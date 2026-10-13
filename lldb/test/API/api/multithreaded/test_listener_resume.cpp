@@ -53,6 +53,6 @@ void listener_func() {
 void check_listener(SBDebugger &dbg) {
   bool got_message = false;
   while (!got_message)
-    g_process_started.pop(5, got_message);
+    g_process_started.pop(got_message);
   g_done = true;
 }

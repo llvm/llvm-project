@@ -81,9 +81,8 @@ define i16 @cmp_sge_v16i8(<16 x i8> %x) {
 ;
 ; AVX512-LABEL: cmp_sge_v16i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpnltb %xmm1, %xmm0, %k0
-; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    vpmovmskb %xmm0, %eax
+; AVX512-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512-NEXT:    retq
   %c = icmp sge <16 x i8> %x, splat (i8 0)
@@ -101,9 +100,8 @@ define i16 @cmp_sgt_neg1_v16i8(<16 x i8> %x) {
 ;
 ; AVX512-LABEL: cmp_sgt_neg1_v16i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpnltb %xmm1, %xmm0, %k0
-; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    vpmovmskb %xmm0, %eax
+; AVX512-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512-NEXT:    retq
   %c = icmp sgt <16 x i8> %x, splat (i8 -1)

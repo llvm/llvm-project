@@ -63,7 +63,8 @@ def LabelBranchingOpInterface : OpInterface<"LabelBranchingOpInterface"> {
       /*methodName=*/  "getTargetOp",
       /*args=*/        (ins),
       /*methodBody=*/ [{
-        return *LabelBranchingOpInterface::getTargetOpFromBlock($_op.getOperation()->getBlock(), $_op.getExitLevel());
+        auto branch = ::mlir::cast<LabelBranchingOpInterface>(*$_raw_op);
+        return *LabelBranchingOpInterface::getTargetOpFromBlock($_raw_op->getBlock(), branch.getExitLevel());
       }]
     >,
     InterfaceMethod<
@@ -121,7 +122,8 @@ def ImportOpInterface : OpInterface<"ImportOpInterface"> {
       /*methodName=*/  "getQualifiedImportName",
       /*args=*/        (ins),
       /*methodBody=*/  [{
-        return ($_op.getModuleName() + ::llvm::Twine{"::"} + $_op.getImportName()).str();
+        auto import = ::mlir::cast<ImportOpInterface>(*$_raw_op);
+        return (import.getModuleName() + ::llvm::Twine{"::"} + import.getImportName()).str();
       }]
       >,
   ];

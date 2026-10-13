@@ -6,6 +6,8 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class TestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

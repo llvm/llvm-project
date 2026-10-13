@@ -401,7 +401,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_emit_interface_stubs))) {
     FinalPhase = phases::IfsMerge;
 
-  // Otherwise do everything.
+    // Otherwise do everything.
   } else
     FinalPhase = phases::Link;
 
@@ -3526,13 +3526,13 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                 Args.getLastArg(options::OPT_M, options::OPT_MM)) &&
                getPreprocessedType(InputType) == types::TY_INVALID)
         Diag(clang::diag::warn_drv_preprocessed_input_file_unused)
-            << InputArg->getAsString(Args) << !!FinalPhaseArg
-            << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
+            << InputArg->getAsString(Args) << !FinalPhaseArg
+            << (FinalPhaseArg ? FinalPhaseArg->getSpelling() : "");
       else
         Diag(clang::diag::warn_drv_input_file_unused)
             << InputArg->getAsString(Args) << getPhaseName(InitialPhase)
-            << !!FinalPhaseArg
-            << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
+            << !FinalPhaseArg
+            << (FinalPhaseArg ? FinalPhaseArg->getSpelling() : "");
       continue;
     }
 
@@ -3565,8 +3565,8 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
 }
 
 /// HIP non-RDC \c -S for AMDGCN: emit host and device assembly separately and
-/// bundle with \c clang-offload-bundler (new offload driver), instead of
-/// \c llvm-offload-binary / \c clang-linker-wrapper fatbin embedding.
+/// bundle with \c clang-offload-bundler, instead of \c llvm-offload-binary /
+/// \c clang-linker-wrapper fatbin embedding.
 static bool shouldBundleHIPAsm(const Compilation &C,
                                const llvm::opt::DerivedArgList &Args,
                                const Driver &D) {
@@ -3710,8 +3710,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         break;
     }
 
-    // HIP non-RDC -S (AMDGCN): bundle host and device assembly like the
-    // classic driver instead of embedding a fat binary in host asm.
+    // HIP non-RDC -S (AMDGCN): bundle host and device assembly instead of
+    // embedding a fat binary in host asm.
     if (Current && !HIPAsmDeviceActions.empty()) {
       ActionList BundleInputs;
       BundleInputs.append(HIPAsmDeviceActions);
@@ -4246,7 +4246,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
       OffloadAction::DeviceDependences DDep;
       DDep.add(*A, *TCAndArch->first, TCAndArch->second, Kind);
 
-      // The legacy CUDA fatbinary path can include PTX alongside the cubin.
+      // The CUDA fatbinary path can include PTX alongside the cubin.
       // The LLVM offload wrapper path feeds these images through a device
       // linker first, and clang-nvlink-wrapper does not accept PTX as input.
       for (Action *Input : A->getInputs())
@@ -4452,8 +4452,13 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<AnalyzeJobAction>(Input, types::TY_Plist);
     if (Args.hasArg(options::OPT_emit_ast))
       return C.MakeAction<CompileJobAction>(Input, types::TY_AST);
-    if (Args.hasArg(options::OPT_emit_cir))
+    if (Args.hasArg(options::OPT_emit_cir)) {
+      // Like -emit-llvm, -c selects the binary form; bare -emit-cir and
+      // -emit-cir -S keep emitting text.
+      if (Args.hasArg(options::OPT_c) && !Args.hasArg(options::OPT_S))
+        return C.MakeAction<CompileJobAction>(Input, types::TY_CIRBC);
       return C.MakeAction<CompileJobAction>(Input, types::TY_CIR);
+    }
     if (Args.hasArg(options::OPT_module_file_info))
       return C.MakeAction<CompileJobAction>(Input, types::TY_ModuleFile);
     if (Args.hasArg(options::OPT_verify_pch))
@@ -4493,8 +4498,11 @@ Action *Driver::ConstructPhaseAction(
       }
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
+    // SYCL device compilations produce IR unless the user explicitly requested
+    // device-only assembly output, in which case emit textual SPIR-V.
     if (Args.hasArg(options::OPT_emit_llvm) ||
-        TargetDeviceOffloadKind == Action::OFK_SYCL) {
+        (TargetDeviceOffloadKind == Action::OFK_SYCL &&
+         !(offloadDeviceOnly() && Args.hasArg(options::OPT_S)))) {
       types::ID Output =
           Args.hasArg(options::OPT_S) ? types::TY_LLVM_IR : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
@@ -5336,8 +5344,10 @@ InputInfoList Driver::BuildJobsForActionNoCache(
   const JobAction *JA = cast<JobAction>(A);
   ActionList CollapsedOffloadActions;
 
-  ToolSelector TS(JA, *TC, C, isSaveTempsEnabled(),
-                  embedBitcodeInObject() && !TC->isUsingLTO(C.getArgs()));
+  ToolSelector TS(
+      JA, *TC, C, isSaveTempsEnabled(),
+      embedBitcodeInObject() &&
+          !TC->isUsingLTO(C.getArgs(), JA->getOffloadingDeviceKind()));
   const Tool *T = TS.getTool(Inputs, CollapsedOffloadActions);
 
   if (!T)
@@ -5404,57 +5414,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
 
   // Determine the place to write output to, if any.
   InputInfo Result;
-  InputInfoList UnbundlingResults;
-  if (auto *UA = dyn_cast<OffloadUnbundlingJobAction>(JA)) {
-    // If we have an unbundling job, we need to create results for all the
-    // outputs. We also update the results cache so that other actions using
-    // this unbundling action can get the right results.
-    for (auto &UI : UA->getDependentActionsInfo()) {
-      assert(UI.DependentOffloadKind != Action::OFK_None &&
-             "Unbundling with no offloading??");
-
-      // Unbundling actions are never at the top level. When we generate the
-      // offloading prefix, we also do that for the host file because the
-      // unbundling action does not change the type of the output which can
-      // cause a overwrite.
-      std::string OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
-          UI.DependentOffloadKind, UI.DependentToolChain->getTripleString(),
-          /*CreatePrefixForHost=*/true);
-      auto CurI = InputInfo(
-          UA,
-          GetNamedOutputPath(C, *UA, BaseInput, UI.DependentBoundArch,
-                             /*AtTopLevel=*/false,
-                             MultipleArchs ||
-                                 UI.DependentOffloadKind == Action::OFK_HIP,
-                             OffloadingPrefix),
-          BaseInput);
-      // Save the unbundling result.
-      UnbundlingResults.push_back(CurI);
-
-      // Get the unique string identifier for this dependence and cache the
-      // result.
-      BoundArch Arch;
-      if (TargetDeviceOffloadKind == Action::OFK_HIP) {
-        if (UI.DependentOffloadKind == Action::OFK_Host)
-          Arch = BoundArch();
-        else
-          Arch = BoundArch(UI.DependentBoundArch);
-      } else
-        Arch = BA;
-
-      CachedResults[{A, GetTriplePlusArchString(UI.DependentToolChain, Arch,
-                                                UI.DependentOffloadKind)}] = {
-          CurI};
-    }
-
-    // Now that we have all the results generated, select the one that should be
-    // returned for the current depending action.
-    std::pair<const Action *, std::string> ActionTC = {
-        A, GetTriplePlusArchString(TC, BA, TargetDeviceOffloadKind)};
-    assert(CachedResults.find(ActionTC) != CachedResults.end() &&
-           "Result does not exist??");
-    Result = CachedResults[ActionTC].front();
-  } else if (JA->getType() == types::TY_Nothing)
+  if (JA->getType() == types::TY_Nothing)
     Result = {InputInfo(A, BaseInput)};
   else {
     // We only have to generate a prefix for the host if this is not a top-level
@@ -5480,23 +5440,9 @@ InputInfoList Driver::BuildJobsForActionNoCache(
       if (i + 1 != e)
         llvm::errs() << ", ";
     }
-    if (UnbundlingResults.empty())
-      llvm::errs() << "], output: " << Result.getAsString() << "\n";
-    else {
-      llvm::errs() << "], outputs: [";
-      for (unsigned i = 0, e = UnbundlingResults.size(); i != e; ++i) {
-        llvm::errs() << UnbundlingResults[i].getAsString();
-        if (i + 1 != e)
-          llvm::errs() << ", ";
-      }
-      llvm::errs() << "] \n";
-    }
+    llvm::errs() << "], output: " << Result.getAsString() << "\n";
   } else {
-    if (UnbundlingResults.empty())
-      T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);
-    else
-      T->ConstructJobMultipleOutputs(C, *JA, UnbundlingResults, InputInfos,
-                                     Args, LinkingOutput);
+    T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);
   }
   return {Result};
 }

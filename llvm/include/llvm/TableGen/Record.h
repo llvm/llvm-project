@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -59,7 +60,7 @@ class TGTimer;
 //  Type Classes
 //===----------------------------------------------------------------------===//
 
-class RecTy {
+class alignas(8) RecTy {
 public:
   /// Subclass discriminator (for dyn_cast<> et al.)
   enum RecTyKind {
@@ -257,7 +258,7 @@ public:
                                 ArrayRef<const Record *> Classes);
   static const RecordRecTy *get(const Record *Class);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  ArrayRef<const Record *> getKey() const { return getClasses(); }
 
   ArrayRef<const Record *> getClasses() const {
     return getTrailingObjects(NumClasses);
@@ -335,6 +336,9 @@ private:
 protected:
   uint8_t Opc; // Used by UnOpInit, BinOpInit, and TernOpInit
 
+  /// Set if resolveReferences returns this value unchanged with any resolver.
+  bool TriviallyResolved;
+
 private:
   virtual void anchor();
 
@@ -342,11 +346,22 @@ public:
   /// Get the kind (type) of the value.
   InitKind getKind() const { return Kind; }
 
+  /// Return true if \p K is a value kind that cannot contain references.
+  static bool isLeafKind(InitKind K) {
+    return K == IK_BitInit || K == IK_DefInit || K == IK_IntInit ||
+           K == IK_StringInit || K == IK_UnsetInit;
+  }
+
+  /// Return true if resolveReferences returns this value unchanged with any
+  /// resolver. This is a cheap, conservative subset of isConcrete().
+  bool isTriviallyResolved() const { return TriviallyResolved; }
+
   /// Get the record keeper that initialized this Init.
   RecordKeeper &getRecordKeeper() const;
 
 protected:
-  explicit Init(InitKind K, uint8_t Opc = 0) : Kind(K), Opc(Opc) {}
+  explicit Init(InitKind K, uint8_t Opc = 0)
+      : Kind(K), Opc(Opc), TriviallyResolved(isLeafKind(K)) {}
 
 public:
   Init(const Init &) = delete;
@@ -502,7 +517,9 @@ private:
 
 protected:
   explicit ArgumentInit(const Init *Value, ArgAuxType Aux)
-      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {}
+      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {
+    TriviallyResolved = Value->isTriviallyResolved();
+  }
 
 public:
   ArgumentInit(const ArgumentInit &) = delete;
@@ -530,7 +547,7 @@ public:
     return get(Value, Aux);
   }
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const Init *, ArgAuxType> getKey() const { return {Value, Aux}; }
 
   const Init *resolveReferences(Resolver &R) const override;
   std::string getAsString() const override {
@@ -608,7 +625,7 @@ public:
 
   static BitsInit *get(RecordKeeper &RK, ArrayRef<const Init *> Range);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  ArrayRef<const Init *> getKey() const { return getBits(); }
 
   unsigned getNumBits() const { return NumBits; }
 
@@ -775,7 +792,7 @@ public:
     return ArrayRef(getTrailingObjects(), NumElements);
   }
 
-  LLVM_DEPRECATED("Use getElements instead", "getElements")
+  LLVM_DEPRECATED_WITH_FIXIT("Use getElements instead", "getElements")
   ArrayRef<const Init *> getValues() const { return getElements(); }
 
   const Init *getElement(unsigned Idx) const { return getElements()[Idx]; }
@@ -1045,7 +1062,10 @@ public:
                                ArrayRef<const Init *> Values,
                                const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const RecTy *, ArrayRef<const Init *>, ArrayRef<const Init *>>
+  getKey() const {
+    return {ValType, getConds(), getVals()};
+  }
 
   const RecTy *getValType() const { return ValType; }
 
@@ -1111,7 +1131,11 @@ public:
                                const Init *A, const Init *B, const Init *Expr,
                                const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const Init *, const Init *, const Init *, const Init *,
+             const Init *, const RecTy *>
+  getKey() const {
+    return {Start, List, A, B, Expr, getType()};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1144,7 +1168,9 @@ public:
 
   static const IsAOpInit *get(const RecTy *CheckType, const Init *Expr);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {CheckType, Expr};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1178,7 +1204,9 @@ public:
 
   static const ExistsOpInit *get(const RecTy *CheckType, const Init *Expr);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {CheckType, Expr};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1215,7 +1243,9 @@ public:
 
   static const InstancesOpInit *get(const RecTy *Type, const Init *Regex);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {Type, Regex};
+  }
 
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
 
@@ -1364,7 +1394,9 @@ public:
   static const VarDefInit *get(SMLoc Loc, const Record *Class,
                                ArrayRef<const ArgumentInit *> Args);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const Record *, ArrayRef<const ArgumentInit *>> getKey() const {
+    return {Class, args()};
+  }
 
   const Init *resolveReferences(Resolver &R) const override;
   const Init *Fold() const;
@@ -1478,7 +1510,11 @@ public:
     return DagInit::get(V, nullptr, ArgAndNames);
   }
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const Init *, const StringInit *, ArrayRef<const Init *>,
+             ArrayRef<const StringInit *>>
+  getKey() const {
+    return {Val, ValName, getArgs(), getArgNames()};
+  }
 
   const Init *getOperator() const { return Val; }
   const Record *getOperatorAsDef(ArrayRef<SMLoc> Loc) const;
@@ -1565,12 +1601,19 @@ public:
 private:
   const Init *Name;
   SMLoc Loc; // Source location of definition of name.
-  PointerIntPair<const RecTy *, 2, FieldKind> TyAndKind;
+  // The low two bits of the flags are the FieldKind, and bit 2 is set if the
+  // value is used.
+  PointerIntPair<const RecTy *, 3, unsigned> TyAndFlags;
+  static constexpr unsigned KindMask = 3;
+  static constexpr unsigned UsedBit = 4;
   const Init *Value;
-  bool IsUsed = false;
 
   /// Reference locations to this record value.
   SmallVector<SMRange, 0> ReferenceLocs;
+
+  FieldKind getKind() const {
+    return FieldKind(TyAndFlags.getInt() & KindMask);
+  }
 
 public:
   RecordVal(const Init *N, const RecTy *T, FieldKind K);
@@ -1594,17 +1637,13 @@ public:
   SMLoc getLoc() const { return Loc; }
 
   /// Is this a field where nonconcrete values are okay?
-  bool isNonconcreteOK() const {
-    return TyAndKind.getInt() == FK_NonconcreteOK;
-  }
+  bool isNonconcreteOK() const { return getKind() == FK_NonconcreteOK; }
 
   /// Is this a template argument?
-  bool isTemplateArg() const {
-    return TyAndKind.getInt() == FK_TemplateArg;
-  }
+  bool isTemplateArg() const { return getKind() == FK_TemplateArg; }
 
   /// Get the type of the field value as a RecTy.
-  const RecTy *getType() const { return TyAndKind.getPointer(); }
+  const RecTy *getType() const { return TyAndFlags.getPointer(); }
 
   /// Get the type of the field for printing purposes.
   std::string getPrintType() const;
@@ -1626,8 +1665,11 @@ public:
 
   /// Whether this value is used. Useful for reporting warnings, for example
   /// when a template argument is unused.
-  void setUsed(bool Used) { IsUsed = Used; }
-  bool isUsed() const { return IsUsed; }
+  void setUsed(bool Used) {
+    unsigned Flags = TyAndFlags.getInt() & ~UsedBit;
+    TyAndFlags.setInt(Used ? Flags | UsedBit : Flags);
+  }
+  bool isUsed() const { return TyAndFlags.getInt() & UsedBit; }
 
   void dump() const;
 

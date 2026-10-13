@@ -27,8 +27,6 @@ class R600TargetLowering final : public AMDGPUTargetLowering {
 public:
   R600TargetLowering(const TargetMachine &TM, const R600Subtarget &STI);
 
-  const R600Subtarget *getSubtarget() const;
-
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
@@ -98,8 +96,6 @@ private:
   SDValue LowerUADDSUBO(SDValue Op, SelectionDAG &DAG,
                         unsigned mainop, unsigned ovf) const;
 
-  SDValue stackPtrToRegIndex(SDValue Ptr, unsigned StackWidth,
-                                          SelectionDAG &DAG) const;
   void getStackAddress(unsigned StackWidth, unsigned ElemIdx,
                        unsigned &Channel, unsigned &PtrIncr) const;
   bool isZero(SDValue Op) const;

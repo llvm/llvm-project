@@ -111,7 +111,7 @@ define { float, float } @modf_qnan() {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call { float, float } @llvm.modf.f32(float 0x7FF8000000000000)
+  %ret = call { float, float } @llvm.modf.f32(float +qnan)
   ret { float, float } %ret
 }
 
@@ -302,7 +302,7 @@ define { <2 x float>, <2 x float> } @modf_splat_qnan() {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call { <2 x float>, <2 x float> } @llvm.modf.v2f32(<2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>)
+  %ret = call { <2 x float>, <2 x float> } @llvm.modf.v2f32(<2 x float> <float +qnan, float +qnan>)
   ret { <2 x float>, <2 x float> } %ret
 }
 

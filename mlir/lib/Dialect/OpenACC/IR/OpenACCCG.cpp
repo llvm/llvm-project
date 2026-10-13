@@ -94,7 +94,7 @@ static void setComputeRegionInputOperandSegments(ComputeRegionOp op,
 
 struct ComputeRegionRemoveDuplicateArgs
     : public OpRewritePattern<ComputeRegionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ComputeRegionOp op,
                                 PatternRewriter &rewriter) const override {
@@ -146,7 +146,7 @@ struct ComputeRegionRemoveDuplicateArgs
 
 struct ComputeRegionRemoveUnusedArgs
     : public OpRewritePattern<ComputeRegionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ComputeRegionOp op,
                                 PatternRewriter &rewriter) const override {
@@ -915,6 +915,39 @@ LogicalResult PredicateRegionOp::verify() {
     return emitOpError("region cannot have any arguments");
   if (!getOperation()->getParentOfType<ComputeRegionOp>())
     return emitOpError("must be nested within an acc.compute_region operation");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MapInfoOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MapInfoOp::verify() {
+  // A pointer-like var addresses the mapped object, so varType has to name that
+  // object rather than the address of it.
+  if (mlir::isa<acc::PointerLikeType>(getVar().getType()) &&
+      getVarType() == getVar().getType())
+    return emitOpError("varType must capture the element type of var");
+
+  // A descriptor operand is only meaningful together with the layout it
+  // follows. Without a kind, consumers have no way to interpret it.
+  if (getDesc() && getDescKind() == DataDescKind::none)
+    return emitOpError("desc requires a descKind other than none");
+
+  // Bounds count elements of the mapped object, which is the OpenACC
+  // descriptor layout, so it must be among the kinds named here.
+  if (!getBounds().empty() &&
+      !acc::bitEnumContainsAny(getDescKind(), DataDescKind::openacc))
+    return emitOpError("bounds require descKind openacc");
+
+  // Anything below -1 has no meaning: -1 states that the size is unknown at
+  // compile time and 0 defers it to bounds or to a descriptor.
+  if (getSize()) {
+    std::optional<int64_t> constantSize = getConstantIntValue(getSize());
+    if (constantSize && *constantSize < -1)
+      return emitOpError("size must be -1, 0, or a positive byte count");
+  }
+
   return success();
 }
 

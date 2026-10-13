@@ -77,7 +77,7 @@ define double @fdiv_nnan_nan_op0(double %x) {
 ; CHECK-LABEL: fdiv_nnan_nan_op0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %r = fdiv nnan double 0xfff8000000000000, %x
+  %r = fdiv nnan double -qnan, %x
   ret double %r
 }
 
@@ -85,7 +85,7 @@ define double @fmul_nnan_nan_op1(double %x) {
 ; CHECK-LABEL: fmul_nnan_nan_op1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %r = fmul nnan double %x, 0x7ff8000000000000
+  %r = fmul nnan double %x, +qnan
   ret double %r
 }
 
@@ -99,7 +99,7 @@ define double @fdiv_ninf_nan_op0(double %x) {
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fdiv d0, d1, d0
 ; CHECK-NEXT:    ret
-  %r = fdiv ninf double 0xfff8000000000000, %x
+  %r = fdiv ninf double -qnan, %x
   ret double %r
 }
 
@@ -113,7 +113,7 @@ define double @fadd_ninf_nan_op1(double %x) {
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
-  %r = fadd ninf double %x, 0x7ff8000000000000
+  %r = fadd ninf double %x, +qnan
   ret double %r
 }
 

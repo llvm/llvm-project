@@ -924,7 +924,7 @@ define i1 @minnum_une_nan_min_constant(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %min = call float @llvm.minnum.f32(float %x, float 0x7FF8000000000000)
+  %min = call float @llvm.minnum.f32(float %x, float +qnan)
   %cmp = fcmp une float %min, 1.0
   ret i1 %cmp
 }
@@ -1097,7 +1097,7 @@ define i1 @maxnum_une_nan_max_constant(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %max = call float @llvm.maxnum.f32(float %x, float 0x7FF8000000000000)
+  %max = call float @llvm.maxnum.f32(float %x, float +qnan)
   %cmp = fcmp une float %max, 1.0
   ret i1 %cmp
 }

@@ -15,25 +15,11 @@ class TestMixedDwarfBinary(TestBase):
         with/whithout -gsplit-dwarf correspondingly."""
 
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        self.target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
-
-        main_bp = self.target.BreakpointCreateByName("g", "a.out")
-        self.assertTrue(main_bp, VALID_BREAKPOINT)
-
-        self.process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.assertState(
-            self.process.GetState(), lldb.eStateStopped, STOPPED_DUE_TO_BREAKPOINT
+        _, _, thread, _ = lldbutil.run_to_name_breakpoint(
+            self, "g", bkpt_module="a.out"
         )
 
-        frame = self.process.GetThreadAtIndex(0).GetFrameAtIndex(0)
+        frame = thread.GetFrameAtIndex(0)
         x = frame.FindVariable("x")
         self.assertTrue(x.IsValid(), "x is not valid")
         y = frame.FindVariable("y")

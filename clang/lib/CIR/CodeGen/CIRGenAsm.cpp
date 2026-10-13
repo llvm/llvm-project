@@ -592,7 +592,9 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       builder.createStore(loc, result, addr);
 
       for (unsigned i = 0, e = resultRegTypes.size(); i != e; ++i) {
-        cir::PointerType typ = builder.getPointerTo(resultRegTypes[i]);
+        cir::PointerType typ = builder.getPointerTo(
+            resultRegTypes[i],
+            mlir::cast<cir::PointerType>(dest.getType()).getAddrSpace());
         cir::GetMemberOp ptr = builder.createGetMember(loc, typ, dest, "", i);
         cir::LoadOp tmp = builder.createLoad(loc, Address(ptr, alignment));
         regResults.push_back(tmp);

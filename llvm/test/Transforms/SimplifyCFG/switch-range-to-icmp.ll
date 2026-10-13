@@ -249,6 +249,70 @@ else:
   ret i32 %i1
 }
 
+define i32 @wrapping_known_range_zext(i8 range(i8 0, 6) %arg) {
+; CHECK-LABEL: @wrapping_known_range_zext(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[ARG:%.*]] to i32
+; CHECK-NEXT:    [[EXT_OFF:%.*]] = add i32 [[EXT]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[EXT_OFF]], 3
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[ELSE:%.*]], label [[IF:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       if:
+; CHECK-NEXT:    [[I0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[I1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %ext = zext i8 %arg to i32
+  switch i32 %ext, label %else [
+  i32 0, label %if
+  i32 4, label %if
+  i32 5, label %if
+  ]
+
+if:
+  %i0 = call i32 @f(i32 0)
+  ret i32 %i0
+
+else:
+  %i1 = call i32 @f(i32 1)
+  ret i32 %i1
+}
+
+define i32 @wrapping_known_range_sext(i8 range(i8 0, 6) %arg) {
+; CHECK-LABEL: @wrapping_known_range_sext(
+; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[ARG:%.*]] to i32
+; CHECK-NEXT:    [[EXT_OFF:%.*]] = add i32 [[EXT]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[EXT_OFF]], 3
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[ELSE:%.*]], label [[IF:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       if:
+; CHECK-NEXT:    [[I0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[I1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %ext = sext i8 %arg to i32
+  switch i32 %ext, label %else [
+  i32 0, label %if
+  i32 4, label %if
+  i32 5, label %if
+  ]
+
+if:
+  %i0 = call i32 @f(i32 0)
+  ret i32 %i0
+
+else:
+  %i1 = call i32 @f(i32 1)
+  ret i32 %i1
+}
+
 define i32 @wrapping_range(i8 %arg) {
 ; CHECK-LABEL: @wrapping_range(
 ; CHECK-NEXT:    [[ARG_OFF:%.*]] = add i8 [[ARG:%.*]], -1

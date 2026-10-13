@@ -189,8 +189,6 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: %ptr.iv.next = getelementptr inbounds i64, ptr %ptr.iv, i64 1
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %ec = icmp eq ptr %ptr.iv.next, %end
 ; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: br i1 %ec, label %exit, label %loop.header
-; CHECK:  Cost of 0 for VF 2: induction instruction %ptr.iv.next = getelementptr inbounds i64, ptr %ptr.iv, i64 1
-; CHECK:  Cost of 0 for VF 2: induction instruction %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ]
 ; CHECK:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP5:%[0-9]+]]> * ir<8>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<8>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP7]]>
@@ -221,8 +219,6 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4]]> = DERIVED-IV ir<%start> + vp<[[VP2]]> * ir<8>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost of 0 for VF 4: induction instruction %ptr.iv.next = getelementptr inbounds i64, ptr %ptr.iv, i64 1
-; CHECK:  Cost of 0 for VF 4: induction instruction %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ]
 ; CHECK:  Cost of 1 for VF 4: vp<[[VP6]]> = DERIVED-IV ir<0> + vp<[[VP5]]> * ir<8>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP7]]> = SCALAR-STEPS vp<[[VP6]]>, ir<8>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP7]]>
@@ -319,8 +315,8 @@ define void @test_vpinstruction_extractvalue_cost(ptr noalias %dst, {i64, i64} %
 ; CHECK:  Cost of 0 for VF 2: IR store i64 %add, ptr %g.dst, align 8
 ; CHECK:  Cost of 0 for VF 2: IR %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 2: IR %ec = icmp eq i64 %iv.next, 1000
-; CHECK:  Cost of 0 for VF 2: CLONE ir<%a> = extractvalue ir<%sv>
-; CHECK:  Cost of 0 for VF 2: CLONE ir<%b> = extractvalue ir<%sv>
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%a> = extractvalue ir<%sv>, ir<0>
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%b> = extractvalue ir<%sv>, ir<1>
 ; CHECK:  Cost of 1 for VF 2: CLONE ir<%add> = add ir<%a>, ir<%b>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
@@ -341,8 +337,8 @@ define void @test_vpinstruction_extractvalue_cost(ptr noalias %dst, {i64, i64} %
 ; CHECK:  Cost of 0 for VF 4: IR store i64 %add, ptr %g.dst, align 8
 ; CHECK:  Cost of 0 for VF 4: IR %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 4: IR %ec = icmp eq i64 %iv.next, 1000
-; CHECK:  Cost of 0 for VF 4: CLONE ir<%a> = extractvalue ir<%sv>
-; CHECK:  Cost of 0 for VF 4: CLONE ir<%b> = extractvalue ir<%sv>
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%a> = extractvalue ir<%sv>, ir<0>
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%b> = extractvalue ir<%sv>, ir<1>
 ; CHECK:  Cost of 1 for VF 4: CLONE ir<%add> = add ir<%a>, ir<%b>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>

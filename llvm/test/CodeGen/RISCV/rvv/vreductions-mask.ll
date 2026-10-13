@@ -1128,3 +1128,16 @@ define zeroext i1 @vreduce_smin_nxv1024i1(<vscale x 1024 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.smin.nxv1024i1(<vscale x 1024 x i1> %v)
   ret i1 %red
 }
+
+define i1 @vreduce_and_icmp(<vscale x 8 x i8> %v) {
+; CHECK-LABEL: vreduce_and_icmp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmsgt.vi v8, v8, 4
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %c = icmp slt <vscale x 8 x i8> %v, splat (i8 5)
+  %red = call i1 @llvm.vector.reduce.and(<vscale x 8 x i1> %c)
+  ret i1 %red
+}

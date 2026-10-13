@@ -1132,11 +1132,13 @@ Speculation::Speculatability arith::RemSIOp::getSpeculatability() {
 // AndIOp
 //===----------------------------------------------------------------------===//
 
-/// Fold `and(a, and(a, b))` to `and(a, b)`
-static Value foldAndIofAndI(arith::AndIOp op) {
+/// Fold `op(a, op(a, b))` to `op(a, b)` for an associative, commutative and
+/// idempotent `op` (e.g. `and`, `or`).
+template <typename OpTy>
+static Value foldIdempotentOfSameOp(OpTy op) {
   for (bool reversePrev : {false, true}) {
     auto prev = (reversePrev ? op.getRhs() : op.getLhs())
-                    .getDefiningOp<arith::AndIOp>();
+                    .template getDefiningOp<OpTy>();
     if (!prev)
       continue;
 
@@ -1170,7 +1172,7 @@ OpFoldResult arith::AndIOp::fold(FoldAdaptor adaptor) {
     return Builder(getContext()).getZeroAttr(getType());
 
   /// and(a, and(a, b)) -> and(a, b)
-  if (Value result = foldAndIofAndI(*this))
+  if (Value result = foldIdempotentOfSameOp(*this))
     return result;
 
   return constFoldBinaryOp<IntegerAttr>(
@@ -1203,6 +1205,10 @@ OpFoldResult arith::OrIOp::fold(FoldAdaptor adaptor) {
                                           m_ConstantInt(&intValue))) &&
       intValue.isAllOnes())
     return getLhs().getDefiningOp<XOrIOp>().getRhs();
+
+  /// or(a, or(a, b)) -> or(a, b)
+  if (Value result = foldIdempotentOfSameOp(*this))
+    return result;
 
   return constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(),
@@ -1396,9 +1402,10 @@ struct NarrowExtremum final : OpRewritePattern<TruncOp> {
         return failure();
     }
 
-    rewriter.replaceOpWithNewOp<ExtremumOp>(truncOp, TypeRange{narrowType},
-                                            ValueRange{lhs, rhs},
-                                            extremumOp->getAttrs());
+    rewriter.replaceOpWithNewOp<ExtremumOp>(
+        truncOp, TypeRange{narrowType}, ValueRange{lhs, rhs},
+        extremumOp.getProperties(),
+        extremumOp->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };
@@ -1435,6 +1442,22 @@ OpFoldResult arith::MaxNumFOp::fold(FoldAdaptor adaptor) {
     return getLhs();
 
   return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::maxnum);
+}
+
+//===----------------------------------------------------------------------===//
+// MaximumNumFOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::MaximumNumFOp::fold(FoldAdaptor adaptor) {
+  // maximumnumf(x,x) -> x
+  if (getLhs() == getRhs())
+    return getRhs();
+
+  // maximumnumf(x, NaN) -> x
+  if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
+    return getLhs();
+
+  return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::maximumnum);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1516,6 +1539,22 @@ OpFoldResult arith::MinNumFOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// MinimumNumFOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::MinimumNumFOp::fold(FoldAdaptor adaptor) {
+  // minimumnumf(x,x) -> x
+  if (getLhs() == getRhs())
+    return getRhs();
+
+  // minimumnumf(x, NaN) -> x
+  if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
+    return getLhs();
+
+  return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::minimumnum);
+}
+
+//===----------------------------------------------------------------------===//
 // MinSIOp
 //===----------------------------------------------------------------------===//
 
@@ -1570,11 +1609,17 @@ OpFoldResult arith::MulFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_OneFloat()))
     return getLhs();
 
+  // Match LLVM InstSimplify: with nnan+nsz, X * 0 -> 0 for a non-constant X.
+  // When both operands are constants, fall through to APFloat so IEEE signed
+  // zeros are preserved (e.g. (-c) * +0.0 == -0.0).
   if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::nnan |
-                                                   arith::FastMathFlags::nsz)) {
+                                                   arith::FastMathFlags::nsz) &&
+      !(adaptor.getLhs() && adaptor.getRhs())) {
     // mulf(x, 0) -> 0
     if (matchPattern(adaptor.getRhs(), m_AnyZeroFloat()))
       return getRhs();
+    if (matchPattern(adaptor.getLhs(), m_AnyZeroFloat()))
+      return getLhs();
   }
 
   auto rm = getRoundingmode();
@@ -2068,8 +2113,10 @@ void arith::TruncFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                   MLIRContext *context) {
   patterns.add<NarrowExtremum<TruncFOp, ExtFOp, MaximumFOp>,
                NarrowExtremum<TruncFOp, ExtFOp, MaxNumFOp>,
+               NarrowExtremum<TruncFOp, ExtFOp, MaximumNumFOp>,
                NarrowExtremum<TruncFOp, ExtFOp, MinimumFOp>,
                NarrowExtremum<TruncFOp, ExtFOp, MinNumFOp>,
+               NarrowExtremum<TruncFOp, ExtFOp, MinimumNumFOp>,
                TruncFSIToFPToSIToFP, TruncFUIToFPToUIToFP>(context);
 }
 
@@ -3113,7 +3160,7 @@ ParseResult SelectOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void arith::SelectOp::print(OpAsmPrinter &p) {
   p << " " << getOperands();
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
   p << " : ";
   if (ShapedType condType = dyn_cast<ShapedType>(getCondition().getType()))
     p << condType << ", ";

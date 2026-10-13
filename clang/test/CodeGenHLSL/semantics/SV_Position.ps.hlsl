@@ -4,10 +4,10 @@
 // CHECK-SPIRV: @SV_Position = external hidden thread_local addrspace(7) externally_initialized constant <4 x float>, !spirv.Decorations ![[#MD_0:]]
 
 // CHECK: define void @main() {{.*}} {
-float4 main(float4 p : SV_Position) : A {
+float4 main(float4 p : SV_Position) : SV_Target {
   // CHECK-SPIRV: %[[P:.*]] = load <4 x float>, ptr addrspace(7) @SV_Position, align 4
   // CHECK-SPIRV: %[[R:.*]] = call spir_func <4 x float> @_Z4mainDv4_f(<4 x float> %[[P]])
-  // CHECK-SPIRV:            store <4 x float> %[[R]], ptr addrspace(8) @A0, align 4
+  // CHECK-SPIRV:            store <4 x float> %[[R]], ptr addrspace(8) @SV_Target0, align 4
 
   // CHECK-DXIL: %[[INPUT:.*]] = call <4 x float> @llvm.dx.load.input.v4f32(i32 0, i32 0, i8 0, i32 poison)
   // CHECK-DXIL: %[[RESULT:.*]] = call <4 x float> @_Z4mainDv4_f(<4 x float> %[[INPUT]])

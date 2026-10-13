@@ -9,7 +9,9 @@
 #include "MCTargetDesc/MipsABIFlagsSection.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
+#include "MCTargetDesc/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsMCAsmInfo.h"
+#include "MCTargetDesc/MipsMCOptions.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "MCTargetDesc/MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
@@ -41,7 +43,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -67,9 +68,6 @@ namespace llvm {
 class MCInstrInfo;
 
 } // end namespace llvm
-
-extern cl::opt<bool> EmitJalrReloc;
-extern cl::opt<bool> NoZeroDivCheck;
 
 namespace {
 
@@ -142,6 +140,7 @@ class MipsAsmParser : public MCTargetAsmParser {
     return static_cast<MipsTargetStreamer &>(TS);
   }
 
+  const MipsMCOptions &CLOpts;
   MipsABIInfo ABI;
   SmallVector<std::unique_ptr<MipsAssemblerOptions>, 2> AssemblerOptions;
   MCSymbol *CurrentFn; // Pointer to the function being parsed. It may be a
@@ -203,7 +202,6 @@ class MipsAsmParser : public MCTargetAsmParser {
                                             const AsmToken &Token, SMLoc S);
   ParseStatus matchAnyRegisterWithoutDollar(OperandVector &Operands, SMLoc S);
   ParseStatus parseAnyRegister(OperandVector &Operands);
-  ParseStatus parseImm(OperandVector &Operands);
   ParseStatus parseJumpTarget(OperandVector &Operands);
   ParseStatus parseInvNum(OperandVector &Operands);
   ParseStatus parseRegisterList(OperandVector &Operands);
@@ -397,6 +395,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool parseSetNoCRCDirective();
   bool parseSetNoVirtDirective();
   bool parseSetNoGINVDirective();
+  bool parseSetNoEVADirective();
 
   bool parseSetAssignment();
 
@@ -440,11 +439,6 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   bool processInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                           const MCSubtargetInfo *STI);
-
-  // Helper function that checks if the value of a vector index is within the
-  // boundaries of accepted values for each RegisterKind
-  // Example: INSERT.B $w0[n], $1 => 16 > n >= 0
-  bool validateMSAIndex(int Val, int RegKind);
 
   // Selects a new architecture by updating the FeatureBits with the necessary
   // info including implied dependencies.
@@ -525,7 +519,7 @@ public:
 
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                 const MCInstrInfo &MII)
-      : MCTargetAsmParser(sti, MII),
+      : MCTargetAsmParser(sti, MII), CLOpts(MipsMCOptions::Global),
         ABI(MipsABIInfo::computeTargetABI(
             sti.getTargetTriple(),
             parser.getContext().getTargetOptions().getABIName())) {
@@ -583,7 +577,7 @@ public:
   }
 
   bool isJalrRelocAvailable(const MCExpr *JalExpr) {
-    if (!EmitJalrReloc)
+    if (!CLOpts.jalr_reloc)
       return false;
     MCValue Res;
     if (!JalExpr->evaluateAsRelocatable(Res, nullptr))
@@ -2139,7 +2133,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   }
 
   if (inMicroMipsMode()) {
-    if (MCID.mayLoad() && Opcode != Mips::LWP_MM) {
+    if (Opcode == Mips::LW_MM || Opcode == Mips::LW_MMR6) {
       // Try to create 16-bit GP relative load instruction.
       for (unsigned i = 0; i < MCID.getNumOperands(); i++) {
         const MCOperandInfo &OpInfo = MCID.operands()[i];
@@ -2163,7 +2157,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
           }
         }
       } // for
-    }   // if load
+    } // if load
 
     // TODO: Handle this with the AsmOperandClass.PredicateMethod.
 
@@ -4249,7 +4243,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     if (!ATReg)
       return true;
 
-    if (!NoZeroDivCheck && ImmValue == 0) {
+    if (!CLOpts.mno_check_zero_division && ImmValue == 0) {
       if (UseTraps)
         TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
       else
@@ -4281,7 +4275,8 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   // break, insert the trap/break and exit. This gives a different result to
   // GAS. GAS has an inconsistency/missed optimization in that not all cases
   // are handled equivalently. As the observed behaviour is the same, we're ok.
-  if (!NoZeroDivCheck && (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64)) {
+  if (!CLOpts.mno_check_zero_division &&
+      (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64)) {
     if (UseTraps) {
       TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
       return false;
@@ -4303,7 +4298,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   MCOperand LabelOp;
 
   TOut.emitRR(DivOp, RsReg, RtReg, IDLoc, STI);
-  if (!NoZeroDivCheck) {
+  if (!CLOpts.mno_check_zero_division) {
     if (UseTraps) {
       TOut.emitRRI(Mips::TEQ, RtReg, ZeroReg, 0x7, IDLoc, STI);
     } else {
@@ -6152,95 +6147,27 @@ MipsAsmParser::printWarningWithFixIt(const Twine &Msg, const Twine &FixMsg,
 }
 
 int MipsAsmParser::matchCPURegisterName(StringRef Name) {
-  int CC;
-
-  CC = StringSwitch<unsigned>(Name)
-           .Case("zero", 0)
-           .Cases({"at", "AT"}, 1)
-           .Case("a0", 4)
-           .Case("a1", 5)
-           .Case("a2", 6)
-           .Case("a3", 7)
-           .Case("v0", 2)
-           .Case("v1", 3)
-           .Case("s0", 16)
-           .Case("s1", 17)
-           .Case("s2", 18)
-           .Case("s3", 19)
-           .Case("s4", 20)
-           .Case("s5", 21)
-           .Case("s6", 22)
-           .Case("s7", 23)
-           .Case("k0", 26)
-           .Case("k1", 27)
-           .Case("gp", 28)
-           .Case("sp", 29)
-           .Case("fp", 30)
-           .Case("s8", 30)
-           .Case("ra", 31)
-           .Case("t0", 8)
-           .Case("t1", 9)
-           .Case("t2", 10)
-           .Case("t3", 11)
-           .Case("t4", 12)
-           .Case("t5", 13)
-           .Case("t6", 14)
-           .Case("t7", 15)
-           .Case("t8", 24)
-           .Case("t9", 25)
-           .Default(-1);
-
-  if (!(isABI_N32() || isABI_N64()))
-    return CC;
-
-  if (12 <= CC && CC <= 15) {
-    // Name is one of t4-t7
+  const MCRegisterInfo &MRI = *getContext().getRegisterInfo();
+  bool IsDeprecated;
+  int Index = MIPS_MC::getCPURegisterIndex(Name, MRI, ABI.getRegAltNameIndex(),
+                                           &IsDeprecated);
+  if (IsDeprecated) {
+    MCRegister Reg = MRI.getRegClass(Mips::GPR32RegClassID).getRegister(Index);
     AsmToken RegTok = getLexer().peekTok();
-    SMRange RegRange = RegTok.getLocRange();
-
-    StringRef FixedName = StringSwitch<StringRef>(Name)
-                              .Case("t4", "t0")
-                              .Case("t5", "t1")
-                              .Case("t6", "t2")
-                              .Case("t7", "t3")
-                              .Default("");
-    assert(FixedName != "" &&  "Register name is not one of t4-t7.");
-
+    StringRef FixedName =
+        MipsInstPrinter::getRegisterName(Reg, ABI.getRegAltNameIndex());
     printWarningWithFixIt("register names $t4-$t7 are only available in O32.",
-                          "Did you mean $" + FixedName + "?", RegRange);
+                          "Did you mean $" + FixedName + "?",
+                          RegTok.getLocRange());
   }
-
-  // Although SGI documentation just cuts out t0-t3 for n32/n64,
-  // GNU pushes the values of t0-t3 to override the o32/o64 values for t4-t7
-  // We are supporting both cases, so for t0-t3 we'll just push them to t4-t7.
-  if (8 <= CC && CC <= 11)
-    CC += 4;
-
-  if (CC == -1)
-    CC = StringSwitch<unsigned>(Name)
-             .Case("a4", 8)
-             .Case("a5", 9)
-             .Case("a6", 10)
-             .Case("a7", 11)
-             .Case("kt0", 26)
-             .Case("kt1", 27)
-             .Default(-1);
-
-  return CC;
+  return Index;
 }
 
 int MipsAsmParser::matchHWRegsRegisterName(StringRef Name) {
-  int CC;
-
-  CC = StringSwitch<unsigned>(Name)
-            .Case("hwr_cpunum", 0)
-            .Case("hwr_synci_step", 1)
-            .Case("hwr_cc", 2)
-            .Case("hwr_ccres", 3)
-            .Case("hwr_ulr", 29)
-            .Default(-1);
-
-  return CC;
+  const MCRegisterInfo &MRI = *getContext().getRegisterInfo();
+  MCRegister Reg = MIPS_MC::matchRegisterName(Name, MRI, Mips::HWRegsRegClassID,
+                                              Mips::RegAliasName);
+  return Reg ? MRI.getEncodingValue(Reg) : -1;
 }
 
 int MipsAsmParser::matchFPURegisterName(StringRef Name) {
@@ -6295,20 +6222,10 @@ int MipsAsmParser::matchMSA128RegisterName(StringRef Name) {
 }
 
 int MipsAsmParser::matchMSA128CtrlRegisterName(StringRef Name) {
-  int CC;
-
-  CC = StringSwitch<unsigned>(Name)
-           .Case("msair", 0)
-           .Case("msacsr", 1)
-           .Case("msaaccess", 2)
-           .Case("msasave", 3)
-           .Case("msamodify", 4)
-           .Case("msarequest", 5)
-           .Case("msamap", 6)
-           .Case("msaunmap", 7)
-           .Default(-1);
-
-  return CC;
+  const MCRegisterInfo &MRI = *getContext().getRegisterInfo();
+  MCRegister Reg = MIPS_MC::matchRegisterName(
+      Name, MRI, Mips::MSACtrlRegClassID, Mips::RegAliasName);
+  return Reg ? MRI.getEncodingValue(Reg) : -1;
 }
 
 bool MipsAsmParser::canUseATReg() {
@@ -7245,6 +7162,7 @@ bool MipsAsmParser::parseSetMips16Directive() {
     return false;
   }
 
+  clearFeatureBits(Mips::FeatureMicroMips, "micromips");
   setFeatureBits(Mips::FeatureMips16, "mips16");
   getTargetStreamer().emitDirectiveSetMips16();
   Parser.Lex(); // Consume the EndOfStatement.
@@ -7402,6 +7320,23 @@ bool MipsAsmParser::parseSetNoGINVDirective() {
   clearFeatureBits(Mips::FeatureGINV, "ginv");
 
   getTargetStreamer().emitDirectiveSetNoGINV();
+  Parser.Lex(); // Consume the EndOfStatement.
+  return false;
+}
+
+bool MipsAsmParser::parseSetNoEVADirective() {
+  MCAsmParser &Parser = getParser();
+  Parser.Lex(); // Eat "noeva".
+
+  // If this is not the end of the statement, report an error.
+  if (getLexer().isNot(AsmToken::EndOfStatement)) {
+    reportParseError("unexpected token, expected end of statement");
+    return false;
+  }
+
+  clearFeatureBits(Mips::FeatureEVA, "eva");
+
+  getTargetStreamer().emitDirectiveSetNoEVA();
   Parser.Lex(); // Consume the EndOfStatement.
   return false;
 }
@@ -7580,6 +7515,7 @@ bool MipsAsmParser::parseSetFeature(uint64_t Feature) {
     getTargetStreamer().emitDirectiveSetDspr2();
     break;
   case Mips::FeatureMicroMips:
+    clearFeatureBits(Mips::FeatureMips16, "mips16");
     setFeatureBits(Mips::FeatureMicroMips, "micromips");
     getTargetStreamer().emitDirectiveSetMicroMips();
     break;
@@ -7654,6 +7590,10 @@ bool MipsAsmParser::parseSetFeature(uint64_t Feature) {
   case Mips::FeatureGINV:
     setFeatureBits(Mips::FeatureGINV, "ginv");
     getTargetStreamer().emitDirectiveSetGINV();
+    break;
+  case Mips::FeatureEVA:
+    setFeatureBits(Mips::FeatureEVA, "eva");
+    getTargetStreamer().emitDirectiveSetEVA();
     break;
   }
   return false;
@@ -8038,6 +7978,10 @@ bool MipsAsmParser::parseDirectiveSet() {
     return parseSetFeature(Mips::FeatureGINV);
   if (IdVal == "noginv")
     return parseSetNoGINVDirective();
+  if (IdVal == "eva")
+    return parseSetFeature(Mips::FeatureEVA);
+  if (IdVal == "noeva")
+    return parseSetNoEVADirective();
 
   // It is just an identifier, look for an assignment.
   return parseSetAssignment();

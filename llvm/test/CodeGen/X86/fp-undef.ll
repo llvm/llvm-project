@@ -313,7 +313,7 @@ define double @fadd_undef_op0_constant_nan(double %x) {
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; ANY-NEXT:    retq
-  %r = fadd double undef, 0x7FF8000000000000
+  %r = fadd double undef, +qnan
   ret double %r
 }
 

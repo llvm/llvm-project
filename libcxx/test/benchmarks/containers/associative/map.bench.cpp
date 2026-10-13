@@ -34,8 +34,8 @@ template <class K, class V>
 struct support::adapt_operations<std::map<K, V>> {
   using ValueType = typename std::map<K, V>::value_type;
   using KeyType   = typename std::map<K, V>::key_type;
-  static ValueType value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
-  static KeyType key_from_value(ValueType const& value) { return value.first; }
+  static ValueType make_value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
+  static KeyType const& key_from_value(ValueType const& value) { return value.first; }
 
   using InsertionResult = std::pair<typename std::map<K, V>::iterator, bool>;
   static auto get_iterator(InsertionResult const& result) { return result.first; }

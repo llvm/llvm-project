@@ -430,10 +430,9 @@ def V3AEWrite_8c_2M0_2V0 : SchedWriteRes<[V3AEUnitM0, V3AEUnitM0, V3AEUnitV0,
   let NumMicroOps = 4;
 }
 
-def V3AEWrite_8c_2V_2V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1,
-                                         V3AEUnitV1]> {
+def V3AEWrite_8c_2V_1V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1]> {
   let Latency     = 8;
-  let NumMicroOps = 4;
+  let NumMicroOps = 3;
 }
 
 def V3AEWrite_4c_2M0_2M : SchedWriteRes<[V3AEUnitM0, V3AEUnitM0, V3AEUnitM,
@@ -524,10 +523,10 @@ def V3AEWrite_9c_2L_2V_2I : SchedWriteRes<[V3AEUnitL, V3AEUnitL, V3AEUnitV,
   let NumMicroOps = 6;
 }
 
-def V3AEWrite_9c_2V_4V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1,
-                                         V3AEUnitV1, V3AEUnitV1, V3AEUnitV1]> {
+def V3AEWrite_9c_2V_2V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1,
+                                         V3AEUnitV1]> {
   let Latency     = 9;
-  let NumMicroOps = 6;
+  let NumMicroOps = 4;
 }
 
 def V3AEWrite_2c_3SA_3V : SchedWriteRes<[V3AEUnitSA, V3AEUnitSA, V3AEUnitSA,
@@ -2254,13 +2253,13 @@ def : InstRW<[V3AEWrite_2c_1V], (instregex "^([SU]Q)?(DEC|INC)[HWD]_ZPiI")>;
 def : InstRW<[V3AEWrite_4c_2V0], (instregex "^URECPE_ZPmZ_S", "^URSQRTE_ZPmZ_S")>;
 
 // Reduction, arithmetic, B form
-def : InstRW<[V3AEWrite_9c_2V_4V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_B")>;
+def : InstRW<[V3AEWrite_9c_2V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_B")>;
 
 // Reduction, arithmetic, H form
-def : InstRW<[V3AEWrite_8c_2V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_H")>;
+def : InstRW<[V3AEWrite_8c_2V_1V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_H")>;
 
 // Reduction, arithmetic, S form
-def : InstRW<[V3AEWrite_6c_2V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_S")>;
+def : InstRW<[V3AEWrite_6c_1V_1V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_S")>;
 
 // Reduction, arithmetic, D form
 def : InstRW<[V3AEWrite_4c_2V], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_D")>;

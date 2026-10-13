@@ -63,7 +63,7 @@
 // RELOC-NOT: host
 
 //
-// Test the bindings using the new driver in LTO-mode.
+// Test the bindings in LTO-mode.
 //
 // RUN: %clang -### --target=x86_64-linux-gnu -ccc-print-phases \
 // RUN:        --offload-arch=gfx90a --offload-arch=gfx908 -foffload-lto -fgpu-rdc -c %s 2>&1 \
@@ -87,7 +87,7 @@
 // LTO-NEXT: 16: assembler, {15}, object, (host-hip)
 
 //
-// Test the new driver when not bundling
+// Test device-only compilation when not bundling.
 //
 // RUN: %clang -### --target=x86_64-linux-gnu -ccc-print-phases \
 // RUN:        --offload-device-only --offload-arch=gfx90a -emit-llvm -c %s 2>&1 \
@@ -99,7 +99,7 @@
 // DEVICE-ONLY-NEXT: 4: offload, "device-hip (amdgpu-amd-amdhsa:gfx90a)" {3}, none
 
 //
-// Test the new driver bundling SPIR-V targets.
+// Test bundling SPIR-V targets.
 //
 // RUN: %clang -### --target=x86_64-linux-gnu -ccc-print-phases \
 // RUN:        --offload-device-only -no-use-spirv-backend \
