@@ -341,8 +341,11 @@ void TransferFunctions::Visit(Stmt *S) {
     }
     case Stmt::BinaryOperatorClass: {
       auto const *BO = cast<BinaryOperator>(S);
-      if (BO->isLogicalOp())
-        AddAllConditionalTerms(val.liveExprs, LV.ESetFact, BO);
+      if (BO->isLogicalOp()) {
+        AddAllConditionalTerms(val.liveExprs, LV.ESetFact, BO->getLHS());
+        AddAllConditionalTerms(val.liveExprs, LV.ESetFact, BO->getRHS());
+        return;
+      }
       break;
     }
   }

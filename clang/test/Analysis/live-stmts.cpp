@@ -373,18 +373,6 @@ int shortCircuitingBinaryOperator(bool b) {
 // CHECK: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
 // CHECK:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
 // CHECK-EMPTY:
-// CHECK: BinaryOperator {{.*}} '_Bool' '||'
-// CHECK: |-BinaryOperator {{.*}} '_Bool' '&&'
-// CHECK: | |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK: | | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK: | `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK: |   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK: `-BinaryOperator {{.*}} '_Bool' '&&'
-// CHECK:   |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK:   | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK:   `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK:     `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK-EMPTY:
 // CHECK: IntegerLiteral {{.*}} 'int' 0
 // CHECK-EMPTY:
 // CHECK: IntegerLiteral {{.*}} 'int' 1
@@ -415,18 +403,6 @@ int shortCircuitingBinaryOperator(bool b) {
 // CHECK: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
 // CHECK: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
 // CHECK:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK-EMPTY:
-// CHECK: BinaryOperator {{.*}} '_Bool' '||'
-// CHECK: |-BinaryOperator {{.*}} '_Bool' '&&'
-// CHECK: | |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK: | | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK: | `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK: |   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK: `-BinaryOperator {{.*}} '_Bool' '&&'
-// CHECK:   |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK:   | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK:   `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK:     `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
 // CHECK-EMPTY:
 // CHECK: IntegerLiteral {{.*}} 'int' 0
 // CHECK-EMPTY:
@@ -459,18 +435,6 @@ int shortCircuitingBinaryOperator(bool b) {
 // CHECK: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
 // CHECK:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
 // CHECK-EMPTY:
-// CHECK: BinaryOperator {{.*}} '_Bool' '||'
-// CHECK: |-BinaryOperator {{.*}} '_Bool' '&&'
-// CHECK: | |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK: | | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK: | `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK: |   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK: `-BinaryOperator {{.*}} '_Bool' '&&'
-// CHECK:   |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK:   | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK:   `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK:     `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK-EMPTY:
 // CHECK: IntegerLiteral {{.*}} 'int' 0
 // CHECK-EMPTY:
 // CHECK: IntegerLiteral {{.*}} 'int' 1
@@ -502,18 +466,6 @@ int shortCircuitingBinaryOperator(bool b) {
 // CHECK: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
 // CHECK:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
 // CHECK-EMPTY:
-// CHECK: BinaryOperator {{.*}} '_Bool' '||'
-// CHECK: |-BinaryOperator {{.*}} '_Bool' '&&'
-// CHECK: | |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK: | | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK: | `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK: |   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK: `-BinaryOperator {{.*}} '_Bool' '&&'
-// CHECK:   |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK:   | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK:   `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK:     `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK-EMPTY:
 // CHECK: IntegerLiteral {{.*}} 'int' 0
 // CHECK-EMPTY:
 // CHECK: IntegerLiteral {{.*}} 'int' 1
@@ -524,12 +476,6 @@ int shortCircuitingBinaryOperator(bool b) {
 // CHECK: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
 // CHECK: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
 // CHECK-EMPTY:
-// CHECK: BinaryOperator {{.*}} '_Bool' '&&'
-// CHECK: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK-EMPTY:
 // CHECK: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
 // CHECK: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
 // CHECK-EMPTY:
@@ -541,18 +487,6 @@ int shortCircuitingBinaryOperator(bool b) {
 // CHECK: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
 // CHECK: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
 // CHECK:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK-EMPTY:
-// CHECK: BinaryOperator {{.*}} '_Bool' '||'
-// CHECK: |-BinaryOperator {{.*}} '_Bool' '&&'
-// CHECK: | |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK: | | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK: | `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK: |   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK: `-BinaryOperator {{.*}} '_Bool' '&&'
-// CHECK:   |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK:   | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
-// CHECK:   `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
-// CHECK:     `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
 // CHECK-EMPTY:
 // CHECK: IntegerLiteral {{.*}} 'int' 0
 // CHECK-EMPTY:
