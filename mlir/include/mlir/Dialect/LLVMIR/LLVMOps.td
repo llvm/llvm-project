@@ -395,6 +395,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
               OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable,
+              UnitAttr:$noundef,
               OptionalAttr<LLVM_ConstantRangeAttr>:$range);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
@@ -416,6 +417,9 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     // A nontemporal load of a float variable.
     %0 = llvm.load %ptr <nontemporal> : !llvm.ptr -> f32
 
+    // A load of a value that is neither undef nor poison.
+    %0 = llvm.load %ptr noundef : !llvm.ptr -> i32
+
     // A load of an integer known to lie in [0, 10).
     %0 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> i32
 
@@ -434,6 +438,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
       `invariant` $invariant |
       `invariant_group` $invariantGroup |
       `dereferenceable` `` $dereferenceable |
+      `noundef` $noundef |
       `range` `` $range
     )
     prop-dict
@@ -448,6 +453,10 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     }
     if ($dereferenceable)
       moduleTranslation.setDereferenceableMetadata(op, inst);
+    if ($noundef) {
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+      inst->setMetadata(llvm::LLVMContext::MD_noundef, metadata);
+    }
     if ($range) {
       llvm::MDNode *metadata = llvm::MDBuilder(inst->getContext())
           .createRange($range->getLower(), $range->getUpper());
@@ -468,6 +477,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
         loadInst->hasMetadata(llvm::LLVMContext::MD_nontemporal),
         loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_load),
         loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_group),
+        loadInst->hasMetadata(llvm::LLVMContext::MD_noundef),
         convertAtomicOrderingFromLLVM(loadInst->getOrdering()),
         getLLVMSyncScope(loadInst));
   }];
@@ -475,7 +485,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal, CArg<"bool", "false">:$isInvariant,
-      CArg<"bool", "false">:$isInvariantGroup,
+      CArg<"bool", "false">:$isInvariantGroup, CArg<"bool", "false">:$isNoundef,
       CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope)>
   ];
@@ -752,6 +762,7 @@ def LLVM_InvokeOp
     : LLVM_Op<"invoke", [AttrSizedOperandSegments,
                          DeclareOpInterfaceMethods<BranchOpInterface>,
                          DeclareOpInterfaceMethods<CallOpInterface>,
+                         DeclareOpInterfaceMethods<SymbolUserOpInterface>,
                          DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
                          Terminator]> {
   let arguments = (ins
@@ -2446,12 +2457,14 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
               LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
               OptionalAttr<I64Attr>:$alignment,
-              UnitAttr:$volatile_);
+              UnitAttr:$volatile_,
+              UnitAttr:$ignore_denormal_mode);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_AtomicRMWType:$res);
   let assemblyFormat = [{
-    (`volatile` $volatile_^)? $bin_op $ptr `,` $val
+    (`volatile` $volatile_^)? (`ignore_denormal_mode` $ignore_denormal_mode^)?
+    $bin_op $ptr `,` $val
     (`syncscope` `(` $syncscope^ `)`)? $ordering
     prop-dict
     attr-dict `:`
@@ -2464,6 +2477,7 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
         convertAtomicOrderingToLLVM($ordering));
     $res = inst;
   }] # setVolatileCode
+     # setIgnoreDenormalModeCode
      # setSyncScopeCode
      # setAlignmentCode
      # setAccessGroupsMetadataCode
@@ -2474,16 +2488,30 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
     $res = LLVM::AtomicRMWOp::create($_builder, $_location,
         convertAtomicBinOpFromLLVM(atomicInst->getOperation()), $ptr, $val,
         convertAtomicOrderingFromLLVM(atomicInst->getOrdering()),
-        getLLVMSyncScope(atomicInst), alignment, atomicInst->isVolatile());
+        getLLVMSyncScope(atomicInst), alignment, atomicInst->isVolatile(),
+        atomicInst->hasMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode));
   }];
-  list<int> llvmArgIndices = [-1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1];
+  list<int> llvmArgIndices = [-1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
   let builders = [
     OpBuilder<(ins "LLVM::AtomicBinOp":$binOp, "Value":$ptr, "Value":$val,
       "LLVM::AtomicOrdering":$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope,
-      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile
+      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
+      CArg<"bool", "false">:$ignoreDenormalMode
     )>
   ];
+  let extraClassDeclaration = [{
+    bool isFloatingPointOperation() {
+      return getBinOp() == AtomicBinOp::fadd ||
+             getBinOp() == AtomicBinOp::fsub ||
+             getBinOp() == AtomicBinOp::fmin ||
+             getBinOp() == AtomicBinOp::fmax ||
+             getBinOp() == AtomicBinOp::fminimum ||
+             getBinOp() == AtomicBinOp::fmaximum ||
+             getBinOp() == AtomicBinOp::fminimumnum ||
+             getBinOp() == AtomicBinOp::fmaximumnum;
+    }
+  }];
   let hasVerifier = 1;
 }
 

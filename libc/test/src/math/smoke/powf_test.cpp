@@ -21,6 +21,12 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
 using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
 using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
@@ -295,8 +301,7 @@ public:
   LIST_POWF_FTZ_DAZ_TESTS(suffix, func)                                        \
   static_assert(true, "Require semicolon.")
 
-LIST_POWF_TESTS(Default, LIBC_NAMESPACE::powf, /*tolerance=*/0);
-LIST_POWF_TESTS(DoubleEval, LIBC_NAMESPACE::math::double_eval::powf,
-                /*tolerance=*/0);
+LIST_POWF_TESTS(Default, LIBC_NAMESPACE::powf, TOLERANCE);
+LIST_POWF_TESTS(DoubleEval, LIBC_NAMESPACE::math::double_eval::powf, TOLERANCE);
 LIST_POWF_TESTS(FloatEval, LIBC_NAMESPACE::math::float_eval::powf,
                 /*tolerance=*/1);

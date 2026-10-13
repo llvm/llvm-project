@@ -1688,6 +1688,8 @@ llvm.func @atomicrmw(
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
   %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic <alignment = 8> : !llvm.ptr, i32
+  // CHECK: atomicrmw fadd ptr %{{.*}}, float %{{.*}} monotonic, align 4, !atomic.ignore.denormal.mode !{{[0-9]+}}
+  %28 = llvm.atomicrmw ignore_denormal_mode fadd %f32_ptr, %f32 monotonic : !llvm.ptr, f32
   llvm.return
 }
 
@@ -2129,6 +2131,17 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
   // CHECK: !invariant.load ![[NODE:[0-9]+]]
   %1 = llvm.load %ptr invariant : !llvm.ptr -> i32
   llvm.return %1 : i32
+}
+
+// CHECK: ![[NODE]] = !{}
+
+// -----
+
+// CHECK-LABEL: @noundef_load
+llvm.func @noundef_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: load i32, ptr %{{.*}}, align 4, !noundef ![[NODE:[0-9]+]]
+  %0 = llvm.load %ptr noundef : !llvm.ptr -> i32
+  llvm.return %0 : i32
 }
 
 // CHECK: ![[NODE]] = !{}

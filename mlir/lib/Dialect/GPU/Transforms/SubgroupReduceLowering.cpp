@@ -128,7 +128,7 @@ private:
 /// ```
 struct ScalarizeSingleElementReduce final
     : OpRewritePattern<gpu::SubgroupReduceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(gpu::SubgroupReduceOp op,
                                 PatternRewriter &rewriter) const override {

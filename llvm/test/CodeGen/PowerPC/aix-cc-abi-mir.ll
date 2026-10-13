@@ -13,7 +13,7 @@ define void @call_test_chars() {
   ; 32BIT-NEXT:   $r4 = LI 97
   ; 32BIT-NEXT:   $r5 = LI 97
   ; 32BIT-NEXT:   $r6 = LI 97
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_chars>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit killed $r3, implicit killed $r4, implicit killed $r5, implicit killed $r6, implicit $r2, implicit-def $r1, implicit-def dead $r3
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_chars>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r2, implicit-def $r1, implicit-def dead $r3
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -24,7 +24,7 @@ define void @call_test_chars() {
   ; 64BIT-NEXT:   $x4 = LI8 97
   ; 64BIT-NEXT:   $x5 = LI8 97
   ; 64BIT-NEXT:   $x6 = LI8 97
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_chars>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit killed $x4, implicit killed $x5, implicit killed $x6, implicit $x2, implicit-def $r1, implicit-def dead $x3
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_chars>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x2, implicit-def $r1, implicit-def dead $x3
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -72,7 +72,7 @@ define void @call_test_chars_mix() {
   ; 32BIT-NEXT:   $r4 = LI 225
   ; 32BIT-NEXT:   $r5 = LI 97
   ; 32BIT-NEXT:   $r6 = LI -31
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_chars_mix>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit killed $r3, implicit killed $r4, implicit killed $r5, implicit killed $r6, implicit $r2, implicit-def $r1, implicit-def dead $r3
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_chars_mix>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r2, implicit-def $r1, implicit-def dead $r3
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -83,7 +83,7 @@ define void @call_test_chars_mix() {
   ; 64BIT-NEXT:   $x4 = LI8 225
   ; 64BIT-NEXT:   $x5 = LI8 97
   ; 64BIT-NEXT:   $x6 = LI8 -31
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_chars_mix>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit killed $x4, implicit killed $x5, implicit killed $x6, implicit $x2, implicit-def $r1, implicit-def dead $x3
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_chars_mix>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x2, implicit-def $r1, implicit-def dead $x3
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -154,7 +154,7 @@ define void @call_test_i1() {
   ; 32BIT: bb.0.entry:
   ; 32BIT-NEXT:   ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   $r3 = LI 1
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_i1>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit killed $r3, implicit $r2, implicit-def $r1
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_i1>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r2, implicit-def $r1
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -162,7 +162,7 @@ define void @call_test_i1() {
   ; 64BIT: bb.0.entry:
   ; 64BIT-NEXT:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   $x3 = LI8 1
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_i1>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_i1>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -241,7 +241,7 @@ define void @call_test_ints() {
   ; 32BIT-NEXT:   $r8 = LI 1
   ; 32BIT-NEXT:   $r9 = LI 1
   ; 32BIT-NEXT:   $r10 = LI 1
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_ints>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit killed $r3, implicit killed $r4, implicit killed $r5, implicit killed $r6, implicit killed $r7, implicit killed $r8, implicit killed $r9, implicit killed $r10, implicit $r2, implicit-def $r1, implicit-def dead $r3
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_ints>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1, implicit-def dead $r3
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -257,7 +257,7 @@ define void @call_test_ints() {
   ; 64BIT-NEXT:   $x8 = LI8 1
   ; 64BIT-NEXT:   $x9 = LI8 1
   ; 64BIT-NEXT:   $x10 = LI8 1
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_ints>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit killed $x4, implicit $x5, implicit killed $x6, implicit killed $x7, implicit killed $x8, implicit killed $x9, implicit killed $x10, implicit $x2, implicit-def $r1, implicit-def dead $x3
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_ints>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x2, implicit-def $r1, implicit-def dead $x3
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -277,7 +277,7 @@ define void @call_test_i64() {
   ; 32BIT-NEXT:   $r8 = LI 3
   ; 32BIT-NEXT:   $r9 = LI 0
   ; 32BIT-NEXT:   $r10 = LI 4
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_i64>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit killed $r3, implicit killed $r4, implicit killed $r5, implicit killed $r6, implicit killed $r7, implicit killed $r8, implicit killed $r9, implicit killed $r10, implicit $r2, implicit-def $r1, implicit-def dead $r3, implicit-def dead $r4
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_i64>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1, implicit-def dead $r3, implicit-def dead $r4
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -288,7 +288,7 @@ define void @call_test_i64() {
   ; 64BIT-NEXT:   $x4 = LI8 2
   ; 64BIT-NEXT:   $x5 = LI8 3
   ; 64BIT-NEXT:   $x6 = LI8 4
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_i64>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit killed $x4, implicit killed $x5, implicit killed $x6, implicit $x2, implicit-def $r1, implicit-def dead $x3
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_i64>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x2, implicit-def $r1, implicit-def dead $x3
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -302,11 +302,11 @@ define i64 @test_i64(i64 %a, i64 %b, i64 %c, i64 %d) {
   ; 32BIT-NEXT:   liveins: $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10
   ; 32BIT-NEXT: {{  $}}
   ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r4, killed renamable $r6, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r5, implicit-def dead $carry, implicit killed $carry
+  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r5, implicit-def dead $carry, implicit $carry
   ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r4, killed renamable $r8, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r7, implicit-def dead $carry, implicit killed $carry
+  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r7, implicit-def dead $carry, implicit $carry
   ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r4, killed renamable $r10, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r9, implicit-def dead $carry, implicit killed $carry
+  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r9, implicit-def dead $carry, implicit $carry
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3, implicit $r4
   ;
   ; 64BIT-LABEL: name: test_i64
@@ -426,7 +426,7 @@ define void @call_test_floats() {
   ; 32BIT-NEXT:   ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   $f2 = COPY renamable $f1
   ; 32BIT-NEXT:   $f3 = COPY renamable $f1
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_floats>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit killed $f2, implicit killed $f3, implicit $r2, implicit-def $r1, implicit-def dead $f1
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_floats>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $r2, implicit-def $r1, implicit-def dead $f1
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -437,7 +437,7 @@ define void @call_test_floats() {
   ; 64BIT-NEXT:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   $f2 = COPY renamable $f1
   ; 64BIT-NEXT:   $f3 = COPY renamable $f1
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_floats>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit killed $f2, implicit killed $f3, implicit $x2, implicit-def $r1, implicit-def dead $f1
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_floats>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $x2, implicit-def $r1, implicit-def dead $f1
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -495,7 +495,7 @@ define void @call_test_fpr_max() {
   ; 32BIT-NEXT:   $f12 = COPY renamable $f1
   ; 32BIT-NEXT:   $f13 = COPY renamable $f1
   ; 32BIT-NEXT:   STFD renamable $f1, 56, $r1 :: (store (s64) into stack + 56, basealign 16)
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_fpr_max>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit killed $f2, implicit killed $f3, implicit killed $f4, implicit killed $f5, implicit killed $f6, implicit killed $f7, implicit killed $f8, implicit killed $f9, implicit killed $f10, implicit killed $f11, implicit killed $f12, implicit killed $f13, implicit $r2, implicit-def $r1, implicit-def dead $f1
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_fpr_max>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit $f10, implicit $f11, implicit $f12, implicit $f13, implicit $r2, implicit-def $r1, implicit-def dead $f1
   ; 32BIT-NEXT:   ADJCALLSTACKUP 128, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -521,7 +521,7 @@ define void @call_test_fpr_max() {
   ; 64BIT-NEXT:   $f12 = COPY renamable $f1
   ; 64BIT-NEXT:   $f13 = COPY renamable $f1
   ; 64BIT-NEXT:   STFD renamable $f1, 112, $x1 :: (store (s64) into stack + 112, align 16)
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_fpr_max>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit killed $f2, implicit killed $f3, implicit killed $f4, implicit killed $f5, implicit killed $f6, implicit killed $f7, implicit killed $f8, implicit killed $f9, implicit killed $f10, implicit killed $f11, implicit killed $f12, implicit killed $f13, implicit $x2, implicit-def $r1, implicit-def dead $f1
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_fpr_max>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit $f10, implicit $f11, implicit $f12, implicit $f13, implicit $x2, implicit-def $r1, implicit-def dead $f1
   ; 64BIT-NEXT:   ADJCALLSTACKUP 152, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -592,7 +592,7 @@ define void @call_test_mix() {
   ; 32BIT-NEXT:   ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   $r4 = LI 1
   ; 32BIT-NEXT:   $r7 = LI 97
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_mix>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit $r4, implicit $f2, implicit killed $r7, implicit $r2, implicit-def $r1, implicit-def dead $r3
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_mix>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit $r4, implicit $f2, implicit $r7, implicit $r2, implicit-def $r1, implicit-def dead $r3
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -605,7 +605,7 @@ define void @call_test_mix() {
   ; 64BIT-NEXT:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   $x4 = LI8 1
   ; 64BIT-NEXT:   $x6 = LI8 97
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_mix>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit $x4, implicit $f2, implicit killed $x6, implicit $x2, implicit-def $r1, implicit-def dead $x3
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_mix>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit $x4, implicit $f2, implicit $x6, implicit $x2, implicit-def $r1, implicit-def dead $x3
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -680,7 +680,7 @@ define i64 @callee_mixed_ints(i32 %a, i8 signext %b, i32 %c, i16 signext %d, i64
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r6
   ; 32BIT-NEXT:   renamable $r5 = SRAWI renamable $r3, 31, implicit-def dead $carry
   ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r3, killed renamable $r8, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r5, killed renamable $r7, implicit-def dead $carry, implicit killed $carry
+  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r5, killed renamable $r7, implicit-def dead $carry, implicit $carry
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3, implicit $r4
   ;
   ; 64BIT-LABEL: name: callee_mixed_ints
@@ -765,7 +765,7 @@ define void @call_test_vararg2() {
   ; 32BIT-NEXT:   ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   $r3 = LI 42
   ; 32BIT-NEXT:   $r6 = LI 42
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_vararg[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $f1, implicit $r4, implicit $r5, implicit killed $r6, implicit $f2, implicit $r7, implicit $r8, implicit $r2, implicit-def $r1
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_vararg[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $f1, implicit $r4, implicit $r5, implicit $r6, implicit $f2, implicit $r7, implicit $r8, implicit $r2, implicit-def $r1
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -782,7 +782,7 @@ define void @call_test_vararg2() {
   ; 64BIT-NEXT:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   $x3 = LI8 42
   ; 64BIT-NEXT:   $x5 = LI8 42
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_vararg[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $f1, implicit $x4, implicit killed $x5, implicit $f2, implicit $x6, implicit $x2, implicit-def $r1
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_vararg[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $f1, implicit $x4, implicit $x5, implicit $f2, implicit $x6, implicit $x2, implicit-def $r1
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -810,7 +810,7 @@ define void @call_test_vararg3() {
   ; 32BIT-NEXT:   $r3 = LI 42
   ; 32BIT-NEXT:   $r6 = LI 0
   ; 32BIT-NEXT:   $r7 = LI 42
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_vararg[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $f1, implicit $r4, implicit $r5, implicit killed $r6, implicit killed $r7, implicit $f2, implicit $r8, implicit $r9, implicit $r2, implicit-def $r1
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_vararg[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $f1, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $f2, implicit $r8, implicit $r9, implicit $r2, implicit-def $r1
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -827,7 +827,7 @@ define void @call_test_vararg3() {
   ; 64BIT-NEXT:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   $x3 = LI8 42
   ; 64BIT-NEXT:   $x5 = LI8 42
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_vararg[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $f1, implicit $x4, implicit killed $x5, implicit $f2, implicit $x6, implicit $x2, implicit-def $r1
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_vararg[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $f1, implicit $x4, implicit $x5, implicit $f2, implicit $x6, implicit $x2, implicit-def $r1
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -966,7 +966,7 @@ define void @call_test_stackarg_float() {
   ; 32BIT-NEXT:   $r9 = LI 7
   ; 32BIT-NEXT:   $r10 = LI 8
   ; 32BIT-NEXT:   STFS renamable $f1, 56, $r1 :: (store (s32) into stack + 56, align 8, basealign 16)
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_stackarg_float[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit killed $r5, implicit killed $r6, implicit killed $r7, implicit killed $r8, implicit killed $r9, implicit killed $r10, implicit $f1, implicit $f2, implicit $r2, implicit-def $r1
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_stackarg_float[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $r10, implicit $f1, implicit $f2, implicit $r2, implicit-def $r1
   ; 32BIT-NEXT:   ADJCALLSTACKUP 68, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -987,7 +987,7 @@ define void @call_test_stackarg_float() {
   ; 64BIT-NEXT:   $x9 = LI8 7
   ; 64BIT-NEXT:   $x10 = LI8 8
   ; 64BIT-NEXT:   STFS renamable $f1, 112, $x1 :: (store (s32) into stack + 112, align 16)
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_stackarg_float[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit killed $x5, implicit killed $x6, implicit killed $x7, implicit killed $x8, implicit killed $x9, implicit killed $x10, implicit $f1, implicit $f2, implicit $x2, implicit-def $r1
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_stackarg_float[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $f1, implicit $f2, implicit $x2, implicit-def $r1
   ; 64BIT-NEXT:   ADJCALLSTACKUP 128, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -1014,7 +1014,7 @@ define void @call_test_stackarg_float2() {
   ; 32BIT-NEXT:   $r6 = LI 4
   ; 32BIT-NEXT:   $r7 = LI 5
   ; 32BIT-NEXT:   $r8 = LI 6
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_stackarg_float2[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit killed $r4, implicit killed $r5, implicit killed $r6, implicit killed $r7, implicit killed $r8, implicit $f1, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_stackarg_float2[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $f1, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -1031,7 +1031,7 @@ define void @call_test_stackarg_float2() {
   ; 64BIT-NEXT:   $x6 = LI8 4
   ; 64BIT-NEXT:   $x7 = LI8 5
   ; 64BIT-NEXT:   $x8 = LI8 6
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_stackarg_float2[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit killed $x4, implicit killed $x5, implicit killed $x6, implicit killed $x7, implicit killed $x8, implicit $f1, implicit $x9, implicit $x2, implicit-def $r1
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_stackarg_float2[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $f1, implicit $x9, implicit $x2, implicit-def $r1
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -1062,7 +1062,7 @@ define void @call_test_stackarg_float3() {
   ; 32BIT-NEXT:   $r8 = LI 6
   ; 32BIT-NEXT:   $r9 = LI 7
   ; 32BIT-NEXT:   STFD renamable $f1, 52, $r1 :: (store (s64) into stack + 52, align 4, basealign 16)
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_stackarg_float3[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit killed $r4, implicit killed $r5, implicit killed $r6, implicit killed $r7, implicit killed $r8, implicit killed $r9, implicit $f1, implicit $r10, implicit $f2, implicit $r2, implicit-def $r1
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_stackarg_float3[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $f1, implicit $r10, implicit $f2, implicit $r2, implicit-def $r1
   ; 32BIT-NEXT:   ADJCALLSTACKUP 64, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -1083,7 +1083,7 @@ define void @call_test_stackarg_float3() {
   ; 64BIT-NEXT:   $x8 = LI8 6
   ; 64BIT-NEXT:   $x9 = LI8 7
   ; 64BIT-NEXT:   STFS renamable $f2, 112, $x1 :: (store (s32) into stack + 112, align 16)
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_stackarg_float3[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit killed $x4, implicit killed $x5, implicit killed $x6, implicit killed $x7, implicit killed $x8, implicit killed $x9, implicit $f1, implicit $x10, implicit $f2, implicit $x2, implicit-def $r1
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_stackarg_float3[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $f1, implicit $x10, implicit $f2, implicit $x2, implicit-def $r1
   ; 64BIT-NEXT:   ADJCALLSTACKUP 120, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -1149,7 +1149,7 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
   ; 64BIT-NEXT:   renamable $x2 = LWA 0, %fixed-stack.0 :: (load (s32) from %fixed-stack.0)
   ; 64BIT-NEXT:   renamable $x31 = LD 0, %fixed-stack.2 :: (load (s64) from %fixed-stack.2)
   ; 64BIT-NEXT:   renamable $x30 = LWA 0, %fixed-stack.3 :: (load (s32) from %fixed-stack.3)
-  ; 64BIT-NEXT:   renamable $x29 = LHA8 2, %fixed-stack.6
+  ; 64BIT-NEXT:   renamable $x29 = LHA8 2, %fixed-stack.6 :: (load (s16) from %fixed-stack.6 + 2, basealign 4)
   ; 64BIT-NEXT:   renamable $x28 = LD 0, %fixed-stack.7 :: (load (s64) from %fixed-stack.7, align 16)
   ; 64BIT-NEXT:   renamable $r3 = nsw ADD4 renamable $r3, renamable $r4, implicit killed $x4, implicit killed $x3
   ; 64BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, renamable $r5, implicit killed $x5
@@ -1523,7 +1523,7 @@ define void @caller_fpr_stack() {
   ; 32BIT-NEXT:   STFD killed renamable $f0, 132, $r1 :: (store (s64) into stack + 132, align 4, basealign 16)
   ; 32BIT-NEXT:   $f10 = COPY renamable $f1
   ; 32BIT-NEXT:   STW killed renamable $r3, 128, $r1 :: (store (s32) into stack + 128, align 16)
-  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_fpr_stack>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit killed $f10, implicit $f11, implicit $f12, implicit $f13, implicit $r2, implicit-def $r1, implicit-def dead $f1
+  ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_fpr_stack>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit $f10, implicit $f11, implicit $f12, implicit $f13, implicit $r2, implicit-def $r1, implicit-def dead $f1
   ; 32BIT-NEXT:   ADJCALLSTACKUP 144, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
   ;
@@ -1594,7 +1594,7 @@ define void @caller_fpr_stack() {
   ; 64BIT-NEXT:   STD killed renamable $x4, 128, $x1 :: (store (s64) into stack + 128, align 16)
   ; 64BIT-NEXT:   STD killed renamable $x7, 120, $x1 :: (store (s64) into stack + 120, basealign 16)
   ; 64BIT-NEXT:   STD killed renamable $x8, 112, $x1 :: (store (s64) into stack + 112, align 16)
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_fpr_stack>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit killed $f10, implicit $f11, implicit $f12, implicit $f13, implicit $x2, implicit-def $r1, implicit-def dead $f1
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_fpr_stack>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit $f10, implicit $f11, implicit $f12, implicit $f13, implicit $x2, implicit-def $r1, implicit-def dead $f1
   ; 64BIT-NEXT:   ADJCALLSTACKUP 176, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
@@ -1734,7 +1734,7 @@ define void @caller_mix() {
   ; 64BIT-NEXT:   $x10 = LI8 40
   ; 64BIT-NEXT:   STD killed renamable $x4, 120, $x1 :: (store (s64) into stack + 120, basealign 16)
   ; 64BIT-NEXT:   STD killed renamable $x5, 112, $x1 :: (store (s64) into stack + 112, align 16)
-  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .mix_callee>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit killed $x7, implicit killed $x8, implicit $x9, implicit killed $x10, implicit $x2, implicit-def $r1, implicit-def dead $x3
+  ; 64BIT-NEXT:   BL8_NOP <mcsymbol .mix_callee>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x2, implicit-def $r1, implicit-def dead $x3
   ; 64BIT-NEXT:   ADJCALLSTACKUP 128, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
   entry:

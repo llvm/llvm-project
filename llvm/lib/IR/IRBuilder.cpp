@@ -48,7 +48,7 @@ GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
                                                   Module *M, bool AddNull) {
   Constant *StrConstant = ConstantDataArray::getString(Context, Str, AddNull);
   if (!M)
-    M = BB->getParent()->getParent();
+    M = getModule();
   auto *GV = new GlobalVariable(
       *M, StrConstant->getType(), true, GlobalValue::PrivateLinkage,
       StrConstant, Name, nullptr, GlobalVariable::NotThreadLocal, AddressSpace);
@@ -214,7 +214,7 @@ Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
 }
 
 Value *IRBuilderBase::CreateAllocationSize(Type *DestTy, AllocaInst *AI) {
-  const DataLayout &DL = BB->getDataLayout();
+  const DataLayout &DL = getDataLayout();
   TypeSize ElemSize = AI->getAllocationBaseSize(DL);
   Value *Size = CreateTypeSize(DestTy, ElemSize);
   if (AI->isArrayAllocation())
@@ -370,7 +370,7 @@ CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Value *AllocSize,
 
   assert(AllocSize->getType() == IntPtrTy && "malloc arg is wrong size");
   // Create the call to Malloc.
-  Module *M = BB->getParent()->getParent();
+  Module *M = getModule();
   Type *BPTy = PointerType::getUnqual(Context);
   FunctionCallee MallocFunc = MallocF;
   if (!MallocFunc)
@@ -402,7 +402,7 @@ CallInst *IRBuilderBase::CreateFree(Value *Source,
   assert(Source->getType()->isPointerTy() &&
          "Can not free something of nonpointer type!");
 
-  Module *M = BB->getParent()->getParent();
+  Module *M = getModule();
 
   Type *VoidTy = Type::getVoidTy(M->getContext());
   Type *VoidPtrTy = PointerType::getUnqual(M->getContext());
@@ -787,7 +787,7 @@ static CallInst *CreateGCStatepointCallCommon(
     std::optional<ArrayRef<T1>> TransitionArgs,
     std::optional<ArrayRef<T2>> DeoptArgs, ArrayRef<T3> GCArgs,
     const Twine &Name) {
-  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder->getModule();
   // Fill in the one generic type'd argument (the function is also vararg)
   Function *FnStatepoint = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::experimental_gc_statepoint,
@@ -842,7 +842,7 @@ static InvokeInst *CreateGCStatepointInvokeCommon(
     std::optional<ArrayRef<T1>> TransitionArgs,
     std::optional<ArrayRef<T2>> DeoptArgs, ArrayRef<T3> GCArgs,
     const Twine &Name) {
-  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder->getModule();
   // Fill in the one generic type'd argument (the function is also vararg)
   Function *FnStatepoint = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::experimental_gc_statepoint,
@@ -931,7 +931,7 @@ CallInst *IRBuilderBase::CreateGCGetPointerOffset(Value *DerivedPtr,
 Value *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
                                            FMFSource FMFSource,
                                            const Twine &Name) {
-  Module *M = BB->getModule();
+  Module *M = getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, Op->getType());
   if (Value *V =
           Folder.FoldIntrinsic(ID, Op, Fn->getReturnType(), FMFSource.get(FMF),
@@ -943,7 +943,7 @@ Value *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
 Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
                                             Value *RHS, FMFSource FMFSource,
                                             const Twine &Name) {
-  Module *M = BB->getModule();
+  Module *M = getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, {LHS->getType()});
   if (Value *V = Folder.FoldIntrinsic(ID, {LHS, RHS}, Fn->getReturnType(),
                                       FMFSource.get(FMF),
@@ -956,7 +956,7 @@ CallInst *IRBuilderBase::CreateIntrinsicWithoutFolding(
     Intrinsic::ID ID, ArrayRef<Type *> OverloadTypes, ArrayRef<Value *> Args,
     FMFSource FMFSource, const Twine &Name,
     ArrayRef<OperandBundleDef> OpBundles) {
-  Module *M = BB->getModule();
+  Module *M = getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, OverloadTypes);
   return createCallHelper(Fn, Args, Name, FMFSource, OpBundles);
 }
@@ -966,7 +966,7 @@ CallInst *IRBuilderBase::CreateIntrinsicWithoutFolding(Type *RetTy,
                                                        ArrayRef<Value *> Args,
                                                        FMFSource FMFSource,
                                                        const Twine &Name) {
-  Module *M = BB->getModule();
+  Module *M = getModule();
   SmallVector<Type *> ArgTys = llvm::map_to_vector(Args, &Value::getType);
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, RetTy, ArgTys);
   return createCallHelper(Fn, Args, Name, FMFSource);
@@ -1186,7 +1186,7 @@ Value *IRBuilderBase::CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name,
 }
 Value *IRBuilderBase::CreatePtrDiff(Type *ElemTy, Value *LHS, Value *RHS,
                                     const Twine &Name) {
-  const DataLayout &DL = BB->getDataLayout();
+  const DataLayout &DL = getDataLayout();
   TypeSize ElemSize = DL.getTypeAllocSize(ElemTy);
   if (ElemSize == TypeSize::getFixed(1))
     return CreatePtrDiff(LHS, RHS, Name);
@@ -1199,7 +1199,7 @@ Value *IRBuilderBase::CreateLaunderInvariantGroup(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "launder.invariant.group only applies to pointers.");
   auto *PtrType = Ptr->getType();
-  Module *M = BB->getParent()->getParent();
+  Module *M = getModule();
   Function *FnLaunderInvariantGroup = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::launder_invariant_group, {PtrType});
 
@@ -1214,7 +1214,7 @@ Value *IRBuilderBase::CreateLaunderInvariantGroup(Value *Ptr) {
 Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {
   auto *Ty = cast<VectorType>(V->getType());
   if (isa<ScalableVectorType>(Ty)) {
-    Module *M = BB->getParent()->getParent();
+    Module *M = getModule();
     Function *F =
         Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_reverse, Ty);
     return Insert(CallInst::Create(F, V), Name);
@@ -1431,8 +1431,6 @@ CallInst *IRBuilderBase::CreateNonnullAssumption(Value *PtrValue) {
   return CreateAssumption(OperandBundleDef("nonnull", PtrValue));
 }
 
-IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;
-IRBuilderCallbackInserter::~IRBuilderCallbackInserter() = default;
-IRBuilderFolder::~IRBuilderFolder() = default;
+void IRBuilderFolder::anchor() {}
 void ConstantFolder::anchor() {}
 void NoFolder::anchor() {}
