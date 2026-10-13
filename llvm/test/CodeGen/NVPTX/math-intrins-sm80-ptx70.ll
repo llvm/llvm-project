@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx70 | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx70 --nvptx-strict-abs --nvptx-strict-neg | FileCheck %s
 ; RUN: %if ptxas-sm_80 && ptxas-isa-7.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx70 | %ptxas-verify -arch=sm_80 %}
 
 declare bfloat @llvm.nvvm.abs.bf16(bfloat)
