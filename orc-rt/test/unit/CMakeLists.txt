@@ -155,6 +155,7 @@ if (ORC_RT_TARGET_POSIX)
     )
 
   add_orc_rt_unittest(ConnectTCPTests
+    connect-tcp/TCPConnectorTest.cpp
     connect-tcp/TCPTest.cpp
 
     connect-tcp/sys/posix/TCPCloseOnExecTest.cpp
