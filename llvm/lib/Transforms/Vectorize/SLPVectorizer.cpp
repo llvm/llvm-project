@@ -32325,7 +32325,11 @@ public:
                      &ReducedValsToOps,
                  const SmallPtrSetImpl<Value *> &NegatedReducedVals,
                  bool HasNarrowedLeafShifts) {
+      // A two-value reduction is unordered by commutativity alone; the
+      // accumulator reassociates the reduction across the loop iterations,
+      // which requires a genuinely associative operation.
       if (!VectorizeLoopAccRdx || RK != ReductionOrdering::Unordered ||
+          isVectorizable(RdxKind, Root) != ReductionOrdering::Unordered ||
           Root->getType()->isIntegerTy(1) || Root->getType()->isVectorTy() ||
           HasNarrowedLeafShifts || isCmpSelMinMax(Root) ||
           Root->hasNUsesOrMore(UsesLimit))
@@ -34350,8 +34354,14 @@ private:
             Instruction *RdxOp = GetReductionOp(RdxVal);
             if (Cnt == 1) {
               unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
-              Cost +=
-                  (SameValueCount ? SameValueCount - 1 : 0) * GenCostFn(RdxOp);
+              // A loop-carried chain removes one operation per reduced value;
+              // its last operation, the reduction root, folds the accumulator
+              // phi back and is credited by the accumulation cost instead.
+              unsigned NumRemoved = SameValueCount ? SameValueCount - 1 : 0;
+              if (RdxKind == RecurKind::FAdd && IsLoopCarriedRoot &&
+                  RdxOp != ReductionRoot)
+                NumRemoved = SameValueCount ? SameValueCount : 1;
+              Cost += NumRemoved * GenCostFn(RdxOp);
               break;
             }
             --Cnt;
@@ -34363,12 +34373,16 @@ private:
             InstructionCost ScalarCost = 0;
             for (User *U : RdxVal->users()) {
               auto *RdxOp = cast<Instruction>(U);
+              // The loop-carried root is not removed: the horizontal form
+              // folds the accumulator phi back through it, the accumulator
+              // form replaces it with the lane-wise operation, costed by
+              // the accumulation cost.
+              if (RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot &&
+                  IsLoopCarriedRoot)
+                continue;
               // The reduction root is used outside of the reduction any
-              // number of times, its fmul operand is still fused into it. The
-              // loop-carried chain is bound by its latency, so the fusion does
-              // not make it cheaper than the vector code, which cuts the chain.
-              if ((RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot &&
-                   !IsLoopCarriedRoot) ||
+              // number of times, its fmul operand is still fused into it.
+              if ((RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot) ||
                   hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
                 InstructionsState RdxOpS = RdxKind == RecurKind::FAdd
                                                ? getSameOpcode(RdxOp, TLI)
