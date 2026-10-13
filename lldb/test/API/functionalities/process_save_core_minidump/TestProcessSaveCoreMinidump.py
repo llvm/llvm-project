@@ -635,7 +635,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
     @skipUnlessPlatform(["linux"])
     @skipUnlessArch("x86_64")
-    def minidump_saves_tls(self):
+    def test_minidump_saves_tls(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
         try:
@@ -656,10 +656,10 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             core_target = self.dbg.CreateTarget(None)
             core_proc = core_target.LoadCore(tls_file)
             frame = core_proc.GetThreadAtIndex(0).GetFrameAtIndex(0)
-            tls_val = frame.FindValue("lf")
+            tls_val = frame.FindValue("lf", lldb.eValueTypeVariableGlobal)
             self.assertEqual(tls_val.GetValueAsUnsigned(), 42)
 
-        except:
+        finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
             if os.path.isfile(tls_file):
                 os.unlink(tls_file)
