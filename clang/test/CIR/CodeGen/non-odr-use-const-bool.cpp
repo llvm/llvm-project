@@ -25,18 +25,38 @@ void pass_to_call(Foo x) {
 // OGCG:         call void @_Z9take_boolb(i1 {{.*}}true)
 
 int use_in_if(Foo x) {
-  if (x.flag) return 1;
+  if (x.flag && side()) return 1;
   return 0;
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z9use_in_if3Foo
-// CIR:         %[[B_IF:.+]] = cir.const #true
+// CIR:         %[[FLAG:.+]] = cir.const #true
+// CIR:         %[[B_IF:.*]] = cir.ternary(%[[FLAG]], true {
+// CIR-NEXT:    %[[SIDE:.*]] = cir.call @_Z4sidev()
+// CIR-NEXT:    %[[SIDE_CAST:.*]] = cir.cast int_to_bool %[[SIDE]]
+// CIR-NEXT:    cir.yield %[[SIDE_CAST]]
+// CIR-NEXT:    }, false {
+// CIR-NEXT:    %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:    cir.yield %[[FALSE]]
+// CIR-NEXT:    })
 // CIR:         cir.if %[[B_IF]]
 
 // LLVM-LABEL: define {{.*}}i32 @_Z9use_in_if3Foo
-// LLVM:         br i1 true,
+// LLVM:       br i1 true, label %[[TRUE:.*]], label %[[FALSE:.*]]
+// LLVM:       [[TRUE]]:
+// LLVM:       %[[SIDE:.*]] = call noundef i32 @_Z4sidev()
+// LLVM:       %[[CMP:.*]] = icmp ne i32 %[[SIDE]], 0
+// LLVM:       br label %[[END:.*]]
+// LLVM:       [[FALSE:.*]]:
+// LLVM:       br label %[[END]]
+// LLVM:       %[[PHI:.*]] = phi i1 [ false, %[[FALSE]] ], [ %[[CMP]], %[[TRUE]] ]
+// LLVM:       br i1 %[[PHI]]
 
+// Classic codegen const-folds the 'true' branch away.
 // OGCG-LABEL: define {{.*}}i32 @_Z9use_in_if3Foo
+// OGCG:       %[[SIDE:.*]] = call noundef i32 @_Z4sidev()
+// OGCG:       %[[CMP:.*]] = icmp ne i32 %[[SIDE]], 0
+// OGCG:       br i1 %[[CMP]]
 
 int short_circuit(Foo x) {
   return (x.flag && side()) ? 1 : 0;
@@ -47,5 +67,18 @@ int short_circuit(Foo x) {
 // CIR:         cir.ternary(%[[B_TERN]],
 
 // LLVM-LABEL: define {{.*}}i32 @_Z13short_circuit3Foo
+// LLVM:         br i1 true, label %[[TRUE:.*]], label %[[FALSE:.*]]
+// LLVM:       [[TRUE]]:
+// LLVM:       %[[SIDE:.*]] = call noundef i32 @_Z4sidev()
+// LLVM:       %[[CMP:.*]] = icmp ne i32 %[[SIDE]], 0
+// LLVM:       br label %[[END:.*]]
+// LLVM:       [[FALSE:.*]]:
+// LLVM:       br label %[[END]]
+// LLVM:       %[[PHI:.*]] = phi i1 [ false, %[[FALSE]] ], [ %[[CMP]], %[[TRUE]] ]
+// LLVM:       select i1 %[[PHI]]
 
+// Classic codegen const-folds the 'true' branch away.
 // OGCG-LABEL: define {{.*}}i32 @_Z13short_circuit3Foo
+// OGCG:       %[[SIDE:.*]] = call noundef i32 @_Z4sidev()
+// OGCG:       %[[CMP:.*]] = icmp ne i32 %[[SIDE]], 0
+// OGCG:       select i1 %[[CMP]], i32 1, i32 0

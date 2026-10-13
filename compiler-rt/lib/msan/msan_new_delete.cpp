@@ -11,9 +11,10 @@
 // Interceptors for operators new and delete.
 //===----------------------------------------------------------------------===//
 
-#include "msan.h"
 #include "interception/interception.h"
+#include "msan.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
 
 #if MSAN_REPLACE_OPERATORS_NEW_AND_DELETE
@@ -38,13 +39,17 @@ namespace std {
       ReportOutOfMemory(size, &stack);        \
     }                                         \
     return res
-#  define OPERATOR_NEW_BODY_ALIGN(nothrow)                \
-    GET_MALLOC_STACK_TRACE;                               \
-    void *res = msan_memalign((uptr)align, size, &stack); \
-    if (!nothrow && UNLIKELY(!res)) {                     \
-      GET_FATAL_STACK_TRACE_IF_EMPTY(&stack);             \
-      ReportOutOfMemory(size, &stack);                    \
-    }                                                     \
+#  define OPERATOR_NEW_BODY_ALIGN(nothrow)                   \
+    GET_MALLOC_STACK_TRACE;                                  \
+    if (UNLIKELY(!CheckAlignedNewAlignment((uptr)align))) {  \
+      GET_FATAL_STACK_TRACE_IF_EMPTY(&stack);                \
+      ReportInvalidAllocationAlignment((uptr)align, &stack); \
+    }                                                        \
+    void* res = msan_memalign((uptr)align, size, &stack);    \
+    if (!nothrow && UNLIKELY(!res)) {                        \
+      GET_FATAL_STACK_TRACE_IF_EMPTY(&stack);                \
+      ReportOutOfMemory(size, &stack);                       \
+    }                                                        \
     return res;
 
 INTERCEPTOR_ATTRIBUTE

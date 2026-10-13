@@ -445,7 +445,6 @@ public:
                            unsigned Scale);
 
   bool tryBitfieldExtractOp(SDNode *N);
-  bool tryBitfieldExtractOpFromSExt(SDNode *N);
   bool tryBitfieldInsertOp(SDNode *N);
   bool tryBitfieldInsertInZeroOp(SDNode *N);
   bool tryShiftAmountMod(SDNode *N);
@@ -817,6 +816,26 @@ bool AArch64DAGToDAGISel::SelectShiftMask(SDValue N, SDValue &ShAmt) {
       MachineSDNode *Neg =
           CurDAG->getMachineNode(NegOpc, DL, VT, Zero, N.getOperand(1));
       ShAmt = SDValue(Neg, 0);
+      return true;
+    }
+  }
+
+  // If shifting by N-X where N == -1 mod ShiftWidth, then just shift by ~X
+  // to generate a NOT (MVN) instead of a SUB from a constant.
+  if (N.getOpcode() == ISD::SUB && N.hasOneUse() &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Imm;
+    if (isIntImmediate(N.getOperand(0).getNode(), Imm) &&
+        (Imm % ShiftWidth == ShiftWidth - 1)) {
+      SDLoc DL(N);
+      EVT VT = N.getValueType();
+      unsigned NotOpc = (ShiftWidth == 32) ? AArch64::ORNWrr : AArch64::ORNXrr;
+      unsigned ZeroReg = (ShiftWidth == 32) ? AArch64::WZR : AArch64::XZR;
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, ZeroReg, VT);
+      MachineSDNode *Not =
+          CurDAG->getMachineNode(NotOpc, DL, VT, Zero, N.getOperand(1));
+      ShAmt = SDValue(Not, 0);
       return true;
     }
   }
@@ -3143,30 +3162,6 @@ static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
   return true;
 }
 
-bool AArch64DAGToDAGISel::tryBitfieldExtractOpFromSExt(SDNode *N) {
-  assert(N->getOpcode() == ISD::SIGN_EXTEND);
-
-  EVT VT = N->getValueType(0);
-  EVT NarrowVT = N->getOperand(0)->getValueType(0);
-  if (VT != MVT::i64 || NarrowVT != MVT::i32)
-    return false;
-
-  uint64_t ShiftImm;
-  SDValue Op = N->getOperand(0);
-  if (!isOpcWithIntImmediate(Op.getNode(), ISD::SRA, ShiftImm))
-    return false;
-
-  SDLoc dl(N);
-  // Extend the incoming operand of the shift to 64-bits.
-  SDValue Opd0 = Widen(CurDAG, Op.getOperand(0));
-  unsigned Immr = ShiftImm;
-  unsigned Imms = NarrowVT.getSizeInBits() - 1;
-  SDValue Ops[] = {Opd0, CurDAG->getTargetConstant(Immr, dl, VT),
-                   CurDAG->getTargetConstant(Imms, dl, VT)};
-  CurDAG->SelectNodeTo(N, AArch64::SBFMXri, VT, Ops);
-  return true;
-}
-
 static bool isBitfieldExtractOp(SelectionDAG *CurDAG, SDNode *N, unsigned &Opc,
                                 SDValue &Opd0, unsigned &Immr, unsigned &Imms,
                                 unsigned NumberOfIgnoredLowBits = 0,
@@ -5297,11 +5292,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
   case ISD::ROTR:
   case ISD::SHL:
     if (tryShiftAmountMod(Node))
-      return;
-    break;
-
-  case ISD::SIGN_EXTEND:
-    if (tryBitfieldExtractOpFromSExt(Node))
       return;
     break;
 

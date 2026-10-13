@@ -9301,8 +9301,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     if (isa<MCConstantExpr>(SubExprVal) &&
         Inst.getOperand(0).getReg() != ARM::PC &&
         Inst.getOperand(0).getReg() != ARM::SP) {
-      int64_t Value =
-        (int64_t) (cast<MCConstantExpr>(SubExprVal))->getValue();
+      int64_t Value = (cast<MCConstantExpr>(SubExprVal))->getValue();
       bool UseMov  = true;
       bool MovHasS = true;
       if (Inst.getOpcode() == ARM::LDRConstPool) {

@@ -41,16 +41,6 @@ using namespace llvm;
 
 STATISTIC(NumLoadMoved, "Number of loads moved below TokenFactor");
 
-static cl::opt<bool> AndImmShrink("x86-and-imm-shrink", cl::init(true),
-    cl::desc("Enable setting constant bits to reduce size of mask immediates"),
-    cl::Hidden);
-
-static cl::opt<bool> EnablePromoteAnyextLoad(
-    "x86-promote-anyext-load", cl::init(true),
-    cl::desc("Enable promoting aligned anyext load to wider load"), cl::Hidden);
-
-extern cl::opt<bool> IndirectBranchTracking;
-
 //===----------------------------------------------------------------------===//
 //                      Pattern Matcher Implementation
 //===----------------------------------------------------------------------===//
@@ -985,6 +975,18 @@ static bool needBWI(MVT VT) {
   return (VT == MVT::v32i16 || VT == MVT::v32f16 || VT == MVT::v64i8);
 }
 
+// Return the single-use wider compare that V is the low subvector of, if any.
+static SDValue getLowSubvectorMaskCompare(SDValue V,
+                                          const X86Subtarget *Subtarget) {
+  if (V.getOpcode() != ISD::EXTRACT_SUBVECTOR || !V.hasOneUse() ||
+      !isNullConstant(V.getOperand(1)))
+    return SDValue();
+  SDValue Src = V.getOperand(0);
+  if (!Src.hasOneUse() || !isLegalMaskCompare(Src.getNode(), Subtarget))
+    return SDValue();
+  return Src;
+}
+
 void X86DAGToDAGISel::PreprocessISelDAG() {
   bool MadeChange = false;
   for (SelectionDAG::allnodes_iterator I = CurDAG->allnodes_begin(),
@@ -1018,7 +1020,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         Metadata *CFProtectionBranch =
             MF->getFunction().getParent()->getModuleFlag(
                 "cf-protection-branch");
-        if (CFProtectionBranch || IndirectBranchTracking) {
+        if (CFProtectionBranch ||
+            Subtarget->getCLOpts().indirect_branch_tracking) {
           SDLoc dl(N);
           uint64_t ComplementImm =
               (~Imm) & maskTrailingOnes<uint64_t>(VT.getSizeInBits());
@@ -1392,6 +1395,46 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       }
       Res = CurDAG->getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, Res,
                             CurDAG->getIntPtrConstant(0, dl));
+      --I;
+      CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
+      ++I;
+      MadeChange = true;
+      continue;
+    }
+    case ISD::AND: {
+      // Masked compares only match an AND of the compare's type; widen the AND.
+      MVT VT = N->getSimpleValueType(0);
+      if (!VT.isVectorOf(MVT::i1))
+        break;
+      assert(Subtarget->hasAVX512() && "Mask vectors need AVX512");
+
+      // Isel already folds this AND, or relies on its upper bits being zero.
+      if (isMaskZeroExtended(N))
+        break;
+
+      SDValue N0 = N->getOperand(0);
+      SDValue N1 = N->getOperand(1);
+      SDValue Cmp = getLowSubvectorMaskCompare(N1, Subtarget);
+      if (!Cmp)
+        Cmp = getLowSubvectorMaskCompare(N0, Subtarget);
+      if (!Cmp)
+        break;
+
+      SDLoc dl(N);
+      MVT WideVT = Cmp.getSimpleValueType();
+      SDValue ZeroIdx = CurDAG->getIntPtrConstant(0, dl);
+      auto Widen = [&](SDValue V) {
+        if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+            isNullConstant(V.getOperand(1)) &&
+            V.getOperand(0).getValueType() == WideVT)
+          return V.getOperand(0);
+        return CurDAG->getNode(ISD::INSERT_SUBVECTOR, dl, WideVT,
+                               CurDAG->getUNDEF(WideVT), V, ZeroIdx);
+      };
+      SDValue Wide0 = Widen(N0);
+      SDValue Wide1 = Widen(N1);
+      SDValue Res = CurDAG->getNode(ISD::AND, dl, WideVT, Wide0, Wide1);
+      Res = CurDAG->getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, Res, ZeroIdx);
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;
@@ -5747,11 +5790,12 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       SDValue Target = Node->getOperand(1);
       assert(Target.getValueType() == MVT::i32 && "Unexpected VT!");
       SDValue ZextTarget = CurDAG->getZExtOrTrunc(Target, dl, MVT::i64);
-      SDValue Brind = CurDAG->getNode(Opcode, dl, MVT::Other,
-                                      Node->getOperand(0), ZextTarget);
-      ReplaceNode(Node, Brind.getNode());
-      SelectCode(ZextTarget.getNode());
-      SelectCode(Brind.getNode());
+      insertDAGNode(*CurDAG, SDValue(Node, 0), ZextTarget);
+
+      unsigned Opc = Opcode == X86ISD::NT_BRIND ? X86::JMP64r_NT : X86::JMP64r;
+      SDNode *Res = CurDAG->getMachineNode(Opc, dl, MVT::Other, ZextTarget,
+                                           Node->getOperand(0));
+      ReplaceNode(Node, Res);
       return;
     }
     break;
@@ -5813,7 +5857,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     }
     if (matchBitExtract(Node))
       return;
-    if (AndImmShrink && shrinkAndImmediate(Node))
+    if (Subtarget->getCLOpts().and_imm_shrink && shrinkAndImmediate(Node))
       return;
 
     [[fallthrough]];
