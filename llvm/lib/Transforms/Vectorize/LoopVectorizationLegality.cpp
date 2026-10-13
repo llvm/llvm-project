@@ -1868,9 +1868,6 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   // This is currently matching about the simplest form we can, expecting
   // only one in-loop load, the result of which is directly compared against
   // a loop-invariant value.
-  // FIXME: We're insisting on a single use for now, because otherwise we will
-  // need to make PHI nodes for other users. That can be done once the initial
-  // transform code lands.
   auto *Br = cast<CondBrInst>(ExitingBlock->getTerminator());
 
   using namespace llvm::PatternMatch;
