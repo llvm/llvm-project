@@ -237,6 +237,7 @@ TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
 
     uint64_t FunctionHash = 0;
     unsigned NumCounters = 0;
+    std::string ProfileName;
     std::vector<std::string> BlockNames;
     for (Instruction &I : instructions(*GenFunction)) {
       auto *Counter = dyn_cast<InstrProfCntrInstBase>(&I);
@@ -246,6 +247,7 @@ TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
       if (BlockNames.empty()) {
         FunctionHash = Counter->getHash()->getZExtValue();
         NumCounters = Counter->getNumCounters()->getZExtValue();
+        ProfileName = getPGOFuncNameVarInitializer(Counter->getName()).str();
         BlockNames.resize(NumCounters);
       }
 
@@ -258,7 +260,6 @@ TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
     for (const std::string &BlockName : BlockNames)
       ASSERT_FALSE(BlockName.empty());
 
-    std::string ProfileName = getIRPGOFuncName(*GenFunction);
     std::vector<uint64_t> Counts(NumCounters, 10);
     if (ZeroCountCase != 0)
       Counts[ZeroCountCase - 1] = 0;
