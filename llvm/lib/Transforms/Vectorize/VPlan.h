@@ -2462,10 +2462,16 @@ protected:
 class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
                                             public VPPhiAccessors {
 protected:
-  VPHeaderPHIRecipe(VPRecipeTy VPRecipeID, Instruction *UnderlyingInstr,
-                    VPValue *Start, Type *ResultTy,
+  VPPhi *IVPhi = nullptr;
+  VPHeaderPHIRecipe(VPRecipeTy VPRecipeID, VPPhi *IVPhi,
+                    Instruction *UnderlyingInstr, VPValue *Start,
+                    Type *ResultTy, DebugLoc DL = DebugLoc::getUnknown())
+      : VPSingleDefRecipe(VPRecipeID, Start, ResultTy, UnderlyingInstr, DL),
+        IVPhi(IVPhi) {}
+
+  VPHeaderPHIRecipe(VPRecipeTy VPRecipeID, VPValue *Start, Type *ResultTy,
                     DebugLoc DL = DebugLoc::getUnknown())
-      : VPSingleDefRecipe(VPRecipeID, Start, ResultTy, UnderlyingInstr, DL) {}
+      : VPSingleDefRecipe(VPRecipeID, Start, ResultTy, /*UV=*/nullptr, DL) {}
 
   const VPRecipeBase *getAsRecipe() const override { return this; }
 
@@ -2532,10 +2538,12 @@ class VPWidenInductionRecipe : public VPHeaderPHIRecipe {
   InductionDescriptor IndDesc;
 
 public:
-  VPWidenInductionRecipe(VPRecipeTy Kind, PHINode *IV, VPValue *Start,
-                         VPValue *Step, const InductionDescriptor &IndDesc,
-                         Type *ResultTy, DebugLoc DL)
-      : VPHeaderPHIRecipe(Kind, IV, Start, ResultTy, DL), IndDesc(IndDesc) {
+  VPWidenInductionRecipe(VPRecipeTy Kind, VPPhi *IVPhi, PHINode *UVIV,
+                         VPValue *Start, VPValue *Step,
+                         const InductionDescriptor &IndDesc, Type *ResultTy,
+                         DebugLoc DL)
+      : VPHeaderPHIRecipe(Kind, IVPhi, UVIV, Start, ResultTy, DL),
+        IndDesc(IndDesc) {
     addOperand(Step);
   }
 
@@ -2581,6 +2589,9 @@ public:
   /// incoming value, its start value.
   unsigned getNumIncoming() const override { return 1; }
 
+  /// Returns the VPPhi associated with this induction.
+  VPPhi *getIVPhi() const { return IVPhi; }
+
   /// Returns the underlying PHINode if one exists, or null otherwise.
   PHINode *getPHINode() const {
     return cast_if_present<PHINode>(getUnderlyingValue());
@@ -2623,23 +2634,25 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe,
   bool isUnrolled() const { return getNumOperands() == 5; }
 
 public:
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
-                                VPValue *VF, const InductionDescriptor &IndDesc,
+  VPWidenIntOrFpInductionRecipe(VPPhi *IVPhi, PHINode *UVPhi, VPValue *Start,
+                                VPValue *Step, VPValue *VF,
+                                const InductionDescriptor &IndDesc,
                                 const VPIRFlags &Flags, DebugLoc DL)
-      : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
-                               Start, Step, IndDesc, Start->getScalarType(),
-                               DL),
+      : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IVPhi,
+                               UVPhi, Start, Step, IndDesc,
+                               Start->getScalarType(), DL),
         VPIRFlags(Flags), Trunc(nullptr) {
     addOperand(VF);
   }
 
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
-                                VPValue *VF, const InductionDescriptor &IndDesc,
+  VPWidenIntOrFpInductionRecipe(VPPhi *IVPhi, PHINode *UVIV, VPValue *Start,
+                                VPValue *Step, VPValue *VF,
+                                const InductionDescriptor &IndDesc,
                                 TruncInst *Trunc, const VPIRFlags &Flags,
                                 DebugLoc DL)
       : VPWidenInductionRecipe(
-            VPRecipeBase::VPWidenIntOrFpInductionSC, IV, Start, Step, IndDesc,
-            Trunc ? Trunc->getType() : Start->getScalarType(), DL),
+            VPRecipeBase::VPWidenIntOrFpInductionSC, IVPhi, UVIV, Start, Step,
+            IndDesc, Trunc ? Trunc->getType() : Start->getScalarType(), DL),
         VPIRFlags(Flags), Trunc(Trunc) {
     addOperand(VF);
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
@@ -2652,7 +2665,7 @@ public:
 
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
-        getPHINode(), getStartValue(), getStepValue(), getVFValue(),
+        getIVPhi(), getPHINode(), getStartValue(), getStepValue(), getVFValue(),
         getInductionDescriptor(), Trunc, *this, getDebugLoc());
   }
 
@@ -2708,12 +2721,12 @@ public:
   /// Create a new VPWidenPointerInductionRecipe for \p Phi with start value \p
   /// Start and the number of elements unrolled \p NumUnrolledElems, typically
   /// VF*UF.
-  VPWidenPointerInductionRecipe(PHINode *Phi, VPValue *Start, VPValue *Step,
-                                VPValue *NumUnrolledElems,
+  VPWidenPointerInductionRecipe(VPPhi *IVPhi, PHINode *UVPhi, VPValue *Start,
+                                VPValue *Step, VPValue *NumUnrolledElems,
                                 const InductionDescriptor &IndDesc, DebugLoc DL)
-      : VPWidenInductionRecipe(VPRecipeBase::VPWidenPointerInductionSC, Phi,
-                               Start, Step, IndDesc, Start->getScalarType(),
-                               DL) {
+      : VPWidenInductionRecipe(VPRecipeBase::VPWidenPointerInductionSC, IVPhi,
+                               UVPhi, Start, Step, IndDesc,
+                               Start->getScalarType(), DL) {
     addOperand(NumUnrolledElems);
   }
 
@@ -2721,8 +2734,8 @@ public:
 
   VPWidenPointerInductionRecipe *clone() override {
     return new VPWidenPointerInductionRecipe(
-        cast<PHINode>(getUnderlyingInstr()), getOperand(0), getOperand(1),
-        getOperand(2), getInductionDescriptor(), getDebugLoc());
+        getIVPhi(), getPHINode(), getOperand(0), getOperand(1), getOperand(2),
+        getInductionDescriptor(), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenPointerInductionSC)
@@ -2806,18 +2819,26 @@ protected:
 /// first operand of the recipe and the incoming value from the backedge is the
 /// second operand.
 struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
-  VPFirstOrderRecurrencePHIRecipe(PHINode *Phi, VPValue &Start,
+  VPFirstOrderRecurrencePHIRecipe(VPPhi *IVPhi, PHINode *UVPhi, VPValue &Start,
                                   VPValue &BackedgeValue)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPFirstOrderRecurrencePHISC, Phi,
-                          &Start, Start.getScalarType()) {
+      : VPHeaderPHIRecipe(VPRecipeBase::VPFirstOrderRecurrencePHISC, IVPhi,
+                          UVPhi, &Start, Start.getScalarType()) {
     addOperand(&BackedgeValue);
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPFirstOrderRecurrencePHISC)
 
   VPFirstOrderRecurrencePHIRecipe *clone() override {
-    return new VPFirstOrderRecurrencePHIRecipe(
-        cast<PHINode>(getUnderlyingInstr()), *getOperand(0), *getOperand(1));
+    return new VPFirstOrderRecurrencePHIRecipe(getIVPhi(), getPHINode(),
+                                               *getOperand(0), *getOperand(1));
+  }
+
+  /// Returns the VPPhi associated with this recurrence.
+  VPPhi *getIVPhi() const { return IVPhi; }
+
+  /// Returns the underlying PHINode if one exists, or null otherwise.
+  PHINode *getPHINode() const {
+    return cast_if_present<PHINode>(getUnderlyingValue());
   }
 
   void execute(VPTransformState &State) override;
@@ -2890,11 +2911,11 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe, public VPIRFlags {
 
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
-  VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
-                       VPValue &BackedgeValue, ReductionStyle Style,
-                       const VPIRFlags &Flags,
+  VPReductionPHIRecipe(VPPhi *IVPhi, PHINode *UVPhi, RecurKind Kind,
+                       VPValue &Start, VPValue &BackedgeValue,
+                       ReductionStyle Style, const VPIRFlags &Flags,
                        bool HasUsesOutsideReductionChain = false)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPReductionPHISC, Phi, &Start,
+      : VPHeaderPHIRecipe(VPRecipeBase::VPReductionPHISC, IVPhi, UVPhi, &Start,
                           Start.getScalarType()),
         VPIRFlags(Flags), Kind(Kind), Style(Style),
         HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {
@@ -2906,8 +2927,8 @@ public:
   VPReductionPHIRecipe *cloneWithOperands(VPValue *Start,
                                           VPValue *BackedgeValue) {
     auto *Clone = new VPReductionPHIRecipe(
-        dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *Start, *BackedgeValue, Style, *this, HasUsesOutsideReductionChain);
+        getIVPhi(), getPHINode(), getRecurrenceKind(), *Start, *BackedgeValue,
+        Style, *this, HasUsesOutsideReductionChain);
     Clone->ExpressionSunk = ExpressionSunk;
     return Clone;
   }
@@ -2920,6 +2941,14 @@ public:
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
+
+  /// Returns the VPPhi associated with this reduction.
+  VPPhi *getIVPhi() const { return IVPhi; }
+
+  /// Returns the underlying PHINode if one exists, or null otherwise.
+  PHINode *getPHINode() const {
+    return cast_if_present<PHINode>(getUnderlyingValue());
+  }
 
   /// Get the factor that the VF of this recipe's output should be scaled by, or
   /// 1 if it isn't scaled.
@@ -4085,8 +4114,8 @@ protected:
 class VPActiveLaneMaskPHIRecipe : public VPHeaderPHIRecipe {
 public:
   VPActiveLaneMaskPHIRecipe(VPValue *StartMask, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPActiveLaneMaskPHISC, nullptr,
-                          StartMask, StartMask->getScalarType(), DL) {}
+      : VPHeaderPHIRecipe(VPRecipeBase::VPActiveLaneMaskPHISC, StartMask,
+                          StartMask->getScalarType(), DL) {}
 
   ~VPActiveLaneMaskPHIRecipe() override = default;
 
@@ -4117,8 +4146,8 @@ protected:
 class VPCurrentIterationPHIRecipe : public VPHeaderPHIRecipe {
 public:
   VPCurrentIterationPHIRecipe(VPValue *StartIV, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPCurrentIterationPHISC, nullptr,
-                          StartIV, StartIV->getScalarType(), DL) {}
+      : VPHeaderPHIRecipe(VPRecipeBase::VPCurrentIterationPHISC, StartIV,
+                          StartIV->getScalarType(), DL) {}
 
   ~VPCurrentIterationPHIRecipe() override = default;
 
