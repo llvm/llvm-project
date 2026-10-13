@@ -2347,6 +2347,8 @@ libc_support_library(
         ":hdr_stdio_macros",
         ":hdr_wchar_macros",
         ":string_memory_utils",
+        ":types_char32_t",
+        ":types_char8_t",
         ":types_off_t",
         ":types_wchar_t",
         ":types_wint_t",
