@@ -8790,9 +8790,10 @@ void AAMemoryLocationImpl::categorizePtrValue(
         MLK = NO_GLOBAL_INTERNAL_MEM;
       else
         MLK = NO_GLOBAL_EXTERNAL_MEM;
-    } else if (isa<ConstantPointerNull>(&Obj) &&
-               (!NullPointerIsDefined(getAssociatedFunction(), AccessAS) ||
-                !NullPointerIsDefined(getAssociatedFunction(), ObjectAS))) {
+    } else if (isa<ConstantPointerNull>(&Obj) && ObjectAS == AccessAS &&
+               !NullPointerIsDefined(getAssociatedFunction(), AccessAS)) {
+      // Accessing null is undefined, but not accessing a null pointer cast to
+      // another address space, which may be a valid address there.
       return true;
     } else if (isa<AllocaInst>(&Obj)) {
       MLK = NO_LOCAL_MEM;
