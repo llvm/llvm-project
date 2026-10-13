@@ -875,3 +875,69 @@ func.func @reduction_equal_layout_promotion(%src: vector<8x16xf32>, %red0: memre
   return
 }
 }
+
+// -----
+// The softmax loop of flash attention, cut down from the IMEX kernel
+// WG/flash_attention_fwd_ov_with_arrray_len_4k.mlir as one subgroup sees it.
+// The sum-reduction is written above the PV dpas, so it is the nearer consumer
+// of %p. Both reductions derive inst_data = [1, 16] for their source, and both
+// must lose to the dpas demands. So the scale -> center -> exp -> truncf chain
+// stays at [8, 16], and the reductions keep [1, 16].
+gpu.module @test {
+// CHECK-LABEL: func.func @flash_attention_softmax_reduction_above_dpas(
+// CHECK: %[[QK:.*]] = xegpu.dpas %{{.*}}, %{{.*}}, %{{.*}} <{layout_a = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+// CHECK: %[[S:.*]] = arith.mulf %[[QK]], %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x64xf32>
+// CHECK: vector.multi_reduction <maximumf>, %[[S]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>} [1] : vector<16x64xf32> to vector<16xf32>
+// CHECK: %[[C:.*]] = arith.subf %[[S]], %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x64xf32>
+// CHECK: %[[P:.*]] = math.exp %[[C]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x64xf32>
+// CHECK: vector.multi_reduction <add>, %[[P]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>} [1] : vector<16x64xf32> to vector<16xf32>
+// CHECK: arith.truncf %[[P]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x64xf32> to vector<16x64xf16>
+func.func @flash_attention_softmax_reduction_above_dpas(
+    %q: memref<16x64xf16>, %k: memref<4096x64xf16>, %v: memref<4096x64xf16>,
+    %out: memref<16x64xf16>) {
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  %c4096 = arith.constant 4096 : index
+  %zero = arith.constant dense<0.0> : vector<16xf32>
+  %minus_inf = arith.constant dense<0xFF800000> : vector<16xf32>
+  %scale = arith.constant dense<0.35> : vector<16x64xf32>
+  %acc_init = arith.constant dense<0.0> : vector<16x64xf32>
+  %tq = xegpu.create_nd_tdesc %q : memref<16x64xf16> -> !xegpu.tensor_desc<16x64xf16>
+  %qv = xegpu.load_nd %tq[0, 0] : !xegpu.tensor_desc<16x64xf16> -> vector<16x64xf16>
+  %tk = xegpu.create_nd_tdesc %k : memref<4096x64xf16> -> !xegpu.tensor_desc<64x64xf16>
+  %tv = xegpu.create_nd_tdesc %v : memref<4096x64xf16> -> !xegpu.tensor_desc<64x64xf16>
+  %res:3 = scf.for %i = %c0 to %c4096 step %c64
+      iter_args(%acc = %acc_init, %m = %minus_inf, %l = %zero)
+      -> (vector<16x64xf32>, vector<16xf32>, vector<16xf32>) {
+    %kv = xegpu.load_nd %tk[%i, %c0] : !xegpu.tensor_desc<64x64xf16> -> vector<64x64xf16>
+    %kt = vector.transpose %kv, [1, 0] : vector<64x64xf16> to vector<64x64xf16>
+    %qk = xegpu.dpas %qv, %kt, %acc_init : vector<16x64xf16>, vector<64x64xf16>, vector<16x64xf32> -> vector<16x64xf32>
+    %s = arith.mulf %qk, %scale : vector<16x64xf32>
+    %mx = vector.multi_reduction <maximumf>, %s, %minus_inf [1] : vector<16x64xf32> to vector<16xf32>
+    %m_new = arith.maximumf %m, %mx : vector<16xf32>
+    %mb = vector.broadcast %m_new : vector<16xf32> to vector<64x16xf32>
+    %mbt = vector.transpose %mb, [1, 0] : vector<64x16xf32> to vector<16x64xf32>
+    %c = arith.subf %s, %mbt : vector<16x64xf32>
+    %p = math.exp %c : vector<16x64xf32>
+    %sum = vector.multi_reduction <add>, %p, %zero [1] : vector<16x64xf32> to vector<16xf32>
+    %d = arith.subf %m, %m_new : vector<16xf32>
+    %alpha = math.exp %d : vector<16xf32>
+    %l_scaled = arith.mulf %l, %alpha : vector<16xf32>
+    %l_new = arith.addf %l_scaled, %sum : vector<16xf32>
+    %ab = vector.broadcast %alpha : vector<16xf32> to vector<64x16xf32>
+    %abt = vector.transpose %ab, [1, 0] : vector<64x16xf32> to vector<16x64xf32>
+    %acc_scaled = arith.mulf %acc, %abt : vector<16x64xf32>
+    %p16 = arith.truncf %p : vector<16x64xf32> to vector<16x64xf16>
+    %vv = xegpu.load_nd %tv[%i, %c0] : !xegpu.tensor_desc<64x64xf16> -> vector<64x64xf16>
+    %o = xegpu.dpas %p16, %vv, %acc_scaled : vector<16x64xf16>, vector<64x64xf16>, vector<16x64xf32> -> vector<16x64xf32>
+    scf.yield %o, %m_new, %l_new : vector<16x64xf32>, vector<16xf32>, vector<16xf32>
+  }
+  %lb = vector.broadcast %res#2 : vector<16xf32> to vector<64x16xf32>
+  %lbt = vector.transpose %lb, [1, 0] : vector<64x16xf32> to vector<16x64xf32>
+  %o_norm = arith.divf %res#0, %lbt : vector<16x64xf32>
+  %o16 = arith.truncf %o_norm : vector<16x64xf32> to vector<16x64xf16>
+  %to = xegpu.create_nd_tdesc %out : memref<16x64xf16> -> !xegpu.tensor_desc<16x64xf16>
+  xegpu.store_nd %o16, %to[0, 0] : vector<16x64xf16>, !xegpu.tensor_desc<16x64xf16>
+  return
+}
+}
