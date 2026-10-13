@@ -1876,7 +1876,8 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(Off).addImm(3);
   }
   BuildMI(BB, DL, TII->get(Mips::ORi), MaskUpper)
-    .addReg(Mips::R0).addImm(MaskImm);
+      .addReg(Mips::R0)
+      .addImm(MaskImm);
   BuildMI(BB, DL, TII->get(Mips::SLLV), Mask)
     .addReg(MaskUpper).addReg(ShiftAmt);
   BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::R0).addReg(Mask);
@@ -2064,7 +2065,8 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(Off).addImm(3);
   }
   BuildMI(BB, DL, TII->get(Mips::ORi), MaskUpper)
-    .addReg(Mips::R0).addImm(MaskImm);
+      .addReg(Mips::R0)
+      .addImm(MaskImm);
   BuildMI(BB, DL, TII->get(Mips::SLLV), Mask)
     .addReg(MaskUpper).addReg(ShiftAmt);
   BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::R0).addReg(Mask);

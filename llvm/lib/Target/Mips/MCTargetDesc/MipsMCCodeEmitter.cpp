@@ -1108,14 +1108,22 @@ MipsMCCodeEmitter::getMovePRegSingleOpValue(const MCInst &MI, unsigned OpNo,
   switch (Op.getReg().id()) {
   default:
     llvm_unreachable("Unknown register for movep!");
-  case Mips::R0:   return 0;
-  case Mips::R17:  return 1;
-  case Mips::R2:   return 2;
-  case Mips::R3:   return 3;
-  case Mips::R16:  return 4;
-  case Mips::R18:  return 5;
-  case Mips::R19:  return 6;
-  case Mips::R20:  return 7;
+  case Mips::R0:
+    return 0;
+  case Mips::R17:
+    return 1;
+  case Mips::R2:
+    return 2;
+  case Mips::R3:
+    return 3;
+  case Mips::R16:
+    return 4;
+  case Mips::R18:
+    return 5;
+  case Mips::R19:
+    return 6;
+  case Mips::R20:
+    return 7;
   }
 }
 

@@ -2085,8 +2085,8 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     //        of the assembler. We ought to leave it to those later stages.
     const MCSymbol *JalSym = getSingleMCSymbol(JalExpr);
 
-    if (expandLoadAddress(getABI().getTempReg(9), MCRegister(), Inst.getOperand(0),
-                          !isGP64bit(), IDLoc, Out, STI))
+    if (expandLoadAddress(getABI().getTempReg(9), MCRegister(),
+                          Inst.getOperand(0), !isGP64bit(), IDLoc, Out, STI))
       return true;
 
     MCInst JalrInst;
@@ -2970,8 +2970,8 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     // constant then we must use R_MIPS_CALL16 instead of R_MIPS_GOT16
     // or R_MIPS_CALL16 instead of R_MIPS_GOT_DISP in 64-bit case.
     if ((DstReg == getABI().getTempReg(9, false) ||
-         DstReg == getABI().getTempReg(9, true)) && !UseSrcReg &&
-        Res.getConstant() == 0 && !IsLocalSym) {
+         DstReg == getABI().getTempReg(9, true)) &&
+        !UseSrcReg && Res.getConstant() == 0 && !IsLocalSym) {
       if (UseXGOT) {
         const MCExpr *CallHiExpr =
             MCSpecifierExpr::create(SymExpr, Mips::S_CALL_HI16, getContext());
@@ -3256,38 +3256,70 @@ static MCRegister nextReg(MCRegister Reg) {
     return Reg == (unsigned)Mips::F31 ? (unsigned)Mips::F0 : Reg + 1;
   switch (Reg.id()) {
   default: llvm_unreachable("Unknown register in assembly macro expansion!");
-  case Mips::R0:   return Mips::R1;
-  case Mips::R1:   return Mips::R2;
-  case Mips::R2:   return Mips::R3;
-  case Mips::R3:   return Mips::R4;
-  case Mips::R4:   return Mips::R5;
-  case Mips::R5:   return Mips::R6;
-  case Mips::R6:   return Mips::R7;
-  case Mips::R7:   return Mips::R8;
-  case Mips::R8:   return Mips::R9;
-  case Mips::R9:   return Mips::R10;
-  case Mips::R10:  return Mips::R11;
-  case Mips::R11:  return Mips::R12;
-  case Mips::R12:  return Mips::R13;
-  case Mips::R13:  return Mips::R14;
-  case Mips::R14:  return Mips::R15;
-  case Mips::R15:  return Mips::R16;
-  case Mips::R16:  return Mips::R17;
-  case Mips::R17:  return Mips::R18;
-  case Mips::R18:  return Mips::R19;
-  case Mips::R19:  return Mips::R20;
-  case Mips::R20:  return Mips::R21;
-  case Mips::R21:  return Mips::R22;
-  case Mips::R22:  return Mips::R23;
-  case Mips::R23:  return Mips::R24;
-  case Mips::R24:  return Mips::R25;
-  case Mips::R25:  return Mips::R26;
-  case Mips::R26:  return Mips::R27;
-  case Mips::R27:  return Mips::R28;
-  case Mips::R28:  return Mips::R29;
-  case Mips::R29:  return Mips::R30;
-  case Mips::R30:  return Mips::R31;
-  case Mips::R31:  return Mips::R0;
+  case Mips::R0:
+    return Mips::R1;
+  case Mips::R1:
+    return Mips::R2;
+  case Mips::R2:
+    return Mips::R3;
+  case Mips::R3:
+    return Mips::R4;
+  case Mips::R4:
+    return Mips::R5;
+  case Mips::R5:
+    return Mips::R6;
+  case Mips::R6:
+    return Mips::R7;
+  case Mips::R7:
+    return Mips::R8;
+  case Mips::R8:
+    return Mips::R9;
+  case Mips::R9:
+    return Mips::R10;
+  case Mips::R10:
+    return Mips::R11;
+  case Mips::R11:
+    return Mips::R12;
+  case Mips::R12:
+    return Mips::R13;
+  case Mips::R13:
+    return Mips::R14;
+  case Mips::R14:
+    return Mips::R15;
+  case Mips::R15:
+    return Mips::R16;
+  case Mips::R16:
+    return Mips::R17;
+  case Mips::R17:
+    return Mips::R18;
+  case Mips::R18:
+    return Mips::R19;
+  case Mips::R19:
+    return Mips::R20;
+  case Mips::R20:
+    return Mips::R21;
+  case Mips::R21:
+    return Mips::R22;
+  case Mips::R22:
+    return Mips::R23;
+  case Mips::R23:
+    return Mips::R24;
+  case Mips::R24:
+    return Mips::R25;
+  case Mips::R25:
+    return Mips::R26;
+  case Mips::R26:
+    return Mips::R27;
+  case Mips::R27:
+    return Mips::R28;
+  case Mips::R28:
+    return Mips::R29;
+  case Mips::R29:
+    return Mips::R30;
+  case Mips::R30:
+    return Mips::R31;
+  case Mips::R31:
+    return Mips::R0;
   case Mips::D0:   return Mips::F1;
   case Mips::D1:   return Mips::F3;
   case Mips::D2:   return Mips::F5;
@@ -3298,12 +3330,18 @@ static MCRegister nextReg(MCRegister Reg) {
   case Mips::D7:   return Mips::F15;
   case Mips::D8:   return Mips::F17;
   case Mips::D9:   return Mips::F19;
-  case Mips::D10:  return Mips::F21;
-  case Mips::D11:  return Mips::F23;
-  case Mips::D12:  return Mips::F25;
-  case Mips::D13:  return Mips::F27;
-  case Mips::D14:  return Mips::F29;
-  case Mips::D15:  return Mips::F31;
+  case Mips::D10:
+    return Mips::F21;
+  case Mips::D11:
+    return Mips::F23;
+  case Mips::D12:
+    return Mips::F25;
+  case Mips::D13:
+    return Mips::F27;
+  case Mips::D14:
+    return Mips::F29;
+  case Mips::D15:
+    return Mips::F31;
   }
 }
 
@@ -3422,8 +3460,8 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
   }
 
   if (Lo_32(ImmOp64) == 0) {
-    if (TmpReg != Mips::R0 && loadImmediate(ImmOp32, TmpReg, MCRegister(),
-                                            true, false, IDLoc, Out, STI))
+    if (TmpReg != Mips::R0 && loadImmediate(ImmOp32, TmpReg, MCRegister(), true,
+                                            false, IDLoc, Out, STI))
       return true;
     TOut.emitRR(Mips::MTC1, FirstReg, TmpReg, IDLoc, STI);
     return false;
@@ -3673,7 +3711,7 @@ bool MipsAsmParser::expandBranchImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       TOut.emitRRI(Mips::SLL, Mips::R0, Mips::R0, 0, IDLoc, STI);
     } else
       TOut.emitRRX(OpCode, DstRegOp.getReg(), Mips::R0, MemOffsetOp, IDLoc,
-              STI);
+                   STI);
   } else {
     warnIfNoMacro(IDLoc);
 
@@ -5566,78 +5604,144 @@ static unsigned getRegisterForMxtrDSP(MCInst &Inst, bool IsMFDSP) {
 // operand.
 static unsigned getRegisterForMxtrFP(MCInst &Inst, bool IsMFTC1) {
   switch (Inst.getOperand(IsMFTC1 ? 1 : 0).getReg().id()) {
-    case Mips::F0:  return Mips::R0;
-    case Mips::F1:  return Mips::R1;
-    case Mips::F2:  return Mips::R2;
-    case Mips::F3:  return Mips::R3;
-    case Mips::F4:  return Mips::R4;
-    case Mips::F5:  return Mips::R5;
-    case Mips::F6:  return Mips::R6;
-    case Mips::F7:  return Mips::R7;
-    case Mips::F8:  return Mips::R8;
-    case Mips::F9:  return Mips::R9;
-    case Mips::F10: return Mips::R10;
-    case Mips::F11: return Mips::R11;
-    case Mips::F12: return Mips::R12;
-    case Mips::F13: return Mips::R13;
-    case Mips::F14: return Mips::R14;
-    case Mips::F15: return Mips::R15;
-    case Mips::F16: return Mips::R16;
-    case Mips::F17: return Mips::R17;
-    case Mips::F18: return Mips::R18;
-    case Mips::F19: return Mips::R19;
-    case Mips::F20: return Mips::R20;
-    case Mips::F21: return Mips::R21;
-    case Mips::F22: return Mips::R22;
-    case Mips::F23: return Mips::R23;
-    case Mips::F24: return Mips::R24;
-    case Mips::F25: return Mips::R25;
-    case Mips::F26: return Mips::R26;
-    case Mips::F27: return Mips::R27;
-    case Mips::F28: return Mips::GP;
-    case Mips::F29: return Mips::SP;
-    case Mips::F30: return Mips::FP;
-    case Mips::F31: return Mips::RA;
-    default: llvm_unreachable("Unknown register for mttc1 alias!");
+  case Mips::F0:
+    return Mips::R0;
+  case Mips::F1:
+    return Mips::R1;
+  case Mips::F2:
+    return Mips::R2;
+  case Mips::F3:
+    return Mips::R3;
+  case Mips::F4:
+    return Mips::R4;
+  case Mips::F5:
+    return Mips::R5;
+  case Mips::F6:
+    return Mips::R6;
+  case Mips::F7:
+    return Mips::R7;
+  case Mips::F8:
+    return Mips::R8;
+  case Mips::F9:
+    return Mips::R9;
+  case Mips::F10:
+    return Mips::R10;
+  case Mips::F11:
+    return Mips::R11;
+  case Mips::F12:
+    return Mips::R12;
+  case Mips::F13:
+    return Mips::R13;
+  case Mips::F14:
+    return Mips::R14;
+  case Mips::F15:
+    return Mips::R15;
+  case Mips::F16:
+    return Mips::R16;
+  case Mips::F17:
+    return Mips::R17;
+  case Mips::F18:
+    return Mips::R18;
+  case Mips::F19:
+    return Mips::R19;
+  case Mips::F20:
+    return Mips::R20;
+  case Mips::F21:
+    return Mips::R21;
+  case Mips::F22:
+    return Mips::R22;
+  case Mips::F23:
+    return Mips::R23;
+  case Mips::F24:
+    return Mips::R24;
+  case Mips::F25:
+    return Mips::R25;
+  case Mips::F26:
+    return Mips::R26;
+  case Mips::F27:
+    return Mips::R27;
+  case Mips::F28:
+    return Mips::GP;
+  case Mips::F29:
+    return Mips::SP;
+  case Mips::F30:
+    return Mips::FP;
+  case Mips::F31:
+    return Mips::RA;
+  default:
+    llvm_unreachable("Unknown register for mttc1 alias!");
   }
 }
 
 // Map the coprocessor operand the corresponding gpr register operand.
 static unsigned getRegisterForMxtrC0(MCInst &Inst, bool IsMFTC0) {
   switch (Inst.getOperand(IsMFTC0 ? 1 : 0).getReg().id()) {
-    case Mips::COP00:  return Mips::R0;
-    case Mips::COP01:  return Mips::R1;
-    case Mips::COP02:  return Mips::R2;
-    case Mips::COP03:  return Mips::R3;
-    case Mips::COP04:  return Mips::R4;
-    case Mips::COP05:  return Mips::R5;
-    case Mips::COP06:  return Mips::R6;
-    case Mips::COP07:  return Mips::R7;
-    case Mips::COP08:  return Mips::R8;
-    case Mips::COP09:  return Mips::R9;
-    case Mips::COP010: return Mips::R10;
-    case Mips::COP011: return Mips::R11;
-    case Mips::COP012: return Mips::R12;
-    case Mips::COP013: return Mips::R13;
-    case Mips::COP014: return Mips::R14;
-    case Mips::COP015: return Mips::R15;
-    case Mips::COP016: return Mips::R16;
-    case Mips::COP017: return Mips::R17;
-    case Mips::COP018: return Mips::R18;
-    case Mips::COP019: return Mips::R19;
-    case Mips::COP020: return Mips::R20;
-    case Mips::COP021: return Mips::R21;
-    case Mips::COP022: return Mips::R22;
-    case Mips::COP023: return Mips::R23;
-    case Mips::COP024: return Mips::R24;
-    case Mips::COP025: return Mips::R25;
-    case Mips::COP026: return Mips::R26;
-    case Mips::COP027: return Mips::R27;
-    case Mips::COP028: return Mips::GP;
-    case Mips::COP029: return Mips::SP;
-    case Mips::COP030: return Mips::FP;
-    case Mips::COP031: return Mips::RA;
-    default: llvm_unreachable("Unknown register for mttc0 alias!");
+  case Mips::COP00:
+    return Mips::R0;
+  case Mips::COP01:
+    return Mips::R1;
+  case Mips::COP02:
+    return Mips::R2;
+  case Mips::COP03:
+    return Mips::R3;
+  case Mips::COP04:
+    return Mips::R4;
+  case Mips::COP05:
+    return Mips::R5;
+  case Mips::COP06:
+    return Mips::R6;
+  case Mips::COP07:
+    return Mips::R7;
+  case Mips::COP08:
+    return Mips::R8;
+  case Mips::COP09:
+    return Mips::R9;
+  case Mips::COP010:
+    return Mips::R10;
+  case Mips::COP011:
+    return Mips::R11;
+  case Mips::COP012:
+    return Mips::R12;
+  case Mips::COP013:
+    return Mips::R13;
+  case Mips::COP014:
+    return Mips::R14;
+  case Mips::COP015:
+    return Mips::R15;
+  case Mips::COP016:
+    return Mips::R16;
+  case Mips::COP017:
+    return Mips::R17;
+  case Mips::COP018:
+    return Mips::R18;
+  case Mips::COP019:
+    return Mips::R19;
+  case Mips::COP020:
+    return Mips::R20;
+  case Mips::COP021:
+    return Mips::R21;
+  case Mips::COP022:
+    return Mips::R22;
+  case Mips::COP023:
+    return Mips::R23;
+  case Mips::COP024:
+    return Mips::R24;
+  case Mips::COP025:
+    return Mips::R25;
+  case Mips::COP026:
+    return Mips::R26;
+  case Mips::COP027:
+    return Mips::R27;
+  case Mips::COP028:
+    return Mips::GP;
+  case Mips::COP029:
+    return Mips::SP;
+  case Mips::COP030:
+    return Mips::FP;
+  case Mips::COP031:
+    return Mips::RA;
+  default:
+    llvm_unreachable("Unknown register for mttc0 alias!");
   }
 }
 
@@ -6769,7 +6873,8 @@ ParseStatus MipsAsmParser::parseRegisterList(OperandVector &Operands) {
       } else {
         MCRegister TmpReg = PrevReg + 1;
         while (TmpReg <= Reg) {
-          if ((((TmpReg < Mips::R16) || (TmpReg > Mips::R23)) && !isGP64bit()) ||
+          if ((((TmpReg < Mips::R16) || (TmpReg > Mips::R23)) &&
+               !isGP64bit()) ||
               (((TmpReg < Mips::R16_64) || (TmpReg > Mips::R23_64)) &&
                isGP64bit()))
             return Error(E, "invalid register operand");

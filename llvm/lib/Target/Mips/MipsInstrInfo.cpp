@@ -62,10 +62,7 @@ bool MipsInstrInfo::isZeroImm(const MachineOperand &op) const {
 }
 
 MCInst MipsInstrInfo::getNop() const {
-  return MCInstBuilder(Mips::SLL)
-      .addReg(Mips::R0)
-      .addReg(Mips::R0)
-      .addImm(0);
+  return MCInstBuilder(Mips::SLL).addReg(Mips::R0).addReg(Mips::R0).addImm(0);
 }
 
 /// insertNoop - If data hazard condition is found insert the target nop
@@ -86,9 +83,7 @@ MachineInstrBuilder MipsInstrInfo::insertNop(MachineBasicBlock &MBB,
       Subtarget.hasMips32r6() ? Mips::SLL_MMR6 : Mips::SLL_MM;
   const unsigned Opc =
       Subtarget.inMicroMipsMode() ? MMOpc : (unsigned)Mips::SLL;
-  return BuildMI(MBB, MI, DL, get(Opc), Mips::R0)
-      .addReg(Mips::R0)
-      .addImm(0);
+  return BuildMI(MBB, MI, DL, get(Opc), Mips::R0).addReg(Mips::R0).addImm(0);
 }
 
 MachineMemOperand *
@@ -503,9 +498,8 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
       (I->getOperand(0).isReg() &&
        (I->getOperand(0).getReg() == Mips::R0 ||
         I->getOperand(0).getReg() == Mips::R0_64)) &&
-      (I->getOperand(1).isReg() &&
-       (I->getOperand(1).getReg() == Mips::R0 ||
-        I->getOperand(1).getReg() == Mips::R0_64)))
+      (I->getOperand(1).isReg() && (I->getOperand(1).getReg() == Mips::R0 ||
+                                    I->getOperand(1).getReg() == Mips::R0_64)))
     return 0;
 
   if (Subtarget.hasMips32r6() || canUseShortMicroMipsCTI) {

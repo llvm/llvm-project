@@ -16,11 +16,11 @@ using namespace llvm;
 namespace {
 static constexpr MCPhysReg O32IntRegs[] = {Mips::R4, Mips::R5, Mips::R6,
                                            Mips::R7};
-static constexpr MCPhysReg NABIIntRegs[] = {Mips::R4, Mips::R5, Mips::R6,
-                                            Mips::R7, Mips::R8, Mips::R9,
+static constexpr MCPhysReg NABIIntRegs[] = {Mips::R4,  Mips::R5, Mips::R6,
+                                            Mips::R7,  Mips::R8, Mips::R9,
                                             Mips::R10, Mips::R11};
 static constexpr MCPhysReg Mips64IntRegs[] = {
-    Mips::R4_64, Mips::R5_64, Mips::R6_64, Mips::R7_64,
+    Mips::R4_64, Mips::R5_64, Mips::R6_64,  Mips::R7_64,
     Mips::R8_64, Mips::R9_64, Mips::R10_64, Mips::R11_64};
 
 struct GPR {
@@ -29,10 +29,11 @@ struct GPR {
 };
 
 static constexpr GPR OABITempRegs[] = {
-    {Mips::R8, Mips::R8_64}, {Mips::R9, Mips::R9_64}, {Mips::R10, Mips::R10_64},
-    {Mips::R11, Mips::R11_64}, {Mips::R12, Mips::R12_64}, {Mips::R13, Mips::R13_64},
-    {Mips::R14, Mips::R14_64}, {Mips::R15, Mips::R15_64}, {Mips::R24, Mips::R24_64},
-    {Mips::R25, Mips::R25_64},
+    {Mips::R8, Mips::R8_64},   {Mips::R9, Mips::R9_64},
+    {Mips::R10, Mips::R10_64}, {Mips::R11, Mips::R11_64},
+    {Mips::R12, Mips::R12_64}, {Mips::R13, Mips::R13_64},
+    {Mips::R14, Mips::R14_64}, {Mips::R15, Mips::R15_64},
+    {Mips::R24, Mips::R24_64}, {Mips::R25, Mips::R25_64},
 };
 
 static constexpr GPR NABITempRegs[] = {
@@ -62,8 +63,9 @@ static constexpr GPR PABITempRegs[] = {
 };
 
 static constexpr GPR SavedRegs[] = {
-    {Mips::R16, Mips::R16_64}, {Mips::R17, Mips::R17_64}, {Mips::R18, Mips::R18_64},
-    {Mips::R19, Mips::R19_64}, {Mips::R20, Mips::R20_64}, {Mips::R21, Mips::R21_64},
+    {Mips::R16, Mips::R16_64}, {Mips::R17, Mips::R17_64},
+    {Mips::R18, Mips::R18_64}, {Mips::R19, Mips::R19_64},
+    {Mips::R20, Mips::R20_64}, {Mips::R21, Mips::R21_64},
     {Mips::R22, Mips::R22_64}, {Mips::R23, Mips::R23_64},
 };
 

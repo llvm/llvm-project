@@ -377,11 +377,12 @@ static bool CheckXWPInstr(MachineInstr *MI, bool ReduceToLwp,
 // Returns true if the registers Reg1 and Reg2 are consecutive
 static bool ConsecutiveRegisters(unsigned Reg1, unsigned Reg2) {
   constexpr std::array<unsigned, 31> Registers = {
-      {Mips::R1, Mips::R2, Mips::R3, Mips::R4, Mips::R5, Mips::R6, Mips::R7,
-       Mips::R8, Mips::R9, Mips::R10, Mips::R11, Mips::R12, Mips::R13, Mips::R14,
-       Mips::R15, Mips::R16, Mips::R17, Mips::R18, Mips::R19, Mips::R20, Mips::R21,
-       Mips::R22, Mips::R23, Mips::R24, Mips::R25, Mips::R26, Mips::R27, Mips::R28,
-       Mips::R29, Mips::R30, Mips::R31}};
+      {Mips::R1,  Mips::R2,  Mips::R3,  Mips::R4,  Mips::R5,  Mips::R6,
+       Mips::R7,  Mips::R8,  Mips::R9,  Mips::R10, Mips::R11, Mips::R12,
+       Mips::R13, Mips::R14, Mips::R15, Mips::R16, Mips::R17, Mips::R18,
+       Mips::R19, Mips::R20, Mips::R21, Mips::R22, Mips::R23, Mips::R24,
+       Mips::R25, Mips::R26, Mips::R27, Mips::R28, Mips::R29, Mips::R30,
+       Mips::R31}};
 
   for (uint8_t i = 0; i < Registers.size() - 1; i++) {
     if (Registers[i] == Reg1) {
@@ -601,8 +602,7 @@ static bool IsMovepDestinationRegPair(unsigned R0, unsigned R1) {
       (R0 == Mips::R4 && R1 == Mips::R6) ||
       (R0 == Mips::R4 && R1 == Mips::R7) ||
       (R0 == Mips::R5 && R1 == Mips::R6) ||
-      (R0 == Mips::R5 && R1 == Mips::R7) ||
-      (R0 == Mips::R6 && R1 == Mips::R7))
+      (R0 == Mips::R5 && R1 == Mips::R7) || (R0 == Mips::R6 && R1 == Mips::R7))
     return true;
 
   return false;

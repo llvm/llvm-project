@@ -909,21 +909,27 @@ void MipsAsmPrinter::EmitSwapFPIntParams(const MCSubtargetInfo &STI,
     EmitInstrRegReg(STI, MovOpc, ABI.getArgReg(0), Mips::F12);
     break;
   case FFSig:
-    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12, Mips::F14, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12,
+                     Mips::F14, LE);
     break;
   case FDSig:
     EmitInstrRegReg(STI, MovOpc, ABI.getArgReg(0), Mips::F12);
-    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(2), ABI.getArgReg(3), Mips::F14, Mips::F15, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(2), ABI.getArgReg(3), Mips::F14,
+                     Mips::F15, LE);
     break;
   case DSig:
-    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12, Mips::F13, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12,
+                     Mips::F13, LE);
     break;
   case DDSig:
-    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12, Mips::F13, LE);
-    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(2), ABI.getArgReg(3), Mips::F14, Mips::F15, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12,
+                     Mips::F13, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(2), ABI.getArgReg(3), Mips::F14,
+                     Mips::F15, LE);
     break;
   case DFSig:
-    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12, Mips::F13, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12,
+                     Mips::F13, LE);
     EmitInstrRegReg(STI, MovOpc, ABI.getArgReg(2), Mips::F14);
     break;
   case NoSig:
@@ -943,14 +949,18 @@ void MipsAsmPrinter::EmitSwapFPIntRetval(
     EmitInstrRegReg(STI, MovOpc, ABI.getReturnReg(0), Mips::F0);
     break;
   case DRet:
-    EmitMovFPIntPair(STI, MovOpc, ABI.getReturnReg(0), ABI.getReturnReg(1), Mips::F0, Mips::F1, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getReturnReg(0), ABI.getReturnReg(1),
+                     Mips::F0, Mips::F1, LE);
     break;
   case CFRet:
-    EmitMovFPIntPair(STI, MovOpc, ABI.getReturnReg(0), ABI.getReturnReg(1), Mips::F0, Mips::F1, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getReturnReg(0), ABI.getReturnReg(1),
+                     Mips::F0, Mips::F1, LE);
     break;
   case CDRet:
-    EmitMovFPIntPair(STI, MovOpc, ABI.getReturnReg(0), ABI.getReturnReg(1), Mips::F0, Mips::F1, LE);
-    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F2, Mips::F3, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getReturnReg(0), ABI.getReturnReg(1),
+                     Mips::F0, Mips::F1, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F2,
+                     Mips::F3, LE);
     break;
   case NoFPRet:
     break;
@@ -1194,25 +1204,23 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
   // Emit "B .tmpN" instruction, which jumps over the nop sled to the actual
   // start of function
   const MCExpr *TargetExpr = MCSymbolRefExpr::create(Target, OutContext);
-  EmitToStreamer(*OutStreamer, MCInstBuilder(Mips::BEQ)
-                                   .addReg(Mips::R0)
-                                   .addReg(Mips::R0)
-                                   .addExpr(TargetExpr));
+  EmitToStreamer(
+      *OutStreamer,
+      MCInstBuilder(Mips::BEQ).addReg(Mips::R0).addReg(Mips::R0).addExpr(
+          TargetExpr));
 
   for (int8_t I = 0; I < NoopsInSledCount; I++)
-    EmitToStreamer(*OutStreamer, MCInstBuilder(Mips::SLL)
-                                     .addReg(Mips::R0)
-                                     .addReg(Mips::R0)
-                                     .addImm(0));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(Mips::SLL).addReg(Mips::R0).addReg(Mips::R0).addImm(0));
 
   OutStreamer->emitLabel(Target);
 
   if (!Subtarget->isGP64bit()) {
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(Mips::ADDiu)
-                       .addReg(Mips::R25)
-                       .addReg(Mips::R25)
-                       .addImm(0x34));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(Mips::ADDiu)
+                                     .addReg(Mips::R25)
+                                     .addReg(Mips::R25)
+                                     .addImm(0x34));
   }
 
   recordSled(CurSled, MI, Kind, 2);

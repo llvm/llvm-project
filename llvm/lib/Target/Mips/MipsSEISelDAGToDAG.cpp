@@ -80,15 +80,13 @@ bool MipsSEDAGToDAGISel::replaceUsesWithZeroReg(MachineRegisterInfo *MRI,
 
   // Check if MI is "addiu $dst, $zero, 0" or "daddiu $dst, $zero, 0".
   if ((MI.getOpcode() == Mips::ADDiu) &&
-      (MI.getOperand(1).getReg() == Mips::R0) &&
-      (MI.getOperand(2).isImm()) &&
+      (MI.getOperand(1).getReg() == Mips::R0) && (MI.getOperand(2).isImm()) &&
       (MI.getOperand(2).getImm() == 0)) {
     DstReg = MI.getOperand(0).getReg();
     ZeroReg = Mips::R0;
   } else if ((MI.getOpcode() == Mips::DADDiu) &&
              (MI.getOperand(1).getReg() == Mips::R0_64) &&
-             (MI.getOperand(2).isImm()) &&
-             (MI.getOperand(2).getImm() == 0)) {
+             (MI.getOperand(2).isImm()) && (MI.getOperand(2).getImm() == 0)) {
     DstReg = MI.getOperand(0).getReg();
     ZeroReg = Mips::R0_64;
   }
@@ -796,10 +794,9 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     if (Inst->Opc == Mips::LUi64)
       RegOpnd = CurDAG->getMachineNode(Inst->Opc, DL, MVT::i64, ImmOpnd);
     else
-      RegOpnd =
-        CurDAG->getMachineNode(Inst->Opc, DL, MVT::i64,
-                               CurDAG->getRegister(Mips::R0_64, MVT::i64),
-                               ImmOpnd);
+      RegOpnd = CurDAG->getMachineNode(
+          Inst->Opc, DL, MVT::i64, CurDAG->getRegister(Mips::R0_64, MVT::i64),
+          ImmOpnd);
 
     // The remaining instructions in the sequence are handled here.
     for (++Inst; Inst != Seq.end(); ++Inst) {
@@ -1123,8 +1120,8 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       bool Is32BitSplat = ABI.IsO32() || SplatBitSize < 64;
       const unsigned ADDiuOp = Is32BitSplat ? Mips::ADDiu : Mips::DADDiu;
       const MVT SplatMVT = Is32BitSplat ? MVT::i32 : MVT::i64;
-      SDValue ZeroVal = CurDAG->getRegister(
-          Is32BitSplat ? Mips::R0 : Mips::R0_64, SplatMVT);
+      SDValue ZeroVal =
+          CurDAG->getRegister(Is32BitSplat ? Mips::R0 : Mips::R0_64, SplatMVT);
 
       const unsigned FILLOp =
           SplatBitSize == 16

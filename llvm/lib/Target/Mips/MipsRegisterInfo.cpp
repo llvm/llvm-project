@@ -162,13 +162,11 @@ const uint32_t *MipsRegisterInfo::getMips16RetHelperMask() {
 
 BitVector MipsRegisterInfo::
 getReservedRegs(const MachineFunction &MF) const {
-  static const MCPhysReg ReservedGPR32[] = {
-    Mips::R0, Mips::R26, Mips::R27, Mips::SP
-  };
+  static const MCPhysReg ReservedGPR32[] = {Mips::R0, Mips::R26, Mips::R27,
+                                            Mips::SP};
 
-  static const MCPhysReg ReservedGPR64[] = {
-    Mips::R0_64, Mips::R26_64, Mips::R27_64, Mips::SP_64
-  };
+  static const MCPhysReg ReservedGPR64[] = {Mips::R0_64, Mips::R26_64,
+                                            Mips::R27_64, Mips::SP_64};
 
   BitVector Reserved(getNumRegs());
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
