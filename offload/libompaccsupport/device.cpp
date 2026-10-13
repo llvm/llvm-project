@@ -81,9 +81,9 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
 }
 
 DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
-                   ol_device_handle_t DeviceHandle)
+                   ol_device_handle_t DeviceHandle, PluginManager *PM)
     : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
-      ForceSynchronousTargetRegions(false), DeviceHandle(DeviceHandle),
+      ForceSynchronousTargetRegions(false), DeviceHandle(DeviceHandle), PM(PM),
       MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {

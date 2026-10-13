@@ -263,8 +263,8 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
-  } else if (((PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) ||
-              (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY)) &&
+  } else if (((Device.PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) ||
+              (Device.PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY)) &&
              (!HasCloseModifier)) {
     // If unified shared memory is active, implicitly mapped variables that
     // are not privatized use host address. Any explicitly mapped variables
@@ -289,7 +289,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       // If we are here, it means that we are either in auto zero-copy or USM.
       // Enable GPU page table prefaulting if selected by the user. This feature
       // is only enabled for APUs.
-      if (PM->getRequirements() & OMPX_REQ_EAGER_ZERO_COPY_MAPS) {
+      if (Device.PM->getRequirements() & OMPX_REQ_EAGER_ZERO_COPY_MAPS) {
         Device.RTL->prepopulate_page_table(Device.DeviceID, HstPtrBegin, Size);
         INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
              "Prefaulted " DPxMOD " Size=%" PRId64 " on GPU page table\n",
@@ -496,8 +496,8 @@ TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
          LR.TPR.getEntry()->dynRefCountToStr().c_str(), DynRefCountAction,
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction);
     LR.TPR.TargetPointer = (void *)TP;
-  } else if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-             PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) {
+  } else if (Device.PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
+             Device.PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
