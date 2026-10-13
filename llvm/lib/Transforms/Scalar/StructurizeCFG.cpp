@@ -1658,12 +1658,9 @@ static bool hasOnlyUniformBranches(Region *R, unsigned UniformMDKindID,
 
   for (auto *E : R->elements()) {
     if (!E->isSubRegion()) {
-      // Never report a region with an island among its direct children as
-      // uniform: the island transform runs only on the island's own region, and
-      // the parent region cannot cope with an island left untransformed below
-      // it. Every island is a direct child of exactly one region, so this is
-      // enough to have each island handled; enclosing regions are judged by
-      // their branches as usual.
+      // Islands need to go through handleIsland. Otherwise, a uniform island in
+      // a divergent region can get mishandled later in wireFlow. (potential
+      // future optimization)
       if (isIsland(E->getEntry()))
         return false;
 
