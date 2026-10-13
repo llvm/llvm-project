@@ -47,6 +47,7 @@
 #include <__utility/exception_guard.h>
 #include <__utility/exchange.h>
 #include <__utility/forward.h>
+#include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <climits>
@@ -455,7 +456,12 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
   __is_valid_insert_position(const_iterator __position) const _NOEXCEPT {
-    return begin() <= __position && __position <= end();
+    // end() may point one word past the storage, so its word is compared for equality.
+    auto __first = std::__to_address(__begin_);
+    auto __last  = __first + __size_ / __bits_per_word;
+    auto __seg   = std::__to_address(__position.__seg_);
+    return std::__is_pointer_in_range(__first, __last, __seg) ||
+           (__seg == __last && __position.__ctz_ <= __size_ % __bits_per_word);
   }
 
   //  Allocate space for __n objects

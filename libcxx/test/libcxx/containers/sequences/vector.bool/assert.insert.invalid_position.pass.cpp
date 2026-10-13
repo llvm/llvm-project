@@ -14,6 +14,8 @@
 // Make sure vector<bool>::insert and emplace catch a position that isn't in [begin(), end()], such as
 // an iterator into another vector or an iterator invalidated by a reallocation.
 
+#include <cassert>
+#include <cstddef>
 #include <vector>
 
 #include "check_assertion.h"
@@ -72,11 +74,42 @@ void test() {
     v.pop_back();
     test_invalid_position(v, stale);
   }
+
+  // An iterator into another vector, inserting into a full vector whose end() is one word past its storage.
+  {
+    Vector v;
+    v.reserve(1);
+    v.resize(v.capacity());
+    Vector other = {false, true, false};
+    test_invalid_position(v, other.begin());
+  }
+}
+
+// Every position in [begin(), end()] is accepted, including end() of a full vector.
+template <class Vector>
+TEST_CONSTEXPR_CXX20 bool test_valid_positions() {
+  Vector v;
+  v.reserve(1);
+  v.resize(v.capacity());
+  for (std::size_t i = 0; i <= v.size(); ++i) {
+    Vector w = v;
+    w.insert(w.cbegin() + i, true);
+    assert(w.size() == v.size() + 1);
+    assert(w[i]);
+  }
+  return true;
 }
 
 int main(int, char**) {
   test<std::vector<bool> >();
   test<std::vector<bool, min_allocator<bool> > >();
+
+  test_valid_positions<std::vector<bool> >();
+  test_valid_positions<std::vector<bool, min_allocator<bool> > >();
+#if TEST_STD_VER >= 20
+  static_assert(test_valid_positions<std::vector<bool> >());
+  static_assert(test_valid_positions<std::vector<bool, min_allocator<bool> > >());
+#endif
 
   return 0;
 }
