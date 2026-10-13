@@ -8815,12 +8815,22 @@ multiclass SIMDAcrossLanesFPIntrinsic<string acrossLanesOpc,
             (v4f16 (SUBREG_TO_REG
               (!cast<Instruction>(acrossLanesOpc # "v4i16v") V64:$Rn),
               hsub))>;
+  def : Pat<(v4f16 (vector_insert (v4f16 immAllZerosV),
+                    (f16 (opNode (v8f16 V128:$Rn))), (i64 0))),
+            (v4f16 (SUBREG_TO_REG
+              (!cast<Instruction>(acrossLanesOpc # "v8i16v") V128:$Rn),
+              hsub))>;
   def : Pat<(v8f16 (vector_insert (v8f16 immAllZerosV),
                     (f16 (opNode (v8f16 V128:$Rn))), (i64 0))),
             (v8f16 (SUBREG_TO_REG
               (!cast<Instruction>(acrossLanesOpc # "v8i16v") V128:$Rn),
               hsub))>;
   }
+  def : Pat<(v2f32 (vector_insert (v2f32 immAllZerosV),
+                    (f32 (opNode (v4f32 V128:$Rn))), (i64 0))),
+            (v2f32 (SUBREG_TO_REG
+              (!cast<Instruction>(acrossLanesOpc # "v4i32v") V128:$Rn),
+              ssub))>;
   def : Pat<(v4f32 (vector_insert (v4f32 immAllZerosV),
                     (f32 (opNode (v4f32 V128:$Rn))), (i64 0))),
             (v4f32 (SUBREG_TO_REG
@@ -9009,14 +9019,26 @@ def : Pat<(i32 (vector_extract (v4i32 (opNode V128:$Rn)), (i64 0))),
 
 // Reductions have the unused lanes set to zero. Inserting the reduction's
 // result into lane zero of a zero vector is therefore redundant.
+def : Pat<(v8i8 (vector_insert immAllZerosV,
+                    (i32 (vector_extract (v16i8 (opNode V128:$Rn)), (i64 0))),
+                    (i64 0))),
+          (v8i8 (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub))>;
 def : Pat<(v16i8 (vector_insert immAllZerosV,
                     (i32 (vector_extract (v16i8 (opNode V128:$Rn)), (i64 0))),
                     (i64 0))),
           (v16i8 (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub))>;
+def : Pat<(v4i16 (vector_insert immAllZerosV,
+                    (i32 (vector_extract (v8i16 (opNode V128:$Rn)), (i64 0))),
+                    (i64 0))),
+          (v4i16 (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub))>;
 def : Pat<(v8i16 (vector_insert immAllZerosV,
                     (i32 (vector_extract (v8i16 (opNode V128:$Rn)), (i64 0))),
                     (i64 0))),
           (v8i16 (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub))>;
+def : Pat<(v2i32 (vector_insert immAllZerosV,
+                    (i32 (vector_extract (v4i32 (opNode V128:$Rn)), (i64 0))),
+                    (i64 0))),
+          (v2i32 (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn), ssub))>;
 def : Pat<(v4i32 (vector_insert immAllZerosV,
                     (i32 (vector_extract (v4i32 (opNode V128:$Rn)), (i64 0))),
                     (i64 0))),
