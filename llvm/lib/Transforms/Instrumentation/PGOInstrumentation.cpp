@@ -1638,11 +1638,16 @@ void PGOUseFunc::setBlockUniformityAttribute() {
 
   LLVMContext &Ctx = F.getContext();
   MDNode *UniformMD = MDNode::get(Ctx, {});
+  // A zero count has no uniformity observation even if its bitmap bit is set.
+  auto HasUniformityObservation = [&](size_t I) {
+    return I < ProfileRecord.Counts.size() && ProfileRecord.Counts[I] != 0;
+  };
   for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I) {
     BasicBlock *BB = InstrumentBBs[I];
     if (!BB || !BB->getTerminator())
       continue;
-    bool IsUniform = ProfileRecord.isBlockUniform(I);
+    bool IsUniform =
+        HasUniformityObservation(I) && ProfileRecord.isBlockUniform(I);
     BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
                                      IsUniform ? UniformMD : nullptr);
   }
@@ -1650,7 +1655,9 @@ void PGOUseFunc::setBlockUniformityAttribute() {
   LLVM_DEBUG({
     dbgs() << "PGO: Set block uniformity profile for " << F.getName() << ": ";
     for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I)
-      dbgs() << (ProfileRecord.isBlockUniform(I) ? 'U' : 'D');
+      dbgs() << (HasUniformityObservation(I)
+                     ? (ProfileRecord.isBlockUniform(I) ? 'U' : 'D')
+                     : '?');
     dbgs() << "\n";
   });
 }

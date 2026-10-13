@@ -208,8 +208,10 @@ TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
       ret i32 0
     })";
 
-  for (unsigned UniformityMask : {0u, 1u, 2u, 3u}) {
-    SCOPED_TRACE(UniformityMask);
+  for (unsigned Case = 0; Case < 12; ++Case) {
+    SCOPED_TRACE(Case);
+    unsigned UniformityMask = Case % 4;
+    unsigned ZeroCountCase = Case / 4;
     LLVMContext Context;
     SMDiagnostic ParseError;
     auto GenModule = parseAssemblyString(Code, ParseError, Context);
@@ -257,8 +259,10 @@ TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
       ASSERT_FALSE(BlockName.empty());
 
     std::string ProfileName = getIRPGOFuncName(*GenFunction);
-    NamedInstrProfRecord Record(ProfileName, FunctionHash,
-                                std::vector<uint64_t>(NumCounters, 10));
+    std::vector<uint64_t> Counts(NumCounters, 10);
+    if (ZeroCountCase != 0)
+      Counts[ZeroCountCase - 1] = 0;
+    NamedInstrProfRecord Record(ProfileName, FunctionHash, Counts);
     Record.UniformityBits = {static_cast<uint8_t>(UniformityMask)};
 
     InstrProfWriter Writer;
@@ -296,7 +300,7 @@ TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
 
       MDNode *MD = BB->getTerminator()->getMetadata(
           LLVMContext::MD_block_uniformity_profile);
-      bool IsUniform = (UniformityMask & (1u << I)) != 0;
+      bool IsUniform = (UniformityMask & (1u << I)) != 0 && Counts[I] != 0;
       EXPECT_EQ(MD != nullptr, IsUniform);
       if (MD)
         EXPECT_EQ(MD->getNumOperands(), 0u);
