@@ -66,18 +66,6 @@ add_entrypoint_object(
     .atexit
 )
 
-add_entrypoint_object(
-  getenv
-  SRCS
-    getenv.cpp
-  HDRS
-    getenv.h
-  DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    .environ_internal
-)
-
 # GCC-12 crashed when building environ_internal during GIMPLE pass: waccess.
 set(environ_internal_gcc12_workaround "")
 if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
@@ -92,11 +80,14 @@ set(environ_internal_deps
   libc.config.app_h
   libc.hdr.types.size_t
   libc.src.__support.checked_ptr
+  libc.src.__support.CPP.mutex
   libc.src.__support.CPP.new
   libc.src.__support.CPP.optional
+  libc.src.__support.CPP.span
   libc.src.__support.CPP.string_view
   libc.src.__support.macros.attributes
   libc.src.__support.macros.config
+  libc.src.__support.macros.sanitizer
   libc.src.string.memory_utils.inline_memcpy
   libc.src.string.memory_utils.inline_strcmp
 )
@@ -105,6 +96,16 @@ set(environ_internal_compile_options ${environ_internal_gcc12_workaround})
 if("libc.src.unistd.environ" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
   list(APPEND environ_internal_deps libc.src.unistd.environ)
   list(APPEND environ_internal_compile_options "-DLIBC_COPT_SUPPORT_ENVIRON")
+endif()
+
+if(TARGET libc.src.__support.threads.mutex AND
+   (NOT LIBC_CONF_THREAD_MODE OR
+    LIBC_CONF_THREAD_MODE STREQUAL "LIBC_THREAD_MODE_PLATFORM"))
+  list(APPEND environ_internal_deps
+    libc.src.__support.CPP.atomic
+    libc.src.__support.threads.mutex
+  )
+  list(APPEND environ_internal_compile_options "-DLIBC_COPT_ENVIRON_LOCKING")
 endif()
 
 add_object_library(
@@ -117,6 +118,18 @@ add_object_library(
     ${environ_internal_compile_options}
   DEPENDS
     ${environ_internal_deps}
+)
+
+add_entrypoint_object(
+  getenv
+  SRCS
+    getenv.cpp
+  HDRS
+    getenv.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    .environ_internal
 )
 
 add_entrypoint_object(
