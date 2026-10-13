@@ -4670,3 +4670,27 @@ func.func @omp_dispatch_nocontext_novariants(%cond : i1, %x : memref<i32>) -> ()
 
 // CHECK-LABEL: func.func private @variant(memref<i32>)
 func.func private @variant(memref<i32>) -> ()
+
+// CHECK-LABEL: omp.private {type = linear} @linear.privatizer : !llvm.ptr init {
+omp.private {type = linear} @linear.privatizer : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg1 : !llvm.ptr)
+// CHECK: } data_address {
+} data_address {
+// CHECK: ^bb0(%{{.*}}: !llvm.ptr):
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
+  // CHECK: omp.yield(%{{.*}} : !llvm.ptr)
+  omp.yield(%0 : !llvm.ptr)
+}
+
+// CHECK-LABEL: func @simd_linear_privatizer
+func.func @simd_linear_privatizer(%x : !llvm.ptr, %lb : i32, %ub : i32, %step : i32) {
+  // CHECK: omp.simd linear(%[[X:.*]] : !llvm.ptr = %{{.*}} : i32) linear_var_types([i32]) private(@linear.privatizer %[[X]] -> %{{.*}} : !llvm.ptr)
+  omp.simd linear(%x : !llvm.ptr = %step : i32) linear_var_types([i32]) private(@linear.privatizer %x -> %arg0 : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  return
+}

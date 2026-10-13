@@ -3062,12 +3062,22 @@ static LogicalResult verifyPrivateVarList(OpType &op) {
     if (privatizerType && (varType != privatizerType))
       return op.emitError()
              << "type mismatch between a "
-             << (privatizerOp.getDataSharingType() ==
-                         DataSharingClauseType::Private
-                     ? "private"
-                     : "firstprivate")
+             << stringifyDataSharingClauseType(
+                    privatizerOp.getDataSharingType())
              << " variable and its privatizer op, var type: " << varType
              << " vs. privatizer op type: " << privatizerType;
+
+    if (privatizerOp.getDataSharingType() == DataSharingClauseType::Linear) {
+      bool isLinearVar = false;
+      if constexpr (std::is_same_v<OpType, SimdOp> ||
+                    std::is_same_v<OpType, WsloopOp>)
+        isLinearVar =
+            llvm::is_contained(op.getLinearVars(), std::get<0>(privateVarInfo));
+      if (!isLinearVar)
+        return op.emitError() << "`linear` privatizer '" << privateSym
+                              << "' used for a variable that is not in the "
+                                 "`linear` clause";
+    }
   }
 
   return success();
@@ -3655,7 +3665,14 @@ LogicalResult SimdOp::verify() {
       getLinearVarTypes().value().size() != getLinearVars().size())
     return emitError() << "Ill-formed type attributes for linear variables";
 
-  llvm::DenseSet<Value> privateVars(llvm::from_range, getPrivateVars());
+  // A `linear` privatizer is how a linear variable is privatized.
+  llvm::DenseSet<Value> privateVars;
+  if (std::optional<ArrayAttr> privateSyms = getPrivateSyms())
+    for (auto [var, sym] : llvm::zip_equal(getPrivateVars(), *privateSyms))
+      if (SymbolTable::lookupNearestSymbolFrom<PrivateClauseOp>(
+              getOperation(), cast<SymbolRefAttr>(sym))
+              .getDataSharingType() != DataSharingClauseType::Linear)
+        privateVars.insert(var);
   llvm::DenseSet<Value> reductionVars(llvm::from_range, getReductionVars());
   // TODO Check lastprivate vars when their support is added to SimdOp.
   for (Value var : getLinearVars()) {
@@ -5332,8 +5349,8 @@ void PrivateClauseOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 
 LogicalResult PrivateClauseOp::verifyRegions() {
   Type argType = getArgType();
-  auto verifyTerminator = [&](Operation *terminator,
-                              bool yieldsValue) -> LogicalResult {
+  auto verifyTerminator = [&](Operation *terminator, bool yieldsValue,
+                              bool yieldsAnyType) -> LogicalResult {
     if (!terminator->getBlock()->getSuccessors().empty())
       return success();
 
@@ -5352,12 +5369,17 @@ LogicalResult PrivateClauseOp::verifyRegions() {
              << "Did not expect any values to be yielded.";
     }
 
-    if (yieldedTypes.size() == 1 && yieldedTypes.front() == argType)
+    if (yieldedTypes.size() == 1 &&
+        (yieldsAnyType || yieldedTypes.front() == argType))
       return success();
 
     auto error = mlir::emitError(yieldOp.getLoc())
-                 << "Invalid yielded value. Expected type: " << argType
-                 << ", got: ";
+                 << "Invalid yielded value. Expected ";
+    if (yieldsAnyType)
+      error << "a single value";
+    else
+      error << "type: " << argType;
+    error << ", got: ";
 
     if (yieldedTypes.empty())
       error << "None";
@@ -5368,8 +5390,8 @@ LogicalResult PrivateClauseOp::verifyRegions() {
   };
 
   auto verifyRegion = [&](Region &region, unsigned expectedNumArgs,
-                          StringRef regionName,
-                          bool yieldsValue) -> LogicalResult {
+                          StringRef regionName, bool yieldsValue,
+                          bool yieldsAnyType = false) -> LogicalResult {
     assert(!region.empty());
 
     if (region.getNumArguments() != expectedNumArgs)
@@ -5382,7 +5404,8 @@ LogicalResult PrivateClauseOp::verifyRegions() {
       if (!block.mightHaveTerminator())
         continue;
 
-      if (failed(verifyTerminator(block.getTerminator(), yieldsValue)))
+      if (failed(verifyTerminator(block.getTerminator(), yieldsValue,
+                                  yieldsAnyType)))
         return failure();
     }
 
@@ -5415,6 +5438,19 @@ LogicalResult PrivateClauseOp::verifyRegions() {
       failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy",
                           /*yieldsValue=*/true)))
     return failure();
+
+  if (dsType == DataSharingClauseType::Linear && !getCopyRegion().empty())
+    return emitError("`linear` clauses do not require a `copy` region.");
+
+  if (!getDataAddressRegion().empty()) {
+    if (dsType != DataSharingClauseType::Linear)
+      return emitError(
+          "only `linear` clauses can have a `data_address` region.");
+    if (failed(verifyRegion(getDataAddressRegion(), /*expectedNumArgs=*/1,
+                            "data_address", /*yieldsValue=*/true,
+                            /*yieldsAnyType=*/true)))
+      return failure();
+  }
 
   if (!getDeallocRegion().empty() &&
       failed(verifyRegion(getDeallocRegion(), /*expectedNumArgs=*/1, "dealloc",

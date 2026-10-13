@@ -3756,6 +3756,52 @@ omp.private {type = private} @x.privatizer : f32 copy {
 
 // -----
 
+// expected-error @below {{`linear` clauses do not require a `copy` region.}}
+omp.private {type = linear} @x.privatizer : f32 copy {
+^bb0(%arg0: f32, %arg1 : f32):
+  omp.yield(%arg0 : f32)
+}
+
+// -----
+
+// expected-error @below {{only `linear` clauses can have a `data_address` region.}}
+omp.private {type = private} @x.privatizer : !llvm.ptr data_address {
+^bb0(%arg0: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+// -----
+
+// expected-error @below {{`data_address`: expected 1 region arguments, got: 2}}
+omp.private {type = linear} @x.privatizer : !llvm.ptr data_address {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+// -----
+
+omp.private {type = linear} @x.privatizer : !llvm.ptr data_address {
+^bb0(%arg0: !llvm.ptr):
+  // expected-error @below {{Invalid yielded value. Expected a single value, got: None}}
+  omp.yield
+}
+
+// -----
+
+omp.private {type = linear} @x.privatizer : !llvm.ptr
+
+func.func @linear_privatizer_not_linear(%x : !llvm.ptr, %lb : i32) {
+  // expected-error @below {{`linear` privatizer '@x.privatizer' used for a variable that is not in the `linear` clause}}
+  omp.simd private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%lb) step (%lb) {
+      omp.yield
+    }
+  }
+  return
+}
+
+// -----
+
 // expected-error @below {{`firstprivate` clauses require at least a `copy` region.}}
 omp.private {type = firstprivate} @x.privatizer : f32 init {
 ^bb0(%arg0: f32, %arg1: f32):
