@@ -115,3 +115,19 @@ FromConstRefOnly FromConstRefOnly() {
   const Obj obj = Make<Obj>();
   return obj;
 }
+
+void Captures() {
+  const Obj obj = Make<Obj>();
+  auto ByRef = [&obj]() -> NonTemplate { return obj; };
+  auto ByCopy = [obj]() -> NonTemplate { return obj; };
+  auto DefaultByRef = [&]() -> NonTemplate { return obj; };
+  auto DefaultByCopy = [=]() -> NonTemplate { return obj; };
+}
+
+void LambdaLocal() {
+  auto L = []() -> NonTemplate {
+    const Obj obj = Make<Obj>();
+    return obj;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constness of 'obj' prevents automatic move [performance-no-automatic-move]
+  };
+}
