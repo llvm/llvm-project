@@ -7173,6 +7173,8 @@ TemplateName CXXNameMangler::mangleExistingSubstitution(TemplateName tname) {
              tname.getAsSubstTemplateTemplateParm()) {
     if (mangleSubstitution(subst->getReplacement()))
       return tname;
+    if (isCompatibleWith(LangOptions::ClangABI::Ver23))
+      return tname;
     tname = subst->getReplacement();
   }
   return tname;

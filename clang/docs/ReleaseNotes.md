@@ -64,6 +64,11 @@ in a future version of Clang.
 
 ### ABI Changes in This Version
 
+- Clang now mangles a template template parameter that was substituted through
+  an alias template and is used as the base of an unresolved name, such as
+  `TT<T>::value` in a non-type template parameter's type, as the substituted
+  template. Previous versions emitted an ill-formed symbol with no name in that
+  position. `-fclang-abi-compat=23` restores the previous behavior. (#GH88592)
 - Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
 for 256- and 512-bit vector arguments and returns from effective per-function
 target features. Features and `arch=` CPUs that imply AVX or AVX512F are
@@ -999,12 +1004,11 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when a method or function definition follows an
   Objective-C `@implementation` that was ended by a nested `@interface`,
   `@protocol` or `@implementation` before its `@end`. (#GH209503)
+- Fixed use-after-free with annotate attribute on a C++ class method with a this-adjusting thunk.
 - Fixed an assertion failure in the Itanium mangler when a template template
   parameter substituted through an alias template is used as the base of an
   unresolved name, such as `TT<T>::value` in a non-type template parameter's
   type. (#GH88592)
-- Fixed use-after-free with annotate attribute on a C++ class method with a this-adjusting thunk.
->>>>>>> main
 
 ### OpenACC Specific Changes
 
