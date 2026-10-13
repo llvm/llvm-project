@@ -2860,12 +2860,12 @@ def CIR_SubOp
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOfIntType> {
+def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer multiplication";
   let description = [{
     The `cir.mul` operation performs multiplication on integer operands. Both
     operands and the result must have the same integer or vector-of-integer
-    type.
+    or matrix-of-integer type.
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
@@ -2878,11 +2878,13 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOfIntType> {
     %1 = cir.mul nsw %a, %b : !s32i
     %2 = cir.mul nuw %a, %b : !u32i
     %3 = cir.mul %va, %vb : !cir.vector<4 x !s32i>
+    %4 = cir.mul %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 
   let arguments = (ins
-    CIR_AnyIntOrVecOfIntType:$lhs, CIR_AnyIntOrVecOfIntType:$rhs,
+    CIR_AnyIntOrVecOrMatrixOfIntType:$lhs,
+    CIR_AnyIntOrVecOrMatrixOfIntType:$rhs,
     UnitProp:$no_signed_wrap,
     UnitProp:$no_unsigned_wrap
   );
@@ -3001,6 +3003,7 @@ def CIR_FSubOp
     operands. Both operands and the result must have the same floating-point
     scalar vector-of-float or matrix-of-float type.
 
+
     Example:
 
     ```
@@ -3018,7 +3021,7 @@ def CIR_FSubOp
 // FMulOp
 //===----------------------------------------------------------------------===//
 
-def CIR_FMulOp : CIR_FPBinaryOp<"fmul"> {
+def CIR_FMulOp : CIR_FPBinaryOp<"fmul", [], CIR_AnyFloatOrVecOrMatrixOfFloatType> {
   let summary = "Floating-point multiplication";
   let description = [{
     The `cir.fmul` operation performs floating-point multiplication on its
@@ -6715,6 +6718,56 @@ def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
     (`volatile` $is_volatile^)?
     `,` qualified(type($result)) attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixMultiplyOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixMultiplyOp : CIR_Op<"matrix.multiply", [
+  Pure,
+  AllMatchSameOperatorTrait<["lhs", "rhs", "result"],
+    "::mlir::cast<cir::MatrixType>($_self.getType()).getElementType()",
+    "element type">,
+  PredOpTrait<"left operand column count matches right operand row count",
+    CPred<"::mlir::cast<cir::MatrixType>($_op.getOperand(0).getType())"
+          ".getNumColumns() == "
+          "::mlir::cast<cir::MatrixType>($_op.getOperand(1).getType())"
+          ".getNumRows()">>,
+  PredOpTrait<"result is left operand rows by right operand columns",
+    CPred<"::mlir::cast<cir::MatrixType>($_op.getResult(0).getType())"
+          ".getNumRows() == "
+          "::mlir::cast<cir::MatrixType>($_op.getOperand(0).getType())"
+          ".getNumRows() && "
+          "::mlir::cast<cir::MatrixType>($_op.getResult(0).getType())"
+          ".getNumColumns() == "
+          "::mlir::cast<cir::MatrixType>($_op.getOperand(1).getType())"
+          ".getNumColumns()">>
+]> {
+  let summary = "Matrix multiplication";
+  let description = [{
+    The `cir.matrix.multiply` operation multiplies two matrices and
+    corresponds to the `llvm.matrix.multiply` intrinsic in LLVM IR.
+
+    The left-hand operand must have dimensions `M x K`, the right-hand operand
+    `K x N`, and the result `M x N`. All three must share an element type.
+
+    ```
+    %res = cir.matrix.multiply %lhs, %rhs
+        : (!cir.matrix<2 x 3 x !cir.float>, !cir.matrix<3 x 4 x !cir.float>)
+        -> !cir.matrix<2 x 4 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_MatrixType:$lhs, CIR_MatrixType:$rhs);
+  let results = (outs CIR_MatrixType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs attr-dict
+    `:` `(` qualified(type($lhs)) `,` qualified(type($rhs)) `)`
+    `->` qualified(type($result))
+  }];
+
 }
 
 //===----------------------------------------------------------------------===//
