@@ -314,6 +314,11 @@ infrastructure are described first, followed by tool-specific sections.
   {option}`ForRangeLoopClasses` to configure container classes that can be used
   as sources in range-based `for` loops.
 
+- Improved {doc}`performance-no-automatic-move
+  <clang-tidy/checks/performance/no-automatic-move>` check by no longer
+  warning when returning a variable captured by a lambda or a block, which is
+  never implicitly moved from.
+
 - Improved {doc}`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
   avoid offering fix-its for string literals originating from macro
