@@ -73,6 +73,7 @@ set(ORC_RT_HEADERS
 if (ORC_RT_TARGET_POSIX)
   list(APPEND ORC_RT_HEADERS
     orc-rt/bedrock/sps/DWARFEHFrameRegistrarSPSCI.h
+    orc-rt/connect-tcp/TCP.h
   )
 endif()
 

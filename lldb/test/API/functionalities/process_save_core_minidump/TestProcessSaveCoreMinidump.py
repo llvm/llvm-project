@@ -281,6 +281,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
     @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
+    # We try to read Linux /proc files from the host not the remote:
+    # https://github.com/llvm/llvm-project/issues/231472
+    @skipIfRemote
     def test_save_linux_mini_dump_thread_options(self):
         """Test that we can save a Linux mini dump
         with a subset of threads"""
@@ -288,6 +291,8 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         thread_subset_dmp = self.getBuildArtifact("core.thread.subset.dmp")
+        core_target = None
+        target = None
         try:
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
@@ -330,7 +335,10 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             )
 
         finally:
-            self.assertTrue(self.dbg.DeleteTarget(target))
+            if target:
+                self.assertTrue(self.dbg.DeleteTarget(target))
+            if core_target:
+                self.assertTrue(self.dbg.DeleteTarget(core_target))
             if os.path.isfile(thread_subset_dmp):
                 os.unlink(thread_subset_dmp)
 
@@ -481,8 +489,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 os.unlink(custom_file)
 
     def save_core_with_region(self, process, region_index):
+        custom_file = self.getBuildArtifact("core.custom.dmp")
+        core_target = None
         try:
-            custom_file = self.getBuildArtifact("core.custom.dmp")
             memory_region = lldb.SBMemoryRegionInfo()
             memory_list = process.GetMemoryRegions()
             memory_list.GetMemoryRegionAtIndex(0, memory_region)
@@ -512,6 +521,8 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 )
                 range_set.add(mem_tuple)
         finally:
+            if core_target:
+                self.assertTrue(self.dbg.DeleteTarget(core_target))
             if os.path.isfile(custom_file):
                 os.unlink(custom_file)
 
@@ -691,6 +702,8 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         output_file = self.getBuildArtifact("no_empty_regions.dmp")
+        target = None
+        core_target = None
         try:
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
@@ -720,5 +733,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             )
             self.assertNotIn(empty_region, core_process.GetMemoryRegions())
         finally:
+            if target:
+                self.assertTrue(self.dbg.DeleteTarget(target))
+            if core_target:
+                self.assertTrue(self.dbg.DeleteTarget(core_target))
             if os.path.isfile(output_file):
                 os.unlink(output_file)
