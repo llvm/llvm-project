@@ -441,6 +441,7 @@ __packed_srx(srx_32, uint32_t)
 #if __riscv_xlen == 64
 __packed_cls(cls_64, int64_t, __builtin_clrsbll)
 __packed_unary_builtin(rev_64, uint64_t, __builtin_bitreverse64)
+__packed_unary_builtin(rev16_64, uint64_t, __builtin_riscv_rev16_64)
 __packed_slx(slx_64, uint64_t)
 __packed_srx(srx_64, uint64_t)
 #endif
