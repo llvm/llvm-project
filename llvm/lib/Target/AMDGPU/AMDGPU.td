@@ -432,6 +432,10 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
 def UseTrue16WithSramECC : True16PredicateClass<"Subtarget->useRealTrue16Insts() && "
                                                 "!Subtarget->d16PreservesUnusedBits()">;
 
+def UseTrue16WithD16PreservesUnusedBits :
+  True16PredicateClass<"Subtarget->useRealTrue16Insts() && "
+                       "Subtarget->d16PreservesUnusedBits()">;
+
 def NotHasD16Writes32BitVgpr: Predicate<"!Subtarget->hasD16Writes32BitVgpr()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, (not FeatureD16Writes32BitVgpr))>;
 

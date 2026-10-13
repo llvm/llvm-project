@@ -686,6 +686,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
 - Clang no longer treats a file-scope `thread_local` declaration without an initializer as a tentative definition in C23 mode. As specified by C23 6.9.3, such a declaration is a definition, so declaring the same variable more that once is now diagnosed as a redefinition. (#GH217636)
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
+- Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -710,6 +711,9 @@ features cannot lower the translation-unit ABI level;
   or `__builtin_is_aligned` with pointers without an underlying object. Null pointers
   are handled as aligned values, while other base-less pointers are rejected during constant
   evaluation.
+- Fixed an assertion failure when `__builtin_object_size` or
+  `__builtin_dynamic_object_size` is called with an out-of-range type argument
+  during constant evaluation. (#GH225041)
 
 #### Bug Fixes to Attribute Support
 
