@@ -516,6 +516,8 @@ private:
   /// The low-level pattern applicator.
   PatternApplicator matcher;
 
+  DeadnessCache deadnessCache;
+
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   ExpensiveChecks expensiveChecks;
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -809,7 +811,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     });
 
     // If the operation is trivially dead - remove it.
-    if (isOpTriviallyDead(op)) {
+    if (deadnessCache.isOpTriviallyDead(op)) {
       rewriter.eraseOp(op);
       changed = true;
 
@@ -993,17 +995,28 @@ void GreedyPatternRewriteDriver::addSingleOpToWorklist(Operation *op) {
 
 void GreedyPatternRewriteDriver::notifyBlockInserted(
     Block *block, Region *previous, Region::iterator previousIt) {
+  if (previous)
+    if (Operation *parent = previous->getParentOp())
+      deadnessCache.invalidate(parent);
+  if (Operation *parent = block->getParentOp())
+    deadnessCache.invalidate(parent);
   if (RewriterBase::Listener *listener = config.getListener())
     listener->notifyBlockInserted(block, previous, previousIt);
 }
 
 void GreedyPatternRewriteDriver::notifyBlockErased(Block *block) {
+  if (Operation *parent = block->getParentOp())
+    deadnessCache.invalidate(parent);
   if (RewriterBase::Listener *listener = config.getListener())
     listener->notifyBlockErased(block);
 }
 
 void GreedyPatternRewriteDriver::notifyOperationInserted(
     Operation *op, OpBuilder::InsertPoint previous) {
+  if (previous.isSet())
+    if (Operation *parent = previous.getBlock()->getParentOp())
+      deadnessCache.invalidate(parent);
+  deadnessCache.invalidate(op);
   LLVM_DEBUG({
     logger.startLine() << "** Insert  : '" << op->getName() << "'(" << op
                        << ")\n";
@@ -1016,6 +1029,7 @@ void GreedyPatternRewriteDriver::notifyOperationInserted(
 }
 
 void GreedyPatternRewriteDriver::notifyOperationModified(Operation *op) {
+  deadnessCache.invalidate(op);
   LLVM_DEBUG({
     logger.startLine() << "** Modified: '" << op->getName() << "'(" << op
                        << ")\n";
@@ -1059,6 +1073,7 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
 }
 
 void GreedyPatternRewriteDriver::notifyOperationErased(Operation *op) {
+  deadnessCache.invalidate(op);
   LLVM_DEBUG({
     logger.startLine() << "** Erase   : '" << op->getName() << "'(" << op
                        << ")\n";
