@@ -260,9 +260,12 @@ void LLVMAddModule(LLVMExecutionEngineRef EE, LLVMModuleRef M){
 LLVMBool LLVMRemoveModule(LLVMExecutionEngineRef EE, LLVMModuleRef M,
                           LLVMModuleRef *OutMod, char **OutError) {
   Module *Mod = unwrap(M);
-  unwrap(EE)->removeModule(Mod);
-  *OutMod = wrap(Mod);
-  return 0;
+  if (unwrap(EE)->removeModule(Mod)) {
+    *OutMod = wrap(Mod);
+    return 0;
+  }
+  *OutError = strdup("Module is not owned by this execution engine");
+  return 1;
 }
 
 LLVMBool LLVMFindFunction(LLVMExecutionEngineRef EE, const char *Name,
