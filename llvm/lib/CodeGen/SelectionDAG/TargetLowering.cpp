@@ -532,7 +532,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 #undef FP_CMP_LIBCALL
 
   // Use the target specific return value for comparison lib calls.
-  EVT RetVT = getCmpLibcallReturnType();
+  EVT RetVT = EVT::getEVT(getCmpLibcallReturnType(*DAG.getContext()));
   SDValue Ops[2] = {NewLHS, NewRHS};
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[2] = { OldLHS.getValueType(),
@@ -12855,6 +12855,21 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
     return;
   }
 
+  // The libcall takes and returns WideVT values as packed VT halves. This only
+  // works if VT is legal and WideVT isn't. Otherwise, emit a wide multiply and
+  // let it legalise normally, possibly into a wider libcall.
+  if (isTypeLegal(WideVT) || !isTypeLegal(VT)) {
+    SDValue Mul = DAG.getNode(ISD::MUL, dl, WideVT,
+                              DAG.getExtOrTrunc(Signed, LHS, dl, WideVT),
+                              DAG.getExtOrTrunc(Signed, RHS, dl, WideVT));
+    SDValue Shift =
+        DAG.getShiftAmountConstant(VT.getScalarSizeInBits(), WideVT, dl);
+    Lo = DAG.getNode(ISD::TRUNCATE, dl, VT, Mul);
+    Hi = DAG.getNode(ISD::TRUNCATE, dl, VT,
+                     DAG.getNode(ISD::SRL, dl, WideVT, Mul, Shift));
+    return;
+  }
+
   SDValue HiLHS, HiRHS;
   if (Signed) {
     // The high part is obtained by SRA'ing all but one of the bits of low
@@ -13708,6 +13723,127 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::BITCAST, dl, VT, Op);
   }
   return SDValue();
+}
+
+void TargetLowering::expandVectorInterleave(SDNode *Node,
+                                            SmallVectorImpl<SDValue> &Results,
+                                            SelectionDAG &DAG) const {
+  assert(Node->getOpcode() == ISD::VECTOR_INTERLEAVE && "Unexpected opcode");
+  EVT VT = Node->getValueType(0);
+  unsigned Factor = Node->getNumOperands();
+  SDLoc DL(Node);
+
+  if (Factor > 2 && Factor % 2 == 0) {
+    SmallVector<EVT> HalfVTs(Factor / 2, VT);
+    SmallVector<SDValue, 8> LOps, ROps;
+    // Interleave so we have 2 factors per result:
+    // a0a1 b0b1 c0c1 d0d1 -> [a0c0 b0d0] [a1c1 b1d1]
+    for (unsigned I = 0; I < Factor / 2; I++) {
+      SDValue Interleave =
+          DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, {VT, VT},
+                      {Node->getOperand(I), Node->getOperand(I + Factor / 2)});
+      LOps.push_back(Interleave.getValue(0));
+      ROps.push_back(Interleave.getValue(1));
+    }
+    // Interleave at Factor/2:
+    // [a0c0 b0d0] [a1c1 b1d1] -> a0b0 c0d0 a1b1 c1d1
+    SDValue L = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, HalfVTs, LOps);
+    SDValue R = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, HalfVTs, ROps);
+    for (unsigned I = 0; I < Factor / 2; I++)
+      Results.push_back(L.getValue(I));
+    for (unsigned I = 0; I < Factor / 2; I++)
+      Results.push_back(R.getValue(I));
+    return;
+  }
+
+  if (!VT.isFixedLengthVector())
+    return;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  EVT EltVT = VT.getVectorElementType();
+
+  // A factor of two needs only same-width, two-input shuffles.
+  if (Factor == 2) {
+    SmallVector<int, 8> Mask = createInterleaveMask(NumElts, Factor);
+    for (unsigned I = 0; I != Factor; ++I)
+      Results.push_back(DAG.getVectorShuffle(
+          VT, DL, Node->getOperand(0), Node->getOperand(1),
+          ArrayRef<int>(Mask).slice(I * NumElts, NumElts)));
+    return;
+  }
+
+  SmallVector<SDValue> InterleavedElts;
+  InterleavedElts.reserve(Factor * NumElts);
+  for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx)
+    for (unsigned OperandIdx = 0; OperandIdx != Factor; ++OperandIdx)
+      InterleavedElts.push_back(DAG.getExtractVectorElt(
+          DL, EltVT, Node->getOperand(OperandIdx), EltIdx));
+
+  for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx)
+    Results.push_back(DAG.getBuildVector(
+        VT, DL, ArrayRef(InterleavedElts).slice(ResultIdx * NumElts, NumElts)));
+}
+
+void TargetLowering::expandVectorDeinterleave(SDNode *Node,
+                                              SmallVectorImpl<SDValue> &Results,
+                                              SelectionDAG &DAG) const {
+  assert(Node->getOpcode() == ISD::VECTOR_DEINTERLEAVE && "Unexpected opcode");
+  EVT VT = Node->getValueType(0);
+  unsigned Factor = Node->getNumOperands();
+  SDLoc DL(Node);
+
+  if (Factor > 2 && Factor % 2 == 0) {
+    SmallVector<SDValue, 8> Ops(Node->ops());
+    SmallVector<EVT> HalfVTs(Factor / 2, VT);
+    // Deinterleave at Factor/2 so each result contains two factors interleaved:
+    // a0b0 c0d0 a1b1 c1d1 -> [a0c0 b0d0] [a1c1 b1d1]
+    SDValue L = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, HalfVTs,
+                            ArrayRef(Ops).take_front(Factor / 2));
+    SDValue R = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, HalfVTs,
+                            ArrayRef(Ops).take_back(Factor / 2));
+    Results.resize(Factor);
+    // Deinterleave the 2 factors out:
+    // [a0c0 a1c1] [b0d0 b1d1] -> a0a1 b0b1 c0c1 d0d1
+    for (unsigned I = 0; I < Factor / 2; ++I) {
+      SDValue Deinterleave = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, {VT, VT},
+                                         {L.getValue(I), R.getValue(I)});
+      Results[I] = Deinterleave.getValue(0);
+      Results[I + Factor / 2] = Deinterleave.getValue(1);
+    }
+    return;
+  }
+
+  if (!VT.isFixedLengthVector())
+    return;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  EVT EltVT = VT.getVectorElementType();
+
+  // A factor of two needs only same-width, two-input shuffles.
+  if (Factor == 2) {
+    for (unsigned I = 0; I != Factor; ++I)
+      Results.push_back(
+          DAG.getVectorShuffle(VT, DL, Node->getOperand(0), Node->getOperand(1),
+                               createStrideMask(I, Factor, NumElts)));
+    return;
+  }
+
+  SmallVector<SDValue> ConcatElts;
+  ConcatElts.reserve(Factor * NumElts);
+  for (unsigned OperandIdx = 0; OperandIdx != Factor; ++OperandIdx)
+    for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx)
+      ConcatElts.push_back(DAG.getExtractVectorElt(
+          DL, EltVT, Node->getOperand(OperandIdx), EltIdx));
+
+  SmallVector<SDValue> DeinterleavedElts;
+  DeinterleavedElts.reserve(Factor * NumElts);
+  for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx) {
+    for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx)
+      DeinterleavedElts.push_back(ConcatElts[ResultIdx + EltIdx * Factor]);
+    Results.push_back(DAG.getBuildVector(
+        VT, DL,
+        ArrayRef(DeinterleavedElts).slice(ResultIdx * NumElts, NumElts)));
+  }
 }
 
 SDValue TargetLowering::expandVectorSplice(SDNode *Node,

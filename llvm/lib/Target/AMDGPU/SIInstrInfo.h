@@ -231,14 +231,14 @@ protected:
   bool swapSourceModifiers(MachineInstr &MI, MachineOperand &Src0,
                            AMDGPU::OpName Src0OpName, MachineOperand &Src1,
                            AMDGPU::OpName Src1OpName) const;
-  bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
-                     unsigned toIdx) const;
   bool isNonCommutableDPP(const MachineInstr &MI) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
 
 public:
+  bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
+                     unsigned toIdx) const;
   enum TargetOperandFlags {
     MO_MASK = 0xf,
 
@@ -442,8 +442,8 @@ public:
 
   bool canInsertSelect(const MachineBasicBlock &MBB,
                        ArrayRef<MachineOperand> Cond, Register DstReg,
-                       Register TrueReg, Register FalseReg, int &CondCycles,
-                       int &TrueCycles, int &FalseCycles) const override;
+                       Register TrueReg, Register FalseReg,
+                       SelectExpansion &Exp) const override;
 
   void insertSelect(MachineBasicBlock &MBB,
                     MachineBasicBlock::iterator I, const DebugLoc &DL,

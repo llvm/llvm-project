@@ -6706,7 +6706,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
     if (IsLowReverse(NumElts))
       return DAG.getNode(ISD::VECTOR_REVERSE, DL, VT, V1);
     if (Subtarget.is64Bit() && VT == MVT::v4i16 && IsLowReverse(/*L=*/2))
-      return DAG.getNode(RISCVISD::PPAIROE_H, DL, VT, V1, V1);
+      return DAG.getNode(RISCVISD::PPAIROE, DL, VT, V1, V1);
     // Widened: reversing sends the low-half lanes to the top half, so shift
     // them back down by half the register. Only the 64-bit packed types are
     // legal here, so the register is XLen (i64).
@@ -12390,6 +12390,21 @@ static unsigned getRVPMulHighOpcode(unsigned IntNo) {
   }
 }
 
+static unsigned getRVScalarAveragingOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V scalar averaging intrinsic");
+  case Intrinsic::riscv_aadd_i32:
+    return ISD::AVGFLOORS;
+  case Intrinsic::riscv_aaddu_u32:
+    return ISD::AVGFLOORU;
+  case Intrinsic::riscv_asub_i32:
+    return RISCVISD::ASUB;
+  case Intrinsic::riscv_asubu_u32:
+    return RISCVISD::ASUBU;
+  }
+}
+
 static unsigned getRVScalarMulHighOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
@@ -12432,21 +12447,17 @@ static unsigned getRVPMulHighAccumulateByHalvesOpcode(unsigned IntNo) {
     llvm_unreachable("Unexpected RISC-V packed multiply high accumulate by "
                      "halves intrinsic");
   case Intrinsic::riscv_pmhacc_b0:
-    return RISCVISD::MHACC_H_B0;
-  case Intrinsic::riscv_pmhacc_b1:
-    return RISCVISD::MHACC_H_B1;
-  case Intrinsic::riscv_pmhaccsu_b0:
-    return RISCVISD::MHACCSU_H_B0;
-  case Intrinsic::riscv_pmhaccsu_b1:
-    return RISCVISD::MHACCSU_H_B1;
   case Intrinsic::riscv_pmhacc_h0:
-    return RISCVISD::MHACC_W_H0;
+    return RISCVISD::MHACC_HALF_0;
+  case Intrinsic::riscv_pmhacc_b1:
   case Intrinsic::riscv_pmhacc_h1:
-    return RISCVISD::MHACC_W_H1;
+    return RISCVISD::MHACC_HALF_1;
+  case Intrinsic::riscv_pmhaccsu_b0:
   case Intrinsic::riscv_pmhaccsu_h0:
-    return RISCVISD::MHACCSU_W_H0;
+    return RISCVISD::MHACCSU_HALF_0;
+  case Intrinsic::riscv_pmhaccsu_b1:
   case Intrinsic::riscv_pmhaccsu_h1:
-    return RISCVISD::MHACCSU_W_H1;
+    return RISCVISD::MHACCSU_HALF_1;
   }
 }
 
@@ -12512,53 +12523,28 @@ static unsigned getRVPScalarMulHighPartsOpcode(unsigned IntNo) {
   }
 }
 
-static unsigned getRVPQFormatAccScalarOpcode(Intrinsic::ID IntNo) {
-  switch (IntNo) {
-  default:
-    llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
-  case Intrinsic::riscv_mqacc_00:
-  case Intrinsic::riscv_pmqacc_h00:
-    return RISCVISD::MQACC_00;
-  case Intrinsic::riscv_mqacc_01:
-  case Intrinsic::riscv_pmqacc_h01:
-    return RISCVISD::MQACC_01;
-  case Intrinsic::riscv_mqacc_11:
-  case Intrinsic::riscv_pmqacc_h11:
-    return RISCVISD::MQACC_11;
-  case Intrinsic::riscv_mqracc_00:
-  case Intrinsic::riscv_pmqracc_h00:
-    return RISCVISD::MQRACC_00;
-  case Intrinsic::riscv_mqracc_01:
-  case Intrinsic::riscv_pmqracc_h01:
-    return RISCVISD::MQRACC_01;
-  case Intrinsic::riscv_mqracc_11:
-  case Intrinsic::riscv_pmqracc_h11:
-    return RISCVISD::MQRACC_11;
-  }
-}
-
 static unsigned getRVPQFormatAccOpcode(Intrinsic::ID IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
   case Intrinsic::riscv_mqacc_00:
   case Intrinsic::riscv_pmqacc_h00:
-    return RISCVISD::PMQACC_W_H00;
+    return RISCVISD::MQACC_HALVES_00;
   case Intrinsic::riscv_mqacc_01:
   case Intrinsic::riscv_pmqacc_h01:
-    return RISCVISD::PMQACC_W_H01;
+    return RISCVISD::MQACC_HALVES_01;
   case Intrinsic::riscv_mqacc_11:
   case Intrinsic::riscv_pmqacc_h11:
-    return RISCVISD::PMQACC_W_H11;
+    return RISCVISD::MQACC_HALVES_11;
   case Intrinsic::riscv_mqracc_00:
   case Intrinsic::riscv_pmqracc_h00:
-    return RISCVISD::PMQRACC_W_H00;
+    return RISCVISD::MQRACC_HALVES_00;
   case Intrinsic::riscv_mqracc_01:
   case Intrinsic::riscv_pmqracc_h01:
-    return RISCVISD::PMQRACC_W_H01;
+    return RISCVISD::MQRACC_HALVES_01;
   case Intrinsic::riscv_mqracc_11:
   case Intrinsic::riscv_pmqracc_h11:
-    return RISCVISD::PMQRACC_W_H11;
+    return RISCVISD::MQRACC_HALVES_11;
   }
 }
 
@@ -13150,14 +13136,14 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
       SDValue RdLo = DAG.getExtractVectorElt(DL, XLenVT, Rd, 0);
       SDValue RdHi = DAG.getExtractVectorElt(DL, XLenVT, Rd, 1);
-      unsigned ScalarOpc = getRVPQFormatAccScalarOpcode(IntNo);
+      unsigned ScalarOpc = getRVPQFormatAccOpcode(IntNo);
       SDValue Lo = DAG.getNode(ScalarOpc, DL, XLenVT, RdLo, Rs1Lo, Rs2Lo);
       SDValue Hi = DAG.getNode(ScalarOpc, DL, XLenVT, RdHi, Rs1Hi, Rs2Hi);
       return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
 
     if (VT == XLenVT) {
-      unsigned Opc = getRVPQFormatAccScalarOpcode(IntNo);
+      unsigned Opc = getRVPQFormatAccOpcode(IntNo);
       return DAG.getNode(Opc, DL, XLenVT, Rd, Rs1, Rs2);
     }
 
@@ -13253,10 +13239,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_pusati: {
     bool IsSigned = IntNo == Intrinsic::riscv_psati;
     unsigned Opc = IsSigned ? RISCVISD::SATI : RISCVISD::USATI;
-    // psati's width counts the sign bit, RISCVISD::SATI's immediate does not.
-    unsigned Width = Op.getConstantOperandVal(2) - (IsSigned ? 1 : 0);
-    return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
-                       DAG.getTargetConstant(Width, DL, XLenVT));
+    return DAG.getNode(
+        Opc, DL, Op.getValueType(), Op.getOperand(1),
+        DAG.getTargetConstant(Op.getConstantOperandVal(2), DL, XLenVT));
   }
   case Intrinsic::riscv_psext_b:
   case Intrinsic::riscv_psext_h: {
@@ -13343,6 +13328,15 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(Opc, DL, VT, Op.getOperand(1), Op.getOperand(2));
+  }
+  case Intrinsic::riscv_aadd_i32:
+  case Intrinsic::riscv_aaddu_u32:
+  case Intrinsic::riscv_asub_i32:
+  case Intrinsic::riscv_asubu_u32: {
+    // RV32 selects the scalar P instructions directly. RV64 goes via
+    // ReplaceNodeResults.
+    unsigned Opc = getRVScalarAveragingOpcode(IntNo);
+    return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
   }
   case Intrinsic::riscv_mulhr_i32:
   case Intrinsic::riscv_mulhru_u32:
@@ -13506,8 +13500,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                       DAG.getUNDEF(MVT::v2i16));
     SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs1, Rs2);
     unsigned Opc = IntNo == Intrinsic::riscv_pmqwacc_i32x2
-                       ? RISCVISD::PMQACC_W_H01
-                       : RISCVISD::PMQRACC_W_H01;
+                       ? RISCVISD::MQACC_HALVES_01
+                       : RISCVISD::MQRACC_HALVES_01;
     return DAG.getNode(Opc, DL, VT, Acc, Zip, Zip);
   }
   case Intrinsic::riscv_mulh_h0:
@@ -14930,6 +14924,16 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     }
   }
 
+  if (Factor == 2 && IsFixedVector) {
+    unsigned NumElts = VecVT.getVectorNumElements();
+    SDValue Results[2];
+    for (unsigned I = 0; I != Factor; ++I)
+      Results[I] =
+          DAG.getVectorShuffle(VecVT, DL, Op.getOperand(0), Op.getOperand(1),
+                               createStrideMask(I, Factor, NumElts));
+    return DAG.getMergeValues(Results, DL);
+  }
+
   SmallVector<SDValue, 8> Ops(Op->op_values());
 
   // Concatenate the vectors as one vector to deinterleave
@@ -15083,6 +15087,23 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   const unsigned Factor = Op.getNumOperands();
   assert(Factor <= 8);
 
+  // Keep both halves of a fixed-length interleave together while widening an
+  // i1 vector. Widening each result independently requires two comparisons to
+  // recreate the mask and then has to concatenate those masks again.
+  if (VecVT.getVectorElementType() == MVT::i1 && Factor == 2 &&
+      VecVT.isFixedLengthVector()) {
+    unsigned NumElts = VecVT.getVectorNumElements();
+    MVT InterleavedVT = VecVT.getDoubleNumVectorElementsVT();
+    SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, InterleavedVT,
+                                 Op.getOperand(0), Op.getOperand(1));
+    SDValue Interleaved = DAG.getVectorShuffle(
+        InterleavedVT, DL, Concat, DAG.getUNDEF(InterleavedVT),
+        createInterleaveMask(NumElts, Factor));
+    SDValue Lo = DAG.getExtractSubvector(DL, VecVT, Interleaved, 0);
+    SDValue Hi = DAG.getExtractSubvector(DL, VecVT, Interleaved, NumElts);
+    return DAG.getMergeValues({Lo, Hi}, DL);
+  }
+
   // i1 vectors need to be widened to i8
   if (VecVT.getVectorElementType() == MVT::i1)
     return widenVectorOpsToi8(Op, DL, DAG);
@@ -15217,6 +15238,15 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   if (VecVT.getScalarSizeInBits() < Subtarget.getELen()) {
     Interleaved = getWideningInterleave(Op.getOperand(0), Op.getOperand(1), DL,
                                         DAG, Subtarget);
+  } else if (Factor == 2 && VecVT.isFixedLengthVector()) {
+    unsigned NumElts = VecVT.getVectorNumElements();
+    SmallVector<int, 8> ShuffleMask = createInterleaveMask(NumElts, Factor);
+    SDValue Results[2];
+    for (unsigned I = 0; I != Factor; ++I)
+      Results[I] = DAG.getVectorShuffle(
+          VecVT, DL, Op.getOperand(0), Op.getOperand(1),
+          ArrayRef(ShuffleMask).slice(I * NumElts, NumElts));
+    return DAG.getMergeValues(Results, DL);
   } else {
     // Otherwise, fallback to using vrgathere16.vv
     MVT ConcatVT = MVT::getVectorVT(VecVT.getVectorElementType(),
@@ -17974,6 +18004,24 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       else
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_aadd_i32:
+    case Intrinsic::riscv_aaddu_u32:
+    case Intrinsic::riscv_asub_i32:
+    case Intrinsic::riscv_asubu_u32: {
+      // RV64 has no scalar averaging instructions; reuse the packed .w
+      // family on the low words, whose element 0 is the scalar result.
+      MVT VT = N->getSimpleValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::i32)
+        return;
+      unsigned Opc = getRVScalarAveragingOpcode(IntNo);
+      SDValue Rs1 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
+      SDValue Rs2 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
+      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
       return;
     }
     case Intrinsic::riscv_mulhr_i32:
@@ -24580,8 +24628,8 @@ static SDValue performSHLCombine(SDNode *N,
                      Passthru, Mask, VL);
 }
 
-// Fold (smax (smin X, (1 << C) - 1), -(1 << C)) -> riscv_sati X, C.
-// Fold (smin (smax X, -(1 << C)), (1 << C) - 1) -> riscv_sati X, C.
+// Fold (smax (smin X, (1 << C) - 1), -(1 << C)) -> riscv_sati X, C+1.
+// Fold (smin (smax X, -(1 << C)), (1 << C) - 1) -> riscv_sati X, C+1.
 // Fold (smax (smin X, (1 << C) - 1), 0) -> riscv_usati X, C.
 // Fold (smin (smax X, 0, (1 << C) - 1) -> riscv_usati X, C.
 static SDValue combineMinMaxToSat(SDNode *N,
@@ -24623,7 +24671,7 @@ static SDValue combineMinMaxToSat(SDNode *N,
   SDLoc DL(N);
   if (MinC == ~MaxC)
     return DAG.getNode(RISCVISD::SATI, DL, VT, Input,
-                       DAG.getTargetConstant(MinC.countr_one(), DL, VT));
+                       DAG.getTargetConstant(MinC.countr_one() + 1, DL, VT));
   if (MaxC == 0)
     return DAG.getNode(RISCVISD::USATI, DL, VT, Input,
                        DAG.getTargetConstant(MinC.countr_one(), DL, VT));
@@ -26820,7 +26868,7 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
     return 33;
   case RISCVISD::SATI: {
     unsigned Width = Op.getConstantOperandVal(1);
-    return Op.getScalarValueSizeInBits() - Width;
+    return Op.getScalarValueSizeInBits() - Width + 1;
   }
   case RISCVISD::VMV_X_S: {
     // The number of sign bits of the scalar result is computed by obtaining the

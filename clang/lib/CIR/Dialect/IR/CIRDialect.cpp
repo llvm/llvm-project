@@ -1912,23 +1912,6 @@ void cir::IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
 // ScopeOp
 //===----------------------------------------------------------------------===//
 
-/// Given the region at `index`, or the parent operation if `index` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes
-/// that correspond to a constant value for each operand, or null if that
-/// operand is not a constant.
-void cir::ScopeOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // The only region always branch back to the parent operation.
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
-    return;
-  }
-
-  // If the condition isn't constant, both regions may be executed.
-  regions.push_back(RegionSuccessor(&getScopeRegion()));
-}
-
 void cir::ScopeOp::build(
     OpBuilder &builder, OperationState &result,
     function_ref<void(OpBuilder &, Type &, Location)> scopeBuilder) {
@@ -2239,15 +2222,6 @@ Block *cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 // CaseOp
 //===----------------------------------------------------------------------===//
 
-void cir::CaseOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
-    return;
-  }
-  regions.push_back(RegionSuccessor(&getCaseRegion()));
-}
-
 void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
                         ArrayAttr value, CaseOpKind kind,
                         OpBuilder::InsertPoint &insertPoint) {
@@ -2264,16 +2238,6 @@ void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
 //===----------------------------------------------------------------------===//
 // SwitchOp
 //===----------------------------------------------------------------------===//
-
-void cir::SwitchOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &region) {
-  if (!point.isParent()) {
-    region.emplace_back(getOperation());
-    return;
-  }
-
-  region.push_back(RegionSuccessor(&getBody()));
-}
 
 void cir::SwitchOp::build(OpBuilder &builder, OperationState &result,
                           Value cond, BuilderOpStateCallbackRef switchBuilder) {
@@ -3404,25 +3368,6 @@ LogicalResult cir::SubOp::verify() {
 // TernaryOp
 //===----------------------------------------------------------------------===//
 
-/// Given the region at `point`, or the parent operation if `point` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
-void cir::TernaryOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // The `true` and the `false` region branch back to the parent operation.
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
-    return;
-  }
-
-  // When branching from the parent operation, both the true and false
-  // regions are considered possible successors
-  regions.push_back(RegionSuccessor(&getTrueRegion()));
-  regions.push_back(RegionSuccessor(&getFalseRegion()));
-}
-
 void cir::TernaryOp::build(
     OpBuilder &builder, OperationState &result, Value cond,
     function_ref<void(OpBuilder &, Location)> trueBuilder,
@@ -3455,11 +3400,9 @@ void cir::TernaryOp::build(
 //===----------------------------------------------------------------------===//
 
 OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
-  mlir::Attribute condition = adaptor.getCondition();
-  if (condition) {
-    bool conditionValue = mlir::cast<cir::BoolAttr>(condition).getValue();
-    return conditionValue ? getTrueValue() : getFalseValue();
-  }
+  if (auto condition =
+          mlir::dyn_cast_if_present<cir::BoolAttr>(adaptor.getCondition()))
+    return condition.getValue() ? getTrueValue() : getFalseValue();
 
   // cir.select if %0 then x else x -> x
   mlir::Attribute trueValue = adaptor.getTrueValue();
@@ -3622,6 +3565,22 @@ OpFoldResult cir::NotOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// BaseClassAddrOp & DerivedClassAddrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BaseClassAddrOp::verify() {
+  if (getSrcAddr().getType().getAddrSpace() != getType().getAddrSpace())
+    return emitOpError() << "address space mismatch";
+  return mlir::success();
+}
+
+LogicalResult cir::DerivedClassAddrOp::verify() {
+  if (getSrcAddr().getType().getAddrSpace() != getType().getAddrSpace())
+    return emitOpError() << "address space mismatch";
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // BaseDataMemberOp & DerivedDataMemberOp
 //===----------------------------------------------------------------------===//
 
@@ -3722,7 +3681,15 @@ void cir::AwaitOp::getSuccessorRegions(
     return;
   }
 
-  // Branching from suspend or resume: exit to the parent operation.
+  // Branching from suspend: continue in resume once the coroutine is resumed,
+  // or exit to the parent operation if it stays suspended or is destroyed.
+  if (&getSuspend() == parentRegion) {
+    regions.emplace_back(&getResume());
+    regions.emplace_back(getOperation());
+    return;
+  }
+
+  // Branching from resume: exit to the parent operation.
   regions.emplace_back(getOperation());
 }
 
@@ -3807,11 +3774,13 @@ void cir::CoroutineOp::getSuccessorRegions(
       point.getTerminatorPredecessorOrNull()->getParentRegion();
 
   // initial_suspend either falls into body (resumed, or never actually
-  // suspended because await_ready() was true) or exits directly, a plain
-  // suspend here means nobody has resumed yet, so we just return to caller.
+  // suspended because await_ready() was true), exits directly, or reaches
+  // destroy when the coroutine is destroyed while suspended at its initial
+  // suspend point.
   if (parent == &getInitialSuspend()) {
     regions.emplace_back(&getBody());
     regions.emplace_back(&getExit());
+    regions.emplace_back(&getDestroy());
     return;
   }
 
@@ -3826,7 +3795,7 @@ void cir::CoroutineOp::getSuccessorRegions(
     return;
   }
 
-  // final_suspend's only live edge in valid programs is destroy resuming
+  // final_suspend's only live edge in valid programs is destroy. Resuming
   // past the final suspend is UB. The ready-immediately edge to exit is
   // kept for structural symmetry with the other two suspend regions even
   // though it's effectively dead.
