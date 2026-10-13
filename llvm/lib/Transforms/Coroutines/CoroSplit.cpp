@@ -841,8 +841,14 @@ Value *coro::BaseCloner::deriveNewFramePointer() {
     auto *CalleeContext = NewF->getArg(ContextIdx);
     auto *ProjectionFunc =
         ActiveAsyncSuspend->getAsyncContextProjectionFunction();
-    auto DbgLoc =
-        cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend])->getDebugLoc();
+    auto *NewSuspend = cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend]);
+    DebugLoc DbgLoc = NewSuspend->getDebugLoc();
+    // The projection may update the async context slot of the frame. With a
+    // line 0 location, prologue_end is placed after that update, but debuggers
+    // expect the slot to be unchanged at prologue_end.
+    if (DbgLoc && DbgLoc.getLine() == 0)
+      if (DebugLoc NonZeroLoc = getFirstNonZeroLocAfterSuspend(NewSuspend))
+        DbgLoc = NonZeroLoc;
     // Calling i8* (i8*)
     auto *CallerContext = Builder.CreateCall(ProjectionFunc->getFunctionType(),
                                              ProjectionFunc, CalleeContext);

@@ -2375,8 +2375,10 @@ const DefInit *VarDefInit::instantiate() {
   Record *NewRec = NewRecOwner.get();
 
   // Copy values from class to instance
-  for (const RecordVal &Val : Class->getValues())
+  for (const RecordVal &Val : Class->getValues()) {
     NewRec->addValue(Val);
+    NewRec->appendValueReferenceLocs(*Class, Val.getNameInit());
+  }
 
   // Copy assertions from class to instance.
   NewRec->appendAssertions(Class);
@@ -2720,7 +2722,7 @@ std::string DagInit::getAsString() const {
 //===----------------------------------------------------------------------===//
 
 RecordVal::RecordVal(const Init *N, const RecTy *T, FieldKind K)
-    : Name(N), TyAndKind(T, K) {
+    : Name(N), TyAndFlags(T, K) {
   setValue(UnsetInit::get(N->getRecordKeeper()));
   assert(Value && "Cannot create unset value for current type!");
 }
@@ -2728,7 +2730,7 @@ RecordVal::RecordVal(const Init *N, const RecTy *T, FieldKind K)
 // This constructor accepts the same arguments as the above, but also
 // a source location.
 RecordVal::RecordVal(const Init *N, SMLoc Loc, const RecTy *T, FieldKind K)
-    : Name(N), Loc(Loc), TyAndKind(T, K) {
+    : Name(N), Loc(Loc), TyAndFlags(T, K) {
   setValue(UnsetInit::get(N->getRecordKeeper()));
   assert(Value && "Cannot create unset value for current type!");
 }
@@ -2748,7 +2750,7 @@ std::string RecordVal::getPrintType() const {
       return "string";
     }
   } else {
-    return TyAndKind.getPointer()->getAsString();
+    return getType()->getAsString();
   }
 }
 
