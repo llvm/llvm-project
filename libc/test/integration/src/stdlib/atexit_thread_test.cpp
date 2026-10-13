@@ -18,7 +18,7 @@
 #include "src/stdlib/__cxa_thread_atexit_impl.h"
 #include "test/IntegrationTest/test.h"
 
-#include "hdr/pthread_macros.h" 
+#include "hdr/types/pthread_t.h" 
 
 namespace {
 
