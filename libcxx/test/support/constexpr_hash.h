@@ -13,11 +13,11 @@
 #ifndef SUPPORT_CONSTEXPR_HASH_H
 #define SUPPORT_CONSTEXPR_HASH_H
 
-#include <__type_traits/is_unqualified.h>
 #include <utility>
 
 #include "test_macros.h"
 #include <type_traits>
+#include <concepts>
 #include <bit>
 #include <cstddef>
 
@@ -51,18 +51,14 @@ struct constexpr_hash<std::nullptr_t> {
 };
 
 template <typename Key>
-  requires requires(Key t) {
-    { std::bool_constant<std::__is_unqualified_v<Key>>() } -> std::same_as<std::true_type>;
+concept UnqualifiedArithmeticOrEnum =
+    std::is_same_v<Key, std::remove_cvref_t<Key>> &&
+    (std::integral<Key> || std::floating_point<Key> || std::is_enum_v<Key>);
 
-    {
-      std::bool_constant< std::bool_constant<std::is_integral_v<Key>>() ||
-                          std::bool_constant<std::is_floating_point_v<Key>>() ||
-                          std::bool_constant<std::is_enum_v<Key>>() >()
-    } -> std::same_as<std::true_type>;
-  }
+template <UnqualifiedArithmeticOrEnum Key>
 struct constexpr_hash<Key> {
   [[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI size_t operator()(const Key& key) const noexcept {
-    if constexpr (std::is_integral_v<Key>) {
+    if constexpr (std::integral<Key>) {
       if constexpr (sizeof(Key) <= sizeof(size_t)) {
         return static_cast<size_t>(key);
       } else {
@@ -72,7 +68,7 @@ struct constexpr_hash<Key> {
         // TODO: 0, 1, 2, 3, 4
         return region[multiple - 1]; // TODO: hash-ing
       }
-    } else if constexpr (std::is_floating_point_v<Key>) {
+    } else if constexpr (std::floating_point<Key>) {
       if (key == 0.0f)
 
         return 0;
