@@ -275,6 +275,17 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                              << "' attribute to be attached to '"
                              << mlir::ModuleOp::getOperationName() << "'";
 
+  if (attrName == getModuleFramePointerAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError() << "expects '" << getModuleFramePointerAttrName()
+                               << "' attribute to be attached to '"
+                               << mlir::ModuleOp::getOperationName() << "'";
+    if (!mlir::isa<cir::FramePointerKindAttr>(attr.getValue()))
+      return op->emitOpError() << "expects '" << getModuleFramePointerAttrName()
+                               << "' to be a #cir.frame_pointer attribute";
+    return success();
+  }
+
   // LoweringPrepare uses this attribute directly as the fatbin global's
   // initializer, so it must be a valid #cir.const_array payload for its type.
   if (attrName == getCUDADeviceBinaryAttrName()) {
@@ -1374,9 +1385,10 @@ parseTryCallDestinations(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
-/// Reject an effect attribute of the wrong kind in an explicit attribute
-/// dictionary.  Where these are declared they are stored as properties, so a
-/// value of the wrong kind would be dropped without a diagnostic.
+/// Reject an attribute in an explicit attribute dictionary whose value is not
+/// the attribute class expected for its name.  Where an op declares the
+/// attribute it is stored as a property, so a value of the wrong class would
+/// be dropped without a diagnostic.
 static ParseResult checkEffectAttrKinds(mlir::OpAsmParser &parser,
                                         llvm::SMLoc loc,
                                         const mlir::NamedAttrList &attrs) {
@@ -1392,6 +1404,13 @@ static ParseResult checkEffectAttrKinds(mlir::OpAsmParser &parser,
       return parser.emitError(loc, "attribute '")
              << CIRDialect::getUwtableAttrName()
              << "' must be a #cir.uwtable attribute";
+
+  if (mlir::Attribute framePointer =
+          attrs.get(CIRDialect::getFramePointerAttrName()))
+    if (!mlir::isa<cir::FramePointerKindAttr>(framePointer))
+      return parser.emitError(loc, "attribute '")
+             << CIRDialect::getFramePointerAttrName()
+             << "' must be a #cir.frame_pointer attribute";
 
   for (llvm::StringRef name :
        {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName(),
@@ -1912,23 +1931,6 @@ void cir::IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
 // ScopeOp
 //===----------------------------------------------------------------------===//
 
-/// Given the region at `index`, or the parent operation if `index` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes
-/// that correspond to a constant value for each operand, or null if that
-/// operand is not a constant.
-void cir::ScopeOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // The only region always branch back to the parent operation.
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
-    return;
-  }
-
-  // If the condition isn't constant, both regions may be executed.
-  regions.push_back(RegionSuccessor(&getScopeRegion()));
-}
-
 void cir::ScopeOp::build(
     OpBuilder &builder, OperationState &result,
     function_ref<void(OpBuilder &, Type &, Location)> scopeBuilder) {
@@ -2239,15 +2241,6 @@ Block *cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 // CaseOp
 //===----------------------------------------------------------------------===//
 
-void cir::CaseOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
-    return;
-  }
-  regions.push_back(RegionSuccessor(&getCaseRegion()));
-}
-
 void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
                         ArrayAttr value, CaseOpKind kind,
                         OpBuilder::InsertPoint &insertPoint) {
@@ -2264,16 +2257,6 @@ void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
 //===----------------------------------------------------------------------===//
 // SwitchOp
 //===----------------------------------------------------------------------===//
-
-void cir::SwitchOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &region) {
-  if (!point.isParent()) {
-    region.emplace_back(getOperation());
-    return;
-  }
-
-  region.push_back(RegionSuccessor(&getBody()));
-}
 
 void cir::SwitchOp::build(OpBuilder &builder, OperationState &result,
                           Value cond, BuilderOpStateCallbackRef switchBuilder) {
@@ -2815,6 +2798,14 @@ LogicalResult cir::VTTAddrPointOp::verify() {
 /// the name of the attribute in ODS.
 static llvm::StringRef getLinkageAttrNameString() { return "linkage"; }
 
+/// Declared cir.func attributes with no dedicated syntax, which print in and
+/// parse from the attribute dictionary instead.
+static bool isFuncAttrInDict(llvm::StringRef name) {
+  return name == CIRDialect::getMemoryEffectsAttrName() ||
+         name == CIRDialect::getUwtableAttrName() ||
+         name == CIRDialect::getFramePointerAttrName();
+}
+
 void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, FuncType type,
                         GlobalLinkageKind linkage, CallingConv callingConv) {
@@ -3100,12 +3091,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
     return failure();
 
-  // Every other declared attribute has dedicated syntax above, so
-  // memory_effects and uwtable is the only one the explicit list may carry.
-  // Without the exception cir.func could not parse back what it prints.
+  // Every other declared attribute has dedicated syntax above.
   for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
-    if (disallowed == CIRDialect::getMemoryEffectsAttrName() ||
-        disallowed == CIRDialect::getUwtableAttrName())
+    if (isFuncAttrInDict(disallowed))
       continue;
     if (parsedAttrs.get(disallowed))
       return parser.emitError(loc, "attribute '")
@@ -3297,13 +3285,10 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p.printAttribute(annotations);
   }
 
-  // Every declared attribute is printed by the syntax above, except
-  // memory_effects and uwtable, which have none and so must reach the
-  // dictionary.
+  // Every other declared attribute is printed by the syntax above.
   llvm::SmallVector<llvm::StringRef> elidedAttrs;
   for (llvm::StringRef name : cir::FuncOp::getAttributeNames())
-    if (name != CIRDialect::getMemoryEffectsAttrName() &&
-        name != CIRDialect::getUwtableAttrName())
+    if (!isFuncAttrInDict(name))
       elidedAttrs.push_back(name);
   function_interface_impl::printFunctionAttributes(p, *this, elidedAttrs);
 
@@ -3404,25 +3389,6 @@ LogicalResult cir::SubOp::verify() {
 // TernaryOp
 //===----------------------------------------------------------------------===//
 
-/// Given the region at `point`, or the parent operation if `point` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
-void cir::TernaryOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // The `true` and the `false` region branch back to the parent operation.
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
-    return;
-  }
-
-  // When branching from the parent operation, both the true and false
-  // regions are considered possible successors
-  regions.push_back(RegionSuccessor(&getTrueRegion()));
-  regions.push_back(RegionSuccessor(&getFalseRegion()));
-}
-
 void cir::TernaryOp::build(
     OpBuilder &builder, OperationState &result, Value cond,
     function_ref<void(OpBuilder &, Location)> trueBuilder,
@@ -3455,11 +3421,9 @@ void cir::TernaryOp::build(
 //===----------------------------------------------------------------------===//
 
 OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
-  mlir::Attribute condition = adaptor.getCondition();
-  if (condition) {
-    bool conditionValue = mlir::cast<cir::BoolAttr>(condition).getValue();
-    return conditionValue ? getTrueValue() : getFalseValue();
-  }
+  if (auto condition =
+          mlir::dyn_cast_if_present<cir::BoolAttr>(adaptor.getCondition()))
+    return condition.getValue() ? getTrueValue() : getFalseValue();
 
   // cir.select if %0 then x else x -> x
   mlir::Attribute trueValue = adaptor.getTrueValue();
@@ -3619,6 +3583,22 @@ OpFoldResult cir::NotOp::fold(FoldAdaptor adaptor) {
   }
 
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// BaseClassAddrOp & DerivedClassAddrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BaseClassAddrOp::verify() {
+  if (getSrcAddr().getType().getAddrSpace() != getType().getAddrSpace())
+    return emitOpError() << "address space mismatch";
+  return mlir::success();
+}
+
+LogicalResult cir::DerivedClassAddrOp::verify() {
+  if (getSrcAddr().getType().getAddrSpace() != getType().getAddrSpace())
+    return emitOpError() << "address space mismatch";
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

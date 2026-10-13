@@ -104,6 +104,15 @@ define void @test_dagcombine_store_concat_trunc_v8i32(ptr addrspace(1) %p, <4 x 
   ret void
 }
 
+define i1 @test_dagcombine_reduce_load_width(ptr addrspace(1) %p) {
+; CHECK-LABEL: test_dagcombine_reduce_load_width(
+; CHECK:    ld.global.L1::evict_first.b8 %rs1, [%rd1];
+  %v = load i64, ptr addrspace(1) %p, align 8, !mem.cache_hint !2
+  %masked = and i64 %v, 255
+  %cmp = icmp eq i64 %masked, 0
+  ret i1 %cmp
+}
+
 ;-----------------------------------------------------------------------------
 ; Preserve cache hints across one-to-N DAG memory rewrites.
 ;-----------------------------------------------------------------------------

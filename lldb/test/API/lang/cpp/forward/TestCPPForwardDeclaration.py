@@ -43,6 +43,7 @@ class ForwardDeclarationTestCase(TestBase):
             result_children=[ValueCheck(value="47", name="a", type="int")],
         )
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.do_test()
 

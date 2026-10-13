@@ -166,39 +166,19 @@ entry:
 }
 
 define void @test_stnp_interleaved_store2_v2i32_Os_intrinsic(<2 x i32> %v0, <2 x i32> %v1, ptr %ptr) #0 {
-; CHECK-LE-IAENABLED-LABEL: test_stnp_interleaved_store2_v2i32_Os_intrinsic:
-; CHECK-LE-IAENABLED:       // %bb.0: // %entry
-; CHECK-LE-IAENABLED-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
-; CHECK-LE-IAENABLED-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
-; CHECK-LE-IAENABLED-NEXT:    st2 { v0.2s, v1.2s }, [x0]
-; CHECK-LE-IAENABLED-NEXT:    ret
+; CHECK-LE-LABEL: test_stnp_interleaved_store2_v2i32_Os_intrinsic:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-LE-NEXT:    st2 { v0.2s, v1.2s }, [x0]
+; CHECK-LE-NEXT:    ret
 ;
-; CHECK-LE-IADISABLED-LABEL: test_stnp_interleaved_store2_v2i32_Os_intrinsic:
-; CHECK-LE-IADISABLED:       // %bb.0: // %entry
-; CHECK-LE-IADISABLED-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-LE-IADISABLED-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-LE-IADISABLED-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-LE-IADISABLED-NEXT:    rev64 v1.4s, v0.4s
-; CHECK-LE-IADISABLED-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-LE-IADISABLED-NEXT:    str q0, [x0]
-; CHECK-LE-IADISABLED-NEXT:    ret
-;
-; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store2_v2i32_Os_intrinsic:
-; CHECK-BE-IAENABLED:       // %bb.0: // %entry
-; CHECK-BE-IAENABLED-NEXT:    rev64 v2.2s, v1.2s
-; CHECK-BE-IAENABLED-NEXT:    rev64 v1.2s, v0.2s
-; CHECK-BE-IAENABLED-NEXT:    st2 { v1.2s, v2.2s }, [x0]
-; CHECK-BE-IAENABLED-NEXT:    ret
-;
-; CHECK-BE-IADISABLED-LABEL: test_stnp_interleaved_store2_v2i32_Os_intrinsic:
-; CHECK-BE-IADISABLED:       // %bb.0: // %entry
-; CHECK-BE-IADISABLED-NEXT:    rev64 v0.2s, v0.2s
-; CHECK-BE-IADISABLED-NEXT:    rev64 v1.2s, v1.2s
-; CHECK-BE-IADISABLED-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-BE-IADISABLED-NEXT:    rev64 v1.4s, v0.4s
-; CHECK-BE-IADISABLED-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-BE-IADISABLED-NEXT:    st1 { v0.4s }, [x0]
-; CHECK-BE-IADISABLED-NEXT:    ret
+; CHECK-BE-LABEL: test_stnp_interleaved_store2_v2i32_Os_intrinsic:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.2s, v1.2s
+; CHECK-BE-NEXT:    rev64 v1.2s, v0.2s
+; CHECK-BE-NEXT:    st2 { v1.2s, v2.2s }, [x0]
+; CHECK-BE-NEXT:    ret
 entry:
   %interleave = call <4 x i32> @llvm.vector.interleave2.v4i32(<2 x i32> %v0, <2 x i32> %v1)
   store <4 x i32> %interleave, ptr %ptr, align 4, !nontemporal !0
@@ -207,39 +187,19 @@ entry:
 
 
 define void @test_stnp_interleaved_store2_v2i32_Oz_intrinsic(<2 x i32> %v0, <2 x i32> %v1, ptr %ptr) #1 {
-; CHECK-LE-IAENABLED-LABEL: test_stnp_interleaved_store2_v2i32_Oz_intrinsic:
-; CHECK-LE-IAENABLED:       // %bb.0: // %entry
-; CHECK-LE-IAENABLED-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
-; CHECK-LE-IAENABLED-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
-; CHECK-LE-IAENABLED-NEXT:    st2 { v0.2s, v1.2s }, [x0]
-; CHECK-LE-IAENABLED-NEXT:    ret
+; CHECK-LE-LABEL: test_stnp_interleaved_store2_v2i32_Oz_intrinsic:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-LE-NEXT:    st2 { v0.2s, v1.2s }, [x0]
+; CHECK-LE-NEXT:    ret
 ;
-; CHECK-LE-IADISABLED-LABEL: test_stnp_interleaved_store2_v2i32_Oz_intrinsic:
-; CHECK-LE-IADISABLED:       // %bb.0: // %entry
-; CHECK-LE-IADISABLED-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-LE-IADISABLED-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-LE-IADISABLED-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-LE-IADISABLED-NEXT:    rev64 v1.4s, v0.4s
-; CHECK-LE-IADISABLED-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-LE-IADISABLED-NEXT:    str q0, [x0]
-; CHECK-LE-IADISABLED-NEXT:    ret
-;
-; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store2_v2i32_Oz_intrinsic:
-; CHECK-BE-IAENABLED:       // %bb.0: // %entry
-; CHECK-BE-IAENABLED-NEXT:    rev64 v2.2s, v1.2s
-; CHECK-BE-IAENABLED-NEXT:    rev64 v1.2s, v0.2s
-; CHECK-BE-IAENABLED-NEXT:    st2 { v1.2s, v2.2s }, [x0]
-; CHECK-BE-IAENABLED-NEXT:    ret
-;
-; CHECK-BE-IADISABLED-LABEL: test_stnp_interleaved_store2_v2i32_Oz_intrinsic:
-; CHECK-BE-IADISABLED:       // %bb.0: // %entry
-; CHECK-BE-IADISABLED-NEXT:    rev64 v0.2s, v0.2s
-; CHECK-BE-IADISABLED-NEXT:    rev64 v1.2s, v1.2s
-; CHECK-BE-IADISABLED-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-BE-IADISABLED-NEXT:    rev64 v1.4s, v0.4s
-; CHECK-BE-IADISABLED-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-BE-IADISABLED-NEXT:    st1 { v0.4s }, [x0]
-; CHECK-BE-IADISABLED-NEXT:    ret
+; CHECK-BE-LABEL: test_stnp_interleaved_store2_v2i32_Oz_intrinsic:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.2s, v1.2s
+; CHECK-BE-NEXT:    rev64 v1.2s, v0.2s
+; CHECK-BE-NEXT:    st2 { v1.2s, v2.2s }, [x0]
+; CHECK-BE-NEXT:    ret
 entry:
   %interleave = call <4 x i32> @llvm.vector.interleave2.v4i32(<2 x i32> %v0, <2 x i32> %v1)
   store <4 x i32> %interleave, ptr %ptr, align 4, !nontemporal !0
@@ -248,37 +208,19 @@ entry:
 
 
 define void @test_stnp_interleaved_store2_v2i64_Os_intrinsic(<2 x i64> %v0, <2 x i64> %v1, ptr %ptr) #0 {
-; CHECK-LE-IAENABLED-LABEL: test_stnp_interleaved_store2_v2i64_Os_intrinsic:
-; CHECK-LE-IAENABLED:       // %bb.0: // %entry
-; CHECK-LE-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-LE-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-LE-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x0]
-; CHECK-LE-IAENABLED-NEXT:    ret
+; CHECK-LE-LABEL: test_stnp_interleaved_store2_v2i64_Os_intrinsic:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-LE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-LE-NEXT:    st2 { v0.2d, v1.2d }, [x0]
+; CHECK-LE-NEXT:    ret
 ;
-; CHECK-LE-IADISABLED-LABEL: test_stnp_interleaved_store2_v2i64_Os_intrinsic:
-; CHECK-LE-IADISABLED:       // %bb.0: // %entry
-; CHECK-LE-IADISABLED-NEXT:    zip2 v2.2d, v0.2d, v1.2d
-; CHECK-LE-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-LE-IADISABLED-NEXT:    stp q0, q2, [x0]
-; CHECK-LE-IADISABLED-NEXT:    ret
-;
-; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store2_v2i64_Os_intrinsic:
-; CHECK-BE-IAENABLED:       // %bb.0: // %entry
-; CHECK-BE-IAENABLED-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-BE-IAENABLED-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-BE-IAENABLED-NEXT:    st2 { v1.2d, v2.2d }, [x0]
-; CHECK-BE-IAENABLED-NEXT:    ret
-;
-; CHECK-BE-IADISABLED-LABEL: test_stnp_interleaved_store2_v2i64_Os_intrinsic:
-; CHECK-BE-IADISABLED:       // %bb.0: // %entry
-; CHECK-BE-IADISABLED-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-IADISABLED-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-IADISABLED-NEXT:    add x8, x0, #16
-; CHECK-BE-IADISABLED-NEXT:    zip2 v2.2d, v0.2d, v1.2d
-; CHECK-BE-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-BE-IADISABLED-NEXT:    st1 { v2.2d }, [x8]
-; CHECK-BE-IADISABLED-NEXT:    st1 { v0.2d }, [x0]
-; CHECK-BE-IADISABLED-NEXT:    ret
+; CHECK-BE-LABEL: test_stnp_interleaved_store2_v2i64_Os_intrinsic:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    st2 { v1.2d, v2.2d }, [x0]
+; CHECK-BE-NEXT:    ret
 entry:
   %interleave = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> %v0, <2 x i64> %v1)
   store <4 x i64> %interleave, ptr %ptr, align 8, !nontemporal !0
@@ -287,37 +229,19 @@ entry:
 
 
 define void @test_stnp_interleaved_store2_v2i64_Oz_intrinsic(<2 x i64> %v0, <2 x i64> %v1, ptr %ptr) #1 {
-; CHECK-LE-IAENABLED-LABEL: test_stnp_interleaved_store2_v2i64_Oz_intrinsic:
-; CHECK-LE-IAENABLED:       // %bb.0: // %entry
-; CHECK-LE-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-LE-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-LE-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x0]
-; CHECK-LE-IAENABLED-NEXT:    ret
+; CHECK-LE-LABEL: test_stnp_interleaved_store2_v2i64_Oz_intrinsic:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-LE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-LE-NEXT:    st2 { v0.2d, v1.2d }, [x0]
+; CHECK-LE-NEXT:    ret
 ;
-; CHECK-LE-IADISABLED-LABEL: test_stnp_interleaved_store2_v2i64_Oz_intrinsic:
-; CHECK-LE-IADISABLED:       // %bb.0: // %entry
-; CHECK-LE-IADISABLED-NEXT:    zip2 v2.2d, v0.2d, v1.2d
-; CHECK-LE-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-LE-IADISABLED-NEXT:    stp q0, q2, [x0]
-; CHECK-LE-IADISABLED-NEXT:    ret
-;
-; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store2_v2i64_Oz_intrinsic:
-; CHECK-BE-IAENABLED:       // %bb.0: // %entry
-; CHECK-BE-IAENABLED-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-BE-IAENABLED-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-BE-IAENABLED-NEXT:    st2 { v1.2d, v2.2d }, [x0]
-; CHECK-BE-IAENABLED-NEXT:    ret
-;
-; CHECK-BE-IADISABLED-LABEL: test_stnp_interleaved_store2_v2i64_Oz_intrinsic:
-; CHECK-BE-IADISABLED:       // %bb.0: // %entry
-; CHECK-BE-IADISABLED-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-IADISABLED-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-IADISABLED-NEXT:    add x8, x0, #16
-; CHECK-BE-IADISABLED-NEXT:    zip2 v2.2d, v0.2d, v1.2d
-; CHECK-BE-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-BE-IADISABLED-NEXT:    st1 { v2.2d }, [x8]
-; CHECK-BE-IADISABLED-NEXT:    st1 { v0.2d }, [x0]
-; CHECK-BE-IADISABLED-NEXT:    ret
+; CHECK-BE-LABEL: test_stnp_interleaved_store2_v2i64_Oz_intrinsic:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    st2 { v1.2d, v2.2d }, [x0]
+; CHECK-BE-NEXT:    ret
 entry:
   %interleave = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> %v0, <2 x i64> %v1)
   store <4 x i64> %interleave, ptr %ptr, align 8, !nontemporal !0
@@ -328,6 +252,3 @@ entry:
 
 attributes #0 = { optsize }
 attributes #1 = { minsize optsize }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-BE: {{.*}}
-; CHECK-LE: {{.*}}
