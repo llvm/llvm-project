@@ -2370,7 +2370,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // AVX512_FP16 scalar operations
     setGroup(MVT::f16);
     SetFPMinMaxAction(MVT::f16);
-    setOperationAction(ISD::FREM, MVT::f16, Custom);
+    setOperationAction(ISD::FREM,		  MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FREM,          MVT::f16, Promote);
     setOperationAction(ISD::SELECT_CC,            MVT::f16, Expand);
     setOperationAction(ISD::BR_CC,                MVT::f16, Expand);
@@ -23302,26 +23302,22 @@ static SDValue LowerFGETSIGN(SDValue Op, SelectionDAG &DAG) {
 }
 
 static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
-  SDLoc dl(Op);
+  SDLoc Dl(Op);
   assert(Op.getValueType() == MVT::f16 && "Unexpected type for FREM");
 
-  SDValue a = Op.getOperand(0);
-  SDValue b = Op.getOperand(1);
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
 
-  SDValue x = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, a);
-  SDValue y = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, b);
+  SDValue X = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, a);
+  SDValue Y = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, b);
 
   SDValue Res = DAG.getNode(ISD::FDIV, dl, MVT::f64, x, y);
-  Res = DAG.getNode(ISD::FTRUNC, dl, MVT::f64, Res);    // q
-  Res = DAG.getNode(ISD::FNEG, dl, MVT::f64, Res);      // -q
-  Res = DAG.getNode(ISD::FMA, dl, MVT::f64, Res, y, x); // -q*y + x
+  Res = DAG.getNode(ISD::FTRUNC, dl, MVT::f64, Res);    
+  Res = DAG.getNode(ISD::FNEG, dl, MVT::f64, Res);      
+  Res = DAG.getNode(ISD::FMA, dl, MVT::f64, Res, y, x); 
   Res = DAG.getNode(ISD::FCOPYSIGN, dl, MVT::f64, Res,
-                    x); // remainder takes sign of x
+                    x);
 
-  // with f32 as a substitute for f16, this causes unhandled conditions with
-  // the` use of f64 internally
-
-  // 1 % inf = NaN
   EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
       DAG.getDataLayout(), *DAG.getContext(), MVT::f64);
   SDValue YIsInf = DAG.getNode(ISD::IS_FPCLASS, dl, CCVT, y,
