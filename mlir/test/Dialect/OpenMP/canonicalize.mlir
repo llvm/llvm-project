@@ -142,3 +142,4 @@ func.func @constant_hoisting_target(%x : !llvm.ptr) {
 // CHECK-LABEL: func.func @constant_hoisting_target
 // CHECK-NOT: arith.constant
 // CHECK: omp.target
+// CHECK: arith.constant
