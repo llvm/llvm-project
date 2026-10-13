@@ -187,8 +187,8 @@ BasicBlockMatchingAndInference::initWeightInfoByBBID(MachineFunction &MF,
   DenseSet<const MachineBasicBlock *> MismatchedMBBs;
   for (const auto &[PredID, Succs] : CFG.EdgeCounts) {
     MachineBasicBlock *PredMBB = FindMBB(PredID);
-    for (const auto &SuccItem : Succs) {
-      MachineBasicBlock *SuccMBB = FindMBB(SuccItem.first);
+    for (const auto &[SuccID, EdgeCount] : Succs) {
+      MachineBasicBlock *SuccMBB = FindMBB(SuccID);
       if (PredMBB && SuccMBB && PredMBB->isSuccessor(SuccMBB))
         continue;
       if (PredMBB)
@@ -198,8 +198,8 @@ BasicBlockMatchingAndInference::initWeightInfoByBBID(MachineFunction &MF,
     }
   }
   DenseSet<const MachineBasicBlock *> ProfiledMBBs;
-  for (const auto &BlockCount : CFG.NodeCounts)
-    if (MachineBasicBlock *MBB = FindMBB(BlockCount.first))
+  for (const auto &[BBID, BlockCount] : CFG.NodeCounts)
+    if (MachineBasicBlock *MBB = FindMBB(BBID))
       ProfiledMBBs.insert(MBB);
   DenseSet<const MachineBasicBlock *> MatchedMBBs;
   for (auto &MBB : MF) {
@@ -213,21 +213,20 @@ BasicBlockMatchingAndInference::initWeightInfoByBBID(MachineFunction &MF,
   }
 
   BasicBlockMatchingAndInference::WeightInfo MatchWeight;
-  for (const auto &BlockCount : CFG.NodeCounts) {
-    MachineBasicBlock *MBB = FindMBB(BlockCount.first);
+  for (const auto &[BBID, BlockCount] : CFG.NodeCounts) {
+    MachineBasicBlock *MBB = FindMBB(BBID);
     if (MBB && MatchedMBBs.count(MBB))
-      MatchWeight.BlockWeights[MBB] += BlockCount.second;
+      MatchWeight.BlockWeights[MBB] += BlockCount;
   }
-  for (const auto &PredItem : CFG.EdgeCounts) {
-    MachineBasicBlock *PredMBB = FindMBB(PredItem.first);
+  for (const auto &[PredID, Succs] : CFG.EdgeCounts) {
+    MachineBasicBlock *PredMBB = FindMBB(PredID);
     if (!PredMBB || !MatchedMBBs.count(PredMBB))
       continue;
-    for (const auto &SuccItem : PredItem.second) {
-      MachineBasicBlock *SuccMBB = FindMBB(SuccItem.first);
+    for (const auto &[SuccID, EdgeCount] : Succs) {
+      MachineBasicBlock *SuccMBB = FindMBB(SuccID);
       if (!SuccMBB || !MatchedMBBs.count(SuccMBB))
         continue;
-      MatchWeight.EdgeWeights[std::make_pair(PredMBB, SuccMBB)] +=
-          SuccItem.second;
+      MatchWeight.EdgeWeights[std::make_pair(PredMBB, SuccMBB)] += EdgeCount;
     }
   }
   return MatchWeight;
