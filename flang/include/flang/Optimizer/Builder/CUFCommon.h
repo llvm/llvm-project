@@ -26,6 +26,13 @@ static constexpr llvm::StringRef cudaDeviceCopySuffix = ".device";
 /// under -gpu=mem:managed. It must be a valid C identifier so the linker
 /// defines the __start_ and __stop_ symbols bounding it.
 static constexpr llvm::StringRef cudaSharedTypeInfoSection = "__nv_type_info";
+/// Name prefix of the page-aligned global emitted last in that section by each
+/// translation unit, so that the section starts on a page boundary and the
+/// pages before the last one hold only type information.
+static constexpr llvm::StringRef cudaSharedTypeInfoEndPrefix =
+    "__nv_type_info_end_";
+/// Page size assumed for the section layout.
+static constexpr int64_t cudaSharedTypeInfoAlignment = 4096;
 /// Attribute on the GPU module mapping the name of each shared type
 /// descriptor to the managed pointer holding its host address.
 static constexpr llvm::StringRef cudaSharedTypeDescsAttrName =

@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
@@ -60,6 +61,7 @@ public:
         mlir::StringAttr::get(ctx, cudaSharedTypeInfoSection);
 
     llvm::SmallVector<fir::GlobalOp> typeDescs;
+    bool definesTypeInfo = false;
     for (fir::GlobalOp global : mod.getOps<fir::GlobalOp>()) {
       if (!cuf::isTypeInfoGlobal(global))
         continue;
@@ -71,9 +73,55 @@ public:
       if (global.isInitialized()) {
         global.removeConstantAttr();
         global.setSectionAttr(section);
+        definesTypeInfo = true;
       }
       if (cuf::isTypeDescriptorGlobal(global))
         typeDescs.push_back(global);
+    }
+
+    std::string unitTag = getUnitTag(mod);
+    mlir::OpBuilder builder(ctx);
+
+    // The CUDA Fortran constructor registers the whole pages of the section
+    // with the CUDA runtime, so no other data may share them: a copy of a
+    // variable that is only partly in registered memory fails. A page-aligned
+    // global makes the section start on a page boundary. Emitted last, it
+    // also follows the type information of this unit, so the copy from the
+    // last unit linked marks a page after all the type information, and the
+    // constructor registers only the pages before it. This assumes the type
+    // information is in COMDAT groups, which puts each global in its own
+    // section ahead of the one opened for this global.
+    // Nothing references the global, so it is kept by llvm.used. It is created
+    // in the LLVM dialect because llvm.used can only refer to LLVM globals.
+    if (definesTypeInfo) {
+      constexpr llvm::StringLiteral usedName{"llvm.used"};
+      if (symTab.lookup(usedName)) {
+        mod.emitError("unexpected ") << usedName << " global";
+        return signalPassFailure();
+      }
+      std::string markerName = cudaSharedTypeInfoEndPrefix.str() + unitTag;
+      mlir::Location loc = mod.getLoc();
+      builder.setInsertionPointToEnd(mod.getBody());
+      auto i8Ty = mlir::IntegerType::get(ctx, 8);
+      auto marker = mlir::LLVM::GlobalOp::create(
+          builder, loc, i8Ty, /*isConstant=*/false,
+          mlir::LLVM::Linkage::Internal, markerName,
+          builder.getIntegerAttr(i8Ty, 0), cudaSharedTypeInfoAlignment);
+      marker.setSection(section.getValue());
+
+      auto ptrTy = mlir::LLVM::LLVMPointerType::get(ctx);
+      auto usedTy = mlir::LLVM::LLVMArrayType::get(ptrTy, 1);
+      auto used = mlir::LLVM::GlobalOp::create(
+          builder, loc, usedTy, /*isConstant=*/false,
+          mlir::LLVM::Linkage::Appending, usedName, mlir::Attribute{});
+      used.setSection("llvm.metadata");
+      builder.createBlock(&used.getInitializerRegion());
+      mlir::Value addr =
+          mlir::LLVM::AddressOfOp::create(builder, loc, ptrTy, markerName);
+      mlir::Value init = mlir::LLVM::UndefOp::create(builder, loc, usedTy);
+      init = mlir::LLVM::InsertValueOp::create(builder, loc, init, addr,
+                                               llvm::ArrayRef<int64_t>{0});
+      mlir::LLVM::ReturnOp::create(builder, loc, init);
     }
 
     auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName);
@@ -91,8 +139,6 @@ public:
     // The pointer names and the dictionary keys use the assembly form of the
     // type descriptor name. CompilerGeneratedNamesConversion does not update
     // names nested in the dictionary, and leaves names in this form unchanged.
-    std::string unitTag = getUnitTag(mod);
-    mlir::OpBuilder builder(ctx);
     auto ptrTy = fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
     auto managed =
         cuf::DataAttributeAttr::get(ctx, cuf::DataAttribute::Managed);

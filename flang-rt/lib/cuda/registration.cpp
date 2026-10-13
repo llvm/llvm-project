@@ -60,10 +60,24 @@ void RTDEF(CUFInitModule)(void **module) { __cudaInitModule(module); }
 void RTDEF(CUFRegisterHostMemoryRange)(void *begin, void *end) {
   if (!begin || end <= begin)
     return;
+  // With HMM or ATS, the device reads pageable host memory directly.
+  int device{0};
+  int pageableAccess{0};
+  if (cudaGetDevice(&device) != cudaSuccess ||
+      cudaDeviceGetAttribute(&pageableAccess, cudaDevAttrPageableMemoryAccess,
+          device) != cudaSuccess)
+    (void)cudaGetLastError();
+  else if (pageableAccess)
+    return;
+  // Registering a page that holds other data would break copies of that data
+  // that extend past the page, so only whole pages within the range are
+  // registered.
   const auto pageSize{static_cast<std::uintptr_t>(sysconf(_SC_PAGESIZE))};
-  const auto first{reinterpret_cast<std::uintptr_t>(begin) & ~(pageSize - 1)};
-  const auto last{
-      (reinterpret_cast<std::uintptr_t>(end) + pageSize - 1) & ~(pageSize - 1)};
+  const auto first{(reinterpret_cast<std::uintptr_t>(begin) + pageSize - 1) &
+      ~(pageSize - 1)};
+  const auto last{reinterpret_cast<std::uintptr_t>(end) & ~(pageSize - 1)};
+  if (last <= first)
+    return;
   cudaError_t err{cudaHostRegister(reinterpret_cast<void *>(first),
       last - first, cudaHostRegisterPortable | cudaHostRegisterMapped)};
   if (err == cudaErrorHostMemoryAlreadyRegistered) {
