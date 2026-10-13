@@ -3763,8 +3763,8 @@ VPExpressionRecipe::VPExpressionRecipe(
       // clone those external users.
       VPSingleDefRecipe *CopyForExtUsers = R->clone();
       R->replaceUsesWithIf(CopyForExtUsers,
-                           [&ExpressionRecipesAsSetOfUsers](VPUser &U) {
-                             return !ExpressionRecipesAsSetOfUsers.contains(&U);
+                           [&ExpressionRecipesAsSetOfUsers](VPUser *U) {
+                             return !ExpressionRecipesAsSetOfUsers.contains(U);
                            });
       CopyForExtUsers->insertBefore(R);
     }

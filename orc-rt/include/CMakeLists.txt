@@ -13,8 +13,6 @@ set(ORC_RT_HEADERS
     orc-rt-c/support/RTTI.h
     orc-rt-c/support/WrapperFunction.h
     orc-rt/bedrock/BootstrapInfo.h
-    orc-rt/bedrock/ConnectionSpec.h
-    orc-rt/bedrock/ConnectorRegistry.h
     orc-rt/bedrock/ExecutorProcessInfo.h
     orc-rt/bedrock/InProcessControllerAccess.h
     orc-rt/bedrock/NativeDylibManager.h
@@ -23,19 +21,21 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/Session.h
     orc-rt/bedrock/SimpleNativeMemoryMap.h
     orc-rt/bedrock/SimpleSymbolTable.h
-    orc-rt/bedrock/SocketConnector.h
-    orc-rt/bedrock/SocketHandle.h
     orc-rt/bedrock/TaskGroup.h
     orc-rt/bedrock/ThreadPoolRunner.h
-    orc-rt/bedrock/VettedPeer.h
     orc-rt/bedrock/sps/AllSPSCI.h
     orc-rt/bedrock/sps/CallSPSCI.h
     orc-rt/bedrock/sps/GDBJITRegistrarSPSCI.h
     orc-rt/bedrock/sps/MemoryAccessSPSCI.h
     orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h
     orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h
-    orc-rt/bedrock/sps/SimpleRemoteCA.h
-    orc-rt/bedrock/sps/SimpleRemoteCAOverSocket.h
+    orc-rt/connect-socket/SocketConnector.h
+    orc-rt/connect-socket/SocketHandle.h
+    orc-rt/connect-socket/sps/SimpleRemoteCAOverSocket.h
+    orc-rt/connect/ConnectionSpec.h
+    orc-rt/connect/ConnectorRegistry.h
+    orc-rt/connect/VettedPeer.h
+    orc-rt/connect/sps/SimpleRemoteCA.h
     orc-rt/support/AllocAction.h
     orc-rt/support/BitmaskEnum.h
     orc-rt/support/CCallback.h
