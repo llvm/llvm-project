@@ -1372,6 +1372,21 @@ llvm.func @masked_nontemporal_no_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>)
   llvm.return
 }
 
+// CHECK-LABEL: @bitcast_same_size
+llvm.func @bitcast_same_size(%arg0: !llvm.ppc_fp128, %arg1: vector<[4]xi32>,
+                              %arg2: !llvm.x86_amx) {
+  // CHECK: llvm.bitcast {{.*}} : !llvm.ppc_fp128 to i128
+  %0 = llvm.bitcast %arg0 : !llvm.ppc_fp128 to i128
+  // CHECK: llvm.bitcast {{.*}} : vector<[4]xi32> to vector<[8]xi16>
+  %1 = llvm.bitcast %arg1 : vector<[4]xi32> to vector<[8]xi16>
+  // CHECK: llvm.bitcast {{.*}} : !llvm.x86_amx to vector<256xi32>
+  %2 = llvm.bitcast %arg2 : !llvm.x86_amx to vector<256xi32>
+  // CHECK: llvm.bitcast {{.*}} : i64 to vector<4xbf16>
+  %c = llvm.mlir.constant(0 : i64) : i64
+  %3 = llvm.bitcast %c : i64 to vector<4xbf16>
+  llvm.return
+}
+
 // CHECK-LABEL: @switch_result_number
 llvm.func @switch_result_number(%arg0: i32) -> i32 {
   %0:2 = "test.op_with_two_results"() : () -> (i32, i32)
