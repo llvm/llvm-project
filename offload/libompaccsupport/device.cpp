@@ -96,7 +96,8 @@ DeviceTy::~DeviceTy() {
 
 /// Used to set the asynchronous execution mode
 inline void setAsyncInfoSynchronous(__tgt_async_info *AI, bool SetSynchronous) {
-  if (SetSynchronous)
+  // AI is null if the AsyncInfoTy failed to create its queue.
+  if (SetSynchronous && AI)
     AI->ExecAsync = false;
 }
 
@@ -104,6 +105,10 @@ llvm::Error DeviceTy::init() {
   // Plugin devices are initialized by liboffload before a handle is published.
   setTeamProcs(RTL->number_of_team_procs(RTLDeviceID));
 
+  if (auto Res = olCreateContext(1, &DeviceHandle, &Context))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to create context for device %d: %s", DeviceID,
+                       Res->Details);
   size_t UidSize = 0;
   if (!olGetDeviceInfoSize(DeviceHandle, OL_DEVICE_INFO_UID, &UidSize) &&
       UidSize > 0) {
@@ -193,6 +198,24 @@ llvm::Error DeviceTy::init() {
                          "failed to initialize RR in device %d\n", DeviceID);
   }
 
+  return llvm::Error::success();
+}
+
+llvm::Error DeviceTy::deinit() {
+  OMPT_IF_BUILT({
+    performIfOmptInitialized(performOmptCallback(device_finalize, DeviceID));
+    // Pairs the unconditional 'setDeviceId' in DeviceTy::init().
+    ompt::removeDeviceId(
+        reinterpret_cast<ompt_device_t *>(&RTL->getDevice(RTLDeviceID)));
+  });
+
+  if (!Context)
+    return llvm::Error::success();
+  if (auto Res = olDestroyContext(Context))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to destroy context for device %d: %s", DeviceID,
+                       Res->Details);
+  Context = nullptr;
   return llvm::Error::success();
 }
 
@@ -1095,11 +1118,26 @@ bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
 }
 
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
-  return RTL->synchronize(RTLDeviceID, AsyncInfo);
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_SUCCESS;
+  if (auto Res = olSyncQueue(Queue)) {
+    REPORT() << "Failure to synchronize stream " << Queue << ": "
+             << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
-  return RTL->query_async(RTLDeviceID, AsyncInfo);
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_SUCCESS;
+  if (auto Res = olQueryQueue(Queue, /*IsComplete=*/nullptr)) {
+    REPORT() << "Failure to query stream " << Queue << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::createEvent(void **Event) {

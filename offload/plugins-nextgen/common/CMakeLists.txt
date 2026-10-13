@@ -44,6 +44,7 @@ if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
     OMPT
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/../../liboffload/API
     ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
     ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
     ${LIBOMPTARGET_INCLUDE_DIR}
@@ -54,7 +55,7 @@ if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
     TARGET_NAME="Profiler"
     DEBUG_PREFIX="OMPT"
   )
-  add_dependencies(PluginOmpt PluginErrcodes)
+  add_dependencies(PluginOmpt PluginErrcodes OffloadAPI)
 
 endif()
 

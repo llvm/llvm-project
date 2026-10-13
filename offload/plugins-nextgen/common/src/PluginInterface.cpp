@@ -1573,40 +1573,6 @@ int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
   return R;
 }
 
-int32_t GenericPluginTy::synchronize(int32_t DeviceId,
-                                     __tgt_async_info *AsyncInfoPtr) {
-  auto T = logger::log<int32_t>(__func__, DeviceId, AsyncInfoPtr);
-  auto R = [&]() {
-    auto Err = getDevice(DeviceId).synchronize(AsyncInfoPtr);
-    if (Err) {
-      REPORT() << "Failure to synchronize stream " << AsyncInfoPtr->Queue << ": "
-               << toString(std::move(Err));
-      return OFFLOAD_FAIL;
-    }
-
-    return OFFLOAD_SUCCESS;
-  }();
-  T.res(R);
-  return R;
-}
-
-int32_t GenericPluginTy::query_async(int32_t DeviceId,
-                                     __tgt_async_info *AsyncInfoPtr) {
-  auto T = logger::log<int32_t>(__func__, DeviceId, AsyncInfoPtr);
-  auto R = [&]() {
-    auto Err = getDevice(DeviceId).queryAsync(AsyncInfoPtr);
-    if (Err) {
-      REPORT() << "Failure to query stream " << AsyncInfoPtr->Queue << ": "
-               << toString(std::move(Err));
-      return OFFLOAD_FAIL;
-    }
-
-    return OFFLOAD_SUCCESS;
-  }();
-  T.res(R);
-  return R;
-}
-
 int32_t GenericPluginTy::create_event(int32_t DeviceId, void **EventPtr) {
   auto T = logger::log<int32_t>(__func__, DeviceId, EventPtr);
   auto R = [&]() {

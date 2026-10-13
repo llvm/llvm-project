@@ -91,16 +91,12 @@ void PluginManager::deinit() {
   }
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
-  OMPT_IF_BUILT({
-    auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
-    for (DeviceTy &Device : devices(ExclusiveDevicesAccessor)) {
-      performIfOmptInitialized(
-          performOmptCallback(device_finalize, Device.DeviceID));
-      // Pairs the unconditional 'setDeviceId' in DeviceTy::init().
-      removeDeviceId(reinterpret_cast<ompt_device_t *>(
-          &Device.RTL->getDevice(Device.RTLDeviceID)));
-    }
-  });
+  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+  for (DeviceTy &Device : devices(ExclusiveDevicesAccessor)) {
+    if (auto Err = Device.deinit())
+      REPORT() << "Failed to deinitialize device " << Device.DeviceID << ": "
+               << toString(std::move(Err));
+  }
 
   // Delete only after device_finalize: tools typically flush their trace
   // buffers from that callback, which goes through the trace record manager.
