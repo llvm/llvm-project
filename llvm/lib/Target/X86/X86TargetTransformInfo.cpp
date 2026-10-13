@@ -773,6 +773,25 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UREM, MVT::i64, { 41, 24, 2, 4 } },
   };
 
+  // A rem paired with the div on the same variable operands in the same block
+  // is free, since the divider already returns the remainder.
+  if ((ISD == ISD::UREM || ISD == ISD::SREM) && LT.first == 1 &&
+      !LT.second.isVector() && CostKind != TTI::TCK_Latency && CtxI &&
+      CtxI->getOpcode() == Opcode && !isa<Constant>(CtxI->getOperand(1))) {
+    using namespace PatternMatch;
+    // Limit the use list walk to save compile time.
+    constexpr unsigned MaxUses = 64;
+    unsigned DivOpcode =
+        ISD == ISD::UREM ? Instruction::UDiv : Instruction::SDiv;
+    const Value *X = CtxI->getOperand(0);
+    const Value *Y = CtxI->getOperand(1);
+    if (!Y->hasNUsesOrMore(MaxUses) && any_of(Y->users(), [&](const User *U) {
+          return match(U, m_BinOp(DivOpcode, m_Specific(X), m_Specific(Y))) &&
+                 cast<Instruction>(U)->getParent() == CtxI->getParent();
+        }))
+      return TTI::TCC_Free;
+  }
+
   if (!LT.second.isVector() && !Op2Info.isConstant())
     if (const auto *Entry =
             CostTableLookup(ScalarVarDivCostTable, ISD, LT.second))
