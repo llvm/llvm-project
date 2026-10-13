@@ -36,11 +36,18 @@ bool mlir::isOpTriviallyDead(Operation *op) {
   return op->use_empty() && wouldOpBeTriviallyDead(op);
 }
 
+/// Return true if the op's own memory effects do not prevent erasure. Allowed
+/// effects are reads and effects on results allocated by the op itself.
+///
+/// If the op only has recursive effects, treat the op itself as having no
+/// effects. Without a memory effect interface or recursive effects, return
+/// false to conservatively assume live effects.
+///
+/// The caller must also check nested effects when `hasRecursiveEffects` is
+/// true. This function does not check uses or restrictions on erasing
+/// terminators and symbols.
 static bool hasOnlyDeadEffects(Operation *op, bool hasRecursiveEffects) {
-  // If the op has memory effects, characterize them to see if the op can be
-  // trivially dead.
   if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
-    // Check if this op has no effects, or only allocates/reads memory.
     SmallVector<MemoryEffects::EffectInstance, 1> effects;
     effectInterface.getEffects(effects);
 
@@ -59,9 +66,6 @@ static bool hasOnlyDeadEffects(Operation *op, bool hasRecursiveEffects) {
                                  isa<MemoryEffects::Read>(effect.getEffect());
                         });
   }
-  // If the op only has recursive side effects, treat the operation itself as
-  // having no effects. The caller must also check its children. Without an
-  // effect interface or recursive effects, conservatively assume live effects.
   return hasRecursiveEffects;
 }
 
