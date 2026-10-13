@@ -185,10 +185,10 @@ bool VectorizerParams::isInterleaveForced() {
   return ::VectorizationInterleave.getNumOccurrences() > 0;
 }
 
-const SCEV *
-llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
-                                const SymbolicStrideMap &PtrToStride,
-                                Value *Ptr) {
+const SCEV *llvm::replaceSymbolicStrideSCEV(
+    PredicatedScalarEvolution &PSE, const Loop *Lp,
+    const SymbolicStrideMap &PtrToStride, Value *Ptr,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   const SCEV *OrigSCEV = PSE.getSCEV(Ptr);
 
   // If there is an entry in the map return the SCEV of the pointer with the
@@ -200,11 +200,18 @@ llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 
   ScalarEvolution *SE = PSE.getSE();
   const SCEV *CT = SE->getOne(StrideSCEV->getType());
-  PSE.addPredicate(*SE->getEqualPredicate(StrideSCEV, CT));
-  const SCEV *Expr = PSE.getSCEV(Ptr);
-
-  LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV
-	     << " by: " << *Expr << "\n");
+  const SCEV *Expr;
+  const SCEVPredicate *EqPred = SE->getEqualPredicate(StrideSCEV, CT);
+  if (Predicates) {
+    Predicates->push_back(EqPred);
+    Expr = SE->rewriteUsingPredicate(OrigSCEV, Lp,
+                                     SCEVUnionPredicate(*Predicates, *SE));
+  } else {
+    PSE.addPredicate(*EqPred);
+    Expr = PSE.getSCEV(Ptr);
+  }
+  LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV << " by: " << *Expr
+                    << "\n");
   return Expr;
 }
 
@@ -377,6 +384,17 @@ static bool isKnownNonDecreasingInLoop(const SCEV *S, const Loop *L,
            "trying to check for AddRec in different loop");
     return SE.getMonotonicPredicateType(AR, ICmpInst::ICMP_UGE) ==
            ScalarEvolution::MonotonicPredicateType::MonotonicallyIncreasing;
+  }
+  case scAddExpr:
+  case scMulExpr: {
+    const auto *NAry = cast<SCEVNAryExpr>(S);
+    if (!NAry->hasNoUnsignedWrap())
+      return false;
+    // With NUW, the exact sum or product fits in the type, so it is
+    // non-decreasing if every operandis.
+    return all_of(NAry->operands(), [&](const SCEV *Op) {
+      return isKnownNonDecreasingInLoop(Op, L, SE);
+    });
   }
   default:
     return false;
@@ -769,9 +787,10 @@ void RuntimePointerChecking::groupChecks(
 
   unsigned TotalComparisons = 0;
 
-  DenseMap<Value *, SmallVector<unsigned>> PositionMap;
+  DenseMap<MemoryDepChecker::MemAccessInfo, SmallVector<unsigned>> PositionMap;
   for (unsigned Index = 0; Index < Pointers.size(); ++Index)
-    PositionMap[Pointers[Index].PointerValue].push_back(Index);
+    PositionMap[{Pointers[Index].PointerValue, Pointers[Index].IsWritePtr}]
+        .push_back(Index);
 
   // We need to keep track of what pointers we've already seen so we
   // don't process them twice.
@@ -804,15 +823,10 @@ void RuntimePointerChecking::groupChecks(
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
     for (auto M : DepCands.members(Access)) {
-      auto PointerI = PositionMap.find(M.getPointer());
-      // If we can't find the pointer in PositionMap that means we can't
-      // generate a memcheck for it.
-      if (PointerI == PositionMap.end())
-        continue;
-      for (unsigned Pointer : PointerI->second) {
-        bool Merged = false;
-        // Mark this pointer as seen.
+      for (unsigned Pointer : PositionMap.lookup(M)) {
+        assert(!Seen.contains(Pointer) && "pointer already processed");
         Seen.insert(Pointer);
+        bool Merged = false;
 
         // Go through all the existing sets and see if we can find one
         // which can include this pointer.
@@ -1683,8 +1697,8 @@ public:
                  DominatorTree &DT, MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE,
                  SmallPtrSetImpl<MDNode *> &LoopAliasScopes)
-      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DT(DT), DepCands(DA),
-        PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
+      : TheLoop(TheLoop), EEA(DT, LI), BAA(*AA, &EEA), AST(BAA), LI(LI), DT(DT),
+        DepCands(DA), PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
     // We're analyzing dependences across loop iterations.
     BAA.enableCrossIterationMode();
   }
@@ -1793,6 +1807,9 @@ private:
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
+
+  /// Capture analysis for BAA.
+  EarliestEscapeAnalysis EEA;
 
   /// Batched alias analysis results.
   BatchAAResults BAA;
@@ -2161,7 +2178,8 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
                for (const auto &[Idx, Q] : enumerate(RTCheckPtrs)) dbgs()
                << "\t(" << Idx << ") " << *Q.getPointer() << "\n");
   } else {
-    RTCheckPtrs = {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
+    RTCheckPtrs = {
+        {replaceSymbolicStrideSCEV(PSE, TheLoop, StridesMap, Ptr), false}};
   }
 
   /// Check whether all pointers can participate in a runtime bounds check. They
@@ -2193,7 +2211,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
       PSE.addPredicates(Predicates);
       Predicates.clear();
       if (auto *StrideAR = dyn_cast<SCEVAddRecExpr>(
-              replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr)))
+              replaceSymbolicStrideSCEV(PSE, TheLoop, StridesMap, Ptr)))
         AR = StrideAR;
       P.setPointer(AR);
     }
@@ -2317,11 +2335,35 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
       continue;
     }
 
+    const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
+    auto StoreSize = [&DL](Type *Ty) { return DL.getTypeStoreSize(Ty); };
+
     for (auto &Access : AccessInfos) {
-      for (const auto &AccessTy : Accesses[Access]) {
+      // A written pointer is only checked via its write access, so its bounds
+      // must also cover the types it is loaded with.
+      SmallSetVector<Type *, 1> AccessTys = Accesses.lookup(Access);
+      if (Access.getInt()) {
+        auto ReadIt = Accesses.find(MemAccessInfo(Access.getPointer(), false));
+        if (ReadIt != Accesses.end())
+          AccessTys.insert_range(ReadIt->second);
+      }
+
+      // The widest fixed and scalable types cover all accesses of their kind.
+      for (bool Scalable : {false, true}) {
+        auto HasMatchingSizeKind = [&](Type *Ty) {
+          return StoreSize(Ty).isScalable() == Scalable;
+        };
+        auto Tys = make_filter_range(AccessTys, std::ref(HasMatchingSizeKind));
+        if (Tys.empty())
+          continue;
+
+        Type *AccessTy = *max_element(Tys, [&](Type *A, Type *B) {
+          return TypeSize::isKnownLT(StoreSize(A), StoreSize(B));
+        });
+
         if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
                                   DepSetId, TheLoop, RunningDepId, ASId,
-                                  false)) {
+                                  /*Assume=*/false)) {
           LLVM_DEBUG(dbgs() << "LAA: Can't find bounds for ptr:"
                             << *Access.getPointer() << '\n');
           Retries.emplace_back(Access, AccessTy);
@@ -2546,7 +2588,8 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
                    const Loop *Lp, const DominatorTree &DT,
                    const SymbolicStrideMap &StridesMap, bool ShouldCheckWrap,
                    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
-  const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
+  const SCEV *PtrScev =
+      replaceSymbolicStrideSCEV(PSE, Lp, StridesMap, Ptr, Predicates);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
 
@@ -2576,21 +2619,6 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
       dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
              << *Ptr << " SCEV: " << *AR << "\n");
   return std::nullopt;
-}
-
-/// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
-                                          Type *AccessTy, Value *Ptr,
-                                          const Loop *Lp,
-                                          const DominatorTree &DT,
-                                          const SymbolicStrideMap &StridesMap,
-                                          bool Assume, bool ShouldCheckWrap) {
-  SmallVector<const SCEVPredicate *> Predicates;
-  std::optional<int64_t> Stride =
-      getPtrStride(PSE, AccessTy, Ptr, Lp, DT, StridesMap, ShouldCheckWrap,
-                   Assume ? &Predicates : nullptr);
-  PSE.addPredicates(Predicates);
-  return Stride;
 }
 
 std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
@@ -2869,9 +2897,8 @@ void MemoryDepChecker::mergeInStatus(VectorizationSafetyStatus S) {
 ///                = out[i];
 ///       out[i+D] =
 ///     }
-static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
-                                     const SCEV &MaxBTC, const SCEV &Dist,
-                                     uint64_t MaxStride) {
+static bool isSafeDependenceDistance(ScalarEvolution &SE, const SCEV &MaxBTC,
+                                     const SCEV &Dist, uint64_t MaxStride) {
 
   // If we can prove that
   //      (**) |Dist| > MaxBTC * Step
@@ -2890,21 +2917,16 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   // will be executed only if LoopCount >= VF, proving distance >= LoopCount
   // also guarantees that distance >= VF.
   //
-  const SCEV *Step = SE.getConstant(MaxBTC.getType(), MaxStride);
-  const SCEV *Product = SE.getMulExpr(&MaxBTC, Step);
-
-  const SCEV *CastedDist = &Dist;
-  const SCEV *CastedProduct = Product;
-  uint64_t DistTypeSizeBits = DL.getTypeSizeInBits(Dist.getType());
-  uint64_t ProductTypeSizeBits = DL.getTypeSizeInBits(Product->getType());
-
-  // The dependence distance can be positive/negative, so we sign extend Dist;
-  // The multiplication of the absolute stride in bytes and the
-  // backedgeTakenCount is non-negative, so we zero extend Product.
-  if (DistTypeSizeBits > ProductTypeSizeBits)
-    CastedProduct = SE.getZeroExtendExpr(Product, Dist.getType());
-  else
-    CastedDist = SE.getNoopOrSignExtend(&Dist, Product->getType());
+  // The dependence distance can be positive/negative, so we sign-extend Dist.
+  // MaxBTC is non-negative, so we zero-extended to the wider type before
+  // computing MaxBTC * Step.
+  // FIXME: The checks below can still wrap if MaxBTC * MaxStride does not fit
+  // in WideTy with two bits to spare, e.g. for an unbounded i64 MaxBTC.
+  Type *WideTy = SE.getWiderType(Dist.getType(), MaxBTC.getType());
+  const SCEV *Step = SE.getConstant(WideTy, MaxStride);
+  const SCEV *CastedDist = SE.getNoopOrSignExtend(&Dist, WideTy);
+  const SCEV *CastedProduct =
+      SE.getMulExpr(SE.getNoopOrZeroExtend(&MaxBTC, WideTy), Step);
 
   // Is  Dist - (MaxBTC * Step) > 0 ?
   // (If so, then we have proven (**) because |Dist| >= Dist)
@@ -3147,8 +3169,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // they are far enough appart that accesses won't access the same location
   // across all loop ierations.
   if (HasSameSize &&
-      isSafeDependenceDistance(
-          DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()), *Dist, MaxStride))
+      isSafeDependenceDistance(SE, *(PSE.getSymbolicMaxBackedgeTakenCount()),
+                               *Dist, MaxStride))
     return Dependence::NoDep;
 
   const APInt *APDist = nullptr;
@@ -3692,7 +3714,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     bool IsReadOnlyPtr = false;
     Type *AccessTy = getLoadStoreType(LD);
     if (Seen.insert({Ptr, AccessTy}).second ||
-        !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, *DT, SymbolicStrides, false,
+        !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, *DT, SymbolicStrides,
                       true)) {
       ++NumReads;
       IsReadOnlyPtr = true;

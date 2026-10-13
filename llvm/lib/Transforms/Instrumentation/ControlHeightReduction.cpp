@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -32,7 +33,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/BranchProbability.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -48,40 +48,16 @@ using namespace llvm;
 
 #define CHR_DEBUG(X) LLVM_DEBUG(X)
 
-static cl::opt<bool> DisableCHR("disable-chr", cl::init(false), cl::Hidden,
-                                cl::desc("Disable CHR for all functions"));
-
-static cl::opt<bool> ForceCHR("force-chr", cl::init(false), cl::Hidden,
-                              cl::desc("Apply CHR for all functions"));
-
-static cl::opt<double> CHRBiasThreshold(
-    "chr-bias-threshold", cl::init(0.99), cl::Hidden,
-    cl::desc("CHR considers a branch bias greater than this ratio as biased"));
-
-static cl::opt<unsigned> CHRMergeThreshold(
-    "chr-merge-threshold", cl::init(2), cl::Hidden,
-    cl::desc("CHR merges a group of N branches/selects where N >= this value"));
-
-static cl::opt<std::string> CHRModuleList(
-    "chr-module-list", cl::init(""), cl::Hidden,
-    cl::desc("Specify file to retrieve the list of modules to apply CHR to"));
-
-static cl::opt<std::string> CHRFunctionList(
-    "chr-function-list", cl::init(""), cl::Hidden,
-    cl::desc("Specify file to retrieve the list of functions to apply CHR to"));
-
-static cl::opt<unsigned> CHRDupThreshsold(
-    "chr-dup-threshold", cl::init(3), cl::Hidden,
-    cl::desc("Max number of duplications by CHR for a region"));
-
 static StringSet<> CHRModules;
 static StringSet<> CHRFunctions;
 
 static void parseCHRFilterFiles() {
-  if (!CHRModuleList.empty()) {
-    auto FileOrErr = MemoryBuffer::getFile(CHRModuleList);
+  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  if (!Opts.chr_module_list.empty()) {
+    auto FileOrErr = MemoryBuffer::getFile(Opts.chr_module_list);
     if (!FileOrErr) {
-      errs() << "Error: Couldn't read the chr-module-list file " << CHRModuleList << "\n";
+      errs() << "Error: Couldn't read the chr-module-list file "
+             << Opts.chr_module_list << "\n";
       std::exit(1);
     }
     StringRef Buf = FileOrErr->get()->getBuffer();
@@ -93,10 +69,11 @@ static void parseCHRFilterFiles() {
         CHRModules.insert(Line);
     }
   }
-  if (!CHRFunctionList.empty()) {
-    auto FileOrErr = MemoryBuffer::getFile(CHRFunctionList);
+  if (!Opts.chr_function_list.empty()) {
+    auto FileOrErr = MemoryBuffer::getFile(Opts.chr_function_list);
     if (!FileOrErr) {
-      errs() << "Error: Couldn't read the chr-function-list file " << CHRFunctionList << "\n";
+      errs() << "Error: Couldn't read the chr-function-list file "
+             << Opts.chr_function_list << "\n";
       std::exit(1);
     }
     StringRef Buf = FileOrErr->get()->getBuffer();
@@ -284,11 +261,12 @@ class CHRScope {
 };
 
 class CHR {
- public:
-  CHR(Function &Fin, BlockFrequencyInfo &BFIin, DominatorTree &DTin,
-      ProfileSummaryInfo &PSIin, RegionInfo &RIin,
-      OptimizationRemarkEmitter &OREin)
-      : F(Fin), BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin), ORE(OREin) {}
+public:
+  CHR(const InstrumentationOptions &Opts, Function &Fin,
+      BlockFrequencyInfo &BFIin, DominatorTree &DTin, ProfileSummaryInfo &PSIin,
+      RegionInfo &RIin, OptimizationRemarkEmitter &OREin)
+      : Opts(Opts), F(Fin), BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin),
+        ORE(OREin) {}
 
   ~CHR() {
     for (CHRScope *Scope : Scopes) {
@@ -368,6 +346,7 @@ class CHR {
     return Count;
   }
 
+  const InstrumentationOptions &Opts;
   Function &F;
   BlockFrequencyInfo &BFI;
   DominatorTree &DT;
@@ -408,14 +387,15 @@ raw_ostream &operator<<(raw_ostream &OS, const CHRScope &Scope) {
   return OS;
 }
 
-static bool shouldApply(Function &F, ProfileSummaryInfo &PSI) {
-  if (DisableCHR)
+static bool shouldApply(const InstrumentationOptions &Opts, Function &F,
+                        ProfileSummaryInfo &PSI) {
+  if (Opts.disable_chr)
     return false;
 
-  if (ForceCHR)
+  if (Opts.force_chr)
     return true;
 
-  if (!CHRModuleList.empty() || !CHRFunctionList.empty()) {
+  if (!Opts.chr_module_list.empty() || !Opts.chr_function_list.empty()) {
     if (CHRModules.count(F.getParent()->getName()))
       return true;
     return CHRFunctions.count(F.getName());
@@ -596,20 +576,21 @@ static bool extractBranchProbabilities(Instruction *I,
   return true;
 }
 
-static BranchProbability getCHRBiasThreshold() {
+static BranchProbability
+getCHRBiasThreshold(const InstrumentationOptions &Opts) {
   return BranchProbability::getBranchProbability(
-      static_cast<uint64_t>(CHRBiasThreshold * 1000000), 1000000);
+      static_cast<uint64_t>(Opts.chr_bias_threshold * 1000000), 1000000);
 }
 
 // A helper for CheckBiasedBranch and CheckBiasedSelect. If TrueProb >=
-// CHRBiasThreshold, put Key into TrueSet and return true. If FalseProb >=
-// CHRBiasThreshold, put Key into FalseSet and return true. Otherwise, return
+// -chr-bias-threshold, put Key into TrueSet and return true. If FalseProb >=
+// -chr-bias-threshold, put Key into FalseSet and return true. Otherwise, return
 // false.
 template <typename K, typename S, typename M>
-static bool checkBias(K *Key, BranchProbability TrueProb,
-                      BranchProbability FalseProb, S &TrueSet, S &FalseSet,
-                      M &BiasMap) {
-  BranchProbability Threshold = getCHRBiasThreshold();
+static bool checkBias(const InstrumentationOptions &Opts, K *Key,
+                      BranchProbability TrueProb, BranchProbability FalseProb,
+                      S &TrueSet, S &FalseSet, M &BiasMap) {
+  BranchProbability Threshold = getCHRBiasThreshold(Opts);
   if (TrueProb >= Threshold) {
     TrueSet.insert(Key);
     BiasMap[Key] = TrueProb;
@@ -625,7 +606,7 @@ static bool checkBias(K *Key, BranchProbability TrueProb,
 // Returns true and insert a region into the right biased set and the map if the
 // branch of the region is biased.
 static bool
-checkBiasedBranch(CondBrInst *BI, Region *R,
+checkBiasedBranch(const InstrumentationOptions &Opts, CondBrInst *BI, Region *R,
                   DenseSet<Region *> &TrueBiasedRegionsGlobal,
                   DenseSet<Region *> &FalseBiasedRegionsGlobal,
                   DenseMap<Region *, BranchProbability> &BranchBiasMap) {
@@ -646,27 +627,25 @@ checkBiasedBranch(CondBrInst *BI, Region *R,
   CHR_DEBUG(dbgs() << "BI " << *BI << " ");
   CHR_DEBUG(dbgs() << "ThenProb " << ThenProb << " ");
   CHR_DEBUG(dbgs() << "ElseProb " << ElseProb << "\n");
-  return checkBias(R, ThenProb, ElseProb,
-                   TrueBiasedRegionsGlobal, FalseBiasedRegionsGlobal,
-                   BranchBiasMap);
+  return checkBias(Opts, R, ThenProb, ElseProb, TrueBiasedRegionsGlobal,
+                   FalseBiasedRegionsGlobal, BranchBiasMap);
 }
 
 // Returns true and insert a select into the right biased set and the map if the
 // select is biased.
-static bool checkBiasedSelect(
-    SelectInst *SI, Region *R,
-    DenseSet<SelectInst *> &TrueBiasedSelectsGlobal,
-    DenseSet<SelectInst *> &FalseBiasedSelectsGlobal,
-    DenseMap<SelectInst *, BranchProbability> &SelectBiasMap) {
+static bool
+checkBiasedSelect(const InstrumentationOptions &Opts, SelectInst *SI, Region *R,
+                  DenseSet<SelectInst *> &TrueBiasedSelectsGlobal,
+                  DenseSet<SelectInst *> &FalseBiasedSelectsGlobal,
+                  DenseMap<SelectInst *, BranchProbability> &SelectBiasMap) {
   BranchProbability TrueProb, FalseProb;
   if (!extractBranchProbabilities(SI, TrueProb, FalseProb))
     return false;
   CHR_DEBUG(dbgs() << "SI " << *SI << " ");
   CHR_DEBUG(dbgs() << "TrueProb " << TrueProb << " ");
   CHR_DEBUG(dbgs() << "FalseProb " << FalseProb << "\n");
-  return checkBias(SI, TrueProb, FalseProb,
-                   TrueBiasedSelectsGlobal, FalseBiasedSelectsGlobal,
-                   SelectBiasMap);
+  return checkBias(Opts, SI, TrueProb, FalseProb, TrueBiasedSelectsGlobal,
+                   FalseBiasedSelectsGlobal, SelectBiasMap);
 }
 
 // Returns the instruction at which to hoist the dependent condition values and
@@ -781,9 +760,9 @@ CHRScope * CHR::findScope(Region *R) {
       CHR_DEBUG(dbgs() << "S1 " << S1->getName() << "\n");
       if (S0 != S1 && (S0 == Exit || S1 == Exit)) {
         RegInfo RI(R);
-        RI.HasBranch = checkBiasedBranch(
-            BI, R, TrueBiasedRegionsGlobal, FalseBiasedRegionsGlobal,
-            BranchBiasMap);
+        RI.HasBranch =
+            checkBiasedBranch(Opts, BI, R, TrueBiasedRegionsGlobal,
+                              FalseBiasedRegionsGlobal, BranchBiasMap);
         Result = new CHRScope(RI);
         Scopes.insert(Result);
         CHR_DEBUG(dbgs() << "Found a region with a branch\n");
@@ -829,10 +808,8 @@ CHRScope * CHR::findScope(Region *R) {
     if (Selects.size() > 0) {
       auto AddSelects = [&](RegInfo &RI) {
         for (auto *SI : Selects)
-          if (checkBiasedSelect(SI, RI.R,
-                                TrueBiasedSelectsGlobal,
-                                FalseBiasedSelectsGlobal,
-                                SelectBiasMap))
+          if (checkBiasedSelect(Opts, SI, RI.R, TrueBiasedSelectsGlobal,
+                                FalseBiasedSelectsGlobal, SelectBiasMap))
             RI.Selects.push_back(SI);
           else
             ORE.emit([&]() {
@@ -1318,19 +1295,20 @@ void CHR::classifyBiasedScopes(CHRScope *Scope, CHRScope *OutermostScope) {
   }
 }
 
-static bool hasAtLeastTwoBiasedBranches(CHRScope *Scope) {
+static bool hasAtLeastTwoBiasedBranches(const InstrumentationOptions &Opts,
+                                        CHRScope *Scope) {
   unsigned NumBiased = Scope->TrueBiasedRegions.size() +
                        Scope->FalseBiasedRegions.size() +
                        Scope->TrueBiasedSelects.size() +
                        Scope->FalseBiasedSelects.size();
-  return NumBiased >= CHRMergeThreshold;
+  return NumBiased >= Opts.chr_merge_threshold;
 }
 
 void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
                        SmallVectorImpl<CHRScope *> &Output) {
   for (CHRScope *Scope : Input) {
     // Filter out the ones with only one region and no subs.
-    if (!hasAtLeastTwoBiasedBranches(Scope)) {
+    if (!hasAtLeastTwoBiasedBranches(Opts, Scope)) {
       CHR_DEBUG(dbgs() << "Filtered out by biased branches truthy-regions "
                 << Scope->TrueBiasedRegions.size()
                 << " falsy-regions " << Scope->FalseBiasedRegions.size()
@@ -1338,12 +1316,11 @@ void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
                 << " false-selects " << Scope->FalseBiasedSelects.size() << "\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(
-            DEBUG_TYPE,
-            "DropScopeWithOneBranchOrSelect",
-            Scope->RegInfos[0].R->getEntry()->getTerminator())
-            << "Drop scope with < "
-            << ore::NV("CHRMergeThreshold", CHRMergeThreshold)
-            << " biased branch(es) or select(s)";
+                   DEBUG_TYPE, "DropScopeWithOneBranchOrSelect",
+                   Scope->RegInfos[0].R->getEntry()->getTerminator())
+               << "Drop scope with < "
+               << ore::NV("CHRMergeThreshold", Opts.chr_merge_threshold)
+               << " biased branch(es) or select(s)";
       });
       continue;
     }
@@ -1702,7 +1679,7 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
     unsigned Duplication = getRegionDuplicationCount(R);
     CHR_DEBUG(dbgs() << "Dup count for R=" << R << "  is " << Duplication
                      << "\n");
-    if (Duplication >= CHRDupThreshsold) {
+    if (Duplication >= Opts.chr_dup_threshold) {
       CHR_DEBUG(dbgs() << "Reached the dup threshold of " << Duplication
                        << " for this region");
       ORE.emit([&]() {
@@ -1927,7 +1904,7 @@ void CHR::fixupBranch(Region *R, CHRScope *Scope,
   auto *BI = cast<CondBrInst>(R->getEntry()->getTerminator());
   assert(BranchBiasMap.contains(R) && "Must be in the bias map");
   BranchProbability Bias = BranchBiasMap[R];
-  assert(Bias >= getCHRBiasThreshold() && "Must be highly biased");
+  assert(Bias >= getCHRBiasThreshold(Opts) && "Must be highly biased");
   // Take the min.
   if (CHRBranchBias > Bias)
     CHRBranchBias = Bias;
@@ -1969,7 +1946,7 @@ void CHR::fixupSelect(SelectInst *SI, CHRScope *Scope,
           Scope->FalseBiasedSelects.count(SI)) && "Must be biased");
   assert(SelectBiasMap.contains(SI) && "Must be in the bias map");
   BranchProbability Bias = SelectBiasMap[SI];
-  assert(Bias >= getCHRBiasThreshold() && "Must be highly biased");
+  assert(Bias >= getCHRBiasThreshold(Opts) && "Must be highly biased");
   // Take the min.
   if (CHRBranchBias > Bias)
     CHRBranchBias = Bias;
@@ -2029,7 +2006,7 @@ void CHR::transformScopes(SmallVectorImpl<CHRScope *> &CHRScopes) {
 }
 
 bool CHR::run() {
-  if (!shouldApply(F, PSI))
+  if (!shouldApply(Opts, F, PSI))
     return false;
 
   CHR_DEBUG(dumpIR(F, "before", nullptr));
@@ -2122,7 +2099,8 @@ PreservedAnalyses ControlHeightReductionPass::run(
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = FAM.getResult<RegionInfoAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  bool Changed = CHR(F, BFI, DT, PSI, RI, ORE).run();
+  bool Changed =
+      CHR(InstrumentationOptions::Global, F, BFI, DT, PSI, RI, ORE).run();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();

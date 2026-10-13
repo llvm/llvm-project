@@ -11,9 +11,11 @@ define void @lanes(ptr %p, ptr %q, ptr %r) !dbg !10 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[TMP0]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[Q]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i64 0
+; CHECK-NEXT:      #dbg_value(float [[TMP2]], [[META6]], !DIExpression(), [[META8]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP1]], i64 1
+; CHECK-NEXT:      #dbg_value(float [[TMP3]], [[META9]], !DIExpression(), [[META8]])
 ; CHECK-NEXT:    [[S:%.*]] = fsub float [[TMP2]], [[TMP3]]
-; CHECK-NEXT:      #dbg_value(float poison, [[META10:![0-9]+]], !DIExpression(), [[META8]])
+; CHECK-NEXT:      #dbg_value(float [[TMP2]], [[META10:![0-9]+]], !DIExpression(), [[META8]])
 ; CHECK-NEXT:    store float [[S]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -45,6 +47,7 @@ define void @same_var(ptr %p, ptr %q, ptr %r) !dbg !20 {
 ; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[Q]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP1]], i64 1
+; CHECK-NEXT:      #dbg_value(float [[TMP3]], [[META12]], !DIExpression(), [[META13]])
 ; CHECK-NEXT:    [[S:%.*]] = fsub float [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    store float [[S]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
@@ -75,7 +78,9 @@ define void @inlined_vars(ptr %p, ptr %q, ptr %r) !dbg !30 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[TMP0]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[Q]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i64 0
+; CHECK-NEXT:      #dbg_value(float [[TMP2]], [[META15]], !DIExpression(), [[META17]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP1]], i64 1
+; CHECK-NEXT:      #dbg_value(float [[TMP3]], [[META15]], !DIExpression(), [[META19]])
 ; CHECK-NEXT:    [[S:%.*]] = fsub float [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    store float [[S]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void

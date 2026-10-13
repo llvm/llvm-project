@@ -876,7 +876,10 @@ public:
   }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    if (E.getKind() == aarch64::Branch26PCRel && !E.getTarget().isDefined()) {
+    // Don't route edges with nonzero addends through stubs: the addend applies
+    // to the target, not the stub.
+    if (E.getKind() == aarch64::Branch26PCRel && E.getAddend() == 0 &&
+        !E.getTarget().isDefined()) {
       DEBUG_WITH_TYPE("jitlink", {
         dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
                << B->getFixupAddress(E) << " (" << B->getAddress() << " + "

@@ -44,9 +44,35 @@ enum PointerTypeInfoFlags {
   PTI_Noexcept = 0x40,
 };
 
+/// Flags for abi::__vmi_class_type_info.
+enum VMIClassTypeInfoFlags {
+  /// VMI_NonDiamondRepeat - Class has non-diamond repeated inheritance.
+  VMI_NonDiamondRepeat = 0x1,
+
+  /// VMI_DiamondShaped - Class is diamond shaped.
+  VMI_DiamondShaped = 0x2
+};
+
+/// Flags for abi::__base_class_type_info.
+enum BaseClassTypeInfoFlags {
+  /// BCTI_Virtual - Base class is virtual.
+  BCTI_Virtual = 0x1,
+
+  /// BCTI_Public - Base class is public.
+  BCTI_Public = 0x2
+};
+
+/// Return whether the given record decl has a "single, public, non-virtual
+/// base at offset zero (i.e. the derived class is dynamic iff the base is)",
+/// according to Itanium C++ ABI, 2.95p6b.
+bool canUseSingleInheritance(const CXXRecordDecl *RD);
+
 /// Compute the src2dst_offset hint as described in the Itanium C++ ABI [2.9.7].
 CharUnits computeOffsetHint(ASTContext &Ctx, const CXXRecordDecl *Src,
                             const CXXRecordDecl *Dst);
+
+/// Compute the value of the flags member in abi::__vmi_class_type_info.
+unsigned computeVMIClassTypeInfoFlags(const CXXRecordDecl *RD);
 
 /// Returns whether the given type contains an incomplete class type.  This is
 /// true if

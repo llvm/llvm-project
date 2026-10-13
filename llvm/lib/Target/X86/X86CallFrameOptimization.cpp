@@ -40,7 +40,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -51,11 +50,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-cf-opt"
-
-static cl::opt<bool>
-    NoX86CFOpt("no-x86-call-frame-opt",
-               cl::desc("Avoid optimizing x86 call frames for size"),
-               cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -145,7 +139,7 @@ INITIALIZE_PASS(X86CallFrameOptimizationLegacy, DEBUG_TYPE,
 // Also returns false in cases where it's potentially legal, but
 // we don't even want to try.
 bool X86CallFrameOptimizationImpl::isLegal(MachineFunction &MF) {
-  if (NoX86CFOpt.getValue())
+  if (STI->getCLOpts().no_x86_call_frame_opt)
     return false;
 
   // We can't encode multiple DW_CFA_GNU_args_size or DW_CFA_def_cfa_offset

@@ -1,4 +1,5 @@
 set(CLANGD_TEST_DEPS
+  clang
   clangd
   ClangdTests
   clangd-indexer
@@ -29,6 +30,10 @@ foreach(dep FileCheck count not llvm-config)
     list(APPEND CLANGD_TEST_DEPS ${dep})
   endif()
 endforeach()
+
+add_subdirectory(plugins)
+
+llvm_canonicalize_cmake_booleans(CLANG_PLUGIN_SUPPORT)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in

@@ -219,13 +219,14 @@ bool PlatformLinux::CanDebugProcess() {
 }
 
 void PlatformLinux::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("_sigtramp"));
-  m_trap_handlers.push_back(ConstString("__kernel_rt_sigreturn"));
-  m_trap_handlers.push_back(ConstString("__restore_rt"));
-  m_trap_handlers.push_back(ConstString("__vdso_rt_sigreturn"));
+  m_trap_handlers.push_back("_sigtramp");
+  m_trap_handlers.push_back("__kernel_rt_sigreturn");
+  m_trap_handlers.push_back("__restore_rt");
+  m_trap_handlers.push_back("__vdso_rt_sigreturn");
 }
 
-static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
+static lldb::UnwindPlanSP
+GetAArch64TrapHandlerUnwindPlan(llvm::StringRef name) {
   UnwindPlanSP unwind_plan_sp;
   if (name != "__kernel_rt_sigreturn")
     return unwind_plan_sp;
@@ -305,7 +306,7 @@ static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
   return unwind_plan_sp;
 }
 
-static lldb::UnwindPlanSP GetRISCVTrapHandlerUnwindPlan(ConstString name,
+static lldb::UnwindPlanSP GetRISCVTrapHandlerUnwindPlan(llvm::StringRef name,
                                                         uint32_t fp_flags) {
   if (name != "__vdso_rt_sigreturn")
     return {};
@@ -382,8 +383,9 @@ static lldb::UnwindPlanSP GetRISCVTrapHandlerUnwindPlan(ConstString name,
   return unwind_plan_sp;
 }
 
-lldb::UnwindPlanSP PlatformLinux::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
-                                                           ConstString name) {
+lldb::UnwindPlanSP
+PlatformLinux::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
+                                        llvm::StringRef name) {
   llvm::Triple triple = arch.GetTriple();
   if (triple.isAArch64())
     return GetAArch64TrapHandlerUnwindPlan(name);
