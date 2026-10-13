@@ -2335,11 +2335,35 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
       continue;
     }
 
+    const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
+    auto StoreSize = [&DL](Type *Ty) { return DL.getTypeStoreSize(Ty); };
+
     for (auto &Access : AccessInfos) {
-      for (const auto &AccessTy : Accesses[Access]) {
+      // A written pointer is only checked via its write access, so its bounds
+      // must also cover the types it is loaded with.
+      SmallSetVector<Type *, 1> AccessTys = Accesses.lookup(Access);
+      if (Access.getInt()) {
+        auto ReadIt = Accesses.find(MemAccessInfo(Access.getPointer(), false));
+        if (ReadIt != Accesses.end())
+          AccessTys.insert_range(ReadIt->second);
+      }
+
+      // The widest fixed and scalable types cover all accesses of their kind.
+      for (bool Scalable : {false, true}) {
+        auto HasMatchingSizeKind = [&](Type *Ty) {
+          return StoreSize(Ty).isScalable() == Scalable;
+        };
+        auto Tys = make_filter_range(AccessTys, std::ref(HasMatchingSizeKind));
+        if (Tys.empty())
+          continue;
+
+        Type *AccessTy = *max_element(Tys, [&](Type *A, Type *B) {
+          return TypeSize::isKnownLT(StoreSize(A), StoreSize(B));
+        });
+
         if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
                                   DepSetId, TheLoop, RunningDepId, ASId,
-                                  false)) {
+                                  /*Assume=*/false)) {
           LLVM_DEBUG(dbgs() << "LAA: Can't find bounds for ptr:"
                             << *Access.getPointer() << '\n');
           Retries.emplace_back(Access, AccessTy);
