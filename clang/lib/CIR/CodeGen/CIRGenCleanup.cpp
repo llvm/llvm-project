@@ -557,8 +557,12 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
                                           mlir::Operation *dominatingIP) {
   EHCleanupScope &scope = cast<EHCleanupScope>(*cgf.ehStack.find(c));
 
-  assert((scope.isNormalCleanup() || scope.isEHCleanup()) &&
-         "cleanup block is neither normal nor EH?");
+  // An EH-only cleanup has both flags clear when pushCleanup dropped
+  // the EH flag. That happens when exceptions are disabled, and when
+  // the innermost EH scope is a terminate scope. The cleanup never
+  // runs, so there is no active flag to clear.
+  if (!scope.isNormalCleanup() && !scope.isEHCleanup())
+    return;
 
   scope.setTestFlagInNormalCleanup(scope.isNormalCleanup());
   scope.setTestFlagInEHCleanup(scope.isEHCleanup());
