@@ -1,4 +1,4 @@
-! RUN: not %flang_fc1 -fsyntax-only -fenumeration-type -pedantic %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fsyntax-only -pedantic %s 2>&1 | FileCheck %s
 ! Test intrinsics HUGE, NEXT, PREVIOUS, INT for enumeration types (F2023 7.6.2).
 
 module enum_intrinsics_mod

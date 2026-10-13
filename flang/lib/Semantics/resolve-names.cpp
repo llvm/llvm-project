@@ -172,18 +172,6 @@ public:
   }
   bool IsIntrinsic(
       const SourceName &name, std::optional<Symbol::Flag> flag) const {
-    // TEMPORARY (enumeration-type feature gating): NEXT and PREVIOUS are only
-    // recognized as intrinsic names when the enumeration-type feature is
-    // enabled, so that pre-F2023 programs may still use those names for
-    // implicit external procedures.  This gating is removed once the
-    // enumeration-type feature is fully implemented.
-    if (!context_->languageFeatures().IsEnabled(
-            common::LanguageFeature::EnumerationType)) {
-      const std::string nameStr{name.ToString()};
-      if (nameStr == "next" || nameStr == "previous") {
-        return false;
-      }
-    }
     if (!flag) {
       return context_->intrinsics().IsIntrinsic(name.ToString());
     } else if (flag == Symbol::Flag::Function) {
@@ -6580,16 +6568,6 @@ void DeclarationVisitor::Post(const parser::EnumDef &) {
 // F2023 R766 EnumerationTypeDef — scope is pushed in Post(EnumerationTypeStmt)
 // and popped in Post(EndEnumerationTypeStmt).
 bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
-  const auto &source{
-      std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source};
-  // ENUMERATION TYPE is an experimental feature: semantics are partially
-  // implemented.  FIR lowering is not implemented.
-  if (!context().IsEnabled(common::LanguageFeature::EnumerationType)) {
-    Say(source, "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
-    return false;
-  }
-  Say(source,
-      "ENUMERATION TYPE support is incomplete and should be enabled only for testing"_warn_en_US);
   BeginAttrs();
   return true;
 }
