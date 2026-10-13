@@ -61,6 +61,24 @@ static cir::SyncScopeKind decodeAMDGPUSyncScope(const Expr *arg) {
       .Default(cir::SyncScopeKind::System);
 }
 
+static cir::SyncScopeKind convertAtomicScopeToCIR(llvm::AtomicScope scope) {
+  switch (scope) {
+  case llvm::AtomicScope::Single:
+    return cir::SyncScopeKind::SingleThread;
+  case llvm::AtomicScope::Wavefront:
+    return cir::SyncScopeKind::Wavefront;
+  case llvm::AtomicScope::Workgroup:
+    return cir::SyncScopeKind::Workgroup;
+  case llvm::AtomicScope::Cluster:
+    return cir::SyncScopeKind::Cluster;
+  case llvm::AtomicScope::Device:
+    return cir::SyncScopeKind::Device;
+  case llvm::AtomicScope::System:
+    return cir::SyncScopeKind::System;
+  }
+  llvm_unreachable("unknown atomic scope");
+}
+
 /// Emit one of the AMDGPU raw hardware atomic builtins as a cir.atomic.fetch.
 static mlir::Value emitAMDGPUAtomicRMW(CIRGenFunction &cgf,
                                        const CallExpr *expr,
@@ -1136,31 +1154,10 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
       cgm.errorNYI(expr->getSourceRange(), "__builtin_amdgcn_fence scope");
       return mlir::Value{};
     }
-    cir::SyncScopeKind syncScope;
-    switch (parsed->first) {
-    case llvm::AtomicScope::Single:
-      syncScope = cir::SyncScopeKind::SingleThread;
-      break;
-    case llvm::AtomicScope::Wavefront:
-      syncScope = cir::SyncScopeKind::Wavefront;
-      break;
-    case llvm::AtomicScope::Workgroup:
-      syncScope = cir::SyncScopeKind::Workgroup;
-      break;
-    case llvm::AtomicScope::Cluster:
-      syncScope = cir::SyncScopeKind::Cluster;
-      break;
-    case llvm::AtomicScope::Device:
-      syncScope = cir::SyncScopeKind::Device;
-      break;
-    case llvm::AtomicScope::System:
-      syncScope = cir::SyncScopeKind::System;
-      break;
-    }
-
     // Sorted and unique, like MMRAMetadata::appendTags.
     llvm::SmallVector<std::string> addrSpaces;
-    for (unsigned i = 2, e = expr->getNumArgs(); i < e; ++i) {
+    addrSpaces.reserve(expr->getNumArgs() - 2);
+    for (unsigned i = 2; i < expr->getNumArgs(); ++i) {
       if (std::optional<std::string> as =
               expr->getArg(i)->tryEvaluateString(getContext()))
         addrSpaces.push_back(std::move(*as));
@@ -1171,6 +1168,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     llvm::sort(addrSpaces);
     addrSpaces.erase(llvm::unique(addrSpaces), addrSpaces.end());
     llvm::SmallVector<mlir::Attribute> mmras;
+    mmras.reserve(addrSpaces.size());
     for (const std::string &as : addrSpaces)
       mmras.push_back(mlir::LLVM::MMRATagAttr::get(
           &getMLIRContext(), "amdgpu-synchronize-as", as));
@@ -1178,7 +1176,8 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     auto fence = cir::AtomicFenceOp::create(
         builder, getLoc(expr->getExprLoc()),
         decodeAtomicOrder(expr->getArg(0), getContext()),
-        cir::SyncScopeKindAttr::get(&getMLIRContext(), syncScope));
+        cir::SyncScopeKindAttr::get(&getMLIRContext(),
+                                    convertAtomicScopeToCIR(parsed->first)));
     if (!mmras.empty())
       fence->setAttr(mlir::LLVM::LLVMDialect::getMmraAttrName(),
                      mmras.size() == 1 ? mmras.front()
