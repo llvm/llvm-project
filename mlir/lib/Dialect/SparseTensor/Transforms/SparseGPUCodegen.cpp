@@ -569,6 +569,18 @@ static Operation *genSpMat(OpBuilder &builder, Location loc,
                                   bCols, bNum, bSz, bSz, rowA, colA, valA);
 }
 
+/// Returns whether the operation swaps matrix dimensions.
+static bool isTransposed(gpu::TransposeMode mode) {
+  switch (mode) {
+  case gpu::TransposeMode::NON_TRANSPOSE:
+    return false;
+  case gpu::TransposeMode::TRANSPOSE:
+  case gpu::TransposeMode::CONJUGATE_TRANSPOSE:
+    return true;
+  }
+  llvm_unreachable("unhandled transpose mode");
+}
+
 /// Match and rewrite SpMV kernel.
 static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
                                  linalg::GenericOp op, bool enableRT,
@@ -594,7 +606,7 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   Value nseA = NumberOfEntriesOp::create(rewriter, loc, a);
   Value rows = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
   Value cols = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
-  bool isTranspose = modeA != gpu::TransposeMode::NON_TRANSPOSE;
+  bool isTranspose = isTransposed(modeA);
   Value szX = isTranspose ? rows : cols;
   Value szY = isTranspose ? cols : rows;
   Value memR = genFirstPosOrCrds(rewriter, loc, a, format, enableRT);
@@ -697,8 +709,8 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   Value nseA = NumberOfEntriesOp::create(rewriter, loc, a);
   Value rows = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
   Value cols = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
-  bool isTransposeA = modeA != gpu::TransposeMode::NON_TRANSPOSE;
-  bool isTransposeB = modeB != gpu::TransposeMode::NON_TRANSPOSE;
+  bool isTransposeA = isTransposed(modeA);
+  bool isTransposeB = isTransposed(modeB);
   Value szm = isTransposeA ? cols : rows;
   Value szk = isTransposeA ? rows : cols;
   Value szn = linalg::createOrFoldDimOp(rewriter, loc, b, isTransposeB ? 0 : 1);
@@ -1339,6 +1351,7 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
       if (maps == infer({{i, j}, {j}, {i}}))
         return rewriteSpMV(rewriter, op, enableRT,
                            gpu::TransposeMode::NON_TRANSPOSE);
+      // TODO: recognize conjugate transpose patterns for SpMV.
       if (maps == infer({{j, i}, {j}, {i}}))
         return rewriteSpMV(rewriter, op, enableRT,
                            gpu::TransposeMode::TRANSPOSE);
@@ -1360,6 +1373,7 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
                            gpu::TransposeMode::NON_TRANSPOSE,
                            gpu::TransposeMode::NON_TRANSPOSE);
       }
+      // TODO: recognize conjugate transpose patterns for either SpMM input.
       if (maps == infer({{k, i}, {k, j}, {i, j}}))
         return rewriteSpMM(rewriter, op, enableRT,
                            gpu::TransposeMode::TRANSPOSE,
