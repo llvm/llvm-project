@@ -17176,10 +17176,13 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
-    // The type was checked when we built the expression.
-    unsigned Type =
-        E->getArg(1)->EvaluateKnownConstInt(Info.Ctx).getZExtValue();
-    assert(Type <= 3 && "unexpected type");
+    APSInt TypeValue = E->getArg(1)->EvaluateKnownConstInt(Info.Ctx);
+    if (TypeValue < 0 || TypeValue > 3) {
+      Info.FFDiag(E->getArg(1), diag::note_constexpr_builtin_arg_out_of_range)
+          << TypeValue << 0 << 3;
+      return false;
+    }
+    unsigned Type = TypeValue.getZExtValue();
 
     bool IsDynamic = BuiltinOp == Builtin::BI__builtin_dynamic_object_size;
     if (std::optional<uint64_t> Size =
@@ -22357,14 +22360,16 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     return true;
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantExpr");
+  EvaluationMode EM = Kind == ConstantExprKind::Initializer
+                          ? EvaluationMode::IgnoreSideEffects
+                          : EvaluationMode::ConstantExpression;
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Result,
-                                  Kind);
+    interp::EvalSettings Settings(EM, Result, Kind);
     Settings.InConstantContext = true;
-    return Ctx.getInterpContext().evaluate(Settings, this, Result.Val);
+    return Ctx.getInterpContext().evaluate(Settings, this, Result.Val) &&
+           !Result.HasSideEffects;
   }
 
-  EvaluationMode EM = EvaluationMode::ConstantExpression;
   EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
 
@@ -22387,14 +22392,14 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   // So we need to make sure temporary objects are destroyed after having
   // evaluating the expression (per C++23 [class.temporary]/p4).
   FullExpressionRAII Scope(Info);
-  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
-      Result.HasSideEffects || !Scope.destroy())
+  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) || !Scope.destroy())
     return false;
 
   if (!Info.discardCleanups())
     llvm_unreachable("Unhandled cleanup; missing full expression marker?");
 
-  if (!CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
+  if (Result.HasSideEffects ||
+      !CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
                                Result.Val, Kind))
     return false;
   if (!CheckMemoryLeaks(Info))

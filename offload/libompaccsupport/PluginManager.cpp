@@ -73,11 +73,12 @@ void PluginManager::deinit() {
   TIMESCOPE();
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
-  OMPT_IF_BUILT_AND_INITIALIZED({
-    auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
-    for (DeviceTy &Device : devices(ExclusiveDevicesAccessor))
-      performOmptCallback(device_finalize, Device.DeviceID);
-  });
+  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+  for (DeviceTy &Device : devices(ExclusiveDevicesAccessor)) {
+    if (auto Err = Device.deinit())
+      REPORT() << "Failed to deinitialize device " << Device.DeviceID << ": "
+               << toString(std::move(Err));
+  }
 
   Plugins.clear();
   if (auto Err = olShutDown())
@@ -663,4 +664,20 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
       return createError(ErrorCode::BackendFailure,
                          "failed to load images on device '%i'", DeviceNo);
   return *DevicePtr;
+}
+
+int PluginManager::getNumActivePlugins() const {
+  int count = 0;
+  if (auto Err = iteratePlatforms(
+          [](ol_platform_handle_t Platform, void *Data) {
+            bool Active = false;
+            if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
+                                  sizeof(Active), &Active) == OL_SUCCESS &&
+                Active)
+              ++(*static_cast<int *>(Data));
+          },
+          static_cast<void *>(&count))) {
+    consumeError(std::move(Err));
+  }
+  return count;
 }

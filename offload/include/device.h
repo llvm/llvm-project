@@ -31,6 +31,7 @@
 #include "OpenMP/Mapping.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include "GlobalHandler.h"
@@ -91,6 +92,7 @@ struct DeviceTy {
   GenericPluginTy *RTL;
   int32_t RTLDeviceID;
   ol_device_handle_t DeviceHandle;
+  ol_context_handle_t Context = nullptr;
 
   DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
            ol_device_handle_t DeviceHandle);
@@ -102,6 +104,9 @@ struct DeviceTy {
 
   /// Try to initialize the device and return any failure.
   llvm::Error init();
+
+  /// Deinitialize the OpenMP device.
+  llvm::Error deinit();
 
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
@@ -149,6 +154,15 @@ struct DeviceTy {
   // Insert a data fence between previous data operations and the following
   // operations if necessary for the device.
   int32_t dataFence(AsyncInfoTy &AsyncInfo);
+
+  /// Register (and, if \p LockMemory, page-lock) the host buffer \p HstPtr
+  /// with \p Size bytes, returning the device-accessible pointer.
+  llvm::Expected<void *> registerMemory(void *HstPtr, int64_t Size,
+                                        bool LockMemory = true);
+
+  /// Unregister (and, if \p UnlockMemory, page-unlock) a host buffer
+  /// previously registered via registerMemory.
+  llvm::Error unregisterMemory(void *HstPtr, bool UnlockMemory = true);
 
   /// Notify the plugin about a new mapping starting at the host address
   /// \p HstPtr and \p Size bytes.
@@ -211,6 +225,9 @@ struct DeviceTy {
   /// Indicate that there are pending images for this device or not.
   void setHasPendingImages(bool V) { HasPendingImages = V; }
 
+  /// Return the unique identifier of the device.
+  llvm::StringRef getUid() const { return Uid; }
+
   /// Get information from the device.
   template <typename T> T getInfo(DeviceInfo Info) const {
     T Value{};
@@ -235,6 +252,9 @@ struct DeviceTy {
   }
 
 private:
+  /// Unique identifier of the device.
+  llvm::SmallString<32> Uid;
+
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
       llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;
@@ -249,6 +269,12 @@ private:
 
   /// Flag to indicate pending images (true after construction).
   bool HasPendingImages = true;
+
+  /// Indicate whether mapped host buffers should be locked automatically.
+  bool LockMappedBuffers = false;
+
+  /// Indicate whether failures when locking mapped buffers should be ignored.
+  bool IgnoreLockMappedFailures = true;
 };
 
 #endif

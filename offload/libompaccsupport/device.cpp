@@ -86,6 +86,27 @@ DeviceTy::~DeviceTy() {
 }
 
 llvm::Error DeviceTy::init() {
+  if (auto Res = olCreateContext(1, &DeviceHandle, &Context))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to create context for device %d: %s", DeviceID,
+                       Res->Details);
+  size_t UidSize = 0;
+  if (!olGetDeviceInfoSize(DeviceHandle, OL_DEVICE_INFO_UID, &UidSize) &&
+      UidSize > 0) {
+    Uid.resize(UidSize);
+    if (olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_UID, UidSize, Uid.data()))
+      Uid.clear();
+    else
+      // Drop the null terminator from the size but keep it in the buffer, so
+      // that getUid() can be handed out as a C string.
+      Uid.pop_back();
+  }
+  if (Uid.empty()) {
+    ODBG(ODT_Init) << "Failed to get UID for device " << DeviceID;
+    // An empty SmallString is not guaranteed to be null-terminated.
+    Uid.c_str();
+  }
+
   OMPT_IF_BUILT_AND_INITIALIZED({
     GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
     std::string ComputeUnitKind = GenericDevice.getComputeUnitKind();
@@ -93,6 +114,32 @@ llvm::Error DeviceTy::init() {
                         reinterpret_cast<ompt_device_t *>(&GenericDevice),
                         lookupCallbackByName, /*documentation=*/nullptr);
   });
+
+  // Envar that indicates whether mapped host buffers should be locked
+  // automatically. The possible values are boolean (on/off) and a special:
+  //   off:       Mapped host buffers are not locked.
+  //   on:        Mapped host buffers are locked in a best-effort approach.
+  //              Failure to lock the buffers are silent.
+  //   mandatory: Mapped host buffers are always locked and failures to lock
+  //              a buffer results in a fatal error.
+  StringEnvar OMPX_LockMappedBuffers("LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS",
+                                     "off");
+  bool Enabled;
+  if (StringParser::parse(OMPX_LockMappedBuffers.get().data(), Enabled)) {
+    // Parsed as a boolean value. Enable the feature if necessary.
+    LockMappedBuffers = Enabled;
+    IgnoreLockMappedFailures = true;
+  } else if (OMPX_LockMappedBuffers.get() == "mandatory") {
+    // Enable the feature and failures are fatal.
+    LockMappedBuffers = true;
+    IgnoreLockMappedFailures = false;
+  } else {
+    // Disable by default.
+    ODBG(ODT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
+                    << OMPX_LockMappedBuffers.get();
+    LockMappedBuffers = false;
+    IgnoreLockMappedFailures = true;
+  }
 
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
@@ -122,6 +169,20 @@ llvm::Error DeviceTy::init() {
                          "failed to initialize RR in device %d\n", DeviceID);
   }
 
+  return llvm::Error::success();
+}
+
+llvm::Error DeviceTy::deinit() {
+  OMPT_IF_BUILT_AND_INITIALIZED(
+      { performOmptCallback(device_finalize, DeviceID); });
+
+  if (!Context)
+    return llvm::Error::success();
+  if (auto Res = olDestroyContext(Context))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to destroy context for device %d: %s", DeviceID,
+                       Res->Details);
+  Context = nullptr;
   return llvm::Error::success();
 }
 
@@ -355,13 +416,38 @@ int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
   return RTL->data_fence(RTLDeviceID, AsyncInfo);
 }
 
+llvm::Expected<void *> DeviceTy::registerMemory(void *HstPtr, int64_t Size,
+                                                bool LockMemory) {
+  void *LockedPtr = nullptr;
+  ol_memory_register_flags_t Flags =
+      LockMemory ? OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY : 0;
+  if (auto Res = olMemRegister(DeviceHandle, HstPtr, Size, Flags, &LockedPtr))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to lock memory %p: %s", HstPtr, Res->Details);
+  return LockedPtr;
+}
+
+llvm::Error DeviceTy::unregisterMemory(void *HstPtr, bool UnlockMemory) {
+  ol_memory_register_flags_t Flags =
+      UnlockMemory ? OL_MEMORY_REGISTER_FLAG_UNLOCK_MEMORY : 0;
+  if (auto Res = olMemUnregister(DeviceHandle, HstPtr, Flags))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to unlock memory %p: %s", HstPtr, Res->Details);
+  return llvm::Error::success();
+}
+
 int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
   ODBG(ODT_Mapping) << "Notifying about new mapping: HstPtr=" << HstPtr
                     << ", Size=" << Size;
 
-  if (RTL->data_notify_mapped(RTLDeviceID, HstPtr, Size)) {
-    REPORT() << "Notifying about data mapping failed.";
-    return OFFLOAD_FAIL;
+  auto LockedPtrOrErr = registerMemory(HstPtr, Size, LockMappedBuffers);
+  if (!LockedPtrOrErr) {
+    if (!IgnoreLockMappedFailures) {
+      REPORT() << "Notifying about data mapping failed: "
+               << llvm::toString(LockedPtrOrErr.takeError());
+      return OFFLOAD_FAIL;
+    }
+    llvm::consumeError(LockedPtrOrErr.takeError());
   }
   return OFFLOAD_SUCCESS;
 }
@@ -369,9 +455,13 @@ int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
 int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
   ODBG(ODT_Mapping) << "Notifying about an unmapping: HstPtr=" << HstPtr;
 
-  if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr)) {
-    REPORT() << "Notifying about data unmapping failed.";
-    return OFFLOAD_FAIL;
+  if (auto Err = unregisterMemory(HstPtr, LockMappedBuffers)) {
+    if (!IgnoreLockMappedFailures) {
+      REPORT() << "Notifying about data unmapping failed: "
+               << llvm::toString(std::move(Err));
+      return OFFLOAD_FAIL;
+    }
+    llvm::consumeError(std::move(Err));
   }
   return OFFLOAD_SUCCESS;
 }
@@ -885,11 +975,26 @@ bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
 }
 
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
-  return RTL->synchronize(RTLDeviceID, AsyncInfo);
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_SUCCESS;
+  if (auto Res = olSyncQueue(Queue)) {
+    REPORT() << "Failure to synchronize stream " << Queue << ": "
+             << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
-  return RTL->query_async(RTLDeviceID, AsyncInfo);
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_SUCCESS;
+  if (auto Res = olQueryQueue(Queue, /*IsComplete=*/nullptr)) {
+    REPORT() << "Failure to query stream " << Queue << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::createEvent(void **Event) {
