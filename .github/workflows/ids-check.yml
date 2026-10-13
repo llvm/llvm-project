@@ -73,7 +73,8 @@ jobs:
         run: |
           cmake -B ./llvm-project/build/ \
                 -S ./llvm-project/llvm/ \
-                -D CMAKE_COMPILER_LAUNCHER=sccache \
+                -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
+                -D CMAKE_C_COMPILER_LAUNCHER=sccache \
                 -D CMAKE_BUILD_TYPE=Release \
                 -D LLVM_TARGETS_TO_BUILD="host" \
                 -D LLVM_INCLUDE_BENCHMARKS=OFF \
