@@ -38,7 +38,7 @@ jobs:
       - if: runner.os != 'Windows'
         background: true
         run: |
-          apt-get update && apt-get install curl
+          apt-get update && apt-get -y install curl
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         background: true
