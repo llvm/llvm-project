@@ -40,6 +40,7 @@ class TestProcessConnect(GDBRemoteTestBase):
             self, self.dbg.GetListener(), self.process(), [lldb.eStateExited]
         )
 
+    @skipIfWindows
     def test_process_connect_sync(self):
         """Test the gdb-remote command in synchronous mode"""
         try:
@@ -55,6 +56,7 @@ class TestProcessConnect(GDBRemoteTestBase):
         finally:
             self.dbg.GetSelectedTarget().GetProcess().Kill()
 
+    @skipIfWindows
     def test_process_connect_async(self):
         """Test the gdb-remote command in asynchronous mode"""
         try:

@@ -67,6 +67,7 @@ class BreakpointByLineAndColumnTestCase(TestBase):
 
     ## Skip gcc version less 7.1 since it doesn't support -gcolumn-info
     @skipIf(compiler="gcc", compiler_version=["<", "7.1"])
+    @expectedFailureAll(debug_info=["pdb"])
     def testBreakpointByLineAndColumnNearestCode(self):
         self.build()
 
