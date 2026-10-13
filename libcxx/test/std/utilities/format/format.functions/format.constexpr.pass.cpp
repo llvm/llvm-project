@@ -39,8 +39,8 @@ constexpr bool test() {
 
   // Strings
   assert(std::format("{}", "abc") == "abc");
-  //  assert(std::format("{}", std::string_view{"abc"}) == "abc");
-  //  assert(std::format("{:*^7}", "abc") == "**abc**");
+  assert(std::format("{}", std::string_view{"abc"}) == "abc");
+  assert(std::format("{:*^7}", "abc") == "**abc**");
 
   // Several arguments
   // assert(std::format("{} + {} = {}", 1, 2, 3) == "1 + 2 = 3");
