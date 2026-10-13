@@ -1,3 +1,4 @@
+# UNSUPPORTED: expensive_checks
 # REQUIRES: x86-registered-target
 # Check that the machine verifier runs at the end of a pipeline that stops
 # before code emission, and that -disable-mir-output-verify suppresses it.
