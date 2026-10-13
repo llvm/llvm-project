@@ -1593,7 +1593,7 @@ static bool interp__builtin_infer_alloc_token(InterpState &S, CodePtr OpPC,
 
   auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
   if (!MaybeToken) {
-    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_stateful_mode);
+    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_unsupported_mode);
     return false;
   }
 
