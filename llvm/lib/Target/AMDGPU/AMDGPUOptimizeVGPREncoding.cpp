@@ -451,8 +451,8 @@ private:
   bool resolveConflictingPins(OptReg &Reg);
 
   /// Returns whether we consider that \p Reg should be pinned. Registers whose
-  /// only remaining neighbors (pinned or not) are all currently in a single MSB
-  /// group are in the perfect MSB group and should never change group again.
+  /// only remaining neighbors (pinned or not) are all currently in the MSB
+  /// group the register is currently in should never change group again.
   bool shouldBePinned(const OptReg &Reg) const;
 
   /// Pins \p Reg if it is eligible according to \ref shouldBePinned. Returns
@@ -645,6 +645,19 @@ class VirtRegReMap {
 public:
   VirtRegReMap(LiveRegMatrix &LRM, LiveIntervals &LIS,
                const MachineFunction &MF, const VirtRegMap &VRM);
+
+  /// Set bits in \p AntiHintUnits corresponding to register units for which \p
+  /// VirtReg currently has an anti-hint. This depends on the current
+  /// virtual-to-physical register assignment.
+  void getAntiHintRegUnits(Register VirtReg, BitVector &AntiHintUnits) const;
+
+  /// Returns whether any of the register units of \p PhysReg is set in \p
+  /// AntiHintUnits.
+  bool isAntiHinted(MCPhysReg PhysReg, const BitVector &AntiHintUnits) const {
+    return any_of(TRI.regunits(PhysReg), [&AntiHintUnits](MCRegUnit Unit) {
+      return AntiHintUnits.test(static_cast<unsigned>(Unit));
+    });
+  }
 
   /// Attempts to re-assign virtual register \p Reg to an available physical
   /// register in any of the MSB groups indicated by set bits in \p
@@ -1230,6 +1243,9 @@ bool ModeSetOptimizer::pinIfEligible(OptReg &Reg) {
   Reg.pinMSBGroup();
   LLVM_DEBUG(dbgs() << "  Pinned " << Reg.print(VRM) << " to "
                     << printGroup(Reg.getMSB()) << '\n');
+  // Neighbors of registers which became pinned may now have conflicts.
+  for (const auto &[NeighborReg, _] : Reg.getNeighbors())
+    CheckResolveConflict.set(NeighborReg->getVirtIndex());
   return true;
 }
 
@@ -1259,24 +1275,16 @@ bool ModeSetOptimizer::resolveConflictsAndPinRegs() {
   LLVM_DEBUG(dbgs() << "* Resolving conflicts and pins:\n");
   bool AnyChange = false;
   do {
+    // Pin eligible registers.
+    for (unsigned VirtRegIdx : CheckShouldBePinned.set_bits())
+      AnyChange |= pinIfEligible(OptRegs[VirtRegIdx]);
+    CheckShouldBePinned.reset();
+
     // Conflict resolution.
     for (unsigned VirtRegIdx : CheckResolveConflict.set_bits())
       AnyChange |= resolveConflictingPins(OptRegs[VirtRegIdx]);
     CheckResolveConflict.reset();
-
-    // Pin eligible registers.
-    for (unsigned VirtRegIdx : CheckShouldBePinned.set_bits()) {
-      OptReg &Reg = OptRegs[VirtRegIdx];
-      if (!pinIfEligible(Reg))
-        continue;
-      AnyChange = true;
-
-      // Neighbors of registers which became pinned may now have conflicts.
-      for (const auto &[NeighborReg, _] : Reg.getNeighbors())
-        CheckResolveConflict.set(NeighborReg->getVirtIndex());
-    }
-    CheckShouldBePinned.reset();
-  } while (CheckResolveConflict.any());
+  } while (CheckShouldBePinned.any());
   return AnyChange;
 }
 
@@ -1448,6 +1456,19 @@ VirtRegReMap::VirtRegReMap(LiveRegMatrix &LRM, LiveIntervals &LIS,
   RCI.runOnMachineFunction(MF);
 }
 
+void VirtRegReMap::getAntiHintRegUnits(Register VirtReg,
+                                       BitVector &AntiHintUnits) const {
+  assert(VirtReg.isVirtual() && "expected virtreg");
+  AntiHintUnits.resize(TRI.getNumRegUnits());
+  const MachineRegisterInfo &MRI = VRM.getRegInfo();
+  SmallVector<MCPhysReg> AntiHints;
+  for (Register VirtReg : MRI.getRegAllocationAntiHints(VirtReg)) {
+    assert(VirtReg.isVirtual() && "expected virtreg");
+    for (MCRegUnit Unit : TRI.regunits(VRM.getPhys(VirtReg)))
+      AntiHintUnits.set(static_cast<unsigned>(Unit));
+  }
+}
+
 bool VirtRegReMap::tryReAssign(OptReg &Reg,
                                const SmallBitVector &TargetGroups) {
   assert(!TargetGroups.test(Reg.getMSB()) && "target is current MSB group");
@@ -1469,9 +1490,15 @@ bool VirtRegReMap::tryReAssign(OptReg &Reg,
   if (UnassignOriginalReg)
     LRM.unassign(LI);
 
+  // Do not re-assign to a physical register that an anti-hinted virtual
+  // register is currently assigned to.
+  BitVector AntiHintUnits;
+  getAntiHintRegUnits(VirtReg, AntiHintUnits);
+
   for (MCPhysReg CandPhysReg : RCI.getOrder(RC)) {
     MSBGroup CandGroup = getVGPRGroup(CandPhysReg, VRM);
     if (!TargetGroups.test(CandGroup) ||
+        isAntiHinted(CandPhysReg, AntiHintUnits) ||
         LRM.checkInterference(LI, CandPhysReg) != LiveRegMatrix::IK_Free)
       continue;
 

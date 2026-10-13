@@ -10,6 +10,7 @@
 #include "AMDGPUUnitTests.h"
 #include "GCNRegPressure.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
@@ -47,9 +48,15 @@ struct VirtVGPRDef {
   /// Index of the physical register, offset within the MSB group to the first
   /// non-reserved VGPR.
   unsigned PhysRegIdx;
+  /// Whether the virtual register's live-range should be artificially extended
+  /// to the beginning and end of the MIR. When false the register will be
+  /// automatically defined on its first use and killed on its last use.
+  bool MaximizeLiveRange;
 
-  VirtVGPRDef(StringRef RegDef, MSBGroup Group, unsigned PhysRegIdx)
-      : Group(Group), PhysRegIdx(PhysRegIdx) {
+  VirtVGPRDef(StringRef RegDef, MSBGroup Group, unsigned PhysRegIdx,
+              bool MaximizeLiveRange = true)
+      : Group(Group), PhysRegIdx(PhysRegIdx),
+        MaximizeLiveRange(MaximizeLiveRange) {
     std::tie(RegName, RegClass) = RegDef.split(':');
   }
 };
@@ -70,6 +77,10 @@ using PhysVGPRDef = StringRef;
 /// unless their class is explicitly provided (e.g., "%0:vgpr_32_lo256").
 /// Physical registers may be reserved ones.
 struct ModeUsingInstr {
+  /// Registers of each operand type. For VOPD instructions, \ref Regs holds
+  /// the X component's registers and \ref RegsY the Y component's.
+  std::array<StringRef, NumOprdTypes> Regs, RegsY;
+
   /// Creates a VOP1 instruction.
   static ModeUsingInstr createVOP1(StringRef Dst, StringRef Src0) {
     ModeUsingInstr Instr(InstrType::VOP1);
@@ -202,9 +213,6 @@ struct ModeUsingInstr {
 
 private:
   enum { SRC0 = 0, SRC1 = 1, SRC2 = 2, DST = 3 };
-  /// Registers of each operand type. For VOPD instructions, \ref Regs holds
-  /// the X component's registers and \ref RegsY the Y component's.
-  std::array<StringRef, NumOprdTypes> Regs, RegsY;
 
   enum class InstrType {
     VOP1,
@@ -299,17 +307,38 @@ body:             |
     std::string RegisterUses;
     raw_string_ostream RegUseOS(RegisterUses);
 
-    for (const VirtVGPRDef VirtDef : VirtDefs) {
-      // Each virtual register gets an IMPLICIT_DEF.
-      OS << "    " << VirtDef.RegName << ':' << VirtDef.RegClass
-         << " = IMPLICIT_DEF\n";
-      // Accumulate uses for the last block.
-      RegUseOS << ", implicit " << VirtDef.RegName;
+    /// Virtual registers which don't have maximal live-range need to be defined
+    /// on their first use.
+    StringMap<const VirtVGPRDef *> RegNeedDef;
+    auto AddDef = [&](StringRef RegName, StringRef RegClass) -> void {
+      OS << "    " << RegName << ':' << RegClass << " = IMPLICIT_DEF\n";
+    };
+    auto AddFirstDef = [&](StringRef RegName) -> void {
+      auto Def = RegNeedDef.find(RegName);
+      if (Def == RegNeedDef.end())
+        return;
+      AddDef(RegName, Def->second->RegClass);
+      RegNeedDef.erase(Def);
+    };
+
+    for (const VirtVGPRDef &VirtDef : VirtDefs) {
+      if (VirtDef.MaximizeLiveRange) {
+        AddDef(VirtDef.RegName, VirtDef.RegClass);
+        // Accumulate uses for the last block.
+        RegUseOS << ", implicit " << VirtDef.RegName;
+      } else {
+        RegNeedDef.insert({VirtDef.RegName, &VirtDef});
+      }
     }
     for (const auto &[Idx, Block] : enumerate(MIRBlocks)) {
       OS << "  bb." << Idx + 1 << ":\n" << LiveIns;
-      for (const ModeUsingInstr &Instr : *Block)
+      for (const ModeUsingInstr &Instr : *Block) {
+        for (StringRef RegName : Instr.Regs)
+          AddFirstDef(RegName);
+        for (StringRef RegName : Instr.RegsY)
+          AddFirstDef(RegName);
         OS << "    " << Instr.toString() << '\n';
+      }
     }
     OS << "  bb." << MIRBlocks.size() + 1 << ":\n    S_NOP 0" << RegisterUses
        << "\n    S_ENDPGM 0\n...\n";
@@ -712,4 +741,30 @@ TEST_F(AMDGPUOptimizeVGPREncodingTest, Lo256RegsArePinned) {
   ASSERT_TRUE(createMIRAndAssign(VirtDefs, {"$vgpr256"}, {&Instructions}, 2));
   runPass();
   expectAssignmentChanges({{"%moveTo1", 1}}, /*Exhaustive=*/true);
+}
+
+/// Registers must not be re-assigned to the physical register of a virtual
+/// register they have an anti-hint for, even if their live ranges don't
+/// interfere. %doNotMove is in group 0 but its neighbors are all in group 1. It
+/// would be re-assigned to %anti's physical register which is in group 1 and
+/// available after the use of %anti but the anti-hint prevents this, yielding
+/// no assignment changes.
+TEST_F(AMDGPUOptimizeVGPREncodingTest, AntiHintPreventsReassign) {
+  SmallVector<VirtVGPRDef> VirtDefs{
+      {"%doNotMove:vgpr_32", 0, 0, /*MaximizeLiveRange=*/false},
+      {"%anti:vgpr_32", 1, 0, /*MaximizeLiveRange=*/false},
+  };
+  SmallVector<ModeUsingInstr> Instructions{
+      ModeUsingInstr::createVOP1("$vgpr0", "$vgpr510"),
+      ModeUsingInstr::createVOP1("$vgpr0", "%anti"),
+      ModeUsingInstr::createVOP1("$vgpr0", "%doNotMove"),
+      ModeUsingInstr::createVOP1("$vgpr0", "$vgpr510"),
+  };
+  ASSERT_TRUE(
+      createMIRAndAssign(VirtDefs, {"$vgpr0", "$vgpr510"}, {&Instructions}, 1));
+  Register DoNotMove = Register::index2VirtReg(0),
+           Anti = Register::index2VirtReg(1);
+  MRI->addRegAllocationAntiHint(DoNotMove, Anti);
+  runPass();
+  expectAssignmentChanges({}, /*Exhaustive=*/true);
 }
