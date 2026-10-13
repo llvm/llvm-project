@@ -389,6 +389,11 @@ Makes programs 10x faster by doing Special New Thing.
   `dso_local` runtime preemption specifier on global values (global variables,
   functions and aliases).
 
+* `LLVMRemoveModule()` now returns a non-zero value and sets `OutError` when
+  the module is not owned by the execution engine. Previously it always
+  reported success, which could lead callers to dispose of a module that was
+  still owned by another execution engine.
+
 ### Changes to the CodeGen infrastructure
 
 * Fixed a crash

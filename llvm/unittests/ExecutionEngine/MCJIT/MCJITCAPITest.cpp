@@ -474,6 +474,29 @@ TEST_F(MCJITCAPITest, yield) {
   EXPECT_TRUE(didCallYield);
 }
 
+TEST_F(MCJITCAPITest, remove_module) {
+  SKIP_UNSUPPORTED_PLATFORM;
+
+  buildSimpleFunction();
+  buildMCJITOptions();
+  buildMCJITEngine();
+
+  LLVMModuleRef RemovedModule = nullptr;
+  char *RemoveError = nullptr;
+  ASSERT_EQ(0, LLVMRemoveModule(Engine, Module, &RemovedModule, &RemoveError));
+  EXPECT_EQ(Module, RemovedModule);
+
+  // The engine no longer owns the module, so removing it again must fail and
+  // report an error.
+  EXPECT_NE(0, LLVMRemoveModule(Engine, Module, &RemovedModule, &RemoveError));
+  EXPECT_NE(nullptr, RemoveError);
+  LLVMDisposeMessage(RemoveError);
+
+  // Ownership was transferred back to us by the first removal.
+  LLVMDisposeModule(Module);
+  Module = nullptr;
+}
+
 static int localTestFunc() {
   return 42;
 }
