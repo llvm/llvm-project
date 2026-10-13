@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -33,6 +34,7 @@ class OptimizationRemarkEmitter;
 class Comdat;
 class CallBase;
 class Module;
+enum class SanitizerInstrumentationRegionIssue;
 
 /// Check if module has flag attached, if not add the flag.
 LLVM_ABI bool checkIfAlreadyInstrumented(Module &M, StringRef Flag);
@@ -70,6 +72,14 @@ LLVM_ABI bool isSanitizerInstrumentationEnd(const Instruction &I);
 /// llvm.sanitizer.instrumentation.end.
 LLVM_ABI bool hasSanitizerInstrumentationRegions(const Function &F);
 
+/// A problem with the llvm.sanitizer.instrumentation.begin()/end() markers of
+/// a function, found by computeSanitizerInstrumentationRegions().
+struct SanitizerInstrumentationRegionProblem {
+  SanitizerInstrumentationRegionIssue Issue;
+  /// The marker, return or first instruction of the merge block to blame.
+  const Instruction *Where;
+};
+
 /// Compute the instructions of \p F that lie inside an
 /// llvm.sanitizer.instrumentation.begin()/end() region, and add them to
 /// \p InRegion.
@@ -81,8 +91,26 @@ LLVM_ABI bool hasSanitizerInstrumentationRegions(const Function &F);
 /// objtool requiring them to be balanced on all paths. The lattice value is
 /// the nesting depth rather than a flag, so that in begin; begin; end; X; end
 /// the instruction X is still in a region.
-LLVM_ABI void computeSanitizerInstrumentationRegions(
+///
+/// Returns the first problem with the markers of \p F, if any: an end()
+/// without a matching begin(), a region still open at a return, or control
+/// flow merging from paths with different nesting depths. Leaving the
+/// function without returning (through an unreachable or by unwinding) with a
+/// region open is not reported. Callers that want the user to see the problem
+/// pass it to diagnoseSanitizerInstrumentationRegionProblem().
+LLVM_ABI std::optional<SanitizerInstrumentationRegionProblem>
+computeSanitizerInstrumentationRegions(
     const Function &F, SmallPtrSetImpl<const Instruction *> &InRegion);
+
+/// Report \p Problem in \p F as a DiagnosticInfoSanitizerInstrumentationRegion
+/// warning through the LLVMContext of \p F.
+///
+/// Every sanitizer pass that implements regions reports the problems it finds,
+/// so a function analyzed by several passes is reported several times. Clang
+/// deduplicates the reports; other drivers (e.g. opt) do not.
+/// TODO: Deduplicate here, without tagging the IR, if that becomes a problem.
+LLVM_ABI void diagnoseSanitizerInstrumentationRegionProblem(
+    const Function &F, const SanitizerInstrumentationRegionProblem &Problem);
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {

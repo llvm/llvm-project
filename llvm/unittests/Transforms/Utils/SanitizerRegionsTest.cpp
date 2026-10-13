@@ -8,19 +8,26 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 
 namespace {
 
+using Issue = SanitizerInstrumentationRegionIssue;
+
 // Every test function loads from %p into values named "in*" for instructions
-// expected to be in a region and "out*" for the rest.
+// expected to be in a region and "out*" for the rest. For malformed regions,
+// the expected problem is given by its kind and by the name of the instruction
+// it points at ("" for the unnamed marker or return itself).
 class SanitizerRegionsTest : public testing::Test {
 protected:
   LLVMContext C;
@@ -43,12 +50,37 @@ protected:
     return M->getFunction("f");
   }
 
-  void expectRegions(StringRef Body, bool ExpectHasRegions = true) {
+  void expectRegions(StringRef Body, bool ExpectHasRegions = true,
+                     std::optional<Issue> ExpectedIssue = std::nullopt,
+                     StringRef ExpectedWhere = "") {
     Function *F = parse(Body);
     ASSERT_TRUE(F);
     EXPECT_EQ(hasSanitizerInstrumentationRegions(*F), ExpectHasRegions);
     SmallPtrSet<const Instruction *, 16> InRegion;
-    computeSanitizerInstrumentationRegions(*F, InRegion);
+    std::optional<SanitizerInstrumentationRegionProblem> Problem =
+        computeSanitizerInstrumentationRegions(*F, InRegion);
+    ASSERT_EQ(Problem.has_value(), ExpectedIssue.has_value());
+    if (Problem) {
+      EXPECT_EQ(Problem->Issue, *ExpectedIssue);
+      ASSERT_TRUE(Problem->Where);
+      EXPECT_EQ(Problem->Where->getName(), ExpectedWhere);
+      switch (*ExpectedIssue) {
+      case Issue::UnmatchedEnd:
+        EXPECT_TRUE(isSanitizerInstrumentationEnd(*Problem->Where));
+        break;
+      case Issue::NotClosedAtReturn:
+        EXPECT_TRUE(isa<ReturnInst>(Problem->Where));
+        break;
+      case Issue::MergeOutsideRegion:
+        EXPECT_FALSE(InRegion.contains(Problem->Where));
+        break;
+      case Issue::MergeNestedRegions:
+        EXPECT_TRUE(InRegion.contains(Problem->Where));
+        break;
+      case Issue::NumIssues:
+        llvm_unreachable("not an issue");
+      }
+    }
     unsigned Named = 0;
     for (const Instruction &I : instructions(*F)) {
       if (!I.hasName())
@@ -103,6 +135,26 @@ TEST_F(SanitizerRegionsTest, UnmatchedEnd) {
       call void @llvm.sanitizer.instrumentation.end()
       %out2 = load i32, ptr %p
       ret void
+  )",
+                /*ExpectHasRegions=*/true, Issue::UnmatchedEnd);
+}
+
+TEST_F(SanitizerRegionsTest, NotClosedAtReturn) {
+  expectRegions(R"(
+      call void @llvm.sanitizer.instrumentation.begin()
+      %in = load i32, ptr %p
+      ret void
+  )",
+                /*ExpectHasRegions=*/true, Issue::NotClosedAtReturn);
+}
+
+// Leaving a function without returning with a region open is not reported
+// (see findSanitizerInstrumentationRegionProblem() for why).
+TEST_F(SanitizerRegionsTest, NotClosedAtUnreachable) {
+  expectRegions(R"(
+      call void @llvm.sanitizer.instrumentation.begin()
+      %in = load i32, ptr %p
+      unreachable
   )");
 }
 
@@ -118,7 +170,8 @@ TEST_F(SanitizerRegionsTest, BeginOnOnePath) {
     join:
       %out = load i32, ptr %p
       ret void
-  )");
+  )",
+                /*ExpectHasRegions=*/true, Issue::MergeOutsideRegion, "out");
 }
 
 // Likewise for a block that can be reached after an end().
@@ -135,7 +188,28 @@ TEST_F(SanitizerRegionsTest, EndOnOnePath) {
     join:
       %out2 = load i32, ptr %p
       ret void
-  )");
+  )",
+                /*ExpectHasRegions=*/true, Issue::MergeOutsideRegion, "out2");
+}
+
+// Paths that differ in nesting depth but are all inside a region: the join is
+// still in a region, at the smaller depth, and is reported as such.
+TEST_F(SanitizerRegionsTest, MergeNestedRegions) {
+  expectRegions(R"(
+    entry:
+      call void @llvm.sanitizer.instrumentation.begin()
+      br i1 %c, label %inner, label %join
+    inner:
+      call void @llvm.sanitizer.instrumentation.begin()
+      %in1 = load i32, ptr %p
+      br label %join
+    join:
+      %in2 = load i32, ptr %p
+      call void @llvm.sanitizer.instrumentation.end()
+      %out = load i32, ptr %p
+      ret void
+  )",
+                /*ExpectHasRegions=*/true, Issue::MergeNestedRegions, "in2");
 }
 
 TEST_F(SanitizerRegionsTest, BalancedOnBothPaths) {
@@ -170,7 +244,8 @@ TEST_F(SanitizerRegionsTest, LoopLeavingRegion) {
     exit:
       %out2 = load i32, ptr %p
       ret void
-  )");
+  )",
+                /*ExpectHasRegions=*/true, Issue::MergeOutsideRegion, "out1");
 }
 
 // A loop entirely inside a region.

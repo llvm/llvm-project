@@ -4349,7 +4349,8 @@ void handle_irq(struct pt_regs *regs) {
 The builtins are meant for code like the Linux kernel's `noinstr` functions,
 which must not be instrumented as a whole but call instrumented code between
 `instrumentation_begin()` and `instrumentation_end()`. Regions nest, and should
-be balanced on every path through the function. Which functions count as
+be balanced on every path through the function; Clang warns about unbalanced
+regions with `-Wsanitizer-instrumentation-region`. Which functions count as
 uninstrumented, and what gets instrumented inside regions, is up to each
 sanitizer; sanitizers that support regions describe this in their own
 documentation.

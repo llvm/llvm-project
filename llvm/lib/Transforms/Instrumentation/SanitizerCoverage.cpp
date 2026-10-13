@@ -648,7 +648,8 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
   }
   SmallPtrSet<const Instruction *, 16> InRegion;
   if (RegionOnly)
-    computeSanitizerInstrumentationRegions(F, InRegion);
+    if (auto Problem = computeSanitizerInstrumentationRegions(F, InRegion))
+      diagnoseSanitizerInstrumentationRegionProblem(F, *Problem);
   if (Options.CoverageType >= SanitizerCoverageOptions::SCK_Edge) {
     CriticalEdgeSplittingOptions SplitOptions;
     SplitOptions.setIgnoreUnreachableDests();
