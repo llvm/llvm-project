@@ -121,3 +121,25 @@ subroutine selected_target_block_substring(n, c)
     c = p(n:n)
   end block
 end subroutine
+
+! Compiler directives between the METADIRECTIVE and the BLOCK are not BLOCK
+! references.
+! CHECK-LABEL: func.func @_QMm_directivesPselected_target_block_directives(
+! CHECK-NOT: omp.map.info {{.*}}name("x")
+! CHECK-NOT: omp.map.info {{.*}}name("a")
+! CHECK: %[[Y:.*]] = omp.map.info {{.*}}name("y")
+! CHECK-NOT: omp.map.info
+! CHECK: omp.target {{.*}}map_entries(%[[Y]] -> %{{[^ ]*}} : !fir.ref<i32>) {
+! CHECK: omp.terminator
+module m_directives
+contains
+  subroutine selected_target_block_directives(x, a, y)
+    integer :: x(10), a(10), y
+    !$omp metadirective when(implementation={vendor(llvm)}: target)
+    !dir$ ignore_tkr (k) x
+    !dir$ assume_aligned a:64
+    block
+      y = y + 1
+    end block
+  end subroutine
+end module

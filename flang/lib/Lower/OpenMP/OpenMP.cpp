@@ -3996,7 +3996,9 @@ forEachParseTreeEval(lower::pft::Evaluation &eval,
   fn(eval);
   if (isBodylessMetadirective(eval) && eval.hasNestedEvaluations())
     for (lower::pft::Evaluation &nested : eval.getNestedEvaluations())
-      fn(nested);
+      // Compiler directives moved with the BLOCK are not part of it.
+      if (!nested.getIf<parser::CompilerDirective>())
+        fn(nested);
 }
 
 // Collect symbols that have dynamic substring accesses in the target region
