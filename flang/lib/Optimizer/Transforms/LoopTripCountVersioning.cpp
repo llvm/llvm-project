@@ -19,7 +19,9 @@
 /// Heuristic: the loop variable is the leading subscript of an explicit-shape
 /// array whose declared leading extent N is at most max-section-extent. For
 /// `a(1:m, :) = 0` with `real :: a(4, n)`, the inner loop is versioned on
-/// `m == 4`. This runs on FIR, the only level where both the loop and the
+/// `m == 4`. Loops are skipped when N times the body size exceeds
+/// max-unrolled-ops (LLVM's -O3 full-unroll budget), since the fast arm would
+/// not unroll. This runs on FIR, the only level where both the loop and the
 /// array's declared type exist.
 //
 //===----------------------------------------------------------------------===//
@@ -47,6 +49,8 @@ namespace fir {
 #define DEBUG_TYPE "flang-loop-tripcount-versioning"
 
 STATISTIC(NumLoopsExamined, "Number of innermost loops examined");
+STATISTIC(NumLoopsTooLarge,
+          "Number of candidates skipped: N * body size > max-unrolled-ops");
 STATISTIC(NumLoopsVersioned, "Number of loops versioned on trip count");
 
 namespace {
@@ -106,13 +110,19 @@ static bool hasUnitLeadingLowerBound(mlir::Value shapeLike) {
 /// (unit lower bound and, if sliced, a triplet `(1, sectionUb, 1)`), return
 /// the extent.
 ///
+/// A sliced access `a(1:ub)` requires ub <= extent even if some elements are
+/// skipped, so it may sit under a fir.if (as in WHERE). An unsliced access
+/// `a(i)` only bounds ub if it runs on every iteration, so it must be
+/// directly in \p body.
+///
 /// Only the leading dimension is considered: it becomes the innermost loop,
 /// and unrolling produces contiguous memory accesses. An array section that
 /// reaches the loop through a temporary box (fir.box_addr of a fir.embox) is
 /// not recognized. Both are possible future extensions.
 static std::optional<int64_t> getLeadingExtentIndexedBy(fir::ArrayCoorOp coor,
                                                         mlir::Value iv,
-                                                        mlir::Value sectionUb) {
+                                                        mlir::Value sectionUb,
+                                                        mlir::Block *body) {
   // unwrapRefType leaves a box type as is, so this also rejects boxed arrays.
   auto seqTy = mlir::dyn_cast<fir::SequenceType>(
       fir::unwrapRefType(coor.getMemref().getType()));
@@ -135,6 +145,8 @@ static std::optional<int64_t> getLeadingExtentIndexedBy(fir::ArrayCoorOp coor,
     if (!isConstantInt(triples[0], 1) || !isConstantInt(triples[2], 1) ||
         stripConverts(triples[1]) != sectionUb)
       return std::nullopt;
+  } else if (coor->getBlock() != body) {
+    return std::nullopt;
   }
   return extent;
 }
@@ -142,10 +154,10 @@ static std::optional<int64_t> getLeadingExtentIndexedBy(fir::ArrayCoorOp coor,
 /// If \p loop is an innermost `do i = 1, ub step 1` with a non-constant upper
 /// bound whose induction variable is the leading subscript of at least one
 /// array with a constant declared leading extent, return the smallest such
-/// extent N, provided 1 < N <= \p maxExtent. In a conforming program an
-/// unconditional access bounds ub by its extent, so the smallest extent is the
-/// most likely value; if the smaller array is accessed only conditionally, ub
-/// may be larger and the original loop runs.
+/// extent N, provided 1 < N <= \p maxExtent. Only accesses that bound ub in a
+/// conforming program take part (see getLeadingExtentIndexedBy), so the
+/// smallest extent is the value ub must equal when all of them are at full
+/// extent.
 ///
 /// Extent 1 is skipped: legacy code declares dummies as `a(1)` and indexes
 /// past them, so `ub == 1` would almost never hold.
@@ -173,7 +185,7 @@ static std::optional<int64_t> getSectionExtent(fir::DoLoopOp loop,
   std::optional<int64_t> extent;
   loop.getBody()->walk([&](fir::ArrayCoorOp coor) {
     if (std::optional<int64_t> coorExtent =
-            getLeadingExtentIndexedBy(coor, iv, sectionUb))
+            getLeadingExtentIndexedBy(coor, iv, sectionUb, loop.getBody()))
       extent = extent ? std::min(*extent, *coorExtent) : *coorExtent;
   });
   if (!extent || *extent <= 1 || *extent > maxExtent)
@@ -258,12 +270,27 @@ void LoopTripCountVersioningPass::runOnOperation() {
     if (!isVersionableInnermostLoop(loop))
       return;
     ++NumLoopsExamined;
-    if (std::optional<int64_t> extent =
-            getSectionExtent(loop, maxSectionExtent)) {
-      LLVM_DEBUG(llvm::dbgs() << "Section extent candidate (N=" << *extent
-                              << ") at " << loop.getLoc() << '\n');
-      candidates.push_back({loop, *extent});
+    std::optional<int64_t> extent = getSectionExtent(loop, maxSectionExtent);
+    if (!extent)
+      return;
+    unsigned bodyOps = 0;
+    loop.getBody()->walk([&](mlir::Operation *) { ++bodyOps; });
+    uint64_t unrolledOps = static_cast<uint64_t>(*extent) * bodyOps;
+    bool tooLarge = maxUnrolledOps != 0 && unrolledOps > maxUnrolledOps;
+    LLVM_DEBUG({
+      // One write per line so parallel builds do not interleave mid-line.
+      std::string msg;
+      llvm::raw_string_ostream os(msg);
+      os << "Section extent candidate (N=" << *extent
+         << ", body ops=" << bodyOps << ") at " << loop.getLoc()
+         << (tooLarge ? " skipped: too large to unroll\n" : "\n");
+      llvm::dbgs() << msg;
+    });
+    if (tooLarge) {
+      ++NumLoopsTooLarge;
+      return;
     }
+    candidates.push_back({loop, *extent});
   });
 
   if (candidates.empty()) {

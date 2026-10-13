@@ -4,6 +4,11 @@
 // RUN: fir-opt --loop-tripcount-versioning="max-section-extent=4" %s | FileCheck %s
 // RUN: fir-opt --loop-tripcount-versioning="max-section-extent=3" %s | FileCheck %s --check-prefix=OFF
 // RUN: fir-opt --loop-tripcount-versioning="max-section-extent=0" %s | FileCheck %s --check-prefix=OFF
+// The unrolled-size limit is extent times body operations. @zero's body is
+// three operations, so 4 * 3 = 12 is accepted at the default and rejected
+// at 11; 0 removes the limit.
+// RUN: fir-opt --loop-tripcount-versioning="max-unrolled-ops=11" %s | FileCheck %s --check-prefix=OFF
+// RUN: fir-opt --loop-tripcount-versioning="max-unrolled-ops=0" %s | FileCheck %s
 
 // Array sections with a runtime extent on an explicit-shape array. The pass
 // versions the innermost loop on `extent == declared extent` so that one arm
@@ -374,6 +379,85 @@ func.func @mixed_extents(%arg0: !fir.ref<!fir.array<4x26xf64>>, %arg1: !fir.ref<
 // CHECK:           } else {
 // CHECK:             fir.do_loop %{{.*}} = %{{.*}} to %[[UB]] step
 // CHECK:           }
+
+// An unsliced access under a fir.if does not execute on every iteration, so
+// it does not bound the loop and takes no part: here `b(2)` is conditional,
+// `a(4)` is not, and the loop is versioned on 4 rather than the minimum 2.
+// Hand-written: lowering reloads the loop variable in explicit DO loops.
+//   do i = 1, n
+//     a(i) = 0
+//     if (c) b(i) = 0
+//   end do
+func.func @conditional_unsliced(%arg0: !fir.ref<!fir.array<4xf64>>, %arg1: !fir.ref<!fir.array<2xf64>>, %arg2: !fir.ref<i32>, %arg3: i1) {
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f64
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %0 = fir.shape %c4 : (index) -> !fir.shape<1>
+  %1 = fir.declare %arg0(%0) uniq_name("a") : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<4xf64>>
+  %2 = fir.shape %c2 : (index) -> !fir.shape<1>
+  %3 = fir.declare %arg1(%2) uniq_name("b") : (!fir.ref<!fir.array<2xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<2xf64>>
+  %4 = fir.load %arg2 : !fir.ref<i32>
+  %5 = fir.convert %4 : (i32) -> index
+  fir.do_loop %arg4 = %c1 to %5 step %c1 {
+    %6 = fir.array_coor %1(%0) %arg4 : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+    fir.store %cst to %6 : !fir.ref<f64>
+    fir.if %arg3 {
+      %7 = fir.array_coor %3(%2) %arg4 : (!fir.ref<!fir.array<2xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+      fir.store %cst to %7 : !fir.ref<f64>
+    }
+  }
+  return
+}
+// CHECK-LABEL: func.func @conditional_unsliced(
+// CHECK:         %[[UB:.*]] = fir.convert %{{.*}} : (i32) -> index
+// CHECK:         %[[C4:.*]] = arith.constant 4 : index
+// CHECK:         %[[CMP:.*]] = arith.cmpi eq, %[[UB]], %[[C4]] : index
+// CHECK:         fir.if %[[CMP]] {
+// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %[[C4]] step
+// CHECK:         } else {
+// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %[[UB]] step
+// CHECK:         }
+
+// A sliced access under a fir.if still bounds the loop: the section
+// designator `a(1:n)` must be in bounds whether or not element i is stored.
+// This is how WHERE lowers.
+// subroutine where_sliced(a, m, n)
+//   real(8) :: a(4)
+//   logical :: m(4)
+//   where (m(1:n)) a(1:n) = 0.0d0
+func.func @where_sliced(%arg0: !fir.ref<!fir.array<4xf64>>, %arg1: !fir.ref<!fir.array<4x!fir.logical<4>>>, %arg2: !fir.ref<i32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f64
+  %c4 = arith.constant 4 : index
+  %0 = fir.shape %c4 : (index) -> !fir.shape<1>
+  %1 = fir.declare %arg0(%0) uniq_name("a") : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<4xf64>>
+  %2 = fir.declare %arg1(%0) uniq_name("m") : (!fir.ref<!fir.array<4x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<4x!fir.logical<4>>>
+  %3 = fir.load %arg2 : !fir.ref<i32>
+  %4 = fir.convert %3 : (i32) -> index
+  %5 = arith.maxsi %4, %c0 : index
+  %6 = fir.slice %c1, %4, %c1 : (index, index, index) -> !fir.slice<1>
+  fir.do_loop %arg3 = %c1 to %5 step %c1 unordered {
+    %7 = fir.array_coor %2(%0) [%6] %arg3 : (!fir.ref<!fir.array<4x!fir.logical<4>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<!fir.logical<4>>
+    %8 = fir.load %7 : !fir.ref<!fir.logical<4>>
+    %9 = fir.convert %8 : (!fir.logical<4>) -> i1
+    fir.if %9 {
+      %10 = fir.array_coor %1(%0) [%6] %arg3 : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f64>
+      fir.store %cst to %10 : !fir.ref<f64>
+    }
+  }
+  return
+}
+// CHECK-LABEL: func.func @where_sliced(
+// CHECK:         %[[UB:.*]] = arith.maxsi %{{.*}}, %{{.*}} : index
+// CHECK:         %[[C4:.*]] = arith.constant 4 : index
+// CHECK:         %[[CMP:.*]] = arith.cmpi eq, %[[UB]], %[[C4]] : index
+// CHECK:         fir.if %[[CMP]] {
+// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %[[C4]] step
+// CHECK:         } else {
+// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %[[UB]] step
+// CHECK:         }
 
 // The loop variable is not the leading subscript: only the leading dimension
 // is versioned.

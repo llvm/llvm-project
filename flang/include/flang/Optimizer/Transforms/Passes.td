@@ -497,12 +497,21 @@ def LoopTripCountVersioning
     `a(1:n, :)` on `a(4, :)` the innermost loop runs `1..n`, and versioning on
     `n == 4` gives the fast variant a trip count of 4. Further heuristics may
     be added in the future.
+
+    Candidates are limited by the declared extent (`max-section-extent`) and
+    by the size of the fully unrolled fast variant, extent times loop body
+    operations (`max-unrolled-ops`, matching LLVM's -O3 full-unroll budget),
+    so that loops are only duplicated where LLVM is expected to unroll them.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::arith::ArithDialect" ];
   let options = [
     Option<"maxSectionExtent", "max-section-extent", "unsigned",
            /*default=*/"32",
-           "Do not version on declared extents larger than this; 0 disables">
+           "Do not version on declared extents larger than this; 0 disables">,
+    Option<"maxUnrolledOps", "max-unrolled-ops", "unsigned",
+           /*default=*/"300",
+           "Do not version if the declared extent times the loop body size "
+           "exceeds this; 0 removes the limit">
   ];
 }
 
