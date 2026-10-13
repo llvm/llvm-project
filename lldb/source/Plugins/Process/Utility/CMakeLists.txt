@@ -1,7 +1,43 @@
 # TODO: Clean up this directory and its dependencies
 set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND ProcessUtility)
 
+add_lldb_library(lldbRegister NO_PLUGIN_DEPENDENCIES
+  PARTIAL_SOURCES_INTENDED
+  RegisterContext_x86.cpp
+  RegisterContextFreeBSD_i386.cpp
+  RegisterContextFreeBSD_powerpc.cpp
+  RegisterContextFreeBSD_x86_64.cpp
+  RegisterContextLinux_i386.cpp
+  RegisterContextLinux_x86_64.cpp
+  RegisterContextLinux_s390x.cpp
+  RegisterContextNetBSD_i386.cpp
+  RegisterContextNetBSD_x86_64.cpp
+  RegisterContextOpenBSD_i386.cpp
+  RegisterContextOpenBSD_x86_64.cpp
+  RegisterContextWindows_i386.cpp
+  RegisterContextWindows_x86_64.cpp
+  RegisterTypeDetector_arm64.cpp
+  RegisterInfos_x86_64_with_base_shared.cpp
+  RegisterInfoPOSIX_arm.cpp
+  RegisterInfoPOSIX_arm64.cpp
+  RegisterInfoPOSIX_loongarch64.cpp
+  RegisterInfoPOSIX_ppc64le.cpp
+  RegisterInfoPOSIX_ppc64.cpp
+  RegisterInfoPOSIX_riscv32.cpp
+  RegisterInfoPOSIX_riscv64.cpp
+  RegisterInfoPOSIXDynamic_riscv32.cpp
+
+  LINK_COMPONENTS
+    Support
+    TargetParser
+  LINK_LIBS
+    lldbUtility
+  ALLOWED_INTERNAL_DEPENDENCIES
+    lldbUtility
+  )
+
 add_lldb_library(lldbPluginProcessUtility
+  PARTIAL_SOURCES_INTENDED
   AuxVector.cpp
   FreeBSDSignals.cpp
   GDBRemoteSignals.cpp
@@ -20,26 +56,15 @@ add_lldb_library(lldbPluginProcessUtility
   NativeRegisterContextRegisterInfo.cpp
   NetBSDSignals.cpp
   OpenBSDSignals.cpp
-  RegisterContext_x86.cpp
   RegisterContextDarwin_arm.cpp
   RegisterContextDarwin_arm64.cpp
   RegisterContextDarwin_riscv32.cpp
   RegisterContextDarwin_x86_64.cpp
   RegisterContextDummy.cpp
-  RegisterContextFreeBSD_i386.cpp
-  RegisterContextFreeBSD_powerpc.cpp
-  RegisterContextFreeBSD_x86_64.cpp
   RegisterContextHistory.cpp
-  RegisterContextLinux_i386.cpp
-  RegisterContextLinux_x86_64.cpp
-  RegisterContextLinux_s390x.cpp
   RegisterContextMach_arm.cpp
   RegisterContextMach_x86_64.cpp
   RegisterContextMemory.cpp
-  RegisterContextNetBSD_i386.cpp
-  RegisterContextNetBSD_x86_64.cpp
-  RegisterContextOpenBSD_i386.cpp
-  RegisterContextOpenBSD_x86_64.cpp
   RegisterContextPOSIX_arm.cpp
   RegisterContextPOSIX_arm64.cpp
   RegisterContextPOSIX_loongarch64.cpp
@@ -50,18 +75,6 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterContextPOSIX_s390x.cpp
   RegisterContextPOSIX_x86.cpp
   RegisterContextThreadMemory.cpp
-  RegisterContextWindows_i386.cpp
-  RegisterContextWindows_x86_64.cpp
-  RegisterTypeDetector_arm64.cpp
-  RegisterInfos_x86_64_with_base_shared.cpp
-  RegisterInfoPOSIX_arm.cpp
-  RegisterInfoPOSIX_arm64.cpp
-  RegisterInfoPOSIX_loongarch64.cpp
-  RegisterInfoPOSIX_ppc64le.cpp
-  RegisterInfoPOSIX_ppc64.cpp
-  RegisterInfoPOSIX_riscv32.cpp
-  RegisterInfoPOSIX_riscv64.cpp
-  RegisterInfoPOSIXDynamic_riscv32.cpp
   StopInfoMachException.cpp
   ThreadMemory.cpp
 
@@ -69,6 +82,7 @@ add_lldb_library(lldbPluginProcessUtility
     Support
     TargetParser
   LINK_LIBS
+    lldbRegister
     lldbBreakpoint
     lldbCore
     lldbDataFormatters

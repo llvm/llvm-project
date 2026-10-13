@@ -1,7 +1,46 @@
+static_library("Register") {
+  output_name = "lldbRegister"
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    "//lldb/source/Utility",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+  ]
+
+  # Uses source-relative includes for own headers.
+  include_dirs = [ "//lldb/source" ]
+  sources = [
+    "RegisterContextFreeBSD_i386.cpp",
+    "RegisterContextFreeBSD_powerpc.cpp",
+    "RegisterContextFreeBSD_x86_64.cpp",
+    "RegisterContextLinux_i386.cpp",
+    "RegisterContextLinux_s390x.cpp",
+    "RegisterContextLinux_x86_64.cpp",
+    "RegisterContextNetBSD_i386.cpp",
+    "RegisterContextNetBSD_x86_64.cpp",
+    "RegisterContextOpenBSD_i386.cpp",
+    "RegisterContextOpenBSD_x86_64.cpp",
+    "RegisterContextWindows_i386.cpp",
+    "RegisterContextWindows_x86_64.cpp",
+    "RegisterContext_x86.cpp",
+    "RegisterInfoPOSIXDynamic_riscv32.cpp",
+    "RegisterInfoPOSIX_arm.cpp",
+    "RegisterInfoPOSIX_arm64.cpp",
+    "RegisterInfoPOSIX_loongarch64.cpp",
+    "RegisterInfoPOSIX_ppc64.cpp",
+    "RegisterInfoPOSIX_ppc64le.cpp",
+    "RegisterInfoPOSIX_riscv32.cpp",
+    "RegisterInfoPOSIX_riscv64.cpp",
+    "RegisterInfos_x86_64_with_base_shared.cpp",
+    "RegisterTypeDetector_arm64.cpp",
+  ]
+}
+
 static_library("Utility") {
   output_name = "lldbPluginProcessUtility"
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
+    ":Register",
     #"//lldb/source/Breakpoint", # 3-hop dependency cycle.
     "//lldb/source/Core",
     "//lldb/source/DataFormatters",
@@ -42,20 +81,10 @@ static_library("Utility") {
     "RegisterContextDarwin_riscv32.cpp",
     "RegisterContextDarwin_x86_64.cpp",
     "RegisterContextDummy.cpp",
-    "RegisterContextFreeBSD_i386.cpp",
-    "RegisterContextFreeBSD_powerpc.cpp",
-    "RegisterContextFreeBSD_x86_64.cpp",
     "RegisterContextHistory.cpp",
-    "RegisterContextLinux_i386.cpp",
-    "RegisterContextLinux_s390x.cpp",
-    "RegisterContextLinux_x86_64.cpp",
     "RegisterContextMach_arm.cpp",
     "RegisterContextMach_x86_64.cpp",
     "RegisterContextMemory.cpp",
-    "RegisterContextNetBSD_i386.cpp",
-    "RegisterContextNetBSD_x86_64.cpp",
-    "RegisterContextOpenBSD_i386.cpp",
-    "RegisterContextOpenBSD_x86_64.cpp",
     "RegisterContextPOSIX_arm.cpp",
     "RegisterContextPOSIX_arm64.cpp",
     "RegisterContextPOSIX_loongarch64.cpp",
@@ -66,19 +95,6 @@ static_library("Utility") {
     "RegisterContextPOSIX_s390x.cpp",
     "RegisterContextPOSIX_x86.cpp",
     "RegisterContextThreadMemory.cpp",
-    "RegisterContextWindows_i386.cpp",
-    "RegisterContextWindows_x86_64.cpp",
-    "RegisterContext_x86.cpp",
-    "RegisterInfoPOSIXDynamic_riscv32.cpp",
-    "RegisterInfoPOSIX_arm.cpp",
-    "RegisterInfoPOSIX_arm64.cpp",
-    "RegisterInfoPOSIX_loongarch64.cpp",
-    "RegisterInfoPOSIX_ppc64.cpp",
-    "RegisterInfoPOSIX_ppc64le.cpp",
-    "RegisterInfoPOSIX_riscv32.cpp",
-    "RegisterInfoPOSIX_riscv64.cpp",
-    "RegisterInfos_x86_64_with_base_shared.cpp",
-    "RegisterTypeDetector_arm64.cpp",
     "StopInfoMachException.cpp",
     "ThreadMemory.cpp",
   ]
