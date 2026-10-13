@@ -395,16 +395,16 @@ llvm.func @rocdl.asyncmark() {
   // CHECK-NEXT: call void @llvm.amdgcn.asyncmark(i32 0)
   // CHECK-NEXT: call void @llvm.amdgcn.asyncmark(i32 5)
   rocdl.asyncmark
-  rocdl.asyncmark stages 5
+  rocdl.asyncmark stages tensor|global_load_async_to_lds_mcast
   llvm.return
 }
 
 llvm.func @rocdl.wait.asyncmark() {
   // CHECK-LABEL: rocdl.wait.asyncmark
   // CHECK-NEXT: call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 0)
-  // CHECK-NEXT: call void @llvm.amdgcn.wait.asyncmark(i16 2, i32 5)
+  // CHECK-NEXT: call void @llvm.amdgcn.wait.asyncmark(i16 2, i32 40)
   rocdl.wait.asyncmark 0
-  rocdl.wait.asyncmark 2 stages 5
+  rocdl.wait.asyncmark 2 stages global_store_async_from_lds|buffer_global_load
   llvm.return
 }
 

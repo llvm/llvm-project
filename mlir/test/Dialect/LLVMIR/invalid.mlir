@@ -2602,16 +2602,8 @@ llvm.func @nvvm_duplicate_fp_modifier(%a: f32, %b: f32) {
 
 // -----
 
-llvm.func @rocdl_asyncmark_stages_out_of_range() {
-  // expected-error@+1 {{'rocdl.asyncmark' op attribute 'stages' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 2047}}
-  rocdl.asyncmark stages 2048
-  llvm.return
-}
-
-// -----
-
-llvm.func @rocdl_wait_asyncmark_stages_out_of_range() {
-  // expected-error@+1 {{'rocdl.wait.asyncmark' op attribute 'stages' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 2047}}
-  rocdl.wait.asyncmark 0 stages 2048
+llvm.func @rocdl_asyncmark_unknown_stage() {
+  // expected-error@+1 {{custom op 'rocdl.asyncmark' expected string or keyword containing one of the following enum values for attribute 'stages' [all, tensor, global_load_async_to_lds, global_load_async_to_lds_mcast, global_store_async_from_lds, buffer_global_load]}}
+  rocdl.asyncmark stages not_a_stage
   llvm.return
 }

@@ -84,9 +84,6 @@ sequence of that stage is at most `N` by removing asyncmarks from the start of
 that sequence if it is longer than `N`. The sequences of the stages that `K`
 does not name are unaffected. `K` must be a constant stage mask.
 
-[Informational note --- Typically, when removing an asyncmark, this intrinsic
-*waits* for the async operations corresponding to that asyncmark to complete.]
-
 ### Completion of Asyncmarks
 
 An asyncmark `M`, produced by an `asyncmark` operation `X`, is *completed-at* 
