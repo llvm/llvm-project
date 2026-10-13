@@ -41,7 +41,7 @@ public:
   }
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 typename _FormatContext::iterator
   format(basic_string_view<_CharT> __str, _FormatContext& __ctx) const {
 #  if _LIBCPP_STD_VER >= 23
     if (__parser_.__type_ == __format_spec::__type::__debug)
@@ -122,7 +122,7 @@ struct formatter<basic_string_view<_CharT, _Traits>, _CharT> : public __formatte
   using _Base _LIBCPP_NODEBUG = __formatter_string<_CharT>;
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 typename _FormatContext::iterator
   format(basic_string_view<_CharT, _Traits> __str, _FormatContext& __ctx) const {
     // Drop _Traits to have one std::basic_string_view formatter.
     return _Base::format(basic_string_view<_CharT>(__str.data(), __str.size()), __ctx);

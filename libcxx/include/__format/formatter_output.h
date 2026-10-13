@@ -275,7 +275,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_transformed(
 ///
 /// \note When \c _LIBCPP_HAS_UNICODE is false the function assumes the input is ASCII.
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __write_string_no_precision(
+_LIBCPP_HIDE_FROM_ABI constexpr auto __write_string_no_precision(
     basic_string_view<_CharT> __str,
     output_iterator<const _CharT&> auto __out_it,
     __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
