@@ -11418,4 +11418,75 @@ TEST(APFloatTest, UserDefinedSemanticsBitcastRoundtrip) {
         << "Roundtrip failed for pattern 0x" << std::hex << pattern;
   }
 }
+
+namespace {
+static void initFloat0NaN(FloatRepr &R, const APInt &API);
+static APInt bitcastFloat0NaN(const FloatRepr &R);
+
+// A type without any bits. Its only value is a quiet NaN.
+static const fltSemantics semFloat0NaN = {
+    0, // maxExponent
+    0, // minExponent
+    1, // precision
+    0, // sizeInBits
+    fltNonfiniteBehavior::NanOnly,
+    fltNanEncoding::AllOnes,
+    false, // hasZero
+    false, // hasSignedRepr
+    false, // hasSignBitInMSB
+    false, // hasDenormals
+    false, // hasExplicitIntegerBit
+    initFloat0NaN,
+    bitcastFloat0NaN,
+};
+
+static void initFloat0NaN(FloatRepr &R, const APInt &API) {
+  const fltSemantics &Sem = semFloat0NaN;
+  R.initialize(Sem);
+  R.setNegative(false);
+  R.setCategory(APFloat::fcNaN);
+  R.setExponent(Sem.maxExponent + 1);
+  R.setSignificand(APInt(Sem.precision, 1));
+}
+
+static APInt bitcastFloat0NaN(const FloatRepr &R) {
+  EXPECT_EQ(&R.getSemantics(), &semFloat0NaN);
+  EXPECT_EQ(R.getCategory(), APFloat::fcNaN);
+  return APInt::getZero(0);
+}
+} // anonymous namespace
+
+TEST(APFloatTest, UserDefinedSemanticsZeroBits) {
+  const fltSemantics &Sem = semFloat0NaN;
+  const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
+
+  APFloat FromBits(Sem, APInt::getZero(0));
+  APFloat NaN = APFloat::getNaN(Sem);
+
+  auto ExpectQNaN = [](const APFloat &F) {
+    EXPECT_TRUE(F.isNaN());
+    EXPECT_FALSE(F.isSignaling());
+    EXPECT_FALSE(F.isNegative());
+    EXPECT_EQ(F.bitcastToAPInt(), APInt::getZero(0));
+  };
+
+  ExpectQNaN(FromBits);
+  ExpectQNaN(NaN);
+
+  APFloat Sum = FromBits;
+  EXPECT_EQ(Sum.add(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Sum);
+
+  APFloat Diff = FromBits;
+  EXPECT_EQ(Diff.subtract(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Diff);
+
+  APFloat Prod = FromBits;
+  EXPECT_EQ(Prod.multiply(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Prod);
+
+  APFloat Quot = FromBits;
+  EXPECT_EQ(Quot.divide(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Quot);
+}
 } // namespace
