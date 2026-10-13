@@ -3400,11 +3400,9 @@ void cir::TernaryOp::build(
 //===----------------------------------------------------------------------===//
 
 OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
-  mlir::Attribute condition = adaptor.getCondition();
-  if (condition) {
-    bool conditionValue = mlir::cast<cir::BoolAttr>(condition).getValue();
-    return conditionValue ? getTrueValue() : getFalseValue();
-  }
+  if (auto condition =
+          mlir::dyn_cast_if_present<cir::BoolAttr>(adaptor.getCondition()))
+    return condition.getValue() ? getTrueValue() : getFalseValue();
 
   // cir.select if %0 then x else x -> x
   mlir::Attribute trueValue = adaptor.getTrueValue();
