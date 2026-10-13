@@ -8,7 +8,7 @@ define void @slt_stride2_guard(i64 %n) {
 ; CHECK-LABEL: 'slt_stride2_guard'
 ; CHECK-NEXT:  Classifying expressions for: @slt_stride2_guard
 ; CHECK-NEXT:    %g = and i1 %g1, %g2
-; CHECK-NEXT:    --> (%g1 umin %g2) U: full-set S: full-set
+; CHECK-NEXT:    --> (%g2 umin %g1) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,9223372036854775805) S: [0,9223372036854775805) Exits: (2 * ((-1 + %n) /u 2))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 2
@@ -69,7 +69,7 @@ define void @slt_stride2_guard_multi_exit(i64 %n, i64 %m) {
 ; CHECK-LABEL: 'slt_stride2_guard_multi_exit'
 ; CHECK-NEXT:  Classifying expressions for: @slt_stride2_guard_multi_exit
 ; CHECK-NEXT:    %g = and i1 %g1, %g2
-; CHECK-NEXT:    --> (%g1 umin %g2) U: full-set S: full-set
+; CHECK-NEXT:    --> (%g2 umin %g1) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
 ; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,9223372036854775805) S: [0,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 2
