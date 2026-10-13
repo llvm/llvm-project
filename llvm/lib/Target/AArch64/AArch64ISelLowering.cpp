@@ -31186,9 +31186,9 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
 
   // Create uzp1, extract_high and extract_low.
   if (TruncHighOpVT != UZP1VT)
-    TruncHighOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncHighOp);
+    TruncHighOp = DAG.getNode(AArch64ISD::NVCAST, DL, UZP1VT, TruncHighOp);
   if (TruncLowOpVT != UZP1VT)
-    TruncLowOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncLowOp);
+    TruncLowOp = DAG.getNode(AArch64ISD::NVCAST, DL, UZP1VT, TruncLowOp);
 
   SDValue UZP1 =
       DAG.getNode(AArch64ISD::UZP1, DL, UZP1VT, TruncLowOp, TruncHighOp);

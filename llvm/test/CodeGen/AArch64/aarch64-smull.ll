@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+neon < %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NEON
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve < %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SVE
 ; RUN: llc -mtriple=aarch64 -global-isel -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI
+; RUN: llc -mtriple=aarch64_be -mattr=+neon < %s -o - | FileCheck %s --check-prefixes=CHECK-BE
 
 define <8 x i16> @smull_v8i8_v8i16(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: smull_v8i8_v8i16:
@@ -10,6 +11,15 @@ define <8 x i16> @smull_v8i8_v8i16(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8b }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECK-BE-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
   %tmp3 = sext <8 x i8> %tmp1 to <8 x i16>
@@ -25,6 +35,15 @@ define <4 x i32> @smull_v4i16_v4i32(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.4h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.4h }, [x1]
+; CHECK-BE-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
   %tmp3 = sext <4 x i16> %tmp1 to <4 x i32>
@@ -40,6 +59,14 @@ define <2 x i64> @smull_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.2s }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.2s }, [x1]
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <2 x i32>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
   %tmp3 = sext <2 x i32> %tmp1 to <2 x i64>
@@ -75,6 +102,19 @@ define <8 x i32> @smull_zext_v8i8_v8i32(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    smull v0.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    smull2 v1.4s, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_zext_v8i8_v8i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8b }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.8h }, [x1]
+; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    smull v2.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    smull2 v0.4s, v0.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
   %load.A = load <8 x i8>, ptr %A
   %load.B = load <8 x i16>, ptr %B
   %zext.A = zext <8 x i8> %load.A to <8 x i32>
@@ -110,6 +150,19 @@ define <8 x i32> @smull_zext_v8i8_v8i32_sext_first_operand(ptr %A, ptr %B) nounw
 ; CHECK-GI-NEXT:    smull v0.4s, v2.4h, v1.4h
 ; CHECK-GI-NEXT:    smull2 v1.4s, v2.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_zext_v8i8_v8i32_sext_first_operand:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8b }, [x1]
+; CHECK-BE-NEXT:    ld1 { v1.8h }, [x0]
+; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    smull v2.4s, v1.4h, v0.4h
+; CHECK-BE-NEXT:    smull2 v0.4s, v1.8h, v0.8h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
   %load.A = load <8 x i16>, ptr %A
   %load.B = load <8 x i8>, ptr %B
   %sext.A = sext <8 x i16> %load.A to <8 x i32>
@@ -158,6 +211,23 @@ define <8 x i32> @smull_zext_v8i8_v8i32_top_bit_is_1(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    mul v0.4s, v2.4s, v0.4s
 ; CHECK-GI-NEXT:    mul v1.4s, v3.4s, v1.4s
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_zext_v8i8_v8i32_top_bit_is_1:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.8h }, [x1]
+; CHECK-BE-NEXT:    orr v0.8h, #128, lsl #8
+; CHECK-BE-NEXT:    sshll2 v3.4s, v1.8h, #0
+; CHECK-BE-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-BE-NEXT:    ushll2 v2.4s, v0.8h, #0
+; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-BE-NEXT:    mul v1.4s, v2.4s, v3.4s
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %load.A = load <8 x i16>, ptr %A
   %or.A = or <8 x i16> %load.A, <i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000>
   %load.B = load <8 x i16>, ptr %B
@@ -208,6 +278,17 @@ define <4 x i32> @smull_zext_v4i16_v4i32(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    ldr d1, [x1]
 ; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_zext_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ldr s0, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.4h }, [x1]
+; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %load.A = load <4 x i8>, ptr %A
   %load.B = load <4 x i16>, ptr %B
   %zext.A = zext <4 x i8> %load.A to <4 x i32>
@@ -245,6 +326,16 @@ define <2 x i64> @smull_zext_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    ldr d0, [x1]
 ; CHECK-GI-NEXT:    smull v0.2d, v1.2s, v0.2s
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_zext_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ldr s0, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.2s }, [x1]
+; CHECK-BE-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %load.A = load <2 x i16>, ptr %A
   %load.B = load <2 x i32>, ptr %B
   %zext.A = zext <2 x i16> %load.A to <2 x i64>
@@ -278,6 +369,15 @@ define <2 x i64> @smull_zext_and_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    ldr d1, [x1]
 ; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_zext_and_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.2s }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.2s }, [x1]
+; CHECK-BE-NEXT:    bic v0.2s, #128, lsl #24
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %load.A = load <2 x i32>, ptr %A
   %and.A = and <2 x i32> %load.A, <i32 u0x7FFFFFFF, i32 u0x7FFFFFFF>
   %load.B = load <2 x i32>, ptr %B
@@ -294,6 +394,15 @@ define <8 x i16> @umull_v8i8_v8i16(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8b }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECK-BE-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
   %tmp3 = zext <8 x i8> %tmp1 to <8 x i16>
@@ -309,6 +418,15 @@ define <4 x i32> @umull_v4i16_v4i32(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.4h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.4h }, [x1]
+; CHECK-BE-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
   %tmp3 = zext <4 x i16> %tmp1 to <4 x i32>
@@ -324,6 +442,14 @@ define <2 x i64> @umull_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.2s }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.2s }, [x1]
+; CHECK-BE-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <2 x i32>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
   %tmp3 = zext <2 x i32> %tmp1 to <2 x i64>
@@ -357,6 +483,16 @@ define <8 x i16> @amull_v8i8_v8i16(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    umull v1.8h, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amull_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8b }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECK-BE-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
   %tmp3 = zext <8 x i8> %tmp1 to <8 x i16>
@@ -393,6 +529,17 @@ define <4 x i32> @amull_v4i16_v4i32(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    umull v1.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amull_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v1.4h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v2.4h }, [x1]
+; CHECK-BE-NEXT:    movi v0.2d, #0x00ffff0000ffff
+; CHECK-BE-NEXT:    smull v1.4s, v1.4h, v2.4h
+; CHECK-BE-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
   %tmp3 = zext <4 x i16> %tmp1 to <4 x i32>
@@ -429,6 +576,16 @@ define <2 x i64> @amull_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    umull v1.2d, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amull_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v1.2s }, [x0]
+; CHECK-BE-NEXT:    ld1 { v2.2s }, [x1]
+; CHECK-BE-NEXT:    movi v0.2d, #0x000000ffffffff
+; CHECK-BE-NEXT:    smull v1.2d, v1.2s, v2.2s
+; CHECK-BE-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <2 x i32>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
   %tmp3 = zext <2 x i32> %tmp1 to <2 x i64>
@@ -446,6 +603,16 @@ define <8 x i16> @smlal_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlal v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlal_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.8b }, [x2]
+; CHECK-BE-NEXT:    smlal v0.8h, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
   %tmp3 = load <8 x i8>, ptr %C
@@ -464,6 +631,16 @@ define <4 x i32> @smlal_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlal v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlal_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.4s }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.4h }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.4h }, [x2]
+; CHECK-BE-NEXT:    smlal v0.4s, v1.4h, v2.4h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
   %tmp3 = load <4 x i16>, ptr %C
@@ -482,6 +659,15 @@ define <2 x i64> @smlal_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlal v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlal_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.2d }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.2s }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.2s }, [x2]
+; CHECK-BE-NEXT:    smlal v0.2d, v1.2s, v2.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <2 x i64>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
   %tmp3 = load <2 x i32>, ptr %C
@@ -500,6 +686,16 @@ define <8 x i16> @umlal_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlal v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlal_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.8b }, [x2]
+; CHECK-BE-NEXT:    umlal v0.8h, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
   %tmp3 = load <8 x i8>, ptr %C
@@ -518,6 +714,16 @@ define <4 x i32> @umlal_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlal v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlal_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.4s }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.4h }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.4h }, [x2]
+; CHECK-BE-NEXT:    umlal v0.4s, v1.4h, v2.4h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
   %tmp3 = load <4 x i16>, ptr %C
@@ -536,6 +742,15 @@ define <2 x i64> @umlal_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlal v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlal_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.2d }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.2s }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.2s }, [x2]
+; CHECK-BE-NEXT:    umlal v0.2d, v1.2s, v2.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <2 x i64>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
   %tmp3 = load <2 x i32>, ptr %C
@@ -574,6 +789,17 @@ define <8 x i16> @amlal_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI-NEXT:    umlal v0.8h, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amlal_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.8b }, [x2]
+; CHECK-BE-NEXT:    smlal v0.8h, v1.8b, v2.8b
+; CHECK-BE-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
   %tmp3 = load <8 x i8>, ptr %C
@@ -615,6 +841,18 @@ define <4 x i32> @amlal_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amlal_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.4s }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.4h }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.4h }, [x2]
+; CHECK-BE-NEXT:    smlal v0.4s, v1.4h, v2.4h
+; CHECK-BE-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-BE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
   %tmp3 = load <4 x i16>, ptr %C
@@ -656,6 +894,17 @@ define <2 x i64> @amlal_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amlal_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.2d }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.2s }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.2s }, [x2]
+; CHECK-BE-NEXT:    smlal v0.2d, v1.2s, v2.2s
+; CHECK-BE-NEXT:    movi v1.2d, #0x000000ffffffff
+; CHECK-BE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <2 x i64>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
   %tmp3 = load <2 x i32>, ptr %C
@@ -675,6 +924,16 @@ define <8 x i16> @smlsl_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlsl v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlsl_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.8b }, [x2]
+; CHECK-BE-NEXT:    smlsl v0.8h, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
   %tmp3 = load <8 x i8>, ptr %C
@@ -693,6 +952,16 @@ define <4 x i32> @smlsl_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlsl v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlsl_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.4s }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.4h }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.4h }, [x2]
+; CHECK-BE-NEXT:    smlsl v0.4s, v1.4h, v2.4h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
   %tmp3 = load <4 x i16>, ptr %C
@@ -711,6 +980,15 @@ define <2 x i64> @smlsl_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlsl v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlsl_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.2d }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.2s }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.2s }, [x2]
+; CHECK-BE-NEXT:    smlsl v0.2d, v1.2s, v2.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <2 x i64>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
   %tmp3 = load <2 x i32>, ptr %C
@@ -729,6 +1007,16 @@ define <8 x i16> @umlsl_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlsl v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlsl_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.8b }, [x2]
+; CHECK-BE-NEXT:    umlsl v0.8h, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
   %tmp3 = load <8 x i8>, ptr %C
@@ -747,6 +1035,16 @@ define <4 x i32> @umlsl_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlsl v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlsl_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.4s }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.4h }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.4h }, [x2]
+; CHECK-BE-NEXT:    umlsl v0.4s, v1.4h, v2.4h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
   %tmp3 = load <4 x i16>, ptr %C
@@ -765,6 +1063,15 @@ define <2 x i64> @umlsl_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlsl v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlsl_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.2d }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.2s }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.2s }, [x2]
+; CHECK-BE-NEXT:    umlsl v0.2d, v1.2s, v2.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <2 x i64>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
   %tmp3 = load <2 x i32>, ptr %C
@@ -803,6 +1110,17 @@ define <8 x i16> @amlsl_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI-NEXT:    umlsl v0.8h, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amlsl_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.8h }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.8b }, [x2]
+; CHECK-BE-NEXT:    smlsl v0.8h, v1.8b, v2.8b
+; CHECK-BE-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
   %tmp3 = load <8 x i8>, ptr %C
@@ -844,6 +1162,18 @@ define <4 x i32> @amlsl_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amlsl_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.4s }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.4h }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.4h }, [x2]
+; CHECK-BE-NEXT:    smlsl v0.4s, v1.4h, v2.4h
+; CHECK-BE-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-BE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
   %tmp3 = load <4 x i16>, ptr %C
@@ -885,6 +1215,17 @@ define <2 x i64> @amlsl_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amlsl_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.2d }, [x0]
+; CHECK-BE-NEXT:    ld1 { v1.2s }, [x1]
+; CHECK-BE-NEXT:    ld1 { v2.2s }, [x2]
+; CHECK-BE-NEXT:    smlsl v0.2d, v1.2s, v2.2s
+; CHECK-BE-NEXT:    movi v1.2d, #0x000000ffffffff
+; CHECK-BE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = load <2 x i64>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
   %tmp3 = load <2 x i32>, ptr %C
@@ -903,6 +1244,15 @@ define <8 x i16> @smull_extvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ; CHECK-NEXT:    movi v1.8b, #244
 ; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_extvec_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    movi v1.8b, #244
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp3 = sext <8 x i8> %arg to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp3, <i16 -12, i16 -12, i16 -12, i16 -12, i16 -12, i16 -12, i16 -12, i16 -12>
   ret <8 x i16> %tmp4
@@ -933,6 +1283,17 @@ define <8 x i16> @smull_noextvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI34_0]
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_noextvec_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    mov w8, #64537 // =0xfc19
+; CHECK-BE-NEXT:    dup v1.8h, w8
+; CHECK-BE-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp3 = sext <8 x i8> %arg to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp3, <i16 -999, i16 -999, i16 -999, i16 -999, i16 -999, i16 -999, i16 -999, i16 -999>
   ret <8 x i16> %tmp4
@@ -944,6 +1305,15 @@ define <4 x i32> @smull_extvec_v4i16_v4i32(<4 x i16> %arg) nounwind {
 ; CHECK-NEXT:    mvni v1.4h, #11
 ; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_extvec_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    mvni v1.4h, #11
+; CHECK-BE-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp3 = sext <4 x i16> %arg to <4 x i32>
   %tmp4 = mul <4 x i32> %tmp3, <i32 -12, i32 -12, i32 -12, i32 -12>
   ret <4 x i32> %tmp4
@@ -970,6 +1340,15 @@ define <2 x i64> @smull_extvec_v2i32_v2i64(<2 x i32> %arg) nounwind {
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI36_0]
 ; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_extvec_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    mov w8, #-1234 // =0xfffffb2e
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    dup v1.2s, w8
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp3 = sext <2 x i32> %arg to <2 x i64>
   %tmp4 = mul <2 x i64> %tmp3, <i64 -1234, i64 -1234>
   ret <2 x i64> %tmp4
@@ -981,6 +1360,15 @@ define <8 x i16> @umull_extvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ; CHECK-NEXT:    movi v1.8b, #12
 ; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_extvec_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    movi v1.8b, #12
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp3 = zext <8 x i8> %arg to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp3, <i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12>
   ret <8 x i16> %tmp4
@@ -1011,6 +1399,17 @@ define <8 x i16> @umull_noextvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI38_0]
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_noextvec_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    mov w8, #999 // =0x3e7
+; CHECK-BE-NEXT:    dup v1.8h, w8
+; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp3 = zext <8 x i8> %arg to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp3, <i16 999, i16 999, i16 999, i16 999, i16 999, i16 999, i16 999, i16 999>
   ret <8 x i16> %tmp4
@@ -1037,6 +1436,16 @@ define <4 x i32> @umull_extvec_v4i16_v4i32(<4 x i16> %arg) nounwind {
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI39_0]
 ; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_extvec_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    mov w8, #1234 // =0x4d2
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    dup v1.4h, w8
+; CHECK-BE-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp3 = zext <4 x i16> %arg to <4 x i32>
   %tmp4 = mul <4 x i32> %tmp3, <i32 1234, i32 1234, i32 1234, i32 1234>
   ret <4 x i32> %tmp4
@@ -1063,6 +1472,15 @@ define <2 x i64> @umull_extvec_v2i32_v2i64(<2 x i32> %arg) nounwind {
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI40_0]
 ; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_extvec_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    mov w8, #1234 // =0x4d2
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    dup v1.2s, w8
+; CHECK-BE-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp3 = zext <2 x i32> %arg to <2 x i64>
   %tmp4 = mul <2 x i64> %tmp3, <i64 1234, i64 1234>
   ret <2 x i64> %tmp4
@@ -1090,6 +1508,16 @@ define <8 x i16> @amull_extvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ; CHECK-GI-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amull_extvec_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    movi v1.8b, #12
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp3 = zext <8 x i8> %arg to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp3, <i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12>
   %and = and <8 x i16> %tmp4, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
@@ -1123,6 +1551,18 @@ define <4 x i32> @amull_extvec_v4i16_v4i32(<4 x i16> %arg) nounwind {
 ; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amull_extvec_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    mov w8, #1234 // =0x4d2
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    dup v1.4h, w8
+; CHECK-BE-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-BE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp3 = zext <4 x i16> %arg to <4 x i32>
   %tmp4 = mul <4 x i32> %tmp3, <i32 1234, i32 1234, i32 1234, i32 1234>
   %and = and <4 x i32> %tmp4, <i32 65535, i32 65535, i32 65535, i32 65535>
@@ -1156,6 +1596,17 @@ define <2 x i64> @amull_extvec_v2i32_v2i64(<2 x i32> %arg) nounwind {
 ; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amull_extvec_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    mov w8, #1234 // =0x4d2
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    dup v1.2s, w8
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    movi v1.2d, #0x000000ffffffff
+; CHECK-BE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp3 = zext <2 x i32> %arg to <2 x i64>
   %tmp4 = mul <2 x i64> %tmp3, <i64 1234, i64 1234>
   %and = and <2 x i64> %tmp4, <i64 4294967295, i64 4294967295>
@@ -1172,6 +1623,16 @@ define i16 @smullWithInconsistentExtensions(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smullWithInconsistentExtensions:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-BE-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-BE-NEXT:    umov w0, v0.h[0]
+; CHECK-BE-NEXT:    ret
   %s = sext <8 x i8> %x to <8 x i16>
   %z = zext <8 x i8> %y to <8 x i16>
   %m = mul <8 x i16> %s, %z
@@ -1190,6 +1651,21 @@ define <8 x i16> @smull_extended_vector_operand(<8 x i16> %v) {
 ; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
 ; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_extended_vector_operand:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    movi v1.4s, #139, lsl #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    sshll v2.4s, v0.4h, #0
+; CHECK-BE-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-BE-NEXT:    mul v2.4s, v2.4s, v1.4s
+; CHECK-BE-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-BE-NEXT:    shrn v1.4h, v2.4s, #1
+; CHECK-BE-NEXT:    shrn2 v1.8h, v0.4s, #1
+; CHECK-BE-NEXT:    rev64 v0.8h, v1.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
 %0 = sext <8 x i16> %v to <8 x i32>
 %1 = mul <8 x i32> %0, <i32 35584, i32 35584, i32 35584, i32 35584, i32 35584, i32 35584, i32 35584, i32 35584>
@@ -1230,6 +1706,18 @@ define void @distribute(ptr %dst, ptr %src, i32 %mul) nounwind {
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: distribute:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    ld1 { v0.2d }, [x1]
+; CHECK-BE-NEXT:    dup v2.8b, w2
+; CHECK-BE-NEXT:    mov d1, v0.d[1]
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    umull v1.8h, v1.8b, v2.8b
+; CHECK-BE-NEXT:    umlal v1.8h, v0.8b, v2.8b
+; CHECK-BE-NEXT:    st1 { v1.8h }, [x0]
+; CHECK-BE-NEXT:    ret
 entry:
   %0 = trunc i32 %mul to i8
   %1 = insertelement <8 x i8> undef, i8 %0, i32 0
@@ -1270,6 +1758,20 @@ define <16 x i16> @umull2_i8(<16 x i8> %arg1, <16 x i8> %arg2) {
 ; CHECK-GI-NEXT:    umull2 v1.8h, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull2_i8:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    umull v2.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    umull2 v0.8h, v0.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    rev64 v2.8h, v2.8h
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
   %arg1_ext = zext <16 x i8> %arg1 to <16 x i16>
   %arg2_ext = zext <16 x i8> %arg2 to <16 x i16>
   %mul = mul <16 x i16> %arg1_ext, %arg2_ext
@@ -1297,6 +1799,20 @@ define <16 x i16> @smull2_i8(<16 x i8> %arg1, <16 x i8> %arg2) {
 ; CHECK-GI-NEXT:    smull2 v1.8h, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull2_i8:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    smull v2.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    smull2 v0.8h, v0.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    rev64 v2.8h, v2.8h
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
   %arg1_ext = sext <16 x i8> %arg1 to <16 x i16>
   %arg2_ext = sext <16 x i8> %arg2 to <16 x i16>
   %mul = mul <16 x i16> %arg1_ext, %arg2_ext
@@ -1324,6 +1840,20 @@ define <8 x i32> @umull2_i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 ; CHECK-GI-NEXT:    umull2 v1.4s, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull2_i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    umull v2.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    umull2 v0.4s, v0.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
   %arg1_ext = zext <8 x i16> %arg1 to <8 x i32>
   %arg2_ext = zext <8 x i16> %arg2 to <8 x i32>
   %mul = mul <8 x i32> %arg1_ext, %arg2_ext
@@ -1351,6 +1881,20 @@ define <8 x i32> @smull2_i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 ; CHECK-GI-NEXT:    smull2 v1.4s, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull2_i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    smull v2.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    smull2 v0.4s, v0.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
   %arg1_ext = sext <8 x i16> %arg1 to <8 x i32>
   %arg2_ext = sext <8 x i16> %arg2 to <8 x i32>
   %mul = mul <8 x i32> %arg1_ext, %arg2_ext
@@ -1378,6 +1922,18 @@ define <4 x i64> @umull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 ; CHECK-GI-NEXT:    umull2 v1.2d, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull2_i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    umull v2.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    umull2 v0.2d, v0.4s, v1.4s
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
   %arg1_ext = zext <4 x i32> %arg1 to <4 x i64>
   %arg2_ext = zext <4 x i32> %arg2 to <4 x i64>
   %mul = mul <4 x i64> %arg1_ext, %arg2_ext
@@ -1405,6 +1961,18 @@ define <4 x i64> @smull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 ; CHECK-GI-NEXT:    smull2 v1.2d, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull2_i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    smull v2.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    smull2 v0.2d, v0.4s, v1.4s
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
   %arg1_ext = sext <4 x i32> %arg1 to <4 x i64>
   %arg2_ext = sext <4 x i32> %arg2 to <4 x i64>
   %mul = mul <4 x i64> %arg1_ext, %arg2_ext
@@ -1438,6 +2006,22 @@ define <16 x i16> @amull2_i8(<16 x i8> %arg1, <16 x i8> %arg2) {
 ; CHECK-GI-NEXT:    and v0.16b, v3.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amull2_i8:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    smull2 v2.8h, v0.16b, v1.16b
+; CHECK-BE-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-BE-NEXT:    bic v2.8h, #255, lsl #8
+; CHECK-BE-NEXT:    rev64 v1.8h, v2.8h
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %arg1_ext = zext <16 x i8> %arg1 to <16 x i16>
   %arg2_ext = zext <16 x i8> %arg2 to <16 x i16>
   %mul = mul <16 x i16> %arg1_ext, %arg2_ext
@@ -1475,6 +2059,23 @@ define <8 x i32> @amull2_i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 ; CHECK-GI-NEXT:    and v0.16b, v3.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amull2_i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    movi v2.2d, #0x00ffff0000ffff
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    smull2 v3.4s, v0.8h, v1.8h
+; CHECK-BE-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-BE-NEXT:    and v1.16b, v3.16b, v2.16b
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %arg1_ext = zext <8 x i16> %arg1 to <8 x i32>
   %arg2_ext = zext <8 x i16> %arg2 to <8 x i32>
   %mul = mul <8 x i32> %arg1_ext, %arg2_ext
@@ -1512,6 +2113,21 @@ define <4 x i64> @amull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 ; CHECK-GI-NEXT:    and v0.16b, v3.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: amull2_i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    movi v2.2d, #0x000000ffffffff
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    smull2 v3.2d, v0.4s, v1.4s
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-BE-NEXT:    and v1.16b, v3.16b, v2.16b
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %arg1_ext = zext <4 x i32> %arg1 to <4 x i64>
   %arg2_ext = zext <4 x i32> %arg2 to <4 x i64>
   %mul = mul <4 x i64> %arg1_ext, %arg2_ext
@@ -1542,6 +2158,18 @@ define <8 x i16> @umull_and_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
 ; CHECK-GI-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-GI-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_and_v8i16:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-BE-NEXT:    xtn v1.8b, v1.8h
+; CHECK-BE-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %in1 = zext <8 x i8> %src1 to <8 x i16>
   %in2 = and <8 x i16> %src2, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
@@ -1571,6 +2199,18 @@ define <8 x i16> @umull_and_v8i16_c(<8 x i8> %src1, <8 x i16> %src2) {
 ; CHECK-GI-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-GI-NEXT:    umull v0.8h, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_and_v8i16_c:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-BE-NEXT:    xtn v1.8b, v1.8h
+; CHECK-BE-NEXT:    umull v0.8h, v1.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %in1 = zext <8 x i8> %src1 to <8 x i16>
   %in2 = and <8 x i16> %src2, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
@@ -1602,6 +2242,19 @@ define <8 x i16> @umull_and256_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_and256_v8i16:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    movi v2.8h, #1, lsl #8
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-BE-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %in1 = zext <8 x i8> %src1 to <8 x i16>
   %in2 = and <8 x i16> %src2, <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>
@@ -1627,6 +2280,15 @@ define <8 x i16> @umull_andconst_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
 ; CHECK-GI-NEXT:    movi d1, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_andconst_v8i16:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    movi v1.2d, #0xffffffffffffffff
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %in1 = zext <8 x i8> %src1 to <8 x i16>
   %out = mul nsw <8 x i16> %in1, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
@@ -1661,6 +2323,20 @@ define <8 x i16> @umull_smaller_v8i16(<8 x i4> %src1, <8 x i16> %src2) {
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_smaller_v8i16:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    movi v2.8b, #15
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-BE-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-BE-NEXT:    xtn v1.8b, v1.8h
+; CHECK-BE-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %in1 = zext <8 x i4> %src1 to <8 x i16>
   %in2 = and <8 x i16> %src2, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
@@ -1692,6 +2368,19 @@ define <4 x i32> @umull_and_v4i32(<4 x i16> %src1, <4 x i32> %src2) {
 ; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_and_v4i32:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    movi v2.2d, #0x0000ff000000ff
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-BE-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %in1 = zext <4 x i16> %src1 to <4 x i32>
   %in2 = and <4 x i32> %src2, <i32 255, i32 255, i32 255, i32 255>
@@ -1732,6 +2421,26 @@ define <8 x i32> @umull_and_v8i32(<8 x i16> %src1, <8 x i32> %src2) {
 ; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    umull v1.4s, v3.4h, v2.4h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_and_v8i32:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    movi v3.2d, #0x0000ff000000ff
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    and v2.16b, v2.16b, v3.16b
+; CHECK-BE-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-BE-NEXT:    uzp1 v1.8h, v1.8h, v2.8h
+; CHECK-BE-NEXT:    umull v2.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    umull2 v0.4s, v0.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %in1 = zext <8 x i16> %src1 to <8 x i32>
   %in2 = and <8 x i32> %src2, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
@@ -1765,6 +2474,20 @@ define <8 x i32> @umull_and_v8i32_dup(<8 x i16> %src1, i32 %src2) {
 ; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    umull v1.4s, v2.4h, v1.4h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_and_v8i32_dup:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    and w8, w0, #0xff
+; CHECK-BE-NEXT:    dup v1.8h, w8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    umull v2.4s, v0.4h, v1.4h
+; CHECK-BE-NEXT:    umull2 v0.4s, v0.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %in1 = zext <8 x i16> %src1 to <8 x i32>
   %in2 = and i32 %src2, 255
@@ -1798,6 +2521,17 @@ define <2 x i64> @umull_and_v2i64(<2 x i32> %src1, <2 x i64> %src2) {
 ; CHECK-GI-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_and_v2i64:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    movi v2.2d, #0x000000000000ff
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-BE-NEXT:    xtn v1.2s, v1.2d
+; CHECK-BE-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %in1 = zext <2 x i32> %src1 to <2 x i64>
   %in2 = and <2 x i64> %src2, <i64 255, i64 255>
@@ -1838,6 +2572,22 @@ define <4 x i64> @umull_and_v4i64(<4 x i32> %src1, <4 x i64> %src2) {
 ; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    umull v1.2d, v3.2s, v2.2s
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_and_v4i64:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    movi v3.2d, #0x000000000000ff
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    and v2.16b, v2.16b, v3.16b
+; CHECK-BE-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    uzp1 v1.4s, v1.4s, v2.4s
+; CHECK-BE-NEXT:    umull v2.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    umull2 v0.2d, v0.4s, v1.4s
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %in1 = zext <4 x i32> %src1 to <4 x i64>
   %in2 = and <4 x i64> %src2, <i64 255, i64 255, i64 255, i64 255>
@@ -1871,6 +2621,18 @@ define <4 x i64> @umull_and_v4i64_dup(<4 x i32> %src1, i64 %src2) {
 ; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    umull v1.2d, v2.2s, v1.2s
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_and_v4i64_dup:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    and w8, w0, #0xff
+; CHECK-BE-NEXT:    dup v1.4s, w8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    umull v2.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    umull2 v0.2d, v0.4s, v1.4s
+; CHECK-BE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %in1 = zext <4 x i32> %src1 to <4 x i64>
   %in2 = and i64 %src2, 255
@@ -1908,6 +2670,20 @@ define void @pmlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3) {
 ; CHECK-GI-NEXT:    sub v0.8h, v1.8h, v0.8h
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: pmlsl2_v8i16_uzp1:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    add x8, x1, #16
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    ld1 { v2.8h }, [x8]
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    uzp1 v2.16b, v0.16b, v2.16b
+; CHECK-BE-NEXT:    pmull2 v0.8h, v0.16b, v2.16b
+; CHECK-BE-NEXT:    sub v0.8h, v1.8h, v0.8h
+; CHECK-BE-NEXT:    st1 { v0.8h }, [x0]
+; CHECK-BE-NEXT:    ret
   %5 = getelementptr inbounds i32, ptr %3, i64 4
   %6 = load <8 x i16>, ptr %5, align 4
   %7 = trunc <8 x i16> %6 to <8 x i8>
@@ -1943,6 +2719,19 @@ define void @smlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3) {
 ; CHECK-GI-NEXT:    smlsl v1.8h, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlsl2_v8i16_uzp1:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    add x8, x1, #16
+; CHECK-BE-NEXT:    ld1 { v2.8h }, [x8]
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    uzp1 v2.16b, v0.16b, v2.16b
+; CHECK-BE-NEXT:    smlsl2 v1.8h, v0.16b, v2.16b
+; CHECK-BE-NEXT:    st1 { v1.8h }, [x0]
+; CHECK-BE-NEXT:    ret
   %5 = getelementptr inbounds i32, ptr %3, i64 4
   %6 = load <8 x i16>, ptr %5, align 4
   %7 = trunc <8 x i16> %6 to <8 x i8>
@@ -1978,6 +2767,19 @@ define void @umlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3) {
 ; CHECK-GI-NEXT:    umlsl v1.8h, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlsl2_v8i16_uzp1:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    add x8, x1, #16
+; CHECK-BE-NEXT:    ld1 { v2.8h }, [x8]
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    uzp1 v2.16b, v0.16b, v2.16b
+; CHECK-BE-NEXT:    umlsl2 v1.8h, v0.16b, v2.16b
+; CHECK-BE-NEXT:    st1 { v1.8h }, [x0]
+; CHECK-BE-NEXT:    ret
   %5 = getelementptr inbounds i32, ptr %3, i64 4
   %6 = load <8 x i16>, ptr %5, align 4
   %7 = trunc <8 x i16> %6 to <8 x i8>
@@ -2013,6 +2815,19 @@ define void @smlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3) {
 ; CHECK-GI-NEXT:    smlsl v1.4s, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlsl2_v4i32_uzp1:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    add x8, x1, #16
+; CHECK-BE-NEXT:    ld1 { v2.4s }, [x8]
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    uzp1 v2.8h, v0.8h, v2.8h
+; CHECK-BE-NEXT:    smlsl2 v1.4s, v0.8h, v2.8h
+; CHECK-BE-NEXT:    st1 { v1.4s }, [x0]
+; CHECK-BE-NEXT:    ret
   %5 = getelementptr inbounds i32, ptr %3, i64 4
   %6 = load <4 x i32>, ptr %5, align 4
   %7 = trunc <4 x i32> %6 to <4 x i16>
@@ -2048,6 +2863,19 @@ define void @umlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3) {
 ; CHECK-GI-NEXT:    umlsl v1.4s, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlsl2_v4i32_uzp1:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    add x8, x1, #16
+; CHECK-BE-NEXT:    ld1 { v2.4s }, [x8]
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    uzp1 v2.8h, v0.8h, v2.8h
+; CHECK-BE-NEXT:    umlsl2 v1.4s, v0.8h, v2.8h
+; CHECK-BE-NEXT:    st1 { v1.4s }, [x0]
+; CHECK-BE-NEXT:    ret
   %5 = getelementptr inbounds i32, ptr %3, i64 4
   %6 = load <4 x i32>, ptr %5, align 4
   %7 = trunc <4 x i32> %6 to <4 x i16>
@@ -2093,6 +2921,23 @@ define void @pmlsl_pmlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3,
 ; CHECK-GI-NEXT:    sub v0.8h, v1.8h, v0.8h
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: pmlsl_pmlsl2_v8i16_uzp1:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    add x8, x1, #16
+; CHECK-BE-NEXT:    ld1 { v2.8h }, [x1]
+; CHECK-BE-NEXT:    ld1 { v3.8h }, [x8]
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    uzp1 v2.16b, v2.16b, v3.16b
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    pmull v3.8h, v0.8b, v2.8b
+; CHECK-BE-NEXT:    pmull2 v0.8h, v0.16b, v2.16b
+; CHECK-BE-NEXT:    add v0.8h, v3.8h, v0.8h
+; CHECK-BE-NEXT:    sub v0.8h, v1.8h, v0.8h
+; CHECK-BE-NEXT:    st1 { v0.8h }, [x0]
+; CHECK-BE-NEXT:    ret
 entry:
   %5 = load <8 x i16>, ptr %3, align 4
   %6 = trunc <8 x i16> %5 to <8 x i8>
@@ -2138,6 +2983,21 @@ define void @smlsl_smlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3,
 ; CHECK-GI-NEXT:    smlsl v1.8h, v4.8b, v3.8b
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlsl_smlsl2_v8i16_uzp1:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    add x8, x1, #16
+; CHECK-BE-NEXT:    ld1 { v2.8h }, [x1]
+; CHECK-BE-NEXT:    ld1 { v3.8h }, [x8]
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    uzp1 v2.16b, v2.16b, v3.16b
+; CHECK-BE-NEXT:    smlsl v1.8h, v0.8b, v2.8b
+; CHECK-BE-NEXT:    smlsl2 v1.8h, v0.16b, v2.16b
+; CHECK-BE-NEXT:    st1 { v1.8h }, [x0]
+; CHECK-BE-NEXT:    ret
 entry:
   %5 = load <8 x i16>, ptr %3, align 4
   %6 = trunc <8 x i16> %5 to <8 x i8>
@@ -2183,6 +3043,21 @@ define void @umlsl_umlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3,
 ; CHECK-GI-NEXT:    umlsl v1.8h, v4.8b, v3.8b
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlsl_umlsl2_v8i16_uzp1:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    add x8, x1, #16
+; CHECK-BE-NEXT:    ld1 { v2.8h }, [x1]
+; CHECK-BE-NEXT:    ld1 { v3.8h }, [x8]
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    uzp1 v2.16b, v2.16b, v3.16b
+; CHECK-BE-NEXT:    umlsl v1.8h, v0.8b, v2.8b
+; CHECK-BE-NEXT:    umlsl2 v1.8h, v0.16b, v2.16b
+; CHECK-BE-NEXT:    st1 { v1.8h }, [x0]
+; CHECK-BE-NEXT:    ret
 entry:
   %5 = load <8 x i16>, ptr %3, align 4
   %6 = trunc <8 x i16> %5 to <8 x i8>
@@ -2228,6 +3103,21 @@ define void @smlsl_smlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3,
 ; CHECK-GI-NEXT:    smlsl v1.4s, v4.4h, v3.4h
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlsl_smlsl2_v4i32_uzp1:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    add x8, x1, #16
+; CHECK-BE-NEXT:    ld1 { v2.4s }, [x1]
+; CHECK-BE-NEXT:    ld1 { v3.4s }, [x8]
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-BE-NEXT:    smlsl v1.4s, v0.4h, v2.4h
+; CHECK-BE-NEXT:    smlsl2 v1.4s, v0.8h, v2.8h
+; CHECK-BE-NEXT:    st1 { v1.4s }, [x0]
+; CHECK-BE-NEXT:    ret
 entry:
   %5 = load <4 x i32>, ptr %3, align 4
   %6 = trunc <4 x i32> %5 to <4 x i16>
@@ -2273,6 +3163,21 @@ define void @umlsl_umlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3,
 ; CHECK-GI-NEXT:    umlsl v1.4s, v4.4h, v3.4h
 ; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlsl_umlsl2_v4i32_uzp1:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    add x8, x1, #16
+; CHECK-BE-NEXT:    ld1 { v2.4s }, [x1]
+; CHECK-BE-NEXT:    ld1 { v3.4s }, [x8]
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-BE-NEXT:    umlsl v1.4s, v0.4h, v2.4h
+; CHECK-BE-NEXT:    umlsl2 v1.4s, v0.8h, v2.8h
+; CHECK-BE-NEXT:    st1 { v1.4s }, [x0]
+; CHECK-BE-NEXT:    ret
 entry:
   %5 = load <4 x i32>, ptr %3, align 4
   %6 = trunc <4 x i32> %5 to <4 x i16>
@@ -2314,6 +3219,18 @@ define <2 x i32> @do_stuff(<2 x i64> %0, <2 x i64> %1) {
 ; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: do_stuff:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
+; CHECK-BE-NEXT:    smull2 v0.2d, v1.4s, v0.4s
+; CHECK-BE-NEXT:    xtn v0.2s, v0.2d
+; CHECK-BE-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    ret
   %bc.1 = bitcast <2 x i64> %1 to <4 x i32>
   %trunc.0 = trunc <2 x i64> %0 to <2 x i32>
   %shuff.hi = shufflevector <4 x i32> %bc.1, <4 x i32> zeroinitializer, <2 x i32> <i32 2, i32 3>
@@ -2331,6 +3248,16 @@ define <2 x i64> @lsr(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    shrn v1.2s, v1.2d, #32
 ; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: lsr:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-BE-NEXT:    shrn v1.2s, v1.2d, #32
+; CHECK-BE-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
     %x = lshr <2 x i64> %a, <i64 32, i64 32>
     %y = lshr <2 x i64> %b, <i64 32, i64 32>
     %z = mul nsw <2 x i64> %x, %y
@@ -2344,6 +3271,15 @@ define <2 x i64> @lsr_const(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
 ; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: lsr_const:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    movi v1.2s, #31
+; CHECK-BE-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-BE-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
     %x = lshr <2 x i64> %a, <i64 32, i64 32>
     %z = mul nsw <2 x i64> %x, <i64 31, i64 31>
     ret <2 x i64> %z
@@ -2356,6 +3292,16 @@ define <2 x i64> @asr(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    shrn v1.2s, v1.2d, #32
 ; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: asr:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-BE-NEXT:    shrn v1.2s, v1.2d, #32
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
     %x = ashr <2 x i64> %a, <i64 32, i64 32>
     %y = ashr <2 x i64> %b, <i64 32, i64 32>
     %z = mul nsw <2 x i64> %x, %y
@@ -2369,6 +3315,15 @@ define <2 x i64> @asr_const(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
 ; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: asr_const:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    movi v1.2s, #31
+; CHECK-BE-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
     %x = ashr <2 x i64> %a, <i64 32, i64 32>
     %z = mul nsw <2 x i64> %x, <i64 31, i64 31>
     ret <2 x i64> %z
@@ -2393,6 +3348,17 @@ define <8 x i16> @smulladdl_v8i8_v8i16(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C) no
 ; CHECK-GI-NEXT:    smlal v2.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smulladdl_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v2.8b, v2.8b
+; CHECK-BE-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    saddw v0.8h, v0.8h, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = sext <8 x i8> %A to <8 x i16>
   %tmp2 = sext <8 x i8> %B to <8 x i16>
   %tmp3 = sext <8 x i8> %C to <8 x i16>
@@ -2420,6 +3386,17 @@ define <8 x i16> @umulladdl_v8i8_v8i16(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C) no
 ; CHECK-GI-NEXT:    umlal v2.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umulladdl_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v2.8b, v2.8b
+; CHECK-BE-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    uaddw v0.8h, v0.8h, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = zext <8 x i8> %A to <8 x i16>
   %tmp2 = zext <8 x i8> %B to <8 x i16>
   %tmp3 = zext <8 x i8> %C to <8 x i16>
@@ -2434,6 +3411,17 @@ define <8 x i16> @smlall_v8i8_v8i16(<8 x i8> %A, <8 x i8> %B, <8 x i16> %C) noun
 ; CHECK-NEXT:    smlal v2.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlall_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v2.8h, v2.8h
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    smlal v2.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v2.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = sext <8 x i8> %A to <8 x i16>
   %tmp2 = sext <8 x i8> %B to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp1, %tmp2
@@ -2447,6 +3435,17 @@ define <8 x i16> @umlall_v8i8_v8i16(<8 x i8> %A, <8 x i8> %B, <8 x i16> %C) noun
 ; CHECK-NEXT:    umlal v2.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlall_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v2.8h, v2.8h
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    umlal v2.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v2.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = zext <8 x i8> %A to <8 x i16>
   %tmp2 = zext <8 x i8> %B to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp1, %tmp2
@@ -2476,6 +3475,17 @@ define <8 x i16> @smulladdl_const_v8i8_v8i16(<8 x i8> %A, <8 x i8> %C) nounwind 
 ; CHECK-GI-NEXT:    smlal v1.8h, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smulladdl_const_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    movi v2.8b, #10
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    smull v0.8h, v0.8b, v2.8b
+; CHECK-BE-NEXT:    saddw v0.8h, v0.8h, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = sext <8 x i8> %A to <8 x i16>
   %tmp3 = sext <8 x i8> %C to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp1, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
@@ -2505,6 +3515,17 @@ define <8 x i16> @umulladdl_const_v8i8_v8i16(<8 x i8> %A, <8 x i8> %C) nounwind 
 ; CHECK-GI-NEXT:    umlal v1.8h, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umulladdl_const_v8i8_v8i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    movi v2.8b, #10
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    umull v0.8h, v0.8b, v2.8b
+; CHECK-BE-NEXT:    uaddw v0.8h, v0.8h, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = zext <8 x i8> %A to <8 x i16>
   %tmp3 = zext <8 x i8> %C to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp1, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
@@ -2531,6 +3552,17 @@ define <8 x i16> @sdistribute_v8i8(<8 x i8> %src1, <8 x i8> %src2, <8 x i8> %mul
 ; CHECK-GI-NEXT:    saddl v0.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v2.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: sdistribute_v8i8:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    smull v0.8h, v0.8b, v2.8b
+; CHECK-BE-NEXT:    smlal v0.8h, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = sext <8 x i8> %src1 to <8 x i16>
   %5 = sext <8 x i8> %mul to <8 x i16>
@@ -2562,6 +3594,17 @@ define <8 x i16> @sdistribute_const1_v8i8(<8 x i8> %src1, <8 x i8> %mul) {
 ; CHECK-GI-NEXT:    saddw v0.8h, v2.8h, v0.8b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: sdistribute_const1_v8i8:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    movi v2.8b, #10
+; CHECK-BE-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    smlal v0.8h, v2.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = sext <8 x i8> %src1 to <8 x i16>
   %5 = sext <8 x i8> %mul to <8 x i16>
@@ -2591,6 +3634,17 @@ define <8 x i16> @sdistribute_const2_v8i8(<8 x i8> %src1, <8 x i8> %src2) {
 ; CHECK-GI-NEXT:    saddl v0.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v2.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: sdistribute_const2_v8i8:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    movi v2.8b, #10
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    smull v0.8h, v0.8b, v2.8b
+; CHECK-BE-NEXT:    smlal v0.8h, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = sext <8 x i8> %src1 to <8 x i16>
   %5 = sext <8 x i8> %src2 to <8 x i16>
@@ -2618,6 +3672,17 @@ define <8 x i16> @udistribute_v8i8(<8 x i8> %src1, <8 x i8> %src2, <8 x i8> %mul
 ; CHECK-GI-NEXT:    uaddl v0.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v2.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: udistribute_v8i8:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    umull v0.8h, v0.8b, v2.8b
+; CHECK-BE-NEXT:    umlal v0.8h, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = zext <8 x i8> %src1 to <8 x i16>
   %5 = zext <8 x i8> %mul to <8 x i16>
@@ -2649,6 +3714,17 @@ define <8 x i16> @udistribute_const1_v8i8(<8 x i8> %src1, <8 x i8> %mul) {
 ; CHECK-GI-NEXT:    uaddw v0.8h, v2.8h, v0.8b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: udistribute_const1_v8i8:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    movi v2.8b, #10
+; CHECK-BE-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    umlal v0.8h, v2.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = zext <8 x i8> %src1 to <8 x i16>
   %5 = zext <8 x i8> %mul to <8 x i16>
@@ -2678,6 +3754,17 @@ define <8 x i16> @udistribute_const2_v8i8(<8 x i8> %src1, <8 x i8> %src2) {
 ; CHECK-GI-NEXT:    uaddl v0.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v2.8h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: udistribute_const2_v8i8:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    movi v2.8b, #10
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
+; CHECK-BE-NEXT:    umull v0.8h, v0.8b, v2.8b
+; CHECK-BE-NEXT:    umlal v0.8h, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = zext <8 x i8> %src1 to <8 x i16>
   %5 = zext <8 x i8> %src2 to <8 x i16>
@@ -2706,6 +3793,16 @@ define <2 x i64> @smulladdl_v2i32_v2i64(<2 x i32> %A, <2 x i32> %B, <2 x i32> %C
 ; CHECK-GI-NEXT:    smlal v2.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smulladdl_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    saddw v0.2d, v0.2d, v2.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = sext <2 x i32> %A to <2 x i64>
   %tmp2 = sext <2 x i32> %B to <2 x i64>
   %tmp3 = sext <2 x i32> %C to <2 x i64>
@@ -2733,6 +3830,16 @@ define <2 x i64> @umulladdl_v2i32_v2i64(<2 x i32> %A, <2 x i32> %B, <2 x i32> %C
 ; CHECK-GI-NEXT:    umlal v2.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umulladdl_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
+; CHECK-BE-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    uaddw v0.2d, v0.2d, v2.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = zext <2 x i32> %A to <2 x i64>
   %tmp2 = zext <2 x i32> %B to <2 x i64>
   %tmp3 = zext <2 x i32> %C to <2 x i64>
@@ -2747,6 +3854,15 @@ define <2 x i64> @smlall_v2i32_v2i64(<2 x i32> %A, <2 x i32> %B, <2 x i64> %C) n
 ; CHECK-NEXT:    smlal v2.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: smlall_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    smlal v2.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = sext <2 x i32> %A to <2 x i64>
   %tmp2 = sext <2 x i32> %B to <2 x i64>
   %tmp4 = mul <2 x i64> %tmp1, %tmp2
@@ -2760,6 +3876,15 @@ define <2 x i64> @umlall_v2i32_v2i64(<2 x i32> %A, <2 x i32> %B, <2 x i64> %C) n
 ; CHECK-NEXT:    umlal v2.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: umlall_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    umlal v2.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = zext <2 x i32> %A to <2 x i64>
   %tmp2 = zext <2 x i32> %B to <2 x i64>
   %tmp4 = mul <2 x i64> %tmp1, %tmp2
@@ -2789,6 +3914,16 @@ define <2 x i64> @smulladdl_const_v2i32_v2i64(<2 x i32> %A, <2 x i32> %C) nounwi
 ; CHECK-GI-NEXT:    smlal v1.2d, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smulladdl_const_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    movi v2.2s, #10
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v2.2s
+; CHECK-BE-NEXT:    saddw v0.2d, v0.2d, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = sext <2 x i32> %A to <2 x i64>
   %tmp3 = sext <2 x i32> %C to <2 x i64>
   %tmp4 = mul <2 x i64> %tmp1, <i64 10, i64 10>
@@ -2818,6 +3953,16 @@ define <2 x i64> @umulladdl_const_v2i32_v2i64(<2 x i32> %A, <2 x i32> %C) nounwi
 ; CHECK-GI-NEXT:    umlal v1.2d, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umulladdl_const_v2i32_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    movi v2.2s, #10
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    umull v0.2d, v0.2s, v2.2s
+; CHECK-BE-NEXT:    uaddw v0.2d, v0.2d, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
   %tmp1 = zext <2 x i32> %A to <2 x i64>
   %tmp3 = zext <2 x i32> %C to <2 x i64>
   %tmp4 = mul <2 x i64> %tmp1, <i64 10, i64 10>
@@ -2851,6 +3996,16 @@ define <2 x i64> @sdistribute_v2i32(<2 x i32> %src1, <2 x i32> %src2, <2 x i32> 
 ; CHECK-GI-NEXT:    fmov d0, x10
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: sdistribute_v2i32:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v2.2s
+; CHECK-BE-NEXT:    smlal v0.2d, v1.2s, v2.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = sext <2 x i32> %src1 to <2 x i64>
   %5 = sext <2 x i32> %mul to <2 x i64>
@@ -2890,6 +4045,16 @@ define <2 x i64> @sdistribute_const1_v2i32(<2 x i32> %src1, <2 x i32> %mul) {
 ; CHECK-GI-NEXT:    fmov d0, x10
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: sdistribute_const1_v2i32:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    movi v2.2s, #10
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    smlal v0.2d, v2.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = sext <2 x i32> %src1 to <2 x i64>
   %5 = sext <2 x i32> %mul to <2 x i64>
@@ -2927,6 +4092,16 @@ define <2 x i64> @sdistribute_const2_v2i32(<2 x i32> %src1, <2 x i32> %src2) {
 ; CHECK-GI-NEXT:    fmov d0, x10
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: sdistribute_const2_v2i32:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    movi v2.2s, #10
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    smull v0.2d, v0.2s, v2.2s
+; CHECK-BE-NEXT:    smlal v0.2d, v1.2s, v2.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = sext <2 x i32> %src1 to <2 x i64>
   %5 = sext <2 x i32> %src2 to <2 x i64>
@@ -2961,6 +4136,16 @@ define <2 x i64> @udistribute_v2i32(<2 x i32> %src1, <2 x i32> %src2, <2 x i32> 
 ; CHECK-GI-NEXT:    fmov d0, x10
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: udistribute_v2i32:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    umull v0.2d, v0.2s, v2.2s
+; CHECK-BE-NEXT:    umlal v0.2d, v1.2s, v2.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = zext <2 x i32> %src1 to <2 x i64>
   %5 = zext <2 x i32> %mul to <2 x i64>
@@ -3000,6 +4185,16 @@ define <2 x i64> @udistribute_const1_v2i32(<2 x i32> %src1, <2 x i32> %mul) {
 ; CHECK-GI-NEXT:    fmov d0, x10
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: udistribute_const1_v2i32:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    movi v2.2s, #10
+; CHECK-BE-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-BE-NEXT:    umlal v0.2d, v2.2s, v1.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = zext <2 x i32> %src1 to <2 x i64>
   %5 = zext <2 x i32> %mul to <2 x i64>
@@ -3037,6 +4232,16 @@ define <2 x i64> @udistribute_const2_v2i32(<2 x i32> %src1, <2 x i32> %src2) {
 ; CHECK-GI-NEXT:    fmov d0, x10
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: udistribute_const2_v2i32:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    movi v2.2s, #10
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
+; CHECK-BE-NEXT:    umull v0.2d, v0.2s, v2.2s
+; CHECK-BE-NEXT:    umlal v0.2d, v1.2s, v2.2s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
 entry:
   %4 = zext <2 x i32> %src1 to <2 x i64>
   %5 = zext <2 x i32> %src2 to <2 x i64>
@@ -3076,6 +4281,23 @@ define <8 x i32> @smull_no_cycle(<8 x i16> %x, <4 x i32> %a) {
 ; CHECK-GI-NEXT:    mul v1.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_no_cycle:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-BE-NEXT:    smull v1.4s, v1.4h, v0.4h
+; CHECK-BE-NEXT:    mov d0, v0.d[1]
+; CHECK-BE-NEXT:    shrn v2.4h, v1.4s, #16
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    smull v0.4s, v2.4h, v0.4h
+; CHECK-BE-NEXT:    rev64 v2.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ret
   %xe = sext <8 x i16> %x to <8 x i32>
   %xl = shufflevector <8 x i32> %xe, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %xh = shufflevector <8 x i32> %xe, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -3209,6 +4431,75 @@ define <32 x i32> @smull_uzp1_no_cycle(<16 x i32> %a, <32 x i8> %b, ptr %p) {
 ; CHECK-GI-NEXT:    smull2 v5.4s, v17.8h, v5.8h
 ; CHECK-GI-NEXT:    smull v7.4s, v19.4h, v18.4h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: smull_uzp1_no_cycle:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v3.4s, v3.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    movi v6.2d, #0000000000000000
+; CHECK-BE-NEXT:    movi v7.4s, #1
+; CHECK-BE-NEXT:    rev64 v5.16b, v5.16b
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    smax v1.4s, v1.4s, v6.4s
+; CHECK-BE-NEXT:    smax v3.4s, v3.4s, v6.4s
+; CHECK-BE-NEXT:    smax v0.4s, v0.4s, v6.4s
+; CHECK-BE-NEXT:    smax v2.4s, v2.4s, v6.4s
+; CHECK-BE-NEXT:    smin v1.4s, v1.4s, v7.4s
+; CHECK-BE-NEXT:    smin v0.4s, v0.4s, v7.4s
+; CHECK-BE-NEXT:    smin v3.4s, v3.4s, v7.4s
+; CHECK-BE-NEXT:    smin v2.4s, v2.4s, v7.4s
+; CHECK-BE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-BE-NEXT:    uzp1 v6.8h, v2.8h, v3.8h
+; CHECK-BE-NEXT:    xtn v2.4h, v2.4s
+; CHECK-BE-NEXT:    uzp1 v16.16b, v0.16b, v6.16b
+; CHECK-BE-NEXT:    rev32 v1.16b, v16.16b
+; CHECK-BE-NEXT:    mov w8, v1.s[3]
+; CHECK-BE-NEXT:    rev64 v1.16b, v4.16b
+; CHECK-BE-NEXT:    ext v4.16b, v5.16b, v5.16b, #8
+; CHECK-BE-NEXT:    ld1 { v5.16b }, [x0]
+; CHECK-BE-NEXT:    and w8, w8, #0x1
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    sshll2 v6.8h, v4.16b, #0
+; CHECK-BE-NEXT:    mov v3.s[2], w8
+; CHECK-BE-NEXT:    ushll2 v7.8h, v5.16b, #0
+; CHECK-BE-NEXT:    ushll v5.8h, v5.8b, #0
+; CHECK-BE-NEXT:    sshll v4.8h, v4.8b, #0
+; CHECK-BE-NEXT:    add x8, x0, #16
+; CHECK-BE-NEXT:    mov d18, v6.d[1]
+; CHECK-BE-NEXT:    smull v2.4s, v2.4h, v6.4h
+; CHECK-BE-NEXT:    st1 { v16.16b }, [x8]
+; CHECK-BE-NEXT:    sshll v17.8h, v1.8b, #0
+; CHECK-BE-NEXT:    sshll2 v1.8h, v1.16b, #0
+; CHECK-BE-NEXT:    xtn v3.4h, v3.4s
+; CHECK-BE-NEXT:    smull v19.4s, v5.4h, v17.4h
+; CHECK-BE-NEXT:    smull2 v5.4s, v5.8h, v17.8h
+; CHECK-BE-NEXT:    smull v17.4s, v7.4h, v1.4h
+; CHECK-BE-NEXT:    smull2 v1.4s, v7.8h, v1.8h
+; CHECK-BE-NEXT:    smull v7.4s, v0.4h, v4.4h
+; CHECK-BE-NEXT:    smull2 v0.4s, v0.8h, v4.8h
+; CHECK-BE-NEXT:    smull v3.4s, v3.4h, v18.4h
+; CHECK-BE-NEXT:    rev64 v20.4s, v2.4s
+; CHECK-BE-NEXT:    rev64 v4.4s, v5.4s
+; CHECK-BE-NEXT:    rev64 v5.4s, v19.4s
+; CHECK-BE-NEXT:    rev64 v17.4s, v17.4s
+; CHECK-BE-NEXT:    rev64 v6.4s, v7.4s
+; CHECK-BE-NEXT:    rev64 v7.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v19.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v18.4s, v3.4s
+; CHECK-BE-NEXT:    ext v1.16b, v4.16b, v4.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v5.16b, v5.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v17.16b, v17.16b, #8
+; CHECK-BE-NEXT:    ext v4.16b, v6.16b, v6.16b, #8
+; CHECK-BE-NEXT:    ext v3.16b, v7.16b, v7.16b, #8
+; CHECK-BE-NEXT:    ext v5.16b, v19.16b, v19.16b, #8
+; CHECK-BE-NEXT:    ext v7.16b, v18.16b, v18.16b, #8
+; CHECK-BE-NEXT:    ext v6.16b, v20.16b, v20.16b, #8
+; CHECK-BE-NEXT:    ret
   %max = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %a, <16 x i32> zeroinitializer)
   %min = call <16 x i32> @llvm.umin.v16i32(<16 x i32> %max, <16 x i32> splat (i32 1))
   %t = trunc <16 x i32> %min to <16 x i8>
@@ -3333,6 +4624,70 @@ define <32 x i32> @umull_uzp1_no_cycle(<16 x i32> %a, <32 x i8> %b, ptr %p) {
 ; CHECK-GI-NEXT:    umull2 v5.4s, v17.8h, v5.8h
 ; CHECK-GI-NEXT:    umull v7.4s, v19.4h, v18.4h
 ; CHECK-GI-NEXT:    ret
+;
+; CHECK-BE-LABEL: umull_uzp1_no_cycle:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    rev64 v3.4s, v3.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    movi v6.4s, #1
+; CHECK-BE-NEXT:    rev64 v5.16b, v5.16b
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    umin v1.4s, v1.4s, v6.4s
+; CHECK-BE-NEXT:    umin v3.4s, v3.4s, v6.4s
+; CHECK-BE-NEXT:    umin v2.4s, v2.4s, v6.4s
+; CHECK-BE-NEXT:    umin v0.4s, v0.4s, v6.4s
+; CHECK-BE-NEXT:    uzp1 v6.8h, v2.8h, v3.8h
+; CHECK-BE-NEXT:    xtn v2.4h, v2.4s
+; CHECK-BE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-BE-NEXT:    uzp1 v16.16b, v0.16b, v6.16b
+; CHECK-BE-NEXT:    rev32 v1.16b, v16.16b
+; CHECK-BE-NEXT:    mov w8, v1.s[3]
+; CHECK-BE-NEXT:    rev64 v1.16b, v4.16b
+; CHECK-BE-NEXT:    ext v4.16b, v5.16b, v5.16b, #8
+; CHECK-BE-NEXT:    ld1 { v5.16b }, [x0]
+; CHECK-BE-NEXT:    and w8, w8, #0x1
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ushll2 v6.8h, v4.16b, #0
+; CHECK-BE-NEXT:    mov v3.s[2], w8
+; CHECK-BE-NEXT:    ushll2 v7.8h, v5.16b, #0
+; CHECK-BE-NEXT:    ushll v5.8h, v5.8b, #0
+; CHECK-BE-NEXT:    ushll v4.8h, v4.8b, #0
+; CHECK-BE-NEXT:    add x8, x0, #16
+; CHECK-BE-NEXT:    mov d18, v6.d[1]
+; CHECK-BE-NEXT:    umull v2.4s, v2.4h, v6.4h
+; CHECK-BE-NEXT:    st1 { v16.16b }, [x8]
+; CHECK-BE-NEXT:    ushll v17.8h, v1.8b, #0
+; CHECK-BE-NEXT:    ushll2 v1.8h, v1.16b, #0
+; CHECK-BE-NEXT:    xtn v3.4h, v3.4s
+; CHECK-BE-NEXT:    umull v19.4s, v5.4h, v17.4h
+; CHECK-BE-NEXT:    umull2 v5.4s, v5.8h, v17.8h
+; CHECK-BE-NEXT:    umull v17.4s, v7.4h, v1.4h
+; CHECK-BE-NEXT:    umull2 v1.4s, v7.8h, v1.8h
+; CHECK-BE-NEXT:    umull v7.4s, v0.4h, v4.4h
+; CHECK-BE-NEXT:    umull2 v0.4s, v0.8h, v4.8h
+; CHECK-BE-NEXT:    umull v3.4s, v3.4h, v18.4h
+; CHECK-BE-NEXT:    rev64 v20.4s, v2.4s
+; CHECK-BE-NEXT:    rev64 v4.4s, v5.4s
+; CHECK-BE-NEXT:    rev64 v5.4s, v19.4s
+; CHECK-BE-NEXT:    rev64 v17.4s, v17.4s
+; CHECK-BE-NEXT:    rev64 v6.4s, v7.4s
+; CHECK-BE-NEXT:    rev64 v7.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v19.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v18.4s, v3.4s
+; CHECK-BE-NEXT:    ext v1.16b, v4.16b, v4.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v5.16b, v5.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v17.16b, v17.16b, #8
+; CHECK-BE-NEXT:    ext v4.16b, v6.16b, v6.16b, #8
+; CHECK-BE-NEXT:    ext v3.16b, v7.16b, v7.16b, #8
+; CHECK-BE-NEXT:    ext v5.16b, v19.16b, v19.16b, #8
+; CHECK-BE-NEXT:    ext v7.16b, v18.16b, v18.16b, #8
+; CHECK-BE-NEXT:    ext v6.16b, v20.16b, v20.16b, #8
+; CHECK-BE-NEXT:    ret
   %min = call <16 x i32> @llvm.umin.v16i32(<16 x i32> %a, <16 x i32> splat (i32 1))
   %t = trunc <16 x i32> %min to <16 x i8>
   %p16 = getelementptr i8, ptr %p, i64 16
