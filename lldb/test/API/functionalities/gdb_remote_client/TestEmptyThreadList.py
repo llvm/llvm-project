@@ -38,6 +38,9 @@ class TestEmptyThreadList(GDBRemoteTestBase):
             def cont(self):
                 return "S13"
 
+            def vCont(self, packet):
+                return "S13"
+
             def other(self, packet):
                 if packet == "vCont?":
                     return "vCont;c;C;s;S"

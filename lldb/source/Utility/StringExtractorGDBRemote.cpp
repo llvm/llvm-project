@@ -324,6 +324,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
     if (PACKET_MATCHES("jAddressSpacesInfo"))
       return eServerPacketType_jAddressSpacesInfo;
 
+    if (PACKET_MATCHES("jLLDBSettings"))
+      return eServerPacketType_jLLDBSettings;
     if (PACKET_MATCHES("jLLDBTraceSupported"))
       return eServerPacketType_jLLDBTraceSupported;
     if (PACKET_STARTS_WITH("jLLDBTraceStop:"))
@@ -342,6 +344,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jAcceleratorPluginBreakpointHit;
     if (PACKET_STARTS_WITH("jAcceleratorPluginGetDynamicLoaderLibraryInfo:"))
       return eServerPacketType_jAcceleratorPluginGetDynamicLoaderLibraryInfo;
+    if (PACKET_STARTS_WITH("jThreadExtendedInfo:"))
+      return eServerPacketType_jThreadExtendedInfo;
     break;
 
   case 'v':

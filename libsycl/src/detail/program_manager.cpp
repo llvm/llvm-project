@@ -19,6 +19,10 @@ _LIBSYCL_SUPPRESS_EXTRA_WARNINGS_BEGIN
 #include <llvm/Frontend/Offloading/Utility.h>
 _LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END
 
+#include <cassert>
+#include <string>
+#include <utility>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
@@ -29,8 +33,12 @@ getDeviceKernelInfo(std::string_view KernelName) {
 
 DeviceKernelInfo &
 ProgramAndKernelManager::getDeviceKernelInfo(std::string_view KernelName) {
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
   auto It = MDeviceKernelInfoMap.find(KernelName);
-  assert(It != MDeviceKernelInfoMap.end());
+  if (It == MDeviceKernelInfoMap.end())
+    throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
+                          "No registered device image provides kernel " +
+                              std::string(KernelName));
   return It->second;
 }
 
@@ -177,8 +185,8 @@ ol_symbol_handle_t ProgramAndKernelManager::getOrCreateKernel(
 
   if (!isImageCompatible(DeviceImage, Device))
     throw exception(make_error_code(errc::runtime),
-                    std::string("No compatible image for ") +
-                        KernelInfo.getName().data() + " was found");
+                    "No compatible image for " +
+                        std::string(KernelInfo.getName()) + " was found");
 
   // Track the context before it caches anything, so that unregisterFatBin() can
   // reach the programs it is about to create.

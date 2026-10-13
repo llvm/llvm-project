@@ -184,6 +184,9 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return Builder.getIntegerType(1, getTypeAlign(QT), /*Signed=*/false,
                                   /*IsBitInt=*/false);
 
+  case BuiltinType::MetaInfo:
+    llvm::reportFatalInternalError("std::meta::info is consteval-only type");
+
   case BuiltinType::Char_S:
   case BuiltinType::Char_U:
   case BuiltinType::SChar:
@@ -312,6 +315,10 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
 #include "clang/Basic/HLSLIntangibleTypes.def"
     llvm::reportFatalInternalError(
         "HLSL intangible types not yet Supported in ABI lowering library");
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
+    llvm::reportFatalInternalError(
+        "HLSL packed types not yet Supported in ABI lowering library");
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
     llvm::reportFatalInternalError(

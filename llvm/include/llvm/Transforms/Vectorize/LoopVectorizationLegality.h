@@ -28,6 +28,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
@@ -242,9 +243,12 @@ struct HistogramInfo {
   LoadInst *Load;
   Instruction *Update;
   StoreInst *Store;
+  /// The update operation applied to the histogram buckets.
+  HistogramUpdateKind UpdateKind;
 
-  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store)
-      : Load(Load), Update(Update), Store(Store) {}
+  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store,
+                HistogramUpdateKind UpdateKind)
+      : Load(Load), Update(Update), Store(Store), UpdateKind(UpdateKind) {}
 };
 
 /// Indicates the characteristics of a loop with an uncountable exit.
@@ -423,6 +427,11 @@ public:
   bool hasUncountableExitWithSideEffects() const {
     return getUncountableExitTrait() == UncountableExitTrait::ReadWrite;
   }
+
+  /// If Cond is a combined exit condition featuring uncountable and countable
+  /// comparisons, returns the countable comparison. Otherwise returns nullptr.
+  LLVM_ABI Instruction *
+  findCountableComparisonInCombinedCondition(Value *Cond) const;
 
   /// Return true if there is store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {

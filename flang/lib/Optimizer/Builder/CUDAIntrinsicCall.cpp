@@ -456,6 +456,10 @@ static constexpr IntrinsicHandler cudaHandlers[]{
          &CI::genMatchAnySync),
      {{{"mask", asValue}, {"value", asValue}}},
      /*isElemental=*/false},
+    {"on_device",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genOnDevice),
+     {},
+     /*isElemental=*/false},
     {"syncthreads",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
          &CI::genSyncThreads),
@@ -642,33 +646,17 @@ static constexpr IntrinsicHandler cudaHandlers[]{
 };
 static_assert(fir::isSorted(cudaHandlers) && "map must be sorted");
 
-// BIND(C) CUDA Fortran procedures. Kept separate because the other handlers
-// are not BIND(C) and must not match a user procedure with the same name.
-static constexpr IntrinsicHandler cudaBindcHandlers[]{
-    {"on_device",
-     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genOnDevice),
-     {},
-     /*isElemental=*/false},
-};
-static_assert(fir::isSorted(cudaBindcHandlers) && "map must be sorted");
-
-static const IntrinsicHandler *
-lookupCUDAHandler(llvm::ArrayRef<IntrinsicHandler> handlers,
-                  llvm::StringRef name) {
+const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
+                                                 bool isBindcCall) {
+  // cudadevice declares on_device() with bind(c).
+  if (isBindcCall && name != "on_device")
+    return nullptr;
   auto compare = [](const IntrinsicHandler &cudaHandler, llvm::StringRef name) {
     return name.compare(cudaHandler.name) > 0;
   };
-  auto result = llvm::lower_bound(handlers, name, compare);
-  return result != handlers.end() && result->name == name ? &*result : nullptr;
-}
-
-const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
-                                                 bool isBindcCall) {
-  // The tables have different lengths, so they cannot share a ternary: that
-  // would decay both arrays to a pointer.
-  if (isBindcCall)
-    return lookupCUDAHandler(cudaBindcHandlers, name);
-  return lookupCUDAHandler(cudaHandlers, name);
+  auto result = llvm::lower_bound(cudaHandlers, name, compare);
+  return result != std::end(cudaHandlers) && result->name == name ? result
+                                                                  : nullptr;
 }
 
 mlir::Value
@@ -1283,11 +1271,18 @@ CUDAIntrinsicLibrary::genLDXXFunc(mlir::Type resultType,
   mlir::Type refResTy = fir::ReferenceType::get(resTy);
   mlir::FunctionType ftype =
       mlir::FunctionType::get(arg.getContext(), {refResTy, refResTy}, {});
-  auto funcOp = builder.createFunction(loc, fctName, ftype);
+  auto intrinsicAttr = fir::FortranProcedureFlagsEnumAttr::get(
+      builder.getContext(), fir::FortranProcedureFlagsEnum::intrinsic);
+  mlir::func::FuncOp funcOp = builder.getNamedFunction(fctName);
+  if (!funcOp) {
+    funcOp = builder.createFunction(loc, fctName, ftype);
+    funcOp->setAttr(fir::getFortranProcedureFlagsAttrName(), intrinsicAttr);
+  }
   llvm::SmallVector<mlir::Value> funcArgs;
   funcArgs.push_back(res);
   funcArgs.push_back(arg);
-  fir::CallOp::create(builder, loc, funcOp, funcArgs);
+  auto call = fir::CallOp::create(builder, loc, funcOp, funcArgs);
+  call.setProcedureAttrsAttr(intrinsicAttr);
   mlir::Value ext =
       builder.createIntegerConstant(loc, builder.getIndexType(), extent);
   return fir::ArrayBoxValue(res, {ext});

@@ -1,0 +1,20 @@
+Name: ExportAsCore
+Globals:
+  - Name: sliceGroupProbe
+    SwiftName: 'fromCoreUnversioned'
+Functions:
+  - Name: sliceGroupOrderProbe
+    SwiftName: 'coreBroad(_:)'
+  - Name: sliceGroupOrderProbe
+    Where:
+      Parameters:
+        - int
+    SwiftName: 'coreExact(_:)'
+SwiftVersions:
+  - Version: 3.0
+    Globals:
+      - Name: sliceGroupProbe
+        SwiftName: 'fromCoreV3'
+    Functions:
+      - Name: sliceGroupOrderProbe
+        SwiftName: 'coreBroadV3(_:)'

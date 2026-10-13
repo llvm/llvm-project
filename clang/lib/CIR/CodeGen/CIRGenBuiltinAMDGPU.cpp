@@ -14,6 +14,7 @@
 
 #include "mlir/IR/Value.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -21,14 +22,92 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
+/// Map a constant integral to memory order.
+static cir::MemOrder decodeAtomicOrder(const Expr *arg, ASTContext &ctx) {
+  Expr::EvalResult orderRes;
+  if (!arg->EvaluateAsInt(orderRes, ctx))
+    return cir::MemOrder::SequentiallyConsistent;
+  switch (orderRes.Val.getInt().getZExtValue()) {
+  case 0:
+    return cir::MemOrder::Relaxed;
+  case 1: // consume -> acquire
+  case 2:
+    return cir::MemOrder::Acquire;
+  case 3:
+    return cir::MemOrder::Release;
+  case 4:
+    return cir::MemOrder::AcquireRelease;
+  default:
+    return cir::MemOrder::SequentiallyConsistent;
+  }
+}
+
+/// Map an AMDGPU sync-scope string-literal argument onto cir::SyncScopeKind.
+/// An absent or unrecognized scope is system scope, which is the conservative
+/// choice and matches what an empty syncscope string means in LLVM.
+static cir::SyncScopeKind decodeAMDGPUSyncScope(const Expr *arg) {
+  const auto *sl =
+      llvm::dyn_cast<clang::StringLiteral>(arg->IgnoreParenCasts());
+  if (!sl)
+    return cir::SyncScopeKind::System;
+  return llvm::StringSwitch<cir::SyncScopeKind>(sl->getString())
+      .Case("singlethread", cir::SyncScopeKind::SingleThread)
+      .Case("wavefront", cir::SyncScopeKind::Wavefront)
+      .Case("workgroup", cir::SyncScopeKind::Workgroup)
+      .Case("agent", cir::SyncScopeKind::Device)
+      .Default(cir::SyncScopeKind::System);
+}
+
+/// Emit one of the AMDGPU raw hardware atomic builtins as a cir.atomic.fetch.
+static mlir::Value emitAMDGPUAtomicRMW(CIRGenFunction &cgf,
+                                       const CallExpr *expr,
+                                       cir::AtomicFetchKind binOp,
+                                       bool hasVolatileArg) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+
+  Address ptr = cgf.emitPointerWithAlignment(expr->getArg(0));
+  mlir::Value val = cgf.emitScalarExpr(expr->getArg(1));
+
+  bool isVolatile;
+  if (hasVolatileArg) {
+    assert(expr->getNumArgs() >= 5);
+    // ds_faddf/fminf/fmaxf spell the volatile flag out as a constant argument.
+    Expr::EvalResult volRes;
+    isVolatile = expr->getArg(4)->EvaluateAsInt(volRes, cgf.getContext()) &&
+                 volRes.Val.getInt().getBoolValue();
+  } else {
+    // Everything else infers it from the pointee type.
+    QualType argTy = expr->getArg(0)->IgnoreImpCasts()->getType();
+    isVolatile = argTy->castAs<clang::PointerType>()
+                     ->getPointeeType()
+                     .isVolatileQualified();
+  }
+
+  // Some of these builtins spell out the ordering and scope; the rest take the
+  // monotonic/agent default described above.
+  cir::MemOrder order = cir::MemOrder::Relaxed;
+  cir::SyncScopeKind scope = cir::SyncScopeKind::Device;
+  if (expr->getNumArgs() >= 4) {
+    order = decodeAtomicOrder(expr->getArg(2), cgf.getContext());
+    scope = decodeAMDGPUSyncScope(expr->getArg(3));
+  }
+
+  auto rmw = cir::AtomicFetchOp::create(builder, loc, ptr.emitRawPointer(), val,
+                                        binOp, order, scope, isVolatile,
+                                        /*fetch_first=*/true);
+  rmw->setAttr(cir::CIRDialect::getAMDGPURawAtomicAttrName(),
+               builder.getUnitAttr());
+  return rmw->getResult(0);
+}
+
 // Emit the `amdgcn.dispatch.ptr` intrinsic, address-space-casting the
 // result to match \p e's return type when needed.
 // If \p e is null, returns the raw AS-4 pointer.
 static mlir::Value emitAMDGPUDispatchPtr(CIRGenFunction &cgf,
+                                         mlir::Location loc,
                                          const CallExpr *e = nullptr) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Location loc =
-      e ? cgf.getLoc(e->getExprLoc()) : builder.getUnknownLoc();
   // The intrinsic always returns a pointer in the constant AS.
   mlir::Type retTy = cir::PointerType::get(
       cir::VoidType::get(builder.getContext()),
@@ -45,6 +124,30 @@ static mlir::Value emitAMDGPUDispatchPtr(CIRGenFunction &cgf,
   if (expectedPtrTy.getAddrSpace() == callPtrTy.getAddrSpace())
     return call;
   return builder.createAddrSpaceCast(loc, call, expectedPtrTy);
+}
+
+// Load a \p ty value at byte \p offset from \p base as an invariant load.
+static mlir::Value emitAMDGPUInvariantLoad(CIRGenFunction &cgf,
+                                           mlir::Location loc, mlir::Value base,
+                                           mlir::Value offset, mlir::Type ty,
+                                           CharUnits align) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Value addr = builder.createPtrStride(loc, base, offset);
+  cir::LoadOp load = builder.createAlignedLoad(loc, ty, addr, align);
+  load.setInvariant(true);
+  assert(!cir::MissingFeatures::opLoadRangeNoundefMetadata());
+  return load;
+}
+
+static mlir::Value emitAMDGPUGridSize(CIRGenFunction &cgf, mlir::Location loc,
+                                      unsigned index) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  const unsigned xOffset = 12;
+  mlir::Value dispatchPtr = emitAMDGPUDispatchPtr(cgf, loc);
+  // Indexing the HSA kernel_dispatch_packet struct.
+  return emitAMDGPUInvariantLoad(
+      cgf, loc, dispatchPtr, builder.getUInt64(xOffset + index * 4, loc),
+      builder.getUInt32Ty(), CharUnits::fromQuantity(4));
 }
 
 static mlir::Value emitBinaryExpMaybeConstrainedFPBuiltin(
@@ -89,7 +192,7 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
 
   mlir::Value negativeOne =
       builder.getConstant(loc, cir::IntAttr::get(int32Ty, -1));
-  mlir::Value expMinus1 = builder.createAdd(loc, exp, negativeOne);
+  mlir::Value expMinus1 = builder.createNSWAdd(loc, exp, negativeOne);
 
   mlir::Value siToFp = cir::CastOp::create(
       builder, loc, srcTy, cir::CastKind::int_to_float, expMinus1);
@@ -100,7 +203,7 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
   mlir::Value inf = builder.getConstant(loc, cir::FPAttr::get(srcTy, infVal));
 
   mlir::Value fabsNegInf =
-      builder.createCompare(loc, cir::CmpOpKind::ne, fabs, inf);
+      builder.createCompare(loc, cir::CmpOpKind::one, fabs, inf);
 
   mlir::Value sel = builder.createSelect(loc, fabsNegInf, siToFp, fabs);
 
@@ -223,15 +326,10 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     bool isUpdateDpp = builtinId == AMDGPU::BI__builtin_amdgcn_update_dpp;
     llvm::StringRef intrinsicName =
         isMovDpp8 ? "amdgcn.mov.dpp8" : "amdgcn.update.dpp";
-
-    // Fixed parameter types of the target LLVM intrinsics, following the
-    // "old"/"data" operands which share the overloaded integer type.
-    llvm::SmallVector<mlir::Type, 4> fixedTailTypes;
-    mlir::Type ui32 = builder.getUInt32Ty();
-    if (isMovDpp8)
-      fixedTailTypes = {ui32};
-    else
-      fixedTailTypes = {ui32, ui32, ui32, builder.getUIntNTy(1)};
+    cir::FuncType intrinsicTy =
+        getIntrinsicType(isMovDpp8 ? llvm::Intrinsic::amdgcn_mov_dpp8
+                                   : llvm::Intrinsic::amdgcn_update_dpp,
+                         {intTy});
 
     auto coerceTo = [&](mlir::Value from, mlir::Type to) -> mlir::Value {
       if (from.getType() == to)
@@ -252,7 +350,6 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     // Number of builtin-level leading args that need zero-extend promotion when
     // the data type is narrower than 32 bits.
     unsigned numPromotedArgs = isUpdateDpp ? 2u : 1u;
-    unsigned numIntTyFinalPos = isMovDpp8 ? 1u : 2u;
     for (unsigned i = 0; i != expr->getNumArgs(); ++i) {
       mlir::Value v =
           emitScalarOrConstFoldImmArg(iceArguments, i, expr->getArg(i));
@@ -262,11 +359,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
           v = builder.createBitcast(v, sameWidthUTy);
         v = builder.createIntCast(v, intTy);
       }
-      unsigned finalIdx = i + unsigned(isMovDpp);
-      mlir::Type finalTy = finalIdx < numIntTyFinalPos
-                               ? intTy
-                               : fixedTailTypes[finalIdx - numIntTyFinalPos];
-      args.push_back(coerceTo(v, finalTy));
+      args.push_back(coerceTo(v, intrinsicTy.getInput(i + unsigned(isMovDpp))));
     }
 
     mlir::Value result = builder.emitIntrinsicCallOp(loc, intrinsicName, intTy,
@@ -355,7 +448,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.cos").getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_dispatch_ptr:
-    return emitAMDGPUDispatchPtr(*this, expr);
+    return emitAMDGPUDispatchPtr(*this, getLoc(expr->getExprLoc()), expr);
   case AMDGPU::BI__builtin_amdgcn_logf:
   case AMDGPU::BI__builtin_amdgcn_log_bf16: {
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.log").getValue();
@@ -1004,14 +1097,13 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
+  // amdgcn grid size
   case AMDGPU::BI__builtin_amdgcn_grid_size_x:
+    return emitAMDGPUGridSize(*this, getLoc(expr->getExprLoc()), 0);
   case AMDGPU::BI__builtin_amdgcn_grid_size_y:
-  case AMDGPU::BI__builtin_amdgcn_grid_size_z: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+    return emitAMDGPUGridSize(*this, getLoc(expr->getExprLoc()), 1);
+  case AMDGPU::BI__builtin_amdgcn_grid_size_z:
+    return emitAMDGPUGridSize(*this, getLoc(expr->getExprLoc()), 2);
   case AMDGPU::BI__builtin_r600_recipsqrt_ieee:
   case AMDGPU::BI__builtin_r600_recipsqrt_ieeef: {
     cgm.errorNYI(expr->getSourceRange(),
@@ -1026,46 +1118,66 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_fence: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
+    CIRGenBuilderTy &b = getBuilder();
+    cir::MemOrder mo = decodeAtomicOrder(expr->getArg(0), getContext());
+    cir::SyncScopeKind syncScope = decodeAMDGPUSyncScope(expr->getArg(1));
+    cir::SyncScopeKindAttr syncScopeAttr =
+        cir::SyncScopeKindAttr::get(b.getContext(), syncScope);
+    cir::AtomicFenceOp::create(b, getLoc(expr->getExprLoc()), mo,
+                               syncScopeAttr);
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
+    return emitAMDGPUAtomicRMW(*this, expr, cir::AtomicFetchKind::UIncWrap,
+                               /*hasVolatileArg=*/false);
   case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec64:
+    return emitAMDGPUAtomicRMW(*this, expr, cir::AtomicFetchKind::UDecWrap,
+                               /*hasVolatileArg=*/false);
   case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f64:
   case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f32:
-  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
-  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
-  case AMDGPU::BI__builtin_amdgcn_ds_faddf:
-  case AMDGPU::BI__builtin_amdgcn_ds_fminf:
-  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
   case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16:
+    return emitAMDGPUAtomicRMW(*this, expr, cir::AtomicFetchKind::Add,
+                               /*hasVolatileArg=*/false);
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
   case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmin_f64:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64: {
+    return emitAMDGPUAtomicRMW(*this, expr, cir::AtomicFetchKind::Min,
+                               /*hasVolatileArg=*/false);
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64:
+    return emitAMDGPUAtomicRMW(*this, expr, cir::AtomicFetchKind::Max,
+                               /*hasVolatileArg=*/false);
+  // The ds_ float forms are the same operations with the volatile flag spelled
+  // out as an argument.
+  case AMDGPU::BI__builtin_amdgcn_ds_faddf:
+    return emitAMDGPUAtomicRMW(*this, expr, cir::AtomicFetchKind::Add,
+                               /*hasVolatileArg=*/true);
+  case AMDGPU::BI__builtin_amdgcn_ds_fminf:
+    return emitAMDGPUAtomicRMW(*this, expr, cir::AtomicFetchKind::Min,
+                               /*hasVolatileArg=*/true);
+  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
+    return emitAMDGPUAtomicRMW(*this, expr, cir::AtomicFetchKind::Max,
+                               /*hasVolatileArg=*/true);
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AMDGPU builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtn:
-  case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtnl: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtnl:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.s.sendmsg.rtn",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_permlane16_swap:
   case AMDGPU::BI__builtin_amdgcn_permlane32_swap: {
     cgm.errorNYI(expr->getSourceRange(),
@@ -1094,6 +1206,18 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_format_v4f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_format_v4f16:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.raw.ptr.buffer.store.format",
+               cir::VoidType::get(builder.getContext()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_format_v4f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_format_v4f16:
+    return emitBuiltinWithOneOverloadedType<4>(
+               expr, "amdgcn.raw.ptr.buffer.load.format",
+               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b8:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b16:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b32:
@@ -1105,34 +1229,26 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.raw.ptr.buffer.atomic.add")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f64:
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.raw.ptr.buffer.atomic.fadd")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f32:
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.raw.ptr.buffer.atomic.fmin")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32:
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.raw.ptr.buffer.atomic.fmax")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
                expr, "amdgcn.s.prefetch.data",

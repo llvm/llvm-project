@@ -9,7 +9,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
     %dscope = fir.dummy_scope : !fir.dscope
-    %0 = fir.declare %arg0 dummy_scope %dscope {uniq_name = "_QFoneargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+    %0 = fir.declare %arg0 dummy_scope %dscope uniq_name("_QFoneargEa") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %1 = fir.rebox %0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %2 = fir.array_coor %1 %c2 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %3 = fir.load %2 : !fir.ref<i32>
@@ -30,7 +30,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
 // CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFoneargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] uniq_name("_QFoneargEa") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_4:.*]] = fir.rebox %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_5:.*]] = fir.array_coor %[[VAL_4]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]] <{tbaa = [#[[ONE_ARG_A_TAG]]]}> : !fir.ref<i32>
@@ -50,9 +50,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
   func.func @_QPtwoarg(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) {
     %c1 = arith.constant 1 : index
     %dscope = fir.dummy_scope : !fir.dscope
-    %0 = fir.declare %arg0 dummy_scope %dscope {uniq_name = "_QFtwoargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+    %0 = fir.declare %arg0 dummy_scope %dscope uniq_name("_QFtwoargEa") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %1 = fir.rebox %0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
-    %2 = fir.declare %arg1 dummy_scope %dscope {uniq_name = "_QFtwoargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+    %2 = fir.declare %arg1 dummy_scope %dscope uniq_name("_QFtwoargEb") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %3 = fir.rebox %2 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %4 = fir.array_coor %3 %c1 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %5 = fir.load %4 : !fir.ref<i32>
@@ -75,9 +75,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK-SAME:                         %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtwoargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] uniq_name("_QFtwoargEa") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_4:.*]] = fir.rebox %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtwoargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] uniq_name("_QFtwoargEb") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] <{tbaa = [#[[TWO_ARG_B_TAG]]]}> : !fir.ref<i32>
@@ -98,9 +98,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
   func.func @_QPtargetarg(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a", fir.target}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) {
     %c1 = arith.constant 1 : index
     %dscope = fir.dummy_scope : !fir.dscope
-    %0 = fir.declare %arg0 dummy_scope %dscope {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtargetargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+    %0 = fir.declare %arg0 dummy_scope %dscope uniq_name("_QFtargetargEa") fortran_attrs<target> : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %1 = fir.rebox %0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
-    %2 = fir.declare %arg1 dummy_scope %dscope {uniq_name = "_QFtargetargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+    %2 = fir.declare %arg1 dummy_scope %dscope uniq_name("_QFtargetargEb") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %3 = fir.rebox %2 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %4 = fir.array_coor %3 %c1 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %5 = fir.load %4 : !fir.ref<i32>
@@ -123,9 +123,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK-SAME:                            %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<target>, uniq_name = "_QFtargetargEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] uniq_name("_QFtargetargEa") fortran_attrs<target> : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_4:.*]] = fir.rebox %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtargetargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] uniq_name("_QFtargetargEb") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] <{tbaa = [#[[TARGET_B_TAG]]]}> : !fir.ref<i32>
@@ -147,8 +147,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %dscope = fir.dummy_scope : !fir.dscope
-    %0 = fir.declare %arg0 dummy_scope %dscope {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointerargEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-    %1 = fir.declare %arg1 dummy_scope %dscope {uniq_name = "_QFpointerargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+    %0 = fir.declare %arg0 dummy_scope %dscope uniq_name("_QFpointerargEa") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+    %1 = fir.declare %arg1 dummy_scope %dscope uniq_name("_QFpointerargEb") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
     %2 = fir.rebox %1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %3 = fir.array_coor %2 %c1 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %4 = fir.load %3 : !fir.ref<i32>
@@ -175,8 +175,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<pointer>, uniq_name = "_QFpointerargEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFpointerargEb"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] uniq_name("_QFpointerargEa") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] uniq_name("_QFpointerargEb") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] <{tbaa = [#[[POINTER_B_TAG]]]}> : !fir.ref<i32>
@@ -211,10 +211,10 @@ func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {
   %c6_i32 = arith.constant 6 : i32
   %c-1_i32 = arith.constant -1 : i32
   %0 = fir.address_of(@_QFEi) : !fir.ref<i32>
-  %1 = fir.declare %0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %1 = fir.declare %0 uniq_name("_QFEi") : (!fir.ref<i32>) -> !fir.ref<i32>
   omp.parallel reduction(@add_reduction_i32 %1 -> %arg0 : !fir.ref<i32>) {
 // CHECK: omp.parallel reduction({{.*}}) {
-    %8 = fir.declare %arg0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %8 = fir.declare %arg0 uniq_name("_QFEi") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK-NEXT: %[[DECL:.*]] = fir.declare
     fir.store %c-1_i32 to %8 : !fir.ref<i32>
 // CHECK-NOT: fir.store %{{.*}} to %[[DECL]] <{tbaa = %{{.*}>}} : !fir.ref<i32>
@@ -237,7 +237,7 @@ fir.global internal @_QFEi : i32 {
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   func.func @renamed_(%arg0: !fir.ref<i32>) attributes {fir.internal_name = "_QPrenamed"} {
     %scope = fir.dummy_scope : !fir.dscope
-    %0 = fir.declare %arg0 dummy_scope %scope {uniq_name = "_QFrenamedEa"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+    %0 = fir.declare %arg0 dummy_scope %scope uniq_name("_QFrenamedEa") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
     %1 = fir.load %0 : !fir.ref<i32>
     fir.store %1 to %0 : !fir.ref<i32>
     return
@@ -260,13 +260,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %c1 = arith.constant 1 : i64
     %0 = llvm.alloca %c1 x i32 {uniq_name = "_QFnonfirallocEi"} : (i64) -> !llvm.ptr
     %1 = fir.convert %0 : (!llvm.ptr) -> !fir.ref<i32>
-    %2 = fir.declare %1 {uniq_name = "_QFnonfirallocEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %2 = fir.declare %1 uniq_name("_QFnonfirallocEi") : (!fir.ref<i32>) -> !fir.ref<i32>
     %3 = fir.load %2 : !fir.ref<i32>
     fir.store %3 to %2 : !fir.ref<i32>
     return
   }
 
-// CHECK: #[[ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFnonfirallocEi", members = {{{.*}}}>
+// CHECK: #[[ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFnonfirallocEi", members = {{.*}}}>
 // CHECK: #[[ALLOC_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ALLOC_DATA]], access_type = #[[ALLOC_DATA]], offset = 0>
 // CHECK-LABEL: func.func @_QPnonfiralloc(
 // CHECK: fir.load {{.*}} <{tbaa = [#[[ALLOC_TAG]]]}>
@@ -285,7 +285,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     return
   }
 
-// CHECK: #[[MEMREF_ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFmemrefallocEi", members = {{{.*}}}>
+// CHECK: #[[MEMREF_ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFmemrefallocEi", members = {{.*}}}>
 // CHECK: #[[MEMREF_ALLOC_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[MEMREF_ALLOC_DATA]], access_type = #[[MEMREF_ALLOC_DATA]], offset = 0>
 // CHECK-LABEL: func.func @_QPmemrefalloc(
 // CHECK: fir.load {{.*}} <{tbaa = [#[[MEMREF_ALLOC_TAG]]]}>
@@ -305,7 +305,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     return
   }
 
-// CHECK: #[[EMPTY_ALLOC_PARENT:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {{{.*}}}>
+// CHECK: #[[EMPTY_ALLOC_PARENT:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {{.*}}}>
 // CHECK: #[[EMPTY_ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data/", members = {<#[[EMPTY_ALLOC_PARENT]], 0>}>
 // CHECK: #[[EMPTY_ALLOC_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[EMPTY_ALLOC_DATA]], access_type = #[[EMPTY_ALLOC_DATA]], offset = 0>
 // CHECK-LABEL: func.func @_QPemptyname(
@@ -327,7 +327,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     return
   }
 
-// CHECK: #[[ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {{{.*}}}>
+// CHECK: #[[ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {{.*}}}>
 // CHECK: #[[ANON_ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {<#[[ANY_DATA]], 0>}>
 // CHECK-NOT: #llvm.tbaa_type_desc<id = "allocated data/
 // CHECK: #[[ANON_ALLOC_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ANON_ALLOC_DATA]], access_type = #[[ANON_ALLOC_DATA]], offset = 0>

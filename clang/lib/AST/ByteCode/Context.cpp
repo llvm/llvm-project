@@ -110,8 +110,10 @@ bool Context::evaluate(const EvalSettings &Settings, const Expr *E,
   size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
+  // The object of an initializer outlives the evaluation.
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/false,
-                             /*DestroyToplevelScope=*/true);
+                             /*DestroyToplevelScope=*/Settings.ConstexprKind !=
+                                 ConstantExprKind::Initializer);
   if (Res.isInvalid()) {
     C.cleanup();
     Stk.clearTo(StackSizeBefore);
@@ -591,6 +593,9 @@ OptPrimType Context::classify(QualType T) const {
 
   if (T->isFixedPointType())
     return PT_FixedPoint;
+
+  if (T->isMetaInfoType())
+    return PT_Reflect;
 
   // Vector and complex types get here.
   return std::nullopt;
