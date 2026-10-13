@@ -22,9 +22,10 @@
 ; TRIM-STATS-NOT: waived because an earlier committed tree already paid for the
 ; TRIM-STATS-NOT: same load
 ;
-; STATS: {{[0-9]+}} SLP - Number of store-to-load forwarding hazard charges
-; STATS-SAME: waived because an earlier committed tree already paid for the
-; STATS-SAME: same load
+; The later store chains do not rescan the load, so neither penalty produces a
+; waiver.
+; STATS-NOT: waived because an earlier committed tree already paid for the
+; STATS-NOT: same load
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -50,12 +51,12 @@ target triple = "x86_64-unknown-linux-gnu"
 ; (distance 20 bytes from chain A's base, 36 bytes from chain B's base; both
 ; misaligned to the 16-byte window).
 ;
-; A hardware load stalls once per load event, not once per conflicting store
-; (verified: Zen 5 rdtsc ubench, DIAGNOSIS.md 2026-09-07), so once the Out
-; tree has paid the penalty for this load, chains A and B must NOT pay it
-; again -- charging it per store would price their otherwise-profitable
-; widening out for a hazard that, on real hardware, does not recur. All chains
-; vectorize.
+; A hardware load stalls once per load event, not once per conflicting store.
+; The load is widened in the Out tree, which is costed first and pays the
+; penalty. Chains A and B are separate store trees whose values are constants,
+; so the conflicting load is not an entry of those trees. The store-side check
+; only looks at in-tree widened loads, so A and B do not rediscover this load
+; and cannot charge it a second time. All chains vectorize.
 ;
 define void @stlf_multichain_dedup(ptr noalias %A, ptr noalias %Out, i64 %n) {
 ; CHECK-LABEL: define void @stlf_multichain_dedup(

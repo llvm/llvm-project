@@ -498,8 +498,41 @@ public:
 
   /// \returns true if widening \p BaseLoad to \p VF elements creates a
   /// forwarding hazard with a same-base store not handled by the current
-  /// vector store entry.
+  /// vector store entry. Stores already emitted by an earlier tree are tested
+  /// through the windows recorded at commit; stores still scalar in IR are
+  /// scanned in the load's loop.
   bool findStoreLoadForwardingHazardForLoad(LoadInst *BaseLoad, unsigned VF);
+
+  /// One widened store emitted by an earlier tree. The scalar stores are gone
+  /// after commit, so a later load tree cannot recover the window from IR
+  /// (a contiguous store is one vector store; a strided store is an intrinsic).
+  /// \p Pos is that emitted instruction and is used for same-iteration order.
+  struct CommittedSTLFStoreWindow {
+    Instruction *Pos = nullptr;
+    Value *Ptr = nullptr;
+    Type *ElemTy = nullptr;
+    uint64_t ElementSize = 0;
+    uint64_t VectorStoreBytes = 0;
+    const Loop *Lp = nullptr;
+  };
+
+  /// Record the window of a store entry as it is emitted, so a later load tree
+  /// can price a conflict against the widened store rather than against the
+  /// scalar stores that no longer exist.
+  void recordCommittedSTLFStore(const TreeEntry *E, Instruction *StorePos,
+                                StoreInst *BaseSI);
+
+  /// \returns true when \p LoadI conflicts with the widened store at \p
+  /// StorePtr
+  /// (\p StorePos orders a same-iteration overlap). \p LoadSizeOverride, when
+  /// set, is the load's effective width in bytes.
+  bool loadConflictsWithSTLFStore(LoadInst *LoadI, const Loop *StoreL,
+                                  Value *StorePtr, Type *StoreElemTy,
+                                  uint64_t ElementSize,
+                                  uint64_t VectorStoreBytes,
+                                  std::optional<int64_t> StoreStride,
+                                  Instruction *StorePos,
+                                  std::optional<uint64_t> LoadSizeOverride);
 
   /// \returns true if \p StoreE's store-side STLF check (in getEntryCost)
   /// will actually run and charge for a hazard with it: a
@@ -760,8 +793,9 @@ public:
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
     TreeEntryToStridedPtrInfoMap.clear();
-    // Not STLFChargedLoads: that dedup set is scoped to the whole function
-    // (the lifetime of this BoUpSLP object), not to one buildTree attempt.
+    // Not STLFChargedLoads or CommittedSTLFStores: both are scoped to the
+    // whole function (the lifetime of this BoUpSLP object), not to one
+    // buildTree attempt.
     PendingSTLFChargedLoads.clear();
     CurrentLoopNest.clear();
     MergedLoopBTCs.clear();
@@ -3709,6 +3743,11 @@ private:
   /// buildTree attempt in deleteTree().
   SmallVector<std::pair<const TreeEntry *, const LoadInst *>>
       PendingSTLFChargedLoads;
+
+  /// Widened stores emitted by trees already committed in this function.
+  /// Cleared only when this BoUpSLP is destroyed: a later tree's load must
+  /// still see a store that vectorizeTree has replaced in IR.
+  SmallVector<CommittedSTLFStoreWindow, 4> CommittedSTLFStores;
 
   /// The loop nest, used to check if only a single loop nest is vectorized, not
   /// multiple, to avoid side-effects from the loop-aware cost model.
@@ -25367,6 +25406,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         ST = Inst;
       }
 
+      // The scalar stores are about to be erased. Keep this widened window so
+      // a later tree's load can be checked against it.
+      if (EnableSLPStoreLoadForwardCheck &&
+          (E->State == TreeEntry::Vectorize ||
+           E->State == TreeEntry::StridedVectorize))
+        recordCommittedSTLFStore(E, ST, SI);
+
       Value *V = PropagateIRFlags(ST);
 
       E->VectorizedValue = V;
@@ -29725,6 +29771,47 @@ getConstantLoopStrideInBytes(Value *Ptr, ScalarEvolution &SE, const Loop *L) {
   return StepVal.getSExtValue();
 }
 
+void BoUpSLP::recordCommittedSTLFStore(const TreeEntry *E,
+                                       Instruction *StorePos,
+                                       StoreInst *BaseSI) {
+  if (!E || !StorePos || !BaseSI)
+    return;
+  const Loop *StoreL = LI->getLoopFor(BaseSI->getParent());
+  if (!StoreL)
+    return;
+  Type *ElemTy = BaseSI->getValueOperand()->getType();
+  if (isa<ScalableVectorType>(ElemTy))
+    return;
+  TypeSize StoreSize = DL->getTypeStoreSize(ElemTy);
+  if (StoreSize.isScalable() || StoreSize.getFixedValue() == 0)
+    return;
+  uint64_t ElementSize = StoreSize.getFixedValue();
+  unsigned VF = E->Scalars.size();
+  std::optional<uint64_t> StoreSizeOverride;
+  if (E->State == TreeEntry::StridedVectorize) {
+    const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+    auto *StrideCI = dyn_cast_or_null<ConstantInt>(SPtrInfo.StrideVal);
+    if (StrideCI && SPtrInfo.Ty) {
+      int64_t StrideUnits = StrideCI->getSExtValue();
+      int64_t AbsStrideUnits =
+          std::max(StrideUnits, std::numeric_limits<int64_t>::min() + 1);
+      uint64_t ByteStride = static_cast<uint64_t>(std::abs(AbsStrideUnits)) *
+                            DL->getTypeAllocSize(ElemTy).getFixedValue();
+      unsigned StridedVF = SPtrInfo.Ty->getNumElements();
+      if (StridedVF > 0) {
+        StoreSizeOverride = (StridedVF - 1) * ByteStride + ElementSize;
+        VF = StridedVF;
+      }
+    }
+    if (!StoreSizeOverride)
+      return;
+  }
+  uint64_t VectorStoreBytes =
+      StoreSizeOverride ? *StoreSizeOverride : VF * ElementSize;
+  CommittedSTLFStores.push_back({StorePos, BaseSI->getPointerOperand(), ElemTy,
+                                 ElementSize, VectorStoreBytes, StoreL});
+}
+
 bool BoUpSLP::findStoreLoadForwardingConflict(
     StoreInst *BaseStore, unsigned VF, LoadInst *OnlyLoad,
     std::optional<uint64_t> LoadSizeOverride,
@@ -29763,13 +29850,14 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
   std::optional<int64_t> StoreStride =
       getConstantLoopStrideInBytes(BaseStore->getPointerOperand(), *SE, StoreL);
 
-  // A store-to-load forwarding hazard can involve any load in the loop that
-  // reads the widened store's base, not only loads that became SLP tree nodes:
-  // a conflicting load may feed a scalar store, sit below a gather/splat leaf,
-  // or be vectorized in a different tree. Enumerate every simple load in the
-  // store's loop that shares the store base. The widened width below is only
-  // visible for loads in the current tree; loads vectorized by other trees are
-  // modeled at scalar width.
+  // Same-width scalar loads never satisfy isStoreLoadForwardingConflict: the
+  // distance and the remainder are multiples of the element size, so a load of
+  // that size is contained in one widened store. Candidates are this tree's
+  // Vectorize and CompressVectorize loads, plus gather/scatter loads wider
+  // than the store element. Walking every instruction in the loop cannot
+  // change that result. A load widened by an earlier tree is no longer in this
+  // tree; that charge belongs on the load side, against the store window
+  // recorded when the store was emitted.
   Value *StoreBase = getUnderlyingObject(BaseStore->getPointerOperand());
   const auto CandidateLoads = [&] {
     SmallVector<LoadInst *> Loads;
@@ -29779,12 +29867,37 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
         Loads.push_back(OnlyLoad);
       return Loads;
     }
-    for (BasicBlock *BB : StoreL->blocks())
-      for (Instruction &I : *BB)
-        if (auto *LoadI = dyn_cast<LoadInst>(&I))
-          if (LoadI->isSimple() &&
-              getUnderlyingObject(LoadI->getPointerOperand()) == StoreBase)
-            Loads.push_back(LoadI);
+    SmallPtrSet<LoadInst *, 8> Seen;
+    for (const std::unique_ptr<TreeEntry> &TEPtr : VectorizableTree) {
+      const TreeEntry *TE = TEPtr.get();
+      if (DeletedNodes.contains(TE) || TransformedToGatherNodes.contains(TE))
+        continue;
+      // Widened entries (contiguous or compressed). A same-width scalar load
+      // cannot straddle, so gather/scatter entries contribute only loads
+      // wider than the store element (an i64 load against an i8 store).
+      const bool IsLoad =
+          TE->hasState() && TE->getOpcode() == Instruction::Load;
+      const bool Widened =
+          IsLoad && (TE->State == TreeEntry::Vectorize ||
+                     TE->State == TreeEntry::CompressVectorize);
+      const bool ScatterOrGather =
+          TE->isGather() ||
+          (IsLoad && TE->State == TreeEntry::ScatterVectorize);
+      if (!Widened && !ScatterOrGather)
+        continue;
+      for (Value *V : TE->Scalars) {
+        auto *LoadI = dyn_cast<LoadInst>(V);
+        if (!LoadI || !LoadI->isSimple() || !Seen.insert(LoadI).second)
+          continue;
+        if (!Widened) {
+          TypeSize LoadSize = DL->getTypeStoreSize(LoadI->getType());
+          if (!LoadSize.isFixed() || LoadSize.getFixedValue() <= ElementSize)
+            continue;
+        }
+        if (getUnderlyingObject(LoadI->getPointerOperand()) == StoreBase)
+          Loads.push_back(LoadI);
+      }
+    }
     return Loads;
   }();
 
@@ -29794,163 +29907,174 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
   // For each candidate load, the widened chain becomes one wide store at the
   // base; check whether the load straddles two such wide stores.
   for (LoadInst *LoadI : CandidateLoads) {
-    // Only loads in the store's loop share its loop-carried dependence.
-    if (LI->getLoopFor(LoadI->getParent()) != StoreL)
+    if (!loadConflictsWithSTLFStore(
+            LoadI, StoreL, BaseStore->getPointerOperand(), ValueTy, ElementSize,
+            VectorStoreBytes, StoreStride, BaseStore, LoadSizeOverride))
       continue;
-    const TreeEntry *WidenedLoadEntry = nullptr;
-    for (const TreeEntry *LTE : getTreeEntries(LoadI)) {
-      if (LTE->isGather() || DeletedNodes.contains(LTE) ||
-          TransformedToGatherNodes.contains(LTE))
-        continue;
-      if (LTE->hasState() &&
-          (LTE->State == TreeEntry::Vectorize ||
-           LTE->State == TreeEntry::CompressVectorize) &&
-          LTE->getOpcode() == Instruction::Load) {
-        WidenedLoadEntry = LTE;
-        break;
-      }
-    }
-    // Interior lanes are not independent wide loads; the base lane's
-    // evaluation covers the whole widened load.
-    bool IsWidenedBaseLane = WidenedLoadEntry != nullptr;
-    if (WidenedLoadEntry) {
-      for (Value *V : WidenedLoadEntry->Scalars) {
-        auto *OtherLd = dyn_cast<LoadInst>(V);
-        if (!OtherLd || OtherLd == LoadI)
-          continue;
-        std::optional<int64_t> LaneDiff = getPointersDiff(
-            LoadI->getType(), LoadI->getPointerOperand(), OtherLd->getType(),
-            OtherLd->getPointerOperand(), *DL, *SE, /*StrictCheck=*/false,
-            /*CheckType=*/false);
-        // Another lane sits at a lower address, so LoadI is not the base.
-        if (LaneDiff && *LaneDiff < 0) {
-          IsWidenedBaseLane = false;
-          break;
-        }
-      }
-      if (!IsWidenedBaseLane)
-        continue;
-    }
-    std::optional<int64_t> Diff =
-        getPointersDiff(ValueTy, BaseStore->getPointerOperand(),
-                        LoadI->getType(), LoadI->getPointerOperand(), *DL, *SE,
-                        /*StrictCheck=*/true, /*CheckType=*/false);
-    if (!Diff || *Diff >= 0)
-      continue;
-    // Negating the minimum signed value is undefined.
-    if (*Diff == std::numeric_limits<int64_t>::min())
-      continue;
-
-    uint64_t Distance = static_cast<uint64_t>(-*Diff) * ElementSize;
-    LLVM_DEBUG(dbgs() << "SLP: STLF: load=" << *LoadI << " distance="
-                      << Distance << " bytes from chain base\n");
-
-    // A widened (regularly vectorized) load accesses the whole vector at once,
-    // so its effective width is the number of emitted lanes * element size, not
-    // one element. Such a wide load can straddle two wide stores even when
-    // perfectly aligned, which the misalignment-only test would miss. Use the
-    // count of distinct scalars actually loaded from memory (not the reuse-
-    // inflated vector factor) for the emitted load width; for an interleaved
-    // entry Scalars already lists every lane across all streams, so it is not
-    // rescaled by the interleave factor again here.
-    TypeSize LoadTypeSize = DL->getTypeStoreSize(LoadI->getType());
-    uint64_t LoadElementSize =
-        LoadTypeSize.isScalable() ? 0 : LoadTypeSize.getFixedValue();
-    if (LoadSizeOverride) {
-      LoadElementSize = *LoadSizeOverride;
-    } else if (WidenedLoadEntry &&
-               WidenedLoadEntry->State == TreeEntry::CompressVectorize) {
-      // A compressed (masked-load + shuffle) entry's real footprint is the
-      // full underlying vector load span, not just the (possibly sparser)
-      // set of scalars actually kept by the compress mask.
-      auto CompressIt = CompressEntryToData.find(WidenedLoadEntry);
-      if (CompressIt != CompressEntryToData.end()) {
-        auto *CompressVecTy =
-            cast<FixedVectorType>(std::get<1>(CompressIt->second));
-        LoadElementSize *= CompressVecTy->getNumElements();
-      } else {
-        LoadElementSize *= WidenedLoadEntry->Scalars.size();
-      }
-    } else if (WidenedLoadEntry) {
-      LoadElementSize *= WidenedLoadEntry->Scalars.size();
-    }
-    // A conflict is only a real hazard if a future iteration's load actually
-    // re-reads the bytes this store wrote. With a common positive loop-carried
-    // stride S, equal for the load and the store, the store's bytes are re-read
-    // iff there is an integer k >= 1 with
-    //   Distance - LoadElementSize < k * S < Distance + VectorStoreBytes.
-    // If no such k exists the accesses are strided-independent, so there is no
-    // forwarding hazard. When the stride is unknown, non-positive, or differs
-    // between load and store, fall back to the conservative check below.
-    std::optional<int64_t> LoadStride =
-        getConstantLoopStrideInBytes(LoadI->getPointerOperand(), *SE, StoreL);
-    // The strided-independence test below only rules out re-reads by *future*
-    // iterations (k >= 1); it says nothing about the current iteration (k == 0,
-    // i.e. Distance < LoadElementSize), where a load wide enough to reach
-    // forward into the store's own bytes already overlaps it and must go
-    // through the conflict predicate. After skipping interior lanes above,
-    // LoadI is the widened load's base (or a scalar load).
-    // A k == 0 overlap is a store-to-load *forwarding* hazard only when the
-    // store executes before the load in program order, so the load reads bytes
-    // the store just wrote (RAW). If the load precedes the store (a WAR
-    // overlap, e.g. a read-then-write sweep), nothing is forwarded. Dominance
-    // lets a store in an earlier block count; when the store does not
-    // dominate the load, the order is not established and it is not treated
-    // as a current-iteration hazard.
-    bool OverlapsCurrentStore = (!WidenedLoadEntry || IsWidenedBaseLane) &&
-                                Distance < LoadElementSize &&
-                                DT->dominates(BaseStore, LoadI);
-    // Both pointers are loop-invariant, so their byte distance never changes
-    // across iterations: if they do not overlap now, they never will.
-    if (!OverlapsCurrentStore && StoreStride && LoadStride &&
-        *StoreStride == 0 && *LoadStride == 0 && Distance >= LoadElementSize) {
-      LLVM_DEBUG(dbgs() << "SLP: STLF: both pointers loop-invariant, "
-                        << "distance never changes -> no conflict\n");
-      continue;
-    }
-    if (!OverlapsCurrentStore && StoreStride && LoadStride &&
-        *StoreStride == *LoadStride && *StoreStride > 0) {
-      int64_t Stride = *StoreStride;
-      int64_t Lo = static_cast<int64_t>(Distance) -
-                   static_cast<int64_t>(LoadElementSize);
-      int64_t Hi = static_cast<int64_t>(Distance) +
-                   static_cast<int64_t>(VectorStoreBytes);
-      int64_t K = Lo < Stride ? 1 : (Lo / Stride) + 1;
-      if (Stride * K >= Hi) {
-        LLVM_DEBUG(dbgs() << "SLP: STLF: strided-independent (stride " << Stride
-                          << "), no future re-read -> no conflict\n");
-        continue;
-      }
-    }
-    // With a negative common stride a later iteration's load sits |S| bytes
-    // further below the store base per iteration, so it reaches the store's
-    // bytes only while Distance + k * |S| < LoadElementSize.
-    if (!OverlapsCurrentStore && StoreStride && *StoreStride < 0 &&
-        Distance + (0 - static_cast<uint64_t>(*StoreStride)) >=
-            LoadElementSize) {
-      LLVM_DEBUG(dbgs() << "SLP: STLF: negative common stride (" << *StoreStride
-                        << "), distance invariant -> no conflict\n");
-      continue;
-    }
-    // Conflict if the load overlaps two wide stores within the recency window,
-    // either because it is misaligned or because the load itself is wider than
-    // the wide store and overruns its window.
-    if (MemoryDepChecker::isStoreLoadForwardingConflict(
-            Distance, VectorStoreBytes, ElementSize, LoadElementSize)) {
-      LLVM_DEBUG(dbgs() << "SLP: Store-load forwarding conflict: "
-                        << (isVectorized(LoadI) ? "widened" : "scalar")
-                        << " load, distance " << Distance
-                        << " bytes, vector store width " << VectorStoreBytes
-                        << " bytes, load width " << LoadElementSize
-                        << " bytes, misalignment "
-                        << (Distance % VectorStoreBytes) << "\n");
-      if (!ConflictingLoads)
-        return true;
-      ConflictingLoads->push_back(LoadI);
-    }
+    if (!ConflictingLoads)
+      return true;
+    ConflictingLoads->push_back(LoadI);
   }
 
   return ConflictingLoads && !ConflictingLoads->empty();
+}
+
+bool BoUpSLP::loadConflictsWithSTLFStore(
+    LoadInst *LoadI, const Loop *StoreL, Value *StorePtr, Type *StoreElemTy,
+    uint64_t ElementSize, uint64_t VectorStoreBytes,
+    std::optional<int64_t> StoreStride, Instruction *StorePos,
+    std::optional<uint64_t> LoadSizeOverride) {
+  // Only loads in the store's loop share its loop-carried dependence.
+  if (LI->getLoopFor(LoadI->getParent()) != StoreL)
+    return false;
+  const TreeEntry *WidenedLoadEntry = nullptr;
+  for (const TreeEntry *LTE : getTreeEntries(LoadI)) {
+    if (LTE->isGather() || DeletedNodes.contains(LTE) ||
+        TransformedToGatherNodes.contains(LTE))
+      continue;
+    if (LTE->hasState() &&
+        (LTE->State == TreeEntry::Vectorize ||
+         LTE->State == TreeEntry::CompressVectorize) &&
+        LTE->getOpcode() == Instruction::Load) {
+      WidenedLoadEntry = LTE;
+      break;
+    }
+  }
+  // Interior lanes are not independent wide loads; the base lane's
+  // evaluation covers the whole widened load.
+  bool IsWidenedBaseLane = WidenedLoadEntry != nullptr;
+  if (WidenedLoadEntry) {
+    for (Value *V : WidenedLoadEntry->Scalars) {
+      auto *OtherLd = dyn_cast<LoadInst>(V);
+      if (!OtherLd || OtherLd == LoadI)
+        continue;
+      std::optional<int64_t> LaneDiff = getPointersDiff(
+          LoadI->getType(), LoadI->getPointerOperand(), OtherLd->getType(),
+          OtherLd->getPointerOperand(), *DL, *SE, /*StrictCheck=*/false,
+          /*CheckType=*/false);
+      // Another lane sits at a lower address, so LoadI is not the base.
+      if (LaneDiff && *LaneDiff < 0) {
+        IsWidenedBaseLane = false;
+        break;
+      }
+    }
+    if (!IsWidenedBaseLane)
+      return false;
+  }
+  std::optional<int64_t> Diff =
+      getPointersDiff(StoreElemTy, StorePtr, LoadI->getType(),
+                      LoadI->getPointerOperand(), *DL, *SE,
+                      /*StrictCheck=*/true, /*CheckType=*/false);
+  if (!Diff || *Diff >= 0)
+    return false;
+  // Negating the minimum signed value is undefined.
+  if (*Diff == std::numeric_limits<int64_t>::min())
+    return false;
+
+  uint64_t Distance = static_cast<uint64_t>(-*Diff) * ElementSize;
+  LLVM_DEBUG(dbgs() << "SLP: STLF: load=" << *LoadI << " distance=" << Distance
+                    << " bytes from chain base\n");
+
+  // A widened (regularly vectorized) load accesses the whole vector at once,
+  // so its effective width is the number of emitted lanes * element size, not
+  // one element. Such a wide load can straddle two wide stores even when
+  // perfectly aligned, which the misalignment-only test would miss. Use the
+  // count of distinct scalars actually loaded from memory (not the reuse-
+  // inflated vector factor) for the emitted load width; for an interleaved
+  // entry Scalars already lists every lane across all streams, so it is not
+  // rescaled by the interleave factor again here.
+  TypeSize LoadTypeSize = DL->getTypeStoreSize(LoadI->getType());
+  uint64_t LoadElementSize =
+      LoadTypeSize.isScalable() ? 0 : LoadTypeSize.getFixedValue();
+  if (LoadSizeOverride) {
+    LoadElementSize = *LoadSizeOverride;
+  } else if (WidenedLoadEntry &&
+             WidenedLoadEntry->State == TreeEntry::CompressVectorize) {
+    // A compressed (masked-load + shuffle) entry's real footprint is the
+    // full underlying vector load span, not just the (possibly sparser)
+    // set of scalars actually kept by the compress mask.
+    auto CompressIt = CompressEntryToData.find(WidenedLoadEntry);
+    if (CompressIt != CompressEntryToData.end()) {
+      auto *CompressVecTy =
+          cast<FixedVectorType>(std::get<1>(CompressIt->second));
+      LoadElementSize *= CompressVecTy->getNumElements();
+    } else {
+      LoadElementSize *= WidenedLoadEntry->Scalars.size();
+    }
+  } else if (WidenedLoadEntry) {
+    LoadElementSize *= WidenedLoadEntry->Scalars.size();
+  }
+  // A conflict is only a real hazard if a future iteration's load actually
+  // re-reads the bytes this store wrote. With a common positive loop-carried
+  // stride S, equal for the load and the store, the store's bytes are re-read
+  // iff there is an integer k >= 1 with
+  //   Distance - LoadElementSize < k * S < Distance + VectorStoreBytes.
+  // If no such k exists the accesses are strided-independent, so there is no
+  // forwarding hazard. When the stride is unknown, non-positive, or differs
+  // between load and store, fall back to the conservative check below.
+  std::optional<int64_t> LoadStride =
+      getConstantLoopStrideInBytes(LoadI->getPointerOperand(), *SE, StoreL);
+  // The strided-independence test below only rules out re-reads by *future*
+  // iterations (k >= 1); it says nothing about the current iteration (k == 0,
+  // i.e. Distance < LoadElementSize), where a load wide enough to reach
+  // forward into the store's own bytes already overlaps it and must go
+  // through the conflict predicate. After skipping interior lanes above,
+  // LoadI is the widened load's base (or a scalar load).
+  // A k == 0 overlap is a store-to-load *forwarding* hazard only when the
+  // store executes before the load in program order, so the load reads bytes
+  // the store just wrote (RAW). If the load precedes the store (a WAR
+  // overlap, e.g. a read-then-write sweep), nothing is forwarded. Dominance
+  // lets a store in an earlier block count; when the store does not
+  // dominate the load, the order is not established and it is not treated
+  // as a current-iteration hazard.
+  bool OverlapsCurrentStore = (!WidenedLoadEntry || IsWidenedBaseLane) &&
+                              Distance < LoadElementSize &&
+                              DT->dominates(StorePos, LoadI);
+  // Both pointers are loop-invariant, so their byte distance never changes
+  // across iterations: if they do not overlap now, they never will.
+  if (!OverlapsCurrentStore && StoreStride && LoadStride && *StoreStride == 0 &&
+      *LoadStride == 0 && Distance >= LoadElementSize) {
+    LLVM_DEBUG(dbgs() << "SLP: STLF: both pointers loop-invariant, "
+                      << "distance never changes -> no conflict\n");
+    return false;
+  }
+  if (!OverlapsCurrentStore && StoreStride && LoadStride &&
+      *StoreStride == *LoadStride && *StoreStride > 0) {
+    int64_t Stride = *StoreStride;
+    int64_t Lo =
+        static_cast<int64_t>(Distance) - static_cast<int64_t>(LoadElementSize);
+    int64_t Hi =
+        static_cast<int64_t>(Distance) + static_cast<int64_t>(VectorStoreBytes);
+    int64_t K = Lo < Stride ? 1 : (Lo / Stride) + 1;
+    if (Stride * K >= Hi) {
+      LLVM_DEBUG(dbgs() << "SLP: STLF: strided-independent (stride " << Stride
+                        << "), no future re-read -> no conflict\n");
+      return false;
+    }
+  }
+  // With a negative common stride a later iteration's load sits |S| bytes
+  // further below the store base per iteration, so it reaches the store's
+  // bytes only while Distance + k * |S| < LoadElementSize.
+  if (!OverlapsCurrentStore && StoreStride && *StoreStride < 0 &&
+      Distance + (0 - static_cast<uint64_t>(*StoreStride)) >= LoadElementSize) {
+    LLVM_DEBUG(dbgs() << "SLP: STLF: negative common stride (" << *StoreStride
+                      << "), distance invariant -> no conflict\n");
+    return false;
+  }
+  // Conflict if the load overlaps two wide stores within the recency window,
+  // either because it is misaligned or because the load itself is wider than
+  // the wide store and overruns its window.
+  if (!MemoryDepChecker::isStoreLoadForwardingConflict(
+          Distance, VectorStoreBytes, ElementSize, LoadElementSize))
+    return false;
+  LLVM_DEBUG(dbgs() << "SLP: Store-load forwarding conflict: "
+                    << (isVectorized(LoadI) ? "widened" : "scalar")
+                    << " load, distance " << Distance
+                    << " bytes, vector store width " << VectorStoreBytes
+                    << " bytes, load width " << LoadElementSize
+                    << " bytes, misalignment " << (Distance % VectorStoreBytes)
+                    << "\n");
+  return true;
 }
 
 bool BoUpSLP::isStoreSideSTLFHandled(const TreeEntry *StoreE) const {
@@ -29970,6 +30094,18 @@ bool BoUpSLP::findStoreLoadForwardingHazardForLoad(LoadInst *BaseLoad,
     return false;
 
   Value *LoadBase = getUnderlyingObject(BaseLoad->getPointerOperand());
+  // Stores committed by an earlier tree. The scalar stores are gone, and a
+  // strided store is an intrinsic, so the loop scan below cannot see them.
+  for (const CommittedSTLFStoreWindow &W : CommittedSTLFStores) {
+    if (W.Lp != LoadL || getUnderlyingObject(W.Ptr) != LoadBase)
+      continue;
+    std::optional<int64_t> StoreStride =
+        getConstantLoopStrideInBytes(W.Ptr, *SE, W.Lp);
+    if (loadConflictsWithSTLFStore(BaseLoad, W.Lp, W.Ptr, W.ElemTy,
+                                   W.ElementSize, W.VectorStoreBytes,
+                                   StoreStride, W.Pos, VectorLoadBytes))
+      return true;
+  }
   for (BasicBlock *BB : LoadL->blocks()) {
     for (Instruction &I : *BB) {
       auto *StoreI = dyn_cast<StoreInst>(&I);
