@@ -12,14 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-internal/tools/OptionParser.h"
-#include "orc-rt/bedrock/ConnectionSpec.h"
-#include "orc-rt/bedrock/ConnectorRegistry.h"
 #include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
-#include "orc-rt/bedrock/SocketConnector.h"
 #include "orc-rt/bedrock/ThreadPoolRunner.h"
 #include "orc-rt/bedrock/sps/AllSPSCI.h"
+#include "orc-rt/connect-socket/SocketConnector.h"
+#include "orc-rt/connect/ConnectionSpec.h"
+#include "orc-rt/connect/ConnectorRegistry.h"
 
 #include "orc-rt-c/support/Logging.h"
 
