@@ -13574,7 +13574,7 @@ bool BoUpSLP::collectGatherUserOps(
       IntrinsicID = II->getIntrinsicID();
     UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID,
                          TE->UserTreeIndex.EdgeIdx);
-   }
+  }
   return !UserOps.empty();
 }
 
