@@ -14246,6 +14246,7 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
 //
 // partial_reduce_fmla(acc, fmul(a, b), splat(1))
 // -> fma(a, b, acc)
+//   (when type(a) == type(b) == type(acc))
 SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   SDLoc DL(N);
   auto *Context = DAG.getContext();
