@@ -178,48 +178,31 @@ void ProfileGeneratorBase::write(std::unique_ptr<SampleProfileWriter> Writer,
   if (std::error_code EC = Writer->write(ProfileMap))
     exitWithError(std::move(EC));
 
-  // Write the unified instrumented profile (containing both code and data)
-  // for LLD.
-  if (!DataAccessProfileData ||
-      memprof::MaximumSupportedVersion < memprof::Version4)
-    return;
+  // Write the data access profile.
+  if (DataAccessProfileData && !DataAccessProfileData->empty()) {
+    StringRef Ext = sys::path::extension(OutputFilename);
+    SmallString<128> DataOutputFilename = StringRef(OutputFilename);
+    sys::path::replace_extension(DataOutputFilename, "");
+    DataOutputFilename += "-data";
+    DataOutputFilename += Ext;
 
-  StringRef Ext = sys::path::extension(OutputFilename);
-  SmallString<128> DataOutputFilename = StringRef(OutputFilename);
-  sys::path::replace_extension(DataOutputFilename, "");
-  DataOutputFilename += "-data";
-  DataOutputFilename += Ext;
+    std::error_code EC;
+    raw_fd_ostream OS(DataOutputFilename, EC, sys::fs::OF_None);
+    if (EC)
+      exitWithError("Could not open data profile output file: " + EC.message());
 
-  std::error_code EC;
-  raw_fd_ostream OS(DataOutputFilename, EC, sys::fs::OF_None);
-  if (EC)
-    exitWithError("Could not open data profile output file: " + EC.message());
+    // The data access profiles are supported in MemProf Version 4 and above.
+    // Use the maximum supported version and enable the memory profile kind.
+    InstrProfWriter DataWriter(
+        /*Sparse=*/false, /*TemporalProfTraceReservoirSize=*/0,
+        /*MaxTemporalProfTraceLength=*/0, /*WritePrevVersion=*/false,
+        static_cast<memprof::IndexedVersion>(memprof::MaximumSupportedVersion));
+    cantFail(DataWriter.mergeProfileKind(InstrProfKind::MemProf));
+    DataWriter.addDataAccessProfData(std::move(DataAccessProfileData));
 
-  // The data access profiles are supported in MemProf Version 4 and above.
-  // Use the maximum supported version and enable the memory profile kind.
-  InstrProfWriter DataWriter(
-      /*Sparse=*/false, /*TemporalProfTraceReservoirSize=*/0,
-      /*MaxTemporalProfTraceLength=*/0, /*WritePrevVersion=*/false,
-      static_cast<memprof::IndexedVersion>(memprof::MaximumSupportedVersion));
-  cantFail(DataWriter.mergeProfileKind(InstrProfKind::MemProf));
-
-  // Add function execution counts from the SampleProfileMap.
-  for (const auto &Entry : ProfileMap) {
-    const SampleContext &Context = Entry.second.getContext();
-    std::string FuncName = Context.toString();
-    uint64_t FuncHash = IndexedInstrProf::ComputeHash(FuncName);
-    uint64_t TotalSamples = Entry.second.getTotalSamples();
-
-    NamedInstrProfRecord Record(FuncName, FuncHash, {TotalSamples});
-    DataWriter.addRecord(std::move(Record),
-                         [](Error E) { consumeError(std::move(E)); });
+    if (Error E = DataWriter.write(OS))
+      exitWithError(toString(std::move(E)));
   }
-
-  // Add DataAccessProfData from ETM reader.
-  DataWriter.addDataAccessProfData(std::move(DataAccessProfileData));
-
-  if (Error E = DataWriter.write(OS))
-    exitWithError(toString(std::move(E)));
 }
 
 void ProfileGeneratorBase::write() {
@@ -611,7 +594,8 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   populateBodySamplesForAllFunctions(SC.RangeCounter);
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
-  populateTypeSamplesForAllFunctions(SC.DataAccessCounter);
+  populateTypeSamplesForAllFunctions(SC.VTableAccessCounter);
+  populateDataAccessSamples(SC.DataAccessCounter);
 
   updateFunctionSamples();
 }
@@ -826,10 +810,10 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
 }
 
 void ProfileGenerator::populateTypeSamplesForAllFunctions(
-    const DataAccessSample &DataAccessSamples) {
+    const VTableAccessSample &VTableAccessSamples) {
   // For each instruction with vtable accesses, get its symbolized inline
   // stack, and add the vtable counters to the function samples.
-  for (const auto &[IpData, Count] : DataAccessSamples) {
+  for (const auto &[IpData, Count] : VTableAccessSamples) {
     uint64_t InstAddr = IpData.first;
     const SampleContextFrameVector &FrameVec =
         Binary->getCachedFrameLocationStack(InstAddr,
@@ -843,6 +827,44 @@ void ProfileGenerator::populateTypeSamplesForAllFunctions(
       FunctionProfile.addTypeSamplesAt(Loc, FunctionId(IpData.second), Count);
     }
   }
+}
+
+void ProfileGenerator::populateDataAccessSamples(
+    const DataAccessSample &DataAccessSamples) {
+  if (DataAccessSamples.empty())
+    return;
+
+  MapVector<std::string, memprof::DataAccessProfRecord, StringMap<unsigned>>
+      DataAccessRecords;
+  for (const auto &[Address, Count] : DataAccessSamples) {
+    if (Binary->addressIsCode(Address) || Binary->findFuncRange(Address))
+      continue;
+
+    DIGlobal Global = Binary->symbolizeData(Address);
+    if (Global.Name.empty() || Global.Name == DILineInfo::BadString)
+      continue;
+
+    if (Global.DeclLine == 0 && Global.Start != 0 && Global.Start != Address)
+      Global = Binary->symbolizeData(Global.Start);
+
+    bool HasLocation =
+        !Global.DeclFile.empty() && Global.DeclFile != DILineInfo::BadString;
+    std::string SymName =
+        HasLocation
+            ? (sys::path::filename(Global.DeclFile) + ":" + Global.Name).str()
+            : Global.Name;
+
+    memprof::DataAccessProfRecord &Record = DataAccessRecords[SymName];
+    Record.AccessCount += Count;
+    if (HasLocation && Record.Locations.empty())
+      Record.Locations.emplace_back(Global.DeclFile, Global.DeclLine);
+  }
+
+  DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+  for (const auto &[SymName, Record] : DataAccessRecords)
+    if (Error E = DataAccessProfileData->setDataAccessProfile(
+            SymName, Record.AccessCount, Record.Locations))
+      consumeError(std::move(E));
 }
 
 void ProfileGeneratorBase::calculateBodySamplesAndSize(
