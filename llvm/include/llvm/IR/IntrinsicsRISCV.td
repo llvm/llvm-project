@@ -2008,6 +2008,16 @@ let TargetPrefix = "riscv" in {
                             [IntrNoMem]>, RISCVVIntrinsic {
       let VLOperand = 2;
     }
+
+    // Input: (passthru, vector_in, mask, vl, policy)
+    def "int_riscv_" # NAME # "_mask" :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                             llvm_anyint_ty, LLVMMatchType<2>],
+                            [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 3;
+    }
   }
 
   defm vzip    : RISCVZip;
@@ -2130,6 +2140,10 @@ class RVPBinaryIntrinsic
                             [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_pmerge : RVPTernaryIntrinsic;
 
+  // Reverse the order of the 16-bit halfwords of a 64-bit value (RV64 only).
+  def int_riscv_rev16_64 : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
+                                              [IntrNoMem, IntrSpeculatable]>;
+
   // Packed Sign and Zero Extend.
   class RVPExtIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2145,6 +2159,16 @@ class RVPBinaryIntrinsic
   def int_riscv_pmulhru  : RVPBinaryIntrinsic;
   def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
   def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
+
+  // Scalar Averaging Addition and Subtraction. On RV64 these map to the
+  // packed paadd.w family on the low words.
+  class RVPScalarBinaryIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_aadd_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_aaddu_u32 : RVPScalarBinaryIntrinsic;
+  def int_riscv_asub_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_asubu_u32 : RVPScalarBinaryIntrinsic;
 
   // Scalar Multiply High. On RV32 these map to the M-extension mulh
   // instructions and the P-extension mulhr instructions.

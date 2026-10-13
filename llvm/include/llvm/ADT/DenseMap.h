@@ -286,7 +286,7 @@ public:
   }
 
   bool maybeMoveFast(DenseMapStorage &&Other) {
-    swap(Other);
+    *this = Other;
     return true;
   }
 };
@@ -462,15 +462,12 @@ public:
   }
 
   void deallocateBuckets() {
-    // Fast path in case storage.Large.NumBuckets == 0, just like destroyAll.
-    // This path is used to destruct zombie instances after moves.
-    if (Small || storage.Large.NumBuckets == 0)
+    if (Small)
       return;
 
     deallocate_buffer(storage.Large.Buckets,
                       allocBytes<BucketT>(storage.Large.NumBuckets),
                       allocAlign<BucketT>());
-    storage.Large.NumBuckets = 0;
   }
 
   bool allocateBuckets(unsigned Num) {
@@ -513,7 +510,6 @@ public:
     Small = false;
     NumEntries = Other.NumEntries;
     storage.Large = Other.storage.Large;
-    Other.storage.Large.NumBuckets = 0;
     return true;
   }
 };

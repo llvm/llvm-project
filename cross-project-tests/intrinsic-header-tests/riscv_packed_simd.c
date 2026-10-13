@@ -12,6 +12,11 @@
 
 #include <riscv_packed_simd.h>
 
+// CHECK-LABEL: test_cls_32:
+// RV32:        cls{{[[:space:]]}}
+// RV64:        clsw
+unsigned test_cls_32(int32_t a) { return __riscv_cls_32(a); }
+
 // Note: RV64 has no 32-bit `rev`; the spec expands it to `rev`+`srai`.
 // CHECK-LABEL: test_rev_32:
 // RV32:        rev{{[[:space:]]}}
@@ -19,11 +24,78 @@
 // RV64-NEXT:   srai
 uint32_t test_rev_32(uint32_t a) { return __riscv_rev_32(a); }
 
+// CHECK-LABEL: test_slx_32:
+// RV32:        slx{{[[:space:]]}}
+// RV64:        andi
+// RV64-NEXT:   slli
+// RV64-NEXT:   slx{{[[:space:]]}}
+uint32_t test_slx_32(uint32_t rd, uint32_t rs1, unsigned shamt) {
+  return __riscv_slx_32(rd, rs1, shamt);
+}
+
+// CHECK-LABEL: test_srx_32:
+// RV32:        srx{{[[:space:]]}}
+// RV64:        ori
+// RV64-NEXT:   slli
+// RV64-NEXT:   srx{{[[:space:]]}}
+uint32_t test_srx_32(uint32_t rd, uint32_t rs1, unsigned shamt) {
+  return __riscv_srx_32(rd, rs1, shamt);
+}
+
 #if __riscv_xlen == 64
+// RV64-LABEL: test_cls_64:
+// RV64:        cls{{[[:space:]]}}
+unsigned test_cls_64(int64_t a) { return __riscv_cls_64(a); }
+
 // RV64-LABEL: test_rev_64:
 // RV64:        rev{{[[:space:]]}}
 uint64_t test_rev_64(uint64_t a) { return __riscv_rev_64(a); }
+
+// RV64-LABEL: test_rev16_64:
+// RV64:        rev16{{[[:space:]]}}
+uint64_t test_rev16_64(uint64_t a) { return __riscv_rev16_64(a); }
+
+// RV64-LABEL: test_slx_64:
+// RV64:        slx{{[[:space:]]}}
+uint64_t test_slx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
+  return __riscv_slx_64(rd, rs1, shamt);
+}
+
+// RV64-LABEL: test_srx_64:
+// RV64:        srx{{[[:space:]]}}
+uint64_t test_srx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
+  return __riscv_srx_64(rd, rs1, shamt);
+}
 #endif
+
+// Scalar averaging addition and subtraction
+// CHECK-LABEL: test_aadd_i32:
+// RV32:        aadd{{[[:space:]]}}
+// RV64:        paadd.w
+int32_t test_aadd_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_aadd_i32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_aaddu_u32:
+// RV32:        aaddu{{[[:space:]]}}
+// RV64:        paaddu.w
+uint32_t test_aaddu_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_aaddu_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_asub_i32:
+// RV32:        asub{{[[:space:]]}}
+// RV64:        pasub.w
+int32_t test_asub_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_asub_i32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_asubu_u32:
+// RV32:        asubu{{[[:space:]]}}
+// RV64:        pasubu.w
+uint32_t test_asubu_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_asubu_u32(rs1, rs2);
+}
 
 // CHECK-LABEL: test_sadd_i32:
 // RV32:        sadd{{[[:space:]]}}

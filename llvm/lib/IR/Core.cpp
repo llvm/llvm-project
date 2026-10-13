@@ -1944,6 +1944,27 @@ LLVMValueRef LLVMConstGEPWithNoWrapFlags(LLVMTypeRef Ty,
   LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
+LLVMValueRef LLVMConstPtrAdd(LLVMValueRef ConstantVal,
+                             LLVMValueRef ConstantOffset,
+                             LLVMGEPNoWrapFlags NoWrapFlags) {
+  return wrap(ConstantExpr::getPtrAdd(unwrap<Constant>(ConstantVal),
+                                      unwrap<Constant>(ConstantOffset),
+                                      mapFromLLVMGEPNoWrapFlags(NoWrapFlags)));
+}
+
+LLVMValueRef LLVMConstPtrAddFromIndices(LLVMTargetDataRef DataLayout,
+                                        LLVMTypeRef Ty,
+                                        LLVMValueRef ConstantVal,
+                                        LLVMValueRef *ConstantIndices,
+                                        unsigned NumIndices,
+                                        LLVMGEPNoWrapFlags NoWrapFlags) {
+  ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
+                               NumIndices);
+  return wrap(ConstantExpr::getGetElementPtr(
+      *unwrap(DataLayout), unwrap(Ty), unwrap<Constant>(ConstantVal), IdxList,
+      mapFromLLVMGEPNoWrapFlags(NoWrapFlags)));
+}
+
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
   return wrap(ConstantExpr::getTrunc(unwrap<Constant>(ConstantVal),
                                      unwrap(ToType)));
@@ -2183,6 +2204,14 @@ void LLVMSetUnnamedAddress(LLVMValueRef Global, LLVMUnnamedAddr UnnamedAddr) {
   case LLVMGlobalUnnamedAddr:
     return GV->setUnnamedAddr(GlobalVariable::UnnamedAddr::Global);
   }
+}
+
+LLVMBool LLVMIsDSOLocal(LLVMValueRef Global) {
+  return unwrap<GlobalValue>(Global)->isDSOLocal();
+}
+
+void LLVMSetDSOLocal(LLVMValueRef Global, LLVMBool IsDSOLocal) {
+  unwrap<GlobalValue>(Global)->setDSOLocal(IsDSOLocal);
 }
 
 LLVMBool LLVMHasUnnamedAddr(LLVMValueRef Global) {

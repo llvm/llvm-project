@@ -10,6 +10,7 @@
 #define LLDB_TARGET_REGISTERTYPEBUILDER_H
 
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

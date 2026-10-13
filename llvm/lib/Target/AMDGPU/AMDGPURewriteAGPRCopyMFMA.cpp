@@ -571,7 +571,7 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
     }
 
     if (StoreBlocks.empty()) {
-      LLVM_DEBUG(dbgs() << "Skipping " << printReg(Slot, &TRI)
+      LLVM_DEBUG(dbgs() << "Skipping " << printReg(LI->reg(), &TRI)
                         << ": no reachable stores\n");
       continue;
     }
@@ -599,20 +599,28 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
                  isLoadJointlyDominatedByStores(*MI, *LI, StoreFreeReachable);
         })) {
       LLVM_DEBUG(
-          dbgs() << "Skipping " << printReg(Slot, &TRI)
+          dbgs() << "Skipping " << printReg(LI->reg(), &TRI)
                  << ": some reachable load not jointly dominated by stores\n");
       continue;
     }
 
     const TargetRegisterClass *RC = LSS.getIntervalRegClass(Slot);
 
-    LLVM_DEBUG(dbgs() << "Trying to eliminate " << printReg(Slot, &TRI)
+    LLVM_DEBUG(dbgs() << "Trying to eliminate " << printReg(LI->reg(), &TRI)
                       << " by reassigning\n");
 
     ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(RC);
 
+    // The stack slot's LiveInterval may be discontiguous: a slot can be live
+    // in memory around a spill store and around a much later reload. Once
+    // we unspill the slot into a register, however, the value must reside in
+    // that register continuously from its first reference to its last (modulo
+    // the live range splitting that happens later below). Checking
+    // interference against the slot's discontiguous interval could let us pick
+    // a PhysReg that is busy inside a gap, corrupting it. Instead, check
+    // interference over the range the replacement register will occupy.
     for (MCPhysReg PhysReg : AllocOrder) {
-      if (LRM.checkInterference(*LI, PhysReg) != LiveRegMatrix::IK_Free)
+      if (LRM.checkInterference(LI->beginIndex(), LI->endIndex(), PhysReg))
         continue;
 
       LLVM_DEBUG(dbgs() << "Reassigning " << *LI << " to "
@@ -624,9 +632,9 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
       for (MachineInstr *SpillMI : SpillReferences->second)
         replaceSpillWithCopyToVReg(*SpillMI, Slot, NewVReg);
 
-      // TODO: We should be able to transfer the information from the stack
-      // slot's LiveInterval without recomputing from scratch with the
-      // replacement vreg uses.
+      // TODO: Transferring the stack slot's LiveInterval instead of recomputing
+      // would not be a straight copy: its segments would have to be widened to
+      // cover each store's reaching reloads.
       LiveInterval &NewLI = LIS.createAndComputeVirtRegInterval(NewVReg);
       VRM.grow();
 

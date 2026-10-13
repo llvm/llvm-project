@@ -19,6 +19,7 @@ add_llvm_component_library(LLVMAArch64Desc
   BinaryFormat
   CodeGenTypes
   MC
+  Option
   Support
   TargetParser
 

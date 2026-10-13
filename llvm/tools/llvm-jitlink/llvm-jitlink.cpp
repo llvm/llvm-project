@@ -3212,7 +3212,7 @@ int main(int argc, char *argv[]) {
       Timers->JITLinkTG.printAll(errs());
     reportLLVMJITLinkError(EntryPoint.takeError());
     ExitOnErr(S->ES.endSession());
-    exit(1);
+    return 1;
   }
 
   ExitOnErr(runChecks(*S, std::move(TT), std::move(Features)));
