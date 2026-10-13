@@ -87,15 +87,18 @@ struct KernelLaunchInfoTy {
   }
 };
 
+struct PluginManager;
+
 struct DeviceTy {
   int32_t DeviceID;
   GenericPluginTy *RTL;
   int32_t RTLDeviceID;
   ol_device_handle_t DeviceHandle;
+  PluginManager *PM;
   ol_context_handle_t Context = nullptr;
 
   DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
-           ol_device_handle_t DeviceHandle);
+           ol_device_handle_t DeviceHandle, PluginManager *PM);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
@@ -136,13 +139,15 @@ struct DeviceTy {
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
                      HostDataToTargetTy *Entry = nullptr,
-                     MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+                     MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                     const ident_t *Loc = nullptr, const char *Name = nullptr);
 
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        AsyncInfoTy &AsyncInfo,
                        HostDataToTargetTy *Entry = nullptr,
-                       MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+                       MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                       const ident_t *Loc = nullptr);
 
   // Return true if data can be copied to DstDevice directly
   bool isDataExchangable(const DeviceTy &DstDevice);

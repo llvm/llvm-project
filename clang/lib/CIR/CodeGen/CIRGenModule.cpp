@@ -2330,6 +2330,19 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
   return builder.getGlobalViewAttr(ptrTy, gv);
 }
 
+cir::GlobalOp CIRGenModule::createGlobalString(mlir::Location loc,
+                                               StringRef str, StringRef name) {
+  mlir::Attribute init = builder.getString(str, convertType(astContext.CharTy),
+                                           /*size=*/std::nullopt);
+
+  // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
+  // we need to do that explicitly.
+  return generateStringLiteral(loc, mlir::cast<mlir::TypedAttr>(init),
+                               cir::GlobalLinkageKind::PrivateLinkage, *this,
+                               getUniqueGlobalName(name.str()),
+                               CharUnits::One());
+}
+
 mlir::ptr::MemorySpaceAttrInterface
 CIRGenModule::getGlobalCIRAddressSpace(LangAS as) {
   return getTargetCIRGenInfo().getGlobalCIRAddressSpace(as);
