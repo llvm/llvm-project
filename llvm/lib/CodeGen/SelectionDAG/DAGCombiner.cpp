@@ -14313,9 +14313,10 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   unsigned LHSOpcode = LHS->getOpcode();
   if (!IsIntOrFPExtOpcode(LHSOpcode)) {
     EVT AccTy = Acc.getValueType();
+    EVT InTy = Op1.getValueType();
     // If we're not extending the inputs, just combine them normally. This
     // already happens for integer ops, but fp requires separate handling.
-    if (N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA &&
+    if (N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA && AccTy == InTy &&
         N->getFlags().hasAllowContract() &&
         Op1->getFlags().hasAllowContract() &&
         TLI.isOperationLegalOrCustom(ISD::FMA, AccTy) &&
