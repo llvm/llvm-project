@@ -45207,6 +45207,13 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     KnownUndef = SrcUndef.zextOrTrunc(NumElts);
     break;
   }
+  case X86ISD::VRNDSCALE: {
+    SDValue Src = Op.getOperand(0);
+    if (SimplifyDemandedVectorElts(Src, DemandedElts, KnownUndef, KnownZero,
+                                   TLO, Depth + 1))
+      return true;
+    break;
+  }
   case X86ISD::BLENDI: {
     SmallVector<int, 16> BlendMask;
     DecodeBLENDMask(NumElts, Op.getConstantOperandVal(2), BlendMask);
