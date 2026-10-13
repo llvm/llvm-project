@@ -171,10 +171,8 @@ define void @test_atomic_store_strm_relaxed_mfloat(ptr %ptr, <1 x i8> %val) noun
 define void @test_atomic_store_strm_relaxed_bfloat(ptr %ptr, bfloat %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_strm_relaxed_bfloat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    stshh strm
-; CHECK-NEXT:    strh w8, [x0]
+; CHECK-NEXT:    str h0, [x0]
 ; CHECK-NEXT:    ret
   store atomic bfloat %val, ptr %ptr monotonic, align 8, !mem.cache_hint !2
   ret void
@@ -183,10 +181,8 @@ define void @test_atomic_store_strm_relaxed_bfloat(ptr %ptr, bfloat %val) nounwi
 define void @test_atomic_store_strm_relaxed_half(ptr %ptr, half %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_strm_relaxed_half:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    stshh strm
-; CHECK-NEXT:    strh w8, [x0]
+; CHECK-NEXT:    str h0, [x0]
 ; CHECK-NEXT:    ret
   store atomic half %val, ptr %ptr monotonic, align 8, !mem.cache_hint !2
   ret void
