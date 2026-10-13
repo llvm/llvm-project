@@ -28,6 +28,7 @@ using llvm::divideSignedWouldOverflow;
 using llvm::mod;
 
 namespace {
+
 // AffineExprConstantFolder evaluates an affine expression using constant
 // operands passed in 'operandConsts'. Returns an IntegerAttr attribute
 // representing the constant value of the affine expression evaluated on

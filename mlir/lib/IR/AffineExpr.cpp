@@ -1354,11 +1354,14 @@ LogicalResult SimpleAffineExprFlattener::visitMulExpr(AffineBinaryOpExpr expr) {
     return addLocalVariableSemiAffine(mulLhs, rhs, a * b, lhs, lhs.size());
   }
 
-  // Get the RHS constant. Bail out if any coefficient overflows.
+  // Get the RHS constant.
   int64_t rhsConst = rhs[getConstantIndex()];
-  for (int64_t &lhsElt : lhs)
-    if (llvm::MulOverflow(lhsElt, rhsConst, lhsElt))
+  for (int64_t &lhsElt : lhs) {
+    auto [prod, overflow] = llvm::MulOverflow(lhsElt, rhsConst);
+    if (overflow)
       return failure();
+    lhsElt = prod;
+  }
 
   return success();
 }
@@ -1368,10 +1371,12 @@ LogicalResult SimpleAffineExprFlattener::visitAddExpr(AffineBinaryOpExpr expr) {
   const auto &rhs = operandExprStack.back();
   auto &lhs = operandExprStack[operandExprStack.size() - 2];
   assert(lhs.size() == rhs.size());
-  // Update the LHS in place. Bail out if any coefficient overflows.
+  // Update the LHS in place.
   for (unsigned i = 0, e = rhs.size(); i < e; i++) {
-    if (llvm::AddOverflow(lhs[i], rhs[i], lhs[i]))
+    auto [sum, overflow] = llvm::AddOverflow(lhs[i], rhs[i]);
+    if (overflow)
       return failure();
+    lhs[i] = sum;
   }
   // Pop off the RHS.
   operandExprStack.pop_back();
