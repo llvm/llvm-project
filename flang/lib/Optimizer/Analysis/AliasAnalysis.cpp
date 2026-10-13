@@ -321,6 +321,13 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
   } else {
     mergedPath = {};
     mergedPath.isApproximate = true;
+    // The snapshots taken before reaching the region-branch op are merged
+    // with this path, so they need to know that some predecessor path is
+    // opaque.
+    mergedPath.isOpaque =
+        llvm::any_of(sources, [](const fir::AliasAnalysis::Source &s) {
+          return s.accessPath.isOpaque;
+        });
   }
 
   mlir::Type mergedTy = allTypesSame ? sources[0].valueType : fallbackType;
@@ -367,6 +374,8 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
         mergedScopedOrigin.approximateSource |= scopedOrigin.approximateSource;
         mergedScopedOrigin.accessPath.isApproximate |=
             scopedOrigin.accessPath.isApproximate;
+        mergedScopedOrigin.accessPath.isOpaque |=
+            scopedOrigin.accessPath.isOpaque;
         seenThisPred[idx] = true;
       }
       // Drop entries this predecessor did not match. Iterate in reverse
@@ -415,6 +424,8 @@ void AliasAnalysis::Source::AccessPath::print(llvm::raw_ostream &os) const {
   os << "]";
   if (isApproximate)
     os << "(~)";
+  if (isOpaque)
+    os << "(opaque)";
 }
 
 void AliasAnalysis::Source::print(llvm::raw_ostream &os) const {
@@ -578,7 +589,8 @@ static bool noAliasBasedOnType(mlir::Value lhs, mlir::Value rhs) {
 /// root variable. For example, paths [Component("a")] and [Component("b")]
 /// diverge immediately, while [Component("a"), Component("x")] and
 /// [Component("a"), Component("y")] share a common prefix "a" and diverge
-/// at the second step.
+/// at the second step. Component names are only compared between steps
+/// selecting fields of the same record type, and opaque paths never diverge.
 ///
 /// When either path continues through a PointerDeref or AllocDeref after
 /// the divergence point, the runtime address could potentially reach a
@@ -597,12 +609,16 @@ static bool noAliasBasedOnType(mlir::Value lhs, mlir::Value rhs) {
 static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
                                     const fir::AliasAnalysis::Source &rhsSrc) {
   using PathStep = fir::AliasAnalysis::Source::PathStep;
+  if (lhsSrc.accessPath.isOpaque || rhsSrc.accessPath.isOpaque)
+    return false;
   auto &lhsSteps = lhsSrc.accessPath.steps;
   auto &rhsSteps = rhsSrc.accessPath.steps;
   size_t minLen = std::min(lhsSteps.size(), rhsSteps.size());
   for (size_t i = 0; i < minLen; ++i) {
     if (lhsSteps[i].kind == PathStep::Kind::Component &&
         rhsSteps[i].kind == PathStep::Kind::Component &&
+        lhsSteps[i].recordType &&
+        lhsSteps[i].recordType == rhsSteps[i].recordType &&
         lhsSteps[i].component != rhsSteps[i].component) {
       auto hasPtrDerefAfter = [](llvm::ArrayRef<PathStep> steps, size_t from) {
         for (size_t j = from; j < steps.size(); ++j)
@@ -783,8 +799,10 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
              llvm::dbgs() << "  rhs: " << rhs << "\n";
              llvm::dbgs() << "  rhsSrc: " << rhsSrc << "\n";);
 
-  // Disambiguate data and descriptors addresses.
-  if (noAliasBasedOnType(lhs, rhs))
+  // Disambiguate data and descriptors addresses. An opaque access path may
+  // reinterpret a descriptor as data or vice versa.
+  if (!lhsSrc.accessPath.isOpaque && !rhsSrc.accessPath.isOpaque &&
+      noAliasBasedOnType(lhs, rhs))
     return AliasResult::NoAlias;
 
   // A null address aliases nothing. Same-value pairs already returned
@@ -884,6 +902,17 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing between composite and non-data component with "
                  << "same source kind and origin value\n");
+      return AliasResult::MayAlias;
+    }
+
+    // Whether a value addresses data or a descriptor is based on its type,
+    // which an opaque access path may have reinterpreted.
+    if (lhsSrc.origin.u == rhsSrc.origin.u &&
+        lhsSrc.origin.isData != rhsSrc.origin.isData &&
+        (lhsSrc.accessPath.isOpaque || rhsSrc.accessPath.isOpaque)) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  aliasing between data and non-data with same source "
+                 << "kind and origin value through an opaque access path\n");
       return AliasResult::MayAlias;
     }
 
@@ -1507,6 +1536,271 @@ static mlir::Value walkBlockArgPassThroughs(mlir::Value v) {
   return v;
 }
 
+/// Return the type of the elements of the memory addressed by a value of
+/// type \p ty: the element type of the data described by a box, or of the
+/// memory pointed to by a reference. A reference to a box addresses the
+/// descriptor, so the box type is returned in that case. Return a null type
+/// if \p ty is not an address.
+static mlir::Type getAddressedElementType(mlir::Type ty) {
+  if (mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(ty))
+    return fir::unwrapSequenceType(eleTy);
+  return {};
+}
+
+/// Return true if a view from \p srcTy to \p resTy maps every element of the
+/// source to an element of the result at the same address. Boxes carry the
+/// byte strides of the data they describe, so this holds for any box-to-box
+/// view. Otherwise, it only holds when neither side addresses an array,
+/// because indexing an array reference uses the size of its static element
+/// type.
+static bool isElementPreservingView(mlir::Type srcTy, mlir::Type resTy) {
+  if (mlir::isa<fir::BaseBoxType>(srcTy) && mlir::isa<fir::BaseBoxType>(resTy))
+    return true;
+  auto addressesArray = [](mlir::Type ty) {
+    return mlir::isa_and_present<fir::SequenceType>(
+        fir::dyn_cast_ptrOrBoxEleTy(ty));
+  };
+  return !addressesArray(srcTy) && !addressesArray(resTy);
+}
+
+/// If the subobject of type \p inner at offset zero of an \p outer object is
+/// reached by repeatedly selecting the first component (e.g. the parent
+/// component of a type extension), append the Component steps selecting it
+/// to \p chain (outermost first) and return true.
+static bool getFirstComponentChain(
+    fir::RecordType outer, mlir::Type inner,
+    llvm::SmallVectorImpl<AliasAnalysis::Source::PathStep> &chain) {
+  size_t initialSize = chain.size();
+  for (fir::RecordType recTy = outer; recTy && recTy.getNumFields() != 0;) {
+    const auto &[name, fieldTy] = recTy.getTypeList().front();
+    AliasAnalysis::Source::PathStep step;
+    step.kind = AliasAnalysis::Source::PathStep::Kind::Component;
+    step.component = mlir::StringAttr::get(recTy.getContext(), name);
+    step.recordType = recTy;
+    chain.push_back(step);
+    if (fieldTy == inner)
+      return true;
+    recTy = mlir::dyn_cast<fir::RecordType>(fieldTy);
+  }
+  chain.truncate(initialSize);
+  return false;
+}
+
+/// Return true if \p ty is a record type whose objects contain a \p baseTy
+/// subobject reached through first components, e.g. if \p ty is an
+/// extension of \p baseTy.
+static bool hasFirstComponentChainTo(mlir::Type ty, mlir::Type baseTy) {
+  auto recTy = mlir::dyn_cast_if_present<fir::RecordType>(ty);
+  llvm::SmallVector<AliasAnalysis::Source::PathStep, 2> chain;
+  return recTy && getFirstComponentChain(recTy, baseTy, chain);
+}
+
+/// Return true if access path steps selecting fields of \p frameTy are
+/// relative to an object of declared type \p eleTy. This is the case if the
+/// types are the same, or if the object is polymorphic and \p frameTy is an
+/// extension of \p eleTy: such steps come from a SELECT TYPE downcast, which
+/// is only executed when the dynamic type of the object is an extension of
+/// \p frameTy.
+static bool isPathFrameOf(mlir::Type frameTy, mlir::Type eleTy,
+                          bool isPolymorphic) {
+  if (frameTy == eleTy)
+    return true;
+  if (!isPolymorphic)
+    return false;
+  return mlir::isa_and_present<mlir::NoneType>(eleTy) ||
+         hasFirstComponentChainTo(frameTy, eleTy);
+}
+
+/// Return true if a view from a value addressing elements of type
+/// \p srcEleTy to a value addressing elements of type \p resEleTy
+/// reinterprets a descriptor as describing data of an unrelated record type,
+/// reinterprets a descriptor as data, or reinterprets a derived type object
+/// as a descriptor. Untyped storage, e.g. of a COMMON block, may hold a
+/// descriptor, so viewing it as a descriptor does not reinterpret anything.
+static bool isDescriptorReinterpretation(mlir::Type srcEleTy,
+                                         mlir::Type resEleTy) {
+  auto srcBoxTy = mlir::dyn_cast_if_present<fir::BaseBoxType>(srcEleTy);
+  auto resBoxTy = mlir::dyn_cast_if_present<fir::BaseBoxType>(resEleTy);
+  if (srcBoxTy && resBoxTy) {
+    mlir::Type srcDataTy = getAddressedElementType(srcBoxTy);
+    mlir::Type resDataTy = getAddressedElementType(resBoxTy);
+    return srcDataTy != resDataTy &&
+           mlir::isa_and_present<fir::RecordType>(srcDataTy) &&
+           mlir::isa_and_present<fir::RecordType>(resDataTy);
+  }
+  if (srcBoxTy)
+    return true;
+  if (resBoxTy)
+    return mlir::isa_and_present<fir::RecordType>(srcEleTy);
+  return false;
+}
+
+/// Return true if all the memory addressed by the result of type \p resTy of
+/// the view \p op lies within the object addressed by its source of type
+/// \p srcTy. \p srcEleTy and \p resEleTy are the types of the elements
+/// addressed by the source, after applying the component path of the view
+/// slice, and by the result. Selecting elements or sections of the source,
+/// describing them with a box, and viewing an object as one of its ancestor
+/// types stay within the source. Any other change of the addressed type is
+/// assumed to reach outside of the source, even when the Fortran rules bound
+/// it, e.g. for the sequence association of an array element with a dummy
+/// array.
+static bool isContainedView(mlir::Operation *op, mlir::Type srcTy,
+                            mlir::Type resTy, mlir::Type srcEleTy,
+                            mlir::Type resEleTy) {
+  if (mlir::isa<fir::CreateBoxOp>(op))
+    return false;
+  if (mlir::isa<fir::ArrayCoorOp, fir::BoxAddrOp>(op))
+    return true;
+  if (mlir::isa<fir::BaseBoxType>(srcTy) && mlir::isa<fir::BaseBoxType>(resTy))
+    return true;
+  if (mlir::isa<fir::EmboxOp>(op))
+    return srcEleTy == resEleTy ||
+           mlir::isa_and_present<mlir::NoneType>(resEleTy) ||
+           hasFirstComponentChainTo(srcEleTy, resEleTy);
+  mlir::Type srcObjTy = fir::dyn_cast_ptrOrBoxEleTy(srcTy);
+  mlir::Type resObjTy = fir::dyn_cast_ptrOrBoxEleTy(resTy);
+  if (!srcObjTy || !resObjTy)
+    return false;
+  // A view of a descriptor as another descriptor. The views of the data
+  // described with an unrelated type are handled by
+  // isDescriptorReinterpretation.
+  if (mlir::isa<fir::BaseBoxType>(srcObjTy) &&
+      mlir::isa<fir::BaseBoxType>(resObjTy))
+    return true;
+  return srcObjTy == resObjTy || hasFirstComponentChainTo(srcObjTy, resObjTy);
+}
+
+/// Return true if \p path has a Component step.
+static bool hasComponentStep(const AliasAnalysis::Source::AccessPath &path) {
+  return llvm::any_of(path.steps, [](const AliasAnalysis::Source::PathStep &s) {
+    return s.kind == AliasAnalysis::Source::PathStep::Kind::Component;
+  });
+}
+
+/// Return the fir.slice operand of a view operation, if any.
+static mlir::Value getViewSlice(mlir::Operation *op) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::Value>(op)
+      .Case<fir::EmboxOp, fir::ReboxOp, fir::ArrayCoorOp>(
+          [](auto sliceableOp) -> mlir::Value {
+            return sliceableOp.getSlice();
+          })
+      .Default([](mlir::Operation *) { return mlir::Value{}; });
+}
+
+/// Append to \p steps (outermost first) the Component steps of the component
+/// path of \p slice, applied to elements of type \p eleTy, and update
+/// \p eleTy to the type of the selected subobjects. Return false if the path
+/// cannot be decoded.
+static bool
+decodeSlicePath(mlir::Value slice, mlir::Type &eleTy,
+                llvm::SmallVectorImpl<AliasAnalysis::Source::PathStep> &steps) {
+  auto sliceOp = slice.getDefiningOp<fir::SliceOp>();
+  if (!sliceOp)
+    return false;
+  unsigned dimension = 0;
+  for (mlir::Value field : sliceOp.getFields()) {
+    if (mlir::isa<fir::FieldType>(field.getType())) {
+      auto fieldOp = field.getDefiningOp<fir::FieldIndexOp>();
+      auto recTy = mlir::dyn_cast_if_present<fir::RecordType>(eleTy);
+      if (!fieldOp || !recTy || dimension != 0)
+        return false;
+      mlir::Type fieldTy = recTy.getType(fieldOp.getFieldName());
+      if (!fieldTy)
+        return false;
+      AliasAnalysis::Source::PathStep step;
+      step.kind = AliasAnalysis::Source::PathStep::Kind::Component;
+      step.component =
+          mlir::StringAttr::get(recTy.getContext(), fieldOp.getFieldName());
+      step.recordType = recTy;
+      steps.push_back(step);
+      eleTy = fieldTy;
+      continue;
+    }
+    // A subscript of an array component.
+    if (dimension == 0) {
+      auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(eleTy);
+      if (!seqTy)
+        return false;
+      dimension = seqTy.getDimension();
+    }
+    if (--dimension == 0)
+      eleTy = mlir::cast<fir::SequenceType>(eleTy).getElementType();
+  }
+  if (dimension != 0)
+    return false;
+  eleTy = fir::unwrapSequenceType(eleTy);
+  return true;
+}
+
+/// getSourceImpl collects Component steps (\p pathSteps, leaf-to-root order)
+/// relative to the record type of the object addressed by the value being
+/// walked. When the walk crosses \p op from \p result to its view source,
+/// update \p pathSteps so that they stay relative to the object addressed by
+/// the view source:
+///   - a component path of a slice selects subobjects of the source
+///     elements, so its steps are appended;
+///   - an upcast view (e.g. CLASS(base) of an extended type object) implies
+///     the steps selecting the parent components, so they are appended;
+///   - the steps collected through a SELECT TYPE downcast of a polymorphic
+///     object stay relative to the extension type (see isPathFrameOf).
+/// \p crossedUncontainedView is set once the walk crosses a view that may
+/// address memory outside of its source (see isContainedView). The steps
+/// selecting subobjects of the source of such a view do not contain the
+/// memory addressed through it.
+/// Return false if the steps cannot be related to the source object, e.g.
+/// when the view reinterprets storage (EQUIVALENCE, COMMON).
+static bool adjustPathStepsForView(
+    fir::FortranObjectViewOpInterface op, mlir::OpResult result,
+    llvm::SmallVectorImpl<AliasAnalysis::Source::PathStep> &pathSteps,
+    bool &crossedUncontainedView) {
+  using PathStep = AliasAnalysis::Source::PathStep;
+  mlir::Type srcTy = op.getViewSource(result).getType();
+  mlir::Type resTy = result.getType();
+  mlir::Type srcEleTy = getAddressedElementType(srcTy);
+  mlir::Type resEleTy = getAddressedElementType(resTy);
+  if (isDescriptorReinterpretation(srcEleTy, resEleTy))
+    return false;
+  // The byte strides of fir.create_box may map its elements to arbitrary
+  // offsets within the source elements. They are not analyzed, because the
+  // only producer of the operation passes the strides of an existing
+  // descriptor.
+  if (mlir::isa<fir::CreateBoxOp>(op) && !pathSteps.empty())
+    return false;
+
+  llvm::SmallVector<PathStep, 2> sliceSteps;
+  if (mlir::Value slice = getViewSlice(op))
+    if (!decodeSlicePath(slice, srcEleTy, sliceSteps))
+      return false;
+  bool isContained = isContainedView(op, srcTy, resTy, srcEleTy, resEleTy);
+  size_t numSteps = pathSteps.size();
+
+  // The steps collected so far are relative to the elements addressed by the
+  // view result, or to an extension of their type (see isPathFrameOf).
+  if (!pathSteps.empty() && pathSteps.back().recordType != srcEleTy &&
+      (srcEleTy != resEleTy || !sliceSteps.empty())) {
+    mlir::Type frameTy = pathSteps.back().recordType;
+    if (!isElementPreservingView(srcTy, resTy))
+      return false;
+    llvm::SmallVector<PathStep, 2> chain;
+    auto srcRecTy = mlir::dyn_cast_if_present<fir::RecordType>(srcEleTy);
+    // Subobjects selected by a slice path are not polymorphic.
+    bool isPolymorphic = mlir::isa<fir::ClassType>(srcTy) && sliceSteps.empty();
+    if (srcRecTy && getFirstComponentChain(srcRecTy, frameTy, chain))
+      pathSteps.append(chain.rbegin(), chain.rend());
+    else if (!isPathFrameOf(frameTy, srcEleTy, isPolymorphic))
+      return false;
+  }
+  pathSteps.append(sliceSteps.rbegin(), sliceSteps.rend());
+  if (pathSteps.size() != numSteps &&
+      (crossedUncontainedView || !isContained)) {
+    pathSteps.truncate(numSteps);
+    return false;
+  }
+  crossedUncontainedView |= !isContained;
+  return true;
+}
+
 void AliasAnalysis::enableSourceCache() { sourceCacheEnabled = true; }
 
 void AliasAnalysis::disableSourceCache() {
@@ -1567,6 +1861,12 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
   // Reversed into the final AccessPath at the end, unless the box-load branch
   // composes the full path directly.
   llvm::SmallVector<Source::PathStep, 4> pathSteps;
+  // Set when pathSteps cannot be related to the object reached by the walk,
+  // e.g. after crossing a view that reinterprets storage.
+  bool pathOpaque{false};
+  // Set after crossing a view that may address memory outside of its source.
+  // The Component steps collected from then on do not contain the leaf.
+  bool crossedUncontainedView{false};
   Source::AccessPath accessPath;
   bool accessPathFinalized{false};
 
@@ -1576,6 +1876,14 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
   // the final Source. Gated on collectScopedOrigins (suppressed when
   // buildSourceAtDeclare reuses getSource purely for declare classification).
   llvm::SmallVector<Source::ScopedOrigin, 4> scopedOrigins;
+  // Make the path opaque, including the snapshots of it taken so far:
+  // buildSourceAtDeclare pairs a snapshot with the origin reached past its
+  // declare, so the views crossed after the snapshot apply to it too.
+  auto markPathOpaque = [&]() {
+    pathOpaque = true;
+    for (Source::ScopedOrigin &scopedOrigin : scopedOrigins)
+      scopedOrigin.accessPath.isOpaque = true;
+  };
   while (defOp && !breakFromLoop) {
     // Operations may have multiple results, so we need to analyze
     // the result for which the source is queried.
@@ -1709,6 +2017,9 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
               accessPath.steps.push_back(pathSteps[i]);
             accessPath.isApproximate =
                 boxSrc.accessPath.isApproximate || approximateSource;
+            if (boxSrc.accessPath.isOpaque)
+              markPathOpaque();
+            accessPath.isOpaque = pathOpaque;
             accessPathFinalized = true;
 
             // Rebase each forwarded ScopedOrigin from the inner walk's
@@ -1721,6 +2032,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
                 for (int i = pathSteps.size() - 1; i >= 0; --i)
                   scopedOrigin.accessPath.steps.push_back(pathSteps[i]);
                 scopedOrigin.accessPath.isApproximate |= approximateSource;
+                scopedOrigin.accessPath.isOpaque |= pathOpaque;
                 if (isPointerBox)
                   scopedOrigin.attributes.set(Attribute::Pointer);
                 scopedOrigin.approximateSource |= approximateSource;
@@ -1874,6 +2186,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
             scopedOrigin.accessPath.steps.assign(pathSteps.rbegin(),
                                                  pathSteps.rend());
             scopedOrigin.accessPath.isApproximate = approximateSource;
+            scopedOrigin.accessPath.isOpaque = pathOpaque;
             scopedOrigin.attributes = attributes;
             scopedOrigin.approximateSource = approximateSource;
             scopedOrigin.isData = followingData;
@@ -1938,6 +2251,27 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
 
           // Record component access steps for the access path.
           //
+          // The steps collected so far select subobjects of the object
+          // designated by hlfir.designate and fir.coordinate_of, unless
+          // the designated object is viewed with a different type in
+          // between.
+          if (mlir::isa<hlfir::DesignateOp, fir::CoordinateOp>(defOp) &&
+              !pathSteps.empty()) {
+            // An element of a polymorphic array is polymorphic.
+            bool isPolymorphic = mlir::isa<fir::ClassType>(ty);
+            if (auto coordOp = mlir::dyn_cast<fir::CoordinateOp>(defOp))
+              isPolymorphic =
+                  mlir::isa<fir::ClassType>(coordOp.getRef().getType()) &&
+                  llvm::all_of(coordOp.getFieldIndices().value_or(
+                                   llvm::ArrayRef<int32_t>{}),
+                               [](int32_t idx) {
+                                 return idx == fir::CoordinateOp::kDynamicIndex;
+                               });
+            if (!isPathFrameOf(pathSteps.back().recordType,
+                               getAddressedElementType(ty), isPolymorphic))
+              markPathOpaque();
+          }
+
           // hlfir.designate carries the component name directly as a
           // StringAttr, e.g. hlfir.designate %x{"fieldName"}.
           if (auto designateOp = mlir::dyn_cast<hlfir::DesignateOp>(defOp)) {
@@ -1945,7 +2279,11 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
               Source::PathStep step;
               step.kind = Source::PathStep::Kind::Component;
               step.component = *comp;
+              step.recordType =
+                  getAddressedElementType(designateOp.getMemref().getType());
               pathSteps.push_back(step);
+              if (crossedUncontainedView)
+                markPathOpaque();
             }
           } else if (auto coordOp = mlir::dyn_cast<fir::CoordinateOp>(defOp)) {
             // fir.coordinate_of encodes field accesses as integer indices
@@ -1962,7 +2300,8 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
             if (fieldIndices) {
               mlir::Type currentTy =
                   fir::dyn_cast_ptrOrBoxEleTy(coordOp.getRef().getType());
-              llvm::SmallVector<mlir::StringAttr, 4> componentNames;
+              llvm::SmallVector<Source::PathStep, 4> componentSteps;
+              bool decoded = true;
               unsigned dimension = 0;
               for (int32_t idx : *fieldIndices) {
                 if (idx == fir::CoordinateOp::kDynamicIndex) {
@@ -1983,29 +2322,39 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
                   // Unexpected type structure; discard any partially
                   // collected names so the access path stays conservative
                   // rather than recording a misleading partial path.
-                  componentNames.clear();
+                  decoded = false;
                   break;
                 }
                 auto typeList = recTy.getTypeList();
                 if (idx < 0 || static_cast<size_t>(idx) >= typeList.size()) {
                   // Out-of-bounds field index; same conservative treatment.
-                  componentNames.clear();
+                  decoded = false;
                   break;
                 }
-                componentNames.push_back(mlir::StringAttr::get(
-                    defOp->getContext(), typeList[idx].first));
-                currentTy = typeList[idx].second;
-              }
-              // pathSteps is in leaf-to-root order (reversed at the end),
-              // so push innermost component first.
-              for (auto it = componentNames.rbegin();
-                   it != componentNames.rend(); ++it) {
                 Source::PathStep step;
                 step.kind = Source::PathStep::Kind::Component;
-                step.component = *it;
-                pathSteps.push_back(step);
+                step.component = mlir::StringAttr::get(defOp->getContext(),
+                                                       typeList[idx].first);
+                step.recordType = recTy;
+                componentSteps.push_back(step);
+                currentTy = typeList[idx].second;
+              }
+              if (decoded) {
+                // pathSteps is in leaf-to-root order (reversed at the end),
+                // so push innermost component first.
+                pathSteps.append(componentSteps.rbegin(),
+                                 componentSteps.rend());
+                if (crossedUncontainedView && !componentSteps.empty())
+                  markPathOpaque();
+              } else if (!pathSteps.empty()) {
+                // Dropping the names would misalign the steps collected
+                // so far with the steps collected from now on.
+                markPathOpaque();
               }
             }
+          } else if (!adjustPathStepsForView(op, opResult, pathSteps,
+                                             crossedUncontainedView)) {
+            markPathOpaque();
           }
 
           // Collect attributes from FortranVariableOpInterface operations.
@@ -2041,6 +2390,13 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
                                  collectScopedOrigins);
               },
               followingData, attributes);
+          if (crossedUncontainedView &&
+              hasComponentStep(accSourceReturn->accessPath))
+            markPathOpaque();
+          accSourceReturn->accessPath.isOpaque |= pathOpaque;
+          for (Source::ScopedOrigin &scopedOrigin :
+               accSourceReturn->scopedOrigins)
+            scopedOrigin.accessPath.isOpaque |= pathOpaque;
           breakFromLoop = true;
         })
         .Case([&](mlir::RegionBranchOpInterface branch) {
@@ -2072,6 +2428,14 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
           regionBranchReturn->approximateSource |= approximateSource;
           regionBranchReturn->isCapturedInInternalProcedure |=
               isCapturedInInternalProcedure;
+          if (regionBranchReturn->accessPath.isOpaque ||
+              (crossedUncontainedView &&
+               hasComponentStep(regionBranchReturn->accessPath)))
+            markPathOpaque();
+          regionBranchReturn->accessPath.isOpaque |= pathOpaque;
+          for (Source::ScopedOrigin &scopedOrigin :
+               regionBranchReturn->scopedOrigins)
+            scopedOrigin.accessPath.isOpaque |= pathOpaque;
           // Prepend the outer (leaf-closer) scopedOrigins -- declares
           // already crossed between leaf and this region-branch op --
           // to the merged predecessors' snapshots. The inner snapshots'
@@ -2130,6 +2494,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
     std::reverse(pathSteps.begin(), pathSteps.end());
     accessPath.steps = std::move(pathSteps);
     accessPath.isApproximate = approximateSource;
+    accessPath.isOpaque = pathOpaque;
   }
 
   if (type == SourceKind::Global) {
