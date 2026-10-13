@@ -188,6 +188,36 @@ module {
 // -----
 
 !u8i = !cir.int<u, 8>
+!rec_S = !cir.struct<"S" {pad !u8i}>
+
+module {
+  cir.func @bad_static_addrspace_mismatch_ctor(%p: !cir.ptr<!cir.array<!rec_S x 10>, target_address_space(1)>) {
+    // expected-error@+1 {{'cir.array.ctor' op block argument address space must match the 'addr' address space}}
+    cir.array.ctor %p : !cir.ptr<!cir.array<!rec_S x 10>, target_address_space(1)> {
+    ^bb0(%e: !cir.ptr<!rec_S>):
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.struct<"S" {pad !u8i}>
+
+module {
+  cir.func @bad_static_addrspace_mismatch_dtor(%p: !cir.ptr<!cir.array<!rec_S x 10>, target_address_space(1)>) {
+    // expected-error@+1 {{'cir.array.dtor' op block argument address space must match the 'addr' address space}}
+    cir.array.dtor %p : !cir.ptr<!cir.array<!rec_S x 10>, target_address_space(1)> {
+    ^bb0(%e: !cir.ptr<!rec_S>):
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
 !u64i = !cir.int<u, 64>
 !rec_S = !cir.struct<"S" {pad !u8i}>
 !rec_T = !cir.struct<"T" {pad !u8i}>
