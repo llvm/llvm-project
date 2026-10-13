@@ -23311,23 +23311,23 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
   SDValue X = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, a);
   SDValue Y = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, b);
 
-  SDValue Res = DAG.getNode(ISD::FDIV, Dl, MVT::f64, x, y);
+  SDValue Res = DAG.getNode(ISD::FDIV, Dl, MVT::f64, X, Y);
   Res = DAG.getNode(ISD::FTRUNC, Dl, MVT::f64, Res);
   Res = DAG.getNode(ISD::FNEG, Dl, MVT::f64, Res);
-  Res = DAG.getNode(ISD::FMA, Dl, MVT::f64, Res, y, x);
-  Res = DAG.getNode(ISD::FCOPYSIGN, Dl, MVT::f64, Res, x);
+  Res = DAG.getNode(ISD::FMA, Dl, MVT::f64, Res, Y, X);
+  Res = DAG.getNode(ISD::FCOPYSIGN, Dl, MVT::f64, Res, X);
 
   EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
-      DAG.getDataLayout(), *DAG.getContext(), MVT::f64);
-  SDValue YIsInf = DAG.getNode(ISD::IS_FPCLASS, Dl, CCVT, y,
+      DAG.getDataLaYout(), *DAG.getContext(), MVT::f64);
+  SDValue YIsInf = DAG.getNode(ISD::IS_FPCLASS, Dl, CCVT, Y,
                                DAG.getTargetConstant(fcInf, Dl, MVT::i32));
 
   SDValue XIsFinite =
-      DAG.getNode(ISD::IS_FPCLASS, Dl, CCVT, x,
+      DAG.getNode(ISD::IS_FPCLASS, Dl, CCVT, X,
                   DAG.getTargetConstant(fcFinite, Dl, MVT::i32));
 
   SDValue UseX = DAG.getNode(ISD::AND, Dl, CCVT, YIsInf, XIsFinite);
-  Res = DAG.getSelect(Dl, MVT::f64, UseX, x, Res);
+  Res = DAG.getSelect(Dl, MVT::f64, UseX, X, Res);
 
   return DAG.getNode(ISD::FP_ROUND, Dl, MVT::f16, Res,
                      DAG.getIntPtrConstant(0, Dl, /*isTarget=*/true));
