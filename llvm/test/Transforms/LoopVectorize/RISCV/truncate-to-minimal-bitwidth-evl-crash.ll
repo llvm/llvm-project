@@ -8,20 +8,15 @@
 define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr %src) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @truncate_to_minimal_bitwidths_widen_cast_recipe(
 ; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[VECTOR_PH:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[GEP_SRC]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
-; CHECK-NEXT:    [[MUL16:%.*]] = mul i32 0, [[CONV]]
-; CHECK-NEXT:    [[SHR35:%.*]] = lshr i32 [[MUL16]], 1
-; CHECK-NEXT:    [[CONV36:%.*]] = trunc i32 [[SHR35]] to i8
-; CHECK-NEXT:    store i8 [[CONV36]], ptr null, align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 16
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[SRC]], <vscale x 16 x i1> splat (i1 true), i32 17)
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -36,7 +31,7 @@ loop:
   %mul16 = mul i32 0, %conv
   %shr35 = lshr i32 %mul16, 1
   %conv36 = trunc i32 %shr35 to i8
-  store i8 %conv36, ptr null, align 1
+  store i8 %conv36, ptr %gep.src, align 1
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv, 16
   br i1 %ec, label %exit, label %loop
