@@ -114,5 +114,3 @@ pixel.end:
 exit:
   ret void
 }
-
-declare double @llvm.fmuladd.f64(double, double, double)
