@@ -25,8 +25,7 @@ struct SideEffectsPass
 
     // Emit recursive memory effects.
     module.walk([](Operation *op) {
-      if (op->hasAttr("test_recursive_memory_effects") &&
-          op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+      if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
         op->emitRemark() << "recursive memory effects";
     });
 
