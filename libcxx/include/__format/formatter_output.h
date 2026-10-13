@@ -139,7 +139,7 @@ __transform(_Iterator __first,
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value) {
+_LIBCPP_HIDE_FROM_ABI constexpr _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_CharT>>>) {
     __out_it.__get_container()->__fill(__n, __value);
     return __out_it;
@@ -152,7 +152,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value)
 }
 
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
+_LIBCPP_HIDE_FROM_ABI constexpr _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
 #  if _LIBCPP_HAS_UNICODE
   if constexpr (same_as<_CharT, char>) {
     std::size_t __bytes = std::countl_one(static_cast<unsigned char>(__value.__data[0]));
