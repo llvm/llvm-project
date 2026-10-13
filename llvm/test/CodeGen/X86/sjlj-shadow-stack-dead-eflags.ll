@@ -9,13 +9,13 @@ define i32 @setjmp_dead_eflags() {
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @buf, $noreg :: (load (s64) from got)
-  ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm killed [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from @buf)
+  ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from @buf)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rbp
   ; CHECK-NEXT:   MOV64mr [[MOV64rm1]], 1, $noreg, 0, $noreg, [[COPY]] :: (store (s64) into %ir.0)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rsp
   ; CHECK-NEXT:   MOV64mr [[MOV64rm1]], 1, $noreg, 16, $noreg, [[COPY1]] :: (store (s64) into %ir.3)
   ; CHECK-NEXT:   MOV64mi32 [[MOV64rm1]], 1, $noreg, 8, $noreg, %bb.3
-  ; CHECK-NEXT:   [[XOR64rr:%[0-9]+]]:gr64 = XOR64rr undef [[XOR64rr]], undef [[XOR64rr]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[XOR64rr:%[0-9]+]]:gr64 = XOR64rr undef [[XOR64rr]], undef [[XOR64rr]], implicit-def $eflags
   ; CHECK-NEXT:   [[RDSSPQ:%[0-9]+]]:gr64 = RDSSPQ [[XOR64rr]], implicit $ssp
   ; CHECK-NEXT:   MOV64mr [[MOV64rm1]], 1, $noreg, 24, $noreg, [[RDSSPQ]]
   ; CHECK-NEXT:   EH_SjLj_Setup %bb.3, csr_noregs
@@ -23,7 +23,7 @@ define i32 @setjmp_dead_eflags() {
   ; CHECK-NEXT: bb.1.entry:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr32 = PHI [[MOV32r0_]], %bb.1, %6, %bb.3
@@ -52,12 +52,12 @@ define void @longjmp_dead_eflags() {
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @buf, $noreg :: (load (s64) from got)
-  ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm killed [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from @buf)
+  ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from @buf)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.entry:
   ; CHECK-NEXT:   successors: %bb.6(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
   ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOV32r0_]], %subreg.sub_32bit
   ; CHECK-NEXT:   [[RDSSPQ:%[0-9]+]]:gr64 = RDSSPQ [[SUBREG_TO_REG]], implicit $ssp
   ; CHECK-NEXT:   TEST64rr [[RDSSPQ]], [[RDSSPQ]], implicit-def $eflags
@@ -73,7 +73,7 @@ define void @longjmp_dead_eflags() {
   ; CHECK-NEXT: bb.3.entry:
   ; CHECK-NEXT:   successors: %bb.6(0x40000000), %bb.4(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[SHR64ri:%[0-9]+]]:gr64 = SHR64ri [[SUB64rr]], 3, implicit-def dead $eflags
+  ; CHECK-NEXT:   [[SHR64ri:%[0-9]+]]:gr64 = SHR64ri [[SUB64rr]], 3, implicit-def $eflags
   ; CHECK-NEXT:   INCSSPQ [[SHR64ri]], implicit-def $ssp, implicit $ssp
   ; CHECK-NEXT:   [[SHR64ri1:%[0-9]+]]:gr64 = SHR64ri [[SHR64ri]], 8, implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.6, 4, implicit $eflags
@@ -81,7 +81,7 @@ define void @longjmp_dead_eflags() {
   ; CHECK-NEXT: bb.4.entry:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[SHR64ri1]], 1, implicit-def dead $eflags
+  ; CHECK-NEXT:   [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[SHR64ri1]], 1, implicit-def $eflags
   ; CHECK-NEXT:   [[MOV64ri32_:%[0-9]+]]:gr64 = MOV64ri32 128
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.entry:
@@ -95,7 +95,7 @@ define void @longjmp_dead_eflags() {
   ; CHECK-NEXT: bb.6.entry:
   ; CHECK-NEXT:   $rbp = frame-destroy MOV64rm [[MOV64rm1]], 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[MOV64rm3:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm1]], 1, $noreg, 8, $noreg
-  ; CHECK-NEXT:   $rsp = frame-destroy MOV64rm killed [[MOV64rm1]], 1, $noreg, 16, $noreg
+  ; CHECK-NEXT:   $rsp = frame-destroy MOV64rm [[MOV64rm1]], 1, $noreg, 16, $noreg
   ; CHECK-NEXT:   JMP64r [[MOV64rm3]]
 entry:
   %0 = load ptr, ptr @buf, align 8
