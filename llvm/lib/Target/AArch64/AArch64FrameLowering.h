@@ -158,8 +158,6 @@ public:
 
   bool isFPReserved(const MachineFunction &MF) const;
 
-  bool needsWinCFI(const MachineFunction &MF) const;
-
   bool requiresSaveVG(const MachineFunction &MF) const;
 
   /// Returns the size of the entire ZPR stackframe (calleesaves + spills).

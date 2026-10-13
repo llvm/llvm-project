@@ -325,11 +325,11 @@ attributes(global) subroutine __ldXXi4(b)
 end
 
 ! CHECK-LABEL: func.func @_QP__ldxxi4
-! CHECK: fir.call @__ldca_i4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
-! CHECK: fir.call @__ldcg_i4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
-! CHECK: fir.call @__ldcs_i4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
-! CHECK: fir.call @__ldlu_i4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
-! CHECK: fir.call @__ldcv_i4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+! CHECK: fir.call @__ldca_i4x4_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+! CHECK: fir.call @__ldcg_i4x4_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+! CHECK: fir.call @__ldcs_i4x4_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+! CHECK: fir.call @__ldlu_i4x4_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+! CHECK: fir.call @__ldcv_i4x4_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
 
 attributes(global) subroutine __ldXXi8(b)
   integer(8), device :: b(*)
@@ -342,11 +342,11 @@ attributes(global) subroutine __ldXXi8(b)
 end
 
 ! CHECK-LABEL: func.func @_QP__ldxxi8
-! CHECK: fir.call @__ldca_i8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
-! CHECK: fir.call @__ldcg_i8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
-! CHECK: fir.call @__ldcs_i8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
-! CHECK: fir.call @__ldlu_i8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
-! CHECK: fir.call @__ldcv_i8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
+! CHECK: fir.call @__ldca_i8x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
+! CHECK: fir.call @__ldcg_i8x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
+! CHECK: fir.call @__ldcs_i8x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
+! CHECK: fir.call @__ldlu_i8x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
+! CHECK: fir.call @__ldcv_i8x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
 
 attributes(global) subroutine __ldXXr4(b)
   real, device :: b(*)
@@ -359,11 +359,11 @@ attributes(global) subroutine __ldXXr4(b)
 end
 
 ! CHECK-LABEL: func.func @_QP__ldxxr4
-! CHECK: fir.call @__ldca_r4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
-! CHECK: fir.call @__ldcg_r4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
-! CHECK: fir.call @__ldcs_r4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
-! CHECK: fir.call @__ldlu_r4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
-! CHECK: fir.call @__ldcv_r4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
+! CHECK: fir.call @__ldca_r4x4_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
+! CHECK: fir.call @__ldcg_r4x4_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
+! CHECK: fir.call @__ldcs_r4x4_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
+! CHECK: fir.call @__ldlu_r4x4_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
+! CHECK: fir.call @__ldcv_r4x4_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
 
 attributes(global) subroutine __ldXXr2(b)
   real(2), device :: b(*)
@@ -376,11 +376,11 @@ attributes(global) subroutine __ldXXr2(b)
 end
 
 ! CHECK-LABEL: func.func @_QP__ldxxr2
-! CHECK: fir.call @__ldca_r2x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
-! CHECK: fir.call @__ldcg_r2x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
-! CHECK: fir.call @__ldcs_r2x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
-! CHECK: fir.call @__ldlu_r2x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
-! CHECK: fir.call @__ldcv_r2x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
+! CHECK: fir.call @__ldca_r2x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
+! CHECK: fir.call @__ldcg_r2x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
+! CHECK: fir.call @__ldcs_r2x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
+! CHECK: fir.call @__ldlu_r2x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
+! CHECK: fir.call @__ldcv_r2x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
 
 attributes(global) subroutine __ldXXr8(b)
   real(8), device :: b(*)
@@ -393,11 +393,11 @@ attributes(global) subroutine __ldXXr8(b)
 end
 
 ! CHECK-LABEL: func.func @_QP__ldxxr8
-! CHECK: fir.call @__ldca_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
-! CHECK: fir.call @__ldcg_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
-! CHECK: fir.call @__ldcs_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
-! CHECK: fir.call @__ldlu_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
-! CHECK: fir.call @__ldcv_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
+! CHECK: fir.call @__ldca_r8x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
+! CHECK: fir.call @__ldcg_r8x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
+! CHECK: fir.call @__ldcs_r8x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
+! CHECK: fir.call @__ldlu_r8x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
+! CHECK: fir.call @__ldcv_r8x2_(%{{.*}}, %{{.*}}) proc_attrs<intrinsic> fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
 
 attributes(device) subroutine testVote()
   integer :: a, ipred, mask
@@ -779,4 +779,12 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPcall_c_kernel()
 ! CHECK: cuf.kernel_launch @c_kernel<<<{{.*}}>>>()
+
+! The __ldXX helper declarations are emitted at the end of the module.
+! CHECK-DAG: func.func private @__ldca_i4x4_(!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>) attributes {fir.proc_attrs = #fir.proc_attrs<intrinsic>}
+! CHECK-DAG: func.func private @__ldca_i8x2_(!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<2xi64>>) attributes {fir.proc_attrs = #fir.proc_attrs<intrinsic>}
+! CHECK-DAG: func.func private @__ldca_r2x2_(!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<2xf16>>) attributes {fir.proc_attrs = #fir.proc_attrs<intrinsic>}
+! CHECK-DAG: func.func private @__ldca_r4x4_(!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<4xf32>>) attributes {fir.proc_attrs = #fir.proc_attrs<intrinsic>}
+! CHECK-DAG: func.func private @__ldca_r8x2_(!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<2xf64>>) attributes {fir.proc_attrs = #fir.proc_attrs<intrinsic>}
+
 ! CHECK: func.func private @c_kernel() attributes {cuf.proc_attr = #cuf.cuda_proc<global>,{{.*}}fir.bindc_name = "c_kernel", fir.proc_attrs = #fir.proc_attrs<bind_c>}

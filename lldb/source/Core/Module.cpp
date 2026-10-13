@@ -1665,8 +1665,14 @@ std::string Module::GetCacheKey() {
   return key;
 }
 
-DataFileCache *Module::GetIndexCache() {
-  if (!ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache())
+DataFileCache *Module::GetIndexCache(bool memory_module) {
+  bool lldb_index_enabled = false;
+  if (ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache())
+    lldb_index_enabled = true;
+  if (memory_module && ModuleList::GetGlobalModuleListProperties()
+                           .GetEnableLLDBIndexCacheMemoryModules())
+    lldb_index_enabled = true;
+  if (!lldb_index_enabled)
     return nullptr;
   // NOTE: intentional leak so we don't crash if global destructor chain gets
   // called as other threads still use the result of this function

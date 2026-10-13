@@ -647,6 +647,29 @@ def CUFDeviceGlobal :
   ];
 }
 
+def CUFSharedTypeInfo : Pass<"cuf-shared-type-info", "mlir::ModuleOp"> {
+  let summary = "Share host runtime type information with device code";
+  let description = [{
+    Under -gpu=mem:managed, a descriptor in managed memory can be written by
+    device code and read by host code, so the type descriptor address it holds
+    must be valid on both sides.
+
+    This pass makes the host runtime type information writable and places it
+    in the `__nv_type_info` section, which CUFAddConstructor registers with the
+    CUDA runtime so device code can read it through its host address. Each
+    type descriptor present in the GPU module gets a managed pointer, which
+    the CUDA Fortran constructor sets to the host address of the type
+    descriptor. The GPU module attribute `cuf.shared_type_descs` maps type
+    descriptor names to these pointers, and code generation loads the type
+    descriptor address from them in device code. The `acc.declare` attribute
+    is dropped so OpenACC does not copy the type information to the device.
+
+    Device code then sees the host binding tables, so type-bound procedures
+    cannot be called from device code.
+  }];
+  let dependentDialects = ["mlir::gpu::GPUDialect", "cuf::CUFDialect"];
+}
+
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
@@ -664,6 +687,11 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
            "GPU module via cuf.register_variable_static, so the CUDA driver "
            "maps the device-side symbol to the host pointer at module-load "
            "time and HMM/ATS handles migration.">,
+    Option<"cudaManagedTypeInfo", "cuda-managed-type-info", "bool",
+           /*default=*/"false",
+           "Register the runtime type information shared with device code "
+           "under -gpu=mem:managed (see cuf-shared-type-info): register the "
+           "pages of its section with the CUDA runtime.">,
     Option<"priority", "priority", "int32_t", /*default=*/"0",
            "Priority for the CUDA Fortran global constructor in "
            "llvm.mlir.global_ctors.">,

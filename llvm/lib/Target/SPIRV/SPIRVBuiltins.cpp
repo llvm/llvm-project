@@ -3176,16 +3176,20 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
     uint64_t NumElem = ConstOp.getCImm()->getValue().getZExtValue();
 
     Register LocalSizeArrayReg = Call->Arguments[LocalSizeElemPtrIdx];
+    SPIRVTypeInst PointeeTy =
+        GR->getPointeeType(GR->getSPIRVTypeForVReg(LocalSizeArrayReg));
+    bool IsArrayPtr = PointeeTy && PointeeTy->getOpcode() == SPIRV::OpTypeArray;
 
     for (unsigned i = 0; i < NumElem; ++i) {
       Register Reg = MRI->createVirtualRegister(&SPIRV::pIDRegClass);
       auto GEPInst = MIRBuilder.buildIntrinsic(
           Intrinsic::spv_gep, ArrayRef<Register>{Reg}, true, false);
       GEPInst
-          .addImm(0)                                        // In bound.
-          .addUse(LocalSizeArrayReg)                        // Base pointer.
-          .addUse(buildConstantIntReg32(0, MIRBuilder, GR)) // Indices.
-          .addUse(buildConstantIntReg32(i, MIRBuilder, GR));
+          .addImm(0)                  // In bound.
+          .addUse(LocalSizeArrayReg); // Base pointer.
+      if (IsArrayPtr)
+        GEPInst.addUse(buildConstantIntReg32(0, MIRBuilder, GR));
+      GEPInst.addUse(buildConstantIntReg32(i, MIRBuilder, GR));
       LocalSizes.push_back(Reg);
     }
   }
@@ -3698,6 +3702,13 @@ mapBuiltinToOpcode(StringRef DemangledCall,
     return std::make_tuple(-1, 0, 0);
   }
   return std::make_tuple(-1, 0, 0);
+}
+
+bool isBuiltin(StringRef DemangledCall,
+               SPIRV::InstructionSet::InstructionSet Set) {
+  SmallVector<Register> Args;
+  return lookupBuiltin(DemangledCall, Set, Register(), nullptr, Args) !=
+         nullptr;
 }
 
 /// Checks that scalar/vector numeric arguments of \p Call match the types

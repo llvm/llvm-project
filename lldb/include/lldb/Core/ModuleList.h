@@ -107,6 +107,8 @@ public:
   lldb::SymbolSharedCacheUse GetSharedCacheBinaryLoading() const;
   bool GetEnableLLDBIndexCache() const;
   bool SetEnableLLDBIndexCache(bool new_value);
+  bool GetEnableLLDBIndexCacheMemoryModules() const;
+  bool SetEnableLLDBIndexCacheMemoryModules(bool new_value);
   uint64_t GetLLDBIndexCacheMaxByteSize();
   uint64_t GetLLDBIndexCacheMaxPercent();
   uint64_t GetLLDBIndexCacheExpirationDays();

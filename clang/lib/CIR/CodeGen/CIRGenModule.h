@@ -82,6 +82,9 @@ private:
 
   const clang::LangOptions &langOpts;
 
+  /// Seeded from langOpts and then pushed and popped by clang::atomic.
+  clang::AtomicOptions atomicOpts;
+
   const clang::CodeGenOptions &codeGenOpts;
 
   /// A "module" matches a c/cpp source file: containing a list of functions.
@@ -175,6 +178,12 @@ public:
   clang::DiagnosticsEngine &getDiags() const { return diags; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
+
+  /// The atomic options in effect at the point currently being emitted.
+  /// clang::atomic adjusts these for the extent of the statement it is attached
+  /// to, so they are module state rather than a fixed language option.
+  clang::AtomicOptions getAtomicOpts() const { return atomicOpts; }
+  void setAtomicOpts(clang::AtomicOptions opts) { atomicOpts = opts; }
 
   CIRGenCXXABI &getCXXABI() const { return *abi; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
@@ -469,6 +478,10 @@ public:
   /// expectations of the AST, rather than using the target's allocation address
   /// space, which may lead to type mismatches in other parts of the IR.
   LangAS getLangTempAllocaAddressSpace() const;
+
+  /// Return the CIR address space attribute for a global in \p as, honoring
+  /// the target address space map where the LangAS fold would lose it.
+  mlir::ptr::MemorySpaceAttrInterface getGlobalCIRAddressSpace(LangAS as);
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).

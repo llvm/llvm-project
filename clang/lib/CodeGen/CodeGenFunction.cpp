@@ -36,7 +36,6 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -3312,9 +3311,8 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
     llvm::Instruction *Assumption) {
   assert(isa_and_nonnull<llvm::CallInst>(Assumption) &&
          cast<llvm::CallInst>(Assumption)->getCalledOperand() ==
-             llvm::Intrinsic::getOrInsertDeclaration(
-                 Builder.GetInsertBlock()->getParent()->getParent(),
-                 llvm::Intrinsic::assume) &&
+             llvm::Intrinsic::getOrInsertDeclaration(Builder.getModule(),
+                                                     llvm::Intrinsic::assume) &&
          "Assumption should be a call to llvm.assume().");
   assert(&(Builder.GetInsertBlock()->back()) == Assumption &&
          "Assumption should be the last instruction of the basic block, "
