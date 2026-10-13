@@ -108,40 +108,43 @@ exit:
 define void @truncate_to_i1_used_by_branch(i8 %x, ptr %dst) #0 {
 ; CHECK-LABEL: define void @truncate_to_i1_used_by_branch(
 ; CHECK-SAME: i8 [[X:%.*]], ptr [[DST:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[VECTOR_PH:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[F_039:%.*]] = phi i8 [ 0, %[[VECTOR_PH]] ], [ [[ADD:%.*]], %[[EXIT:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = or i8 23, [[X]]
-; CHECK-NEXT:    [[EXTRACT_T:%.*]] = trunc i8 [[TMP0]] to i1
-; CHECK-NEXT:    br i1 [[EXTRACT_T]], label %[[MIDDLE_BLOCK:.*]], label %[[EXIT]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 9, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 16, i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[INDEX]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i8 [[TMP1]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[TMP2]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i32 [[TMP0]], [[INDEX]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    store i8 0, ptr [[DST]], align 1
-; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[ADD]] = add i8 [[F_039]], 1
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[F_039]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV]], 8
-; CHECK-NEXT:    br i1 [[CMP]], label %[[VECTOR_BODY]], label %[[EXIT1:.*]]
-; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop.header
 
 loop.header:
-  %f.039 = phi i8  [ 0, %entry ], [ %add, %loop.latch ]
+  %iv = phi i8  [ 0, %entry ], [ %add, %loop.latch ]
   %0 = or i8 23, %x
   %extract.t = trunc i8 %0 to i1
   br i1 %extract.t, label %then, label %loop.latch
 
 then:
-  store i8 0, ptr %dst, align 1
+  %loc = getelementptr i8, ptr %dst, i8 %iv
+  store i8 0, ptr %loc, align 1
   br label %loop.latch
 
 loop.latch:
-  %add = add i8 %f.039, 1
-  %conv = sext i8 %f.039 to i32
+  %add = add i8 %iv, 1
+  %conv = sext i8 %iv to i32
   %cmp = icmp slt i32 %conv, 8
   br i1 %cmp, label %loop.header, label %exit
 
@@ -214,7 +217,7 @@ define void @icmp_only_first_op_truncated(ptr noalias %dst, i32 %x, i64 %N, i64 
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP14]] to i64
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -282,18 +285,18 @@ define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) vsc
 ; CHECK-NEXT:    [[TMP16:%.*]] = trunc <vscale x 2 x i32> [[TMP15]] to <vscale x 2 x i16>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP13]], 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[P2]], i64 [[TMP8]]
-; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i16.p0.i64(<vscale x 2 x i16> [[TMP16]], ptr align 2 [[TMP10]], i64 8, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]]), !alias.scope [[META5:![0-9]+]], !noalias [[META8:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i16.p0.i64(<vscale x 2 x i16> [[TMP16]], ptr align 2 [[TMP10]], i64 8, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]]), !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = trunc <vscale x 2 x i32> [[TMP15]] to <vscale x 2 x i8>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP13]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[P2]], i64 [[TMP11]]
-; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i8.p0.i64(<vscale x 2 x i8> [[TMP18]], ptr align 1 [[TMP12]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]]), !alias.scope [[META11:![0-9]+]], !noalias [[META12:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i8.p0.i64(<vscale x 2 x i8> [[TMP18]], ptr align 1 [[TMP12]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]]), !alias.scope [[META12:![0-9]+]], !noalias [[META13:![0-9]+]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP13]], 5
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[P2]], i64 [[TMP17]]
-; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i64.p0.i64(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[TMP19]], i64 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]]), !alias.scope [[META12]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i64.p0.i64(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[TMP19]], i64 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]]), !alias.scope [[META13]]
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP9]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -314,7 +317,7 @@ define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) vsc
 ; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 4
 ; CHECK-NEXT:    [[IV_NEXT_EXT:%.*]] = sext i16 [[IV_NEXT]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[IV_NEXT_EXT]], 1024
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP1]], label %[[EXIT]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP1]], label %[[EXIT]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -352,14 +355,15 @@ attributes #1 = { "target-features"="+64bit,+v" }
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
-; CHECK: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]]}
-; CHECK: [[META7]] = distinct !{[[META7]], i1 false, !"LVerDomain"}
-; CHECK: [[META8]] = !{[[META9:![0-9]+]], [[META10:![0-9]+]]}
-; CHECK: [[META9]] = distinct !{[[META9]], [[META7]]}
-; CHECK: [[META10]] = distinct !{[[META10]], [[META7]]}
-; CHECK: [[META11]] = !{[[META9]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
+; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
+; CHECK: [[META8]] = distinct !{[[META8]], i1 false, !"LVerDomain"}
+; CHECK: [[META9]] = !{[[META10:![0-9]+]], [[META11:![0-9]+]]}
+; CHECK: [[META10]] = distinct !{[[META10]], [[META8]]}
+; CHECK: [[META11]] = distinct !{[[META11]], [[META8]]}
 ; CHECK: [[META12]] = !{[[META10]]}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META2]]}
-; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]]}
+; CHECK: [[META13]] = !{[[META11]]}
+; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]]}
 ;.
