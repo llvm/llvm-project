@@ -66,6 +66,11 @@ cl::opt<unsigned> loopTripCountVersioningMaxSectionExtent(
     cl::desc("largest declared array extent to version an innermost loop on; "
              "0 disables"),
     cl::init(32), cl::Hidden);
+cl::opt<unsigned> loopTripCountVersioningMaxUnrolledOps(
+    "loop-tripcount-versioning-max-unrolled-ops",
+    cl::desc("do not version a loop if declared extent times body size "
+             "exceeds this; 0 removes the limit"),
+    cl::init(300), cl::Hidden);
 EnableOption(AllocationPlacement, "allocation-placement",
              "unified array allocation placement (experimental; replaces "
              "stack-arrays and memory-allocation-opt)");
