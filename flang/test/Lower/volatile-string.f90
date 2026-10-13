@@ -69,7 +69,7 @@ end program
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func private @_QFPassign_same_length(
-! CHECK-SAME:                                              %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.boxchar<1> {fir.bindc_name = "x"}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
+! CHECK-SAME:                                              %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.boxchar<1> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_inout>}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_3:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
@@ -83,7 +83,7 @@ end program
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func private @_QFPassign_different_length(
-! CHECK-SAME:                                                   %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.boxchar<1> {fir.bindc_name = "string"}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
+! CHECK-SAME:                                                   %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.boxchar<1> {fir.bindc_name = "string", fir.fortran_attrs = #fir.var_attrs<intent_inout>}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope

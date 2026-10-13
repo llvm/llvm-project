@@ -2164,6 +2164,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_ctype_utils",
         ":__support_macros_config",
+        ":__support_wctype_utils",
         ":hdr_stdint_proxy",
     ],
 )
@@ -2371,7 +2372,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_close",
-        ":__support_osutil_linux_syscall_wrappers_dup2",
+        ":__support_osutil_linux_syscall_wrappers_dup3",
         ":__support_osutil_linux_syscall_wrappers_fcntl",
         ":__support_osutil_linux_syscall_wrappers_lseek",
         ":__support_osutil_linux_syscall_wrappers_open",
@@ -4207,6 +4208,34 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_exit",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/exit.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_exit_group",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/exit_group.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_exit_hdrs",
     hdrs = ["src/__support/OSUtil/exit.h"],
     deps = [
@@ -4227,7 +4256,7 @@ libc_support_library(
         ":__support_common",
         ":__support_macros_config",
         ":__support_osutil_exit_hdrs",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_exit_group",
     ],
 )
 
@@ -4607,6 +4636,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_clone",
         ":__support_osutil_linux_syscall_wrappers_close",
+        ":__support_osutil_linux_syscall_wrappers_exit",
         ":__support_osutil_linux_syscall_wrappers_getpid",
         ":__support_osutil_linux_syscall_wrappers_mmap",
         ":__support_osutil_linux_syscall_wrappers_mprotect",
@@ -4658,6 +4688,7 @@ libc_support_library(
     }),
     deps = [
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_exit",
         ":__support_osutil_linux_syscall_wrappers_getrandom",
         ":__support_osutil_linux_syscall_wrappers_mmap",
         ":__support_osutil_linux_syscall_wrappers_munmap",
@@ -6425,6 +6456,7 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_integer_literals",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
     ],
@@ -8656,6 +8688,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_math_common_constants",
@@ -8719,6 +8752,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
         ":__support_macros_config",
         ":__support_macros_optimization",
     ],
@@ -10170,6 +10204,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
@@ -15538,6 +15573,7 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_exit",
         ":__support_threads_thread_headers",
+        ":fflush_internal",
     ],
 )
 
@@ -17477,20 +17513,34 @@ libc_support_library(
     ],
 )
 
-libc_function(
-    name = "fflush",
-    srcs = ["src/stdio/generic/fflush.cpp"],
-    hdrs = ["src/stdio/fflush.h"],
+libc_support_library(
+    name = "fflush_internal",
+    srcs = ["src/stdio/generic/fflush_internal.cpp"],
+    hdrs = ["src/stdio/fflush_internal.h"],
     deps = [
-        ":__support_common",
+        ":__support_error_or",
         ":__support_file_file",
         ":__support_file_platform_file",
-        ":__support_libc_errno",
         ":__support_macros_config",
-        ":errno",
         ":stderr",
         ":stdin",
         ":stdout",
+        ":types_FILE",
+    ],
+)
+
+libc_function(
+    name = "fflush",
+    srcs = ["src/stdio/fflush.cpp"],
+    hdrs = ["src/stdio/fflush.h"],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":errno",
+        ":fflush_internal",
+        ":hdr_stdio_macros",
         ":types_FILE",
     ],
 )

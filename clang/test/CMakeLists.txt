@@ -107,6 +107,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-ssaf-analyzer
   clang-ssaf-format
   clang-ssaf-linker
+  clang-ssaf-orchestrator-make
   clang-ssaf-src-edit-merge
   clang-sycl-linker
   diagtool
@@ -263,6 +264,8 @@ if(CLANG_ENABLE_CIR)
       llvm-config
       llvm-dis
       llvm-objdump
+      llvm-readelf
+      llvm-strings
       not
       opt
       split-file

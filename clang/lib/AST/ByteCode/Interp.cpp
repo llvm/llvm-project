@@ -40,9 +40,10 @@ using namespace clang::interp;
 // On MSVC, musttail does not guarantee tail calls in debug mode.
 // We disable it on MSVC generally since it doesn't seem to be able
 // to handle the way we use tailcalls.
-// PPC can't tail-call external calls, which is a problem for InterpNext.
+// MIPS and PPC can't tail-call external calls, which is a problem for
+// InterpNext.
 #if defined(_MSC_VER) || defined(__powerpc__) || !defined(MUSTTAIL) ||         \
-    defined(__i386__) || defined(__sparc__)
+    defined(__i386__) || defined(__sparc__) || defined(__mips__)
 #undef MUSTTAIL
 #define MUSTTAIL
 #define USE_TAILCALLS 0
@@ -633,33 +634,6 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_past_end_subobject)
       << CSK << S.Current->getRange(OpPC);
-  return false;
-}
-
-bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                   uint32_t Offset) {
-  uint32_t MinOffset = Ptr.block()->getMetadataSize();
-  uint32_t PtrOffset = Ptr.getByteOffset();
-
-  // We subtract Offset from PtrOffset. The result must be at least
-  // MinOffset.
-  if (Offset < PtrOffset && (PtrOffset - Offset) >= MinOffset)
-    return true;
-
-  const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
-  QualType ExprTy = E->getType();
-  if (ExprTy->isPointerOrReferenceType())
-    ExprTy = ExprTy->getPointeeType();
-
-  QualType TargetQT = ExprTy;
-  QualType MostDerivedQT = Ptr.getDeclPtr().getType();
-
-  if (MostDerivedQT->isPointerOrReferenceType())
-    MostDerivedQT = MostDerivedQT->getPointeeType();
-
-  S.CCEDiag(E, diag::note_constexpr_invalid_downcast)
-      << MostDerivedQT << TargetQT;
-
   return false;
 }
 
@@ -1384,20 +1358,8 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
   return false;
 }
 
-bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
-                       const Pointer &Ptr) {
-  if (!Ptr.isBlockPointer() && !Ptr.isOpaquePointer())
-    return false;
-  // Regular new type(...) call.
-  if (isa_and_nonnull<CXXNewExpr>(Source))
-    return true;
-  // operator new.
-  if (const auto *CE = dyn_cast_if_present<CallExpr>(Source);
-      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_operator_new)
-    return true;
-  // std::allocator.allocate() call
-  if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(Source);
-      MCE && MCE->getMethodDecl()->getIdentifier()->isStr("allocate"))
+bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (Ptr.isBlockPointer() && Ptr.block()->isDynamic())
     return true;
 
   // Whatever this is, we didn't heap allocate it.
@@ -1563,7 +1525,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return true;
 
     if (!Ptr.isBlockPointer())
-      return CheckDeleteSource(S, OpPC, nullptr, Ptr);
+      return CheckDeleteSource(S, OpPC, Ptr);
 
     // Remove base casts.
     QualType InitialType = Ptr.getType();
@@ -1602,7 +1564,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return false;
     }
 
-    if (!CheckDeleteSource(S, OpPC, Source, Ptr))
+    if (!CheckDeleteSource(S, OpPC, Ptr))
       return false;
 
     // For a class type with a virtual destructor, the selected operator delete
@@ -1863,8 +1825,9 @@ bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK) {
   return getBase(S, OpPC, Ptr.narrow(), Off, NullOK);
 }
 
-bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
-                      const Type *TargetType) {
+// Do ONE step of a BaseToDerived cast.
+bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, bool NullOK,
+                      const Type *TargetType, const Type *FinalType) {
   const Pointer &Ptr = S.Stk.pop<Pointer>().narrow();
   if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Derived))
     return false;
@@ -1884,21 +1847,31 @@ bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
 
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
     return false;
-  if (!CheckDowncast(S, OpPC, Ptr, Off))
-    return false;
 
-  const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
-  assert(TargetRecord);
-
-  if (TargetRecord->getDecl()->getCanonicalDecl() !=
-      TargetType->getAsCXXRecordDecl()->getCanonicalDecl()) {
+  auto diagFailedCast = [&]() -> bool {
     QualType MostDerivedType = Ptr.getDeclDesc()->getType();
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_downcast)
-        << MostDerivedType << QualType(TargetType, 0);
+        << MostDerivedType << QualType(FinalType, 0);
     return false;
-  }
+  };
 
-  S.Stk.push<Pointer>(Ptr.atFieldSub(Off));
+  // We're casting down one level, which isn't possible if the pointer is
+  // already the root.
+  if (Ptr.isRoot())
+    return diagFailedCast();
+
+  auto unwrapPointerType = [](QualType T) -> const Type * {
+    if (T->isPointerOrReferenceType())
+      return T->getPointeeType().getTypePtr();
+    return T.getTypePtr();
+  };
+
+  PtrView BasePtr = Ptr.view().getBase();
+  const Type *BaseTy = unwrapPointerType(BasePtr.getType());
+  if (!ASTContext::hasSameType(BaseTy, TargetType))
+    return diagFailedCast();
+
+  S.Stk.push<Pointer>(BasePtr);
   return true;
 }
 
@@ -3353,10 +3326,11 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
     return !Fatal;
   case CastKind::Volatile:
     if (!S.checkingPotentialConstantExpression()) {
-      const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
-      if (S.getLangOpts().CPlusPlus)
+      const auto *E = S.Current->getExpr(OpPC);
+      const auto *CE = dyn_cast<CastExpr>(E);
+      if (CE && S.getLangOpts().CPlusPlus)
         S.FFDiag(E, diag::note_constexpr_access_volatile_type)
-            << AK_Read << E->getSubExpr()->getType();
+            << AK_Read << CE->getSubExpr()->getType();
       else
         S.FFDiag(E);
     }
