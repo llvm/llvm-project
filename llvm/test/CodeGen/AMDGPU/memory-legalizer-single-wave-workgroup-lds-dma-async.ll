@@ -38,8 +38,11 @@ define void @lds_async_dma_wg_fence_release_single32(ptr addrspace(1) inreg %g, 
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-NEXT:    global_load_async_to_lds_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    ; asyncmark
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    ; wait_asyncmark(0)
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_asynccnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-NEXT:    ds_load_b32 v1, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
@@ -48,7 +51,9 @@ define void @lds_async_dma_wg_fence_release_single32(ptr addrspace(1) inreg %g, 
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
   fence syncscope("workgroup") release
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
   %v = load i32, ptr addrspace(3) %lds, align 4
   store i32 %v, ptr addrspace(3) %lds, align 4
   ret void
