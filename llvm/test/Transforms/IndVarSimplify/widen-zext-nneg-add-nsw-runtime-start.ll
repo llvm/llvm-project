@@ -5,9 +5,8 @@ target datalayout = "e-m:e-i64:64-n8:16:32:64-S128"
 
 ; for (int i = start; i < 10000; i++) a[i] = a[i - 32] + 1;
 ; Array indices are zext nneg, and i - 32 is nsw but not nuw. Where start is
-; known non-negative on loop entry, i - 32 can be computed in i64.
+; known non-negative on loop entry, i - 32 is computed in i64.
 
-; FIXME: i - 32 should be computed in i64.
 ; start and start - 32 are both <u len, and len is non-negative.
 define void @runtime_start(ptr %a, i32 %start, ptr %len.p) {
 ; CHECK-LABEL: define void @runtime_start(
@@ -28,17 +27,15 @@ define void @runtime_start(ptr %a, i32 %start, ptr %len.p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], %[[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[TMP1]], -32
-; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[IDX]] to i64
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = add nsw i64 [[INDVARS_IV]], -32
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[SRC]], align 1
 ; CHECK-NEXT:    [[V1:%.*]] = add i8 [[V]], 1
 ; CHECK-NEXT:    [[DST:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 [[V1]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[DONE:%.*]] = icmp sgt i32 [[TMP2]], 9998
+; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], 10000
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
@@ -75,7 +72,6 @@ exit:
   ret void
 }
 
-; FIXME: i - 32 should be computed in i64.
 ; start <u len, and len is non-negative.
 define void @ult_guard_len_range(ptr %a, i32 %start, ptr %len.p) {
 ; CHECK-LABEL: define void @ult_guard_len_range(
@@ -86,20 +82,20 @@ define void @ult_guard_len_range(ptr %a, i32 %start, ptr %len.p) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START]] to i64
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[START]], i32 9999)
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[SMAX]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], %[[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[TMP1]], -32
-; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[IDX]] to i64
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = add nsw i64 [[INDVARS_IV]], -32
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[SRC]], align 1
 ; CHECK-NEXT:    [[V1:%.*]] = add i8 [[V]], 1
 ; CHECK-NEXT:    [[DST:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 [[V1]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[DONE:%.*]] = icmp sgt i32 [[TMP2]], 9998
+; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
@@ -129,7 +125,6 @@ exit:
   ret void
 }
 
-; FIXME: i - 32 should be computed in i64.
 ; start >=s 32.
 define void @sge_guard(ptr %a, i32 %start) {
 ; CHECK-LABEL: define void @sge_guard(
@@ -139,20 +134,20 @@ define void @sge_guard(ptr %a, i32 %start) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START]] to i64
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[START]], i32 9999)
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[SMAX]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], %[[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[TMP1]], -32
-; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[IDX]] to i64
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = add nsw i64 [[INDVARS_IV]], -32
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[SRC]], align 1
 ; CHECK-NEXT:    [[V1:%.*]] = add i8 [[V]], 1
 ; CHECK-NEXT:    [[DST:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 [[V1]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[DONE:%.*]] = icmp sgt i32 [[TMP2]], 9998
+; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]

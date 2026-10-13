@@ -7,7 +7,6 @@ target datalayout = "e-m:e-i64:64-n8:16:32:64-S128"
 ; Array indices are zext nneg, and i - 32 is nsw but not nuw. start is
 ; non-negative on loop entry, so the dependence distance between a[i] and
 ; a[i - 32] is known and no runtime alias check is needed.
-; FIXME: a runtime alias check is emitted.
 define void @runtime_start(ptr %a, i32 %start, ptr %len.p) {
 ; CHECK-LABEL: define void @runtime_start(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[START:%.*]], ptr [[LEN_P:%.*]]) {
@@ -28,18 +27,7 @@ define void @runtime_start(ptr %a, i32 %start, ptr %len.p) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 9967, [[START_M32]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
-; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[START_M32]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP6]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], 1
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP9]], 15
-; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[TMP10]]
@@ -48,9 +36,7 @@ define void @runtime_start(ptr %a, i32 %start, ptr %len.p) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nuw i64 [[TMP0]], [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = trunc nuw i64 [[TMP12]] to i32
-; CHECK-NEXT:    [[TMP14:%.*]] = add nsw i32 [[TMP13]], -32
-; CHECK-NEXT:    [[TMP15:%.*]] = zext nneg i32 [[TMP14]] to i64
+; CHECK-NEXT:    [[TMP15:%.*]] = add nsw i64 [[TMP12]], -32
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = add <4 x i32> [[WIDE_LOAD]], splat (i32 1)
@@ -63,22 +49,20 @@ define void @runtime_start(ptr %a, i32 %start, ptr %len.p) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[TMP0]], %[[LOOP_PREHEADER]] ], [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ], [ [[TMP0]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[TMP0]], %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP20:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[TMP20]], -32
-; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[IDX]] to i64
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = add nsw i64 [[INDVARS_IV]], -32
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[V1:%.*]] = add i32 [[V]], 1
 ; CHECK-NEXT:    [[DST:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i32 [[V1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP21:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[DONE:%.*]] = icmp sgt i32 [[TMP21]], 9998
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT_LOOPEXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], 10000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT_LOOPEXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -121,5 +105,5 @@ exit:
 ; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META2]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META2]]}
 ;.

@@ -11465,9 +11465,18 @@ bool ScalarEvolution::isKnownOnEveryIteration(CmpPredicate Pred,
 
   // It seems backedge guard check is faster than entry one so in some cases
   // it can speed up whole estimation by short circuit
-  return isLoopBackedgeGuardedByCond(L, Pred, SplitLHS.second,
-                                     SplitRHS.second) &&
-         isLoopEntryGuardedByCond(L, Pred, SplitLHS.first, SplitRHS.first);
+  if (isLoopBackedgeGuardedByCond(L, Pred, SplitLHS.second, SplitRHS.second))
+    return isLoopEntryGuardedByCond(L, Pred, SplitLHS.first, SplitRHS.first);
+
+  // If one side is a recurrence of L and the other side is invariant in L,
+  // and the predicate can only change from false to true as the loop
+  // iterates, it holds on every iteration once it holds on entry.
+  auto MP = getMonotonicPredicate(Pred.dropSameSign(), LHS, RHS, L);
+  if (!MP || MP->Type != MonotonicallyIncreasing)
+    return false;
+  if (MP->Swapped)
+    std::swap(SplitLHS, SplitRHS);
+  return isLoopEntryGuardedByCond(L, MP->Pred, SplitLHS.first, SplitRHS.first);
 }
 
 std::optional<ScalarEvolution::MonotonicPredicateType>
