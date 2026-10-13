@@ -1,4 +1,4 @@
-//===-- Implementation of fflush for baremetal -----------------*- C++ -*-===//
+//===-- Implementation header for lchown ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/fflush.h"
+#ifndef LLVM_LIBC_SRC_UNISTD_LCHOWN_H
+#define LLVM_LIBC_SRC_UNISTD_LCHOWN_H
 
-#include "src/__support/common.h"
+#include "hdr/types/gid_t.h"
+#include "hdr/types/uid_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-// Baremetal uses unbuffered I/O, so there is nothing to flush.
-LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
-  (void)stream;
-  // TODO: Shall we have an embedding API for fflush?
-  return 0;
-}
+int lchown(const char *path, uid_t owner, gid_t group);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_UNISTD_LCHOWN_H
