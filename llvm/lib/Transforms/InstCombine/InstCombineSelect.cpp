@@ -3665,7 +3665,13 @@ foldSelectOfSymmetricSelect(SelectInst &OuterSelVal,
     return nullptr;
 
   Value *Xor = Builder.CreateXor(InnerCond, OuterCond);
-  return SelectInst::Create(Xor, InnerFalseVal, InnerTrueVal);
+  SelectInst *SI = SelectInst::Create(Xor, InnerFalseVal, InnerTrueVal);
+  // We cannot construct branch weights without assuming that the distributions
+  // of the two conditions are independent, so mark the branch weights as
+  // unknown.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE,
+                                              OuterSelVal.getFunction());
+  return SI;
 }
 
 /// Look for patterns like
