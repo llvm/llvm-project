@@ -284,6 +284,11 @@
 #define _LIBCPP_AVAILABILITY_HAS_NEW_SYNC _LIBCPP_INTRODUCED_IN_LLVM_22
 #define _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE
 
+// This controls whether the asymmetric thread fence entry points (an internal helper used by
+// <hazard_pointer> and <rcu>) are available in the dylib.
+#define _LIBCPP_AVAILABILITY_HAS_ASYMMETRIC_THREAD_FENCE _LIBCPP_INTRODUCED_IN_LLVM_24
+// No attribute, since the symbols are only referenced under the macro above
+
 // This controls whether `std::__hash_memory` is available in the dylib, which
 // is used for some `std::hash` specializations.
 #define _LIBCPP_AVAILABILITY_HAS_HASH_MEMORY _LIBCPP_INTRODUCED_IN_LLVM_21
