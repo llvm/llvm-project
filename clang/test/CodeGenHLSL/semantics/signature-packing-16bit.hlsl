@@ -15,11 +15,11 @@ Output main() {
 }
 
 // Without native 16-bit types, half is float and all elements share a row.
-// WIDE-DAG: !{i32 0, !"A", i32 9, i32 0, !{{[0-9]+}}, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
-// WIDE-DAG: !{i32 1, !"B", i32 9, i32 0, !{{[0-9]+}}, i32 0, i32 1, i8 1, i32 0, i8 1, i8 0, i8 0, i32 0}
-// WIDE-DAG: !{i32 2, !"C", i32 9, i32 0, !{{[0-9]+}}, i32 0, i32 1, i8 1, i32 0, i8 2, i8 0, i8 0, i32 0}
+// WIDE-DAG: !{i32 0, !"A", i32 9, i32 0, !{{[0-9]+}}, i32 2, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+// WIDE-DAG: !{i32 1, !"B", i32 9, i32 0, !{{[0-9]+}}, i32 2, i32 1, i8 1, i32 0, i8 1, i8 0, i8 0, i32 0}
+// WIDE-DAG: !{i32 2, !"C", i32 9, i32 0, !{{[0-9]+}}, i32 2, i32 1, i8 1, i32 0, i8 2, i8 0, i8 0, i32 0}
 
 // Native 16-bit and 32-bit components must occupy different rows in both modes.
-// NATIVE-DAG: !{i32 0, !"A", i32 8, i32 0, !{{[0-9]+}}, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
-// NATIVE-DAG: !{i32 1, !"B", i32 9, i32 0, !{{[0-9]+}}, i32 0, i32 1, i8 1, i32 1, i8 0, i8 0, i8 0, i32 0}
-// NATIVE-DAG: !{i32 2, !"C", i32 8, i32 0, !{{[0-9]+}}, i32 0, i32 1, i8 1, i32 0, i8 1, i8 0, i8 0, i32 0}
+// NATIVE-DAG: !{i32 0, !"A", i32 8, i32 0, !{{[0-9]+}}, i32 2, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+// NATIVE-DAG: !{i32 1, !"B", i32 9, i32 0, !{{[0-9]+}}, i32 2, i32 1, i8 1, i32 1, i8 0, i8 0, i8 0, i32 0}
+// NATIVE-DAG: !{i32 2, !"C", i32 8, i32 0, !{{[0-9]+}}, i32 2, i32 1, i8 1, i32 0, i8 1, i8 0, i8 0, i32 0}

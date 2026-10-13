@@ -65,16 +65,16 @@ Targets ps_main(Varyings input) {
 // CHECK-DAG: ![[ID]] = !{i32 3, !"ID", i32 9, i32 0, ![[ZERO]], i32 0, i32 1, i8 2, i32 3, i8 0, i8 0, i8 0, i32 0}
 
 // Prefix-stable packing uses three rows: (a,b), (c), (d).
-// STABLE-DAG: ![[A]] = !{i32 0, !"A", i32 9, i32 0, ![[ZERO]], i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
-// STABLE-DAG: ![[B]] = !{i32 1, !"B", i32 9, i32 0, ![[ZERO]], i32 0, i32 1, i8 2, i32 0, i8 1, i8 0, i8 0, i32 0}
-// STABLE-DAG: ![[C]] = !{i32 2, !"C", i32 9, i32 0, ![[ZERO]], i32 0, i32 1, i8 3, i32 1, i8 0, i8 0, i8 0, i32 0}
-// STABLE-DAG: ![[D]] = !{i32 3, !"D", i32 9, i32 0, ![[ZERO]], i32 0, i32 1, i8 2, i32 2, i8 0, i8 0, i8 0, i32 0}
+// STABLE-DAG: ![[A]] = !{i32 0, !"A", i32 9, i32 0, ![[ZERO]], i32 2, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+// STABLE-DAG: ![[B]] = !{i32 1, !"B", i32 9, i32 0, ![[ZERO]], i32 2, i32 1, i8 2, i32 0, i8 1, i8 0, i8 0, i32 0}
+// STABLE-DAG: ![[C]] = !{i32 2, !"C", i32 9, i32 0, ![[ZERO]], i32 2, i32 1, i8 3, i32 1, i8 0, i8 0, i8 0, i32 0}
+// STABLE-DAG: ![[D]] = !{i32 3, !"D", i32 9, i32 0, ![[ZERO]], i32 2, i32 1, i8 2, i32 2, i8 0, i8 0, i8 0, i32 0}
 
 // Optimized packing uses two rows: (c,a), (b,d).
-// OPTIMIZED-DAG: ![[A]] = !{i32 0, !"A", i32 9, i32 0, ![[ZERO]], i32 0, i32 1, i8 1, i32 0, i8 3, i8 0, i8 0, i32 0}
-// OPTIMIZED-DAG: ![[B]] = !{i32 1, !"B", i32 9, i32 0, ![[ZERO]], i32 0, i32 1, i8 2, i32 1, i8 0, i8 0, i8 0, i32 0}
-// OPTIMIZED-DAG: ![[C]] = !{i32 2, !"C", i32 9, i32 0, ![[ZERO]], i32 0, i32 1, i8 3, i32 0, i8 0, i8 0, i8 0, i32 0}
-// OPTIMIZED-DAG: ![[D]] = !{i32 3, !"D", i32 9, i32 0, ![[ZERO]], i32 0, i32 1, i8 2, i32 1, i8 2, i8 0, i8 0, i32 0}
+// OPTIMIZED-DAG: ![[A]] = !{i32 0, !"A", i32 9, i32 0, ![[ZERO]], i32 2, i32 1, i8 1, i32 0, i8 3, i8 0, i8 0, i32 0}
+// OPTIMIZED-DAG: ![[B]] = !{i32 1, !"B", i32 9, i32 0, ![[ZERO]], i32 2, i32 1, i8 2, i32 1, i8 0, i8 0, i8 0, i32 0}
+// OPTIMIZED-DAG: ![[C]] = !{i32 2, !"C", i32 9, i32 0, ![[ZERO]], i32 2, i32 1, i8 3, i32 0, i8 0, i8 0, i8 0, i32 0}
+// OPTIMIZED-DAG: ![[D]] = !{i32 3, !"D", i32 9, i32 0, ![[ZERO]], i32 2, i32 1, i8 2, i32 1, i8 2, i8 0, i8 0, i32 0}
 
 // Pixel output rows always follow semantic indices, including gaps, not
 // declaration order or the selected packing mode.
