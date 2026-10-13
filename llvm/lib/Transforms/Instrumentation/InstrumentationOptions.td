@@ -369,7 +369,7 @@ defm : BoolField<"icp-samplepgo", "false",
   "Run indirect-call promotion in SamplePGO mode">;
 // Indirect call promotion pass will fall back to function-based comparison if
 // vtable-count / function-count is smaller than this threshold.
-defm : ValueField<"icp-vtable-percentage-threshold", "float", "0.995",
+defm : ValueField<"icp-vtable-percentage-threshold", "float", "0.995f",
   "The percentage threshold of vtable-count / function-count for cost-benefit analysis">;
 
 // InstrProfiling.cpp
