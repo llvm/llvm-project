@@ -702,6 +702,9 @@ set(files
   __pstl/backends/statpart/for_each.h
   __pstl/backends/statpart/is_heap_until.h
   __pstl/backends/statpart/merge.h
+  __pstl/backends/statpart/min_element.h
+  __pstl/backends/statpart/minmax_element.h
+  __pstl/backends/statpart/mismatch.h
   __pstl/backends/std_thread.h
   __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h

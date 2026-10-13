@@ -2435,6 +2435,15 @@ module std {
         module merge {
           header "__pstl/backends/statpart/merge.h"
         }
+        module min_element {
+          header "__pstl/backends/statpart/min_element.h"
+        }
+        module minmax_element {
+          header "__pstl/backends/statpart/minmax_element.h"
+        }
+        module mismatch {
+          header "__pstl/backends/statpart/mismatch.h"
+        }
         header "__pstl/backends/statpart.h"
       }
       module std_thread {

@@ -15,6 +15,9 @@
 #include <__pstl/backends/statpart/for_each.h>
 #include <__pstl/backends/statpart/is_heap_until.h>
 #include <__pstl/backends/statpart/merge.h>
+#include <__pstl/backends/statpart/min_element.h>
+#include <__pstl/backends/statpart/minmax_element.h>
+#include <__pstl/backends/statpart/mismatch.h>
 
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_if.h>
@@ -77,137 +80,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
-
-template <class _ExecutionPolicy>
-struct __min_element<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator, class _Compare>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
-  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      if (__first == __last) {
-        return __last; // nothing to do
-      }
-
-      _ForwardIterator __init = __first;
-      ++__first;
-      if (__first == __last) {
-        return __init; // the only element is the minimum
-      }
-
-      // A reduction that returns an iterator pointing to the lowest element, left bias in case of a tie
-      auto __iter_reduce = [&__comp](_ForwardIterator __lhs, _ForwardIterator __rhs) {
-        return __comp(*__rhs, *__lhs) ? __rhs : __lhs;
-      };
-
-      // Perform a parallel reduction of iterators [first+1, last) with 'first' as init.
-      return __statpart::__transform_reduce(
-          std::move(__first),
-          std::move(__last),
-          __identity{},      // No transformations
-          std::move(__init), // Use the first iterator as the init element
-          __iter_reduce,     // Reduction of 2 elements
-          [&__iter_reduce, &__comp](auto __brick_first, auto __brick_last, auto __brick_init) {
-            // Reduction of an iterator range + init element: use the serial version to find the minimum among
-            // the iterators and then reduce with the init element.
-            return __iter_reduce(__brick_init, std::min_element(__brick_first, __brick_last, __comp));
-          });
-    } else {
-      // Non-random access iterators cannot be processed in parallel, fall back to the sequential implementation.
-      return std::min_element(std::move(__first), std::move(__last), std::move(__comp));
-    }
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __minmax_element<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator, class _Compare>
-  _LIBCPP_HIDE_FROM_ABI optional<pair<_ForwardIterator, _ForwardIterator>>
-  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      using _IterPair = pair<_ForwardIterator, _ForwardIterator>;
-
-      if (__first == __last) {
-        return _IterPair{__last, __last}; // Nothing to do
-      }
-
-      _IterPair __init = {__first, __first};
-      ++__first;
-      if (__first == __last) {
-        return __init; // The only element is both the minimum and the maximum
-      }
-
-      // A reduction that returns a pair of iterators pointing to the minimum and maximum elements.
-      // In a case of a tie the minimum iterators are biased left and the maximum iterators are biased right.
-      auto __iter_reduce = [&__comp](_IterPair __lhs, _IterPair __rhs) {
-        return _IterPair{__comp(*__rhs.first, *__lhs.first) ? __rhs.first : __lhs.first,
-                         __comp(*__rhs.second, *__lhs.second) ? __lhs.second : __rhs.second};
-      };
-
-      // Perform a parallel reduction of iterators [first+1, last) with {first, first} as init.
-      return __statpart::__transform_reduce(
-          std::move(__first),
-          std::move(__last),
-          [](auto __it) { return _IterPair{__it, __it}; }, // Transform an iterator into an iterator pair
-          std::move(__init),                               // Use the pair of first iterators as the init element
-          __iter_reduce,                                   // Reduction of 2 minmax pairs
-          [&__iter_reduce, &__comp](auto __brick_first, auto __brick_last, auto __brick_init) {
-            // Reduction of an iterator range + init element: use the serial version to find the minmax among
-            // the iterators and then reduce it with the init element.
-            return __iter_reduce(__brick_init, std::minmax_element(__brick_first, __brick_last, __comp));
-          });
-    } else {
-      // Non-random access iterators cannot be processed in parallel, fall back to the sequential implementation.
-      return std::minmax_element(std::move(__first), std::move(__last), std::move(__comp));
-    }
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __mismatch<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
-  _LIBCPP_HIDE_FROM_ABI optional<pair<_ForwardIterator1, _ForwardIterator2>>
-  operator()(_Policy&&,
-             _ForwardIterator1 __first1,
-             _ForwardIterator1 __last1,
-             _ForwardIterator2 __first2,
-             _ForwardIterator2 __last2,
-             _Predicate __pred) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
-      // Look for a mismatch only in the prefix of the two ranges.
-      auto __n = std::min(__last1 - __first1, __last2 - __first2);
-      // Find a position in the first range where the predicate is false against the corresponding position in the
-      // second range.
-      auto __res = __statpart::__find(
-          __first1,
-          __first1 + __n,
-          [&__pred, __first1, __first2](_ForwardIterator1 __brick_first1, _ForwardIterator1 __brick_last1) {
-            // Run the sequential mismatch algorithm on these ranges:
-            //   [__brick_first1, __brick_last1) and
-            //   [__first2 + (__brick_first1 - __first1), __first2 + (__brick_last1 - __first1))
-            auto __brick_first2 = __first2 + (__brick_first1 - __first1);
-            return std::mismatch(std::move(__brick_first1), std::move(__brick_last1), std::move(__brick_first2), __pred)
-                .first;
-          },
-          less<>{}, // `less` here means the lowest index among the mismatches
-          true      // `true` here means we want the first mismatch, not the last
-      );
-      if (!__res) {
-        return std::nullopt; // Failed to run the algorithm, propagate the error.
-      }
-      auto __idx = *__res - __first1;
-      return pair<_ForwardIterator1, _ForwardIterator2>{std::move(*__res), __first2 + __idx};
-    } else {
-      // Non-random access iterators cannot be processed in parallel, fall back to the sequential implementation.
-      // Unsequenced execution is also implicitly covered by the sequential implementation.
-      return std::mismatch(
-          std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__pred));
-    }
-  }
-};
 
 template <class _ExecutionPolicy>
 struct __reverse<__statpart_backend_tag, _ExecutionPolicy> {
