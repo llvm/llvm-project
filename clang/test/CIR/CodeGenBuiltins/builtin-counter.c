@@ -9,3 +9,11 @@
 unsigned long long read_cycles(void) {
   return __builtin_readcyclecounter();
 }
+
+// CIR-LABEL: cir.func {{.*}} @read_steady(
+// CIR: %{{.+}} = cir.call_llvm_intrinsic "readsteadycounter" : () -> !u64i
+// LLVM-LABEL: @read_steady(
+// LLVM: %{{.+}} = call i64 @llvm.readsteadycounter()
+unsigned long long read_steady(void) {
+  return __builtin_readsteadycounter();
+}
