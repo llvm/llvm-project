@@ -375,6 +375,19 @@ define void @load_store(ptr %ptr) {
 
 ; // -----
 
+; CHECK-LABEL: @noundef_load
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define i32 @noundef_load(ptr %ptr) {
+  ; CHECK:  %[[V:[0-9]+]] = llvm.load %[[PTR]] noundef <alignment = 4> : !llvm.ptr -> i32
+  %1 = load i32, ptr %ptr, align 4, !noundef !0
+  ; CHECK:  llvm.return %[[V]]
+  ret i32 %1
+}
+
+!0 = !{}
+
+; // -----
+
 ; CHECK-LABEL: @invariant_load
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define float @invariant_load(ptr %ptr) {

@@ -148,6 +148,11 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add BlahLibc)>;
 // CHECK-NEXT:  ULong,
 // CHECK-NEXT:  Void,
 // CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT: enum class RuntimeLibrary : unsigned char {
+// CHECK-NEXT:   UnknownLibrary = 0,
+// CHECK-NEXT:   libc,
+// CHECK-NEXT: };
 // CHECK-NEXT: } // End namespace RTLIB
 // CHECK-NEXT: } // End namespace llvm
 // CHECK-EMPTY:
@@ -359,28 +364,28 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add BlahLibc)>;
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-EMPTY:
 // CHECK-NEXT:   if (TT.getArch() == Triple::blah) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
 // CHECK-NEXT:   if (TT.getArch() == Triple::buzz) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
 // CHECK-NEXT:   if (TT.getArch() == Triple::foo) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
 // CHECK-NEXT:   if (TT.getArch() == Triple::simple) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;
