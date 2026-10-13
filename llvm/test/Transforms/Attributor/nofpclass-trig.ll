@@ -82,7 +82,7 @@ define float @ret_sinh_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
   ret float %call
 }
 
-; sinh preserves the sign of nonzero inputs.
+; With IEEE denormals, sinh preserves the sign of non-NaN inputs.
 define float @ret_sinh_no_nonzero_pos(float nofpclass(pinf psub pnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @ret_sinh_no_nonzero_pos
 ; CHECK-SAME: (float nofpclass(pinf psub pnorm) [[ARG:%.*]]) #[[ATTR1]] {
