@@ -457,16 +457,12 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
       llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
       inst->setMetadata(llvm::LLVMContext::MD_noundef, metadata);
     }
-    if ($range) {
-      llvm::MDNode *metadata = llvm::MDBuilder(inst->getContext())
-          .createRange($range->getLower(), $range->getUpper());
-      inst->setMetadata(llvm::LLVMContext::MD_range, metadata);
-    }
   }] # setOrderingCode
      # setSyncScopeCode
      # setAlignmentCode
      # setNonTemporalMetadataCode
      # setInvariantGroupCode
+     # setRangeCode
      # setAccessGroupsMetadataCode
      # setAliasAnalysisMetadataCode;
   string mlirBuilder = [{
