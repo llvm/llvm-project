@@ -606,6 +606,22 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  if (RISCV::FPR16RegClass.contains(DstReg) &&
+      RISCV::GPRRegClass.contains(SrcReg)) {
+    assert(STI.hasHalfFPLoadStoreMove() && "Unexpected extensions");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_H_X), DstReg)
+        .addReg(SrcReg, KillFlag);
+    return;
+  }
+
+  if (RISCV::GPRRegClass.contains(DstReg) &&
+      RISCV::FPR16RegClass.contains(SrcReg)) {
+    assert(STI.hasHalfFPLoadStoreMove() && "Unexpected extensions");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_H), DstReg)
+        .addReg(SrcReg, KillFlag);
+    return;
+  }
+
   if (RISCV::FPR32RegClass.contains(DstReg) &&
       RISCV::GPRRegClass.contains(SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::FMV_W_X), DstReg)
