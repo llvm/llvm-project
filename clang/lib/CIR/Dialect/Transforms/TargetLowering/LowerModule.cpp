@@ -80,26 +80,20 @@ const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
 
 // TODO: not to create it every time
 std::unique_ptr<LowerModule>
-createLowerModule(mlir::ModuleOp module,
-                  llvm::function_ref<mlir::InFlightDiagnostic()> emitDiag) {
+createLowerModule(mlir::ModuleOp module) {
   // If the triple is not present, e.g. CIR modules parsed from text, we
   // cannot init LowerModule properly.
   assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
 
   // Fetch target information.
-  std::optional<llvm::Triple> triple =
-      cir::getTripleFromModule(module, emitDiag);
+  std::optional<llvm::Triple> triple = cir::getTripleFromModule(module);
   if (!triple)
     return nullptr;
   clang::TargetOptions targetOptions;
   targetOptions.Triple = triple->str();
   auto targetInfo = clang::targets::AllocateTarget(*triple, targetOptions);
-  if (!targetInfo) {
-    if (emitDiag)
-      emitDiag() << "unknown triple '" << triple->str() << "' in "
-                 << cir::CIRDialect::getTripleAttrName() << " attribute";
+  if (!targetInfo)
     return nullptr;
-  }
 
   // Populate the lowering-relevant LangOptions from the module's
   // #cir.lowering_lang_options attribute so a reloaded .cir lowers the same
@@ -129,12 +123,8 @@ createLowerModule(mlir::ModuleOp module,
 
   if (auto optAttr = module->getAttr(cir::CIRDialect::getOptInfoAttrName())) {
     auto optInfo = mlir::dyn_cast<cir::OptInfoAttr>(optAttr);
-    if (!optInfo) {
-      if (emitDiag)
-        emitDiag() << "malformed " << cir::CIRDialect::getOptInfoAttrName()
-                   << " attribute";
+    if (!optInfo)
       return nullptr;
-    }
     codeGenOpts.OptimizationLevel = optInfo.getLevel();
     codeGenOpts.OptimizeSize = optInfo.getSize();
   }

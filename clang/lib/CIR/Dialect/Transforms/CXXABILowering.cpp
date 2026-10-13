@@ -900,15 +900,13 @@ void CXXABILoweringPass::runOnOperation() {
   auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
   mlir::MLIRContext *ctx = mod.getContext();
 
-  auto diag = [&] {
-    return mod.emitWarning("cannot create a CIR lower module, skipping the ")
-           << getName() << " pass: ";
-  };
-  std::unique_ptr<cir::LowerModule> lowerModule =
-      cir::createLowerModule(mod, diag);
+  std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
   // If lower module is not available, skip the ABI lowering pass.
-  if (!lowerModule)
+  if (!lowerModule) {
+    mod.emitWarning("cannot create a CIR lower module, skipping the ")
+           << getName() << " pass: ";
     return;
+  }
 
   mlir::DataLayout dataLayout(mod);
   CIRABITypeConverter typeConverter(*ctx, dataLayout, *lowerModule);

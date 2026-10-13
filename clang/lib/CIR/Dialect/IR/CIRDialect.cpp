@@ -12,6 +12,7 @@
 
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
+#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -287,6 +288,31 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                        /*trailingZerosNum=*/0);
   }
 
+  if (attrName == getTripleAttrName()) {
+    auto tripleStr = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
+    if (!tripleStr)
+      return op->emitOpError() << "expects '" << getTripleAttrName() << "' to "
+                               << " be a string";
+    llvm::Triple triple = llvm::Triple(tripleStr.getValue());
+    clang::TargetOptions targetOptions;
+    targetOptions.Triple = tripleStr.getValue();
+    // "Validate" our triple by checking if it can successfully initialize into
+    // a TargetInfo:
+    if (!clang::targets::AllocateTarget(triple, targetOptions)) {
+      return op->emitOpError() << "unknown triple '" << tripleStr.getValue()
+                               << "' in '" << getTripleAttrName()
+                               << "' attribute";
+    }
+  }
+
+  if (attrName == getOptInfoAttrName()) {
+    auto optInfo = mlir::dyn_cast<cir::OptInfoAttr>(attr.getValue());
+    if (!optInfo)
+      return op->emitOpError() << "malformed "
+                               << cir::CIRDialect::getOptInfoAttrName()
+                               << " attribute";
+  }
+
   return success();
 }
 
@@ -402,24 +428,17 @@ static LogicalResult verifyProducedBy(Operation *op, Value operand,
   return success();
 }
 
-std::optional<llvm::Triple> cir::getTripleFromModule(
-    mlir::ModuleOp mod,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitDiag) {
-  if (!mod->hasAttr(cir::CIRDialect::getTripleAttrName())) {
-    if (emitDiag)
-      emitDiag() << "module is missing " << cir::CIRDialect::getTripleAttrName()
-                 << " attribute";
+std::optional<llvm::Triple> cir::getTripleFromModule(mlir::ModuleOp mod) {
+  // Verifying the validity of the triple attribute happens in
+  // cir::CIRDialect::verifyOperationAttribute; verifyOperationAttribute
+  // should error first if we have an invalid attribute. 
+  if (!mod->hasAttr(cir::CIRDialect::getTripleAttrName()))
     return std::nullopt;
-  }
 
   auto tripleAttr = mod->getAttrOfType<mlir::StringAttr>(
       cir::CIRDialect::getTripleAttrName());
-  if (!tripleAttr) {
-    if (emitDiag)
-      emitDiag() << "expected a string from module attribute "
-                 << cir::CIRDialect::getTripleAttrName();
+  if (!tripleAttr)
     return std::nullopt;
-  }
 
   return llvm::Triple{tripleAttr.getValue()};
 }

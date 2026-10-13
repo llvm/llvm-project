@@ -57,9 +57,7 @@ public:
   const TargetLoweringInfo &getTargetLoweringInfo();
 };
 
-std::unique_ptr<LowerModule> createLowerModule(
-    mlir::ModuleOp module,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitDiag = nullptr);
+std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module);
 
 } // namespace cir
 
