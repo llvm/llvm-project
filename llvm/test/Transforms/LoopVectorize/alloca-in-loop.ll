@@ -27,20 +27,33 @@ define void @alloca_address_stored(ptr noalias %dst, i64 %n) {
 ; VF4IC2-NEXT:    [[TMP7:%.*]] = add i32 [[TMP1]], 6
 ; VF4IC2-NEXT:    [[TMP8:%.*]] = add i32 [[TMP1]], 7
 ; VF4IC2-NEXT:    [[TMP9:%.*]] = alloca [8 x i8], align 16
+; VF4IC2-NEXT:    [[TMP13:%.*]] = alloca [8 x i8], align 16
+; VF4IC2-NEXT:    [[TMP16:%.*]] = alloca [8 x i8], align 16
+; VF4IC2-NEXT:    [[TMP25:%.*]] = alloca [8 x i8], align 16
 ; VF4IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP9]], i64 0
-; VF4IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; VF4IC2-NEXT:    [[TMP14:%.*]] = insertelement <4 x ptr> [[BROADCAST_SPLATINSERT]], ptr [[TMP13]], i64 1
+; VF4IC2-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> [[TMP14]], ptr [[TMP16]], i64 2
+; VF4IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = insertelement <4 x ptr> [[TMP15]], ptr [[TMP25]], i64 3
+; VF4IC2-NEXT:    [[TMP17:%.*]] = alloca [8 x i8], align 16
+; VF4IC2-NEXT:    [[TMP18:%.*]] = alloca [8 x i8], align 16
+; VF4IC2-NEXT:    [[TMP19:%.*]] = alloca [8 x i8], align 16
+; VF4IC2-NEXT:    [[TMP20:%.*]] = alloca [8 x i8], align 16
+; VF4IC2-NEXT:    [[TMP21:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP17]], i64 0
+; VF4IC2-NEXT:    [[TMP22:%.*]] = insertelement <4 x ptr> [[TMP21]], ptr [[TMP18]], i64 1
+; VF4IC2-NEXT:    [[TMP23:%.*]] = insertelement <4 x ptr> [[TMP22]], ptr [[TMP19]], i64 2
+; VF4IC2-NEXT:    [[TMP24:%.*]] = insertelement <4 x ptr> [[TMP23]], ptr [[TMP20]], i64 3
 ; VF4IC2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 [[INDEX]]
 ; VF4IC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds ptr, ptr [[TMP10]], i64 4
 ; VF4IC2-NEXT:    store <4 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP10]], align 8
-; VF4IC2-NEXT:    store <4 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP11]], align 8
+; VF4IC2-NEXT:    store <4 x ptr> [[TMP24]], ptr [[TMP11]], align 8
 ; VF4IC2-NEXT:    store i32 [[TMP1]], ptr [[TMP9]], align 4
-; VF4IC2-NEXT:    store i32 [[TMP2]], ptr [[TMP9]], align 4
-; VF4IC2-NEXT:    store i32 [[TMP3]], ptr [[TMP9]], align 4
-; VF4IC2-NEXT:    store i32 [[TMP4]], ptr [[TMP9]], align 4
-; VF4IC2-NEXT:    store i32 [[TMP5]], ptr [[TMP9]], align 4
-; VF4IC2-NEXT:    store i32 [[TMP6]], ptr [[TMP9]], align 4
-; VF4IC2-NEXT:    store i32 [[TMP7]], ptr [[TMP9]], align 4
-; VF4IC2-NEXT:    store i32 [[TMP8]], ptr [[TMP9]], align 4
+; VF4IC2-NEXT:    store i32 [[TMP2]], ptr [[TMP13]], align 4
+; VF4IC2-NEXT:    store i32 [[TMP3]], ptr [[TMP16]], align 4
+; VF4IC2-NEXT:    store i32 [[TMP4]], ptr [[TMP25]], align 4
+; VF4IC2-NEXT:    store i32 [[TMP5]], ptr [[TMP17]], align 4
+; VF4IC2-NEXT:    store i32 [[TMP6]], ptr [[TMP18]], align 4
+; VF4IC2-NEXT:    store i32 [[TMP7]], ptr [[TMP19]], align 4
+; VF4IC2-NEXT:    store i32 [[TMP8]], ptr [[TMP20]], align 4
 ; VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF4IC2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF4IC2-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -64,12 +77,13 @@ define void @alloca_address_stored(ptr noalias %dst, i64 %n) {
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDEX]] to i32
 ; VF1IC2-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
 ; VF1IC2-NEXT:    [[TMP4:%.*]] = alloca [8 x i8], align 16
+; VF1IC2-NEXT:    [[TMP8:%.*]] = alloca [8 x i8], align 16
 ; VF1IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 [[INDEX]]
 ; VF1IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 [[TMP1]]
 ; VF1IC2-NEXT:    store ptr [[TMP4]], ptr [[TMP5]], align 8
-; VF1IC2-NEXT:    store ptr [[TMP4]], ptr [[TMP6]], align 8
+; VF1IC2-NEXT:    store ptr [[TMP8]], ptr [[TMP6]], align 8
 ; VF1IC2-NEXT:    store i32 [[TMP2]], ptr [[TMP4]], align 4
-; VF1IC2-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
+; VF1IC2-NEXT:    store i32 [[TMP3]], ptr [[TMP8]], align 4
 ; VF1IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF1IC2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF1IC2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -111,16 +125,45 @@ define void @two_allocas_different_types(ptr noalias %dst.a, ptr noalias %dst.b,
 ; VF4IC2:       [[VECTOR_BODY]]:
 ; VF4IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4IC2-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
+; VF4IC2-NEXT:    [[TMP8:%.*]] = alloca i32, align 4
+; VF4IC2-NEXT:    [[TMP33:%.*]] = alloca i32, align 4
+; VF4IC2-NEXT:    [[TMP34:%.*]] = alloca i32, align 4
 ; VF4IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP1]], i64 0
-; VF4IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; VF4IC2-NEXT:    [[TMP35:%.*]] = insertelement <4 x ptr> [[BROADCAST_SPLATINSERT]], ptr [[TMP8]], i64 1
+; VF4IC2-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP35]], ptr [[TMP33]], i64 2
+; VF4IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = insertelement <4 x ptr> [[TMP7]], ptr [[TMP34]], i64 3
+; VF4IC2-NEXT:    [[TMP9:%.*]] = alloca i32, align 4
+; VF4IC2-NEXT:    [[TMP10:%.*]] = alloca i32, align 4
+; VF4IC2-NEXT:    [[TMP11:%.*]] = alloca i32, align 4
+; VF4IC2-NEXT:    [[TMP12:%.*]] = alloca i32, align 4
+; VF4IC2-NEXT:    [[TMP13:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP9]], i64 0
+; VF4IC2-NEXT:    [[TMP14:%.*]] = insertelement <4 x ptr> [[TMP13]], ptr [[TMP10]], i64 1
+; VF4IC2-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> [[TMP14]], ptr [[TMP11]], i64 2
+; VF4IC2-NEXT:    [[TMP16:%.*]] = insertelement <4 x ptr> [[TMP15]], ptr [[TMP12]], i64 3
+; VF4IC2-NEXT:    [[TMP17:%.*]] = alloca i64, align 4
+; VF4IC2-NEXT:    [[TMP18:%.*]] = alloca i64, align 4
+; VF4IC2-NEXT:    [[TMP19:%.*]] = alloca i64, align 4
+; VF4IC2-NEXT:    [[TMP20:%.*]] = alloca i64, align 4
+; VF4IC2-NEXT:    [[TMP21:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP17]], i64 0
+; VF4IC2-NEXT:    [[TMP22:%.*]] = insertelement <4 x ptr> [[TMP21]], ptr [[TMP18]], i64 1
+; VF4IC2-NEXT:    [[TMP23:%.*]] = insertelement <4 x ptr> [[TMP22]], ptr [[TMP19]], i64 2
+; VF4IC2-NEXT:    [[TMP24:%.*]] = insertelement <4 x ptr> [[TMP23]], ptr [[TMP20]], i64 3
+; VF4IC2-NEXT:    [[TMP25:%.*]] = alloca i64, align 4
+; VF4IC2-NEXT:    [[TMP26:%.*]] = alloca i64, align 4
+; VF4IC2-NEXT:    [[TMP27:%.*]] = alloca i64, align 4
+; VF4IC2-NEXT:    [[TMP28:%.*]] = alloca i64, align 4
+; VF4IC2-NEXT:    [[TMP29:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP25]], i64 0
+; VF4IC2-NEXT:    [[TMP30:%.*]] = insertelement <4 x ptr> [[TMP29]], ptr [[TMP26]], i64 1
+; VF4IC2-NEXT:    [[TMP31:%.*]] = insertelement <4 x ptr> [[TMP30]], ptr [[TMP27]], i64 2
+; VF4IC2-NEXT:    [[TMP32:%.*]] = insertelement <4 x ptr> [[TMP31]], ptr [[TMP28]], i64 3
 ; VF4IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[DST_A]], i64 [[INDEX]]
 ; VF4IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i64 4
 ; VF4IC2-NEXT:    store <4 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 8
-; VF4IC2-NEXT:    store <4 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP3]], align 8
+; VF4IC2-NEXT:    store <4 x ptr> [[TMP16]], ptr [[TMP3]], align 8
 ; VF4IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[DST_B]], i64 [[INDEX]]
 ; VF4IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[TMP4]], i64 4
-; VF4IC2-NEXT:    store <4 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP4]], align 8
-; VF4IC2-NEXT:    store <4 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP5]], align 8
+; VF4IC2-NEXT:    store <4 x ptr> [[TMP24]], ptr [[TMP4]], align 8
+; VF4IC2-NEXT:    store <4 x ptr> [[TMP32]], ptr [[TMP5]], align 8
 ; VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF4IC2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF4IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -142,14 +185,17 @@ define void @two_allocas_different_types(ptr noalias %dst.a, ptr noalias %dst.b,
 ; VF1IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = alloca i32, align 4
+; VF1IC2-NEXT:    [[TMP8:%.*]] = alloca i32, align 4
+; VF1IC2-NEXT:    [[TMP9:%.*]] = alloca i64, align 4
+; VF1IC2-NEXT:    [[TMP10:%.*]] = alloca i64, align 4
 ; VF1IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[DST_A]], i64 [[INDEX]]
 ; VF1IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[DST_A]], i64 [[TMP1]]
 ; VF1IC2-NEXT:    store ptr [[TMP2]], ptr [[TMP3]], align 8
-; VF1IC2-NEXT:    store ptr [[TMP2]], ptr [[TMP4]], align 8
+; VF1IC2-NEXT:    store ptr [[TMP8]], ptr [[TMP4]], align 8
 ; VF1IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[DST_B]], i64 [[INDEX]]
 ; VF1IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[DST_B]], i64 [[TMP1]]
-; VF1IC2-NEXT:    store ptr [[TMP2]], ptr [[TMP5]], align 8
-; VF1IC2-NEXT:    store ptr [[TMP2]], ptr [[TMP6]], align 8
+; VF1IC2-NEXT:    store ptr [[TMP9]], ptr [[TMP5]], align 8
+; VF1IC2-NEXT:    store ptr [[TMP10]], ptr [[TMP6]], align 8
 ; VF1IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF1IC2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF1IC2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

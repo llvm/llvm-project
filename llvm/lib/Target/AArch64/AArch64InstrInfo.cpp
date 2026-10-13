@@ -3632,11 +3632,9 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   // prologue/epilogue if the CFI information encoded the operations as separate
   // instructions, as that will cause the size of the actual prologue to mismatch
   // with the prologue size recorded in the Windows CFI.
-  const MCAsmInfo &MAI = MI.getMF()->getTarget().getMCAsmInfo();
-  bool NeedsWinCFI =
-      MAI.usesWindowsCFI() && MI.getMF()->getFunction().needsUnwindTableEntry();
-  if (NeedsWinCFI && (MI.getFlag(MachineInstr::FrameSetup) ||
-                      MI.getFlag(MachineInstr::FrameDestroy)))
+  if ((MI.getFlag(MachineInstr::FrameSetup) ||
+       MI.getFlag(MachineInstr::FrameDestroy)) &&
+      MI.getMF()->needsWinCFI())
     return false;
 
   // On some CPUs quad load/store pairs are slower than two single load/stores.
@@ -10960,17 +10958,8 @@ void AArch64InstrInfo::mergeOutliningCandidateAttributes(
 
 bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
     MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
-  const Function &F = MF.getFunction();
-
-  // Can F be deduplicated by the linker? If it can, don't outline from it.
-  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
-    return false;
-
-  // Don't outline from functions with section markings; the program could
-  // expect that all the code is in the named section.
-  // FIXME: Allow outlining from multiple functions with the same section
-  // marking.
-  if (F.hasSection())
+  if (!TargetInstrInfo::isFunctionSafeToOutlineFrom(MF,
+                                                    OutlineFromLinkOnceODRs))
     return false;
 
   // Outlining from functions with redzones is unsafe since the outliner may
@@ -10988,7 +10977,7 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
     return false;
 
   // FIXME: Teach the outliner to generate/handle Windows unwind info.
-  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
+  if (MF.usesWindowsUnwindInfo())
     return false;
 
   // It's safe to outline from MF.
@@ -11086,9 +11075,11 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
   // StartPt points to the first place where all unsafe registers
   // are dead (if there is any such point). Begin partitioning the MBB into
   // ranges.
-  for (auto &MI : make_range(FirstPossibleEndPt, MBB.instr_rend())) {
-    if (!MI.isDebugInstr())
-      LRU.stepBackward(MI);
+  // Pseudo probes are ordinary instructions to the mapper, so only skip debug
+  // instructions here.
+  for (auto &MI : instructionsWithoutDebug(FirstPossibleEndPt, MBB.instr_rend(),
+                                           /*SkipPseudoOp=*/false)) {
+    LRU.stepBackward(MI);
     UpdateWholeMBBFlags(MI);
     if (!AreAllUnsafeRegsDead()) {
       SaveRangeIfNonEmpty();
@@ -11096,12 +11087,10 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
       continue;
     }
     LRAvailableEverywhere &= LRU.available(AArch64::LR);
-    // RangeBegin may point at a debug instruction because the mapper ignores
-    // debug instructions wherever they appear. Only count non-debug
-    // instructions so debug info cannot make a short range outlinable.
+    // Pseudo probes count because the mapper treats them as ordinary
+    // instructions.
     RangeBegin = MI.getIterator();
-    if (!MI.isDebugInstr())
-      ++RangeLen;
+    ++RangeLen;
   }
   // Above loop misses the last (or only) range. If we are still safe, then
   // let's save the range.

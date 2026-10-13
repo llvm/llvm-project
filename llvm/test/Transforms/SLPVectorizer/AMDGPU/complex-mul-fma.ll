@@ -1,7 +1,7 @@
 ; RUN: opt -passes=slp-vectorizer -mtriple=amdgpu9.42-amd-amdhsa -pass-remarks=slp-vectorizer -disable-output < %s 2>&1 | FileCheck %s
 
 ; The second fmul of each fsub/fadd does not fuse, so packing those pays off.
-; CHECK: Stores SLP vectorized with cost -2
+; CHECK: Stores SLP vectorized with cost -1
 define void @cmul_store(ptr addrspace(1) %out, float %xr, float %xi, float %wr, float %wi) {
   %xr.wr = fmul contract float %xr, %wr
   %xi.wi = fmul contract float %xi, %wi

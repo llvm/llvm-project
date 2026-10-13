@@ -748,6 +748,17 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_inotify
+  ../libc/include/sys/inotify.yaml
+  sys/inotify.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_inotify_macros
+    .llvm-libc-types.struct_inotify_event
+    .stdint
+)
+
+add_header_macro(
   sys_ipc
   ../libc/include/sys/ipc.yaml
   sys/ipc.h
@@ -1097,6 +1108,8 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.struct_rusage
     .llvm-libc-types.siginfo_t
+    .llvm-libc-types.id_t
+    .llvm-libc-types.idtype_t
 )
 
 add_header_macro(
@@ -1197,6 +1210,7 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.speed_t
     .llvm-libc-types.struct_termios
+    .llvm-libc-types.struct_winsize
     .llvm-libc-types.tcflag_t
 )
 

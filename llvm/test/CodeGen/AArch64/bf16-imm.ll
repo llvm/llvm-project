@@ -181,18 +181,6 @@ define <4 x bfloat> @vec_1p5() {
 }
 
 define <8 x bfloat> @vec8_1p5() {
-; CHECK-NOZCZ-SD-LABEL: vec_1p5:
-; CHECK-NOZCZ-SD:       // %bb.0:
-; CHECK-NOZCZ-SD-NEXT:    mov w8, #15488 // =0x3c80
-; CHECK-NOZCZ-SD-NEXT:    dup v0.4h, w8
-; CHECK-NOZCZ-SD-NEXT:    ret
-;
-; CHECK-ZCZ-SD-LABEL: vec_1p5:
-; CHECK-ZCZ-SD:       // %bb.0:
-; CHECK-ZCZ-SD-NEXT:    mov w8, #15488 // =0x3c80
-; CHECK-ZCZ-SD-NEXT:    dup v0.4h, w8
-; CHECK-ZCZ-SD-NEXT:    ret
-;
 ; CHECK-FP16-SD-LABEL: vec8_1p5:
 ; CHECK-FP16-SD:       // %bb.0:
 ; CHECK-FP16-SD-NEXT:    mov w8, #15488 // =0x3c80

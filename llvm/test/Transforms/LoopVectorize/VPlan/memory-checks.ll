@@ -262,4 +262,136 @@ exit:
   ret void
 }
 
+define void @bound_is_addrec_of_sibling_loop_non_unit_step(ptr %a, ptr %b, i64 %n, i64 %m) {
+; CHECK-LABEL: VPlan for loop in 'bound_is_addrec_of_sibling_loop_non_unit_step'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<ph.2>:
+; CHECK-NEXT:    IR   %iv.1.lcssa = phi i64 [ %iv.1, %loop.1 ]
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.memcheck>:
+; CHECK-NEXT:    IR   %0 = mul i64 %indvar, 12
+; CHECK-NEXT:    IR   %1 = add i64 %0, 20
+; CHECK-NEXT:    IR   %scevgep = getelementptr i8, ptr %b, i64 %1
+; CHECK-NEXT:    IR   %2 = shl i64 %n, 2
+; CHECK-NEXT:    IR   %3 = add i64 %2, 20
+; CHECK-NEXT:    IR   %4 = add i64 %0, %3
+; CHECK-NEXT:    IR   %scevgep1 = getelementptr i8, ptr %b, i64 %4
+; CHECK-NEXT:    IR   %5 = shl i64 %n, 3
+; CHECK-NEXT:    IR   %6 = add i64 %5, -4
+; CHECK-NEXT:    IR   %scevgep2 = getelementptr i8, ptr %a, i64 %6
+; CHECK-NEXT:    IR   %bound0 = icmp ult ptr %scevgep, %scevgep2
+; CHECK-NEXT:    IR   %bound1 = icmp ult ptr %a, %scevgep1
+; CHECK-NEXT:    IR   %found.conflict = and i1 %bound0, %bound1
+; CHECK-NEXT:    EMIT branch-on-cond ir<%found.conflict>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = and ir<%n>, ir<3>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = step-vector i64
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = broadcast ir<4>
+; CHECK-NEXT:  Successor(s): vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %iv.1 = phi i64 [ 5, %entry ], [ %iv.1.next, %loop.1 ]
+  call void @use(i64 %iv.1)
+  %iv.1.next = add nuw nsw i64 %iv.1, 3
+  %ec.1 = icmp ugt i64 %iv.1, %m
+  br i1 %ec.1, label %ph.2, label %loop.1
+
+ph.2:
+  br label %loop.2
+
+loop.2:
+  %iv.2 = phi i64 [ 0, %ph.2 ], [ %iv.2.next, %loop.2 ]
+  %idx.a = shl nuw nsw i64 %iv.2, 1
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %idx.a
+  %l = load i32, ptr %gep.a, align 4
+  %idx.b = add nuw nsw i64 %iv.2, %iv.1
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %idx.b
+  store i32 %l, ptr %gep.b, align 4
+  %iv.2.next = add nuw nsw i64 %iv.2, 1
+  %ec.2 = icmp eq i64 %iv.2.next, %n
+  br i1 %ec.2, label %exit, label %loop.2
+
+exit:
+  ret void
+}
+
+define void @bound_is_ptr_iv_of_sibling_loop(ptr %a, ptr %b, i64 %n, i64 %m) {
+; CHECK-LABEL: VPlan for loop in 'bound_is_ptr_iv_of_sibling_loop'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<ph.2>:
+; CHECK-NEXT:    IR   %ptr.iv.lcssa = phi ptr [ %ptr.iv, %loop.1 ]
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.memcheck>:
+; CHECK-NEXT:    IR   %0 = shl i64 %n, 2
+; CHECK-NEXT:    IR   %1 = sub i64 0, %b1
+; CHECK-NEXT:    IR   %2 = ptrtoaddr ptr %ptr.iv.lcssa to i64
+; CHECK-NEXT:    IR   %3 = add i64 %2, %1
+; CHECK-NEXT:    IR   %4 = add i64 %0, %3
+; CHECK-NEXT:    IR   %scevgep = getelementptr i8, ptr %b, i64 %4
+; CHECK-NEXT:    IR   %5 = shl i64 %n, 3
+; CHECK-NEXT:    IR   %6 = add i64 %5, -4
+; CHECK-NEXT:    IR   %scevgep2 = getelementptr i8, ptr %a, i64 %6
+; CHECK-NEXT:    IR   %bound0 = icmp ult ptr %ptr.iv.lcssa, %scevgep2
+; CHECK-NEXT:    IR   %bound1 = icmp ult ptr %a, %scevgep
+; CHECK-NEXT:    IR   %found.conflict = and i1 %bound0, %bound1
+; CHECK-NEXT:    EMIT branch-on-cond ir<%found.conflict>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = and ir<%n>, ir<3>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = step-vector i64
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = broadcast ir<4>
+; CHECK-NEXT:  Successor(s): vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %ptr.iv = phi ptr [ %b, %entry ], [ %ptr.iv.next, %loop.1 ]
+  %iv.1 = phi i64 [ 0, %entry ], [ %iv.1.next, %loop.1 ]
+  call void @use(i64 %iv.1)
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 12
+  %iv.1.next = add nuw i64 %iv.1, 1
+  %ec.1 = icmp ugt i64 %iv.1, %m
+  br i1 %ec.1, label %ph.2, label %loop.1
+
+ph.2:
+  br label %loop.2
+
+loop.2:
+  %iv.2 = phi i64 [ 0, %ph.2 ], [ %iv.2.next, %loop.2 ]
+  %idx.a = shl nuw nsw i64 %iv.2, 1
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %idx.a
+  %l = load i32, ptr %gep.a, align 4
+  %gep.b = getelementptr inbounds i32, ptr %ptr.iv, i64 %iv.2
+  store i32 %l, ptr %gep.b, align 4
+  %iv.2.next = add nuw nsw i64 %iv.2, 1
+  %ec.2 = icmp eq i64 %iv.2.next, %n
+  br i1 %ec.2, label %exit, label %loop.2
+
+exit:
+  ret void
+}
+
 declare void @use(i64)

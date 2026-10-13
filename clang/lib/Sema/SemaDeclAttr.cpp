@@ -4157,8 +4157,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
 
   // In C++ the implicit 'this' function parameter also counts, and they are
   // counted from one.
-  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
-  Info->NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
+  Info->NumArgs = getFunctionOrMethodNumParams(D, /*IncludeThis=*/true);
 
   Info->Identifier = AL.getArgAsIdent(0)->getIdentifierInfo();
   StringRef Format = Info->Identifier->getName();
@@ -4194,7 +4193,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   // FIXME: Do we need to bounds check?
   unsigned ArgIdx = Info->FormatStringIdx - 1;
 
-  if (HasImplicitThisParam) {
+  if (hasImplicitObjectParameter(D)) {
     if (ArgIdx == 0) {
       S.Diag(AL.getLoc(),
              diag::err_format_attribute_implicit_this_format_string)
@@ -6201,7 +6200,10 @@ static void handleLaunchBoundsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static std::pair<Expr *, int>
 makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
                        const unsigned Idx) {
-  if (!E || S.DiagnoseUnexpandedParameterPack(E))
+  if (!E)
+    return {nullptr, 1};
+
+  if (S.DiagnoseUnexpandedParameterPack(E))
     return {};
 
   // Accept template arguments for now as they depend on something else.
@@ -6215,18 +6217,23 @@ makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
         << &AL << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
     return {};
   }
-  // Make sure we can fit it in 4 bits.
-  if (!I->isIntN(4)) {
-    S.Diag(E->getExprLoc(), diag::err_ice_too_large)
-        << toString(*I, 10, false) << 4 << /*Unsigned=*/1;
-    return {};
-  }
   if (*I < 0) {
     S.Diag(E->getExprLoc(), diag::warn_attribute_argument_n_negative)
         << &AL << Idx << E->getSourceRange();
+    return {};
+  }
+  // Make sure we can fit it in 8 bits, so the product below cannot overflow.
+  if (!I->isIntN(8)) {
+    S.Diag(E->getExprLoc(), diag::err_ice_too_large)
+        << toString(*I, 10, false) << 8 << /*Unsigned=*/1;
+    return {};
   }
 
-  return {ConstantExpr::Create(S.getASTContext(), E, APValue(*I)),
+  ExprResult Result = S.DefaultLvalueConversion(E);
+  if (!Result.isUsable())
+    return {};
+
+  return {ConstantExpr::Create(S.getASTContext(), Result.get(), APValue(*I)),
           I->getZExtValue()};
 }
 
@@ -8762,6 +8769,12 @@ void Sema::checkUnusedDeclAttributes(Declarator &D) {
 
 void Sema::DiagnoseUnknownAttribute(const ParsedAttr &AL) {
   SourceRange NR = AL.getNormalizedRange();
+  // Skip the expensive spelling-list typo-correction scan when the
+  // diagnostics it feeds are disabled at this location.
+  if (Diags.isIgnored(diag::warn_unknown_attribute_ignored, NR.getBegin()) &&
+      Diags.isIgnored(diag::warn_unknown_attribute_ignored_suggestion,
+                      NR.getBegin()))
+    return;
   StringRef ScopeName = AL.getNormalizedScopeName();
   std::optional<StringRef> CorrectedScopeName =
       AL.tryGetCorrectedScopeName(ScopeName);

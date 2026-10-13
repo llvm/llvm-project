@@ -1697,8 +1697,8 @@ public:
                  DominatorTree &DT, MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE,
                  SmallPtrSetImpl<MDNode *> &LoopAliasScopes)
-      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DT(DT), DepCands(DA),
-        PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
+      : TheLoop(TheLoop), EEA(DT, LI), BAA(*AA, &EEA), AST(BAA), LI(LI), DT(DT),
+        DepCands(DA), PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
     // We're analyzing dependences across loop iterations.
     BAA.enableCrossIterationMode();
   }
@@ -1807,6 +1807,9 @@ private:
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
+
+  /// Capture analysis for BAA.
+  EarliestEscapeAnalysis EEA;
 
   /// Batched alias analysis results.
   BatchAAResults BAA;
@@ -2332,11 +2335,35 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
       continue;
     }
 
+    const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
+    auto StoreSize = [&DL](Type *Ty) { return DL.getTypeStoreSize(Ty); };
+
     for (auto &Access : AccessInfos) {
-      for (const auto &AccessTy : Accesses[Access]) {
+      // A written pointer is only checked via its write access, so its bounds
+      // must also cover the types it is loaded with.
+      SmallSetVector<Type *, 1> AccessTys = Accesses.lookup(Access);
+      if (Access.getInt()) {
+        auto ReadIt = Accesses.find(MemAccessInfo(Access.getPointer(), false));
+        if (ReadIt != Accesses.end())
+          AccessTys.insert_range(ReadIt->second);
+      }
+
+      // The widest fixed and scalable types cover all accesses of their kind.
+      for (bool Scalable : {false, true}) {
+        auto HasMatchingSizeKind = [&](Type *Ty) {
+          return StoreSize(Ty).isScalable() == Scalable;
+        };
+        auto Tys = make_filter_range(AccessTys, std::ref(HasMatchingSizeKind));
+        if (Tys.empty())
+          continue;
+
+        Type *AccessTy = *max_element(Tys, [&](Type *A, Type *B) {
+          return TypeSize::isKnownLT(StoreSize(A), StoreSize(B));
+        });
+
         if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
                                   DepSetId, TheLoop, RunningDepId, ASId,
-                                  false)) {
+                                  /*Assume=*/false)) {
           LLVM_DEBUG(dbgs() << "LAA: Can't find bounds for ptr:"
                             << *Access.getPointer() << '\n');
           Retries.emplace_back(Access, AccessTy);
@@ -2592,21 +2619,6 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
       dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
              << *Ptr << " SCEV: " << *AR << "\n");
   return std::nullopt;
-}
-
-/// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
-                                          Type *AccessTy, Value *Ptr,
-                                          const Loop *Lp,
-                                          const DominatorTree &DT,
-                                          const SymbolicStrideMap &StridesMap,
-                                          bool Assume, bool ShouldCheckWrap) {
-  SmallVector<const SCEVPredicate *> Predicates;
-  std::optional<int64_t> Stride =
-      getPtrStride(PSE, AccessTy, Ptr, Lp, DT, StridesMap, ShouldCheckWrap,
-                   Assume ? &Predicates : nullptr);
-  PSE.addPredicates(Predicates);
-  return Stride;
 }
 
 std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
@@ -2885,9 +2897,8 @@ void MemoryDepChecker::mergeInStatus(VectorizationSafetyStatus S) {
 ///                = out[i];
 ///       out[i+D] =
 ///     }
-static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
-                                     const SCEV &MaxBTC, const SCEV &Dist,
-                                     uint64_t MaxStride) {
+static bool isSafeDependenceDistance(ScalarEvolution &SE, const SCEV &MaxBTC,
+                                     const SCEV &Dist, uint64_t MaxStride) {
 
   // If we can prove that
   //      (**) |Dist| > MaxBTC * Step
@@ -2906,21 +2917,16 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   // will be executed only if LoopCount >= VF, proving distance >= LoopCount
   // also guarantees that distance >= VF.
   //
-  const SCEV *Step = SE.getConstant(MaxBTC.getType(), MaxStride);
-  const SCEV *Product = SE.getMulExpr(&MaxBTC, Step);
-
-  const SCEV *CastedDist = &Dist;
-  const SCEV *CastedProduct = Product;
-  uint64_t DistTypeSizeBits = DL.getTypeSizeInBits(Dist.getType());
-  uint64_t ProductTypeSizeBits = DL.getTypeSizeInBits(Product->getType());
-
-  // The dependence distance can be positive/negative, so we sign extend Dist;
-  // The multiplication of the absolute stride in bytes and the
-  // backedgeTakenCount is non-negative, so we zero extend Product.
-  if (DistTypeSizeBits > ProductTypeSizeBits)
-    CastedProduct = SE.getZeroExtendExpr(Product, Dist.getType());
-  else
-    CastedDist = SE.getNoopOrSignExtend(&Dist, Product->getType());
+  // The dependence distance can be positive/negative, so we sign-extend Dist.
+  // MaxBTC is non-negative, so we zero-extended to the wider type before
+  // computing MaxBTC * Step.
+  // FIXME: The checks below can still wrap if MaxBTC * MaxStride does not fit
+  // in WideTy with two bits to spare, e.g. for an unbounded i64 MaxBTC.
+  Type *WideTy = SE.getWiderType(Dist.getType(), MaxBTC.getType());
+  const SCEV *Step = SE.getConstant(WideTy, MaxStride);
+  const SCEV *CastedDist = SE.getNoopOrSignExtend(&Dist, WideTy);
+  const SCEV *CastedProduct =
+      SE.getMulExpr(SE.getNoopOrZeroExtend(&MaxBTC, WideTy), Step);
 
   // Is  Dist - (MaxBTC * Step) > 0 ?
   // (If so, then we have proven (**) because |Dist| >= Dist)
@@ -3163,8 +3169,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // they are far enough appart that accesses won't access the same location
   // across all loop ierations.
   if (HasSameSize &&
-      isSafeDependenceDistance(
-          DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()), *Dist, MaxStride))
+      isSafeDependenceDistance(SE, *(PSE.getSymbolicMaxBackedgeTakenCount()),
+                               *Dist, MaxStride))
     return Dependence::NoDep;
 
   const APInt *APDist = nullptr;
@@ -3708,7 +3714,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     bool IsReadOnlyPtr = false;
     Type *AccessTy = getLoadStoreType(LD);
     if (Seen.insert({Ptr, AccessTy}).second ||
-        !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, *DT, SymbolicStrides, false,
+        !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, *DT, SymbolicStrides,
                       true)) {
       ++NumReads;
       IsReadOnlyPtr = true;
