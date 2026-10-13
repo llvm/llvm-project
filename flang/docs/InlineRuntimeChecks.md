@@ -263,9 +263,10 @@ llvm.cond_br %ok weights([2000, 1]), ^cont, ^fail
   `long long`. Code generation packs that array on the failure path; the
   assertion's diagnostic operands remain SSA values until then. Both entries
   have fixed signatures to keep the ABI simple on devices. Messages use only
-  `%lld` and `%%` (for a literal percent sign). The array entry formats these
-  directives before passing the completed message to the existing runtime
-  termination machinery.
+  `%lld` and `%%` (for a literal percent sign). The array entry prints the
+  diagnostic in pieces through the existing runtime termination machinery,
+  without allocating a formatted message. Concurrent failures may interleave
+  their output.
 - **Declaration.** The runtime function declaration must carry `noreturn`,
   so LLVM can use the checked condition on the continuation path.
 - **Source location.** Take it from the assert's own location. Resolve

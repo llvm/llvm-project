@@ -11,15 +11,11 @@
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/file.h"
 #include "flang-rt/runtime/io-error.h"
-#include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/unit.h"
-#include "flang/Runtime/freestanding-tools.h"
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
-#include <limits>
 
 #ifdef HAVE_BACKTRACE
 #include BACKTRACE_HEADER
@@ -249,12 +245,12 @@ static RT_NOINLINE_ATTR void PrintBacktrace() {
 
 RT_OPTNONE_ATTR void FORTRAN_PROCEDURE_NAME(backtrace)() { PrintBacktrace(); }
 
+RT_EXT_API_GROUP_BEGIN
 [[noreturn]] RT_API_ATTRS void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line) {
   Fortran::runtime::Terminator{source, line}.Crash(message);
 }
 
-RT_OFFLOAD_API_GROUP_BEGIN
 [[noreturn]] RT_API_ATTRS void RTNAME(ReportFatalUserErrorValues)(
     const char *message, const char *source, int line, long long v0,
     long long v1, long long v2, long long v3) {
@@ -267,58 +263,47 @@ RT_OFFLOAD_API_GROUP_BEGIN
   Fortran::runtime::Terminator terminator{source, line};
   RUNTIME_CHECK(terminator, message && (count == 0 || values));
 
-  // Reserve enough space for every value, its sign, and the unchanged format.
-  // Allocation is confined to this fatal path, and no diagnostic is truncated.
-  constexpr std::size_t maxValueChars{
-      std::numeric_limits<unsigned long long>::digits10 + 2};
-  std::size_t messageLength{Fortran::runtime::strlen(message)};
-  if (messageLength == std::numeric_limits<std::size_t>::max() ||
-      count > (std::numeric_limits<std::size_t>::max() - messageLength - 1) /
-              maxValueChars) {
-    terminator.Crash("Fatal error message size overflow");
-  }
-  char *buffer{static_cast<char *>(Fortran::runtime::AllocateMemoryOrCrash(
-      terminator, messageLength + count * maxValueChars + 1))};
-  char *out{buffer};
-  std::size_t nextValue{0};
+  // Validate the format and count before printing the diagnostic or reading
+  // values.
+  std::size_t conversions{0};
   for (const char *p{message}; *p; ++p) {
-    if (*p != '%') {
-      *out++ = *p;
-    } else if (p[1] == '%') {
-      *out++ = '%';
-      ++p;
-    } else if (p[1] == 'l' && p[2] == 'l' && p[3] == 'd') {
-      if (nextValue == count) {
-        terminator.Crash("Fatal error message value count mismatch");
+    if (*p == '%') {
+      if (p[1] == '%') {
+        ++p;
+      } else if (p[1] == 'l' && p[2] == 'l' && p[3] == 'd') {
+        ++conversions;
+        p += 3;
+      } else {
+        terminator.Crash("Invalid fatal error message format");
       }
-      long long value{values[nextValue++]};
-      unsigned long long magnitude{static_cast<unsigned long long>(value)};
-      if (value < 0) {
-        *out++ = '-';
-        // Negate in unsigned arithmetic, including for the most negative value.
-        magnitude = -magnitude;
-      }
-      char digits[maxValueChars];
-      char *end{digits + sizeof digits}, *begin{end};
-      do {
-        *--begin = '0' + magnitude % 10;
-        magnitude /= 10;
-      } while (magnitude != 0);
-      std::size_t length{static_cast<std::size_t>(end - begin)};
-      Fortran::runtime::memcpy(out, begin, length);
-      out += length;
-      p += 3;
-    } else {
-      terminator.Crash("Invalid fatal error message format");
     }
   }
-  if (nextValue != count) {
+  if (conversions != count) {
     terminator.Crash("Fatal error message value count mismatch");
   }
-  *out = '\0';
-  // Keep both the standard diagnostic and the host crash-handler hook. The
-  // rendered percent signs are data, not additional format conversions.
-  terminator.Crash("%s", buffer);
+
+  // Print in pieces so reporting the error does not require allocating a
+  // formatted message. Concurrent failures may interleave their output.
+  terminator.CrashHeader();
+  std::size_t nextValue{0};
+  for (const char *p{message}; *p;) {
+    if (*p != '%') {
+      char chunk[256];
+      std::size_t length{0};
+      while (*p && *p != '%' && length < sizeof chunk - 1) {
+        chunk[length++] = *p++;
+      }
+      chunk[length] = '\0';
+      terminator.PrintCrashArgs("%s", chunk);
+    } else if (p[1] == '%') {
+      terminator.PrintCrashArgs("%%");
+      p += 2;
+    } else {
+      terminator.PrintCrashArgs("%lld", values[nextValue++]);
+      p += 4;
+    }
+  }
+  terminator.CrashFooter();
 }
-RT_OFFLOAD_API_GROUP_END
+RT_EXT_API_GROUP_END
 }

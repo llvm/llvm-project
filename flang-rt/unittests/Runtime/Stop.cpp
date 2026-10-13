@@ -150,17 +150,18 @@ TEST_F(TestProgramEnd, CrashValueArrayTest) {
   EXPECT_DEATH(
       RTNAME(ReportFatalUserErrorValueArray)(
           "%lld %lld %lld %lld %lld %%%lld %%lld", "check.f90", 43, 6, values),
-      "check.f90\\(43\\): -9223372036854775808 9223372036854775807 0 -1 "
+      "fatal Fortran runtime error\\(check.f90:43\\): "
+      "-9223372036854775808 9223372036854775807 0 -1 "
       "4294967296 %17 %lld");
 }
 
 TEST_F(TestProgramEnd, CrashValueArrayWithoutValuesTest) {
   EXPECT_DEATH(RTNAME(ReportFatalUserErrorValueArray)(
                    "bad argument: 100%%", "check.f90", 7, 0, nullptr),
-      "check.f90\\(7\\): bad argument: 100%");
+      "fatal Fortran runtime error\\(check.f90:7\\): bad argument: 100%");
   EXPECT_DEATH(
       RTNAME(ReportFatalUserErrorValueArray)("", "check.f90", 7, 0, nullptr),
-      "check.f90\\(7\\): ");
+      "fatal Fortran runtime error\\(check.f90:7\\): ");
 }
 
 TEST_F(TestProgramEnd, CrashValueArrayInvalidFormatTest) {
@@ -187,25 +188,23 @@ TEST_F(TestProgramEnd, CrashValueArrayCountMismatchTest) {
       "RUNTIME_CHECK");
 }
 
-TEST_F(TestProgramEnd, CrashValueArraySizeOverflowTest) {
+TEST_F(TestProgramEnd, CrashValueArrayLargeCountMismatchTest) {
   const long long value{0};
-  EXPECT_DEATH(RTNAME(ReportFatalUserErrorValueArray)("%lld", "check.f90", 7,
-                   std::numeric_limits<std::size_t>::max(), &value),
-      "Fatal error message size overflow");
+  for (std::size_t count : {std::numeric_limits<std::size_t>::max(),
+           std::numeric_limits<std::size_t>::max() / 64}) {
+    EXPECT_DEATH(RTNAME(ReportFatalUserErrorValueArray)(
+                     "%lld", "check.f90", 7, count, &value),
+        "Fatal error message value count mismatch");
+  }
 }
 
 TEST_F(TestProgramEnd, CrashValueArrayStandardDiagnosticTest) {
-  // The test crash handler truncates messages to 1000 characters. Exercise the
-  // actual runtime diagnostic, including its header and a much longer message.
+  // A long literal must span several chunks without truncation.
   std::string message(4096, 'x');
   message += " %lld %lld %lld %lld %lld %%";
   const long long values[]{-1, 0, 1, 2, 3};
-  EXPECT_DEATH(
-      {
-        Terminator::RegisterCrashHandler(nullptr);
-        RTNAME(ReportFatalUserErrorValueArray)(
-            message.c_str(), "check.f90", 99, 5, values);
-      },
+  EXPECT_DEATH(RTNAME(ReportFatalUserErrorValueArray)(
+                   message.c_str(), "check.f90", 99, 5, values),
       ("fatal Fortran runtime error\\(check.f90:99\\): " +
           std::string(4096, 'x') + " -1 0 1 2 3 %")
           .c_str());
