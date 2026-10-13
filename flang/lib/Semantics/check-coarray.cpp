@@ -121,11 +121,11 @@ static void CheckTeamStat(
         "Image selector STAT variable must not be a coindexed "
         "object"_err_en_US);
   } else if (const auto *expr{GetExpr(context, var)}) {
-    if (auto type{expr->GetType()};
-        type && type->category() == TypeCategory::Integer &&
-        type->kind() < 2 && context.ShouldWarn(common::LanguageFeature::StatKind)) { // F2023 9.7.4 p1
-      context.Say(at,
-          "The stat-variable must have an integer kind of at least 16-bit"_warn_en_US);
+    if (auto type{expr->GetType()}; type &&
+        type->category() == TypeCategory::Integer &&
+        type->kind() < 2) { // F2023 9.7.4 p1
+      context.Warn(common::UsageWarning::StatKind,
+          "The stat-variable should have a decimal exponent range of at least four"_warn_en_US);
     }
   }
 }
@@ -144,24 +144,25 @@ static void CheckCoindexedStatOrErrmsg(SemanticsContext &context,
   Fortran::common::visit(CoindexedCheck, statOrErrmsg.u);
 }
 
-static void CheckSyncStat(SemanticsContext &context,
-    const parser::StatOrErrmsg &statOrErrmsg, bool &gotStat, bool &gotMsg) {
+static void CheckStatOrErrmsg(SemanticsContext &context,
+    const parser::StatOrErrmsg &statOrErrmsg, const std::string &listName,
+    bool &gotStat, bool &gotMsg) {
   common::visit(
       common::visitors{
           [&](const parser::StatVariable &stat) {
             if (gotStat) {
               context.Say( // C1172
-                  "The stat-variable in a sync-stat-list may not be repeated"_err_en_US);
+                  "The stat-variable in a %s may not be repeated"_err_en_US,
+                  listName);
             }
-            if (const auto *expr{GetExpr(context, stat)})
+            if (const auto *expr{GetExpr(context, stat)}) {
               if (auto type{expr->GetType()}; type &&
                   type->category() == TypeCategory::Integer &&
-                  type->kind() < 2 &&
-                  context.ShouldWarn(
-                      common::LanguageFeature::StatKind)) { // F2023 9.7.4 p1
-                context.Say(
-                    "The stat-variable must have an integer kind of at least 16-bit"_warn_en_US);
+                  type->kind() < 2) { // F2023 9.7.4 p1
+                context.Warn(common::UsageWarning::StatKind,
+                    "The stat-variable should have a decimal exponent range of at least four"_warn_en_US);
               }
+            }
             gotStat = true;
           },
           [&](const parser::MsgVariable &var) {
@@ -170,21 +171,22 @@ static void CheckSyncStat(SemanticsContext &context,
                 "ERRMSG=");
             if (gotMsg) {
               context.Say( // C1172
-                  "The errmsg-variable in a sync-stat-list may not be repeated"_err_en_US);
+                  "The errmsg-variable in a %s may not be repeated"_err_en_US,
+                  listName);
             }
             gotMsg = true;
           },
       },
       statOrErrmsg.u);
 
-  CheckCoindexedStatOrErrmsg(context, statOrErrmsg, "sync-stat-list");
+  CheckCoindexedStatOrErrmsg(context, statOrErrmsg, listName);
 }
 
 static void CheckSyncStatList(
     SemanticsContext &context, const std::list<parser::StatOrErrmsg> &list) {
   bool gotStat{false}, gotMsg{false};
   for (const parser::StatOrErrmsg &statOrErrmsg : list) {
-    CheckSyncStat(context, statOrErrmsg, gotStat, gotMsg);
+    CheckStatOrErrmsg(context, statOrErrmsg, "sync-stat-list", gotStat, gotMsg);
   }
 }
 
@@ -268,41 +270,8 @@ static void CheckEventWaitSpecList(SemanticsContext &context,
               gotUntil = true;
             },
             [&](const parser::StatOrErrmsg &statOrErrmsg) {
-              common::visit(
-                  common::visitors{
-                      [&](const parser::StatVariable &stat) {
-                        if (gotStat) {
-                          context.Say( // C1178
-                              "A stat-variable in a event-wait-spec-list may not be repeated"_err_en_US);
-                        }
-                        if (const auto *expr{GetExpr(context, stat)})
-                          if (auto type{expr->GetType()}; type &&
-                              type->category() == TypeCategory::Integer &&
-                              type->kind() < 2 &&
-                              context.ShouldWarn(
-                                  common::LanguageFeature::StatKind)) { // F2023 9.7.4
-                                                                        // p1
-                            context.Say(
-                                "The stat-variable must have an integer kind of at least 16-bit"_warn_en_US);
-                          }
-                        gotStat = true;
-                      },
-                      [&](const parser::MsgVariable &var) {
-                        WarnOnDeferredLengthCharacterScalar(context,
-                            GetExpr(context, var),
-                            parser::UnwrapRef<parser::Variable>(var)
-                                .GetSource(),
-                            "ERRMSG=");
-                        if (gotMsg) {
-                          context.Say( // C1178
-                              "A errmsg-variable in a event-wait-spec-list may not be repeated"_err_en_US);
-                        }
-                        gotMsg = true;
-                      },
-                  },
-                  statOrErrmsg.u);
-              CheckCoindexedStatOrErrmsg(
-                  context, statOrErrmsg, "event-wait-spec-list");
+              CheckStatOrErrmsg(context, statOrErrmsg, "event-wait-spec-list",
+                  gotStat, gotMsg);
             },
 
         },
@@ -381,7 +350,8 @@ void CoarrayChecker::Leave(const parser::LockStmt &x) {
       std::get<std::list<parser::LockStmt::LockStat>>(x.t)) {
     if (const auto *statOrErrmsg{
             std::get_if<parser::StatOrErrmsg>(&lockStat.u)}) {
-      CheckSyncStat(context_, *statOrErrmsg, gotStat, gotMsg);
+      CheckStatOrErrmsg(
+          context_, *statOrErrmsg, "lock-stat-list", gotStat, gotMsg);
     } else {
       CHECK(std::holds_alternative<
           parser::Scalar<parser::Logical<parser::Variable>>>(lockStat.u));
@@ -417,11 +387,12 @@ void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
 void CoarrayChecker::Leave(const parser::FormTeamStmt &x) {
   CheckTeamType(
       context_, std::get<parser::TeamVariable>(x.t), /*mustBeVariable=*/true);
+  bool gotStat{false}, gotMsg{false};
   for (const auto &spec :
       std::get<std::list<parser::FormTeamStmt::FormTeamSpec>>(x.t)) {
     if (const auto *statOrErrmsg{std::get_if<parser::StatOrErrmsg>(&spec.u)}) {
-      CheckCoindexedStatOrErrmsg(
-          context_, *statOrErrmsg, "form-team-spec-list");
+      CheckStatOrErrmsg(
+          context_, *statOrErrmsg, "form-team-spec-list", gotStat, gotMsg);
     }
   }
 }
