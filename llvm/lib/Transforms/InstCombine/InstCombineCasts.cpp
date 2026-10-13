@@ -64,12 +64,54 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
   case Instruction::Shl:
   case Instruction::UDiv:
   case Instruction::URem: {
-    Value *LHS = EvaluateInDifferentTypeImpl(I->getOperand(0), Ty, isSigned, IC,
-                                             Processed);
-    Value *RHS = EvaluateInDifferentTypeImpl(I->getOperand(1), Ty, isSigned, IC,
-                                             Processed);
+    // sext(binop nsw (trunc nsw X), Y) is binop nsw X, sext(Y) when X already
+    // has the destination type. trunc nsw means X fits in the narrow type, and
+    // nsw on the narrow binop means the result does too, so the wide binop is
+    // nsw. Rebuilding without that flag makes visitSExt emit shl/ashr, which
+    // SCEV cannot treat as a non-wrapping recurrence.
+    Value *X = nullptr;
+    bool NSWWide = false;
+    if (isSigned &&
+        (Opc == Instruction::Add || Opc == Instruction::Sub ||
+         Opc == Instruction::Mul) &&
+        I->hasNoSignedWrap()) {
+      bool W0 = match(I->getOperand(0), m_NSWTrunc(m_SpecificType(Ty, X)));
+      bool W1 = match(I->getOperand(1), m_NSWTrunc(m_SpecificType(Ty, X)));
+      NSWWide = W0 || W1;
+    }
+
+    Value *WideOps[2];
+    for (unsigned OpIdx = 0; OpIdx != 2; ++OpIdx) {
+      Value *Op = I->getOperand(OpIdx);
+      Value *TruncSrc = nullptr;
+      if (NSWWide && match(Op, m_NSWTrunc(m_Value(TruncSrc))) &&
+          TruncSrc->getType() == Ty) {
+        WideOps[OpIdx] = TruncSrc;
+        continue;
+      }
+      if (NSWWide) {
+        if (Constant *C = dyn_cast<Constant>(Op))
+          if (Constant *Folded = ConstantFoldIntegerCast(
+                  C, Ty, /*IsSigned=*/true, IC.getDataLayout())) {
+            WideOps[OpIdx] = Folded;
+            continue;
+          }
+        // Sign-extend an operand that is not itself a trunc nsw of Ty.
+        CastInst *Ext = CastInst::Create(Instruction::SExt, Op, Ty,
+                                         Op->getName() + ".sext");
+        WideOps[OpIdx] = IC.InsertNewInstWith(Ext, I->getIterator());
+        continue;
+      }
+      WideOps[OpIdx] =
+          EvaluateInDifferentTypeImpl(Op, Ty, isSigned, IC, Processed);
+    }
+
+    Value *LHS = WideOps[0];
+    Value *RHS = WideOps[1];
     Res = BinaryOperator::Create((Instruction::BinaryOps)Opc, LHS, RHS);
-    if (Opc == Instruction::LShr || Opc == Instruction::AShr)
+    if (NSWWide)
+      Res->setHasNoSignedWrap(true);
+    else if (Opc == Instruction::LShr || Opc == Instruction::AShr)
       Res->setIsExact(I->isExact());
     break;
   }
@@ -1892,12 +1934,31 @@ bool TypeEvaluationHelper::canEvaluateSExtdPred(Value *V, Type *Ty) {
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Mul:
     // These operators can all arbitrarily be extended if their inputs can.
     return canEvaluateSExtdImpl(I->getOperand(0), Ty) &&
            canEvaluateSExtdImpl(I->getOperand(1), Ty);
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul: {
+    // sext(binop nsw (trunc nsw X), Y) may sign-extend Y. At least one operand
+    // must already be an iM value behind trunc nsw, so this does not widen
+    // arithmetic that was never connected to the destination type.
+    if (I->hasNoSignedWrap()) {
+      Value *X = nullptr;
+      bool W0 = match(I->getOperand(0), m_NSWTrunc(m_SpecificType(Ty, X)));
+      bool W1 = match(I->getOperand(1), m_NSWTrunc(m_SpecificType(Ty, X)));
+      if (W0 || W1) {
+        Value *Op0 = I->getOperand(0);
+        Value *Op1 = I->getOperand(1);
+        return (canEvaluateSExtdImpl(Op0, Ty) ||
+                Op0->getType() == I->getType()) &&
+               (canEvaluateSExtdImpl(Op1, Ty) ||
+                Op1->getType() == I->getType());
+      }
+    }
+    return canEvaluateSExtdImpl(I->getOperand(0), Ty) &&
+           canEvaluateSExtdImpl(I->getOperand(1), Ty);
+  }
 
     // case Instruction::Shl:   TODO
     // case Instruction::LShr:  TODO
@@ -1991,7 +2052,24 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   if (match(Src, m_Trunc(m_Value(TruncSrc))))
     if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
       ShouldExtendExpression = false;
-  if (ShouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
+  // Vectors are not integer types, so shouldChangeType rejects them. Allow the
+  // same scalar legality check when widening an nsw add/sub/mul of trunc nsw.
+  bool LegalType = shouldChangeType(SrcTy, DestTy);
+  if (!LegalType && SrcTy->isVectorTy() &&
+      shouldChangeType(SrcTy->getScalarType(), DestTy->getScalarType())) {
+    Value *WideSrc;
+    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(Src)) {
+      Instruction::BinaryOps Opc = BO->getOpcode();
+      LegalType = (Opc == Instruction::Add || Opc == Instruction::Sub ||
+                   Opc == Instruction::Mul) &&
+                  BO->hasNoSignedWrap() &&
+                  (match(BO->getOperand(0),
+                         m_NSWTrunc(m_SpecificType(DestTy, WideSrc))) ||
+                   match(BO->getOperand(1),
+                         m_NSWTrunc(m_SpecificType(DestTy, WideSrc))));
+    }
+  }
+  if (ShouldExtendExpression && LegalType &&
       TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy)) {
     // Okay, we can transform this!  Insert the new expression now.
     LLVM_DEBUG(
@@ -2001,8 +2079,19 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     Value *Res = EvaluateInDifferentType(Src, DestTy, true);
     assert(Res->getType() == DestTy);
 
-    // If the high bits are already filled with sign bit, just replace this
-    // cast with the result.
+    // sext(binop nsw (trunc nsw X)) is already the sign-extended value, so do
+    // not wrap it in shl/ashr. The binop has to sit between the trunc and this
+    // sext.
+    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(Src)) {
+      Instruction::BinaryOps Opc = BO->getOpcode();
+      Value *Wide = nullptr;
+      if ((Opc == Instruction::Add || Opc == Instruction::Sub ||
+           Opc == Instruction::Mul) &&
+          BO->hasNoSignedWrap() &&
+          (match(BO->getOperand(0), m_NSWTrunc(m_SpecificType(DestTy, Wide))) ||
+           match(BO->getOperand(1), m_NSWTrunc(m_SpecificType(DestTy, Wide)))))
+        return replaceInstUsesWith(Sext, Res);
+    }
     if (ComputeNumSignBits(Res, &Sext) > DestBitSize - SrcBitSize)
       return replaceInstUsesWith(Sext, Res);
 
