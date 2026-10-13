@@ -1171,6 +1171,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### SYCL Support
 
+- `--offload-arch` accepts the Intel GPU names from
+  `llvm/TargetParser/IntelGPUTargetParser.def`, e.g. `xe-pvc`, and their numeric
+  names, e.g. `xe_12.60.7`. `bmg_g21` is no longer accepted; use `xe-bmg-g21`.
+
 #### Improvements
 
 ## Additional Information
