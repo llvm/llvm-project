@@ -5330,7 +5330,11 @@ let Predicates = [HasSVE, HasCPA] in {
 //===----------------------------------------------------------------------===//
 // Load-Acquire/Store-Release octaword (FEAT_SVE_LRCPC)
 //===----------------------------------------------------------------------===//
-let Predicates = [HasSVE_LRCPC] in {
-  defm LDAPRO_ZXI : sve_mem_z_acq_fill<"ldapro">;
-  defm STLRO_ZXI  : sve_mem_z_rel_spill<"stlro">;
+let Predicates = [HasSVE_RCPC] in {
+  defm LDAPRO_ZXI : sve_mem_z_ordered<"ldapro", (outs ZPRAny:$Zt),
+                                      (ins GPR64sp:$Rn, uimm8s32:$imm),
+                                      0b10000101100, 0b011, 1>;
+  defm STLRO_ZXI  : sve_mem_z_ordered<"stlro", (outs),
+                                      (ins ZPRAny:$Zt, GPR64sp:$Rn, uimm8s32:$imm),
+                                      0b11100101110, 0b000, 0>;
 }

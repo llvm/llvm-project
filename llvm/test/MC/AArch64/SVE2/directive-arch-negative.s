@@ -65,8 +65,8 @@ bfscale z0.h, p0/m, z0.h, z0.h
 // CHECK: error: instruction requires: sve-bfscale
 // CHECK-NEXT: bfscale z0.h, p0/m, z0.h, z0.h
 
-.arch armv9.6-a+sve-lrcpc
-.arch armv9.6-a+nosve-lrcpc
+.arch armv9.6-a+sve-rcpc
+.arch armv9.6-a+nosve-rcpc
 ldapro z0, [x0]
-// CHECK: error: instruction requires: sve-lrcpc
+// CHECK: error: instruction requires: sve-rcpc
 // CHECK-NEXT: ldapro z0, [x0]
