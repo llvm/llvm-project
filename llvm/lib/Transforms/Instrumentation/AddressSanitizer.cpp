@@ -2911,7 +2911,8 @@ bool AddressSanitizer::instrumentFunction(Function &F,
 
   SmallPtrSet<const Instruction *, 16> InRegion;
   if (RegionOnly) {
-    computeSanitizerInstrumentationRegions(F, InRegion);
+    if (auto Problem = computeSanitizerInstrumentationRegions(F, InRegion))
+      diagnoseSanitizerInstrumentationRegionProblem(F, *Problem);
   } else {
     // We can't instrument allocas used with llvm.localescape. Only static
     // allocas can be passed to that intrinsic. (The locals of a region-only

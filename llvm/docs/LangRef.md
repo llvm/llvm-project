@@ -28620,6 +28620,17 @@ dominated by a `llvm.sanitizer.instrumentation.begin`, so any per-function
 sanitizer state set up there is available. A region that is entered on some
 paths but not others is therefore instrumented only where it is unambiguous.
 
+Sanitizer passes that implement regions warn about unbalanced markers: a
+`llvm.sanitizer.instrumentation.end` without a matching
+`llvm.sanitizer.instrumentation.begin`, a region that is still open at a `ret`,
+and a point where paths with different region nesting depths merge. Regions that
+are still open where the function is left without returning, i.e. at an
+`unreachable` (e.g. after a call to a `noreturn` function) or when an exception
+unwinds out of it, are not diagnosed. Markers in functions that are instrumented
+as a whole are ignored and not checked. In Clang, the warning is controlled by
+`-Wsanitizer-instrumentation-region` and emitted at most once per function;
+`opt` reports a function once per sanitizer pass that analyzes it.
+
 MemorySanitizer supports regions in kernel mode (KMSAN), in functions marked
 with `disable_sanitizer_instrumentation`. The function-level ABI prologue is
 skipped, the MSan context state is fetched at

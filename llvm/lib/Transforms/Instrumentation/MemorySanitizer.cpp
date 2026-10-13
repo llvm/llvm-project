@@ -1604,7 +1604,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// pointer. With the intersection join an in-region instruction is always
   /// dominated by a begin(), so the slot is always initialized.
   void computeRegionMembership() {
-    computeSanitizerInstrumentationRegions(F, InRegion);
+    if (auto Problem = computeSanitizerInstrumentationRegions(F, InRegion))
+      diagnoseSanitizerInstrumentationRegionProblem(F, *Problem);
 
     // A begin() is nested if the code right before it is already in a region:
     // the preceding instruction, or, at the start of a block, the terminators

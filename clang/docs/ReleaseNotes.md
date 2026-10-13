@@ -1322,7 +1322,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   sanitizer instrumentation is enabled again. AddressSanitizer,
   KernelMemorySanitizer, ThreadSanitizer and SanitizerCoverage support them;
   see [LanguageExtensions](LanguageExtensions.md) and the documentation of each
-  sanitizer.
+  sanitizer. The new `-Wsanitizer-instrumentation-region` warning reports
+  unbalanced regions: an end without a matching begin, a region still open at
+  a return, and control flow merging from paths with different region nesting.
 
 ### Python Binding Changes
 
