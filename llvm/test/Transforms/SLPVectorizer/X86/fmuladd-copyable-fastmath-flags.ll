@@ -16,7 +16,7 @@ define void @storechain_1fmul_no_nsz(ptr %a, ptr %b, ptr %c, ptr %dst) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> <float poison, float -0.000000e+00, float poison, float poison>, float [[C0]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP6:%.*]] = call nsz <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]], <4 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]], <4 x float> [[TMP5]])
 ; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -74,7 +74,7 @@ define void @storechain_1fadd_no_nsz(ptr %a, ptr %b, ptr %c, ptr %dst) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP4]], <4 x i32> <i32 0, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP12:%.*]] = call nsz <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP1]], <4 x float> [[TMP7]], <4 x float> [[TMP11]])
+; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP1]], <4 x float> [[TMP7]], <4 x float> [[TMP11]])
 ; CHECK-NEXT:    store <4 x float> [[TMP12]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
