@@ -1,3 +1,4 @@
+; REQUIRES: zlib
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: llc -filetype=obj %p/Inputs/malformed-prf1.ll -o %t.malformed-prf1.o
 ; RUN: llc -filetype=obj %p/Inputs/malformed-prf2.ll -o %t.malformed-prf2.o
