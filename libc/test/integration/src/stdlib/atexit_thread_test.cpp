@@ -1,9 +1,15 @@
-//===-- Tests for __cxa_thread_atexit_impl --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file consists of an integration test written to the functionality
+/// of __cxa_thread_atexit_impl() function while an exit of a pthread
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/pthread/pthread_create.h"
@@ -12,7 +18,7 @@
 #include "src/stdlib/__cxa_thread_atexit_impl.h"
 #include "test/IntegrationTest/test.h"
 
-#include <pthread.h>
+#include "hdr/pthread_macros.h" 
 
 namespace {
 

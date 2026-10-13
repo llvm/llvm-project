@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/__cxa_thread_atexit_impl.h"
-
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
