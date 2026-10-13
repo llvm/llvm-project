@@ -234,6 +234,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
+#  include <__utility/is_pointer_in_range.h>
 #  include <__utility/move.h>
 #  include <__utility/pair.h>
 #  include <__utility/swap.h>
@@ -1244,7 +1245,19 @@ private:
   _LIBCPP_HIDE_FROM_ABI iterator __insert_bidirectional(const_iterator __p, _BiIter __f, _BiIter __l, size_type __n);
 
   _LIBCPP_HIDE_FROM_ABI bool __is_valid_insert_position(const_iterator __p) const {
-    return begin() <= __p && __p <= end();
+    // Check that __p points into our map and blocks before computing its index from them.
+    if (__map_.empty())
+      return __p == end();
+    auto __map_first = std::__to_address(__map_.begin());
+    auto __slot      = std::__to_address(__p.__m_iter_);
+    if (!std::__is_pointer_in_range(__map_first, std::__to_address(__map_.end()), __slot))
+      return false;
+    auto __block = std::__to_address(*__slot);
+    auto __elem  = std::__to_address(__p.__ptr_);
+    if (!std::__is_pointer_in_range(__block, __block + __block_size, __elem))
+      return false;
+    auto __pos = static_cast<size_type>((__slot - __map_first) * __block_size + (__elem - __block));
+    return __start_ <= __pos && __pos <= __start_ + size();
   }
 
   template <class _InpIter, __enable_if_t<__has_exactly_input_iterator_category<_InpIter>::value, int> = 0>

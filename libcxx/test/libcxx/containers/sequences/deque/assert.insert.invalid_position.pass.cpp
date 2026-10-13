@@ -72,6 +72,24 @@ void test() {
     d.pop_back();
     test_invalid_position(d, stale);
   }
+
+  // An iterator into another deque, inserting into an empty deque that still holds a block.
+  {
+    Deque d = {1, 2, 3};
+    d.clear();
+    Deque other = {4, 5, 6};
+    test_invalid_position(d, other.begin());
+    test_invalid_position(d, other.end());
+  }
+
+  // An iterator into a block that pop_front() released.
+  {
+    Deque d(3 * 4096);
+    typename Deque::const_iterator stale = d.begin();
+    for (int i = 0; i != 2 * 4096; ++i)
+      d.pop_front();
+    test_invalid_position(d, stale);
+  }
 }
 
 int main(int, char**) {
