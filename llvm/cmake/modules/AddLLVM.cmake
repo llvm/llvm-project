@@ -164,6 +164,19 @@ function(add_llvm_symbol_exports target_name export_file)
     set(native_export_file "${export_file}")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-bE:${export_file}")
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    # wasm-ld uses explicit exports, not ELF version scripts. These also
+    # pull the exported API definitions out of static dependency archives.
+    set(native_export_file "${target_name}.exports")
+    add_custom_command(OUTPUT ${native_export_file}
+      COMMAND sed -e "s/^/-Wl,--export=/" < ${export_file} > ${native_export_file}
+      DEPENDS ${export_file}
+      VERBATIM
+      COMMENT "Creating export file for ${target_name}")
+    # Forward each response-file entry through the Emscripten driver.
+    set_property(TARGET ${target_name} APPEND PROPERTY
+                 LINK_OPTIONS "-Wl,--no-export-dynamic"
+                              "@${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}")
   elseif(LLVM_HAVE_LINK_VERSION_SCRIPT)
     # Gold and BFD ld require a version script rather than a plain list.
     set(native_export_file "${target_name}.exports")
@@ -737,11 +750,12 @@ function(llvm_add_library name)
   ## class members from being dllexport'ed to reduce compile time.
   ## This will also keep us below the 64k exported symbol limit
   ## https://blog.llvm.org/2018/11/30-faster-windows-builds-with-clang-cl_14.html
-  if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND
-     MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
-    target_compile_options(${name} PUBLIC /Zc:dllexportInlines-)
+  if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND MSVC)
+    target_compile_options(${name} PUBLIC
+      "$<$<COMPILE_LANGUAGE:C,CXX>:$<$<CXX_COMPILER_ID:Clang>:/Zc:dllexportInlines->>")
     if(TARGET ${obj_name})
-      target_compile_options(${obj_name} PUBLIC /Zc:dllexportInlines-)
+      target_compile_options(${obj_name} PUBLIC
+        "$<$<COMPILE_LANGUAGE:C,CXX>:$<$<CXX_COMPILER_ID:Clang>:/Zc:dllexportInlines->>")
     endif()
   endif()
 
@@ -1280,10 +1294,10 @@ macro(add_llvm_executable name)
     target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
   endif()
 
-  if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND
-     MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
+  if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND MSVC)
     # This has to match how the libraries the executable is linked to are built or there be linker errors.
-    target_compile_options(${name} PRIVATE /Zc:dllexportInlines-)
+    target_compile_options(${name} PRIVATE
+      "$<$<COMPILE_LANGUAGE:C,CXX>:$<$<CXX_COMPILER_ID:Clang>:/Zc:dllexportInlines->>")
   endif()
 endmacro(add_llvm_executable name)
 

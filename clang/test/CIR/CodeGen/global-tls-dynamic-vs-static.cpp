@@ -12,7 +12,7 @@ thread_local  int d = f();
 // CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn @a = #cir.int<5> : !s32i
 // CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn @b = #cir.int<5> : !s32i
 // CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW1c", "_ZTH1c"> @c = #cir.int<5> : !s32i
-// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW1d", "_ZTH1d"> @d = ctor
+// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW1d", "_ZTH1d"> @d = #cir.int<0> : !s32i ctor
 
 // CIR-DAG: cir.global external tls_model = tls_dyn @a = #cir.int<5> : !s32i
 // CIR-DAG: cir.global external tls_model = tls_dyn @b = #cir.int<5> : !s32i

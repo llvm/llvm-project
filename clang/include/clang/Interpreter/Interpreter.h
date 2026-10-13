@@ -44,9 +44,7 @@ class CompilerInstance;
 class CXXRecordDecl;
 class Decl;
 class IncrementalParser;
-class IncrementalDeviceParser;
-
-enum class OffloadType { CUDA, HIP };
+class IncrementalCUDADeviceParser;
 
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
@@ -67,51 +65,28 @@ public:
   // Offload options
   void SetOffloadArch(llvm::StringRef Arch) { OffloadArch = Arch; };
 
-  void SetDeviceSDK(OffloadType Type, llvm::StringRef Path) {
-    if (Type == OffloadType::HIP)
-      RocmSDKPath = Path;
-    else
-      CudaSDKPath = Path;
-  }
-
-  // Retained for compatibility with existing CUDA callers.
-  void SetCudaSDK(llvm::StringRef Path) {
-    SetDeviceSDK(OffloadType::CUDA, Path);
-  }
+  // CUDA specific
+  void SetCudaSDK(llvm::StringRef path) { CudaSDKPath = path; };
 
   // Hand over the compilation.
   void SetDriverCompilationCallback(std::function<DriverCompilationFn> C) {
     CompilationCB = C;
   }
 
-  llvm::Expected<std::unique_ptr<CompilerInstance>>
-  CreateHost(OffloadType Type);
-  llvm::Expected<std::unique_ptr<CompilerInstance>>
-  CreateDevice(OffloadType Type);
-
-  // Retained for compatibility with existing CUDA callers.
-  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaHost() {
-    return CreateHost(OffloadType::CUDA);
-  }
-  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaDevice() {
-    return CreateDevice(OffloadType::CUDA);
-  }
+  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaHost();
+  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaDevice();
 
 private:
   llvm::Expected<std::unique_ptr<CompilerInstance>>
   create(std::string TT, std::vector<const char *> &ClangArgv);
 
-  llvm::Expected<std::unique_ptr<CompilerInstance>>
-  createOffload(OffloadType Type, bool device);
+  llvm::Expected<std::unique_ptr<CompilerInstance>> createCuda(bool device);
 
   std::vector<const char *> UserArgs;
   std::optional<std::string> TargetTriple;
 
   llvm::StringRef OffloadArch;
-  llvm::StringRef RocmSDKPath;
   llvm::StringRef CudaSDKPath;
-
-  std::string OffloadCUID;
 
   std::optional<std::function<DriverCompilationFn>> CompilationCB;
 };
@@ -131,7 +106,7 @@ class Interpreter {
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
 
   // An optional parser for CUDA offloading
-  std::unique_ptr<IncrementalDeviceParser> DeviceParser;
+  std::unique_ptr<IncrementalCUDADeviceParser> DeviceParser;
 
   // An optional action for CUDA offloading
   std::unique_ptr<IncrementalAction> DeviceAct;
@@ -172,8 +147,8 @@ public:
   create(std::unique_ptr<CompilerInstance> CI,
          std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr);
   static llvm::Expected<std::unique_ptr<Interpreter>>
-  createWithDevice(OffloadType Type, std::unique_ptr<CompilerInstance> CI,
-                   std::unique_ptr<CompilerInstance> DCI);
+  createWithCUDA(std::unique_ptr<CompilerInstance> CI,
+                 std::unique_ptr<CompilerInstance> DCI);
 
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();

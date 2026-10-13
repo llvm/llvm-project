@@ -807,7 +807,14 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
   if (LLVM_UNLIKELY(Inst->getOpcode() == Instruction::PHI))
     return phiNodeOperandWithNewAddressSpace(NewI, OperandUse.get());
 
-  NewI->insertBefore(Inst->getIterator());
+  // During cloning phase, the cast is placed before the original flat
+  // instruction, as its clone in the new address space has not been inserted
+  // yet. During poison fixup phase, the clone already exists, thus make sure
+  // the cast is inserted before it.
+  Instruction *InsertPt = Inst;
+  if (Value *NewUser = ValueWithNewAddrSpace.lookup(Inst))
+    InsertPt = cast<Instruction>(NewUser);
+  NewI->insertBefore(InsertPt->getIterator());
   NewI->setDebugLoc(Inst->getDebugLoc());
   return NewI;
 }

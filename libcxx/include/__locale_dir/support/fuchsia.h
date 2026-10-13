@@ -14,6 +14,7 @@
 #include <clocale> // uselocale & friends
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <cwchar>
 #include <langinfo.h>
 

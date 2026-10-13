@@ -874,13 +874,12 @@ define <2 x i64> @vwaddu_vx_v2i64_i64(ptr %x, ptr %y) nounwind {
 define <4 x i64> @crash(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-LABEL: crash:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v9
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsext.vf4 v8, v11
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v11, v10
-; CHECK-NEXT:    vwaddu.wv v8, v8, v11
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.wv v10, v10, v9
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %a = sext <4 x i16> %x to <4 x i64>
   %b = zext <4 x i16> %y to <4 x i64>
@@ -940,4 +939,26 @@ define <2 x i64> @vwaddu_v2i64_of_v2i16(ptr %x, ptr %y) {
   %d = zext <2 x i16> %b to <2 x i64>
   %e = add <2 x i64> %c, %d
   ret <2 x i64> %e
+}
+
+define <16 x i32> @vwadd_sext_chain_v16i8_v16i32(<16 x i32> %acc, <16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
+; CHECK-LABEL: vwadd_sext_chain_v16i8_v16i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vwadd.vv v16, v14, v15
+; CHECK-NEXT:    vwadd.vv v18, v12, v13
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vwadd.vv v12, v18, v16
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v12, v8
+; CHECK-NEXT:    ret
+  %sa = sext <16 x i8> %a to <16 x i32>
+  %sb = sext <16 x i8> %b to <16 x i32>
+  %sc = sext <16 x i8> %c to <16 x i32>
+  %sd = sext <16 x i8> %d to <16 x i32>
+  %s0 = add <16 x i32> %acc, %sa
+  %s1 = add <16 x i32> %s0, %sb
+  %s2 = add <16 x i32> %s1, %sc
+  %s3 = add <16 x i32> %s2, %sd
+  ret <16 x i32> %s3
 }

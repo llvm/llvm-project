@@ -14,9 +14,9 @@
 
 ! RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-llvm %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s --check-prefix=LLVM
-! RUN: not %flang_fc1 -fsyntax-only %openmp_flags -fopenmp-version=51 %s 2>&1 | FileCheck %s --check-prefix=VERSION51
+! RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,VERSION51
 
-! VERSION51: error: {{.*}}ALLOCATE
+! VERSION51: warning: {{.*}}ALLOCATE
 
 subroutine scope_allocator_omitted(x, y)
   integer :: x, y

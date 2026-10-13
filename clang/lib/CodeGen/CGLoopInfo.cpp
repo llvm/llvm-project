@@ -651,9 +651,10 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
     case LoopHintAttr::Disable:
       switch (Option) {
       case LoopHintAttr::Vectorize:
-        // Disable vectorization by specifying a width of 1.
+        // Disable vectorization by specifying a width of 1 and disabling
+        // scalable vectorization explicitly.
         setVectorizeWidth(1);
-        setVectorizeScalable(LoopAttributes::Unspecified);
+        setVectorizeScalable(LoopAttributes::Disable);
         break;
       case LoopHintAttr::Interleave:
         // Disable interleaving by speciyfing a count of 1.
