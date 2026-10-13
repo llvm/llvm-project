@@ -1252,9 +1252,6 @@ TLI_DEFINE_VECFUNC("tgammaf", "_ZGVsMxv_tgammaf", SCALABLE(4), MASKED, "_ZGVsMxv
 
 #elif defined(TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV)
 
-// The RVV modf, sincos and sincospi entry points return both results in one
-// larger vector, so they cannot use the scalar functions' output-pointer ABI.
-
 TLI_DEFINE_VECFUNC("acos", "Sleef_acosdx_u10rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxv")
 TLI_DEFINE_VECFUNC("llvm.acos.f64", "Sleef_acosdx_u10rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxv")
 TLI_DEFINE_VECFUNC("acosf", "Sleef_acosfx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")

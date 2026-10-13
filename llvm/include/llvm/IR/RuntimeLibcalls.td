@@ -4902,7 +4902,7 @@ def ArmPLLibrary : LibcallLibrary<"armpl",
        !filter(entry, ARMPL_VECFUNCS,
                !match(entry.LibCallFuncName, "^armpl_sv"))), isAArch64>;
 
-def AMDLIBMLibrary : LibcallLibrary<"amdlibm", (add AMDLIBM_VECFUNCS)>;
+def AMDLIBMLibrary : LibcallLibrary<"amdlibm", (add AMDLIBM_VECFUNCS), isX86>;
 
 def AccelerateLibrary : LibcallLibrary<"accelerate", (add ACCELERATE_VECFUNCS)>;
 
