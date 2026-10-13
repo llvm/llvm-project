@@ -66,21 +66,19 @@ TEST(OffloadArchTest, RoundTrip) {
   }
 }
 
-// A spelling that is not the architecture name still denotes the device, and
-// canonicalizes to that name rather than round-tripping to itself.
-TEST(OffloadArchTest, IntelGPUAliases) {
-  // An alias, here the spelling accepted before the Intel GPU list existed.
-  EXPECT_EQ(parse("bmg_g21"), parse("xe-bmg-g21"));
-  // A numeric name, whose revision takes no part in the lookup.
+// A numeric name denotes the device, and canonicalizes to the device name.
+TEST(OffloadArchTest, IntelGPUNumericNames) {
+  // The revision takes no part in the lookup.
   EXPECT_EQ(parse("xe_12.60.0"), parse("xe-pvc"));
   EXPECT_EQ(parse("xe_12.60.7"), parse("xe-pvc"));
   EXPECT_EQ(parse("xe_12.60"), parse("xe-pvc"));
-  EXPECT_STREQ(OffloadArchToString(parse("bmg_g21")), "xe-bmg-g21");
   EXPECT_STREQ(OffloadArchToString(parse("xe_12.60.7")), "xe-pvc");
 
   // A well-formed numeric name for a device this build does not know is as
   // unknown as any other unknown name.
   EXPECT_TRUE(parse("xe_99.99.0").isUnknown());
+  // So is the spelling clang accepted before the Intel GPU list existed.
+  EXPECT_TRUE(parse("bmg_g21").isUnknown());
 }
 
 TEST(OffloadArchTest, Defaults) {

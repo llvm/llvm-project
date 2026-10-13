@@ -1171,6 +1171,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### SYCL Support
 
+- `--offload-arch` accepts the Intel GPU names from
+  `llvm/TargetParser/IntelGPUTargetParser.def`, e.g. `xe-pvc`, and their numeric
+  names, e.g. `xe_12.60.7`. `bmg_g21` is no longer accepted; use `xe-bmg-g21`.
 - On a `spirv32-unknown-unknown` or `spirv64-unknown-unknown` offload target,
   `--offload-arch` and `--no-offload-arch` must now name an Intel GPU or CPU,
   `generic`, or the numeric name of an Intel GPU such as `xe_40.11.0`. Any other

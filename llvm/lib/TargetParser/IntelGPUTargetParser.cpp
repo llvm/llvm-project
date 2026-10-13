@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -87,7 +86,7 @@ StringRef llvm::IntelGPU::getArchName(GPUKind Kind) {
     return NAME;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
   }
-  llvm_unreachable("invalid Intel GPU GPUKind");
+  llvm_unreachable("invalid Intel GPU kind");
 }
 
 // Read a numeric architecture name, e.g. "xe_12.60.7", into the GPU IP version
@@ -126,7 +125,6 @@ GPUKind llvm::IntelGPU::parseArch(StringRef Name) {
   .Case(NAME, GK_##KIND)
 #define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
   .Case(NAME, GK_##KIND)
-#define INTEL_GPU_ALIAS(NAME, KIND) .Case(NAME, GK_##KIND)
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
                      .Default(GK_NONE);
   if (Kind != GK_NONE)
@@ -141,49 +139,7 @@ GPUKind llvm::IntelGPU::parseArch(StringRef Name) {
   return GK_NONE;
 }
 
-// The suffix each IGCA_FEATURE_SETS token contributes to a target name.
-#define IGCA_FEATURE_SETS_Core ""
-#define IGCA_FEATURE_SETS_Compute "c"
-#define IGCA_FEATURE_SETS_Render "r"
-#define IGCA_FEATURE_SETS_ComputeExact "ca"
-#define IGCA_FEATURE_SETS_RenderExact "ra"
-
 bool llvm::IntelGPU::isNumericArchName(StringRef Name) {
   uint32_t GPUIPVersion;
   return parseNumericArchName(Name, GPUIPVersion);
-}
-
-StringRef llvm::IntelGPU::getIGCAName(GPUKind Kind) {
-  // Unlike the NVPTX virtual architecture name, this is not a column of its
-  // own: the target and the feature sets already spell it, and a column would
-  // let the three disagree.
-  switch (Kind) {
-  case GK_NONE:
-    return "";
-#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
-  case GK_##KIND:                                                              \
-    return "igca_" #IGCA_TARGET IGCA_FEATURE_SETS_##IGCA_FEATURE_SETS;
-#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
-  case GK_##KIND:                                                              \
-    return "igca_" #IGCA_TARGET IGCA_FEATURE_SETS_##IGCA_FEATURE_SETS;
-#include "llvm/TargetParser/IntelGPUTargetParser.def"
-  }
-  llvm_unreachable("invalid Intel GPU GPUKind");
-}
-
-#undef IGCA_FEATURE_SETS_Core
-#undef IGCA_FEATURE_SETS_Compute
-#undef IGCA_FEATURE_SETS_Render
-#undef IGCA_FEATURE_SETS_ComputeExact
-#undef IGCA_FEATURE_SETS_RenderExact
-
-void llvm::IntelGPU::fillValidArchList(SmallVectorImpl<StringRef> &Values) {
-  // An alias is a name the user may write, so it belongs here even though it is
-  // never the name reported for a device.
-#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
-  Values.push_back(NAME);
-#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
-  Values.push_back(NAME);
-#define INTEL_GPU_ALIAS(NAME, KIND) Values.push_back(NAME);
-#include "llvm/TargetParser/IntelGPUTargetParser.def"
 }

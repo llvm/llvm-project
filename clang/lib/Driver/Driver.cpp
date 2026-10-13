@@ -970,13 +970,11 @@ using TripleSet = std::multiset<llvm::Triple>;
 // requested offloading kind and architectures.
 static TripleSet inferOffloadToolchains(Compilation &C,
                                         Action::OffloadKind Kind) {
-  // A SYCL Intel GPU has several accepted spellings, so key it by its canonical
-  // name, or --no-offload-arch with another spelling would not remove it.
-  auto canonicalize = [Kind](StringRef Arch) {
+  // An Intel GPU has several spellings, so key it by its canonical name, or
+  // --no-offload-arch with another spelling would not remove it.
+  auto canonicalize = [](StringRef Arch) {
     OffloadArch ID = StringToOffloadArch(Arch);
-    return Kind == Action::OFK_SYCL && ID.isIntelGPU()
-               ? std::string(OffloadArchToString(ID))
-               : Arch.str();
+    return ID.isIntelGPU() ? std::string(OffloadArchToString(ID)) : Arch.str();
   };
   std::set<std::string> Archs;
   for (Arg *A : C.getInputArgs()) {
@@ -3925,8 +3923,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
 }
 
-/// Returns the canonical name for the offloading architecture when using a HIP
-/// or CUDA architecture, or an Intel GPU for SYCL.
+/// Returns the canonical name for the offloading architecture when using a HIP,
+/// CUDA or Intel GPU architecture.
 static StringRef getCanonicalArchString(Compilation &C,
                                         const llvm::opt::DerivedArgList &Args,
                                         StringRef ArchStr,
@@ -3936,8 +3934,8 @@ static StringRef getCanonicalArchString(Compilation &C,
   // expecting the triple to be only NVPTX / AMDGPU.
   OffloadArch Arch =
       StringToOffloadArch(getProcessorFromTargetID(Triple, ArchStr));
-  // An Intel name or "generic" takes no target features, so it must parse in
-  // full; otherwise "xe-pvc:garbage" would silently become "xe-pvc".
+  // An Intel name or "generic" takes no target features, so "xe-pvc:foo" is
+  // not "xe-pvc".
   if ((Arch.isIntel() || Arch.isGeneric()) && ArchStr.contains(':'))
     Arch = OffloadArch::getUnknown();
   if (Triple.isNVPTX() && (Arch.isUnknown() || !Arch.isNVPTX())) {
@@ -3973,10 +3971,9 @@ static StringRef getCanonicalArchString(Compilation &C,
     return StringRef();
   }
 
-  // A SYCL Intel GPU has several accepted spellings, e.g. an alias or a numeric
-  // name, so canonicalize it for the same reason as an NVPTX one: two spellings
-  // of one device must be one architecture.
-  if (Arch.isNVPTX() || (Kind == Action::OFK_SYCL && Arch.isIntelGPU()))
+  // Several spellings of one device must be one architecture, e.g. "xe-pvc" and
+  // "xe_12.60.7".
+  if (Arch.isNVPTX() || Arch.isIntelGPU())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
   if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
