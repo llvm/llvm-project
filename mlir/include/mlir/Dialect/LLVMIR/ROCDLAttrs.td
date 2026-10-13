@@ -93,9 +93,21 @@ def ROCDL_Gfx942CachePolicyAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_Gfx942CachePolicy,
                                      "gfx942_cache_policy">;
 
-def ROCDL_BufferInvCachePolicyAttr
-    : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_BufferInvCachePolicy,
-                                     "buffer_inv_cache_policy">;
+// BUFFER_INV only supports SC0 (bit 0) and SC1 (bit 4).
+def ROCDL_BufferInvCachePolicyBits : AttrConstraint<
+    CPred<[{
+      (static_cast<uint32_t>(
+           ::llvm::cast<::mlir::ROCDL::Gfx942CachePolicyAttr>($_self)
+               .getValue()) &
+       ~static_cast<uint32_t>(
+           ::mlir::ROCDL::Gfx942CachePolicy::sc0 |
+           ::mlir::ROCDL::Gfx942CachePolicy::sc1)) == 0
+    }]>,
+    "with no bits other than sc0 and sc1 set">;
+
+def ROCDL_BufferInvCachePolicyAttr :
+    ConfinedAttr<ROCDL_Gfx942CachePolicyAttr,
+                 [ROCDL_BufferInvCachePolicyBits]>;
 
 def ROCDL_Gfx12CachePolicyAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_Gfx12CachePolicy,
