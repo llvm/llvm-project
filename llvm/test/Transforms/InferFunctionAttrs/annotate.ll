@@ -1,5 +1,5 @@
 ; RUN: opt < %s -mtriple=x86_64-- -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-NOLINUX,CHECK-OPEN,CHECK-UNKNOWN %s
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-NOLINUX,CHECK-OPEN,CHECK-DARWIN %s
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.9.0 -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-NOLINUX,CHECK-OPEN,CHECK-DARWIN %s
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-LINUX %s
 ; RUN: opt < %s -mtriple=nvptx -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-NOLINUX,CHECK-NVPTX %s
 ; RUN: opt < %s -mtriple=powerpc64-ibm-aix-xcoff -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-NOLINUX,CHECK-AIX %s
@@ -86,12 +86,6 @@ declare float @__coshf_finite(float)
 ; CHECK-LINUX: declare x86_fp80 @__coshl_finite(x86_fp80) [[NOFREE]]
 ; CHECK-NOLINUX: declare x86_fp80 @__coshl_finite(x86_fp80)
 declare x86_fp80 @__coshl_finite(x86_fp80)
-
-; CHECK: declare double @__cospi(double)
-declare double @__cospi(double)
-
-; CHECK: declare float @__cospif(float)
-declare float @__cospif(float)
 
 ; CHECK-LINUX: declare double @__exp10_finite(double) [[NOFREE]]
 ; CHECK-NOLINUX: declare double @__exp10_finite(double)
@@ -188,12 +182,6 @@ declare float @__sinhf_finite(float)
 ; CHECK-LINUX: declare x86_fp80 @__sinhl_finite(x86_fp80) [[NOFREE]]
 ; CHECK-NOLINUX: declare x86_fp80 @__sinhl_finite(x86_fp80)
 declare x86_fp80 @__sinhl_finite(x86_fp80)
-
-; CHECK: declare double @__sinpi(double)
-declare double @__sinpi(double)
-
-; CHECK: declare float @__sinpif(float)
-declare float @__sinpif(float)
 
 ; CHECK: declare i32 @abs(i32) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i32 @abs(i32)
@@ -1220,6 +1208,32 @@ declare void @sincosf(float, ptr, ptr)
 
 ; CHECK: declare void @sincosl(x86_fp80, ptr writeonly captures(none), ptr writeonly captures(none)) [[ARGMEMORERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare void @sincosl(x86_fp80, ptr, ptr)
+
+; CHECK-DARWIN: declare double @__cospi(double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare double @__cospi(double)
+
+; CHECK-DARWIN: declare float @__cospif(float) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare float @__cospif(float)
+
+; CHECK-DARWIN: declare double @__sinpi(double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare double @__sinpi(double)
+
+; CHECK-DARWIN: declare float @__sinpif(float) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare float @__sinpif(float)
+
+; CHECK-DARWIN: declare { double, double } @__sincos_stret(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare { double, double } @__sincos_stret(double)
+
+; CHECK-DARWIN: declare <2 x float> @__sincosf_stret(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare <2 x float> @__sincosf_stret(float)
+
+; FIXME: __sincospi_stret is missing most attributes
+; CHECK-DARWIN: declare { double, double } @__sincospi_stret(double) [[NOFREE]]
+declare { double, double } @__sincospi_stret(double)
+
+; FIXME: __sincospif_stret shouldn't set errno
+; CHECK-DARWIN: declare <2 x float> @__sincospif_stret(float) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare <2 x float> @__sincospif_stret(float)
 
 ; memset_pattern{4,8,16} aren't available everywhere.
 ; CHECK-DARWIN: declare void @memset_pattern4(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
