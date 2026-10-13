@@ -2228,6 +2228,8 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
                                                    QualType elementType) {
   assert(requiresArrayCookie(e));
 
+  // TODO: When sanitizer support is implemented, we'll need to
+  // get the address space from `newPtr`.
   assert(!cir::MissingFeatures::sanitizers());
 
   ASTContext &ctx = cgm.getASTContext();
