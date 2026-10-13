@@ -7,12 +7,15 @@ define double @direct_consumer(double %x, i32 %n) #0 {
 ; CHECK-LABEL: define double @direct_consumer(
 ; CHECK-SAME: double [[X:%.*]], i32 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[Y:%.*]] = call double @llvm.floor.f64(double [[X]])
+; CHECK-NEXT:    [[FLOOR_INPUT:%.*]] = freeze double [[X]]
+; CHECK-NEXT:    [[Y:%.*]] = call double @llvm.floor.f64(double [[FLOOR_INPUT]])
 ; CHECK-NEXT:    [[I:%.*]] = fptosi double [[Y]] to i32
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[N]], [[I]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[YES:.*]], label %[[NO:.*]]
 ; CHECK:       [[YES]]:
-; CHECK-NEXT:    [[FRAC:%.*]] = fsub double [[X]], [[Y]]
+; CHECK-NEXT:    [[FLOOR_INT:%.*]] = sitofp i32 [[I]] to double
+; CHECK-NEXT:    [[FLOOR_SHARED:%.*]] = call double @llvm.copysign.f64(double [[FLOOR_INT]], double [[FLOOR_INPUT]])
+; CHECK-NEXT:    [[FRAC:%.*]] = fsub double [[FLOOR_INPUT]], [[FLOOR_SHARED]]
 ; CHECK-NEXT:    ret double [[FRAC]]
 ; CHECK:       [[NO]]:
 ; CHECK-NEXT:    ret double 2.000000e+00
@@ -38,7 +41,9 @@ define double @frozen_input(double %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[N]], [[I]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[YES:.*]], label %[[NO:.*]]
 ; CHECK:       [[YES]]:
-; CHECK-NEXT:    [[FRAC:%.*]] = fsub double [[FX]], [[Y]]
+; CHECK-NEXT:    [[FLOOR_INT:%.*]] = sitofp i32 [[I]] to double
+; CHECK-NEXT:    [[FLOOR_SHARED:%.*]] = call double @llvm.copysign.f64(double [[FLOOR_INT]], double [[FX]])
+; CHECK-NEXT:    [[FRAC:%.*]] = fsub double [[FX]], [[FLOOR_SHARED]]
 ; CHECK-NEXT:    ret double [[FRAC]]
 ; CHECK:       [[NO]]:
 ; CHECK-NEXT:    ret double 2.000000e+00

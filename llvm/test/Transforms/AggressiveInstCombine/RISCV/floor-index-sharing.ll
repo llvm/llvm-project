@@ -10,8 +10,11 @@ define { double, i32 } @branch_phi(double %x, i32 %n, double %inv) #0 {
 ; CHECK-LABEL: define { double, i32 } @branch_phi(
 ; CHECK-SAME: double [[X:%.*]], i32 [[N:%.*]], double [[INV:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[Y:%.*]] = call double @llvm.floor.f64(double [[X]])
+; CHECK-NEXT:    [[FLOOR_INPUT:%.*]] = freeze double [[X]]
+; CHECK-NEXT:    [[Y:%.*]] = call double @llvm.floor.f64(double [[FLOOR_INPUT]])
 ; CHECK-NEXT:    [[I:%.*]] = fptosi double [[Y]] to i32
+; CHECK-NEXT:    [[FLOOR_INT:%.*]] = sitofp i32 [[I]] to double
+; CHECK-NEXT:    [[FLOOR_SHARED:%.*]] = call double @llvm.copysign.f64(double [[FLOOR_INT]], double [[FLOOR_INPUT]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[N]], [[I]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[CLIP:.*]], label %[[JOIN:.*]]
 ; CHECK:       [[CLIP]]:
@@ -20,8 +23,8 @@ define { double, i32 } @branch_phi(double %x, i32 %n, double %inv) #0 {
 ; CHECK-NEXT:    [[YC:%.*]] = call double @llvm.floor.f64(double [[XC]])
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
-; CHECK-NEXT:    [[RX:%.*]] = phi double [ [[X]], %[[ENTRY]] ], [ [[XC]], %[[CLIP]] ]
-; CHECK-NEXT:    [[RY:%.*]] = phi double [ [[Y]], %[[ENTRY]] ], [ [[YC]], %[[CLIP]] ]
+; CHECK-NEXT:    [[RX:%.*]] = phi double [ [[FLOOR_INPUT]], %[[ENTRY]] ], [ [[XC]], %[[CLIP]] ]
+; CHECK-NEXT:    [[RY:%.*]] = phi double [ [[FLOOR_SHARED]], %[[ENTRY]] ], [ [[YC]], %[[CLIP]] ]
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[I]], %[[ENTRY]] ], [ [[N]], %[[CLIP]] ]
 ; CHECK-NEXT:    [[FRAC:%.*]] = fsub double [[RX]], [[RY]]
 ; CHECK-NEXT:    [[R0:%.*]] = insertvalue { double, i32 } poison, double [[FRAC]], 0
