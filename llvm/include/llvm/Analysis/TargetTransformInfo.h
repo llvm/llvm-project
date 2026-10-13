@@ -1131,9 +1131,9 @@ public:
   /// Stores information about the uses of a build vector
   struct BuildVectorUseOp {
     unsigned Opcode;
-    std::optional<unsigned> IntrinsicID;
+    Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
     int OperandIndex;
-    BuildVectorUseOp(unsigned Opcode, std::optional<unsigned> IntrinsicID,
+    BuildVectorUseOp(unsigned Opcode, Intrinsic::ID IntrinsicID,
                      int OperandIndex)
         : Opcode(Opcode), IntrinsicID(IntrinsicID), OperandIndex(OperandIndex) {
     }

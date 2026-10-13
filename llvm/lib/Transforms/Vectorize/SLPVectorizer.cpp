@@ -13569,7 +13569,7 @@ bool BoUpSLP::collectGatherUserOps(
         TransformedToGatherNodes.contains(UserTE))
       return false;
 
-    std::optional<unsigned> IntrinsicID;
+    Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
     if (auto *II = dyn_cast<IntrinsicInst>(UserTE->getMainOp()))
       IntrinsicID = II->getIntrinsicID();
     UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID,

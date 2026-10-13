@@ -3783,7 +3783,7 @@ bool RISCVTTIImpl::shouldConsiderAddressTypePromotion(
 }
 
 bool RISCVTTIImpl::canSplatOperand(unsigned Opcode, int Operand,
-                                   std::optional<unsigned> IntrinsicID) const {
+                                   Intrinsic::ID IntrinsicID) const {
   switch (Opcode) {
   case Instruction::Add:
   case Instruction::Sub:
@@ -3808,31 +3808,28 @@ bool RISCVTTIImpl::canSplatOperand(unsigned Opcode, int Operand,
   case Instruction::Select:
     return Operand == 1;
   case Instruction::Call:
-    if (IntrinsicID) {
-      switch (*IntrinsicID) {
-      case Intrinsic::fma:
-      case Intrinsic::fmuladd:
-        return Operand == 0 || Operand == 1;
-      case Intrinsic::vp_udiv:
-      case Intrinsic::vp_sdiv:
-      case Intrinsic::vp_urem:
-      case Intrinsic::vp_srem:
-      case Intrinsic::ssub_sat:
-      case Intrinsic::usub_sat:
-        return Operand == 1;
-        // These intrinsics are commutative.
-      case Intrinsic::smin:
-      case Intrinsic::umin:
-      case Intrinsic::smax:
-      case Intrinsic::umax:
-      case Intrinsic::sadd_sat:
-      case Intrinsic::uadd_sat:
-        return Operand == 0 || Operand == 1;
-      default:
-        return false;
-      }
+    switch (IntrinsicID) {
+    case Intrinsic::fma:
+    case Intrinsic::fmuladd:
+      return Operand == 0 || Operand == 1;
+    case Intrinsic::vp_udiv:
+    case Intrinsic::vp_sdiv:
+    case Intrinsic::vp_urem:
+    case Intrinsic::vp_srem:
+    case Intrinsic::ssub_sat:
+    case Intrinsic::usub_sat:
+      return Operand == 1;
+      // These intrinsics are commutative.
+    case Intrinsic::smin:
+    case Intrinsic::umin:
+    case Intrinsic::smax:
+    case Intrinsic::umax:
+    case Intrinsic::sadd_sat:
+    case Intrinsic::uadd_sat:
+      return Operand == 0 || Operand == 1;
+    default:
+      return false;
     }
-    return false;
   default:
     return false;
   }
@@ -3843,7 +3840,7 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
     return false;
 
   auto *II = dyn_cast<IntrinsicInst>(I);
-  unsigned IntrinsicID = 0;
+  Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
   if (II)
     IntrinsicID = II->getIntrinsicID();
 
