@@ -3565,6 +3565,22 @@ OpFoldResult cir::NotOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// BaseClassAddrOp & DerivedClassAddrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BaseClassAddrOp::verify() {
+  if (getSrcAddr().getType().getAddrSpace() != getType().getAddrSpace())
+    return emitOpError() << "address space mismatch";
+  return mlir::success();
+}
+
+LogicalResult cir::DerivedClassAddrOp::verify() {
+  if (getSrcAddr().getType().getAddrSpace() != getType().getAddrSpace())
+    return emitOpError() << "address space mismatch";
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // BaseDataMemberOp & DerivedDataMemberOp
 //===----------------------------------------------------------------------===//
 

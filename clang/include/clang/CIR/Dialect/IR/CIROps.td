@@ -6883,6 +6883,8 @@ class CIR_ClassCastOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
       `:` qualified(type($src_addr)) `->` qualified(type($result))
       attr-dict
   }];
+
+  let hasVerifier = 1;
 }
 
 def CIR_BaseClassAddrOp : CIR_ClassCastOp<"base_class_addr"> {
