@@ -10,50 +10,33 @@ define void @store_in_header(ptr noalias %a, ptr align 2 dereferenceable(40) %pr
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_IF:.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP2]], i1 false)
-; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], i64 0
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    store i16 0, ptr [[TMP5]], align 2
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], i64 1
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    store i16 0, ptr [[TMP8]], align 2
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], i64 2
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; CHECK:       [[PRED_STORE_IF3]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP10]]
-; CHECK-NEXT:    store i16 0, ptr [[TMP11]], align 2
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; CHECK:       [[PRED_STORE_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], i64 3
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
-; CHECK:       [[PRED_STORE_IF5]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP13]]
+; CHECK-NEXT:    store i16 0, ptr [[TMP5]], align 2
+; CHECK-NEXT:    store i16 0, ptr [[TMP8]], align 2
+; CHECK-NEXT:    store i16 0, ptr [[TMP11]], align 2
 ; CHECK-NEXT:    store i16 0, ptr [[TMP14]], align 2
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    br label %[[PRED_STORE_IF]]
+; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP4]], [[TMP16]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP4]], i64 0, i64 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP18]], 20
 ; CHECK-NEXT:    br i1 [[TMP19]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
@@ -104,54 +87,37 @@ define void @invariant_load(ptr noalias %a, ptr %src, ptr align 2 dereferenceabl
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_IF:.*]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP2]], i1 false)
-; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], i64 0
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[SRC]], align 2
+; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr [[SRC]], align 2
+; CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[SRC]], align 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i16, ptr [[SRC]], align 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    store i16 [[TMP16]], ptr [[TMP11]], align 2
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], i64 1
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr [[SRC]], align 2
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP7]]
+; CHECK-NEXT:    store i16 [[TMP5]], ptr [[TMP11]], align 2
 ; CHECK-NEXT:    store i16 [[TMP8]], ptr [[TMP18]], align 2
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], i64 2
-; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; CHECK:       [[PRED_STORE_IF3]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[SRC]], align 2
-; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP24]]
 ; CHECK-NEXT:    store i16 [[TMP12]], ptr [[TMP13]], align 2
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; CHECK:       [[PRED_STORE_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], i64 3
-; CHECK-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
-; CHECK:       [[PRED_STORE_IF5]]:
-; CHECK-NEXT:    [[TMP25:%.*]] = load i16, ptr [[SRC]], align 2
-; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP26]]
-; CHECK-NEXT:    store i16 [[TMP25]], ptr [[TMP27]], align 2
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    store i16 [[TMP16]], ptr [[TMP14]], align 2
+; CHECK-NEXT:    br label %[[PRED_STORE_IF]]
+; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
-; CHECK-NEXT:    [[TMP21:%.*]] = or i1 [[TMP19]], [[TMP20]]
-; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP4]], [[TMP20]]
+; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP4]], i64 0, i64 4
 ; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[TMP22]], 20
 ; CHECK-NEXT:    br i1 [[TMP23]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]

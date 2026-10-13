@@ -12,9 +12,11 @@
 #ifndef LLVM_UNITTESTS_TRANSFORMS_VECTORIZE_VPLANTESTBASE_H
 #define LLVM_UNITTESTS_TRANSFORMS_VECTORIZE_VPLANTESTBASE_H
 
+#include "../lib/Transforms/Vectorize/LoopVectorizationPlanner.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanHelpers.h"
 #include "../lib/Transforms/Vectorize/VPlanTransforms.h"
+#include "../lib/Transforms/Vectorize/VectorizeOptions.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -104,11 +106,13 @@ protected:
           MapVector<PHINode *, RecurrenceDescriptor>(),
           SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
           /*AllowReordering=*/false);
-    }
-
-    if (Style) {
+      TargetTransformInfo TTI(DL);
+      const auto &Opts = Ctx->getLibraryOptions().get<VectorizeOptions>();
+      VFSelectionContext Config(Opts, TTI, /*Legal=*/nullptr, L, F, PSE,
+                                /*DB=*/nullptr, &ORE, /*Hints=*/nullptr,
+                                /*OptForSize=*/false);
       VPlanTransforms::handleUncountableEarlyExits(*Plan, &ORE, L, PSE, *DT,
-                                                   AC.get(), *Style);
+                                                   AC.get(), *Style, Config);
     } else
       VPlanTransforms::handleCountableEarlyExits(*Plan);
     VPlanTransforms::addMiddleCheck(*Plan);

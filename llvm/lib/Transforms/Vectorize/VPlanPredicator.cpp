@@ -408,10 +408,11 @@ void VPPredicator::run() {
       Header->getNumSuccessors() == 2 &&
       match(Header->getTerminator(), m_BranchOnCond(m_AnyOf()));
   assert((!KeepHeaderBranch ||
-          any_of(Header->getSuccessors(), [&](VPBlockBase *Succ) {
-            return VPPDT.dominates(Succ, Header) &&
-                   cast<VPBasicBlock>(Succ)->phis().empty();
-          })) &&
+          any_of(Header->getSuccessors(),
+                 [&](VPBlockBase *Succ) {
+                   return VPPDT.dominates(Succ, Header) &&
+                          cast<VPBasicBlock>(Succ)->phis().empty();
+                 })) &&
          "Kept branch must skip to a merge block without phis");
   // Scan the body of the loop in a topological order to visit each basic
   // block after having visited its predecessor basic blocks.
