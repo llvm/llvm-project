@@ -1101,21 +1101,6 @@ elementwiseMatchAndRewriteHelper(Operation *operation, ValueRange operands,
                                     targetShape, converter);
 }
 
-// Returns the identity value to seed a float min/max reduction with. TOSA seeds
-// REDUCE_MIN with maximum_s<in_out_t>() and REDUCE_MAX/ARGMAX with
-// minimum_s<in_out_t>(), and for floating-point types those bounds are
-// +/-infinity rather than the largest finite value. Only use them when the
-// caller opted in *and* the format can represent them: APFloat::getInf() is
-// unreachable for FiniteOnly semantics and silently returns a NaN for NanOnly
-// semantics such as f8E4M3FN, which would poison the whole reduction through
-// NaN-propagating arith.minimumf/arith.maximumf.
-static APFloat getFloatMinMaxIdentity(const llvm::fltSemantics &semantics,
-                                      bool negative, bool allowNonFinites) {
-  if (allowNonFinites && APFloat::semanticsHasInf(semantics))
-    return APFloat::getInf(semantics, negative);
-  return APFloat::getLargest(semantics, negative);
-}
-
 // Returns the constant initial value for a given reduction operation. The
 // attribute type varies depending on the element type required.
 static TypedAttr createInitialValueForReduceOp(Operation *op, Type elementTy,
@@ -3071,7 +3056,7 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
 };
 
 struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(FFT2dOp fft2d,
                                 PatternRewriter &rewriter) const override {

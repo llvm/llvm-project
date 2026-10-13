@@ -555,7 +555,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       }
     }
 
-    if (IntrinsicID == Intrinsic::riscv_vsetvli ||
+    if (IntrinsicID == Intrinsic::riscv_orc_b ||
+        IntrinsicID == Intrinsic::riscv_vsetvli ||
         IntrinsicID == Intrinsic::riscv_vsetvlimax) {
       for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
         const MachineOperand &MO = MI.getOperand(Idx);

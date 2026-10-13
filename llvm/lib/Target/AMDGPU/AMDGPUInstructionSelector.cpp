@@ -499,12 +499,13 @@ bool AMDGPUInstructionSelector::selectG_ADD_SUB(MachineInstr &I) const {
       .add(Lo1)
       .add(Lo2)
       .addImm(0);
-    MachineInstr *Addc = BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_ADDC_U32_e64), DstHi)
-      .addDef(MRI->createVirtualRegister(CarryRC), RegState::Dead)
-      .add(Hi1)
-      .add(Hi2)
-      .addReg(CarryReg, RegState::Kill)
-      .addImm(0);
+    MachineInstr *Addc =
+        BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_ADDC_U32_e64), DstHi)
+            .addDef(MRI->createVirtualRegister(CarryRC), RegState::Dead)
+            .add(Hi1)
+            .add(Hi2)
+            .addReg(CarryReg)
+            .addImm(0);
 
     constrainSelectedInstRegOperands(*Addc, TII, TRI, RBI);
   }
@@ -2297,7 +2298,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
       MIB.addDef(TmpReg);
       if (!MRI->use_empty(VDataOut)) {
         BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), VDataOut)
-            .addReg(TmpReg, RegState::Kill, SubReg);
+            .addReg(TmpReg, {}, SubReg);
       }
 
     } else {
@@ -6158,49 +6159,45 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
     } else {
       auto PtrBaseDef = getDefSrcRegIgnoringCopies(PtrBase, *MRI);
       if (isSGPR(PtrBaseDef->Reg)) {
-        if (ConstOffset > 0) {
-          // Offset is too large.
-          //
-          // saddr + large_offset -> saddr +
-          //                         (voffset = large_offset & ~MaxOffset) +
-          //                         (large_offset & MaxOffset);
-          int64_t SplitImmOffset = 0, RemainderOffset = ConstOffset;
-          if (NeedIOffset) {
-            std::tie(SplitImmOffset, RemainderOffset) =
-                TII.splitFlatOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS,
-                                    AMDGPU::FlatAddrSpace::FlatGlobal);
-          }
+        // Offset is too large.
+        //
+        // saddr + large_offset -> saddr +
+        //                         (voffset = large_offset & ~MaxOffset) +
+        //                         (large_offset & MaxOffset);
+        int64_t SplitImmOffset = 0, RemainderOffset = ConstOffset;
+        if (NeedIOffset) {
+          std::tie(SplitImmOffset, RemainderOffset) =
+              TII.splitFlatOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS,
+                                  AMDGPU::FlatAddrSpace::FlatGlobal);
+        }
 
-          if (Subtarget->hasSignedGVSOffset() ? isInt<32>(RemainderOffset)
-                                              : isUInt<32>(RemainderOffset)) {
-            MachineInstr *MI = Root.getParent();
-            MachineBasicBlock *MBB = MI->getParent();
-            Register HighBits =
-                MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+        if (Subtarget->hasSignedGVSOffset() ? isInt<32>(RemainderOffset)
+                                            : isUInt<32>(RemainderOffset)) {
+          MachineInstr *MI = Root.getParent();
+          MachineBasicBlock *MBB = MI->getParent();
+          Register HighBits =
+              MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
-            BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32),
-                    HighBits)
-                .addImm(RemainderOffset);
+          BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32),
+                  HighBits)
+              .addImm(RemainderOffset);
 
-            if (NeedIOffset)
-              return {{
-                  [=](MachineInstrBuilder &MIB) {
-                    MIB.addReg(PtrBase);
-                  }, // saddr
-                  [=](MachineInstrBuilder &MIB) {
-                    MIB.addReg(HighBits);
-                  }, // voffset
-                  [=](MachineInstrBuilder &MIB) { MIB.addImm(SplitImmOffset); },
-                  [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); },
-              }};
+          if (NeedIOffset)
             return {{
                 [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrBase); }, // saddr
                 [=](MachineInstrBuilder &MIB) {
                   MIB.addReg(HighBits);
                 }, // voffset
+                [=](MachineInstrBuilder &MIB) { MIB.addImm(SplitImmOffset); },
                 [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); },
             }};
-          }
+          return {{
+              [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrBase); }, // saddr
+              [=](MachineInstrBuilder &MIB) {
+                MIB.addReg(HighBits);
+              }, // voffset
+              [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); },
+          }};
         }
 
         // We are adding a 64 bit SGPR and a constant. If constant bus limit
@@ -7449,11 +7446,13 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
       .addImm(0x3F)
       .setOperandDead(3); // Dead scc
 
-  // MO = ((CntOp & 0x3F) << shAmt) | BarID
+  // MO = ((CntOp & CntMask) << shAmt) | BarID
+  unsigned CntMask =
+      AMDGPU::getBarrierMemberCountBitMask(AMDGPU::getIsaVersion(STI.getCPU()));
   Register TmpReg2 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_AND_B32), TmpReg2)
       .add(CntOp)
-      .addImm(0x3F)
+      .addImm(CntMask)
       .setOperandDead(3); // Dead scc
 
   Register TmpReg3 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);

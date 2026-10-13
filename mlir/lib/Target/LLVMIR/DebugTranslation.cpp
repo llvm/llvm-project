@@ -276,9 +276,8 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
               return llvm::ConstantAsMetadata::get(
                   llvm::ConstantInt::get(llvmCtx, intAttr.getValue()));
             })
-            .Default([](Attribute) -> llvm::Metadata * {
-              llvm_unreachable("verifier guarantees DINodeAttr or IntegerAttr");
-            });
+            .DefaultUnreachable(
+                "verifier guarantees DINodeAttr or IntegerAttr");
   }
 
   return llvm::DIDerivedType::get(
