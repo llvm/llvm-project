@@ -115,6 +115,16 @@ int main() {
   runTestsForMemCpyFunc<true>([&](queue &Q, event Dep, auto... OtherArgs) {
     return Q.memcpy(OtherArgs..., std::vector<event>({Dep}));
   });
+  runTestsForMemCpyFunc<false>([&](queue &Q, event Dep, auto... OtherArgs) {
+    (void)Dep;
+    return Q.submit([&](sycl::handler &CGH) { Q.memcpy(OtherArgs...); });
+  });
+  runTestsForMemCpyFunc<true>([&](queue &Q, event Dep, auto... OtherArgs) {
+    return Q.submit([&](sycl::handler &CGH) {
+      CGH.depends_on(Dep);
+      Q.memcpy(OtherArgs...);
+    });
+  });
 
   return 0;
 }

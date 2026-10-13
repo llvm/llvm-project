@@ -283,9 +283,9 @@ struct VPlanTransforms {
   static void unrollByUF(VPlan &Plan, unsigned UF);
 
   /// Replace replicating VPReplicateRecipe, VPScalarIVStepsRecipe and
-  /// VPInstruction in \p Plan with \p VF single-scalar recipes. Replicate
-  /// regions are dissolved by replicating their blocks and their recipes \p VF
-  /// times.
+  /// VPInstruction in \p Plan with \p VF single-scalar recipes, packed into
+  /// Build(Struct)Vectors for vector users. Replicate regions are dissolved by
+  /// replicating their blocks and their recipes \p VF times.
   /// TODO: Also dissolve replicate regions with live outs.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
 
@@ -508,10 +508,8 @@ struct VPlanTransforms {
   static void materializeBackedgeTakenCount(VPlan &Plan,
                                             VPBasicBlock *VectorPH);
 
-  /// Add explicit Build[Struct]Vector recipes to Pack multiple scalar values
-  /// into vectors and Unpack recipes to extract scalars from vectors as
-  /// needed.
-  static void materializePacksAndUnpacks(VPlan &Plan);
+  /// Add explicit Unpack recipes to extract scalars from vectors as needed.
+  static void materializeUnpacks(VPlan &Plan);
 
   /// Materialize UF, VF and VFxUF to be computed explicitly using
   /// VPInstructions.
@@ -643,12 +641,14 @@ struct VPlanTransforms {
 
   /// Make VPlan-based scalarization decision prior to delegating to the ones
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
-  /// enabled by prior widening of consecutive memory operations for now.
+  /// enabled by prior widening of consecutive memory operations and calls for
+  /// now.
   static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
 
   /// Convert call VPInstructions in \p Plan into widened call, vector
   /// intrinsic or replicate recipes based on a cost comparison via \p CostCtx.
-  static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
+  /// Returns true if any call was widened.
+  static bool makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
 

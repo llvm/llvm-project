@@ -41,7 +41,6 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -9259,11 +9258,9 @@ static void FixupDebugInfoForOutlinedFunction(
     }
   };
 
-  // The location and scope of variable intrinsics and records still point to
+  // The location and scope of variable records still point to
   // the parent function of the target region. Update them.
   for (Instruction &I : instructions(Func)) {
-    assert(!isa<llvm::DbgVariableIntrinsic>(&I) &&
-           "Unexpected debug intrinsic");
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
       UpdateDebugRecord(&DVR);
       MoveDebugRecordToCorrectBlock(&DVR);
@@ -12910,22 +12907,51 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
     T->eraseFromParent();
 
   InsertPointTy BodyIP = CLI->getBodyIP();
+  // Blocks that exist before BodyGen, other than the body and latch, are
+  // outside the loop body.
+  SmallPtrSet<BasicBlock *, 32> ExistingBlocks;
+  for (BasicBlock &Block : *F)
+    ExistingBlocks.insert(&Block);
   if (llvm::Error Err = BodyGen(BodyIP, CLI->getIndVar()))
     return Err;
 
-  // Body must either fallthrough to the latch or branch directly to it.
-  if (Instruction *BodyTerminator = CLI->getBody()->getTerminatorOrNull()) {
-    auto *BodyBr = dyn_cast<UncondBrInst>(BodyTerminator);
-    if (!BodyBr || BodyBr->getSuccessor() != CLI->getLatch()) {
-      return make_error<StringError>(
-          "iterator bodygen must terminate the canonical body with an "
-          "unconditional branch to the loop latch",
-          inconvertibleErrorCode());
+  // The body may span several blocks. Branch its single unterminated block to
+  // the latch; otherwise some block must already branch there.
+  BasicBlock *Latch = CLI->getLatch();
+  BasicBlock *OpenBB = nullptr;
+  bool ReachesLatch = false;
+  SmallVector<BasicBlock *> Worklist{CLI->getBody()};
+  SmallPtrSet<BasicBlock *, 8> Visited{CLI->getBody()};
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (!BB->hasTerminator()) {
+      if (OpenBB)
+        return make_error<StringError>(
+            "iterator bodygen must leave at most one unterminated block",
+            inconvertibleErrorCode());
+      OpenBB = BB;
+      continue;
     }
-  } else {
-    // Ensure we end the loop body by jumping to the latch.
-    Builder.SetInsertPoint(CLI->getBody());
-    Builder.CreateBr(CLI->getLatch());
+    for (BasicBlock *Succ : successors(BB)) {
+      if (Succ == Latch) {
+        ReachesLatch = true;
+        continue;
+      }
+      if (Succ != CLI->getBody() && ExistingBlocks.contains(Succ))
+        return make_error<StringError>(
+            "iterator bodygen must not branch out of the loop body",
+            inconvertibleErrorCode());
+      if (Visited.insert(Succ).second)
+        Worklist.push_back(Succ);
+    }
+  }
+
+  if (OpenBB) {
+    Builder.SetInsertPoint(OpenBB);
+    Builder.CreateBr(Latch);
+  } else if (!ReachesLatch) {
+    return make_error<StringError>("iterator bodygen must reach the loop latch",
+                                   inconvertibleErrorCode());
   }
 
   // Link After -> ContBB
