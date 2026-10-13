@@ -1819,6 +1819,18 @@ llvm.func @invoke_phis() -> i32 attributes { personality = @__gxx_personality_v0
 
 // -----
 
+module attributes {llvm.data_layout = "P4"} {
+  llvm.func @__gxx_personality_v0(...) -> i32
+
+  // CHECK-LABEL: @personality_program_as
+  // CHECK-SAME: personality ptr addrspace(4) @__gxx_personality_v0
+  llvm.func @personality_program_as() attributes { personality = @__gxx_personality_v0 } {
+    llvm.return
+  }
+}
+
+// -----
+
 // CHECK-LABEL: @hasGCFunction
 // CHECK-SAME: gc "statepoint-example"
 llvm.func @hasGCFunction() attributes { garbageCollector = "statepoint-example" } {
@@ -2131,6 +2143,17 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
   // CHECK: !invariant.load ![[NODE:[0-9]+]]
   %1 = llvm.load %ptr invariant : !llvm.ptr -> i32
   llvm.return %1 : i32
+}
+
+// CHECK: ![[NODE]] = !{}
+
+// -----
+
+// CHECK-LABEL: @noundef_load
+llvm.func @noundef_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: load i32, ptr %{{.*}}, align 4, !noundef ![[NODE:[0-9]+]]
+  %0 = llvm.load %ptr noundef : !llvm.ptr -> i32
+  llvm.return %0 : i32
 }
 
 // CHECK: ![[NODE]] = !{}

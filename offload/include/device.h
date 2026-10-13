@@ -87,14 +87,18 @@ struct KernelLaunchInfoTy {
   }
 };
 
+struct PluginManager;
+
 struct DeviceTy {
   int32_t DeviceID;
   GenericPluginTy *RTL;
   int32_t RTLDeviceID;
   ol_device_handle_t DeviceHandle;
+  PluginManager *PM;
+  ol_context_handle_t Context = nullptr;
 
   DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
-           ol_device_handle_t DeviceHandle);
+           ol_device_handle_t DeviceHandle, PluginManager *PM);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
@@ -103,6 +107,9 @@ struct DeviceTy {
 
   /// Try to initialize the device and return any failure.
   llvm::Error init();
+
+  /// Deinitialize the OpenMP device.
+  llvm::Error deinit();
 
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
