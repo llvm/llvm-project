@@ -195,6 +195,10 @@ public:
     return false;
   }
 
+  virtual bool enableWindowsCFIShrinkWrapping(const MachineFunction &MF) const {
+    return false;
+  }
+
   /// Returns true if the stack slot holes in the fixed and callee-save stack
   /// area should be used when allocating other stack locations to reduce stack
   /// size.

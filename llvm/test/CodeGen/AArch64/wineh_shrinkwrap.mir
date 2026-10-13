@@ -2,16 +2,30 @@
 # RUN:   -stop-after=prolog-epilog | FileCheck %s --check-prefix=WIN64
 # RUN: llc -O2 -o - %s -mtriple=aarch64-linux -start-before=shrink-wrap \
 # RUN:   -stop-after=prolog-epilog | FileCheck %s --check-prefix=LINUX
+# RUN: llc -O2 %s -mtriple=aarch64-windows -start-before=shrink-wrap \
+# RUN:   -filetype=obj -o %t.obj
+# RUN: llvm-readobj --unwind %t.obj | FileCheck %s --check-prefix=UNWIND
+# RUN: llc -O2 %s -mtriple=aarch64-windows -start-before=shrink-wrap \
+# RUN:   -enable-shrink-wrap=false -filetype=obj -o %t-disabled.obj
+# RUN: llvm-readobj --unwind %t-disabled.obj | FileCheck %s --check-prefix=DISABLED
+# RUN: llc -O2 %s -mtriple=arm64ec-pc-windows-msvc -start-before=shrink-wrap \
+# RUN:   -enable-shrink-wrap=true -filetype=obj -o %t-arm64ec.obj
+# RUN: llvm-readobj --unwind %t-arm64ec.obj | FileCheck %s --check-prefix=ARM64EC
 
-# This tests checks that shrink wrapping bails out on Windows AMR64 due to the
-# use of Windows CFI.  We don't currently support fragments for WIndows EH on
-# ARM64.
-# The same test gets shrink wrapped on Linux ARM64.
+# Both Windows and Linux ARM64 place the prologue on the path that needs it.
 
 # WIN64-LABEL: bb.0.entry:
-# WIN64: early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -32
 # WIN64-LABEL: bb.1:
 # WIN64-LABEL: bb.2.if.then:
+# WIN64: early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -32
+
+# UNWIND: Function: ?func@@YAHHH@Z +0x8 (0x8)
+# UNWIND: Prologue [
+# UNWIND: 0xc0fa              ; sub sp, #4000
+# UNWIND: 0xe4                ; end
+
+# DISABLED: Function: ?func@@YAHHH@Z (0x0)
+# ARM64EC: Function: ?func@@YAHHH@Z (0x0)
 
 # LINUX-LABEL: bb.0.entry:
 # LINUX-LABEL: bb.1:

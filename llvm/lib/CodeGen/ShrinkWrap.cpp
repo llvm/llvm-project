@@ -1040,12 +1040,15 @@ PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
 bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
 
+  bool UsesWindowsCFI = MF.usesWindowsUnwindInfo();
+  if (UsesWindowsCFI && MF.getTarget().getTargetTriple().isAArch64() &&
+      !TFI->enableWindowsCFIShrinkWrapping(MF))
+    return false;
+
   switch (EnableShrinkWrapOpt) {
   case cl::boolOrDefault::BOU_UNSET:
     return TFI->enableShrinkWrapping(MF) &&
-           // Windows with CFI has some limitations that make it impossible
-           // to use shrink-wrapping.
-           !MF.usesWindowsUnwindInfo() &&
+           (!UsesWindowsCFI || TFI->enableWindowsCFIShrinkWrapping(MF)) &&
            // Sanitizers look at the value of the stack at the location
            // of the crash. Since a crash can happen anywhere, the
            // frame must be lowered before anything else happen for the
