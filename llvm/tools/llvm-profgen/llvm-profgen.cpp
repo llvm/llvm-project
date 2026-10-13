@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DataAccessProfGenerator.h"
 #include "ErrorHandling.h"
 #include "Options.h"
 #include "PerfReader.h"
@@ -216,8 +215,16 @@ int main(int argc, const char *argv[]) {
     raw_fd_ostream OS(OutputFilename, EC, sys::fs::OF_None);
     if (EC)
       exitWithError(EC, OutputFilename);
-    if (Error E = generateDataAccessProf(*Binary, DataAccessProfileFilename, OS,
-                                         PIDFilter))
+
+    Expected<DataAccessSamples> Samples = readDataAccessPerfTrace(
+        Binary.get(), DataAccessProfileFilename, PIDFilter);
+    if (!Samples)
+      exitWithError(toString(Samples.takeError()));
+    Expected<std::unique_ptr<memprof::DataAccessProfData>> Profile =
+        generateDataAccessProfile(*Binary, *Samples);
+    if (!Profile)
+      exitWithError(toString(Profile.takeError()));
+    if (Error E = writeDataAccessProfile(std::move(*Profile), OS))
       exitWithError(toString(std::move(E)));
     return EXIT_SUCCESS;
   }

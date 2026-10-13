@@ -572,6 +572,27 @@ Error forEachCanonicalDataAccessSample(
   return Error::success();
 }
 
+Expected<DataAccessSamples>
+readDataAccessPerfTrace(ProfiledBinary *Binary,
+                        StringRef DataAccessPerfTraceFile,
+                        std::optional<int32_t> PIDFilter) {
+  DataAccessSamples Samples;
+  if (Error E = forEachCanonicalDataAccessSample(
+          Binary, DataAccessPerfTraceFile, PIDFilter,
+          [&](uint64_t, std::optional<uint64_t> CanonicalDataAddr, uint64_t,
+              bool Unresolved, bool MappedPID) {
+            if (CanonicalDataAddr)
+              ++Samples.AddressCounts[*CanonicalDataAddr];
+            Samples.HasUnresolvedSample |= Unresolved;
+            Samples.SawMappedPIDSample |= MappedPID;
+          },
+          &Samples.OtherLoadedFiles))
+    return std::move(E);
+  Samples.HasMappedImage = Binary->hasMappedImage(PIDFilter);
+  Samples.CanMarkKnownCold = !Samples.HasUnresolvedSample;
+  return Samples;
+}
+
 Error PerfReaderBase::parseDataAccessPerfTraces(
     StringRef DataAccessPerfTraceFile, std::optional<int32_t> PIDFilter) {
   assert(!SampleCounters.empty() && "Sample counters should not be empty!");

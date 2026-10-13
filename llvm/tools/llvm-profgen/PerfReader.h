@@ -167,6 +167,25 @@ Error forEachCanonicalDataAccessSample(
         OnSample,
     StringSet<> *OtherLoadedFiles = nullptr);
 
+// Source-neutral data-address counts and trace validity information. Addresses
+// are preferred ELF virtual addresses in the profiled binary.
+struct DataAccessSamples {
+  std::map<uint64_t, uint64_t> AddressCounts;
+  StringSet<> OtherLoadedFiles;
+  bool HasUnresolvedSample = false;
+  bool SawMappedPIDSample = false;
+  bool HasMappedImage = false;
+  // True only when absent samples are evidence that a binary symbol is cold.
+  bool CanMarkKnownCold = false;
+};
+
+// Parse and aggregate a perf data-access dump. Mapping records for all
+// processes are tracked even when \p PIDFilter selects one process's samples.
+Expected<DataAccessSamples>
+readDataAccessPerfTrace(ProfiledBinary *Binary,
+                        StringRef DataAccessPerfTraceFile,
+                        std::optional<int32_t> PIDFilter);
+
 struct PerfSample {
   // LBR stack recorded in FIFO order.
   SmallVector<LBREntry, 16> LBRStack;

@@ -24,5 +24,4 @@ add_llvm_tool(llvm-profgen
   ProfiledBinary.cpp
   ProfileGenerator.cpp
   MissingFrameInferrer.cpp
-  DataAccessProfGenerator.cpp
   )

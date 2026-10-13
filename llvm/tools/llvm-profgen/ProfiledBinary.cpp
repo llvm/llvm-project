@@ -27,6 +27,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
+#include <tuple>
 
 #define DEBUG_TYPE "load-binary"
 
@@ -1440,6 +1441,124 @@ StringRef ProfiledBinary::symbolizeDataAddress(uint64_t Address) {
                                               getSectionedAddress(Address)),
                     SymbolizerPath);
   return NameStrings.insert(DataDIGlobal.Name).first->getKey();
+}
+
+bool ProfiledBinary::isSharedLibrary() const {
+  const auto *ELFObj = dyn_cast<ELFObjectFileBase>(OBinary.getBinary());
+  return ELFObj && ELFObj->getEType() == ELF::ET_DYN && !isPIE();
+}
+
+Error ProfiledBinary::collectDataSymbols(
+    SmallVectorImpl<ProfiledDataSymbol> &Symbols) const {
+  const auto *ELFObj = dyn_cast<ELFObjectFileBase>(OBinary.getBinary());
+  if (!ELFObj)
+    return createStringError(inconvertibleErrorCode(),
+                             "--memprof-dap requires an ELF binary: " + Path);
+  if (ELFObj->symbol_begin() == ELFObj->symbol_end())
+    return createStringError(inconvertibleErrorCode(),
+                             "--memprof-dap requires a symbol table, but " +
+                                 Path + " has none (stripped?)");
+
+  for (ELFSymbolRef Sym : ELFObj->symbols()) {
+    uint64_t Size = Sym.getSize();
+    uint8_t Type = Sym.getELFType();
+    if (Size == 0 || (Type != ELF::STT_OBJECT && Type != ELF::STT_COMMON &&
+                      Type != ELF::STT_NOTYPE))
+      continue;
+
+    Expected<uint32_t> FlagsOrErr = Sym.getFlags();
+    if (!FlagsOrErr)
+      return FlagsOrErr.takeError();
+    if (*FlagsOrErr & (SymbolRef::SF_Undefined | SymbolRef::SF_Absolute |
+                       SymbolRef::SF_FormatSpecific))
+      continue;
+
+    std::optional<SectionRef> Sec;
+    if (!(*FlagsOrErr & SymbolRef::SF_Common)) {
+      Expected<section_iterator> SecOrErr = Sym.getSection();
+      if (!SecOrErr)
+        return SecOrErr.takeError();
+      if (*SecOrErr == ELFObj->section_end() ||
+          !((*SecOrErr)->isData() || (*SecOrErr)->isBSS()))
+        continue;
+      Sec = **SecOrErr;
+    }
+
+    Expected<StringRef> NameOrErr = Sym.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+    if (NameOrErr->empty())
+      continue;
+    Expected<uint64_t> AddrOrErr = Sym.getAddress();
+    if (!AddrOrErr)
+      return AddrOrErr.takeError();
+    if (*AddrOrErr + Size < *AddrOrErr)
+      continue;
+
+    ProfiledDataSymbol DataSymbol;
+    DataSymbol.Start = *AddrOrErr;
+    DataSymbol.End = *AddrOrErr + Size;
+    DataSymbol.Name = *NameOrErr;
+    DataSymbol.ExternallyVisible = Sym.getBinding() != ELF::STB_LOCAL &&
+                                   (Sym.getOther() & 0x3) == ELF::STV_DEFAULT;
+
+    if (Sec && !Sec->isBSS() && DataSymbol.Start >= Sec->getAddress()) {
+      Expected<StringRef> ContentsOrErr = Sec->getContents();
+      if (!ContentsOrErr)
+        return ContentsOrErr.takeError();
+      StringRef Contents =
+          ContentsOrErr->substr(DataSymbol.Start - Sec->getAddress(), Size);
+      if (Contents.size() == Size)
+        DataSymbol.Contents = Contents;
+    }
+    Symbols.push_back(DataSymbol);
+  }
+
+  llvm::sort(Symbols, [](const ProfiledDataSymbol &A,
+                         const ProfiledDataSymbol &B) {
+    return std::tie(A.Start, A.End, A.Name) < std::tie(B.Start, B.End, B.Name);
+  });
+  return Error::success();
+}
+
+std::optional<StringSet<>>
+ProfiledBinary::collectDynamicDataSymbols(const StringSet<> &Files) {
+  StringSet<> Names;
+  for (const auto &File : Files) {
+    StringRef Path = File.getKey();
+    file_magic Magic;
+    if (std::error_code EC = identify_magic(Path, Magic)) {
+      WithColor::warning() << "cannot read " << Path << ": " << EC.message()
+                           << "\n";
+      return std::nullopt;
+    }
+    if (Magic != file_magic::elf_executable &&
+        Magic != file_magic::elf_shared_object)
+      continue;
+
+    Expected<OwningBinary<Binary>> BinOrErr = createBinary(Path);
+    if (!BinOrErr) {
+      WithColor::warning() << "cannot read " << Path << ": "
+                           << toString(BinOrErr.takeError()) << "\n";
+      return std::nullopt;
+    }
+    const auto *Obj = dyn_cast<ELFObjectFileBase>(BinOrErr->getBinary());
+    if (!Obj)
+      continue;
+    for (ELFSymbolRef Sym : Obj->getDynamicSymbolIterators()) {
+      Expected<uint32_t> FlagsOrErr = Sym.getFlags();
+      Expected<StringRef> NameOrErr = Sym.getName();
+      if (!FlagsOrErr || !NameOrErr) {
+        consumeError(FlagsOrErr.takeError());
+        consumeError(NameOrErr.takeError());
+        return std::nullopt;
+      }
+      if (Sym.getELFType() == ELF::STT_OBJECT &&
+          !(*FlagsOrErr & SymbolRef::SF_Undefined))
+        Names.insert(*NameOrErr);
+    }
+  }
+  return Names;
 }
 
 void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,

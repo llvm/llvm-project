@@ -202,6 +202,17 @@ struct MMapEvent {
   StringRef BinaryPath;
 };
 
+// A data object from the ELF symbol table. Addresses use the preferred ELF
+// virtual-address space and End is exclusive. Contents refers to the object's
+// file bytes when they are available; BSS and common symbols have no contents.
+struct ProfiledDataSymbol {
+  uint64_t Start = 0;
+  uint64_t End = 0;
+  StringRef Name;
+  std::optional<StringRef> Contents;
+  bool ExternallyVisible = false;
+};
+
 class ProfiledBinary {
   // The executable binary file.
   object::OwningBinary<object::Binary> OBinary;
@@ -487,6 +498,17 @@ public:
   const Triple &getTriple() const { return TheTriple; }
   const object::Binary &getBinary() const { return *OBinary.getBinary(); }
   bool isPIE() const { return IsPIE; }
+  bool isSharedLibrary() const;
+
+  // Collect the data objects defined by this binary's ELF symbol table.
+  Error collectDataSymbols(SmallVectorImpl<ProfiledDataSymbol> &Symbols) const;
+
+  // Return the data objects defined in the dynamic symbol tables of \p Files.
+  // A missing or unreadable file makes the result unavailable, because callers
+  // cannot then safely infer that a preemptible symbol is cold.
+  static std::optional<StringSet<>>
+  collectDynamicDataSymbols(const StringSet<> &Files);
+
   uint64_t getBaseAddress() const { return BaseAddress; }
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
 
