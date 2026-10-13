@@ -554,7 +554,9 @@ public:
   bool canSplatOperand(Instruction *I, int Operand) const;
   /// Return true if a vector instruction will lower to a target instruction
   /// able to splat the given operand.
-  bool canSplatOperand(unsigned Opcode, int Operand) const;
+  bool
+  canSplatOperand(unsigned Opcode, int Operand,
+                  std::optional<unsigned> IntrinsicID = std::nullopt) const;
 
   TargetTransformInfo::VectorInstrContext getBuildVectorContextHint(
       ArrayRef<int> Mask, ArrayRef<Value *> Scalars,

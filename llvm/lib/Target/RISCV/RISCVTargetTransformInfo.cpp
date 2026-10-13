@@ -3651,7 +3651,8 @@ bool RISCVTTIImpl::shouldConsiderAddressTypePromotion(
   return Considerable;
 }
 
-bool RISCVTTIImpl::canSplatOperand(unsigned Opcode, int Operand) const {
+bool RISCVTTIImpl::canSplatOperand(unsigned Opcode, int Operand,
+                                   std::optional<unsigned> IntrinsicID) const {
   switch (Opcode) {
   case Instruction::Add:
   case Instruction::Sub:
@@ -3675,6 +3676,32 @@ bool RISCVTTIImpl::canSplatOperand(unsigned Opcode, int Operand) const {
   case Instruction::SRem:
   case Instruction::Select:
     return Operand == 1;
+  case Instruction::Call:
+    if (IntrinsicID) {
+      switch (*IntrinsicID) {
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd:
+        return Operand == 0 || Operand == 1;
+      case Intrinsic::vp_udiv:
+      case Intrinsic::vp_sdiv:
+      case Intrinsic::vp_urem:
+      case Intrinsic::vp_srem:
+      case Intrinsic::ssub_sat:
+      case Intrinsic::usub_sat:
+        return Operand == 1;
+        // These intrinsics are commutative.
+      case Intrinsic::smin:
+      case Intrinsic::umin:
+      case Intrinsic::smax:
+      case Intrinsic::umax:
+      case Intrinsic::sadd_sat:
+      case Intrinsic::uadd_sat:
+        return Operand == 0 || Operand == 1;
+      default:
+        return false;
+      }
+    }
+    return false;
   default:
     return false;
   }
@@ -3684,35 +3711,12 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
   if (!I->getType()->isVectorTy() || !ST->hasVInstructions())
     return false;
 
-  if (canSplatOperand(I->getOpcode(), Operand))
-    return true;
-
   auto *II = dyn_cast<IntrinsicInst>(I);
-  if (!II)
-    return false;
+  unsigned IntrinsicID = 0;
+  if (II)
+    IntrinsicID = II->getIntrinsicID();
 
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::fma:
-  case Intrinsic::fmuladd:
-    return Operand == 0 || Operand == 1;
-  case Intrinsic::vp_udiv:
-  case Intrinsic::vp_sdiv:
-  case Intrinsic::vp_urem:
-  case Intrinsic::vp_srem:
-  case Intrinsic::ssub_sat:
-  case Intrinsic::usub_sat:
-    return Operand == 1;
-    // These intrinsics are commutative.
-  case Intrinsic::smin:
-  case Intrinsic::umin:
-  case Intrinsic::smax:
-  case Intrinsic::umax:
-  case Intrinsic::sadd_sat:
-  case Intrinsic::uadd_sat:
-    return Operand == 0 || Operand == 1;
-  default:
-    return false;
-  }
+  return canSplatOperand(I->getOpcode(), Operand, IntrinsicID);
 }
 
 TargetTransformInfo::VectorInstrContext RISCVTTIImpl::getBuildVectorContextHint(
@@ -3735,7 +3739,8 @@ TargetTransformInfo::VectorInstrContext RISCVTTIImpl::getBuildVectorContextHint(
 
   if (all_of(UserOps,
              [this](const TargetTransformInfo::BuildVectorUseOp &UserOp) {
-               return canSplatOperand(UserOp.Opcode, UserOp.OperandIndex);
+               return canSplatOperand(UserOp.Opcode, UserOp.OperandIndex,
+                                      UserOp.IntrinsicID);
              }))
     return VectorInstrContext::SplatOpFolded;
 

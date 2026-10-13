@@ -23860,7 +23860,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
               if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
                   TransformedToGatherNodes.contains(UserTE))
                 return false;
-              UserOps.emplace_back(UserTE->getOpcode(),
+              std::optional<unsigned> IntrinsicID;
+              if (auto *II = dyn_cast<IntrinsicInst>(UserTE->getMainOp()))
+                IntrinsicID = II->getIntrinsicID();
+              UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID,
                                    TE->UserTreeIndex.EdgeIdx);
             }
             return !UserOps.empty();

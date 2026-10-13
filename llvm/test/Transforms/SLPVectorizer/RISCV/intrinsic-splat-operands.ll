@@ -8,7 +8,7 @@ declare i32 @llvm.ssub.sat.i32(i32, i32)
 declare i32 @llvm.fshl.i32(i32, i32, i32)
 
 ; The splat is operand 0 of a commutative, splattable intrinsic.
-; SLP: Adding cost 2 for bundle Idx: 2, n=2 [i32 %splat, ..].
+; SLP: Adding cost 0 for bundle Idx: 2, n=2 [i32 %splat, ..].
 define void @smax_splat_first(ptr %out, ptr %in, i32 %splat) {
 entry:
   %in0 = load i32, ptr %in, align 4
@@ -23,7 +23,7 @@ entry:
 }
 
 ; The splat is operand 1 of a splattable intrinsic.
-; SLP: Adding cost 2 for bundle Idx: 3, n=2 [i32 %splat, ..].
+; SLP: Adding cost 0 for bundle Idx: 3, n=2 [i32 %splat, ..].
 define void @ssub_splat_second(ptr %out, ptr %in, i32 %splat) {
 entry:
   %in0 = load i32, ptr %in, align 4
