@@ -179,8 +179,9 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; CHECK-NEXT:    ; %cond.false
 ; CHECK-NEXT:    ; Label of block must be emitted
 ; CHECK-NEXT:    s_trap 2
-; UNIFY-LABEL: @kernel_callbr(
-; UNIFY-NEXT:  entry:
+; UNIFY-LABEL: define amdgpu_kernel void @kernel_callbr(
+; UNIFY-SAME: i32 [[A:%.*]], ptr addrspace(1) [[X:%.*]], i32 noundef [[N:%.*]]) {
+; UNIFY-NEXT:  [[ENTRY:.*:]]
 ; UNIFY-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; UNIFY-NEXT:    [[CMP:%.*]] = icmp eq i32 [[N]], 256
 ; UNIFY-NEXT:    [[CMP32:%.*]] = zext i1 [[CMP]] to i32
