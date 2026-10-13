@@ -22,8 +22,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include <cassert>
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 namespace mlir {
 namespace linalg {
@@ -415,7 +415,7 @@ template <typename ConvOp>
 static FailureOr<std::pair<Operation *, Operation *>>
 rewriteNchwFchwInIm2Col(RewriterBase &rewriter, ConvOp convOp) {
   static_assert(std::is_same_v<ConvOp, linalg::Conv2DNchwFchwOp> ||
-                std::is_same_v<ConvOp, linalg::Conv2DNchwFchwQOp>,
+                    std::is_same_v<ConvOp, linalg::Conv2DNchwFchwQOp>,
                 "expected Conv2DNchwFchwOp or Conv2DNchwFchwQOp");
 
   auto inputType = cast<ShapedType>(convOp.getInputs()[0].getType());
@@ -561,12 +561,12 @@ rewriteNchwFchwInIm2Col(RewriterBase &rewriter, ConvOp convOp) {
 
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
-  return rewriteNchwFchwInIm2col(rewriter, convOp);
+  return rewriteNchwFchwInIm2Col(rewriter, convOp);
 }
 
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwQOp convOp) {
-  return rewriteNchwFchwInIm2col(rewriter, convOp);
+  return rewriteNchwFchwInIm2Col(rewriter, convOp);
 }
 
 FailureOr<std::pair<Operation *, Operation *>>
