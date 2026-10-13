@@ -7181,7 +7181,7 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
 
   OptLabelTy TargetLabel = std::nullopt;
   const VariableScope<Emitter> *BreakScope = nullptr;
@@ -7200,7 +7200,7 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
     // May be null if the named loop is outside of the
     // current evaluation context, i.e. not a valid target.
     if (!TargetLoop)
-      return this->emitUnsupported(S);
+      return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
 
     for (const auto &LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
@@ -7227,7 +7227,7 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
 
   OptLabelTy TargetLabel = std::nullopt;
   const VariableScope<Emitter> *ContinueScope = nullptr;
@@ -7245,7 +7245,7 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
     // May be null if the named loop is outside of the
     // current evaluation context, i.e. not a valid target.
     if (!TargetLoop)
-      return this->emitUnsupported(S);
+      return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
 
     for (auto LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {

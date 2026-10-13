@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -verify=expected,no-new-interp -fsyntax-only -fnamed-loops %s -fno-experimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fnamed-loops %s -fno-experimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fnamed-loops %s -fexperimental-new-constant-interpreter
 
 int a[10]{};
@@ -54,7 +54,7 @@ void f3() {
 void f4() {
   l1: for (;;) {
     constexpr int x = ({ // expected-error {{constexpr variable 'x' must be initialized by a constant expression}}
-      break l1; // no-new-interp-note {{not supported in a constant expression}}
+      break l1; // expected-note {{cannot break to a label outside the current evaluation context}}
       1;
     });
   }
@@ -63,7 +63,7 @@ void f4() {
 void f5() {
   l1: for (;;) {
     constexpr int x = ({ // expected-error {{constexpr variable 'x' must be initialized by a constant expression}}
-      continue l1; // no-new-interp-note {{not supported in a constant expression}}
+      continue l1; // expected-note {{cannot continue to a label outside the current evaluation context}}
       1;
     });
   }
@@ -72,7 +72,7 @@ void f5() {
 void f6() {
   l1: for (;;) {
     constexpr int x = ({ // expected-error {{constexpr variable 'x' must be initialized by a constant expression}}
-      for (;;) break l1; // expected-note {{not supported in a constant expression}}
+      for (;;) break l1; // expected-note {{cannot break to a label outside the current evaluation context}}
       1;
     });
   }
@@ -81,7 +81,7 @@ void f6() {
 void f7() {
   l1: for (;;) {
     constexpr int x = ({ // expected-error {{constexpr variable 'x' must be initialized by a constant expression}}
-      for (;;) continue l1; // expected-note {{not supported in a constant expression}}
+      for (;;) continue l1; // expected-note {{cannot continue to a label outside the current evaluation context}}
       1;
     });
   }

@@ -6392,7 +6392,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       // current evaluation context, i.e. not a valid target.
       if (!LoopOrSwitch) {
         Info.FFDiag(S->getBeginLoc(),
-                    diag::note_constexpr_stmt_expr_unsupported);
+                    diag::note_break_continue_label_outside_context)
+            << isa<ContinueStmt>(B);
         return ESR_Failed;
       }
     }
