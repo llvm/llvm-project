@@ -577,12 +577,12 @@ public:
       Wait.clear(AMDGPU::LOAD_CNT);
   }
 
-  void determineWaitForPhysReg(AMDGPU::InstCounterType T, MCPhysReg Reg,
+  void determineWaitForPhysReg(AMDGPU::InstCounterType T, MCRegister Reg,
                                AMDGPU::Waitcnt &Wait,
                                const MachineInstr &MI) const;
-  MCPhysReg determineVGPR16Dependency(const MachineInstr &MI,
-                                      AMDGPU::InstCounterType T,
-                                      MCPhysReg Reg) const;
+  MCRegister determineVGPR16Dependency(const MachineInstr &MI,
+                                       AMDGPU::InstCounterType T,
+                                       MCRegister Reg) const;
   void determineWaitForLDSDMA(AMDGPU::InstCounterType T, VMEMID TID,
                               AMDGPU::Waitcnt &Wait) const;
   AMDGPU::Waitcnt determineAsyncWait(unsigned N);
@@ -636,7 +636,7 @@ public:
 
   // Return true if there might be pending writes to the vgpr-interval by VMEM
   // instructions where the HWEvents in VGPRContext are not contained in E.
-  bool hasDifferentVGPRPendingEvents(MCPhysReg Reg, HWEvents E) const {
+  bool hasDifferentVGPRPendingEvents(MCRegister Reg, HWEvents E) const {
     for (MCRegUnit RU : regunits(Reg)) {
       auto It = VMem.find(toVMEMID(RU));
       if (It != VMem.end() && (It->second.VGPRPendingEvents & ~E).any())
@@ -645,7 +645,7 @@ public:
     return false;
   }
 
-  void clearVGPRPendingEvents(MCPhysReg Reg) {
+  void clearVGPRPendingEvents(MCRegister Reg) {
     for (MCRegUnit RU : regunits(Reg)) {
       if (auto It = VMem.find(toVMEMID(RU)); It != VMem.end()) {
         It->second.VGPRPendingEvents = HWEvents::NONE;
@@ -667,7 +667,7 @@ public:
 
   bool hasPointSampleAccel(const MachineInstr &MI) const;
   bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
-                                      MCPhysReg RU) const;
+                                      MCRegister RU) const;
 
   void print(raw_ostream &) const;
   void dump() const { print(dbgs()); }
@@ -698,7 +698,7 @@ private:
   bool mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
                        ArrayRef<CounterValueArray> OtherMarks);
 
-  iterator_range<MCRegUnitIterator> regunits(MCPhysReg Reg) const {
+  iterator_range<MCRegUnitIterator> regunits(MCRegister Reg) const {
     assert(Reg != AMDGPU::SCC && "Shouldn't be used on SCC");
     if (!Context->TRI.isInAllocatableClass(Reg))
       return {{}, {}};
@@ -722,7 +722,7 @@ private:
           ScoreUBs[AMDGPU::EXP_CNT] - getLimit(AMDGPU::EXP_CNT);
   }
 
-  void setRegScore(MCPhysReg Reg, AMDGPU::InstCounterType T, unsigned Val) {
+  void setRegScore(MCRegister Reg, AMDGPU::InstCounterType T, unsigned Val) {
     const SIRegisterInfo &TRI = Context->TRI;
     if (Reg == AMDGPU::SCC) {
       SCCScore = Val;
@@ -858,7 +858,7 @@ public:
 void WaitcntBrackets::setScoreByOperand(const MachineOperand &Op,
                                         AMDGPU::InstCounterType CntTy,
                                         unsigned Score) {
-  setRegScore(static_cast<MCPhysReg>(Op.getReg().asMCReg()), CntTy, Score);
+  setRegScore(Op.getReg().asMCReg(), CntTy, Score);
 }
 
 // Return true if the subtarget is one that enables Point Sample Acceleration
@@ -882,7 +882,7 @@ bool WaitcntBrackets::hasPointSampleAccel(const MachineInstr &MI) const {
 // (this is the type that a point sample accelerated instruction effectively
 // becomes)
 bool WaitcntBrackets::hasPointSamplePendingVmemTypes(const MachineInstr &MI,
-                                                     MCPhysReg Reg) const {
+                                                     MCRegister Reg) const {
   if (!hasPointSampleAccel(MI))
     return false;
 
@@ -1045,8 +1045,7 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
           // this with another potential dependency
           if (hasPointSampleAccel(Inst))
             VGPRContext |= HWEvents::VMEM_READ_ACCESS;
-          for (MCRegUnit RU :
-               regunits(static_cast<MCPhysReg>(Op.getReg().asMCReg())))
+          for (MCRegUnit RU : regunits(Op.getReg().asMCReg()))
             VMem[toVMEMID(RU)].VGPRPendingEvents |= VGPRContext;
         }
       }
@@ -1443,9 +1442,9 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N) {
 // 1. MI is a VALU, and there is a wait event on the other half
 // 2. MI is a LdSt, and there is a wait event on the other half from different
 // order group
-MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
-                                                     AMDGPU::InstCounterType T,
-                                                     MCPhysReg Reg) const {
+MCRegister WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
+                                                      AMDGPU::InstCounterType T,
+                                                      MCRegister Reg) const {
   const TargetRegisterClass *RC = Context->TRI.getPhysRegBaseClass(Reg);
   uint64_t Size = Context->TRI.getRegSizeInBits(*RC);
 
@@ -1460,7 +1459,7 @@ MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
       AMDGPU::isHi16Reg(Reg, Context->TRI) ? AMDGPU::lo16 : AMDGPU::hi16);
 
   AMDGPU::Waitcnt Wait;
-  for (MCRegUnit RU : regunits(static_cast<MCPhysReg>(OtherHalf)))
+  for (MCRegUnit RU : regunits(OtherHalf))
     determineWaitForScore(T, getVMemScore(toVMEMID(RU), T), Wait);
 
   // No wait on otherhalf
@@ -1468,7 +1467,7 @@ MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
     return Reg;
 
   if (Context->TII.isVALU(MI, /*AllowLDSDMA=*/false))
-    return static_cast<MCPhysReg>(Reg32);
+    return Reg32;
 
   // If hi/lo16 mixed events
   HWEvents MIEvents = AMDGPU::getEventsFor(
@@ -1476,12 +1475,12 @@ MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
   HWEvents OtherHalfEvents = Context->getWaitEvents(T);
   HWEvents Events = MIEvents & OtherHalfEvents;
   if (Events.size() > 1)
-    return static_cast<MCPhysReg>(Reg32);
+    return Reg32;
   return Reg;
 }
 
 void WaitcntBrackets::determineWaitForPhysReg(AMDGPU::InstCounterType T,
-                                              MCPhysReg Reg,
+                                              MCRegister Reg,
                                               AMDGPU::Waitcnt &Wait,
                                               const MachineInstr &MI) const {
   if (Reg == AMDGPU::SCC) {
@@ -2424,14 +2423,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       const MachineOperand &CallAddrOp = TII.getCalleeOperand(MI);
       if (CallAddrOp.isReg()) {
         ScoreBrackets.determineWaitForPhysReg(
-            SmemAccessCounter,
-            static_cast<MCPhysReg>(CallAddrOp.getReg().asMCReg()), Wait, MI);
+            SmemAccessCounter, CallAddrOp.getReg().asMCReg(), Wait, MI);
 
         if (const auto *RtnAddrOp =
                 TII.getNamedOperand(MI, AMDGPU::OpName::dst)) {
           ScoreBrackets.determineWaitForPhysReg(
-              SmemAccessCounter,
-              static_cast<MCPhysReg>(RtnAddrOp->getReg().asMCReg()), Wait, MI);
+              SmemAccessCounter, RtnAddrOp->getReg().asMCReg(), Wait, MI);
         }
       }
     } else if (Opc == AMDGPU::S_BARRIER_WAIT) {
@@ -2503,7 +2500,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         if (Op.isTied() && Op.isUse() && TII.doesNotReadTiedSource(MI))
           continue;
 
-        MCPhysReg Reg = static_cast<MCPhysReg>(Op.getReg().asMCReg());
+        MCRegister Reg = Op.getReg().asMCReg();
 
         const bool IsVGPR = TRI.isVectorRegister(MRI, Op.getReg());
         if (IsVGPR) {
