@@ -2542,8 +2542,11 @@ public:
   /// \p AttrSpelling, \p AllowRedecl and \p AttrArg are reserved for that model
   /// (see LangOptions::hasBoundsSafetyAttributes).
   ///
-  /// \returns true if the shape is valid, or false after diagnosing a rejected
-  /// attribute. Rejection may produce a warning rather than an error.
+  /// \returns false after diagnosing an attribute that must be dropped. Returns
+  /// true if the shape is valid, after the warning for an array of structs with
+  /// flexible array members, and, under the -fbounds-safety attribute model,
+  /// after an error on a pointer, with \c Flags.CountInBytes set so that type
+  /// construction can recover.
   bool ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
                                    SourceRange AttrRange,
                                    BoundsAttrFlags &Flags,
@@ -2556,7 +2559,8 @@ public:
   /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer, array
   /// and function declarator chunks enclosing the attribute.
   ///
-  /// \returns true if valid, or false after diagnosing a rejected attribute.
+  /// \returns false after diagnosing an attribute that must be dropped (see
+  /// ValidateBoundsAttrTypeShape).
   bool ValidateBoundsAttrTypeForTypePosition(
       QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
       SourceRange AttrRange, unsigned PointerNestLevel, BoundsAttrFlags &Flags);

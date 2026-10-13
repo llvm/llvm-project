@@ -130,11 +130,45 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
   auto InvalidTypeKind = CountedByInvalidPointeeTypeKind::VALID;
   bool ShouldWarn = false;
   if (!Flags.CountInBytes && PointeeTy->isAlwaysIncompleteType()) {
-    // GNU void pointer arithmetic treats each element as one byte, so allow
-    // counted_by on void pointers outside the -fbounds-safety attribute model.
+    // In general using `counted_by` or `counted_by_or_null` on
+    // pointers where the pointee is an incomplete type are problematic. This
+    // is because it isn't possible to compute the pointer's bounds without
+    // knowing the pointee type size. At the same time it is common to forward
+    // declare types in header files.
+    //
+    // E.g.:
+    //
+    // struct Handle;
+    // struct Wrapper {
+    //   size_t count;
+    //   struct Handle* __counted_by(count) handles;
+    // }
+    //
+    // To allow the above code pattern but still prevent the pointee type from
+    // being incomplete in places where bounds checks are needed the following
+    // scheme is used:
+    //
+    // * When the pointee type might not always be an incomplete type (i.e.
+    // a type that is currently incomplete but might be completed later
+    // on in the translation unit) the attribute is allowed by this method
+    // but later uses of the FieldDecl are checked that the pointee type
+    // is complete see `BoundsSafetyCheckAssignmentToCountAttrPtr`,
+    // `BoundsSafetyCheckInitialization`, and
+    // `BoundsSafetyCheckUseOfCountAttrPtr`
+    //
+    // * When the pointee type is always an incomplete type (e.g.
+    // `void` in strict C mode) the attribute is disallowed by this method
+    // because we know the type can never be completed so there's no reason
+    // to allow it.
+    //
+    // Exception: void has an implicit size of 1 byte for pointer arithmetic
+    // (following GNU convention). Therefore, counted_by on void* is allowed
+    // and behaves equivalently to sized_by (treating the count as bytes).
     if (PointeeTy->isVoidType() && !getLangOpts().hasBoundsSafetyAttributes()) {
+      // Emit a warning that this is a GNU extension.
       Diag(AttrLoc, diag::ext_gnu_counted_by_void_ptr) << Kind;
       Diag(AttrLoc, diag::note_gnu_counted_by_void_ptr_use_sized_by) << Kind;
+      assert(!Ty->isArrayType() && "sized_by is not allowed on arrays");
       if (UpdateFlags)
         Flags.CountInBytes = true;
       return true;
@@ -147,9 +181,12 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
   } else if (!Flags.CountInBytes &&
              PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
     if (Ty->isArrayType()) {
-      // Warn for compatibility with Linux kernel code using counted_by on a FAM
-      // of structs with FAMs. Computing these bounds requires traversing the
-      // elements at runtime.
+      // This is a workaround for the Linux kernel that has already adopted
+      // `counted_by` on a FAM where the pointee is a struct with a FAM. This
+      // should be an error because computing the bounds of the array cannot
+      // be done correctly without manually traversing every struct object in
+      // the array at runtime. To allow the code to be built this error is
+      // downgraded to a warning.
       ShouldWarn = true;
     }
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
@@ -161,6 +198,15 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
                           : diag::err_counted_by_attr_pointee_unknown_size;
     Diag(AttrLoc, DiagID) << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
                           << (ShouldWarn ? 1 : 0) << Kind << AttrRange;
+    if (ShouldWarn)
+      return true;
+    if (getLangOpts().hasBoundsSafetyAttributes() && !Ty->isArrayType()) {
+      // Under BoundsSafety, recover by switching to byte count so that
+      // type construction can proceed and emit follow-up diagnostics.
+      // We don't do this for arrays because `__sized_by` is not allowed.
+      Flags.CountInBytes = true;
+      return true;
+    }
     return false;
   }
 
