@@ -252,21 +252,47 @@ func.func @public_function(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 //   CHECK-NOT:   tensor.extract
 //       CHECK:   return %arg0 : tensor<1xi64>
 
+// -----
+
+/// Positive tests: private callees updated while public caller signatures and
+/// calls to public functions remain unchanged through reboxing.
+
 func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   return %arg0 : tensor<1xi64>
 }
 // CHECK-LABEL: func.func private @callee
-//  CHECK-SAME:     -> tensor<1xi64>
-//   CHECK-NOT:   tensor.extract
-//       CHECK:   return %arg0 : tensor<1xi64>
+//  CHECK-SAME:     %[[SRC:.*]]: tensor<1xi64>) -> i64
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[EXT:.*]] = tensor.extract %[[SRC]][%[[C0]]] : tensor<1xi64>
+//       CHECK:   return %[[EXT]] : i64
+
+func.func private @private_caller(%arg0: tensor<1xi64>) -> tensor<1xi64> {
+  %0 = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
+  return %0 : tensor<1xi64>
+}
+// CHECK-LABEL: func.func private @private_caller
+//  CHECK-SAME:     -> i64
+//       CHECK:   %[[CALL:.*]] = call @callee(%arg0) : (tensor<1xi64>) -> i64
+//       CHECK:   return %[[CALL]] : i64
 
 func.func @public_caller(%arg0: tensor<1xi64>) -> tensor<1xi64> {
-  %0 = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
+  %0 = call @private_caller(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
   return %0 : tensor<1xi64>
 }
 // CHECK-LABEL: func.func @public_caller
 //  CHECK-SAME:     -> tensor<1xi64>
-//       CHECK:   %[[CALL:.*]] = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
+//       CHECK:   %[[CALL:.*]] = call @private_caller(%arg0) : (tensor<1xi64>) -> i64
+//       CHECK:   %[[BOX:.*]] = tensor.from_elements %[[CALL]] : tensor<1xi64>
+//   CHECK-NOT:   tensor.extract
+//       CHECK:   return %[[BOX]] : tensor<1xi64>
+
+func.func @public_user(%arg0: tensor<1xi64>) -> tensor<1xi64> {
+  %0 = call @public_caller(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
+  return %0 : tensor<1xi64>
+}
+// CHECK-LABEL: func.func @public_user
+//  CHECK-SAME:     -> tensor<1xi64>
+//       CHECK:   %[[CALL:.*]] = call @public_caller(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
 //   CHECK-NOT:   tensor.extract
 //       CHECK:   return %[[CALL]] : tensor<1xi64>
 

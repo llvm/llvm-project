@@ -113,7 +113,9 @@ computeScalarizationState(func::FuncOp func, ScalarizationAnalysis &analysis) {
   // Starting from one locally-eligible private function, walk its symbol users
   // upward through private callers. Memoization avoids re-traversing the same
   // subgraph from the outer linear scan, and early blocking truncates the DFS
-  // as soon as a public/unsupported user is found.
+  // when an unsupported symbol user or a blocked candidate caller is found.
+  // Non-candidate callers, including public functions, stop recursion without
+  // blocking callsite adaptation.
   auto setBlocked = [&] {
     analysis.states[func] = ScalarizationState::blocked;
     return ScalarizationState::blocked;
@@ -149,15 +151,10 @@ computeScalarizationState(func::FuncOp func, ScalarizationAnalysis &analysis) {
     assert(analysis.moduleFunctions.contains(caller) &&
            "Caller of private function is not a direct function in the module");
 
-    // Public and external callers keep the current function blocked because the
-    // pass cannot rewrite every visible call boundary.
-    if (caller.isPublic())
-      return setBlocked();
-
     assert(!caller.isExternal() && "Caller of private function is external.");
 
-    // A private non-candidate caller can absorb the scalarized call by
-    // reboxing the scalar result back into a single-element tensor.
+    // A non-candidate caller, including a public function, can absorb the
+    // scalarized call by reboxing its result without changing its signature.
     if (!analysis.candidateInfos.contains(caller))
       continue;
 
