@@ -2843,9 +2843,6 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   // peek through it and apply the 32-bit shift-amount masking.
   def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (zext (i32 shiftMask32:$Rm))))),
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
-
-  // The same masking applies when the i32 shift amount is widened to i64 with
-  // any_extend or sign_extend (not just zero_extend).
   def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (anyext (i32 shiftMask32:$Rm))))),
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
   def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (sext (i32 shiftMask32:$Rm))))),

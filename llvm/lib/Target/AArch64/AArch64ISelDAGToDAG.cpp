@@ -776,28 +776,23 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
 // shift amount (e.g. generating a NEG or MVN) is safe even with multiple
 // uses, because each shift only reads the low bits of the amount.
 static bool allUsesAreShiftAmounts(SDValue N) {
-  for (SDNode *User : N.getNode()->users()) {
+  return all_of(N.getNode()->users(), [&](SDNode *User) {
     switch (User->getOpcode()) {
     case ISD::SHL:
     case ISD::SRL:
     case ISD::SRA:
     case ISD::ROTR:
-      if (User->getOperand(1).getNode() != N.getNode())
-        return false;
-      break;
+      return User->getOperand(1).getNode() == N.getNode();
     case ISD::ANY_EXTEND:
     case ISD::ZERO_EXTEND:
     case ISD::SIGN_EXTEND:
       // A 32-bit shift amount may be widened to i64 before it reaches the
       // shift; look through the extend to the ultimate users.
-      if (!allUsesAreShiftAmounts(SDValue(User, 0)))
-        return false;
-      break;
+      return allUsesAreShiftAmounts(SDValue(User, 0));
     default:
       return false;
     }
-  }
-  return true;
+  });
 }
 
 template <unsigned ShiftWidth>
