@@ -3742,8 +3742,7 @@ void cir::AwaitOp::getSuccessorRegions(
 }
 
 LogicalResult cir::AwaitOp::verify() {
-  if (this->getReady().empty() ||
-      !isa<ConditionOp>(this->getReady().back().getTerminator()))
+  if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
     return emitOpError("ready region must end with cir.condition");
   if (this->getSuspend().empty())
     return emitOpError("suspend region must not be empty");
