@@ -45,7 +45,7 @@ constexpr bool ElementsAre(Range &&R) {
 }
 } // namespace detail
 
-using Clauses = EnumSet<Clause, Clause_enumSize>;
+using Clauses = EnumSet<Clause>;
 
 TEST(EnumSetTest, DefaultInitialization) {
   constexpr Clauses S;

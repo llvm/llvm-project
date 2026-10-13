@@ -168,14 +168,6 @@ using InstExclusionSetTy = SmallPtrSet<Instruction *, 4>;
 /// Return true iff \p M target a GPU (and we can use GPU AS reasoning).
 LLVM_ABI bool isGPU(const Module &M);
 
-/// Check if the given address space \p AS corresponds to a GPU generic
-/// address space for the target triple in module \p M.
-LLVM_ABI bool isGPUGenericAddressSpace(const Module &M, unsigned AS);
-
-/// Check if the given address space \p AS corresponds to a GPU global
-/// address space for the target triple in module \p M.
-LLVM_ABI bool isGPUGlobalAddressSpace(const Module &M, unsigned AS);
-
 /// Check if the given address space \p AS corresponds to a GPU shared
 /// address space for the target triple in module \p M.
 LLVM_ABI bool isGPUSharedAddressSpace(const Module &M, unsigned AS);
@@ -532,7 +524,6 @@ public:
   virtual void print(Attributor *, raw_ostream &OS) const {
     OS << "AADepNode Impl\n";
   }
-  DepSetTy &getDeps() { return Deps; }
 
   friend struct Attributor;
   friend struct AADepGraph;
@@ -852,28 +843,6 @@ struct IRPosition {
     return getAssociatedFunction()->setAttributes(AttrList);
   }
 
-  /// Return the number of arguments associated with this function or call site
-  /// scope.
-  unsigned getNumArgs() const {
-    assert((getPositionKind() == IRP_CALL_SITE ||
-            getPositionKind() == IRP_FUNCTION) &&
-           "Only valid for function/call site positions!");
-    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
-      return CB->arg_size();
-    return getAssociatedFunction()->arg_size();
-  }
-
-  /// Return theargument \p ArgNo associated with this function or call site
-  /// scope.
-  Value *getArg(unsigned ArgNo) const {
-    assert((getPositionKind() == IRP_CALL_SITE ||
-            getPositionKind() == IRP_FUNCTION) &&
-           "Only valid for function/call site positions!");
-    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
-      return CB->getArgOperand(ArgNo);
-    return getAssociatedFunction()->getArg(ArgNo);
-  }
-
   /// Return the associated position kind.
   Kind getPositionKind() const {
     char EncodingBits = getEncodingBits();
@@ -1027,10 +996,6 @@ private:
   static bool isReturnPosition(char EncodingBits) {
     return EncodingBits == ENC_RETURNED_VALUE;
   }
-
-  /// Return true if the encoding bits describe a returned or call site returned
-  /// position.
-  bool isReturnPosition() const { return isReturnPosition(getEncodingBits()); }
 
   /// The encoding of the IRPosition is a combination of a pointer and two
   /// encoding bits. The values of the encoding bits are defined in the enum
@@ -2259,9 +2224,6 @@ public:
     const Function &getReplacedFn() const { return ReplacedFn; }
     const Argument &getReplacedArg() const { return ReplacedArg; }
     unsigned getNumReplacementArgs() const { return ReplacementTypes.size(); }
-    const SmallVectorImpl<Type *> &getReplacementTypes() const {
-      return ReplacementTypes;
-    }
 
     ///}
 
@@ -2914,9 +2876,6 @@ struct BooleanState : public IntegerStateBase<bool, true, false> {
 
   BooleanState() = default;
   BooleanState(base_t Assumed) : super(Assumed) {}
-
-  /// Set the assumed value to \p Value but never below the known one.
-  void setAssumed(bool Value) { Assumed &= (Known | Value); }
 
   /// Set the known and asssumed value to \p Value.
   void setKnown(bool Value) {
@@ -3808,14 +3767,8 @@ struct AAUndefinedBehavior
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
   AAUndefinedBehavior(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
-  /// Return true if "undefined behavior" is assumed.
-  bool isAssumedToCauseUB() const { return getAssumed(); }
-
   /// Return true if "undefined behavior" is assumed for a specific instruction.
   virtual bool isAssumedToCauseUB(Instruction *I) const = 0;
-
-  /// Return true if "undefined behavior" is known.
-  bool isKnownToCauseUB() const { return getKnown(); }
 
   /// Return true if "undefined behavior" is known for a specific instruction.
   virtual bool isKnownToCauseUB(Instruction *I) const = 0;
@@ -4050,20 +4003,6 @@ protected:
   /// can have an effect on live values, especially loads, but that effect
   /// is propagated which allows us to remove the store in turn.
   virtual bool isRemovableStore() const { return false; }
-
-  /// This method is used to check if at least one instruction in a collection
-  /// of instructions is live.
-  template <typename T> bool isLiveInstSet(T begin, T end) const {
-    for (const auto &I : llvm::make_range(begin, end)) {
-      assert(I->getFunction() == getIRPosition().getAssociatedFunction() &&
-             "Instruction must be in the same anchor scope function.");
-
-      if (!isAssumedDead(I))
-        return true;
-    }
-
-    return false;
-  }
 
 public:
   /// Create an abstract attribute view for the position \p IRP.
@@ -4345,12 +4284,6 @@ struct AAInstanceInfo : public StateWrapper<BooleanState, AbstractAttribute> {
   AAInstanceInfo(const IRPosition &IRP, Attributor &A)
       : StateWrapper<BooleanState, AbstractAttribute>(IRP) {}
 
-  /// Return true if we know that the underlying value is unique in its scope
-  /// wrt. the Attributor analysis. That means it might not be unique but we can
-  /// still use pointer equality without risking to represent two instances with
-  /// one `llvm::Value`.
-  bool isKnownUniqueForAnalysis() const { return isKnown(); }
-
   /// Return true if we assume that the underlying value is unique in its scope
   /// wrt. the Attributor analysis. That means it might not be unique but we can
   /// still use pointer equality without risking to represent two instances with
@@ -4625,9 +4558,6 @@ struct AAPrivatizablePtr
 
   /// Returns true if pointer privatization is assumed to be possible.
   bool isAssumedPrivatizablePtr() const { return getAssumed(); }
-
-  /// Returns true if pointer privatization is known to be possible.
-  bool isKnownPrivatizablePtr() const { return getKnown(); }
 
   /// See AbstractAttribute::requiresCallersForArgOrFunction
   static bool requiresCallersForArgOrFunction() { return true; }
@@ -5077,10 +5007,6 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
     return *this;
   }
 
-  bool contains(const MemberTy &V) const {
-    return !isValidState() ? true : Set.contains(V);
-  }
-
 protected:
   SetTy &getAssumedSet() {
     assert(isValidState() && "This set shoud not be used when it is invalid!");
@@ -5127,26 +5053,6 @@ private:
   /// Take union with an undef value.
   void unionWithUndef() {
     UndefIsContained = true;
-    reduceUndefValue();
-  }
-
-  /// Take intersection with R.
-  void intersectWith(const PotentialValuesState &R) {
-    /// If R is a full set, do nothing.
-    if (!R.isValidState())
-      return;
-    /// If this is a full set, change this to R.
-    if (!isValidState()) {
-      *this = R;
-      return;
-    }
-    SetTy IntersectSet;
-    for (const MemberTy &C : Set) {
-      if (R.Set.count(C))
-        IntersectSet.insert(C);
-    }
-    Set = IntersectSet;
-    UndefIsContained &= R.undefIsContained();
     reduceUndefValue();
   }
 
@@ -5969,13 +5875,6 @@ struct AAPointerInfo : public AbstractAttribute {
       return std::make_pair(LB, Changed);
     }
 
-    /// Insert the given range \p R, maintaining sorted order.
-    ///
-    /// \return The place of insertion and true iff anything changed.
-    std::pair<iterator, bool> insert(const RangeTy &R) {
-      return insert(Ranges.begin(), R);
-    }
-
     /// Add the increment \p Inc to the offset of every range.
     void addToAllOffsets(int64_t Inc) {
       assert(!isUnassigned() &&
@@ -5985,17 +5884,6 @@ struct AAPointerInfo : public AbstractAttribute {
       for (auto &R : Ranges) {
         R.Offset += Inc;
       }
-    }
-
-    /// Return true iff there is exactly one range and it is known.
-    bool isUnique() const {
-      return Ranges.size() == 1 && !Ranges.front().offsetOrSizeAreUnknown();
-    }
-
-    /// Return the unique range, assuming it exists.
-    const RangeTy &getUnique() const {
-      assert(isUnique() && "No unique range to return!");
-      return Ranges.front();
     }
 
     /// Return true iff the list contains an unknown range.
@@ -6131,9 +6019,6 @@ struct AAPointerInfo : public AbstractAttribute {
       return Content.has_value() && !*Content;
     }
 
-    /// Set the value written to nullptr, i.e., unknown.
-    void setWrittenValueUnknown() { Content = nullptr; }
-
     /// Return the type associated with the access, if known.
     Type *getType() const { return Ty; }
 
@@ -6147,20 +6032,6 @@ struct AAPointerInfo : public AbstractAttribute {
     /// Return the written value which can be `llvm::null` if it is not yet
     /// determined.
     std::optional<Value *> getContent() const { return Content; }
-
-    bool hasUniqueRange() const { return Ranges.isUnique(); }
-    const AA::RangeTy &getUniqueRange() const { return Ranges.getUnique(); }
-
-    /// Add a range accessed by this Access.
-    ///
-    /// If there are multiple ranges, then this is a "may access".
-    void addRange(int64_t Offset, int64_t Size) {
-      Ranges.insert({Offset, Size});
-      if (!hasUniqueRange()) {
-        Kind = AccessKind(Kind | AK_MAY);
-        Kind = AccessKind(Kind & ~AK_MUST);
-      }
-    }
 
     const RangeList &getRanges() const { return Ranges; }
 

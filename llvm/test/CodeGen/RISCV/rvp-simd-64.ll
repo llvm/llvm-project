@@ -6226,7 +6226,7 @@ define <4 x i16> @test_pmulh_v4i16(<4 x i16> %rs1, <4 x i16> %rs2) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    pmulh.h a0, a0, a1
 ; RV64-NEXT:    ret
-  %res = call <4 x i16> @llvm.riscv.pmulh.v4i16(<4 x i16> %rs1, <4 x i16> %rs2)
+  %res = call <4 x i16> @llvm.smulh.v4i16(<4 x i16> %rs1, <4 x i16> %rs2)
   ret <4 x i16> %res
 }
 
@@ -6256,7 +6256,7 @@ define <4 x i16> @test_pmulhu_v4i16(<4 x i16> %rs1, <4 x i16> %rs2) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    pmulhu.h a0, a0, a1
 ; RV64-NEXT:    ret
-  %res = call <4 x i16> @llvm.riscv.pmulhu.v4i16(<4 x i16> %rs1, <4 x i16> %rs2)
+  %res = call <4 x i16> @llvm.umulh.v4i16(<4 x i16> %rs1, <4 x i16> %rs2)
   ret <4 x i16> %res
 }
 
@@ -6316,7 +6316,7 @@ define <2 x i32> @test_pmulh_v2i32(<2 x i32> %rs1, <2 x i32> %rs2) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    pmulh.w a0, a0, a1
 ; RV64-NEXT:    ret
-  %res = call <2 x i32> @llvm.riscv.pmulh.v2i32(<2 x i32> %rs1, <2 x i32> %rs2)
+  %res = call <2 x i32> @llvm.smulh.v2i32(<2 x i32> %rs1, <2 x i32> %rs2)
   ret <2 x i32> %res
 }
 
@@ -6346,7 +6346,7 @@ define <2 x i32> @test_pmulhu_v2i32(<2 x i32> %rs1, <2 x i32> %rs2) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    pmulhu.w a0, a0, a1
 ; RV64-NEXT:    ret
-  %res = call <2 x i32> @llvm.riscv.pmulhu.v2i32(<2 x i32> %rs1, <2 x i32> %rs2)
+  %res = call <2 x i32> @llvm.umulh.v2i32(<2 x i32> %rs1, <2 x i32> %rs2)
   ret <2 x i32> %res
 }
 
@@ -8017,6 +8017,38 @@ declare <2 x i32> @llvm.riscv.pmhacc.h0.v2i32(<2 x i32>, <2 x i32>, <4 x i16>)
 declare <2 x i32> @llvm.riscv.pmhacc.h1.v2i32(<2 x i32>, <2 x i32>, <4 x i16>)
 declare <2 x i32> @llvm.riscv.pmhaccsu.h0.v2i32(<2 x i32>, <2 x i32>, <4 x i16>)
 declare <2 x i32> @llvm.riscv.pmhaccsu.h1.v2i32(<2 x i32>, <2 x i32>, <4 x i16>)
+declare <2 x i32> @llvm.riscv.pmqwacc.i32x2(<2 x i32>, <2 x i16>, <2 x i16>)
+declare <2 x i32> @llvm.riscv.pmqrwacc.i32x2(<2 x i32>, <2 x i16>, <2 x i16>)
+
+define <2 x i32> @test_pmqwacc_i32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2) {
+; RV32-LABEL: test_pmqwacc_i32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmqwacc.h a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmqwacc_i32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zip16p a1, a1, a2
+; RV64-NEXT:    pmqacc.w.h01 a0, a1, a1
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmqwacc.i32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_pmqrwacc_i32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2) {
+; RV32-LABEL: test_pmqrwacc_i32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmqrwacc.h a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmqrwacc_i32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zip16p a1, a1, a2
+; RV64-NEXT:    pmqracc.w.h01 a0, a1, a1
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmqrwacc.i32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i32> %r
+}
 
 define <2 x i32> @test_pmacc_h00_v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b) {
 ; RV32-LABEL: test_pmacc_h00_v2i32:
@@ -8616,5 +8648,113 @@ define <2 x i32> @test_pusati_u32x2_max_width(<2 x i32> %a) {
 ; RV64-NEXT:    pusati.w a0, a0, 31
 ; RV64-NEXT:    ret
   %res = call <2 x i32> @llvm.riscv.pusati.v2i32.i32(<2 x i32> %a, i32 31)
+  ret <2 x i32> %res
+}
+
+define <8 x i8> @test_pslide1up_v8i8(<8 x i8> %rd, i8 %rs1) {
+; RV32-LABEL: test_pslide1up_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a3, 8
+; RV32-NEXT:    slli a2, a2, 24
+; RV32-NEXT:    slx a1, a0, a3
+; RV32-NEXT:    slx a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslide1up_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a1, a1, 56
+; RV64-NEXT:    li a2, 8
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %scalar = insertelement <8 x i8> poison, i8 %rs1, i64 0
+  %res = shufflevector <8 x i8> %rd, <8 x i8> %scalar, <8 x i32> <i32 8, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_pslide1down_v8i8(<8 x i8> %rd, i8 %rs1) {
+; RV32-LABEL: test_pslide1down_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a3, 8
+; RV32-NEXT:    srx a0, a1, a3
+; RV32-NEXT:    srx a1, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslide1down_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 8
+; RV64-NEXT:    srx a0, a1, a2
+; RV64-NEXT:    ret
+  %scalar = insertelement <8 x i8> poison, i8 %rs1, i64 0
+  %res = shufflevector <8 x i8> %rd, <8 x i8> %scalar, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+  ret <8 x i8> %res
+}
+
+define <4 x i16> @test_pslide1up_v4i16(<4 x i16> %rd, i16 %rs1) {
+; RV32-LABEL: test_pslide1up_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a3, 16
+; RV32-NEXT:    slli a2, a2, 16
+; RV32-NEXT:    slx a1, a0, a3
+; RV32-NEXT:    slx a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslide1up_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a1, a1, 48
+; RV64-NEXT:    li a2, 16
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %scalar = insertelement <4 x i16> poison, i16 %rs1, i64 0
+  %res = shufflevector <4 x i16> %rd, <4 x i16> %scalar, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pslide1down_v4i16(<4 x i16> %rd, i16 %rs1) {
+; RV32-LABEL: test_pslide1down_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a3, 16
+; RV32-NEXT:    srx a0, a1, a3
+; RV32-NEXT:    srx a1, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslide1down_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 16
+; RV64-NEXT:    srx a0, a1, a2
+; RV64-NEXT:    ret
+  %scalar = insertelement <4 x i16> poison, i16 %rs1, i64 0
+  %res = shufflevector <4 x i16> %rd, <4 x i16> %scalar, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @test_pslide1up_v2i32(<2 x i32> %rd, i32 %rs1) {
+; RV32-LABEL: test_pslide1up_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslide1up_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pack a0, a1, a0
+; RV64-NEXT:    ret
+  %scalar = insertelement <2 x i32> poison, i32 %rs1, i64 0
+  %res = shufflevector <2 x i32> %rd, <2 x i32> %scalar, <2 x i32> <i32 2, i32 0>
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pslide1down_v2i32(<2 x i32> %rd, i32 %rs1) {
+; RV32-LABEL: test_pslide1down_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslide1down_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppairoe.w a0, a0, a1
+; RV64-NEXT:    ret
+  %scalar = insertelement <2 x i32> poison, i32 %rs1, i64 0
+  %res = shufflevector <2 x i32> %rd, <2 x i32> %scalar, <2 x i32> <i32 1, i32 2>
   ret <2 x i32> %res
 }

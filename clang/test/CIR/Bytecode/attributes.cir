@@ -1,0 +1,58 @@
+// RUN: cir-opt %s -verify-roundtrip | FileCheck %s
+// RUN: cir-opt %s --emit-bytecode | llvm-strings | FileCheck %s --check-prefix=NATIVE
+
+// Round-trip the natively encoded attributes. Values are asymmetric (size !=
+// offset, negative offset) because a transposed pair of same-typed parameters
+// is exactly what a symmetric test cannot see.
+//
+// Check the attributes are not string-encoded in the blob.
+// NATIVE-NOT: #cir.
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+
+module attributes {
+  cir.opt_info = #cir.opt_info<level = 2, size = 1>,
+  test.bitfield = #cir.bitfield_info<name = "f", storage_type = !u8i, size = 3,
+                                     offset = 5, is_signed = true>,
+  test.blockaddr = #cir.block_addr_info<@some_func, "some_label"> : !cir.ptr<!cir.void>,
+  test.addrpoint = #cir.address_point<index = 1, offset = -2>,
+  test.oclversion = #cir.cl.version<3, 0>,
+  test.i8 = #cir.int<127> : !u8i,
+  test.s32 = #cir.int<-559038737> : !s32i,
+  test.u64 = #cir.int<1099511627776> : !u64i,
+  test.i128 = #cir.int<18446744073709551617> : !cir.int<s, 128>,
+  test.f32 = #cir.fp<1.500000e+00> : !cir.float,
+  test.f64 = #cir.fp<3.141592653589793e+00> : !cir.double,
+  test.f80 = #cir.fp<1.500000e+00> : !cir.long_double<!cir.f80>,
+  test.true = #cir.bool<true> : !cir.bool,
+  test.false = #cir.bool<false> : !cir.bool,
+  test.nullptr = #cir.ptr<null> : !cir.ptr<!u8i>,
+  test.ptr = #cir.ptr<32 : i64> : !cir.ptr<!u8i>,
+  test.catchall = #cir.all,
+  test.unwind = #cir.unwind
+} {
+}
+
+// CHECK-DAG: #bfi_f = #cir.bitfield_info<name = "f", storage_type = !u8i, size = 3, offset = 5, is_signed = true>
+// CHECK-DAG: test.bitfield = #bfi_f
+// CHECK-DAG: cir.opt_info = #cir.opt_info<level = 2, size = 1>
+// CHECK-DAG: test.addrpoint = #cir.address_point<index = 1, offset = -2>
+// CHECK-DAG: test.blockaddr = #cir.block_addr_info<@some_func, "some_label"> : !cir.ptr<!void>
+// CHECK-DAG: test.oclversion = #cir.cl.version<3, 0>
+// CHECK-DAG: test.i8 = #cir.int<127> : !u8i
+// CHECK-DAG: test.s32 = #cir.int<-559038737> : !s32i
+// CHECK-DAG: test.u64 = #cir.int<1099511627776> : !u64i
+// CHECK-DAG: test.i128 = #cir.int<18446744073709551617> : !s128i
+// CHECK-DAG: test.f80 = #cir.fp<1.500000e+00> : !cir.long_double<!cir.f80>
+// CHECK-DAG: test.f32 = #cir.fp<1.500000e+00> : !cir.float
+// CHECK-DAG: test.f64 = #cir.fp<3.1415926535897931> : !cir.double
+// CHECK-DAG: #true = #cir.bool<true> : !cir.bool
+// CHECK-DAG: #false = #cir.bool<false> : !cir.bool
+// CHECK-DAG: test.true = #true
+// CHECK-DAG: test.false = #false
+// CHECK-DAG: test.nullptr = #cir.ptr<null> : !cir.ptr<!u8i>
+// CHECK-DAG: test.ptr = #cir.ptr<32 : i64> : !cir.ptr<!u8i>
+// CHECK-DAG: test.catchall = #cir.all
+// CHECK-DAG: test.unwind = #cir.unwind

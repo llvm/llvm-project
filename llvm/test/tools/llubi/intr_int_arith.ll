@@ -43,6 +43,16 @@ define void @main() {
     call i4 @llvm.umulh.i4(i4 -4, i4 poison)
     call <2 x i32> @llvm.umulh.v2i32(<2 x i32> <i32 1, i32 -4>, <2 x i32> <i32 2, i32 6>)
 
+    call i8 @llvm.pext.i8(i8 170, i8 204)
+    call i8 @llvm.pext.i8(i8 -1, i8 170)
+    call i8 @llvm.pext.i8(i8 -1, i8 poison)
+    call <2 x i8> @llvm.pext.v2i8(<2 x i8> <i8 170, i8 -1>, <2 x i8> <i8 204, i8 170>)
+
+    call i8 @llvm.pdep.i8(i8 10, i8 204)
+    call i8 @llvm.pdep.i8(i8 15, i8 170)
+    call i8 @llvm.pdep.i8(i8 15, i8 poison)
+    call <2 x i8> @llvm.pext.v2i8(<2 x i8> <i8 10, i8 15>, <2 x i8> <i8 204, i8 170>)
+
     ret void
 }
 ; CHECK: Entering function: main
@@ -82,5 +92,13 @@ define void @main() {
 ; CHECK-NEXT:   %34 = call i4 @llvm.umulh.i4(i4 -4, i4 6) => i4 4
 ; CHECK-NEXT:   %35 = call i4 @llvm.umulh.i4(i4 -4, i4 poison) => poison
 ; CHECK-NEXT:   %36 = call <2 x i32> @llvm.umulh.v2i32(<2 x i32> <i32 1, i32 -4>, <2 x i32> <i32 2, i32 6>) => { i32 0, i32 5 }
+; CHECK-NEXT:   %37 = call i8 @llvm.pext.i8(i8 -86, i8 -52) => i8 10
+; CHECK-NEXT:   %38 = call i8 @llvm.pext.i8(i8 -1, i8 -86) => i8 15
+; CHECK-NEXT:   %39 = call i8 @llvm.pext.i8(i8 -1, i8 poison) => poison
+; CHECK-NEXT:   %40 = call <2 x i8> @llvm.pext.v2i8(<2 x i8> <i8 -86, i8 -1>, <2 x i8> <i8 -52, i8 -86>) => { i8 10, i8 15 }
+; CHECK-NEXT:   %41 = call i8 @llvm.pdep.i8(i8 10, i8 -52) => i8 -120
+; CHECK-NEXT:   %42 = call i8 @llvm.pdep.i8(i8 15, i8 -86) => i8 -86
+; CHECK-NEXT:   %43 = call i8 @llvm.pdep.i8(i8 15, i8 poison) => poison
+; CHECK-NEXT:   %44 = call <2 x i8> @llvm.pext.v2i8(<2 x i8> <i8 10, i8 15>, <2 x i8> <i8 -52, i8 -86>) => { i8 2, i8 3 }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

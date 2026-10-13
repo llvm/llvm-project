@@ -147,10 +147,12 @@ class UniqueTypesTestCase2(TestBase):
 
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_simple_template_names(self):
         self.do_test(dict(CFLAGS_EXTRAS="-gsimple-template-names"))
 
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_no_simple_template_names(self):
         self.do_test(dict(CFLAGS_EXTRAS="-gno-simple-template-names"))

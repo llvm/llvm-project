@@ -50,7 +50,7 @@ const char *ARMArch[] = {
     "armv9-a",     "armv9",     "armv9a",       "armv9.1-a",   "armv9.1a",
     "armv9.2-a",   "armv9.2a",  "armv9.3-a",    "armv9.3a",    "armv9.4-a",
     "armv9.4a",    "armv9.5-a", "armv9.5a",     "armv9.6a",    "armv9.6-a",
-    "armv9.7a",    "armv9.7-a",
+    "armv9.7a",    "armv9.7-a", "armv9.8a",     "armv9.8-a",
 };
 
 std::string FormatExtensionFlags(int64_t Flags) {
@@ -664,6 +664,8 @@ TEST(TargetParserTest, testARMArch) {
                           ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(testARMArch("armv9.7-a", "generic", "v9.7a",
                           ARMBuildAttrs::CPUArch::v9_A));
+  EXPECT_TRUE(testARMArch("armv9.8-a", "generic", "v9.8a",
+                          ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(
       testARMArch("armv8-r", "generic", "v8r", ARMBuildAttrs::CPUArch::v8_R));
   EXPECT_TRUE(testARMArch("armv8-m.base", "generic", "v8m.base",
@@ -978,6 +980,7 @@ TEST(TargetParserTest, ARMparseArchProfile) {
     case ARM::ArchKind::ARMV9_5A:
     case ARM::ArchKind::ARMV9_6A:
     case ARM::ArchKind::ARMV9_7A:
+    case ARM::ArchKind::ARMV9_8A:
       EXPECT_EQ(ARM::ProfileKind::A, ARM::parseArchProfile(ARMArch[i]));
       break;
     default:
@@ -1160,6 +1163,8 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("c1-premium", "armv9.3-a"),
                       AArch64CPUTestParams("c1-pro", "armv9.3-a"),
                       AArch64CPUTestParams("c1-ultra", "armv9.3-a"),
+                      AArch64CPUTestParams("c2-pro", "armv9.3-a"),
+                      AArch64CPUTestParams("c2-ultra", "armv9.3-a"),
                       AArch64CPUTestParams("cyclone", "armv8-a"),
                       AArch64CPUTestParams("apple-a7", "armv8-a"),
                       AArch64CPUTestParams("apple-a8", "armv8-a"),
@@ -1294,6 +1299,7 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
 INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTests, AArch64CPUAliasTestFixture,
     ::testing::Values(AArch64CPUAliasTestParams({"neoverse-n2", "cobalt-100"}),
+                      AArch64CPUAliasTestParams({"c1-pro", "c2-pro"}),
                       AArch64CPUAliasTestParams({"apple-a7", "cyclone",
                                                  "apple-a8", "apple-a9"}),
                       AArch64CPUAliasTestParams({"apple-a12", "apple-s4",
@@ -1309,7 +1315,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 101;
+static constexpr unsigned NumAArch64CPUArchs = 103;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1347,6 +1353,7 @@ TEST(TargetParserTest, testAArch64Arch) {
   EXPECT_TRUE(testAArch64Arch("armv9.5-a"));
   EXPECT_TRUE(testAArch64Arch("armv9.6-a"));
   EXPECT_TRUE(testAArch64Arch("armv9.7-a"));
+  EXPECT_TRUE(testAArch64Arch("armv9.8-a"));
 }
 
 bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
@@ -1501,6 +1508,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_BTIE,         AArch64::AEK_F64MM,
       AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
       AArch64::AEK_MTETC,        AArch64::AEK_HINTE,
+      AArch64::AEK_CFLT,         AArch64::AEK_LSC64B,
   };
 
   std::vector<StringRef> Features;
@@ -1625,6 +1633,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+tev"));
   EXPECT_TRUE(llvm::is_contained(Features, "+btie"));
   EXPECT_TRUE(llvm::is_contained(Features, "+hinte"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+cflt"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+lsc64b"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1652,6 +1662,7 @@ TEST(TargetParserTest, AArch64ArchFeatures) {
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_5A.ArchFeature], "+v9.5a");
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_6A.ArchFeature], "+v9.6a");
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_7A.ArchFeature], "+v9.7a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_8A.ArchFeature], "+v9.8a");
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8R.ArchFeature], "+v8r");
 }
 
@@ -1682,7 +1693,7 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
   for (const auto *A :
        {&AArch64::ARMV9_1A, &AArch64::ARMV9_2A, &AArch64::ARMV9_3A,
         &AArch64::ARMV9_4A, &AArch64::ARMV9_5A, &AArch64::ARMV9_6A,
-        &AArch64::ARMV9_7A})
+        &AArch64::ARMV9_7A, &AArch64::ARMV9_8A})
     EXPECT_TRUE(A->implies(AArch64::ARMV9A));
 
   EXPECT_TRUE(AArch64::ARMV8_1A.implies(AArch64::ARMV8A));
@@ -1702,6 +1713,7 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
   EXPECT_TRUE(AArch64::ARMV9_5A.implies(AArch64::ARMV9_4A));
   EXPECT_TRUE(AArch64::ARMV9_6A.implies(AArch64::ARMV9_5A));
   EXPECT_TRUE(AArch64::ARMV9_7A.implies(AArch64::ARMV9_6A));
+  EXPECT_TRUE(AArch64::ARMV9_8A.implies(AArch64::ARMV9_7A));
 
   EXPECT_TRUE(AArch64::ARMV9A.implies(AArch64::ARMV8_5A));
   EXPECT_TRUE(AArch64::ARMV9_1A.implies(AArch64::ARMV8_6A));
@@ -1804,6 +1816,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"tev", "notev", "+tev", "-tev"},
       {"btie", "nobtie", "+btie", "-btie"},
       {"hinte", "nohinte", "+hinte", "-hinte"},
+      {"cflt", "nocflt", "+cflt", "-cflt"},
+      {"lsc64b", "nolsc64b", "+lsc64b", "-lsc64b"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -2826,6 +2840,8 @@ TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
 
   // A capability feature is queried through the bitset only.
   EXPECT_FALSE(HasFeature("gfx1030", "half-addressable-physical-local-memory"));
+  EXPECT_FALSE(HasFeature("gfx906", "sramecc-on-off-modes"));
+  EXPECT_FALSE(HasFeature("gfx1250", "sramecc-on-off-modes"));
 
   // LDS allocation granularity is queried through the bitset only.
   EXPECT_FALSE(HasFeature("gfx600", "lds-alloc-granularity-256"));
@@ -3634,6 +3650,62 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   // A non-AMDGCN triple has no target-id features.
   EXPECT_FALSE(
       TargetID::parse(Triple("r600-unknown-unknown"), "cypress").has_value());
+}
+
+TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {
+  using namespace AMDGPU;
+
+  // Existing SRAMECC targets retain their selectable modes, including generic
+  // targets and gfx12.5, where XNACK is hardwired on.
+  for (StringRef GPU :
+       {"gfx906", "gfx908", "gfx90a", "gfx942", "gfx950", "gfx9-4-generic",
+        "gfx1250-strict", "gfx1250", "gfx1251", "gfx12-5-generic"}) {
+    SCOPED_TRACE(GPU);
+    GPUKind Kind = parseArchAMDGCN(GPU);
+    const AMDGPUFeatureBitset &Features = getFeatureBitset(Kind);
+    EXPECT_TRUE(Features.test(FEAT_SRAMECC_SUPPORT));
+    EXPECT_TRUE(Features.test(FEAT_SRAMECC_ON_OFF_MODES));
+
+    // The processor is resolved from the triple subarch.
+    StringRef SubArch = getSubArchName(getSubArch(Kind));
+    Triple TT(SubArch, "amd", "amdhsa");
+    auto Default = TargetID::parse(TT, "");
+    ASSERT_TRUE(Default);
+    EXPECT_EQ(Default->getGPUKind(), Kind);
+    EXPECT_EQ(Default->getSramEccSetting(), TargetIDSetting::Any);
+    EXPECT_EQ(Default->getCanonicalFeatureString(), GPU);
+
+    for (bool Enabled : {false, true}) {
+      StringRef Mode = Enabled ? ":sramecc+" : ":sramecc-";
+      std::string ID = (GPU + Mode).str();
+      TargetIDSetting Setting =
+          Enabled ? TargetIDSetting::On : TargetIDSetting::Off;
+      auto Explicit = TargetID::parse(TT, Mode);
+      ASSERT_TRUE(Explicit);
+      EXPECT_EQ(Explicit->getSramEccSetting(), Setting);
+      EXPECT_EQ(Explicit->getCanonicalFeatureString(), ID);
+      EXPECT_EQ(Explicit->toString(),
+                (SubArch + "-amd-amdhsa-unknown-" + ID).str());
+      EXPECT_EQ(TargetID::createFromSubtargetFeatures(
+                    TT, GPU, Enabled ? "+sramecc" : "-sramecc"),
+                *Explicit);
+    }
+  }
+
+  for (StringRef GPU : {"gfx600", "gfx900", "gfx1100", "gfx1200"}) {
+    SCOPED_TRACE(GPU);
+    GPUKind Kind = parseArchAMDGCN(GPU);
+    EXPECT_FALSE(getFeatureBitset(Kind).test(FEAT_SRAMECC_ON_OFF_MODES));
+
+    Triple TT(getSubArchName(getSubArch(Kind)), "amd", "amdhsa");
+    EXPECT_EQ(TargetID(TT, "").getSramEccSetting(),
+              TargetIDSetting::Unsupported);
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc+"));
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc-"));
+    EXPECT_EQ(TargetID::createFromSubtargetFeatures(TT, GPU, "+sramecc")
+                  .getSramEccSetting(),
+              TargetIDSetting::Unsupported);
+  }
 }
 
 TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {

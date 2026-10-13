@@ -34,9 +34,11 @@ common --@rules_python//python/config_settings:bootstrap_impl=script
 # tests vs binaries. We don't need this feature and it slows down opt builds
 # considerably.
 # TODO: Remove platform specifics we're on bazel 7.x https://github.com/bazelbuild/bazel/issues/12439
-# Apple platforms always enable pic so this flag is unnecessary anyways
+# Apple platforms always enable pic so this flag is unnecessary anyways.
+# On Windows all code is PIC (CMake's LLVM_ENABLE_PIC is a no-op there), and
+# rules_cc's MSVC toolchain does not declare the `supports_pic` feature, so
+# `--force_pic` makes configure_features() fail before anything is built.
 build:linux --force_pic
-build:windows --force_pic
 
 # Shared objects take up more space. With fast linkers and binaries that aren't
 # super large, the benefits of shared objects are minimal.

@@ -9,6 +9,7 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "CASTestConfig.h"
 #include "OnDiskCommonUtils.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
@@ -322,6 +323,65 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheConcurrentValidation) {
                       Succeeded());
     EXPECT_EQ(Result, ValidationResult::Skipped);
   }
+}
+
+TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheBootTimeMoved) {
+  if (!isBootTimeKnown())
+    GTEST_SKIP() << "boot time is not known";
+
+  auto HashFn = GetParam().HashFn;
+  StringRef HashName = GetParam().HashName;
+  size_t HashSize = GetParam().HashSize;
+
+  unittest::TempDir Temp("ondisk-unified", /*Unique=*/true);
+  {
+    std::unique_ptr<UnifiedOnDiskCache> UniDB;
+    ASSERT_THAT_ERROR(UnifiedOnDiskCache::open(Temp.path(),
+                                               /*SizeLimit=*/std::nullopt,
+                                               HashName, HashSize)
+                          .moveInto(UniDB),
+                      Succeeded());
+  }
+  auto validate = [&]() {
+    return UnifiedOnDiskCache::validateIfNeeded(Temp.path(), HashName, HashSize,
+                                                /*CheckHash=*/true, HashFn,
+                                                /*ForceValidation=*/false);
+  };
+  std::string ValidationPath(Temp.path("v1.validation"));
+  auto readBootTime = [&]() -> uint64_t {
+    auto Buf = MemoryBuffer::getFile(ValidationPath);
+    EXPECT_TRUE(bool(Buf));
+    uint64_t Value = 0;
+    if (Buf)
+      EXPECT_FALSE((*Buf)->getBuffer().trim().getAsInteger(10, Value));
+    return Value;
+  };
+  auto writeBootTime = [&](uint64_t Value) {
+    std::error_code EC;
+    raw_fd_ostream OS(ValidationPath, EC);
+    ASSERT_FALSE(EC);
+    OS << Value << '\n';
+  };
+
+  std::optional<ValidationResult> Result;
+  ASSERT_THAT_ERROR(validate().moveInto(Result), Succeeded());
+  EXPECT_EQ(Result, ValidationResult::Valid);
+  uint64_t BootTime = readBootTime();
+  ASSERT_NE(BootTime, 0u);
+
+  // The boot time moved back since the validation, e.g. because the clock was
+  // adjusted, so the recorded one is later. It is still the same boot.
+  writeBootTime(BootTime + 1);
+  ASSERT_THAT_ERROR(validate().moveInto(Result), Succeeded());
+  EXPECT_EQ(Result, ValidationResult::Skipped);
+  EXPECT_EQ(readBootTime(), BootTime + 1);
+
+  // The recorded boot time is earlier, e.g. from an earlier boot, so validation
+  // is performed and records the current boot time.
+  writeBootTime(BootTime - 1);
+  ASSERT_THAT_ERROR(validate().moveInto(Result), Succeeded());
+  EXPECT_EQ(Result, ValidationResult::Valid);
+  EXPECT_EQ(readBootTime(), BootTime);
 }
 
 TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheRepeatedRecovery) {

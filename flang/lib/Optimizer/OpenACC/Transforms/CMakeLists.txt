@@ -28,6 +28,7 @@ add_flang_library(FIROpenACCTransforms
   MLIR_LIBS
   MLIRArithDialect
   MLIRIR
+  MLIRMemRefDialect
   MLIRPass
   MLIROpenACCDialect
   MLIROpenACCUtils

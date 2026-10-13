@@ -31,5 +31,5 @@ PROGRAM reproducer
    PRINT *, GRID%DZ(1)
 END PROGRAM reproducer
 
-! CHECK: PluginInterface device {{[0-9]+}} info: Launching kernel
+! CHECK: omptarget device {{[0-9]+}} info: Launching kernel
 ! CHECK: 3.
