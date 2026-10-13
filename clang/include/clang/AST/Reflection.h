@@ -55,9 +55,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
 // ^^const int // Type
 // ^^foo       // Alias
 // ^^const foo // Type
-inline bool isTypeAliasAsReflectionName(QualType QT) {
-  return QT.getLocalQualifiers() == Qualifiers{};
-}
+bool isTypeAliasAsReflectionName(QualType QT);
 
 } // namespace clang
 

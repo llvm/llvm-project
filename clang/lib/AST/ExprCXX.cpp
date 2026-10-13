@@ -1978,7 +1978,9 @@ CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
 CXXReflectExpr::CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc,
                                const TypeSourceInfo *TSI)
     : Expr(CXXReflectExprClass, C.MetaInfoTy, VK_PRValue, OK_Ordinary),
-      CaretCaretLoc(CaretCaretLoc), Kind(ReflectionKind::Type), Operand(TSI) {}
+      CaretCaretLoc(CaretCaretLoc), Kind(ReflectionKind::Type), Operand(TSI) {
+  setDependence(computeDependence(this));
+}
 
 CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
                                        SourceLocation CaretCaretLoc,
