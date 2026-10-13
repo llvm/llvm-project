@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements Mem2Reg interfaces for promoting a memref to a single
-// vector SSA value. `PromotableMemOpInterface` handles `memref.copy`, and
-// `PromotableAliaserInterface` handles `memref.subview`. Vector transfer ops
-// are handled by the models in the Vector dialect.
+// This file implements memory slot interface models used by Mem2Reg to promote
+// a memref to a single vector SSA value. `PromotableMemOpInterface` handles
+// `memref.copy`. `PromotableAliaserInterface` exposes `memref.subview` aliases,
+// and `PromotableOpInterface` removes the subviews after promotion. Vector
+// transfer ops are handled by the models in the Vector dialect.
 //
 // A memory slot pairs a memref with the vector type used to represent its
 // contents. Promotion replaces accesses to the slot with uses and definitions
@@ -175,8 +176,9 @@ static Value buildSubViewMask(OpBuilder &builder, Location loc,
 ///
 /// The padding value does not affect the copy: both operands must have the same
 /// runtime shape. For a whole-buffer slot, the source covers the whole vector.
-/// For a dynamic-subview slot, the aliaser's masked select discards lanes
-/// outside the subview's extent.
+/// For a dynamic-subview slot,
+/// `PromotableAliaserInterface::projectAliasValueToSlotValue` discards lanes
+/// outside the subview's extent with a masked select.
 static Value readMemRefAsVector(OpBuilder &builder, Location loc, Value mem,
                                 VectorType vecType) {
   assert(!vecType.isScalable() && "expected a fixed-size vector");
@@ -219,18 +221,19 @@ static void writeVectorToMemRef(OpBuilder &builder, Location loc, Value vec,
 }
 
 //===----------------------------------------------------------------------===//
-//  memref.copy
+//  PromotableMemOpInterface model for memref.copy
 //===----------------------------------------------------------------------===//
 namespace {
-/// Mem2Reg model for `memref.copy`.
+/// `PromotableMemOpInterface` model for `memref.copy`.
 ///
 /// A copy into the slot becomes a `vector.transfer_read` of the source in
 /// `getStored`. A copy out of the slot becomes a `vector.transfer_write` of the
 /// reaching definition in `removeBlockingUses`.
 ///
 /// A copy between two slots is rewritten one slot at a time, in either order.
-/// For dynamic subviews, the aliaser masks writes into the slot, and this model
-/// masks copies out of it.
+/// For dynamic subviews,
+/// `PromotableAliaserInterface::projectAliasValueToSlotValue` masks writes into
+/// the slot, and this model masks copies out of it.
 struct CopyOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<CopyOpMemOpModel,
                                                      memref::CopyOp> {
@@ -291,12 +294,12 @@ struct CopyOpMemOpModel
 };
 
 //===----------------------------------------------------------------------===//
-//  memref.subview aliaser
+//  PromotableOpInterface model for memref.subview
 //===----------------------------------------------------------------------===//
 
-/// Companion `PromotableOpInterface` model for the `memref.subview` aliased
-/// below: once the slot is promoted, the view has no remaining memory uses and
-/// is erased.
+/// `PromotableOpInterface` model for `memref.subview`. Works with the
+/// `PromotableAliaserInterface` model below to remove the subview once its
+/// result's uses have been promoted.
 struct SubViewOpPromotableModel
     : public PromotableOpInterface::ExternalModel<SubViewOpPromotableModel,
                                                   memref::SubViewOp> {
@@ -304,8 +307,7 @@ struct SubViewOpPromotableModel
                         const SmallPtrSetImpl<OpOperand *> &blockingUses,
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
-    // The view result is itself a blocking use of the parent slot; its own
-    // users (the transfers) are resolved through the alias projections.
+    // Removing the subview requires removing all uses of its memref result.
     for (OpOperand &use : op->getResult(0).getUses())
       newBlockingUses.push_back(&use);
     return true;
@@ -319,7 +321,12 @@ struct SubViewOpPromotableModel
   }
 };
 
-/// Exposes a same-rank `memref.subview` as an alias of a vector slot.
+//===----------------------------------------------------------------------===//
+//  PromotableAliaserInterface model for memref.subview
+//===----------------------------------------------------------------------===//
+
+/// `PromotableAliaserInterface` model exposing a same-rank `memref.subview` as
+/// an alias of a vector slot.
 ///
 /// `projectSlotValueToAliasValue` provides the alias value for loads and for a
 /// store's `getStored` hook. `projectAliasValueToSlotValue` merges the stored

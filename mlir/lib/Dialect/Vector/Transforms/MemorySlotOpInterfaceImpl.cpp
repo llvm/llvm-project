@@ -6,17 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements Mem2Reg `PromotableMemOpInterface` models for
-// `vector.transfer_read` and `vector.transfer_write`. These models promote a
-// memref slot to a single vector SSA value. The models for `memref.copy` and
+// This file implements memory slot interface models for
+// `vector.transfer_read` and `vector.transfer_write`. These models implement
+// `PromotableMemOpInterface` so Mem2Reg can replace vector transfers with uses
+// and definitions of a vector SSA value. The models for `memref.copy` and
 // `memref.subview` live in the MemRef dialect.
 //
-// Transfers must meet the criteria in `isPromotableTransfer`: their vector type
-// must match the slot's value type, their indices must be zero, and their
-// permutation map must be the identity. A read uses the slot's current value;
-// a write defines its next value. For transfers with a mask operand or through
-// a dynamic subview, `arith.select` supplies padding for inactive read lanes
-// and preserves the previous value for inactive write lanes.
+// A read uses the slot's current value; a write defines its next value.
+// Static subviews use a vector matching the subview's shape: reads extract that
+// sub-vector from the parent, and writes insert it back into the parent.
+// Supported transfers through dynamic subviews use a vector type matching the
+// whole static parent, and the subview's slot holds that whole vector. Reads
+// pad lanes outside the runtime extent, and writes preserve the previous value
+// of those lanes. `arith.select` implements this behavior and also handles
+// lanes disabled by a transfer's mask operand.
 //
 // Transfers wrapped in `vector.mask` prevent promotion because that op does
 // not implement `PromotableRegionOpInterface`, which Mem2Reg requires to
@@ -41,25 +44,18 @@ using namespace mlir::vector;
 //  Utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns whether `xferOp` can be promoted to a load/store of `slot`'s vector
-/// value. This requires that the transfer's sole use of the slot is as its
-/// base, the transferred vector type equals `slot.valueType`, the indices are
-/// all zero (origin), and the permutation map is the identity.
+/// Returns whether `xferOp` can be promoted to use or define `slot`'s vector
+/// value. The transfer's memref base must be the slot pointer, its vector type
+/// must equal `slot.valueType`, its indices must be zero, and its permutation
+/// map must be the identity. Out-of-bounds dimensions are allowed only for a
+/// supported dynamic subview.
 ///
-/// Partial accesses through dynamic subviews or with mask operands are
-/// reconstructed with `arith.select` during promotion.
-///
-/// For a dynamic subview, the aliaser masks writes to preserve the parent value
-/// outside the subview's extent. Reads are masked here because they need the
-/// transfer's padding operand, which the aliaser does not have.
-///
-/// A transfer's mask operand is combined with the subview mask using
-/// `arith.andi` for reads. For writes, `getStored` applies it with a separate
-/// `arith.select` to preserve inactive lanes.
+/// More general transfers may be supportable, but their value depends on
+/// motivating use cases, implementation complexity, and generated code quality.
 static bool
 isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
-  // The sole blocking use must be the slot pointer as the transfer's base.
+  // The transfer's memref base must be the slot pointer.
   if (blockingUses.size() != 1)
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
@@ -93,11 +89,11 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
 }
 
 //===----------------------------------------------------------------------===//
-//  Interface models
+//  PromotableMemOpInterface models
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// Mem2Reg model for a `vector.transfer_read` of the slot.
+/// `PromotableMemOpInterface` model for `vector.transfer_read`.
 struct TransferReadOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<TransferReadOpMemOpModel,
                                                      vector::TransferReadOp> {
@@ -122,6 +118,10 @@ struct TransferReadOpMemOpModel
 
   // Replace the read with the reaching definition, selecting padding for lanes
   // outside the subview's extent or disabled by the transfer's mask.
+  // PromotableAliaserInterface::projectSlotValueToAliasValue supplies the whole
+  // parent vector for a dynamic subview. Apply the extent mask here because
+  // this hook has access to the transfer's padding operand. If the transfer
+  // also has a mask operand, combine the two masks with arith.andi.
   DeletionKind
   removeBlockingUses(Operation *op, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses,
@@ -147,8 +147,7 @@ struct TransferReadOpMemOpModel
   }
 };
 
-/// Mem2Reg model for a `vector.transfer_write` to the slot, which qualifies
-/// under the same `isPromotableTransfer` criteria.
+/// `PromotableMemOpInterface` model for `vector.transfer_write`.
 struct TransferWriteOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<TransferWriteOpMemOpModel,
                                                      vector::TransferWriteOp> {
@@ -164,8 +163,8 @@ struct TransferWriteOpMemOpModel
                   Value reachingDef, const DataLayout &dataLayout) const {
     auto writeOp = cast<vector::TransferWriteOp>(op);
     Value stored = writeOp.getValueToStore();
-    // A dynamic-view extent is composed separately, by the aliaser's
-    // `projectAliasValueToSlotValue`.
+    // PromotableAliaserInterface::projectAliasValueToSlotValue separately
+    // preserves parent lanes outside a dynamic subview's extent.
     if (Value mask = writeOp.getMask())
       stored = arith::SelectOp::create(builder, op->getLoc(), mask, stored,
                                        reachingDef);
