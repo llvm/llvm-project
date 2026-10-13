@@ -13,7 +13,7 @@ config.test_format = lit.formats.ShTest(
     execute_external=True, force_execute_external=True
 )
 
-config.excludes = ["comgr-sources"]
+config.excludes = ["comgr-sources", "Inputs"]
 
 config.test_source_root = os.path.dirname(__file__)
 config.test_exec_root = config.my_obj_root
@@ -161,3 +161,35 @@ config.substitutions.append(("%python", _fwd(sys.executable)))
 config.substitutions.append(
     ("%transpile_cli", _fwd(config.comgr_obj_dir, "transpile_cli"))
 )
+
+
+# Executing translated code requires a matching device and the HIP runtime.
+_rocm_path = os.environ.get("ROCM_PATH", "/opt/rocm")
+
+
+def _has_gfx942_device():
+    enumerator = _fwd(_rocm_path, "bin", "rocm_agent_enumerator")
+    if not os.path.exists(enumerator):
+        return False
+    try:
+        out = subprocess.run(
+            [enumerator], stdout=subprocess.PIPE, check=True, timeout=30
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return b"gfx942" in out.stdout.split()
+
+
+_hip_include = _fwd(_rocm_path, "include")
+_hip_lib = _fwd(_rocm_path, "lib")
+if (
+    platform.system() == "Linux"
+    and os.path.exists(_fwd(_hip_include, "hip", "hip_runtime_api.h"))
+    and os.path.exists(_fwd(_hip_lib, "libamdhip64.so"))
+    and _has_gfx942_device()
+):
+    config.available_features.add("comgr-has-hip-gfx942")
+    config.substitutions.append(("%hip_cflags", "-I" + _hip_include))
+    config.substitutions.append(
+        ("%hip_ldflags", "-L{0} -lamdhip64 -Wl,-rpath,{0}".format(_hip_lib))
+    )
