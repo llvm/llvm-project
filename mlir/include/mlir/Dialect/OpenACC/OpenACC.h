@@ -33,6 +33,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/SmallVector.h"
 #include <variant>
 
 #define GET_TYPEDEF_CLASSES
@@ -138,6 +139,12 @@ mlir::ArrayAttr getAsyncOperandsDeviceType(mlir::Operation *accDataClauseOp);
 /// an acc data clause operation, that correspond to the device types
 /// associated with the async clauses without an async-value.
 mlir::ArrayAttr getAsyncOnly(mlir::Operation *accDataClauseOp);
+
+/// The clauses of a construct can be given once per device type. Of the values
+/// that reach a given device type, the ones naming it are the most specific,
+/// then the ones naming every device type, then the ones given before any
+/// device_type clause.
+SmallVector<DeviceType, 3> getDeviceTypesByPrecedence(DeviceType deviceType);
 
 /// Used to obtain the `name` from an acc operation.
 std::optional<llvm::StringRef> getVarName(mlir::Operation *accOp);

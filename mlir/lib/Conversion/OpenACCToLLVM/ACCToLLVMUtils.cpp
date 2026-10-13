@@ -322,16 +322,6 @@ FailureOr<Value> acc::emitGetDevicePtrCall(Operation *clauseOp, Value hostPtr,
   return call->getResult();
 }
 
-SmallVector<DeviceType, 3>
-acc::getDeviceTypesByPrecedence(DeviceType deviceType) {
-  SmallVector<DeviceType, 3> deviceTypes;
-  if (deviceType != DeviceType::None && deviceType != DeviceType::Star)
-    deviceTypes.push_back(deviceType);
-  deviceTypes.push_back(DeviceType::Star);
-  deviceTypes.push_back(DeviceType::None);
-  return deviceTypes;
-}
-
 LogicalResult acc::emitGuardedByIfCond(Location loc, Value ifCond,
                                        RewriterBase &rewriter,
                                        function_ref<LogicalResult()> emitFn) {
