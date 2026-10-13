@@ -128,6 +128,7 @@ constexpr void test_long_range(T lhs, T rhs, Order expected) {
   a[257] = lhs;
   b[257] = rhs;
   test_lexicographical_compare<const T*, const T*>(a, b, expected);
+  test_lexicographical_compare<T*, const T*>(a, b, expected);
   test_lexicographical_compare<const T*, const T*>(a, std::array<T, 257>{}, std::strong_ordering::greater);
 }
 

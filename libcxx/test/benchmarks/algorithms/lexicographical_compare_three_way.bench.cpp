@@ -36,17 +36,11 @@ static TEST_ALIGN_BENCHMARK void BM_lexicographical_compare_three_way(benchmark:
   }
 }
 
-// Type alias to make sure the `*` does not appear in the benchmark name.
-// A `*` would confuse the Python test runner running this google benchmark.
-using IntPtr          = int*;
-using UnsignedCharPtr = unsigned char*;
-using SignedCharPtr   = signed char*;
-
 // `lexicographical_compare_three_way` has a fast path for random access iterators.
-BENCHMARK(BM_lexicographical_compare_three_way<IntPtr>)->RangeMultiplier(4)->Range(1, 1 << 20);
-BENCHMARK(BM_lexicographical_compare_three_way<UnsignedCharPtr>)->RangeMultiplier(4)->Range(1, 1 << 20);
-BENCHMARK(BM_lexicographical_compare_three_way<SignedCharPtr>)->RangeMultiplier(4)->Range(1, 1 << 20);
-BENCHMARK(BM_lexicographical_compare_three_way<random_access_iterator<IntPtr>>)->RangeMultiplier(4)->Range(1, 1 << 20);
-BENCHMARK(BM_lexicographical_compare_three_way<cpp17_input_iterator<IntPtr>>)->RangeMultiplier(4)->Range(1, 1 << 20);
+BENCHMARK(BM_lexicographical_compare_three_way<int*>)->RangeMultiplier(4)->Range(1, 1 << 20);
+BENCHMARK(BM_lexicographical_compare_three_way<unsigned char*>)->RangeMultiplier(4)->Range(1, 1 << 20);
+BENCHMARK(BM_lexicographical_compare_three_way<signed char*>)->RangeMultiplier(4)->Range(1, 1 << 20);
+BENCHMARK(BM_lexicographical_compare_three_way<random_access_iterator<int*>>)->RangeMultiplier(4)->Range(1, 1 << 20);
+BENCHMARK(BM_lexicographical_compare_three_way<cpp17_input_iterator<int*>>)->RangeMultiplier(4)->Range(1, 1 << 20);
 
 BENCHMARK_MAIN();
