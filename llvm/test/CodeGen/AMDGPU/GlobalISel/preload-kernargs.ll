@@ -346,4 +346,134 @@ define amdgpu_kernel void @v3i32_i32_preload_arg(ptr addrspace(1) inreg %out, <3
   ret void
 }
 
+define amdgpu_kernel void @preload_lds_ptr_inreg(ptr addrspace(3) inreg %p, ptr addrspace(1) %out) #0 {
+  ; CHECK-LABEL: name: preload_lds_ptr_inreg
+  ; CHECK: numKernargPreloadSGPRs: 1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr0_sgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
+  ; CHECK-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[COPY2]](i32)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](i64)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
+  ; CHECK-NEXT:   G_STORE [[INTTOPTR]](p3), [[LOAD]](p1) :: (store (p3) into %ir.out.load, addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  ; ASM-LABEL: preload_lds_ptr_inreg:
+  ; ASM: .amdhsa_user_sgpr_kernarg_preload_length 1
+  store ptr addrspace(3) %p, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @preload_v1i32_inreg(<1 x i32> inreg %x, ptr addrspace(1) %out) #0 {
+  ; CHECK-LABEL: name: preload_v1i32_inreg
+  ; CHECK: numKernargPreloadSGPRs: 1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr0_sgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](i64)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
+  ; CHECK-NEXT:   G_STORE [[COPY3]](i32), [[LOAD]](p1) :: (store (i32) into %ir.out.load, addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  ; ASM-LABEL: preload_v1i32_inreg:
+  ; ASM: .amdhsa_user_sgpr_kernarg_preload_length 1
+  store <1 x i32> %x, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @preload_v3i16_inreg(<3 x i16> inreg %x, ptr addrspace(1) %out) #0 {
+  ; CHECK-LABEL: name: preload_v3i16_inreg
+  ; CHECK: numKernargPreloadSGPRs: 2
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $sgpr2_sgpr3
+  ; CHECK-NEXT:   [[EXTRACT:%[0-9]+]]:_(i16) = G_EXTRACT [[COPY1]](i64), 0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i16) = COPY [[EXTRACT]](i16)
+  ; CHECK-NEXT:   [[EXTRACT1:%[0-9]+]]:_(i16) = G_EXTRACT [[COPY1]](i64), 16
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i16) = COPY [[EXTRACT1]](i16)
+  ; CHECK-NEXT:   [[EXTRACT2:%[0-9]+]]:_(i16) = G_EXTRACT [[COPY1]](i64), 32
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i16) = COPY [[EXTRACT2]](i16)
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x i16>) = G_BUILD_VECTOR [[COPY2]](i16), [[COPY3]](i16), [[COPY4]](i16)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](i64)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
+  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<3 x i16>), [[LOAD]](p1) :: (store (<3 x i16>) into %ir.out.load, align 8, addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  ; ASM-LABEL: preload_v3i16_inreg:
+  ; ASM: .amdhsa_user_sgpr_kernarg_preload_length 2
+  store <3 x i16> %x, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+define amdgpu_kernel void @preload_v8i1_inreg(<8 x i1> inreg %x, ptr addrspace(1) %out) #0 {
+  ; CHECK-LABEL: name: preload_v8i1_inreg
+  ; CHECK: numKernargPreloadSGPRs: 1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr0_sgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[EXTRACT:%[0-9]+]]:_(i1) = G_EXTRACT [[COPY1]](i32), 0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i1) = COPY [[EXTRACT]](i1)
+  ; CHECK-NEXT:   [[EXTRACT1:%[0-9]+]]:_(i1) = G_EXTRACT [[COPY1]](i32), 1
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i1) = COPY [[EXTRACT1]](i1)
+  ; CHECK-NEXT:   [[EXTRACT2:%[0-9]+]]:_(i1) = G_EXTRACT [[COPY1]](i32), 2
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i1) = COPY [[EXTRACT2]](i1)
+  ; CHECK-NEXT:   [[EXTRACT3:%[0-9]+]]:_(i1) = G_EXTRACT [[COPY1]](i32), 3
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(i1) = COPY [[EXTRACT3]](i1)
+  ; CHECK-NEXT:   [[EXTRACT4:%[0-9]+]]:_(i1) = G_EXTRACT [[COPY1]](i32), 4
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(i1) = COPY [[EXTRACT4]](i1)
+  ; CHECK-NEXT:   [[EXTRACT5:%[0-9]+]]:_(i1) = G_EXTRACT [[COPY1]](i32), 5
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(i1) = COPY [[EXTRACT5]](i1)
+  ; CHECK-NEXT:   [[EXTRACT6:%[0-9]+]]:_(i1) = G_EXTRACT [[COPY1]](i32), 6
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(i1) = COPY [[EXTRACT6]](i1)
+  ; CHECK-NEXT:   [[EXTRACT7:%[0-9]+]]:_(i1) = G_EXTRACT [[COPY1]](i32), 7
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(i1) = COPY [[EXTRACT7]](i1)
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i1>) = G_BUILD_VECTOR [[COPY2]](i1), [[COPY3]](i1), [[COPY4]](i1), [[COPY5]](i1), [[COPY6]](i1), [[COPY7]](i1), [[COPY8]](i1), [[COPY9]](i1)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](i64)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
+  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<8 x i1>), [[LOAD]](p1) :: (store (<8 x i1>) into %ir.out.load, addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  ; ASM-LABEL: preload_v8i1_inreg:
+  ; ASM: .amdhsa_user_sgpr_kernarg_preload_length 1
+  store <8 x i1> %x, ptr addrspace(1) %out, align 1
+  ret void
+}
+
+define amdgpu_kernel void @preload_skip_empty_struct_inreg({} inreg %empty, i32 inreg %x, ptr addrspace(1) %out) #0 {
+  ; CHECK-LABEL: name: preload_skip_empty_struct_inreg
+  ; CHECK: numKernargPreloadSGPRs: 1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr0_sgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](i64)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
+  ; CHECK-NEXT:   G_STORE [[COPY3]](i32), [[LOAD]](p1) :: (store (i32) into %ir.out.load, addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  ; ASM-LABEL: preload_skip_empty_struct_inreg:
+  ; ASM: .amdhsa_user_sgpr_kernarg_preload_length 1
+  store i32 %x, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 attributes #0 = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
