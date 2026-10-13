@@ -13577,9 +13577,10 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
                                                        InitsCopy);
   }
 
+  SmallVector<Expr *, 8> ExpandedInits;
   if (DirectInit) {
     if (auto *IL = dyn_cast<InitListExpr>(Init))
-      DeduceInits = IL->inits();
+      DeduceInits = getInitsWithEmbedExpanded(IL, ExpandedInits);
   }
 
   // Deduction only works if we have exactly one source expression.

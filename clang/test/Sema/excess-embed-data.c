@@ -47,4 +47,10 @@ struct S1 s1 = {
     // cpp-error@-2{{excess elements in struct initializer}}
   , x
 };
+
+int f = {
+#embed __FILE__
+    // c-warning@-1{{excess elements in scalar initializer}}
+    // cpp-error@-3{{excess elements in scalar initializer}}
+};
 }

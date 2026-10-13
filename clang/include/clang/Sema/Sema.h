@@ -9132,6 +9132,11 @@ public:
 
   bool IsStringInit(Expr *Init, const ArrayType *AT);
 
+  /// The initializers of \p ILE with each EmbedExpr expanded to one
+  /// IntegerLiteral per embedded element; \p Storage is used only if needed.
+  MultiExprArg getInitsWithEmbedExpanded(InitListExpr *ILE,
+                                         SmallVectorImpl<Expr *> &Storage);
+
   /// Determine whether we can perform aggregate initialization for the purposes
   /// of overload resolution.
   bool CanPerformAggregateInitializationForOverloadResolution(
