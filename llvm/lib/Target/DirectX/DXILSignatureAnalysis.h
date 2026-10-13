@@ -34,11 +34,26 @@ struct EntrySignature {
   SmallVector<uint32_t> InputOutputMap;
   bool UseNative16Bit = false;
 
+  /// Return the DXIL input/output/patch-constant signature triple. Empty input
+  /// and output lists become null operands; return null if both lists are
+  /// empty. ValidatorVersion controls which access-mask properties are emitted.
   MDTuple *getAsMetadata(LLVMContext &Ctx, VersionTuple ValidatorVersion) const;
+
+  /// Append ISG1/OSG1 parameters to the supplied builders. ValidatorVersion
+  /// selects legacy component-type and exclusive-mask encoding conventions.
   void buildSignatures(mcdxbc::Signature &Input, mcdxbc::Signature &Output,
                        VersionTuple ValidatorVersion) const;
+
+  /// Append PSV signature elements and set vector extents, the dependency map,
+  /// and stage-specific signature flags. Does not finalize or serialize PSV.
   void updatePSV(mcdxbc::PSVRuntimeInfo &PSV,
                  VersionTuple ValidatorVersion) const;
+
+  /// Return the serialized dx.viewIdState words for this entry: input scalar
+  /// count, output scalar count, then the input/output dependency table. Scalar
+  /// counts include padding and equal four times the respective vector extent.
+  /// Each input scalar has ceil(output scalar count / 32) consecutive words,
+  /// where bit (4 * row + column) identifies an output scalar.
   SmallVector<uint32_t> getDependencyState() const;
   void print(raw_ostream &OS) const;
 };
