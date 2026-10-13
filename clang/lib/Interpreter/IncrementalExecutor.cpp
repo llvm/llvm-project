@@ -361,6 +361,13 @@ outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
 llvm::Expected<std::unique_ptr<IncrementalExecutor>>
 IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
                                    const clang::TargetInfo &TI) {
+  return create(TSC, TI, {});
+}
+
+llvm::Expected<std::unique_ptr<IncrementalExecutor>>
+IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
+                                   const clang::TargetInfo &TI,
+                                   const std::vector<std::string> &LLVMArgs) {
   if (IE)
     return std::move(IE);
   llvm::Triple TT = TI.getTriple();

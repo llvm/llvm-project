@@ -16,6 +16,8 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 
+#include <vector>
+
 namespace llvm {
 namespace orc {
 class ExecutorAddr;
@@ -52,10 +54,6 @@ public:
   std::optional<llvm::CodeModel::Model> CM = std::nullopt;
   /// An optional external IncrementalExecutor
   std::unique_ptr<IncrementalExecutor> IE;
-  /// mllvm args from the frontend; on wasm these are re-applied after each
-  /// lldMain call because lld resets all cl options for test-isolation
-  /// purposes.
-  std::vector<std::string> LLVMArgs;
   /// An optional external orc jit builder
   std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
   /// A default callback that can be used in the IncrementalCompilerBuilder to
@@ -69,6 +67,11 @@ public:
 
   llvm::Expected<std::unique_ptr<IncrementalExecutor>>
   create(llvm::orc::ThreadSafeContext &TSC, const clang::TargetInfo &TI);
+
+  /// Pass LLVM arguments to restore after linking Wasm modules.
+  llvm::Expected<std::unique_ptr<IncrementalExecutor>>
+  create(llvm::orc::ThreadSafeContext &TSC, const clang::TargetInfo &TI,
+         const std::vector<std::string> &LLVMArgs);
 
 private:
   llvm::Error UpdateOrcRuntimePath(const driver::Compilation &C);

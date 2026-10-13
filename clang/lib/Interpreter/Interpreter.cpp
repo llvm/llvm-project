@@ -600,11 +600,8 @@ llvm::Error Interpreter::CreateExecutor() {
   if (!IncrExecutorBuilder)
     IncrExecutorBuilder = std::make_unique<IncrementalExecutorBuilder>();
 
-  // Propagate mllvm args so the wasm executor can restore them after each
-  // lldMain invocation (which resets all cl options for test isolation).
-  IncrExecutorBuilder->LLVMArgs = CI->getFrontendOpts().LLVMArgs;
-
-  auto ExecutorOrErr = IncrExecutorBuilder->create(*TSCtx, CI->getTarget());
+  auto ExecutorOrErr = IncrExecutorBuilder->create(
+      *TSCtx, CI->getTarget(), CI->getFrontendOpts().LLVMArgs);
   if (ExecutorOrErr)
     IncrExecutor = std::move(*ExecutorOrErr);
 
