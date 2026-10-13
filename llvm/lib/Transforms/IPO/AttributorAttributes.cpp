@@ -10478,25 +10478,77 @@ struct AANoUndefFloating : public AANoUndefImpl {
 
 struct AANoUndefReturned final
     : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl> {
-  AANoUndefReturned(const IRPosition &IRP, Attributor &A)
-      : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>(IRP, A) {}
+  using Base = AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>;
+  AANoUndefReturned(const IRPosition &IRP, Attributor &A) : Base(IRP, A) {}
 
   void initialize(Attributor &A) override {
-    AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>::initialize(A);
+    Base::initialize(A);
     if (isAtFixpoint())
       return;
 
-    // Returning a value that violates a return attribute, e.g., nonnull, is
-    // poison.
     AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
-    AttributeSet RetAttrs =
-        getAssociatedFunction()->getAttributes().getRetAttrs();
-    if (any_of(RetAttrs, [&](Attribute Attr) { return AM.contains(Attr); }))
-      indicatePessimisticFixpoint();
+    RetAttrs = getAssociatedFunction()->getAttributes().getRetAttrs();
+    HasPoisonGeneratingAttrs =
+        any_of(RetAttrs, [&](Attribute Attr) { return AM.contains(Attr); });
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    // Returning a value that violates a return attribute, e.g., nonnull, is
+    // poison, so the attributes must hold for all returned values.
+    if (HasPoisonGeneratingAttrs) {
+      auto AttrsHold = [&](Instruction &I) {
+        return attrsHold(A, *cast<ReturnInst>(I).getReturnValue(), I);
+      };
+      bool UsedAssumedInformation = false;
+      if (!A.checkForAllInstructions(AttrsHold, *this, {Instruction::Ret},
+                                     UsedAssumedInformation))
+        return indicatePessimisticFixpoint();
+    }
+
+    return Base::updateImpl(A);
   }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
+
+private:
+  /// Return true if the poison-generating return attributes are assumed to
+  /// hold for the returned value \p V.
+  bool attrsHold(Attributor &A, Value &V, Instruction &CtxI) {
+    IRPosition VPos = IRPosition::value(V);
+    bool IsKnown;
+    if (RetAttrs.hasAttribute(Attribute::NonNull) &&
+        !AA::hasAssumedIRAttr<Attribute::NonNull>(
+            A, this, VPos, DepClassTy::REQUIRED, IsKnown))
+      return false;
+
+    if (MaybeAlign Alignment = RetAttrs.getAlignment()) {
+      const auto *AlignAA =
+          A.getAAFor<AAAlign>(*this, VPos, DepClassTy::REQUIRED);
+      if (!AlignAA || AlignAA->getAssumedAlign() < *Alignment)
+        return false;
+    }
+
+    Attribute Range = RetAttrs.getAttribute(Attribute::Range);
+    if (Range.isValid()) {
+      const auto *RangeAA =
+          A.getAAFor<AAValueConstantRange>(*this, VPos, DepClassTy::REQUIRED);
+      return RangeAA && Range.getRange().contains(
+                            RangeAA->getAssumedConstantRange(A, &CtxI));
+    }
+
+    if (FPClassTest NoFPClass = RetAttrs.getNoFPClass()) {
+      const auto *NoFPClassAA =
+          A.getAAFor<AANoFPClass>(*this, VPos, DepClassTy::REQUIRED);
+      return NoFPClassAA &&
+             (NoFPClassAA->getAssumedNoFPClass() & NoFPClass) == NoFPClass;
+    }
+
+    return true;
+  }
+
+  AttributeSet RetAttrs;
+  bool HasPoisonGeneratingAttrs = false;
 };
 
 struct AANoUndefArgument final
