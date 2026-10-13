@@ -1,4 +1,5 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s --check-prefix=HLFIR
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 %s -o - | FileCheck %s --check-prefix=HLFIR
 
 ! Variant selection is provided by DECLARE VARIANT with a `construct={dispatch}`
 ! match: inside a dispatch region the call to the base procedure `foo_dispatch`
@@ -77,6 +78,7 @@ program dispatch_test
   !$omp dispatch
   !HLFIR:   fir.call @_QMfuncsPfoo_variant() {{.*}}: () -> ()
     call foo_dispatch()
+  !$omp end dispatch
   !HLFIR:   omp.terminator
   !HLFIR: }
 
@@ -84,6 +86,7 @@ program dispatch_test
   !$omp dispatch nowait
   !HLFIR:   fir.call @_QMfuncsPfoo_variant() {{.*}}: () -> ()
     call foo_dispatch()
+  !$omp end dispatch
   !HLFIR:   omp.terminator
   !HLFIR: }
 
