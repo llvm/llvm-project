@@ -5672,19 +5672,8 @@ bool SimplifyCFGOpt::simplifyResume(ResumeInst *RI, IRBuilder<> &Builder) {
 static bool isCleanupBlockEmpty(iterator_range<BasicBlock::iterator> R) {
   for (Instruction &I : R) {
     auto *II = dyn_cast<IntrinsicInst>(&I);
-    if (!II)
+    if (!II || II->getIntrinsicID() != Intrinsic::lifetime_end)
       return false;
-
-    Intrinsic::ID IntrinsicID = II->getIntrinsicID();
-    switch (IntrinsicID) {
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_value:
-    case Intrinsic::dbg_label:
-    case Intrinsic::lifetime_end:
-      break;
-    default:
-      return false;
-    }
   }
   return true;
 }

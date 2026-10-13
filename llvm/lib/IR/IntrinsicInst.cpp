@@ -161,12 +161,6 @@ void DbgVariableIntrinsic::replaceVariableLocationOp(Value *OldValue,
       0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
 }
 
-std::optional<uint64_t> DbgVariableIntrinsic::getFragmentSizeInBits() const {
-  if (auto Fragment = getExpression()->getFragmentInfo())
-    return Fragment->SizeInBits;
-  return getVariable()->getSizeInBits();
-}
-
 Value *DbgAssignIntrinsic::getAddress() const {
   auto *MD = getRawAddress();
   if (auto *V = dyn_cast<ValueAsMetadata>(MD))
@@ -177,17 +171,8 @@ Value *DbgAssignIntrinsic::getAddress() const {
   return nullptr;
 }
 
-void DbgAssignIntrinsic::setAssignId(DIAssignID *New) {
-  setOperand(OpAssignID, MetadataAsValue::get(getContext(), New));
-}
-
 void DbgAssignIntrinsic::setAddress(Value *V) {
   setOperand(OpAddress,
-             MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
-}
-
-void DbgAssignIntrinsic::setValue(Value *V) {
-  setOperand(OpValue,
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
 }
 
