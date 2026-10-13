@@ -13,6 +13,7 @@
 #include "ProfiledBinary.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <float.h>
@@ -566,7 +567,8 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   populateBodySamplesForAllFunctions(SC.RangeCounter);
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
-  populateTypeSamplesForAllFunctions(SC.DataAccessCounter);
+  populateTypeSamplesForAllFunctions(SC.VTableAccessCounter);
+  populateDataAccessSamples(SC.DataAccessCounter);
 
   updateFunctionSamples();
 }
@@ -781,10 +783,10 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
 }
 
 void ProfileGenerator::populateTypeSamplesForAllFunctions(
-    const DataAccessSample &DataAccessSamples) {
+    const VTableAccessSample &VTableAccessSamples) {
   // For each instruction with vtable accesses, get its symbolized inline
   // stack, and add the vtable counters to the function samples.
-  for (const auto &[IpData, Count] : DataAccessSamples) {
+  for (const auto &[IpData, Count] : VTableAccessSamples) {
     uint64_t InstAddr = IpData.first;
     const SampleContextFrameVector &FrameVec =
         Binary->getCachedFrameLocationStack(InstAddr,
@@ -798,6 +800,44 @@ void ProfileGenerator::populateTypeSamplesForAllFunctions(
       FunctionProfile.addTypeSamplesAt(Loc, FunctionId(IpData.second), Count);
     }
   }
+}
+
+void ProfileGenerator::populateDataAccessSamples(
+    const DataAccessSample &DataAccessSamples) {
+  if (DataAccessSamples.empty())
+    return;
+
+  MapVector<std::string, memprof::DataAccessProfRecord, StringMap<unsigned>>
+      DataAccessRecords;
+  for (const auto &[Address, Count] : DataAccessSamples) {
+    if (Binary->addressIsCode(Address) || Binary->findFuncRange(Address))
+      continue;
+
+    DIGlobal Global = Binary->symbolizeData(Address);
+    if (Global.Name.empty() || Global.Name == DILineInfo::BadString)
+      continue;
+
+    if (Global.DeclLine == 0 && Global.Start != 0 && Global.Start != Address)
+      Global = Binary->symbolizeData(Global.Start);
+
+    bool HasLocation =
+        !Global.DeclFile.empty() && Global.DeclFile != DILineInfo::BadString;
+    std::string SymName =
+        HasLocation
+            ? (sys::path::filename(Global.DeclFile) + ":" + Global.Name).str()
+            : Global.Name;
+
+    memprof::DataAccessProfRecord &Record = DataAccessRecords[SymName];
+    Record.AccessCount += Count;
+    if (HasLocation && Record.Locations.empty())
+      Record.Locations.emplace_back(Global.DeclFile, Global.DeclLine);
+  }
+
+  DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+  for (const auto &[SymName, Record] : DataAccessRecords)
+    if (Error E = DataAccessProfileData->setDataAccessProfile(
+            SymName, Record.AccessCount, Record.Locations))
+      consumeError(std::move(E));
 }
 
 void ProfileGeneratorBase::calculateBodySamplesAndSize(

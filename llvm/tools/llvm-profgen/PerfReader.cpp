@@ -445,8 +445,8 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
       if (DataSymbol.starts_with("_ZTV")) {
         uint64_t IP = 0;
         Fields[2].getAsInteger(16, IP);
-        Counter.recordDataAccessCount(Binary->canonicalizeVirtualAddress(IP),
-                                      DataSymbol, 1);
+        Counter.recordVTableAccessCount(Binary->canonicalizeVirtualAddress(IP),
+                                        DataSymbol, 1);
       }
     }
   }
@@ -1530,7 +1530,9 @@ void ETMReader::recordInstructionRange(uint64_t Start, uint64_t End,
 }
 
 void ETMReader::recordDataAddress(uint64_t Address, uint64_t Count) {
-  DataAddressCounts[Address] += Count;
+  assert(!Counters.empty() && "Counters should not be empty!");
+  auto &Counter = Counters.begin()->second;
+  Counter.recordDataAccessCount(Address, Count);
 }
 
 class ETMCallback : public ETMDecoder::Callback {
@@ -1571,43 +1573,6 @@ void ETMReader::parseETMTraces() {
   ETMCallback CB(this);
   if (Error E = Decoder->processTrace(Data, CB))
     exitWithError(toString(std::move(E)));
-}
-
-std::unique_ptr<memprof::DataAccessProfData>
-ETMReader::takeDataAccessProfData() {
-  MapVector<std::string, memprof::DataAccessProfRecord, StringMap<unsigned>>
-      DataAccessRecords;
-  for (const auto &[Address, Count] : DataAddressCounts) {
-    if (Binary->addressIsCode(Address) || Binary->findFuncRange(Address))
-      continue;
-
-    DIGlobal Global = Binary->symbolizeData(Address);
-    if (Global.Name.empty() || Global.Name == DILineInfo::BadString)
-      continue;
-
-    if (Global.DeclLine == 0 && Global.Start != 0 && Global.Start != Address)
-      Global = Binary->symbolizeData(Global.Start);
-
-    bool HasLocation =
-        !Global.DeclFile.empty() && Global.DeclFile != DILineInfo::BadString;
-    std::string SymName =
-        HasLocation
-            ? (sys::path::filename(Global.DeclFile) + ":" + Global.Name).str()
-            : Global.Name;
-
-    memprof::DataAccessProfRecord &Record = DataAccessRecords[SymName];
-    Record.AccessCount += Count;
-    if (HasLocation && Record.Locations.empty())
-      Record.Locations.emplace_back(Global.DeclFile, Global.DeclLine);
-  }
-
-  auto DataAccessProfData = std::make_unique<memprof::DataAccessProfData>();
-  for (const auto &[SymName, Record] : DataAccessRecords)
-    if (Error E = DataAccessProfData->setDataAccessProfile(
-            SymName, Record.AccessCount, Record.Locations))
-      consumeError(std::move(E));
-
-  return DataAccessProfData;
 }
 
 } // end namespace sampleprof

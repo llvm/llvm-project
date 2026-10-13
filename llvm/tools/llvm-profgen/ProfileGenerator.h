@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include <memory>
 #include <unordered_set>
@@ -47,10 +48,6 @@ public:
          bool profileIsCS);
   virtual void generateProfile() = 0;
   void write();
-  void
-  setDataAccessProfData(std::unique_ptr<memprof::DataAccessProfData> Data) {
-    DataAccessProfileData = std::move(Data);
-  }
 
   static uint32_t
   getDuplicationFactor(unsigned Discriminator,
@@ -187,8 +184,9 @@ private:
   populateBodySamplesWithProbesForAllFunctions(const RangeSample &RangeCounter);
   void populateBoundarySamplesWithProbesForAllFunctions(
       const BranchSample &BranchCounters);
-  void
-  populateTypeSamplesForAllFunctions(const DataAccessSample &DataAccessSamples);
+  void populateTypeSamplesForAllFunctions(
+      const VTableAccessSample &VTableAccessSamples);
+  void populateDataAccessSamples(const DataAccessSample &DataAccessSamples);
   void postProcessProfiles();
   void trimColdProfiles(uint64_t ColdCntThreshold);
   bool collectFunctionsFromLLVMProfile(

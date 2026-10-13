@@ -263,9 +263,6 @@ int main(int argc, const char *argv[]) {
 
     std::unique_ptr<ProfileGeneratorBase> Generator =
         ProfileGeneratorBase::create(Binary.get(), Counters, ProfileIsCS);
-    if (EtmReader)
-      Generator->setDataAccessProfData(EtmReader->takeDataAccessProfData());
-
     Generator->generateProfile();
     Generator->write();
   }
