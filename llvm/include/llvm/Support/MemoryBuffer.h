@@ -202,7 +202,8 @@ public:
   }
 
   LLVM_ABI static ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
-  getFile(const Twine &Filename, bool IsVolatile = false,
+  getFile(const Twine &Filename, sys::fs::OpenFlags Flags = sys::fs::OF_None,
+          bool RequiresNullTerminator = false, bool IsVolatile = false,
           std::optional<Align> Alignment = std::nullopt);
 
   /// Map a subrange of the specified file as a WritableMemoryBuffer.

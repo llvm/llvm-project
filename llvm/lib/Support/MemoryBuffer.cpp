@@ -295,13 +295,14 @@ getFileAux(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
 }
 
 ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
-WritableMemoryBuffer::getFile(const Twine &Filename, bool IsVolatile,
+WritableMemoryBuffer::getFile(const Twine &Filename, sys::fs::OpenFlags Flags,
+                              bool RequiresNullTerminator, bool IsVolatile,
                               std::optional<Align> Alignment) {
   sys::sandbox::violationIfEnabled();
 
   return getFileAux<WritableMemoryBuffer>(
-      Filename, /*MapSize=*/-1, /*Offset=*/0, sys::fs::OF_None,
-      /*RequiresNullTerminator=*/false, IsVolatile, Alignment);
+      Filename, /*MapSize=*/-1, /*Offset=*/0, Flags, RequiresNullTerminator,
+      IsVolatile, Alignment);
 }
 
 ErrorOr<std::unique_ptr<WritableMemoryBuffer>>

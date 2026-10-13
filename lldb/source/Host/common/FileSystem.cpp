@@ -269,7 +269,9 @@ static std::unique_ptr<T> GetMemoryBuffer(const llvm::Twine &path,
                                           bool is_volatile) {
   std::unique_ptr<T> buffer;
   if (size == 0) {
-    auto buffer_or_error = T::getFile(path, is_volatile);
+    auto buffer_or_error =
+        T::getFile(path, llvm::sys::fs::OF_None,
+                   /*RequiresNullTerminator=*/false, is_volatile);
     if (!buffer_or_error)
       return nullptr;
     buffer = std::move(*buffer_or_error);

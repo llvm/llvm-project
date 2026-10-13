@@ -22,7 +22,8 @@ namespace include_fixer {
 
 llvm::ErrorOr<std::unique_ptr<YamlSymbolIndex>>
 YamlSymbolIndex::createFromFile(llvm::StringRef FilePath) {
-  auto Buffer = llvm::MemoryBuffer::getFile(FilePath, sys::fs::OF_TextWithCRLF);
+  auto Buffer =
+      llvm::MemoryBuffer::getFile(FilePath, llvm::sys::fs::OF_TextWithCRLF);
   if (!Buffer)
     return Buffer.getError();
 
