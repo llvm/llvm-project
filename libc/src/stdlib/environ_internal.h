@@ -44,7 +44,8 @@ struct EnvStringOwnership {
 
 // Centralized manager for environment variable operations.
 // This class encapsulates all state and operations related to environment
-// management, including memory management and tracking of string ownership.
+// management, including thread safety (when enabled) and tracking of string
+// ownership.
 //
 // The manager provides iterator support, allowing callers to iterate over
 // the current environment entries using standard begin()/end() semantics.
@@ -61,9 +62,6 @@ class EnvironmentManager {
 
   // Current number of variables in environ
   size_t count = 0;
-
-  // True if we have initialized from the startup environment
-  bool initialized = false;
 
   // True if we allocated storage (and are responsible for freeing it)
   bool is_ours = false;
@@ -88,6 +86,9 @@ class EnvironmentManager {
   // success, false on allocation failure.
   bool ensure_capacity(size_t needed);
 
+  // Unset implementation assuming the environment lock is already held.
+  int unset_unlocked(cpp::string_view name);
+
 public:
   // Get the singleton instance of the environment manager.
   static EnvironmentManager &get_instance();
@@ -102,7 +103,7 @@ public:
   using iterator = char **;
   iterator begin();
   iterator end();
-  size_t size() const;
+  size_t size();
 
   // Look up a variable by name. Returns a pointer to the value string
   // (after the '='), or nullptr if not found.
