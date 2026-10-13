@@ -397,7 +397,7 @@ bool llvm::proveOuterLoopMemorySafety(VPlan &Plan,
         continue;
       }
       // Bail out on any other memory accesses or write-after-write conflict in
-      // the other loop.
+      // the outer loop.
       if (!match(&R, m_VPInstruction<Instruction::Store>(m_VPValue(StoredVal),
                                                          m_VPValue(Addr))) ||
           !writesDisjointLocationsPerIteration(Addr, StoredVal->getScalarType(),

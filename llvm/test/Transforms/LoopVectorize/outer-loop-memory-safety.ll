@@ -1012,6 +1012,58 @@ exit:
   ret void
 }
 
+; The lanes of the column-major store A[i + j*2] are only distinct for VF <= 2.
+define void @col_major_m2_store_only(ptr noalias %A, i64 %N) {
+; CHECK-LABEL: define void @col_major_m2_store_only(
+; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_BODY:.*]]
+; CHECK:       [[INNER_BODY]]:
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[INNER_IV_MUL_2:%.*]] = mul nsw i64 [[INNER_IV]], 2
+; CHECK-NEXT:    [[IDX:%.*]] = add nsw i64 [[OUTER_IV]], [[INNER_IV_MUL_2]]
+; CHECK-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[A_PTR]], align 4
+; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[INNER_IV_CMP:%.*]] = icmp eq i64 [[INNER_IV_NEXT]], 2
+; CHECK-NEXT:    br i1 [[INNER_IV_CMP]], label %[[OUTER_LATCH]], label %[[INNER_BODY]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[OUTER_IV_CMP:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[OUTER_IV_CMP]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP8]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner.body
+
+inner.body:
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner.body ]
+  %inner.iv.mul.2 = mul nsw i64 %inner.iv, 2
+  %idx = add nsw i64 %outer.iv, %inner.iv.mul.2
+  %A.ptr = getelementptr inbounds float, ptr %A, i64 %idx
+  store i32 0, ptr %A.ptr, align 4
+  %inner.iv.next = add nuw nsw i64 %inner.iv, 1
+  %inner.iv.cmp = icmp eq i64 %inner.iv.next, 2
+  br i1 %inner.iv.cmp, label %outer.latch, label %inner.body
+
+outer.latch:
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.iv.cmp = icmp eq i64 %outer.iv.next, %N
+  br i1 %outer.iv.cmp, label %exit, label %outer.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
+
 ; The row-major store A[i*8 + j] writes a distinct row on each outer iteration.
 define void @row_major_m8(ptr noalias %A, i64 %N) {
 ; CHECK-LABEL: define void @row_major_m8(

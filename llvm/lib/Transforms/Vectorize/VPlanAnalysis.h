@@ -30,7 +30,7 @@ struct VPCostContext;
 void collectEphemeralRecipesForVPlan(VPlan &Plan,
                                      DenseSet<VPRecipeBase *> &EphRecipes);
 
-/// Returns true if the memory accesses in outer loop plain \p Plan can be
+/// Returns true if the memory accesses in outer loop plain CFG \p Plan can be
 /// vectorized.
 bool proveOuterLoopMemorySafety(VPlan &Plan, PredicatedScalarEvolution &PSE,
                                 AAResults &AA, const Loop *OuterLoop);
