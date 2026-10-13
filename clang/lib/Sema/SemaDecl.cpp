@@ -4835,13 +4835,10 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   // mismatches on New. If every prior declaration is invalid, skip the type
   // merge entirely to avoid false positives; the redefinition logic below will
   // still run and emit the appropriate diagnostic.
-  VarDecl *TypeOld = nullptr;
-  for (VarDecl *Prev : Old->redecls()) {
-    if (!Prev->isInvalidDecl()) {
-      TypeOld = Prev;
-      break;
-    }
-  }
+  auto ValidIter = llvm::find_if(Old->redecls(), [](const VarDecl *D) {
+    return !D->isInvalidDecl();
+  });
+  VarDecl *TypeOld = ValidIter == Old->redecls_end() ? nullptr : *ValidIter;
 
   if (TypeOld) {
     MergeVarDeclTypes(New, TypeOld,
