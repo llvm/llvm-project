@@ -234,6 +234,7 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
   } else {
     // Failure(s) - backout anything that could be permanent.
     std::free(convertUnits);
+    convertUnits = nullptr; // avoid a double free in ExternalFileUnit::CloseAll
     numConvertUnits = 0;
   }
   return success;
