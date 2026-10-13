@@ -895,8 +895,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
                            ISD::EXTLOAD, false)) {
         // If the source type is not legal, see if there is a legal extload to
         // an intermediate type that we can then extend further.
-        EVT LoadVT = TLI.getLoadExtIntermediateType(*DAG.getContext(), DestVT,
-                                                    SrcVT, ExtType);
+        EVT LoadVT =
+            TLI.getRegisterType(*DAG.getContext(), SrcVT.getSimpleVT());
         if ((LoadVT.isFloatingPoint() == SrcVT.isFloatingPoint()) &&
             (TLI.isTypeLegal(SrcVT) || // Same as SrcVT == LoadVT?
              TLI.isLoadLegal(LoadVT, SrcVT, LD->getAlign(),
