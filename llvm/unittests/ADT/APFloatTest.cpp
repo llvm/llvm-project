@@ -11489,4 +11489,88 @@ TEST(APFloatTest, UserDefinedSemanticsZeroBits) {
   EXPECT_EQ(Quot.divide(NaN, RM), APFloat::opOK);
   ExpectQNaN(Quot);
 }
+
+namespace {
+static void initFloat1Inf(FloatRepr &R, const APInt &API);
+static APInt bitcastFloat1Inf(const FloatRepr &R);
+
+// A type with only a sign bit. Its only values are +inf and -inf.
+static const fltSemantics semFloat1Inf = {
+    0, // maxExponent
+    0, // minExponent
+    1, // precision
+    1, // sizeInBits
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    false, // hasZero
+    true,  // hasSignedRepr
+    true,  // hasSignBitInMSB
+    false, // hasDenormals
+    false, // hasExplicitIntegerBit
+    initFloat1Inf,
+    bitcastFloat1Inf,
+};
+
+static void initFloat1Inf(FloatRepr &R, const APInt &API) {
+  const fltSemantics &Sem = semFloat1Inf;
+  R.initialize(Sem);
+  R.setNegative(API[0]);
+  R.setCategory(APFloat::fcInfinity);
+  R.setExponent(Sem.maxExponent + 1);
+  R.setSignificand(APInt::getZero(Sem.precision));
+}
+
+static APInt bitcastFloat1Inf(const FloatRepr &R) {
+  EXPECT_EQ(&R.getSemantics(), &semFloat1Inf);
+  EXPECT_EQ(R.getCategory(), APFloat::fcInfinity);
+  return APInt(1, R.isNegative());
+}
+} // anonymous namespace
+
+TEST(APFloatTest, UserDefinedSemanticsOneBit) {
+  const fltSemantics &Sem = semFloat1Inf;
+  const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
+
+  APFloat PInf(Sem, APInt(1, 0));
+  APFloat MInf(Sem, APInt(1, 1));
+  EXPECT_TRUE(PInf.bitwiseIsEqual(APFloat::getInf(Sem, false)));
+  EXPECT_TRUE(MInf.bitwiseIsEqual(APFloat::getInf(Sem, true)));
+
+  auto ExpectInf = [](const APFloat &F, bool Negative) {
+    EXPECT_TRUE(F.isInfinity());
+    EXPECT_EQ(F.isNegative(), Negative);
+    EXPECT_EQ(F.bitcastToAPInt(), APInt(1, Negative));
+  };
+
+  ExpectInf(PInf, false);
+  ExpectInf(MInf, true);
+
+  APFloat Sum = PInf;
+  EXPECT_EQ(Sum.add(PInf, RM), APFloat::opOK);
+  ExpectInf(Sum, false);
+
+  Sum = MInf;
+  EXPECT_EQ(Sum.add(MInf, RM), APFloat::opOK);
+  ExpectInf(Sum, true);
+
+  APFloat Diff = PInf;
+  EXPECT_EQ(Diff.subtract(MInf, RM), APFloat::opOK);
+  ExpectInf(Diff, false);
+
+  Diff = MInf;
+  EXPECT_EQ(Diff.subtract(PInf, RM), APFloat::opOK);
+  ExpectInf(Diff, true);
+
+  APFloat Prod = PInf;
+  EXPECT_EQ(Prod.multiply(PInf, RM), APFloat::opOK);
+  ExpectInf(Prod, false);
+
+  Prod = PInf;
+  EXPECT_EQ(Prod.multiply(MInf, RM), APFloat::opOK);
+  ExpectInf(Prod, true);
+
+  Prod = MInf;
+  EXPECT_EQ(Prod.multiply(MInf, RM), APFloat::opOK);
+  ExpectInf(Prod, false);
+}
 } // namespace
