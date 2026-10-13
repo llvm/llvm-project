@@ -185,8 +185,15 @@ __global__ void fn() {
 // OGCG-DEVICE:   store i32 %[[VAL]], ptr addrspacecast (ptr addrspace(3) @_ZZ2fnvE1j to ptr), align 4
 // OGCG-DEVICE:   ret void
 
-struct S { int a; float b[4]; };
+struct S {
+  int a;
+  float b[4];
+  __device__ S() {}
+};
 
+// CIR-DEVICE-NOT: @_ZN1SC1Ev
+// LLVM-DEVICE-NOT: @_ZN1SC1Ev
+// OGCG-DEVICE-NOT: @_ZN1SC1Ev
 __global__ void fnStruct() {
   __shared__ S s;
   s.a = 1;
