@@ -206,7 +206,8 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
 
   if (pc.LoopTripCountVersioning)
     pm.addPass(fir::createLoopTripCountVersioning(
-        {/*maxSectionExtent=*/loopTripCountVersioningMaxSectionExtent}));
+        {/*maxSectionExtent=*/loopTripCountVersioningMaxSectionExtent,
+         /*maxUnrolledOps=*/loopTripCountVersioningMaxUnrolledOps}));
 
   pm.addPass(mlir::createCSEPass());
 
