@@ -767,10 +767,11 @@ define void @store_factor5_from_load_factor4(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw nsw i64 [[TMP61]], 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x float> [[WIDE_VEC]], <16 x float> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x float> [[WIDE_VEC]], <16 x float> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <16 x float> [[WIDE_VEC]], <16 x float> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <16 x float> [[WIDE_VEC]], <16 x float> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = call { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave4.v16f32(<16 x float> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC4]], 0
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC4]], 1
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC4]], 2
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC4]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP6]]

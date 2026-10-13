@@ -564,6 +564,11 @@ public:
 
   virtual bool enableInterleavedAccessVectorization() const { return false; }
 
+  virtual bool shouldUseInterleaveIntrinsicForFixedLengthVector(
+      unsigned InterleaveFactor) const {
+    return false;
+  }
+
   virtual bool enableMaskedInterleavedAccessVectorization() const {
     return false;
   }
