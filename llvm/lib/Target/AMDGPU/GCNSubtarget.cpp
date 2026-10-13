@@ -93,9 +93,10 @@ static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
   }
 }
 
-GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
-                                                            StringRef GPU,
-                                                            StringRef FS) {
+GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(
+    const Triple &TT, StringRef GPU, StringRef FS,
+    AMDGPU::TargetIDSetting XnackSetting,
+    AMDGPU::TargetIDSetting SramEccSetting) {
   // Determine default and user-specified characteristics
   //
   // We want to be able to turn these off, but making this a subtarget feature
@@ -201,6 +202,17 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
          "InstCacheLineSize must be a power of 2");
 
+  // Apply the module flag's xnack setting if the target supports on/off modes.
+  // Targets without on/off mode support have xnack always on and ignore module
+  // flags.
+  if (hasXNACKOnOffModes())
+    TargetID.setXnackSetting(XnackSetting);
+
+  // Apply the module flag's sramecc setting if the target supports on/off
+  // modes. Targets with sramecc hardwired on ignore module flags.
+  if (hasSRAMECCOnOffModes())
+    TargetID.setSramEccSetting(SramEccSetting);
+
   return *this;
 }
 
@@ -227,24 +239,14 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     InstrItins(getInstrItineraryForCPU(GPU)),
     BufferOOBRelaxed(BufferOOBRelaxed),
     TBufferOOBRelaxed(TBufferOOBRelaxed),
-    InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
+    InstrInfo(initializeSubtargetDependencies(TT, GPU, FS, XnackSetting,
+                                              SramEccSetting)),
     TLInfo(TM, *this),
     // Frame index expansion sometimes assumes the low bit of SP is 0
     FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0,
                   /*TransAl=*/Align(4)) {
 
   // clang-format on
-
-  // Apply the module flag's xnack setting if the target supports on/off modes.
-  // Targets without on/off mode support have xnack always on and ignore module
-  // flags.
-  if (hasXNACKOnOffModes())
-    TargetID.setXnackSetting(XnackSetting);
-
-  // Apply the module flag's sramecc setting if the target supports on/off
-  // modes. Targets with sramecc hardwired on ignore module flags.
-  if (hasSRAMECCOnOffModes())
-    TargetID.setSramEccSetting(SramEccSetting);
 
   LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
                     << TargetID.getXnackSetting() << '\n');

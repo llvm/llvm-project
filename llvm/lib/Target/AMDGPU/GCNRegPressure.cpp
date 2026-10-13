@@ -671,6 +671,33 @@ bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
   return NextMI != End;
 }
 
+void GCNDownwardRPTracker::retireVirtReg(Register Reg, SlotIndex SI) {
+  const LiveInterval &LI = LIS.getInterval(Reg);
+  if (LI.hasSubRanges()) {
+    auto It = LiveRegs.end();
+    for (const auto &S : LI.subranges()) {
+      if (!S.liveAt(SI)) {
+        if (It == LiveRegs.end()) {
+          It = LiveRegs.find(Reg);
+          if (It == LiveRegs.end())
+            llvm_unreachable("register isn't live");
+        }
+        auto PrevMask = It->second;
+        It->second &= ~S.LaneMask;
+        CurPressure.inc(Reg, PrevMask, It->second, *MRI);
+      }
+    }
+    if (It != LiveRegs.end() && It->second.none())
+      LiveRegs.erase(It);
+  } else if (!LI.liveAt(SI)) {
+    auto It = LiveRegs.find(Reg);
+    if (It == LiveRegs.end())
+      llvm_unreachable("register isn't live");
+    CurPressure.inc(Reg, It->second, LaneBitmask::getNone(), *MRI);
+    LiveRegs.erase(It);
+  }
+}
+
 bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
                                              bool UseInternalIterator) {
   assert(MRI && "call reset first");
@@ -698,36 +725,15 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
   for (auto &MO : CurrMI->operands()) {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
+    if (MO.isUse() && CurrMI->getOpcode() == AMDGPU::PHI)
+      break;
     if (MO.isUse() && !MO.readsReg())
       continue;
     if (!UseInternalIterator && MO.isDef())
       continue;
     if (!SeenRegs.insert(MO.getReg()).second)
       continue;
-    const LiveInterval &LI = LIS.getInterval(MO.getReg());
-    if (LI.hasSubRanges()) {
-      auto It = LiveRegs.end();
-      for (const auto &S : LI.subranges()) {
-        if (!S.liveAt(SI)) {
-          if (It == LiveRegs.end()) {
-            It = LiveRegs.find(MO.getReg());
-            if (It == LiveRegs.end())
-              llvm_unreachable("register isn't live");
-          }
-          auto PrevMask = It->second;
-          It->second &= ~S.LaneMask;
-          CurPressure.inc(MO.getReg(), PrevMask, It->second, *MRI);
-        }
-      }
-      if (It != LiveRegs.end() && It->second.none())
-        LiveRegs.erase(It);
-    } else if (!LI.liveAt(SI)) {
-      auto It = LiveRegs.find(MO.getReg());
-      if (It == LiveRegs.end())
-        llvm_unreachable("register isn't live");
-      CurPressure.inc(MO.getReg(), It->second, LaneBitmask::getNone(), *MRI);
-      LiveRegs.erase(It);
-    }
+    retireVirtReg(MO.getReg(), SI);
   }
 
   MaxPressure = max(MaxPressure, CurPressure);
@@ -973,7 +979,7 @@ getRegLiveThroughMask(const MachineRegisterInfo &MRI, const LiveIntervals &LIS,
 bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-  const LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   auto &OS = dbgs();
 
@@ -1026,8 +1032,9 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
 
         while (!RPT.advanceBeforeNext()) {
           GCNRegPressure RPBeforeMI = RPT.getPressure();
+          RPT.resetMaxPressure();
           RPT.advanceToNext();
-          RP.emplace_back(RPBeforeMI, RPT.getPressure());
+          RP.emplace_back(RPBeforeMI, RPT.getMaxPressure());
         }
 
         LiveOut = RPT.getLiveRegs();

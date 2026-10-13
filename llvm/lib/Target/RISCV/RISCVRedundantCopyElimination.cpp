@@ -109,6 +109,22 @@ guaranteesRegEqualsImmInBlock(MachineBasicBlock &MBB,
   return false;
 }
 
+// Match copy from x0, "addi rd, x0, imm", or "qc.li rd, imm", returning the
+// defined register and the known value. Reg is invalid if MI isn't a match.
+static RegImmPair matchRegKnownVal(const MachineInstr &MI) {
+  if (MI.isCopy() && MI.getOperand(0).isReg() && MI.getOperand(1).isReg() &&
+      MI.getOperand(1).getReg() == RISCV::X0)
+    return RegImmPair(MI.getOperand(0).getReg(), 0);
+  if (MI.getOpcode() == RISCV::ADDI && MI.getOperand(0).isReg() &&
+      MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0 &&
+      MI.getOperand(2).isImm())
+    return RegImmPair(MI.getOperand(0).getReg(), MI.getOperand(2).getImm());
+  if (MI.getOpcode() == RISCV::QC_LI && MI.getOperand(0).isReg() &&
+      MI.getOperand(1).isImm())
+    return RegImmPair(MI.getOperand(0).getReg(), MI.getOperand(1).getImm());
+  return RegImmPair(Register(), 0);
+}
+
 static std::optional<int64_t>
 getRegImmediateBeforeTerminator(MachineBasicBlock &MBB, Register Reg,
                                 const TargetRegisterInfo *TRI) {
@@ -120,14 +136,10 @@ getRegImmediateBeforeTerminator(MachineBasicBlock &MBB, Register Reg,
     MachineInstr &MI = *--I;
     if (!MI.modifiesRegister(Reg, TRI))
       continue;
-    // The last modification must define Reg itself to a known immediate.
-    if (MI.getOpcode() == RISCV::ADDI && MI.getOperand(0).isReg() &&
-        MI.getOperand(0).getReg() == Reg && MI.getOperand(1).isReg() &&
-        MI.getOperand(1).getReg() == RISCV::X0 && MI.getOperand(2).isImm())
-      return MI.getOperand(2).getImm();
-    if (MI.getOpcode() == RISCV::QC_LI && MI.getOperand(0).isReg() &&
-        MI.getOperand(0).getReg() == Reg && MI.getOperand(1).isImm())
-      return MI.getOperand(1).getImm();
+    // The last modification must define Reg itself to a known value.
+    RegImmPair Match = matchRegKnownVal(MI);
+    if (Match.Reg == Reg)
+      return Match.Imm;
     return std::nullopt;
   }
   return std::nullopt;
@@ -192,39 +204,11 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
   for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr *MI = &*I;
     ++I;
-    bool RemoveMI = false;
-    if (IsZeroCopy) {
-      if (MI->isCopy() && MI->getOperand(0).isReg() &&
-          MI->getOperand(1).isReg()) {
-        Register DefReg = MI->getOperand(0).getReg();
-        Register SrcReg = MI->getOperand(1).getReg();
-
-        if (SrcReg == RISCV::X0 && !MRI->isReserved(DefReg) &&
-            TargetReg == DefReg)
-          RemoveMI = true;
-      }
-    } else {
-      // Xqcibi, XAndesPref and Zibi compare with non-zero immediate:
-      // remove redundant addi rd,x0,imm or qc.li rd,imm as applicable.
-      if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(0).isReg() &&
-          MI->getOperand(1).isReg() && MI->getOperand(2).isImm()) {
-        Register DefReg = MI->getOperand(0).getReg();
-        Register SrcReg = MI->getOperand(1).getReg();
-        int64_t Imm = MI->getOperand(2).getImm();
-        if (SrcReg == RISCV::X0 && !MRI->isReserved(DefReg) &&
-            TargetReg == DefReg && Imm == CompareImm)
-          RemoveMI = true;
-      } else if (MI->getOpcode() == RISCV::QC_LI && MI->getOperand(0).isReg() &&
-                 MI->getOperand(1).isImm()) {
-        Register DefReg = MI->getOperand(0).getReg();
-        int64_t Imm = MI->getOperand(1).getImm();
-        if (!MRI->isReserved(DefReg) && TargetReg == DefReg &&
-            Imm == CompareImm)
-          RemoveMI = true;
-      }
-    }
-
-    if (RemoveMI) {
+    // Compare with non-zero immediate or a known register value:
+    // remove redundant copy, addi rd,x0,imm, or qc.li rd,imm as applicable.
+    RegImmPair Match = matchRegKnownVal(*MI);
+    if (Match.Reg && TargetReg == Match.Reg && Match.Imm == CompareImm &&
+        !MRI->isReserved(Match.Reg)) {
       LLVM_DEBUG(dbgs() << "Remove redundant Copy: ");
       LLVM_DEBUG(MI->print(dbgs()));
 

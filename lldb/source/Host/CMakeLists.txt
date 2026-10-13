@@ -119,6 +119,13 @@ else()
       )
   endif()
 
+  # Darwin has its own framework-aware implementation.
+  if (LLDB_ENABLE_PYTHON AND NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    add_host_subdirectory(posix
+      posix/PythonRuntimeLoaderPosix.cpp
+      )
+  endif()
+
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     add_subdirectory(macosx/objcxx)
     set(LLDBObjCLibs lldbHostMacOSXObjCXX)
@@ -152,11 +159,6 @@ else()
       linux/LibcGlue.cpp
       linux/Support.cpp
       )
-    if (LLDB_ENABLE_PYTHON)
-      add_host_subdirectory(linux
-        linux/PythonRuntimeLoaderLinux.cpp
-        )
-    endif()
     if (CMAKE_SYSTEM_NAME MATCHES "Android")
       add_host_subdirectory(android
         android/HostInfoAndroid.cpp
