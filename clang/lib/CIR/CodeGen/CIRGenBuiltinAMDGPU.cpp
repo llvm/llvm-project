@@ -154,6 +154,8 @@ static mlir::Value emitAMDGPUWorkGroupSizeV4(CIRGenFunction &cgf,
   return builder.createSelect(loc, isPartial, remainder, groupSize);
 }
 
+// COV_NONE picks COV_4 or COV_5+ at runtime from __oclc_ABI_version so device
+// libraries stay ABI-agnostic.
 static mlir::Value emitAMDGPUWorkGroupSize(CIRGenFunction &cgf,
                                            mlir::Location loc, unsigned index) {
   llvm::CodeObjectVersionKind cov =
@@ -169,8 +171,6 @@ static mlir::Value emitAMDGPUWorkGroupSize(CIRGenFunction &cgf,
                ? emitAMDGPUWorkGroupSizeV5(cgf, loc, index)
                : emitAMDGPUWorkGroupSizeV4(cgf, loc, index);
 
-  // Select the implementation at runtime based on __oclc_ABI_version, which
-  // device libraries use to stay ABI-agnostic.
   CIRGenBuilderTy &builder = cgf.getBuilder();
   CIRGenModule &cgm = cgf.cgm;
   StringRef name = "__oclc_ABI_version";
