@@ -453,9 +453,6 @@ static bool isControlLikeUse(const MachineInstr &MI);
 
 static bool isControlPhi(Register Reg, const MachineRegisterInfo &MRI,
                          const MachineBasicBlock &LoopHeader) {
-  if (MRI.use_empty(Reg))
-    return false;
-
   for (const MachineInstr &UseMI : MRI.use_instructions(Reg)) {
     if (UseMI.isDebugValue())
       continue;
@@ -597,9 +594,9 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
     bool IsControlPhiValue = isControlPhi(DstReg, *MRI, MBB);
 
     MachineIDFSSAUpdater SSAUpdater(DT, MF, DstReg);
-    SSAUpdater.addUseBlock(&MBB);
 
     if (IsControlPhiValue) {
+      SSAUpdater.addUseBlock(&MBB);
       for (const auto &Incoming : Incomings)
         SSAUpdater.addAvailableValue(Incoming.Block, Incoming.Reg);
       Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
@@ -758,22 +755,6 @@ static void instrDefsUsesSCC(const MachineInstr &MI, bool &Def, bool &Use) {
 static bool isControlLikeUse(const MachineInstr &MI) {
   if (MI.isPHI() || MI.isTerminator() || MI.isBranch())
     return true;
-
-  unsigned Opc = MI.getOpcode();
-  switch (Opc) {
-  case AMDGPU::S_CBRANCH_VCCNZ:
-  case AMDGPU::S_CBRANCH_VCCZ:
-  case AMDGPU::S_BRANCH:
-  case AMDGPU::S_CBRANCH_SCC0:
-  case AMDGPU::S_CBRANCH_SCC1:
-  case AMDGPU::S_AND_SAVEEXEC_B32:
-  case AMDGPU::S_OR_B32:
-  case AMDGPU::S_AND_B32:
-  case AMDGPU::S_ANDN2_B32:
-    return true;
-  default:
-    break;
-  }
 
   bool DefSCC, UseSCC;
   instrDefsUsesSCC(MI, DefSCC, UseSCC);
