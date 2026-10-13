@@ -83,8 +83,8 @@ let test_target () =
 
   begin group "layout";
     let layout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:128-n8:16:32-S128" in
-    set_data_layout layout m;
-    insist (layout = data_layout m)
+    set_data_layout (DataLayout.of_string layout) m;
+    insist (layout = DataLayout.as_string (data_layout m))
   end
   (* CHECK: target datalayout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:128-n8:16:32-S128"
    * CHECK: target triple = "i686-apple-darwin8"
@@ -297,23 +297,40 @@ let test_constants () =
   ignore (define_global "const_trunc" (const_trunc (const_add foldbomb five)
                                                i8_type) m);
   ignore (define_global "const_ptrtoint" (const_ptrtoint
-    (const_gep i8_type (const_null (pointer_type context))
-               [| const_int i32_type 1 |])
+    (const_ptradd (const_null (pointer_type context)) (const_int i32_type 1)
+                   GEPNoWrapFlags.none)
     i32_type) m);
   ignore (define_global "const_inttoptr" (const_inttoptr (const_add foldbomb five)
                                                   void_ptr) m);
   ignore (define_global "const_bitcast" (const_bitcast foldbomb double_type) m);
 
   group "misc constants";
-  (* CHECK: const_size_of{{.*}}getelementptr{{.*}}null
-   * CHECK: const_gep{{.*}}getelementptr
+  (* CHECK: const_ptradd = global ptr getelementptr (i8, ptr @FoldBomb, i64 5)
+   * CHECK: const_ptradd_inbounds = global ptr
+   * CHECK-SAME: getelementptr inbounds (i8, ptr @FoldBomb, i64 5)
+   * CHECK: const_ptradd_inbounds_nuw = global ptr
+   * CHECK-SAME: getelementptr inbounds nuw (i8, ptr @FoldBomb, i64 5)
+   * CHECK: const_ptradd_from_indices = global ptr
+   * CHECK-SAME: getelementptr nusw (i8, ptr @FoldBomb, i32 20)
    * CHECK: const_extractelement{{.*}}extractelement
    * CHECK: const_insertelement{{.*}}insertelement
    * CHECK: const_shufflevector = global <4 x i32> <i32 0, i32 1, i32 1, i32 0>
    *)
-  ignore (define_global "const_size_of" (size_of (pointer_type context)) m);
-  ignore (define_global "const_gep" (const_gep i8_type foldbomb_gv [| five |])
+  ignore (define_global "const_ptradd"
+          (const_ptradd foldbomb_gv five GEPNoWrapFlags.none) m);
+  ignore (define_global "const_ptradd_inbounds"
+          (const_ptradd foldbomb_gv five GEPNoWrapFlags.inbounds) m);
+  ignore (define_global "const_ptradd_inbounds_nuw"
+          (const_ptradd foldbomb_gv five
+           (GEPNoWrapFlags.inbounds lor GEPNoWrapFlags.nuw)) m);
+  ignore (define_global "const_ptradd_from_indices"
+          (Option.get (const_ptradd_from_indices (data_layout m) i32_type
+                       foldbomb_gv [| five |] GEPNoWrapFlags.nusw))
           m);
+  assert (Option.is_none (const_ptradd_from_indices (data_layout m) i32_type
+                          foldbomb_gv
+                          [| (const_ptrtoint foldbomb_gv i32_type) |]
+                          GEPNoWrapFlags.none));
   let zero = const_int i32_type 0 in
   let one  = const_int i32_type 1 in
   ignore (define_global "const_extractelement" (const_extractelement
@@ -1255,7 +1272,7 @@ let test_builder () =
   end;
 
   group "malloc/free"; begin
-      (* CHECK: call{{.*}}@malloc(i32 ptrtoint
+      (* CHECK: call{{.*}}@malloc(i32 4
        * CHECK: call{{.*}}@free(ptr
        * CHECK: call{{.*}}@malloc(i32 %
        *)

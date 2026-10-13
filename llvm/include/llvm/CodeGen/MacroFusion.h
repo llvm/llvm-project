@@ -26,18 +26,24 @@ class TargetInstrInfo;
 class TargetSubtargetInfo;
 class ScheduleDAGInstrs;
 class SUnit;
+class SDep;
 
 /// Check if the instr pair, FirstMI and SecondMI, should be fused
-/// together. Given SecondMI, when FirstMI is unspecified, then check if
-/// SecondMI may be part of a fused pair at all.
+/// together, based on the dependency between them, Dep. Given SecondMI, when
+/// FirstMI is unspecified, then check if SecondMI may be part of a fused pair
+/// at all.
 using MacroFusionPredTy = bool (*)(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &STI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI);
+                                   const MachineInstr &SecondMI,
+                                   const SDep *Dep);
 
 /// Checks if the number of cluster edges between SU and its predecessors is
 /// less than FuseLimit
 LLVM_ABI bool hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit);
+
+/// Returns true if \p Dep is a non-null non-data dependency.
+LLVM_ABI bool isNonDataDep(const SDep *Dep);
 
 /// Create an artificial edge between FirstSU and SecondSU.
 /// Make data dependencies from the FirstSU also dependent on the SecondSU to

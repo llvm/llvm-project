@@ -38,6 +38,8 @@
 // When availability annotations are disabled, we take for granted that features introduced
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE /* nothing */
 
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
@@ -73,15 +75,34 @@
 
 // clang-format off
 
+// LLVM 24
+// TODO: Fill this in
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE __attribute__((unavailable))
+
 // LLVM 23
 // TODO: Fill this in
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23 0
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 22
-// TODO: Fill this in
-#  define _LIBCPP_INTRODUCED_IN_LLVM_22 0
-#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE __attribute__((unavailable))
+//
+// Note that DriverKit versions were bumped forward and aligned with the other Apple OSes in that release.
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 270000) ||       \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 270000) ||     \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 270000) ||             \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 270000) ||       \
+      (defined(__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__ < 270000)
+#    define _LIBCPP_INTRODUCED_IN_LLVM_22 0
+#  else
+#    define _LIBCPP_INTRODUCED_IN_LLVM_22 1
+#  endif
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE                                                                 \
+    __attribute__((availability(macos, strict, introduced = 27.0)))                                               \
+    __attribute__((availability(ios, strict, introduced = 27.0)))                                                 \
+    __attribute__((availability(tvos, strict, introduced = 27.0)))                                                \
+    __attribute__((availability(watchos, strict, introduced = 27.0)))                                             \
+    __attribute__((availability(driverkit, strict, introduced = 27.0)))
 
 // LLVM 21
 #  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 260400) ||       \
@@ -238,6 +259,11 @@
       "It looks like you're trying to enable vendor availability markup, but you haven't defined the corresponding macros yet!"
 
 #endif
+
+// This controls the availability of the C++26 debugging functions.
+// The platform specific implementation is built in the library.
+#define _LIBCPP_AVAILABILITY_HAS_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24
+#define _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
 
 // This determines whether we assume that the internal std::__bad_variant_access_with_msg class
 // (which carries a message describing the cause of the failure in bad_variant_access::what())

@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 class TestEarlyProcessLaunch(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfAsan  # rdar://103359354
     # until this feature is included in the system
     # debugserver.

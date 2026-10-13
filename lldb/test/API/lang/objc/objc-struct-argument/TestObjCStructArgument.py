@@ -23,29 +23,11 @@ class TestObjCStructArgument(TestBase):
     def test_with_python_api(self):
         """Test passing structs to Objective-C methods."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        bpt = target.BreakpointCreateByLocation(self.main_source, self.break_line)
-        self.assertTrue(bpt, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, bpt)
-
-        # Make sure we stopped at the first breakpoint.
-        self.assertNotEqual(len(thread_list), 0, "No thread stopped at our breakpoint.")
-        self.assertEqual(
-            len(thread_list), 1, "More than one thread stopped at our breakpoint."
+        _, _, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.main_source), self.break_line
         )
 
-        frame = thread_list[0].GetFrameAtIndex(0)
+        frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame, "Got a valid frame 0 frame.")
 
         self.expect("expression [summer sumThings:tts]", substrs=["9"])

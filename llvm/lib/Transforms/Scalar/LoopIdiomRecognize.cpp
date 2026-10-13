@@ -28,6 +28,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -152,33 +153,16 @@ bool DisableLIRP::HashRecognize;
 static cl::opt<bool, true>
     DisableLIRPHashRecognize("disable-" DEBUG_TYPE "-hashrecognize",
                              cl::desc("Proceed with loop idiom recognize pass, "
-                                      "but do not optimize CRC loops."),
+                                      "but do not do hash-recognize analysis."),
                              cl::location(DisableLIRP::HashRecognize),
                              cl::init(false), cl::ReallyHidden);
-
-static cl::opt<bool> UseLIRCodeSizeHeurs(
-    "use-lir-code-size-heurs",
-    cl::desc("Use loop idiom recognition code size heuristics when compiling "
-             "with -Os/-Oz"),
-    cl::init(true), cl::Hidden);
-
-static cl::opt<bool> ForceMemsetPatternIntrinsic(
-    "loop-idiom-force-memset-pattern-intrinsic",
-    cl::desc("Use memset.pattern intrinsic whenever possible"), cl::init(false),
-    cl::Hidden);
-
-static cl::opt<bool> ForceCRCClmul(
-    "loop-idiom-force-crc-clmul",
-    cl::desc("Use the clmul-based CRC loop optimization whenever possible"),
-    cl::init(false), cl::Hidden);
-
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // namespace llvm
 
 namespace {
 
 class LoopIdiomRecognize {
+  const ScalarOptions &Opts;
   Loop *CurLoop = nullptr;
   AliasAnalysis *AA;
   DominatorTree *DT;
@@ -198,7 +182,8 @@ public:
                               const TargetTransformInfo *TTI, MemorySSA *MSSA,
                               const DataLayout *DL,
                               OptimizationRemarkEmitter &ORE)
-      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL), ORE(ORE) {
+      : Opts(ScalarOptions::Global), AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI),
+        TTI(TTI), DL(DL), ORE(ORE) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
@@ -349,7 +334,7 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
 
   // Determine if code size heuristics need to be applied.
   ApplyCodeSizeHeuristics =
-      L->getHeader()->getParent()->hasOptSize() && UseLIRCodeSizeHeurs;
+      L->getHeader()->getParent()->hasOptSize() && Opts.use_lir_code_size_heurs;
 
   HasMemset = TLI->has(LibFunc_memset);
   // TODO: Unconditionally enable use of the memset pattern intrinsic (or at
@@ -360,8 +345,9 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
   HasMemcpy = TLI->has(LibFunc_memcpy);
 
-  if (HasMemset || HasMemsetPattern || ForceMemsetPatternIntrinsic ||
-      HasMemcpy || !DisableLIRP::HashRecognize)
+  if (HasMemset || HasMemsetPattern ||
+      Opts.loop_idiom_force_memset_pattern_intrinsic || HasMemcpy ||
+      !DisableLIRP::HashRecognize)
     if (SE->hasLoopInvariantBackedgeTakenCount(L))
       return runOnCountableLoop();
 
@@ -389,8 +375,7 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
 
   // The following transforms hoist stores/memsets into the loop pre-header.
   // Give up if the loop has instructions that may throw.
-  SimpleLoopSafetyInfo SafetyInfo;
-  SafetyInfo.computeLoopSafetyInfo(CurLoop);
+  SimpleLoopSafetyInfo SafetyInfo(CurLoop);
   if (SafetyInfo.anyBlockMayThrow())
     return false;
 
@@ -406,7 +391,8 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   }
 
   // Attempt to optimize a CRC loop if one is detected by HashRecognize.
-  if (!DisableLIRP::HashRecognize)
+  if (!DisableLIRP::HashRecognize &&
+      Opts.loop_idiom_crc_strategy != CRCStrategyKind::Disable)
     if (auto Res = HashRecognize(*CurLoop, *SE).getResult())
       MadeChange |= optimizeCRCLoop(*Res);
 
@@ -530,7 +516,7 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
     return LegalStoreKind::Memset;
   }
   if (!MustPreserveExternalState && !UnorderedAtomic &&
-      (HasMemsetPattern || ForceMemsetPatternIntrinsic) &&
+      (HasMemsetPattern || Opts.loop_idiom_force_memset_pattern_intrinsic) &&
       !DisableLIRP::Memset &&
       // Don't create memset_pattern16s with address spaces.
       StorePtr->getType()->getPointerAddressSpace() == 0 &&
@@ -826,8 +812,10 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
   if (MCI->isVolatile() || !isa<ConstantInt>(MCI->getLength()))
     return false;
 
-  // If we're not allowed to hack on memcpy, we fail.
-  if ((!HasMemcpy && !MCI->isForceInlined()) || DisableLIRP::Memcpy)
+  // If we're not allowed to hack on memcpy, we fail. We don't mess with the
+  // inlined version as generating a larger inline mempcy could affect code
+  // size.
+  if (!HasMemcpy || MCI->isForceInlined() || DisableLIRP::Memcpy)
     return false;
 
   Value *Dest = MCI->getDest();
@@ -889,8 +877,9 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   if (MSI->isVolatile())
     return false;
 
-  // If we're not allowed to hack on memset, we fail.
-  if (!HasMemset || DisableLIRP::Memset)
+  // If we're not allowed to hack on memset, we fail. We don't mess with the
+  // inlined version as generating a larger memset could affect code size.
+  if (!HasMemset || MSI->isForceInlined() || DisableLIRP::Memset)
     return false;
 
   Value *Pointer = MSI->getDest();
@@ -1085,6 +1074,13 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     Value *StoredVal, Instruction *TheStore,
     SmallPtrSetImpl<Instruction *> &Stores, const SCEVAddRecExpr *Ev,
     const SCEV *BECount, bool IsNegStride, bool IsLoopMemset) {
+  // We currently don't convert inline intrinsics into larger ones, to avoid
+  // code size increase. `processLoopMemSet` checks that the intrinsic is not
+  // inline before calling this function.
+  assert((isa<StoreInst>(TheStore) ||
+          !cast<MemIntrinsic>(TheStore)->isForceInlined()) &&
+         "inline mem intrinsics should be filtered out by callers");
+
   Module *M = TheStore->getModule();
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
@@ -1145,7 +1141,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   Value *MemsetArg;
   std::optional<int64_t> BytesWritten;
 
-  if (PatternValue && (HasMemsetPattern || ForceMemsetPatternIntrinsic)) {
+  if (PatternValue &&
+      (HasMemsetPattern || Opts.loop_idiom_force_memset_pattern_intrinsic)) {
     const SCEV *TripCountS =
         SE->getTripCountFromExitCount(BECount, IntIdxTy, CurLoop);
     if (!Expander.isSafeToExpand(TripCountS))
@@ -1199,7 +1196,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     NewCall = Builder.CreateMemSet(BasePtr, SplatValue, MemsetArg,
                                    MaybeAlign(StoreAlignment),
                                    /*isVolatile=*/false, AATags);
-  } else if (ForceMemsetPatternIntrinsic ||
+  } else if (Opts.loop_idiom_force_memset_pattern_intrinsic ||
              isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     assert(isa<SCEVConstant>(StoreSizeSCEV) && "Expected constant store size");
 
@@ -1289,43 +1286,47 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 namespace {
 class MemmoveVerifier {
 public:
-  explicit MemmoveVerifier(const Value &LoadBasePtr, const Value &StoreBasePtr,
-                           const DataLayout &DL)
-      : DL(DL), BP1(llvm::GetPointerBaseWithConstantOffset(
-                    LoadBasePtr.stripPointerCasts(), LoadOff, DL)),
-        BP2(llvm::GetPointerBaseWithConstantOffset(
-            StoreBasePtr.stripPointerCasts(), StoreOff, DL)),
-        IsSameObject(BP1 == BP2) {}
+  explicit MemmoveVerifier(const SCEV &LoadStart, const SCEV &StoreStart,
+                           ScalarEvolution &SE)
+      : DL(SE.getDataLayout()),
+        Off(dyn_cast<SCEVConstant>(SE.getMinusSCEV(&StoreStart, &LoadStart))),
+        BasePtr(dyn_cast<SCEVUnknown>(SE.getPointerBase(&StoreStart))),
+        IsSameObject(Off != nullptr) {}
 
   bool loadAndStoreMayFormMemmove(unsigned StoreSize, bool IsNegStride,
                                   const Instruction &TheLoad,
                                   bool IsMemCpy) const {
+    // The store must be at a constant offset from the load, and there must be
+    // an underlying pointer.
+    if (!Off || !BasePtr)
+      return false;
+    const APInt &OffVal = Off->getAPInt();
+    // If null is defined then the base pointer can't be null
+    auto *NullBase = dyn_cast<ConstantPointerNull>(BasePtr->getValue());
+    if (NullBase && NullPointerIsDefined(
+                        TheLoad.getParent()->getParent(),
+                        NullBase->getPointerType()->getPointerAddressSpace()))
+      return false;
+    int64_t LoadSize;
     if (IsMemCpy) {
-      // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
-      // for negative stride.
-      if ((!IsNegStride && LoadOff <= StoreOff) ||
-          (IsNegStride && LoadOff >= StoreOff))
-        return false;
+      // memcpy is equivalent to a sequence of byte loads and stores
+      LoadSize = 1;
     } else {
-      // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
-      // for negative stride. LoadBasePtr shouldn't overlap with StoreBasePtr.
-      int64_t LoadSize =
-          DL.getTypeSizeInBits(TheLoad.getType()).getFixedValue() / 8;
-      if (BP1 != BP2 || LoadSize != int64_t(StoreSize))
-        return false;
-      if ((!IsNegStride && LoadOff < StoreOff + int64_t(StoreSize)) ||
-          (IsNegStride && LoadOff + LoadSize > StoreOff))
+      LoadSize = DL.getTypeSizeInBits(TheLoad.getType()).getFixedValue() / 8;
+      if (LoadSize != StoreSize)
         return false;
     }
+    // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
+    // for negative stride. LoadBasePtr shouldn't overlap with StoreBasePtr.
+    if (IsNegStride ? OffVal.slt(LoadSize) : OffVal.sgt(-LoadSize))
+      return false;
     return true;
   }
 
 private:
   const DataLayout &DL;
-  int64_t LoadOff = 0;
-  int64_t StoreOff = 0;
-  const Value *BP1;
-  const Value *BP2;
+  const SCEVConstant *Off;
+  const SCEVUnknown *BasePtr;
 
 public:
   const bool IsSameObject;
@@ -1337,12 +1338,12 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     MaybeAlign StoreAlign, MaybeAlign LoadAlign, Instruction *TheStore,
     Instruction *TheLoad, const SCEVAddRecExpr *StoreEv,
     const SCEVAddRecExpr *LoadEv, const SCEV *BECount) {
-
-  // FIXME: until llvm.memcpy.inline supports dynamic sizes, we need to
-  // conservatively bail here, since otherwise we may have to transform
-  // llvm.memcpy.inline into llvm.memcpy which is illegal.
-  if (auto *MCI = dyn_cast<MemCpyInst>(TheStore); MCI && MCI->isForceInlined())
-    return false;
+  // We currently don't convert inline intrinsics into larger ones, to avoid
+  // code size increase. `processLoopMemCpy` checks that the intrinsic is not
+  // inline before calling this function.
+  assert((isa<StoreInst>(TheStore) ||
+          !cast<MemIntrinsic>(TheStore)->isForceInlined()) &&
+         "inline mem intrinsics should be filtered out by callers");
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
   // guaranteed to be loop invariant, which means that it should dominate the
@@ -1436,7 +1437,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 
   // If the store is a memcpy instruction, we must check if it will write to
   // the load memory locations. So remove it from the ignored stores.
-  MemmoveVerifier Verifier(*LoadBasePtr, *StoreBasePtr, *DL);
+  MemmoveVerifier Verifier(*LdStart, *StrStart, *SE);
   if (IsMemCpy && !Verifier.IsSameObject)
     IgnoredInsts.erase(TheStore);
   if (mayLoopAccessLocation(LoadBasePtr, ModRefInfo::Mod, CurLoop, BECount,
@@ -1589,43 +1590,127 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   if (TT.getArch() == Triple::hexagon)
     return false;
 
-  // The force-crc-clmul flag should cause the clmul optimization to run
-  // unconditionally.
-  if (ForceCRCClmul) {
+  LLVMContext &Ctx = Info.LHS->getContext();
+  Type *CRCTy = Info.LHS->getType();
+  unsigned CRCBW = CRCTy->getIntegerBitWidth();
+
+  // CRC computation is mostly serial, so latency works best for comparison.
+  TargetTransformInfo::TargetCostKind CostKind =
+      TargetTransformInfo::TCK_Latency;
+
+  InstructionCost XorCost =
+      TTI->getArithmeticInstrCost(Instruction::Xor, CRCTy, CostKind);
+  InstructionCost ShiftCost =
+      TTI->getArithmeticInstrCost(Instruction::LShr, CRCTy, CostKind);
+  InstructionCost AndCost =
+      TTI->getArithmeticInstrCost(Instruction::And, CRCTy, CostKind);
+  InstructionCost SelectCost =
+      TTI->getCmpSelInstrCost(Instruction::Select, CRCTy, Type::getInt1Ty(Ctx),
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  InstructionCost LoadCost =
+      TTI->getMemoryOpCost(Instruction::Load, CRCTy, DL->getABITypeAlign(CRCTy),
+                           DL->getDefaultGlobalsAddressSpace(), CostKind);
+  auto ClmulCost = [&](unsigned BW) {
+    auto *Ty = IntegerType::get(Ctx, BW);
+    IntrinsicCostAttributes Attrs(Intrinsic::clmul, Ty, {Ty, Ty});
+    return TTI->getIntrinsicInstrCost(Attrs, CostKind);
+  };
+
+  // Estimate the cost of the original, unoptimized loop.
+  InstructionCost OrigLoopCost =
+      (2 * ShiftCost + 2 * XorCost + AndCost + SelectCost) * Info.TripCount;
+
+  // Estimate the cost of the Sarwate lookup table optimization strategy.
+  // As mentioned previously, a byte-multiple trip count is required.
+  InstructionCost TableStrategyCost =
+      Info.TripCount % 8 != 0
+          ? InstructionCost::getInvalid()
+          : (LoadCost + XorCost + 2 * ShiftCost) * (Info.TripCount / 8);
+
+  // Estimate the cost of the carry-less multiplication optimization strategy.
+  InstructionCost ClmulStrategyCost = ClmulCost(2 * Info.TripCount) +
+                                      ClmulCost(CRCBW + Info.TripCount) +
+                                      2 * XorCost + 2 * ShiftCost + AndCost;
+
+  ORE.emit([&]() {
+    return OptimizationRemarkAnalysis(DEBUG_TYPE, "CRCLoopCosts",
+                                      CurLoop->getStartLoc(),
+                                      CurLoop->getHeader())
+           << "CRC loop costs: original="
+           << ore::NV("OrigLoopCost", OrigLoopCost)
+           << ", table=" << ore::NV("TableStrategyCost", TableStrategyCost)
+           << ", clmul=" << ore::NV("ClmulStrategyCost", ClmulStrategyCost);
+  });
+
+  auto ReportMissed = [&](StringRef Reason) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "CRCLoopMissed",
+                                      CurLoop->getStartLoc(),
+                                      CurLoop->getHeader())
+             << "CRC loop not optimized: " << Reason;
+    });
+  };
+  auto ReportOptimized = [&](StringRef Strategy, StringRef Reason) {
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "CRCLoopOptimized",
+                                CurLoop->getStartLoc(), CurLoop->getHeader())
+             << "CRC loop optimized using " << ore::NV("Strategy", Strategy)
+             << ": " << Reason;
+    });
+  };
+
+  switch (Opts.loop_idiom_crc_strategy) {
+  default:
+    ReportMissed("disabled by user");
+    return false;
+  case CRCStrategyKind::Table:
+    // The table strategy is not possible in its current form without a byte-
+    // multiple trip count.
+    if (Info.TripCount % 8 == 0) {
+      optimizeCRCLoopUsingTableLookup(Info);
+      ReportOptimized("table", "forced by user");
+      return true;
+    }
+    ReportMissed("table strategy forced, but not possible");
+    return false;
+  case CRCStrategyKind::Clmul:
     optimizeCRCLoopUsingClmul(Info);
+    ReportOptimized("clmul", "forced by user");
+    return true;
+  case CRCStrategyKind::Auto:
+    // When using the auto strategy, bail if we are optimizing for size since
+    // there's usually not a clear size benefit.
+    // TODO: The clmul optimization is around the same size in many cases, so it
+    // could be worth it to take advantage of that fact, especially if it would
+    // be much faster than the original loop.
+    if (ApplyCodeSizeHeuristics) {
+      ReportMissed("optimizing for size");
+      return false;
+    }
+
+    // Only apply an optimization if there's a clear benefit to doing so.
+    if (std::min(TableStrategyCost, ClmulStrategyCost) >= OrigLoopCost) {
+      ReportMissed("no profitable strategy");
+      return false;
+    }
+
+    if (TableStrategyCost <= ClmulStrategyCost) {
+      optimizeCRCLoopUsingTableLookup(Info);
+      ReportOptimized("table", "most profitable strategy");
+    } else {
+      optimizeCRCLoopUsingClmul(Info);
+      ReportOptimized("clmul", "most profitable strategy");
+    }
     return true;
   }
-
-  // FIXME: Once intrinsic cost modeling is more reliable for clmul, that should
-  // be used to determine which optimization to use. Until then, only apply the
-  // clmul optimization when optimizing for size, since a lookup table is not
-  // viable in that case.
-  if (!ApplyCodeSizeHeuristics && Info.TripCount % 8 == 0) {
-    optimizeCRCLoopUsingTableLookup(Info);
-    return true;
-  }
-
-  // The clmul optimization should be applied if it is fast and likely to lower
-  // in a way that keeps code small.
-  // TODO: If clmul exists on the target but not for the required width, it
-  // might be possible to split into multiple iterations of reduction.
-  unsigned ClmulMuBW = Info.IsBigEndian ? 2 * Info.TripCount : Info.TripCount;
-  unsigned ClmulGPBW =
-      Info.LHS->getType()->getIntegerBitWidth() + Info.TripCount;
-  IntegerType *WidestClmulTy =
-      IntegerType::get(Info.LHS->getContext(), std::max(ClmulMuBW, ClmulGPBW));
-  if (TTI->haveFastClmul(WidestClmulTy)) {
-    optimizeCRCLoopUsingClmul(Info);
-    return true;
-  }
-
-  return false;
 }
 
 // The algorithm used in this optimization is a Polynomial (GF(2)) Barrett
 // Reduction based on Intel's "Fast CRC Computation for Generic Polynomials
 // Using PCLMULQDQ Instruction" white paper (December 2009).
 void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
+  // TODO: If clmul exists on the target but not for the required width, it
+  // might be possible to split into multiple iterations of reduction.
   Type *CRCTy = Info.LHS->getType();
   LLVMContext &Ctx = CRCTy->getContext();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
@@ -1812,19 +1897,16 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     };
     auto HiIdx = [LoByte, CRCBW](IRBuilderBase &Builder, Value *Op,
                                  const Twine &Name) {
-      Type *OpTy = Op->getType();
-
-      // When the bitwidth of the CRC mismatches the Op's bitwidth, we need to
-      // use the CRC's bitwidth as the reference for shifting right.
-      return LoByte(Builder,
-                    CRCBW > 8 ? Builder.CreateLShr(
-                                    Op, ConstantInt::get(OpTy, CRCBW - 8), Name)
-                              : Op,
-                    Name + ".lo.byte");
+      // Shift the top bits of Op to the bottom byte by using the CRC bitwidth
+      // as a reference.
+      if (CRCBW != 8) {
+        Op = CRCBW > 8 ? Builder.CreateLShr(Op, CRCBW - 8, Name)
+                       : Builder.CreateShl(Op, 8 - CRCBW, Name);
+      }
+      return LoByte(Builder, Op, Name + ".lo.byte");
     };
 
-    IRBuilder<> Builder(CurLoop->getHeader(),
-                        CurLoop->getHeader()->getFirstNonPHIIt());
+    IRBuilder<> Builder(CurLoop->getHeader()->getFirstNonPHIIt());
 
     // Create the CRC PHI, and initialize its incoming value to the initial
     // value of CRC.
@@ -1866,7 +1948,15 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     // CRCTableLd = CRCTable[(iv'th byte of data) ^ (top|bottom) byte of CRC].
     Value *CRCTableGEP =
         Builder.CreateInBoundsGEP(CRCTy, GV, Indexer, "tbl.ptradd");
-    Value *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+    Instruction *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+
+    // Update MemorySSA since we just created a new load instruction.
+    if (MSSAU) {
+      auto *NewMemAcc = MSSAU->createMemoryAccessInBB(
+          CRCTableLd, /*Definition=*/nullptr, CRCTableLd->getParent(),
+          MemorySSA::Beginning);
+      MSSAU->insertUse(cast<MemoryUse>(NewMemAcc), /*RenameUses=*/true);
+    }
 
     // CRCNext = (CRC (<<|>>) 8) ^ CRCTableLd, or simply CRCTableLd in case of
     // CRC-8.
@@ -1889,6 +1979,8 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     for (PHINode *PN : Cleanup)
       RecursivelyDeleteDeadPHINode(PN);
     SE->forgetLoop(CurLoop);
+    if (MSSAU && VerifyMemorySSA)
+      MSSAU->getMemorySSA()->verifyMemorySSA();
   }
 }
 
@@ -1988,14 +2080,14 @@ public:
 
     LLVM_DEBUG(dbgs() << "pointer load scev: " << *LoadEv << "\n");
 
-    unsigned StepSize = Step->getZExtValue();
+    uint64_t StepSize = Step->getZExtValue();
 
     // Verify that StepSize is consistent with platform char width.
     OpWidth = OperandType->getIntegerBitWidth();
     unsigned WcharSize = TLI->getWCharSize(*LoopLoad->getModule());
-    if (OpWidth != StepSize * 8)
-      return false;
     if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
+      return false;
+    if (StepSize != OpWidth / 8)
       return false;
     if (OpWidth >= 16)
       if (OpWidth != WcharSize * 8)
@@ -2628,12 +2720,11 @@ bool LoopIdiomRecognize::insertFFSIfProfitable(Intrinsic::ID IntrinID,
   // would have identical behavior in the original loop and thus
   if (!IsCntPhiUsedOutsideLoop) {
     auto *PreCondBB = PH->getSinglePredecessor();
-    if (!PreCondBB)
-      return false;
-    auto *PreCondBI = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
-    if (!PreCondBI)
-      return false;
-    if (matchCondition(PreCondBI, PH) != InitX)
+    auto *PreCondBI =
+        PreCondBB ? dyn_cast<CondBrInst>(PreCondBB->getTerminator()) : nullptr;
+    if (!(PreCondBI && matchCondition(PreCondBI, PH) == InitX) &&
+        !isKnownNonZero(
+            InitX, SimplifyQuery(*DL, DT, /*AC=*/nullptr, PH->getTerminator())))
       return false;
     ZeroCheck = true;
   }
@@ -3376,7 +3467,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   // Step 4: Rewrite the loop into a countable form, with canonical IV.
 
   // The new canonical induction variable.
-  Builder.SetInsertPoint(LoopHeaderBB, LoopHeaderBB->begin());
+  Builder.SetInsertPoint(LoopHeaderBB->begin());
   auto *IV = Builder.CreatePHI(Ty, 2, CurLoop->getName() + ".iv");
 
   // The induction itself.
@@ -3391,7 +3482,6 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
                                        CurLoop->getName() + ".ivcheck");
   SmallVector<uint32_t> BranchWeights;
   const bool HasBranchWeights =
-      !ProfcheckDisableMetadataFixes &&
       extractBranchWeights(*LoopHeaderBB->getTerminator(), BranchWeights);
 
   auto *BI = Builder.CreateCondBr(IVCheck, SuccessorBB, LoopHeaderBB);
@@ -3712,11 +3802,11 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   // Step 3: Rewrite the loop into a countable form, with canonical IV.
 
   // The new canonical induction variable.
-  Builder.SetInsertPoint(LoopHeaderBB, LoopHeaderBB->begin());
+  Builder.SetInsertPoint(LoopHeaderBB->begin());
   auto *CIV = Builder.CreatePHI(Ty, 2, CurLoop->getName() + ".iv");
 
   // The induction itself.
-  Builder.SetInsertPoint(LoopHeaderBB, LoopHeaderBB->getFirstNonPHIIt());
+  Builder.SetInsertPoint(LoopHeaderBB->getFirstNonPHIIt());
   auto *CIVNext =
       Builder.CreateAdd(CIV, ConstantInt::get(Ty, 1), CIV->getName() + ".next",
                         /*HasNUW=*/true, /*HasNSW=*/Bitwidth != 2);
@@ -3739,7 +3829,6 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   Builder.SetInsertPoint(LoopHeaderBB->getTerminator());
   SmallVector<uint32_t> BranchWeights;
   const bool HasBranchWeights =
-      !ProfcheckDisableMetadataFixes &&
       extractBranchWeights(*LoopHeaderBB->getTerminator(), BranchWeights);
 
   auto *BI = Builder.CreateCondBr(CIVCheck, SuccessorBB, LoopHeaderBB);

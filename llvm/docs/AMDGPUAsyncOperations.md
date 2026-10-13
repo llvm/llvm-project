@@ -14,11 +14,14 @@ internally by the compiler. A thread that initiates one or more async operations
 ## Asyncmarks
 
 An *asyncmark* created by a thread can be used to track async operations
-initiated by that thread. The abstract machine maintains a sequence of
-asyncmarks during the execution of a function body, which excludes any
-asyncmarks produced by calls to other functions encountered in the currently
-executing function. The state of this sequence at each program point in the
-function is called the *current sequence*.
+initiated by that thread.
+
+### Current Sequence
+
+The abstract machine maintains a sequence of asyncmarks during the execution of
+a function body, which excludes any asyncmarks produced by calls to other
+functions encountered in the currently executing function. The state of this
+sequence at each program point in the function is called the *current sequence*.
 
 ### `@llvm.amdgcn.asyncmark()`
 
@@ -29,9 +32,7 @@ Produces an asyncmark and appends it to the current sequence.
 Ensures that the length of the current sequence is at most `N` by removing
 asyncmarks from the start of the sequence if it is more than `N`.
 
-(amdgpu-asyncmark-memory-model)=
-
-## Memory Model
+### Completion of Asyncmarks
 
 An `asyncmark()` operation `X` that produces an asyncmark `M` is
 *completed-at* a `wait.asyncmark()` operation `Y` in the same function body
@@ -41,13 +42,26 @@ if:
 - `M` is not in the current sequence at any operation `Z` that immediately
   follows `Y` in *program-order*.
 
-Each dynamic instance `I` of an async *instruction* initiates a corresponding
-async *operation* `A` such that `I` *happens-before* `A`. Then `A`
-*happens-before* a `wait.asyncmark()` operation `Y` if there exists an
-`asyncmark()` operation `X` such that:
+## Completion of Async Operations
 
+An async operation executes outside the thread that initiated it, i.e., it is
+not related in *program-order* with any other operations from that thread. But
+the thread can use an asyncmark to ensure that the async operation is
+*completed-at* some later operation.
+
+An async operation `A` *initiated-by* an instruction `I` is *completed-at* some
+`wait.asyncmark()` operation `Y` if there exists an `asyncmark()` operation `X`
+such that:
 - `I` is *program-ordered* before `X`, and
 - `X` is *completed-at* `Y`.
+
+### happens-before
+
+When an instruction `I` initiates an async operation `A`, `I` *happens-before*
+`A`.
+
+If `A` is *completed-at* a `wait.asyncmark()` operation `Y`, then `A`
+*happens-before* `Y`.
 
 ## Examples
 

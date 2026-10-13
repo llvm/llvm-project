@@ -193,6 +193,7 @@ public:
   void VisitTemplateArgument(const TemplateArgument &Arg);
 
   void VisitMSGuidDecl(const MSGuidDecl *D);
+  void VisitTemplateParamObjectDecl(const TemplateParamObjectDecl *D);
 
   /// Emit a Decl's name using NamedDecl::printName() and return true if
   ///  the decl had no name.
@@ -805,6 +806,9 @@ void USRGenerator::VisitType(QualType T) {
       case BuiltinType::NullPtr:
         Out << 'n';
         break;
+      case BuiltinType::MetaInfo:
+        Out << "@BT@MetaInfo";
+        break;
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
   case BuiltinType::Id:                                                        \
     Out << "@BT@" << #Suffix << "_" << #ImgType;                               \
@@ -857,6 +861,16 @@ void USRGenerator::VisitType(QualType T) {
     Out << "@BT@" << #Name;                                                    \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case BuiltinType::Id:                                                        \
+    Out << "@BT@" << #Name;                                                    \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    Out << "@BT@" << Name;                                                     \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
       case BuiltinType::ShortAccum:
         Out << "@BT@ShortAccum";
         break;
@@ -1210,6 +1224,15 @@ void USRGenerator::VisitMSGuidDecl(const MSGuidDecl *D) {
   VisitDeclContext(D->getDeclContext());
   Out << "@MG@";
   D->NamedDecl::printName(Out);
+}
+
+void USRGenerator::VisitTemplateParamObjectDecl(
+    const TemplateParamObjectDecl *D) {
+  Out << "@TPO@";
+  VisitType(D->getType());
+  ODRHash Hash{};
+  Hash.AddStructuralValue(D->getValue());
+  Out << Hash.CalculateHash();
 }
 
 //===----------------------------------------------------------------------===//

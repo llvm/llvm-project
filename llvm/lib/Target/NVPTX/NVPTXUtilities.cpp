@@ -11,9 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXUtilities.h"
-#include "NVPTX.h"
-#include "NVPTXTargetMachine.h"
 #include "NVVMProperties.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -31,6 +30,16 @@ static cl::opt<bool> ForceMinByValParamAlign(
 
 Function *llvm::getMaybeBitcastedCallee(const CallBase *CB) {
   return dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
+}
+
+unsigned llvm::getFromTypeWidthForLoad(const MemSDNode *Mem) {
+  auto TotalWidth = Mem->getMemoryVT().getSizeInBits();
+  auto NumElts = Mem->getNumValues() - 1;
+  auto ElementBitWidth = TotalWidth / NumElts;
+  assert(isPowerOf2_32(ElementBitWidth) && ElementBitWidth >= 8 &&
+         ElementBitWidth <= 128 && TotalWidth <= 256 &&
+         "Invalid width for load");
+  return ElementBitWidth;
 }
 
 Align llvm::getPTXParamTypeAlign(Type *ArgTy, const DataLayout &DL) {
@@ -102,23 +111,4 @@ Align llvm::getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned Idx,
     DirectCallee = getMaybeBitcastedCallee(CB);
 
   return getPTXParamAlign(DirectCallee, Ty, Idx, DL);
-}
-
-bool llvm::shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
-  const auto &ST =
-      *static_cast<const NVPTXTargetMachine &>(TM).getSubtargetImpl();
-  if (!ST.hasNoReturn())
-    return false;
-
-  assert((isa<Function>(V) || isa<CallInst>(V)) &&
-         "Expect either a call instruction or a function");
-
-  if (const CallInst *CallI = dyn_cast<CallInst>(V))
-    return CallI->doesNotReturn() &&
-           CallI->getFunctionType()->getReturnType()->isVoidTy();
-
-  const Function *F = cast<Function>(V);
-  return F->doesNotReturn() &&
-         F->getFunctionType()->getReturnType()->isVoidTy() &&
-         !isKernelFunction(*F);
 }

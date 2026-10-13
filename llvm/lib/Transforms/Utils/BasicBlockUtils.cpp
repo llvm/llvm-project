@@ -1740,7 +1740,7 @@ void llvm::SplitBlockAndInsertForEachLane(
     ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
-  IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
+  IRBuilder<> IRB(InsertBefore);
 
   if (EC.isScalable()) {
     Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
@@ -1764,7 +1764,7 @@ void llvm::SplitBlockAndInsertForEachLane(
     Value *EVL, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
-  IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
+  IRBuilder<> IRB(InsertBefore);
   Type *Ty = EVL->getType();
 
   if (!isa<ConstantInt>(EVL)) {
@@ -1888,15 +1888,6 @@ void llvm::InvertBranch(CondBrInst *PBI, IRBuilderBase &Builder) {
 
   PBI->setCondition(NewCond);
   PBI->swapSuccessors();
-}
-
-bool llvm::hasOnlySimpleTerminator(const Function &F) {
-  for (auto &BB : F) {
-    auto *Term = BB.getTerminator();
-    if (!isa<ReturnInst, UnreachableInst, UncondBrInst, CondBrInst>(Term))
-      return false;
-  }
-  return true;
 }
 
 Printable llvm::printBasicBlock(const BasicBlock *BB) {

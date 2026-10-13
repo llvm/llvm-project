@@ -24,13 +24,12 @@ public:
   AvailabilityPredicate(const Record *Def) : TheDef(Def) {
     if (!TheDef)
       return;
+    // An unset CondDag means the libcall is always available.
     if (const RecordVal *RV = TheDef->getValue("CondDag")) {
-      if (const auto *Dag = dyn_cast_or_null<DagInit>(RV->getValue())) {
+      if (const auto *Dag = dyn_cast_or_null<DagInit>(RV->getValue());
+          Dag && !isa<UnsetInit>(Dag->getOperator()))
         PredicateString = lowerCondDag(TheDef, Dag);
-        return;
-      }
     }
-    PredicateString = TheDef->getValueAsString("Cond").str();
   }
 
   const Record *getDef() const { return TheDef; }
@@ -136,8 +135,6 @@ public:
     OS << '\"' << getLibcallFuncName() << '\"';
   }
 
-  bool isDefault() const { return TheDef->getValueAsBit("IsDefault"); }
-
   void emitEnumEntry(raw_ostream &OS) const {
     OS << "RTLIB::impl_" << this->getName();
   }
@@ -174,8 +171,7 @@ private:
   std::vector<RuntimeLibcall> RuntimeLibcallDefList;
   std::vector<RuntimeLibcallImpl> RuntimeLibcallImplDefList;
 
-  DenseMap<const RuntimeLibcall *, const RuntimeLibcallImpl *>
-      LibCallToDefaultImpl;
+  std::vector<const Record *> FuncArgTypeList;
 
 public:
   RuntimeLibcalls(const RecordKeeper &Records);
@@ -194,6 +190,10 @@ public:
 
   const RuntimeLibcallImpl *getRuntimeLibcallImpl(const Record *Def) const {
     return Def2RuntimeLibcallImpl.lookup(Def);
+  }
+
+  ArrayRef<const Record *> getFuncArgTypeList() const {
+    return FuncArgTypeList;
   }
 };
 

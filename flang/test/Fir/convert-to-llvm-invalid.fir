@@ -27,13 +27,50 @@ func.func @shift_not_dead(%arg0: !fir.box<!fir.array<?xf32>>, %i: index) {
 
 // -----
 
-// Test `fir.select_type` conversion to llvm.
-// Should have been converted.
+// The four fir.select* terminators are lowered to cf.* earlier in the
+// pipeline (--fir-select-ops-conversion for select/select_case/select_rank,
+// --fir-polymorphic-op for select_type). Any that reach FIR-to-LLVM hit a
+// defensive stub that emits a clear "should have already been converted"
+// diagnostic.
 
-func.func @bar_select_type(%arg : !fir.class<!fir.type<derivedst{a:f32}>>) -> i32 {
+func.func @select_should_have_been_converted(%arg: i32) -> i32 {
+  %0 = arith.constant 1 : i32
+  // expected-error@+2{{'fir.select' op should have already been converted}}
+  // expected-error@+1{{failed to legalize operation 'fir.select'}}
+  fir.select %arg : i32 [1, ^bb1(%0:i32), unit, ^bb1(%0:i32)]
+^bb1(%a: i32):
+  return %a : i32
+}
+
+// -----
+
+func.func @select_case_should_have_been_converted(%arg: !fir.ref<i32>) -> i32 {
+  %v = fir.load %arg : !fir.ref<i32>
+  %c1 = arith.constant 1 : i32
+  // expected-error@+2{{'fir.select_case' op should have already been converted}}
+  // expected-error@+1{{failed to legalize operation 'fir.select_case'}}
+  fir.select_case %v : i32 [#fir.point, %c1, ^bb1, unit, ^bb1]
+^bb1:
+  return %v : i32
+}
+
+// -----
+
+func.func @select_rank_should_have_been_converted(%arg: i32) -> i32 {
+  %0 = arith.constant 1 : i32
+  // expected-error@+2{{'fir.select_rank' op should have already been converted}}
+  // expected-error@+1{{failed to legalize operation 'fir.select_rank'}}
+  fir.select_rank %arg : i32 [1, ^bb1(%0:i32), unit, ^bb1(%0:i32)]
+^bb1(%a: i32):
+  return %a : i32
+}
+
+// -----
+
+func.func @select_type_should_have_been_converted(%arg: !fir.class<!fir.type<derivedst{a:f32}>>) -> i32 {
   %0 = arith.constant 1 : i32
   %2 = arith.constant 3 : i32
-  // expected-error@+2{{fir.select_type should have already been converted}}
+  // expected-error@+2{{'fir.select_type' op should have already been converted}}
   // expected-error@+1{{failed to legalize operation 'fir.select_type'}}
   fir.select_type %arg : !fir.class<!fir.type<derivedst{a:f32}>> [
     #fir.type_is<!fir.int<4>>,^bb1(%0:i32),

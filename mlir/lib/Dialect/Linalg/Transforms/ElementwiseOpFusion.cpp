@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/AffineExpr.h"
@@ -501,6 +502,291 @@ public:
 
 private:
   ControlFusionFn controlFn;
+};
+
+/// Split an elementwise operation at the boundaries of its `tensor.concat`
+/// inputs. This exposes the producers of the concat inputs to the elementwise
+/// fusion patterns.
+///
+///   elementwise(concat(x0, x1), concat(y0, y1))
+///
+/// becomes
+///
+///   concat(elementwise(x0, y0), elementwise(x1, y1))
+///
+/// This pattern is intentionally expressed on `linalg.generic`: tensor
+/// elementwise operations such as `arith.addf` are converted to that form by
+/// `-convert-elementwise-to-linalg`, before this pattern runs as a preamble to
+/// Linalg elementwise fusion.
+///
+/// A partition is one input of a concat, viewed as a contiguous interval of
+/// the concat dimension. All concat inputs must have matching partitions: the
+/// same number of partitions with the same static size at each index.
+///
+/// All concat operands must partition the same iteration-space dimension into
+/// the same statically-sized pieces. Inputs that do not use that iteration
+/// dimension (for example, broadcast inputs) can be shared by all pieces.
+class SplitElementwiseOpWithConcatInputs : public OpRewritePattern<GenericOp> {
+public:
+  using OpRewritePattern<GenericOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GenericOp genericOp,
+                                PatternRewriter &rewriter) const override {
+    if (!genericOp.hasPureTensorSemantics() || !isElementwise(genericOp) ||
+        genericOp.hasIndexSemantics())
+      return failure();
+
+    SmallVector<tensor::ConcatOp> concatOps(genericOp.getNumDpsInputs());
+    SmallVector<OpOperand *> nonConcatInputs;
+    std::optional<unsigned> splitLoopDim;
+    // Now we limit the concat ops to have the same number of inputs for
+    // simplicity.
+    // TODO: technically, elementwise(concat(x0, x1), concat(y0, y1, y2)) ->
+    // concat(elementwise(...), elementwise(...), elementwise(...)) may be
+    // fine too. But that may require we create new slices, which might be
+    // more complex.
+    // The size in the concat dimension of different inputs. For example,
+    //
+    //  x0: tensor<2x3xf32>
+    //  x1: tensor<2x4xf32>
+    //  x:  tensor<2x7xf32>
+    //  %x = tensor.concat dim(1) %x0, %x1
+    //
+    // The partition sizes in this case are [3, 4]. Same as above, we limit the
+    // partition sizes to be the same for different concat ops.
+    SmallVector<SmallVector<int64_t>> partitionSizes;
+
+    for (auto [index, operand] :
+         llvm::enumerate(genericOp.getDpsInputOperands())) {
+      auto concatOp = operand->get().getDefiningOp<tensor::ConcatOp>();
+      if (!concatOp) {
+        nonConcatInputs.push_back(operand);
+        continue;
+      }
+
+      // Rewriting a concat that has other consumers could increase the amount
+      // of live computation instead of just exposing fusion opportunities.
+      if (!concatOp->hasOneUse())
+        return rewriter.notifyMatchFailure(genericOp,
+                                           "concat input has another consumer");
+
+      AffineMap inputMap = genericOp.getMatchingIndexingMap(operand);
+      auto concatDimExpr =
+          dyn_cast<AffineDimExpr>(inputMap.getResult(concatOp.getDim()));
+      if (!concatDimExpr)
+        return rewriter.notifyMatchFailure(
+            genericOp, "concat dimension does not map to a loop dimension");
+
+      unsigned currentSplitLoopDim = concatDimExpr.getPosition();
+      if (splitLoopDim && *splitLoopDim != currentSplitLoopDim)
+        return rewriter.notifyMatchFailure(
+            genericOp, "concat inputs partition different loop dimensions");
+      splitLoopDim = currentSplitLoopDim;
+
+      SmallVector<int64_t> currentPartitionSizes;
+      currentPartitionSizes.reserve(concatOp.getInputs().size());
+      for (Value input : concatOp.getInputs()) {
+        int64_t size = cast<RankedTensorType>(input.getType())
+                           .getDimSize(concatOp.getDim());
+        if (ShapedType::isDynamic(size))
+          return rewriter.notifyMatchFailure(
+              genericOp, "concat partition size is dynamic");
+        currentPartitionSizes.push_back(size);
+      }
+      partitionSizes.push_back(std::move(currentPartitionSizes));
+      concatOps[index] = concatOp;
+    }
+
+    if (!splitLoopDim)
+      return rewriter.notifyMatchFailure(genericOp, "has no concat input");
+    if (!llvm::all_equal(partitionSizes))
+      return rewriter.notifyMatchFailure(
+          genericOp, "concat inputs have different partition sizes");
+
+    // A tensor input that varies along the split dimension must itself be a
+    // compatible concat. Inputs that are invariant along that dimension can be
+    // reused by every split operation.
+    AffineExpr splitDimExpr =
+        getAffineDimExpr(*splitLoopDim, genericOp.getContext());
+    for (OpOperand *operand : nonConcatInputs) {
+      Type operandType = operand->get().getType();
+      // Scalars do not vary along an iteration-space dimension and can be
+      // reused in every partition.
+      if (isa<IntegerType, FloatType, IndexType, ComplexType>(operandType))
+        continue;
+
+      // Otherwise we want ranked tensors.
+      if (!isa<RankedTensorType>(operandType))
+        return rewriter.notifyMatchFailure(
+            genericOp, "non-concat shaped input is not a ranked tensor");
+
+      if (genericOp.getMatchingIndexingMap(operand).getResultPosition(
+              splitDimExpr))
+        return rewriter.notifyMatchFailure(
+            genericOp, "non-concat input varies along the split dimension");
+    }
+
+    // Map the iteration-space split dimension to each output's physical tensor
+    // dimension. `isElementwise` guarantees that the output maps are
+    // permutations, so every output contains this dimension.
+    SmallVector<unsigned> outputConcatDims;
+    outputConcatDims.reserve(genericOp.getNumDpsInits());
+    for (OpOperand &output : genericOp.getDpsInitsMutable()) {
+      std::optional<unsigned> outputDim =
+          genericOp.getMatchingIndexingMap(&output).getResultPosition(
+              splitDimExpr);
+      // Otherwise the generic op is not elementwise.
+      assert(outputDim &&
+             "elementwise output map must contain the split dimension");
+      outputConcatDims.push_back(*outputDim);
+    }
+
+    Location loc = genericOp.getLoc();
+    // Keep each result in a separate list because a generic can have multiple
+    // outputs.
+    SmallVector<SmallVector<Value>> splitResults(genericOp->getNumResults());
+    SmallVector<int64_t> outputOffsets(genericOp.getNumDpsInits(), 0);
+
+    // Build one generic for each aligned concat partition. For
+    // `elementwise(concat(x0, x1), concat(y0, y1))` becomes
+    // `elementwise(x0, y0)` and `elementwise(x1, y1)`.
+    for (auto [partitionIndex, partitionSize] :
+         llvm::enumerate(partitionSizes.front())) {
+      // For each partition, turn inputs `concat(x0, x1)`, `concat(y0, y1)`, and
+      // `scalar` into the inputs `x0`, `y0`, and `scalar`.
+      SmallVector<Value> inputs =
+          getPartitionInputs(genericOp, concatOps, partitionIndex);
+      // For a `tensor<7xf32>` output and partition size [3, 4], create a
+      // `tensor<3xf32>` output here; if the body reads `%init`, use
+      // `%init[0:3]` as its init instead.
+      PartitionOutputs outputs =
+          createPartitionOutputs(rewriter, loc, genericOp, outputConcatDims,
+                                 partitionSize, outputOffsets);
+      // For example, clone the body of
+      // `elementwise(concat(x0, x1), concat(y0, y1))` as
+      // `elementwise(x0, y0)`, retaining its indexing maps and iterators.
+      GenericOp splitOp =
+          cloneGenericForPartition(rewriter, loc, genericOp, inputs, outputs);
+      for (auto [resultIndex, result] : llvm::enumerate(splitOp->getResults()))
+        splitResults[resultIndex].push_back(result);
+    }
+
+    // Reassemble every original result from its partition results. The concat
+    // dimension may differ for each output due to its indexing map.
+    SmallVector<Value> replacements;
+    replacements.reserve(genericOp->getNumResults());
+    for (auto [resultIndex, result] :
+         llvm::enumerate(genericOp->getResults())) {
+      replacements.push_back(tensor::ConcatOp::create(
+          rewriter, loc, cast<RankedTensorType>(result.getType()),
+          outputConcatDims[resultIndex], splitResults[resultIndex]));
+    }
+    rewriter.replaceOp(genericOp, replacements);
+    return success();
+  }
+
+private:
+  /// Return the inputs for one concat partition.
+  /// For example, for `elementwise(concat(x0, x1), concat(y0, y1), scalar)`,
+  /// partition 0 uses `(x0, y0, scalar)` and partition 1 uses
+  /// `(x1, y1, scalar)`.
+  static SmallVector<Value>
+  getPartitionInputs(GenericOp genericOp, ArrayRef<tensor::ConcatOp> concatOps,
+                     unsigned partitionIndex) {
+    SmallVector<Value> inputs;
+    inputs.reserve(genericOp.getNumDpsInputs());
+    for (auto [index, operand] :
+         llvm::enumerate(genericOp.getDpsInputOperands())) {
+      if (!concatOps[index]) {
+        inputs.push_back(operand->get());
+        continue;
+      }
+      tensor::ConcatOp concatOp = concatOps[index];
+      inputs.push_back(concatOp.getInputs()[partitionIndex]);
+    }
+    return inputs;
+  }
+
+  struct PartitionOutputs {
+    SmallVector<Value> values;
+    SmallVector<Type> resultTypes;
+  };
+
+  /// Create the output operands and result types for one concat partition.
+  /// For an output `tensor<7xf32>` split into sizes `[3, 4]`, this creates a
+  /// `tensor<3xf32>` output for partition 0 and `tensor<4xf32>` for partition
+  /// 1. If the generic body reads its output block argument, the outputs are
+  /// slices of the original init tensor, e.g. `%init[0:3]` and `%init[3:7]`;
+  /// otherwise they are `tensor.empty` values.
+  static PartitionOutputs createPartitionOutputs(
+      PatternRewriter &rewriter, Location loc, GenericOp genericOp,
+      ArrayRef<unsigned> outputConcatDims, int64_t partitionSize,
+      MutableArrayRef<int64_t> outputOffsets) {
+    PartitionOutputs partitionOutputs;
+    partitionOutputs.values.reserve(genericOp.getNumDpsInits());
+    partitionOutputs.resultTypes.reserve(genericOp->getNumResults());
+    for (auto [outputIndex, output] :
+         llvm::enumerate(genericOp.getDpsInitsMutable())) {
+      Value outputValue = output.get();
+      auto outputType = cast<RankedTensorType>(outputValue.getType());
+      unsigned outputConcatDim = outputConcatDims[outputIndex];
+      SmallVector<int64_t> partitionShape(outputType.getShape());
+      partitionShape[outputConcatDim] = partitionSize;
+      auto partitionType =
+          RankedTensorType::get(partitionShape, outputType.getElementType(),
+                                outputType.getEncoding());
+
+      SmallVector<OpFoldResult> sizes =
+          tensor::getMixedSizes(rewriter, loc, outputValue);
+      sizes[outputConcatDim] = rewriter.getIndexAttr(partitionSize);
+
+      Value partitionOutput;
+      // A body such as `linalg.yield %in` does not read `%out`, so the init
+      // value is irrelevant and this partition can use `tensor.empty`.
+      if (!genericOp.payloadUsesValueFromOperand(&output)) {
+        partitionOutput = tensor::EmptyOp::create(rewriter, loc, sizes,
+                                                  outputType.getElementType(),
+                                                  outputType.getEncoding());
+      } else {
+        // A body such as `%sum = arith.addf %in, %out` reads the init value.
+        // For a `[3, 4]` partitioning, extract `%init[0:3]` for partition 0
+        // and `%init[3:7]` for partition 1 to preserve that value.
+        SmallVector<OpFoldResult> offsets(outputType.getRank(),
+                                          rewriter.getIndexAttr(0));
+        SmallVector<OpFoldResult> strides(outputType.getRank(),
+                                          rewriter.getIndexAttr(1));
+        offsets[outputConcatDim] =
+            rewriter.getIndexAttr(outputOffsets[outputIndex]);
+        partitionOutput = tensor::ExtractSliceOp::create(
+            rewriter, loc, partitionType, outputValue, offsets, sizes, strides);
+      }
+      partitionOutputs.values.push_back(partitionOutput);
+      partitionOutputs.resultTypes.push_back(partitionType);
+      outputOffsets[outputIndex] += partitionSize;
+    }
+    return partitionOutputs;
+  }
+
+  /// Clone `genericOp` for one partition while preserving its computation and
+  /// relevant attributes. For example, this turns the `x0, y0` inputs from
+  /// `getPartitionInputs` into an `elementwise(x0, y0)` generic with the same
+  /// body as the original `elementwise(concat(x0, x1), concat(y0, y1))`.
+  static GenericOp cloneGenericForPartition(PatternRewriter &rewriter,
+                                            Location loc, GenericOp genericOp,
+                                            ArrayRef<Value> inputs,
+                                            const PartitionOutputs &outputs) {
+    GenericOp splitOp = GenericOp::create(
+        rewriter, loc, outputs.resultTypes, inputs, outputs.values,
+        genericOp.getIndexingMapsArray(), genericOp.getIteratorTypesArray());
+    if (StringAttr doc = genericOp.getDocAttr())
+      splitOp->setAttr(splitOp.getDocAttrName(), doc);
+    if (StringAttr libraryCall = genericOp.getLibraryCallAttr())
+      splitOp->setAttr(splitOp.getLibraryCallAttrName(), libraryCall);
+    splitOp->setDiscardableAttrs(genericOp->getDiscardableAttrDictionary());
+    rewriter.cloneRegionBefore(genericOp.getRegion(), splitOp.getRegion(),
+                               splitOp.getRegion().begin());
+    return splitOp;
+  }
 };
 } // namespace
 
@@ -1809,11 +2095,32 @@ GenericOp cloneToCollapsedOp<GenericOp>(RewriterBase &rewriter,
   return collapsedOp;
 }
 
+/// Collapse a `BroadcastOp` with a 0-D input into the single flattened
+/// dimension (`dimensions = [0]`).
+template <>
+BroadcastOp
+cloneToCollapsedOp<BroadcastOp>(RewriterBase &rewriter, BroadcastOp origOp,
+                                const CollapsingInfo &collapsingInfo) {
+  assert(origOp.getInput().getType().getRank() == 0 && "expected a 0-D input");
+
+  SmallVector<Value> inputOperands, outputOperands;
+  SmallVector<Type> resultTypes;
+  collapseOperandsAndResults(origOp, collapsingInfo, rewriter, inputOperands,
+                             outputOperands, resultTypes);
+
+  SmallVector<int64_t> newDimensions = {0};
+  return BroadcastOp::create(rewriter, origOp.getLoc(), inputOperands[0],
+                             outputOperands[0], newDimensions);
+}
+
 static LinalgOp createCollapsedOp(LinalgOp op,
                                   const CollapsingInfo &collapsingInfo,
                                   RewriterBase &rewriter) {
   if (GenericOp genericOp = dyn_cast<GenericOp>(op.getOperation())) {
     return cloneToCollapsedOp(rewriter, genericOp, collapsingInfo);
+  }
+  if (BroadcastOp broadcastOp = dyn_cast<BroadcastOp>(op.getOperation())) {
+    return cloneToCollapsedOp(rewriter, broadcastOp, collapsingInfo);
   }
   return cloneToCollapsedOp(rewriter, op, collapsingInfo);
 }
@@ -2461,6 +2768,11 @@ void mlir::linalg::populateElementwiseOpsFusionPatterns(
   populateEraseUnusedOperandsAndResultsPatterns(patterns);
 }
 
+void mlir::linalg::populateSplitElementwiseOpsWithConcatInputsPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<SplitElementwiseOpWithConcatInputs>(patterns.getContext());
+}
+
 void mlir::linalg::populateCollapseDimensions(
     RewritePatternSet &patterns,
     const GetCollapsableDimensionsFn &controlCollapseDimensions) {
@@ -2498,6 +2810,7 @@ struct LinalgElementwiseOpFusionPass
     };
 
     // Add elementwise op fusion patterns.
+    populateSplitElementwiseOpsWithConcatInputsPatterns(patterns);
     populateElementwiseOpsFusionPatterns(patterns, defaultControlFn);
     populateFoldReshapeOpsByExpansionPatterns(patterns, defaultControlFn);
     tensor::populateBubbleUpExpandShapePatterns(patterns);

@@ -13,7 +13,8 @@ define void @foo(i32 %i) {
 ; PTX60:       {
 ; PTX60-NEXT:    .reg .pred %p<2>;
 ; PTX60-NEXT:    .reg .b32 %r<2>;
-; PTX60-NEXT:  $L_brx_0:
+; PTX60-EMPTY:
+; PTX60-NEXT:  JTI0_0:
 ; PTX60-NEXT:    .branchtargets
 ; PTX60-NEXT:     $L__BB0_2,
 ; PTX60-NEXT:     $L__BB0_3,
@@ -24,7 +25,7 @@ define void @foo(i32 %i) {
 ; PTX60-NEXT:    setp.gt.u32 %p1, %r1, 3;
 ; PTX60-NEXT:    @%p1 bra $L__BB0_6;
 ; PTX60-NEXT:  // %bb.1: // %entry
-; PTX60-NEXT:    brx.idx %r1, $L_brx_0;
+; PTX60-NEXT:    brx.idx %r1, JTI0_0;
 ; PTX60-NEXT:  $L__BB0_2: // %case0
 ; PTX60-NEXT:    st.global.b32 [out], 0;
 ; PTX60-NEXT:    bra.uni $L__BB0_6;
@@ -107,7 +108,8 @@ define i32 @test2(i32 %tmp158) {
 ; PTX60:       {
 ; PTX60-NEXT:    .reg .pred %p<6>;
 ; PTX60-NEXT:    .reg .b32 %r<3>;
-; PTX60-NEXT:  $L_brx_0:
+; PTX60-EMPTY:
+; PTX60-NEXT:  JTI1_0:
 ; PTX60-NEXT:    .branchtargets
 ; PTX60-NEXT:     $L__BB1_6,
 ; PTX60-NEXT:     $L__BB1_7,
@@ -131,7 +133,7 @@ define i32 @test2(i32 %tmp158) {
 ; PTX60-NEXT:    setp.gt.u32 %p2, %r2, 5;
 ; PTX60-NEXT:    @%p2 bra $L__BB1_5;
 ; PTX60-NEXT:  // %bb.12: // %entry
-; PTX60-NEXT:    brx.idx %r2, $L_brx_0;
+; PTX60-NEXT:    brx.idx %r2, JTI1_0;
 ; PTX60-NEXT:  $L__BB1_7: // %bb339
 ; PTX60-NEXT:    st.param.b32 [func_retval0], 12;
 ; PTX60-NEXT:    ret;

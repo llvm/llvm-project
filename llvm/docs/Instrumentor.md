@@ -305,6 +305,8 @@ The configuration file is a JSON document with the following structure:
   - `target_regex`: Regular expression to filter targets (empty = all targets)
   - `host_enabled`: Enable instrumentation for CPU targets (default: true)
   - `gpu_enabled`: Enable instrumentation for GPU targets (default: true)
+  - `runtime_bitcode`: Links the provided runtime library in during instrumentation (default: empty)
+  - `inline_runtime`: Inline runtime calls if a runime is provided via `inline_runtime` (default: true)
 
 **function_pre / function_post**
 

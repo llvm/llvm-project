@@ -68,6 +68,12 @@ public:
   explicit AVRInstrInfo(const AVRSubtarget &STI);
 
   const AVRRegisterInfo &getRegisterInfo() const { return RI; }
+
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &AVR::PTRDISPREGSRegClass;
+  }
+
   const MCInstrDesc &getBrCond(AVRCC::CondCodes CC) const;
   AVRCC::CondCodes getCondFromBranchOpc(unsigned Opc) const;
   AVRCC::CondCodes getOppositeCondition(AVRCC::CondCodes CC) const;

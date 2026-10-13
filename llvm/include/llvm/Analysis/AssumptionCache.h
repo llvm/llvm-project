@@ -163,6 +163,8 @@ public:
   }
 
   /// Access the list of assumptions which affect this value.
+  ///
+  /// No more than -max-assumes-per-value of them are cached.
   MutableArrayRef<ResultElem> assumptionsFor(const Value *V) {
     if (!Scanned)
       scanFunction();
@@ -243,10 +245,6 @@ public:
   /// If no assumptions are cached, this will scan the function. Otherwise, the
   /// existing cache will be returned.
   AssumptionCache &getAssumptionCache(Function &F);
-
-  /// Return the cached assumptions for a function if it has already been
-  /// scanned. Otherwise return nullptr.
-  AssumptionCache *lookupAssumptionCache(Function &F);
 
   AssumptionCacheTracker();
   ~AssumptionCacheTracker() override;

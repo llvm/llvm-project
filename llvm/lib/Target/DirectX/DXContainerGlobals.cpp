@@ -12,7 +12,9 @@
 
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
+#include "MCTargetDesc/DirectXContainerObjectWriter.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -41,10 +43,9 @@ using namespace llvm::mcdxbc;
 
 static cl::opt<bool> ShaderHashDependsOnSource(
     "dx-Zss", cl::desc("Compute Shader Hash considering source information"));
-extern cl::opt<std::string> PdbDebugPath;
-extern cl::opt<bool> SourceInDebugModule;
-cl::opt<bool> PdbInPrivate("dx-pdb-in-private",
-                           cl::desc("Store PDB in private user data"));
+
+cl::opt<bool> dxil::PdbInPrivate("dx-pdb-in-private",
+                                 cl::desc("Store PDB in private user data"));
 
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
@@ -285,17 +286,23 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
       };
 
   for (const dxil::ResourceInfo &RI : DRM.cbuffers()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding, dxbc::PSV::ResourceType::CBV,
                                         dxil::ResourceKind::CBuffer));
   }
   for (const dxil::ResourceInfo &RI : DRM.samplers()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding,
                                         dxbc::PSV::ResourceType::Sampler,
                                         dxil::ResourceKind::Sampler));
   }
   for (const dxil::ResourceInfo &RI : DRM.srvs()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
     dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
@@ -311,6 +318,8 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
         MakeBinding(Binding, ResType, TypeInfo.getResourceKind()));
   }
   for (const dxil::ResourceInfo &RI : DRM.uavs()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
     dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
@@ -325,9 +334,7 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
       ResType = dxbc::PSV::ResourceType::UAVRaw;
 
     dxbc::PSV::ResourceFlags Flags;
-    // TODO: Add support for dxbc::PSV::ResourceFlag::UsedByAtomic64, tracking
-    // with https://github.com/llvm/llvm-project/issues/104392
-    Flags.Flags = 0u;
+    Flags.Bits.UsedByAtomic64 = RI.HasAtomic64Use;
 
     PSV.Resources.push_back(
         MakeBinding(Binding, ResType, TypeInfo.getResourceKind(), Flags));

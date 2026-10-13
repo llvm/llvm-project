@@ -54,6 +54,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
+using lldb_private::plugin::dwarf::SymbolFileDWARF;
 
 namespace opts {
 static cl::SubCommand BreakpointSubcommand("breakpoints",
@@ -65,6 +66,9 @@ cl::SubCommand SymTabSubcommand("symtab",
                                 "Test symbol table functionality");
 cl::SubCommand IRMemoryMapSubcommand("ir-memory-map", "Test IRMemoryMap");
 cl::SubCommand AssertSubcommand("assert", "Test assert handling");
+cl::SubCommand DwoDiagnosticSuffixSubcommand(
+    "dwo-diagnostic-suffix",
+    "Print the configured missing DWO diagnostic suffix");
 
 cl::opt<std::string> Log("log", cl::desc("Path to a log file"), cl::init(""),
                          cl::sub(BreakpointSubcommand),
@@ -1243,6 +1247,11 @@ int main(int argc, const char *argv[]) {
   llvm_shutdown_obj Y;
 
   cl::ParseCommandLineOptions(argc, argv, "LLDB Testing Utility\n");
+
+  if (opts::DwoDiagnosticSuffixSubcommand) {
+    outs() << SymbolFileDWARF::GetDwoDiagnosticSuffix() << '\n';
+    return 0;
+  }
 
   SystemLifetimeManager DebuggerLifetime;
   if (auto e = DebuggerLifetime.Initialize(

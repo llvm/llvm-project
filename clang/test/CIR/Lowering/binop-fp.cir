@@ -45,8 +45,8 @@ module {
   }
 }
 
-// MLIR: = llvm.alloca {{.*}} f32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
-// MLIR: = llvm.alloca {{.*}} f64 {alignment = 8 : i64} : (i64) -> !llvm.ptr
+// MLIR: = llvm.alloca {{.*}} f32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+// MLIR: = llvm.alloca {{.*}} f64 {alignment = 8 : i64} : (i32) -> !llvm.ptr
 // MLIR: = llvm.fmul {{.*}} : f32
 // MLIR: = llvm.fdiv
 // MLIR: = llvm.fadd
@@ -56,8 +56,8 @@ module {
 // MLIR: = llvm.fmul
 // MLIR: = llvm.fdiv
 
-// LLVM: = alloca float, i64
-// LLVM: = alloca double, i64
+// LLVM: = alloca float
+// LLVM: = alloca double
 // LLVM: = fmul float
 // LLVM: = fdiv float
 // LLVM: = fadd float

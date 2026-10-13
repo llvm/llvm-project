@@ -30,6 +30,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -43,12 +44,15 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Linker/Linker.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/IPO/InstrumentorUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Transforms/Utils/PromoteMemToReg.h"
 
 #include <cassert>
 #include <cstdint>
@@ -56,7 +60,6 @@
 #include <iterator>
 #include <memory>
 #include <string>
-#include <system_error>
 #include <type_traits>
 
 using namespace llvm;
@@ -78,7 +81,7 @@ static cl::list<std::string>
     ConfigFiles("instrumentor-read-config-files",
                 cl::desc("Read the instrumentor configuration from the "
                          "specified JSON files (comma separated)"),
-                cl::ZeroOrMore, cl::CommaSeparated);
+                cl::CommaSeparated);
 
 /// The user option to specify an input file to read the configuration file
 /// paths from.
@@ -189,6 +192,10 @@ public:
   }
 
 private:
+  /// Link the runtime bitcodes into the module. Returns true if the module
+  /// was changed.
+  bool linkRuntime();
+
   /// Indicate if the module should be instrumented based on the target.
   bool shouldInstrumentTarget();
 
@@ -237,6 +244,73 @@ static Regex createRegex(StringRef Str, StringRef Name, LLVMContext &Ctx) {
     return RX;
   }
   return Regex();
+}
+
+bool InstrumentorImpl::linkRuntime() {
+  ArrayRef<StringRef> RuntimeBitcodes = IConf.RuntimeBitcodes->getStringList();
+  if (RuntimeBitcodes.empty())
+    return false;
+
+  bool Changed = false;
+
+  for (StringRef RuntimeBitcode : RuntimeBitcodes) {
+    if (RuntimeBitcode.empty())
+      continue;
+
+    SMDiagnostic Err;
+    auto RTM = parseIRFile(RuntimeBitcode, Err, M.getContext());
+    if (!RTM) {
+      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+          Twine("Failed to parse runtime bitcode file '") + RuntimeBitcode +
+              Twine("': ") + Err.getMessage(),
+          DS_Error));
+      return Changed;
+    }
+
+    if (Linker::linkModules(M, std::move(RTM))) {
+      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+          Twine("Failed to link in runtime bitcode file '") + RuntimeBitcode +
+              "'",
+          DS_Error));
+      return Changed;
+    }
+    Changed = true;
+  }
+
+  if (!IConf.InlineRuntimeEagerly->getBool())
+    return Changed;
+
+  for (auto [I, _] : IIRB.NewInsts) {
+    auto *CI = dyn_cast<CallInst>(I);
+    if (!CI || isa<IntrinsicInst>(CI))
+      continue;
+
+    InlineFunctionInfo IFI;
+    auto InlineResult = InlineFunction(*CI, IFI);
+    if (!InlineResult.isSuccess()) {
+      std::string WarnMsg;
+      raw_string_ostream SS(WarnMsg);
+      SS << "Inlining of runtime call failed: "
+         << CI->getCalledFunction()->getName() << "\n";
+      SS << "Reason: " << InlineResult.getFailureReason() << "\n";
+      SS << "Signatures: " << *CI->getFunctionType() << " vs "
+         << *CI->getCalledFunction()->getFunctionType() << "\n";
+      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(WarnMsg, DS_Warning));
+    }
+  }
+
+  // Promote any eligible instrumentor-associated allocas to registers.
+  for (auto It : IIRB.AllocaMap) {
+    auto *Fn = It.first.first;
+    DominatorTree DT(*Fn);
+    auto &Allocas = *It.second;
+    erase_if(Allocas,
+             [](const AllocaInst *AI) { return !isAllocaPromotable(AI); });
+    PromoteMemToReg(Allocas, DT);
+    delete It.second;
+  }
+  IIRB.AllocaMap.clear();
+  return Changed;
 }
 
 bool InstrumentorImpl::shouldInstrumentTarget() {
@@ -364,7 +438,7 @@ bool InstrumentorImpl::instrumentModule() {
         IConf.getRTName(Ctor ? "ctor" : "dtor", ""), M);
 
     auto *EntryBB = BasicBlock::Create(IIRB.Ctx, "entry", YtorFn);
-    IIRB.IRB.SetInsertPoint(EntryBB, EntryBB->begin());
+    IIRB.IRB.SetInsertPoint(EntryBB->begin());
     ensureDbgLoc(IIRB.IRB);
     IIRB.IRB.CreateRetVoid();
 
@@ -467,6 +541,8 @@ bool InstrumentorImpl::instrument() {
   for (Function &Fn : M)
     Changed |= instrumentFunction(Fn);
 
+  Changed |= linkRuntime();
+
   return Changed;
 }
 
@@ -554,6 +630,17 @@ BaseConfigurationOption::createStringOption(InstrumentationConfig &IConf,
   auto BCO =
       std::make_unique<BaseConfigurationOption>(Name, Description, STRING);
   BCO->setString(DefaultValue);
+  IConf.addBaseChoice(BCO.get());
+  return BCO;
+}
+
+std::unique_ptr<BaseConfigurationOption>
+BaseConfigurationOption::createStringListOption(
+    InstrumentationConfig &IConf, StringRef Name, StringRef Description,
+    ArrayRef<StringRef> DefaultValue) {
+  auto BCO =
+      std::make_unique<BaseConfigurationOption>(Name, Description, STRING_LIST);
+  BCO->setStringList(DefaultValue);
   IConf.addBaseChoice(BCO.get());
   return BCO;
 }
@@ -659,8 +746,7 @@ Value *InstrumentationOpportunity::forceCast(Value &V, Type &Ty,
                                              InstrumentorIRBuilderTy &IIRB) {
   if (V.getType()->isVoidTy())
     return Ty.isVoidTy() ? &V : Constant::getNullValue(&Ty);
-  return tryToCast(IIRB.IRB, &V, &Ty,
-                   IIRB.IRB.GetInsertBlock()->getDataLayout());
+  return tryToCast(IIRB.IRB, &V, &Ty, IIRB.IRB.getDataLayout());
 }
 
 Value *InstrumentationOpportunity::replaceValue(Value &V, Value &NewV,
@@ -809,8 +895,7 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
   auto CompleteName =
       IConf.getRTName(IO.IP.isPRE() ? "pre_" : "post_", IO.getName(),
                       ForceIndirection ? "_ind" : "");
-  auto FC = IIRB.IRB.GetInsertBlock()->getModule()->getOrInsertFunction(
-      CompleteName, FnTy);
+  auto FC = IIRB.IRB.getModule()->getOrInsertFunction(CompleteName, FnTy);
   auto *CI = IIRB.IRB.CreateCall(FC, CallParams);
   CI->addFnAttr(Attribute::get(IIRB.Ctx, Attribute::WillReturn));
 
@@ -886,7 +971,7 @@ static Value *createValuePack(const Range &R, InstrumentationConfig &IConf,
                             IConf.getRTName("", "value_pack"));
 
   auto *AI = IIRB.getAlloca(Fn, STy);
-  IIRB.IRB.CreateMemCpy(AI, AI->getAlign(), GV, MaybeAlign(GV->getAlignment()),
+  IIRB.IRB.CreateMemCpy(AI, AI->getAlign(), GV, GV->getAlign(),
                         IIRB.DL.getTypeAllocSize(STy));
   for (auto [Param, Idx] : Values) {
     auto *Ptr = IIRB.IRB.CreateStructGEP(STy, AI, Idx);
@@ -1101,22 +1186,7 @@ void AllocaIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
 Value *AllocaIO::getSize(Value &V, Type &Ty, InstrumentationConfig &IO,
                          InstrumentorIRBuilderTy &IIRB) {
   auto &AI = cast<AllocaInst>(V);
-  const DataLayout &DL = AI.getDataLayout();
-  Value *SizeValue = nullptr;
-  TypeSize TypeSize = DL.getTypeAllocSize(AI.getAllocatedType());
-  if (TypeSize.isFixed()) {
-    SizeValue = getCI(&Ty, TypeSize.getFixedValue());
-  } else {
-    auto *NullPtr = ConstantPointerNull::get(AI.getType());
-    SizeValue = IIRB.IRB.CreatePtrToInt(
-        IIRB.IRB.CreateGEP(AI.getAllocatedType(), NullPtr,
-                           {IIRB.IRB.getInt32(1)}),
-        &Ty);
-  }
-  if (AI.isArrayAllocation())
-    SizeValue = IIRB.IRB.CreateMul(
-        SizeValue, IIRB.IRB.CreateZExtOrBitCast(AI.getArraySize(), &Ty));
-  return SizeValue;
+  return IIRB.IRB.CreateAllocationSize(&Ty, &AI);
 }
 
 Value *AllocaIO::setSize(Value &V, Value &NewV, InstrumentationConfig &IO,
@@ -1650,7 +1720,8 @@ Value *GlobalVarIO::getAlignment(Value &V, Type &Ty,
                                  InstrumentationConfig &IConf,
                                  InstrumentorIRBuilderTy &IIRB) {
   GlobalVariable &GV = cast<GlobalVariable>(V);
-  return getCI(&Ty, GV.getAlignment());
+  MaybeAlign Alignment = GV.getAlign();
+  return getCI(&Ty, Alignment ? Alignment->value() : 0);
 }
 Value *GlobalVarIO::getDeclaredSize(Value &V, Type &Ty,
                                     InstrumentationConfig &IConf,

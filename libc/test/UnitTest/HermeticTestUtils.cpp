@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
 
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
+    !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 #include "src/sys/auxv/getauxval.h"
 #endif
 
@@ -70,13 +73,18 @@ void *memset(void *ptr, int value, size_t count) {
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
 int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
-void *malloc(size_t s) {
-  // Keep the bump pointer aligned on an eight byte boundary.
-  s = ((s + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
+void *aligned_alloc(size_t align, size_t s) {
+  if (align & (align - 1)) // Must be power of 2
+    return nullptr;
+  uintptr_t ptr_val = reinterpret_cast<uintptr_t>(ptr);
+  uintptr_t aligned_ptr_val = ((ptr_val + align - 1) / align) * align;
+  ptr = reinterpret_cast<uint8_t *>(aligned_ptr_val);
   void *mem = ptr;
   ptr += s;
   return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
 }
+
+void *malloc(size_t s) { return aligned_alloc(ALIGNMENT, s); }
 
 void free(void *) {}
 
@@ -108,12 +116,33 @@ void __cxa_pure_virtual() {
 // __dso_handle when -nostdlib is used.
 void *__dso_handle = nullptr;
 
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
+    !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 // Due to historical reasons, libgcc on aarch64 may expect __getauxval to be
 // defined. See also https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
 unsigned long __getauxval(unsigned long id) {
   return LIBC_NAMESPACE::getauxval(id);
 }
+#endif
+
+void *calloc(size_t num, size_t size) {
+  if (num == 0 || size == 0)
+    return nullptr;
+  size_t total = 0;
+  if (__builtin_mul_overflow(num, size, &total)) {
+    LIBC_NAMESPACE::libc_errno = ENOMEM;
+    return nullptr;
+  }
+  void *mem = malloc(total);
+  if (mem == nullptr) {
+    LIBC_NAMESPACE::libc_errno = ENOMEM;
+    return nullptr;
+  }
+  LIBC_NAMESPACE::memset(mem, 0, total);
+  return mem;
+}
+#if defined(__linux__)
+int *__errno_location() noexcept { return LIBC_NAMESPACE::__llvm_libc_errno(); }
 #endif
 
 } // extern "C"
@@ -126,6 +155,8 @@ void *operator new[](size_t size) { return malloc(size); }
 
 void operator delete(void *ptr) { free(ptr); }
 
+void operator delete[](void *ptr) { free(ptr); }
+
 void operator delete(void *ptr, size_t) { free(ptr); }
 
 // Defining members in the std namespace is not preferred. But, we do it here
@@ -137,6 +168,6 @@ enum class align_val_t : size_t {};
 
 void operator delete(void *ptr, std::align_val_t) noexcept { free(ptr); }
 
-void operator delete(void *ptr, unsigned int, std::align_val_t) noexcept {
+void operator delete(void *ptr, size_t, std::align_val_t) noexcept {
   free(ptr);
 }

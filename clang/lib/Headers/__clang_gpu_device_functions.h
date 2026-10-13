@@ -11,29 +11,10 @@
 
 #if defined(__HIP__) || defined(__CUDA__)
 
-#ifndef __device__
-#define __host__ __attribute__((host))
-#define __device__ __attribute__((device))
-#define __global__ __attribute__((global))
-#define __shared__ __attribute__((shared))
-#define __constant__ __attribute__((constant))
-#define __managed__ __attribute__((managed))
-#endif
-
 #include <gpuintrin.h>
 
 #pragma push_macro("__GPU_DEVICE__")
 #define __GPU_DEVICE__ static __inline__ __attribute__((device, always_inline))
-
-#pragma push_macro("MAYBE_UNDEF")
-#define MAYBE_UNDEF __attribute__((maybe_undef))
-
-// warpSize and the threadIdx/blockIdx/blockDim/gridDim coordinate variables.
-#include <__clang_gpu_builtin_vars.h>
-
-//===----------------------------------------------------------------------===//
-// Integer intrinsics.
-//===----------------------------------------------------------------------===//
 
 __GPU_DEVICE__ unsigned int __popc(unsigned int __x) {
   return __builtin_popcountg(__x);
@@ -128,10 +109,6 @@ __GPU_DEVICE__ unsigned int __byte_perm(unsigned int __x, unsigned int __y,
   return __result;
 }
 
-//===----------------------------------------------------------------------===//
-// Bitfield operations.
-//===----------------------------------------------------------------------===//
-
 __GPU_DEVICE__ unsigned int __lastbit_u32_u64(unsigned long long __x) {
   return (unsigned int)__builtin_ctzg(__x, -1);
 }
@@ -168,10 +145,6 @@ __GPU_DEVICE__ unsigned long long __bitinsert_u64(unsigned long long __dst,
   return (__dst & ~(__mask << __o)) | ((__src & __mask) << __o);
 }
 
-//===----------------------------------------------------------------------===//
-// Type punning.
-//===----------------------------------------------------------------------===//
-
 __GPU_DEVICE__ int __float_as_int(float __x) {
   return __builtin_bit_cast(int, __x);
 }
@@ -202,12 +175,6 @@ __GPU_DEVICE__ double __hiloint2double(int __hi, int __lo) {
                                 (unsigned long long)(unsigned int)__lo);
 }
 
-//===----------------------------------------------------------------------===//
-// Numeric conversions with explicit rounding.
-//===----------------------------------------------------------------------===//
-
-// Floating-point to integer conversions map directly onto the rounding
-// builtins.
 #define __GPU_CVT_FP2INT(__name, __res, __arg)                                 \
   __GPU_DEVICE__ __res __name##_rd(__arg __x) {                                \
     return (__res)__builtin_elementwise_floor(__x);                            \
@@ -231,11 +198,9 @@ __GPU_CVT_FP2INT(__float2ull, unsigned long long, float)
 
 #undef __GPU_CVT_FP2INT
 
-// Round-to-nearest is a plain conversion, so the '_rn' variants are exact.
-//
-// TODO: Directed rounding (rd/ru/rz) for integer-to-float and the narrowing
-// double-to-float conversions has no portable builtin yet (need pragma STDC
-// FENV_ROUND pragma), so these are stubbed.
+// TODO: Directed rounding (rd/ru/rz) on the widening conversions needs a
+// FENV_ROUND pragma that is not yet wired up, so only round-to-nearest is
+// exact.
 #define __GPU_CVT_TO_F(__name, __res, __arg)                                   \
   __GPU_DEVICE__ __res __name##_rd(__arg __x) { __builtin_trap(); }            \
   __GPU_DEVICE__ __res __name##_rn(__arg __x) { return (__res)__x; }           \
@@ -252,14 +217,8 @@ __GPU_CVT_TO_F(__double2float, float, double)
 
 #undef __GPU_CVT_TO_F
 
-// Integer to double conversions are always exact, so only round-to-nearest is
-// defined by CUDA and HIP.
 __GPU_DEVICE__ double __int2double_rn(int __x) { return (double)__x; }
 __GPU_DEVICE__ double __uint2double_rn(unsigned int __x) { return (double)__x; }
-
-//===----------------------------------------------------------------------===//
-// Wavefront vote and lane identity.
-//===----------------------------------------------------------------------===//
 
 __GPU_DEVICE__ unsigned int __lane_id(void) { return __gpu_lane_id(); }
 
@@ -324,12 +283,8 @@ __GPU_DEVICE__ int __fns(unsigned int __mask, unsigned int __base,
   return __fns32(__mask, __base, __offset);
 }
 
-//===----------------------------------------------------------------------===//
-// Synchronization and fences
-//===----------------------------------------------------------------------===//
-
-// CUDA provides __syncthreads as an NVPTX compiler builtin directly.
-#if !defined(__CUDA__)
+// CUDA lowers __syncthreads to an NVPTX builtin directly.
+#if !defined(__NVPTX__)
 __GPU_DEVICE__ void __syncthreads(void) { __gpu_sync_threads(); }
 #endif
 
@@ -387,10 +342,6 @@ __GPU_DEVICE__ void __threadfence_system(void) {
   __scoped_atomic_thread_fence(__ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
 }
 
-//===----------------------------------------------------------------------===//
-// Timers
-//===----------------------------------------------------------------------===//
-
 __GPU_DEVICE__ long long __clock64(void) {
   return (long long)__builtin_readcyclecounter();
 }
@@ -401,10 +352,6 @@ __GPU_DEVICE__ long long wall_clock64(void) {
   return (long long)__builtin_readsteadycounter();
 }
 
-// Warp shuffle / synchronization / reduction intrinsics.
-#include <__clang_gpu_intrinsics.h>
-
-#pragma pop_macro("MAYBE_UNDEF")
 #pragma pop_macro("__GPU_DEVICE__")
 
 #endif // device compile

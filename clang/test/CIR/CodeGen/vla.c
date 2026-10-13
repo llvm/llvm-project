@@ -393,23 +393,23 @@ void vla_subscript_expr() {
 // CIR: %[[CONST_5:.*]] = cir.const #cir.int<5> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_5]], %[[N_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[CONST_0_VAL:.*]] = cir.const #cir.int<0> : !s32i
-// CIR: %[[CONST_5:.*]] = cir.const #cir.int<5> : !s64i
-// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s64i
 // CIR: %[[TMP_N:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
 // CIR: %[[A_VAL:.*]] = cir.cast bitcast %[[A_ADDR]] : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>> -> !cir.ptr<!cir.ptr<!s32i>>
 // CIR: cir.store {{.*}} %[[A_VAL]], %[[COMPOUND_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CIR: %[[TMP_COMPOUND:.*]] = cir.load {{.*}} %[[COMPOUND_ADDR]] : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s64i
 // CIR: %[[COMPOUND_PTR:.*]] = cir.ptr_stride %[[TMP_COMPOUND]], %[[CONST_0]] : (!cir.ptr<!cir.ptr<!s32i>>, !s64i) -> !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[TMP_COMPOUND:.*]] = cir.load {{.*}} %[[COMPOUND_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !u64i
 // CIR: %[[VLA_IDX:.*]] = cir.mul nsw %[[CONST_1]], %[[TMP_N]] : !u64i
 // CIR: %[[VLA_A_PTR:.*]] = cir.ptr_stride %[[TMP_COMPOUND]], %[[VLA_IDX]] : (!cir.ptr<!s32i>, !u64i) -> !cir.ptr<!s32i>
+// CIR: %[[CONST_5:.*]] = cir.const #cir.int<5> : !s64i
 // CIR: %[[ELEM_5_PTR:.*]] = cir.ptr_stride %[[VLA_A_PTR]], %[[CONST_5]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 // CIR: cir.store {{.*}} %[[CONST_0_VAL]], %[[ELEM_5_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: %[[A_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM: %[[N_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[COMPOUND_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca ptr, align 8
+// LLVM: %[[N_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[COMPOUND_ADDR:.*]] = alloca ptr, align 8
 // LLVM: store i64 5, ptr %[[N_ADDR]], align 8
 // LLVM: %[[TMP_N:.*]] = load i64, ptr %[[N_ADDR]], align 8
 // LLVM: store ptr %[[A_ADDR]], ptr %[[COMPOUND_ADDR]], align 8
@@ -450,14 +450,14 @@ double vla_param_2d(int n, double m[n][n], int i, int j) {
 // CIR:   cir.store{{.*}} %[[J_ARG]], %[[J_ADDR]]
 // CIR:   %[[N:.*]] = cir.load{{.*}} %[[N_ADDR]]
 // CIR:   %[[VLA_SIZE:.*]] = cir.cast integral %[[N]] : !s32i -> !u64i
-// CIR:   %[[J:.*]] = cir.load{{.*}} %[[J_ADDR]]
-// CIR:   %[[J_EXT:.*]] = cir.cast integral %[[J]] : !s32i -> !s64i
+// CIR:   %[[M:.*]] = cir.load{{.*}} %[[M_ADDR]]
 // CIR:   %[[I:.*]] = cir.load{{.*}} %[[I_ADDR]]
 // CIR:   %[[I_EXT_S:.*]] = cir.cast integral %[[I]] : !s32i -> !s64i
-// CIR:   %[[M:.*]] = cir.load{{.*}} %[[M_ADDR]]
 // CIR:   %[[I_EXT:.*]] = cir.cast integral %[[I_EXT_S]] : !s64i -> !u64i
 // CIR:   %[[ROW_OFF:.*]] = cir.mul nsw %[[I_EXT]], %[[VLA_SIZE]] : !u64i
 // CIR:   %[[ROW_PTR:.*]] = cir.ptr_stride %[[M]], %[[ROW_OFF]]
+// CIR:   %[[J:.*]] = cir.load{{.*}} %[[J_ADDR]]
+// CIR:   %[[J_EXT:.*]] = cir.cast integral %[[J]] : !s32i -> !s64i
 // CIR:   %[[ELEM_PTR:.*]] = cir.ptr_stride %[[ROW_PTR]], %[[J_EXT]]
 // CIR:   %[[ELEM:.*]] = cir.load{{.*}} %[[ELEM_PTR]] : !cir.ptr<!cir.double>, !cir.double
 
@@ -472,13 +472,13 @@ double vla_param_2d(int n, double m[n][n], int i, int j) {
 // LLVM:   store i32 %[[J_ARG]], ptr %[[J_ADDR]]
 // LLVM:   %[[N:.*]] = load i32, ptr %[[N_ADDR]]
 // LLVM:   %[[VLA_SIZE:.*]] = sext i32 %[[N]] to i64
-// LLVM:   %[[J:.*]] = load i32, ptr %[[J_ADDR]]
-// LLVM:   %[[J_EXT:.*]] = sext i32 %[[J]] to i64
+// LLVM:   %[[M:.*]] = load ptr, ptr %[[M_ADDR]]
 // LLVM:   %[[I:.*]] = load i32, ptr %[[I_ADDR]]
 // LLVM:   %[[I_EXT:.*]] = sext i32 %[[I]] to i64
-// LLVM:   %[[M:.*]] = load ptr, ptr %[[M_ADDR]]
 // LLVM:   %[[ROW_OFF:.*]] = mul nsw i64 %[[I_EXT]], %[[VLA_SIZE]]
 // LLVM:   %[[ROW_PTR:.*]] = getelementptr double, ptr %[[M]], i64 %[[ROW_OFF]]
+// LLVM:   %[[J:.*]] = load i32, ptr %[[J_ADDR]]
+// LLVM:   %[[J_EXT:.*]] = sext i32 %[[J]] to i64
 // LLVM:   %[[ELEM_PTR:.*]] = getelementptr double, ptr %[[ROW_PTR]], i64 %[[J_EXT]]
 // LLVM:   %[[ELEM:.*]] = load double, ptr %[[ELEM_PTR]]
 
@@ -529,8 +529,8 @@ void complex_vla_cast(int n) {
 // CIR:   }
 
 // LLVM: define {{.*}} void @complex_vla_cast
-// LLVM:   %[[LEN_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[SAVED_STACK:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[LEN_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[SAVED_STACK:.*]] = alloca ptr, align 8
 // LLVM:   store i32 %{{.*}}, ptr %[[LEN_ADDR]], align 4
 // LLVM:   %[[LEN:.*]] = load i32, ptr %[[LEN_ADDR]], align 4
 // LLVM:   %[[LEN_SIZE_T:.*]] = sext i32 %[[LEN]] to i64

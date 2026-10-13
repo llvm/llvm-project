@@ -49,9 +49,8 @@ foreach(arch ${DFSAN_SUPPORTED_ARCH})
     PARENT_TARGET dfsan)
   add_sanitizer_rt_symbols(clang_rt.dfsan
     ARCHS ${arch}
+    PARENT_TARGET dfsan
     EXTRA dfsan.syms.extra)
-  add_dependencies(dfsan
-    clang_rt.dfsan-${arch}-symbols)
 endforeach()
 
 set(dfsan_abilist_dir ${COMPILER_RT_OUTPUT_DIR}/share)
@@ -70,4 +69,5 @@ add_custom_command(OUTPUT ${dfsan_abilist_filename}
                    DEPENDS done_abilist.txt libc_ubuntu1404_abilist.txt)
 add_dependencies(dfsan dfsan_abilist)
 install(FILES ${dfsan_abilist_filename}
-        DESTINATION ${COMPILER_RT_INSTALL_DATA_DIR})
+        DESTINATION ${COMPILER_RT_INSTALL_DATA_DIR}
+        COMPONENT dfsan)

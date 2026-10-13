@@ -1,5 +1,4 @@
 // RUN: not llvm-mc -triple=amdgpu8.02 %s 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgpu6.00 %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgpu7.04 %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
 

@@ -1,12 +1,15 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   DebugInfoDWARF
   Object
   MC
+  TargetParser
   ${BOLT_TARGETS_TO_BUILD}
   )
 
 add_bolt_unittest(CoreTests
   BinaryContext.cpp
+  Relocation.cpp
   ClusteredRows.cpp
   MCPlusBuilder.cpp
   MemoryMaps.cpp

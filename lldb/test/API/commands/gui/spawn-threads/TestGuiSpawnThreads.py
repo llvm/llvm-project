@@ -11,7 +11,7 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 import sys
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class TestGuiSpawnThreadsTest(PExpectTest):
     # This tests spawns threads, so low resources on the host may
     # lead to the test program being stalled for a long time.
@@ -21,6 +21,8 @@ class TestGuiSpawnThreadsTest(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfCursesSupportMissing
+    # Temporary fix for CI timeouts - https://github.com/llvm/llvm-project/issues/209874.
+    @skipIfLinux
     def test_gui(self):
         self.build()
 

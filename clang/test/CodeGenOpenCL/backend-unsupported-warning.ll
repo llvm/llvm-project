@@ -1,12 +1,12 @@
 ; REQUIRES: amdgpu-registered-target
-; RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -S -o - %s 2>&1 | FileCheck %s
+; RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -S -o - %s 2>&1 | FileCheck %s
 
 ; Check that a DiagnosticUnsupported reported as a warning works
 ; correctly, and is not emitted as an error.
 
 ; CHECK: warning: test.c:2:20: in function use_lds_global_in_func i32 (): local memory global used by non-kernel function
 
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 @lds = external addrspace(3) global i32, align 4
 

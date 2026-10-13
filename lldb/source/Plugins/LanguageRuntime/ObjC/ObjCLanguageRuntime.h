@@ -233,6 +233,8 @@ public:
 
   virtual TaggedPointerVendor *GetTaggedPointerVendor() { return nullptr; }
 
+  bool IsTaggedPointerValue(ValueObject &in_value);
+
   typedef std::shared_ptr<EncodingToType> EncodingToTypeSP;
 
   virtual EncodingToTypeSP GetEncodingToType();

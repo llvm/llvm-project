@@ -2344,6 +2344,10 @@ static void printCPUType(uint32_t cputype, uint32_t cpusubtype) {
       outs() << "    cputype CPU_TYPE_ARM64\n";
       outs() << "    cpusubtype CPU_SUBTYPE_ARM64E\n";
       break;
+    case MachO::CPU_SUBTYPE_ARM64E_X1:
+      outs() << "    cputype CPU_TYPE_ARM64\n";
+      outs() << "    cpusubtype CPU_SUBTYPE_ARM64E_X1\n";
+      break;
     default:
       printUnknownCPUType(cputype, cpusubtype);
       break;
@@ -8472,6 +8476,9 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
       case MachO::CPU_SUBTYPE_ARM64E:
         outs() << "          E";
         break;
+      case MachO::CPU_SUBTYPE_ARM64E_X1:
+        outs() << "       E.X1";
+        break;
       default:
         outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
         break;
@@ -9291,6 +9298,19 @@ static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
   for (unsigned i = 0; i < bd.ntools; ++i) {
     MachO::build_tool_version bv = obj->getBuildToolVersion(i);
     PrintBuildToolVersion(bv, verbose);
+  }
+}
+
+static void PrintTargetTripleCommand(MachO::target_triple_command tt,
+                                     const char *Ptr) {
+  PrintLoadCommand(tt.cmd, tt.cmdsize,
+                   tt.cmdsize >= sizeof(struct MachO::target_triple_command),
+                   /*LabelWidth=*/8);
+  if (tt.triple < tt.cmdsize) {
+    const char *P = Ptr + tt.triple;
+    outs() << "  triple " << P << " (offset " << tt.triple << ")\n";
+  } else {
+    outs() << "  triple ?(bad offset " << tt.triple << ")\n";
   }
 }
 
@@ -10193,6 +10213,10 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
       MachO::build_version_command Bv =
           Obj->getBuildVersionLoadCommand(Command);
       PrintBuildVersionLoadCommand(Obj, Bv, verbose);
+    } else if (Command.C.cmd == MachO::LC_TARGET_TRIPLE) {
+      MachO::target_triple_command Tt =
+          Obj->getTargetTripleLoadCommand(Command);
+      PrintTargetTripleCommand(Tt, Command.Ptr);
     } else if (Command.C.cmd == MachO::LC_SOURCE_VERSION) {
       MachO::source_version_command Sd = Obj->getSourceVersionCommand(Command);
       PrintSourceVersionCommand(Sd);

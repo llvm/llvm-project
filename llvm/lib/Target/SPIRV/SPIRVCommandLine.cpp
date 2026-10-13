@@ -17,11 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <functional>
-#include <iterator>
 #include <string>
-#include <utility>
-#include <vector>
 
 #define DEBUG_TYPE "spirv-commandline"
 
@@ -132,6 +128,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
     {"SPV_KHR_non_semantic_info",
      SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
+    {"SPV_KHR_relaxed_extended_instruction",
+     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction},
     {"SPV_KHR_ray_query", SPIRV::Extension::Extension::SPV_KHR_ray_query},
     {"SPV_EXT_shader_image_int64",
      SPIRV::Extension::Extension::SPV_EXT_shader_image_int64},
@@ -179,7 +177,10 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_AMD_weak_linkage", SPIRV::Extension::Extension::SPV_AMD_weak_linkage},
     {"SPV_KHR_abort", SPIRV::Extension::Extension::SPV_KHR_abort},
     {"SPV_KHR_poison_freeze",
-     SPIRV::Extension::Extension::SPV_KHR_poison_freeze}};
+     SPIRV::Extension::Extension::SPV_KHR_poison_freeze},
+    {"SPV_KHR_untyped_pointers",
+     SPIRV::Extension::Extension::SPV_KHR_untyped_pointers},
+    {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue, ExtensionSet &Vals) {

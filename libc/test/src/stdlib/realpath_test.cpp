@@ -19,6 +19,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/utility.h"
 #include "src/__support/OSUtil/path.h"
+#include "src/__support/c_string.h"
 #include "src/__support/fixedvector.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/libc_errno.h"
@@ -32,12 +33,14 @@
 #include "src/unistd/close.h"
 #include "src/unistd/getcwd.h"
 #include "src/unistd/getpid.h"
+#include "src/unistd/symlinkat.h"
 #include "src/unistd/unlinkat.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 
 namespace cpp = LIBC_NAMESPACE::cpp;
 namespace path = LIBC_NAMESPACE::path;
+using LIBC_NAMESPACE::CString;
 using LIBC_NAMESPACE::FixedVector;
 using LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::testing::tlog;
@@ -160,6 +163,21 @@ public:
       return -1;
     return LIBC_NAMESPACE::close(newfd);
   }
+
+  // Creates a symlink relative to TestDir. Returns zero on success.
+  [[nodiscard]] int symlink(const char *target_path,
+                            const char *relative_path) {
+    char *path = LIBC_NAMESPACE::strdup(relative_path);
+    if (path == nullptr)
+      return -1;
+
+    if (!files.push_back(path)) {
+      tlog << "Not enough space in TestDir::files_\n";
+      return -1;
+    }
+
+    return LIBC_NAMESPACE::symlinkat(target_path, fd, path);
+  }
 };
 
 cpp::string unique_id() {
@@ -204,9 +222,17 @@ public:
   // While we would prefer to return cpp::optional<TestDir> here,
   // LLVM-libc's optional expects types to be trivially destructible.
   [[nodiscard]] bool create_test_dir(const char *name, TestDir &dst) {
-    // Use /tmp instead of the typical libc_make_test_file_path to ensure
-    // the path is absolute and does not contain symlinks.
-    cpp::string test_dir_path = "/tmp/LlvmLibcRealpathTest.";
+    CString test_dir = libc_make_test_file_path(".");
+    char buf[PATH_MAX];
+    // Some test environments will have symlinks in their test directory.
+    // In order for tests to compute an expected canonical path,
+    // the path returned by create_test_dir needs to be canonical itself.
+    char *test_dir_abspath = LIBC_NAMESPACE::realpath(test_dir, buf);
+    if (libc_errno != 0)
+      return false;
+
+    cpp::string test_dir_path(test_dir_abspath);
+    test_dir_path += "/LlvmLibcRealpathTest.";
     test_dir_path += name;
     test_dir_path += ".";
 
@@ -484,4 +510,111 @@ TEST_F(LlvmLibcRealpathTest, RelativeRealpathRejectsPathExceedingMaxSize) {
 
   ASSERT_EQ(realpath_buffered("."), nullptr);
   ASSERT_ERRNO_EQ(ENAMETOOLONG);
+}
+
+TEST_F(LlvmLibcRealpathTest, AbsoluteSymlinkResolves) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("AbsoluteSymlinkResolves", test_dir));
+
+  ASSERT_THAT(test_dir.mkdir("a"), Succeeds());
+  ASSERT_THAT(test_dir.touch("a/file"), Succeeds());
+
+  cpp::string absolute_target = test_dir.absolute_path("a/file");
+  ASSERT_THAT(test_dir.symlink(absolute_target.c_str(), "link"), Succeeds());
+
+  ASSERT_STREQ(realpath_buffered(test_dir.absolute_path("link")),
+               absolute_target.c_str());
+}
+
+TEST_F(LlvmLibcRealpathTest, RelativeSymlinkResolves) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("RelativeSymlinkResolves", test_dir));
+
+  ASSERT_THAT(test_dir.mkdir("a"), Succeeds());
+  ASSERT_THAT(test_dir.touch("a/file"), Succeeds());
+
+  ASSERT_THAT(test_dir.symlink("a/file", "link"), Succeeds());
+
+  ASSERT_STREQ(realpath_buffered(test_dir.absolute_path("link")),
+               test_dir.absolute_path("a/file").c_str());
+}
+
+TEST_F(LlvmLibcRealpathTest, SymlinkWithinDirectoryTraversalResolves) {
+  TestDir test_dir;
+  ASSERT_TRUE(
+      create_test_dir("SymlinkWithinDirectoryTraversalResolves", test_dir));
+
+  ASSERT_THAT(test_dir.mkdir("a"), Succeeds());
+  ASSERT_THAT(test_dir.mkdir("a/b"), Succeeds());
+  ASSERT_THAT(test_dir.touch("a/b/c"), Succeeds());
+  ASSERT_THAT(test_dir.symlink("a/b", "link"), Succeeds());
+
+  ASSERT_STREQ(realpath_buffered(test_dir.absolute_path("link/c")),
+               test_dir.absolute_path("a/b/c").c_str());
+}
+
+TEST_F(LlvmLibcRealpathTest, MultipleSymlinkResolutions) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("MultipleSymlinkResolutions", test_dir));
+
+  ASSERT_THAT(test_dir.symlink("b", "a"), Succeeds());
+  ASSERT_THAT(test_dir.symlink("c", "b"), Succeeds());
+  ASSERT_THAT(test_dir.symlink("d", "c"), Succeeds());
+  ASSERT_THAT(test_dir.touch("d"), Succeeds());
+
+  ASSERT_STREQ(realpath_buffered(test_dir.absolute_path("a")),
+               test_dir.absolute_path("d").c_str());
+}
+
+TEST_F(LlvmLibcRealpathTest, SymlinkLoop) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("SymlinkLoop", test_dir));
+
+  ASSERT_THAT(test_dir.symlink("a", "b"), Succeeds());
+  ASSERT_THAT(test_dir.symlink("b", "a"), Succeeds());
+
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("a")), nullptr);
+  ASSERT_ERRNO_EQ(ELOOP);
+}
+
+TEST_F(LlvmLibcRealpathTest, LongSymlinkErrorsWithNameTooLong) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("LongSymlinkErrorsWithNameTooLong", test_dir));
+
+  cpp::string target(PATH_MAX - 1, 'a');
+  for (size_t i = 0; i < target.size(); i += NAME_MAX)
+    target[i] = '/';
+
+  ASSERT_THAT(test_dir.symlink(target.c_str(), "link"), Succeeds());
+
+  // The link resolves to a maximum length path,
+  // so adding anything to the end means the intermediary path is too long.
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("link/long")), nullptr);
+  ASSERT_ERRNO_EQ(ENAMETOOLONG);
+}
+
+TEST_F(LlvmLibcRealpathTest, ErrorsWithNotDirWhenLinkTargetHasTrailingSep) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("ErrorsWithNotDirWhenLinkTargetHasTrailingSep",
+                              test_dir));
+
+  ASSERT_THAT(test_dir.touch("file"), Succeeds());
+  // The trailing slash in the symlink target should be respected.
+  ASSERT_THAT(test_dir.symlink("file/", "link"), Succeeds());
+
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("link")), nullptr);
+  ASSERT_ERRNO_EQ(ENOTDIR);
+}
+
+TEST_F(LlvmLibcRealpathTest, ErrorsWithNotDirWhenPathWithLinkHasTrailingSep) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("ErrorsWithNotDirWhenPathWithLinkHasTrailingSep",
+                              test_dir));
+
+  ASSERT_THAT(test_dir.touch("file"), Succeeds());
+  ASSERT_THAT(test_dir.symlink("file", "link"), Succeeds());
+
+  // The trailing slash in "link/" should be respected.
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("link/")), nullptr);
+  ASSERT_ERRNO_EQ(ENOTDIR);
 }
