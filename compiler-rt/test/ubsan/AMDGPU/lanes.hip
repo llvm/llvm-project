@@ -1,6 +1,8 @@
 // REQUIRES: ubsan-hip
 // RUN: %clang_hip -fsanitize=builtin %s -o %t %hip_libs
 // RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hip -O2 -fsanitize=builtin %s -o %t %hip_libs
+// RUN: %run %t 2>&1 | FileCheck %s
 
 #define TID __builtin_amdgcn_workitem_id_x()
 
@@ -36,6 +38,14 @@ __global__ void shuffle(int *Out) {
     Out[TID] = __shfl(X, Lane + 16);
 }
 
+__global__ void shuffle_direct(int *Out) {
+  int Lane = __lane_id();
+  int X = Out[TID];
+  // CHECK: lanes.hip:[[#@LINE+2]]:16: runtime error: lane index passed to __builtin_amdgcn_wave_shuffle() refers to an inactive lane
+  if (Lane < 16)
+    Out[TID] = __builtin_amdgcn_wave_shuffle(X, Lane + 16);
+}
+
 // CHECK: hip.h:[[#]]:[[#]]: runtime error: lane index passed to __builtin_amdgcn_wave_shuffle() refers to an inactive lane
 __global__ void partial_reduce(int *Out) { Out[TID] = reduce(Out[TID]); }
 
@@ -47,6 +57,8 @@ int main() {
   readlane<<<1, 64>>>(P);
   CHECK_HIP(hipDeviceSynchronize());
   shuffle<<<1, 64>>>(P);
+  CHECK_HIP(hipDeviceSynchronize());
+  shuffle_direct<<<1, 64>>>(P);
   CHECK_HIP(hipDeviceSynchronize());
   partial_reduce<<<1, 20>>>(P);
   CHECK_HIP(hipDeviceSynchronize());
