@@ -312,7 +312,7 @@ public:
 private:
 
   // Create a single-threaded LLLazyJIT instance.
-  LLVM_ABI LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
+  LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
 
   std::unique_ptr<LazyCallThroughManager> LCTMgr;
   std::unique_ptr<IRPartitionLayer> IPLayer;

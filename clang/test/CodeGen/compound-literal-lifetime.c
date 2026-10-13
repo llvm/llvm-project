@@ -91,3 +91,15 @@ label:
   goto label;
 }
 
+int callee(int);
+
+// Verify that conditional compound literals (which wrap CallLifetimeEnd in
+// ConditionalCleanup) do not prevent [[clang::musttail]] calls.
+// CHECK-LABEL: define dso_local i32 @test_musttail(
+// CHECK: musttail call i32 @callee(
+// CHECK-NEXT: ret i32
+int test_musttail(int cond) {
+  struct foo s;
+  s = cond ? (struct foo){.x = 1} : (struct foo){.x = 2};
+  [[clang::musttail]] return callee(s.x);
+}

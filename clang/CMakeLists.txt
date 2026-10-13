@@ -220,6 +220,16 @@ if( CLANG_HAVE_DLFCN_H )
   cmake_pop_check_state()
 endif()
 
+if(NOT DEFINED CLANG_HAVE_EMUTLS_GET_ADDRESS)
+  include(CheckCXXSourceCompiles)
+  check_cxx_source_compiles([[
+    extern "C" void *__emutls_get_address(void *);
+    int main() {
+      return __emutls_get_address((void *)0) != (void *)0;
+    }
+  ]] CLANG_HAVE_EMUTLS_GET_ADDRESS)
+endif()
+
 set(CLANG_RESOURCE_DIR "" CACHE STRING
   "Relative directory from the Clang binary to its resource files.")
 
@@ -402,7 +412,7 @@ configure_file(
 
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common -Woverloaded-virtual")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common")
 
   # Enable -pedantic for Clang even if it's not enabled for LLVM.
   if (NOT LLVM_ENABLE_PEDANTIC)

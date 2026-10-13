@@ -60,7 +60,7 @@ class TGTimer;
 //  Type Classes
 //===----------------------------------------------------------------------===//
 
-class RecTy {
+class alignas(8) RecTy {
 public:
   /// Subclass discriminator (for dyn_cast<> et al.)
   enum RecTyKind {
@@ -336,6 +336,9 @@ private:
 protected:
   uint8_t Opc; // Used by UnOpInit, BinOpInit, and TernOpInit
 
+  /// Set if resolveReferences returns this value unchanged with any resolver.
+  bool TriviallyResolved;
+
 private:
   virtual void anchor();
 
@@ -343,11 +346,22 @@ public:
   /// Get the kind (type) of the value.
   InitKind getKind() const { return Kind; }
 
+  /// Return true if \p K is a value kind that cannot contain references.
+  static bool isLeafKind(InitKind K) {
+    return K == IK_BitInit || K == IK_DefInit || K == IK_IntInit ||
+           K == IK_StringInit || K == IK_UnsetInit;
+  }
+
+  /// Return true if resolveReferences returns this value unchanged with any
+  /// resolver. This is a cheap, conservative subset of isConcrete().
+  bool isTriviallyResolved() const { return TriviallyResolved; }
+
   /// Get the record keeper that initialized this Init.
   RecordKeeper &getRecordKeeper() const;
 
 protected:
-  explicit Init(InitKind K, uint8_t Opc = 0) : Kind(K), Opc(Opc) {}
+  explicit Init(InitKind K, uint8_t Opc = 0)
+      : Kind(K), Opc(Opc), TriviallyResolved(isLeafKind(K)) {}
 
 public:
   Init(const Init &) = delete;
@@ -503,7 +517,9 @@ private:
 
 protected:
   explicit ArgumentInit(const Init *Value, ArgAuxType Aux)
-      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {}
+      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {
+    TriviallyResolved = Value->isTriviallyResolved();
+  }
 
 public:
   ArgumentInit(const ArgumentInit &) = delete;
@@ -776,7 +792,7 @@ public:
     return ArrayRef(getTrailingObjects(), NumElements);
   }
 
-  LLVM_DEPRECATED("Use getElements instead", "getElements")
+  LLVM_DEPRECATED_WITH_FIXIT("Use getElements instead", "getElements")
   ArrayRef<const Init *> getValues() const { return getElements(); }
 
   const Init *getElement(unsigned Idx) const { return getElements()[Idx]; }
@@ -1585,12 +1601,16 @@ public:
 private:
   const Init *Name;
   SMLoc Loc; // Source location of definition of name.
-  PointerIntPair<const RecTy *, 2, FieldKind> TyAndKind;
+  // The low two bits of the flags are the FieldKind, and bit 2 is set if the
+  // value is used.
+  PointerIntPair<const RecTy *, 3, unsigned> TyAndFlags;
+  static constexpr unsigned KindMask = 3;
+  static constexpr unsigned UsedBit = 4;
   const Init *Value;
-  bool IsUsed = false;
 
-  /// Reference locations to this record value.
-  SmallVector<SMRange, 0> ReferenceLocs;
+  FieldKind getKind() const {
+    return FieldKind(TyAndFlags.getInt() & KindMask);
+  }
 
 public:
   RecordVal(const Init *N, const RecTy *T, FieldKind K);
@@ -1614,17 +1634,13 @@ public:
   SMLoc getLoc() const { return Loc; }
 
   /// Is this a field where nonconcrete values are okay?
-  bool isNonconcreteOK() const {
-    return TyAndKind.getInt() == FK_NonconcreteOK;
-  }
+  bool isNonconcreteOK() const { return getKind() == FK_NonconcreteOK; }
 
   /// Is this a template argument?
-  bool isTemplateArg() const {
-    return TyAndKind.getInt() == FK_TemplateArg;
-  }
+  bool isTemplateArg() const { return getKind() == FK_TemplateArg; }
 
   /// Get the type of the field value as a RecTy.
-  const RecTy *getType() const { return TyAndKind.getPointer(); }
+  const RecTy *getType() const { return TyAndFlags.getPointer(); }
 
   /// Get the type of the field for printing purposes.
   std::string getPrintType() const;
@@ -1638,16 +1654,13 @@ public:
   /// Set the value and source location of the field.
   bool setValue(const Init *V, SMLoc NewLoc);
 
-  /// Add a reference to this record value.
-  void addReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
-
-  /// Return the references of this record value.
-  ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
-
   /// Whether this value is used. Useful for reporting warnings, for example
   /// when a template argument is unused.
-  void setUsed(bool Used) { IsUsed = Used; }
-  bool isUsed() const { return IsUsed; }
+  void setUsed(bool Used) {
+    unsigned Flags = TyAndFlags.getInt() & ~UsedBit;
+    TyAndFlags.setInt(Used ? Flags | UsedBit : Flags);
+  }
+  bool isUsed() const { return TyAndFlags.getInt() & UsedBit; }
 
   void dump() const;
 
@@ -1692,6 +1705,7 @@ private:
   SmallVector<SMLoc, 4> Locs;
   SmallVector<SMLoc, 0> ForwardDeclarationLocs;
   mutable SmallVector<SMRange, 0> ReferenceLocs;
+  mutable DenseMap<const Init *, SmallVector<SMRange, 0>> ValueReferenceLocs;
   SmallVector<const Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
@@ -1731,9 +1745,9 @@ public:
   // ID number. Don't copy CorrespondingDefInit either, since it's owned by the
   // original record. All other fields can be copied normally.
   Record(const Record &O)
-      : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
-        Values(O.Values), Assertions(O.Assertions),
-        DirectSuperClasses(O.DirectSuperClasses),
+      : Name(O.Name), Locs(O.Locs), ValueReferenceLocs(O.ValueReferenceLocs),
+        TemplateArgs(O.TemplateArgs), Values(O.Values),
+        Assertions(O.Assertions), DirectSuperClasses(O.DirectSuperClasses),
         TrackedRecords(O.TrackedRecords), ID(getNewUID(O.getRecords())),
         Kind(O.Kind) {}
 
@@ -1763,6 +1777,26 @@ public:
 
   /// Return the references of this record value.
   ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
+
+  /// Add a reference to the value named \p Name.
+  void appendValueReferenceLoc(const Init *Name, SMRange Loc) const {
+    ValueReferenceLocs[Name].push_back(Loc);
+  }
+
+  /// Add the references to the value named \p Name in \p From.
+  void appendValueReferenceLocs(const Record &From, const Init *Name) const {
+    auto It = From.ValueReferenceLocs.find(Name);
+    if (It != From.ValueReferenceLocs.end())
+      llvm::append_range(ValueReferenceLocs[Name], It->second);
+  }
+
+  /// Return the references to the value named \p Name.
+  ArrayRef<SMRange> getValueReferenceLocs(const Init *Name) const {
+    auto It = ValueReferenceLocs.find(Name);
+    if (It == ValueReferenceLocs.end())
+      return {};
+    return It->second;
+  }
 
   // Update a class location when encountering a (re-)definition.
   void updateClassLoc(SMLoc Loc);

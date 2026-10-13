@@ -169,6 +169,7 @@ def OMPC_Depobj : Clause<[Spelling<"depobj">]> {
   let isImplicit = true;
 }
 def OMPC_Depth : Clause<[Spelling<"depth">]> {
+  let clangClass = "OMPDepthClause";
   let flangClass = "ScalarIntConstantExpr";
 }
 def OMPC_Destroy : Clause<[Spelling<"destroy">]> {
@@ -1700,6 +1701,7 @@ def OMP_DoSimd : Directive<[Spelling<"do simd">]> {
     VersionedClause<OMPC_If, 50>,
     VersionedClause<OMPC_LastPrivate>,
     VersionedClause<OMPC_Linear>,
+    VersionedClause<OMPC_NonTemporal, 50>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_Reduction>,
   ];

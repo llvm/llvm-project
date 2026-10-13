@@ -39,7 +39,9 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -68,7 +70,7 @@ namespace clang {
 // TODO: consider deprecating ClSanitizeGuardChecks; functionality is subsumed
 //       by -fsanitize-skip-hot-cutoff
 llvm::cl::opt<bool> ClSanitizeGuardChecks(
-    "ubsan-guard-checks", llvm::cl::Optional,
+    "ubsan-guard-checks",
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 } // namespace clang
@@ -441,9 +443,16 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
       if (!ReferenceTemporaryDtor)
         return;
 
+      // Like in `EmitDeclDestroy`, destructors that return `this` need a helper
+      // if the target does not tolerate the mismatch (e.g. WebAssembly).
+      bool CanRegisterDestructor =
+          !CGF.CGM.getCXXABI().HasThisReturn(
+              GlobalDecl(ReferenceTemporaryDtor, Dtor_Complete)) ||
+          CGF.CGM.getCXXABI().canCallMismatchedFunctionType();
+
       llvm::FunctionCallee CleanupFn;
       llvm::Constant *CleanupArg;
-      if (E->getType()->isArrayType()) {
+      if (E->getType()->isArrayType() || !CanRegisterDestructor) {
         CleanupFn = CodeGenFunction(CGF.CGM).generateDestroyHelper(
             ReferenceTemporary, E->getType(), CodeGenFunction::destroyCXXObject,
             CGF.getLangOpts().Exceptions,
@@ -636,8 +645,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
 
         OldIP = Builder.saveIP();
         llvm::BasicBlock *Block = OldConditional->getStartingBlock();
-        Builder.restoreIP(CGBuilderTy::InsertPoint(
-            Block, llvm::BasicBlock::iterator(Block->back())));
+        Builder.restoreIP(Block->back().getIterator());
       }
 
       if (EmitLifetimeStart(Alloca.getPointer())) {
@@ -2312,7 +2320,8 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   }
 
   llvm::Type *ResTy = ConvertType(Ty);
-  bool HasBoolRep = Ty->hasBooleanRepresentation() || Ty->isExtVectorBoolType();
+  bool HasBoolRep = Ty->hasBooleanRepresentation() ||
+                    Ty->isExtVectorBoolType() || Ty->isConstantMatrixBoolType();
   if (HasBoolRep && CGM.getCodeGenOpts().isConvertingBoolWithCmp0()) {
     return Builder.CreateICmpNE(
         Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
@@ -2353,6 +2362,25 @@ static RawAddress MaybeConvertMatrixAddress(RawAddress Addr,
   return Addr;
 }
 
+// Emit a store of a matrix LValue. This may require casting the original
+// pointer to memory address (ArrayType) to a pointer to the value type
+// (VectorType).
+static void EmitStoreOfMatrixScalar(llvm::Value *value, LValue lvalue,
+                                    bool isInit, CodeGenFunction &CGF) {
+  if (CGF.getLangOpts().HLSL &&
+      isMatrixRowMajor(CGF.getLangOpts(), lvalue.getType())) {
+    const auto *MatrixTy = lvalue.getType()->castAs<ConstantMatrixType>();
+    llvm::MatrixBuilder MB(CGF.Builder);
+    value = MB.CreateColumnMajorToRowMajorTransform(
+        value, MatrixTy->getNumRows(), MatrixTy->getNumColumns());
+  }
+  Address Addr = MaybeConvertMatrixAddress(lvalue.getAddress(), CGF,
+                                           value->getType()->isVectorTy());
+  CGF.EmitStoreOfScalar(value, Addr, lvalue.isVolatile(), lvalue.getType(),
+                        lvalue.getBaseInfo(), lvalue.getTBAAInfo(), isInit,
+                        lvalue.isNontemporal());
+}
+
 LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
   LValue Base;
   if (E->getBase()->isGLValue())
@@ -2363,11 +2391,8 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
     llvm::Value *Mat = EmitScalarExpr(E->getBase());
     Address MatMem = CreateMemTemp(E->getBase()->getType());
     QualType Ty = E->getBase()->getType();
-    llvm::Type *LTy = convertTypeForLoadStore(Ty, Mat->getType());
-    if (LTy->getScalarSizeInBits() > Mat->getType()->getScalarSizeInBits())
-      Mat = Builder.CreateZExt(Mat, LTy);
-    Builder.CreateStore(Mat, MatMem);
     Base = MakeAddrLValue(MatMem, Ty, AlignmentSource::Decl);
+    EmitStoreOfMatrixScalar(Mat, Base, /*isInit=*/true, *this);
   }
   QualType ResultType =
       E->getType().withCVRQualifiers(Base.getQuals().getCVRQualifiers());
@@ -2417,18 +2442,6 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
   return LValue::MakeExtVectorElt(
       MaybeConvertMatrixAddress(Base.getExtVectorAddress(), *this), CV,
       ResultType, Base.getBaseInfo(), TBAAAccessInfo());
-}
-
-// Emit a store of a matrix LValue. This may require casting the original
-// pointer to memory address (ArrayType) to a pointer to the value type
-// (VectorType).
-static void EmitStoreOfMatrixScalar(llvm::Value *value, LValue lvalue,
-                                    bool isInit, CodeGenFunction &CGF) {
-  Address Addr = MaybeConvertMatrixAddress(lvalue.getAddress(), CGF,
-                                           value->getType()->isVectorTy());
-  CGF.EmitStoreOfScalar(value, Addr, lvalue.isVolatile(), lvalue.getType(),
-                        lvalue.getBaseInfo(), lvalue.getTBAAInfo(), isInit,
-                        lvalue.isNontemporal());
 }
 
 void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
@@ -2514,7 +2527,15 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
 
   Address Addr = MaybeConvertMatrixAddress(DestAddr, CGF);
   LV.setAddress(Addr);
-  return RValue::get(CGF.EmitLoadOfScalar(LV, Loc));
+  llvm::Value *Value = CGF.EmitLoadOfScalar(LV, Loc);
+  if (CGF.getLangOpts().HLSL &&
+      isMatrixRowMajor(CGF.getLangOpts(), LV.getType())) {
+    const auto *MatrixTy = LV.getType()->castAs<ConstantMatrixType>();
+    llvm::MatrixBuilder MB(CGF.Builder);
+    Value = MB.CreateRowMajorToColumnMajorTransform(
+        Value, MatrixTy->getNumRows(), MatrixTy->getNumColumns());
+  }
+  return RValue::get(Value);
 }
 
 RValue CodeGenFunction::EmitLoadOfAnyValue(LValue LV, AggValueSlot Slot,
@@ -3614,6 +3635,69 @@ static bool canEmitSpuriousReferenceToVariable(CodeGenFunction &CGF,
   }
 }
 
+/// Emit an LValue for a structured binding captured in an OpenMP region.
+/// Handles extracting individual bindings from the captured decomposed
+/// declaration (struct fields, array elements, etc.).
+LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
+  assert(CapturedStmtInfo && "Expected to be inside a captured region");
+  assert(CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
+         "Expected OpenMP captured region");
+  assert(CGM.getLangOpts().OpenMP && "Expected OpenMP to be enabled");
+
+  if (auto It = LocalDeclMap.find(BD->getCanonicalDecl());
+      It != LocalDeclMap.end())
+    return MakeAddrLValue(It->second, BD->getType());
+
+  const auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
+
+  // Use getNonReferenceType() because we need the actual object type, not the
+  // reference type. DeclRefExpr with VK_LValue requires a non-reference type
+  // (AST invariant). EmitDeclRefLValue will load any reference for us.
+  QualType DREType = DD->getType().getNonReferenceType();
+  DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(DD),
+                  /*RefersToEnclosingVariableOrCapture=*/true, DREType,
+                  VK_LValue, SourceLocation());
+  LValue BaseLVal = EmitDeclRefLValue(&DRE);
+
+  // Ensure the Address has the correct element type for DD's type.
+  // EmitDeclRefLValue might return an address with a different element type
+  // if reference unwrapping occurred.
+  Address BaseAddr = BaseLVal.getAddress();
+  QualType DDType = DD->getType();
+  llvm::Type *ExpectedTy = CGM.getTypes().ConvertTypeForMem(DDType);
+  if (BaseAddr.getElementType() != ExpectedTy)
+    BaseAddr = BaseAddr.withElementType(ExpectedTy);
+
+  // Now emit the binding expression (array subscript, member access, etc.)
+  // by temporarily installing the decomposed storage address, then routing
+  // through EmitLValue for the binding expression.
+  Expr *BindingExpr = BD->getBinding();
+  auto It = LocalDeclMap.find(DD);
+  bool WasMapped = It != LocalDeclMap.end();
+  Address SavedAddr = WasMapped ? It->second : Address::invalid();
+  Address MapAddr = BaseAddr;
+  if (DD->getType()->isReferenceType()) {
+    RawAddress RefSlot = CreateMemTemp(DD->getType(), "omp.binding.ref");
+    Builder.CreateStore(BaseAddr.emitRawPointer(*this), RefSlot);
+    MapAddr = RefSlot;
+  }
+  if (WasMapped)
+    It->second = MapAddr;
+  else
+    LocalDeclMap.insert({DD, MapAddr});
+  llvm::scope_exit Guard([&] {
+    if (WasMapped) {
+      auto RestoreIt = LocalDeclMap.find(DD);
+      assert(RestoreIt != LocalDeclMap.end() && "DD should still be in map");
+      RestoreIt->second = SavedAddr;
+    } else {
+      LocalDeclMap.erase(DD);
+    }
+  });
+
+  return EmitLValue(BindingExpr);
+}
+
 LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   const NamedDecl *ND = E->getDecl();
   QualType T = E->getType();
@@ -3796,6 +3880,33 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   // an enclosing scope.
   if (const auto *BD = dyn_cast<BindingDecl>(ND)) {
     if (E->refersToEnclosingVariableOrCapture()) {
+      auto ApplyNontemporal = [&](LValue LV) {
+        if (getLangOpts().OpenMP &&
+            CGM.getOpenMPRuntime().isNontemporalDecl(BD))
+          LV.setNontemporal(/*Value=*/true);
+        return LV;
+      };
+
+      // Try direct lookup first.
+      auto It = LocalDeclMap.find(BD->getCanonicalDecl());
+      if (It != LocalDeclMap.end()) {
+        return ApplyNontemporal(
+            MakeAddrLValue(It->second, E->getType(), AlignmentSource::Decl));
+      }
+
+      // OpenMP case: binding was captured via its decomposed decl.
+      if (CapturedStmtInfo &&
+          CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
+          CGM.getLangOpts().OpenMP) {
+        auto NameIt = OMPPrivatizedBindings.find(
+            cast<BindingDecl>(BD->getCanonicalDecl()));
+        if (NameIt != OMPPrivatizedBindings.end()) {
+          return ApplyNontemporal(MakeAddrLValue(NameIt->second, E->getType(),
+                                                 AlignmentSource::Decl));
+        }
+        return ApplyNontemporal(EmitOMPCapturedBindingLValue(BD));
+      }
+      // Non-OpenMP case: lambda capture.
       auto *FD = LambdaCaptureFields.lookup(BD);
       return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
     }
@@ -4761,15 +4872,6 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   }
 }
 
-static QualType getFixedSizeElementType(const ASTContext &ctx,
-                                        const VariableArrayType *vla) {
-  QualType eltType;
-  do {
-    eltType = vla->getElementType();
-  } while ((vla = ctx.getAsVariableArrayType(eltType)));
-  return eltType;
-}
-
 static bool hasBPFPreserveStaticOffset(const RecordDecl *D) {
   return D && D->hasAttr<BPFPreserveStaticOffsetAttr>();
 }
@@ -4852,7 +4954,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   // Determine the element size of the statically-sized base.  This is
   // the thing that the indices are expressed in terms of.
   if (auto vla = CGF.getContext().getAsVariableArrayType(eltType)) {
-    eltType = getFixedSizeElementType(CGF.getContext(), vla);
+    eltType = CodeGenUtils::getFixedSizeElementType(CGF.getContext(), vla);
   }
 
   // We can use that to compute the best alignment of the element.
@@ -5808,7 +5910,7 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
 static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
                                          const FieldDecl *field,
                                          bool IsInBounds) {
-  if (isEmptyFieldForLayout(CGF.getContext(), field))
+  if (CodeGenUtils::isEmptyFieldForLayout(CGF.getContext(), field))
     return emitAddrOfZeroSizeField(CGF, base, field, IsInBounds);
 
   const RecordDecl *rec = field->getParent();
@@ -5974,18 +6076,6 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
   Address addr = base.getAddress();
   if (hasBPFPreserveStaticOffset(rec))
     addr = wrapWithBPFPreserveStaticOffset(*this, addr);
-  if (auto *ClassDef = dyn_cast<CXXRecordDecl>(rec)) {
-    if (CGM.getCodeGenOpts().StrictVTablePointers &&
-        ClassDef->isDynamicClass()) {
-      // Getting to any field of dynamic object requires stripping dynamic
-      // information provided by invariant.group.  This is because accessing
-      // fields may leak the real address of dynamic object, which could result
-      // in miscompilation when leaked pointer would be compared.
-      auto *stripped =
-          Builder.CreateStripInvariantGroup(addr.emitRawPointer(*this));
-      addr = Address(stripped, addr.getElementType(), addr.getAlignment());
-    }
-  }
 
   unsigned RecordCVR = base.getVRQualifiers();
   if (rec->isUnion()) {
@@ -6103,9 +6193,7 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
   // scope in C.
   if (!getLangOpts().CPlusPlus)
     if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
-      pushLifetimeExtendedDestroy(getCleanupKind(DtorKind), DeclPtr,
-                                  E->getType(), getDestroyer(DtorKind),
-                                  DtorKind & EHCleanup);
+      pushLifetimeExtendedDestroy(DtorKind, DeclPtr, E->getType());
 
   return Result;
 }
@@ -6628,16 +6716,6 @@ RValue CodeGenFunction::EmitSimpleCallExpr(const CallExpr *E,
                   /*Chain=*/nullptr, CallOrInvoke);
 }
 
-// Detect the unusual situation where an inline version is shadowed by a
-// non-inline version. In that case we should pick the external one
-// everywhere. That's GCC behavior too.
-static bool OnlyHasInlineBuiltinDeclaration(const FunctionDecl *FD) {
-  for (const FunctionDecl *PD = FD; PD; PD = PD->getPreviousDecl())
-    if (!PD->isInlineBuiltinDeclaration())
-      return false;
-  return true;
-}
-
 static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
 
@@ -6657,7 +6735,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     // When directing calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
     if (CGF.CurFn->getName() != FDInlineName &&
-        OnlyHasInlineBuiltinDeclaration(FD)) {
+        CodeGenUtils::onlyHasInlineBuiltinDeclaration(FD)) {
       llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
       llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
       llvm::Module *M = Fn->getParent();

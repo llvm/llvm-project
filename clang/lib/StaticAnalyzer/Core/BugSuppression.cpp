@@ -257,7 +257,7 @@ preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
   if (!InstantiatedFrom)
     return D;
 
-  if (const auto *Tmpl = InstantiatedFrom.dyn_cast<ClassTemplateDecl *>()) {
+  if (const auto *Tmpl = dyn_cast<ClassTemplateDecl *>(InstantiatedFrom)) {
     // Interestingly, the source template might be a forward declaration, so we
     // need to find the definition redeclaration.
     return chooseDefinitionRedecl(walkInstantiatedFromChain(Tmpl));

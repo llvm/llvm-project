@@ -207,7 +207,7 @@ private:
   void addExtendedDiag(SourceLocation Loc, diag::kind DiagId);
 
   OptionalDiagnostic diag(SourceLocation Loc, diag::kind DiagId,
-                          unsigned ExtraNotes, bool IsCCEDiag);
+                          unsigned ExtraNotes, bool IsFFDiag);
 
   /// Should we continue evaluation after encountering undefined behavior?
   bool keepEvaluatingAfterUndefinedBehavior() const;

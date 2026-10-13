@@ -1891,15 +1891,11 @@ class FCUEQ_W_DESC : MSA_3RF_DESC_BASE<"fcueq.w", vfsetueq_v4f32, MSA128WOpnd>,
 class FCUEQ_D_DESC : MSA_3RF_DESC_BASE<"fcueq.d", vfsetueq_v2f64, MSA128DOpnd>,
                      IsCommutable;
 
-class FCULE_W_DESC : MSA_3RF_DESC_BASE<"fcule.w", vfsetule_v4f32, MSA128WOpnd>,
-                     IsCommutable;
-class FCULE_D_DESC : MSA_3RF_DESC_BASE<"fcule.d", vfsetule_v2f64, MSA128DOpnd>,
-                     IsCommutable;
+class FCULE_W_DESC : MSA_3RF_DESC_BASE<"fcule.w", vfsetule_v4f32, MSA128WOpnd>;
+class FCULE_D_DESC : MSA_3RF_DESC_BASE<"fcule.d", vfsetule_v2f64, MSA128DOpnd>;
 
-class FCULT_W_DESC : MSA_3RF_DESC_BASE<"fcult.w", vfsetult_v4f32, MSA128WOpnd>,
-                     IsCommutable;
-class FCULT_D_DESC : MSA_3RF_DESC_BASE<"fcult.d", vfsetult_v2f64, MSA128DOpnd>,
-                     IsCommutable;
+class FCULT_W_DESC : MSA_3RF_DESC_BASE<"fcult.w", vfsetult_v4f32, MSA128WOpnd>;
+class FCULT_D_DESC : MSA_3RF_DESC_BASE<"fcult.d", vfsetult_v2f64, MSA128DOpnd>;
 
 class FCUN_W_DESC : MSA_3RF_DESC_BASE<"fcun.w", vfsetun_v4f32, MSA128WOpnd>,
                     IsCommutable;
@@ -3465,11 +3461,9 @@ class MSA_FABS_PSEUDO_DESC_BASE<RegisterOperand ROWD,
             [(set ROWD:$wd, (fabs ROWS:$ws))]>;
 
 def FABS_W : MSA_FABS_PSEUDO_DESC_BASE<MSA128WOpnd>,
-             PseudoInstExpansion<(FMAX_A_W MSA128WOpnd:$wd, MSA128WOpnd:$ws,
-                                           MSA128WOpnd:$ws)>;
+             PseudoInstExpansion<(BCLRI_W MSA128WOpnd:$wd, MSA128WOpnd:$ws, 31)>;
 def FABS_D : MSA_FABS_PSEUDO_DESC_BASE<MSA128DOpnd>,
-             PseudoInstExpansion<(FMAX_A_D MSA128DOpnd:$wd, MSA128DOpnd:$ws,
-                                           MSA128DOpnd:$ws)>;
+             PseudoInstExpansion<(BCLRI_D MSA128DOpnd:$wd, MSA128DOpnd:$ws, 63)>;
 
 class MSABitconvertPat<ValueType DstVT, ValueType SrcVT,
                        RegisterClass DstRC, list<Predicate> preds = [HasMSA]> :
@@ -3509,6 +3503,12 @@ def : MSABitconvertPat<v2i64, v8i16, MSA128D, [HasMSA, IsLE]>;
 def : MSABitconvertPat<v2i64, v4i32, MSA128D, [HasMSA, IsLE]>;
 def : MSABitconvertPat<v2i64, v8f16, MSA128D, [HasMSA, IsLE]>;
 def : MSABitconvertPat<v2i64, v4f32, MSA128D, [HasMSA, IsLE]>;
+
+def : MSABitconvertPat<v8f16, v16i8, MSA128H, [HasMSA, IsLE]>;
+def : MSABitconvertPat<v8f16, v4i32, MSA128H, [HasMSA, IsLE]>;
+def : MSABitconvertPat<v8f16, v2i64, MSA128H, [HasMSA, IsLE]>;
+def : MSABitconvertPat<v8f16, v4f32, MSA128H, [HasMSA, IsLE]>;
+def : MSABitconvertPat<v8f16, v2f64, MSA128H, [HasMSA, IsLE]>;
 
 def : MSABitconvertPat<v4f32, v16i8, MSA128W, [HasMSA, IsLE]>;
 def : MSABitconvertPat<v4f32, v8i16, MSA128W, [HasMSA, IsLE]>;

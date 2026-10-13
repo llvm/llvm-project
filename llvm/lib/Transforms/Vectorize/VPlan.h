@@ -62,7 +62,9 @@ class SCEV;
 class SCEVPredicate;
 class Type;
 class VPBasicBlock;
-class VPBuilder;
+struct VPBuilderDefaultInserter;
+template <typename InserterTy = VPBuilderDefaultInserter> class VPBuilderBase;
+using VPBuilder = VPBuilderBase<>;
 class VPDominatorTree;
 class VPRegionBlock;
 class VPlan;
@@ -264,16 +266,6 @@ public:
     return getEnclosingBlockWithSuccessors()->getSuccessors();
   }
 
-  /// \return the predecessors either attached directly to this VPBlockBase or,
-  /// if this VPBlockBase is the entry block of a VPRegionBlock and has no
-  /// predecessors of its own, search recursively for the first enclosing
-  /// VPRegionBlock that has predecessors and return them. If no such
-  /// VPRegionBlock exists, return the (empty) predecessors of the topmost
-  /// VPBlockBase reached.
-  const VPBlocksTy &getHierarchicalPredecessors() {
-    return getEnclosingBlockWithPredecessors()->getPredecessors();
-  }
-
   /// \return the hierarchical predecessor of this VPBlockBase if it has a
   /// single hierarchical predecessor. Otherwise return a null pointer.
   VPBlockBase *getSingleHierarchicalPredecessor() {
@@ -366,11 +358,11 @@ public:
   /// Return the cost of the block.
   virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printAsOperand(raw_ostream &OS, bool PrintType = false) const {
     OS << getName();
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print plain-text dump of this VPBlockBase to \p O, prefixing all lines
   /// with \p Indent. \p SlotTracker is used to print unnamed VPValue's using
   /// consequtive numbers.
@@ -565,7 +557,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the recipe to stderr (for debugging).
-  LLVM_ABI_FOR_TEST void dump() const;
+  void dump() const;
 
   /// Print the recipe, delegating to printRecipe().
   void print(raw_ostream &O, const Twine &Indent,
@@ -618,14 +610,6 @@ LLVM_ABI Type *computeScalarTypeForInstruction(unsigned Opcode,
 class LLVM_ABI_FOR_TEST VPSingleDefRecipe : public VPRecipeBase,
                                             public VPSingleDefValue {
 public:
-  VPSingleDefRecipe(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
-                    DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this) {}
-
-  VPSingleDefRecipe(VPRecipeTy SC, ArrayRef<VPValue *> Operands, Value *UV,
-                    DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV) {}
-
   VPSingleDefRecipe(VPRecipeTy SC, ArrayRef<VPValue *> Operands, Type *ResultTy,
                     Value *UV = nullptr, DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV, ResultTy) {}
@@ -695,7 +679,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPSingleDefRecipe to dbgs() (for debugging).
-  LLVM_ABI_FOR_TEST LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 #endif
 };
 
@@ -723,6 +707,9 @@ public:
 
     WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
     WrapFlagsTy() : HasNUW(false), HasNSW(false) {}
+    WrapFlagsTy withoutNoSignedWrap() {
+      return {static_cast<bool>(HasNUW), false};
+    }
   };
 
   struct TruncFlagsTy {
@@ -957,17 +944,9 @@ public:
           GEPNoWrapFlags::fromRaw(GEPFlagsStorage));
       break;
     case OperationType::FPMathOp:
-    case OperationType::FCmp: {
-      const FastMathFlagsTy &F = getFMFsRef();
-      I.setHasAllowReassoc(F.AllowReassoc);
-      I.setHasNoNaNs(F.NoNaNs);
-      I.setHasNoInfs(F.NoInfs);
-      I.setHasNoSignedZeros(F.NoSignedZeros);
-      I.setHasAllowReciprocal(F.AllowReciprocal);
-      I.setHasAllowContract(F.AllowContract);
-      I.setHasApproxFunc(F.ApproxFunc);
+    case OperationType::FCmp:
+      I.copyFastMathFlags(getFastMathFlagsOrNone());
       break;
-    }
     case OperationType::NonNegOp:
       I.setNonNeg(NonNegFlags.NonNeg);
       break;
@@ -1013,12 +992,6 @@ public:
   }
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlagsOrNone() const;
-
-  bool isNonNeg() const {
-    assert(OpType == OperationType::NonNegOp &&
-           "recipe doesn't have a NNEG flag");
-    return NonNegFlags.NonNeg;
-  }
 
   bool hasNoUnsignedWrap() const {
     switch (OpType) {
@@ -1101,7 +1074,8 @@ public:
   /// Returns default flags for \p Opcode and scalar \p ResultTy for opcodes
   /// that support it, asserts otherwise. Opcodes not supporting default flags
   /// include compares and ComputeReductionResult.
-  static VPIRFlags getDefaultFlags(unsigned Opcode, Type *ResultTy = nullptr);
+  LLVM_ABI_FOR_TEST static VPIRFlags getDefaultFlags(unsigned Opcode,
+                                                     Type *ResultTy = nullptr);
 
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
@@ -1124,11 +1098,6 @@ static_assert(sizeof(VPIRFlags) <= 3, "VPIRFlags should not grow");
 /// A pure-virtual common base class for recipes defining a single VPValue and
 /// using IR flags.
 struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
-  VPRecipeWithIRFlags(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
-                      const VPIRFlags &Flags,
-                      DebugLoc DL = DebugLoc::getUnknown())
-      : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags(Flags) {}
-
   VPRecipeWithIRFlags(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
                       Type *ResultTy, const VPIRFlags &Flags,
                       DebugLoc DL = DebugLoc::getUnknown())
@@ -1184,7 +1153,9 @@ struct VPExecutionFrequency {
   const bool IsEstimated;
 
   VPExecutionFrequency(BlockFrequency Freq, bool IsEstimated)
-      : Freq(Freq), IsEstimated(IsEstimated) {}
+      : Freq(Freq), IsEstimated(IsEstimated) {
+    assert(Freq > BlockFrequency() && "execution frequency must be non-zero");
+  }
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
@@ -1221,8 +1192,9 @@ public:
   VPIRMetadata(Instruction &I) {
     getMetadataToPropagate(&I, Metadata);
     // Retain the branch weights of terminators. They are used to compute the
-    // frequencies with which the blocks of the original loop execute.
-    if (I.isTerminator())
+    // frequencies with which the blocks of the original loop execute. Also
+    // retain !prof on selects.
+    if (I.isTerminator() || isa<SelectInst>(&I))
       if (MDNode *BW = I.getMetadata(LLVMContext::MD_prof))
         Metadata.emplace_back(LLVMContext::MD_prof, BW);
   }
@@ -1246,6 +1218,11 @@ public:
       It->second = Node;
     else
       Metadata.emplace_back(Kind, Node);
+  }
+
+  /// Remove the metadata of kind \p Kind, if present.
+  void eraseMetadata(unsigned Kind) {
+    erase_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
   }
 
   /// Intersect this VPIRMetadata object with \p MD, keeping only metadata
@@ -1322,6 +1299,15 @@ public:
     // WideActiveLaneMask is used for control flow and is unrolled by widening,
     // with one extract vector created per unroll part.
     WideActiveLaneMask,
+    // Signature: Vectors... -> WideVector
+    // Concatenates all vector operands to a single wide vector.
+    ConcatVectors,
+    // Signature: (Multiplier, Address, Align) -> Vector
+    // Loads a single wide vector of `Multiplier * VF` elements.
+    WideVectorLoad,
+    // Signature: (Multiplier, Address, Alignment, Vector)
+    // Stores a single wide vector of `Multiplier * VF` elements.
+    WideVectorStore,
     // Extracts each unrolled part of a (VF * UF) widened vector/mask.
     ExtractVectorForPart,
     ExplicitVectorLength,
@@ -1378,8 +1364,7 @@ public:
     // Returns a scalar boolean value, which is true if any lane of its
     // (boolean) vector operands is true. It produces the reduced value across
     // all unrolled iterations. Unrolling will add all copies of its original
-    // operand as additional operands. AnyOf is poison-safe as all operands
-    // will be frozen.
+    // operand as additional operands. Note does not block poison propagation.
     AnyOf,
     // Calculates the first active lane index of the vector predicate operands.
     // It produces the lane index across all unrolled iterations. Unrolling will
@@ -1404,8 +1389,8 @@ public:
     /// The lane specifies an index into a vector formed by combining all vector
     /// operands (all operands after the first one).
     ExtractLane,
-    /// Explicit user for the resume phi of the canonical induction in the main
-    /// VPlan, used by the epilogue vector loop.
+    /// Explicit user for values in the main VPlan, used by the epilogue vector
+    /// loop.
     ResumeForEpilogue,
     /// Extracts the last active lane from a set of vectors. The first operand
     /// is the default value if no lanes in the masks are active. Conceptually,
@@ -1446,12 +1431,12 @@ private:
 
   /// Returns true if we can generate a scalar for the first lane only if
   /// needed.
-  bool canGenerateScalarForFirstLane() const;
+  bool doesGenerateSingleScalar() const;
 
-  /// Utility methods serving execute(): generates a single vector instance of
-  /// the modeled instruction. \returns the generated value. . In some cases an
-  /// existing value is returned rather than a generated one.
-  Value *generate(VPTransformState &State);
+  /// Utility method serving execute: Generates either a single-scalar or vector
+  /// value. \p GenerateSingleScalar determines whether to generate a
+  /// single-scalar value.
+  Value *generate(VPTransformState &State, bool GenerateSingleScalar);
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
@@ -1464,7 +1449,8 @@ private:
       return true;
 
     return Instruction::isCast(Opcode) || Opcode == Instruction::PHI ||
-           Opcode == Instruction::GetElementPtr;
+           Opcode == Instruction::GetElementPtr ||
+           Opcode == Instruction::ExtractValue;
   }
 
 public:
@@ -1527,6 +1513,7 @@ public:
     case VPInstruction::BranchOnCond:
     case VPInstruction::BranchOnTwoConds:
     case VPInstruction::BranchOnCount:
+    case VPInstruction::WideVectorStore:
       return false;
     default:
       return true;
@@ -1560,9 +1547,7 @@ public:
 
   /// Returns the mask for the VPInstruction. Returns nullptr for unmasked
   /// VPInstructions.
-  VPValue *getMask() const {
-    return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
-  }
+  VPValue *getMask() const { return isMasked() ? getLastOperand() : nullptr; }
 
   /// Returns an iterator range over the operands excluding the mask operand
   /// if present.
@@ -1581,7 +1566,8 @@ public:
 
   /// Returns true if the recipe only uses scalars of operand \p Op.
   bool usesScalars(const VPValue *Op) const override {
-    return isSingleScalar() || usesFirstLaneOnly(Op);
+    return isSingleScalar() || getOpcode() == VPInstruction::PtrAdd ||
+           usesFirstLaneOnly(Op);
   }
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
@@ -1627,7 +1613,8 @@ public:
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
   /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
-  VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
+  LLVM_ABI_FOR_TEST VPValue *
+  getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
 
   /// Sets the incoming value for \p VPBB to \p V. \p VPBB must be an incoming
   /// block.
@@ -1886,7 +1873,8 @@ protected:
 /// VPWidenCastRecipe is a recipe to create vector cast instructions.
 /// TODO: Merge with VPWidenRecipe now that type is associated to every
 /// VPRecipeValue.
-class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
+class LLVM_ABI_FOR_TEST VPWidenCastRecipe : public VPRecipeWithIRFlags,
+                                            public VPIRMetadata {
   /// Cast instruction opcode.
   Instruction::CastOps Opcode;
 
@@ -1916,24 +1904,25 @@ public:
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCastSC)
 
   /// Produce widened copies of the cast.
-  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPWidenCastRecipe.
-  LLVM_ABI_FOR_TEST InstructionCost
-  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   Instruction::CastOps getOpcode() const { return Opcode; }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
 /// A recipe for widening vector intrinsics.
-class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
+class LLVM_ABI_FOR_TEST VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags,
+                                                 public VPIRMetadata {
   /// ID of the vector intrinsic to widen.
   Intrinsic::ID VectorIntrinsicID;
 
@@ -2023,7 +2012,7 @@ public:
   }
 
   /// Produce a widened version of the vector intrinsic.
-  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override;
 
   /// Compute the cost of a vector intrinsic with \p ID and \p Operands.
   static InstructionCost computeCallCost(Intrinsic::ID ID,
@@ -2032,8 +2021,8 @@ public:
                                          ElementCount VF, VPCostContext &Ctx);
 
   /// Return the cost of this vector intrinsic.
-  LLVM_ABI_FOR_TEST InstructionCost
-  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   /// Return the ID of the intrinsic.
   Intrinsic::ID getVectorIntrinsicID() const { return VectorIntrinsicID; }
@@ -2050,18 +2039,19 @@ public:
   /// Returns true if the intrinsic may have side-effects.
   bool mayHaveSideEffects() const { return MayHaveSideEffects; }
 
-  LLVM_ABI_FOR_TEST bool usesFirstLaneOnly(const VPValue *Op) const override;
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
 /// A recipe for widening vector memory intrinsics.
-class VPWidenMemIntrinsicRecipe final : public VPWidenIntrinsicRecipe {
+class LLVM_ABI_FOR_TEST VPWidenMemIntrinsicRecipe final
+    : public VPWidenIntrinsicRecipe {
   /// Alignment information for this memory access.
   Align Alignment;
 
@@ -2074,9 +2064,12 @@ public:
                                VectorIntrinsicID, CallArguments, Ty, {}, MD,
                                DL),
         Alignment(Alignment) {
-    assert((VectorIntrinsicID == Intrinsic::experimental_vp_strided_load ||
-            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store) &&
-           "Unexpected intrinsic");
+    assert(getVectorMemoryIntrinsicPointerArgIdx(VectorIntrinsicID) &&
+           getVectorIntrinsicMaskArgIdx(VectorIntrinsicID) &&
+           "Expected a masked vector load/store intrinsic");
+    assert((!Ty->isVoidTy() ||
+            getVectorStoreIntrinsicDataArgIdx(VectorIntrinsicID)) &&
+           "Expected data argument for store intrinsic");
   }
 
   ~VPWidenMemIntrinsicRecipe() override = default;
@@ -2091,6 +2084,15 @@ public:
 
   /// Produce a widened version of the vector memory intrinsic.
   void execute(VPTransformState &State) override;
+
+  /// Returns the address operand index of the VPWidenMemIntrinsicRecipe.
+  unsigned getAddrOpIdx() const;
+
+  /// Returns the mask of a predicated VPWidenMemIntrinsicRecipe.
+  VPValue *getMask() const;
+
+  /// Returns the data type of the memory access at \p VF.
+  Type *getAccessType(ElementCount VF) const;
 
   /// Helper function for computing the cost of vector memory intrinsic.
   static InstructionCost computeMemIntrinsicCost(Intrinsic::ID IID, Type *Ty,
@@ -2120,9 +2122,8 @@ public:
                             DL),
         VPIRMetadata(Metadata), Variant(Variant) {
     setUnderlyingValue(UV);
-    assert(
-        isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
-        "last operand must be the called function");
+    assert(isa<Function>(getLastOperand()->getLiveInIRValue()) &&
+           "last operand must be the called function");
     assert(cast<Function>(CallArguments.back()->getLiveInIRValue())
                    ->getReturnType() == getScalarType() &&
            "Scalar type must match return type of called scalar function");
@@ -2148,7 +2149,7 @@ public:
   static InstructionCost computeCallCost(Function *Variant, VPCostContext &Ctx);
 
   Function *getCalledScalarFunction() const {
-    return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+    return cast<Function>(getLastOperand()->getLiveInIRValue());
   }
 
   operand_range args() { return drop_end(operands()); }
@@ -2168,23 +2169,24 @@ protected:
 /// A recipe representing a sequence of load -> update -> store as part of
 /// a histogram operation. This means there may be aliasing between vector
 /// lanes, which is handled by the llvm.experimental.vector.histogram family
-/// of intrinsics. The only update operations currently supported are
-/// 'add' and 'sub' where the other term is loop-invariant.
+/// of intrinsics. Supported update operations are: add, sub, uadd.sat, umax,
+/// and umin, where the other term is loop-invariant.
 class VPHistogramRecipe : public VPRecipeBase, public VPIRMetadata {
-  /// Opcode of the update operation, currently either add or sub.
-  unsigned Opcode;
+  /// The update operation kind for this histogram.
+  HistogramUpdateKind UpdateKind;
 
 public:
-  VPHistogramRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
+  VPHistogramRecipe(HistogramUpdateKind UpdateKind,
+                    ArrayRef<VPValue *> Operands,
                     const VPIRMetadata &Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(VPRecipeBase::VPHistogramSC, Operands, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {}
+        VPIRMetadata(Metadata), UpdateKind(UpdateKind) {}
 
   ~VPHistogramRecipe() override = default;
 
   VPHistogramRecipe *clone() override {
-    return new VPHistogramRecipe(Opcode, operands(), *this, getDebugLoc());
+    return new VPHistogramRecipe(UpdateKind, operands(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPHistogramSC);
@@ -2196,12 +2198,27 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  unsigned getOpcode() const { return Opcode; }
-
   /// Return the mask operand if one was provided, or a null pointer if all
   /// lanes should be executed unconditionally.
   VPValue *getMask() const {
     return getNumOperands() == 3 ? getOperand(2) : nullptr;
+  }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getOperand(1);
+  }
+
+private:
+  /// Return the histogram intrinsic ID for this recipe's update kind.
+  Intrinsic::ID getHistogramIntrinsicID() const;
+
+  /// Return true if the increment should be negated before passing to the
+  /// histogram intrinsic (only for Sub).
+  bool mustNegateIncrement() const {
+    return UpdateKind == HistogramUpdateKind::Sub;
   }
 
 protected:
@@ -2446,12 +2463,8 @@ class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
                                             public VPPhiAccessors {
 protected:
   VPHeaderPHIRecipe(VPRecipeTy VPRecipeID, Instruction *UnderlyingInstr,
-                    VPValue *Start, DebugLoc DL = DebugLoc::getUnknown())
-      : VPHeaderPHIRecipe(VPRecipeID, UnderlyingInstr, Start,
-                          Start->getScalarType(), DL) {}
-
-  VPHeaderPHIRecipe(VPRecipeTy VPRecipeID, Instruction *UnderlyingInstr,
-                    VPValue *Start, Type *ResultTy, DebugLoc DL)
+                    VPValue *Start, Type *ResultTy,
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPSingleDefRecipe(VPRecipeID, Start, ResultTy, UnderlyingInstr, DL) {}
 
   const VPRecipeBase *getAsRecipe() const override { return this; }
@@ -2521,12 +2534,6 @@ class VPWidenInductionRecipe : public VPHeaderPHIRecipe {
 public:
   VPWidenInductionRecipe(VPRecipeTy Kind, PHINode *IV, VPValue *Start,
                          VPValue *Step, const InductionDescriptor &IndDesc,
-                         DebugLoc DL)
-      : VPWidenInductionRecipe(Kind, IV, Start, Step, IndDesc,
-                               Start->getScalarType(), DL) {}
-
-  VPWidenInductionRecipe(VPRecipeTy Kind, PHINode *IV, VPValue *Start,
-                         VPValue *Step, const InductionDescriptor &IndDesc,
                          Type *ResultTy, DebugLoc DL)
       : VPHeaderPHIRecipe(Kind, IV, Start, ResultTy, DL), IndDesc(IndDesc) {
     addOperand(Step);
@@ -2565,9 +2572,6 @@ public:
   /// Returns the step value of the induction.
   VPValue *getStepValue() { return getOperand(1); }
   const VPValue *getStepValue() const { return getOperand(1); }
-
-  /// Update the step value of the recipe.
-  void setStepValue(VPValue *V) { setOperand(1, V); }
 
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
@@ -2623,7 +2627,8 @@ public:
                                 VPValue *VF, const InductionDescriptor &IndDesc,
                                 const VPIRFlags &Flags, DebugLoc DL)
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
-                               Start, Step, IndDesc, DL),
+                               Start, Step, IndDesc, Start->getScalarType(),
+                               DL),
         VPIRFlags(Flags), Trunc(nullptr) {
     addOperand(VF);
   }
@@ -2687,7 +2692,7 @@ public:
   /// the last unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getLastUnrolledPartOperand() {
-    return isUnrolled() ? getOperand(getNumOperands() - 1) : this;
+    return isUnrolled() ? getLastOperand() : this;
   }
 
 protected:
@@ -2707,7 +2712,8 @@ public:
                                 VPValue *NumUnrolledElems,
                                 const InductionDescriptor &IndDesc, DebugLoc DL)
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenPointerInductionSC, Phi,
-                               Start, Step, IndDesc, DL) {
+                               Start, Step, IndDesc, Start->getScalarType(),
+                               DL) {
     addOperand(NumUnrolledElems);
   }
 
@@ -2803,7 +2809,7 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
   VPFirstOrderRecurrencePHIRecipe(PHINode *Phi, VPValue &Start,
                                   VPValue &BackedgeValue)
       : VPHeaderPHIRecipe(VPRecipeBase::VPFirstOrderRecurrencePHISC, Phi,
-                          &Start) {
+                          &Start, Start.getScalarType()) {
     addOperand(&BackedgeValue);
   }
 
@@ -2873,13 +2879,23 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe, public VPIRFlags {
   /// compare has multiple uses.
   bool HasUsesOutsideReductionChain;
 
+  /// Temporary flag indicating that the FindIV reduction expression has been
+  /// sunk. While this is true, epilogue vectorization is disabled to avoid
+  /// applying the sunk expression twice (once in the main vector loop and again
+  /// in the epilogue), which can produce incorrect results by applying the sunk
+  /// operation twice.
+  /// TODO: Remove this flag once epilogue vectorization properly supports
+  /// sunk FindIV expressions.
+  bool ExpressionSunk = false;
+
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
                        VPValue &BackedgeValue, ReductionStyle Style,
                        const VPIRFlags &Flags,
                        bool HasUsesOutsideReductionChain = false)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPReductionPHISC, Phi, &Start),
+      : VPHeaderPHIRecipe(VPRecipeBase::VPReductionPHISC, Phi, &Start,
+                          Start.getScalarType()),
         VPIRFlags(Flags), Kind(Kind), Style(Style),
         HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {
     addOperand(&BackedgeValue);
@@ -2889,9 +2905,11 @@ public:
 
   VPReductionPHIRecipe *cloneWithOperands(VPValue *Start,
                                           VPValue *BackedgeValue) {
-    return new VPReductionPHIRecipe(
+    auto *Clone = new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
         *Start, *BackedgeValue, Style, *this, HasUsesOutsideReductionChain);
+    Clone->ExpressionSunk = ExpressionSunk;
+    return Clone;
   }
 
   VPReductionPHIRecipe *clone() override {
@@ -2929,13 +2947,14 @@ public:
            std::holds_alternative<RdxOrdered>(Style);
   }
 
-  /// Returns true if the reduction outputs a vector with a scaled down VF.
-  bool isPartialReduction() const { return getVFScaleFactor() > 1; }
-
   /// Returns true, if the phi is part of a multi-use reduction.
   bool hasUsesOutsideReductionChain() const {
     return HasUsesOutsideReductionChain;
   }
+
+  void setExpressionSunk() { ExpressionSunk = true; }
+
+  bool isExpressionSunk() const { return ExpressionSunk; }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -3101,7 +3120,7 @@ public:
   /// by a nullptr.
   VPValue *getMask() const {
     // Mask is optional and the last operand.
-    return HasMask ? getOperand(getNumOperands() - 1) : nullptr;
+    return HasMask ? getLastOperand() : nullptr;
   }
 
   /// Return true if the access needs a mask because of the gaps.
@@ -3331,7 +3350,7 @@ public:
   VPValue *getVecOp() const { return getOperand(1); }
   /// The VPValue of the condition for the block.
   VPValue *getCondOp() const {
-    return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
+    return isConditional() ? getLastOperand() : nullptr;
   }
   /// Get the factor that the VF of this recipe's output should be scaled by, or
   /// 1 if it isn't scaled.
@@ -3481,7 +3500,7 @@ public:
   /// Return the mask of a predicated VPReplicateRecipe.
   VPValue *getMask() {
     assert(isPredicated() && "Trying to get the mask of a unpredicated recipe");
-    return getOperand(getNumOperands() - 1);
+    return getLastOperand();
   }
 
   /// Return the recipe's operands, excluding the mask of a predicated recipe.
@@ -3800,7 +3819,7 @@ public:
   VPValue *getMask() const {
     // Mask is optional and therefore the last operand.
     const VPRecipeBase *R = getAsRecipe();
-    return isMasked() ? R->getOperand(R->getNumOperands() - 1) : nullptr;
+    return isMasked() ? R->getLastOperand() : nullptr;
   }
 
   /// Returns the alignment of the memory access.
@@ -4067,7 +4086,7 @@ class VPActiveLaneMaskPHIRecipe : public VPHeaderPHIRecipe {
 public:
   VPActiveLaneMaskPHIRecipe(VPValue *StartMask, DebugLoc DL)
       : VPHeaderPHIRecipe(VPRecipeBase::VPActiveLaneMaskPHISC, nullptr,
-                          StartMask, DL) {}
+                          StartMask, StartMask->getScalarType(), DL) {}
 
   ~VPActiveLaneMaskPHIRecipe() override = default;
 
@@ -4099,7 +4118,7 @@ class VPCurrentIterationPHIRecipe : public VPHeaderPHIRecipe {
 public:
   VPCurrentIterationPHIRecipe(VPValue *StartIV, DebugLoc DL)
       : VPHeaderPHIRecipe(VPRecipeBase::VPCurrentIterationPHISC, nullptr,
-                          StartIV, DL) {}
+                          StartIV, StartIV->getScalarType(), DL) {}
 
   ~VPCurrentIterationPHIRecipe() override = default;
 
@@ -4196,7 +4215,7 @@ protected:
 /// A recipe for converting \p Current into \p Start + \p Current * \p Step.
 /// FastMathFlags are derived from the \p FPBinOp in the case of FP inductions,
 /// and the passed NoWrap \p Flags apply in the case of Ptr and Int inductions.
-class VPDerivedIVRecipe : public VPRecipeWithIRFlags {
+class LLVM_ABI_FOR_TEST VPDerivedIVRecipe : public VPRecipeWithIRFlags {
   /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
   /// If not nullptr, the floating point induction binary operator. Must be set
@@ -5043,6 +5062,10 @@ public:
 
   const DataLayout &getDataLayout() const {
     return getScalarHeader()->getIRBasicBlock()->getDataLayout();
+  }
+
+  Function *getIRFunction() const {
+    return getScalarHeader()->getIRBasicBlock()->getParent();
   }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }

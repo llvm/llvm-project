@@ -68,24 +68,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "PlatformOptions.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "PlatformOptions.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "PlatformOptions.inc"
-#undef OPTION
-};
-
-class PlatformOptTable : public opt::GenericOptTable {
+class PlatformOptTable : public opt::OptTable {
 public:
-  PlatformOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  PlatformOptTable() : opt::OptTable(optionTables()) {}
 
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =

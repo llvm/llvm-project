@@ -179,6 +179,12 @@ getReservedRegs(const MachineFunction &MF) const {
   for (MCPhysReg R : ReservedGPR64)
     Reserved.set(R);
 
+  // Static JIT code uses t9 in RuntimeDyld stubs for R_MIPS_26 relocations,
+  // including jumps within a function. Keep it out of register allocation.
+  const auto &TM = static_cast<const MipsTargetMachine &>(MF.getTarget());
+  if (TM.isJIT() && TM.getRelocationModel() == Reloc::Static)
+    markSuperRegs(Reserved, Mips::T9);
+
   // Mark user-reserved GPRs and their 64-bit super-registers.
   for (unsigned I = 1; I < 32; ++I)
     if (Subtarget.isGPRReservedByUser(I))
@@ -287,8 +293,7 @@ Register MipsRegisterInfo::
 getFrameRegister(const MachineFunction &MF) const {
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
-  bool IsN64 =
-      static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI().IsN64();
+  bool IsN64 = Subtarget.getABI().IsN64();
 
   if (Subtarget.inMips16Mode())
     return TFI->hasFP(MF) ? Mips::S0 : Mips::SP;
@@ -310,7 +315,7 @@ bool MipsRegisterInfo::canRealignStack(const MachineFunction &MF) const {
 
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
   unsigned FP = Subtarget.isGP32bit() ? Mips::FP : Mips::FP_64;
-  unsigned BP = Subtarget.isGP32bit() ? Mips::S7 : Mips::S7_64;
+  unsigned BP = Subtarget.getABI().getSavedReg(7, Subtarget.isGP64bit());
 
   // Support dynamic stack realignment for all targets except Mips16.
   if (Subtarget.inMips16Mode())

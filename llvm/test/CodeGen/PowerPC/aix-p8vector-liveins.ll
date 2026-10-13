@@ -33,9 +33,9 @@ entry:
 ; POWR8:       %1:vssrc = COPY $f2
 ; POWR8:       %0:vssrc = COPY $f1
 ; POWR8:       %5:vssrc = nofpexcept XSADDSP %0, %1
-; POWR8:       %6:vssrc = nofpexcept XSADDSP killed %5, %2
-; POWR8:       %7:vssrc = nofpexcept XSADDSP killed %6, %3
-; POWR8:       %8:vssrc = nofpexcept XSADDSP killed %7, %4
+; POWR8:       %6:vssrc = nofpexcept XSADDSP %5, %2
+; POWR8:       %7:vssrc = nofpexcept XSADDSP %6, %3
+; POWR8:       %8:vssrc = nofpexcept XSADDSP %7, %4
 ; POWR8:       $f1 = COPY %8
 
 ; NOP8V-LABEL: name:            vssr
@@ -55,9 +55,9 @@ entry:
 ; NOP8V:        %1:f4rc = COPY $f2
 ; NOP8V:        %0:f4rc = COPY $f1
 ; NOP8V:        %5:f4rc = nofpexcept FADDS %0, %1, implicit $rm
-; NOP8V:        %6:f4rc = nofpexcept FADDS killed %5, %2, implicit $rm
-; NOP8V:        %7:f4rc = nofpexcept FADDS killed %6, %3, implicit $rm
-; NOP8V:        %8:f4rc = nofpexcept FADDS killed %7, %4, implicit $rm
+; NOP8V:        %6:f4rc = nofpexcept FADDS %5, %2, implicit $rm
+; NOP8V:        %7:f4rc = nofpexcept FADDS %6, %3, implicit $rm
+; NOP8V:        %8:f4rc = nofpexcept FADDS %7, %4, implicit $rm
 ; NOP8V:        $f1 = COPY %8
 
 define double @vsfr(double %a, double %b, double %c, double %d, double %e) {
@@ -86,9 +86,9 @@ entry:
 ; VSX:          %1:vsfrc = COPY $f2
 ; VSX:          %0:vsfrc = COPY $f1
 ; VSX:          %5:vsfrc = nofpexcept XSADDDP %0, %1, implicit $rm
-; VSX:          %6:vsfrc = nofpexcept XSADDDP killed %5, %2, implicit $rm
-; VSX:          %7:vsfrc = nofpexcept XSADDDP killed %6, %3, implicit $rm
-; VSX:          %8:vsfrc = nofpexcept XSADDDP killed %7, %4, implicit $rm
+; VSX:          %6:vsfrc = nofpexcept XSADDDP %5, %2, implicit $rm
+; VSX:          %7:vsfrc = nofpexcept XSADDDP %6, %3, implicit $rm
+; VSX:          %8:vsfrc = nofpexcept XSADDDP %7, %4, implicit $rm
 ; VSX:          $f1 = COPY %8
 
 ; NOVSX-LABEL:  vsfr
@@ -108,8 +108,8 @@ entry:
 ; NOVSX:        %1:f8rc = COPY $f2
 ; NOVSX:        %0:f8rc = COPY $f1
 ; NOVSX:        %5:f8rc = nofpexcept FADD %0, %1, implicit $rm
-; NOVSX:        %6:f8rc = nofpexcept FADD killed %5, %2, implicit $rm
-; NOVSX:        %7:f8rc = nofpexcept FADD killed %6, %3, implicit $rm
-; NOVSX:        %8:f8rc = nofpexcept FADD killed %7, %4, implicit $rm
+; NOVSX:        %6:f8rc = nofpexcept FADD %5, %2, implicit $rm
+; NOVSX:        %7:f8rc = nofpexcept FADD %6, %3, implicit $rm
+; NOVSX:        %8:f8rc = nofpexcept FADD %7, %4, implicit $rm
 ; NOVSX:        $f1 = COPY %8
 

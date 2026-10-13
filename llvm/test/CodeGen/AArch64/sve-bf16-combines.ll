@@ -155,7 +155,6 @@ define <vscale x 8 x bfloat> @fmls_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale 
 ; BF16_NONSTREAMING-NEXT:    uunpkhi z5.s, z2.h
 ; BF16_NONSTREAMING-NEXT:    uunpklo z2.s, z2.h
 ; BF16_NONSTREAMING-NEXT:    fneg z1.h, p0/m, z1.h
-; BF16_NONSTREAMING-NEXT:    ptrue p0.s
 ; BF16_NONSTREAMING-NEXT:    zip2 z6.h, z3.h, z0.h
 ; BF16_NONSTREAMING-NEXT:    zip1 z0.h, z3.h, z0.h
 ; BF16_NONSTREAMING-NEXT:    uunpkhi z4.s, z1.h
@@ -186,7 +185,6 @@ define <vscale x 8 x bfloat> @fmls_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale 
 ; BF16_STREAMING-NEXT:    uunpkhi z5.s, z2.h
 ; BF16_STREAMING-NEXT:    uunpklo z2.s, z2.h
 ; BF16_STREAMING-NEXT:    fneg z1.h, p0/m, z1.h
-; BF16_STREAMING-NEXT:    ptrue p0.s
 ; BF16_STREAMING-NEXT:    zip2 z6.h, z3.h, z0.h
 ; BF16_STREAMING-NEXT:    zip1 z0.h, z3.h, z0.h
 ; BF16_STREAMING-NEXT:    uunpkhi z4.s, z1.h
@@ -435,7 +433,6 @@ define <vscale x 8 x bfloat> @fmls_sel_nxv8bf16(<vscale x 8 x i1> %pred, <vscale
 ; BF16_NONSTREAMING-NEXT:    uunpkhi z5.s, z2.h
 ; BF16_NONSTREAMING-NEXT:    uunpklo z2.s, z2.h
 ; BF16_NONSTREAMING-NEXT:    fneg z1.h, p1/m, z1.h
-; BF16_NONSTREAMING-NEXT:    ptrue p1.s
 ; BF16_NONSTREAMING-NEXT:    zip2 z6.h, z3.h, z0.h
 ; BF16_NONSTREAMING-NEXT:    zip1 z3.h, z3.h, z0.h
 ; BF16_NONSTREAMING-NEXT:    uunpkhi z4.s, z1.h
@@ -465,7 +462,6 @@ define <vscale x 8 x bfloat> @fmls_sel_nxv8bf16(<vscale x 8 x i1> %pred, <vscale
 ; BF16_STREAMING-NEXT:    uunpkhi z5.s, z2.h
 ; BF16_STREAMING-NEXT:    uunpklo z2.s, z2.h
 ; BF16_STREAMING-NEXT:    fneg z1.h, p1/m, z1.h
-; BF16_STREAMING-NEXT:    ptrue p1.s
 ; BF16_STREAMING-NEXT:    zip2 z6.h, z3.h, z0.h
 ; BF16_STREAMING-NEXT:    zip1 z3.h, z3.h, z0.h
 ; BF16_STREAMING-NEXT:    uunpkhi z4.s, z1.h

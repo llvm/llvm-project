@@ -40,6 +40,11 @@
 ; CHECK-DAG:  llvm.return %[[GEP]] : !llvm.ptr
 @global_gep_const_expr = internal constant ptr getelementptr (i32, ptr @global_int, i32 2)
 
+; CHECK: llvm.mlir.global internal constant @global_gep_inrange
+; CHECK: llvm.getelementptr inbounds inrange <i{{[0-9]+}}, -16, 8>
+@vt = external constant [3 x ptr]
+@global_gep_inrange = internal constant ptr getelementptr inbounds inrange(-16, 8) ([3 x ptr], ptr @vt, i64 0, i64 2)
+
 ; // -----
 
 ; Verifies that converting a reference to a global does not convert the global
@@ -450,3 +455,10 @@ define ptr @associated_ifunc_resolver() {
 @a = external global i8, !absolute_symbol !0
 !0 = !{i64 -1, i64 -1}
 
+
+; // -----
+
+; Globals render by name only: a large initializer must not be embedded.
+; WARN: warning: unhandled associated metadata: {{.*}} on @big{{ *}}{{$}}
+@big = global [300 x i8] c"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", !associated !0
+!0 = !{ptr null}

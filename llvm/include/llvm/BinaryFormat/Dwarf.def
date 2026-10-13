@@ -1068,6 +1068,7 @@ HANDLE_DW_LANG(0x0045, Nim, 0, 0, DWARF)
 HANDLE_DW_LANG(0x0046, Erlang, 1, 0, DWARF)
 HANDLE_DW_LANG(0x0047, Elixir, 1, 0, DWARF)
 HANDLE_DW_LANG(0x0048, Gleam, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0049, Roc, 0, 0, DWARF)
 
 // Vendor extensions:
 HANDLE_DW_LANG(0x8001, Mips_Assembler, std::nullopt, 0, MIPS)
@@ -1140,6 +1141,7 @@ HANDLE_DW_LNAME(0x002f, Nim, "Nim", 0) // VVMMPP
 HANDLE_DW_LNAME(0x0030, Erlang, "Erlang", 1) // VVMMPP
 HANDLE_DW_LNAME(0x0031, Elixir, "Elixir", 1) // VVMMPP
 HANDLE_DW_LNAME(0x0032, Gleam, "Gleam", 0) // VVMMPP
+HANDLE_DW_LNAME(0x0033, Roc, "Roc", 0) // VVMMPP
 
 // DWARF attribute type encodings.
 HANDLE_DW_ATE(0x01, address, 2, DWARF)
