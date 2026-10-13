@@ -1830,8 +1830,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (SV && !V->getType()->isVoidTy() && getShadowTy(V) != SV->getType()) {
       LLVM_DEBUG(dbgs() << "V:  " << *V << "\n");
       LLVM_DEBUG(dbgs() << "SV: " << *SV << "\n");
-      assert(getShadowTy(V) == getShadowTy(SV) &&
-             "setShadow called with mismatching types");
+      assert(getShadowTy(V) == SV->getType()
+               && "setShadow called with mismatching types");
     }
 
     ShadowMap[V] = PropagateShadow ? SV : getCleanShadow(V);
