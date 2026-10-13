@@ -524,8 +524,9 @@ void CIRGenNVCUDARuntime::handleGlobalReplace(cir::GlobalOp oldGV,
 }
 
 /// Whether this translation unit has anything for the CUDA runtime to register.
-/// Like LoweringPrepare, count only kernel stub definitions and device variables
-/// carrying registration metadata, not kernel declarations or launch-site calls.
+/// Like LoweringPrepare, count only kernel stub definitions and device
+/// variables carrying registration metadata, not kernel declarations or
+/// launch-site calls.
 static bool hasEntitiesToRegister(mlir::ModuleOp module) {
   // A walk, not a scan of the module body, so this stays in agreement with the
   // recursive walk LoweringPrepare collects them with.
