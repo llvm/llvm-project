@@ -1116,6 +1116,12 @@ features cannot lower the translation-unit ABI level;
 
 ### OpenCL Specific Changes
 
+- In OpenCL, the ``integer-divide-by-zero`` and ``signed-integer-overflow``
+  checks emitted for integer ``/`` and ``%`` now use the recoverable handler
+  even without ``-fsanitize-recover``, because OpenCL C v3.0 s6.5.1 gives
+  integer division by zero and ``INT_MIN / -1`` an unspecified value instead
+  of an exception. A trap cannot continue, so these checks are no longer
+  emitted under ``-fsanitize-trap``.
 - Extensions ``cl_khr_extended_bit_ops``, ``cl_khr_integer_dot_product``,
   ``cl_khr_subgroup_extended_types``, ``cl_khr_subgroup_rotate``,
   ``cl_khr_subgroup_shuffle``, and ``cl_khr_subgroup_shuffle_relative`` are

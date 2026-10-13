@@ -4326,6 +4326,16 @@ void CodeGenFunction::EmitCheck(
   // This expression looks expensive but will be simplified after
   // LowerAllowCheckPass.
   for (auto &[Check, Ord] : Checked) {
+    // OpenCL C v3.0 s6.5.1: integer division by zero and INT_MIN / -1 do not
+    // cause an exception but result in an unspecified value, so these checks
+    // use the recoverable handler even without -fsanitize-recover. A trap
+    // cannot continue, so they are not emitted at all under -fsanitize-trap.
+    bool OpenCLIntDivRem = getLangOpts().OpenCL &&
+                           CheckHandler == SanitizerHandler::DivremOverflow &&
+                           Ord != SanitizerKind::SO_FloatDivideByZero;
+    if (OpenCLIntDivRem && CGM.getCodeGenOpts().SanitizeTrap.has(Ord))
+      continue;
+
     llvm::Value *GuardedCheck = Check;
     if (ClSanitizeGuardChecks ||
         (CGM.getCodeGenOpts().SanitizeSkipHotCutoffs[Ord] > 0)) {
@@ -4336,10 +4346,11 @@ void CodeGenFunction::EmitCheck(
     }
 
     // -fsanitize-trap= overrides -fsanitize-recover=.
-    llvm::Value *&Cond = CGM.getCodeGenOpts().SanitizeTrap.has(Ord) ? TrapCond
-                         : CGM.getCodeGenOpts().SanitizeRecover.has(Ord)
-                             ? RecoverableCond
-                             : FatalCond;
+    llvm::Value *&Cond =
+        CGM.getCodeGenOpts().SanitizeTrap.has(Ord) ? TrapCond
+        : (OpenCLIntDivRem || CGM.getCodeGenOpts().SanitizeRecover.has(Ord))
+            ? RecoverableCond
+            : FatalCond;
     Cond = Cond ? Builder.CreateAnd(Cond, GuardedCheck) : GuardedCheck;
 
     if (!CGM.getCodeGenOpts().SanitizeMergeHandlers.has(Ord))
