@@ -60,7 +60,7 @@ TEST(FieldListVisitor, StreamVisit) {
 
   std::vector<CVType> Records =
       CRB.end(TypeIndex(TypeIndex::FirstNonSimpleIndex));
-  ASSERT_EQ(Records.size(), 1);
+  ASSERT_EQ(Records.size(), size_t(1));
   Visitor Vis(D, B);
   Error EC = visitMemberRecordStream(Records.front().data(), Vis);
   ASSERT_THAT_ERROR(std::move(EC), Succeeded());
@@ -86,7 +86,7 @@ TEST(FieldListVisitor, VisitBadRecord) {
 
   std::vector<CVType> Records =
       CRB.end(TypeIndex(TypeIndex::FirstNonSimpleIndex));
-  ASSERT_EQ(Records.size(), 1);
+  ASSERT_EQ(Records.size(), size_t(1));
   // Remove some data from the back to get the member deserializer to error out.
   Records.front().RecordData = Records.front().RecordData.drop_back(4);
   Visitor Vis;
@@ -131,7 +131,7 @@ TEST(FieldListVisitor, VisitEarlyExit) {
 
   std::vector<CVType> Records =
       CRB.end(TypeIndex(TypeIndex::FirstNonSimpleIndex));
-  ASSERT_EQ(Records.size(), 1);
+  ASSERT_EQ(Records.size(), size_t(1));
   Visitor Vis(D);
   Error EC = visitMemberRecordStream(Records.front().data(), Vis);
   ASSERT_THAT_ERROR(std::move(EC), FailedWithMessage("stop it"));
