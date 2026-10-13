@@ -2633,16 +2633,11 @@ bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
         return true;
     }
 
-    // WAR: Trans(I) reads, VALU(MI) writes (VOPD duals have two dests,
-    // no plain vdst).
-    for (const MachineOperand &ValuDef : MI->explicit_operands()) {
-      if (!ValuDef.isReg() || !ValuDef.isDef())
-        continue;
-      for (const MachineOperand &TransUse : I.explicit_uses()) {
-        if (TransUse.isReg() &&
-            TRI->regsOverlap(ValuDef.getReg(), TransUse.getReg()))
-          return true;
-      }
+    // WAR: Trans(I) reads, VALU(MI) writes. Use modifiesRegister for
+    // multi-dest VALUs.
+    for (const MachineOperand &TransUse : I.explicit_uses()) {
+      if (TransUse.isReg() && MI->modifiesRegister(TransUse.getReg(), TRI))
+        return true;
     }
 
     return false;
