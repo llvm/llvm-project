@@ -210,6 +210,7 @@ set(files
   __algorithm/upper_bound.h
   __assert
   __atomic/aliases.h
+  __atomic/asymmetric_thread_fence.h
   __atomic/atomic.h
   __atomic/atomic_flag.h
   __atomic/atomic_init.h

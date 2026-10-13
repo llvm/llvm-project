@@ -68,6 +68,7 @@ set(LIBCXX_SOURCES
 
 if (LIBCXX_ENABLE_THREADS)
   list(APPEND LIBCXX_SOURCES
+    asymmetric_thread_fence.cpp
     atomic.cpp
     barrier.cpp
     condition_variable_destructor.cpp
