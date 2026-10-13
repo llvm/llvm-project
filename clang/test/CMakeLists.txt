@@ -263,6 +263,8 @@ if(CLANG_ENABLE_CIR)
       llvm-config
       llvm-dis
       llvm-objdump
+      llvm-readelf
+      llvm-strings
       not
       opt
       split-file

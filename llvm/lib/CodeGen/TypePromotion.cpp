@@ -102,6 +102,7 @@ static cl::opt<bool> DisablePromotion("disable-type-promotion", cl::Hidden,
 
 namespace {
 class IRPromoter {
+  Module &M;
   LLVMContext &Ctx;
   unsigned PromotedWidth = 0;
   SetVector<Value *> &Visited;
@@ -122,12 +123,13 @@ class IRPromoter {
   void Cleanup();
 
 public:
-  IRPromoter(LLVMContext &C, unsigned Width, SetVector<Value *> &visited,
+  IRPromoter(Module &M, unsigned Width, SetVector<Value *> &visited,
              SetVector<Value *> &sources, SetVector<Instruction *> &sinks,
              SmallPtrSetImpl<Instruction *> &wrap,
              SmallPtrSetImpl<Instruction *> &instsToRemove)
-      : Ctx(C), PromotedWidth(Width), Visited(visited), Sources(sources),
-        Sinks(sinks), SafeWrap(wrap), InstsToRemove(instsToRemove) {
+      : M(M), Ctx(M.getContext()), PromotedWidth(Width), Visited(visited),
+        Sources(sources), Sinks(sinks), SafeWrap(wrap),
+        InstsToRemove(instsToRemove) {
     ExtTy = IntegerType::get(Ctx, PromotedWidth);
   }
 
@@ -137,6 +139,7 @@ public:
 class TypePromotionImpl {
   unsigned TypeSize = 0;
   const TargetLowering *TLI = nullptr;
+  Module *M = nullptr;
   LLVMContext *Ctx = nullptr;
   unsigned RegisterBitWidth = 0;
   SmallPtrSet<Value *, 16> AllVisited;
@@ -444,7 +447,7 @@ void IRPromoter::ReplaceAllUsersOfWith(Value *From, Value *To) {
 }
 
 void IRPromoter::ExtendSources() {
-  IRBuilder<> Builder{Ctx};
+  IRBuilder<> Builder(M);
 
   auto InsertZExt = [&](Value *V, BasicBlock::iterator InsertPt) {
     assert(V->getType() != ExtTy && "zext already extends to i32");
@@ -555,7 +558,7 @@ void IRPromoter::PromoteTree() {
 void IRPromoter::TruncateSinks() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Fixing up the sinks:\n");
 
-  IRBuilder<> Builder{Ctx};
+  IRBuilder<> Builder(M);
 
   auto InsertTrunc = [&](Value *V, Type *TruncTy) -> Instruction * {
     if (!isa<Instruction>(V) || !isa<IntegerType>(V->getType()))
@@ -660,7 +663,7 @@ void IRPromoter::Cleanup() {
 
 void IRPromoter::ConvertTruncs() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Converting truncs..\n");
-  IRBuilder<> Builder{Ctx};
+  IRBuilder<> Builder(M);
 
   for (auto *V : Visited) {
     if (!isa<TruncInst>(V) || isTruncToI1(V) || Sources.count(V))
@@ -941,7 +944,7 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
       (ToPromote < 2 || (Blocks.size() == 1 && NonFreeArgs > SafeWrap.size())))
     return false;
 
-  IRPromoter Promoter(*Ctx, PromotedWidth, CurrentVisited, Sources, Sinks,
+  IRPromoter Promoter(*M, PromotedWidth, CurrentVisited, Sources, Sinks,
                       SafeWrap, InstsToRemove);
   Promoter.Mutate();
   return true;
@@ -964,6 +967,7 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
   TLI = SubtargetInfo->getTargetLowering();
   RegisterBitWidth =
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
+  M = F.getParent();
   Ctx = &F.getContext();
 
   // Return the preferred integer width of the instruction, or zero if we

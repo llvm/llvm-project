@@ -1271,11 +1271,18 @@ CUDAIntrinsicLibrary::genLDXXFunc(mlir::Type resultType,
   mlir::Type refResTy = fir::ReferenceType::get(resTy);
   mlir::FunctionType ftype =
       mlir::FunctionType::get(arg.getContext(), {refResTy, refResTy}, {});
-  auto funcOp = builder.createFunction(loc, fctName, ftype);
+  auto intrinsicAttr = fir::FortranProcedureFlagsEnumAttr::get(
+      builder.getContext(), fir::FortranProcedureFlagsEnum::intrinsic);
+  mlir::func::FuncOp funcOp = builder.getNamedFunction(fctName);
+  if (!funcOp) {
+    funcOp = builder.createFunction(loc, fctName, ftype);
+    funcOp->setAttr(fir::getFortranProcedureFlagsAttrName(), intrinsicAttr);
+  }
   llvm::SmallVector<mlir::Value> funcArgs;
   funcArgs.push_back(res);
   funcArgs.push_back(arg);
-  fir::CallOp::create(builder, loc, funcOp, funcArgs);
+  auto call = fir::CallOp::create(builder, loc, funcOp, funcArgs);
+  call.setProcedureAttrsAttr(intrinsicAttr);
   mlir::Value ext =
       builder.createIntegerConstant(loc, builder.getIndexType(), extent);
   return fir::ArrayBoxValue(res, {ext});

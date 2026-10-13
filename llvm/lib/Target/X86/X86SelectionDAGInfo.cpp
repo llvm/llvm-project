@@ -25,10 +25,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-selectiondag-info"
 
-static cl::opt<bool>
-    UseFSRMForMemcpy("x86-use-fsrm-for-memcpy", cl::Hidden, cl::init(false),
-                     cl::desc("Use fast short rep mov in memcpy lowering"));
-
 X86SelectionDAGInfo::X86SelectionDAGInfo()
     : SelectionDAGGenTargetInfo(X86GenSDNodeInfo) {}
 
@@ -67,36 +63,21 @@ bool X86SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
 
 void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                                            const SDNode *N) const {
-  switch (N->getOpcode()) {
-  default:
-    break;
-  case X86ISD::VP2INTERSECT:
-    // invalid number of results; expected 1, got 2
-  case X86ISD::CALL:
-  case X86ISD::NT_BRIND:
-    // operand #1 must have type i32 (iPTR), but has type i64
-  case X86ISD::INSERTQI:
-  case X86ISD::EXTRQI:
-    // result #0 must have type v2i64, but has type v16i8/v8i16
-    return;
-  }
-
   SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
 
   switch (N->getOpcode()) {
   default:
     break;
+  case X86ISD::CALL:
   case X86ISD::TC_RETURN:
   case X86ISD::TC_RETURN_GLOBALADDR: {
-    // The tail-call target is an integer whose width depends on both the
+    // The call target is an integer whose width depends on both the
     // subtarget and on how the callee is addressed:
     //  * A direct call to a GlobalAddress/ExternalSymbol is i32 on the
-    //    x32 ABI (as well as plain 32-bit mode) and i64 under LP64, since
-    //    TCRETURNdi/TCRETURNdi64 are selected based on IsLP64/NotLP64.
-    //  * Anything else (register, folded load, or TC_RETURN_GLOBALADDR's
-    //    RIP-relative CFGuard call) uses the register width the subtarget
-    //    executes in, i.e. i64 whenever the subtarget runs in 64-bit mode
-    //    (including x32) and i32 otherwise.
+    //    x32 ABI (as well as plain 32-bit mode) and i64 under LP64.
+    //  * Anything else (register, folded load, or RIP-relative CFGuard call)
+    //    uses the register width the subtarget executes in, i.e. i64 whenever
+    //    the subtarget runs in 64-bit mode (including x32) and i32 otherwise.
     const X86Subtarget &Subtarget =
         DAG.getMachineFunction().getSubtarget<X86Subtarget>();
     SDValue Target = N->getOperand(1);
@@ -429,7 +410,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
     return SDValue();
 
   // If enabled and available, use fast short rep mov.
-  if (UseFSRMForMemcpy && Subtarget.hasFSRM())
+  if (Subtarget.getCLOpts().use_fsrm_for_memcpy && Subtarget.hasFSRM())
     return emitRepmovs(Subtarget, DAG, dl, Chain, Dst, Src, Size, MVT::i8);
 
   // Handle constant sizes

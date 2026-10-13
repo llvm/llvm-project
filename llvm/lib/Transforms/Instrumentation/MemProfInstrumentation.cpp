@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/MemProfInstrumentation.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -34,7 +35,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -48,13 +48,10 @@ using namespace llvm::memprof;
 constexpr int LLVM_MEM_PROFILER_VERSION = 1;
 
 // Size of memory mapped to a single shadow location.
-constexpr uint64_t DefaultMemGranularity = 64;
+[[maybe_unused]] constexpr uint64_t DefaultMemGranularity = 64;
 
 // Size of memory mapped to a single histogram bucket.
 constexpr uint64_t HistogramGranularity = 8;
-
-// Scale from granularity down to shadow size.
-constexpr uint64_t DefaultShadowScale = 3;
 
 constexpr char MemProfModuleCtorName[] = "memprof.module_ctor";
 constexpr uint64_t MemProfCtorAndDtorPriority = 1;
@@ -71,78 +68,6 @@ constexpr char MemProfFilenameVar[] = "__memprof_profile_filename";
 
 constexpr char MemProfHistogramFlagVar[] = "__memprof_histogram";
 
-// Command-line flags.
-
-static cl::opt<bool> ClInsertVersionCheck(
-    "memprof-guard-against-version-mismatch",
-    cl::desc("Guard against compiler/runtime version mismatch."), cl::Hidden,
-    cl::init(true));
-
-// This flag may need to be replaced with -f[no-]memprof-reads.
-static cl::opt<bool> ClInstrumentReads("memprof-instrument-reads",
-                                       cl::desc("instrument read instructions"),
-                                       cl::Hidden, cl::init(true));
-
-static cl::opt<bool>
-    ClInstrumentWrites("memprof-instrument-writes",
-                       cl::desc("instrument write instructions"), cl::Hidden,
-                       cl::init(true));
-
-static cl::opt<bool> ClInstrumentAtomics(
-    "memprof-instrument-atomics",
-    cl::desc("instrument atomic instructions (rmw, cmpxchg)"), cl::Hidden,
-    cl::init(true));
-
-static cl::opt<bool> ClUseCalls(
-    "memprof-use-callbacks",
-    cl::desc("Use callbacks instead of inline instrumentation sequences."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<std::string>
-    ClMemoryAccessCallbackPrefix("memprof-memory-access-callback-prefix",
-                                 cl::desc("Prefix for memory access callbacks"),
-                                 cl::Hidden, cl::init("__memprof_"));
-
-// These flags allow to change the shadow mapping.
-// The shadow mapping looks like
-//    Shadow = ((Mem & mask) >> scale) + offset
-
-static cl::opt<int> ClMappingScale("memprof-mapping-scale",
-                                   cl::desc("scale of memprof shadow mapping"),
-                                   cl::Hidden, cl::init(DefaultShadowScale));
-
-static cl::opt<int>
-    ClMappingGranularity("memprof-mapping-granularity",
-                         cl::desc("granularity of memprof shadow mapping"),
-                         cl::Hidden, cl::init(DefaultMemGranularity));
-
-static cl::opt<bool> ClStack("memprof-instrument-stack",
-                             cl::desc("Instrument scalar stack variables"),
-                             cl::Hidden, cl::init(false));
-
-// Debug flags.
-
-static cl::opt<int> ClDebug("memprof-debug", cl::desc("debug"), cl::Hidden,
-                            cl::init(0));
-
-static cl::opt<std::string> ClDebugFunc("memprof-debug-func", cl::Hidden,
-                                        cl::desc("Debug func"));
-
-static cl::opt<int> ClDebugMin("memprof-debug-min", cl::desc("Debug min inst"),
-                               cl::Hidden, cl::init(-1));
-
-static cl::opt<int> ClDebugMax("memprof-debug-max", cl::desc("Debug max inst"),
-                               cl::Hidden, cl::init(-1));
-
-static cl::opt<bool> ClHistogram("memprof-histogram",
-                                 cl::desc("Collect access count histograms"),
-                                 cl::Hidden, cl::init(false));
-
-static cl::opt<std::string>
-    MemprofRuntimeDefaultOptions("memprof-runtime-default-options",
-                                 cl::desc("The default memprof options"),
-                                 cl::Hidden, cl::init(""));
-
 // Instrumentation statistics
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -154,9 +79,10 @@ namespace {
 /// This struct defines the shadow mapping using the rule:
 ///   shadow = ((mem & mask) >> Scale) ADD DynamicShadowOffset.
 struct ShadowMapping {
-  ShadowMapping() {
-    Scale = ClMappingScale;
-    Granularity = ClHistogram ? HistogramGranularity : ClMappingGranularity;
+  ShadowMapping(const InstrumentationOptions &Opts) {
+    Scale = Opts.memprof_mapping_scale;
+    Granularity = Opts.memprof_histogram ? HistogramGranularity
+                                         : Opts.memprof_mapping_granularity;
     Mask = ~(Granularity - 1);
   }
 
@@ -180,7 +106,8 @@ struct InterestingMemoryAccess {
 /// Instrument the code in module to profile memory accesses.
 class MemProfiler {
 public:
-  MemProfiler(Module &M) {
+  MemProfiler(const InstrumentationOptions &Opts, Module &M)
+      : Opts(Opts), Mapping(Opts) {
     C = &(M.getContext());
     LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
@@ -209,6 +136,7 @@ public:
 private:
   void initializeCallbacks(Module &M);
 
+  const InstrumentationOptions &Opts;
   LLVMContext *C;
   int LongSize;
   Type *IntptrTy;
@@ -224,11 +152,15 @@ private:
 
 class ModuleMemProfiler {
 public:
-  ModuleMemProfiler(Module &M) { TargetTriple = M.getTargetTriple(); }
+  ModuleMemProfiler(const InstrumentationOptions &Opts, Module &M)
+      : Opts(Opts), Mapping(Opts) {
+    TargetTriple = M.getTargetTriple();
+  }
 
   bool instrumentModule(Module &);
 
 private:
+  const InstrumentationOptions &Opts;
   Triple TargetTriple;
   ShadowMapping Mapping;
   Function *MemProfCtorFunction = nullptr;
@@ -240,10 +172,12 @@ MemProfilerPass::MemProfilerPass() = default;
 
 PreservedAnalyses MemProfilerPass::run(Function &F,
                                        AnalysisManager<Function> &AM) {
-  assert((!ClHistogram || ClMappingGranularity == DefaultMemGranularity) &&
+  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  assert((!Opts.memprof_histogram ||
+          Opts.memprof_mapping_granularity == DefaultMemGranularity) &&
          "Memprof with histogram only supports default mapping granularity");
   Module &M = *F.getParent();
-  MemProfiler Profiler(M);
+  MemProfiler Profiler(Opts, M);
   if (Profiler.instrumentFunction(F))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -254,7 +188,7 @@ ModuleMemProfilerPass::ModuleMemProfilerPass() = default;
 PreservedAnalyses ModuleMemProfilerPass::run(Module &M,
                                              AnalysisManager<Module> &AM) {
 
-  ModuleMemProfiler Profiler(M);
+  ModuleMemProfiler Profiler(InstrumentationOptions::Global, M);
   if (Profiler.instrumentModule(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -295,25 +229,25 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
   InterestingMemoryAccess Access;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    if (!ClInstrumentReads)
+    if (!Opts.memprof_instrument_reads)
       return std::nullopt;
     Access.IsWrite = false;
     Access.AccessTy = LI->getType();
     Access.Addr = LI->getPointerOperand();
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    if (!ClInstrumentWrites)
+    if (!Opts.memprof_instrument_writes)
       return std::nullopt;
     Access.IsWrite = true;
     Access.AccessTy = SI->getValueOperand()->getType();
     Access.Addr = SI->getPointerOperand();
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
-    if (!ClInstrumentAtomics)
+    if (!Opts.memprof_instrument_atomics)
       return std::nullopt;
     Access.IsWrite = true;
     Access.AccessTy = RMW->getValOperand()->getType();
     Access.Addr = RMW->getPointerOperand();
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
-    if (!ClInstrumentAtomics)
+    if (!Opts.memprof_instrument_atomics)
       return std::nullopt;
     Access.IsWrite = true;
     Access.AccessTy = XCHG->getCompareOperand()->getType();
@@ -324,14 +258,14 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
               F->getIntrinsicID() == Intrinsic::masked_store)) {
       unsigned OpOffset = 0;
       if (F->getIntrinsicID() == Intrinsic::masked_store) {
-        if (!ClInstrumentWrites)
+        if (!Opts.memprof_instrument_writes)
           return std::nullopt;
         // Masked store has an initial operand for the value.
         OpOffset = 1;
         Access.AccessTy = CI->getArgOperand(0)->getType();
         Access.IsWrite = true;
       } else {
-        if (!ClInstrumentReads)
+        if (!Opts.memprof_instrument_reads)
           return std::nullopt;
         Access.AccessTy = CI->getType();
         Access.IsWrite = false;
@@ -417,7 +351,8 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
 void MemProfiler::instrumentMop(Instruction *I, const DataLayout &DL,
                                 InterestingMemoryAccess &Access) {
   // Skip instrumentation of stack accesses unless requested.
-  if (!ClStack && isa<AllocaInst>(getUnderlyingObject(Access.Addr))) {
+  if (!Opts.memprof_instrument_stack &&
+      isa<AllocaInst>(getUnderlyingObject(Access.Addr))) {
     if (Access.IsWrite)
       ++NumSkippedStackWrites;
     else
@@ -447,19 +382,20 @@ void MemProfiler::instrumentAddress(Instruction *OrigIns,
   IRBuilder<> IRB(InsertBefore);
   Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
 
-  if (ClUseCalls) {
+  if (Opts.memprof_use_callbacks) {
     IRB.CreateCall(MemProfMemoryAccessCallback[IsWrite], AddrLong);
     return;
   }
 
-  Type *ShadowTy = ClHistogram ? Type::getInt8Ty(*C) : Type::getInt64Ty(*C);
+  Type *ShadowTy =
+      Opts.memprof_histogram ? Type::getInt8Ty(*C) : Type::getInt64Ty(*C);
   Type *ShadowPtrTy = PointerType::get(*C, 0);
 
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   Value *ShadowAddr = IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy);
   Value *ShadowValue = IRB.CreateLoad(ShadowTy, ShadowAddr);
   // If we are profiling with histograms, add overflow protection at 255.
-  if (ClHistogram) {
+  if (Opts.memprof_histogram) {
     Value *MaxCount = ConstantInt::get(Type::getInt8Ty(*C), 255);
     Value *Cmp = IRB.CreateICmpULT(ShadowValue, MaxCount);
     Instruction *IncBlock =
@@ -493,12 +429,14 @@ void createProfileFileNameVar(Module &M) {
 
 // Set MemprofHistogramFlag as a Global variable in IR. This makes it accessible
 // to the runtime, changing shadow count behavior.
-void createMemprofHistogramFlagVar(Module &M) {
+void createMemprofHistogramFlagVar(const InstrumentationOptions &Opts,
+                                   Module &M) {
   const StringRef VarName(MemProfHistogramFlagVar);
   Type *IntTy1 = Type::getInt1Ty(M.getContext());
   auto MemprofHistogramFlag = new GlobalVariable(
       M, IntTy1, true, GlobalValue::WeakAnyLinkage,
-      Constant::getIntegerValue(IntTy1, APInt(1, ClHistogram)), VarName);
+      Constant::getIntegerValue(IntTy1, APInt(1, Opts.memprof_histogram)),
+      VarName);
   const Triple &TT = M.getTargetTriple();
   if (TT.supportsCOMDAT()) {
     MemprofHistogramFlag->setLinkage(GlobalValue::ExternalLinkage);
@@ -507,9 +445,10 @@ void createMemprofHistogramFlagVar(Module &M) {
   appendToCompilerUsed(M, MemprofHistogramFlag);
 }
 
-void createMemprofDefaultOptionsVar(Module &M) {
+void createMemprofDefaultOptionsVar(const InstrumentationOptions &Opts,
+                                    Module &M) {
   Constant *OptionsConst = ConstantDataArray::getString(
-      M.getContext(), MemprofRuntimeDefaultOptions, /*AddNull=*/true);
+      M.getContext(), Opts.memprof_runtime_default_options, /*AddNull=*/true);
   GlobalVariable *OptionsVar =
       new GlobalVariable(M, OptionsConst->getType(), /*isConstant=*/true,
                          GlobalValue::WeakAnyLinkage, OptionsConst,
@@ -526,8 +465,9 @@ bool ModuleMemProfiler::instrumentModule(Module &M) {
   // Create a module constructor.
   std::string MemProfVersion = std::to_string(LLVM_MEM_PROFILER_VERSION);
   std::string VersionCheckName =
-      ClInsertVersionCheck ? (MemProfVersionCheckNamePrefix + MemProfVersion)
-                           : "";
+      Opts.memprof_guard_against_version_mismatch
+          ? (MemProfVersionCheckNamePrefix + MemProfVersion)
+          : "";
   std::tie(MemProfCtorFunction, std::ignore) =
       createSanitizerCtorAndInitFunctions(M, MemProfModuleCtorName,
                                           MemProfInitName, /*InitArgTypes=*/{},
@@ -538,32 +478,35 @@ bool ModuleMemProfiler::instrumentModule(Module &M) {
 
   createProfileFileNameVar(M);
 
-  createMemprofHistogramFlagVar(M);
+  createMemprofHistogramFlagVar(Opts, M);
 
-  createMemprofDefaultOptionsVar(M);
+  createMemprofDefaultOptionsVar(Opts, M);
 
   return true;
 }
 
 void MemProfiler::initializeCallbacks(Module &M) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
-    const std::string HistPrefix = ClHistogram ? "hist_" : "";
+    const std::string HistPrefix = Opts.memprof_histogram ? "hist_" : "";
 
     SmallVector<Type *, 2> Args1{1, IntptrTy};
     MemProfMemoryAccessCallback[AccessIsWrite] = M.getOrInsertFunction(
-        ClMemoryAccessCallbackPrefix + HistPrefix + TypeStr,
+        (Opts.memprof_memory_access_callback_prefix + HistPrefix + TypeStr)
+            .str(),
         FunctionType::get(IRB.getVoidTy(), Args1, false));
   }
   MemProfMemmove = M.getOrInsertFunction(
-      ClMemoryAccessCallbackPrefix + "memmove", PtrTy, PtrTy, PtrTy, IntptrTy);
-  MemProfMemcpy = M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memcpy",
-                                        PtrTy, PtrTy, PtrTy, IntptrTy);
-  MemProfMemset =
-      M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memset", PtrTy,
-                            PtrTy, IRB.getInt32Ty(), IntptrTy);
+      (Opts.memprof_memory_access_callback_prefix + "memmove").str(), PtrTy,
+      PtrTy, PtrTy, IntptrTy);
+  MemProfMemcpy = M.getOrInsertFunction(
+      (Opts.memprof_memory_access_callback_prefix + "memcpy").str(), PtrTy,
+      PtrTy, PtrTy, IntptrTy);
+  MemProfMemset = M.getOrInsertFunction(
+      (Opts.memprof_memory_access_callback_prefix + "memset").str(), PtrTy,
+      PtrTy, IRB.getInt32Ty(), IntptrTy);
 }
 
 bool MemProfiler::maybeInsertMemProfInitAtFunctionEntry(Function &F) {
@@ -597,7 +540,7 @@ bool MemProfiler::insertDynamicShadowAtFunctionEntry(Function &F) {
 bool MemProfiler::instrumentFunction(Function &F) {
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
     return false;
-  if (ClDebugFunc == F.getName())
+  if (Opts.memprof_debug_func == F.getName())
     return false;
   if (F.getName().starts_with("__memprof_"))
     return false;
@@ -635,8 +578,9 @@ bool MemProfiler::instrumentFunction(Function &F) {
 
   int NumInstrumented = 0;
   for (auto *Inst : ToInstrument) {
-    if (ClDebugMin < 0 || ClDebugMax < 0 ||
-        (NumInstrumented >= ClDebugMin && NumInstrumented <= ClDebugMax)) {
+    if (Opts.memprof_debug_min < 0 || Opts.memprof_debug_max < 0 ||
+        (NumInstrumented >= Opts.memprof_debug_min &&
+         NumInstrumented <= Opts.memprof_debug_max)) {
       std::optional<InterestingMemoryAccess> Access =
           isInterestingMemoryAccess(Inst);
       if (Access)
