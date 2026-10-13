@@ -312,7 +312,7 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
       getAndRecordGlobalAddress(Program, "__omp_rtl_device_environment");
   if (!DeviceEnvironmentPtrOrErr) {
     llvm::consumeError(DeviceEnvironmentPtrOrErr.takeError());
-    return std::move(Program);
+    return Program;
   }
   void *DeviceEnvironmentPtr = *DeviceEnvironmentPtrOrErr;
 
@@ -345,7 +345,7 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
                  /*Name=*/"DeviceEnvironment"))
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
 
-  return std::move(Program);
+  return Program;
 }
 
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
