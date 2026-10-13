@@ -13,6 +13,156 @@
 
 declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float>, metadata, metadata)
 declare <8 x half> @llvm.experimental.constrained.fptrunc.v8f16.v8f32(<8 x float>, metadata, metadata)
+declare <16 x half> @llvm.experimental.constrained.fptrunc.v16f16.v16f32(<16 x float>, metadata, metadata)
+declare <32 x half> @llvm.experimental.constrained.fptrunc.v32f16.v32f32(<32 x float>, metadata, metadata)
+declare <16 x float> @llvm.experimental.constrained.fpext.v16f32.v16f16(<16 x half>, metadata)
+
+; The source type is not legal: split in LowerOperation.
+define <16 x half> @fptrunc_v16f32_strict(<16 x float> %a) #0 {
+; X64-F16C-LABEL: fptrunc_v16f32_strict:
+; X64-F16C:       # %bb.0:
+; X64-F16C-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
+; X64-F16C-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
+; X64-F16C-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-F16C-NEXT:    retq
+;
+; X64-AVX512-LABEL: fptrunc_v16f32_strict:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
+; X64-AVX512-NEXT:    retq
+;
+; X86-LABEL: fptrunc_v16f32_strict:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
+; X86-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
+; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    retl
+  %r = call <16 x half> @llvm.experimental.constrained.fptrunc.v16f16.v16f32(<16 x float> %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #1
+  ret <16 x half> %r
+}
+
+; Same shape as the C reproducer: load, convert, store.
+define void @fptrunc_v16f32_strict_store(ptr %out, ptr %in) #0 {
+; X64-F16C-LABEL: fptrunc_v16f32_strict_store:
+; X64-F16C:       # %bb.0:
+; X64-F16C-NEXT:    vmovaps (%rsi), %ymm0
+; X64-F16C-NEXT:    vmovaps 32(%rsi), %ymm1
+; X64-F16C-NEXT:    vcvtps2ph $4, %ymm1, 16(%rdi)
+; X64-F16C-NEXT:    vcvtps2ph $4, %ymm0, (%rdi)
+; X64-F16C-NEXT:    vzeroupper
+; X64-F16C-NEXT:    retq
+;
+; X64-AVX512-LABEL: fptrunc_v16f32_strict_store:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovaps (%rsi), %zmm0
+; X64-AVX512-NEXT:    vcvtps2ph $4, %zmm0, (%rdi)
+; X64-AVX512-NEXT:    vzeroupper
+; X64-AVX512-NEXT:    retq
+;
+; X86-LABEL: fptrunc_v16f32_strict_store:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovaps (%ecx), %ymm0
+; X86-NEXT:    vmovaps 32(%ecx), %ymm1
+; X86-NEXT:    vcvtps2ph $4, %ymm1, 16(%eax)
+; X86-NEXT:    vcvtps2ph $4, %ymm0, (%eax)
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+  %a = load <16 x float>, ptr %in, align 64
+  %r = call <16 x half> @llvm.experimental.constrained.fptrunc.v16f16.v16f32(<16 x float> %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #1
+  store <16 x half> %r, ptr %out, align 32
+  ret void
+}
+
+; The result type is not legal either: split in ReplaceNodeResults, then the
+; halves are split again in LowerOperation.
+define <32 x half> @fptrunc_v32f32_strict(<32 x float> %a) #0 {
+; X64-AVX2-LABEL: fptrunc_v32f32_strict:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
+; X64-AVX2-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
+; X64-AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vcvtps2ph $4, %ymm2, %xmm1
+; X64-AVX2-NEXT:    vcvtps2ph $4, %ymm3, %xmm2
+; X64-AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; X64-AVX2-NEXT:    retq
+;
+; X64-HSW-LABEL: fptrunc_v32f32_strict:
+; X64-HSW:       # %bb.0:
+; X64-HSW-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
+; X64-HSW-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
+; X64-HSW-NEXT:    vcvtps2ph $4, %ymm2, %xmm2
+; X64-HSW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-HSW-NEXT:    vcvtps2ph $4, %ymm3, %xmm1
+; X64-HSW-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; X64-HSW-NEXT:    retq
+;
+; X64-SKX-LABEL: fptrunc_v32f32_strict:
+; X64-SKX:       # %bb.0:
+; X64-SKX-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
+; X64-SKX-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
+; X64-SKX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-SKX-NEXT:    vcvtps2ph $4, %ymm2, %xmm1
+; X64-SKX-NEXT:    vcvtps2ph $4, %ymm3, %xmm2
+; X64-SKX-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; X64-SKX-NEXT:    retq
+;
+; X64-AVX512-LABEL: fptrunc_v32f32_strict:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
+; X64-AVX512-NEXT:    vcvtps2ph $4, %zmm1, %ymm1
+; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; X64-AVX512-NEXT:    retq
+;
+; X86-LABEL: fptrunc_v32f32_strict:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-32, %esp
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    vmovaps 8(%ebp), %ymm3
+; X86-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
+; X86-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
+; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vcvtps2ph $4, %ymm2, %xmm1
+; X86-NEXT:    vcvtps2ph $4, %ymm3, %xmm2
+; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+  %r = call <32 x half> @llvm.experimental.constrained.fptrunc.v32f16.v32f32(<32 x float> %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #1
+  ret <32 x half> %r
+}
+
+; The chain of the split conversion orders it before the strict extension that
+; consumes the result.
+define <16 x float> @fptrunc_fpext_v16f32_strict(<16 x float> %a) #0 {
+; X64-F16C-LABEL: fptrunc_fpext_v16f32_strict:
+; X64-F16C:       # %bb.0:
+; X64-F16C-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
+; X64-F16C-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
+; X64-F16C-NEXT:    vcvtph2ps %xmm1, %ymm1
+; X64-F16C-NEXT:    vcvtph2ps %xmm0, %ymm0
+; X64-F16C-NEXT:    retq
+;
+; X64-AVX512-LABEL: fptrunc_fpext_v16f32_strict:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
+; X64-AVX512-NEXT:    vcvtph2ps %ymm0, %zmm0
+; X64-AVX512-NEXT:    retq
+;
+; X86-LABEL: fptrunc_fpext_v16f32_strict:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
+; X86-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
+; X86-NEXT:    vcvtph2ps %xmm1, %ymm1
+; X86-NEXT:    vcvtph2ps %xmm0, %ymm0
+; X86-NEXT:    retl
+  %t = call <16 x half> @llvm.experimental.constrained.fptrunc.v16f16.v16f32(<16 x float> %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #1
+  %e = call <16 x float> @llvm.experimental.constrained.fpext.v16f32.v16f16(<16 x half> %t, metadata !"fpexcept.strict") #1
+  ret <16 x float> %e
+}
 
 define <4 x half> @fptrunc_v4f32_strict(<4 x float> %a) #0 {
 ; X64-LABEL: fptrunc_v4f32_strict:
