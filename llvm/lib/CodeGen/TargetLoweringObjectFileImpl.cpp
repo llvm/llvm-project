@@ -2337,6 +2337,8 @@ void TargetLoweringObjectFileWasm::initialize(MCContext &Ctx,
 MCSection *
 TargetLoweringObjectFileWasm::getNamedSection(StringRef Name,
                                               SectionKind Kind) const {
+  if (Kind.isMetadata())
+    return getContext().getWasmSection(".custom_section." + Name, Kind);
   return getContext().getWasmSection(Name, Kind);
 }
 

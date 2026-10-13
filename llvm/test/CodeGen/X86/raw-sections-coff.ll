@@ -1,5 +1,23 @@
 ; RUN: llc -filetype=obj -mtriple=x86_64-windows-msvc %s -o %t.o
 ; RUN: llvm-readobj --sections --section-data %t.o | FileCheck %s
+; RUN: llc -mtriple=x86_64-windows-msvc %s -o %t.s
+; RUN: FileCheck %s --check-prefix=ASM < %t.s
+;; The assembly must round-trip to the same object contents.
+; RUN: llvm-mc -filetype=obj -triple=x86_64-windows-msvc %t.s -o %t.mc.o
+; RUN: llvm-readobj --sections --section-data %t.mc.o | FileCheck %s
+
+; ASM:      .section clangast,"yD"
+; ASM-NEXT: .p2align 3, 0x0
+; ASM-NEXT: .ascii "\336\255\276\357"
+; ASM:      .section bigalign,"yD"
+; ASM-NEXT: .p2align 6, 0x0
+; ASM-NEXT: .ascii "\001\002\003"
+; ASM:      .section twoentry,"yD"
+; ASM-NEXT: .p2align 2, 0x0
+; ASM-NEXT: .ascii "\252\273\314"
+; ASM:      .section twoentry,"yD"
+; ASM-NEXT: .p2align 3, 0x0
+; ASM-NEXT: .ascii "\021\""
 
 ; CHECK:      Name: clangast
 ; CHECK:      RawDataSize:

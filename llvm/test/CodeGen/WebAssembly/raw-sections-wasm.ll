@@ -1,5 +1,25 @@
 ; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown %s -o %t.o
 ; RUN: llvm-readobj --sections --section-data %t.o | FileCheck %s
+; RUN: llc -mtriple=wasm32-unknown-unknown %s -o %t.s
+; RUN: FileCheck %s --check-prefix=ASM < %t.s
+;; The assembly must round-trip to the same object contents.
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %t.s -o %t.mc.o
+; RUN: llvm-readobj --sections --section-data %t.mc.o | FileCheck %s
+
+;; In assembly, custom sections carry a .custom_section. prefix so that they
+;; are not mistaken for data sections.
+; ASM:      .section .custom_section.__clangast,"",@
+; ASM-NEXT: .p2align 3, 0x0
+; ASM-NEXT: .ascii "\336\255\276\357"
+; ASM:      .section .custom_section.__bigalign,"",@
+; ASM-NEXT: .p2align 6, 0x0
+; ASM-NEXT: .ascii "\001\002\003"
+; ASM:      .section .custom_section.__twoentries,"",@
+; ASM-NEXT: .p2align 2, 0x0
+; ASM-NEXT: .ascii "\252\273\314"
+; ASM:      .section .custom_section.__twoentries,"",@
+; ASM-NEXT: .p2align 3, 0x0
+; ASM-NEXT: .ascii "\021\""
 
 ; CHECK:      Type: CUSTOM
 ; CHECK-NEXT: Size: 4
