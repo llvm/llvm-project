@@ -2,7 +2,7 @@
 
 /// Check `-target-abi`.
 // RUN: %clang --target=loongarch32 -### -fintegrated-as -c %s 2>&1 | \
-// RUN:   FileCheck -DABI=ilp32d --check-prefix=ABI %s
+// RUN:   FileCheck -DABI=ilp32s --check-prefix=ABI %s
 // RUN: %clang --target=loongarch32 -mabi=ilp32d -### -fintegrated-as -c %s 2>&1 | \
 // RUN:   FileCheck -DABI=ilp32d --check-prefix=ABI %s
 // RUN: %clang --target=loongarch32 -mabi=ilp32f -### -fintegrated-as -c %s 2>&1 | \
