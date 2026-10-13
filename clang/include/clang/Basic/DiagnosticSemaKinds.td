@@ -7212,8 +7212,6 @@ def err_count_attr_must_be_in_structure : Error<
   "field %0 in '%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}1' not inside structure">;
 def err_count_attr_argument_not_integer : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' requires a non-boolean integer type argument">;
-def err_count_attr_argument_is_bitfield : Error<
-  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' cannot have a bitfield type argument">;
 def err_count_attr_only_support_simple_decl_reference : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' argument must be a simple declaration reference">;
 def err_count_attr_in_union : Error<
@@ -7270,13 +7268,14 @@ def err_builtin_counted_by_ref_invalid_arg
             "the 'counted_by' attribute">;
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
-
 def err_builtin_counted_by_ref_cannot_leak_reference : Error<
   "value returned by '__builtin_counted_by_ref' cannot be %select{assigned to a "
   "variable|passed into a function|returned from a function}0">;
 def err_builtin_counted_by_ref_invalid_use : Error<
   "value returned by '__builtin_counted_by_ref' cannot be used in "
   "%select{an array subscript|a binary}0 expression">;
+def err_builtin_counted_by_ref_argument_is_bitfield : Error<
+  "'__builtin_counted_by_ref' argument cannot be a bitfield">;
 
 let CategoryName = "ARC Semantic Issue" in {
 

@@ -207,15 +207,6 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     return true;
   }
 
-  if (CountFD->isBitField()) {
-    Diag(E->getBeginLoc(), diag::err_count_attr_argument_is_bitfield)
-        << Kind << E->getSourceRange();
-    Diag(CountDecl->getBeginLoc(),
-         diag::note_flexible_array_counted_by_attr_field)
-        << CountDecl << CountDecl->getSourceRange();
-    return true;
-  }
-
   if (FD->getParent() != CountFD->getParent()) {
     if (CountFD->getParent()->isUnion()) {
       Diag(CountFD->getBeginLoc(), diag::err_count_attr_refer_to_union)

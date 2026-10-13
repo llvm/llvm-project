@@ -114,11 +114,6 @@ struct annotated_with_anon_struct {
   };
 };
 
-struct bitfield_counter {
-  int count : 13; // expected-note {{'count' declared here}}
-  struct bar *array[] __counted_by(count); // expected-error {{'counted_by' cannot have a bitfield type argument}}
-};
-
 //==============================================================================
 // __counted_by on a struct VLA with element type that has unknown size
 //==============================================================================

@@ -185,3 +185,12 @@ struct ptr_no_attr {
 void test11(struct ptr_no_attr *p) {
   _Static_assert(_Generic(__builtin_counted_by_ref(p->ptr), void * : 1, default : 0) == 1, "should be void*");
 }
+
+struct bitfield_counter {
+  int count : 13; // expected-note {{'count' declared here}}
+  int array[] __attribute__((counted_by(count)));
+};
+
+void test_bitfield_counter(struct bitfield_counter *p) {
+  __builtin_counted_by_ref(p->array); // expected-error {{'__builtin_counted_by_ref' argument cannot be a bitfield}}
+}

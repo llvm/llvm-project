@@ -7222,6 +7222,15 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
       // Member has counted_by attribute - return pointer to count field
       const auto *MemberDecl = cast<FieldDecl>(ME->getMemberDecl());
       if (const FieldDecl *CountFD = MemberDecl->findCountedByField()) {
+        if (CountFD->isBitField()) {
+          Diag(ME->getBeginLoc(),
+               diag::err_builtin_counted_by_ref_argument_is_bitfield)
+              << ME->getSourceRange();
+          return Diag(CountFD->getBeginLoc(),
+                      diag::note_flexible_array_counted_by_attr_field)
+                 << CountFD << CountFD->getSourceRange();
+        }
+
         TheCall->setType(Context.getPointerType(CountFD->getType()));
         return false;
       }
