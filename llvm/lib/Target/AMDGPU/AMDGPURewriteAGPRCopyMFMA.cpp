@@ -23,6 +23,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMFMAToAGPR.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
@@ -66,6 +67,7 @@ class AMDGPURewriteAGPRCopyMFMAImpl {
   LiveStacks &LSS;
   const RegisterClassInfo &RegClassInfo;
   MachineDominatorTree &MDT;
+  AMDGPU::MFMAToAGPR MFMAToAGPR;
 
   bool attemptReassignmentsToAGPR(SmallSetVector<Register, 4> &InterferingRegs,
                                   MCPhysReg PrefPhysReg) const;
@@ -78,10 +80,11 @@ public:
                                 MachineDominatorTree &MDT)
       : MF(MF), ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
         TRI(*ST.getRegisterInfo()), MRI(MF.getRegInfo()), VRM(VRM), LRM(LRM),
-        LIS(LIS), LSS(LSS), RegClassInfo(RegClassInfo), MDT(MDT) {}
+        LIS(LIS), LSS(LSS), RegClassInfo(RegClassInfo), MDT(MDT),
+        MFMAToAGPR(MF, TII, TRI, MRI) {}
 
   bool isRewriteCandidate(const MachineInstr &MI) const {
-    return TII.isMAI(MI) && AMDGPU::getAGPRFormOp(MI.getOpcode()) != -1;
+    return AMDGPU::hasAGPRForm(MI, TII);
   }
 
   /// Find AV_* registers assigned to AGPRs (or virtual registers which were
@@ -102,20 +105,6 @@ public:
 
   bool tryReassigningMFMAChain(MachineInstr &MFMA, Register MFMAHintReg,
                                MCPhysReg PhysRegHint) const;
-
-  /// Compute the register class constraints based on the uses of \p Reg,
-  /// excluding MFMA uses from which can be rewritten to change the register
-  /// class constraint. MFMA scale operands need to be constraint checked.
-  /// This should be nearly identical to MachineRegisterInfo::recomputeRegClass.
-
-  /// \p RewriteCandidates will collect the set of MFMA instructions that need
-  /// to have the opcode mutated to perform the replacement.
-  ///
-  /// \p RewriteRegs will accumulate the set of register used by those MFMAs
-  /// that need to have the register classes adjusted.
-  bool recomputeRegClassExceptRewritable(
-      Register Reg, SmallVectorImpl<MachineInstr *> &RewriteCandidates,
-      SmallSetVector<Register, 4> &RewriteRegs) const;
 
   bool tryFoldCopiesToAGPR(Register VReg, MCRegister AssignedAGPR) const;
   bool tryFoldCopiesFromAGPR(Register VReg, MCRegister AssignedAGPR) const;
@@ -147,91 +136,6 @@ public:
   bool run(MachineFunction &MF) const;
 };
 
-bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
-    Register StartReg, SmallVectorImpl<MachineInstr *> &RewriteCandidates,
-    SmallSetVector<Register, 4> &RewriteRegs) const {
-  SmallVector<Register, 8> Worklist = {StartReg};
-
-  // Recursively visit all transitive MFMA users
-  while (!Worklist.empty()) {
-    Register Reg = Worklist.pop_back_val();
-    const TargetRegisterClass *OldRC = MRI.getRegClass(Reg);
-
-    // Inflate to the equivalent AV_* class.
-    const TargetRegisterClass *NewRC = TRI.getLargestLegalSuperClass(OldRC, MF);
-    if (OldRC == NewRC)
-      return false;
-
-    // Accumulate constraints from all uses.
-    for (MachineOperand &MO : MRI.reg_nodbg_operands(Reg)) {
-      // Apply the effect of the given operand to NewRC.
-      MachineInstr *MI = MO.getParent();
-
-      // We can swap the classes of dst + src2 as a pair to AGPR, so ignore the
-      // effects of rewrite candidates. It just so happens that we can use
-      // either AGPR or VGPR in src0/src1. We still need to check constraint
-      // effects for scale variant, which does not allow AGPR.
-      if (isRewriteCandidate(*MI)) {
-        int AGPROp = AMDGPU::getAGPRFormOp(MI->getOpcode());
-        const MCInstrDesc &AGPRDesc = TII.get(AGPROp);
-        const TargetRegisterClass *NewRC =
-            TII.getRegClass(AGPRDesc, MO.getOperandNo());
-        if (!TRI.hasAGPRs(NewRC))
-          return false;
-
-        const MachineOperand *VDst =
-            TII.getNamedOperand(*MI, AMDGPU::OpName::vdst);
-        const MachineOperand *Src2 =
-            TII.getNamedOperand(*MI, AMDGPU::OpName::src2);
-        for (const MachineOperand *Op : {VDst, Src2}) {
-          if (!Op->isReg())
-            continue;
-
-          Register OtherReg = Op->getReg();
-          if (OtherReg.isPhysical())
-            return false;
-
-          if (OtherReg != Reg && RewriteRegs.insert(OtherReg))
-            Worklist.push_back(OtherReg);
-        }
-
-        if (!is_contained(RewriteCandidates, MI)) {
-          LLVM_DEBUG({
-            Register VDstPhysReg = VRM.getPhys(VDst->getReg());
-            dbgs() << "Attempting to replace VGPR MFMA with AGPR version:"
-                   << " Dst=[" << printReg(VDst->getReg()) << " => "
-                   << printReg(VDstPhysReg, &TRI);
-
-            if (Src2->isReg()) {
-              Register Src2PhysReg = VRM.getPhys(Src2->getReg());
-              dbgs() << "], Src2=[" << printReg(Src2->getReg(), &TRI) << " => "
-                     << printReg(Src2PhysReg, &TRI);
-            }
-
-            dbgs() << "]: " << MI;
-          });
-
-          RewriteCandidates.push_back(MI);
-        }
-
-        continue;
-      }
-
-      unsigned OpNo = &MO - &MI->getOperand(0);
-      NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, &TII, &TRI);
-      if (!NewRC || NewRC == OldRC) {
-        LLVM_DEBUG(dbgs() << "User of " << printReg(Reg, &TRI)
-                          << " cannot be reassigned to "
-                          << (NewRC ? TRI.getRegClassName(NewRC) : "NULL")
-                          << ": " << *MI);
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
     MachineInstr &MFMA, Register MFMAHintReg, MCPhysReg PhysRegHint) const {
   // src2 and dst have the same physical class constraint; try to preserve
@@ -250,14 +154,31 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
   // need to figure out where to put them. The live range splitting is smarter
   // than anything we're doing here, so trust it did something reasonable.
   //
-  // Note recomputeRegClassExceptRewritable will consider the constraints of
-  // this MFMA's src2 as well as the src2/dst of any transitive MFMA users.
-  if (!recomputeRegClassExceptRewritable(MFMAHintReg, RewriteCandidates,
-                                         RewriteRegs)) {
+  // Note canMoveChainToAGPR will consider the constraints of this MFMA's src2
+  // as well as the src2/dst of any transitive MFMA users.
+  if (!MFMAToAGPR.canMoveChainToAGPR(MFMAHintReg, RewriteCandidates,
+                                     RewriteRegs)) {
     LLVM_DEBUG(dbgs() << "Could not recompute the regclass of dst reg "
                       << printReg(MFMAHintReg, &TRI) << '\n');
     return false;
   }
+
+  LLVM_DEBUG({
+    for (MachineInstr *MI : RewriteCandidates) {
+      const MachineOperand *VDst =
+          TII.getNamedOperand(*MI, AMDGPU::OpName::vdst);
+      const MachineOperand *Src2 =
+          TII.getNamedOperand(*MI, AMDGPU::OpName::src2);
+      dbgs() << "Attempting to replace VGPR MFMA with AGPR version:"
+             << " Dst=[" << printReg(VDst->getReg()) << " => "
+             << printReg(VRM.getPhys(VDst->getReg()), &TRI);
+      if (Src2->isReg()) {
+        dbgs() << "], Src2=[" << printReg(Src2->getReg(), &TRI) << " => "
+               << printReg(VRM.getPhys(Src2->getReg()), &TRI);
+      }
+      dbgs() << "]: " << *MI;
+    }
+  });
 
   // If src2 and dst are different registers, we need to also reassign the
   // input to an available AGPR if it is compatible with all other uses.
@@ -299,17 +220,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
 
   // Fixup the register classes of the virtual registers now that we've
   // committed to the reassignments.
-  for (Register InterferingReg : RewriteRegs) {
-    const TargetRegisterClass *EquivalentAGPRRegClass =
-        TRI.getEquivalentAGPRClass(MRI.getRegClass(InterferingReg));
-    MRI.setRegClass(InterferingReg, EquivalentAGPRRegClass);
-  }
-
-  for (MachineInstr *RewriteCandidate : RewriteCandidates) {
-    int NewMFMAOp = AMDGPU::getAGPRFormOp(RewriteCandidate->getOpcode());
-    RewriteCandidate->setDesc(TII.get(NewMFMAOp));
-    ++NumMFMAsRewrittenToAGPR;
-  }
+  MFMAToAGPR.applyAGPRForm(RewriteCandidates, RewriteRegs.getArrayRef());
+  NumMFMAsRewrittenToAGPR += RewriteCandidates.size();
 
   return true;
 }
@@ -429,11 +341,10 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesFromAGPR(
         continue;
 
       MachineInstr &CopyUseMI = *CopyUseMO.getParent();
-      if (isRewriteCandidate(CopyUseMI)) {
-        if (tryReassigningMFMAChain(CopyUseMI, CopyDstReg,
-                                    VRM.getPhys(CopyDstReg)))
-          MadeChange = true;
-      }
+      if (isRewriteCandidate(CopyUseMI) &&
+          tryReassigningMFMAChain(CopyUseMI, CopyDstReg,
+                                  VRM.getPhys(CopyDstReg)))
+        MadeChange = true;
     }
   }
 
