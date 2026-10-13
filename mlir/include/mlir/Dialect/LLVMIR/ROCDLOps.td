@@ -675,8 +675,9 @@ def ROCDL_WaitTensorcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.tensorcnt", [], 0,
   let assemblyFormat = "$count attr-dict";
 }
 
-def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
-    Arguments<(ins)> {
+def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0, [0], ["stages"]>,
+    Arguments<(ins DefaultValuedAttr<
+        ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<2047>]>, "0">:$stages)> {
   let summary = "Mark the end of a group of asynchronous operations";
   let description = [{
       This operation, in conjunction with `rocdl.wait.asyncmark`, forms the
@@ -689,20 +690,28 @@ def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
 
       See `rocdl.wait.asyncmark`'s documentation for a usage example.
 
+      `stages` is a mask of the async stages to mark: the mark is appended to
+      the sequence of every stage it names. The zero mask, which is the
+      default, names every stage.
+
       Example:
       ```mlir
-      // Mark the end of an async operation group.
+      // Mark the end of an async operation group in every stage.
       rocdl.asyncmark
+      // Mark the end of an async operation group in stage 0 alone.
+      rocdl.asyncmark stages 1
       ```
 
       Available on gfx9 and later.
   }];
   let results = (outs);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "(`stages` $stages^)? attr-dict";
 }
 
-def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [0], ["count"]>,
-    Arguments<(ins I16Attr:$count)> {
+def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [0, 1], ["count", "stages"]>,
+    Arguments<(ins I16Attr:$count,
+        DefaultValuedAttr<
+          ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<2047>]>, "0">:$stages)> {
   let summary = "Wait until N or fewer async operation groups are unexecuted";
   let description = [{
       This operation, along with `rocdl.asyncmark`, forms the compiler-provided
@@ -711,6 +720,10 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       At the point where a wait.asyncmark operation is executed, all async operations
       that were parts of any async group (established by asyncmark in program order)
       other than the `count` previously-added ones will have finished executing.
+
+      `stages` is a mask of the async stages to wait on: each stage it names
+      is waited on separately, using its own sequence of asyncmarks. The zero
+      mask, which is the default, names every stage.
 
       For more detail, including on how this mechanism composes with function calls,
       see [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
@@ -721,6 +734,8 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       ```mlir
       // Wait until at most N async groups remain outstanding.
       rocdl.wait.asyncmark 1
+      // The same, counting the groups of stage 0 alone.
+      rocdl.wait.asyncmark 1 stages 1
       ```
 
       Usage example:
@@ -739,7 +754,7 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       ```
   }];
   let results = (outs);
-  let assemblyFormat = "$count attr-dict";
+  let assemblyFormat = "$count (`stages` $stages^)? attr-dict";
 }
 
 def ROCDL_SetPrioOp : ROCDL_ConcreteNonMemIntrOp<"s.setprio", [], 0, [0], ["priority"]>,

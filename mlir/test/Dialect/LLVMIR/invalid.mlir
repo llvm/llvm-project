@@ -2599,3 +2599,19 @@ llvm.func @nvvm_duplicate_fp_modifier(%a: f32, %b: f32) {
   %0 = nvvm.addf %a, %b ftz = true ftz = true : f32
   llvm.return
 }
+
+// -----
+
+llvm.func @rocdl_asyncmark_stages_out_of_range() {
+  // expected-error@+1 {{'rocdl.asyncmark' op attribute 'stages' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 2047}}
+  rocdl.asyncmark stages 2048
+  llvm.return
+}
+
+// -----
+
+llvm.func @rocdl_wait_asyncmark_stages_out_of_range() {
+  // expected-error@+1 {{'rocdl.wait.asyncmark' op attribute 'stages' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 2047}}
+  rocdl.wait.asyncmark 0 stages 2048
+  llvm.return
+}

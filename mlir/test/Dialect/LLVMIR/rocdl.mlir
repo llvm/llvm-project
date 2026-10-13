@@ -1341,15 +1341,22 @@ llvm.func @rocdl.s.wait.tensorcnt() {
 
 llvm.func @rocdl.asyncmark() {
   // CHECK-LABEL: rocdl.asyncmark
-  // CHECK: rocdl.asyncmark
+  // The zero mask is the default, so it is not printed.
+  // CHECK: rocdl.asyncmark{{$}}
+  // CHECK: rocdl.asyncmark{{$}}
+  // CHECK: rocdl.asyncmark stages 5{{$}}
   rocdl.asyncmark
+  rocdl.asyncmark stages 0
+  rocdl.asyncmark stages 5
   llvm.return
 }
 
 llvm.func @rocdl.wait.asyncmark() {
   // CHECK-LABEL: rocdl.wait.asyncmark
-  // CHECK: rocdl.wait.asyncmark 0
+  // CHECK: rocdl.wait.asyncmark 0{{$}}
+  // CHECK: rocdl.wait.asyncmark 2 stages 5{{$}}
   rocdl.wait.asyncmark 0
+  rocdl.wait.asyncmark 2 stages 5
   llvm.return
 }
 
