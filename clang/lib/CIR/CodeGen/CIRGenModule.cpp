@@ -2331,14 +2331,7 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
 
 mlir::ptr::MemorySpaceAttrInterface
 CIRGenModule::getGlobalCIRAddressSpace(LangAS as) {
-  // The cir::LangAddressSpace fold loses the SPIRDefIsGenMap split between
-  // cuda_constant and opencl_constant, so use the target map like classic.
-  if (langOpts.CUDAIsDevice && getTriple().isSPIRV() &&
-      (as == LangAS::cuda_device || as == LangAS::cuda_constant ||
-       as == LangAS::cuda_shared))
-    return cir::TargetAddressSpaceAttr::get(
-        &getMLIRContext(), astContext.getTargetAddressSpace(as));
-  return cir::toCIRAddressSpaceAttr(getMLIRContext(), as);
+  return getTargetCIRGenInfo().getGlobalCIRAddressSpace(as);
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
