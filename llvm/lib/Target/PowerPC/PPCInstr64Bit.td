@@ -1462,18 +1462,11 @@ def LQ   : DQForm_RTp5_RA17_MEM<56, 0,
 
 // PowerPC AS uses the low DQ-form selector value 2 for tagged quadword
 // loads.  The register pair and displacement fields otherwise match LQ.
-def LQ_PPCAS : DQForm_RTp5_RA17_MEM<56, 2,
-                                    (outs g8prc:$RTp),
-                                    (ins (memrix16 $DQ, $RA):$addr),
-                                    "lq $RTp, $addr", IIC_LdStLQ,
-                                    []>,
-                                    RegConstraint<"@earlyclobber $RTp">,
-                                    Requires<[IsPPC64, HasPPCAS]>;
-def LQT_PPCAS : ASDQTForm_RTp5_RA17_MEM<56, 3,
+def LQ_PPCAS : ASDQTForm_RTp5_RA17_MEM<56,
                                         (outs g8prc:$RTp),
                                         (ins (memrix16 $DQ, $RA):$addr,
-                                             u2imm:$T),
-                                        "lq $RTp, $addr, $T", NoItinerary>,
+                                             u4imm:$PT),
+                                        "lq $RTp, $addr, $PT", NoItinerary>,
                                         RegConstraint<"@earlyclobber $RTp">,
                                         Requires<[IsPPC64, HasPPCAS]>;
 def LMD_PPCAS : DSForm_1<58, 3, (outs g8rc:$RST),

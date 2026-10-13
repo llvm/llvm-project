@@ -1985,7 +1985,7 @@ let Predicates = [HasPPCAS], hasNoSchedulingInfo = 1,
 
   let isAsmParserOnly = 1 in
   def TXER : TXForm<31, 4, (outs),
-                    (ins u5imm:$TO, u10imm:$UI, u5imm:$XBI),
+                    (ins u5imm:$TO, u10imm:$UI, asxbi:$XBI),
                     "txer $TO, $UI, $XBI", NoItinerary>;
 
   def LSDX_PPCAS : XForm_1<31, 565, (outs g8rc:$RST),
@@ -2001,18 +2001,47 @@ let Predicates = [HasPPCAS], hasNoSchedulingInfo = 1,
                             (ins g8rc:$RST, g8rc:$RA, u5imm:$RB),
                             "stsdi $RST, $RA, $RB", NoItinerary, []>;
 
+  def CMPLA_PPCAS : XForm_16<31, 64, (outs crrc:$BF),
+                             (ins g8rc:$RA, g8rc:$RB),
+                             "cmpla $BF, $RA, $RB", NoItinerary> {
+    let L = 1;
+  }
+  def MCRXRT_PPCAS : X_BF3<31, 544, (outs crrc:$BF), (ins),
+                            "mcrxrt $BF", NoItinerary>;
+
   def SELII_PPCAS : ASSelectForm<12, (outs g8rc:$RA),
-                                 (ins s5imm:$S1, s5imm:$S2, u5imm:$XBI),
+                                 (ins s5imm:$S1, s5imm:$S2, asxbi:$XBI),
                                  "selii $RA, $S1, $S2, $XBI">;
   def SELIR_PPCAS : ASSelectForm<13, (outs g8rc:$RA),
-                                 (ins s5imm:$S1, g8rc:$S2, u5imm:$XBI),
+                                 (ins s5imm:$S1, g8rc:$S2, asxbi:$XBI),
                                  "selir $RA, $S1, $S2, $XBI">;
   def SELRI_PPCAS : ASSelectForm<14, (outs g8rc:$RA),
-                                 (ins g8rc:$S1, s5imm:$S2, u5imm:$XBI),
+                                 (ins g8rc:$S1, s5imm:$S2, asxbi:$XBI),
                                  "selri $RA, $S1, $S2, $XBI">;
   def SELRR_PPCAS : ASSelectForm<15, (outs g8rc:$RA),
-                                 (ins g8rc:$S1, g8rc:$S2, u5imm:$XBI),
+                                 (ins g8rc:$S1, g8rc:$S2, asxbi:$XBI),
                                  "selrr $RA, $S1, $S2, $XBI">;
+
+  def SELIIo_PPCAS : ASSelectForm<12, (outs g8rc:$RA),
+                                  (ins s5imm:$S1, s5imm:$S2, asxbi:$XBI),
+                                  "selii. $RA, $S1, $S2, $XBI"> {
+    let RC = 1;
+  }
+  def SELIRo_PPCAS : ASSelectForm<13, (outs g8rc:$RA),
+                                  (ins s5imm:$S1, g8rc:$S2, asxbi:$XBI),
+                                  "selir. $RA, $S1, $S2, $XBI"> {
+    let RC = 1;
+  }
+  def SELRIo_PPCAS : ASSelectForm<14, (outs g8rc:$RA),
+                                  (ins g8rc:$S1, s5imm:$S2, asxbi:$XBI),
+                                  "selri. $RA, $S1, $S2, $XBI"> {
+    let RC = 1;
+  }
+  def SELRRo_PPCAS : ASSelectForm<15, (outs g8rc:$RA),
+                                  (ins g8rc:$S1, g8rc:$S2, asxbi:$XBI),
+                                  "selrr. $RA, $S1, $S2, $XBI"> {
+    let RC = 1;
+  }
 }
 
 // Branch history rolling buffer.

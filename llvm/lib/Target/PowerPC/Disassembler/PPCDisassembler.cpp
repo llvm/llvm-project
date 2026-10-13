@@ -255,6 +255,15 @@ static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeASXBIOperand(MCInst &Inst, uint64_t Imm,
+                                       int64_t Address,
+                                       const MCDisassembler *Decoder) {
+  if (!isUInt<4>(Imm))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(Imm + 32));
+  return MCDisassembler::Success;
+}
+
 template <unsigned N>
 static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address,
@@ -404,7 +413,7 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     MI.setOpcode(PPC::TXER);
     MI.addOperand(MCOperand::createImm((Inst >> 21) & 0x1f));
     MI.addOperand(MCOperand::createImm((Inst >> 11) & 0x3ff));
-    MI.addOperand(MCOperand::createImm((Inst >> 6) & 0x1f));
+    MI.addOperand(MCOperand::createImm(((Inst >> 7) & 0xf) + 32));
     return MCDisassembler::Success;
   }
 

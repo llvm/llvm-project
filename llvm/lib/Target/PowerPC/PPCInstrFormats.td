@@ -437,19 +437,18 @@ class DQForm_RTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
   let Inst{28...31} = xo;
 }
 
-class ASDQTForm_RTp5_RA17_MEM<bits<6> opcode, bits<2> xo, dag OOL, dag IOL,
+class ASDQTForm_RTp5_RA17_MEM<bits<6> opcode, dag OOL, dag IOL,
                               string asmstr, InstrItinClass itin>
   : I<opcode, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5> RTp;
   bits<5> RA;
   bits<12> DQ;
-  bits<2> T;
+  bits<4> PT;
 
   let Inst{6...10} = RTp;
   let Inst{11...15} = RA;
   let Inst{16...27} = DQ;
-  let Inst{28...29} = T;
-  let Inst{30...31} = xo;
+  let Inst{28...31} = PT;
 }
 
 // PowerPC AS TX-form. UI is a 10-bit value available to the trap handler;
@@ -459,11 +458,12 @@ class TXForm<bits<6> opcode, bits<5> xo, dag OOL, dag IOL, string asmstr,
   : I<opcode, OOL, IOL, asmstr, itin> {
   bits<5> TO;
   bits<10> UI;
-  bits<5> XBI;
+  bits<4> XBI;
 
   let Inst{6...10} = TO;
   let Inst{11...20} = UI;
-  let Inst{21...25} = XBI;
+  let Inst{21...24} = XBI;
+  let Inst{25} = 1;
   let Inst{26...30} = xo;
   let Inst{31} = 0;
 }
@@ -476,14 +476,15 @@ class ASSelectForm<bits<5> xo, dag OOL, dag IOL, string asmstr>
   bits<5> S1;
   bits<5> RA;
   bits<5> S2;
-  bits<5> XBI;
+  bits<4> XBI;
   bit RC = 0;
 
   let Inst{6...10} = S1;
   let Inst{11...15} = RA;
   let Inst{16...20} = S2;
-  let Inst{21...25} = XBI;
-  let Inst{26...30} = xo;
+  let Inst{21...24} = XBI;
+  let Inst{25...26} = 0;
+  let Inst{27...30} = xo{3...0};
   let Inst{31} = RC;
 }
 
