@@ -7745,11 +7745,9 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
   (void)TLI;
 
   if (SrcAS == ARM64AS::PTR32_SPTR) {
-    return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, Src,
-                       DAG.getTargetConstant(0, DL, DestVT));
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, Src);
   } else if (SrcAS == ARM64AS::PTR32_UPTR) {
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, DestVT, Src,
-                       DAG.getTargetConstant(0, DL, DestVT));
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, DestVT, Src);
   } else if ((DestAS == ARM64AS::PTR32_SPTR) ||
              (DestAS == ARM64AS::PTR32_UPTR)) {
     SDValue Ext = DAG.getAnyExtOrTrunc(Src, DL, DestVT);
