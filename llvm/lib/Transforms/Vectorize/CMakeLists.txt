@@ -30,6 +30,7 @@ add_llvm_component_library(LLVMVectorize
   SLPVectorizer/SLPTypeUtils.cpp
   SLPVectorizer/SLPUtils.cpp
   SLPVectorizer.cpp
+  SLPVPlanCodegen.cpp
   Vectorize.cpp
   VectorCombine.cpp
   VPlan.cpp
