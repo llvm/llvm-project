@@ -2426,6 +2426,25 @@ static Instruction *foldSubOfMinMax(BinaryOperator &I,
   return nullptr;
 }
 
+/// sub nuw (and X, LowMask), (zext Y) --> zext (sub nuw (trunc X), Y)
+/// where LowMask has exactly as many low bits set as Y's width, so the 'and'
+/// is zext(trunc X) and the wide nuw implies the narrow sub does not wrap.
+static Instruction *foldSubNUWOfMaskAndZExt(BinaryOperator &I,
+                                            InstCombiner::BuilderTy &Builder) {
+  Value *X, *Y;
+  const APInt *Mask;
+  if (!I.hasNoUnsignedWrap() ||
+      !match(I.getOperand(0),
+             m_OneUse(m_And(m_Value(X), m_LowBitMask(Mask)))) ||
+      !match(I.getOperand(1), m_OneUse(m_ZExt(m_Value(Y)))) ||
+      Mask->countr_one() != Y->getType()->getScalarSizeInBits())
+    return nullptr;
+
+  Value *TruncX = Builder.CreateTrunc(X, Y->getType());
+  Value *NarrowSub = Builder.CreateNUWSub(TruncX, Y);
+  return new ZExtInst(NarrowSub, I.getType());
+}
+
 Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   if (Value *V = simplifySubInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
@@ -2506,6 +2525,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
     return Changed ? &I : nullptr;
   };
+
+  if (Instruction *R = foldSubNUWOfMaskAndZExt(I, Builder))
+    return R;
 
   // First, let's try to interpret `sub a, b` as `add a, (sub 0, b)`,
   // and let's try to sink `(sub 0, b)` into `b` itself. But only if this isn't

@@ -9,9 +9,9 @@ declare void @use(i16)
 define i16 @sub_nuw_mask_zext(i16 %x, i8 %y) {
 ; CHECK-LABEL: define i16 @sub_nuw_mask_zext(
 ; CHECK-SAME: i16 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = and i16 [[X]], 255
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[Y]] to i16
-; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i16 [[M]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[X]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw i8 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %m = and i16 %x, 255
@@ -24,11 +24,11 @@ define i16 @sub_nuw_mask_zext(i16 %x, i8 %y) {
 define i32 @sub_nuw_mask_zext_urem_trunc(i32 %x) {
 ; CHECK-LABEL: define i32 @sub_nuw_mask_zext_urem_trunc(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[X]], 65535
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X]] to i16
 ; CHECK-NEXT:    [[REM:%.*]] = urem i16 [[T]], 3
-; CHECK-NEXT:    [[Z:%.*]] = zext nneg i16 [[REM]] to i32
-; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i32 [[M]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw i16 [[TMP1]], [[REM]]
+; CHECK-NEXT:    [[R:%.*]] = zext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %m = and i32 %x, 65535
@@ -42,9 +42,9 @@ define i32 @sub_nuw_mask_zext_urem_trunc(i32 %x) {
 define i16 @sub_nuw_nsw_mask_zext(i16 %x, i8 %y) {
 ; CHECK-LABEL: define i16 @sub_nuw_nsw_mask_zext(
 ; CHECK-SAME: i16 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = and i16 [[X]], 255
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[Y]] to i16
-; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i16 [[M]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[X]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw i8 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %m = and i16 %x, 255
@@ -56,9 +56,9 @@ define i16 @sub_nuw_nsw_mask_zext(i16 %x, i8 %y) {
 define i16 @sub_nuw_mask_zext_nneg(i16 %x, i8 %y) {
 ; CHECK-LABEL: define i16 @sub_nuw_mask_zext_nneg(
 ; CHECK-SAME: i16 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = and i16 [[X]], 255
-; CHECK-NEXT:    [[Z:%.*]] = zext nneg i8 [[Y]] to i16
-; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i16 [[M]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[X]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw i8 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %m = and i16 %x, 255
@@ -70,9 +70,9 @@ define i16 @sub_nuw_mask_zext_nneg(i16 %x, i8 %y) {
 define <2 x i16> @sub_nuw_mask_zext_vec_splat(<2 x i16> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i16> @sub_nuw_mask_zext_vec_splat(
 ; CHECK-SAME: <2 x i16> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = and <2 x i16> [[X]], splat (i16 255)
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i8> [[Y]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw <2 x i16> [[M]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[X]] to <2 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw <2 x i8> [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[TMP2]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %m = and <2 x i16> %x, splat (i16 255)
@@ -84,9 +84,9 @@ define <2 x i16> @sub_nuw_mask_zext_vec_splat(<2 x i16> %x, <2 x i8> %y) {
 define <2 x i16> @sub_nuw_mask_zext_vec_splat_poison(<2 x i16> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i16> @sub_nuw_mask_zext_vec_splat_poison(
 ; CHECK-SAME: <2 x i16> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = and <2 x i16> [[X]], <i16 255, i16 poison>
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i8> [[Y]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw <2 x i16> [[M]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[X]] to <2 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw <2 x i8> [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[TMP2]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %m = and <2 x i16> %x, <i16 255, i16 poison>
@@ -112,9 +112,9 @@ define <2 x i16> @sub_nuw_mask_zext_vec_non_splat(<2 x i16> %x, <2 x i8> %y) {
 define i13 @sub_nuw_mask_zext_i13_i5(i13 %x, i5 %y) {
 ; CHECK-LABEL: define i13 @sub_nuw_mask_zext_i13_i5(
 ; CHECK-SAME: i13 [[X:%.*]], i5 [[Y:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = and i13 [[X]], 31
-; CHECK-NEXT:    [[Z:%.*]] = zext i5 [[Y]] to i13
-; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i13 [[M]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i13 [[X]] to i5
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw i5 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i5 [[TMP2]] to i13
 ; CHECK-NEXT:    ret i13 [[R]]
 ;
   %m = and i13 %x, 31
@@ -126,9 +126,9 @@ define i13 @sub_nuw_mask_zext_i13_i5(i13 %x, i5 %y) {
 define i8 @sub_nuw_mask_zext_i8_i1(i8 %x, i1 %y) {
 ; CHECK-LABEL: define i8 @sub_nuw_mask_zext_i8_i1(
 ; CHECK-SAME: i8 [[X:%.*]], i1 [[Y:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = and i8 [[X]], 1
-; CHECK-NEXT:    [[Z_NEG:%.*]] = sext i1 [[Y]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[M]], [[Z_NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[X]] to i1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[Y]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP2]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = and i8 %x, 1
