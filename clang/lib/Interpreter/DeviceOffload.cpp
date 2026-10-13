@@ -36,6 +36,31 @@ IncrementalDeviceParser::IncrementalDeviceParser(
 
 IncrementalDeviceParser::~IncrementalDeviceParser() {}
 
+IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
+    CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+    IncrementalAction *DeviceAct,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
+    llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
+    : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
+                              PTUs) {
+  if (Err)
+    return;
+  StringRef Arch = TargetOpts.CPU;
+  if (!Arch.starts_with("gfx")) {
+    Err = llvm::joinErrors(std::move(Err), llvm::make_error<llvm::StringError>(
+                                               "Invalid HIP architecture",
+                                               llvm::inconvertibleErrorCode()));
+    return;
+  }
+}
+
+llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
+  // FIXME: Generate the HSACO and bundle it for the host compilation.
+  return llvm::Error::success();
+}
+
+IncrementalHIPDeviceParser::~IncrementalHIPDeviceParser() {}
+
 IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
     CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
     IncrementalAction *DeviceAct,
