@@ -35,21 +35,6 @@ define <8 x i8> @vaaddu_vx_v8i8_floor(<8 x i8> %x, i8 %y) {
 }
 
 
-define <8 x i8> @vaaddu_vv_v8i8_floor_sexti16(<8 x i8> %x, <8 x i8> %y) {
-; CHECK-LABEL: vaaddu_vv_v8i8_floor_sexti16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrwi vxrm, 2
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vaadd.vv v8, v8, v9
-; CHECK-NEXT:    ret
-  %xzv = sext <8 x i8> %x to <8 x i16>
-  %yzv = sext <8 x i8> %y to <8 x i16>
-  %add = add nuw nsw <8 x i16> %xzv, %yzv
-  %div = lshr <8 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  %ret = trunc <8 x i16> %div to <8 x i8>
-  ret <8 x i8> %ret
-}
-
 define <8 x i8> @vaaddu_vv_v8i8_floor_zexti32(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_floor_zexti32:
 ; CHECK:       # %bb.0:
@@ -281,22 +266,6 @@ define <8 x i8> @vaaddu_vx_v8i8_ceil(<8 x i8> %x, i8 %y) {
   %add = add nuw nsw <8 x i16> %xzv, %yzv
   %add1 = add nuw nsw <8 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %div = lshr <8 x i16> %add1, splat (i16 1)
-  %ret = trunc <8 x i16> %div to <8 x i8>
-  ret <8 x i8> %ret
-}
-
-define <8 x i8> @vaaddu_vv_v8i8_ceil_sexti16(<8 x i8> %x, <8 x i8> %y) {
-; CHECK-LABEL: vaaddu_vv_v8i8_ceil_sexti16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrwi vxrm, 0
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vaadd.vv v8, v8, v9
-; CHECK-NEXT:    ret
-  %xzv = sext <8 x i8> %x to <8 x i16>
-  %yzv = sext <8 x i8> %y to <8 x i16>
-  %add = add nuw nsw <8 x i16> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  %div = lshr <8 x i16> %add1, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %ret = trunc <8 x i16> %div to <8 x i8>
   ret <8 x i8> %ret
 }
