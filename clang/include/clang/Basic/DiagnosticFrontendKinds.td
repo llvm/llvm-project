@@ -324,7 +324,7 @@ def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
 def warn_function_always_inline_attribute_mismatch : Warning<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes, "
-  "inlining may change runtime behaviour">, InGroup<AArch64SMEAttributes>;
+  "%1 may not be inlined">, InGroup<AArch64SMEAttributes>;
 def err_function_always_inline_new_za : Error<
   "always_inline function %0 has new za state">;
 def err_function_always_inline_new_zt0
@@ -510,6 +510,9 @@ def warn_hlsl_failed_to_embed_source
 
 def err_data_layout_mismatch : Error<"backend data layout '%0' does not match "
                                      "expected target description '%1'">;
+def err_fe_exception_model_mismatch
+    : Error<"'-exception-model=%0' does not match the module's exception "
+            "model '%1'">;
 def err_failed_to_open_for_embedding
     : Error<"could not open '%0' for embedding">;
 def err_unsupported_cxx_abi_feature

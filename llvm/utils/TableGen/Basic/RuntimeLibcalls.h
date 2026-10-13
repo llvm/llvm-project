@@ -171,6 +171,8 @@ private:
   std::vector<RuntimeLibcall> RuntimeLibcallDefList;
   std::vector<RuntimeLibcallImpl> RuntimeLibcallImplDefList;
 
+  std::vector<const Record *> FuncArgTypeList;
+
 public:
   RuntimeLibcalls(const RecordKeeper &Records);
 
@@ -188,6 +190,10 @@ public:
 
   const RuntimeLibcallImpl *getRuntimeLibcallImpl(const Record *Def) const {
     return Def2RuntimeLibcallImpl.lookup(Def);
+  }
+
+  ArrayRef<const Record *> getFuncArgTypeList() const {
+    return FuncArgTypeList;
   }
 };
 

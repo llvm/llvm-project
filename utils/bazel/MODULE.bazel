@@ -39,6 +39,15 @@ bazel_dep(name = "rules_cc_autoconf", version = "0.24.0", repo_name = None)
 
 bazel_dep(name = "emsdk", version = "6.0.2", dev_dependency = True)
 bazel_dep(name = "llvm", version = "0.8.20", dev_dependency = True)
+bazel_dep(name = "wolfd_bazel_compile_commands", version = "0.5.2", dev_dependency = True)
+single_version_override(
+    module_name = "wolfd_bazel_compile_commands",
+    patch_strip = 1,
+    patches = [
+        "//tools/compile_commands:build.patch",
+        "//tools/compile_commands:generate_compile_commands.patch",
+    ],
+)
 
 llvm_repos_extension = use_extension(":extensions.bzl", "llvm_repos_extension")
 use_repo(

@@ -168,7 +168,7 @@ struct FunctionsAndLDSAccess {
 class AMDGPUSwLowerLDS {
 public:
   AMDGPUSwLowerLDS(Module &Mod, DomTreeCallback Callback)
-      : M(Mod), IRB(M.getContext()), DTCallback(Callback) {}
+      : M(Mod), IRB(M), DTCallback(Callback) {}
   bool run();
   void getUsesOfLDSByNonKernels();
   void getNonKernelsWithLDSArguments(const CallGraph &CG);
@@ -322,7 +322,7 @@ static void addLDSSizeAttribute(Function *Func, uint32_t Offset,
 
 static void markUsedByKernel(Function *Func, GlobalVariable *SGV) {
   BasicBlock *Entry = &Func->getEntryBlock();
-  IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
+  IRBuilder<> Builder(Entry->getFirstNonPHIIt());
 
   Function *Decl = Intrinsic::getOrInsertDeclaration(Func->getParent(),
                                                      Intrinsic::donothing, {});

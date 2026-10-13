@@ -8,8 +8,8 @@ body:             |
   ; CHECK-LABEL: name: @Undef
   ; CHECK-NEXT: %def:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
-    %def:_(s32) = G_IMPLICIT_DEF
-    %copy:_(s32) = COPY %def
+    %def:_(f32) = G_IMPLICIT_DEF
+    %copy:_(f32) = COPY %def
 ...
 ---
 name:            FreezeNegZero
@@ -19,9 +19,9 @@ body:             |
   ; CHECK-NEXT: %neg0:_ FPClasses:(nzero) SignBitKnown:1
   ; CHECK-NEXT: %fr:_ FPClasses:(nzero) SignBitKnown:1
   ; CHECK-NEXT: %copy:_ FPClasses:(nzero) SignBitKnown:1
-    %neg0:_(s32) = G_FCONSTANT float -0.0
-    %fr:_(s32) = G_FREEZE %neg0
-    %copy:_(s32) = COPY %fr
+    %neg0:_(f32) = G_FCONSTANT float -0.0
+    %fr:_(f32) = G_FREEZE %neg0
+    %copy:_(f32) = COPY %fr
 ...
 ---
 name:            FreezeFabsUndef
@@ -32,10 +32,10 @@ body:             |
   ; CHECK-NEXT: %fabs:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %fr:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
-    %def:_(s32) = G_IMPLICIT_DEF
-    %fabs:_(s32) = G_FABS %def
-    %fr:_(s32) = G_FREEZE %fabs
-    %copy:_(s32) = COPY %fr
+    %def:_(f32) = G_IMPLICIT_DEF
+    %fabs:_(f32) = G_FABS %def
+    %fr:_(f32) = G_FREEZE %fabs
+    %copy:_(f32) = COPY %fr
 ...
 ---
 name:            ScalableFAbs
@@ -45,9 +45,9 @@ body:             |
   ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %fabs:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
-    %val:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-    %fabs:_(<vscale x 4 x s32>) = G_FABS %val
-    %copy:_(<vscale x 4 x s32>) = COPY %fabs
+    %val:_(<vscale x 4 x f32>) = G_IMPLICIT_DEF
+    %fabs:_(<vscale x 4 x f32>) = G_FABS %val
+    %copy:_(<vscale x 4 x f32>) = COPY %fabs
 ...
 ---
 name:            CstVecNegZero
@@ -59,11 +59,11 @@ body:             |
   ; CHECK-NEXT: %c2:_ FPClasses:(nzero) SignBitKnown:1
   ; CHECK-NEXT: %vector:_ FPClasses:(nzero) SignBitKnown:1
   ; CHECK-NEXT: %copy_vector:_ FPClasses:(nzero) SignBitKnown:1
-    %c0:_(s32) = G_FCONSTANT float -0.0
-    %c1:_(s32) = G_FCONSTANT float -0.0
-    %c2:_(s32) = G_FCONSTANT float -0.0
-    %vector:_(<3 x s32>) = G_BUILD_VECTOR %c0, %c1, %c2
-    %copy_vector:_(<3 x s32>) = COPY %vector
+    %c0:_(f32) = G_FCONSTANT float -0.0
+    %c1:_(f32) = G_FCONSTANT float -0.0
+    %c2:_(f32) = G_FCONSTANT float -0.0
+    %vector:_(<3 x f32>) = G_BUILD_VECTOR %c0, %c1, %c2
+    %copy_vector:_(<3 x f32>) = COPY %vector
 ...
 ---
 name:            CstZeroFPExt
@@ -73,9 +73,9 @@ body:             |
   ; CHECK-NEXT: %c0:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %ext:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
-    %c0:_(s32) = G_FCONSTANT float 0.0
-    %ext:_(s64) = nnan ninf G_FPEXT %c0
-    %copy:_(s64) = COPY %ext
+    %c0:_(f32) = G_FCONSTANT float 0.0
+    %ext:_(f64) = nnan ninf G_FPEXT %c0
+    %copy:_(f64) = COPY %ext
 ...
 ---
 name:            CstVecZeroFPExt
@@ -88,12 +88,12 @@ body:             |
   ; CHECK-NEXT: %vector:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %ext:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
-    %c0:_(s32) = G_FCONSTANT float 0.0
-    %c1:_(s32) = G_FCONSTANT float 0.0
-    %c2:_(s32) = G_FCONSTANT float 0.0
-    %vector:_(<3 x s32>) = G_BUILD_VECTOR %c0, %c1, %c2
-    %ext:_(<3 x s64>) = nnan ninf G_FPEXT %vector
-    %copy:_(<3 x s64>) = COPY %ext
+    %c0:_(f32) = G_FCONSTANT float 0.0
+    %c1:_(f32) = G_FCONSTANT float 0.0
+    %c2:_(f32) = G_FCONSTANT float 0.0
+    %vector:_(<3 x f32>) = G_BUILD_VECTOR %c0, %c1, %c2
+    %ext:_(<3 x f64>) = nnan ninf G_FPEXT %vector
+    %copy:_(<3 x f64>) = COPY %ext
 ...
 ---
 name:            CstZeroFPTrunc
@@ -103,9 +103,9 @@ body:             |
   ; CHECK-NEXT: %c0:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %trunc:_ FPClasses:(zero psub pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(zero psub pnorm) SignBitKnown:?
-    %c0:_(s64) = G_FCONSTANT double 0.0
-    %trunc:_(s32) = nnan ninf G_FPTRUNC %c0
-    %copy:_(s32) = COPY %trunc
+    %c0:_(f64) = G_FCONSTANT double 0.0
+    %trunc:_(f32) = nnan ninf G_FPTRUNC %c0
+    %copy:_(f32) = COPY %trunc
 ...
 ---
 # f0x35800000 is 0x1p-20, which is normal in f32 and subnormal in f16.
@@ -117,9 +117,9 @@ body:             |
   ; CHECK-NEXT: %src:_ FPClasses:(pnorm) SignBitKnown:0
   ; CHECK-NEXT: %trunc:_ FPClasses:(pinf zero psub pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(pinf zero psub pnorm) SignBitKnown:?
-    %src:_(s32) = G_FCONSTANT float f0x35800000
-    %trunc:_(s16) = G_INTRINSIC_FPTRUNC_ROUND %src, 1
-    %copy:_(s16) = COPY %trunc
+    %src:_(f32) = G_FCONSTANT float f0x35800000
+    %trunc:_(f16) = G_INTRINSIC_FPTRUNC_ROUND %src, 1
+    %copy:_(f16) = COPY %trunc
 ...
 ---
 name:            CstVecZeroFPTrunc
@@ -132,12 +132,12 @@ body:             |
   ; CHECK-NEXT: %vector:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %trunc:_ FPClasses:(zero psub pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(zero psub pnorm) SignBitKnown:?
-    %c0:_(s64) = G_FCONSTANT double 0.0
-    %c1:_(s64) = G_FCONSTANT double 0.0
-    %c2:_(s64) = G_FCONSTANT double 0.0
-    %vector:_(<3 x s64>) = G_BUILD_VECTOR %c0, %c1, %c2
-    %trunc:_(<3 x s32>) = nnan ninf G_FPTRUNC %vector
-    %copy:_(<3 x s32>) = COPY %trunc
+    %c0:_(f64) = G_FCONSTANT double 0.0
+    %c1:_(f64) = G_FCONSTANT double 0.0
+    %c2:_(f64) = G_FCONSTANT double 0.0
+    %vector:_(<3 x f64>) = G_BUILD_VECTOR %c0, %c1, %c2
+    %trunc:_(<3 x f32>) = nnan ninf G_FPTRUNC %vector
+    %copy:_(<3 x f32>) = COPY %trunc
 ...
 ---
 name:            SelectPos0
@@ -151,11 +151,11 @@ body:             |
   ; CHECK-NEXT: %sel:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float 0.0
-    %rhs:_(s32) = G_FCONSTANT float 0.0
-    %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
-    %copy:_(s32) = COPY %sel
+    %cond:_(i1) = G_LOAD %ptr(p0) :: (load (i1))
+    %lhs:_(f32) = G_FCONSTANT float 0.0
+    %rhs:_(f32) = G_FCONSTANT float 0.0
+    %sel:_(f32) = G_SELECT %cond, %lhs, %rhs
+    %copy:_(f32) = COPY %sel
 ...
 ---
 name:            SelectNeg0
@@ -169,11 +169,11 @@ body:             |
   ; CHECK-NEXT: %sel:_ FPClasses:(nzero) SignBitKnown:1
   ; CHECK-NEXT: %copy:_ FPClasses:(nzero) SignBitKnown:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float -0.0
-    %rhs:_(s32) = G_FCONSTANT float -0.0
-    %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
-    %copy:_(s32) = COPY %sel
+    %cond:_(i1) = G_LOAD %ptr(p0) :: (load (i1))
+    %lhs:_(f32) = G_FCONSTANT float -0.0
+    %rhs:_(f32) = G_FCONSTANT float -0.0
+    %sel:_(f32) = G_SELECT %cond, %lhs, %rhs
+    %copy:_(f32) = COPY %sel
 ...
 ---
 name:            SelectPosOrNeg0
@@ -187,11 +187,11 @@ body:             |
   ; CHECK-NEXT: %sel:_ FPClasses:(zero) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(zero) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float -0.0
-    %rhs:_(s32) = G_FCONSTANT float 0.0
-    %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
-    %copy:_(s32) = COPY %sel
+    %cond:_(i1) = G_LOAD %ptr(p0) :: (load (i1))
+    %lhs:_(f32) = G_FCONSTANT float -0.0
+    %rhs:_(f32) = G_FCONSTANT float 0.0
+    %sel:_(f32) = G_SELECT %cond, %lhs, %rhs
+    %copy:_(f32) = COPY %sel
 ...
 ---
 name:            SelectPosInf
@@ -205,11 +205,11 @@ body:             |
   ; CHECK-NEXT: %sel:_ FPClasses:(pinf) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pinf) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float 0x7FF0000000000000
-    %rhs:_(s32) = G_FCONSTANT float 0x7FF0000000000000
-    %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
-    %copy:_(s32) = COPY %sel
+    %cond:_(i1) = G_LOAD %ptr(p0) :: (load (i1))
+    %lhs:_(f32) = G_FCONSTANT float 0x7FF0000000000000
+    %rhs:_(f32) = G_FCONSTANT float 0x7FF0000000000000
+    %sel:_(f32) = G_SELECT %cond, %lhs, %rhs
+    %copy:_(f32) = COPY %sel
 ...
 ---
 name:            SelectNegInf
@@ -223,11 +223,11 @@ body:             |
   ; CHECK-NEXT: %sel:_ FPClasses:(ninf) SignBitKnown:1
   ; CHECK-NEXT: %copy:_ FPClasses:(ninf) SignBitKnown:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float 0xFFF0000000000000
-    %rhs:_(s32) = G_FCONSTANT float 0xFFF0000000000000
-    %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
-    %copy:_(s32) = COPY %sel
+    %cond:_(i1) = G_LOAD %ptr(p0) :: (load (i1))
+    %lhs:_(f32) = G_FCONSTANT float 0xFFF0000000000000
+    %rhs:_(f32) = G_FCONSTANT float 0xFFF0000000000000
+    %sel:_(f32) = G_SELECT %cond, %lhs, %rhs
+    %copy:_(f32) = COPY %sel
 ...
 ---
 name:            SelectPosOrNegInf
@@ -241,11 +241,11 @@ body:             |
   ; CHECK-NEXT: %sel:_ FPClasses:(inf) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(inf) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float 0x7FF0000000000000
-    %rhs:_(s32) = G_FCONSTANT float 0xFFF0000000000000
-    %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
-    %copy:_(s32) = COPY %sel
+    %cond:_(i1) = G_LOAD %ptr(p0) :: (load (i1))
+    %lhs:_(f32) = G_FCONSTANT float 0x7FF0000000000000
+    %rhs:_(f32) = G_FCONSTANT float 0xFFF0000000000000
+    %sel:_(f32) = G_SELECT %cond, %lhs, %rhs
+    %copy:_(f32) = COPY %sel
 ...
 ---
 name:            SelectNNaN
@@ -259,11 +259,11 @@ body:             |
   ; CHECK-NEXT: %sel:_ FPClasses:(inf zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(inf zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %rhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %sel:_(s32) = nnan G_SELECT %cond, %lhs, %rhs
-    %copy:_(s32) = COPY %sel
+    %cond:_(i1) = G_LOAD %ptr(p0) :: (load (i1))
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %sel:_(f32) = nnan G_SELECT %cond, %lhs, %rhs
+    %copy:_(f32) = COPY %sel
 ...
 ---
 name:            SelectNInf
@@ -277,11 +277,11 @@ body:             |
   ; CHECK-NEXT: %sel:_ FPClasses:(nan zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %rhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %sel:_(s32) = ninf G_SELECT %cond, %lhs, %rhs
-    %copy:_(s32) = COPY %sel
+    %cond:_(i1) = G_LOAD %ptr(p0) :: (load (i1))
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %sel:_(f32) = ninf G_SELECT %cond, %lhs, %rhs
+    %copy:_(f32) = COPY %sel
 ...
 ---
 name:            SelectNNaNNInf
@@ -295,11 +295,11 @@ body:             |
   ; CHECK-NEXT: %sel:_ FPClasses:(zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %rhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %sel:_(s32) = nnan ninf G_SELECT %cond, %lhs, %rhs
-    %copy:_(s32) = COPY %sel
+    %cond:_(i1) = G_LOAD %ptr(p0) :: (load (i1))
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %sel:_(f32) = nnan ninf G_SELECT %cond, %lhs, %rhs
+    %copy:_(f32) = COPY %sel
 ...
 ---
 name:            FNegNInf
@@ -311,9 +311,9 @@ body:             |
   ; CHECK-NEXT: %fneg:_ FPClasses:(nan zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fneg:_(s32) = ninf G_FNEG %val
-    %copy:_(s32) = COPY %fneg
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fneg:_(f32) = ninf G_FNEG %val
+    %copy:_(f32) = COPY %fneg
 ...
 ---
 name:            FabsUnknown
@@ -325,9 +325,9 @@ body:             |
   ; CHECK-NEXT: %fabs:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = G_FABS %val
-    %copy:_(s32) = COPY %fabs
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = G_FABS %val
+    %copy:_(f32) = COPY %fabs
 ...
 ---
 name:            VecFabsUnknown
@@ -339,9 +339,9 @@ body:             |
   ; CHECK-NEXT: %fabs:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(<3 x s32>) = G_LOAD %ptr(p0) :: (load (<3 x s32>))
-    %fabs:_(<3 x s32>) = G_FABS %val
-    %copy:_(<3 x s32>) = COPY %fabs
+    %val:_(<3 x f32>) = G_LOAD %ptr(p0) :: (load (<3 x f32>))
+    %fabs:_(<3 x f32>) = G_FABS %val
+    %copy:_(<3 x f32>) = COPY %fabs
 ...
 ---
 name:            FnegFabs
@@ -354,10 +354,10 @@ body:             |
   ; CHECK-NEXT: %fneg:_ FPClasses:(nan ninf nzero nsub nnorm) SignBitKnown:1
   ; CHECK-NEXT: %copy:_ FPClasses:(nan ninf nzero nsub nnorm) SignBitKnown:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = G_FABS %val
-    %fneg:_(s32) = G_FNEG %fabs
-    %copy:_(s32) = COPY %fneg
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = G_FABS %val
+    %fneg:_(f32) = G_FNEG %fabs
+    %copy:_(f32) = COPY %fneg
 ...
 ---
 name:            FnegFabsNInf
@@ -370,10 +370,10 @@ body:             |
   ; CHECK-NEXT: %fneg:_ FPClasses:(nan nzero nsub nnorm) SignBitKnown:1
   ; CHECK-NEXT: %copy:_ FPClasses:(nan nzero nsub nnorm) SignBitKnown:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = ninf G_FABS %val
-    %fneg:_(s32) = G_FNEG %fabs
-    %copy:_(s32) = COPY %fneg
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = ninf G_FABS %val
+    %fneg:_(f32) = G_FNEG %fabs
+    %copy:_(f32) = COPY %fneg
 ...
 ---
 name:            FnegFabsNNan
@@ -386,10 +386,10 @@ body:             |
   ; CHECK-NEXT: %fneg:_ FPClasses:(ninf nzero nsub nnorm) SignBitKnown:1
   ; CHECK-NEXT: %copy:_ FPClasses:(ninf nzero nsub nnorm) SignBitKnown:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan G_FABS %val
-    %fneg:_(s32) = G_FNEG %fabs
-    %copy:_(s32) = COPY %fneg
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan G_FABS %val
+    %fneg:_(f32) = G_FNEG %fabs
+    %copy:_(f32) = COPY %fneg
 ...
 ---
 name:            CopySignNNanSrc0
@@ -403,11 +403,11 @@ body:             |
   ; CHECK-NEXT: %fcopysign:_ FPClasses:(inf zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(inf zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %mag:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %sgn:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan G_FABS %mag
-    %fcopysign:_(s32) = G_FCOPYSIGN %fabs, %sgn
-    %copy:_(s32) = COPY %fcopysign
+    %mag:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %sgn:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan G_FABS %mag
+    %fcopysign:_(f32) = G_FCOPYSIGN %fabs, %sgn
+    %copy:_(f32) = COPY %fcopysign
 ...
 ---
 name:            CopySignNInfSrc0_NegSign
@@ -421,11 +421,11 @@ body:             |
   ; CHECK-NEXT: %fcopysign:_ FPClasses:(nan nzero nnorm) SignBitKnown:1
   ; CHECK-NEXT: %copy:_ FPClasses:(nan nzero nnorm) SignBitKnown:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %mag:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %sgn:_(s32) = G_FCONSTANT float -1.0
-    %flog:_(s32) = ninf G_FLOG %mag
-    %fcopysign:_(s32) = G_FCOPYSIGN %flog, %sgn
-    %copy:_(s32) = COPY %fcopysign
+    %mag:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %sgn:_(f32) = G_FCONSTANT float -1.0
+    %flog:_(f32) = ninf G_FLOG %mag
+    %fcopysign:_(f32) = G_FCOPYSIGN %flog, %sgn
+    %copy:_(f32) = COPY %fcopysign
 ...
 ---
 name:            CopySignNInfSrc0_PosSign
@@ -439,11 +439,11 @@ body:             |
   ; CHECK-NEXT: %fcopysign:_ FPClasses:(nan pzero pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pzero pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %mag:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %sgn:_(s32) = G_FCONSTANT float 1.0
-    %fsqrt:_(s32) = ninf G_FSQRT %mag
-    %fcopysign:_(s32) = G_FCOPYSIGN %fsqrt, %sgn
-    %copy:_(s32) = COPY %fcopysign
+    %mag:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %sgn:_(f32) = G_FCONSTANT float 1.0
+    %fsqrt:_(f32) = ninf G_FSQRT %mag
+    %fcopysign:_(f32) = G_FCOPYSIGN %fsqrt, %sgn
+    %copy:_(f32) = COPY %fcopysign
 ...
 ---
 name:            UIToFP
@@ -455,9 +455,9 @@ body:             |
   ; CHECK-NEXT: %cast:_ FPClasses:(pzero pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %cast:_(s32) = G_UITOFP %val
-    %copy:_(s32) = COPY %cast
+    %val:_(i32) = G_LOAD %ptr(p0) :: (load (i32))
+    %cast:_(f32) = G_UITOFP %val
+    %copy:_(f32) = COPY %cast
 ...
 ---
 name:            SIToFP
@@ -469,9 +469,9 @@ body:             |
   ; CHECK-NEXT: %cast:_ FPClasses:(pzero norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %cast:_(s32) = G_SITOFP %val
-    %copy:_(s32) = COPY %cast
+    %val:_(i32) = G_LOAD %ptr(p0) :: (load (i32))
+    %cast:_(f32) = G_SITOFP %val
+    %copy:_(f32) = COPY %cast
 ...
 ---
 name:            FAdd
@@ -484,10 +484,10 @@ body:             |
   ; CHECK-NEXT: %fadd:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %rhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fadd:_(s32) = G_FADD %lhs, %rhs
-    %copy:_(s32) = COPY %fadd
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fadd:_(f32) = G_FADD %lhs, %rhs
+    %copy:_(f32) = COPY %fadd
 ...
 ---
 name:            FAdd_Zero
@@ -500,10 +500,10 @@ body:             |
   ; CHECK-NEXT: %fadd:_ FPClasses:(nan inf pzero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan inf pzero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %rhs:_(s32) = G_FCONSTANT float 0.0
-    %fadd:_(s32) = G_FADD %lhs, %rhs
-    %copy:_(s32) = COPY %fadd
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_FCONSTANT float 0.0
+    %fadd:_(f32) = G_FADD %lhs, %rhs
+    %copy:_(f32) = COPY %fadd
 ...
 ---
 name:            FAdd_NegZero
@@ -516,10 +516,10 @@ body:             |
   ; CHECK-NEXT: %fadd:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %rhs:_(s32) = G_FCONSTANT float -0.0
-    %fadd:_(s32) = G_FADD %lhs, %rhs
-    %copy:_(s32) = COPY %fadd
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_FCONSTANT float -0.0
+    %fadd:_(f32) = G_FADD %lhs, %rhs
+    %copy:_(f32) = COPY %fadd
 ...
 ---
 name:            FstrictAdd_Zero
@@ -532,10 +532,10 @@ body:             |
   ; CHECK-NEXT: %fadd:_ FPClasses:(nan inf pzero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan inf pzero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %rhs:_(s32) = G_FCONSTANT float 0.0
-    %fadd:_(s32) = G_STRICT_FADD %lhs, %rhs
-    %copy:_(s32) = COPY %fadd
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_FCONSTANT float 0.0
+    %fadd:_(f32) = G_STRICT_FADD %lhs, %rhs
+    %copy:_(f32) = COPY %fadd
 ...
 ---
 name:            FMul
@@ -548,10 +548,10 @@ body:             |
   ; CHECK-NEXT: %fmul:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %val:_(s32) = G_FREEZE %load
-    %fmul:_(s32) = G_FMUL %val, %val
-    %copy:_(s32) = COPY %fmul
+    %load:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %val:_(f32) = G_FREEZE %load
+    %fmul:_(f32) = G_FMUL %val, %val
+    %copy:_(f32) = COPY %fmul
 ...
 ---
 name:            FMulZero
@@ -565,11 +565,11 @@ body:             |
   ; CHECK-NEXT: %fmul:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %rhs:_(s32) = G_FCONSTANT float 0.0
-    %fabs:_(s32) = nnan ninf G_FABS %lhs
-    %fmul:_(s32) = G_FMUL %fabs, %rhs
-    %copy:_(s32) = COPY %fmul
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_FCONSTANT float 0.0
+    %fabs:_(f32) = nnan ninf G_FABS %lhs
+    %fmul:_(f32) = G_FMUL %fabs, %rhs
+    %copy:_(f32) = COPY %fmul
 ...
 ---
 name:            FLog
@@ -581,9 +581,9 @@ body:             |
   ; CHECK-NEXT: %flog:_ FPClasses:(nan inf pzero norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan inf pzero norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %flog:_(s32) = G_FLOG %val
-    %copy:_(s32) = COPY %flog
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %flog:_(f32) = G_FLOG %val
+    %copy:_(f32) = COPY %flog
 ...
 ---
 name:            FLogNeg
@@ -597,11 +597,11 @@ body:             |
   ; CHECK-NEXT: %flog:_ FPClasses:(qnan ninf pzero norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(qnan ninf pzero norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan ninf G_FABS %val
-    %fneg:_(s32) = nnan ninf G_FNEG %fabs
-    %flog:_(s32) = G_FLOG %fneg
-    %copy:_(s32) = COPY %flog
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan ninf G_FABS %val
+    %fneg:_(f32) = nnan ninf G_FNEG %fabs
+    %flog:_(f32) = G_FLOG %fneg
+    %copy:_(f32) = COPY %flog
 ...
 ---
 name:            FLogPosZero
@@ -611,9 +611,9 @@ body:             |
   ; CHECK-NEXT: %val:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %flog:_ FPClasses:(ninf pzero norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(ninf pzero norm) SignBitKnown:?
-    %val:_(s32) = G_FCONSTANT float 0.0
-    %flog:_(s32) = G_FLOG %val
-    %copy:_(s32) = COPY %flog
+    %val:_(f32) = G_FCONSTANT float 0.0
+    %flog:_(f32) = G_FLOG %val
+    %copy:_(f32) = COPY %flog
 ...
 ---
 name:            FLogNegZero
@@ -623,9 +623,39 @@ body:             |
   ; CHECK-NEXT: %val:_ FPClasses:(nzero) SignBitKnown:1
   ; CHECK-NEXT: %flog:_ FPClasses:(ninf pzero norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(ninf pzero norm) SignBitKnown:?
-    %val:_(s32) = G_FCONSTANT float -0.0
-    %flog:_(s32) = G_FLOG %val
-    %copy:_(s32) = COPY %flog
+    %val:_(f32) = G_FCONSTANT float -0.0
+    %flog:_(f32) = G_FLOG %val
+    %copy:_(f32) = COPY %flog
+...
+---
+name:            FExpNegSubnormal
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FExpNegSubnormal
+  ; CHECK-NEXT: %subnormal:_ FPClasses:(psub) SignBitKnown:0
+  ; CHECK-NEXT: %negative_subnormal:_ FPClasses:(nsub) SignBitKnown:1
+  ; CHECK-NEXT: %exp:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pnorm) SignBitKnown:0
+    %subnormal:_(f32) = G_FCONSTANT float f0x00000001
+    %negative_subnormal:_(f32) = G_FNEG %subnormal
+    %exp:_(f32) = G_FEXP %negative_subnormal
+    %copy:_(f32) = COPY %exp
+...
+---
+name:            FExp2Positive
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FExp2Positive
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %positive:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %exp2:_ FPClasses:(pinf pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pinf pnorm) SignBitKnown:0
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %positive:_(f32) = nnan G_FABS %val
+    %exp2:_(f32) = G_FEXP2 %positive
+    %copy:_(f32) = COPY %exp2
 ...
 ---
 name:            CopyFabs
@@ -638,10 +668,10 @@ body:             |
   ; CHECK-NEXT: %copy0:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy1:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = G_FABS %val
-    %copy0:_(s32) = COPY %fabs
-    %copy1:_(s32) = COPY %copy0
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = G_FABS %val
+    %copy0:_(f32) = COPY %fabs
+    %copy1:_(f32) = COPY %copy0
 ...
 ---
 name:            SelectIsFPClassZero
@@ -655,11 +685,11 @@ body:             |
   ; CHECK-NEXT: %sel:_ FPClasses:(zero) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(zero) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %rhs:_(s32) = G_FCONSTANT float 0.0
-    %cond:_(s1) = G_IS_FPCLASS %lhs, 96
-    %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
-    %copy:_(s32) = COPY %sel
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_FCONSTANT float 0.0
+    %cond:_(i1) = G_IS_FPCLASS %lhs, 96
+    %sel:_(f32) = G_SELECT %cond, %lhs, %rhs
+    %copy:_(f32) = COPY %sel
 ...
 ---
 name:            FLDExp
@@ -673,11 +703,28 @@ body:             |
   ; CHECK-NEXT: %fldexp:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %exp:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = G_FABS %val
-    %fldexp:_(s32) = G_FLDEXP %fabs, %exp
-    %copy:_(s32) = COPY %fldexp
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %exp:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = G_FABS %val
+    %fldexp:_(f32) = G_FLDEXP %fabs, %exp
+    %copy:_(f32) = COPY %fldexp
+...
+---
+name:            FFrexp
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FFrexp
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %fabs:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %frexp_mant:_ FPClasses:(pzero pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %frexp_exp:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero pnorm) SignBitKnown:0
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan ninf G_FABS %val
+    %frexp_mant:_(f32), %frexp_exp:_(f32) = G_FFREXP %fabs
+    %copy:_(f32) = COPY %frexp_mant
 ...
 ---
 name:            FPowPos
@@ -691,11 +738,11 @@ body:             |
   ; CHECK-NEXT: %fpow:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %exp:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = G_FABS %val
-    %fpow:_(s32) = G_FPOW %fabs, %exp
-    %copy:_(s32) = COPY %fpow
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %exp:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = G_FABS %val
+    %fpow:_(f32) = G_FPOW %fabs, %exp
+    %copy:_(f32) = COPY %fpow
 ...
 ---
 name:            FPowPosNNaN
@@ -710,12 +757,12 @@ body:             |
   ; CHECK-NEXT: %fpow:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %exp:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan G_FABS %val
-    %fabs_exp:_(s32) = nnan G_FABS %exp
-    %fpow:_(s32) = G_FPOW %fabs, %fabs_exp
-    %copy:_(s32) = COPY %fpow
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %exp:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan G_FABS %val
+    %fabs_exp:_(f32) = nnan G_FABS %exp
+    %fpow:_(f32) = G_FPOW %fabs, %fabs_exp
+    %copy:_(f32) = COPY %fpow
 ...
 ---
 name:            FPowIEvenExp
@@ -728,10 +775,10 @@ body:             |
   ; CHECK-NEXT: %fpowi:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %pwr:_(s32) = G_CONSTANT i32 2
-    %fpowi:_(s32) = G_FPOWI %val, %pwr
-    %copy:_(s32) = COPY %fpowi
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %pwr:_(i32) = G_CONSTANT i32 2
+    %fpowi:_(f32) = G_FPOWI %val, %pwr
+    %copy:_(f32) = COPY %fpowi
 ...
 ---
 name:            FPowIPos
@@ -745,11 +792,11 @@ body:             |
   ; CHECK-NEXT: %fpowi:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %pwr:_(s32) = G_CONSTANT i32 3
-    %fabs:_(s32) = nnan ninf G_FABS %val
-    %fpowi:_(s32) = G_FPOWI %fabs, %pwr
-    %copy:_(s32) = COPY %fpowi
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %pwr:_(i32) = G_CONSTANT i32 3
+    %fabs:_(f32) = nnan ninf G_FABS %val
+    %fpowi:_(f32) = G_FPOWI %fabs, %pwr
+    %copy:_(f32) = COPY %fpowi
 ...
 ---
 # powi(finite, 1): ninf G_FNEG rules out inf; exp=1 preserves.
@@ -765,12 +812,12 @@ body:             |
   ; CHECK-NEXT: %fpowi:_ FPClasses:(nan zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %val:_(s32) = G_FREEZE %load
-    %finite:_(s32) = ninf G_FNEG %val
-    %one:_(s32) = G_CONSTANT i32 1
-    %fpowi:_(s32) = G_FPOWI %finite, %one
-    %copy:_(s32) = COPY %fpowi
+    %load:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %val:_(f32) = G_FREEZE %load
+    %finite:_(f32) = ninf G_FNEG %val
+    %one:_(i32) = G_CONSTANT i32 1
+    %fpowi:_(f32) = G_FPOWI %finite, %one
+    %copy:_(f32) = COPY %fpowi
 ...
 ---
 # powi(normal, -1): 1/2.0 = 0.5, a positive finite value.
@@ -782,10 +829,10 @@ body:             |
   ; CHECK-NEXT: %negone:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %fpowi:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
-    %normal:_(s32) = G_FCONSTANT float 2.0
-    %negone:_(s32) = G_CONSTANT i32 -1
-    %fpowi:_(s32) = G_FPOWI %normal, %negone
-    %copy:_(s32) = COPY %fpowi
+    %normal:_(f32) = G_FCONSTANT float 2.0
+    %negone:_(i32) = G_CONSTANT i32 -1
+    %fpowi:_(f32) = G_FPOWI %normal, %negone
+    %copy:_(f32) = COPY %fpowi
 ...
 ---
 name:            FPowIZeroOrNaNNonnegativeExponent
@@ -802,14 +849,14 @@ body:             |
   ; CHECK-NEXT: %fpowi:_ FPClasses:(nan zero psub pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan zero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %val:_(s32) = G_FREEZE %load
-    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %zero_or_nan:_(s32) = G_FREM %val, %val
-    %nonneg_mask:_(s32) = G_CONSTANT i32 2147483647
-    %nonneg:_(s32) = G_AND %x, %nonneg_mask
-    %fpowi:_(s32) = G_FPOWI %zero_or_nan, %nonneg
-    %copy:_(s32) = COPY %fpowi
+    %load:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %val:_(f32) = G_FREEZE %load
+    %x:_(i32) = G_LOAD %ptr(p0) :: (load (i32))
+    %zero_or_nan:_(f32) = G_FREM %val, %val
+    %nonneg_mask:_(i32) = G_CONSTANT i32 2147483647
+    %nonneg:_(i32) = G_AND %x, %nonneg_mask
+    %fpowi:_(f32) = G_FPOWI %zero_or_nan, %nonneg
+    %copy:_(f32) = COPY %fpowi
 ...
 ---
 name:            FDiv
@@ -822,10 +869,10 @@ body:             |
   ; CHECK-NEXT: %fdiv:_ FPClasses:(nan pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %val:_(s32) = G_FREEZE %load
-    %fdiv:_(s32) = G_FDIV %val, %val
-    %copy:_(s32) = COPY %fdiv
+    %load:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %val:_(f32) = G_FREEZE %load
+    %fdiv:_(f32) = G_FDIV %val, %val
+    %copy:_(f32) = COPY %fdiv
 ...
 ---
 name:            FDivInf
@@ -836,10 +883,10 @@ body:             |
   ; CHECK-NEXT: %rhs:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %fdiv:_ FPClasses:(pinf) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pinf) SignBitKnown:0
-    %lhs:_(s32) = G_FCONSTANT float 1.0
-    %rhs:_(s32) = G_FCONSTANT float 0.0
-    %fdiv:_(s32) = G_FDIV %lhs, %rhs
-    %copy:_(s32) = COPY %fdiv
+    %lhs:_(f32) = G_FCONSTANT float 1.0
+    %rhs:_(f32) = G_FCONSTANT float 0.0
+    %fdiv:_(f32) = G_FDIV %lhs, %rhs
+    %copy:_(f32) = COPY %fdiv
 ...
 ---
 name:            FDivSqrt
@@ -853,11 +900,11 @@ body:             |
   ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf zero psub pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan inf zero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %sqrt:_(s32) = G_FSQRT %x
-    %one:_(s32) = G_FCONSTANT float 1.0
-    %fdiv:_(s32) = G_FDIV %one, %sqrt
-    %copy:_(s32) = COPY %fdiv
+    %x:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %sqrt:_(f32) = G_FSQRT %x
+    %one:_(f32) = G_FCONSTANT float 1.0
+    %fdiv:_(f32) = G_FDIV %one, %sqrt
+    %copy:_(f32) = COPY %fdiv
 ...
 ---
 name:            FDivNegSqrtNeg
@@ -872,12 +919,12 @@ body:             |
   ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf zero nsub nnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan inf zero nsub nnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %neg_x:_(s32) = G_FNEG %x
-    %sqrt:_(s32) = G_FSQRT %neg_x
-    %neg_one:_(s32) = G_FCONSTANT float -1.0
-    %fdiv:_(s32) = G_FDIV %neg_one, %sqrt
-    %copy:_(s32) = COPY %fdiv
+    %x:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %neg_x:_(f32) = G_FNEG %x
+    %sqrt:_(f32) = G_FSQRT %neg_x
+    %neg_one:_(f32) = G_FCONSTANT float -1.0
+    %fdiv:_(f32) = G_FDIV %neg_one, %sqrt
+    %copy:_(f32) = COPY %fdiv
 ...
 ---
 name:            SqrtFDiv
@@ -891,11 +938,11 @@ body:             |
   ; CHECK-NEXT: %sqrt:_ FPClasses:(nan pinf zero pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pinf zero pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %one:_(s32) = G_FCONSTANT float 1.0
-    %inv:_(s32) = G_FDIV %one, %x
-    %sqrt:_(s32) = G_FSQRT %inv
-    %copy:_(s32) = COPY %sqrt
+    %x:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %one:_(f32) = G_FCONSTANT float 1.0
+    %inv:_(f32) = G_FDIV %one, %x
+    %sqrt:_(f32) = G_FSQRT %inv
+    %copy:_(f32) = COPY %sqrt
 ...
 ---
 name:            FRem
@@ -908,10 +955,10 @@ body:             |
   ; CHECK-NEXT: %frem:_ FPClasses:(nan zero) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan zero) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %val:_(s32) = G_FREEZE %load
-    %frem:_(s32) = G_FREM %val, %val
-    %copy:_(s32) = COPY %frem
+    %load:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %val:_(f32) = G_FREEZE %load
+    %frem:_(f32) = G_FREM %val, %val
+    %copy:_(f32) = COPY %frem
 ...
 ---
 name:            FRemSelfKnownFiniteNonZero
@@ -919,11 +966,11 @@ body:             |
   bb.0:
   ; CHECK-LABEL: name: @FRemSelfKnownFiniteNonZero
   ; CHECK-NEXT: %val:_ FPClasses:(pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %frem:_ FPClasses:(zero) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(zero) SignBitKnown:?
-    %val:_(s32) = G_FCONSTANT float 2.0
-    %frem:_(s32) = G_FREM %val, %val
-    %copy:_(s32) = COPY %frem
+  ; CHECK-NEXT: %frem:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
+    %val:_(f32) = G_FCONSTANT float 2.0
+    %frem:_(f32) = G_FREM %val, %val
+    %copy:_(f32) = COPY %frem
 ...
 ---
 name:            ShuffleVec
@@ -937,11 +984,11 @@ body:             |
   ; CHECK-NEXT: %shuf:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %vec:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load (<4 x s32>))
-    %fabs:_(<4 x s32>) = nnan ninf G_FABS %vec
-    %def:_(<4 x s32>) = G_IMPLICIT_DEF
-    %shuf:_(<4 x s32>) = G_SHUFFLE_VECTOR %fabs(<4 x s32>), %def, shufflemask(0, 0, 0, 0)
-    %copy:_(<4 x s32>) = COPY %shuf
+    %vec:_(<4 x f32>) = G_LOAD %ptr(p0) :: (load (<4 x f32>))
+    %fabs:_(<4 x f32>) = nnan ninf G_FABS %vec
+    %def:_(<4 x f32>) = G_IMPLICIT_DEF
+    %shuf:_(<4 x f32>) = G_SHUFFLE_VECTOR %fabs(<4 x f32>), %def, shufflemask(0, 0, 0, 0)
+    %copy:_(<4 x f32>) = COPY %shuf
 ...
 ---
 name:            BuildVec
@@ -955,11 +1002,11 @@ body:             |
   ; CHECK-NEXT: %vec:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val1:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan ninf G_FABS %val1
-    %val2:_(s32) = G_FCONSTANT float 3.0
-    %vec:_(<2 x s32>) = G_BUILD_VECTOR %fabs, %val2
-    %copy:_(<2 x s32>) = COPY %vec
+    %val1:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan ninf G_FABS %val1
+    %val2:_(f32) = G_FCONSTANT float 3.0
+    %vec:_(<2 x f32>) = G_BUILD_VECTOR %fabs, %val2
+    %copy:_(<2 x f32>) = COPY %vec
 ...
 ---
 name:            ConcatVec
@@ -976,14 +1023,14 @@ body:             |
   ; CHECK-NEXT: %cat:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %vec1:_(<2 x s32>) = G_LOAD %ptr(p0) :: (load (<2 x s32>))
-    %c1:_(s32) = G_FCONSTANT float 1.0
-    %c2:_(s32) = G_FCONSTANT float 2.0
-    %vec2:_(<2 x s32>) = G_BUILD_VECTOR %c1, %c2
-    %fabs1:_(<2 x s32>) = nnan ninf G_FABS %vec1
-    %fabs2:_(<2 x s32>) = nnan ninf G_FABS %vec2
-    %cat:_(<4 x s32>) = G_CONCAT_VECTORS %fabs1, %fabs2
-    %copy:_(<4 x s32>) = COPY %cat
+    %vec1:_(<2 x f32>) = G_LOAD %ptr(p0) :: (load (<2 x f32>))
+    %c1:_(f32) = G_FCONSTANT float 1.0
+    %c2:_(f32) = G_FCONSTANT float 2.0
+    %vec2:_(<2 x f32>) = G_BUILD_VECTOR %c1, %c2
+    %fabs1:_(<2 x f32>) = nnan ninf G_FABS %vec1
+    %fabs2:_(<2 x f32>) = nnan ninf G_FABS %vec2
+    %cat:_(<4 x f32>) = G_CONCAT_VECTORS %fabs1, %fabs2
+    %copy:_(<4 x f32>) = COPY %cat
 ...
 ---
 name:            VecExtractElem
@@ -997,11 +1044,11 @@ body:             |
   ; CHECK-NEXT: %extract:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %vec:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load (<4 x s32>))
-    %fabs:_(<4 x s32>) = nnan ninf G_FABS %vec
-    %idx:_(s64) = G_CONSTANT i64 1
-    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %fabs, %idx
-    %copy:_(s32) = COPY %extract
+    %vec:_(<4 x f32>) = G_LOAD %ptr(p0) :: (load (<4 x f32>))
+    %fabs:_(<4 x f32>) = nnan ninf G_FABS %vec
+    %idx:_(i64) = G_CONSTANT i64 1
+    %extract:_(f32) = G_EXTRACT_VECTOR_ELT %fabs, %idx
+    %copy:_(f32) = COPY %extract
 ...
 ---
 name:            VecInsertElem
@@ -1017,13 +1064,13 @@ body:             |
   ; CHECK-NEXT: %insert:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %vec:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load (<4 x s32>))
-    %fabs1:_(<4 x s32>) = nnan ninf G_FABS %vec
-    %elem:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs2:_(s32) = nnan ninf G_FABS %elem
-    %idx:_(s64) = G_CONSTANT i64 1
-    %insert:_(<4 x s32>) = G_INSERT_VECTOR_ELT %fabs1, %fabs2, %idx
-    %copy:_(<4 x s32>) = COPY %insert
+    %vec:_(<4 x f32>) = G_LOAD %ptr(p0) :: (load (<4 x f32>))
+    %fabs1:_(<4 x f32>) = nnan ninf G_FABS %vec
+    %elem:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs2:_(f32) = nnan ninf G_FABS %elem
+    %idx:_(i64) = G_CONSTANT i64 1
+    %insert:_(<4 x f32>) = G_INSERT_VECTOR_ELT %fabs1, %fabs2, %idx
+    %copy:_(<4 x f32>) = COPY %insert
 ...
 ---
 name:            FSinh
@@ -1035,9 +1082,9 @@ body:             |
   ; CHECK-NEXT: %fsinh:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fsinh:_(s32) = G_FSINH %val
-    %copy:_(s32) = COPY %fsinh
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fsinh:_(f32) = G_FSINH %val
+    %copy:_(f32) = COPY %fsinh
 ...
 ---
 name:            FSinhPos
@@ -1050,10 +1097,10 @@ body:             |
   ; CHECK-NEXT: %fsinh:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan ninf G_FABS %val
-    %fsinh:_(s32) = G_FSINH %fabs
-    %copy:_(s32) = COPY %fsinh
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan ninf G_FABS %val
+    %fsinh:_(f32) = G_FSINH %fabs
+    %copy:_(f32) = COPY %fsinh
 ...
 ---
 name:            FCosh
@@ -1065,9 +1112,9 @@ body:             |
   ; CHECK-NEXT: %fcosh:_ FPClasses:(nan pinf pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pinf pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fcosh:_(s32) = G_FCOSH %val
-    %copy:_(s32) = COPY %fcosh
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fcosh:_(f32) = G_FCOSH %val
+    %copy:_(f32) = COPY %fcosh
 ...
 ---
 name:            FCoshNNaN
@@ -1080,10 +1127,10 @@ body:             |
   ; CHECK-NEXT: %fcosh:_ FPClasses:(pinf pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pinf pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan G_FABS %val
-    %fcosh:_(s32) = G_FCOSH %fabs
-    %copy:_(s32) = COPY %fcosh
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan G_FABS %val
+    %fcosh:_(f32) = G_FCOSH %fabs
+    %copy:_(f32) = COPY %fcosh
 ...
 ---
 name:            FTanh
@@ -1095,9 +1142,9 @@ body:             |
   ; CHECK-NEXT: %ftanh:_ FPClasses:(nan zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %ftanh:_(s32) = G_FTANH %val
-    %copy:_(s32) = COPY %ftanh
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %ftanh:_(f32) = G_FTANH %val
+    %copy:_(f32) = COPY %ftanh
 ...
 ---
 name:            FTanhPos
@@ -1110,10 +1157,10 @@ body:             |
   ; CHECK-NEXT: %ftanh:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan ninf G_FABS %val
-    %ftanh:_(s32) = G_FTANH %fabs
-    %copy:_(s32) = COPY %ftanh
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan ninf G_FABS %val
+    %ftanh:_(f32) = G_FTANH %fabs
+    %copy:_(f32) = COPY %ftanh
 ...
 ---
 name:            FAsin
@@ -1125,9 +1172,9 @@ body:             |
   ; CHECK-NEXT: %fasin:_ FPClasses:(nan zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fasin:_(s32) = G_FASIN %val
-    %copy:_(s32) = COPY %fasin
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fasin:_(f32) = G_FASIN %val
+    %copy:_(f32) = COPY %fasin
 ...
 ---
 name:            FAsinPos
@@ -1140,10 +1187,10 @@ body:             |
   ; CHECK-NEXT: %fasin:_ FPClasses:(qnan pzero psub pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(qnan pzero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan ninf G_FABS %val
-    %fasin:_(s32) = G_FASIN %fabs
-    %copy:_(s32) = COPY %fasin
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan ninf G_FABS %val
+    %fasin:_(f32) = G_FASIN %fabs
+    %copy:_(f32) = COPY %fasin
 ...
 ---
 name:            FAcos
@@ -1155,9 +1202,9 @@ body:             |
   ; CHECK-NEXT: %facos:_ FPClasses:(nan pzero pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pzero pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %facos:_(s32) = G_FACOS %val
-    %copy:_(s32) = COPY %facos
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %facos:_(f32) = G_FACOS %val
+    %copy:_(f32) = COPY %facos
 ...
 ---
 name:            FAcosPos
@@ -1170,10 +1217,10 @@ body:             |
   ; CHECK-NEXT: %facos:_ FPClasses:(qnan pzero pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(qnan pzero pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan ninf G_FABS %val
-    %facos:_(s32) = G_FACOS %fabs
-    %copy:_(s32) = COPY %facos
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan ninf G_FABS %val
+    %facos:_(f32) = G_FACOS %fabs
+    %copy:_(f32) = COPY %facos
 ...
 ---
 name:            FAtan
@@ -1185,9 +1232,9 @@ body:             |
   ; CHECK-NEXT: %fatan:_ FPClasses:(nan zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fatan:_(s32) = G_FATAN %val
-    %copy:_(s32) = COPY %fatan
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fatan:_(f32) = G_FATAN %val
+    %copy:_(f32) = COPY %fatan
 ...
 ---
 name:            FAtanPos
@@ -1200,10 +1247,10 @@ body:             |
   ; CHECK-NEXT: %fatan:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan ninf G_FABS %val
-    %fatan:_(s32) = G_FATAN %fabs
-    %copy:_(s32) = COPY %fatan
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan ninf G_FABS %val
+    %fatan:_(f32) = G_FATAN %fabs
+    %copy:_(f32) = COPY %fatan
 ...
 ---
 name:            FTan
@@ -1215,9 +1262,9 @@ body:             |
   ; CHECK-NEXT: %ftan:_ FPClasses:(nan zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %ftan:_(s32) = G_FTAN %val
-    %copy:_(s32) = COPY %ftan
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %ftan:_(f32) = G_FTAN %val
+    %copy:_(f32) = COPY %ftan
 ...
 ---
 name:            FTanNNaN
@@ -1230,10 +1277,10 @@ body:             |
   ; CHECK-NEXT: %ftan:_ FPClasses:(zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs:_(s32) = nnan ninf G_FABS %val
-    %ftan:_(s32) = G_FTAN %fabs
-    %copy:_(s32) = COPY %ftan
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs:_(f32) = nnan ninf G_FABS %val
+    %ftan:_(f32) = G_FTAN %fabs
+    %copy:_(f32) = COPY %ftan
 ...
 ---
 name:            FAtan2
@@ -1246,10 +1293,10 @@ body:             |
   ; CHECK-NEXT: %fatan2:_ FPClasses:(nan zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %y:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fatan2:_(s32) = G_FATAN2 %y, %x
-    %copy:_(s32) = COPY %fatan2
+    %y:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %x:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fatan2:_(f32) = G_FATAN2 %y, %x
+    %copy:_(f32) = COPY %fatan2
 ...
 ---
 name:            FAtan2NNaN
@@ -1264,12 +1311,12 @@ body:             |
   ; CHECK-NEXT: %fatan2:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %y:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %fabs_y:_(s32) = nnan ninf G_FABS %y
-    %fabs_x:_(s32) = nnan ninf G_FABS %x
-    %fatan2:_(s32) = G_FATAN2 %fabs_y, %fabs_x
-    %copy:_(s32) = COPY %fatan2
+    %y:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %x:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fabs_y:_(f32) = nnan ninf G_FABS %y
+    %fabs_x:_(f32) = nnan ninf G_FABS %x
+    %fatan2:_(f32) = G_FATAN2 %fabs_y, %fabs_x
+    %copy:_(f32) = COPY %fatan2
 ...
 ---
 name:            FMulAbsULEOne
@@ -1285,13 +1332,13 @@ body:             |
   ; CHECK-NEXT: %fmul:_ FPClasses:(nan zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %floor:_(s32) = G_FFLOOR %x
-    %fract:_(s32) = G_FSUB %x, %floor
-    %finite:_(s32) = nnan ninf G_FABS %val
-    %fmul:_(s32) = G_FMUL %finite, %fract
-    %copy:_(s32) = COPY %fmul
+    %x:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %floor:_(f32) = G_FFLOOR %x
+    %fract:_(f32) = G_FSUB %x, %floor
+    %finite:_(f32) = nnan ninf G_FABS %val
+    %fmul:_(f32) = G_FMUL %finite, %fract
+    %copy:_(f32) = COPY %fmul
 ...
 ---
 name:            FMASelfSquare
@@ -1305,9 +1352,9 @@ body:             |
   ; CHECK-NEXT: %fma:_ FPClasses:(nan pinf pnorm) SignBitKnown:?
   ; CHECK-NEXT: %copy:_ FPClasses:(nan pinf pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %val:_(s32) = G_FREEZE %load
-    %c:_(s32) = G_FCONSTANT float 1.0
-    %fma:_(s32) = G_FMA %val, %val, %c
-    %copy:_(s32) = COPY %fma
+    %load:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %val:_(f32) = G_FREEZE %load
+    %c:_(f32) = G_FCONSTANT float 1.0
+    %fma:_(f32) = G_FMA %val, %val, %c
+    %copy:_(f32) = COPY %fma
 ...

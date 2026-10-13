@@ -375,6 +375,19 @@ define void @load_store(ptr %ptr) {
 
 ; // -----
 
+; CHECK-LABEL: @noundef_load
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define i32 @noundef_load(ptr %ptr) {
+  ; CHECK:  %[[V:[0-9]+]] = llvm.load %[[PTR]] noundef <alignment = 4> : !llvm.ptr -> i32
+  %1 = load i32, ptr %ptr, align 4, !noundef !0
+  ; CHECK:  llvm.return %[[V]]
+  ret i32 %1
+}
+
+!0 = !{}
+
+; // -----
+
 ; CHECK-LABEL: @invariant_load
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define float @invariant_load(ptr %ptr) {
@@ -485,8 +498,12 @@ define void @atomic_rmw(ptr %ptr1, i32 %val1, ptr %ptr2, float %val2) {
   ; CHECK-SAME:  syncscope("singlethread")
   ; CHECK-SAME:  alignment = 8
   %22 = atomicrmw volatile udec_wrap ptr %ptr1, i32 %val1 syncscope("singlethread") acquire, align 8
+  ; CHECK:  llvm.atomicrmw ignore_denormal_mode fadd %[[PTR2]], %[[VAL2]] acquire
+  %23 = atomicrmw fadd ptr %ptr2, float %val2 acquire, !atomic.ignore.denormal.mode !0
   ret void
 }
+
+!0 = !{}
 
 ; // -----
 

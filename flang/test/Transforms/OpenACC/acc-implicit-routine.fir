@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --pass-pipeline="builtin.module(acc-initialize-fir-analyses,acc-implicit-routine)" -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: fir-opt %s --pass-pipeline="builtin.module(acc-initialize-fir-analyses,acc-implicit-routine{the-device-types=3,4})" -split-input-file -verify-diagnostics | FileCheck %s
 
 // -----
 
@@ -147,3 +147,49 @@ module {
     return
   }
 }
+
+// -----
+
+module {
+  func.func @_QPhost_then() {
+    return
+  }
+  func.func @_QPdevice_else() {
+    return
+  }
+  func.func @_QPdevice_then() {
+    return
+  }
+  func.func @_QPhost_else() {
+    return
+  }
+  func.func @_QPtest_host_branch() {
+    %host = arith.constant 2 : i32
+    %not_host = arith.constant 3 : i32
+    %on_host = acc.on_device %host : i32 -> i1
+    %on_not_host = acc.on_device %not_host : i32 -> i1
+    acc.serial {
+      fir.if %on_host {
+        fir.call @_QPhost_then() : () -> ()
+      } else {
+        fir.call @_QPdevice_else() : () -> ()
+      }
+      fir.if %on_not_host {
+        fir.call @_QPdevice_then() : () -> ()
+      } else {
+        fir.call @_QPhost_else() : () -> ()
+      }
+      acc.yield
+    }
+    return
+  }
+}
+
+// CHECK-NOT: acc.routine @{{.*}} func(@_QPhost_then)
+// CHECK-NOT: acc.routine @{{.*}} func(@_QPhost_else)
+// CHECK: acc.routine @acc_routine_0 func(@_QPdevice_else) implicit
+// CHECK: func.func @_QPdevice_else() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>}
+// CHECK: acc.routine @acc_routine_1 func(@_QPdevice_then) implicit
+// CHECK: func.func @_QPdevice_then() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_1]>}
+// CHECK-NOT: acc.routine @{{.*}} func(@_QPhost_then)
+// CHECK-NOT: acc.routine @{{.*}} func(@_QPhost_else)
