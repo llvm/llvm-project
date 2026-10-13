@@ -55,6 +55,16 @@ concept UnqualifiedArithmeticOrEnum =
     std::is_same_v<Key, std::remove_cvref_t<Key>> &&
     (std::integral<Key> || std::floating_point<Key> || std::is_enum_v<Key>);
 
+template <size_t N>
+constexpr std::size_t array_hash(std::array<char, N> arr) {
+  // use a simple implementation for "hash"-ing
+  std::size_t res{0};
+  for (char c : arr) {
+    res ^= c;
+  }
+  return res;
+}
+
 template <UnqualifiedArithmeticOrEnum Key>
 struct constexpr_hash<Key> {
   [[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI std::size_t operator()(const Key& key) const noexcept {
@@ -62,31 +72,13 @@ struct constexpr_hash<Key> {
       if constexpr (sizeof(Key) <= sizeof(size_t)) {
         return static_cast<size_t>(key);
       } else {
-        constexpr size_t multiple           = sizeof(Key) / sizeof(size_t);
-        std::array<size_t, multiple> region = std::bit_cast<std::array<size_t, multiple>>(key);
-
-        // TODO: 0, 1, 2, 3, 4
-        return region[multiple - 1]; // TODO: hash-ing
+        return array_hash(std::bit_cast<std::array<char, sizeof(Key)>>(key));
       }
     } else if constexpr (std::floating_point<Key>) {
       if (key == 0.0f)
-
         return 0;
-      // return __scalar_hash<Key>::operator()(key);
 
-      constexpr size_t multiple         = sizeof(Key) / sizeof(char);
-      std::array<char, multiple> region = std::bit_cast<std::array<char, multiple>>(key);
-
-      // TODO: pack indexing?
-      size_t res = 0;
-      for (size_t i = 0; i < multiple; ++i) {
-        res ^= region[i];
-      }
-      return res;
-
-      // TODO: 0, 1, 2, 3, 4
-      // return region[multiple - 1]; // TODO: hash-ing
-      // return 1234ULL;
+      return array_hash(std::bit_cast<std::array<char, sizeof(Key)>>(key));
 
     } else if constexpr (std::is_enum_v<Key>) {
       using type = decltype(std::to_underlying(std::declval<Key>()));

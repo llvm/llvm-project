@@ -40,6 +40,11 @@ constexpr void test() {
       const std::size_t result = h(t);
       LIBCPP_ASSERT(result == static_cast<std::size_t>(t));
       ((void)result); // Prevent unused warning
+    } else {
+      T t2(static_cast<T>(i + 1));
+      const std::size_t result1 = h(t);
+      const std::size_t result2 = h(t2);
+      LIBCPP_ASSERT(result1 != result2);
     }
   }
 }
