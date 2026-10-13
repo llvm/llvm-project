@@ -7480,6 +7480,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_hipstdpar_interpose_alloc);
     Args.addOptInFlag(CmdArgs, options::OPT_fhip_kernel_arg_name,
                       options::OPT_fno_hip_kernel_arg_name);
+    if (TC.getTriple().isSPIRV() &&
+        TC.getTriple().getVendor() == llvm::Triple::VendorType::AMD)
     Args.addLastArg(CmdArgs, options::OPT_fenable_spirv_size_optimization);
   }
 
