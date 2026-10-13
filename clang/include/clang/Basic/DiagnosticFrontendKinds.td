@@ -504,6 +504,13 @@ def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
+def err_hlsl_signature_packing : Error<
+  "failed to pack %select{input|output}0 signature: %1">;
+def warn_hlsl_signature_packing_ignored : Warning<
+  "semantic signature packing mode '%0' is ignored as "
+  "%select{vertex shader inputs|pixel shader outputs}1 always use "
+  "%select{stacked|indexed}1 packing">,
+  InGroup<HLSLSemanticSignatures>;
 def warn_hlsl_failed_to_embed_source
     : Warning<"failed to embed source for '%0' into dx.source.contents">,
       InGroup<HLSLDXCCompat>;

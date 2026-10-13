@@ -1980,6 +1980,9 @@ def HLSLAvailability : DiagGroup<"hlsl-availability">;
 // Warnings specifically for DXC incompatabilities.
 def HLSLDXCCompat : DiagGroup<"hlsl-dxc-compatability">;
 
+// Warnings for semantics and their signatures.
+def HLSLSemanticSignatures : DiagGroup<"hlsl-semantic-signatures">;
+
 // Warnings for legacy binding behavior
 def LegacyConstantRegisterBinding : DiagGroup<"legacy-constant-register-binding">;
 
