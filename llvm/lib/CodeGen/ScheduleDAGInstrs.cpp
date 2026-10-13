@@ -745,18 +745,12 @@ private:
   void addBarrierChain(UnanalyzableMemopFrontier &UF);
 
   /// Promote the store \p SU to be a new sequencing store in the frontier \p F.
-  /// If \p PreserveNoAliasLoads is true, loads in the frontier that do not
-  /// alias with \p SU will be retained after promotion.
-  void updateSequencingStore(MemopFrontier &F, SUnit *SU,
-                             bool PreserveNoAliasLoads);
+  void updateSequencingStore(MemopFrontier &F, SUnit *SU);
 
   /// Promote the store \p SU with underlying objects \p Objs to be a new
-  /// sequencing store in the frontier \p UF. If \p PreserveNoAliasLoads is
-  /// true, loads in the frontier that do not alias with \p SU will be retained
-  /// after promotion.
+  /// sequencing store in the frontier \p UF.
   void updateSequencingStore(UnanalyzableMemopFrontier &UF, SUnit *SU,
-                             UnderlyingObjectsVector &&Objs,
-                             bool PreserveNoAliasLoads);
+                             UnderlyingObjectsVector &&Objs);
 
 public:
   void buildDeps();
@@ -853,8 +847,8 @@ void ScheduleDAGDependencyBuilder::addBarrierChain(
   UF.clear();
 }
 
-void ScheduleDAGDependencyBuilder::updateSequencingStore(
-    MemopFrontier &F, SUnit *SU, bool PreserveNoAliasLoads) {
+void ScheduleDAGDependencyBuilder::updateSequencingStore(MemopFrontier &F,
+                                                         SUnit *SU) {
   assert(SU->getInstr()->mayStore() &&
          "Only store instructions should be used as sequencing stores");
   LLVM_DEBUG(dbgs() << "Promoting " << *SU << " to sequencing store\n");
@@ -868,37 +862,26 @@ void ScheduleDAGDependencyBuilder::updateSequencingStore(
 
   F.Stores.clear();
 
-  if (PreserveNoAliasLoads) {
-    // If asked, for loads, we can do slightly better. Rather than naively
-    // adding pred barriers and clearing the map, we check whether each load
-    // genuinely needs to sequence against the new sequencing store. Wherever an
-    // edge is not required, we retain the load and avoid the spurious control
-    // dependency.
-    for (auto It = F.Loads.begin(); It != F.Loads.end();) {
-      if (addChainDependency(SU, *It, /*TrueMemOrderLatency=*/1)) {
-        It = F.Loads.erase(It);
-      } else {
-        ++It;
-      }
+  // For loads, we can do slightly better. Rather than naively adding pred
+  // barriers and clearing the map, we check whether each load genuinely needs
+  // to sequence against the new sequencing store. Wherever an edge is not
+  // required, we retain the load and avoid the spurious control dependency.
+  for (auto It = F.Loads.begin(); It != F.Loads.end();) {
+    if (addChainDependency(SU, *It, /*TrueMemOrderLatency=*/1)) {
+      It = F.Loads.erase(It);
+    } else {
+      ++It;
     }
-  } else {
-    // Otherwise, just sequence all loads against the sequencing store and clear
-    // the map.
-    for (SUnit *S : F.Loads)
-      S->addPredBarrier(SU);
-
-    F.Loads.clear();
   }
 
   F.SequencingStore = SU;
 }
 
 void ScheduleDAGDependencyBuilder::updateSequencingStore(
-    UnanalyzableMemopFrontier &UF, SUnit *SU, UnderlyingObjectsVector &&Objs,
-    bool PreserveNoAliasLoads) {
+    UnanalyzableMemopFrontier &UF, SUnit *SU, UnderlyingObjectsVector &&Objs) {
   assert(SU->getInstr()->mayStore() &&
          "Only store instructions should be used as sequencing stores");
-  updateSequencingStore(UF.Frontier, SU, PreserveNoAliasLoads);
+  updateSequencingStore(UF.Frontier, SU);
   UF.BaseObjects = std::move(Objs);
   UF.SeenSequencingLoad = false;
 }
@@ -1095,8 +1078,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
         addChainDependencies(SU, AF, IsStore);
 
       if (IsStore && UnanalyzableFrontier.shouldUpdate(Objs)) {
-        updateSequencingStore(UnanalyzableFrontier, SU, std::move(Objs),
-                              /*PreserveNoAliasLoads=*/true);
+        updateSequencingStore(UnanalyzableFrontier, SU, std::move(Objs));
       } else {
         if (!IsStore && UnanalyzableFrontier.escapesBaseObjects(Objs))
           UnanalyzableFrontier.SeenSequencingLoad = true;
