@@ -5,10 +5,9 @@
 ; If computeKnownSignBits (in SelectionDAG) can do a simple
 ; look-thru for extractelement then we know that the add will yield a
 ; non-negative result.
-define i1 @test1(ptr %in) {
+define i1 @test1(ptr %in) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:         .cfi_startproc
-; CHECK-NEXT:  ! %bb.0:
+; CHECK:       ! %bb.0:
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    mov %g0, %o0
   %vec2 = load <4 x i16>, ptr %in, align 1
@@ -24,10 +23,9 @@ define i1 @test1(ptr %in) {
 ; v2i32 is legal on 32-bit SPARC to represent 64-bit integer register pairs.
 ; Make sure a dynamic extract does not reach instruction selection, which
 ; only handles constant indices.
-define i32 @extract_v2i32(<2 x i32> %v, i32 %idx) {
+define i32 @extract_v2i32(<2 x i32> %v, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_v2i32:
-; CHECK:         .cfi_startproc
-; CHECK-NEXT:  ! %bb.0:
+; CHECK:       ! %bb.0:
 ; CHECK-NEXT:    cmp %o2, 0
 ; CHECK-NEXT:    be .LBB1_2
 ; CHECK-NEXT:    nop
