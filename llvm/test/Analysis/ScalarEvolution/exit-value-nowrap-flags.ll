@@ -326,3 +326,52 @@ exit:
 done:
   ret ptr %first
 }
+
+; The exit value of %iv.div differs from %end.div only in the use flags on the
+; operands of the dividend.
+define void @add_exit_value_differs_in_operand_use_flags(i64 %start, i64 %step, i64 %n) {
+; CHECK-LABEL: 'add_exit_value_differs_in_operand_use_flags'
+; CHECK-NEXT:  Classifying expressions for: @add_exit_value_differs_in_operand_use_flags
+; CHECK-NEXT:    %offset = mul i64 %n, %step
+; CHECK-NEXT:    --> (%step * %n) U: full-set S: full-set
+; CHECK-NEXT:    %end = add i64 %start, %offset
+; CHECK-NEXT:    --> ((%step * %n) + %start) U: full-set S: full-set
+; CHECK-NEXT:    %end.div = udiv i64 %end, 3
+; CHECK-NEXT:    --> (((%step * %n) + %start) /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206)
+; CHECK-NEXT:    %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%start,+,%step}<nuw><%loop> U: full-set S: full-set Exits: ((%step * %n)<u nuw> + %start)<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.div = udiv i64 %iv, 3
+; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n)<u nuw> + %start)<u nuw> /u 3) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %a = add i64 %iv.div, %end.div
+; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) + ({%start,+,%step}<nuw><%loop> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) Exits: ((((%step * %n) + %start) /u 3) + (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
+; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i64 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @add_exit_value_differs_in_operand_use_flags
+; CHECK-NEXT:  Loop %loop: backedge-taken count is %n
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %n
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %offset = mul i64 %n, %step
+  %end = add i64 %start, %offset
+  %end.div = udiv i64 %end, 3
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.div = udiv i64 %iv, 3
+  %a = add i64 %iv.div, %end.div
+  %iv.next = add nuw i64 %iv, %step
+  %i.next = add i64 %i, 1
+  %c = icmp eq i64 %i, %n
+  br i1 %c, label %exit, label %loop
+
+exit:
+  ret void
+}
