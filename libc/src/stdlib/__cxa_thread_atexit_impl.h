@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Include header for implementation of __cxa_thread_atexit_impl
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___THREADS_CXA_THREAD_ATEXIT_IMPL_H
 #define LLVM_LIBC_SRC___THREADS_CXA_THREAD_ATEXIT_IMPL_H
