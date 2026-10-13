@@ -1948,11 +1948,7 @@ static void addFullyUnrolledInstructionsToIgnore(
   auto *Cmp = L->getLatchCmpInst();
   if (Cmp)
     InstsToIgnore.insert(Cmp);
-  for (const auto &KV : IL) {
-    // Extract the key by hand so that it can be used in the lambda below.  Note
-    // that captured structured bindings are a C++20 extension.
-    PHINode *IV = KV.first;
-
+  for (PHINode *IV : IL.keys()) {
     // The induction is free: a widened induction generates a vector phi with
     // its start value and an increment that is dead without a backedge.
     InstsToIgnore.insert(IV);
@@ -2836,8 +2832,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // of the induction variable and induction variable update remain uniform.
   // The code below handles both pointer and non-pointer induction variables.
   BasicBlock *Latch = TheLoop->getLoopLatch();
-  for (const auto &Induction : Legal->getInductionVars()) {
-    auto *Ind = Induction.first;
+  for (PHINode *Ind : Legal->getInductionVars().keys()) {
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
 
     // Determine if all users of the induction variable are uniform after
@@ -4532,8 +4527,11 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   for (BasicBlock *BB : TheLoop->blocks()) {
     // For each instruction in the old loop.
     for (Instruction &I : *BB) {
-      Value *Ptr =  getLoadStorePointerOperand(&I);
-      if (!Ptr)
+      Value *Ptr = getLoadStorePointerOperand(&I);
+
+      // Ignore if no pointer found or a widening decision has already been
+      // made.
+      if (!Ptr || (getWideningDecision(&I, VF) != CM_Unknown))
         continue;
 
       LLVM_DEBUG(dbgs() << "LV: Memory widening: calculating best strategy for "
@@ -4605,10 +4603,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       if (isAccessInterleaved(&I)) {
         const auto *Group = getInterleavedAccessGroup(&I);
         assert(Group && "Fail to get an interleaved access group.");
-
-        // Make one decision for the whole group.
-        if (getWideningDecision(&I, VF) != CM_Unknown)
-          continue;
 
         NumAccesses = Group->getNumMembers();
         if (interleavedAccessCanBeWidened(&I, VF))
@@ -5335,17 +5329,14 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 
   // Ignore type-promoting instructions we identified during reduction
   // detection.
-  for (const auto &Reduction : Legal->getReductionVars()) {
-    const RecurrenceDescriptor &RedDes = Reduction.second;
-    const SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
-    VecValuesToIgnore.insert_range(Casts);
+  for (const RecurrenceDescriptor &RedDes :
+       Legal->getReductionVars().values()) {
+    VecValuesToIgnore.insert_range(RedDes.getCastInsts());
   }
   // Ignore type-casting instructions we identified during induction
   // detection.
-  for (const auto &Induction : Legal->getInductionVars()) {
-    const InductionDescriptor &IndDes = Induction.second;
+  for (const InductionDescriptor &IndDes : Legal->getInductionVars().values())
     VecValuesToIgnore.insert_range(IndDes.getCastInsts());
-  }
 }
 
 void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
@@ -5802,7 +5793,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
-  RUN_VPLAN_PASS(VPlanTransforms::materializePacksAndUnpacks, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::materializeUnpacks, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::materializeBroadcasts, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   bool HasBranchWeights =
@@ -6142,16 +6133,9 @@ VPRecipeWithIRFlags *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze:
+  case Instruction::ExtractValue:
     return new VPWidenRecipe(*I, VPI->operandsWithoutMask(), *VPI, *VPI,
                              VPI->getDebugLoc());
-  case Instruction::ExtractValue: {
-    SmallVector<VPValue *> NewOps(VPI->operandsWithoutMask());
-    auto *EVI = cast<ExtractValueInst>(I);
-    assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
-    unsigned Idx = EVI->getIndices()[0];
-    NewOps.push_back(Plan.getConstantInt(32, Idx));
-    return new VPWidenRecipe(*I, NewOps, *VPI, *VPI, VPI->getDebugLoc());
-  }
   };
 }
 
@@ -6165,10 +6149,6 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
     return nullptr;
 
   const HistogramInfo *HI = *HistInfo;
-  // FIXME: Support other operations.
-  unsigned Opcode = HI->Update->getOpcode();
-  assert((Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
-         "Histogram update operation must be an Add or Sub");
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
@@ -6181,8 +6161,8 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   if (CM.isMaskRequired(HI->Store))
     HGramOps.push_back(VPI->getMask());
 
-  return new VPHistogramRecipe(Opcode, HGramOps, cast<VPIRMetadata>(*VPI),
-                               VPI->getDebugLoc());
+  return new VPHistogramRecipe(HI->UpdateKind, HGramOps,
+                               cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
 }
 
 bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
@@ -6434,7 +6414,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   // Create recipes for header phis. For outer loops, reductions, recurrences
   // and in-loop reductions are empty since legality doesn't detect them.
   if (!RUN_VPLAN_PASS(
-          VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop,
+          VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop, ORE,
           VPDT, Legal->getInductionVars(), Legal->getReductionVars(),
           Legal->getFixedOrderRecurrences(), Config.getInLoopReductions(),
           Config.getHints().allowReordering())) {
@@ -6644,8 +6624,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
-  RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
-                 RecipeBuilder, CostCtx);
+  // Widened calls may only use the first lane of some operands.
+  if (RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
+                     RecipeBuilder, CostCtx))
+    RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
   RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI,
                  PSE);
@@ -7410,20 +7392,28 @@ static void preparePlanForEpilogueVectorLoop(
                 [](const VPUser *U) {
                   if (isa<VPScalarIVStepsRecipe, VPDerivedIVRecipe>(U))
                     return true;
-                  unsigned Opc = cast<VPInstruction>(U)->getOpcode();
-                  return Instruction::isCast(Opc) || Opc == Instruction::Add;
+                  auto *VPI = dyn_cast<VPInstruction>(U);
+                  if (!VPI)
+                    return false;
+                  // Only users linear in the canonical IV (e.g. scaling it by
+                  // a stride) stay correct when offsetting it below; others,
+                  // like header masks, may need an epilogue-relative IV.
+                  return Instruction::isCast(VPI->getOpcode()) ||
+                         is_contained({Instruction::Add, Instruction::Mul,
+                                       Instruction::Shl},
+                                      VPI->getOpcode());
                 }) &&
-         "the canonical IV should only be used by its increment or "
-         "ScalarIVSteps when resetting the start value");
+         "the canonical IV should only be used by its increment, casts, "
+         "stride scaling, ScalarIVSteps or DerivedIV when resetting the start "
+         "value");
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   VPInstruction *Add = Builder.createAdd(IV, VPV);
   // Replace all users of the canonical IV and its increment with the offset
   // version, except for the Add itself and the canonical IV increment.
   auto *Increment = vputils::findCanonicalIVIncrement(Plan);
   assert(Increment && "Must have a canonical IV increment at this point");
-  IV->replaceUsesWithIf(Add, [Add, Increment](VPUser &U) {
-    return &U != Add && &U != Increment;
-  });
+  IV->replaceUsesWithIf(
+      Add, [Add, Increment](VPUser *U) { return U != Add && U != Increment; });
   VPInstruction *OffsetIVInc =
       VPBuilder::getToInsertAfter(Increment).createAdd(Increment, VPV);
   Increment->replaceAllUsesWith(OffsetIVInc);
@@ -7890,12 +7880,16 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       // Bail out early if either the SCEV or memory runtime checks are known to
       // fail. In that case, the vector loop would never execute.
       using namespace llvm::PatternMatch;
-      if (Checks.getSCEVChecks().first &&
-          match(Checks.getSCEVChecks().first, m_One()))
+      if ((Checks.getSCEVChecks().first &&
+           match(Checks.getSCEVChecks().first, m_One())) ||
+          (Checks.getMemRuntimeChecks().first &&
+           match(Checks.getMemRuntimeChecks().first, m_One()))) {
+        reportVectorizationFailure(
+            "runtime checks are known to fail, so we will never enter the "
+            "vector loop",
+            "RuntimeChecksNeverEnterVectorLoop", ORE, L);
         return false;
-      if (Checks.getMemRuntimeChecks().first &&
-          match(Checks.getMemRuntimeChecks().first, m_One()))
-        return false;
+      }
     }
 
     // Check if it is profitable to vectorize with runtime checks.
@@ -7923,10 +7917,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   std::pair<StringRef, std::string> VecDiagMsg, IntDiagMsg;
   bool VectorizeLoop = true, InterleaveLoop = true;
   if (VF.Width.isScalar()) {
-    LLVM_DEBUG(dbgs() << "LV: Vectorization is possible but not beneficial.\n");
-    VecDiagMsg = {
-        "VectorizationNotBeneficial",
-        "the cost-model indicates that vectorization is not beneficial"};
+    if (LVP.hasVectorPlan()) {
+      LLVM_DEBUG(
+          dbgs() << "LV: Vectorization is possible but not beneficial.\n");
+      VecDiagMsg = {
+          "VectorizationNotBeneficial",
+          "the cost-model indicates that vectorization is not beneficial"};
+    } else {
+      LLVM_DEBUG(dbgs() << "LV: Vectorization is not possible. Failed to "
+                           "create any vector VPlans.\n");
+      VecDiagMsg = {"VectorizationNotPossible",
+                    "vectorization is not possible"};
+    }
     VectorizeLoop = false;
   }
 
@@ -7948,16 +7950,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     InterleaveLoop = false;
   } else if (IC == 1 && UserIC <= 1) {
     // Tell the user interleaving is not beneficial.
-    LLVM_DEBUG(dbgs() << "LV: Interleaving is not beneficial.\n");
-    IntDiagMsg = {
-        "InterleavingNotBeneficial",
-        "the cost-model indicates that interleaving is not beneficial"};
-    InterleaveLoop = false;
-    if (UserIC == 1) {
-      IntDiagMsg.first = "InterleavingNotBeneficialAndDisabled";
-      IntDiagMsg.second +=
-          " and is explicitly disabled or interleave count is set to 1";
+    if (LVP.hasAPlan()) {
+      LLVM_DEBUG(dbgs() << "LV: Interleaving is not beneficial.\n");
+      IntDiagMsg = {
+          "InterleavingNotBeneficial",
+          "the cost-model indicates that interleaving is not beneficial"};
+      if (UserIC == 1) {
+        IntDiagMsg.first = "InterleavingNotBeneficialAndDisabled";
+        IntDiagMsg.second +=
+            " and is explicitly disabled or interleave count is set to 1";
+      }
+    } else {
+      LLVM_DEBUG(dbgs() << "LV: Interleaving is not possible. Failed to create"
+                        << " any vplans\n");
+      IntDiagMsg = {"InterleavingNotPossible", "interleaving is not possible"};
     }
+    InterleaveLoop = false;
   } else if (IC > 1 && UserIC == 1) {
     // Tell the user interleaving is beneficial, but it explicitly disabled.
     LLVM_DEBUG(dbgs() << "LV: Interleaving is beneficial but is explicitly "

@@ -855,7 +855,7 @@ static void buildFrameLayout(Function &F, const DominatorTree &DT,
   if (Shape.ABI == coro::ABI::Switch && PromiseAlloca) {
     // We assume that no alias will be create before CoroBegin.
     FrameData.Allocas.emplace_back(
-        PromiseAlloca, DenseMap<Instruction *, std::optional<APInt>>{},
+        PromiseAlloca, SmallMapVector<Instruction *, std::optional<APInt>, 4>{},
         hasAccessingPromiseBeforeCB(DT, Shape));
   }
   // Create an entry for every spilled value.

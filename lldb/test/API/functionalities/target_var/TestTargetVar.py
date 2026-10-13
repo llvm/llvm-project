@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class targetCommandTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @skipIfDarwinEmbedded  # needs x86_64
     @skipIf(debug_info="gmodules")  # not relevant
     @skipIf(compiler="clang", compiler_version=["<", "7.0"])

@@ -13,8 +13,8 @@
 // useful for targets like x86_64 that cannot lower fp convertions
 // with more than 128 bits.
 //
-// - Expansion of ‘frem‘ for types MVT::f16, MVT::f32, and MVT::f64 for
-// targets which use "Expand" as the legalization action for the
+// - Expansion of ‘frem‘ for types MVT::f16, MVT::bf16, MVT::f32, and MVT::f64
+// for targets which use "Expand" as the legalization action for the
 // corresponding type.
 //
 // - Expansion of ‘udiv‘, ‘sdiv‘, ‘urem‘, and ‘srem‘ instructions with
@@ -219,8 +219,8 @@ class FRemExpander {
   /// The frem argument/return types that can be expanded by this class.
   // TODO: The expansion could work for other floating point types
   // as well, but this would require additional testing.
-  static constexpr std::array<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
-                                                      MVT::f64};
+  static constexpr std::array<MVT, 4> ExpandableTypes{MVT::f16, MVT::bf16,
+                                                      MVT::f32, MVT::f64};
 
 public:
   static bool canExpandType(Type *Ty) {
@@ -277,7 +277,7 @@ public:
     // uses the same input/result type.
     unsigned MaxIter = 2;
 
-    if (Ty->isHalfTy()) {
+    if (Ty->is16bitFPTy()) {
       // Use the wider type and less iterations.
       ComputeTy = B.getFloatTy();
       MaxIter = 1;

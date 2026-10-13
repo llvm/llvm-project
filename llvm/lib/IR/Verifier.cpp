@@ -450,7 +450,6 @@ private:
   void visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call);
   void visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI);
   void visitVPIntrinsic(VPIntrinsic &VPI);
-  void visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI);
   void visitAtomicRMWInst(AtomicRMWInst &RMWI);
   void visitFenceInst(FenceInst &FI);
@@ -2961,11 +2960,14 @@ void Verifier::visitConstantExprsRecursively(const Constant *EntryC) {
 }
 
 void Verifier::visitConstantExpr(const ConstantExpr *CE) {
-  if (CE->getOpcode() == Instruction::BitCast)
+  if (CE->getOpcode() == Instruction::BitCast) {
     Check(CastInst::castIsValid(Instruction::BitCast, CE->getOperand(0),
                                 CE->getType()),
           "Invalid bitcast", CE);
-  else if (CE->getOpcode() == Instruction::PtrToAddr)
+    Check(DL.getTypeSizeInBits(CE->getOperand(0)->getType()) ==
+              DL.getTypeSizeInBits(CE->getType()),
+          "Invalid bitcast", CE);
+  } else if (CE->getOpcode() == Instruction::PtrToAddr)
     checkPtrToAddr(CE->getOperand(0)->getType(), CE->getType(), *CE);
 }
 
@@ -3990,6 +3992,9 @@ void Verifier::visitBitCastInst(BitCastInst &I) {
   Check(
       CastInst::castIsValid(Instruction::BitCast, I.getOperand(0), I.getType()),
       "Invalid bitcast", &I);
+  Check(DL.getTypeSizeInBits(I.getSrcTy()) ==
+            DL.getTypeSizeInBits(I.getDestTy()),
+        "Invalid bitcast", &I);
   visitInstruction(I);
 }
 
@@ -6837,6 +6842,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Type *ElemTy = Call.getType()->getScalarType();
     Check(ElemTy->isIntegerTy(1),
           "get_active_lane_mask: element type is not i1", Call);
+    break;
+  }
+  case Intrinsic::mask_beforefirst: {
+    Check(Call.getType()->getScalarType()->isIntegerTy(1),
+          "mask.beforefirst element type must be i1", Call);
     break;
   }
   case Intrinsic::experimental_get_vector_length: {

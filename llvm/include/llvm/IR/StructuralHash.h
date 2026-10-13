@@ -34,7 +34,14 @@ LLVM_ABI stable_hash StructuralHash(const Function &F,
                                     bool DetailedHash = false);
 
 /// Returns a hash of the global variable \p G.
-LLVM_ABI stable_hash StructuralHash(const GlobalVariable &G);
+/// \param SourceQualifyLocalGlobals Whether to combine the hash of a global
+/// with local linkage with the source file name of its module. Such globals
+/// are hashed by name, and the same name in different modules denotes
+/// different storage; qualifying with the source lets clients that compare
+/// hashes across modules tell them apart. Globals hashed by content are not
+/// affected.
+LLVM_ABI stable_hash StructuralHash(const GlobalVariable &G,
+                                    bool SourceQualifyLocalGlobals = false);
 
 /// Returns a hash of the module \p M by hashing all functions and global
 /// variables contained within. \param M The module to hash. \param DetailedHash
@@ -81,9 +88,12 @@ struct FunctionHashInfo {
 /// \param F The function to hash.
 /// \param IgnoreOp A callable that takes an instruction and an operand index,
 /// and returns true if the operand should be ignored in the hash computation.
+/// \param SourceQualifyLocalGlobals Whether to qualify the hashes of globals
+/// with local linkage with their module's source file name.
 /// \return A FunctionHashInfo structure
 LLVM_ABI FunctionHashInfo
-StructuralHashWithDifferences(const Function &F, IgnoreOperandFunc IgnoreOp);
+StructuralHashWithDifferences(const Function &F, IgnoreOperandFunc IgnoreOp,
+                              bool SourceQualifyLocalGlobals = false);
 
 } // end namespace llvm
 
