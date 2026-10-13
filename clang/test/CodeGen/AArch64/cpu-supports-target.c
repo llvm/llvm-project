@@ -117,11 +117,115 @@
 // CHECK-NEXT:    store i32 12, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    br label %[[RETURN]]
 // CHECK:       [[IF_ELSE22]]:
+// CHECK-NEXT:    [[TMP48:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP49:%.*]] = and i64 [[TMP48]], 4611686018427387904
+// CHECK-NEXT:    [[TMP50:%.*]] = icmp eq i64 [[TMP49]], 4611686018427387904
+// CHECK-NEXT:    [[TMP51:%.*]] = and i1 true, [[TMP50]]
+// CHECK-NEXT:    br i1 [[TMP51]], label %[[CPU_SUPPORTS_EXTENSION:.*]], label %[[CPU_SUPPORTS_END:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION]]:
+// CHECK-NEXT:    [[TMP52:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP53:%.*]] = and i64 [[TMP52]], 8
+// CHECK-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[TMP53]], 8
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END]]
+// CHECK:       [[CPU_SUPPORTS_END]]:
+// CHECK-NEXT:    [[TMP55:%.*]] = phi i1 [ false, %[[IF_ELSE22]] ], [ [[TMP54]], %[[CPU_SUPPORTS_EXTENSION]] ]
+// CHECK-NEXT:    br i1 [[TMP55]], label %[[IF_THEN23:.*]], label %[[IF_ELSE24:.*]]
+// CHECK:       [[IF_THEN23]]:
+// CHECK-NEXT:    store i32 13, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label %[[RETURN]]
+// CHECK:       [[IF_ELSE24]]:
+// CHECK-NEXT:    [[TMP56:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP57:%.*]] = and i64 [[TMP56]], 2986361600
+// CHECK-NEXT:    [[TMP58:%.*]] = icmp eq i64 [[TMP57]], 2986361600
+// CHECK-NEXT:    [[TMP59:%.*]] = and i1 true, [[TMP58]]
+// CHECK-NEXT:    br i1 [[TMP59]], label %[[IF_THEN25:.*]], label %[[IF_ELSE26:.*]]
+// CHECK:       [[IF_THEN25]]:
+// CHECK-NEXT:    store i32 14, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label %[[RETURN]]
+// CHECK:       [[IF_ELSE26]]:
+// CHECK-NEXT:    [[TMP60:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP61:%.*]] = and i64 [[TMP60]], 4618441417868460800
+// CHECK-NEXT:    [[TMP62:%.*]] = icmp eq i64 [[TMP61]], 4618441417868460800
+// CHECK-NEXT:    [[TMP63:%.*]] = and i1 true, [[TMP62]]
+// CHECK-NEXT:    br i1 [[TMP63]], label %[[CPU_SUPPORTS_EXTENSION27:.*]], label %[[CPU_SUPPORTS_END28:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION27]]:
+// CHECK-NEXT:    [[TMP64:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP65:%.*]] = and i64 [[TMP64]], 32
+// CHECK-NEXT:    [[TMP66:%.*]] = icmp eq i64 [[TMP65]], 32
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END28]]
+// CHECK:       [[CPU_SUPPORTS_END28]]:
+// CHECK-NEXT:    [[TMP67:%.*]] = phi i1 [ false, %[[IF_ELSE26]] ], [ [[TMP66]], %[[CPU_SUPPORTS_EXTENSION27]] ]
+// CHECK-NEXT:    br i1 [[TMP67]], label %[[IF_THEN29:.*]], label %[[IF_ELSE30:.*]]
+// CHECK:       [[IF_THEN29]]:
+// CHECK-NEXT:    store i32 15, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label %[[RETURN]]
+// CHECK:       [[IF_ELSE30]]:
+// CHECK-NEXT:    [[TMP68:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP69:%.*]] = and i64 [[TMP68]], 4611686088220672256
+// CHECK-NEXT:    [[TMP70:%.*]] = icmp eq i64 [[TMP69]], 4611686088220672256
+// CHECK-NEXT:    [[TMP71:%.*]] = and i1 true, [[TMP70]]
+// CHECK-NEXT:    br i1 [[TMP71]], label %[[CPU_SUPPORTS_EXTENSION31:.*]], label %[[CPU_SUPPORTS_END32:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION31]]:
+// CHECK-NEXT:    [[TMP72:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP73:%.*]] = and i64 [[TMP72]], 451
+// CHECK-NEXT:    [[TMP74:%.*]] = icmp eq i64 [[TMP73]], 451
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END32]]
+// CHECK:       [[CPU_SUPPORTS_END32]]:
+// CHECK-NEXT:    [[TMP75:%.*]] = phi i1 [ false, %[[IF_ELSE30]] ], [ [[TMP74]], %[[CPU_SUPPORTS_EXTENSION31]] ]
+// CHECK-NEXT:    br i1 [[TMP75]], label %[[IF_THEN33:.*]], label %[[IF_ELSE34:.*]]
+// CHECK:       [[IF_THEN33]]:
+// CHECK-NEXT:    store i32 16, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label %[[RETURN]]
+// CHECK:       [[IF_ELSE34]]:
+// CHECK-NEXT:    [[TMP76:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP77:%.*]] = and i64 [[TMP76]], 144154916657644288
+// CHECK-NEXT:    [[TMP78:%.*]] = icmp eq i64 [[TMP77]], 144154916657644288
+// CHECK-NEXT:    [[TMP79:%.*]] = and i1 true, [[TMP78]]
+// CHECK-NEXT:    br i1 [[TMP79]], label %[[IF_THEN35:.*]], label %[[IF_ELSE36:.*]]
+// CHECK:       [[IF_THEN35]]:
+// CHECK-NEXT:    store i32 17, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label %[[RETURN]]
+// CHECK:       [[IF_ELSE36]]:
+// CHECK-NEXT:    [[TMP80:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP81:%.*]] = and i64 [[TMP80]], 144550594814771968
+// CHECK-NEXT:    [[TMP82:%.*]] = icmp eq i64 [[TMP81]], 144550594814771968
+// CHECK-NEXT:    [[TMP83:%.*]] = and i1 true, [[TMP82]]
+// CHECK-NEXT:    br i1 [[TMP83]], label %[[IF_THEN37:.*]], label %[[IF_ELSE38:.*]]
+// CHECK:       [[IF_THEN37]]:
+// CHECK-NEXT:    store i32 18, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label %[[RETURN]]
+// CHECK:       [[IF_ELSE38]]:
+// CHECK-NEXT:    [[TMP84:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP85:%.*]] = and i64 [[TMP84]], 3611891303626916608
+// CHECK-NEXT:    [[TMP86:%.*]] = icmp eq i64 [[TMP85]], 3611891303626916608
+// CHECK-NEXT:    [[TMP87:%.*]] = and i1 true, [[TMP86]]
+// CHECK-NEXT:    br i1 [[TMP87]], label %[[IF_THEN39:.*]], label %[[IF_ELSE40:.*]]
+// CHECK:       [[IF_THEN39]]:
+// CHECK-NEXT:    store i32 19, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label %[[RETURN]]
+// CHECK:       [[IF_ELSE40]]:
+// CHECK-NEXT:    [[TMP88:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP89:%.*]] = and i64 [[TMP88]], 4755805604684055296
+// CHECK-NEXT:    [[TMP90:%.*]] = icmp eq i64 [[TMP89]], 4755805604684055296
+// CHECK-NEXT:    [[TMP91:%.*]] = and i1 true, [[TMP90]]
+// CHECK-NEXT:    br i1 [[TMP91]], label %[[CPU_SUPPORTS_EXTENSION41:.*]], label %[[CPU_SUPPORTS_END42:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION41]]:
+// CHECK-NEXT:    [[TMP92:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP93:%.*]] = and i64 [[TMP92]], 532
+// CHECK-NEXT:    [[TMP94:%.*]] = icmp eq i64 [[TMP93]], 532
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END42]]
+// CHECK:       [[CPU_SUPPORTS_END42]]:
+// CHECK-NEXT:    [[TMP95:%.*]] = phi i1 [ false, %[[IF_ELSE40]] ], [ [[TMP94]], %[[CPU_SUPPORTS_EXTENSION41]] ]
+// CHECK-NEXT:    br i1 [[TMP95]], label %[[IF_THEN43:.*]], label %[[IF_ELSE44:.*]]
+// CHECK:       [[IF_THEN43]]:
+// CHECK-NEXT:    store i32 20, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label %[[RETURN]]
+// CHECK:       [[IF_ELSE44]]:
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    br label %[[RETURN]]
 // CHECK:       [[RETURN]]:
-// CHECK-NEXT:    [[TMP48:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    ret i32 [[TMP48]]
+// CHECK-NEXT:    [[TMP96:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    ret i32 [[TMP96]]
 //
 int check_all_features() {
   if (__builtin_cpu_supports("rng+flagm+flagm2+fp16fml+dotprod+sm4"))
@@ -148,6 +252,22 @@ int check_all_features() {
     return 11;
   else if (__builtin_cpu_supports("sme-i16i64+sme2"))
     return 12;
+  else if (__builtin_cpu_supports("gcs"))
+    return 13;
+  else if (__builtin_cpu_supports("fp8+f8f32mm+fp8dot4+fp8dot2+fp8fma"))
+    return 14;
+  else if (__builtin_cpu_supports("lut+faminmax+f8f16mm"))
+    return 15;
+  else if (__builtin_cpu_supports("sve2p1+sve2p2+sve-aes2+sve-bfscale+sve-f16f32mm"))
+    return 16;
+  else if (__builtin_cpu_supports("ssve-fp8dot4+ssve-fp8dot2+ssve-fp8fma"))
+    return 17;
+  else if (__builtin_cpu_supports("ssve-bitperm+ssve-aes+ssve-fexpa"))
+    return 18;
+  else if (__builtin_cpu_supports("sme-f8f32+sme-lutv2+sme2p1+sme2p2"))
+    return 19;
+  else if (__builtin_cpu_supports("sme-f16f16+sme-f8f16+sme-mop4"))
+    return 20;
   else
     return 0;
 }
@@ -220,16 +340,24 @@ int test_versions() {
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define dso_local i32 @test_long(
 // CHECK-SAME: ) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 577586773744664575
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 577586773744664575
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 8808385837051150335
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 8808385837051150335
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
-// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP3]] to i32
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CPU_SUPPORTS_EXTENSION:.*]], label %[[CPU_SUPPORTS_END:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION]]:
+// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 1023
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 1023
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END]]
+// CHECK:       [[CPU_SUPPORTS_END]]:
+// CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[TMP6]], %[[CPU_SUPPORTS_EXTENSION]] ]
+// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP7]] to i32
 // CHECK-NEXT:    ret i32 [[CONV]]
 //
 int test_long(void) {
-  return __builtin_cpu_supports("rng+flagm+flagm2+fp16fml+dotprod+sm4+rdm+lse+fp+simd+aes+bf16+bti+crc+cssc+dit+dotprod+f32mm+f64mm+flagm+fp16fml+fp16+i8mm+mops+sha2+sha3+sm4+sve2");
+  return __builtin_cpu_supports("rng+flagm+flagm2+fp16fml+dotprod+sm4+rdm+lse+fp+simd+aes+bf16+bti+crc+cssc+dit+dotprod+f32mm+f64mm+flagm+fp16fml+fp16+i8mm+mops+sha2+sha3+sm4+sve2+gcs+fp8+f8f32mm+fp8dot4+fp8dot2+fp8fma+lut+faminmax+f8f16mm+sve2p1+sve2p2+sve-aes2+sve-bfscale+sve-f16f32mm+ssve-fp8dot4+ssve-fp8dot2+ssve-fp8fma+ssve-bitperm+ssve-aes+ssve-fexpa+sme-f8f32+sme-lutv2+sme2p1+sme2p2+sme-f16f16+sme-f8f16+sme-mop4");
 }
 
 //.
@@ -237,5 +365,11 @@ int test_long(void) {
 // CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
 // CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone vscale_range(1,16) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }
 //.
-// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

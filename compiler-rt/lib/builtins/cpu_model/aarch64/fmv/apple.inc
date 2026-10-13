@@ -7,6 +7,9 @@
 #define HAS_CPU_CAPABILITIES_PUBLIC_H 1
 
 // FB13964283 - A few of these didn't make it into the public SDK yet.
+#ifndef CAP_BIT_FEAT_WFxT
+#define CAP_BIT_FEAT_WFxT           26
+#endif
 #ifndef CAP_BIT_FEAT_SME
 #define CAP_BIT_FEAT_SME            40
 #endif
@@ -18,6 +21,30 @@
 #endif
 #ifndef CAP_BIT_FEAT_SME_I16I64
 #define CAP_BIT_FEAT_SME_I16I64     43
+#endif
+#ifndef CAP_BIT_FEAT_SME2p1
+#define CAP_BIT_FEAT_SME2p1         44
+#endif
+#ifndef CAP_BIT_FEAT_SME_F16F16
+#define CAP_BIT_FEAT_SME_F16F16     45
+#endif
+#ifndef CAP_BIT_FEAT_SME_F8F16
+#define CAP_BIT_FEAT_SME_F8F16      47
+#endif
+#ifndef CAP_BIT_FEAT_SME_F8F32
+#define CAP_BIT_FEAT_SME_F8F32      48
+#endif
+#ifndef CAP_BIT_FEAT_MTE2
+#define CAP_BIT_FEAT_MTE2           61
+#endif
+#ifndef CAP_BIT_FEAT_CSSC
+#define CAP_BIT_FEAT_CSSC           67
+#endif
+
+// Adjust the capability buffer size to fit in newer feature bits when using an older SDK.
+#if CAP_BIT_NB < 68
+#undef CAP_BIT_NB
+#define CAP_BIT_NB 68
 #endif
 
 #endif
@@ -49,7 +76,7 @@ void __init_cpu_features_resolver(void) {
   if (__atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED))
     return;
 
-  uint64_t features = 0;
+  uint64_t features[2] = {0, 0};
 
 #ifdef HAS_CPU_CAPABILITIES_PUBLIC_H
   uint8_t feats_bitvec[(CAP_BIT_NB + 7) / 8] = {0};
@@ -62,7 +89,7 @@ void __init_cpu_features_resolver(void) {
 #define CHECK_BIT(FROM, TO)                                                    \
   do {                                                                         \
     if (feats_bitvec[FROM / 8] & (1u << ((FROM) & 7))) {                       \
-      features |= (1ULL << TO);                                                \
+      features[(TO) / 64] |= (1ULL << ((TO) % 64));                            \
     }                                                                          \
   } while (0)
 
@@ -85,6 +112,7 @@ void __init_cpu_features_resolver(void) {
     CHECK_BIT(CAP_BIT_FEAT_DPB2, FEAT_DPB2);
     CHECK_BIT(CAP_BIT_FEAT_BF16, FEAT_BF16);
     CHECK_BIT(CAP_BIT_FEAT_I8MM, FEAT_I8MM);
+    CHECK_BIT(CAP_BIT_FEAT_WFxT, FEAT_WFXT);
     CHECK_BIT(CAP_BIT_FEAT_DIT, FEAT_DIT);
     CHECK_BIT(CAP_BIT_FEAT_FP16, FEAT_FP16);
     CHECK_BIT(CAP_BIT_FEAT_SSBS, FEAT_SSBS2);
@@ -95,11 +123,21 @@ void __init_cpu_features_resolver(void) {
     CHECK_BIT(CAP_BIT_FEAT_SME2, FEAT_SME2);
     CHECK_BIT(CAP_BIT_FEAT_SME_F64F64, FEAT_SME_F64);
     CHECK_BIT(CAP_BIT_FEAT_SME_I16I64, FEAT_SME_I64);
+    CHECK_BIT(CAP_BIT_FEAT_SME2p1, FEAT_SME2P1);
+    CHECK_BIT(CAP_BIT_FEAT_SME_F16F16, FEAT_SME_F16F16);
+    CHECK_BIT(CAP_BIT_FEAT_SME_F8F16, FEAT_SME_F8F16);
+    CHECK_BIT(CAP_BIT_FEAT_SME_F8F32, FEAT_SME_F8F32);
+    // Both SME FP8 extensions require the base FP8 feature.
+    CHECK_BIT(CAP_BIT_FEAT_SME_F8F16, FEAT_FP8);
+    CHECK_BIT(CAP_BIT_FEAT_SME_F8F32, FEAT_FP8);
+    CHECK_BIT(CAP_BIT_FEAT_MTE2, FEAT_MEMTAG2);
+    CHECK_BIT(CAP_BIT_FEAT_CSSC, FEAT_CSSC);
 
-    features = deriveImplicitFeatures(features);
+    features[0] = deriveImplicitFeatures(features[0]);
 
-    __atomic_store_n(&__aarch64_cpu_features.features2, 0, __ATOMIC_RELAXED);
-    __atomic_store_n(&__aarch64_cpu_features.features, features,
+    __atomic_store_n(&__aarch64_cpu_features.features2, features[1],
+                     __ATOMIC_RELAXED);
+    __atomic_store_n(&__aarch64_cpu_features.features, features[0],
                      __ATOMIC_RELEASE);
     return;
   }
@@ -140,12 +178,12 @@ void __init_cpu_features_resolver(void) {
   for (size_t I = 0, E = sizeof(feature_checks) / sizeof(feature_checks[0]);
         I != E; ++I)
     if (isKnownAndSupported(feature_checks[I].sysctl_name))
-      features |= (1ULL << feature_checks[I].feature);
+      features[0] |= (1ULL << feature_checks[I].feature);
 
-  features = deriveImplicitFeatures(features);
+  features[0] = deriveImplicitFeatures(features[0]);
 
   __atomic_store_n(&__aarch64_cpu_features.features2, 0, __ATOMIC_RELAXED);
-  __atomic_store_n(&__aarch64_cpu_features.features, features,
+  __atomic_store_n(&__aarch64_cpu_features.features, features[0],
                    __ATOMIC_RELEASE);
 }
 

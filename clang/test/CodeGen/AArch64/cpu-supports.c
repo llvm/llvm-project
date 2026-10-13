@@ -76,6 +76,7 @@ int main(void) {
   if (__builtin_cpu_supports("avx2"))
     return 4;
 
+    //Test a feature in the second uint64_t bitfield.
   if (__builtin_cpu_supports("sve2p1"))
     return 5;
 

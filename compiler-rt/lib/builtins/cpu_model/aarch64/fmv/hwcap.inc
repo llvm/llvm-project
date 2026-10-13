@@ -161,6 +161,5 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
 
   __atomic_store_n(&__aarch64_cpu_features.features2, feat[1],
                    __ATOMIC_RELAXED);
-  __atomic_store_n(&__aarch64_cpu_features.features, feat[0],
-                   __ATOMIC_RELEASE);
+  __atomic_store_n(&__aarch64_cpu_features.features, feat[0], __ATOMIC_RELEASE);
 }
