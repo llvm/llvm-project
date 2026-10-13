@@ -24,11 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> syncfs(int fd) {
-#if defined(SYS_syncfs)
   return syscall_checked<int>(SYS_syncfs, fd);
-#else
-#error "SYS_syncfs syscall not available."
-#endif
 }
 
 } // namespace linux_syscalls
