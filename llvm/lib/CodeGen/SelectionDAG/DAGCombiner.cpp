@@ -72,6 +72,7 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -161,6 +162,20 @@ static cl::opt<bool> DisableCombines("combiner-disabled", cl::Hidden,
                                      cl::desc("Disable the DAG combiner"));
 
 namespace {
+
+template <typename RangeT = std::initializer_list<const MemSDNode *>>
+static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
+  auto Begin = Nodes.begin();
+  if (Begin == Nodes.end())
+    return nullptr;
+
+  const MDNode *MemCacheHint = (*Begin)->getMemCacheHint();
+  if (all_of(Nodes, [MemCacheHint](const MemSDNode *Node) {
+        return Node->getMemCacheHint() == MemCacheHint;
+      }))
+    return MemCacheHint;
+  return nullptr;
+}
 
   class DAGCombiner {
     SelectionDAG &DAG;
@@ -10159,9 +10174,13 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     SourceValue = DAG.getNode(ISD::ROTR, DL, WideVT, SourceValue, RotAmt);
   }
 
+  const MDNode *MemCacheHint = getCommonMemCacheHint(Stores);
+
   SDValue NewStore =
       DAG.getStore(Chain, DL, SourceValue, FirstStore->getBasePtr(),
-                   FirstStore->getPointerInfo(), FirstStore->getAlign());
+                   FirstStore->getPointerInfo(), FirstStore->getAlign(),
+                   MachineMemOperand::MONone,
+                   MMOMetadata(AAMDNodes(), nullptr, MemCacheHint));
 
   // Rely on other DAG combine rules to remove the other individual stores.
   DAG.ReplaceAllUsesWith(N, NewStore.getNode());
@@ -10364,10 +10383,13 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   if (!Allowed || !Fast)
     return SDValue();
 
-  SDValue NewLoad =
-      DAG.getExtLoad(NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, SDLoc(N), VT,
-                     Chain, FirstLoad->getBasePtr(),
-                     FirstLoad->getPointerInfo(), MemVT, FirstLoad->getAlign());
+  const MDNode *MemCacheHint = getCommonMemCacheHint(Loads);
+
+  SDValue NewLoad = DAG.getExtLoad(
+      NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, SDLoc(N), VT, Chain,
+      FirstLoad->getBasePtr(), FirstLoad->getPointerInfo(), MemVT,
+      FirstLoad->getAlign(), MachineMemOperand::MONone,
+      MMOMetadata(AAMDNodes(), nullptr, MemCacheHint));
 
   // Transfer chain users from old loads to the new load.
   for (LoadSDNode *L : Loads)
@@ -12189,10 +12211,12 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
             SDValue NewPtr = DAG.getMemBasePlusOffset(
                 RHS->getBasePtr(), TypeSize::getFixed(PtrOff), DL);
             AddToWorklist(NewPtr.getNode());
+            const MDNode *MemCacheHint = getCommonMemCacheHint({LHS, RHS});
             SDValue Load = DAG.getLoad(
                 VT, DL, RHS->getChain(), NewPtr,
                 RHS->getPointerInfo().getWithOffset(PtrOff), NewAlign,
-                RHS->getMemOperand()->getFlags(), RHS->getAAInfo());
+                RHS->getMemOperand()->getFlags(),
+                MMOMetadata(RHS->getAAInfo(), nullptr, MemCacheHint));
             DAG.makeEquivalentMemoryOrdering(LHS, Load.getValue(1));
             DAG.makeEquivalentMemoryOrdering(RHS, Load.getValue(1));
             return Load;
@@ -13975,7 +13999,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
       return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
                           MST->getBasePtr(), MST->getPointerInfo(),
                           MST->getBaseAlign(), MST->getMemOperand()->getFlags(),
-                          MST->getAAInfo());
+                          MST->getMMOMetadataForSubAccess());
 
     // Convert a masked_store with constant getactivelanemask input mask to a
     // standard store.
@@ -13995,7 +14019,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
           return DAG.getStore(MST->getChain(), DL, Ext, MST->getBasePtr(),
                               MST->getPointerInfo(), MST->getBaseAlign(),
                               MST->getMemOperand()->getFlags(),
-                              MST->getAAInfo());
+                              MST->getMMOMetadataForSubAccess());
         }
       }
     }
@@ -14185,7 +14209,8 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
         DAG.getLoad(N->getValueType(0), SDLoc(N), MLD->getChain(),
                     MLD->getBasePtr(), MLD->getPointerInfo(),
                     MLD->getBaseAlign(), MLD->getMemOperand()->getFlags(),
-                    MMOMetadata(MLD->getAAInfo(), MLD->getRanges()));
+                    MMOMetadata(MLD->getAAInfo(), MLD->getRanges(),
+                                MLD->getMemCacheHint()));
     return CombineTo(N, NewLd, NewLd.getValue(1));
   }
 
@@ -15520,11 +15545,11 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
   for (unsigned Idx = 0; Idx < NumSplits; Idx++) {
     const unsigned Offset = Idx * Stride;
 
-    SDValue SplitLoad =
-        DAG.getExtLoad(ExtType, SDLoc(LN0), SplitDstVT, LN0->getChain(),
-                       BasePtr, LN0->getPointerInfo().getWithOffset(Offset),
-                       SplitSrcVT, LN0->getBaseAlign(),
-                       LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
+    SDValue SplitLoad = DAG.getExtLoad(
+        ExtType, SDLoc(LN0), SplitDstVT, LN0->getChain(), BasePtr,
+        LN0->getPointerInfo().getWithOffset(Offset), SplitSrcVT,
+        LN0->getBaseAlign(), LN0->getMemOperand()->getFlags(),
+        LN0->getMMOMetadataForSubAccess());
 
     BasePtr = DAG.getMemBasePlusOffset(BasePtr, TypeSize::getFixed(Stride), DL);
 
@@ -17358,15 +17383,16 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
       } else if (CR.getBitWidth() == BitSize)
         NewRanges = OldRanges;
     }
-    Load = DAG.getLoad(VT, DL, LN0->getChain(), NewPtr,
-                       LN0->getPointerInfo().getWithOffset(PtrOff),
-                       LN0->getBaseAlign(), LN0->getMemOperand()->getFlags(),
-                       MMOMetadata(LN0->getAAInfo(), NewRanges));
+    Load = DAG.getLoad(
+        VT, DL, LN0->getChain(), NewPtr,
+        LN0->getPointerInfo().getWithOffset(PtrOff), LN0->getBaseAlign(),
+        LN0->getMemOperand()->getFlags(),
+        MMOMetadata(LN0->getAAInfo(), NewRanges, LN0->getMemCacheHint()));
   } else
     Load = DAG.getExtLoad(ExtType, DL, VT, LN0->getChain(), NewPtr,
                           LN0->getPointerInfo().getWithOffset(PtrOff), ExtVT,
                           LN0->getBaseAlign(), LN0->getMemOperand()->getFlags(),
-                          LN0->getAAInfo());
+                          LN0->getMMOMetadataForSubAccess());
 
   // Replace the old load's chain with the new load's chain.
   WorklistRemover DeadNodes(*this);
@@ -18251,8 +18277,10 @@ SDValue DAGCombiner::CombineConsecutiveLoads(SDNode *N, EVT VT) {
       DAG.areNonVolatileConsecutiveLoads(LD2, LD1, LD1Bytes, 1) &&
       TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
                              *LD1->getMemOperand(), &LD1Fast) && LD1Fast)
-    return DAG.getLoad(VT, SDLoc(N), LD1->getChain(), LD1->getBasePtr(),
-                       LD1->getPointerInfo(), LD1->getAlign());
+    return DAG.getLoad(
+        VT, SDLoc(N), LD1->getChain(), LD1->getBasePtr(), LD1->getPointerInfo(),
+        LD1->getAlign(), MachineMemOperand::MONone,
+        MMOMetadata(AAMDNodes(), nullptr, getCommonMemCacheHint({LD1, LD2})));
 
   return SDValue();
 }
@@ -22265,7 +22293,9 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
             LD->getAddressingMode(), LD->getExtensionType(),
             LD->getValueType(0), SDLoc(N), Chain, Ptr, LD->getOffset(),
             LD->getPointerInfo(), LD->getMemoryVT(), *Alignment,
-            LD->getMemOperand()->getFlags(), LD->getAAInfo());
+            LD->getMemOperand()->getFlags(),
+            MMOMetadata(LD->getAAInfo(), LD->getRanges(),
+                        LD->getMemCacheHint()));
         // NewLoad will always be N as we are only refining the alignment
         assert(NewLoad.getNode() == N);
         (void)NewLoad;
@@ -22997,17 +23027,19 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
   }
 
   ++OpsNarrowed;
+  MMOMetadata Metadata = St->getMMOMetadataForSubAccess();
   if (UseTruncStore)
     return DAG.getTruncStore(St->getChain(), SDLoc(St), IVal, Ptr,
                              St->getPointerInfo().getWithOffset(StOffset), VT,
-                             St->getBaseAlign());
+                             St->getBaseAlign(), MachineMemOperand::MONone,
+                             Metadata);
 
   // Truncate down to the new size.
   IVal = DAG.getNode(ISD::TRUNCATE, SDLoc(IVal), VT, IVal);
 
   return DAG.getStore(St->getChain(), SDLoc(St), IVal, Ptr,
                       St->getPointerInfo().getWithOffset(StOffset),
-                      St->getBaseAlign());
+                      St->getBaseAlign(), MachineMemOperand::MONone, Metadata);
 }
 
 /// Look for sequence of load / op / store where op is one of 'or', 'xor', and
@@ -23144,15 +23176,16 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     Align NewAlign = commonAlignment(LD->getAlign(), PtrOff);
     SDValue NewPtr =
         DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(PtrOff), SDLoc(LD));
-    SDValue NewLD =
-        DAG.getLoad(NewVT, SDLoc(N0), LD->getChain(), NewPtr,
-                    LD->getPointerInfo().getWithOffset(PtrOff), NewAlign,
-                    LD->getMemOperand()->getFlags(), LD->getAAInfo());
+    SDValue NewLD = DAG.getLoad(NewVT, SDLoc(N0), LD->getChain(), NewPtr,
+                                LD->getPointerInfo().getWithOffset(PtrOff),
+                                NewAlign, LD->getMemOperand()->getFlags(),
+                                LD->getMMOMetadataForSubAccess());
     SDValue NewVal = DAG.getNode(Opc, SDLoc(Value), NewVT, NewLD,
                                  DAG.getConstant(NewImm, SDLoc(Value), NewVT));
-    SDValue NewST =
-        DAG.getStore(Chain, SDLoc(N), NewVal, NewPtr,
-                     ST->getPointerInfo().getWithOffset(PtrOff), NewAlign);
+    SDValue NewST = DAG.getStore(Chain, SDLoc(N), NewVal, NewPtr,
+                                 ST->getPointerInfo().getWithOffset(PtrOff),
+                                 NewAlign, MachineMemOperand::MONone,
+                                 ST->getMMOMetadataForSubAccess());
 
     AddToWorklist(NewPtr.getNode());
     AddToWorklist(NewLD.getNode());
@@ -23355,6 +23388,10 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
 
   std::optional<MachineMemOperand::Flags> Flags;
   AAMDNodes AAInfo;
+  auto GetMemNode = [](const MemOpLink &MemOp) { return MemOp.MemNode; };
+  auto StoreMemNodes =
+      map_range(ArrayRef(StoreNodes).take_front(NumStores), GetMemNode);
+  const MDNode *MemCacheHint = getCommonMemCacheHint(StoreMemNodes);
   for (unsigned I = 0; I != NumStores; ++I) {
     StoreSDNode *St = cast<StoreSDNode>(StoreNodes[I].MemNode);
     if (!Flags) {
@@ -23506,7 +23543,8 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
         CanReusePtrInfo
             ? FirstInChain->getPointerInfo()
             : MachinePointerInfo(FirstInChain->getPointerInfo().getAddrSpace()),
-        FirstInChain->getAlign(), *Flags, AAInfo);
+        FirstInChain->getAlign(), *Flags,
+        MMOMetadata(AAInfo, nullptr, MemCacheHint));
   } else { // Must be realized as a trunc store
     EVT LegalizedStoredValTy =
         TLI.getTypeToTransformTo(*DAG.getContext(), StoredVal.getValueType());
@@ -23521,7 +23559,7 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
             ? FirstInChain->getPointerInfo()
             : MachinePointerInfo(FirstInChain->getPointerInfo().getAddrSpace()),
         StoredVal.getValueType() /*TVT*/, FirstInChain->getAlign(), *Flags,
-        AAInfo);
+        MMOMetadata(AAInfo, nullptr, MemCacheHint));
   }
 
   // Replace all merged stores with the new store.
@@ -24295,11 +24333,20 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 
     StMMOFlags |= TLI.getTargetMMOFlags(*StoreNodes[0].MemNode);
 
+    auto GetMemNode = [](const MemOpLink &MemOp) { return MemOp.MemNode; };
+    auto LoadMemNodes =
+        map_range(ArrayRef(LoadNodes).take_front(NumElem), GetMemNode);
+    const MDNode *LoadMemCacheHint = getCommonMemCacheHint(LoadMemNodes);
+    auto StoreMemNodes =
+        map_range(ArrayRef(StoreNodes).take_front(NumElem), GetMemNode);
+    const MDNode *StoreMemCacheHint = getCommonMemCacheHint(StoreMemNodes);
+
     SDValue NewLoad, NewStore;
     if (UseVectorTy || !DoIntegerTruncate) {
       NewLoad = DAG.getLoad(
           JointMemOpVT, LoadDL, FirstLoad->getChain(), FirstLoad->getBasePtr(),
-          FirstLoad->getPointerInfo(), FirstLoadAlign, LdMMOFlags);
+          FirstLoad->getPointerInfo(), FirstLoadAlign, LdMMOFlags,
+          MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
       SDValue StoreOp = NewLoad;
       if (NeedRotate) {
         unsigned LoadWidth = ElementSizeBytes * 8 * 2;
@@ -24314,20 +24361,23 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
           NewStoreChain, StoreDL, StoreOp, FirstInChain->getBasePtr(),
           CanReusePtrInfo ? FirstInChain->getPointerInfo()
                           : MachinePointerInfo(FirstStoreAS),
-          FirstStoreAlign, StMMOFlags);
+          FirstStoreAlign, StMMOFlags,
+          MMOMetadata(AAMDNodes(), nullptr, StoreMemCacheHint));
     } else { // This must be the truncstore/extload case
       EVT ExtendedTy =
           TLI.getTypeToTransformTo(*DAG.getContext(), JointMemOpVT);
-      NewLoad = DAG.getExtLoad(ISD::EXTLOAD, LoadDL, ExtendedTy,
-                               FirstLoad->getChain(), FirstLoad->getBasePtr(),
-                               FirstLoad->getPointerInfo(), JointMemOpVT,
-                               FirstLoadAlign, LdMMOFlags);
+      NewLoad = DAG.getExtLoad(
+          ISD::EXTLOAD, LoadDL, ExtendedTy, FirstLoad->getChain(),
+          FirstLoad->getBasePtr(), FirstLoad->getPointerInfo(), JointMemOpVT,
+          FirstLoadAlign, LdMMOFlags,
+          MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
       NewStore = DAG.getTruncStore(
           NewStoreChain, StoreDL, NewLoad, FirstInChain->getBasePtr(),
           CanReusePtrInfo ? FirstInChain->getPointerInfo()
                           : MachinePointerInfo(FirstStoreAS),
           JointMemOpVT, FirstInChain->getAlign(),
-          FirstInChain->getMemOperand()->getFlags());
+          FirstInChain->getMemOperand()->getFlags(),
+          MMOMetadata(AAMDNodes(), nullptr, StoreMemCacheHint));
     }
 
     // Transfer chain users from old loads to the new load.
@@ -24534,14 +24584,14 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
         std::swap(Lo, Hi);
 
       MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
-      AAMDNodes AAInfo = ST->getAAInfo();
+      MMOMetadata Metadata = ST->getMMOMetadataForSubAccess();
 
       SDValue St0 = DAG.getStore(Chain, DL, Lo, Ptr, ST->getPointerInfo(),
-                                 ST->getBaseAlign(), MMOFlags, AAInfo);
+                                 ST->getBaseAlign(), MMOFlags, Metadata);
       Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(4), DL);
       SDValue St1 = DAG.getStore(Chain, DL, Hi, Ptr,
                                  ST->getPointerInfo().getWithOffset(4),
-                                 ST->getBaseAlign(), MMOFlags, AAInfo);
+                                 ST->getBaseAlign(), MMOFlags, Metadata);
       return DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
                          St0, St1);
     }
@@ -24611,7 +24661,8 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
   }
 
   return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, NewAlign,
-                      ST->getMemOperand()->getFlags());
+                      ST->getMemOperand()->getFlags(),
+                      ST->getMMOMetadataForSubAccess());
 }
 
 SDValue DAGCombiner::visitATOMIC_STORE(SDNode *N) {
@@ -24805,7 +24856,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
         SDValue NewStore = DAG.getTruncStore(
             Chain, SDLoc(N), Value, Ptr, ST->getOffset(), ST->getPointerInfo(),
             ST->getMemoryVT(), *Alignment, ST->getMemOperand()->getFlags(),
-            ST->getAAInfo());
+            ST->getMMOMetadataForSubAccess());
         // NewStore will always be N as we are only refining the alignment
         assert(NewStore.getNode() == N);
         (void)NewStore;
@@ -25419,8 +25470,11 @@ SDValue DAGCombiner::combineInsertEltToLoad(SDNode *N, unsigned InsIndex) {
       InsIndex == 0 ? ScalarLoad->getPointerInfo()
                     : VecLoad->getPointerInfo().getWithOffset(EltSize / 8);
 
-  SDValue Load = DAG.getLoad(VecLoad->getValueType(0), DL,
-                             ScalarLoad->getChain(), Ptr, PtrInfo, NewAlign);
+  const MDNode *MemCacheHint = getCommonMemCacheHint({ScalarLoad, VecLoad});
+  SDValue Load =
+      DAG.getLoad(VecLoad->getValueType(0), DL, ScalarLoad->getChain(), Ptr,
+                  PtrInfo, NewAlign, MachineMemOperand::MONone,
+                  MMOMetadata(AAMDNodes(), nullptr, MemCacheHint));
   DAG.makeEquivalentMemoryOrdering(ScalarLoad, Load.getValue(1));
   DAG.makeEquivalentMemoryOrdering(VecLoad, Load.getValue(1));
   return Extend ? DAG.getNode(Extend, DL, VT, Load) : Load;
@@ -27751,6 +27805,8 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *WideMMO = MF.getMachineMemOperand(
       Base->getMemOperand(), /*Offset=*/0, WideVT.getStoreSize());
+  if (!getCommonMemCacheHint({LoadA, LoadB}))
+    WideMMO->clearMemCacheHint();
   SDValue WideLoad = DAG.getLoad(WideVT, SDLoc(N), Base->getChain(),
                                  Base->getBasePtr(), WideMMO);
   // Redirect old chain users to the new chain.
@@ -31232,11 +31288,13 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
       MMOFlags &= ~MachineMemOperand::MOInvariant;
     if (!RLD->isDereferenceable())
       MMOFlags &= ~MachineMemOperand::MODereferenceable;
+    const MDNode *MemCacheHint = getCommonMemCacheHint({LLD, RLD});
     if (LLD->getExtensionType() == ISD::NON_EXTLOAD) {
       // FIXME: Discards pointer and AA info.
       Load = DAG.getLoad(TheSelect->getValueType(0), SDLoc(TheSelect),
                          LLD->getChain(), Addr, MachinePointerInfo(AddrSpace),
-                         Alignment, MMOFlags);
+                         Alignment, MMOFlags,
+                         MMOMetadata(AAMDNodes(), nullptr, MemCacheHint));
     } else {
       // FIXME: Discards pointer and AA info.
       Load = DAG.getExtLoad(
@@ -31244,7 +31302,7 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
                                                   : LLD->getExtensionType(),
           SDLoc(TheSelect), TheSelect->getValueType(0), LLD->getChain(), Addr,
           MachinePointerInfo(AddrSpace), LLD->getMemoryVT(), Alignment,
-          MMOFlags);
+          MMOFlags, MMOMetadata(AAMDNodes(), nullptr, MemCacheHint));
     }
 
     // Users of the select now use the result of the load.
