@@ -51,9 +51,10 @@
 ; CHECK-LABEL: define amdgpu_kernel void @accumulated_ballot(
 ; CHECK: [[ENTRY_ACTIVE:%.+]] = call i1 @llvm.amdgcn.init.whole.wave()
 ; CHECK: [[ENTRY_BALLOT:%.+]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[ENTRY_ACTIVE]])
+; CHECK: [[ENTRY_WWM:%.+]] = call i64 @llvm.amdgcn.strict.wwm.i64(i64 [[ENTRY_BALLOT]])
 ; CHECK: [[ENTRY_BASE:%.+]] = and i32 [[LANE_ID:%.+]], -32
 ; CHECK: [[ENTRY_OFFSET:%.+]] = zext i32 [[ENTRY_BASE]] to i64
-; CHECK: [[ENTRY_SLICE:%.+]] = lshr i64 [[ENTRY_BALLOT]], [[ENTRY_OFFSET]]
+; CHECK: [[ENTRY_SLICE:%.+]] = lshr i64 [[ENTRY_WWM]], [[ENTRY_OFFSET]]
 ; CHECK: [[ENTRY:%.+]] = trunc i64 [[ENTRY_SLICE]] to i32
 accumulated_ballot:
  s_load_b64 s[4:5], s[0:1], 0
