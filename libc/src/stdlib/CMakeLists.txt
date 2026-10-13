@@ -55,18 +55,6 @@ add_entrypoint_object(
     .atexit
 )
 
-add_entrypoint_object(
-  getenv
-  SRCS
-    getenv.cpp
-  HDRS
-    getenv.h
-  DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    .environ_internal
-)
-
 # GCC-12 crashed when building environ_internal during GIMPLE pass: waccess.
 set(environ_internal_gcc12_workaround "")
 if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
@@ -81,11 +69,16 @@ set(environ_internal_deps
   libc.config.app_h
   libc.hdr.types.size_t
   libc.src.__support.alloc_checker
+  libc.src.__support.CPP.atomic
+  libc.src.__support.CPP.mutex
   libc.src.__support.CPP.new
   libc.src.__support.CPP.optional
+  libc.src.__support.CPP.span
   libc.src.__support.CPP.string_view
   libc.src.__support.macros.attributes
   libc.src.__support.macros.config
+  libc.src.__support.macros.sanitizer
+  libc.src.__support.threads.mutex
   libc.src.string.memory_utils.inline_memcpy
 )
 set(environ_internal_compile_options ${environ_internal_gcc12_workaround})
@@ -95,17 +88,31 @@ if("libc.src.unistd.environ" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
   list(APPEND environ_internal_compile_options "-DLIBC_COPT_SUPPORT_ENVIRON")
 endif()
 
-add_object_library(
-  environ_internal
-  SRCS
-    environ_internal.cpp
-  HDRS
-    environ_internal.h
-  COMPILE_OPTIONS
-    ${environ_internal_compile_options}
-  DEPENDS
-    ${environ_internal_deps}
-)
+if(TARGET libc.src.__support.threads.mutex)
+  add_object_library(
+    environ_internal
+    SRCS
+      environ_internal.cpp
+    HDRS
+      environ_internal.h
+    COMPILE_OPTIONS
+      ${environ_internal_compile_options}
+    DEPENDS
+      ${environ_internal_deps}
+  )
+
+  add_entrypoint_object(
+    getenv
+    SRCS
+      getenv.cpp
+    HDRS
+      getenv.h
+    DEPENDS
+      libc.src.__support.common
+      libc.src.__support.macros.config
+      .environ_internal
+  )
+endif()
 
 add_entrypoint_object(
   strfromf

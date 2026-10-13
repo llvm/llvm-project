@@ -13,10 +13,14 @@
 
 #include "src/stdlib/environ_internal.h"
 #include "config/app.h"
+#include "src/__support/CPP/mutex.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/alloc-checker.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/sanitizer.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #ifdef LIBC_COPT_SUPPORT_ENVIRON
 #include "src/unistd/environ.h"
@@ -35,7 +39,11 @@ constexpr size_t MIN_ENVIRON_CAPACITY = 32;
 constexpr size_t ENVIRON_GROWTH_FACTOR = 2;
 
 void EnvironmentManager::init_once() {
-  if (initialized)
+  if (initialized.load(cpp::MemoryOrder::ACQUIRE))
+    return;
+
+  cpp::lock_guard lock(env_lock);
+  if (initialized.load(cpp::MemoryOrder::RELAXED))
     return;
 
   // Count entries in the startup environ.
@@ -47,11 +55,11 @@ void EnvironmentManager::init_once() {
     count = c;
   }
 
-  initialized = true;
+  initialized.store(true, cpp::MemoryOrder::RELEASE);
 }
 
 EnvironmentManager &EnvironmentManager::get_instance() {
-  static EnvironmentManager mgr;
+  static LIBC_CONSTINIT EnvironmentManager mgr;
   mgr.init_once();
   return mgr;
 }
@@ -62,16 +70,25 @@ char **EnvironmentManager::get_array() {
   return reinterpret_cast<char **>(app.env_ptr);
 }
 
-EnvironmentManager::iterator EnvironmentManager::begin() { return get_array(); }
+EnvironmentManager::iterator EnvironmentManager::begin() {
+  cpp::lock_guard lock(env_lock);
+  return get_array();
+}
 
 EnvironmentManager::iterator EnvironmentManager::end() {
+  cpp::lock_guard lock(env_lock);
   char **env_array = get_array();
   return env_array ? env_array + count : nullptr;
 }
 
-size_t EnvironmentManager::size() const { return count; }
+size_t EnvironmentManager::size() {
+  cpp::lock_guard lock(env_lock);
+  return count;
+}
 
 char *EnvironmentManager::get(cpp::string_view name) {
+  cpp::lock_guard lock(env_lock);
+
   cpp::optional<size_t> idx = find_var(name);
   if (!idx)
     return nullptr;
@@ -83,7 +100,7 @@ cpp::optional<size_t> EnvironmentManager::find_var(cpp::string_view name) {
   if (!env_array)
     return cpp::nullopt;
 
-  for (size_t i = 0; i < count; i++) {
+  for (size_t i = 0; i < count; ++i) {
     cpp::string_view current(env_array[i]);
     if (current.starts_with(name) && current.size() > name.size() &&
         current[name.size()] == '=')
@@ -113,9 +130,12 @@ EnvironmentManager::alloc_and_copy(size_t new_capacity, char **old_storage,
     return cpp::nullopt;
   }
 
-  for (size_t i = 0; i < copy_count; i++) {
-    new_storage[i] = old_storage ? old_storage[i] : nullptr;
-    new_ownership[i] = old_ownership ? old_ownership[i] : EnvStringOwnership();
+  if (old_storage) {
+    for (size_t i = 0; i < copy_count; ++i) {
+      new_storage[i] = old_storage[i];
+      new_ownership[i] =
+          old_ownership ? old_ownership[i] : EnvStringOwnership();
+    }
   }
   new_storage[copy_count] = nullptr;
 
@@ -165,8 +185,8 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   if (!result)
     return false;
 
-  delete[] storage;
-  delete[] ownership;
+  char **old_storage = storage;
+  EnvStringOwnership *old_ownership = ownership;
 
   auto [new_storage, new_ownership] = *result;
   storage = new_storage;
@@ -179,11 +199,19 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   environ = storage;
 #endif
 
+  // Old storage is intentionally retained so callers holding a reference
+  // to the previous environ array do not encounter use-after-free.
+  // We free old_ownership since it is internal to EnvironmentManager.
+  delete[] old_ownership;
+  LIBC_LSAN_IGNORE_OBJECT(old_storage);
+
   return true;
 }
 
 int EnvironmentManager::set(cpp::string_view name, cpp::string_view value,
                             bool overwrite) {
+  cpp::lock_guard lock(env_lock);
+
   cpp::optional<size_t> idx = find_var(name);
 
   // If the variable exists and we're not overwriting, do nothing.
@@ -232,6 +260,11 @@ int EnvironmentManager::set(cpp::string_view name, cpp::string_view value,
 }
 
 int EnvironmentManager::unset(cpp::string_view name) {
+  cpp::lock_guard lock(env_lock);
+  return unset_unlocked(name);
+}
+
+int EnvironmentManager::unset_unlocked(cpp::string_view name) {
   cpp::optional<size_t> idx = find_var(name);
   if (!idx)
     return 0; // Variable not found; POSIX defines this as success.
@@ -267,12 +300,14 @@ int EnvironmentManager::unset(cpp::string_view name) {
 }
 
 int EnvironmentManager::put(char *string) {
+  cpp::lock_guard lock(env_lock);
+
   cpp::string_view sv(string);
   size_t eq_pos = sv.find_first_of('=');
 
   // No '=' found: treat as unset (POSIX behavior).
   if (eq_pos == cpp::string_view::npos)
-    return unset(sv);
+    return unset_unlocked(sv);
 
   cpp::string_view name = sv.substr(0, eq_pos);
 
@@ -303,10 +338,14 @@ int EnvironmentManager::put(char *string) {
 }
 
 int EnvironmentManager::clear() {
-  init_once();
+  cpp::lock_guard lock(env_lock);
 
   // Free the pointer array, but leave the string buffers intact so that
   // existing getenv pointers remain valid.
+  if (storage) {
+    for (char *entry : cpp::span<char *>(storage, count))
+      LIBC_LSAN_IGNORE_OBJECT(entry);
+  }
   delete[] storage;
   delete[] ownership;
   storage = nullptr;
