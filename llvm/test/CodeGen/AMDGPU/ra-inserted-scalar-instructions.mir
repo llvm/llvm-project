@@ -3,6 +3,8 @@
 
 # The spills/copies during RA for scalar register block LiveIns should be inserted at the beginning of the block.
 # The COPY inserted in bb.9 during liverange split should precede the SPILL that was inserted earlier in the flow.
+# The sub1-only copy in bb.0 spills just word 1 at byte offset 4, preserving
+# the slot's other word until the later definition supplies it.
 
 ---
 name:            test_kernel
@@ -140,7 +142,7 @@ body:             |
   ; GCN-NEXT:   dead undef [[DEF1:%[0-9]+]].sub1:vreg_64 = IMPLICIT_DEF
   ; GCN-NEXT:   SI_SPILL_S32_SAVE $sgpr1, %stack.15, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.15, addrspace 5)
   ; GCN-NEXT:   undef [[COPY:%[0-9]+]].sub1:sgpr_64 = COPY $sgpr0
-  ; GCN-NEXT:   SI_SPILL_S64_SAVE [[COPY]], %stack.2, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.2, align 4, addrspace 5)
+  ; GCN-NEXT:   SI_SPILL_S32_SAVE_PARTIAL [[COPY]].sub1, %stack.2, 1, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.2 + 4, addrspace 5), (load (s64) from %stack.2, align 4, addrspace 5)
   ; GCN-NEXT:   undef [[V_READFIRSTLANE_B32_:%[0-9]+]].sub0:sgpr_64 = V_READFIRSTLANE_B32 undef [[DEF]], implicit $exec
   ; GCN-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]].sub1:sgpr_64 = V_READFIRSTLANE_B32 undef [[DEF]], implicit $exec
   ; GCN-NEXT:   undef [[V_READFIRSTLANE_B32_1:%[0-9]+]].sub0:sgpr_64 = V_READFIRSTLANE_B32 undef [[DEF]], implicit $exec

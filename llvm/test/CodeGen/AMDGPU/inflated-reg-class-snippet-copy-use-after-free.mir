@@ -96,10 +96,13 @@ body:             |
 
 # This test is similar to except it is still broken when the use
 # instruction does not read the full set of lanes after one attempted fix.
+# AV512 has no lane-preserving spill hook. Retain the lane-subset split copy
+# and spill its child while still checking the last-chance recoloring failure.
 
 # CHECK-LABEL: name: inflated_reg_class_copy_use_after_free_lane_subset
 # CHECK: S_NOP 0, implicit-def [[ORIG_REG:%[0-9]+]].sub0_sub1_sub2_sub3
-# CHECK-NEXT: SI_SPILL_AV512_SAVE [[ORIG_REG]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: undef [[SPILL_CHILD:%[0-9]+]].sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7:av_512_align2 = lr-split COPY [[ORIG_REG]].sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7
+# CHECK-NEXT: SI_SPILL_AV512_SAVE [[SPILL_CHILD]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.0, align 4, addrspace 5)
 # CHECK-NEXT: [[RESTORE_0:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
 # CHECK-NEXT: S_NOP 0, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit [[RESTORE_0]].sub0_sub1_sub2_sub3, implicit [[RESTORE_0]].sub4_sub5_sub6_sub7
 # CHECK-NEXT: undef [[SPLIT0:%[0-9]+]].sub2_sub3:av_512_align2 = lr-split COPY undef $vgpr2_vgpr3 {

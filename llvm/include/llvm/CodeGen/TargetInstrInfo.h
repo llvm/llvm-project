@@ -1225,12 +1225,31 @@ public:
   /// can be passed elsewhere. The \p Flags is used to set appropriate machine
   /// flags on the spill instruction e.g. FrameSetup flag on a callee saved
   /// register spill instruction, part of prologue, during the frame lowering.
-  virtual void storeRegToStackSlot(
-      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
-      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
+  ///
+  /// \p Lanes limits the spill to those lanes of \p SrcReg (RC lane numbering,
+  /// not a byte offset); the default LaneBitmask::getAll() spills the whole
+  /// register. A target opting in via canStoreRegToStackSlotWithLanes may get a
+  /// narrower mask and must store exactly those lanes, preserving the rest of
+  /// the slot. It must not widen the store, nor report the partial store as
+  /// complete via isStoreToStackSlot.
+  virtual void
+  storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                      Register SrcReg, bool isKill, int FrameIndex,
+                      const TargetRegisterClass *RC, Register VReg,
+                      MachineInstr::MIFlag Flags = MachineInstr::NoFlags,
+                      LaneBitmask Lanes = LaneBitmask::getAll()) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::storeRegToStackSlot!");
+  }
+
+  /// Whether the target can spill exactly Lanes of RC while preserving the
+  /// other lanes of the original stack slot. Lanes uses RC's lane numbering;
+  /// it is not a byte offset. In particular, a target must not round this mask
+  /// up to a wider store. A target which opts in receives the narrower mask
+  /// through storeRegToStackSlot's \p Lanes parameter.
+  virtual bool canStoreRegToStackSlotWithLanes(const TargetRegisterClass *RC,
+                                               LaneBitmask Lanes) const {
+    return false;
   }
 
   /// Load the specified register of the given register class from the specified

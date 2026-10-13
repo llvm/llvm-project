@@ -43,10 +43,12 @@ public:
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
-  void storeRegToStackSlot(
-      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-      bool IsKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
-      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
+  void
+  storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                      Register SrcReg, bool IsKill, int FrameIndex,
+                      const TargetRegisterClass *RC, Register VReg,
+                      MachineInstr::MIFlag Flags = MachineInstr::NoFlags,
+                      LaneBitmask Lanes = LaneBitmask::getAll()) const override;
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DstReg,
       int FrameIndex, const TargetRegisterClass *RC, Register VReg,

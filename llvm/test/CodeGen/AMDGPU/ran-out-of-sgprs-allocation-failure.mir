@@ -52,7 +52,8 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_1024_align2 = COPY renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, implicit $exec
   ; CHECK-NEXT:   renamable $sgpr22_sgpr23 = V_CMP_NE_U32_e64 1, undef %18:vgpr_32, implicit $exec
   ; CHECK-NEXT:   renamable $sgpr53 = S_MOV_B32 1083786240
-  ; CHECK-NEXT:   SI_SPILL_S1024_SAVE renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.5, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.5, align 4, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_S32_SAVE_PARTIAL renamable $sgpr52, %stack.5, 16, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.5 + 64, addrspace 5), (load (s1024) from %stack.5, align 4, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_S32_SAVE_PARTIAL killed renamable $sgpr53, %stack.5, 17, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.5 + 68, addrspace 5), (load (s1024) from %stack.5, align 4, addrspace 5)
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

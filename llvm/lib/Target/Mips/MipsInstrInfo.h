@@ -152,7 +152,8 @@ public:
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
       bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
-      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override {
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags,
+      LaneBitmask Lanes = LaneBitmask::getAll()) const override {
     storeRegToStack(MBB, MBBI, SrcReg, isKill, FrameIndex, RC, 0, Flags);
   }
 

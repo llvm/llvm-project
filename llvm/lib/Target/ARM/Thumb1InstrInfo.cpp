@@ -116,12 +116,10 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 }
 
-void Thumb1InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator I,
-                                          Register SrcReg, bool isKill, int FI,
-                                          const TargetRegisterClass *RC,
-                                          Register VReg,
-                                          MachineInstr::MIFlag Flags) const {
+void Thumb1InstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
+    bool isKill, int FI, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags, LaneBitmask Lanes) const {
   assert((RC == &ARM::tGPRRegClass ||
           (SrcReg.isPhysical() && isARMLowRegister(SrcReg))) &&
          "Unknown regclass!");

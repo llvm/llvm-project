@@ -1821,9 +1821,66 @@ void SIInstrInfo::storeRegToStackSlotImpl(
 void SIInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
-    MachineInstr::MIFlag Flags) const {
+    MachineInstr::MIFlag Flags, LaneBitmask Lanes) const {
+  // A narrower-than-full mask requests a partial spill that preserves the
+  // other words of the shared slot. Otherwise emit the ordinary full-width
+  // store, including when this class does not support partial spills.
+  if (Lanes != LaneBitmask::getAll() &&
+      canStoreRegToStackSlotWithLanes(RC, Lanes)) {
+    MachineFunction &MF = *MBB.getParent();
+    SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+    MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+    if (FrameInfo.getStackID(FrameIndex) == TargetStackID::SGPRSpill)
+      MFI.setHasSpilledSGPRs();
+    const DebugLoc &DL = MBB.findDebugLoc(MI);
+
+    auto Parts = RI.getRegSplitParts(RC, 4);
+    for (unsigned Word = 0; Word != Parts.size(); ++Word) {
+      unsigned SubReg = Parts[Word];
+      LaneBitmask WordLanes = RI.getSubRegIndexLaneMask(SubReg);
+      if ((Lanes & WordLanes).none())
+        continue;
+      Lanes &= ~WordLanes;
+      MachinePointerInfo PtrInfo =
+          MachinePointerInfo::getFixedStack(MF, FrameIndex, Word * 4);
+      auto *StoreMMO = MF.getMachineMemOperand(
+          PtrInfo, MachineMemOperand::MOStore, 4,
+          commonAlignment(FrameInfo.getObjectAlign(FrameIndex), Word * 4));
+      // The scratch fallback without an EXEC-save register preserves the other
+      // slot words by reading them into its already-scavenged VGPR.
+      auto *LoadMMO = MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, FrameIndex),
+          MachineMemOperand::MOLoad, FrameInfo.getObjectSize(FrameIndex),
+          FrameInfo.getObjectAlign(FrameIndex));
+      BuildMI(MBB, MI, DL, get(AMDGPU::SI_SPILL_S32_SAVE_PARTIAL))
+          .addReg(SrcReg, getKillRegState(isKill && Lanes.none()), SubReg)
+          .addFrameIndex(FrameIndex)
+          .addImm(Word)
+          .addMemOperand(StoreMMO)
+          .addMemOperand(LoadMMO)
+          .addReg(MFI.getStackPtrOffsetReg(), RegState::Implicit);
+    }
+    return;
+  }
+
   storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC, VReg, Flags,
                           false);
+}
+
+bool SIInstrInfo::canStoreRegToStackSlotWithLanes(const TargetRegisterClass *RC,
+                                                  LaneBitmask Lanes) const {
+  if (!RI.isSGPRClass(RC) || RI.getSpillSize(*RC) <= 4)
+    return false;
+
+  // SGPR tuples split into 32-bit words. Never turn a partial-word mask into
+  // a full-word store: such masks need a different preservation mechanism.
+  for (int16_t SubReg : RI.getRegSplitParts(RC, 4)) {
+    LaneBitmask Word = RI.getSubRegIndexLaneMask(SubReg);
+    if ((Lanes & Word).any() && (Lanes & Word) != Word)
+      return false;
+    Lanes &= ~Word;
+  }
+  return Lanes.none();
 }
 
 void SIInstrInfo::storeRegToStackSlotCFI(MachineBasicBlock &MBB,
@@ -10293,7 +10350,7 @@ Register SIInstrInfo::isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex,
 Register SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                           int &FrameIndex,
                                           TypeSize &MemBytes) const {
-  if (!MI.mayLoad())
+  if (!MI.mayLoad() || MI.getOpcode() == AMDGPU::SI_SPILL_S32_SAVE_PARTIAL)
     return Register();
 
   if (isMUBUF(MI) || isVGPRSpill(MI))
@@ -10308,7 +10365,7 @@ Register SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                          int &FrameIndex,
                                          TypeSize &MemBytes) const {
-  if (!MI.mayStore())
+  if (!MI.mayStore() || MI.getOpcode() == AMDGPU::SI_SPILL_S32_SAVE_PARTIAL)
     return Register();
 
   if (isMUBUF(MI) || isVGPRSpill(MI))

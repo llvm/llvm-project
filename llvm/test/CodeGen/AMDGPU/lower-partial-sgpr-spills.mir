@@ -1,0 +1,127 @@
+# RUN: llc -mtriple=amdgpu11.51-amd-amdhsa -verify-machineinstrs -run-pass=si-lower-sgpr-spills %s -o - | FileCheck %s --check-prefix=LANES
+# RUN: llc -mtriple=amdgpu11.51-amd-amdhsa -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs -run-pass=prolog-epilog %s -o - | FileCheck %s --check-prefix=SCRATCH
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs -run-pass=prolog-epilog %s -o - | FileCheck %s --check-prefix=BUFFER
+# RUN: llc -mtriple=amdgpu11.51-amd-amdhsa -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs -start-before=prolog-epilog -filetype=null %s
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs -start-before=prolog-epilog -filetype=null %s
+#
+# A full tuple initializes the slot, then words 1 and 3 are replaced with new
+# values. The full restore must observe the initial words 0 and 2, along with
+# the new words 1 and 3. Scratch maps tuple words to wave lanes, not successive
+# scratch byte offsets; the partial spill must select the original lane.
+# LANES-LABEL: name: update_words
+# LANES: [[V:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, [[V]]
+# LANES-NEXT: [[V]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr5, 1, [[V]]
+# LANES-NEXT: [[V]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr6, 2, [[V]]
+# LANES-NEXT: [[V]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr7, 3, [[V]]
+# LANES-NEXT: [[V]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr8, 1, [[V]]
+# LANES-NEXT: [[V]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr9, 3, [[V]]
+# LANES-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR [[V]], 0
+# LANES-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR [[V]], 1
+# LANES-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR [[V]], 2
+# LANES-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR [[V]], 3
+#
+# SCRATCH-LABEL: name: update_words
+# SCRATCH: $exec_lo = S_MOV_B32 2,
+# SCRATCH-NEXT: SCRATCH_STORE_DWORD_ST {{.*}}%stack.1
+# SCRATCH-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr8, 1, undef $vgpr0
+# SCRATCH-NEXT: SCRATCH_STORE_DWORD_ST killed $vgpr0, 0, 0, {{.*}}%stack.0
+# SCRATCH: $exec_lo = S_MOV_B32 8,
+# SCRATCH-NEXT: SCRATCH_STORE_DWORD_ST {{.*}}%stack.1
+# SCRATCH-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr9, 3, undef $vgpr0
+# SCRATCH-NEXT: SCRATCH_STORE_DWORD_ST killed $vgpr0, 0, 0, {{.*}}%stack.0
+# SCRATCH: $exec_lo = S_MOV_B32 15,
+# SCRATCH: $vgpr0 = SCRATCH_LOAD_DWORD_ST 0, 0, {{.*}}%stack.0
+# SCRATCH-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0
+# SCRATCH-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+# SCRATCH-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+# SCRATCH-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 3
+#
+# BUFFER-LABEL: name: update_words
+# BUFFER: $exec = S_MOV_B64 2,
+# BUFFER-NEXT: BUFFER_STORE_DWORD_OFFSET {{.*}}%stack.1
+# BUFFER-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr8, 1, undef $vgpr0
+# BUFFER-NEXT: BUFFER_STORE_DWORD_OFFSET {{.*}}%stack.0
+# BUFFER: $exec = S_MOV_B64 8,
+# BUFFER-NEXT: BUFFER_STORE_DWORD_OFFSET {{.*}}%stack.1
+# BUFFER-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr9, 3, undef $vgpr0
+# BUFFER-NEXT: BUFFER_STORE_DWORD_OFFSET {{.*}}%stack.0
+# BUFFER: $exec = S_MOV_B64 15,
+# BUFFER: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET {{.*}}%stack.0
+# BUFFER-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0
+# BUFFER-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
+# BUFFER-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
+# BUFFER-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 3
+---
+name: update_words
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  hasSpilledSGPRs: true
+  scratchRSrcReg: $sgpr96_sgpr97_sgpr98_sgpr99
+  frameOffsetReg: $sgpr33
+  stackPtrOffsetReg: $sgpr32
+body: |
+  bb.0:
+    liveins: $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, $sgpr9
+    SI_SPILL_S128_SAVE $sgpr4_sgpr5_sgpr6_sgpr7, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s128) into %stack.0, align 4, addrspace 5)
+    SI_SPILL_S32_SAVE_PARTIAL $sgpr8, %stack.0, 1, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.0 + 4, addrspace 5), (load (s128) from %stack.0, align 4, addrspace 5)
+    SI_SPILL_S32_SAVE_PARTIAL $sgpr9, %stack.0, 3, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.0 + 12, addrspace 5), (load (s128) from %stack.0, align 4, addrspace 5)
+    $sgpr12_sgpr13_sgpr14_sgpr15 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s128) from %stack.0, align 4, addrspace 5)
+    KILL $sgpr12_sgpr13_sgpr14_sgpr15
+    S_ENDPGM 0
+...
+# All allocatable SGPRs stay live across the update, so scratch lowering
+# cannot save EXEC in an SGPR. It must read the existing slot into the
+# emergency VGPR before changing lane 3 and writing it back.
+# LANES-LABEL: name: no_exec_save_register
+# LANES: [[V:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr7, 3, [[V]]
+# LANES-NEXT: [[V]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr8, 3, [[V]]
+# LANES: $sgpr12 = SI_RESTORE_S32_FROM_VGPR [[V]], 0
+# LANES-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR [[V]], 1
+# LANES-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR [[V]], 2
+# LANES-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR [[V]], 3
+#
+# SCRATCH-LABEL: name: no_exec_save_register
+# SCRATCH: $vgpr0 = SCRATCH_LOAD_DWORD_ST 0, 0, {{.*}}%stack.0
+# SCRATCH-NEXT: $exec_lo = S_NOT_B32 $exec_lo
+# SCRATCH-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_ST 0, 0, {{.*}}%stack.0
+# SCRATCH-NEXT: $exec_lo = S_NOT_B32 $exec_lo
+# SCRATCH-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr8, 3, $vgpr0
+# SCRATCH-NEXT: SCRATCH_STORE_DWORD_ST $vgpr0, 0, 0, {{.*}}%stack.0
+# SCRATCH-NEXT: $exec_lo = S_NOT_B32 $exec_lo
+# SCRATCH-NEXT: SCRATCH_STORE_DWORD_ST killed $vgpr0, 0, 0, {{.*}}%stack.0
+#
+# BUFFER-LABEL: name: no_exec_save_register
+# BUFFER: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET {{.*}}%stack.0
+# BUFFER-NEXT: $exec = S_NOT_B64 $exec
+# BUFFER-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET {{.*}}%stack.0
+# BUFFER-NEXT: $exec = S_NOT_B64 $exec
+# BUFFER-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr8, 3, $vgpr0
+# BUFFER-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, {{.*}}%stack.0
+# BUFFER-NEXT: $exec = S_NOT_B64 $exec
+# BUFFER-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, {{.*}}%stack.0
+---
+name: no_exec_save_register
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  hasSpilledSGPRs: true
+  scratchRSrcReg: $sgpr96_sgpr97_sgpr98_sgpr99
+  frameOffsetReg: $sgpr33
+  stackPtrOffsetReg: $sgpr32
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr32, $sgpr33, $sgpr34, $sgpr35, $sgpr36, $sgpr37, $sgpr38, $sgpr39, $sgpr40, $sgpr41, $sgpr42, $sgpr43, $sgpr44, $sgpr45, $sgpr46, $sgpr47, $sgpr48, $sgpr49, $sgpr50, $sgpr51, $sgpr52, $sgpr53, $sgpr54, $sgpr55, $sgpr56, $sgpr57, $sgpr58, $sgpr59, $sgpr60, $sgpr61, $sgpr62, $sgpr63, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $sgpr96, $sgpr97, $sgpr98, $sgpr99, $sgpr100, $sgpr101, $sgpr102, $sgpr103, $sgpr104, $sgpr105
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vcc = IMPLICIT_DEF
+    SI_SPILL_S128_SAVE $sgpr4_sgpr5_sgpr6_sgpr7, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s128) into %stack.0, align 4, addrspace 5)
+    SI_SPILL_S32_SAVE_PARTIAL $sgpr8, %stack.0, 3, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.0 + 12, addrspace 5), (load (s128) from %stack.0, align 4, addrspace 5)
+    KILL $vcc, $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr32, $sgpr33, $sgpr34, $sgpr35, $sgpr36, $sgpr37, $sgpr38, $sgpr39, $sgpr40, $sgpr41, $sgpr42, $sgpr43, $sgpr44, $sgpr45, $sgpr46, $sgpr47, $sgpr48, $sgpr49, $sgpr50, $sgpr51, $sgpr52, $sgpr53, $sgpr54, $sgpr55, $sgpr56, $sgpr57, $sgpr58, $sgpr59, $sgpr60, $sgpr61, $sgpr62, $sgpr63, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $sgpr96, $sgpr97, $sgpr98, $sgpr99, $sgpr100, $sgpr101, $sgpr102, $sgpr103, $sgpr104, $sgpr105
+    $sgpr12_sgpr13_sgpr14_sgpr15 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s128) from %stack.0, align 4, addrspace 5)
+    KILL $sgpr12_sgpr13_sgpr14_sgpr15
+    S_ENDPGM 0
+...

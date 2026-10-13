@@ -664,12 +664,10 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   llvm_unreachable("Impossible reg-to-reg copy");
 }
 
-void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                         MachineBasicBlock::iterator I,
-                                         Register SrcReg, bool IsKill, int FI,
-                                         const TargetRegisterClass *RC,
-                                         Register VReg,
-                                         MachineInstr::MIFlag Flags) const {
+void RISCVInstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
+    bool IsKill, int FI, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags, LaneBitmask Lanes) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
   Align Alignment = MFI.getObjectAlign(FI);
