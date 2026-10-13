@@ -18,6 +18,7 @@ can spell the compiler several ways, so several names lead to the same shim:
 ```text
 cc, clang, c++, clang++  ->  clang
 ld                       ->  ld
+ar                       ->  ar
 ```
 
 It also writes the configuration for the shims into a JSON document and puts
@@ -48,11 +49,11 @@ split by what they do:
 
 ```text
 shim.py          the Shim class, its diagnostics, merge_edits
-commands.py      Files, is_object, artifact_of, summary_of,
+commands.py      Files, is_object, is_archive, artifact_of, summary_of,
                  filter_build_artifacts, unique
 driver_jobs.py   Job and the -### listing reader
 run.py           run_shim
-clang.py ld.py
+clang.py ld.py ar.py
 ```
 
 Every shim has the same shape, which `run_shim` implements: run the tool the
@@ -96,10 +97,11 @@ run it, and there is no SSAF step for its tool.
 
 ## Recording what the build assembled
 
-`ld` reads its command line for the artifact it produces and the artifacts it
-consumes, and records them in `<output-dir>/build-graph/<path>.buildstep.json`.
-The top-most link unit is found from these records, and they tell an artifact
-the build assembled from one it never touched.
+`ld` and `ar` each read their command line for the artifact it produces and
+the artifacts it consumes, and record them in
+`<output-dir>/build-graph/<path>.buildstep.json`. The top-most link unit is
+found from these records, and they tell an artifact the build assembled from
+one it never touched.
 
 Everything a shim writes is named for a build artifact's path plus a suffix,
 such as `ssaf-artifacts/<path>.summary.json`.
@@ -127,7 +129,8 @@ The kind says what went wrong; the kinds are the values of `SSAFFailureKind`:
 extract      summary extraction for a compilation
 transform    source-edit generation for a compilation
 link         clang-ssaf-linker over a link's inputs
-merge        clang-ssaf-src-edit-merge over a link's inputs
+archive      the same for an archive
+merge        clang-ssaf-src-edit-merge over a link's or an archive's inputs
 forward      handing a job to the shim that stands in for its tool
 missing      an artifact with nothing analysed behind it
 driver-jobs  the driver refused to list a command's jobs
