@@ -1271,6 +1271,18 @@ bool SITargetLowering::isShuffleMaskLegal(ArrayRef<int>, EVT) const {
   return false;
 }
 
+EVT SITargetLowering::getLoadExtIntermediateType(
+    LLVMContext &Context, EVT DestVT, EVT SrcVT,
+    ISD::LoadExtType ExtType) const {
+  // For extending loads to i64 from i8/i16, use i32 as the intermediate type
+  // since AMDGPU subword loads always extend to i32.
+  if (DestVT == MVT::i64 && (SrcVT == MVT::i8 || SrcVT == MVT::i16))
+    return MVT::i32;
+
+  return TargetLowering::getLoadExtIntermediateType(Context, DestVT, SrcVT,
+                                                    ExtType);
+}
+
 MVT SITargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                     CallingConv::ID CC,
                                                     EVT VT) const {
