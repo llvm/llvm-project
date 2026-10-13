@@ -34,8 +34,8 @@ constexpr bool test() {
   assert(std::format("{:>5}", 42) == "   42");
 
   // bool and char
-  // assert(std::format("{}", true) == "true");
-  // assert(std::format("{}", 'a') == "a");
+  assert(std::format("{}", true) == "true");
+  assert(std::format("{}", 'a') == "a");
 
   // Strings
   // assert(std::format("{}", "abc") == "abc");

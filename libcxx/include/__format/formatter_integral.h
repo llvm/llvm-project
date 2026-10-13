@@ -126,7 +126,7 @@ _LIBCPP_HIDE_FROM_ABI inline string __determine_grouping(ptrdiff_t __size, const
 //
 
 template <__fmt_char_type _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
+_LIBCPP_HIDE_FROM_ABI constexpr auto
 __format_char(integral auto __value,
               output_iterator<const _CharT&> auto __out_it,
               __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
@@ -423,7 +423,7 @@ struct __bool_strings<wchar_t> {
 #  endif
 
 template <class _CharT, class _FormatContext>
-_LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+_LIBCPP_HIDE_FROM_ABI constexpr typename _FormatContext::iterator
 __format_bool(bool __value, _FormatContext& __ctx, __format_spec::__parsed_specifications<_CharT> __specs) {
 #  if _LIBCPP_HAS_LOCALIZATION
   if (__specs.__std_.__locale_specific_form_) {
