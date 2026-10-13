@@ -76,34 +76,38 @@ subroutine target_inner_parallel()
 end subroutine
 
 ! A selected TARGET from a metadirective that precedes every executable
-! statement keeps its source position before an inner TEAMS.
-! CHECK-LABEL: func.func @_QPdeclarative_target_teams()
+! statement keeps its source position before an inner PARALLEL.
+! CHECK-LABEL: func.func @_QPdeclarative_target_parallel()
 ! CHECK: omp.target
-! CHECK: omp.teams
+! CHECK: omp.parallel
 ! CHECK: omp.taskyield
 ! CHECK: return
-subroutine declarative_target_teams()
+subroutine declarative_target_parallel()
   !$omp metadirective when(implementation={vendor(llvm)}: target)
   block
-    !$omp teams
-      !$omp metadirective when(construct={target, teams}: taskyield) &
+    !$omp parallel
+      !$omp metadirective when(construct={target, parallel}: taskyield) &
       !$omp& default(nothing)
-    !$omp end teams
+    !$omp end parallel
   end block
 end subroutine
 
 ! A BLOCK associated with a selected TARGET is mapped like a direct TARGET body.
+! The TARGET region's binding of x does not outlive it.
 ! CHECK-LABEL: func.func @_QPselected_target_block(
+! CHECK: %[[X:[0-9]+]]{{(:2)?}} = {{(hlfir|fir)}}.declare %{{.*}} uniq_name("_QFselected_target_blockEx")
 ! CHECK: %[[MAP:.*]] = omp.map.info {{.*}}name("x")
 ! CHECK: omp.target {{.*}}map_entries(%[[MAP]] -> %[[ARG:.*]] : !fir.ref<i32>) {
 ! CHECK: {{(hlfir|fir)}}.declare %[[ARG]] uniq_name("_QFselected_target_blockEx")
 ! CHECK: omp.terminator
+! CHECK: fir.load %[[X]]{{(#0)?}} :
 subroutine selected_target_block(x)
   integer :: x
   !$omp metadirective when(implementation={vendor(llvm)}: target)
   block
     x = x + 1
   end block
+  x = x + 2
 end subroutine
 
 ! A named constant with a dynamic substring in the BLOCK is mapped.
@@ -141,5 +145,6 @@ contains
     block
       y = y + 1
     end block
+    y = y + 2
   end subroutine
 end module

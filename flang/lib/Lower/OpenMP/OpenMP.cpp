@@ -7892,6 +7892,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpMetadirectiveDirective &meta) {
+  // The declarative entry point has no scope for a selected variant's bindings.
+  lower::SymMapScope scope(symTable);
   genMetadirective(converter, symTable, semaCtx, eval, meta.v.Clauses());
 }
 
