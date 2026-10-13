@@ -643,17 +643,33 @@ define <8 x half> @lhs_dup_complex_v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x 
   ret <8 x half> %result
 }
 
-define <4 x float> @lhs_dup_complex_v4f32_wraparound(<4 x float> %acc, <4 x float> %lhs, <4 x float> %rhs) {
-; CHECK-LE-SD-LABEL: lhs_dup_complex_v4f32_wraparound:
+define <4 x float> @lhs_dup_complex_v4f32_rot270_rot0(<4 x float> %acc, <4 x float> %lhs, <4 x float> %rhs) {
+; CHECK-LE-SD-LABEL: lhs_dup_complex_v4f32_rot270_rot0:
 ; CHECK-LE-SD:       // %bb.0:
-; CHECK-LE-SD-NEXT:    fcmla v0.4s, v2.4s, v1.s[1], #270
-; CHECK-LE-SD-NEXT:    fcmla v0.4s, v2.4s, v1.s[1], #0
+; CHECK-LE-SD-NEXT:    dup v1.2d, v1.d[1]
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #270
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #0
 ; CHECK-LE-SD-NEXT:    ret
   %lhs.i64 = bitcast <4 x float> %lhs to <2 x i64>
   %lhs.dup = shufflevector <2 x i64> %lhs.i64, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
   %lhs.complex = bitcast <2 x i64> %lhs.dup to <4 x float>
   %partial = call <4 x float> @llvm.aarch64.neon.vcmla.rot270.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
   %result = call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
+  ret <4 x float> %result
+}
+
+define <4 x float> @lhs_dup_complex_v4f32_rot90_rot180(<4 x float> %acc, <4 x float> %lhs, <4 x float> %rhs) {
+; CHECK-LE-SD-LABEL: lhs_dup_complex_v4f32_rot90_rot180:
+; CHECK-LE-SD:       // %bb.0:
+; CHECK-LE-SD-NEXT:    dup v1.2d, v1.d[1]
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #90
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #180
+; CHECK-LE-SD-NEXT:    ret
+  %lhs.i64 = bitcast <4 x float> %lhs to <2 x i64>
+  %lhs.dup = shufflevector <2 x i64> %lhs.i64, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
+  %lhs.complex = bitcast <2 x i64> %lhs.dup to <4 x float>
+  %partial = call <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
+  %result = call <4 x float> @llvm.aarch64.neon.vcmla.rot180.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
   ret <4 x float> %result
 }
 

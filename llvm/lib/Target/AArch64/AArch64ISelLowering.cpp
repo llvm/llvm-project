@@ -25334,10 +25334,11 @@ static bool isDuplicatedComplexOperand(SDValue Op) {
   }
 }
 
-// A pair of FCMLAs with orthogonal rotations represents a complex multiply
-// (possibly with one operand conjugated), so the multiplicands can be swapped.
-// Canonicalize a duplicated LHS to the RHS, where the existing instruction
-// patterns can select indexed FCMLAs.
+// A pair of FCMLAs with rotations {0, 90} or {180, 270} represents a complex
+// multiply, so the multiplicands can be swapped. Other orthogonal rotation
+// pairs conjugate one particular operand and are not symmetric. Canonicalize a
+// duplicated LHS to the RHS, where the existing instruction patterns can
+// select indexed FCMLAs.
 static SDValue performNeonFCMLACombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI) {
   int SecondRotation = getNeonFCMLARotation(getIntrinsicID(N));
@@ -25348,7 +25349,8 @@ static SDValue performNeonFCMLACombine(SDNode *N,
     return SDValue();
 
   int FirstRotation = getNeonFCMLARotation(getIntrinsicID(First.getNode()));
-  if (FirstRotation < 0 || (FirstRotation & 1) == (SecondRotation & 1))
+  if (FirstRotation < 0 || FirstRotation / 2 != SecondRotation / 2 ||
+      FirstRotation == SecondRotation)
     return SDValue();
 
   SDValue LHS = N->getOperand(2);
