@@ -71,21 +71,19 @@ void RTDEF(CUFRegisterHostMemoryRange)(void *begin, void *end) {
     return;
   // Registering a page that holds other data would break copies of that data
   // that extend past the page. The compiler aligns the start of the range and
-  // the global ending it, at end - 1, to a page boundary, so that only whole
-  // pages within the range need to be registered. If the pages are larger than
-  // that alignment, or the objects predate it, every page overlapping the range
-  // is registered instead, so that all of it remains readable by the device.
+  // the global ending it, at end - 1, to a page boundary, so that only the
+  // pages from the start up to that global need to be registered. An edge
+  // that is not aligned, because the pages are larger than that alignment or
+  // the objects predate it, can share its page with other data. That page is
+  // registered anyway: the device faults on type information that is not
+  // registered, whereas only copies extending past the page fail otherwise.
   const auto pageSize{static_cast<std::uintptr_t>(sysconf(_SC_PAGESIZE))};
   const auto beginAddr{reinterpret_cast<std::uintptr_t>(begin)};
   const auto endAddr{reinterpret_cast<std::uintptr_t>(end)};
-  std::uintptr_t first, last;
-  if (beginAddr % pageSize == 0 && (endAddr - 1) % pageSize == 0) {
-    first = beginAddr;
-    last = endAddr - 1;
-  } else {
-    first = beginAddr & ~(pageSize - 1);
-    last = (endAddr + pageSize - 1) & ~(pageSize - 1);
-  }
+  const std::uintptr_t first{beginAddr & ~(pageSize - 1)};
+  const std::uintptr_t last{(endAddr - 1) % pageSize == 0
+          ? endAddr - 1
+          : (endAddr + pageSize - 1) & ~(pageSize - 1)};
   if (last <= first)
     return;
   cudaError_t err{cudaHostRegister(reinterpret_cast<void *>(first),
