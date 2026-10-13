@@ -617,6 +617,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
       .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
       .clampScalar(0, sXLen, sXLen)
+      .minScalar(1, s32)
       .libcallFor({{sXLen, s32}, {sXLen, s64}})
       .libcallFor(ST.is64Bit(), {{sXLen, s128}});
 
