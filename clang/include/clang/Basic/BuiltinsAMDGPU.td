@@ -1171,8 +1171,8 @@ def __builtin_amdgcn_permlane_xor : AMDGPUBuiltin<"int(int, int, int)", [Const],
 def __builtin_amdgcn_permlane_idx_gen : AMDGPUBuiltin<"int(int, int)", [Const], "gfx1250-insts,wavefrontsize32">;
 
 def __builtin_amdgcn_perm_pk16_b4_u4 : AMDGPUBuiltin<"_ExtVector<2, unsigned int>(unsigned int, unsigned int, _ExtVector<2, unsigned int>)", [Const], "tensor-cvt-lut-insts">;
-def __builtin_amdgcn_perm_pk16_b6_u4 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(unsigned int, unsigned long int, _ExtVector<2, unsigned int>)", [Const], "tensor-cvt-lut-insts">;
-def __builtin_amdgcn_perm_pk16_b8_u4 : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(unsigned long int, unsigned long int, _ExtVector<2, unsigned int>)", [Const], "tensor-cvt-lut-insts">;
+def __builtin_amdgcn_perm_pk16_b6_u4 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(unsigned int, uint64_t, _ExtVector<2, unsigned int>)", [Const], "tensor-cvt-lut-insts">;
+def __builtin_amdgcn_perm_pk16_b8_u4 : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(uint64_t, uint64_t, _ExtVector<2, unsigned int>)", [Const], "tensor-cvt-lut-insts">;
 
 def __builtin_amdgcn_add_max_i32 : AMDGPUBuiltin<"int(int, int, int, _Constant bool)", [Const], "add-min-max-insts">;
 def __builtin_amdgcn_add_max_u32 : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int, _Constant bool)", [Const], "add-min-max-insts">;
