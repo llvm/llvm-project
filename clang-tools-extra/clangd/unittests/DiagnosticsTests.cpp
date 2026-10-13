@@ -829,7 +829,7 @@ TEST(DiagnosticTest, ClangTidyEnablesClangWarning) {
 }
 
 TEST(DiagnosticTest, ClangTidyCompilerWarningsWithoutChecks) {
-  auto TU = TestTU::withCode("static void foo() {}\n");
+  auto TU = TestTU::withCode("static void foo() {}");
   TU.ClangTidyProvider = [](tidy::ClangTidyOptions &Opts, llvm::StringRef) {
     Opts.Checks = "-*,clang-diagnostic-*";
     Opts.ExtraArgs = {"-Wunused-function"};
@@ -840,8 +840,7 @@ TEST(DiagnosticTest, ClangTidyCompilerWarningsWithoutChecks) {
   EXPECT_THAT(TU.build().getDiagnostics(), ElementsAre(Warning));
 
   // Without tidy checks, NOLINT and WarningsAsErrors don't affect warnings.
-  TU.Code =
-      "static void foo() {} // NOLINT(clang-diagnostic-unused-function)\n";
+  TU.Code = "static void foo() {} // NOLINT(clang-diagnostic-unused-function)";
   EXPECT_THAT(TU.build().getDiagnostics(), ElementsAre(Warning));
 }
 
