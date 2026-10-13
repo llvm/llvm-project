@@ -8,16 +8,27 @@
 ; RUN: %llc -mtriple=amdgpu9.42-amd-amdhsa -filetype=obj %t.bc -o %t.gfx942.o
 ; RUN: %transpile_cli %t.hsaco --target-isa=gfx1250 --emit-ir=masks | %FileCheck %s --check-prefix=SAME
 
+; RUN: %transpile_cli %t.hsaco --target-isa=gfx942 --emit-ir=masks --specialize-workgroup=1,1,1 > %t.single.ll
+; RUN: %opt -passes='default<O2>' -verify-each -S %t.single.ll -o %t.single.opt.ll
+; RUN: %FileCheck %s --check-prefix=SINGLE --implicit-check-not=amdgpu-no-wwm < %t.single.opt.ll
+; RUN: %llc -mtriple=amdgpu9.42-amd-amdhsa -filetype=obj %t.single.opt.ll -o %t.single.o
+; SINGLE: call i64 @llvm.amdgcn.strict.wwm.i64
+; SINGLE: "amdgpu-flat-work-group-size"="1,1"
+; RUN: %opt -passes='print<uniformity>' -disable-output %t.single.opt.ll 2>&1 | %FileCheck %s --check-prefix=SINGLE-DIVERGENCE
+; SINGLE-DIVERGENCE: DIVERGENT: {{.+}}call i1 @llvm.amdgcn.init.whole.wave()
+; SINGLE-DIVERGENCE: DIVERGENT: br i1
+
 ; The two source waves select opposite lane parities. Keep their ballots,
 ; saved EXEC masks, and memory guards connected through source-width SGPRs.
 ; IR-LABEL: define amdgpu_kernel void @masks(
 ; IR: [[LANE_LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; IR-NEXT: [[LANE:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LANE_LO]])
 ; IR-NEXT: [[ENTRY_ACTIVE:%.*]] = call i1 @llvm.amdgcn.init.whole.wave()
-; IR-NEXT: [[ENTRY_BALLOT:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[ENTRY_ACTIVE]])
+; IR-NEXT: [[ENTRY_BALLOT:%.+]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[ENTRY_ACTIVE]])
+; IR-NEXT: [[ENTRY_WWM:%.+]] = call i64 @llvm.amdgcn.strict.wwm.i64(i64 [[ENTRY_BALLOT]])
 ; IR-NEXT: [[ENTRY_BASE:%.*]] = and i32 [[LANE]], -32
 ; IR-NEXT: [[ENTRY_SHIFT:%.*]] = zext i32 [[ENTRY_BASE]] to i64
-; IR-NEXT: [[ENTRY_SLICE:%.*]] = lshr i64 [[ENTRY_BALLOT]], [[ENTRY_SHIFT]]
+; IR-NEXT: [[ENTRY_SLICE:%.*]] = lshr i64 [[ENTRY_WWM]], [[ENTRY_SHIFT]]
 ; IR-NEXT: [[ENTRY_EXEC:%.*]] = trunc i64 [[ENTRY_SLICE]] to i32
 ; IR: [[SOURCE_LANE:%.*]] = and i32 [[LANE]], 31
 ; IR-NEXT: [[ENTRY_BITS:%.*]] = lshr i32 [[ENTRY_EXEC]], [[SOURCE_LANE]]

@@ -585,7 +585,12 @@ Value *WaveNativeProjection::emitInitialExec(IRBuilder<> &B) const {
   // it so partial waves cannot acquire additional vector memory effects.
   EntryActive = B.CreateIntrinsic(Intrinsic::amdgcn_init_whole_wave, {}, {},
                                   nullptr, "orig_active");
-  return ballotI1ToWidth(B, EntryActive, sourceWaveMaskTy(), "saved_exec");
+  Value *Exec = ballotI1ToWidth(B, EntryActive, waveMaskTy(), "saved_exec");
+  // Mark whole-wave usage explicitly so singleton workgroups retain divergent
+  // execution when the backend infers function attributes.
+  Exec = B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, {waveMaskTy()}, {Exec},
+                           nullptr, "whole_wave_exec");
+  return emitCurrentSourceWaveMask(B, Exec, "saved_exec_source");
 }
 
 Value *WaveNativeProjection::emitLaneActiveBit(IRBuilder<> &B,
