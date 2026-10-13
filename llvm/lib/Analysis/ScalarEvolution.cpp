@@ -731,8 +731,7 @@ static int CompareSCEVComplexity(const LoopInfo *const LI, SCEVUse LHS,
       return (int)LNumOps - (int)RNumOps;
 
     for (unsigned i = 0; i != LNumOps; ++i) {
-      auto X = CompareSCEVComplexity(LI, LOps[i].getPointer(),
-                                     ROps[i].getPointer(), DT);
+      auto X = CompareSCEVComplexity(LI, LOps[i], ROps[i], DT);
       if (X != 0)
         return X;
     }
