@@ -172,6 +172,8 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_group_memory_barrier_with_group_sync : ClangBuiltin<"__builtin_spirv_group_barrier">,
     DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
   def int_spv_discard : DefaultAttrsIntrinsic<[], [], []>;
+  // Debugging intrinsics (HLSL proposal 0039)
+  def int_spv_debug_break : DefaultAttrsIntrinsic<[], [], []>;
   def int_spv_ddx : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
   def int_spv_ddy : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
   def int_spv_ddx_coarse : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
