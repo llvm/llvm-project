@@ -904,6 +904,37 @@ static void instantiateDependentOpenACCRoutineDeclAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const OpenACCRoutineDeclAttr *OldAttr, const Decl *Old, Decl *New);
 
+void Sema::enterPrototypeParamScope(
+    const Decl *Tmpl, const MultiLevelTemplateArgumentList &TemplateArgs,
+    std::optional<LocalInstantiationScope> &Scope) {
+  // Only a late-parsed attribute is parsed with a pointee's parameters in
+  // scope (see Parser::ParseLexedAttribute), so only it can name one; enter a
+  // scope only then, to keep them mapped until the attributes are instantiated.
+  bool LateParsed = false, Inherited = false;
+  for (const Attr *A : Tmpl->attrs()) {
+    if (!A->isLateParsed())
+      continue;
+    LateParsed = true;
+    Inherited |= A->isInherited();
+  }
+  if (!LateParsed)
+    return;
+  Scope.emplace(*this, /*CombineWithOuterScope=*/true,
+                /*MapsPrototypeParams=*/true);
+  if (!Inherited)
+    return;
+  // An inherited attribute names a parameter of the redeclaration it was
+  // written on, so substitute into that redeclaration's type as well, only to
+  // map its parameters; the type itself is discarded. That the attribute then
+  // names a parameter of no declaration's type is fine: the analysis takes a
+  // pointee's parameter for the argument at its position in the call, whichever
+  // prototype declares it (see SExprBuilder::translateDeclRefExpr).
+  for (const Decl *R = Tmpl->getPreviousDecl(); R; R = R->getPreviousDecl())
+    if (const auto *DD = dyn_cast<DeclaratorDecl>(R))
+      if (TypeSourceInfo *TSI = DD->getTypeSourceInfo())
+        SubstType(TSI, TemplateArgs, DD->getLocation(), DD->getDeclName());
+}
+
 void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                             const Decl *Tmpl, Decl *New,
                             LateInstantiatedAttrVec *LateAttrs,
@@ -1794,6 +1825,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D) {
 Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
                                              bool InstantiatingVarTemplate,
                                              ArrayRef<BindingDecl*> *Bindings) {
+  // Keep the parameters of a prototype in the type mapped for the attributes.
+  std::optional<LocalInstantiationScope> ProtoScope;
+  SemaRef.enterPrototypeParamScope(D, TemplateArgs, ProtoScope);
 
   // Do substitution on the type of the declaration
   TypeSourceInfo *TSI = SemaRef.SubstType(
@@ -1896,6 +1930,8 @@ Decl *TemplateDeclInstantiator::VisitAccessSpecDecl(AccessSpecDecl *D) {
 
 Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   bool Invalid = false;
+  std::optional<LocalInstantiationScope> ProtoScope;
+  SemaRef.enterPrototypeParamScope(D, TemplateArgs, ProtoScope);
   TypeSourceInfo *TSI = D->getTypeSourceInfo();
   if (TSI->getType()->isInstantiationDependentType() ||
       TSI->getType()->isVariablyModifiedType()) {
@@ -4977,6 +5013,9 @@ TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
     VarTemplateDecl *VarTemplate, VarDecl *D,
     ArrayRef<TemplateArgument> Converted,
     VarTemplateSpecializationDecl *PrevDecl) {
+  // Keep the parameters of a prototype in the type mapped for the attributes.
+  std::optional<LocalInstantiationScope> ProtoScope;
+  SemaRef.enterPrototypeParamScope(D, TemplateArgs, ProtoScope);
 
   // Do substitution on the type of the declaration
   TypeSourceInfo *TSI =
@@ -5408,6 +5447,10 @@ TemplateDeclInstantiator::InstantiateVarTemplatePartialSpecialization(
   VarTemplateSpecializationDecl *PrevDecl =
       VarTemplate->findPartialSpecialization(CTAI.CanonicalConverted,
                                              InstParams, InsertToken);
+
+  // Keep the parameters of a prototype in the type mapped for the attributes.
+  std::optional<LocalInstantiationScope> ProtoScope;
+  SemaRef.enterPrototypeParamScope(PartialSpec, TemplateArgs, ProtoScope);
 
   // Do substitution on the type of the declaration
   TypeSourceInfo *TSI = SemaRef.SubstType(
@@ -7288,10 +7331,14 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
   // it gets here, always has a FunctionOrMethod as its ParentDC??
   // For now:
   //  - as long as we have a ParmVarDecl whose parent is non-dependent and
-  //    whose type is not instantiation dependent, do nothing to the decl
+  //    whose type is not instantiation dependent, do nothing to the decl,
+  //    unless its prototype was substituted in a scope that maps it (see
+  //    enterPrototypeParamScope)
   //  - otherwise find its instantiated decl.
   if (isa<ParmVarDecl>(D) && !ParentDependsOnArgs &&
-      !cast<ParmVarDecl>(D)->getType()->isInstantiationDependentType())
+      !cast<ParmVarDecl>(D)->getType()->isInstantiationDependentType() &&
+      !(CurrentInstantiationScope &&
+        CurrentInstantiationScope->getInstantiationOfIfExists(D)))
     return D;
   if (isa<ParmVarDecl>(D) || isa<NonTypeTemplateParmDecl>(D) ||
       isa<TemplateTypeParmDecl>(D) || isa<TemplateTemplateParmDecl>(D) ||

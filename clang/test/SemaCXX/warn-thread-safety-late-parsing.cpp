@@ -68,12 +68,11 @@ struct Outer {
   static Mutex m;
 };
 
-// Template instantiation cannot yet map a pointee's parameters. A name binds
-// the same way in a template as elsewhere, but an attribute naming one is
-// rejected.
+// A name binds the same way in a template as elsewhere; see
+// warn-thread-safety-late-parsing-instantiation.cpp for how it is instantiated.
 template <typename T>
 struct InTemplate {
-  void (*cb)(T *h) REQUIRES(h->lock); // both-error{{'requires_capability' attribute in a template cannot name pointee function parameter 'h'}}
+  void (*cb)(T *h) REQUIRES(h->lock);
   // Ambiguous, as outside a template.
   void (*shadow)(T *own) REQUIRES(own->lock); // both-error{{reference to 'own' is ambiguous}} \
                                               // both-note{{candidate found by name lookup is 'own'}}

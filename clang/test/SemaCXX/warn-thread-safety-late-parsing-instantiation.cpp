@@ -8,6 +8,10 @@
 
 class __attribute__((capability("mutex"))) Mutex {};
 
+struct Holder {
+  Mutex lock;
+};
+
 // Each callback releases a lock that is not held, which is reported only if
 // its attribute was instantiated naming the later parameter.
 template <typename T>
@@ -15,6 +19,17 @@ void put_later(void (*release)(T) RELEASE(mu), Mutex *mu, T t) {
   release(t); // expected-warning{{releasing mutex 'mu' that was not held}}
 }
 template void put_later<int>(void (*)(int), Mutex *, int); // expected-note{{in instantiation of function template specialization 'put_later<int>' requested here}}
+
+// With deduced arguments, and alongside a pointee parameter.
+template <typename T>
+void put_later_pointee(void (*release)(T *h) RELEASE(h->lock, mu), Mutex *mu,
+                       T *t) {
+  release(t); // expected-warning{{releasing mutex 'mu' that was not held}} \
+              // expected-warning{{releasing mutex 't->lock' that was not held}}
+}
+void use_put_later_pointee(void (*release)(Holder *), Mutex *mu, Holder *t) {
+  put_later_pointee(release, mu, t); // expected-note{{in instantiation of function template specialization 'put_later_pointee<Holder>' requested here}}
+}
 
 // After a parameter pack.
 template <typename... Ts>

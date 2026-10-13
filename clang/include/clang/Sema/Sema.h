@@ -14452,6 +14452,18 @@ public:
                             LateInstantiatedAttrVec &LateAttrs,
                             LocalInstantiationScope *OuterMostScope);
 
+  /// An attribute on a declarator may name a parameter of the prototype in its
+  /// type, such as 'h' in 'void (*cb)(T *h) REQUIRES(h->mu)'. If \p Tmpl has
+  /// one, enter a scope in \p Scope that keeps those parameters mapped from
+  /// the substitution of the type until the attributes are instantiated (see
+  /// InstantiateAttrs), and also maps those of the earlier redeclarations
+  /// whose attributes \p Tmpl inherits. Substitute the type and instantiate
+  /// the attributes while it is entered.
+  void
+  enterPrototypeParamScope(const Decl *Tmpl,
+                           const MultiLevelTemplateArgumentList &TemplateArgs,
+                           std::optional<LocalInstantiationScope> &Scope);
+
   /// Update instantiation attributes after template was late parsed.
   ///
   /// Some attributes are evaluated based on the body of template. If it is
