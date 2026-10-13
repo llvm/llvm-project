@@ -104,7 +104,7 @@ lldb_private::formatters::ExtractIndexFromString(llvm::StringRef item_name) {
     return std::nullopt;
   if (item_name.front() != '[' || item_name.back() != ']')
     return std::nullopt;
-  item_name = item_name.drop_front();
+  item_name = item_name.drop_front().ltrim();
 
   unsigned long long idx = 0;
   if (llvm::consumeUnsignedInteger(item_name, /*Radix=*/0, idx))

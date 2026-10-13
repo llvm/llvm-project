@@ -19,7 +19,11 @@ TEST(FormattersHelpersTests, ExtractIndexFromString) {
   EXPECT_EQ(ExtractIndexFromString("[0]"), std::optional<size_t>(0));
   EXPECT_EQ(ExtractIndexFromString("[1]"), std::optional<size_t>(1));
   EXPECT_EQ(ExtractIndexFromString("[42]"), std::optional<size_t>(42));
-  EXPECT_EQ(ExtractIndexFromString("[1234567]"), std::optional<size_t>(1234567));
+  EXPECT_EQ(ExtractIndexFromString("[1234567]"),
+            std::optional<size_t>(1234567));
+
+  // Whitespace between [ and the index and ] is acceptable.
+  EXPECT_EQ(ExtractIndexFromString("[ 42 ]"), std::optional<size_t>(42));
 
   // The base is auto-detected, so hex and octal are accepted.
   EXPECT_EQ(ExtractIndexFromString("[0x10]"), std::optional<size_t>(16));
