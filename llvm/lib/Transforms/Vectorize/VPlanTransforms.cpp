@@ -917,7 +917,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 /// value of the affine expression \p VPV computes.
 static VPWidenInductionRecipe *
 getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
-                   VPValue **PostIncStart = nullptr) {
+                   VPValue **PostIncStart = nullptr,
+                   std::optional<APInt> *StartOffset = nullptr) {
+  assert((!StartOffset || PostIncStart) &&
+         "cannot request an offset without a start value");
   auto *WideIV = dyn_cast<VPWidenInductionRecipe>(VPV);
   if (WideIV) {
     // VPV itself is a wide induction, separately compute the end value for exit
@@ -991,6 +994,8 @@ getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
   if (!match(WideIV->getStartValue(), m_APInt(StartC)))
     return nullptr;
   *PostIncStart = Plan.getConstantInt(*StartC + Offset);
+  if (StartOffset)
+    *StartOffset = Offset;
   return WideIV;
 }
 
@@ -6296,8 +6301,9 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
 
       VPValue *Op = VPI.getOperand(0);
       VPValue *Start = nullptr;
+      std::optional<APInt> StartOffset;
       VPWidenInductionRecipe *WideIV =
-          getOptimizableIVOf(Op, Plan, PSE, &Start);
+          getOptimizableIVOf(Op, Plan, PSE, &Start, &StartOffset);
       if (!WideIV)
         continue;
       if (!Start)
@@ -6322,7 +6328,7 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
           WideIV->getPHINode(), Start, WideIV->getStepValue(),
           WideIV->getVFValue(), WideIV->getInductionDescriptor(),
           VPI.getScalarType(), VPIRFlags::WrapFlagsTy(false, false),
-          VPI.getDebugLoc());
+          VPI.getDebugLoc(), StartOffset);
       NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       VPI.replaceAllUsesWith(NarrowIV);
       VPI.eraseFromParent();

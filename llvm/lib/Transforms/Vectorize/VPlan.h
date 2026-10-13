@@ -2613,6 +2613,8 @@ public:
 /// converted to concrete recipes before executing.
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe,
                                       public VPIRFlags {
+  std::optional<APInt> StartOffset;
+
   // If this recipe is unrolled it will have 2 additional operands.
   bool isUnrolled() const { return getNumOperands() == 5; }
 
@@ -2630,10 +2632,10 @@ public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
                                 Type *ResultTy, const VPIRFlags &Flags,
-                                DebugLoc DL)
+                                DebugLoc DL, std::optional<APInt> StartOffset = std::nullopt)
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
                                Start, Step, IndDesc, ResultTy, DL),
-        VPIRFlags(Flags) {
+        VPIRFlags(Flags), StartOffset(std::move(StartOffset)) {
     addOperand(VF);
   }
 
@@ -2642,7 +2644,7 @@ public:
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
         getPHINode(), getStartValue(), getStepValue(), getVFValue(),
-        getInductionDescriptor(), getScalarType(), *this, getDebugLoc());
+        getInductionDescriptor(), getScalarType(), *this, getDebugLoc(), StartOffset);
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenIntOrFpInductionSC)
@@ -2669,6 +2671,12 @@ public:
     return getStartValue() && getScalarType()->isIntegerTy() &&
            getScalarType()->getPrimitiveSizeInBits() <
                getStartValue()->getScalarType()->getPrimitiveSizeInBits();
+  }
+
+  /// Return the constant offset from the original induction start that was
+  /// folded into this recipe's start value, if any.
+  const APInt *getStartOffset() const {
+    return StartOffset ? &*StartOffset : nullptr;
   }
 
   /// Return the cost of this VPWidenIntOrFpInductionRecipe.
