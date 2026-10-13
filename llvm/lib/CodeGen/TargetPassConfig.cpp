@@ -314,6 +314,14 @@ static cl::boolOrDefault toBoolOrDefault(BoolOrDefault B) {
                                   : cl::boolOrDefault::BOU_FALSE;
 }
 
+static MachineVerifierMode
+computeMachineVerifierMode(const CodeGenOptions &Opts, bool VerifyEach) {
+  if (VerifyEach)
+    return MachineVerifierMode::Each;
+  return Opts.disable_mir_output_verify ? MachineVerifierMode::None
+                                        : MachineVerifierMode::End;
+}
+
 CGPassBuilderOption llvm::getCGPassBuilderOption() {
   const CodeGenOptions &Opts = CodeGenOptions::Global;
   CGPassBuilderOption Opt;
@@ -323,7 +331,8 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   Opt.EnableFastISelOption = toBoolOrDefault(Opts.fast_isel);
   Opt.EnableRegAllocFastTied = toBoolOrDefault(Opts.regalloc_fast_tied);
   Opt.EnableGlobalISelOption = toBoolOrDefault(Opts.global_isel);
-  Opt.VerifyMachineCode = toBoolOrDefault(Opts.verify_machineinstrs);
+  Opt.VerifyMachineCode = computeMachineVerifierMode(
+      Opts, valueOr(Opts.verify_machineinstrs, false));
   Opt.DisableAtExitBasedGlobalDtorLowering =
       Opts.disable_atexit_based_global_dtor_lowering;
   Opt.DisableExpandReductions = Opts.disable_expand_reductions;
@@ -448,6 +457,13 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
 
   if (Opts.global_isel_abort)
     TM.Options.GlobalISelAbort = *Opts.global_isel_abort;
+
+  bool VerifyEach = valueOr(Opts.verify_machineinstrs, false);
+#ifdef EXPENSIVE_CHECKS
+  if (Opts.verify_machineinstrs == BoolOrDefault::Default)
+    VerifyEach = TM.isMachineVerifierClean();
+#endif
+  VerifyMode = computeMachineVerifierMode(Opts, VerifyEach);
 
   if (Opts.function_splitting)
     TM.Options.FunctionSplitting = *Opts.function_splitting;
@@ -626,13 +642,7 @@ void TargetPassConfig::addPrintPass(const std::string &Banner) {
 }
 
 void TargetPassConfig::addVerifyPass(const std::string &Banner) {
-  const CodeGenOptions &Opts = CodeGenOptions::Global;
-  bool Verify = valueOr(Opts.verify_machineinstrs, false);
-#ifdef EXPENSIVE_CHECKS
-  if (Opts.verify_machineinstrs == BoolOrDefault::Default)
-    Verify = TM->isMachineVerifierClean();
-#endif
-  if (Verify)
+  if (VerifyMode == MachineVerifierMode::Each)
     PM->add(createMachineVerifierPass(Banner));
 }
 
@@ -1092,10 +1102,10 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::PassLast));
 
-  const bool SplitFunctions =
+  const bool SplitFunctionsWithPGO =
       TM->Options.FunctionSplitting == FunctionSplittingMode::All;
 
-  if (SplitFunctions || Opts.split_static_data ||
+  if (SplitFunctionsWithPGO || Opts.split_static_data ||
       TM->Options.EnableStaticDataPartitioning) {
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty()) {
@@ -1113,14 +1123,6 @@ void TargetPassConfig::addMachinePasses() {
     }
   }
 
-  // Machine function splitter uses the basic block sections feature.
-  // When used along with `-basic-block-sections=`, the basic-block-sections
-  // feature takes precedence. This means functions eligible for
-  // basic-block-sections optimizations (`=all`, or `=list=` with function
-  // included in the list profile) will get that optimization instead.
-  if (SplitFunctions)
-    addPass(createMachineFunctionSplitterPass());
-
   if (Opts.split_static_data || TM->Options.EnableStaticDataPartitioning) {
     // The static data splitter pass is a machine function pass. and
     // static data annotator pass is a module-wide pass. See the file comment
@@ -1128,10 +1130,13 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createStaticDataSplitterLegacyPass());
     addPass(createStaticDataAnnotatorLegacyPass());
   }
-  // We run the BasicBlockSections pass if either we need BB sections or BB
-  // address map (or both).
+  // We run the BasicBlockSections pass if we need BB sections, BB address map,
+  // or function splitting. With function splitting, functions which are
+  // eligible for basic-block-sections optimizations (`=all`, or `=list=` with
+  // function included in the list profile) get that optimization, and the other
+  // functions are split using their PGO/AutoFDO profile.
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
-      TM->Options.BBAddrMap) {
+      TM->Options.BBAddrMap || SplitFunctionsWithPGO) {
     if (shouldEmitBBHash() || Opts.basic_block_section_match_infer)
       addPass(llvm::createMachineBlockHashInfoPass());
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
@@ -1144,7 +1149,7 @@ void TargetPassConfig::addMachinePasses() {
         addPass(llvm::createInsertCodePrefetchPass());
       }
     }
-    addPass(llvm::createBasicBlockSectionsPass());
+    addPass(llvm::createBasicBlockSectionsPass(SplitFunctionsWithPGO));
   }
 
   addPostBBSections();
