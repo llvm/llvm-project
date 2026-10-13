@@ -1,0 +1,78 @@
+
+# REQUIRES: ssaf-orchestrator-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+# RUN: chmod +x %t/failing-clang %t/one-failing-clang
+
+# RUN: cd %t
+# RUN: not %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%t/failing-clang \
+# RUN:     -o %t/out -- make 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=FAILED
+# FAILED: no summaries
+
+# RUN: ls %t/build/a.o %t/build/b.o %t/build/prg
+# RUN: grep 'stub refuses' %t/out/failure-logs%t/build/a.o.extract.log
+
+# RUN: ls %t/out/ssaf-artifacts%t/build && not ls %t/out/ssaf-artifacts%t/build/a.o.summary.json
+
+# RUN: env BINARY_CLANG=%ssaf-orchestrator-make-clang \
+# RUN:     not %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%t/one-failing-clang \
+# RUN:     -o %t/out2 -- make 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=PARTIAL
+# PARTIAL: 1 SSAF step(s) failed; see the log files under {{[^ ]*}}/out2
+
+# RUN: ls %t/out2/ssaf-artifacts%t/build | FileCheck %s --check-prefix=PARTIAL-TU \
+# RUN:   --implicit-check-not={{a\.o\.summary\.json}}
+# PARTIAL-TU: {{b\.o\.summary\.json}}
+# RUN: ls %t/out2/ssaf-artifacts%t/build/prg.summary.json
+
+# RUN: env BINARY_CLANG=%ssaf-orchestrator-make-clang \
+# RUN:     %clang-ssaf-orchestrator-make -k \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%t/one-failing-clang \
+# RUN:     -o %t/out3 -- make 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=KEPT-GOING
+# KEPT-GOING: 1 SSAF step(s) failed
+
+#--- Makefile
+CXX = clang++
+all: build/prg
+build/%.o: src/%.cpp
+	$(CXX) -c -o $@ $<
+build/prg: build/a.o build/b.o
+	$(CXX) -o $@ build/a.o build/b.o
+
+#--- src/a.cpp
+int b();
+int main() { return b(); }
+
+#--- src/b.cpp
+int b() { return 0; }
+
+#--- failing-clang
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in
+    --ssaf-tu-summary-file=*)
+      file="${arg#*=}"
+      mkdir -p "$(dirname "$file")"
+      echo '{}' > "$file"
+      ;;
+  esac
+done
+echo "stub refuses to extract" >&2
+exit 1
+
+#--- one-failing-clang
+#!/bin/sh
+"$BINARY_CLANG" "$@" || exit $?
+for arg in "$@"; do
+  case "$arg" in
+    *a.o.summary.json) echo "stub refuses to extract" >&2; exit 1 ;;
+  esac
+done
+exit 0
