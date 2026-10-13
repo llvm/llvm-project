@@ -1966,9 +1966,22 @@ let PPC970_Unit = 7 in {
 // We mark SCV as having no scheduling model since it is only meant to be used
 // as inline assembly. If we implement a builtin pattern for it we will need to
 // add it to the P9 and P10 scheduling models.
-let Predicates = [IsISA3_0], hasNoSchedulingInfo = 1 in {
+let Predicates = [IsISA3_0OrPPCAS], hasNoSchedulingInfo = 1 in {
   def SCV : SCForm<17, 0, 1, (outs), (ins i32imm:$LEV),
                    "scv $LEV", IIC_BrB, []>;
+}
+
+// PowerPC AS tag-setting instruction.  The architected encoding has no
+// explicit operands; bits 11...15 carry its fixed selector value.
+let Predicates = [HasPPCAS], hasNoSchedulingInfo = 1,
+    hasSideEffects = 1 in {
+  def SETTAG : I<31, (outs), (ins), "settag", NoItinerary> {
+    let Inst{6...10} = 0;
+    let Inst{11...15} = 1;
+    let Inst{16...20} = 0;
+    let Inst{21...30} = 499;
+    let Inst{31} = 0;
+  }
 }
 
 // Branch history rolling buffer.

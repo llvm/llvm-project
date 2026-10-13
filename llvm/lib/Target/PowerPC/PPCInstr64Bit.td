@@ -1458,7 +1458,17 @@ def LQ   : DQForm_RTp5_RA17_MEM<56, 0,
                                 "lq $RTp, $addr", IIC_LdStLQ,
                                 []>,
                                 RegConstraint<"@earlyclobber $RTp">,
-                                isPPC64;
+                                Requires<[IsPPC64, NoPPCAS]>;
+
+// PowerPC AS uses the low DQ-form selector value 2 for tagged quadword
+// loads.  The register pair and displacement fields otherwise match LQ.
+def LQ_PPCAS : DQForm_RTp5_RA17_MEM<56, 2,
+                                    (outs g8prc:$RTp),
+                                    (ins (memrix16 $DQ, $RA):$addr),
+                                    "lq $RTp, $addr", IIC_LdStLQ,
+                                    []>,
+                                    RegConstraint<"@earlyclobber $RTp">,
+                                    Requires<[IsPPC64, HasPPCAS]>;
 // We don't really have LQX in the ISA, make a pseudo one so that we can
 // handle x-form during isel. Make it pre-ra may expose
 // oppotunities to some opts(CSE, LICM and etc.) for the result of adding
