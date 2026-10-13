@@ -6,9 +6,6 @@
 
 // expected-no-diagnostics
 
-// ---------------------------------------------------------------------------
-// Type definitions shared across all tests.
-// ---------------------------------------------------------------------------
 #pragma OPENCL EXTENSION cl_khr_cooperative_matrix : enable
 
 typedef float __attribute__((coop_mat(memory_scope_sub_group,
@@ -24,9 +21,7 @@ typedef int   __attribute__((coop_mat(memory_scope_sub_group,
                                       16, 16,
                                       CLK_COOPERATIVE_MATRIX_A)))           MatA_int_t;
 
-// ---------------------------------------------------------------------------
 // coop_mat_init: initialise with a float scalar.
-// ---------------------------------------------------------------------------
 void test_coop_mat_init_basic(void) {
     MatA_t a;
     MatB_t b;
@@ -36,26 +31,20 @@ void test_coop_mat_init_basic(void) {
     c = coop_mat_init(0.0f);
 }
 
-// ---------------------------------------------------------------------------
 // coop_mat_init: integer element type.
-// ---------------------------------------------------------------------------
 void test_coop_mat_init_int(void) {
     MatA_int_t m;
     m = coop_mat_init(42);
 }
 
-// ---------------------------------------------------------------------------
 // coop_mat_init: re-initialise the same variable (chained assigns).
-// ---------------------------------------------------------------------------
 void test_coop_mat_init_chained(void) {
     MatC_t acc;
     acc = coop_mat_init(0.0f);
     acc = coop_mat_init(1.0f);
 }
 
-// ---------------------------------------------------------------------------
 // coop_mat_length: basic usage — returns unsigned int directly.
-// ---------------------------------------------------------------------------
 void test_coop_mat_length_basic(void) {
     MatA_t a;
     a = coop_mat_init(0.0f);
@@ -63,9 +52,7 @@ void test_coop_mat_length_basic(void) {
     (void)len;
 }
 
-// ---------------------------------------------------------------------------
 // coop_mat_length: all three use roles.
-// ---------------------------------------------------------------------------
 void test_coop_mat_length_roles(void) {
     MatA_t a;   a = coop_mat_init(0.0f);
     MatB_t b;   b = coop_mat_init(0.0f);
@@ -76,9 +63,7 @@ void test_coop_mat_length_roles(void) {
     (void)la; (void)lb; (void)lc;
 }
 
-// ---------------------------------------------------------------------------
 // coop_mat_length: result used in arithmetic.
-// ---------------------------------------------------------------------------
 void test_coop_mat_length_arith(void) {
     MatA_t a;
     a = coop_mat_init(0.0f);
