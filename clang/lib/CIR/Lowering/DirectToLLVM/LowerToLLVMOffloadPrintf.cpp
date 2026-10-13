@@ -72,6 +72,7 @@ packArgsIntoNVPTXFormatBuffer(cir::OffloadPrintfOp op, mlir::ValueRange args,
   {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     auto fn = op->getParentOfType<mlir::LLVM::LLVMFuncOp>();
+    assert(fn && "lowering expects printf to be inside a function");
     rewriter.setInsertionPointToStart(&fn.getBody().front());
     mlir::Value one =
         mlir::LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(), 1);
