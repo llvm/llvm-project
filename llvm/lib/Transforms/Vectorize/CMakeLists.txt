@@ -35,6 +35,7 @@ add_llvm_component_library(LLVMVectorize
   VPlan.cpp
   VPlanAnalysis.cpp
   VPlanConstruction.cpp
+  VPlanCrossPartCSE.cpp
   VPlanDominatorTree.cpp
   VPlanEVLTailFolding.cpp
   VPlanLowering.cpp
