@@ -46,9 +46,7 @@ define void @wrap_i64(ptr addrspace(2) %b) {
 define void @wrap_complete(ptr %b) {
 ; CHECK-LABEL: define void @wrap_complete(
 ; CHECK-SAME: ptr [[B:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr [[B]], i8 -128
 ; CHECK-NEXT:    [[K:%.*]] = getelementptr i8, ptr [[B]], i8 126
-; CHECK-NEXT:    store i32 1, ptr [[D]], align 1
 ; CHECK-NEXT:    store i64 2, ptr [[K]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -65,7 +63,7 @@ define void @shorten_end_wrap(ptr %b, i64 %x) {
 ; CHECK-SAME: ptr [[B:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr [[B]], i8 120
 ; CHECK-NEXT:    [[K:%.*]] = getelementptr i8, ptr [[B]], i8 -128
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[D]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[D]], i8 0, i64 8, i1 false)
 ; CHECK-NEXT:    store i64 [[X]], ptr [[K]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -82,7 +80,8 @@ define void @shorten_begin_wrap(ptr %b, i64 %x) {
 ; CHECK-SAME: ptr [[B:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr [[B]], i8 -128
 ; CHECK-NEXT:    [[K:%.*]] = getelementptr i8, ptr [[B]], i8 126
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[D]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[D]], i64 6
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP1]], i8 0, i64 10, i1 false)
 ; CHECK-NEXT:    store i64 [[X]], ptr [[K]], align 1
 ; CHECK-NEXT:    ret void
 ;

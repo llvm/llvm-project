@@ -1274,34 +1274,26 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
     return OW_Unknown;
   }
 
+  // Offsets in different address spaces may wrap at different widths.
+  unsigned IdxWidth = DL.getIndexTypeSizeInBits(DeadPtr->getType());
+  if (IdxWidth != DL.getIndexTypeSizeInBits(KillingPtr->getType()))
+    return OW_Unknown;
+
   // Okay, we have stores to two completely different pointers.  Try to
   // decompose the pointer into a "base + constant_offset" form.  If the base
   // pointers are equal, then we can reason about the two stores.
   DeadOff = 0;
   KillingOff = 0;
-  const Value *DeadBasePtr =
-      GetPointerBaseWithConstantOffset(DeadPtr, DeadOff, DL);
-  const Value *KillingBasePtr =
-      GetPointerBaseWithConstantOffset(KillingPtr, KillingOff, DL);
+  APInt DeadBaseOff(IdxWidth, 0);
+  APInt KillingBaseOff(IdxWidth, 0);
+  const Value *DeadBasePtr = DeadPtr->stripAndAccumulateConstantOffsets(
+      DL, DeadBaseOff, /*AllowNonInbounds=*/true);
+  const Value *KillingBasePtr = KillingPtr->stripAndAccumulateConstantOffsets(
+      DL, KillingBaseOff, /*AllowNonInbounds=*/true);
 
   // If the base pointers still differ, we have two completely different
   // stores.
   if (DeadBasePtr != KillingBasePtr)
-    return OW_Unknown;
-
-  if (DeadPtr->getType() != KillingPtr->getType())
-    return OW_Unknown;
-
-  // Offsets wrap around in the index width. Give up if either access crosses
-  // the end of the signed index range, so the int64_t math below is exact.
-  unsigned IdxWidth = DL.getIndexTypeSizeInBits(DeadPtr->getType());
-  uint64_t DeadSz = DeadSize.getFixedValue();
-  uint64_t KillingSz = KillingSize.getFixedValue();
-  int64_t DeadEnd, KillingEnd;
-  if (!isUInt<63>(DeadSz) || !isUInt<63>(KillingSz) ||
-      AddOverflow(DeadOff, int64_t(DeadSz), DeadEnd) ||
-      AddOverflow(KillingOff, int64_t(KillingSz), KillingEnd) ||
-      !isIntN(IdxWidth, DeadEnd) || !isIntN(IdxWidth, KillingEnd))
     return OW_Unknown;
 
   // The killing access completely overlaps the dead store if and only if
@@ -1315,23 +1307,26 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
   //           OR
   //    |-------dead-------|
   //    |<->|---killing---|<----->|
-  //
-  // We have to be careful here as *Off is signed while *.Size is unsigned.
 
-  // Check if the dead access starts "not before" the killing one.
-  if (DeadOff >= KillingOff) {
+  // A zero-sized killing access does not overwrite anything.
+  if (KillingSize == 0)
+    return OW_None;
+
+  // Check if the dead access starts "inside" the killing one.
+  APInt Delta = DeadBaseOff - KillingBaseOff;
+  if (Delta.ult(KillingSize)) {
     // If the dead access ends "not after" the killing access then the
     // dead one is completely overwritten by the killing one.
-    if (uint64_t(DeadOff) - uint64_t(KillingOff) + DeadSize <= KillingSize)
+    if (Delta.getZExtValue() + DeadSize <= KillingSize)
       return OW_Complete;
-    // If start of the dead access is "before" end of the killing access
-    // then accesses overlap.
-    else if (uint64_t(DeadOff) - uint64_t(KillingOff) < KillingSize)
-      return OW_MaybePartial;
+    // Otherwise the accesses overlap.
+    KillingOff = -int64_t(Delta.getZExtValue());
+    return OW_MaybePartial;
   }
   // If start of the killing access is "before" end of the dead access then
   // accesses overlap.
-  else if (uint64_t(KillingOff) - uint64_t(DeadOff) < DeadSize) {
+  if ((-Delta).ult(DeadSize)) {
+    KillingOff = (-Delta).getZExtValue();
     return OW_MaybePartial;
   }
 
@@ -2400,10 +2395,9 @@ bool DSEState::removePartiallyOverlappedStores(InstOverlapIntervalsTy &IOL) {
     MemoryLocation Loc = *getLocForWrite(DeadI);
     assert(isRemovable(DeadI) && "Expect only removable instruction");
 
-    const Value *Ptr = Loc.Ptr->stripPointerCasts();
+    // Overlap intervals are relative to the start of the dead access.
     int64_t DeadStart = 0;
     uint64_t DeadSize = Loc.Size.getValue();
-    GetPointerBaseWithConstantOffset(Ptr, DeadStart, DL);
     OverlapIntervalsTy &IntervalMap = OI.second;
     Changed |= tryToShortenEnd(DeadI, IntervalMap, DeadStart, DeadSize);
     if (IntervalMap.empty())
