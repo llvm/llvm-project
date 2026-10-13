@@ -281,3 +281,87 @@ define double @fpext_f16_to_f64(half %x) nounwind {
   %a = fpext half %x to double
   ret double %a
 }
+
+define half @fptrunc_f32_to_f16(float %x) nounwind {
+; RV32-LABEL: fptrunc_f32_to_f16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    fcvt.h.s fa0, fa0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: fptrunc_f32_to_f16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    fcvt.h.s fa0, fa0
+; RV64-NEXT:    ret
+;
+; RV32ZFHMIN-LABEL: fptrunc_f32_to_f16:
+; RV32ZFHMIN:       # %bb.0:
+; RV32ZFHMIN-NEXT:    fcvt.h.s fa0, fa0
+; RV32ZFHMIN-NEXT:    ret
+;
+; RV64ZFHMIN-LABEL: fptrunc_f32_to_f16:
+; RV64ZFHMIN:       # %bb.0:
+; RV64ZFHMIN-NEXT:    fcvt.h.s fa0, fa0
+; RV64ZFHMIN-NEXT:    ret
+;
+; RV32NOZFH-LABEL: fptrunc_f32_to_f16:
+; RV32NOZFH:       # %bb.0:
+; RV32NOZFH-NEXT:    addi sp, sp, -16
+; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    call __truncsfhf2
+; RV32NOZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32NOZFH-NEXT:    addi sp, sp, 16
+; RV32NOZFH-NEXT:    ret
+;
+; RV64NOZFH-LABEL: fptrunc_f32_to_f16:
+; RV64NOZFH:       # %bb.0:
+; RV64NOZFH-NEXT:    addi sp, sp, -16
+; RV64NOZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64NOZFH-NEXT:    call __truncsfhf2
+; RV64NOZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64NOZFH-NEXT:    addi sp, sp, 16
+; RV64NOZFH-NEXT:    ret
+  %a = fptrunc float %x to half
+  ret half %a
+}
+
+define half @fptrunc_f64_to_f16(double %x) nounwind {
+; RV32-LABEL: fptrunc_f64_to_f16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    fcvt.h.d fa0, fa0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: fptrunc_f64_to_f16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    fcvt.h.d fa0, fa0
+; RV64-NEXT:    ret
+;
+; RV32ZFHMIN-LABEL: fptrunc_f64_to_f16:
+; RV32ZFHMIN:       # %bb.0:
+; RV32ZFHMIN-NEXT:    fcvt.h.d fa0, fa0
+; RV32ZFHMIN-NEXT:    ret
+;
+; RV64ZFHMIN-LABEL: fptrunc_f64_to_f16:
+; RV64ZFHMIN:       # %bb.0:
+; RV64ZFHMIN-NEXT:    fcvt.h.d fa0, fa0
+; RV64ZFHMIN-NEXT:    ret
+;
+; RV32NOZFH-LABEL: fptrunc_f64_to_f16:
+; RV32NOZFH:       # %bb.0:
+; RV32NOZFH-NEXT:    addi sp, sp, -16
+; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    call __truncdfhf2
+; RV32NOZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32NOZFH-NEXT:    addi sp, sp, 16
+; RV32NOZFH-NEXT:    ret
+;
+; RV64NOZFH-LABEL: fptrunc_f64_to_f16:
+; RV64NOZFH:       # %bb.0:
+; RV64NOZFH-NEXT:    addi sp, sp, -16
+; RV64NOZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64NOZFH-NEXT:    call __truncdfhf2
+; RV64NOZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64NOZFH-NEXT:    addi sp, sp, 16
+; RV64NOZFH-NEXT:    ret
+  %a = fptrunc double %x to half
+  ret half %a
+}
