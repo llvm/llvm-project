@@ -216,8 +216,10 @@ public:
   ///        active checker as the tag.
   ExplodedNode *addTransition(ProgramStateRef State, ExplodedNode *Pred,
                               const ProgramPointTag *Tag = nullptr) {
-    // FIXME: In these two early return statements we use 'Pred' and
-    // 'Pred->getState()' instead of 'getPredecessor()' and 'getState()'.
+    // FIXME: In these two early return statements we should use 'Pred' and
+    // 'Pred->getState()' (the node received as an argument and its state)
+    // instead of 'getPredecessor()' and 'getState()' (the older node received
+    // by the constructor of CheckerContext, and its state).
     // Alternatively, we should perhaps return null if the state is null.
     if (!State)
       return getPredecessor();
@@ -245,7 +247,7 @@ public:
     return addTransitionImpl(State, true, Pred, Tag);
   }
 
-  /// Calls generateSink, passing getPrdecessor() (i.e. as the node that was
+  /// Calls generateSink, passing getPredecessor() (i.e. as the node that was
   /// passed to the constructor of CheckerContext) to its 'Pred' argument and
   /// not returning its result.
   ///
@@ -256,7 +258,7 @@ public:
     generateSink(State, getPredecessor());
   }
 
-  /// Calls generateSink, passing getPrdecessor() (i.e. as the node that was
+  /// Calls generateSink, passing getPredecessor() (i.e. as the node that was
   /// passed to the constructor of CheckerContext) to its 'Pred' argument.
   ///
   /// FIXME: This should be unified with generateSink().
@@ -277,7 +279,7 @@ public:
   /// Creates a new ExplodedNode and adds it to the ExplodedGraph as a child of
   /// 'getPredecessor()', the node that was passed to the constructor of
   /// CheckerContext. The difference between this and 'addTransition' is that
-  /// this alwyas attempts to create a new node, even if there is no state
+  /// this always attempts to create a new node, even if there is no state
   /// change and no explicitly speficified tag.
   /// Can return nullptr if the node creation fails (when it would recreate
   /// an existing node or when the state is posteriorly overconstrained).
