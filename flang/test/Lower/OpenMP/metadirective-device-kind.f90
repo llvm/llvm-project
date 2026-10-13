@@ -1,5 +1,22 @@
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 %s -o - | FileCheck %s
 
+! Device weights depend on context depth, not the candidate's selector count.
+! CHECK-LABEL: func.func @_QPtest_device_kind_nested_parallel()
+! CHECK: omp.parallel
+! CHECK: omp.parallel
+! CHECK-NOT: omp.barrier
+! CHECK: omp.taskyield
+! CHECK-NOT: omp.barrier
+! CHECK: return
+subroutine test_device_kind_nested_parallel()
+  !$omp parallel
+    !$omp parallel
+      !$omp metadirective when(device={kind(cpu)}: taskyield) &
+      !$omp& when(construct={parallel}: barrier)
+    !$omp end parallel
+  !$omp end parallel
+end subroutine
+
 ! CHECK-LABEL: func.func @_QPtest_device_kind_host()
 ! CHECK:         omp.taskyield
 ! CHECK:         return

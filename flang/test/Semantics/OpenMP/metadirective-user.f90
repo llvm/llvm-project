@@ -34,3 +34,23 @@ subroutine f04(a, b)
 !ERROR: Repeated trait name CONDITION in a trait set
   !$omp & when(user={condition(a), condition(b)}: nothing)
 end
+
+! Profiling still runs after expression diagnostics have been recorded.
+subroutine invalid_negative_kind(n)
+  integer :: n
+!ERROR: CONDITION trait requires a single LOGICAL expression
+!ERROR: INTEGER(KIND=3) is not a supported type
+  !$omp metadirective when(user={condition(n == -1_3)}: taskyield) otherwise(taskwait)
+end
+
+subroutine invalid_complex_integer_kind()
+!ERROR: CONDITION trait requires a single LOGICAL expression
+!ERROR: INTEGER(KIND=3) is not a supported type
+  !$omp metadirective when(user={condition((1_3, 2) == (1, 2))}: taskyield) otherwise(taskwait)
+end
+
+subroutine invalid_complex_real_kind()
+!ERROR: CONDITION trait requires a single LOGICAL expression
+!ERROR: Unsupported REAL(KIND=7)
+  !$omp metadirective when(user={condition((1.0_7, 0.0) == (1.0, 0.0))}: taskyield) otherwise(taskwait)
+end
