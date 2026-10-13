@@ -481,8 +481,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 os.unlink(custom_file)
 
     def save_core_with_region(self, process, region_index):
+        core_target = None
+        custom_file = self.getBuildArtifact("core.custom.dmp")
         try:
-            custom_file = self.getBuildArtifact("core.custom.dmp")
             memory_region = lldb.SBMemoryRegionInfo()
             memory_list = process.GetMemoryRegions()
             memory_list.GetMemoryRegionAtIndex(0, memory_region)
@@ -512,6 +513,8 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 )
                 range_set.add(mem_tuple)
         finally:
+            if core_target:
+                self.assertTrue(self.dbg.DeleteTarget(core_target))
             if os.path.isfile(custom_file):
                 os.unlink(custom_file)
 
