@@ -340,6 +340,8 @@ SarifDocumentWriter::createThreadFlows(ArrayRef<ThreadFlow> ThreadFlows) {
   for (const auto &ThreadFlow : ThreadFlows) {
     json::Object Loc = createLocation(createPhysicalLocation(ThreadFlow.Range),
                                       ThreadFlow.Message);
+    if (Loc.empty())
+      continue;
     Locs.emplace_back(
         createThreadFlowLocation(std::move(Loc), ThreadFlow.Importance));
   }
@@ -365,13 +367,13 @@ void SarifDocumentWriter::createRun(StringRef ShortToolName,
       InformationUri.empty() ? "https://clang.llvm.org/docs/UsersManual.html"
                              : InformationUri;
 
-  json::Object Tool{
-      {"driver", json::Object{{"name", ShortToolName},
-                              {"fullName", LongToolName},
-                              {"language", "en-US"},
-                              {"version", ToolVersion},
-                              {"informationUri", EffectiveInformationUri},
-                              {"rules", json::Array{}}}}};
+  json::Object Tool{{"driver", json::Object{{"name", ShortToolName},
+                                            {"fullName", LongToolName},
+                                            {"language", "en-US"},
+                                            {"version", ToolVersion},
+                                            {"informationUri",
+                                             EffectiveInformationUri},
+                                            {"rules", json::Array{}}}}};
   json::Object TheRun{{"tool", std::move(Tool)},
                       {"results", {}},
                       {"artifacts", {}},
@@ -426,12 +428,12 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
   if (!Locs.empty())
     Ret["locations"] = std::move(Locs);
 
+  // The schema requires relatedLocations items to be unique.
   json::Array ReLocs;
   for (const auto &[Range, Message] : Result.RelatedLocations) {
     json::Value Loc = createLocation(createPhysicalLocation(Range), Message);
-    if (!Loc.getAsObject()->empty() && !llvm::is_contained(ReLocs, Loc)) {
+    if (!Loc.getAsObject()->empty() && !llvm::is_contained(ReLocs, Loc))
       ReLocs.emplace_back(std::move(Loc));
-    }
   }
 
   if (!ReLocs.empty())

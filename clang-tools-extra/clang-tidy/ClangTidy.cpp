@@ -38,8 +38,9 @@
 #include "clang/Tooling/DiagnosticsYaml.h" // IWYU pragma: keep
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -219,17 +220,11 @@ public:
 
   CharSourceRange getNoteRange(const tooling::DiagnosticMessage &Note) {
     const SourceLocation Loc = getLocation(Note.FilePath, Note.FileOffset);
-    if (Loc.isInvalid())
-      return Note.Ranges.empty() ? CharSourceRange()
-                                 : getRange(Note.Ranges.front());
-    return getOffsetRange(SourceMgr, Loc);
+    return Loc.isValid() ? getOffsetRange(SourceMgr, Loc) : CharSourceRange();
   }
 
   SmallVector<ThreadFlow, 8> createThreadFlows(const ClangTidyError &Error) {
     SmallVector<ThreadFlow, 8> Flows;
-    if (!StringRef(Error.DiagnosticName).starts_with("clang-analyzer-"))
-      return Flows;
-
     Flows.reserve(Error.Notes.size());
     for (const tooling::DiagnosticMessage &Note : Error.Notes) {
       Flows.push_back(ThreadFlow::create()
