@@ -9,9 +9,9 @@ define void @test(ptr %this, double %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[PIXEL00_LOC:%.*]] = getelementptr i8, ptr [[THIS]], i64 144
-; CHECK-NEXT:    [[MUL23_I:%.*]] = fmul contract double [[TMP0]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd contract <2 x double> [[TMP3]], <double -0.000000e+00, double 0.000000e+00>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> zeroinitializer, [[TMP4]]
+; CHECK-NEXT:    [[MUL23_I:%.*]] = fmul contract double [[TMP0]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[MUL23_I]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x double> [[TMP5]], [[TMP7]]

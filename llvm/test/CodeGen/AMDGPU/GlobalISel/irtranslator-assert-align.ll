@@ -35,7 +35,7 @@ define void @call_result_align_1() {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 0
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @returns_ptr
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -61,7 +61,7 @@ define void @call_result_align_1() {
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(i32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY19]](i32), [[COPY20]](i32)
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   G_STORE [[C]](i8), [[MV]](p1) :: (store (i8) into %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %ptr = call align 1 ptr addrspace(1) @returns_ptr()
@@ -84,7 +84,7 @@ define void @call_result_align_8() {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 0
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @returns_ptr
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -110,7 +110,7 @@ define void @call_result_align_8() {
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(i32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY19]](i32), [[COPY20]](i32)
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p1) = G_ASSERT_ALIGN [[MV]], 8
   ; CHECK-NEXT:   G_STORE [[C]](i8), [[ASSERT_ALIGN]](p1) :: (store (i8) into %ir.ptr, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
@@ -134,7 +134,7 @@ define void @declaration_result_align_8() {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 0
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @returns_ptr_align8
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -160,7 +160,7 @@ define void @declaration_result_align_8() {
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(i32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY19]](i32), [[COPY20]](i32)
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p1) = G_ASSERT_ALIGN [[MV]], 8
   ; CHECK-NEXT:   G_STORE [[C]](i8), [[ASSERT_ALIGN]](p1) :: (store (i8) into %ir.ptr, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN

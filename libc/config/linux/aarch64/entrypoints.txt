@@ -400,6 +400,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/wait.h entrypoints
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
+    libc.src.sys.wait.waitid
     libc.src.sys.wait.waitpid
 
     # sys/xattr.h entrypoints
@@ -427,6 +428,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.sysmacros.major
     libc.src.sys.sysmacros.minor
 
+    # sys/inotify.h entrypoints
+    libc.src.sys.inotify.inotify_add_watch
+    libc.src.sys.inotify.inotify_init
+    libc.src.sys.inotify.inotify_init1
+    libc.src.sys.inotify.inotify_rm_watch
+
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed
@@ -437,8 +444,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcflush
     libc.src.termios.tcgetattr
     libc.src.termios.tcgetsid
+    libc.src.termios.tcgetwinsize
     libc.src.termios.tcsendbreak
     libc.src.termios.tcsetattr
+    libc.src.termios.tcsetwinsize
 
     # unistd.h entrypoints
     libc.src.unistd.alarm
@@ -475,6 +484,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getgid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
+    libc.src.unistd.lchown
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
@@ -498,6 +508,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.sleep
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
+    libc.src.unistd.sync
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
@@ -1334,6 +1345,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.abort
     libc.src.stdlib.at_quick_exit
     libc.src.stdlib.atexit
+    libc.src.stdlib.clearenv
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.putenv
@@ -1414,6 +1426,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime_r
     libc.src.time.clock
     libc.src.time.clock_getcpuclockid
+    libc.src.time.clock_getres
     libc.src.time.clock_gettime
     libc.src.time.clock_settime
     libc.src.time.difftime
