@@ -1426,13 +1426,9 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
       if (args[j] && args[j]->isConditionalArg()) {
         const ActualArgument::ConditionalArg &condArg{
             DEREF(args[j]->GetConditionalArg())};
-        // A .NIL. consequent can leave an OPTIONAL dummy absent at run time,
-        // and an inquiry such as IEEE_SUPPORT_UNDERFLOW_CONTROL gives a
-        // different answer for an absent argument than for a present one.
-        // TODO: Fold such a reference twice, once with the representative
-        // and once with the argument absent, and keep the result when both
-        // agree. Blocked on llvm/llvm-project#227390: semantics rejects .NIL.
-        // for every OPTIONAL dummy of an intrinsic, so this can't be tested.
+        // C1540 rules out .NIL. here in conforming code: no type-only inquiry
+        // dummy is OPTIONAL in the standard (the IEEE_SUPPORT_* inquiries are
+        // generic with and without X). Bail out defensively.
         if (condArg.HasNilConsequent() ||
             !IsTypeOnlyInquiryArg(*intrinsic, j)) {
           return Expr<T>{std::move(funcRef)};

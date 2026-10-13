@@ -17,6 +17,8 @@ module m
   integer, pointer :: ptr1(:), ptr2(:)
   integer, target :: tgt(10)
   real :: x, y
+  character(4) :: c4a
+  character(8) :: c8a
   type(ieee_round_type) :: mode
   !ERROR: Must be a constant value
   integer, parameter :: p_size = size((flag ? a1 : a2))
@@ -47,6 +49,12 @@ module m
   ! when ROUND_VALUE= is a variable, so the original reference is kept.
   !ERROR: Must be a constant value
   logical, parameter :: p_round = ieee_support_rounding(mode, (flag ? x : y))
+  ! Fixed but different lengths: a fold through the first consequent-arg
+  ! would succeed here, so only the type-only check prevents it.
+  !ERROR: Must be a constant value
+  integer, parameter :: p_len_fixed = len((flag ? c4a : c8a))
+  !ERROR: Must be a constant value
+  integer, parameter :: p_storage_size_fixed = storage_size((flag ? c4a : c8a))
 contains
   ! LEN and STORAGE_SIZE depend on length type parameters and dynamic type,
   ! which C1538 doesn't require to agree between consequent-args.
