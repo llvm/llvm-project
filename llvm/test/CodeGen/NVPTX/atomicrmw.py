@@ -80,10 +80,10 @@ atomicrmw_elementwise_func = Template(
 run_statement = Template(
     """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-DISALLOW
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-ALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-ALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-DISALLOW
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-DISALLOW
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-ALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-ALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-DISALLOW
 ; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_${sm} %}
 ; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_${sm} %}
 ; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}
