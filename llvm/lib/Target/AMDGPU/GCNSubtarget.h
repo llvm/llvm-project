@@ -678,7 +678,7 @@ public:
   }
 
   bool useAddPCI64Inst() const {
-    return HasGFX1250Insts && !hasUnusableAddPCI64();
+    return hasSAddPCI64Inst() && !hasUnusableSAddPCI64();
   }
 
   /// \returns true if the target supports expert scheduling mode 2 which relies

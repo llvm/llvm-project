@@ -1415,6 +1415,10 @@ defm SlowMaxMinMulI64Insts : AMDGPUSubtargetFeature<"slow-max-min-mul-i64-insts"
   GenPredicate=false
 >;
 
+defm SAddPCI64Inst : AMDGPUSubtargetFeature<"s-add-pc-i64-inst",
+  "Has s_add_pc_i64 instruction"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1648,7 +1652,7 @@ def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
   "Target requires waits for loads and atomics before system scope stores"
 >;
 
-defm UnusableAddPCI64 : AMDGPUSubtargetFeature<"unusable-add-pc-i64",
+defm UnusableSAddPCI64 : AMDGPUSubtargetFeature<"unusable-s-add-pc-i64",
   "s_add_pc_i64 instruction is unusable by codegen",
   GenPredicate=false
 >;
@@ -2463,7 +2467,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureRealTrue16Insts,
    FeatureMTBUFInsts,
    FeatureFormattedMUBUFInsts,
-   FeatureDataCacheLineSize128
+   FeatureDataCacheLineSize128,
    ]>;
 
 def FeatureISAVersion12_50_Common : FeatureSet<
@@ -2556,6 +2560,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureRealTrue16Insts,
    FeatureVMovB64Inst,
    FeatureVMulU64Inst,
+   FeatureSAddPCI64Inst,
 ]>;
 
 def FeatureISAVersion12_50_STRICT : FeatureSet<
@@ -2591,7 +2596,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
    FeatureSupportsXNACK,
-   FeatureUnusableAddPCI64,
+   FeatureUnusableSAddPCI64,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2629,7 +2634,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
    FeatureSupportsXNACK,
-   FeatureUnusableAddPCI64,
+   FeatureUnusableSAddPCI64,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2694,7 +2699,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureSupportsXNACK,
-   FeatureUnusableAddPCI64,
+   FeatureUnusableSAddPCI64,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -2773,7 +2778,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureSmemPrefetchInsts,
    FeatureAsyncLoadToLDSInsts,
    FeatureIndexedResources,
-   FeatureUnusableAddPCI64,
+   FeatureSAddPCI64Inst,
+   FeatureUnusableSAddPCI64,
 ]>;
 
 def FeatureISAVersion13_Generic: FeatureSet<
