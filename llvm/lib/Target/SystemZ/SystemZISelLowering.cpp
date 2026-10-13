@@ -11542,11 +11542,8 @@ void SystemZTargetLowering::verifyNarrowIntegerArgs_Call(
   bool IsInternal = false;
   const Function *CalleeFn = nullptr;
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
-    if ((CalleeFn = dyn_cast<Function>(G->getGlobal()))) {
+    if ((CalleeFn = dyn_cast<Function>(G->getGlobal())))
       IsInternal = isInternal(CalleeFn);
-      assert(CalleeFn->getCallingConv() == CLI.CallConv &&
-             "Wrong calling convention used.");
-    }
   bool C_ABI = CLI.CallConv == CallingConv::C && !IsInternal;
   if (!verifyNarrowIntegerArgs(C_ABI, Outs, CalleeFn, /*IsRet=*/false)) {
     errs() << "Callee: ";
@@ -11586,6 +11583,9 @@ void SystemZTargetLowering::verifyNarrowIntegerArgs_Ret(
 bool SystemZTargetLowering::verifyNarrowIntegerArgs(
     bool C_ABI, const SmallVectorImpl<ISD::OutputArg> &Outs,
     const Function *FunHeader, bool IsRet) const {
+  if (IsRet && Outs.size() != 1)
+    return true;
+
   for (unsigned i = 0; i < Outs.size(); ++i) {
     EVT OrigArgVT = Outs[i].ArgVT;
     if (!OrigArgVT.isInteger() || OrigArgVT.getSizeInBits() >= 64)
@@ -11596,7 +11596,7 @@ bool SystemZTargetLowering::verifyNarrowIntegerArgs(
 
     // Per the C ABI there must be an extension.
     if (C_ABI && !Flags.isSExt() && !Flags.isZExt() && !Flags.isNoExt()) {
-      errs() << "ERROR:  (C ABI violiation) missing extension attribute on arg "
+      errs() << "ERROR:  (C ABI violation) missing extension attribute on arg "
              << OrigIdx << ".\n";
       return false;
     }

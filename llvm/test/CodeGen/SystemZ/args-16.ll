@@ -14,7 +14,7 @@ define void @foo() {
   ret void
 }
 
-; CHECK: ERROR:  (C ABI violiation) missing extension attribute on arg 0.
+; CHECK: ERROR:  (C ABI violation) missing extension attribute on arg 0.
 ; CHECK: Returning from function: i16 @callee_MissingRetAttr()
 ; CHECK: UNREACHABLE executed
 

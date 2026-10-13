@@ -11,7 +11,7 @@ define void @caller() {
 
 declare void @bar_Struct(i8 %Arg)
 
-; CHECK: ERROR:  (C ABI violiation) missing extension attribute on arg 0.
+; CHECK: ERROR:  (C ABI violation) missing extension attribute on arg 0.
 ; CHECK: Callee: void @bar_Struct(i8)
 ; CHECK: Caller: void @caller()
 ; CHECK:         call void @bar_Struct(i8 123)
