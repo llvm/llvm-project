@@ -1519,6 +1519,7 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   assert(MI.getOperand(2).isReg() && "Unexpected operand in dot");
   SPIRVTypeInst TypeDef = ST.getSPIRVGlobalRegistry()->getSPIRVTypeForVReg(
       MI.getOperand(2).getReg(), MI.getMF());
+  assert(TypeDef && "Unexpected type instruction for dot input");
   if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
     assert(TypeDef->getOperand(1).getImm() == 32);
     Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPacked);
@@ -2667,6 +2668,7 @@ void addInstrRequirements(const MachineInstr &MI,
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVTypeInst TypeDef = ST.getSPIRVGlobalRegistry()->getSPIRVTypeForVReg(
         MI.getOperand(2).getReg(), MI.getMF());
+    assert(TypeDef && "Unexpected type instruction for comparison operand");
     if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     if (isBFloat16Type(TypeDef)) {
