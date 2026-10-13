@@ -838,6 +838,22 @@ void BackendConsumer::MisExpectDiagHandler(
         << Filename << Line << Column;
 }
 
+void BackendConsumer::SanitizerInstrumentationRegionDiagHandler(
+    const llvm::DiagnosticInfoSanitizerInstrumentationRegion &D) {
+  StringRef Filename;
+  unsigned Line, Column;
+  bool BadDebugInfo = false;
+  FullSourceLoc Loc =
+      getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
+
+  Diags.Report(Loc, diag::warn_fe_backend_sanitizer_instrumentation_region)
+      << D.getMsg().str();
+
+  if (BadDebugInfo)
+    Diags.Report(Loc, diag::note_fe_backend_invalid_loc)
+        << Filename << Line << Column;
+}
+
 /// This function is invoked when the backend needs
 /// to report something to the user.
 void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
@@ -923,6 +939,10 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
     return;
   case llvm::DK_MisExpect:
     MisExpectDiagHandler(cast<DiagnosticInfoMisExpect>(DI));
+    return;
+  case llvm::DK_SanitizerInstrumentationRegion:
+    SanitizerInstrumentationRegionDiagHandler(
+        cast<DiagnosticInfoSanitizerInstrumentationRegion>(DI));
     return;
   default:
     // Plugin IDs are not bound to any value as they are set dynamically.

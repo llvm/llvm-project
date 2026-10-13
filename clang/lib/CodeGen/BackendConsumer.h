@@ -140,6 +140,9 @@ public:
   /// Specialized handler for misexpect warnings.
   /// Note that misexpect remarks are emitted through ORE
   void MisExpectDiagHandler(const llvm::DiagnosticInfoMisExpect &D);
+  /// Specialized handler for unbalanced sanitizer instrumentation regions.
+  void SanitizerInstrumentationRegionDiagHandler(
+      const llvm::DiagnosticInfoSanitizerInstrumentationRegion &D);
 };
 
 } // namespace clang

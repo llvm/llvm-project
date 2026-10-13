@@ -169,8 +169,91 @@ static unsigned regionDepthAfter(const Instruction &I, unsigned Depth) {
   return Depth;
 }
 
+static const char *const SanitizerRegionsDiagnosedMD =
+    "sanitizer.regions.diagnosed";
+
+/// Find the first problem with the region markers of \p F, given the fixed
+/// point of the region analysis, and report it.
+///
+/// With the "must" (minimum) join the analysis is exact as long as all paths
+/// to a block agree on the nesting depth, so the first point where they
+/// disagree is a block whose reached predecessors leave with different depths.
+/// Joins are checked first, so that an end() or a return that only looks
+/// unbalanced because of an earlier bad join is not blamed instead.
+static void diagnoseSanitizerInstrumentationRegions(
+    Function &F, const DenseMap<const BasicBlock *, unsigned> &DepthIn,
+    const DenseMap<const BasicBlock *, unsigned> &DepthOut) {
+  if (F.getMetadata(SanitizerRegionsDiagnosedMD))
+    return;
+
+  const Instruction *Where = nullptr;
+  const char *Msg = nullptr;
+  for (const BasicBlock &BB : F) {
+    if (&BB == &F.getEntryBlock() || DepthIn.lookup(&BB) == UnreachedDepth)
+      continue;
+    unsigned Min = UnreachedDepth, Max = 0;
+    for (const BasicBlock *Pred : predecessors(&BB)) {
+      unsigned Out = DepthOut.lookup(Pred);
+      if (Out == UnreachedDepth)
+        continue;
+      Min = std::min(Min, Out);
+      Max = std::max(Max, Out);
+    }
+    if (Min != Max) {
+      // Point at the first instruction that has a location, if any.
+      Where = &*BB.getFirstNonPHIOrDbgOrAlloca();
+      for (const Instruction &I : BB)
+        if (I.getDebugLoc()) {
+          Where = &I;
+          break;
+        }
+      Msg = Min == 0
+                ? "control flow merges from paths with different sanitizer "
+                  "instrumentation region nesting; the code that follows is "
+                  "treated as outside the region"
+                : "control flow merges from paths with different sanitizer "
+                  "instrumentation region nesting; the code that follows is "
+                  "treated as nested in the smaller number of regions";
+      break;
+    }
+  }
+
+  for (const BasicBlock &BB : F) {
+    if (Msg)
+      break;
+    unsigned Depth = DepthIn.lookup(&BB);
+    if (Depth == UnreachedDepth)
+      continue;
+    for (const Instruction &I : BB) {
+      if (isSanitizerInstrumentationEnd(I) && !Depth) {
+        Where = &I;
+        Msg = "sanitizer instrumentation region end without a matching begin";
+        break;
+      }
+      if (isa<ReturnInst>(I) && Depth) {
+        // Only returns are checked. Not closing a region before a call that
+        // does not return (BUG(), panic()) is common and harmless, and
+        // unwinding out of a function cannot be checked consistently: a call
+        // without a landing pad leaves no terminator to look at.
+        Where = &I;
+        Msg = "sanitizer instrumentation region is not closed before return";
+        break;
+      }
+      Depth = regionDepthAfter(I, Depth);
+    }
+  }
+
+  if (!Msg)
+    return;
+  F.getContext().diagnose(DiagnosticInfoSanitizerInstrumentationRegion(
+      F, Where->getDebugLoc(),
+      Twine("in function '") + F.getName() + "': " + Msg));
+  // Several sanitizer passes may analyze the same function; warn only once.
+  F.setMetadata(SanitizerRegionsDiagnosedMD, MDNode::get(F.getContext(), {}));
+}
+
 void llvm::computeSanitizerInstrumentationRegions(
-    const Function &F, SmallPtrSetImpl<const Instruction *> &InRegion) {
+    Function &F, SmallPtrSetImpl<const Instruction *> &InRegion) {
   DenseMap<const BasicBlock *, unsigned> DepthIn;
   DenseMap<const BasicBlock *, unsigned> DepthOut;
   const BasicBlock *Entry = &F.getEntryBlock();
@@ -220,4 +303,6 @@ void llvm::computeSanitizerInstrumentationRegions(
         InRegion.insert(&I);
     }
   }
+
+  diagnoseSanitizerInstrumentationRegions(F, DepthIn, DepthOut);
 }

@@ -495,6 +495,21 @@ void DiagnosticInfoMisExpect::print(DiagnosticPrinter &DP) const {
   DP << getLocationStr() << ": " << getMsg();
 }
 
+DiagnosticInfoSanitizerInstrumentationRegion::
+    DiagnosticInfoSanitizerInstrumentationRegion(const Function &Fn,
+                                                 const DebugLoc &Loc,
+                                                 const Twine &Msg)
+    : DiagnosticInfoWithLocationBase(DK_SanitizerInstrumentationRegion,
+                                     DS_Warning, Fn, Loc),
+      Msg(Msg) {}
+
+void DiagnosticInfoSanitizerInstrumentationRegion::print(
+    DiagnosticPrinter &DP) const {
+  if (isLocationAvailable())
+    DP << getLocationStr() << ": ";
+  DP << getMsg();
+}
+
 void OptimizationRemarkAnalysisFPCommute::anchor() {}
 void OptimizationRemarkAnalysisAliasing::anchor() {}
 

@@ -76,8 +76,16 @@ LLVM_ABI bool hasSanitizerInstrumentationRegions(const Function &F);
 /// objtool requiring them to be balanced on all paths. The lattice value is
 /// the nesting depth rather than a flag, so that in begin; begin; end; X; end
 /// the instruction X is still in a region.
+///
+/// Unbalanced regions are also reported as a warning through the
+/// LLVMContext diagnostic handler: an end() without a matching begin(), a
+/// region still open at a return, and control flow merging from paths with
+/// different nesting depths. Leaving the function without returning (through
+/// an unreachable or by unwinding) with a region open is not diagnosed. At
+/// most one warning is emitted per function,
+/// even if several sanitizer passes analyze it.
 LLVM_ABI void computeSanitizerInstrumentationRegions(
-    const Function &F, SmallPtrSetImpl<const Instruction *> &InRegion);
+    Function &F, SmallPtrSetImpl<const Instruction *> &InRegion);
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
