@@ -697,6 +697,7 @@ features cannot lower the translation-unit ABI level;
 - Clang no longer treats a file-scope `thread_local` declaration without an initializer as a tentative definition in C23 mode. As specified by C23 6.9.3, such a declaration is a definition, so declaring the same variable more that once is now diagnosed as a redefinition. (#GH217636)
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
+- Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
 
 #### Bug Fixes to Compiler Builtins
 
