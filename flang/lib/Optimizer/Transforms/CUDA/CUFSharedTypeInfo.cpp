@@ -11,6 +11,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -44,6 +45,61 @@ static std::string getUnitTag(mlir::ModuleOp mod) {
     if (auto sym = mlir::dyn_cast<mlir::SymbolOpInterface>(op))
       os << ';' << sym.getName();
   return llvm::utohexstr(llvm::xxh3_64bits(key), /*LowerCase=*/true);
+}
+
+/// Add the LLVM global \p name to llvm.used, creating the array or appending
+/// to the one already in \p mod.
+static mlir::LogicalResult
+addToUsed(mlir::ModuleOp mod, mlir::SymbolTable &symTab, llvm::StringRef name) {
+  constexpr llvm::StringLiteral usedName{"llvm.used"};
+  mlir::MLIRContext *ctx = mod.getContext();
+  mlir::Location loc = mod.getLoc();
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(ctx);
+  mlir::OpBuilder builder(ctx);
+
+  auto used = symTab.lookup<mlir::LLVM::GlobalOp>(usedName);
+  mlir::LLVM::ReturnOp oldReturn;
+  uint64_t numOld = 0;
+  if (used) {
+    auto oldTy =
+        mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(used.getGlobalType());
+    mlir::Block *init = used.getInitializerBlock();
+    if (!oldTy || oldTy.getElementType() != ptrTy || !init)
+      return used.emitError("unexpected form of ") << usedName;
+    oldReturn = mlir::cast<mlir::LLVM::ReturnOp>(init->getTerminator());
+    numOld = oldTy.getNumElements();
+    builder.setInsertionPoint(oldReturn);
+  } else {
+    if (symTab.lookup(usedName))
+      return mod.emitError("unexpected ") << usedName << " symbol";
+    builder.setInsertionPointToEnd(mod.getBody());
+    used = mlir::LLVM::GlobalOp::create(
+        builder, loc, mlir::LLVM::LLVMArrayType::get(ptrTy, 1),
+        /*isConstant=*/false, mlir::LLVM::Linkage::Appending, usedName,
+        mlir::Attribute{});
+    used.setSection("llvm.metadata");
+    builder.createBlock(&used.getInitializerRegion());
+  }
+
+  auto usedTy = mlir::LLVM::LLVMArrayType::get(ptrTy, numOld + 1);
+  mlir::Value value = mlir::LLVM::UndefOp::create(builder, loc, usedTy);
+  for (uint64_t i = 0; i < numOld; ++i) {
+    int64_t pos = i;
+    mlir::Value elt = mlir::LLVM::ExtractValueOp::create(
+        builder, loc, oldReturn.getArg(), llvm::ArrayRef<int64_t>(pos));
+    value = mlir::LLVM::InsertValueOp::create(builder, loc, value, elt,
+                                              llvm::ArrayRef<int64_t>(pos));
+  }
+  mlir::Value addr = mlir::LLVM::AddressOfOp::create(builder, loc, ptrTy, name);
+  int64_t markerPos = numOld;
+  value = mlir::LLVM::InsertValueOp::create(builder, loc, value, addr,
+                                            llvm::ArrayRef<int64_t>(markerPos));
+  if (oldReturn)
+    oldReturn.getArgMutable().assign(value);
+  else
+    mlir::LLVM::ReturnOp::create(builder, loc, value);
+  used.setGlobalTypeAttr(mlir::TypeAttr::get(usedTy));
+  return mlir::success();
 }
 
 class CUFSharedTypeInfo
@@ -94,11 +150,6 @@ public:
     // Nothing references the global, so it is kept by llvm.used. It is created
     // in the LLVM dialect because llvm.used can only refer to LLVM globals.
     if (definesTypeInfo) {
-      constexpr llvm::StringLiteral usedName{"llvm.used"};
-      if (symTab.lookup(usedName)) {
-        mod.emitError("unexpected ") << usedName << " global";
-        return signalPassFailure();
-      }
       std::string markerName = cudaSharedTypeInfoEndPrefix.str() + unitTag;
       mlir::Location loc = mod.getLoc();
       builder.setInsertionPointToEnd(mod.getBody());
@@ -106,22 +157,11 @@ public:
       auto marker = mlir::LLVM::GlobalOp::create(
           builder, loc, i8Ty, /*isConstant=*/false,
           mlir::LLVM::Linkage::Internal, markerName,
-          builder.getIntegerAttr(i8Ty, 0), cudaSharedTypeInfoAlignment);
+          builder.getIntegerAttr(i8Ty, 0),
+          getCudaSharedTypeInfoAlignment(fir::getTargetTriple(mod)));
       marker.setSection(section.getValue());
-
-      auto ptrTy = mlir::LLVM::LLVMPointerType::get(ctx);
-      auto usedTy = mlir::LLVM::LLVMArrayType::get(ptrTy, 1);
-      auto used = mlir::LLVM::GlobalOp::create(
-          builder, loc, usedTy, /*isConstant=*/false,
-          mlir::LLVM::Linkage::Appending, usedName, mlir::Attribute{});
-      used.setSection("llvm.metadata");
-      builder.createBlock(&used.getInitializerRegion());
-      mlir::Value addr =
-          mlir::LLVM::AddressOfOp::create(builder, loc, ptrTy, markerName);
-      mlir::Value init = mlir::LLVM::UndefOp::create(builder, loc, usedTy);
-      init = mlir::LLVM::InsertValueOp::create(builder, loc, init, addr,
-                                               llvm::ArrayRef<int64_t>{0});
-      mlir::LLVM::ReturnOp::create(builder, loc, init);
+      if (mlir::failed(addToUsed(mod, symTab, markerName)))
+        return signalPassFailure();
     }
 
     auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName);

@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/TargetParser/Triple.h"
 
 static constexpr llvm::StringRef cudaDeviceModuleName = "cuda_device_mod";
 static constexpr llvm::StringRef cudaSharedMemSuffix = "__shared_mem__";
@@ -31,8 +32,13 @@ static constexpr llvm::StringRef cudaSharedTypeInfoSection = "__nv_type_info";
 /// pages before the last one hold only type information.
 static constexpr llvm::StringRef cudaSharedTypeInfoEndPrefix =
     "__nv_type_info_end_";
-/// Page size assumed for the section layout.
-static constexpr int64_t cudaSharedTypeInfoAlignment = 4096;
+/// Alignment of that global: the largest page size of \p triple, so that the
+/// layout holds whatever page size the system uses.
+inline int64_t getCudaSharedTypeInfoAlignment(const llvm::Triple &triple) {
+  if (triple.isAArch64() || triple.isPPC64())
+    return 65536;
+  return 4096;
+}
 /// Attribute on the GPU module mapping the name of each shared type
 /// descriptor to the managed pointer holding its host address.
 static constexpr llvm::StringRef cudaSharedTypeDescsAttrName =
