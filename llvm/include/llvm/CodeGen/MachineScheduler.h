@@ -96,6 +96,7 @@
 #include <algorithm>
 #include <cassert>
 #include <llvm/Support/raw_ostream.h>
+#include <list>
 #include <memory>
 #include <string>
 #include <vector>

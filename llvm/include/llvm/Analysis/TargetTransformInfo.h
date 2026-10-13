@@ -1262,10 +1262,6 @@ public:
   /// Return true if the hardware has a fast square-root instruction.
   LLVM_ABI bool haveFastSqrt(Type *Ty) const;
 
-  /// Return true if the hardware has a fast carry-less multiplication
-  /// instruction.
-  LLVM_ABI bool haveFastClmul(IntegerType *Ty) const;
-
   /// Return true if the cost of the instruction is too high to speculatively
   /// execute and should be kept behind a branch.
   /// This normally just wraps around a getInstructionCost() call, but some
@@ -2161,11 +2157,6 @@ public:
 
   /// \return The maximum number of function arguments the target supports.
   LLVM_ABI unsigned getMaxNumArgs() const;
-
-  /// \return For an array of given Size, return alignment boundary to
-  /// pad to. Default is no padding.
-  LLVM_ABI unsigned getNumBytesToPadGlobalArray(unsigned Size,
-                                                Type *ArrayType) const;
 
   /// @}
 

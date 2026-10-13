@@ -1847,8 +1847,8 @@ define i32 @clmulr_i32(i32 %a, i32 %b) nounwind {
 ; RV64IMZBC:       # %bb.0:
 ; RV64IMZBC-NEXT:    slli a1, a1, 32
 ; RV64IMZBC-NEXT:    slli a0, a0, 32
-; RV64IMZBC-NEXT:    clmulh a0, a0, a1
-; RV64IMZBC-NEXT:    srli a0, a0, 31
+; RV64IMZBC-NEXT:    clmulr a0, a0, a1
+; RV64IMZBC-NEXT:    srli a0, a0, 32
 ; RV64IMZBC-NEXT:    ret
   %a.ext = zext i32 %a to i64
   %b.ext = zext i32 %b to i64

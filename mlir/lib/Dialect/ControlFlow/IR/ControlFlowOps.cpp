@@ -307,7 +307,7 @@ namespace {
 ///  -> br ^bb2
 ///
 struct SimplifyConstCondBranchPred : public OpRewritePattern<CondBranchOp> {
-  using OpRewritePattern<CondBranchOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(CondBranchOp condbr,
                                 PatternRewriter &rewriter) const override {

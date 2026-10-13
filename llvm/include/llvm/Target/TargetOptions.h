@@ -45,7 +45,7 @@ enum class BasicBlockSection {
           // basic block sections for a subset of basic blocks which can be
           // used to control object size bloats from creating sections.
   Preset, // Similar to list but the blocks are identified by passes which
-          // seek to use Basic Block Sections, e.g. MachineFunctionSplitter.
+          // seek to use Basic Block Sections, e.g. -function-splitting=all.
           // This option cannot be set via the command line.
   None    // Do not use Basic Block Sections.
 };
@@ -57,7 +57,6 @@ enum class FunctionSplittingMode {
                   // which have a basic block sections profile. Such functions
                   // are still laid out using the profile, but are emitted as a
                   // single contiguous section.
-                  // NOTE: Not implemented yet.
   BBSectionsOnly, // Split only functions that have a basic block sections
                   // profile. Functions without one are not split, even if
                   // they have PGO/SamplePGO data. This is the default, and
@@ -133,9 +132,9 @@ public:
         EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
         EmitCallSiteInfo(false), EnableDebugEntryValues(false),
         ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
-        XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
-        JMCInstrument(false), EnableCFIFixup(false), MisExpect(false),
-        XCOFFReadOnlyPointers(false), VerifyArgABICompliance(true) {}
+        XRayFunctionIndex(true), DebugStrictDwarf(false), JMCInstrument(false),
+        EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
+        VerifyArgABICompliance(true) {}
 
   /// NoZerosInBSS - By default some codegens place zero-initialized data to
   /// .bss section. This flag disables such behaviour (necessary, e.g. for
@@ -276,9 +275,6 @@ public:
   /// When set to true, don't use DWARF extensions in later DWARF versions.
   /// By default, it is set to false.
   unsigned DebugStrictDwarf : 1;
-
-  /// Emit the hotpatch flag in CodeView debug.
-  unsigned Hotpatch : 1;
 
   /// Enable JustMyCode instrumentation.
   unsigned JMCInstrument : 1;

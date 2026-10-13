@@ -1948,11 +1948,7 @@ static void addFullyUnrolledInstructionsToIgnore(
   auto *Cmp = L->getLatchCmpInst();
   if (Cmp)
     InstsToIgnore.insert(Cmp);
-  for (const auto &KV : IL) {
-    // Extract the key by hand so that it can be used in the lambda below.  Note
-    // that captured structured bindings are a C++20 extension.
-    PHINode *IV = KV.first;
-
+  for (PHINode *IV : IL.keys()) {
     // The induction is free: a widened induction generates a vector phi with
     // its start value and an increment that is dead without a backedge.
     InstsToIgnore.insert(IV);
@@ -2836,8 +2832,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // of the induction variable and induction variable update remain uniform.
   // The code below handles both pointer and non-pointer induction variables.
   BasicBlock *Latch = TheLoop->getLoopLatch();
-  for (const auto &Induction : Legal->getInductionVars()) {
-    auto *Ind = Induction.first;
+  for (PHINode *Ind : Legal->getInductionVars().keys()) {
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
 
     // Determine if all users of the induction variable are uniform after
@@ -5335,17 +5330,14 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 
   // Ignore type-promoting instructions we identified during reduction
   // detection.
-  for (const auto &Reduction : Legal->getReductionVars()) {
-    const RecurrenceDescriptor &RedDes = Reduction.second;
-    const SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
-    VecValuesToIgnore.insert_range(Casts);
+  for (const RecurrenceDescriptor &RedDes :
+       Legal->getReductionVars().values()) {
+    VecValuesToIgnore.insert_range(RedDes.getCastInsts());
   }
   // Ignore type-casting instructions we identified during induction
   // detection.
-  for (const auto &Induction : Legal->getInductionVars()) {
-    const InductionDescriptor &IndDes = Induction.second;
+  for (const InductionDescriptor &IndDes : Legal->getInductionVars().values())
     VecValuesToIgnore.insert_range(IndDes.getCastInsts());
-  }
 }
 
 void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
@@ -5802,7 +5794,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
-  RUN_VPLAN_PASS(VPlanTransforms::materializePacksAndUnpacks, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::materializeUnpacks, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::materializeBroadcasts, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   bool HasBranchWeights =
@@ -6142,16 +6134,9 @@ VPRecipeWithIRFlags *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze:
+  case Instruction::ExtractValue:
     return new VPWidenRecipe(*I, VPI->operandsWithoutMask(), *VPI, *VPI,
                              VPI->getDebugLoc());
-  case Instruction::ExtractValue: {
-    SmallVector<VPValue *> NewOps(VPI->operandsWithoutMask());
-    auto *EVI = cast<ExtractValueInst>(I);
-    assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
-    unsigned Idx = EVI->getIndices()[0];
-    NewOps.push_back(Plan.getConstantInt(32, Idx));
-    return new VPWidenRecipe(*I, NewOps, *VPI, *VPI, VPI->getDebugLoc());
-  }
   };
 }
 
@@ -6165,10 +6150,6 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
     return nullptr;
 
   const HistogramInfo *HI = *HistInfo;
-  // FIXME: Support other operations.
-  unsigned Opcode = HI->Update->getOpcode();
-  assert((Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
-         "Histogram update operation must be an Add or Sub");
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
@@ -6181,8 +6162,8 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   if (CM.isMaskRequired(HI->Store))
     HGramOps.push_back(VPI->getMask());
 
-  return new VPHistogramRecipe(Opcode, HGramOps, cast<VPIRMetadata>(*VPI),
-                               VPI->getDebugLoc());
+  return new VPHistogramRecipe(HI->UpdateKind, HGramOps,
+                               cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
 }
 
 bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
@@ -7412,11 +7393,20 @@ static void preparePlanForEpilogueVectorLoop(
                 [](const VPUser *U) {
                   if (isa<VPScalarIVStepsRecipe, VPDerivedIVRecipe>(U))
                     return true;
-                  unsigned Opc = cast<VPInstruction>(U)->getOpcode();
-                  return Instruction::isCast(Opc) || Opc == Instruction::Add;
+                  auto *VPI = dyn_cast<VPInstruction>(U);
+                  if (!VPI)
+                    return false;
+                  // Only users linear in the canonical IV (e.g. scaling it by
+                  // a stride) stay correct when offsetting it below; others,
+                  // like header masks, may need an epilogue-relative IV.
+                  return Instruction::isCast(VPI->getOpcode()) ||
+                         is_contained({Instruction::Add, Instruction::Mul,
+                                       Instruction::Shl},
+                                      VPI->getOpcode());
                 }) &&
-         "the canonical IV should only be used by its increment or "
-         "ScalarIVSteps when resetting the start value");
+         "the canonical IV should only be used by its increment, casts, "
+         "stride scaling, ScalarIVSteps or DerivedIV when resetting the start "
+         "value");
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   VPInstruction *Add = Builder.createAdd(IV, VPV);
   // Replace all users of the canonical IV and its increment with the offset
@@ -7892,12 +7882,16 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       // Bail out early if either the SCEV or memory runtime checks are known to
       // fail. In that case, the vector loop would never execute.
       using namespace llvm::PatternMatch;
-      if (Checks.getSCEVChecks().first &&
-          match(Checks.getSCEVChecks().first, m_One()))
+      if ((Checks.getSCEVChecks().first &&
+           match(Checks.getSCEVChecks().first, m_One())) ||
+          (Checks.getMemRuntimeChecks().first &&
+           match(Checks.getMemRuntimeChecks().first, m_One()))) {
+        reportVectorizationFailure(
+            "runtime checks are known to fail, so we will never enter the "
+            "vector loop",
+            "RuntimeChecksNeverEnterVectorLoop", ORE, L);
         return false;
-      if (Checks.getMemRuntimeChecks().first &&
-          match(Checks.getMemRuntimeChecks().first, m_One()))
-        return false;
+      }
     }
 
     // Check if it is profitable to vectorize with runtime checks.

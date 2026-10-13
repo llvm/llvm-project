@@ -63,6 +63,7 @@
 #include <algorithm>
 #include <bitset>
 #include <cctype>
+#include <list>
 #include <numeric>
 using namespace llvm;
 
@@ -1053,6 +1054,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::AVGCEILU,           MVT::v16i8, Legal);
     setOperationAction(ISD::AVGCEILU,           MVT::v8i16, Legal);
 
+    if (!Subtarget.is64Bit()) {
+      setOperationAction(ISD::MULHU,            MVT::v2i64, Custom);
+      setOperationAction(ISD::MULHS,            MVT::v2i64, Custom);
+    }
+
     setOperationAction(ISD::SMULO,              MVT::v16i8, Custom);
     setOperationAction(ISD::UMULO,              MVT::v16i8, Custom);
     setOperationAction(ISD::UMULO,              MVT::v2i32, Custom);
@@ -1684,6 +1690,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       if (Subtarget.is64Bit()) {
         setOperationAction(ISD::UMUL_LOHI, MVT::v4i64, Custom);
         setOperationAction(ISD::SMUL_LOHI, MVT::v4i64, Custom);
+      } else {
+        setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
       }
       setOperationAction(ISD::VSELECT, MVT::v32i8, Legal);
 
@@ -1964,11 +1972,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v16i32, Legal);
     setOperationAction(ISD::MUL, MVT::v32i16, HasBWI ? Legal : Custom);
     setOperationAction(ISD::MUL, MVT::v64i8,  Custom);
-
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::UMUL_LOHI, MVT::v8i64, Custom);
-      setOperationAction(ISD::SMUL_LOHI, MVT::v8i64, Custom);
-    }
 
     setOperationAction(ISD::MULHU, MVT::v8i64, Custom);
     setOperationAction(ISD::MULHS, MVT::v8i64, Custom);
@@ -5018,10 +5021,10 @@ static SDValue concatSubVectors(SDValue V1, SDValue V2, SelectionDAG &DAG,
   EVT SubVT = V1.getValueType();
   EVT SubSVT = SubVT.getScalarType();
   unsigned SubNumElts = SubVT.getVectorNumElements();
-  unsigned SubVectorWidth = SubVT.getSizeInBits();
+  unsigned SubVecWidth = SubVT.getSizeInBits();
   EVT VT = EVT::getVectorVT(*DAG.getContext(), SubSVT, 2 * SubNumElts);
-  SDValue V = insertSubVector(DAG.getUNDEF(VT), V1, 0, DAG, dl, SubVectorWidth);
-  return insertSubVector(V, V2, SubNumElts, DAG, dl, SubVectorWidth);
+  SDValue V = insertSubVector(DAG.getPOISON(VT), V1, 0, DAG, dl, SubVecWidth);
+  return insertSubVector(V, V2, SubNumElts, DAG, dl, SubVecWidth);
 }
 
 /// Returns a vector of specified type with all bits set.
@@ -20607,14 +20610,12 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
     if (SrcVT == MVT::v2i32 && VT == MVT::v2f64) {
       // Note: Since v2f64 is a legal type. We don't need to zero extend the
       // source for strict FP.
+      Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
+                        DAG.getUNDEF(SrcVT));
       if (IsStrict)
-        return DAG.getNode(
-            X86ISD::STRICT_CVTSI2P, dl, {VT, MVT::Other},
-            {Chain, DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
-                                DAG.getUNDEF(SrcVT))});
-      return DAG.getNode(X86ISD::CVTSI2P, dl, VT,
-                         DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
-                                     DAG.getUNDEF(SrcVT)));
+        return DAG.getNode(X86ISD::STRICT_CVTSI2P, dl, {VT, MVT::Other},
+                           {Chain, Src});
+      return DAG.getNode(X86ISD::CVTSI2P, dl, VT, Src);
     }
     if (SrcVT == MVT::v2i64 || SrcVT == MVT::v4i64)
       return lowerINT_TO_FP_vXi64(Op, dl, DAG, Subtarget);
@@ -21253,6 +21254,9 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 SDValue X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                                            bool IsSigned,
                                            SDValue &Chain) const {
+  if (!Subtarget.hasX87())
+    return SDValue();
+
   bool IsStrict = Op->isStrictFPOpcode();
   SDLoc DL(Op);
 
@@ -28380,7 +28384,7 @@ bool X86::isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
     return false;
   // 64-bit targets support extended Swift async frame setup,
   // except for targets that use the windows 64 prologue.
-  return !MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+  return !MF.usesWindowsUnwindInfo();
 }
 
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
@@ -28941,7 +28945,7 @@ SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
   MFI.setFrameAddressIsTaken(true);
 
-  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
+  if (MF.usesWindowsUnwindInfo()) {
     // Depth > 0 makes no sense on targets which use Windows unwind codes.  It
     // is not possible to crawl up the stack without looking at the unwind codes
     // simultaneously.
@@ -34454,10 +34458,10 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(Op);
 
   assert((!N->isCompressingStore() || Subtarget.hasAVX512()) &&
-         "Expanding masked load is supported on AVX-512 target only!");
+         "Compressing masked store is supported on AVX-512 target only!");
 
   assert((!N->isCompressingStore() || ScalarVT.getSizeInBits() >= 32) &&
-         "Expanding masked load is supported for 32 and 64-bit types only!");
+         "Compressing masked store is supported for 32 and 64-bit types only!");
 
   assert(Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
          "Cannot lower masked store op.");
@@ -48276,9 +48280,13 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
       EltSizeInBits <= 64 && DAG.computeKnownBits(Rdx).getMaxValue().ule(255) &&
       (EltSizeInBits == 16 || Rdx.getOpcode() == ISD::ZERO_EXTEND ||
        Subtarget.hasAVX512())) {
-    if (Rdx.getValueType() == MVT::v8i16) {
-      Rdx = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, Rdx,
-                        DAG.getUNDEF(MVT::v8i16));
+    if (Rdx.getValueType() == MVT::v8i16 ||
+        (Rdx.getValueType() == MVT::v4i32 && Subtarget.hasSSE41())) {
+      MVT PackSVT = MVT::getIntegerVT(EltSizeInBits / 2);
+      MVT PackVT = MVT::getVectorVT(PackSVT, NumElts * 2);
+      Rdx = DAG.getNode(X86ISD::PACKUS, DL, PackVT, Rdx,
+                        DAG.getPOISON(Rdx.getValueType()));
+      Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
     } else if (NumElts == 4) {
       // v4i16 fits into the bottom v8i8 64-bits and is cheaper to truncate.
       Rdx = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Rdx);
@@ -51331,11 +51339,6 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   if (isPowerOf2_64(C.getZExtValue()))
     return SDValue();
 
-  // Optimize a single multiply with constant into two operations in order to
-  // implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
-  if (!Subtarget.getCLOpts().mul_constant_optimization)
-    return SDValue();
-
   // An imul is usually smaller than the alternative sequence.
   if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
@@ -51343,6 +51346,8 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
     return SDValue();
 
+  // Optimize a single multiply with constant into two operations in order to
+  // implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
   int64_t SignMulAmt = C.getSExtValue();
   assert(SignMulAmt != INT64_MIN && "Int min should have been handled!");
   uint64_t AbsMulAmt = SignMulAmt < 0 ? -SignMulAmt : SignMulAmt;
@@ -58305,15 +58310,15 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
       SVT != MVT::i64 && SVT != MVT::f32 && SVT != MVT::f64)
     return SDValue();
 
-  // We don't have CMPP Instruction for vxf16
-  if (N0.getOperand(0).getValueType().getVectorElementType() == MVT::f16)
+  // We don't have CMPP Instruction for vxf16/vxbf16.
+  EVT N00VT = N0.getOperand(0).getValueType();
+  EVT N00SVT = N00VT.getVectorElementType();
+  if (N00SVT == MVT::f16 || N00SVT == MVT::bf16)
     return SDValue();
   // We can only do this if the vector size in 256 bits or less.
   unsigned Size = VT.getSizeInBits();
   if (Size > 256 && Subtarget.useAVX512Regs())
     return SDValue();
-
-  EVT N00VT = N0.getOperand(0).getValueType();
 
   // Don't fold if the condition code can't be handled by PCMPEQ/PCMPGT since
   // that's the only integer compares with we have.
@@ -64315,6 +64320,7 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
     case ISD::ZERO_EXTEND:
     case ISD::ANY_EXTEND:
     case ISD::MUL:
+    case ISD::SINT_TO_FP:
       return false;
     case ISD::SHL:
     case ISD::SRA:
@@ -65682,6 +65688,6 @@ Align X86TargetLowering::getPrefLoopAlignment(
   std::optional<int> InnermostAlign =
       Subtarget.getCLOpts().experimental_pref_innermost_loop_alignment;
   if (ML && ML->isInnermost() && InnermostAlign)
-    return Align(1ULL << *InnermostAlign);
+    return Align::fromLog2(*InnermostAlign);
   return TargetLowering::getPrefLoopAlignment();
 }
