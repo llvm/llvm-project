@@ -5353,10 +5353,12 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return std::min(Tmp, Tmp2) - 1;
   case ISD::MUL: {
     // The output of the Mul can be at most twice the valid bits in the inputs.
-    unsigned SignBitsOp0 = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    unsigned SignBitsOp0 =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (SignBitsOp0 == 1)
       break;
-    unsigned SignBitsOp1 = ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    unsigned SignBitsOp1 =
+        ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     if (SignBitsOp1 == 1)
       break;
     unsigned OutValidBits =
@@ -5379,7 +5381,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::TRUNCATE: {
     // Check if the sign bits of source go down as far as the truncated value.
     unsigned NumSrcBits = Op.getOperand(0).getScalarValueSizeInBits();
-    unsigned NumSrcSignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    unsigned NumSrcSignBits =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (NumSrcSignBits > (NumSrcBits - VTBits))
       return NumSrcSignBits - (NumSrcBits - VTBits);
     break;
@@ -7482,6 +7485,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType().getScalarType() == MVT::i1)
       return getNode(ISD::VECREDUCE_AND, DL, VT, N1);
     break;
+  case ISD::MASK_BEFOREFIRST:
+    // With a single lane, the result is true iff that lane is false.
+    if (VT.getVectorElementCount().isScalar())
+      return getLogicalNOT(DL, N1, VT);
+    break;
   case ISD::VECTOR_REPEAT:
     assert(N1.getValueType().isFixedLengthVector() &&
            "VECTOR_REPEAT requires a fixed-length vector operand");
@@ -8271,6 +8279,62 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                                    : getBuildVector(VT, DL, ScalarResults);
   NewSDValueDbgMsg(V, "New node fold constant vector: ", this);
   return V;
+}
+
+SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
+                                             SDVTList VTList,
+                                             ArrayRef<SDValue> Ops,
+                                             SDNodeFlags Flags) {
+  if (VTList.NumVTs == 1)
+    return FoldConstantArithmetic(Opcode, DL, VTList.VTs[0], Ops, Flags);
+
+  switch (Opcode) {
+  case ISD::SADDO:
+  case ISD::UADDO:
+  case ISD::SSUBO:
+  case ISD::USUBO:
+  case ISD::SMULO:
+  case ISD::UMULO: {
+    // TODO: Support non-splat vector constants.
+    ConstantSDNode *C1 = isConstOrConstSplat(Ops[0]);
+    ConstantSDNode *C2 = isConstOrConstSplat(Ops[1]);
+    if (!C1 || !C2 || C1->isOpaque() || C2->isOpaque())
+      return SDValue();
+
+    const APInt &V1 = C1->getAPIntValue(), &V2 = C2->getAPIntValue();
+    bool Overflow;
+    APInt Result;
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Unexpected overflow opcode");
+    case ISD::SADDO:
+      Result = V1.sadd_ov(V2, Overflow);
+      break;
+    case ISD::UADDO:
+      Result = V1.uadd_ov(V2, Overflow);
+      break;
+    case ISD::SSUBO:
+      Result = V1.ssub_ov(V2, Overflow);
+      break;
+    case ISD::USUBO:
+      Result = V1.usub_ov(V2, Overflow);
+      break;
+    case ISD::SMULO:
+      Result = V1.smul_ov(V2, Overflow);
+      break;
+    case ISD::UMULO:
+      Result = V1.umul_ov(V2, Overflow);
+      break;
+    }
+
+    EVT VT = VTList.VTs[0];
+    return getNode(ISD::MERGE_VALUES, DL, VTList,
+                   {getConstant(Result, DL, VT),
+                    getBoolConstant(Overflow, DL, VTList.VTs[1], VT)},
+                   Flags);
+  }
+  }
+  return SDValue();
 }
 
 SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
@@ -12048,6 +12112,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
            "Operand is DELETED_NODE!");
 #endif
 
+  if (SDValue V = FoldConstantArithmetic(Opcode, DL, VTList, Ops, Flags))
+    return V;
+
   switch (Opcode) {
   case ISD::SADDO:
   case ISD::UADDO:
@@ -13945,6 +14012,10 @@ ConstantSDNode *llvm::isConstOrConstSplat(SDValue N, const APInt &DemandedElts,
     }
   }
 
+  if (N.getOpcode() == ISD::MERGE_VALUES)
+    return isConstOrConstSplat(N.getOperand(N.getResNo()), DemandedElts,
+                               AllowUndefs, AllowTruncation);
+
   return nullptr;
 }
 
@@ -15109,9 +15180,9 @@ std::optional<bool> SelectionDAG::isBoolConstant(SDValue N) const {
   if (!Const)
     return std::nullopt;
 
-  EVT VT = N->getValueType(0);
+  EVT VT = N.getValueType();
   const APInt CVal = Const->getAPIntValue().trunc(VT.getScalarSizeInBits());
-  switch (TLI->getBooleanContents(N.getValueType())) {
+  switch (TLI->getBooleanContents(VT)) {
   case TargetLowering::ZeroOrOneBooleanContent:
     if (CVal.isOne())
       return true;

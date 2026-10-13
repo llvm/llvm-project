@@ -397,6 +397,14 @@ functions:
       - type: int
     guard: null
     attributes: []
+  - name: lchown
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: uid_t
+      - type: gid_t
   - name: link
     standards:
       - posix
