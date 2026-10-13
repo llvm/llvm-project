@@ -4381,8 +4381,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
 
     assert(I.arg_size() == 2);
-    Value *Accumulator = I.getArgOperand(0);
-    Value *Addends = I.getArgOperand(1);
+    [[maybe_unused]] Value *Accumulator = I.getArgOperand(0);
+    [[maybe_unused]] Value *Addends = I.getArgOperand(1);
     assert(isa<VectorType>(Accumulator->getType()));
     assert(isa<VectorType>(Addends->getType()));
 
@@ -4420,7 +4420,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         SAcc->getType(), Intrinsic::vector_partial_reduce_add, {SAcc, SAdd});
 
     SOutput = IRB.CreateSExt(IRB.CreateICmpNE(SOutput, getCleanShadow(SOutput)),
-                             SOutput->getType());
+                             getShadowTy(&I));
 
     setShadow(&I, SOutput);
     setOriginForNaryOp(I);

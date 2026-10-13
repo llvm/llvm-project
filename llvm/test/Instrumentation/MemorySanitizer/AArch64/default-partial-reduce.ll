@@ -3,55 +3,7 @@
 ;
 ; Handled strictly: (none)
 ;
-; Handled heuristically:
-; - <16 x bfloat> @llvm.vector.partial.reduce.fadd(<16 x bfloat>, <16 x bfloat>)
-; - <16 x half> @llvm.vector.partial.reduce.fadd(<16 x half>, <16 x half>)
-; - <16 x i16> @llvm.vector.partial.reduce.add(<16 x i16>, <16 x i16>)
-; - <16 x i8> @llvm.vector.partial.reduce.add(<16 x i8>, <16 x i8>)
-; - <2 x bfloat> @llvm.vector.partial.reduce.fadd(<2 x bfloat>, <2 x bfloat>)
-; - <2 x double> @llvm.vector.partial.reduce.fadd(<2 x double>, <2 x double>)
-; - <2 x float> @llvm.vector.partial.reduce.fadd(<2 x float>, <2 x float>)
-; - <2 x half> @llvm.vector.partial.reduce.fadd(<2 x half>, <2 x half>)
-; - <2 x i16> @llvm.vector.partial.reduce.add(<2 x i16>, <2 x i16>)
-; - <2 x i32> @llvm.vector.partial.reduce.add(<2 x i32>, <2 x i32>)
-; - <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64>, <2 x i64>)
-; - <32 x i8> @llvm.vector.partial.reduce.add(<32 x i8>, <32 x i8>)
-; - <4 x bfloat> @llvm.vector.partial.reduce.fadd(<4 x bfloat>, <4 x bfloat>)
-; - <4 x double> @llvm.vector.partial.reduce.fadd(<4 x double>, <4 x double>)
-; - <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float>, <4 x float>)
-; - <4 x half> @llvm.vector.partial.reduce.fadd(<4 x half>, <4 x half>)
-; - <4 x i16> @llvm.vector.partial.reduce.add(<4 x i16>, <4 x i16>)
-; - <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32>, <4 x i32>)
-; - <4 x i64> @llvm.vector.partial.reduce.add(<4 x i64>, <4 x i64>)
-; - <4 x i8> @llvm.vector.partial.reduce.add(<4 x i8>, <4 x i8>)
-; - <8 x bfloat> @llvm.vector.partial.reduce.fadd(<8 x bfloat>, <8 x bfloat>)
-; - <8 x float> @llvm.vector.partial.reduce.fadd(<8 x float>, <8 x float>)
-; - <8 x half> @llvm.vector.partial.reduce.fadd(<8 x half>, <8 x half>)
-; - <8 x i16> @llvm.vector.partial.reduce.add(<8 x i16>, <8 x i16>)
-; - <8 x i32> @llvm.vector.partial.reduce.add(<8 x i32>, <8 x i32>)
-; - <8 x i8> @llvm.vector.partial.reduce.add(<8 x i8>, <8 x i8>)
-; - <vscale x 16 x bfloat> @llvm.vector.partial.reduce.fadd(<vscale x 16 x bfloat>, <vscale x 16 x bfloat>)
-; - <vscale x 16 x half> @llvm.vector.partial.reduce.fadd(<vscale x 16 x half>, <vscale x 16 x half>)
-; - <vscale x 16 x i16> @llvm.vector.partial.reduce.add(<vscale x 16 x i16>, <vscale x 16 x i16>)
-; - <vscale x 16 x i8> @llvm.vector.partial.reduce.add(<vscale x 16 x i8>, <vscale x 16 x i8>)
-; - <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double>, <vscale x 2 x double>)
-; - <vscale x 2 x float> @llvm.vector.partial.reduce.fadd(<vscale x 2 x float>, <vscale x 2 x float>)
-; - <vscale x 2 x i32> @llvm.vector.partial.reduce.add(<vscale x 2 x i32>, <vscale x 2 x i32>)
-; - <vscale x 2 x i64> @llvm.vector.partial.reduce.add(<vscale x 2 x i64>, <vscale x 2 x i64>)
-; - <vscale x 32 x i8> @llvm.vector.partial.reduce.add(<vscale x 32 x i8>, <vscale x 32 x i8>)
-; - <vscale x 4 x bfloat> @llvm.vector.partial.reduce.fadd(<vscale x 4 x bfloat>, <vscale x 4 x bfloat>)
-; - <vscale x 4 x double> @llvm.vector.partial.reduce.fadd(<vscale x 4 x double>, <vscale x 4 x double>)
-; - <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float>, <vscale x 4 x float>)
-; - <vscale x 4 x half> @llvm.vector.partial.reduce.fadd(<vscale x 4 x half>, <vscale x 4 x half>)
-; - <vscale x 4 x i16> @llvm.vector.partial.reduce.add(<vscale x 4 x i16>, <vscale x 4 x i16>)
-; - <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32>, <vscale x 4 x i32>)
-; - <vscale x 4 x i64> @llvm.vector.partial.reduce.add(<vscale x 4 x i64>, <vscale x 4 x i64>)
-; - <vscale x 8 x bfloat> @llvm.vector.partial.reduce.fadd(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
-; - <vscale x 8 x float> @llvm.vector.partial.reduce.fadd(<vscale x 8 x float>, <vscale x 8 x float>)
-; - <vscale x 8 x half> @llvm.vector.partial.reduce.fadd(<vscale x 8 x half>, <vscale x 8 x half>)
-; - <vscale x 8 x i16> @llvm.vector.partial.reduce.add(<vscale x 8 x i16>, <vscale x 8 x i16>)
-; - <vscale x 8 x i32> @llvm.vector.partial.reduce.add(<vscale x 8 x i32>, <vscale x 8 x i32>)
-; - <vscale x 8 x i8> @llvm.vector.partial.reduce.add(<vscale x 8 x i8>, <vscale x 8 x i8>)
+; Handled heuristically: (none)
 ;
 ; Forked from llvm/test/CodeGen/AArch64/default-partial-reduce.ll
 
@@ -70,9 +22,9 @@ define <4 x i8> @pr_4xi8(<4 x i8> %in, <4 x i8> %acc)  sanitize_memory {
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v4i16(<4 x i16> [[TMP5]], <4 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i8>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i8> @llvm.vector.partial.reduce.add.v4i8.v4i8(<4 x i8> [[ACC]], <4 x i8> [[IN]])
-; CHECK-NEXT:    store <4 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i8> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i8> [[RES]]
 ;
   %res = call <4 x i8> @llvm.vector.partial.reduce.add(<4 x i8> %acc, <4 x i8> %in)
@@ -91,9 +43,9 @@ define <8 x i8> @pr_8xi8(<8 x i8> %in, <8 x i8> %acc)  sanitize_memory {
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <8 x i1> [[TMP4]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i16> @llvm.vector.partial.reduce.add.v8i16.v8i16(<8 x i16> [[TMP5]], <8 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <8 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <8 x i1> [[TMP8]] to <8 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <8 x i1> [[TMP8]] to <8 x i8>
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i8> @llvm.vector.partial.reduce.add.v8i8.v8i8(<8 x i8> [[ACC]], <8 x i8> [[IN]])
-; CHECK-NEXT:    store <8 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i8> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[RES]]
 ;
   %res = call <8 x i8> @llvm.vector.partial.reduce.add(<8 x i8> %acc, <8 x i8> %in)
@@ -112,9 +64,9 @@ define <16 x i8> @pr_16xi8(<16 x i8> %in, <16 x i8> %acc)  sanitize_memory {
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i1> [[TMP4]] to <16 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i16> @llvm.vector.partial.reduce.add.v16i16.v16i16(<16 x i16> [[TMP5]], <16 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <16 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <16 x i1> [[TMP8]] to <16 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <16 x i1> [[TMP8]] to <16 x i8>
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x i8> @llvm.vector.partial.reduce.add.v16i8.v16i8(<16 x i8> [[ACC]], <16 x i8> [[IN]])
-; CHECK-NEXT:    store <16 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <16 x i8> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i8> [[RES]]
 ;
   %res = call <16 x i8> @llvm.vector.partial.reduce.add(<16 x i8> %acc, <16 x i8> %in)
@@ -133,9 +85,9 @@ define <32 x i8> @pr_32xi8(<32 x i8> %in, <32 x i8> %acc)  sanitize_memory {
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <32 x i1> [[TMP4]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <32 x i16> @llvm.vector.partial.reduce.add.v32i16.v32i16(<32 x i16> [[TMP5]], <32 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <32 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <32 x i1> [[TMP8]] to <32 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <32 x i1> [[TMP8]] to <32 x i8>
 ; CHECK-NEXT:    [[RES:%.*]] = call <32 x i8> @llvm.vector.partial.reduce.add.v32i8.v32i8(<32 x i8> [[ACC]], <32 x i8> [[IN]])
-; CHECK-NEXT:    store <32 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <32 x i8> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x i8> [[RES]]
 ;
   %res = call <32 x i8> @llvm.vector.partial.reduce.add(<32 x i8> %acc, <32 x i8> %in)
@@ -238,9 +190,9 @@ define <2 x i32> @pr_2xi32(<2 x i32> %in, <2 x i32> %acc)  sanitize_memory {
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x i16> @llvm.vector.partial.reduce.add.v2i16.v2i16(<2 x i16> [[TMP5]], <2 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <2 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v2i32(<2 x i32> [[ACC]], <2 x i32> [[IN]])
-; CHECK-NEXT:    store <2 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
   %res = call <2 x i32> @llvm.vector.partial.reduce.add(<2 x i32> %acc, <2 x i32> %in)
@@ -259,9 +211,9 @@ define <4 x i32> @pr_4xi32(<4 x i32> %in, <4 x i32> %acc)  sanitize_memory {
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v4i16(<4 x i16> [[TMP5]], <4 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[ACC]], <4 x i32> [[IN]])
-; CHECK-NEXT:    store <4 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %acc, <4 x i32> %in)
@@ -280,9 +232,9 @@ define <8 x i32> @pr_8xi32(<8 x i32> %in, <8 x i32> %acc)  sanitize_memory {
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <8 x i1> [[TMP4]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i16> @llvm.vector.partial.reduce.add.v8i16.v8i16(<8 x i16> [[TMP5]], <8 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <8 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <8 x i1> [[TMP8]] to <8 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <8 x i1> [[TMP8]] to <8 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.vector.partial.reduce.add.v8i32.v8i32(<8 x i32> [[ACC]], <8 x i32> [[IN]])
-; CHECK-NEXT:    store <8 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i32> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
 ;
   %res = call <8 x i32> @llvm.vector.partial.reduce.add(<8 x i32> %acc, <8 x i32> %in)
@@ -301,9 +253,9 @@ define <2 x i64> @pr_2xi64(<2 x i64> %in, <2 x i64> %acc)  sanitize_memory {
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x i16> @llvm.vector.partial.reduce.add.v2i16.v2i16(<2 x i16> [[TMP5]], <2 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <2 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i64>
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[ACC]], <2 x i64> [[IN]])
-; CHECK-NEXT:    store <2 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %res = call <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64> %acc, <2 x i64> %in)
@@ -322,9 +274,9 @@ define <4 x i64> @pr_4xi64(<4 x i64> %in, <4 x i64> %acc)  sanitize_memory {
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v4i16(<4 x i16> [[TMP5]], <4 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i64>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i64> @llvm.vector.partial.reduce.add.v4i64.v4i64(<4 x i64> [[ACC]], <4 x i64> [[IN]])
-; CHECK-NEXT:    store <4 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i64> [[RES]]
 ;
   %res = call <4 x i64> @llvm.vector.partial.reduce.add(<4 x i64> %acc, <4 x i64> %in)
@@ -337,9 +289,9 @@ define <vscale x 8 x i8> @pr_nx8xi8(<vscale x 8 x i8> %in, <vscale x 8 x i8> %ac
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 8 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 8 x i1> [[TMP2]] to <vscale x 8 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 8 x i1> [[TMP2]] to <vscale x 8 x i8>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x i8> @llvm.vector.partial.reduce.add.nxv8i8.nxv8i8(<vscale x 8 x i8> [[ACC]], <vscale x 8 x i8> [[IN]])
-; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 8 x i8> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 8 x i8> [[RES]]
 ;
   %res = call <vscale x 8 x i8> @llvm.vector.partial.reduce.add(<vscale x 8 x i8> %acc, <vscale x 8 x i8> %in)
@@ -352,9 +304,9 @@ define <vscale x 16 x i8> @pr_nx16xi8(<vscale x 16 x i8> %in, <vscale x 16 x i8>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i16> @llvm.vector.partial.reduce.add.nxv16i16.nxv16i16(<vscale x 16 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 16 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 16 x i1> [[TMP2]] to <vscale x 16 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 16 x i1> [[TMP2]] to <vscale x 16 x i8>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.vector.partial.reduce.add.nxv16i8.nxv16i8(<vscale x 16 x i8> [[ACC]], <vscale x 16 x i8> [[IN]])
-; CHECK-NEXT:    store <vscale x 16 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 16 x i8> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[RES]]
 ;
   %res = call <vscale x 16 x i8> @llvm.vector.partial.reduce.add(<vscale x 16 x i8> %acc, <vscale x 16 x i8> %in)
@@ -367,9 +319,9 @@ define <vscale x 32 x i8> @pr_nx32xi8(<vscale x 32 x i8> %in, <vscale x 32 x i8>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 32 x i16> @llvm.vector.partial.reduce.add.nxv32i16.nxv32i16(<vscale x 32 x i16> zeroinitializer, <vscale x 32 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 32 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 32 x i1> [[TMP2]] to <vscale x 32 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 32 x i1> [[TMP2]] to <vscale x 32 x i8>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 32 x i8> @llvm.vector.partial.reduce.add.nxv32i8.nxv32i8(<vscale x 32 x i8> [[ACC]], <vscale x 32 x i8> [[IN]])
-; CHECK-NEXT:    store <vscale x 32 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 32 x i8> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 32 x i8> [[RES]]
 ;
   %res = call <vscale x 32 x i8> @llvm.vector.partial.reduce.add(<vscale x 32 x i8> %acc, <vscale x 32 x i8> %in)
@@ -427,9 +379,9 @@ define <vscale x 2 x i32> @pr_nx2xi32(<vscale x 2 x i32> %in, <vscale x 2 x i32>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.vector.partial.reduce.add.nxv2i16.nxv2i16(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 2 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i1> [[TMP2]] to <vscale x 2 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i1> [[TMP2]] to <vscale x 2 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add.nxv2i32.nxv2i32(<vscale x 2 x i32> [[ACC]], <vscale x 2 x i32> [[IN]])
-; CHECK-NEXT:    store <vscale x 2 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[RES]]
 ;
   %res = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add(<vscale x 2 x i32> %acc, <vscale x 2 x i32> %in)
@@ -442,9 +394,9 @@ define <vscale x 4 x i32> @pr_nx4xi32(<vscale x 4 x i32> %in, <vscale x 4 x i32>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv4i16(<vscale x 4 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32(<vscale x 4 x i32> [[ACC]], <vscale x 4 x i32> [[IN]])
-; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
 ;
   %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 4 x i32> %in)
@@ -457,9 +409,9 @@ define <vscale x 8 x i32> @pr_nx8xi32(<vscale x 8 x i32> %in, <vscale x 8 x i32>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 8 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 8 x i1> [[TMP2]] to <vscale x 8 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 8 x i1> [[TMP2]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x i32> @llvm.vector.partial.reduce.add.nxv8i32.nxv8i32(<vscale x 8 x i32> [[ACC]], <vscale x 8 x i32> [[IN]])
-; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 8 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[RES]]
 ;
   %res = call <vscale x 8 x i32> @llvm.vector.partial.reduce.add(<vscale x 8 x i32> %acc, <vscale x 8 x i32> %in)
@@ -472,9 +424,9 @@ define <vscale x 2 x i64> @pr_nx2xi64(<vscale x 2 x i64> %in, <vscale x 2 x i64>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.vector.partial.reduce.add.nxv2i16.nxv2i16(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 2 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i1> [[TMP2]] to <vscale x 2 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i1> [[TMP2]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv2i64(<vscale x 2 x i64> [[ACC]], <vscale x 2 x i64> [[IN]])
-; CHECK-NEXT:    store <vscale x 2 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[RES]]
 ;
   %res = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add(<vscale x 2 x i64> %acc, <vscale x 2 x i64> %in)
@@ -487,9 +439,9 @@ define <vscale x 4 x i64> @pr_nx4xi64(<vscale x 4 x i64> %in, <vscale x 4 x i64>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv4i16(<vscale x 4 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i64> @llvm.vector.partial.reduce.add.nxv4i64.nxv4i64(<vscale x 4 x i64> [[ACC]], <vscale x 4 x i64> [[IN]])
-; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x i64> [[RES]]
 ;
   %res = call <vscale x 4 x i64> @llvm.vector.partial.reduce.add(<vscale x 4 x i64> %acc, <vscale x 4 x i64> %in)
@@ -676,9 +628,9 @@ define <2 x float> @pr_2xfloat(<2 x float> %in, <2 x float> %acc)  sanitize_memo
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x i16> @llvm.vector.partial.reduce.add.v2i16.v2i16(<2 x i16> [[TMP5]], <2 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <2 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x float> @llvm.vector.partial.reduce.fadd.v2f32.v2f32(<2 x float> [[ACC]], <2 x float> [[IN]])
-; CHECK-NEXT:    store <2 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x float> [[RES]]
 ;
   %res = call <2 x float> @llvm.vector.partial.reduce.fadd(<2 x float> %acc, <2 x float> %in)
@@ -697,9 +649,9 @@ define <4 x float> @pr_4xfloat(<4 x float> %in, <4 x float> %acc)  sanitize_memo
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v4i16(<4 x i16> [[TMP5]], <4 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[ACC]], <4 x float> [[IN]])
-; CHECK-NEXT:    store <4 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <4 x float> %in)
@@ -718,9 +670,9 @@ define <8 x float> @pr_8xfloat(<8 x float> %in, <8 x float> %acc)  sanitize_memo
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <8 x i1> [[TMP4]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i16> @llvm.vector.partial.reduce.add.v8i16.v8i16(<8 x i16> [[TMP5]], <8 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <8 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <8 x i1> [[TMP8]] to <8 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <8 x i1> [[TMP8]] to <8 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.vector.partial.reduce.fadd.v8f32.v8f32(<8 x float> [[ACC]], <8 x float> [[IN]])
-; CHECK-NEXT:    store <8 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i32> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
   %res = call <8 x float> @llvm.vector.partial.reduce.fadd(<8 x float> %acc, <8 x float> %in)
@@ -739,9 +691,9 @@ define <2 x double> @pr_2xdouble(<2 x double> %in, <2 x double> %acc)  sanitize_
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x i16> @llvm.vector.partial.reduce.add.v2i16.v2i16(<2 x i16> [[TMP5]], <2 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <2 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i64>
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[ACC]], <2 x double> [[IN]])
-; CHECK-NEXT:    store <2 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %res = call <2 x double> @llvm.vector.partial.reduce.fadd(<2 x double> %acc, <2 x double> %in)
@@ -760,9 +712,9 @@ define <4 x double> @pr_4xdouble(<4 x double> %in, <4 x double> %acc)  sanitize_
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v4i16(<4 x i16> [[TMP5]], <4 x i16> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i64>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.vector.partial.reduce.fadd.v4f64.v4f64(<4 x double> [[ACC]], <4 x double> [[IN]])
-; CHECK-NEXT:    store <4 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   %res = call <4 x double> @llvm.vector.partial.reduce.fadd(<4 x double> %acc, <4 x double> %in)
@@ -865,9 +817,9 @@ define <vscale x 2 x float> @pr_nx2xfloat(<vscale x 2 x float> %in, <vscale x 2 
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.vector.partial.reduce.add.nxv2i16.nxv2i16(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 2 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i1> [[TMP2]] to <vscale x 2 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i1> [[TMP2]] to <vscale x 2 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x float> @llvm.vector.partial.reduce.fadd.nxv2f32.nxv2f32(<vscale x 2 x float> [[ACC]], <vscale x 2 x float> [[IN]])
-; CHECK-NEXT:    store <vscale x 2 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[RES]]
 ;
   %res = call <vscale x 2 x float> @llvm.vector.partial.reduce.fadd(<vscale x 2 x float> %acc, <vscale x 2 x float> %in)
@@ -880,9 +832,9 @@ define <vscale x 4 x float> @pr_nx4xfloat(<vscale x 4 x float> %in, <vscale x 4 
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv4i16(<vscale x 4 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv4f32(<vscale x 4 x float> [[ACC]], <vscale x 4 x float> [[IN]])
-; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
 ;
   %res = call <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 4 x float> %in)
@@ -895,9 +847,9 @@ define <vscale x 8 x float> @pr_nx8xfloat(<vscale x 8 x float> %in, <vscale x 8 
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 8 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 8 x i1> [[TMP2]] to <vscale x 8 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 8 x i1> [[TMP2]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x float> @llvm.vector.partial.reduce.fadd.nxv8f32.nxv8f32(<vscale x 8 x float> [[ACC]], <vscale x 8 x float> [[IN]])
-; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 8 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[RES]]
 ;
   %res = call <vscale x 8 x float> @llvm.vector.partial.reduce.fadd(<vscale x 8 x float> %acc, <vscale x 8 x float> %in)
@@ -910,9 +862,9 @@ define <vscale x 2 x double> @pr_nx2xdouble(<vscale x 2 x double> %in, <vscale x
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.vector.partial.reduce.add.nxv2i16.nxv2i16(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 2 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i1> [[TMP2]] to <vscale x 2 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i1> [[TMP2]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.vector.partial.reduce.fadd.nxv2f64.nxv2f64(<vscale x 2 x double> [[ACC]], <vscale x 2 x double> [[IN]])
-; CHECK-NEXT:    store <vscale x 2 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[RES]]
 ;
   %res = call <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 2 x double> %in)
@@ -925,9 +877,9 @@ define <vscale x 4 x double> @pr_nx4xdouble(<vscale x 4 x double> %in, <vscale x
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv4i16(<vscale x 4 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x double> @llvm.vector.partial.reduce.fadd.nxv4f64.nxv4f64(<vscale x 4 x double> [[ACC]], <vscale x 4 x double> [[IN]])
-; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x double> [[RES]]
 ;
   %res = call <vscale x 4 x double> @llvm.vector.partial.reduce.fadd(<vscale x 4 x double> %acc, <vscale x 4 x double> %in)
