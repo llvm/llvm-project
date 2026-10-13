@@ -11,6 +11,12 @@ include "llvm/Option/LibraryOptions.td"
 def TestLibraryOptions : OptionsStruct<"test", prefix = "lib-">;
 
 defm : BoolField<"lib-enable", "false", "A bool">;
+def InBuild : BuildCondition<"__cplusplus">;
+def NotInBuild : BuildCondition<"__cplusplus < 201103L">;
+let Condition = InBuild in
+defm : BoolField<"lib-in-build", "false", "Available">;
+let Condition = NotInBuild in
+defm : BoolField<"lib-not-in-build", "false", "Unavailable">;
 defm : ValueField<"lib-count", "unsigned", "3", "An unsigned">;
 defm : OptionalValueField<"lib-limit", "unsigned", "An optional">;
 defm : ListField<"lib-list", "unsigned", "A list">;

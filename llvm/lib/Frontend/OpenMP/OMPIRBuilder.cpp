@@ -41,7 +41,6 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -9259,11 +9258,9 @@ static void FixupDebugInfoForOutlinedFunction(
     }
   };
 
-  // The location and scope of variable intrinsics and records still point to
+  // The location and scope of variable records still point to
   // the parent function of the target region. Update them.
   for (Instruction &I : instructions(Func)) {
-    assert(!isa<llvm::DbgVariableIntrinsic>(&I) &&
-           "Unexpected debug intrinsic");
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
       UpdateDebugRecord(&DVR);
       MoveDebugRecordToCorrectBlock(&DVR);

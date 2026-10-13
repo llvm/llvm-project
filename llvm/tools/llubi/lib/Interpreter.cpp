@@ -1894,7 +1894,7 @@ public:
         case BooleanKind::False:
           break;
         case BooleanKind::Poison:
-          return AnyValue::poison();
+          return AnyValue::getPoisonValue(Ctx, RetTy);
         }
       }
 
