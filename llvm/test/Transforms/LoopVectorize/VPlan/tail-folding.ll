@@ -129,7 +129,6 @@ define i32 @conditional_live_out(ptr noalias %p, i32 %n, i1 %c) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP6:%[0-9]+]]> = phi [ ir<%phi>, latch ], [ ir<poison>, vector.body ]
-; CHECK-NEXT:      EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = phi [ ir<%iv>, latch ], [ ir<poison>, vector.body ]
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -140,13 +139,13 @@ define i32 @conditional_live_out(ptr noalias %p, i32 %n, i1 %c) {
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-part vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-lane vp<[[VP9]]>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part ir<%iv>
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-lane vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = last-active-lane vp<[[VP4]]>
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-lane vp<[[VP13]]>, vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = last-active-lane vp<[[VP4]]>
-; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-lane vp<[[VP15]]>, vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-lane vp<[[VP15]]>, ir<%iv>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<true>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
