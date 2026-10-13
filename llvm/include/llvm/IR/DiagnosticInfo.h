@@ -93,6 +93,7 @@ enum DiagnosticKind {
   DK_SrcMgr,
   DK_DontCall,
   DK_MisExpect,
+  DK_SanitizerInstrumentationRegion,
   DK_FirstPluginKind // Must be last value to work with
                      // getNextAvailablePluginDiagnosticKind
 };
@@ -1149,6 +1150,50 @@ public:
   std::string getMessage() const;
 
   void print(DiagnosticPrinter &DP) const override;
+};
+
+/// The kinds of problems with llvm.sanitizer.instrumentation.begin/end
+/// markers that the sanitizer passes report. Clang's
+/// warn_fe_backend_sanitizer_instrumentation_region selects its text by the
+/// numeric value, so keep the order in sync with that diagnostic.
+enum class SanitizerInstrumentationRegionIssue {
+  /// An end() without a matching begin().
+  UnmatchedEnd,
+  /// A region is still open at a return.
+  NotClosedAtReturn,
+  /// Paths with different region nesting depths merge, and the code that
+  /// follows is treated as outside any region.
+  MergeOutsideRegion,
+  /// Paths with different region nesting depths merge, and the code that
+  /// follows is treated as nested in the smaller number of regions.
+  MergeNestedRegions,
+  /// Not an issue; the number of issues above.
+  NumIssues
+};
+
+/// Diagnostic information for unbalanced sanitizer instrumentation regions
+/// (llvm.sanitizer.instrumentation.begin/end).
+class LLVM_ABI DiagnosticInfoSanitizerInstrumentationRegion
+    : public DiagnosticInfoWithLocationBase {
+public:
+  DiagnosticInfoSanitizerInstrumentationRegion(
+      const Function &Fn, const DebugLoc &Loc,
+      SanitizerInstrumentationRegionIssue Issue);
+
+  /// \see DiagnosticInfo::print.
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_SanitizerInstrumentationRegion;
+  }
+
+  SanitizerInstrumentationRegionIssue getIssue() const { return Issue; }
+
+  /// The description of \p Issue used by print().
+  static StringRef getIssueText(SanitizerInstrumentationRegionIssue Issue);
+
+private:
+  SanitizerInstrumentationRegionIssue Issue;
 };
 
 /// Diagnostic information for MisExpect analysis.

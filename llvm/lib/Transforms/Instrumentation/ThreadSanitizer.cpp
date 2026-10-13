@@ -492,7 +492,8 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   SmallPtrSet<const Instruction *, 16> InRegion;
   if (RegionOnly ||
       (!SanitizeFunction && hasSanitizerInstrumentationRegions(F)))
-    computeSanitizerInstrumentationRegions(F, InRegion);
+    if (auto Problem = computeSanitizerInstrumentationRegions(F, InRegion))
+      diagnoseSanitizerInstrumentationRegionProblem(F, *Problem);
 
   initialize(*F.getParent(), TLI);
   SmallVector<InstructionInfo, 8> AllLoadsAndStores;
