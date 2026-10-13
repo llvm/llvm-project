@@ -3255,9 +3255,6 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
                             m_VPValue(Op1)))) {
       Worklist.push_back(Op1);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
-    } else if (match(V, m_Not(m_VPValue(Op1)))) {
-      Worklist.push_back(Op1);
-      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else
       return nullptr;
   }
@@ -3396,7 +3393,8 @@ static bool handleUncountableExitsWithSideEffects(
   // a widen IV recipe with a step of 1; we're only interested in contiguous
   // accesses for the condition load right now.
   auto *IV = cast<VPWidenInductionRecipe>(&HeaderVPBB->front());
-  if (!match(IV->getStepValue(), m_SpecificInt(1))) {
+  if (!match(IV->getStartValue(), m_SpecificInt(0)) ||
+      !match(IV->getStepValue(), m_SpecificInt(1))) {
     reportVectorizationFailure("Early exit loop with side effects contains "
                                "load used by the exit condition with an "
                                "unsupported memory access pattern",
