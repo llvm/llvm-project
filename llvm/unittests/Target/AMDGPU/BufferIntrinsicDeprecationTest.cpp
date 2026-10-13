@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Test to ensure we don't direct users to an intrinsic that doesn't exist when
-// warning about deprecated <4 x i32> intrinsics in AMDGPUAsmPrinter
+// warning about deprecated <4 x i32> intrinsics in AMDGPULowerIntrinsics
 //
 //===----------------------------------------------------------------------===//
 

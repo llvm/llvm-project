@@ -18,7 +18,6 @@
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPU.h"
 #include "AMDGPUHSAMetadataStreamer.h"
-#include "AMDGPUInstrInfo.h"
 #include "AMDGPUMCResourceInfo.h"
 #include "AMDGPUResourceUsageAnalysis.h"
 #include "AMDGPUTargetMachine.h"
@@ -33,7 +32,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "Utils/SIDefinesUtils.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinterAnalysis.h"
@@ -56,11 +54,6 @@
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
-
-static cl::opt<bool> WarnDeprecatedBufferIntrinsics(
-    "amdgpu-warn-deprecated-buffer-intrinsics", cl::Hidden, cl::init(true),
-    cl::desc("Warn about AMDGPU buffer intrinsics that take their resource as "
-             "a <4 x i32> instead of a ptr addrspace(8)"));
 
 // This should get the default rounding mode from the kernel. We just set the
 // default here, but this could change if the OpenCL rounding mode pragmas are
@@ -391,56 +384,6 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   AsmPrinter::emitGlobalVariable(GV);
 }
 
-/// Warn about the buffer intrinsics in \p M that take their resource as a
-/// <4 x i32> rather than a ptr addrspace(8), pointing at the replacement.
-/// Diagnose once per intrinsic, ignoring types, to avoid flooding the user with
-/// warnings.
-static void warnOnDeprecatedBufferIntrinsics(Module &M) {
-  SmallSet<Intrinsic::ID, 8> Reported;
-  for (const Function &F : M) {
-    if (!F.isDeclaration() || F.use_empty())
-      continue;
-    Intrinsic::ID ID = F.getIntrinsicID();
-    if (ID == Intrinsic::not_intrinsic)
-      continue;
-
-    const AMDGPU::RsrcIntrinsic *RI = AMDGPU::lookupRsrcIntrinsic(ID);
-    // TODO: Add smart pointers for images
-    if (!RI || RI->IsImage)
-      continue;
-    FunctionType *FT = F.getFunctionType();
-    if (FT->getParamType(RI->RsrcArg)->isPointerTy())
-      continue;
-
-    if (!Reported.insert(ID).second)
-      continue;
-
-    StringRef Name = Intrinsic::getBaseName(ID);
-    std::string Repl = AMDGPU::getPtrBufferIntrinsicName(Name);
-    std::string Msg = ("'" + Name +
-                       "' is deprecated and will be removed in a future LLVM "
-                       "release; use '" +
-                       Repl +
-                       "' with a 'ptr addrspace(8)' resource created by "
-                       "'llvm.amdgcn.make.buffer.rsrc' instead")
-                          .str();
-
-    const CallBase *Call = nullptr;
-    for (const User *U : F.users()) {
-      const auto *CB = dyn_cast<CallBase>(U);
-      if (CB && CB->getFunction() && CB->getDebugLoc()) {
-        Call = CB;
-        break;
-      }
-    }
-    if (Call)
-      M.getContext().diagnose(DiagnosticInfoGenericWithLoc(
-          Msg, *Call->getFunction(), Call->getDebugLoc(), DS_Warning));
-    else
-      M.getContext().diagnose(DiagnosticInfoGeneric(Msg, DS_Warning));
-  }
-}
-
 bool AMDGPUAsmPrinter::doInitialization(Module &M) {
   const Triple &TT = M.getTargetTriple();
   if (TT.getSubArch() == Triple::NoSubArch) {
@@ -461,9 +404,6 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
           DS_Warning));
     }
   }
-
-  if (WarnDeprecatedBufferIntrinsics)
-    warnOnDeprecatedBufferIntrinsics(M);
 
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 

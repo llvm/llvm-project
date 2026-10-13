@@ -5,6 +5,9 @@
 
 ; RUN: llc -mtriple=amdgpu9.00-amd-mesa3d -filetype=null < %s 2>&1 | \
 ; RUN:   FileCheck --implicit-check-not=warning: %s
+; RUN: opt -mtriple=amdgpu9.00-amd-mesa3d -passes=amdgpu-lower-intrinsics \
+; RUN:   -disable-output < %s 2>&1 | \
+; RUN:   FileCheck --implicit-check-not=warning: %s
 ; RUN: llc -mtriple=amdgpu9.00-amd-mesa3d -filetype=null \
 ; RUN:   -amdgpu-warn-deprecated-buffer-intrinsics=0 < %s 2>&1 | \
 ; RUN:   FileCheck -check-prefix=OFF --allow-empty --implicit-check-not=warning: %s

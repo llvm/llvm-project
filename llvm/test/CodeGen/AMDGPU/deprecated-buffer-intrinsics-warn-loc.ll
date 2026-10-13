@@ -4,6 +4,9 @@
 
 ; RUN: llc -mtriple=amdgpu9.00-amd-mesa3d -filetype=null < %s 2>&1 | \
 ; RUN:   FileCheck --implicit-check-not=warning: %s
+; RUN: opt -mtriple=amdgpu9.00-amd-mesa3d -passes=amdgpu-lower-intrinsics \
+; RUN:   -disable-output < %s 2>&1 | \
+; RUN:   FileCheck --implicit-check-not=warning: %s
 
 ; Reported against the first call that has a location, not the one without, and
 ; not twice even though there are three calls.
