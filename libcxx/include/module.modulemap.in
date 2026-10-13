@@ -2462,6 +2462,15 @@ module std {
         module transform {
           header "__pstl/backends/statpart/transform.h"
         }
+        module transform_reduce {
+          header "__pstl/backends/statpart/transform_reduce.h"
+        }
+        module uninitialized_copy {
+          header "__pstl/backends/statpart/uninitialized_copy.h"
+        }
+        module uninitialized_move {
+          header "__pstl/backends/statpart/uninitialized_move.h"
+        }
         header "__pstl/backends/statpart.h"
       }
       module std_thread {
