@@ -54,22 +54,6 @@ std::optional<uint32_t> readSourceImageDword(const RaiseContext &Ctx,
   return std::nullopt;
 }
 
-Expected<std::optional<uint64_t>> sourceImageSgprPairAddr(RaiseContext &Ctx,
-                                                          const DecodedInst &Di,
-                                                          unsigned BaseIdx) {
-  if (std::optional<uint64_t> Address =
-          Ctx.registers().lookupSourceImageSgprPairAddr(BaseIdx))
-    return Address;
-  // A source address the raise can no longer resolve must not reach a load or
-  // a further displacement, both of which would then run against the memory
-  // the raised kernel was handed.
-  if (Ctx.registers().droppedSourceImageSgprPairAddr(BaseIdx))
-    return unsupported(Ctx, Di,
-                       "uses a source address that a block boundary or a write "
-                       "to one half of the pair has dropped");
-  return std::nullopt;
-}
-
 Expected<std::optional<uint64_t>> sourceImageOperandAddr(RaiseContext &Ctx,
                                                          const DecodedInst &Di,
                                                          unsigned Index) {
@@ -81,7 +65,7 @@ Expected<std::optional<uint64_t>> sourceImageOperandAddr(RaiseContext &Ctx,
     return Reg.takeError();
   if (Reg->RegKind != ParsedReg::SGPR || !Reg->BaseIdx)
     return std::nullopt;
-  return sourceImageSgprPairAddr(Ctx, Di, *Reg->BaseIdx);
+  return Ctx.registers().lookupSourceImageSgprPairAddr(*Reg->BaseIdx);
 }
 
 } // namespace COMGR::transpiler

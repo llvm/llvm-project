@@ -34,6 +34,16 @@ There is no public C entry point for the transpiler yet; it is reachable from
 the `transpile_cli` test driver used by the `test-lit/transpiler/raiser`
 suite.
 
+## Source-image addresses
+
+SETPC analysis supplies complete source-image addresses at block entries where
+all incoming paths agree. The raiser uses them to resolve loads from the captured
+image at raise time.
+
+`RegisterState` tracks provenance separately for each SGPR dword and SCC.
+SSA promotion carries that state through joins and loops. Ordinary writes clear
+provenance only for the words they replace.
+
 ## Wave projection
 
 When translating wave32 to wave64, WaveNative places two consecutive source

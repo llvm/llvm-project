@@ -14,8 +14,8 @@
 
 ; RUN: not %transpile_cli %t.hsaco --emit-ir=refuse_back_branch_kernel \
 ; RUN:   2>&1 | %FileCheck %s --check-prefix=BACKBRANCH
-; RUN: not %transpile_cli %t.hsaco --emit-ir=refuse_later_capture_kernel \
-; RUN:   2>&1 | %FileCheck %s --check-prefix=LATERCAPTURE
+; RUN: %transpile_cli %t.hsaco --emit-ir=unrelated_capture_kernel \
+; RUN:   | %FileCheck %s --check-prefix=LATERCAPTURE
 
 	.amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
 	.text
@@ -42,16 +42,14 @@ refuse_back_branch_kernel:
 	s_branch .Lback_branch_load
 	s_endpgm
 
-	.globl	refuse_later_capture_kernel
+	.globl	unrelated_capture_kernel
 	.p2align	8
-	.type	refuse_later_capture_kernel,@function
-refuse_later_capture_kernel:
-; Whether the s_get_pc_i64 runs before the read is a question about the paths
-; through the kernel that the raise does not answer, so a read of a pair the
-; kernel records a source address into anywhere is refused.
+	.type	unrelated_capture_kernel,@function
+unrelated_capture_kernel:
+; A capture on a path that cannot reach the read does not affect it.
 	s_cmp_eq_u32 s2, 0
 	s_cbranch_scc1 .Llater_capture
-; LATERCAPTURE: unsupported-instruction-form: v_add_nc_u32 {{.+}} :: operand-read: 's0' may hold a source code-object address
+; LATERCAPTURE: add i32
 	v_add_nc_u32 v0, s0, v0
 	s_endpgm
 .Llater_capture:
@@ -82,7 +80,7 @@ defined_before_capture_kernel:
 		.amdhsa_next_free_vgpr 4
 		.amdhsa_next_free_sgpr 24
 	.end_amdhsa_kernel
-	.amdhsa_kernel refuse_later_capture_kernel
+	.amdhsa_kernel unrelated_capture_kernel
 		.amdhsa_kernarg_size 0
 		.amdhsa_next_free_vgpr 4
 		.amdhsa_next_free_sgpr 24
@@ -112,10 +110,10 @@ amdhsa.kernels:
     .kernarg_segment_align: 8
     .kernarg_segment_size: 0
     .max_flat_workgroup_size: 1024
-    .name:           refuse_later_capture_kernel
+    .name:           unrelated_capture_kernel
     .private_segment_fixed_size: 0
     .sgpr_count:     24
-    .symbol:         refuse_later_capture_kernel.kd
+    .symbol:         unrelated_capture_kernel.kd
     .vgpr_count:     4
     .wavefront_size: 32
   - .args: []

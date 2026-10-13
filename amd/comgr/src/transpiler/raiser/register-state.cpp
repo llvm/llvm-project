@@ -21,6 +21,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -297,9 +298,14 @@ RegisterState::RegisterState(IRBuilder<> &B, const WaveProjection &Projection,
     B.CreateStore(B.getFalse(), WaveMaskIsPair);
     B.CreateStore(B.getInt64(0), SourceWavePair);
     B.CreateStore(B.getFalse(), SourceWavePairValid);
+    AllocaInst *SourceImage =
+        B.CreateAlloca(B.getInt1Ty(), nullptr, "sgpr_source_image_" + Twine(I));
+    B.CreateStore(B.getFalse(), SourceImage);
     SgprShadows.push_back({WaveMask, WaveMaskValid, WaveMaskIsPair,
-                           SourceWavePair, SourceWavePairValid});
+                           SourceWavePair, SourceWavePairValid, SourceImage});
   }
+  SourceImageScc = B.CreateAlloca(B.getInt1Ty(), nullptr, "scc_source_image");
+  B.CreateStore(B.getFalse(), SourceImageScc);
 }
 
 void RegisterState::computeVGPRAdjust(const DecodedInst &Di) {
@@ -552,48 +558,43 @@ Expected<ParsedReg> RegisterState::parseReg(const DecodedInst &Di,
 
 void RegisterState::storeSCC(IRBuilder<> &B, Value *V) {
   Regs.storeSCC(B, V);
-  blockState().DefinedScc = true;
+  B.CreateStore(B.getFalse(), SourceImageScc);
+  auto *Constant = dyn_cast<ConstantInt>(V);
+  blockState().SccConstant =
+      Constant ? std::optional<bool>(!Constant->isZero()) : std::nullopt;
   blockState().SccFromSourceImage = false;
 }
 
 void RegisterState::storeSourceImageSCC(IRBuilder<> &B, Value *V) {
   Regs.storeSCC(B, V);
-  blockState().DefinedScc = true;
+  B.CreateStore(B.getTrue(), SourceImageScc);
+  blockState().SccConstant.reset();
   blockState().SccFromSourceImage = true;
-  SourceImageSccWritten = true;
-}
-
-bool RegisterState::sccMayHoldSourceImageBit() {
-  if (blockState().SccFromSourceImage)
-    return true;
-  return SourceImageSccWritten && !blockState().DefinedScc;
 }
 
 Expected<Value *> RegisterState::readSCC(const DecodedInst &Di) {
-  if (sccMayHoldSourceImageBit())
+  if (blockState().SccFromSourceImage)
+    return refuseSourceImageRead(Di, std::nullopt);
+  DeferredSourceImageReads.push_back(
+      {&Di, std::nullopt, B.CreateLoad(B.getInt1Ty(), SourceImageScc),
+       B.GetInsertBlock()});
+  return Regs.loadSCC(B);
+}
+
+Error RegisterState::refuseSourceImageRead(const DecodedInst &Di,
+                                           std::optional<unsigned> Idx) {
+  if (!Idx)
     return RaiseFailure::atInstruction(
         RaiseFailureReason::UnsupportedInstructionForm,
         strippedMnemonic(MC, Di.Inst), Di.Offset,
         formatName(Di.TargetSpecificFlags),
         "operand-read: 'scc' may hold a carry or overflow derived from a "
         "source code-object address; relocation may change the result");
-  return Regs.loadSCC(B);
-}
-
-bool RegisterState::sourceImageSgprPairRecorded(unsigned Idx) const {
-  // A pair is keyed by its low SGPR, so this register belongs to the pair
-  // keyed at its own index and to the one before it.
-  return SourceImageSgprPairs.contains(Idx) ||
-         (Idx > 0 && SourceImageSgprPairs.contains(Idx - 1));
-}
-
-Error RegisterState::refuseSourceImageRead(const DecodedInst &Di,
-                                           unsigned Idx) {
   return RaiseFailure::atInstruction(
       RaiseFailureReason::UnsupportedInstructionForm,
       strippedMnemonic(MC, Di.Inst), Di.Offset,
       formatName(Di.TargetSpecificFlags),
-      Twine("operand-read: 's") + Twine(Idx) +
+      Twine("operand-read: 's") + Twine(*Idx) +
           "' may hold a source code-object address, which names a place in "
           "the source image rather than anything the raised kernel can "
           "address");
@@ -604,14 +605,11 @@ Error RegisterState::refuseSourceImageRead(const DecodedInst &Di,
                                            unsigned WidthInDwords) {
   for (unsigned I = 0; I != WidthInDwords; ++I) {
     unsigned Idx = BaseIdx + I;
-    if (mayHoldSourceImageAddress(Idx))
+    if (blockState().SourceImageDwords.contains(Idx))
       return refuseSourceImageRead(Di, Idx);
-    // The register carries no address the raise knows of yet, and the block
-    // reading it holds whatever ran before rather than a value of its own, so
-    // an instruction the raise has still to reach can record one there.
-    if (!sourceImageSgprPairRecorded(Idx) &&
-        !blockState().DefinedSgprs.contains(Idx))
-      DeferredSourceImageReads.push_back({/*Di=*/&Di, /*Idx=*/Idx});
+    DeferredSourceImageReads.push_back(
+        {&Di, Idx, B.CreateLoad(B.getInt1Ty(), SgprShadows[Idx].SourceImage),
+         B.GetInsertBlock()});
   }
   return Error::success();
 }
@@ -623,10 +621,38 @@ Error RegisterState::refuseSourceImageRead(const DecodedInst &Di,
   return refuseSourceImageRead(Di, *Pr.BaseIdx, Pr.WidthInDwords);
 }
 
-Error RegisterState::refuseDeferredSourceImageReads() {
-  for (const DeferredSourceImageRead &Read : DeferredSourceImageReads)
-    if (sourceImageSgprPairRecorded(Read.Idx))
+// Return whether every reachable incoming provenance value is false.
+// A PHI cycle contributes no definition of its own.
+static bool isOrdinaryValue(Value *Provenance, const DominatorTree &DT) {
+  SmallVector<Value *> Worklist{Provenance};
+  SmallPtrSet<Value *, 16> Visited;
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    if (auto *C = dyn_cast<ConstantInt>(V)) {
+      if (!C->isZero())
+        return false;
+      continue;
+    }
+    auto *Phi = dyn_cast<PHINode>(V);
+    if (!Phi)
+      return false;
+    for (unsigned I = 0; I != Phi->getNumIncomingValues(); ++I)
+      if (DT.isReachableFromEntry(Phi->getIncomingBlock(I)))
+        Worklist.push_back(Phi->getIncomingValue(I));
+  }
+  return true;
+}
+
+Error RegisterState::refuseDeferredSourceImageReads(const DominatorTree &DT) {
+  for (const DeferredSourceImageRead &Read : DeferredSourceImageReads) {
+    if (!DT.isReachableFromEntry(Read.Block))
+      continue;
+    assert(Read.Provenance && "provenance was deleted before validation");
+    if (!isOrdinaryValue(Read.Provenance, DT))
       return refuseSourceImageRead(*Read.Di, Read.Idx);
+  }
   return Error::success();
 }
 
@@ -1217,8 +1243,9 @@ Value *RegisterState::loadSgprWaveMaskValid(unsigned BaseIdx) const {
 void RegisterState::invalidateSgprWaveMaskI1(unsigned BaseIdx) {
   blockState().LastSgprWaveMaskI1.erase(BaseIdx);
   blockState().SourceImageSgprPairAddrShadow.erase(BaseIdx);
-  blockState().DefinedSgprs.insert(BaseIdx);
+  blockState().SourceImageDwords.erase(BaseIdx);
   if (BaseIdx < SgprShadows.size()) {
+    B.CreateStore(B.getFalse(), SgprShadows[BaseIdx].SourceImage);
     B.CreateStore(B.getFalse(), SgprShadows[BaseIdx].WaveMaskValid);
     B.CreateStore(B.getFalse(), SgprShadows[BaseIdx].SourceWavePairValid);
   }
@@ -1268,29 +1295,13 @@ std::optional<bool> RegisterState::takeSourceImageCarry(unsigned BaseIdx,
   return Carry;
 }
 
-bool RegisterState::droppedSourceImageSgprPairAddr(unsigned BaseIdx) {
-  if (!SourceImageSgprPairs.contains(BaseIdx) ||
-      blockState().SourceImageSgprPairAddrShadow.contains(BaseIdx))
-    return false;
-  // A block that wrote both halves itself holds what it wrote there, whatever
-  // the block that computed the address left in them.
-  const DenseSet<unsigned> &Defined = blockState().DefinedSgprs;
-  return !Defined.contains(BaseIdx) || !Defined.contains(BaseIdx + 1);
-}
-
-bool RegisterState::mayHoldSourceImageAddress(unsigned Idx) {
-  // A pair is keyed by its low SGPR, so this register is the low half of the
-  // pair keyed at its own index and the high half of the one before it.
-  auto PairCarriesAddress = [&](unsigned BaseIdx) {
-    if (!SourceImageSgprPairs.contains(BaseIdx))
-      return false;
-    if (blockState().SourceImageSgprPairAddrShadow.contains(BaseIdx))
-      return true;
-    // Another block recorded the address, and this one holds what that block
-    // left there unless it has written the register itself.
-    return !blockState().DefinedSgprs.contains(Idx);
-  };
-  return PairCarriesAddress(Idx) || (Idx > 0 && PairCarriesAddress(Idx - 1));
+void RegisterState::recordSourceImageSgprPairAddr(unsigned BaseIdx,
+                                                  uint64_t Value) {
+  blockState().SourceImageSgprPairAddrShadow[BaseIdx] = Value;
+  blockState().SourceImageDwords.insert(BaseIdx);
+  blockState().SourceImageDwords.insert(BaseIdx + 1);
+  B.CreateStore(B.getTrue(), SgprShadows[BaseIdx].SourceImage);
+  B.CreateStore(B.getTrue(), SgprShadows[BaseIdx + 1].SourceImage);
 }
 
 void RegisterState::updateM0Const(Value *V) {
@@ -1317,12 +1328,14 @@ void RegisterState::invalidateSgprShadows() {
 
 void RegisterState::collectAllocas(SmallVectorImpl<AllocaInst *> &Out) const {
   Regs.collectAllocas(Out);
+  Out.push_back(SourceImageScc);
   for (const SgprShadow &Shadow : SgprShadows) {
     Out.push_back(Shadow.WaveMask);
     Out.push_back(Shadow.WaveMaskValid);
     Out.push_back(Shadow.WaveMaskIsPair);
     Out.push_back(Shadow.SourceWavePair);
     Out.push_back(Shadow.SourceWavePairValid);
+    Out.push_back(Shadow.SourceImage);
   }
 }
 

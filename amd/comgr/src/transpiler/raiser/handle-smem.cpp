@@ -318,11 +318,9 @@ Error handleSMEM(RaiseContext &Ctx, const DecodedInst &Di, OperandResolver &) {
   // source code object. Nothing of the source image is mapped where the raised
   // kernel runs, so answer the load from the captured image instead of emitting
   // it, which would read target memory at a source address.
-  Expected<std::optional<uint64_t>> SourceImageBase =
-      sourceImageSgprPairAddr(Ctx, Di, *Base->BaseIdx);
-  if (!SourceImageBase)
-    return SourceImageBase.takeError();
-  if (*SourceImageBase) {
+  std::optional<uint64_t> SourceImageBase =
+      Ctx.registers().lookupSourceImageSgprPairAddr(*Base->BaseIdx);
+  if (SourceImageBase) {
     // The source image is read a dword at a time, which a sub-dword load does
     // not divide into: its address needs no alignment and its result needs
     // extending.
@@ -339,7 +337,7 @@ Error handleSMEM(RaiseContext &Ctx, const DecodedInst &Di, OperandResolver &) {
                            "reads the source code object at an offset only "
                            "the running kernel knows");
     }
-    return loadFromSourceImage(Ctx, Di, *Destination, **SourceImageBase,
+    return loadFromSourceImage(Ctx, Di, *Destination, *SourceImageBase,
                                ImmediateOffset, DestinationWidthInDwords);
   }
 

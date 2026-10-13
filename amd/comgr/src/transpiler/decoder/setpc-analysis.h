@@ -68,6 +68,8 @@ using SetPcSite = std::variant<SetPcResolved, SetPcUnresolvable>;
 struct SetPcAnalysis {
   // One entry per s_set_pc_i64 and s_swap_pc_i64, keyed by its source offset.
   llvm::DenseMap<uint64_t, SetPcSite> Sites;
+  // Complete singleton source offsets at block entry, keyed by block and pair.
+  llvm::DenseMap<uint64_t, llvm::DenseMap<unsigned, uint64_t>> EntryOffsets;
   // Block starts the analysis found on top of the ones the decode gave it.
   // Every one is the offset of a decoded instruction. The caller must start a
   // block at each, because the analysis split its own walk there and its

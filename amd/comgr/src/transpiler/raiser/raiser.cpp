@@ -703,6 +703,11 @@ static Error raiseDecodedKernel(const RaiseEnvironment &Env, Module &M,
       if (!Open->hasTerminator())
         B.CreateBr(Next);
       B.SetInsertPoint(Next);
+      auto Incoming = SetPc.EntryOffsets.find(Di.Offset);
+      if (Incoming != SetPc.EntryOffsets.end())
+        for (const auto &[Base, Offset] : Incoming->second)
+          Ctx->registers().recordSourceImageSgprPairAddr(Base,
+                                                         Text.Address + Offset);
     } else if (Open->hasTerminator()) {
       // An instruction trailing a control transfer without leading a block
       // start of its own is reached by nothing, and needs a block anyway for
@@ -734,17 +739,13 @@ static Error raiseDecodedKernel(const RaiseEnvironment &Env, Module &M,
         RaiseFailureReason::UnterminatedKernelExtent,
         "kernel extent ends without an instruction that ends the program");
 
-  // Every source code-object address the kernel records is known once every
-  // instruction is raised, so this is where the reads deferred along the way
-  // are decided.
-  if (Error Err = Ctx->registers().refuseDeferredSourceImageReads())
-    return Err;
-
   DominatorTree DT(*F);
   AssumptionCache AC(*F);
   SmallVector<AllocaInst *> Allocas;
   Ctx->registers().collectAllocas(Allocas);
   PromoteMemToReg(Allocas, DT, &AC);
+  if (Error Err = Ctx->registers().refuseDeferredSourceImageReads(DT))
+    return Err;
   if (Error Err = Ctx->validateRequiredBits())
     return Err;
   if (UseWaveNative || UseReplicated) {

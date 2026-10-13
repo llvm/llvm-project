@@ -523,8 +523,8 @@ TEST_F(RegisterStateTest, OwnsPerSgprShadowStorage) {
   Env->Regs->regFile().collectAllocas(RegisterFileAllocas);
   SmallVector<AllocaInst *> Allocas;
   Env->Regs->collectAllocas(Allocas);
-  EXPECT_EQ(Allocas.size(),
-            RegisterFileAllocas.size() + Env->Regs->regFile().Sgpr.size() * 5);
+  EXPECT_EQ(Allocas.size(), RegisterFileAllocas.size() +
+                                Env->Regs->regFile().Sgpr.size() * 6 + 1);
 }
 
 TEST_F(RegisterStateTest, InvalidatesPerSgprShadowStorage) {

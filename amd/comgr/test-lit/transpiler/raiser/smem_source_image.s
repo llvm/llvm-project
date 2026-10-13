@@ -33,10 +33,10 @@
 ; RUN:   2>&1 | %FileCheck %s --check-prefix=TWOADDR
 ; RUN: not %transpile_cli %t.hsaco --emit-ir=refuse_reversed_sub_kernel \
 ; RUN:   2>&1 | %FileCheck %s --check-prefix=REVERSEDSUB
-; RUN: not %transpile_cli %t.hsaco --emit-ir=refuse_other_block_kernel \
-; RUN:   2>&1 | %FileCheck %s --check-prefix=OTHERBLOCK
-; RUN: not %transpile_cli %t.hsaco --emit-ir=refuse_clobbered_block_kernel \
-; RUN:   2>&1 | %FileCheck %s --check-prefix=CLOBBERED
+; RUN: %transpile_cli %t.hsaco --emit-ir=pcrel_other_block_kernel \
+; RUN:   | %FileCheck %s --check-prefix=OTHERBLOCK
+; RUN: %transpile_cli %t.hsaco --emit-ir=pcrel_clobbered_block_kernel \
+; RUN:   | %FileCheck %s --check-prefix=CLOBBERED
 ; RUN: not %transpile_cli %t.hsaco --emit-ir=refuse_signed_carry_kernel \
 ; RUN:   2>&1 | %FileCheck %s --check-prefix=SIGNEDCARRY
 ; RUN: not %transpile_cli %t.hsaco --emit-ir=refuse_compare_dynamic_kernel \
@@ -415,36 +415,42 @@ refuse_reversed_sub_kernel:
 	s_sub_nc_u64 s[2:3], 8, s[0:1]
 	s_endpgm
 
-	.globl	refuse_other_block_kernel
+	.globl	pcrel_other_block_kernel
 	.p2align	8
-	.type	refuse_other_block_kernel,@function
-refuse_other_block_kernel:
-; The captured address holds only in the block that captured it, so the load
-; the branch leads to names an address the raise can no longer resolve.
+	.type	pcrel_other_block_kernel,@function
+pcrel_other_block_kernel:
 	s_get_pc_i64 s[0:1]
+.Lother_pc:
+	s_add_nc_u64 s[0:1], s[0:1], .Lother_data-.Lother_pc
 	s_cmp_eq_u32 s2, 0
 	s_cbranch_scc1 .Lother_block
 	s_endpgm
 .Lother_block:
-; OTHERBLOCK: unsupported-instruction-form: s_load_b32 {{.+}} :: uses a source address that a block boundary or a write to one half of the pair has dropped
-	s_load_b32 s3, s[0:1], 0x0
+	s_load_b32 s3, s[0:1], 0
+; OTHERBLOCK: add i32 42,
+	v_add_nc_u32 v0, s3, v0
 	s_endpgm
+.Lother_data:
+	.long 42
 
-	.globl	refuse_clobbered_block_kernel
+	.globl	pcrel_clobbered_block_kernel
 	.p2align	8
-	.type	refuse_clobbered_block_kernel,@function
-refuse_clobbered_block_kernel:
-; Writing the pair in one block says nothing about what another block holds
-; there, so the load is still refused rather than read from target memory.
+	.type	pcrel_clobbered_block_kernel,@function
+pcrel_clobbered_block_kernel:
 	s_get_pc_i64 s[0:1]
+.Lclobbered_pc:
+	s_add_nc_u64 s[0:1], s[0:1], .Lclobbered_data-.Lclobbered_pc
 	s_cmp_eq_u32 s2, 0
 	s_cbranch_scc1 .Lclobbered_block
 	s_mov_b32 s0, 0
 	s_endpgm
 .Lclobbered_block:
-; CLOBBERED: unsupported-instruction-form: s_load_b32 {{.+}} :: uses a source address that a block boundary or a write to one half of the pair has dropped
-	s_load_b32 s3, s[0:1], 0x0
+	s_load_b32 s3, s[0:1], 0
+; CLOBBERED: add i32 42,
+	v_add_nc_u32 v0, s3, v0
 	s_endpgm
+.Lclobbered_data:
+	.long 42
 
 ; A source address stands for a place in the captured image and names nothing
 ; the raised kernel can address, so a read that would hand either of its halves
@@ -693,12 +699,12 @@ refuse_escape_high_kernel:
 		.amdhsa_next_free_vgpr 4
 		.amdhsa_next_free_sgpr 24
 	.end_amdhsa_kernel
-	.amdhsa_kernel refuse_other_block_kernel
+	.amdhsa_kernel pcrel_other_block_kernel
 		.amdhsa_kernarg_size 0
 		.amdhsa_next_free_vgpr 4
 		.amdhsa_next_free_sgpr 24
 	.end_amdhsa_kernel
-	.amdhsa_kernel refuse_clobbered_block_kernel
+	.amdhsa_kernel pcrel_clobbered_block_kernel
 		.amdhsa_kernarg_size 0
 		.amdhsa_next_free_vgpr 4
 		.amdhsa_next_free_sgpr 24
@@ -1054,10 +1060,10 @@ amdhsa.kernels:
     .kernarg_segment_align: 8
     .kernarg_segment_size: 0
     .max_flat_workgroup_size: 1024
-    .name:           refuse_other_block_kernel
+    .name:           pcrel_other_block_kernel
     .private_segment_fixed_size: 0
     .sgpr_count:     24
-    .symbol:         refuse_other_block_kernel.kd
+    .symbol:         pcrel_other_block_kernel.kd
     .vgpr_count:     4
     .wavefront_size: 32
   - .args: []
@@ -1065,10 +1071,10 @@ amdhsa.kernels:
     .kernarg_segment_align: 8
     .kernarg_segment_size: 0
     .max_flat_workgroup_size: 1024
-    .name:           refuse_clobbered_block_kernel
+    .name:           pcrel_clobbered_block_kernel
     .private_segment_fixed_size: 0
     .sgpr_count:     24
-    .symbol:         refuse_clobbered_block_kernel.kd
+    .symbol:         pcrel_clobbered_block_kernel.kd
     .vgpr_count:     4
     .wavefront_size: 32
   - .args: []

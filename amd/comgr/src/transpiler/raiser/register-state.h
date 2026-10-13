@@ -28,6 +28,10 @@
 #include <cstdint>
 #include <optional>
 
+namespace llvm {
+class DominatorTree;
+}
+
 namespace COMGR::transpiler {
 
 // The source architectural registers as the raiser sees them. Scalar wave-mask
@@ -88,6 +92,9 @@ public:
 
   // Read SCC, refusing it when its value may depend on a source-image address.
   llvm::Expected<llvm::Value *> readSCC(const DecodedInst &Di);
+
+  // Return a block-local SCC constant independent of source relocation.
+  std::optional<bool> knownSCC() { return blockState().SccConstant; }
 
   // Read the SGPR at Idx, or the pair based there, naming the register by
   // index rather than by an operand. Di is the instruction the read serves,
@@ -222,25 +229,11 @@ public:
   // entry. Single-SGPR entries remain independent.
   void invalidateSgprWaveMaskI1(unsigned BaseIdx);
 
-  // Record that SGPR pair BaseIdx holds source code-object address Value. The
-  // pair holds an address rather than an ordinary value, so neither half
-  // counts as written by this block any more.
-  void recordSourceImageSgprPairAddr(unsigned BaseIdx, uint64_t Value) {
-    blockState().SourceImageSgprPairAddrShadow[BaseIdx] = Value;
-    SourceImageSgprPairs.insert(BaseIdx);
-    blockState().DefinedSgprs.erase(BaseIdx);
-    blockState().DefinedSgprs.erase(BaseIdx + 1);
-  }
+  // Record the source-image address held by an SGPR pair.
+  void recordSourceImageSgprPairAddr(unsigned BaseIdx, uint64_t Value);
 
-  // Return the source code-object address recorded for SGPR pair BaseIdx in
-  // this block, if any.
+  // Return the source-image address known for this pair in the current block.
   std::optional<uint64_t> lookupSourceImageSgprPairAddr(unsigned BaseIdx);
-
-  // Whether SGPR pair BaseIdx was given a source code-object address that has
-  // since been dropped, either by a block boundary or by a write to one half
-  // of the pair. The address itself is gone, so a read of the pair names a
-  // source address the raise can no longer resolve.
-  bool droppedSourceImageSgprPairAddr(unsigned BaseIdx);
 
   // Record that the low half of a split source code-object address
   // displacement left carry Carry in SCC for SGPR pair BaseIdx, and that the
@@ -259,15 +252,9 @@ public:
   // is waiting.
   std::optional<bool> takeSourceImageCarry(unsigned BaseIdx, uint64_t Offset);
 
-  // Whether SGPR Idx may hold half of a source code-object address, either
-  // because this block recorded one there or because a block that ran before
-  // this one may have left one there.
-  bool mayHoldSourceImageAddress(unsigned Idx);
-
-  // Refuse the reads deferred while the set of source code-object addresses
-  // this function records was still incomplete. Call once every instruction is
-  // raised, which is when that set is complete.
-  llvm::Error refuseDeferredSourceImageReads();
+  // Reject deferred reads that may observe source-address bits on any reachable
+  // path. Requires SSA promotion of the register and provenance allocas.
+  llvm::Error refuseDeferredSourceImageReads(const llvm::DominatorTree &DT);
 
   // Track the value written to M0, which the relative-addressing opcodes need
   // as a constant to resolve the register index they name. A non-constant
@@ -288,25 +275,18 @@ public:
 private:
   llvm::SmallVector<llvm::WeakTrackingVH> UnavailableEntryValues;
 
-  // A read of an SGPR that the raise cannot yet decide, kept until it can.
+  // An operand read whose source-address provenance needs a CFG check.
   struct DeferredSourceImageRead {
-    // Instruction the read serves, owned by the decode the raise runs over.
     const DecodedInst *Di;
-    // SGPR the instruction reads.
-    unsigned Idx;
+    // No index denotes SCC.
+    std::optional<unsigned> Idx;
+    llvm::WeakTrackingVH Provenance;
+    llvm::BasicBlock *Block;
   };
 
-  // Whether a source code-object address is recorded anywhere in this function
-  // into a pair covering SGPR Idx.
-  bool sourceImageSgprPairRecorded(unsigned Idx) const;
-
-  // Refuse a read of SGPR Idx, which may hold part of a source code-object
-  // address. Such an address stands for a place in the captured source image,
-  // which the raise reads at raise time; the running kernel has nothing mapped
-  // there, so a value the target program computes from it points nowhere. The
-  // handlers that do mean the source image ask for the address itself and
-  // never come through here.
-  llvm::Error refuseSourceImageRead(const DecodedInst &Di, unsigned Idx);
+  // Diagnose a source-address read of an SGPR, or SCC when no index is given.
+  llvm::Error refuseSourceImageRead(const DecodedInst &Di,
+                                    std::optional<unsigned> Idx);
 
   // Decide a read of the registers named either by a base index and a width in
   // dwords or by the operand that reads them, refusing it when one of them
@@ -341,6 +321,8 @@ private:
     llvm::AllocaInst *SourceWavePair;
     // Whether SourceWavePair was ever written for this source wave.
     llvm::AllocaInst *SourceWavePairValid;
+    // Whether this dword holds part of a source-image address.
+    llvm::AllocaInst *SourceImage;
   };
 
   // A V_CMP result kept for reuse while the SGPR it wrote remains valid.
@@ -370,14 +352,9 @@ private:
       uint64_t NextOffset;
     };
     std::optional<SourceImageCarryState> SourceImageCarry;
-    // Whether this block last wrote SCC from a source-image address.
+    std::optional<bool> SccConstant;
     bool SccFromSourceImage = false;
-
-    // Whether this block wrote SCC, hiding any value from a predecessor.
-    bool DefinedScc = false;
-    // SGPRs this block has written an ordinary value to, and which therefore
-    // hold what this block put there rather than whatever a predecessor left.
-    llvm::DenseSet<unsigned> DefinedSgprs;
+    llvm::DenseSet<unsigned> SourceImageDwords;
     // Constant value last stored to M0.
     std::optional<uint64_t> M0Const;
     // Active low byte of S_SET_VGPR_MSB. Architectural rather than raise-time:
@@ -422,24 +399,8 @@ private:
   // carrying SSA values that do not dominate their uses.
   llvm::SmallVector<SgprShadow> SgprShadows;
 
-  // SGPR pairs a source code-object address was recorded into anywhere in the
-  // function. Entries only accumulate: a write elsewhere in decode order says
-  // nothing about the block a read happens in, and forgetting the pair there
-  // would turn a refusal into a load against target memory.
-  llvm::DenseSet<unsigned> SourceImageSgprPairs;
-
-  // Reads deferred until that set is complete. Instructions are raised in
-  // decode order, which says nothing about the order a branch reaching
-  // backwards runs them in, so a read can precede the instruction whose
-  // address it observes.
   llvm::SmallVector<DeferredSourceImageRead> DeferredSourceImageReads;
-
-  // Whether any block wrote an SCC value derived from a source-image address.
-  // A block that has not written SCC must not trust an inherited value.
-  bool SourceImageSccWritten = false;
-
-  // Whether SCC may still contain a value derived from a source-image address.
-  bool sccMayHoldSourceImageBit();
+  llvm::AllocaInst *SourceImageScc;
 };
 
 } // namespace COMGR::transpiler

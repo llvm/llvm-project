@@ -39,8 +39,7 @@ alloc_vgpr_kernel:
 	s_alloc_vgpr 0x100
 	s_cmov_b32 s6, s2
 ; ALLOC: fence syncscope("agent") seq_cst
-; ALLOC: [[GREW:%.+]] = select i1 true, i32 3, i32 7
-; ALLOC: call i32 @llvm.bitreverse.i32(i32 [[GREW]])
+; ALLOC: call i32 @llvm.bitreverse.i32(i32 3)
 	s_brev_b32 s7, s6
 ; The register-operand form asks for a count nothing wrote, and still succeeds:
 ; the answer does not depend on how many registers were asked for.
@@ -49,8 +48,7 @@ alloc_vgpr_kernel:
 	s_alloc_vgpr s4
 	s_cmov_b32 s9, s8
 ; ALLOC: fence syncscope("agent") seq_cst
-; ALLOC: [[GREW_REG:%.+]] = select i1 true, i32 5, i32 9
-; ALLOC: call i32 @llvm.bitreverse.i32(i32 [[GREW_REG]])
+; ALLOC: call i32 @llvm.bitreverse.i32(i32 5)
 	s_brev_b32 s10, s9
 ; ALLOC: ret void
 	s_endpgm

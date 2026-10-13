@@ -440,9 +440,24 @@ static Value *emitMaskCombine(IRBuilder<> &B, const ExecCombine &Combine,
 
 Error handleSOP1(RaiseContext &Ctx, const DecodedInst &Di,
                  OperandResolver &Op) {
+  Value *MoveCondition = nullptr;
+  if (Di.CanonOp == CanonicalOp::S_CMOV_B32 ||
+      Di.CanonOp == CanonicalOp::S_CMOV_B64) {
+    Expected<Value *> Scc = Ctx.registers().readSCC(Di);
+    if (!Scc)
+      return Scc.takeError();
+    MoveCondition = *Scc;
+    if (std::optional<bool> Known = Ctx.registers().knownSCC()) {
+      if (!*Known)
+        return Error::success();
+      MoveCondition = Ctx.B.getTrue();
+    }
+  }
   if (Di.CanonOp == CanonicalOp::S_MOV_B32 ||
-      Di.CanonOp == CanonicalOp::S_MOV_B64) {
-    bool Is64 = Di.CanonOp == CanonicalOp::S_MOV_B64;
+      Di.CanonOp == CanonicalOp::S_MOV_B64 ||
+      isa_and_present<ConstantInt>(MoveCondition)) {
+    bool Is64 = Di.CanonOp == CanonicalOp::S_MOV_B64 ||
+                Di.CanonOp == CanonicalOp::S_CMOV_B64;
     Expected<ParsedReg> Dst = Op.dst();
     if (!Dst)
       return Dst.takeError();
@@ -524,10 +539,7 @@ Error handleSOP1(RaiseContext &Ctx, const DecodedInst &Di,
     Expected<Value *> Old = Is64 ? Op.dstValue64() : Op.dstValue();
     if (!Old)
       return Old.takeError();
-    Expected<Value *> Scc = Ctx.registers().readSCC(Di);
-    if (!Scc)
-      return Scc.takeError();
-    Value *Moved = Ctx.B.CreateSelect(*Scc, *Src, *Old, "s_cmov");
+    Value *Moved = Ctx.B.CreateSelect(MoveCondition, *Src, *Old, "s_cmov");
     writeDst(Ctx.registers(), *Dst, Moved, Is64);
     return Error::success();
   }
