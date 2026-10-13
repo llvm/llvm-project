@@ -101,7 +101,7 @@ def ApplyVectorContractMultiLevelUnrollPatternsOp : Op<Transform_Dialect,
     for the nanokernel lowerings.
 
     The following flags control the decomposition:
-    - `enable_amx`: Prepare for AMX bf16 and int8 tile dot-product
+    - `enable_amx`: Prepare for AMX tile dot-product
   }];
 
   let arguments = (ins UnitAttr:$enable_amx);

@@ -83,6 +83,16 @@ struct MLUCandidate {
 } // anonymous namespace
 
 //----------------------------------------------------------------------------//
+// Forward declarations                                                       //
+//----------------------------------------------------------------------------//
+
+static void buildMNLoopBody(MLUCandidate &candidate, OpBuilder &b, Location loc,
+                            Value ivM, Value ivN);
+static SmallVector<Value> buildKLoopBody(MLUCandidate &candidate, OpBuilder &b,
+                                         Location loc, Value ivM, Value ivN,
+                                         Value ivK, ValueRange iterArgs);
+
+//----------------------------------------------------------------------------//
 // Utilities                                                                  //
 //----------------------------------------------------------------------------//
 
@@ -526,6 +536,7 @@ static void makeAccInitializationBackedByMemory(MLUCandidate &candidate,
   if (candidate.accIsZeroInit)
     return;
 
+  OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(candidate.accLoop);
   auto loc = candidate.accLoop.getLoc();
 
@@ -562,6 +573,7 @@ static void makeAccInitializationBackedByMemory(MLUCandidate &candidate,
 // reuse it.
 static void makeAccResultBackedByMemory(MLUCandidate &candidate,
                                         PatternRewriter &rewriter) {
+  OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(candidate.accLoop);
   auto loc = candidate.accLoop.getLoc();
 
@@ -629,16 +641,11 @@ static void makeAccResultBackedByMemory(MLUCandidate &candidate,
   candidate.opsToDelete.push_back(candidate.accLoop);
 }
 
-static void buildMNLoopBody(MLUCandidate &candidate, OpBuilder &b, Location loc,
-                            Value ivM, Value ivN);
-static SmallVector<Value> buildKLoopBody(MLUCandidate &candidate, OpBuilder &b,
-                                         Location loc, Value ivM, Value ivN,
-                                         Value ivK, ValueRange iterArgs);
-
 // Create the loop nest for iterating over the M and N dimensions of the
 // accumulator. Construction continues in buildMNLoopBody.
 static void buildLoopNestForCandidate(MLUCandidate &candidate,
                                       PatternRewriter &rewriter) {
+  OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(candidate.accLoop);
   auto loc = candidate.accLoop.getLoc();
 

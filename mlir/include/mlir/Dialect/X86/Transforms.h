@@ -117,7 +117,7 @@ void populateMoveAccumulatorForContractLoopPatterns(
 
 // Feature flags to control the multi-level unroll patttern.
 struct MultiLevelUnrollOptions {
-  bool enableAMX = false; // Prepare for AMX bf16 and int8 tile dot-product
+  bool enableAMX = false; // Prepare for AMX tile dot-product
 };
 
 // A set of patterns that tile and unroll contractions in order to prepare them
