@@ -1623,6 +1623,8 @@ namespace {
 struct RegPairInfo {
   Register Reg1;
   Register Reg2;
+  Register Reg3;
+  Register Reg4;
   int FrameIdx;
   int Offset;
   enum RegType { GPR, FPR64, FPR128, PPR, ZPR, VG } Type;
@@ -1630,7 +1632,23 @@ struct RegPairInfo {
 
   RegPairInfo() = default;
 
-  bool isPaired() const { return Reg2.isValid(); }
+  bool isPaired() const {
+    return Reg2.isValid() && !Reg3.isValid() && !Reg4.isValid();
+  }
+
+  bool isQuad() const {
+    return Reg2.isValid() && Reg3.isValid() && Reg4.isValid();
+  }
+
+  bool isGrouped() const { return isPaired() || isQuad(); }
+
+  unsigned getNumRegs() const {
+    if (isQuad())
+      return 4;
+    if (isPaired())
+      return 2;
+    return 1;
+  }
 
   bool isScalable() const { return Type == PPR || Type == ZPR; }
 };
@@ -1817,12 +1835,31 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
         // Also, WinCFI has no support for group ZPR loads/stores yet.
         if (isTargetWindows(MF) || AFI->getPredicateRegForFillSpill() == 0)
           break;
-        // We expect to see pairs in decending order (e.g. [z9, z8]).
-        // We ensure this in `orderZPRCalleeSavesForGroups()`. This is required
-        // as (for Linux) StackFillDir is negative (so we start at higher
-        // addresses) and we need to ensure the lower register in the pair has
-        // the lower address to store the registers in the correct order.
-        if (((NextReg - AArch64::Z0) % 2 == 0) && (NextReg + 1 == RPI.Reg1)) {
+
+        // We expect to see pairs and quads in decending order (e.g. [z7, z6,
+        // z5, z4]). We ensure this in `orderZPRCalleeSavesForGroups()`. This is
+        // required as (for Linux) StackFillDir is negative (so we start at
+        // higher addresses) and we need to ensure the lower register in the
+        // pair has the lower address to store the registers in the correct
+        // order.
+        if (unsigned(i + 3 * RegInc) < Count) {
+          MCRegister Reg3 = CSI[i + RegInc * 2].getReg();
+          MCRegister Reg4 = CSI[i + RegInc * 3].getReg();
+          bool Consecutive = (Reg4 + 1 == Reg3) && (Reg3 + 1 == NextReg) &&
+                             (NextReg + 1 == RPI.Reg1);
+          const int NumRegs = 4;
+          int Offset = (ScalableByteOffset + StackFillDir * NumRegs * Scale);
+
+          if ((Reg4 - AArch64::Z0) % 4 == 0 && Consecutive &&
+              isValidMemOpOffset(TII, AArch64::LD1B_4Z_IMM, Offset)) {
+            RPI.Reg2 = NextReg;
+            RPI.Reg3 = Reg3;
+            RPI.Reg4 = Reg4;
+          }
+        }
+
+        if (!RPI.isQuad() && ((NextReg - AArch64::Z0) % 2 == 0) &&
+            (NextReg + 1 == RPI.Reg1)) {
           const int NumRegs = 2;
           int Offset = (ScalableByteOffset + StackFillDir * NumRegs * Scale);
 
@@ -1842,9 +1879,16 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     //
     // The order of the registers in the list is controlled by
     // getCalleeSavedRegs(), so they will always be in-order, as well.
-    assert((!RPI.isPaired() ||
-            (CSI[i].getFrameIdx() + RegInc == CSI[i + RegInc].getFrameIdx())) &&
-           "Out of order callee saved regs!");
+
+    bool RegsOrdered = all_of(seq(RPI.getNumRegs() - 1), [&](int RegOffset) {
+      return CSI[i + RegInc * RegOffset].getFrameIdx() + RegInc ==
+             CSI[i + RegInc * RegOffset + RegInc].getFrameIdx();
+    });
+    assert(RegsOrdered && "Out of order callee saved regs!");
+    (void)RegsOrdered;
+
+    assert((!RPI.isQuad() || RPI.Type == RegPairInfo::ZPR) &&
+           "Currently only ZPR's support four-register spills");
 
     assert((!RPI.isPaired() || !NeedsFrameRecord || RPI.Reg2 != AArch64::FP ||
             RPI.Reg1 == AArch64::LR) &&
@@ -1866,9 +1910,9 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
            "Callee-save registers not saved as adjacent register pair!");
 
     RPI.FrameIdx = CSI[i].getFrameIdx();
-    if (IsWindows &&
-        RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
-      RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
+    if (IsWindows)
+      // RPI.FrameIdx must be the lower index of the group
+      RPI.FrameIdx = CSI[i + RegInc * (RPI.getNumRegs() - 1)].getFrameIdx();
 
     // Realign the scalable offset if necessary. This is relevant when spilling
     // predicates on Windows.
@@ -1884,9 +1928,9 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     assert(OffsetPre % Scale == 0);
 
     if (RPI.isScalable())
-      ScalableByteOffset += StackFillDir * (RPI.isPaired() ? 2 * Scale : Scale);
+      ScalableByteOffset += StackFillDir * RPI.getNumRegs() * Scale;
     else
-      ByteOffset += StackFillDir * (RPI.isPaired() ? 2 * Scale : Scale);
+      ByteOffset += StackFillDir * RPI.getNumRegs() * Scale;
 
     // Swift's async context is directly before FP, so allocate an extra
     // 8 bytes for it.
@@ -1898,7 +1942,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     // Round up size of non-pair to pair size if we need to pad the
     // callee-save area to ensure 16-byte alignment.
     if (NeedGapToAlignStack && !IsWindows && !RPI.isScalable() &&
-        RPI.Type != RegPairInfo::FPR128 && !RPI.isPaired() &&
+        RPI.Type != RegPairInfo::FPR128 && !RPI.isGrouped() &&
         ByteOffset % 16 != 0) {
       ByteOffset += 8 * StackFillDir;
       assert(MFI.getObjectAlign(RPI.FrameIdx) <= Align(16));
@@ -1949,8 +1993,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       AFI->setCalleeSaveBaseToFrameRecordOffset(Offset);
 
     RegPairs.push_back(RPI);
-    if (RPI.isPaired())
-      i += RegInc;
+    i += RegInc * (RPI.getNumRegs() - 1);
   }
   if (IsWindows) {
     // If we need an alignment gap in the stack, align the topmost stack
@@ -2004,6 +2047,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
   for (const RegPairInfo &RPI : llvm::reverse(RegPairs)) {
     Register Reg1 = RPI.Reg1;
     Register Reg2 = RPI.Reg2;
+    Register Reg3 = RPI.Reg3;
+    Register Reg4 = RPI.Reg4;
     unsigned StrOpc;
 
     // Issue sequence of spills for cs regs.  The first spill may be converted
@@ -2029,7 +2074,9 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       StrOpc = RPI.isPaired() ? AArch64::STPQi : AArch64::STRQui;
       break;
     case RegPairInfo::ZPR:
-      StrOpc = RPI.isPaired() ? AArch64::ST1B_2Z_IMM : AArch64::STR_ZXI;
+      StrOpc = RPI.isQuad()
+                   ? AArch64::ST1B_4Z_IMM
+                   : (RPI.isPaired() ? AArch64::ST1B_2Z_IMM : AArch64::STR_ZXI);
       break;
     case RegPairInfo::PPR:
       StrOpc = AArch64::STR_PXI;
@@ -2083,11 +2130,19 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
 
     LLVM_DEBUG({
       dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
-      if (RPI.isPaired())
+      if (RPI.isGrouped())
         dbgs() << ", " << printReg(Reg2, TRI);
+      if (RPI.isQuad()) {
+        dbgs() << ", " << printReg(Reg3, TRI);
+        dbgs() << ", " << printReg(Reg4, TRI);
+      }
       dbgs() << ") -> fi#(" << RPI.FrameIdx;
-      if (RPI.isPaired())
+      if (RPI.isGrouped())
         dbgs() << ", " << RPI.FrameIdx + 1;
+      if (RPI.isQuad()) {
+        dbgs() << ", " << RPI.FrameIdx + 2;
+        dbgs() << ", " << RPI.FrameIdx + 3;
+      }
       dbgs() << ")\n";
     });
 
@@ -2096,10 +2151,12 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
            "Windows unwdinding requires a consecutive (FP,LR) pair");
     unsigned FrameIdxReg1 = RPI.FrameIdx;
     unsigned FrameIdxReg2 = RPI.FrameIdx + 1;
+    unsigned FrameIdxReg3 = RPI.FrameIdx + 2;
+    unsigned FrameIdxReg4 = RPI.FrameIdx + 3;
 
-    if (RPI.isPaired() && RPI.isScalable()) {
+    if (RPI.isGrouped() && RPI.isScalable()) {
       assert(!isTargetWindows(MF) &&
-             "Scalable register groups are not supported by Windows WinCFI");
+             "Scalable register groups are not supported by Windows CFI yet");
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -2128,15 +2185,33 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         MBB.addLiveIn(Reg1);
       if (!MRI.isReserved(Reg2))
         MBB.addLiveIn(Reg2);
+      if (RPI.isQuad()) {
+        if (!MRI.isReserved(Reg3))
+          MBB.addLiveIn(Reg3);
+        if (!MRI.isReserved(Reg4))
+          MBB.addLiveIn(Reg4);
+      }
+
       assert(RPI.Reg2 + 1 == RPI.Reg1 && "Expected reversed ZPR pair");
-      MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg2 - AArch64::Z0));
+      if (RPI.isQuad()) {
+        MIB.addReg(/*QuadRegs*/ AArch64::Z0_Z1_Z2_Z3 +
+                   (RPI.Reg4 - AArch64::Z0));
+        MIB.addMemOperand(MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, FrameIdxReg4),
+            MachineMemOperand::MOStore, Size, Alignment));
+        MIB.addMemOperand(MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, FrameIdxReg3),
+            MachineMemOperand::MOStore, Size, Alignment));
+      } else {
+        MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg2 - AArch64::Z0));
+      }
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
           MachineMemOperand::MOStore, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset / 2) // [sp, #imm*2*vscale],
-                                  // where 2*vscale is implicit
+          .addImm(RPI.Offset /      // [sp, #imm*size*vscale]
+                  RPI.getNumRegs()) // where size*vscale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -2173,14 +2248,12 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     }
     // Update the StackIDs of the SVE stack slots.
     MachineFrameInfo &MFI = MF.getFrameInfo();
-    if (RPI.Type == RegPairInfo::ZPR) {
-      MFI.setStackID(FrameIdxReg1, TargetStackID::ScalableVector);
-      if (RPI.isPaired())
-        MFI.setStackID(FrameIdxReg2, TargetStackID::ScalableVector);
-    } else if (RPI.Type == RegPairInfo::PPR) {
-      MFI.setStackID(FrameIdxReg1, TargetStackID::ScalablePredicateVector);
-      if (RPI.isPaired())
-        MFI.setStackID(FrameIdxReg2, TargetStackID::ScalablePredicateVector);
+    for (unsigned I = 0; I < RPI.getNumRegs(); ++I) {
+      if (RPI.Type == RegPairInfo::ZPR)
+        MFI.setStackID(RPI.FrameIdx + I, TargetStackID::ScalableVector);
+      else if (RPI.Type == RegPairInfo::PPR)
+        MFI.setStackID(RPI.FrameIdx + I,
+                       TargetStackID::ScalablePredicateVector);
     }
   }
   return true;
@@ -2224,6 +2297,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   for (const RegPairInfo &RPI : RegPairs) {
     Register Reg1 = RPI.Reg1;
     Register Reg2 = RPI.Reg2;
+    Register Reg3 = RPI.Reg3;
+    Register Reg4 = RPI.Reg4;
 
     // Issue sequence of restores for cs regs. The last restore may be converted
     // to a post-increment load later by emitEpilogue if the callee-save stack
@@ -2247,7 +2322,9 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       LdrOpc = RPI.isPaired() ? AArch64::LDPQi : AArch64::LDRQui;
       break;
     case RegPairInfo::ZPR:
-      LdrOpc = RPI.isPaired() ? AArch64::LD1B_2Z_IMM : AArch64::LDR_ZXI;
+      LdrOpc = RPI.isQuad()
+                   ? AArch64::LD1B_4Z_IMM
+                   : (RPI.isPaired() ? AArch64::LD1B_2Z_IMM : AArch64::LDR_ZXI);
       break;
     case RegPairInfo::PPR:
       LdrOpc = AArch64::LDR_PXI;
@@ -2257,21 +2334,31 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     }
     LLVM_DEBUG({
       dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
-      if (RPI.isPaired())
+      if (RPI.isGrouped())
         dbgs() << ", " << printReg(Reg2, TRI);
+      if (RPI.isQuad()) {
+        dbgs() << ", " << printReg(Reg3, TRI);
+        dbgs() << ", " << printReg(Reg4, TRI);
+      }
       dbgs() << ") -> fi#(" << RPI.FrameIdx;
-      if (RPI.isPaired())
+      if (RPI.isGrouped())
         dbgs() << ", " << RPI.FrameIdx + 1;
+      if (RPI.isQuad()) {
+        dbgs() << ", " << RPI.FrameIdx + 2;
+        dbgs() << ", " << RPI.FrameIdx + 3;
+      }
       dbgs() << ")\n";
     });
 
     unsigned FrameIdxReg1 = RPI.FrameIdx;
     unsigned FrameIdxReg2 = RPI.FrameIdx + 1;
+    unsigned FrameIdxReg3 = RPI.FrameIdx + 2;
+    unsigned FrameIdxReg4 = RPI.FrameIdx + 3;
 
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-    if (RPI.isPaired() && RPI.isScalable()) {
+    if (RPI.isGrouped() && RPI.isScalable()) {
       assert(!isTargetWindows(MF) &&
-             "Scalable register groups are not supported by Windows WinCFI");
+             "Scalable register groups are not supported by Windows CFI yet");
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
@@ -2287,16 +2374,26 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
             .setMIFlags(MachineInstr::FrameDestroy);
       }
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
-      assert(RPI.Reg2 + 1 == RPI.Reg1 && "Expected reversed ZPR pair");
-      MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg2 - AArch64::Z0),
-                 getDefRegState(true));
+      if (RPI.isQuad()) {
+        MIB.addReg(/*QuadRegs*/ AArch64::Z0_Z1_Z2_Z3 + (RPI.Reg4 - AArch64::Z0),
+                   getDefRegState(true));
+        MIB.addMemOperand(MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, FrameIdxReg4),
+            MachineMemOperand::MOLoad, Size, Alignment));
+        MIB.addMemOperand(MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, FrameIdxReg3),
+            MachineMemOperand::MOLoad, Size, Alignment));
+      } else {
+        MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg2 - AArch64::Z0),
+                   getDefRegState(true));
+      }
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
           MachineMemOperand::MOLoad, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset / 2) // [sp, #imm*2*vscale]
-                                  // where 2*vscale is implicit
+          .addImm(RPI.Offset /      // [sp, #imm*size*vscale]
+                  RPI.getNumRegs()) // where size*vscale is implicit
           .setMIFlag(MachineInstr::FrameDestroy);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
