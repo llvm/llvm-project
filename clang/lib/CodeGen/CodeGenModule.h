@@ -1795,10 +1795,11 @@ public:
 
   /// Returns the function type that identifies \p FD as an indirect call
   /// target or callee in the call graph section. Virtual methods are
-  /// identified by the type of the method that introduced the virtual function
-  /// (the root of their override chain) so that calls through pointers to any
-  /// class of the hierarchy match the overriders they can reach, even if those
-  /// have a covariant return type.
+  /// identified by the type of the method that introduced the vtable entry
+  /// they are placed in (the last method overridden along the primary base
+  /// chain of their class), so that calls through pointers to any class of the
+  /// hierarchy match the functions they reach through that entry, even if the
+  /// overriders have a covariant return type.
   QualType GetCallGraphFunctionType(const FunctionDecl *FD) const;
 
   /// Create and attach callgraph metadata if the function is a potential
