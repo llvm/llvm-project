@@ -70,12 +70,22 @@ void RTDEF(CUFRegisterHostMemoryRange)(void *begin, void *end) {
   else if (pageableAccess)
     return;
   // Registering a page that holds other data would break copies of that data
-  // that extend past the page, so only whole pages within the range are
-  // registered.
+  // that extend past the page. The compiler aligns the start of the range and
+  // the global ending it, at end - 1, to a page boundary, so that only whole
+  // pages within the range need to be registered. If the pages are larger than
+  // that alignment, or the objects predate it, every page overlapping the range
+  // is registered instead, so that all of it remains readable by the device.
   const auto pageSize{static_cast<std::uintptr_t>(sysconf(_SC_PAGESIZE))};
-  const auto first{(reinterpret_cast<std::uintptr_t>(begin) + pageSize - 1) &
-      ~(pageSize - 1)};
-  const auto last{reinterpret_cast<std::uintptr_t>(end) & ~(pageSize - 1)};
+  const auto beginAddr{reinterpret_cast<std::uintptr_t>(begin)};
+  const auto endAddr{reinterpret_cast<std::uintptr_t>(end)};
+  std::uintptr_t first, last;
+  if (beginAddr % pageSize == 0 && (endAddr - 1) % pageSize == 0) {
+    first = beginAddr;
+    last = endAddr - 1;
+  } else {
+    first = beginAddr & ~(pageSize - 1);
+    last = (endAddr + pageSize - 1) & ~(pageSize - 1);
+  }
   if (last <= first)
     return;
   cudaError_t err{cudaHostRegister(reinterpret_cast<void *>(first),
