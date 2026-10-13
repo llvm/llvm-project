@@ -332,16 +332,33 @@ protected:
                    IRUnitRef) override;
 };
 
+// Return the block label as it is printed as an operand.  This must be used
+// consistently everywhere a block label is needed so that unnamed blocks are
+// identified correctly and quoted numeric names remain distinct from numeric
+// labels.
+template <typename T> static inline std::string getBlockLabel(const T &B) {
+  std::string Operand;
+  raw_string_ostream OS(Operand);
+  B.printAsOperand(OS, /*PrintType=*/false);
+
+  StringRef Label = OS.str();
+  [[maybe_unused]] bool HadPrefix = Label.consume_front("%");
+  assert(HadPrefix && "Expected block operand to start with '%'");
+  return Label.str();
+}
+
 // Information that needs to be saved for a basic block in order to compare
 // before and after the pass to determine if it was changed by a pass.
 template <typename T> class BlockDataT {
 public:
-  BlockDataT(const BasicBlock &B) : Label(B.getName().str()), Data(B) {
+  BlockDataT(const BasicBlock &B) : Label(getBlockLabel(B)), Data(B) {
+    assert(!Label.empty() && "Expected block to have label");
     raw_string_ostream SS(Body);
     B.print(SS, nullptr, true, true);
   }
 
-  BlockDataT(const MachineBasicBlock &B) : Label(B.getName().str()), Data(B) {
+  BlockDataT(const MachineBasicBlock &B) : Label(getBlockLabel(B)), Data(B) {
+    assert(!Label.empty() && "Expected block to have label");
     raw_string_ostream SS(Body);
     B.print(SS);
   }
