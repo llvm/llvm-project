@@ -1,0 +1,11 @@
+// REQUIRES: clangd-tidy-checks
+// RUN: cp %s %t.cpp
+// RUN: clangd -enable-config=0 -clang-tidy=0 -check=%t.cpp -check-tidy-time=-* 2>&1 | FileCheck %s
+
+// Time only baseline builds to avoid timing-stability retries.
+// CHECK: Timing AST build with individual clang-tidy checks
+// CHECK: Baseline =
+// CHECK: Finished individual clang-tidy checks
+// CHECK: All checks completed, 0 errors
+
+int *p = 0;
