@@ -17528,12 +17528,23 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
           DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
                          LN0->getBasePtr(), ExtVT, LN0->getMemOperand());
       SDValue Res = ExtLoad;
-      if (Frozen)
+      SDValue FrozenLoad;
+      if (Frozen) {
+        FrozenLoad = DAG.getFreeze(ExtLoad);
         // Allow value tracking to see the sign extension through the freeze.
-        Res = DAG.getNode(ISD::AssertSext, DL, VT, DAG.getFreeze(ExtLoad),
+        Res = DAG.getNode(ISD::AssertSext, DL, VT, FrozenLoad,
                           DAG.getValueType(ExtVT.getScalarType()));
+      }
       CombineTo(N, Res);
-      CombineTo(LN0, ExtLoad, ExtLoad.getValue(1));
+      if (Frozen && !N0.hasOneUse()) {
+        // (freeze (extload x)) has other uses: route them through
+        // (truncate (freeze (sextload x))).
+        SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(N0),
+                                    LoadOp.getValueType(), FrozenLoad);
+        CombineTo(LN0, Trunc, ExtLoad.getValue(1));
+      } else {
+        CombineTo(LN0, ExtLoad, ExtLoad.getValue(1));
+      }
       AddToWorklist(ExtLoad.getNode());
       return SDValue(N, 0); // Return N so it doesn't get rechecked!
     }
