@@ -19,9 +19,13 @@
 #include "Shared/Profile.h"
 #include "device.h"
 
+#include "Utils/ELF.h"
+
 #include "llvm/ADT/SmallString.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -42,6 +46,40 @@ namespace llvm::offload::tmp {
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
 int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 } // namespace llvm::offload::tmp
+
+/// Return the device handle of the host device, or nullptr if there is none.
+///
+/// Only the host plugin claims an image built for the host machine, so
+/// iterating the devices compatible with such an image finds the host device
+/// without initializing any other platform.
+static ol_device_handle_t findHostDevice() {
+  llvm::ELF::Elf64_Ehdr HostImage{};
+  memcpy(HostImage.e_ident, llvm::ELF::ElfMagic, 4);
+  HostImage.e_ident[llvm::ELF::EI_CLASS] = llvm::ELF::ELFCLASS64;
+  // The fields below are written in host byte order, so the header has to
+  // declare the host encoding for it to be read back correctly.
+  HostImage.e_ident[llvm::ELF::EI_DATA] = llvm::sys::IsBigEndianHost
+                                              ? llvm::ELF::ELFDATA2MSB
+                                              : llvm::ELF::ELFDATA2LSB;
+  HostImage.e_ident[llvm::ELF::EI_VERSION] = llvm::ELF::EV_CURRENT;
+  HostImage.e_type = llvm::ELF::ET_DYN;
+  HostImage.e_machine = utils::elf::getTargetMachine();
+  HostImage.e_version = llvm::ELF::EV_CURRENT;
+  HostImage.e_ehsize = sizeof(HostImage);
+  HostImage.e_shentsize = sizeof(llvm::ELF::Elf64_Shdr);
+
+  ol_device_handle_t HostDevice = nullptr;
+  if (auto Res = olIterateCompatibleDevices(
+          &HostImage, sizeof(HostImage),
+          [](ol_device_handle_t D, void *Data) {
+            *(static_cast<ol_device_handle_t *>(Data)) = D;
+            return false;
+          },
+          &HostDevice))
+    REPORT() << "Failed to find the host device: " << Res->Details;
+
+  return HostDevice;
+}
 
 void PluginManager::init() {
   TIMESCOPE();
@@ -65,6 +103,8 @@ void PluginManager::init() {
           },
           this))
     REPORT() << "Failed to iterate platforms: " << toString(std::move(Err));
+
+  HostDevice = findHostDevice();
 
   ODBG(ODT_Init) << "RTLs loaded!";
 }
@@ -490,11 +530,12 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE) &&
               !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT) &&
               ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-               (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)))
-            if (Device.RTL->data_submit(DeviceId, DeviceEntry.Address,
-                                        Entry.Address,
-                                        Entry.Size) != OFFLOAD_SUCCESS)
+               (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY))) {
+            AsyncInfoTy AsyncInfo(Device);
+            if (Device.submitData(DeviceEntry.Address, Entry.Address,
+                                  Entry.Size, AsyncInfo) != OFFLOAD_SUCCESS)
               REPORT() << "Failed to write symbol for USM " << Entry.SymbolName;
+          }
         } else if (Entry.Address) {
           if (Device.RTL->get_function(Binary, Entry.SymbolName,
                                        &DeviceEntry.Address) !=

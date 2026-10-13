@@ -143,6 +143,9 @@ struct PluginManager {
   /// Returns the number of plugins that are active.
   int getNumActivePlugins() const;
 
+  /// Return the device handle used for the host side of the data transfers.
+  ol_device_handle_t getHostDevice() const { return HostDevice; }
+
 private:
   bool RTLsLoaded = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
@@ -173,6 +176,9 @@ private:
   std::list<llvm::SmallVector<__tgt_device_image, 0>> LegacyImages;
   llvm::DenseMap<__tgt_bin_desc *, __tgt_bin_desc> UpgradedDescriptors;
   __tgt_bin_desc *upgradeLegacyEntries(__tgt_bin_desc *Desc);
+
+  // Device handle used for host side of the data transfers.
+  ol_device_handle_t HostDevice = nullptr;
 
   /// Register the image \p Img from \p Desc on the compatible device
   /// \p DeviceHandle, unless the device is already in \p UsedDevices. Returns
