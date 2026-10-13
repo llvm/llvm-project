@@ -12,7 +12,7 @@ bool tryToExtinguishByVal(bool);
 void tryPutFireOut();
 bool callTheFD();
 void scream();
-
+bool isFireFighterComing();
 bool someOtherCondition();
 
 //===--- Basic Positives --------------------------------------------------===//
@@ -278,6 +278,19 @@ void positive_direct_outer_and_rhs() {
     // CHECK-FIXES: {{^\ *$}}
   }
 }
+void positive_direct_outer_and_rhs_bool() {
+  bool onFire = isBurning();
+  bool isComing = isFireFighterComing();
+  if (isComing && onFire) {
+    if (onFire) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^\ *$}}
+      scream();
+    }
+    // CHECK-FIXES: {{^\ *$}}
+  }
+}
+
 
 void positive_indirect_outer_and_rhs() {
   bool onFire = isBurning();

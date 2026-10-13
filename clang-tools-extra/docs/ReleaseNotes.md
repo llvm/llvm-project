@@ -203,9 +203,15 @@ infrastructure are described first, followed by tool-specific sections.
   the pointer points to an incomplete (forward-declared) type.
 
 - Improved {doc}`bugprone-redundant-branch-condition
-  <clang-tidy/checks/bugprone/redundant-branch-condition>` check by fixing
-  false positives when the condition variable is changed later in a loop that
-  encloses the inner `if`.
+  <clang-tidy/checks/bugprone/redundant-branch-condition>` check:
+  
+    - Fixed false positives when the condition variable is changed later in a loop that
+      encloses the inner `if`.
+
+    - Fixed false negatives when there are two varibles statement in both side
+      of `&&` in `if` like `a && b` .it showing correct warning for first variable
+      and failed for second variable in if condition.eg.  `(x && y) { if (y) ... }`
+      in this example warning is not shown properly. 
 
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
