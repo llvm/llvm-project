@@ -139,8 +139,8 @@ add_orc_rt_unittest(ConnectTests
             orc-rt-support-objects
   )
 
-# The socket helpers and transport are POSIX-only for now, so the socket tests
-# are too.
+# The socket helpers, the socket transport and TCP are POSIX-only for now, so
+# their tests are too.
 if (ORC_RT_TARGET_POSIX)
   add_orc_rt_unittest(ConnectSocketTests
     connect-socket/SocketHandleTest.cpp
@@ -152,6 +152,19 @@ if (ORC_RT_TARGET_POSIX)
 
     LINK_LIBS orc-rt-connect-socket-objects orc-rt-connect-objects
               orc-rt-bedrock-objects orc-rt-support-objects
+    )
+
+  add_orc_rt_unittest(ConnectTCPTests
+    connect-tcp/TCPTest.cpp
+
+    connect-tcp/sys/posix/TCPCloseOnExecTest.cpp
+    connect-tcp/sys/posix/TCPTestUtils.cpp
+
+    connect-socket/sys/posix/SocketTestUtils.cpp
+
+    LINK_LIBS orc-rt-connect-tcp-objects orc-rt-connect-socket-objects
+              orc-rt-connect-objects orc-rt-bedrock-objects
+              orc-rt-support-objects
     )
 endif()
 
