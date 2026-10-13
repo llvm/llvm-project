@@ -6,7 +6,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 ; Every function in this file has a reason that it can't be transformed.
 
 ; CHECK-NOT: Checks all passed, doing the transformation
-
+; CHECK: Steps are different
 ; Outer loop does not start at zero
 define void @test_1(i32 %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %scale) {
 entry:
@@ -722,3 +722,41 @@ for.empty:
 declare void @objc_enumerationMutation(ptr)
 declare dso_local void @f(ptr)
 declare dso_local void @g(...)
+
+; The two GEPs in the linear IV expression have different element sizes
+@arr = constant [64 x i8] c"\01\02\03\04\05\06\07\08\09\0A\0B\0C\0D\0E\0F\10\11\12\13\14\15\16\17\18\19\1A\1B\1C\1D\1E\1F\20\21\22\23\24\25\26\27\28\29\2A\2B\2C\2D\2E\2F\30\31\32\33\34\35\36\37\38\39\3A\3B\3C\3D\3E\3F\40", align 1
+@result = global i32 0, align 4
+
+; for i in 0..2, j in 0..2: result += ((i32*)((i8*)arr + 2*i))[j] (low byte)
+; reads byte offsets 0, 4, 2, 6 and returns 1+5+3+7 = 16
+define i32 @test_13() {
+entry:
+  br label %outer.header
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  br label %inner.header
+inner.header:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner.latch ]
+  %mul = mul i64 %i, 2
+  %p1 = getelementptr inbounds i8, ptr @arr, i64 %mul
+  %p2 = getelementptr inbounds i32, ptr %p1, i64 %j
+  %v = load i8, ptr %p2, align 1
+  %v32 = zext i8 %v to i32
+  %old = load i32, ptr @result, align 4
+  %new = add i32 %old, %v32
+  store i32 %new, ptr @result, align 4
+  br label %inner.latch
+inner.latch:
+  %j.next = add nuw i64 %j, 1
+  %inner.cmp = icmp ult i64 %j.next, 2
+  br i1 %inner.cmp, label %inner.header, label %inner.exit
+inner.exit:
+  br label %outer.latch
+outer.latch:
+  %i.next = add nuw i64 %i, 1
+  %outer.cmp = icmp ult i64 %i.next, 2
+  br i1 %outer.cmp, label %outer.header, label %exit
+exit:
+  %ans = load i32, ptr @result, align 4
+  ret i32 %ans
+}
