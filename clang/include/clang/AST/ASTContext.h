@@ -555,10 +555,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// context dies without having to track them individually.
   llvm::SpecificBumpPtrAllocator<AttrVec> DeclAttrAllocator;
 
-  /// One-entry cache for getDeclAttrs().
-  const Decl *LastDeclAttrsDecl = nullptr;
-  AttrVec *LastDeclAttrs = nullptr;
-
   /// A mapping from non-redeclarable declarations in modules that were
   /// merged with other declarations to the canonical declaration that they were
   /// merged into.
