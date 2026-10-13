@@ -974,6 +974,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error dataDelete(void *TgtPtr, TargetAllocTy Kind,
                    GenericProfilerTy *ProfilerPtr = nullptr);
 
+  /// Allocate memory through the plugin's default context, which, unlike
+  /// dataAlloc, caches allocations for reuse. Free it with freeCtxMem.
+  Expected<void *> allocCtxMem(int64_t Size, TargetAllocTy Kind);
+
+  /// Free memory allocated with allocCtxMem.
+  Error freeCtxMem(void *Ptr, TargetAllocTy Kind);
+
   /// Pin or register host memory to optimize transfers and return the device
   /// accessible pointer that devices should use for memory transfers involving
   /// the host pinned allocation.

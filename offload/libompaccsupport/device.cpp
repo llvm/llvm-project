@@ -505,23 +505,6 @@ struct DynBlockMemConfTy {
 };
 } // namespace
 
-/// Allocate device memory that a single launch uses. Unlike
-/// GenericDeviceTy::dataAlloc, the plugin context caches it for reuse.
-static llvm::Expected<void *> allocLaunchMemory(GenericDeviceTy &GenericDevice,
-                                                uint64_t Size) {
-  auto AllocOrErr = GenericDevice.Plugin.getDefaultContext(GenericDevice)
-                        .allocate(GenericDevice, Size, /*HostPtr=*/nullptr,
-                                  TARGET_ALLOC_DEVICE, /*Alignment=*/0);
-  if (!AllocOrErr)
-    return AllocOrErr.takeError();
-  if (Size && !*AllocOrErr)
-    return createError(ErrorCode::BackendFailure,
-                       "failed to allocate %" PRIu64
-                       " bytes of launch memory from device allocator",
-                       Size);
-  return *AllocOrErr;
-}
-
 /// Prepare the block memory buffer requested for the kernel and execute the
 /// specified fallback if necessary.
 static llvm::Expected<DynBlockMemConfTy>
@@ -551,8 +534,8 @@ prepareBlockMemory(GenericDeviceTy &GenericDevice,
       DynBlockMemSize = 0;
     } else {
       // Get global memory as fallback.
-      auto AllocOrErr = allocLaunchMemory(
-          GenericDevice, NumBlocks * uint64_t(DynBlockMemSize));
+      auto AllocOrErr = GenericDevice.allocCtxMem(
+          NumBlocks * uint64_t(DynBlockMemSize), TARGET_ALLOC_DEVICE);
       if (!AllocOrErr)
         return AllocOrErr.takeError();
       DynFallbackPtr = *AllocOrErr;
@@ -566,8 +549,7 @@ static void freeAfterSynchronization(GenericDeviceTy &GenericDevice,
                                      AsyncInfoTy &AsyncInfo, void *Ptr,
                                      TargetAllocTy Kind) {
   AsyncInfo.addPostProcessingFunction([&GenericDevice, Ptr, Kind]() -> int {
-    if (auto Err = GenericDevice.Plugin.getDefaultContext(GenericDevice)
-                       .deallocate(GenericDevice, Ptr, Kind)) {
+    if (auto Err = GenericDevice.freeCtxMem(Ptr, Kind)) {
       REPORT() << "Failure to free device memory " << Ptr << ": "
                << toString(std::move(Err));
       return OFFLOAD_FAIL;
@@ -603,8 +585,8 @@ static llvm::Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
   if (!NeedsReductionBuffer && !DynCGroupMem)
     return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
 
-  auto AllocOrErr =
-      allocLaunchMemory(GenericDevice, sizeof(KernelLaunchEnvironmentTy));
+  auto AllocOrErr = GenericDevice.allocCtxMem(sizeof(KernelLaunchEnvironmentTy),
+                                              TARGET_ALLOC_DEVICE);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
 
@@ -624,8 +606,9 @@ static llvm::Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
 
   if (NeedsReductionBuffer) {
     // Use number of teams many buffer elements.
-    auto ReductionAllocOrErr = allocLaunchMemory(
-        GenericDevice, uint64_t(KernelEnv.ReductionDataSize) * NumBlocks0);
+    auto ReductionAllocOrErr = GenericDevice.allocCtxMem(
+        uint64_t(KernelEnv.ReductionDataSize) * NumBlocks0,
+        TARGET_ALLOC_DEVICE);
     if (!ReductionAllocOrErr)
       return ReductionAllocOrErr.takeError();
     LocalKLE.ReductionBuffer = *ReductionAllocOrErr;

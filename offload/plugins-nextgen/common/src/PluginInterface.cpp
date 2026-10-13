@@ -608,6 +608,23 @@ Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
       "missing getDeviceMemorySize implementation (required by RR-heuristic");
 }
 
+Expected<void *> GenericDeviceTy::allocCtxMem(int64_t Size,
+                                              TargetAllocTy Kind) {
+  auto AllocOrErr = Plugin.getDefaultContext(*this).allocate(
+      *this, Size, /*HostPtr=*/nullptr, Kind, /*Alignment=*/0);
+  if (!AllocOrErr)
+    return AllocOrErr.takeError();
+  if (Size && !*AllocOrErr)
+    return Plugin::error(
+        ErrorCode::OUT_OF_RESOURCES,
+        "failed to allocate %" PRId64 " bytes from device allocator", Size);
+  return *AllocOrErr;
+}
+
+Error GenericDeviceTy::freeCtxMem(void *Ptr, TargetAllocTy Kind) {
+  return Plugin.getDefaultContext(*this).deallocate(*this, Ptr, Kind);
+}
+
 Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind,
                                             size_t Alignment,
