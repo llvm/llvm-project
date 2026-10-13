@@ -64,6 +64,68 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
   }
 }
 
+TEST(RuntimeLibcallsTest, VectorLibraryAvailability) {
+  using Info = RTLIB::RuntimeLibcallsInfo;
+  const struct {
+    const char *TripleName;
+    unsigned SleefCount;
+    unsigned ArmPLCount;
+    unsigned AMDCount;
+  } Targets[] = {
+      {"aarch64-unknown-linux-gnu", 16, 24, 0},
+      {"riscv64-unknown-linux-gnu", 2, 0, 0},
+      {"i386-unknown-linux-gnu", 0, 0, 6},
+      {"x86_64-unknown-linux-gnu", 0, 0, 6},
+  };
+
+  for (const auto &Target : Targets) {
+    SCOPED_TRACE(Target.TripleName);
+    Triple TT(Target.TripleName);
+    Info System(TT);
+
+    // Choosing no vector library must leave these calls unavailable.
+    for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
+      StringRef Name = Info::getLibcallImplName(Impl);
+      if (Name.starts_with("_ZGV") || Name.starts_with("Sleef_") ||
+          Name.starts_with("armpl_") || Name.starts_with("amd_"))
+        EXPECT_FALSE(System.isAvailable(Impl)) << Name.str();
+    }
+
+    const struct {
+      VectorLibrary Library;
+      unsigned Count;
+      unsigned VectorCallCount;
+    } Libraries[] = {
+        {VectorLibrary::SLEEFGNUABI, Target.SleefCount, 0},
+        {VectorLibrary::ArmPL, Target.ArmPLCount, Target.ArmPLCount ? 8u : 0u},
+        {VectorLibrary::AMDLIBM, Target.AMDCount, 0},
+    };
+
+    for (const auto &Library : Libraries) {
+      SCOPED_TRACE(static_cast<unsigned>(Library.Library));
+      Info Selected(TT, ExceptionHandling::Default, FloatABI::Default, "",
+                    Library.Library);
+      unsigned Added = 0;
+      unsigned VectorCallCount = 0;
+      for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
+        if (System.isAvailable(Impl)) {
+          EXPECT_TRUE(Selected.isAvailable(Impl));
+          continue;
+        }
+        if (!Selected.isAvailable(Impl))
+          continue;
+        ++Added;
+        CallingConv::ID CC = Selected.getLibcallImplCallingConv(Impl);
+        EXPECT_TRUE(CC == CallingConv::C ||
+                    CC == CallingConv::AArch64_VectorCall);
+        VectorCallCount += CC == CallingConv::AArch64_VectorCall;
+      }
+      EXPECT_EQ(Added, Library.Count);
+      EXPECT_EQ(VectorCallCount, Library.VectorCallCount);
+    }
+  }
+}
+
 TEST(RuntimeLibcallsTest, LibcallForIntrinsic) {
   LLVMContext Ctx;
   using Info = RTLIB::RuntimeLibcallsInfo;

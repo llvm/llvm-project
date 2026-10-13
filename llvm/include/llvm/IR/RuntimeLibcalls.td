@@ -4711,6 +4711,25 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
   def armpl_vtgammaq_f64 : RuntimeLibcallImpl<TGAMMA_V2F64>;
 }
 
+defvar ArmPLCodeGenImpls = !filter(impl, ARMPL_VECFUNCS,
+  !match(!cast<string>(impl.Provides),
+         "^(REM|MODF|SINCOS|SINCOSPI|POW|CBRT)_(V2F64|V4F32|NXV2F64|NXV4F32)$"));
+
+// Preserve the existing backend calling convention assignments. Override the
+// fixed-width fmod, sincos, pow and cbrt implementations; leave modf and
+// sincospi with the default C calling convention.
+defvar ArmPLVectorCallCodeGen = !filter(impl, ArmPLCodeGenImpls,
+  !match(!cast<string>(impl.Provides),
+         "^(REM|SINCOS|POW|CBRT)_(V2F64|V4F32)$"));
+def AArch64_VECTORCALL
+    : LibcallCallingConv<[{CallingConv::AArch64_VectorCall}]>;
+
+// Like SLEEF, this library is enabled explicitly by the VectorLibrary option.
+def ArmPLCodeGen : LibcallLibrary<"armpl",
+  (add !listremove(ArmPLCodeGenImpls, ArmPLVectorCallCodeGen),
+       LibcallsWithCC<(add ArmPLVectorCallCodeGen), AArch64_VECTORCALL>),
+  RuntimeLibcallAvailability<(all_of IsAArch64)>>;
+
 //===----------------------------------------------------------------------===//
 // AMD vector math library (AMDLIBM) functions
 //===----------------------------------------------------------------------===//
@@ -4842,3 +4861,11 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd4_round : RuntimeLibcallImpl<ROUND_V4F64>;
   def amd_vrd8_round : RuntimeLibcallImpl<ROUND_V8F64>;
 }
+
+defvar AMDLIBMCodeGenImpls = !filter(impl, AMDLIBM_VECFUNCS,
+  !match(!cast<string>(impl.Provides),
+         "^SINCOS_(V2F64|V4F64|V8F64|V4F32|V8F32|V16F32)$"));
+
+// Like SLEEF, this library is enabled explicitly by the VectorLibrary option.
+def AMDLIBMCodeGen
+    : LibcallLibrary<"amdlibm", (add AMDLIBMCodeGenImpls), isX86>;

@@ -40,52 +40,18 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   initLibcalls(TT, ExceptionModel, FloatABI, ABIName,
                TT.getDefaultLongDoubleFormat());
 
-  // TODO: TableGen should generate the remaining vector library sets.
   switch (VecLib) {
   case VectorLibrary::SLEEFGNUABI:
     setAvailableLibFuncs_sleef(TT, ExceptionModel, FloatABI, ABIName,
                               TT.getDefaultLongDoubleFormat(), CallingConv::C);
     break;
   case VectorLibrary::ArmPL:
-    for (RTLIB::LibcallImpl Impl : {RTLIB::impl_armpl_svfmod_f32_x,
-                                    RTLIB::impl_armpl_svfmod_f64_x,
-                                    RTLIB::impl_armpl_vfmodq_f32,
-                                    RTLIB::impl_armpl_vfmodq_f64,
-                                    RTLIB::impl_armpl_vmodfq_f64,
-                                    RTLIB::impl_armpl_vmodfq_f32,
-                                    RTLIB::impl_armpl_svmodf_f64_x,
-                                    RTLIB::impl_armpl_svmodf_f32_x,
-                                    RTLIB::impl_armpl_vsincosq_f64,
-                                    RTLIB::impl_armpl_vsincosq_f32,
-                                    RTLIB::impl_armpl_svsincos_f64_x,
-                                    RTLIB::impl_armpl_svsincos_f32_x,
-                                    RTLIB::impl_armpl_vsincospiq_f32,
-                                    RTLIB::impl_armpl_vsincospiq_f64,
-                                    RTLIB::impl_armpl_svsincospi_f32_x,
-                                    RTLIB::impl_armpl_svsincospi_f64_x,
-                                    RTLIB::impl_armpl_svpow_f32_x,
-                                    RTLIB::impl_armpl_svpow_f64_x,
-                                    RTLIB::impl_armpl_vpowq_f32,
-                                    RTLIB::impl_armpl_vpowq_f64,
-                                    RTLIB::impl_armpl_svcbrt_f32_x,
-                                    RTLIB::impl_armpl_svcbrt_f64_x,
-                                    RTLIB::impl_armpl_vcbrtq_f32,
-                                    RTLIB::impl_armpl_vcbrtq_f64})
-      setAvailable(Impl);
-
-    for (RTLIB::LibcallImpl Impl :
-         {RTLIB::impl_armpl_vfmodq_f32, RTLIB::impl_armpl_vfmodq_f64,
-          RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32,
-          RTLIB::impl_armpl_vpowq_f32, RTLIB::impl_armpl_vpowq_f64,
-          RTLIB::impl_armpl_vcbrtq_f32, RTLIB::impl_armpl_vcbrtq_f64})
-      setLibcallImplCallingConv(Impl, CallingConv::AArch64_VectorCall);
+    setAvailableLibFuncs_armpl(TT, ExceptionModel, FloatABI, ABIName,
+                              TT.getDefaultLongDoubleFormat(), CallingConv::C);
     break;
   case VectorLibrary::AMDLIBM:
-    for (RTLIB::LibcallImpl Impl :
-         {RTLIB::impl_amd_vrd2_sincos, RTLIB::impl_amd_vrd4_sincos,
-          RTLIB::impl_amd_vrd8_sincos, RTLIB::impl_amd_vrs4_sincosf,
-          RTLIB::impl_amd_vrs8_sincosf, RTLIB::impl_amd_vrs16_sincosf})
-      setAvailable(Impl);
+    setAvailableLibFuncs_amdlibm(TT, ExceptionModel, FloatABI, ABIName,
+                                TT.getDefaultLongDoubleFormat(), CallingConv::C);
     break;
   default:
     break;
