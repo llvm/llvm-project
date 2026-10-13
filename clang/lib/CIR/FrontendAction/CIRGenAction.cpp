@@ -273,6 +273,8 @@ public:
       EmbedObject(LLVMModule.get(), CGO, CI.getVirtualFileSystem(),
                   CI.getDiagnostics());
 
+      EmbedBitcode(LLVMModule.get(), CGO, llvm::MemoryBufferRef());
+
       BackendAction BEAction = getBackendActionFromOutputType(Action);
       emitBackendOutput(CI, CI.getCodeGenOpts(), LLVMModule.get(), BEAction, FS,
                         std::move(OutputStream));
