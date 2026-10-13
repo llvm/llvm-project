@@ -1109,6 +1109,9 @@ features cannot lower the translation-unit ABI level;
 
 #### CUDA Support
 
+- Fixed missing diagnostics for wrong-side functions reached through constructor
+  and member initializers. (#GH118415)
+
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
 
