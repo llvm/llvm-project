@@ -2140,6 +2140,10 @@ class RVPBinaryIntrinsic
                             [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_pmerge : RVPTernaryIntrinsic;
 
+  // Reverse the order of the 16-bit halfwords of a 64-bit value (RV64 only).
+  def int_riscv_rev16_64 : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
+                                              [IntrNoMem, IntrSpeculatable]>;
+
   // Packed Sign and Zero Extend.
   class RVPExtIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],

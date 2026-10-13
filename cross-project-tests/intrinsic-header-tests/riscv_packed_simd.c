@@ -51,6 +51,10 @@ unsigned test_cls_64(int64_t a) { return __riscv_cls_64(a); }
 // RV64:        rev{{[[:space:]]}}
 uint64_t test_rev_64(uint64_t a) { return __riscv_rev_64(a); }
 
+// RV64-LABEL: test_rev16_64:
+// RV64:        rev16{{[[:space:]]}}
+uint64_t test_rev16_64(uint64_t a) { return __riscv_rev16_64(a); }
+
 // RV64-LABEL: test_slx_64:
 // RV64:        slx{{[[:space:]]}}
 uint64_t test_slx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
