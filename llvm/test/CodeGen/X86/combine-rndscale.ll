@@ -237,7 +237,6 @@ define i16 @concat_roundps_cmp_v8f32(<8 x float> %x0, <8 x float> %x1, <8 x floa
 define <2 x double> @demandedelts_roundpd_v2f64(<2 x double> %a, <2 x double> %b) {
 ; AVX-LABEL: demandedelts_roundpd_v2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-NEXT:    vroundpd $12, %xmm0, %xmm0
 ; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX-NEXT:    retq
@@ -248,22 +247,12 @@ define <2 x double> @demandedelts_roundpd_v2f64(<2 x double> %a, <2 x double> %b
 }
 
 define <8 x float> @demandedelts_roundps_v8f32(<8 x float> %a, <8 x float> %b) {
-; AVX1OR2-LABEL: demandedelts_roundps_v8f32:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; AVX1OR2-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[0,2],ymm0[0,0],ymm1[4,6],ymm0[4,4]
-; AVX1OR2-NEXT:    vroundps $12, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,7,7,7,7]
-; AVX1OR2-NEXT:    retq
-;
-; AVX512-LABEL: demandedelts_roundps_v8f32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [0,0,0,0,8,4,4,4]
-; AVX512-NEXT:    vpermi2ps %ymm1, %ymm0, %ymm2
-; AVX512-NEXT:    vroundps $12, %ymm2, %ymm0
-; AVX512-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,7,7,7,7]
-; AVX512-NEXT:    retq
+; AVX-LABEL: demandedelts_roundps_v8f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; AVX-NEXT:    vroundps $12, %ymm0, %ymm0
+; AVX-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,7,7,7,7]
+; AVX-NEXT:    retq
   %i0 = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 8, i32 4, i32 4, i32 4>
   %i1 = tail call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %i0, i32 12)
   %i2 = shufflevector <8 x float> %i1, <8 x float> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 7, i32 7, i32 7, i32 7>
