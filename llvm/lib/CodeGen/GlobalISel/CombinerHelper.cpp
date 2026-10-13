@@ -173,9 +173,10 @@ bool CombinerHelper::isLegalOrHasFewerElements(
          Action == LegalizeActions::FewerElements;
 }
 
-bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
+bool CombinerHelper::isImmConstantLegalOrBeforeLegalizer(unsigned Opc,
+                                                         const LLT Ty) const {
   if (!Ty.isVector())
-    return isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, {Ty}});
+    return isLegalOrBeforeLegalizer({Opc, {Ty}});
   if (isPreLegalize())
     return true;
   // Scalable vectors cannot be constant folded here.
@@ -183,7 +184,15 @@ bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
     return false;
   LLT EltTy = Ty.getElementType();
   return isLegal({TargetOpcode::G_BUILD_VECTOR, {Ty, EltTy}}) &&
-         isLegal({TargetOpcode::G_CONSTANT, {EltTy}});
+         isLegal({Opc, {EltTy}});
+}
+
+bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
+  return isImmConstantLegalOrBeforeLegalizer(TargetOpcode::G_CONSTANT, Ty);
+}
+
+bool CombinerHelper::isFPConstantLegalOrBeforeLegalizer(const LLT Ty) const {
+  return isImmConstantLegalOrBeforeLegalizer(TargetOpcode::G_FCONSTANT, Ty);
 }
 
 void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
@@ -5223,6 +5232,10 @@ bool CombinerHelper::matchConstantFoldFPUnary(MachineInstr &MI,
   Register Src = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
+
+  if (!isFPConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
   // Source and destination element types can differ (G_FPEXT/G_FPTRUNC) and
   // can have different denormal modes.
   if (SrcTy.isVector() &&

@@ -173,6 +173,12 @@ public:
   /// not constant folded and return false.
   LLVM_ABI bool isConstantLegalOrBeforeLegalizer(const LLT Ty) const;
 
+  /// \return true if the combine is running prior to legalization, or if a
+  /// scalar \p Ty G_FCONSTANT is legal. For fixed vectors, also requires
+  /// G_BUILD_VECTOR of those scalar constants to be legal. Scalable vectors are
+  /// not constant folded and return false.
+  LLVM_ABI bool isFPConstantLegalOrBeforeLegalizer(const LLT Ty) const;
+
   /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
   LLVM_ABI void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
                                Register ToReg) const;
@@ -1069,6 +1075,12 @@ public:
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
+
+  /// \return true if the combine is running prior to legalization, or if a
+  /// scalar \p Ty \p Opc (G_CONSTANT or G_FCONSTANT) is legal. For fixed
+  /// vectors, also requires G_BUILD_VECTOR of those scalar constants to be
+  /// legal. Scalable vectors are not constant folded and return false.
+  bool isImmConstantLegalOrBeforeLegalizer(unsigned Opc, const LLT Ty) const;
 
   /// Helper function for matchBinopWithNeg: tries to match one commuted form
   /// of `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`.
