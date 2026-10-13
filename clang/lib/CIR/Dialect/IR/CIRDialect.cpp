@@ -35,6 +35,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
 
+#include "CIRDialectBytecode.h"
+
 using namespace mlir;
 using namespace cir;
 
@@ -102,6 +104,7 @@ void cir::CIRDialect::initialize() {
 #include "clang/CIR/Dialect/IR/CIROps.cpp.inc"
       >();
   addInterfaces<CIROpAsmDialectInterface>();
+  detail::addBytecodeInterface(this);
 }
 
 Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
@@ -3719,7 +3722,15 @@ void cir::AwaitOp::getSuccessorRegions(
     return;
   }
 
-  // Branching from suspend or resume: exit to the parent operation.
+  // Branching from suspend: continue in resume once the coroutine is resumed,
+  // or exit to the parent operation if it stays suspended or is destroyed.
+  if (&getSuspend() == parentRegion) {
+    regions.emplace_back(&getResume());
+    regions.emplace_back(getOperation());
+    return;
+  }
+
+  // Branching from resume: exit to the parent operation.
   regions.emplace_back(getOperation());
 }
 
@@ -3804,11 +3815,13 @@ void cir::CoroutineOp::getSuccessorRegions(
       point.getTerminatorPredecessorOrNull()->getParentRegion();
 
   // initial_suspend either falls into body (resumed, or never actually
-  // suspended because await_ready() was true) or exits directly, a plain
-  // suspend here means nobody has resumed yet, so we just return to caller.
+  // suspended because await_ready() was true), exits directly, or reaches
+  // destroy when the coroutine is destroyed while suspended at its initial
+  // suspend point.
   if (parent == &getInitialSuspend()) {
     regions.emplace_back(&getBody());
     regions.emplace_back(&getExit());
+    regions.emplace_back(&getDestroy());
     return;
   }
 
@@ -3823,7 +3836,7 @@ void cir::CoroutineOp::getSuccessorRegions(
     return;
   }
 
-  // final_suspend's only live edge in valid programs is destroy resuming
+  // final_suspend's only live edge in valid programs is destroy. Resuming
   // past the final suspend is UB. The ready-immediately edge to exit is
   // kept for structural symmetry with the other two suspend regions even
   // though it's effectively dead.
@@ -4537,10 +4550,11 @@ LogicalResult cir::MatrixTransposeOp::verify() {
   cir::MatrixType resultTy = getResult().getType();
 
   if ((valueTy.getElementType() != resultTy.getElementType()) ||
-      (valueTy.getRowNum() != resultTy.getColumnNum()) ||
-      (valueTy.getColumnNum() != resultTy.getRowNum())) {
-    auto expectedTy = cir::MatrixType::get(
-        valueTy.getElementType(), valueTy.getColumnNum(), valueTy.getRowNum());
+      (valueTy.getNumRows() != resultTy.getNumColumns()) ||
+      (valueTy.getNumColumns() != resultTy.getNumRows())) {
+    auto expectedTy =
+        cir::MatrixType::get(valueTy.getElementType(), valueTy.getNumColumns(),
+                             valueTy.getNumRows());
     emitOpError() << "operand type " << valueTy << " expects result type of "
                   << expectedTy << " but got " << resultTy;
     return failure();

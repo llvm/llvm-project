@@ -2169,12 +2169,12 @@ define <6 x i32> @bitcast_v12f16_to_v6i32(<12 x half> %a, i32 %b) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:  ; %bb.2: ; %end
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2367,12 +2367,12 @@ define inreg <6 x i32> @bitcast_v12f16_to_v6i32_scalar(<12 x half> inreg %a, i32
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NEXT:  .LBB19_2: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, s5 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, s4 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, s3 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, s2 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, s1 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, s0 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v5, s5, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v4, s4, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, s3, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v2, s2, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, s1, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -4202,12 +4202,12 @@ define <6 x float> @bitcast_v12f16_to_v6f32(<12 x half> %a, i32 %b) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:  ; %bb.2: ; %end
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -4400,12 +4400,12 @@ define inreg <6 x float> @bitcast_v12f16_to_v6f32_scalar(<12 x half> inreg %a, i
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NEXT:  .LBB35_2: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, s5 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, s4 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, s3 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, s2 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, s1 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, s0 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v5, s5, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v4, s4, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, s3, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v2, s2, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, s1, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -5816,12 +5816,12 @@ define <3 x i64> @bitcast_v12f16_to_v3i64(<12 x half> %a, i32 %b) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:  ; %bb.2: ; %end
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -6014,12 +6014,12 @@ define inreg <3 x i64> @bitcast_v12f16_to_v3i64_scalar(<12 x half> inreg %a, i32
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NEXT:  .LBB47_2: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, s5 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, s4 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, s3 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, s2 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, s1 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, s0 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v5, s5, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v4, s4, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, s3, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v2, s2, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, s1, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -7067,12 +7067,12 @@ define <3 x double> @bitcast_v12f16_to_v3f64(<12 x half> %a, i32 %b) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:  ; %bb.2: ; %end
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -7265,12 +7265,12 @@ define inreg <3 x double> @bitcast_v12f16_to_v3f64_scalar(<12 x half> inreg %a, 
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NEXT:  .LBB55_2: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, s5 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, s4 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, s3 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, s2 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, s1 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, s0 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v5, s5, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v4, s4, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, s3, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v2, s2, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, s1, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -7845,12 +7845,12 @@ define <12 x i16> @bitcast_v12f16_to_v12i16(<12 x half> %a, i32 %b) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:  ; %bb.2: ; %end
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -8058,12 +8058,12 @@ define inreg <12 x i16> @bitcast_v12f16_to_v12i16_scalar(<12 x half> inreg %a, i
 ; GFX11-NEXT:    v_dual_mov_b32 v6, s6 :: v_dual_mov_b32 v7, s7
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NEXT:  .LBB59_2: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, s5 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, s4 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, s3 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, s2 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, s1 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, s0 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v5, s5, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v4, s4, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, s3, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v2, s2, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, s1, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
