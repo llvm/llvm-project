@@ -24,11 +24,16 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.afdo -sample-profile-remapping-file=%S/Inputs/remapper-reread-loaded-profile.map -salvage-stale-profile -salvage-unused-profile -S | FileCheck %s --check-prefixes=CHECK,REMAP
 
 ; CHECK: define {{.*}} @_Z3fooP4Basei({{.*}} !prof ![[FOO_ENTRY:[0-9]+]]
+; CHECK: br i1 %cmp, label %if.then, label %if.end, {{.*}} !prof ![[FOO_BR:[0-9]+]]
 ; CHECK: define {{.*}} @_ZN2ns3barEl({{.*}} !prof ![[BAR_ENTRY:[0-9]+]]
 
+; foo has 100 head samples and 100 body samples on the branch at line 3.
 ; NOREMAP-DAG: ![[FOO_ENTRY]] = !{!"function_entry_count", i64 101}
-; FIXME: foo's profile is read twice and merged into itself; this should be 101.
+; NOREMAP-DAG: ![[FOO_BR]] = !{!"branch_weights", i32 101, i32 2}
+; FIXME: foo's profile is read twice and merged into itself; both its head and
+; its body samples are doubled. These should be 101 and "101, 2".
 ; REMAP-DAG:   ![[FOO_ENTRY]] = !{!"function_entry_count", i64 201}
+; REMAP-DAG:   ![[FOO_BR]] = !{!"branch_weights", i32 201, i32 2}
 ; CHECK-DAG:   ![[BAR_ENTRY]] = !{!"function_entry_count", i64 51}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
@@ -36,10 +41,18 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @_Z3fooP4Basei(ptr %b, i32 %x) #0 !dbg !10 {
 entry:
+  %cmp = icmp sgt i32 %x, 0, !dbg !12
+  br i1 %cmp, label %if.then, label %if.end, !dbg !12
+
+if.then:
   %vtable = load ptr, ptr %b, align 8, !dbg !13
   %fp = load ptr, ptr %vtable, align 8, !dbg !13
   %r = call i32 %fp(ptr %b), !dbg !13
-  ret i32 %r, !dbg !14
+  br label %if.end, !dbg !13
+
+if.end:
+  %s = phi i32 [ %r, %if.then ], [ 0, %entry ], !dbg !14
+  ret i32 %s, !dbg !14
 }
 
 define i32 @_ZN2ns3barEl(i64 %x) #0 !dbg !20 {
@@ -64,6 +77,7 @@ attributes #0 = { "use-sample-profile" }
 !5 = !DISubroutineType(types: !6)
 !6 = !{}
 !10 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooP4Basei", scope: !1, file: !1, line: 1, type: !5, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
+!12 = !DILocation(line: 3, column: 7, scope: !10)
 !13 = !DILocation(line: 4, column: 10, scope: !15)
 !14 = !DILocation(line: 5, column: 3, scope: !10)
 !15 = !DILexicalBlockFile(scope: !10, file: !1, discriminator: 1)
