@@ -254,7 +254,7 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
       APInt ub = ubAttr.getValue();
       APInt step = stepAttr.getValue();
 
-      // bail out if ub <= lb or ub - lb <= step (unsigned) 
+      // bail out if ub <= lb or ub - lb <= step (unsigned)
       if (ub.ule(lb) || (ub - lb).ule(step))
         return failure();
     }
