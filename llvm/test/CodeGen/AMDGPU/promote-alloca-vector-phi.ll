@@ -278,3 +278,75 @@ join:
   store i32 %l, ptr addrspace(1) %out
   ret void
 }
+
+; A scalar member whose in-memory size differs from its in-register size (i1 is
+; one byte in memory but one bit in a register) cannot be promoted:
+define amdgpu_kernel void @phi_scalar_padded_type(i1 %c, ptr addrspace(1) %out) {
+; CHECK-LABEL: define amdgpu_kernel void @phi_scalar_padded_type(
+; CHECK-SAME: i1 [[C:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = alloca i1, align 1, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = alloca i1, align 1, addrspace(5)
+; CHECK-NEXT:    store i1 true, ptr addrspace(5) [[A]], align 1
+; CHECK-NEXT:    store i1 false, ptr addrspace(5) [[B]], align 1
+; CHECK-NEXT:    br i1 [[C]], label %[[BB1:.*]], label %[[BB2:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr addrspace(5) [ [[A]], %[[BB1]] ], [ [[B]], %[[BB2]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i1, ptr addrspace(5) [[P]], align 1
+; CHECK-NEXT:    store i1 [[L]], ptr addrspace(1) [[OUT]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca i1, addrspace(5)
+  %b = alloca i1, addrspace(5)
+  store i1 true, ptr addrspace(5) %a
+  store i1 false, ptr addrspace(5) %b
+  br i1 %c, label %bb.1, label %bb.2
+bb.1:
+  br label %join
+bb.2:
+  br label %join
+join:
+  %p = phi ptr addrspace(5) [ %a, %bb.1 ], [ %b, %bb.2 ]
+  %l = load i1, ptr addrspace(5) %p
+  store i1 %l, ptr addrspace(1) %out
+  ret void
+}
+
+; A single alloca whose pointer flows through a phi that is used directly as a
+; memcpy operand. The alloca is not promoted now, although we have chance to improve in this area.
+define amdgpu_kernel void @memcpy_ptr_is_phi(i1 %c, ptr addrspace(1) %out, ptr addrspace(5) %src) {
+; CHECK-LABEL: define amdgpu_kernel void @memcpy_ptr_is_phi(
+; CHECK-SAME: i1 [[C:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = alloca [4 x i32], align 4, addrspace(5)
+; CHECK-NEXT:    br i1 [[C]], label %[[BB1:.*]], label %[[BB2:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr addrspace(5) [ [[A]], %[[BB1]] ], [ [[A]], %[[BB2]] ]
+; CHECK-NEXT:    call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) [[P]], ptr addrspace(5) [[SRC]], i32 16, i1 false)
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; CHECK-NEXT:    store i32 [[L]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca [4 x i32], addrspace(5)
+  br i1 %c, label %bb.1, label %bb.2
+bb.1:
+  br label %join
+bb.2:
+  br label %join
+join:
+  %p = phi ptr addrspace(5) [ %a, %bb.1 ], [ %a, %bb.2 ]
+  call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) %p, ptr addrspace(5) %src, i32 16, i1 false)
+  %l = load i32, ptr addrspace(5) %p
+  store i32 %l, ptr addrspace(1) %out
+  ret void
+}

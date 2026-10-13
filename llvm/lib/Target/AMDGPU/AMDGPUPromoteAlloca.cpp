@@ -1133,16 +1133,16 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
 }
 
 void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
+  if (DisablePromoteAllocaToVector) {
+    LLVM_DEBUG(dbgs() << "  Promote alloca to vectors is disabled\n");
+    return;
+  }
+
   // A phi/select that merges with null or a non-alloca object can't be given a
   // vector lane, so the whole group is unpromotable to vector.
   if (AA.HaveUnpromotableMerge) {
     LLVM_DEBUG(dbgs() << "  Cannot convert to vector due to merge with "
                          "null/unknown object\n");
-    return;
-  }
-
-  if (DisablePromoteAllocaToVector) {
-    LLVM_DEBUG(dbgs() << "  Promote alloca to vectors is disabled\n");
     return;
   }
 
@@ -1155,6 +1155,10 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
     unsigned ElemCnt;
     if (MemberTy->isSingleValueType() && !MemberTy->isVectorTy()) {
       if (CombinedEltTy && CombinedEltTy != MemberTy)
+        return;
+
+      // Abort on type with different sizes in memory and register.
+      if (DL.getTypeSizeInBits(MemberTy) != DL.getTypeAllocSizeInBits(MemberTy))
         return;
 
       CombinedEltTy = MemberTy;
@@ -1268,6 +1272,9 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       auto getConstIndexIntoAlloca = [&](Value *Ptr) -> ConstantInt * {
         if (Ptr == AA.getLeaderAlloca())
           return ConstantInt::get(Ptr->getContext(), APInt(32, 0));
+
+        if (!isa<GetElementPtrInst>(Ptr))
+          return nullptr;
 
         auto Index = computeGEPToVectorIndex(cast<GetElementPtrInst>(Ptr), AA,
                                              VecEltTy, DL);
