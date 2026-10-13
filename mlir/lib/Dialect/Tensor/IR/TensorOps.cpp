@@ -3252,6 +3252,11 @@ void PadOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
 }
 
 LogicalResult PadOp::verify() {
+  for (ArrayRef<int64_t> padding : {getStaticLow(), getStaticHigh()})
+    for (int64_t size : padding)
+      if (!ShapedType::isDynamic(size) && size < 0)
+        return emitOpError("padding must be non-negative, got ") << size;
+
   auto sourceType = llvm::cast<RankedTensorType>(getSource().getType());
   auto resultType = llvm::cast<RankedTensorType>(getResult().getType());
   auto expectedType =
