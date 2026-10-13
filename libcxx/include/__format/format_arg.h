@@ -355,8 +355,8 @@ public:
   __basic_format_arg_value<_Context> __value_;
   __format::__arg_t __type_;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit basic_format_arg(
-      __format::__arg_t __type, __basic_format_arg_value<_Context> __value) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit
+  basic_format_arg(__format::__arg_t __type, __basic_format_arg_value<_Context> __value) noexcept
       : __value_(__value), __type_(__type) {}
 };
 
