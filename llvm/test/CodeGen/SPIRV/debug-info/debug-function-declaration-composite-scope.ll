@@ -1,20 +1,24 @@
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; DISubprogram whose lexical scope is not yet supported, so no DebugFunctionDeclaration is emitted.
+; A declaration whose Parent is a composite.
 
 ; CHECK: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[I32:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: OpString "member_fn"
+; CHECK-DAG: [[NAME:%[0-9]+]] = OpString "member_fn"
+; CHECK-DAG: [[SNAME:%[0-9]+]] = OpString "S"
 ; CHECK-DAG: [[PATH:%[0-9]+]] = OpString "{{[/\\]}}tmp{{[/\\]}}composite-scope-decl.c"
 ; CHECK-DAG: [[C100:%[0-9]+]] = OpConstant [[I32]] 100
 ; CHECK-DAG: [[C5:%[0-9]+]] = OpConstant [[I32]] 5
 ; CHECK-DAG: [[C0:%[0-9]+]] = OpConstant [[I32]] 0
 ; CHECK-DAG: [[DS:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugSource [[PATH]]
-; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugCompilationUnit [[C100]] [[C5]] [[DS]] [[C0]]
-; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugTypeFunction [[C0]] [[VOID]]
-; CHECK-NOT: DebugFunctionDeclaration
+; CHECK-DAG: [[TF:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeFunction [[C0]] [[VOID]]
+; CHECK: [[C1:%[0-9]+]] = OpConstant [[I32]] 1
+; CHECK: [[S:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeComposite [[SNAME]] [[C1]]
+; CHECK: [[C2:%[0-9]+]] = OpConstant [[I32]] 2
+; CHECK: [[C128:%[0-9]+]] = OpConstant [[I32]] 128
+; CHECK: OpExtInst [[VOID]] [[EXT]] DebugFunctionDeclaration [[NAME]] [[TF]] [[DS]] [[C2]] [[C0]] [[S]] [[NAME]] [[C128]]
 
 target triple = "spirv64-unknown-unknown"
 

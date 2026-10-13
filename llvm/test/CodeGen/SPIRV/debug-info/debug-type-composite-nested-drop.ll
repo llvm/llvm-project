@@ -1,18 +1,16 @@
-; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV --implicit-check-not=DebugTypeMember
+; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; Composites are emitted in a single DebugInfoFinder pass. Outer is discovered
-; before Inner, so when Outer is emitted its Inner-typed member has no id yet
-; and is dropped. Inner is emitted next, and its basic-type member survives.
-; Only one DebugTypeMember is emitted here, for Inner.x. Emitting composites in
-; dependency order, would add a second DebugTypeMember for Outer.inner
-; (see https://github.com/llvm/llvm-project/issues/211850).
-
-; Both composites are still emitted.
-; CHECK-SPIRV: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
-; CHECK-SPIRV: DebugTypeComposite
-; CHECK-SPIRV: DebugTypeMember
-; CHECK-SPIRV: DebugTypeComposite
+; CHECK-SPIRV: [[ext:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+; CHECK-SPIRV-DAG: [[void:%[0-9]+]] = OpTypeVoid
+; CHECK-SPIRV-DAG: [[str_inner_ty:%[0-9]+]] = OpString "Inner"
+; CHECK-SPIRV-DAG: [[str_outer:%[0-9]+]] = OpString "Outer"
+; CHECK-SPIRV-DAG: [[str_x:%[0-9]+]] = OpString "x"
+; CHECK-SPIRV-DAG: [[str_inner:%[0-9]+]] = OpString "inner"
+; CHECK-SPIRV: [[mem_x:%[0-9]+]] = OpExtInst [[void]] [[ext]] DebugTypeMember [[str_x]]
+; CHECK-SPIRV: [[inner:%[0-9]+]] = OpExtInst [[void]] [[ext]] DebugTypeComposite [[str_inner_ty]] {{.*}} [[mem_x]]{{$}}
+; CHECK-SPIRV: [[mem_inner:%[0-9]+]] = OpExtInst [[void]] [[ext]] DebugTypeMember [[str_inner]] [[inner]]
+; CHECK-SPIRV: OpExtInst [[void]] [[ext]] DebugTypeComposite [[str_outer]] {{.*}} [[mem_inner]]{{$}}
 
 define spir_func void @test() !dbg !12 {
 entry:
