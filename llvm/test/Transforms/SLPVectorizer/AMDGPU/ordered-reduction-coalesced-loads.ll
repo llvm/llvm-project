@@ -174,14 +174,14 @@ define float @dot_i16_window(ptr addrspace(1) %a, ptr addrspace(1) %b, float %ac
 ; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <4 x i16> [[TMP0]] to <4 x float>
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr addrspace(1) [[B]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[M0:%.*]] = extractelement <4 x float> [[TMP3]], i64 0
-; CHECK-NEXT:    [[S0:%.*]] = fadd contract float [[ACC]], [[M0]]
-; CHECK-NEXT:    [[M1:%.*]] = extractelement <4 x float> [[TMP3]], i64 1
-; CHECK-NEXT:    [[S1:%.*]] = fadd contract float [[S0]], [[M1]]
-; CHECK-NEXT:    [[M2:%.*]] = extractelement <4 x float> [[TMP3]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[M2]]
-; CHECK-NEXT:    [[M3:%.*]] = extractelement <4 x float> [[TMP3]], i64 3
-; CHECK-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[M3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i64 0
+; CHECK-NEXT:    [[S0:%.*]] = fadd contract float [[ACC]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP3]], i64 1
+; CHECK-NEXT:    [[S1:%.*]] = fadd contract float [[S0]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP3]], i64 2
+; CHECK-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP3]], i64 3
+; CHECK-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[TMP7]]
 ; CHECK-NEXT:    ret float [[S3]]
 ;
 entry:

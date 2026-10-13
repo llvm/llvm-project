@@ -659,6 +659,21 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::bf16, Promote);
     AddPromotedToType(ISD::STORE, MVT::bf16, MVT::i16);
 
+    if (!Subtarget->useRealTrue16Insts() ||
+        !Subtarget->d16PreservesUnusedBits()) {
+      for (MVT VT : {MVT::i16, MVT::f16, MVT::bf16}) {
+        setOperationAction(ISD::ATOMIC_LOAD, VT, Promote);
+        AddPromotedToType(ISD::ATOMIC_LOAD, VT, MVT::i32);
+      }
+    }
+
+    if (!Subtarget->useRealTrue16Insts()) {
+      for (MVT VT : {MVT::i16, MVT::f16, MVT::bf16}) {
+        setOperationAction(ISD::ATOMIC_STORE, VT, Promote);
+        AddPromotedToType(ISD::ATOMIC_STORE, VT, MVT::i32);
+      }
+    }
+
     // F16 - VOP1 Actions.
     setOperationAction({ISD::FP_ROUND, ISD::STRICT_FP_ROUND, ISD::FCOS,
                         ISD::FSIN, ISD::FROUND},
@@ -5261,11 +5276,11 @@ SITargetLowering::emitGWSMemViolTestLoop(MachineInstr &MI,
   BuildMI(*LoopBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), Reg)
       .addImm(EncodedReg);
 
+  // clang-format off
   // FIXME: Do we need to use an isel pseudo that may clobber scc?
   BuildMI(*LoopBB, I, DL, TII->get(AMDGPU::S_CMP_LG_U32))
-      .addReg(Reg, RegState::Kill)
+      .addReg(Reg)
       .addImm(0);
-  // clang-format off
   BuildMI(*LoopBB, I, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
       .addMBB(LoopBB);
   // clang-format on
@@ -5322,7 +5337,7 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
 
   // Update EXEC, save the original EXEC value to VCC.
   BuildMI(LoopBB, I, DL, TII->get(LMC.AndSaveExecOpc), NewExec)
-      .addReg(CondReg, RegState::Kill)
+      .addReg(CondReg)
       .setOperandDead(3); // Dead scc
 
   MRI.setSimpleHint(NewExec, CondReg);
@@ -5333,7 +5348,7 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
     } else {
       SGPRIdxReg = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
       BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_ADD_I32), SGPRIdxReg)
-          .addReg(CurrentIdxReg, RegState::Kill)
+          .addReg(CurrentIdxReg)
           .addImm(Offset)
           .setOperandDead(3); // Dead scc
     }
@@ -5341,10 +5356,10 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
     // Move index from VCC into M0
     if (Offset == 0) {
       BuildMI(LoopBB, I, DL, TII->get(AMDGPU::COPY), AMDGPU::M0)
-          .addReg(CurrentIdxReg, RegState::Kill);
+          .addReg(CurrentIdxReg);
     } else {
       BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_ADD_I32), AMDGPU::M0)
-          .addReg(CurrentIdxReg, RegState::Kill)
+          .addReg(CurrentIdxReg)
           .addImm(Offset)
           .setOperandDead(3); // Dead scc
     }
@@ -6619,7 +6634,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
           ClampInstr.addImm(SISrcMods::NONE); // src1 mod
         ClampInstr.addReg(Src1);              // src1
         if (needsCarryIn)
-          ClampInstr.addReg(CarryIn, RegState::Kill); // carry-in reg
+          ClampInstr.addReg(CarryIn); // carry-in reg
         if (AMDGPU::getNamedOperandIdx(InstrOpc, AMDGPU::OpName::clamp) >= 0)
           ClampInstr.addImm(0); // clamp
         if (isFPOp)
@@ -7098,7 +7113,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
             .addReg(DeadCarryReg, RegState::Define | RegState::Dead)
             .add(SrcReg0Sub1)
             .add(SrcReg1Sub1)
-            .addReg(CarryReg, RegState::Kill)
+            .addReg(CarryReg)
             .addImm(0); // clamp bit
 
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
@@ -7161,7 +7176,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
             .add(Src2Sub1);
 
         BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
-            .addReg(Src2_32, RegState::Kill)
+            .addReg(Src2_32)
             .addImm(0);
       }
     } else {
