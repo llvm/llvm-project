@@ -166,7 +166,8 @@ static Value makeRankReducingSubview(OpBuilder &b, Location loc, Value base,
 // Slice a 2D vector into smaller tiles of the given native type.
 static SmallVector<Value> slice(OpBuilder &b, Location loc, Value value,
                                 VectorType nativeType) {
-  VectorType regTileType = cast<VectorType>(value.getType());
+  VectorType regTileType = dyn_cast<VectorType>(value.getType());
+  assert(regTileType && "can only slice vector values");
   ArrayRef<int64_t> regTileShape = regTileType.getShape();
   ArrayRef<int64_t> nativeShape = nativeType.getShape();
 
@@ -194,11 +195,11 @@ static SmallVector<Value> slice(OpBuilder &b, Location loc, Value value,
 static Value splice(OpBuilder &b, Location loc, ValueRange values,
                     VectorType regTileType) {
   auto types = values.getTypes();
-  assert(!types.empty() &&
-         count(types, types.front()) == static_cast<int64_t>(types.size()) &&
+  assert(!types.empty() && all_equal(types) &&
          "All values must have the same type");
 
-  VectorType nativeType = cast<VectorType>(types.front());
+  VectorType nativeType = dyn_cast<VectorType>(types.front());
+  assert(nativeType && "can only splice vector values");
 
   ArrayRef<int64_t> nativeShape = nativeType.getShape();
   ArrayRef<int64_t> regTileShape = regTileType.getShape();
@@ -227,10 +228,6 @@ static Value splice(OpBuilder &b, Location loc, ValueRange values,
     }
 
   return result;
-}
-
-static LogicalResult hasNativeShapeAttr(Operation *op) {
-  return success(op->hasAttr(nativeShapeAttrName));
 }
 
 static std::optional<SmallVector<int64_t>>
@@ -848,7 +845,6 @@ void x86::populateVectorContractMultiLevelUnrollPatterns(
     RewritePatternSet &patterns, const MultiLevelUnrollOptions &options) {
   patterns.add<VectorContractMultiLevelUnroll>(patterns.getContext(), options);
   vector::UnrollVectorOptions nativeUnrollOptions;
-  nativeUnrollOptions.setFilterConstraint(hasNativeShapeAttr);
   nativeUnrollOptions.setNativeShapeFn(getFromNativeShapeAttr);
   vector::populateVectorUnrollPatterns(patterns, nativeUnrollOptions);
 }
