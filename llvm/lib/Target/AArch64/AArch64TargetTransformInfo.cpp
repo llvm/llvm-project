@@ -5013,6 +5013,45 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(
                                   {}, VIC);
 }
 
+TargetTransformInfo::VectorInstrContext
+AArch64TTIImpl::getBuildVectorContextHint(
+    ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+    function_ref<bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+        GatherUseOps) const {
+  if (Scalars.empty() || !ST->isNeonAvailable() ||
+      !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
+    return VectorInstrContext::None;
+
+  const auto *SplatIt = find_if_not(Scalars, IsaPred<UndefValue>);
+  if (SplatIt == Scalars.end() || isa<ExtractElementInst>(*SplatIt))
+    return VectorInstrContext::None;
+
+  // The indexed (by element) FMLA/FMLS take the splatted operand from a lane of
+  // a 128-bit register, see isProfitableToSinkOperands(). SVE indexes within
+  // each 128-bit segment, so a wider fixed-length SVE vector still needs a dup.
+  Type *ScalarTy = (*SplatIt)->getType();
+  if (!ScalarTy->isFloatTy() && !ScalarTy->isDoubleTy() &&
+      !(ScalarTy->isHalfTy() && ST->hasFullFP16()))
+    return VectorInstrContext::None;
+  if (ST->useSVEForFixedLengthVectors() &&
+      Scalars.size() * ScalarTy->getPrimitiveSizeInBits().getFixedValue() > 128)
+    return VectorInstrContext::None;
+
+  SmallVector<TargetTransformInfo::BuildVectorUseOp, 4> UserOps;
+  if (!GatherUseOps(UserOps) || UserOps.empty())
+    return VectorInstrContext::None;
+
+  // Only fmuls fused into fmuladds (FMLA/FMLS by element) are reported. An
+  // unfused fmul by element takes the lane too, but reporting it makes SLP
+  // vectorize VF=2 trees whose alternate fadd/fsub nodes it undercounts.
+  if (all_of(UserOps, [](const TargetTransformInfo::BuildVectorUseOp &UserOp) {
+        return UserOp.Opcode == Instruction::FMul && UserOp.IsFused;
+      }))
+    return VectorInstrContext::SplatOpFolded;
+
+  return VectorInstrContext::None;
+}
+
 InstructionCost AArch64TTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
     Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
@@ -7312,6 +7351,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   }
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded &&
+      Kind == TTI::SK_Broadcast)
+    return TTI::TCC_Free;
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
   // A subvector extract can be implemented with a NEON/SVE ext (or trivial
   // extract, if from lane 0) for 128-bit NEON vectors or legal SVE vectors.

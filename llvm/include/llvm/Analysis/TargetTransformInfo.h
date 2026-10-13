@@ -1130,10 +1130,13 @@ public:
 
   /// Stores information about the uses of a build vector
   struct BuildVectorUseOp {
-    unsigned Opcode;
-    int OperandIndex;
-    BuildVectorUseOp(unsigned Opcode, int OperandIndex)
-        : Opcode(Opcode), OperandIndex(OperandIndex) {}
+    unsigned Opcode = 0;
+    int OperandIndex = 0;
+    /// The user is fused into its own vector user (e.g. an fmul into an
+    /// fmuladd).
+    bool IsFused = false;
+    BuildVectorUseOp(unsigned Opcode, int OperandIndex, bool IsFused)
+        : Opcode(Opcode), OperandIndex(OperandIndex), IsFused(IsFused) {}
   };
 
   /// Calculates a VectorInstrContext from \p I.
