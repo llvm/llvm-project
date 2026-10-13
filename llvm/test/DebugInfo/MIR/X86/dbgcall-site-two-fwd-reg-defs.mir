@@ -95,8 +95,8 @@ body:             |
 name:            main
 tracksRegLiveness: true
 callSites:
-  - { bb: 0, offset: 10 }
-  - { bb: 0, offset: 14, fwdArgRegs:
+  - { bb: '%bb.0', offset: 10 }
+  - { bb: '%bb.0', offset: 14, fwdArgRegs:
       - { arg: 0, reg: '$rdi' }
       - { arg: 1, reg: '$esi' } }
 body:             |

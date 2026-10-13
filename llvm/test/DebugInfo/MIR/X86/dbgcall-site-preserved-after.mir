@@ -59,8 +59,8 @@ name:            caller
 fixedStack:
   - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$rbx' }
 callSites:
-  - { bb: 0, offset: 3 }
-  - { bb: 0, offset: 8, fwdArgRegs:
+  - { bb: '%bb.0', offset: 3 }
+  - { bb: '%bb.0', offset: 8, fwdArgRegs:
       - { arg: 0, reg: '$rdi' } }
 body:             |
   bb.0.entry:
