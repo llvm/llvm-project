@@ -649,6 +649,11 @@ The following extensions are not classified as `SIMPLE`: `CHDIR`, `DSECNDS`, `ET
   Use `-Wrelaxed-c-loc-checks` (alongside `-frelaxed-c-loc-checks`) to
   enable a diagnostic warning for affected call sites.
   [-frelaxed-c-loc-checks]
+* In formatted I/O, an item of enumeration type may correspond to a `G`
+  edit descriptor, which is processed like an `I` edit descriptor (the
+  value written or read is the ordinal position).  F2023 12.6.3 permits
+  only the `I`, `B`, `O`, and `Z` edit descriptors for enumeration type
+  items.  No diagnostic is issued.
 
 ### Extensions and legacy features deliberately not supported
 

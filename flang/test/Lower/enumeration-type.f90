@@ -528,6 +528,45 @@ subroutine test_allocate_color()
   allocate(color :: x)
 end subroutine
 
+! SAME_TYPE_AS and EXTENDS_TYPE_OF are processor dependent when neither dynamic
+! type is extensible.  An enumeration value passed to CLASS(*) carries its own
+! type descriptor, so the runtime sees (green, 7) as different types (F) and
+! (green, blue) as the same type (T).
+
+! CHECK-LABEL: func.func @_QPtest_same_type_as(
+subroutine test_same_type_as(a, b, same, extends)
+  class(*), intent(in) :: a, b
+  logical, intent(out) :: same, extends
+  ! CHECK: fir.call @_FortranASameTypeAs(
+  same = same_type_as(a, b)
+  ! CHECK: fir.call @_FortranAExtendsTypeOf(
+  extends = extends_type_of(a, b)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_same_type_as_args()
+subroutine test_same_type_as_args()
+  use enum_mod
+  interface
+    subroutine test_same_type_as(a, b, same, extends)
+      class(*), intent(in) :: a, b
+      logical, intent(out) :: same, extends
+    end subroutine
+  end interface
+  logical :: same, extends
+  ! CHECK: %[[G1:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+  ! CHECK: %[[G1C:.*]] = fir.convert %[[G1]] : (!fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.class<none>
+  ! CHECK: %[[I:.*]] = fir.embox %{{.*}} : (!fir.ref<i32>) -> !fir.box<i32>
+  ! CHECK: %[[IC:.*]] = fir.rebox %[[I]] : (!fir.box<i32>) -> !fir.class<none>
+  ! CHECK: fir.call @_QPtest_same_type_as(%[[G1C]], %[[IC]], %{{.*}}, %{{.*}})
+  call test_same_type_as(green, 7, same, extends)
+  ! CHECK: %[[G2:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+  ! CHECK: %[[G2C:.*]] = fir.convert %[[G2]] : (!fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.class<none>
+  ! CHECK: %[[B:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+  ! CHECK: %[[BC:.*]] = fir.convert %[[B]] : (!fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.class<none>
+  ! CHECK: fir.call @_QPtest_same_type_as(%[[G2C]], %[[BC]], %{{.*}}, %{{.*}})
+  call test_same_type_as(green, blue, same, extends)
+end subroutine
+
 ! -----------------------------------------------------------------------------
 !            Verify the enumeration globals
 ! -----------------------------------------------------------------------------
