@@ -116,12 +116,27 @@ def configure(command_line_opts, env):
         if command_line_opts.analyses
         else None
     )
+    ssaf_src_edit_merge = (
+        _resolve_ssaf_tool(
+            "--ssaf-src-edit-merge",
+            "clang-ssaf-src-edit-merge",
+            command_line_opts.ssaf_src_edit_merge,
+            installed_shim_dir_path,
+            errors,
+        )
+        if command_line_opts.transformation
+        else None
+    )
 
     if errors:
         return None, options.Problem(
             options.ENVIRONMENT_ERROR, "required tools not resolvable:", errors
         )
 
+    common_pass_config = dict(
+        ssaf_clang=ssaf_clang,
+        ssaf_extra_clang_args=command_line_opts.ssaf_extra_clang_args,
+    )
     workflow_config = config.SSAFWorkflowConfig(
         output_dir=output_dir,
         installed_shim_dir_path=installed_shim_dir_path,
@@ -133,10 +148,18 @@ def configure(command_line_opts, env):
         build_environment=env,
     )
     analysis_config = config.SSAFAnalysisPassConfig(
-        ssaf_clang=ssaf_clang,
-        ssaf_extra_clang_args=command_line_opts.ssaf_extra_clang_args,
         extractors=command_line_opts.extract_summaries,
         ssaf_linker=ssaf_linker,
         analyses=command_line_opts.analyses,
+        **common_pass_config,
     )
-    return (workflow_config, analysis_config), None
+    transformation_config = (
+        config.SSAFTransformationPassConfig(
+            ssaf_src_edit_merge=ssaf_src_edit_merge,
+            transformation=command_line_opts.transformation,
+            **common_pass_config,
+        )
+        if command_line_opts.transformation
+        else None
+    )
+    return (workflow_config, analysis_config, transformation_config), None

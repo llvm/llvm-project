@@ -88,6 +88,27 @@ class Results(unittest.TestCase):
             ),
         )
 
+    def test_the_transformation_names_every_file_that_holds_conflicts(self):
+        self.assertEqual(
+            "source-edits: /out/prg.edits.yaml\n"
+            "edit-conflicts: /out/libx.a.conflicts.sarif\n"
+            "edit-conflicts: /out/prg.conflicts.sarif\n",
+            self._stdout(
+                lambda: logging_diagnostics.report_transformation(
+                    "/out/prg.edits.yaml",
+                    ["/out/libx.a.conflicts.sarif", "/out/prg.conflicts.sarif"],
+                )
+            ),
+        )
+        self.assertEqual(
+            "source-edits: /out/prg.edits.yaml\n",
+            self._stdout(
+                lambda: logging_diagnostics.report_transformation(
+                    "/out/prg.edits.yaml", []
+                )
+            ),
+        )
+
     def test_results_are_flushed_as_they_are_written(self):
         flushes = []
         stream = io.StringIO()

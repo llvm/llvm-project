@@ -55,6 +55,13 @@ def build_parser():
         "Repeatable. Without it the run stops after summary extraction.",
     )
     parser.add_argument(
+        "--transformation",
+        metavar="<name>",
+        default=None,
+        help="Source transformation to run in the second pass. Requires "
+        "--analysis. Without it the run stops after the analysis.",
+    )
+    parser.add_argument(
         "--ssaf-linker",
         metavar="<path>",
         default=None,
@@ -65,6 +72,12 @@ def build_parser():
         metavar="<path>",
         default=None,
         help="Path to clang-ssaf-analyzer (default: found on PATH).",
+    )
+    parser.add_argument(
+        "--ssaf-src-edit-merge",
+        metavar="<path>",
+        default=None,
+        help="Path to clang-ssaf-src-edit-merge (default: found on PATH).",
     )
     parser.add_argument(
         "--ssaf-extra-clang-arg",
@@ -102,10 +115,12 @@ class CommandLineOpts:
         output_dir=None,
         extract_summaries=None,
         analyses=(),
+        transformation=None,
         ssaf_clang=None,
         ssaf_extra_clang_args=(),
         ssaf_linker=None,
         ssaf_analyzer=None,
+        ssaf_src_edit_merge=None,
         keep_going=False,
         verbose=False,
     ):
@@ -113,10 +128,12 @@ class CommandLineOpts:
         self.output_dir = output_dir
         self.extract_summaries = extract_summaries
         self.analyses = list(analyses)
+        self.transformation = transformation
         self.ssaf_clang = ssaf_clang
         self.ssaf_extra_clang_args = list(ssaf_extra_clang_args)
         self.ssaf_linker = ssaf_linker
         self.ssaf_analyzer = ssaf_analyzer
+        self.ssaf_src_edit_merge = ssaf_src_edit_merge
         self.keep_going = keep_going
         self.verbose = verbose
 
@@ -130,16 +147,25 @@ def resolve(argv):
     if not build_command:
         return None, Problem(USAGE_ERROR, "no build command given")
 
+    if args.transformation and not args.analyses:
+        return None, Problem(
+            USAGE_ERROR,
+            "--transformation needs --analysis: the transformation consumes "
+            "the whole-program analysis result",
+        )
+
     return (
         CommandLineOpts(
             build_command=build_command,
             output_dir=args.output_dir,
             extract_summaries=args.extract_summaries,
             analyses=args.analyses,
+            transformation=args.transformation,
             ssaf_clang=args.ssaf_clang,
             ssaf_extra_clang_args=args.ssaf_extra_clang_args,
             ssaf_linker=args.ssaf_linker,
             ssaf_analyzer=args.ssaf_analyzer,
+            ssaf_src_edit_merge=args.ssaf_src_edit_merge,
             keep_going=args.keep_going,
             verbose=args.verbose,
         ),

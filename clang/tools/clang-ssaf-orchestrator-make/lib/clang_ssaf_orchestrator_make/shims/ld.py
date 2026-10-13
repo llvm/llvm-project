@@ -4,7 +4,7 @@
 
 import os
 
-from .. import logging_diagnostics, utils
+from .. import config, logging_diagnostics, utils
 from ..build_graph import BuildArtifactId
 from ..failure_logs import SSAFFailureKind
 from ..ssaf_artifact_repository import SSAFArtifactKind, get_ssaf_artifact_id
@@ -16,6 +16,7 @@ from .commands import (
     summary_of,
     unique,
 )
+from .shim import merge_edits
 
 
 def identify_inputs_output(argv):
@@ -76,6 +77,10 @@ def invoke_ssaf_tools(shim, cwd):
     input_build_artifact_ids = filter_build_artifacts(
         shim.build_graph, ssaf_artifact_repo, cwd, files.inputs
     )
+
+    if shim.pass_config.pass_kind == config.SSAFPassKind.TRANSFORMATION:
+        merge_edits(shim, build_artifact_id, input_build_artifact_ids)
+        return
 
     shim.build_graph.record_build_step(
         build_artifact_id,
