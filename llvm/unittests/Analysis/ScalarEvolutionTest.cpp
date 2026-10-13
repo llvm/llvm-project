@@ -1604,29 +1604,26 @@ TEST_F(ScalarEvolutionsTest, ImpliedNonNegativeFromULT) {
     const auto ULT = ICmpInst::ICMP_ULT, ULE = ICmpInst::ICMP_ULE;
     const auto UGT = ICmpInst::ICMP_UGT;
 
-    // FIXME: All the checks down to the mixed widths case should be
-    // EXPECT_TRUE.
-
     // x <u len  &&  len >=s 0  -->  x >=s 0.
-    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULT, X, Len));
-    EXPECT_FALSE(isImpliedCond(SE, SGT, X, MinusOne, ULT, X, Len));
-    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULE, X, Len));
-    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, UGT, Len, X));
+    EXPECT_TRUE(isImpliedCond(SE, SGE, X, Zero, ULT, X, Len));
+    EXPECT_TRUE(isImpliedCond(SE, SGT, X, MinusOne, ULT, X, Len));
+    EXPECT_TRUE(isImpliedCond(SE, SGE, X, Zero, ULE, X, Len));
+    EXPECT_TRUE(isImpliedCond(SE, SGE, X, Zero, UGT, Len, X));
 
     // Weaker lower bounds.
-    EXPECT_FALSE(isImpliedCond(SE, SGE, X, MinusThree, ULT, X, Len));
-    EXPECT_FALSE(isImpliedCond(SE, SGE, X, NonPos, ULT, X, Len));
+    EXPECT_TRUE(isImpliedCond(SE, SGE, X, MinusThree, ULT, X, Len));
+    EXPECT_TRUE(isImpliedCond(SE, SGE, X, NonPos, ULT, X, Len));
 
     // len may be INT_MAX.
-    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULE, X, LenSMax));
+    EXPECT_TRUE(isImpliedCond(SE, SGE, X, Zero, ULE, X, LenSMax));
     // len may be INT_MIN.
-    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULT, X, LenSMin));
+    EXPECT_TRUE(isImpliedCond(SE, SGE, X, Zero, ULT, X, LenSMin));
 
     // Mixed widths: sext(x) <u zext(len)  -->  x >=s 0.
     Type *I64 = Type::getInt64Ty(F.getContext());
     const SCEV *XSExt = SE.getSignExtendExpr(X, I64);
     const SCEV *LenZExt = SE.getZeroExtendExpr(Len, I64);
-    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULT, XSExt, LenZExt));
+    EXPECT_TRUE(isImpliedCond(SE, SGE, X, Zero, ULT, XSExt, LenZExt));
 
     // len may be INT_MIN + 1, so x may be INT_MIN.
     EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULT, X, LenBig));

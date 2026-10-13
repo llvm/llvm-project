@@ -12276,6 +12276,25 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
                                    CanonicalFoundRHS);
   }
 
+  // x <u y && y <=u 2^(n-1) --> x >=s 0. This covers y >=s 0, and also
+  // x <=u y with y up to INT_MAX, which reaches here as x <u y + 1.
+  // TODO: Currently this reasons about y only via ranges to save compile-time.
+  if ((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE) &&
+      FoundPred == ICmpInst::ICMP_ULT) {
+    const SCEV *SignedMin = getConstant(
+        APInt::getSignedMinValue(getTypeSizeInBits(FoundRHS->getType())));
+    if (isKnownPredicateViaConstantRanges(ICmpInst::ICMP_ULE, FoundRHS,
+                                          SignedMin)) {
+      // Here x >=s 0 holds. Try to imply the predicate we were asked about from
+      // it.
+      Type *Ty = FoundLHS->getType();
+      const SCEV *Bound =
+          Pred == ICmpInst::ICMP_SGE ? getZero(Ty) : getMinusOne(Ty);
+      if (isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, Bound, CtxI))
+        return true;
+    }
+  }
+
   // Check if we can make progress by sharpening ranges.
   if (FoundPred == ICmpInst::ICMP_NE &&
       (isa<SCEVConstant>(FoundLHS) || isa<SCEVConstant>(FoundRHS))) {

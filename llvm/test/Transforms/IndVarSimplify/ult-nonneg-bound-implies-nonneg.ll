@@ -3,8 +3,6 @@
 
 target datalayout = "e-m:e-i64:64-n8:16:32:64-S128"
 
-; FIXME: fold loop exits to "br i1 false" where possible.
-
 ; x <u len && len >=s 0 implies x >=s 0, so the loop-invariant exit
 ; "start <s 0" is never taken.
 define void @exit_invariant(i32 %start, ptr %p) {
@@ -18,8 +16,7 @@ define void @exit_invariant(i32 %start, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i32 [[START]], 0
-; CHECK-NEXT:    br i1 [[NEG]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -59,8 +56,7 @@ define void @exit_invariant_ule(i32 %start, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i32 [[START]], 0
-; CHECK-NEXT:    br i1 [[NEG]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -94,15 +90,13 @@ define void @exit_invariant_nonpos(i32 %start, ptr %p, ptr %q) {
 ; CHECK-SAME: i32 [[START:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]]
-; CHECK-NEXT:    [[NONPOS:%.*]] = load i32, ptr [[Q]], align 4, !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[START]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[START]], [[NONPOS]]
-; CHECK-NEXT:    br i1 [[LT]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -132,6 +126,7 @@ exit:
 }
 
 ; len is non-negative only because of a dominating guard.
+; TODO: fold the exit.
 define void @exit_invariant_len_guarded(i32 %start, i32 %len) {
 ; CHECK-LABEL: define void @exit_invariant_len_guarded(
 ; CHECK-SAME: i32 [[START:%.*]], i32 [[LEN:%.*]]) {
@@ -216,6 +211,7 @@ exit:
 }
 
 ; start + 1 >s 0 holds as well.
+; TODO: fold the exit.
 define void @exit_invariant_offset(i32 %start, ptr %p) {
 ; CHECK-LABEL: define void @exit_invariant_offset(
 ; CHECK-SAME: i32 [[START:%.*]], ptr [[P:%.*]]) {
@@ -269,5 +265,4 @@ declare void @side()
 ;.
 ; CHECK: [[RNG0]] = !{i32 0, i32 2147483647}
 ; CHECK: [[RNG1]] = !{i32 0, i32 -2147483648}
-; CHECK: [[RNG2]] = !{i32 -2147483648, i32 1}
 ;.
