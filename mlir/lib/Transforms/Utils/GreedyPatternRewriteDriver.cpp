@@ -56,8 +56,8 @@ namespace {
 /// This struct stores finger prints of ops to determine whether the IR has
 /// changed or not.
 struct ExpensiveChecks : public RewriterBase::ForwardingListener {
-  ExpensiveChecks(RewriterBase::Listener *driver, Operation *topLevel)
-      : RewriterBase::ForwardingListener(driver), topLevel(topLevel) {}
+  ExpensiveChecks(RewriterBase::Listener *listener, Operation *topLevel)
+      : RewriterBase::ForwardingListener(listener), topLevel(topLevel) {}
 
   /// Compute finger prints of the given op and its nested ops.
   void computeFingerPrints(Operation *topLevel) {
@@ -132,6 +132,16 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
 protected:
   /// Invalidate the finger print of the given op, i.e., remove it from the map.
   void invalidateFingerPrint(Operation *op) { fingerprints.erase(op); }
+
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override {
+    RewriterBase::ForwardingListener::notifyBlockInserted(block, previous,
+                                                          previousIt);
+    // Block insertion or movement changes the block structure of both parents.
+    if (previous)
+      invalidateFingerPrint(previous->getParentOp());
+    invalidateFingerPrint(block->getParentOp());
+  }
 
   void notifyBlockErased(Block *block) override {
     RewriterBase::ForwardingListener::notifyBlockErased(block);
@@ -315,6 +325,56 @@ private:
 // GreedyPatternRewriteDriver
 //===----------------------------------------------------------------------===//
 
+/// Provides cached deadness queries that stay valid across rewriter
+/// notifications. All notifications are forwarded to the wrapped listener
+/// after invalidating affected cache entries.
+class DeadnessListener : public RewriterBase::ForwardingListener {
+public:
+  explicit DeadnessListener(RewriterBase::Listener *listener)
+      : RewriterBase::ForwardingListener(listener) {}
+
+  /// Return true if the operation is unused and can be erased.
+  bool isOpTriviallyDead(Operation *op) { return cache.isOpTriviallyDead(op); }
+
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override {
+    if (previous)
+      if (Operation *parent = previous->getParentOp())
+        cache.invalidate(parent);
+    if (Operation *parent = block->getParentOp())
+      cache.invalidate(parent);
+    ForwardingListener::notifyBlockInserted(block, previous, previousIt);
+  }
+
+  void notifyBlockErased(Block *block) override {
+    if (Operation *parent = block->getParentOp())
+      cache.invalidate(parent);
+    ForwardingListener::notifyBlockErased(block);
+  }
+
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
+    if (previous.isSet())
+      if (Operation *parent = previous.getBlock()->getParentOp())
+        cache.invalidate(parent);
+    cache.invalidate(op);
+    ForwardingListener::notifyOperationInserted(op, previous);
+  }
+
+  void notifyOperationModified(Operation *op) override {
+    cache.invalidate(op);
+    ForwardingListener::notifyOperationModified(op);
+  }
+
+  void notifyOperationErased(Operation *op) override {
+    cache.invalidate(op);
+    ForwardingListener::notifyOperationErased(op);
+  }
+
+private:
+  DeadnessCache cache;
+};
+
 /// This is a worklist-driven driver for the PatternMatcher, which repeatedly
 /// applies the locally optimal patterns.
 ///
@@ -408,7 +468,7 @@ private:
   /// The low-level pattern applicator.
   PatternApplicator matcher;
 
-  DeadnessCache deadnessCache;
+  DeadnessListener deadnessListener;
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   ExpensiveChecks expensiveChecks;
@@ -419,11 +479,11 @@ private:
 GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     MLIRContext *ctx, const FrozenRewritePatternSet &patterns,
     const GreedyRewriteConfig &config)
-    : rewriter(ctx), config(config), matcher(patterns)
+    : rewriter(ctx), config(config), matcher(patterns), deadnessListener(this)
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // clang-format off
       , expensiveChecks(
-          /*driver=*/this,
+          /*listener=*/&deadnessListener,
           /*topLevel=*/config.getScope() ? config.getScope()->getParentOp()
                                          : nullptr)
 // clang-format on
@@ -435,10 +495,10 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
   // Set up listener.
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   // Send IR notifications to the debug handler. This handler will then forward
-  // all notifications to this GreedyPatternRewriteDriver.
+  // all notifications through the cache listener to the driver.
   rewriter.setListener(&expensiveChecks);
 #else
-  rewriter.setListener(this);
+  rewriter.setListener(&deadnessListener);
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 }
 
@@ -485,7 +545,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     });
 
     // If the operation is trivially dead - remove it.
-    if (deadnessCache.isOpTriviallyDead(op)) {
+    if (deadnessListener.isOpTriviallyDead(op)) {
       rewriter.eraseOp(op);
       changed = true;
 
@@ -505,8 +565,9 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         Operation *dumpRootOp = getDumpRootOp(op);
 #endif // NDEBUG
         if (foldResults.empty()) {
-          // Op was modified in-place.
-          notifyOperationModified(op);
+          // Folding modified the op without using the rewriter. Notify the
+          // cache listener, which forwards the modification to the driver.
+          deadnessListener.notifyOperationModified(op);
           changed = true;
           LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -667,28 +728,17 @@ void GreedyPatternRewriteDriver::addSingleOpToWorklist(Operation *op) {
 
 void GreedyPatternRewriteDriver::notifyBlockInserted(
     Block *block, Region *previous, Region::iterator previousIt) {
-  if (previous)
-    if (Operation *parent = previous->getParentOp())
-      deadnessCache.invalidate(parent);
-  if (Operation *parent = block->getParentOp())
-    deadnessCache.invalidate(parent);
   if (RewriterBase::Listener *listener = config.getListener())
     listener->notifyBlockInserted(block, previous, previousIt);
 }
 
 void GreedyPatternRewriteDriver::notifyBlockErased(Block *block) {
-  if (Operation *parent = block->getParentOp())
-    deadnessCache.invalidate(parent);
   if (RewriterBase::Listener *listener = config.getListener())
     listener->notifyBlockErased(block);
 }
 
 void GreedyPatternRewriteDriver::notifyOperationInserted(
     Operation *op, OpBuilder::InsertPoint previous) {
-  if (previous.isSet())
-    if (Operation *parent = previous.getBlock()->getParentOp())
-      deadnessCache.invalidate(parent);
-  deadnessCache.invalidate(op);
   LLVM_DEBUG({
     logger.startLine() << "** Insert  : '" << op->getName() << "'(" << op
                        << ")\n";
@@ -701,7 +751,6 @@ void GreedyPatternRewriteDriver::notifyOperationInserted(
 }
 
 void GreedyPatternRewriteDriver::notifyOperationModified(Operation *op) {
-  deadnessCache.invalidate(op);
   LLVM_DEBUG({
     logger.startLine() << "** Modified: '" << op->getName() << "'(" << op
                        << ")\n";
@@ -745,7 +794,6 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
 }
 
 void GreedyPatternRewriteDriver::notifyOperationErased(Operation *op) {
-  deadnessCache.invalidate(op);
   LLVM_DEBUG({
     logger.startLine() << "** Erase   : '" << op->getName() << "'(" << op
                        << ")\n";
