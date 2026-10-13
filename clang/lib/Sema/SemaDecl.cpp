@@ -14378,6 +14378,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
         return;
       }
       Call->setType(VDecl->getType());
+      VDecl->setInit(Call);
+      return;
     }
   }
 

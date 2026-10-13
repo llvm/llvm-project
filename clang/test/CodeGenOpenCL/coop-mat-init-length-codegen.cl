@@ -7,9 +7,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_cooperative_matrix : enable
 
-// ---------------------------------------------------------------------------
 // Type definitions.
-// ---------------------------------------------------------------------------
 typedef float __attribute__((coop_mat(memory_scope_sub_group,
                                       16, 16,
                                       CLK_COOPERATIVE_MATRIX_A)))           MatA_t;
@@ -20,11 +18,9 @@ typedef int   __attribute__((coop_mat(memory_scope_sub_group,
                                       16, 16,
                                       CLK_COOPERATIVE_MATRIX_A)))           MatA_int_t;
 
-// ---------------------------------------------------------------------------
 // coop_mat_init — float scalar.
 //    Expected IR: call __spirv_CompositeConstruct with the scalar value,
 //    returning a spirv.CooperativeMatrixKHR TargetExtType.
-// ---------------------------------------------------------------------------
 
 // CHECK-LABEL: @{{.*}}test_init_float
 // CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
@@ -36,10 +32,8 @@ kernel void test_init_float(global float *out) {
     (void)a;
 }
 
-// ---------------------------------------------------------------------------
 // coop_mat_init — integer scalar.
 //    Expected IR: call __spirv_CompositeConstruct with an i32 value.
-// ---------------------------------------------------------------------------
 
 // CHECK-LABEL: @{{.*}}test_init_int
 // CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
@@ -51,10 +45,8 @@ kernel void test_init_int(void) {
     (void)m;
 }
 
-// ---------------------------------------------------------------------------
 // coop_mat_init — zero initialisation.
 //    Expected IR: call __spirv_CompositeConstruct with 0.0.
-// ---------------------------------------------------------------------------
 
 // CHECK-LABEL: @{{.*}}test_init_zero
 // CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
@@ -66,11 +58,9 @@ kernel void test_init_zero(void) {
     (void)acc;
 }
 
-// ---------------------------------------------------------------------------
 // coop_mat_length — returns unsigned int.
 //    Expected IR: call __spirv_CooperativeMatrixLengthKHR, result stored into
 //    an i32 alloca.
-// ---------------------------------------------------------------------------
 
 // CHECK-LABEL: @{{.*}}test_length
 // CHECK:         call spir_func i32 @__spirv_CooperativeMatrixLengthKHR
@@ -83,10 +73,8 @@ kernel void test_length(global unsigned int *out) {
     *out = len;
 }
 
-// ---------------------------------------------------------------------------
 // coop_mat_init then coop_mat_length — combined flow.
 //    Verifies the TargetExtType produced by init flows into length unchanged.
-// ---------------------------------------------------------------------------
 
 // CHECK-LABEL: @{{.*}}test_init_then_length
 // CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
@@ -99,10 +87,8 @@ kernel void test_init_then_length(global unsigned int *out) {
     *out = coop_mat_length(a);
 }
 
-// ---------------------------------------------------------------------------
 // coop_mat_length — calling convention is SPIR_FUNC.
 //    The call must NOT be a plain 'call' — it must be 'call spir_func'.
-// ---------------------------------------------------------------------------
 
 // CHECK-LABEL: @{{.*}}test_length_cc
 // CHECK:        call spir_func i32 @__spirv_CooperativeMatrixLengthKHR
