@@ -25,13 +25,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // [expos.only.func]
 
+// three_way_comparable_with<T, T> is equivalent to three_way_comparable<T>, but it is a lot more expensive to check at
+// compile time, and comparing objects of the same type is the common case.
+template <class _Tp, class _Up>
+inline constexpr bool __synth_three_way_comparable_with = three_way_comparable_with<_Tp, _Up>;
+template <class _Tp>
+inline constexpr bool __synth_three_way_comparable_with<_Tp, _Tp> = three_way_comparable<_Tp>;
+
 _LIBCPP_HIDE_FROM_ABI inline constexpr auto __synth_three_way = []<class _Tp, class _Up>(const _Tp& __t, const _Up& __u)
   requires requires {
     { __t < __u } -> __boolean_testable;
     { __u < __t } -> __boolean_testable;
   }
 {
-  if constexpr (three_way_comparable_with<_Tp, _Up>) {
+  if constexpr (__synth_three_way_comparable_with<_Tp, _Up>) {
     return __t <=> __u;
   } else {
     if (__t < __u)
