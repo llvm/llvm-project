@@ -122,3 +122,74 @@ subroutine C932(ed1, ed5, ed7, edc9, edc10, okad1, okpd1, okacd5)
   allocate(rp)
   allocate(character(123) :: chvar)
 end subroutine
+
+! J3/26-007r1 C866 exception and C869.
+subroutine protected_target_allocation(p, ordinary)
+  real, pointer, protected_target :: p, a(:)
+  real, pointer :: ordinary
+  type node
+    real, pointer :: link
+    real, pointer, protected_target :: protected_link
+  end type
+  type(node), pointer, protected_target :: parent
+  type(node) :: object
+  !ERROR: An ALLOCATE statement for a PROTECTED_TARGET pointer must have a SOURCE= clause
+  allocate(p)
+  !ERROR: An ALLOCATE statement for a PROTECTED_TARGET pointer must have a SOURCE= clause
+  allocate(p, mold=1.)
+  !ERROR: An ALLOCATE statement for a PROTECTED_TARGET pointer must have a SOURCE= clause
+  allocate(real :: p)
+  allocate(p, source=1.)
+  allocate(a(2), source=1.)
+  allocate(object%protected_link, source=1.)
+  allocate(ordinary) ! An ordinary pointer does not require SOURCE=.
+  !ERROR: Name in ALLOCATE statement is not definable
+  !BECAUSE: 'parent' has the PROTECTED_TARGET attribute and its target is not definable
+  allocate(parent%link, source=1.)
+  associate(q => parent)
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'parent' has the PROTECTED_TARGET attribute and its target is not definable
+    allocate(q%link, source=1.)
+  end associate
+end subroutine
+
+! J3/26-007r1 C866 and 20.6.7(11): the selector is not an allocate-object.
+subroutine protected_target_rank_allocation(p)
+  real, pointer, protected_target :: p(..)
+  select rank(q => p)
+  rank(0)
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+    allocate(q)
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+    allocate(q, mold=1.)
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+    allocate(q, source=1.)
+  rank(1)
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+    allocate(q(2))
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+    allocate(q(2), mold=[1., 2.])
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+    allocate(q(2), source=1.)
+  end select
+end subroutine
+
+subroutine ordinary_rank_allocation(p)
+  real, pointer :: p(..)
+  select rank(q => p)
+  rank(0)
+    allocate(q)
+    allocate(q, mold=1.)
+    allocate(q, source=1.)
+  rank(1)
+    allocate(q(2))
+    allocate(q(2), mold=[1., 2.])
+    allocate(q(2), source=1.)
+  end select
+end subroutine

@@ -67,6 +67,11 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (const Symbol *protectedPointer{
+            FindProtectedTarget(*expr)}) { // F'2028 C873
+      evaluate::SayWithDeclaration(messages, *protectedPointer,
+          "A PROTECTED_TARGET pointer or its subobject may not be an actual argument to a procedure with an implicit interface"_err_en_US);
+    }
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
@@ -399,6 +404,12 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
   bool dummyIsPointer{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
+  if (!dummyIsPointer && dummy.intent != common::Intent::In &&
+      FindProtectedTarget(actual)) { // F'2028 C874
+    messages.Say(
+        "A PROTECTED_TARGET pointer or its subobject may be associated with nonpointer %s only if it has INTENT(IN)"_err_en_US,
+        dummyName);
+  }
   bool dummyIsAllocatableOrPointer{dummyIsAllocatable || dummyIsPointer};
   allowActualArgumentConversions &= !dummyIsAllocatableOrPointer;
   bool typesCompatibleWithIgnoreTKR{

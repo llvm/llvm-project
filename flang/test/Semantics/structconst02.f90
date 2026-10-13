@@ -45,3 +45,56 @@ module module1
     !TODO more!
   end subroutine errors
 end module module1
+
+! J3/26-007r1 C871 preserves protection in pointer components.
+module protected_target_constructor
+  type ordinary_box
+    real, pointer :: p
+  end type
+  type protected_box
+    real, pointer, protected_target :: p
+  end type
+  type ordinary_text_box
+    character(:), pointer :: p
+  end type
+  type protected_text_box
+    character(:), pointer, protected_target :: p
+  end type
+  type object
+    real :: value
+    real, pointer :: link
+  end type
+contains
+  subroutine constructors
+    real, pointer, protected_target :: p, a(:)
+    real, pointer :: ordinary
+    type(object), pointer, protected_target :: parent
+    type(ordinary_box) :: writable
+    type(protected_box) :: kept
+    type(ordinary_text_box) :: writable_text
+    type(protected_text_box) :: kept_text
+    character(4), target :: text
+    integer, pointer, protected_target :: index
+    kept = protected_box(p)
+    kept = protected_box(a(1))
+    kept = protected_box(ordinary)
+    kept = protected_box(null())
+    writable = ordinary_box(ordinary)
+    writable = ordinary_box(parent%link)
+    !ERROR: Target 'p' with PROTECTED_TARGET attribute may not be associated with pointer 'p' without PROTECTED_TARGET
+    writable = ordinary_box(p)
+    !ERROR: Target 'a' with PROTECTED_TARGET attribute may not be associated with pointer 'p' without PROTECTED_TARGET
+    writable = ordinary_box(a(1))
+    !ERROR: Target 'parent' with PROTECTED_TARGET attribute may not be associated with pointer 'p' without PROTECTED_TARGET
+    writable = ordinary_box(parent%value)
+    associate(q => p)
+      writable = ordinary_box(q) ! The associate has no PROTECTED_TARGET attribute.
+    end associate
+    writable_text = ordinary_text_box(text(index:index))
+    kept_text = protected_text_box(text(index:index))
+    associate(q => text(index:index))
+      writable_text = ordinary_text_box(q)
+      kept_text = protected_text_box(q)
+    end associate
+  end subroutine
+end module

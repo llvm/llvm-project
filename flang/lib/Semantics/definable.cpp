@@ -249,10 +249,26 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
   return std::nullopt;
 }
 
+static ProtectedTargetContext GetProtectedTargetContext(
+    DefinabilityFlags flags) {
+  if (!flags.test(DefinabilityFlag::PointerDefinition)) {
+    return ProtectedTargetContext::Definition;
+  }
+  return flags.test(DefinabilityFlag::AcceptAllocatable)
+      ? ProtectedTargetContext::Allocation
+      : ProtectedTargetContext::PointerAssociation;
+}
+
 // Checks a data-ref
 static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::DataRef &dataRef) {
+  if (const Symbol *protectedPointer{
+          FindProtectedTarget(dataRef, GetProtectedTargetContext(flags))}) {
+    return BlameSymbol(at,
+        "'%s' has the PROTECTED_TARGET attribute and its target is not definable"_en_US,
+        *protectedPointer);
+  }
   auto whyNotBase{
       WhyNotDefinableBase(at, scope, flags, dataRef.GetFirstSymbol(),
           evaluate::UnwrapWholeSymbolDataRef(dataRef) != nullptr,
@@ -270,6 +286,12 @@ static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
 
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
+  if (const Symbol *protectedPointer{FindProtectedTarget(
+          evaluate::DataRef{original}, GetProtectedTargetContext(flags))}) {
+    return BlameSymbol(at,
+        "'%s' has the PROTECTED_TARGET attribute and its target is not definable"_en_US,
+        *protectedPointer);
+  }
   auto whyNotBase{WhyNotDefinableBase(at, scope, flags, original,
       /*isWholeSymbol=*/true, /*isComponentPointerTarget=*/false)};
   if (!whyNotBase || !whyNotBase->IsFatal()) {
@@ -412,6 +434,12 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
         }
         if (const auto *component{procDesignator->GetComponent()}) {
           flags.reset(DefinabilityFlag::PointerDefinition);
+          if (const Symbol *protectedPointer{FindProtectedTarget(
+                  component->base(), ProtectedTargetContext::Definition)}) {
+            return BlameSymbol(at,
+                "'%s' has the PROTECTED_TARGET attribute and its target is not definable"_en_US,
+                *protectedPointer);
+          }
           return WhyNotDefinableBase(at, scope, flags,
               component->base().GetFirstSymbol(), false,
               DefinesComponentPointerTarget(component->base(), flags));
@@ -422,6 +450,11 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     }
     return parser::Message{
         at, "'%s' is not a definable pointer"_err_en_US, expr.AsFortran()};
+  } else if (const Symbol *protectedPointer{FindProtectedTarget(
+                 expr, ProtectedTargetContext::Definition)}) {
+    return BlameSymbol(at,
+        "'%s' has the PROTECTED_TARGET attribute and its target is not definable"_en_US,
+        *protectedPointer);
   } else if (!evaluate::IsVariable(expr)) {
     return parser::Message{
         at, "'%s' is not a variable or pointer"_err_en_US, expr.AsFortran()};

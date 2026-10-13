@@ -299,6 +299,7 @@ public:
   HANDLE_ATTR_CLASS(Parameter, PARAMETER)
   HANDLE_ATTR_CLASS(Pointer, POINTER)
   HANDLE_ATTR_CLASS(Protected, PROTECTED)
+  HANDLE_ATTR_CLASS(ProtectedTarget, PROTECTED_TARGET)
   HANDLE_ATTR_CLASS(Save, SAVE)
   HANDLE_ATTR_CLASS(Target, TARGET)
   HANDLE_ATTR_CLASS(Value, VALUE)
@@ -1090,6 +1091,7 @@ public:
   bool Pre(const parser::IntrinsicStmt &);
   bool Pre(const parser::OptionalStmt &);
   bool Pre(const parser::ProtectedStmt &);
+  bool Pre(const parser::ProtectedTargetStmt &);
   bool Pre(const parser::ValueStmt &);
   bool Pre(const parser::VolatileStmt &);
   bool Pre(const parser::AllocatableStmt &) {
@@ -2688,6 +2690,12 @@ bool AttrsVisitor::Pre(const parser::Pass &x) {
 bool AttrsVisitor::IsDuplicateAttr(Attr attrName) {
   CHECK(attrs_);
   if (attrs_->test(attrName)) {
+    if (attrName == Attr::PROTECTED_TARGET) {
+      Say(currStmtSource().value(),
+          "Attribute '%s' cannot be used more than once"_err_en_US,
+          AttrToString(attrName));
+      return true;
+    }
     context().Warn(common::LanguageFeature::RedundantAttribute,
         currStmtSource().value(),
         "Attribute '%s' cannot be used more than once"_warn_en_US,
@@ -6763,6 +6771,9 @@ bool DeclarationVisitor::Pre(const parser::OptionalStmt &x) {
 bool DeclarationVisitor::Pre(const parser::ProtectedStmt &x) {
   return HandleAttributeStmt(Attr::PROTECTED, x.v);
 }
+bool DeclarationVisitor::Pre(const parser::ProtectedTargetStmt &x) {
+  return HandleAttributeStmt(Attr::PROTECTED_TARGET, x.v);
+}
 bool DeclarationVisitor::Pre(const parser::ValueStmt &x) {
   return CheckNotInBlock("VALUE") && // C1107
       HandleAttributeStmt(Attr::VALUE, x.v);
@@ -9346,7 +9357,8 @@ void ConstructVisitor::Post(const parser::SelectRankCaseStmt::Rank &x) {
       CHECK(std::holds_alternative<parser::Default>(x.u));
       // RANK DEFAULT: assumed-rank
       details.set_IsAssumedRank();
-      attrsToKeep |= Attrs{Attr::ALLOCATABLE, Attr::POINTER};
+      attrsToKeep |=
+          Attrs{Attr::ALLOCATABLE, Attr::POINTER, Attr::PROTECTED_TARGET};
     }
     symbol->attrs() |= selectorAttrs & attrsToKeep;
   }

@@ -288,3 +288,132 @@ module m14
     x3 = y3
   end subroutine
 end module m14
+
+! J3/26-007r1 C866 and 8.5.16p2 protect target values, not association status.
+module protected_target_definition
+  type node
+    real :: value
+    real, pointer :: link
+    type(node), pointer :: next
+    real, pointer, protected_target :: protected_link
+  end type
+  real, target :: storage
+  integer, protected :: substring_bound = 1
+contains
+  function readonly_result() result(p)
+    real, pointer, protected_target :: p
+    p => storage
+  end function
+  subroutine definitions(p, ordinary_in, index)
+    real, pointer, protected_target :: p(:)
+    real, pointer, intent(in) :: ordinary_in
+    integer, pointer, protected_target :: index
+    type(node), pointer, protected_target :: parent
+    character(4), pointer, protected_target :: text
+    complex, pointer, protected_target :: z
+    character(4), target :: ordinary_text
+    real, target :: value
+    real :: a(4)
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+    p = 1.
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+    if (.false.) p(1:2) = 2.
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'text' has the PROTECTED_TARGET attribute and its target is not definable
+    text(2:3) = 'ab'
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'z' has the PROTECTED_TARGET attribute and its target is not definable
+    z%re = 1.
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'parent' has the PROTECTED_TARGET attribute and its target is not definable
+    parent%value = 1.
+    !ERROR: The left-hand side of a pointer assignment is not definable
+    !BECAUSE: 'parent' has the PROTECTED_TARGET attribute and its target is not definable
+    parent%link => value
+    parent%link = 1. ! An ordinary pointer component's target is separate.
+    parent%next%value = 1.
+    parent%next%link => value
+    ordinary_in = 1. ! INTENT(IN) alone still protects only association.
+    a(index) = 1. ! A protected index does not make a protected designator.
+    ordinary_text(index:index) = 'a'
+    associate(q => ordinary_text(index:index))
+      q = 'a'
+    end associate
+    associate(q => a(index))
+      q = 1.
+    end associate
+    !ERROR: Input variable 'p' is not definable
+    !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+    read(*,*) p
+    associate(q => p(1:2))
+      !ERROR: Left-hand side of assignment is not definable
+      !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+      q = 1.
+    end associate
+    associate(q => parent)
+      !ERROR: Left-hand side of assignment is not definable
+      !BECAUSE: 'parent' has the PROTECTED_TARGET attribute and its target is not definable
+      q%value = 1.
+      q%link = 1.
+    end associate
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+    readonly_result() = 1.
+    associate(q => readonly_result())
+      !ERROR: Left-hand side of assignment is not definable
+      !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+      q = 1.
+    end associate
+  end subroutine
+  subroutine ranked(p)
+    real, pointer, protected_target :: p(..)
+    real, target :: value, array(2)
+    select rank(q => p)
+    rank(0)
+      !ERROR: Left-hand side of assignment is not definable
+      !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+      q = 1.
+      q => value
+      nullify(q)
+      !ERROR: Target 'p' with PROTECTED_TARGET attribute may not be associated with pointer 'q' without PROTECTED_TARGET
+      q => readonly_result()
+    rank(1)
+      !ERROR: Left-hand side of assignment is not definable
+      !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+      q = 1.
+      q => array
+      nullify(q)
+    end select
+  end subroutine
+  subroutine selected(p)
+    class(node), pointer, protected_target :: p
+    select type(q => p)
+    type is(node)
+      !ERROR: Left-hand side of assignment is not definable
+      !BECAUSE: 'p' has the PROTECTED_TARGET attribute and its target is not definable
+      q%value = 1.
+      q%link = 1.
+    end select
+  end subroutine
+  subroutine association_only(p)
+    real, pointer, protected_target, intent(in) :: p
+    real, target :: value
+    !ERROR: The left-hand side of a pointer assignment is not definable
+    !BECAUSE: 'p' is an INTENT(IN) dummy argument
+    p => value
+    !ERROR: 'p' may not appear in NULLIFY
+    !BECAUSE: 'p' is an INTENT(IN) dummy argument
+    nullify(p)
+  end subroutine
+end module
+
+subroutine protected_bound_definition
+  use protected_target_definition, only: substring_bound
+  character(4) :: text
+  text(substring_bound:substring_bound) = 'a'
+  associate(q => text(substring_bound:substring_bound))
+    q = 'a'
+  end associate
+end subroutine

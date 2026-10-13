@@ -9,6 +9,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -24,6 +25,77 @@
 #include <variant>
 
 namespace Fortran::semantics {
+
+SymbolVector GetDesignatorSymbolVector(const evaluate::DataRef &dataRef) {
+  auto componentSymbols{[](const evaluate::Component &component) {
+    auto symbols{GetDesignatorSymbolVector(component.base())};
+    symbols.emplace_back(component.GetLastSymbol());
+    return symbols;
+  }};
+  return common::visit(
+      common::visitors{
+          [](const SymbolRef &symbol) { return SymbolVector{symbol}; },
+          componentSymbols,
+          [&](const evaluate::ArrayRef &array) {
+            if (const auto *component{array.base().UnwrapComponent()}) {
+              return componentSymbols(*component);
+            }
+            return SymbolVector{array.base().GetLastSymbol()};
+          },
+          [](const evaluate::CoarrayRef &coarray) {
+            return GetDesignatorSymbolVector(coarray.base());
+          },
+      },
+      dataRef.u);
+}
+
+const Symbol *FindProtectedTarget(
+    const evaluate::DataRef &dataRef, ProtectedTargetContext context) {
+  auto symbols{GetDesignatorSymbolVector(dataRef)};
+  for (auto iter{symbols.rbegin()}; iter != symbols.rend(); ++iter) {
+    const Symbol &symbol{iter->get().GetUltimate()};
+    if (const auto *association{symbol.detailsIf<AssocEntityDetails>()};
+        association && association->expr() &&
+        context != ProtectedTargetContext::Source) {
+      // A selector in a definition context is not itself an allocate-object
+      // (J3/26-007r1 20.6.7(11), C866).
+      auto selectorContext{
+          context == ProtectedTargetContext::PointerAssociation &&
+                  iter == symbols.rbegin()
+              ? ProtectedTargetContext::PointerAssociation
+              : ProtectedTargetContext::Definition};
+      return FindProtectedTarget(*association->expr(), selectorContext);
+    }
+    if (IsPointer(symbol)) {
+      if ((context == ProtectedTargetContext::PointerAssociation ||
+              context == ProtectedTargetContext::Allocation) &&
+          iter == symbols.rbegin()) {
+        continue;
+      }
+      return IsProtectedTarget(symbol) ? &symbol : nullptr;
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTarget(
+    const SomeExpr &expr, ProtectedTargetContext context) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTarget(*dataRef, context);
+  } else if ((context == ProtectedTargetContext::Source ||
+                 context == ProtectedTargetContext::Definition) &&
+      evaluate::IsVariable(expr)) {
+    if (const auto *call{evaluate::UnwrapProcedureRef(expr)}) {
+      if (const Symbol *proc{call->proc().GetInterfaceSymbol()}) {
+        if (const Symbol *result{FindFunctionResult(*proc)};
+            result && IsProtectedTarget(*result)) {
+          return result;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
 
 // Find this or containing scope that matches predicate
 static const Scope *FindScopeContaining(

@@ -350,6 +350,19 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
   }
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET)) {
+    // J3/26-007r1 C781, C8109, and 8.5.16: this is a data pointer attribute.
+    if (!IsPointer(symbol) ||
+        (!symbol.has<ObjectEntityDetails>() &&
+            !symbol.has<AssocEntityDetails>())) {
+      messages_.Say(
+          "An entity with the PROTECTED_TARGET attribute must be a data pointer"_err_en_US);
+    }
+    if (FindCommonBlockContaining(symbol)) { // F'2028 C867
+      messages_.Say(
+          "A PROTECTED_TARGET pointer may not be in a common block"_err_en_US);
+    }
+  }
   if (InPure()) {
     if (InInterface()) {
       // Declarations in interface definitions "have no effect" if they
@@ -601,6 +614,16 @@ void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
                 ref->name(), symbol.name()),
             *ref);
       } else if (const auto *derived{type->AsDerived()}) {
+        if (!IsPointer(*ref)) {
+          if (const Symbol *component{
+                  FindUltimateComponent(*derived, IsProtectedTarget)}) {
+            evaluate::AttachDeclaration(
+                messages_.Say(
+                    "COMMON block /%s/ may not contain PROTECTED_TARGET component '%s' of '%s'"_err_en_US,
+                    symbol.name(), component->name(), ref->name()),
+                *component); // F'2028 C867
+          }
+        }
         if (!IsSequenceOrBindCType(derived)) {
           evaluate::AttachDeclaration(
               evaluate::AttachDeclaration(
@@ -4177,7 +4200,9 @@ void SubprogramMatchHelper::CheckDummyDataObject(const Symbol &symbol1,
     const Symbol &symbol2, const DummyDataObject &obj1,
     const DummyDataObject &obj2) {
   if (!CheckSameIntent(symbol1, symbol2, obj1.intent, obj2.intent)) {
-  } else if (!CheckSameAttrs(symbol1, symbol2, obj1.attrs, obj2.attrs)) {
+  } else if (!CheckSameAttrs(symbol1, symbol2,
+                 obj1.attrs - DummyDataObject::Attr::ProtectedTarget,
+                 obj2.attrs - DummyDataObject::Attr::ProtectedTarget)) {
   } else if (!obj1.type.type().IsEquivalentTo(obj2.type.type())) {
     Say(symbol1, symbol2,
         "Dummy argument '%s' has type %s; the corresponding argument in the interface body has distinct type %s"_err_en_US,

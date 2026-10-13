@@ -150,6 +150,26 @@ const Symbol *FindImmediateComponent(
 inline bool IsPointer(const Symbol &symbol) {
   return symbol.attrs().test(Attr::POINTER);
 }
+inline bool IsProtectedTarget(const Symbol &symbol) {
+  return symbol.attrs().test(Attr::PROTECTED_TARGET);
+}
+
+// The symbols on a designator's base path, without selectors or (co)subscripts.
+SymbolVector GetDesignatorSymbolVector(const evaluate::DataRef &);
+
+enum class ProtectedTargetContext {
+  Source,
+  Definition,
+  PointerAssociation,
+  Allocation
+};
+
+// Find the PROTECTED_TARGET pointer that protects this designator in context.
+// An intervening pointer's target is separate (J3/26-007r1 9.4.2p5).
+const Symbol *FindProtectedTarget(const evaluate::DataRef &,
+    ProtectedTargetContext = ProtectedTargetContext::Source);
+const Symbol *FindProtectedTarget(
+    const SomeExpr &, ProtectedTargetContext = ProtectedTargetContext::Source);
 inline bool IsAllocatable(const Symbol &symbol) {
   return symbol.attrs().test(Attr::ALLOCATABLE);
 }

@@ -1,6 +1,55 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Pointer assignment constraints 10.2.2.2 (see also assign02.f90)
 
+module protected_target_characteristics
+  real, target :: storage
+contains
+  function protected_result() result(p)
+    real, pointer, protected_target :: p
+    p => storage
+  end function
+  function ordinary_result() result(p)
+    real, pointer :: p
+    p => storage
+  end function
+  subroutine protected_dummy(p)
+    real, pointer, protected_target :: p
+  end subroutine
+  subroutine ordinary_dummy(p)
+    real, pointer :: p
+  end subroutine
+  subroutine compatibility
+    procedure(protected_result), pointer :: fp
+    procedure(ordinary_result), pointer :: ordinary_fp
+    procedure(protected_dummy), pointer :: sp
+    procedure(ordinary_dummy), pointer :: ordinary_sp
+    fp => protected_result
+    ordinary_fp => ordinary_result
+    sp => protected_dummy
+    ! PROTECTED_TARGET is not a characteristic in J3/26-007r1 clause 15.
+    fp => ordinary_result
+    ordinary_fp => protected_result
+    sp => ordinary_dummy
+    ordinary_sp => protected_dummy
+    call takes_protected_result(ordinary_result)
+    call takes_ordinary_result(protected_result)
+    call takes_protected_dummy(ordinary_dummy)
+    call takes_ordinary_dummy(protected_dummy)
+  end subroutine
+  subroutine takes_protected_result(f)
+    procedure(protected_result) :: f
+  end subroutine
+  subroutine takes_ordinary_result(f)
+    procedure(ordinary_result) :: f
+  end subroutine
+  subroutine takes_protected_dummy(s)
+    procedure(protected_dummy) :: s
+  end subroutine
+  subroutine takes_ordinary_dummy(s)
+    procedure(ordinary_dummy) :: s
+  end subroutine
+end module
+
 module m0
   procedure(),pointer,save :: p
 end

@@ -6,6 +6,70 @@
 ! - C1550: binding label
 ! - C1551: NON_RECURSIVE prefix
 
+module protected_target_interface
+  interface
+    module subroutine protected_dummy(p)
+      real, pointer, protected_target :: p
+    end subroutine
+    module subroutine ordinary_dummy(p)
+      real, pointer :: p
+    end subroutine
+    module function protected_result() result(p)
+      real, pointer, protected_target :: p
+    end function
+    module function ordinary_result() result(p)
+      real, pointer :: p
+    end function
+    module subroutine dummy_procedure(s)
+      interface
+        subroutine s(p)
+          real, pointer, protected_target :: p
+        end subroutine
+      end interface
+    end subroutine
+    module subroutine dummy_function(f)
+      interface
+        function f() result(p)
+          real, pointer, protected_target :: p
+        end function
+      end interface
+    end subroutine
+  end interface
+end module
+
+submodule(protected_target_interface) protected_target_implementation
+contains
+  ! PROTECTED_TARGET is not a characteristic in J3/26-007r1 clause 15.
+  module subroutine protected_dummy(p)
+    real, pointer :: p
+  end subroutine
+  module subroutine ordinary_dummy(p)
+    real, pointer, protected_target :: p
+  end subroutine
+  module function protected_result() result(p)
+    real, pointer :: p
+    nullify(p)
+  end function
+  module function ordinary_result() result(p)
+    real, pointer, protected_target :: p
+    nullify(p)
+  end function
+  module subroutine dummy_procedure(s)
+    interface
+      subroutine s(p)
+        real, pointer :: p
+      end subroutine
+    end interface
+  end subroutine
+  module subroutine dummy_function(f)
+    interface
+      function f() result(p)
+        real, pointer :: p
+      end function
+    end interface
+  end subroutine
+end submodule
+
 module m1
   interface
     module subroutine s4(x)

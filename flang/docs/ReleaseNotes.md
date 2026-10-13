@@ -29,6 +29,22 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
+- Added frontend support for the Fortran 2028 working draft's
+  `PROTECTED_TARGET` data pointer attribute and statement. Targets cannot be
+  defined through these pointers, and protection is checked in pointer
+  assignments, structure constructors and argument association. `ALLOCATE`
+  of a direct pointer requires `SOURCE=`, and `DEALLOCATE` is prohibited.
+  Allocation of such a pointer through a construct alias is rejected,
+  even with `SOURCE=`. The attribute is retained in module files and procedure
+  interfaces, but does not participate in interface compatibility checks.
+  Following J3/26-007r1, source-use constraints apply to aliases only when
+  their own attributes or subobjects carry protection; this does not provide
+  blanket protection through construct aliases or interface conversions.
+  For the conflict between
+  J3/26-007r1 C864 and 8.5.16 NOTE 1, Flang follows C864 and rejects association
+  of a `PROTECTED_TARGET` pointer with a use-associated nonpointer `PROTECTED`
+  target.
+
 ## Bug Fixes
 
 - Fixed `fir::getTypeSizeAndAlignment` returning the wrong allocation size for

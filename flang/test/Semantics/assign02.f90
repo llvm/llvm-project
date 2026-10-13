@@ -250,3 +250,124 @@ subroutine s2
     p => z
   end associate
 end
+
+! J3/26-007r1 C870 includes sections and nonpointer subobjects.
+module protected_target_assignment
+  type item
+    real :: value
+    real, pointer :: link
+    real, pointer, protected_target :: protected_link
+  end type
+  real, protected, target :: protected_value
+  integer, protected :: substring_bound = 1
+  real, target :: value, array(4)
+  real, pointer, protected_target :: rp, ap(:)
+  type(item), pointer, protected_target :: ip
+contains
+  function result_pointer() result(p)
+    real, pointer, protected_target :: p
+    p => value
+  end function
+  subroutine associations(input)
+    real, intent(in), target :: input
+    real, pointer :: ordinary, ordinary_array(:)
+    real, pointer, protected_target :: kept
+    character(4), pointer, protected_target :: cp
+    character(:), pointer :: ordinary_character
+    character(:), pointer, protected_target :: kept_character
+    character(4), target :: text
+    complex, pointer, protected_target :: zp
+    real, parameter :: constant = 1.
+    integer, pointer, protected_target :: index
+    rp => value
+    rp => input
+    rp => rp
+    ap => array
+    kept => ap(1)
+    !ERROR: Target 'cp' with PROTECTED_TARGET attribute may not be associated with pointer 'ordinary_character' without PROTECTED_TARGET
+    ordinary_character => cp(2:3)
+    !ERROR: Target 'zp' with PROTECTED_TARGET attribute may not be associated with pointer 'ordinary' without PROTECTED_TARGET
+    ordinary => zp%re
+    !ERROR: Target 'rp' with PROTECTED_TARGET attribute may not be associated with pointer 'ordinary' without PROTECTED_TARGET
+    ordinary => rp
+    !ERROR: Target 'ap' with PROTECTED_TARGET attribute may not be associated with pointer 'ordinary_array' without PROTECTED_TARGET
+    ordinary_array => ap(2:4)
+    !ERROR: Target 'ip' with PROTECTED_TARGET attribute may not be associated with pointer 'ordinary' without PROTECTED_TARGET
+    ordinary => ip%value
+    kept => ip%value
+    ordinary => ip%link ! A different pointer's target is not protected by ip.
+    !ERROR: Target 'protected_link' with PROTECTED_TARGET attribute may not be associated with pointer 'ordinary' without PROTECTED_TARGET
+    ordinary => ip%protected_link
+    !ERROR: Target 'p' with PROTECTED_TARGET attribute may not be associated with pointer 'ordinary' without PROTECTED_TARGET
+    ordinary => result_pointer()
+    kept => result_pointer()
+    !ERROR: Target associated with pointer 'rp' must be a designator or a call to a pointer-valued function
+    rp => constant
+    kept => array(index) ! The index is not part of the target designator.
+    ordinary_character => text(index:index)
+    kept_character => text(index:index)
+    associate(a => text(index:index))
+      ordinary_character => a
+      kept_character => a
+    end associate
+    ! ASSOCIATE names do not inherit PROTECTED_TARGET (11.1.3.3).
+    associate(a => ap(2:4))
+      ordinary_array => a
+    end associate
+    associate(a => result_pointer())
+      ordinary => a
+    end associate
+    nullify(rp, ap, kept)
+  end subroutine
+
+  subroutine owner_association
+    rp => protected_value ! C864 only restricts use association.
+  end subroutine
+
+  subroutine ranked_sources(p)
+    real, pointer, protected_target :: p(..)
+    real, pointer :: ordinary, ordinary_array(:)
+    real, pointer, protected_target :: kept(:)
+    select rank(q => p)
+    rank(0)
+      ordinary => q
+    rank(1)
+      ordinary_array => q
+    rank default
+      ! RANK DEFAULT retains PROTECTED_TARGET (11.1.12.3p2).
+      !ERROR: Target 'q' with PROTECTED_TARGET attribute may not be associated with pointer 'ordinary_array' without PROTECTED_TARGET
+      ordinary_array(1:1) => q
+      kept(1:1) => q
+    end select
+  end subroutine
+end module
+
+subroutine protected_target_conflict
+  use protected_target_assignment, only: rp, protected_value
+  real, pointer :: ordinary
+  ! Follow normative J3/26-007r1 C864, not the contradictory 8.5.16 NOTE 1.
+  !ERROR: A PROTECTED_TARGET pointer may not be associated with use-associated nonpointer PROTECTED target 'protected_value'
+  rp => protected_value
+  ordinary => protected_value ! The optional pointer-to-undefinable warning is off.
+end subroutine
+
+module protected_target_initial_conflict
+  use protected_target_assignment, only: protected_value
+  ! C864 also applies to initial-data-target.
+  !ERROR: A PROTECTED_TARGET pointer may not be associated with use-associated nonpointer PROTECTED target 'protected_value'
+  real, pointer, protected_target :: p => protected_value
+end module
+
+subroutine protected_bound_association
+  use protected_target_assignment, only: substring_bound, protected_value
+  character(4), target :: text
+  character(:), pointer, protected_target :: p
+  real, pointer, protected_target :: value_pointer
+  p => text(substring_bound:substring_bound)
+  associate(q => text(substring_bound:substring_bound))
+    p => q
+  end associate
+  associate(q => protected_value)
+    value_pointer => q ! The associate name does not inherit PROTECTED.
+  end associate
+end subroutine

@@ -7,7 +7,8 @@
 !  attr-spec values are:
 !    PUBLIC, PRIVATE, ALLOCATABLE, ASYNCHRONOUS, CODIMENSION, CONTIGUOUS,
 !    DIMENSION (array-spec), EXTERNAL, INTENT (intent-spec), INTRINSIC,
-!    BIND(C), OPTIONAL, PARAMETER, POINTER, PROTECTED, SAVE, TARGET, VALUE,
+!    BIND(C), OPTIONAL, PARAMETER, POINTER, PROTECTED, PROTECTED_TARGET,
+!    SAVE, TARGET, VALUE,
 !    VOLATILE
 module m
 
@@ -64,3 +65,41 @@ contains
       arg2 =3.5
     end subroutine testTypeDecl
 end module m
+
+! J3/26-007r1 C781, C8109 and 8.5.16: data pointers only.
+module protected_target_declarations
+  real, pointer, protected_target :: p
+  real, pointer :: q, r
+  protected_target q
+  protected_target :: r
+  !ERROR: An entity with the PROTECTED_TARGET attribute must be a data pointer
+  real, protected_target :: nonpointer
+  !ERROR: An entity with the PROTECTED_TARGET attribute must be a data pointer
+  real :: statement_nonpointer
+  protected_target :: statement_nonpointer
+  !ERROR: An entity with the PROTECTED_TARGET attribute must be a data pointer
+  procedure(), pointer :: procedure_pointer
+  protected_target procedure_pointer
+  !ERROR: Attribute 'PROTECTED_TARGET' cannot be used more than once
+  real, pointer, protected_target, protected_target :: duplicate
+  type good
+    real, pointer, protected_target :: p
+  end type
+  type bad
+    !ERROR: An entity with the PROTECTED_TARGET attribute must be a data pointer
+    real, protected_target :: p
+  end type
+  !ERROR: A PROTECTED_TARGET pointer may not be in a common block
+  real, pointer, protected_target :: common_pointer
+  common /direct/ common_pointer
+  type common_type
+    sequence
+    real, pointer, protected_target :: p
+  end type
+  type(common_type) :: common_object
+  !ERROR: COMMON block /nested/ may not contain PROTECTED_TARGET component 'p' of 'common_object'
+  common /nested/ common_object
+  ! A pointer's target, unlike its descriptor, is not in the common block.
+  type(common_type), pointer :: ordinary_common_pointer
+  common /ordinary/ ordinary_common_pointer
+end module
