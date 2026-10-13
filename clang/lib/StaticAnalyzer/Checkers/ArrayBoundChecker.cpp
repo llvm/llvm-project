@@ -230,6 +230,12 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB,
     if (!Index)
       return std::nullopt;
 
+    // The size of an incomplete type (e.g forward declaration) is unknown, so
+    // the offset cannot be calculated.
+    QualType ElemType = CurRegion->getElementType();
+    if (ElemType->isIncompleteType())
+      return std::nullopt;
+
     // Calculate Delta = Index * sizeof(ElemType).
     NonLoc Size = SVB.makeArrayIndex(getElementSize(CurRegion, SVB));
     auto Delta = EvalBinOp(BO_Mul, *Index, Size);
