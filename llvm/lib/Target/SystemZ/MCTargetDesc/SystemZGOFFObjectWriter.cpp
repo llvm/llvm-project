@@ -10,8 +10,6 @@
 #include "SystemZMCAsmInfo.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCSectionGOFF.h"
-#include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCValue.h"
 #include <memory>
 
 using namespace llvm;
