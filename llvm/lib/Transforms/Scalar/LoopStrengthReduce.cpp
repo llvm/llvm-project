@@ -2195,6 +2195,9 @@ class LSRInstance {
   void OptimizeShadowIV();
   bool FindIVUserForCond(Instruction *Cond, IVStrideUse *&CondUse);
   Instruction *OptimizeMax(ICmpInst *Cond, IVStrideUse *&CondUse);
+  ICmpInst *OptimizeLoopTermCondToEquality(ICmpInst *Cond,
+                                           IVStrideUse *&CondUse,
+                                           BasicBlock *ExitingBlock);
   void OptimizeLoopTermCond();
 
   void ChainInstruction(Instruction *UserInst, Instruction *IVOper,
@@ -2448,6 +2451,72 @@ bool LSRInstance::FindIVUserForCond(Instruction *Cond, IVStrideUse *&CondUse) {
   return false;
 }
 
+/// Replace a relational loop exit with an equality comparison when the target
+/// prefers the exact exit value as an equality immediate.
+ICmpInst *LSRInstance::OptimizeLoopTermCondToEquality(
+    ICmpInst *Cond, IVStrideUse *&CondUse, BasicBlock *ExitingBlock) {
+  if (Cond->isEquality() || ExitingBlock != L->getLoopLatch())
+    return Cond;
+
+  auto *IV = dyn_cast<PHINode>(CondUse->getOperandValToReplace());
+  if (!IV || !IV->getType()->isIntegerTy() || IV->getParent() != L->getHeader())
+    return Cond;
+  if (Cond->getOperand(0) != IV && Cond->getOperand(1) != IV)
+    return Cond;
+
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(IV));
+  if (!AR || AR->getLoop() != L || !AR->isAffine())
+    return Cond;
+
+  const auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE));
+  if (!Step || Step->isZero())
+    return Cond;
+
+  const SCEV *ExitCount = SE.getExitCount(L, ExitingBlock);
+  if (isa<SCEVCouldNotCompute>(ExitCount))
+    return Cond;
+
+  // The recurrence must not visit its exit value before the exiting
+  // iteration. Do not rely on poison-derived no-wrap flags here.
+  const APInt &StepValue = Step->getAPInt();
+  unsigned PeriodLog2 = StepValue.getBitWidth() - StepValue.countr_zero();
+  if (SE.getUnsignedRangeMax(ExitCount).getActiveBits() > PeriodLog2)
+    return Cond;
+
+  const auto *ExitValue =
+      dyn_cast<SCEVConstant>(AR->evaluateAtIteration(ExitCount, SE));
+  if (!ExitValue || !TTI.preferLoopExitWithEqualityComparison(
+                        *Cond, ExitValue->getAPInt() + StepValue))
+    return Cond;
+
+  LLVM_DEBUG(dbgs() << "  Rewriting loop exit to compare " << *IV << " against "
+                    << *ExitValue << '\n');
+
+  auto *TermBr = cast<CondBrInst>(ExitingBlock->getTerminator());
+  bool TrueContinues = L->contains(TermBr->getSuccessor(0));
+  bool FalseContinues = L->contains(TermBr->getSuccessor(1));
+  if (TrueContinues == FalseContinues)
+    return Cond;
+
+  auto Pred = TrueContinues ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
+  auto *NewCond = new ICmpInst(TermBr->getIterator(), Pred, IV,
+                               ExitValue->getValue(), "lsr.exitcond");
+  NewCond->setDebugLoc(Cond->getDebugLoc());
+  bool ReplacesAllUses = Cond->hasOneUse();
+  TermBr->setCondition(NewCond);
+
+  if (ReplacesAllUses) {
+    CondUse->setUser(NewCond);
+    SE.forgetValue(Cond);
+    Cond->eraseFromParent();
+  } else {
+    CondUse = &IU.AddUser(NewCond, IV);
+  }
+
+  Changed = true;
+  return NewCond;
+}
+
 /// Rewrite the loop's terminating condition if it uses a max computation.
 ///
 /// This is a narrow solution to a specific, but acute, problem. For loops
@@ -2673,6 +2742,9 @@ LSRInstance::OptimizeLoopTermCond() {
     // Check for dominance.
     if (!DT.dominates(ExitingBlock, LatchBlock))
       continue;
+
+    if (auto *Cmp = dyn_cast<ICmpInst>(Cond))
+      Cond = OptimizeLoopTermCondToEquality(Cmp, CondUse, ExitingBlock);
 
     // Conservatively avoid trying to use the post-inc value in non-latch
     // exits if there may be pre-inc users in intervening blocks.

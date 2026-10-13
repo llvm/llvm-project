@@ -37,7 +37,7 @@ define void @increment_to_17(ptr %p, i32 %start) {
 ; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
 ; ZIBI-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
 ; ZIBI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp slt i32 [[IV]], 16
+; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], 17
 ; ZIBI-NEXT:    br i1 [[LSR_EXITCOND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; ZIBI:       [[EXIT_LOOPEXIT]]:
 ; ZIBI-NEXT:    br label %[[EXIT]]
@@ -51,10 +51,9 @@ define void @increment_to_17(ptr %p, i32 %start) {
 ; ASM-NEXT:    blt a2, a3, .LBB0_2
 ; ASM-NEXT:  .LBB0_1: # %loop
 ; ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; ASM-NEXT:    sext.w a3, a1
 ; ASM-NEXT:    sw a1, 0(a0)
-; ASM-NEXT:    addi a1, a1, 1
-; ASM-NEXT:    blt a3, a2, .LBB0_1
+; ASM-NEXT:    addiw a1, a1, 1
+; ASM-NEXT:    bnei a1, 17, .LBB0_1
 ; ASM-NEXT:  .LBB0_2: # %exit
 ; ASM-NEXT:    ret
 entry:
@@ -102,7 +101,7 @@ define void @decrement_to_17(ptr %p, i32 %start) {
 ; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
 ; ZIBI-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
 ; ZIBI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
-; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp sgt i32 [[IV]], 18
+; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], 17
 ; ZIBI-NEXT:    br i1 [[LSR_EXITCOND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; ZIBI:       [[EXIT_LOOPEXIT]]:
 ; ZIBI-NEXT:    br label %[[EXIT]]
@@ -116,10 +115,9 @@ define void @decrement_to_17(ptr %p, i32 %start) {
 ; ASM-NEXT:    blt a3, a2, .LBB1_2
 ; ASM-NEXT:  .LBB1_1: # %loop
 ; ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; ASM-NEXT:    sext.w a3, a1
 ; ASM-NEXT:    sw a1, 0(a0)
-; ASM-NEXT:    addi a1, a1, -1
-; ASM-NEXT:    blt a2, a3, .LBB1_1
+; ASM-NEXT:    addiw a1, a1, -1
+; ASM-NEXT:    bnei a1, 17, .LBB1_1
 ; ASM-NEXT:  .LBB1_2: # %exit
 ; ASM-NEXT:    ret
 entry:
@@ -157,24 +155,22 @@ define void @decrement_by_two_to_17(ptr %p) {
 ; ZIBI-NEXT:  [[ENTRY:.*]]:
 ; ZIBI-NEXT:    br label %[[LOOP:.*]]
 ; ZIBI:       [[LOOP]]:
-; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 1003, %[[ENTRY]] ]
-; ZIBI-NEXT:    [[IV_NEXT:%.*]] = add i32 [[IV]], -2
-; ZIBI-NEXT:    store volatile i32 [[IV_NEXT]], ptr [[P]], align 4
-; ZIBI-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[IV]], -2
-; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp sgt i32 [[LSR_IV_NEXT]], 19
+; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ 1001, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; ZIBI-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
+; ZIBI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -2
+; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], 17
 ; ZIBI-NEXT:    br i1 [[LSR_EXITCOND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; ZIBI:       [[EXIT]]:
 ; ZIBI-NEXT:    ret void
 ;
 ; ASM-LABEL: decrement_by_two_to_17:
 ; ASM:       # %bb.0: # %entry
-; ASM-NEXT:    li a1, 1003
-; ASM-NEXT:    li a2, 19
+; ASM-NEXT:    li a1, 1001
 ; ASM-NEXT:  .LBB2_1: # %loop
 ; ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; ASM-NEXT:    addiw a1, a1, -2
 ; ASM-NEXT:    sw a1, 0(a0)
-; ASM-NEXT:    blt a2, a1, .LBB2_1
+; ASM-NEXT:    addiw a1, a1, -2
+; ASM-NEXT:    bnei a1, 17, .LBB2_1
 ; ASM-NEXT:  # %bb.2: # %exit
 ; ASM-NEXT:    ret
 entry:
@@ -418,7 +414,7 @@ define void @drop_poison_on_postinc(ptr %p, i32 %start) {
 ; ZIBI-NEXT:    [[IV_FROZEN:%.*]] = freeze i32 [[IV]]
 ; ZIBI-NEXT:    store volatile i32 [[IV_FROZEN]], ptr [[P]], align 4
 ; ZIBI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
-; ZIBI-NEXT:    [[EXITCOND:%.*]] = icmp sgt i32 [[IV]], 18
+; ZIBI-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], 17
 ; ZIBI-NEXT:    br i1 [[EXITCOND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; ZIBI:       [[EXIT_LOOPEXIT]]:
 ; ZIBI-NEXT:    br label %[[EXIT]]
@@ -432,10 +428,9 @@ define void @drop_poison_on_postinc(ptr %p, i32 %start) {
 ; ASM-NEXT:    blt a3, a2, .LBB6_2
 ; ASM-NEXT:  .LBB6_1: # %loop
 ; ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; ASM-NEXT:    sext.w a3, a1
 ; ASM-NEXT:    sw a1, 0(a0)
-; ASM-NEXT:    addi a1, a1, -1
-; ASM-NEXT:    blt a2, a3, .LBB6_1
+; ASM-NEXT:    addiw a1, a1, -1
+; ASM-NEXT:    bnei a1, 17, .LBB6_1
 ; ASM-NEXT:  .LBB6_2: # %exit
 ; ASM-NEXT:    ret
 entry:
@@ -474,24 +469,22 @@ define void @false_successor_continues(ptr %p) {
 ; ZIBI-NEXT:  [[ENTRY:.*]]:
 ; ZIBI-NEXT:    br label %[[LOOP:.*]]
 ; ZIBI:       [[LOOP]]:
-; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 32, %[[ENTRY]] ]
-; ZIBI-NEXT:    [[IV_NEXT:%.*]] = add i32 [[IV]], -1
-; ZIBI-NEXT:    store volatile i32 [[IV_NEXT]], ptr [[P]], align 4
-; ZIBI-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[IV]], -1
-; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp sle i32 [[LSR_IV_NEXT]], 18
+; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ 31, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; ZIBI-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
+; ZIBI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], 17
 ; ZIBI-NEXT:    br i1 [[LSR_EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; ZIBI:       [[EXIT]]:
 ; ZIBI-NEXT:    ret void
 ;
 ; ASM-LABEL: false_successor_continues:
 ; ASM:       # %bb.0: # %entry
-; ASM-NEXT:    li a1, 32
-; ASM-NEXT:    li a2, 18
+; ASM-NEXT:    li a1, 31
 ; ASM-NEXT:  .LBB7_1: # %loop
 ; ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; ASM-NEXT:    addiw a1, a1, -1
 ; ASM-NEXT:    sw a1, 0(a0)
-; ASM-NEXT:    blt a2, a1, .LBB7_1
+; ASM-NEXT:    addiw a1, a1, -1
+; ASM-NEXT:    bnei a1, 17, .LBB7_1
 ; ASM-NEXT:  # %bb.2: # %exit
 ; ASM-NEXT:    ret
 entry:
@@ -592,24 +585,22 @@ define void @minus_one_exit_value(ptr %p) {
 ; ZIBI-NEXT:  [[ENTRY:.*]]:
 ; ZIBI-NEXT:    br label %[[LOOP:.*]]
 ; ZIBI:       [[LOOP]]:
-; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 33, %[[ENTRY]] ]
-; ZIBI-NEXT:    [[IV_NEXT:%.*]] = add i32 [[IV]], -2
-; ZIBI-NEXT:    store volatile i32 [[IV_NEXT]], ptr [[P]], align 4
-; ZIBI-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[IV]], -2
-; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp sgt i32 [[LSR_IV_NEXT]], 1
+; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ 31, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; ZIBI-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
+; ZIBI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -2
+; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], -1
 ; ZIBI-NEXT:    br i1 [[LSR_EXITCOND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; ZIBI:       [[EXIT]]:
 ; ZIBI-NEXT:    ret void
 ;
 ; ASM-LABEL: minus_one_exit_value:
 ; ASM:       # %bb.0: # %entry
-; ASM-NEXT:    li a1, 33
-; ASM-NEXT:    li a2, 1
+; ASM-NEXT:    li a1, 31
 ; ASM-NEXT:  .LBB9_1: # %loop
 ; ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; ASM-NEXT:    addiw a1, a1, -2
 ; ASM-NEXT:    sw a1, 0(a0)
-; ASM-NEXT:    blt a2, a1, .LBB9_1
+; ASM-NEXT:    addiw a1, a1, -2
+; ASM-NEXT:    bnei a1, -1, .LBB9_1
 ; ASM-NEXT:  # %bb.2: # %exit
 ; ASM-NEXT:    ret
 entry:
@@ -713,7 +704,7 @@ define void @shared_condition(ptr %p, i32 %start) {
 ; ZIBI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
 ; ZIBI-NEXT:    [[CONTINUE:%.*]] = icmp sgt i32 [[IV]], 18
 ; ZIBI-NEXT:    call void @use_condition(i1 [[CONTINUE]])
-; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp sgt i32 [[IV]], 18
+; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], 17
 ; ZIBI-NEXT:    br i1 [[LSR_EXITCOND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; ZIBI:       [[EXIT_LOOPEXIT]]:
 ; ZIBI-NEXT:    br label %[[EXIT]]
@@ -722,45 +713,37 @@ define void @shared_condition(ptr %p, i32 %start) {
 ;
 ; ASM-LABEL: shared_condition:
 ; ASM:       # %bb.0: # %entry
-; ASM-NEXT:    addi sp, sp, -48
-; ASM-NEXT:    .cfi_def_cfa_offset 48
-; ASM-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; ASM-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; ASM-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; ASM-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; ASM-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; ASM-NEXT:    addi sp, sp, -32
+; ASM-NEXT:    .cfi_def_cfa_offset 32
+; ASM-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; ASM-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; ASM-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; ASM-NEXT:    .cfi_offset ra, -8
 ; ASM-NEXT:    .cfi_offset s0, -16
 ; ASM-NEXT:    .cfi_offset s1, -24
-; ASM-NEXT:    .cfi_offset s2, -32
-; ASM-NEXT:    .cfi_offset s3, -40
 ; ASM-NEXT:    mv s0, a1
-; ASM-NEXT:    li s2, 18
-; ASM-NEXT:    sext.w a1, a1
-; ASM-NEXT:    blt a1, s2, .LBB11_3
+; ASM-NEXT:    li a1, 18
+; ASM-NEXT:    sext.w a2, s0
+; ASM-NEXT:    blt a2, a1, .LBB11_3
 ; ASM-NEXT:  # %bb.1: # %loop.preheader
 ; ASM-NEXT:    mv s1, a0
 ; ASM-NEXT:  .LBB11_2: # %loop
 ; ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; ASM-NEXT:    sext.w s3, s0
+; ASM-NEXT:    sext.w a0, s0
 ; ASM-NEXT:    sw s0, 0(s1)
-; ASM-NEXT:    slti a0, s3, 19
-; ASM-NEXT:    addi s0, s0, -1
+; ASM-NEXT:    slti a0, a0, 19
+; ASM-NEXT:    addiw s0, s0, -1
 ; ASM-NEXT:    xori a0, a0, 1
 ; ASM-NEXT:    call use_condition
-; ASM-NEXT:    blt s2, s3, .LBB11_2
+; ASM-NEXT:    bnei s0, 17, .LBB11_2
 ; ASM-NEXT:  .LBB11_3: # %exit
-; ASM-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; ASM-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; ASM-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; ASM-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; ASM-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; ASM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; ASM-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; ASM-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; ASM-NEXT:    .cfi_restore ra
 ; ASM-NEXT:    .cfi_restore s0
 ; ASM-NEXT:    .cfi_restore s1
-; ASM-NEXT:    .cfi_restore s2
-; ASM-NEXT:    .cfi_restore s3
-; ASM-NEXT:    addi sp, sp, 48
+; ASM-NEXT:    addi sp, sp, 32
 ; ASM-NEXT:    .cfi_def_cfa_offset 0
 ; ASM-NEXT:    ret
 entry:
