@@ -1604,6 +1604,12 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Populate \p Regs with scratch candidates for long unconditional branches.
+  /// The caller must also check liveness and unwind requirements.
+  virtual void getLongJumpScratchRegs(BitVector &Regs) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Change \p Regs with a bitmask with all general purpose regs that can be
   /// encoded without extra prefix bytes. For x86 only.
   virtual void getClassicGPRegs(BitVector &Regs) const {
@@ -1981,9 +1987,12 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Create a long branch using a register proven dead at the target.
-  virtual void createLongBranch(MCInst &Inst, const MCSymbol *Target,
-                                MCPhysReg ScratchReg, MCContext *Ctx) const {
+  /// Create a long unconditional branch using a scratch register proven safe
+  /// to clobber by the caller. The instruction may expand to multiple machine
+  /// instructions.
+  virtual void createLongUncondBranch(MCInst &Inst, const MCSymbol *Target,
+                                      MCPhysReg ScratchReg,
+                                      MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
 

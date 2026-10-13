@@ -8,26 +8,26 @@
 # RUN: llvm-objdump -d --disassemble-symbols=_start %t.bolt | FileCheck %s
 
 # CHECK-LABEL: <_start>:
-# CHECK-NOT: auipc t0,
-# CHECK: auipc t1,
-# CHECK-NOT: auipc t0,
+# CHECK-NOT: auipc t1,
+# CHECK: auipc t2,
+# CHECK-NOT: auipc t1,
 
   .text
   .globl _start
   .type _start, @function
 _start:
   .cfi_startproc
-  mv t0, sp
-  .cfi_def_cfa t0, 0
+  mv t1, sp
+  .cfi_def_cfa t1, 0
   beqz a0, .Lcold
   .cfi_def_cfa sp, 0
-  li t0, 0
   li t1, 0
+  li t2, 0
   ret
 .Lcold:
   .cfi_def_cfa sp, 0
-  li t0, 0
   li t1, 0
+  li t2, 0
   ret
   .cfi_endproc
   .size _start, .-_start

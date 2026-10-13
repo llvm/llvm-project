@@ -130,6 +130,17 @@ public:
     Regs &= ExclusionMask;
   }
 
+  void getLongJumpScratchRegs(BitVector &Regs) const override {
+    getGPRegs(Regs, /*IncludeAlias=*/false);
+    removeNonScavengeableRegs(Regs);
+    BitVector CalleeSaved(Regs.size());
+    getCalleeSavedRegs(CalleeSaved);
+    Regs.reset(CalleeSaved);
+    // JALR x0, x5 carries a return-address-stack pop hint. Avoid using the
+    // alternate link register for intra-function jumps even when it is dead.
+    Regs.reset(getAliases(RISCV::X5));
+  }
+
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {
     switch (RelType) {
     case ELF::R_RISCV_JAL:
@@ -324,8 +335,9 @@ public:
     Inst.addOperand(MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx)));
   }
 
-  void createLongBranch(MCInst &Inst, const MCSymbol *Target,
-                        MCPhysReg ScratchReg, MCContext *Ctx) const override {
+  void createLongUncondBranch(MCInst &Inst, const MCSymbol *Target,
+                              MCPhysReg ScratchReg,
+                              MCContext *Ctx) const override {
     Inst = MCInstBuilder(RISCV::PseudoJump)
                .addReg(ScratchReg)
                .addExpr(MCSpecifierExpr::create(

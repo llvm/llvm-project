@@ -34,7 +34,7 @@
 # RUN: %t.arg.bolt
 # RUN: llvm-objdump -d --disassemble-symbols=foo,foo.cold.0 %t.arg.bolt | FileCheck %s --check-prefix=ARG
 
-# CHECK: RISC-V relaxed branches in
+# CHECK: RISC-V inserted long-jump stubs in
 # CODE: <foo>:
 # CODE: auipc t1,
 # CODE: jr

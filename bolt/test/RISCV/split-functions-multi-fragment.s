@@ -10,20 +10,21 @@
 # RUN:   --disassemble-symbols=_start,_start.cold.0,_start.cold.1,_start.cold.2 %t.bolt | FileCheck %s
 
 # CHECK-LABEL: <_start>:
-# CHECK: auipc t0,
+# CHECK: auipc t1,
 # CHECK-NEXT: jr {{.*}} <_start.cold.0>
-# CHECK: auipc t0,
+# CHECK: auipc t1,
 # CHECK-NEXT: jr {{.*}} <_start.cold.1>
 # CHECK-LABEL: <_start.cold.0>:
 # CHECK-NEXT: addi a0, a0, 0x1
-# CHECK-NEXT: auipc t0,
+# CHECK-NEXT: auipc t1,
 # CHECK-NEXT: jr {{.*}} <_start.cold.2>
 # CHECK-LABEL: <_start.cold.1>:
 # CHECK-NEXT: addi a0, a0, 0x2
-# CHECK-NEXT: auipc t0,
+# CHECK-NEXT: auipc t1,
 # CHECK-NEXT: jr {{.*}} <_start.cold.2>
 # CHECK-LABEL: <_start.cold.2>:
 # CHECK-NEXT: li t0, 0x0
+# CHECK-NEXT: li t1, 0x0
 # CHECK-NEXT: ret
 
   .text
@@ -39,6 +40,7 @@ _start:
   addi a0, a0, 2
 .Ljoin:
   li t0, 0
+  li t1, 0
   ret
   .cfi_endproc
   .size _start, .-_start

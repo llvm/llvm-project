@@ -13,6 +13,7 @@
 #include "bolt/Passes/RISCVLongJmpPass.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/RegAnalysis.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::bolt;
@@ -24,11 +25,7 @@ namespace {
 BitVector getScratchRegCandidates(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   BitVector Regs(BC.MRI->getNumRegs());
-  BC.MIB->getGPRegs(Regs, /*IncludeAlias=*/false);
-  BC.MIB->removeNonScavengeableRegs(Regs);
-  BitVector CalleeSaved(Regs.size());
-  BC.MIB->getCalleeSavedRegs(CalleeSaved);
-  Regs.reset(CalleeSaved);
+  BC.MIB->getLongJumpScratchRegs(Regs);
 
   // Ordinary liveness does not account for registers needed by stack unwinding.
   // Conservatively exclude CFI references throughout the function instead of
@@ -84,10 +81,11 @@ void keepFragmentsTogether(BinaryFunction &BF) {
 }
 
 /// Insert a stub for every cross-fragment CFG edge, without estimating its
-/// final distance. Return false if splitting was cancelled for lack of scratch.
+/// final distance. Return the number of stubs, or std::nullopt if splitting was
+/// cancelled for lack of scratch.
 /// Analyze all edges before mutating the CFG so fallback needs no stub
 /// rollback.
-bool relaxFunction(BinaryFunction &BF, RegAnalysis &RA) {
+std::optional<size_t> insertLongJumpStubs(BinaryFunction &BF, RegAnalysis &RA) {
   BinaryContext &BC = BF.getBinaryContext();
   BitVector Candidates = getScratchRegCandidates(BF);
   struct LongJumpEdge {
@@ -117,7 +115,7 @@ bool relaxFunction(BinaryFunction &BF, RegAnalysis &RA) {
                     << " unsplit: no dead register for a RISC-V long jump\n";
           DIM.invalidateLivenessAnalysis();
           keepFragmentsTogether(BF);
-          return false;
+          return std::nullopt;
         }
         ScratchRegs[Target] = Dead.find_first();
       }
@@ -145,29 +143,32 @@ bool relaxFunction(BinaryFunction &BF, RegAnalysis &RA) {
     MCInst Jump;
     // PseudoJump expands to AUIPC scratch + JALR x0, scratch. It overwrites the
     // chosen dead register without changing ra; JITLink may later shorten it.
-    BC.MIB->createLongBranch(Jump, E.Target->getLabel(), ScratchRegs[E.Target],
-                             BC.Ctx.get());
+    BC.MIB->createLongUncondBranch(Jump, E.Target->getLabel(),
+                                   ScratchRegs[E.Target], BC.Ctx.get());
     E.Stub->clear();
     E.Stub->addInstruction(Jump);
   }
-  return true;
+  return Edges.size();
 }
 
 } // namespace
 
 Error RISCVLongJmpPass::runOnFunctions(BinaryContext &BC) {
   RegAnalysis RA(BC, nullptr, nullptr);
-  unsigned Relaxed = 0, KeptTogether = 0;
+  unsigned FunctionsWithStubs = 0, KeptTogether = 0;
   for (auto &[Address, BF] : BC.getBinaryFunctions()) {
     if (!BC.shouldEmit(BF) || !BF.isSimple() || !BF.isSplit())
       continue;
-    if (relaxFunction(BF, RA))
-      ++Relaxed;
-    else
+    if (std::optional<size_t> NumStubs = insertLongJumpStubs(BF, RA)) {
+      if (*NumStubs)
+        ++FunctionsWithStubs;
+    } else {
       ++KeptTogether;
+    }
   }
-  BC.outs() << "BOLT-INFO: RISC-V relaxed branches in " << Relaxed
-            << " split functions; kept " << KeptTogether
-            << " functions together without a dead scratch register\n";
+  if (FunctionsWithStubs || KeptTogether)
+    BC.outs() << "BOLT-INFO: RISC-V inserted long-jump stubs in "
+              << FunctionsWithStubs << " split functions; kept " << KeptTogether
+              << " functions together without a dead scratch register\n";
   return Error::success();
 }
