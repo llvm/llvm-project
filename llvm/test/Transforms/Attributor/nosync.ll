@@ -341,14 +341,14 @@ declare void @llvm.memset.p0.i32(ptr %dest, i8 %val, i32 %len, i1 %isvolatile)
 define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@memcpy_volatile
-; TUNIT-SAME: (ptr nofree writeonly captures(none) [[PTR1:%.*]], ptr nofree readonly captures(none) [[PTR2:%.*]]) #[[ATTR14:[0-9]+]] {
-; TUNIT-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly captures(none) [[PTR1]], ptr nofree readonly captures(none) [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR23:[0-9]+]]
+; TUNIT-SAME: (ptr nofree [[PTR1:%.*]], ptr nofree [[PTR2:%.*]]) #[[ATTR14:[0-9]+]] {
+; TUNIT-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly [[PTR1]], ptr nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR23:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 4
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@memcpy_volatile
-; CGSCC-SAME: (ptr nofree writeonly captures(none) [[PTR1:%.*]], ptr nofree readonly captures(none) [[PTR2:%.*]]) #[[ATTR14:[0-9]+]] {
-; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly captures(none) [[PTR1]], ptr nofree readonly captures(none) [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR24:[0-9]+]]
+; CGSCC-SAME: (ptr nofree [[PTR1:%.*]], ptr nofree [[PTR2:%.*]]) #[[ATTR14:[0-9]+]] {
+; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly [[PTR1]], ptr nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR24:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 4
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %ptr1, ptr %ptr2, i32 8, i1 true)
