@@ -121,8 +121,7 @@ unsigned AMDGPUMachineFunctionInfo::allocateLDSGlobal(const DataLayout &DL,
         // section, and not within some other non-absolute-address object
         // allocated here, but the extra error detection is minimal and we would
         // have to pass the Function around or cache the attribute value.
-        uint32_t ObjectEnd =
-            static_cast<uint32_t>(ObjectStart + GV.getGlobalSize(DL));
+        uint64_t ObjectEnd = ObjectStart + GV.getGlobalSize(DL);
         if (ObjectEnd > StaticLDSSize) {
           report_fatal_error(
               "Absolute address LDS variable outside of static frame");
