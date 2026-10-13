@@ -28461,9 +28461,9 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
                return false;
              LLVM_DEBUG(dbgs() << "SLP: cancel scheduling of the trimmed node "
                                << TE->Idx << " bundle " << *Bundle << "\n");
-             for (ScheduleData *SD :
-                  make_isa_range<ScheduleData>(Bundle->getBundle()))
-               ClearedSDs.insert(SD);
+             for (ScheduleEntity *SE : Bundle->getBundle())
+               if (ScheduleData *SD = BS->getScheduleData(SE->getInst()))
+                 ClearedSDs.insert(SD);
              BS->cancelScheduling(*Bundle);
              return true;
            });

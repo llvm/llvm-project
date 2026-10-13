@@ -5,29 +5,26 @@ define void @test(double %a, double %b, ptr %out0, ptr %out1, ptr %in) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: double [[A:%.*]], double [[B:%.*]], ptr [[OUT0:%.*]], ptr [[OUT1:%.*]], ptr [[IN:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> <double poison, double 1.000000e+00>, double [[A]], i64 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[T2:%.*]] = fadd double [[A]], 0.000000e+00
+; CHECK-NEXT:    [[T3:%.*]] = fmul double [[T2]], 0.000000e+00
+; CHECK-NEXT:    [[T4:%.*]] = fmul double [[T3]], 0.000000e+00
+; CHECK-NEXT:    [[T5:%.*]] = fsub double 0.000000e+00, [[T4]]
 ; CHECK-NEXT:    [[V:%.*]] = load double, ptr [[IN]], align 8
 ; CHECK-NEXT:    [[T0:%.*]] = fmul double [[V]], 0.000000e+00
 ; CHECK-NEXT:    [[T1:%.*]] = fmul double [[T0]], 0.000000e+00
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd <2 x double> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[M2:%.*]] = fmul double 1.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double poison>, double [[M2]], i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[V]], i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul <2 x double> [[TMP12]], <double 0.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul <2 x double> [[TMP13]], zeroinitializer
-; CHECK-NEXT:    [[C1:%.*]] = extractelement <2 x double> [[TMP14]], i64 0
-; CHECK-NEXT:    [[C2:%.*]] = fsub double 0.000000e+00, [[C1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP14]], i64 1
+; CHECK-NEXT:    [[C0:%.*]] = fadd double 0.000000e+00, 1.000000e+00
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul double [[C0]], 0.000000e+00
 ; CHECK-NEXT:    [[C3:%.*]] = fsub double 0.000000e+00, [[TMP8]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP2]])
 ; CHECK-NEXT:    store double [[TMP3]], ptr [[OUT1]], align 8
 ; CHECK-NEXT:    [[S4:%.*]] = fsub double [[B]], 0.000000e+00
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> <double 0.000000e+00, double poison, double poison, double 1.000000e+00>, <4 x double> [[TMP11]], <4 x i32> <i32 0, i32 5, i32 poison, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double poison, double 1.000000e+00>, double [[C0]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[S4]], i64 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP6]])
