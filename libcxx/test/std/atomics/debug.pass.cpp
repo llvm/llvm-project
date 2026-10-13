@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstdint>
 
 #include "test_macros.h"
 
