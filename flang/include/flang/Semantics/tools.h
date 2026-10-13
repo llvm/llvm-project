@@ -178,6 +178,13 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+// Find the PROTECTED_TARGET pointer through which a target is accessed.
+// Skip the last symbol when checking definition of a pointer/allocatable
+// descriptor rather than its target.
+const Symbol *FindProtectedTarget(
+    const evaluate::DataRef &, bool skipLast = false);
+const Symbol *FindProtectedTarget(const SomeExpr &);
+
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }

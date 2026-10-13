@@ -439,6 +439,7 @@ std::optional<DummyDataObject> DummyDataObject::Characterize(
               {Attr::VALUE, DummyDataObject::Attr::Value},
               {Attr::VOLATILE, DummyDataObject::Attr::Volatile},
               {Attr::POINTER, DummyDataObject::Attr::Pointer},
+              {Attr::PROTECTED_TARGET, DummyDataObject::Attr::ProtectedTarget},
               {Attr::TARGET, DummyDataObject::Attr::Target},
           });
       result->intent = GetIntent(symbol.attrs());
@@ -1075,6 +1076,8 @@ static std::optional<FunctionResult> CharacterizeFunctionResult(
               {semantics::Attr::ALLOCATABLE, FunctionResult::Attr::Allocatable},
               {semantics::Attr::CONTIGUOUS, FunctionResult::Attr::Contiguous},
               {semantics::Attr::POINTER, FunctionResult::Attr::Pointer},
+              {semantics::Attr::PROTECTED_TARGET,
+                  FunctionResult::Attr::ProtectedTarget},
           });
       result.cudaDataAttr = object->cudaDataAttr();
       return result;

@@ -9,6 +9,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -325,6 +326,44 @@ bool IsStmtFunctionResult(const Symbol &symbol) {
 
 bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
+}
+
+const Symbol *FindProtectedTarget(
+    const evaluate::DataRef &dataRef, bool skipLast) {
+  auto symbols{evaluate::GetSymbolVector(dataRef)};
+  auto it{symbols.rbegin()};
+  if (skipLast && it != symbols.rend()) {
+    ++it;
+  }
+  for (; it != symbols.rend(); ++it) {
+    const Symbol &symbol{**it};
+    if (const auto *association{symbol.detailsIf<AssocEntityDetails>()};
+        association && association->expr()) {
+      return FindProtectedTarget(*association->expr());
+    }
+    if (IsPointer(symbol)) {
+      // F2028 9.4.2p5: a pointer component's target is not a subobject
+      // of the object containing its descriptor.
+      return symbol.attrs().test(Attr::PROTECTED_TARGET) ? &symbol : nullptr;
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTarget(const SomeExpr &expr) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTarget(*dataRef);
+  } else if (evaluate::IsVariable(expr)) {
+    if (const auto *call{evaluate::UnwrapProcedureRef(expr)}) {
+      if (const Symbol *interface{call->proc().GetInterfaceSymbol()}) {
+        if (const Symbol *result{FindFunctionResult(*interface)}) {
+          return result->attrs().test(Attr::PROTECTED_TARGET) ? result
+                                                              : nullptr;
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 
 bool IsBindCProcedure(const Symbol &original) {

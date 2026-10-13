@@ -22,6 +22,20 @@ There is no distinction made between support in the Parser/Semantics and the MLI
 
 Note: The two major missing features in Flang at present are coarrays and parameterized derived types (PDTs) with length type parameters.
 
+## Fortran 2028 working draft
+
+Flang supports the `PROTECTED_TARGET` data pointer attribute and statement
+from [J3/26-007r1](https://j3-fortran.org/doc/year/26/26-007r1.pdf).
+The target cannot be defined through that pointer, and pointer association,
+structure construction and argument association must preserve its protection.
+Allocation requires `SOURCE=`, and deallocation through the pointer is prohibited.
+The attribute has no run-time effect.
+
+When a `PROTECTED_TARGET` pointer is associated with a use-associated
+nonpointer `PROTECTED` target, Flang follows constraint C864 rather than
+the contradictory example in 8.5.16 NOTE 1.
+The optional allocation-lifetime diagnostic suggested by NOTE 2 is not implemented.
+
 
 ## Fortran 2023
 See [document](F202X.md) for a brief discussion about the new features in Fortran 2023. The following table summarizes the

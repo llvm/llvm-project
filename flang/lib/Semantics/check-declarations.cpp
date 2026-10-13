@@ -347,6 +347,22 @@ void CheckHelper::Check(const Symbol &symbol) {
           "A PROTECTED entity may not be in a common block"_err_en_US);
     }
   }
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET)) {
+    if (!IsPointer(symbol)) { // F2028 C781 and C8109
+      messages_.Say(symbol.owner().IsDerivedType()
+              ? "PROTECTED_TARGET component '%s' must have the POINTER attribute"_err_en_US
+              : "PROTECTED_TARGET entity '%s' must have the POINTER attribute"_err_en_US,
+          symbol.name());
+    } else if (IsProcedure(symbol)) {
+      messages_.Say(
+          "PROTECTED_TARGET entity '%s' must be a data pointer"_err_en_US,
+          symbol.name());
+    }
+    if (FindCommonBlockContaining(symbol)) { // F2028 C867
+      messages_.Say(
+          "A PROTECTED_TARGET pointer may not be in a common block"_err_en_US);
+    }
+  }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
   }
@@ -619,6 +635,19 @@ void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
                       *componentPath),
                   derived->typeSymbol()),
               *ref);
+        } else if (!IsPointer(*ref)) {
+          if (const Symbol *component{
+                  FindUltimateComponent(*derived, [](const Symbol &component) {
+                    return component.attrs().test(Attr::PROTECTED_TARGET);
+                  })}) { // F2028 C867
+            evaluate::AttachDeclaration(
+                evaluate::AttachDeclaration(
+                    messages_.Say(
+                        "COMMON block /%s/ may not have the member '%s' with PROTECTED_TARGET component '%s'"_err_en_US,
+                        symbol.name(), ref->name(), component->name()),
+                    *component),
+                *ref);
+          }
         }
       }
     }

@@ -67,6 +67,12 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (FindProtectedTarget(*expr)) { // F2028 C873
+      messages.Say(arg.sourceLocation(),
+          "PROTECTED_TARGET actual argument '%s' requires an explicit interface"_err_en_US,
+          expr->AsFortran());
+      return;
+    }
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
@@ -399,6 +405,38 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
   bool dummyIsPointer{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
+  if (scope) {
+    const Symbol *protectedTarget{FindProtectedTarget(actual)};
+    if (!protectedTarget && dummyIsPointer &&
+        evaluate::IsObjectPointer(actual)) {
+      if (auto dataRef{evaluate::ExtractDataRef(actual)}) {
+        // A pointer actual passes its descriptor as well as its target.
+        protectedTarget = FindProtectedTarget(*dataRef, /*skipLast=*/true);
+      }
+    }
+    if (protectedTarget) {
+      if (dummyIsPointer) {
+        if (!dummy.attrs.test(
+                characteristics::DummyDataObject::Attr::ProtectedTarget)) {
+          messages.Say( // F2028 C872
+              "PROTECTED_TARGET pointer or subobject '%s' may not be associated with %s without PROTECTED_TARGET"_err_en_US,
+              actual.AsFortran(), dummyName);
+          return;
+        }
+      } else {
+        // F2028 17.2.1p3 supplies INTENT(IN) for intrinsic dummies without
+        // an explicit intent, including NULL's MOLD=.
+        bool dummyIntentIn{dummy.intent == common::Intent::In ||
+            (intrinsic && dummy.intent == common::Intent::Default)};
+        if (!dummyIntentIn) { // F2028 C874
+          messages.Say(
+              "PROTECTED_TARGET pointer or subobject '%s' requires an INTENT(IN) nonpointer %s"_err_en_US,
+              actual.AsFortran(), dummyName);
+          return;
+        }
+      }
+    }
+  }
   bool dummyIsAllocatableOrPointer{dummyIsAllocatable || dummyIsPointer};
   allowActualArgumentConversions &= !dummyIsAllocatableOrPointer;
   bool typesCompatibleWithIgnoreTKR{
@@ -1361,6 +1399,16 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
         std::get_if<evaluate::ProcedureDesignator>(&expr->u)};
     const auto *argProcSymbol{
         argProcDesignator ? argProcDesignator->GetSymbol() : nullptr};
+    if (dummyIsPointer && argProcDesignator && IsProcedurePointer(*expr)) {
+      if (const auto *component{argProcDesignator->GetComponent()};
+          component && FindProtectedTarget(component->base())) {
+        // F2028 C872 applies to the descriptor inside the protected target.
+        messages.Say(
+            "PROTECTED_TARGET pointer or subobject '%s' may not be associated with %s without PROTECTED_TARGET"_err_en_US,
+            expr->AsFortran(), dummyName);
+        return;
+      }
+    }
     if (argProcSymbol) {
       if (const auto *subp{
               argProcSymbol->GetUltimate().detailsIf<SubprogramDetails>()}) {
