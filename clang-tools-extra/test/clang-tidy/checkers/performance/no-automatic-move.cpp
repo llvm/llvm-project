@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s performance-no-automatic-move %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s performance-no-automatic-move %t -- -- -fblocks
 
 struct Obj {
   Obj();
@@ -126,6 +126,19 @@ void Captures() {
 
 void LambdaLocal() {
   auto L = []() -> NonTemplate {
+    const Obj obj = Make<Obj>();
+    return obj;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constness of 'obj' prevents automatic move [performance-no-automatic-move]
+  };
+}
+
+void BlockCaptures() {
+  const Obj obj = Make<Obj>();
+  auto B = ^NonTemplate { return obj; };
+}
+
+void BlockLocal() {
+  auto B = ^NonTemplate {
     const Obj obj = Make<Obj>();
     return obj;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constness of 'obj' prevents automatic move [performance-no-automatic-move]
