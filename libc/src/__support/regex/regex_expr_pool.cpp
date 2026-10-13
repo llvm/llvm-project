@@ -141,15 +141,18 @@ bool ExprPool::allocate_block() {
     if (!ac)
       return false;
     Block **dst = new_blocks;
-    for (Block *blk : active_blocks())
-      *dst++ = blk;
+    for (Block *blk : active_blocks()) {
+      *dst = blk;
+      ++dst;
+    }
     delete[] blocks.data();
     blocks = cpp::span<Block *>(new_blocks, new_cap);
   }
   Block *blk = new (ac) Block();
   if (!ac)
     return false;
-  blocks[block_count++] = blk;
+  blocks[block_count] = blk;
+  ++block_count;
   return true;
 }
 
@@ -171,77 +174,78 @@ bool ExprPool::grow_hashtable() {
   return true;
 }
 
-cpp::expected<ExprId, int> ExprPool::intern(Expr e) {
+ErrorOr<ExprId> ExprPool::intern(Expr e) {
   if ((hashtable.empty() || block_count == 0) && !ensure_initialized())
-    return cpp::unexpected(REG_ESPACE);
+    return Error(REG_ESPACE);
 
-  // 1. Probe for an existing node with identical content.
+  // Probe for an existing node with identical content.
   e.hash = hash_expr(e);
   ExprId *bucket = &find_bucket(hashtable, e);
   if (*bucket != INVALID_EXPR_ID)
     return *bucket;
 
-  // 2. Admission Control: Check the hard limit on AST nodes.
+  // Admission Control: Check the hard limit on AST nodes.
   if (node_count >= MAX_NODE_LIMIT)
-    return cpp::unexpected(REG_ESPACE);
+    return Error(REG_ESPACE);
 
-  if ((node_count + 1) * 10 >= hashtable.size() * 7) {
+  if (node_count >= max_hashtable_nodes()) {
     if (!grow_hashtable())
-      return cpp::unexpected(REG_ESPACE);
+      return Error(REG_ESPACE);
     bucket = &find_bucket(hashtable, e);
   }
 
-  // 3. Arena Allocation: If no matching node found, allocate a stable slot.
-  if (node_count == block_count * BLOCK_SIZE) {
+  // Arena Allocation: If no matching node found, allocate a stable slot.
+  if (node_count == block_count * NODES_PER_BLOCK) {
     if (!allocate_block())
-      return cpp::unexpected(REG_ESPACE);
+      return Error(REG_ESPACE);
   }
 
-  // 4. Node Initialisation: Copy the structural definition into the arena.
-  ExprId new_id = static_cast<ExprId>(++node_count);
+  // Node Initialisation: Copy the structural definition into the arena.
+  ++node_count;
+  ExprId new_id = static_cast<ExprId>(node_count);
   slot_at(new_id) = e;
   *bucket = new_id;
   return new_id;
 }
 
-cpp::expected<ExprId, int> ExprPool::empty_set() {
+ErrorOr<ExprId> ExprPool::empty_set() {
   if (!ensure_initialized())
-    return cpp::unexpected(REG_ESPACE);
+    return Error(REG_ESPACE);
   return EMPTY_SET_ID;
 }
-cpp::expected<ExprId, int> ExprPool::empty_str() {
+ErrorOr<ExprId> ExprPool::empty_str() {
   if (!ensure_initialized())
-    return cpp::unexpected(REG_ESPACE);
+    return Error(REG_ESPACE);
   return EMPTY_STR_ID;
 }
-cpp::expected<ExprId, int> ExprPool::make_lit(char c) {
+ErrorOr<ExprId> ExprPool::make_lit(char c) {
   return intern(Expr::make_literal(c));
 }
 
-cpp::expected<ExprId, int> ExprPool::make_concat(ExprId l, ExprId r) {
+ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
   if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
-    return cpp::unexpected(REG_BADPAT);
+    return Error(REG_BADPAT);
   // Apply basic algebraic identities for concatenation:
-  // 1. Ø · R = R · Ø = Ø (Identity: null set)
+  // Ø · R = R · Ø = Ø (Identity: null set)
   if (l == EMPTY_SET_ID || r == EMPTY_SET_ID)
     return empty_set();
-  // 2. ε · R = R · ε = R (Identity: empty string)
+  // ε · R = R · ε = R (Identity: empty string)
   if (l == EMPTY_STR_ID)
     return r;
   if (r == EMPTY_STR_ID)
     return l;
   return intern(Expr::make_concat(l, r, is_nullable(l) && is_nullable(r)));
 }
-cpp::expected<ExprId, int> ExprPool::make_alt(ExprId l, ExprId r) {
+ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
-    return cpp::unexpected(REG_BADPAT);
+    return Error(REG_BADPAT);
   // Apply basic algebraic identities for alternation:
-  // 1. Ø | R = R | Ø = R (Identity: null set)
+  // Ø | R = R | Ø = R (Identity: null set)
   if (l == EMPTY_SET_ID)
     return r;
   if (r == EMPTY_SET_ID)
     return l;
-  // 2. R | R = R (Idempotency)
+  // R | R = R (Idempotency)
   if (l == r)
     return l;
   if (l > r)

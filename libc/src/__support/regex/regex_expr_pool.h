@@ -15,8 +15,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_REGEX_REGEX_EXPR_POOL_H
 
 #include "src/__support/CPP/array.h"
-#include "src/__support/CPP/expected.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/error_or.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/regex/regex_ast.h"
@@ -37,13 +37,13 @@ class ExprPool {
   ///
   /// Blocks are allocated on demand to avoid large contiguous allocations.
   struct Block {
-    /// 32 nodes * 16B = 512B per block (8 cache lines).
-    static constexpr size_t BLOCK_SIZE = 32;
+    /// Number of Expr nodes stored in each block (32 nodes * 16B = 512B).
+    static constexpr size_t NODES_PER_BLOCK = 32;
     /// The actual storage for Expr nodes.
-    cpp::array<Expr, BLOCK_SIZE> nodes{};
+    cpp::array<Expr, NODES_PER_BLOCK> nodes{};
   };
 
-  static constexpr size_t BLOCK_SIZE = Block::BLOCK_SIZE;
+  static constexpr size_t NODES_PER_BLOCK = Block::NODES_PER_BLOCK;
   /// Initial directory capacity for 8 blocks (64B), holding up to 256 nodes
   /// before directory growth.
   static constexpr size_t INITIAL_BLOCKS_CAPACITY = 8;
@@ -51,6 +51,9 @@ class ExprPool {
   /// unique nodes at 70% max load factor while keeping initial pool footprint
   /// at 512B + 64B + 256B = 832B (< 1 KiB).
   static constexpr size_t INITIAL_HASH_CAPACITY = 64;
+  /// Grow the hash table when occupancy reaches 70% to keep linear-probing
+  /// chains short.
+  static constexpr double MAX_LOAD_FACTOR = 0.7;
 
   /// The maximum number of nodes allowed in the pool to prevent memory
   /// exhaustion during compilation of highly complex or maliciously crafted
@@ -76,11 +79,17 @@ class ExprPool {
     return blocks.first(block_count);
   }
 
+  /// Maximum number of nodes the current hash table can hold before rehashing.
+  size_t max_hashtable_nodes() const {
+    return static_cast<size_t>(static_cast<double>(hashtable.size()) *
+                               MAX_LOAD_FACTOR);
+  }
+
   /// Single choke point mapping a 1-based ExprId to its 2D block/node slot.
   Expr &slot_at(ExprId id) const {
     LIBC_ASSERT(id != INVALID_EXPR_ID && id <= node_count);
     size_t idx = static_cast<size_t>(id - 1);
-    return blocks[idx / BLOCK_SIZE]->nodes[idx % BLOCK_SIZE];
+    return blocks[idx / NODES_PER_BLOCK]->nodes[idx % NODES_PER_BLOCK];
   }
 
   ExprId &find_bucket(cpp::span<ExprId> table, const Expr &e) const;
@@ -97,7 +106,7 @@ class ExprPool {
   /// \param e A structural definition (proto-node) to intern.
   /// \returns The ExprId of the unique, stable instance in the arena,
   ///          or REG_ESPACE on failure.
-  cpp::expected<ExprId, int> intern(Expr e);
+  ErrorOr<ExprId> intern(Expr e);
 
 public:
   constexpr ExprPool() = default;
@@ -116,27 +125,27 @@ public:
   }
 
   // TODO: Use fluent interface (and_then, transform) for these factories once
-  // implemented in cpp::expected.
+  // implemented in ErrorOr / cpp::expected.
 
   /// Returns an EmptySet node.
-  cpp::expected<ExprId, int> empty_set();
+  ErrorOr<ExprId> empty_set();
   /// Returns an EmptyStr node.
-  cpp::expected<ExprId, int> empty_str();
+  ErrorOr<ExprId> empty_str();
   /// Creates or returns an existing Literal node for the given character.
-  cpp::expected<ExprId, int> make_lit(char c);
+  ErrorOr<ExprId> make_lit(char c);
   /// Normalizing factory for Concatenation (L · R).
   ///
   /// Applies algebraic simplifications before interning:
   /// - (Ø · R) or (R · Ø) => Ø
   /// - (ε · R) or (R · ε) => R
-  cpp::expected<ExprId, int> make_concat(ExprId l, ExprId r);
+  ErrorOr<ExprId> make_concat(ExprId l, ExprId r);
 
   /// Normalizing factory for Alternation (L | R).
   ///
   /// Applies algebraic simplifications before interning:
   /// - (Ø | R) or (R | Ø) => R
   /// - (R | R) => R (Idempotency)
-  cpp::expected<ExprId, int> make_alt(ExprId l, ExprId r);
+  ErrorOr<ExprId> make_alt(ExprId l, ExprId r);
 };
 
 } // namespace regex
