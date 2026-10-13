@@ -153,6 +153,9 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         # should have been read from the 'symtab' DataCacheFile.
         for addrs in memory_read_addrs:
             for addr in addrs:
+
+                # Check that the address isn't in the range of the
+                # mach-o header and load commands.
                 if addr >= exe_header_start and addr < exe_header_end:
                     print(
                         "Address 0x%x was read from a.out's Mach-O header and load commands.  It should have been retrieved from the 'headerbytes' DataFileCache file."
@@ -161,7 +164,10 @@ class MemoryReadModuleSymtabTestCase(TestBase):
                     if self.TraceOn():
                         self.runCmd("target modules dump sections a.out")
                         print("Read of address 0x%x is within Mach-O header" % addr)
-                self.assertFalse(addr >= linkedit_startaddr and addr < linkedit_endaddr)
+                self.assertFalse(addr >= exe_header_start and addr < exe_header_end)
+
+                # Check that the address isn't in the range of the
+                # LINKEDIT segment.
                 if addr >= linkedit_startaddr and addr < linkedit_endaddr:
                     print(
                         "Address 0x%x was read from a.out's __LINKEDIT; all symbol table information should have been retrieved from DataFileCache of it."
