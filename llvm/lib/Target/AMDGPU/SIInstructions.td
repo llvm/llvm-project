@@ -2103,8 +2103,8 @@ let True16Predicate = UseRealTrue16Insts,
   def : GCNPat<(bf16 (AMDGPUclamp (VOP3Mods bf16:$src0, i32:$src0_modifiers))),
   (EXTRACT_SUBREG
     (V_PK_MAX_NUM_BF16
-      $src0_modifiers, (REG_SEQUENCE VGPR_32, $src0, lo16, (bf16 (IMPLICIT_DEF)), hi16),
-      $src0_modifiers, (REG_SEQUENCE VGPR_32, $src0, lo16, (bf16 (IMPLICIT_DEF)), hi16),
+      $src0_modifiers, (lo16_to_vgpr32 $src0),
+      $src0_modifiers, (lo16_to_vgpr32 $src0),
       DSTCLAMP.ENABLE), lo16)
   >;
 
@@ -2471,8 +2471,8 @@ def : GCNPat <
 def : GCNPat <
   (DivergentBinFrag<fcopysign> fp16vt:$src0, fp16vt:$src1),
   (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
-    (REG_SEQUENCE VGPR_32, VGPR_16:$src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
-    (REG_SEQUENCE VGPR_32, VGPR_16:$src1, lo16, (i16 (IMPLICIT_DEF)), hi16)), lo16)
+    (lo16_to_vgpr32 VGPR_16:$src0),
+    (lo16_to_vgpr32 VGPR_16:$src1)), lo16)
 >;
 
 // TODO: Scalar case for 0 magnitude special case
@@ -2485,7 +2485,7 @@ def : GCNPat <
 def : GCNPat <
   (fcopysign f32:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), $src0,
-             (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $src1, hi16))
+             (hi16_to_vgpr32 $src1))
 >;
 
 // TODO: Scalar case for 0 magnitude special case
@@ -2501,13 +2501,13 @@ def : GCNPat <
   (REG_SEQUENCE VReg_64,
     (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
     (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), (i32 (EXTRACT_SUBREG $src0, sub1)),
-               (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $src1, hi16)), sub1)
+               (hi16_to_vgpr32 $src1)), sub1)
 >;
 
 def : GCNPat <
   (fcopysign fp16vt:$src0, f32:$src1),
   (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
-             (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+             (lo16_to_vgpr32 $src0),
              (V_LSHRREV_B32_e64 (i32 16), $src1)), lo16)
 >;
 
@@ -2521,7 +2521,7 @@ def : GCNPat <
 def : GCNPat <
   (fcopysign fp16vt:$src0, f64:$src1),
   (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
-             (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+             (lo16_to_vgpr32 $src0),
              (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1))), lo16)
 >;
 }
@@ -3161,14 +3161,14 @@ let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (i16 (DivergentSextInreg<i1> i16:$src)),
   (V_BFE_I32_e64
-   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+   (lo16_to_vgpr32 VGPR_16:$src),
    (i32 0), (i32 1))
 >;
 
 def : GCNPat <
   (i16 (DivergentSextInreg<i8> i16:$src)),
   (V_BFE_I32_e64
-   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+   (lo16_to_vgpr32 VGPR_16:$src),
    (i32 0), (i32 8))
 >;
 }
@@ -4000,7 +4000,7 @@ let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 0), (i16 VGPR_16:$src1))),
   (v2i16 (V_LSHLREV_B32_e64 (i32 16),
-    (i32 (REG_SEQUENCE VGPR_32, VGPR_16:$src1, lo16, (i16 (IMPLICIT_DEF)), hi16))))
+    (i32 (lo16_to_vgpr32 VGPR_16:$src1))))
 >;
 
 def : GCNPat <
@@ -4102,7 +4102,7 @@ def : GCNPat <
     (i32 (bitconvert (v2i16 (build_vector (i16 0), (i16 VGPR_16:$src_hi))))),
     i32:$src2)),
   (V_LSHL_OR_B32_e64
-    (i32 (REG_SEQUENCE VGPR_32, VGPR_16:$src_hi, lo16, (i16 (IMPLICIT_DEF)), hi16)),
+    (i32 (lo16_to_vgpr32 VGPR_16:$src_hi)),
     (i32 16), VSrc_b32:$src2)
 >;
 
@@ -4155,11 +4155,11 @@ def : GCNPat <
 >;
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$src0), (Ty undef))),
-  (REG_SEQUENCE VGPR_32, $src0, lo16, (Ty (IMPLICIT_DEF)), hi16)
+  (lo16_to_vgpr32 $src0)
 >;
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty undef), (Ty VGPR_16:$src1))),
-  (REG_SEQUENCE VGPR_32, (Ty (IMPLICIT_DEF)), lo16, (Ty VGPR_16:$src1), hi16)
+  (hi16_to_vgpr32 (Ty VGPR_16:$src1))
 >;
 }
 
@@ -4270,12 +4270,12 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (v2f16 (scalar_to_vector f16:$src0)),
-  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16)
+  (lo16_to_vgpr32 $src0)
 >;
 
 def : GCNPat <
   (v2i16 (scalar_to_vector i16:$src0)),
-  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16)
+  (lo16_to_vgpr32 $src0)
 >;
 
 def : GCNPat <
@@ -4290,7 +4290,7 @@ def : GCNPat <
 
 def : GCNPat <
   (v2bf16 (DivergentUnaryFrag<scalar_to_vector> (bf16 VGPR_16:$src0))),
-  (REG_SEQUENCE VGPR_32, VGPR_16:$src0, lo16, (i16 (IMPLICIT_DEF)), hi16)
+  (lo16_to_vgpr32 VGPR_16:$src0)
 >;
 
 // Unlike the divergent case above, a uniform bf16 value lives in the low 16
