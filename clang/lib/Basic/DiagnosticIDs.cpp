@@ -129,7 +129,13 @@ struct StaticDiagInfoRec {
     return DiagID < RHS.DiagID;
   }
 };
+#ifdef _AIX
+// On AIX, bit-fields are laid out in 4-byte containers regardless of their
+// declared type, which raises the struct's alignment to 4 and pads it to 12.
+static_assert(sizeof(StaticDiagInfoRec) == 12);
+#else
 static_assert(sizeof(StaticDiagInfoRec) == 10);
+#endif
 static_assert(static_cast<unsigned>(diag::Group::NUM_GROUPS) < (1U << 14),
               "too many diagnostic groups for StaticDiagInfoRec");
 
