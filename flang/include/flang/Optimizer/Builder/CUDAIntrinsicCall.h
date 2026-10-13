@@ -75,6 +75,7 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   mlir::Value genMatchAnySync(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <typename OpTy>
   mlir::Value genNVVMTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genOnDevice(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genSyncThreads(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSyncThreadsAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSyncThreadsCount(mlir::Type, llvm::ArrayRef<mlir::Value>);

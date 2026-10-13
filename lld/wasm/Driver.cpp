@@ -1121,8 +1121,11 @@ static void processStubLibraries() {
         }
       }
 
-      // Secondly looks for any symbols with an `importName` that matches
-      for (Symbol *sym : symtab->symbols()) {
+      // Secondly looks for any symbols with an `importName` that matches.
+      // Note: addStubSymbolDeps can add new symbols and reallocate the
+      // underlying symbol vector, invalidating range-for iterators.
+      for (size_t i = 0; i < symtab->symbols().size(); ++i) {
+        Symbol *sym = symtab->symbols()[i];
         if (sym->isUndefined() && sym->importName.has_value()) {
           auto it = stub_file->symbolDependencies.find(sym->importName.value());
           if (it != stub_file->symbolDependencies.end()) {

@@ -1211,12 +1211,6 @@ multiclass VOP1_Real_FULL_t16_and_fake16_gfx13<
        VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_fake16", asmName>;
 }
 
-multiclass VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13_not_gfx1250<bits<9> op, string opName,
-                                                                  string asmName> :
-  VOP1_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
-  VOP1_Real_FULL_with_name<GFX12Not12_50Gen, op, opName, asmName>,
-  VOP1_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
-
 multiclass VOP1_Real_OpSelIsDPP<GFXGen Gen, bits<9> op> : VOP1_Real_e32<Gen, op> {
    defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
    def _e64#Gen.Suffix :
@@ -1280,7 +1274,7 @@ multiclass VOP1_Real_OpSelIsDPP_gfx1250_gfx13<bits<9> op> :
   VOP1_Real_OpSelIsDPP<GFX1250Gen, op>,
   VOP1_Real_OpSelIsDPP<GFX13Gen, op>;
 
-defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13_not_gfx1250<0x06c, "V_CVT_F32_FP8_op_sel", "v_cvt_f32_fp8">;
+defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x06c, "V_CVT_F32_FP8_op_sel", "v_cvt_f32_fp8">;
 defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name<GFX1250Gen, 0x06c, "V_CVT_F32_FP8_gfx1250", "v_cvt_f32_fp8">;
 
 defm V_CVT_F32_BF8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x06d, "V_CVT_F32_BF8_op_sel", "v_cvt_f32_bf8">;
@@ -1647,9 +1641,7 @@ multiclass VOP1_Real_vi <bits<10> op> {
   if !cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtDPP then
     def _dpp_vi :
       VOP_DPP_Real<!cast<VOP1_DPP_Pseudo>(NAME#"_dpp"), SIEncodingFamily.VI>,
-      VOP1_DPPe<op{7-0}, !cast<VOP1_DPP_Pseudo>(NAME#"_dpp")> {
-        let AssemblerPredicate = isGFX8GFX9;
-      }
+      VOP1_DPPe<op{7-0}, !cast<VOP1_DPP_Pseudo>(NAME#"_dpp")>;
 }
 
 defm V_NOP               : VOP1_Real_vi <0x0>;

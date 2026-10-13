@@ -143,8 +143,6 @@ protected:
   bool isExportedSymbol(uint32_t Flags) override;
 };
 
-bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
-                        uint64_t &MinorVer);
 } // namespace llvm::omp::target::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0PROGRAM_H

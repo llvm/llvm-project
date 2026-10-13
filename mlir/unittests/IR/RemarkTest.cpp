@@ -440,6 +440,25 @@ static LogicalResult enableFinalPolicy(MLIRContext &context,
       /*printAsEmitRemarks=*/false);
 }
 
+// The final policy emits remarks in creation order. A later report of an
+// identity replaces the earlier one and takes its own position.
+TEST(Remark, TestRemarkFinalOrder) {
+  std::vector<std::string> emitted;
+  {
+    MLIRContext context;
+    ASSERT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
+    Location locA = FileLineColLoc::get(&context, "test.cpp", 2, 5);
+    Location locB = FileLineColLoc::get(&context, "test.cpp", 1, 5);
+    auto opts = remark::RemarkOpts::name("Unroller").category("LoopUnroll");
+
+    remark::passed(locA, opts) << "A first";
+    remark::passed(locB, opts) << "B";
+    // The function name is not part of the identity.
+    remark::passed(locA, opts.function("other")) << "A last";
+  }
+  EXPECT_THAT(emitted, ElementsAre("Unroller: B", "Unroller: A last"));
+}
+
 // finalize() drains the stored remarks. mlir-opt calls it explicitly and the
 // engine destructor calls it again; each call emits only the remarks reported
 // since the previous one, and an identity drained by one call can be reported
@@ -457,8 +476,7 @@ TEST(Remark, TestRemarkFinalDrains) {
     remark::passed(loc, first) << "first";
     remark::passed(loc, second) << "second";
     policy->finalize();
-    EXPECT_THAT(emitted,
-                UnorderedElementsAre("First: first", "Second: second"));
+    EXPECT_THAT(emitted, ElementsAre("First: first", "Second: second"));
 
     // Nothing pending: a repeated call emits nothing.
     policy->finalize();
@@ -469,8 +487,8 @@ TEST(Remark, TestRemarkFinalDrains) {
     remark::passed(loc, first) << "first again";
     EXPECT_EQ(emitted.size(), 2u);
   }
-  ASSERT_EQ(emitted.size(), 3u);
-  EXPECT_EQ(emitted[2], "First: first again");
+  EXPECT_THAT(emitted, ElementsAre("First: first", "Second: second",
+                                   "First: first again"));
 }
 
 // A RelatedTo link only resolves between remarks drained by the same
@@ -775,4 +793,41 @@ TEST(Remark, TestRemarkLinking) {
   EXPECT_THAT(errOut, HasSubstr("vectorized loop"));
 }
 
+TEST(Remark, TestNestedLocation) {
+  MLIRContext context;
+  Location fileLoc = FileLineColLoc::get(&context, "test.mlir", 42, 7);
+  Location otherLoc = FileLineColLoc::get(&context, "other.mlir", 9, 3);
+  Location nameLoc = NameLoc::get(StringAttr::get(&context, "name"), fileLoc);
+  Location fusedLoc = FusedLoc::get(&context, {nameLoc, otherLoc});
+  Location callSiteLoc = CallSiteLoc::get(nameLoc, otherLoc);
+
+  std::pair<const char *, Location> cases[] = {{"NameLoc", nameLoc},
+                                               {"FusedLoc", fusedLoc},
+                                               {"CallSiteLoc", callSiteLoc}};
+  for (auto [kind, loc] : cases) {
+    SCOPED_TRACE(kind);
+    remark::detail::OptRemarkPass remark(loc, remark::RemarkOpts::name("R"));
+
+    llvm::remarks::Remark llvmRemark = remark.generateRemark();
+    ASSERT_TRUE(llvmRemark.Loc.has_value());
+    EXPECT_EQ(llvmRemark.Loc->SourceFilePath, "test.mlir");
+    EXPECT_EQ(llvmRemark.Loc->SourceLine, 42u);
+    EXPECT_EQ(llvmRemark.Loc->SourceColumn, 7u);
+
+    std::string printed;
+    llvm::raw_string_ostream os(printed);
+    remark.print(os, /*printLocation=*/true);
+    EXPECT_THAT(printed, HasSubstr(" @\"test.mlir\":42:7"));
+  }
+
+  // Without a file location inside, the remark has no source location.
+  remark::detail::OptRemarkPass remark(
+      NameLoc::get(StringAttr::get(&context, "name")),
+      remark::RemarkOpts::name("R"));
+  EXPECT_EQ(remark.generateRemark().Loc->SourceFilePath, "<unknown file>");
+  std::string printed;
+  llvm::raw_string_ostream os(printed);
+  remark.print(os, /*printLocation=*/true);
+  EXPECT_THAT(printed, Not(HasSubstr(" @")));
+}
 } // namespace

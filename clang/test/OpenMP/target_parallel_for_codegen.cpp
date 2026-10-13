@@ -4275,7 +4275,7 @@ int bar(int n){
 // CHECK9-NEXT:    [[ADD12:%.*]] = fadd double [[CONV11]], 1.000000e+00
 // CHECK9-NEXT:    [[CONV13:%.*]] = fptrunc double [[ADD12]] to float
 // CHECK9-NEXT:    store float [[CONV13]], ptr [[ARRAYIDX10]], align 4
-// CHECK9-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[TMP3]], i64 0, i64 1
+// CHECK9-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr [5 x [10 x double]], ptr [[TMP3]], i64 0, i64 1
 // CHECK9-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX14]], i64 0, i64 2
 // CHECK9-NEXT:    [[TMP22:%.*]] = load double, ptr [[ARRAYIDX15]], align 8
 // CHECK9-NEXT:    [[ADD16:%.*]] = fadd double [[TMP22]], 1.000000e+00
@@ -5135,7 +5135,7 @@ int bar(int n){
 // CHECK11-NEXT:    [[ADD12:%.*]] = fadd double [[CONV11]], 1.000000e+00
 // CHECK11-NEXT:    [[CONV13:%.*]] = fptrunc double [[ADD12]] to float
 // CHECK11-NEXT:    store float [[CONV13]], ptr [[ARRAYIDX10]], align 4
-// CHECK11-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[TMP3]], i32 0, i32 1
+// CHECK11-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr [5 x [10 x double]], ptr [[TMP3]], i32 0, i32 1
 // CHECK11-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX14]], i32 0, i32 2
 // CHECK11-NEXT:    [[TMP22:%.*]] = load double, ptr [[ARRAYIDX15]], align 8
 // CHECK11-NEXT:    [[ADD16:%.*]] = fadd double [[TMP22]], 1.000000e+00

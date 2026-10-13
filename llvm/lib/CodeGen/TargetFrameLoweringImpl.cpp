@@ -37,8 +37,7 @@ bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const 
 }
 
 bool TargetFrameLowering::enableCFIFixup(const MachineFunction &MF) const {
-  return MF.needsFrameMoves() &&
-         !MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+  return !MF.usesWindowsUnwindInfo() && MF.needsFrameMoves();
 }
 
 /// Returns the displacement from the frame register to the stack
