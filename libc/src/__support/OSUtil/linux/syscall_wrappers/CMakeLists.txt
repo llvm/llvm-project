@@ -790,6 +790,21 @@ add_header_library(
 )
 
 add_header_library(
+  lchown
+  HDRS
+    lchown.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.gid_t
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ftruncate
   HDRS
     ftruncate.h
@@ -1053,6 +1068,29 @@ add_header_library(
   fsync
   HDRS
     fsync.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sync
+  HDRS
+    sync.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  syncfs
+  HDRS
+    syncfs.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
@@ -1620,5 +1658,25 @@ add_header_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  exit
+  HDRS
+    exit.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  exit_group
+  HDRS
+    exit_group.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
     libc.src.__support.macros.config
 )

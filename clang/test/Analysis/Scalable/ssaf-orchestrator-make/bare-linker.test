@@ -1,0 +1,46 @@
+
+# REQUIRES: ssaf-orchestrator-make-build
+# REQUIRES: system-darwin, aarch64-registered-target
+# REQUIRES: ssaf-orchestrator-make-sdkroot
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+
+# RUN: cd %t
+# RUN: %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/out -- make \
+# RUN:   | FileCheck %s --check-prefix=STDOUT
+
+# STDOUT: summaries: 3
+# STDOUT: link-unit: {{[^ ]*}}/build/prg
+
+# RUN: cat %t/out/ssaf-artifacts%t/build/prg.summary.json | FileCheck %s --check-prefix=LU
+# LU: "type": "LUSummary"
+
+# RUN: cat %t/out/build-graph%t/build/prg.buildstep.json \
+# RUN:   | FileCheck %s --check-prefix=UNIT
+# UNIT-DAG: {{[^ ]*}}/build/main.o
+# UNIT-DAG: {{[^ ]*}}/build/helper.o
+
+# RUN: ls %t/build/prg
+
+#--- Makefile
+CXX = clang++
+LDFLAGS = -lSystem -syslibroot $(SDKROOT) -arch arm64 -platform_version macos 15.0 15.0
+all: build/prg
+build/%.o: src/%.cpp
+	$(CXX) -arch arm64 -c -o $@ $<
+build/prg: build/main.o build/helper.o
+	$(LD) -o $@ build/main.o build/helper.o $(LDFLAGS) -lc++
+
+#--- src/helper.cpp
+int helper(int *p) { return p[0]; }
+
+#--- src/main.cpp
+int helper(int *p);
+int main() {
+  int values[2] = {1, 2};
+  return helper(values);
+}
