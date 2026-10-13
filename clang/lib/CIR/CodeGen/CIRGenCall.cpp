@@ -204,6 +204,23 @@ getZeroCallUsedRegsKindStr(llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind k) {
   llvm_unreachable("Unknown kind?");
 }
 
+std::optional<cir::FramePointerKind>
+CIRGenModule::getFramePointerKind(CodeGenOptions::FramePointerKind kind) {
+  switch (kind) {
+  case CodeGenOptions::FramePointerKind::None:
+    return std::nullopt;
+  case CodeGenOptions::FramePointerKind::Reserved:
+    return cir::FramePointerKind::Reserved;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    return cir::FramePointerKind::NonLeafNoReserve;
+  case CodeGenOptions::FramePointerKind::NonLeaf:
+    return cir::FramePointerKind::NonLeaf;
+  case CodeGenOptions::FramePointerKind::All:
+    return cir::FramePointerKind::All;
+  }
+  llvm_unreachable("Unknown frame pointer kind");
+}
+
 /// Add default attributes to a function, which have merge semantics under
 /// -mlink-builtin-bitcode and should not simply overwrite any existing
 /// attributes in the linked library.
@@ -235,7 +252,11 @@ static void addTrivialDefaultFunctionAttributes(
       attrs.set(cir::CIRDialect::getTrapFuncNameAttrName(),
                 mlir::StringAttr::get(mlirCtx, codeGenOpts.TrapFuncName));
   } else {
-    // TODO(cir): Set frame pointer attribute here.
+    if (std::optional<cir::FramePointerKind> kind =
+            CIRGenModule::getFramePointerKind(codeGenOpts.getFramePointer()))
+      attrs.set(cir::CIRDialect::getFramePointerAttrName(),
+                cir::FramePointerKindAttr::get(mlirCtx, *kind));
+
     // TODO(cir): a number of other attribute 1-offs based on codegen/lang opts
     // should be done here: less-recise-fpmad null-pointer-is-valid
     // no-trapping-math
