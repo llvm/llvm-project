@@ -3004,7 +3004,9 @@ damage by making the value deterministic. Use `-Wuninitialized`, or a tool like
 
 Individual variables can opt out with `__attribute__((uninitialized))`, and
 whole functions with `__attribute__((no_trivial_auto_var_init))`.
-`-ftrivial-auto-var-init-max-size=` skips variables above a given size, and
+`-ftrivial-auto-var-init-max-size=` only initializes variables smaller than
+the given size (including struct fields smaller than the given size,
+even if the struct as a whole is larger than the given size), and
 `-ftrivial-auto-var-init-stop-after=` stops after a given number of variables;
 both exist to bound code size while triaging.
 
