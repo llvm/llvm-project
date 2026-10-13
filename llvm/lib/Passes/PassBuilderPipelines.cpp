@@ -873,14 +873,17 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   if (Opts.attributor_enable & AttributorRunOption::CGSCC)
     MainCGPipeline.addPass(AttributorCGSCCPass());
-  else if (Opts.attributor_enable & AttributorRunOption::CGSCC_LIGHT)
-    MainCGPipeline.addPass(AttributorLightCGSCCPass());
 
   // Deduce function attributes. We do another run of this after the function
   // simplification pipeline, so this only needs to run when it could affect the
   // function simplification pipeline, which is only the case with recursive
   // functions.
-  MainCGPipeline.addPass(PostOrderFunctionAttrsPass(/*SkipNonRecursive*/ true));
+  if (Opts.attributor_enable & AttributorRunOption::CGSCC_LIGHT) {
+    MainCGPipeline.addPass(AttributorLightCGSCCPass());
+  } else {
+    MainCGPipeline.addPass(
+        PostOrderFunctionAttrsPass(/*SkipNonRecursive*/ true));
+  }
 
   // When at O3 add argument promotion to the pass pipeline.
   // FIXME: It isn't at all clear why this should be limited to O3.
@@ -902,7 +905,10 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   // Finally, deduce any function attributes based on the fully simplified
   // function.
-  MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
+  if (Opts.attributor_enable & AttributorRunOption::CGSCC_LIGHT)
+    MainCGPipeline.addPass(AttributorLightCGSCCPass());
+  else
+    MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
 
   // Mark that the function is fully simplified and that it shouldn't be
   // simplified again if we somehow revisit it due to CGSCC mutations unless
@@ -1391,7 +1397,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
   // FIXME: Is this really an optimization rather than a canonicalization?
-  MPM.addPass(ReversePostOrderFunctionAttrsPass());
+  if (Opts.attributor_enable & AttributorRunOption::MODULE_LIGHT)
+    MPM.addPass(AttributorLightPass());
+  else
+    MPM.addPass(ReversePostOrderFunctionAttrsPass());
 
   // Do a post inline PGO instrumentation and use pass. This is a context
   // sensitive PGO pass. We don't want to do this in LTOPreLink phrase as
@@ -1519,7 +1528,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(DivRemPairsPass());
 
   // Merge adjacent icmps into memcmp, then expand memcmp to loads/compares.
-  // TODO: move this furter up so that it can be optimized by GVN, etc.
+  // TODO: move this further up so that it can be optimized by GVN, etc.
   if (Opts.enable_mergeicmps)
     OptimizePM.addPass(MergeICmpsPass());
   OptimizePM.addPass(ExpandMemCmpPass());
@@ -1953,7 +1962,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Promoting by-reference arguments to by-value exposes more constants to
     // IPSCCP.
     CGSCCPassManager CGPM;
-    CGPM.addPass(PostOrderFunctionAttrsPass());
+    if (Opts.attributor_enable & AttributorRunOption::CGSCC_LIGHT)
+      CGPM.addPass(AttributorLightCGSCCPass());
+    else
+      CGPM.addPass(PostOrderFunctionAttrsPass());
     CGPM.addPass(ArgumentPromotionPass());
     CGPM.addPass(
         createCGSCCToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
@@ -1972,7 +1984,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
   // FIXME: Is this really an optimization rather than a canonicalization?
-  MPM.addPass(ReversePostOrderFunctionAttrsPass());
+  if (Opts.attributor_enable & AttributorRunOption::MODULE_LIGHT)
+    MPM.addPass(AttributorLightPass());
+  else
+    MPM.addPass(ReversePostOrderFunctionAttrsPass());
 
   // Use in-range annotations on GEP indices to split globals where beneficial.
   MPM.addPass(GlobalSplitPass());
@@ -2111,8 +2126,13 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM),
                                                 PTO.EagerlyInvalidateAnalyses));
 
-  MPM.addPass(
-      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+  if (Opts.attributor_enable & AttributorRunOption::CGSCC_LIGHT) {
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(AttributorLightCGSCCPass()));
+  } else {
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+  }
 
   // Require the GlobalsAA analysis for the module so we can query it within
   // MainFPM.
@@ -2204,6 +2224,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // passes to avoid re-sinking, but before SimplifyCFG because it can allow
   // flattening of blocks.
   LateFPM.addPass(DivRemPairsPass());
+
+  // Merge adjacent icmps into memcmp, then expand memcmp to loads/compares.
+  // TODO: move this further up so that it can be optimized by GVN, etc.
+  if (Opts.enable_mergeicmps)
+    LateFPM.addPass(MergeICmpsPass());
+  LateFPM.addPass(ExpandMemCmpPass());
 
   // Delete basic blocks, which optimization passes may have killed.
   LateFPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
