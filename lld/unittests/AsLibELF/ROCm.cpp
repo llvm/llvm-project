@@ -22,10 +22,21 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
+#include <algorithm>
 
-extern const char *TestMainArgv0;
+static std::string expand(const char *path) {
+  if (!llvm::StringRef(path).contains("%"))
+    return std::string(path);
+
+  llvm::SmallString<256> thisPath;
+  thisPath.append(getenv("LLD_SRC_DIR"));
+  llvm::sys::path::append(thisPath, "unittests", "AsLibELF");
+
+  std::string expanded(path);
+  expanded.replace(expanded.find("%S"), 2, thisPath.data(), thisPath.size());
+  return expanded;
+}
 
 LLD_HAS_DRIVER(elf)
 
@@ -36,7 +47,7 @@ static bool lldInvoke(const char *inPath, const char *outPath) {
   return !s.retCode && s.canRunAgain;
 }
 
-static bool runLinker(llvm::StringRef input) {
+static bool runLinker(const char *path) {
   // Create a temp file for HSA code object.
   int tempHsacoFD = -1;
   llvm::SmallString<128> tempHsacoFilename;
@@ -46,20 +57,18 @@ static bool runLinker(llvm::StringRef input) {
   }
   llvm::FileRemover cleanupHsaco(tempHsacoFilename);
   // Invoke lld. Expect a true return value from lld.
-  llvm::SmallString<128> inputPath =
-      llvm::unittest::getInputFileDirectory(TestMainArgv0);
-  llvm::sys::path::append(inputPath, input);
-  if (!lldInvoke(inputPath.c_str(), tempHsacoFilename.c_str())) {
-    llvm::errs() << "Failed to link: " << inputPath << "\n";
+  std::string expandedPath = expand(path);
+  if (!lldInvoke(expandedPath.data(), tempHsacoFilename.c_str())) {
+    llvm::errs() << "Failed to link: " << expandedPath << "\n";
     return false;
   }
   return true;
 }
 
 TEST(AsLib, ROCm) {
-  EXPECT_TRUE(runLinker("kernel1.o"));
-  EXPECT_TRUE(runLinker("kernel2.o"));
-  EXPECT_TRUE(runLinker("kernel1.o"));
-  EXPECT_TRUE(runLinker("kernel2.o"));
+  EXPECT_TRUE(runLinker("%S/Inputs/kernel1.o"));
+  EXPECT_TRUE(runLinker("%S/Inputs/kernel2.o"));
+  EXPECT_TRUE(runLinker("%S/Inputs/kernel1.o"));
+  EXPECT_TRUE(runLinker("%S/Inputs/kernel2.o"));
 }
 #endif

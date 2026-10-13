@@ -8,9 +8,9 @@ define void @foo(i32 %n, i32 %N) {
 ; SAMPLING:  %[[VV0:[0-9]+]] = load i16, ptr @__llvm_profile_sampling, align 2
 ; SAMPLING:  %[[VV1:[0-9]+]] = icmp ule i16 %[[VV0]], 199
 ; SAMPLING:  br i1 %[[VV1]], label {{.*}}, label {{.*}}, !prof !0
-; SAMPLING: {{.*}} = load {{.*}} @__profc_foo{{.*}} 3)
+; SAMPLING: {{.*}} = load {{.*}} @__profc_foo{{.*}} 24)
 ; SAMPLING-NEXT: add
-; SAMPLING-NEXT: store {{.*}}@__profc_foo{{.*}}3)
+; SAMPLING-NEXT: store {{.*}}@__profc_foo{{.*}} 24)
 bb:
   %tmp = add nsw i32 %n, 1
   %tmp1 = add nsw i32 %n, -1
@@ -63,12 +63,12 @@ bb12:
 ; PROMO: %[[CHECK1:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}}
 ; PROMO-NEXT: add {{.*}} %[[CHECK1]], %[[LIVEOUT1]]
 ; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}
-; PROMO-NEXT: %[[CHECK2:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}} 1)
+; PROMO-NEXT: %[[CHECK2:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}} 8)
 ; PROMO-NEXT: add {{.*}} %[[CHECK2]], %[[LIVEOUT2]]
-; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}1)
-; PROMO-NEXT: %[[CHECK3:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}} 2)
+; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}} 8)
+; PROMO-NEXT: %[[CHECK3:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}} 16)
 ; PROMO-NEXT: add {{.*}} %[[CHECK3]], %[[LIVEOUT3]]
-; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}2)
+; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}} 16)
 ; PROMO-NOT: @__profc_foo{{.*}})
 
 }

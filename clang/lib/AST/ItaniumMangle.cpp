@@ -578,6 +578,7 @@ private:
   void mangleFloatLiteral(QualType T, const llvm::APFloat &V);
   void mangleFixedPointLiteral();
   void mangleNullPointer(QualType T);
+  void mangleReflection(ReflectionKind Kind, const void *OpaqueOperand);
 
   void mangleMemberExprBase(const Expr *base, bool isArrow);
   void mangleMemberExpr(const Expr *base, bool isArrow,
@@ -1283,6 +1284,66 @@ void CXXNameMangler::mangleNullPointer(QualType T) {
   Out << "0E";
 }
 
+void CXXNameMangler::mangleReflection(ReflectionKind Kind,
+                                      const void *OpaqueOperand) {
+  // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
+  // TODO(Reflection): add support for remaining items in the grammar below
+
+  // <reflection> ::= nu                                 # null reflection
+  //              ::= vl <expression>                    # value
+  //              ::= ob <expression>                    # object
+  //              ::= vr <variable name>                 # variable
+  //              ::= sb <sb name>                       # structured binding
+  //              ::= fn <function encoding>             # function
+  //              ::= pa [ <nonnegative number> ] _ <encoding>  # function
+  //                                                              parameter
+  //              ::= en <prefix> <unqualified-name>     # enumerator
+  //              ::= an [ <nonnegative number> ] _      # annotation
+  //              ::= ta <alias prefix>                  # type alias
+  //              ::= ty <type>                          # type
+  //              ::= dm <prefix> <unqualified-name>     # non-static data
+  //                                                       member
+  //              ::= un <prefix> [ <nonnegative number> ] _ # unnamed bit-field
+  //              ::= ct [ <prefix> ] <unqualified-name> # class template
+  //              ::= ft [ <prefix> ] <unqualified-name> # function template
+  //              ::= vt [ <prefix> ] <unqualified-name> # variable template
+  //              ::= at [ <prefix> ] <unqualified-name> # alias template
+  //              ::= co [ <prefix> ] <unqualified-name> # concept
+  //              ::= na [ <prefix> ] <unqualified-name> # namespace alias
+  //              ::= ns [ <prefix> ] <unqualified-name> # namespace
+  //              ::= ng                                 # ^^::
+  //              ::= ba [ <nonnegative number> ] _ <type> # direct base class
+  //                                                         relationship
+  //              ::= ds <type> _ [ <unqualified-name> ] _
+  //                  [ <alignment number> ] _ [ <bit-width number> ] _
+  //                  [ n ]                              # data member
+  //                  description
+
+  Out << "LDm";
+  switch (Kind) {
+  case ReflectionKind::Null:
+    Out << "nu";
+    break;
+  case ReflectionKind::Type: {
+    const auto *TSI = static_cast<const TypeSourceInfo *>(OpaqueOperand);
+    QualType QT = TSI->getType();
+
+    if (isTypeAliasAsReflectionName(QT)) {
+      if (const auto *TDT = QT->getAs<TypedefType>()) {
+        Out << "ta";
+        mangleName(TDT->getDecl()->getCanonicalDecl());
+        break;
+      }
+    }
+
+    Out << "ty";
+    mangleType(QT);
+    break;
+  }
+  }
+  Out << 'E';
+}
+
 void CXXNameMangler::mangleNumber(const llvm::APSInt &Value) {
   if (Value.isSigned() && Value.isNegative()) {
     Out << 'n';
@@ -1706,14 +1767,8 @@ void CXXNameMangler::mangleUnqualifiedName(
     break;
 
   case DeclarationName::CXXOperatorName:
-    if (ND && Arity == UnknownArity) {
-      Arity = cast<FunctionDecl>(ND)->getNumParams();
-
-      // If we have a member function, we need to include the 'this' pointer.
-      if (const auto *MD = dyn_cast<CXXMethodDecl>(ND))
-        if (MD->isImplicitObjectMemberFunction())
-          Arity++;
-    }
+    if (ND && Arity == UnknownArity)
+      Arity = cast<FunctionDecl>(ND)->getNumParamsIncludingThis();
     [[fallthrough]];
   case DeclarationName::CXXConversionFunctionName:
   case DeclarationName::CXXLiteralOperatorName:
@@ -3195,10 +3250,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   // UNSUPPORTED:    ::= De # IEEE 754r decimal floating point (128 bits)
   // UNSUPPORTED:    ::= Df # IEEE 754r decimal floating point (32 bits)
   //                 ::= Dh # IEEE 754r half-precision floating point (16 bits)
-  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point type _FloatN (N bits);
+  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point
+  //                 type _FloatN (N bits);
   //                 ::= Di # char32_t
   //                 ::= Ds # char16_t
   //                 ::= Dn # std::nullptr_t (i.e., decltype(nullptr))
+  //                 ::= Dm # std::meta::info (i.e., decltype(^^int))
   //                 ::= [DS] DA  # N1169 fixed-point [_Sat] T _Accum
   //                 ::= [DS] DR  # N1169 fixed-point [_Sat] T _Fract
   //                 ::= u <source-name>    # vendor extended type
@@ -3467,6 +3524,10 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << TI->getIbm128Mangling();
     break;
   }
+  case BuiltinType::MetaInfo:
+    // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
+    Out << "Dm";
+    break;
   case BuiltinType::NullPtr:
     Out << "Dn";
     break;
@@ -3571,6 +3632,11 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     mangleVendorType(#Name);                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case BuiltinType::Id:                                                        \
+    mangleVendorType(#Name);                                                   \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case BuiltinType::Id:                                                        \
     mangleVendorType(Name);                                                    \
@@ -4989,6 +5055,7 @@ void CXXNameMangler::mangleExpression(const Expr *E, unsigned Arity,
   //                ::= L <pointer type> 0 E         # null pointer template argument
   //                ::= L <type> <real-part float> _ <imag-part float> E    # complex floating point literal (C99); not used by clang
   //                ::= L <mangled-name> E           # external name
+  //                ::= LDm <reflection> E           # C++26 reflection value
   // clang-format on
   QualType ImplicitlyConvertedToType;
 
@@ -5068,8 +5135,8 @@ recurse:
     goto recurse;
 
   case Expr::CXXReflectExprClass: {
-    // TODO(Reflection): implement this after introducing std::meta::info
-    assert(false && "unimplemented");
+    const CXXReflectExpr *RE = cast<CXXReflectExpr>(E);
+    mangleReflection(RE->getKind(), RE->getOpaqueValue());
     break;
   }
 
@@ -6620,6 +6687,9 @@ static bool isZeroInitialized(QualType T, const APValue &V) {
 
   case APValue::MemberPointer:
     return !V.getMemberPointerDecl();
+
+  case APValue::Reflection:
+    return !V.getReflectionOpaqueOperand();
   }
 
   llvm_unreachable("Unhandled APValue::ValueKind enum");
@@ -7013,6 +7083,12 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
       break;
     }
 
+    break;
+  }
+
+  case APValue::Reflection: {
+    mangleReflection(V.getReflectionOperandKind(),
+                     V.getReflectionOpaqueOperand());
     break;
   }
 

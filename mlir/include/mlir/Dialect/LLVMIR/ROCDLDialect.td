@@ -18,7 +18,6 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 def ROCDL_Dialect : Dialect {
   let name = "rocdl";
   let cppNamespace = "::mlir::ROCDL";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let dependentDialects = ["LLVM::LLVMDialect"];
   let summary = "Dialect for wrapping LLVM AMDGPU backend intrinsics and attributes";
   let hasOperationAttrVerify = 1;
@@ -160,7 +159,7 @@ def ROCDL_Dialect : Dialect {
      "::mlir::DenseI32ArrayAttr":$reqd_work_group_size,
      "::mlir::StringAttr":$flat_work_group_size,
      "::mlir::IntegerAttr":$max_flat_work_group_size,
-     "::mlir::IntegerAttr":$waves_per_eu,
+     "::mlir::StringAttr":$waves_per_eu,
      "::mlir::BoolAttr":$unsafe_fp_atomics,
      // Boolean attributes for explicitly enabling/disabling xnack or sramecc.
      // Not setting these is a third "default"/"any" state, and not the same as

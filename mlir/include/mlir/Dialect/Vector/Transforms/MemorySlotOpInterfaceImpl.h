@@ -14,7 +14,7 @@ namespace mlir {
 class DialectRegistry;
 
 namespace vector {
-void registerMemorySlotOpInterfaceExternalModels(DialectRegistry &registry);
+void registerMemorySlotExternalModels(DialectRegistry &registry);
 } // namespace vector
 } // namespace mlir
 

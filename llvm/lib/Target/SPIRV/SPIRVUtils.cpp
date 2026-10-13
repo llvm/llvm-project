@@ -227,16 +227,6 @@ void buildOpName(Register Target, StringRef Name,
   }
 }
 
-void buildOpName(Register Target, StringRef Name, MachineInstr &I,
-                 const SPIRVInstrInfo &TII) {
-  if (!Name.empty()) {
-    auto MIB =
-        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpName))
-            .addUse(Target);
-    addStringImm(Name, MIB);
-  }
-}
-
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
                                   ArrayRef<uint32_t> DecArgs,
                                   StringRef StrImm) {
@@ -303,22 +293,25 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
       continue; // Ignored.
     }
     uint32_t Dec = static_cast<uint32_t>(DecorationId->getZExtValue());
-    if (Dec == static_cast<uint32_t>(SPIRV::Decoration::UniformId)) {
-      ConstantInt *ScopeV =
+    if (Dec == static_cast<uint32_t>(SPIRV::Decoration::UniformId) ||
+        Dec == static_cast<uint32_t>(SPIRV::Decoration::AlignmentId) ||
+        Dec == static_cast<uint32_t>(SPIRV::Decoration::MaxByteOffsetId)) {
+      ConstantInt *IdV =
           OpMD->getNumOperands() == 2
               ? mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
               : nullptr;
-      assert(ScopeV && isUInt<32>(ScopeV->getZExtValue()) &&
-             "Expect Scope <id> operand of the UniformId decoration");
+      if (!IdV || !isUInt<32>(IdV->getZExtValue()))
+        report_fatal_error("Expect a single integer <id> operand of the "
+                           "decoration");
       SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
       SPIRVTypeInst SpvTypeInt32 =
           GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
-      Register ScopeReg = GR->buildConstantInt(
-          ScopeV->getZExtValue(), MIRBuilder, SpvTypeInt32, /*EmitIR=*/false);
+      Register IdReg = GR->buildConstantInt(IdV->getZExtValue(), MIRBuilder,
+                                            SpvTypeInt32, /*EmitIR=*/false);
       MIRBuilder.buildInstr(SPIRV::OpDecorateId)
           .addUse(Reg)
           .addImm(Dec)
-          .addUse(ScopeReg);
+          .addUse(IdReg);
       continue;
     }
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate).addUse(Reg).addImm(Dec);
@@ -471,9 +464,9 @@ SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
   auto ScopeID = [&](AtomicScope Scope) {
     return Ctx.getOrInsertSyncScopeID(*getAtomicScopeIRString(TT, Scope));
   };
-  static const llvm::SyncScope::ID SubGroup = ScopeID(AtomicScope::Wavefront);
-  static const llvm::SyncScope::ID WorkGroup = ScopeID(AtomicScope::Workgroup);
-  static const llvm::SyncScope::ID Device = ScopeID(AtomicScope::Device);
+  const llvm::SyncScope::ID SubGroup = ScopeID(AtomicScope::Wavefront);
+  const llvm::SyncScope::ID WorkGroup = ScopeID(AtomicScope::Workgroup);
+  const llvm::SyncScope::ID Device = ScopeID(AtomicScope::Device);
 
   if (Id == llvm::SyncScope::SingleThread)
     return SPIRV::Scope::Invocation;

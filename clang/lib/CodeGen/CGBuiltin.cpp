@@ -4351,6 +4351,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     if (auto *VecTy = QT->getAs<VectorType>())
       QT = VecTy->getElementType();
+    else if (auto *MatTy = QT->getAs<ConstantMatrixType>())
+      QT = MatTy->getElementType();
     if (QT->isIntegerType())
       Result = Builder.CreateBinaryIntrinsic(
           Intrinsic::abs, EmitScalarExpr(E->getArg(0)), Builder.getFalse(),

@@ -27,7 +27,9 @@ bool Context::initGlobalValues() {
   // Register all function and block targets that may be used by indirect calls
   // and branches.
   for (Function &F : M) {
-    if (F.hasAddressTaken()) {
+    if (F.hasAddressTaken(nullptr,
+                          /*IgnoreCallbackUses=*/false,
+                          /*IgnoreAssumeLikeCalls=*/false)) {
       // TODO: Use precise alignment for function pointers if it is necessary.
       auto FuncObj = allocate(0, F.getPointerAlignment(DL).value(), F.getName(),
                               DL.getProgramAddressSpace(), MemInitKind::Zeroed,
@@ -561,7 +563,7 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   assert(Ty->isPointerTy() && "Expect a pointer type");
   // Try to recover provenance from the tag.
   if (IsTagValid) {
-    APInt Tag(NumBitsToExtract, RawTagBits);
+    APInt Tag(NumBits, RawTagBits);
     if (auto Prov = TaggedProvenances.lookup(Tag))
       return Pointer(std::move(Prov), Bits);
   }
@@ -701,11 +703,12 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
   };
   if (Val.isPoison()) {
     for (uint32_t I = 0, E = NewOffsetInBits - OffsetInBits; I < E;) {
-      uint32_t NumBitsInByte = std::min(8 - (OffsetInBits + I) % 8, E - I);
-      assert(((OffsetInBits ^ (OffsetInBits + NumBitsInByte - 1)) & ~7) == 0 &&
+      uint32_t BitsStart = OffsetInBits + I;
+      uint32_t NumBitsInByte = std::min(8 - BitsStart % 8, E - I);
+      assert(((BitsStart ^ (BitsStart + NumBitsInByte - 1)) & ~7) == 0 &&
              "Across byte boundary.");
-      Bytes[(OffsetInBits + I) / 8].poisonBits(static_cast<uint8_t>(
-          ((1U << NumBitsInByte) - 1) << ((OffsetInBits + I) % 8)));
+      Bytes[BitsStart / 8].poisonBits(
+          static_cast<uint8_t>(((1U << NumBitsInByte) - 1) << (BitsStart % 8)));
       I += NumBitsInByte;
     }
   } else if (Ty->isIntegerTy()) {
@@ -1109,6 +1112,10 @@ Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
   if (SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
+  unsigned AddressBW = DL.getAddressSizeInBits(AS);
+  // Make sure the address can be represented.
+  if (!isUIntN(AddressBW, AlignedAddr))
+    return nullptr;
   auto MemObj = makeIntrusiveRefCnt<MemoryObject>(
       AlignedAddr, Size, Name, AS, InitKind, AllocKind, IsIRGlobalValue);
   MemoryObjects[AlignedAddr] = MemObj;

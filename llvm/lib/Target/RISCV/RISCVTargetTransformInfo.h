@@ -72,6 +72,20 @@ class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   InstructionCost getSlideCost(FixedVectorType *Tp, ArrayRef<int> Mask,
                                TTI::TargetCostKind CostKind) const;
 
+  /// Return the type used to cost vzip.vv, whose LMUL represents the
+  /// interleaved destination EMUL. Return an invalid MVT if illegal.
+  MVT getZvzipVZIPCostVT(MVT InterleavedVT) const;
+
+  /// Return the type used to cost vunzipe.v/vunzipo.v, whose LMUL represents
+  /// the interleaved source EMUL. Return an invalid MVT if illegal.
+  MVT getZvzipVUNZIPCostVT(MVT InterleavedVT) const;
+
+  /// If a fixed-length shuffle can be lowered to a vzip.vv instruction,
+  /// return its cost.
+  InstructionCost getVZIPCost(TTI::ShuffleKind Kind, VectorType *DstTy,
+                              VectorType *SrcTy, ArrayRef<int> Mask,
+                              TTI::TargetCostKind CostKind) const;
+
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),

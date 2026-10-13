@@ -119,8 +119,6 @@ namespace llvm {
     ModuleSummaryIndex *Index;
     SlotMapping *Slots;
 
-    SmallVector<Instruction*, 64> InstsWithTBAATag;
-
     /// DIAssignID metadata does not support temporary RAUW so we cannot use
     /// the normal metadata forward reference resolution method. Instead,
     /// non-temporary DIAssignID are attached to instructions (recorded here)

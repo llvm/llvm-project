@@ -2753,11 +2753,15 @@ void ParallelOp::build(
     OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
     ValueRange upperBounds, ValueRange steps, ValueRange initVals,
     function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
-        bodyBuilderFn) {
+        bodyBuilderFn,
+    bool unsignedCmp) {
   result.addOperands(lowerBounds);
   result.addOperands(upperBounds);
   result.addOperands(steps);
   result.addOperands(initVals);
+  if (unsignedCmp)
+    result.addAttribute(getUnsignedCmpAttrName(result.name),
+                        builder.getUnitAttr());
   result.addAttribute(
       ParallelOp::getOperandSegmentSizeAttr(),
       builder.getDenseI32ArrayAttr({static_cast<int32_t>(lowerBounds.size()),
@@ -2787,7 +2791,8 @@ void ParallelOp::build(
 void ParallelOp::build(
     OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
     ValueRange upperBounds, ValueRange steps,
-    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn,
+    bool unsignedCmp) {
   // Only pass a non-null wrapper if bodyBuilderFn is non-null itself. Make sure
   // we don't capture a reference to a temporary by constructing the lambda at
   // function level.
@@ -2800,8 +2805,8 @@ void ParallelOp::build(
   if (bodyBuilderFn)
     wrapper = wrappedBuilderFn;
 
-  build(builder, result, lowerBounds, upperBounds, steps, ValueRange(),
-        wrapper);
+  build(builder, result, lowerBounds, upperBounds, steps, ValueRange(), wrapper,
+        unsignedCmp);
 }
 
 LogicalResult ParallelOp::verify() {
@@ -2869,6 +2874,10 @@ LogicalResult ParallelOp::verify() {
 
 ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
+  if (succeeded(parser.parseOptionalKeyword("unsigned")))
+    result.addAttribute(getUnsignedCmpAttrName(result.name),
+                        builder.getUnitAttr());
+
   // Parse an opening `(` followed by induction variables followed by `)`
   SmallVector<OpAsmParser::Argument, 4> ivs;
   if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren))
@@ -2935,6 +2944,8 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void ParallelOp::print(OpAsmPrinter &p) {
+  if (getUnsignedCmp())
+    p << " unsigned";
   p << " (" << getBody()->getArguments() << ") = (" << getLowerBound()
     << ") to (" << getUpperBound() << ") step (" << getStep() << ")";
   if (!getInitVals().empty())
@@ -3661,7 +3672,7 @@ static bool hasDuplicates(ValueRange args) {
 /// args and op result values accordingly.
 /// Needed to simplify `scf.while` -> `scf.for` uplifting.
 struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(WhileOp loop,
                                 PatternRewriter &rewriter) const override {

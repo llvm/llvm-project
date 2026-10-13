@@ -15,7 +15,7 @@ subroutine omp_task_affinity_elem()
 end subroutine omp_task_affinity_elem
 
 ! CHECK-LABEL: func.func @_QPomp_task_affinity_elem()
-! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFomp_task_affinity_elemEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFomp_task_affinity_elemEa") : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! CHECK: omp.parallel {
 ! CHECK:   %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:   %[[ELEM:.*]] = hlfir.designate %[[A]]#0 (%[[C1]]) : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
@@ -47,8 +47,8 @@ subroutine omp_task_affinity_array_section()
 end subroutine omp_task_affinity_array_section
 
 ! CHECK-LABEL: func.func @_QPomp_task_affinity_array_section()
-! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFomp_task_affinity_array_sectionEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
-! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFomp_task_affinity_array_sectionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFomp_task_affinity_array_sectionEa") : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFomp_task_affinity_array_sectionEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: omp.parallel {
 ! CHECK:   %[[C2:.*]] = arith.constant 2 : index
 ! CHECK:   %[[C50:.*]] = arith.constant 50 : index
@@ -76,7 +76,7 @@ end subroutine omp_task_affinity_scalar
 
 ! CHECK-LABEL: func.func @_QPomp_task_affinity_scalar()
 ! CHECK: %[[S:.*]] = fir.alloca i32 <{bindc_name = "s", uniq_name = "_QFomp_task_affinity_scalarEs"}>
-! CHECK: %[[SDECL:.*]]:2 = hlfir.declare %[[S]] {uniq_name = "_QFomp_task_affinity_scalarEs"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[SDECL:.*]]:2 = hlfir.declare %[[S]] uniq_name("_QFomp_task_affinity_scalarEs") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: hlfir.assign %{{.*}} to %[[SDECL]]#0 : i32, !fir.ref<i32>
 ! CHECK: omp.parallel {
 ! CHECK:     %[[LEN:.*]] = arith.constant 4 : i64
@@ -115,7 +115,7 @@ subroutine whole_array_affinity()
 end subroutine whole_array_affinity
 
 ! CHECK-LABEL: func.func @_QPwhole_array_affinity()
-! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFwhole_array_affinityEa"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFwhole_array_affinityEa") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK: %[[C4:.*]] = arith.constant 4 : i64
 ! CHECK: %[[LEN:.*]] = arith.muli %{{.*}}, %[[C4]] : i64
 ! CHECK: %[[ADDRI8:.*]] = fir.convert %[[A]]#0 : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<i8>
@@ -161,7 +161,7 @@ subroutine assumed_shape_affinity(a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPassumed_shape_affinity(
-! CHECK: %[[A:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFassumed_shape_affinityEa"}
+! CHECK: %[[A:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{.*}} arg 1 uniq_name("_QFassumed_shape_affinityEa") fortran_attrs<intent_inout>
 ! CHECK: %[[ELEM:.*]] = fir.box_elesize %[[A]]#0 : (!fir.box<!fir.array<?xi32>>) -> index
 ! CHECK: %[[ELEM_I64:.*]] = fir.convert %[[ELEM]] : (index) -> i64
 ! CHECK: %[[LEN:.*]] = arith.muli %{{.*}}, %[[ELEM_I64]] : i64
@@ -178,7 +178,7 @@ subroutine allocatable_affinity(n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPallocatable_affinity(
-! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable_affinityEa"}
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFallocatable_affinityEa") fortran_attrs<allocatable>
 ! CHECK: %[[ABOX:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[ELEM:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> index
 ! CHECK: %[[ELEM_I64:.*]] = fir.convert %[[ELEM]] : (index) -> i64
@@ -197,7 +197,7 @@ subroutine pointer_affinity(n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPpointer_affinity(
-! CHECK: %[[P:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointer_affinityEp"}
+! CHECK: %[[P:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFpointer_affinityEp") fortran_attrs<pointer>
 ! CHECK: %[[PBOX:.*]] = fir.load %[[P]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[ELEM:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> index
 ! CHECK: %[[ELEM_I64:.*]] = fir.convert %[[ELEM]] : (index) -> i64
@@ -213,7 +213,7 @@ subroutine char_const_len_affinity()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPchar_const_len_affinity()
-! CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %c7 {uniq_name = "_QFchar_const_len_affinityEa"}
+! CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %c7 uniq_name("_QFchar_const_len_affinityEa")
 ! CHECK: %[[CHARLEN_I64:.*]] = fir.convert %c7 : (index) -> i64
 ! CHECK: %[[ELEMSIZE:.*]] = arith.muli %[[CHARLEN_I64]], %{{.*}} : i64
 ! CHECK: %[[LEN:.*]] = arith.muli %{{.*}}, %[[ELEMSIZE]] : i64
@@ -229,7 +229,7 @@ subroutine char_runtime_len_affinity(n, l)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPchar_runtime_len_affinity(
-! CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %{{.*}} {uniq_name = "_QFchar_runtime_len_affinityEa"}
+! CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %{{.*}} uniq_name("_QFchar_runtime_len_affinityEa")
 ! CHECK: %[[ELEM:.*]] = fir.box_elesize %[[DECLARE]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 ! CHECK: %[[ELEM_I64:.*]] = fir.convert %[[ELEM]] : (index) -> i64
 ! CHECK: %[[LEN:.*]] = arith.muli %{{.*}}, %[[ELEM_I64]] : i64
@@ -254,7 +254,7 @@ contains
 end module
 
 ! CHECK-LABEL: func.func @_QMtask_affinity_polymorphic_modPtask_affinity_poly()
-! CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtask_affinity_polymorphic_modFtask_affinity_polyEa"}
+! CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMtask_affinity_polymorphic_modFtask_affinity_polyEa") fortran_attrs<allocatable>
 ! CHECK: %[[ALOAD:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtask_affinity_polymorphic_modTt{x:i32}>>>>
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[ALOAD]] : (!fir.class<!fir.heap<!fir.type<_QMtask_affinity_polymorphic_modTt{x:i32}>>>) -> !fir.heap<!fir.type<_QMtask_affinity_polymorphic_modTt{x:i32}>>
 ! CHECK: %[[SIZELOAD:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtask_affinity_polymorphic_modTt{x:i32}>>>>
@@ -286,7 +286,7 @@ end subroutine
 ! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
 ! Iterator IV temp must be named in the compiler-generated namespace ("_QQ"
 ! prefix) so it is not emitted as a bogus user local in DWARF under -g.
-! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]] {uniq_name = "_QQ{{.*}}.omp.iter"}
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]] uniq_name("_QQ{{.*}}.omp.iter")
 ! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
@@ -599,7 +599,7 @@ subroutine task_affinity_iterator_char_runtime(n, l)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_char_runtime(
-! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %{{.*}} {uniq_name = "_QFtask_affinity_iterator_char_runtimeEa"}
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %{{.*}} uniq_name("_QFtask_affinity_iterator_char_runtimeEa")
 ! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0({{.*}}) {{.*}} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i64) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:   %[[ELEM:.*]] = fir.box_elesize %[[A]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index

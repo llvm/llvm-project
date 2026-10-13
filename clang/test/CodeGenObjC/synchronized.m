@@ -39,8 +39,9 @@ void foo(id a) {
     // CHECK: unreachable
 
     // CHECK:      call void @objc_exception_try_exit
-    // CHECK-NEXT: call i32 @objc_sync_exit
-    // CHECK: ret void
+    // CHECK-NEXT: [[SYNCVAL:%.*]] = load ptr, ptr [[SYNC]]
+    // CHECK-NEXT: call i32 @objc_sync_exit(ptr [[SYNCVAL]])
+    // CHECK-NEXT: ret void
     return;
   }
 
@@ -48,16 +49,20 @@ void foo(id a) {
 
 // CHECK-LABEL: define{{.*}} i32 @f0(
 int f0(id a) {
-  // We can optimize the ret to a constant as we can figure out
-  // that x isn't stored to within the synchronized block.
+  // x isn't stored to within the synchronized block itself (x++ happens
+  // before the setjmp, while entering it), but BasicAA conservatively
+  // treats any local as capturable across a `returns_twice` call anywhere
+  // in the function, so the ret can no longer be folded to a constant.
 
   // CHECK: [[X:%.*]] = alloca i32
   // CHECK: store i32 1, ptr [[X]]
   int x = 0;
-  @synchronized((x++, a)) {    
+  @synchronized((x++, a)) {
   }
 
-  // CHECK: ret i32 1
+  // CHECK:      [[RET:%.*]] = load i32, ptr [[X]]
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
+  // CHECK-NEXT: ret i32 [[RET]]
   return x;
 }
 

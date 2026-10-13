@@ -255,4 +255,47 @@ private:
 void callEscaping(const Function &);
 void callNoEscape([[clang::noescape]] const Function &);
 
+namespace std {
+inline namespace __1 {
+using size_t = decltype(sizeof(0));
+
+namespace ranges {
+template <typename Derived> class view_interface {};
+} // namespace ranges
+
+template <typename Iterator> class reverse_iterator {
+public:
+  reverse_iterator(Iterator);
+  auto &operator*() const { return *m_it; }
+  reverse_iterator &operator++();
+  bool operator!=(const reverse_iterator &) const;
+
+private:
+  Iterator m_it;
+};
+
+template <typename A, typename B> struct pair {
+  A first;
+  B second;
+};
+
+template <size_t I, typename A, typename B> A &get(pair<A, B> &);
+
+template <typename T> T *data(Vector<T> &);
+
+template <typename T> class optional {
+public:
+  optional();
+  optional(T);
+  const T &operator*() const { return m_value; }
+  T &operator*() { return m_value; }
+  const T *operator->() const { return &m_value; }
+  T *operator->() { return &m_value; }
+
+private:
+  T m_value;
+};
+} // namespace __1
+} // namespace std
+
 #endif

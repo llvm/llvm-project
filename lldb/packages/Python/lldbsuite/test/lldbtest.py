@@ -1438,17 +1438,18 @@ class Base(unittest.TestCase):
             for src in self.log_files:
                 if os.path.isfile(src):
                     dst = src.replace(src_log_basename, dst_log_basename)
-                    if os.name == "nt" and os.path.isfile(dst):
+                    long_dst = lldbutil.get_extended_windows_path(dst)
+                    if os.name == "nt" and os.path.isfile(long_dst):
                         # On Windows, renaming a -> b will throw an exception if
                         # b exists.  On non-Windows platforms it silently
                         # replaces the destination.  Ultimately this means that
                         # atomic renames are not guaranteed to be possible on
                         # Windows, but we need this to work anyway, so just
                         # remove the destination first if it already exists.
-                        remove_file(dst)
+                        remove_file(long_dst)
 
                     lldbutil.mkdir_p(os.path.dirname(dst))
-                    os.rename(src, dst)
+                    os.rename(lldbutil.get_extended_windows_path(src), long_dst)
                     files.append(dst)
             if files:
                 print(
@@ -2188,11 +2189,6 @@ class LLDBTestCaseFactory(type):
                             if enabled
                         ]
 
-                    # PDB is off by default, because it has a lot of failures right now.
-                    # See llvm.org/pr149498
-                    if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
-                        dbginfo_categories.append("pdb")
-
                     xfail_fns = getattr(attrvalue, "__variant_xfail__", {})
                     skip_fns = getattr(attrvalue, "__variant_skip__", {})
                     xfail_for_debug_info_cat_fn = xfail_fns.get("debug_info", no_reason)
@@ -2303,13 +2299,6 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
     # Subclasses can set this to true (if they don't depend on debug info) to avoid running the
     # test multiple times with various debug info types.
     NO_DEBUG_INFO_TESTCASE = False
-
-    TEST_WITH_PDB_DEBUG_INFO = False
-    """
-    Subclasses can set this to True to test with PDB in addition to the other debug info
-    types. This id off by default because many tests will fail due to missing functionality in PDB.
-    See llvm.org/pr149498.
-    """
 
     def generateSource(self, source):
         template = source + ".template"

@@ -20,7 +20,7 @@ define i1 @test_lpad_phi_widen_into_pred() personality ptr @__gxx_personality_v0
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @may_throw, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; CHECK-NEXT:   BL @may_throw, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   G_BR %bb.3
@@ -77,7 +77,7 @@ define i1 @test_lpad_phi_widen_into_pred_ext(ptr %ptr) personality ptr @__gxx_pe
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @may_throw, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; CHECK-NEXT:   BL @may_throw, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   G_BR %bb.3

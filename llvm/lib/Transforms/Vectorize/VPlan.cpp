@@ -259,13 +259,6 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
     return Data.VPV2Scalars[Def][0];
   }
 
-  // Look through BuildVector to avoid redundant extracts.
-  // TODO: Remove once replicate regions are unrolled explicitly.
-  if (Lane.getKind() == VPLane::Kind::First && match(Def, m_BuildVector())) {
-    auto *BuildVector = cast<VPInstruction>(Def);
-    return get(BuildVector->getOperand(Lane.getKnownLane()), true);
-  }
-
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
   if (!VecPart->getType()->isVectorTy()) {
@@ -279,10 +272,10 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   return Extract;
 }
 
-Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
+Value *VPTransformState::get(const VPValue *Def, bool NeedsSingleScalar) {
   assert(!isa<VPRegionValue>(Def) &&
          "VPRegionValue must be materialized before VPTransformState::get");
-  if (NeedsScalar) {
+  if (NeedsSingleScalar) {
     assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
             hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||
             (hasScalarValue(Def, VPLane(0)) &&
@@ -350,12 +343,12 @@ void VPTransformState::fixupHeaderPhis() {
 
     for (VPRecipeBase &R : Header->phis()) {
       auto *PhiR = cast<VPSingleDefRecipe>(&R);
-      bool NeedsScalar =
+      bool NeedsSingleScalar =
           isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
                                cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
 
-      Value *Phi = get(PhiR, NeedsScalar);
-      Value *Val = get(PhiR->getOperand(1), NeedsScalar);
+      Value *Phi = get(PhiR, NeedsSingleScalar);
+      Value *Val = get(PhiR->getOperand(1), NeedsSingleScalar);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }
@@ -1462,14 +1455,13 @@ bool VPValue::isDefinedOutsideLoopRegions() const {
   return !isDefinedInsideLoopRegions(this);
 }
 void VPValue::replaceAllUsesWith(VPValue *New) {
-  replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
+  replaceUsesWithIf(New, [](VPUser *) { return true; });
   if (auto *SV = dyn_cast<VPSymbolicValue>(this))
     SV->markMaterialized();
 }
 
 void VPValue::replaceUsesWithIf(
-    VPValue *New,
-    llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+    VPValue *New, llvm::function_ref<bool(VPUser *U)> ShouldReplace) {
   assertNotMaterialized();
   // Note that this early exit is required for correctness; the implementation
   // below relies on the number of users for this VPValue to decrease, which
@@ -1481,7 +1473,7 @@ void VPValue::replaceUsesWithIf(
     VPUser *User = Users[J];
     bool RemovedUser = false;
     for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
-      if (User->getOperand(I) != this || !ShouldReplace(*User, I))
+      if (User->getOperand(I) != this || !ShouldReplace(User))
         continue;
 
       RemovedUser = true;
@@ -1605,6 +1597,10 @@ std::string VPSlotTracker::getName(const Value *V) {
 
   V->printAsOperand(S, false, getOrCreateMST());
   return Name;
+}
+
+void VPSlotTracker::printMetadataAsOperand(raw_ostream &O, const MDNode *N) {
+  N->printAsOperand(O, getOrCreateMST(), getModule());
 }
 
 std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
