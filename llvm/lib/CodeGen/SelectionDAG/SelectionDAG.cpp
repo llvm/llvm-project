@@ -2756,9 +2756,9 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
       return getBoolConstant(ISD::isTrueWhenEqual(Cond), dl, VT, OpVT);
   }
 
-  if (ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2)) {
+  if (ConstantSDNode *N2C = isConstOrConstSplat(N2)) {
     const APInt &C2 = N2C->getAPIntValue();
-    if (ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1)) {
+    if (ConstantSDNode *N1C = isConstOrConstSplat(N1)) {
       const APInt &C1 = N1C->getAPIntValue();
 
       return getBoolConstant(ICmpInst::compare(C1, C2, getICmpCondCode(Cond)),
