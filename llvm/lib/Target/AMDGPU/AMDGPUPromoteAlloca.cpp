@@ -1419,6 +1419,9 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   // Replace the uses with poison first so they can be deleted in any order.
   for (Instruction *I : AA.Vector.UsersToRemove) {
     I->dropDroppableUses();
+    assert(all_of(I->users(), [&](const Instruction *U) {
+      return AA.Vector.UsersToRemove.contains(U);
+    }));
     I->replaceAllUsesWith(PoisonValue::get(I->getType()));
     I->eraseFromParent();
   }
