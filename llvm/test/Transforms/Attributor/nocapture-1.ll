@@ -585,7 +585,7 @@ define void @test_atomicrmw(ptr %p) {
 define void @test_volatile(ptr %x) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@test_volatile
-; TUNIT-SAME: (ptr nofree align 4 [[X:%.*]]) #[[ATTR9:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree writeonly align 4 captures(address) [[X:%.*]]) #[[ATTR9:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[X]], i64 1
 ; TUNIT-NEXT:    store volatile i32 0, ptr [[GEP]], align 4
@@ -593,7 +593,7 @@ define void @test_volatile(ptr %x) {
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@test_volatile
-; CGSCC-SAME: (ptr nofree align 4 [[X:%.*]]) #[[ATTR12:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree writeonly align 4 captures(address) [[X:%.*]]) #[[ATTR12:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[X]], i64 1
 ; CGSCC-NEXT:    store volatile i32 0, ptr [[GEP]], align 4
@@ -652,7 +652,7 @@ define void @captureLaunder(ptr %p) {
 define i1 @captureICmp(ptr %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@captureICmp
-; CHECK-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
@@ -663,7 +663,7 @@ define i1 @captureICmp(ptr %x) {
 define i1 @captureICmpRev(ptr %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@captureICmpRev
-; CHECK-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr null, [[X]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
@@ -696,7 +696,7 @@ define i1 @nocaptureInboundsGEPICmpRev(ptr %x) {
 define i1 @nocaptureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@nocaptureDereferenceableOrNullICmp
-; CHECK-SAME: (ptr nofree noundef readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr nofree noundef readnone captures(address) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
@@ -707,13 +707,13 @@ define i1 @nocaptureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x)
 define i1 @captureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x) null_pointer_is_valid {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@captureDereferenceableOrNullICmp
-; TUNIT-SAME: (ptr nofree noundef readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR11:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree noundef readnone captures(address) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR11:[0-9]+]] {
 ; TUNIT-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; TUNIT-NEXT:    ret i1 [[TMP1]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@captureDereferenceableOrNullICmp
-; CGSCC-SAME: (ptr nofree noundef readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR14:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree noundef readnone captures(address) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR14:[0-9]+]] {
 ; CGSCC-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; CGSCC-NEXT:    ret i1 [[TMP1]]
 ;

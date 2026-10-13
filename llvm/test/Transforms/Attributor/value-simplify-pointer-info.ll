@@ -3082,7 +3082,7 @@ f:
 define void @atomicrmw(ptr %p, i32 %i, i1 %cnd) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define void @atomicrmw(
-; TUNIT-SAME: ptr nofree [[P:%.*]], i32 [[I:%.*]], i1 noundef [[CND:%.*]]) #[[ATTR3]] {
+; TUNIT-SAME: ptr nofree readnone captures(address) [[P:%.*]], i32 [[I:%.*]], i1 noundef [[CND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    br i1 [[CND]], label %[[T:.*]], label %[[M:.*]]
 ; TUNIT:       [[T]]:
 ; TUNIT-NEXT:    br label %[[M]]
@@ -3092,7 +3092,7 @@ define void @atomicrmw(ptr %p, i32 %i, i1 %cnd) {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CGSCC-LABEL: define void @atomicrmw(
-; CGSCC-SAME: ptr nofree [[P:%.*]], i32 [[I:%.*]], i1 noundef [[CND:%.*]]) #[[ATTR5]] {
+; CGSCC-SAME: ptr nofree readnone captures(address) [[P:%.*]], i32 [[I:%.*]], i1 noundef [[CND:%.*]]) #[[ATTR5]] {
 ; CGSCC-NEXT:    br i1 [[CND]], label %[[T:.*]], label %[[M:.*]]
 ; CGSCC:       [[T]]:
 ; CGSCC-NEXT:    br label %[[M]]

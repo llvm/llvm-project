@@ -5,8 +5,8 @@
 
 define void @volatile_memcpy(ptr %d, ptr %s) {
 ; CHECK-LABEL: define void @volatile_memcpy(
-; CHECK-SAME: ptr nofree [[D:%.*]], ptr nofree [[S:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr writeonly [[D]], ptr readonly [[S]], i64 noundef 8, i1 noundef true) #[[ATTR3:[0-9]+]]
+; CHECK-SAME: ptr nofree writeonly captures(address) [[D:%.*]], ptr nofree readonly captures(address) [[S:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr writeonly captures(address) [[D]], ptr readonly captures(address) [[S]], i64 noundef 8, i1 noundef true) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 8, i1 true)
@@ -25,8 +25,8 @@ define void @nonvolatile_memcpy(ptr %d, ptr %s) {
 
 define void @volatile_memset(ptr %d) {
 ; CHECK-LABEL: define void @volatile_memset(
-; CHECK-SAME: ptr nofree [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr writeonly [[D]], i8 noundef 0, i64 noundef 8, i1 noundef true) #[[ATTR3]]
+; CHECK-SAME: ptr nofree writeonly captures(address) [[D:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr writeonly captures(address) [[D]], i8 noundef 0, i64 noundef 8, i1 noundef true) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr %d, i8 0, i64 8, i1 true)

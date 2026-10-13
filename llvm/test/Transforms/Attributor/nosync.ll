@@ -135,7 +135,7 @@ define void @load_volatile_release(ptr nocapture %arg) norecurse nounwind uwtabl
 define void @volatile_store(ptr %arg) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@volatile_store
-; CHECK-SAME: (ptr nofree noundef align 4 [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef writeonly align 4 captures(address) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    store volatile i32 14, ptr [[ARG]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -153,7 +153,7 @@ define void @volatile_store(ptr %arg) norecurse nounwind uwtable {
 define i32 @volatile_load(ptr %arg) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@volatile_load
-; CHECK-SAME: (ptr nofree noundef align 4 [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-SAME: (ptr nofree noundef readonly align 4 captures(address) [[ARG:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[I:%.*]] = load volatile i32, ptr [[ARG]], align 4
 ; CHECK-NEXT:    ret i32 [[I]]
 ;
@@ -199,16 +199,16 @@ define void @call_might_sync() noinline nounwind uwtable {
 define i32 @scc1(ptr %arg) noinline nounwind uwtable {
 ; TUNIT: Function Attrs: nofree noinline nosync nounwind memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@scc1
-; TUNIT-SAME: (ptr nofree [[ARG:%.*]]) #[[ATTR7:[0-9]+]] {
-; TUNIT-NEXT:    tail call void @scc2(ptr nofree [[ARG]]) #[[ATTR22:[0-9]+]]
-; TUNIT-NEXT:    [[VAL:%.*]] = tail call i32 @volatile_load(ptr nofree noundef align 4 [[ARG]]) #[[ATTR22]]
+; TUNIT-SAME: (ptr nofree readonly "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR7:[0-9]+]] {
+; TUNIT-NEXT:    tail call void @scc2(ptr nofree readonly captures(address) [[ARG]]) #[[ATTR22:[0-9]+]]
+; TUNIT-NEXT:    [[VAL:%.*]] = tail call i32 @volatile_load(ptr nofree noundef readonly align 4 captures(address) [[ARG]]) #[[ATTR22]]
 ; TUNIT-NEXT:    ret i32 [[VAL]]
 ;
 ; CGSCC: Function Attrs: nofree noinline nosync nounwind memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@scc1
 ; CGSCC-SAME: (ptr nofree [[ARG:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CGSCC-NEXT:    tail call void @scc2(ptr nofree [[ARG]]) #[[ATTR22:[0-9]+]]
-; CGSCC-NEXT:    [[VAL:%.*]] = tail call i32 @volatile_load(ptr nofree noundef align 4 [[ARG]]) #[[ATTR23:[0-9]+]]
+; CGSCC-NEXT:    [[VAL:%.*]] = tail call i32 @volatile_load(ptr nofree noundef readonly align 4 [[ARG]]) #[[ATTR23:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[VAL]]
 ;
   tail call void @scc2(ptr %arg)
@@ -217,11 +217,17 @@ define i32 @scc1(ptr %arg) noinline nounwind uwtable {
 }
 
 define void @scc2(ptr %arg) noinline nounwind uwtable {
-; CHECK: Function Attrs: nofree noinline nosync nounwind memory(argmem: readwrite) uwtable
-; CHECK-LABEL: define {{[^@]+}}@scc2
-; CHECK-SAME: (ptr nofree [[ARG:%.*]]) #[[ATTR7:[0-9]+]] {
-; CHECK-NEXT:    [[I:%.*]] = tail call i32 @scc1(ptr nofree [[ARG]]) #[[ATTR22:[0-9]+]]
-; CHECK-NEXT:    ret void
+; TUNIT: Function Attrs: nofree noinline nosync nounwind memory(argmem: readwrite) uwtable
+; TUNIT-LABEL: define {{[^@]+}}@scc2
+; TUNIT-SAME: (ptr nofree readonly captures(address) [[ARG:%.*]]) #[[ATTR7]] {
+; TUNIT-NEXT:    [[I:%.*]] = tail call i32 @scc1(ptr nofree readonly "no-capture-maybe-returned" [[ARG]]) #[[ATTR22]]
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: nofree noinline nosync nounwind memory(argmem: readwrite) uwtable
+; CGSCC-LABEL: define {{[^@]+}}@scc2
+; CGSCC-SAME: (ptr nofree [[ARG:%.*]]) #[[ATTR7]] {
+; CGSCC-NEXT:    [[I:%.*]] = tail call i32 @scc1(ptr nofree [[ARG]]) #[[ATTR22]]
+; CGSCC-NEXT:    ret void
 ;
   %i = tail call i32 @scc1(ptr %arg)
   ret void
@@ -341,14 +347,14 @@ declare void @llvm.memset.p0.i32(ptr %dest, i8 %val, i32 %len, i1 %isvolatile)
 define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@memcpy_volatile
-; TUNIT-SAME: (ptr nofree [[PTR1:%.*]], ptr nofree [[PTR2:%.*]]) #[[ATTR14:[0-9]+]] {
-; TUNIT-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly [[PTR1]], ptr nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR23:[0-9]+]]
+; TUNIT-SAME: (ptr nofree writeonly captures(address) [[PTR1:%.*]], ptr nofree readonly captures(address) [[PTR2:%.*]]) #[[ATTR14:[0-9]+]] {
+; TUNIT-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly captures(address) [[PTR1]], ptr nofree readonly captures(address) [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR23:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 4
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@memcpy_volatile
-; CGSCC-SAME: (ptr nofree [[PTR1:%.*]], ptr nofree [[PTR2:%.*]]) #[[ATTR14:[0-9]+]] {
-; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly [[PTR1]], ptr nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR24:[0-9]+]]
+; CGSCC-SAME: (ptr nofree writeonly captures(address) [[PTR1:%.*]], ptr nofree readonly captures(address) [[PTR2:%.*]]) #[[ATTR14:[0-9]+]] {
+; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly captures(address) [[PTR1]], ptr nofree readonly captures(address) [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR24:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 4
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %ptr1, ptr %ptr2, i32 8, i1 true)

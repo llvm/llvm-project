@@ -147,7 +147,7 @@ define void @test_volatile(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_volatile
-; ATTRIBUTOR-SAME: (ptr nofree [[P:%.*]]) #[[ATTR6:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree writeonly captures(address) [[P:%.*]]) #[[ATTR6:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    store volatile i8 0, ptr [[P]], align 1
 ; ATTRIBUTOR-NEXT:    ret void
 ;

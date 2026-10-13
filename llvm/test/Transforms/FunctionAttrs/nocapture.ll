@@ -707,7 +707,7 @@ define void @test_volatile(ptr %x) {
 ;
 ; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define void @test_volatile
-; ATTRIBUTOR-SAME: (ptr nofree [[X:%.*]]) #[[ATTR12:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree writeonly captures(address) [[X:%.*]]) #[[ATTR12:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:  entry:
 ; ATTRIBUTOR-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[X]], i64 1
 ; ATTRIBUTOR-NEXT:    store volatile i32 0, ptr [[GEP]], align 4
@@ -772,7 +772,7 @@ define i1 @captureICmp(ptr %x) {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; ATTRIBUTOR-LABEL: define i1 @captureICmp
-; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
 ;
@@ -789,7 +789,7 @@ define i1 @captureICmpRev(ptr %x) {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; ATTRIBUTOR-LABEL: define i1 @captureICmpRev
-; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp eq ptr null, [[X]]
 ; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
 ;
@@ -798,17 +798,11 @@ define i1 @captureICmpRev(ptr %x) {
 }
 
 define i1 @captureICmpWrongPred(ptr %x) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; FNATTRS-LABEL: define i1 @captureICmpWrongPred
-; FNATTRS-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
-; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
-; FNATTRS-NEXT:    ret i1 [[TMP1]]
-;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; ATTRIBUTOR-LABEL: define i1 @captureICmpWrongPred
-; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
-; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
-; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
+; COMMON: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; COMMON-LABEL: define i1 @captureICmpWrongPred
+; COMMON-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
+; COMMON-NEXT:    ret i1 [[TMP1]]
 ;
   %1 = icmp slt ptr %x, null
   ret i1 %1
@@ -823,7 +817,7 @@ define i1 @captureICmpWrongPredDereferenceableOrNull(ptr dereferenceable_or_null
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; ATTRIBUTOR-LABEL: define i1 @captureICmpWrongPredDereferenceableOrNull
-; ATTRIBUTOR-SAME: (ptr nofree readnone dereferenceable_or_null(1) [[X:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(address) dereferenceable_or_null(1) [[X:%.*]]) #[[ATTR0]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
 ; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
 ;
@@ -834,19 +828,12 @@ define i1 @captureICmpWrongPredDereferenceableOrNull(ptr dereferenceable_or_null
 ; We could infer captures(address_is_null) here, but don't bother, because
 ; InstCombine will optimize the GEP away.
 define i1 @nocaptureInboundsGEPICmp(ptr %x) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; FNATTRS-LABEL: define i1 @nocaptureInboundsGEPICmp
-; FNATTRS-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
-; FNATTRS-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
-; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
-; FNATTRS-NEXT:    ret i1 [[TMP2]]
-;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; ATTRIBUTOR-LABEL: define i1 @nocaptureInboundsGEPICmp
-; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
-; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
-; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
-; ATTRIBUTOR-NEXT:    ret i1 [[TMP2]]
+; COMMON: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; COMMON-LABEL: define i1 @nocaptureInboundsGEPICmp
+; COMMON-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
+; COMMON-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
+; COMMON-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = getelementptr inbounds i32, ptr %x, i32 5
   %2 = icmp eq ptr %1, null
@@ -854,19 +841,12 @@ define i1 @nocaptureInboundsGEPICmp(ptr %x) {
 }
 
 define i1 @nocaptureInboundsGEPICmpRev(ptr %x) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; FNATTRS-LABEL: define i1 @nocaptureInboundsGEPICmpRev
-; FNATTRS-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
-; FNATTRS-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
-; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr null, [[TMP1]]
-; FNATTRS-NEXT:    ret i1 [[TMP2]]
-;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; ATTRIBUTOR-LABEL: define i1 @nocaptureInboundsGEPICmpRev
-; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
-; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
-; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq ptr null, [[TMP1]]
-; ATTRIBUTOR-NEXT:    ret i1 [[TMP2]]
+; COMMON: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; COMMON-LABEL: define i1 @nocaptureInboundsGEPICmpRev
+; COMMON-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
+; COMMON-NEXT:    [[TMP2:%.*]] = icmp eq ptr null, [[TMP1]]
+; COMMON-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = getelementptr inbounds i32, ptr %x, i32 5
   %2 = icmp eq ptr null, %1
@@ -874,19 +854,12 @@ define i1 @nocaptureInboundsGEPICmpRev(ptr %x) {
 }
 
 define i1 @notInboundsGEPICmp(ptr %x) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; FNATTRS-LABEL: define i1 @notInboundsGEPICmp
-; FNATTRS-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
-; FNATTRS-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
-; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
-; FNATTRS-NEXT:    ret i1 [[TMP2]]
-;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; ATTRIBUTOR-LABEL: define i1 @notInboundsGEPICmp
-; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
-; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
-; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
-; ATTRIBUTOR-NEXT:    ret i1 [[TMP2]]
+; COMMON: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; COMMON-LABEL: define i1 @notInboundsGEPICmp
+; COMMON-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
+; COMMON-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
+; COMMON-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = getelementptr i32, ptr %x, i32 5
   %2 = icmp eq ptr %1, null
@@ -903,7 +876,7 @@ define i1 @inboundsGEPICmpNullPointerDefined(ptr %x) null_pointer_is_valid {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
 ; ATTRIBUTOR-LABEL: define i1 @inboundsGEPICmpNullPointerDefined
-; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR14:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(address) [[X:%.*]]) #[[ATTR14:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
 ; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
 ; ATTRIBUTOR-NEXT:    ret i1 [[TMP2]]
@@ -922,7 +895,7 @@ define i1 @nocaptureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x)
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; ATTRIBUTOR-LABEL: define i1 @nocaptureDereferenceableOrNullICmp
-; ATTRIBUTOR-SAME: (ptr nofree readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(address) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR0]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
 ;
@@ -939,7 +912,7 @@ define i1 @captureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x) n
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
 ; ATTRIBUTOR-LABEL: define i1 @captureDereferenceableOrNullICmp
-; ATTRIBUTOR-SAME: (ptr nofree readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR14]] {
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(address) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR14]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
 ;
@@ -1051,7 +1024,7 @@ define i64 @captures_ptrtoaddr_stored(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; ATTRIBUTOR-LABEL: define i64 @captures_ptrtoaddr_stored
-; ATTRIBUTOR-SAME: (ptr nofree writeonly [[P:%.*]]) #[[ATTR1]] {
+; ATTRIBUTOR-SAME: (ptr nofree writeonly captures(address) [[P:%.*]]) #[[ATTR1]] {
 ; ATTRIBUTOR-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; ATTRIBUTOR-NEXT:    store i64 [[INT]], ptr @gi, align 8
 ; ATTRIBUTOR-NEXT:    ret i64 0
@@ -1063,17 +1036,11 @@ define i64 @captures_ptrtoaddr_stored(ptr %p) {
 
 ;; Note: ptrtoaddr is a location-independent capture, so we don't get captures(ret: address) here.
 define i64 @captures_ptrtoaddr_ret(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; FNATTRS-LABEL: define i64 @captures_ptrtoaddr_ret
-; FNATTRS-SAME: (ptr nofree readnone captures(address) [[P:%.*]]) #[[ATTR0]] {
-; FNATTRS-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P]] to i64
-; FNATTRS-NEXT:    ret i64 [[INT]]
-;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; ATTRIBUTOR-LABEL: define i64 @captures_ptrtoaddr_ret
-; ATTRIBUTOR-SAME: (ptr nofree readnone [[P:%.*]]) #[[ATTR0]] {
-; ATTRIBUTOR-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P]] to i64
-; ATTRIBUTOR-NEXT:    ret i64 [[INT]]
+; COMMON: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; COMMON-LABEL: define i64 @captures_ptrtoaddr_ret
+; COMMON-SAME: (ptr nofree readnone captures(address) [[P:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P]] to i64
+; COMMON-NEXT:    ret i64 [[INT]]
 ;
   %int = ptrtoaddr ptr %p to i64
   ret i64 %int
@@ -1089,7 +1056,7 @@ define i64 @captures_ptrtoaddr_ignored(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; ATTRIBUTOR-LABEL: define i64 @captures_ptrtoaddr_ignored
-; ATTRIBUTOR-SAME: (ptr nofree readnone [[P:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(address) [[P:%.*]]) #[[ATTR0]] {
 ; ATTRIBUTOR-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; ATTRIBUTOR-NEXT:    ret i64 0
 ;
@@ -1257,10 +1224,10 @@ define void @addr_only_scc(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind
 ; ATTRIBUTOR-LABEL: define void @addr_only_scc
-; ATTRIBUTOR-SAME: (ptr nofree nonnull [[P:%.*]]) #[[ATTR16:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull readonly captures(address) [[P:%.*]]) #[[ATTR16:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
 ; ATTRIBUTOR-NEXT:    store i8 [[V]], ptr @g, align 1
-; ATTRIBUTOR-NEXT:    call void @addr_only_scc2(ptr nofree nonnull [[P]]) #[[ATTR16]]
+; ATTRIBUTOR-NEXT:    call void @addr_only_scc2(ptr nofree nonnull readonly captures(address) [[P]]) #[[ATTR16]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   %v = load i8, ptr %p
@@ -1283,11 +1250,11 @@ define void @addr_only_scc2(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind
 ; ATTRIBUTOR-LABEL: define void @addr_only_scc2
-; ATTRIBUTOR-SAME: (ptr nofree [[P:%.*]]) #[[ATTR16]] {
+; ATTRIBUTOR-SAME: (ptr nofree readonly captures(address) [[P:%.*]]) #[[ATTR16]] {
 ; ATTRIBUTOR-NEXT:    [[CMP:%.*]] = icmp ne ptr [[P]], null
 ; ATTRIBUTOR-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[EXIT:%.*]]
 ; ATTRIBUTOR:       if:
-; ATTRIBUTOR-NEXT:    call void @addr_only_scc(ptr nofree [[P]]) #[[ATTR16]]
+; ATTRIBUTOR-NEXT:    call void @addr_only_scc(ptr nofree readonly captures(address) [[P]]) #[[ATTR16]]
 ; ATTRIBUTOR-NEXT:    br label [[EXIT]]
 ; ATTRIBUTOR:       exit:
 ; ATTRIBUTOR-NEXT:    ret void
@@ -1363,7 +1330,7 @@ define void @captures_metadata_address_is_null(ptr %x, ptr %y) {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; ATTRIBUTOR-LABEL: define void @captures_metadata_address_is_null
-; ATTRIBUTOR-SAME: (ptr nofree writeonly [[X:%.*]], ptr nofree nonnull writeonly captures(none) [[Y:%.*]]) #[[ATTR18:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree writeonly captures(address) [[X:%.*]], ptr nofree nonnull writeonly captures(none) [[Y:%.*]]) #[[ATTR18:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META0:![0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -1380,7 +1347,7 @@ define void @captures_metadata_address(ptr %x, ptr %y) {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; ATTRIBUTOR-LABEL: define void @captures_metadata_address
-; ATTRIBUTOR-SAME: (ptr nofree writeonly [[X:%.*]], ptr nofree nonnull writeonly captures(none) [[Y:%.*]]) #[[ATTR18]] {
+; ATTRIBUTOR-SAME: (ptr nofree writeonly captures(address) [[X:%.*]], ptr nofree nonnull writeonly captures(none) [[Y:%.*]]) #[[ATTR18]] {
 ; ATTRIBUTOR-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META1:![0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;

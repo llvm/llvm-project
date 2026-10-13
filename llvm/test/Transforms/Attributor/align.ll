@@ -160,7 +160,7 @@ define internal ptr @f1(ptr readnone %0) local_unnamed_addr #0 {
 define ptr @f2(ptr readnone %0) local_unnamed_addr #0 {
 ; TUNIT: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@f2
-; TUNIT-SAME: (ptr nofree readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; TUNIT-SAME: (ptr nofree readnone "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; TUNIT-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
 ; TUNIT-NEXT:    br i1 [[TMP2]], label [[TMP4:%.*]], label [[TMP3:%.*]]
 ; TUNIT:       3:
@@ -173,7 +173,7 @@ define ptr @f2(ptr readnone %0) local_unnamed_addr #0 {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@f2
-; CGSCC-SAME: (ptr nofree readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CGSCC-SAME: (ptr nofree readnone "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CGSCC-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
 ; CGSCC-NEXT:    br i1 [[TMP2]], label [[TMP4:%.*]], label [[TMP3:%.*]]
 ; CGSCC:       3:

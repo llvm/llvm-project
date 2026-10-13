@@ -967,14 +967,14 @@ define i1 @d_fcmp(double %a, double %b) {
 define i1 @dp_icmp(ptr %a, ptr %b) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@dp_icmp
-; TUNIT-SAME: (ptr nofree readnone [[A:%.*]], ptr nofree readnone [[B:%.*]]) #[[ATTR1]] {
+; TUNIT-SAME: (ptr nofree readnone captures(address) [[A:%.*]], ptr nofree readnone captures(address) [[B:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    [[R:%.*]] = icmp sge ptr [[A]], [[B]]
 ; TUNIT-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
 ; TUNIT-NEXT:    ret i1 [[S]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@dp_icmp
-; CGSCC-SAME: (ptr nofree readnone [[A:%.*]], ptr nofree readnone [[B:%.*]]) #[[ATTR2]] {
+; CGSCC-SAME: (ptr nofree readnone captures(address) [[A:%.*]], ptr nofree readnone captures(address) [[B:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:    [[R:%.*]] = icmp sge ptr [[A]], [[B]]
 ; CGSCC-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
 ; CGSCC-NEXT:    ret i1 [[S]]
@@ -986,14 +986,14 @@ define i1 @dp_icmp(ptr %a, ptr %b) {
 define i1 @ip_icmp(ptr %a, ptr %b) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@ip_icmp
-; TUNIT-SAME: (ptr nofree readnone [[A:%.*]], ptr nofree readnone [[B:%.*]]) #[[ATTR1]] {
+; TUNIT-SAME: (ptr nofree readnone captures(address) [[A:%.*]], ptr nofree readnone captures(address) [[B:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    [[R:%.*]] = icmp ult ptr [[A]], [[B]]
 ; TUNIT-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
 ; TUNIT-NEXT:    ret i1 [[S]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@ip_icmp
-; CGSCC-SAME: (ptr nofree readnone [[A:%.*]], ptr nofree readnone [[B:%.*]]) #[[ATTR2]] {
+; CGSCC-SAME: (ptr nofree readnone captures(address) [[A:%.*]], ptr nofree readnone captures(address) [[B:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:    [[R:%.*]] = icmp ult ptr [[A]], [[B]]
 ; CGSCC-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
 ; CGSCC-NEXT:    ret i1 [[S]]
@@ -1008,8 +1008,8 @@ define i1 @fcmp_caller(float %fa, float %fb, double %da, double %db, ptr %dpa, p
 ; TUNIT-SAME: (float [[FA:%.*]], float [[FB:%.*]], double [[DA:%.*]], double [[DB:%.*]], ptr nofree readnone [[DPA:%.*]], ptr nofree readnone [[DPB:%.*]], ptr nofree readnone [[IPA:%.*]], ptr nofree readnone [[IPB:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    [[R1:%.*]] = call i1 @f_fcmp(float [[FA]], float [[FB]]) #[[ATTR4]]
 ; TUNIT-NEXT:    [[R2:%.*]] = call i1 @d_fcmp(double [[DA]], double [[DB]]) #[[ATTR4]]
-; TUNIT-NEXT:    [[R3:%.*]] = call i1 @dp_icmp(ptr noalias nofree readnone [[DPA]], ptr noalias nofree readnone [[DPB]]) #[[ATTR4]]
-; TUNIT-NEXT:    [[R4:%.*]] = call i1 @ip_icmp(ptr noalias nofree readnone [[IPA]], ptr noalias nofree readnone [[IPB]]) #[[ATTR4]]
+; TUNIT-NEXT:    [[R3:%.*]] = call i1 @dp_icmp(ptr noalias nofree readnone captures(address) [[DPA]], ptr noalias nofree readnone captures(address) [[DPB]]) #[[ATTR4]]
+; TUNIT-NEXT:    [[R4:%.*]] = call i1 @ip_icmp(ptr noalias nofree readnone captures(address) [[IPA]], ptr noalias nofree readnone captures(address) [[IPB]]) #[[ATTR4]]
 ; TUNIT-NEXT:    [[O1:%.*]] = or i1 [[R1]], [[R2]]
 ; TUNIT-NEXT:    [[O2:%.*]] = or i1 [[R3]], [[R4]]
 ; TUNIT-NEXT:    [[O3:%.*]] = or i1 [[O1]], [[O2]]

@@ -5904,7 +5904,8 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
       return true;
 
   // Volatile memory intrinsics capture the address, even though the
-  // arguments of their declarations are not captured.
+  // arguments of their declarations are not captured, so they are
+  // captures(address) instead.
   if (IRP.getPositionKind() == IRP_CALL_SITE_ARGUMENT &&
       isVolatileMemIntrinsic(IRP.getAnchorValue()))
     return false;
@@ -6010,9 +6011,12 @@ struct AANoCaptureImpl : public AANoCapture {
       return;
 
     if (isArgumentPosition()) {
-      if (isAssumedNoCapture())
-        Attrs.emplace_back(Attribute::get(Ctx, Attribute::Captures));
-      else if (ManifestInternal)
+      if (isAssumedNoCapture()) {
+        CaptureInfo CI = isAssumed(NOT_CAPTURED_ADDRESS)
+                             ? CaptureInfo::none()
+                             : CaptureInfo(CaptureComponents::Address);
+        Attrs.emplace_back(Attribute::getWithCaptureInfo(Ctx, CI));
+      } else if (ManifestInternal)
         Attrs.emplace_back(Attribute::get(Ctx, "no-capture-maybe-returned"));
     }
   }
@@ -6076,6 +6080,9 @@ struct AANoCaptureImpl : public AANoCapture {
     bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
         A, this, CSArgPos, DepClassTy::REQUIRED, IsKnownNoCapture, false,
         &ArgNoCaptureAA);
+    // The callee may still capture the address.
+    if (ArgNoCaptureAA && !ArgNoCaptureAA->isAssumed(NOT_CAPTURED_ADDRESS))
+      State.removeAssumedBits(NOT_CAPTURED_ADDRESS);
     if (IsAssumedNoCapture)
       return isCapturedIn(State, /* Memory */ false, /* Integer */ false,
                           /* Return */ false);
@@ -6181,6 +6188,12 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
       Follow = true;
       return true;
     }
+    // Uses that only capture the address, e.g., comparisons and volatile
+    // accesses, do not capture the provenance.
+    if (!capturesAnyProvenance(CI.UseCC) && !capturesAnything(CI.ResultCC)) {
+      T.removeAssumedBits(NOT_CAPTURED_ADDRESS);
+      return true;
+    }
     return checkUse(A, T, U, Follow);
   };
 
@@ -6217,8 +6230,12 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
     //       sense to specialize attributes for call sites arguments instead of
     //       redirecting requests to the callee argument.
     Argument *Arg = getAssociatedArgument();
-    if (!Arg || isVolatileMemIntrinsic(getAnchorValue()))
+    if (!Arg)
       return indicatePessimisticFixpoint();
+    if (isVolatileMemIntrinsic(getAnchorValue())) {
+      removeAssumedBits(NOT_CAPTURED_ADDRESS);
+      return indicateOptimisticFixpoint();
+    }
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
     bool IsKnownNoCapture;
     const AANoCapture *ArgAA = nullptr;

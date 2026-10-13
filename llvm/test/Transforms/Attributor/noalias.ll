@@ -264,7 +264,7 @@ return:
 define ptr @test8(ptr %0) nounwind uwtable {
 ; CHECK: Function Attrs: nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@test8
-; CHECK-SAME: (ptr nofree [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr nofree readnone captures(address) [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP0]], null
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]

@@ -70,13 +70,13 @@ define internal i32 @dead_internal_func(i32 %0) {
 define i32 @volatile_load(ptr) norecurse nounwind uwtable {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@volatile_load
-; TUNIT-SAME: (ptr nofree noundef align 4 [[TMP0:%.*]]) #[[ATTR6:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree noundef readonly align 4 captures(address) [[TMP0:%.*]]) #[[ATTR6:[0-9]+]] {
 ; TUNIT-NEXT:    [[TMP2:%.*]] = load volatile i32, ptr [[TMP0]], align 4
 ; TUNIT-NEXT:    ret i32 [[TMP2]]
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@volatile_load
-; CGSCC-SAME: (ptr nofree noundef align 4 [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree noundef readonly align 4 captures(address) [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CGSCC-NEXT:    [[TMP2:%.*]] = load volatile i32, ptr [[TMP0]], align 4
 ; CGSCC-NEXT:    ret i32 [[TMP2]]
 ;
@@ -154,7 +154,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define i32 @dead_block_present(i32 %a, ptr %ptr1) #0 {
 ; TUNIT: Function Attrs: nosync
 ; TUNIT-LABEL: define {{[^@]+}}@dead_block_present
-; TUNIT-SAME: (i32 [[A:%.*]], ptr [[PTR1:%.*]]) #[[ATTR7:[0-9]+]] {
+; TUNIT-SAME: (i32 [[A:%.*]], ptr nofree readonly captures(address) [[PTR1:%.*]]) #[[ATTR7:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
 ; TUNIT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]

@@ -275,7 +275,7 @@ define float @mutually_recursive1(float %arg) {
 
 define float @recursive_phi(ptr %ptr) {
 ; CHECK-LABEL: define nofpclass(nan) float @recursive_phi
-; CHECK-SAME: (ptr nofree [[PTR:%.*]]) {
+; CHECK-SAME: (ptr nofree readonly captures(address) [[PTR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RET:%.*]] = call nofpclass(nan) float @ret_nofpclass_nan()
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

@@ -3,7 +3,7 @@
 
 define i32 @addrspacecast_ptr(ptr %p0, ptr addrspace(5) %p5) {
 ; CHECK-LABEL: define i32 @addrspacecast_ptr(
-; CHECK-SAME: ptr nofree readonly captures(none) [[P0:%.*]], ptr addrspace(5) nofree readonly [[P5:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[P0:%.*]], ptr addrspace(5) nofree readonly captures(address) [[P5:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq ptr addrspace(5) [[P5]], addrspacecast (ptr null to ptr addrspace(5))
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP]], ptr [[P0]], ptr null
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[SELECT]], align 4

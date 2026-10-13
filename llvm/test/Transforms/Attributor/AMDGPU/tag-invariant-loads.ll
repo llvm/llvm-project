@@ -91,7 +91,7 @@ define amdgpu_kernel void @test_swap(ptr addrspace(1) noalias %ptr, i32 inreg %s
 
 define amdgpu_kernel void @test_volatile(ptr addrspace(1) noalias %ptr) {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_volatile(
-; AMDGCN-SAME: ptr addrspace(1) noalias nofree noundef align 4 [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
+; AMDGCN-SAME: ptr addrspace(1) noalias nofree noundef readonly align 4 captures(address) [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load volatile i32, ptr addrspace(1) [[PTR]], align 4
 ; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR7]]
 ; AMDGCN-NEXT:    ret void

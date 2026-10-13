@@ -4314,7 +4314,7 @@ struct AAInstanceInfo : public StateWrapper<BooleanState, AbstractAttribute> {
 struct AANoCapture
     : public IRAttribute<
           Attribute::Captures,
-          StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>,
+          StateWrapper<BitIntegerState<uint16_t, 15, 0>, AbstractAttribute>,
           AANoCapture> {
   AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
@@ -4351,6 +4351,10 @@ struct AANoCapture
     /// derived pointer we know it is not captured.
     NO_CAPTURE =
         NOT_CAPTURED_IN_MEM | NOT_CAPTURED_IN_INT | NOT_CAPTURED_IN_RET,
+
+    /// The address is not captured either, e.g., by a comparison or a volatile
+    /// access. Without it, a value that is not captured is captures(address).
+    NOT_CAPTURED_ADDRESS = 1 << 3,
   };
 
   /// Return true if we know that the underlying value is not captured in its
