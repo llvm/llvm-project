@@ -53,59 +53,6 @@ static std::optional<MCRegister> lookupOptReg(const MapT &Map,
   return It->second;
 }
 
-/// Partition \p Ty into \p BasicTypes, \p PointerTypes, \p SubroutineTypes,
-/// \p VectorTypes, \p ArrayTypes, \p CompositeTypes, and \p TypedefTypes for
-/// NSDI emission. Used when iterating DebugInfoFinder.types(); each DI node is
-/// seen once, so no recursion into pointer bases. Other composites and the
-/// remaining derived kinds are ignored because they are not yet supported.
-/// Only types that are supported (later used) are partitioned.
-static void
-partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
-               SmallVector<const DIDerivedType *> &PointerTypes,
-               SmallVector<const DISubroutineType *> &SubroutineTypes,
-               SmallVector<const DICompositeType *> &VectorTypes,
-               SmallVector<const DICompositeType *> &ArrayTypes,
-               SmallVector<const DICompositeType *> &CompositeTypes,
-               SmallVector<const DIDerivedType *> &TypedefTypes) {
-  if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
-    BasicTypes.push_back(BT);
-    return;
-  }
-  if (const auto *ST = dyn_cast<DISubroutineType>(Ty)) {
-    SubroutineTypes.push_back(ST);
-    return;
-  }
-  if (const auto *CT = dyn_cast<DICompositeType>(Ty)) {
-    if (CT->getTag() == dwarf::DW_TAG_array_type) {
-      // A vector is an array with DINode::FlagVector. A plain array is the
-      // same tag without it. A matrix is also lowered to a DW_TAG_array_type
-      // (two subranges), so it is indistinguishable from a 2D array here and
-      // is emitted as a DebugTypeArray.
-      //
-      // FIXME: Emitting a matrix as a DebugTypeArray is valid but loses the
-      // matrix shape. DWARF has no matrix tag, so distinguishing a matrix needs
-      // a new DINode flag analogous to FlagVector, set on the array, plus a way
-      // to carry column-major vs row-major traits. Array-of-vectors alone would
-      // not disambiguate a matrix from a genuine array of vectors. Once the
-      // frontend marks matrices, route them to a DebugTypeMatrix path here.
-      if (CT->isVector())
-        VectorTypes.push_back(CT);
-      else
-        ArrayTypes.push_back(CT);
-    } else if (CT->getTag() == dwarf::DW_TAG_structure_type ||
-               CT->getTag() == dwarf::DW_TAG_class_type ||
-               CT->getTag() == dwarf::DW_TAG_union_type) {
-      CompositeTypes.push_back(CT);
-    }
-    return;
-  }
-  const auto *DT = dyn_cast<DIDerivedType>(Ty);
-  if (DT && DT->getTag() == dwarf::DW_TAG_pointer_type)
-    PointerTypes.push_back(DT);
-  else if (DT && DT->getTag() == dwarf::DW_TAG_typedef)
-    TypedefTypes.push_back(DT);
-}
-
 enum : uint32_t {
   NSDIFlagIsProtected = 1u << 0,
   NSDIFlagIsPrivate = 1u << 1,
@@ -382,13 +329,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
     return;
 
   CompileUnits.clear();
-  BasicTypes.clear();
-  PointerTypes.clear();
-  SubroutineTypes.clear();
-  VectorTypes.clear();
-  ArrayTypes.clear();
-  CompositeTypes.clear();
-  TypedefTypes.clear();
+  DebugTypes.clear();
   SubprogramDeclarations.clear();
   SubprogramDefinitions.clear();
   UniqueDebugLocations.clear();
@@ -455,10 +396,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   // Find all debug info types that may be referenced by NSDI instructions.
   DebugInfoFinder Finder;
   Finder.processModule(*M);
-  llvm::for_each(Finder.types(), [&](DIType *Ty) {
-    partitionTypes(Ty, BasicTypes, PointerTypes, SubroutineTypes, VectorTypes,
-                   ArrayTypes, CompositeTypes, TypedefTypes);
-  });
+  DebugTypes.assign(Finder.types().begin(), Finder.types().end());
 
   for (const DISubprogram *SP : Finder.subprograms()) {
     if (SP->isDefinition())
@@ -940,6 +878,17 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeForCompositeType(
     MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
   switch (CT->getTag()) {
   case dwarf::DW_TAG_array_type:
+    // A vector is an array with DINode::FlagVector. A plain array is the
+    // same tag without it. A matrix is also lowered to a DW_TAG_array_type
+    // (two subranges), so it is indistinguishable from a 2D array here and
+    // is emitted as a DebugTypeArray.
+    //
+    // FIXME: Emitting a matrix as a DebugTypeArray is valid but loses the
+    // matrix shape. DWARF has no matrix tag, so distinguishing a matrix needs
+    // a new DINode flag analogous to FlagVector, set on the array, plus a way
+    // to carry column-major vs row-major traits. Array-of-vectors alone would
+    // not disambiguate a matrix from a genuine array of vectors. Once the
+    // frontend marks matrices, route them to a DebugTypeMatrix path here.
     if (CT->isVector())
       return emitDebugTypeVector(CT, ExtInstSetReg, MAI);
     return emitDebugTypeArray(CT, ExtInstSetReg, MAI);
@@ -1670,9 +1619,6 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     }
   }
 
-  for (const DIBasicType *BT : BasicTypes)
-    emitOpStringIfNew(BT->getName(), MAI);
-
   for (const DISubprogram *SP : concat<const DISubprogram *>(
            SubprogramDeclarations, SubprogramDefinitions)) {
     emitOpStringIfNew(SP->getName(), MAI);
@@ -1680,26 +1626,37 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     emitAndCacheScopePathOpStringReg(SP, MAI);
   }
 
-  // Cache the OpStrings each DebugTypeComposite and its DebugTypeMembers use:
-  // the composite name, identifier (linkage name), and path, plus each member
-  // name and path.
-  for (const DICompositeType *CT : CompositeTypes) {
-    emitOpStringIfNew(CT->getName(), MAI);
-    emitOpStringIfNew(CT->getIdentifier(), MAI);
-    emitAndCacheScopePathOpStringReg(CT->getFile(), MAI);
-    for (const DINode *Element : CT->getElements()) {
-      const auto *M = dyn_cast<DIDerivedType>(Element);
-      if (!M || M->getTag() != dwarf::DW_TAG_member)
-        continue;
-      emitOpStringIfNew(M->getName(), MAI);
-      emitAndCacheScopePathOpStringReg(M->getFile(), MAI);
+  for (const DIType *Ty : DebugTypes) {
+    if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
+      emitOpStringIfNew(BT->getName(), MAI);
+      continue;
     }
-  }
-
-  // Cache the name and path OpStrings each DebugTypedef uses.
-  for (const DIDerivedType *TD : TypedefTypes) {
-    emitOpStringIfNew(TD->getName(), MAI);
-    emitAndCacheScopePathOpStringReg(TD->getFile(), MAI);
+    if (const auto *CT = dyn_cast<DICompositeType>(Ty)) {
+      // Cache the OpStrings each DebugTypeComposite and its DebugTypeMembers
+      // use: the composite name, identifier (linkage name), and path, plus
+      // each member name and path. Arrays and vectors have no such strings.
+      if (CT->getTag() != dwarf::DW_TAG_structure_type &&
+          CT->getTag() != dwarf::DW_TAG_class_type &&
+          CT->getTag() != dwarf::DW_TAG_union_type)
+        continue;
+      emitOpStringIfNew(CT->getName(), MAI);
+      emitOpStringIfNew(CT->getIdentifier(), MAI);
+      emitAndCacheScopePathOpStringReg(CT->getFile(), MAI);
+      for (const DINode *Element : CT->getElements()) {
+        const auto *M = dyn_cast<DIDerivedType>(Element);
+        if (!M || M->getTag() != dwarf::DW_TAG_member)
+          continue;
+        emitOpStringIfNew(M->getName(), MAI);
+        emitAndCacheScopePathOpStringReg(M->getFile(), MAI);
+      }
+      continue;
+    }
+    // Cache the name and path OpStrings each DebugTypedef uses.
+    const auto *TD = dyn_cast<DIDerivedType>(Ty);
+    if (TD && TD->getTag() == dwarf::DW_TAG_typedef) {
+      emitOpStringIfNew(TD->getName(), MAI);
+      emitAndCacheScopePathOpStringReg(TD->getFile(), MAI);
+    }
   }
 
   for (const auto &[GV, _] : GlobalVariableDebugInfoMap) {
@@ -2361,9 +2318,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   for (const DIScope *S :
        make_filter_range(LexicalBlocks, IsaPred<DINamespace>))
     getOrCreateDebugScope(S);
-  for (const DIType *Ty :
-       concat<const DIType *>(BasicTypes, VectorTypes, PointerTypes, ArrayTypes,
-                              SubroutineTypes, TypedefTypes, CompositeTypes))
+  for (const DIType *Ty : DebugTypes)
     getOrCreateDebugScope(Ty);
   for (const DISubprogram *SP : concat<const DISubprogram *>(
            SubprogramDeclarations, SubprogramDefinitions))
