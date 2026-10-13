@@ -1572,6 +1572,7 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_make_buffer_rsrc:
+  case Intrinsic::amdgcn_flat_prefetch:
     OpIndexes.push_back(0);
     return true;
   default:
@@ -1624,6 +1625,15 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
         M, II->getIntrinsicID(), {DstTy, SrcTy, NumRecordsTy});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
+  }
+  case Intrinsic::amdgcn_flat_prefetch: {
+    if (NewV->getType()->getPointerAddressSpace() != AMDGPUAS::GLOBAL_ADDRESS)
+      return nullptr;
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        II->getModule(), Intrinsic::amdgcn_global_prefetch);
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;
