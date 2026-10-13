@@ -18,7 +18,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
@@ -26,24 +25,13 @@
 
 using namespace llvm;
 
-// Temporary workaround for old linkers that do not support ULEB128 relocations,
-// which are abused by DWARF v5 DW_LLE_offset_pair/DW_RLE_offset_pair
-// implemented in Clang/LLVM.
-static cl::opt<bool> ULEB128Reloc(
-    "riscv-uleb128-reloc", cl::init(true), cl::Hidden,
-    cl::desc("Emit R_RISCV_SET_ULEB128/E_RISCV_SUB_ULEB128 if appropriate"));
-
-static cl::opt<bool>
-    AlignRvc("riscv-align-rvc", cl::init(true), cl::Hidden,
-             cl::desc("When generating R_RISCV_ALIGN, insert $alignment-2 "
-                      "bytes of NOPs even in norvc code"));
-
 RISCVAsmBackend::RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
                                  bool Is64Bit, bool IsLittleEndian,
                                  const MCTargetOptions &Options)
     : MCAsmBackend(IsLittleEndian ? llvm::endianness::little
                                   : llvm::endianness::big),
-      STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
+      CLOpts(RISCVMCOptions::Global), STI(STI), OSABI(OSABI), Is64Bit(Is64Bit),
+      TargetOptions(Options) {
   RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
 }
 
@@ -343,7 +331,7 @@ bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
   // Use default handling unless the alignment is larger than the nop size.
   const MCSubtargetInfo *STI = F.getSubtargetInfo();
   unsigned MinNopLen =
-      AlignRvc || STI->hasFeature(RISCV::FeatureStdExtZca) ? 2 : 4;
+      CLOpts.align_rvc || STI->hasFeature(RISCV::FeatureStdExtZca) ? 2 : 4;
   if (F.getAlignment() <= MinNopLen)
     return false;
 
@@ -462,7 +450,7 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(MCFragment &LF,
   if (LF.isLEBSigned())
     return std::make_pair(false, false);
   const MCExpr &Expr = LF.getLEBValue();
-  if (ULEB128Reloc) {
+  if (CLOpts.uleb128_reloc) {
     LF.setVarFixups({MCFixup::create(0, &Expr, FK_Data_leb128)});
   }
   return std::make_pair(Expr.evaluateKnownAbsolute(Value, *Asm), false);

@@ -136,6 +136,8 @@ public:
   // Flag to force GOT to be in output if we have relocations
   // that relies on its address.
   std::atomic<bool> hasGotOffRel = false;
+  // Set if relaxOnce may add entries after removeUnusedSyntheticSections.
+  std::atomic<bool> hasDeferredEntries = false;
 
 protected:
   size_t numEntries = 0;

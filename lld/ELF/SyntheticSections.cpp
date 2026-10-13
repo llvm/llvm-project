@@ -579,7 +579,8 @@ void GotSection::finalizeContents() {
 bool GotSection::isNeeded() const {
   // Needed if the GOT symbol is used or the number of entries is more than just
   // the header. A GOT with just the header may not be needed.
-  return hasGotOffRel || numEntries > ctx.target->gotHeaderEntriesNum;
+  return hasGotOffRel || hasDeferredEntries ||
+         numEntries > ctx.target->gotHeaderEntriesNum;
 }
 
 void GotSection::writeTo(uint8_t *buf) {

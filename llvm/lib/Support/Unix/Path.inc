@@ -1308,9 +1308,10 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
   ssize_t NumRead =
       sys::RetryAfterSignal(-1, ::pread, FD.get(), Buf.data(), Size, Offset);
 #else
-  if (lseek(FD, Offset, SEEK_SET) == -1)
+  if (lseek(FD.get(), Offset, SEEK_SET) == -1)
     return errorCodeToError(errnoAsErrorCode());
-  ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
+  ssize_t NumRead =
+      sys::RetryAfterSignal(-1, ::read, FD.get(), Buf.data(), Size);
 #endif
   if (NumRead == -1)
     return errorCodeToError(errnoAsErrorCode());

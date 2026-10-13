@@ -1,8 +1,6 @@
 
 set(ORC_RT_BEDROCK_SOURCES
   BootstrapInfo.cpp
-  ConnectionSpec.cpp
-  ConnectorRegistry.cpp
   ExecutorProcessInfo.cpp
   GDBJITRegistrar.cpp
   InProcessControllerAccess.cpp
@@ -17,8 +15,8 @@ set(ORC_RT_BEDROCK_SOURCES
   sps/GDBJITRegistrarSPSCI.cpp
   sps/MemoryAccessSPSCI.cpp
   sps/NativeDylibManagerSPSCI.cpp
+  sps/SessionSPSCI.cpp
   sps/SimpleNativeMemoryMapSPSCI.cpp
-  sps/SimpleRemoteCA.cpp
   )
 
 # System implementations are composed, not merely selected: a target gets one
@@ -38,19 +36,18 @@ set(ORC_RT_BEDROCK_SOURCES
 # copy of them.
 
 set(ORC_RT_BEDROCK_POSIX_SOURCES
+  sys/posix/DWARFEHFrameRegistrar.cpp
   sys/posix/DynamicLibrary.cpp
   sys/posix/Memory.cpp
   sys/posix/PageSize.cpp
-  sys/posix/SocketConnector.cpp
-  sys/posix/SocketHandle.cpp
-  sys/posix/sps/SimpleRemoteCAOverSocket.cpp
+  sys/posix/sps/DWARFEHFrameRegistrarSPSCI.cpp
 )
 
 set(ORC_RT_BEDROCK_DARWIN_SOURCES
   sys/darwin/CPUFeatures.cpp
+  sys/darwin/StandaloneMachOUnwindInfoRegistrar.cpp
   sys/darwin/TargetTriple.cpp
-  StandaloneMachOUnwindInfoRegistrar.cpp
-  sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
+  sys/darwin/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
 )
 
 set(ORC_RT_BEDROCK_LINUX_SOURCES
@@ -66,12 +63,14 @@ set(ORC_RT_BEDROCK_WINDOWS_SOURCES
   sys/windows/TargetTriple.cpp
 )
 
+if (ORC_RT_TARGET_POSIX)
+  list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_POSIX_SOURCES})
+endif()
+
 if (APPLE)
-  list(APPEND ORC_RT_BEDROCK_SOURCES
-    ${ORC_RT_BEDROCK_POSIX_SOURCES} ${ORC_RT_BEDROCK_DARWIN_SOURCES})
+  list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_DARWIN_SOURCES})
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  list(APPEND ORC_RT_BEDROCK_SOURCES
-    ${ORC_RT_BEDROCK_POSIX_SOURCES} ${ORC_RT_BEDROCK_LINUX_SOURCES})
+  list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_LINUX_SOURCES})
 elseif (WIN32)
   list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_WINDOWS_SOURCES})
 else()

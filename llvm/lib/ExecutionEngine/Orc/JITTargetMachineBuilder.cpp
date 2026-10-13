@@ -56,6 +56,12 @@ JITTargetMachineBuilder::createTargetMachine() {
   return std::unique_ptr<TargetMachine>(TM);
 }
 
+Expected<DataLayout>
+JITTargetMachineBuilder::getDefaultDataLayoutForTarget() const {
+  return DataLayout::parse(
+      TT.computeDataLayout(Options.MCOptions.getABIName()));
+}
+
 JITTargetMachineBuilder &JITTargetMachineBuilder::addFeatures(
     const std::vector<std::string> &FeatureVec) {
   for (const auto &F : FeatureVec)

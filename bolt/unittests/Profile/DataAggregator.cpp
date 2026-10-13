@@ -19,6 +19,7 @@ using namespace llvm::bolt;
 
 namespace opts {
 extern cl::opt<bool> ReadPreAggregated;
+extern cl::opt<bool> IgnoreBuildID;
 } // namespace opts
 
 namespace llvm {
@@ -151,6 +152,84 @@ TEST_F(PreAggregatedTestHelper, parseHexField) {
 }
 
 #ifdef X86_AVAILABLE
+
+namespace llvm {
+namespace bolt {
+
+struct MMapEventsTestHelper : PreAggregatedTestHelper {
+  void SetUp() override {
+    PreAggregatedTestHelper::SetUp();
+    initializeBOLTForX86();
+    BC->setFilename("prog");
+    BC->setFileBuildID(BuildID);
+    BC->SegmentMapInfo[0x401000] =
+        SegmentInfo{0x401000, 0x1000, 0x1000, 0x1000, 0x1000, true, false};
+    opts::IgnoreBuildID = false;
+  }
+
+  static constexpr StringRef BuildID =
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+  DenseSet<uint64_t> parseMMapPIDs(StringRef Input) {
+    DataAggregator DA("<pseudo input>");
+    DA.BC = BC.get();
+    DA.setParsingBuffer(Input);
+    EXPECT_FALSE(DA.parseMMapEvents());
+    DenseSet<uint64_t> PIDs;
+    for (const auto &KV : DA.BinaryMMapInfo)
+      PIDs.insert(KV.first);
+    return PIDs;
+  }
+};
+
+} // namespace bolt
+} // namespace llvm
+
+TEST_F(MMapEventsTestHelper, MatchWithouBuildId) {
+  // Profiles recorded without build-ids match mappings by file name.
+  StringRef Input =
+      "prog 100 160514.108604: PERF_RECORD_MMAP2 100/100: [0x401000(0x1000) @ "
+      "0x1000 00:00 0 0]: r-xp /pkg/mmapptest/1/prog\n"
+      "prog 200 160514.108605: PERF_RECORD_MMAP2 200/200: [0x401000(0x1000) @ "
+      "0x1000 00:00 0 0]: r-xp /pkg/mmapptest/2/prog\n";
+  testing::internal::CaptureStderr();
+  DenseSet<uint64_t> PIDs = parseMMapPIDs(Input);
+  std::string CapturedStderr = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(PIDs.size(), 2u);
+  EXPECT_TRUE(PIDs.count(100));
+  EXPECT_TRUE(PIDs.count(200));
+}
+
+TEST_F(MMapEventsTestHelper, MatchWithBuildId) {
+  BC->setFilename("prog2");
+  StringRef Input =
+      "prog 100 160514.108604: PERF_RECORD_MMAP2 100/100: [0x401000(0x1000) @ "
+      "0x1000 <aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>]: r-xp "
+      "/pkg/mmapptest/1/prog\n"
+      "prog 200 160514.108605: PERF_RECORD_MMAP2 200/200: [0x401000(0x1000) @ "
+      "0x1000 <bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb>]: r-xp "
+      "/pkg/mmapptest/2/prog\n";
+  DenseSet<uint64_t> PIDs = parseMMapPIDs(Input);
+  EXPECT_EQ(PIDs.size(), 1u);
+  EXPECT_TRUE(PIDs.count(100));
+  EXPECT_FALSE(PIDs.count(200));
+}
+
+TEST_F(MMapEventsTestHelper, MatchIgnoreBuildId) {
+  StringRef Input =
+      "prog 100 160514.108604: PERF_RECORD_MMAP2 100/100: [0x401000(0x1000) @ "
+      "0x1000 <aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>]: r-xp "
+      "/pkg/mmapptest/1/prog\n"
+      "prog 200 160514.108605: PERF_RECORD_MMAP2 200/200: [0x401000(0x1000) @ "
+      "0x1000 <bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb>]: r-xp "
+      "/pkg/mmapptest/2/prog\n";
+  opts::IgnoreBuildID = true;
+  DenseSet<uint64_t> PIDs = parseMMapPIDs(Input);
+  opts::IgnoreBuildID = false;
+  EXPECT_EQ(PIDs.size(), 2u);
+  EXPECT_TRUE(PIDs.count(100));
+  EXPECT_TRUE(PIDs.count(200));
+}
 
 namespace llvm {
 namespace bolt {

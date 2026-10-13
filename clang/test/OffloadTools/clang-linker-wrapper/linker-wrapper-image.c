@@ -25,8 +25,8 @@
 // OPENMP-REL: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading.relocatable", align 8
 
 //      OPENMP: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading", align 8
-// OPENMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr (i8, ptr @.omp_offloading.device_image, i64 [[IMG_OFF:[0-9]+]]), ptr getelementptr (i8, ptr @.omp_offloading.device_image, i64 [[IMG_OFF]]), ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, ptr @__stop_llvm_offload_entries }]
-// OPENMP-NEXT: @.omp_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.omp_offloading.device_images, ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, ptr @__stop_llvm_offload_entries }
+// OPENMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr (i8, ptr @.omp_offloading.device_image, i64 [[IMG_OFF:[0-9]+]]), ptr getelementptr (i8, ptr @.omp_offloading.device_image, i64 [[IMG_OFF]]), ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, ptr @__stop_llvm_offload_entries }]
+// OPENMP-NEXT: @.omp_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.omp_offloading.device_images, ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, ptr @__stop_llvm_offload_entries }
 // OPENMP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.omp_offloading.descriptor_reg, ptr null }]
 
 //      OPENMP: define internal void @.omp_offloading.descriptor_reg() section ".text.startup" {
@@ -90,11 +90,11 @@
 //
 //      CUDA: define internal void @.cuda.globals_reg(ptr %0) section ".text.startup" {
 // CUDA-NEXT: entry:
-// CUDA-NEXT:   %1 = icmp ne ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, @__stop_llvm_offload_entries
+// CUDA-NEXT:   %1 = icmp ne ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, @__stop_llvm_offload_entries
 // CUDA-NEXT:   br i1 %1, label %while.entry, label %while.end
 //
 //      CUDA: while.entry:
-// CUDA-NEXT:   %entry1 = phi ptr [ {{(@__start_llvm_offload_entries|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, %entry ], [ %16, %if.end ]
+// CUDA-NEXT:   %entry1 = phi ptr [ {{(@__start_llvm_offload_entries|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, %entry ], [ %16, %if.end ]
 // CUDA-NEXT:   %2 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 4
 // CUDA-NEXT:   %addr = load ptr, ptr %2, align 8
 // CUDA-NEXT:   %3 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 8
@@ -232,11 +232,11 @@
 //
 //      HIP: define internal void @.hip.globals_reg(ptr %0) section "{{\.text\.startup|__TEXT,__StaticInit}}" {
 // HIP-NEXT: entry:
-// HIP-NEXT:   %1 = icmp ne ptr {{(@.*offload_entries.*|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, @{{.*offload_entries.*}}
+// HIP-NEXT:   %1 = icmp ne ptr {{(@.*offload_entries.*|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, @{{.*offload_entries.*}}
 // HIP-NEXT:   br i1 %1, label %while.entry, label %while.end
 //
 //      HIP: while.entry:
-// HIP-NEXT:   %entry1 = phi ptr [ {{(@.*offload_entries.*|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, %entry ], [ %16, %if.end ]
+// HIP-NEXT:   %entry1 = phi ptr [ {{(@.*offload_entries.*|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, %entry ], [ %16, %if.end ]
 // HIP-NEXT:   %2 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 4
 // HIP-NEXT:   %addr = load ptr, ptr %2, align 8
 // HIP-NEXT:   %3 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 8

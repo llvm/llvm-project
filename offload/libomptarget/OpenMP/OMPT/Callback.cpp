@@ -31,8 +31,7 @@ extern "C" void ompt_libomp_connect(ompt_start_tool_result_t *);
 // Define OMPT callback functions (bound to actual callbacks later on)
 #define defineOmptCallback(Name, Type, Code)                                   \
   Name##_t llvm::omp::target::ompt::Name##_fn = nullptr;
-FOREACH_OMPT_NOEMI_EVENT(defineOmptCallback)
-FOREACH_OMPT_EMI_EVENT(defineOmptCallback)
+FOREACH_OMPT_TARGET_CALLBACK(defineOmptCallback)
 #undef defineOmptCallback
 
 // See definition in OpenMP (omp.h.var/omp_lib.(F90|h).var)
@@ -552,8 +551,7 @@ void llvm::omp::target::ompt::connectLibrary() {
     lookupCallbackByCode(                                                      \
         (ompt_callbacks_t)(Code),                                              \
         (ompt_callback_t *)&(llvm::omp::target::ompt::Name##_fn));
-  FOREACH_OMPT_NOEMI_EVENT(bindOmptCallback)
-  FOREACH_OMPT_EMI_EVENT(bindOmptCallback)
+  FOREACH_OMPT_TARGET_CALLBACK(bindOmptCallback)
 #undef bindOmptCallback
 
   ODBG(ODT_Tool) << "Exiting connectLibrary";

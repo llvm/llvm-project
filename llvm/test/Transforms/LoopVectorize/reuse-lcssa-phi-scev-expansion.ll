@@ -21,8 +21,8 @@ define void @reuse_lcssa_phi_for_add_rec1(ptr %head) {
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[IV]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[IV_2_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_2_NEXT]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[SRC_2:%.*]] = tail call noalias noundef dereferenceable_or_null(8) ptr @calloc(i64 1, i64 8)
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smin.i32(i32 [[IV_2_NEXT]], i32 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[IV_2_NEXT]], [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smin.i32(i32 [[IV_2_NEXT_LCSSA]], i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[IV_2_NEXT_LCSSA]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -458,3 +458,80 @@ exit:
   ret void
 }
 
+
+define void @reuse_lcssa_phi_for_trip_count(ptr %dst, i64 %start) {
+; CHECK-LABEL: define void @reuse_lcssa_phi_for_trip_count(
+; CHECK-SAME: ptr [[DST:%.*]], i64 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_1:.*]]
+; CHECK:       [[LOOP_1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[IV_2_NEXT]] = add i64 [[IV_2]], 3
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[EC_1]], label %[[PH:.*]], label %[[LOOP_1]]
+; CHECK:       [[PH]]:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[IV]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[IV_2_LCSSA:%.*]] = phi i64 [ [[IV_2]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[IV_2_LCSSA]], -5
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 1
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 5, [[N_VEC]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 5, [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
+; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ 5, %[[PH]] ]
+; CHECK-NEXT:    br label %[[LOOP_2:.*]]
+; CHECK:       [[LOOP_2]]:
+; CHECK-NEXT:    [[IV_3:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_3_NEXT:%.*]], %[[LOOP_2]] ]
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV_3]]
+; CHECK-NEXT:    store i8 0, ptr [[GEP_DST]], align 1
+; CHECK-NEXT:    [[IV_3_NEXT]] = add i64 [[IV_3]], 1
+; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i64 [[IV_3_NEXT]], [[IV_2_LCSSA]]
+; CHECK-NEXT:    br i1 [[EC_2]], label %[[EXIT]], label %[[LOOP_2]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    store i64 [[IV_LCSSA]], ptr [[DST]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.1 ]
+  %iv.2 = phi i64 [ %start, %entry ], [ %iv.2.next, %loop.1 ]
+  %iv.2.next = add i64 %iv.2, 3
+  %iv.next = add i64 %iv, 1
+  %ec.1 = call i1 @cond()
+  br i1 %ec.1, label %ph, label %loop.1
+
+ph:
+  %iv.lcssa = phi i64 [ %iv, %loop.1 ]
+  %iv.2.lcssa = phi i64 [ %iv.2, %loop.1 ]
+  br label %loop.2
+
+loop.2:
+  %iv.3 = phi i64 [ 5, %ph ], [ %iv.3.next, %loop.2 ]
+  %gep.dst = getelementptr i8, ptr %dst, i64 %iv.3
+  store i8 0, ptr %gep.dst
+  %iv.3.next = add i64 %iv.3, 1
+  %ec.2 = icmp eq i64 %iv.3.next, %iv.2.lcssa
+  br i1 %ec.2, label %exit, label %loop.2
+
+exit:
+  store i64 %iv.lcssa, ptr %dst
+  ret void
+}

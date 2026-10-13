@@ -32,7 +32,7 @@ subroutine s()
   global_real = 1.0
   global_integer = 1
 end subroutine
-!CHECK-DAG: fir.global @_QMdeclare_target_moduleEglobal_arr {alignment = 64 : i64, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} : !fir.array<10xi32>
+!CHECK-DAG: fir.global @_QMdeclare_target_moduleEglobal_arr <{alignment = 64 : i64}> {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} : !fir.array<10xi32>
 !CHECK-DAG: fir.global @_QMdeclare_target_moduleEglobal_real {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : f32
 !CHECK-DAG: fir.global @_QMdeclare_target_moduleEglobal_integer {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} : i32
 

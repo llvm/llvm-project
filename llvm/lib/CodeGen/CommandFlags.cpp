@@ -104,7 +104,6 @@ CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
 CGOPT(bool, EnableCallGraphSection)
 CGOPT(bool, EmitCallSiteInfo)
-CGOPT(bool, EnableMachineFunctionSplitter)
 CGOPT(bool, EnableStaticDataPartitioning)
 CGOPT(bool, EnableDebugEntryValues)
 CGOPT(bool, ForceDwarfFrameSection)
@@ -432,13 +431,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableDebugEntryValues);
 
-  static cl::opt<bool> EnableMachineFunctionSplitter(
-      "split-machine-functions",
-      cl::desc("Split out cold basic blocks from machine functions based on "
-               "profile information"),
-      cl::init(false));
-  CGBINDOPT(EnableMachineFunctionSplitter);
-
   static cl::opt<bool> EnableStaticDataPartitioning(
       "partition-static-data-sections",
       cl::desc("Partition data sections using profile information."),
@@ -550,7 +542,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.ExceptionModel = getExceptionModel();
   Options.VecLib = getVectorLibrary();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
-  Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
   Options.EnableStaticDataPartitioning = getEnableStaticDataPartitioning();
   Options.EmitAddrsig = getEnableAddrsig();
   Options.EmitCallGraphSection = getEnableCallGraphSection();
@@ -745,6 +736,16 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
       M.addModuleFlag(Module::Error, "exception-model",
                       MDString::get(M.getContext(), getExceptionModelName(EH)));
     }
+  }
+
+  // Synthesize the "target-abi" module flag from the -target-abi option.
+  //
+  // FIXME: verifyOptionsConsistency validates consistency for target-abi. We
+  // should consistently handle all ABI module flags either here or there.
+  StringRef ABIName = mc::getABIName();
+  if (!ABIName.empty() && !M.getModuleFlag("target-abi")) {
+    M.addModuleFlag(Module::Error, "target-abi",
+                    MDString::get(M.getContext(), ABIName));
   }
 
   for (Function &F : M)

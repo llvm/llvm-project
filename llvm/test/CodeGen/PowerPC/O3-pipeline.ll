@@ -138,6 +138,8 @@
 ; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       PowerPC MI Peephole Optimization
 ; CHECK-NEXT:       Remove dead machine instructions
+; CHECK-NEXT:       Remove unreachable machine basic blocks
+; CHECK-NEXT:       Live Variable Analysis
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       PowerPC TLS Dynamic Call Fixup
@@ -155,11 +157,11 @@
 ; CHECK-NEXT:       Remove unreachable machine basic blocks
 ; CHECK-NEXT:       Live Variable Analysis
 ; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       Slot index numbering
+; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:       Two-Address instruction pass
-; CHECK-NEXT:       Slot index numbering
-; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
 ; CHECK-NEXT:       Machine Cycle Info Analysis

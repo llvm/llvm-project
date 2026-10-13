@@ -111,6 +111,7 @@ private:
     return selectShiftMask(Root, 32);
   }
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
+  ComplexRendererFns selectBrindRegImm(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImmLsb00000(MachineOperand &Root) const;
 
   // Plan for materializing a constant address as (Hi materialization, Lo12
@@ -642,6 +643,28 @@ RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
       mi_match(RootReg, *MRI, m_ICst(CVal))) {
     if (auto Fns = computeConstAddr(CVal, /*IsPrefetch=*/false, Register()))
       return Fns;
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RootReg); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectBrindRegImm(MachineOperand &Root) const {
+  if (!Root.isReg())
+    return std::nullopt;
+
+  Register RootReg = Root.getReg();
+
+  // base + constant offset (G_PTR_ADD). Doesn't match a FrameIndex, unlike
+  // selectAddrRegImm, since the callers of this (e.g. indirect branches)
+  // can't take a FrameIndex or global address operand.
+  Register BaseReg;
+  int64_t RHSC;
+  if (mi_match(RootReg, *MRI, m_GPtrAdd(m_Reg(BaseReg), m_ICst(RHSC))) &&
+      isInt<12>(RHSC)) {
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(BaseReg); },
+             [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); }}};
   }
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RootReg); },
@@ -1470,11 +1493,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
     return true;
   }
-  case TargetOpcode::G_BRINDIRECT:
-    MI.setDesc(TII.get(RISCV::PseudoBRIND));
-    MI.addOperand(MachineOperand::CreateImm(0));
-    constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-    return true;
   case TargetOpcode::G_SELECT:
     return selectSelect(MI);
   case TargetOpcode::G_FCMP:
@@ -2132,6 +2150,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       TmpReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
     MachineInstr *Cmp = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                 TII.get(getFCmpOpcode(Pred, Size)), TmpReg)
+                            .setMIFlag(MachineInstr::NoFPExcept)
                             .addReg(LHS)
                             .addReg(RHS);
     constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
@@ -2142,6 +2161,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
     MachineInstr *Cmp1 =
         BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                 TII.get(getFCmpOpcode(CmpInst::FCMP_OLT, Size)), Cmp1Reg)
+            .setMIFlag(MachineInstr::NoFPExcept)
             .addReg(LHS)
             .addReg(RHS);
     constrainSelectedInstRegOperands(*Cmp1, TII, TRI, RBI);
@@ -2149,6 +2169,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
     MachineInstr *Cmp2 =
         BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                 TII.get(getFCmpOpcode(CmpInst::FCMP_OLT, Size)), Cmp2Reg)
+            .setMIFlag(MachineInstr::NoFPExcept)
             .addReg(RHS)
             .addReg(LHS);
     constrainSelectedInstRegOperands(*Cmp2, TII, TRI, RBI);
@@ -2169,6 +2190,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       MachineInstr *Cmp =
           BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                   TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), TmpReg)
+              .setMIFlag(MachineInstr::NoFPExcept)
               .addReg(LHS)
               .addReg(LHS);
       constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
@@ -2177,6 +2199,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       MachineInstr *Cmp1 =
           BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                   TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp1Reg)
+              .setMIFlag(MachineInstr::NoFPExcept)
               .addReg(LHS)
               .addReg(LHS);
       constrainSelectedInstRegOperands(*Cmp1, TII, TRI, RBI);
@@ -2184,6 +2207,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       MachineInstr *Cmp2 =
           BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                   TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp2Reg)
+              .setMIFlag(MachineInstr::NoFPExcept)
               .addReg(RHS)
               .addReg(RHS);
       constrainSelectedInstRegOperands(*Cmp2, TII, TRI, RBI);

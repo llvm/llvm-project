@@ -20,7 +20,6 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/ClassUtils.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -394,7 +393,8 @@ static Address applyNonVirtualAndVirtualOffset(
   // not bytes.  So the pointer must be cast to a byte pointer and back.
 
   mlir::Value ptr = addr.getPointer();
-  mlir::Type charPtrType = cgf.cgm.uInt8PtrTy;
+  mlir::Type charPtrType =
+      cgf.getBuilder().getPointerTo(cgf.uInt8Ty, addr.getAddressSpace());
   mlir::Value charPtr = cgf.getBuilder().createBitcast(ptr, charPtrType);
   mlir::Value adjusted = cir::PtrStrideOp::create(
       cgf.getBuilder(), loc, charPtrType, charPtr, baseOffset);
@@ -987,14 +987,13 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
                             /*delegating=*/false, addr, type);
 }
 
-namespace {
-mlir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
-                                  const CXXDestructorDecl *dd) {
+mlir::Value CIRGenFunction::loadThisForDtorDelete(const CXXDestructorDecl *dd) {
   if (Expr *thisArg = dd->getOperatorDeleteThisArg())
-    return cgf.emitScalarExpr(thisArg);
-  return cgf.loadCXXThis();
+    return emitScalarExpr(thisArg);
+  return loadCXXThis();
 }
 
+namespace {
 /// Call the operator delete associated with the current destructor.
 struct CallDtorDelete final : EHScopeStack::Cleanup {
   CallDtorDelete() {}
@@ -1003,7 +1002,7 @@ struct CallDtorDelete final : EHScopeStack::Cleanup {
     const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(cgf.curFuncDecl);
     const CXXRecordDecl *classDecl = dtor->getParent();
     cgf.emitDeleteCall(dtor->getOperatorDelete(),
-                       loadThisForDtorDelete(cgf, dtor),
+                       cgf.loadThisForDtorDelete(dtor),
                        cgf.getContext().getCanonicalTagType(classDecl));
   }
 };
@@ -1035,8 +1034,8 @@ public:
 /// destructors on members and base classes in reverse order of their
 /// construction.
 ///
-/// For a deleting destructor, this also handles the case where a destroying
-/// operator delete completely overrides the definition.
+/// For a deleting destructor, this pushes the cleanup that calls operator
+/// delete. The caller handles a destroying operator delete.
 void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
                                        CXXDtorType dtorType) {
   assert((!dd->isTrivial() || dd->hasAttr<DLLExportAttr>()) &&
@@ -1048,14 +1047,17 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
     assert(dd->getOperatorDelete() &&
            "operator delete missing - EnterDtorCleanups");
     if (cxxStructorImplicitParamValue) {
-      cgm.errorNYI(dd->getSourceRange(), "deleting destructor with vtt");
+      // The implicit parameter of a deleting destructor is the Microsoft ABI
+      // flag word that selects whether and which operator delete is called.
+      assert(getTarget().getCXXABI().isMicrosoft() &&
+             "only the Microsoft ABI passes an implicit deleting dtor param");
+      cgm.errorNYI(dd->getSourceRange(),
+                   "deleting destructor with conditional delete: MSVC ABI");
+
     } else {
-      if (dd->getOperatorDelete()->isDestroyingOperatorDelete()) {
-        cgm.errorNYI(dd->getSourceRange(),
-                     "deleting destructor with destroying operator delete");
-      } else {
-        ehStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
-      }
+      assert(!dd->getOperatorDelete()->isDestroyingOperatorDelete() &&
+             "destroying operator delete is handled by emitDestructorBody");
+      ehStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
     }
     return;
   }
@@ -1255,7 +1257,6 @@ Address CIRGenFunction::getAddressOfBaseClass(
 
   // Get the base pointer type.
   mlir::Type baseValueTy = convertType((path.end()[-1])->getType());
-  assert(!cir::MissingFeatures::addressSpace());
 
   // If there is no virtual base, use cir.base_class_addr.  It takes care of
   // the adjustment and the null pointer check.
@@ -1267,17 +1268,50 @@ Address CIRGenFunction::getAddressOfBaseClass(
 
   assert(!cir::MissingFeatures::sanitizers());
 
+  mlir::Location mlirLoc = getLoc(loc);
+
+  // Computing the virtual offset requires reading the vtable, which is only
+  // safe to do once we know the pointer isn't null. Guard the whole
+  // computation, mirroring classic CodeGen's cast.notnull/cast.end split.
+  if (vBase && nullCheckValue) {
+    CharUnits alignment =
+        cgm.getVBaseAlignment(value.getAlignment(), derived, vBase)
+            .alignmentAtOffset(nonVirtualOffset);
+    mlir::Type basePtrTy =
+        builder.getPointerTo(baseValueTy, value.getAddressSpace());
+    mlir::Value ptrIsNull = builder.createPtrIsNull(value.getPointer());
+    mlir::Value result =
+        cir::TernaryOp::create(
+            builder, mlirLoc, ptrIsNull,
+            [&](mlir::OpBuilder &, mlir::Location) {
+              builder.createYield(
+                  mlirLoc, builder.getNullPtr(basePtrTy, mlirLoc).getResult());
+            },
+            [&](mlir::OpBuilder &, mlir::Location) {
+              mlir::Value virtualOffset =
+                  cgm.getCXXABI().getVirtualBaseClassOffset(
+                      mlirLoc, *this, value, derived, vBase);
+              Address adjusted = applyNonVirtualAndVirtualOffset(
+                  mlirLoc, *this, value, nonVirtualOffset, virtualOffset,
+                  derived, vBase, baseValueTy, /*assumeNotNull=*/true);
+              adjusted = adjusted.withElementType(builder, baseValueTy);
+              builder.createYield(mlirLoc, adjusted.getPointer());
+            })
+            .getResult();
+    return Address(result, baseValueTy, alignment);
+  }
+
   // Compute the virtual offset.
   mlir::Value virtualOffset = nullptr;
   if (vBase) {
     virtualOffset = cgm.getCXXABI().getVirtualBaseClassOffset(
-        getLoc(loc), *this, value, derived, vBase);
+        mlirLoc, *this, value, derived, vBase);
   }
 
   // Apply both offsets.
   value = applyNonVirtualAndVirtualOffset(
-      getLoc(loc), *this, value, nonVirtualOffset, virtualOffset, derived,
-      vBase, baseValueTy, not nullCheckValue);
+      mlirLoc, *this, value, nonVirtualOffset, virtualOffset, derived, vBase,
+      baseValueTy, not nullCheckValue);
 
   // Cast to the destination type.
   value = value.withElementType(builder, baseValueTy);
@@ -1391,9 +1425,9 @@ void CIRGenFunction::emitInheritedCXXConstructorCall(
 
   if (inheritedFromVBase &&
       cgm.getTarget().getCXXABI().hasConstructorVariants()) {
-    cgm.errorNYI(e->getSourceRange(), "emitInheritedCXXConstructorCall "
-                                      "inheritedFromVBase with ctor variants");
-    return;
+    // The base-object variant doesn't construct virtual bases, so the
+    // inherited constructor's arguments aren't passed.
+    ctorArgs.push_back(thisArg);
   } else if (!cxxInheritedCtorInitExprArgs.empty()) {
     // The inheriting constructor was inlined; just inject its arguments.
     assert(cxxInheritedCtorInitExprArgs.size() >= d->getNumParams() &&

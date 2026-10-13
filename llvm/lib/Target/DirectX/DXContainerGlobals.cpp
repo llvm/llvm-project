@@ -13,7 +13,9 @@
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DXILSignatureAnalysis.h"
+#include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
+#include "MCTargetDesc/DirectXContainerObjectWriter.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -42,10 +44,9 @@ using namespace llvm::mcdxbc;
 
 static cl::opt<bool> ShaderHashDependsOnSource(
     "dx-Zss", cl::desc("Compute Shader Hash considering source information"));
-extern cl::opt<std::string> PdbDebugPath;
-extern cl::opt<bool> SourceInDebugModule;
-cl::opt<bool> PdbInPrivate("dx-pdb-in-private",
-                           cl::desc("Store PDB in private user data"));
+
+cl::opt<bool> dxil::PdbInPrivate("dx-pdb-in-private",
+                                 cl::desc("Store PDB in private user data"));
 
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
