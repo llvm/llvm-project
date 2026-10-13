@@ -607,13 +607,12 @@ private:
   /// Size, Flags. NonSemantic \c DebugTypeMember carries no Parent operand: the
   /// enclosing \c DebugTypeComposite references its members, not the reverse.
   ///
-  /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if \p M's type cannot be emitted.
-  std::optional<MCRegister> emitDebugTypeMember(const DIDerivedType *M,
-                                                MCRegister VoidTypeReg,
-                                                MCRegister I32TypeReg,
-                                                MCRegister ExtInstSetReg,
-                                                SPIRV::ModuleAnalysisInfo &MAI);
+  /// \returns Emitted with the result id on success. Returns the base's status
+  /// and emits nothing if \p M's type cannot be emitted.
+  EmitResult emitDebugTypeMember(const DIDerivedType *M, MCRegister VoidTypeReg,
+                                 MCRegister I32TypeReg,
+                                 MCRegister ExtInstSetReg,
+                                 SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \c DebugTypeComposite for the struct, class, or union \p CT, after a
   /// \c DebugTypeMember for each data member whose type can be emitted. A
