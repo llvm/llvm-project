@@ -8,89 +8,79 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
-// <functional>
-
-// template <class T>
-// struct hash
-//     : public unary_function<T, size_t>
-// {
-//     size_t operator()(T val) const;
-// };
+// "support/constexpr_hash.h"
 
 // Not very portable
 
-#include <functional>
+#include "constexpr_hash.h"
+
 #include <cassert>
 #include <type_traits>
 #include <limits>
 #include <cmath>
 
-#include "constexpr_hash.h"
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 11
 #  include "poisoned_hash_helper.h"
 #endif
 
-template <class T, template <class> class THash = std::hash >
+template <class T>
 TEST_CONSTEXPR_CXX26 void test() {
 #if TEST_STD_VER >= 11
-  test_hash_disabled<const T, THash<const T>>();
-  test_hash_disabled<volatile T, THash<volatile T>>();
-  test_hash_disabled<const volatile T, THash<const volatile T>>();
+  test_hash_disabled<const T, support::constexpr_hash<const T>>();
+  test_hash_disabled<volatile T, support::constexpr_hash<volatile T>>();
+  test_hash_disabled<const volatile T, support::constexpr_hash<const volatile T>>();
 #endif
 
-  // typedef std::hash<T> H;
-  typedef THash<T> H;
+  typedef support::constexpr_hash<T> H;
 #if TEST_STD_VER <= 17
-    static_assert((std::is_same<typename H::argument_type, T>::value), "");
-    static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
+  static_assert((std::is_same<typename H::argument_type, T>::value), "");
+  static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
 #endif
-    ASSERT_NOEXCEPT(H()(T()));
-    H h;
+  ASSERT_NOEXCEPT(H()(T()));
+  H h;
 
-    std::size_t t0 = h(0.);
-    std::size_t tn0 = h(-0.);
-    std::size_t tp1 = h(static_cast<T>(0.1));
-    std::size_t t1 = h(1);
-    std::size_t tn1 = h(-1);
-    std::size_t pinf = h(INFINITY);
-    std::size_t ninf = h(-INFINITY);
-    assert(t0 == tn0);
-    assert(t0 != tp1);
-    assert(t0 != t1);
-    assert(t0 != tn1);
-    assert(t0 != pinf);
-    assert(t0 != ninf);
+  std::size_t t0   = h(0.);
+  std::size_t tn0  = h(-0.);
+  std::size_t tp1  = h(static_cast<T>(0.1));
+  std::size_t t1   = h(1);
+  std::size_t tn1  = h(-1);
+  std::size_t pinf = h(INFINITY);
+  std::size_t ninf = h(-INFINITY);
+  assert(t0 == tn0);
+  assert(t0 != tp1);
+  assert(t0 != t1);
+  assert(t0 != tn1);
+  assert(t0 != pinf);
+  assert(t0 != ninf);
 
-    assert(tp1 != t1);
-    assert(tp1 != tn1);
-    assert(tp1 != pinf);
-    assert(tp1 != ninf);
+  assert(tp1 != t1);
+  assert(tp1 != tn1);
+  assert(tp1 != pinf);
+  assert(tp1 != ninf);
 
-    assert(t1 != tn1);
-    assert(t1 != pinf);
-    assert(t1 != ninf);
+  assert(t1 != tn1);
+  assert(t1 != pinf);
+  assert(t1 != ninf);
 
-    assert(tn1 != pinf);
-    assert(tn1 != ninf);
+  assert(tn1 != pinf);
+  assert(tn1 != ninf);
 
-    assert(pinf != ninf);
+  assert(pinf != ninf);
 }
 
-template <template <typename> typename THash >
 TEST_CONSTEXPR_CXX26 bool test_with_hash() {
-  test<float, THash>();
-  test<double, THash>();
-  test<long double, THash>();
+  test<float>();
+  test<double>();
+  test<long double>();
   return true;
 }
 
-int main(int, char**)
-{
-  assert(test_with_hash<std::hash>());
+int main(int, char**) {
+  assert(test_with_hash());
 #if TEST_STD_VER >= 26
-  static_assert(test_with_hash<support::constexpr_hash>());
+  static_assert(test_with_hash());
 #endif
   return 0;
 }

@@ -6,19 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++26
 
-// <functional>
+// "support/constexpr_hash.h"
 
-// Test that <functional> provides all of the arithmetic, enum, and pointer
-// hash specializations.
+// Test that "support/constexpr_hash.h" provides all of the arithmetic, enum, and pointer
+// hash specializations, and that they work during constant evaluation.
 
-#include <functional>
+#include "constexpr_hash.h"
 
 #include "poisoned_hash_helper.h"
 
 #include "test_macros.h"
-#include "constexpr_hash.h"
 
 int main(int, char**) {
   test_library_hash_specializations_available();

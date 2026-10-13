@@ -6,20 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <functional>
+// REQUIRES: std-at-least-c++26
+
+// "support/constexpr_hash.h"
 
 //  Hashing a struct w/o a defined hash should fail.
 
-#include <functional>
-#include <cassert>
-#include <type_traits>
+#include "constexpr_hash.h"
+
+#include <cstddef>
 
 struct X {};
 
-int main(int, char**)
-{
-    X x;
-    std::size_t h = std::hash<X>{} ( x );
+int main(int, char**) {
+  X x;
+  std::size_t h = support::constexpr_hash<X>{}(x);
 
   return 0;
 }

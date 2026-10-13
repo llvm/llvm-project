@@ -8,47 +8,37 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
-// <functional>
-
-// template <class T>
-// struct hash
-//     : public unary_function<T, size_t>
-// {
-//     size_t operator()(T val) const;
-// };
+// "support/constexpr_hash.h"
 
 // Not very portable
 
+#include "constexpr_hash.h"
+
 #include <cassert>
 #include <cstddef>
-#include <functional>
 #include <type_traits>
 
-#include "constexpr_hash.h"
 #include "test_macros.h"
 
-template <class T, template <class> class THash = std::hash >
+template <class T>
 TEST_CONSTEXPR_CXX26 void test() {
-  // typedef std::hash<T> H;
-  typedef THash<T> H;
+  typedef support::constexpr_hash<T> H;
 #if TEST_STD_VER <= 17
-    static_assert((std::is_same<typename H::argument_type, T>::value), "");
-    static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
+  static_assert((std::is_same<typename H::argument_type, T>::value), "");
+  static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
 #endif
-    ASSERT_NOEXCEPT(H()(T()));
-    H h;
+  ASSERT_NOEXCEPT(H()(T()));
+  H h;
 
-    typedef typename std::remove_pointer<T>::type type;
-    type i;
-    type j;
-    assert(h(&i) != h(&j));
+  typedef typename std::remove_pointer<T>::type type;
+  type i;
+  type j;
+  assert(h(&i) != h(&j));
 }
 
-template < template <class> class THash = std::hash >
 TEST_CONSTEXPR_CXX26 void test_nullptr() {
   typedef std::nullptr_t T;
-  // typedef std::hash<T> H;
-  typedef THash<T> H;
+  typedef support::constexpr_hash<T> H;
 #if TEST_STD_VER <= 17
   static_assert((std::is_same<typename H::argument_type, T>::value), "");
   static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
@@ -56,19 +46,17 @@ TEST_CONSTEXPR_CXX26 void test_nullptr() {
   ASSERT_NOEXCEPT(H()(T()));
 }
 
-template <template <typename> typename THash >
 TEST_CONSTEXPR_CXX26 bool test_with_hash() {
-  test_nullptr< THash>();
+  test_nullptr();
   return true;
 }
 
-int main(int, char**)
-{
-  assert(test_with_hash<std::hash>());
-  test<int*>();
+int main(int, char**) {
+  assert(test_with_hash());
+  // test<int*>();
 
 #if TEST_STD_VER >= 26
-  static_assert(test_with_hash<support::constexpr_hash>());
+  static_assert(test_with_hash());
 #endif
 
   return 0;

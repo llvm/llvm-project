@@ -8,132 +8,121 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
-// <functional>
+// "support/constexpr_hash.h"
 
-// template <class T>
-// struct hash
-//     : public unary_function<T, size_t>
-// {
-//     size_t operator()(T val) const;
-// };
+#include "constexpr_hash.h"
 
-#include <functional>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
 
-#include "constexpr_hash.h"
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 11
 #  include "poisoned_hash_helper.h"
 #endif
 
-template <class T, template <class> class THash = std::hash >
+template <class T>
 TEST_CONSTEXPR_CXX26 void test() {
 #if TEST_STD_VER >= 11
-  test_hash_disabled<const T, THash<const T>>();
-  test_hash_disabled<volatile T, THash<volatile T>>();
-  test_hash_disabled<const volatile T, THash<const volatile T>>();
+  test_hash_disabled<const T, support::constexpr_hash<const T>>();
+  test_hash_disabled<volatile T, support::constexpr_hash<volatile T>>();
+  test_hash_disabled<const volatile T, support::constexpr_hash<const volatile T>>();
 #endif
 
-  // typedef std::hash<T> H;
-  typedef THash<T> H;
+  typedef support::constexpr_hash<T> H;
 #if TEST_STD_VER <= 17
-    static_assert((std::is_same<typename H::argument_type, T>::value), "");
-    static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
+  static_assert((std::is_same<typename H::argument_type, T>::value), "");
+  static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
 #endif
-    ASSERT_NOEXCEPT(H()(T()));
-    H h;
+  ASSERT_NOEXCEPT(H()(T()));
+  H h;
 
-    for (int i = 0; i <= 5; ++i)
-    {
-        T t(static_cast<T>(i));
-        const bool small = std::integral_constant<bool, sizeof(T) <= sizeof(std::size_t)>::value; // avoid compiler warnings
-        if (small)
-        {
-            const std::size_t result = h(t);
-            LIBCPP_ASSERT(result == static_cast<std::size_t>(t));
-            ((void)result); // Prevent unused warning
-        }
+  for (int i = 0; i <= 5; ++i) {
+    T t(static_cast<T>(i));
+    const bool small = std::integral_constant<bool, sizeof(T) <= sizeof(std::size_t)>::value; // avoid compiler warnings
+    if (small) {
+      const std::size_t result = h(t);
+      LIBCPP_ASSERT(result == static_cast<std::size_t>(t));
+      ((void)result); // Prevent unused warning
     }
+  }
 }
 
-template <template <typename> typename THash >
 TEST_CONSTEXPR_CXX26 bool test_with_hash() {
-  test<bool, THash>();
-  test<char, THash>();
-  test<signed char, THash>();
-  test<unsigned char, THash>();
-  test<char16_t, THash>();
-  test<char32_t, THash>();
+  test<bool>();
+  test<char>();
+  test<signed char>();
+  test<unsigned char>();
+  test<char16_t>();
+  test<char32_t>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t, THash>();
+  test<wchar_t>();
 #endif
-  test<short, THash>();
-  test<unsigned short, THash>();
-  test<int, THash>();
-  test<unsigned int, THash>();
-  test<long, THash>();
-  test<unsigned long, THash>();
-  test<long long, THash>();
-  test<unsigned long long, THash>();
+  test<short>();
+  test<unsigned short>();
+  test<int>();
+  test<unsigned int>();
+  test<long>();
+  test<unsigned long>();
+  test<long long>();
+  test<unsigned long long>();
 
   //  LWG #2119
-  test<std::ptrdiff_t, THash>();
-  test<std::size_t, THash>();
+  test<std::ptrdiff_t>();
+  test<std::size_t>();
 
-  test<std::int8_t, THash>();
-  test<std::int16_t, THash>();
-  test<std::int32_t, THash>();
-  test<std::int64_t, THash>();
+  test<std::int8_t>();
+  test<std::int16_t>();
+  test<std::int32_t>();
+  test<std::int64_t>();
 
-  test<std::int_fast8_t, THash>();
-  test<std::int_fast16_t, THash>();
-  test<std::int_fast32_t, THash>();
-  test<std::int_fast64_t, THash>();
+  test<std::int_fast8_t>();
+  test<std::int_fast16_t>();
+  test<std::int_fast32_t>();
+  test<std::int_fast64_t>();
 
-  test<std::int_least8_t, THash>();
-  test<std::int_least16_t, THash>();
-  test<std::int_least32_t, THash>();
-  test<std::int_least64_t, THash>();
+  test<std::int_least8_t>();
+  test<std::int_least16_t>();
+  test<std::int_least32_t>();
+  test<std::int_least64_t>();
 
-  test<std::intmax_t, THash>();
-  test<std::intptr_t, THash>();
+  test<std::intmax_t>();
+  test<std::intptr_t>();
 
-  test<std::uint8_t, THash>();
-  test<std::uint16_t, THash>();
-  test<std::uint32_t, THash>();
-  test<std::uint64_t, THash>();
+  test<std::uint8_t>();
+  test<std::uint16_t>();
+  test<std::uint32_t>();
+  test<std::uint64_t>();
 
-  test<std::uint_fast8_t, THash>();
-  test<std::uint_fast16_t, THash>();
-  test<std::uint_fast32_t, THash>();
-  test<std::uint_fast64_t, THash>();
+  test<std::uint_fast8_t>();
+  test<std::uint_fast16_t>();
+  test<std::uint_fast32_t>();
+  test<std::uint_fast64_t>();
 
-  test<std::uint_least8_t, THash>();
-  test<std::uint_least16_t, THash>();
-  test<std::uint_least32_t, THash>();
-  test<std::uint_least64_t, THash>();
+  test<std::uint_least8_t>();
+  test<std::uint_least16_t>();
+  test<std::uint_least32_t>();
+  test<std::uint_least64_t>();
 
-  test<std::uintmax_t, THash>();
-  test<std::uintptr_t, THash>();
+  test<std::uintmax_t>();
+  test<std::uintptr_t>();
 
 #ifndef TEST_HAS_NO_INT128
-  test<__int128_t, THash>();
-  test<__uint128_t, THash>();
+  test<__int128_t>();
+  test<__uint128_t>();
 #endif
 
   return true;
 }
 
 int main(int, char**) {
-  assert(test_with_hash<std::hash>());
+  assert(test_with_hash());
 
 #if TEST_STD_VER >= 26
-  static_assert(test_with_hash<support::constexpr_hash>());
+  static_assert(test_with_hash());
 #endif
 
   return 0;
