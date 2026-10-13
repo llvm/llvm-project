@@ -54,8 +54,9 @@ void DebugInfoODRUniquer::addUnresolvedODRSubprogramDecl(TempDISubprogram SP) {
 }
 
 void DebugInfoODRUniquer::finalizeUnresolvedSubprogramDecls() {
-  while (!PendingFnDecls.empty()) {
-    TempDISubprogram SP = PendingFnDecls.pop_back_val();
+  for (auto It = PendingFnDecls.begin(), End = PendingFnDecls.end(); It != End;
+       ++It) {
+    TempDISubprogram SP = std::move(*It);
     if (MDNode *Scope = dyn_cast_or_null<MDNode>(SP->getRawScope())) {
       assert(!SP->getLinkageName().empty() && "expcted linkage name");
       assert(!Scope->isTemporary() &&
@@ -74,4 +75,5 @@ void DebugInfoODRUniquer::finalizeUnresolvedSubprogramDecls() {
     assert(NewSP->isResolved() && "expected SP to be resolved");
     addSubprogramDecl(NewSP);
   }
+  PendingFnDecls.clear();
 }

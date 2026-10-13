@@ -1,8 +1,11 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 ; RUN: opt < %s -S | FileCheck %s
+; RUN: opt < %s -disable-debug-info-type-map | opt -S | FileCheck %s
 ; RUN: verify-uselistorder %s
 
-;; This test also runs opt to check opt applies the same odr type debug uniquing.
+;; This test also runs opt to check opt applies the same odr type debug uniquing,
+;; and runs it with -disable-debug-info-type-map to check that the subsequent
+;; bitcode parsing run agrees with the output.
 
 ; Anchor the order of the nodes.
 !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !20, !21, !22, !23}
@@ -61,7 +64,7 @@
 ; Define an identified type with fields and functions. This time DISubprograms
 ; come before DICompositeType scope to check forward refs work with the debug
 ; ODR type uniquing infra.
-; CHECK-NEXT: !18 = !DISubprogram(name: "scope-metadata-fwd-ref2", linkageName: "scope-metadata-fwd-ref", scope: !19, file: !1, type: !7, spFlags: 0)
+; CHECK-NEXT: !18 = !DISubprogram(name: "scope-metadata-fwd-ref1", linkageName: "scope-metadata-fwd-ref", scope: !19, file: !1, type: !7, spFlags: 0)
 ; CHECK-NEXT: !19 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "odr-scope", file: !1, line: 2, size: 64, align: 32, identifier: "odr-scope")
 ; CHECK-NEXT: !20 = !{!18, !18}
 !20 = !DISubprogram(name: "scope-metadata-fwd-ref1", linkageName: "scope-metadata-fwd-ref", scope: !22, file: !1, isDefinition: false, type: !18)
