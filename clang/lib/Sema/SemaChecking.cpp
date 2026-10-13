@@ -4184,6 +4184,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BIcoop_mat_scalar_neg:
     return BuiltinCoopMatrixScalarUnaryOp(TheCall, TheCallResult);
 
+  case Builtin::BIcoop_mat_init:
+    return BuiltinCoopMatInit(TheCall, TheCallResult);
+
+  case Builtin::BIcoop_mat_length:
+    return BuiltinCoopMatLength(TheCall, TheCallResult);
+
   case Builtin::BI__builtin_matrix_transpose:
     return BuiltinMatrixTranspose(TheCall, TheCallResult);
 
@@ -17696,7 +17702,7 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
 
     if (!OperandsTy->isIntegerType() && !OperandsTy->isEnumeralType()) {
       Diag(Operands->getBeginLoc(),
-           diag::err_invalid_coopmat_memory_operand_type);
+           diag::err_invalid_coopmat_matrix_operand_type);
       return ExprError();
     }
   }
@@ -17798,6 +17804,58 @@ ExprResult Sema::BuiltinCoopMatrixScalarUnaryOp(CallExpr *TheCall,
   }
   TheCall->setType(Arg0->getType());
 
+  return CallResult;
+}
+
+ExprResult Sema::BuiltinCoopMatInit(CallExpr *TheCall, ExprResult CallResult) {
+  if (checkArgCount(TheCall, 1))
+    return ExprError();
+
+  Expr *Arg = TheCall->getArg(0);
+
+  // Defer validation for dependent arguments.
+  if (Arg->isTypeDependent())
+    return CallResult;
+
+  QualType ArgTy = Arg->getType();
+
+  // coop_mat_init(coop_mat)
+  if (ArgTy->isCooperativeMatrixType())
+    return CallResult;
+
+  // coop_mat_init(component_type)
+  if (ArgTy->isArithmeticType())
+    return CallResult;
+
+  // coop_mat_init(const gentype *)
+  if (const auto *PtrTy = ArgTy->getAs<PointerType>()) {
+    QualType PointeeTy = PtrTy->getPointeeType();
+
+    if (PointeeTy->isArithmeticType())
+      return CallResult;
+  }
+
+  Diag(Arg->getBeginLoc(), diag::err_invalid_coopmat_builtin_arg);
+  return ExprError();
+}
+
+ExprResult Sema::BuiltinCoopMatLength(CallExpr *TheCall,
+                                      ExprResult CallResult) {
+  if (checkArgCount(TheCall, 1))
+    return ExprError();
+
+  Expr *Arg = TheCall->getArg(0);
+
+  // Defer validation for dependent arguments.
+  if (Arg->isTypeDependent())
+    return CallResult;
+
+  if (!Arg->getType()->isCooperativeMatrixType()) {
+    Diag(Arg->getBeginLoc(), diag::err_invalid_coopmat_arg);
+    return ExprError();
+  }
+
+  // The builtin declaration should already provide the result type.
   return CallResult;
 }
 

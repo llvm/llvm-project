@@ -12031,10 +12031,10 @@ def err_coopmat_mismatch_element_and_pointer_type
             "pointer type">;
 
 def err_invalid_coopmat_arg
-    : Error<"argument must be a valid cooperative matrix type">;
+    : Error<"argument must be a valid cooperative matrix">;
 
-def err_invalid_coopmat_memory_operand_type
-    : Error<"fourth argument of 'coop_mat_mulAdd' must have enum type">;
+def err_invalid_coopmat_matrix_operand_type
+    : Error<"fourth argument of 'coop_mat_mulAdd' must have enum or integer type">;
 
 def err_invalid_coopmat_assignment
     : Error<"builtin return value should be assigned to cooperative matrix "
@@ -12059,6 +12059,9 @@ def err_unsupported_coopmat_scalar_operator
 
 def err_incompatible_coopmat_types
     : Error<"incompatible cooperative matrix types">;
+
+def err_invalid_coopmat_builtin_arg
+    : Error<"invalid argument of cooperative matrix builtin">;
 
 // MIG routine annotations.
 def warn_mig_server_routine_does_not_return_kern_return_t : Warning<

@@ -5193,8 +5193,7 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   }
 
   // If the base is a matrix type, try to create a new MatrixSubscriptExpr.
-  if (base->getType()->isMatrixType() ||
-      base->getType()->isCooperativeMatrixType()) {
+  if (base->getType()->isMatrixType()) {
     if (CheckAndReportCommaError(ArgExprs.front()))
       return ExprError();
 
@@ -16039,12 +16038,13 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   switch (Opc) {
   case BO_Assign:
     if (getLangOpts().OpenCL) {
-      if (CallExpr *Call = getCoopMatrixBuiltinCall(RHSExpr)) {
+      if (CallExpr *Call = getCoopMatrixBuiltinCall(RHSExpr->IgnoreParens())) {
         if (!LHSExpr->getType()->isCooperativeMatrixType()) {
           Diag(LHSExpr->getBeginLoc(), diag::err_invalid_coopmat_assignment);
           return ExprError();
         }
         Call->setType(LHSExpr->getType());
+        RHS.get()->setType(LHSExpr->getType());
         if (CheckCoopMatrixLoadElementType(LHSExpr->getType(),
                                            LHSExpr->getBeginLoc(), Call))
           return ExprError();

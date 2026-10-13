@@ -3137,6 +3137,8 @@ private:
                                        ExprResult CallResult);
   ExprResult BuiltinCoopMatrixScalarUnaryOp(CallExpr *TheCall,
                                             ExprResult CallResult);
+  ExprResult BuiltinCoopMatInit(CallExpr *TheCall, ExprResult CallResult);
+  ExprResult BuiltinCoopMatLength(CallExpr *TheCall, ExprResult CallResult);
 
   // Matrix builtin handling.
   ExprResult BuiltinMatrixTranspose(CallExpr *TheCall, ExprResult CallResult);
