@@ -8215,10 +8215,6 @@ static bool isGuaranteedNotToBeUndefOrPoison(
           if (isa<ConstantInt>(SplatC) || isa<ConstantFP>(SplatC))
             return true;
       } else {
-        if (includesUndef(Kind) && C->containsUndefElement())
-          return false;
-        if (includesPoison(Kind) && C->containsPoisonElement())
-          return false;
         if (auto *CA = dyn_cast<ConstantAggregate>(C))
           return all_of(CA->operands(), [&](const Use &Op) {
             return isGuaranteedNotToBeUndefOrPoison(Op.get(), AC, CtxI, DT,
