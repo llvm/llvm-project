@@ -1,5 +1,5 @@
-; RUN: llc -O0 -global-isel=false -mtriple=amdgpu9.0a-amd-amdhsa %s -o - | FileCheck %s --check-prefix=GFX90A
-; RUN: llc -O0 -global-isel=false -mtriple=amdgpu12.01-amd-amdhsa %s -o - | FileCheck %s --check-prefix=GFX12
+; RUN: llc -O0 -mtriple=amdgpu9.0a-amd-amdhsa %s -o - | FileCheck %s --check-prefix=GFX90A
+; RUN: llc -O0 -mtriple=amdgpu12.01-amd-amdhsa %s -o - | FileCheck %s --check-prefix=GFX12
 
 define amdgpu_kernel void @store_as4_v4i64(ptr addrspace(4) %dst, <4 x i64> %value) {
 ; GFX90A-LABEL: store_as4_v4i64:
