@@ -2633,14 +2633,10 @@ bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
         return true;
     }
 
-    auto *ValuDst = TII->getNamedOperand(*MI, AMDGPU::OpName::vdst);
-    if (!ValuDst || !ValuDst->isReg())
-      return false;
-
-    // WAR: Trans(I) reads, VALU(MI) writes.
-    Register ValuDef = ValuDst->getReg();
+    // WAR: Trans(I) reads, VALU(MI) writes. Use modifiesRegister for
+    // multi-dest VALUs.
     for (const MachineOperand &TransUse : I.explicit_uses()) {
-      if (TransUse.isReg() && TRI->regsOverlap(ValuDef, TransUse.getReg()))
+      if (TransUse.isReg() && MI->modifiesRegister(TransUse.getReg(), TRI))
         return true;
     }
 
