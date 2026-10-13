@@ -160,56 +160,6 @@ static bool hasIncompleteRecordByValue(mlir::Type ty) {
   return false;
 }
 
-/// Whether \p ty has the x87 double extended format, wrapped in LongDoubleType
-/// or not.
-static bool isX87DoubleExtended(mlir::Type ty) {
-  auto fpTy = dyn_cast<cir::FPTypeInterface>(ty);
-  return fpTy &&
-         &fpTy.getFloatSemantics() == &llvm::APFloat::x87DoubleExtended();
-}
-
-/// Whether \p ty is, or holds by value, an x87 double extended value, alone or
-/// as the element of a _Complex or a vector.
-static bool holdsX87DoubleExtended(mlir::Type ty) {
-  if (isa<cir::FPTypeInterface>(ty))
-    return isX87DoubleExtended(ty);
-  if (auto complexTy = dyn_cast<cir::ComplexType>(ty))
-    return isX87DoubleExtended(complexTy.getElementType());
-  if (auto vecTy = dyn_cast<cir::VectorType>(ty))
-    return isX87DoubleExtended(vecTy.getElementType());
-  if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
-    return arrTy.getSize() && holdsX87DoubleExtended(arrTy.getElementType());
-  if (auto recTy = dyn_cast<cir::RecordType>(ty))
-    return llvm::any_of(recTy.getMembers(), holdsX87DoubleExtended);
-  return false;
-}
-
-/// Returns how many bytes from the start of \p ty a value of it reaches.  A
-/// scalar reaches the end of its storage, a record the furthest end of its
-/// non-padding members, and an array the end of its last element, so padding
-/// at the end of a record does not count.
-static uint64_t getDataExtentInBytes(mlir::Type ty, const DataLayout &dl) {
-  if (auto recTy = dyn_cast<cir::RecordType>(ty)) {
-    uint64_t extent = 0;
-    for (auto [idx, memberTy, kind] :
-         llvm::enumerate(recTy.getMembers(), recTy.getMemberKinds())) {
-      if (kind == cir::RecordMemberKind::Pad)
-        continue;
-      extent = std::max(extent, recTy.getElementOffset(dl, idx) +
-                                    getDataExtentInBytes(memberTy, dl));
-    }
-    return extent;
-  }
-  if (auto arrTy = dyn_cast<cir::ArrayType>(ty)) {
-    if (!arrTy.getSize())
-      return 0;
-    mlir::Type elemTy = arrTy.getElementType();
-    return (arrTy.getSize() - 1) * dl.getTypeSize(elemTy).getFixedValue() +
-           getDataExtentInBytes(elemTy, dl);
-  }
-  return dl.getTypeSize(ty).getFixedValue();
-}
-
 /// The CIR types the x86_64 bridge handles.  Scalars: an integer up to 128
 /// bits (including `__int128`), a `_BitInt` of any width, pointer, vtable
 /// pointer, bool, void, or any floating-point type.  Aggregates: a complete
@@ -302,26 +252,6 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
       // there is no member here to build the Indirect coercion from.
       if (members.empty() && recordBits > 128)
         return false;
-      // A union is moved as a value of its storage type, and an x87 value
-      // stores fewer bytes than it occupies, so the bytes another member
-      // holds past them would be lost.  A double extended member stores its
-      // first 10 bytes, so it can share a union with other such members and
-      // with members whose data ends within those bytes, provided it is the
-      // storage type.  An x87 value held any other way, in a _Complex, a
-      // vector, a record or an array, is measured at its full storage, which
-      // reaches past them.
-      if (members.size() > 1 && llvm::any_of(members, holdsX87DoubleExtended)) {
-        uint64_t x87StoreBytes = llvm::APFloat::semanticsSizeInBits(
-                                     llvm::APFloat::x87DoubleExtended()) /
-                                 8;
-        if (!isX87DoubleExtended(
-                mlir::cast<cir::UnionType>(recTy).getUnionStorageType(dl)) ||
-            !llvm::all_of(members, [&](mlir::Type m) {
-              return isX87DoubleExtended(m) ||
-                     getDataExtentInBytes(m, dl) <= x87StoreBytes;
-            }))
-          return false;
-      }
       // A `_BitInt` access unit past an eightbyte has byte-array storage in
       // CIR and integer storage in classic CodeGen, so the narrowing walk
       // finds an i8 in the second eightbyte where classic keeps an i64.

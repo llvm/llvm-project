@@ -88,7 +88,6 @@ cir.func @takes_dim3(%arg0: !rec_Dim3)
 }
 
 // CHECK:      cir.func{{.*}} @takes_dim3(%[[D0:.*]]: !s64i, %[[D1:.*]]: !s32i)
-// CHECK:        cir.alloca "coerce" {{.*}} : !cir.ptr<{{.*}}, target_address_space(5)>
 // CHECK:        %[[FSLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<{{.*}}, target_address_space(5)>
 // CHECK:        %[[P0:.*]] = cir.get_member %[[FSLOT]][0] {{.*}} -> !cir.ptr<!s64i, target_address_space(5)>
 // CHECK:        cir.store %[[D0]], %[[P0]] : !s64i, !cir.ptr<!s64i, target_address_space(5)>
