@@ -14,6 +14,7 @@
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
@@ -487,12 +488,21 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   return isa<VPExpandSCEVRecipe>(VPV);
 }
 
-bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
+static bool
+isUniformAcrossVFsAndUFsImpl(const VPValue *V,
+                             SmallPtrSetImpl<const VPValue *> &Visited) {
   // Live-ins, symbolic and canonical-IV region values are uniform.
   if (auto *RV = dyn_cast<VPRegionValue>(V))
     return RV == RV->getDefiningRegion()->getCanonicalIV();
   if (isa<VPIRValue, VPSymbolicValue>(V))
     return true;
+
+  // All recursive checks are conjunctive, so each value needs checking once.
+  if (!Visited.insert(V).second)
+    return true;
+  auto IsUniform = [&](const VPValue *Op) {
+    return isUniformAcrossVFsAndUFsImpl(Op, Visited);
+  };
 
   const VPRecipeBase *R = V->getDefiningRecipe();
   const VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
@@ -503,12 +513,12 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()) ||
         match(R, m_ExtractVectorForPart(m_VPValue(), m_VPValue())))
       return false;
-    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
+    return all_of(R->operands(), IsUniform);
   }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
       .Case([](const VPDerivedIVRecipe *R) { return true; })
-      .Case([](const VPReplicateRecipe *R) {
+      .Case([&](const VPReplicateRecipe *R) {
         // Be conservative about side-effects, except for the
         // known-side-effecting assumes and stores, which we know will be
         // uniform. Each alloca creates a distinct allocation, so allocas are
@@ -516,29 +526,34 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
         return R->isSingleScalar() && R->getOpcode() != Instruction::Alloca &&
                (!R->mayHaveSideEffects() ||
                 isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
-               all_of(R->operands(), isUniformAcrossVFsAndUFs);
+               all_of(R->operands(), IsUniform);
       })
-      .Case([](const VPWidenRecipe *R) {
+      .Case([&](const VPWidenRecipe *R) {
         return preservesUniformity(R->getOpcode()) &&
-               all_of(R->operands(), isUniformAcrossVFsAndUFs);
+               all_of(R->operands(), IsUniform);
       })
       .Case([](const VPPhi *) {
         // Bail out on VPPhi, as we can end up in infinite cycles.
         return false;
       })
-      .Case([](const VPInstruction *VPI) {
+      .Case([&](const VPInstruction *VPI) {
         return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
                 preservesUniformity(VPI->getOpcode())) &&
-               all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
+               all_of(VPI->operands(), IsUniform);
       })
-      .Case([](const VPWidenCastRecipe *R) {
+      .Case([&](const VPWidenCastRecipe *R) {
         // A cast is uniform according to its operand.
-        return isUniformAcrossVFsAndUFs(R->getOperand(0));
+        return IsUniform(R->getOperand(0));
       })
       .Default([](const VPRecipeBase *) { // A value is considered non-uniform
                                           // unless proven otherwise.
         return false;
       });
+}
+
+bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
+  SmallPtrSet<const VPValue *, 8> Visited;
+  return isUniformAcrossVFsAndUFsImpl(V, Visited);
 }
 
 bool vputils::doesGeneratePerAllLanes(const VPRecipeBase *R) {
