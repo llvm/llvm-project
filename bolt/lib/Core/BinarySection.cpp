@@ -16,6 +16,7 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Endian.h"
 
 #define DEBUG_TYPE "bolt"
 
@@ -191,8 +192,19 @@ void BinarySection::flushPendingRelocations(raw_fd_ostream &OS,
       ++SkippedPendingRelocations;
       continue;
     }
-    Value = Relocation::encodeValue(Reloc.Type, Value,
-                                    SectionAddress + Reloc.Offset);
+
+    uint32_t OriginalInst = 0;
+    // Are we dealing with B.cond, TBZ/TBNZ, CBZ/CBNZ and need extra info
+    // to be able to encode the instruction.
+    if (BC.isAArch64() && (Reloc.Type == ELF::R_AARCH64_CONDBR19 ||
+                           Reloc.Type == ELF::R_AARCH64_TSTBR14)) {
+      StringRef Contents = getContents();
+      assert(Contents.size() >= Reloc.Offset + 4 &&
+             "Complete instruction must lie in contents.");
+      OriginalInst = support::endian::read32le(Contents.data() + Reloc.Offset);
+    }
+    Value = Relocation::encodeValue(
+        Reloc.Type, Value, SectionAddress + Reloc.Offset, OriginalInst);
 
     safePWrite(OS, reinterpret_cast<const char *>(&Value),
                Relocation::getSizeForType(Reloc.Type),

@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvars -run-pass=virtregrewriter -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvars -run-pass=virt-reg-rewriter -o - %s | FileCheck %s
 
 # Regression test for a bug where LiveDebugVariables used the wrong instruction
 # iterator type when debugInstrRef=true, and triggered an assertion.

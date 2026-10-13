@@ -47,6 +47,19 @@
 // CHK-FSYCL-IS-DEVICE: "-cc1"{{.*}} "-fsycl-is-device" {{.*}} "-emit-llvm-bc"
 // CHK-FSYCL-IS-HOST: "-cc1"{{.*}} "-fsycl-is-host"
 
+/// Check that -S with a device-only compilation produces textual SPIR-V, while
+/// -S -emit-llvm continues to produce textual LLVM IR.
+// RUN: %clang -### -fsycl -fsycl-device-only -S %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-DEVICE-ONLY-ASM %s
+// RUN: %clang -### -fsycl -fsycl-device-only -S -emit-llvm %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-DEVICE-ONLY-LL %s
+// CHK-DEVICE-ONLY-ASM: "-cc1"{{.*}} "-fsycl-is-device"
+// CHK-DEVICE-ONLY-ASM-NOT: "-emit-llvm"
+// CHK-DEVICE-ONLY-ASM-SAME: "-S"
+// CHK-DEVICE-ONLY-ASM-SAME: "-o" "{{[^"]*}}.s"
+// CHK-DEVICE-ONLY-LL: "-cc1"{{.*}} "-fsycl-is-device" {{.*}} "-emit-llvm"
+// CHK-DEVICE-ONLY-LL-SAME: "-o" "{{[^"]*}}.ll"
+
 /// Check that SYCL compilation defaults to relocatable device code (-fgpu-rdc
 /// is passed to both the device and the host -cc1 invocation) and that
 /// -fno-gpu-rdc disables it.

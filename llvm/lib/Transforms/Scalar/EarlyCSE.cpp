@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -72,16 +73,6 @@ STATISTIC(NumDSE,      "Number of trivial dead stores removed");
 
 DEBUG_COUNTER(CSECounter, "early-cse",
               "Controls which instructions are removed");
-
-static cl::opt<unsigned> EarlyCSEMssaOptCap(
-    "earlycse-mssa-optimization-cap", cl::init(500), cl::Hidden,
-    cl::desc("Enable imprecision in EarlyCSE in pathological cases, in exchange "
-             "for faster compile. Caps the MemorySSA clobbering calls."));
-
-static cl::opt<bool> EarlyCSEDebugHash(
-    "earlycse-debug-hash", cl::init(false), cl::Hidden,
-    cl::desc("Perform extra assertion checking to verify that SimpleValue's hash "
-             "function is well-behaved w.r.t. its isEqual predicate"));
 
 //===----------------------------------------------------------------------===//
 // SimpleValue
@@ -328,7 +319,7 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
   // will force all hashing to collide, so we'll exhaustively search
   // the table for a match, and the assertion in isEqual will fire if
   // there's a bug causing equal keys to hash differently.
-  if (EarlyCSEDebugHash)
+  if (ScalarOptions::Global.earlycse_debug_hash)
     return 0;
 #endif
   return getHashValueImpl(Val);
@@ -1093,7 +1084,7 @@ bool EarlyCSE::isSameMemGeneration(unsigned EarlierGeneration,
   // EarlierInst and LaterInst and neither can any other write that potentially
   // clobbers LaterInst.
   MemoryAccess *LaterDef;
-  if (ClobberCounter < EarlyCSEMssaOptCap) {
+  if (ClobberCounter < ScalarOptions::Global.earlycse_mssa_optimization_cap) {
     LaterDef = MSSA->getWalker()->getClobberingMemoryAccess(LaterInst);
     ClobberCounter++;
   } else

@@ -148,6 +148,10 @@ struct DAP final : public DAPTransport::MessageHandler {
   lldb::SBFormat thread_format;
   llvm::unique_function<void()> on_configuration_done;
 
+  /// Called after the session ends, to send the 'disconnect' response as the
+  /// last message to the client.
+  llvm::unique_function<void()> on_session_end;
+
   /// This is used to allow request_evaluate to handle empty expressions
   /// (ie the user pressed 'return' and expects the previous expression to
   /// repeat). If the previous expression was a command, it will be empty.
@@ -338,6 +342,9 @@ struct DAP final : public DAPTransport::MessageHandler {
   llvm::Error Disconnect();
 
   /// Disconnect the DAP session and optionally terminate the debuggee.
+  ///
+  /// The session ends once the current request handler returns, see `Loop()`.
+  /// Does nothing if the session is already disconnected.
   llvm::Error Disconnect(bool terminateDebuggee);
 
   /// Send a "terminated" event to indicate the process is done being debugged.
@@ -465,6 +472,24 @@ private:
   void TransportHandler();
   void TerminateLoop(bool failed = false);
 
+  /// What `Loop()` does with the queued messages. It only moves forward.
+  enum class QueueState {
+    Running,
+    /// The client closed the connection, or the transport failed.
+    InputClosed,
+    /// `Disconnect()` ended the session and we killed or detached the debuggee.
+    Disconnected,
+  };
+
+  /// Updates the queue to `state`. Only updates if state it is greater than the
+  /// current state. Used in `Loop()`. Caller must hold `m_queue_mutex`.
+  void SetQueueState(QueueState state);
+
+  /// Ends the session and does cleanup.
+  /// Reports the end of the debuggee, stops reading from the
+  /// client, answers the queued requests, then calls `on_session_end`.
+  void EndSession(std::thread &transport_thread);
+
   /// Registration of request handler.
   /// @{
   void RegisterRequests();
@@ -494,7 +519,7 @@ private:
   std::deque<protocol::Message> m_queue;
   std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
-  bool m_disconnecting = false;
+  QueueState m_queue_state = QueueState::Running;
   bool m_error_occurred = false;
 
   // Loop for managing reading from the client.

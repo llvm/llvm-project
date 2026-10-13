@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/SocketConnector.h"
+#include "orc-rt/bedrock/Session.h"
 
+#include "BedrockTestUtils.h"
+#include "CommonTestUtils.h"
 #include "ErrorMatchers.h"
 #include "bedrock/SocketTestUtils.h"
 
@@ -28,22 +31,18 @@ using ::testing::HasSubstr;
 
 namespace {
 
-/// Runs "socket:adopt=<FD>" through the socket connector. The GetAttachInfo it
-/// supplies records that it was called and then fails, so a descriptor that
-/// passes validation stops there rather than being attached.
-Error adoptFD(int FD, bool &AttachInfoRequested) {
+/// Runs "socket:adopt=<FD>" through the socket connector, targeting a fresh
+/// Session. Every case below fails before attach, so the Session never
+/// connects (and noErrors would catch an unexpected attach failure).
+Error adoptFD(int FD) {
   ConnectorRegistry R;
   if (auto Err = registerSocketConnector(R))
     return Err;
   auto CS = ConnectionSpec::parse("socket:adopt=" + std::to_string(FD));
   if (!CS)
     return CS.takeError();
-  return R.connect(
-      [&]() noexcept -> Expected<ConnectorRegistry::AttachInfo> {
-        AttachInfoRequested = true;
-        return make_error<StringError>("attach info requested");
-      },
-      *CS);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  return R.connect(*CS, S, BootstrapInfo(S));
 }
 
 bool isOpen(int FD) { return ::fcntl(FD, F_GETFD) != -1; }
@@ -52,10 +51,8 @@ TEST(SocketConnectorTest, RejectsPipe) {
   int P[2];
   ASSERT_EQ(::pipe(P), 0);
 
-  bool AttachInfoRequested = false;
-  EXPECT_THAT_ERROR(adoptFD(P[0], AttachInfoRequested),
+  EXPECT_THAT_ERROR(adoptFD(P[0]),
                     FailedWithMessage(HasSubstr("is not a socket")));
-  EXPECT_FALSE(AttachInfoRequested);
   EXPECT_TRUE(isOpen(P[0])) << "a rejected descriptor must be left open";
 
   ::close(P[0]);
@@ -68,20 +65,19 @@ TEST(SocketConnectorTest, RejectsClosedDescriptor) {
   ::close(P[0]);
   ::close(P[1]);
 
-  bool AttachInfoRequested = false;
-  EXPECT_THAT_ERROR(adoptFD(P[0], AttachInfoRequested),
+  EXPECT_THAT_ERROR(adoptFD(P[0]),
                     FailedWithMessage(HasSubstr("is not a socket")));
-  EXPECT_FALSE(AttachInfoRequested);
 }
 
 TEST(SocketConnectorTest, TakesOwnershipOfASocketEvenOnFailure) {
-  auto H = makeNativeSocket();
-  ASSERT_TRUE(H.has_value());
+  // A non-stream socket passes the connector's is-a-socket check, so the
+  // connector takes ownership of it, but is then rejected when creating the
+  // ControllerAccess, which requires a stream socket.
+  auto H = makeNativeNonStreamSocket();
+  ASSERT_TRUE(H.has_value()) << "could not create a socket for the test";
 
-  bool AttachInfoRequested = false;
-  EXPECT_THAT_ERROR(adoptFD(*H, AttachInfoRequested),
-                    FailedWithMessage("attach info requested"));
-  EXPECT_TRUE(AttachInfoRequested);
+  EXPECT_THAT_ERROR(adoptFD(*H),
+                    FailedWithMessage(HasSubstr("requires a stream socket")));
   EXPECT_FALSE(isNativeSocketOpen(*H))
       << "an adopted socket must be closed when the connection fails";
 }

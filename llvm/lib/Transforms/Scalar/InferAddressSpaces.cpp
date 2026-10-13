@@ -807,7 +807,14 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
   if (LLVM_UNLIKELY(Inst->getOpcode() == Instruction::PHI))
     return phiNodeOperandWithNewAddressSpace(NewI, OperandUse.get());
 
-  NewI->insertBefore(Inst->getIterator());
+  // During cloning phase, the cast is placed before the original flat
+  // instruction, as its clone in the new address space has not been inserted
+  // yet. During poison fixup phase, the clone already exists, thus make sure
+  // the cast is inserted before it.
+  Instruction *InsertPt = Inst;
+  if (Value *NewUser = ValueWithNewAddrSpace.lookup(Inst))
+    InsertPt = cast<Instruction>(NewUser);
+  NewI->insertBefore(InsertPt->getIterator());
   NewI->setDebugLoc(Inst->getDebugLoc());
   return NewI;
 }
@@ -1333,8 +1340,9 @@ static bool replaceOperandIfSame(Instruction *Inst, unsigned OpIdx,
 
 template <typename InstrType>
 static bool replaceSimplePointerUse(const TargetTransformInfo &TTI,
-                                    InstrType *MemInstr, unsigned AddrSpace,
-                                    Value *OldV, Value *NewV) {
+                                    InstrType *MemInstr, Value *OldV,
+                                    Value *NewV) {
+  unsigned AddrSpace = NewV->getType()->getPointerAddressSpace();
   if (!MemInstr->isVolatile() || TTI.hasVolatileVariant(MemInstr, AddrSpace)) {
     return replaceOperandIfSame(MemInstr, InstrType::getPointerOperandIndex(),
                                 OldV, NewV);
@@ -1351,19 +1359,18 @@ static bool replaceSimplePointerUse(const TargetTransformInfo &TTI,
 ///
 /// \p returns true the user replacement was made.
 static bool replaceIfSimplePointerUse(const TargetTransformInfo &TTI,
-                                      User *Inst, unsigned AddrSpace,
-                                      Value *OldV, Value *NewV) {
+                                      User *Inst, Value *OldV, Value *NewV) {
   if (auto *LI = dyn_cast<LoadInst>(Inst))
-    return replaceSimplePointerUse(TTI, LI, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, LI, OldV, NewV);
 
   if (auto *SI = dyn_cast<StoreInst>(Inst))
-    return replaceSimplePointerUse(TTI, SI, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, SI, OldV, NewV);
 
   if (auto *RMW = dyn_cast<AtomicRMWInst>(Inst))
-    return replaceSimplePointerUse(TTI, RMW, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, RMW, OldV, NewV);
 
   if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst))
-    return replaceSimplePointerUse(TTI, CmpX, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, CmpX, OldV, NewV);
 
   return false;
 }
@@ -1463,8 +1470,7 @@ void InferAddressSpacesImpl::performPointerReplacement(
 
   User *CurUser = U.getUser();
 
-  unsigned AddrSpace = V->getType()->getPointerAddressSpace();
-  if (replaceIfSimplePointerUse(*TTI, CurUser, AddrSpace, V, NewV))
+  if (replaceIfSimplePointerUse(*TTI, CurUser, V, NewV))
     return;
 
   // Skip if the current user is the new value itself.
