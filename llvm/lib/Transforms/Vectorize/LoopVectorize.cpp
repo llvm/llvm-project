@@ -4527,8 +4527,11 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   for (BasicBlock *BB : TheLoop->blocks()) {
     // For each instruction in the old loop.
     for (Instruction &I : *BB) {
-      Value *Ptr =  getLoadStorePointerOperand(&I);
-      if (!Ptr)
+      Value *Ptr = getLoadStorePointerOperand(&I);
+
+      // Ignore if no pointer found or a widening decision has already been
+      // made.
+      if (!Ptr || (getWideningDecision(&I, VF) != CM_Unknown))
         continue;
 
       LLVM_DEBUG(dbgs() << "LV: Memory widening: calculating best strategy for "
@@ -4600,10 +4603,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       if (isAccessInterleaved(&I)) {
         const auto *Group = getInterleavedAccessGroup(&I);
         assert(Group && "Fail to get an interleaved access group.");
-
-        // Make one decision for the whole group.
-        if (getWideningDecision(&I, VF) != CM_Unknown)
-          continue;
 
         NumAccesses = Group->getNumMembers();
         if (interleavedAccessCanBeWidened(&I, VF))
