@@ -2155,7 +2155,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     else if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
       // Adjust the alignment for fixed-length SVE predicates.
       Align = 16;
-    else if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
+    else if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()) ||
              VT->getVectorKind() == VectorKind::RVVFixedLengthMask ||
              VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
              VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
@@ -10771,8 +10771,8 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
       First->getVectorKind() != VectorKind::SveFixedLengthPredicate &&
       Second->getVectorKind() != VectorKind::SveFixedLengthData &&
       Second->getVectorKind() != VectorKind::SveFixedLengthPredicate &&
-      First->getVectorKind() != VectorKind::RVVFixedLengthData &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthData &&
+      !isRVVFixedLengthDataVectorKind(First->getVectorKind()) &&
+      !isRVVFixedLengthDataVectorKind(Second->getVectorKind()) &&
       First->getVectorKind() != VectorKind::RVVFixedLengthMask &&
       Second->getVectorKind() != VectorKind::RVVFixedLengthMask &&
       First->getVectorKind() != VectorKind::RVVFixedLengthMask_1 &&
@@ -10884,7 +10884,7 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
                  Info.ElementType == BoolTy &&
                  getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT)) * 2);
         }
-        if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
+        if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()) ||
             VT->getVectorKind() == VectorKind::Generic)
           return FirstType->isRVVVLSBuiltinType() &&
                  getTypeSize(SecondType) == getRVVTypeSize(*this, BT) &&

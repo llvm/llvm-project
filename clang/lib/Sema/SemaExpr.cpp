@@ -11061,7 +11061,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
       if (VecType->getVectorKind() == VectorKind::SveFixedLengthData ||
           VecType->getVectorKind() == VectorKind::SveFixedLengthPredicate)
         return true;
-      if (VecType->getVectorKind() == VectorKind::RVVFixedLengthData ||
+      if (isRVVFixedLengthDataVectorKind(VecType->getVectorKind()) ||
           VecType->getVectorKind() == VectorKind::RVVFixedLengthMask ||
           VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
           VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
@@ -11096,7 +11096,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
             SecondVecType->getVectorKind() ==
                 VectorKind::SveFixedLengthPredicate)
           return true;
-        if (SecondVecType->getVectorKind() == VectorKind::RVVFixedLengthData ||
+        if (isRVVFixedLengthDataVectorKind(SecondVecType->getVectorKind()) ||
             SecondVecType->getVectorKind() == VectorKind::RVVFixedLengthMask ||
             SecondVecType->getVectorKind() ==
                 VectorKind::RVVFixedLengthMask_1 ||

@@ -718,7 +718,13 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     OS << ") * 8))) ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorKind::RVVFixedLengthData:
+  case VectorKind::RVVFixedLengthData_MF8:
+  case VectorKind::RVVFixedLengthData_MF4:
+  case VectorKind::RVVFixedLengthData_MF2:
+  case VectorKind::RVVFixedLengthData_M1:
+  case VectorKind::RVVFixedLengthData_M2:
+  case VectorKind::RVVFixedLengthData_M4:
+  case VectorKind::RVVFixedLengthData_M8:
   case VectorKind::RVVFixedLengthMask:
   case VectorKind::RVVFixedLengthMask_1:
   case VectorKind::RVVFixedLengthMask_2:
@@ -813,7 +819,13 @@ void TypePrinter::printDependentVectorBefore(
     OS << "))) ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorKind::RVVFixedLengthData:
+  case VectorKind::RVVFixedLengthData_MF8:
+  case VectorKind::RVVFixedLengthData_MF4:
+  case VectorKind::RVVFixedLengthData_MF2:
+  case VectorKind::RVVFixedLengthData_M1:
+  case VectorKind::RVVFixedLengthData_M2:
+  case VectorKind::RVVFixedLengthData_M4:
+  case VectorKind::RVVFixedLengthData_M8:
   case VectorKind::RVVFixedLengthMask:
   case VectorKind::RVVFixedLengthMask_1:
   case VectorKind::RVVFixedLengthMask_2:

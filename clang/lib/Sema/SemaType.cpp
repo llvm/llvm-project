@@ -46,6 +46,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <bitset>
 #include <optional>
 
@@ -8870,7 +8871,7 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
       S.Context.getBuiltinVectorTypeInfo(CurType->castAs<BuiltinType>());
   unsigned MinElts = Info.EC.getKnownMinValue();
 
-  VectorKind VecKind = VectorKind::RVVFixedLengthData;
+  VectorKind VecKind = VectorKind::RVVFixedLengthMask;
   unsigned ExpectedSize = VScale->first * MinElts;
   QualType EltType = CurType->getRVVEltType(S.Context);
   unsigned EltSize = S.Context.getTypeSize(EltType);
@@ -8895,6 +8896,13 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   } else {
     ExpectedSize *= EltSize;
     NumElts = VecSize / EltSize;
+
+    // Record the LMUL of the sizeless type in the vector kind, so that later
+    // stages do not have to re-derive it from VLEN and the element count.
+    //   LMUL = MinElts * EltSize / RVVBitsPerBlock
+    VecKind = getRVVFixedLengthDataVectorKind(
+        int(llvm::Log2_32(MinElts * EltSize)) -
+        int(llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock)));
   }
 
   // The attribute vector size must match -mrvv-vector-bits.

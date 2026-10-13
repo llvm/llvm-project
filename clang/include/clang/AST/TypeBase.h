@@ -2133,7 +2133,7 @@ protected:
     /// The kind of vector, either a generic vector type or some
     /// target-specific vector type such as for AltiVec or Neon.
     LLVM_PREFERRED_TYPE(VectorKind)
-    unsigned VecKind : 4;
+    unsigned VecKind : 5;
     /// The number of elements in the vector.
     uint32_t NumElements;
   };
@@ -4255,7 +4255,13 @@ enum class VectorKind {
   SveFixedLengthPredicate,
 
   /// is RISC-V RVV fixed-length data vector
-  RVVFixedLengthData,
+  RVVFixedLengthData_MF8,
+  RVVFixedLengthData_MF4,
+  RVVFixedLengthData_MF2,
+  RVVFixedLengthData_M1,
+  RVVFixedLengthData_M2,
+  RVVFixedLengthData_M4,
+  RVVFixedLengthData_M8,
 
   /// is RISC-V RVV fixed-length mask vector
   RVVFixedLengthMask,
@@ -4264,6 +4270,91 @@ enum class VectorKind {
   RVVFixedLengthMask_2,
   RVVFixedLengthMask_4
 };
+
+/// True if \p VK is one of the RVV fixed-length data vector kinds, i.e. a
+/// riscv_rvv_vector_bits typedef of a data (non-mask) RVV type.
+inline bool isRVVFixedLengthDataVectorKind(VectorKind VK) {
+  switch (VK) {
+  case VectorKind::RVVFixedLengthData_MF8:
+  case VectorKind::RVVFixedLengthData_MF4:
+  case VectorKind::RVVFixedLengthData_MF2:
+  case VectorKind::RVVFixedLengthData_M1:
+  case VectorKind::RVVFixedLengthData_M2:
+  case VectorKind::RVVFixedLengthData_M4:
+  case VectorKind::RVVFixedLengthData_M8:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Return log2 of the LMUL recorded in an RVV fixed-length data vector kind:
+/// MF8 -> -3, MF4 -> -2, MF2 -> -1, M1 -> 0, M2 -> 1, M4 -> 2, M8 -> 3.
+inline int getRVVFixedLengthDataLMulLog2(VectorKind VK) {
+  switch (VK) {
+  case VectorKind::RVVFixedLengthData_MF8:
+    return -3;
+  case VectorKind::RVVFixedLengthData_MF4:
+    return -2;
+  case VectorKind::RVVFixedLengthData_MF2:
+    return -1;
+  case VectorKind::RVVFixedLengthData_M1:
+    return 0;
+  case VectorKind::RVVFixedLengthData_M2:
+    return 1;
+  case VectorKind::RVVFixedLengthData_M4:
+    return 2;
+  case VectorKind::RVVFixedLengthData_M8:
+    return 3;
+  default:
+    llvm_unreachable("not an RVV fixed-length data vector kind");
+  }
+}
+
+/// Return the LMUL of an RVV fixed-length data vector kind as a string:
+/// "mf8" .. "m8" if \p MF is true, "1/8" .. "8" otherwise.
+inline StringRef getRVVFixedLengthDataLMulString(VectorKind VK, bool MF) {
+  switch (VK) {
+  case VectorKind::RVVFixedLengthData_MF8:
+    return MF ? "mf8" : "1/8";
+  case VectorKind::RVVFixedLengthData_MF4:
+    return MF ? "mf4" : "1/4";
+  case VectorKind::RVVFixedLengthData_MF2:
+    return MF ? "mf2" : "1/2";
+  case VectorKind::RVVFixedLengthData_M1:
+    return MF ? "m1" : "1";
+  case VectorKind::RVVFixedLengthData_M2:
+    return MF ? "m2" : "2";
+  case VectorKind::RVVFixedLengthData_M4:
+    return MF ? "m4" : "4";
+  case VectorKind::RVVFixedLengthData_M8:
+    return MF ? "m8" : "8";
+  default:
+    llvm_unreachable("not an RVV fixed-length data vector kind");
+  }
+}
+
+/// Inverse of getRVVFixedLengthDataLMulLog2().
+inline VectorKind getRVVFixedLengthDataVectorKind(int LMulLog2) {
+  switch (LMulLog2) {
+  case -3:
+    return VectorKind::RVVFixedLengthData_MF8;
+  case -2:
+    return VectorKind::RVVFixedLengthData_MF4;
+  case -1:
+    return VectorKind::RVVFixedLengthData_MF2;
+  case 0:
+    return VectorKind::RVVFixedLengthData_M1;
+  case 1:
+    return VectorKind::RVVFixedLengthData_M2;
+  case 2:
+    return VectorKind::RVVFixedLengthData_M4;
+  case 3:
+    return VectorKind::RVVFixedLengthData_M8;
+  default:
+    llvm_unreachable("LMUL out of range for an RVV type");
+  }
+}
 
 /// Represents a GCC generic vector type. This type is created using
 /// __attribute__((vector_size(n)), where "n" specifies the vector size in

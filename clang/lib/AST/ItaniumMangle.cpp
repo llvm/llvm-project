@@ -4316,7 +4316,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
 }
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
-  assert((T->getVectorKind() == VectorKind::RVVFixedLengthData ||
+  assert((isRVVFixedLengthDataVectorKind(T->getVectorKind()) ||
           T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
           T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
           T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
@@ -4335,7 +4335,7 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     TypeNameOS << "int8";
     break;
   case BuiltinType::UChar:
-    if (T->getVectorKind() == VectorKind::RVVFixedLengthData)
+    if (isRVVFixedLengthDataVectorKind(T->getVectorKind()))
       TypeNameOS << "uint8";
     else
       TypeNameOS << "bool";
@@ -4392,19 +4392,19 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     break;
   }
 
-  // Apend the LMUL suffix.
-  auto VScale = getASTContext().getTargetInfo().getVScaleRange(
-      getASTContext().getLangOpts(),
-      TargetInfo::ArmStreamingKind::NotStreaming);
-  unsigned VLen = VScale->first * llvm::RISCV::RVVBitsPerBlock;
-
-  if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
-    TypeNameOS << 'm';
-    if (VecSizeInBits >= VLen)
-      TypeNameOS << (VecSizeInBits / VLen);
-    else
-      TypeNameOS << 'f' << (VLen / VecSizeInBits);
+  // Append the LMUL suffix. For data types the LMUL is recorded in the vector
+  // kind, so the mangled name names the type the typedef was written against
+  // even when the typedef is shorter than VLEN * LMUL, and does not depend on
+  // VLEN at all. Mask types are still tied to a fixed VLEN, so their ratio is
+  // derived from it.
+  if (isRVVFixedLengthDataVectorKind(T->getVectorKind())) {
+    TypeNameOS << getRVVFixedLengthDataLMulString(T->getVectorKind(),
+                                                  /*MF=*/true);
   } else {
+    auto VScale = getASTContext().getTargetInfo().getVScaleRange(
+        getASTContext().getLangOpts(),
+        TargetInfo::ArmStreamingKind::NotStreaming);
+    unsigned VLen = VScale->first * llvm::RISCV::RVVBitsPerBlock;
     TypeNameOS << (VLen / VecSizeInBits);
   }
   TypeNameOS << "_t";
@@ -4445,7 +4445,7 @@ void CXXNameMangler::mangleType(const VectorType *T) {
              T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData ||
+  } else if (isRVVFixedLengthDataVectorKind(T->getVectorKind()) ||
              T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
              T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
              T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
@@ -4478,7 +4478,7 @@ void CXXNameMangler::mangleType(const DependentVectorType *T) {
              T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
+  } else if (isRVVFixedLengthDataVectorKind(T->getVectorKind())) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }

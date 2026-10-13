@@ -40,6 +40,8 @@ private:
 
   llvm::Type *detectHomogeneousRVVFixedLengthStruct(QualType Ty) const;
 
+  unsigned getRVVFixedLengthMinElts(const VectorType *VT) const;
+
 public:
   RISCVABIInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen, unsigned FLen,
                bool EABI)
@@ -410,6 +412,35 @@ ABIArgInfo RISCVABIInfo::coerceAndExpandFPCCEligibleStruct(
   return ABIArgInfo::getCoerceAndExpand(CoerceToType, UnpaddedCoerceToType);
 }
 
+/// Minimum element count of the scalable vector an RVV fixed-length *data*
+/// vector is coerced to, i.e. the N in <vscale x N x T>. The LMUL comes from
+/// the vector kind - the type the typedef was written against - rather than
+/// from VLEN and the element count.
+static unsigned getRVVFixedLengthDataMinElts(VectorKind VK,
+                                             unsigned EltSizeInBits) {
+  // The underlying scalable type holds LMUL * RVVBitsPerBlock bits at
+  // vscale=1.
+  int LMulLog2 = getRVVFixedLengthDataLMulLog2(VK);
+  unsigned SizeAtVScale1 = LMulLog2 >= 0
+                               ? llvm::RISCV::RVVBitsPerBlock << LMulLog2
+                               : llvm::RISCV::RVVBitsPerBlock >> -LMulLog2;
+  assert(SizeAtVScale1 >= EltSizeInBits && "LMUL too small for element type");
+  return SizeAtVScale1 / EltSizeInBits;
+}
+
+/// Minimum element count of the scalable vector \p VT is coerced to, in units
+/// of \p VT's own Clang element type. Masks are modelled as i8 vectors and are
+/// exactly VLEN * LMUL wide, so their LMUL is recovered from VLEN.
+unsigned RISCVABIInfo::getRVVFixedLengthMinElts(const VectorType *VT) const {
+  unsigned EltSizeInBits = getContext().getTypeSize(VT->getElementType());
+  if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()))
+    return getRVVFixedLengthDataMinElts(VT->getVectorKind(), EltSizeInBits);
+
+  auto VScale = getContext().getTargetInfo().getVScaleRange(
+      getContext().getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
+  return llvm::divideCeil(VT->getNumElements(), VScale->first);
+}
+
 llvm::Type *RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty,
                                                     unsigned ABIVLen) const {
   // No riscv_vls_cc attribute.
@@ -556,8 +587,9 @@ RISCVABIInfo::detectHomogeneousRVVFixedLengthStruct(QualType Ty) const {
     return nullptr;
 
   auto IsFixedLengthRVVVector = [](const VectorType *VT) {
+    if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()))
+      return true;
     switch (VT->getVectorKind()) {
-    case VectorKind::RVVFixedLengthData:
     case VectorKind::RVVFixedLengthMask:
     case VectorKind::RVVFixedLengthMask_1:
     case VectorKind::RVVFixedLengthMask_2:
@@ -607,24 +639,21 @@ RISCVABIInfo::detectHomogeneousRVVFixedLengthStruct(QualType Ty) const {
 
   const auto *VT = CommonTy->castAs<VectorType>();
   llvm::Type *EltType = CGT.ConvertType(VT->getElementType());
-  auto VScale = getContext().getTargetInfo().getVScaleRange(
-      getContext().getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
+  unsigned MinElts = getRVVFixedLengthMinElts(VT);
 
-  // Ensure total register usage does not exceed 8.
-  if (Count > 1 &&
-      Count * llvm::divideCeil((uint64_t)VT->getNumElements() *
-                                   EltType->getScalarSizeInBits(),
-                               VScale->first * llvm::RISCV::RVVBitsPerBlock) >
-          8)
+  // Ensure total register usage does not exceed 8. Each vector occupies
+  // max(1, LMUL) registers.
+  uint64_t RegsPerVec =
+      llvm::divideCeil((uint64_t)MinElts * EltType->getScalarSizeInBits(),
+                       llvm::RISCV::RVVBitsPerBlock);
+  if (Count > 1 && Count * RegsPerVec > 8)
     return nullptr;
 
-  unsigned MinElts = llvm::divideCeil(VT->getNumElements(), VScale->first);
   if (Count == 1)
     return llvm::ScalableVectorType::get(EltType, MinElts);
 
-  unsigned I8EltCount = llvm::divideCeil((uint64_t)VT->getNumElements() *
-                                             EltType->getScalarSizeInBits(),
-                                         VScale->first * 8);
+  unsigned I8EltCount =
+      llvm::divideCeil((uint64_t)MinElts * EltType->getScalarSizeInBits(), 8);
   auto *I8Vec = llvm::ScalableVectorType::get(
       llvm::Type::getInt8Ty(getVMContext()), I8EltCount);
   return llvm::TargetExtType::get(getVMContext(), "riscv.vector.tuple", I8Vec,
@@ -675,7 +704,7 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
     break;
   default:
     assert((VT->getVectorKind() == VectorKind::Generic ||
-            VT->getVectorKind() == VectorKind::RVVFixedLengthData) &&
+            isRVVFixedLengthDataVectorKind(VT->getVectorKind())) &&
            "Unexpected vector kind");
     EltType = CGT.ConvertType(VT->getElementType());
   }
@@ -683,11 +712,19 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
   llvm::ScalableVectorType *ResType;
 
   if (ABIVLen == 0) {
-    // The MinNumElts is simplified from equation:
-    // NumElts / VScale =
-    //  (EltSize * NumElts / (VScale * RVVBitsPerBlock))
-    //    * (RVVBitsPerBlock / EltSize)
-    ResType = llvm::ScalableVectorType::get(EltType, NumElts / VScale->first);
+    unsigned MinScalableElts;
+    if (isRVVFixedLengthDataVectorKind(VT->getVectorKind())) {
+      // Use the LMUL of the type the typedef was written against.
+      MinScalableElts = getRVVFixedLengthDataMinElts(
+          VT->getVectorKind(), EltType->getScalarSizeInBits());
+    } else {
+      // The MinNumElts is simplified from equation:
+      // NumElts / VScale =
+      //  (EltSize * NumElts / (VScale * RVVBitsPerBlock))
+      //    * (RVVBitsPerBlock / EltSize)
+      MinScalableElts = NumElts / VScale->first;
+    }
+    ResType = llvm::ScalableVectorType::get(EltType, MinScalableElts);
   } else {
     // Check registers needed <= 8.
     if ((EltType->getScalarSizeInBits() * NumElts / ABIVLen) > 8)
@@ -824,7 +861,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/pull/419
   if (const VectorType *VT = Ty->getAs<VectorType>();
       VT && !VT->getElementType()->isBitIntType()) {
-    if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
+    if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()) ||
         VT->getVectorKind() == VectorKind::RVVFixedLengthMask ||
         VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
         VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
