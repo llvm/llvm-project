@@ -512,6 +512,30 @@ for.end:
   ret i32 0
 }
 
+define void @start_and_stride_correlated(i1 %g, ptr %dst) mustprogress {
+; CHECK-LABEL: 'start_and_stride_correlated'
+; CHECK-NEXT:  Determining loop execution counts for: @start_and_stride_correlated
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (15 /u (zext i1 %g to i64))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 16
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (15 /u (zext i1 %g to i64))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g.64 = zext i1 %g to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr inbounds i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw nsw i64 %iv, %g.64
+  %ec = icmp ult i64 %iv.next, 16
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 declare void @llvm.assume(i1)
 
 !8 = distinct !{!8, !9}
