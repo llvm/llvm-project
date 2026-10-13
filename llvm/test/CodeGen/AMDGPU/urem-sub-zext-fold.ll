@@ -157,7 +157,7 @@ define i32 @urem_i8_and_mask(i32 %x) {
 ; GFX11-LABEL: urem_i8_and_mask:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b16 v1.l, 0xff, v0.l
+; GFX11-NEXT:    v_and_b16 v1.l, v0.l, 0xff
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_lo_u16 v1.l, v1.l, 37
 ; GFX11-NEXT:    v_lshrrev_b16 v1.l, 8, v1.l
@@ -165,7 +165,7 @@ define i32 @urem_i8_and_mask(i32 %x) {
 ; GFX11-NEXT:    v_sub_nc_u16 v1.h, v0.l, v1.l
 ; GFX11-NEXT:    v_lshrrev_b16 v1.h, 1, v1.h
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b16 v1.h, 0x7f, v1.h
+; GFX11-NEXT:    v_and_b16 v1.h, v1.h, 0x7f
 ; GFX11-NEXT:    v_add_nc_u16 v1.l, v1.h, v1.l
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshrrev_b16 v1.l, 2, v1.l
