@@ -36,6 +36,11 @@ function(libc_set_definition output_var)
 endfunction()
 
 function(_get_compile_options_from_flags output_var)
+  if(NOT ARGN)
+    set(${output_var} "" PARENT_SCOPE)
+    return()
+  endif()
+
   set(compile_options "")
 
   if(LIBC_CPU_FEATURES MATCHES "FMA")
@@ -207,6 +212,7 @@ function(_get_compile_options_from_config output_var)
 
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction()
+_get_compile_options_from_config(LIBC_COMPILE_OPTIONS_FROM_CONFIG)
 
 function(_get_compile_options_from_arch output_var)
   # Set options that are not found in src/__support/macros/properties/architectures.h
@@ -226,13 +232,10 @@ function(_get_compile_options_from_arch output_var)
 
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction()
+_get_compile_options_from_arch(LIBC_COMPILE_OPTIONS_FROM_ARCH)
 
-function(_get_common_compile_options output_var flags)
-  _get_compile_options_from_flags(compile_flags ${flags})
-  _get_compile_options_from_config(config_flags)
-  _get_compile_options_from_arch(arch_flags)
-
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags} ${arch_flags})
+function(_get_common_compile_options_impl output_var)
+  set(compile_options ${LIBC_COMPILE_OPTIONS_FROM_CONFIG} ${LIBC_COMPILE_OPTIONS_FROM_ARCH})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     if(LLVM_LIBC_FULL_BUILD)
@@ -356,4 +359,10 @@ function(_get_common_compile_options output_var flags)
     endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
+endfunction()
+_get_common_compile_options_impl(LIBC_COMMON_COMPILE_OPTIONS)
+
+function(_get_common_compile_options output_var flags)
+  _get_compile_options_from_flags(compile_flags ${flags})
+  set(${output_var} ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${LIBC_COMMON_COMPILE_OPTIONS} PARENT_SCOPE)
 endfunction()
