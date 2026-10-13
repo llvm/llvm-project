@@ -1269,7 +1269,6 @@ OpFoldResult arith::NegFOp::fold(FoldAdaptor adaptor) {
     return op.getOperand();
   return constFoldUnaryOpConditional<FloatAttr>(
       adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
-        // Types such as f8E8M0FNU cannot represent a negated value.
         if (!APFloat::semanticsHasSignedRepr(a.getSemantics()))
           return std::nullopt;
         return -a;
@@ -2304,7 +2303,6 @@ OpFoldResult arith::SIToFPOp::fold(FoldAdaptor adaptor) {
         FloatType floatTy = llvm::cast<FloatType>(resEleType);
         APFloat apf(floatTy.getFloatSemantics(),
                     APInt::getZero(floatTy.getWidth()));
-        // Types such as f8E8M0FNU cannot represent a negative value.
         if (a.isNegative() &&
             !APFloat::semanticsHasSignedRepr(floatTy.getFloatSemantics())) {
           castStatus = false;
