@@ -45,7 +45,7 @@ struct constexpr_hash<std::nullptr_t> {
   constexpr_hash() noexcept                        = default;
   constexpr_hash& operator=(const constexpr_hash&) = default;
 
-  [[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI size_t operator()(std::nullptr_t) const noexcept {
+  [[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI std::size_t operator()(std::nullptr_t) const noexcept {
     return 662607004ull;
   }
 };
@@ -57,7 +57,7 @@ concept UnqualifiedArithmeticOrEnum =
 
 template <UnqualifiedArithmeticOrEnum Key>
 struct constexpr_hash<Key> {
-  [[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI size_t operator()(const Key& key) const noexcept {
+  [[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI std::size_t operator()(const Key& key) const noexcept {
     if constexpr (std::integral<Key>) {
       if constexpr (sizeof(Key) <= sizeof(size_t)) {
         return static_cast<size_t>(key);
