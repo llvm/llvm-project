@@ -115,7 +115,6 @@ static void CheckTeamType(
 static void CheckTeamStat(
     SemanticsContext &context, const parser::ImageSelectorSpec::Stat &stat) {
   const auto &var{parser::UnwrapRef<parser::Variable>(stat)};
-  auto at{parser::FindSourceLocation(var)};
   if (parser::GetCoindexedNamedObject(var)) {
     context.Say(parser::FindSourceLocation(var), // C931
         "Image selector STAT variable must not be a coindexed "
