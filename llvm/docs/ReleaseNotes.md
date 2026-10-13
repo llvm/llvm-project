@@ -192,6 +192,13 @@ Makes programs 10x faster by doing Special New Thing.
     replaced with `-fsplit-machine-functions` or
     `-mllvm -function-splitting=all`.
 
+* Merged the `MachineFunctionSplitter` pass into the `BasicBlockSections`
+  pass, which now performs all function splitting: it uses the basic block
+  sections profile where available, and the PGO/AutoFDO profile elsewhere (with
+  `-function-splitting=all`). `createMachineFunctionSplitterPass()` and the
+  `machine-function-splitter` pass name are removed;
+  `createBasicBlockSectionsPass()` takes a `SplitWithPGO` argument instead.
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
@@ -256,6 +263,10 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the AArch64 Backend
 
 * Added support for C2-Pro and C2-Ultra CPUs.
+* Added support for hardening return address signing against PACMAN attacks.
+  Functions with the `"sign-return-address-harden"="load-return-address"`
+  attribute perform a load from the return address before returning, reducing the
+  cache side channel used to guess pointer authentication codes.
 
 * Assembler/disassembler support has been added for Armv9.8-A (2026)
   architecture extensions.

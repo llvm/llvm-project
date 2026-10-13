@@ -2831,12 +2831,12 @@ def CIR_AddOp
 //===----------------------------------------------------------------------===//
 
 def CIR_SubOp
-    : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyIntOrVecOfIntType> {
+    : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer subtraction";
   let description = [{
     The `cir.sub` operation performs subtraction on integer operands. Both
-    operands and the result must have the same integer or vector-of-integer
-    type.
+    operands and the result must have the same integer, vector-of-integer or
+    matrix-of-integer type.
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
@@ -2851,6 +2851,7 @@ def CIR_SubOp
     %1 = cir.sub nsw %a, %b : !s32i
     %2 = cir.sub sat %a, %b : !s32i
     %3 = cir.sub %va, %vb : !cir.vector<4 x !s32i>
+    %4 = cir.sub %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 }
@@ -2859,12 +2860,12 @@ def CIR_SubOp
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOfIntType> {
+def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer multiplication";
   let description = [{
     The `cir.mul` operation performs multiplication on integer operands. Both
     operands and the result must have the same integer or vector-of-integer
-    type.
+    or matrix-of-integer type.
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
@@ -2877,11 +2878,13 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOfIntType> {
     %1 = cir.mul nsw %a, %b : !s32i
     %2 = cir.mul nuw %a, %b : !u32i
     %3 = cir.mul %va, %vb : !cir.vector<4 x !s32i>
+    %4 = cir.mul %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 
   let arguments = (ins
-    CIR_AnyIntOrVecOfIntType:$lhs, CIR_AnyIntOrVecOfIntType:$rhs,
+    CIR_AnyIntOrVecOrMatrixOfIntType:$lhs,
+    CIR_AnyIntOrVecOrMatrixOfIntType:$rhs,
     UnitProp:$no_signed_wrap,
     UnitProp:$no_unsigned_wrap
   );
@@ -2992,12 +2995,14 @@ def CIR_FAddOp
 // FSubOp
 //===----------------------------------------------------------------------===//
 
-def CIR_FSubOp : CIR_FPBinaryOp<"fsub"> {
+def CIR_FSubOp
+    : CIR_FPBinaryOp<"fsub", [], CIR_AnyFloatOrVecOrMatrixOfFloatType> {
   let summary = "Floating-point subtraction";
   let description = [{
     The `cir.fsub` operation performs floating-point subtraction on its
     operands. Both operands and the result must have the same floating-point
-    scalar or vector-of-float type.
+    scalar vector-of-float or matrix-of-float type.
+
 
     Example:
 
@@ -3005,6 +3010,7 @@ def CIR_FSubOp : CIR_FPBinaryOp<"fsub"> {
     %0 = cir.fsub %a, %b : !cir.float
     %1 = cir.fsub %a, %b : !cir.double
     %2 = cir.fsub %va, %vb : !cir.vector<4 x !cir.float>
+    %3 = cir.fsub %ma, %mb : !cir.matrix<3 x 3 x !cir.float>
     ```
   }];
 
@@ -3015,7 +3021,7 @@ def CIR_FSubOp : CIR_FPBinaryOp<"fsub"> {
 // FMulOp
 //===----------------------------------------------------------------------===//
 
-def CIR_FMulOp : CIR_FPBinaryOp<"fmul"> {
+def CIR_FMulOp : CIR_FPBinaryOp<"fmul", [], CIR_AnyFloatOrVecOrMatrixOfFloatType> {
   let summary = "Floating-point multiplication";
   let description = [{
     The `cir.fmul` operation performs floating-point multiplication on its
@@ -4902,11 +4908,13 @@ def CIR_CoroutineOp : CIR_Op<"coroutine", [
       points and introduce structured control flow that transfers
       execution to `final_suspend`.
 
-    - `final_suspend`: exactly one `cir.await`, marked `final`. Nothing
-      else. Corresponds to `co_await promise.final_suspend()`. Resuming
-      past this point is undefined behavior in valid programs, so its
-      `resume` edge is expected to be dead in practice, but is kept for
-      structural symmetry with the other two suspend regions.
+    - `final_suspend`: at most one `cir.await`, marked `final`. Nothing
+      else. Corresponds to `co_await promise.final_suspend()`. Suspending
+      at this final suspend point is valid: the coroutine stays suspended
+      until it is destroyed. Resuming past this point is undefined behavior
+      in valid programs, so its `resume` edge is expected to be dead in
+      practice, but is kept for structural symmetry with the other two
+      suspend regions.
 
     - `gro`: TODO.
 
@@ -4914,10 +4922,10 @@ def CIR_CoroutineOp : CIR_Op<"coroutine", [
 
     - `destroy`: destroys the coroutine frame (`coro.free` + `delete`).
       Reached by an explicit `destroy()` call on a suspended handle, by
-      normal completion through `final_suspend`, or by an exception
-      escaping the coroutine. Falls through to `exit` except when reached
-      due to an escaping exception, where it continues propagating that
-      exception instead.
+      normal completion through `initial_suspend`, `final_suspend`, or
+      by an exception escaping the coroutine. Falls through to `exit`
+      except when reached due to an escaping exception, where it continues
+      propagating that exception instead.
 
     - `exit`: the shared return-to-caller path. Reached directly from any
       suspend point that isn't being destroyed (the coroutine is just
@@ -5061,10 +5069,9 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
 ]> {
   let summary = "Coroutine return operation";
   let description = [{
-    The `cir.co_return` operation models a coroutine return point inside a
-    `cir.coro.body` region.
-    This operation is expected to appear only within a `cir.coro.body` region,
-    but it may be nested within other operations or regions inside that body.
+    The `cir.co_return` operation models a coroutine return point inside the
+    `body` region of a `cir.coroutine`. It may be nested within other
+    operations or regions inside that body.
   }];
 
   let assemblyFormat = [{
@@ -6603,8 +6610,6 @@ def CIR_MatrixExtractOp : CIR_Op<"matrix.extract", [
     The `cir.matrix.extract` operation extracts the element at the given row 
     and column indices from a matrix object.
 
-    Currently, the flatten index is a column-based index.
-
     ```
     %rowIdx = cir.const #cir.int<1> : !u64i
     %columnIdx = cir.const #cir.int<2> : !u64i
@@ -6623,6 +6628,45 @@ def CIR_MatrixExtractOp : CIR_Op<"matrix.extract", [
 
   let assemblyFormat = [{
     $matrix
+    `[` $rowIdx `:` type($rowIdx) `]` `[` $columnIdx `:` type($columnIdx) `]`
+    attr-dict `:` qualified(type($matrix))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixInsertOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixInsertOp : CIR_Op<"matrix.insert", [
+  Pure,
+  AllTypesMatch<["matrix", "result"]>,
+  TypesMatchWith<"type of 'value' matches element type of 'matrix'",
+    "matrix", "value", "mlir::cast<cir::MatrixType>($_self).getElementType()">
+]> {
+  let summary = "Insert one element into a matrix object";
+  let description = [{
+    The `cir.matrix.insert` operation returns a copy of a matrix object with
+    the element at the given row and column indices replaced by `value`.
+
+    ```
+    %rowIdx = cir.const #cir.int<1> : !u64i
+    %columnIdx = cir.const #cir.int<2> : !u64i
+    %new = cir.matrix.insert %value, %matrix[%rowIdx : !u64i] [ %columnIdx : !u64i]
+      : !cir.matrix<3 x 3 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_MatrixElementType:$value,
+    CIR_MatrixType:$matrix,
+    CIR_AnyFundamentalIntType:$rowIdx,
+    CIR_AnyFundamentalIntType:$columnIdx
+  );
+
+  let results = (outs CIR_MatrixType:$result);
+
+  let assemblyFormat = [{
+    $value `,` $matrix
     `[` $rowIdx `:` type($rowIdx) `]` `[` $columnIdx `:` type($columnIdx) `]`
     attr-dict `:` qualified(type($matrix))
   }];
@@ -6674,6 +6718,56 @@ def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
     (`volatile` $is_volatile^)?
     `,` qualified(type($result)) attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixMultiplyOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixMultiplyOp : CIR_Op<"matrix.multiply", [
+  Pure,
+  AllMatchSameOperatorTrait<["lhs", "rhs", "result"],
+    "::mlir::cast<cir::MatrixType>($_self.getType()).getElementType()",
+    "element type">,
+  PredOpTrait<"left operand column count matches right operand row count",
+    CPred<"::mlir::cast<cir::MatrixType>($_op.getOperand(0).getType())"
+          ".getNumColumns() == "
+          "::mlir::cast<cir::MatrixType>($_op.getOperand(1).getType())"
+          ".getNumRows()">>,
+  PredOpTrait<"result is left operand rows by right operand columns",
+    CPred<"::mlir::cast<cir::MatrixType>($_op.getResult(0).getType())"
+          ".getNumRows() == "
+          "::mlir::cast<cir::MatrixType>($_op.getOperand(0).getType())"
+          ".getNumRows() && "
+          "::mlir::cast<cir::MatrixType>($_op.getResult(0).getType())"
+          ".getNumColumns() == "
+          "::mlir::cast<cir::MatrixType>($_op.getOperand(1).getType())"
+          ".getNumColumns()">>
+]> {
+  let summary = "Matrix multiplication";
+  let description = [{
+    The `cir.matrix.multiply` operation multiplies two matrices and
+    corresponds to the `llvm.matrix.multiply` intrinsic in LLVM IR.
+
+    The left-hand operand must have dimensions `M x K`, the right-hand operand
+    `K x N`, and the result `M x N`. All three must share an element type.
+
+    ```
+    %res = cir.matrix.multiply %lhs, %rhs
+        : (!cir.matrix<2 x 3 x !cir.float>, !cir.matrix<3 x 4 x !cir.float>)
+        -> !cir.matrix<2 x 4 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_MatrixType:$lhs, CIR_MatrixType:$rhs);
+  let results = (outs CIR_MatrixType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs attr-dict
+    `:` `(` qualified(type($lhs)) `,` qualified(type($rhs)) `)`
+    `->` qualified(type($result))
+  }];
+
 }
 
 //===----------------------------------------------------------------------===//
