@@ -707,16 +707,12 @@ define void @mixed_type_copy(ptr %dst, ptr %src) {
 ; CHECK-LABEL: mixed_type_copy:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a2, a1, 16
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a2)
 ; CHECK-NEXT:    addi a2, a0, 16
 ; CHECK-NEXT:    vse64.v v8, (a2)
-; CHECK-NEXT:    ld a2, 32(a1)
-; CHECK-NEXT:    sd a2, 32(a0)
-; CHECK-NEXT:    addi a1, a1, 40
-; CHECK-NEXT:    vle64.v v8, (a1)
-; CHECK-NEXT:    addi a0, a0, 40
-; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    ld a1, 48(a1)
+; CHECK-NEXT:    sd a1, 48(a0)
 ; CHECK-NEXT:    ret
   %src0 = getelementptr i8, ptr %src, i64 16
   %dst0 = getelementptr i8, ptr %dst, i64 16
@@ -744,13 +740,9 @@ define void @mixed_type_copy(ptr %dst, ptr %src) {
 define void @scalar_store_merge(ptr %dst, ptr %src) #0 {
 ; CHECK-LABEL: scalar_store_merge:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lw a2, 0(a1)
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    lh a2, 4(a1)
-; CHECK-NEXT:    sh a2, 4(a0)
-; CHECK-NEXT:    lhu a2, 6(a1)
+; CHECK-NEXT:    ld a2, 0(a1)
+; CHECK-NEXT:    sd a2, 0(a0)
 ; CHECK-NEXT:    lh a1, 8(a1)
-; CHECK-NEXT:    sh a2, 6(a0)
 ; CHECK-NEXT:    sh a1, 8(a0)
 ; CHECK-NEXT:    ret
   %v0 = load i16, ptr %src, align 8, !tbaa !12
@@ -777,19 +769,13 @@ define void @scalar_store_merge(ptr %dst, ptr %src) #0 {
 define void @scalar_store_merge_seven(ptr %dst, ptr %src) #0 {
 ; CHECK-LABEL: scalar_store_merge_seven:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh a2, 0(a1)
-; CHECK-NEXT:    lh a3, 2(a1)
-; CHECK-NEXT:    lh a4, 4(a1)
-; CHECK-NEXT:    sh a2, 0(a0)
-; CHECK-NEXT:    sh a3, 2(a0)
-; CHECK-NEXT:    sh a4, 4(a0)
-; CHECK-NEXT:    lhu a2, 6(a1)
-; CHECK-NEXT:    lh a3, 8(a1)
-; CHECK-NEXT:    sh a2, 6(a0)
-; CHECK-NEXT:    sh a3, 8(a0)
-; CHECK-NEXT:    lhu a2, 10(a1)
+; CHECK-NEXT:    lw a2, 0(a1)
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    lw a2, 4(a1)
+; CHECK-NEXT:    lw a3, 8(a1)
+; CHECK-NEXT:    sw a2, 4(a0)
+; CHECK-NEXT:    sw a3, 8(a0)
 ; CHECK-NEXT:    lh a1, 12(a1)
-; CHECK-NEXT:    sh a2, 10(a0)
 ; CHECK-NEXT:    sh a1, 12(a0)
 ; CHECK-NEXT:    ret
   %v0 = load i16, ptr %src, align 8, !tbaa !18
