@@ -1469,6 +1469,17 @@ def LQ_PPCAS : DQForm_RTp5_RA17_MEM<56, 2,
                                     []>,
                                     RegConstraint<"@earlyclobber $RTp">,
                                     Requires<[IsPPC64, HasPPCAS]>;
+def LQT_PPCAS : ASDQTForm_RTp5_RA17_MEM<56, 3,
+                                        (outs g8prc:$RTp),
+                                        (ins (memrix16 $DQ, $RA):$addr,
+                                             u2imm:$T),
+                                        "lq $RTp, $addr, $T", NoItinerary>,
+                                        RegConstraint<"@earlyclobber $RTp">,
+                                        Requires<[IsPPC64, HasPPCAS]>;
+def LMD_PPCAS : DSForm_1<58, 3, (outs g8rc:$RST),
+                         (ins (memrix $D, $RA):$addr),
+                         "lmd $RST, $addr", NoItinerary, []>,
+                         Requires<[IsPPC64, HasPPCAS]>;
 // We don't really have LQX in the ISA, make a pseudo one so that we can
 // handle x-form during isel. Make it pre-ra may expose
 // oppotunities to some opts(CSE, LICM and etc.) for the result of adding
@@ -1695,6 +1706,10 @@ let mayStore = 1, hasNoSchedulingInfo = 1 in {
 def STQ : DSForm_1<62, 2, (outs), (ins g8prc:$RST, (memrix $D, $RA):$addr),
                    "stq $RST, $addr", IIC_LdStSTQ,
                    []>, isPPC64;
+def STMD_PPCAS : DSForm_1<62, 3, (outs),
+                          (ins g8rc:$RST, (memrix $D, $RA):$addr),
+                          "stmd $RST, $addr", NoItinerary, []>,
+                          Requires<[IsPPC64, HasPPCAS]>;
 
 def STQX_PSEUDO : PPCCustomInserterPseudo<(outs),
                                           (ins g8prc:$RSp, memrr:$dst),

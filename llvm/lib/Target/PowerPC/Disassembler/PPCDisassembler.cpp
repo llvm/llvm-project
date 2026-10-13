@@ -396,6 +396,18 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   // Read the instruction in the proper endianness.
   uint64_t Inst = ReadFunc(Bytes.data());
 
+  // TXER uses the PowerPC AS TX-form. Its XBI field occupies bits that the
+  // base Power ISA decoder treats as part of an X-form extended opcode, so it
+  // must be recognized before the generated base instruction table.
+  if (STI.hasFeature(PPC::FeaturePPCAS) && (Inst >> 26) == 31 &&
+      (Inst & 0x3f) == 0x08 && ((Inst >> 21) & 0x1f) <= 1) {
+    MI.setOpcode(PPC::TXER);
+    MI.addOperand(MCOperand::createImm((Inst >> 21) & 0x1f));
+    MI.addOperand(MCOperand::createImm((Inst >> 11) & 0x3ff));
+    MI.addOperand(MCOperand::createImm((Inst >> 6) & 0x1f));
+    return MCDisassembler::Success;
+  }
+
   if (STI.hasFeature(PPC::FeatureSPE)) {
     DecodeStatus result =
         decodeInstruction(DecoderTableSPE32, MI, Inst, Address, this, STI);

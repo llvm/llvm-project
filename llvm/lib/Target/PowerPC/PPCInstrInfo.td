@@ -1982,6 +1982,37 @@ let Predicates = [HasPPCAS], hasNoSchedulingInfo = 1,
     let Inst{21...30} = 499;
     let Inst{31} = 0;
   }
+
+  let isAsmParserOnly = 1 in
+  def TXER : TXForm<31, 4, (outs),
+                    (ins u5imm:$TO, u10imm:$UI, u5imm:$XBI),
+                    "txer $TO, $UI, $XBI", NoItinerary>;
+
+  def LSDX_PPCAS : XForm_1<31, 565, (outs g8rc:$RST),
+                           (ins g8rc:$RA, g8rc:$RB),
+                           "lsdx $RST, $RA, $RB", NoItinerary, []>;
+  def LSDI_PPCAS : XForm_1<31, 629, (outs g8rc:$RST),
+                           (ins g8rc:$RA, u5imm:$RB),
+                           "lsdi $RST, $RA, $RB", NoItinerary, []>;
+  def STSDX_PPCAS : XForm_1<31, 693, (outs),
+                            (ins g8rc:$RST, g8rc:$RA, g8rc:$RB),
+                            "stsdx $RST, $RA, $RB", NoItinerary, []>;
+  def STSDI_PPCAS : XForm_1<31, 757, (outs),
+                            (ins g8rc:$RST, g8rc:$RA, u5imm:$RB),
+                            "stsdi $RST, $RA, $RB", NoItinerary, []>;
+
+  def SELII_PPCAS : ASSelectForm<12, (outs g8rc:$RA),
+                                 (ins s5imm:$S1, s5imm:$S2, u5imm:$XBI),
+                                 "selii $RA, $S1, $S2, $XBI">;
+  def SELIR_PPCAS : ASSelectForm<13, (outs g8rc:$RA),
+                                 (ins s5imm:$S1, g8rc:$S2, u5imm:$XBI),
+                                 "selir $RA, $S1, $S2, $XBI">;
+  def SELRI_PPCAS : ASSelectForm<14, (outs g8rc:$RA),
+                                 (ins g8rc:$S1, s5imm:$S2, u5imm:$XBI),
+                                 "selri $RA, $S1, $S2, $XBI">;
+  def SELRR_PPCAS : ASSelectForm<15, (outs g8rc:$RA),
+                                 (ins g8rc:$S1, g8rc:$S2, u5imm:$XBI),
+                                 "selrr $RA, $S1, $S2, $XBI">;
 }
 
 // Branch history rolling buffer.
