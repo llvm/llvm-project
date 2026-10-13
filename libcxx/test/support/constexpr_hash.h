@@ -92,7 +92,7 @@ struct constexpr_hash<Key> {
       using type = decltype(std::to_underlying(std::declval<Key>()));
       return constexpr_hash<type>()(static_cast<type>(key));
     }
-    __builtin_unreachable(); // todo: revisit
+    std::unreachable(); // todo: revisit
   }
 
   constexpr_hash() noexcept                        = default;
