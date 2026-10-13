@@ -497,6 +497,7 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.fcntl
     libc.src.__support.OSUtil.linux.syscall_wrappers.getpid
     libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
 )
