@@ -1209,9 +1209,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
 bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                        ArrayRef<MachineOperand> Cond,
                                        Register DstReg, Register TrueReg,
-                                       Register FalseReg, int &CondCycles,
-                                       int &TrueCycles,
-                                       int &FalseCycles) const {
+                                       Register FalseReg,
+                                       SelectExpansion &Exp) const {
   // Check register classes.
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *RC =
@@ -1225,20 +1224,24 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   if (!RI.getCommonSubClass(RC, MRI.getRegClass(DstReg)))
     return false;
 
-  // Expanding cbz/tbz requires an extra cycle of latency on the condition.
+  // Expanding cbz/tbz requires a flag setting instruction in addition to the
+  // select, adding an extra cycle of latency on the condition.
   unsigned ExtraCondLat = Cond.size() != 1;
+  Exp.NumInsts = 1 + ExtraCondLat;
+  if (ExtraCondLat)
+    Exp.ClobberedPhysRegs.push_back(AArch64::NZCV);
 
   // GPRs are handled by csel.
   // FIXME: Fold in x+1, -x, and ~x when applicable.
   if (AArch64::GPR64allRegClass.hasSubClassEq(RC) ||
       AArch64::GPR32allRegClass.hasSubClassEq(RC)) {
     // Single-cycle csel, csinc, csinv, and csneg.
-    CondCycles = 1 + ExtraCondLat;
-    TrueCycles = FalseCycles = 1;
+    Exp.CondCycles = 1 + ExtraCondLat;
+    Exp.TrueCycles = Exp.FalseCycles = 1;
     if (canFoldIntoCSel(MRI, TrueReg))
-      TrueCycles = 0;
+      Exp.TrueCycles = 0;
     else if (canFoldIntoCSel(MRI, FalseReg))
-      FalseCycles = 0;
+      Exp.FalseCycles = 0;
     return true;
   }
 
@@ -1246,8 +1249,8 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   // FIXME: Form fabs, fmin, and fmax when applicable.
   if (AArch64::FPR64RegClass.hasSubClassEq(RC) ||
       AArch64::FPR32RegClass.hasSubClassEq(RC)) {
-    CondCycles = 5 + ExtraCondLat;
-    TrueCycles = FalseCycles = 2;
+    Exp.CondCycles = 5 + ExtraCondLat;
+    Exp.TrueCycles = Exp.FalseCycles = 2;
     return true;
   }
 
@@ -1256,8 +1259,9 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   if (AArch64::FPR128RegClass.hasSubClassEq(RC) &&
       Subtarget.isNeonAvailable() &&
       !MBB.getParent()->getFunction().hasMinSize()) {
-    CondCycles = 8 + ExtraCondLat;
-    TrueCycles = FalseCycles = 2;
+    Exp.CondCycles = 8 + ExtraCondLat;
+    Exp.TrueCycles = Exp.FalseCycles = 2;
+    Exp.NumInsts = 3 + ExtraCondLat;
     return true;
   }
 
@@ -3628,11 +3632,9 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   // prologue/epilogue if the CFI information encoded the operations as separate
   // instructions, as that will cause the size of the actual prologue to mismatch
   // with the prologue size recorded in the Windows CFI.
-  const MCAsmInfo &MAI = MI.getMF()->getTarget().getMCAsmInfo();
-  bool NeedsWinCFI =
-      MAI.usesWindowsCFI() && MI.getMF()->getFunction().needsUnwindTableEntry();
-  if (NeedsWinCFI && (MI.getFlag(MachineInstr::FrameSetup) ||
-                      MI.getFlag(MachineInstr::FrameDestroy)))
+  if ((MI.getFlag(MachineInstr::FrameSetup) ||
+       MI.getFlag(MachineInstr::FrameDestroy)) &&
+      MI.getMF()->needsWinCFI())
     return false;
 
   // On some CPUs quad load/store pairs are slower than two single load/stores.
@@ -10549,6 +10551,23 @@ AArch64InstrInfo::getOutliningCandidateInfo(
                                    ->getInfo<AArch64FunctionInfo>()
                                    ->getSignReturnAddressCondition();
   if (RASignCondition != SignReturnAddress::None) {
+    // Candidates that have Return Address Authentication Hardening enabled are
+    // discarded.
+    //
+    // In its current form, the machine outliner does not preserve X16/X17
+    // across outlined function calls, even though it should as they are
+    // caller-saved registers. And since the hardening based on load from the
+    // return address may clobber one of these registers, if they are alive
+    // across a call their value would be lost due to the hardening mechanism.
+    llvm::erase_if(RepeatedSequenceLocs, [](outliner::Candidate &C) {
+      return C.getMF()
+          ->getInfo<AArch64FunctionInfo>()
+          ->shouldHardenSignReturnAddress();
+    });
+    // If the sequence doesn't have enough candidates left, then we're done.
+    if (RepeatedSequenceLocs.size() < MinRepeats)
+      return std::nullopt;
+
     // One PAC and one AUT instructions
     NumBytesToCreateFrame += 8;
 
@@ -10926,23 +10945,21 @@ void AArch64InstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(CFn.getFnAttribute("sign-return-address"));
   if (CFn.hasFnAttribute("sign-return-address-key"))
     F.addFnAttr(CFn.getFnAttribute("sign-return-address-key"));
+  // The "sign-return-address-harden" attribute is not included because no
+  // candidate is supposed to have hardening enabled.
+  assert(llvm::none_of(Candidates, [](const outliner::Candidate &C) {
+    return C.getMF()
+        ->getInfo<AArch64FunctionInfo>()
+        ->shouldHardenSignReturnAddress();
+  }));
 
   AArch64GenInstrInfo::mergeOutliningCandidateAttributes(F, Candidates);
 }
 
 bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
     MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
-  const Function &F = MF.getFunction();
-
-  // Can F be deduplicated by the linker? If it can, don't outline from it.
-  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
-    return false;
-
-  // Don't outline from functions with section markings; the program could
-  // expect that all the code is in the named section.
-  // FIXME: Allow outlining from multiple functions with the same section
-  // marking.
-  if (F.hasSection())
+  if (!TargetInstrInfo::isFunctionSafeToOutlineFrom(MF,
+                                                    OutlineFromLinkOnceODRs))
     return false;
 
   // Outlining from functions with redzones is unsafe since the outliner may
@@ -10960,7 +10977,7 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
     return false;
 
   // FIXME: Teach the outliner to generate/handle Windows unwind info.
-  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
+  if (MF.usesWindowsUnwindInfo())
     return false;
 
   // It's safe to outline from MF.
@@ -11058,9 +11075,11 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
   // StartPt points to the first place where all unsafe registers
   // are dead (if there is any such point). Begin partitioning the MBB into
   // ranges.
-  for (auto &MI : make_range(FirstPossibleEndPt, MBB.instr_rend())) {
-    if (!MI.isDebugInstr())
-      LRU.stepBackward(MI);
+  // Pseudo probes are ordinary instructions to the mapper, so only skip debug
+  // instructions here.
+  for (auto &MI : instructionsWithoutDebug(FirstPossibleEndPt, MBB.instr_rend(),
+                                           /*SkipPseudoOp=*/false)) {
+    LRU.stepBackward(MI);
     UpdateWholeMBBFlags(MI);
     if (!AreAllUnsafeRegsDead()) {
       SaveRangeIfNonEmpty();
@@ -11068,12 +11087,10 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
       continue;
     }
     LRAvailableEverywhere &= LRU.available(AArch64::LR);
-    // RangeBegin may point at a debug instruction because the mapper ignores
-    // debug instructions wherever they appear. Only count non-debug
-    // instructions so debug info cannot make a short range outlinable.
+    // Pseudo probes count because the mapper treats them as ordinary
+    // instructions.
     RangeBegin = MI.getIterator();
-    if (!MI.isDebugInstr())
-      ++RangeLen;
+    ++RangeLen;
   }
   // Above loop misses the last (or only) range. If we are still safe, then
   // let's save the range.

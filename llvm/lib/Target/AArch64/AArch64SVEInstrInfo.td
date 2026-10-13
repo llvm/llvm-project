@@ -141,7 +141,15 @@ def AArch64ldff1s_gather_imm_z         : SDNode<"AArch64ISD::GLDFF1S_IMM_MERGE_Z
 def AArch64ldnt1_gather_z  : SDNode<"AArch64ISD::GLDNT1_MERGE_ZERO",  SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ldnt1s_gather_z : SDNode<"AArch64ISD::GLDNT1S_MERGE_ZERO", SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 // Gather vector base +  scalar offset
-def AArch64ld1q_gather_z: SDNode<"AArch64ISD::GLD1Q_MERGE_ZERO", SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
+// Quadword gathers/scatters use a single predicate bit per 128-bit quadword,
+// i.e. always nxv1i1, regardless of the element count of the data being
+// loaded/stored.
+def SDT_AArch64_GATHER_VS_128 : SDTypeProfile<1, 4, [
+  SDTCisVec<0>, SDTCisVT<1, nxv1i1>, SDTCisVec<2>, SDTCisInt<3>,
+  SDTCisVT<4, OtherVT>
+]>;
+
+def AArch64ld1q_gather_z: SDNode<"AArch64ISD::GLD1Q_MERGE_ZERO", SDT_AArch64_GATHER_VS_128, [SDNPHasChain, SDNPMayLoad]>;
 
 // Contiguous stores - node definitions
 //
@@ -178,7 +186,15 @@ def AArch64st1_scatter_imm         : SDNode<"AArch64ISD::SST1_IMM_PRED",        
 def AArch64stnt1_scatter : SDNode<"AArch64ISD::SSTNT1_PRED", SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
 
 // Scatter vector base + scalar offset
-def AArch64st1q_scatter : SDNode<"AArch64ISD::SST1Q_PRED", SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
+// Quadword gathers/scatters use a single predicate bit per 128-bit quadword,
+// i.e. always nxv1i1, regardless of the element count of the data being
+// loaded/stored.
+def SDT_AArch64_SCATTER_VS_128 : SDTypeProfile<0, 5, [
+  SDTCisVec<0>, SDTCisVT<1, nxv1i1>, SDTCisVec<2>, SDTCisInt<3>,
+  SDTCisVT<4, OtherVT>
+]>;
+
+def AArch64st1q_scatter : SDNode<"AArch64ISD::SST1Q_PRED", SDT_AArch64_SCATTER_VS_128, [SDNPHasChain, SDNPMayStore]>;
 
 // AArch64 SVE/SVE2 - the remaining node definitions
 //
@@ -413,25 +429,17 @@ def AArch64ursra : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                             [(int_aarch64_sve_ursra node:$op1, node:$op2, node:$op3),
                              (add node:$op1, (AArch64urshri_p (SVEAllActive), node:$op2, node:$op3))]>;
 
-// Replace pattern min(max(v1,v2),v3) by clamp
-def AArch64sclamp : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
-                              [(int_aarch64_sve_sclamp node:$Zd, node:$Zn, node:$Zm),
-                              (AArch64smin_p (SVEAllActive),
-                                  (AArch64smax_p (SVEAllActive), node:$Zd, node:$Zn),
-                                  node:$Zm)
-                               ]>;
-def AArch64uclamp : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
-                              [(int_aarch64_sve_uclamp node:$Zd, node:$Zn, node:$Zm),
-                               (AArch64umin_p (SVEAllActive),
-                                  (AArch64umax_p (SVEAllActive), node:$Zd, node:$Zn),
-                                  node:$Zm)
-                              ]>;
-def AArch64fclamp : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
-                              [(int_aarch64_sve_fclamp node:$Zd, node:$Zn, node:$Zm),
-                              (AArch64fminnm_p (SVEAllActive),
-                                  (AArch64fmaxnm_p (SVEAllActive), node:$Zd, node:$Zn),
-                               node:$Zm)
-                               ]>;
+// Replace pattern min(max(v1,v2),v3) by clamp. Min's operands are commutable.
+class ClampPatFrags<SDPatternOperator intrinsic, SDPatternOperator minop,
+                    SDPatternOperator maxop>
+: PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
+           [(intrinsic node:$Zd, node:$Zn, node:$Zm),
+            (minop (SVEAllActive), (maxop (SVEAllActive), node:$Zd, node:$Zn), node:$Zm),
+            (minop (SVEAllActive), node:$Zm, (maxop (SVEAllActive), node:$Zd, node:$Zn))]>;
+
+def AArch64sclamp : ClampPatFrags<int_aarch64_sve_sclamp, AArch64smin_p, AArch64smax_p>;
+def AArch64uclamp : ClampPatFrags<int_aarch64_sve_uclamp, AArch64umin_p, AArch64umax_p>;
+def AArch64fclamp : ClampPatFrags<int_aarch64_sve_fclamp, AArch64fminnm_p, AArch64fmaxnm_p>;
 
 def AArch64fdot : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
                             [(int_aarch64_sve_fdot_x2 node:$Zd, node:$Zn, node:$Zm),
@@ -1232,6 +1240,15 @@ let Predicates = [HasSVE_or_SME] in {
   defm BRKB_PPzP  : sve_int_break_z<0b100, "brkb",  int_aarch64_sve_brkb_z>;
   defm BRKB_PPmP  : sve_int_break_m<0b101, "brkb",  int_aarch64_sve_brkb>;
   defm BRKBS_PPzP : sve_int_break_z<0b110, "brkbs", null_frag>;
+
+  def : Pat<(nxv16i1 (mask_beforefirst PPR8:$Pn)),
+            (BRKB_PPzP (PTRUE_B 31), PPR8:$Pn)>;
+  def : Pat<(nxv8i1 (mask_beforefirst PPR8:$Pn)),
+            (BRKB_PPzP (PTRUE_H 31), PPR8:$Pn)>;
+  def : Pat<(nxv4i1 (mask_beforefirst PPR8:$Pn)),
+            (BRKB_PPzP (PTRUE_S 31), PPR8:$Pn)>;
+  def : Pat<(nxv2i1 (mask_beforefirst PPR8:$Pn)),
+            (BRKB_PPzP (PTRUE_D 31), PPR8:$Pn)>;
 
   defm PTEST_PP : sve_int_ptest<0b010000, "ptest", AArch64ptest, AArch64ptest_any, AArch64ptest_first>;
   defm PFALSE   : sve_int_pfalse<0b000000, "pfalse">;

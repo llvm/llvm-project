@@ -404,8 +404,12 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
           FMF &= cast<FPMathOperator>(FII)->getFastMathFlags();
           FMF |= SelectFPOp->getFastMathFlags();
 
-          Value *SelectVal = Builder.CreateSelect(Cond, LdexpVal0, LdexpVal1);
-          Value *SelectExp = Builder.CreateSelect(Cond, LdexpExp0, LdexpExp1);
+          Value *SelectVal = Builder.CreateSelect(
+              Cond, LdexpVal0, LdexpVal1, "",
+              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+          Value *SelectExp = Builder.CreateSelect(
+              Cond, LdexpExp0, LdexpExp1, "",
+              ProfcheckDisableMetadataFixes ? nullptr : &SI);
 
           Value *NewLdexp = Builder.CreateIntrinsic(
               TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp}, FMF);
@@ -3661,7 +3665,13 @@ foldSelectOfSymmetricSelect(SelectInst &OuterSelVal,
     return nullptr;
 
   Value *Xor = Builder.CreateXor(InnerCond, OuterCond);
-  return SelectInst::Create(Xor, InnerFalseVal, InnerTrueVal);
+  SelectInst *SI = SelectInst::Create(Xor, InnerFalseVal, InnerTrueVal);
+  // We cannot construct branch weights without assuming that the distributions
+  // of the two conditions are independent, so mark the branch weights as
+  // unknown.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE,
+                                              OuterSelVal.getFunction());
+  return SI;
 }
 
 /// Look for patterns like
@@ -5314,29 +5324,34 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // TODO: preserve FMF flags
   auto FoldSelectWithAndOrCond = [&](bool IsAnd, Value *A,
                                      Value *B) -> Instruction * {
+    Instruction *MDFrom = nullptr;
+    // If the and/or is logical, we can propagate branch weights from that
+    // select. Otherwise, we cannot infer the branch weights in the
+    // general case.
+    if (auto *NestedSI = dyn_cast<SelectInst>(SI.getCondition()))
+      if (NestedSI->getCondition() == A)
+        MDFrom = NestedSI;
+
     if (Value *V = simplifySelectInst(B, TrueVal, FalseVal, FMF,
                                       SQ.getWithInstruction(&SI))) {
-      Value *NewTrueVal = IsAnd ? V : TrueVal;
-      Value *NewFalseVal = IsAnd ? FalseVal : V;
-
-      // If the True and False values don't change, then preserve the branch
-      // metadata of the original select as the net effect of this change is to
-      // simplify the conditional.
-      Instruction *MDFrom = nullptr;
-      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal) {
-        MDFrom = &SI;
-      }
-      return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,
-                                MDFrom);
+      SelectInst *NewSI = SelectInst::Create(
+          A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
+      if (!MDFrom)
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE, &F);
+      return NewSI;
     }
 
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
         if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this)) {
-          return SelectInst::Create(
+          SelectInst *NewSI = SelectInst::Create(
               A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
-              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+              ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
+          if (!MDFrom)
+            setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE, &F);
+          return NewSI;
         }
     }
 

@@ -2414,17 +2414,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                          << (*ArraySize)->getSourceRange());
       }
 
-      if (!AllocType->isDependentType()) {
-        unsigned ActiveSizeBits =
-            ConstantArrayType::getNumAddressingBits(Context, AllocType, *Value);
-        if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context))
-          return ExprError(
-              Diag((*ArraySize)->getBeginLoc(), diag::err_array_too_large)
-              << toString(*Value, 10, Value->isSigned(),
-                          /*formatAsCLiteral=*/false, /*UpperCase=*/false,
-                          /*InsertSeparators=*/true)
-              << (*ArraySize)->getSourceRange());
-      }
+      if (checkArrayTooLarge(AllocType, *Value, (*ArraySize)->getBeginLoc(),
+                             (*ArraySize)->getSourceRange()))
+        return ExprError();
 
       KnownArraySize = Value->getZExtValue();
     } else if (TypeIdParens.isValid()) {

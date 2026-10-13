@@ -2177,8 +2177,10 @@ public:
 
   /// Parses the option spelled by Args[0], which may take Args[1] as its
   /// value, and sets \p Consumed to the number of arguments it spans. The
-  /// strings in \p Args remain valid until reset().
-  virtual Error parse(ArrayRef<const char *> Args, unsigned &Consumed) = 0;
+  /// strings in \p Args and the memory from \p Alloc remain valid until
+  /// reset().
+  virtual Error parse(ArrayRef<const char *> Args, unsigned &Consumed,
+                      BumpPtrAllocator &Alloc) = 0;
 
   /// Restores the default values.
   virtual void reset() = 0;
