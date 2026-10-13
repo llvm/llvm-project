@@ -108,9 +108,9 @@ void SBModuleSpec::SetObjectName(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
   if (!name)
-    m_opaque_up->GetObjectName().clear();
+    m_opaque_up->SetObjectName(std::string());
   else
-    m_opaque_up->GetObjectName() = name;
+    m_opaque_up->SetObjectName(name);
 }
 
 const char *SBModuleSpec::GetTriple() {

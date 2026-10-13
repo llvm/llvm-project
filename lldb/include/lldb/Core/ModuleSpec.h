@@ -104,7 +104,7 @@ public:
 
   const UUID &GetUUID() const { return m_uuid; }
 
-  std::string &GetObjectName() { return m_object_name; }
+  void SetObjectName(std::string name) { m_object_name = std::move(name); }
 
   const std::string &GetObjectName() const { return m_object_name; }
 
