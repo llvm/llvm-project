@@ -26,6 +26,7 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -152,6 +153,7 @@ void SPIRVModuleAnalysisImpl::setBaseInfo(const Module &M) {
   MAI.GlobalObjMap.clear();
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
+  MAI.InstrAuxDataRecords.clear();
   MAI.Reqs.clear();
   MAI.Reqs.initAvailableCapabilities(*ST);
 
@@ -766,6 +768,26 @@ void SPIRVModuleAnalysisImpl::processOtherInstrs(const Module &M) {
         } else if (TII->isAliasingInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_AliasingInsts, IS);
         } else if (TII->isDecorationInstr(MI)) {
+          if (MI.getOpcode() == SPIRV::OpDecorate &&
+              MI.getOperand(1).getImm() ==
+                  static_cast<unsigned>(
+                      SPIRV::Decoration::AuxDataInstructionMetadata)) {
+            MAI.setSkipEmission(&MI);
+            std::string Str = getStringImm(MI, 2);
+            using AMDMD = SPIRV::ModuleAnalysisInfo::AMDGPUAtomicMDKind;
+            auto MaybeKind =
+                StringSwitch<std::optional<AMDMD>>(Str)
+                    .Case("amdgpu.no.fine.grained.memory",
+                          AMDMD::NoFineGrainedMemory)
+                    .Case("amdgpu.no.remote.memory", AMDMD::NoRemoteMemory)
+                    .Case("atomic.ignore.denormal.mode",
+                          AMDMD::IgnoreDenormalMode)
+                    .Default(std::nullopt);
+            if (MaybeKind)
+              MAI.InstrAuxDataRecords.push_back(
+                  {MF, MI.getOperand(0).getReg(), *MaybeKind});
+            continue;
+          }
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations, IS);
           collectFuncNames(MI, &F);
         } else if (TII->isConstantInstr(MI)) {

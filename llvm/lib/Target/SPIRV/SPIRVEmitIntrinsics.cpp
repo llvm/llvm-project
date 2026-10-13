@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVAuxDataHandler.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -3122,27 +3123,27 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
                       {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
   }
-  if (I->getModule()->getTargetTriple().getVendor() == Triple::AMD &&
+  if (spirvPreserveAuxData(I->getModule()->getTargetTriple()) &&
       isa<AtomicRMWInst>(I)) {
-    // If present, we encode AMDGPU atomic metadata as UserSemantic string
-    // decorations, which will be parsed during reverse translation.
-    auto &Ctx = B.getContext();
-    auto *US = ConstantAsMetadata::get(
-        ConstantInt::get(B.getInt32Ty(), SPIRV::Decoration::UserSemantic));
+    LLVMContext &Ctx = B.getContext();
+    auto *AuxMD = ConstantAsMetadata::get(ConstantInt::get(
+        B.getInt32Ty(), SPIRV::Decoration::AuxDataInstructionMetadata));
 
     SmallVector<Metadata *> MDs;
     if (I->hasMetadata("amdgpu.no.fine.grained.memory"))
       MDs.push_back(MDNode::get(
-          Ctx, {US, MDString::get(Ctx, "amdgpu.no.fine.grained.memory")}));
+          Ctx, {AuxMD, MDString::get(Ctx, "amdgpu.no.fine.grained.memory")}));
     if (I->hasMetadata("amdgpu.no.remote.memory"))
       MDs.push_back(MDNode::get(
-          Ctx, {US, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
+          Ctx, {AuxMD, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
     if (I->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode))
       MDs.push_back(MDNode::get(
-          Ctx, {US, MDString::get(Ctx, "atomic.ignore.denormal.mode")}));
-    if (!MDs.empty())
+          Ctx, {AuxMD, MDString::get(Ctx, "atomic.ignore.denormal.mode")}));
+    if (!MDs.empty()) {
+      setInsertPointAfterDef(B, I);
       B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
                         {I, MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))});
+    }
   }
 }
 
