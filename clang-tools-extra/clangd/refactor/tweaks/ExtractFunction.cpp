@@ -438,7 +438,7 @@ struct NewFunction {
     QualType TypeInfo;
     ParamPassKind Kind;
     unsigned OrderPriority; // Lower value parameters are preferred first.
-    std::string render(const DeclContext *Context) const;
+    std::string render(const DeclContext &Context) const;
     bool operator<(const Parameter &Other) const {
       return OrderPriority < Other.OrderPriority;
     }
@@ -510,7 +510,7 @@ std::string NewFunction::renderParametersForDeclaration(
     if (NeedCommaBefore)
       Result += ", ";
     NeedCommaBefore = true;
-    Result += P.render(&Enclosing);
+    Result += P.render(Enclosing);
   }
   return Result;
 }
@@ -641,21 +641,27 @@ NewFunction::getFuncBody(const SourceManager &SM) const {
   return *NewBody + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
 }
 
-std::string NewFunction::Parameter::render(const DeclContext *Context) const {
+std::string NewFunction::Parameter::render(const DeclContext &Context) const {
   // Passing Name as printType()'s declarator placeholder (rather than just
   // appending it after the printed type) lets clang's own type printer
   // place it correctly for declarator syntax that doesn't simply put the
   // name after the type, e.g. a function pointer (`void (*name)(int)`, not
-  // `void (*)(int) name`) or an array (`int name[5]`, not `int[5] name`).
-  // For a reference, building the actual reference QualType (rather than
-  // just prepending "&" to the placeholder string) is what lets the
-  // printer correctly parenthesize a reference-to-array
-  // (`int (&name)[5]`, not the invalid `int &name[5]`).
+  // `void (*)(int) name`). This only threads correctly through an outer
+  // pointer or reference, though, not through a bare array type on its
+  // own (confirmed empirically: it prints as `int[5] name`, not the
+  // intended `int name[5]`) -- harmless here, since createParameters
+  // never leaves TypeInfo as a bare array: it's always either decayed
+  // to a pointer (in C) or wrapped in the reference built just below
+  // (in C++). For that reference case, building the actual reference
+  // QualType (rather than just prepending "&" to the placeholder
+  // string) is what lets the printer correctly parenthesize a
+  // reference-to-array (`int (&name)[5]`, not the invalid
+  // `int &name[5]`).
   QualType RenderedType =
       Kind == ParamPassKind::Reference
-          ? Context->getParentASTContext().getLValueReferenceType(TypeInfo)
+          ? Context.getParentASTContext().getLValueReferenceType(TypeInfo)
           : TypeInfo;
-  return printType(RenderedType, *Context, Name);
+  return printType(RenderedType, Context, Name);
 }
 
 // Stores captured information about Extraction Zone.
@@ -1198,6 +1204,22 @@ bool createParameters(NewFunction &ExtractedFunc,
       }
     }
 
+    // A reference-to-array parameter's declared type always spells out
+    // every dimension's bound, including the outermost one (unlike a
+    // decayed C pointer, which drops it). For a variable-length array,
+    // that bound is an arbitrary expression -- typically another
+    // variable's name -- that isn't in scope in the extracted
+    // function's declaration, and even making it an explicit preceding
+    // parameter doesn't help: the two don't line up at the call site
+    // (the callee's declared bound and the caller's concrete array type
+    // don't reference-bind just because both happen to be named the
+    // same). So this is rejected unconditionally, in both languages --
+    // C still gets a chance to extract it below, by decaying to a
+    // pointer instead of keeping a reference.
+    if (Kind == ParamPassKind::Reference && TypeInfo->isArrayType() &&
+        TypeInfo->isVariablyModifiedType() && LangOpts.CPlusPlus)
+      return false;
+
     // C has no references. A parameter that would otherwise need one
     // becomes a real pointer instead: the call site takes the address of
     // the original variable explicitly, and every use of it in the
@@ -1205,9 +1227,10 @@ bool createParameters(NewFunction &ExtractedFunc,
     // NewFunction::getFuncBody). Array types are the exception: they decay
     // to a pointer on their own wherever they're used, so no rewriting or
     // address-of is needed for them at all -- except that TypeInfo itself
-    // must be decayed too (NewFunction::Parameter::render() has no special
-    // case for array declarator syntax, so leaving it as an array type
-    // would print as the uncompilable `int[5] name`).
+    // must still be decayed explicitly (confirmed empirically): unlike a
+    // pointer or reference, printType()'s declarator placeholder doesn't
+    // thread correctly through a *bare* array type on its own, printing
+    // the uncompilable `int[5] name` instead of `int name[5]`.
     if (Kind == ParamPassKind::Reference && !LangOpts.CPlusPlus) {
       if (TypeInfo->isArrayType()) {
         // A decayed pointer no longer reports the array's own size,

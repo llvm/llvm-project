@@ -1263,19 +1263,39 @@ TEST_F(ExtractFunctionTest, CFileRejectMultiDimensionVariableLengthArray) {
             "fail: Too complex to extract.");
 }
 
-TEST_F(ExtractFunctionTest, CXXVariableLengthArrayByReference) {
-  // In C++ (where clang also supports VLAs as a GNU extension), this
-  // isn't a problem at all: an unmutated array always stays a
-  // reference there (see ConstParametersScalarsByValue's array case),
-  // never decaying to a pointer, so there's no separate parameter that
-  // needs to agree with the array's own bound.
+TEST_F(ExtractFunctionTest, CXXRejectVariableLengthArray) {
+  // Clang also supports VLAs in C++ as a GNU extension. An unmutated
+  // array capture is passed by reference there (see
+  // ConstParametersScalarsByValue's plain, fixed-size array case,
+  // which that's still fine for) rather than decaying it to a pointer
+  // the way C does -- but a reference's declared type spells out every
+  // dimension's bound, including the outermost one:
+  // `void extracted(int (&A)[2][N])` looks plausible, and even
+  // compiles, but a call to it doesn't -- `N` in the parameter list
+  // isn't the same `N` as at the call site, and a reference-to-array
+  // parameter can't be bound by just matching the spelling.
   Context = File;
-  EXPECT_THAT(apply(R"cpp(
+  EXPECT_EQ(apply(R"cpp(
       void foo(int N) {
          int A[2][N];
          [[A[0][0] = 1;]]
     })cpp"),
-              HasSubstr("extracted(int (&A)[2][N])"));
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CXXRejectSingleDimensionVariableLengthArray) {
+  // Unlike in C (where a single-dimension VLA decays to a pointer that
+  // no longer mentions the bound at all, see
+  // CFileAllowSingleDimensionVariableLengthArray), a C++ reference's
+  // declared type keeps the bound regardless of dimension count, so
+  // even this simpler case has the same hazard as the 2D one above.
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int A[N];
+         [[A[0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
 }
 
 } // namespace
