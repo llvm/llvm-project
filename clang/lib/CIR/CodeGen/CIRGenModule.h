@@ -473,6 +473,11 @@ public:
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
 
+  /// Create a private constant global holding the null-terminated string
+  /// \p str, mirroring llvm::IRBuilder::CreateGlobalString.
+  cir::GlobalOp createGlobalString(mlir::Location loc, llvm::StringRef str,
+                                   llvm::StringRef name);
+
   /// Returns the address space for temporary allocations in the language. This
   /// ensures that the allocated variable's address space matches the
   /// expectations of the AST, rather than using the target's allocation address
