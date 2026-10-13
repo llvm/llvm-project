@@ -903,8 +903,7 @@ int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
   ol_queue_handle_t Queue = AsyncInfo.getQueue();
   if (!Queue)
     return OFFLOAD_SUCCESS;
-  bool IsComplete;
-  if (auto Res = olQueryQueue(Queue, &IsComplete)) {
+  if (auto Res = olQueryQueue(Queue, /*IsComplete=*/nullptr)) {
     REPORT() << "Failure to query stream " << Queue << ": " << Res->Details;
     return OFFLOAD_FAIL;
   }
