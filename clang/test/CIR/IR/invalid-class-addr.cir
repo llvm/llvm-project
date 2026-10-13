@@ -1,0 +1,27 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+!rec_B = !cir.struct<"B" {data !s32i}>
+!rec_D = !cir.struct<"D" {data !rec_B}>
+
+module {
+  cir.func @base_class_addr_address_space_mismatch(%arg0: !cir.ptr<!rec_D, target_address_space(1)>) {
+    // expected-error @below {{address space mismatch}}
+    %0 = cir.base_class_addr %arg0 [0] : !cir.ptr<!rec_D, target_address_space(1)> -> !cir.ptr<!rec_B>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_B = !cir.struct<"B" {data !s32i}>
+!rec_D = !cir.struct<"D" {data !rec_B}>
+
+module {
+  cir.func @derived_class_addr_address_space_mismatch(%arg0: !cir.ptr<!rec_B, target_address_space(1)>) {
+    // expected-error @below {{address space mismatch}}
+    %0 = cir.derived_class_addr %arg0 [0] : !cir.ptr<!rec_B, target_address_space(1)> -> !cir.ptr<!rec_D>
+    cir.return
+  }
+}
