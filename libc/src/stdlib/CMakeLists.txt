@@ -857,6 +857,13 @@ if(TARGET libc.src.__support.threads.thread)
   libc_add_definition(exit_compile_options "LIBC_COPT_SUPPORT_THREADS")
 endif()
 
+if("libc.src.stdio.fflush" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+  list(APPEND exit_deps
+    libc.src.stdio.fflush_internal
+  )
+  libc_add_definition(exit_compile_options "LIBC_COPT_EXIT_FLUSH_STREAMS")
+endif()
+
 add_entrypoint_object(
   exit
   SRCS

@@ -2530,6 +2530,13 @@ private:
   /// vector savings the count check does not model.
   bool bypassesInstCountCheck(InstructionCost TreeCost) const;
 
+  /// Collects into \p UserOps the user operations of the gathers of the scalars
+  /// of \p E, for TTI::getBuildVectorContextHint(). Returns false if no user is
+  /// found or some user cannot be described.
+  bool
+  collectGatherUserOps(const TreeEntry &E,
+                       SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const;
+
   /// \returns the fadd/fsub user of the single-use fmul \p I, which the
   /// backend fuses with \p I into an fmuladd in the scalar code, and the cost
   /// of that fmuladd, or {nullptr, invalid cost}. If \p InTree is set, the
@@ -2706,7 +2713,7 @@ private:
   isGatherShuffledEntry(
       const TreeEntry *TE, ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       SmallVectorImpl<SmallVector<const TreeEntry *>> &Entries,
-      unsigned NumParts, bool ForOrder = false);
+      unsigned NumParts, Type *ScalarTy, bool ForOrder = false);
 
   /// \returns the cost of gathering (inserting) the values in \p VL into a
   /// vector.
@@ -5765,7 +5772,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
       tryToGatherExtractElements(GatheredScalars, ExtractMask, NumParts);
   SmallVector<std::optional<TargetTransformInfo::ShuffleKind>> GatherShuffles =
       isGatherShuffledEntry(&TE, GatheredScalars, Mask, Entries, NumParts,
-                            /*ForOrder=*/true);
+                            ScalarTy, /*ForOrder=*/true);
   // The internal gathers of the splat gather subtrees are not used as shuffle
   // sources, do not reorder the tree to match them.
   if (hasSplatSubtreeGather(Entries)) {
@@ -10800,9 +10807,24 @@ class InstructionsCompatibilityAnalysis {
   /// Returns the idempotent value for MainOp. For Add, returns 0. For Or, it
   /// should choose between false and the operand itself, since V or V == V.
   /// For the min/max intrinsics, returns the corresponding limit value (e.g. 0
-  /// for umax, since umax(V, 0) == V).
-  Value *selectBestIdempotentValue() const {
+  /// for umax, since umax(V, 0) == V). For smin and smax the type limit is
+  /// kept when it stays same after narrowing, otherwise the limit is deduced
+  /// from the signed width of V.
+  Value *selectBestIdempotentValue(Value *V) const {
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
+    if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(MainOp);
+        MinMax && MinMax->isSigned() &&
+        !isTypeLimitNeutral(V, MinMax->getIntrinsicID() == Intrinsic::smax,
+                            DL)) {
+      // TODO: add AC to both width queries once the analysis has one.
+      unsigned Width = ComputeMaxSignificantBits(V, DL, nullptr, nullptr, &DT);
+      APInt Limit = MinMax->getIntrinsicID() == Intrinsic::smax
+                        ? APInt::getSignedMinValue(Width)
+                        : APInt::getSignedMaxValue(Width);
+      return Constant::getIntegerValue(
+          MainOp->getType(),
+          Limit.sext(MainOp->getType()->getScalarSizeInBits()));
+    }
     return ConstantExpr::getIdentity(MainOp, MainOp->getType(),
                                      !MainOp->isCommutative());
   }
@@ -10863,7 +10885,7 @@ class InstructionsCompatibilityAnalysis {
       return {V, PoisonValue::get(Ty)};
     if (isa<UndefValue>(V) && isUndefTolerantBinOp(MainOp))
       return {V, V};
-    return {V, selectBestIdempotentValue()};
+    return {V, selectBestIdempotentValue(V)};
   }
 
   /// Checks if the lanes with the absorbing constant may use poison as the
@@ -13530,6 +13552,25 @@ bool BoUpSLP::bypassesInstCountCheck(InstructionCost TreeCost) const {
            TE.State != TreeEntry::CombinedVectorize &&
            isPoorThroughputOp(TE.getMainOp(), *TTI, *TLI, Cache, CostKind);
   });
+}
+
+bool BoUpSLP::collectGatherUserOps(
+    const TreeEntry &E, SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const {
+  UserOps.clear();
+  for (const auto &TE :
+       make_filter_range(VectorizableTree, [&](const auto &TE) {
+         return !DeletedNodes.contains(TE.get());
+       })) {
+    if (!(TE->isGather() || TransformedToGatherNodes.contains(TE.get())) ||
+        !E.isSame(TE->Scalars))
+      continue;
+    const TreeEntry *UserTE = TE->UserTreeIndex.UserTE;
+    if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
+        TransformedToGatherNodes.contains(UserTE))
+      return false;
+    UserOps.emplace_back(UserTE->getOpcode(), TE->UserTreeIndex.EdgeIdx);
+  }
+  return !UserOps.empty();
 }
 
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
@@ -22089,7 +22130,7 @@ SmallVector<std::optional<TargetTransformInfo::ShuffleKind>>
 BoUpSLP::isGatherShuffledEntry(
     const TreeEntry *TE, ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
     SmallVectorImpl<SmallVector<const TreeEntry *>> &Entries, unsigned NumParts,
-    bool ForOrder) {
+    Type *ScalarTy, bool ForOrder) {
   assert(NumParts > 0 && NumParts < VL.size() &&
          "Expected positive number of registers.");
   Entries.clear();
@@ -22104,8 +22145,8 @@ BoUpSLP::isGatherShuffledEntry(
   Mask.assign(VL.size(), PoisonMaskElem);
   assert((TE->UserTreeIndex || TE == &getRootNode()) &&
          "Expected only single user of the gather node.");
-  unsigned PWSz = getFullVectorNumberOfElements(*TTI, VL.front()->getType(),
-                                                VL.size(), SLPReVec);
+  unsigned PWSz =
+      getFullVectorNumberOfElements(*TTI, ScalarTy, VL.size(), SLPReVec);
   if (TE->UserTreeIndex && TE->UserTreeIndex.UserTE->isGather() &&
       TE->UserTreeIndex.EdgeIdx == UINT_MAX &&
       (TE->Idx == 0 ||
@@ -23433,8 +23474,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         all_of(E->Scalars, [this](Value *V) { return isVectorized(V); }) ||
         isSplat(E->Scalars) ||
         (E->Scalars != GatheredScalars && GatheredScalars.size() <= 2)) {
-      GatherShuffles =
-          isGatherShuffledEntry(E, GatheredScalars, Mask, Entries, NumParts);
+      GatherShuffles = isGatherShuffledEntry(E, GatheredScalars, Mask, Entries,
+                                             NumParts, ScalarTy);
     }
     // The splat gather subtrees are speculative: the keep/drop check may
     // delete them and does not track reuse of their internal gathers by other
@@ -23846,24 +23887,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       auto GatherUserOps =
           [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
             UserOps.clear();
-            if (NeedFreeze)
-              return false;
-            for (const auto &TE :
-                 make_filter_range(VectorizableTree, [&](const auto &TE) {
-                   return !DeletedNodes.contains(TE.get());
-                 })) {
-              if (!(TE->isGather() ||
-                    TransformedToGatherNodes.contains(TE.get())) ||
-                  !E->isSame(TE->Scalars))
-                continue;
-              auto *UserTE = TE->UserTreeIndex.UserTE;
-              if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
-                  TransformedToGatherNodes.contains(UserTE))
-                return false;
-              UserOps.emplace_back(UserTE->getOpcode(),
-                                   TE->UserTreeIndex.EdgeIdx);
-            }
-            return !UserOps.empty();
+            return !NeedFreeze && collectGatherUserOps(*E, UserOps);
           };
       ContextHint =
           TTI->getBuildVectorContextHint(ReuseMask, E->Scalars, GatherUserOps);
@@ -28437,9 +28461,9 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
                return false;
              LLVM_DEBUG(dbgs() << "SLP: cancel scheduling of the trimmed node "
                                << TE->Idx << " bundle " << *Bundle << "\n");
-             for (ScheduleData *SD :
-                  make_isa_range<ScheduleData>(Bundle->getBundle()))
-               ClearedSDs.insert(SD);
+             for (ScheduleEntity *SE : Bundle->getBundle())
+               if (ScheduleData *SD = BS->getScheduleData(SE->getInst()))
+                 ClearedSDs.insert(SD);
              BS->cancelScheduling(*Bundle);
              return true;
            });
@@ -29128,7 +29152,10 @@ bool BoUpSLP::collectValuesToDemote(
         };
         // A copyable V stands for smax/smin(V, identity), which equals V.
         if (E.isCopyableElement(V))
-          return CheckOp(V);
+          return CheckOp(V) &&
+                 (isTypeLimitNeutral(V, ID == Intrinsic::smax, *DL) ||
+                  ComputeMaxSignificantBits(V, *DL, nullptr, nullptr, DT) <=
+                      BitWidth);
         auto *I = cast<Instruction>(V);
         return CheckOp(I->getOperand(0)) && CheckOp(I->getOperand(1));
       });
@@ -32298,7 +32325,11 @@ public:
                      &ReducedValsToOps,
                  const SmallPtrSetImpl<Value *> &NegatedReducedVals,
                  bool HasNarrowedLeafShifts) {
+      // A two-value reduction is unordered by commutativity alone; the
+      // accumulator reassociates the reduction across the loop iterations,
+      // which requires a genuinely associative operation.
       if (!VectorizeLoopAccRdx || RK != ReductionOrdering::Unordered ||
+          isVectorizable(RdxKind, Root) != ReductionOrdering::Unordered ||
           Root->getType()->isIntegerTy(1) || Root->getType()->isVectorTy() ||
           HasNarrowedLeafShifts || isCmpSelMinMax(Root) ||
           Root->hasNUsesOrMore(UsesLimit))
@@ -34323,8 +34354,14 @@ private:
             Instruction *RdxOp = GetReductionOp(RdxVal);
             if (Cnt == 1) {
               unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
-              Cost +=
-                  (SameValueCount ? SameValueCount - 1 : 0) * GenCostFn(RdxOp);
+              // A loop-carried chain removes one operation per reduced value;
+              // its last operation, the reduction root, folds the accumulator
+              // phi back and is credited by the accumulation cost instead.
+              unsigned NumRemoved = SameValueCount ? SameValueCount - 1 : 0;
+              if (RdxKind == RecurKind::FAdd && IsLoopCarriedRoot &&
+                  RdxOp != ReductionRoot)
+                NumRemoved = SameValueCount ? SameValueCount : 1;
+              Cost += NumRemoved * GenCostFn(RdxOp);
               break;
             }
             --Cnt;
@@ -34336,12 +34373,16 @@ private:
             InstructionCost ScalarCost = 0;
             for (User *U : RdxVal->users()) {
               auto *RdxOp = cast<Instruction>(U);
+              // The loop-carried root is not removed: the horizontal form
+              // folds the accumulator phi back through it, the accumulator
+              // form replaces it with the lane-wise operation, costed by
+              // the accumulation cost.
+              if (RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot &&
+                  IsLoopCarriedRoot)
+                continue;
               // The reduction root is used outside of the reduction any
-              // number of times, its fmul operand is still fused into it. The
-              // loop-carried chain is bound by its latency, so the fusion does
-              // not make it cheaper than the vector code, which cuts the chain.
-              if ((RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot &&
-                   !IsLoopCarriedRoot) ||
+              // number of times, its fmul operand is still fused into it.
+              if ((RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot) ||
                   hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
                 InstructionsState RdxOpS = RdxKind == RecurKind::FAdd
                                                ? getSameOpcode(RdxOp, TLI)

@@ -70,8 +70,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips-asm-printer"
 
-extern cl::opt<bool> EmitJalrReloc;
-
 MipsTargetStreamer &MipsAsmPrinter::getTargetStreamer() const {
   return static_cast<MipsTargetStreamer &>(*OutStreamer->getTargetStreamer());
 }
@@ -236,7 +234,7 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
-  if (EmitJalrReloc &&
+  if (Subtarget->getMCCLOpts().jalr_reloc &&
       (MI->isReturn() || MI->isCall() || MI->isIndirectBranch())) {
     emitDirectiveRelocJalr(*MI, OutContext, TM, *OutStreamer, *Subtarget);
   }

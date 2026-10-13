@@ -119,6 +119,13 @@ features cannot lower the translation-unit ABI level;
   for homogeneous aggregate classification.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH218799)
 
+- On Windows targets using the Microsoft record layout, `#pragma pack` no longer
+  reduces the alignment of fields of vector type (e.g. `__m128`) or of x87
+  80-bit `long double` (with `-mlong-double-80`), including when such fields
+  are nested in structs or arrays. This matches MSVC and fixes misaligned
+  accesses to these fields. `__attribute__((packed))` on the field or the
+  enclosing record still reduces the alignment. (#GH208256)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
@@ -352,6 +359,16 @@ features cannot lower the translation-unit ABI level;
   `[[clang::unsafe_buffer_usage("container")]]`) to allow two-parameter container
   and view constructors and factory functions to opt in to
   `-Wunsafe-buffer-usage-in-container` diagnostics.
+
+- The thread safety attribute `lock_returned` (`RETURN_CAPABILITY`) can now be
+  applied to function pointers, like the other thread safety function
+  attributes:
+
+  ```c
+  struct Ops {
+    struct Mutex *(*lock_of)(struct Dev *d) RETURN_CAPABILITY(&d->lock);
+  };
+  ```
 
 ### Improvements to Clang's diagnostics
 
@@ -604,6 +621,8 @@ features cannot lower the translation-unit ABI level;
   `operator delete`, since such a delete expression never invokes the
   destructor. (#GH65524)
 
+- Suggest missing `typename` prefixes to dependent packs within template arguments. (#GH75248)
+
 - Fixed a false-positive `-Wshadow` warning when a variable in an
   inline-defined friend function shares the name of a non-static class
   member variable. (#GH221190)
@@ -622,7 +641,7 @@ features cannot lower the translation-unit ABI level;
   keyword, such as when deferring the last statement of a block; when
   used as the body of a conditional; or when it immediately precedes
   a `break`/`continue` statement or a `return` with no argument.
- 
+
 - Clang now diagnoses arrays whose size is deduced from an initializer list when they exceed the maximum object size
 
 - Added `-Wunsafe-buffer-usage-main-argv` as a diagnostic group under
@@ -677,6 +696,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
 - Clang no longer treats a file-scope `thread_local` declaration without an initializer as a tentative definition in C23 mode. As specified by C23 6.9.3, such a declaration is a definition, so declaring the same variable more that once is now diagnosed as a redefinition. (#GH217636)
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
+- Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
+- Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -701,6 +722,9 @@ features cannot lower the translation-unit ABI level;
   or `__builtin_is_aligned` with pointers without an underlying object. Null pointers
   are handled as aligned values, while other base-less pointers are rejected during constant
   evaluation.
+- Fixed an assertion failure when `__builtin_object_size` or
+  `__builtin_dynamic_object_size` is called with an out-of-range type argument
+  during constant evaluation. (#GH225041)
 
 #### Bug Fixes to Attribute Support
 
