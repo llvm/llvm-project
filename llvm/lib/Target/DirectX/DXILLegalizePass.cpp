@@ -16,6 +16,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Pass.h"
@@ -237,13 +238,22 @@ legalizeNonStandardInteger(Instruction &I,
               "type for instruction '") +
             I.getOpcodeName() + "'",
         /*gen_crash_diag=*/false);
-  for (Value *Operand : I.operands())
+  auto *CI = dyn_cast<CallInst>(&I);
+  bool IsSignatureAccess =
+      CI && (CI->getIntrinsicID() == Intrinsic::dx_load_input ||
+             CI->getIntrinsicID() == Intrinsic::dx_store_output);
+  for (auto [Index, Operand] : enumerate(I.operands())) {
+    // Signature intrinsics require a constant i8 column in their ABI. It is
+    // consumed by DXIL op lowering, not an integer SSA value to promote.
+    if (IsSignatureAccess && Index == 2 && isa<ConstantInt>(Operand))
+      continue;
     if (getLegalIntegerType(Operand->getType()))
       report_fatal_error(Twine("DXIL legalization does not support "
                                "non-standard integer operand "
                                "type for instruction '") +
                              I.getOpcodeName() + "'",
                          /*gen_crash_diag=*/false);
+  }
   return false;
 }
 

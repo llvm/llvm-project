@@ -5,6 +5,7 @@
 ; RUN: not opt -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %t/operand.ll -disable-output 2>&1 | FileCheck %s --check-prefix=OPERAND
 ; RUN: not opt -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %t/return.ll -disable-output 2>&1 | FileCheck %s --check-prefix=RETURN
 ; RUN: not opt -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %t/ambiguous-store.ll -disable-output 2>&1 | FileCheck %s --check-prefix=AMBIGUOUS-STORE
+; RUN: not opt -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %t/signature-value.ll -disable-output 2>&1 | FileCheck %s --check-prefix=SIGNATURE-VALUE
 
 ;--- wide.ll
 
@@ -65,5 +66,13 @@ define void @ambiguous_i8_store(i1 %condition, ptr %lhs, ptr %rhs) {
 ; AMBIGUOUS-STORE: LLVM ERROR: DXIL legalization cannot determine the i8 store's storage type
   %pointer = select i1 %condition, ptr %lhs, ptr %rhs
   store i8 1, ptr %pointer
+  ret void
+}
+
+;--- signature-value.ll
+
+define void @unsupported_signature_value() {
+; SIGNATURE-VALUE: LLVM ERROR: DXIL legalization does not support non-standard integer operand type for instruction 'call'
+  call void @llvm.dx.store.output.i8(i32 0, i32 0, i8 0, i8 1)
   ret void
 }
