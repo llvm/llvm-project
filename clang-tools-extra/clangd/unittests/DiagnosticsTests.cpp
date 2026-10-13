@@ -19,6 +19,7 @@
 #include "TestIndex.h"
 #include "TestTU.h"
 #include "TidyProvider.h"
+#include "clang-tidy-config.h"
 #include "index/MemIndex.h"
 #include "index/Ref.h"
 #include "index/Relation.h"
@@ -361,6 +362,48 @@ TEST(DiagnosticsTest, ClangTidy) {
           Diag(Test.range("bar"),
                "function 'bar' is within a recursive call chain"))));
 }
+
+#if CLANGD_TIDY_CHECKS && CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
+TEST(DiagnosticsTest, ClangTidyExperimentalCustomChecks) {
+  Annotations Test(R"cpp(
+    int x = $literal[[0]];
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.ClangTidyProvider = [](tidy::ClangTidyOptions &Opts, llvm::StringRef) {
+    Opts.Checks = "-*,custom-integer-literal";
+    tidy::ClangTidyOptions::CustomCheckValue Check;
+    Check.Name = "integer-literal";
+    Check.Query = R"(match integerLiteral().bind("literal"))";
+    tidy::ClangTidyOptions::CustomCheckDiag Diagnostic;
+    Diagnostic.BindName = "literal";
+    Diagnostic.Message = "integer literal found";
+    Diagnostic.Level = DiagnosticIDs::Warning;
+    Check.Diags.push_back(std::move(Diagnostic));
+    Opts.CustomChecks.emplace();
+    Opts.CustomChecks->push_back(std::move(Check));
+  };
+
+  auto DiagnosticsFor = [&](bool Enabled, Config::FastCheckPolicy Policy) {
+    Config Cfg;
+    Cfg.Diagnostics.ClangTidy.ExperimentalCustomChecks = Enabled;
+    Cfg.Diagnostics.ClangTidy.FastCheckFilter = Policy;
+    WithContextValue WithCfg(Config::Key, std::move(Cfg));
+    auto AST = TU.build();
+    return std::vector<clangd::Diag>(AST.getDiagnostics());
+  };
+  auto CustomDiagnostic =
+      AllOf(Diag(Test.range("literal"), "integer literal found"),
+            diagSource(Diag::ClangTidy), diagName("custom-integer-literal"),
+            diagSeverity(DiagnosticsEngine::Warning));
+
+  EXPECT_THAT(DiagnosticsFor(false, Config::FastCheckPolicy::Loose), IsEmpty());
+  EXPECT_THAT(DiagnosticsFor(true, Config::FastCheckPolicy::Strict), IsEmpty());
+  EXPECT_THAT(DiagnosticsFor(true, Config::FastCheckPolicy::Loose),
+              ElementsAre(CustomDiagnostic));
+  EXPECT_THAT(DiagnosticsFor(true, Config::FastCheckPolicy::None),
+              ElementsAre(CustomDiagnostic));
+}
+#endif
 
 TEST(DiagnosticsTest, ClangTidyRedundantParenthesesFix) {
   Annotations Test(R"cpp(
@@ -1561,6 +1604,43 @@ TEST(IncludeFixerTest, NoCrashMemberAccess) {
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       UnorderedElementsAre(Diag(Test.range(), "no member named 'xy' in 'X'")));
+}
+
+TEST(IncludeFixerTest, NoCrashOnQualifiedConversionFunctionName) {
+  auto TU = TestTU::withCode(R"cpp(// error-ok
+namespace std {}
+void f() { operator new[](0, operator::align_val_t{}); }
+  )cpp");
+  TU.ExtraArgs.push_back("-std=c++17");
+  auto Index = buildIndexWithSymbol(
+      SymbolWithHeader{"std::align_val_t", "unittest:///new.h", "<new>"});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(TU.build().getDiagnostics(), Not(IsEmpty()));
+}
+
+TEST(IncludeFixerTest, FixConversionFunctionTargetType) {
+  Annotations Test(R"cpp(// error-ok
+$insert[[]]struct Wrapper {
+  template <typename T>
+  operator T() const { return T(); }
+};
+
+void f() {
+  Wrapper W;
+  auto V = W.operator::$target[[Something]]();
+}
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  auto Index = buildIndexWithSymbol(
+      SymbolWithHeader{"Something", "unittest:///test.h", "\"test.h\""});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              Contains(Field(
+                  &Diag::Fixes,
+                  Contains(Fix(Test.range("insert"), "#include \"test.h\"\n",
+                               "Include \"test.h\" for symbol Something")))));
 }
 
 TEST(IncludeFixerTest, UseCachedIndexResults) {

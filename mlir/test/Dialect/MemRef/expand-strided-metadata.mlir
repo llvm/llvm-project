@@ -72,6 +72,31 @@ func.func @simplify_subview_all_dynamic(
 
 // -----
 
+// Check that folded offsets and strides are reflected in the result type of
+// the reinterpret_cast. Sizes remain dynamic because they are forwarded
+// without folding.
+// CHECK-LABEL: func @simplify_subview_folded_metadata
+//       CHECK: %[[CAST:.*]] = memref.reinterpret_cast %{{[^ ]+}} to
+//  CHECK-SAME:   offset: [10],
+//  CHECK-SAME:   sizes: [%{{[^ ]+}}, %{{[^ ]+}}],
+//  CHECK-SAME:   strides: [8, 2]
+//  CHECK-SAME: memref<f32> to memref<?x?xf32, strided<[8, 2], offset: 10>>
+//       CHECK: memref.load %[[CAST]]
+//  CHECK-SAME: memref<?x?xf32, strided<[8, 2], offset: 10>>
+func.func @simplify_subview_folded_metadata(%base: memref<4x8xf32>) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %subview = memref.subview %base[%c1, %c2] [%c2, %c3] [%c1, %c2] :
+    memref<4x8xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %result = memref.load %subview[%c0, %c0] :
+    memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return %result : f32
+}
+
+// -----
+
 // Check that we simplify extract_strided_metadata of subview to
 // base_buf, base_offset, base_sizes, base_strides = extract_strided_metadata
 // strides = base_stride_i * subview_stride_i

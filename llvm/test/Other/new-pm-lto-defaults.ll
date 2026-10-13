@@ -66,6 +66,7 @@
 ; CHECK-O-NEXT: Running pass: WholeProgramDevirtPass
 ; CHECK-O-NEXT: Running pass: NoRecurseLTOInferencePass
 ; CHECK-O23-NEXT: Running pass: CoroEarlyPass
+; CHECK-O1-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
 ; CHECK-O1-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O23-NEXT: Running pass: GlobalOptPass
 ; CHECK-O23-NEXT: Running pass: PromotePass
@@ -118,6 +119,7 @@
 ; CHECK-O23-NEXT: Running analysis: CycleAnalysis
 ; CHECK-O23-NEXT: Running pass: MoveAutoInitPass on foo
 ; CHECK-O23-NEXT: Running pass: MergedLoadStoreMotionPass on foo
+; CHECK-O23-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
 ; CHECK-EP-VECTORIZER-START-NEXT: Running pass: NoOpFunctionPass on foo
 ; CHECK-O23-NEXT: Running pass: LoopSimplifyPass on foo
 ; CHECK-O23-NEXT: Running pass: LCSSAPass on foo
@@ -153,6 +155,8 @@
 ; CHECK-O-NEXT: Running pass: DropTypeTestsPass
 ; CHECK-O23-NEXT: Running pass: LoopSink
 ; CHECK-O23-NEXT: Running pass: DivRemPairs
+; CHECK-O23-NEXT: Running pass: MergeICmpsPass
+; CHECK-O23-NEXT: Running pass: ExpandMemCmpPass
 ; CHECK-O23-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O23-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O23-NEXT: Running pass: GlobalDCEPass

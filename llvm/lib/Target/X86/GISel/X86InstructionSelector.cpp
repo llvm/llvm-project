@@ -1128,6 +1128,8 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
   assert((LhsBank == RhsBank) &&
          "Both banks assigned to FCMP arguments need to be same!");
 
+  bool IsX87 = LhsBank->getID() == X86::PSRRegBankID;
+
   // Compute the opcode for the CMP instruction.
   unsigned OpCmp;
   LLT Ty = MRI.getType(LhsReg);
@@ -1135,12 +1137,10 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
   default:
     return false;
   case 32:
-    OpCmp = LhsBank->getID() == X86::PSRRegBankID ? X86::UCOM_FpIr32
-                                                  : X86::UCOMISSrr;
+    OpCmp = IsX87 ? X86::UCOM_FpIr32 : X86::UCOMISSrr;
     break;
   case 64:
-    OpCmp = LhsBank->getID() == X86::PSRRegBankID ? X86::UCOM_FpIr64
-                                                  : X86::UCOMISDrr;
+    OpCmp = IsX87 ? X86::UCOM_FpIr64 : X86::UCOMISDrr;
     break;
   case 80:
     OpCmp = X86::UCOM_FpIr80;
@@ -1156,6 +1156,8 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
         *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpCmp))
              .addReg(LhsReg)
              .addReg(RhsReg);
+    if (IsX87)
+      CmpInst.getOperand(3).setIsDead(); // Mark unused FPSW def dead.
 
     Register FlagReg1 = MRI.createVirtualRegister(&X86::GR8RegClass);
     Register FlagReg2 = MRI.createVirtualRegister(&X86::GR8RegClass);
@@ -1166,7 +1168,8 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
     MachineInstr &Set3 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
                                   TII.get(SETFOpc[2]), ResultReg)
                               .addReg(FlagReg1)
-                              .addReg(FlagReg2);
+                              .addReg(FlagReg2)
+                              .setOperandDead(3);
     constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
     constrainSelectedInstRegOperands(Set1, TII, TRI, RBI);
     constrainSelectedInstRegOperands(Set2, TII, TRI, RBI);
@@ -1189,6 +1192,8 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
       *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpCmp))
            .addReg(LhsReg)
            .addReg(RhsReg);
+  if (IsX87)
+    CmpInst.getOperand(3).setIsDead(); // Mark unused FPSW def dead.
 
   MachineInstr &Set =
       *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr), ResultReg).addImm(CC);
@@ -1858,8 +1863,8 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
               TII.get(OpEntry.OpSignExtend));
     else {
       Register Zero32 = MRI.createVirtualRegister(&X86::GR32RegClass);
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::MOV32r0),
-              Zero32);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::MOV32r0), Zero32)
+          .setOperandDead(1);
 
       // Copy the zero into the appropriate sub/super/identical physical
       // register. Unfortunately the operations needed are not uniform enough

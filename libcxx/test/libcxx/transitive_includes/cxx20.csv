@@ -11,6 +11,7 @@ algorithm iosfwd
 algorithm limits
 algorithm optional
 algorithm ratio
+algorithm stdexcept
 algorithm tuple
 algorithm version
 any cstdint
@@ -231,6 +232,7 @@ ctgmath version
 cwchar cctype
 cwchar cwctype
 cwctype cctype
+debugging version
 deque cctype
 deque compare
 deque cstdint

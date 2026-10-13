@@ -15,9 +15,6 @@
 ```{role} good
 ```
 
-```{contents}
-:local:
-```
 
 # OpenMP Support
 
@@ -44,6 +41,19 @@ see {ref}`OpenMP implementation details <openmp-implementation-details>` and
   known at compile time. To prevent this conservative choice and use
   at most 32 bits, compile your program with the
   `-fopenmp-optimistic-collapse`.
+- C++20 structured bindings are now supported in OpenMP constructs.
+  Bindings from structured binding declarations can be used in data-sharing
+  clauses (``private``, ``firstprivate``, ``lastprivate``, ``shared``,
+  ``linear``), and in ``map`` clauses for target directives.
+  Limitations: tuple-like bindings (using the tuple protocol with ``get<N>()``)
+  are not yet supported; conditional lastprivate and reductions are not yet
+  supported.
+  Important restriction for target regions: if the original variable is
+  explicitly mapped (e.g., ``map(tofrom: t)``) but only bindings from it,
+  and not the original variable itself, are used in the target region, the
+  compiler emits an error. Either use the original variable directly in the
+  target region, or map the bindings explicitly instead of the original
+  variable.
 
 ## GPU devices support
 
@@ -292,9 +302,11 @@ implementation.
 | loop reverse transformation                               | {good}`done`        | {none}`unclaimed`   | [PR92916][PR92916]                                                                                                                  |
 | loop stripe transformation                                | {good}`done`        | {none}`unclaimed`   | [PR119891][PR119891]                                                                                                                |
 | loop fusion transformation                                | {part}`in progress` | {good}`done`        | [PR139293][PR139293] [PR161213][PR161213] [PR168898][PR168898]                                                                      |
-| loop index set splitting transformation with count clause | {part}`in progress` | {none}`unclaimed`   | @amitamd7                                                                                                                           |
+| loop index set splitting transformation                   | {good}`done`        | {none}`unclaimed`   | C/C++: @loopacino                                                                                                                   |
+| counts clause on loop split                               | {good}`done`        | {none}`unclaimed`   | C/C++: @loopacino                                                                                                                   |
 | loop transformation apply clause                          | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
 | loop fuse transformation                                  | {good}`done`        | {none}`unclaimed`   |                                                                                                                                     |
+| depth clause on loop fuse                                 | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
 | workdistribute construct                                  |                     | {none}`in progress` | @skc7, @mjklemm                                                                                                                     |
 | task_iteration                                            | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
 | memscope clause for atomic and flush                      | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
@@ -384,7 +396,8 @@ implementation.
 | Feature                                                               | C/C++ Status        | Fortran Status      | Reviews                                                                                                  |
 | --------------------------------------------------------------------- | ------------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
 | dyn_groupprivate clause                                               | {part}`partial`     | {part}`In Progress` | C/C++: Host device support missing                                                                       |
-| loop flatten transformation                                           | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
+| loop flatten transformation                                           | {part}`partial`     | {none}`unclaimed`   | C/C++: @loopacino ([PR206977][PR206977]); non-rectangular loops are not supported yet                   |
+| depth clause on loop flatten                                          | {good}`done`        | {none}`unclaimed`   | C/C++: @loopacino                                                                                        |
 | loop grid/tile modifiers for sizes clause                             | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
 | attach map-type modifier                                              | {part}`In Progress` | {none}`unclaimed`   | C/C++: @abhinavgaba; RT: @abhinavgaba ([PR149036][PR149036], [PR158370][PR158370], [PR210213][PR210213]) |
 | need_device_ptr modifier for adjust_args clause                       | {part}`partial`     | {none}`unclaimed`   | Clang Parsing/Sema: [PR168905][PR168905] [PR169558][PR169558]                                            |
@@ -563,6 +576,7 @@ considered for standardization. Please post on the
 [PR194168]: https://github.com/llvm/llvm-project/pull/194168
 [PR195829]: https://github.com/llvm/llvm-project/pull/195829
 [PR196431]: https://github.com/llvm/llvm-project/pull/196431
+[PR206977]: https://github.com/llvm/llvm-project/pull/206977
 [PR210213]: https://github.com/llvm/llvm-project/pull/210213
 
 [discourse forums (runtimes - openmp category)]: https://discourse.llvm.org/c/runtimes/openmp/35

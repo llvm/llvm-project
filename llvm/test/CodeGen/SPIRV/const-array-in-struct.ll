@@ -9,7 +9,13 @@
 ; CHECK-SPIRV-DAG: %[[#ArrayTy:]] = OpTypeArray %[[#IntTy]] %[[#Const16]]
 ; CHECK-SPIRV-DAG: %[[#StructTy:]] = OpTypeStruct %[[#ArrayTy]]
 ; CHECK-SPIRV-DAG: %[[#]] = OpConstantNull %[[#IntTy]]
-; CHECK-SPIRV-DAG-COUNT-7: %[[#]] = OpConstant %[[#IntTy]] {{[1-9]}}
+; CHECK-SPIRV-DAG: %[[#Const1:]] = OpConstant %[[#IntTy]] 1
+; CHECK-SPIRV-DAG: %[[#Const2:]] = OpConstant %[[#IntTy]] 2
+; CHECK-SPIRV-DAG: %[[#Const3:]] = OpConstant %[[#IntTy]] 3
+; CHECK-SPIRV-DAG: %[[#Const4:]] = OpConstant %[[#IntTy]] 4
+; CHECK-SPIRV-DAG: %[[#Const5:]] = OpConstant %[[#IntTy]] 5
+; CHECK-SPIRV-DAG: %[[#Const6:]] = OpConstant %[[#IntTy]] 6
+; CHECK-SPIRV-DAG: %[[#Const7:]] = OpConstant %[[#IntTy]] 7
 ; CHECK-SPIRV-DAG: %[[#ConstArray:]] = OpConstantComposite %[[#ArrayTy]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#]]
 ; CHECK-SPIRV-DAG: %[[#]] = OpConstantComposite %[[#StructTy]] %[[#ConstArray]]
 

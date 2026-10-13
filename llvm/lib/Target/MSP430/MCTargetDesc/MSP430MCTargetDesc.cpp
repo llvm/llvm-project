@@ -17,6 +17,7 @@
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
@@ -81,6 +82,10 @@ static MCInstPrinter *createMSP430MCInstPrinter(const Triple &T,
   return nullptr;
 }
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new MCTargetStreamer(S);
+}
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeMSP430TargetMC() {
   Target &T = getTheMSP430Target();
@@ -94,4 +99,5 @@ LLVMInitializeMSP430TargetMC() {
   TargetRegistry::RegisterMCAsmBackend(T, createMSP430MCAsmBackend);
   TargetRegistry::RegisterObjectTargetStreamer(
       T, createMSP430ObjectTargetStreamer);
+  TargetRegistry::RegisterNullTargetStreamer(T, createNullTargetStreamer);
 }

@@ -148,7 +148,7 @@ static SourceRange getLocationOfConst(const TypeSourceInfo *TSI,
                                       const SourceManager &SourceMgr,
                                       const LangOptions &LangOpts) {
   assert(TSI);
-  const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  const auto FTL = TSI->getTypeLoc().getAsAdjusted<FunctionTypeLoc>();
   assert(FTL);
 
   const SourceRange Range{FTL.getRParenLoc().getLocWithOffset(1),

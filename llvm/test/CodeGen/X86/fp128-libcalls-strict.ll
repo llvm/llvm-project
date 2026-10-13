@@ -111,7 +111,7 @@ define fp128 @add(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 8(%ebp), %esi
 ; WIN-X86-NEXT:    movl 36(%ebp), %edi
 ; WIN-X86-NEXT:    movl 40(%ebp), %ebx
@@ -240,7 +240,7 @@ define fp128 @sub(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 8(%ebp), %esi
 ; WIN-X86-NEXT:    movl 36(%ebp), %edi
 ; WIN-X86-NEXT:    movl 40(%ebp), %ebx
@@ -369,7 +369,7 @@ define fp128 @mul(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 8(%ebp), %esi
 ; WIN-X86-NEXT:    movl 36(%ebp), %edi
 ; WIN-X86-NEXT:    movl 40(%ebp), %ebx
@@ -498,7 +498,7 @@ define fp128 @div(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 8(%ebp), %esi
 ; WIN-X86-NEXT:    movl 36(%ebp), %edi
 ; WIN-X86-NEXT:    movl 40(%ebp), %ebx
@@ -932,7 +932,7 @@ define i64 @cmp_ueq_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-NEXT:    pushq %rsi
 ; WIN-NEXT:    pushq %rdi
 ; WIN-NEXT:    pushq %rbx
-; WIN-NEXT:    subq $128, %rsp
+; WIN-NEXT:    addq $-128, %rsp
 ; WIN-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; WIN-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; WIN-NEXT:    movq %rdx, %rsi
@@ -1156,7 +1156,7 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-NEXT:    pushq %rsi
 ; WIN-NEXT:    pushq %rdi
 ; WIN-NEXT:    pushq %rbx
-; WIN-NEXT:    subq $128, %rsp
+; WIN-NEXT:    addq $-128, %rsp
 ; WIN-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; WIN-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; WIN-NEXT:    movq %rdx, %rsi

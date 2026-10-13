@@ -9,6 +9,8 @@
 #ifndef LLDB_UTILITY_STRUCTUREDDATA_H
 #define LLDB_UTILITY_STRUCTUREDDATA_H
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
@@ -403,6 +405,21 @@ public:
                      &callback) const {
       for (const auto &pair : m_dict) {
         if (!callback(pair.first(), pair.second.get()))
+          break;
+      }
+    }
+
+    /// Like ForEach, but visits the entries in key order, for stable output.
+    void
+    ForEachSorted(std::function<bool(llvm::StringRef key, Object *object)> const
+                      &callback) const {
+      llvm::SmallVector<llvm::StringRef> keys;
+      keys.reserve(m_dict.size());
+      for (const auto &pair : m_dict)
+        keys.push_back(pair.first());
+      llvm::sort(keys);
+      for (llvm::StringRef key : keys) {
+        if (!callback(key, m_dict.lookup(key).get()))
           break;
       }
     }

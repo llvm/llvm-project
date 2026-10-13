@@ -380,6 +380,8 @@ enum Kind {
   kw_dso_local_equivalent,
   kw_no_cfi,
   kw_ptrauth,
+  kw_bitinsert,
+  kw_bitextract,
 
   kw_freeze,
 

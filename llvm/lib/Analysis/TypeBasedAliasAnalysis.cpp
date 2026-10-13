@@ -169,18 +169,6 @@ public:
     // Ok, this node has a valid parent. Return it.
     return TBAANodeImpl<MDNodeTy>(P);
   }
-
-  /// Test if this TBAANode represents a type for objects which are
-  /// not modified (by any means) in the context where this
-  /// AliasAnalysis is relevant.
-  bool isTypeImmutable() const {
-    if (Node->getNumOperands() < 3)
-      return false;
-    ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Node->getOperand(2));
-    if (!CI)
-      return false;
-    return CI->getValue()[0];
-  }
 };
 
 /// \name Specializations of \c TBAANodeImpl for const and non const qualified
@@ -615,8 +603,19 @@ static bool mayBeAccessToSubobjectOf(TBAAStructTagNode BaseTag,
                  BaseType.getNode() == BaseTag.getAccessType() ||
                  SubobjectTag.getBaseType() == SubobjectTag.getAccessType();
       if (GenericTag) {
-        *GenericTag =
-            MayAlias ? SubobjectTag.getNode() : createAccessTag(CommonType);
+        if (!MayAlias) {
+          *GenericTag = createAccessTag(CommonType);
+        } else if (SubobjectTag.isTypeImmutable() &&
+                   !BaseTag.isTypeImmutable()) {
+          // The generic tag can only be immutable if both accesses are, so
+          // drop the flag and keep the rest of the tag.
+          const MDNode *Tag = SubobjectTag.getNode();
+          unsigned FlagOpNo = SubobjectTag.isNewFormat() ? 4 : 3;
+          SmallVector<Metadata *, 4> Ops(Tag->operands().take_front(FlagOpNo));
+          *GenericTag = MDNode::get(Tag->getContext(), Ops);
+        } else {
+          *GenericTag = SubobjectTag.getNode();
+        }
       }
       return true;
     }
@@ -748,6 +747,17 @@ MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
   return MD;
 }
 
+// Read a !tbaa.struct field entry (an offset or a size) as a 64-bit value.
+// Returns std::nullopt if it does not fit in 64 bits.
+static std::optional<uint64_t> getTBAAStructFieldAsInt64(const MDOperand &Op) {
+  return mdconst::extract<ConstantInt>(Op)->getValue().tryZExtValue();
+}
+
+static bool isScalarAccessTag(const MDNode *Tag) {
+  TBAAStructTagNode T(Tag);
+  return T.getAccessType() == T.getBaseType();
+}
+
 MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
   // Fast path if there's no offset
   if (Offset == 0)
@@ -810,16 +820,31 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
 AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
   AAMDNodes New = *this;
   MDNode *M = New.TBAAStruct;
-  if (!New.TBAA && M && M->getNumOperands() >= 3 && M->getOperand(0) &&
-      mdconst::hasa<ConstantInt>(M->getOperand(0)) &&
-      mdconst::extract<ConstantInt>(M->getOperand(0))->isZero() &&
-      M->getOperand(1) && mdconst::hasa<ConstantInt>(M->getOperand(1)) &&
-      mdconst::extract<ConstantInt>(M->getOperand(1))->getValue() ==
-          AccessSize &&
-      M->getOperand(2) && isa<MDNode>(M->getOperand(2)))
-    New.TBAA = cast<MDNode>(M->getOperand(2));
 
+  // The access may cover several !tbaa.struct fields (e.g. a {int, int} copy
+  // widened to an i64 load/store). If those fields share a single tag and tile
+  // [0, AccessSize) with no gaps, that tag still describes the whole access.
   New.TBAAStruct = nullptr;
+  if (New.TBAA || !M)
+    return New;
+  MDNode *CommonTag = nullptr;
+  uint64_t Offset = 0;
+  for (size_t I = 0, E = M->getNumOperands(); I + 2 < E && Offset < AccessSize;
+       I += 3) {
+    std::optional<uint64_t> FieldOffset =
+        getTBAAStructFieldAsInt64(M->getOperand(I));
+    std::optional<uint64_t> FieldSize =
+        getTBAAStructFieldAsInt64(M->getOperand(I + 1));
+    MDNode *FieldTag = dyn_cast_or_null<MDNode>(M->getOperand(I + 2));
+    if (!FieldOffset || !FieldSize || !FieldTag ||
+        !isScalarAccessTag(FieldTag) || *FieldOffset != Offset ||
+        (CommonTag && FieldTag != CommonTag))
+      break;
+    CommonTag = FieldTag;
+    Offset += *FieldSize;
+  }
+  if (Offset == AccessSize)
+    New.TBAA = CommonTag;
   return New;
 }
 

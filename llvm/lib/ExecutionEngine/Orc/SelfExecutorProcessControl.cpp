@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -14,12 +15,11 @@
 #include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
-
-#include "TargetProcess/OrcRTBootstrap.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -48,9 +48,11 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   addDefaultBootstrapValuesForHostProcess(BootstrapMap, BootstrapSymbols);
   rt_bootstrap::addRunAsFunctionWrappersTo(BootstrapSymbols);
 
-  BootstrapSymbols[rt::DispatchName] =
+  Mangler Mangle(getTargetTriple());
+  BootstrapSymbols[Mangle.mangledCopy(rt::DispatchName)] =
       ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager);
-  BootstrapSymbols[rt::DispatchCtxName] = ExecutorAddr::fromPtr(this);
+  BootstrapSymbols[Mangle.mangledCopy(rt::DispatchCtxName)] =
+      ExecutorAddr::fromPtr(this);
 
 #ifdef __APPLE__
   // FIXME: Don't add an UnwindInfoManager by default -- it's redundant when
@@ -133,7 +135,7 @@ SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
   auto ResultF = ResultP.get_future();
   static_cast<SelfExecutorProcessControl *>(Ctx)
       ->getExecutionSession()
-      .runJITDispatchHandler(
+      .runCallControllerHandler(
           [ResultP = std::move(ResultP)](
               shared::WrapperFunctionBuffer Result) mutable {
             ResultP.set_value(std::move(Result));

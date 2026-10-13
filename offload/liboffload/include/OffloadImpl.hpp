@@ -86,7 +86,7 @@ inline ol_result_t llvmErrorToOffloadError(llvm::Error &&Err) {
     return nullptr;
   }
 
-  ol_errc_t ErrCode;
+  ol_errc_t ErrCode = OL_ERRC_UNKNOWN;
   llvm::StringRef Details;
 
   llvm::handleAllErrors(std::move(Err), [&](llvm::StringError &Err) {

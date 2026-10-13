@@ -1393,6 +1393,34 @@ TEST(APFloatTest, fromZeroDecimalLargeExponentString) {
   EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), StringRef("0e1234" "\0" "2", 6)).convertToDouble());
 }
 
+TEST(APFloatTest, DecimalStringsUseLargePowersOfFive) {
+  // These values are just below one, so they cannot take the early obvious
+  // underflow path. The number of fractional digits is the power passed to
+  // powerOf5(). Together, the cases exercise the high entries and different
+  // combinations of the precomputed powers-of-five table.
+  struct TestCase {
+    const fltSemantics &Sem;
+    unsigned FractionalDigits;
+  };
+  const TestCase Tests[] = {
+      {APFloat::IEEEhalf(), 8192},
+      {APFloat::IEEEsingle(), 12288},
+      {APFloat::IEEEdouble(), 16376},
+      {APFloat::IEEEquad(), 16383},
+  };
+
+  for (const TestCase &Test : Tests) {
+    std::string Input = "0." + std::string(Test.FractionalDigits, '9');
+    APFloat Value(Test.Sem);
+    auto StatusOr =
+        Value.convertFromString(Input, APFloat::rmNearestTiesToEven);
+    ASSERT_TRUE(!!StatusOr) << Test.FractionalDigits;
+    EXPECT_TRUE(*StatusOr & APFloat::opInexact) << Test.FractionalDigits;
+    EXPECT_TRUE(Value.bitwiseIsEqual(APFloat::getOne(Test.Sem, false)))
+        << Test.FractionalDigits;
+  }
+}
+
 TEST(APFloatTest, fromZeroHexadecimalString) {
   EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0p1").convertToDouble());
   EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0p1").convertToDouble());
@@ -2494,23 +2522,27 @@ TEST(APFloatTest, ConvertLosesUnrepresentableSignAndZero) {
 
   for (const fltSemantics *Sem : NoSignSemantics) {
     // The magnitude converts exactly, so the sign is the whole of the loss.
-    APFloat test(-2.0);
+    APFloat test(-1.0);
     bool losesInfo = false;
     APFloat::opStatus status =
         test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
     EXPECT_TRUE(losesInfo);
     EXPECT_EQ(status, APFloat::opInexact);
     EXPECT_TRUE(test.isNegative());
-    EXPECT_EQ(-2.0, test.convertToDouble());
+    EXPECT_EQ(-1.0, test.convertToDouble());
+    APInt negBits = test.bitcastToAPInt();
 
     // The same magnitude without the sign has nothing to report.
-    test = APFloat(2.0);
+    test = APFloat(1.0);
     losesInfo = true;
     status = test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
     EXPECT_FALSE(losesInfo);
     EXPECT_EQ(status, APFloat::opOK);
     EXPECT_FALSE(test.isNegative());
-    EXPECT_EQ(2.0, test.convertToDouble());
+    EXPECT_EQ(1.0, test.convertToDouble());
+
+    // No sign bit exists, so the bits must match the positive magnitude.
+    EXPECT_EQ(test.bitcastToAPInt(), negBits);
   }
 
   // Float8E8M0FNU has no zero either, and substitutes 2^-127 for one. That

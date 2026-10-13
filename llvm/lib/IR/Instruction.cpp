@@ -463,6 +463,10 @@ void Instruction::dropPoisonGeneratingFlags() {
     cast<ICmpInst>(this)->setSameSign(false);
     break;
 
+  case Instruction::AddrSpaceCast:
+    cast<AddrSpaceCastInst>(this)->setNonNull(false);
+    break;
+
   case Instruction::Call: {
     if (auto *II = dyn_cast<IntrinsicInst>(this)) {
       switch (II->getIntrinsicID()) {
@@ -583,8 +587,7 @@ void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
       LLVMContext::MD_mem_cache_hint, LLVMContext::MD_nofpclass};
   SmallVector<unsigned> KeepIDs;
   KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
-  append_range(KeepIDs, (!ProfcheckDisableMetadataFixes ? KnownIDs
-                                                        : drop_end(KnownIDs)));
+  append_range(KeepIDs, KnownIDs);
   append_range(KeepIDs, Keep);
   dropUBImplyingAttrsAndUnknownMetadata(KeepIDs);
 }
@@ -754,6 +757,14 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
   if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
     if (auto *DestICmp = dyn_cast<ICmpInst>(this))
       DestICmp->setSameSign(SrcICmp->hasSameSign());
+
+  if (auto *SrcASC = dyn_cast<AddrSpaceCastInst>(V))
+    if (auto *DestASC = dyn_cast<AddrSpaceCastInst>(this)) {
+      assert(DestASC->getSrcAddressSpace() == SrcASC->getSrcAddressSpace() &&
+             "nonull flag cannot be safely preserved with different source "
+             "address spaces");
+      DestASC->setNonNull(SrcASC->hasNonNull());
+    }
 }
 
 void Instruction::andIRFlags(const Value *V) {
@@ -799,9 +810,18 @@ void Instruction::andIRFlags(const Value *V) {
   if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
     if (auto *DestICmp = dyn_cast<ICmpInst>(this))
       DestICmp->setSameSign(DestICmp->hasSameSign() && SrcICmp->hasSameSign());
+
+  if (auto *SrcASC = dyn_cast<AddrSpaceCastInst>(V))
+    if (auto *DestASC = dyn_cast<AddrSpaceCastInst>(this)) {
+      assert(DestASC->getSrcAddressSpace() == SrcASC->getSrcAddressSpace() &&
+             "nonull flag cannot be safely preserved with different source "
+             "address spaces");
+      DestASC->setNonNull(DestASC->hasNonNull() && SrcASC->hasNonNull());
+    }
 }
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {
+  // clang-format off
   switch (OpCode) {
   // Terminators
   case Ret:    return "ret";
@@ -883,9 +903,12 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case LandingPad:     return "landingpad";
   case CleanupPad:     return "cleanuppad";
   case Freeze:         return "freeze";
+  case BitInsert:      return "bitinsert";
+  case BitExtract:     return "bitextract";
 
   default: return "<Invalid operator> ";
   }
+  // clang-format on
 }
 
 /// This must be kept in sync with FunctionComparator::cmpOperations in
@@ -1019,6 +1042,7 @@ bool Instruction::isSameOperationAs(const Instruction *I,
   bool IgnoreAlignment = flags & CompareIgnoringAlignment;
   bool UseScalarTypes = flags & CompareUsingScalarTypes;
   bool IntersectAttrs = flags & CompareUsingIntersectedAttrs;
+  bool CheckCallTargets = flags & CompareCallTargets;
 
   if (getOpcode() != I->getOpcode() ||
       getNumOperands() != I->getNumOperands() ||
@@ -1035,6 +1059,11 @@ bool Instruction::isSameOperationAs(const Instruction *I,
           I->getOperand(i)->getType()->getScalarType() :
         getOperand(i)->getType() != I->getOperand(i)->getType())
       return false;
+
+  if (CheckCallTargets)
+    if (const auto *CB = dyn_cast<CallBase>(this))
+      if (CB->getCalledOperand() != cast<CallBase>(I)->getCalledOperand())
+        return false;
 
   return this->hasSameSpecialState(I, IgnoreAlignment, IntersectAttrs);
 }
@@ -1219,9 +1248,6 @@ bool Instruction::isVolatile() const {
 }
 
 bool Instruction::maySynchronize() const {
-  // FIXME: This currently treats atomics with monotonic ordering as
-  // synchronizing. This is unnecessarily conservative and does not match
-  // our LangRef definition of the property.
   switch (getOpcode()) {
   default:
     assert(!isAtomic() && "Unhandled atomic instruction");
@@ -1232,12 +1258,16 @@ bool Instruction::maySynchronize() const {
     return FI->getSyncScopeID() != SyncScope::SingleThread;
   }
   case Instruction::AtomicRMW:
-  case Instruction::AtomicCmpXchg:
-    return true;
+    return isStrongerThanMonotonic(cast<AtomicRMWInst>(this)->getOrdering());
+  case Instruction::AtomicCmpXchg: {
+    auto *ACXI = cast<AtomicCmpXchgInst>(this);
+    return isStrongerThanMonotonic(ACXI->getSuccessOrdering()) ||
+           isStrongerThanMonotonic(ACXI->getFailureOrdering());
+  }
   case Instruction::Store:
-    return isStrongerThanUnordered(cast<StoreInst>(this)->getOrdering());
+    return isStrongerThanMonotonic(cast<StoreInst>(this)->getOrdering());
   case Instruction::Load:
-    return isStrongerThanUnordered(cast<LoadInst>(this)->getOrdering());
+    return isStrongerThanMonotonic(cast<LoadInst>(this)->getOrdering());
   case Instruction::Call:
   case Instruction::Invoke:
   case Instruction::CallBr:
@@ -1355,15 +1385,6 @@ bool Instruction::isLifetimeStartOrEnd() const {
     return false;
   Intrinsic::ID ID = II->getIntrinsicID();
   return ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end;
-}
-
-bool Instruction::isLaunderOrStripInvariantGroup() const {
-  auto *II = dyn_cast<IntrinsicInst>(this);
-  if (!II)
-    return false;
-  Intrinsic::ID ID = II->getIntrinsicID();
-  return ID == Intrinsic::launder_invariant_group ||
-         ID == Intrinsic::strip_invariant_group;
 }
 
 bool Instruction::isDebugOrPseudoInst() const {

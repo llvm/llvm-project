@@ -5,7 +5,7 @@ define i8 @test() {
 ; CHECK-LABEL: define i8 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <2 x i16> <i16 -1, i16 0>, <i16 -1, i16 0>
-; CHECK-NEXT:    [[CONV13_I89_PEEL_I:%.*]] = zext i1 false to i8
+; CHECK-NEXT:    [[CONV13_I89_PEEL_I:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    ret i8 [[CONV13_I89_PEEL_I]]
 ;
 entry:

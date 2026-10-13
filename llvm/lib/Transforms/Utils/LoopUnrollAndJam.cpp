@@ -948,8 +948,7 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   }
 
   // Check the loop safety info for exceptions.
-  SimpleLoopSafetyInfo LSI;
-  LSI.computeLoopSafetyInfo(L);
+  SimpleLoopSafetyInfo LSI(L);
   if (LSI.anyBlockMayThrow()) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Something may throw\n");
     return false;

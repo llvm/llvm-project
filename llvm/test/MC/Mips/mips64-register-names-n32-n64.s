@@ -1,10 +1,10 @@
 # RUN: llvm-mc %s -triple=mips64-unknown-freebsd -show-encoding 2>%t0 \
 # RUN:     | FileCheck %s
-# RUN: FileCheck -check-prefix=WARNING %s < %t0
+# RUN: FileCheck -check-prefix=WARNING --implicit-check-not=warning: %s < %t0
 #
 # RUN: llvm-mc %s -triple=mips64-unknown-freebsd -show-encoding \
 # RUN:     -target-abi n32 2>%t1 | FileCheck %s
-# RUN: FileCheck -check-prefix=WARNING %s < %t1
+# RUN: FileCheck -check-prefix=WARNING --implicit-check-not=warning: %s < %t1
 #
 # Check that the register names are mapped to their correct numbers for n32/n64
 # Second byte of addiu with $zero at rt contains the number of the source

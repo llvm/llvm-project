@@ -130,7 +130,7 @@ void ExecutionEngine::registerSymbols(
 
 void ExecutionEngine::setupTargetTripleAndDataLayout(Module *llvmModule,
                                                      llvm::TargetMachine *tm) {
-  llvmModule->setDataLayout(tm->createDataLayout());
+  llvmModule->setDataLayout(tm->getTargetTriple().computeDataLayout());
   llvmModule->setTargetTriple(tm->getTargetTriple());
 }
 
@@ -143,7 +143,7 @@ static std::string makePackedFunctionName(StringRef name) {
 // pointer to provide a unified invocation interface.
 static void packFunctionArguments(Module *module) {
   auto &ctx = module->getContext();
-  llvm::IRBuilder<> builder(ctx);
+  llvm::IRBuilder<> builder(*module);
   DenseSet<llvm::Function *> interfaceFunctions;
   for (auto &func : module->getFunctionList()) {
     if (func.isDeclaration() || func.hasLocalLinkage())
