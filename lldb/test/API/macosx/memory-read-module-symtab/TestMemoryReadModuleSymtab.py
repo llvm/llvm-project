@@ -153,7 +153,6 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         # should have been read from the 'symtab' DataCacheFile.
         for addrs in memory_read_addrs:
             for addr in addrs:
-
                 # Check that the address isn't in the range of the
                 # mach-o header and load commands.
                 if addr >= exe_header_start and addr < exe_header_end:
