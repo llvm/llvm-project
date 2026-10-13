@@ -2026,7 +2026,8 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
   case SD_Automatic:
     cgf.pushLifetimeExtendedDestroy(
         NormalAndEHCleanup, referenceTemporary, e->getType(),
-        CIRGenFunction::destroyCXXObject, cgf.getLangOpts().Exceptions);
+        CIRGenFunction::destroyCXXObject, cgf.getLangOpts().Exceptions,
+        m->getExtendingDecl());
     break;
 
   case SD_Dynamic:
