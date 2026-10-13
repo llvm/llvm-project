@@ -2346,7 +2346,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
   setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
-                            {2, 3}, VT, Custom);
+                            {3}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
@@ -15912,6 +15912,15 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                     DAG.getNode(AArch64ISD::NVCAST, DL, BSVT, V1)));
   }
 
+  auto preferTBLToMultiInstrShuffle = [&]() {
+    if (DAG.shouldOptForSize())
+      return false;
+    // Look for a simple single block loop.
+    const BasicBlock *Block = DAG.getBasicBlock();
+    assert(Block && "Expected a valid block!");
+    return is_contained(successors(Block), Block);
+  };
+
   if (((NumElts == 8 && EltSize == 16) || (NumElts == 16 && EltSize == 8) ||
        (NumElts == 4 && EltSize == 32)) &&
       ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size())) {
@@ -15924,9 +15933,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
       return convertFromScalableVector(DAG, VT, Rev);
     }
 
-    SDValue Rev = DAG.getNode(AArch64ISD::REV64, DL, VT, V1);
-    return DAG.getNode(AArch64ISD::EXT, DL, VT, Rev, Rev,
-                       DAG.getConstant(8, DL, MVT::i32));
+    if (!preferTBLToMultiInstrShuffle()) {
+      SDValue Rev = DAG.getNode(AArch64ISD::REV64, DL, VT, V1);
+      return DAG.getNode(AArch64ISD::EXT, DL, VT, Rev, Rev,
+                         DAG.getConstant(8, DL, MVT::i32));
+    }
   }
 
   // Check for slide-with-zeros pattern before EXT (slide is also valid EXT)
@@ -16046,7 +16057,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // If the shuffle is not directly supported and it has 4 elements, use
   // the PerfectShuffle-generated table to synthesize it from other shuffles.
-  if (NumElts == 4) {
+  if (NumElts == 4 && (getPerfectShuffleCost(ShuffleMask) == 1 ||
+                       !preferTBLToMultiInstrShuffle())) {
     SmallVector<ShuffleEntry> Entries;
     if (generatePerfectShuffle(ShuffleMask, NumElts, Entries)) {
       SmallVector<SDValue> Vals;
@@ -26688,6 +26700,7 @@ static SDValue isNVCastToHalfWidthElements(SDValue V,
 static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
                                  const AArch64Subtarget *Subtarget) {
   SDLoc DL(N);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   EVT ResVT = N->getValueType(0);
@@ -26707,8 +26720,11 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     uint64_t ExtIdx0 = Op0.getConstantOperandVal(1);
     uint64_t ExtIdx1 = Op1.getConstantOperandVal(1);
     uint64_t NumElements = SourceVec.getValueType().getVectorMinNumElements();
-    if (ExtIdx0 == 0 && ExtIdx1 == NumElements / 2) {
-      EVT WidenedResVT = ResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+    EVT WidenedResVT = ResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+    if (ExtIdx0 == 0 && ExtIdx1 == NumElements / 2 &&
+        TLI.isTypeLegal(WidenedResVT) &&
+        (WidenedResVT.isScalableVector() ||
+         WidenedResVT.getFixedSizeInBits() <= 128)) {
       SDValue Uzp = DAG.getNode(N->getOpcode(), DL, WidenedResVT, SourceVec,
                                 DAG.getPOISON(WidenedResVT));
       return DAG.getExtractSubvector(DL, ResVT, Uzp, 0);
