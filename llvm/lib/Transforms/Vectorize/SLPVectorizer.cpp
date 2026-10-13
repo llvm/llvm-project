@@ -24176,36 +24176,33 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         I->dropPoisonGeneratingFlags();
     }
     I = ::propagateMetadata(I, UniqueInsts.getArrayRef());
-    // For copyable elements the lane is synthesized using a binop identity
-    // value, so the operand at that lane is the copyable scalar's value.
-    // fast-math flags that turn defined NaN/Inf inputs into poison (nnan,
-    // ninf) are only justified if every copyable scalar at the synthesized
-    // lane is itself provably non-NaN/non-Inf - either an FPMathOperator
-    // with the matching flag set, or a constant FP that is not NaN/Inf.
+    // A copyable lane is emitted as a synthesized operation - an absorbed
+    // fmul becomes fmuladd(a, b, -0.0), other scalars are combined with a
+    // binop identity value - so every fast-math flag must be justified by
+    // each copyable scalar: an FP operator justifies only its own flags, a
+    // constant FP the flags its value cannot violate, and any other value
+    // only the transform permissions, which cannot change an identity
+    // lane. An unjustified flag poisons NaN/Inf inputs, flushes a -0.0
+    // result, or changes the rounding of an absorbed lane.
     if (E->hasCopyableElements() && isa<FPMathOperator>(I)) {
-      bool AllNoNaNs = true;
-      bool AllNoInfs = true;
+      FastMathFlags CopyableFMF;
+      CopyableFMF.set();
       for (Value *Scalar : make_filter_range(Scalars, [&](Value *Scalar) {
              return E->isCopyableElement(Scalar);
            })) {
         if (auto *FPMO = dyn_cast<FPMathOperator>(Scalar)) {
-          AllNoNaNs &= FPMO->hasNoNaNs();
-          AllNoInfs &= FPMO->hasNoInfs();
+          CopyableFMF &= FPMO->getFastMathFlags();
           continue;
         }
-        if (auto *CFP = dyn_cast<ConstantFP>(Scalar)) {
-          AllNoNaNs &= !CFP->isNaN();
-          AllNoInfs &= !CFP->isInfinity();
-          continue;
-        }
-        AllNoNaNs = false;
-        AllNoInfs = false;
-        break;
+        auto *CFP = dyn_cast<ConstantFP>(Scalar);
+        if (!CFP || CFP->isNaN())
+          CopyableFMF.setNoNaNs(false);
+        if (!CFP || CFP->isInfinity())
+          CopyableFMF.setNoInfs(false);
+        if (!CFP || CFP->isNegZero())
+          CopyableFMF.setNoSignedZeros(false);
       }
-      if (!AllNoNaNs)
-        I->setHasNoNaNs(false);
-      if (!AllNoInfs)
-        I->setHasNoInfs(false);
+      I->copyFastMathFlags(I->getFastMathFlags() & CopyableFMF);
     }
     // Copyable lanes modeled as op(V, V) or with an undef or poison operand do
     // not preserve the disjoint flag: or disjoint(V, V) is poison unless V is
