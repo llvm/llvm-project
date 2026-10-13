@@ -93,6 +93,8 @@ next1:
   ]
 
 next2:
+  ; Make sure the noop inline asm below doesn't reuse the moved result of this call.
+  call i32 @llvm.ctpop.i32(i32 0)
   ; call blackbox
   call void asm sideeffect "", ""()
   ; invoke blackbox
@@ -225,6 +227,7 @@ exit:
 ; CHECK-NEXT:   switch i32 %result_recursive, label %next2 [
 ; CHECK-NEXT:     i32 0, label %exit
 ; CHECK-NEXT:   ] jump to %next2
+; CHECK-NEXT:   %1 = call i32 @llvm.ctpop.i32(i32 0) => i32 0
 ; CHECK-NEXT:   call void asm sideeffect "", ""()
 ; CHECK-NEXT:   invoke void asm sideeffect "", ""()
 ; CHECK-NEXT:           to label %next3 unwind label %cleanup

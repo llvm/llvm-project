@@ -4,8 +4,8 @@ func.func @memref_subview(%arg0: memref<8x16x4xf32, strided<[64, 4, 1]>>, %arg1:
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
-  %0 = test.with_bounds {smax = 13 : index, smin = 11 : index, umax = 13 : index, umin = 11 : index} : index
-  %1 = test.with_bounds {smax = 7 : index, smin = 5 : index, umax = 7 : index, umin = 5 : index} : index
+  %0 = test.with_bounds <smax = 13 : index, smin = 11 : index, umax = 13 : index, umin = 11 : index> : index
+  %1 = test.with_bounds <smax = 7 : index, smin = 5 : index, umax = 7 : index, umin = 5 : index> : index
 
   // Test subview with unknown sizes, and constant offsets and strides.
   // CHECK: Op:  %[[SV0:.*]] = memref.subview

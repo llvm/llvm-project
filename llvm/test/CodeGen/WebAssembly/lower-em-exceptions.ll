@@ -1,6 +1,6 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -S | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
+; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -172,3 +172,6 @@ declare void @__cxa_call_unexpected(ptr)
 ; CHECK-DAG: declare void @__resumeException(ptr)
 ; CHECK-DAG: declare void @__invoke_void_i32(ptr, i32)
 ; CHECK-DAG: declare ptr @__cxa_find_matching_catch_4(ptr, ptr)
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"emscripten"}

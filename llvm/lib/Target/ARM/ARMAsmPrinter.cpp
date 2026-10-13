@@ -535,7 +535,7 @@ void ARMAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
 }
 
 void ARMAsmPrinter::emitStartOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   auto &TS =
       static_cast<ARMTargetStreamer &>(*OutStreamer->getTargetStreamer());
   // Use unified assembler syntax.
@@ -576,7 +576,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
 
 
 void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     // All darwin targets use mach-o.
     const TargetLoweringObjectFileMachO &TLOFMacho =
@@ -657,6 +657,15 @@ static bool checkDenormalAttributeConsistency(const Module &M,
     if (F.isDeclaration())
       return false;
     return F.getDenormalFPEnv() != Value;
+  });
+}
+
+// Returns true if any function definition in the module has the strictfp
+// attribute, which taints the whole module: such code may change the FP
+// rounding mode at run time.
+static bool checkModuleHasStrictFP(const Module &M) {
+  return any_of(M, [](const Function &F) {
+    return !F.isDeclaration() && F.isStrictFP();
   });
 }
 
@@ -781,16 +790,15 @@ void ARMAsmPrinter::emitAttributes() {
     if (unsigned TagVal = Ex->getZExtValue())
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions, TagVal);
   } else if (checkFunctionsAttributeConsistency(*MMI->getModule(),
-                                                "no-trapping-math", "true") ||
-             TM.Options.NoTrappingFPMath)
+                                                "no-trapping-math", "true"))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions,
                       ARMBuildAttrs::Not_Allowed);
   else {
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions, ARMBuildAttrs::Allowed);
 
-    // If the user has permitted this code to choose the IEEE 754
-    // rounding at run-time, emit the rounding attribute.
-    if (TM.Options.HonorSignDependentRoundingFPMathOption)
+    // If any function may change the FP rounding mode at run time the code
+    // cannot assume the default rounding, so emit the rounding attribute.
+    if (checkModuleHasStrictFP(*MMI->getModule()))
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_rounding, ARMBuildAttrs::Allowed);
   }
 
@@ -822,7 +830,7 @@ void ARMAsmPrinter::emitAttributes() {
   if (const Module *SourceModule = MMI->getModule()) {
     // ABI_PCS_wchar_t to indicate wchar_t width
     // FIXME: There is no way to emit value 0 (wchar_t prohibited).
-    int WCharWidth = TM.getTargetTriple().getDefaultWCharSize();
+    int WCharWidth = SourceModule->getTargetTriple().getDefaultWCharSize();
     if (auto WCharWidthValue = mdconst::extract_or_null<ConstantInt>(
             SourceModule->getModuleFlag("wchar_size")))
       WCharWidth = WCharWidthValue->getZExtValue();
@@ -921,7 +929,7 @@ static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
 
 MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
                                         unsigned char TargetFlags) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = GV->getParent()->getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     bool IsIndirect =
         (TargetFlags & ARMII::MO_NONLAZY) && getTM().isGVIndirectSymbol(GV);
@@ -1621,14 +1629,13 @@ void ARMAsmPrinter::EmitKCFI_CHECK_ARM32(Register AddrReg, int64_t Type,
            "Cannot encode immediate as ARM modified immediate");
 
     // eor[s] scratch, scratch, #imm (last one sets flags with CPSR)
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(ARM::EORri)
-                       .addReg(ScratchReg)
-                       .addReg(ScratchReg)
-                       .addImm(SOImmVal)
-                       .addImm(ARMCC::AL)
-                       .addReg(0)
-                       .addReg(isLast ? ARM::CPSR : ARM::NoRegister));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::EORri)
+                                     .addReg(ScratchReg)
+                                     .addReg(ScratchReg)
+                                     .addImm(SOImmVal)
+                                     .addImm(ARMCC::AL)
+                                     .addReg(0)
+                                     .addReg(isLast ? ARM::CPSR : Register()));
   }
 
   // If we spilled r3, restore it immediately after the comparison.
@@ -1719,14 +1726,13 @@ void ARMAsmPrinter::EmitKCFI_CHECK_Thumb2(Register AddrReg, int64_t Type,
            "Cannot encode immediate as Thumb2 modified immediate");
 
     // eor[s] scratch, scratch, #imm (last one sets flags with CPSR)
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(ARM::t2EORri)
-                       .addReg(ScratchReg)
-                       .addReg(ScratchReg)
-                       .addImm(imm)
-                       .addImm(ARMCC::AL)
-                       .addReg(0)
-                       .addReg(isLast ? ARM::CPSR : ARM::NoRegister));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::t2EORri)
+                                     .addReg(ScratchReg)
+                                     .addReg(ScratchReg)
+                                     .addImm(imm)
+                                     .addImm(ARMCC::AL)
+                                     .addReg(0)
+                                     .addReg(isLast ? ARM::CPSR : Register()));
   }
 
   // If we spilled r3, restore it immediately after the comparison.

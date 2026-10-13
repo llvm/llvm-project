@@ -16,6 +16,7 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 
@@ -189,6 +190,11 @@ public:
   /// always be able to get register info as well (through this method).
   const AArch64RegisterInfo &getRegisterInfo() const { return RI; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &AArch64::GPR64spRegClass;
+  }
+
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
@@ -308,8 +314,7 @@ public:
   static void suppressLdStPair(MachineInstr &MI);
 
   std::optional<ExtAddrMode>
-  getAddrModeFromMemoryOp(const MachineInstr &MemI,
-                          const TargetRegisterInfo *TRI) const override;
+  getAddrModeFromMemoryOp(const MachineInstr &MemI) const override;
 
   bool canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
                            const MachineInstr &AddrI,
@@ -320,8 +325,8 @@ public:
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      int64_t &Offset, bool &OffsetIsScalable,
+      LocationSize &Width) const override;
 
   /// If \p OffsetIsScalable is set to 'true', the offset is scaled by `vscale`.
   /// This is true for some SVE instructions like ldr/str that have a
@@ -330,8 +335,7 @@ public:
   bool getMemOperandWithOffsetWidth(const MachineInstr &MI,
                                     const MachineOperand *&BaseOp,
                                     int64_t &Offset, bool &OffsetIsScalable,
-                                    TypeSize &Width,
-                                    const TargetRegisterInfo *TRI) const;
+                                    TypeSize &Width) const;
 
   /// Return the immediate offset of the base register in a load/store \p LdSt.
   MachineOperand &getMemOpBaseRegImmOfsOffsetOperand(MachineInstr &LdSt) const;
@@ -417,6 +421,14 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+
+  /// Inserts the compare instruction needed to un-fuse a fused conditional
+  /// branch instruction and returns the condition code of the original fused
+  /// branch.
+  AArch64CC::CondCode insertCmpForCondBr(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MI,
+                                         const DebugLoc &DL,
+                                         ArrayRef<MachineOperand> Cond) const;
 
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;

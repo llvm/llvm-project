@@ -13,7 +13,6 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/IR/LLVMContext.h" // Explicitly include for LLVMContext
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -24,39 +23,6 @@ SPIRVCombinerHelper::SPIRVCombinerHelper(
     GISelValueTracking *VT, MachineDominatorTree *MDT, const LegalizerInfo *LI,
     const SPIRVSubtarget &STI)
     : CombinerHelper(Observer, B, IsPreLegalize, VT, MDT, LI), STI(STI) {}
-
-/// This match is part of a combine that
-/// rewrites length(X - Y) to distance(X, Y)
-///   (f32 (g_intrinsic length
-///           (g_fsub (vXf32 X) (vXf32 Y))))
-/// ->
-///   (f32 (g_intrinsic distance
-///           (vXf32 X) (vXf32 Y)))
-///
-bool SPIRVCombinerHelper::matchLengthToDistance(MachineInstr &MI) const {
-  if (!mi_match(MI, MRI, m_GIntrinsic<Intrinsic::spv_length>()))
-    return false;
-
-  // First operand of MI is `G_INTRINSIC` so start at operand 2.
-  Register SubReg = MI.getOperand(2).getReg();
-  return mi_match(SubReg, MRI, m_GFSub(m_Reg(), m_Reg()));
-}
-
-void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
-  // Extract the operands for X and Y from the match criteria.
-  Register SubDestReg = MI.getOperand(2).getReg();
-  MachineInstr *SubInstr = MRI.getVRegDef(SubDestReg);
-  Register SubOperand1 = SubInstr->getOperand(1).getReg();
-  Register SubOperand2 = SubInstr->getOperand(2).getReg();
-  Register ResultReg = MI.getOperand(0).getReg();
-
-  Builder.setInstrAndDebugLoc(MI);
-  Builder.buildIntrinsic(Intrinsic::spv_distance, ResultReg)
-      .addUse(SubOperand1)
-      .addUse(SubOperand2);
-
-  MI.eraseFromParent();
-}
 
 /// This match is part of a combine that
 /// rewrites X / length(X) to normalize(X)

@@ -116,9 +116,10 @@ class RegBankSelectPass : public RequiredPassInfoMixin<RegBankSelectPass> {
   RegBankSelectMode OptMode;
 
 public:
+  LLVM_ABI
   RegBankSelectPass(RegBankSelectMode RunningMode = RegBankSelectMode::Fast);
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setIsSSA().setLegalized();

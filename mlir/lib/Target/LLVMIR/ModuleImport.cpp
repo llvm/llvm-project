@@ -41,6 +41,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/ModRef.h"
@@ -52,25 +53,61 @@ using namespace mlir::LLVM::detail;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsFromLLVM.inc"
 
-// Utility to print an LLVM value as a string for passing to emitError().
-// FIXME: Diagnostic should be able to natively handle types that have
-// operator << (raw_ostream&) defined.
-static std::string diag(const llvm::Value &value) {
-  std::string str;
-  llvm::raw_string_ostream os(str);
-  os << value;
+/// Upper bound on the characters a diagnostic renders for an LLVM entity.
+/// One rendering is unbounded by nature: a GlobalVariable prints its entire
+/// initializer, and a node with long MDStrings or large inline constants
+/// prints them whole. On a merged library a single unbounded diagnostic
+/// reaches tens of megabytes, so every rendering path below truncates its
+/// output. Diagnostics only need to identify the entity; the full form is
+/// in the input being imported.
+static constexpr size_t kMaxDiagLength = 256;
+
+static std::string truncateDiag(std::string str) {
+  if (str.size() <= kMaxDiagLength)
+    return str;
+  str.resize(kMaxDiagLength);
+  str += "... <truncated>";
   return str;
 }
 
-// Utility to print an LLVM metadata node as a string for passing
-// to emitError(). The module argument is needed to print the nodes
-// canonically numbered.
-static std::string diagMD(const llvm::Metadata *node,
-                          const llvm::Module *module) {
+/// Prints a metadata node through a caller-provided tracker so module-flag
+/// conversion shares the importer's tracker instead of building one per call.
+static std::string renderMetadataWithTracker(const llvm::Metadata *node,
+                                             llvm::ModuleSlotTracker &tracker,
+                                             const llvm::Module *module) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  node->print(os, module, /*IsForDebug=*/true);
-  return str;
+  node->print(os, tracker, module, /*IsForDebug=*/true);
+  return truncateDiag(std::move(str));
+}
+
+llvm::ModuleSlotTracker &ModuleImport::getDiagSlotTracker() {
+  // Printing through a caller-provided tracker numbers exactly like the
+  // per-call tracker Metadata::print and Value::print would construct, but
+  // the tracker's lazy module pre-pass is paid once per import instead of
+  // once per rendering.
+  if (!diagSlotTracker)
+    diagSlotTracker =
+        std::make_unique<llvm::ModuleSlotTracker>(llvmModule.get());
+  return *diagSlotTracker;
+}
+
+std::string ModuleImport::renderValue(const llvm::Value &value) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  // A GlobalValue renders its full definition. For a merged vtable or string
+  // table that is megabytes, so print globals by name only.
+  if (const auto *global = llvm::dyn_cast<llvm::GlobalValue>(&value)) {
+    global->printAsOperand(os, /*PrintType=*/false, getDiagSlotTracker());
+    return truncateDiag(std::move(str));
+  }
+  value.print(os, getDiagSlotTracker());
+  return truncateDiag(std::move(str));
+}
+
+std::string ModuleImport::renderMetadata(const llvm::Metadata *node) {
+  return renderMetadataWithTracker(node, getDiagSlotTracker(),
+                                   llvmModule.get());
 }
 
 /// Returns the name of the global_ctors global variables.
@@ -284,6 +321,8 @@ getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
   return blocks;
 }
 
+ModuleImport::~ModuleImport() = default;
+
 ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule,
                            bool emitExpensiveWarnings,
@@ -367,16 +406,15 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
       const auto *memberNode =
           dyn_cast<const llvm::MDNode>(node->getOperand(2 * pairNum + 1));
       if (!memberNode) {
-        emitError(loc) << "operand '" << 2 * pairNum + 1 << "' must be MDNode: "
-                       << diagMD(node, llvmModule.get());
+        emitError(loc) << "operand '" << 2 * pairNum + 1
+                       << "' must be MDNode: " << renderMetadata(node);
         return false;
       }
       int64_t offset = 0;
       if (2 * pairNum + 2 >= numOperands) {
         // Allow for optional 0 offset in 2-operand nodes.
         if (numOperands != 2) {
-          emitError(loc) << "missing member offset: "
-                         << diagMD(node, llvmModule.get());
+          emitError(loc) << "missing member offset: " << renderMetadata(node);
           return false;
         }
       } else {
@@ -384,8 +422,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
             node->getOperand(2 * pairNum + 2));
         if (!offsetCI) {
           emitError(loc) << "operand '" << 2 * pairNum + 2
-                         << "' must be ConstantInt: "
-                         << diagMD(node, llvmModule.get());
+                         << "' must be ConstantInt: " << renderMetadata(node);
           return false;
         }
         offset = offsetCI->getZExtValue();
@@ -441,7 +478,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
           llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(3));
       if (!isConstantCI) {
         emitError(loc) << "operand '3' must be ConstantInt: "
-                       << diagMD(node, llvmModule.get());
+                       << renderMetadata(node);
         return false;
       }
       isConst = isConstantCI->getValue()[0];
@@ -488,8 +525,8 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
       // and we have a cycle in the graph. Cycles are not allowed in TBAA
       // graphs.
       if (!seen.insert(current).second)
-        return emitError(loc) << "has cycle in TBAA graph: "
-                              << diagMD(current, llvmModule.get());
+        return emitError(loc)
+               << "has cycle in TBAA graph: " << renderMetadata(current);
 
       continue;
     }
@@ -533,7 +570,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
     }
 
     return emitError(loc) << "unsupported TBAA node format: "
-                          << diagMD(current, llvmModule.get());
+                          << renderMetadata(current);
   }
   return success();
 }
@@ -543,7 +580,7 @@ ModuleImport::processAccessGroupMetadata(const llvm::MDNode *node) {
   Location loc = mlirModule.getLoc();
   if (failed(loopAnnotationImporter->translateAccessGroup(node, loc)))
     return emitError(loc) << "unsupported access group node: "
-                          << diagMD(node, llvmModule.get());
+                          << renderMetadata(node);
   return success();
 }
 
@@ -577,9 +614,10 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
   // Helper that creates an alias scope domain attribute.
   auto createAliasScopeDomainOp = [&](const llvm::MDNode *aliasDomain) {
     StringAttr description = nullptr;
-    if (aliasDomain->getNumOperands() >= 2)
-      if (auto *operand = dyn_cast<llvm::MDString>(aliasDomain->getOperand(1)))
-        description = builder.getStringAttr(operand->getString());
+    StringRef descriptionStr =
+        llvm::AliasScopeDomainNode(aliasDomain).getDescription();
+    if (!descriptionStr.empty())
+      description = builder.getStringAttr(descriptionStr);
     Attribute idAttr = getIdAttr(aliasDomain);
     return builder.getAttr<AliasScopeDomainAttr>(idAttr, description);
   };
@@ -596,11 +634,11 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
       // node before.
       if (!verifySelfRefOrString(scope) || !domain ||
           !verifyDescription(scope, 2))
-        return emitError(loc) << "unsupported alias scope node: "
-                              << diagMD(scope, llvmModule.get());
-      if (!verifySelfRefOrString(domain) || !verifyDescription(domain, 1))
-        return emitError(loc) << "unsupported alias domain node: "
-                              << diagMD(domain, llvmModule.get());
+        return emitError(loc)
+               << "unsupported alias scope node: " << renderMetadata(scope);
+      if (!verifySelfRefOrString(domain) || !verifyDescription(domain, 2))
+        return emitError(loc)
+               << "unsupported alias domain node: " << renderMetadata(domain);
 
       if (aliasScopeMapping.contains(scope))
         continue;
@@ -689,11 +727,13 @@ static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
 /// something else is found.
 static llvm::MDTuple *getTwoElementMDTuple(ModuleOp mlirModule,
                                            const llvm::Module *llvmModule,
-                                           const llvm::MDOperand &md) {
+                                           const llvm::MDOperand &md,
+                                           llvm::ModuleSlotTracker &tracker) {
   auto *tupleEntry = dyn_cast_or_null<llvm::MDTuple>(md);
   if (!tupleEntry || tupleEntry->getNumOperands() != 2)
     emitWarning(mlirModule.getLoc())
-        << "expected 2-element tuple metadata: " << diagMD(md, llvmModule);
+        << "expected 2-element tuple metadata: "
+        << renderMetadataWithTracker(md, tracker, llvmModule);
   return tupleEntry;
 }
 
@@ -702,8 +742,10 @@ static llvm::MDTuple *getTwoElementMDTuple(ModuleOp mlirModule,
 /// `matchKey` is different from the tuple's key.
 static llvm::ConstantAsMetadata *getConstantMDFromKeyValueTuple(
     ModuleOp mlirModule, const llvm::Module *llvmModule,
-    const llvm::MDOperand &md, StringRef matchKey, bool optional = false) {
-  llvm::MDTuple *tupleEntry = getTwoElementMDTuple(mlirModule, llvmModule, md);
+    const llvm::MDOperand &md, StringRef matchKey,
+    llvm::ModuleSlotTracker &tracker, bool optional = false) {
+  llvm::MDTuple *tupleEntry =
+      getTwoElementMDTuple(mlirModule, llvmModule, md, tracker);
   if (!tupleEntry)
     return nullptr;
   auto *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
@@ -711,7 +753,8 @@ static llvm::ConstantAsMetadata *getConstantMDFromKeyValueTuple(
     if (!optional)
       emitWarning(mlirModule.getLoc())
           << "expected '" << matchKey << "' key, but found: "
-          << diagMD(tupleEntry->getOperand(0), llvmModule);
+          << renderMetadataWithTracker(tupleEntry->getOperand(0), tracker,
+                                       llvmModule);
     return nullptr;
   }
 
@@ -724,9 +767,10 @@ static llvm::ConstantAsMetadata *getConstantMDFromKeyValueTuple(
 static FailureOr<uint64_t>
 convertInt64FromKeyValueTuple(ModuleOp mlirModule,
                               const llvm::Module *llvmModule,
-                              const llvm::MDOperand &md, StringRef matchKey) {
-  llvm::ConstantAsMetadata *valMD =
-      getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md, matchKey);
+                              const llvm::MDOperand &md, StringRef matchKey,
+                              llvm::ModuleSlotTracker &tracker) {
+  llvm::ConstantAsMetadata *valMD = getConstantMDFromKeyValueTuple(
+      mlirModule, llvmModule, md, matchKey, tracker);
   if (!valMD)
     return failure();
 
@@ -735,14 +779,16 @@ convertInt64FromKeyValueTuple(ModuleOp mlirModule,
 
   emitWarning(mlirModule.getLoc())
       << "expected integer metadata value for key '" << matchKey
-      << "': " << diagMD(md, llvmModule);
+      << "': " << renderMetadataWithTracker(md, tracker, llvmModule);
   return failure();
 }
 
 static std::optional<ProfileSummaryFormatKind>
 convertProfileSummaryFormat(ModuleOp mlirModule, const llvm::Module *llvmModule,
-                            const llvm::MDOperand &formatMD) {
-  auto *tupleEntry = getTwoElementMDTuple(mlirModule, llvmModule, formatMD);
+                            const llvm::MDOperand &formatMD,
+                            llvm::ModuleSlotTracker &tracker) {
+  auto *tupleEntry =
+      getTwoElementMDTuple(mlirModule, llvmModule, formatMD, tracker);
   if (!tupleEntry)
     return std::nullopt;
 
@@ -750,18 +796,32 @@ convertProfileSummaryFormat(ModuleOp mlirModule, const llvm::Module *llvmModule,
   if (!keyMD || keyMD->getString() != "ProfileFormat") {
     emitWarning(mlirModule.getLoc())
         << "expected 'ProfileFormat' key: "
-        << diagMD(tupleEntry->getOperand(0), llvmModule);
+        << renderMetadataWithTracker(tupleEntry->getOperand(0), tracker,
+                                     llvmModule);
     return std::nullopt;
   }
 
-  llvm::MDString *valMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(1));
+  llvm::Metadata *valueMD = tupleEntry->getOperand(1).get();
+  if (!valueMD) {
+    emitWarning(mlirModule.getLoc())
+        << "expected string metadata value for key 'ProfileFormat': null";
+    return std::nullopt;
+  }
+
+  llvm::MDString *valMD = dyn_cast<llvm::MDString>(valueMD);
+  if (!valMD) {
+    emitWarning(mlirModule.getLoc())
+        << "expected string metadata value for key 'ProfileFormat': "
+        << renderMetadataWithTracker(valueMD, tracker, llvmModule);
+    return std::nullopt;
+  }
   std::optional<ProfileSummaryFormatKind> fmtKind =
       symbolizeProfileSummaryFormatKind(valMD->getString());
   if (!fmtKind) {
     emitWarning(mlirModule.getLoc())
         << "expected 'SampleProfile', 'InstrProf' or 'CSInstrProf' values, "
            "but found: "
-        << diagMD(valMD, llvmModule);
+        << renderMetadataWithTracker(valMD, tracker, llvmModule);
     return std::nullopt;
   }
 
@@ -771,8 +831,10 @@ convertProfileSummaryFormat(ModuleOp mlirModule, const llvm::Module *llvmModule,
 static FailureOr<SmallVector<ModuleFlagProfileSummaryDetailedAttr>>
 convertProfileSummaryDetailed(ModuleOp mlirModule,
                               const llvm::Module *llvmModule,
-                              const llvm::MDOperand &summaryMD) {
-  auto *tupleEntry = getTwoElementMDTuple(mlirModule, llvmModule, summaryMD);
+                              const llvm::MDOperand &summaryMD,
+                              llvm::ModuleSlotTracker &tracker) {
+  auto *tupleEntry =
+      getTwoElementMDTuple(mlirModule, llvmModule, summaryMD, tracker);
   if (!tupleEntry)
     return failure();
 
@@ -780,7 +842,8 @@ convertProfileSummaryDetailed(ModuleOp mlirModule,
   if (!keyMD || keyMD->getString() != "DetailedSummary") {
     emitWarning(mlirModule.getLoc())
         << "expected 'DetailedSummary' key: "
-        << diagMD(tupleEntry->getOperand(0), llvmModule);
+        << renderMetadataWithTracker(tupleEntry->getOperand(0), tracker,
+                                     llvmModule);
     return failure();
   }
 
@@ -788,7 +851,8 @@ convertProfileSummaryDetailed(ModuleOp mlirModule,
   if (!entriesMD) {
     emitWarning(mlirModule.getLoc())
         << "expected tuple value for 'DetailedSummary' key: "
-        << diagMD(tupleEntry->getOperand(1), llvmModule);
+        << renderMetadataWithTracker(tupleEntry->getOperand(1), tracker,
+                                     llvmModule);
     return failure();
   }
 
@@ -798,7 +862,7 @@ convertProfileSummaryDetailed(ModuleOp mlirModule,
     if (!entryMD || entryMD->getNumOperands() != 3) {
       emitWarning(mlirModule.getLoc())
           << "'DetailedSummary' entry expects 3 operands: "
-          << diagMD(entry, llvmModule);
+          << renderMetadataWithTracker(entry, tracker, llvmModule);
       return failure();
     }
 
@@ -808,7 +872,7 @@ convertProfileSummaryDetailed(ModuleOp mlirModule,
     if (!op0 || !op1 || !op2) {
       emitWarning(mlirModule.getLoc())
           << "expected only integer entries in 'DetailedSummary': "
-          << diagMD(entry, llvmModule);
+          << renderMetadataWithTracker(entry, tracker, llvmModule);
       return failure();
     }
 
@@ -822,15 +886,14 @@ convertProfileSummaryDetailed(ModuleOp mlirModule,
   return detailedSummary;
 }
 
-static Attribute
-convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
-                                     const llvm::Module *llvmModule,
-                                     llvm::MDTuple *mdTuple) {
+static Attribute convertProfileSummaryModuleFlagValue(
+    ModuleOp mlirModule, const llvm::Module *llvmModule, llvm::MDTuple *mdTuple,
+    llvm::ModuleSlotTracker &tracker) {
   unsigned profileNumEntries = mdTuple->getNumOperands();
   if (profileNumEntries < 8) {
     emitWarning(mlirModule.getLoc())
         << "expected at 8 entries in 'ProfileSummary': "
-        << diagMD(mdTuple, llvmModule);
+        << renderMetadataWithTracker(mdTuple, tracker, llvmModule);
     return nullptr;
   }
 
@@ -843,7 +906,8 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
     if (summayIdx + 1 >= profileNumEntries) {
       emitWarning(mlirModule.getLoc())
           << "the last summary entry is '" << matchKey
-          << "', expected 'DetailedSummary': " << diagMD(md, llvmModule);
+          << "', expected 'DetailedSummary': "
+          << renderMetadataWithTracker(md, tracker, llvmModule);
       return failure();
     }
 
@@ -854,12 +918,13 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
       [&](const llvm::MDOperand &md,
           StringRef matchKey) -> FailureOr<std::optional<uint64_t>> {
     if (!getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md, matchKey,
+                                        tracker,
                                         /*optional=*/true))
       return FailureOr<std::optional<uint64_t>>(std::nullopt);
     if (checkOptionalPosition(md, matchKey).failed())
       return failure();
-    FailureOr<uint64_t> val =
-        convertInt64FromKeyValueTuple(mlirModule, llvmModule, md, matchKey);
+    FailureOr<uint64_t> val = convertInt64FromKeyValueTuple(
+        mlirModule, llvmModule, md, matchKey, tracker);
     if (failed(val))
       return failure();
     return val;
@@ -868,7 +933,8 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
   auto getOptDoubleValue = [&](const llvm::MDOperand &md,
                                StringRef matchKey) -> FailureOr<FloatAttr> {
     auto *valMD = getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md,
-                                                 matchKey, /*optional=*/true);
+                                                 matchKey, tracker,
+                                                 /*optional=*/true);
     if (!valMD)
       return FloatAttr{};
     if (auto *cstFP = dyn_cast<llvm::ConstantFP>(valMD->getValue())) {
@@ -879,46 +945,50 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
     }
     emitWarning(mlirModule.getLoc())
         << "expected double metadata value for key '" << matchKey
-        << "': " << diagMD(md, llvmModule);
+        << "': " << renderMetadataWithTracker(md, tracker, llvmModule);
     return failure();
   };
 
   // Build ModuleFlagProfileSummaryAttr by sequentially fetching elements in
   // a fixed order: format, total count, etc.
   std::optional<ProfileSummaryFormatKind> format = convertProfileSummaryFormat(
-      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++));
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), tracker);
   if (!format.has_value())
     return nullptr;
 
   FailureOr<uint64_t> totalCount = convertInt64FromKeyValueTuple(
-      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "TotalCount");
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "TotalCount",
+      tracker);
   if (failed(totalCount))
     return nullptr;
 
   FailureOr<uint64_t> maxCount = convertInt64FromKeyValueTuple(
-      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "MaxCount");
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "MaxCount",
+      tracker);
   if (failed(maxCount))
     return nullptr;
 
   FailureOr<uint64_t> maxInternalCount = convertInt64FromKeyValueTuple(
       mlirModule, llvmModule, mdTuple->getOperand(summayIdx++),
-      "MaxInternalCount");
+      "MaxInternalCount", tracker);
   if (failed(maxInternalCount))
     return nullptr;
 
   FailureOr<uint64_t> maxFunctionCount = convertInt64FromKeyValueTuple(
       mlirModule, llvmModule, mdTuple->getOperand(summayIdx++),
-      "MaxFunctionCount");
+      "MaxFunctionCount", tracker);
   if (failed(maxFunctionCount))
     return nullptr;
 
   FailureOr<uint64_t> numCounts = convertInt64FromKeyValueTuple(
-      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "NumCounts");
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "NumCounts",
+      tracker);
   if (failed(numCounts))
     return nullptr;
 
   FailureOr<uint64_t> numFunctions = convertInt64FromKeyValueTuple(
-      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "NumFunctions");
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "NumFunctions",
+      tracker);
   if (failed(numFunctions))
     return nullptr;
 
@@ -940,7 +1010,7 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
   // Handle detailed summary.
   FailureOr<SmallVector<ModuleFlagProfileSummaryDetailedAttr>> detailed =
       convertProfileSummaryDetailed(mlirModule, llvmModule,
-                                    mdTuple->getOperand(summayIdx));
+                                    mdTuple->getOperand(summayIdx), tracker);
   if (failed(detailed))
     return nullptr;
 
@@ -953,15 +1023,14 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
 
 /// Invoke specific handlers for each known module flag value, returns nullptr
 /// if the key is unknown or unimplemented.
-static Attribute
-convertModuleFlagValueFromMDTuple(ModuleOp mlirModule,
-                                  const llvm::Module *llvmModule, StringRef key,
-                                  llvm::MDTuple *mdTuple) {
+static Attribute convertModuleFlagValueFromMDTuple(
+    ModuleOp mlirModule, const llvm::Module *llvmModule, StringRef key,
+    llvm::MDTuple *mdTuple, llvm::ModuleSlotTracker &tracker) {
   if (key == LLVMDialect::getModuleFlagKeyCGProfileName())
     return convertCGProfileModuleFlagValue(mlirModule, mdTuple);
   if (key == LLVMDialect::getModuleFlagKeyProfileSummaryName())
-    return convertProfileSummaryModuleFlagValue(mlirModule, llvmModule,
-                                                mdTuple);
+    return convertProfileSummaryModuleFlagValue(mlirModule, llvmModule, mdTuple,
+                                                tracker);
   // Handle MDTuples whose operands are all MDStrings (e.g. "riscv-isa").
   // Convert them to ArrayAttr of StringAttrs for a lossless round-trip.
   Builder builder(mlirModule->getContext());
@@ -989,13 +1058,14 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
       valAttr = builder.getStringAttr(mdString->getString());
     } else if (auto *mdTuple = dyn_cast<llvm::MDTuple>(val)) {
       valAttr = convertModuleFlagValueFromMDTuple(mlirModule, llvmModule.get(),
-                                                  key->getString(), mdTuple);
+                                                  key->getString(), mdTuple,
+                                                  getDiagSlotTracker());
     }
 
     if (!valAttr) {
       emitWarning(mlirModule.getLoc())
           << "unsupported module flag value for key '" << key->getString()
-          << "' : " << diagMD(val, llvmModule.get());
+          << "' : " << renderMetadata(val);
       continue;
     }
 
@@ -1039,8 +1109,9 @@ LogicalResult ModuleImport::convertDependentLibrariesMetadata() {
           libraries.push_back(mdString->getString());
     }
     if (!libraries.empty())
-      mlirModule->setAttr(LLVM::LLVMDialect::getDependentLibrariesAttrName(),
-                          builder.getStrArrayAttr(libraries));
+      mlirModule->setDiscardableAttr(
+          LLVM::LLVMDialect::getDependentLibrariesAttrName(),
+          builder.getStrArrayAttr(libraries));
   }
   return success();
 }
@@ -1056,8 +1127,9 @@ LogicalResult ModuleImport::convertIdentMetadata() {
       if (auto *md = dyn_cast<llvm::MDNode>(named.getOperand(0)))
         if (md->getNumOperands() == 1)
           if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
-            mlirModule->setAttr(LLVMDialect::getIdentAttrName(),
-                                builder.getStringAttr(mdStr->getString()));
+            mlirModule->setDiscardableAttr(
+                LLVMDialect::getIdentAttrName(),
+                builder.getStringAttr(mdStr->getString()));
   }
   return success();
 }
@@ -1073,8 +1145,9 @@ LogicalResult ModuleImport::convertCommandlineMetadata() {
       if (auto *md = dyn_cast<llvm::MDNode>(nmd.getOperand(0)))
         if (md->getNumOperands() == 1)
           if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
-            mlirModule->setAttr(LLVMDialect::getCommandlineAttrName(),
-                                builder.getStringAttr(mdStr->getString()));
+            mlirModule->setDiscardableAttr(
+                LLVMDialect::getCommandlineAttrName(),
+                builder.getStringAttr(mdStr->getString()));
   }
   return success();
 }
@@ -1151,13 +1224,13 @@ LogicalResult ModuleImport::convertGlobals() {
         globalVar.getName() == getGlobalDtorsVarName()) {
       if (failed(convertGlobalCtorsAndDtors(&globalVar))) {
         return emitError(UnknownLoc::get(context))
-               << "unhandled global variable: " << diag(globalVar);
+               << "unhandled global variable: " << renderValue(globalVar);
       }
       continue;
     }
     if (failed(convertGlobal(&globalVar))) {
       return emitError(UnknownLoc::get(context))
-             << "unhandled global variable: " << diag(globalVar);
+             << "unhandled global variable: " << renderValue(globalVar);
     }
   }
   return success();
@@ -1167,7 +1240,7 @@ LogicalResult ModuleImport::convertAliases() {
   for (llvm::GlobalAlias &alias : llvmModule->aliases()) {
     if (failed(convertAlias(&alias))) {
       return emitError(UnknownLoc::get(context))
-             << "unhandled global alias: " << diag(alias);
+             << "unhandled global alias: " << renderValue(alias);
     }
   }
   return success();
@@ -1177,7 +1250,7 @@ LogicalResult ModuleImport::convertIFuncs() {
   for (llvm::GlobalIFunc &ifunc : llvmModule->ifuncs()) {
     if (failed(convertIFunc(&ifunc))) {
       return emitError(UnknownLoc::get(context))
-             << "unhandled global ifunc: " << diag(ifunc);
+             << "unhandled global ifunc: " << renderValue(ifunc);
     }
   }
   return success();
@@ -1194,13 +1267,13 @@ LogicalResult ModuleImport::convertDataLayout() {
   for (StringRef token : dataLayoutImporter.getUnhandledTokens())
     emitWarning(loc, "unhandled data layout token: ") << token;
 
-  mlirModule->setAttr(DLTIDialect::kDataLayoutAttrName,
-                      dataLayoutImporter.getDataLayoutSpec());
+  mlirModule->setDiscardableAttr(DLTIDialect::kDataLayoutAttrName,
+                                 dataLayoutImporter.getDataLayoutSpec());
   return success();
 }
 
 void ModuleImport::convertTargetTriple() {
-  mlirModule->setAttr(
+  mlirModule->setDiscardableAttr(
       LLVM::LLVMDialect::getTargetTripleAttrName(),
       builder.getStringAttr(llvmModule->getTargetTriple().str()));
 }
@@ -1216,8 +1289,8 @@ void ModuleImport::convertModuleLevelAsm() {
         asmArrayAttr.push_back(builder.getStringAttr(line));
   }
 
-  mlirModule->setAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
-                      builder.getArrayAttr(asmArrayAttr));
+  mlirModule->setDiscardableAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
+                                 builder.getArrayAttr(asmArrayAttr));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
@@ -1237,9 +1310,8 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
     if (failed(iface.setMetadataAttrs(builder, kind, node, op, *this))) {
       if (emitExpensiveWarnings) {
         Location loc = debugImporter->translateLoc(inst->getDebugLoc());
-        emitWarning(loc) << "unhandled metadata: "
-                         << diagMD(node, llvmModule.get()) << " on "
-                         << diag(*inst);
+        emitWarning(loc) << "unhandled metadata: " << renderMetadata(node)
+                         << " on " << renderValue(*inst);
       }
     }
   }
@@ -1299,7 +1371,7 @@ void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
   value = bitEnumSet(value, FastmathFlags::afn, flags.approxFunc());
   value = bitEnumSet(value, FastmathFlags::reassoc, flags.allowReassoc());
   FastmathFlagsAttr attr = FastmathFlagsAttr::get(builder.getContext(), value);
-  iface->setAttr(iface.getFastmathAttrName(), attr);
+  iface.setFastmathAttr(attr);
 }
 
 /// Returns `type` if it is a builtin integer or floating-point vector type that
@@ -1708,9 +1780,9 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
       symbolRef =
           getMetadataOperandSymbolRef(associatedMD->getOperand(0).get());
     if (!symbolRef) {
-      emitWarning(globalOp.getLoc()) << "unhandled associated metadata: "
-                                     << diagMD(associatedMD, llvmModule.get())
-                                     << " on " << diag(*globalVar);
+      emitWarning(globalOp.getLoc())
+          << "unhandled associated metadata: " << renderMetadata(associatedMD)
+          << " on " << renderValue(*globalVar);
     } else {
       globalOp.setAssociatedAttr(symbolRef);
     }
@@ -1957,7 +2029,27 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     }));
     if (failed(processInstruction(inst)))
       return failure();
-    return lookupValue(inst);
+    Value result = lookupValue(inst);
+    // getAsInstruction() does not preserve GEP `inrange`, which exists only on
+    // constant expressions. Reattach it to the imported GEPOp.
+    if (constExpr->getOpcode() == llvm::Instruction::GetElementPtr) {
+      auto *gepOperator = llvm::cast<llvm::GEPOperator>(constExpr);
+      if (std::optional<llvm::ConstantRange> inRange =
+              gepOperator->getInRange()) {
+        auto gepOp = result.getDefiningOp<GEPOp>();
+        assert(gepOp && "expected GEPOp for getelementptr constexpr");
+        // The range is not always built at the index width of the base
+        // pointer (clang uses 32 bits for vtable address points); bring it to
+        // that width, as the textual IR parser does.
+        unsigned indexWidth =
+            llvmModule->getDataLayout().getIndexTypeSizeInBits(
+                gepOperator->getPointerOperandType());
+        gepOp.setInrangeAttr(LLVM::ConstantRangeAttr::get(
+            context, inRange->getLower().sextOrTrunc(indexWidth),
+            inRange->getUpper().sextOrTrunc(indexWidth)));
+      }
+    }
+    return result;
   }
 
   // Convert zero-initialized aggregates to ZeroOp.
@@ -2031,7 +2123,8 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   if (isa<llvm::GlobalValue>(constant))
     error = " since global value is unsupported";
 
-  return emitError(loc) << "unhandled constant: " << diag(*constant) << error;
+  return emitError(loc) << "unhandled constant: " << renderValue(*constant)
+                        << error;
 }
 
 FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
@@ -2082,7 +2175,7 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
     Attribute mdAttr = convertMetadataToAttr(md);
     if (!mdAttr)
       return emitError(mlirModule.getLoc())
-             << "unsupported metadata: " << diagMD(md, llvmModule.get());
+             << "unsupported metadata: " << renderMetadata(md);
     Value result =
         MetadataAsValueOp::create(builder, UnknownLoc::get(context), mdAttr)
             .getRes();
@@ -2097,7 +2190,7 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
   Location loc = UnknownLoc::get(context);
   if (auto *inst = dyn_cast<llvm::Instruction>(value))
     loc = translateLoc(inst->getDebugLoc());
-  return emitError(loc) << "unhandled value: " << diag(*value);
+  return emitError(loc) << "unhandled value: " << renderValue(*value);
 }
 
 FailureOr<Value> ModuleImport::convertMetadataValue(llvm::Value *value) {
@@ -2403,7 +2496,7 @@ LogicalResult ModuleImport::convertIntrinsic(llvm::CallInst *inst) {
     return success();
 
   Location loc = translateLoc(inst->getDebugLoc());
-  return emitError(loc) << "unhandled intrinsic: " << diag(*inst);
+  return emitError(loc) << "unhandled intrinsic: " << renderValue(*inst);
 }
 
 ArrayAttr
@@ -2535,6 +2628,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                    builder.getStringAttr(asmI->getConstraintString()),
                    asmI->hasSideEffects(), asmI->isAlignStack(),
                    convertTailCallKindFromLLVM(callInst->getTailCallKind()),
+                   callInst->hasFnAttr(llvm::Attribute::Convergent),
                    AsmDialectAttr::get(
                        mlirModule.getContext(),
                        convertAsmDialectFromLLVM(asmI->getDialect())),
@@ -2755,7 +2849,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   if (succeeded(convertInstructionImpl(builder, inst, *this, iface)))
     return success();
 
-  return emitError(loc) << "unhandled instruction: " << diag(*inst);
+  return emitError(loc) << "unhandled instruction: " << renderValue(*inst);
 }
 
 LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
@@ -2771,8 +2865,9 @@ LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   // Process debug records attached to this instruction. Debug variable records
   // are stored for later processing after all SSA values are converted, while
   // debug label records can be converted immediately.
-  if (inst->DebugMarker) {
-    for (llvm::DbgRecord &dbgRecord : inst->DebugMarker->getDbgRecordRange()) {
+  if (inst->getDbgMarker()) {
+    for (llvm::DbgRecord &dbgRecord :
+         inst->getDbgMarker()->getDbgRecordRange()) {
       // Store debug variable records for later processing.
       if (auto *dbgVariableRecord =
               dyn_cast<llvm::DbgVariableRecord>(&dbgRecord)) {
@@ -2885,6 +2980,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("alwaysinline"),
     StringLiteral("cold"),
     StringLiteral("convergent"),
+    StringLiteral("disable-tail-calls"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
     StringLiteral("hot"),
@@ -2908,7 +3004,9 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("save-reg-params"),
     StringLiteral("target-features"),
     StringLiteral("trap-func-name"),
+    StringLiteral("sample-profile-suffix-elision-policy"),
     StringLiteral("tune-cpu"),
+    StringLiteral("uniform-work-group-size"),
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
@@ -3007,6 +3105,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setOptsize(true);
   if (func->hasFnAttribute("save-reg-params"))
     funcOp.setSaveRegParams(true);
+  if (func->hasFnAttribute("uniform-work-group-size"))
+    funcOp.setUniformWorkGroupSize(true);
   if (func->hasFnAttribute(llvm::Attribute::MinSize))
     funcOp.setMinsize(true);
   if (func->hasFnAttribute(llvm::Attribute::ReturnsTwice))
@@ -3071,6 +3171,22 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
 
   if (func->hasFnAttribute("use-sample-profile"))
     funcOp.setUseSampleProfile(true);
+
+  if (llvm::Attribute attr = func->getFnAttribute("disable-tail-calls");
+      attr.isStringAttribute()) {
+    StringRef val = attr.getValueAsString();
+    if (val == "true")
+      funcOp.setDisableTailCalls(true);
+    else if (val != "false")
+      emitError(funcOp.getLoc())
+          << "unknown value '" << val << "' for 'disable-tail-calls' attribute";
+  }
+
+  if (llvm::Attribute attr =
+          func->getFnAttribute("sample-profile-suffix-elision-policy");
+      attr.isStringAttribute())
+    funcOp.setSampleProfileSuffixElisionPolicy(
+        StringAttr::get(context, attr.getValueAsString()));
 
   if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
       attr.isStringAttribute())
@@ -3221,6 +3337,9 @@ static LogicalResult convertCallBaseAttributes(llvm::CallBase *inst, Op op) {
 
 LogicalResult ModuleImport::convertInvokeAttributes(llvm::InvokeInst *inst,
                                                     InvokeOp op) {
+  llvm::AttributeList invokeAttrs = inst->getAttributes();
+  op.setUniformWorkGroupSize(
+      invokeAttrs.getFnAttr("uniform-work-group-size").isValid());
   return convertCallBaseAttributes(inst, op);
 }
 
@@ -3240,6 +3359,8 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setOptsize(
       callAttrs.getFnAttr(llvm::Attribute::OptimizeForSize).isValid());
   op.setSaveRegParams(callAttrs.getFnAttr("save-reg-params").isValid());
+  op.setUniformWorkGroupSize(
+      callAttrs.getFnAttr("uniform-work-group-size").isValid());
   op.setBuiltin(callAttrs.getFnAttr(llvm::Attribute::Builtin).isValid());
   op.setNobuiltin(callAttrs.getFnAttr(llvm::Attribute::NoBuiltin).isValid());
   op.setMinsize(callAttrs.getFnAttr(llvm::Attribute::MinSize).isValid());
@@ -3357,9 +3478,11 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
     llvm::MDNode *metadataNode = node;
     auto emitUnhandledFunctionMetadataWarning = [&]() {
+      if (!emitExpensiveWarnings)
+        return;
       emitWarning(funcOp.getLoc())
-          << "unhandled function metadata: "
-          << diagMD(metadataNode, llvmModule.get()) << " on " << diag(*func);
+          << "unhandled function metadata: " << renderMetadata(metadataNode)
+          << " on " << renderValue(*func);
     };
 
     if (iface.isConvertibleMetadata(kind)) {
@@ -3505,7 +3628,8 @@ ModuleImport::processDebugOpArgumentsAndInsertionPt(
     return {};
   FailureOr<Value> argOperand = convertArgOperandToValue();
   if (failed(argOperand)) {
-    emitError(loc) << "failed to convert a debug operand: " << diag(*address);
+    emitError(loc) << "failed to convert a debug operand: "
+                   << renderValue(*address);
     return {};
   }
 
@@ -3523,7 +3647,7 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   Location loc = translateLoc(dbgIntr->getDebugLoc());
   auto emitUnsupportedWarning = [&]() {
     if (emitExpensiveWarnings)
-      emitWarning(loc) << "dropped intrinsic: " << diag(*dbgIntr);
+      emitWarning(loc) << "dropped intrinsic: " << renderValue(*dbgIntr);
     return success();
   };
 
@@ -3673,7 +3797,7 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
     } else if (inst.getOpcode() != llvm::Instruction::PHI) {
       if (emitExpensiveWarnings) {
         Location loc = debugImporter->translateLoc(inst.getDebugLoc());
-        emitWarning(loc) << "dropped instruction: " << diag(inst);
+        emitWarning(loc) << "dropped instruction: " << renderValue(inst);
       }
     }
   }
@@ -3707,14 +3831,14 @@ ModuleImport::translateDereferenceableAttr(const llvm::MDNode *node,
   // dereferenceable bytes.
   if (node->getNumOperands() != 1)
     return emitError(loc) << "dereferenceable metadata must have one operand: "
-                          << diagMD(node, llvmModule.get());
+                          << renderMetadata(node);
 
   auto *numBytesMD = dyn_cast<llvm::ConstantAsMetadata>(node->getOperand(0));
   auto *numBytesCst = dyn_cast<llvm::ConstantInt>(numBytesMD->getValue());
   if (!numBytesCst || !numBytesCst->getValue().isNonNegative())
     return emitError(loc) << "dereferenceable metadata operand must be a "
                              "non-negative constant integer: "
-                          << diagMD(node, llvmModule.get());
+                          << renderMetadata(node);
 
   bool mayBeNull = kindID == llvm::LLVMContext::MD_dereferenceable_or_null;
   auto derefAttr = builder.getAttr<DereferenceableAttr>(

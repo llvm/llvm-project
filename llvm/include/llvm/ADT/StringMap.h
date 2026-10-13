@@ -49,6 +49,7 @@ protected:
     RHS.TheTable = nullptr;
     RHS.NumBuckets = 0;
     RHS.NumItems = 0;
+    RHS.incrementEpoch();
   }
 
   LLVM_ABI StringMapImpl(unsigned InitSize, unsigned ItemSize);

@@ -206,7 +206,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
-  ; CHECK-NEXT:   dead $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
+  ; CHECK-NEXT:   $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
   ; CHECK-NEXT:   STATEPOINT 2, 5, 2, undef %24:gr64, $rdi, undef $rsi, 2, 0, 2, 0, 2, 37, 2, 0, 2, 2, 2, 0, 2, 43, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 1, 2, 6, 2, 0, 2, 4, 2, 1, 2, 0, 2, 0, 2, 7, 2, 0, 2, 0, 2, 0, 2, 7, 2, 0, 2, 0, 2, 0, 2, 2, 2, 4, 2, 5, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF

@@ -86,14 +86,17 @@ FunctionType CallOp::getCalleeType() {
 LogicalResult CallIndirectOp::canonicalize(CallIndirectOp indirectCall,
                                            PatternRewriter &rewriter) {
   // Check that the callee is a constant callee.
-  SymbolRefAttr calledFn;
+  FlatSymbolRefAttr calledFn;
   if (!matchPattern(indirectCall.getCallee(), m_Constant(&calledFn)))
     return failure();
 
-  // Replace with a direct call.
-  rewriter.replaceOpWithNewOp<CallOp>(indirectCall, calledFn,
-                                      indirectCall.getResultTypes(),
-                                      indirectCall.getArgOperands());
+  // Replace with a direct call, preserving the call-site attributes.
+  auto directCall = CallOp::create(
+      rewriter, indirectCall.getLoc(), indirectCall.getResultTypes(), calledFn,
+      indirectCall.getArgOperands(), indirectCall.getArgAttrsAttr(),
+      indirectCall.getResAttrsAttr());
+  directCall->setDiscardableAttrs(indirectCall->getDiscardableAttrDictionary());
+  rewriter.replaceOp(indirectCall, directCall.getResults());
   return success();
 }
 

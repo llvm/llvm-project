@@ -8,11 +8,6 @@
 
 # OpenMP Semantic Analysis
 
-```{contents}
----
-local:
----
-```
 
 ## OpenMP for Flang
 

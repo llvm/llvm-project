@@ -14,7 +14,6 @@
 #include "SIPreAllocateWWMRegs.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -96,10 +95,6 @@ INITIALIZE_PASS_END(SIPreAllocateWWMRegsLegacy, DEBUG_TYPE,
 char SIPreAllocateWWMRegsLegacy::ID = 0;
 
 char &llvm::SIPreAllocateWWMRegsLegacyID = SIPreAllocateWWMRegsLegacy::ID;
-
-FunctionPass *llvm::createSIPreAllocateWWMRegsLegacyPass() {
-  return new SIPreAllocateWWMRegsLegacy();
-}
 
 bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
   Register Reg = MO.getReg();

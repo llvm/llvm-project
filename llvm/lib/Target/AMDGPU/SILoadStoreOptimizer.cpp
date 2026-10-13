@@ -60,11 +60,9 @@
 #include "SILoadStoreOptimizer.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -120,6 +118,7 @@ class SILoadStoreOptimizer {
     unsigned DMask;
     InstClassEnum InstClass;
     unsigned CPol = 0;
+    bool GDS = false;
     const TargetRegisterClass *DataRC;
     bool UseST64;
     int AddrIdx[MaxAddressRegs];
@@ -242,14 +241,14 @@ private:
                            MachineBasicBlock::iterator InsertBefore,
                            const DebugLoc &DL, AMDGPU::OpName OpName) const;
 
-  unsigned read2Opcode(unsigned EltSize) const;
-  unsigned read2ST64Opcode(unsigned EltSize) const;
+  unsigned read2Opcode(unsigned EltSize, bool GDS) const;
+  unsigned read2ST64Opcode(unsigned EltSize, bool GDS) const;
   MachineBasicBlock::iterator
   mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
                  MachineBasicBlock::iterator InsertBefore);
 
-  unsigned write2Opcode(unsigned EltSize) const;
-  unsigned write2ST64Opcode(unsigned EltSize) const;
+  unsigned write2Opcode(unsigned EltSize, bool GDS) const;
+  unsigned write2ST64Opcode(unsigned EltSize, bool GDS) const;
   unsigned getWrite2Opcode(const CombineInfo &CI) const;
 
   MachineBasicBlock::iterator
@@ -899,6 +898,7 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
 
   if ((InstClass == DS_READ) || (InstClass == DS_WRITE)) {
     Offset &= 0xffff;
+    GDS = LSO.TII->getNamedOperand(*I, AMDGPU::OpName::gds)->getImm();
   } else if (InstClass != MIMG) {
     CPol = LSO.TII->getNamedOperand(*I, AMDGPU::OpName::cpol)->getImm();
   }
@@ -948,10 +948,6 @@ INITIALIZE_PASS_END(SILoadStoreOptimizerLegacy, DEBUG_TYPE,
 char SILoadStoreOptimizerLegacy::ID = 0;
 
 char &llvm::SILoadStoreOptimizerLegacyID = SILoadStoreOptimizerLegacy::ID;
-
-FunctionPass *llvm::createSILoadStoreOptimizerLegacyPass() {
-  return new SILoadStoreOptimizerLegacy();
-}
 
 static void addDefsUsesToList(const MachineInstr &MI,
                               DenseSet<Register> &RegDefs,
@@ -1022,7 +1018,8 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
   // Check other optional immediate operands for equality.
   AMDGPU::OpName OperandsToMatch[] = {
       AMDGPU::OpName::cpol, AMDGPU::OpName::d16,  AMDGPU::OpName::unorm,
-      AMDGPU::OpName::da,   AMDGPU::OpName::r128, AMDGPU::OpName::a16};
+      AMDGPU::OpName::da,   AMDGPU::OpName::r128, AMDGPU::OpName::a16,
+      AMDGPU::OpName::dim};
 
   for (AMDGPU::OpName op : OperandsToMatch) {
     int Idx = AMDGPU::getNamedOperandIdx(CI.I->getOpcode(), op);
@@ -1091,6 +1088,9 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
   // XXX - Would the same offset be OK? Is there any reason this would happen or
   // be useful?
   if (CI.Offset == Paired.Offset)
+    return false;
+
+  if (CI.GDS != Paired.GDS)
     return false;
 
   // This won't be valid if the offset isn't aligned.
@@ -1429,14 +1429,15 @@ SILoadStoreOptimizer::copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
   return SrcReg;
 }
 
-unsigned SILoadStoreOptimizer::read2Opcode(unsigned EltSize) const {
-  if (STM->ldsRequiresM0Init())
+unsigned SILoadStoreOptimizer::read2Opcode(unsigned EltSize, bool GDS) const {
+  if (GDS || STM->ldsRequiresM0Init())
     return (EltSize == 4) ? AMDGPU::DS_READ2_B32 : AMDGPU::DS_READ2_B64;
   return (EltSize == 4) ? AMDGPU::DS_READ2_B32_gfx9 : AMDGPU::DS_READ2_B64_gfx9;
 }
 
-unsigned SILoadStoreOptimizer::read2ST64Opcode(unsigned EltSize) const {
-  if (STM->ldsRequiresM0Init())
+unsigned SILoadStoreOptimizer::read2ST64Opcode(unsigned EltSize,
+                                               bool GDS) const {
+  if (GDS || STM->ldsRequiresM0Init())
     return (EltSize == 4) ? AMDGPU::DS_READ2ST64_B32 : AMDGPU::DS_READ2ST64_B64;
 
   return (EltSize == 4) ? AMDGPU::DS_READ2ST64_B32_gfx9
@@ -1454,8 +1455,8 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
 
   unsigned NewOffset0 = std::min(CI.Offset, Paired.Offset);
   unsigned NewOffset1 = std::max(CI.Offset, Paired.Offset);
-  unsigned Opc =
-      CI.UseST64 ? read2ST64Opcode(CI.EltSize) : read2Opcode(CI.EltSize);
+  unsigned Opc = CI.UseST64 ? read2ST64Opcode(CI.EltSize, CI.GDS)
+                            : read2Opcode(CI.EltSize, CI.GDS);
 
   assert((isUInt<8>(NewOffset0) && isUInt<8>(NewOffset1)) &&
          (NewOffset0 != NewOffset1) && "Computed offset doesn't fit");
@@ -1491,7 +1492,7 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
           .addReg(BaseReg, BaseRegFlags, BaseSubReg) // addr
           .addImm(NewOffset0)                        // offset0
           .addImm(NewOffset1)                        // offset1
-          .addImm(0)                                 // gds
+          .addImm(CI.GDS)                            // gds
           .cloneMergedMemRefs({&*CI.I, &*Paired.I});
 
   copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdst, DestReg);
@@ -1503,15 +1504,16 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
   return Read2;
 }
 
-unsigned SILoadStoreOptimizer::write2Opcode(unsigned EltSize) const {
-  if (STM->ldsRequiresM0Init())
+unsigned SILoadStoreOptimizer::write2Opcode(unsigned EltSize, bool GDS) const {
+  if (GDS || STM->ldsRequiresM0Init())
     return (EltSize == 4) ? AMDGPU::DS_WRITE2_B32 : AMDGPU::DS_WRITE2_B64;
   return (EltSize == 4) ? AMDGPU::DS_WRITE2_B32_gfx9
                         : AMDGPU::DS_WRITE2_B64_gfx9;
 }
 
-unsigned SILoadStoreOptimizer::write2ST64Opcode(unsigned EltSize) const {
-  if (STM->ldsRequiresM0Init())
+unsigned SILoadStoreOptimizer::write2ST64Opcode(unsigned EltSize,
+                                                bool GDS) const {
+  if (GDS || STM->ldsRequiresM0Init())
     return (EltSize == 4) ? AMDGPU::DS_WRITE2ST64_B32
                           : AMDGPU::DS_WRITE2ST64_B64;
 
@@ -1520,7 +1522,8 @@ unsigned SILoadStoreOptimizer::write2ST64Opcode(unsigned EltSize) const {
 }
 
 unsigned SILoadStoreOptimizer::getWrite2Opcode(const CombineInfo &CI) const {
-  return CI.UseST64 ? write2ST64Opcode(CI.EltSize) : write2Opcode(CI.EltSize);
+  return CI.UseST64 ? write2ST64Opcode(CI.EltSize, CI.GDS)
+                    : write2Opcode(CI.EltSize, CI.GDS);
 }
 
 MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
@@ -1579,7 +1582,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
           .add(*Data1)                               // data1
           .addImm(NewOffset0)                        // offset0
           .addImm(NewOffset1)                        // offset1
-          .addImm(0)                                 // gds
+          .addImm(CI.GDS)                            // gds
           .cloneMergedMemRefs({&*CI.I, &*Paired.I});
 
   CI.I->eraseFromParent();
@@ -1877,6 +1880,11 @@ static bool needsConstrainedOpcode(const GCNSubtarget &STM,
 unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
                                             const CombineInfo &Paired) {
   const unsigned Width = CI.Width + Paired.Width;
+  const CombineInfo &Leading = Paired < CI ? Paired : CI;
+  // If XNACK is enabled, use the constrained opcodes when the first load is
+  // under-aligned.
+  const bool NeedsConstrainedOpc =
+      needsConstrainedOpcode(*STM, Leading.I->memoperands(), Width);
 
   switch (getCommonInstClass(CI, Paired)) {
   default:
@@ -1892,10 +1900,6 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
   case UNKNOWN:
     llvm_unreachable("Unknown instruction class");
   case S_BUFFER_LOAD_IMM: {
-    // If XNACK is enabled, use the constrained opcodes when the first load is
-    // under-aligned.
-    bool NeedsConstrainedOpc =
-        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;
@@ -1914,10 +1918,6 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     }
   }
   case S_BUFFER_LOAD_SGPR_IMM: {
-    // If XNACK is enabled, use the constrained opcodes when the first load is
-    // under-aligned.
-    bool NeedsConstrainedOpc =
-        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;
@@ -1936,10 +1936,6 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     }
   }
   case S_LOAD_IMM: {
-    // If XNACK is enabled, use the constrained opcodes when the first load is
-    // under-aligned.
-    bool NeedsConstrainedOpc =
-        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;

@@ -13,8 +13,6 @@
 
 #include "GISel/WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "Utils/WasmAddressSpaces.h"
-#include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
