@@ -314,6 +314,8 @@ code with clang-apply-replacements.
 
 static cl::opt<std::string> SarifExport("sarif-export", desc(R"(
 File in which to store diagnostics in SARIF format.
+Use '-' to write to stdout instead of the
+usual diagnostic output.
 )"),
                                         cl::value_desc("filename"),
                                         cl::cat(ClangTidyCategory));
@@ -745,14 +747,15 @@ int clangTidyMain(int argc, const char **argv) {
     return 1;
   }
 
-  if (!SarifExport.empty()) {
+  // Checked after the informational modes so they never truncate the file.
+  if (!SarifExport.empty() && SarifExport != "-") {
     std::error_code EC;
     {
-      llvm::raw_fd_ostream Probe(SarifExport, EC, llvm::sys::fs::OF_Append);
+      llvm::raw_fd_ostream OS(SarifExport, EC, llvm::sys::fs::OF_Text);
     }
     if (EC) {
-      llvm::errs() << "Error opening SARIF export file: " << EC.message()
-                   << '\n';
+      llvm::errs() << "Error opening SARIF export file '" << SarifExport
+                   << "': " << EC.message() << '\n';
       return 1;
     }
   }

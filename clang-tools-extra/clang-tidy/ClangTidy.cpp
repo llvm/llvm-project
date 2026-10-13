@@ -263,6 +263,9 @@ public:
         (Loc.isValid() ? Result.addLocations(getOffsetRange(SourceMgr, Loc))
                        : Result.addLocations(getResultRanges(Error)));
 
+    // Same-location, same-message diagnostics from other checks are merged,
+    // with the first alphabetically as the check name, not necessarily the
+    // canon name.
     if (!Error.EnabledDiagnosticAliases.empty())
       Result = Result.addProperty(
           "enabledAliases", llvm::join(Error.EnabledDiagnosticAliases, ","));
@@ -369,17 +372,20 @@ private:
   }
 
   void finalizeSarif() {
-    if (SarifWriter) {
-      std::error_code EC;
-      llvm::raw_fd_ostream SarifOS(SarifExportPath, EC, llvm::sys::fs::OF_Text);
-      if (EC) {
-        llvm::errs() << "Error opening SARIF export file: " << EC.message()
-                     << "\n";
-      } else {
-        llvm::json::Value Document = SarifWriter->createDocument();
-        SarifOS << llvm::formatv("{0:2}", Document);
-      }
+    const llvm::json::Value Document = SarifWriter->createDocument();
+    if (SarifExportPath == "-") {
+      llvm::outs() << llvm::formatv("{0:2}", Document);
+      return;
     }
+    // Reopened here as the file may have changed during the analysis.
+    std::error_code EC;
+    llvm::raw_fd_ostream SarifOS(SarifExportPath, EC, llvm::sys::fs::OF_Text);
+    if (EC) {
+      llvm::errs() << "Error opening SARIF export file '" << SarifExportPath
+                   << "': " << EC.message() << "\n";
+      return;
+    }
+    SarifOS << llvm::formatv("{0:2}", Document);
   }
 
   void reportFix(const DiagnosticBuilder &Diag,
