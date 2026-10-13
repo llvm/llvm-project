@@ -5,7 +5,7 @@
 ;; This test also runs opt to check opt applies the same odr type debug uniquing.
 
 ; Anchor the order of the nodes.
-!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17}
+!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !20, !21, !22, !23}
 
 ; Some basic building blocks.
 ; CHECK:      !0 = !DIBasicType
@@ -56,6 +56,18 @@
 !16 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !3, file: !2, isDefinition: false, type: !18)
 
 ; CHECK-NEXT: !17 = !{!4, !6}
+!17 = !{!15, !16}
+
+; Define an identified type with fields and functions. This time DISubprograms
+; come before DICompositeType scope to check forward refs work with the debug
+; ODR type uniquing infra.
+; CHECK-NEXT: !18 = !DISubprogram(name: "scope-metadata-fwd-ref2", linkageName: "scope-metadata-fwd-ref", scope: !19, file: !1, type: !7, spFlags: 0)
+; CHECK-NEXT: !19 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "odr-scope", file: !1, line: 2, size: 64, align: 32, identifier: "odr-scope")
+; CHECK-NEXT: !20 = !{!18, !18}
+!20 = !DISubprogram(name: "scope-metadata-fwd-ref1", linkageName: "scope-metadata-fwd-ref", scope: !22, file: !1, isDefinition: false, type: !18)
+!21 = !DISubprogram(name: "scope-metadata-fwd-ref2", linkageName: "scope-metadata-fwd-ref", scope: !22, file: !1, isDefinition: false, type: !18)
+!22 = !DICompositeType(tag: DW_TAG_structure_type, name: "odr-scope", file: !1, line: 2, size: 64, align: 32, identifier: "odr-scope")
+!23 = !{!20, !21}
+
 ; CHECK-NOT: !DIDerivedType
 ; CHECK-NOT: !DISubprogram
-!17 = !{!15, !16}
