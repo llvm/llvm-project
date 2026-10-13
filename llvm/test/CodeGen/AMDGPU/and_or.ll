@@ -578,6 +578,49 @@ define amdgpu_ps <4 x float> @and_or_shared_literals_v2i32(<2 x i32> %a, <2 x i3
   ret <4 x float> %f
 }
 
+; v2i16 operations are promoted to i32, with the splat behind a bitcast.
+define amdgpu_ps <3 x float> @and_or_shared_literals_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c) {
+; VI-LABEL: and_or_shared_literals_v2i16:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_and_b32_e32 v0, 0xf000f, v0
+; VI-NEXT:    v_and_b32_e32 v1, 0xf000f, v1
+; VI-NEXT:    v_and_b32_e32 v2, 0xf000f, v2
+; VI-NEXT:    v_or_b32_e32 v0, 0x64006400, v0
+; VI-NEXT:    v_or_b32_e32 v1, 0x64006400, v1
+; VI-NEXT:    v_or_b32_e32 v2, 0x64006400, v2
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: and_or_shared_literals_v2i16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0x64006400
+; GFX9-NEXT:    v_and_or_b32 v0, v0, s0, v3
+; GFX9-NEXT:    v_and_or_b32 v1, v1, s0, v3
+; GFX9-NEXT:    v_and_or_b32 v2, v2, s0, v3
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10PLUS-LABEL: and_or_shared_literals_v2i16:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_mov_b32 s0, 0x64006400
+; GFX10PLUS-NEXT:    v_and_or_b32 v0, v0, 0xf000f, s0
+; GFX10PLUS-NEXT:    v_and_or_b32 v1, v1, 0xf000f, s0
+; GFX10PLUS-NEXT:    v_and_or_b32 v2, v2, 0xf000f, s0
+; GFX10PLUS-NEXT:    ; return to shader part epilog
+  %x0 = and <2 x i16> %a, splat (i16 15)
+  %r0 = or <2 x i16> %x0, splat (i16 25600)
+  %x1 = and <2 x i16> %b, splat (i16 15)
+  %r1 = or <2 x i16> %x1, splat (i16 25600)
+  %x2 = and <2 x i16> %c, splat (i16 15)
+  %r2 = or <2 x i16> %x2, splat (i16 25600)
+  %f0 = bitcast <2 x i16> %r0 to float
+  %f1 = bitcast <2 x i16> %r1 to float
+  %f2 = bitcast <2 x i16> %r2 to float
+  %v0 = insertelement <3 x float> poison, float %f0, i32 0
+  %v1 = insertelement <3 x float> %v0, float %f1, i32 1
+  %v2 = insertelement <3 x float> %v1, float %f2, i32 2
+  ret <3 x float> %v2
+}
+
 ; Plain adds keep the literal in a free operand slot, so nothing is shared.
 define amdgpu_ps <5 x float> @and_or_literal_used_by_nonfused(i32 %a, <4 x i32> %b) {
 ; VI-LABEL: and_or_literal_used_by_nonfused:

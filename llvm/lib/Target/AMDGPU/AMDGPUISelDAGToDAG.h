@@ -58,9 +58,10 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   // Default FP mode for the current function.
   SIModeRegisterDefaults Mode;
 
-  // Over budget fragments per constant, counted before selection drops use
-  // edges. Keyed by value: the DAG recycles node memory.
-  DenseMap<const ConstantInt *, unsigned> SharedConstantUses;
+  // Over budget fragments per 32-bit constant, counted before selection drops
+  // use edges. Keyed by value: the DAG recycles node memory. 64-bit keys keep
+  // all 32-bit values clear of the DenseMap sentinels.
+  DenseMap<uint64_t, unsigned> SharedConstantUses;
 
   // Instructions that will be lowered with a final instruction that zeros the
   // high result bits.
