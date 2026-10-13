@@ -242,6 +242,24 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   if (lbInt && ubInt && stepInt && ceil(float(*ubInt - *lbInt) / *stepInt) <= 1)
     return failure();
 
+  // Check whether we have a unsigned loop
+  if (forOp.getUnsignedCmp()) {
+    IntegerAttr lbAttr, ubAttr, stepAttr;
+    if (matchPattern(forOp.getLowerBound(), m_Constant(&lbAttr)) &&
+        matchPattern(forOp.getUpperBound(), m_Constant(&ubAttr)) &&
+        matchPattern(forOp.getStep(), m_Constant(&stepAttr))) {
+
+      // Get the constants as APInt at the loop’s own bit width
+      APInt lb = lbAttr.getValue();
+      APInt ub = ubAttr.getValue();
+      APInt step = stepAttr.getValue();
+
+      // bail out if ub <= lb or ub - lb <= step (unsigned) 
+      if (ub.ule(lb) || (ub - lb).ule(step))
+        return failure();
+    }
+  }
+
   // The peeling bound (%lb + %step) is computed with affine.apply, which
   // accepts only index operands. %ub does not feed into this bound, so only
   // %lb and %step need to be constant to guarantee the affine.apply (see below)
