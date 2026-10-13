@@ -1471,29 +1471,26 @@ def CIR_FramePointerKindAttr
   let summary = "Encodes the frame pointer kind for a function or a module.";
 
   let description = [{
-    A frame pointer is a register that holds the address of the current
-    function's frame record, so that debuggers, profilers and stack
-    unwinders can walk the call stack by following the chain of frame
-    records.  Eliminating it frees the register for other uses.  The frame
-    pointer kind says which functions must keep one:
+    Mirrors the `frame-pointer` function attribute and module flag of LLVM
+    IR (https://llvm.org/docs/LangRef.html#function-attributes), which tell
+    the code generator whether a function should keep its frame pointer.  The
+    code generator may keep a frame pointer even when the kind says it can
+    be eliminated.
 
-    - `none`: the frame pointer may be eliminated and its register used for
-      other purposes.
-    - `non_leaf`: functions that call other functions keep the frame
-      pointer.  A leaf function may eliminate it, but may not use its
-      register for anything else.
-    - `all`: every function keeps the frame pointer.
-    - `reserved`: the frame pointer may be eliminated, but its register is
-      not used for anything else, so it either points to a valid frame
-      record for the current function or is left unmodified.
-    - `non_leaf_no_reserve`: like `non_leaf`, except that a leaf function
-      may use the frame pointer register as a general-purpose register.
+    - `none`: the frame pointer can be eliminated, and its register can be
+      used for other purposes.
+    - `reserved`: the frame pointer register must either be updated to point
+      to a valid frame record for the current function, or not be modified.
+    - `non_leaf`: the frame pointer should be kept if the function calls
+      other functions.
+    - `non_leaf_no_reserve`: like `non_leaf`, but a leaf function may use
+      the frame pointer register for other purposes.
+    - `all`: the frame pointer should be kept.
 
-    The kind is a minimum: the code generator may keep a frame pointer that
-    the kind allows it to eliminate.  On a function the attribute applies
-    to that function.  On the module it applies to the functions LLVM
-    creates after CIR is lowered, such as sanitizer constructors.  A
-    function or module without the attribute behaves as `none`.
+    On a function, the attribute applies to that function.  On the module,
+    it becomes the `frame-pointer` module flag, which LLVM applies to the
+    functions it creates after CIR is lowered, such as sanitizer
+    constructors.  Without the attribute, the kind is `none`.
 
     Example:
 
