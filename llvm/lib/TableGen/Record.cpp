@@ -32,7 +32,6 @@
 #include "llvm/TableGen/TGTimer.h"
 #include <cassert>
 #include <cstdint>
-#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -72,7 +71,7 @@ struct detail::RecordKeeperImpl {
 
   UniquingSet<ArgumentInit> TheArgumentInitPool;
   UniquingSet<BitsInit> TheBitsInitPool;
-  std::map<int64_t, IntInit *> TheIntInitPool;
+  DenseMap<int64_t, IntInit *> TheIntInitPool;
   StringMap<const StringInit *, BumpPtrAllocator &> StringInitStringPool;
   StringMap<const StringInit *, BumpPtrAllocator &> StringInitCodePool;
   UniquingSet<ListInit> TheListInitPool;
@@ -394,6 +393,9 @@ const ArgumentInit *ArgumentInit::get(const Init *Value, ArgAuxType Aux) {
 }
 
 const Init *ArgumentInit::resolveReferences(Resolver &R) const {
+  if (isTriviallyResolved())
+    return this;
+
   const Init *NewValue = Value->resolveReferences(R);
   if (NewValue != Value)
     return cloneWithValue(NewValue);
@@ -425,6 +427,8 @@ BitsInit::BitsInit(RecordKeeper &RK, ArrayRef<const Init *> Bits)
     : TypedInit(IK_BitsInit, BitsRecTy::get(RK, Bits.size())),
       NumBits(Bits.size()) {
   llvm::uninitialized_copy(Bits, getTrailingObjects());
+  // Other values are converted to a bit when resolved.
+  TriviallyResolved = all_of(Bits, IsaPred<BitInit, UnsetInit>);
 }
 
 BitsInit *BitsInit::get(RecordKeeper &RK, ArrayRef<const Init *> Bits) {
@@ -518,6 +522,9 @@ std::string BitsInit::getAsString() const {
 // resolveReferences - If there are any field references that refer to fields
 // that have been filled in, we can propagate the values now.
 const Init *BitsInit::resolveReferences(Resolver &R) const {
+  if (isTriviallyResolved())
+    return this;
+
   bool Changed = false;
   SmallVector<const Init *, 16> NewBits(getNumBits());
 
@@ -650,6 +657,8 @@ ListInit::ListInit(ArrayRef<const Init *> Elements, const RecTy *EltTy)
     : TypedInit(IK_ListInit, ListRecTy::get(EltTy)),
       NumElements(Elements.size()) {
   llvm::uninitialized_copy(Elements, getTrailingObjects());
+  TriviallyResolved = all_of(
+      Elements, [](const Init *Elt) { return Elt->isTriviallyResolved(); });
 }
 
 const ListInit *ListInit::get(ArrayRef<const Init *> Elements,
@@ -707,6 +716,9 @@ const Record *ListInit::getElementAsRecord(unsigned Idx) const {
 }
 
 const Init *ListInit::resolveReferences(Resolver &R) const {
+  if (isTriviallyResolved())
+    return this;
+
   SmallVector<const Init *, 8> Resolved;
   Resolved.reserve(size());
   bool Changed = false;
@@ -2609,6 +2621,9 @@ DagInit::DagInit(const Init *V, const StringInit *VN,
       ValName(VN), NumArgs(Args.size()) {
   llvm::uninitialized_copy(Args, getTrailingObjects<const Init *>());
   llvm::uninitialized_copy(ArgNames, getTrailingObjects<const StringInit *>());
+  TriviallyResolved =
+      V->isTriviallyResolved() &&
+      all_of(Args, [](const Init *Arg) { return Arg->isTriviallyResolved(); });
 }
 
 const DagInit *DagInit::get(const Init *V, const StringInit *VN,
@@ -2658,6 +2673,9 @@ std::optional<unsigned> DagInit::getArgNo(StringRef Name) const {
 }
 
 const Init *DagInit::resolveReferences(Resolver &R) const {
+  if (isTriviallyResolved())
+    return this;
+
   SmallVector<const Init *, 8> NewArgs;
   NewArgs.reserve(arg_size());
   bool ArgsChanged = false;
@@ -2702,7 +2720,7 @@ std::string DagInit::getAsString() const {
 //===----------------------------------------------------------------------===//
 
 RecordVal::RecordVal(const Init *N, const RecTy *T, FieldKind K)
-    : Name(N), TyAndKind(T, K) {
+    : Name(N), TyAndFlags(T, K) {
   setValue(UnsetInit::get(N->getRecordKeeper()));
   assert(Value && "Cannot create unset value for current type!");
 }
@@ -2710,7 +2728,7 @@ RecordVal::RecordVal(const Init *N, const RecTy *T, FieldKind K)
 // This constructor accepts the same arguments as the above, but also
 // a source location.
 RecordVal::RecordVal(const Init *N, SMLoc Loc, const RecTy *T, FieldKind K)
-    : Name(N), Loc(Loc), TyAndKind(T, K) {
+    : Name(N), Loc(Loc), TyAndFlags(T, K) {
   setValue(UnsetInit::get(N->getRecordKeeper()));
   assert(Value && "Cannot create unset value for current type!");
 }
@@ -2730,7 +2748,7 @@ std::string RecordVal::getPrintType() const {
       return "string";
     }
   } else {
-    return TyAndKind.getPointer()->getAsString();
+    return getType()->getAsString();
   }
 }
 

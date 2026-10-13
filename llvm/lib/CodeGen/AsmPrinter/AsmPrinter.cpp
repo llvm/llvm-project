@@ -539,11 +539,6 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   AddrLabelSymbols = nullptr;
 
-  // Initialize TargetLoweringObjectFile.
-  TM.getObjFileLowering()->Initialize(OutContext, TM);
-
-  TM.getObjFileLowering()->getModuleMetadata(M);
-
   // On AIX, we delay emitting any section information until
   // after emitting the .file pseudo-op. This allows additional
   // information (such as the embedded command line) to be associated
@@ -1438,10 +1433,6 @@ AsmPrinter::getFunctionCFISectionType(const Function &F) const {
 AsmPrinter::CFISection
 AsmPrinter::getFunctionCFISectionType(const MachineFunction &MF) const {
   return getFunctionCFISectionType(MF.getFunction());
-}
-
-bool AsmPrinter::needsSEHMoves() {
-  return MAI.usesWindowsCFI() && MF->getFunction().needsUnwindTableEntry();
 }
 
 bool AsmPrinter::usesCFIWithoutEH() const {
