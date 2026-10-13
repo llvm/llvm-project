@@ -669,7 +669,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.is64Bit() && ST.hasStdExtF(), {{s32, s32}})
       .customFor(ST.is64Bit() && ST.hasStdExtD(), {{s32, s64}})
       .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
-      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .minScalar(1, s32)
       .libcallFor({{s32, s32},
                    {s64, s32},
                    {s32, s64},
@@ -682,7 +682,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
       .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
       .minScalar(0, sXLen)
-      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .minScalar(1, s32)
       .libcallFor({{s32, s32},
                    {s64, s32},
                    {s32, s64},
