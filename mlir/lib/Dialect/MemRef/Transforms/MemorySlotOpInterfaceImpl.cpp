@@ -51,50 +51,58 @@
 using namespace mlir;
 using namespace mlir::memref;
 using namespace mlir::vector;
+
 //===----------------------------------------------------------------------===//
 //  Utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns whether `subView` can be promoted as an alias of a sub-vector.
-/// Promotion uses `vector.extract_strided_slice` and
-/// `vector.insert_strided_slice`, which require:
-///   * fully static offsets and sizes,
-///   * unit strides,
-///   * no rank reduction (result rank == source rank),
-/// Dynamic shapes are handled by `isAliasableDynamicShapeSubView` instead.
+/// Checks the requirements shared by static and dynamic subview aliases: a
+/// parent with a static shape and a valid vector element type, no rank
+/// reduction, and unit slice strides.
+static bool isUnitStrideSliceOfStaticParent(memref::SubViewOp subView) {
+  MemRefType srcType = subView.getSourceType();
+  if (!srcType.hasStaticShape())
+    return false;
+
+  if (srcType.getRank() != subView.getType().getRank())
+    return false;
+
+  if (!subView.hasUnitStride())
+    return false;
+
+  return VectorType::isValidElementType(srcType.getElementType());
+}
+
+/// Returns whether `subView` can alias a slice of the parent vector using
+/// `vector.extract_strided_slice` and `vector.insert_strided_slice`.
+/// Requires static source and result shapes, constant offsets, unit strides,
+/// and no rank reduction.
 static bool isAliasableStaticShapeSubView(memref::SubViewOp subView) {
-  auto srcType = dyn_cast<MemRefType>(subView.getSource().getType());
-  auto resType = dyn_cast<MemRefType>(subView.getResult().getType());
-  if (!srcType || !resType || !srcType.hasStaticShape() ||
-      !resType.hasStaticShape())
+  if (!subView.getType().hasStaticShape())
     return false;
 
-  // No rank reduction: extract/insert_strided_slice operate at a single rank.
-  if (srcType.getRank() != resType.getRank())
+  if (!isUnitStrideSliceOfStaticParent(subView))
     return false;
 
-  // Unit strides only.
-  for (OpFoldResult stride : subView.getMixedStrides()) {
-    std::optional<int64_t> s = getConstantIntValue(stride);
-    if (!s || *s != 1)
-      return false;
-  }
+  return llvm::all_of(subView.getMixedOffsets(), [](OpFoldResult offset) {
+    return getConstantIntValue(offset).has_value();
+  });
+}
 
-  // Static offsets.
-  for (OpFoldResult offset : subView.getMixedOffsets()) {
-    if (!getConstantIntValue(offset))
-      return false;
-  }
+/// Returns whether `subView` can be promoted as an alias of the whole parent
+/// vector. Requires a static source shape, a dynamic result shape, zero
+/// offsets, unit strides, and no rank reduction.
+static bool isAliasableDynamicShapeSubView(memref::SubViewOp subView) {
+  if (subView.getType().hasStaticShape())
+    return false;
 
-  // Static sizes (already implied by the result's static shape, but the sizes
-  // must match the result shape so the slice covers exactly the subview).
-  for (auto [size, dim] :
-       llvm::zip_equal(subView.getMixedSizes(), resType.getShape())) {
-    std::optional<int64_t> s = getConstantIntValue(size);
-    if (!s || *s != dim)
-      return false;
-  }
-  return true;
+  if (!isUnitStrideSliceOfStaticParent(subView))
+    return false;
+
+  /// The alias uses the parent vector's shape because vector dimensions cannot
+  /// be dynamic. Zero offsets allow `vector.create_mask` to select the
+  /// subview's extent.
+  return subView.hasZeroOffset();
 }
 
 /// Returns the static offsets of `subView` within the parent vector for
@@ -107,34 +115,6 @@ static SmallVector<int64_t> getStaticSubViewOffsets(memref::SubViewOp subView) {
     offsets.push_back(*value);
   }
   return offsets;
-}
-
-/// Returns whether `subView` can be promoted as an alias of the whole parent
-/// vector. Static shapes are handled by `isAliasableStaticShapeSubView`
-/// instead.
-static bool isAliasableDynamicShapeSubView(memref::SubViewOp subView) {
-  // The parent must be statically shaped so the slot has a fixed-shape vector
-  // type; only the subview's sizes may be dynamic.
-  auto srcType = dyn_cast<MemRefType>(subView.getSource().getType());
-  auto resType = dyn_cast<MemRefType>(subView.getResult().getType());
-  if (!srcType || !resType || !srcType.hasStaticShape())
-    return false;
-
-  // At least one dynamic result dimension; a fully static sub-slice is handled
-  // by `isAliasableStaticShapeSubView` instead.
-  if (resType.hasStaticShape())
-    return false;
-
-  // Same rank: the read/write vector matches the parent rank.
-  if (srcType.getRank() != resType.getRank())
-    return false;
-
-  // Unit strides and zero offsets: a leading, contiguous sub-region starting at
-  // the parent's origin, so the valid region on each dim is exactly [0, size).
-  if (!subView.hasUnitStride() || !subView.hasZeroOffset())
-    return false;
-
-  return VectorType::isValidElementType(srcType.getElementType());
 }
 
 /// The vector type covering `subView`'s whole parent buffer, which is the type
@@ -163,6 +143,18 @@ static Value buildSubViewMask(OpBuilder &builder, Location loc,
   return vector::CreateMaskOp::create(
       builder, loc,
       VectorType::get(parentVecType.getShape(), builder.getI1Type()), bounds);
+}
+
+bool mlir::memref::isDynamicSubViewSlot(Value slotPtr) {
+  return static_cast<bool>(getDynamicSubView(slotPtr));
+}
+
+Value mlir::memref::buildDynamicSubViewMask(OpBuilder &builder, Location loc,
+                                            Value slotPtr) {
+  memref::SubViewOp subView = getDynamicSubView(slotPtr);
+  if (!subView)
+    return {};
+  return buildSubViewMask(builder, loc, subView);
 }
 
 namespace {
@@ -231,8 +223,6 @@ struct SubViewOpAliasModel
     // A static slice aliases the sub-vector matching the subview's shape.
     if (isAliasableStaticShapeSubView(subView)) {
       auto resType = cast<MemRefType>(subView.getResult().getType());
-      if (!VectorType::isValidElementType(resType.getElementType()))
-        return;
       VectorType aliasVecType =
           VectorType::get(resType.getShape(), resType.getElementType());
       newSlots.push_back(MemorySlot{subView.getResult(), aliasVecType});
@@ -290,22 +280,6 @@ struct SubViewOpAliasModel
   }
 };
 } // namespace
-
-//===----------------------------------------------------------------------===//
-//  Queries for the models of ops that access a slot
-//===----------------------------------------------------------------------===//
-
-bool mlir::memref::isDynamicSubViewSlot(Value slotPtr) {
-  return static_cast<bool>(getDynamicSubView(slotPtr));
-}
-
-Value mlir::memref::buildDynamicSubViewMask(OpBuilder &builder, Location loc,
-                                            Value slotPtr) {
-  memref::SubViewOp subView = getDynamicSubView(slotPtr);
-  if (!subView)
-    return {};
-  return buildSubViewMask(builder, loc, subView);
-}
 
 //===----------------------------------------------------------------------===//
 //  Register external models
