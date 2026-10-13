@@ -8810,6 +8810,16 @@ multiclass ConcatPat<ValueType DstTy, ValueType SrcTy,
   def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn), immAllZerosV)),
             (SUBREG_TO_REG (FMOVDr V64:$Rn), dsub)>;
 
+  // Similar to the pattern above, but the high lanes can also be initialized to
+  // zero through a bitconvert of an i64 or f64 zero scalar.
+  def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn),
+                        (SrcTy (bitconvert (i64 0))))),
+              (DstTy (SUBREG_TO_REG (FMOVDr V64:$Rn), dsub))>;
+
+  def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn),
+                        (SrcTy (bitconvert (f64 fpimm0))))),
+              (DstTy (SUBREG_TO_REG (FMOVDr V64:$Rn), dsub))>;
+
   // If the high lanes are undef we can just ignore them:
   def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn), undef)),
             (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub)>;

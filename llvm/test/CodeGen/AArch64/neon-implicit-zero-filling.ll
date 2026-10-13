@@ -124,6 +124,16 @@ define <4 x i32> @reduce_smax_v4i32_zero_fill(<4 x i32> %a) {
   ret <4 x i32> %t2
 }
 
+define <2 x i64> @reduce_smax_v1i64_zero_fill(<1 x i64> %a) {
+; CHECK-LABEL: reduce_smax_v1i64_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+  %t1 = call i64 @llvm.vector.reduce.smax.v1i64(<1 x i64> %a)
+  %t2 = insertelement <2 x i64> zeroinitializer, i64 %t1, i64 0
+  ret <2 x i64> %t2
+}
+
 define <8 x i8> @reduce_umax_v8i8_zero_fill(<8 x i8> %a) {
 ; CHECK-LABEL: reduce_umax_v8i8_zero_fill:
 ; CHECK:       // %bb.0:
@@ -395,6 +405,16 @@ define <4 x float> @reduce_fmin_v4f32_zero_fill(<4 x float> %a) {
   %t2 = insertelement <4 x float> zeroinitializer, float %t1, i64 0
   ret <4 x float> %t2
 
+}
+
+define <2 x double> @reduce_fmin_v1f64_zero_fill(<1 x double> %a) {
+; CHECK-LABEL: reduce_fmin_v1f64_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+  %t1 = call double @llvm.vector.reduce.fmin.v1f64(<1 x double> %a)
+  %t2 = insertelement <2 x double> zeroinitializer, double %t1, i64 0
+  ret <2 x double> %t2
 }
 
 attributes #0 = { "target-features"="+fullfp16" }
