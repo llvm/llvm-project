@@ -1088,11 +1088,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
                          Custom);
       if (!Subtarget.avoidFixedPoint())
-        setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS,
-                            ISD::AVGCEILU},
-                           VT, Legal);
-      setOperationAction({ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT},
-                         VT, Legal);
+        setOperationAction(
+            {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS, ISD::AVGCEILU}, VT,
+            Legal);
+      setOperationAction(
+          {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT, Legal);
 
       // Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR_VL"
       // nodes which truncate by one power of two at a time.
@@ -1655,11 +1655,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Custom);
 
         if (!Subtarget.avoidFixedPoint())
-          setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS,
-                              ISD::AVGCEILU},
-                             VT, Custom);
-        setOperationAction({ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT},
-                           VT, Custom);
+          setOperationAction(
+              {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS, ISD::AVGCEILU},
+              VT, Custom);
+        setOperationAction(
+            {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT,
+            Custom);
 
         setOperationAction(ISD::VSELECT, VT, Custom);
 
