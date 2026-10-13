@@ -10,6 +10,15 @@
 ; RUN:   | FileCheck %s --check-prefix=NO-TRIPLE-INPUT
 ; NO-TRIPLE-INPUT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ;
+; Test that only the architecture is recorded in the offload image, both when
+; the full triple comes from -triple= and when it is inferred from the input.
+; RUN: clang-sycl-linker --dry-run -v -triple=spirv64-unknown-unknown %t/no-triple.bc -o %t/short-explicit.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=SHORT-TRIPLE
+; RUN: llvm-as %t/full-triple.ll -o %t/full-triple.bc
+; RUN: clang-sycl-linker --dry-run -v %t/full-triple.bc -o %t/short-inferred.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=SHORT-TRIPLE
+; SHORT-TRIPLE: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
+;
 ; Test that triple was inferred from inputs and recorded in the offload image.
 ; RUN: llvm-as %t/input1.ll -o %t/input1.bc
 ; RUN: llvm-as %t/input2.ll -o %t/input2.bc
@@ -80,6 +89,15 @@ define spir_kernel void @kernel_d() #0 {
 }
 
 attributes #0 = { "sycl-module-id"="TU4.cpp" }
+
+;--- full-triple.ll
+target triple = "spirv64-unknown-unknown"
+
+define spir_kernel void @kernel_e() #0 {
+  ret void
+}
+
+attributes #0 = { "sycl-module-id"="TU5.cpp" }
 
 ;--- archive-full-triple.ll
 target triple = "spirv64-unknown-unknown"

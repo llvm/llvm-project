@@ -1043,8 +1043,12 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     OffloadingImage TheImage{};
     TheImage.TheImageKind = IsAOTCompileNeeded ? IMG_Object : IMG_SPIRV;
     TheImage.TheOffloadKind = OFK_SYCL;
+    // Pack the short form of the triple. The runtime only needs to know which
+    // binary format the image holds, and the architecture is the single
+    // canonical spelling of it: inputs may spell the same target as 'spirv64'
+    // or 'spirv64-unknown-unknown'.
     TheImage.StringData["triple"] =
-        Args.MakeArgString(Result.TargetTriple.str());
+        Args.MakeArgString(Result.TargetTriple.getArchName());
     TheImage.StringData["arch"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
     TheImage.StringData["symbols"] = SI.Symbols;

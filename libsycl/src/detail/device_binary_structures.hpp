@@ -26,9 +26,11 @@ namespace detail {
 /// A device type represented by a particular target
 /// triple requires specific binary images. We need
 /// to map the image type onto the device target triple.
+/// clang-sycl-linker packs the short form of the triple, i.e. the
+/// architecture only, so these strings carry no vendor/OS components.
 
 /// SPIR-V with 64-bit pointers.
-static constexpr char DeviceBinaryTripleSPIRV64[] = "spirv64-unknown-unknown";
+static constexpr char DeviceBinaryTripleSPIRV64[] = "spirv64";
 
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
