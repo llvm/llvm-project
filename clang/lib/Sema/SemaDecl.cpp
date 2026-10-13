@@ -2611,9 +2611,9 @@ static bool isCompatibleBuiltinFunctionType(ASTContext &Context,
     if (!decodeNextBuiltinType(Context, TypeStr, BuiltinParamTy,
                                IsTargetTypedef))
       return false;
-    if (!isCompatibleBuiltinParamOrReturnType(
-            Context, DeclFn->getParamType(ParamIdx), BuiltinParamTy,
-            IsTargetTypedef))
+    if (!isCompatibleBuiltinParamOrReturnType(Context,
+                                              DeclFn->getParamType(ParamIdx),
+                                              BuiltinParamTy, IsTargetTypedef))
       return false;
     ++ParamIdx;
   }
@@ -11431,7 +11431,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
               ASTContext::GetBuiltinTypeError Error;
               LookupNecessaryTypesForBuiltin(S, BuiltinID);
               QualType BuiltinType = Context.GetBuiltinType(BuiltinID, Error);
-              const char *TypeStr = Context.BuiltinInfo.getTypeString(BuiltinID);
+              const char *TypeStr =
+                  Context.BuiltinInfo.getTypeString(BuiltinID);
 
               if ((!Error && !BuiltinType.isNull() &&
                    Context.hasSameFunctionTypeIgnoringExceptionSpec(
