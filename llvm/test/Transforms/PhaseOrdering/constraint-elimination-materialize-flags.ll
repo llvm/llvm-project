@@ -28,8 +28,6 @@ define void @index_mask_removed(ptr %A, i16 %start, i16 %v, i16 %n) {
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[LOOP_BODY_PREHEADER3]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP3]], 131068
-; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[N_VEC]] to i16
-; CHECK-NEXT:    [[TMP13:%.*]] = add i16 [[START]], [[TMP12]]
 ; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub i16 [[START]], [[V]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -44,10 +42,12 @@ define void @index_mask_removed(ptr %A, i16 %start, i16 %v, i16 %n) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP19:%.*]] = trunc i32 [[N_VEC]] to i16
+; CHECK-NEXT:    [[TMP20:%.*]] = add i16 [[START]], [[TMP19]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT]], label %[[LOOP_BODY_PREHEADER3]]
 ; CHECK:       [[LOOP_BODY_PREHEADER3]]:
-; CHECK-NEXT:    [[IV2_PH:%.*]] = phi i16 [ [[START]], %[[VECTOR_SCEVCHECK]] ], [ [[START]], %[[LOOP_BODY_PREHEADER]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[IV2_PH:%.*]] = phi i16 [ [[START]], %[[VECTOR_SCEVCHECK]] ], [ [[START]], %[[LOOP_BODY_PREHEADER]] ], [ [[TMP20]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_BODY:.*]]
 ; CHECK:       [[LOOP_BODY]]:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP_BODY]] ], [ [[IV2_PH]], %[[LOOP_BODY_PREHEADER3]] ]
