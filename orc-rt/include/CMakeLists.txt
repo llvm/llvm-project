@@ -27,6 +27,7 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/SocketHandle.h
     orc-rt/bedrock/TaskGroup.h
     orc-rt/bedrock/ThreadPoolRunner.h
+    orc-rt/bedrock/VettedPeer.h
     orc-rt/bedrock/sps/AllSPSCI.h
     orc-rt/bedrock/sps/CallSPSCI.h
     orc-rt/bedrock/sps/GDBJITRegistrarSPSCI.h
@@ -51,6 +52,8 @@ set(ORC_RT_HEADERS
     orc-rt/support/Proxy.h
     orc-rt/support/RTTI.h
     orc-rt/support/StringPool.h
+    orc-rt/support/SymbolLookupFlags.h
+    orc-rt/support/SymbolLookupSet.h
     orc-rt/support/WrapperFunction.h
     orc-rt/support/bind.h
     orc-rt/support/bit.h
@@ -60,13 +63,14 @@ set(ORC_RT_HEADERS
     orc-rt/support/span.h
     orc-rt/support/sps/SPSAllocAction.h
     orc-rt/support/sps/SPSMemoryFlags.h
+    orc-rt/support/sps/SPSSymbolLookupSet.h
     orc-rt/support/sps/SPSWrapperFunction.h
     orc-rt/support/sps/SPSWrapperFunctionBuffer.h
     orc-rt/support/sps/SimplePackedSerialization.h
 )
 
 # Headers for POSIX-only interfaces, installed only where they're implemented.
-if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (ORC_RT_TARGET_POSIX)
   list(APPEND ORC_RT_HEADERS
     orc-rt/bedrock/sps/DWARFEHFrameRegistrarSPSCI.h
   )

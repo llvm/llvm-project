@@ -6033,11 +6033,19 @@ getMoreSpecializedTrailingPackTieBreaker(
   ArrayRef<TemplateArgument> As1 = TST1->template_arguments(),
                              As2 = TST2->template_arguments();
   const TemplateArgument &TA1 = As1.back(), &TA2 = As2.back();
-  bool IsPack = TA1.getKind() == TemplateArgument::Pack;
-  assert(IsPack == (TA2.getKind() == TemplateArgument::Pack));
-  if (!IsPack)
+  // C++26 [temp.deduct.partial]p11:
+  //   If, after considering the above, function template F is at least as
+  //   specialized as function template G and vice-versa, and if G has a
+  //   trailing function parameter pack for which F does not have a
+  //   corresponding parameter, and if F does not have a trailing function
+  //   parameter pack, then F is more specialized than G.
+  bool IsPack1 = TA1.getKind() == TemplateArgument::Pack;
+  bool IsPack2 = TA2.getKind() == TemplateArgument::Pack;
+  if (IsPack1 != IsPack2)
+    return IsPack1 ? MoreSpecializedTrailingPackTieBreakerResult::More
+                   : MoreSpecializedTrailingPackTieBreakerResult::Less;
+  if (!IsPack1 || As1.size() != As2.size())
     return MoreSpecializedTrailingPackTieBreakerResult::Equal;
-  assert(As1.size() == As2.size());
 
   unsigned PackSize1 = TA1.pack_size(), PackSize2 = TA2.pack_size();
   bool IsPackExpansion1 =

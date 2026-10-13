@@ -13,15 +13,15 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    movb $1, %cl
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb.i5
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    addl %esi, %esi
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %mp_unexp_mp2d.exit.i
 ; CHECK-NEXT:    je .LBB0_3
@@ -29,7 +29,7 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  # %bb.6: # %cond_next36.i
 ; CHECK-NEXT:    movl $0, 0
-; CHECK-NEXT:    movzbl %cl, %ebp
+; CHECK-NEXT:    movzbl %al, %ebp
 ; CHECK-NEXT:    andl $1, %ebp
 ; CHECK-NEXT:    xorpd %xmm0, %xmm0
 ; CHECK-NEXT:    xorl %eax, %eax

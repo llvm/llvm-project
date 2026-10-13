@@ -57,6 +57,25 @@ static void populateShift(llvm::SmallVectorImpl<mlir::Value> &vec,
   vec.append(shift.getOrigins().begin(), shift.getOrigins().end());
 }
 
+/// Report a shape or slice the rewrites cannot read.
+///
+/// They are folded into the code-gen form through their defining op, so a
+/// value that has none -- a block argument, or the result of a select --
+/// cannot be folded. Saying so is better than what the rewrites would
+/// otherwise do: describe the whole array instead of the section it names.
+static llvm::LogicalResult checkFoldableShapeAndSlice(mlir::Operation *op,
+                                                      mlir::Value shape,
+                                                      mlir::Value slice) {
+  if (shape &&
+      !mlir::isa_and_nonnull<fir::ShapeOp, fir::ShapeShiftOp, fir::ShiftOp>(
+          shape.getDefiningOp()))
+    return op->emitOpError("shape operand is not defined by a fir.shape, "
+                           "fir.shape_shift or fir.shift");
+  if (slice && !mlir::isa_and_nonnull<fir::SliceOp>(slice.getDefiningOp()))
+    return op->emitOpError("slice operand is not defined by a fir.slice");
+  return llvm::success();
+}
+
 // Helper to emit embox/rebox for OPTIONAL input inside a block
 // guarded by a runtime presence check and to return an absent
 // box when the input is not present.
@@ -136,6 +155,10 @@ public:
     llvm::FailureOr<RewriteKind> rewriteKind = getRewriteKind(embox);
     if (llvm::failed(rewriteKind))
       return llvm::failure();
+    if (*rewriteKind == RewriteKind::Dynamic &&
+        llvm::failed(checkFoldableShapeAndSlice(embox, embox.getShape(),
+                                                embox.getSlice())))
+      return llvm::failure();
     if (embox.getOptional()) {
       mlir::Value newBox = emitOptionalBoxGuard(rewriter, embox, [&] {
         return matchAndRewriteImpl(embox, rewriter, *rewriteKind)->getResult(0);
@@ -194,27 +217,30 @@ public:
     auto loc = embox.getLoc();
     llvm::SmallVector<mlir::Value> shapeOpers;
     llvm::SmallVector<mlir::Value> shiftOpers;
-    if (auto shapeOp = mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp())) {
+    // matchAndRewrite has already reported a shape this cannot read.
+    mlir::Operation *shapeDef = shapeVal.getDefiningOp();
+    if (auto shapeOp = mlir::dyn_cast_or_null<fir::ShapeOp>(shapeDef)) {
       populateShape(shapeOpers, shapeOp);
     } else {
-      auto shiftOp =
-          mlir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp());
+      auto shiftOp = mlir::dyn_cast_or_null<fir::ShapeShiftOp>(shapeDef);
       assert(shiftOp && "shape is neither fir.shape nor fir.shape_shift");
       populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
     }
     llvm::SmallVector<mlir::Value> sliceOpers;
     llvm::SmallVector<mlir::Value> subcompOpers;
     llvm::SmallVector<mlir::Value> substrOpers;
-    if (auto s = embox.getSlice())
-      if (auto sliceOp =
-              mlir::dyn_cast_or_null<fir::SliceOp>(s.getDefiningOp())) {
-        sliceOpers.assign(sliceOp.getTriples().begin(),
-                          sliceOp.getTriples().end());
-        subcompOpers.assign(sliceOp.getFields().begin(),
-                            sliceOp.getFields().end());
-        substrOpers.assign(sliceOp.getSubstr().begin(),
-                           sliceOp.getSubstr().end());
-      }
+    if (auto s = embox.getSlice()) {
+      auto sliceOp = mlir::dyn_cast_or_null<fir::SliceOp>(s.getDefiningOp());
+      // matchAndRewrite has already reported a slice this cannot read.
+      // Dropping it would describe the whole array instead of the section.
+      assert(sliceOp && "slice is not defined by a fir.slice");
+      sliceOpers.assign(sliceOp.getTriples().begin(),
+                        sliceOp.getTriples().end());
+      subcompOpers.assign(sliceOp.getFields().begin(),
+                          sliceOp.getFields().end());
+      substrOpers.assign(sliceOp.getSubstr().begin(),
+                         sliceOp.getSubstr().end());
+    }
     auto xbox = fir::cg::XEmboxOp::create(
         rewriter, loc, embox.getType(), embox.getMemref(), shapeOpers,
         shiftOpers, sliceOpers, subcompOpers, substrOpers,
@@ -244,6 +270,9 @@ public:
   llvm::LogicalResult
   matchAndRewrite(fir::ReboxOp rebox,
                   mlir::PatternRewriter &rewriter) const override {
+    if (llvm::failed(checkFoldableShapeAndSlice(rebox, rebox.getShape(),
+                                                rebox.getSlice())))
+      return llvm::failure();
     if (rebox.getOptional()) {
       mlir::Value newBox = emitOptionalBoxGuard(rewriter, rebox, [&] {
         return matchAndRewriteImpl(rebox, rewriter)->getResult(0);
@@ -316,6 +345,9 @@ public:
   llvm::LogicalResult
   matchAndRewrite(fir::ArrayCoorOp arrCoor,
                   mlir::PatternRewriter &rewriter) const override {
+    if (llvm::failed(checkFoldableShapeAndSlice(arrCoor, arrCoor.getShape(),
+                                                arrCoor.getSlice())))
+      return llvm::failure();
     auto loc = arrCoor.getLoc();
     llvm::SmallVector<mlir::Value> shapeOpers;
     llvm::SmallVector<mlir::Value> shiftOpers;

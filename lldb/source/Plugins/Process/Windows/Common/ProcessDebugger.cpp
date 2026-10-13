@@ -312,6 +312,18 @@ Status ProcessDebugger::DestroyProcess(const lldb::StateType state) {
   return error;
 }
 
+void ProcessDebugger::EndDebugSession() {
+  DebuggerThreadSP debugger_thread;
+  {
+    llvm::sys::ScopedLock lock(m_mutex);
+    if (!m_session_data)
+      return;
+    debugger_thread = m_session_data->m_debugger;
+  }
+  debugger_thread->StopDebugging(/*terminate=*/true);
+  m_session_data.reset();
+}
+
 Status ProcessDebugger::HaltProcess(bool &caused_stop) {
   Log *log = GetLog(WindowsLog::Process);
   Status error;

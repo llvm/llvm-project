@@ -59,19 +59,6 @@ static char *ProfileTraceFile = nullptr;
 #define SHM_SIZE 1024
 #endif
 
-#if defined(KMP_GOMP_COMPAT)
-char const __kmp_version_alt_comp[] =
-    KMP_VERSION_PREFIX "alternative compiler support: yes";
-#endif /* defined(KMP_GOMP_COMPAT) */
-
-char const __kmp_version_omp_api[] =
-    KMP_VERSION_PREFIX "API version: 5.0 (201611)";
-
-#ifdef KMP_DEBUG
-char const __kmp_version_lock[] =
-    KMP_VERSION_PREFIX "lock type: run time selectable";
-#endif /* KMP_DEBUG */
-
 #define KMP_MIN(x, y) ((x) < (y) ? (x) : (y))
 
 /* ------------------------------------------------------------------------ */

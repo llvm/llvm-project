@@ -48,10 +48,10 @@ end function
 ! CHECK-SAME: %[[ARG0:.*]]: i32 {fir.bindc_name = "i"}) -> !fir.char<1> attributes {fir.bindc_name = "f_int_to_char", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
 ! CHECK: %[[TEMP:.*]] = fir.alloca !fir.char<1>
 ! CHECK: %[[RESULT:.*]] = fir.alloca !fir.char<1> <{bindc_name = "f_int_to_char", uniq_name = "_QFf_int_to_charEf_int_to_char"}>
-! CHECK: %[[RESULT_DECL:.*]]:2 = hlfir.declare %[[RESULT]] typeparams %c1{{.*}} {uniq_name = "_QFf_int_to_charEf_int_to_char"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+! CHECK: %[[RESULT_DECL:.*]]:2 = hlfir.declare %[[RESULT]] typeparams %c1{{.*}} uniq_name("_QFf_int_to_charEf_int_to_char") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 ! CHECK: %[[INT_I:.*]] = fir.alloca i32
 ! CHECK: fir.store %[[ARG0]] to %[[INT_I]] : !fir.ref<i32>
-! CHECK: %[[INT_I_DECL:.*]]:2 = hlfir.declare %[[INT_I]] dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFf_int_to_charEi"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[INT_I_DECL:.*]]:2 = hlfir.declare %[[INT_I]] dummy_scope %{{.*}} arg 1 uniq_name("_QFf_int_to_charEi") fortran_attrs<value> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[ARG0_2:.*]] = fir.load %[[INT_I_DECL]]#0 : !fir.ref<i32>
 ! CHECK: %[[ARG0_I64:.*]] = fir.convert %[[ARG0_2]] : (i32) -> i64
 ! CHECK: %[[ARG0_I8:.*]] = fir.convert %[[ARG0_I64]] : (i64) -> i8

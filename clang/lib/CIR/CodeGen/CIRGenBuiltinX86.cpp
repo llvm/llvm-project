@@ -2425,42 +2425,52 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fadd_ph512:
   case X86::BI__builtin_ia32_reduce_fadd_ph256:
   case X86::BI__builtin_ia32_reduce_fadd_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "vector.reduce.fadd", ops[0].getType(),
-                                       mlir::ValueRange{ops[0], ops[1]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::reassoc;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
+    return cir::VecReduceFAddOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], ops[1], fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmul_pd512:
   case X86::BI__builtin_ia32_reduce_fmul_ps512:
   case X86::BI__builtin_ia32_reduce_fmul_ph512:
   case X86::BI__builtin_ia32_reduce_fmul_ph256:
   case X86::BI__builtin_ia32_reduce_fmul_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "vector.reduce.fmul", ops[0].getType(),
-                                       mlir::ValueRange{ops[0], ops[1]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::reassoc;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
+    return cir::VecReduceFMulOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], ops[1], fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmax_pd512:
   case X86::BI__builtin_ia32_reduce_fmax_ps512:
   case X86::BI__builtin_ia32_reduce_fmax_ph512:
   case X86::BI__builtin_ia32_reduce_fmax_ph256:
   case X86::BI__builtin_ia32_reduce_fmax_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
-    return builder.emitIntrinsicCallOp(
-        getLoc(expr->getExprLoc()), "vector.reduce.fmax",
-        vecTy.getElementType(), mlir::ValueRange{ops[0]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::nnan;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
+    return cir::VecReduceFMaxOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmin_pd512:
   case X86::BI__builtin_ia32_reduce_fmin_ps512:
   case X86::BI__builtin_ia32_reduce_fmin_ph512:
   case X86::BI__builtin_ia32_reduce_fmin_ph256:
   case X86::BI__builtin_ia32_reduce_fmin_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
-    return builder.emitIntrinsicCallOp(
-        getLoc(expr->getExprLoc()), "vector.reduce.fmin",
-        vecTy.getElementType(), mlir::ValueRange{ops[0]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::nnan;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
+    return cir::VecReduceFMinOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_rdrand16_step:
   case X86::BI__builtin_ia32_rdrand32_step:
@@ -2593,6 +2603,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vpshufbitqmb128_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb256_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb512_mask:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_cmpeqps:
   case X86::BI__builtin_ia32_cmpeqpd:
     return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::eq,
