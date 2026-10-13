@@ -731,8 +731,12 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Asm.LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
-                                      /*Errs=*/nullptr, /*VFS=*/VFS.get());
+    // With no stream to report to, the parser calls exit(), which ends the
+    // process that embeds clang. Keep its output where it already went.
+    if (!llvm::cl::ParseCommandLineOptions(
+            NumArgs + 1, Args.get(), /*Overview=*/"", /*Errs=*/&llvm::errs(),
+            /*VFS=*/VFS.get()))
+      Diags.Report(diag::err_fe_invalid_forwarded_option) << 0;
   }
 
   // Execute the invocation, unless there were parsing errors.

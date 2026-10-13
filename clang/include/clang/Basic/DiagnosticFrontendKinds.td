@@ -153,6 +153,8 @@ def err_cir_input_missing_triple : Error<
     "missing target triple in ClangIR input">;
 def err_cir_input_triple_mismatch : Error<
     "target triple '%0' of ClangIR input does not match the target '%1'">;
+def err_fe_invalid_forwarded_option : Error<
+    "invalid argument in '%select{-mllvm|-mmlir}0'">;
 def err_fe_invalid_multiple_actions : Error<
     "'%0' action ignored; '%1' action specified previously">;
 def err_fe_invalid_alignment : Error<
