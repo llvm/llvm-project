@@ -1,4 +1,4 @@
-//===- constexpr_hash.h - Classes for representing statements -------------*- C++ -*-===//
+//===- constexpr_hash.h - A hash function to use during constant evaluation -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
