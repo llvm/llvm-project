@@ -1854,6 +1854,23 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
   return DefCycle && DefCycle <= 1U;
 }
 
+bool TargetInstrInfo::isFunctionSafeToOutlineFrom(
+    MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
+  const Function &F = MF.getFunction();
+
+  // Can F be deduplicated by the linker? If it can, don't outline from it.
+  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
+    return false;
+
+  // Allow outlining from named section functions if the target can place the
+  // outlined function in the   same section.
+  if (F.hasSection() && !supportsSectionAwareOutlining())
+    return false;
+
+  // It's safe to outline from MF.
+  return true;
+}
+
 bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
   // TODO: We don't split functions where a section attribute has been set
   // since the split part may not be placed in a contiguous region. It may also
