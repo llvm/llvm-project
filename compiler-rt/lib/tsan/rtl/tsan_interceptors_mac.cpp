@@ -452,6 +452,20 @@ TSAN_INTERCEPTOR(int, objc_sync_exit, id obj) {
   return result;
 }
 
+TSAN_INTERCEPTOR(void, objc_storeStrong, id* location, id obj) {
+  SCOPED_TSAN_INTERCEPTOR(objc_storeStrong, location, obj);
+  // Under ARC, stores to __strong variables are lowered to objc_storeStrong;
+  // we model it as a plain write to *location. Do this even when
+  // ignore_interceptors_accesses is set, but only for instrumented callers.
+  bool in_ignored_lib;
+  if (!libignore()->IsIgnored(GET_CALLER_PC(), &in_ignored_lib)) {
+    SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
+    MemoryAccess(thr, pc, (uptr)location, sizeof(*location), kAccessWrite);
+    SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
+  }
+  REAL(objc_storeStrong)(location, obj);
+}
+
 TSAN_INTERCEPTOR(int, swapcontext, ucontext_t *oucp, const ucontext_t *ucp) {
   {
     SCOPED_INTERCEPTOR_RAW(swapcontext, oucp, ucp);
