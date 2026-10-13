@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=OGCG,LLVM-OGCG --input-file=%t.ll %s
 
 // References to const, non-volatile variables whose initializer can be
 // constant evaluated are emitted as the constant value, even when the variable
@@ -11,8 +11,7 @@
 // reference is to an enclosing variable captured by a lambda.
 
 // CIR-NOT: cir.global {{.*}}@__const.
-// LLVM-NOT: @__const.
-// OGCG-NOT: @__const.
+// LLVM-OGCG-NOT: @__const.
 
 float use(float);
 int side();
@@ -37,13 +36,10 @@ int non_captured() {
 // CIR:         %[[FOUR2:.*]] = cir.const #cir.int<4> : !s32i
 // CIR:         cir.store {{.*}}%[[FOUR2]], %[[RV]]
 
-// LLVM-LABEL: define {{.*}}i32 @_Z12non_capturedv()
-// LLVM:         store i32 4, ptr %{{.*}}
-// LLVM:         store i32 4, ptr %{{.*}}
-
-// OGCG-LABEL: define {{.*}}i32 @_Z12non_capturedv()
-// OGCG:         store i32 4, ptr %{{.*}}
-// OGCG:         ret i32 4
+// LLVM-OGCG-LABEL: define {{.*}}i32 @_Z12non_capturedv()
+// LLVM-OGCG:         store i32 4, ptr %{{.*}}
+// LLVM:              store i32 4, ptr %{{.*}}
+// OGCG:              ret i32 4
 
 int constexpr_var() {
   constexpr int c = 7;
@@ -57,11 +53,9 @@ int constexpr_var() {
 // CIR:         %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CIR:         cir.mul nsw %[[SEVEN]], %[[TWO]] : !s32i
 
-// LLVM-LABEL: define {{.*}}i32 @_Z13constexpr_varv()
-// LLVM:         store i32 14, ptr %{{.*}}
-
-// OGCG-LABEL: define {{.*}}i32 @_Z13constexpr_varv()
-// OGCG:         ret i32 14
+// LLVM-OGCG-LABEL: define {{.*}}i32 @_Z13constexpr_varv()
+// LLVM:              store i32 14, ptr %{{.*}}
+// OGCG:              ret i32 14
 
 _Complex float complex_var() {
   const _Complex float z = 1.0f;
@@ -75,12 +69,10 @@ _Complex float complex_var() {
 // CIR:         %[[Z:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<0.000000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR:         cir.store {{.*}}%[[Z]], %[[RV]]
 
-// LLVM-LABEL: define {{.*}} @_Z11complex_varv()
-// LLVM:         store { float, float } { float 1.000000e+00, float 0.000000e+00 }, ptr %{{.*}}
-
-// OGCG-LABEL: define {{.*}} @_Z11complex_varv()
-// OGCG:         store float 1.000000e+00, ptr %{{.*}}
-// OGCG:         store float 0.000000e+00, ptr %{{.*}}
+// LLVM-OGCG-LABEL: define {{.*}} @_Z11complex_varv()
+// LLVM:              store { float, float } { float 1.000000e+00, float 0.000000e+00 }, ptr %{{.*}}
+// OGCG:              store float 1.000000e+00, ptr %{{.*}}
+// OGCG:              store float 0.000000e+00, ptr %{{.*}}
 
 int global_var = 5;
 int captured_ref_to_global() {
@@ -102,13 +94,9 @@ int const_ref_to_nonconst_global() {
 // CIR:         %[[G:.*]] = cir.const #cir.global_view<@global_var> : !cir.ptr<!s32i>
 // CIR:         cir.load {{.*}}%[[G]] : !cir.ptr<!s32i>, !s32i
 
-// LLVM-LABEL: define {{.*}}i32 @_Z28const_ref_to_nonconst_globalv()
-// LLVM:         store ptr @global_var, ptr %{{.*}}
-// LLVM:         load i32, ptr @global_var
-
-// OGCG-LABEL: define {{.*}}i32 @_Z28const_ref_to_nonconst_globalv()
-// OGCG:         store ptr @global_var, ptr %{{.*}}
-// OGCG:         load i32, ptr @global_var
+// LLVM-OGCG-LABEL: define {{.*}}i32 @_Z28const_ref_to_nonconst_globalv()
+// LLVM-OGCG:         store ptr @global_var, ptr %{{.*}}
+// LLVM-OGCG:         load i32, ptr @global_var
 
 int g_arr[4] = {1, 2, 3, 4};
 int ref_to_array_element() {
@@ -122,11 +110,8 @@ int ref_to_array_element() {
 // CIR:         %[[ELT:.*]] = cir.const #cir.global_view<@g_arr, [1 : i32]> : !cir.ptr<!s32i>
 // CIR:         cir.load {{.*}}%[[ELT]] : !cir.ptr<!s32i>, !s32i
 
-// LLVM-LABEL: define {{.*}}i32 @_Z20ref_to_array_elementv()
-// LLVM:         load i32, ptr getelementptr inbounds nuw (i8, ptr @g_arr, i64 4)
-
-// OGCG-LABEL: define {{.*}}i32 @_Z20ref_to_array_elementv()
-// OGCG:         load i32, ptr getelementptr (i8, ptr @g_arr, i64 4)
+// LLVM-OGCG-LABEL: define {{.*}}i32 @_Z20ref_to_array_elementv()
+// LLVM-OGCG:         load i32, ptr getelementptr {{.*}}(i8, ptr @g_arr, i64 4)
 
 _Complex float gcf;
 float complex_ref() {
@@ -143,13 +128,11 @@ float complex_ref() {
 // CIR:         %[[V1:.*]] = cir.load {{.*}}%[[G1]]
 // CIR:         cir.complex.fadd %[[V0]], %[[V1]]
 
-// LLVM-LABEL: define {{.*}}float @_Z11complex_refv()
-// LLVM:         load { float, float }, ptr @gcf
-// LLVM:         load { float, float }, ptr @gcf
-
-// OGCG-LABEL: define {{.*}}float @_Z11complex_refv()
-// OGCG:         load float, ptr @gcf
-// OGCG:         load float, ptr getelementptr inbounds nuw (i8, ptr @gcf, i64 4)
+// LLVM-OGCG-LABEL: define {{.*}}float @_Z11complex_refv()
+// LLVM:              load { float, float }, ptr @gcf
+// LLVM:              load { float, float }, ptr @gcf
+// OGCG:              load float, ptr @gcf
+// OGCG:              load float, ptr getelementptr inbounds nuw (i8, ptr @gcf, i64 4)
 
 // A const pointer whose value is the address of a global.
 
@@ -164,11 +147,8 @@ int const_ptr_to_global() {
 // CIR:         %[[G:.*]] = cir.const #cir.global_view<@global_var> : !cir.ptr<!s32i>
 // CIR:         cir.load {{.*}}%[[G]] : !cir.ptr<!s32i>, !s32i
 
-// LLVM-LABEL: define {{.*}}i32 @_Z19const_ptr_to_globalv()
-// LLVM:         load i32, ptr @global_var
-
-// OGCG-LABEL: define {{.*}}i32 @_Z19const_ptr_to_globalv()
-// OGCG:         load i32, ptr @global_var
+// LLVM-OGCG-LABEL: define {{.*}}i32 @_Z19const_ptr_to_globalv()
+// LLVM-OGCG:         load i32, ptr @global_var
 
 // Constant pointers and integers that need dedicated LLVM constant expressions.
 
@@ -181,11 +161,8 @@ int const_absolute_ptr(void *p) {
 // CIR:         %[[FAILED:.*]] = cir.const #cir.ptr<-1 : i64> : !cir.ptr<!void>
 // CIR:         cir.cmp eq %{{.*}}, %[[FAILED]] : !cir.ptr<!void>
 
-// LLVM-LABEL: define {{.*}}i32 @_Z18const_absolute_ptrPv(
-// LLVM:         icmp eq ptr %{{.*}}, inttoptr (i64 -1 to ptr)
-
-// OGCG-LABEL: define {{.*}}i32 @_Z18const_absolute_ptrPv(
-// OGCG:         icmp eq ptr %{{.*}}, inttoptr (i64 -1 to ptr)
+// LLVM-OGCG-LABEL: define {{.*}}i32 @_Z18const_absolute_ptrPv(
+// LLVM-OGCG:         icmp eq ptr %{{.*}}, inttoptr (i64 -1 to ptr)
 
 void *const_label_addr(int i) {
   void *const target = &&l1;
@@ -205,13 +182,9 @@ l2:
 // CIR:         %[[DIFF:.*]] = cir.const #cir.block_addr_diff<@_Z16const_label_addri, "l2", "l1"> : !s64i
 // CIR:         cir.cast integral %[[DIFF]] : !s64i -> !u64i
 
-// LLVM-LABEL: define {{.*}}ptr @_Z16const_label_addri(
-// LLVM:         store ptr inttoptr (i64 sub (i64 ptrtoint (ptr blockaddress(@_Z16const_label_addri, %[[L2:.*]]) to i64), i64 ptrtoint (ptr blockaddress(@_Z16const_label_addri, %[[L1:.*]]) to i64)) to ptr), ptr %{{.*}}
-// LLVM:         phi ptr [ blockaddress(@_Z16const_label_addri, %[[L1]]), %{{.*}} ]
-
-// OGCG-LABEL: define {{.*}}ptr @_Z16const_label_addri(
-// OGCG:         store ptr inttoptr (i64 sub (i64 ptrtoint (ptr blockaddress(@_Z16const_label_addri, %l2) to i64), i64 ptrtoint (ptr blockaddress(@_Z16const_label_addri, %l1) to i64)) to ptr), ptr %{{.*}}
-// OGCG:         phi ptr [ blockaddress(@_Z16const_label_addri, %l1), %{{.*}} ]
+// LLVM-OGCG-LABEL: define {{.*}}ptr @_Z16const_label_addri(
+// LLVM-OGCG:         store ptr inttoptr (i64 sub (i64 ptrtoint (ptr blockaddress(@_Z16const_label_addri, %[[L2:.*]]) to i64), i64 ptrtoint (ptr blockaddress(@_Z16const_label_addri, %[[L1:.*]]) to i64)) to ptr), ptr %{{.*}}
+// LLVM-OGCG:         phi ptr [ blockaddress(@_Z16const_label_addri, %[[L1]]), %{{.*}} ]
 
 // Static data members named through a member access.
 
@@ -224,12 +197,10 @@ float static_member(S s) { return s.kf; }
 // CIR-NOT:     cir.get_global
 // CIR:         cir.const #cir.fp<1.500000e+00> : !cir.float
 
-// LLVM-LABEL: define {{.*}}float @_Z13static_member1S(
-// LLVM-NOT:     load float
-// LLVM:         store float 1.500000e+00
-
-// OGCG-LABEL: define {{.*}}float @_Z13static_member1S(
-// OGCG:         ret float 1.500000e+00
+// LLVM-OGCG-LABEL: define {{.*}}float @_Z13static_member1S(
+// LLVM-OGCG-NOT:     load float
+// LLVM:              store float 1.500000e+00
+// OGCG:              ret float 1.500000e+00
 
 // Negative cases: the value is loaded from the variable.
 
@@ -242,11 +213,8 @@ int volatile_const() {
 // CIR:         %[[V:.*]] = cir.alloca "v"
 // CIR:         cir.load volatile {{.*}}%[[V]]
 
-// LLVM-LABEL: define {{.*}}i32 @_Z14volatile_constv()
-// LLVM:         load volatile i32, ptr %{{.*}}
-
-// OGCG-LABEL: define {{.*}}i32 @_Z14volatile_constv()
-// OGCG:         load volatile i32, ptr %{{.*}}
+// LLVM-OGCG-LABEL: define {{.*}}i32 @_Z14volatile_constv()
+// LLVM-OGCG:         load volatile i32, ptr %{{.*}}
 
 int non_const_init() {
   const int x = side();
@@ -258,15 +226,10 @@ int non_const_init() {
 // CIR:         cir.call @_Z4sidev()
 // CIR:         cir.load {{.*}}%[[X]]
 
-// LLVM-LABEL: define {{.*}}i32 @_Z14non_const_initv()
-// LLVM:         %[[X:.*]] = alloca i32
-// LLVM:         call {{.*}}i32 @_Z4sidev()
-// LLVM:         load i32, ptr %[[X]]
-
-// OGCG-LABEL: define {{.*}}i32 @_Z14non_const_initv()
-// OGCG:         %[[X:.*]] = alloca i32
-// OGCG:         call {{.*}}i32 @_Z4sidev()
-// OGCG:         load i32, ptr %[[X]]
+// LLVM-OGCG-LABEL: define {{.*}}i32 @_Z14non_const_initv()
+// LLVM-OGCG:         %[[X:.*]] = alloca i32
+// LLVM-OGCG:         call {{.*}}i32 @_Z4sidev()
+// LLVM-OGCG:         load i32, ptr %[[X]]
 
 int param(const int p) {
   return p;
@@ -276,13 +239,9 @@ int param(const int p) {
 // CIR:         %[[P:.*]] = cir.alloca "p"
 // CIR:         cir.load {{.*}}%[[P]]
 
-// LLVM-LABEL: define {{.*}}i32 @_Z5parami(
-// LLVM:         %[[P:.*]] = alloca i32
-// LLVM:         load i32, ptr %[[P]]
-
-// OGCG-LABEL: define {{.*}}i32 @_Z5parami(
-// OGCG:         %[[P:.*]] = alloca i32
-// OGCG:         load i32, ptr %[[P]]
+// LLVM-OGCG-LABEL: define {{.*}}i32 @_Z5parami(
+// LLVM-OGCG:         %[[P:.*]] = alloca i32
+// LLVM-OGCG:         load i32, ptr %[[P]]
 
 // The captured constants are used directly instead of being loaded from the
 // closure.
@@ -295,15 +254,10 @@ int param(const int p) {
 // CIR:         %[[NF:.*]] = cir.cast int_to_float %[[N]] : !s32i -> !cir.float
 // CIR:         cir.fadd %[[USE]], %[[NF]] : !cir.float
 
-// LLVM-LABEL: define internal {{.*}}float @"_ZZ8capturedvENK3$_0clEv"(
-// LLVM-NOT:     getelementptr
-// LLVM:         %[[USE:.*]] = call {{.*}}float @_Z3usef(float noundef f0x3F666666)
-// LLVM:         fadd float %[[USE]], 4.000000e+00
-
-// OGCG-LABEL: define internal {{.*}}float @"_ZZ8capturedvENK3$_0clEv"(
-// OGCG-NOT:     getelementptr
-// OGCG:         %[[USE:.*]] = call {{.*}}float @_Z3usef(float noundef f0x3F666666)
-// OGCG:         fadd float %[[USE]], 4.000000e+00
+// LLVM-OGCG-LABEL: define internal {{.*}}float @"_ZZ8capturedvENK3$_0clEv"(
+// LLVM-OGCG-NOT:     getelementptr
+// LLVM-OGCG:         %[[USE:.*]] = call {{.*}}float @_Z3usef(float noundef f0x3F666666)
+// LLVM-OGCG:         fadd float %[[USE]], 4.000000e+00
 
 // A reference to a global is emitted as a reference constant: the global is
 // loaded directly rather than through the reference.
@@ -312,8 +266,5 @@ int param(const int p) {
 // CIR:         %[[G:.*]] = cir.const #cir.global_view<@global_var> : !cir.ptr<!s32i>
 // CIR:         cir.load {{.*}}%[[G]] : !cir.ptr<!s32i>, !s32i
 
-// LLVM-LABEL: define internal {{.*}}i32 @"_ZZ22captured_ref_to_globalvENK3$_0clEv"(
-// LLVM:         load i32, ptr @global_var
-
-// OGCG-LABEL: define internal {{.*}}i32 @"_ZZ22captured_ref_to_globalvENK3$_0clEv"(
-// OGCG:         load i32, ptr @global_var
+// LLVM-OGCG-LABEL: define internal {{.*}}i32 @"_ZZ22captured_ref_to_globalvENK3$_0clEv"(
+// LLVM-OGCG:         load i32, ptr @global_var
