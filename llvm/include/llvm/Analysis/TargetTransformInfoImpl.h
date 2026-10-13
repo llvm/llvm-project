@@ -566,7 +566,7 @@ public:
 
   virtual bool shouldUseInterleaveIntrinsicForFixedLengthVector(
       unsigned InterleaveFactor) const {
-    return false;
+    return InterleaveFactor <= 8;
   }
 
   virtual bool enableMaskedInterleavedAccessVectorization() const {
