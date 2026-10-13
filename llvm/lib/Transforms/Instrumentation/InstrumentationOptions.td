@@ -50,8 +50,6 @@ defm : BoolField<"asan-initialization-order", "true",
   "Handle C++ initializer order">;
 defm : ListField<"asan-instrument-address-spaces", "unsigned",
   "Only instrument variables in the specified address spaces">;
-defm : BoolField<"asan-instrument-assume-dereferenceable", "false",
-  "Instrument llvm.assume(dereferenceable)">;
 defm : BoolField<"asan-instrument-atomics", "true",
   "Instrument atomic instructions (rmw, cmpxchg)">;
 defm : BoolField<"asan-instrument-byval", "true",

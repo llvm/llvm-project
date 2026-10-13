@@ -25,5 +25,3 @@ __asan_get_report_src_address
 __asan_report_error
 __asan_report_present
 __asan_set_error_report_callback
-__asan_report_assume_dereferenceable
-__asan_report_assume_dereferenceable_noabort
