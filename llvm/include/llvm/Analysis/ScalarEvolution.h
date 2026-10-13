@@ -1610,8 +1610,7 @@ public:
 
   public:
     /// Return loop guards for loop \p L, which are collected on first use.
-    static LoopGuards collectOnDemand(const Loop *L,
-                                               ScalarEvolution &SE) {
+    static LoopGuards collectOnDemand(const Loop *L, ScalarEvolution &SE) {
       LoopGuards Guards(SE);
       Guards.PendingLoop = L;
       return Guards;
