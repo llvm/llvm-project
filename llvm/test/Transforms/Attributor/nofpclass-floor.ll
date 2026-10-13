@@ -75,9 +75,9 @@ define float @ret_floor_nosnan(float nofpclass(snan) %arg0) {
 }
 
 define float @ret_floor_nozero(float nofpclass(zero) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) float @ret_floor_nozero
+; CHECK-LABEL: define nofpclass(nzero sub) float @ret_floor_nozero
 ; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.floor.f32(float nofpclass(zero) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub) float @llvm.floor.f32(float nofpclass(zero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.floor.f32(float %arg0)
@@ -95,9 +95,9 @@ define float @ret_floor_nopzero(float nofpclass(pzero) %arg0) {
 }
 
 define float @ret_floor_nonzero(float nofpclass(nzero) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) float @ret_floor_nonzero
+; CHECK-LABEL: define nofpclass(nzero sub) float @ret_floor_nonzero
 ; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.floor.f32(float nofpclass(nzero) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub) float @llvm.floor.f32(float nofpclass(nzero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.floor.f32(float %arg0)
@@ -105,9 +105,9 @@ define float @ret_floor_nonzero(float nofpclass(nzero) %arg0) {
 }
 
 define float @ret_floor_nonorm(float nofpclass(norm) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) float @ret_floor_nonorm
+; CHECK-LABEL: define nofpclass(sub pnorm) float @ret_floor_nonorm
 ; CHECK-SAME: (float nofpclass(norm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.floor.f32(float nofpclass(norm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub pnorm) float @llvm.floor.f32(float nofpclass(norm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.floor.f32(float %arg0)
@@ -125,9 +125,9 @@ define float @ret_floor_nonnorm(float nofpclass(nnorm) %arg0) {
 }
 
 define float @ret_floor_nopnorm(float nofpclass(pnorm) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) float @ret_floor_nopnorm
+; CHECK-LABEL: define nofpclass(sub pnorm) float @ret_floor_nopnorm
 ; CHECK-SAME: (float nofpclass(pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.floor.f32(float nofpclass(pnorm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub pnorm) float @llvm.floor.f32(float nofpclass(pnorm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.floor.f32(float %arg0)
@@ -185,9 +185,9 @@ define float @ret_floor_nonnorm_nonsub(float nofpclass(nnorm nsub) %arg0) {
 }
 
 define float @ret_floor_nopnorm_nonsub(float nofpclass(pnorm nsub) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) float @ret_floor_nopnorm_nonsub
+; CHECK-LABEL: define nofpclass(sub pnorm) float @ret_floor_nopnorm_nonsub
 ; CHECK-SAME: (float nofpclass(nsub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.floor.f32(float nofpclass(nsub pnorm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub pnorm) float @llvm.floor.f32(float nofpclass(nsub pnorm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.floor.f32(float %arg0)
@@ -325,9 +325,9 @@ define float @ret_floor_nopos_nopzero_nonan(float nofpclass(pinf psub pnorm pzer
 }
 
 define float @ret_floor_nopos_nozero(float nofpclass(pinf psub pnorm zero) %arg0) {
-; CHECK-LABEL: define nofpclass(pinf pzero sub pnorm) float @ret_floor_nopos_nozero
+; CHECK-LABEL: define nofpclass(pinf zero sub pnorm) float @ret_floor_nopos_nozero
 ; CHECK-SAME: (float nofpclass(pinf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf pzero sub pnorm) float @llvm.floor.f32(float nofpclass(pinf zero psub pnorm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf zero sub pnorm) float @llvm.floor.f32(float nofpclass(pinf zero psub pnorm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.floor.f32(float %arg0)
@@ -335,9 +335,9 @@ define float @ret_floor_nopos_nozero(float nofpclass(pinf psub pnorm zero) %arg0
 }
 
 define float @ret_floor_nopos_nozero_nonan(float nofpclass(pinf psub pnorm zero nan) %arg0) {
-; CHECK-LABEL: define nofpclass(nan pinf pzero sub pnorm) float @ret_floor_nopos_nozero_nonan
+; CHECK-LABEL: define nofpclass(nan pinf zero sub pnorm) float @ret_floor_nopos_nozero_nonan
 ; CHECK-SAME: (float nofpclass(nan pinf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf pzero sub pnorm) float @llvm.floor.f32(float nofpclass(nan pinf zero psub pnorm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf zero sub pnorm) float @llvm.floor.f32(float nofpclass(nan pinf zero psub pnorm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.floor.f32(float %arg0)
@@ -345,9 +345,9 @@ define float @ret_floor_nopos_nozero_nonan(float nofpclass(pinf psub pnorm zero 
 }
 
 define float @ret_floor_nopzero_nopnorm(float nofpclass(pzero pnorm) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) float @ret_floor_nopzero_nopnorm
+; CHECK-LABEL: define nofpclass(sub pnorm) float @ret_floor_nopzero_nopnorm
 ; CHECK-SAME: (float nofpclass(pzero pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.floor.f32(float nofpclass(pzero pnorm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub pnorm) float @llvm.floor.f32(float nofpclass(pzero pnorm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.floor.f32(float %arg0)
@@ -355,9 +355,9 @@ define float @ret_floor_nopzero_nopnorm(float nofpclass(pzero pnorm) %arg0) {
 }
 
 define float @ret_floor_nonzero_nonnorm(float nofpclass(nzero nnorm) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) float @ret_floor_nonzero_nonnorm
+; CHECK-LABEL: define nofpclass(nzero sub) float @ret_floor_nonzero_nonnorm
 ; CHECK-SAME: (float nofpclass(nzero nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.floor.f32(float nofpclass(nzero nnorm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub) float @llvm.floor.f32(float nofpclass(nzero nnorm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.floor.f32(float %arg0)
@@ -365,9 +365,9 @@ define float @ret_floor_nonzero_nonnorm(float nofpclass(nzero nnorm) %arg0) {
 }
 
 define float @ret_floor_nozero_nonorm(float nofpclass(zero norm) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) float @ret_floor_nozero_nonorm
+; CHECK-LABEL: define nofpclass(nzero sub pnorm) float @ret_floor_nozero_nonorm
 ; CHECK-SAME: (float nofpclass(zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.floor.f32(float nofpclass(zero norm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub pnorm) float @llvm.floor.f32(float nofpclass(zero norm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.floor.f32(float %arg0)
@@ -375,6 +375,16 @@ define float @ret_floor_nozero_nonorm(float nofpclass(zero norm) %arg0) {
 }
 
 
+
+define float @ret_floor__no_psub_nnorm(float nofpclass(psub nnorm) %arg0) {
+; CHECK-LABEL: define nofpclass(sub) float @ret_floor__no_psub_nnorm
+; CHECK-SAME: (float nofpclass(psub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.floor.f32(float nofpclass(psub nnorm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.floor.f32(float %arg0)
+  ret float %call
+}
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; TUNIT: {{.*}}
