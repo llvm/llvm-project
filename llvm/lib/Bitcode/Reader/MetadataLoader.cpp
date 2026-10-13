@@ -2056,11 +2056,12 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *CUorFn = getMDOrNull(Record[12 + OffsetB]);
 
     DISubprogram *SP = nullptr;
+    Metadata *Scope = getDITypeRefOrNull(Record[1]);
     bool MaybeODRUnique = Context.isODRUniquingDebugTypes() && !IsDistinct &&
                           !(SPFlags & DISubprogram::SPFlagDefinition) &&
-                          getMDString(Record[3]);
+                          getMDString(Record[3]) && Scope;
 
-    if (MaybeODRUnique && !isa<DIScope>(getDITypeRefOrNull(Record[1]))) {
+    if (MaybeODRUnique && !isa<DIScope>(Scope)) {
       // The scope is a temporary forward reference, meaning we can't perform
       // ODR-uniquing yet. In order to perform ODR uniquing later the SP must
       // be replacable, so create a temporary one.

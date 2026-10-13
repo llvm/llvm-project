@@ -6420,7 +6420,7 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   Result = nullptr;
   bool MaybeODRUnique = Context.isODRUniquingDebugTypes() && !IsDistinct &&
                         !(SPFlags & DISubprogram::SPFlagDefinition) &&
-                        linkageName.Val;
+                        linkageName.Val && scope.Val;
 
   if (MaybeODRUnique) {
     if (DIScope *Scope = dyn_cast<DIScope>(scope.Val)) {
