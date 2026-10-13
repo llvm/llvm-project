@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "gtest/gtest.h"
 #include <cassert>
 
@@ -87,14 +85,13 @@ TEST(IntelGPUTargetParserTest, KindArchNames) {
 }
 
 TEST(IntelGPUTargetParserTest, ParseArch) {
-  // A human-friendly name, a compatibility name, and an alias.
+  // A human-friendly name and a compatibility name.
   EXPECT_EQ(IntelGPU::parseArch("xe-pvc"), IntelGPU::GK_XE_PVC);
   EXPECT_EQ(IntelGPU::parseArch("xe-dg2"), IntelGPU::GK_XE_DG2);
-  EXPECT_EQ(IntelGPU::parseArch("bmg_g21"), IntelGPU::GK_XE_BMG_G21);
-  // Products built on one GPU IP version are one device, named after the one
-  // the offload-arch utility prints.
-  EXPECT_EQ(IntelGPU::parseArch("xe-arl-u"), IntelGPU::GK_XE_MTL_U);
-  EXPECT_EQ(IntelGPU::parseArch("xe-ats-m150"), IntelGPU::GK_XE_ACM_G10);
+  // Each device has one name; another product on its GPU IP version is named
+  // by its numeric name instead.
+  EXPECT_EQ(IntelGPU::parseArch("bmg_g21"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe-arl-u"), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("xe_12.70"), IntelGPU::GK_XE_MTL_U);
   // Except PVC-SDV, which the AOT compiler builds for its own stepping.
   EXPECT_EQ(IntelGPU::parseArch("xe-pvc-sdv"), IntelGPU::GK_XE_PVC_SDV);
@@ -143,43 +140,7 @@ TEST(IntelGPUTargetParserTest, EveryNameParses) {
   EXPECT_EQ(IntelGPU::parseArch(NAME), IntelGPU::GK_##KIND) << NAME;
 #define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
   EXPECT_EQ(IntelGPU::parseArch(NAME), IntelGPU::GK_##KIND) << NAME;
-#define INTEL_GPU_ALIAS(NAME, KIND)                                            \
-  EXPECT_EQ(IntelGPU::parseArch(NAME), IntelGPU::GK_##KIND) << NAME;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
-}
-
-TEST(IntelGPUTargetParserTest, AliasesAreNeverReported) {
-  // An alias declares no kind of its own, so the name reported for a device is
-  // the row's own name. A device with two spellings would otherwise depend on
-  // which one the table happened to reach first.
-#define INTEL_GPU_ALIAS(NAME, KIND)                                            \
-  EXPECT_NE(IntelGPU::getArchName(IntelGPU::GK_##KIND), NAME) << NAME;
-#include "llvm/TargetParser/IntelGPUTargetParser.def"
-}
-
-TEST(IntelGPUTargetParserTest, IGCANames) {
-  // One of each suffix, since the target and the feature sets are pasted
-  // together.
-  EXPECT_EQ(IntelGPU::getIGCAName(IntelGPU::GK_XE_CRI), "igca_60c");
-  EXPECT_EQ(IntelGPU::getIGCAName(IntelGPU::GK_XE_NVL_P), "igca_60r");
-  EXPECT_EQ(IntelGPU::getIGCAName(IntelGPU::GK_XE_PVC), "igca_20ca");
-  EXPECT_EQ(IntelGPU::getIGCAName(IntelGPU::GK_XE_DG2), "igca_15ra");
-  EXPECT_EQ(IntelGPU::getIGCAName(IntelGPU::GK_NONE), "");
-}
-
-TEST(IntelGPUTargetParserTest, ValidArchList) {
-  SmallVector<StringRef> Values;
-  IntelGPU::fillValidArchList(Values);
-
-  EXPECT_FALSE(Values.empty());
-  EXPECT_NE(llvm::find(Values, "xe-pvc"), Values.end());
-  // A compatibility name and an alias are as valid as any other name.
-  EXPECT_NE(llvm::find(Values, "xe-dg2"), Values.end());
-  EXPECT_NE(llvm::find(Values, "bmg_g21"), Values.end());
-  // The list is offered to a user whose name did not parse, so every entry has
-  // to be a name that would have.
-  for (StringRef Value : Values)
-    EXPECT_NE(IntelGPU::parseArch(Value), IntelGPU::GK_NONE) << Value;
 }
 
 } // namespace

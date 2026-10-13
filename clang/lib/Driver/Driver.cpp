@@ -3914,19 +3914,17 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
 }
 
-/// Returns the canonical name for the offloading architecture when using a HIP
-/// or CUDA architecture, or an Intel GPU for SYCL.
+/// Returns the canonical name for the offloading architecture when using a HIP,
+/// CUDA or Intel GPU architecture.
 static StringRef getCanonicalArchString(Compilation &C,
                                         const llvm::opt::DerivedArgList &Args,
                                         StringRef ArchStr,
-                                        const llvm::Triple &Triple,
-                                        Action::OffloadKind Kind) {
+                                        const llvm::Triple &Triple) {
   // Lookup the CUDA / HIP architecture string. Only report an error if we were
   // expecting the triple to be only NVPTX / AMDGPU.
   OffloadArch Arch =
       StringToOffloadArch(getProcessorFromTargetID(Triple, ArchStr));
-  // An Intel name takes no target features, so it must parse in full; otherwise
-  // "xe-pvc:garbage" would silently become "xe-pvc".
+  // An Intel name takes no target features, so "xe-pvc:foo" is not "xe-pvc".
   if (Arch.isIntel() && ArchStr.contains(':'))
     Arch = OffloadArch::getUnknown();
   if (Triple.isNVPTX() && (Arch.isUnknown() || !Arch.isNVPTX())) {
@@ -3951,10 +3949,9 @@ static StringRef getCanonicalArchString(Compilation &C,
     }
   }
 
-  // A SYCL Intel GPU has several accepted spellings, e.g. an alias or a numeric
-  // name, so canonicalize it for the same reason as an NVPTX one: two spellings
-  // of one device must be one architecture.
-  if (Arch.isNVPTX() || (Kind == Action::OFK_SYCL && Arch.isIntelGPU()))
+  // Several spellings of one device must be one architecture, e.g. "xe-pvc" and
+  // "xe_12.60.7".
+  if (Arch.isNVPTX() || Arch.isIntelGPU())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
   if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
@@ -4015,7 +4012,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
 
           for (auto ArchStr : *GPUsOrErr) {
             StringRef CanonicalStr = getCanonicalArchString(
-                C, Args, Args.MakeArgString(ArchStr), TC.getTriple(), Kind);
+                C, Args, Args.MakeArgString(ArchStr), TC.getTriple());
             if (!CanonicalStr.empty())
               Archs.insert(CanonicalStr);
             else
@@ -4023,7 +4020,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           }
         } else {
           StringRef CanonicalStr =
-              getCanonicalArchString(C, Args, Arch, TC.getTriple(), Kind);
+              getCanonicalArchString(C, Args, Arch, TC.getTriple());
           if (!CanonicalStr.empty())
             Archs.insert(CanonicalStr);
           else
@@ -4036,7 +4033,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           Archs.clear();
         } else {
           StringRef ArchStr =
-              getCanonicalArchString(C, Args, Arch, TC.getTriple(), Kind);
+              getCanonicalArchString(C, Args, Arch, TC.getTriple());
           Archs.erase(ArchStr);
         }
       }
@@ -4092,7 +4089,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
                                   ? ""
                                   : OffloadArchToString(TripleOffloadArch);
     StringRef CanonicalStr =
-        getCanonicalArchString(C, Args, ArchStr, TC.getTriple(), Kind);
+        getCanonicalArchString(C, Args, ArchStr, TC.getTriple());
     if (!CanonicalStr.empty())
       Archs.insert(CanonicalStr);
   }
