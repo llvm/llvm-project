@@ -17,9 +17,12 @@
 //
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
 // RUN:   -fmodules-strict-context-hash -I %t/a -I %t/b %t/tu.c -E -o - \
-// RUN:   -fmodule-map-file=%t/b/b.modulemap | FileCheck %s
+// RUN:   -fmodule-map-file=%t/b/b.modulemap -Rmodule-build 2>&1 | FileCheck %s
 //
+// CHECK: remark: building module 'A'
 // CHECK: int value = 2;
+
+// RUN: ls %t/cache/*/A-*.pcm | count 2
 
 //--- tu.c
 #include "a.h"
