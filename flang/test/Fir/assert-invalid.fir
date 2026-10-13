@@ -33,7 +33,7 @@ func.func @too_many_values(%ok: i1, %i: i32) {
 // -----
 
 func.func @wide_integer(%ok: i1, %i: i128) {
-  // expected-error@+1 {{diagnostic integers must be at most 64 bits wide}}
+  // expected-error@+1 {{must be variadic of 8-, 16-, 32-, or 64-bit signless integer or index}}
   fir.assert %ok, argument, "%lld" values(%i : i128)
   return
 }
@@ -65,7 +65,23 @@ func.func @wrong_result_count(%ok: i1, %i: i32) {
 // -----
 
 func.func @real_value(%ok: i1, %x: f32) {
-  // expected-error@+1 {{must be variadic of signless integer or index}}
+  // expected-error@+1 {{must be variadic of 8-, 16-, 32-, or 64-bit signless integer or index}}
   fir.assert %ok, argument, "%lld" values(%x : f32)
+  return
+}
+
+// -----
+
+func.func @boolean_value(%ok: i1, %flag: i1) {
+  // expected-error@+1 {{must be variadic of 8-, 16-, 32-, or 64-bit signless integer or index}}
+  fir.assert %ok, argument, "%lld" values(%flag : i1)
+  return
+}
+
+// -----
+
+func.func @nonstandard_integer_width(%ok: i1, %i: i24) {
+  // expected-error@+1 {{must be variadic of 8-, 16-, 32-, or 64-bit signless integer or index}}
+  fir.assert %ok, argument, "%lld" values(%i : i24)
   return
 }

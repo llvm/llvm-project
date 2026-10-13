@@ -93,7 +93,9 @@ def fir_AssertOp : fir_Op<"assert", [
     reporting `message` at the operation's source location. The message may
     contain `%lld` directives, one for each integer or index operand
     in `values`, and `%%` for a literal percent sign. Diagnostic values are
-    interpreted as signed integers and must fit in 64 bits.
+    interpreted as signed integers and must have type `i8`, `i16`, `i32`,
+    `i64`, or `index`. Boolean values must be explicitly extended to one of
+    these types, choosing signed or unsigned interpretation at the producer.
 
     Consumers of the results depend on the check. The operation is deliberately
     not speculatable or a view: looking through it in a rewrite would discard
@@ -108,7 +110,8 @@ def fir_AssertOp : fir_Op<"assert", [
   }];
   let arguments = (ins I1:$condition, fir_RuntimeCheckKindAttr:$kind,
                        StrAttr:$message,
-                       Variadic<AnySignlessIntegerOrIndex>:$values,
+                       Variadic<AnyTypeOf<[I8, I16, I32, I64, Index],
+                           "8-, 16-, 32-, or 64-bit signless integer or index">>:$values,
                        Variadic<AnyType>:$guarded);
   let results = (outs Variadic<AnyType>:$results);
   let assemblyFormat = [{

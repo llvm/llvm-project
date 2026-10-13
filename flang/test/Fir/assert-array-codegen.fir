@@ -1,6 +1,7 @@
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir %s | FileCheck %s
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="datalayout=e-p:64:64-p5:32:32-A5" %s | FileCheck %s --check-prefix=PRIVATE
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=i386-unknown-linux-gnu datalayout=e-p:32:32" %s | FileCheck %s --check-prefix=COUNT32
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=amdgcn-amd-amdhsa datalayout=e-p:64:64-p1:64:64-p5:32:32-A5-G1" %s | FileCheck %s --check-prefix=GLOBAL
 
 // Five values select the array entry. Conversion, allocation and stores must
 // stay on the failure path, and the guarded result survives on success.
@@ -41,6 +42,14 @@ func.func @array_values(%ok: i1, %a: i8, %b: i16, %c: i32, %d: index, %e: i64, %
 // COUNT32: %[[COUNT:.*]] = llvm.mlir.constant(5 : i32)
 // COUNT32-NEXT: llvm.alloca %[[COUNT]] x i64 : (i32) -> !llvm.ptr
 // COUNT32: llvm.call @_FortranAReportFatalUserErrorValueArray
+// GLOBAL-DAG: llvm.mlir.global internal constant @{{.*}}("bounds.f90\00") {{.*}}addr_space = 1
+// GLOBAL-DAG: llvm.mlir.global internal constant @{{.*}}("dimension %lld, position %lld, index %lld, bounds %lld:%lld (100%%)\00") {{.*}}addr_space = 1
+// GLOBAL-LABEL: llvm.func @array_values
+// GLOBAL: %[[MSG:.*]] = llvm.addrspacecast %{{.*}} : !llvm.ptr<1> to !llvm.ptr
+// GLOBAL: %[[FILE:.*]] = llvm.addrspacecast %{{.*}} : !llvm.ptr<1> to !llvm.ptr
+// GLOBAL: %[[STORAGE:.*]] = llvm.alloca %{{.*}} x i64 : (i64) -> !llvm.ptr<5>
+// GLOBAL: %[[VALUES:.*]] = llvm.addrspacecast %[[STORAGE]] : !llvm.ptr<5> to !llvm.ptr
+// GLOBAL: llvm.call @_FortranAReportFatalUserErrorValueArray(%[[MSG]], %[[FILE]], %{{.*}}, %{{.*}}, %[[VALUES]])
 
 // -----
 
@@ -62,6 +71,11 @@ gpu.module @device {
 // CHECK-COUNT-12: llvm.store
 // CHECK: llvm.call @_FortranAReportFatalUserErrorValueArray(%{{.*}}, %{{.*}}, %{{.*}}, %[[COUNT]], %[[ARRAY]])
 // CHECK-NEXT: llvm.unreachable
+// GLOBAL-LABEL: gpu.module @device {
+// GLOBAL-DAG: llvm.mlir.global internal constant @{{.*}}("shapes.f90\00") {{.*}}addr_space = 1
+// GLOBAL: gpu.func @shapes
+// GLOBAL: llvm.addrspacecast %{{.*}} : !llvm.ptr<1> to !llvm.ptr
+// GLOBAL: llvm.call @_FortranAReportFatalUserErrorValueArray
 
 // -----
 

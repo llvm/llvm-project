@@ -61,13 +61,6 @@ bool fir::useStrictVolatileVerification() {
 //===----------------------------------------------------------------------===//
 
 llvm::LogicalResult fir::AssertOp::verify() {
-  if (getGuarded().getTypes() != getResultTypes())
-    return emitOpError("result types must match guarded operand types");
-  for (mlir::Type type : getValues().getTypes())
-    if (auto integer = mlir::dyn_cast<mlir::IntegerType>(type))
-      if (integer.getWidth() > 64)
-        return emitOpError("diagnostic integers must be at most 64 bits wide");
-
   llvm::StringRef message = getMessage();
   if (message.contains('\0'))
     return emitOpError("message must not contain an embedded null character");

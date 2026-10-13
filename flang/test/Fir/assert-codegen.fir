@@ -1,4 +1,5 @@
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=amdgcn-amd-amdhsa datalayout=e-p:64:64-p1:64:64-p5:32:32-A5-G1" %s | FileCheck %s --check-prefix=GLOBAL
 
 func.func @check(%ok: i1, %small: i32, %n: index, %array: !fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>> {
   %g = fir.assert %ok, conformance, "extents %lld and %lld" values(%small, %n : i32, index) guard(%array : !fir.ref<!fir.array<?xi32>>) loc("source.f90":42:7)
@@ -20,6 +21,14 @@ func.func @check(%ok: i1, %small: i32, %n: index, %array: !fir.ref<!fir.array<?x
 // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i64)
 // CHECK: llvm.call @_FortranAReportFatalUserErrorValues(%[[MSG]], %[[FILE]], %[[LINE]], %[[EXT]], %[[N]], %[[ZERO]], %{{.*}})
 // CHECK-NEXT: llvm.unreachable
+// GLOBAL-DAG: llvm.mlir.global internal constant @[[MSG:.*]]("extents %lld and %lld\00") {{.*}}addr_space = 1
+// GLOBAL-DAG: llvm.mlir.global internal constant @[[FILE:.*]]("source.f90\00") {{.*}}addr_space = 1
+// GLOBAL-LABEL: llvm.func @check(
+// GLOBAL: %[[MSGADDR:.*]] = llvm.mlir.addressof @[[MSG]] : !llvm.ptr<1>
+// GLOBAL-NEXT: %[[MSGCAST:.*]] = llvm.addrspacecast %[[MSGADDR]] : !llvm.ptr<1> to !llvm.ptr
+// GLOBAL-NEXT: %[[FILEADDR:.*]] = llvm.mlir.addressof @[[FILE]] : !llvm.ptr<1>
+// GLOBAL-NEXT: %[[FILECAST:.*]] = llvm.addrspacecast %[[FILEADDR]] : !llvm.ptr<1> to !llvm.ptr
+// GLOBAL: llvm.call @_FortranAReportFatalUserErrorValues(%[[MSGCAST]], %[[FILECAST]],
 
 // -----
 
@@ -66,3 +75,23 @@ gpu.module @device {
 // CHECK: llvm.cond_br
 // CHECK: llvm.call @_FortranAReportFatalUserErrorValues
 // CHECK: llvm.unreachable
+// GLOBAL-LABEL: gpu.module @device {
+// GLOBAL-DAG: llvm.mlir.global internal constant @{{.*}}("kernel.f90\00") {{.*}}addr_space = 1
+// GLOBAL-DAG: llvm.mlir.global internal constant @{{.*}}("subscript %lld\00") {{.*}}addr_space = 1
+// GLOBAL: gpu.func @check_device
+// GLOBAL: llvm.addrspacecast %{{.*}} : !llvm.ptr<1> to !llvm.ptr
+// GLOBAL: llvm.call @_FortranAReportFatalUserErrorValues
+
+// -----
+
+// Producers choose how a boolean diagnostic is interpreted.
+func.func @boolean_value(%ok: i1, %flag: i1) {
+  %value = arith.extui %flag : i1 to i8
+  fir.assert %ok, argument, "flag is %lld" values(%value : i8)
+  return
+}
+// CHECK-LABEL: llvm.func @boolean_value(
+// CHECK: %[[VALUE:.*]] = llvm.zext %{{.*}} : i1 to i8
+// CHECK: llvm.cond_br
+// CHECK: %[[EXT:.*]] = llvm.sext %[[VALUE]] : i8 to i64
+// CHECK: llvm.call @_FortranAReportFatalUserErrorValues(%{{.*}}, %{{.*}}, %{{.*}}, %[[EXT]],

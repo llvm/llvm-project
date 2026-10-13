@@ -32,6 +32,7 @@
 #include "flang/Runtime/CUDA/memory.h"
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Runtime/descriptor-consts.h"
+#include "flang/Runtime/entry-names.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "mlir/Conversion/ArithAttrToLLVM/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -4436,6 +4437,8 @@ static mlir::FileLineColLoc findAssertSourceLocation(mlir::Location loc) {
 struct AssertOpConversion : public fir::FIROpConversion<fir::AssertOp> {
   using FIROpConversion::FIROpConversion;
 
+  static constexpr unsigned maxInlineValues = 4;
+
   llvm::LogicalResult
   matchAndRewrite(fir::AssertOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
@@ -4446,18 +4449,18 @@ struct AssertOpConversion : public fir::FIROpConversion<fir::AssertOp> {
     auto ptrTy = getLlvmPtrType(op.getContext());
     auto i64Ty = rewriter.getI64Type();
     auto countTy = rewriter.getIntegerType(lowerTy().getPointerBitwidth(0));
-    bool useArray = adaptor.getValues().size() > 4;
+    bool useArray = adaptor.getValues().size() > maxInlineValues;
     llvm::SmallVector<mlir::Type> argumentTypes{ptrTy, ptrTy,
                                                 rewriter.getI32Type()};
     if (useArray)
       argumentTypes.append({countTy, ptrTy});
     else
-      argumentTypes.append(4, i64Ty);
+      argumentTypes.append(maxInlineValues, i64Ty);
     auto functionType = mlir::LLVM::LLVMFunctionType::get(
         mlir::LLVM::LLVMVoidType::get(op.getContext()), argumentTypes);
     llvm::StringRef runtimeName =
-        useArray ? "_FortranAReportFatalUserErrorValueArray"
-                 : "_FortranAReportFatalUserErrorValues";
+        useArray ? RTNAME_STRING(ReportFatalUserErrorValueArray)
+                 : RTNAME_STRING(ReportFatalUserErrorValues);
     mlir::Operation *declaration =
         mlir::SymbolTable::lookupSymbolIn(scope, runtimeName);
     if (declaration) {
@@ -4496,6 +4499,7 @@ struct AssertOpConversion : public fir::FIROpConversion<fir::AssertOp> {
     auto stringAddress = [&](llvm::StringRef text) -> mlir::Value {
       std::string terminated = text.str() + '\0';
       std::string name = fir::factory::uniqueCGIdent("assert", terminated);
+      unsigned globalAS = getGlobalAddressSpace(rewriter);
       if (!mlir::SymbolTable::lookupSymbolIn(scope, name)) {
         mlir::OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointToStart(&scope->getRegion(0).front());
@@ -4503,9 +4507,12 @@ struct AssertOpConversion : public fir::FIROpConversion<fir::AssertOp> {
                                                       terminated.size());
         mlir::LLVM::GlobalOp::create(rewriter, loc, arrayTy, /*constant=*/true,
                                      mlir::LLVM::Linkage::Internal, name,
-                                     rewriter.getStringAttr(terminated));
+                                     rewriter.getStringAttr(terminated),
+                                     /*alignment=*/0, globalAS);
       }
-      return mlir::LLVM::AddressOfOp::create(rewriter, loc, ptrTy, name);
+      return replaceWithAddrOfOrASCast(rewriter, loc, globalAS,
+                                       getProgramAddressSpace(rewriter), name,
+                                       ptrTy);
     };
 
     mlir::Value message = stringAddress(op.getMessage());
@@ -4542,7 +4549,7 @@ struct AssertOpConversion : public fir::FIROpConversion<fir::AssertOp> {
     } else {
       for (mlir::Value value : adaptor.getValues())
         arguments.push_back(integerCast(loc, rewriter, i64Ty, value));
-      while (arguments.size() < 7)
+      while (arguments.size() < functionType.getNumParams())
         arguments.push_back(mlir::LLVM::ConstantOp::create(
             rewriter, loc, i64Ty, rewriter.getI64IntegerAttr(0)));
     }
