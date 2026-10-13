@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ADCE.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -44,7 +45,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -58,16 +58,6 @@ using namespace llvm;
 
 STATISTIC(NumRemoved, "Number of instructions removed");
 STATISTIC(NumBranchesRemoved, "Number of branch instructions removed");
-
-// This is a temporary option until we change the interface to this pass based
-// on optimization level.
-static cl::opt<bool> RemoveControlFlowFlag("adce-remove-control-flow",
-                                           cl::init(true), cl::Hidden);
-
-// This option enables removing of may-be-infinite loops which have no other
-// effect.
-static cl::opt<bool> RemoveLoops("adce-remove-loops", cl::init(false),
-                                 cl::Hidden);
 
 namespace {
 
@@ -93,6 +83,7 @@ struct ADCEChanged {
 };
 
 class AggressiveDeadCodeElimination {
+  const ScalarOptions &Opts;
   Function &F;
 
   // ADCE does not use DominatorTree per se, but it updates it to preserve the
@@ -175,7 +166,7 @@ class AggressiveDeadCodeElimination {
 public:
   AggressiveDeadCodeElimination(Function &F, DominatorTree *DT,
                                 PostDominatorTree &PDT)
-      : F(F), DT(DT), PDT(PDT) {}
+      : Opts(ScalarOptions::Global), F(F), DT(DT), PDT(PDT) {}
 
   ADCEChanged performDeadCodeElimination();
 };
@@ -200,10 +191,10 @@ void AggressiveDeadCodeElimination::initialize() {
     if (isAlwaysLive(I))
       markLive(&I);
 
-  if (!RemoveControlFlowFlag)
+  if (!Opts.adce_remove_control_flow)
     return;
 
-  if (!RemoveLoops) {
+  if (!Opts.adce_remove_loops) {
     // Mark all terminators that have backedges as live.
     SmallVector<std::pair<const BasicBlock *, const BasicBlock *>> Backedges;
     FindFunctionBackedges(F, Backedges);
@@ -253,7 +244,8 @@ bool AggressiveDeadCodeElimination::isAlwaysLive(Instruction &I) {
   }
   if (!I.isTerminator())
     return false;
-  if (RemoveControlFlowFlag && isa<UncondBrInst, CondBrInst, SwitchInst>(I))
+  if (Opts.adce_remove_control_flow &&
+      isa<UncondBrInst, CondBrInst, SwitchInst>(I))
     return false;
   return true;
 }

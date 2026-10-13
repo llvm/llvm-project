@@ -1,0 +1,70 @@
+// RUN: cir-opt %s -sccp -o - | FileCheck %s
+
+// cir.switch.flat implements BranchOpInterface::getSuccessorForOperands, so
+// with a constant condition only the taken edge is live and SCCP can fold the
+// taken successor's block argument to the constant passed along that edge.
+
+!s32i = !cir.int<s, 32>
+
+cir.func @constant_switch() -> !s32i {
+  %cond = cir.const #cir.int<1> : !s32i
+  %c10 = cir.const #cir.int<10> : !s32i
+  %c20 = cir.const #cir.int<20> : !s32i
+  %c30 = cir.const #cir.int<30> : !s32i
+  cir.switch.flat %cond : !s32i, ^default(%c30 : !s32i) [
+    0: ^case0(%c10 : !s32i),
+    1: ^case1(%c20 : !s32i)
+  ]
+^case0(%a: !s32i):
+  cir.return %a : !s32i
+^case1(%b: !s32i):
+  cir.return %b : !s32i
+^default(%d: !s32i):
+  cir.return %d : !s32i
+}
+
+// CHECK-LABEL: cir.func @constant_switch
+// CHECK:         %[[C20:.*]] = cir.const #cir.int<20> : !s32i
+// CHECK:       ^bb1(%[[A:.*]]: !s32i):
+// CHECK-NEXT:    cir.return %[[A]] : !s32i
+// CHECK:       ^bb2(%{{.*}}: !s32i):
+// CHECK-NEXT:    cir.return %[[C20]] : !s32i
+// CHECK:       ^bb3(%[[D:.*]]: !s32i):
+// CHECK-NEXT:    cir.return %[[D]] : !s32i
+
+// No case matches a constant condition: the default edge is the live one.
+cir.func @constant_switch_default() -> !s32i {
+  %cond = cir.const #cir.int<7> : !s32i
+  %c10 = cir.const #cir.int<10> : !s32i
+  %c30 = cir.const #cir.int<30> : !s32i
+  cir.switch.flat %cond : !s32i, ^default(%c30 : !s32i) [
+    0: ^case0(%c10 : !s32i)
+  ]
+^case0(%a: !s32i):
+  cir.return %a : !s32i
+^default(%d: !s32i):
+  cir.return %d : !s32i
+}
+
+// CHECK-LABEL: cir.func @constant_switch_default
+// CHECK:         %[[C30:.*]] = cir.const #cir.int<30> : !s32i
+// CHECK:       ^bb1(%[[A:.*]]: !s32i):
+// CHECK-NEXT:    cir.return %[[A]] : !s32i
+// CHECK:       ^bb2(%{{.*}}: !s32i):
+// CHECK-NEXT:    cir.return %[[C30]] : !s32i
+
+// A non-constant condition keeps every edge live: the block argument joins
+// two different constants and cannot fold.
+cir.func @dynamic_switch(%cond: !s32i) -> !s32i {
+  %c10 = cir.const #cir.int<10> : !s32i
+  %c20 = cir.const #cir.int<20> : !s32i
+  cir.switch.flat %cond : !s32i, ^join(%c20 : !s32i) [
+    0: ^join(%c10 : !s32i)
+  ]
+^join(%v: !s32i):
+  cir.return %v : !s32i
+}
+
+// CHECK-LABEL: cir.func @dynamic_switch
+// CHECK:       ^bb1(%[[V:.*]]: !s32i):
+// CHECK-NEXT:    cir.return %[[V]] : !s32i

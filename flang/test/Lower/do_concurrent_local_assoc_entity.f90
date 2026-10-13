@@ -18,7 +18,7 @@ end subroutine local_assoc
 ! CHECK: fir.local {type = local} @[[LOCALIZER:.*local_assocEa.*]] : !fir.array<8xf32>{{$}}
 
 ! CHECK: func.func @_QPlocal_assoc()
-! CHECK: %[[ASSOC_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "{{.*}}local_assocEa"}
+! CHECK: %[[ASSOC_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("{{.*}}local_assocEa")
 ! CHECK: fir.do_concurrent.loop {{.*}} local(@[[LOCALIZER]] %[[ASSOC_DECL]]#0 -> %[[LOCAL_ARG:.*]] : !fir.ref<!fir.array<8xf32>>) {
 ! CHECK:   %[[LOCAL_DECL:.*]]:2 = hlfir.declare %[[LOCAL_ARG]](%{{.*}})
 ! CHECK:   hlfir.designate %[[LOCAL_DECL]]#0 (%{{.*}})

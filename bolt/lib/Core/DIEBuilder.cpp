@@ -701,8 +701,12 @@ void DIEBuilder::cloneDieOffsetReferenceAttribute(
     return;
   }
 
-  Die.addValue(getState().DIEAlloc, AttrSpec.Attr, AttrSpec.Form,
-               DIEEntry(*NewRefDie));
+  // The size of a DW_FORM_ref_udata depends on the referenced DIE's offset,
+  // which is not final yet for forward references. Use a fixed-size form.
+  const dwarf::Form Form = AttrSpec.Form == dwarf::DW_FORM_ref_udata
+                               ? dwarf::DW_FORM_ref4
+                               : AttrSpec.Form;
+  Die.addValue(getState().DIEAlloc, AttrSpec.Attr, Form, DIEEntry(*NewRefDie));
 }
 
 void DIEBuilder::cloneStringAttribute(

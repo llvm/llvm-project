@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 #define LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 
+#include "../ExprConstShared.h"
 #include "DeclOrExpr.h"
 #include "InitMap.h"
 #include "PrimType.h"
@@ -195,7 +196,7 @@ public:
   QualType getType() const;
   QualType getElemQualType() const;
   QualType getDataType(const ASTContext &Ctx) const;
-  SourceLocation getLocation() const;
+  SourceLocation getLocation() const { return Source.getLocation(); }
   SourceInfo getLoc() const;
 
   const Decl *asDecl() const { return Source.asDecl(); }
@@ -268,6 +269,18 @@ public:
 
   /// Whether variables of this descriptor need their destructor called or not.
   bool hasTrivialDtor() const;
+
+  /// Returns the kind of dynamic allocation source of this block.
+  static DynAllocKind getDynAllocKindForExpr(const Expr *E);
+  /// Returns the kind of dynamic allocation source of this block.
+  DynAllocKind getDynAllocKind() const {
+    return asExpr() ? getDynAllocKindForExpr(asExpr()) : DynAllocKind::None;
+  }
+  /// Checks if the descriptor is of a dynamic allocation.
+  bool isDynAlloc() const { return getDynAllocKind() != DynAllocKind::None; }
+
+  /// Compute the alignment for a dynamic allocation.
+  CharUnits computeAlignForDynamicAlloc(const ASTContext &Ctx) const;
 
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;

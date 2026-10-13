@@ -72,11 +72,11 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
       }],
       "::std::optional<::mlir::BlockArgument>", "getSuccessorBlockArgument",
       (ins "unsigned":$operandIndex), [{
-        ::mlir::Operation *opaqueOp = $_op;
-        for (unsigned i = 0, e = opaqueOp->getNumSuccessors(); i != e; ++i) {
+        auto branch = ::mlir::cast<::mlir::BranchOpInterface>(*$_raw_op);
+        for (unsigned i = 0, e = $_raw_op->getNumSuccessors(); i != e; ++i) {
           if (::std::optional<::mlir::BlockArgument> arg = ::mlir::detail::getBranchSuccessorArgument(
-                $_op.getSuccessorOperands(i), operandIndex,
-                opaqueOp->getSuccessor(i)))
+                branch.getSuccessorOperands(i), operandIndex,
+                $_raw_op->getSuccessor(i)))
             return arg;
         }
         return ::std::nullopt;

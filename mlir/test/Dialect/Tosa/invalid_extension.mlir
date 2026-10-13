@@ -12,6 +12,13 @@ func.func @test_argmax(%arg0: tensor<14x19xbf16>) -> tensor<14xi32> {
 }
 
 // -----
+func.func @test_argmin(%arg0: tensor<14x19xbf16>) -> tensor<14xi32> {
+  // expected-error@+1 {{'tosa.argmin' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.argmin %arg0 axis(1) : (tensor<14x19xbf16>) -> tensor<14xi32>
+  return %0 : tensor<14xi32>
+}
+
+// -----
 func.func @test_avg_pool2d(%arg0: tensor<1x7x7x9xbf16>, %arg1: tensor<1xbf16>, %arg2: tensor<1xbf16>) -> tensor<1x7x7x9xbf16> {
   // expected-error@+1 {{'tosa.avg_pool2d' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.avg_pool2d %arg0, %arg1, %arg2 kernel([2, 2]) stride([1, 1]) pad([0, 1, 0, 1]) acc_type(f32) : (tensor<1x7x7x9xbf16>, tensor<1xbf16>, tensor<1xbf16>) -> tensor<1x7x7x9xbf16>
@@ -273,6 +280,13 @@ func.func @test_gather(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x26xi32>) ->
   // expected-error@+1 {{'tosa.gather' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xbf16>, tensor<13x26xi32>) -> tensor<13x26x3xbf16>
   return %0 : tensor<13x26x3xbf16>
+}
+
+// -----
+func.func @test_gather_mxfp(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg1: tensor<13x26xi32>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.gather' op illegal: requires all of [mx_common, mx_fp4e2m1] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<13x26xi32>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
 
 // -----

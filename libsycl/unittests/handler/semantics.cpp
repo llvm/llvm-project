@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "test_helpers.hpp"
 #include <mock/helpers.hpp>
 
@@ -10,6 +18,7 @@
 #include <gtest/gtest.h>
 
 #include <string>
+#include <vector>
 
 using namespace sycl;
 using namespace ::testing;
@@ -30,6 +39,8 @@ TEST(Handler, MultipleActionsRejected) {
     Thrown = true;
     EXPECT_NE(std::string(E.what()).find("multiple actions"),
               std::string::npos);
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Q.get_context());
   }
 
   EXPECT_TRUE(Thrown);
@@ -106,7 +117,7 @@ TEST(Handler, EmptyCommandGroupNoDependencies) {
   E.wait();
 }
 
-TEST(Queue, SubmitCannotBeNested) {
+TEST(Handler, SubmitCannotBeNested) {
   mock::MockWrapper Mock;
   queue Q;
 
@@ -122,6 +133,8 @@ TEST(Queue, SubmitCannotBeNested) {
     Thrown = true;
     EXPECT_NE(std::string(E.what()).find("cannot be nested"),
               std::string::npos);
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Q.get_context());
   }
 
   EXPECT_TRUE(Thrown);

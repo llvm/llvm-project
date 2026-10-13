@@ -354,11 +354,17 @@ struct OperationFormat {
     std::optional<StringRef> variableTransformer;
   };
 
-  /// The context in which an element is generated.
+  /// The context used to generate an element's parser. This controls whether
+  /// attribute variables are parsed optionally; it does not change the parsing
+  /// of other element kinds.
   enum class GenContext {
-    /// The element is generated at the top-level or with the same behaviour.
+    /// Use the default parsing behaviour: an ODS optional attribute may be
+    /// absent. Used at the top level and by callers using the default context.
     Normal,
-    /// The element is generated inside an optional group.
+    /// Generate an element in a selected branch of an optional group. Attribute
+    /// variables must be present, even if they are optional in ODS. The group
+    /// is optional, but its contents are required once the branch is selected.
+    /// The group's first element is parsed separately to select the branch.
     Optional
   };
 
@@ -384,6 +390,8 @@ struct OperationFormat {
   /// Generate the operation parser from this format.
   void genParser(Operator &op, OpClass &opClass);
   /// Generate the parser code for a specific format element.
+  /// `genCtx`, together with ODS optionality, determines whether attribute
+  /// variables may be absent at this position.
   void genElementParser(FormatElement *element, MethodBody &body,
                         FmtContext &attrTypeCtx,
                         GenContext genCtx = GenContext::Normal);
@@ -1904,8 +1912,9 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
         }
       }
 
-      // Generate the rest of the elements inside an optional group. Elements in
-      // an optional group after the guard are parsed as required.
+      // Generate the remaining then-elements or all else-elements after the
+      // guard has selected a branch. Optional attributes must be parsed as
+      // required here so that an incomplete group is rejected.
       for (FormatElement *childElement : elements)
         if (childElement != elidedAnchorElement)
           genElementParser(childElement, body, attrTypeCtx,
@@ -2032,7 +2041,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
         }
       } else {
         for (FormatElement *el : pelement)
-          genElementParser(el, body, attrTypeCtx);
+          genElementParser(el, body, attrTypeCtx, GenContext::Optional);
       }
       body << "    } else ";
     }
@@ -2729,14 +2738,49 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
 /// Generate the printer for the 'attr-dict' directive.
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body, bool withKeyword) {
-  body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;\n";
+  // TODO: Remove the non-strict path when strict properties in assembly
+  // formats are always enabled.
+  if (fmt.useStrictPropertiesInAssemblyFormat) {
+    // Inherent attributes are printed by their bindings or prop-dict.
+    body << "  _odsPrinter.printOptionalAttrDict"
+         << (withKeyword ? "WithKeyword" : "")
+         << "((*this)->getDiscardableAttrDictionary().getValue());\n";
+    return;
+  }
 
-  genVariadicSegmentElision(fmt, op, body, "elidedAttrs");
-
+  SmallVector<StringRef> fixedElidedAttrs;
+  if (!fmt.allOperands &&
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
+    fixedElidedAttrs.push_back("operandSegmentSizes");
+  if (!fmt.allResultTypes &&
+      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
+    fixedElidedAttrs.push_back("resultSegmentSizes");
   for (StringRef key : fmt.inferredAttributes.keys())
-    body << "  elidedAttrs.push_back(\"" << key << "\");\n";
+    fixedElidedAttrs.push_back(key);
   for (const NamedAttribute *attr : fmt.usedAttributes)
-    body << "  elidedAttrs.push_back(\"" << attr->name << "\");\n";
+    fixedElidedAttrs.push_back(attr->name);
+
+  bool hasConditionalElision =
+      llvm::any_of(op.getAttributes(), [&](const NamedAttribute &namedAttr) {
+        return !fmt.usedAttributes.contains(&namedAttr) &&
+               !namedAttr.attr.isDerivedAttr() &&
+               namedAttr.attr.hasDefaultValue();
+      });
+  if (hasConditionalElision) {
+    body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs = {";
+    llvm::interleaveComma(fixedElidedAttrs, body, [&](StringRef name) {
+      body << "\"" << name << "\"";
+    });
+    body << "};\n";
+  } else if (fixedElidedAttrs.empty()) {
+    body << "  ::llvm::ArrayRef<::llvm::StringRef> elidedAttrs;\n";
+  } else {
+    body << "  static constexpr ::llvm::StringRef elidedAttrs[] = {";
+    llvm::interleaveComma(fixedElidedAttrs, body, [&](StringRef name) {
+      body << "\"" << name << "\"";
+    });
+    body << "};\n";
+  }
 
   // Add code to check attributes for equality with their default values.
   // Default-valued attributes will not be printed when their value matches the
@@ -2785,12 +2829,12 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
 /// the previous element was a punctuation literal.
 static void genLiteralPrinter(StringRef value, MethodBody &body,
                               bool &shouldEmitSpace, bool &lastWasPunctuation) {
-  body << "  _odsPrinter";
+  body << "  _odsPrinter << \"";
 
   // Don't insert a space for certain punctuation.
   if (shouldEmitSpace && shouldEmitSpaceBefore(value, lastWasPunctuation))
-    body << " << ' '";
-  body << " << \"" << value << "\";\n";
+    body << ' ';
+  body << value << "\";\n";
 
   // Insert a space after certain literals.
   shouldEmitSpace =
@@ -3349,8 +3393,10 @@ void OperationFormat::genElementPrinter(FormatElement *element,
 }
 
 void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
+  // Printing is not performance sensitive. LLVM_ATTRIBUTE_MINSIZE reduces
+  // binary size and compiler work for printers generated for every operation.
   auto *method = opClass.addMethod(
-      "void", "print",
+      "LLVM_ATTRIBUTE_MINSIZE void", "print",
       MethodParameter("::mlir::OpAsmPrinter &", "_odsPrinter"));
   auto &body = method->body();
 

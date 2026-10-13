@@ -81,6 +81,7 @@ ret32_address_main:
 
 #      RELOC:     Name:            linking
 # RELOC-NEXT:     Version:         2
+# RELOC-NEXT:     TargetArch:      wasm32
 # RELOC-NEXT:     SymbolTable:
 # RELOC-NEXT:       - Index:           0
 # RELOC-NEXT:         Kind:            FUNCTION

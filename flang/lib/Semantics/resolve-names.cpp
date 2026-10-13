@@ -646,7 +646,8 @@ public:
   Symbol *FindInTypeOrParents(const Scope &, const parser::Name &);
   Symbol *FindInTypeOrParents(const parser::Name &);
   Symbol *FindInScopeOrBlockConstructs(const Scope &, SourceName);
-  Symbol *FindSeparateModuleProcedureInterface(const parser::Name &);
+  Symbol *FindSeparateModuleProcedureInterface(
+      const parser::Name &, bool emitError = true);
   void EraseSymbol(const parser::Name &);
   void EraseSymbol(const Symbol &symbol) { currScope().erase(symbol.name()); }
   // Make a new symbol with the name and attrs of an existing one
@@ -3882,6 +3883,7 @@ void ScopeHandler::ApplyImplicitCUDADataAttr(Symbol &symbol) {
     object->set_cudaDataAttrIsImplicit();
   } else {
     object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+    object->set_cudaDataAttrIsImplicit();
   }
 }
 
@@ -4300,6 +4302,15 @@ static bool CheckCompatibleDistinctUltimates(SemanticsContext &context,
   return true; // don't try to merge generics (or whatever)
 }
 
+// Check whether two symbols identify the same procedure. Otherwise, require
+// matching names and procedure kinds: intrinsic procedures must both be
+// intrinsic, module procedures must identify the same module symbol, and
+// external procedures must both be declared by interface bodies with equal
+// characteristics.
+// For intrinsic-module compatibility rules, a future, separate check could
+// compare the basic shapes of host and CUDA specifics, including dummy argument
+// and result types and ranks, while ignoring CUDA-specific attributes.
+// That shape comparison is not performed here.
 static bool AreSameProcedureForUseAssociation(
     SemanticsContext &context, const Symbol &p1, const Symbol &p2) {
   const Symbol &ultimate1{p1.GetUltimate()};
@@ -4351,20 +4362,26 @@ static bool HasCUDADummyDataAttribute(const Symbol &procedure) {
 
 struct IntrinsicModuleUseAssociationRule {
   const char *moduleName;
-  const char *genericName;
-  bool (*matches)(SemanticsContext &, const GenericDetails &, const Symbol &);
+  bool (*matches)(SemanticsContext &, const Symbol &, const Symbol &);
 };
 
-static bool MatchesCublasGemm(SemanticsContext &context,
-    const GenericDetails &generic, const Symbol &other) {
-  const Symbol *specific{generic.specific()};
+static bool MatchesCublasBlas(
+    SemanticsContext &context, const Symbol &generic, const Symbol &other) {
+  // Exclude CUBLAS-prefixed API names from the legacy BLAS compatibility rule.
+  const SourceName &genericName{generic.GetUltimate().name()};
+  const llvm::StringRef genericNameRef{genericName.begin(), genericName.size()};
+  if (genericNameRef.starts_with("cublas")) {
+    return false;
+  }
+  const auto &details{generic.get<GenericDetails>()};
+  const Symbol *specific{details.specific()};
   if (!specific ||
       !AreSameProcedureForUseAssociation(context, *specific, other)) {
     return false;
   }
   bool containsSpecific{false};
   bool hasCUDAOverload{false};
-  for (const Symbol &candidate : generic.specificProcs()) {
+  for (const Symbol &candidate : details.specificProcs()) {
     containsSpecific |= &candidate.GetUltimate() == &specific->GetUltimate();
     hasCUDAOverload |= HasCUDADummyDataAttribute(candidate);
   }
@@ -4377,9 +4394,8 @@ FindIntrinsicModuleUseAssociationRule(
   // Add entries here for intrinsic module generics that should take precedence
   // over an equivalent external interface during USE association.
   static const IntrinsicModuleUseAssociationRule rules[]{
-      {"cublas", "sgemm", MatchesCublasGemm},
-      {"cublas", "dgemm", MatchesCublasGemm},
-      {"cublas", "zgemm", MatchesCublasGemm},
+      {"cublas", MatchesCublasBlas},
+      {"cublas_v2", MatchesCublasBlas},
   };
   const Scope &owner{generic.GetUltimate().owner()};
   if (!owner.IsModule() || !owner.parent().IsIntrinsicModules() ||
@@ -4388,8 +4404,7 @@ FindIntrinsicModuleUseAssociationRule(
   }
   for (const auto &rule : rules) {
     if (owner.GetName().value() == rule.moduleName &&
-        generic.GetUltimate().name() == rule.genericName &&
-        rule.matches(context, generic.get<GenericDetails>(), other)) {
+        rule.matches(context, generic, other)) {
       return &rule;
     }
   }
@@ -5597,6 +5612,11 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
 Symbol &SubprogramVisitor::PostSubprogramStmt() {
   Symbol &symbol{*currScope().symbol()};
   SetExplicitAttrs(symbol, EndAttrs());
+  if (symbol.get<SubprogramDetails>().moduleInterface()) {
+    // An omitted MODULE prefix accepted as an extension still defines the
+    // separate module procedure declared by the interface body.
+    SetExplicitAttr(symbol, Attr::MODULE);
+  }
   if (symbol.attrs().test(Attr::MODULE)) {
     symbol.attrs().set(Attr::EXTERNAL, false);
     symbol.implicitAttrs().set(Attr::EXTERNAL, false);
@@ -5847,7 +5867,7 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
 }
 
 Symbol *ScopeHandler::FindSeparateModuleProcedureInterface(
-    const parser::Name &name) {
+    const parser::Name &name, bool emitError) {
   auto *symbol{FindSymbol(name)};
   if (symbol && symbol->has<SubprogramNameDetails>()) {
     const Scope *parent{nullptr};
@@ -5866,7 +5886,9 @@ Symbol *ScopeHandler::FindSeparateModuleProcedureInterface(
     symbol = const_cast<Symbol *>(defnIface);
   }
   if (!IsSeparateModuleProcedureInterface(symbol)) {
-    Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
+    if (emitError) {
+      Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
+    }
     symbol = nullptr;
   }
   return symbol;
@@ -5910,7 +5932,11 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
     const parser::LanguageBindingSpec *bindingSpec,
     const ProgramTree::EntryStmtList *entryStmts) {
   bool isValid{true};
-  if (hasModulePrefix && !currScope().IsModule() &&
+  if (hasModulePrefix && isAbstract()) { // C1547
+    Say(name,
+        "'%s' may not have a MODULE prefix in an ABSTRACT interface body"_err_en_US);
+    isValid = false;
+  } else if (hasModulePrefix && !currScope().IsModule() &&
       !currScope().IsSubmodule()) { // C1547
     Say(name,
         "'%s' is a MODULE procedure which must be declared within a MODULE or SUBMODULE"_err_en_US);
@@ -5931,6 +5957,25 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
       } else {
         EraseSymbol(name);
       }
+    }
+  } else if (isValid && !inInterfaceBlock() && !InModuleFile() &&
+      currScope().IsSubmodule() &&
+      context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix)) {
+    // Repair only definitions in the current source: a module file already
+    // records whether its producer treated the subprogram as MODULE.
+    if (Symbol *iface{
+            FindSeparateModuleProcedureInterface(name, /*emitError=*/false)};
+        iface && &iface->owner() != &currScope()) {
+      // Repairing a same-scope interface would also require replacing its
+      // existing symbol, as the explicit MODULE path above does. That case
+      // seems less likely than a missing prefix on an ancestor interface.
+      moduleInterface = iface;
+      context().messages().Warn(/*isInModuleFile=*/false,
+          context().languageFeatures(),
+          common::LanguageFeature::ImplicitModulePrefix, name.source,
+          "Assuming a missing MODULE prefix on '%s' to repair the separate module procedure interface '%s:%s'"_port_en_US,
+          name.source, moduleInterface->owner().GetName().value(),
+          moduleInterface->name());
     }
   }
   Symbol *newSymbol{
@@ -6059,7 +6104,8 @@ const Symbol *SubprogramVisitor::CheckExtantProc(
 Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec,
     bool hasModulePrefix) {
-  if (!inInterfaceBlock() && currScope().IsSubmodule() && !hasModulePrefix) {
+  if (!inInterfaceBlock() && currScope().IsSubmodule() && !hasModulePrefix &&
+      !context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix)) {
     const Scope &parent{currScope().parent()};
     if (parent.IsModule() || parent.IsSubmodule()) {
       if (const Symbol *host{parent.FindSymbol(name.source)}) {

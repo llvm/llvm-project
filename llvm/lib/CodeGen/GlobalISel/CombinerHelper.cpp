@@ -2745,7 +2745,8 @@ bool CombinerHelper::matchUndefShuffleVectorMask(MachineInstr &MI) const {
 }
 
 bool CombinerHelper::matchUndefStore(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_STORE);
+  if (!cast<GStore>(MI).isUnordered())
+    return false;
   return getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(0).getReg(),
                       MRI);
 }
@@ -3565,6 +3566,9 @@ bool CombinerHelper::matchUseVectorTruncate(MachineInstr &MI,
   // Check the size of unmerge source
   MatchInfo = UnmergeMI->getSourceReg();
   LLT UnmergeSrcTy = MRI.getType(MatchInfo);
+  if (!UnmergeSrcTy.isVector())
+    return false;
+
   if (!DstTy.getElementCount().isKnownMultipleOf(UnmergeSrcTy.getNumElements()))
     return false;
 

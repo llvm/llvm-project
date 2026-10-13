@@ -1224,12 +1224,10 @@ addImplicitMapper(Fortran::lower::AbstractConverter &converter,
       });
 }
 
-mlir::FlatSymbolRefAttr
-resolveMapperId(Fortran::lower::AbstractConverter &converter,
-                mlir::Location loc, const omp::Object &object,
-                llvm::StringRef mapperIdNameRef,
-                mlir::omp::ClauseMapFlags mapTypeBits,
-                llvm::omp::Directive directive, bool hasParentObj) {
+mlir::FlatSymbolRefAttr resolveMapperId(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const omp::Object &object, llvm::StringRef mapperIdNameRef,
+    mlir::omp::ClauseMapFlags mapTypeBits, llvm::omp::Directive directive) {
   const semantics::DerivedTypeSpec *objectTypeSpec =
       getSymbolDerivedType(*object.sym());
   if (!objectTypeSpec)
@@ -1259,10 +1257,10 @@ resolveMapperId(Fortran::lower::AbstractConverter &converter,
     // specification.
     auto *userDefinedDefault =
         converter.getModuleOp().lookupSymbol(mapperIdName);
-    if (!userDefinedDefault && !hasParentObj &&
-        (directive != llvm::omp::Directive::OMPD_target_enter_data &&
-         directive != llvm::omp::Directive::OMPD_target_exit_data &&
-         directive != llvm::omp::Directive::OMPD_target_update)) {
+    if (!userDefinedDefault &&
+        directive != llvm::omp::Directive::OMPD_target_enter_data &&
+        directive != llvm::omp::Directive::OMPD_target_exit_data &&
+        directive != llvm::omp::Directive::OMPD_target_update) {
       bool isAllocOrPointer =
           semantics::IsAllocatableOrObjectPointer(object.sym());
       bool isPointer = semantics::IsPointer(*object.sym());

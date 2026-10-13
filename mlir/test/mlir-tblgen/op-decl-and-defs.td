@@ -100,6 +100,8 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:     return ::llvm::StringLiteral("test.a_op");
 // CHECK:   }
 // CHECK:   ::mlir::Operation::operand_range getODSOperands(unsigned index) {
+// CHECK-NEXT:     auto [start, length] = getODSOperandIndexAndLength(index);
+// CHECK-NEXT:     return getOperation()->getOperands().slice(start, length);
 // CHECK:   ::mlir::TypedValue<::mlir::IntegerType> getA() {
 // CHECK:   ::mlir::Operation::operand_range getB() {
 // CHECK:   ::mlir::OpOperand &getAMutable() {
@@ -169,10 +171,10 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // DEFS-LABEL: void AOp::buildPropertiesAndDiscardableAttributes
 // DEFS:   Properties &properties = odsState.getOrAddProperties<Properties>();
 // DEFS-NEXT:   populateDefaultProperties(odsState.name, properties);
-// DEFS:     if (name == "attr1" || name == "some_attr2")
-// DEFS:       inherentAttributes.push_back(attr);
-// DEFS:       odsState.addAttribute(attr.getName(), attr.getValue());
-// DEFS:   if (::mlir::failed(setPropertiesFromAttr(
+// DEFS:   const ::llvm::StringRef inherentNames[] = {"attr1", "some_attr2"};
+// DEFS:   ::mlir::detail::splitPropertiesAndDiscardableAttributes(
+// DEFS:   return setPropertiesFromAttr(properties, inherentAttrs,
+
 
 // Check that `getAttrDictionary()` is used when not using properties.
 
