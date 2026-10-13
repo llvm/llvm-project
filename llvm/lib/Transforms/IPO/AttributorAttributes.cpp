@@ -8708,6 +8708,9 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
 
     uint32_t CBAssumedNotAccessedLocs =
         CBMemLocationAA->getAssumedNotAccessedLocation();
+    // Volatile calls may also access inaccessible memory.
+    if (CB->isVolatile())
+      CBAssumedNotAccessedLocs &= ~NO_INACCESSIBLE_MEM;
 
     // Set the argmemonly and global bit as we handle them separately below.
     uint32_t CBAssumedNotAccessedLocsNoArgMem =
