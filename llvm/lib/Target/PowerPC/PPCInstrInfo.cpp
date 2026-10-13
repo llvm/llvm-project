@@ -1054,6 +1054,11 @@ bool PPCInstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
   case PPC::EXTSW_32:
   case PPC::EXTSW_32_64:
     SrcReg = MI.getOperand(1).getReg();
+    // On 64-bit targets, extension can not be eliminated if the input is zero
+    // extended. The input before zero extention may be a negative value.
+    if (Subtarget.isPPC64() &&
+        isZeroExtended(SrcReg, &MI.getMF()->getRegInfo()))
+      return false;
     DstReg = MI.getOperand(0).getReg();
     SubIdx = PPC::sub_32;
     return true;
