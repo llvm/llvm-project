@@ -70,9 +70,9 @@ class BinOpSameOpcodeHelper {
     XorBIT = 1 << 7,
     FAddBIT = 1 << 8,
     FSubBIT = 1 << 9,
-    LShrBIT = 1 << 11,
-    UDivBIT = 1 << 12,
-    MainOpBIT = 1 << 13,
+    LShrBIT = 1 << 10,
+    UDivBIT = 1 << 11,
+    MainOpBIT = 1 << 12,
     LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
   /// Return a non-nullptr if either operand of I is a ConstantInt (for the
