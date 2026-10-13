@@ -1458,7 +1458,7 @@ def CIR_UnwindTableKindAttr : CIR_EnumAttr<CIR_UnwindTableKind, "uwtable"> {
 // FramePointerKind
 //===----------------------------------------------------------------------===//
 def CIR_FramePointerKind : CIR_I32Enum<"FramePointerKind",
-                                       "Frame Pointer Kind", [
+                                       "frame pointer kind", [
   I32EnumCase<"None", 0, "none">,
   I32EnumCase<"NonLeaf", 1, "non_leaf">,
   I32EnumCase<"All", 2, "all">,
