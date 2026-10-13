@@ -693,53 +693,55 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-IADISABLED-NEXT:    ret
 ; CHECK-IADISABLED-NEXT:  .LBB2_7: // %vector.ph
 ; CHECK-IADISABLED-NEXT:    add x11, x8, #1
-; CHECK-IADISABLED-NEXT:    mov w8, #1132396544 // =0x437f0000
-; CHECK-IADISABLED-NEXT:    adrp x12, .LCPI2_0
+; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI2_0
+; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI2_1
 ; CHECK-IADISABLED-NEXT:    and x10, x11, #0x1fffffffc
-; CHECK-IADISABLED-NEXT:    dup v0.4s, w8
-; CHECK-IADISABLED-NEXT:    ldr q1, [x12, :lo12:.LCPI2_0]
-; CHECK-IADISABLED-NEXT:    add x9, x10, x10, lsl #1
+; CHECK-IADISABLED-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
+; CHECK-IADISABLED-NEXT:    mov w8, #1132396544 // =0x437f0000
+; CHECK-IADISABLED-NEXT:    add x12, x10, x10, lsl #1
+; CHECK-IADISABLED-NEXT:    ldr q1, [x9, :lo12:.LCPI2_1]
+; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI2_2
+; CHECK-IADISABLED-NEXT:    dup v2.4s, w8
+; CHECK-IADISABLED-NEXT:    adrp x13, .LCPI2_3
+; CHECK-IADISABLED-NEXT:    ldr q3, [x9, :lo12:.LCPI2_2]
+; CHECK-IADISABLED-NEXT:    add x8, x1, x12, lsl #2
+; CHECK-IADISABLED-NEXT:    ldr q4, [x13, :lo12:.LCPI2_3]
+; CHECK-IADISABLED-NEXT:    add x9, x0, x12
 ; CHECK-IADISABLED-NEXT:    and x12, x11, #0x1fffffffc
-; CHECK-IADISABLED-NEXT:    add x8, x1, x9, lsl #2
-; CHECK-IADISABLED-NEXT:    add x9, x0, x9
 ; CHECK-IADISABLED-NEXT:  .LBB2_8: // %vector.body
 ; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q2, q4, [x1]
+; CHECK-IADISABLED-NEXT:    ldp q5, q6, [x1]
 ; CHECK-IADISABLED-NEXT:    subs x12, x12, #4
-; CHECK-IADISABLED-NEXT:    ldr q6, [x1, #32]
+; CHECK-IADISABLED-NEXT:    ldr q7, [x1, #32]
+; CHECK-IADISABLED-NEXT:    tbl v16.16b, { v5.16b, v6.16b }, v0.16b
+; CHECK-IADISABLED-NEXT:    tbl v17.16b, { v5.16b, v6.16b }, v1.16b
 ; CHECK-IADISABLED-NEXT:    add x1, x1, #48
-; CHECK-IADISABLED-NEXT:    mov v3.16b, v2.16b
-; CHECK-IADISABLED-NEXT:    rev64 v5.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    mov v3.s[1], v2.s[3]
-; CHECK-IADISABLED-NEXT:    mov v5.s[0], v2.s[1]
-; CHECK-IADISABLED-NEXT:    mov v3.s[2], v4.s[2]
-; CHECK-IADISABLED-NEXT:    mov v4.s[0], v2.s[2]
-; CHECK-IADISABLED-NEXT:    mov v5.s[3], v6.s[2]
-; CHECK-IADISABLED-NEXT:    mov v4.s[2], v6.s[0]
-; CHECK-IADISABLED-NEXT:    mov v3.s[3], v6.s[1]
-; CHECK-IADISABLED-NEXT:    mov v4.s[3], v6.s[3]
-; CHECK-IADISABLED-NEXT:    fcmgt v2.4s, v3.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fcmgt v6.4s, v5.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fcmgt v7.4s, v4.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    bsl v2.16b, v0.16b, v3.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v3.4s, v3.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bsl v6.16b, v0.16b, v5.16b
+; CHECK-IADISABLED-NEXT:    mov v16.s[3], v7.s[1]
+; CHECK-IADISABLED-NEXT:    mov v17.s[3], v7.s[2]
+; CHECK-IADISABLED-NEXT:    mov v6.s[0], v5.s[2]
+; CHECK-IADISABLED-NEXT:    tbl v5.16b, { v6.16b, v7.16b }, v3.16b
+; CHECK-IADISABLED-NEXT:    fcmgt v6.4s, v16.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    fcmgt v7.4s, v17.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    fcmgt v18.4s, v5.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    bsl v6.16b, v2.16b, v16.16b
+; CHECK-IADISABLED-NEXT:    fcmlt v16.4s, v16.4s, #0.0
+; CHECK-IADISABLED-NEXT:    bsl v7.16b, v2.16b, v17.16b
+; CHECK-IADISABLED-NEXT:    fcmlt v17.4s, v17.4s, #0.0
+; CHECK-IADISABLED-NEXT:    bsl v18.16b, v2.16b, v5.16b
 ; CHECK-IADISABLED-NEXT:    fcmlt v5.4s, v5.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bsl v7.16b, v0.16b, v4.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v4.4s, v4.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bic v2.16b, v2.16b, v3.16b
-; CHECK-IADISABLED-NEXT:    bic v3.16b, v6.16b, v5.16b
-; CHECK-IADISABLED-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    bic v4.16b, v7.16b, v4.16b
-; CHECK-IADISABLED-NEXT:    fcvtzs v3.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    fcvtzs v4.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    xtn v5.4h, v2.4s
-; CHECK-IADISABLED-NEXT:    xtn v6.4h, v3.4s
-; CHECK-IADISABLED-NEXT:    xtn v7.4h, v4.4s
-; CHECK-IADISABLED-NEXT:    tbl v2.16b, { v5.16b, v6.16b, v7.16b }, v1.16b
-; CHECK-IADISABLED-NEXT:    mov s3, v2.s[2]
-; CHECK-IADISABLED-NEXT:    str d2, [x0]
-; CHECK-IADISABLED-NEXT:    str s3, [x0, #8]
+; CHECK-IADISABLED-NEXT:    bic v6.16b, v6.16b, v16.16b
+; CHECK-IADISABLED-NEXT:    bic v7.16b, v7.16b, v17.16b
+; CHECK-IADISABLED-NEXT:    fcvtzs v6.4s, v6.4s
+; CHECK-IADISABLED-NEXT:    bic v5.16b, v18.16b, v5.16b
+; CHECK-IADISABLED-NEXT:    fcvtzs v7.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    fcvtzs v5.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    xtn v16.4h, v6.4s
+; CHECK-IADISABLED-NEXT:    xtn v17.4h, v7.4s
+; CHECK-IADISABLED-NEXT:    xtn v18.4h, v5.4s
+; CHECK-IADISABLED-NEXT:    tbl v5.16b, { v16.16b, v17.16b, v18.16b }, v4.16b
+; CHECK-IADISABLED-NEXT:    mov s6, v5.s[2]
+; CHECK-IADISABLED-NEXT:    str d5, [x0]
+; CHECK-IADISABLED-NEXT:    str s6, [x0, #8]
 ; CHECK-IADISABLED-NEXT:    add x0, x0, #12
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB2_8
 ; CHECK-IADISABLED-NEXT:  // %bb.9: // %middle.block
@@ -1147,56 +1149,59 @@ define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-IADISABLED-NEXT:    add x11, x8, #1
 ; CHECK-IADISABLED-NEXT:    mov w8, #1132396544 // =0x437f0000
 ; CHECK-IADISABLED-NEXT:    adrp x12, .LCPI3_0
+; CHECK-IADISABLED-NEXT:    adrp x13, .LCPI3_1
+; CHECK-IADISABLED-NEXT:    adrp x14, .LCPI3_2
 ; CHECK-IADISABLED-NEXT:    and x10, x11, #0x1fffffffc
 ; CHECK-IADISABLED-NEXT:    dup v0.4s, w8
-; CHECK-IADISABLED-NEXT:    ldr q1, [x12, :lo12:.LCPI3_0]
 ; CHECK-IADISABLED-NEXT:    add x8, x1, x10, lsl #4
 ; CHECK-IADISABLED-NEXT:    add x9, x0, x10, lsl #2
+; CHECK-IADISABLED-NEXT:    ldr q1, [x12, :lo12:.LCPI3_0]
+; CHECK-IADISABLED-NEXT:    ldr q2, [x13, :lo12:.LCPI3_1]
+; CHECK-IADISABLED-NEXT:    ldr q3, [x14, :lo12:.LCPI3_2]
 ; CHECK-IADISABLED-NEXT:    and x12, x11, #0x1fffffffc
 ; CHECK-IADISABLED-NEXT:  .LBB3_8: // %vector.body
 ; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q3, q2, [x1, #32]
+; CHECK-IADISABLED-NEXT:    ldp q4, q5, [x1, #32]
 ; CHECK-IADISABLED-NEXT:    subs x12, x12, #4
-; CHECK-IADISABLED-NEXT:    ldp q6, q5, [x1], #64
-; CHECK-IADISABLED-NEXT:    zip1 v4.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    trn1 v19.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    zip2 v2.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v7.4s, v6.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    zip1 v16.4s, v6.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    trn2 v18.4s, v6.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    zip2 v5.4s, v6.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    ext v17.16b, v3.16b, v4.16b, #8
-; CHECK-IADISABLED-NEXT:    uzp2 v3.4s, v7.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    mov v18.d[1], v4.d[1]
-; CHECK-IADISABLED-NEXT:    mov v5.d[1], v19.d[1]
+; CHECK-IADISABLED-NEXT:    ldp q6, q7, [x1], #64
+; CHECK-IADISABLED-NEXT:    tbl v17.16b, { v4.16b, v5.16b }, v1.16b
+; CHECK-IADISABLED-NEXT:    zip1 v18.4s, v4.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    trn1 v20.4s, v4.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    zip1 v16.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    trn2 v19.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip2 v21.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip2 v4.4s, v4.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    tbl v5.16b, { v6.16b, v7.16b }, v2.16b
 ; CHECK-IADISABLED-NEXT:    mov v16.d[1], v17.d[1]
-; CHECK-IADISABLED-NEXT:    mov v3.d[1], v2.d[1]
-; CHECK-IADISABLED-NEXT:    fcmgt v4.4s, v18.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fcmlt v17.4s, v18.4s, #0.0
-; CHECK-IADISABLED-NEXT:    fcmgt v6.4s, v5.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fcmgt v2.4s, v16.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fcmgt v7.4s, v3.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    bsl v4.16b, v0.16b, v18.16b
-; CHECK-IADISABLED-NEXT:    bsl v6.16b, v0.16b, v5.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v5.4s, v5.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bsl v2.16b, v0.16b, v16.16b
+; CHECK-IADISABLED-NEXT:    mov v19.d[1], v18.d[1]
+; CHECK-IADISABLED-NEXT:    mov v21.d[1], v20.d[1]
+; CHECK-IADISABLED-NEXT:    mov v5.d[1], v4.d[1]
+; CHECK-IADISABLED-NEXT:    fcmgt v4.4s, v16.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    fcmgt v6.4s, v19.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    fcmgt v7.4s, v21.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    fcmgt v17.4s, v5.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    fcmlt v18.4s, v19.4s, #0.0
+; CHECK-IADISABLED-NEXT:    bsl v4.16b, v0.16b, v16.16b
 ; CHECK-IADISABLED-NEXT:    fcmlt v16.4s, v16.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bsl v7.16b, v0.16b, v3.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v3.4s, v3.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bic v4.16b, v4.16b, v17.16b
-; CHECK-IADISABLED-NEXT:    bic v5.16b, v6.16b, v5.16b
-; CHECK-IADISABLED-NEXT:    bic v2.16b, v2.16b, v16.16b
+; CHECK-IADISABLED-NEXT:    bsl v6.16b, v0.16b, v19.16b
+; CHECK-IADISABLED-NEXT:    bsl v7.16b, v0.16b, v21.16b
+; CHECK-IADISABLED-NEXT:    fcmlt v19.4s, v21.4s, #0.0
+; CHECK-IADISABLED-NEXT:    bsl v17.16b, v0.16b, v5.16b
+; CHECK-IADISABLED-NEXT:    fcmlt v5.4s, v5.4s, #0.0
+; CHECK-IADISABLED-NEXT:    bic v4.16b, v4.16b, v16.16b
+; CHECK-IADISABLED-NEXT:    bic v6.16b, v6.16b, v18.16b
+; CHECK-IADISABLED-NEXT:    bic v7.16b, v7.16b, v19.16b
+; CHECK-IADISABLED-NEXT:    bic v5.16b, v17.16b, v5.16b
 ; CHECK-IADISABLED-NEXT:    fcvtzs v4.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    bic v3.16b, v7.16b, v3.16b
+; CHECK-IADISABLED-NEXT:    fcvtzs v6.4s, v6.4s
+; CHECK-IADISABLED-NEXT:    fcvtzs v7.4s, v7.4s
 ; CHECK-IADISABLED-NEXT:    fcvtzs v5.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    fcvtzs v3.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    xtn v16.4h, v2.4s
-; CHECK-IADISABLED-NEXT:    xtn v17.4h, v4.4s
-; CHECK-IADISABLED-NEXT:    xtn v18.4h, v5.4s
-; CHECK-IADISABLED-NEXT:    xtn v19.4h, v3.4s
-; CHECK-IADISABLED-NEXT:    tbl v2.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v1.16b
-; CHECK-IADISABLED-NEXT:    str q2, [x0], #16
+; CHECK-IADISABLED-NEXT:    xtn v16.4h, v4.4s
+; CHECK-IADISABLED-NEXT:    xtn v17.4h, v6.4s
+; CHECK-IADISABLED-NEXT:    xtn v18.4h, v7.4s
+; CHECK-IADISABLED-NEXT:    xtn v19.4h, v5.4s
+; CHECK-IADISABLED-NEXT:    tbl v4.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v3.16b
+; CHECK-IADISABLED-NEXT:    str q4, [x0], #16
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB3_8
 ; CHECK-IADISABLED-NEXT:  // %bb.9: // %middle.block
 ; CHECK-IADISABLED-NEXT:    cmp x11, x10
@@ -2443,24 +2448,22 @@ for.body:                                         ; preds = %for.body.preheader5
 define void @reverse4_shuffle_1024(ptr noalias %out, ptr noalias readonly %in) {
 ; CHECK-LABEL: reverse4_shuffle_1024:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1024 // =0x400
-; CHECK-NEXT:    add x9, x1, #32
-; CHECK-NEXT:    add x10, x0, #32
+; CHECK-NEXT:    adrp x8, .LCPI7_0
+; CHECK-NEXT:    add x9, x0, #32
+; CHECK-NEXT:    mov w10, #1024 // =0x400
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI7_0]
+; CHECK-NEXT:    add x8, x1, #32
 ; CHECK-NEXT:  .LBB7_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q0, q1, [x9, #-32]
-; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    ldp q2, q3, [x9], #64
-; CHECK-NEXT:    rev64 v0.16b, v0.16b
-; CHECK-NEXT:    rev64 v1.16b, v1.16b
-; CHECK-NEXT:    rev64 v2.16b, v2.16b
-; CHECK-NEXT:    rev64 v3.16b, v3.16b
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    stp q0, q1, [x10, #-32]
-; CHECK-NEXT:    stp q2, q3, [x10], #64
+; CHECK-NEXT:    ldp q1, q2, [x8, #-32]
+; CHECK-NEXT:    subs x10, x10, #1
+; CHECK-NEXT:    ldp q3, q4, [x8], #64
+; CHECK-NEXT:    tbl v1.16b, { v1.16b }, v0.16b
+; CHECK-NEXT:    tbl v2.16b, { v2.16b }, v0.16b
+; CHECK-NEXT:    tbl v3.16b, { v3.16b }, v0.16b
+; CHECK-NEXT:    tbl v4.16b, { v4.16b }, v0.16b
+; CHECK-NEXT:    stp q1, q2, [x9, #-32]
+; CHECK-NEXT:    stp q3, q4, [x9], #64
 ; CHECK-NEXT:    b.ne .LBB7_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
@@ -2527,24 +2530,22 @@ exit:
 define void @reverse4_shuffle_0231(ptr noalias %out, ptr noalias readonly %in) {
 ; CHECK-LABEL: reverse4_shuffle_0231:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1024 // =0x400
-; CHECK-NEXT:    add x9, x1, #32
-; CHECK-NEXT:    add x10, x0, #32
+; CHECK-NEXT:    adrp x8, .LCPI8_0
+; CHECK-NEXT:    add x9, x0, #32
+; CHECK-NEXT:    mov w10, #1024 // =0x400
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI8_0]
+; CHECK-NEXT:    add x8, x1, #32
 ; CHECK-NEXT:  .LBB8_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q0, q1, [x9, #-32]
-; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    ldp q3, q4, [x9], #64
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #12
-; CHECK-NEXT:    ext v5.16b, v1.16b, v1.16b, #12
-; CHECK-NEXT:    ext v6.16b, v3.16b, v3.16b, #12
-; CHECK-NEXT:    ext v7.16b, v4.16b, v4.16b, #12
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    uzp1 v1.4s, v1.4s, v5.4s
-; CHECK-NEXT:    uzp1 v2.4s, v3.4s, v6.4s
-; CHECK-NEXT:    uzp1 v3.4s, v4.4s, v7.4s
-; CHECK-NEXT:    stp q0, q1, [x10, #-32]
-; CHECK-NEXT:    stp q2, q3, [x10], #64
+; CHECK-NEXT:    ldp q1, q2, [x8, #-32]
+; CHECK-NEXT:    subs x10, x10, #1
+; CHECK-NEXT:    ldp q3, q4, [x8], #64
+; CHECK-NEXT:    tbl v1.16b, { v1.16b }, v0.16b
+; CHECK-NEXT:    tbl v2.16b, { v2.16b }, v0.16b
+; CHECK-NEXT:    tbl v3.16b, { v3.16b }, v0.16b
+; CHECK-NEXT:    tbl v4.16b, { v4.16b }, v0.16b
+; CHECK-NEXT:    stp q1, q2, [x9, #-32]
+; CHECK-NEXT:    stp q3, q4, [x9], #64
 ; CHECK-NEXT:    b.ne .LBB8_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
