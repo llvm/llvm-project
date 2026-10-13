@@ -710,6 +710,10 @@ void privatizeSymbol(
   // not emit the copy region when dealing with the SIMD directive.
   if (dir && dir == llvm::omp::Directive::OMPD_simd)
     emitCopyRegion = false;
+  // Allocatable LINEAR items get a `linear` privatizer.
+  bool isLinear = std::is_same_v<OpType, mlir::omp::PrivateClauseOp> &&
+                  symToPrivatize->test(semantics::Symbol::Flag::OmpLinear) &&
+                  semantics::IsAllocatable(ultimate);
 
   mlir::Value privVal = hsb.getAddr();
   mlir::Type allocType = privVal.getType();
@@ -765,7 +769,8 @@ void privatizeSymbol(
     auto moduleOp = firOpBuilder.getModule();
     std::string privatizerPrefix =
         converter.mangleName(*sym) +
-        (emitCopyRegion ? "_firstprivate" : "_private");
+        (emitCopyRegion ? "_firstprivate"
+                        : (isLinear ? "_linear" : "_private"));
     if (forceHeapAllocation)
       privatizerPrefix += "_heap";
     auto uniquePrivatizerName = fir::getTypeAsString(
@@ -790,6 +795,7 @@ void privatizeSymbol(
           firOpBuilder, symLoc, uniquePrivatizerName,
           /*sym_visibility=*/nullptr, allocType,
           emitCopyRegion ? mlir::omp::DataSharingClauseType::FirstPrivate
+          : isLinear     ? mlir::omp::DataSharingClauseType::Linear
                          : mlir::omp::DataSharingClauseType::Private);
     } else {
       result =
@@ -885,6 +891,20 @@ void privatizeSymbol(
         fir::YieldOp::create(
             firOpBuilder, hsb.getAddr().getLoc(),
             symTable.shallowLookupSymbol(*symToPrivatize).getAddr());
+      }
+    }
+
+    // Populate the `data_address` region of a `linear` privatizer.
+    if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
+      if (isLinear) {
+        mlir::Block *block =
+            firOpBuilder.createBlock(&result.getDataAddressRegion(),
+                                     /*insertPt=*/{}, {argType}, {symLoc});
+        firOpBuilder.setInsertionPointToEnd(block);
+        mlir::Value box =
+            fir::LoadOp::create(firOpBuilder, symLoc, block->getArgument(0));
+        mlir::Value addr = fir::BoxAddrOp::create(firOpBuilder, symLoc, box);
+        mlir::omp::YieldOp::create(firOpBuilder, symLoc, addr);
       }
     }
 

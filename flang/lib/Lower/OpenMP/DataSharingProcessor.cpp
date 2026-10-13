@@ -341,6 +341,12 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
       } else {
         collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
       }
+    } else if (const auto *linearClause =
+                   std::get_if<omp::clause::Linear>(&clause.u)) {
+      // Allocatable linear items need a real private copy.
+      for (const omp::Object &object : std::get<ObjectList>(linearClause->t))
+        if (semantics::IsAllocatable(object.sym()->GetUltimate()))
+          allPrivatizedSymbols.insert(object.sym());
     }
   }
 
