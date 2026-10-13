@@ -52,9 +52,6 @@ public:
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
-  EVT getLoadExtIntermediateType(LLVMContext &Context, EVT DestVT, EVT SrcVT,
-                                 ISD::LoadExtType ExtType) const override;
-
   MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
 
   bool isUniformLoad(const LoadSDNode *Load) const;
