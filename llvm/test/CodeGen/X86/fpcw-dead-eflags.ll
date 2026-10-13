@@ -42,20 +42,20 @@ define float @uitofp_i64(i64 %x) nounwind {
   ; X86-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1)
   ; X86-NEXT:   [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 4, $noreg :: (load (s32) from %fixed-stack.1 + 4)
   ; X86-NEXT:   MOV32mr %stack.0, 1, $noreg, 4, $noreg, [[MOV32rm1]] :: (store (s32) into %stack.0 + 4, basealign 8)
-  ; X86-NEXT:   MOV32mr %stack.0, 1, $noreg, 0, $noreg, killed [[MOV32rm]] :: (store (s32) into %stack.0, align 8)
+  ; X86-NEXT:   MOV32mr %stack.0, 1, $noreg, 0, $noreg, [[MOV32rm]] :: (store (s32) into %stack.0, align 8)
   ; X86-NEXT:   [[SHR32ri:%[0-9]+]]:gr32_nosp = SHR32ri [[MOV32rm1]], 31, implicit-def dead $eflags
   ; X86-NEXT:   [[ILD_Fp64m80_:%[0-9]+]]:rfp80 = ILD_Fp64m80 %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %stack.0)
-  ; X86-NEXT:   [[ADD_Fp80m32_:%[0-9]+]]:rfp80 = nofpexcept ADD_Fp80m32 killed [[ILD_Fp64m80_]], $noreg, 4, killed [[SHR32ri]], %const.0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from constant-pool, align 8)
-  ; X86-NEXT:   nofpexcept ST_Fp80m32 %stack.1, 1, $noreg, 0, $noreg, killed [[ADD_Fp80m32_]], implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %stack.1)
+  ; X86-NEXT:   [[ADD_Fp80m32_:%[0-9]+]]:rfp80 = nofpexcept ADD_Fp80m32 [[ILD_Fp64m80_]], $noreg, 4, [[SHR32ri]], %const.0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from constant-pool, align 8)
+  ; X86-NEXT:   nofpexcept ST_Fp80m32 %stack.1, 1, $noreg, 0, $noreg, [[ADD_Fp80m32_]], implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %stack.1)
   ; X86-NEXT:   [[LD_Fp32m:%[0-9]+]]:rfp32 = nofpexcept LD_Fp32m %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %stack.1)
-  ; X86-NEXT:   RET 0, killed [[LD_Fp32m]]
+  ; X86-NEXT:   RET 0, [[LD_Fp32m]]
   ;
   ; WIN-LABEL: name: uitofp_i64
   ; WIN: bb.0 (%ir-block.0):
   ; WIN-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1)
   ; WIN-NEXT:   [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 4, $noreg :: (load (s32) from %fixed-stack.1 + 4)
   ; WIN-NEXT:   MOV32mr %stack.0, 1, $noreg, 4, $noreg, [[MOV32rm1]] :: (store (s32) into %stack.0 + 4, basealign 8)
-  ; WIN-NEXT:   MOV32mr %stack.0, 1, $noreg, 0, $noreg, killed [[MOV32rm]] :: (store (s32) into %stack.0, align 8)
+  ; WIN-NEXT:   MOV32mr %stack.0, 1, $noreg, 0, $noreg, [[MOV32rm]] :: (store (s32) into %stack.0, align 8)
   ; WIN-NEXT:   [[SHR32ri:%[0-9]+]]:gr32_nosp = SHR32ri [[MOV32rm1]], 31, implicit-def dead $eflags
   ; WIN-NEXT:   [[ILD_Fp64m80_:%[0-9]+]]:rfp80 = ILD_Fp64m80 %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %stack.0)
   ; WIN-NEXT:   FNSTCW16m %stack.2, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw :: (store (s16) into %stack.2)
@@ -64,11 +64,11 @@ define float @uitofp_i64(i64 %x) nounwind {
   ; WIN-NEXT:   [[COPY:%[0-9]+]]:gr16 = COPY [[OR32ri]].sub_16bit
   ; WIN-NEXT:   MOV16mr %stack.3, 1, $noreg, 0, $noreg, [[COPY]] :: (store (s16) into %stack.3)
   ; WIN-NEXT:   FLDCW16m %stack.3, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit-def $fpcw :: (load (s16) from %stack.3)
-  ; WIN-NEXT:   [[ADD_Fp80m32_:%[0-9]+]]:rfp80 = ADD_Fp80m32 killed [[ILD_Fp64m80_]], $noreg, 4, killed [[SHR32ri]], %const.0, $noreg, implicit-def $fpsw, implicit $fpcw
+  ; WIN-NEXT:   [[ADD_Fp80m32_:%[0-9]+]]:rfp80 = ADD_Fp80m32 [[ILD_Fp64m80_]], $noreg, 4, [[SHR32ri]], %const.0, $noreg, implicit-def $fpsw, implicit $fpcw
   ; WIN-NEXT:   FLDCW16m %stack.2, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit-def $fpcw :: (load (s16) from %stack.2)
-  ; WIN-NEXT:   nofpexcept ST_Fp80m32 %stack.1, 1, $noreg, 0, $noreg, killed [[ADD_Fp80m32_]], implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %stack.1)
+  ; WIN-NEXT:   nofpexcept ST_Fp80m32 %stack.1, 1, $noreg, 0, $noreg, [[ADD_Fp80m32_]], implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %stack.1)
   ; WIN-NEXT:   [[LD_Fp32m:%[0-9]+]]:rfp32 = nofpexcept LD_Fp32m %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %stack.1)
-  ; WIN-NEXT:   RET 0, killed [[LD_Fp32m]]
+  ; WIN-NEXT:   RET 0, [[LD_Fp32m]]
   %r = uitofp i64 %x to float
   ret float %r
 }

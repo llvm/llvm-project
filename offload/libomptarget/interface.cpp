@@ -37,6 +37,7 @@
 using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
+using namespace llvm::omp::target::helpers;
 
 // If offload is enabled, ensure that device DeviceID has been initialized.
 //
@@ -647,17 +648,18 @@ EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
   if (!PM)
     return;
 
-  olIteratePlatforms(
-      [](ol_platform_handle_t Platform, void *Data) {
-        bool Active = false;
-        if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE, sizeof(Active),
-                              &Active) == OL_SUCCESS &&
-            Active)
-          olPlatformRegisterRPCCallback(
-              Platform, reinterpret_cast<ol_platform_rpc_cb_t>(Data));
-        return true;
-      },
-      reinterpret_cast<void *>(Callback));
+  if (auto Err = iteratePlatforms(
+          [](ol_platform_handle_t Platform, void *Data) {
+            bool Active = false;
+            if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
+                                  sizeof(Active), &Active) == OL_SUCCESS &&
+                Active)
+              olPlatformRegisterRPCCallback(
+                  Platform, reinterpret_cast<ol_platform_rpc_cb_t>(Data));
+            return true;
+          },
+          reinterpret_cast<void *>(Callback)))
+    REPORT() << "Failed to iterate platforms: " << toString(std::move(Err));
 }
 
 EXTERN void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr) {
