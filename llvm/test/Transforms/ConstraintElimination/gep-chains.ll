@@ -389,3 +389,64 @@ then:
 else:
   ret i1 false
 }
+
+; Both GEPs are nusw and have a single i8 index, so neither GEP violates nusw on
+; its own. However, the sum of their constant offsets (-2^63 - 1) is not
+; representable in the index type, so the offsets must not be combined. The
+; combined offset has the opposite sign and folded %cmp to false, while it is
+; true for %p = 0x8000000000000002, where %inner is 2 and %outer is 1.
+define i1 @nested_nusw_constant_offset_signed_wrap(ptr %p) {
+; CHECK-LABEL: @nested_nusw_constant_offset_signed_wrap(
+; CHECK-NEXT:    [[INNER:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 -9223372036854775808
+; CHECK-NEXT:    [[OUTER:%.*]] = getelementptr nusw i8, ptr [[INNER]], i64 -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[OUTER]], [[P]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %inner = getelementptr nusw i8, ptr %p, i64 -9223372036854775808
+  %outer = getelementptr nusw i8, ptr %inner, i64 -1
+  %cmp = icmp ult ptr %outer, %p
+  ret i1 %cmp
+}
+
+; Positive offsets overflow in the same way: each GEP is fine on its own, but
+; 2 * (2^62 + 1) is not representable. %outer is %p + 2^63 + 2, so %cmp is false,
+; but the wrapped combined offset folded it to true.
+define i1 @nested_nusw_constant_offset_positive_signed_wrap(ptr %p) {
+; CHECK-LABEL: @nested_nusw_constant_offset_positive_signed_wrap(
+; CHECK-NEXT:    [[INNER:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 4611686018427387905
+; CHECK-NEXT:    [[OUTER:%.*]] = getelementptr nusw i8, ptr [[INNER]], i64 4611686018427387905
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[OUTER]], [[P]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %inner = getelementptr nusw i8, ptr %p, i64 4611686018427387905
+  %outer = getelementptr nusw i8, ptr %inner, i64 4611686018427387905
+  %cmp = icmp ult ptr %outer, %p
+  ret i1 %cmp
+}
+
+; Here the sum (-2^63) is still representable, so the offsets are combined and
+; %outer = %p - 2^63 implies that %cmp is false.
+define i1 @nested_nusw_constant_offset_no_signed_wrap(ptr %p) {
+; CHECK-LABEL: @nested_nusw_constant_offset_no_signed_wrap(
+; CHECK-NEXT:    [[INNER:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 -9223372036854775807
+; CHECK-NEXT:    [[OUTER:%.*]] = getelementptr nusw i8, ptr [[INNER]], i64 -1
+; CHECK-NEXT:    ret i1 false
+;
+  %inner = getelementptr nusw i8, ptr %p, i64 -9223372036854775807
+  %outer = getelementptr nusw i8, ptr %inner, i64 -1
+  %cmp = icmp uge ptr %outer, %p
+  ret i1 %cmp
+}
+
+; Small offsets combine without wrapping, so this is still known to be true.
+define i1 @nested_nuw_constant_offset_combined(ptr %p) {
+; CHECK-LABEL: @nested_nuw_constant_offset_combined(
+; CHECK-NEXT:    [[INNER:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 5
+; CHECK-NEXT:    [[OUTER:%.*]] = getelementptr nuw i8, ptr [[INNER]], i64 3
+; CHECK-NEXT:    ret i1 true
+;
+  %inner = getelementptr nuw i8, ptr %p, i64 5
+  %outer = getelementptr nuw i8, ptr %inner, i64 3
+  %cmp = icmp uge ptr %outer, %p
+  ret i1 %cmp
+}
