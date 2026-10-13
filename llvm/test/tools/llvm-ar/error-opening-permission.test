@@ -9,10 +9,10 @@
 ## No Permission:
 # RUN: llvm-ar rc %t/permission.b %t/1.txt
 # RUN: chmod 100 %t/permission.b
-## Restore permissions whether FileCheck succeeds or fails, preserving the
-## non-zero exit code on failure.
 # RUN: not llvm-ar p %t/permission.b 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NO-PERMISSION -DARCHIVE=%t/permission.b -DMSG=%errc_EACCES && \
+## Restore permissions whether FileCheck succeeds or fails, preserving the
+## non-zero exit code on failure.
 # RUN:   chmod 700 %t/permission.b || not chmod 700 %t/permission.b
 
 # NO-PERMISSION: error: unable to open '[[ARCHIVE]]': [[MSG]]
