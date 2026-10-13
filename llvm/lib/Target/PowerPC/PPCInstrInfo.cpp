@@ -1520,8 +1520,8 @@ unsigned PPCInstrInfo::insertBranch(MachineBasicBlock &MBB,
 bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                    ArrayRef<MachineOperand> Cond,
                                    Register DstReg, Register TrueReg,
-                                   Register FalseReg, int &CondCycles,
-                                   int &TrueCycles, int &FalseCycles) const {
+                                   Register FalseReg,
+                                   SelectExpansion &Exp) const {
   if (!Subtarget.hasISEL())
     return false;
 
@@ -1556,9 +1556,9 @@ bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   // an open question. On the A2, the isel instruction has a 2-cycle latency
   // but single-cycle throughput. These numbers are used in combination with
   // the MispredictPenalty setting from the active SchedMachineModel.
-  CondCycles = 1;
-  TrueCycles = 1;
-  FalseCycles = 1;
+  Exp.CondCycles = 1;
+  Exp.TrueCycles = 1;
+  Exp.FalseCycles = 1;
 
   return true;
 }
