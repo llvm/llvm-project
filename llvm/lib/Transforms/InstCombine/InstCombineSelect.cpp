@@ -5318,33 +5318,28 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // TODO: preserve FMF flags
   auto FoldSelectWithAndOrCond = [&](bool IsAnd, Value *A,
                                      Value *B) -> Instruction * {
+    Instruction *MDFrom = nullptr;
+    // If the and/or is logical, we can propagate branch weights from that
+    // select. Otherwise, we cannot infer the branch weights in the
+    // general case.
+    if (auto *NestedSI = dyn_cast<SelectInst>(SI.getCondition()))
+      if (NestedSI->getCondition() == A)
+        MDFrom = NestedSI;
+
     if (Value *V = simplifySelectInst(B, TrueVal, FalseVal, FMF,
                                       SQ.getWithInstruction(&SI))) {
-      Value *NewTrueVal = IsAnd ? V : TrueVal;
-      Value *NewFalseVal = IsAnd ? FalseVal : V;
-
-      // If the True and False values don't change, then preserve the branch
-      // metadata of the original select as the net effect of this change is to
-      // simplify the conditional.
-      Instruction *MDFrom = nullptr;
-      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal) {
-        MDFrom = &SI;
-      }
-      return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,
-                                MDFrom);
+      SelectInst *NewSI = SelectInst::Create(
+          A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
+      if (!MDFrom)
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE, &F);
+      return NewSI;
     }
 
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
         if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this)) {
-          // If the and/or is logical, we can propagate branch weights from that
-          // select. Otherwise, we cannot infer the branch weights in the
-          // general case.
-          Instruction *MDFrom = nullptr;
-          if (auto *NestedSI = dyn_cast<SelectInst>(SI.getCondition()))
-            if (NestedSI->getCondition() == A)
-              MDFrom = NestedSI;
           SelectInst *NewSI = SelectInst::Create(
               A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
               ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
