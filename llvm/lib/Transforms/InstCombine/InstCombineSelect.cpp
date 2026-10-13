@@ -5329,7 +5329,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (Value *V = simplifySelectInst(B, TrueVal, FalseVal, FMF,
                                       SQ.getWithInstruction(&SI))) {
       SelectInst *NewSI = SelectInst::Create(
-          A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr, MDFrom);
+          A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
       if (!MDFrom)
         setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE, &F);
       return NewSI;
