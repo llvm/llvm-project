@@ -89,7 +89,7 @@ define ptx_kernel void @inlineasm(ptr %p) {
 ;
 ; CHECK-SM100-LABEL: inlineasm(
 ; CHECK-SM100:       {
-; CHECK-SM100-NEXT:    .reg .b32 %r<6>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<5>;
 ; CHECK-SM100-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
@@ -102,8 +102,7 @@ define ptx_kernel void @inlineasm(ptr %p) {
 ; CHECK-SM100-NEXT:    // nop
 ; CHECK-SM100-NEXT:    // end inline asm
 ; CHECK-SM100-NEXT:    mov.b64 %rd2, {%r1, %r2};
-; CHECK-SM100-NEXT:    mov.b32 %r5, 0f00000000;
-; CHECK-SM100-NEXT:    mov.b64 %rd3, {%r5, %r5};
+; CHECK-SM100-NEXT:    mov.b64 %rd3, {0f00000000, 0f00000000};
 ; CHECK-SM100-NEXT:    mul.rn.f32x2 %rd4, %rd2, %rd3;
 ; CHECK-SM100-NEXT:    st.b64 [%rd1], %rd4;
 ; CHECK-SM100-NEXT:    ret;
@@ -176,7 +175,7 @@ define ptx_kernel void @zextend_to_v2i32(<2 x i8> %0) {
 ; CHECK-SM100-LABEL: zextend_to_v2i32(
 ; CHECK-SM100:       {
 ; CHECK-SM100-NEXT:    .reg .b16 %rs<3>;
-; CHECK-SM100-NEXT:    .reg .b32 %r<5>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<4>;
 ; CHECK-SM100-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
@@ -185,8 +184,7 @@ define ptx_kernel void @zextend_to_v2i32(<2 x i8> %0) {
 ; CHECK-SM100-NEXT:    cvt.u32.u16 %r2, %rs2;
 ; CHECK-SM100-NEXT:    cvt.u32.u16 %r3, %rs1;
 ; CHECK-SM100-NEXT:    mov.b64 %rd1, {%r3, %r2};
-; CHECK-SM100-NEXT:    mov.b32 %r4, 0;
-; CHECK-SM100-NEXT:    mov.b64 %rd2, {%r4, %r4};
+; CHECK-SM100-NEXT:    mov.b64 %rd2, {0, 0};
 ; CHECK-SM100-NEXT:    mov.b64 %rd3, 4;
 ; CHECK-SM100-NEXT:    st.b32 [%rd3], %rd2;
 ; CHECK-SM100-NEXT:    mov.b64 %rd4, 0;
@@ -230,7 +228,7 @@ define ptx_kernel void @sextend_to_v2i32(<2 x i8> %0) {
 ; CHECK-SM100-LABEL: sextend_to_v2i32(
 ; CHECK-SM100:       {
 ; CHECK-SM100-NEXT:    .reg .b16 %rs<3>;
-; CHECK-SM100-NEXT:    .reg .b32 %r<7>;
+; CHECK-SM100-NEXT:    .reg .b32 %r<6>;
 ; CHECK-SM100-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
@@ -241,8 +239,7 @@ define ptx_kernel void @sextend_to_v2i32(<2 x i8> %0) {
 ; CHECK-SM100-NEXT:    cvt.u32.u16 %r4, %rs1;
 ; CHECK-SM100-NEXT:    cvt.s32.s8 %r5, %r4;
 ; CHECK-SM100-NEXT:    mov.b64 %rd1, {%r5, %r3};
-; CHECK-SM100-NEXT:    mov.b32 %r6, 0;
-; CHECK-SM100-NEXT:    mov.b64 %rd2, {%r6, %r6};
+; CHECK-SM100-NEXT:    mov.b64 %rd2, {0, 0};
 ; CHECK-SM100-NEXT:    mov.b64 %rd3, 4;
 ; CHECK-SM100-NEXT:    st.b32 [%rd3], %rd2;
 ; CHECK-SM100-NEXT:    mov.b64 %rd4, 0;
