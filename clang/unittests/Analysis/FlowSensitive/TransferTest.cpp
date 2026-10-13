@@ -5800,9 +5800,38 @@ TEST_P(TransferTest, LoopMergeBlockUpdatesBoolModelWhenLocToValUnchanged) {
         const ValueDecl *ADecl = findValueDecl(ASTCtx, "A");
         ASSERT_THAT(ADecl, NotNull());
 
-        if (GetParam() == BoolModelKind::Simple) {
-          EXPECT_FALSE(Env.proves(getFormula(*ADecl, Env)));
-        }
+        EXPECT_FALSE(Env.proves(getFormula(*ADecl, Env)));
+      });
+}
+
+TEST_P(TransferTest, LoopWithDisjunctionProvedByLaterAssumptionConverges) {
+  std::string Code = R"(
+    bool foo();
+
+    void target(bool X) {
+      while (foo()) {
+        if (!(X || foo())) return;
+        if (!X) return;
+        (void)0;
+        /*[[p]]*/
+      }
+    }
+  )";
+  // Each iteration assumes `X || foo()` (with a fresh atom for `foo()`) while
+  // `X` is unknown, and then assumes `X == true`. At the backedge join/widen,
+  // `X == true` already proves `X || foo()`, so the per-iteration formulas
+  // should not accumulate in `AssumedFormulas` and prevent convergence.
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *XDecl = findValueDecl(ASTCtx, "X");
+        ASSERT_THAT(XDecl, NotNull());
+
+        EXPECT_TRUE(Env.proves(getFormula(*XDecl, Env)));
       });
 }
 

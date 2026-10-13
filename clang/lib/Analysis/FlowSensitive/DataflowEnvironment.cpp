@@ -179,17 +179,18 @@ public:
           AtomToVal.insert({A, V});
       }
 
-      // Keep assumed formulas that hold on both branches: either because both
+      // Keep assumed formulas that hold on both branches (and are not already
+      // reduced to `true` by the joined `AtomToVal`): either because both
       // environments still carry `F` as an unresolved formula, or because one
       // branch carries `F` and the other branch's `AtomToVal` assignments
       // already prove `F`. Any branch-local formulas not proved by the other
       // branch are dropped here, which shrinks `AssumedFormulas` at joins.
       for (const Formula *F : SA.AssumedFormulas) {
-        if (SB.AssumedFormulas.contains(F) || SB.proves(*F))
+        if (!proves(*F) && (SB.AssumedFormulas.contains(F) || SB.proves(*F)))
           AssumedFormulas.insert(F);
       }
       for (const Formula *F : SB.AssumedFormulas) {
-        if (SA.proves(*F))
+        if (!proves(*F) && SA.proves(*F))
           AssumedFormulas.insert(F);
       }
     }
