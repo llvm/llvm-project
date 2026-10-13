@@ -132,7 +132,8 @@ public:
     Address addr = getAtomicAddress();
     if (hasPadding())
       addr = cgf.getBuilder().createGetMember(loc, addr, /*name=*/"value",
-                                              /*index=*/0);
+                                              /*index=*/0,
+                                              cgf.cgm.getDataLayout());
 
     assert(!cir::MissingFeatures::opTBAA());
     return LValue::makeAddr(addr, getValueType(), lvalue.getBaseInfo());
