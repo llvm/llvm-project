@@ -1655,7 +1655,8 @@ struct MIFEventPostOpConversion
                                            coarrayHandle, offset, stat,
                                            errmsgArg, errmsgAllocArg);
     } else
-      TODO(loc, "coarray: mif.event_post with event_var which is a component of a coarray.");
+      TODO(loc, "coarray: mif.event_post with event_var which is a component "
+                "of a coarray.");
 
     fir::CallOp callOp = fir::CallOp::create(builder, loc, funcOp, args);
     rewriter.replaceOp(op, callOp);
