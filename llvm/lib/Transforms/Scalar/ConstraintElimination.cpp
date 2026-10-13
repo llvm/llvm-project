@@ -1193,6 +1193,18 @@ void State::addBoundsForHeaderInductions(BasicBlock &BB) {
   }
 }
 
+/// Returns the phi in the header of \p L whose backedge value is \p V, and its
+/// start value, or {nullptr, nullptr}.
+static std::pair<PHINode *, Value *>
+getPhiWithBackedgeValue(Loop *L, const BasicBlock *LoopPred, Value *V) {
+  for (PHINode &PN : L->getHeader()->phis()) {
+    auto [Start, Backedge] = getStartAndBackedgeValue(PN, LoopPred);
+    if (Backedge == V)
+      return {&PN, Start};
+  }
+  return {nullptr, nullptr};
+}
+
 void State::addInfoForInductions(BasicBlock &BB) {
   auto *L = LI.getLoopFor(&BB);
   if (!L)
@@ -1216,6 +1228,26 @@ void State::addInfoForInductions(BasicBlock &BB) {
   auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
   if (!Br)
     return;
+
+  // If the latch branches back on pred(V0, V1) for the backedge values of
+  // header phis P0 and P1, pred(P0, P1) holds in the header given
+  // pred(Start0, Start1). Drop samesign: it only holds on the backedge.
+  Value *V0, *V1;
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  if (&BB == Latch && LoopPred &&
+      match(Br->getCondition(), m_ICmp(Pred, m_Value(V0), m_Value(V1))) &&
+      (Br->getSuccessor(0) == Header || Br->getSuccessor(1) == Header)) {
+    auto [P0, Start0] = getPhiWithBackedgeValue(L, LoopPred, V0);
+    auto [P1, Start1] = getPhiWithBackedgeValue(L, LoopPred, V1);
+    if (P0 && P1 && P0 != P1) {
+      CmpInst::Predicate HeaderPred = Br->getSuccessor(0) == Header
+                                          ? Pred.dropSameSign()
+                                          : CmpInst::getInversePredicate(Pred);
+      WorkList.push_back(FactOrCheck::getConditionFact(
+          DT.getNode(Header), HeaderPred, P0, P1,
+          ConditionTy(HeaderPred, Start0, Start1)));
+    }
+  }
 
   auto CountingCmp = m_c_ICmp(Pred, IndValue, m_Value(B));
   std::optional<bool> PeeledOnEdge;
@@ -1248,7 +1280,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB))
     return;
 
-  BasicBlock *LoopPred = L->getLoopPredecessor();
   if (!LoopPred || !L->isLoopInvariant(B))
     return;
 
