@@ -1373,7 +1373,7 @@ endif()
 # This option is handled below and is defined here as it impacts the PCH status.
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 
-if(LLVM_CCACHE_BUILD OR CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache")
+if(LLVM_CCACHE_BUILD)
   find_program(CCACHE_PROGRAM ccache)
   if(NOT CCACHE_PROGRAM)
     message(FATAL_ERROR "Unable to find the program ccache. Set LLVM_CCACHE_BUILD to OFF")
@@ -1532,10 +1532,10 @@ if(LLVM_CCACHE_BUILD)
     endif()
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
   else()
+    set(LLVM_CCACHE_PARAMS "run_second_cpp=true;hash_dir=true;sloppiness=pch_defines,time_macros"
+        CACHE STRING "Parameters to pass through to ccache")
     if (CCACHE_SUPPORTS_CLI_CONFIG)
       # configure ccache with the command line configuration syntax
-      set(LLVM_CCACHE_PARAMS "run_second_cpp=true;hash_dir=true;sloppiness=pch_defines,time_macros"
-        CACHE STRING "Parameters to pass through to ccache")
       if (LLVM_CCACHE_MAXSIZE)
         list(APPEND LLVM_CCACHE_PARAMS "cache_maxsize=${LLVM_CCACHE_MAXSIZE}")
       endif()
