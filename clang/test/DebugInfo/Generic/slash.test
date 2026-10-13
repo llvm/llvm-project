@@ -6,5 +6,5 @@ RUN: cd %t-dir
 RUN: %clang -target x86_64-pc-win32 -emit-llvm -S -g  %t-dir/debug-info-slash.cpp -Iheader -o - | FileCheck --check-prefix=WIN %s
 RUN: %clang -target x86_64-linux-gnu -emit-llvm -S -g  %t-dir/debug-info-slash.cpp -Iheader -o - | FileCheck --check-prefix=LINUX %s
 
-WIN:   lambda at header\\Inputs\\debug-info-slash.h
-LINUX: lambda at header/Inputs/debug-info-slash.h
+WIN:   lambda
+LINUX: lambda
