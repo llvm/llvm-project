@@ -11,16 +11,17 @@ declare x86_thiscallcc void @use(ptr)
 
 
 ;; MOVUPSrm is a merged load from stack objects %b, %c, and %d.
-;; FIXME: Check that the load is not marked as "from %ir.b"
-;; FIXME: Check that the zero-store to %c is preceeded by that load.
+;; Check that the wide load is not marked as "from %ir.b".
+;; Check that the zero-store to %c's SU is preceeded by the SU for that load.
 
 ; CHECK:       Current Schedule Region
 ; CHECK-LABEL: f:%bb.0 bb
-; CHECK:       SU([[LOAD:[0-9]+]]): {{.*}}MOVUPSrm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s128) from %ir.b, align 8)
+; CHECK:       SU([[LOAD:[0-9]+]]): {{.*}}MOVUPSrm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s128) from %fixed-stack.3, align 8)
 ; CHECK:       SU([[ZERO:[0-9]+]]): %[[ZREG:[0-9]+]]:gr32 = MOV32r0
 ; CHECK:       SU([[STORE:[0-9]+]]): MOV32mr {{.*}}, %[[ZREG]]:gr32
 ; CHECK:         Predecessors:
 ; CHECK:           SU([[ZERO]])
+; CHECK:           SU([[LOAD]]){{.*}}Memory
 
 
 define x86_thiscallcc void @f(ptr %a,
