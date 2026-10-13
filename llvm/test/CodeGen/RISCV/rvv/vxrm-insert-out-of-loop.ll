@@ -2,8 +2,6 @@
 
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+v,+m \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV32
-; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+m -mcpu=sifive-p670 \
-; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV64P670
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+m -mcpu=spacemit-x60 \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV64X60
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+m \

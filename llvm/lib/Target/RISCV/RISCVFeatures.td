@@ -2256,6 +2256,10 @@ def TunePreferVsetvliOverReadVLENB
           "prefer-vsetvli-over-read-vlenb", "PreferVsetvliOverReadVLENB",
           "true", "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
 
+def TuneAvoidFixedPointInstructions
+    : SubtargetFeature<"avoid-fixed-point", "AvoidFixedPoint",
+                       "true", "Fixed point instructions should be avoided">;
+
 //===----------------------------------------------------------------------===//
 // CPU Families (alphabetized by vendor).
 //===----------------------------------------------------------------------===//
