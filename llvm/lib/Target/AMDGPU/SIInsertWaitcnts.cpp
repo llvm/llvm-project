@@ -1060,7 +1060,7 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
       // The "Slot" is the offset from LDSDMA_BEGIN. If it's non-zero, then
       // there is a MachineInstr in LDSDMAStores used to track this LDSDMA
       // store. The "Slot" is the index into LDSDMAStores + 1.
-      unsigned Slot = 0;
+      size_t Slot = 0;
       for (const auto *MemOp : Inst.memoperands()) {
         if (!MemOp->isStore() ||
             MemOp->getAddrSpace() != AMDGPUAS::LOCAL_ADDRESS)
@@ -1075,8 +1075,7 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
         // is squashed into a single big object.
         if (!AAI || !AAI.Scope)
           break;
-        for (unsigned I = 0, E = static_cast<unsigned>(LDSDMAStores.size());
-             I != E && !Slot; ++I) {
+        for (size_t I = 0, E = LDSDMAStores.size(); I != E && !Slot; ++I) {
           for (const auto *MemOp : LDSDMAStores[I]->memoperands()) {
             if (MemOp->isStore() && AAI == MemOp->getAAInfo()) {
               Slot = I + 1;
@@ -1090,12 +1089,12 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
         // means the scoreboard cannot track it. We still want to preserve the
         // MI in order to check alias information, though.
         LDSDMAStores.push_back(&Inst);
-        Slot = static_cast<unsigned>(LDSDMAStores.size());
+        Slot = LDSDMAStores.size();
         break;
       }
       setVMemScore(LDSDMA_BEGIN, T, CurrScore);
       if (Slot && Slot < NUM_LDSDMA)
-        setVMemScore(LDSDMA_BEGIN + Slot, T, CurrScore);
+        setVMemScore(LDSDMA_BEGIN + static_cast<VMEMID>(Slot), T, CurrScore);
     }
 
     if (Context->shouldUpdateAsyncMark(Inst, T)) {
@@ -2472,10 +2471,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         VMEMID TID = LDSDMA_BEGIN;
         if (Ptr && Memop->getAAInfo()) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
-          for (unsigned I = 0, E = static_cast<unsigned>(LDSDMAStores.size());
-               I != E; ++I) {
+          for (size_t I = 0, E = LDSDMAStores.size(); I != E; ++I) {
             if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
-              if ((I + 1) >= NUM_LDSDMA) {
+              size_t Slot = I + 1;
+              if (Slot >= NUM_LDSDMA) {
                 // We didn't have enough slot to track this LDS DMA store, it
                 // has been tracked using the common RegNo (FIRST_LDS_VGPR).
                 ScoreBrackets.determineWaitForLDSDMA(AMDGPU::LOAD_CNT, TID,
@@ -2483,8 +2482,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
                 break;
               }
 
-              ScoreBrackets.determineWaitForLDSDMA(AMDGPU::LOAD_CNT,
-                                                   TID + I + 1, Wait);
+              ScoreBrackets.determineWaitForLDSDMA(
+                  AMDGPU::LOAD_CNT, TID + static_cast<VMEMID>(Slot), Wait);
             }
           }
         } else {
