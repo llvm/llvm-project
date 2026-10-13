@@ -1367,7 +1367,6 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
           CC |= Use->CC;
         else
           CC |= CaptureComponents(A->getAttributes().getCaptureInfo());
-        break;
       }
       if (capturesAll(CC))
         break;
