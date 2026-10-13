@@ -43,6 +43,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <limits>
 
 #define DEBUG_TYPE "machine-scheduler"
 
@@ -99,10 +100,6 @@ static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
              "point of maximum register pressure after scheduling."),
     cl::init(false));
 #endif
-
-static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
-    "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
-    cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
 
 bool VGPRThresholdParser::parse(cl::Option &O, StringRef ArgName, StringRef Arg,
                                 unsigned &Value) {
@@ -776,7 +773,7 @@ GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
     const MachineSchedContext *C, bool IsLegacyScheduler)
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::OccInitialSchedule);
-  if (!DisableRewriteMFMAFormSchedStage)
+  if (RewriteMFMAFormStage::isEnabled())
     SchedStages.push_back(GCNSchedStageID::RewriteMFMAForm);
   SchedStages.push_back(GCNSchedStageID::UnclusteredHighRPReschedule);
   SchedStages.push_back(GCNSchedStageID::ClusteredLowOccupancyReschedule);

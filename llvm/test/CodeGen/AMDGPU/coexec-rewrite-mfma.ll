@@ -4,12 +4,16 @@
 ; chains can be rewritten to the AGPR form when ArchVGPR pressure is excessive.
 ;
 ; This IR is reduced from a Triton-generated GEMM kernel with multiple (28 to be
-; exact) MFMAs in a phi-carried loop with high VGPR pressure, every MFMA in the
-; loop is rewritten to the AGPR-destination form (v_mfma_f32_16x16x32_f16 a*).
+; exact) MFMAs in a phi-carried loop with high VGPR pressure. The MFMAs form 14
+; accumulator chains. Converting 13 of them already brings both regions under
+; the ArchVGPR limit; the last one shares a register with a DS_READ address, so
+; it would need a 192-bit bridge copy at loop frequency to buy no further spill
+; relief. It is left in VGPR form.
 
 ; CHECK-LABEL: v5_local_prefetch:
-; CHECK-COUNT-28: v_mfma_f32_16x16x32_f16 a
-; CHECK-NOT: v_mfma_f32_16x16x32_f16 v
+; CHECK-COUNT-26: v_mfma_f32_16x16x32_f16 a
+; CHECK-COUNT-2: v_mfma_f32_16x16x32_f16 v
+; CHECK-NOT: v_mfma_f32_16x16x32_f16
 
 define amdgpu_kernel void @v5_local_prefetch() #0 {
 .lr.ph:
