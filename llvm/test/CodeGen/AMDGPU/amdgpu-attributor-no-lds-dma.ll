@@ -14,7 +14,7 @@ declare void @known_clean_extern() #0
 
 define amdgpu_kernel void @no_lds_dma(ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define amdgpu_kernel void @no_lds_dma(
-; CHECK-SAME: ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(3) [[LDS:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[LDS]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -24,7 +24,7 @@ define amdgpu_kernel void @no_lds_dma(ptr addrspace(3) %lds) {
 
 define amdgpu_kernel void @barrier(ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define amdgpu_kernel void @barrier(
-; CHECK-SAME: ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: ptr addrspace(3) [[LDS:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[LDS]], align 4
 ; CHECK-NEXT:    ret void
@@ -36,7 +36,7 @@ define amdgpu_kernel void @barrier(ptr addrspace(3) %lds) {
 
 define amdgpu_kernel void @buffer_load_lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define amdgpu_kernel void @buffer_load_lds(
-; CHECK-SAME: ptr addrspace(8) [[RSRC:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(8) [[RSRC:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) [[RSRC]], ptr addrspace(3) [[LDS]], i32 4, i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
@@ -46,7 +46,7 @@ define amdgpu_kernel void @buffer_load_lds(ptr addrspace(8) %rsrc, ptr addrspace
 
 define amdgpu_kernel void @load_to_lds(ptr addrspace(1) %g, ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define amdgpu_kernel void @load_to_lds(
-; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @llvm.amdgcn.load.to.lds.p1(ptr addrspace(1) [[G]], ptr addrspace(3) [[LDS]], i32 4, i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
@@ -56,7 +56,7 @@ define amdgpu_kernel void @load_to_lds(ptr addrspace(1) %g, ptr addrspace(3) %ld
 
 define amdgpu_kernel void @global_load_async_to_lds(ptr addrspace(1) %g, ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define amdgpu_kernel void @global_load_async_to_lds(
-; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) [[G]], ptr addrspace(3) [[LDS]], i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
@@ -66,7 +66,7 @@ define amdgpu_kernel void @global_load_async_to_lds(ptr addrspace(1) %g, ptr add
 
 define amdgpu_kernel void @global_store_async_from_lds(ptr addrspace(1) %g, ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define amdgpu_kernel void @global_store_async_from_lds(
-; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @llvm.amdgcn.global.store.async.from.lds.b32(ptr addrspace(1) [[G]], ptr addrspace(3) [[LDS]], i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
@@ -76,7 +76,7 @@ define amdgpu_kernel void @global_store_async_from_lds(ptr addrspace(1) %g, ptr 
 
 define amdgpu_kernel void @tensor_load_to_lds() {
 ; CHECK-LABEL: define amdgpu_kernel void @tensor_load_to_lds(
-; CHECK-SAME: ) #[[ATTR6]] {
+; CHECK-SAME: ) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> zeroinitializer, <8 x i32> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
 ; CHECK-NEXT:    ret void
 ;
@@ -86,7 +86,7 @@ define amdgpu_kernel void @tensor_load_to_lds() {
 
 define amdgpu_kernel void @tensor_store_from_lds() {
 ; CHECK-LABEL: define amdgpu_kernel void @tensor_store_from_lds(
-; CHECK-SAME: ) #[[ATTR6]] {
+; CHECK-SAME: ) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> zeroinitializer, <8 x i32> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
 ; CHECK-NEXT:    ret void
 ;
@@ -96,7 +96,7 @@ define amdgpu_kernel void @tensor_store_from_lds() {
 
 define internal void @callee_no_lds_dma(ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define internal void @callee_no_lds_dma(
-; CHECK-SAME: ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: ptr addrspace(3) [[LDS:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[LDS]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -106,7 +106,7 @@ define internal void @callee_no_lds_dma(ptr addrspace(3) %lds) {
 
 define internal void @callee_lds_dma(ptr addrspace(1) %g, ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define internal void @callee_lds_dma(
-; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @llvm.amdgcn.load.to.lds.p1(ptr addrspace(1) [[G]], ptr addrspace(3) [[LDS]], i32 4, i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
@@ -116,7 +116,7 @@ define internal void @callee_lds_dma(ptr addrspace(1) %g, ptr addrspace(3) %lds)
 
 define internal void @callee_calls_lds_dma(ptr addrspace(1) %g, ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define internal void @callee_calls_lds_dma(
-; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @callee_lds_dma(ptr addrspace(1) [[G]], ptr addrspace(3) [[LDS]])
 ; CHECK-NEXT:    ret void
 ;
@@ -126,7 +126,7 @@ define internal void @callee_calls_lds_dma(ptr addrspace(1) %g, ptr addrspace(3)
 
 define amdgpu_kernel void @call_no_lds_dma(ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define amdgpu_kernel void @call_no_lds_dma(
-; CHECK-SAME: ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: ptr addrspace(3) [[LDS:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    call void @callee_no_lds_dma(ptr addrspace(3) [[LDS]])
 ; CHECK-NEXT:    ret void
 ;
@@ -136,7 +136,7 @@ define amdgpu_kernel void @call_no_lds_dma(ptr addrspace(3) %lds) {
 
 define amdgpu_kernel void @call_lds_dma(ptr addrspace(1) %g, ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define amdgpu_kernel void @call_lds_dma(
-; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @callee_lds_dma(ptr addrspace(1) [[G]], ptr addrspace(3) [[LDS]])
 ; CHECK-NEXT:    ret void
 ;
@@ -146,7 +146,7 @@ define amdgpu_kernel void @call_lds_dma(ptr addrspace(1) %g, ptr addrspace(3) %l
 
 define amdgpu_kernel void @call_calls_lds_dma(ptr addrspace(1) %g, ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define amdgpu_kernel void @call_calls_lds_dma(
-; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: ptr addrspace(1) [[G:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @callee_calls_lds_dma(ptr addrspace(1) [[G]], ptr addrspace(3) [[LDS]])
 ; CHECK-NEXT:    ret void
 ;
@@ -156,7 +156,7 @@ define amdgpu_kernel void @call_calls_lds_dma(ptr addrspace(1) %g, ptr addrspace
 
 define internal void @recurse_no_lds_dma(i32 %n, ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define internal void @recurse_no_lds_dma(
-; CHECK-SAME: i32 [[N:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: i32 [[N:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[RECURSE:.*]]
 ; CHECK:       [[RECURSE]]:
@@ -182,7 +182,7 @@ exit:
 
 define amdgpu_kernel void @call_recurse_no_lds_dma(i32 %n, ptr addrspace(3) %lds) {
 ; CHECK-LABEL: define amdgpu_kernel void @call_recurse_no_lds_dma(
-; CHECK-SAME: i32 [[N:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: i32 [[N:%.*]], ptr addrspace(3) [[LDS:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    call void @recurse_no_lds_dma(i32 [[N]], ptr addrspace(3) [[LDS]])
 ; CHECK-NEXT:    ret void
 ;
@@ -201,7 +201,7 @@ define amdgpu_kernel void @call_unknown_extern() {
 
 define amdgpu_kernel void @call_known_clean_extern() {
 ; CHECK-LABEL: define amdgpu_kernel void @call_known_clean_extern(
-; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    call void @known_clean_extern()
 ; CHECK-NEXT:    ret void
 ;
@@ -221,7 +221,7 @@ define amdgpu_kernel void @call_indirect(ptr %fptr) {
 
 define amdgpu_kernel void @inline_asm() {
 ; CHECK-LABEL: define amdgpu_kernel void @inline_asm(
-; CHECK-SAME: ) #[[ATTR6]] {
+; CHECK-SAME: ) #[[ATTR5]] {
 ; CHECK-NEXT:    call void asm sideeffect "s_nop 0", ""()
 ; CHECK-NEXT:    ret void
 ;
@@ -233,9 +233,8 @@ attributes #0 = { "amdgpu-no-lds-dma" }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-no-lds-dma" }
-; CHECK: attributes #[[ATTR5]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-dma" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR6]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
+; CHECK: attributes #[[ATTR3]] = { "amdgpu-no-lds-dma" }
+; CHECK: attributes #[[ATTR4]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-dma" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR5]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
 ;.
