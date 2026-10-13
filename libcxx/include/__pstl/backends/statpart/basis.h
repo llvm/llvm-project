@@ -14,6 +14,7 @@
 #include <__algorithm/min.h>
 #include <__algorithm/move.h>
 #include <__algorithm/upper_bound.h>
+#include <__assert>
 #include <__atomic/atomic.h>
 #include <__config>
 #include <__functional/identity.h>
@@ -52,24 +53,27 @@ namespace __pstl {
 
 namespace __statpart {
 
-// The backbone of the backend: applies the function to each of the indices [0, __chunk_count] in parallel.
+// The backbone of the backend: applies the function to each of the indices [0, __chunk_count) in parallel.
 // The actual number of parallel workers and the order of application is unspecified.
 _LIBCPP_EXPORTED_FROM_ABI void
 __apply(size_t __chunk_count, void* __context, void (*__func)(void* __context, size_t __chunk)) noexcept;
 
-// The maximum number of partitions to be processed per each CPU
+// The maximum number of partitions to be processed per CPU
 constexpr inline size_t __max_partitions_per_cpu = 8;
 
 // The minimum number of elements to sort serially in a single partition
 constexpr inline size_t __min_sort_partition_size = 256;
 
 enum class __partitioning_result {
-  // returned when the partitioning result is not nullopt
+  // Returned when the partitioning result is not a nullopt.
   __ok,
-  // returned when there is not enough element to produce a single partition or the final number of partitions is less
-  // than 2, i.e. there's no reason to process in parallel
+  // Returned when there are not enough element to produce a single partition or the final number of partitions is fewer
+  // than 2, i.e. there's no reason to process the input in parallel.
   __not_enough_elements,
-  // later: returned memory couldn't be allocated for the stashed forward iterators
+  // There's fewer than 2 processors available in the system, or their number is unknown, which is treated as having
+  // a single processor. In either case, fall back to serial processing.
+  __no_parallelism,
+  // Reserved for later: returned when memory could not be allocated for the stashed forward iterators.
   __bad_alloc
 };
 
@@ -79,9 +83,9 @@ struct _LIBCPP_HIDE_FROM_ABI __iterator_range {
   _Iterator __last;
 };
 
-// __iterator_partitions<Iter> holds a finite per-determined set of partitions and allows to query each iterator range
+// __iterator_partitions<Iter> holds a finite pre-determined set of partitions and allows querying each iterator range
 // in O(1) time.
-// TODO: Later to support forward iterators via a second implicit template argument.
+// TODO: Support forward iterators later via a second implicit template argument and its specializations.
 template <class _Iterator>
 struct _LIBCPP_HIDE_FROM_ABI __iterator_partitions {
   _LIBCPP_HIDE_FROM_ABI size_t __partitions_count() const { return __partitions_count_; }
@@ -106,11 +110,11 @@ private:
   __partition(_Iter, _Iter, __partitioning_result&, size_t, size_t, size_t, size_t) noexcept;
 };
 
-// Splits the input iterator range into a finite set of partitions, such as that every iterator sub-range can queried in
+// Splits the input iterator range into a finite set of partitions, such that every iterator sub-range can queried in
 // a O(1) time later.
-// In case partitioning failed returns nullopt and reports the reason in __result.
+// If partitioning fails, returns nullopt and reports the reason in __result.
 // __min_partition_size specifies the minimal number of elements in every partition.
-// __prefix_to_skip and __suffix_to_skip allow to optionally trim the input range by specified numbers of elements
+// __prefix_to_skip and __suffix_to_skip allows optionally trimming the input range by the specified number of elements
 // before partitioning.
 // __workers_count is normally implicitly queried from hardware_concurrency() and should be explicitly specified only in
 // unit tests.
@@ -123,13 +127,19 @@ _LIBCPP_HIDE_FROM_ABI optional<__iterator_partitions<_ForwardIterator>> __partit
     size_t __prefix_to_skip     = 0,
     size_t __suffix_to_skip     = 0,
     size_t __workers_count      = thread::hardware_concurrency()) noexcept {
-  // forward iteratos to be supported later
+  // Forward iterators will be supported later.
   static_assert(__has_random_access_iterator_category_or_concept<_ForwardIterator>::value);
-  // TODO: assert( __min_partition_size > 0 )?
-  // TODO: assert( __workers_count > 0 )?
+
+  _LIBCPP_ASSERT_INTERNAL(__min_partition_size >= 1, "minimum partition size must be at least 1 element");
+
+  if (__workers_count < 2) {
+    // There's no available parallelism in the system, no reason to perform partitioning.
+    __result = __partitioning_result::__no_parallelism;
+    return {};
+  }
 
   size_t __count = static_cast<size_t>(std::distance(__first, __last));
-  if (__count < __prefix_to_skip + __suffix_to_skip) {
+  if (__count <= __prefix_to_skip + __suffix_to_skip) {
     __result = __partitioning_result::__not_enough_elements;
     return {};
   }
@@ -139,7 +149,6 @@ _LIBCPP_HIDE_FROM_ABI optional<__iterator_partitions<_ForwardIterator>> __partit
   size_t __partition_count = std::min(__max_partitions, __effective_count / __min_partition_size);
 
   if (__partition_count < 2) {
-    // TODO: verify that's what we want
     __result = __partitioning_result::__not_enough_elements;
     return {}; // not enough input data to process in parallel => no reason to build partitions
   }
@@ -155,7 +164,7 @@ _LIBCPP_HIDE_FROM_ABI optional<__iterator_partitions<_ForwardIterator>> __partit
 }
 
 // for_each with explicit partitioning:
-// calls __func in parallel with every iterator ranges provided in __partitions
+// calls __func in parallel with every iterator range provided in __partitions.
 template <class _Iterator, class _Functor>
 _LIBCPP_HIDE_FROM_ABI void __for_each_partition(const __iterator_partitions<_Iterator>& __partitions, _Functor __func) {
   struct __ctx_t {
@@ -169,7 +178,7 @@ _LIBCPP_HIDE_FROM_ABI void __for_each_partition(const __iterator_partitions<_Ite
   });
 }
 
-// Calls __func(index) for every index in [0, __count) in parallel
+// Calls __func(index) for every index in [0, __count) in parallel.
 template <class _Functor>
 _LIBCPP_HIDE_FROM_ABI void __for_each_index(size_t __count, _Functor __func) {
   __statpart::__apply(__count, &__func, [](void* __context, size_t __index) {
@@ -177,7 +186,7 @@ _LIBCPP_HIDE_FROM_ABI void __for_each_index(size_t __count, _Functor __func) {
   });
 }
 
-// for_each that calls __func in parallel against every partition index available in __partitions
+// for_each that calls __func in parallel for every partition index available in __partitions.
 template <class _Iterator, class _Functor>
 _LIBCPP_HIDE_FROM_ABI void
 __for_each_partition_index(const __iterator_partitions<_Iterator>& __partitions, _Functor __func) {
