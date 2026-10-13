@@ -296,3 +296,186 @@ exit2:
 exit:
   ret float %acc.next
 }
+
+; The inner loop skips a run of zero bytes, and most iterations of the outer
+; loop bypass it. Its exit value meets the bypass path's index in %i.next. The
+; inner loop should count with the outer loop's index register, rather than
+; with an IV offset from it, which needs a copy on the bypass path and an
+; adjustment after the inner loop.
+define i64 @skip_runs(ptr %p, i64 %n, ptr %out) {
+; CHECK-LABEL: skip_runs:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testq %rsi, %rsi
+; CHECK-NEXT:    je .LBB3_1
+; CHECK-NEXT:  # %bb.3: # %outer.preheader
+; CHECK-NEXT:    movl $2, %ecx
+; CHECK-NEXT:    subq %rsi, %rcx
+; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:  .LBB3_4: # %outer
+; CHECK-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-NEXT:    # Child Loop BB3_6 Depth 2
+; CHECK-NEXT:    movzbl (%rdi,%r8), %r9d
+; CHECK-NEXT:    movb %r9b, (%rdx,%rax)
+; CHECK-NEXT:    incq %rax
+; CHECK-NEXT:    incq %r8
+; CHECK-NEXT:    cmpq %rsi, %r8
+; CHECK-NEXT:    je .LBB3_2
+; CHECK-NEXT:  # %bb.5: # %check
+; CHECK-NEXT:    # in Loop: Header=BB3_4 Depth=1
+; CHECK-NEXT:    cmpb $0, (%rdi,%r8)
+; CHECK-NEXT:    jne .LBB3_4
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB3_6: # %inner
+; CHECK-NEXT:    # Parent Loop BB3_4 Depth=1
+; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    leaq (%rcx,%r8), %r9
+; CHECK-NEXT:    cmpq $1, %r9
+; CHECK-NEXT:    je .LBB3_2
+; CHECK-NEXT:  # %bb.7: # %inner.cont
+; CHECK-NEXT:    # in Loop: Header=BB3_6 Depth=2
+; CHECK-NEXT:    leaq 1(%r8), %r9
+; CHECK-NEXT:    cmpb $0, 1(%rdi,%r8)
+; CHECK-NEXT:    movq %r9, %r8
+; CHECK-NEXT:    je .LBB3_6
+; CHECK-NEXT:  # %bb.8: # in Loop: Header=BB3_4 Depth=1
+; CHECK-NEXT:    movq %r9, %r8
+; CHECK-NEXT:    jmp .LBB3_4
+; CHECK-NEXT:  .LBB3_1:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:  .LBB3_2: # %done
+; CHECK-NEXT:    retq
+entry:
+  %e = icmp eq i64 %n, 0
+  br i1 %e, label %done, label %outer
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %latch ]
+  %k = phi i64 [ 0, %entry ], [ %k.next, %latch ]
+  %pi = getelementptr inbounds i8, ptr %p, i64 %i
+  %x = load i8, ptr %pi, align 1
+  %po = getelementptr inbounds i8, ptr %out, i64 %k
+  store i8 %x, ptr %po, align 1
+  %k.next = add nuw i64 %k, 1
+  %i1 = add nuw i64 %i, 1
+  %ex = icmp eq i64 %i1, %n
+  br i1 %ex, label %done, label %check
+
+check:
+  %pj0 = getelementptr inbounds i8, ptr %p, i64 %i1
+  %y0 = load i8, ptr %pj0, align 1
+  %z0 = icmp eq i8 %y0, 0
+  br i1 %z0, label %inner, label %latch
+
+inner:
+  %j = phi i64 [ %i1, %check ], [ %j1, %inner.cont ]
+  %j1 = add nuw i64 %j, 1
+  %ej = icmp eq i64 %j1, %n
+  br i1 %ej, label %done, label %inner.cont
+
+inner.cont:
+  %pj = getelementptr inbounds i8, ptr %p, i64 %j1
+  %y = load i8, ptr %pj, align 1
+  %z = icmp eq i8 %y, 0
+  br i1 %z, label %inner, label %latch
+
+latch:
+  %i.next = phi i64 [ %i1, %check ], [ %j1, %inner.cont ]
+  br label %outer
+
+done:
+  %r = phi i64 [ 0, %entry ], [ %k.next, %outer ], [ %k.next, %inner ]
+  ret i64 %r
+}
+; The same in LCSSA form, with both exits of the inner loop leaving through a
+; phi in a dedicated exit block before the inner exit value reaches the merge.
+define i64 @skip_runs_lcssa(ptr %p, i64 %n, ptr %out) {
+; CHECK-LABEL: skip_runs_lcssa:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testq %rsi, %rsi
+; CHECK-NEXT:    je .LBB4_1
+; CHECK-NEXT:  # %bb.3: # %outer.preheader
+; CHECK-NEXT:    movl $2, %ecx
+; CHECK-NEXT:    subq %rsi, %rcx
+; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB4_4: # %outer
+; CHECK-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-NEXT:    # Child Loop BB4_6 Depth 2
+; CHECK-NEXT:    movzbl (%rdi,%r8), %r9d
+; CHECK-NEXT:    movb %r9b, (%rdx,%rax)
+; CHECK-NEXT:    incq %rax
+; CHECK-NEXT:    incq %r8
+; CHECK-NEXT:    cmpq %rsi, %r8
+; CHECK-NEXT:    je .LBB4_2
+; CHECK-NEXT:  # %bb.5: # %check
+; CHECK-NEXT:    # in Loop: Header=BB4_4 Depth=1
+; CHECK-NEXT:    cmpb $0, (%rdi,%r8)
+; CHECK-NEXT:    jne .LBB4_4
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB4_6: # %inner
+; CHECK-NEXT:    # Parent Loop BB4_4 Depth=1
+; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    leaq (%rcx,%r8), %r9
+; CHECK-NEXT:    cmpq $1, %r9
+; CHECK-NEXT:    je .LBB4_4
+; CHECK-NEXT:  # %bb.7: # %inner.cont
+; CHECK-NEXT:    # in Loop: Header=BB4_6 Depth=2
+; CHECK-NEXT:    leaq 1(%r8), %r9
+; CHECK-NEXT:    cmpb $0, 1(%rdi,%r8)
+; CHECK-NEXT:    movq %r9, %r8
+; CHECK-NEXT:    je .LBB4_6
+; CHECK-NEXT:  # %bb.8: # in Loop: Header=BB4_4 Depth=1
+; CHECK-NEXT:    movq %r9, %r8
+; CHECK-NEXT:    jmp .LBB4_4
+; CHECK-NEXT:  .LBB4_1:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:  .LBB4_2: # %done
+; CHECK-NEXT:    retq
+entry:
+  %e = icmp eq i64 %n, 0
+  br i1 %e, label %done, label %outer
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %latch ]
+  %k = phi i64 [ 0, %entry ], [ %k.next, %latch ]
+  %pi = getelementptr inbounds i8, ptr %p, i64 %i
+  %x = load i8, ptr %pi, align 1
+  %po = getelementptr inbounds i8, ptr %out, i64 %k
+  store i8 %x, ptr %po, align 1
+  %k.next = add nuw i64 %k, 1
+  %i1 = add nuw i64 %i, 1
+  %ex = icmp eq i64 %i1, %n
+  br i1 %ex, label %done, label %check
+
+check:
+  %pj0 = getelementptr inbounds i8, ptr %p, i64 %i1
+  %y0 = load i8, ptr %pj0, align 1
+  %z0 = icmp eq i8 %y0, 0
+  br i1 %z0, label %inner, label %latch
+
+inner:
+  %j = phi i64 [ %i1, %check ], [ %j1, %inner.cont ]
+  %j1 = add nuw i64 %j, 1
+  %ej = icmp eq i64 %j1, %n
+  br i1 %ej, label %inner.exit, label %inner.cont
+
+inner.cont:
+  %pj = getelementptr inbounds i8, ptr %p, i64 %j1
+  %y = load i8, ptr %pj, align 1
+  %z = icmp eq i8 %y, 0
+  br i1 %z, label %inner, label %inner.exit
+
+inner.exit:
+  %j1.lcssa = phi i64 [ %j, %inner ], [ %j1, %inner.cont ]
+  br label %latch
+
+latch:
+  %i.next = phi i64 [ %i1, %check ], [ %j1.lcssa, %inner.exit ]
+  br label %outer
+
+done:
+  %r = phi i64 [ 0, %entry ], [ %k.next, %outer ]
+  ret i64 %r
+}

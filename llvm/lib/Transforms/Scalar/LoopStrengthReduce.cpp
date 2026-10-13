@@ -1308,6 +1308,10 @@ public:
   /// latch. This includes fixups before early exits.
   bool AllFixupsUnconditional = true;
 
+  /// This records whether the value of a fixup reaches a PHI in an outer loop
+  /// that merges it with a value from a path that skips the loop.
+  bool MergesWithLoopBypass = false;
+
   /// RigidFormula is set to true to guarantee that this use will be associated
   /// with a single formula--the one that initially matched. Some SCEV
   /// expressions cannot be expanded. This allows LSR to consider the registers
@@ -1600,6 +1604,13 @@ void Cost::RateFormula(const Formula &F, SmallPtrSetImpl<const SCEV *> &Regs,
   // to save it.
   if (LU.Kind != LSRUse::ICmpZero || !LU.AllFixupsOutsideLoop)
     C.Insns += C.NumBaseAdds - PrevNumBaseAdds;
+  // An exit value that needs an unfolded add is computed on the exit edge. If
+  // a PHI in an outer loop merges it with a value from a path that skips the
+  // loop, the IV cannot share a register with that value either, which can
+  // cost a copy or an extra branch on the bypass path.
+  if ((LU.Kind == LSRUse::Basic || LU.Kind == LSRUse::Special) &&
+      LU.MergesWithLoopBypass && C.NumBaseAdds != PrevNumBaseAdds)
+    ++C.Insns;
   assert(isValid() && "invalid cost");
 }
 
@@ -1660,6 +1671,53 @@ bool LSRFixup::isUseFullyOutsideLoop(const Loop *L) const {
   }
 
   return !L->contains(UserInst);
+}
+
+/// Test whether the value \p LF provides, the IV \p S of \p L, reaches a PHI
+/// outside \p L but inside a loop that contains \p L, which merges it with a
+/// value from a path through that loop that skips \p L. Only a value that is
+/// not a constant but differs from the start of \p S by a constant counts:
+/// that is what could share a register with the IV. PHIs that only merge exits
+/// of
+/// \p L, such as LCSSA PHIs, are looked through.
+static bool isMergedWithLoopBypass(const LSRFixup &LF, const SCEV *S,
+                                   const Loop &L, const DominatorTree &DT,
+                                   ScalarEvolution &SE) {
+  const Loop *Outermost = L.getOutermostLoop();
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(S);
+  if (Outermost == &L || !AR || AR->getLoop() != &L)
+    return false;
+  const BasicBlock *Header = L.getHeader();
+  SmallVector<const PHINode *, 4> Worklist;
+  SmallPtrSet<const PHINode *, 4> Visited;
+  if (const auto *PN = dyn_cast<PHINode>(LF.UserInst))
+    Worklist.push_back(PN);
+  while (!Worklist.empty() && Visited.size() < 8) {
+    const PHINode *PN = Worklist.pop_back_val();
+    if (!Visited.insert(PN).second || L.contains(PN) ||
+        !Outermost->contains(PN))
+      continue;
+    // A block that is only reachable through L is dominated by its header.
+    bool ExitsOnly = true;
+    for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
+      const BasicBlock *BB = PN->getIncomingBlock(I);
+      if (DT.dominates(Header, BB))
+        continue;
+      ExitsOnly = false;
+      Value *V = PN->getIncomingValue(I);
+      if (!Outermost->contains(BB) || !SE.isSCEVable(V->getType()))
+        continue;
+      const SCEV *Bypass = SE.getSCEV(V);
+      if (!isa<SCEVConstant>(Bypass) &&
+          SE.computeConstantDifference(Bypass, AR->getStart()))
+        return true;
+    }
+    if (ExitsOnly)
+      for (const User *U : PN->users())
+        if (const auto *UserPN = dyn_cast<PHINode>(U))
+          Worklist.push_back(UserPN);
+  }
+  return false;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3662,6 +3720,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     LF.Offset = Offset;
     LU.AllFixupsOutsideLoop &= LF.isUseFullyOutsideLoop(L);
     LU.AllFixupsUnconditional &= IsFixupExecutedEachIncrement(LF);
+    LU.MergesWithLoopBypass |= isMergedWithLoopBypass(LF, S, *L, DT, SE);
 
     // Create SCEV as Formula for calculating baseline cost
     if (!VisitedLSRUse.count(LUIdx) && !LF.isUseFullyOutsideLoop(L)) {
@@ -5002,6 +5061,7 @@ void LSRInstance::NarrowSearchSpaceByCollapsingUnrolledCode() {
 
       LUThatHas->AllFixupsOutsideLoop &= LU.AllFixupsOutsideLoop;
       LUThatHas->AllFixupsUnconditional &= LU.AllFixupsUnconditional;
+      LUThatHas->MergesWithLoopBypass |= LU.MergesWithLoopBypass;
 
       // Transfer the fixups of LU to LUThatHas.
       for (LSRFixup &Fixup : LU.Fixups) {
@@ -5275,6 +5335,7 @@ void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
     for (LSRFixup &Fixup : LU.Fixups) {
       LUToMergeWith->pushFixup(Fixup);
     }
+    LUToMergeWith->MergesWithLoopBypass |= LU.MergesWithLoopBypass;
 
     // Delete the old use.
     DeleteUse(LU, LUIdx);
