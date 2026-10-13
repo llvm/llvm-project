@@ -7334,6 +7334,20 @@ static bool hasNestedOpenMPConstruct(lower::pft::Evaluation &eval) {
   return false;
 }
 
+static bool hasStrictlyNestedTeams(lower::pft::Evaluation &eval) {
+  if (!eval.hasNestedEvaluations())
+    return false;
+  for (lower::pft::Evaluation &nested : eval.getNestedEvaluations()) {
+    if (const auto *omp = nested.getIf<parser::OpenMPConstruct>()) {
+      if (llvm::omp::topTeamsSet.test(parser::omp::GetOmpDirectiveName(*omp).v))
+        return true;
+    } else if (hasStrictlyNestedTeams(nested)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static bool hasDirectiveAssociation(llvm::omp::Directive directive,
                                     llvm::omp::Association association) {
   return llvm::any_of(llvm::omp::getLeafConstructsOrSelf(directive),
@@ -7786,6 +7800,15 @@ static void genMetadirective(lower::AbstractConverter &converter,
       if (associatedBlockEval && hasUnsupportedDataEnvironmentDirective(queue))
         TODO(variantLoc, "data-environment construct with associated BLOCK in "
                          "METADIRECTIVE variant");
+      // Semantics checks this only for a directly written TARGET.
+      if (associatedBlockEval &&
+          spec->DirId() == llvm::omp::Directive::OMPD_target &&
+          hasStrictlyNestedTeams(*associatedBlockEval))
+        fir::emitFatalError(
+            variantLoc,
+            "TARGET construct with nested TEAMS region contains statements or "
+            "directives outside of the TEAMS construct",
+            /*genCrashDiag=*/false);
       mlir::SaveStateStack<OpenMPContextFrame> context{
           converter.getStateStack(), eval, spec->DirId(),
           /*isReplacement=*/true};

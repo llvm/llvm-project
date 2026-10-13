@@ -92,6 +92,22 @@ subroutine declarative_target_parallel()
   end block
 end subroutine
 
+! A TEAMS in the BLOCK is diagnosed only when TARGET is selected.
+! CHECK-LABEL: func.func @_QPunselected_target_teams()
+! CHECK-NOT: omp.target
+! CHECK: omp.teams
+! CHECK: fir.call @_QPwork()
+! CHECK: return
+subroutine unselected_target_teams()
+  !$omp metadirective when(implementation={vendor(gnu)}: target) &
+  !$omp& default(nothing)
+  block
+    !$omp teams
+      call work()
+    !$omp end teams
+  end block
+end subroutine
+
 ! A BLOCK associated with a selected TARGET is mapped like a direct TARGET body.
 ! The TARGET region's binding of x does not outlive it.
 ! CHECK-LABEL: func.func @_QPselected_target_block(
