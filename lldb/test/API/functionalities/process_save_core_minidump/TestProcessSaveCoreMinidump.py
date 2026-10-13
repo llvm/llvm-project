@@ -68,21 +68,19 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertIn(thread_id, stacks_to_registers_map)
             register_val_list = stacks_to_registers_map[thread_id]
             frame_register_list = frame.GetRegisters()
-
-            if self.getArchitecture() == "x86_64":
-                # explicitly verify we collected fs and gs base for x86_64
-                general_purpose_registers = frame_register_list.GetValueAtIndex(0)
-                explicit_registers = ["fs_base", "gs_base"]
-                for reg in explicit_registers:
-                    register = general_purpose_registers.GetChildMemberWithName(reg)
-                    self.assertTrue(register.IsValid(), f"{reg} is not valid.")
-                    self.assertEqual(
-                        register.GetValueAsUnsigned(),
-                        stacks_to_registers_map[thread_id]
-                        .GetValueAtIndex(0)
-                        .GetChildMemberWithName(reg)
-                        .GetValueAsUnsigned(),
-                    )
+            # explicitly verify we collected fs and gs base for x86_64
+            general_purpose_registers = frame_register_list.GetValueAtIndex(0)
+            explicit_registers = ["fs_base", "gs_base"]
+            for reg in explicit_registers:
+                register = general_purpose_registers.GetChildMemberWithName(reg)
+                self.assertTrue(register.IsValid())
+                self.assertEqual(
+                    register.GetValueAsUnsigned(),
+                    stacks_to_registers_map[thread_id]
+                    .GetValueAtIndex(0)
+                    .GetChildMemberWithName(reg)
+                    .GetValueAsUnsigned(),
+                )
 
             # The live process may have had register sets that are not saved to
             # the minidump. Even when a set is saved, it may not be complete.
@@ -93,7 +91,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 self.assertTrue(register_val_regset.IsValid())
                 for reg in frame_regset:
                     reg_name = reg.GetName()
-                    if self.getArchitecture() == "x86_64" and reg_name == "sp":
+                    if reg_name == "sp":
                         # No way to get "sp" because it always gets redirected to
                         # "rsp". https://github.com/llvm/llvm-project/issues/212778
                         continue
@@ -108,33 +106,17 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
                     self.assertEqual(reg.IsValid(), register_val_reg.IsValid())
 
-                    if self.getArchitecture() == "x86_64":
-                        known_mismatches = [
-                            "xmm13",
-                            "fctrl",
-                            "ftag",
-                            "mxcsr",
-                            "mxcsrmask",
-                        ]
-                    elif self.getArchitecture() == "aarch64":
-                        known_mismatches = [
-                            *[f"d{n}" for n in range(32)],
-                            *[f"s{n}" for n in range(32)],
-                        ]
-
-                    if reg_name in known_mismatches:
+                    if reg_name in ["xmm13", "fctrl", "ftag", "mxcsr", "mxcsrmask"]:
                         # These values are "valid", but different from the live process.
                         continue
 
                     self.assertEqual(
-                        reg.GetValueAsUnsigned(),
-                        register_val_reg.GetValueAsUnsigned(),
-                        f"Values for register {reg_name} did not match.",
+                        reg.GetValueAsUnsigned(), register_val_reg.GetValueAsUnsigned()
                     )
 
         self.dbg.DeleteTarget(target)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump(self):
         """Test that we can save a Linux mini dump."""
@@ -279,7 +261,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(core_sb_full):
                 os.unlink(core_sb_full)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump_thread_options(self):
         """Test that we can save a Linux mini dump
@@ -334,7 +316,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(thread_subset_dmp):
                 os.unlink(thread_subset_dmp)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump_default_options(self):
         """Test that we can save a Linux mini dump with default SBSaveCoreOptions"""
@@ -390,7 +372,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(default_value_file):
                 os.unlink(default_value_file)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_linux_minidump_one_region(self):
         """Test that we can save a Linux mini dump with one region in sbsavecore regions"""
@@ -448,7 +430,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(one_region_file):
                 os.unlink(one_region_file)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_minidump_custom_save_style(self):
         """Test that verifies a custom and unspecified save style fails for
@@ -515,7 +497,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(custom_file):
                 os.unlink(custom_file)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_minidump_custom_save_style_duplicated_regions(self):
         """Test that verifies a custom and unspecified save style fails for
@@ -684,8 +666,8 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(tls_file):
                 os.unlink(tls_file)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
+    @skipUnlessArch("x86_64")
     def test_invalid_custom_regions_not_included(self):
         options = lldb.SBSaveCoreOptions()
         self.build()

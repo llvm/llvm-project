@@ -7,6 +7,7 @@ from lldbsuite.test import lldbutil
 class TestStructuredBinding(TestBase):
     @skipIf(oslist=["linux"], archs=["arm$"])
     @skipIf(compiler="clang", compiler_version=["<", "14.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
