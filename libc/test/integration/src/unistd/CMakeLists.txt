@@ -191,6 +191,8 @@ add_integration_test(
     libc_execv_test_normal_exit
     libc_exec_test_signal_exit
     libc.hdr.fcntl_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_wait_macros
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.wait.waitpid

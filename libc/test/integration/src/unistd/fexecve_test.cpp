@@ -1,22 +1,26 @@
-//===-- Unittests for fexecve ---------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Integration test for fexecve.
+///
+//===----------------------------------------------------------------------===//
 
-#include "hdr/fcntl_macros.h"
 #include "src/fcntl/open.h"
 #include "src/sys/wait/waitpid.h"
 #include "src/unistd/close.h"
 #include "src/unistd/fexecve.h"
 #include "src/unistd/fork.h"
 
+#include "hdr/fcntl_macros.h"
+#include "hdr/signal_macros.h"
+#include "hdr/sys_wait_macros.h"
 #include "test/IntegrationTest/test.h"
-
-#include <signal.h>
-#include <sys/wait.h>
 
 void fork_and_fexecve_normal_exit(char **envp) {
   int fd = LIBC_NAMESPACE::open("libc_execv_test_normal_exit", O_RDONLY);
