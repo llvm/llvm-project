@@ -133,8 +133,6 @@ public:
   };
 
   static const unsigned NumEnumAttrKinds = LastEnumAttr - FirstEnumAttr + 1;
-  static const unsigned NumIntAttrKinds = LastIntAttr - FirstIntAttr + 1;
-  static const unsigned NumTypeAttrKinds = LastTypeAttr - FirstTypeAttr + 1;
 
   static bool isEnumAttrKind(AttrKind Kind) {
     return Kind >= FirstEnumAttr && Kind <= LastEnumAttr;
@@ -209,9 +207,6 @@ public:
   LLVM_ABI static Attribute getWithByValType(LLVMContext &Context, Type *Ty);
   LLVM_ABI static Attribute getWithStructRetType(LLVMContext &Context,
                                                  Type *Ty);
-  LLVM_ABI static Attribute getWithByRefType(LLVMContext &Context, Type *Ty);
-  LLVM_ABI static Attribute getWithPreallocatedType(LLVMContext &Context,
-                                                    Type *Ty);
   LLVM_ABI static Attribute getWithInAllocaType(LLVMContext &Context, Type *Ty);
   LLVM_ABI static Attribute getWithUWTableKind(LLVMContext &Context,
                                                UWTableKind Kind);
@@ -234,10 +229,6 @@ public:
   LLVM_ABI static Attribute::AttrKind getAttrKindFromName(StringRef AttrName);
 
   LLVM_ABI static StringRef getNameFromAttrKind(Attribute::AttrKind AttrKind);
-
-  /// Return true if the provided string matches the IR name of an attribute.
-  /// example: "noalias" return true but not "NoAlias"
-  LLVM_ABI static bool isExistingAttribute(StringRef Name);
 
   //===--------------------------------------------------------------------===//
   // Attribute Accessors
@@ -606,9 +597,6 @@ public:
   LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
                                     ArrayRef<Attribute::AttrKind> Kinds);
   LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
-                                    ArrayRef<Attribute::AttrKind> Kinds,
-                                    ArrayRef<uint64_t> Values);
-  LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
                                     ArrayRef<StringRef> Kind);
   LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
                                     AttributeSet Attrs);
@@ -740,10 +728,6 @@ public:
   /// attribute list. Returns a new list because attribute lists are immutable.
   [[nodiscard]] LLVM_ABI AttributeList
   removeAttributeAtIndex(LLVMContext &C, unsigned Index, StringRef Kind) const;
-  [[nodiscard]] AttributeList removeAttribute(LLVMContext &C, unsigned Index,
-                                              StringRef Kind) const {
-    return removeAttributeAtIndex(C, Index, Kind);
-  }
 
   /// Remove the specified attributes at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
@@ -1213,11 +1197,6 @@ public:
     return MaybeAlign(getRawIntAttr(Attribute::Alignment).value_or(0));
   }
 
-  /// Retrieve the stack alignment attribute, if it exists.
-  MaybeAlign getStackAlignment() const {
-    return MaybeAlign(getRawIntAttr(Attribute::StackAlignment).value_or(0));
-  }
-
   /// Retrieve the number of dereferenceable bytes, if the
   /// dereferenceable attribute exists (zero is returned otherwise).
   uint64_t getDereferenceableBytes() const {
@@ -1242,17 +1221,6 @@ public:
 
   /// Retrieve the byval type.
   Type *getByValType() const { return getTypeAttr(Attribute::ByVal); }
-
-  /// Retrieve the sret type.
-  Type *getStructRetType() const { return getTypeAttr(Attribute::StructRet); }
-
-  /// Retrieve the byref type.
-  Type *getByRefType() const { return getTypeAttr(Attribute::ByRef); }
-
-  /// Retrieve the preallocated type.
-  Type *getPreallocatedType() const {
-    return getTypeAttr(Attribute::Preallocated);
-  }
 
   /// Retrieve the inalloca type.
   Type *getInAllocaType() const { return getTypeAttr(Attribute::InAlloca); }
@@ -1321,9 +1289,6 @@ public:
 
   /// This turns a byref type into the form used internally in Attribute.
   LLVM_ABI AttrBuilder &addByRefAttr(Type *Ty);
-
-  /// This turns a preallocated type into the form used internally in Attribute.
-  LLVM_ABI AttrBuilder &addPreallocatedAttr(Type *Ty);
 
   /// This turns an inalloca type into the form used internally in Attribute.
   LLVM_ABI AttrBuilder &addInAllocaAttr(Type *Ty);
@@ -1433,13 +1398,6 @@ LLVM_ABI bool areOutlineCompatible(const Function &A, const Function &B);
 /// Merge caller's and callee's attributes.
 LLVM_ABI void mergeAttributesForInlining(Function &Caller,
                                          const Function &Callee);
-
-/// Merges the functions attributes from \p ToMerge into function \p Base.
-///
-/// \param [in,out] Base - The function being merged into.
-/// \param [in] ToMerge - The function to merge attributes from.
-LLVM_ABI void mergeAttributesForOutlining(Function &Base,
-                                          const Function &ToMerge);
 
 /// Update min-legal-vector-width if it is in Attribute and less than Width.
 LLVM_ABI void updateMinLegalVectorWidthAttr(Function &Fn, uint64_t Width);
