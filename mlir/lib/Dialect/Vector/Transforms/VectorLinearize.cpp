@@ -1029,38 +1029,31 @@ getTypeBitWidthBoundPairs(Operation *op, unsigned targetBitWidth) {
   return resultsWithBitWidth;
 }
 
-/// If `type` is VectorType with trailing dimension of (bit) size greater than
-/// or equal to `targetBitWidth`, its defining op is considered legal.
-static bool
-isNotLinearizableBecauseLargeInnerDimension(Type type,
-                                            unsigned targetBitWidth) {
-
-  VectorType vecType = dyn_cast<VectorType>(type);
-
-  // Not linearizable for reasons other than what this function checks.
-  if (!vecType || vecType.getRank() == 0)
-    return false;
-
-  // The width of the type 'index' is unbounded (and therefore potentially above
-  // the target width).
-  if (vecType.getElementType().isIndex())
-    return true;
-
-  unsigned finalDimSize = vecType.getShape().back();
-  unsigned nbBitsPerElm = vecType.getElementTypeBitWidth();
-  unsigned trailingVecDimBitWidth = finalDimSize * nbBitsPerElm;
-  return trailingVecDimBitWidth >= targetBitWidth;
-}
-
-static bool
-isNotLinearizableBecauseLargeInnerDimension(Operation *op,
-                                            unsigned targetBitWidth) {
+/// Returns true if any checked vector type of op's inner-most dimension
+/// size is equal to or exceeds target bit width.
+static bool hasWideInnerDim(Operation *op, unsigned targetBitWidth) {
   // Check on bitwidths.
   SmallVector<std::pair<Type, unsigned>> toCheck =
       getTypeBitWidthBoundPairs(op, targetBitWidth);
+
+  // If `type` is VectorType with trailing dimension of (bit) size greater than
+  // or equal to `targetBitWidth`, its defining op is considered legal.
   return llvm::any_of(toCheck, [&](std::pair<Type, unsigned> typeWidth) {
-    return isNotLinearizableBecauseLargeInnerDimension(typeWidth.first,
-                                                       typeWidth.second);
+    VectorType vecType = dyn_cast<VectorType>(typeWidth.first);
+
+    // Not linearizable for reasons other than what this function checks.
+    if (!vecType || vecType.getRank() == 0)
+      return false;
+
+    // The width of the type 'index' is unbounded (and therefore potentially
+    // above the target width).
+    if (vecType.getElementType().isIndex())
+      return true;
+
+    unsigned finalDimSize = vecType.getShape().back();
+    unsigned nbBitsPerElm = vecType.getElementTypeBitWidth();
+    unsigned trailingVecDimBitWidth = finalDimSize * nbBitsPerElm;
+    return trailingVecDimBitWidth >= typeWidth.second;
   });
 }
 
@@ -1068,7 +1061,7 @@ void mlir::vector::populateVectorLinearizeBitWidthTargetRules(
     ConversionTarget &target, unsigned targetBitWidth) {
   target.markUnknownOpDynamicallyLegal(
       [=](Operation *op) -> std::optional<bool> {
-        if (isNotLinearizableBecauseLargeInnerDimension(op, targetBitWidth))
+        if (hasWideInnerDim(op, targetBitWidth))
           return true;
         return std::nullopt;
       });
