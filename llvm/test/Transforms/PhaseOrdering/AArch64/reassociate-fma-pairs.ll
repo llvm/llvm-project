@@ -7,7 +7,7 @@
 ; cost model the shared products %ab/%bb and the last pair %p3/%q3 stay scalar:
 ; vectorizing them would need lane extracts for the scalar users and would
 ; break the fusion of %p3/%q3 into the fadd/fsub of the energy update
-; (fmadd/fmsub), so the loop body is emitted as scalar fmul/fmadd/fmsub.
+; (fmadd/fmsub).
 
 define double @md_vdw_energy(ptr nocapture readonly %coeffs, double %energy, double %scale, double %table.delta, i64 %n) {
 ; CHECK-LABEL: define double @md_vdw_energy(

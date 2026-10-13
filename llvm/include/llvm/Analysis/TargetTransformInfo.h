@@ -1149,10 +1149,13 @@ public:
     unsigned Opcode = 0;
     Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
     int OperandIndex = -1;
+    /// The user is fused into its own vector user (e.g. an fmul into an
+    /// fmuladd).
+    bool IsFused = false;
     BuildVectorUseOp(unsigned Opcode, Intrinsic::ID IntrinsicID,
-                     int OperandIndex)
-        : Opcode(Opcode), IntrinsicID(IntrinsicID), OperandIndex(OperandIndex) {
-    }
+                     int OperandIndex, bool IsFused)
+        : Opcode(Opcode), IntrinsicID(IntrinsicID), OperandIndex(OperandIndex),
+          IsFused(IsFused) {}
   };
 
   /// Calculates a VectorInstrContext from \p I.
