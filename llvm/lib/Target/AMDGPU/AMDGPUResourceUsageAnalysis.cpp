@@ -306,9 +306,11 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
         }
 
         if (IsIndirect) {
-          Info.CalleeSegmentSize =
-              std::max(Info.CalleeSegmentSize,
-                       static_cast<uint64_t>(AssumedStackSizeForExternalCall));
+          // Chain callees use the same stack frame. Exclude them.
+          if (!IsChainCall)
+            Info.CalleeSegmentSize = std::max(
+                Info.CalleeSegmentSize,
+                static_cast<uint64_t>(AssumedStackSizeForExternalCall));
 
           // Register usage of indirect calls gets handled later
           Info.UsesVCC = true;

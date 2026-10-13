@@ -4,13 +4,13 @@
 ; CHECK:         .set .Lamdgpu_cs_chain_func.private_seg_size, 16{{$}}
 
 ; CHECK-LABEL: {{^}}chain_callee_smaller_stack:
-; CHECK:         .set .Lchain_callee_smaller_stack.private_seg_size, 36+max(.Lamdgpu_cs_chain_func.private_seg_size){{$}}
+; CHECK:         .set .Lchain_callee_smaller_stack.private_seg_size, 36{{$}}
 
 ; CHECK-LABEL: {{^}}chain_callee_larger_stack:
-; CHECK:         .set .Lchain_callee_larger_stack.private_seg_size, 8+max(.Lamdgpu_cs_chain_func.private_seg_size){{$}}
+; CHECK:         .set .Lchain_callee_larger_stack.private_seg_size, 8{{$}}
 
 ; CHECK-LABEL: {{^}}chain_and_wwf:
-; CHECK:         .set .Lchain_and_wwf.private_seg_size, 80+max(.Lwwf_alloca.private_seg_size, .Lamdgpu_cs_chain_func.private_seg_size){{$}}
+; CHECK:         .set .Lchain_and_wwf.private_seg_size, 80+max(.Lwwf_alloca.private_seg_size){{$}}
 
 ; CHECK-LABEL: {{^}}wwf_alloca:
 ; CHECK:         .set .Lwwf_alloca.private_seg_size, 28{{$}}
@@ -19,10 +19,10 @@
 ; CHECK:         .set .Lgfx_alloca.private_seg_size, 28{{$}}
 
 ; CHECK-LABEL: {{^}}chain_and_gfx:
-; CHECK:         .set .Lchain_and_gfx.private_seg_size, 32+max(.Lgfx_alloca.private_seg_size, .Lamdgpu_cs_chain_func.private_seg_size){{$}}
+; CHECK:         .set .Lchain_and_gfx.private_seg_size, 32+max(.Lgfx_alloca.private_seg_size){{$}}
 
 ; CHECK-LABEL: {{^}}cs_to_chain_and_wwf:
-; CHECK:         .set .Lcs_to_chain_and_wwf.private_seg_size, 12+max(.Lchain_and_wwf.private_seg_size){{$}}
+; CHECK:         .set .Lcs_to_chain_and_wwf.private_seg_size, 12{{$}}
 
 ; CHECK-LABEL: {{^}}chain_indirect_and_wwf:
 ; CHECK:         .set .Lchain_indirect_and_wwf.private_seg_size, 64+max(.Lwwf_alloca.private_seg_size){{$}}
@@ -35,7 +35,7 @@
 ; CHECK-LABEL:         .hardware_stages:
 ; CHECK:      .cs:
 ; CHECK:             .entry_point_symbol: cs_to_chain_and_wwf
-; CHECK:             .scratch_memory_size: 0x80{{$}}
+; CHECK:             .scratch_memory_size: 0x10{{$}}
 ; CHECK:         .shader_functions:
 ; CHECK-LABEL:      amdgpu_cs_chain_func:
 ; CHECK:             .backend_stack_size: 0x10{{$}}
