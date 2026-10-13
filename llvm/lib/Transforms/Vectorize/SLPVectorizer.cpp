@@ -2530,6 +2530,13 @@ private:
   /// vector savings the count check does not model.
   bool bypassesInstCountCheck(InstructionCost TreeCost) const;
 
+  /// Collects into \p UserOps the user operations of the gathers of the scalars
+  /// of \p E, for TTI::getBuildVectorContextHint(). Returns false if no user is
+  /// found or some user cannot be described.
+  bool
+  collectGatherUserOps(const TreeEntry &E,
+                       SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const;
+
   /// \returns the fadd/fsub user of the single-use fmul \p I, which the
   /// backend fuses with \p I into an fmuladd in the scalar code, and the cost
   /// of that fmuladd, or {nullptr, invalid cost}. If \p InTree is set, the
@@ -13547,6 +13554,25 @@ bool BoUpSLP::bypassesInstCountCheck(InstructionCost TreeCost) const {
   });
 }
 
+bool BoUpSLP::collectGatherUserOps(
+    const TreeEntry &E, SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const {
+  UserOps.clear();
+  for (const auto &TE :
+       make_filter_range(VectorizableTree, [&](const auto &TE) {
+         return !DeletedNodes.contains(TE.get());
+       })) {
+    if (!(TE->isGather() || TransformedToGatherNodes.contains(TE.get())) ||
+        !E.isSame(TE->Scalars))
+      continue;
+    const TreeEntry *UserTE = TE->UserTreeIndex.UserTE;
+    if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
+        TransformedToGatherNodes.contains(UserTE))
+      return false;
+    UserOps.emplace_back(UserTE->getOpcode(), TE->UserTreeIndex.EdgeIdx);
+  }
+  return !UserOps.empty();
+}
+
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   uint64_t Total = 0;
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
@@ -23861,24 +23887,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       auto GatherUserOps =
           [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
             UserOps.clear();
-            if (NeedFreeze)
-              return false;
-            for (const auto &TE :
-                 make_filter_range(VectorizableTree, [&](const auto &TE) {
-                   return !DeletedNodes.contains(TE.get());
-                 })) {
-              if (!(TE->isGather() ||
-                    TransformedToGatherNodes.contains(TE.get())) ||
-                  !E->isSame(TE->Scalars))
-                continue;
-              auto *UserTE = TE->UserTreeIndex.UserTE;
-              if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
-                  TransformedToGatherNodes.contains(UserTE))
-                return false;
-              UserOps.emplace_back(UserTE->getOpcode(),
-                                   TE->UserTreeIndex.EdgeIdx);
-            }
-            return !UserOps.empty();
+            return !NeedFreeze && collectGatherUserOps(*E, UserOps);
           };
       ContextHint =
           TTI->getBuildVectorContextHint(ReuseMask, E->Scalars, GatherUserOps);
@@ -24167,36 +24176,33 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         I->dropPoisonGeneratingFlags();
     }
     I = ::propagateMetadata(I, UniqueInsts.getArrayRef());
-    // For copyable elements the lane is synthesized using a binop identity
-    // value, so the operand at that lane is the copyable scalar's value.
-    // fast-math flags that turn defined NaN/Inf inputs into poison (nnan,
-    // ninf) are only justified if every copyable scalar at the synthesized
-    // lane is itself provably non-NaN/non-Inf - either an FPMathOperator
-    // with the matching flag set, or a constant FP that is not NaN/Inf.
+    // A copyable lane is emitted as a synthesized operation - an absorbed
+    // fmul becomes fmuladd(a, b, -0.0), other scalars are combined with a
+    // binop identity value - so every fast-math flag must be justified by
+    // each copyable scalar: an FP operator justifies only its own flags, a
+    // constant FP the flags its value cannot violate, and any other value
+    // only the transform permissions, which cannot change an identity
+    // lane. An unjustified flag poisons NaN/Inf inputs, flushes a -0.0
+    // result, or changes the rounding of an absorbed lane.
     if (E->hasCopyableElements() && isa<FPMathOperator>(I)) {
-      bool AllNoNaNs = true;
-      bool AllNoInfs = true;
+      FastMathFlags CopyableFMF;
+      CopyableFMF.set();
       for (Value *Scalar : make_filter_range(Scalars, [&](Value *Scalar) {
              return E->isCopyableElement(Scalar);
            })) {
         if (auto *FPMO = dyn_cast<FPMathOperator>(Scalar)) {
-          AllNoNaNs &= FPMO->hasNoNaNs();
-          AllNoInfs &= FPMO->hasNoInfs();
+          CopyableFMF &= FPMO->getFastMathFlags();
           continue;
         }
-        if (auto *CFP = dyn_cast<ConstantFP>(Scalar)) {
-          AllNoNaNs &= !CFP->isNaN();
-          AllNoInfs &= !CFP->isInfinity();
-          continue;
-        }
-        AllNoNaNs = false;
-        AllNoInfs = false;
-        break;
+        auto *CFP = dyn_cast<ConstantFP>(Scalar);
+        if (!CFP || CFP->isNaN())
+          CopyableFMF.setNoNaNs(false);
+        if (!CFP || CFP->isInfinity())
+          CopyableFMF.setNoInfs(false);
+        if (!CFP || CFP->isNegZero())
+          CopyableFMF.setNoSignedZeros(false);
       }
-      if (!AllNoNaNs)
-        I->setHasNoNaNs(false);
-      if (!AllNoInfs)
-        I->setHasNoInfs(false);
+      I->copyFastMathFlags(I->getFastMathFlags() & CopyableFMF);
     }
     // Copyable lanes modeled as op(V, V) or with an undef or poison operand do
     // not preserve the disjoint flag: or disjoint(V, V) is poison unless V is
@@ -28452,9 +28458,9 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
                return false;
              LLVM_DEBUG(dbgs() << "SLP: cancel scheduling of the trimmed node "
                                << TE->Idx << " bundle " << *Bundle << "\n");
-             for (ScheduleData *SD :
-                  make_isa_range<ScheduleData>(Bundle->getBundle()))
-               ClearedSDs.insert(SD);
+             for (ScheduleEntity *SE : Bundle->getBundle())
+               if (ScheduleData *SD = BS->getScheduleData(SE->getInst()))
+                 ClearedSDs.insert(SD);
              BS->cancelScheduling(*Bundle);
              return true;
            });
@@ -32316,7 +32322,11 @@ public:
                      &ReducedValsToOps,
                  const SmallPtrSetImpl<Value *> &NegatedReducedVals,
                  bool HasNarrowedLeafShifts) {
+      // A two-value reduction is unordered by commutativity alone; the
+      // accumulator reassociates the reduction across the loop iterations,
+      // which requires a genuinely associative operation.
       if (!VectorizeLoopAccRdx || RK != ReductionOrdering::Unordered ||
+          isVectorizable(RdxKind, Root) != ReductionOrdering::Unordered ||
           Root->getType()->isIntegerTy(1) || Root->getType()->isVectorTy() ||
           HasNarrowedLeafShifts || isCmpSelMinMax(Root) ||
           Root->hasNUsesOrMore(UsesLimit))
@@ -34341,8 +34351,14 @@ private:
             Instruction *RdxOp = GetReductionOp(RdxVal);
             if (Cnt == 1) {
               unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
-              Cost +=
-                  (SameValueCount ? SameValueCount - 1 : 0) * GenCostFn(RdxOp);
+              // A loop-carried chain removes one operation per reduced value;
+              // its last operation, the reduction root, folds the accumulator
+              // phi back and is credited by the accumulation cost instead.
+              unsigned NumRemoved = SameValueCount ? SameValueCount - 1 : 0;
+              if (RdxKind == RecurKind::FAdd && IsLoopCarriedRoot &&
+                  RdxOp != ReductionRoot)
+                NumRemoved = SameValueCount ? SameValueCount : 1;
+              Cost += NumRemoved * GenCostFn(RdxOp);
               break;
             }
             --Cnt;
@@ -34354,12 +34370,16 @@ private:
             InstructionCost ScalarCost = 0;
             for (User *U : RdxVal->users()) {
               auto *RdxOp = cast<Instruction>(U);
+              // The loop-carried root is not removed: the horizontal form
+              // folds the accumulator phi back through it, the accumulator
+              // form replaces it with the lane-wise operation, costed by
+              // the accumulation cost.
+              if (RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot &&
+                  IsLoopCarriedRoot)
+                continue;
               // The reduction root is used outside of the reduction any
-              // number of times, its fmul operand is still fused into it. The
-              // loop-carried chain is bound by its latency, so the fusion does
-              // not make it cheaper than the vector code, which cuts the chain.
-              if ((RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot &&
-                   !IsLoopCarriedRoot) ||
+              // number of times, its fmul operand is still fused into it.
+              if ((RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot) ||
                   hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
                 InstructionsState RdxOpS = RdxKind == RecurKind::FAdd
                                                ? getSameOpcode(RdxOp, TLI)
