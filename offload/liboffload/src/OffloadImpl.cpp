@@ -1543,6 +1543,10 @@ GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
 int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
   return Device->DeviceNum;
 }
+
+__tgt_async_info *__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue) {
+  return Queue ? Queue->AsyncInfo : nullptr;
+}
 } // namespace tmp
 
 } // namespace offload
