@@ -11357,6 +11357,11 @@ For GFX942:
   * PCIe access from the GPU to the CPU can be kept coherent by using the MTYPE
     UC (uncached) which bypasses the L2.
 
+* A ``buffer_inv`` with neither sc0 nor sc1 set (or ``BUFFER_INV 0`` in MIR)
+  does not invalidate the L1 or L2 caches. It is functionally ``s_nop`` with
+  the side effect of incrementing ``vmcnt``. This side effect is also present
+  when ``EXEC`` is zero.
+
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant
 address space and global address space for program scope ``const`` variables.
