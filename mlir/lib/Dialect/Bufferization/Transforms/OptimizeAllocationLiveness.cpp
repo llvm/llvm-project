@@ -110,10 +110,11 @@ public:
   /// When moving a dealloc operation to be closer to its companion alloc we
   /// have to consider the following. The dealloc should be:
   /// - After all the operand definitions that the dealloc uses
-  /// - Before any of ops that consume the results produced by the dealloc
-  /// To do this we first ensure the "target" position is after all the operands
-  /// Then we ensure this target dominates all consumers of deallocs results. If
-  /// not no valid position exists and return nullptr.
+  /// - Before any ops that consume the results produced by the dealloc
+  /// To do this, we first ensure the "target" position is after all the
+  /// operands. Then we ensure this target dominates all consumers of the
+  /// dealloc's results. If not, no valid position exists and nullptr is
+  /// returned.
   static Operation *findValidInsertionPoint(DominanceInfo *domInfo,
                                             Operation *allocOp,
                                             Operation *deallocOp,
@@ -154,7 +155,8 @@ public:
           return nullptr;
       }
     }
-    return target;
+    // Return the op to insert before
+    return target->getNextNode();
   }
 
   void runOnOperation() override {
@@ -220,8 +222,8 @@ public:
         return WalkResult::advance();
       }
 
-      deallocOp->moveAfter(target);
-      LDBG() << "Moved dealloc op after: " << *target;
+      deallocOp->moveBefore(target);
+      LDBG() << "Moved dealloc op before: " << *target;
 
       return WalkResult::advance();
     });
