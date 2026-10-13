@@ -242,13 +242,13 @@ bool ObjectFileXCOFF::SetLoadAddressByType(Target &target, lldb::addr_t value,
                     section_sp, section_sp->GetFileOffset() + value))
               ++num_loaded_sections;
           }
-        } else if (type_id == 2 && section_sp && (section_sp->GetName() == ".data")) {
-          if (!section_sp->IsThreadSpecific()) {
-            // - If value_is_offset is true: add value to file address
-            // - If value_is_offset is false: value is the absolute runtime address
+        } else if (type_id == 2 && section_sp) {
+          bool is_data = section_sp->GetName() == ".data";
+          bool is_bss  = section_sp->GetName() == ".bss";
+          if ((is_data || is_bss) && !section_sp->IsThreadSpecific()) {
             lldb::addr_t load_addr;
             if (value_is_offset) {
-              load_addr = section_sp->GetFileAddress() + value;
+              load_addr = value + section_sp->GetFileAddress();
             } else {
               load_addr = value;
             }
@@ -415,8 +415,35 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
             uint64_t csect_size = csect_aux.getSectionOrLength();
             if (csect_size > 0)
               symbol.SetByteSize(csect_size);
-            if (!symbolName.starts_with("_ZTV"))
+            if (smc == XCOFF::XMC_RO && !symbolName.starts_with("_ZTV")) {
               symbol.GetAddressRef() = Address();
+            } else if (smc == XCOFF::XMC_RW) {
+              // Allowlist of XMC_RW XTY_SD symbols needed for libpthdebug.
+              // All other XMC_RW csects are compiler-generated tables that
+              // must not pollute the address space 
+              static const llvm::StringRef kLibpthreadsSymbols[] = {
+                  "__n_pthreads",
+                  "__libpthreads_version",
+                  "pth_table_high",
+                  "pth_table_next",
+                  "usched_tid",
+                  "timerq_tid",
+                  "stop_tid",
+                  "hold_change",
+                  "hold_count",
+                  "vp_hold_count",
+                  "concurrency",
+              };
+              bool is_needed = false;
+              for (llvm::StringRef needed : kLibpthreadsSymbols) {
+                if (symbolName == needed) {
+                  is_needed = true;
+                  break;
+                }
+              }
+              if (!is_needed)
+                symbol.GetAddressRef() = Address();
+            }
           } else if (smc == XCOFF::XMC_PR) {
             // XMC_PR is a standalone named code csect (not an entry label
             // inside a larger csect).  Set its declared size directly.

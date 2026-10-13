@@ -540,6 +540,7 @@ private:
   void HandleAsyncMisc(llvm::StringRef data) override;
   void HandleStopReply() override;
   void HandleAsyncStructuredDataPacket(llvm::StringRef data) override;
+  std::string HandleAsyncSymbolLookup(llvm::StringRef symbol_name) override;
 
   lldb::ThreadSP
   HandleThreadAsyncInterrupt(uint8_t signo,

@@ -6110,6 +6110,40 @@ void ProcessGDBRemote::AddRemoteRegisters(
   m_register_info_sp->SetRegisterInfo(std::move(registers), arch_to_use);
 }
 
+std::string
+ProcessGDBRemote::HandleAsyncSymbolLookup(llvm::StringRef symbol_name) {
+  Log *log = GetLog(GDBRLog::Process);
+  LLDB_LOGF(log,
+            "ProcessGDBRemote::%s: server requested address of symbol '%s'",
+            __FUNCTION__, std::string(symbol_name).c_str());
+
+  // Attempt to resolve the symbol in the current target image list.
+  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+  SymbolContextList sc_list;
+  GetTarget().GetImages().FindSymbolsWithNameAndType(ConstString(symbol_name),
+                                                    eSymbolTypeAny, sc_list);
+  for (const SymbolContext &sc : sc_list) {
+    if (sc.symbol) {
+      load_addr = sc.symbol->GetLoadAddress(&GetTarget());
+      if (load_addr != LLDB_INVALID_ADDRESS)
+        break;
+    }
+  }
+
+  LLDB_LOGF(log, "ProcessGDBRemote::%s: resolved '%s' -> 0x%" PRIx64,
+            __FUNCTION__, std::string(symbol_name).c_str(), load_addr);
+
+  // Build the reply payload: qSymbolLookupReply:<hex_addr>:<hex_encoded_name>
+  StreamString payload;
+  payload.PutCString("qSymbolLookupReply:");
+  if (load_addr != LLDB_INVALID_ADDRESS)
+    payload.Printf("%" PRIx64, load_addr);
+  payload.PutChar(':');
+  payload.PutBytesAsRawHex8(symbol_name.data(), symbol_name.size());
+
+  return std::string(payload.GetString());
+}
+
 // query the target of gdb-remote for extended target information returns
 // true on success (got register definitions), false on failure (did not).
 llvm::Error ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {

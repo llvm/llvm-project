@@ -10,7 +10,11 @@
 #define liblldb_NativeProcessAIX_H_
 
 #include <csignal>
+#include <string>
+#include <sys/pthdebug.h>
+#include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/HostThread.h"
@@ -134,6 +138,46 @@ public:
   NativeThreadAIX *GetThreadByID(lldb::tid_t id);
   NativeThreadAIX *GetCurrentThread();
 
+  /// Returns the kernel TID that triggered the most recent stop event.
+  lldb::tid_t GetTriggeringTID() const { return m_triggering_tid; }
+
+  // Accessors used by PthdbWrapper.cpp callbacks.
+  // Must be public because the callbacks receive a plain NativeProcessAIX *.
+
+  /// Expose delegate for synchronous symbol lookup from pthdb callbacks.
+  NativeDelegate &GetDelegate() { return m_delegate; }
+
+  /// Look up a cached pthdb symbol address.  Returns LLDB_INVALID_ADDRESS
+  /// if the name has not been resolved yet.
+  lldb::addr_t LookupPthdbgSymbol(llvm::StringRef name) const {
+    auto it = m_pthdbg_symbols.find(name.str());
+    return (it != m_pthdbg_symbols.end()) ? it->second : LLDB_INVALID_ADDRESS;
+  }
+
+  /// Cache a resolved pthdb symbol address.
+  void StorePthdbgSymbol(llvm::StringRef name, lldb::addr_t addr) {
+    m_pthdbg_symbols[name.str()] = addr;
+  }
+
+  // libpthdebug session state accessors (used by PthdbWrapper).
+
+  bool IsPthdbInitialized() const { return m_pthdb_initialized; }
+  bool IsPthdbNotPthreaded() const { return m_pthdb_not_pthreaded; }
+  pthdb_session_t GetPthdbSession() const { return m_pthdb_session; }
+
+  void SetPthdbSession(pthdb_session_t session) {
+    m_pthdb_session = session;
+    m_pthdb_initialized = true;
+  }
+
+  /// Reset the session handle and mark it as uninitialised (teardown).
+  void ClearPthdbSession() {
+    m_pthdb_session = 0;
+    m_pthdb_initialized = false;
+  }
+
+  void SetPthdbNotPthreaded() { m_pthdb_not_pthreaded = true; }
+
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   GetAuxvData() const override {
     // Not available on this target.
@@ -186,6 +230,20 @@ private:
   /*MainLoop& m_main_loop;*/
   static lldb::pid_t process_pid; // For Access to PtraceWrapper
 
+  // libpthdebug session state
+
+  /// Map from symbol name resolved address, populated by cb_symbol_addrs().
+  std::unordered_map<std::string, lldb::addr_t> m_pthdbg_symbols;
+
+  /// libpthdebug session handle; 0 = not initialised.
+  pthdb_session_t m_pthdb_session = 0;
+
+  /// True once pthdb_session_init() has succeeded.
+  bool m_pthdb_initialized = false;
+
+  /// True if the inferior is not pthreaded (PTHDB_NOT_PTHREADED received).
+  bool m_pthdb_not_pthreaded = false;
+
   lldb::tid_t m_triggering_tid = LLDB_INVALID_THREAD_ID;
 
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
@@ -213,6 +271,8 @@ private:
   void MonitorSIGTRAP(const WaitStatus status, NativeThreadAIX &thread);
 
   void MonitorTrace(NativeThreadAIX &thread);
+
+  void LogSymbolLookupResults(llvm::ArrayRef<llvm::StringLiteral> symbols);
 
   void MonitorBreakpoint(NativeThreadAIX &thread);
 
