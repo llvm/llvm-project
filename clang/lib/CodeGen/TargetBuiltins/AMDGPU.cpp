@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGBuiltin.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -555,6 +556,21 @@ static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
   }
 }
 
+static void emitBuiltinCheck(CodeGenFunction &CGF, const CallExpr *E,
+                             CodeGenFunction::BuiltinCheckKind Kind,
+                             llvm::function_ref<Value *()> EmitCond) {
+  if (!CGF.SanOpts.has(SanitizerKind::Builtin))
+    return;
+
+  auto CheckOrdinal = SanitizerKind::SO_Builtin;
+  auto CheckHandler = SanitizerHandler::InvalidBuiltin;
+  SanitizerDebugLocation SanScope(&CGF, {CheckOrdinal}, CheckHandler);
+  CGF.EmitCheck(
+      std::make_pair(EmitCond(), CheckOrdinal), CheckHandler,
+      {CGF.EmitCheckSourceLocation(E->getExprLoc()), CGF.Builder.getInt8(Kind)},
+      {});
+}
+
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
@@ -683,12 +699,36 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_permlane64:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::amdgcn_permlane64);
-  case AMDGPU::BI__builtin_amdgcn_readlane:
-    return emitBuiltinWithOneOverloadedType<2>(*this, E,
-                                               Intrinsic::amdgcn_readlane);
-  case AMDGPU::BI__builtin_amdgcn_wave_shuffle:
-    return emitBuiltinWithOneOverloadedType<2>(*this, E,
-                                               Intrinsic::amdgcn_wave_shuffle);
+  case AMDGPU::BI__builtin_amdgcn_readlane: {
+    Value *Src = EmitScalarExpr(E->getArg(0));
+    Value *Lane = EmitScalarExpr(E->getArg(1));
+    // The lane index must be uniform across the wavefront.
+    emitBuiltinCheck(*this, E, BCK_NonUniformLane, [&] {
+      Value *First = Builder.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane,
+                                             {Lane->getType()}, {Lane});
+      return Builder.CreateICmpEQ(Lane, First);
+    });
+    return Builder.CreateIntrinsic(Intrinsic::amdgcn_readlane, {Src->getType()},
+                                   {Src, Lane});
+  }
+  case AMDGPU::BI__builtin_amdgcn_wave_shuffle: {
+    Value *Src = EmitScalarExpr(E->getArg(0));
+    Value *Idx = EmitScalarExpr(E->getArg(1));
+    // The source lane, wrapped to the wavefront size, must be active.
+    emitBuiltinCheck(*this, E, BCK_InactiveLane, [&] {
+      Value *Active = Builder.CreateIntrinsic(Intrinsic::amdgcn_ballot,
+                                              {Int64Ty}, {Builder.getTrue()});
+      Value *Size =
+          Builder.CreateIntrinsic(Int32Ty, Intrinsic::amdgcn_wavefrontsize, {});
+      Value *Lane =
+          Builder.CreateAnd(Idx, Builder.CreateSub(Size, Builder.getInt32(1)));
+      Value *Bit =
+          Builder.CreateLShr(Active, Builder.CreateZExt(Lane, Int64Ty));
+      return Builder.CreateTrunc(Bit, Builder.getInt1Ty());
+    });
+    return Builder.CreateIntrinsic(Intrinsic::amdgcn_wave_shuffle,
+                                   {Src->getType()}, {Src, Idx});
+  }
   case AMDGPU::BI__builtin_amdgcn_readfirstlane:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::amdgcn_readfirstlane);
