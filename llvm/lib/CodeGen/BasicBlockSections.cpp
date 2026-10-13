@@ -14,6 +14,11 @@
 // and the rest are grouped in a cold section. The exception handling blocks are
 // treated specially to ensure they are all in one seciton.
 //
+// This pass also implements machine function splitting
+// (-function-splitting=all). Functions without a basic block sections profile
+// are split using PGO/AutoFDO profiles: cold blocks are moved into a separate
+// section with the symbol `foo.cold`.
+//
 // Basic Block Sections
 // ====================
 //
@@ -66,20 +71,38 @@
 // the corresponding basic blocks. This logic is implemented in AsmPrinter. This
 // pass only assigns the BBSectionType of every function to ``labels``.
 //
+// Machine Function Splitting
+// ==========================
+//
+// With -function-splitting=all, functions without a basic block sections
+// profile are split using PGO/AutoFDO profiles. Blocks deemed cold are placed
+// in a separate section prefixed with ".text.split." (see
+// -bbsections-cold-text-prefix), referenced by the symbol `foo.cold`. Grouping
+// cold blocks across functions decreases fragmentation and improves icache and
+// iTLB utilization. Such functions get the BBSectionType ``Preset``.
+//
+// For the original RFC of machine function splitting please see
+// https://groups.google.com/d/msg/llvm-dev/RUegaMg-iqc/wFAVxa6fCgAJ
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/EHUtils.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/BasicBlockMatchingAndInference.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/UniqueBBID.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/CodeLayout.h"
@@ -102,18 +125,43 @@ static cl::opt<bool> BBSectionsDetectSourceDrift(
              "mismatch for this function"),
     cl::init(true), cl::Hidden);
 
+// FIXME: This cutoff value is CPU dependent and should be moved to
+// TargetTransformInfo once we consider enabling this on other platforms.
+// The value is expressed as a ProfileSummaryInfo integer percentile cutoff.
+// Defaults to 999950, i.e. all blocks colder than 99.995 percentile are split.
+// The default was empirically determined to be optimal when considering cutoff
+// values between 99%-ile to 100%-ile with respect to iTLB and icache metrics on
+// Intel CPUs.
+static cl::opt<unsigned>
+    PercentileCutoff("mfs-psi-cutoff",
+                     cl::desc("Percentile profile summary cutoff used to "
+                              "determine cold blocks. Unused if set to zero."),
+                     cl::init(999950), cl::Hidden);
+
+static cl::opt<unsigned> ColdCountThreshold(
+    "mfs-count-threshold",
+    cl::desc(
+        "Minimum number of times a block must be executed to be retained."),
+    cl::init(1), cl::Hidden);
+
+static cl::opt<bool> SplitAllEHCode(
+    "mfs-split-ehcode",
+    cl::desc("Splits all EH code and it's descendants by default."),
+    cl::init(false), cl::Hidden);
+
 namespace {
 
 class BasicBlockSections : public MachineFunctionPass {
 public:
   static char ID;
 
-  BasicBlockSections() : MachineFunctionPass(ID) {
+  explicit BasicBlockSections(bool SplitWithPGO = false)
+      : MachineFunctionPass(ID), SplitWithPGO(SplitWithPGO) {
     initializeBasicBlockSectionsPass(*PassRegistry::getPassRegistry());
   }
 
   StringRef getPassName() const override {
-    return "Basic Block Sections Analysis";
+    return "Basic Block Sections Transformation";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -125,6 +173,12 @@ public:
 private:
   bool handleBBSections(MachineFunction &MF);
   bool handleBBAddrMap(MachineFunction &MF);
+  bool shouldSplitWithPGO(MachineFunction &MF);
+  void assignColdSectionWithPGO(MachineFunction &MF);
+
+  // Whether functions without a basic block sections profile are split using
+  // PGO/AutoFDO profiles (-function-splitting=all).
+  const bool SplitWithPGO;
 };
 
 } // end anonymous namespace
@@ -136,6 +190,8 @@ INITIALIZE_PASS_BEGIN(
     "into clusters of basic blocks.",
     false, false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(BasicBlockSections, "bbsections-prepare",
                     "Prepares for basic block sections, by splitting functions "
                     "into clusters of basic blocks.",
@@ -375,13 +431,128 @@ bool llvm::hasInstrProfHashMismatch(MachineFunction &MF) {
   return false;
 }
 
-// Identify, arrange, and modify basic blocks which need separate sections
-// according to the specification provided by the -fbasic-block-sections flag.
-bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
-  auto BBSectionsType = MF.getTarget().getBBSectionsType();
-  if (BBSectionsType == BasicBlockSection::None)
+/// setDescendantEHBlocksCold - This splits all EH pads and blocks reachable
+/// only by EH pad as cold. This will help mark EH pads statically cold
+/// instead of relying on profile data.
+static void setDescendantEHBlocksCold(MachineFunction &MF) {
+  DenseSet<MachineBasicBlock *> EHBlocks;
+  computeEHOnlyBlocks(MF, EHBlocks);
+  for (auto Block : EHBlocks) {
+    Block->setSectionID(MBBSectionID::ColdSectionID);
+  }
+}
+
+static bool isColdBlock(const MachineBasicBlock &MBB,
+                        const MachineBlockFrequencyInfo *MBFI,
+                        ProfileSummaryInfo *PSI) {
+  std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
+  // For instrumentation profiles and sample profiles, we use different ways
+  // to judge whether a block is cold and should be split.
+  if (PSI->hasInstrumentationProfile() || PSI->hasCSInstrumentationProfile()) {
+    // If using instrument profile, which is deemed "accurate", no count means
+    // cold.
+    if (!Count)
+      return true;
+    if (PercentileCutoff > 0)
+      return PSI->isColdCountNthPercentile(PercentileCutoff, *Count);
+    // Fallthrough to end of function.
+  } else if (PSI->hasSampleProfile()) {
+    // For sample profile, no count means "do not judege coldness".
+    if (!Count)
+      return false;
+  }
+
+  return (*Count < ColdCountThreshold);
+}
+
+// Returns whether a function which does not have a basic block sections profile
+// should be split using its PGO/AutoFDO profile.
+bool BasicBlockSections::shouldSplitWithPGO(MachineFunction &MF) {
+  if (!SplitWithPGO || skipFunction(MF.getFunction()))
     return false;
 
+  // We target functions with profile data. Static information in the form
+  // of exception handling code may be split to cold if user passes the
+  // mfs-split-ehcode flag.
+  if (!MF.getFunction().hasProfileData() && !SplitAllEHCode)
+    return false;
+
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  if (!TII.isFunctionSafeToSplit(MF))
+    return false;
+
+  // Do not split functions which are in the basic block sections profile, even
+  // if their profile is not used due to source drift.
+  if (MF.getTarget().getBBSectionsType() == BasicBlockSection::List &&
+      getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
+          .getBBSPR()
+          .isFunctionHot(MF.getName()))
+    return false;
+
+  return true;
+}
+
+// Splits a function using its PGO/AutoFDO profile: assigns the cold section to
+// cold blocks, and the default section to all the other blocks.
+void BasicBlockSections::assignColdSectionWithPGO(MachineFunction &MF) {
+  MF.setBBSectionsType(BasicBlockSection::Preset);
+
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  bool UseProfileData = MF.getFunction().hasProfileData();
+  MachineBlockFrequencyInfo *MBFI = nullptr;
+  ProfileSummaryInfo *PSI = nullptr;
+  if (UseProfileData) {
+    MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+    PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+    // If we don't have a good profile (sample profile is not deemed
+    // as a "good profile") and the function is not hot, then early
+    // return. (Because we can only trust hot functions when profile
+    // quality is not good.)
+    if (PSI->hasSampleProfile() && !PSI->isFunctionHotInCallGraph(&MF, *MBFI)) {
+      // Split all EH code and it's descendant statically by default.
+      if (SplitAllEHCode)
+        setDescendantEHBlocksCold(MF);
+      return;
+    }
+  }
+
+  SmallVector<MachineBasicBlock *, 2> LandingPads;
+  for (auto &MBB : MF) {
+    if (MBB.isEntryBlock())
+      continue;
+
+    if (MBB.isEHPad())
+      LandingPads.push_back(&MBB);
+    else if (UseProfileData && isColdBlock(MBB, MBFI, PSI) &&
+             TII.isMBBSafeToSplitToCold(MBB) && !SplitAllEHCode)
+      MBB.setSectionID(MBBSectionID::ColdSectionID);
+  }
+
+  // Split all EH code and it's descendant statically by default.
+  if (SplitAllEHCode)
+    setDescendantEHBlocksCold(MF);
+  // We only split out eh pads if all of them are cold.
+  else {
+    // Here we have UseProfileData == true.
+    bool HasHotLandingPads = false;
+    for (const MachineBasicBlock *LP : LandingPads) {
+      if (!isColdBlock(*LP, MBFI, PSI) || !TII.isMBBSafeToSplitToCold(*LP))
+        HasHotLandingPads = true;
+    }
+    if (!HasHotLandingPads) {
+      for (MachineBasicBlock *LP : LandingPads)
+        LP->setSectionID(MBBSectionID::ColdSectionID);
+    }
+  }
+}
+
+// Identify, arrange, and modify basic blocks which need separate sections
+// according to the specification provided by the -fbasic-block-sections flag,
+// or according to the PGO/AutoFDO profile with -function-splitting=all.
+bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
+  auto BBSectionsType = MF.getTarget().getBBSectionsType();
+
+  DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
   // Check for source drift. If the source has changed since the profiles
   // were obtained, optimizing basic blocks might be sub-optimal.
   // This only applies to BasicBlockSection::List as it creates
@@ -389,11 +560,7 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
   // invalidate these groupings leading to sub-optimal code generation with
   // regards to performance.
   if (BBSectionsType == BasicBlockSection::List &&
-      hasInstrProfHashMismatch(MF))
-    return false;
-
-  DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
-  if (BBSectionsType == BasicBlockSection::List) {
+      !hasInstrProfHashMismatch(MF)) {
     SmallVector<BBClusterInfo> ClusterInfo;
     if (auto *BMI = getAnalysisIfAvailable<BasicBlockMatchingAndInference>()) {
       ClusterInfo = createBBClusterInfoForFunction(MF, *BMI);
@@ -401,19 +568,32 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
       ClusterInfo = getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
                         .getClusterInfoForFunction(MF.getName());
     }
-    if (ClusterInfo.empty())
-      return false;
     for (auto &BBClusterInfo : ClusterInfo) {
       FuncClusterInfo.try_emplace(BBClusterInfo.BBID, BBClusterInfo);
     }
   }
 
-  // Renumber blocks before sorting them. This is useful for accessing the
-  // original layout positions and finding the original fallthroughs.
+  // A function without a basic block sections profile is split using its
+  // PGO/AutoFDO profile, if enabled.
+  const bool UsePGO =
+      BBSectionsType == BasicBlockSection::None ||
+      (BBSectionsType == BasicBlockSection::List && FuncClusterInfo.empty());
+  if (UsePGO && !shouldSplitWithPGO(MF))
+    return false;
+
+  // Renumber blocks before assigning sections and sorting them. This is useful
+  // for accessing the original layout positions and finding the original
+  // fallthroughs. Blocks which are not in any cluster keep their original
+  // order, which retains decisions made by prior passes such as
+  // MachineBlockPlacement.
   MF.RenumberBlocks();
 
-  MF.setBBSectionsType(BBSectionsType);
-  assignSections(MF, FuncClusterInfo);
+  if (UsePGO) {
+    assignColdSectionWithPGO(MF);
+  } else {
+    MF.setBBSectionsType(BBSectionsType);
+    assignSections(MF, FuncClusterInfo);
+  }
 
   const MachineBasicBlock &EntryBB = MF.front();
   auto EntryBBSectionID = EntryBB.getSectionID();
@@ -452,8 +632,10 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
     // their cluster and their position within the cluster. A section holds more
     // than one cluster only with -function-splitting=none. Basic blocks which
     // are not in any cluster come after all the profiled basic blocks of the
-    // section, in their original order.
-    if (XSectionID.Type == MBBSectionID::SectionType::Default) {
+    // section, in their original order. Without a basic block sections profile,
+    // all basic blocks keep their original order (they might not have BBIDs).
+    if (XSectionID.Type == MBBSectionID::SectionType::Default &&
+        !FuncClusterInfo.empty()) {
       auto XI = FuncClusterInfo.find(*X.getBBID());
       auto YI = FuncClusterInfo.find(*Y.getBBID());
       bool XInCluster = XI != FuncClusterInfo.end();
@@ -494,12 +676,16 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
+  if (SplitWithPGO) {
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+  }
   AU.addUsedIfAvailable<BasicBlockMatchingAndInference>();
   AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
   AU.addUsedIfAvailable<MachinePostDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MachineFunctionPass *llvm::createBasicBlockSectionsPass() {
-  return new BasicBlockSections();
+MachineFunctionPass *llvm::createBasicBlockSectionsPass(bool SplitWithPGO) {
+  return new BasicBlockSections(SplitWithPGO);
 }
