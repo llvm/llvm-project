@@ -10,6 +10,7 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
+#include "MCTargetDesc/RISCVMCOptions.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
@@ -36,7 +37,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -53,9 +53,6 @@ using namespace llvm;
 
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
-
-static cl::opt<bool> AddBuildAttributes("riscv-add-build-attributes",
-                                        cl::init(false));
 
 namespace {
 struct RISCVOperand;
@@ -335,7 +332,7 @@ public:
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
 
-    if (AddBuildAttributes)
+    if (RISCVMCOptions::Global.add_build_attributes)
       getTargetStreamer().emitTargetAttributes(STI, /*EmitStackAlign*/ false);
   }
 
@@ -344,7 +341,6 @@ public:
   // location instead of being printed with no location information.
   void onBeginOfFile() override {
     // If the target streamer already has a resolved ABI (e.g. set by
-    // RISCVTargetELFStreamer for a valid -target-abi, or set by
     // RISCVAsmPrinter during codegen), skip ABI validation.
     if (getTargetStreamer().hasTargetABI())
       return;
@@ -824,11 +820,6 @@ public:
       return (Imm == 0) || (Imm == 1) || (Imm == 2) || (Imm == 4) ||
              (Imm == 8) || (Imm == 16) || (Imm == 15) || (Imm == 31);
     });
-  }
-
-  bool isUImm7EqXLen() const {
-    return isUImmPred(
-        [this](int64_t Imm) { return isRV64Expr() ? Imm == 64 : Imm == 32; });
   }
 
   bool isUImm8GE32() const {
@@ -1710,10 +1701,6 @@ std::string RISCVAsmParser::getCustomOperandDiag(unsigned MatchError) {
     return "immediate must be an integer in the range "
            "[1, 255], a multiple of 8 in the range [256, 504], "
            "or a multiple of 16 in the range [512, 4096]";
-  case Match_InvalidUImm7EqXLen:
-    return ("immediate must be an integer equal to XLEN (" +
-            Twine(isRV64() ? "64" : "32") + ")")
-        .str();
   }
 }
 
@@ -3778,7 +3765,8 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   if (STI->hasFeature(RISCV::Feature32Bit) &&
-      STI->hasFeature(RISCV::FeatureVendorXqcili))
+      STI->hasFeature(RISCV::FeatureVendorXqcili) &&
+      !ParserOptions.IsPicEnabled)
     emitToStreamer(
         Out, MCInstBuilder(RISCV::QC_E_LI).addReg(DestReg).addExpr(Symbol));
   else
@@ -4243,16 +4231,40 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     return Error(Operands[3]->getStartLoc(),
                  "the sum of the immediate operands must be less than 32");
 
-  if (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_LWUD ||
-      Opcode == RISCV::TH_LWD) {
+  switch (Opcode) {
+  default:
+    break;
+  case RISCV::TH_LBIA:
+  case RISCV::TH_LBIB:
+  case RISCV::TH_LBUIA:
+  case RISCV::TH_LBUIB:
+  case RISCV::TH_LHIA:
+  case RISCV::TH_LHIB:
+  case RISCV::TH_LHUIA:
+  case RISCV::TH_LHUIB:
+  case RISCV::TH_LWIA:
+  case RISCV::TH_LWIB:
+  case RISCV::TH_LWUIA:
+  case RISCV::TH_LWUIB:
+  case RISCV::TH_LDIA:
+  case RISCV::TH_LDIB:
+    if (Inst.getOperand(0).getReg() == Inst.getOperand(2).getReg())
+      return Error(Operands[1]->getStartLoc(), "rd and rs1 must be different");
+    break;
+  case RISCV::TH_LDD:
+  case RISCV::TH_LWUD:
+  case RISCV::TH_LWD: {
     MCRegister Rd1 = Inst.getOperand(0).getReg();
     MCRegister Rd2 = Inst.getOperand(1).getReg();
     MCRegister Rs1 = Inst.getOperand(2).getReg();
-    // The encoding with rd1 == rd2 == rs1 is reserved for XTHead load pair.
+    // The encoding with overlapping rs1, rd1, and rd2 is reserved for XTHead
+    // load pair.
     if (Rs1 == Rd1 || Rs1 == Rd2 || Rd1 == Rd2) {
       SMLoc Loc = Operands[1]->getStartLoc();
       return Error(Loc, "rs1, rd1, and rd2 cannot overlap");
     }
+    break;
+  }
   }
 
   if (Opcode == RISCV::CM_MVSA01 || Opcode == RISCV::QC_CM_MVSA01) {

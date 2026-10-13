@@ -4,9 +4,9 @@
 ; The mul node is trimmed from the tree as non-profitable and its scalars are
 ; gathered into the vector add. The bundle, scheduled for the trimmed node,
 ; must be cancelled: otherwise the scalar muls are still scheduled as a vector
-; bundle, sunk below all the loads and emitted in reverse order, i.e. the
-; scalar code, which is not vectorized, is reordered. The muls keep their
-; original positions between the loads.
+; bundle and emitted in reverse order, i.e. the scalar code, which is not
+; vectorized, is reordered. The muls are scheduled as separate instructions and
+; keep their original order.
 
 define void @trimmed_subtree_keeps_scalar_order(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, ptr %h, ptr %s) {
 ; CHECK-LABEL: define void @trimmed_subtree_keeps_scalar_order(
@@ -20,10 +20,10 @@ define void @trimmed_subtree_keeps_scalar_order(ptr %a, ptr %b, ptr %c, ptr %d, 
 ; CHECK-NEXT:    [[G0:%.*]] = load i64, ptr [[G]], align 8
 ; CHECK-NEXT:    [[D0:%.*]] = load i64, ptr [[D]], align 8
 ; CHECK-NEXT:    [[H0:%.*]] = load i64, ptr [[H]], align 8
-; CHECK-NEXT:    [[M3:%.*]] = mul i64 [[D0]], [[H0]]
-; CHECK-NEXT:    [[M2:%.*]] = mul i64 [[C0]], [[G0]]
-; CHECK-NEXT:    [[M1:%.*]] = mul i64 [[B0]], [[F0]]
 ; CHECK-NEXT:    [[M0:%.*]] = mul i64 [[A0]], [[E0]]
+; CHECK-NEXT:    [[M1:%.*]] = mul i64 [[B0]], [[F0]]
+; CHECK-NEXT:    [[M2:%.*]] = mul i64 [[C0]], [[G0]]
+; CHECK-NEXT:    [[M3:%.*]] = mul i64 [[D0]], [[H0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[M0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[M1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[M2]], i64 2

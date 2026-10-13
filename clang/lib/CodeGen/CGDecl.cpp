@@ -783,7 +783,12 @@ void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
   auto CheckOrdinal = SanitizerKind::SO_NullabilityAssign;
   auto CheckHandler = SanitizerHandler::TypeMismatch;
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
-  llvm::Value *IsNotNull = Builder.CreateIsNotNull(RHS);
+  llvm::Value *IsNotNull;
+  if (auto *MPT = LHS.getType()->getAs<MemberPointerType>())
+    IsNotNull = CGM.getCXXABI().EmitMemberPointerIsNotNull(*this, RHS, MPT);
+  else
+    IsNotNull = Builder.CreateIsNotNull(RHS);
+
   llvm::Constant *StaticData[] = {
       EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(LHS.getType()),
       llvm::ConstantInt::get(Int8Ty, 0), // The LogAlignment info is unused.
@@ -1526,39 +1531,37 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     // If this value is an array or struct with a statically determinable
     // constant initializer, there are optimizations we can do.
     //
-    // TODO: We should constant-evaluate the initializer of any variable,
-    // as long as it is initialized by a constant expression. Currently,
-    // isConstantInitializer produces wrong answers for structs with
-    // reference or bitfield members, and a few other cases, and checking
-    // for POD-ness protects us from some of these.
+    // TODO: We should be able to delete most of the restrictions here; there's
+    // no reason we specifically need a POD array/record type. But we'd need to
+    // evaluate the performance, update regression tests, and fix a crash with
+    // OpenMP.
     if (D.getInit() && (Ty->isArrayType() || Ty->isRecordType()) &&
         (D.isConstexpr() ||
          ((Ty.isPODType(getContext()) ||
-           getContext().getBaseElementType(Ty)->isObjCObjectPointerType()) &&
-          D.getInit()->isConstantInitializer(getContext())))) {
+           getContext().getBaseElementType(Ty)->isObjCObjectPointerType())))) {
+      emission.ConstantAggregateInitializer =
+          ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
+      if (emission.ConstantAggregateInitializer) {
+        // If the variable's a const type, and it's neither an NRVO
+        // candidate nor a __block variable and has no mutable members,
+        // emit it as a global instead.
+        // Exception is if a variable is located in non-constant address space
+        // in OpenCL.
+        bool NeedsDtor =
+            D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
+        if ((!getLangOpts().OpenCL ||
+             Ty.getAddressSpace() == LangAS::opencl_constant) &&
+            (CGM.getCodeGenOpts().MergeAllConstants && !NRVO &&
+             !isEscapingByRef &&
+             Ty.isConstantStorage(getContext(), true, !NeedsDtor))) {
+          EmitStaticVarDecl(D, llvm::GlobalValue::InternalLinkage);
 
-      // If the variable's a const type, and it's neither an NRVO
-      // candidate nor a __block variable and has no mutable members,
-      // emit it as a global instead.
-      // Exception is if a variable is located in non-constant address space
-      // in OpenCL.
-      bool NeedsDtor =
-          D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
-      if ((!getLangOpts().OpenCL ||
-           Ty.getAddressSpace() == LangAS::opencl_constant) &&
-          (CGM.getCodeGenOpts().MergeAllConstants && !NRVO &&
-           !isEscapingByRef &&
-           Ty.isConstantStorage(getContext(), true, !NeedsDtor))) {
-        EmitStaticVarDecl(D, llvm::GlobalValue::InternalLinkage);
-
-        // Signal this condition to later callbacks.
-        emission.Addr = Address::invalid();
-        assert(emission.wasEmittedAsGlobal());
-        return emission;
+          // Signal this condition to later callbacks.
+          emission.Addr = Address::invalid();
+          assert(emission.wasEmittedAsGlobal());
+          return emission;
+        }
       }
-
-      // Otherwise, tell the initialization code that we're in this case.
-      emission.IsConstantAggregate = true;
     }
 
     // A normal fixed sized variable becomes an alloca in the entry block,
@@ -1640,6 +1643,40 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         }
       } else {
         assert(!emission.useLifetimeMarkers());
+      }
+    }
+
+    // A variable whose declaration is bypassed by a goto or switch is not
+    // initialized by EmitAutoVarInit, which runs at the declaration. Emit the
+    // trivial-auto-var-init separately.
+    if (Bypasses.IsBypassed(&D) && !emission.IsEscapingByRef &&
+        !Ty->isVariablyModifiedType() &&
+        getAutoVarInitKind(Ty, D) !=
+            LangOptions::TrivialAutoVarInitKind::Uninitialized) {
+      if (!Bypasses.isAlwaysBypassed()) {
+        // The variable's lifetime restarts on each re-entry into its scope, so
+        // reinitialize at every bypassing jump. Backward gotos are emitted at
+        // the jump source, which comes after this alloca; forward gotos and the
+        // switch dispatch have already been emitted, so patch their init in
+        // before the jump.
+        BypassedVarInits.insert({&D, address});
+        for (const BypassingForwardJump &FG : BypassingForwardJumps) {
+          const auto *Vars = Bypasses.getBypassedVarsForSource(FG.Source);
+          if (!Vars || !Vars->contains(&D))
+            continue;
+          if (llvm::Instruction *Term = FG.Block->getTerminator()) {
+            llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+            Builder.SetInsertPoint(Term);
+            emitZeroOrPatternForAutoVarInit(Ty, D, address);
+          }
+        }
+      } else {
+        // A computed goto can jump anywhere, so we can't identify the jumps
+        // that bypass this declaration. Fall back to initializing once, in the
+        // function's entry block.
+        llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+        Builder.SetInsertPoint(getPostAllocaInsertPoint());
+        emitZeroOrPatternForAutoVarInit(Ty, D, address);
       }
     }
 
@@ -1840,6 +1877,35 @@ bool CodeGenFunction::isTrivialInitializer(const Expr *Init) {
   return false;
 }
 
+LangOptions::TrivialAutoVarInitKind
+CodeGenFunction::getAutoVarInitKind(QualType Ty, const VarDecl &D) {
+  auto hasNoTrivialAutoVarInitAttr = [](const Decl *D) {
+    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
+  };
+  if (D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
+      hasNoTrivialAutoVarInitAttr(Ty->getAsTagDecl()) ||
+      hasNoTrivialAutoVarInitAttr(CurFuncDecl))
+    return LangOptions::TrivialAutoVarInitKind::Uninitialized;
+  return getContext().getLangOpts().getTrivialAutoVarInit();
+}
+
+void CodeGenFunction::emitBypassedVarInitsForSource(const Stmt *Source) {
+  // Scope-reentry reinit is only sound when jump sources are known. With a
+  // computed goto we can't tell whether a jump leaves a variable's scope, so
+  // EmitAutoVarAlloca falls back to a single function-scope init and we must
+  // not reinitialize here -- doing so could clobber a still-live variable.
+  if (Bypasses.isAlwaysBypassed())
+    return;
+  const auto *Vars = Bypasses.getBypassedVarsForSource(Source);
+  if (!Vars)
+    return;
+  for (const VarDecl *VD : *Vars) {
+    auto It = BypassedVarInits.find(VD);
+    if (It != BypassedVarInits.end())
+      emitZeroOrPatternForAutoVarInit(VD->getType(), *VD, It->second);
+  }
+}
+
 void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
                                                       const VarDecl &D,
                                                       Address Loc) {
@@ -1999,16 +2065,9 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   const Address Loc =
       locIsByrefHeader ? emission.getObjectAddress(*this) : emission.Addr;
 
-  auto hasNoTrivialAutoVarInitAttr = [&](const Decl *D) {
-    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
-  };
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
-      ((D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
-        hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
-        hasNoTrivialAutoVarInitAttr(CurFuncDecl))
-           ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-           : getContext().getLangOpts().getTrivialAutoVarInit());
+      getAutoVarInitKind(type, D);
 
   auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
@@ -2026,10 +2085,13 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     return initializeWhatIsTechnicallyUninitialized(Loc);
 
   llvm::Constant *constant = nullptr;
-  if (emission.IsConstantAggregate ||
+  if (emission.ConstantAggregateInitializer ||
       D.mightBeUsableInConstantExpressions(getContext())) {
     assert(!capturedByInit && "constant init contains a capturing block?");
-    constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
+    if (emission.ConstantAggregateInitializer)
+      constant = emission.ConstantAggregateInitializer;
+    else
+      constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
     if (constant && !constant->isNullValue() &&
         (trivialAutoVarInit !=
          LangOptions::TrivialAutoVarInitKind::Uninitialized)) {
@@ -2081,7 +2143,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
 
   PGO->markStmtMaybeUsed(Init);
 
-  if (!emission.IsConstantAggregate) {
+  if (!emission.ConstantAggregateInitializer) {
     // For simple scalar/complex initialization, store the value directly.
     LValue lv = MakeAddrLValue(Loc, type);
     lv.setNonGC(true);

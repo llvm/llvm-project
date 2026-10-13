@@ -102,5 +102,17 @@ ENUM_LOWERINGOPT(FPExceptionTraps, unsigned, 8, 0)
 /// construct. Controlled by -f[no-]openacc-combined-loop-firstprivate.
 ENUM_LOWERINGOPT(OpenACCCombinedLoopFirstprivate, unsigned, 1, 1)
 
+/// Initialization mode for automatic variables that have no explicit or
+/// default initialization (-finit-local= / -finit-local-zero).
+/// Off by default.
+ENUM_LOWERINGOPT(InitLocalMode, Fortran::lower::InitLocalKind, 3,
+                 Fortran::lower::InitLocalKind::Off)
+
+/// If true (default), treat a DO CONCURRENT associated with an OpenACC kernels
+/// loop as independent when no explicit loop parallelism mode is present.
+/// Controlled by
+/// -f[no-]openacc-acc-kernels-do-concurrent-independent.
+ENUM_LOWERINGOPT(OpenACCKernelsDoConcurrentIndependent, unsigned, 1, 1)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

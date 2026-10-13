@@ -72,7 +72,7 @@ void conditional_no_escape(int c) {
   int local = 7;
   if (c)
     global = nullptr; // no-warning
-  (void)local;
+  use(local);
 }
 
 // Pointer compound assignment and increment/decrement keep the pointer in the

@@ -683,8 +683,7 @@ void Module::setCodeModel(CodeModel::Model CL) {
 }
 
 LongDoubleFormat Module::getLongDoubleFormat() const {
-  if (auto *Val =
-          dyn_cast_or_null<MDString>(getModuleFlag("long-double-type"))) {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("long-double-type"))) {
     if (std::optional<LongDoubleFormat> Format =
             parseLongDoubleFormat(Val->getString()))
       return *Format;
@@ -699,7 +698,7 @@ void Module::setLongDoubleFormat(LongDoubleFormat Format) {
 }
 
 FloatABI::ABIType Module::getFloatABI() const {
-  if (auto *Val = dyn_cast_or_null<MDString>(getModuleFlag("float-abi")))
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("float-abi")))
     return *FloatABI::parseABIType(Val->getString());
   // Without an explicit flag, fall back to the ABI implied by the target
   // triple.
@@ -718,7 +717,7 @@ void Module::setThreadModel(ThreadModel Model) {
 }
 
 ExceptionHandling Module::getExceptionModel() const {
-  if (auto *Val = dyn_cast_or_null<MDString>(getModuleFlag("exception-model")))
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("exception-model")))
     return *parseExceptionModel(Val->getString());
 
   // TODO: Return getDefaultExceptionHandling when TargetOptions field is
@@ -1005,8 +1004,7 @@ void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
 
 StringRef Module::getTargetABIFromMD() {
   StringRef TargetABI;
-  if (auto *TargetABIMD =
-          dyn_cast_or_null<MDString>(getModuleFlag("target-abi")))
+  if (auto *TargetABIMD = cast_or_null<MDString>(getModuleFlag("target-abi")))
     TargetABI = TargetABIMD->getString();
   return TargetABI;
 }

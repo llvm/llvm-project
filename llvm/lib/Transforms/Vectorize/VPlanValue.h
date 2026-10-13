@@ -186,9 +186,8 @@ public:
   /// Go through the uses list for this VPValue and make each use point to \p
   /// New if the callback ShouldReplace returns true for the given use specified
   /// by a pair of (VPUser, the use index).
-  void replaceUsesWithIf(
-      VPValue *New,
-      llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace);
+  void replaceUsesWithIf(VPValue *New,
+                         llvm::function_ref<bool(VPUser &U)> ShouldReplace);
 
   /// Returns the recipe defining this VPValue or nullptr if it is not defined
   /// by a recipe, i.e. is a live-in.
@@ -198,9 +197,6 @@ public:
   /// Returns the scalar type of this VPValue, dispatching based on the
   /// concrete subclass.
   Type *getScalarType() const;
-
-  /// Returns true if this VPValue is defined by a recipe.
-  bool hasDefiningRecipe() const { return getDefiningRecipe(); }
 
   /// Returns true if the VPValue is defined outside any loop.
   bool isDefinedOutsideLoopRegions() const;
@@ -360,14 +356,14 @@ public:
 };
 
 /// A VPRecipeValue defined by a VPSingleDefRecipe.
-class VPSingleDefValue : public VPRecipeValue {
+class LLVM_ABI_FOR_TEST VPSingleDefValue : public VPRecipeValue {
   friend class VPDef;
   friend class VPSingleDefRecipe;
 
 protected:
   /// Construct a VPSingleDefValue. Must only be used by VPSingleDefRecipe.
-  LLVM_ABI_FOR_TEST VPSingleDefValue(VPSingleDefRecipe *Def,
-                                     Value *UV = nullptr, Type *Ty = nullptr);
+  VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV = nullptr,
+                   Type *Ty = nullptr);
 
 public:
   ~VPSingleDefValue() override;
@@ -443,6 +439,9 @@ public:
     assert(N < Operands.size() && "Operand index out of bounds");
     return Operands[N];
   }
+
+  /// Returns the last operand.
+  VPValue *getLastOperand() const { return Operands.back(); }
 
   void setOperand(unsigned I, VPValue *New) {
     assert((!Operands[I]->getScalarType() || !New->getScalarType() ||

@@ -3902,7 +3902,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
                             const AAMemoryBehavior &MemBehaviorAA,
                             const CallBase &CB, unsigned OtherArgNo) {
     // We do not need to worry about aliasing with the underlying IRP.
-    if (this->getCalleeArgNo() == (int)OtherArgNo)
+    if (this->getCallSiteArgNo() == (int)OtherArgNo)
       return false;
 
     // If it is not a pointer or pointer vector we do not alias.
@@ -4537,6 +4537,12 @@ struct AAIsDeadFunction : public AAIsDead {
 
   bool isAssumedDeadInternalFunction(Attributor &A) {
     if (!getAnchorScope()->hasLocalLinkage())
+      return false;
+    // An AA that will not be updated is fixed pessimistically right after
+    // initialization, so an assumed-dead result would be discarded. Checking
+    // the call sites recursively initializes the liveness of every internal
+    // caller, which in CGSCC cleanup repeats for each callee SCC.
+    if (!A.shouldUpdateAA<AAIsDead>(getIRPosition()))
       return false;
     bool UsedAssumedInformation = false;
     return A.checkForAllCallSites([](AbstractCallSite) { return false; }, *this,
@@ -5265,7 +5271,7 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
       if (ConstVals && ConstVals->isValidState() && ConstVals->isAtFixpoint()) {
         unsigned ShiftValue = std::min(ConstVals->getAssumedMinTrailingZeros(),
                                        Value::MaxAlignmentExponent);
-        Align ConstAlign(UINT64_C(1) << ShiftValue);
+        Align ConstAlign = Align::fromLog2(ShiftValue);
         if (ConstAlign >= AlignAA->getKnownAlign())
           return Align(1).value();
       }
@@ -5596,7 +5602,7 @@ struct AAAlignCallSiteReturned final
           unsigned ShiftValue =
               std::min(ConstVals->getAssumedMinTrailingZeros(),
                        Value::MaxAlignmentExponent);
-          Alignment = Align(UINT64_C(1) << ShiftValue);
+          Alignment = Align::fromLog2(ShiftValue);
           Valid = true;
         }
 
@@ -5876,12 +5882,11 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
   if (!isa<Constant>(V) && !IRP.isArgumentPosition())
     return V.use_empty();
 
-  // You cannot "capture" null in the default address space.
-  //
-  // FIXME: This should use NullPointerIsDefined to account for the function
-  // attribute.
-  if (isa<UndefValue>(V) || (isa<ConstantPointerNull>(V) &&
-                             V.getType()->getPointerAddressSpace() == 0)) {
+  // You cannot "capture" null if it is not a valid pointer.
+  if (isa<UndefValue>(V) ||
+      (isa<ConstantPointerNull>(V) &&
+       !NullPointerIsDefined(IRP.getAnchorScope(),
+                             V.getType()->getPointerAddressSpace()))) {
     return true;
   }
 
@@ -6929,9 +6934,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       if (SizeAPI) {
         Size = ConstantInt::get(AI.CB->getContext(), *SizeAPI);
       } else {
-        LLVMContext &Ctx = AI.CB->getContext();
         ObjectSizeOpts Opts;
-        ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, Opts);
+        ObjectSizeOffsetEvaluator Eval(*AI.CB->getModule(), TLI, Opts);
         SizeOffsetValue SizeOffsetPair = Eval.compute(AI.CB);
         assert(SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown() &&
                cast<ConstantInt>(SizeOffsetPair.Offset)->isZero());
@@ -7656,7 +7660,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                                    unsigned ArgNo, BasicBlock::iterator IP) {
     assert(PrivType && "Expected privatizable type!");
 
-    IRBuilder<NoFolder> IRB(IP->getParent(), IP);
+    IRBuilder<NoFolder> IRB(IP);
     const DataLayout &DL = F.getDataLayout();
 
     // Traverse the type, build GEPs and stores.
@@ -12245,6 +12249,11 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
                 SmallVectorImpl<const Value *> &Worklist) {
     Instruction *UInst = dyn_cast<Instruction>(U.getUser());
     if (!UInst) {
+      // Outside a closed world, code outside the module can read an
+      // externally visible global, so the value escapes through it.
+      if (auto *GV = dyn_cast<GlobalValue>(U.getUser()))
+        if (!GV->hasLocalLinkage() && !A.isClosedWorldModule())
+          return false;
       Follow = true;
       return true;
     }

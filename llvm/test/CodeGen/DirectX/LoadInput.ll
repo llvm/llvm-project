@@ -1,4 +1,5 @@
 ; RUN: opt -S -dxil-intrinsic-expansion -dxil-op-lower %s | FileCheck %s
+; RUN: opt -S -mtriple=dxil-pc-shadermodel6.0-vertex -dxil-intrinsic-expansion -dxil-op-lower %s | FileCheck %s
 
 target triple = "dxil-pc-shadermodel6.0-pixel"
 

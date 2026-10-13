@@ -1228,7 +1228,7 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
       TSTargetID->setXnackSetting(Setting);
   }
 
-  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSupportsSRAMECC)) {
+  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSRAMECCOnOffModes)) {
     AMDGPU::TargetIDSetting Setting =
         GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
     if (Setting != AMDGPU::TargetIDSetting::Any)
@@ -1252,6 +1252,14 @@ static const MCExpr *computeAccumOffset(const MCExpr *NumVGPR, MCContext &Ctx) {
       Ctx);
 
   return MCBinaryExpr::createSub(DivCeil, ConstOne, Ctx);
+}
+
+static unsigned getLDSEncodingGranule(const GCNSubtarget &ST) {
+  unsigned Granule =
+      AMDGPU::getLDSEncodingGranule(ST.getTargetID().getGPUKind());
+  // The legacy generic targets have no encoding granularity feature. Preserve
+  // the default used for code generation when no GPU is specified.
+  return Granule ? Granule : 256;
 }
 
 void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
@@ -1401,6 +1409,24 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
         MF.getFunction(), "local memory", MFI->getLDSSize(),
         STM.getAddressableLocalMemorySize(), DS_Error));
   }
+
+  // When dynamic VGPRs are enabled, entry functions are launched with a single
+  // VGPR block. The register allocator enforces this constraint, but we also
+  // need to catch explicit physical registers in inline asm and wave dispatch
+  // VGPR arguments.
+  if (MFI->isDynamicVGPREnabled() &&
+      AMDGPU::isEntryFunctionCC(F.getCallingConv())) {
+    unsigned BlockSize = MFI->getDynamicVGPRBlockSize();
+    uint64_t NumVgpr;
+    if (TryGetMCExprValue(ProgInfo.NumVGPRsForWavesPerEU, NumVgpr) &&
+        NumVgpr > BlockSize) {
+      LLVMContext &Ctx = F.getContext();
+      Ctx.diagnose(DiagnosticInfoResourceLimit(
+          F, "dynamic VGPR entry point vector registers", NumVgpr, BlockSize,
+          DS_Warning, DK_ResourceLimit));
+    }
+  }
+
   // The MCExpr equivalent of getNumSGPRBlocks/getNumVGPRBlocks:
   // (alignTo(max(1u, NumGPR), GPREncodingGranule) / GPREncodingGranule) - 1
   auto GetNumGPRBlocks = [&CreateExpr, &Ctx](const MCExpr *NumGPR,
@@ -1440,7 +1466,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.LDSSize = MFI->getLDSSize();
 
-  unsigned LDSGranularityBytes = getLdsDwGranularity(STM) * 4;
+  unsigned LDSGranularityBytes = getLDSEncodingGranule(STM);
   ProgInfo.LDSBlocks =
       alignTo(ProgInfo.LDSSize, LDSGranularityBytes) / LDSGranularityBytes;
 
@@ -1679,8 +1705,7 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
 
   MD->updateHwStageMaximum(
       CC, ".lds_size",
-      (unsigned)(CurrentProgramInfo.LdsSize * getLdsDwGranularity(ST) *
-                 sizeof(uint32_t)));
+      (unsigned)(CurrentProgramInfo.LdsSize * getLDSEncodingGranule(ST)));
 }
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type

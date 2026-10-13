@@ -721,6 +721,13 @@ emulation environment using QEMU helper scripts found in
 `llvm-project/lldb/scripts/lldb-test-qemu`. These scripts currently
 work with Arm or AArch64, but support for other architectures can be added easily.
 
+### Running tests against WebAssembly
+
+The API tests can be compiled to WebAssembly and run under a standalone Wasm
+runtime. {doc}`/resources/wasm-testing` describes how to configure LLDB's `wasm`
+platform for a runtime serving a GDB remote stub, with WAMR and WasmKit as
+examples.
+
 ## Debugging Test Failures
 
 On non-Windows platforms, you can use the `-d` option to `dotest.py` which

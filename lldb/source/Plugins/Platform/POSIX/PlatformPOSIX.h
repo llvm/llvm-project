@@ -86,9 +86,8 @@ protected:
                           llvm::StringRef expr_prefix,
                           lldb::ValueObjectSP &result_valobj_sp);
 
-  std::unique_ptr<lldb_private::UtilityFunction>
-  MakeLoadImageUtilityFunction(lldb_private::ExecutionContext &exe_ctx,
-                               lldb_private::Status &error);
+  llvm::Expected<std::unique_ptr<lldb_private::UtilityFunction>>
+  MakeLoadImageUtilityFunction(lldb_private::ExecutionContext &exe_ctx);
 
   virtual
   llvm::StringRef GetLibdlFunctionDeclarations(lldb_private::Process *process);

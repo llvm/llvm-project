@@ -86,3 +86,17 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.__support.macros.config
 )
+
+add_entrypoint_object(
+  posix_fallocate
+  SRCS
+    posix_fallocate.cpp
+  HDRS
+    ../posix_fallocate.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.off_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fallocate
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
