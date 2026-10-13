@@ -32,26 +32,21 @@ jobs:
     steps:
       - name: Setup crlf
         if: runner.os == 'Windows'
-        background: true
         run: |
           git config --global core.autocrlf false
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        background: true
         with:
           persist-credentials: false
           path: ${{ github.workspace }}/llvm-project
           fetch-depth: 2
 
       - name: Setup ccache
-        background: true
         uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
           max-size: 2G
           key: ids-check-${{ runner.os }}
           variant: sccache
-
-      - wait-all:
 
       - name: Get changed files
         id: changed-files
