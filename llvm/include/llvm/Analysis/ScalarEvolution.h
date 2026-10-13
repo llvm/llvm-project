@@ -2456,6 +2456,11 @@ private:
   getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
                                 ICmpInst::Predicate Pred);
 
+  /// Test if the condition described by Pred, LHS, RHS is known to be true on
+  /// every iteration of \p L.
+  bool isKnownOnEveryIteration(CmpPredicate Pred, const SCEV *LHS,
+                               const SCEV *RHS, const Loop *L);
+
   /// Return SCEV no-wrap flags that can be proven based on reasoning about
   /// how poison produced from no-wrap flags on this value (e.g. a nuw add)
   /// would trigger undefined behavior on overflow.

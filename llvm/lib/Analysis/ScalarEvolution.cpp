@@ -11387,30 +11387,7 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
         return DT.properlyDominates(L1->getHeader(), L2->getHeader());
       });
 
-  // Get init and post increment value for LHS.
-  auto SplitLHS = SplitIntoInitAndPostInc(MDL, LHS);
-  // if LHS contains unknown non-invariant SCEV then bail out.
-  if (SplitLHS.first == getCouldNotCompute())
-    return false;
-  assert (SplitLHS.second != getCouldNotCompute() && "Unexpected CNC");
-  // Get init and post increment value for RHS.
-  auto SplitRHS = SplitIntoInitAndPostInc(MDL, RHS);
-  // if RHS contains unknown non-invariant SCEV then bail out.
-  if (SplitRHS.first == getCouldNotCompute())
-    return false;
-  assert (SplitRHS.second != getCouldNotCompute() && "Unexpected CNC");
-  // It is possible that init SCEV contains an invariant load but it does
-  // not dominate MDL and is not available at MDL loop entry, so we should
-  // check it here.
-  if (!isAvailableAtLoopEntry(SplitLHS.first, MDL) ||
-      !isAvailableAtLoopEntry(SplitRHS.first, MDL))
-    return false;
-
-  // It seems backedge guard check is faster than entry one so in some cases
-  // it can speed up whole estimation by short circuit
-  return isLoopBackedgeGuardedByCond(MDL, Pred, SplitLHS.second,
-                                     SplitRHS.second) &&
-         isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first, SplitRHS.first);
+  return isKnownOnEveryIteration(Pred, LHS, RHS, MDL);
 }
 
 bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
@@ -11462,6 +11439,35 @@ bool ScalarEvolution::isKnownOnEveryIteration(CmpPredicate Pred,
   const Loop *L = LHS->getLoop();
   return isLoopEntryGuardedByCond(L, Pred, LHS->getStart(), RHS) &&
          isLoopBackedgeGuardedByCond(L, Pred, LHS->getPostIncExpr(*this), RHS);
+}
+
+bool ScalarEvolution::isKnownOnEveryIteration(CmpPredicate Pred,
+                                              const SCEV *LHS, const SCEV *RHS,
+                                              const Loop *L) {
+  // Get init and post increment value for LHS.
+  auto SplitLHS = SplitIntoInitAndPostInc(L, LHS);
+  // if LHS contains unknown non-invariant SCEV then bail out.
+  if (SplitLHS.first == getCouldNotCompute())
+    return false;
+  assert(SplitLHS.second != getCouldNotCompute() && "Unexpected CNC");
+  // Get init and post increment value for RHS.
+  auto SplitRHS = SplitIntoInitAndPostInc(L, RHS);
+  // if RHS contains unknown non-invariant SCEV then bail out.
+  if (SplitRHS.first == getCouldNotCompute())
+    return false;
+  assert(SplitRHS.second != getCouldNotCompute() && "Unexpected CNC");
+  // It is possible that init SCEV contains an invariant load but it does
+  // not dominate L and is not available at L loop entry, so we should
+  // check it here.
+  if (!isAvailableAtLoopEntry(SplitLHS.first, L) ||
+      !isAvailableAtLoopEntry(SplitRHS.first, L))
+    return false;
+
+  // It seems backedge guard check is faster than entry one so in some cases
+  // it can speed up whole estimation by short circuit
+  return isLoopBackedgeGuardedByCond(L, Pred, SplitLHS.second,
+                                     SplitRHS.second) &&
+         isLoopEntryGuardedByCond(L, Pred, SplitLHS.first, SplitRHS.first);
 }
 
 std::optional<ScalarEvolution::MonotonicPredicateType>
