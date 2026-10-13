@@ -37,6 +37,8 @@ auto test =
     []<class CharT, class... Args>(
         std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) constexpr {
       std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
+      if (TEST_IS_CONSTANT_EVALUATED)
+        assert(out == expected);
       TEST_REQUIRE(
           out == expected,
           TEST_WRITE_CONCATENATED(

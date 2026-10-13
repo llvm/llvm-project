@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=9000000
 
 // <format>
 
@@ -105,6 +106,16 @@ void test() {
   test_assure_parse_is_called<CharT>();
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test_constexpr() {
+  format_tests_constexpr<char>(test, test_exception);
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  format_tests_constexpr<wchar_t>(test, test_exception);
+#  endif
+  return true;
+}
+#endif
+
 void test() {
   test<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
@@ -114,6 +125,9 @@ void test() {
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test_constexpr());
+#endif
 
   return 0;
 }
