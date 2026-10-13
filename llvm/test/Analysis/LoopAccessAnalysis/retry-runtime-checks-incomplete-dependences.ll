@@ -13,14 +13,9 @@ define void @independent_pair_with_unknown_deps(ptr %a, i64 %offset, i64 %n) {
 ; DEFAULT-NEXT:      Check 0:
 ; DEFAULT-NEXT:        Comparing group GRP0:
 ; DEFAULT-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
-; DEFAULT-NEXT:        Against group GRP1:
-; DEFAULT-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
-; DEFAULT-NEXT:      Check 1:
-; DEFAULT-NEXT:        Comparing group GRP0:
-; DEFAULT-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
 ; DEFAULT-NEXT:        Against group GRP2:
 ; DEFAULT-NEXT:          %gep.a.off = getelementptr inbounds i32, ptr %a, i64 %iv.2.off
-; DEFAULT-NEXT:      Check 2:
+; DEFAULT-NEXT:      Check 1:
 ; DEFAULT-NEXT:        Comparing group GRP1:
 ; DEFAULT-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
 ; DEFAULT-NEXT:        Against group GRP2:

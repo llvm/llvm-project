@@ -32,13 +32,12 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-LABEL: @Test(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[Z:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 256
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[OBJ:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    br label [[DOTOUTER_PREHEADER:%.*]]
 ; CHECK:       .outer.preheader:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[I_NEXT:%.*]], [[DOTOUTER:%.*]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[I]], 7
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 256
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 [[TMP4]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[OBJ:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[I]], 2
@@ -48,14 +47,10 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[Z]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[OBJ]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[BOUND05:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP4]]
 ; CHECK-NEXT:    [[BOUND16:%.*]] = icmp ult ptr [[TMP9]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT7:%.*]] = and i1 [[BOUND05]], [[BOUND16]]
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT7]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT7]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[Z]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[Z]], [[N_MOD_VF]]
@@ -69,12 +64,12 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP11]], align 4, !alias.scope [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add nsw <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[OBJ]], i64 0, i32 2, i64 [[I]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP15]], align 4, !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP15]], align 4, !alias.scope [[META5:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <4 x i32> [[TMP14]], [[WIDE_LOAD8]]
-; CHECK-NEXT:    store <4 x i32> [[TMP17]], ptr [[TMP15]], align 4, !alias.scope [[META5]], !noalias [[META7]]
+; CHECK-NEXT:    store <4 x i32> [[TMP17]], ptr [[TMP15]], align 4, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[Z]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[DOTOUTER]], label [[SCALAR_PH]]
@@ -99,27 +94,15 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP23]], align 4
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[EXITCOND_INNER:%.*]] = icmp eq i64 [[J_NEXT]], [[Z]]
-; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label [[DOTOUTER]], label [[DOTINNER]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label [[DOTOUTER]], label [[DOTINNER]], !llvm.loop [[LOOP10:![0-9]+]]
 ;
 ; CHECK-HOIST-LABEL: @Test(
-; CHECK-HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[OBJ:%.*]], i64 256
-; CHECK-HOIST-NEXT:    [[TMP1:%.*]] = shl i64 [[Z:%.*]], 2
-; CHECK-HOIST-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4224
-; CHECK-HOIST-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP2]]
-; CHECK-HOIST-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP1]]
-; CHECK-HOIST-NEXT:    [[SCEVGEP3:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 128
 ; CHECK-HOIST-NEXT:    br label [[DOTOUTER_PREHEADER:%.*]]
 ; CHECK-HOIST:       .outer.preheader:
 ; CHECK-HOIST-NEXT:    [[I:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[I_NEXT:%.*]], [[DOTOUTER:%.*]] ]
-; CHECK-HOIST-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[OBJ]], i64 0, i32 1, i64 [[I]]
-; CHECK-HOIST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[Z]], 4
-; CHECK-HOIST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
-; CHECK-HOIST:       vector.memcheck:
-; CHECK-HOIST-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
-; CHECK-HOIST-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[OBJ]], [[SCEVGEP1]]
-; CHECK-HOIST-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-HOIST-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SCEVGEP3]], [[SCEVGEP1]]
-; CHECK-HOIST-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-HOIST-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[OBJ:%.*]], i64 0, i32 1, i64 [[I]]
+; CHECK-HOIST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[Z:%.*]], 4
+; CHECK-HOIST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-HOIST:       vector.ph:
 ; CHECK-HOIST-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[Z]], 3
 ; CHECK-HOIST-NEXT:    [[N_VEC:%.*]] = sub i64 [[Z]], [[N_MOD_VF]]
@@ -133,17 +116,17 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-HOIST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4, !alias.scope [[META3:![0-9]+]]
 ; CHECK-HOIST-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; CHECK-HOIST-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[OBJ]], i64 0, i32 2, i64 [[I]], i64 [[INDEX]]
-; CHECK-HOIST-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4, !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
+; CHECK-HOIST-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4, !alias.scope [[META5:![0-9]+]], !noalias [[META0]]
 ; CHECK-HOIST-NEXT:    [[TMP11:%.*]] = add nsw <4 x i32> [[TMP8]], [[WIDE_LOAD5]]
-; CHECK-HOIST-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP9]], align 4, !alias.scope [[META5]], !noalias [[META7]]
+; CHECK-HOIST-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP9]], align 4, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-HOIST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-HOIST-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-HOIST-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-HOIST-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-HOIST:       middle.block:
 ; CHECK-HOIST-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[Z]], [[N_VEC]]
 ; CHECK-HOIST-NEXT:    br i1 [[CMP_N]], label [[DOTOUTER]], label [[SCALAR_PH]]
 ; CHECK-HOIST:       scalar.ph:
-; CHECK-HOIST-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[DOTOUTER_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-HOIST-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[DOTOUTER_PREHEADER]] ]
 ; CHECK-HOIST-NEXT:    br label [[DOTINNER:%.*]]
 ; CHECK-HOIST:       .exit:
 ; CHECK-HOIST-NEXT:    ret void
@@ -163,7 +146,7 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-HOIST-NEXT:    store i32 [[TMP19]], ptr [[TMP17]], align 4
 ; CHECK-HOIST-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
 ; CHECK-HOIST-NEXT:    [[EXITCOND_INNER:%.*]] = icmp eq i64 [[J_NEXT]], [[Z]]
-; CHECK-HOIST-NEXT:    br i1 [[EXITCOND_INNER]], label [[DOTOUTER]], label [[DOTINNER]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-HOIST-NEXT:    br i1 [[EXITCOND_INNER]], label [[DOTOUTER]], label [[DOTINNER]], !llvm.loop [[LOOP10:![0-9]+]]
 ;
   br label %.outer.preheader
 
