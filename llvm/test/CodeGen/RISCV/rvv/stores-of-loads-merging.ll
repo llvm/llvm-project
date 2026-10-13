@@ -774,6 +774,53 @@ define void @scalar_store_merge(ptr %dst, ptr %src) #0 {
   ret void
 }
 
+define void @scalar_store_merge_seven(ptr %dst, ptr %src) #0 {
+; CHECK-LABEL: scalar_store_merge_seven:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lh a2, 0(a1)
+; CHECK-NEXT:    lh a3, 2(a1)
+; CHECK-NEXT:    lh a4, 4(a1)
+; CHECK-NEXT:    sh a2, 0(a0)
+; CHECK-NEXT:    sh a3, 2(a0)
+; CHECK-NEXT:    sh a4, 4(a0)
+; CHECK-NEXT:    lhu a2, 6(a1)
+; CHECK-NEXT:    lh a3, 8(a1)
+; CHECK-NEXT:    sh a2, 6(a0)
+; CHECK-NEXT:    sh a3, 8(a0)
+; CHECK-NEXT:    lhu a2, 10(a1)
+; CHECK-NEXT:    lh a1, 12(a1)
+; CHECK-NEXT:    sh a2, 10(a0)
+; CHECK-NEXT:    sh a1, 12(a0)
+; CHECK-NEXT:    ret
+  %v0 = load i16, ptr %src, align 8, !tbaa !18
+  store i16 %v0, ptr %dst, align 8, !tbaa !18
+  %src1 = getelementptr i8, ptr %src, i64 2
+  %dst1 = getelementptr i8, ptr %dst, i64 2
+  %v1 = load i16, ptr %src1, align 2, !tbaa !19
+  store i16 %v1, ptr %dst1, align 2, !tbaa !19
+  %src2 = getelementptr i8, ptr %src, i64 4
+  %dst2 = getelementptr i8, ptr %dst, i64 4
+  %v2 = load i16, ptr %src2, align 4, !tbaa !20
+  store i16 %v2, ptr %dst2, align 4, !tbaa !20
+  %src3 = getelementptr i8, ptr %src, i64 6
+  %dst3 = getelementptr i8, ptr %dst, i64 6
+  %v3 = load i16, ptr %src3, align 2, !tbaa !21
+  store i16 %v3, ptr %dst3, align 2, !tbaa !21
+  %src4 = getelementptr i8, ptr %src, i64 8
+  %dst4 = getelementptr i8, ptr %dst, i64 8
+  %v4 = load i16, ptr %src4, align 4, !tbaa !22
+  store i16 %v4, ptr %dst4, align 4, !tbaa !22
+  %src5 = getelementptr i8, ptr %src, i64 10
+  %dst5 = getelementptr i8, ptr %dst, i64 10
+  %v5 = load i16, ptr %src5, align 2, !tbaa !23
+  store i16 %v5, ptr %dst5, align 2, !tbaa !23
+  %src6 = getelementptr i8, ptr %src, i64 12
+  %dst6 = getelementptr i8, ptr %dst, i64 12
+  %v6 = load i16, ptr %src6, align 4, !tbaa !24
+  store i16 %v6, ptr %dst6, align 4, !tbaa !24
+  ret void
+}
+
 !0 = !{!"Simple C/C++ TBAA"}
 !1 = !{!"omnipotent char", !0, i64 0}
 !2 = !{!"any pointer", !1, i64 0}
@@ -793,5 +840,14 @@ define void @scalar_store_merge(ptr %dst, ptr %src) #0 {
 !14 = !{!11, !10, i64 4}
 !15 = !{!11, !10, i64 6}
 !16 = !{!11, !10, i64 8}
+!17 = !{!"seven short copy object", !10, i64 0, !10, i64 2, !10, i64 4,
+        !10, i64 6, !10, i64 8, !10, i64 10, !10, i64 12}
+!18 = !{!17, !10, i64 0}
+!19 = !{!17, !10, i64 2}
+!20 = !{!17, !10, i64 4}
+!21 = !{!17, !10, i64 6}
+!22 = !{!17, !10, i64 8}
+!23 = !{!17, !10, i64 10}
+!24 = !{!17, !10, i64 12}
 
 attributes #0 = { noimplicitfloat }
