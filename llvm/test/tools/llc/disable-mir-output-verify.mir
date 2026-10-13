@@ -9,8 +9,8 @@
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm=false -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck --check-prefix=LEGACY-STOP %s
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm=false -debug-pass=Structure -filetype=null -disable-mir-output-verify %s 2>&1 | FileCheck --check-prefix=LEGACY-STOP-NOVERIFY %s
 
-# RUN: llc -mtriple=x86_64-pc-linux-gnu -passes=no-op-machine-function -print-pipeline-passes %s | FileCheck --check-prefix=NPM-PASSES %s
-# RUN: llc -mtriple=x86_64-pc-linux-gnu -passes=no-op-machine-function -print-pipeline-passes -disable-mir-output-verify %s | FileCheck --check-prefix=NPM-PASSES-NOVERIFY %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -passes=no-op-machine-function -print-pipeline-passes -filetype=null %s | FileCheck --check-prefix=NPM-PASSES %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -passes=no-op-machine-function -print-pipeline-passes -filetype=null -disable-mir-output-verify %s | FileCheck --check-prefix=NPM-PASSES-NOVERIFY %s
 
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm -print-pipeline-passes -filetype=null %s | FileCheck --check-prefix=NPM-STOP %s
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm -print-pipeline-passes -filetype=null -disable-mir-output-verify %s | FileCheck --check-prefix=NPM-STOP-NOVERIFY %s
@@ -18,7 +18,7 @@
 # No extra verifier when one already runs after each pass.
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -run-pass=machine-cp -debug-pass=Structure -filetype=null -verify-machineinstrs %s 2>&1 | FileCheck --check-prefix=RUN-PASS-VERIFY-EACH %s
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm=false -debug-pass=Structure -filetype=null -verify-machineinstrs %s 2>&1 | FileCheck --check-prefix=LEGACY-STOP-VERIFY-EACH %s
-# RUN: llc -mtriple=x86_64-pc-linux-gnu -passes=no-op-machine-function -print-pipeline-passes -verify-each %s | FileCheck --check-prefix=NPM-PASSES-NOVERIFY %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -passes=no-op-machine-function -print-pipeline-passes -filetype=null -verify-each %s | FileCheck --check-prefix=NPM-PASSES-NOVERIFY %s
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm -print-pipeline-passes -filetype=null -verify-each %s | FileCheck --check-prefix=NPM-STOP-NOVERIFY %s
 
 # RUN-PASS: FunctionPass Manager
