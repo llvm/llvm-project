@@ -1704,17 +1704,6 @@ td_library(
     ]),
 )
 
-gentbl_cc_library(
-    name = "ARMTargetParserDefGen",
-    tbl_outs = {"include/llvm/TargetParser/ARMTargetParserDef.inc": ["-gen-arm-target-def"]},
-    tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/ARM/ARM.td",
-    deps = [
-        ":ArmTargetTdFiles",
-        ":CommonTargetTdFiles",
-    ],
-)
-
 td_library(
     name = "AArch64TargetTdFiles",
     srcs = glob([
@@ -1832,7 +1821,6 @@ cc_library(
         "include/llvm/TargetParser/AArch64FeatPriorities.inc",
         "include/llvm/TargetParser/AArch64TargetParserDef.inc",
         "include/llvm/TargetParser/AMDGPUTargetParserDef.inc",
-        "include/llvm/TargetParser/ARMTargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
         "include/llvm/TargetParser/R600TargetParserDef.inc",
     ] + glob([
@@ -2805,6 +2793,10 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-searchable-tables"],
                 "lib/Target/ARM/ARMGenSystemRegister.inc",
+            ),
+            (
+                ["-gen-arm-target-def"],
+                "lib/Target/ARM/ARMGenTargetDef.inc",
             ),
             (
                 ["-gen-instr-info"],
