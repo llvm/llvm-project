@@ -56,8 +56,8 @@ TEST_F(FortConvertUnitTest, MultipleExceptionsAndUnitLists) {
 }
 
 TEST_F(FortConvertUnitTest, EveryMode) {
-  ASSERT_TRUE(env.ParseFortConvertUnit(
-      "native:1;little_endian:2;big_endian:3;swap:4"));
+  ASSERT_TRUE(
+      env.ParseFortConvertUnit("native:1;little_endian:2;big_endian:3;swap:4"));
   ASSERT_EQ(env.numConvertUnits, 4u);
   EXPECT_EQ(env.UnitRtConvert(1), Convert::Native);
   EXPECT_EQ(env.UnitRtConvert(2), Convert::LittleEndian);
