@@ -11,6 +11,7 @@
 
 #include "lldb/Host/Config.h"
 
+#include <atomic>
 #include <climits>
 
 #include <chrono>
@@ -3404,7 +3405,7 @@ protected:
     //the < private state management.
     ProcessRunLock m_public_run_lock;
     ProcessRunLock m_private_run_lock;
-    bool m_is_running = false;
+    std::atomic<bool> m_is_running = false;
     Purpose m_purpose;
     ///< This will be the thread name given to the Private State HostThread when
     ///< it gets spun up.
