@@ -353,8 +353,10 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
   OS << "#include \"llvm/Support/Allocator.h\"\n\n";
   StringRef Namespace = Struct.getValueAsString("Namespace");
-  OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n"
-        "class OptTable;\n} // namespace opt\n} // namespace llvm\n\n";
+  OS << "namespace llvm {\nnamespace cl {\nclass LibraryOptionsContext;\n"
+        "} // namespace cl\nnamespace opt {\nclass Arg;\n"
+        "class LibraryOptionsParser;\nclass OptTable;\n} // namespace opt\n"
+        "} // namespace llvm\n\n";
   OS << "namespace " << Namespace << " {\n";
   OS << "struct " << Name << " {\n";
   if (Namespace != "llvm")
@@ -363,13 +365,18 @@ static void emitOptionsStruct(const Record &Struct,
     ConditionScope CS(OS, *R);
     OS << "  " << M.Type << " " << M.Name << "{" << M.Default << "};\n";
   }
-  OS << "\n  /// The instance cl::ParseCommandLineOptions sets.\n";
-  OS << "  static " << Name << " Global;\n\n";
+  bool PerContext = Struct.getValueAsBit("PerContext");
+  OS << "\n  static constexpr bool PerContext = "
+     << (PerContext ? "true" : "false") << ";\n";
   OS << "  static const llvm::opt::OptTable &optTable();\n";
   OS << "  /// Sets the member that \\p A names, allocating a list from \\p "
         "Alloc.\n  /// Returns false if the value is invalid.\n";
   OS << "  bool apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator "
         "&Alloc);\n";
+  if (PerContext)
+    OS << "\nprivate:\n  friend class llvm::cl::LibraryOptionsContext;\n"
+          "  friend class llvm::opt::LibraryOptionsParser;\n";
+  OS << "\n  static " << Name << " Global;\n";
   OS << "};\n} // namespace " << Namespace << "\n";
   OS << "#endif // OPTIONS_STRUCT_DECL\n";
 

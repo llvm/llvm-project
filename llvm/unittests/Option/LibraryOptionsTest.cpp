@@ -17,6 +17,7 @@ enum class Mode { A, B };
 
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/LibraryOptions.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -115,12 +116,7 @@ TEST(LibraryOptionsTest, BoolOrDefault) {
 
 // What cl:: sees of the struct, without cl::.
 TEST(LibraryOptionsTest, Parser) {
-  opt::LibraryOptionsParser P(
-      TestLibraryOptions::optTable,
-      [](const opt::Arg &A, BumpPtrAllocator &Alloc) {
-        return TestLibraryOptions::Global.apply(A, Alloc);
-      },
-      [] { TestLibraryOptions::Global = TestLibraryOptions(); });
+  opt::LibraryOptionsParser P(std::in_place_type<TestLibraryOptions>);
 
   std::vector<std::string> Rows;
   P.forEachOption([&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
@@ -140,7 +136,7 @@ TEST(LibraryOptionsTest, Parser) {
   BumpPtrAllocator Alloc;
   auto Parse = [&](std::initializer_list<const char *> Argv) {
     unsigned Consumed = 0;
-    std::string Err = toString(P.parse(Argv, Consumed, Alloc));
+    std::string Err = toString(P.parse(P.global(), Argv, Consumed, Alloc));
     return std::to_string(Consumed) + " " + Err;
   };
   EXPECT_EQ(Parse({"-lib-count", "5"}), "2 ");
@@ -190,6 +186,52 @@ TEST(LibraryOptionsTest, Register) {
       cl::ParseCommandLineOptions(std::size(Again), Again, "", &nulls()));
   EXPECT_EQ(G.Path, "r");
   EXPECT_THAT(G.list, testing::ElementsAre(3u, 4u));
+  cl::ResetCommandLineParser();
+}
+
+// parseCommandLineOptions sets the options of a library that is not
+// per-context in its Global, which a context without values reads.
+TEST(LibraryOptionsTest, ParseIntoGlobal) {
+  cl::ResetCommandLineParser();
+  opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
+  cl::LibraryOptionsContext V;
+  const char *Args[] = {"prog", "-lib-count=5"};
+  EXPECT_TRUE(cl::parseCommandLineOptions(V, Args, "", &nulls()));
+  EXPECT_EQ(TestLibraryOptions::Global.count, 5u);
+  EXPECT_EQ(&V.get<TestLibraryOptions>(), &TestLibraryOptions::Global);
+  cl::ResetCommandLineParser();
+}
+
+// Values that override Global, as an LLVMContext holds them.
+TEST(LibraryOptionsTest, Values) {
+  cl::ResetCommandLineParser();
+  opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
+  cl::opt<bool> NotLibrary("lib-cl-opt");
+  cl::LibraryOptionsContext V;
+  auto Set = [&](std::initializer_list<const char *> Args) {
+    return toString(V.set(Args));
+  };
+  std::string Path = "-lib-path=q";
+  EXPECT_EQ(Set({"-lib-count", "7", Path.c_str(), "--lib-list=1,2"}), "");
+  Path.assign(Path.size(), ' ');
+  EXPECT_EQ(TestLibraryOptions::Global.count, 3u);
+
+  // A later call keeps the earlier values.
+  EXPECT_EQ(Set({"-lib-list=3"}), "");
+  EXPECT_THAT(V.get<TestLibraryOptions>().list,
+              testing::ElementsAre(1u, 2u, 3u));
+
+  // Another context replays the arguments, which outlive the caller's.
+  cl::LibraryOptionsContext Copy;
+  EXPECT_EQ(toString(Copy.set(V.args())), "");
+  const TestLibraryOptions &C = Copy.get<TestLibraryOptions>();
+  EXPECT_EQ(C.count, 7u);
+  EXPECT_EQ(C.Path, "q");
+  EXPECT_THAT(C.list, testing::ElementsAre(1u, 2u, 3u));
+
+  EXPECT_EQ(Set({"-lib-count=x"}), "invalid value 'x' in '-lib-count=x'");
+  EXPECT_EQ(Set({"-lib-cl-opt"}), "'-lib-cl-opt' is not a library option");
+  EXPECT_EQ(Set({"lib-count=1"}), "'lib-count=1' is not a library option");
   cl::ResetCommandLineParser();
 }
 
