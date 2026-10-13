@@ -25,13 +25,13 @@ RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %{cas_plugin} \
 RUN:   --fcas-plugin-option crash-on-validate \
 RUN:   --validate-if-needed --force --check-hash 2>&1 \
 RUN:   | FileCheck %s --check-prefix=INVALID
-RUN: FileCheck %s --check-prefix=PENDING --input-file %t/cas/v1.SHA1.validation
+RUN: FileCheck %s --check-prefix=PENDING --input-file %t/cas/SHA1/v1.validation
 
 # The crashed validation is not skipped even though the data was validated
 # earlier during this boot.
 RUN: llvm-cas --cas %t/cas --fcas-plugin-path %{cas_plugin} \
 RUN:   --validate-if-needed | FileCheck %s --check-prefix=VALID
-RUN: FileCheck %s --check-prefix=VALIDATED --input-file %t/cas/v1.SHA1.validation
+RUN: FileCheck %s --check-prefix=VALIDATED --input-file %t/cas/SHA1/v1.validation
 RUN: llvm-cas --cas %t/cas --fcas-plugin-path %{cas_plugin} \
 RUN:   --validate-if-needed | FileCheck %s --check-prefix=SKIPPED
 
@@ -39,15 +39,15 @@ RUN:   --validate-if-needed | FileCheck %s --check-prefix=SKIPPED
 RUN: not --crash llvm-cas --cas %t/cas --fcas-plugin-path %{cas_plugin} \
 RUN:   --fcas-plugin-option crash-on-validate \
 RUN:   --validate-if-needed --in-process --force --check-hash
-RUN: FileCheck %s --check-prefix=PENDING --input-file %t/cas/v1.SHA1.validation
+RUN: FileCheck %s --check-prefix=PENDING --input-file %t/cas/SHA1/v1.validation
 
 # With --allow-recovery, llvm-cas recovers after the validation process crashes.
 RUN: llvm-cas --cas %t/cas --fcas-plugin-path %{cas_plugin} \
 RUN:   --fcas-plugin-option crash-on-validate \
 RUN:   --validate-if-needed --force --check-hash --allow-recovery \
 RUN:   | FileCheck %s --check-prefix=RECOVERED
-RUN: ls %t/cas | FileCheck %s --check-prefix=RECOVERED-DIRS
-RUN: FileCheck %s --check-prefix=VALIDATED --input-file %t/cas/v1.SHA1.validation
+RUN: ls %t/cas/SHA1 | FileCheck %s --check-prefix=RECOVERED-DIRS
+RUN: FileCheck %s --check-prefix=VALIDATED --input-file %t/cas/SHA1/v1.validation
 RUN: llvm-cas --cas %t/cas --fcas-plugin-path %{cas_plugin} \
 RUN:   --validate-if-needed | FileCheck %s --check-prefix=SKIPPED
 RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %{cas_plugin} \
@@ -61,5 +61,5 @@ INVALID: llvm-cas: validate-if-needed: cas contents invalid
 PENDING: {{^18446744073709551615$}}
 VALIDATED: {{^[0-9]{1,19}$}}
 RECOVERED: recovered from invalid data
-RECOVERED-DIRS: corrupt.0.v1.SHA1.1
+RECOVERED-DIRS: corrupt.0.v1.1
 NOT-FOUND: result not found

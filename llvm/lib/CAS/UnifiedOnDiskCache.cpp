@@ -14,27 +14,27 @@
 /// directory exceeds its intended limit a new empty directory becomes the
 /// primary one.
 ///
-/// Within the top-level directory (the path that \p UnifiedOnDiskCache::open
-/// receives) there are directories named like this:
+/// The data of each hashing algorithm is kept in its own top-level directory,
+/// '<path>/<hash>', where 'path' is the path that \p UnifiedOnDiskCache::open
+/// receives and 'hash' is the name of the hashing algorithm, e.g. 'BLAKE3'.
+/// This allows caches using different hashing algorithms to share the same
+/// path. Within the top-level directory there are directories named like this:
 ///
-/// 'v<version>.<hash>.<x>'
-/// 'v<version>.<hash>.<x+1>'
-/// 'v<version>.<hash>.<x+2>'
+/// 'v<version>.<x>'
+/// 'v<version>.<x+1>'
+/// 'v<version>.<x+2>'
 /// ...
 ///
-/// 'version' is the version integer for this \p UnifiedOnDiskCache's scheme,
-/// 'hash' is the name of the hashing algorithm of the stored data and the part
-/// after the last dot is an increasing integer. Only the directories of the
-/// requested hash name are considered, which allows caches using different
-/// hashing algorithms to share the same top-level directory. The primary
-/// directory is the one with the highest integer and the upstream one is the
-/// directory before it. For example, if the sub-directories contained are:
+/// 'version' is the version integer for this \p UnifiedOnDiskCache's scheme and
+/// the part after the dot is an increasing integer. The primary directory is
+/// the one with the highest integer and the upstream one is the directory
+/// before it. For example, if the sub-directories contained are:
 ///
-/// 'v1.BLAKE3.5', 'v1.BLAKE3.6', 'v1.BLAKE3.7', 'v1.BLAKE3.8'
+/// 'v1.5', 'v1.6', 'v1.7', 'v1.8'
 ///
-/// Then the primary one is 'v1.BLAKE3.8', the upstream one is 'v1.BLAKE3.7',
-/// and the rest are unused directories that can be safely deleted at any time
-/// and by any process.
+/// Then the primary one is 'v1.8', the upstream one is 'v1.7', and the rest are
+/// unused directories that can be safely deleted at any time and by any
+/// process.
 ///
 /// Contained within the top-level directory is a file named "lock" which is
 /// used for processes to take shared or exclusive locks for the contents of the
@@ -62,13 +62,13 @@
 /// recover by marking invalid data for garbage collection.
 ///
 /// Validation and recovery are serialized by an exclusive lock on the
-/// "v1.<hash>.validation" file, which records the boot time of the last
-/// successful validation or recovery. Before validating, the file is marked as
-/// validation pending, and the boot time is only written once validation
-/// succeeds; a validation that fails or crashes leaves it pending, so the next
-/// validation is not skipped. Recovery only happens while validation is
-/// pending, so when multiple processes attempt recovery after a failed
-/// validation only the first one recovers.
+/// "v1.validation" file, which records the boot time of the last successful
+/// validation or recovery. Before validating, the file is marked as validation
+/// pending, and the boot time is only written once validation succeeds; a
+/// validation that fails or crashes leaves it pending, so the next validation
+/// is not skipped. Recovery only happens while validation is pending, so when
+/// multiple processes attempt recovery after a failed validation only the first
+/// one recovers.
 ///
 /// The data recovery described above requires exclusive access to the CAS, and
 /// it is an error to attempt recovery if the CAS is open in any process/thread.
@@ -104,21 +104,20 @@ using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
 
-/// FIXME: When the version of \p getDBDirPrefix is bumped up we need to figure
-/// out how to handle the leftover sub-directories of the previous version,
-/// within the \p UnifiedOnDiskCache::collectGarbage function.
-static constexpr StringLiteral DBDirVersionPrefix = "v1.";
+/// FIXME: When the version of \p DBDirPrefix is bumped up we need to figure out
+/// how to handle the leftover sub-directories of the previous version, within
+/// the \p UnifiedOnDiskCache::collectGarbage function.
+static constexpr StringLiteral DBDirPrefix = "v1.";
+
+static constexpr StringLiteral ValidationFilename = "v1.validation";
 static constexpr StringLiteral CorruptPrefix = "corrupt.";
 
-/// \returns the 'v<version>.<hash>.' prefix of the database directories.
-static std::string getDBDirPrefix(StringRef HashName) {
-  return (DBDirVersionPrefix + HashName + ".").str();
-}
-
-/// \returns the name of the file recording the validation state of the
-/// databases using \p HashName.
-static std::string getValidationFilename(StringRef HashName) {
-  return (DBDirVersionPrefix + HashName + ".validation").str();
+/// \returns the top-level directory within \p Path for the data of the hashing
+/// algorithm \p HashName.
+static std::string getRootPath(StringRef Path, StringRef HashName) {
+  SmallString<256> RootPath(Path);
+  sys::path::append(RootPath, HashName);
+  return std::string(RootPath);
 }
 
 ObjectID UnifiedOnDiskCache::getObjectIDFromValue(ArrayRef<char> Value) {
@@ -158,12 +157,11 @@ UnifiedOnDiskCache::faultInFromUpstreamKV(ArrayRef<uint8_t> Key) {
   return PrimaryKVDB->put(Key, getValueFromObjectID(*PrimaryID));
 }
 
-/// \returns all the 'v<version>.<hash>.<x>' names of sub-directories for
-/// \p HashName, sorted with ascending order of the integer after the last dot.
-/// Corrupt directories, if included, will come first.
+/// \returns all the 'v<version>.<x>' names of sub-directories, sorted with
+/// ascending order of the integer after the dot. Corrupt directories, if
+/// included, will come first.
 static Expected<SmallVector<std::string, 4>>
-getAllDBDirs(StringRef Path, StringRef HashName, bool IncludeCorrupt = false) {
-  std::string DBDirPrefix = getDBDirPrefix(HashName);
+getAllDBDirs(StringRef Path, bool IncludeCorrupt = false) {
   struct DBDir {
     uint64_t Order;
     std::string Name;
@@ -176,15 +174,10 @@ getAllDBDirs(StringRef Path, StringRef HashName, bool IncludeCorrupt = false) {
     if (DirI->type() != sys::fs::file_type::directory_file)
       continue;
     StringRef SubDir = sys::path::filename(DirI->path());
-    if (IncludeCorrupt && SubDir.consume_front(CorruptPrefix)) {
-      // 'corrupt.<attempt>.<original name>'.
-      SubDir = SubDir.substr(SubDir.find('.') + 1);
-      if (SubDir.starts_with(DBDirPrefix))
-        FoundDBDirs.push_back(
-            {0, std::string(sys::path::filename(DirI->path()))});
+    if (IncludeCorrupt && SubDir.starts_with(CorruptPrefix)) {
+      FoundDBDirs.push_back({0, std::string(SubDir)});
       continue;
     }
-    // Directories of other hash names can be present in the same path.
     if (!SubDir.starts_with(DBDirPrefix))
       continue;
     uint64_t Order;
@@ -206,15 +199,13 @@ getAllDBDirs(StringRef Path, StringRef HashName, bool IncludeCorrupt = false) {
   return DBDirs;
 }
 
-static Expected<SmallVector<std::string, 4>>
-getAllGarbageDirs(StringRef Path, StringRef HashName) {
-  auto DBDirs = getAllDBDirs(Path, HashName, /*IncludeCorrupt=*/true);
+static Expected<SmallVector<std::string, 4>> getAllGarbageDirs(StringRef Path) {
+  auto DBDirs = getAllDBDirs(Path, /*IncludeCorrupt=*/true);
   if (!DBDirs)
     return DBDirs.takeError();
 
-  // FIXME: When the version of \p DBDirVersionPrefix is bumped up we need to
-  // figure out how to handle the leftover sub-directories of the previous
-  // version.
+  // FIXME: When the version of \p DBDirPrefix is bumped up we need to figure
+  // out how to handle the leftover sub-directories of the previous version.
 
   for (unsigned Keep = 2; Keep > 0 && !DBDirs->empty(); --Keep) {
     StringRef Back(DBDirs->back());
@@ -225,11 +216,9 @@ getAllGarbageDirs(StringRef Path, StringRef HashName) {
   return *DBDirs;
 }
 
-/// \returns Given a sub-directory named 'v<version>.<hash>.<x>', it outputs the
-/// 'v<version>.<hash>.<x+1>' name.
-static void getNextDBDirName(StringRef DBDir, StringRef HashName,
-                             llvm::raw_ostream &OS) {
-  std::string DBDirPrefix = getDBDirPrefix(HashName);
+/// \returns Given a sub-directory named 'v<version>.<x>', it outputs the
+/// 'v<version>.<x+1>' name.
+static void getNextDBDirName(StringRef DBDir, llvm::raw_ostream &OS) {
   assert(DBDir.starts_with(DBDirPrefix));
   uint64_t Count;
   bool Failed = DBDir.substr(DBDirPrefix.size()).getAsInteger(10, Count);
@@ -242,13 +231,13 @@ Error UnifiedOnDiskCache::validateActionCache() const {
   return getKeyValueDB().validate();
 }
 
-static Error validateInProcess(StringRef RootPath, StringRef HashName,
+static Error validateInProcess(StringRef Path, StringRef HashName,
                                unsigned HashByteSize, bool CheckHash,
                                OnDiskGraphDB::HashingFuncT HashFn) {
   std::shared_ptr<UnifiedOnDiskCache> UniDB;
-  if (Error E = UnifiedOnDiskCache::open(RootPath, std::nullopt, HashName,
-                                         HashByteSize)
-                    .moveInto(UniDB))
+  if (Error E =
+          UnifiedOnDiskCache::open(Path, std::nullopt, HashName, HashByteSize)
+              .moveInto(UniDB))
     return E;
   if (Error E = UniDB->getGraphDB().validate(CheckHash, HashFn))
     return E;
@@ -288,12 +277,12 @@ public:
       std::numeric_limits<uint64_t>::max();
 
   static Expected<std::unique_ptr<LockedValidationFile>>
-  open(StringRef RootPath, StringRef HashName) {
+  open(StringRef RootPath) {
     if (std::error_code EC = sys::fs::create_directories(RootPath))
       return createFileError(RootPath, EC);
 
     SmallString<256> PathBuf(RootPath);
-    sys::path::append(PathBuf, getValidationFilename(HashName));
+    sys::path::append(PathBuf, ValidationFilename);
     int FD = -1;
     if (std::error_code EC = sys::fs::openFileForReadWrite(
             PathBuf, FD, sys::fs::CD_OpenAlways, sys::fs::OF_None))
@@ -378,7 +367,7 @@ private:
 
 /// Marks all the database directories in \p RootPath as corrupt, which makes
 /// them eligible for garbage collection. Requires exclusive access to the CAS.
-static Error markAllDBDirsCorrupt(StringRef RootPath, StringRef HashName) {
+static Error markAllDBDirsCorrupt(StringRef RootPath) {
   SmallString<256> PathBuf(RootPath);
   sys::path::append(PathBuf, "lock");
 
@@ -397,7 +386,7 @@ static Error markAllDBDirsCorrupt(StringRef RootPath, StringRef HashName) {
   }
   llvm::scope_exit UnlockFD([&]() { unlockFileThreadSafe(LockFD); });
 
-  auto DBDirs = getAllDBDirs(RootPath, HashName);
+  auto DBDirs = getAllDBDirs(RootPath);
   if (!DBDirs)
     return DBDirs.takeError();
 
@@ -431,10 +420,11 @@ static Error markAllDBDirsCorrupt(StringRef RootPath, StringRef HashName) {
 }
 
 Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
-    StringRef RootPath, StringRef HashName, unsigned HashByteSize,
-    bool CheckHash, OnDiskGraphDB::HashingFuncT HashFn, bool ForceValidation) {
+    StringRef Path, StringRef HashName, unsigned HashByteSize, bool CheckHash,
+    OnDiskGraphDB::HashingFuncT HashFn, bool ForceValidation) {
+  std::string RootPath = getRootPath(Path, HashName);
   std::unique_ptr<LockedValidationFile> VF;
-  if (Error E = LockedValidationFile::open(RootPath, HashName).moveInto(VF))
+  if (Error E = LockedValidationFile::open(RootPath).moveInto(VF))
     return std::move(E);
 
   std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
@@ -468,8 +458,8 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
   if (Error E = VF->setValidationPending())
     return std::move(E);
 
-  if (Error E = validateInProcess(RootPath, HashName, HashByteSize, CheckHash,
-                                  HashFn)) {
+  if (Error E =
+          validateInProcess(Path, HashName, HashByteSize, CheckHash, HashFn)) {
     if (Logger)
       LogValidationError = toStringWithoutConsuming(E);
     return std::move(E);
@@ -480,10 +470,11 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
   return ValidationResult::Valid;
 }
 
-Expected<ValidationResult> UnifiedOnDiskCache::recover(StringRef RootPath,
+Expected<ValidationResult> UnifiedOnDiskCache::recover(StringRef Path,
                                                        StringRef HashName) {
+  std::string RootPath = getRootPath(Path, HashName);
   std::unique_ptr<LockedValidationFile> VF;
-  if (Error E = LockedValidationFile::open(RootPath, HashName).moveInto(VF))
+  if (Error E = LockedValidationFile::open(RootPath).moveInto(VF))
     return std::move(E);
 
   std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
@@ -513,7 +504,7 @@ Expected<ValidationResult> UnifiedOnDiskCache::recover(StringRef RootPath,
     return ValidationResult::Skipped;
   }
 
-  if (Error E = markAllDBDirsCorrupt(RootPath, HashName)) {
+  if (Error E = markAllDBDirsCorrupt(RootPath)) {
     if (Logger)
       LogRecoveryError = toStringWithoutConsuming(E);
     return std::move(E);
@@ -525,11 +516,12 @@ Expected<ValidationResult> UnifiedOnDiskCache::recover(StringRef RootPath,
 }
 
 Expected<std::unique_ptr<UnifiedOnDiskCache>>
-UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
+UnifiedOnDiskCache::open(StringRef Path, std::optional<uint64_t> SizeLimit,
                          StringRef HashName, unsigned HashByteSize,
                          OnDiskGraphDB::FaultInPolicy FaultInPolicy) {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
+  std::string RootPath = getRootPath(Path, HashName);
   if (std::error_code EC = sys::fs::create_directories(RootPath))
     return createFileError(RootPath, EC);
 
@@ -548,11 +540,11 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
           lockFileThreadSafe(LockFD, sys::fs::LockKind::Shared))
     return createFileError(PathBuf, EC);
 
-  auto DBDirs = getAllDBDirs(RootPath, HashName);
+  auto DBDirs = getAllDBDirs(RootPath);
   if (!DBDirs)
     return DBDirs.takeError();
   if (DBDirs->empty())
-    DBDirs->push_back(getDBDirPrefix(HashName) + "1");
+    DBDirs->push_back((Twine(DBDirPrefix) + "1").str());
 
   std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
 #ifndef _WIN32
@@ -605,7 +597,6 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
     return std::move(E);
 
   UniDB->RootPath = RootPath;
-  UniDB->HashName = HashName;
   UniDB->SizeLimit = SizeLimit.value_or(0);
   UniDB->LockFD = LockFD;
   UniDB->NeedsGarbageCollection = DBDirs->size() > 2;
@@ -706,7 +697,7 @@ Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
   SmallString<256> PathBuf(RootPath);
   raw_svector_ostream OS(PathBuf);
   OS << sys::path::get_separator();
-  getNextDBDirName(PrimaryDBDir, HashName, OS);
+  getNextDBDirName(PrimaryDBDir, OS);
   if (std::error_code EC = sys::fs::create_directory(PathBuf))
     return createFileError(PathBuf, EC);
 
@@ -718,13 +709,14 @@ UnifiedOnDiskCache::UnifiedOnDiskCache() = default;
 
 UnifiedOnDiskCache::~UnifiedOnDiskCache() { consumeError(close()); }
 
-Error UnifiedOnDiskCache::collectGarbage(StringRef Path, StringRef HashName,
-                                         ondisk::OnDiskCASLogger *Logger) {
-  auto DBDirs = getAllGarbageDirs(Path, HashName);
+/// Removes the unused sub-directories of the top-level directory \p RootPath.
+static Error collectGarbageInRoot(StringRef RootPath,
+                                  ondisk::OnDiskCASLogger *Logger) {
+  auto DBDirs = getAllGarbageDirs(RootPath);
   if (!DBDirs)
     return DBDirs.takeError();
 
-  SmallString<256> PathBuf(Path);
+  SmallString<256> PathBuf(RootPath);
   for (StringRef UnusedSubDir : *DBDirs) {
     sys::path::append(PathBuf, UnusedSubDir);
     if (Logger)
@@ -736,6 +728,11 @@ Error UnifiedOnDiskCache::collectGarbage(StringRef Path, StringRef HashName,
   return Error::success();
 }
 
+Error UnifiedOnDiskCache::collectGarbage(StringRef Path, StringRef HashName,
+                                         ondisk::OnDiskCASLogger *Logger) {
+  return collectGarbageInRoot(getRootPath(Path, HashName), Logger);
+}
+
 Error UnifiedOnDiskCache::collectGarbage() {
-  return collectGarbage(RootPath, HashName, Logger.get());
+  return collectGarbageInRoot(RootPath, Logger.get());
 }

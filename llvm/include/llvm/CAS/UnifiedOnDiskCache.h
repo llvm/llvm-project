@@ -54,8 +54,10 @@ public:
 
   /// Open a \p UnifiedOnDiskCache instance for a directory.
   ///
-  /// \param Path directory for the on-disk database. The directory will be
-  /// created if it doesn't exist.
+  /// \param Path directory for the on-disk database. The data is stored in its
+  /// \p HashName sub-directory, so that caches using different hashing
+  /// algorithms can share the same \p Path. The directory will be created if it
+  /// doesn't exist.
   /// \param SizeLimit Optional size for limiting growth. This has an effect for
   /// when the instance is closed.
   /// \param HashName Identifier name for the hashing algorithm that is going to
@@ -181,7 +183,6 @@ private:
   uint64_t getPrimaryStorageSize() const;
 
   std::string RootPath;
-  std::string HashName;
   std::atomic<uint64_t> SizeLimit;
 
   int LockFD = -1;

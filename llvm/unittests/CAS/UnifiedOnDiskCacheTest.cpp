@@ -20,11 +20,6 @@ using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
 using namespace llvm::unittest::cas;
 
-/// \returns the name of the entry 'v1.<hash>.<Suffix>' of a unified cache.
-static std::string dbName(StringRef HashName, StringRef Suffix) {
-  return (Twine("v1.") + HashName + "." + Suffix).str();
-}
-
 /// Visits all the files of a directory recursively and returns the sum of their
 /// sizes.
 static Expected<size_t> countFileSizes(StringRef Path) {
@@ -296,8 +291,8 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheConcurrentValidation) {
     SCOPED_TRACE(Force ? "Force" : "NoForce");
     unittest::TempDir Temp("ondisk-unified", /*Unique=*/true);
     createCAS(Temp.path());
-    ASSERT_FALSE(
-        sys::fs::remove(Temp.path(dbName(HashName, "1") + "/data.v1")));
+    std::string HashDir(Temp.path(HashName));
+    ASSERT_FALSE(sys::fs::remove(HashDir + "/v1.1/data.v1"));
 
     auto Counts = runConcurrently([&]() -> Expected<ValidationResult> {
       Expected<ValidationResult> Result = validate(Temp.path(), Force);
@@ -317,7 +312,7 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheConcurrentValidation) {
     // interleaving.
     if (!Force && BootTimeKnown)
       EXPECT_EQ(Counts[ValidationResult::Skipped], NumTasks - 1);
-    EXPECT_EQ(countCorruptDirs(Temp.path()), 1u);
+    EXPECT_EQ(countCorruptDirs(HashDir), 1u);
 
     // Recovery counts as validation for this boot.
     std::optional<ValidationResult> Result;
@@ -354,7 +349,8 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheBootTimeMoved) {
                                                 /*CheckHash=*/true, HashFn,
                                                 /*ForceValidation=*/false);
   };
-  std::string ValidationPath(Temp.path(dbName(HashName, "validation")));
+  std::string HashDir(Temp.path(HashName));
+  std::string ValidationPath = HashDir + "/v1.validation";
   auto readBootTime = [&]() -> uint64_t {
     auto Buf = MemoryBuffer::getFile(ValidationPath);
     EXPECT_TRUE(bool(Buf));
@@ -413,8 +409,8 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheRepeatedRecovery) {
       ASSERT_THAT_ERROR(store(UniDB->getGraphDB(), "1", {}).moveInto(ID),
                         Succeeded());
     }
-    ASSERT_FALSE(
-        sys::fs::remove(Temp.path(dbName(HashName, "1") + "/data.v1")));
+    std::string HashDir(Temp.path(HashName));
+    ASSERT_FALSE(sys::fs::remove(HashDir + "/v1.1/data.v1"));
     EXPECT_THAT_EXPECTED(
         UnifiedOnDiskCache::validateIfNeeded(Temp.path(), HashName, HashSize,
                                              /*CheckHash=*/true, HashFn,
@@ -426,9 +422,9 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheRepeatedRecovery) {
         UnifiedOnDiskCache::recover(Temp.path(), HashName).moveInto(Result),
         Succeeded());
     EXPECT_EQ(Result, ValidationResult::Recovered);
-    EXPECT_TRUE(sys::fs::exists(Temp.path("corrupt." + std::to_string(I) + "." +
-                                          dbName(HashName, "1"))));
-    EXPECT_FALSE(sys::fs::exists(Temp.path(dbName(HashName, "1"))));
+    EXPECT_TRUE(
+        sys::fs::exists(HashDir + "/corrupt." + std::to_string(I) + ".v1.1"));
+    EXPECT_FALSE(sys::fs::exists(HashDir + "/v1.1"));
   }
 }
 
@@ -446,12 +442,14 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheSharedPathDifferentHash) {
                           .moveInto(UniDB),
                       Succeeded());
   }
-  EXPECT_TRUE(sys::fs::exists(Temp.path(dbName(HashName, "1"))));
-  EXPECT_TRUE(sys::fs::exists(Temp.path(dbName(OtherHashName, "1"))));
+  std::string HashDir(Temp.path(HashName));
+  std::string OtherHashDir(Temp.path(OtherHashName));
+  EXPECT_TRUE(sys::fs::exists(HashDir + "/v1.1"));
+  EXPECT_TRUE(sys::fs::exists(OtherHashDir + "/v1.1"));
 
   // Garbage collection only considers the directories of its own hash name.
   ASSERT_THAT_ERROR(UnifiedOnDiskCache::collectGarbage(Temp.path(), HashName),
                     Succeeded());
-  EXPECT_TRUE(sys::fs::exists(Temp.path(dbName(HashName, "1"))));
-  EXPECT_TRUE(sys::fs::exists(Temp.path(dbName(OtherHashName, "1"))));
+  EXPECT_TRUE(sys::fs::exists(HashDir + "/v1.1"));
+  EXPECT_TRUE(sys::fs::exists(OtherHashDir + "/v1.1"));
 }

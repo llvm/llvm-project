@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/BuiltinCASContext.h"
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Error.h"
@@ -45,7 +46,7 @@ static uint16_t readU16(ArrayRef<uint8_t> Data, size_t Offset) {
   return support::endian::read16le(Data.data() + Offset);
 }
 
-/// Find the versioned subdirectory (v1.N) inside the CAS root.
+/// Find the versioned subdirectory (v1.N) inside \p CASDir.
 static std::string findVersionedSubdir(StringRef CASDir) {
   std::error_code EC;
   std::string Best;
@@ -301,8 +302,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   CAS.reset();
   AC.reset();
 
-  // Step 4: Find the versioned subdirectory.
-  std::string SubDir = findVersionedSubdir(TmpDir);
+  // Step 4: Find the versioned subdirectory of the builtin hashing algorithm.
+  SmallString<256> HashDir(TmpDir);
+  sys::path::append(HashDir, builtin::BuiltinCASContext::getHashName());
+  std::string SubDir = findVersionedSubdir(HashDir);
   if (SubDir.empty())
     return 0;
 

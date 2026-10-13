@@ -207,10 +207,10 @@ TEST(PluginCASTest, validate) {
   // Nothing to recover from after a successful validation.
   ASSERT_THAT_ERROR(recover().moveInto(Result), Succeeded());
   EXPECT_EQ(Result, ValidationResult::Skipped);
-  EXPECT_TRUE(sys::fs::exists(Temp.path("v1.SHA1.1")));
+  EXPECT_TRUE(sys::fs::exists(Temp.path("SHA1/v1.1")));
 
   // Invalidate the data.
-  ASSERT_FALSE(sys::fs::remove(Temp.path("v1.SHA1.1/data.v1")));
+  ASSERT_FALSE(sys::fs::remove(Temp.path("SHA1/v1.1/data.v1")));
   EXPECT_THAT_EXPECTED(validateIfNeeded(/*Force=*/true), Failed());
 
   // Recovery requires exclusive access, and fails rather than waiting for it.
@@ -222,7 +222,7 @@ TEST(PluginCASTest, validate) {
 
   ASSERT_THAT_ERROR(recover().moveInto(Result), Succeeded());
   EXPECT_EQ(Result, ValidationResult::Recovered);
-  EXPECT_FALSE(sys::fs::exists(Temp.path("v1.SHA1.1")));
+  EXPECT_FALSE(sys::fs::exists(Temp.path("SHA1/v1.1")));
 
   // A concurrent recovery for the same failed validation is skipped.
   ASSERT_THAT_ERROR(recover().moveInto(Result), Succeeded());
