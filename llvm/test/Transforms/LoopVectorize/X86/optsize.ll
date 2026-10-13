@@ -224,9 +224,8 @@ attributes #2 = { optsize }
 
 
 ; PR39497
-; We can't vectorize this one because we version for overflow check and tiny
-; trip count leads to opt-for-size (which otherwise could fold the tail by
-; masking).
+; This loop has an overflow check and a tiny trip count.
+; It is still vectorized by folding the tail via masking.
 define void @scev_predicate_no_vec(i32 %start, ptr %dst) {
 ; CHECK-LABEL: define void @scev_predicate_no_vec(
 ; CHECK-SAME: i32 [[START:%.*]], ptr [[DST:%.*]]) #[[ATTR2:[0-9]+]] {
