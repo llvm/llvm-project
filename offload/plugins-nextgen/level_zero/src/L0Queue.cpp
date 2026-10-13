@@ -64,18 +64,6 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   size_t SharedLocalMemorySize = KEnv.SharedLocalMemorySize;
   auto &KernelProperties = KEnv.KernelPR;
 
-  if (SharedLocalMemorySize > 0 &&
-      KEnv.NumArgs != KernelProperties.NumKernelArgs - 1)
-    return error::createOffloadError(
-        ErrorCode::INVALID_ARGUMENT,
-        "Kernel launch was submitted with %u arguments and %zu Shared Local "
-        "Memory size, but %u arguments were expected."
-        "Level Zero backend for liboffload supports Shared Local Memory only "
-        "for kernels which have their last argument in `__local` address "
-        "space. The argument must be omitted in olLaunchKernel API.",
-        KEnv.NumArgs, KEnv.SharedLocalMemorySize,
-        KernelProperties.NumKernelArgs - 1);
-
   bool AppendLaunchKernelWithArgsAvailable =
       Device.getL0Context().LaunchKernelWithArguments.available();
 

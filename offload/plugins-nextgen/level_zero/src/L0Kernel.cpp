@@ -194,19 +194,15 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   } else {
     // User requested DynSharedMem
     if (LaunchArgs.NumArgs != KernelPR.NumKernelArgs - 1)
-      return Plugin::error(
-          ErrorCode::INVALID_ARGUMENT,
-          "Number of arguments (%u) does not match the number of arguments "
-          "expected by the kernel (%u). Level Zero plugin requires that "
-          "kernels using "
-          "shared local memory, have last argument in `__local` address space "
-          "and "
-          "the argument is ommited in kernel submission, because Level Zero "
-          "plugin "
-          "will append it based on `DynSharedMemory` property.", // We should
-                                                                 // reference
-                                                                 // manpage here
-          LaunchArgs.NumArgs, KernelPR.NumKernelArgs - 1);
+      return error::createOffloadError(
+        ErrorCode::INVALID_ARGUMENT,
+        "Kernel launch was submitted with %u arguments and %zu Shared Local "
+        "Memory size, but %u arguments were expected."
+        "Level Zero backend for liboffload supports Shared Local Memory only "
+        "for kernels which have their last argument in `__local` address "
+        "space. The argument must be omitted in olLaunchKernel API.",
+        KEnv.NumArgs, KEnv.SharedLocalMemorySize,
+        KernelPR.NumKernelArgs - 1);
   }
 
   assert(Queue->getUserCtx() && "Queue must belong to a plugin context");
