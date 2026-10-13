@@ -51,6 +51,7 @@ FunctionPass *createAArch64RedundantCopyEliminationPass();
 FunctionPass *createAArch64RedundantCondBranchPass();
 FunctionPass *createAArch64CondBrTuning();
 FunctionPass *createAArch64CompressJumpTablesPass();
+FunctionPass *createAArch64WinCFIPass();
 FunctionPass *createAArch64ConditionalCompares();
 FunctionPass *createAArch64AdvSIMDScalar();
 FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
@@ -174,6 +175,7 @@ void initializeAArch64PredicateAsCounterLoopRewritesPass(PassRegistry &);
 void initializeAArch64BranchTargetsLegacyPass(PassRegistry &);
 void initializeAArch64CollectLOHLegacyPass(PassRegistry &);
 void initializeAArch64CompressJumpTablesLegacyPass(PassRegistry &);
+void initializeAArch64WinCFILegacyPass(PassRegistry &);
 void initializeAArch64CondBrTuningPass(PassRegistry &);
 void initializeAArch64ConditionOptimizerLegacyPass(PassRegistry &);
 void initializeAArch64ConditionalComparesLegacyPass(PassRegistry &);
@@ -271,6 +273,12 @@ public:
 
 class AArch64CollectLOHPass
     : public OptionalPassInfoMixin<AArch64CollectLOHPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64WinCFIPass : public RequiredPassInfoMixin<AArch64WinCFIPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
