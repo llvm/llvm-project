@@ -5081,8 +5081,7 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
   // We don't import function bodies from other named module units since that
   // behavior may break ABI compatibility of the current unit.
   if (const Module *M = F->getOwningModule();
-      M && !(M->isGlobalModule() && F->hasAttr<GNUInlineAttr>()) &&
-      M->getTopLevelModule()->isNamedModule() &&
+      M && M->getTopLevelModule()->isNamedModule() &&
       getContext().getCurrentNamedModule() != M->getTopLevelModule()) {
     // There are practices to mark template member function as always-inline
     // and mark the template as extern explicit instantiation but not give
@@ -5093,7 +5092,10 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
     //
     // TODO: Maybe it is better to give it a warning if we call a non-inline
     // function from other module units which is marked as always-inline.
-    if (!F->isTemplateInstantiation() || !F->hasAttr<AlwaysInlineAttr>()) {
+    // GNU-inline definitions in the global module fragment are also needed
+    // for inlining, but definitions owned by named modules remain restricted.
+    if ((!F->isTemplateInstantiation() || !F->hasAttr<AlwaysInlineAttr>()) &&
+        !(M->isGlobalModule() && F->hasAttr<GNUInlineAttr>())) {
       return false;
     }
   }
