@@ -72,8 +72,8 @@ public:
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
       bool isKill, int FrameIndex, const TargetRegisterClass *RC,
 
-      Register VReg,
-      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
+      Register VReg, MachineInstr::MIFlag Flags = MachineInstr::NoFlags,
+      LaneBitmask Lanes = LaneBitmask::getAll()) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,

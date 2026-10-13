@@ -41,10 +41,12 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
-  void storeRegToStackSlot(
-      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool IsKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
-      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
+  void
+  storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                      Register SrcReg, bool IsKill, int FrameIndex,
+                      const TargetRegisterClass *RC, Register VReg,
+                      MachineInstr::MIFlag Flags = MachineInstr::NoFlags,
+                      LaneBitmask Lanes = LaneBitmask::getAll()) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,

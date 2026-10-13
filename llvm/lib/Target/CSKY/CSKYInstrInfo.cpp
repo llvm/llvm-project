@@ -390,12 +390,10 @@ Register CSKYInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-void CSKYInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator I,
-                                        Register SrcReg, bool IsKill, int FI,
-                                        const TargetRegisterClass *RC,
-                                        Register VReg,
-                                        MachineInstr::MIFlag Flags) const {
+void CSKYInstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
+    bool IsKill, int FI, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags, LaneBitmask Lanes) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
