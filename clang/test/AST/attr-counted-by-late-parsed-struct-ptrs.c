@@ -43,3 +43,22 @@ struct on_pointer_anon_count {
 //
 // See `clang/test/Sema/attr-counted-by-late-parsed-struct-ptrs.c` for test
 // cases.
+
+//==============================================================================
+// A declaration-specifier-position attribute shared by several declarators
+//==============================================================================
+// All declarators share one CountAttributedType, so every field must print a
+// resolved count. Previously only the last one did: each declarator built its
+// own (un-uniqued) node and only the last was ever completed, leaving the
+// earlier fields with an empty '__counted_by()'.
+
+typedef int *ptr_ty;
+
+struct shared_declspec_attr {
+  int count;
+  ptr_ty __counted_by(count) a, b;
+};
+// CHECK-LABEL: struct shared_declspec_attr definition
+// CHECK-NEXT:  |-FieldDecl {{.*}} referenced count 'int'
+// CHECK-NEXT:  |-FieldDecl {{.*}} a 'ptr_ty __counted_by(count)':'int *'
+// CHECK-NEXT:  `-FieldDecl {{.*}} b 'ptr_ty __counted_by(count)':'int *'
