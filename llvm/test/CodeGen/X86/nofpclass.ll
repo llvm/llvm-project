@@ -43,21 +43,11 @@ define i32 @load_metadata_fmaximumnum(ptr %0, ptr %1) nounwind {
 ; NOSSE-LABEL: load_metadata_fmaximumnum:
 ; NOSSE:       # %bb.0:
 ; NOSSE-NEXT:    flds (%rdi)
-; NOSSE-NEXT:    fsts -{{[0-9]+}}(%rsp)
 ; NOSSE-NEXT:    flds (%rsi)
 ; NOSSE-NEXT:    fxch %st(1)
 ; NOSSE-NEXT:    fucomi %st(1), %st
 ; NOSSE-NEXT:    fxch %st(1)
 ; NOSSE-NEXT:    fcmovnbe %st(1), %st
-; NOSSE-NEXT:    cmpl $0, -{{[0-9]+}}(%rsp)
-; NOSSE-NEXT:    fld %st(0)
-; NOSSE-NEXT:    fcmove %st(2), %st
-; NOSSE-NEXT:    fstp %st(2)
-; NOSSE-NEXT:    fldz
-; NOSSE-NEXT:    fxch %st(1)
-; NOSSE-NEXT:    fucomi %st(1), %st
-; NOSSE-NEXT:    fstp %st(1)
-; NOSSE-NEXT:    fcmove %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    fstps -{{[0-9]+}}(%rsp)
 ; NOSSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -66,10 +56,7 @@ define i32 @load_metadata_fmaximumnum(ptr %0, ptr %1) nounwind {
 ; SSE-LABEL: load_metadata_fmaximumnum:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    maxss (%rsi), %xmm1
-; SSE-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    andps %xmm1, %xmm0
+; SSE-NEXT:    maxss (%rsi), %xmm0
 ; SSE-NEXT:    movd %xmm0, %eax
 ; SSE-NEXT:    retq
   %f0 = load float, ptr %0, align 4, !nofpclass !{i32 99} ; 99 == (fcNan | fcZero)

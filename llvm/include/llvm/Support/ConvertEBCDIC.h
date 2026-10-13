@@ -13,6 +13,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_SUPPORT_CONVERTEBCDIC_H
+#define LLVM_SUPPORT_CONVERTEBCDIC_H
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -20,6 +23,15 @@
 
 namespace llvm {
 namespace ConverterEBCDIC {
+/// Converts UTF-8 text containing only code points in the range U+0000 to
+/// U+00FF to EBCDIC-1047.
+///
+/// Returns std::errc::invalid_argument for incomplete UTF-8 input and
+/// std::errc::illegal_byte_sequence for malformed UTF-8 or code points outside
+/// that range.
+///
+/// \pre \p Result is empty. On error, it contains the successfully converted
+/// prefix.
 LLVM_ABI std::error_code convertToEBCDIC(StringRef Source,
                                          SmallVectorImpl<char> &Result);
 
@@ -27,3 +39,5 @@ LLVM_ABI void convertToUTF8(StringRef Source, SmallVectorImpl<char> &Result);
 
 } // namespace ConverterEBCDIC
 } // namespace llvm
+
+#endif // LLVM_SUPPORT_CONVERTEBCDIC_H

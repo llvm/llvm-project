@@ -209,14 +209,14 @@ define <4 x i32> @combine_vec_add_sub_sub(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    paddd %xmm2, %xmm1
 ; SSE-NEXT:    psubd %xmm1, %xmm0
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,1,2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_sub_sub:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,1,2,3]
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> %a, %b
   %2 = sub <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %d
@@ -639,4 +639,35 @@ define i32 @add_adc_multi_use(i32 %0, i32 %1, i32 %2) nounwind {
   %9 = select i1 %8, i32 %0, i32 %1
   %10 = add i32 %9, %6
   ret i32 %10
+}
+
+; Don't fold add(x,x) -> X86ISD::VSHLI(x,1) for elements wider than 64 bits.
+; PR228829
+define <1 x i128> @combine_vec_add_self_v1i128(<1 x i128> %a) {
+; CHECK-LABEL: combine_vec_add_self_v1i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    adcq %rsi, %rdx
+; CHECK-NEXT:    retq
+  %s = add <1 x i128> %a, %a
+  ret <1 x i128> %s
+}
+
+define <2 x i128> @combine_vec_add_self_v2i128(<2 x i128> %a) {
+; CHECK-LABEL: combine_vec_add_self_v2i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    addq %rsi, %rsi
+; CHECK-NEXT:    adcq %rdx, %rdx
+; CHECK-NEXT:    addq %rcx, %rcx
+; CHECK-NEXT:    adcq %r8, %r8
+; CHECK-NEXT:    movq %r8, 24(%rdi)
+; CHECK-NEXT:    movq %rcx, 16(%rdi)
+; CHECK-NEXT:    movq %rdx, 8(%rdi)
+; CHECK-NEXT:    movq %rsi, (%rdi)
+; CHECK-NEXT:    retq
+  %s = add <2 x i128> %a, %a
+  ret <2 x i128> %s
 }

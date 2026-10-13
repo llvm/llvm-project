@@ -34,7 +34,6 @@ def IIC_BrB          : InstrItinClass;
 def IIC_BrCR         : InstrItinClass;
 def IIC_BrMCR        : InstrItinClass;
 def IIC_BrMCRX       : InstrItinClass;
-def IIC_LdStDCBA     : InstrItinClass;
 def IIC_LdStDCBF     : InstrItinClass;
 def IIC_LdStDCBI     : InstrItinClass;
 def IIC_LdStLoad     : InstrItinClass;

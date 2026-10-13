@@ -12,8 +12,14 @@ void thread_work() {
   --g_barrier;
   while (g_barrier.load() > 0)
     ;
-  std::this_thread::sleep_for(
-      std::chrono::seconds(1)); // avoid timeout on Windows
+#ifdef _WIN32
+  // Avoid a timeout on Windows.
+  // It seems the debugger needs some time
+  // to init the breakpoint for the thread.
+  // This test is flaky on Windows with 1 sec sleep.
+  // Moving the break comment below did not help.
+  std::this_thread::sleep_for(std::chrono::seconds(3));
+#endif
   while (g_spin) // break in thread
     std::this_thread::yield();
 }

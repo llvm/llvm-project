@@ -23,6 +23,8 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
 using namespace clang;
 using namespace CodeGen;
 
@@ -235,6 +237,32 @@ void CodeGenModule::EmitDefinitionAsAlias(GlobalDecl AliasDecl,
   SetCommonAttributes(AliasDecl, Alias);
 }
 
+// For an implicit __host__ __device__ destructor, this trap body is reachable
+// only when a host-allocated object is destroyed on the device through the
+// vtable. HIP documents that pattern as invalid: an object with virtual
+// member functions constructed on the host cannot be destroyed on the device.
+// Device-side construction either pulls the dtor in as an organic device
+// caller (errors surface in Sema) or compiles cleanly (the real body is
+// emitted, no trap).
+bool CodeGenModule::tryEmitCUDADeviceInvalidFunctionBody(GlobalDecl GD,
+                                                         llvm::Function *Fn) {
+  if (!getLangOpts().CUDAIsDevice)
+    return false;
+  const auto *FD = dyn_cast<FunctionDecl>(GD.getDecl());
+  if (!FD || !getContext().CUDADeviceInvalidFuncs.count(FD->getCanonicalDecl()))
+    return false;
+  llvm::BasicBlock *BB =
+      llvm::BasicBlock::Create(getLLVMContext(), "entry", Fn);
+  llvm::IRBuilder<> Builder(BB);
+  Builder.CreateIntrinsic(llvm::Intrinsic::trap, {});
+  llvm::Type *RetTy = Fn->getReturnType();
+  if (RetTy->isVoidTy())
+    Builder.CreateRetVoid();
+  else
+    Builder.CreateRet(llvm::PoisonValue::get(RetTy));
+  return true;
+}
+
 llvm::Function *CodeGenModule::codegenCXXStructor(GlobalDecl GD) {
   const CGFunctionInfo &FnInfo = getTypes().arrangeCXXStructorDeclaration(GD);
   auto *Fn = cast<llvm::Function>(
@@ -243,7 +271,8 @@ llvm::Function *CodeGenModule::codegenCXXStructor(GlobalDecl GD) {
 
   setFunctionLinkage(GD, Fn);
 
-  CodeGenFunction(*this).GenerateCode(GD, Fn, FnInfo);
+  if (!tryEmitCUDADeviceInvalidFunctionBody(GD, Fn))
+    CodeGenFunction(*this).GenerateCode(GD, Fn, FnInfo);
   setNonAliasAttributes(GD, Fn);
   SetLLVMFunctionAttributesForDefinition(cast<CXXMethodDecl>(GD.getDecl()), Fn);
   return Fn;

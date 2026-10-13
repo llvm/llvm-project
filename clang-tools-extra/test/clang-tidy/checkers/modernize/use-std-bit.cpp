@@ -1,84 +1,85 @@
-// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-std-bit %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-std-bit %t -check-suffixes=,NOPROMOTION
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-std-bit %t -config="{CheckOptions: { modernize-use-std-bit.HonorIntPromotion: true }}" -check-suffixes=,PROMOTION
 // CHECK-FIXES: #include <bit>
 
 /*
  * has_one_bit pattern
  */
 unsigned has_one_bit_bithack(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return x && !(x & (x - 1));
 }
 
 unsigned long has_one_bit_bithack(unsigned long x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return x && !(x & (x - 1));
 }
 
 unsigned short has_one_bit_bithack(unsigned short x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return x && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithack_perm(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return x && !((x - 1) & (x));
 }
 
 unsigned has_one_bit_bithack_otherperm(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return !((x - 1) & (x)) && x;
 }
 
 unsigned has_one_bit_bithack_variant_neq(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (x != 0) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithack_variant_neq_perm(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (x != 0) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithack_variant_gt(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (x > 0) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithacks_variant_gte(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (x >= 1) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithacks_variant_lt(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (0 < x) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithacks_variant_lte(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (1 <= x) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithack_variant_gt_perm(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (x > 0) && !(x & (x - 1));
 }
 
 #define HAS_ONE_BIT v && !(v & (v - 1))
 unsigned has_one_bit_bithack_macro(unsigned v) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
   // No fixes, it comes from macro expansion.
   return HAS_ONE_BIT;
 }
@@ -195,3 +196,109 @@ unsigned invalid_popcount_bitset(unsigned x, signed y) {
   };
 }
 
+
+/*
+ * rotate patterns
+ */
+
+using uint64_t = __UINT64_TYPE__;
+using uint32_t = __UINT32_TYPE__;
+
+int rotate_left_pattern(unsigned char x) {
+  // CHECK-MESSAGES: :[[@LINE+3]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES-NOPROMOTION: return std::rotl(x, 3);
+  // CHECK-FIXES-PROMOTION: return static_cast<int>(std::rotl(x, 3));
+  return (x) << 3 | x >> 5;
+}
+
+auto rotate_left_pattern_with_cast(unsigned char x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:29: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return static_cast<short>(std::rotl(x, 3));
+  return static_cast<short>((x) << 3 | x >> 5);
+}
+
+unsigned char rotate_left_pattern_with_implicit_cast(unsigned char x) {
+  // CHECK-MESSAGES: :[[@LINE+3]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES-NOPROMOTION: return std::rotl(x, 3);
+  // CHECK-FIXES-PROMOTION: return static_cast<int>(std::rotl(x, 3));
+  return (x) << 3 | x >> 5;
+}
+
+auto rotate_left_pattern_without_cast(unsigned char x) {
+  // CHECK-MESSAGES: :[[@LINE+3]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES-NOPROMOTION: return std::rotl(x, 3);
+  // CHECK-FIXES-PROMOTION: return static_cast<int>(std::rotl(x, 3));
+  return x << 3 | x >> 5;
+}
+
+uint32_t rotate_left_pattern_with_surrounding_parenthesis(unsigned char x) {
+  // CHECK-MESSAGES: :[[@LINE+3]]:11: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES-NOPROMOTION: return (std::rotl(x, 3));
+  // CHECK-FIXES-PROMOTION: return (static_cast<int>(std::rotl(x, 3)));
+  return (x << 3 | x >> 5);
+}
+
+uint64_t rotate_left_pattern_int64(uint64_t x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::rotl(x, 3);
+  return x << 3 | x >> 61;
+}
+
+uint32_t rotate_left_pattern_int32(uint32_t x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::rotl(x, 3);
+  return (x) << 3 | x >> 29;
+}
+
+unsigned char rotate_left_pattern_perm(unsigned char x) {
+  // CHECK-MESSAGES: :[[@LINE+3]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES-NOPROMOTION: return std::rotl(x, 3);
+  // CHECK-FIXES-PROMOTION: return static_cast<int>(std::rotl(x, 3));
+  return x >> 5 | x << 3;
+}
+
+uint32_t rotate_swap_pattern(uint32_t x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::rotl(x, 16);
+  return x << 16 | x >> 16;
+}
+
+uint64_t rotate_right_pattern(uint64_t x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::rotr' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::rotr(x, 3);
+  return (x << 61) | ((x >> 3));
+}
+
+unsigned char rotate_right_pattern_perm(unsigned char x0) {
+  // CHECK-MESSAGES: :[[@LINE+3]]:10: warning: use 'std::rotr' instead [modernize-use-std-bit]
+  // CHECK-FIXES-NOPROMOTION: return std::rotr(x0, 3);
+  // CHECK-FIXES-PROMOTION: return static_cast<int>(std::rotr(x0, 3));
+  return x0 >> 3 | x0 << 5;
+}
+
+#define ROTR v >> 3 | v << 5
+unsigned char rotate_macro(unsigned char v) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::rotr' instead [modernize-use-std-bit]
+  // No fixes, it comes from macro expansion.
+  return ROTR;
+}
+
+/*
+ * Invalid rotate patterns
+ */
+void invalid_rotate_patterns(unsigned char x, signed char y, unsigned char z) {
+  int patterns[] = {
+    // non-matching references
+    x >> 3 | z << 5,
+    // bad shift combination
+    x >> 3 | x << 6,
+    x >> 4 | x << 3,
+    // bad operator combination
+    x << 3 | x << 6,
+    x + 3 | x << 6,
+    x >> 3 & x << 5,
+    x >> 5 ^ x << 3,
+    // unsupported types
+    y >> 4 | y << 4,
+  };
+}

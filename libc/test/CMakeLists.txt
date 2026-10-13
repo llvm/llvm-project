@@ -1,11 +1,5 @@
-add_custom_target(check-libc)
 add_custom_target(libc-unit-tests)
 add_custom_target(libc-hermetic-tests)
-add_dependencies(check-libc libc-unit-tests libc-hermetic-tests)
-
-if (TARGET check-hdrgen)
-  add_dependencies(check-libc check-hdrgen)
-endif()
 
 add_custom_target(exhaustive-check-libc)
 add_custom_target(libc-long-running-tests)
@@ -32,17 +26,25 @@ configure_lit_site_cfg(
   "CMAKE_CROSSCOMPILING_EMULATOR"
 )
 
-add_lit_testsuite(check-libc-lit
+add_custom_target(check-libc-build)
+add_lit_testsuite(check-libc
   "Running libc tests via lit"
   ${LIBC_BUILD_DIR}/test
-  DEPENDS libc-unit-tests-build libc-hermetic-tests-build libc-integration-tests-build libc_include_tests-build
 )
+add_dependencies(check-libc check-libc-build)
+
+if(TARGET check-hdrgen)
+  add_dependencies(check-libc check-hdrgen)
+endif()
+
+add_dependencies(check-libc-build libc-unit-tests-build)
+add_dependencies(check-libc-build libc-hermetic-tests-build)
 
 add_subdirectory(UnitTest)
 
 if(LIBC_TARGET_OS_IS_GPU)
   if(NOT CMAKE_CROSSCOMPILING_EMULATOR)
-    message(WARNING "Cannot build libc GPU tests, set CMAKE_CROSS_COMPILING_EMULATOR.")
+    message(WARNING "Cannot build libc GPU tests, set CMAKE_CROSSCOMPILING_EMULATOR.")
     return()
   elseif(LIBC_GPU_TESTS_DISABLED)
     message(WARNING "Cannot build libc GPU tests, missing target architecture.")
@@ -61,7 +63,7 @@ endif()
 add_subdirectory(include)
 
 if(NOT ${LIBC_TARGET_OS} STREQUAL "linux" AND
-   NOT ${LIBC_TARGET_OS} STREQUAL "gpu")
+  NOT ${LIBC_TARGET_OS} STREQUAL "gpu")
   # Integration tests are currently only available for linux and the GPU.
   return()
 endif()

@@ -30,7 +30,7 @@
 using namespace llvm;
 
 namespace {
-struct ForwardingPass : public PassInfoMixin<ForwardingPass> {
+struct ForwardingPass : public OptionalPassInfoMixin<ForwardingPass> {
   template <typename T> ForwardingPass(T &&Arg) : Func(std::forward<T>(Arg)) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {

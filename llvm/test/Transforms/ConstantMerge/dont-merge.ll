@@ -92,3 +92,25 @@ define void @test5(ptr %P1, ptr %P2) {
         store ptr @T5ua, ptr %P2
         ret void
 }
+
+$test6a = comdat any
+$test6b = comdat any
+
+; If @T6a were to get merged into @T6b and the $test6b comdat group gets dropped,
+; @test6a would have a (now invalid) reference to the dropped @T6b constant
+
+@T6a = private unnamed_addr constant i32 666, comdat($test6a)
+@T6b = private unnamed_addr constant i32 666, comdat($test6b)
+
+; CHECK: @T6a
+; CHECK: @T6b
+
+define void @test6a(ptr %P) comdat {
+        store ptr @T6a, ptr %P
+        ret void
+}
+
+define void @test6b(ptr %P) comdat {
+        store ptr @T6b, ptr %P
+        ret void
+}

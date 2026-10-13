@@ -26,6 +26,15 @@ public:
 
   enum class EscapeStyle { CXX, Swift };
 
+  enum class ZeroTermination {
+    /// Don't look for a terminator - print the whole buffer.
+    Ignore,
+    /// Stop printing at the first zero terminator.
+    ZeroTerminate,
+    /// Print embedded zeros, but ignore zeros at the end of the buffer.
+    TrimTrailingZeros,
+  };
+
   class DumpToStreamOptions {
   public:
     DumpToStreamOptions() = default;
@@ -54,13 +63,9 @@ public:
 
     uint32_t GetSourceSize() const { return m_source_size; }
 
-    void SetNeedsZeroTermination(bool z) { m_needs_zero_termination = z; }
+    void SetZeroTermination(ZeroTermination z) { m_zero_termination = z; }
 
-    bool GetNeedsZeroTermination() const { return m_needs_zero_termination; }
-
-    void SetBinaryZeroIsTerminator(bool e) { m_zero_is_terminator = e; }
-
-    bool GetBinaryZeroIsTerminator() const { return m_zero_is_terminator; }
+    ZeroTermination GetZeroTermination() const { return m_zero_termination; }
 
     void SetEscapeNonPrintables(bool e) { m_escape_non_printables = e; }
 
@@ -85,18 +90,15 @@ public:
     char m_quote = '"';
     /// The length of the memory region that should be dumped in bytes.
     uint32_t m_source_size = 0;
-    bool m_needs_zero_termination = true;
     /// True iff non-printable characters should be escaped when dumping
     /// them to the stream.
     bool m_escape_non_printables = true;
     /// True iff the max-string-summary-length setting of the target should
     /// be ignored.
     bool m_ignore_max_length = false;
-    /// True iff a zero bytes ('\0') should terminate the memory region that
-    /// is being dumped.
-    bool m_zero_is_terminator = true;
     /// The language-specific style for escaping special characters.
     EscapeStyle m_escape_style = EscapeStyle::CXX;
+    ZeroTermination m_zero_termination = ZeroTermination::ZeroTerminate;
   };
 
   class ReadStringAndDumpToStreamOptions : public DumpToStreamOptions {

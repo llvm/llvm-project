@@ -61,7 +61,7 @@ define nofpclass(nan norm sub zero) float @ret_only_inf__floor(float %x) {
 define nofpclass(nan pinf norm sub zero) float @ret_only_ninf__floor(float %x) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) float @ret_only_ninf__floor(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %result = call float @llvm.floor.f32(float %x)
   ret float %result
@@ -70,7 +70,7 @@ define nofpclass(nan pinf norm sub zero) float @ret_only_ninf__floor(float %x) {
 define nofpclass(nan ninf norm sub zero) float @ret_only_pinf__floor(float %x) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) float @ret_only_pinf__floor(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %result = call float @llvm.floor.f32(float %x)
   ret float %result
@@ -335,7 +335,7 @@ define nofpclass(snan) float @source_known_nsub__floor(float nofpclass(inf nan n
 define nofpclass(snan) float @source_known_pinf__floor(float nofpclass(nan ninf norm sub zero) %pinf) {
 ; CHECK-LABEL: define nofpclass(snan) float @source_known_pinf__floor(
 ; CHECK-SAME: float nofpclass(nan ninf zero sub norm) [[PINF:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %result = call float @llvm.floor.f32(float %pinf)
   ret float %result
@@ -353,7 +353,7 @@ define nofpclass(snan) float @source_known_pinf_or_nan__floor(float nofpclass(ni
 define nofpclass(snan) float @source_known_ninf__floor(float nofpclass(nan pinf norm sub zero) %ninf) {
 ; CHECK-LABEL: define nofpclass(snan) float @source_known_ninf__floor(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[NINF:%.*]]) {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %result = call float @llvm.floor.f32(float %ninf)
   ret float %result
@@ -1353,3 +1353,167 @@ define nofpclass(snan) float @qnan_result_demands_snan_src__roundeven(i1 %cond, 
   %result = call float @llvm.roundeven.f32(float %select)
   ret float %result
 }
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__trunc(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__trunc(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.trunc.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.trunc.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__floor(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__floor(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.floor.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__ceil(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__ceil(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.ceil.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__round(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__round(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.round.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.round.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__roundeven(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__roundeven(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.roundeven.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.roundeven.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__rint(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__rint(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.rint.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.rint.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__nearbyint(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_ieee__nearbyint(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.nearbyint.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.nearbyint.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__trunc(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #1 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__trunc(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NEGSUBNORMAL]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.trunc.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.trunc.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__floor(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #1 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__floor(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NEGSUBNORMAL]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.floor.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__ceil(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #1 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__ceil(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NEGSUBNORMAL]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.ceil.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__round(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #1 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__round(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NEGSUBNORMAL]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.round.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.round.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__roundeven(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #1 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__roundeven(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NEGSUBNORMAL]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.roundeven.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.roundeven.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__rint(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #1 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__rint(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NEGSUBNORMAL]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.rint.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.rint.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__nearbyint(i1 %cond, float nofpclass(nan inf zero psub norm) %negsubnormal, float %unknown) #1 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands_negsubnormal_src_mode_dynamic_dapz__nearbyint(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUBNORMAL:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NEGSUBNORMAL]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.nearbyint.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %negsubnormal, float %unknown
+  %result = call float @llvm.nearbyint.f32(float %select)
+  ret float %result
+}
+
+attributes #0 = { denormal_fpenv(dynamic|ieee) }
+attributes #1 = { denormal_fpenv(dynamic|positivezero) }

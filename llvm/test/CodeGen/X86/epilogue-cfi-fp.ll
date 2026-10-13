@@ -1,5 +1,5 @@
 ; RUN: llc -O0 %s -o - | FileCheck %s
-; RUN: llc < %s -stop-after=prologepilog | FileCheck %s --check-prefix=PEI
+; RUN: llc < %s -stop-after=prolog-epilog | FileCheck %s --check-prefix=PEI
 
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i686-pc-linux"
@@ -15,7 +15,7 @@ define i32 @foo(i32 %i, i32 %j, i32 %k, i32 %l, i32 %m) #0 {
 ; PEI-LABEL: name: foo
 ; PEI:         $ebp = frame-destroy POP32r implicit-def $esp, implicit $esp
 ; PEI-NEXT:    frame-destroy CFI_INSTRUCTION def_cfa $esp, 4
-; PEI-NEXT:    RET 0, killed $eax
+; PEI-NEXT:    RET 0, $eax
 
 entry:
   %i.addr = alloca i32, align 4

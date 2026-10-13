@@ -65,11 +65,17 @@ entry:
 
 ; rdar://11632325
 define i32@foo4(i32 %a) nounwind ssp {
-; CHECK-LABEL: foo4:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cneg w0, w0, mi
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: foo4:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmp w0, #0
+; CHECK-SD-NEXT:    cneg w0, w0, mi
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: foo4:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    cneg w0, w0, le
+; CHECK-GI-NEXT:    ret
   %cmp = icmp sgt i32 %a, -1
   %neg = sub nsw i32 0, %a
   %cond = select i1 %cmp, i32 %a, i32 %neg
@@ -77,11 +83,18 @@ define i32@foo4(i32 %a) nounwind ssp {
 }
 
 define i32@foo5(i32 %a, i32 %b) nounwind ssp {
-; CHECK-LABEL: foo5:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    subs w8, w0, w1
-; CHECK-NEXT:    cneg w0, w8, mi
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: foo5:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    subs w8, w0, w1
+; CHECK-SD-NEXT:    cneg w0, w8, mi
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: foo5:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub w8, w0, w1
+; CHECK-GI-NEXT:    cmn w8, #1
+; CHECK-GI-NEXT:    cneg w0, w8, le
+; CHECK-GI-NEXT:    ret
 entry:
   %sub = sub nsw i32 %a, %b
   %cmp = icmp sgt i32 %sub, -1
@@ -121,12 +134,11 @@ define i32 @foo7(i32 %a, i32 %b) nounwind {
 ;
 ; CHECK-GI-LABEL: foo7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    subs w8, w0, w1
-; CHECK-GI-NEXT:    cneg w9, w8, mi
+; CHECK-GI-NEXT:    sub w8, w0, w1
 ; CHECK-GI-NEXT:    cmn w8, #1
-; CHECK-GI-NEXT:    csel w10, w9, w0, lt
-; CHECK-GI-NEXT:    cmp w8, #0
-; CHECK-GI-NEXT:    csel w0, w10, w9, pl
+; CHECK-GI-NEXT:    cneg w8, w8, le
+; CHECK-GI-NEXT:    csel w9, w8, w0, lt
+; CHECK-GI-NEXT:    csel w0, w9, w8, gt
 ; CHECK-GI-NEXT:    ret
 entry:
   %sub = sub nsw i32 %a, %b

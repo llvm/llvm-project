@@ -23,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 
@@ -189,7 +190,7 @@ const char *SBModule::GetUUIDString() const {
   // then we don't need to worry about the lifetime of the string as it will
   // never go away once it has been put into the ConstString string pool
   const char *uuid_cstr =
-      ConstString(module_sp->GetUUID().GetAsString()).GetCString();
+      StringPool::GetSystemPool().Intern(module_sp->GetUUID().GetAsString());
   // Note: SBModule::GetUUIDString's expected behavior is to return nullptr if
   // the string we get is empty, so we must perform this check before returning.
   if (uuid_cstr && uuid_cstr[0])
@@ -557,8 +558,7 @@ SBSection SBModule::FindSection(const char *sect_name) {
     module_sp->GetSymbolFile();
     SectionList *section_list = module_sp->GetSectionList();
     if (section_list) {
-      ConstString const_sect_name(sect_name);
-      SectionSP section_sp(section_list->FindSectionByName(const_sect_name));
+      SectionSP section_sp(section_list->FindSectionByName(sect_name));
       if (section_sp) {
         sb_section.SetSP(section_sp);
       }
@@ -587,7 +587,7 @@ const char *SBModule::GetTriple() {
   // Unique the string so we don't run into ownership issues since the const
   // strings put the string into the string pool once and the strings never
   // comes out
-  ConstString const_triple(triple.c_str());
+  ConstString const_triple(triple);
   return const_triple.GetCString();
 }
 
@@ -638,6 +638,15 @@ lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
       sb_file_spec.SetFileSpec(symfile->GetObjectFile()->GetFileSpec());
   }
   return sb_file_spec;
+}
+
+lldb::SBModuleSpecList SBModule::GetSeparateDebugInfoFiles() {
+  LLDB_INSTRUMENT_VA(this);
+  ModuleSP module_sp(GetSP());
+  if (module_sp)
+    return lldb::SBModuleSpecList(module_sp->GetSeparateDebugInfoFiles());
+
+  return lldb::SBModuleSpecList();
 }
 
 lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {

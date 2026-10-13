@@ -12,6 +12,7 @@ endif()
 set(OFFLOAD_NOT_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/not)
 set(OFFLOAD_DEVICE_INFO_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-offload-device-info)
 set(OFFLOAD_TBLGEN_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/offload-tblgen)
+set(OMP_KERNEL_REPLAY ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-omp-kernel-replay)
 
 # Set the information that we know.
 set(OPENMP_TEST_COMPILER_ID "Clang")

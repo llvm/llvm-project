@@ -1,0 +1,49 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+// Ignore'd return: the rewriter changes the function's return type to void,
+// drops the operand from every cir.return, and at call sites issues a void
+// call.  Any remaining uses of the original (non-void) call result get
+// replaced with a poison constant of the original return type so the IR
+// stays well-typed without pretending we have a real value at the ABI
+// boundary.
+
+!s32i = !cir.int<s, 32>
+
+#ignore_return = {
+  return = { kind = "ignore" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i32, dense<32>: vector<2xi64>>>
+} {
+
+  cir.func @callee() -> !s32i
+      attributes { test_classify = #ignore_return } {
+    %0 = cir.const #cir.int<42> : !s32i
+    cir.return %0 : !s32i
+  }
+
+  // Return type becomes void (dropped from the func type), and the cir.return
+  // becomes operand-free.
+  // CHECK:      cir.func{{.*}} @callee()
+  // CHECK-NOT:    -> !s32i
+  // CHECK:        cir.return
+  // CHECK-NOT:    : !s32i
+
+  cir.func @caller_uses_result() -> !s32i
+      attributes { test_classify = #ignore_return } {
+    %0 = cir.call @callee() : () -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // Caller's own return is also classified Ignore, so its return type is
+  // also void.  The use of @callee's result becomes a poison constant (the
+  // returned-but-ignored value is never observable).
+  // CHECK:      cir.func{{.*}} @caller_uses_result()
+  // CHECK:        cir.call @callee() : () -> ()
+  // CHECK:        cir.const #cir.poison : !s32i
+  // CHECK:        cir.return
+
+}

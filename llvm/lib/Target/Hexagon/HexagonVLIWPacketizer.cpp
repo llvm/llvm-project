@@ -89,10 +89,7 @@ namespace {
       AU.setPreservesCFG();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<MachineLoopInfoWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineLoopInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -478,7 +475,7 @@ bool HexagonPacketizerList::useCallersSP(MachineInstr &MI) {
   unsigned FrameSize = MF.getFrameInfo().getStackSize();
   MachineOperand &Off = MI.getOperand(1);
   int64_t NewOff = Off.getImm() - (FrameSize + HEXAGON_LRFP_SIZE);
-  if (HII->isValidOffset(Opc, NewOff, HRI)) {
+  if (HII->isValidOffset(Opc, NewOff)) {
     Off.setImm(NewOff);
     return true;
   }
@@ -529,7 +526,7 @@ bool HexagonPacketizerList::updateOffset(SUnit *SUI, SUnit *SUJ) {
     return false;
 
   int64_t Offset = MI.getOperand(OPI).getImm();
-  if (!HII->isValidOffset(MI.getOpcode(), Offset+Incr, HRI))
+  if (!HII->isValidOffset(MI.getOpcode(), Offset + Incr))
     return false;
 
   MI.getOperand(OPI).setImm(Offset + Incr);
@@ -1077,7 +1074,9 @@ bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
 
   if (MI.getOpcode() == Hexagon::PATCHABLE_FUNCTION_ENTER ||
       MI.getOpcode() == Hexagon::PATCHABLE_FUNCTION_EXIT ||
-      MI.getOpcode() == Hexagon::PATCHABLE_TAIL_CALL)
+      MI.getOpcode() == Hexagon::PATCHABLE_TAIL_CALL ||
+      MI.getOpcode() == Hexagon::PATCHABLE_EVENT_CALL ||
+      MI.getOpcode() == Hexagon::PATCHABLE_TYPED_EVENT_CALL)
     return true;
 
   if (MI.getOpcode() == Hexagon::A2_nop)

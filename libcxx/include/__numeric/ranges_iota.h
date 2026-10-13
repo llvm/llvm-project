@@ -26,9 +26,10 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
+#if _LIBCPP_STD_VER >= 23
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 23
 namespace ranges {
 template <typename _Out, typename _Tp>
 using iota_result = ranges::out_value_result<_Out, _Tp>;
@@ -56,9 +57,9 @@ public:
 inline constexpr auto iota = __iota_fn{};
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
 

@@ -35,9 +35,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(oeq), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(oeq), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -76,9 +76,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(ogt), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(ogt), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -117,9 +117,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(oge), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(oge), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -158,9 +158,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(olt), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(olt), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -199,9 +199,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(ole), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(ole), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -241,9 +241,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(one), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(one), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -282,9 +282,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(ord), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(ord), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -323,9 +323,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(uno), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(uno), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -365,9 +365,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(ueq), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(ueq), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -406,9 +406,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(ugt), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(ugt), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -447,9 +447,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(uge), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(uge), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -488,9 +488,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(ult), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(ult), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -529,9 +529,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(ule), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(ule), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:
@@ -570,9 +570,9 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $s0, $s1, $w0, $w1
 
-    %cmp_lhs:fpr(s32) = COPY $s0
-    %cmp_rhs:fpr(s32) = COPY $s1
-    %fcmp:gpr(s32) = G_FCMP floatpred(une), %cmp_lhs(s32), %cmp_rhs
+    %cmp_lhs:fpr(f32) = COPY $s0
+    %cmp_rhs:fpr(f32) = COPY $s1
+    %fcmp:gpr(i32) = G_FCMP floatpred(une), %cmp_lhs(f32), %cmp_rhs
     G_BRCOND %fcmp, %bb.2
     G_BR %bb.1
   bb.1:

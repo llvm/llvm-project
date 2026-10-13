@@ -4,10 +4,10 @@
 
 module {
   // CHECK-LABEL: llvm.func @alloca_i32
-  // CHECK:         %[[SIZE:.*]] = llvm.mlir.constant(1 : i64) : i64
-  // CHECK-NEXT:    %{{.*}} = llvm.alloca %[[SIZE]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+  // CHECK:         %[[SIZE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT:    %{{.*}} = llvm.alloca %[[SIZE]] x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
   cir.func @alloca_i32() {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["var_name"] {alignment = 4 : i64}
+    %0 = cir.alloca "var_name" align(4) : !cir.ptr<!s32i>
     cir.return
   }
 }

@@ -75,12 +75,12 @@ define i64 @select_example_mul_i64(i64 %a, i64 %b, i1 zeroext %x, i64 %y) {
 ; RV32I-M:       # %bb.0: # %entry
 ; RV32I-M-NEXT:    beqz a4, .LBB1_2
 ; RV32I-M-NEXT:  # %bb.1:
-; RV32I-M-NEXT:    mul a2, a0, a6
-; RV32I-M-NEXT:    mulhu a3, a0, a5
+; RV32I-M-NEXT:    mul a3, a0, a6
+; RV32I-M-NEXT:    mulhu a4, a0, a5
 ; RV32I-M-NEXT:    mul a1, a1, a5
-; RV32I-M-NEXT:    add a2, a3, a2
-; RV32I-M-NEXT:    add a3, a2, a1
 ; RV32I-M-NEXT:    mul a2, a0, a5
+; RV32I-M-NEXT:    add a3, a4, a3
+; RV32I-M-NEXT:    add a3, a3, a1
 ; RV32I-M-NEXT:  .LBB1_2: # %entry
 ; RV32I-M-NEXT:    mv a0, a2
 ; RV32I-M-NEXT:    mv a1, a3

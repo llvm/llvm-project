@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -triple amdgcn -target-cpu gfx950 -fsyntax-only -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -std=c++20 -triple amdgpu9.50 -fsyntax-only -fcuda-is-device -verify %s
 
 // Test that __builtin_amdgcn_global_load_lds and related builtins accept
 // instantiation-dependent expressions (e.g., template parameters, sizeof(T))

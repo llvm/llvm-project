@@ -231,7 +231,7 @@ void ThreadPlanCallFunction::DidPop() { DoTakedown(PlanSucceeded()); }
 
 void ThreadPlanCallFunction::GetDescription(Stream *s, DescriptionLevel level) {
   if (level == eDescriptionLevelBrief) {
-    s->Printf("Function call thread plan");
+    s->PutCString("Function call thread plan");
   } else {
     s->Printf("Thread plan to call 0x%" PRIx64,
               m_function_addr.GetLoadAddress(&GetTarget()));
@@ -349,6 +349,16 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
     // it is a signal that is set not to stop.  Check that here first.  We just
     // say we explain the stop but aren't done and everything will continue on
     // from there.
+
+    // Fork events are not handled by this plan — let them fall through
+    // to ThreadPlanBase. DidFork is called via PerformAction when the
+    // event is delivered.
+    if (m_real_stop_info_sp) {
+      StopReason reason = m_real_stop_info_sp->GetStopReason();
+      if (reason == eStopReasonFork || reason == eStopReasonVFork ||
+          reason == eStopReasonVForkDone)
+        return false;
+    }
 
     if (m_real_stop_info_sp &&
         m_real_stop_info_sp->ShouldStopSynchronous(event_ptr)) {

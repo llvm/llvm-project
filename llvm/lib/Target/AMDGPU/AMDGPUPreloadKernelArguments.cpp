@@ -191,7 +191,7 @@ public:
     if (!ImplicitArgPtr)
       return;
 
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     // Pair is the load and the load offset.
     SmallVector<std::pair<LoadInst *, unsigned>, 4> ImplicitArgLoads;
     for (auto *U : ImplicitArgPtr->users()) {
@@ -203,7 +203,8 @@ public:
         int64_t Offset = 0;
         auto *Load = dyn_cast<LoadInst>(U); // Load from ImplicitArgPtr?
         if (!Load) {
-          if (GetPointerBaseWithConstantOffset(U, Offset, DL) != CI)
+          if (U->user_empty() ||
+              GetPointerBaseWithConstantOffset(U, Offset, DL) != CI)
             continue;
 
           Load = dyn_cast<LoadInst>(*U->user_begin()); // Load from GEP?

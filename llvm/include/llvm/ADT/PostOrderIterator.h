@@ -19,78 +19,12 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator_range.h"
 #include <iterator>
 #include <optional>
-#include <set>
 #include <type_traits>
 #include <utility>
 
 namespace llvm {
-
-// The po_iterator_storage template provides access to the set of already
-// visited nodes during the po_iterator's depth-first traversal.
-//
-// The default implementation simply contains a set of visited nodes, while
-// the External=true version uses a reference to an external set.
-//
-// It is possible to prune the depth-first traversal in several ways:
-//
-// - When providing an external set that already contains some graph nodes,
-//   those nodes won't be visited again. This is useful for restarting a
-//   post-order traversal on a graph with nodes that aren't dominated by a
-//   single node.
-//
-// - By providing a custom SetType class, unwanted graph nodes can be excluded
-//   by having the insert() function return false. This could for example
-//   confine a CFG traversal to blocks in a specific loop.
-//
-// - Finally, by specializing the po_iterator_storage template itself, graph
-//   edges can be pruned by returning false in the insertEdge() function. This
-//   could be used to remove loop back-edges from the CFG seen by po_iterator.
-//
-// A specialized po_iterator_storage class can observe both the pre-order and
-// the post-order. The insertEdge() function is called in a pre-order, while
-// the finishPostorder() function is called just before the po_iterator moves
-// on to the next node.
-
-/// Default po_iterator_storage implementation with an internal set object.
-template<class SetType, bool External>
-class po_iterator_storage {
-  SetType Visited;
-
-public:
-  // Return true if edge destination should be visited.
-  template <typename NodeRef>
-  bool insertEdge(std::optional<NodeRef> From, NodeRef To) {
-    return Visited.insert(To).second;
-  }
-
-  // Called after all children of BB have been visited.
-  template <typename NodeRef> void finishPostorder(NodeRef BB) {}
-};
-
-/// Specialization of po_iterator_storage that references an external set.
-template<class SetType>
-class po_iterator_storage<SetType, true> {
-  SetType &Visited;
-
-public:
-  po_iterator_storage(SetType &VSet) : Visited(VSet) {}
-  po_iterator_storage(const po_iterator_storage &S) : Visited(S.Visited) {}
-
-  // Return true if edge destination should be visited, called with From = 0 for
-  // the root node.
-  // Graph edges can be pruned by specializing this function.
-  template <class NodeRef>
-  bool insertEdge(std::optional<NodeRef> From, NodeRef To) {
-    return Visited.insert(To).second;
-  }
-
-  // Called after all children of BB have been visited.
-  template <class NodeRef> void finishPostorder(NodeRef BB) {}
-};
-
 namespace po_detail {
 
 template <typename NodeRef> class NumberSet {
@@ -120,180 +54,209 @@ using DefaultSet =
 
 } // namespace po_detail
 
-template <class GraphT, class SetType = po_detail::DefaultSet<GraphT>,
-          bool ExtStorage = false, class GT = GraphTraits<GraphT>>
-class po_iterator : public po_iterator_storage<SetType, ExtStorage> {
+/// CRTP base class for post-order traversal. Storage for visited nodes must be
+/// provided by the sub-class, which must implement insertEdge(). Due to CRTP
+/// limitations, the sub-class must call init() with the start node before
+/// traversing; not calling init results in an empty iterator.
+///
+/// Sub-classes can observe the post-order traversal with finishPostorder(),
+/// which is called before the iterator moves to the next node, and also the
+/// pre-order traversal with insertEdge().
+///
+/// Unwanted graph nodes (e.g. from a previous traversal) can be skipped by
+/// returning false from insertEdge().
+///
+/// This class only supports a single traversal of the graph.
+template <typename DerivedT, typename GraphTraits>
+class PostOrderTraversalBase {
+  using NodeRef = typename GraphTraits::NodeRef;
+  using ChildItTy = typename GraphTraits::ChildIteratorType;
+
+  struct StackEntry {
+    NodeRef Node;  ///< Node.
+    ChildItTy It;  ///< Iterator for next child.
+    ChildItTy End; ///< End iterator for children.
+
+    // This constructor is carefully designed so that there is no store between
+    // the calls to child_begin() and child_end(). LLVM IR successors() is a
+    // pure function called for begin and end, but the second call can't be
+    // removed if there's a potentially visible store (here: store to the
+    // member It in the VisitStack) in between.
+    StackEntry(NodeRef Node, iterator_range<ChildItTy> Children)
+        : Node(Node), It(Children.begin()), End(Children.end()) {}
+  };
+  SmallVector<StackEntry, 8> VisitStack;
+
 public:
-  // When External storage is used we are not multi-pass safe.
-  using iterator_category =
-      std::conditional_t<ExtStorage, std::input_iterator_tag,
-                         std::forward_iterator_tag>;
-  using value_type = typename GT::NodeRef;
-  using difference_type = std::ptrdiff_t;
-  using pointer = value_type *;
-  using reference = const value_type &;
+  class iterator {
+    friend class PostOrderTraversalBase;
 
-private:
-  using NodeRef = typename GT::NodeRef;
-  using ChildItTy = typename GT::ChildIteratorType;
+  public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type = NodeRef;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = NodeRef;
 
-  /// Used to maintain the ordering.
-  /// First element is basic block pointer, second is iterator for the next
-  /// child to visit, third is the end iterator.
-  SmallVector<std::tuple<NodeRef, ChildItTy, ChildItTy>, 8> VisitStack;
+  private:
+    DerivedT *POT = nullptr;
+    NodeRef V = nullptr;
 
-  po_iterator(NodeRef BB) {
-    this->insertEdge(std::optional<NodeRef>(), BB);
-    VisitStack.emplace_back(BB, GT::child_begin(BB), GT::child_end(BB));
-    traverseChild();
-  }
+  public:
+    iterator() = default;
 
-  po_iterator() = default; // End is when stack is empty.
+  private:
+    iterator(DerivedT &POT, value_type V) : POT(&POT), V(V) {}
 
-  po_iterator(NodeRef BB, SetType &S)
-      : po_iterator_storage<SetType, ExtStorage>(S) {
-    if (this->insertEdge(std::optional<NodeRef>(), BB)) {
-      VisitStack.emplace_back(BB, GT::child_begin(BB), GT::child_end(BB));
+  public:
+    bool operator==(const iterator &X) const { return V == X.V; }
+    bool operator!=(const iterator &X) const { return !(*this == X); }
+
+    reference operator*() const { return V; }
+    pointer operator->() const { return &V; }
+
+    iterator &operator++() { // Preincrement
+      V = POT->next();
+      return *this;
+    }
+
+    iterator operator++(int) { // Postincrement
+      iterator tmp = *this;
+      ++*this;
+      return tmp;
+    }
+  };
+
+protected:
+  PostOrderTraversalBase() = default;
+
+  DerivedT *derived() { return static_cast<DerivedT *>(this); }
+
+  /// Initialize post-order traversal at given start node.
+  void init(NodeRef Start) {
+    if (derived()->insertEdge(std::optional<NodeRef>(), Start)) {
+      VisitStack.emplace_back(Start, make_range(GraphTraits::child_begin(Start),
+                                                GraphTraits::child_end(Start)));
       traverseChild();
     }
   }
 
-  po_iterator(SetType &S)
-      : po_iterator_storage<SetType, ExtStorage>(S) {
-  } // End is when stack is empty.
-
+private:
   void traverseChild() {
     while (true) {
       auto &Entry = VisitStack.back();
-      if (std::get<1>(Entry) == std::get<2>(Entry))
+      if (Entry.It == Entry.End)
         break;
-      NodeRef BB = *std::get<1>(Entry)++;
-      if (this->insertEdge(std::optional<NodeRef>(std::get<0>(Entry)), BB)) {
-        // If the block is not visited...
-        VisitStack.emplace_back(BB, GT::child_begin(BB), GT::child_end(BB));
-      }
+      NodeRef BB = *Entry.It++;
+      // If the block is not visited...
+      if (derived()->insertEdge(std::optional<NodeRef>(Entry.Node), BB))
+        VisitStack.emplace_back(BB, make_range(GraphTraits::child_begin(BB),
+                                               GraphTraits::child_end(BB)));
     }
   }
 
-public:
-  // Provide static "constructors"...
-  static po_iterator begin(const GraphT &G) {
-    return po_iterator(GT::getEntryNode(G));
-  }
-  static po_iterator end(const GraphT &G) { return po_iterator(); }
-
-  static po_iterator begin(const GraphT &G, SetType &S) {
-    return po_iterator(GT::getEntryNode(G), S);
-  }
-  static po_iterator end(const GraphT &G, SetType &S) { return po_iterator(S); }
-
-  bool operator==(const po_iterator &x) const {
-    return VisitStack == x.VisitStack;
-  }
-  bool operator!=(const po_iterator &x) const { return !(*this == x); }
-
-  reference operator*() const { return std::get<0>(VisitStack.back()); }
-
-  // This is a nonstandard operator-> that dereferences the pointer an extra
-  // time... so that you can actually call methods ON the BasicBlock, because
-  // the contained type is a pointer.  This allows BBIt->getTerminator() f.e.
-  //
-  NodeRef operator->() const { return **this; }
-
-  po_iterator &operator++() { // Preincrement
-    this->finishPostorder(std::get<0>(VisitStack.back()));
+  NodeRef next() {
+    derived()->finishPostorder(VisitStack.back().Node);
     VisitStack.pop_back();
-    if (!VisitStack.empty())
-      traverseChild();
-    return *this;
+    if (VisitStack.empty())
+      return nullptr;
+    traverseChild();
+    return VisitStack.back().Node;
   }
 
-  po_iterator operator++(int) { // Postincrement
-    po_iterator tmp = *this;
-    ++*this;
-    return tmp;
+public:
+  iterator begin() {
+    if (VisitStack.empty())
+      return iterator(); // We don't even want to see the start node.
+    return iterator(*derived(), VisitStack.back().Node);
+  }
+  iterator end() { return iterator(); }
+
+  // Methods that are intended to be overridden by sub-classes.
+
+  /// Add edge and return whether To should be visited. From is nullopt for the
+  /// root node.
+  bool insertEdge(std::optional<NodeRef> From, NodeRef To);
+
+  /// Callback just before the iterator moves to the next block.
+  void finishPostorder(NodeRef) {}
+};
+
+/// Post-order traversal of a graph. Note: the traversal state is stored in this
+/// class, not in the iterators -- the lifetime of PostOrderTraversal must
+/// exceed the lifetime of the iterators. Special care must be taken with
+/// range-based for-loops in combination with LLVM ranges:
+///
+///   // Fine:
+///   for (BasicBlock *BB : post_order(F)) { ... }
+///
+///   // Problematic! Lifetime of PostOrderTraversal ends before the loop is
+///   // entered, because make_filter_range only stores the iterators but not
+///   // the range object itself.
+///   for (BasicBlock *BB : make_filter_range(post_order(F), ...)) { ... }
+///   // Fixed:
+///   auto POT = post_order(F);
+///   for (BasicBlock *BB : make_filter_range(POT, ...)) { ... }
+///
+/// This class only supports a single traversal of the graph.
+template <typename GraphT, typename SetType = po_detail::DefaultSet<GraphT>>
+class PostOrderTraversal
+    : public PostOrderTraversalBase<PostOrderTraversal<GraphT, SetType>,
+                                    GraphTraits<GraphT>> {
+  using NodeRef = typename GraphTraits<GraphT>::NodeRef;
+
+  SetType Visited;
+
+public:
+  /// Default constructor for an empty traversal.
+  PostOrderTraversal() = default;
+
+  /// Post-order traversal of the graph starting at the root node using an
+  /// internal storage.
+  PostOrderTraversal(const GraphT &G) {
+    this->init(GraphTraits<GraphT>::getEntryNode(G));
+  }
+
+  bool insertEdge(std::optional<NodeRef> From, NodeRef To) {
+    return Visited.insert(To).second;
+  }
+};
+
+/// Post-order traversal of the graph starting at the root node using an
+/// external storage. This can be used to keep track of visited nodes after the
+/// traversal and to skip nodes that are already contained in the set. See
+/// PostOrderTraversal for usage restrictions.
+template <typename GraphT, typename SetType>
+class PostOrderExtTraversal
+    : public PostOrderTraversalBase<PostOrderExtTraversal<GraphT, SetType>,
+                                    GraphTraits<GraphT>> {
+  using NodeRef = typename GraphTraits<GraphT>::NodeRef;
+
+  SetType &Visited;
+
+public:
+  PostOrderExtTraversal(const GraphT &G, SetType &S) : Visited(S) {
+    this->init(GraphTraits<GraphT>::getEntryNode(G));
+  }
+
+  bool insertEdge(std::optional<NodeRef> From, NodeRef To) {
+    return Visited.insert(To).second;
   }
 };
 
 // Provide global constructors that automatically figure out correct types...
 //
-template <class T>
-po_iterator<T> po_begin(const T &G) { return po_iterator<T>::begin(G); }
-template <class T>
-po_iterator<T> po_end  (const T &G) { return po_iterator<T>::end(G); }
-
-template <class T> iterator_range<po_iterator<T>> post_order(const T &G) {
-  return make_range(po_begin(G), po_end(G));
+/// Post-order traversal of a graph. Note: this returns a PostOrderTraversal,
+/// not an iterator range; \see PostOrderTraversal.
+template <class T> auto post_order(const T &G) {
+  return PostOrderTraversal<T>(G);
 }
-
-// Provide global definitions of external postorder iterators...
-template <class T, class SetType = std::set<typename GraphTraits<T>::NodeRef>>
-struct po_ext_iterator : po_iterator<T, SetType, true> {
-  po_ext_iterator(const po_iterator<T, SetType, true> &V) :
-  po_iterator<T, SetType, true>(V) {}
-};
-
+template <class T, class SetType> auto post_order_ext(const T &G, SetType &S) {
+  return PostOrderExtTraversal<T, SetType>(G, S);
+}
 template <class T, class SetType>
-po_ext_iterator<T, SetType> po_ext_begin(const T &G, SetType &S) {
-  return po_ext_iterator<T, SetType>::begin(G, S);
-}
-
-template <class T, class SetType>
-po_ext_iterator<T, SetType> po_ext_end(const T &G, SetType &S) {
-  return po_ext_iterator<T, SetType>::end(G, S);
-}
-
-template <class T, class SetType>
-iterator_range<po_ext_iterator<T, SetType>> post_order_ext(const T &G, SetType &S) {
-  return make_range(po_ext_begin(G, S), po_ext_end(G, S));
-}
-
-// Provide global definitions of inverse post order iterators...
-template <class T, class SetType = std::set<typename GraphTraits<T>::NodeRef>,
-          bool External = false>
-struct ipo_iterator : po_iterator<Inverse<T>, SetType, External> {
-  ipo_iterator(const po_iterator<Inverse<T>, SetType, External> &V) :
-     po_iterator<Inverse<T>, SetType, External> (V) {}
-};
-
-template <class T>
-ipo_iterator<T> ipo_begin(const T &G) {
-  return ipo_iterator<T>::begin(G);
-}
-
-template <class T>
-ipo_iterator<T> ipo_end(const T &G){
-  return ipo_iterator<T>::end(G);
-}
-
-template <class T>
-iterator_range<ipo_iterator<T>> inverse_post_order(const T &G) {
-  return make_range(ipo_begin(G), ipo_end(G));
-}
-
-// Provide global definitions of external inverse postorder iterators...
-template <class T, class SetType = std::set<typename GraphTraits<T>::NodeRef>>
-struct ipo_ext_iterator : ipo_iterator<T, SetType, true> {
-  ipo_ext_iterator(const ipo_iterator<T, SetType, true> &V) :
-    ipo_iterator<T, SetType, true>(V) {}
-  ipo_ext_iterator(const po_iterator<Inverse<T>, SetType, true> &V) :
-    ipo_iterator<T, SetType, true>(V) {}
-};
-
-template <class T, class SetType>
-ipo_ext_iterator<T, SetType> ipo_ext_begin(const T &G, SetType &S) {
-  return ipo_ext_iterator<T, SetType>::begin(G, S);
-}
-
-template <class T, class SetType>
-ipo_ext_iterator<T, SetType> ipo_ext_end(const T &G, SetType &S) {
-  return ipo_ext_iterator<T, SetType>::end(G, S);
-}
-
-template <class T, class SetType>
-iterator_range<ipo_ext_iterator<T, SetType>>
-inverse_post_order_ext(const T &G, SetType &S) {
-  return make_range(ipo_ext_begin(G, S), ipo_ext_end(G, S));
+auto inverse_post_order_ext(const T &G, SetType &S) {
+  return PostOrderExtTraversal<Inverse<T>, SetType>(G, S);
 }
 
 //===--------------------------------------------------------------------===//
@@ -331,7 +294,7 @@ class ReversePostOrderTraversal {
   VecTy Blocks; // Block list in normal PO order
 
   void Initialize(const GraphT &G) {
-    std::copy(po_begin(G), po_end(G), std::back_inserter(Blocks));
+    llvm::copy(post_order(G), std::back_inserter(Blocks));
   }
 
 public:

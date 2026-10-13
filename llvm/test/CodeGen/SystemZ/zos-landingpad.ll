@@ -30,18 +30,17 @@ lpad:
   unreachable
 }
 
+; Check that the exception table is emitted into .lsda section.
+; CHECK: GCC_except.test1 CSECT
+; CHECK: C_WSA64 CATTR ALIGN(3),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(GCC_
+; CHECK:                _except.test1)
+; CHECK: GCC_except.test1 XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 ; Check that offsets to the FD of the personality routine and LSDA are emitted in PPA1
 ; CHECK: * PPA1 Flags 4
 ; CHECK: *   Bit 3: 1 = C++ EH block
 ; CHECK: *   Bit 7: 1 = Name Length and Name
 ; CHECK:  DC XL1'91'
 ; CHECK: * Personality routine
-; CHECK:  DC XL8'0000000000000020'
+; CHECK:  DC XL8'0000000000000000'
 ; CHECK: * LSDA location
-; CHECK:  DC XL8'0000000000000028'
-; Check that the exception table is emitted into .lsda section.
-; CHECK:  stdin#C CSECT
-; CHECK: C_WSA64 CATTR ALIGN(2),FILL(0),NOTEXECUTABLE,RMODE(64),PART(.gcc_excepti
-; CHECK:                ion_table.test1)
-; CHECK: .gcc_exception_table.test1 XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(S
-; CHECK:                SECTION)
+; CHECK:  DC XL8'0000000000000008'

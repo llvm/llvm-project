@@ -127,7 +127,7 @@ lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
   if (idx == 0)
-    return m_real_child->GetSP()->Clone(ConstString("Value"));
+    return m_real_child->GetSP()->Clone("Value");
   return nullptr;
 }
 

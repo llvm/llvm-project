@@ -10,5 +10,8 @@ static_library("Windows-DYLD") {
 
   # Uses source-relative includes for own headers.
   include_dirs = [ "//lldb/source" ]
-  sources = [ "DynamicLoaderWindowsDYLD.cpp" ]
+  sources = [
+    "DynamicLoaderWindowsDYLD.cpp",
+    "MSVCRTCFrameRecognizer.cpp",
+  ]
 }

@@ -11,6 +11,7 @@
 #include "__llvm-libc-common.h"
 #include "llvm-libc-types/meep.h"
 #include "llvm-libc-types/road.h"
+#include <acme/anvil.h>
 
 __BEGIN_C_DECLS
 

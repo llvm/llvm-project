@@ -86,8 +86,6 @@ struct GCNRegPressure {
   unsigned getArchVGPRNum() const { return Value[VGPR] + Value[AVGPR]; }
   /// \returns the AccVGPR32 pressure
   unsigned getAGPRNum() const { return Value[AGPR]; }
-  /// \returns the AVGPR32 pressure
-  unsigned getAVGPRNum() const { return Value[AVGPR]; }
 
   unsigned getVGPRTuplesWeight() const {
     return std::max(Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR],
@@ -129,12 +127,6 @@ struct GCNRegPressure {
            LaneBitmask PrevMask,
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
-
-  bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
-                       unsigned DynamicVGPRBlockSize) const {
-    return getOccupancy(ST, DynamicVGPRBlockSize) >
-           O.getOccupancy(ST, DynamicVGPRBlockSize);
-  }
 
   /// Compares \p this GCNRegpressure to \p O, returning true if \p this is
   /// less. Since GCNRegpressure contains different types of pressures, and due
@@ -250,10 +242,9 @@ public:
   /// towards achieving the RP target.
   bool isSaveBeneficial(Register Reg) const;
 
-  /// Saves virtual register \p Reg with lanemask \p Mask.
-  void saveReg(Register Reg, LaneBitmask Mask, const MachineRegisterInfo &MRI) {
-    RP.inc(Reg, Mask, LaneBitmask::getNone(), MRI);
-  }
+  /// Returns whether the benefit that saving \p SaveRP represents will be
+  /// beneficial towards achieving the RP target.
+  bool isSaveBeneficial(const GCNRegPressure &SaveRP) const;
 
   /// Returns the benefit towards achieving the RP target that saving \p SaveRP
   /// represents, in total number of registers saved across all classes.
@@ -299,12 +290,12 @@ private:
   GCNRegPressure RP;
 
   /// Target number of SGPRs.
-  unsigned MaxSGPRs;
+  unsigned MaxSGPRs = 0;
   /// Target number of ArchVGPRs and AGPRs.
-  unsigned MaxVGPRs;
+  unsigned MaxVGPRs = 0;
   /// Target number of overall VGPRs for subtargets with unified RFs. Always 0
   /// for subtargets with non-unified RFs.
-  unsigned MaxUnifiedVGPRs;
+  unsigned MaxUnifiedVGPRs = 0;
 
   GCNRPTarget(const GCNRegPressure &RP, const MachineFunction &MF)
       : MF(MF), UnifiedRF(MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()),
@@ -319,30 +310,39 @@ public:
   using LiveRegSet = DenseMap<unsigned, LaneBitmask>;
 
 protected:
-  const LiveIntervals &LIS;
+  LiveIntervals &LIS;
   LiveRegSet LiveRegs;
   GCNRegPressure CurPressure, MaxPressure;
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
-  GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
+  GCNRPTracker(LiveIntervals &LIS_) : LIS(LIS_) {}
 
-  void reset(const MachineInstr &MI, const LiveRegSet *LiveRegsCopy,
-             bool After);
+  /// Resets tracker before or \p After the provided \p MI, which can be a debug
+  /// instruction.
+  void reset(const MachineInstr &MI, bool After);
 
-  /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
-  void bumpDeadDefs(ArrayRef<VRegMaskOrUnit> DeadDefs);
+  /// Resets tracker at the start or \p End of the \p MBB.
+  void reset(const MachineBasicBlock &MBB, bool End);
+
+  /// Resets tracker at the specified slot index \p SI.
+  void reset(const MachineRegisterInfo &MRI, SlotIndex SI);
 
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
 public:
-  // reset tracker and set live register set to the specified value.
-  void reset(const MachineRegisterInfo &MRI_, const LiveRegSet &LiveRegs_);
+  /// Resets tracker with the provided \p LiveRegs.
+  void reset(const MachineRegisterInfo &MRI, const LiveRegSet &LiveRegs);
+
   // live regs for the current state
   const decltype(LiveRegs) &getLiveRegs() const { return LiveRegs; }
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
 
   void clearMaxPressure() { MaxPressure.clear(); }
+
+  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
+
+  void resetMaxPressure() { MaxPressure = CurPressure; }
 
   GCNRegPressure getPressure() const { return CurPressure; }
 
@@ -361,25 +361,13 @@ getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
 
 class GCNUpwardRPTracker : public GCNRPTracker {
 public:
-  GCNUpwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNUpwardRPTracker(LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
   using GCNRPTracker::reset;
 
-  /// reset tracker at the specified slot index \p SI.
-  void reset(const MachineRegisterInfo &MRI, SlotIndex SI) {
-    GCNRPTracker::reset(MRI, llvm::getLiveRegs(SI, LIS, MRI));
-  }
-
-  /// reset tracker to the end of the \p MBB.
-  void reset(const MachineBasicBlock &MBB) {
-    SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
-    reset(MBB.getParent()->getRegInfo(), MBBLastSlot);
-  }
-
-  /// reset tracker to the point just after \p MI (in program order).
-  void reset(const MachineInstr &MI) {
-    reset(MI.getMF()->getRegInfo(), LIS.getInstructionIndex(MI).getDeadSlot());
-  }
+  /// Resets tracker to the point just after \p MI (in program order), which can
+  /// be a debug instruction.
+  void reset(const MachineInstr &MI) { reset(MI, /*After=*/true); }
 
   /// Move to the state of RP just before the \p MI . If \p UseInternalIterator
   /// is set, also update the internal iterators. Setting \p UseInternalIterator
@@ -389,10 +377,6 @@ public:
   /// \p returns whether the tracker's state after receding MI corresponds
   /// to reported by LIS.
   bool isValid() const;
-
-  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
-
-  void resetMaxPressure() { MaxPressure = CurPressure; }
 
   GCNRegPressure getMaxPressureAndReset() {
     GCNRegPressure RP = MaxPressure;
@@ -410,8 +394,13 @@ class GCNDownwardRPTracker : public GCNRPTracker {
 
   MachineBasicBlock::const_iterator MBBEnd;
 
+  /// Drop the lanes of \p Reg that are no longer live at \p SI, decreasing
+  /// CurPressure accordingly. \p Reg must be a virtual register that is
+  /// currently tracked as live.
+  void retireVirtReg(Register Reg, SlotIndex SI);
+
 public:
-  GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNDownwardRPTracker(LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
   using GCNRPTracker::reset;
 
@@ -424,10 +413,12 @@ public:
     return Res;
   }
 
-  /// Reset tracker to the point before the \p MI
-  /// filling \p LiveRegs upon this point using LIS.
-  /// \p returns false if block is empty except debug values.
-  bool reset(const MachineInstr &MI, const LiveRegSet *LiveRegs = nullptr);
+  /// Reset tracker to the point before the \p MI filling \p LiveRegs upon this
+  /// point using LIS. \p End must be between the MI and the end of its parent
+  /// block (inclusive). \p returns false if the range [MI, End) is empty except
+  /// debug values.
+  bool reset(const MachineInstr &MI, MachineBasicBlock::const_iterator End,
+             const LiveRegSet *LiveRegs = nullptr);
 
   /// Move to the state right before the next MI or after the end of MBB.
   /// \p returns false if reached end of the block.
@@ -458,10 +449,15 @@ public:
   /// \p MI and use LIS for RP calculations.
   bool advance(MachineInstr *MI = nullptr, bool UseInternalIterator = true);
 
-  /// Advance instructions until before \p End.
+  /// Advance instructions until before \p End using internal iterators to
+  /// process instructions in program order. Returns whether iterators actually
+  /// had to advance to reach \p End.
   bool advance(MachineBasicBlock::const_iterator End);
 
-  /// Reset to \p Begin and advance to \p End.
+  /// Reset tracker to \p Begin (filling \p LiveRegs upon this point using LIS)
+  /// and advance to \p End, which must be between \p Begin and the end of its
+  /// parent block (inclusive). \p returns false if the range [Begin, End) is
+  /// empty except debug values.
   bool advance(MachineBasicBlock::const_iterator Begin,
                MachineBasicBlock::const_iterator End,
                const LiveRegSet *LiveRegsCopy = nullptr);
@@ -584,6 +580,18 @@ LLVM_ABI void dumpMaxRegPressure(MachineFunction &MF,
                                  GCNRegPressure::RegKind Kind,
                                  LiveIntervals &LIS,
                                  const MachineLoopInfo *MLI);
+
+/// Estimate VGPR pressure using greedy, non-splitting register allocation
+/// simulation, accounting for live interval interference.
+/// \param RegionBegin Start iterator of the region
+/// \param RegionEnd End iterator of the region
+/// \param LiveIns Live-in registers for the region
+/// \returns estimated VGPR pressure
+unsigned estimateGreedyVGPRPressure(
+    MachineBasicBlock::const_iterator RegionBegin,
+    MachineBasicBlock::const_iterator RegionEnd,
+    const GCNRPTracker::LiveRegSet &LiveIns, const LiveIntervals &LIS,
+    const MachineRegisterInfo &MRI, const SIRegisterInfo &TRI);
 
 } // end namespace llvm
 

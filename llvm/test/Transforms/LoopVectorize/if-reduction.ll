@@ -26,7 +26,7 @@ define float @fcmp_0_fadd_select1(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[ZEXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ZEXT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -70,11 +70,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %header, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
@@ -86,7 +86,7 @@ for.body:                                         ; preds = %header, %for.body
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret float %1
 }
@@ -114,7 +114,7 @@ define double @fcmp_0_fadd_select2(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[ZEXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ZEXT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -158,11 +158,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %header, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
@@ -174,7 +174,7 @@ for.body:                                         ; preds = %header, %for.body
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret double %1
 }
@@ -203,7 +203,7 @@ define float @fcmp_val_fadd_select1(ptr noalias %x, float %y, i32 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[ZEXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ZEXT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[Y]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
@@ -249,11 +249,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %header, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
@@ -265,7 +265,7 @@ for.body:                                         ; preds = %header, %for.body
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret float %1
 }
@@ -294,7 +294,7 @@ define double @fcmp_val_fadd_select2(ptr noalias %x, double %y, i32 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[ZEXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ZEXT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[Y]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
@@ -340,11 +340,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %header, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
@@ -356,7 +356,7 @@ for.body:                                         ; preds = %header, %for.body
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret double %1
 }
@@ -386,7 +386,7 @@ define float @fcmp_array_elm_fadd_select1(ptr noalias %x, ptr noalias %y, i32 %N
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[ZEXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ZEXT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -434,11 +434,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.header
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx.1 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
@@ -452,7 +452,7 @@ for.body:                                         ; preds = %for.body, %for.head
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %2 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret float %2
 }
@@ -482,7 +482,7 @@ define double @fcmp_array_elm_fadd_select2(ptr noalias %x, ptr noalias %y, i32 %
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[ZEXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ZEXT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -530,11 +530,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.header
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx.1 = getelementptr inbounds double, ptr %x, i64 %indvars.iv
@@ -548,7 +548,7 @@ for.body:                                         ; preds = %for.body, %for.head
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %2 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret double %2
 }
@@ -576,7 +576,7 @@ define float @fcmp_0_fsub_select1(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[ZEXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ZEXT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -620,11 +620,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.header
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
@@ -636,7 +636,7 @@ for.body:                                         ; preds = %for.body, %for.head
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret float %1
 }
@@ -682,11 +682,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.header
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
@@ -698,7 +698,7 @@ for.body:                                         ; preds = %for.body, %for.head
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret float %1
 }
@@ -726,7 +726,7 @@ define double @fcmp_0_fsub_select2(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[ZEXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ZEXT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -770,11 +770,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.header
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
@@ -786,7 +786,7 @@ for.body:                                         ; preds = %for.body, %for.head
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret double %1
 }
@@ -833,11 +833,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.header
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
@@ -849,7 +849,7 @@ for.body:                                         ; preds = %for.body, %for.head
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret double %1
 }
@@ -877,7 +877,7 @@ define float @fcmp_0_fmult_select1(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[ZEXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ZEXT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -921,11 +921,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.header
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
@@ -937,7 +937,7 @@ for.body:                                         ; preds = %for.body, %for.head
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret float %1
 }
@@ -984,11 +984,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.header
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
@@ -1000,7 +1000,7 @@ for.body:                                         ; preds = %for.body, %for.head
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret float %1
 }
@@ -1028,7 +1028,7 @@ define double @fcmp_0_fmult_select2(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[ZEXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ZEXT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1072,11 +1072,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.header
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
@@ -1088,7 +1088,7 @@ for.body:                                         ; preds = %for.body, %for.head
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret double %1
 }
@@ -1135,11 +1135,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.header
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
@@ -1151,7 +1151,7 @@ for.body:                                         ; preds = %for.body, %for.head
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
   ret double %1
 }
@@ -1184,7 +1184,7 @@ define float @fcmp_multi(ptr nocapture %a, i32 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1244,11 +1244,11 @@ entry:
   %cmp10 = icmp sgt i32 %n, 0
   br i1 %cmp10, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
   %sum.011 = phi float [ 0.000000e+00, %for.body.preheader ], [ %sum.1, %for.inc ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
@@ -1256,26 +1256,26 @@ for.body:                                         ; preds = %for.inc, %for.body.
   %cmp1 = fcmp ogt float %0, 1.000000e+00
   br i1 %cmp1, label %for.inc, label %if.else
 
-if.else:                                          ; preds = %for.body
+if.else:
   %cmp8 = fcmp olt float %0, 3.000000e+00
   br i1 %cmp8, label %if.then10, label %if.else14
 
-if.then10:                                        ; preds = %if.else
+if.then10:
   %mul = fmul fast float %0, 2.000000e+00
   br label %for.inc
 
-if.else14:                                        ; preds = %if.else
+if.else14:
   %mul17 = fmul fast float %0, 3.000000e+00
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.else14, %if.then10
+for.inc:
   %.pn = phi float [ %mul, %if.then10 ], [ %mul17, %if.else14 ], [ %0, %for.body ]
   %sum.1 = fadd fast float %.pn, %sum.011
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc, %entry
+for.end:
   %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %sum.1, %for.inc ]
   ret float %sum.0.lcssa
 }
@@ -1306,7 +1306,7 @@ define float @fcmp_fadd_fsub(ptr nocapture %a, i32 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1364,11 +1364,11 @@ entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
   %sum.010 = phi float [ 0.000000e+00, %for.body.preheader ], [ %sum.1, %for.inc ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
@@ -1376,25 +1376,25 @@ for.body:                                         ; preds = %for.inc, %for.body.
   %cmp1 = fcmp ogt float %0, 1.000000e+00
   br i1 %cmp1, label %if.then, label %if.else
 
-if.then:                                          ; preds = %for.body
+if.then:
   %add = fadd fast float %0, %sum.010
   br label %for.inc
 
-if.else:                                          ; preds = %for.body
+if.else:
   %cmp8 = fcmp olt float %0, 3.000000e+00
   br i1 %cmp8, label %if.then10, label %for.inc
 
-if.then10:                                        ; preds = %if.else
+if.then10:
   %sub = fsub fast float %sum.010, %0
   br label %for.inc
 
-for.inc:                                          ; preds = %if.then, %if.then10, %if.else
+for.inc:
   %sum.1 = phi float [ %add, %if.then ], [ %sub, %if.then10 ], [ %sum.010, %if.else ]
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc, %entry
+for.end:
   %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %sum.1, %for.inc ]
   ret float %sum.0.lcssa
 }
@@ -1455,11 +1455,11 @@ entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.inc, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
   %sum.010 = phi float [ 0.000000e+00, %for.body.preheader ], [ %sum.1, %for.inc ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
@@ -1467,25 +1467,25 @@ for.body:                                         ; preds = %for.inc, %for.body.
   %cmp1 = fcmp ogt float %0, 1.000000e+00
   br i1 %cmp1, label %if.then, label %if.else
 
-if.then:                                          ; preds = %for.body
+if.then:
   %add = fadd fast float %0, %sum.010
   br label %for.inc
 
-if.else:                                          ; preds = %for.body
+if.else:
   %cmp8 = fcmp olt float %0, 3.000000e+00
   br i1 %cmp8, label %if.then10, label %for.inc
 
-if.then10:                                        ; preds = %if.else
+if.then10:
   %mul = fmul fast float %0, %sum.010
   br label %for.inc
 
-for.inc:                                          ; preds = %if.then, %if.then10, %if.else
+for.inc:
   %sum.1 = phi float [ %add, %if.then ], [ %mul, %if.then10 ], [ %sum.010, %if.else ]
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.inc, %entry
+for.end:
   %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %sum.1, %for.inc ]
   ret float %sum.0.lcssa
 }
@@ -1533,11 +1533,11 @@ entry:
   %cmp7 = icmp sgt i32 %LEN, 0
   br i1 %cmp7, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %LEN to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %sum.08 = phi float [ 0.000000e+00, %for.body.preheader ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
@@ -1548,7 +1548,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %add, %for.body ]
   ret float %sum.0.lcssa
 }
@@ -1563,7 +1563,7 @@ define i64 @fcmp_0_add_select2(ptr noalias %x, i64 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1607,10 +1607,10 @@ entry:
   %cmp.1 = icmp sgt i64 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   br label %for.body
 
-for.body:                                         ; preds = %header, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi i64 [ 0, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
@@ -1622,7 +1622,7 @@ for.body:                                         ; preds = %header, %for.body
   %exitcond = icmp eq i64 %indvars.iv.next, %N
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi i64 [ 0, %entry ], [ %sum.2, %for.body ]
   ret i64 %1
 }
@@ -1636,10 +1636,10 @@ define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_HEADER]]:
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[ZEXT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i64 0, [[ZEXT]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i64 0, [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1685,11 +1685,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %header, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi i32 [ 0, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
@@ -1701,7 +1701,7 @@ for.body:                                         ; preds = %header, %for.body
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi i32 [ 0, %entry ], [ %sum.2, %for.body ]
   ret i32 %1
 }
@@ -1717,7 +1717,7 @@ define i32 @fcmp_0_mult_select1(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[ZEXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ZEXT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1761,11 +1761,11 @@ entry:
   %cmp.1 = icmp sgt i32 %N, 0
   br i1 %cmp.1, label %for.header, label %for.end
 
-for.header:                                       ; preds = %entry
+for.header:
   %zext = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.header
+for.body:
   %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
   %sum.1 = phi i32 [ 0, %for.header ], [ %sum.2, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
@@ -1777,7 +1777,7 @@ for.body:                                         ; preds = %for.body, %for.head
   %exitcond = icmp eq i64 %indvars.iv.next, %zext
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %1 = phi i32 [ 0, %entry ], [ %sum.2, %for.body ]
   ret i32 %1
 }

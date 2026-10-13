@@ -342,8 +342,8 @@ subroutine valid_multi_branch(x)
   result = (x > 20 ? 1 : x > 15 ? 2 : x > 10 ? 3 : x > 5 ? 4 : 5)
 end subroutine
 
-! Error: polymorphic types not yet supported
-subroutine error_polymorphic(flag)
+! Valid: polymorphic types
+subroutine valid_polymorphic(flag)
   type :: base_t
     integer :: i
   end type
@@ -351,8 +351,16 @@ subroutine error_polymorphic(flag)
   logical :: flag
   class(base_t), allocatable :: poly1, poly2, result
 
-  !ERROR: not yet implemented: Conditional expressions with polymorphic types (CLASS) are not yet supported
   result = (flag ? poly1 : poly2)
+end subroutine
+
+! Error: unlimited polymorphic (CLASS(*)) not allowed
+subroutine error_unlimited_polymorphic(flag)
+  logical :: flag
+  class(*), allocatable :: star1, star2, result
+
+  !ERROR: Unlimited polymorphic types (CLASS(*)) not allowed in conditional expression
+  result = (flag ? star1 : star2)
 end subroutine
 
 ! Error: mismatched character kinds

@@ -147,6 +147,32 @@ void check__hlt() {
 // CHECK-MSVC: call void @llvm.aarch64.hlt(i32 0)
 // CHECK-LINUX: error: call to undeclared function '__hlt'
 
+unsigned int check__hvc(unsigned int a, unsigned int b) {
+  __hvc(0);
+  return __hvc(1, a, b);
+}
+
+// CHECK-MSVC-LABEL: define {{.*}} i32 @check__hvc(
+// CHECK-MSVC: call i64 @llvm.aarch64.hvc(i32 0, i64 poison, i64 poison, i64 poison, i64 poison)
+// CHECK-MSVC: [[HVC_A:%.*]] = zext i32 {{.*}} to i64
+// CHECK-MSVC: [[HVC_B:%.*]] = zext i32 {{.*}} to i64
+// CHECK-MSVC: [[HVC_R:%.*]] = call i64 @llvm.aarch64.hvc(i32 1, i64 [[HVC_A]], i64 [[HVC_B]], i64 poison, i64 poison)
+// CHECK-MSVC: trunc i64 [[HVC_R]] to i32
+// CHECK-LINUX: error: call to undeclared function '__hvc'
+
+unsigned int check__svc(unsigned int a, unsigned int b) {
+  __svc(0);
+  return __svc(1, a, b);
+}
+
+// CHECK-MSVC-LABEL: define {{.*}} i32 @check__svc(
+// CHECK-MSVC: call i64 @llvm.aarch64.svc(i32 0, i64 poison, i64 poison, i64 poison, i64 poison)
+// CHECK-MSVC: [[SVC_A:%.*]] = zext i32 {{.*}} to i64
+// CHECK-MSVC: [[SVC_B:%.*]] = zext i32 {{.*}} to i64
+// CHECK-MSVC: [[SVC_R:%.*]] = call i64 @llvm.aarch64.svc(i32 1, i64 [[SVC_A]], i64 [[SVC_B]], i64 poison, i64 poison)
+// CHECK-MSVC: trunc i64 [[SVC_R]] to i32
+// CHECK-LINUX: error: call to undeclared function '__svc'
+
 unsigned __int64 check__getReg(void) {
   unsigned volatile __int64 reg;
   reg = __getReg(18);
@@ -154,8 +180,48 @@ unsigned __int64 check__getReg(void) {
   return reg;
 }
 
-// CHECK-MSCOMPAT: call i64 @llvm.read_register.i64(metadata ![[MD2:.*]])
-// CHECK-MSCOMPAT: call i64 @llvm.read_register.i64(metadata ![[MD3:.*]])
+// CHECK-MSCOMPAT: call i64 @llvm.read_volatile_register.i64(metadata ![[MD2:.*]])
+// CHECK-MSCOMPAT: call i64 @llvm.read_volatile_register.i64(metadata ![[MD3:.*]])
+
+void test__setReg(unsigned __int64 v)
+{
+  __setReg(18, v);
+  __setReg(31, v);
+}
+
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @test__setReg(i64{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT: %[[DATA_ADDR1:.*]] = load i64, ptr %v.addr, align 8
+// CHECK-MSCOMPAT: call void @llvm.write_volatile_register.i64(metadata ![[MD2]], i64 %[[DATA_ADDR1]])
+// CHECK-MSCOMPAT: %[[DATA_ADDR2:.*]] = load i64, ptr %v.addr, align 8
+// CHECK-MSCOMPAT: call void @llvm.write_volatile_register.i64(metadata ![[MD3]], i64 %[[DATA_ADDR2]])
+// CHECK-LINUX: error: call to undeclared function '__setReg'
+
+double test__getRegFp(void)
+{
+  double volatile reg;
+  reg = __getRegFp(5);
+  reg = __getRegFp(31);
+  return reg;
+}
+
+// CHECK-MSCOMPAT-LABEL: define{{.*}}double @test__getRegFp(){{.*}}{
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata ![[MD4:.*]])
+// CHECK-MSCOMPAT:       bitcast i64 [[BITS]] to double
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata ![[MD5:.*]])
+// CHECK-MSCOMPAT:       bitcast i64 [[BITS]] to double
+// CHECK-LINUX: error: call to undeclared function '__getRegFp'
+
+void test__setRegFp(double v)
+{
+  __setRegFp(5, v);
+  __setRegFp(31, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @test__setRegFp(double{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = bitcast double {{.*}} to i64
+// CHECK-MSCOMPAT:       call void @llvm.write_volatile_register.i64(metadata ![[MD4:.*]], i64 [[BITS]])
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = bitcast double {{.*}} to i64
+// CHECK-MSCOMPAT:       call void @llvm.write_volatile_register.i64(metadata ![[MD5:.*]], i64 [[BITS]])
+// CHECK-LINUX: error: call to undeclared function '__setRegFp'
 
 #ifdef __LP64__
 #define LONG __int32
@@ -584,6 +650,29 @@ unsigned int check_CountOneBits64(unsigned __int64 arg1) {
 // CHECK-MSCOMPAT: ret i32 %[[VAR2]]
 // CHECK-LINUX: error: call to undeclared function '_CountOneBits64'
 
+unsigned int check_CountTrailingZeros(unsigned LONG arg1) {
+  return _CountTrailingZeros(arg1);
+}
+
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i32, align 4
+// CHECK-MSCOMPAT: store i32 %[[ARG1]], ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i32, ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = call i32 @llvm.cttz.i32(i32 %[[VAR0]], i1 false)
+// CHECK-MSCOMPAT: ret i32 %[[VAR1]]
+// CHECK-LINUX: error: call to undeclared function '_CountTrailingZeros'
+
+unsigned int check_CountTrailingZeros64(unsigned __int64 arg1) {
+  return _CountTrailingZeros64(arg1);
+}
+
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i64, align 8
+// CHECK-MSCOMPAT: store i64 %[[ARG1]], ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i64, ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = call i64 @llvm.cttz.i64(i64 %[[VAR0]], i1 false)
+// CHECK-MSCOMPAT: %[[VAR2:.*]] = trunc i64 %[[VAR1]] to i32
+// CHECK-MSCOMPAT: ret i32 %[[VAR2]]
+// CHECK-LINUX: error: call to undeclared function '_CountTrailingZeros64'
+
 void check__prefetch(void *arg1) {
   return __prefetch(arg1);
 }
@@ -594,6 +683,18 @@ void check__prefetch(void *arg1) {
 // CHECK-MSCOMPAT: call void @llvm.prefetch.p0(ptr %[[VAR0]], i32 0, i32 3, i32 1)
 // CHECK-MSCOMPAT: ret void
 
+void check__prefetch2(void *arg1) {
+  __prefetch2(arg1, 0x00);
+  __prefetch2(arg1, 0x13);
+}
+
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @check__prefetch2(ptr{{.*}}%arg1){{.*}}{
+// CHECK-MSCOMPAT: call void @llvm.aarch64.prefetch(ptr %{{.*}}, i32 0, i32 0, i32 0, i32 1)
+// CHECK-MSCOMPAT: call void @llvm.aarch64.prefetch(ptr %{{.*}}, i32 1, i32 1, i32 1, i32 1)
+// CHECK-LINUX: error: call to undeclared function '__prefetch2'
+
 
 // CHECK-MSCOMPAT: ![[MD2]] = !{!"x18"}
 // CHECK-MSCOMPAT: ![[MD3]] = !{!"sp"}
+// CHECK-MSCOMPAT: ![[MD4]] = !{!"d5"}
+// CHECK-MSCOMPAT: ![[MD5]] = !{!"d31"}

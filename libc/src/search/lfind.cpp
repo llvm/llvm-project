@@ -10,7 +10,7 @@
 #include "src/__support/CPP/cstddef.h" // cpp::byte
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/memory_size.h"
+#include "src/__support/math_extras.h"
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void *, lfind,
@@ -21,7 +21,7 @@ LLVM_LIBC_FUNCTION(void *, lfind,
     return nullptr;
 
   size_t byte_len = 0;
-  if (internal::mul_overflow(*nmemb, size, &byte_len))
+  if (mul_overflow(*nmemb, size, byte_len))
     return nullptr;
 
   const cpp::byte *next = reinterpret_cast<const cpp::byte *>(base);

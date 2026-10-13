@@ -132,9 +132,8 @@ define <3 x i64> @or_setcc_i16_i32_sel_i64(<3 x i16> %a, <3 x i16> %b, <3 x i32>
 ; CHECK-NEXT:    bit.16b v2, v6, v1
 ; CHECK-NEXT:    bsl.16b v0, v4, v7
 ; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q2
-; CHECK-NEXT:    ext.16b v1, v0, v0, #8
+; CHECK-NEXT:    mov d1, v0[1]
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    ret
   %cmp0 = icmp sgt <3 x i16> %a, %b
   %cmp1 = icmp sgt <3 x i32> %c, %d
@@ -161,9 +160,8 @@ define <3 x i64> @and_setcc_i32_i32_sel_i64(<3 x i32> %a, <3 x i32> %b, <3 x i32
 ; CHECK-NEXT:    bit.16b v2, v6, v1
 ; CHECK-NEXT:    bsl.16b v0, v4, v7
 ; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q2
-; CHECK-NEXT:    ext.16b v1, v0, v0, #8
+; CHECK-NEXT:    mov d1, v0[1]
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    ret
   %cmp0 = icmp sgt <3 x i32> %a, %b
   %cmp1 = icmp sgt <3 x i32> %c, %d
@@ -191,9 +189,8 @@ define <3 x i64> @or_setcc_i16_i16_sel_i64(<3 x i16> %a, <3 x i16> %b, <3 x i16>
 ; CHECK-NEXT:    bit.16b v2, v6, v1
 ; CHECK-NEXT:    bsl.16b v0, v4, v7
 ; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q2
-; CHECK-NEXT:    ext.16b v1, v0, v0, #8
+; CHECK-NEXT:    mov d1, v0[1]
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    ret
   %cmp0 = icmp sgt <3 x i16> %a, %b
   %cmp1 = icmp sgt <3 x i16> %c, %d

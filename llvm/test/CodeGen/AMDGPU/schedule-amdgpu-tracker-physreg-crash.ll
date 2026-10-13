@@ -1,5 +1,5 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack -amdgpu-use-amdgpu-trackers=1  2>&1  < %s | FileCheck -check-prefixes=ERR-GCNTRACKERS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack 2>&1  < %s | FileCheck -check-prefixes=GCN %s
+; RUN: not --crash llc -mtriple=amdgpu9.00-amd-amdhsa --amdgpu-xnack=true -amdgpu-use-amdgpu-trackers=1 -verify-machineinstrs  2>&1  < %s | FileCheck -check-prefixes=ERR-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa --amdgpu-xnack=true 2>&1  < %s | FileCheck -check-prefixes=GCN %s
 
 %asm.output = type { <16 x i32>, <16 x i32>, <16 x i32>, <8 x i32>, <2 x i32>, i32, ; sgprs
                      <16 x i32>, <7 x i32>, ; vgprs
@@ -16,7 +16,10 @@
                      i64 ; vcc
                      }
 
-; ERR-GCNTRACKERS: ran out of registers during register allocation
+; With the tracker enabled, no separate WWM VGPR is available and the SGPR
+; spill falls back to memory. This case cannot preserve EXEC because SCC is
+; live and no SGPR can be scavenged.
+; ERR-GCNTRACKERS: unhandled SGPR spill to memory
 ; GCN-NOT: ran out of registers during register allocation
 
 ; FIXME: GCN Trackers do not track pressure from PhysRegs, so scheduling is actually worse
@@ -62,4 +65,3 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 
 attributes #0 = { nounwind alignstack=64 "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="10,10" "no-realign-stack" }
 attributes #1 = { nounwind alignstack=16 "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="10,10" "no-realign-stack" }
-

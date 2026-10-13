@@ -69,3 +69,25 @@ __attribute__((section("non_trivial_ctor"))) const t1 v1; // expected-note {{dec
 extern const t1 v2;
 __attribute__((section("non_trivial_ctor"))) const t1 v2{3}; // expected-error {{'v2' causes a section type conflict with 'v1'}}
 } // namespace non_trivial_ctor
+
+// Check that a section conflict with a decl whose name is not a simple
+// identifier (here, a lambda's call operator) is diagnosed without crashing.
+namespace GH192264 {
+auto lambda = [](int val) __attribute__((section("lambda_op"))) { return val; }; // expected-note {{declared here}}
+__attribute__((section("lambda_op"))) int i{}; // expected-error {{'i' causes a section type conflict with 'operator()'}}
+} // namespace GH192264
+
+// Check that a section conflict with a decl whose name is not a simple
+// identifier (here, a lambda's call operator) is diagnosed without crashing.
+namespace lambda_call_operator_pragma {
+auto lambda = [](int val) __attribute__((section("lambda_op_pragma"))) { return val; }; // expected-note {{declared here}}
+#pragma clang section bss="lambda_op_pragma" // expected-error {{this causes a section type conflict with 'operator()'}}
+#pragma clang section bss=""
+} // namespace lambda_call_operator_pragma
+
+namespace GH192264_original {
+struct S {};
+using F = decltype([](auto val) // expected-note {{declared here}}
+__attribute__((section("gh192264"))) const S s{}; // expected-error {{expected body of lambda expression}}
+__attribute__((section("gh192264"))) int i{}; // expected-error {{'i' causes a section type conflict with 'operator()'}}
+} // namespace GH192264_original

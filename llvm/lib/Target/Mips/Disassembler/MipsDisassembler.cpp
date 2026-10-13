@@ -339,21 +339,6 @@ static DecodeStatus DecodeINSVE_DF(MCInst &MI, InsnType insn, uint64_t Address,
 }
 
 template <typename InsnType>
-static DecodeStatus DecodeDAHIDATIMMR6(MCInst &MI, InsnType insn,
-                                       uint64_t Address,
-                                       const MCDisassembler *Decoder) {
-  InsnType Rs = fieldFromInstruction(insn, 16, 5);
-  InsnType Imm = fieldFromInstruction(insn, 0, 16);
-  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR64RegClassID,
-                                       Rs)));
-  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR64RegClassID,
-                                       Rs)));
-  MI.addOperand(MCOperand::createImm(Imm));
-
-  return MCDisassembler::Success;
-}
-
-template <typename InsnType>
 static DecodeStatus DecodeDAHIDATI(MCInst &MI, InsnType insn, uint64_t Address,
                                    const MCDisassembler *Decoder) {
   InsnType Rs = fieldFromInstruction(insn, 21, 5);
@@ -1006,28 +991,6 @@ static DecodeStatus DecodeFCCRegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 7)
     return MCDisassembler::Fail;
   MCRegister Reg = getReg(Decoder, Mips::FCCRegClassID, RegNo);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeFGR32CCRegisterClass(MCInst &Inst, unsigned RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  if (RegNo > 31)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = getReg(Decoder, Mips::FGR32CCRegClassID, RegNo);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeFGR64CCRegisterClass(MCInst &Inst, unsigned RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  if (RegNo > 31)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = getReg(Decoder, Mips::FGR64CCRegClassID, RegNo);
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }

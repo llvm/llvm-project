@@ -322,7 +322,7 @@ DecodeStatus SparcDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                                uint64_t Address,
                                                raw_ostream &CStream) const {
   uint32_t Insn;
-  bool isLittleEndian = getContext().getAsmInfo()->isLittleEndian();
+  bool isLittleEndian = getContext().getAsmInfo().isLittleEndian();
   DecodeStatus Result =
       readInstruction32(Bytes, Address, Size, Insn, isLittleEndian);
   if (Result == MCDisassembler::Fail)

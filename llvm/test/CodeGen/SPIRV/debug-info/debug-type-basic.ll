@@ -1,45 +1,26 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
-; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-MIR-DAG: [[type_void:%[0-9]+\:type]] = OpTypeVoid
-; CHECK-MIR-DAG: [[type_i32:%[0-9]+\:type]] = OpTypeInt 32, 0
-; CHECK-MIR-DAG: [[encoding_signedchar:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 5
-; CHECK-MIR-DAG: [[encoding_float:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 3
-; CHECK-MIR-DAG: [[flag_zero:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 0
-; CHECK-MIR-DAG: [[str_bool:%[0-9]+\:id\(s32\)]] = OpString 1819242338, 0
-; CHECK-MIR-DAG: [[size_8bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 8
-; CHECK-MIR-DAG: [[encoding_boolean:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 2
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_bool]], [[size_8bits]], [[encoding_boolean]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_int:%[0-9]+\:id\(s32\)]] = OpString 7630441
-; CHECK-MIR-DAG: [[size_32bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 32
-; CHECK-MIR-DAG: [[encoding_signed:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 4
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_int]], [[size_32bits]], [[encoding_signed]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_short:%[0-9]+\:id\(s32\)]] = OpString 1919903859, 116
-; CHECK-MIR-DAG: [[size_16bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 16
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_short]], [[size_16bits]], [[encoding_signed]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_char:%[0-9]+\:id\(s32\)]] = OpString 1918986339, 0
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_char]], [[size_8bits]], [[encoding_signedchar]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_long:%[0-9]+\:id\(s32\)]] = OpString 1735290732, 0
-; CHECK-MIR-DAG: [[size_64bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 64
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_long]], [[size_64bits]], [[encoding_signed]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_uint:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1953392928, 0
-; CHECK-MIR-DAG: [[encoding_unsigned:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 6
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_uint]], [[size_32bits]], [[encoding_unsigned]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_ushort:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1869116192, 29810
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_ushort]], [[size_16bits]], [[encoding_unsigned]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_uchar:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1634231072, 114
-; CHECK-MIR-DAG: [[encoding_unsignedchar:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 7
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_uchar]], [[size_8bits]], [[encoding_unsignedchar]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_ulong:%[0-9]+\:id\(s32\)]] = OpString 1769172597, 1684368999, 1852795936, 103
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_ulong]], [[size_64bits]], [[encoding_unsigned]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_float:%[0-9]+\:id\(s32\)]] = OpString 1634692198, 116
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_float]], [[size_32bits]], [[encoding_float]], [[flag_zero]]
-; CHECK-MIR-DAG: [[str_double:%[0-9]+\:id\(s32\)]] = OpString 1651863396, 25964
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_double]], [[size_64bits]], [[encoding_float]], [[flag_zero]]
+; The old SPIRVEmitNonSemanticDI MachineFunctionPass emitted DebugTypeBasic
+; instructions as MachineInstructions, which were tested via
+; --print-after=spirv-nonsemantic-debug-info (CHECK-MIR prefix).
+; SPIRVNonSemanticDebugHandler replaces that pass. It emits NSDI instructions
+; directly as MCInsts at print time, with no MIR representation. CHECK-SPIRV
+; tests the same instructions at the SPIR-V text output level.
 
+; All CHECK-SPIRV-DAG directives form a single group anchored at OpExtInstImport.
+; OpTypeVoid and OpTypeInt 32 0 are emitted before the OpString/OpExtInst block,
+; so they must be in the same group as the string and DebugTypeBasic checks rather
+; than after a NOT fence (which would advance the scan position past them).
 ; CHECK-SPIRV: [[ext_inst_non_semantic:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+; CHECK-SPIRV-DAG: [[type_void:%[0-9]+]] = OpTypeVoid
+; CHECK-SPIRV-DAG: [[type_float64:%[0-9]+]] = OpTypeFloat 64
+; CHECK-SPIRV-DAG: [[type_float32:%[0-9]+]] = OpTypeFloat 32
+; CHECK-SPIRV-DAG: [[type_int64:%[0-9]+]] = OpTypeInt 64 0
+; CHECK-SPIRV-DAG: [[type_int8:%[0-9]+]] = OpTypeInt 8 0
+; CHECK-SPIRV-DAG: [[type_int16:%[0-9]+]] = OpTypeInt 16 0
+; CHECK-SPIRV-DAG: [[type_int32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: [[str_bool:%[0-9]+]] = OpString "bool"
 ; CHECK-SPIRV-DAG: [[str_int:%[0-9]+]] = OpString "int"
 ; CHECK-SPIRV-DAG: [[str_short:%[0-9]+]] = OpString "short"
@@ -51,15 +32,10 @@
 ; CHECK-SPIRV-DAG: [[str_ulong:%[0-9]+]] = OpString "unsigned long"
 ; CHECK-SPIRV-DAG: [[str_float:%[0-9]+]] = OpString "float"
 ; CHECK-SPIRV-DAG: [[str_double:%[0-9]+]] = OpString "double"
-; CHECK-SPIRV-NOT: ----------------
-; CHECK-SPIRV-DAG: [[type_void:%[0-9]+]] = OpTypeVoid
-; CHECK-SPIRV-DAG: [[type_float64:%[0-9]+]] = OpTypeFloat 64
-; CHECK-SPIRV-DAG: [[type_float32:%[0-9]+]] = OpTypeFloat 32
-; CHECK-SPIRV-DAG: [[type_int64:%[0-9]+]] = OpTypeInt 64 0
-; CHECK-SPIRV-DAG: [[type_int8:%[0-9]+]] = OpTypeInt 8 0
-; CHECK-SPIRV-DAG: [[type_int16:%[0-9]+]] = OpTypeInt 16 0
-; CHECK-SPIRV-DAG: [[type_int32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: [[encoding_signedchar:%[0-9]+]] = OpConstant [[type_int32]] 5{{$}}
+; The Flags operand of DebugTypeBasic is an integer bitmask. OpConstant with an
+; explicit value is the canonical form for integer constants in NSDI, consistent
+; with other NSDI producers such as DXC and glslang. OpConstantNull is not used.
 ; CHECK-SPIRV-DAG: [[flag_zero:%[0-9]+]] = OpConstant [[type_int32]] 0{{$}}
 ; CHECK-SPIRV-DAG: [[encoding_float:%[0-9]+]] = OpConstant [[type_int32]] 3{{$}}
 ; CHECK-SPIRV-DAG: [[size_8bit:%[0-9]+]] = OpConstant [[type_int32]] 8{{$}}

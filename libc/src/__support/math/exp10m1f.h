@@ -104,7 +104,7 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float, N_EXCEPTS_HI>
 
 } // namespace exp10m1f_internal
 
-LIBC_INLINE constexpr float exp10m1f(float x) {
+LIBC_INLINE float exp10m1f(float x) {
   using namespace exp10m1f_internal;
   using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);
@@ -115,9 +115,11 @@ LIBC_INLINE constexpr float exp10m1f(float x) {
   // When x >= log10(2^128), or x is nan
   if (LIBC_UNLIKELY(xbits.is_pos() && x_u >= 0x421a'209bU)) {
     if (xbits.is_finite()) {
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       int rounding = fputil::quick_get_round();
       if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
         return FPBits::max_normal().get_val();
+#endif
 
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_OVERFLOW);
@@ -132,6 +134,15 @@ LIBC_INLINE constexpr float exp10m1f(float x) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     if (auto r = EXP10M1F_EXCEPTS_LO.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
       return r.value();
+#else
+    // Even if we're not checking for the misrounded cases in this interval, we
+    // must still check for -0 as input and return -0 as output, rather than +0
+    // as the code below would compute.
+    //
+    // We might as well check for both zeroes at once, in fact, since it's no
+    // slower.
+    if (LIBC_UNLIKELY(x_abs == 0))
+      return x;
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
     double dx = x;
@@ -155,10 +166,15 @@ LIBC_INLINE constexpr float exp10m1f(float x) {
     if (xbits.is_nan())
       return x;
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    if (x_u == 0xc0f0d2f1)     // x = log10(2^-25)
+      return -0x1.ffff'fep-1f; // -1.0f + 0x1.0p-24f
+#else
     int rounding = fputil::quick_get_round();
     if (rounding == FE_UPWARD || rounding == FE_TOWARDZERO ||
         (rounding == FE_TONEAREST && x_u == 0xc0f0d2f1))
       return -0x1.ffff'fep-1f; // -1.0f + 0x1.0p-24f
+#endif
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_UNDERFLOW);
@@ -184,21 +200,33 @@ LIBC_INLINE constexpr float exp10m1f(float x) {
     case 0x40e00000U: // x = 7.0f
       return 9'999'999.0f;
     case 0x41000000U: { // x = 8.0f
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return 100'000'000.0f;
+#else
       int rounding = fputil::quick_get_round();
       if (rounding == FE_UPWARD || rounding == FE_TONEAREST)
         return 100'000'000.0f;
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       return 99'999'992.0f;
     }
     case 0x41100000U: { // x = 9.0f
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return 1'000'000'000.0f;
+#else
       int rounding = fputil::quick_get_round();
       if (rounding == FE_UPWARD || rounding == FE_TONEAREST)
         return 1'000'000'000.0f;
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       return 999'999'936.0f;
     }
     case 0x41200000U: { // x = 10.0f
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return 10'000'000'000.0f;
+#else
       int rounding = fputil::quick_get_round();
       if (rounding == FE_UPWARD || rounding == FE_TONEAREST)
         return 10'000'000'000.0f;
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       return 9'999'998'976.0f;
     }
     }

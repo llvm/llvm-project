@@ -54,7 +54,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "lib/Utils.h"
+#include "IRUtils/IRUtils.h"
+#include "MIRUtils/MIRUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -130,7 +131,7 @@ static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
 // Embedding-specific options
 static cl::opt<std::string>
     FunctionName("function", cl::desc("Process specific function only"),
-                 cl::value_desc("name"), cl::Optional, cl::init(""),
+                 cl::value_desc("name"), cl::init(""),
                  cl::sub(EmbeddingsSubCmd), cl::cat(CommonCategory));
 
 static cl::opt<EmbeddingLevel>
@@ -207,13 +208,13 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
     if (TheTriple.getTriple().empty())
       TheTriple.setTriple(sys::getDefaultTargetTriple());
 
-    auto TMOrErr = codegen::createTargetMachineForTriple(TheTriple.str());
+    auto TMOrErr = codegen::createTargetMachineForTriple(TheTriple);
     if (!TMOrErr) {
       Err.print(ToolName, errs());
       exit(1); // Match original behavior
     }
     Ctx.TM = std::move(*TMOrErr);
-    return Ctx.TM->createDataLayout().getStringRepresentation();
+    return TheTriple.computeDataLayout();
   };
 
   Ctx.M = MIR->parseIRModule(SetDataLayout);

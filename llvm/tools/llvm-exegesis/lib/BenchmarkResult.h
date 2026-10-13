@@ -18,6 +18,7 @@
 #include "LlvmState.h"
 #include "RegisterValue.h"
 #include "ValidationEvent.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -25,7 +26,6 @@
 #include <limits>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -65,7 +65,7 @@ struct BenchmarkKey {
   std::vector<RegisterValue> RegisterInitialValues;
   // The memory values that can be mapped into the execution context of the
   // snippet.
-  std::unordered_map<std::string, MemoryValue> MemoryValues;
+  StringMap<MemoryValue> MemoryValues;
   // The memory mappings that the snippet can access.
   std::vector<MemoryMapping> MemoryMappings;
   // An opaque configuration, that can be used to separate several benchmarks of
@@ -136,6 +136,9 @@ struct Benchmark {
   static Expected<Benchmark> readYaml(const LLVMState &State,
                                                  MemoryBufferRef Buffer);
 
+  // Deserializes benchmarks from the given Buffer. Entries that fail to parse
+  // (e.g. referencing an unknown opcode from a bitrotted sample) are warned
+  // about and skipped instead of aborting the read of the whole file.
   static Expected<std::vector<Benchmark>>
   readYamls(const LLVMState &State, MemoryBufferRef Buffer);
 

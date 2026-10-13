@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 < %s | FileCheck -check-prefixes=GCN,W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GCN,W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GCN,W64 %s
+; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -check-prefixes=GCN,W64 %s
+; RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize32 < %s | FileCheck -check-prefixes=GCN,W32 %s
+; RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GCN,W64 %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize32 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,W32 %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GCN,W64 %s
 
 ; GCN-LABEL: {{^}}fold_wavefrontsize:
 

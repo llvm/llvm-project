@@ -83,11 +83,21 @@ static Error removeSections(const CommonConfig &Config, Object &Obj) {
   return Obj.removeSections(RemovePred);
 }
 
-static void markSymbols(const CommonConfig &, Object &Obj) {
+static void markSymbols(const CommonConfig &Config, Object &Obj) {
   // Symbols referenced from the indirect symbol table must not be removed.
   for (IndirectSymbolEntry &ISE : Obj.IndirectSymTable.Symbols)
     if (ISE.Symbol)
       (*ISE.Symbol)->Referenced = true;
+
+  // --strip-all removes relocations, so their symbols need not be preserved.
+  if (Config.StripAll)
+    return;
+
+  for (const LoadCommand &LC : Obj.LoadCommands)
+    for (const std::unique_ptr<Section> &Sec : LC.Sections)
+      for (const RelocationInfo &R : Sec->Relocations)
+        if (R.Symbol && *R.Symbol)
+          (*R.Symbol)->Referenced = true;
 }
 
 static void updateAndRemoveSymbols(const CommonConfig &Config,
@@ -157,7 +167,7 @@ static void updateLoadCommandPayloadString(LoadCommand &LC, StringRef S) {
   assert(isLoadCommandWithPayloadString(LC) &&
          "unsupported load command encountered");
 
-  uint32_t NewCmdsize = alignTo(sizeof(LCType) + S.size() + 1, 8);
+  uint32_t NewCmdsize = alignToPowerOf2(sizeof(LCType) + S.size() + 1, 8);
 
   LC.MachOLoadCommand.load_command_data.cmdsize = NewCmdsize;
   LC.Payload.assign(NewCmdsize - sizeof(LCType), 0);
@@ -169,7 +179,8 @@ static LoadCommand buildRPathLoadCommand(StringRef Path) {
   MachO::rpath_command RPathLC;
   RPathLC.cmd = MachO::LC_RPATH;
   RPathLC.path = sizeof(MachO::rpath_command);
-  RPathLC.cmdsize = alignTo(sizeof(MachO::rpath_command) + Path.size() + 1, 8);
+  RPathLC.cmdsize =
+      alignToPowerOf2(sizeof(MachO::rpath_command) + Path.size() + 1, 8);
   LC.MachOLoadCommand.rpath_command_data = RPathLC;
   LC.Payload.assign(RPathLC.cmdsize - sizeof(MachO::rpath_command), 0);
   llvm::copy(Path, LC.Payload.begin());
@@ -351,7 +362,7 @@ static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
   // There's no segment named TargetSegName. Create a new load command and
   // Insert a new section into it.
   LoadCommand &NewSegment =
-      Obj.addSegment(TargetSegName, alignTo(Sec.Size, 16384));
+      Obj.addSegment(TargetSegName, alignToPowerOf2(Sec.Size, 16384));
   NewSegment.Sections.push_back(std::make_unique<Section>(Sec));
   NewSegment.Sections.back()->Addr = *NewSegment.getSegmentVMAddr();
   return Error::success();
@@ -453,8 +464,7 @@ static Error handleArgs(const CommonConfig &Config,
     return createFileError(Config.InputFilename, std::move(E));
 
   // Mark symbols to determine which symbols are still needed.
-  if (Config.StripAll)
-    markSymbols(Config, Obj);
+  markSymbols(Config, Obj);
 
   updateAndRemoveSymbols(Config, MachOConfig, Obj);
 

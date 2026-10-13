@@ -7,11 +7,11 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,DXCHECK,NO_HALF
 
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
+// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,SPVCHECK,NATIVE_HALF
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,SPVCHECK,NO_HALF
 
 // DXCHECK: define hidden [[FN_TYPE:]]noundef i1 @
@@ -60,3 +60,8 @@ bool3 test_isnan_float3(float3 p0) { return isnan(p0); }
 // CHECK: %hlsl.isnan = call <4 x i1> @llvm.[[ICF]].isnan.v4f32
 // CHECK: ret <4 x i1> %hlsl.isnan
 bool4 test_isnan_float4(float4 p0) { return isnan(p0); }
+
+// CHECK: define hidden [[FN_TYPE]]noundef <5 x i1> @
+// CHECK: %hlsl.isnan = call <5 x i1> @llvm.[[ICF]].isnan.v5f32
+// CHECK: ret <5 x i1> %hlsl.isnan
+vector<bool, 5> test_isnan_float5(vector<float, 5> p0) { return isnan(p0); }

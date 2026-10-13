@@ -28,7 +28,6 @@ class InputFile;
 class Symbol;
 
 class Defined;
-struct Partition;
 class SyntheticSection;
 template <class ELFT> class ObjFile;
 class OutputSection;
@@ -78,11 +77,6 @@ public:
 
   StringRef name;
 
-  // The 1-indexed partition that this section is assigned to by the garbage
-  // collector, or 0 if this section is dead. Normally there is only one
-  // partition, so this will either be 0 or 1.
-  elf::Partition &getPartition(Ctx &) const;
-
   // These corresponds to the fields in Elf_Shdr.
   uint64_t flags;
   uint32_t type;
@@ -92,6 +86,7 @@ public:
   uint32_t entsize;
 
   Kind sectionKind;
+  // 0 (dead) or 1 (live).
   uint8_t partition = 1;
 
   // The next two bit fields are only used by InputSectionBase, but we
@@ -108,6 +103,11 @@ public:
   uint64_t getOffset(uint64_t offset) const;
 
   uint64_t getVA(uint64_t offset = 0) const;
+
+  // Translate an offset in relocations to an address. RelocScan::scanEhSection
+  // has already mapped .eh_frame offsets to the merged output section, so they
+  // must not be translated a second time.
+  uint64_t getRelocVA(uint64_t offset) const;
 
   bool isLive() const { return partition != 0; }
   void markLive() { partition = 1; }
@@ -207,11 +207,6 @@ public:
   void drop_back(unsigned num) {
     assert(bytesDropped + num < 256);
     bytesDropped += num;
-  }
-
-  void push_back(uint64_t num) {
-    assert(bytesDropped >= num);
-    bytesDropped -= num;
   }
 
   mutable const uint8_t *content_;

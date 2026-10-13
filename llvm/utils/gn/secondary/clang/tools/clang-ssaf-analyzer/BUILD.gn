@@ -1,0 +1,13 @@
+executable("clang-ssaf-analyzer") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/Basic",
+    "//clang/lib/ScalableStaticAnalysis/Analyses",
+    "//clang/lib/ScalableStaticAnalysis/Core",
+    "//clang/lib/ScalableStaticAnalysis/SourceTransformation",
+    "//clang/lib/ScalableStaticAnalysis/Tool",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "SSAFAnalyzer.cpp" ]
+}

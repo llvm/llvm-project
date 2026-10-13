@@ -15,7 +15,10 @@
 
 #include <stddef.h> // size_t
 
-#if defined(LIBC_TARGET_ARCH_IS_X86)
+#if defined(LIBC_COPT_USE_MEM_BUILTINS)
+#include "src/string/memory_utils/generic/builtin.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_builtin
+#elif defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_memcmp.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_x86
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)

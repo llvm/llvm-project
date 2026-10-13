@@ -57,7 +57,6 @@ struct EDAttr {
   GOFF::ESDBindingAlgorithm BindAlgorithm = GOFF::ESD_BA_Concatenate;
   GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial;
   GOFF::ESDReserveQwords ReservedQwords = GOFF::ESD_RQ_0;
-  GOFF::ESDAlignment Alignment = GOFF::ESD_ALIGN_Doubleword;
   uint8_t FillByteValue = 0;
 };
 
@@ -75,6 +74,7 @@ struct LDAttr {
 struct PRAttr {
   bool IsRenamable = false;
   GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
+  GOFF::ESDBindingStrength BindingStrength = GOFF::ESD_BST_Strong;
   GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink;
   GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified;
   uint32_t SortKey = 0;

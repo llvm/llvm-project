@@ -597,7 +597,7 @@ define <8 x i32> @sabd_8h_bv_imm(<8 x i16> %a) {
 ; CHECK-LABEL: sabd_8h_bv_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x9, #549747425280 // =0x7fff800000
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    adrp x8, .LCPI45_0
 ; CHECK-NEXT:    movk x9, #69, lsl #48
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI45_0]
@@ -619,7 +619,7 @@ define <8 x i32> @sabd_8h_bv_imm(<8 x i16> %a) {
 define <8 x i32> @uabd_8h_bv_imm(<8 x i16> %a) {
 ; CHECK-LABEL: uabd_8h_bv_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    adrp x8, .LCPI46_0
 ; CHECK-NEXT:    adrp x9, .LCPI46_1
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI46_0]

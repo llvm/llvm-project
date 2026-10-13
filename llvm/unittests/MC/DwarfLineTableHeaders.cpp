@@ -70,8 +70,7 @@ public:
   /// Create all data structures necessary to operate an assembler
   StreamerContext createStreamer(raw_pwrite_stream &OS) {
     StreamerContext Res;
-    Res.Ctx = std::make_unique<MCContext>(TT, MAI.get(), MRI.get(),
-                                          /*MSTI=*/nullptr);
+    Res.Ctx = std::make_unique<MCContext>(TT, *MAI, *MRI, *STI);
     Res.MOFI.reset(TheTarget->createMCObjectFileInfo(*Res.Ctx,
                                                      /*PIC=*/false));
     Res.Ctx->setObjectFileInfo(Res.MOFI.get());

@@ -58,7 +58,7 @@ public:
   void Delete();
 };
 
-static FileSpec JoinPath(const FileSpec &path1, const char *path2) {
+static FileSpec JoinPath(const FileSpec &path1, llvm::StringRef path2) {
   FileSpec result_spec(path1);
   result_spec.AppendPathComponent(path2);
   return result_spec;
@@ -194,7 +194,7 @@ Status ModuleCache::Put(const FileSpec &root_dir_spec, const char *hostname,
   const auto module_spec_dir =
       GetModuleDirectory(root_dir_spec, module_spec.GetUUID());
   const auto module_file_path =
-      JoinPath(module_spec_dir, target_file.GetFilename().AsCString(nullptr));
+      JoinPath(module_spec_dir, target_file.GetFilename());
 
   const auto tmp_file_path = tmp_file.GetPath();
   const auto err_code =
@@ -228,8 +228,7 @@ Status ModuleCache::Get(const FileSpec &root_dir_spec, const char *hostname,
   const auto module_spec_dir =
       GetModuleDirectory(root_dir_spec, module_spec.GetUUID());
   const auto module_file_path =
-      JoinPath(module_spec_dir,
-               module_spec.GetFileSpec().GetFilename().AsCString(nullptr));
+      JoinPath(module_spec_dir, module_spec.GetFileSpec().GetFilename());
 
   if (!FileSystem::Instance().Exists(module_file_path))
     return Status::FromErrorStringWithFormat(

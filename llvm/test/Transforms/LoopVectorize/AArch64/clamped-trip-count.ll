@@ -27,7 +27,7 @@ define void @clamped_tc_8(ptr nocapture %dst, i32 %n, i64 %val) vscale_range(1,1
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %p_out_tail.09 = phi ptr [ %dst, %entry ], [ %incdec.ptr, %for.body ]
   %0 = shl nuw nsw i64 %indvars.iv, 3
@@ -39,7 +39,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, 8
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 }
 
@@ -81,13 +81,13 @@ entry:
   %cmp8.not = icmp eq i32 %rem, 0
   br i1 %cmp8.not, label %for.cond.cleanup, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %add = add nuw nsw i32 %rem, 7
   %shr = lshr i32 %add, 3
   %wide.trip.count = zext i32 %shr to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %p_out_tail.09 = phi ptr [ %dst, %for.body.preheader ], [ %incdec.ptr, %for.body ]
   %0 = shl nuw nsw i64 %indvars.iv, 3
@@ -99,6 +99,6 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 }

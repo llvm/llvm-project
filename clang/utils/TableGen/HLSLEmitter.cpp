@@ -329,6 +329,14 @@ static void emitVectorOverload(const OverloadContext &Ctx, StringRef ElemType,
   });
 }
 
+/// Emit a dependent-size vector template overload for the given element type.
+static void emitLongVectorOverload(const OverloadContext &Ctx,
+                                   StringRef ElemType) {
+  emitOverload(Ctx, ElemType, [](StringRef ET) {
+    return ("vector<__detail::enable_if_t<(N > 4), " + ET + ">, N>").str();
+  });
+}
+
 /// Emit a matrix overload for the given element type and matrix dimensions.
 static void emitMatrixOverload(const OverloadContext &Ctx, StringRef ElemType,
                                unsigned Rows, unsigned Cols) {
@@ -459,9 +467,11 @@ static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
                                   ArrayRef<TypeWorkItem> Worklist,
                                   bool EmitScalarOverload,
                                   ArrayRef<int64_t> VectorSizes,
+                                  bool EmitLongVectorOverload,
                                   ArrayRef<const Record *> MatrixDimensions) {
   bool InIfdef = false;
-  for (const TypeWorkItem &Item : Worklist) {
+  for (size_t I = 0, E = Worklist.size(); I != E; ++I) {
+    const TypeWorkItem &Item = Worklist[I];
     if (Item.NeedsIfdefGuard && !InIfdef) {
       OS << "#ifdef __HLSL_ENABLE_16_BIT\n";
       InIfdef = true;
@@ -480,6 +490,11 @@ static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
       EmitAvail();
       emitVectorOverload(Ctx, Item.ElemType, N);
     }
+    if (EmitLongVectorOverload) {
+      OS << "template <int N>\n";
+      EmitAvail();
+      emitLongVectorOverload(Ctx, Item.ElemType);
+    }
     for (const Record *MD : MatrixDimensions) {
       EmitAvail();
       emitMatrixOverload(Ctx, Item.ElemType, MD->getValueAsInt("Rows"),
@@ -487,8 +502,7 @@ static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
     }
 
     if (InIfdef) {
-      bool NextIsUnguarded =
-          (&Item == &Worklist.back()) || !(&Item + 1)->NeedsIfdefGuard;
+      bool NextIsUnguarded = (I + 1 == E) || !Worklist[I + 1].NeedsIfdefGuard;
       if (NextIsUnguarded) {
         OS << "#endif\n";
         InIfdef = false;
@@ -517,6 +531,7 @@ static void emitBuiltinOverloads(raw_ostream &OS, const Record *R) {
                             R->getValueAsListOfDefs("VaryingTypes").empty();
 
   std::vector<int64_t> VectorSizes = R->getValueAsListOfInts("VaryingVecSizes");
+  bool EmitLongVectorOverload = R->getValueAsBit("VaryingLongVector");
   std::vector<const Record *> MatrixDimensions =
       R->getValueAsListOfDefs("VaryingMatDims");
 
@@ -530,7 +545,7 @@ static void emitBuiltinOverloads(raw_ostream &OS, const Record *R) {
   });
 
   emitWorklistOverloads(OS, Ctx, Worklist, EmitScalarOverload, VectorSizes,
-                        MatrixDimensions);
+                        EmitLongVectorOverload, MatrixDimensions);
 }
 
 /// Emit alias overloads for a single HLSLBuiltin record.

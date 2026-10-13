@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Missing some long double math functions.
+// XFAIL: LLVM-LIBC-FIXME
+
 // <complex>
 
 // template<Arithmetic T, Arithmetic U>

@@ -31,6 +31,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <bitset>
 #include <memory>
@@ -206,12 +207,19 @@ protected:
 
   const ARMBaseTargetMachine &TM;
 
+  /// The floating-point ABI in effect for this subtarget.
+  FloatABI::ABIType FloatABIType;
+
+  /// The ABI in effect.
+  const ARM::ARMABI ABI;
+
 public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
   ///
   ARMSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
                const ARMBaseTargetMachine &TM, bool IsLittle,
+               FloatABI::ABIType FloatABI, ARM::ARMABI ABI,
                bool MinSize = false, DenormalMode DM = DenormalMode::getIEEE());
 
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
@@ -366,6 +374,18 @@ public:
   }
   /// @}
 
+  /// Returns the floating-point ABI in effect for this subtarget.
+  FloatABI::ABIType getFloatABI() const { return FloatABIType; }
+
+  /// Returns true if the subtarget uses the hard floating-point ABI.
+  bool isTargetHardFloat() const { return FloatABIType == FloatABI::Hard; }
+
+  bool isAPCS_ABI() const { return ABI == ARM::ARM_ABI_APCS; }
+  bool isAAPCS_ABI() const {
+    return ABI == ARM::ARM_ABI_AAPCS || ABI == ARM::ARM_ABI_AAPCS16;
+  }
+  bool isAAPCS16_ABI() const { return ABI == ARM::ARM_ABI_AAPCS16; }
+
   bool isReadTPSoft() const {
     return !(isReadTPTPIDRURW() || isReadTPTPIDRURO() || isReadTPTPIDRPRW());
   }
@@ -413,8 +433,6 @@ public:
   const std::string & getCPUString() const { return CPUString; }
 
   bool isLittle() const { return IsLittle; }
-
-  unsigned getMispredictionPenalty() const;
 
   /// Returns true if machine scheduler should be enabled.
   bool enableMachineScheduler() const override;
@@ -502,8 +520,8 @@ public:
     return MVEVectorCostFactor;
   }
 
-  bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                   MCRegister PhysReg) const override;
+  void getCSRAllocationOrderMask(const MachineFunction &MF,
+                                 BitVector &Mask) const override;
   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
 };
 

@@ -7,14 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "PreferSingleCharOverloadsCheck.h"
+#include "../utils/CheckUtils.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <optional>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
+
+namespace {
+
+constexpr llvm::StringLiteral DeprecatedCheckName =
+    "performance-faster-string-find";
+constexpr llvm::StringLiteral CanonicalCheckName =
+    "performance-prefer-single-char-overloads";
+
+} // namespace
 
 static std::optional<std::string>
 makeCharacterLiteral(const StringLiteral *Literal) {
@@ -24,12 +35,12 @@ makeCharacterLiteral(const StringLiteral *Literal) {
     Literal->outputString(OS);
   }
   // Now replace the " with '.
-  auto OpenPos = Result.find_first_of('"');
+  const auto OpenPos = Result.find_first_of('"');
   if (OpenPos == std::string::npos)
     return std::nullopt;
   Result[OpenPos] = '\'';
 
-  auto ClosePos = Result.find_last_of('"');
+  const auto ClosePos = Result.find_last_of('"');
   if (ClosePos == std::string::npos)
     return std::nullopt;
   Result[ClosePos] = '\'';
@@ -46,7 +57,11 @@ PreferSingleCharOverloadsCheck::PreferSingleCharOverloadsCheck(
     : ClangTidyCheck(Name, Context),
       StringLikeClasses(utils::options::parseStringList(
           Options.get("StringLikeClasses",
-                      "::std::basic_string;::std::basic_string_view"))) {}
+                      "::std::basic_string;::std::basic_string_view"))) {
+  if (Name == DeprecatedCheckName)
+    utils::diagDeprecatedCheckAlias(*this, *Context, DeprecatedCheckName,
+                                    CanonicalCheckName);
+}
 
 void PreferSingleCharOverloadsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -87,11 +102,15 @@ void PreferSingleCharOverloadsCheck::check(
   if (!Replacement)
     return;
 
-  diag(Literal->getBeginLoc(), "%0 called with a string literal consisting of "
-                               "a single character; consider using the more "
-                               "efficient overload accepting a character")
-      << FindFunc
-      << FixItHint::CreateReplacement(Literal->getSourceRange(), *Replacement);
+  const auto Diag = diag(Literal->getBeginLoc(),
+                         "%0 called with a string literal consisting of "
+                         "a single character; consider using the more "
+                         "efficient overload accepting a character")
+                    << FindFunc;
+  if (std::none_of(Literal->tokloc_begin(), Literal->tokloc_end(),
+                   [](SourceLocation Loc) { return Loc.isMacroID(); }))
+    Diag << FixItHint::CreateReplacement(Literal->getSourceRange(),
+                                         *Replacement);
 }
 
 } // namespace clang::tidy::performance

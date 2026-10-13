@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -global-isel=0 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel=1 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 ; RUN: llc -mtriple=aarch64 -global-isel=1 -mattr=+fullfp16,+bf16 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI
+; RUN: llc -mtriple=aarch64 -global-isel=1 -mattr=+bf16 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define float @fptrunc_f64_f32(double %a) {
 ; CHECK-LABEL: fptrunc_f64_f32:

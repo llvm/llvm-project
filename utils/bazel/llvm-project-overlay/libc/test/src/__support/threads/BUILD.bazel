@@ -1,0 +1,49 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc __support/threads functionality.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "futex_utils_test",
+    srcs = ["futex_utils_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_optional",
+        "//libc:__support_threads_futex_utils",
+        "//libc:hdr_errno_macros",
+    ],
+)
+
+libc_test(
+    name = "raw_mutex_test",
+    srcs = ["linux/raw_mutex_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_atomic",
+        "//libc:__support_osutil_exit",
+        "//libc:__support_osutil_syscall",
+        "//libc:__support_threads_raw_mutex",
+        "//libc:__support_threads_sleep",
+        "//libc:__support_time_clock_gettime",
+        "//libc:hdr_signal_macros",
+        "//libc:hdr_sys_mman_macros",
+        "//libc:llvm_libc_macros_time_macros",
+        "//libc:mmap",
+        "//libc:munmap",
+    ],
+)
+
+libc_test(
+    name = "raw_rwlock_test",
+    srcs = ["linux/raw_rwlock_test.cpp"],
+    deps = [
+        "//libc:__support_threads_raw_rwlock",
+        "//libc:__support_time_clock_gettime",
+        "//libc:hdr_time_macros",
+    ],
+)

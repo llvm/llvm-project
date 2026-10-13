@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize,instcombine -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -28,7 +28,7 @@ entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %sum.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %x = getelementptr inbounds %struct.coordinate, ptr %A, i64 %indvars.iv, i32 0
@@ -39,7 +39,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %sum.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %sum.0.lcssa
 }
@@ -70,7 +70,7 @@ entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %sum.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %x = getelementptr inbounds %struct.lit, ptr %A, i64 %indvars.iv, i32 0
@@ -81,7 +81,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   %sum.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %sum.0.lcssa
 }

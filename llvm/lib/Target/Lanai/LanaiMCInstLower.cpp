@@ -46,7 +46,7 @@ LanaiMCInstLower::GetExternalSymbolSymbol(const MachineOperand &MO) const {
 MCSymbol *LanaiMCInstLower::GetJumpTableSymbol(const MachineOperand &MO) const {
   SmallString<256> Name;
   raw_svector_ostream(Name)
-      << Printer.MAI->getInternalSymbolPrefix() << "JTI"
+      << Printer.MAI.getInternalSymbolPrefix() << "JTI"
       << Printer.getFunctionNumber() << '_' << MO.getIndex();
   // Create a symbol for the name.
   return Ctx.getOrCreateSymbol(Name.str());
@@ -56,7 +56,7 @@ MCSymbol *
 LanaiMCInstLower::GetConstantPoolIndexSymbol(const MachineOperand &MO) const {
   SmallString<256> Name;
   raw_svector_ostream(Name)
-      << Printer.MAI->getInternalSymbolPrefix() << "CPI"
+      << Printer.MAI.getInternalSymbolPrefix() << "CPI"
       << Printer.getFunctionNumber() << '_' << MO.getIndex();
   // Create a symbol for the name.
   return Ctx.getOrCreateSymbol(Name.str());

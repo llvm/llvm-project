@@ -94,4 +94,4 @@ sb	a5, 0x0(a1)
 # CHECK-NEXT: 3.     1     0.0    0.0    0.0       add	zero, a3, a4
 # CHECK-NEXT: 4.     1     0.0    0.0    0.0       add	a5, a3, a4
 # CHECK-NEXT: 5.     1     0.0    0.0    0.0       sb	a5, 0(a1)
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        6     0.0    0.0    0.0       <total>

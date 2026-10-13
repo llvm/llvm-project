@@ -157,11 +157,11 @@ entry:
   %cmp.not19 = icmp slt i64 %n, 4
   br i1 %cmp.not19, label %exit, label %loop.preheader
 
-loop.preheader:                               ; preds = %entry
+loop.preheader:
   %sub = add nsw i64 %n, -3
   br label %loop
 
-loop:                                         ; preds = %loop.preheader, %loop
+loop:
   %iv = phi i64 [ 1, %loop.preheader ], [ %iv.next, %loop ]
   %0 = add nsw i64 %iv, -1
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %0

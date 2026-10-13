@@ -1,5 +1,12 @@
 # This file handles building LLVM runtime sub-projects.
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
 
 # This file can be used in two ways: the bootstrapping build calls it from
 # llvm/runtimes/CMakeLists.txt where we reuse the build tree of the top-level
@@ -63,8 +70,24 @@ function(runtime_register_component name)
   set_property(GLOBAL APPEND PROPERTY SUB_COMPONENTS ${name})
 endfunction()
 
-find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+set(llvm_search_paths "${LLVM_BINARY_DIR}")
+set(clang_search_paths "${LLVM_BINARY_DIR}")
+if(LLVM_BINARY_DIR)
+  list(APPEND llvm_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+  list(APPEND clang_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang")
+endif()
+
+# Exports from LLVM and Clang may contain shared libraries. When targeting
+# platforms that lack shared library support, importing such
+# exports unrestrictedly will trigger an error. Set
+# LLVM_OMIT_EXPORTS_FROM_CONFIG flag to skip importing these exports
+# when the target platform does not support shared libraries.
+get_property(HAS_SHARED_SUPPORT GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if (NOT HAS_SHARED_SUPPORT)
+  set(LLVM_OMIT_EXPORTS_FROM_CONFIG ON)
+endif()
+find_package(LLVM PATHS ${llvm_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+find_package(Clang PATHS ${clang_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
 set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
 
@@ -133,13 +156,6 @@ filter_prefixed("${CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} C
 # The compiler driver may be implicitly trying to link against libunwind,
 # which might not work if libunwind doesn't exist yet. Try to check if
 # --unwindlib=none is supported, and use that if possible.
-#
-# TODO: Note that this is problematic when LLVM_USE_SANITIZER is used
-# because some sanitizers require the unwinder and so the combination of
-# -fsanitize=... --unwindlib=none will always result in a linking error.
-# Currently, we counteract this issue by adding -fno-sanitize=all flag in
-# the project specific code within */cmake/config-ix.cmake files but that's
-# brittle. We should ideally move this to runtimes/CMakeLists.txt.
 llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
 if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
   set(ORIG_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
@@ -162,6 +178,13 @@ if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
   check_c_compiler_flag("--start-no-unused-arguments" C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
   if (C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
     set(CMAKE_REQUIRED_FLAGS "${ORIG_CMAKE_REQUIRED_FLAGS} --start-no-unused-arguments --unwindlib=none --end-no-unused-arguments")
+  endif()
+
+  # Some sanitizers require the unwinder, so the LLVM_USE_SANITIZER flags added
+  # by HandleLLVMOptions cannot link with --unwindlib=none. This only suppresses
+  # using sanitizers for the internal CMake compiler flag checks.
+  if (LLVM_USE_SANITIZER)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-sanitize=all")
   endif()
 endif()
 
@@ -223,7 +246,7 @@ set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
   set(option_prefix "")
-  if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+  if (CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
     set(option_prefix "/clang:")
   endif()
   set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${LLVM_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
@@ -270,12 +293,29 @@ cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
 cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
 
 
+# Code for Fortran support.
+#
+# Currently, only flang-rt and openmp contain Fortran sources. We assume that
+# none of the public CMake variables defined in config-Fortran are used unless
+# we enable one of these runtimes. Other runtimes would make used of undefined
+# variables.
+#
+# config-Fortran.cmake makes use of
+# RUNTIMES_OUTPUT_RESOURCE_DIR, RUNTIMES_INSTALL_RESOURCE_PATH,
+# hence must be included after those variables are defined.
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+  include(config-Fortran)
+endif ()
+
+
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
 option(LLVM_ENABLE_SPHINX "Use Sphinx to generate the runtimes documentation." OFF)
 option(RUNTIMES_EXECUTE_ONLY_CODE "Compile runtime libraries as execute-only." OFF)
 
-include(HandleDoxygen)
+if(NOT HAVE_LLVM_LIT)
+  include(HandleDoxygen)
+endif()
 
 if (RUNTIMES_EXECUTE_ONLY_CODE)
   # If a target doesn't support or recognise -mexecute-only, Clang will simply ignore the flag.

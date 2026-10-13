@@ -215,3 +215,39 @@ __m256d test_mm256_permute_pd(__m256d A) {
     // OGCG: shufflevector <4 x double> %{{.*}}, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
     return _mm256_permute_pd(A, 0x5);
 }
+
+__m256d test_mm256_permute2f128_pd(__m256d A, __m256d B) {
+  // CIR-LABEL: test_mm256_permute2f128_pd
+  // CIR: {{.*}} = cir.vec.shuffle({{.*}}, {{.*}} : !cir.vector<4 x !cir.double>) [#cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.double>
+
+  // LLVM-LABEL: test_mm256_permute2f128_pd
+  // LLVM: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+
+  // OGCG-LABEL: test_mm256_permute2f128_pd
+  // OGCG: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  return _mm256_permute2f128_pd(A, B, 0x31);
+}
+
+__m256 test_mm256_permute2f128_ps(__m256 A, __m256 B) {
+  // CIR-LABEL: test_mm256_permute2f128_ps
+  // CIR: {{.*}} = cir.vec.shuffle({{.*}}, {{.*}} : !cir.vector<8 x !cir.float>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<8 x !cir.float>
+ 
+  // LLVM-LABEL: test_mm256_permute2f128_ps
+  // LLVM: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
+ 
+  // OGCG-LABEL: test_mm256_permute2f128_ps
+  // OGCG: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
+  return _mm256_permute2f128_ps(A, B, 0x13);
+}
+
+__m256i test_mm256_permute2f128_si256(__m256i A, __m256i B) {
+  // CIR-LABEL: test_mm256_permute2f128_si256
+  // CIR: {{.*}} = cir.vec.shuffle({{.*}}, {{.*}} : !cir.vector<8 x !s32i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i] : !cir.vector<8 x !s32i>
+
+  // LLVM-LABEL: test_mm256_permute2f128_si256
+  // LLVM: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+
+  // OGCG-LABEL: test_mm256_permute2f128_si256
+  // OGCG: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  return _mm256_permute2f128_si256(A, B, 0x20);
+}

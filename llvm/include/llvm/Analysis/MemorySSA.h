@@ -943,7 +943,8 @@ public:
 };
 
 /// Printer pass for \c MemorySSA.
-class MemorySSAPrinterPass : public PassInfoMixin<MemorySSAPrinterPass> {
+class MemorySSAPrinterPass
+    : public RequiredPassInfoMixin<MemorySSAPrinterPass> {
   raw_ostream &OS;
   bool EnsureOptimizedUses;
 
@@ -952,27 +953,22 @@ public:
       : OS(OS), EnsureOptimizedUses(EnsureOptimizedUses) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for \c MemorySSA via the walker.
 class MemorySSAWalkerPrinterPass
-    : public PassInfoMixin<MemorySSAWalkerPrinterPass> {
+    : public RequiredPassInfoMixin<MemorySSAWalkerPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit MemorySSAWalkerPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for \c MemorySSA.
-struct MemorySSAVerifierPass : PassInfoMixin<MemorySSAVerifierPass> {
+struct MemorySSAVerifierPass : RequiredPassInfoMixin<MemorySSAVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c MemorySSA.
@@ -1054,11 +1050,11 @@ public:
   ///
   /// This version of the function is mainly used to disambiguate phi translated
   /// pointers, where the value of a pointer may have changed from the initial
-  /// memory access. Note that this expects to be handed either a MemoryUse,
-  /// or an already potentially clobbering access. Unlike the above API, if
-  /// given a MemoryDef that clobbers the pointer as the starting access, it
-  /// will return that MemoryDef, whereas the above would return the clobber
-  /// starting from the use side of  the memory def.
+  /// memory access. Note that this expects to be handed a potentially
+  /// clobbering access (either a MemoryDef or a MemoryPhi). Unlike the above
+  /// API, if given a MemoryDef that clobbers the pointer as the starting
+  /// access, it will return that MemoryDef, whereas the above would return the
+  /// clobber starting from the use side of the memory def.
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                                   const MemoryLocation &,
                                                   BatchAAResults &AA) = 0;
@@ -1207,16 +1203,6 @@ struct UpwardDefsElem {
 };
 
 template <> struct DenseMapInfo<UpwardDefsElem> {
-  static inline UpwardDefsElem getEmptyKey() {
-    return {DenseMapInfo<MemoryAccess *>::getEmptyKey(),
-            DenseMapInfo<MemoryLocation>::getEmptyKey(), false};
-  }
-
-  static inline UpwardDefsElem getTombstoneKey() {
-    return {DenseMapInfo<MemoryAccess *>::getTombstoneKey(),
-            DenseMapInfo<MemoryLocation>::getTombstoneKey(), false};
-  }
-
   static unsigned getHashValue(const UpwardDefsElem &Val) {
     return hash_combine(DenseMapInfo<MemoryAccess *>::getHashValue(Val.MA),
                         DenseMapInfo<MemoryLocation>::getHashValue(Val.Loc),

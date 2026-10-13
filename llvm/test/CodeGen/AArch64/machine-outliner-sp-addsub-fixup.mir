@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64--- -run-pass=prologepilog -run-pass=machine-outliner \
+# RUN: llc -mtriple=aarch64--- -run-pass=prolog-epilog -run-pass=machine-outliner \
 # RUN:   -verify-machineinstrs %s -o - | FileCheck %s
 
 # Check that the outliner fixes up SP-derived add/sub immediates inside an

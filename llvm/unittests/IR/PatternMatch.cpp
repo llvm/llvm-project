@@ -1532,6 +1532,17 @@ TEST_F(PatternMatchTest, VectorOps) {
       SP2, m_Shuffle(m_InsertElt(m_Undef(), m_Value(A), m_Zero()),
                      m_Undef(), m_ZeroMask())));
   EXPECT_TRUE(A == Val);
+
+  // Repeat the above with m_Splat.
+  EXPECT_TRUE(match(SI1, m_Splat(m_SpecificInt(1))));
+  EXPECT_FALSE(match(SI2, m_Splat(m_Value())));
+  EXPECT_FALSE(match(SI3, m_Splat(m_Value())));
+  EXPECT_FALSE(match(SI4, m_Splat(m_Value())));
+
+  A = nullptr;
+  EXPECT_TRUE(match(SP1, m_Splat(m_SpecificInt(2))));
+  EXPECT_TRUE(match(SP2, m_Splat(m_Value(A))));
+  EXPECT_TRUE(A == Val);
 }
 
 TEST_F(PatternMatchTest, UndefPoisonMix) {
@@ -2103,6 +2114,38 @@ TEST_F(PatternMatchTest, IntrinsicMatcher) {
       match(Intrinsic5, m_Intrinsic<Intrinsic::instrprof_increment_step>(
                             m_Value(), m_Value(), m_Value(), m_Value(),
                             m_SpecificInt(10))));
+}
+
+TEST_F(PatternMatchTest, AnyIntrinsicMatcher) {
+  Value *Ops0[] = {IRB.getInt32(0)};
+  Value *Ops1[] = {IRB.getInt32(0)};
+  Module *M = BB->getParent()->getParent();
+
+  Function *BswapFn =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::bswap, IRB.getInt32Ty());
+  Value *BswapCall = CallInst::Create(BswapFn, Ops0, "", BB);
+
+  Function *CtpopFn =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::ctpop, IRB.getInt32Ty());
+  Value *CtpopCall = CallInst::Create(CtpopFn, Ops1, "", BB);
+
+  // Match any of the listed intrinsic IDs.
+  EXPECT_TRUE(
+      match(BswapCall, m_AnyIntrinsic<Intrinsic::bswap, Intrinsic::ctpop>()));
+  EXPECT_TRUE(
+      match(CtpopCall, m_AnyIntrinsic<Intrinsic::bswap, Intrinsic::ctpop>()));
+
+  // Should not match an unlisted intrinsic.
+  EXPECT_FALSE(match(
+      BswapCall, m_AnyIntrinsic<Intrinsic::ctpop, Intrinsic::bitreverse>()));
+
+  // Single ID should work like m_Intrinsic.
+  EXPECT_TRUE(match(BswapCall, m_AnyIntrinsic<Intrinsic::bswap>()));
+  EXPECT_FALSE(match(CtpopCall, m_AnyIntrinsic<Intrinsic::bswap>()));
+
+  // Non-intrinsic call should not match.
+  EXPECT_FALSE(match(IRB.getInt32(0),
+                     m_AnyIntrinsic<Intrinsic::bswap, Intrinsic::ctpop>()));
 }
 
 namespace {
@@ -2724,6 +2767,29 @@ TEST_F(PatternMatchTest, ShiftOrSelf) {
   EXPECT_TRUE(match(Add, m_AShrOrSelf(m_Value(A), ShAmtC)));
   EXPECT_EQ(A, Add);
   EXPECT_EQ(ShAmtC, 0U);
+}
+
+TEST_F(PatternMatchTest, SpecificType) {
+  Type *I32 = IRB.getInt32Ty();
+  Type *I64 = IRB.getInt64Ty();
+  Value *X = IRB.CreateAdd(IRB.getInt32(1), IRB.getInt32(2));
+  Value *Y = IRB.CreateZExt(X, I64);
+
+  EXPECT_TRUE(match(X, m_SpecificType(I32)));
+  EXPECT_FALSE(match(X, m_SpecificType(I64)));
+
+  Value *Bound = nullptr;
+  EXPECT_TRUE(match(X, m_SpecificType(I32, Bound)));
+  EXPECT_EQ(X, Bound);
+  Bound = nullptr;
+  EXPECT_FALSE(match(X, m_SpecificType(I64, Bound)));
+
+  Bound = nullptr;
+  EXPECT_TRUE(match(Y, m_ZExt(m_SpecificType(I32, Bound))));
+  EXPECT_EQ(X, Bound);
+
+  EXPECT_TRUE(match(X, m_SpecificType(I32, m_Add(m_Value(), m_Value()))));
+  EXPECT_FALSE(match(X, m_SpecificType(I64, m_Add(m_Value(), m_Value()))));
 }
 
 TEST_F(PatternMatchTest, CommutativeDeferredIntrinsicMatch) {

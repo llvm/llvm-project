@@ -1,0 +1,30 @@
+{
+  "configuration": {
+    "runtime_prefix": "__instrumentor_",
+    "gpu_enabeld": false
+  },
+  "instruction_pre": {
+    "numeric": {
+      "enabld": true,
+      "type_id": true,
+      "size": true,
+      "opocde": true,
+      "left": true,
+      "right": true,
+      "zzzzzz": false,
+      "id": true
+    }
+  },
+  "instruction_post": {
+    "numerci": {
+      "enabled": true,
+      "type_id": true,
+      "size": true,
+      "opcode": true,
+      "left": true,
+      "right": true,
+      "result": true,
+      "id": true
+    }
+  }
+}

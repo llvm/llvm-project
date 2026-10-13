@@ -1,5 +1,6 @@
 // RUN: %libomptarget-compile-generic -fopenmp-extensions
 // RUN: %libomptarget-run-generic | %fcheck-generic -strict-whitespace
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

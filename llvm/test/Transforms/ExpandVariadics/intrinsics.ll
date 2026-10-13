@@ -123,10 +123,8 @@ entry:
 ;.
 ; OPT: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; OPT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
-; OPT: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; ABI: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; ABI: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; OPT: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ;.

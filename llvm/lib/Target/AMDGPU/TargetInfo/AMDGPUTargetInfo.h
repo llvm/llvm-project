@@ -23,6 +23,10 @@ Target &getTheR600Target();
 /// The target for GCN GPUs.
 Target &getTheGCNTarget();
 
+/// The target for GCN GPUs, registered under the legacy "amdgcn" architecture
+/// name for use with -march. This is an alias for the target returned by
+/// getTheGCNTarget() and does not participate in target-triple based lookup.
+Target &getTheGCNLegacyTarget();
 }
 
 #endif // LLVM_LIB_TARGET_AMDGPU_TARGETINFO_AMDGPUTARGETINFO_H

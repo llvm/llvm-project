@@ -43,6 +43,8 @@ struct ParseOptions {
   bool PreambleParseForwardingFunctions = true;
 
   bool ImportInsertions = false;
+
+  bool SkipPreambleBuild = false;
 };
 
 /// Information required to run clang, e.g. to parse AST or do code completion.

@@ -53,6 +53,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         PartialEntityAccessModel<fir::CoordinateOp>>(*ctx);
     fir::DeclareOp::attachInterface<PartialEntityAccessModel<fir::DeclareOp>>(
         *ctx);
+    fir::DeclareOp::attachInterface<
+        OutlineIdentityOperandDeclareModel<fir::DeclareOp>>(*ctx);
 
     fir::AddrOfOp::attachInterface<AddressOfGlobalModel>(*ctx);
     fir::GlobalOp::attachInterface<GlobalVariableModel>(*ctx);
@@ -61,6 +63,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         *ctx);
     fir::EmboxOp::attachInterface<IndirectGlobalAccessModel<fir::EmboxOp>>(
         *ctx);
+    fir::CreateBoxOp::attachInterface<
+        IndirectGlobalAccessModel<fir::CreateBoxOp>>(*ctx);
     fir::ReboxOp::attachInterface<IndirectGlobalAccessModel<fir::ReboxOp>>(
         *ctx);
     fir::TypeDescOp::attachInterface<
@@ -85,6 +89,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         *ctx);
     fir::SliceOp::attachInterface<OutlineRematerializationModel<fir::SliceOp>>(
         *ctx);
+    fir::AbsentOp::attachInterface<
+        OutlineRematerializationModel<fir::AbsentOp>>(*ctx);
   });
 
   // Register HLFIR operation interfaces
@@ -94,6 +100,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
             PartialEntityAccessModel<hlfir::DesignateOp>>(*ctx);
         hlfir::DeclareOp::attachInterface<
             PartialEntityAccessModel<hlfir::DeclareOp>>(*ctx);
+        hlfir::DeclareOp::attachInterface<
+            OutlineIdentityOperandDeclareModel<hlfir::DeclareOp>>(*ctx);
       });
 
   // Register CUF operation interfaces
@@ -106,8 +114,16 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
                             mlir::acc::OpenACCDialect *dialect) {
     mlir::acc::LoopOp::attachInterface<OperationMoveModel<mlir::acc::LoopOp>>(
         *ctx);
+    mlir::acc::KernelsOp::attachInterface<
+        OperationMoveModel<mlir::acc::KernelsOp>>(*ctx);
+    mlir::acc::ParallelOp::attachInterface<
+        OperationMoveModel<mlir::acc::ParallelOp>>(*ctx);
+    mlir::acc::SerialOp::attachInterface<
+        OperationMoveModel<mlir::acc::SerialOp>>(*ctx);
     mlir::acc::ReductionInitOp::attachInterface<
-        fir::acc::ReductionInitOpFortranObjectViewModel>(*ctx);
+        fir::acc::AccFortranObjectViewModel<mlir::acc::ReductionInitOp>>(*ctx);
+    mlir::acc::UnwrapPrivateOp::attachInterface<
+        fir::acc::AccFortranObjectViewModel<mlir::acc::UnwrapPrivateOp>>(*ctx);
   });
 
   registerAttrsExtensions(registry);

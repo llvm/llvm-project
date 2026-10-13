@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mattr=+load-store-opt -enable-misched < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire -mattr=+load-store-opt -enable-misched < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00 -mattr=+load-store-opt -enable-misched < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.04 -mattr=+load-store-opt -enable-misched < %s | FileCheck %s
 
 ; This test is for a bug in the machine scheduler where stores without
 ; an underlying object would be moved across the barrier.  In this

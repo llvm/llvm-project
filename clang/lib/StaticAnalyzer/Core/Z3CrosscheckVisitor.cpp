@@ -54,8 +54,8 @@ Z3CrosscheckVisitor::Z3CrosscheckVisitor(Z3CrosscheckVisitor::Z3Result &Result,
     : Constraints(ConstraintMap::Factory().getEmptyMap()), Result(Result),
       Opts(Opts) {}
 
-void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
-                                          const ExplodedNode *EndPathNode,
+void Z3CrosscheckVisitor::finalizeVisitor(const ExplodedNode *EndPathNode,
+                                          BugReporterContext &BRC,
                                           PathSensitiveBugReport &BR) {
   // Collect new constraints
   addConstraints(EndPathNode, /*OverwriteConstraintsOnExistingSyms=*/true);
@@ -75,14 +75,17 @@ void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
   for (const auto &[Sym, Range] : Constraints) {
     auto RangeIt = Range.begin();
 
-    llvm::SMTExprRef SMTConstraints = SMTConv::getRangeExpr(
-        RefutationSolver, Ctx, Sym, RangeIt->From(), RangeIt->To(),
-        /*InRange=*/true);
+    llvm::SMTExprRef SMTConstraints =
+        SMTConv::getRangeExpr(RefutationSolver, Ctx, Sym, RangeIt->From(),
+                              RangeIt->To(),
+                              /*InRange=*/true)
+            .value();
     while ((++RangeIt) != Range.end()) {
       SMTConstraints = RefutationSolver->mkOr(
           SMTConstraints, SMTConv::getRangeExpr(RefutationSolver, Ctx, Sym,
                                                 RangeIt->From(), RangeIt->To(),
-                                                /*InRange=*/true));
+                                                /*InRange=*/true)
+                              .value());
     }
     RefutationSolver->addConstraint(SMTConstraints);
   }

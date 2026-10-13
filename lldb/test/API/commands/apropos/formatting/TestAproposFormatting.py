@@ -32,4 +32,64 @@ class AproposFormattingTest(PExpectTest):
         )
 
         self.expect_prompt()
-        self.quit()
+
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    def test_apropos_highlights_matches(self):
+        """Test that apropos highlights matching keywords in output."""
+        self.launch(use_colors=True, dimensions=(100, 200))
+
+        ansi_green = "\x1b[32m"
+        ansi_reset = "\x1b[0m"
+        self.child.sendline(
+            "settings set show-regex-match-ansi-prefix ${ansi.fg.green}"
+        )
+        self.expect_prompt()
+
+        self.child.sendline("apropos plug")
+        # Apropos should highlight in:
+        # Command names.
+        self.child.expect_exact(ansi_green + "plug" + ansi_reset + "in list")
+        # Command descriptions.
+        self.child.expect_exact(
+            "Report info about registered LLDB "
+            + ansi_green
+            + "plug"
+            + ansi_reset
+            + "ins."
+        )
+        # Settings paths.
+        self.child.expect_exact(
+            "platform." + ansi_green + "plug" + ansi_reset + "in.remote-android"
+        )
+        # Settings names.
+        self.child.expect_exact(
+            ansi_green
+            + "plug"
+            + ansi_reset
+            + "in.structured-data.darwin-log.auto-enable-options"
+        )
+        # Settings descriptions.
+        self.child.expect_exact("'" + ansi_green + "plug" + ansi_reset + "in")
+        self.expect_prompt()
+
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    def test_apropos_highlights_across_line_break(self):
+        """Test that apropos highlights matches that span a line break."""
+        self.launch(use_colors=True, dimensions=(24, 68))
+
+        ansi_green = "\x1b[32m"
+        ansi_reset = "\x1b[0m"
+        self.child.sendline(
+            "settings set show-regex-match-ansi-prefix ${ansi.fg.green}"
+        )
+        self.expect_prompt()
+
+        self.child.sendline('apropos "will override this"')
+        # The narrow terminal forces "will override this" to wrap across
+        # lines. Verify the ANSI highlight spans the match: green starts
+        # before "will" and the reset comes after "this".
+        self.child.expect_exact(ansi_green + "will")
+        self.child.expect_exact("this" + ansi_reset)
+        self.expect_prompt()
