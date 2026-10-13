@@ -254,7 +254,6 @@ class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertTrue(saw_stopped, "no jThreadsInfo entry for the stopped thread")
 
     @skipIfNetBSD
-    @skipIfWindows  # Flaky on Windows
     def test_stop_reply_contains_thread_pcs(self):
         self.build()
         self.set_inferior_startup_launch()

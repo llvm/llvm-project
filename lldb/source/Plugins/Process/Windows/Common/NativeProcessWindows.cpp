@@ -604,6 +604,16 @@ void NativeProcessWindows::ReportDeferredStop() {
   if (!m_deferred_stop)
     return;
   m_deferred_stop = false;
+  for (const auto &t : m_threads) {
+    auto *thread = static_cast<NativeThreadWindows *>(t.get());
+    if (thread->CompleteStepWithoutTrap()) {
+      LLDB_LOG(GetLog(WindowsLog::Exception),
+               "thread {0:x} completed its single step but its trap is not in "
+               "yet, reporting the step",
+               thread->GetID());
+      SetStopReasonForThread(*thread, StopReason::eStopReasonTrace);
+    }
+  }
   if (GetThreadByID(m_deferred_stop_tid))
     SetCurrentThreadID(m_deferred_stop_tid);
   SynchronouslyNotifyProcessStateChanged(eStateStopped);
@@ -639,10 +649,13 @@ bool NativeProcessWindows::RewindTrapOfRemovedBreakpoint(
 
 ExceptionResult
 NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
+  NativeThreadWindows *stepped_thread = GetThreadByID(record.GetThreadID());
+  const bool step_reported =
+      stepped_thread && stepped_thread->TakePendingStepTrap();
   uint32_t wp_id = LLDB_INVALID_INDEX32;
 #ifndef __aarch64__
   Log *log = GetLog(WindowsLog::Exception);
-  if (NativeThreadWindows *thread = GetThreadByID(record.GetThreadID())) {
+  if (NativeThreadWindows *thread = stepped_thread) {
     NativeRegisterContextWindows &reg_ctx = thread->GetRegisterContext();
     Status error =
         reg_ctx.GetWatchpointHitIndex(wp_id, record.GetExceptionAddress());
@@ -661,7 +674,17 @@ NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
   }
 #endif
   if (wp_id == LLDB_INVALID_INDEX32) {
-    NativeThreadWindows *thread = GetThreadByID(record.GetThreadID());
+    NativeThreadWindows *thread = stepped_thread;
+    if (step_reported) {
+      LLDB_LOG(GetLog(WindowsLog::Exception),
+               "dropping the trap of the single step thread {0:x} already "
+               "reported",
+               record.GetThreadID());
+      // Re-arm the current step in case this trap consumed its trace flag.
+      if (thread->IsSingleStepping())
+        thread->SetSingleStepFlag();
+      return ExceptionResult::MaskException;
+    }
     if (thread && !thread->IsSingleStepping()) {
       LLDB_LOG(GetLog(WindowsLog::Exception),
                "ignoring a late single-step trap on thread {0:x}, which this "
