@@ -227,6 +227,10 @@ public:
     return SubReg2Idx.lookup(Reg);
   }
 
+  // Return the sub-register at Idx, or NULL if there is none. Only valid after
+  // computeSuperRegs().
+  CodeGenRegister *getSubReg(const CodeGenSubRegIndex *Idx) const;
+
   using SuperRegList = std::vector<const CodeGenRegister *>;
 
   // Get the list of super-registers in topological order, small to large.
@@ -312,6 +316,8 @@ private:
   SubRegMap SubRegs;
   SuperRegList SuperRegs;
   DenseMap<const CodeGenRegister *, CodeGenSubRegIndex *> SubReg2Idx;
+  // SubRegs as an array sorted by sub-register index, for getSubReg().
+  SmallVector<std::pair<unsigned, CodeGenRegister *>, 0> SubRegsByIdx;
   RegUnitList RegUnits;
   RegUnitLaneMaskList RegUnitLaneMasks;
 };

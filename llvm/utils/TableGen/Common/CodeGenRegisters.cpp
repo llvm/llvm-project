@@ -551,6 +551,18 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
   }
 }
 
+CodeGenRegister *
+CodeGenRegister::getSubReg(const CodeGenSubRegIndex *Idx) const {
+  assert(SuperRegsComplete && "Must precompute super-registers");
+  auto It = llvm::lower_bound(SubRegsByIdx, Idx->EnumValue,
+                              [](const auto &Entry, unsigned EnumValue) {
+                                return Entry.first < EnumValue;
+                              });
+  if (It == SubRegsByIdx.end() || It->first != Idx->EnumValue)
+    return nullptr;
+  return It->second;
+}
+
 void CodeGenRegister::computeSuperRegs(CodeGenRegBank &RegBank) {
   // Only visit each register once.
   if (SuperRegsComplete)
@@ -565,7 +577,10 @@ void CodeGenRegister::computeSuperRegs(CodeGenRegBank &RegBank) {
   // Now add this as a super-register on all sub-registers.
   // Also compute the TopoSigId in post-order.
   TopoSigId Id;
+  SubRegsByIdx.reserve(SubRegs.size());
   for (auto SubReg : SubRegs) {
+    SubRegsByIdx.emplace_back(SubReg.first->EnumValue, SubReg.second);
+
     // Topological signature computed from SubIdx, TopoId(SubReg).
     // Loops and idempotent indices have TopoSig = ~0u.
     Id.push_back(SubReg.first->EnumValue);
@@ -2597,7 +2612,7 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     for (const CodeGenRegister *Super : RC->getMembers()) {
       if (Super->Artificial)
         continue;
-      const CodeGenRegister *Sub = Super->getSubRegs().find(SubIdx)->second;
+      const CodeGenRegister *Sub = Super->getSubReg(SubIdx);
       assert(Sub && "Missing sub-register");
       SubRegs.push_back(Sub);
       TopoSigs.set(Sub->getTopoSig());
