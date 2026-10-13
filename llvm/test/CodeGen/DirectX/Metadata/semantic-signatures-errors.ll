@@ -33,6 +33,12 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-OUTPUT
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/position-integer.ll 2>&1 | FileCheck %s --check-prefix=POSITION-INTEGER
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/vertex-id-float.ll 2>&1 | FileCheck %s --check-prefix=VERTEX-ID-FLOAT
+; RUN: cat %t/row-common.ll %t/row-interpolation.ll > %t/row-check.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/row-check.ll 2>&1 | FileCheck %s --check-prefix=ROW-INTERPOLATION
+; RUN: cat %t/row-common.ll %t/row-multi.ll > %t/row-check.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/row-check.ll 2>&1 | FileCheck %s --check-prefix=ROW-MULTI
+; RUN: cat %t/row-common.ll %t/row-native-width.ll > %t/row-check.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/row-check.ll 2>&1 | FileCheck %s --check-prefix=ROW-NATIVE-WIDTH
 
 ;--- triple.ll
 ; TRIPLE: Invalid semantic signature: expected an entry/input/output signature triple
@@ -335,3 +341,33 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !1 = !{!2}
 !2 = !{i32 0, !"SV_VertexID", i32 8, i32 1, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
 !3 = !{i32 0}
+
+;--- row-common.ll
+target triple = "dxil-pc-shadermodel6.8-pixel"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="pixel" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, !1, null}
+!1 = !{!2, !3}
+!4 = !{i32 0}
+
+;--- row-interpolation.ll
+; ROW-INTERPOLATION: entry 'main' input signature: signature elements have different interpolation modes at row 0 (element 1)
+; Disjoint masks do not permit Linear and LinearCentroid to share a row.
+!2 = !{i32 0, !"A", i32 9, i32 0, !4, i32 2, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 1, !"B", i32 9, i32 0, !4, i32 3, i32 1, i8 1, i32 0, i8 1, i8 0, i8 0, i32 0}
+
+;--- row-multi.ll
+; ROW-MULTI: entry 'main' input signature: signature elements have different interpolation modes at row 1 (element 1)
+; Check every row covered by a multi-row element, not just its first row.
+!2 = !{i32 0, !"A", i32 9, i32 0, !5, i32 2, i32 2, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 1, !"B", i32 9, i32 0, !4, i32 3, i32 1, i8 1, i32 1, i8 1, i8 0, i8 0, i32 0}
+!5 = !{i32 0, i32 1}
+
+;--- row-native-width.ll
+; ROW-NATIVE-WIDTH: entry 'main' input signature: signature elements have different component widths at row 0 (element 1)
+; Native 16-bit and 32-bit components cannot share a row either.
+!llvm.module.flags = !{!5}
+!5 = !{i32 1, !"dx.nativelowprec", i32 1}
+!2 = !{i32 0, !"A", i32 8, i32 0, !4, i32 2, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 1, !"B", i32 9, i32 0, !4, i32 2, i32 1, i8 1, i32 0, i8 1, i8 0, i8 0, i32 0}

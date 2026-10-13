@@ -73,7 +73,7 @@ static Error parseSignature(Metadata *MD,
                             SmallVectorImpl<SemanticSignatureElement> &Out,
                             ModuleSignatureInfo &Info,
                             Triple::EnvironmentType Stage, IOType IO,
-                            unsigned &Extent) {
+                            bool Native16, unsigned &Extent) {
   if (!MD)
     return Error::success();
   auto *List = dyn_cast<MDNode>(MD);
@@ -84,6 +84,8 @@ static Error parseSignature(Metadata *MD,
 
   std::set<std::pair<std::string, uint32_t>> Semantics;
   std::array<uint8_t, MaxSignatureRows> AllocatedColumns = {};
+  std::array<dxbc::PSV::InterpolationMode, MaxSignatureRows> RowModes = {};
+  std::array<bool, MaxSignatureRows> RowNative16 = {};
   for (const MDOperand &Op : List->operands()) {
     auto *Node = dyn_cast_or_null<MDNode>(Op);
     if (Error Err = checkElementNode(Node))
@@ -165,13 +167,27 @@ static Error parseSignature(Metadata *MD,
       return signatureError(
           "integer pixel inputs require constant interpolation");
 
-    // Ensure that signatures are packed without overlap.
+    // Co-packed elements must obey row constraints, even when their component
+    // masks do not overlap. Min-precision types occupy 32-bit components.
+    bool IsNative16 = Native16 && (E.CompType == ElementType::F16 ||
+                                   E.CompType == ElementType::I16 ||
+                                   E.CompType == ElementType::U16);
     uint8_t Mask = E.getDeclaredMask();
     for (unsigned Row = E.StartRow; Row != E.StartRow + E.Rows; ++Row) {
       if (AllocatedColumns[Row] & Mask)
         return signatureError("signature elements overlap at row " +
                               Twine(Row) + " (element " + Twine(E.SigId) + ")");
+      if (AllocatedColumns[Row] && RowModes[Row] != E.InterpMode)
+        return signatureError("signature elements have different interpolation "
+                              "modes at row " +
+                              Twine(Row) + " (element " + Twine(E.SigId) + ")");
+      if (AllocatedColumns[Row] && RowNative16[Row] != IsNative16)
+        return signatureError("signature elements have different component "
+                              "widths at row " +
+                              Twine(Row) + " (element " + Twine(E.SigId) + ")");
       AllocatedColumns[Row] |= Mask;
+      RowModes[Row] = E.InterpMode;
+      RowNative16[Row] = IsNative16;
     }
     Extent = std::max(Extent, E.StartRow + E.Rows);
     E.SemanticName = Info.Names.insert(E.SemanticName).first->getKey();
@@ -311,11 +327,13 @@ analyzeModule(Module &M, const ModuleMetadataInfo &MMI) {
         return signatureError("entry '" + F->getName() + "' " + Category +
                               " signature: " + toString(std::move(Err)));
       };
-      if (Error Err = parseSignature(Record->getOperand(1), Sig.Inputs, Info,
-                                     Sig.Stage, IOType::In, Sig.InputVectors))
+      if (Error Err =
+              parseSignature(Record->getOperand(1), Sig.Inputs, Info, Sig.Stage,
+                             IOType::In, Sig.UseNative16Bit, Sig.InputVectors))
         return AddContext(std::move(Err), "input");
       if (Error Err = parseSignature(Record->getOperand(2), Sig.Outputs, Info,
-                                     Sig.Stage, IOType::Out, Sig.OutputVectors))
+                                     Sig.Stage, IOType::Out, Sig.UseNative16Bit,
+                                     Sig.OutputVectors))
         return AddContext(std::move(Err), "output");
       for (const Instruction &I : instructions(F))
         if (auto *II = dyn_cast<IntrinsicInst>(&I);
@@ -462,7 +480,13 @@ static StringRef getContainerSemanticName(const SemanticSignatureElement &E) {
 static void buildSignature(mcdxbc::Signature &Sig,
                            ArrayRef<SemanticSignatureElement> Elements,
                            bool Input, bool Native16, bool Legacy) {
+  SmallDenseMap<dxbc::PSV::SemanticKind, uint32_t, 8> SystemNameIDs;
   for (const auto &E : Elements) {
+    // Legacy serialization shares canonical system names across elements, but
+    // arbitrary elements retain their own name entry even for equal strings.
+    uint32_t NameID = E.SigId;
+    if (E.SemanticKind != dxbc::PSV::SemanticKind::Arbitrary)
+      NameID = SystemNameIDs.try_emplace(E.SemanticKind, E.SigId).first->second;
     uint8_t Mask = E.getDeclaredMask();
     uint8_t ExclusiveMask =
         Input ? E.getAlwaysReadsMask() : E.getNeverWritesMask();

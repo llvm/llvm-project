@@ -1,11 +1,15 @@
-; RUN: opt -S -dxil-translate-metadata %s | FileCheck %s --check-prefix=MD
-; RUN: opt -disable-output -passes='print<dxil-signature>' %s 2>&1 | FileCheck %s --check-prefix=ANALYSIS
-; RUN: llc -filetype=obj %s -o %t.dxbc
+; RUN: split-file %s %t
+; RUN: opt -S -dxil-translate-metadata %t/shader.ll | FileCheck %s --check-prefix=MD
+; RUN: opt -disable-output -passes='print<dxil-signature>' %t/shader.ll 2>&1 | FileCheck %s --check-prefix=ANALYSIS
+; RUN: opt -disable-output -passes='print<dxil-signature>' %t/same-mode.ll 2>&1 | FileCheck %s --check-prefix=SAME-MODE
+; RUN: opt -disable-output -passes='print<dxil-signature>' %t/separate-rows.ll 2>&1 | FileCheck %s --check-prefix=SEPARATE-ROWS
+; RUN: llc -filetype=obj %t/shader.ll -o %t.dxbc
 ; RUN: obj2yaml %t.dxbc | FileCheck %s --check-prefix=PARTS
 ; RUN: obj2yaml %t.dxbc | yaml2obj | obj2yaml | FileCheck %s --check-prefix=PARTS
 ; RUN: llvm-objcopy --dump-section=DXIL=%t.bc %t.dxbc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=MD
 
+;--- shader.ll
 target triple = "dxil-pc-shadermodel6.8-pixel"
 
 define void @main() #0 {
@@ -93,3 +97,29 @@ attributes #0 = { "hlsl.shader"="pixel" }
 ; PARTS: Kind: Target
 ; PARTS: InputOutputMap:
 ; PARTS-NEXT: - [ 0x5000, 0x0, 0x0, 0x5000, 0x0, 0x0, 0x0, 0x5000 ]
+
+;--- same-mode.ll
+; SAME-MODE: Inputs: 2 elements, 1 vectors
+; Equal interpolation modes can share a row with disjoint component masks.
+target triple = "dxil-pc-shadermodel6.8-pixel"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="pixel" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, !1, null}
+!1 = !{!2, !3}
+!2 = !{i32 0, !"A", i32 9, i32 0, !4, i32 3, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 1, !"B", i32 9, i32 0, !4, i32 3, i32 1, i8 1, i32 0, i8 1, i8 0, i8 0, i32 0}
+!4 = !{i32 0}
+
+;--- separate-rows.ll
+; SEPARATE-ROWS: Inputs: 2 elements, 2 vectors
+; Different interpolation modes are valid when the elements use separate rows.
+target triple = "dxil-pc-shadermodel6.8-pixel"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="pixel" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, !1, null}
+!1 = !{!2, !3}
+!2 = !{i32 0, !"A", i32 9, i32 0, !4, i32 2, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 1, !"B", i32 9, i32 0, !4, i32 3, i32 1, i8 1, i32 1, i8 0, i8 0, i8 0, i32 0}
+!4 = !{i32 0}
