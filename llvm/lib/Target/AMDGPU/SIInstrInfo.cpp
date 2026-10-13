@@ -10862,9 +10862,7 @@ bool SIInstrInfo::isAsmOnlyOpcode(int MCOp) const {
 #define GENERATE_RENAMED_GFX9_CASES(OPCODE)                                    \
   case OPCODE##_dpp:                                                           \
   case OPCODE##_e32:                                                           \
-  case OPCODE##_e64:                                                           \
-  case OPCODE##_e64_dpp:                                                       \
-  case OPCODE##_sdwa:
+  case OPCODE##_e64:
 
 static bool isRenamedInGFX9(int Opcode) {
   switch (Opcode) {
@@ -10877,11 +10875,8 @@ static bool isRenamedInGFX9(int Opcode) {
     GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_SUBREV_U32)
     GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_SUB_CO_U32)
     GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_SUB_U32)
-  //
   case AMDGPU::V_DIV_FIXUP_F16_gfx9_e64:
-  case AMDGPU::V_DIV_FIXUP_F16_gfx9_fake16_e64:
   case AMDGPU::V_FMA_F16_gfx9_e64:
-  case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
   case AMDGPU::V_INTERP_P2_F16:
   case AMDGPU::V_MAD_F16_e64:
   case AMDGPU::V_MAD_U16_e64:
