@@ -6388,6 +6388,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     const Stmt *LoopOrSwitch = nullptr;
     if (B->isNamed()) {
       LoopOrSwitch = B->getNamedLoopOrSwitch();
+      // May be null if the named loop is outside of the
+      // current evaluation context, i.e. not a valid target.
       if (!LoopOrSwitch) {
         Info.FFDiag(S->getBeginLoc(),
                     diag::note_constexpr_stmt_expr_unsupported);

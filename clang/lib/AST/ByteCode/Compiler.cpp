@@ -7197,6 +7197,8 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
     }
   } else {
     const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
     if (!TargetLoop)
       return this->emitUnsupported(S);
 
@@ -7240,6 +7242,8 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
     }
   } else {
     const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
     if (!TargetLoop)
       return this->emitUnsupported(S);
 
