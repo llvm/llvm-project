@@ -717,7 +717,7 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   StringRef Arch(Args.getLastArgValue(OPT_arch_EQ));
   assert(!Arch.empty() && "Arch must be specified for AOT compilation");
   // ocloc spells a device without the "xe-" prefix and with "_" between words,
-  // e.g. "bmg_g21" for "xe-bmg-g21", so translate any accepted spelling.
+  // e.g. "bmg_g21" for "xe-bmg-g21".
   StringRef Canonical = OffloadArchToString(StringToOffloadArch(Arch));
   [[maybe_unused]] bool HasPrefix = Canonical.consume_front("xe-");
   assert(HasPrefix && "Intel GPU name without the xe- prefix");
@@ -1052,12 +1052,8 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     TheImage.TheOffloadKind = OFK_SYCL;
     TheImage.StringData["triple"] =
         Args.MakeArgString(Result.TargetTriple.str());
-    // Label an Intel GPU image with its canonical name, whichever spelling was
-    // given, so that one device's images always carry one arch.
-    StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-    OffloadArch OA = StringToOffloadArch(Arch);
     TheImage.StringData["arch"] =
-        OA.isIntelGPU() ? OffloadArchToString(OA) : Args.MakeArgString(Arch);
+        Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
     TheImage.StringData["symbols"] = SI.Symbols;
     TheImage.Image = std::move(*FileOrErr);
     Images.emplace_back(std::move(TheImage));

@@ -20,7 +20,6 @@
 #include <string>
 
 namespace llvm {
-template <typename T> class SmallVectorImpl;
 
 namespace IntelGPU {
 
@@ -44,34 +43,21 @@ enum GPUKind : uint8_t {
 /// version; xe-pvc is returned.
 LLVM_ABI StringRef getArchName(uint32_t GPUIPVersion);
 
-/// \return the numeric name of \p GPUIPVersion, e.g. "xe_35.11.0".
-LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
-
 /// \return the human-friendly name of \p Kind, e.g. "xe-pvc", or an empty
 /// string for GK_NONE.
 LLVM_ABI StringRef getArchName(GPUKind Kind);
+
+/// \return the numeric name of \p GPUIPVersion, e.g. "xe_35.11.0".
+LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 
 /// \return the device \p Name denotes, or GK_NONE for a name this build does
 /// not know.
 ///
 /// \p Name may be a human-friendly name ("xe-pvc"), a compatibility name
-/// ("xe-dg2"), an alias ("bmg_g21") or a numeric name ("xe_12.60.7"). The
-/// revision of a numeric name is ignored and may be omitted, so "xe_12.60",
-/// "xe_12.60.0" and "xe_12.60.7" all denote the same device.
+/// ("xe-dg2") or a numeric name ("xe_12.60.7"). The revision of a numeric name
+/// is ignored and may be omitted, so "xe_12.60", "xe_12.60.0" and "xe_12.60.7"
+/// all denote the same device.
 LLVM_ABI GPUKind parseArch(StringRef Name);
-
-/// \return the IGCA target name to compile \p Kind for, e.g. "xe-pvc" ->
-/// "igca_20ca", or an empty string for GK_NONE. This is the spelling
-/// -target-cpu is invoked with.
-///
-/// The name is the numeric IGCA target followed by the suffix of the feature
-/// sets: igca_60 is the core features, igca_60c adds the compute features, and
-/// igca_60ca is exact, meaning that only a device at that target will do.
-LLVM_ABI StringRef getIGCAName(GPUKind Kind);
-
-/// Append every architecture name this build accepts, for diagnostics that
-/// offer the user an alternative to a name that did not parse.
-LLVM_ABI void fillValidArchList(SmallVectorImpl<StringRef> &Values);
 
 } // namespace IntelGPU
 } // namespace llvm

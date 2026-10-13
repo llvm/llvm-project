@@ -135,13 +135,8 @@ public:
     return TargetInfo::CharPtrBuiltinVaList;
   }
 
-  // StringToOffloadArch recognizes architectures from all vendors. Accept only
-  // the ones NVPTX accepted before, so Sema does not accept an Intel GPU name
-  // as an NVPTX CPU.
   bool isValidCPUName(StringRef Name) const override {
-    OffloadArch Arch = StringToOffloadArch(Name);
-    return Arch.isNVPTX() || Arch.isAMDGPU() || Arch.isAMDGCNSPIRV() ||
-           Arch.isGeneric() || Arch.isUnused();
+    return !StringToOffloadArch(Name).isUnknown();
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
@@ -149,10 +144,8 @@ public:
   }
 
   bool setCPU(StringRef Name) override {
-    if (!isValidCPUName(Name))
-      return false;
     GPU = StringToOffloadArch(Name);
-    return true;
+    return !GPU.isUnknown();
   }
 
   void setSupportedOpenCLOpts() override {
