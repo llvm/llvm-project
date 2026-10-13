@@ -27525,6 +27525,24 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             });
       }))
     return std::nullopt;
+  // A scalar that is a non-schedulable copyable element of another node in the
+  // same block (not the user of this node) is reused at the insertion point of
+  // that node, which does not depend on this node in the schedule. The
+  // vectorized value of this node may be emitted after the reuse, producing
+  // broken IR. Bail out of scheduling to avoid it.
+  if (any_of(make_isa_range<Instruction>(VL), [&](Instruction *I) {
+        if ((HasCopyables && S.isCopyableElement(I)) ||
+            !doesNotNeedToBeScheduled(I))
+          return false;
+        return any_of(
+            SLP->VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+              return TE.get() != EI.UserTE && !TE->isGather() &&
+                     TE->hasCopyableElements() && TE->isCopyableElement(I) &&
+                     TE->getMainOp()->getParent() == I->getParent() &&
+                     TE->getOperations().isNonSchedulable(I);
+            });
+      }))
+    return std::nullopt;
   if (DoesNotRequireScheduling) {
     // If all operands were replaced by copyables, the operands of this node
     // might be not, so need to recalculate dependencies for schedule data,
