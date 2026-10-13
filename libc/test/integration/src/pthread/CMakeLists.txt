@@ -226,6 +226,7 @@ add_integration_test(
   SRCS
     pthread_tss_test.cpp
   DEPENDS
+    libc.hdr.limits_macros
     libc.include.pthread
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_exit

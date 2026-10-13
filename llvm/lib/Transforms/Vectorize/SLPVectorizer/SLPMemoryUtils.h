@@ -19,12 +19,16 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/Alignment.h"
 
+#include <cstdint>
+
 namespace llvm {
 class AssumptionCache;
 class BasicBlock;
+class ConstantInt;
 class DataLayout;
 class DominatorTree;
 class FixedVectorType;
+class IRBuilderBase;
 class SCEV;
 class ScalarEvolution;
 class TargetLibraryInfo;
@@ -39,6 +43,17 @@ namespace llvm::slpvectorizer {
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,
                            bool CompareOpcodes = true);
+
+/// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
+/// \p IsReverse is set, or nullptr if \p Stride is not a constant.
+ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
+                                      const DataLayout &DL,
+                                      bool IsReverse = false);
+
+/// Casts \p V between the widened strided access type and the entry vector
+/// type \p DstTy.
+Value *createWidenedStridedCast(IRBuilderBase &Builder, Value *V, Type *DstTy,
+                                const DataLayout &DL);
 
 /// Calculates minimal alignment as a common alignment.
 template <typename T> Align computeCommonAlignment(ArrayRef<Value *> VL);
@@ -79,6 +94,20 @@ bool isMaskedLoadCompress(
     const DominatorTree &DT, const TargetLibraryInfo &TLI,
     const TargetTransformInfo::TargetCostKind CostKind,
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec);
+
+/// Checks if the simple loads of \p VL, mixed with the undef and poison lanes,
+/// can be replaced by a single load of the whole \p VL width. The loads must be
+/// consecutive and match their lanes, and the whole accessed range must be safe
+/// to load unconditionally.
+bool canWidenLoadsOverUndefLanes(ArrayRef<Value *> VL, const DataLayout &DL,
+                                 ScalarEvolution &SE, AssumptionCache &AC,
+                                 const DominatorTree &DT,
+                                 const TargetLibraryInfo &TLI);
+
+/// Returns the distance in bytes from the start of the vector load to the
+/// first load of \p Scalars: the leading undef lanes are covered by the vector
+/// load.
+uint64_t getVectorLoadShift(ArrayRef<Value *> Scalars);
 
 /// Checks if the stores \p VL with pointers \p PointerOps can be lowered as a
 /// single masked store. On success \p StoreVecTy is the widened store type and

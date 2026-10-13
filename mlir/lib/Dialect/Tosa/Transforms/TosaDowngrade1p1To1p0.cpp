@@ -35,7 +35,7 @@ namespace {
 
 class BoolFp32CastRewrite : public OpRewritePattern<tosa::CastOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::CastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -71,7 +71,7 @@ public:
 
 class BoolGatherRewrite : public OpRewritePattern<tosa::GatherOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::GatherOp op,
                                 PatternRewriter &rewriter) const override {
@@ -106,7 +106,7 @@ public:
 
 class BoolScatterRewrite : public OpRewritePattern<tosa::ScatterOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::ScatterOp op,
                                 PatternRewriter &rewriter) const override {
@@ -173,7 +173,7 @@ static LogicalResult isMatMulTTypeCompatibleForDowngrade(tosa::MatMulTOp op) {
 
 class MatMulTRewrite : public OpRewritePattern<tosa::MatMulTOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::MatMulTOp op,
                                 PatternRewriter &rewriter) const override {
@@ -188,6 +188,11 @@ public:
     if (!aShape.hasRank() || !bShape.hasRank())
       return rewriter.notifyMatchFailure(op, "expected ranked A and B tensors");
 
+    // TOSA 1.0 MATMUL requires rank 3 inputs. MATMUL_T operations with other
+    // ranks require separate rank and batch broadcast legalization.
+    if (aShape.getRank() != 3 || bShape.getRank() != 3)
+      return rewriter.notifyMatchFailure(op, "expected rank 3 A and B tensors");
+
     const int64_t dSize = bShape.getDimSize(0);
     const int64_t nSize = aShape.getDimSize(0);
 
@@ -198,6 +203,12 @@ public:
         (dSize == 1 && ShapedType::isDynamic(nSize)))
       return rewriter.notifyMatchFailure(
           op, "expected known batch size for broadcast");
+
+    // TOSA 1.0 MATMUL does not broadcast batch dimensions. The lowering below
+    // handles broadcasting B by tiling it, but does not implement tiling A.
+    if (dSize != 1 && (nSize == 1 || ShapedType::isDynamic(nSize)))
+      return rewriter.notifyMatchFailure(
+          op, "cannot downgrade A batch broadcasting");
 
     const int64_t wSize = bShape.getDimSize(1);
     const int64_t cSize = bShape.getDimSize(2);

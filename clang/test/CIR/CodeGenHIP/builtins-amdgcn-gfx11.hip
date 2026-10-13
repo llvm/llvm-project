@@ -31,6 +31,22 @@
 // RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
+// RUN: %clang_cc1 -triple amdgpu11.54-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+
+// RUN: %clang_cc1 -triple amdgpu11.70-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+
+// RUN: %clang_cc1 -triple amdgpu11.71-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+
+// RUN: %clang_cc1 -triple amdgpu11.72-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+
 // RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 -fclangir \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
@@ -60,6 +76,22 @@
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -triple amdgpu11.53-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
+// RUN: %clang_cc1 -triple amdgpu11.54-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
+// RUN: %clang_cc1 -triple amdgpu11.70-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
+// RUN: %clang_cc1 -triple amdgpu11.71-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
+// RUN: %clang_cc1 -triple amdgpu11.72-amd-amdhsa -x hip -std=c++11 -fclangir \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
@@ -95,6 +127,22 @@
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
+// RUN: %clang_cc1 -triple amdgpu11.54-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
+// RUN: %clang_cc1 -triple amdgpu11.70-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
+// RUN: %clang_cc1 -triple amdgpu11.71-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
+// RUN: %clang_cc1 -triple amdgpu11.72-amd-amdhsa -x hip -std=c++11 \
+// RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
 #define __device__ __attribute__((device))
 
 //===----------------------------------------------------------------------===//
@@ -107,4 +155,20 @@
 // LLVM: call i32 @llvm.amdgcn.permlane64.i32(i32 %{{.*}})
 __device__ void test_permlane64(unsigned int* out, unsigned int a) {
   *out = __builtin_amdgcn_permlane64(a);
+}
+
+// CIR-LABEL: @_Z18test_s_sendmsg_rtnPj
+// CIR: cir.call_llvm_intrinsic "amdgcn.s.sendmsg.rtn" {{.*}} : (!u32i) -> !u32i
+// LLVM: define{{.*}} void @_Z18test_s_sendmsg_rtnPj
+// LLVM: call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 0)
+__device__ void test_s_sendmsg_rtn(unsigned int* out) {
+  *out = __builtin_amdgcn_s_sendmsg_rtn(0);
+}
+
+// CIR-LABEL: @_Z19test_s_sendmsg_rtnlPm
+// CIR: cir.call_llvm_intrinsic "amdgcn.s.sendmsg.rtn" {{.*}} : (!u32i) -> !u64i
+// LLVM: define{{.*}} void @_Z19test_s_sendmsg_rtnlPm
+// LLVM: call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 0)
+__device__ void test_s_sendmsg_rtnl(unsigned long* out) {
+  *out = __builtin_amdgcn_s_sendmsg_rtnl(0);
 }

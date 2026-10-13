@@ -8,9 +8,9 @@ func.func @simple(%arg0: !fir.ref<!fir.array<100x10xf32>> , %arg1: !fir.ref<!fir
   %c10 = arith.constant 10 : index
   %c100 = arith.constant 100 : index
   %0 = fir.shape %c100, %c10 : (index, index) -> !fir.shape<2>
-  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "_QFsimpleEx"} : (!fir.ref<!fir.array<100x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<100x10xf32>>, !fir.ref<!fir.array<100x10xf32>>)
+  %1:2 = hlfir.declare %arg0(%0) uniq_name("_QFsimpleEx") : (!fir.ref<!fir.array<100x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<100x10xf32>>, !fir.ref<!fir.array<100x10xf32>>)
   %2 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %arg1(%2) {uniq_name = "y"} : (!fir.ref<!fir.array<10xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi64>>, !fir.ref<!fir.array<10xi64>>)
+  %3:2 = hlfir.declare %arg1(%2) uniq_name("y") : (!fir.ref<!fir.array<10xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi64>>, !fir.ref<!fir.array<10xi64>>)
   hlfir.region_assign {
     hlfir.yield %f : f32
   } to {

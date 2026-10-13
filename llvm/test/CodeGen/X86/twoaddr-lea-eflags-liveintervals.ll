@@ -3,9 +3,9 @@
 ; -precompute-phys-liveness is only available in asserts builds
 
 ; RUN: llc -mtriple=i686-- -verify-machineinstrs -precompute-phys-liveness \
-; RUN:     -early-live-intervals < %s | FileCheck --check-prefix=X86 %s
+; RUN:     < %s | FileCheck --check-prefix=X86 %s
 ; RUN: llc -mtriple=x86_64-- -verify-machineinstrs -precompute-phys-liveness \
-; RUN:     -early-live-intervals < %s | FileCheck --check-prefix=X64 %s
+; RUN:     < %s | FileCheck --check-prefix=X64 %s
 
 ; When TwoAddressInstructionPass converts an EFLAGS-clobbering
 ; arithmetic instruction into an LEA, the dead EFLAGS must be dropped

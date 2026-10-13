@@ -153,6 +153,8 @@ private:
   SmallVector<const MergeCandidate *, 4> Candidates;
   SmallVector<MachineInstr *, 4> MergeBaseCandidates;
 
+  MachineBasicBlock::iterator eraseInstr(MachineBasicBlock::iterator MI);
+
   void moveLiveRegsBefore(const MachineBasicBlock &MBB,
                           MachineBasicBlock::const_iterator Before);
   unsigned findFreeReg(const TargetRegisterClass &RegClass);
@@ -180,7 +182,7 @@ private:
                            MachineBasicBlock::iterator &MBBI);
   bool MergeBaseUpdateLoadStore(MachineInstr *MI);
   bool MergeBaseUpdateLSMultiple(MachineInstr *MI);
-  bool MergeBaseUpdateLSDouble(MachineInstr &MI) const;
+  bool MergeBaseUpdateLSDouble(MachineInstr &MI);
   bool LoadStoreMultipleOpti(MachineBasicBlock &MBB);
   bool MergeReturnIntoLDM(MachineBasicBlock &MBB);
   bool CombineMovBx(MachineBasicBlock &MBB);
@@ -594,6 +596,13 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
   }
 }
 
+MachineBasicBlock::iterator
+ARMLoadStoreOpt::eraseInstr(MachineBasicBlock::iterator MI) {
+  if (LiveRegsValid && LiveRegPos == MI)
+    LiveRegsValid = false;
+  return MI->eraseFromParent();
+}
+
 /// Return the first register of class \p RegClass that is not in \p Regs.
 unsigned ARMLoadStoreOpt::findFreeReg(const TargetRegisterClass &RegClass) {
   for (unsigned Reg : RCI->getOrder(&RegClass))
@@ -939,7 +948,7 @@ MachineInstr *ARMLoadStoreOpt::MergeOpsUpdate(const MergeCandidate &Cand) {
 
   // Remove instructions which have been merged.
   for (MachineInstr *MI : Cand.Instrs)
-    MBB.erase(MI);
+    eraseInstr(MI);
 
   // Determine range between the earliest removed instruction and the new one.
   if (EarliestAtBegin)
@@ -1351,7 +1360,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
   }
   if (MergeInstr != MBB.end()) {
     LLVM_DEBUG(dbgs() << "  Erasing old increment: " << *MergeInstr);
-    MBB.erase(MergeInstr);
+    eraseInstr(MergeInstr);
   }
 
   unsigned NewOpc = getUpdatingLSMultipleOpcode(Opcode, Mode);
@@ -1368,7 +1377,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
   MIB.setMemRefs(MI->memoperands());
 
   LLVM_DEBUG(dbgs() << "  Added new load/store: " << *MIB);
-  MBB.erase(MBBI);
+  eraseInstr(MBBI);
   return true;
 }
 
@@ -1525,7 +1534,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
     }
   }
   LLVM_DEBUG(dbgs() << "  Erasing old increment: " << *MergeInstr);
-  MBB.erase(MergeInstr);
+  eraseInstr(MergeInstr);
 
   ARM_AM::AddrOpc AddSub = Offset < 0 ? ARM_AM::sub : ARM_AM::add;
 
@@ -1614,12 +1623,12 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
       LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
     }
   }
-  MBB.erase(MBBI);
+  eraseInstr(MBBI);
 
   return true;
 }
 
-bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
+bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
   assert((Opcode == ARM::t2LDRDi8 || Opcode == ARM::t2STRDi8) &&
          "Must have t2STRDi8 or t2LDRDi8");
@@ -1655,7 +1664,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
       return false;
   }
   LLVM_DEBUG(dbgs() << "  Erasing old increment: " << *MergeInstr);
-  MBB.erase(MergeInstr);
+  eraseInstr(MergeInstr);
 
   DebugLoc DL = MI.getDebugLoc();
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc));
@@ -1677,7 +1686,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
   MIB.cloneMemRefs(MI);
 
   LLVM_DEBUG(dbgs() << "  Added new load/store: " << *MIB);
-  MBB.erase(MBBI);
+  eraseInstr(MBBI);
   return true;
 }
 
@@ -1879,7 +1888,7 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
       ++NumSTRD2STR;
   }
 
-  MBBI = MBB.erase(MBBI);
+  MBBI = eraseInstr(MBBI);
   return true;
 }
 
@@ -2072,7 +2081,7 @@ bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
       PrevMI.setDesc(TII->get(NewOpc));
       MO.setReg(ARM::PC);
       PrevMI.copyImplicitOps(*MBB.getParent(), *MBBI);
-      MBB.erase(MBBI);
+      eraseInstr(MBBI);
       return true;
     }
   }
@@ -2098,8 +2107,8 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
           .addReg(Use.getReg(), RegState::Kill)
           .add(predOps(ARMCC::AL))
           .copyImplicitOps(*MBBI);
-      MBB.erase(MBBI);
-      MBB.erase(Prev);
+      eraseInstr(MBBI);
+      eraseInstr(Prev);
       return true;
     }
 
