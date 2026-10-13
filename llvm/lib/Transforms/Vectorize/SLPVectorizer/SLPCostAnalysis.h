@@ -27,6 +27,7 @@
 
 namespace llvm {
 class APInt;
+class DataLayout;
 class FastMathFlags;
 class FixedVectorType;
 class Instruction;
@@ -67,6 +68,14 @@ InstructionCost
 getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy, Align Alignment,
                    unsigned AddressSpace,
                    const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the cast between the widened strided access type and
+/// the entry vector type.
+InstructionCost
+getWidenedStridedCastCost(const TargetTransformInfo &TTI, Type *SrcTy,
+                          Type *DstTy, const DataLayout &DL,
+                          TargetTransformInfo::CastContextHint CCH,
+                          TargetTransformInfo::TargetCostKind CostKind);
 
 /// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
 /// padding to a full register and using the masked div/rem intrinsic is
@@ -112,7 +121,7 @@ getBoolBitmaskCost(const TargetTransformInfo &TTI, bool NeedMask,
 InstructionCost getNarrowedLeafOpsCost(
     const TargetTransformInfo &TTI,
     const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
-    VectorType *NarrowVecTy, VectorType *WideVecTy, const Instruction *CxtI,
+    VectorType *NarrowVecTy, VectorType *WideVecTy, const Instruction *CtxI,
     TargetTransformInfo::TargetCostKind CostKind);
 
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
@@ -156,7 +165,7 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
                                TargetTransformInfo::CastContextHint CCH,
                                TargetTransformInfo::TargetCostKind CostKind,
                                const TargetLibraryInfo *TLI,
-                               const Instruction *CxtI, unsigned &ShiftWidth);
+                               const Instruction *CtxI, unsigned &ShiftWidth);
 
 /// i1 reductions can be emitted as the plain target reduction or in the
 /// bitcast-based form (bitcast to a scalar integer type plus a compare for

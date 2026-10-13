@@ -11,6 +11,7 @@
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsMCAsmInfo.h"
+#include "MCTargetDesc/MipsMCOptions.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "MCTargetDesc/MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
@@ -42,7 +43,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -68,9 +68,6 @@ namespace llvm {
 class MCInstrInfo;
 
 } // end namespace llvm
-
-extern cl::opt<bool> EmitJalrReloc;
-extern cl::opt<bool> NoZeroDivCheck;
 
 namespace {
 
@@ -143,6 +140,7 @@ class MipsAsmParser : public MCTargetAsmParser {
     return static_cast<MipsTargetStreamer &>(TS);
   }
 
+  const MipsMCOptions &CLOpts;
   MipsABIInfo ABI;
   SmallVector<std::unique_ptr<MipsAssemblerOptions>, 2> AssemblerOptions;
   MCSymbol *CurrentFn; // Pointer to the function being parsed. It may be a
@@ -204,7 +202,6 @@ class MipsAsmParser : public MCTargetAsmParser {
                                             const AsmToken &Token, SMLoc S);
   ParseStatus matchAnyRegisterWithoutDollar(OperandVector &Operands, SMLoc S);
   ParseStatus parseAnyRegister(OperandVector &Operands);
-  ParseStatus parseImm(OperandVector &Operands);
   ParseStatus parseJumpTarget(OperandVector &Operands);
   ParseStatus parseInvNum(OperandVector &Operands);
   ParseStatus parseRegisterList(OperandVector &Operands);
@@ -398,6 +395,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool parseSetNoCRCDirective();
   bool parseSetNoVirtDirective();
   bool parseSetNoGINVDirective();
+  bool parseSetNoEVADirective();
 
   bool parseSetAssignment();
 
@@ -441,11 +439,6 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   bool processInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                           const MCSubtargetInfo *STI);
-
-  // Helper function that checks if the value of a vector index is within the
-  // boundaries of accepted values for each RegisterKind
-  // Example: INSERT.B $w0[n], $1 => 16 > n >= 0
-  bool validateMSAIndex(int Val, int RegKind);
 
   // Selects a new architecture by updating the FeatureBits with the necessary
   // info including implied dependencies.
@@ -526,7 +519,7 @@ public:
 
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                 const MCInstrInfo &MII)
-      : MCTargetAsmParser(sti, MII),
+      : MCTargetAsmParser(sti, MII), CLOpts(MipsMCOptions::Global),
         ABI(MipsABIInfo::computeTargetABI(
             sti.getTargetTriple(),
             parser.getContext().getTargetOptions().getABIName())) {
@@ -584,7 +577,7 @@ public:
   }
 
   bool isJalrRelocAvailable(const MCExpr *JalExpr) {
-    if (!EmitJalrReloc)
+    if (!CLOpts.jalr_reloc)
       return false;
     MCValue Res;
     if (!JalExpr->evaluateAsRelocatable(Res, nullptr))
@@ -2140,7 +2133,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   }
 
   if (inMicroMipsMode()) {
-    if (MCID.mayLoad() && Opcode != Mips::LWP_MM) {
+    if (Opcode == Mips::LW_MM || Opcode == Mips::LW_MMR6) {
       // Try to create 16-bit GP relative load instruction.
       for (unsigned i = 0; i < MCID.getNumOperands(); i++) {
         const MCOperandInfo &OpInfo = MCID.operands()[i];
@@ -2164,7 +2157,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
           }
         }
       } // for
-    }   // if load
+    } // if load
 
     // TODO: Handle this with the AsmOperandClass.PredicateMethod.
 
@@ -4250,7 +4243,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     if (!ATReg)
       return true;
 
-    if (!NoZeroDivCheck && ImmValue == 0) {
+    if (!CLOpts.mno_check_zero_division && ImmValue == 0) {
       if (UseTraps)
         TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
       else
@@ -4282,7 +4275,8 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   // break, insert the trap/break and exit. This gives a different result to
   // GAS. GAS has an inconsistency/missed optimization in that not all cases
   // are handled equivalently. As the observed behaviour is the same, we're ok.
-  if (!NoZeroDivCheck && (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64)) {
+  if (!CLOpts.mno_check_zero_division &&
+      (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64)) {
     if (UseTraps) {
       TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
       return false;
@@ -4304,7 +4298,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   MCOperand LabelOp;
 
   TOut.emitRR(DivOp, RsReg, RtReg, IDLoc, STI);
-  if (!NoZeroDivCheck) {
+  if (!CLOpts.mno_check_zero_division) {
     if (UseTraps) {
       TOut.emitRRI(Mips::TEQ, RtReg, ZeroReg, 0x7, IDLoc, STI);
     } else {
@@ -7168,6 +7162,7 @@ bool MipsAsmParser::parseSetMips16Directive() {
     return false;
   }
 
+  clearFeatureBits(Mips::FeatureMicroMips, "micromips");
   setFeatureBits(Mips::FeatureMips16, "mips16");
   getTargetStreamer().emitDirectiveSetMips16();
   Parser.Lex(); // Consume the EndOfStatement.
@@ -7325,6 +7320,23 @@ bool MipsAsmParser::parseSetNoGINVDirective() {
   clearFeatureBits(Mips::FeatureGINV, "ginv");
 
   getTargetStreamer().emitDirectiveSetNoGINV();
+  Parser.Lex(); // Consume the EndOfStatement.
+  return false;
+}
+
+bool MipsAsmParser::parseSetNoEVADirective() {
+  MCAsmParser &Parser = getParser();
+  Parser.Lex(); // Eat "noeva".
+
+  // If this is not the end of the statement, report an error.
+  if (getLexer().isNot(AsmToken::EndOfStatement)) {
+    reportParseError("unexpected token, expected end of statement");
+    return false;
+  }
+
+  clearFeatureBits(Mips::FeatureEVA, "eva");
+
+  getTargetStreamer().emitDirectiveSetNoEVA();
   Parser.Lex(); // Consume the EndOfStatement.
   return false;
 }
@@ -7503,6 +7515,7 @@ bool MipsAsmParser::parseSetFeature(uint64_t Feature) {
     getTargetStreamer().emitDirectiveSetDspr2();
     break;
   case Mips::FeatureMicroMips:
+    clearFeatureBits(Mips::FeatureMips16, "mips16");
     setFeatureBits(Mips::FeatureMicroMips, "micromips");
     getTargetStreamer().emitDirectiveSetMicroMips();
     break;
@@ -7577,6 +7590,10 @@ bool MipsAsmParser::parseSetFeature(uint64_t Feature) {
   case Mips::FeatureGINV:
     setFeatureBits(Mips::FeatureGINV, "ginv");
     getTargetStreamer().emitDirectiveSetGINV();
+    break;
+  case Mips::FeatureEVA:
+    setFeatureBits(Mips::FeatureEVA, "eva");
+    getTargetStreamer().emitDirectiveSetEVA();
     break;
   }
   return false;
@@ -7961,6 +7978,10 @@ bool MipsAsmParser::parseDirectiveSet() {
     return parseSetFeature(Mips::FeatureGINV);
   if (IdVal == "noginv")
     return parseSetNoGINVDirective();
+  if (IdVal == "eva")
+    return parseSetFeature(Mips::FeatureEVA);
+  if (IdVal == "noeva")
+    return parseSetNoEVADirective();
 
   // It is just an identifier, look for an assignment.
   return parseSetAssignment();

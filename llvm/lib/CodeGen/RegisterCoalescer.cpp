@@ -159,6 +159,10 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// shrinkToUses() later.
   LaneBitmask ShrinkMask;
 
+  /// PHI kills of pruned subrange values. The incoming value of a subrange PHI
+  /// may need to be re-extended from earlier defs after operands are rewritten.
+  SmallVector<std::pair<LaneBitmask, SlotIndex>, 4> PHIKills;
+
   /// True if the main range of the currently coalesced intervals should be
   /// checked for smaller live intervals.
   bool ShrinkMainRange = false;
@@ -313,6 +317,11 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// existing subregister number of the def / use being updated is not zero,
   /// make sure to set it to the correct physical subregister.
   void updateRegDefsUses(Register SrcReg, Register DstReg, unsigned SubIdx);
+
+  /// Fix up the subranges of \p LI after values were pruned by the join:
+  /// re-extend the pruned PHI inputs in PHIKills to their remaining defs, and
+  /// shrink the subranges in ShrinkMask.
+  void updatePrunedSubRanges(LiveInterval &LI);
 
   /// If the given machine operand reads only undefined lanes add an undef
   /// flag.
@@ -1639,11 +1648,12 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     assert(DstReg.isPhysical() &&
            "Only expect virtual or physical registers in remat");
 
-    // When we're rematerializing into a not-quite-right register we already add
-    // the real definition as an implicit-def, but we should also be marking the
-    // "official" register as dead, since nothing else is going to use it as a
-    // result of this remat. Not doing this can affect pressure tracking.
-    NewMI.getOperand(0).setIsDead(true);
+    // CopyDstReg is added as an implicit-def below. If the remat defines a
+    // sub-register of CopyDstReg, the def is part of that live value and must
+    // stay live. Otherwise only the part covered by CopyDstReg is used, so the
+    // def is dead.
+    if (!TRI->isSuperRegister(NewMI.getOperand(0).getReg(), CopyDstReg))
+      NewMI.getOperand(0).setIsDead(true);
 
     bool HasDefMatchingCopy = false;
     for (auto [OpIndex, Reg] : NewMIImplDefs) {
@@ -2051,6 +2061,33 @@ void RegisterCoalescer::setUndefOnPrunedSubRegUses(LiveInterval &LI,
   LIS->shrinkToUses(&LI);
 }
 
+void RegisterCoalescer::updatePrunedSubRanges(LiveInterval &LI) {
+  for (LiveInterval::SubRange &S : LI.subranges()) {
+    SmallVector<SlotIndex, 8> EndPoints;
+    for (auto [Mask, Idx] : PHIKills) {
+      if ((Mask & S.LaneMask).any() && LI.liveAt(Idx.getPrevSlot()))
+        EndPoints.push_back(Idx);
+    }
+
+    if (!EndPoints.empty()) {
+      SmallVector<SlotIndex, 8> Undefs;
+      LI.computeSubRangeUndefs(Undefs, S.LaneMask, *MRI,
+                               *LIS->getSlotIndexes());
+      LIS->extendToIndices(S, EndPoints, Undefs);
+    }
+
+    if ((S.LaneMask & ShrinkMask).none())
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Shrink LaneUses (Lane " << PrintLaneMask(S.LaneMask)
+                      << ")\n");
+    LIS->shrinkToUses(S, LI.reg());
+    ShrinkMainRange = true;
+  }
+
+  LI.removeEmptySubRanges();
+}
+
 RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
     MachineInstr *CopyMI,
     SmallPtrSetImpl<MachineInstr *> &CurrentErasedInstrs) {
@@ -2189,6 +2226,7 @@ RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
 
   ShrinkMask = LaneBitmask::getNone();
   ShrinkMainRange = false;
+  PHIKills.clear();
 
   // Okay, attempt to join these two intervals.  If one of the intervals being
   // joined is a physreg and the join succeeds, this method always canonicalizes
@@ -2264,30 +2302,14 @@ RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
     updateRegDefsUses(CP.getDstReg(), CP.getDstReg(), CP.getDstIdx());
   updateRegDefsUses(CP.getSrcReg(), CP.getDstReg(), CP.getSrcIdx());
 
-  // Shrink subregister ranges if necessary.
-  if (ShrinkMask.any()) {
-    LiveInterval &LI = LIS->getInterval(CP.getDstReg());
-    for (LiveInterval::SubRange &S : LI.subranges()) {
-      if ((S.LaneMask & ShrinkMask).none())
-        continue;
-      LLVM_DEBUG(dbgs() << "Shrink LaneUses (Lane " << PrintLaneMask(S.LaneMask)
-                        << ")\n");
-      LIS->shrinkToUses(S, LI.reg());
-      ShrinkMainRange = true;
-    }
-    LI.removeEmptySubRanges();
-  }
+  if (ShrinkMask.any() || !PHIKills.empty())
+    updatePrunedSubRanges(LIS->getInterval(CP.getDstReg()));
 
   // CP.getSrcReg()'s live interval has been merged into CP.getDstReg's live
   // interval. Since CP.getSrcReg() is in ToBeUpdated set and its live interval
   // is not up-to-date, need to update the merged live interval here.
-  if (ToBeUpdated.count(CP.getSrcReg()))
-    ShrinkMainRange = true;
-
-  if (ShrinkMainRange) {
-    LiveInterval &LI = LIS->getInterval(CP.getDstReg());
-    shrinkToUses(&LI);
-  }
+  if (ShrinkMainRange || ToBeUpdated.count(CP.getSrcReg()))
+    shrinkToUses(&LIS->getInterval(CP.getDstReg()));
 
   // SrcReg is guaranteed to be the register whose live interval that is
   // being merged.
@@ -2710,7 +2732,9 @@ public:
   /// Removes subranges starting at copies that get removed. This sometimes
   /// happens when undefined subranges are copied around. These ranges contain
   /// no useful information and can be removed.
-  void pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask);
+  void pruneSubRegValues(
+      LiveInterval &LI, LaneBitmask &ShrinkMask,
+      SmallVectorImpl<std::pair<LaneBitmask, SlotIndex>> &PHIKills);
 
   /// Pruning values in subranges can lead to removing segments in these
   /// subranges started by IMPLICIT_DEFs. The corresponding segments in
@@ -3326,8 +3350,8 @@ void JoinVals::pruneValues(JoinVals &Other,
           // Also remove dead flags since the joined live range will
           // continue past this instruction.
           for (MachineOperand &MO :
-               Indexes->getInstructionFromIndex(Def)->all_defs()) {
-            if (MO.getReg() == Reg) {
+               mi_bundle_ops(*Indexes->getInstructionFromIndex(Def))) {
+            if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
               if (MO.getSubReg() != 0 && MO.isUndef() && !EraseImpDef)
                 MO.setIsUndef(false);
               MO.setIsDead(false);
@@ -3363,6 +3387,23 @@ void JoinVals::pruneValues(JoinVals &Other,
     case CR_Unresolved:
     case CR_Impossible:
       llvm_unreachable("Unresolved conflicts");
+    }
+  }
+}
+
+/// Collect the ends of the predecessors where \p VNI is live-out into a PHI
+/// value of \p LR. Mirrors LiveIntervals::hasPHIKill.
+static void collectPHIKills(const LiveRange &LR, const VNInfo *VNI,
+                            const SlotIndexes &Indexes,
+                            SmallVectorImpl<SlotIndex> &PHIKills) {
+  for (const VNInfo *PHI : LR.valnos) {
+    if (PHI->isUnused() || !PHI->isPHIDef())
+      continue;
+    const MachineBasicBlock *PHIMBB = Indexes.getMBBFromIndex(PHI->def);
+    for (const MachineBasicBlock *Pred : PHIMBB->predecessors()) {
+      SlotIndex End = Indexes.getMBBEndIdx(Pred);
+      if (LR.getVNInfoBefore(End) == VNI)
+        PHIKills.push_back(End);
     }
   }
 }
@@ -3413,7 +3454,9 @@ static bool isLiveThrough(const LiveQueryResult Q) {
 /// from that copy cannot disappear. When pruning a value that started
 /// at the removed copy, the corresponding identical value must be
 /// extended to replace it.
-void JoinVals::pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask) {
+void JoinVals::pruneSubRegValues(
+    LiveInterval &LI, LaneBitmask &ShrinkMask,
+    SmallVectorImpl<std::pair<LaneBitmask, SlotIndex>> &PHIKills) {
   // Look for values being erased.
   bool DidPrune = false;
   for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
@@ -3444,6 +3487,8 @@ void JoinVals::pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask) {
            (V.Identical && V.Resolution == CR_Erase && ValueOut->def == Def))) {
         LLVM_DEBUG(dbgs() << "\t\tPrune sublane " << PrintLaneMask(S.LaneMask)
                           << " at " << Def << "\n");
+        SmallVector<SlotIndex, 8> ValuePHIKills;
+        collectPHIKills(S, ValueOut, *Indexes, ValuePHIKills);
         SmallVector<SlotIndex, 8> EndPoints;
         LIS->pruneValue(S, Def, &EndPoints);
         DidPrune = true;
@@ -3456,6 +3501,9 @@ void JoinVals::pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask) {
           // then we can't simply prune V from S. V needs to be replaced
           // with V.OtherVNI.
           LIS->extendToIndices(S, EndPoints);
+        } else {
+          for (SlotIndex Kill : ValuePHIKills)
+            PHIKills.emplace_back(S.LaneMask, Kill);
         }
 
         // We may need to eliminate the subrange if the copy introduced a live
@@ -3784,15 +3832,15 @@ RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
     // having stale segments.
     LHSVals.pruneMainSegments(LHS, ShrinkMainRange);
 
-    LHSVals.pruneSubRegValues(LHS, ShrinkMask);
-    RHSVals.pruneSubRegValues(LHS, ShrinkMask);
+    LHSVals.pruneSubRegValues(LHS, ShrinkMask, PHIKills);
+    RHSVals.pruneSubRegValues(LHS, ShrinkMask, PHIKills);
   } else if (TrackSubRegLiveness && !CP.getDstIdx() && CP.getSrcIdx()) {
     LHS.createSubRangeFrom(LIS->getVNInfoAllocator(),
                            CP.getNewRC()->getLaneMask(), LHS);
     mergeSubRangeInto(LHS, RHS, TRI->getSubRegIndexLaneMask(CP.getSrcIdx()), CP,
                       CP.getDstIdx());
     LHSVals.pruneMainSegments(LHS, ShrinkMainRange);
-    LHSVals.pruneSubRegValues(LHS, ShrinkMask);
+    LHSVals.pruneSubRegValues(LHS, ShrinkMask, PHIKills);
   }
 
   // The merging algorithm in LiveInterval::join() can't handle conflicting

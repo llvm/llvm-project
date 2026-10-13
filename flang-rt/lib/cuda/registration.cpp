@@ -11,6 +11,8 @@
 #include "flang/Runtime/CUDA/common.h"
 
 #include "cuda_runtime.h"
+#include <cstdint>
+#include <unistd.h>
 
 namespace Fortran::runtime::cuda {
 
@@ -54,6 +56,29 @@ void RTDEF(CUFRegisterManagedVariable)(
 }
 
 void RTDEF(CUFInitModule)(void **module) { __cudaInitModule(module); }
+
+void RTDEF(CUFRegisterHostMemoryRange)(void *begin, void *end) {
+  if (!begin || end <= begin)
+    return;
+  const auto pageSize{static_cast<std::uintptr_t>(sysconf(_SC_PAGESIZE))};
+  const auto first{reinterpret_cast<std::uintptr_t>(begin) & ~(pageSize - 1)};
+  const auto last{
+      (reinterpret_cast<std::uintptr_t>(end) + pageSize - 1) & ~(pageSize - 1)};
+  cudaError_t err{cudaHostRegister(reinterpret_cast<void *>(first),
+      last - first, cudaHostRegisterPortable | cudaHostRegisterMapped)};
+  if (err == cudaErrorHostMemoryAlreadyRegistered) {
+    // Clear the error state left by the failed call.
+    (void)cudaGetLastError();
+    return;
+  }
+  if (err != cudaSuccess) {
+    const char *name{cudaGetErrorName(err)};
+    Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash("cudaHostRegister(%p, %zu) failed with '%s'",
+        reinterpret_cast<void *>(first), static_cast<std::size_t>(last - first),
+        name ? name : "<unknown>");
+  }
+}
 
 } // extern "C"
 

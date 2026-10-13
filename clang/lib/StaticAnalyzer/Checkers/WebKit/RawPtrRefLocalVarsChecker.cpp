@@ -15,6 +15,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -96,14 +97,22 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
       if (isGetterOfSafePtr(Method).value_or(false))
         return true;
     }
+    // For a member operator call, the first argument is the implicit object.
+    auto *OperatorMethod = dyn_cast<CXXMethodDecl>(Callee);
+    if (!isa<CXXOperatorCallExpr>(CE) || !OperatorMethod ||
+        !OperatorMethod->isImplicitObjectMemberFunction())
+      OperatorMethod = nullptr;
     unsigned ArgIndex = 0;
-    unsigned ArgOffset = isa<CXXOperatorCallExpr>(CE);
+    unsigned ArgOffset = OperatorMethod ? 1 : 0;
     for (auto *Arg : CE->arguments()) {
       ParmVarDecl *Parm = nullptr;
       if (ArgIndex >= ArgOffset) {
         unsigned ParmIndex = ArgIndex - ArgOffset;
         if (ParmIndex < Callee->getNumParams())
           Parm = Callee->getParamDecl(ParmIndex);
+      } else if (OperatorMethod->isConst()) {
+        ArgIndex++;
+        continue;
       }
       if (mutatesGuardian(Arg, Parm))
         return false;
@@ -152,7 +161,7 @@ private:
         return false;
       return !ArgType.getNonReferenceType().isConstQualified();
     }
-    return !ArgType.isConstQualified();
+    return !ArgType.getNonReferenceType().isConstQualified();
   }
 };
 
@@ -214,6 +223,24 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
   return false;
 }
 
+// Returns the fast enumeration statement whose element is declared as V as in
+// "for (T *V in Collection)".
+static const ObjCForCollectionStmt *
+findObjCForCollectionStmtOfElement(const VarDecl *V) {
+  ASTContext &Ctx = V->getASTContext();
+  for (auto &VarParent : Ctx.getParents(*V)) {
+    auto *DS = VarParent.get<DeclStmt>();
+    if (!DS || !DS->isSingleDecl())
+      continue;
+    for (auto &DeclStmtParent : Ctx.getParents(*DS)) {
+      auto *FCS = DeclStmtParent.get<ObjCForCollectionStmt>();
+      if (FCS && FCS->getElement() == DS)
+        return FCS;
+    }
+  }
+  return nullptr;
+}
+
 static const VarDecl *findAssignedVar(const Expr *DestExpr) {
   while (DestExpr) {
     DestExpr = DestExpr->IgnoreParenCasts();
@@ -273,10 +300,40 @@ public:
       }
 
       bool TraverseDecl(Decl *D) override {
+        // A template pattern is checked through its instantiations, which are
+        // traversed from the TemplateDecl itself. In the pattern the callee of
+        // a call may still be an unresolved overload set and the type of an
+        // expression may still be dependent, neither of which can be reasoned
+        // about, so don't enter it at all.
+        if (D && !isa<TemplateDecl>(D) && D->isTemplated())
+          return true;
         llvm::SaveAndRestore SavedDecl(DeclWithIssue);
         if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
           DeclWithIssue = D;
         return DynamicRecursiveASTVisitor::TraverseDecl(D);
+      }
+
+      bool TraverseLambdaExpr(LambdaExpr *L) override {
+        auto *FTD = L->getLambdaClass()->getDependentLambdaCallOperator();
+        if (!FTD)
+          return DynamicRecursiveASTVisitor::TraverseLambdaExpr(L);
+        // The body of a generic lambda is the pattern of its call operator,
+        // but it is reached from the LambdaExpr as a statement, so TraverseDecl
+        // never gets to skip it. Traverse the capture initializers, which are
+        // evaluated in the enclosing scope, and then the call operator itself,
+        // of which the pattern is skipped like any other and the instantiations
+        // are traversed. Going through TraverseDecl also makes an instantiation
+        // the decl with the issue, so that a guardian is looked up in it rather
+        // than in the pattern. The initializers are traversed as expressions
+        // because the variable of an init capture is declared in the pattern.
+        for (unsigned I = 0, N = L->capture_size(); I != N; ++I) {
+          if (!(L->capture_begin() + I)->isExplicit())
+            continue;
+          if (auto *Init = L->capture_init_begin()[I];
+              Init && !TraverseStmt(Init))
+            return false;
+        }
+        return TraverseDecl(FTD);
       }
 
       bool VisitTypedefDecl(TypedefDecl *TD) override {
@@ -309,12 +366,15 @@ public:
 
       bool TraverseIfStmt(IfStmt *IS) override {
         if (IS->getConditionVariable()) {
-          // This code currently does not explicitly check the "else" statement
-          // since getConditionVariable returns nullptr when there is a
-          // condition defined after ";" as in "if (auto foo = ~; !foo)". If
-          // this semantics change, we should add an explicit check for "else".
-          if (auto *Then = IS->getThen(); !Then || TFA.isTrivial(Then))
+          // This code does not check the condition variable in the "else"
+          // statement since getConditionVariable returns nullptr when there
+          // is a condition defined after ";" as in "if (auto foo = ~; !foo)".
+          // If this semantics change, we should check it in "else" as well.
+          if (auto *Then = IS->getThen(); !Then || TFA.isTrivial(Then)) {
+            if (auto *Else = IS->getElse(); Else && !TFA.isTrivial(Else))
+              return TraverseStmt(Else);
             return true;
+          }
         }
         if (!TFA.isTrivial(IS))
           return DynamicRecursiveASTVisitor::TraverseIfStmt(IS);
@@ -382,7 +442,8 @@ public:
         const Expr *Origin = nullptr;
         if (Model->checksForInteriorDestruction()) {
           const Expr *Source = InitList ? InitList->getInit(Index) : Value;
-          if (isPtrOriginSafe(V, Source, DeclWithIssue, Origin))
+          if (isPtrOriginSafe(V, Source, DeclWithIssue, Origin,
+                              Binding->getType()))
             continue;
         }
         reportBug(V, V->getType(), nullptr, BD, DeclWithIssue, Origin);
@@ -392,8 +453,15 @@ public:
     std::optional<bool> IsUncountedPtr = isUnsafePtr(SinkType);
     if (IsUncountedPtr && *IsUncountedPtr) {
       const Expr *Origin = nullptr;
+      // The element of a fast enumeration is kept alive by the collection,
+      // which can't be mutated during the enumeration. Treat the collection as
+      // the initial value of the element.
+      if (!Value) {
+        if (auto *FCS = findObjCForCollectionStmtOfElement(V))
+          Value = FCS->getCollection();
+      }
       if (Value) {
-        if (isPtrOriginSafe(V, Value, DeclWithIssue, Origin))
+        if (isPtrOriginSafe(V, Value, DeclWithIssue, Origin, SinkType))
           return;
       } else if (Model->checksForInteriorDestruction())
         return;
@@ -402,7 +470,8 @@ public:
   }
 
   bool isPtrOriginSafe(const VarDecl *V, const Expr *Value,
-                       const Decl *DeclWithIssue, const Expr *&Origin) const {
+                       const Decl *DeclWithIssue, const Expr *&Origin,
+                       QualType SinkType = QualType()) const {
     return tryToFindPtrOrigin(
         Value, /*StopAtFirstRefCountedObj=*/false,
         Model->checksForInteriorDestruction(),
@@ -442,7 +511,8 @@ public:
           if (EFA.isACallToEnsureFn(InitArgOrigin))
             return true;
 
-          if (Model->isSafeExpr(InitArgOrigin, PtrIsLifetimeBoundToOrigin))
+          if (Model->isSafeExpr(InitArgOrigin, PtrIsLifetimeBoundToOrigin,
+                                SinkType, /*SinkMayEscape=*/false))
             return true;
 
           if (!Model->checksForInteriorDestruction() &&
@@ -470,9 +540,16 @@ public:
       if (auto *Record = GuardianType->getAsCXXRecordDecl()) {
         if (MaybeGuardian->isLocalVarDecl() &&
             (Model->isSafePtr(Record) ||
-             isRefcountedStringsHack(MaybeGuardian)) &&
-            isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
-          return true;
+             isRefcountedStringsHack(MaybeGuardian))) {
+          // The collection of a fast enumeration is evaluated before the loop
+          // body is entered so the guardian only needs to outlive the body.
+          if (auto *FCS = findObjCForCollectionStmtOfElement(V)) {
+            GuardianVisitor Visitor(MaybeGuardian);
+            return Visitor.TraverseStmt(const_cast<Stmt *>(FCS->getBody()));
+          }
+          if (isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
+            return true;
+        }
       }
     }
 
@@ -570,7 +647,7 @@ class UnborrowedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
 public:
   UnborrowedLocalVarsChecker()
       : RawPtrRefLocalVarsChecker("Loan on a CanBorrow object not guarded by "
-                                  "a Borrow",
+                                  "const or a Borrow",
                                   makeBorrowSafetyModel()) {}
 };
 

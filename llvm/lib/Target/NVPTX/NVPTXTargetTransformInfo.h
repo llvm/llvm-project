@@ -127,7 +127,7 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      const Instruction *CtxI = nullptr) const override;
 
   InstructionCost
   getScalarizationOverhead(VectorType *InTy, const APInt &DemandedElts,
@@ -151,17 +151,16 @@ public:
         Insert = false;
       }
     }
-    if (Insert && NVPTX::isPackedVectorTy(VT) && VT.is32BitVector()) {
-      // Can be built in a single 32-bit mov (64-bit regs are emulated in SASS
-      // with 2x 32-bit regs)
-      Cost += 1;
-      Insert = false;
-    }
     if (Insert && VT == MVT::v4i8) {
-      InstructionCost Cost = 3; // 3 x PRMT
+      Cost += 3; // 3 x PRMT
       for (auto Idx : seq(NumElements))
         if (DemandedElts[Idx])
           Cost += 1; // zext operand to i32
+      Insert = false;
+    } else if (Insert && NVPTX::isPackedVectorTy(VT) && VT.is32BitVector()) {
+      // Can be built in a single 32-bit mov (64-bit regs are emulated in SASS
+      // with 2x 32-bit regs)
+      Cost += 1;
       Insert = false;
     }
     return Cost + BaseT::getScalarizationOverhead(InTy, DemandedElts, Insert,
@@ -177,19 +176,19 @@ public:
                              TTI::PeelingPreferences &PP) const override;
 
   bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) const override {
-    // Volatile loads/stores are only supported for shared and global address
-    // spaces, or for generic AS that maps to them.
-    if (!(AddrSpace == llvm::ADDRESS_SPACE_GENERIC ||
-          AddrSpace == llvm::ADDRESS_SPACE_GLOBAL ||
-          AddrSpace == llvm::ADDRESS_SPACE_SHARED))
+    if (!isa<LoadInst, StoreInst>(I))
       return false;
 
-    switch(I->getOpcode()){
+    switch (AddrSpace) {
     default:
       return false;
-    case Instruction::Load:
-    case Instruction::Store:
+    case ADDRESS_SPACE_GENERIC:
+    case ADDRESS_SPACE_GLOBAL:
+    case ADDRESS_SPACE_SHARED:
+    case ADDRESS_SPACE_SHARED_CLUSTER:
       return true;
+    case ADDRESS_SPACE_LOCAL:
+      return ST->hasLocalVolatile();
     }
   }
 
@@ -230,6 +229,8 @@ public:
     // Self-referential globals are not supported.
     return false;
   }
+
+  bool shouldBuildLookupTablesForConstant(Constant *C) const override;
 
   InstructionCost getPartialReductionCost(
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
