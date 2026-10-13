@@ -1,7 +1,10 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("VectorizeOptions") {
-  visibility = [ ":Vectorize" ]
+  visibility = [
+    ":Vectorize",
+    "//llvm/unittests/Transforms/Vectorize:VectorizeTests",
+  ]
   args = [ "-gen-opt-parser-defs" ]
 }
 

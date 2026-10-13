@@ -1852,3 +1852,39 @@ define i32 @test_mulhrsu_i32(i32 %rs1, i32 %rs2) {
   %res = call i32 @llvm.riscv.mulhrsu.i32(i32 %rs1, i32 %rs2)
   ret i32 %res
 }
+
+define i32 @test_aadd_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_aadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    paadd.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.aadd.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_aaddu_u32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_aaddu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    paaddu.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.aaddu.u32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_asub_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_asub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pasub.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.asub.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_asubu_u32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_asubu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pasubu.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.asubu.u32(i32 %a, i32 %b)
+  ret i32 %res
+}

@@ -2492,7 +2492,7 @@ private:
   isGatherShuffledEntry(
       const TreeEntry *TE, ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       SmallVectorImpl<SmallVector<const TreeEntry *>> &Entries,
-      unsigned NumParts, bool ForOrder = false);
+      unsigned NumParts, Type *ScalarTy, bool ForOrder = false);
 
   /// \returns the cost of gathering (inserting) the values in \p VL into a
   /// vector.
@@ -5552,7 +5552,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
       tryToGatherExtractElements(GatheredScalars, ExtractMask, NumParts);
   SmallVector<std::optional<TargetTransformInfo::ShuffleKind>> GatherShuffles =
       isGatherShuffledEntry(&TE, GatheredScalars, Mask, Entries, NumParts,
-                            /*ForOrder=*/true);
+                            ScalarTy, /*ForOrder=*/true);
   // The internal gathers of the splat gather subtrees are not used as shuffle
   // sources, do not reorder the tree to match them.
   if (hasSplatSubtreeGather(Entries)) {
@@ -10598,9 +10598,24 @@ class InstructionsCompatibilityAnalysis {
   /// Returns the idempotent value for MainOp. For Add, returns 0. For Or, it
   /// should choose between false and the operand itself, since V or V == V.
   /// For the min/max intrinsics, returns the corresponding limit value (e.g. 0
-  /// for umax, since umax(V, 0) == V).
-  Value *selectBestIdempotentValue() const {
+  /// for umax, since umax(V, 0) == V). For smin and smax the type limit is
+  /// kept when it stays same after narrowing, otherwise the limit is deduced
+  /// from the signed width of V.
+  Value *selectBestIdempotentValue(Value *V) const {
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
+    if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(MainOp);
+        MinMax && MinMax->isSigned() &&
+        !isTypeLimitNeutral(V, MinMax->getIntrinsicID() == Intrinsic::smax,
+                            DL)) {
+      // TODO: add AC to both width queries once the analysis has one.
+      unsigned Width = ComputeMaxSignificantBits(V, DL, nullptr, nullptr, &DT);
+      APInt Limit = MinMax->getIntrinsicID() == Intrinsic::smax
+                        ? APInt::getSignedMinValue(Width)
+                        : APInt::getSignedMaxValue(Width);
+      return Constant::getIntegerValue(
+          MainOp->getType(),
+          Limit.sext(MainOp->getType()->getScalarSizeInBits()));
+    }
     return ConstantExpr::getIdentity(MainOp, MainOp->getType(),
                                      !MainOp->isCommutative());
   }
@@ -10661,7 +10676,7 @@ class InstructionsCompatibilityAnalysis {
       return {V, PoisonValue::get(Ty)};
     if (isa<UndefValue>(V) && isUndefTolerantBinOp(MainOp))
       return {V, V};
-    return {V, selectBestIdempotentValue()};
+    return {V, selectBestIdempotentValue(V)};
   }
 
   /// Checks if the lanes with the absorbing constant may use poison as the
@@ -21898,7 +21913,7 @@ SmallVector<std::optional<TargetTransformInfo::ShuffleKind>>
 BoUpSLP::isGatherShuffledEntry(
     const TreeEntry *TE, ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
     SmallVectorImpl<SmallVector<const TreeEntry *>> &Entries, unsigned NumParts,
-    bool ForOrder) {
+    Type *ScalarTy, bool ForOrder) {
   assert(NumParts > 0 && NumParts < VL.size() &&
          "Expected positive number of registers.");
   Entries.clear();
@@ -21913,8 +21928,8 @@ BoUpSLP::isGatherShuffledEntry(
   Mask.assign(VL.size(), PoisonMaskElem);
   assert((TE->UserTreeIndex || TE == &getRootNode()) &&
          "Expected only single user of the gather node.");
-  unsigned PWSz = getFullVectorNumberOfElements(*TTI, VL.front()->getType(),
-                                                VL.size(), Opts.slp_revec);
+  unsigned PWSz =
+      getFullVectorNumberOfElements(*TTI, ScalarTy, VL.size(), Opts.slp_revec);
   if (TE->UserTreeIndex && TE->UserTreeIndex.UserTE->isGather() &&
       TE->UserTreeIndex.EdgeIdx == UINT_MAX &&
       (TE->Idx == 0 ||
@@ -23243,8 +23258,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         all_of(E->Scalars, [this](Value *V) { return isVectorized(V); }) ||
         isSplat(E->Scalars) ||
         (E->Scalars != GatheredScalars && GatheredScalars.size() <= 2)) {
-      GatherShuffles =
-          isGatherShuffledEntry(E, GatheredScalars, Mask, Entries, NumParts);
+      GatherShuffles = isGatherShuffledEntry(E, GatheredScalars, Mask, Entries,
+                                             NumParts, ScalarTy);
     }
     // The splat gather subtrees are speculative: the keep/drop check may
     // delete them and does not track reuse of their internal gathers by other
@@ -28939,7 +28954,10 @@ bool BoUpSLP::collectValuesToDemote(
         };
         // A copyable V stands for smax/smin(V, identity), which equals V.
         if (E.isCopyableElement(V))
-          return CheckOp(V);
+          return CheckOp(V) &&
+                 (isTypeLimitNeutral(V, ID == Intrinsic::smax, *DL) ||
+                  ComputeMaxSignificantBits(V, *DL, nullptr, nullptr, DT) <=
+                      BitWidth);
         auto *I = cast<Instruction>(V);
         return CheckOp(I->getOperand(0)) && CheckOp(I->getOperand(1));
       });
@@ -36588,28 +36606,32 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
     }
   }
 
-  if (PoorThroughputSeeds.size() >= 2) {
-    SmallVector<Value *> Seeds;
-    SmallDenseMap<Value *, SeedGroupKey> SeedKeys;
-    for (Instruction *I :
-         make_filter_range(PoorThroughputSeeds, [&](Instruction *I) {
-           return !R.isDeleted(I) &&
-                  isValidElementType(getValueType(I, Opts->slp_revec),
-                                     Opts->slp_revec) &&
-                  !R.hasResolvedUser(I);
-         })) {
-      SeedKeys.try_emplace(I, getSeedGroupKey(I, *TLI));
-      Seeds.push_back(I);
-    }
-    Changed |= vectorizeSeeds(
-        Seeds,
-        [&](Value *V1, Value *V2) {
-          return SeedKeys.at(V1).less(SeedKeys.at(V2));
-        },
-        R);
-  }
+  Changed |= vectorizePoorThroughputSeeds(PoorThroughputSeeds.getArrayRef(), R);
 
   return Changed;
+}
+
+bool SLPVectorizerPass::vectorizePoorThroughputSeeds(
+    ArrayRef<Instruction *> Candidates, BoUpSLP &R) {
+  if (Candidates.size() < 2)
+    return false;
+  SmallVector<Value *> Seeds;
+  SmallDenseMap<Value *, SeedGroupKey> SeedKeys;
+  for (Instruction *I : make_filter_range(Candidates, [&](Instruction *I) {
+         return !R.isDeleted(I) &&
+                isValidElementType(getValueType(I, Opts->slp_revec),
+                                   Opts->slp_revec) &&
+                !R.hasResolvedUser(I);
+       })) {
+    SeedKeys.try_emplace(I, getSeedGroupKey(I, *TLI));
+    Seeds.push_back(I);
+  }
+  return vectorizeSeeds(
+      Seeds,
+      [&](Value *V1, Value *V2) {
+        return SeedKeys.at(V1).less(SeedKeys.at(V2));
+      },
+      R);
 }
 
 bool SLPVectorizerPass::vectorizeSeeds(

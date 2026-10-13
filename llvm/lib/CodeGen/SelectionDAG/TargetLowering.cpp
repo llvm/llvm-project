@@ -532,7 +532,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 #undef FP_CMP_LIBCALL
 
   // Use the target specific return value for comparison lib calls.
-  EVT RetVT = getCmpLibcallReturnType();
+  EVT RetVT = EVT::getEVT(getCmpLibcallReturnType(*DAG.getContext()));
   SDValue Ops[2] = {NewLHS, NewRHS};
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[2] = { OldLHS.getValueType(),
@@ -12852,6 +12852,21 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
   RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
   if (LibcallImpl == RTLIB::Unsupported) {
     forceExpandMultiply(DAG, dl, Signed, Lo, Hi, LHS, RHS);
+    return;
+  }
+
+  // The libcall takes and returns WideVT values as packed VT halves. This only
+  // works if VT is legal and WideVT isn't. Otherwise, emit a wide multiply and
+  // let it legalise normally, possibly into a wider libcall.
+  if (isTypeLegal(WideVT) || !isTypeLegal(VT)) {
+    SDValue Mul = DAG.getNode(ISD::MUL, dl, WideVT,
+                              DAG.getExtOrTrunc(Signed, LHS, dl, WideVT),
+                              DAG.getExtOrTrunc(Signed, RHS, dl, WideVT));
+    SDValue Shift =
+        DAG.getShiftAmountConstant(VT.getScalarSizeInBits(), WideVT, dl);
+    Lo = DAG.getNode(ISD::TRUNCATE, dl, VT, Mul);
+    Hi = DAG.getNode(ISD::TRUNCATE, dl, VT,
+                     DAG.getNode(ISD::SRL, dl, WideVT, Mul, Shift));
     return;
   }
 

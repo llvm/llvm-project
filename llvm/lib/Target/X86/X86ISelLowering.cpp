@@ -1054,6 +1054,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::AVGCEILU,           MVT::v16i8, Legal);
     setOperationAction(ISD::AVGCEILU,           MVT::v8i16, Legal);
 
+    if (!Subtarget.is64Bit()) {
+      setOperationAction(ISD::MULHU,            MVT::v2i64, Custom);
+      setOperationAction(ISD::MULHS,            MVT::v2i64, Custom);
+    }
+
     setOperationAction(ISD::SMULO,              MVT::v16i8, Custom);
     setOperationAction(ISD::UMULO,              MVT::v16i8, Custom);
     setOperationAction(ISD::UMULO,              MVT::v2i32, Custom);
@@ -1685,6 +1690,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       if (Subtarget.is64Bit()) {
         setOperationAction(ISD::UMUL_LOHI, MVT::v4i64, Custom);
         setOperationAction(ISD::SMUL_LOHI, MVT::v4i64, Custom);
+      } else {
+        setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
       }
       setOperationAction(ISD::VSELECT, MVT::v32i8, Legal);
 
@@ -21247,6 +21254,9 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 SDValue X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                                            bool IsSigned,
                                            SDValue &Chain) const {
+  if (!Subtarget.hasX87())
+    return SDValue();
+
   bool IsStrict = Op->isStrictFPOpcode();
   SDLoc DL(Op);
 
@@ -28374,7 +28384,7 @@ bool X86::isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
     return false;
   // 64-bit targets support extended Swift async frame setup,
   // except for targets that use the windows 64 prologue.
-  return !MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+  return !MF.usesWindowsUnwindInfo();
 }
 
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
@@ -28935,7 +28945,7 @@ SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
   MFI.setFrameAddressIsTaken(true);
 
-  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
+  if (MF.usesWindowsUnwindInfo()) {
     // Depth > 0 makes no sense on targets which use Windows unwind codes.  It
     // is not possible to crawl up the stack without looking at the unwind codes
     // simultaneously.
@@ -48270,9 +48280,13 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
       EltSizeInBits <= 64 && DAG.computeKnownBits(Rdx).getMaxValue().ule(255) &&
       (EltSizeInBits == 16 || Rdx.getOpcode() == ISD::ZERO_EXTEND ||
        Subtarget.hasAVX512())) {
-    if (Rdx.getValueType() == MVT::v8i16) {
-      Rdx = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, Rdx,
-                        DAG.getUNDEF(MVT::v8i16));
+    if (Rdx.getValueType() == MVT::v8i16 ||
+        (Rdx.getValueType() == MVT::v4i32 && Subtarget.hasSSE41())) {
+      MVT PackSVT = MVT::getIntegerVT(EltSizeInBits / 2);
+      MVT PackVT = MVT::getVectorVT(PackSVT, NumElts * 2);
+      Rdx = DAG.getNode(X86ISD::PACKUS, DL, PackVT, Rdx,
+                        DAG.getPOISON(Rdx.getValueType()));
+      Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
     } else if (NumElts == 4) {
       // v4i16 fits into the bottom v8i8 64-bits and is cheaper to truncate.
       Rdx = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Rdx);
@@ -64306,6 +64320,7 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
     case ISD::ZERO_EXTEND:
     case ISD::ANY_EXTEND:
     case ISD::MUL:
+    case ISD::SINT_TO_FP:
       return false;
     case ISD::SHL:
     case ISD::SRA:

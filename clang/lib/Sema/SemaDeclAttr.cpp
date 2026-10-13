@@ -3709,13 +3709,18 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
              << Unsupported << None << CurFeature << Target;
   }
 
+  if (ParsedAttrs.BranchProtection.empty()) {
+    if (!ParsedAttrs.SignReturnAddrHardening.empty())
+      return Diag(LiteralLoc,
+                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
+    return false;
+  }
+
   TargetInfo::BranchProtectionInfo BPI{};
   StringRef DiagMsg;
-  if (ParsedAttrs.BranchProtection.empty())
-    return false;
+
   if (!Context.getTargetInfo().validateBranchProtection(
-          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI,
-          Context.getLangOpts(), DiagMsg)) {
+          ParsedAttrs, BPI, Context.getLangOpts(), DiagMsg)) {
     if (DiagMsg.empty())
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "branch-protection" << Target;
@@ -3724,6 +3729,19 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   }
   if (!DiagMsg.empty())
     Diag(LiteralLoc, diag::warn_unsupported_branch_protection_spec) << DiagMsg;
+
+  if (!ParsedAttrs.SignReturnAddrHardening.empty()) {
+    auto SignReturnAddrHardenOpt =
+        Context.getTargetInfo().parseSignReturnAddressHardening(
+            ParsedAttrs.SignReturnAddrHardening);
+    if (!SignReturnAddrHardenOpt)
+      return Diag(LiteralLoc, diag::err_invalid_harden_pac_ret_spec)
+             << ParsedAttrs.SignReturnAddrHardening;
+
+    if (BPI.SignReturnAddr == LangOptions::SignReturnAddressScopeKind::None)
+      return Diag(LiteralLoc,
+                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
+  }
 
   return false;
 }
@@ -4139,8 +4157,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
 
   // In C++ the implicit 'this' function parameter also counts, and they are
   // counted from one.
-  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
-  Info->NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
+  Info->NumArgs = getFunctionOrMethodNumParams(D, /*IncludeThis=*/true);
 
   Info->Identifier = AL.getArgAsIdent(0)->getIdentifierInfo();
   StringRef Format = Info->Identifier->getName();
@@ -4176,7 +4193,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   // FIXME: Do we need to bounds check?
   unsigned ArgIdx = Info->FormatStringIdx - 1;
 
-  if (HasImplicitThisParam) {
+  if (hasImplicitObjectParameter(D)) {
     if (ArgIdx == 0) {
       S.Diag(AL.getLoc(),
              diag::err_format_attribute_implicit_this_format_string)
@@ -6212,7 +6229,11 @@ makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
     return {};
   }
 
-  return {ConstantExpr::Create(S.getASTContext(), E, APValue(*I)),
+  ExprResult Result = S.DefaultLvalueConversion(E);
+  if (!Result.isUsable())
+    return {};
+
+  return {ConstantExpr::Create(S.getASTContext(), Result.get(), APValue(*I)),
           I->getZExtValue()};
 }
 
