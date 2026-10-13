@@ -631,6 +631,12 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
       return $_get(type.getContext(), type,
                    mlir::DenseI32ArrayAttr::get(type.getContext(), path));
     }]>,
+    // Pointer-to-data-member reusing an existing path attribute.
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
+                                       "mlir::DenseI32ArrayAttr":$member_path),
+                                  [{
+      return $_get(type.getContext(), type, member_path);
+    }]>,
   ];
 
   // This attribute gets lowered during CXXABILowering.
@@ -2444,7 +2450,7 @@ def CIR_LoweringLangOptionsAttr
     width, CXXABI, fp formats, etc.) are rebuilt from `cir.triple` instead.
 
     Each bool field mirrors the like-named `LangOptions` member: `exceptions`,
-    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `gpu_rdc`,
+    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `hlsl`, `gpu_rdc`,
     `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters), and
     `openmp_is_target_device`. `clang_abi_compat` is an `i32` mirroring
     `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
@@ -2467,6 +2473,7 @@ def CIR_LoweringLangOptionsAttr
     "bool":$cuda,
     "bool":$cuda_is_device,
     "bool":$hip,
+    "bool":$hlsl,
     "bool":$gpu_rdc,
     "bool":$openmp,
     "bool":$openmp_is_target_device,
@@ -2475,7 +2482,7 @@ def CIR_LoweringLangOptionsAttr
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
-               $gpu_rdc, $openmp, $openmp_is_target_device,
+               $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
                $clang_abi_compat) `>`
   }];
 

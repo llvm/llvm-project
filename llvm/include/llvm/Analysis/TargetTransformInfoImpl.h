@@ -585,8 +585,6 @@ public:
 
   virtual bool haveFastSqrt(Type *Ty) const { return false; }
 
-  virtual bool haveFastClmul(IntegerType *Ty) const { return false; }
-
   virtual bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
     return true;
   }
@@ -1250,11 +1248,6 @@ public:
   }
 
   virtual unsigned getMaxNumArgs() const { return UINT_MAX; }
-
-  virtual unsigned getNumBytesToPadGlobalArray(unsigned Size,
-                                               Type *ArrayType) const {
-    return 0;
-  }
 
   virtual void collectKernelLaunchBounds(
       const Function &F,
