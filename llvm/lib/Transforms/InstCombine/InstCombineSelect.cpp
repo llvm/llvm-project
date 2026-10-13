@@ -1688,6 +1688,20 @@ static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
 
   if (SelectPatternResult::isMinOrMax(SPF)) {
     Intrinsic::ID IntrinsicID = getMinMaxIntrinsic(SPF);
+    // SPF can match patterns like:
+    // (X <u C1) ? C1 : UMIN(X, C2) ==> UMAX(UMIN(X, C2), C1)
+    // However, if the UMIN has poison-generating annotations, the result may
+    // be more poisonous, because the poison is propagated unconditionally after
+    // the transform. Drop annotations in this case.
+    // FIXME: This is something of a hack that relies on details of patterns
+    // supported by SPF.
+    if (!impliesPoison(LHS, &Cmp))
+      if (auto *I = dyn_cast<Instruction>(LHS))
+        I->dropPoisonGeneratingAnnotations();
+    if (!impliesPoison(RHS, &Cmp))
+      if (auto *I = dyn_cast<Instruction>(RHS))
+        I->dropPoisonGeneratingAnnotations();
+
     return IC.Builder.CreateBinaryIntrinsic(IntrinsicID, LHS, RHS);
   }
 

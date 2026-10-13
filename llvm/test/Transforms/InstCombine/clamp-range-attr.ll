@@ -4,7 +4,8 @@
 define i16 @umax_of_umin_range1(i16 %x) {
 ; CHECK-LABEL: define i16 @umax_of_umin_range1(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[UMIN:%.*]] = call range(i16 43, 1001) i16 @llvm.umin.i16(i16 [[X]], i16 1000)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.umax.i16(i16 [[X]], i16 42)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i16 @llvm.umin.i16(i16 [[TMP1]], i16 1000)
 ; CHECK-NEXT:    ret i16 [[UMIN]]
 ;
   %umin = call range(i16 43, 1001) i16 @llvm.umin.i16(i16 %x, i16 1000)
@@ -29,7 +30,8 @@ define i16 @umax_of_umin_range2(i16 %x) {
 define i16 @umin_of_umax_range1(i16 %x) {
 ; CHECK-LABEL: define i16 @umin_of_umax_range1(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[UMIN:%.*]] = call range(i16 43, 1001) i16 @llvm.umax.i16(i16 [[X]], i16 42)
+; CHECK-NEXT:    [[UMIN1:%.*]] = call i16 @llvm.umax.i16(i16 [[X]], i16 42)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i16 @llvm.umin.i16(i16 [[UMIN1]], i16 1000)
 ; CHECK-NEXT:    ret i16 [[UMIN]]
 ;
   %umin = call range(i16 43, 1001) i16 @llvm.umax.i16(i16 %x, i16 42)
@@ -41,7 +43,7 @@ define i16 @umin_of_umax_range1(i16 %x) {
 define i16 @umin_of_umax_range2(i16 %x) {
 ; CHECK-LABEL: define i16 @umin_of_umax_range2(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[UMIN:%.*]] = call range(i16 43, 1101) i16 @llvm.umax.i16(i16 [[X]], i16 42)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i16 @llvm.umax.i16(i16 [[X]], i16 42)
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i16 @llvm.umin.i16(i16 [[UMIN]], i16 1000)
 ; CHECK-NEXT:    ret i16 [[UMAX]]
 ;
@@ -54,7 +56,8 @@ define i16 @umin_of_umax_range2(i16 %x) {
 define i16 @smax_of_smin_range1(i16 %x) {
 ; CHECK-LABEL: define i16 @smax_of_smin_range1(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[SMIN:%.*]] = call range(i16 -100, 101) i16 @llvm.smin.i16(i16 [[X]], i16 100)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[X]], i16 -100)
+; CHECK-NEXT:    [[SMIN:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP1]], i16 100)
 ; CHECK-NEXT:    ret i16 [[SMIN]]
 ;
   %smin = call range(i16 -100, 101) i16 @llvm.smin.i16(i16 %x, i16 100)
@@ -79,7 +82,8 @@ define i16 @smax_of_smin_range2(i16 %x) {
 define i16 @smin_of_smax_range1(i16 %x) {
 ; CHECK-LABEL: define i16 @smin_of_smax_range1(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[SMAX:%.*]] = call range(i16 -100, 101) i16 @llvm.smax.i16(i16 [[X]], i16 -100)
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i16 @llvm.smax.i16(i16 [[X]], i16 -100)
+; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smin.i16(i16 [[SMAX1]], i16 100)
 ; CHECK-NEXT:    ret i16 [[SMAX]]
 ;
   %smax = call range(i16 -100, 101) i16 @llvm.smax.i16(i16 %x, i16 -100)
@@ -91,7 +95,7 @@ define i16 @smin_of_smax_range1(i16 %x) {
 define i16 @smin_of_smax_range2(i16 %x) {
 ; CHECK-LABEL: define i16 @smin_of_smax_range2(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[SMAX:%.*]] = call range(i16 -100, 201) i16 @llvm.smax.i16(i16 [[X]], i16 -100)
+; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[X]], i16 -100)
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i16 @llvm.smin.i16(i16 [[SMAX]], i16 100)
 ; CHECK-NEXT:    ret i16 [[SMIN]]
 ;
