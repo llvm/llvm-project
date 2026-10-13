@@ -100,34 +100,29 @@ func.func @dyn_subview_of_static_subview(%v: vector<8x16xf32>, %n: index,
 
 // -----
 
-// The promoted value flows across control flow: a block argument merges the
-// masked store on one path with the untouched value on the other.
+// The promoted value flows across control flow: the `scf.if` returns the
+// masked store on one path and the untouched value on the other.
 
-// CHECK-LABEL: func.func @dyn_subview_across_cfg(
+// CHECK-LABEL: func.func @dyn_subview_in_scf_if(
 // CHECK-SAME:      %[[V:[a-z0-9_]+]]: vector<8x16xf32>, %[[W:[a-z0-9_]+]]: vector<8x16xf32>, %[[N:[a-z0-9_]+]]: index
 // CHECK-NOT:     memref.alloca
-// CHECK:         cf.cond_br %{{.*}}, ^[[BB1:.*]], ^[[BB2:.*]]
-// CHECK:       ^[[BB1]]:
-// CHECK:         %[[CM:.*]] = vector.create_mask %[[N]], %{{.*}} : vector<8x16xi1>
-// CHECK:         %[[SEL:.*]] = arith.select %[[CM]], %[[W]], %[[V]]
-// CHECK:         cf.br ^[[BB3:.*]](%[[SEL]] : vector<8x16xf32>)
-// CHECK:       ^[[BB2]]:
-// CHECK:         cf.br ^[[BB3]](%[[V]] : vector<8x16xf32>)
-// CHECK:       ^[[BB3]](%[[PHI:.*]]: vector<8x16xf32>):
-// CHECK:         return %[[PHI]]
-func.func @dyn_subview_across_cfg(%v: vector<8x16xf32>, %w: vector<8x16xf32>,
-                                  %n: index, %pad: f32, %c: i1) -> vector<8x16xf32> {
+// CHECK:         %[[IF:.*]] = scf.if %{{.*}} -> (vector<8x16xf32>) {
+// CHECK:           %[[CM:.*]] = vector.create_mask %[[N]], %{{.*}} : vector<8x16xi1>
+// CHECK:           %[[SEL:.*]] = arith.select %[[CM]], %[[W]], %[[V]]
+// CHECK:           scf.yield %[[SEL]] : vector<8x16xf32>
+// CHECK:         } else {
+// CHECK:           scf.yield %[[V]] : vector<8x16xf32>
+// CHECK:         }
+// CHECK:         return %[[IF]]
+func.func @dyn_subview_in_scf_if(%v: vector<8x16xf32>, %w: vector<8x16xf32>,
+                                 %n: index, %pad: f32, %c: i1) -> vector<8x16xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8x16xf32>
   vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
-  cf.cond_br %c, ^bb1, ^bb2
-^bb1:
-  %sv = memref.subview %a[0, 0] [%n, 16] [1, 1] : memref<8x16xf32> to memref<?x16xf32, strided<[16, 1]>>
-  vector.transfer_write %w, %sv[%c0, %c0] {in_bounds = [false, true]} : vector<8x16xf32>, memref<?x16xf32, strided<[16, 1]>>
-  cf.br ^bb3
-^bb2:
-  cf.br ^bb3
-^bb3:
+  scf.if %c {
+    %sv = memref.subview %a[0, 0] [%n, 16] [1, 1] : memref<8x16xf32> to memref<?x16xf32, strided<[16, 1]>>
+    vector.transfer_write %w, %sv[%c0, %c0] {in_bounds = [false, true]} : vector<8x16xf32>, memref<?x16xf32, strided<[16, 1]>>
+  }
   %r = vector.transfer_read %a[%c0, %c0], %pad {in_bounds = [true, true]} : memref<8x16xf32>, vector<8x16xf32>
   return %r : vector<8x16xf32>
 }

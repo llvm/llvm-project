@@ -269,6 +269,34 @@ func.func @subview_static_read(%init: vector<8xf32>, %pad: f32) -> vector<4xf32>
 
 // -----
 
+// Each subview in a chain aliases its own parent, so a write through the inner
+// one is inserted into the outer slice, which is inserted back into the
+// buffer's value. The write lands at the sum of the two offsets.
+
+// CHECK-LABEL: func.func @subview_of_subview_write
+//   CHECK-SAME:   (%[[V:.*]]: vector<2xf32>, %[[INIT:.*]]: vector<8xf32>, %[[PAD:.*]]: f32)
+//    CHECK-NOT:   memref.alloca
+//    CHECK-NOT:   memref.subview
+//    CHECK-NOT:   vector.transfer_write
+//    CHECK-NOT:   vector.transfer_read
+//        CHECK:   vector.extract_strided_slice %[[INIT]] offsets = [2], sizes = [4], strides = [1]
+//        CHECK:   %[[INNER:.*]] = vector.insert_strided_slice %[[V]], %{{.*}} offsets = [1], strides = [1] : vector<2xf32> into vector<4xf32>
+//        CHECK:   %[[OUTER:.*]] = vector.insert_strided_slice %[[INNER]], %[[INIT]] offsets = [2], strides = [1] : vector<4xf32> into vector<8xf32>
+//        CHECK:   return %[[OUTER]] : vector<8xf32>
+func.func @subview_of_subview_write(%v: vector<2xf32>, %init: vector<8xf32>, %pad: f32) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %init, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  // Write via a subview of a subview: element 3 of the buffer.
+  %s1 = memref.subview %a[2] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 2>>
+  %s2 = memref.subview %s1[1] [2] [1] : memref<4xf32, strided<[1], offset: 2>> to memref<2xf32, strided<[1], offset: 3>>
+  vector.transfer_write %v, %s2[%c0] {in_bounds = [true]} : vector<2xf32>, memref<2xf32, strided<[1], offset: 3>>
+  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
+  return %r : vector<8xf32>
+}
+
+// -----
+
 // A buffer accessed *only* through subviews, with no whole-buffer transfer to
 // seed the promoted value: the reaching definition is the allocator's default
 // value (ub.poison), and the written slice is inserted into it and read back
