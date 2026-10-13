@@ -1,27 +1,38 @@
-! RUN: %flang -fsyntax-only -pedantic %s 2>&1 | FileCheck %s
+!RUN: %python %S/test_errors.py %s %flang_fc1 -Werror -Wstat-kind
 
 program stat_test
   use iso_c_binding
   use iso_fortran_env
   integer :: coarray[*]
+  integer, allocatable :: a(:)
   type(event_type) :: e[*]
+  type(team_type) :: t
   integer(C_INT8_T) :: myint8
   integer(C_INT16_T) :: myint16
  
-  ! CHECK: warning:  The stat-variable must have an integer kind of at least 16-bit
-  coarray[1, stat=myint8] = 0 ! violates F2023 9.7.4
+  !WARNING: The stat-variable should have a decimal exponent range of at least four [-Wstat-kind]
+  coarray[1, stat=myint8] = 0
   
-  ! CHECK: warning: The stat-variable must have an integer kind of at least 16-bit
-  sync all(stat=myint8) ! violates F2023 9.7.4
+  !WARNING: The stat-variable should have a decimal exponent range of at least four [-Wstat-kind]
+  sync all(stat=myint8)
   
-  ! CHECK: warning: The stat-variable must have an integer kind of at least 16-bit
-  event wait(e, stat=myint8) ! violates F2023 9.7.4
+  !WARNING: The stat-variable should have a decimal exponent range of at least four [-Wstat-kind]
+  event wait(e, stat=myint8)
   
-  ! CHECK-NOT: warning: The stat-variable must have an integer kind of at least 16-bit
+  !WARNING: The stat-variable should have a decimal exponent range of at least four [-Wstat-kind]
+  allocate(a(3), stat=myint8)
+  
+  !WARNING: The stat-variable should have a decimal exponent range of at least four [-Wstat-kind]
+  deallocate(a, stat=myint8)
+  
+  !WARNING: The stat-variable should have a decimal exponent range of at least four [-Wstat-kind]
+  form team(1, t, stat=myint8)
+  
   coarray[1, stat=myint16] = 0 ! ok
-  
   sync all(stat=myint16) ! ok
-  
   event wait(e, stat=myint16) ! ok
+  allocate(a(3), stat=myint16) ! ok
+  deallocate(a, stat=myint16) ! ok
+  form team(1, t, stat=myint16) ! ok
 
 end program
