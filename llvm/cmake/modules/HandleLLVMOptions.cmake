@@ -1373,6 +1373,34 @@ endif()
 # This option is handled below and is defined here as it impacts the PCH status.
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 
+if(LLVM_CCACHE_BUILD OR CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache")
+  find_program(CCACHE_PROGRAM ccache)
+  if(NOT CCACHE_PROGRAM)
+    message(FATAL_ERROR "Unable to find the program ccache. Set LLVM_CCACHE_BUILD to OFF")
+  endif()
+  message(STATUS "CCache program: ${CCACHE_PROGRAM}")
+
+  if(CMAKE_HOST_WIN32)
+    execute_process(COMMAND ${CCACHE_PROGRAM} --version
+      OUTPUT_VARIABLE CCACHE_VERSION_OUT
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REPLACE "\n" ";" CCACHE_VERSION_OUT_LIST "${CCACHE_VERSION_OUT}")
+    list(GET CCACHE_VERSION_OUT_LIST 0 CCACHE_VERSION_OUT_FIRST)
+    if (CCACHE_VERSION_OUT_FIRST MATCHES "^ccache version ([0-9]+\.[0-9]+.*)")
+      set(CCACHE_VERSION ${CMAKE_MATCH_1})
+    endif()
+    set(CCACHE_VERSION ${CCACHE_VERSION} CACHE STRING "CCache version number" FORCE)
+    message(STATUS "CCache version: ${CCACHE_VERSION}")
+    if (CCACHE_VERSION VERSION_GREATER_EQUAL "4.8")
+      message(STATUS "CCache supports command line configuration")
+      # We store this as a separate option to support command line configuration on windows without PCH
+      set(CCACHE_SUPPORTS_CLI_CONFIG TRUE)
+    else()
+      set(CCACHE_SUPPORTS_CLI_CONFIG FALSE)
+    endif()
+  endif()
+endif()
+
 if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
   if(LLVM_ENABLE_MODULES)
     # PCH with modules is difficult to get right and modules should make PCH
@@ -1443,34 +1471,11 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
         "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
       set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
     endif()
-    find_program(CCACHE_PROGRAM ccache)
-    if(NOT CCACHE_PROGRAM)
-      message(FATAL_ERROR "Unable to find the program ccache. Set LLVM_CCACHE_BUILD to OFF")
-    endif()
-    message(STATUS "CCache program: ${CCACHE_PROGRAM}")
-
-    if(CMAKE_HOST_WIN32)
-      execute_process(COMMAND ${CCACHE_PROGRAM} --version
-      OUTPUT_VARIABLE CCACHE_VERSION_OUT
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-      string(REPLACE "\n" ";" CCACHE_VERSION_OUT_LIST "${CCACHE_VERSION_OUT}")
-      list(GET CCACHE_VERSION_OUT_LIST 0 CCACHE_VERSION_OUT_FIRST)
-      if (CCACHE_VERSION_OUT_FIRST MATCHES "^ccache version ([0-9]+\.[0-9]+.*)")
-        set(CCACHE_VERSION ${CMAKE_MATCH_1})
-      endif()
-      set(CCACHE_VERSION ${CCACHE_VERSION} CACHE STRING "CCache version number" FORCE)
-      message(STATUS "CCache version: ${CCACHE_VERSION}")
-      if (CCACHE_VERSION VERSION_GREATER_EQUAL "4.8")
-        message(STATUS "CCache supports command line configuration")
-        # We store this as a separate option to support command line configuration on windows without PCH
-        set(CCACHE_SUPPORTS_CLI_OPTIONS TRUE)
-      else()
-        set(CCACHE_SUPPORTS_CLI_OPTIONS FALSE)
-        set(CMAKE_DISABLE_PRECOMPILE_HEADERS TRUE)
-        message(WARNING "Using ccache with precompiled headers on Windows is "
+    if(CMAKE_HOST_WIN32 AND NOT CCACHE_SUPPORTS_CLI_CONFIG)
+      set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+      message(WARNING "Using ccache with precompiled headers on Windows is "
         "not supported with ccache versions older than 4.8 "
         "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
-      endif()
     endif()
   endif()
 endif()
@@ -1527,7 +1532,7 @@ if(LLVM_CCACHE_BUILD)
     endif()
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
   else()
-    if (CCACHE_SUPPORTS_CLI_OPTIONS)
+    if (CCACHE_SUPPORTS_CLI_CONFIG)
       # configure ccache with the command line configuration syntax
       set(LLVM_CCACHE_PARAMS "run_second_cpp=true;hash_dir=true;sloppiness=pch_defines,time_macros"
         CACHE STRING "Parameters to pass through to ccache")
@@ -1550,6 +1555,11 @@ if(LLVM_CCACHE_BUILD)
       # with cmd.exe and some MSVC tools other than cl.exe
       set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
       set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+    else()
+      if(LLVM_CCACHE_MAXSIZE OR LLVM_CCACHE_DIR OR
+         NOT LLVM_CCACHE_PARAMS MATCHES "run_second_cpp=true;hash_dir=true;sloppiness=pch_defines,time_macros")
+        message(FATAL_ERROR "CCache configuration through CMake is not supported on Windows with ccache older than 4.8")
+      endif()
     endif()
   endif()
 endif()
