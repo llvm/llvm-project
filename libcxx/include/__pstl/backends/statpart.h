@@ -10,6 +10,7 @@
 #define _LIBCPP___PSTL_STATPART_H
 
 #include <__pstl/backends/statpart/basis.h>
+#include <__pstl/backends/statpart/find_end.h>
 
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_if.h>
@@ -72,63 +73,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
-
-template <class _ExecutionPolicy>
-struct __find_end<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator1>
-  operator()(_Policy&&,
-             _ForwardIterator1 __first1,
-             _ForwardIterator1 __last1,
-             _ForwardIterator2 __first2,
-             _ForwardIterator2 __last2,
-             _BinaryPredicate __pred) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
-      typedef typename std::iterator_traits<_ForwardIterator1>::difference_type _DifferenceType;
-      _DifferenceType __size2 = __last2 - __first2; // The length of the needle to search for.
-      if (__size2 == 0) {
-        return __last1; // If the needle length is zero, the last iterator is returned.
-      }
-      _DifferenceType __size1 = __last1 - __first1;
-      if (__size1 < __size2) {
-        return __last1; // The range is too small to contain the requested number of consecutive elements.
-      }
-      // Calculate the length of the tail where a potential match cannot start by definition.
-      _DifferenceType __crop = __size2 - 1;
-      // We're only interested in the range where a potential match can start: [first, last - crop)
-      _ForwardIterator1 __last1_cropped = __last1 - __crop;
-      // Run a parallel chunked find_if, covering the range where a potential match can start.
-      auto __res = __statpart::__find(
-          __first1,
-          __last1_cropped,
-          [__first2, __last2, __crop, &__pred](_ForwardIterator1 __brick_first, _ForwardIterator1 __brick_last) {
-            // Uncrop the range to allow std::find_end to find a full match, which can go beyond __brick_last.
-            _ForwardIterator1 __brick_last_uncropped = __brick_last + __crop;
-            // Run a serial std::find_end inside each of the chunks in parallel.
-            _ForwardIterator1 __ret = std::find_end(__brick_first, __brick_last_uncropped, __first2, __last2, __pred);
-            // The returned iterator is either a match inside [__brick_first, __brick_last) or a miss encoded as
-            // __brick_last_uncropped. Return the miss as __brick_last to conform to expectations of __parallel_find().
-            return __ret == __brick_last_uncropped ? __brick_last : __ret;
-          },
-          greater<>{}, // `greater` here means the highest index among the matches
-          false        // `false` here means we want the last match, not the first
-      );
-      if (!__res) {
-        return std::nullopt; // Failed to run the algorithm, propagate the error.
-      }
-      if (*__res == __last1_cropped) {
-        return __last1; // No match was found in the range.
-      }
-      return *__res; // Return the successful match.
-    } else {
-      // Non-random access iterators cannot be processed in parallel, fall back to the sequential implementation.
-      return std::find_end(
-          std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__pred));
-    }
-  }
-};
 
 template <class _ExecutionPolicy>
 struct __for_each<__statpart_backend_tag, _ExecutionPolicy> {

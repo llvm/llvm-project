@@ -2420,6 +2420,9 @@ module std {
         module basis {
           header "__pstl/backends/statpart/basis.h"
         }
+        module find_end {
+          header "__pstl/backends/statpart/find_end.h"
+        }
       }
       module statpart_old {
         header "__pstl/backends/statpart.h"

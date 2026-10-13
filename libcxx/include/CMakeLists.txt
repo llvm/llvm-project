@@ -697,6 +697,7 @@ set(files
   __pstl/backends/serial.h
   __pstl/backends/statpart.h  
   __pstl/backends/statpart/basis.h
+  __pstl/backends/statpart/find_end.h
   __pstl/backends/std_thread.h
   __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h

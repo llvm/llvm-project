@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_STATPART__BASIS_H
-#define _LIBCPP___PSTL_STATPART__BASIS_H
+#ifndef _LIBCPP___PSTL_STATPART_BASIS_H
+#define _LIBCPP___PSTL_STATPART_BASIS_H
 
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/merge.h>
@@ -491,4 +491,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_STATPART__BASIS_H
+#endif // _LIBCPP___PSTL_STATPART_BASIS_H
