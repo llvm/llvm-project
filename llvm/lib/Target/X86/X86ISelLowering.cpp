@@ -23308,29 +23308,29 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
   SDValue A = Op.getOperand(0);
   SDValue B = Op.getOperand(1);
 
-  SDValue X = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, a);
-  SDValue Y = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, b);
+  SDValue X = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, a);
+  SDValue Y = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, b);
 
-  SDValue Res = DAG.getNode(ISD::FDIV, dl, MVT::f64, x, y);
-  Res = DAG.getNode(ISD::FTRUNC, dl, MVT::f64, Res);
-  Res = DAG.getNode(ISD::FNEG, dl, MVT::f64, Res);
-  Res = DAG.getNode(ISD::FMA, dl, MVT::f64, Res, y, x);
-  Res = DAG.getNode(ISD::FCOPYSIGN, dl, MVT::f64, Res, x);
+  SDValue Res = DAG.getNode(ISD::FDIV, Dl, MVT::f64, x, y);
+  Res = DAG.getNode(ISD::FTRUNC, Dl, MVT::f64, Res);
+  Res = DAG.getNode(ISD::FNEG, Dl, MVT::f64, Res);
+  Res = DAG.getNode(ISD::FMA, Dl, MVT::f64, Res, y, x);
+  Res = DAG.getNode(ISD::FCOPYSIGN, Dl, MVT::f64, Res, x);
 
   EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
       DAG.getDataLayout(), *DAG.getContext(), MVT::f64);
-  SDValue YIsInf = DAG.getNode(ISD::IS_FPCLASS, dl, CCVT, y,
-                               DAG.getTargetConstant(fcInf, dl, MVT::i32));
+  SDValue YIsInf = DAG.getNode(ISD::IS_FPCLASS, Dl, CCVT, y,
+                               DAG.getTargetConstant(fcInf, Dl, MVT::i32));
 
   SDValue XIsFinite =
-      DAG.getNode(ISD::IS_FPCLASS, dl, CCVT, x,
-                  DAG.getTargetConstant(fcFinite, dl, MVT::i32));
+      DAG.getNode(ISD::IS_FPCLASS, Dl, CCVT, x,
+                  DAG.getTargetConstant(fcFinite, Dl, MVT::i32));
 
-  SDValue UseX = DAG.getNode(ISD::AND, dl, CCVT, YIsInf, XIsFinite);
-  Res = DAG.getSelect(dl, MVT::f64, UseX, x, Res);
+  SDValue UseX = DAG.getNode(ISD::AND, Dl, CCVT, YIsInf, XIsFinite);
+  Res = DAG.getSelect(Dl, MVT::f64, UseX, x, Res);
 
-  return DAG.getNode(ISD::FP_ROUND, dl, MVT::f16, Res,
-                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+  return DAG.getNode(ISD::FP_ROUND, Dl, MVT::f16, Res,
+                     DAG.getIntPtrConstant(0, Dl, /*isTarget=*/true));
 }
 /// Helper for attempting to create a X86ISD::BT node.
 static SDValue getBT(SDValue Src, SDValue BitNo, const SDLoc &DL, SelectionDAG &DAG) {
