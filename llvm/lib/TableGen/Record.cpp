@@ -2375,8 +2375,10 @@ const DefInit *VarDefInit::instantiate() {
   Record *NewRec = NewRecOwner.get();
 
   // Copy values from class to instance
-  for (const RecordVal &Val : Class->getValues())
+  for (const RecordVal &Val : Class->getValues()) {
     NewRec->addValue(Val);
+    NewRec->appendValueReferenceLocs(*Class, Val.getNameInit());
+  }
 
   // Copy assertions from class to instance.
   NewRec->appendAssertions(Class);

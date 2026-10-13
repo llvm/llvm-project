@@ -300,7 +300,7 @@ void TableGenIndex::initialize(const RecordKeeper &records) {
     for (const RecordVal &value : def.getValues()) {
       auto *sym = getOrInsertDef(&def, &value);
       insertRef(sym, sym->defLoc, /*isDef=*/true);
-      for (SMRange refLoc : value.getReferenceLocs())
+      for (SMRange refLoc : def.getValueReferenceLocs(value.getNameInit()))
         insertRef(sym, refLoc);
     }
   }
