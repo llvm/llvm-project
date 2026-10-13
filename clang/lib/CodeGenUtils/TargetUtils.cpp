@@ -9,6 +9,11 @@
 #include "clang/CodeGenUtils/TargetUtils.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Type.h"
+#include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang::CodeGenUtils {
 
@@ -49,6 +54,71 @@ ArmSMEInlinability getArmSMEInlinability(const FunctionDecl *Caller,
   }
 
   return Inlinability;
+}
+
+bool hasExtraNeonArgument(unsigned BuiltinID) {
+  // Required by the headers included below, but not in this particular
+  // function.
+  [[maybe_unused]] int PtrArgNum = -1;
+  [[maybe_unused]] bool HasConstPtr = false;
+
+  // The mask encodes the type. We don't care about the actual value. Instead,
+  // we just check whether its been set.
+  uint64_t mask = 0;
+  switch (BuiltinID) {
+#define GET_NEON_OVERLOAD_CHECK
+#include "clang/Basic/arm_fp16.inc"
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_OVERLOAD_CHECK
+  // Non-neon builtins for controling VFP that take extra argument for
+  // discriminating the type.
+  case ARM::BI__builtin_arm_vcvtr_f:
+  case ARM::BI__builtin_arm_vcvtr_d:
+    mask = 1;
+  }
+
+  return mask != 0;
+}
+
+bool isAAPCS(const TargetInfo &TargetInfo) {
+  return TargetInfo.getABI().starts_with("aapcs");
+}
+
+//===----------------------------------------------------------------------===//
+// AMDGPU
+//===----------------------------------------------------------------------===//
+
+bool requiresAMDGPUProtectedVisibility(const Decl *D,
+                                       bool HasHiddenVisibility) {
+  if (!HasHiddenVisibility)
+    return false;
+
+  return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
+         (D->hasAttr<DeviceKernelAttr>() ||
+          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
+          (isa<VarDecl>(D) &&
+           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
+            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
+            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType())));
+}
+
+//===----------------------------------------------------------------------===//
+// SPIR-V
+//===----------------------------------------------------------------------===//
+
+bool spirNullPointerNeedsGenericCast(QualType QT, const llvm::Triple &Triple) {
+  // LLVM address space of the SPIR-V CodeSectionINTEL storage class.
+  constexpr unsigned SPIRVCodeSectionINTELAddrSpace = 9;
+  LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
+                  ? LangAS::Default
+                  : QT->getPointeeType().getAddressSpace();
+  if (AS == LangAS::Default || AS == LangAS::opencl_generic ||
+      AS == LangAS::opencl_constant)
+    return false;
+  // As per SPV_INTEL_function_pointers, it is illegal to addrspacecast
+  // function pointers to/from the generic AS.
+  return !(Triple.isSPIRV() && isTargetAddressSpace(AS) &&
+           toTargetAddressSpace(AS) == SPIRVCodeSectionINTELAddrSpace);
 }
 
 } // namespace clang::CodeGenUtils

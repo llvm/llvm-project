@@ -133,3 +133,71 @@ body:             |
     MOV8mi $r13, 1, $noreg, 0, $noreg, 0
     RET 0
 ...
+
+---
+name:            test3a
+body:             |
+  ; The conditional branch in bb.1 duplicates the one in bb.0, so bb.0 falls
+  ; through to it and the two blocks are merged.
+  ;
+  ; CHECK-LABEL: name: test3a
+  ; CHECK: bb.0:
+  ; CHECK:   TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+  ; CHECK:   JCC_1 %bb.2, 5, implicit $eflags
+  ; CHECK: bb.1:
+  ; CHECK-NOT: JCC_1
+  ; CHECK:   MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   RET 0
+  ; CHECK: bb.2:
+  ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   RET 0
+  bb.0:
+    TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+
+  bb.1:
+    JCC_1 %bb.3, 5, implicit killed $eflags
+
+  bb.2:
+    MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+    RET 0
+
+  bb.3:
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    RET 0
+...
+
+---
+name:            test3b
+body:             |
+  ; Verify that we get the same rewrites as in test3a when adding a DBG_VALUE
+  ; instruction in the mix.
+  ;
+  ; CHECK-LABEL: name: test3b
+  ; CHECK: bb.0:
+  ; CHECK:   TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+  ; CHECK:   DBG_VALUE
+  ; CHECK:   JCC_1 %bb.2, 5, implicit $eflags
+  ; CHECK: bb.1:
+  ; CHECK-NOT: JCC_1
+  ; CHECK:   MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   RET 0
+  ; CHECK: bb.2:
+  ; CHECK:   MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+  ; CHECK:   RET 0
+  bb.0:
+    TEST8rr killed renamable $al, renamable $al, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+
+  bb.1:
+    DBG_VALUE
+    JCC_1 %bb.3, 5, implicit killed $eflags
+
+  bb.2:
+    MOV8mi $r12, 1, $noreg, 0, $noreg, 0
+    RET 0
+
+  bb.3:
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    RET 0
+...

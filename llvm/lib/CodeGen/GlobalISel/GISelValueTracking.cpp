@@ -1022,7 +1022,8 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_CTLS: {
     Register Reg = MI.getOperand(1).getReg();
-    unsigned MinRedundantSignBits = computeNumSignBits(Reg, Depth + 1) - 1;
+    unsigned MinRedundantSignBits =
+        computeNumSignBits(Reg, DemandedElts, Depth + 1) - 1;
 
     unsigned MaxUpperRedundantSignBits = MRI.getType(Reg).getScalarSizeInBits();
 
@@ -1815,7 +1816,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     LLT Ty = MRI.getType(Val).getScalarType();
     const fltSemantics &FltSem = getFltSemanticForLLT(Ty);
     DenormalMode Mode = MF->getDenormalMode(FltSem);
-    Known = KnownFPClass::log(KnownSrc, Mode);
+    bool IsMultiUnitFPType = &FltSem == &APFloat::PPCDoubleDouble();
+    Known = KnownFPClass::log(KnownSrc, Mode, IsMultiUnitFPType);
     break;
   }
   case TargetOpcode::G_FPOW: {

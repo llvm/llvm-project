@@ -274,8 +274,9 @@ Error CodeGenPassBuilder::buildPipeline(
   if (auto Err = addMachinePasses(PMW))
     return Err;
 
-  if (!Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier)
-    addMachineFunctionPass(MachineVerifierPass(), PMW);
+  if (PrintAsm ? !Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier
+               : Opt.VerifyMachineCode == MachineVerifierMode::End)
+    addMachineFunctionPass(MachineVerifierPass(), PMW, /*Force=*/!PrintAsm);
 
   // We add AsmPrinter regardless if we are emitting MIR or Assembly as the
   // final output so that -stop-before=<target>-asm-printer works. When printing
@@ -875,17 +876,16 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(
       RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>(), PMW);
 
+  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
+  // that pass can rely on it instead of LiveVariables. This is a step toward
+  // removing LiveVariables entirely.
+  addMachineFunctionPass(
+      RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
+
   // Edge splitting is smarter with machine loop info.
   addMachineFunctionPass(
       RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>(), PMW);
   addMachineFunctionPass(PHIEliminationPass(), PMW);
-
-  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
-  // that pass can rely on it instead of LiveVariables. This is a step toward
-  // removing LiveVariables entirely.
-  // FIXME: Eventually, we want to run LiveIntervals before PHI elimination.
-  addMachineFunctionPass(
-      RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 
   addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
   addMachineFunctionPass(RegisterCoalescerPass(), PMW);

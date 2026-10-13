@@ -596,7 +596,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    Query.Types[0] != Query.MMODescrs[0].MemoryTy &&
                    Query.Types[0].getSizeInBits() > 32;
           },
-          changeTo(0, s32))
+          changeTo(0, i32))
       // TODO: Use BITCAST for v2i8, v2i16 after G_TRUNC gets sorted out
       .bitcastIf(typeInSet(0, {v4s8}),
                  [=](const LegalityQuery &Query) {
