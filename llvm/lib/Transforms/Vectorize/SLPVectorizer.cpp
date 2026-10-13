@@ -9362,12 +9362,13 @@ static SeedGroupKey getSeedGroupKey(const Instruction *I,
 } // namespace
 
 /// Returns true if \p I is an expensive scalar op whose vector form is cheaper
-/// per lane (e.g. fdiv, frem, fsqrt).
+/// per lane (e.g. fdiv, frem, fsqrt). If \p MaxVecRegSize is non-zero, the
+/// widest vector fitting into it is checked too.
 static bool isPoorThroughputOp(Instruction *I, const TargetTransformInfo &TTI,
                                const TargetLibraryInfo &TLI,
                                PoorThroughputOpCache &Cache,
                                const TTI::TargetCostKind CostKind,
-                               unsigned MaxVecRegSize) {
+                               unsigned MaxVecRegSize = 0) {
   if (!isa<BinaryOperator, CallInst>(I))
     return false;
   Type *Ty = I->getType();
@@ -13536,8 +13537,7 @@ bool BoUpSLP::bypassesInstCountCheck(InstructionCost TreeCost) const {
     return TE.hasState() && !DeletedNodes.contains(&TE) && !TE.isGather() &&
            !TransformedToGatherNodes.contains(&TE) &&
            TE.State != TreeEntry::CombinedVectorize &&
-           isPoorThroughputOp(TE.getMainOp(), *TTI, *TLI, Cache, CostKind,
-                              getMaxVecRegSize());
+           isPoorThroughputOp(TE.getMainOp(), *TTI, *TLI, Cache, CostKind);
   });
 }
 
@@ -36823,7 +36823,13 @@ bool SLPVectorizerPass::vectorizeSplitStorePoorThroughputSeeds(BasicBlock *BB,
     });
   };
   return vectorizePoorThroughputSeeds(Candidates, R, [&](ArrayRef<Value *> VL) {
-    return any_of(VL, HasLocalStoreUser) && !all_of(VL, HasLocalStoreUser);
+    // The scalars not stored locally must widen the stored scalars, left by
+    // the store chains after the full vectors.
+    unsigned MaxVF = bit_floor(R.getMaxVecRegSize() /
+                               DL->getTypeSizeInBits(VL.front()->getType()));
+    unsigned NumStored = count_if(VL, HasLocalStoreUser);
+    unsigned Rem = MaxVF ? NumStored % MaxVF : 0;
+    return Rem != 0 && bit_floor(Rem) < bit_floor(VL.size() - NumStored + Rem);
   });
 }
 

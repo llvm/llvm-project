@@ -252,3 +252,70 @@ for.cond.cleanup:
   store i64 %div7.7.sink, ptr %arrayidx9.7, align 8
   ret void
 }
+
+; The stored udivs fill the whole vector, the udiv stored in the other block
+; must not be seeded with them.
+define void @full_store_chain(ptr noalias %src, ptr noalias %dst, ptr noalias %p, i1 %k) {
+; AVX512-LABEL: define void @full_store_chain(
+; AVX512-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], ptr noalias [[P:%.*]], i1 [[K:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:  [[ENTRY:.*:]]
+; AVX512-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 1
+; AVX512-NEXT:    [[X0:%.*]] = load i64, ptr [[SRC]], align 8
+; AVX512-NEXT:    [[DIV0:%.*]] = udiv i64 [[X0]], 7
+; AVX512-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[SRC1]], align 8
+; AVX512-NEXT:    [[TMP1:%.*]] = udiv <4 x i64> [[TMP0]], splat (i64 7)
+; AVX512-NEXT:    store <4 x i64> [[TMP1]], ptr [[DST]], align 8
+; AVX512-NEXT:    br i1 [[K]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; AVX512:       [[THEN]]:
+; AVX512-NEXT:    store i64 [[DIV0]], ptr [[P]], align 8
+; AVX512-NEXT:    br label %[[EXIT]]
+; AVX512:       [[EXIT]]:
+; AVX512-NEXT:    ret void
+;
+; AVX2-LABEL: define void @full_store_chain(
+; AVX2-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], ptr noalias [[P:%.*]], i1 [[K:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:  [[ENTRY:.*:]]
+; AVX2-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 1
+; AVX2-NEXT:    [[X0:%.*]] = load i64, ptr [[SRC]], align 8
+; AVX2-NEXT:    [[DIV0:%.*]] = udiv i64 [[X0]], 7
+; AVX2-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[SRC1]], align 8
+; AVX2-NEXT:    [[TMP1:%.*]] = udiv <4 x i64> [[TMP0]], splat (i64 7)
+; AVX2-NEXT:    store <4 x i64> [[TMP1]], ptr [[DST]], align 8
+; AVX2-NEXT:    br i1 [[K]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; AVX2:       [[THEN]]:
+; AVX2-NEXT:    store i64 [[DIV0]], ptr [[P]], align 8
+; AVX2-NEXT:    br label %[[EXIT]]
+; AVX2:       [[EXIT]]:
+; AVX2-NEXT:    ret void
+;
+entry:
+  %src1 = getelementptr inbounds i64, ptr %src, i64 1
+  %src2 = getelementptr inbounds i64, ptr %src, i64 2
+  %src3 = getelementptr inbounds i64, ptr %src, i64 3
+  %src4 = getelementptr inbounds i64, ptr %src, i64 4
+  %x0 = load i64, ptr %src, align 8
+  %x1 = load i64, ptr %src1, align 8
+  %x2 = load i64, ptr %src2, align 8
+  %x3 = load i64, ptr %src3, align 8
+  %x4 = load i64, ptr %src4, align 8
+  %div0 = udiv i64 %x0, 7
+  %div1 = udiv i64 %x1, 7
+  %div2 = udiv i64 %x2, 7
+  %div3 = udiv i64 %x3, 7
+  %div4 = udiv i64 %x4, 7
+  %dst1 = getelementptr inbounds i64, ptr %dst, i64 1
+  %dst2 = getelementptr inbounds i64, ptr %dst, i64 2
+  %dst3 = getelementptr inbounds i64, ptr %dst, i64 3
+  store i64 %div1, ptr %dst, align 8
+  store i64 %div2, ptr %dst1, align 8
+  store i64 %div3, ptr %dst2, align 8
+  store i64 %div4, ptr %dst3, align 8
+  br i1 %k, label %then, label %exit
+
+then:
+  store i64 %div0, ptr %p, align 8
+  br label %exit
+
+exit:
+  ret void
+}
