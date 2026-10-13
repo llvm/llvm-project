@@ -1082,15 +1082,12 @@ define <4 x i8> @to_fp8_v4f16(<4 x half> %x) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.h, v1
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, v0
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.h
-; GFX1250-TRUE16-NEXT:    v_dual_lshlrev_b32 v0, 16, v1 :: v_dual_lshrrev_b32 v1, 8, v2
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
-; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
-; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v2.h
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, v1
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f16_e64 v0.l, v0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
+; GFX1250-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
+; GFX1250-TRUE16-NEXT:    v_dual_lshrrev_b32 v1, 8, v0 :: v_dual_lshrrev_b32 v3, 24, v3
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: to_fp8_v4f16:
@@ -1350,15 +1347,12 @@ define <4 x i8> @to_bf8_v4f16(<4 x half> %x) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.h, v1
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, v0
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.h
-; GFX1250-TRUE16-NEXT:    v_dual_lshlrev_b32 v0, 16, v1 :: v_dual_lshrrev_b32 v1, 8, v2
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
-; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
-; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v2.h
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, v1
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f16_e64 v0.l, v0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
+; GFX1250-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
+; GFX1250-TRUE16-NEXT:    v_dual_lshrrev_b32 v1, 8, v0 :: v_dual_lshrrev_b32 v3, 24, v3
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: to_bf8_v4f16:
@@ -1663,7 +1657,7 @@ define i8 @to_fp8_f16_towardzero(half %x) {
 ; GFX1250-TRUE16-NEXT:    v_frexp_exp_i16_f16_e32 v1.h, v0.l
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v2.l, 0x400
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-TRUE16-NEXT:    v_and_b16 v1.l, 0x3ff, v0.h
+; GFX1250-TRUE16-NEXT:    v_and_b16 v1.l, v0.h, 0x3ff
 ; GFX1250-TRUE16-NEXT:    v_sub_nc_u16 v2.h, 2, v1.h
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-TRUE16-NEXT:    v_bitop3_b16 v0.h, v0.h, v2.l, 0x3ff bitop3:0xec
@@ -1678,7 +1672,7 @@ define i8 @to_fp8_f16_towardzero(half %x) {
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b16 v1.l, v1.l, 0, vcc_lo
 ; GFX1250-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 7, v0.h
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1250-TRUE16-NEXT:    v_and_b16 v2.l, 0x80, v2.l
+; GFX1250-TRUE16-NEXT:    v_and_b16 v2.l, v2.l, 0x80
 ; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v1.h, v1.h, v3.l
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b16 v0.h, v0.h, 0, vcc_lo
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b16 v2.h, 0, 8, vcc_lo
@@ -1840,13 +1834,13 @@ define <2 x i8> @to_fp8_v2f16_saturate(<2 x half> %x) {
 ; GFX1250-TRUE16-NEXT:    v_sub_nc_u16 v4.h, 2, v2.l
 ; GFX1250-TRUE16-NEXT:    v_lshrrev_b16 v2.h, 8, v0.l
 ; GFX1250-TRUE16-NEXT:    v_bitop3_b16 v4.l, v1.h, v1.l, 0x3ff bitop3:0xec
-; GFX1250-TRUE16-NEXT:    v_and_b16 v5.l, 0x3ff, v1.h
+; GFX1250-TRUE16-NEXT:    v_and_b16 v5.l, v1.h, 0x3ff
 ; GFX1250-TRUE16-NEXT:    v_lshrrev_b16 v5.h, 6, v1.h
 ; GFX1250-TRUE16-NEXT:    v_min_u16 v4.h, v4.h, 15
 ; GFX1250-TRUE16-NEXT:    v_and_b16 v1.h, v1.h, 63
 ; GFX1250-TRUE16-NEXT:    v_sub_nc_u16 v6.l, 2, v3.h
 ; GFX1250-TRUE16-NEXT:    v_bitop3_b16 v1.l, v3.l, v1.l, 0x3ff bitop3:0xec
-; GFX1250-TRUE16-NEXT:    v_and_b16 v6.h, 0x3ff, v3.l
+; GFX1250-TRUE16-NEXT:    v_and_b16 v6.h, v3.l, 0x3ff
 ; GFX1250-TRUE16-NEXT:    v_sub_nc_u16 v7.h, v4.h, 1 clamp
 ; GFX1250-TRUE16-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v1.h
 ; GFX1250-TRUE16-NEXT:    v_min_u16 v1.h, v6.l, 15
@@ -1904,7 +1898,7 @@ define <2 x i8> @to_fp8_v2f16_saturate(<2 x half> %x) {
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b16 v3.l, v3.l, 0, s0
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v6.l
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b16 v4.l, 0, 8, s0
-; GFX1250-TRUE16-NEXT:    v_and_b16 v1.h, 0x80, v2.h
+; GFX1250-TRUE16-NEXT:    v_and_b16 v1.h, v2.h, 0x80
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, v1.l, vcc_lo
 ; GFX1250-TRUE16-NEXT:    v_lshlrev_b16 v6.l, 3, v2.l
 ; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v3.h, v3.h, v5.l
@@ -1934,7 +1928,7 @@ define <2 x i8> @to_fp8_v2f16_saturate(<2 x half> %x) {
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b16 v1.l, v4.l, v1.l, s1
 ; GFX1250-TRUE16-NEXT:    v_cmp_lt_i16_e64 s1, 15, v3.h
-; GFX1250-TRUE16-NEXT:    v_or_b16 v3.h, 0x7e, v5.h
+; GFX1250-TRUE16-NEXT:    v_or_b16 v3.h, v5.h, 0x7e
 ; GFX1250-TRUE16-NEXT:    s_and_b32 s0, s0, vcc_lo
 ; GFX1250-TRUE16-NEXT:    v_bitop3_b16 v2.l, v2.h, v5.l, 0x80 bitop3:0xec
 ; GFX1250-TRUE16-NEXT:    v_cmp_eq_f16_e32 vcc_lo, 0, v0.h
@@ -1959,7 +1953,7 @@ define <2 x i8> @to_fp8_v2f16_saturate(<2 x half> %x) {
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7f, v1.h, vcc_lo
 ; GFX1250-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, 0xff bitop3:0xec
-; GFX1250-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v0.h
+; GFX1250-TRUE16-NEXT:    v_and_b16 v1.l, v0.h, 0xff
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: to_fp8_v2f16_saturate:
