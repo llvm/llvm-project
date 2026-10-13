@@ -12,10 +12,7 @@ void test_processor_is(void) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @test_processor_is
-// CIR: %[[ID:.*]] = cir.const #cir.int<4294967295> : !u32i
-// CIR: %[[DEF:.*]] = cir.const #false
-// CIR: %[[MD:.*]] = cir.metadata_as_value #cir.md_node<#cir.md_string<"is.gfx900">>
-// CIR: cir.call_llvm_intrinsic "spv.named.boolean.spec.constant" %[[ID]], %[[DEF]], %[[MD]] : (!u32i, !cir.bool, !cir.metadata) -> !cir.bool
+// CIR: cir.amdgcn_feature_predicate "is.gfx900"
 
 // LLVM-LABEL: define {{.*}} @test_processor_is
 // LLVM: call{{.*}} i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata ![[IS_GFX900:[0-9]+]])
@@ -29,8 +26,7 @@ void test_is_invocable(void) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @test_is_invocable
-// CIR: %[[MD:.*]] = cir.metadata_as_value #cir.md_node<#cir.md_string<"has.gfx10-insts">>
-// CIR: cir.call_llvm_intrinsic "spv.named.boolean.spec.constant" %{{.*}}, %{{.*}}, %[[MD]] : (!u32i, !cir.bool, !cir.metadata) -> !cir.bool
+// CIR: cir.amdgcn_feature_predicate "has.gfx10-insts"
 
 // LLVM-LABEL: define {{.*}} @test_is_invocable
 // LLVM: call{{.*}} i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata ![[HAS_GFX10:[0-9]+]])

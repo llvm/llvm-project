@@ -145,17 +145,8 @@ static mlir::Value emitAMDGPUPredicate(CIRGenFunction &cgf, const CallExpr *e,
                                        const llvm::Twine &name) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(e->getExprLoc());
-  mlir::MLIRContext *ctx = builder.getContext();
-
-  mlir::Value specId =
-      builder.getConstantInt(loc, builder.getUInt32Ty(), UINT32_MAX);
-  mlir::Value defaultValue = builder.getFalse(loc);
-  auto predicate = cir::MDNodeAttr::get(
-      ctx, cir::MDStringAttr::get(ctx, builder.getStringAttr(name)));
-  mlir::Value md = cir::MetadataAsValueOp::create(builder, loc, predicate);
-  mlir::Value result = builder.emitIntrinsicCallOp(
-      loc, "spv.named.boolean.spec.constant", builder.getBoolTy(),
-      mlir::ValueRange{specId, defaultValue, md});
+  mlir::Value result = cir::AMDGCNFeaturePredicateOp::create(
+      builder, loc, builder.getBoolTy(), builder.getStringAttr(name));
   // Sema retypes the call to the logical operation type, which is int in C.
   return builder.createBoolToInt(result, cgf.convertType(e->getType()));
 }
