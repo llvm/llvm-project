@@ -139,6 +139,26 @@ class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = []>
   }];
 }
 
+// Base class for the region-branch ops whose successors do not depend on the
+// operation: any of their regions may be entered from the parent operation, and
+// every region returns to it on exit.
+class CIR_EnterAnyRegionBranchOpBase<string mnemonic, list<Trait> traits = []>
+    : CIR_RegionBranchOpBase<mnemonic, traits> {
+  let append extraClassDefinition = [{
+    void $cppClass::getSuccessorRegions(
+        mlir::RegionBranchPoint point,
+        llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+      if (!point.isParent()) {
+        regions.emplace_back(getOperation());
+        return;
+      }
+
+      for (mlir::Region &region : getOperation()->getRegions())
+        regions.emplace_back(&region);
+    }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // CIR Operation Traits
 //===----------------------------------------------------------------------===//
@@ -1351,7 +1371,7 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
 // ScopeOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ScopeOp : CIR_RegionBranchOpBase<"scope", [
+def CIR_ScopeOp : CIR_EnterAnyRegionBranchOpBase<"scope", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -1575,7 +1595,7 @@ def CIR_CaseOpKind : CIR_I32Enum<"CaseOpKind", "case kind", [
 
 def CIR_CaseOpKindAttr : CIR_EnumAttr<CIR_CaseOpKind, "case">;
 
-def CIR_CaseOp : CIR_RegionBranchOpBase<"case", [
+def CIR_CaseOp : CIR_EnterAnyRegionBranchOpBase<"case", [
   RecursivelySpeculatable, AutomaticAllocationScope
 ]> {
   let summary = "Case operation";
@@ -1612,7 +1632,7 @@ def CIR_CaseOp : CIR_RegionBranchOpBase<"case", [
   let hasLLVMLowering = false;
 }
 
-def CIR_SwitchOp : CIR_RegionBranchOpBase<"switch", [
+def CIR_SwitchOp : CIR_EnterAnyRegionBranchOpBase<"switch", [
   SameVariadicOperandSize,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
@@ -3296,7 +3316,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 // TernaryOp
 //===----------------------------------------------------------------------===//
 
-def CIR_TernaryOp : CIR_RegionBranchOpBase<"ternary", [
+def CIR_TernaryOp : CIR_EnterAnyRegionBranchOpBase<"ternary", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
