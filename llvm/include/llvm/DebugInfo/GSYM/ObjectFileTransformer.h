@@ -38,11 +38,19 @@ public:
   /// \param Gsym The GSYM creator to populate with the function information
   /// from the debug info.
   ///
+  /// \param StubsObj An optional object file to synthesize mach-o symbol stubs
+  ///        from. Only the stubs are read from it; the UUID and the symbol
+  ///        table still come from \a Obj. Stubs are named using the indirect
+  ///        symbol table in LC_DYSYMTAB, which a dSYM does not carry even
+  ///        though its symbol table is the richer one, so the two can need to
+  ///        come from different files. \a Obj supplies the stubs when this is
+  ///        NULL.
+  ///
   /// \returns An error indicating any fatal issues that happen when parsing
   /// the DWARF, or Error::success() if all goes well.
-  LLVM_ABI static llvm::Error convert(const object::ObjectFile &Obj,
-                                      OutputAggregator &Output,
-                                      GsymCreator &Gsym);
+  LLVM_ABI static llvm::Error
+  convert(const object::ObjectFile &Obj, OutputAggregator &Output,
+          GsymCreator &Gsym, const object::ObjectFile *StubsObj = nullptr);
 };
 
 } // namespace gsym

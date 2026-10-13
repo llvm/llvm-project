@@ -84,6 +84,7 @@ static bool Verbose;
 static std::vector<std::string> InputFilenames;
 static std::string ConvertFilename;
 static std::string SymtabFilename;
+static std::string StubsFilename;
 static std::vector<std::string> ArchFilters;
 static std::string OutputFilename;
 static std::string JsonSummaryFile;
@@ -145,6 +146,9 @@ static void parseArgs(int argc, char **argv) {
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_symtab_file_EQ))
     SymtabFilename = A->getValue();
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_stubs_file_EQ))
+    StubsFilename = A->getValue();
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_arch_EQ))
     ArchFilters.emplace_back(A->getValue());
@@ -456,7 +460,8 @@ resolveSymtabObject(StringRef ArchName, Binary *SymtabBinary,
 }
 
 static llvm::Error handleObjectFile(ObjectFile &Obj, ObjectFile *SymtabObj,
-                                    StringRef SymtabPath,
+                                    StringRef SymtabPath, ObjectFile *StubsObj,
+                                    StringRef StubsPath,
                                     const std::string &OutFile,
                                     OutputAggregator &Out) {
   auto ThreadCount =
@@ -530,11 +535,15 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, ObjectFile *SymtabObj,
     Gsym.prepareMergedFunctions(Out);
 
   // Get the UUID and convert symbol table to GSYM.
+  if (StubsObj)
+    Out << "Using symbol stubs file: " << StubsPath << "\n";
   if (SymtabObj) {
     Out << "Using symbol table file: " << SymtabPath << "\n";
-    if (auto Err = ObjectFileTransformer::convert(*SymtabObj, Out, Gsym))
+    if (auto Err =
+            ObjectFileTransformer::convert(*SymtabObj, Out, Gsym, StubsObj))
       return Err;
-  } else if (auto Err = ObjectFileTransformer::convert(Obj, Out, Gsym)) {
+  } else if (auto Err =
+                 ObjectFileTransformer::convert(Obj, Out, Gsym, StubsObj)) {
     return Err;
   }
 
@@ -574,6 +583,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, ObjectFile *SymtabObj,
 
 static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
                                 Binary *SymtabBinary, StringRef SymtabPath,
+                                Binary *StubsBinary, StringRef StubsPath,
                                 const std::string &OutFile,
                                 OutputAggregator &Out) {
   Expected<std::unique_ptr<Binary>> BinOrErr = object::createBinary(Buffer);
@@ -587,9 +597,15 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
     if (!SymtabObjOrErr)
       return SymtabObjOrErr.takeError();
 
+    std::unique_ptr<ObjectFile> OwnedStubsObj;
+    auto StubsObjOrErr =
+        resolveSymtabObject(ArchName, StubsBinary, StubsPath, OwnedStubsObj);
+    if (!StubsObjOrErr)
+      return StubsObjOrErr.takeError();
+
     outs() << "Output file (" << ArchName << "): " << OutFile << "\n";
-    if (auto Err =
-            handleObjectFile(*Obj, *SymtabObjOrErr, SymtabPath, OutFile, Out))
+    if (auto Err = handleObjectFile(*Obj, *SymtabObjOrErr, SymtabPath,
+                                    *StubsObjOrErr, StubsPath, OutFile, Out))
       return Err;
   } else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get())) {
     // Iterate over all contained architectures and filter out any that were
@@ -613,6 +629,14 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
 
     // Now handle each architecture we need to convert.
     bool MultipleArchitecturesSelected = FilterObjs.size() > 1;
+    if (MultipleArchitecturesSelected && StubsBinary &&
+        isa<ObjectFile>(StubsBinary))
+      return createStringError(
+          std::errc::invalid_argument,
+          "symbol stubs file '%s' is not a universal binary, but the input "
+          "contains multiple architectures; use --arch to select a single "
+          "architecture",
+          StubsPath.str().c_str());
     if (MultipleArchitecturesSelected && SymtabBinary &&
         isa<ObjectFile>(SymtabBinary))
       return createStringError(
@@ -630,6 +654,12 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
       if (!SymtabObjOrErr)
         return SymtabObjOrErr.takeError();
 
+      std::unique_ptr<ObjectFile> OwnedStubsObj;
+      auto StubsObjOrErr =
+          resolveSymtabObject(ArchName, StubsBinary, StubsPath, OwnedStubsObj);
+      if (!StubsObjOrErr)
+        return StubsObjOrErr.takeError();
+
       std::string ArchOutFile(OutFile);
       // If we are only handling a single architecture, then we will use the
       // normal output file. If we are handling multiple architectures append
@@ -640,8 +670,9 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
         ArchOutFile.append(ArchName);
       }
       outs() << "Output file (" << ArchName << "): " << ArchOutFile << "\n";
-      if (auto Err = handleObjectFile(*Obj, *SymtabObjOrErr, SymtabPath,
-                                      ArchOutFile, Out))
+      if (auto Err =
+              handleObjectFile(*Obj, *SymtabObjOrErr, SymtabPath,
+                               *StubsObjOrErr, StubsPath, ArchOutFile, Out))
         return Err;
     }
   }
@@ -673,8 +704,24 @@ static llvm::Error handleFileConversionToGSYM(StringRef Filename,
     SymtabBinary = std::move(*SymtabBinOrErr);
   }
 
+  std::unique_ptr<MemoryBuffer> StubsBuffer;
+  std::unique_ptr<Binary> StubsBinary;
+  if (!StubsFilename.empty()) {
+    auto StubsBufOrErr = MemoryBuffer::getFile(StubsFilename);
+    if (!StubsBufOrErr)
+      return createStringError(StubsBufOrErr.getError(),
+                               "failed to open symbol stubs file '%s'",
+                               StubsFilename.c_str());
+
+    StubsBuffer = std::move(*StubsBufOrErr);
+    auto StubsBinOrErr = object::createBinary(*StubsBuffer);
+    if (!StubsBinOrErr)
+      return StubsBinOrErr.takeError();
+    StubsBinary = std::move(*StubsBinOrErr);
+  }
+
   return handleBuffer(Filename, *Buffer, SymtabBinary.get(), SymtabFilename,
-                      OutFile, Out);
+                      StubsBinary.get(), StubsFilename, OutFile, Out);
 }
 
 static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
