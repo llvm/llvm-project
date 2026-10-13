@@ -209,7 +209,7 @@ template <typename CallbackTy> llvm::Error iterateDevices(CallbackTy Callback) {
   };
   if (auto Res = olIterateDevices(Wrapper, &Callback))
     return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                     "Failed to iterate devices: %d",
+                                     "Failed to iterate devices: %s",
                                      Res->Details);
   return llvm::Error::success();
 }

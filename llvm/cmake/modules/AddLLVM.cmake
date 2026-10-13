@@ -164,6 +164,19 @@ function(add_llvm_symbol_exports target_name export_file)
     set(native_export_file "${export_file}")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-bE:${export_file}")
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    # wasm-ld uses explicit exports, not ELF version scripts. These also
+    # pull the exported API definitions out of static dependency archives.
+    set(native_export_file "${target_name}.exports")
+    add_custom_command(OUTPUT ${native_export_file}
+      COMMAND sed -e "s/^/-Wl,--export=/" < ${export_file} > ${native_export_file}
+      DEPENDS ${export_file}
+      VERBATIM
+      COMMENT "Creating export file for ${target_name}")
+    # Forward each response-file entry through the Emscripten driver.
+    set_property(TARGET ${target_name} APPEND PROPERTY
+                 LINK_OPTIONS "-Wl,--no-export-dynamic"
+                              "@${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}")
   elseif(LLVM_HAVE_LINK_VERSION_SCRIPT)
     # Gold and BFD ld require a version script rather than a plain list.
     set(native_export_file "${target_name}.exports")

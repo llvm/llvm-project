@@ -10,6 +10,7 @@
 
 #include "RuntimeLibcalls.h"
 
+#include "SequenceToOffsetTable.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -87,6 +88,7 @@ private:
                               StringToOffsetTable &OffsetTable) const;
 
   void emitGetInitRuntimeLibcallNames(raw_ostream &OS) const;
+  void emitGetInitRuntimeLibcallSignatures(raw_ostream &OS) const;
 
   // Emit the sorted per-predicate `setAvailable` tables/loops. The
   // always-available bucket emits at \p BaseIndent; each predicated bucket is
@@ -195,7 +197,17 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
   OS << "};\n"
      << "constexpr size_t NumLibcallImpls = "
      << Libcalls.getRuntimeLibcallImplDefList().size() + 1
-     << ";\n"
+     << ";\n\n"
+        "enum FuncArgTypeID : char {\n"
+        "  NoFuncArgType = 0,\n";
+
+  for (const auto *R : Libcalls.getFuncArgTypeList()) {
+    if (R->getName() == "NoneType")
+      continue;
+    OS << "  " << R->getName() << ",\n";
+  }
+
+  OS << "};\n"
         "} // End namespace RTLIB\n"
         "} // End namespace llvm\n";
 }
@@ -424,6 +436,47 @@ const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
   }
 
   emitNameMatchHashTable(OS, Table);
+}
+
+using Signature = std::vector<StringRef>;
+
+static Signature getSignature(const Record *R) {
+  const auto *Tys = R->getValueAsListInit("ArgumentTypes");
+  Signature Sig;
+  Sig.reserve(Tys->size() + 1);
+  const Record *RetType = R->getValueAsOptionalDef("ReturnType");
+  if (RetType && RetType->getName() != "NoneType")
+    Sig.push_back(RetType->getName());
+  for (unsigned I = 0, E = Tys->size(); I < E; ++I)
+    Sig.push_back(Tys->getElementAsRecord(I)->getName());
+  return Sig;
+}
+
+void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallSignatures(
+    raw_ostream &OS) const {
+  SequenceToOffsetTable<Signature> SignatureTable("NoFuncArgType");
+
+  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList())
+    SignatureTable.add(getSignature(LC.getDef()));
+  SignatureTable.layout();
+
+  IfDefEmitter IfDef(OS, "GET_INIT_RUNTIME_LIBCALL_SIGNATURES");
+
+  OS << R"(
+const FuncArgTypeID RTLIB::RuntimeLibcallsInfo::SignatureTable[] = {
+)";
+  SignatureTable.emit(OS, [](raw_ostream &OS, StringRef E) { OS << E; });
+  OS << "};\n";
+
+  OS << R"(
+const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
+)";
+  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList()) {
+    const Record *LibcallDef = LC.getDef();
+    OS << formatv("  {}, // {}\n", SignatureTable.get(getSignature(LibcallDef)),
+                  LibcallDef->getName());
+  }
+  OS << "};\n";
 }
 
 void RuntimeLibcallEmitter::emitPredicateGroups(
@@ -1148,6 +1201,7 @@ void RuntimeLibcallEmitter::run(raw_ostream &OS) {
   emitGetRuntimeLibcallEnum(OS);
 
   emitGetInitRuntimeLibcallNames(OS);
+  emitGetInitRuntimeLibcallSignatures(OS);
 
   emitRuntimeLibcallsInfoMemberDecls(OS);
 

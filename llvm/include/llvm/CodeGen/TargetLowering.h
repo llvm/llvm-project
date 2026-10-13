@@ -615,6 +615,7 @@ public:
   /// based on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
+  int getRecipEstimateSqrtEnabled(EVT VT, const Function &F) const;
   int getRecipEstimateSqrtEnabled(EVT VT, MachineFunction &MF) const;
 
   /// Return a ReciprocalEstimate enum value for a division of the given type

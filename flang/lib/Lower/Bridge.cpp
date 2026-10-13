@@ -39,7 +39,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
-#include "flang/Optimizer/Builder/Runtime/CUDA/Support.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
@@ -2073,7 +2072,7 @@ private:
         mlir::Value active = cuf::DeviceIsActiveOp::create(*builder, loc);
         builder->genIfThen(loc, active)
             .genThen([&]() {
-              fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
+              cuf::DeviceSynchronizeOp::create(*builder, loc);
               bridge.cudaCleanupCtx().finalizeAndKeep();
             })
             .end();

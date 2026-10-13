@@ -726,11 +726,6 @@ bool GCNSchedStrategy::hasNextStage() const {
   return std::next(CurrentStage) != SchedStages.end();
 }
 
-GCNSchedStageID GCNSchedStrategy::getNextStage() const {
-  assert(CurrentStage && std::next(CurrentStage) != SchedStages.end());
-  return *std::next(CurrentStage);
-}
-
 bool GCNSchedStrategy::tryPendingCandidate(SchedCandidate &Cand,
                                            SchedCandidate &TryCand,
                                            SchedBoundary *Zone) const {

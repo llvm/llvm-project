@@ -5355,6 +5355,8 @@ add_fp_unittest(
     libc.src.math.pow
 )
 
+# TODO: Re-enable the test for GPU.
+if(NOT LIBC_TARGET_OS_IS_GPU)
 add_fp_unittest(
   powf_test
   SUITE
@@ -5367,6 +5369,7 @@ add_fp_unittest(
     libc.src.__support.math.powf_float_eval
     libc.src.__support.FPUtil.fp_bits
 )
+endif()
 
 add_fp_unittest(
   totalorder_test

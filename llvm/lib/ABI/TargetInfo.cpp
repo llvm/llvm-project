@@ -124,7 +124,7 @@ const Type *TargetInfo::isSingleElementStruct(const Type *Ty) const {
 
   // We don't consider a struct a single-element struct if it has padding
   // beyond the element type.
-  if (Found->getSizeInBits() != Ty->getSizeInBits())
+  if (Found->getABISizeInBits() != Ty->getABISizeInBits())
     return nullptr;
 
   return Found;

@@ -654,12 +654,6 @@ static bool tryOptimizeConsecStores(SmallVectorImpl<StoreInfo> &Stores,
   return true;
 }
 
-static cl::opt<bool>
-    EnableConsecutiveMemOpOpt("aarch64-postlegalizer-consecutive-memops",
-                              cl::init(true), cl::Hidden,
-                              cl::desc("Enable consecutive memop optimization "
-                                       "in AArch64PostLegalizerCombiner"));
-
 static bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
                                                CSEMIRBuilder &MIB) {
   // This combine needs to run after all reassociations/folds on pointer
@@ -686,7 +680,9 @@ static bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
   bool Changed = false;
   auto &MRI = MF.getRegInfo();
 
-  if (!EnableConsecutiveMemOpOpt)
+  if (!MF.getSubtarget<AArch64Subtarget>()
+           .getCLOpts()
+           .postlegalizer_consecutive_memops)
     return Changed;
 
   SmallVector<StoreInfo, 8> Stores;

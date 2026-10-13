@@ -673,7 +673,7 @@ cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (getTls() && !global.getTlsModel())
     return emitOpError("access to global not marked thread local");
 
-  if (!global.getStaticLocalGuard().has_value())
+  if (!global.getDynamicInitGuard().has_value())
     return emitOpError("static_local attribute mismatch");
 
   return success();
@@ -2371,23 +2371,32 @@ mlir::LogicalResult cir::GlobalOp::verify() {
       return failure();
   }
 
-  if ((getStaticLocalGuard().has_value()) &&
+  std::optional<DynamicInitInfoAttr> info = getDynamicInitInfo();
+
+  if ((getDynamicInitGuard().has_value()) && (!info || info->getLocal()) &&
       (!getCtorRegion().empty() || !getDtorRegion().empty()))
     return emitOpError(
         "Cannot have a static-local global-op with a constructor or "
         "destructor, they require in-function initialization via LocalInitOp");
 
-  // CIRGen emits 'static_local_guard' and 'static_local_info' together and
+  // CIRGen emits 'dynamic_init_guard' and 'dynamic_init_info' together and
   // they are only meaningful together: the guard drives lowering, which reads
   // the info. Require both or neither so malformed .cir can carry neither a
   // guard without info nor a dangling info nothing will read.
-  if (getStaticLocalGuard().has_value() != getStaticLocalInfo().has_value())
-    return emitOpError("'static_local_guard' and 'static_local_info' must be "
+  if (getDynamicInitGuard().has_value() != getDynamicInitInfo().has_value())
+    return emitOpError("'dynamic_init_guard' and 'dynamic_init_info' must be "
                        "present together");
 
   if (getTlsRefs()) {
-    if (getStaticLocalGuard().has_value())
-      return emitOpError("cannot have both static local and tls references");
+    // 'Unordered' TLS globals (variable template instantiations) legitimately
+    // carry both: they can't use the shared __tls_init guard, so CIRGen also
+    // gives them their own dynamic-init guard, mangled the same as
+    // 'tls_refs's own guard name. 'Ordered' TLS globals share __tls_init and
+    // have no per-variable guard name, so a dynamic-init guard there would be
+    // a mismatch.
+    if (getDynamicInitGuard().has_value() && !getTlsRefs()->getGuardName())
+      return emitOpError("cannot have a dynamic-init guard combined with "
+                         "ordered tls references");
     if (!getTlsModel())
       return emitOpError("'tls_refs' only valid for tls");
   }
@@ -2606,10 +2615,13 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       return emitOpError("access to global not marked thread local");
 
     // Verify that the static_local attribute on GetGlobalOp matches the
-    // static_local_guard attribute on GlobalOp. GetGlobalOp uses a UnitAttr,
-    // GlobalOp uses StaticLocalGuardAttr. Both should be present, or neither.
+    // dynamic_init_guard attribute on GlobalOp. GetGlobalOp uses a UnitAttr,
+    // GlobalOp uses DynamicInitGuardAttr. Both should be present, or neither.
     bool getGlobalIsStaticLocal = getStaticLocal();
-    bool globalIsStaticLocal = g.getStaticLocalGuard().has_value();
+    bool globalIsStaticLocal =
+        g.getDynamicInitGuard().has_value() &&
+        (!g.getDynamicInitInfo() || g.getDynamicInitInfo()->getLocal());
+
     if (getGlobalIsStaticLocal != globalIsStaticLocal &&
         !getOperation()->getParentOfType<cir::GlobalOp>())
       return emitOpError("static_local attribute mismatch");

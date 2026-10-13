@@ -194,3 +194,7 @@ Status NativeThreadWindows::SetHardwareBreakpoint(lldb::addr_t addr,
 Status NativeThreadWindows::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   return Status::FromErrorString("unimplemented.");
 }
+
+StructuredData::ObjectSP NativeThreadWindows::GetExtendedInfo() const {
+  return m_host_thread.GetNativeThread().GetExtendedInfo();
+}

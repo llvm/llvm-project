@@ -2411,7 +2411,7 @@ CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   }
 
   // Use vector version of the intrinsic.
-  Module *M = State.Builder.GetInsertBlock()->getModule();
+  Module *M = State.Builder.getModule();
   Function *VectorF =
       Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
   assert(VectorF &&

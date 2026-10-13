@@ -1423,9 +1423,9 @@ void CIRGenFunction::emitInheritedCXXConstructorCall(
 
   if (inheritedFromVBase &&
       cgm.getTarget().getCXXABI().hasConstructorVariants()) {
-    cgm.errorNYI(e->getSourceRange(), "emitInheritedCXXConstructorCall "
-                                      "inheritedFromVBase with ctor variants");
-    return;
+    // The base-object variant doesn't construct virtual bases, so the
+    // inherited constructor's arguments aren't passed.
+    ctorArgs.push_back(thisArg);
   } else if (!cxxInheritedCtorInitExprArgs.empty()) {
     // The inheriting constructor was inlined; just inject its arguments.
     assert(cxxInheritedCtorInitExprArgs.size() >= d->getNumParams() &&

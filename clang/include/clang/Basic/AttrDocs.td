@@ -7017,13 +7017,11 @@ rarely executed, whereas `preserve_most` function calls are intended to be
 on the hot path and definitely executed a lot. Furthermore `preserve_most`
 doesn't prevent the inliner from inlining the function call.
 
-This calling convention will be used by a future version of the Objective-C
-runtime and should therefore still be considered experimental at this time.
-Although this convention was created to optimize certain runtime calls to
-the Objective-C runtime, it is not limited to this runtime and might be used
-by other runtimes in the future too. The current implementation only
-supports X86-64 and AArch64, but the intention is to support more architectures
-in the future.
+This convention was created to optimize certain runtime calls to the
+Objective-C runtime, but it is not limited to that runtime; it is also used by
+other runtimes and libraries, such as the Swift runtime and the Linux kernel.
+The current implementation only supports X86-64 and AArch64, but the intention
+is to support more architectures in the future.
   }];
 }
 
@@ -9369,6 +9367,31 @@ groupshared GSData data[5*5*1];
 ```
 
 The full documentation is available here: <https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-syntax#group-shared>
+  }];
+}
+
+def HLSLInterpolationModifierDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "HLSL Interpolation Modifiers";
+  let Content = [{
+The HLSL keywords `nointerpolation`, `linear`, `centroid`,
+`noperspective`, `sample`, and `center` control interpolation of pixel
+shader inputs and vertex shader outputs.
+
+When applied to an aggregate type, the modifier propagates recursively to every
+scalar or vector of the type. A modifier on an inner field overrides one
+inherited from an enclosing declaration.
+
+`nointerpolation` cannot be combined with another interpolation modifier.
+For pixel shader inputs and vertex shader outputs, it cannot be used on
+`SV_Position`. Integer, boolean, and 64-bit floating-point components only
+support `nointerpolation`.
+
+Unqualified pixel shader inputs and vertex shader outputs default to `linear`
+for floating-point components of at most 32 bits and `nointerpolation` otherwise.
+`SV_Position` uses the corresponding `noperspective` mode. Vertex shader inputs,
+pixel shader outputs, and signatures in other shader stages have no
+interpolation mode; their interpolation modifiers are ignored.
   }];
 }
 

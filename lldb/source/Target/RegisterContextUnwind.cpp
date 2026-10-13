@@ -1315,11 +1315,13 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
       }
     }
   }
-  const std::vector<ConstString> user_specified_trap_handler_names(
-      m_parent_unwind.GetUserSpecifiedTrapHandlerFunctionNames());
-  for (ConstString name : user_specified_trap_handler_names) {
-    if ((m_sym_ctx.function && m_sym_ctx.function->GetName() == name) ||
-        (m_sym_ctx.symbol && m_sym_ctx.symbol->GetName() == name)) {
+  const std::vector<std::string> &user_specified_trap_handler_names =
+      m_parent_unwind.GetUserSpecifiedTrapHandlerFunctionNames();
+  for (const std::string &name : user_specified_trap_handler_names) {
+    if ((m_sym_ctx.function &&
+         m_sym_ctx.function->GetName().GetStringRef() == name) ||
+        (m_sym_ctx.symbol &&
+         m_sym_ctx.symbol->GetName().GetStringRef() == name)) {
       return true;
     }
   }

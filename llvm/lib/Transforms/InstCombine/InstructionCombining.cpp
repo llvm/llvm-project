@@ -133,9 +133,6 @@ STATISTIC(NumReassoc  , "Number of reassociations");
 DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
 
-InstCombiner::IRBuilderInstCombineInserter::~IRBuilderInstCombineInserter() =
-    default;
-
 void InstCombiner::IRBuilderInstCombineInserter::InsertHelper(
     Instruction *I, const Twine &Name, BasicBlock::iterator InsertPt) const {
   IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
