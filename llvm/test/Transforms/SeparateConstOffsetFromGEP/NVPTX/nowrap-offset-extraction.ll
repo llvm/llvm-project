@@ -9,8 +9,8 @@ define ptr @byte_index_wrap(ptr %p, i64 %x) {
 ; CHECK-LABEL: define ptr @byte_index_wrap(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = and i64 [[X]], 9223372036854775807
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[A]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[A]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %a = and i64 %x, 9223372036854775807
@@ -23,8 +23,8 @@ define ptr @byte_index_wrap_nusw(ptr %p, i64 %x) {
 ; CHECK-LABEL: define ptr @byte_index_wrap_nusw(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = and i64 [[X]], 9223372036854775807
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i8, ptr [[P]], i64 [[A]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw i8, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[A]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %a = and i64 %x, 9223372036854775807

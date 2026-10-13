@@ -31,8 +31,8 @@ define i1 @combined_positive_constant(ptr %p, i32 %x) {
 ; CHECK-LABEL: define i1 @combined_positive_constant(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[X]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i32 [[LSHR]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 2147483647
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i32 [[LSHR]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i32 2147483647
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[GEP1]], [[P]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
