@@ -20,6 +20,7 @@ include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.td"
 include "mlir/Dialect/OpenMP/OpenMPClauses.td"
 include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpAsmInterface.td"
@@ -192,7 +193,7 @@ def PrivateClauseOp
 //===----------------------------------------------------------------------===//
 
 def ParallelOp : OpenMP_Op<"parallel", traits = [
-    AttrSizedOperandSegments, AutomaticAllocationScope,
+    AttrSizedOperandSegments, AutomaticAllocationScope, HasParallelRegion,
     DeclareOpInterfaceMethods<ComposableOpInterface>,
     DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
     RecursiveMemoryEffects
@@ -242,7 +243,7 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
 //===----------------------------------------------------------------------===//
 def TeamsOp : OpenMP_Op<"teams", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
-    RecursiveMemoryEffects, OutlineableOpenMPOpInterface
+    HasParallelRegion, RecursiveMemoryEffects, OutlineableOpenMPOpInterface
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_DynGroupprivateClause, OpenMP_IfClause,
     OpenMP_NumTeamsClause, OpenMP_PrivateClause, OpenMP_ReductionClause,
@@ -298,7 +299,8 @@ def SectionOp : OpenMP_Op<"section", traits = [
 }
 
 def SectionsOp : OpenMP_Op<"sections", traits = [
-    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
+    HasParallelRegion
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_NowaitClause, OpenMP_PrivateClause,
     OpenMP_ReductionClause
@@ -682,7 +684,8 @@ def FuseOp
 //===----------------------------------------------------------------------===//
 
 def WorkshareOp : OpenMP_Op<"workshare", traits = [
-    DeclareOpInterfaceMethods<ComposableOpInterface>, RecursiveMemoryEffects
+    DeclareOpInterfaceMethods<ComposableOpInterface>, HasParallelRegion,
+    RecursiveMemoryEffects
   ], clauses = [
     OpenMP_NowaitClause,
   ], singleRegion = true> {
@@ -706,7 +709,7 @@ def WorkshareOp : OpenMP_Op<"workshare", traits = [
 
 def WorkshareLoopWrapperOp : OpenMP_Op<"workshare.loop_wrapper", traits = [
     DeclareOpInterfaceMethods<LoopWrapperInterface>, HasAncestor<"WorkshareOp">,
-    NoTerminator, RecursiveMemoryEffects, SingleBlock
+    HasParallelRegion, NoTerminator, RecursiveMemoryEffects, SingleBlock
   ], singleRegion = true> {
   let summary = "contains loop nests to be parallelized by workshare";
   let description = [{
@@ -726,7 +729,7 @@ def WorkshareLoopWrapperOp : OpenMP_Op<"workshare.loop_wrapper", traits = [
 //===----------------------------------------------------------------------===//
 
 def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
-    RecursiveMemoryEffects, SameVariadicOperandSize
+    HasParallelRegion, RecursiveMemoryEffects, SameVariadicOperandSize
   ], clauses = [
     OpenMP_CollapseClause,
     OpenMP_LoopRelatedClause,
@@ -797,7 +800,7 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
 
 def LoopOp : OpenMP_Op<"loop", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
-    NoTerminator, SingleBlock
+    HasParallelRegion, NoTerminator, SingleBlock
   ], clauses = [
     OpenMP_BindClause, OpenMP_PrivateClause, OpenMP_OrderClause,
     OpenMP_ReductionClause
@@ -845,8 +848,8 @@ def LoopOp : OpenMP_Op<"loop", traits = [
 
 def WsloopOp : OpenMP_Op<"wsloop", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
-    DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
-    RecursiveMemoryEffects, SingleBlock
+    DeclareOpInterfaceMethods<LoopWrapperInterface>, HasParallelRegion,
+    NoTerminator, RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_LinearClause, OpenMP_NowaitClause,
     OpenMP_OrderClause, OpenMP_OrderedClause, OpenMP_PrivateClause,
@@ -897,8 +900,8 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
 
 def SimdOp : OpenMP_Op<"simd", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
-    DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
-    RecursiveMemoryEffects, SingleBlock
+    DeclareOpInterfaceMethods<LoopWrapperInterface>, HasParallelRegion,
+    NoTerminator, RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AlignedClause, OpenMP_IfClause, OpenMP_LinearClause,
     OpenMP_NontemporalClause, OpenMP_OrderClause, OpenMP_PrivateClause,
@@ -972,8 +975,8 @@ def YieldOp
 //===----------------------------------------------------------------------===//
 def DistributeOp : OpenMP_Op<"distribute", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
-    DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
-    RecursiveMemoryEffects, SingleBlock
+    DeclareOpInterfaceMethods<LoopWrapperInterface>, HasParallelRegion,
+    NoTerminator, RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_DistScheduleClause, OpenMP_OrderClause,
     OpenMP_PrivateClause
@@ -1075,7 +1078,7 @@ def TaskOp : OpenMP_Op<"task", traits = [
 // SingleBlock restriction is just to ease implementation. It would be okay to
 // relax this.
 def TaskloopContextOp : OpenMP_Op<"taskloop.context", traits = [
-    AttrSizedOperandSegments, AutomaticAllocationScope,
+    AttrSizedOperandSegments, AutomaticAllocationScope, HasParallelRegion,
     RecursiveMemoryEffects, SingleBlock,
     DeclareOpInterfaceMethods<ComposableOpInterface>,
     DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>
@@ -1174,8 +1177,8 @@ def TaskloopContextOp : OpenMP_Op<"taskloop.context", traits = [
 
 def TaskloopWrapperOp : OpenMP_Op<"taskloop.wrapper", traits = [
     DeclareOpInterfaceMethods<ComposableOpInterface>,
-    DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
-    RecursiveMemoryEffects, SingleBlock
+    DeclareOpInterfaceMethods<LoopWrapperInterface>, HasParallelRegion,
+    NoTerminator, RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     // See taskloop.context, which generates the runtime calls and outlined
     // task function.
@@ -1655,8 +1658,8 @@ def TargetUpdateOp: OpenMP_Op<"target_update", traits = [
 
 def TargetOp : OpenMP_Op<"target", traits = [
     AttrSizedOperandSegments, BlockArgOpenMPOpInterface,
-    DeclareOpInterfaceMethods<ComposableOpInterface>, IsolatedFromAbove,
-    OutlineableOpenMPOpInterface
+    DeclareOpInterfaceMethods<ComposableOpInterface>, HasParallelRegion,
+    IsolatedFromAbove, OutlineableOpenMPOpInterface
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
     OpenMP_AllocateClause, OpenMP_DependClause, OpenMP_DeviceClause,
@@ -2654,7 +2657,7 @@ def FreeSharedMemOp : OpenMP_Op<"free_shared_mem", traits = [
 //===----------------------------------------------------------------------===//
 
 def WorkdistributeOp : OpenMP_Op<"workdistribute", traits = [
-    DeclareOpInterfaceMethods<ComposableOpInterface>
+    DeclareOpInterfaceMethods<ComposableOpInterface>, HasParallelRegion
   ]> {
   let summary = "workdistribute directive";
   let description = [{

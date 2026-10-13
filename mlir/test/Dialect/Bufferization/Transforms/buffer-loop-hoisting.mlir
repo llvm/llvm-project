@@ -546,6 +546,70 @@ func.func @hoist_alloca(
 
 // -----
 
+// Each parallel OpenACC iteration must retain its own allocation.
+// CHECK-LABEL: func @no_hoist_acc_parallel_loop(
+// CHECK-NOT: memref.alloc
+// CHECK: acc.parallel
+// CHECK-NOT: memref.alloc
+// CHECK: acc.loop gang vector
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[ALLOC]]
+// CHECK-NEXT: memref.store %[[VALUE]]
+func.func @no_hoist_acc_parallel_loop(%out: memref<2xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  acc.parallel {
+    acc.loop gang vector control(%i : index) = (%c0 : index)
+        to (%c2 : index) step (%c1 : index) {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %i, %buffer[%c0] : memref<1xindex>
+      %value = memref.load %buffer[%c0] : memref<1xindex>
+      memref.store %value, %out[%i] : memref<2xindex>
+      acc.yield
+    } independent
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// Hoist out of an inner sequential loop, but keep the allocation private to
+// each parallel OpenACC iteration.
+// CHECK-LABEL: func @hoist_within_acc_parallel_loop(
+// CHECK-NOT: memref.alloc
+// CHECK: acc.parallel
+// CHECK-NOT: memref.alloc
+// CHECK: acc.loop gang vector
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: scf.for
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[ALLOC]]
+// CHECK-NEXT: memref.store %[[VALUE]]
+func.func @hoist_within_acc_parallel_loop(%out: memref<2x2xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  acc.parallel {
+    acc.loop gang vector control(%i : index) = (%c0 : index)
+        to (%c2 : index) step (%c1 : index) {
+      scf.for %j = %c0 to %c2 step %c1 {
+        %buffer = memref.alloc() : memref<1xindex>
+        memref.store %j, %buffer[%c0] : memref<1xindex>
+        %value = memref.load %buffer[%c0] : memref<1xindex>
+        memref.store %value, %out[%i, %j] : memref<2x2xindex>
+      }
+      acc.yield
+    } independent
+    acc.yield
+  }
+  return
+}
+
+// -----
+
 // A nested entry block can be reachable even when its enclosing block is not.
 // CHECK-LABEL: func @loop_unreachable_parent(
 // CHECK: return
