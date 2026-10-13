@@ -26,6 +26,7 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -152,6 +153,7 @@ void SPIRVModuleAnalysisImpl::setBaseInfo(const Module &M) {
   MAI.GlobalObjMap.clear();
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
+  MAI.InstrAuxDataRecords.clear();
   MAI.Reqs.clear();
   MAI.Reqs.initAvailableCapabilities(*ST);
 
@@ -766,6 +768,26 @@ void SPIRVModuleAnalysisImpl::processOtherInstrs(const Module &M) {
         } else if (TII->isAliasingInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_AliasingInsts, IS);
         } else if (TII->isDecorationInstr(MI)) {
+          if (MI.getOpcode() == SPIRV::OpDecorate &&
+              MI.getOperand(1).getImm() ==
+                  static_cast<unsigned>(
+                      SPIRV::Decoration::AuxDataInstructionMetadata)) {
+            MAI.setSkipEmission(&MI);
+            std::string Str = getStringImm(MI, 2);
+            using AMDMD = SPIRV::ModuleAnalysisInfo::AMDGPUAtomicMDKind;
+            auto MaybeKind =
+                StringSwitch<std::optional<AMDMD>>(Str)
+                    .Case("amdgpu.no.fine.grained.memory",
+                          AMDMD::NoFineGrainedMemory)
+                    .Case("amdgpu.no.remote.memory", AMDMD::NoRemoteMemory)
+                    .Case("atomic.ignore.denormal.mode",
+                          AMDMD::IgnoreDenormalMode)
+                    .Default(std::nullopt);
+            if (MaybeKind)
+              MAI.InstrAuxDataRecords.push_back(
+                  {MF, MI.getOperand(0).getReg(), *MaybeKind});
+            continue;
+          }
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations, IS);
           collectFuncNames(MI, &F);
         } else if (TII->isConstantInstr(MI)) {
@@ -1495,13 +1517,9 @@ static void AddDotProductRequirements(const MachineInstr &MI,
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   assert(MI.getOperand(2).isReg() && "Unexpected operand in dot");
-  // We do not consider what the previous instruction is. This is just used
-  // to get the input register and to check the type.
-  const MachineInstr *Input = MRI.getVRegDef(MI.getOperand(2).getReg());
-  assert(Input->getOperand(1).isReg() && "Unexpected operand in dot input");
-  Register InputReg = Input->getOperand(1).getReg();
-
-  SPIRVTypeInst TypeDef = MRI.getVRegDef(InputReg);
+  SPIRVTypeInst TypeDef = ST.getSPIRVGlobalRegistry()->getSPIRVTypeForVReg(
+      MI.getOperand(2).getReg(), MI.getMF());
+  assert(TypeDef && "Unexpected type instruction for dot input");
   if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
     assert(TypeDef->getOperand(1).getImm() == 32);
     Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPacked);
@@ -1827,15 +1845,16 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpAtomicOr:
   case SPIRV::OpAtomicXor: {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    const MachineInstr *InstrPtr = &MI;
+    SPIRVTypeInst TypeDef;
     if (Op == SPIRV::OpAtomicStore) {
       assert(MI.getOperand(3).isReg());
-      InstrPtr = MRI.getVRegDef(MI.getOperand(3).getReg());
-      assert(InstrPtr && "Unexpected type instruction for OpAtomicStore");
+      TypeDef = ST.getSPIRVGlobalRegistry()->getSPIRVTypeForVReg(
+          MI.getOperand(3).getReg(), MI.getMF());
+      assert(TypeDef && "Unexpected type instruction for OpAtomicStore");
+    } else {
+      assert(MI.getOperand(1).isReg() && "Unexpected operand in atomic");
+      TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
     }
-    assert(InstrPtr->getOperand(1).isReg() && "Unexpected operand in atomic");
-    Register TypeReg = InstrPtr->getOperand(1).getReg();
-    SPIRVTypeInst TypeDef = MRI.getVRegDef(TypeReg);
 
     if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
       unsigned BitWidth = TypeDef->getOperand(1).getImm();
@@ -2647,8 +2666,9 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpFUnordGreaterThan:
   case SPIRV::OpFUnordGreaterThanEqual: {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    MachineInstr *OperandDef = MRI.getVRegDef(MI.getOperand(2).getReg());
-    SPIRVTypeInst TypeDef = MRI.getVRegDef(OperandDef->getOperand(1).getReg());
+    SPIRVTypeInst TypeDef = ST.getSPIRVGlobalRegistry()->getSPIRVTypeForVReg(
+        MI.getOperand(2).getReg(), MI.getMF());
+    assert(TypeDef && "Unexpected type instruction for comparison operand");
     if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     if (isBFloat16Type(TypeDef)) {

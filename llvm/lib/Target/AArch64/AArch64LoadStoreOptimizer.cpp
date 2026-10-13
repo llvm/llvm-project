@@ -1650,11 +1650,6 @@ bool AArch64LoadStoreOpt::findMatchingStore(
   return false;
 }
 
-static bool needsWinCFI(const MachineFunction *MF) {
-  return MF->getTarget().getMCAsmInfo().usesWindowsCFI() &&
-         MF->getFunction().needsUnwindTableEntry();
-}
-
 // Returns true if FirstMI and MI are candidates for merging or pairing.
 // Otherwise, returns false.
 static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
@@ -1669,8 +1664,9 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
          !TII->isLdStPairSuppressed(FirstMI) &&
          "FirstMI shouldn't get here if either of these checks are true.");
 
-  if (needsWinCFI(MI.getMF()) && (MI.getFlag(MachineInstr::FrameSetup) ||
-                                  MI.getFlag(MachineInstr::FrameDestroy)))
+  if ((MI.getFlag(MachineInstr::FrameSetup) ||
+       MI.getFlag(MachineInstr::FrameDestroy)) &&
+      MI.getMF()->needsWinCFI())
     return false;
 
   unsigned OpcA = FirstMI.getOpcode();
@@ -2552,7 +2548,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
   // the memory access (I) and the increment (MBBI) can access the memory
   // region defined by [SP, MBBI].
   const bool BaseRegSP = BaseReg == AArch64::SP;
-  if (BaseRegSP && needsWinCFI(I->getMF())) {
+  if (BaseRegSP && I->getMF()->needsWinCFI()) {
     // FIXME: For now, we always block the optimization over SP in windows
     // targets as it requires to adjust the unwind/debug info, messing up
     // the unwind info can actually cause a miscompile.
@@ -2648,7 +2644,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   }
 
   const bool BaseRegSP = BaseReg == AArch64::SP;
-  if (BaseRegSP && needsWinCFI(I->getMF())) {
+  if (BaseRegSP && I->getMF()->needsWinCFI()) {
     // FIXME: For now, we always block the optimization over SP in windows
     // targets as it requires to adjust the unwind/debug info, messing up
     // the unwind info can actually cause a miscompile.
@@ -2774,7 +2770,7 @@ bool AArch64LoadStoreOpt::tryToPromoteLoadFromStore(
   if (MI.hasOrderedMemoryRef())
     return false;
 
-  if (needsWinCFI(MI.getMF()) && MI.getFlag(MachineInstr::FrameDestroy))
+  if (MI.getFlag(MachineInstr::FrameDestroy) && MI.getMF()->needsWinCFI())
     return false;
 
   // Make sure this is a reg+imm.

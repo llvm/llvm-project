@@ -305,6 +305,29 @@ add_libc_test(
 )
 
 add_libc_test(
+  lchown_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    lchown_test.cpp
+  DEPENDS
+    libc.hdr.sys_stat_macros
+    libc.hdr.fcntl_macros
+    libc.include.unistd
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.getgid
+    libc.src.unistd.getuid
+    libc.src.unistd.lchown
+    libc.src.unistd.symlink
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   link_test
   SUITE
     libc_unistd_unittests
