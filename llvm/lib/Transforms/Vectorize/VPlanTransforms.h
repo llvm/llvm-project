@@ -284,7 +284,7 @@ struct VPlanTransforms {
 
   /// Replace replicating VPReplicateRecipe, VPScalarIVStepsRecipe and
   /// VPInstruction in \p Plan with \p VF single-scalar recipes, packed into
-  /// Build(Struct)Vectors for vector users. Replicate regions are dissolved by
+  /// BuildVectors for vector users. Replicate regions are dissolved by
   /// replicating their blocks and their recipes \p VF times.
   /// TODO: Also dissolve replicate regions with live outs.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
