@@ -1040,9 +1040,10 @@ CheckObjCDictionaryLiteralDuplicateKeys(Sema &S,
 /// keys are stored and looked up as UTF-16, and the CFString emitter truncates
 /// each key at the first ill-formed byte. A truncated key generally cannot be
 /// found at runtime as written, so flag it -- mirroring the diagnostic emitted
-/// for ill-formed UTF-8 when boxing a string (warn_objc_boxing_invalid_utf8_string).
-static void
-CheckObjCDictionaryLiteralUTF8Keys(Sema &S, ObjCDictionaryLiteral *Literal) {
+/// for ill-formed UTF-8 when boxing a string
+/// (warn_objc_boxing_invalid_utf8_string).
+static void CheckObjCDictionaryLiteralUTF8Keys(Sema &S,
+                                               ObjCDictionaryLiteral *Literal) {
   // Only constant dictionaries store/truncate keys as UTF-16; ordinary runtime
   // dictionaries keep the original NSString unchanged.
   if (!Literal->isExpressibleAsConstantInitializer())
