@@ -4527,8 +4527,11 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   for (BasicBlock *BB : TheLoop->blocks()) {
     // For each instruction in the old loop.
     for (Instruction &I : *BB) {
-      Value *Ptr =  getLoadStorePointerOperand(&I);
-      if (!Ptr)
+      Value *Ptr = getLoadStorePointerOperand(&I);
+
+      // Ignore if no pointer found or a widening decision has already been
+      // made.
+      if (!Ptr || (getWideningDecision(&I, VF) != CM_Unknown))
         continue;
 
       LLVM_DEBUG(dbgs() << "LV: Memory widening: calculating best strategy for "
@@ -4600,10 +4603,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       if (isAccessInterleaved(&I)) {
         const auto *Group = getInterleavedAccessGroup(&I);
         assert(Group && "Fail to get an interleaved access group.");
-
-        // Make one decision for the whole group.
-        if (getWideningDecision(&I, VF) != CM_Unknown)
-          continue;
 
         NumAccesses = Group->getNumMembers();
         if (interleavedAccessCanBeWidened(&I, VF))
@@ -6282,15 +6281,18 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                        VPI->getOpcode()) &&
          "Should have been handled prior to this!");
 
-  // We can only replicate an extractvalue if its operand generates per lane in
-  // the same block, otherwise we would need to extract a lane from its struct
-  // operand which is invalid.
+  // An extractvalue takes the shape of its operand: we cannot extract a lane
+  // from a widened struct, nor build a struct from replicated lanes.
   if (VPI->getOpcode() == Instruction::ExtractValue &&
       !vputils::isSingleScalar(VPI->getOperand(0)))
     if (VPRecipeBase *OpR = VPI->getOperand(0)->getDefiningRecipe())
-      if (!vputils::doesGeneratePerAllLanes(OpR) ||
-          OpR->getParent() != VPI->getParent())
+      if (!vputils::doesGeneratePerAllLanes(OpR))
         return tryToWiden(VPI);
+  if (VPI->getOpcode() == Instruction::ExtractValue)
+    return new VPReplicateRecipe(Instr, VPI->operandsWithoutMask(),
+                                 vputils::isSingleScalar(VPI->getOperand(0)),
+                                 /*Mask=*/nullptr, *VPI, *VPI,
+                                 VPI->getDebugLoc());
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -7413,9 +7415,8 @@ static void preparePlanForEpilogueVectorLoop(
   // version, except for the Add itself and the canonical IV increment.
   auto *Increment = vputils::findCanonicalIVIncrement(Plan);
   assert(Increment && "Must have a canonical IV increment at this point");
-  IV->replaceUsesWithIf(Add, [Add, Increment](VPUser &U) {
-    return &U != Add && &U != Increment;
-  });
+  IV->replaceUsesWithIf(
+      Add, [Add, Increment](VPUser *U) { return U != Add && U != Increment; });
   VPInstruction *OffsetIVInc =
       VPBuilder::getToInsertAfter(Increment).createAdd(Increment, VPV);
   Increment->replaceAllUsesWith(OffsetIVInc);
@@ -7522,8 +7523,14 @@ static void preparePlanForEpilogueVectorLoop(
                  "(or negative zero)");
 
           Sub->setOperand(0, ResumeVPV);
-        } else
-          VPI->setOperand(0, ResumeVPV);
+        } else {
+          // The start vector may be shared by multiple reductions, so create
+          // a new one using the resume.
+          auto *NewStart = cast<VPInstruction>(VPI->clone());
+          NewStart->setOperand(0, ResumeVPV);
+          NewStart->insertBefore(VPI);
+          ReductionPhi->setStartValue(NewStart);
+        }
         continue;
       }
     } else {
