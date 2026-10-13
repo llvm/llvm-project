@@ -12043,7 +12043,7 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
         continue;
       // Ignore debug info and pseudo op intrinsics, they don't escape or store
       // to allocas.
-      if (I.isDebugOrPseudoInst())
+      if (isa<PseudoProbeInst>(I))
         continue;
       // This is an unknown instruction. Assume it escapes or writes to all
       // static alloca operands.

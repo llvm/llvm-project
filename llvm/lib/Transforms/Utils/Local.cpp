@@ -3427,7 +3427,7 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
       dropDebugUsers(*I);
     // RemoveDIs: drop debug-info too as the following code does.
     I->dropDbgRecords();
-    if (I->isDebugOrPseudoInst()) {
+    if (isa<PseudoProbeInst>(I)) {
       // Remove DbgInfo and pseudo probe Intrinsics.
       II = I->eraseFromParent();
       continue;

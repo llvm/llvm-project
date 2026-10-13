@@ -2747,7 +2747,7 @@ static bool precededByAbortIntrinsic(const UnreachableInst &I,
                                      const SPIRVSubtarget &ST) {
   // Find a previous non-debug instruction.
   const Instruction *Prev = I.getPrevNode();
-  while (Prev && Prev->isDebugOrPseudoInst())
+  while (Prev && isa<PseudoProbeInst>(Prev))
     Prev = Prev->getPrevNode();
 
   if (Prev && isAbortCall(*Prev, ST))

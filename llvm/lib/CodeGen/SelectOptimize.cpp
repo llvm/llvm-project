@@ -898,7 +898,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
   DenseMap<Value *, SelectLikeInfo>::iterator It;
   while (BBIt != BB.end()) {
     Instruction *I = &*BBIt++;
-    if (I->isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(I))
       continue;
 
     if (!AlreadyProcessed)
@@ -930,7 +930,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
       Instruction *NI = &*BBIt;
       // Debug/pseudo instructions should be skipped and not prevent the
       // formation of a select group.
-      if (NI->isDebugOrPseudoInst()) {
+      if (isa<PseudoProbeInst>(NI)) {
         ++BBIt;
         continue;
       }
@@ -1317,7 +1317,7 @@ bool SelectOptimizeImpl::computeLoopCosts(
     CostInfo &MaxCost = LoopCost[Iter];
     for (BasicBlock *BB : L->getBlocks()) {
       for (const Instruction &I : *BB) {
-        if (I.isDebugOrPseudoInst())
+        if (isa<PseudoProbeInst>(I))
           continue;
         // Compute the predicated and non-predicated cost of the instruction.
         Scaled64 IPredCost = Scaled64::getZero(),

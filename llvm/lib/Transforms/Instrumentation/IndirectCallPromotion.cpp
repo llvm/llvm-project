@@ -149,7 +149,7 @@ static bool isDestBBSuitableForSink(Instruction *Inst, BasicBlock *DestBB) {
     // instruction must be an instruction. See `Verifier::visitInstruction`.
     Instruction *UserInst = cast<Instruction>(User);
     // We can sink debug or pseudo instructions together with Inst.
-    if (UserInst->isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(UserInst))
       continue;
     UserBB = getUserBasicBlock(Use, UserInst);
     // Do not sink if Inst is used in a basic block that is not DestBB.

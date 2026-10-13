@@ -1197,7 +1197,7 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
       continue;
 
     // Skip debug or pseudo instructions.
-    if (I.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(I))
       continue;
 
     // Skip eh pad instructions.

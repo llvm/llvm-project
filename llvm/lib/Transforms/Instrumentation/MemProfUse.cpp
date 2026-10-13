@@ -756,7 +756,7 @@ readMemprof(const InstrumentationOptions &Opts, Module &M, Function &F,
   // debug locations.
   for (auto &BB : F) {
     for (auto &I : BB) {
-      if (I.isDebugOrPseudoInst())
+      if (isa<PseudoProbeInst>(I))
         continue;
       // We are only interested in calls (allocation or interior call stack
       // context calls).

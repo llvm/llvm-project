@@ -681,7 +681,7 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
       break;
     // Debug info intrinsics do not get in the way of tail call optimization.
     // Pseudo probe intrinsics do not block tail call optimization either.
-    if (BBI->isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(BBI))
       continue;
     // A lifetime end, assume or noalias.decl intrinsic should not stop tail
     // call optimization.
