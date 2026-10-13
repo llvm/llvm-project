@@ -1546,6 +1546,9 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
   switch (Opc) {
     default:
       return false;
+    case AArch64::SEH_StartProc:
+    case AArch64::SEH_EndProc:
+    case AArch64::SEH_EndC:
     case AArch64::SEH_StackAlloc:
     case AArch64::SEH_SaveFPLR:
     case AArch64::SEH_SaveFPLR_X:

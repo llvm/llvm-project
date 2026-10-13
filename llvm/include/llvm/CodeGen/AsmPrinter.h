@@ -529,6 +529,8 @@ public:
 
   bool needsSEHMoves();
 
+  virtual bool hasExplicitWinCFIRanges() const { return false; }
+
   /// Since emitting CFI unwind information is entangled with supporting the
   /// exceptions, this returns true for platforms which use CFI unwind
   /// information for other purposes (debugging, sanitizers, ...) when

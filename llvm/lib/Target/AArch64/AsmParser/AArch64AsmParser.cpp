@@ -208,6 +208,7 @@ private:
 
   bool parseDirectiveSEHAllocStack(SMLoc L);
   bool parseDirectiveSEHPrologEnd(SMLoc L);
+  bool parseDirectiveSEHEndC(SMLoc L);
   bool parseDirectiveSEHSaveR19R20X(SMLoc L);
   bool parseDirectiveSEHSaveFPLR(SMLoc L);
   bool parseDirectiveSEHSaveFPLRX(SMLoc L);
@@ -7139,6 +7140,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHAllocStack(Loc);
     else if (IDVal == ".seh_endprologue")
       parseDirectiveSEHPrologEnd(Loc);
+    else if (IDVal == ".seh_end_c")
+      parseDirectiveSEHEndC(Loc);
     else if (IDVal == ".seh_save_r19r20_x")
       parseDirectiveSEHSaveR19R20X(Loc);
     else if (IDVal == ".seh_save_fplr")
@@ -7672,6 +7675,11 @@ bool AArch64AsmParser::parseDirectiveSEHAllocStack(SMLoc L) {
 /// ::= .seh_endprologue
 bool AArch64AsmParser::parseDirectiveSEHPrologEnd(SMLoc L) {
   getTargetStreamer().emitARM64WinCFIPrologEnd();
+  return false;
+}
+
+bool AArch64AsmParser::parseDirectiveSEHEndC(SMLoc L) {
+  getTargetStreamer().emitARM64WinCFIEndC();
   return false;
 }
 

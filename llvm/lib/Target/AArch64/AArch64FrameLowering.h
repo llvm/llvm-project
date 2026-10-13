@@ -110,6 +110,7 @@ public:
   bool enableShrinkWrapping(const MachineFunction &MF) const override {
     return true;
   }
+  bool enableWindowsCFIShrinkWrapping(const MachineFunction &MF) const override;
 
   bool enableStackSlotScavenging(const MachineFunction &MF) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
