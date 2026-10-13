@@ -2500,18 +2500,21 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
       if (!scalarExpr) {
         continue;
       }
+      // Subset checks compare condition identities; distinct conditions must
+      // not share one.
+      llvm::StringRef identity{prop.source.begin(), prop.source.size()};
       if (auto constValue{EvaluateUserCondition(semaCtx, *scalarExpr)}) {
         vmi.addTrait(set,
             *constValue ? llvm::omp::TraitProperty::user_condition_true
                         : llvm::omp::TraitProperty::user_condition_false,
-            "<condition>", scorePtr);
+            identity, scorePtr);
         continue;
       }
       if (!dynamicCond) {
         dynamicCond = DynamicUserCondition{scalarExpr, prop.source};
       }
       vmi.addTrait(set, llvm::omp::TraitProperty::user_condition_unknown,
-          "<condition>", scorePtr);
+          identity, scorePtr);
     }
     return;
   }
@@ -2621,8 +2624,10 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
           staticVMI.ScoreMap.erase(scoreIt);
         }
         staticVMI.RequiredTraits.reset(unsigned(dynamicConditionTrait));
+        staticVMI.UserCondition = {};
         llvm::APInt *conditionScorePtr{
             conditionScore ? &*conditionScore : nullptr};
+        llvm::StringRef conditionIdentity{rawVMI.UserCondition};
 
         bool hasMatchAny{rawVMI.RequiredTraits.test(unsigned(matchAnyTrait))};
         bool hasMatchNone{rawVMI.RequiredTraits.test(unsigned(matchNoneTrait))};
@@ -2639,7 +2644,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
 
           llvm::omp::VariantMatchInfo conditionTrueVMI{staticVMI};
           conditionTrueVMI.addTrait(
-              llvm::omp::TraitProperty::user_condition_true, "<condition>",
+              llvm::omp::TraitProperty::user_condition_true, conditionIdentity,
               conditionScorePtr);
           if (!llvm::omp::isVariantApplicableInContext(
                   conditionTrueVMI, matchContext)) {
@@ -2652,7 +2657,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
               rankingVMI.addTrait(hasMatchNone
                       ? dynamicConditionTrait
                       : llvm::omp::TraitProperty::user_condition_true,
-                  "<condition>", conditionScorePtr);
+                  conditionIdentity, conditionScorePtr);
             };
 
         if (hasMatchAny && isStaticVMIApplicable) {
