@@ -2,9 +2,9 @@
 ## and out-of-range tail calls.
 
 # RUN: %clang %cflags %s -o %t -Wl,-Ttext=0x10000000
-# RUN: not llvm-bolt %t -o %t.f --split-functions --split-strategy=all \
+# RUN: not llvm-bolt %t -o %t.f --split-functions --split-strategy=all --funcs=_start \
 # RUN:   --custom-allocation-vma=0x20000000 2>&1 | FileCheck %s
-# RUN: llvm-bolt %t -o %t.ok --split-functions --split-strategy=all \
+# RUN: llvm-bolt %t -o %t.ok --split-functions --split-strategy=all --funcs=_start \
 # RUN:   --custom-allocation-vma=0x11000000 2>&1 | FileCheck %s --check-prefix=IN-RANGE
 # RUN: %clang %cflags %s -o %t.tail -Wl,-q,-Ttext=0x10000000
 # RUN: llvm-bolt %t.tail -o %t.tail.bolt --funcs=foo \
@@ -13,10 +13,13 @@
 # CHECK: BOLT-ERROR: Unable to relax non-call branch beyond 128MiB
 # IN-RANGE: BOLT-INFO: Inserted 0 stubs in the hot area and 0 stubs in the cold area.
 # TAILCALL: Binary Function "foo" after long-jmp
-# TAILCALL: b .LStub0 # TAILCALL
+# TAILCALL: b [[STUB:\.LStub[0-9]+]] # TAILCALL
+# TAILCALL: [[STUB]] (
 # TAILCALL: adrp x16, bar
 # TAILCALL-NEXT: add x16, x16, :lo12:bar
 # TAILCALL-NEXT: br x16 # UNKNOWN CONTROL FLOW
+# TAILCALL: add x0, x1, #0x0
+# TAILCALL-NEXT: b [[STUB]] # TAILCALL
 
     .text
     .globl _start
@@ -31,6 +34,11 @@ _start:
     .globl foo
     .type foo, @function
 foo:
+    cmp x0, x1
+    b.eq .LchangeReg
+    b bar
+.LchangeReg:
+    add x0, x1, #0
     b bar
     .size foo, .-foo
 
