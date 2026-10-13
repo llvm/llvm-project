@@ -27,6 +27,10 @@ namespace __stacktrace {
 
 namespace {
 
+// None of this is used on 32-bit x86 (see __windows_impl's early-return below), and is excluded
+// here too so it doesn't trip `-Wunused-function` on that target.
+#  if !defined(_M_IX86)
+
 template <typename F>
 bool get_func(HMODULE module, F** func, char const* name) {
   return ((*func = reinterpret_cast<F*>(reinterpret_cast<void*>(GetProcAddress(module, name)))) != nullptr);
@@ -128,6 +132,8 @@ struct _SymInitScope {
   explicit _SymInitScope(HANDLE proc) : proc_(proc) { SymInitialize(proc_, nullptr, true); }
   ~_SymInitScope() { SymCleanup(proc_); }
 };
+
+#  endif // !defined(_M_IX86)
 
 } // namespace
 
