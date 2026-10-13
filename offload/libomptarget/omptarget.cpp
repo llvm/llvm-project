@@ -15,7 +15,7 @@
 #include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
-#include "PluginManager.h"
+#include "OpenMP/OffloadRTL.h"
 #include "Shared/Debug.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"

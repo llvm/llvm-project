@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OpenMP/OffloadRTL.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 
@@ -25,6 +26,7 @@ static std::mutex &getPluginMutex() {
 static uint32_t RefCount = 0;
 std::atomic<bool> RTLAlive{false};
 std::atomic<int> RTLOngoingSyncs{0};
+PluginManager *PM = nullptr;
 
 /// Check deleted and deprecated features, such as environment variables.
 static void checkRuntimeEnvironment() {

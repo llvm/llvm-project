@@ -73,9 +73,9 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
 }
 
 DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
-                   ol_device_handle_t DeviceHandle)
+                   ol_device_handle_t DeviceHandle, PluginManager *PM)
     : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
-      DeviceHandle(DeviceHandle), MappingInfo(*this) {}
+      DeviceHandle(DeviceHandle), PM(PM), MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
