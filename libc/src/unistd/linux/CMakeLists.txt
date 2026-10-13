@@ -271,10 +271,11 @@ add_entrypoint_object(
   HDRS
     ../fexecve.h
   DEPENDS
+    libc.hdr.fcntl_macros
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
-    libc.src.__support.OSUtil.linux.syscall_wrappers.fexecve
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execveat
     libc.src.errno.errno
 )
 

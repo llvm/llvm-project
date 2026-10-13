@@ -1670,11 +1670,10 @@ add_header_library(
 )
 
 add_header_library(
-  fexecve
+  execveat
   HDRS
-    fexecve.h
+    execveat.h
   DEPENDS
-    libc.hdr.fcntl_macros
     libc.include.sys_syscall
     libc.src.__support.common
     libc.src.__support.error_or

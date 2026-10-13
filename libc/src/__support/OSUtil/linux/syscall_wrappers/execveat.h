@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Syscall wrapper for fexecve.
+/// Syscall wrapper for execveat.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_FEXECVE_H
-#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_FEXECVE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_EXECVEAT_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_EXECVEAT_H
 
-#include "hdr/fcntl_macros.h"
 #include "src/__support/OSUtil/linux/syscall.h" // syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -24,16 +23,13 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
-LIBC_INLINE ErrorOr<int> fexecve(int fd, char *const argv[],
-                                 char *const envp[]) {
-#if defined(SYS_execveat)
-  return syscall_checked<int>(SYS_execveat, fd, "", argv, envp, AT_EMPTY_PATH);
-#else
-#error "SYS_execveat syscall not available."
-#endif
+LIBC_INLINE ErrorOr<int> execveat(int dirfd, const char *pathname,
+                                  char *const argv[], char *const envp[],
+                                  int flags) {
+  return syscall_checked<int>(SYS_execveat, dirfd, pathname, argv, envp, flags);
 }
 
 } // namespace linux_syscalls
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_FEXECVE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_EXECVEAT_H

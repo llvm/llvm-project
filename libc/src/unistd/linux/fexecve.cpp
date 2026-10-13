@@ -13,7 +13,8 @@
 
 #include "src/unistd/fexecve.h"
 
-#include "src/__support/OSUtil/linux/syscall_wrappers/fexecve.h"
+#include "hdr/fcntl_macros.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/execveat.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -22,7 +23,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fexecve,
                    (int fd, char *const argv[], char *const envp[])) {
-  auto ret = linux_syscalls::fexecve(fd, argv, envp);
+  auto ret = linux_syscalls::execveat(fd, "", argv, envp, AT_EMPTY_PATH);
   if (!ret.has_value()) {
     libc_errno = ret.error();
     return -1;
