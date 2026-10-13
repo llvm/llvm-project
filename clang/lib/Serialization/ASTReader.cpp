@@ -1887,8 +1887,15 @@ InputFileLoc ASTReader::getLoadedFileLoc(FileEntryRef Wanted) {
   if (Known == LoadedInputFiles->end())
     return InputFileLoc();
 
+  time_t WantedTime = Wanted.getModificationTime();
+
   for (const LoadedModuleInputFile &In : Known->second) {
     InputFileInfo FI = getInputFileInfo(*In.F, In.InputID);
+
+    // A zero timestamp means none was recorded, so only two nonzero,
+    // differing timestamps rule out a match.
+    if (FI.StoredTime && WantedTime && FI.StoredTime != WantedTime)
+      continue;
 
     StringRef Unresolved = FI.UnresolvedImportedFilename;
     if (!llvm::sys::path::is_absolute(Unresolved) ||
