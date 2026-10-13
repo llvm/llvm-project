@@ -7231,7 +7231,9 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
   VPRecipeBase *MiddleTerm = MiddleVPBB->getTerminator();
   MiddleBuilder.setInsertPoint(
       MiddleVPBB, MiddleTerm ? MiddleTerm->getIterator() : MiddleVPBB->end());
+  // Multiple header phis may share the same resume phi.
   SmallVector<VPInstruction *> ResumeValues;
+  SmallSetVector<VPPhi *, 4> ResumePhis;
   for (VPRecipeBase &R : MainPlan.getScalarHeader()->phis()) {
     auto *ResumePhi = cast<VPPhi>(R.getOperand(0));
     assert(ResumePhi->getNumIncoming() == 2 &&
@@ -7240,6 +7242,9 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
     ResumeValues.push_back(MiddleBuilder.createNaryOp(
         VPInstruction::ResumeForEpilogue,
         {ResumePhi->getOperand(0), ResumePhi->getOperand(1)}));
+    ResumePhis.insert(ResumePhi);
+  }
+  for (VPPhi *ResumePhi : ResumePhis) {
     ResumePhi->replaceAllUsesWith(ResumePhi->getOperand(1));
     ResumePhi->eraseFromParent();
   }
@@ -7253,13 +7258,6 @@ static void preparePlanForEpilogueVectorLoop(
     ElementCount MainLoopVF, unsigned MainLoopUF, ElementCount EpilogueVF,
     LoopVectorizationPlanner &LVP, VFSelectionContext &Config,
     ScalarEvolution &SE, const MainPlanResumeMarkers &Markers) {
-  // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
-  // from the main plan.
-  // TODO: Replace the IR PHI key.
-  DenseMap<PHINode *, VPInstruction *> IRPhiToResumeForEpi;
-  for (auto [HeaderPhi, ResumeForEpi] :
-       zip_equal(MainPlan.getScalarHeader()->phis(), Markers.ResumeValues))
-    IRPhiToResumeForEpi[&cast<VPIRPhi>(HeaderPhi).getIRPhi()] = ResumeForEpi;
   VPIRBasicBlock *EpilogueCheck = RUN_VPLAN_PASS(
       VPlanTransforms::modelGeneratedMainLoopBlocks, Plan, MainPlan);
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
@@ -7329,6 +7327,14 @@ static void preparePlanForEpilogueVectorLoop(
       VPBuilder::getToInsertAfter(Increment).createAdd(Increment, VPV);
   Increment->replaceAllUsesWith(OffsetIVInc);
   OffsetIVInc->setOperand(0, Increment);
+
+  // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
+  // from the main plan.
+  // TODO: Replace the IR PHI key.
+  DenseMap<PHINode *, VPInstruction *> IRPhiToResumeForEpi;
+  for (auto [HeaderPhi, ResumeForEpi] :
+       zip_equal(MainPlan.getScalarHeader()->phis(), Markers.ResumeValues))
+    IRPhiToResumeForEpi[&cast<VPIRPhi>(HeaderPhi).getIRPhi()] = ResumeForEpi;
 
   // Resume values must be created in the vector preheader.
   VPBuilder PHBuilder(VectorPH, VectorPH->getFirstNonPhi());
