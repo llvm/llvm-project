@@ -152,6 +152,11 @@ def OpExtInstImport: Op<11, (outs ID:$res), (ins StringImm:$extInstsName, variab
 // perspective of the instruction selection pass
 def OpExtInst: Op<12, (outs ID:$res), (ins TYPE:$ty, i32imm:$set, Extension:$inst, variable_ops),
                   "$res = OpExtInst $ty $set $inst">;
+// Same layout as OpExtInst; allows operands that are defined later in the
+// module (SPV_KHR_relaxed_extended_instruction).
+def OpExtInstWithForwardRefsKHR: Op<4433, (outs ID:$res),
+                  (ins TYPE:$ty, i32imm:$set, Extension:$inst, variable_ops),
+                  "$res = OpExtInstWithForwardRefsKHR $ty $set $inst">;
 // 3.42.5 Mode-Setting Instructions
 
 def OpMemoryModel: Op<14, (outs), (ins AddressingModel:$addr, MemoryModel:$mem),
