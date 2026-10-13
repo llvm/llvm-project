@@ -98,7 +98,7 @@ static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
 /// \p declOp is visible.
 static fir::AllocaOp createBoundSlot(mlir::Value val,
                                      fir::cg::XDeclareOp declOp) {
-  // Generate the slot and store with UnknownLoc so tha they dont impact the
+  // Generate the slot and store with UnknownLoc so that they don't impact the
   // line table.
   mlir::OpBuilder builder(declOp);
   mlir::Location loc = builder.getUnknownLoc();
