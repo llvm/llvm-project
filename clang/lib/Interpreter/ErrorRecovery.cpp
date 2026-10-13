@@ -19,7 +19,12 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclVisitor.h"
+#include "clang/AST/GlobalDecl.h"
+#include "clang/AST/Mangle.h"
 #include "clang/Sema/Sema.h"
+
+#define DEBUG_TYPE "clang-repl"
 
 namespace clang {
 
@@ -51,51 +56,90 @@ void DeclStateReverter::restoreDefinitionDataFootprint(
 #include "clang/AST/CXXRecordDeclDefinitionBits.def"
 }
 
-void DeclStateReverter::revertDefinitionArrival(Decl *D) {
-  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    FD->setBody(nullptr);
-    // Reset the body state so a later PTU sees this as not instantiated.
-    FD->setWillHaveBody(false);
+void DeclStateReverter::revertDefinitionArrival(VarDecl *VD) {
+  VD->setInit(nullptr);
+  VD->setInvalidDecl(false);
+}
 
-    // The reverted body may have caused a substitution failure to mark
-    // the function invalid. Clear that state as well.
-    FD->setInvalidDecl(false);
-  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
-    VD->setInit(nullptr);
-    VD->setInvalidDecl(false);
-  } else if (auto *Field = dyn_cast<FieldDecl>(D))
-    Field->setInClassInitializer(nullptr);
-  else if (auto *ED = dyn_cast<EnumDecl>(D)) {
-    // Undo EnumDecl::completeDefinition() writes. PromotionType and both
-    // bit-count fields are always overwritten during completion, so they can
-    // be reset unconditionally.
-    ED->setPromotionType(QualType());
-    // resetEnumBits(*ED);
-    // EnumDecl::setNumPositiveBits/setNumNegativeBits -- private.
-    // ED->setNumPositiveBits(0);
-    // ED->setNumNegativeBits(0);
+void DeclStateReverter::revertDefinitionArrival(FunctionDecl *FD) {
+  FD->setBody(nullptr);
+  // Reset the body state so a later PTU sees this as not instantiated.
+  FD->setWillHaveBody(false);
 
-    // completeDefinition() only sets IntegerType for non-fixed enums. A fixed
-    // enum may already have an IntegerType from its forward declaration, which
-    // must be preserved.
-    if (!ED->isFixed())
-      ED->setIntegerType(QualType());
-    ED->setCompleteDefinition(false);
-    clearBeingDefined(*ED);
-  } else if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
-    // 1. DefinitionData pointer -- back to null.
-    RD->DefinitionData = nullptr;
+  // The reverted body may have caused a substitution failure to mark
+  // the function invalid. Clear that state as well.
+  FD->setInvalidDecl(false);
+}
 
-    // 2. DeclContext member list -- back to empty.
-    clearDeclContextChain(*RD);
-    DeclContext *Primary = RD->getDeclContext()->getPrimaryContext();
-    if (StoredDeclsMap *Map = Primary->getLookupPtr())
-      Map->clear();
+void DeclStateReverter::revertDefinitionArrival(EnumDecl *ED) {
+  // Undo EnumDecl::completeDefinition() writes. PromotionType and both
+  // bit-count fields are always overwritten during completion, so they can
+  // be reset unconditionally.
+  ED->setPromotionType(QualType());
+  // resetEnumBits(*ED);
+  // EnumDecl::setNumPositiveBits/setNumNegativeBits -- private.
+  // ED->setNumPositiveBits(0);
+  // ED->setNumNegativeBits(0);
 
-    // 3. TagDecl completion bits -- back to "never started". Flipped by
-    // startDefinition()/completeDefinition().
-    clearBeingDefined(*RD);
-    RD->setCompleteDefinition(false);
+  // completeDefinition() only sets IntegerType for non-fixed enums. A fixed
+  // enum may already have an IntegerType from its forward declaration, which
+  // must be preserved.
+  if (!ED->isFixed())
+    ED->setIntegerType(QualType());
+  ED->setCompleteDefinition(false);
+  clearBeingDefined(*ED);
+}
+
+void DeclStateReverter::revertDefinitionArrival(CXXRecordDecl *RD) {
+  // 1. DefinitionData pointer -- back to null.
+  RD->DefinitionData = nullptr;
+
+  // 2. DeclContext member list -- back to empty.
+  clearDeclContextChain(*RD);
+  DeclContext *Primary = RD->getPrimaryContext();
+  if (StoredDeclsMap *Map = Primary->getLookupPtr())
+    Map->clear();
+
+  // 3. TagDecl completion bits -- back to "never started". Flipped by
+  // startDefinition()/completeDefinition().
+  clearBeingDefined(*RD);
+  RD->setCompleteDefinition(false);
+}
+
+void DeclStateReverter::forgetCodeGenMangledNames(CodeGenerator *CodeGen,
+                                                  ASTContext &Ctx,
+                                                  const Decl *D) {
+  if (!CodeGen)
+    return;
+  const auto *ND = dyn_cast<NamedDecl>(D);
+  if (!ND)
+    return;
+
+  std::unique_ptr<MangleContext> MC(Ctx.createMangleContext());
+  if (!MC->shouldMangleDeclName(ND))
+    return;
+
+  auto Forget = [&](GlobalDecl GD) {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    MC->mangleName(GD, OS);
+    CodeGen->forgetDecl(Name);
+  };
+
+  // Brute-force every mangled name a constructor/destructor can have --
+  // mirrors cling's DeclUnloader::VisitCXXConstructorDecl/
+  // VisitCXXDestructorDecl, the one other known implementation of this.
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(ND)) {
+    Forget(GlobalDecl(Ctor, Ctor_Complete));
+    Forget(GlobalDecl(Ctor, Ctor_Base));
+    Forget(GlobalDecl(Ctor, Ctor_Comdat));
+  } else if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(ND)) {
+    Forget(GlobalDecl(Dtor, Dtor_Deleting));
+    Forget(GlobalDecl(Dtor, Dtor_Complete));
+    Forget(GlobalDecl(Dtor, Dtor_Base));
+    Forget(GlobalDecl(Dtor, Dtor_Comdat));
+  } else if (isa<FunctionDecl>(ND) || isa<VarDecl>(ND)) {
+    Forget(GlobalDecl(ND));
   }
 }
 
@@ -134,13 +178,9 @@ void DeclStateReverter::removeSpecializations(
   }
 }
 
-void DeclStateReverter::detachDefData(const Decl *D) {
-  const auto *RD = dyn_cast<CXXRecordDecl>(D);
-  if (!RD)
-    return;
-  for (const auto *I : RD->redecls())
-    const_cast<CXXRecordDecl *>(cast<CXXRecordDecl>(I))->DefinitionData =
-        nullptr;
+void DeclStateReverter::detachDefData(CXXRecordDecl *RD) {
+  for (auto *I : RD->redecls())
+    cast<CXXRecordDecl>(I)->DefinitionData = nullptr;
 }
 
 void DeclStateReverter::detachCommonBase(const RedeclarableTemplateDecl *RT) {
@@ -151,10 +191,12 @@ void DeclStateReverter::detachCommonBase(const RedeclarableTemplateDecl *RT) {
 void DeclStateReverter::detachFromExternCLookup(Decl *D,
                                                 DeclContext *ExternCCtx,
                                                 PTUID ID) {
-  auto *ND = dyn_cast<NamedDecl>(D);
+  NamedDecl *ND = dyn_cast<NamedDecl>(D);
   if (!ND)
     return;
 
+  if (ND->getDeclName().isEmpty())
+    return;
   // bool IsExternC = false;
   // if (const auto *FD = dyn_cast<FunctionDecl>(ND))
   //   IsExternC = FD->isExternC();
@@ -166,7 +208,7 @@ void DeclStateReverter::detachFromExternCLookup(Decl *D,
 
   if (StoredDeclsMap *Map = ExternCCtx->getPrimaryContext()->getLookupPtr()) {
     auto It = Map->find(ND->getDeclName());
-    if (It != Map->end())
+    if (It != Map->end() && !It->second.isNull())
       It->second.remove(ND);
   }
 }
@@ -174,7 +216,9 @@ void DeclStateReverter::detachFromExternCLookup(Decl *D,
 void DeclStateReverter::removeFromIdResolver(Sema &S, NamedDecl *D) {
   if (D->getDeclName().isEmpty())
     return;
-  if (D->getDeclName().getFETokenInfo())
+
+  if (D->getDeclName().isIdentifier() && D->getDeclName().getFETokenInfo() &&
+      !D->getLangOpts().ObjC && !D->getLangOpts().CPlusPlus)
     S.IdResolver.RemoveDecl(D);
 }
 
@@ -204,7 +248,8 @@ void DeclStateReverter::detachFromDCLookup(Decl *D, PTUID ID) {
           Map->erase(Pos);
       }
     }
-  } while (DC->isTransparentContext() && (DC = DC->getParent()));
+  } while ((DC->isTransparentContext() || DC->isInlineNamespace()) &&
+           (DC = DC->getParent()));
 }
 
 // Walk D's redecl chain looking for the newest decl that is from previous
@@ -250,7 +295,8 @@ NamedDecl *DeclStateReverter::tryDetachRedeclChain(Decl *D, PTUID ID) {
   auto unlinkRedeclChain = [&](auto *RD) {
     auto *SurvivorDecl = findSurvivor(RD, ID);
     if (SurvivorDecl)
-      patchRedeclLink(RD, SurvivorDecl);
+      unlinkRedeclChain2(RD, SurvivorDecl);
+    // patchRedeclLink(RD, SurvivorDecl);
 
     Survivor = SurvivorDecl;
   };
@@ -551,7 +597,6 @@ uint32_t PTUMutationActions::confirmMutation(const Decl *D, DeclShape S,
     if (FlaggedKinds & uint32_t(MutationKind::TemplateCommon) &&
         Tracker.getHiddenMutationTracker().isTrackedFor(
             RT, uint32_t(MutationKind::TemplateCommon))) {
-      // No chain to compare against -- write-once.
       if (DeclStateReverter::isCommonPtrValid(RT))
         Verified |= uint32_t(MutationKind::TemplateCommon);
     }
@@ -700,41 +745,324 @@ public:
   }
 };
 
+class ASTDeclUnmerger : public DeclVisitor<ASTDeclUnmerger> {
+private:
+  // DeclContext::FirstDecl/LastDecl -- protected, needed by
+  // repairLexicalChain only.
+  struct DeclContextLinkAccess : DeclContext {
+    using DeclContext::FirstDecl;
+    using DeclContext::LastDecl;
+  };
+
+  // Decl::NextInContextAndBits -- protected, needed by repairLexicalChain
+  // only (to sever the link at the truncation point).
+  struct DeclLexicalLinkAccess : Decl {
+    using Decl::NextInContextAndBits;
+  };
+
+  static void clearNextInContext(Decl &D) {
+    static_cast<DeclLexicalLinkAccess &>(D).NextInContextAndBits.setPointer(
+        nullptr);
+  }
+
+  PTUID ID;
+  IncrementalStateTracker &Tracker;
+  Sema &SemaRef;
+  CodeGenerator *CodeGen;
+
+  llvm::SmallPtrSet<const Decl *, 16> RepairedChains;
+  llvm::SmallPtrSet<const DeclContext *, 8> RepairedLexicalContexts;
+
+  bool isFromThisPTU(const void *Ptr) const {
+    return Tracker.isFromThisPTU(Ptr, ID);
+  }
+
+  bool hasNoPreviousDecl(const Decl *D) {
+    return D->getPreviousDecl() == nullptr;
+  }
+
+  bool needToRepairDC(const DeclContext *DC) {
+    return Tracker.isFromThisPTU(DC, ID);
+  }
+
+  template <typename DeclT> DeclT *findSurvivor(DeclT *D) const {
+    for (Decl *It = D->getMostRecentDecl(); It; It = It->getPreviousDecl())
+      if (!isFromThisPTU(It))
+        return dyn_cast<DeclT>(It);
+    return nullptr;
+  }
+
+  template <typename DeclT>
+  void resetRedeclLinkToSurvivor(Redeclarable<DeclT> *DBase, DeclT *Survivor) {
+    auto *Latest = static_cast<DeclT *>(DBase);
+    Latest->getFirstDecl()->RedeclLink.setLatest(Survivor);
+    for (DeclT *Dead = Latest; Dead != Survivor;) {
+      DeclT *Next = Dead->getPreviousDecl();
+      Dead->First = Dead;
+      Dead->RedeclLink =
+          Redeclarable<DeclT>::LatestDeclLink(Tracker.getASTContext());
+      Dead = Next;
+    }
+  }
+
+  template <typename DeclT> void detachRedeclChain(DeclT *D) {
+    if (hasNoPreviousDecl(D))
+      return;
+    if (!RepairedChains.insert(D->getCanonicalDecl()).second)
+      return;
+    DeclT *Latest = D->getMostRecentDecl();
+    if (DeclT *Survivor = findSurvivor(D))
+      resetRedeclLinkToSurvivor(Latest, Survivor);
+  }
+
+  /// Remove D from its DeclContext lookup map and restore the previous
+  /// declaration if it was replaced.
+  void detachFromDCLookup(NamedDecl *ND) {
+    // Find any declaration from the previous PTU in the redecl chain that may
+    // have been replaced by this declaration.
+    NamedDecl *Survivor = findSurvivor(ND);
+    DeclarationName Name = ND->getDeclName();
+
+    DeclContext *DC = ND->getDeclContext();
+    do {
+      DeclContext *Primary = DC->getPrimaryContext();
+      if (StoredDeclsMap *Map = Primary->getLookupPtr()) {
+        auto Pos = Map->find(Name);
+        if (Pos != Map->end()) {
+          StoredDeclsList &List = Pos->second;
+          List.remove(ND);
+          if (Survivor) {
+            List.addOrReplaceDecl(Survivor);
+          } if (List.isNull())
+            Map->erase(Pos);
+        }
+      }
+    } while ((DC->isTransparentContext() || DC->isInlineNamespace()) &&
+             (DC = DC->getParent()));
+  }
+
+  void detachFromExternCLookup(NamedDecl *ND) {
+    if (ND->getDeclName().isEmpty())
+      return;
+    DeclContext *ExternCCtx = Tracker.getASTContext().getExternCContextDecl();
+    if (StoredDeclsMap *Map = ExternCCtx->getPrimaryContext()->getLookupPtr()) {
+      auto It = Map->find(ND->getDeclName());
+      if (It != Map->end() && !It->second.isNull())
+        It->second.remove(ND);
+    }
+  }
+
+  void removeFromIdResolver(NamedDecl *ND) {
+    if (ND->getDeclName().isEmpty())
+      return;
+    if (ND->getDeclName().isIdentifier() &&
+        ND->getDeclName().getFETokenInfo() && !ND->getLangOpts().ObjC &&
+        !ND->getLangOpts().CPlusPlus)
+      SemaRef.IdResolver.RemoveDecl(ND);
+  }
+
+  void detachDefData(CXXRecordDecl *RD) {
+    for (auto *I : RD->redecls())
+      cast<CXXRecordDecl>(I)->DefinitionData = nullptr;
+  }
+
+  void repairLexicalChain(DeclContext &DC) {
+    auto &Access = static_cast<DeclContextLinkAccess &>(DC);
+    Decl *Prev = nullptr;
+    for (Decl *Cur = Access.FirstDecl; Cur; Cur = Cur->getNextDeclInContext()) {
+      if (isFromThisPTU(Cur)) {
+        if (Prev) {
+          Access.LastDecl = Prev;
+          clearNextInContext(*Prev);
+        } else {
+          Access.FirstDecl = Access.LastDecl = nullptr; // nothing survives
+        }
+        return;
+      }
+      Prev = Cur;
+    }
+  }
+
+  void forgetMangledNames(const NamedDecl *ND,
+                          std::initializer_list<GlobalDecl> GDs) {
+    if (!CodeGen)
+      return;
+    std::unique_ptr<MangleContext> MC(
+        Tracker.getASTContext().createMangleContext());
+    if (!MC->shouldMangleDeclName(ND))
+      return;
+    for (GlobalDecl GD : GDs) {
+      std::string Name;
+      llvm::raw_string_ostream OS(Name);
+      MC->mangleName(GD, OS);
+      CodeGen->forgetDecl(Name);
+    }
+  }
+
+  void unlinkCommon(NamedDecl *ND) {
+    detachFromExternCLookup(ND);
+    removeFromIdResolver(ND);
+
+    Decl *Canon = ND->getCanonicalDecl();
+    if (RepairedChains.count(Canon))
+      return;
+
+    detachFromDCLookup(ND);
+  }
+
+  void recurseInto(DeclContext *DC) {
+    for (Decl *D : llvm::SmallVector<Decl *, 8>(DC->decls()))
+      Visit(D);
+    if (RepairedLexicalContexts.insert(DC).second)
+      repairLexicalChain(*DC);
+  }
+
+public:
+  ASTDeclUnmerger(PTUID ID, IncrementalStateTracker &Tracker, Sema &SemaRef,
+                  CodeGenerator *CodeGen)
+      : ID(ID), Tracker(Tracker), SemaRef(SemaRef), CodeGen(CodeGen) {}
+
+  void VisitDecl(Decl *D) {
+    if (auto *DC = dyn_cast<DeclContext>(D))
+      recurseInto(DC);
+    if (auto *ND = dyn_cast<NamedDecl>(D)) {
+      unlinkCommon(ND);
+    }
+  }
+
+  void VisitTranslationUnitDecl(TranslationUnitDecl *D) { recurseInto(D); }
+
+  void VisitNamespaceDecl(NamespaceDecl *D) {
+    // we don't care about the decl which complete chain is part belong to
+    // current PTU.
+    if (!Tracker.isFromThisPTU(D->getCanonicalDecl(), ID))
+      recurseInto(D);
+    unlinkCommon(D);
+    detachRedeclChain(D);
+  }
+
+  void VisitTagDecl(TagDecl *D) {
+    recurseInto(D);
+    unlinkCommon(D);
+    detachRedeclChain(D);
+  }
+
+  void VisitCXXRecordDecl(CXXRecordDecl *RD) {
+    recurseInto(RD);
+    unlinkCommon(RD);
+    if (CXXRecordDecl *Def = RD->getDefinition(); Def && isFromThisPTU(Def))
+      detachDefData(Def);
+    detachRedeclChain<TagDecl>(RD);
+  }
+
+  void VisitFunctionDecl(FunctionDecl *FD) {
+    forgetMangledNames(FD, {GlobalDecl(FD)});
+    unlinkCommon(FD);
+    detachRedeclChain(FD);
+  }
+
+  void VisitCXXConstructorDecl(CXXConstructorDecl *D) {
+    forgetMangledNames(D,
+                       {GlobalDecl(D, Ctor_Complete), GlobalDecl(D, Ctor_Base),
+                        GlobalDecl(D, Ctor_Comdat)});
+    unlinkCommon(D);
+    detachRedeclChain<FunctionDecl>(D);
+  }
+
+  void VisitCXXDestructorDecl(CXXDestructorDecl *D) {
+    forgetMangledNames(
+        D, {GlobalDecl(D, Dtor_Deleting), GlobalDecl(D, Dtor_Complete),
+            GlobalDecl(D, Dtor_Base), GlobalDecl(D, Dtor_Comdat)});
+    unlinkCommon(D);
+    detachRedeclChain<FunctionDecl>(D);
+  }
+
+  void VisitVarDecl(VarDecl *D) {
+    forgetMangledNames(D, {GlobalDecl(D)});
+    unlinkCommon(D);
+    detachRedeclChain(D);
+  }
+
+  void VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
+    unlinkCommon(D);
+    bool HasSurvivorToReplace =
+        !hasNoPreviousDecl(D) && !isFromThisPTU(D->getCanonicalDecl());
+    if (HasSurvivorToReplace)
+      detachRedeclChain(D);
+
+    NamedDecl *Templated = D->getTemplatedDecl();
+    if (auto *RD = dyn_cast<CXXRecordDecl>(Templated)) {
+      if (CXXRecordDecl *Def = RD->getDefinition(); Def && isFromThisPTU(Def))
+        detachDefData(RD);
+      if (HasSurvivorToReplace)
+        detachRedeclChain<TagDecl>(RD);
+    } else if (HasSurvivorToReplace) {
+      if (auto *FD = dyn_cast<FunctionDecl>(Templated))
+        detachRedeclChain(FD);
+      else if (auto *VD = dyn_cast<VarDecl>(Templated))
+        detachRedeclChain(VD);
+    }
+  }
+};
+
 class DeclStateUnlinkPolicy {
   PTUID ID;
   IncrementalStateTracker &Tracker;
   DeclStateReverter &Reverter;
+  Sema &SemaRef;
+  CodeGenerator *CodeGen;
+  llvm::SmallPtrSet<const DeclContext *, 8> &TouchedDCs;
   llvm::SmallPtrSet<const Decl *, 16> RepairedChains;
   llvm::SmallPtrSet<const DeclContext *, 8> RepairedLexicalContexts;
-  llvm::SmallPtrSet<const DeclContext *, 8> TouchedDC;
 
 public:
   DeclStateUnlinkPolicy(PTUID ID, IncrementalStateTracker &Tracker,
-                        DeclStateReverter &Reverter)
-      : ID(ID), Tracker(Tracker), Reverter(Reverter) {}
+                        DeclStateReverter &Reverter, Sema &SemaRef,
+                        CodeGenerator *CodeGen,
+                        llvm::SmallPtrSet<const DeclContext *, 8> &TouchedDCs)
+      : ID(ID), Tracker(Tracker), Reverter(Reverter), SemaRef(SemaRef),
+        CodeGen(CodeGen), TouchedDCs(TouchedDCs) {}
 
   bool shouldRecurse(const Decl *D) const {
-    // we don't care about the decl which complete chain is part belong to
-    // current PTU.
-    if (Tracker.isFromThisPTU(D->getCanonicalDecl(), ID))
-      return false;
-    return isa<NamespaceDecl>(D);
+    return isa<DeclContext>(D);
+    // const auto *DC = dyn_cast<DeclContext>(D);
+    // if (DC && DC->isTransparentContext())
+    //   return true;
+    // // we don't care about the decl which complete chain is part belong to
+    // // current PTU.
+    // if (Tracker.isFromThisPTU(D->getCanonicalDecl(), ID))
+    //   return false;
+    // return isa<NamespaceDecl>(D);
   }
 
-  void process(const Decl *D) {
-    Reverter.detachFromExternCLookup(
-        const_cast<Decl *>(D), Tracker.getASTContext().getExternCContextDecl(),
-        ID);
-    if (auto *ND = dyn_cast<NamedDecl>(const_cast<Decl *>(D)))
-      DeclStateReverter::removeFromIdResolver(Tracker.getSema(), ND);
+  void process(Decl *D) {
+    // Forget whatever mangled names CodeGen may have already registered
+    // for D, before anything below removes the AST information mangling
+    // needs. See DeclStateReverter::forgetCodeGenMangledNames's own
+    // comment.
+    DeclStateReverter::forgetCodeGenMangledNames(CodeGen,
+                                                 Tracker.getASTContext(), D);
 
-    const Decl *Canon = D->getCanonicalDecl();
+    if (isa<CXXRecordDecl>(D)) {
+      if (auto *DC = dyn_cast<DeclContext>(D); DC) {
+        for (Decl *Member : DC->decls())
+          DeclStateReverter::forgetCodeGenMangledNames(
+              CodeGen, Tracker.getASTContext(), Member);
+      }
+    }
+
+    Reverter.detachFromExternCLookup(
+        D, Tracker.getASTContext().getExternCContextDecl(), ID);
+    if (auto *ND = dyn_cast<NamedDecl>(D))
+      DeclStateReverter::removeFromIdResolver(SemaRef, ND);
+
+    Decl *Canon = D->getCanonicalDecl();
 
     // Whether Candidate's own DefinitionData belongs to this PTU and needs
     // detaching.
-    auto needsDefDataDetach = [&](const Decl *Candidate) {
-      const auto *RD = dyn_cast<CXXRecordDecl>(Candidate);
-      const CXXRecordDecl *Def = RD ? RD->getDefinition() : nullptr;
+    auto needsDefDataDetach = [&](Decl *Candidate) {
+      auto *RD = dyn_cast<CXXRecordDecl>(Candidate);
+      CXXRecordDecl *Def = RD ? RD->getDefinition() : nullptr;
       return Def && Tracker.isFromThisPTU(Def, ID);
     };
 
@@ -745,30 +1073,30 @@ public:
     bool detachRedecl =
         D->getPreviousDecl() && !Tracker.isFromThisPTU(Canon, ID);
 
-    if (FirstVisit && needsDefDataDetach(D))
-      Reverter.detachDefData(D);
+    if (FirstVisit && detachRedecl && needsDefDataDetach(D))
+      Reverter.detachDefData(cast<CXXRecordDecl>(D));
 
-    if (FirstVisit) {
-      if (const DeclContext *DC = D->getDeclContext()->getPrimaryContext();
-          TouchedDC.contains(DC))
-        Reverter.detachFromDCLookup(const_cast<Decl *>(D), ID);
+    // if (FirstVisit) {
+      // if (const DeclContext *DC = D->getDeclContext()->getPrimaryContext();
+      //     (TouchedDCs.contains(DC) || DC->isTransparentContext()))
+      Reverter.detachFromDCLookup(D, ID);
 
       if (detachRedecl) {
         Reverter.detachFromRedeclChain(D, ID);
         RepairedChains.insert(Canon);
       }
-    }
+    // }
 
-    if (const auto *RT = dyn_cast<RedeclarableTemplateDecl>(D)) {
-      const NamedDecl *Templated = RT->getTemplatedDecl();
+    if (auto *RT = dyn_cast<RedeclarableTemplateDecl>(D)) {
+      NamedDecl *Templated = RT->getTemplatedDecl();
       if (needsDefDataDetach(Templated))
-        Reverter.detachDefData(Templated);
+        Reverter.detachDefData(cast<CXXRecordDecl>(Templated));
       if (detachRedecl)
         Reverter.detachFromRedeclChain(Templated, ID);
     }
 
     if (const DeclContext *LexicalDC = D->getLexicalDeclContext();
-        !Tracker.isFromThisPTU(LexicalDC, ID) &&
+        // !Tracker.isFromThisPTU(LexicalDC, ID) &&
         !RepairedLexicalContexts.count(LexicalDC)) {
       Reverter.repairLexicalChain(*const_cast<DeclContext *>(LexicalDC), ID);
       RepairedLexicalContexts.insert(LexicalDC);
@@ -777,13 +1105,22 @@ public:
 };
 
 template <typename DeclStatePolicyT>
-void PTUMutationActions::walkDecls(const DeclContext *DC,
-                                   DeclStatePolicyT &Policy) {
-  for (const Decl *D : DC->decls()) {
+void PTUMutationActions::walkDecls(DeclContext *DC, DeclStatePolicyT &Policy) {
+  llvm::SmallVector<Decl *, 8> Decls(DC->decls());
+  for (Decl *D : Decls) {
     if (Policy.shouldRecurse(D))
       walkDecls(cast<DeclContext>(D), Policy);
     Policy.process(D);
   }
+}
+
+static bool isReachableFromThisTU(const Decl *D,
+                                  const TranslationUnitDecl *ThisTU) {
+  const DeclContext *DC = D->getLexicalDeclContext();
+  for (; DC; DC = DC->getLexicalParent())
+    if (DC == ThisTU)
+      return DC->containsDecl(const_cast<Decl *>(D));
+  return false;
 }
 
 /// -----------------------------------------------------------------------
@@ -808,7 +1145,7 @@ void PTUMutationActions::walkDecls(const DeclContext *DC,
 
 void PTUMutationActions::commitMembers(PTUID ID, const DeclContext *Members) {
   DeclStateCommitPolicy Policy(ID, *this);
-  walkDecls(Members, Policy);
+  walkDecls(const_cast<DeclContext *>(Members), Policy);
 }
 
 void PTUMutationActions::commitClass(PTUID ID, const CXXRecordDecl *RD,
@@ -1046,6 +1383,8 @@ void PTUMutationActions::commit(TranslationUnitDecl *ThisTU) {
   Cur.ThisPTU = ThisTU;
   PTUID ID = Cur.ID;
 
+  LLVM_DEBUG({ llvm::dbgs() << "Commit ThisTU\n"; });
+
   // 1. Verify any unconfirmed mutation (see : KindNeedingVerification) reported
   // by the listener, whether true or false.
   Cur.verifyMutations(*this);
@@ -1069,8 +1408,13 @@ void PTUMutationActions::commit(TranslationUnitDecl *ThisTU) {
   // DeclStateCommitPolicy: Decides what to do with declarations created by the
   //    current PTU, such as whether a declaration needs to be tracked or not.
   DeclStateCommitPolicy Policy(ID, *this);
-  for (const Decl *D : Cur.ImplicitDecls)
+  for (const Decl *D : Cur.ImplicitDecls) {
+    if (isReachableFromThisTU(D, ThisTU))
+      continue;
+    if (Policy.shouldRecurse(D))
+      walkDecls(const_cast<DeclContext *>(cast<DeclContext>(D)), Policy);
     Policy.process(D);
+  }
 
   // Iterate over all declarations from this TU and apply DeclStateCommitPolicy.
   walkDecls(ThisTU, Policy);
@@ -1145,7 +1489,6 @@ void PTUMutationActions::restoreClass(PTUID ID, CXXRecordDecl *RD,
 
 void PTUMutationActions::restoreFunction(PTUID ID, FunctionDecl *FD,
                                          MutationRecord &Rec) {
-
   // FunctionType is shared across the whole redeclaration chain.
   // Resolving a deferred noexcept or deducing an auto return updates the
   // type for every redecl, including ones owned by earlier PTUs, so each
@@ -1161,8 +1504,13 @@ void PTUMutationActions::restoreFunction(PTUID ID, FunctionDecl *FD,
     }
   }
 
-  if (Rec.has(MutationKind::DefinitionInstantiate))
+  if (Rec.has(MutationKind::DefinitionInstantiate)) {
     DeclStateReverter::revertDefinitionArrival(FD);
+    DeclStateReverter::forgetCodeGenMangledNames(CodeGen,
+                                                 Tracker.getASTContext(), FD);
+    if (auto *MD = dyn_cast<CXXMethodDecl>(FD); MD && MD->isVirtual())
+      SemaCache.restoreVTableUsed(MD->getParent());
+  }
 
   if (Rec.has(MutationKind::SpecInfo)) {
     // A function template specialization is a plain FunctionDecl carrying
@@ -1214,9 +1562,10 @@ void PTUMutationActions::restoreTemplate(PTUID ID, RedeclarableTemplateDecl *TD,
     }
   }
 
-  if (Rec.has(MutationKind::SpecializationAdded))
+  if (Rec.has(MutationKind::SpecializationAdded)) {
     DeclStateReverter::removeSpecializations(Tracker.getPTUSlabCheckpoints(),
                                              TD, ID);
+  }
 }
 
 void PTUMutationActions::restoreTypedef(PTUID ID, TypedefNameDecl *TD,
@@ -1242,7 +1591,9 @@ void PTUMutationActions::restoreVar(PTUID ID, VarDecl *VD,
   }
 
   if (Rec.has(MutationKind::DefinitionInstantiate)) {
-    DeclStateReverter::revertDefinitionArrival(const_cast<VarDecl *>(VD));
+    DeclStateReverter::revertDefinitionArrival(VD);
+    DeclStateReverter::forgetCodeGenMangledNames(CodeGen,
+                                                 Tracker.getASTContext(), VD);
   }
 
   if (Rec.has(MutationKind::SpecInfo)) {
@@ -1273,13 +1624,12 @@ void PTUMutationActions::restoreEnum(PTUID ID, EnumDecl *ED,
     // for (const TagDecl *Redecl : ED->redecls()) {
     //   const auto *Last = Tracker.Footprints.mostRecent<const Type *>(
     //       Redecl, MutationKind::TypeForDecl);
-    //   const Type *LastKnown = Last ? *Last : nullptr;
     //   TODO: need to handle?
     // }
   }
 
   if (Rec.has(MutationKind::DefinitionInstantiate))
-    DeclStateReverter::revertDefinitionArrival(const_cast<EnumDecl *>(ED));
+    DeclStateReverter::revertDefinitionArrival(ED);
 
   if (Rec.has(MutationKind::MemberSpecInfo)) {
     assert(ED->getMemberSpecializationInfo());
@@ -1322,11 +1672,16 @@ void SemaCacheReverter::restoreSpecialMemberCache(PTUID ID) {
     SemaRef.SpecialMemberCache.erase(Key);
 }
 
+void SemaCacheReverter::restoreVTableUsed(CXXRecordDecl *RD) {
+  SemaRef.VTablesUsed.erase(RD->getCanonicalDecl());
+}
+
 void PTUMutationActions::restore(TranslationUnitDecl *ThisTU) {
   PTUStateInfo &Cur = Tracker.current();
   assert((!Cur.Commited || ThisTU == Cur.ThisPTU) &&
          "MostRecentTU doesn't match the TU recorded at commit time");
   PTUID ID = Cur.ID;
+
   // 1. Check whether this PTU was committed. If the PTU failed, it was not
   //    committed and therefore did not go through the commit policy or register
   //    any declaration state, so there is nothing to undo from
@@ -1362,22 +1717,35 @@ void PTUMutationActions::restore(TranslationUnitDecl *ThisTU) {
   for (auto &[D, Rec] : Cur.Mutations)
     restoreDecl(ID, const_cast<Decl *>(D), Rec);
 
-  DeclStateReverter Detacher(Tracker.getPTUSlabCheckpoints());
+  DeclStateReverter Detacher(Tracker.getPTUSlabCheckpoints(),
+                             Tracker.getASTContext());
   // 3. Cur.ImplicitDecls: Declarations created by this PTU. Unlink them from
   //    the compiler's shared state.
   //
   //    This is the counterpart to the commit DeclStateCommitPolicy, but
   //    performs the opposite operation by unlinking the declarations.
   //
+  // ASTDeclUnmerger: Decides what to do with declarations created by the
+  //    current PTU, such as whether a declaration needs to be unlinked from
+  //    redeclarations, DeclContext lookup, etc.
   // DeclStateUnlinkPolicy: Decides what to do with declarations created by the
   //    current PTU, such as whether a declaration needs to be unlinked from
   //    redeclarations, DeclContext lookup, etc.
-  DeclStateUnlinkPolicy Policy(ID, Tracker, Detacher);
-  for (const Decl *D : Cur.ImplicitDecls)
-    Policy.process(D);
+  DeclStateUnlinkPolicy Policy(ID, Tracker, Detacher, SemaRef, CodeGen,
+                               Cur.TouchedDCs);
+  ASTDeclUnmerger Umerger(ID, Tracker, SemaRef, CodeGen);
+  for (const Decl *D : Cur.ImplicitDecls) {
+    if (isReachableFromThisTU(D, ThisTU))
+      continue;
+    // if (Policy.shouldRecurse(D))
+    //   walkDecls(const_cast<DeclContext *>(cast<DeclContext>(D)), Policy);
+    // Policy.process(const_cast<Decl *>(D));
+    Umerger.Visit(const_cast<Decl *>(D));
+  }
 
-  walkDecls(ThisTU, Policy);
-
+  // walkDecls(ThisTU, Policy);
+  Umerger.Visit(ThisTU);
+  // ASTDeclUnmerger(SemaRef, ThisTU).Visit(ThisTU);
   // SpecialMemberCache stores the CXXMethodDecl* from a previous
   // LookupSpecialMember() call. If it was created by a PTU being rolled back,
   // the cache entry is stale, so remove it here.
@@ -1433,8 +1801,8 @@ void PTUMutationRecorder::CompletedTagDefinition(const TagDecl *D) {
   }
 
   DeclShape S = classifyShape(D);
-
-  Cur.noteMutated(D, S, MutationKind::DefinitionInstantiate);
+  if (false)
+    Cur.noteMutated(D, S, MutationKind::DefinitionInstantiate);
 
   /// Handle this for MemberSpec because the notifier does not guarantee whether
   /// it fires before or after the mutation. We cannot reliably compare the
@@ -1458,10 +1826,10 @@ void PTUMutationRecorder::AddedVisibleDecl(const DeclContext *DC,
   if (D->isImplicit())
     Cur.ImplicitDecls.insert(D);
 
-  if (Tracker.isFromThisPTU(DC, Cur.ID) || Cur.TouchedDC.contains(DC))
+  if (Tracker.isFromThisPTU(DC, Cur.ID) || Cur.TouchedDCs.contains(DC))
     return;
 
-  Cur.TouchedDC.insert(DC);
+  Cur.TouchedDCs.insert(DC);
 }
 
 void PTUMutationRecorder::AddedCXXImplicitMember(const CXXRecordDecl *RD,
@@ -1487,13 +1855,10 @@ void PTUMutationRecorder::noteTemplateDeclMutation(const TemplateT *TD,
                                                    const SpecT *Spec,
                                                    DeclShape S) {
   PTUStateInfo &Cur = Tracker.current();
+  Cur.ImplicitDecls.insert(Spec);
 
-  if (Spec->isImplicit())
-    Cur.ImplicitDecls.insert(Spec);
-
-  if (Tracker.isFromThisPTU(TD, Cur.ID)) {
+  if (Tracker.isFromThisPTU(TD, Cur.ID))
     return;
-  }
 
   Cur.noteMutated(TD, DeclShape::Template, MutationKind::SpecializationAdded);
 }
@@ -1531,6 +1896,9 @@ void PTUMutationRecorder::DeducedReturnType(const FunctionDecl *FD,
 }
 
 void PTUMutationRecorder::noteDefinitionInstantiated(const Decl *D) {
+  // llvm::dbgs() << "noteDefinitionInstantiated S\n";
+  // D->dump();
+  // llvm::dbgs() << "noteDefinitionInstantiated E\n";
   PTUStateInfo &Cur = Tracker.current();
   if (Tracker.isFromThisPTU(D, Cur.ID)) {
     // Normally, walkDecls covers declarations created in this PTU.
@@ -1543,6 +1911,7 @@ void PTUMutationRecorder::noteDefinitionInstantiated(const Decl *D) {
       Cur.ImplicitDecls.insert(D);
     return;
   }
+
   Cur.noteMutated(D, classifyShape(D), MutationKind::DefinitionInstantiate);
 }
 

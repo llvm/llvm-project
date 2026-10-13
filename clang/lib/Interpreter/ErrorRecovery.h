@@ -21,6 +21,8 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/GlobalDecl.h"
+#include "clang/CodeGen/ModuleBuilder.h"
 #include "llvm/ADT/BitVector.h"
 #include <variant>
 
@@ -278,7 +280,10 @@ protected:
     FP.restore(Owner);
   }
 
-  static void revertDefinitionArrival(Decl *D);
+  static void revertDefinitionArrival(CXXRecordDecl *RD);
+  static void revertDefinitionArrival(VarDecl *VD);
+  static void revertDefinitionArrival(FunctionDecl *FD);
+  static void revertDefinitionArrival(EnumDecl *ED);
 
   // True if Common could still be created later -- i.e. nobody has called
   // getCommonPtr() anywhere in this template's redecl chain yet.
@@ -320,15 +325,17 @@ protected:
   // }
 
   // static void resetTypeForDecl(TypeDecl *TD) { TD->TypeForDecl = nullptr; }
-
+public:
+  static void forgetCodeGenMangledNames(CodeGenerator *CodeGen,
+                                       ASTContext &Ctx, const Decl *D);
 private:
   PTUCheckpointLedger &PTUSlabCheckpoints;
-
+    ASTContext &Ctx;
 public:
   friend PTUMutationActions;
 
-  explicit DeclStateReverter(PTUCheckpointLedger &Ledger)
-      : PTUSlabCheckpoints(Ledger) {}
+  explicit DeclStateReverter(PTUCheckpointLedger &Ledger, ASTContext &Ctx)
+      : PTUSlabCheckpoints(Ledger), Ctx(Ctx) {}
 
   static bool isExtensibleContainer(const Decl *D) {
     return isa<NamespaceDecl>(D) || isa<CXXRecordDecl>(D);
@@ -338,7 +345,7 @@ public:
     return D->getPreviousDecl() == nullptr;
   }
 
-  void detachDefData(const Decl *D);
+  void detachDefData(CXXRecordDecl *D);
 
   static void detachCommonBase(const RedeclarableTemplateDecl *RT);
 
@@ -353,6 +360,24 @@ public:
   template <typename decl_type>
   void patchRedeclLink(Redeclarable<decl_type> *D, decl_type *Survivor) {
     setLatestRedecl<decl_type>(*D->getFirstDecl(), Survivor);
+  }
+  template <typename decl_type>
+  void unlinkRedeclChain2(Redeclarable<decl_type> *D, decl_type *Survivor) {
+    auto *Latest = static_cast<decl_type *>(D);
+
+    // Rebuild First -> ... -> Survivor -> ... -> Latest as
+    // First -> ... -> Survivor.
+    Latest->getFirstDecl()->RedeclLink.setLatest(Survivor);
+
+    // The chain is circular: a withdrawn declaration still linked into it can
+    // never walk back around to itself, so redecls() on one would not
+    // terminate. Give each withdrawn declaration a chain of its own.
+    for (decl_type *Dead = Latest; Dead != Survivor;) {
+      decl_type *Next = Dead->getPreviousDecl();
+      Dead->First = Dead;
+      Dead->RedeclLink = Redeclarable<decl_type>::LatestDeclLink(Ctx);
+      Dead = Next;
+    }
   }
 
   void detachFromRedeclChain(const Decl *D, PTUID ID);
@@ -524,7 +549,7 @@ struct PTUStateInfo {
   bool HadImplicitCXXMember = false;
 
   /// here touched info mean other this belongs to other PTUs;
-  llvm::SmallPtrSet<const DeclContext *, 4> TouchedDC;
+  llvm::SmallPtrSet<const DeclContext *, 8> TouchedDCs;
 
   /// Every (Owner, Kind) key this PTU's own commit() wrote a FootprintStore
   /// entry for.
@@ -629,9 +654,6 @@ public:
 class IncrementalStateTracker {
 private:
   ASTContext &Ctx;
-  // Only needed so remove stale
-  // Sema::SpecialMemberCache entries for decls this PTU created.
-  Sema &SemaRef;
   PTUCheckpointLedger PTUSlabCheckpoints;
   PTUID NextID = 0;
 
@@ -647,8 +669,14 @@ private:
   friend class PTUMutationActions;
 
 public:
-  IncrementalStateTracker(ASTContext &Ctx, Sema &S)
-      : Ctx(Ctx), SemaRef(S), PTUSlabCheckpoints(Ctx) {}
+  // Sema/CodeGenerator deliberately live on PTUMutationActions instead --
+  // nothing here (PTU stack, checkpoints, footprints, sweep tracking)
+  // actually needs either; they were only ever pass-through conveniences
+  // for revert-side-effect cleanup (IdResolver, SpecialMemberCache,
+  // CodeGen mangled-name forgetting), which is PTUMutationActions'/
+  // DeclStateReverter's concern, not this class's.
+  IncrementalStateTracker(ASTContext &Ctx)
+      : Ctx(Ctx), PTUSlabCheckpoints(Ctx) {}
 
   // Writes a new value to FootprintStore and records that this PTU touched
   // (Owner, K), so undoLastEntries() knows what to remove if the PTU is rolled
@@ -685,7 +713,6 @@ public:
 
   SweepTracker &getHiddenMutationTracker() { return HiddenMutationTracker; }
   PTUCheckpointLedger &getPTUSlabCheckpoints() { return PTUSlabCheckpoints; }
-  Sema &getSema() const { return SemaRef; }
   ASTContext &getASTContext() const { return Ctx; }
 
   void undoLastEntries();
@@ -711,24 +738,35 @@ public:
   // LookupSpecialMember() call for each (RD, kind+qualifiers). Remove entries
   // whose cached method belongs to the PTU being rolled back.
   void restoreSpecialMemberCache(PTUID ID);
+
+  // Sema::VTablesUsed records, per class, whether its vtable has already
+  // been marked used.
+  void restoreVTableUsed(CXXRecordDecl *RD);
 };
 
 class PTUMutationActions {
 private:
   IncrementalStateTracker &Tracker;
   SweepTracker &HiddenMutationTracker;
+  Sema &SemaRef;
+  // Optional (null under -fsyntax-only, where no CodeGenerator exists).
+  CodeGenerator *CodeGen = nullptr;
   SemaCacheReverter SemaCache;
   DeclStateReverter Reverter;
 
 public:
-  explicit PTUMutationActions(IncrementalStateTracker &Tracker)
+  explicit PTUMutationActions(IncrementalStateTracker &Tracker, Sema &S,
+                              CodeGenerator *CodeGen = nullptr)
       : Tracker(Tracker),
         HiddenMutationTracker(Tracker.getHiddenMutationTracker()),
-        SemaCache(Tracker.getSema(), Tracker),
-        Reverter(Tracker.getPTUSlabCheckpoints()) {}
+        SemaRef(S), CodeGen(CodeGen), SemaCache(S, Tracker),
+        Reverter(Tracker.getPTUSlabCheckpoints(), Tracker.getASTContext()) {}
+
+  Sema &getSema() const { return SemaRef; }
+  CodeGenerator *getCodeGen() const { return CodeGen; }
 
   template <typename DeclStatePolicyT>
-  void walkDecls(const DeclContext *DC, DeclStatePolicyT &Policy);
+  void walkDecls(DeclContext *DC, DeclStatePolicyT &Policy);
 
   uint32_t DeclNeedingTracking(DeclShape S, const Decl *D);
 
