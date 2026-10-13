@@ -199,7 +199,6 @@ static Operation *cloneOpWithOperandsAndTypes(RewriterBase &rewriter,
   return rewriter.create(res);
 }
 
-namespace {
 /// Reuse an args buffer from `buffers` to transit a value of `targetType`, or
 /// return null if none fits.
 static Value tryReuseArgBuffer(SmallVectorImpl<std::pair<Value, bool>> &buffers,
@@ -253,6 +252,7 @@ static Value tryReuseArgBuffer(SmallVectorImpl<std::pair<Value, bool>> &buffers,
   return Value();
 }
 
+namespace {
 /// Rewrite a WarpExecuteOnLane0Op into a predicated scf.if op where the single
 /// thread `laneId` executes the entirety of the computation.
 ///
@@ -2440,7 +2440,6 @@ struct WarpOpReduction : public WarpDistributionPattern {
 private:
   DistributedReductionFn distributedReductionFn;
 };
-
 } // namespace
 
 void mlir::vector::populateWarpExecuteOnLane0OpToScfForPattern(

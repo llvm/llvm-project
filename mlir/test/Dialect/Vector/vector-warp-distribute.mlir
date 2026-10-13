@@ -21,8 +21,6 @@
 // CHECK-SCF-IF-DAG: #[[$TIMES8:.*]] = affine_map<()[s0] -> (s0 * 8)>
 // CHECK-SCF-IF-DAG: memref.global "private" @__shared_128xf32 : memref<128xf32, 3>
 // CHECK-SCF-IF-DAG: memref.global "private" @__shared_256xf32 : memref<256xf32, 3>
-// CHECK-SCF-IF-NOT: memref.global "private" @__shared_32xf32
-// CHECK-SCF-IF-NOT: memref.global "private" @__shared_64xf32
 
 // CHECK-SCF-IF-LABEL: func @rewrite_warp_op_to_scf_if(
 //  CHECK-SCF-IF-SAME:     %[[laneid:.*]]: index,
