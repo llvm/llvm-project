@@ -154,8 +154,13 @@ static mlir::Value emitAMDGPUWorkGroupSizeV4(CIRGenFunction &cgf,
   return builder.createSelect(loc, isPartial, remainder, groupSize);
 }
 
-// COV_NONE picks COV_4 or COV_5+ at runtime from __oclc_ABI_version so device
-// libraries stay ABI-agnostic.
+// \p index is 0, 1, and 2 for x, y, and z dimension, respectively.
+// Emit code based on Code Object ABI version.
+// COV_4    : Emit code to use dispatch ptr
+// COV_5+   : Emit code to use implicitarg ptr
+// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
+//            and use its value for COV_4 or COV_5+ approach. It is used for
+//            compiling device libraries in an ABI-agnostic way.
 static mlir::Value emitAMDGPUWorkGroupSize(CIRGenFunction &cgf,
                                            mlir::Location loc, unsigned index) {
   llvm::CodeObjectVersionKind cov =
