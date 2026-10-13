@@ -186,6 +186,15 @@ def vashr_vlshr_imm : GICombineRule<
   (apply [{ applyVAshrLshrImm(*${mi}, MRI, ${matchinfo}); }])
 >;
 
+def vashr_vlshr_const_vec_matchdata :
+  GIDefMatchData<"SmallVector<APInt, 16>">;
+def vashr_vlshr_const_vec : GICombineRule<
+  (defs root:$root, vashr_vlshr_const_vec_matchdata:$matchinfo),
+  (match (vashr_vlshr_imm_frags $root):$mi,
+          [{ return matchVAshrLshrConstVec(*${mi}, MRI, ${matchinfo}); }]),
+  (apply [{ applyVAshrLshrConstVec(*${mi}, MRI, B, ${matchinfo}); }])
+>;
+
 def form_duplane_matchdata :
   GIDefMatchData<"std::pair<unsigned, int>">;
 def form_duplane : GICombineRule <
@@ -399,6 +408,7 @@ def combine_mul_cmlt : GICombineRule<
 def AArch64PostLegalizerLowering
     : GICombiner<"AArch64PostLegalizerLoweringImpl",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
+                        vashr_vlshr_const_vec,
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
