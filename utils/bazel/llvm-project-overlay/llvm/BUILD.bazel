@@ -1792,7 +1792,7 @@ gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/RISCV/RISCV.td",
+    td_file = "lib/Target/RISCV/RISCVTargetParserDef.td",
     deps = [
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
