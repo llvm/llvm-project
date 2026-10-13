@@ -1887,6 +1887,19 @@ public:
     return getRegisterTypeImpl(Context, VT, /*ForCallingConv=*/false);
   }
 
+  /// Return the intermediate type to use for an extending load from SrcVT to
+  /// DestVT.
+  ///
+  /// For example, an i8 -> i64 extending load might select i32 as the
+  /// intermediate type, creating: load i8 -> i32, then extend i32 -> i64.
+  ///
+  /// By default, this returns the register type for SrcVT.
+  virtual EVT getLoadExtIntermediateType(LLVMContext &Context, EVT DestVT,
+                                         EVT SrcVT,
+                                         ISD::LoadExtType ExtType) const {
+    return getRegisterType(Context, SrcVT.getSimpleVT());
+  }
+
   /// Return the number of registers that this ValueType will eventually
   /// require.
   ///
