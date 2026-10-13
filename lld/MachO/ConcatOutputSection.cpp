@@ -122,6 +122,13 @@ bool TextOutputSection::isTargetKnownInRange(const ConcatInputSection &isec,
   // Check if the referent is reachable with a simple call instruction.
   return lowVA <= funcVA && funcVA <= highVA;
 }
+Defined *TextOutputSection::findThunkInRange(const ConcatInputSection &isec,
+                                             const Relocation &r) const {
+  auto it = thunkMap.find(ThunkKey(r));
+  if (it == thunkMap.end())
+    return nullptr;
+  return getThunkInRange(isec, r, it->second);
+}
 
 Defined *TextOutputSection::getThunkInRange(const ConcatInputSection &isec,
                                             const Relocation &r,
@@ -268,12 +275,11 @@ void TextOutputSection::finalize() {
     while (!branchesToProcess.empty()) {
       auto [callerIsec, r] = branchesToProcess.front();
       assert(callerIsec->isFinal);
-      auto &thunkInfo = thunkMap[*r];
       if (isTargetKnownInRange(*callerIsec, *r)) {
         branchesToProcess.pop_front();
         continue;
       }
-      if (auto *thunk = getThunkInRange(*callerIsec, *r, thunkInfo)) {
+      if (auto *thunk = findThunkInRange(*callerIsec, *r)) {
         deferredBranchRedirects.emplace_back(callerIsec, r, thunk);
         branchesToProcess.pop_front();
         continue;
@@ -289,7 +295,7 @@ void TextOutputSection::finalize() {
       if (nextEnd + slop <= highVA)
         break;
 
-      createThunk(*callerIsec, *r, thunkInfo);
+      createThunk(*callerIsec, *r, thunkMap[*r]);
       branchesToProcess.pop_front();
     }
     finalizeOne(isec);
@@ -313,8 +319,7 @@ void TextOutputSection::finalize() {
         continue;
       if (isTargetKnownInRange(*isec, r))
         continue;
-      auto &thunkInfo = thunkMap[r];
-      if (auto *thunk = getThunkInRange(*isec, r, thunkInfo)) {
+      if (auto *thunk = findThunkInRange(*isec, r)) {
         deferredBranchRedirects.emplace_back(isec, &r, thunk);
         continue;
       }
@@ -331,10 +336,8 @@ void TextOutputSection::finalize() {
   // when estimating where __stubs / __objc_stubs could end up.
   DenseSet<ThunkKey, ThunkMapKeyInfo> branchTargets;
   for (auto [callerIsec, r] : branchesToProcess) {
-    ThunkKey thunkKey(*r);
-    auto &thunkInfo = thunkMap[thunkKey];
-    if (!getThunkInRange(*callerIsec, *r, thunkInfo))
-      branchTargets.insert(thunkKey);
+    if (!findThunkInRange(*callerIsec, *r))
+      branchTargets.insert(ThunkKey(*r));
   }
 
   auto estimatedStubsEnd = estimateStubsEndVA(branchTargets.size());
