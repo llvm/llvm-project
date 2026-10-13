@@ -179,27 +179,6 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
     }
     if (It.first == "configuration") {
       for (auto &ObjIt : *Obj) {
-        // Accept the single-file `runtime_bitcode` key as an alias for a
-        // one-element `runtime_bitcodes` list.
-        if (StringRef(ObjIt.first) == "runtime_bitcode") {
-          auto V = ObjIt.second.getAsString();
-          if (!V)
-            Ctx.diagnose(DiagnosticInfoInstrumentation(
-                "configuration key 'runtime_bitcode' expects a string, value "
-                "ignored",
-                DS_Warning));
-          else if (Obj->get("runtime_bitcodes"))
-            Ctx.diagnose(DiagnosticInfoInstrumentation(
-                "configuration key 'runtime_bitcode' ignored in favor of "
-                "'runtime_bitcodes'",
-                DS_Warning));
-          else if (V->empty())
-            IConf.RuntimeBitcodes->setStringList({});
-          else
-            IConf.RuntimeBitcodes->setStringList({IConf.SS.save(*V)});
-          continue;
-        }
-
         if (auto *BO = BCOMap.lookup(ObjIt.first)) {
           switch (BO->Kind) {
           case BaseConfigurationOption::STRING:

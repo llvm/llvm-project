@@ -1,6 +1,0 @@
-{
-  "configuration": {
-    "runtime_bitcode": "runtime_bitcodes_callbacks_rt.bc",
-    "runtime_bitcodes": ["runtime_bitcodes_state_rt.bc"]
-  }
-}
