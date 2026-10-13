@@ -8400,7 +8400,7 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
       }))
     return 1;
 
-  LoopGuards Guards = LoopGuards::collect(L, *this);
+  LoopGuards Guards = LoopGuards::collectOnDemand(L, *this);
   unsigned Res = 0;
   for (BasicBlock *ExitingBB : ExitingBlocks)
     Res = std::gcd(
@@ -8408,9 +8408,8 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
   return Res;
 }
 
-unsigned
-ScalarEvolution::getSmallConstantTripMultiple(const SCEV *ExitCount,
-                                              const LoopGuards &Guards) {
+unsigned ScalarEvolution::getSmallConstantTripMultiple(const SCEV *ExitCount,
+                                                       LoopGuards &Guards) {
   assert(!isa<SCEVCouldNotCompute>(ExitCount) && "Must be computable!");
 
   // Get the trip count
@@ -8430,7 +8429,8 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
   if (isa<SCEVCouldNotCompute>(ExitCount))
     return 1;
 
-  return getSmallConstantTripMultiple(ExitCount, LoopGuards::collect(L, *this));
+  LoopGuards Guards = LoopGuards::collectOnDemand(L, *this);
+  return getSmallConstantTripMultiple(ExitCount, Guards);
 }
 
 /// Returns the largest constant divisor of the trip count of this loop as a
@@ -10796,7 +10796,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   if (!isLoopInvariant(Step, L))
     return getCouldNotCompute();
 
-  LoopGuards Guards = LoopGuards::collect(L, *this);
+  LoopGuards Guards = LoopGuards::collectOnDemand(L, *this);
   // Specialize step for this loop so we get context sensitive facts below.
   const SCEV *StepWLG = applyLoopGuards(Step, Guards);
 
@@ -13341,13 +13341,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
                                   bool ControlsOnlyExit, bool AllowPredicates) {
   SmallVector<const SCEVPredicate *> Predicates;
 
-  // Loop guards for L, collected on demand.
-  std::optional<LoopGuards> CachedGuards;
-  auto getGuards = [&]() -> const LoopGuards & {
-    if (!CachedGuards)
-      CachedGuards.emplace(LoopGuards::collect(L, *this));
-    return *CachedGuards;
-  };
+  LoopGuards Guards = LoopGuards::collectOnDemand(L, *this);
 
   // FIXME: Extend the non-invariant RHS analysis to greater-than comparisons.
   if (Invert && !isLoopInvariant(RHS, L))
@@ -13385,8 +13379,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
           APInt StrideMax = getUnsignedRangeMax(AR->getStepRecurrence(*this));
           APInt Limit = APInt::getMaxValue(InnerBitWidth) - (StrideMax - 1);
           Limit = Limit.zext(OuterBitWidth);
-          return getUnsignedRangeMax(applyLoopGuards(RHS, getGuards()))
-              .ule(Limit);
+          return getUnsignedRangeMax(applyLoopGuards(RHS, Guards)).ule(Limit);
         };
         auto Flags = AR->getNoWrapFlags();
         if (!hasFlags(Flags, SCEV::FlagNUW) && canProveNUW())
@@ -13449,7 +13442,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   bool PositiveStride = isKnownPositive(Stride);
   // A dominating guard may prove the stride positive.
   if (!PositiveStride) {
-    const SCEV *LoopGuardedStride = applyLoopGuards(Stride, getGuards());
+    const SCEV *LoopGuardedStride = applyLoopGuards(Stride, Guards);
     if (isKnownPositive(LoopGuardedStride)) {
       GuardedStride = LoopGuardedStride;
       PositiveStride = true;
@@ -13777,8 +13770,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         };
 
         auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-        const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, getGuards());
-        const SCEV *GuardedStart = applyLoopGuards(OrigStart, getGuards());
+        const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, Guards);
+        const SCEV *GuardedStart = applyLoopGuards(OrigStart, Guards);
         if (Invert)
           std::swap(GuardedRHS, GuardedStart);
 
@@ -15666,16 +15659,16 @@ void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
     }
 }
 
-ScalarEvolution::LoopGuards
-ScalarEvolution::LoopGuards::collect(const Loop *L, ScalarEvolution &SE) {
-  BasicBlock *Header = L->getHeader();
+void ScalarEvolution::LoopGuards::collectPending() {
+  const Loop *L = PendingLoop;
+  if (!L)
+    return;
+  PendingLoop = nullptr;
   BasicBlock *Pred = L->getLoopPredecessor();
-  LoopGuards Guards(SE);
   if (!Pred)
-    return Guards;
+    return;
   SmallPtrSet<const BasicBlock *, 8> VisitedBlocks;
-  collectFromBlock(SE, Guards, Header, Pred, VisitedBlocks);
-  return Guards;
+  collectFromBlock(SE, *this, L->getHeader(), Pred, VisitedBlocks);
 }
 
 void ScalarEvolution::LoopGuards::collectFromPHI(
@@ -16388,10 +16381,17 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
 }
 
 const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
-  return applyLoopGuards(Expr, LoopGuards::collect(L, *this));
+  LoopGuards Guards = LoopGuards::collectOnDemand(L, *this);
+  return applyLoopGuards(Expr, Guards);
 }
 
 const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr,
-                                             const LoopGuards &Guards) {
+                                             LoopGuards &Guards) {
+  // Loop guards never rewrite constants and AddRecs, so there is no need to
+  // collect pending guards for them.
+  if (isa<SCEVConstant, SCEVAddRecExpr>(Expr))
+    return Expr;
+  if (Guards.PendingLoop)
+    Guards.collectPending();
   return Guards.rewrite(Expr);
 }
