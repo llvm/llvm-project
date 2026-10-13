@@ -1253,13 +1253,11 @@ public:
     __set_size(__n);
     __annotate_new(__n);
     __result_type __r = std::move(__op)(data(), auto(__n));
-    if constexpr (__integer_like<__result_type>) { // Avoid extra errors after a failed static_assert
-      if constexpr (is_signed_v<__result_type>)
-        _LIBCPP_ASSERT_VALID_INPUT_RANGE(
-            __r >= 0, "string::resize_and_overwrite: the operation returned a negative size");
-      _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__to_unsigned_like(__r) <= __n,
-                                       "string::resize_and_overwrite: the operation returned a size larger than n");
-    }
+    if constexpr (is_signed_v<__result_type>)
+      _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+          __r >= 0, "string::resize_and_overwrite: the operation returned a negative size");
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__to_unsigned_like(__r) <= __n,
+                                     "string::resize_and_overwrite: the operation returned a size larger than n");
     __erase_to_end(__r);
   }
 #  endif
