@@ -742,7 +742,10 @@ private:
 
   void addBarrierChain(SUList &SUs);
   void addBarrierChain(MemopFrontier &F);
-  void addBarrierChain(UnanalyzableMemopFrontier &UF);
+
+  /// Add dependencies from the barrier chain to all in flight memory operations
+  /// and clear the memop frontiers.
+  void addBarrierMemoryDeps();
 
   /// Promote the store \p SU to be a new sequencing store in the frontier \p F.
   void updateSequencingStore(MemopFrontier &F, SUnit *SU);
@@ -840,11 +843,15 @@ void ScheduleDAGDependencyBuilder::addBarrierChain(MemopFrontier &F) {
   F.clear();
 }
 
-void ScheduleDAGDependencyBuilder::addBarrierChain(
-    UnanalyzableMemopFrontier &UF) {
+void ScheduleDAGDependencyBuilder::addBarrierMemoryDeps() {
   assert(BarrierChain != nullptr);
-  addBarrierChain(UF.Frontier);
-  UF.clear();
+
+  addBarrierChain(UnanalyzableFrontier.Frontier);
+  UnanalyzableFrontier.clear();
+
+  for (auto &[_, AF] : AnalyzableFrontiers)
+    addBarrierChain(AF);
+  AnalyzableFrontiers.clear();
 }
 
 void ScheduleDAGDependencyBuilder::updateSequencingStore(MemopFrontier &F,
@@ -1006,10 +1013,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
 
       // Add dependencies against everything below it and clear maps.
       addBarrierChain(FPExceptions);
-      addBarrierChain(UnanalyzableFrontier);
-      for (auto &[_, AF] : AnalyzableFrontiers)
-        addBarrierChain(AF);
-      AnalyzableFrontiers.clear();
+      addBarrierMemoryDeps();
 
       continue;
     }
@@ -1054,11 +1058,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       LLVM_DEBUG(dbgs() << "Creating barrier chain and clearing maps.\n");
 
       BarrierChain = SU;
-
-      addBarrierChain(UnanalyzableFrontier);
-      for (auto &[_, AF] : AnalyzableFrontiers)
-        addBarrierChain(AF);
-      AnalyzableFrontiers.clear();
+      addBarrierMemoryDeps();
 
       MemOpsProcessed = 0;
       continue;
