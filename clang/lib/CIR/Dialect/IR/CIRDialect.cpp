@@ -770,6 +770,12 @@ cir::ResumeOp::getMutableSuccessorOperands(RegionSuccessor point) {
   return MutableOperandRange(getOperation(), 0, 0);
 }
 
+MutableOperandRange
+cir::CoroSuspendPoint::getMutableSuccessorOperands(RegionSuccessor point) {
+  // The condition operand is not forwarded to successor regions.
+  return MutableOperandRange(getOperation(), 0, 0);
+}
+
 LogicalResult cir::ConditionOp::verify() {
   if (!isa<LoopOpInterface, AwaitOp>(getOperation()->getParentOp()))
     return emitOpError("condition must be within a conditional region");
@@ -3722,21 +3728,16 @@ void cir::AwaitOp::getSuccessorRegions(
     return;
   }
 
-  // Branching from suspend: if terminated by a suspend_point with a condition
-  // (vetoable suspend), false branches to resume and true exits to parent op.
+  // Branching from suspend: continue in resume once the coroutine is resumed
+  // (or immediately if suspension is vetoed), or exit to the parent operation
+  // if it stays suspended or is destroyed.
   if (&getSuspend() == parentRegion) {
-    if (auto suspendPoint = dyn_cast<CoroSuspendPoint>(
-            point.getTerminatorPredecessorOrNull())) {
-      if (suspendPoint.getCond()) {
-        regions.emplace_back(getOperation());
-        regions.emplace_back(&getResume());
-        return;
-      }
-    }
+    regions.emplace_back(&getResume());
+    regions.emplace_back(getOperation());
+    return;
   }
 
-  // Branching from suspend (unconditional) or resume: exit to the parent
-  // operation.
+  // Branching from resume: exit to the parent operation.
   regions.emplace_back(getOperation());
 }
 
@@ -3822,11 +3823,13 @@ void cir::CoroutineOp::getSuccessorRegions(
       point.getTerminatorPredecessorOrNull()->getParentRegion();
 
   // initial_suspend either falls into body (resumed, or never actually
-  // suspended because await_ready() was true) or exits directly, a plain
-  // suspend here means nobody has resumed yet, so we just return to caller.
+  // suspended because await_ready() was true), exits directly, or reaches
+  // destroy when the coroutine is destroyed while suspended at its initial
+  // suspend point.
   if (parent == &getInitialSuspend()) {
     regions.emplace_back(&getBody());
     regions.emplace_back(&getExit());
+    regions.emplace_back(&getDestroy());
     return;
   }
 
@@ -3841,7 +3844,7 @@ void cir::CoroutineOp::getSuccessorRegions(
     return;
   }
 
-  // final_suspend's only live edge in valid programs is destroy resuming
+  // final_suspend's only live edge in valid programs is destroy. Resuming
   // past the final suspend is UB. The ready-immediately edge to exit is
   // kept for structural symmetry with the other two suspend regions even
   // though it's effectively dead.

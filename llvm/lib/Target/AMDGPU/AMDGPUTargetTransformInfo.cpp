@@ -1365,15 +1365,15 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
 /// this is only querying a specific result index if this returns multiple
 /// registers in a struct.
 bool GCNTTIImpl::isInlineAsmSourceOfDivergence(
-  const CallInst *CI, ArrayRef<unsigned> Indices) const {
+    const CallBase *CB, ArrayRef<unsigned> Indices) const {
   // TODO: Handle complex extract indices
   if (Indices.size() > 1)
     return true;
 
-  const DataLayout &DL = CI->getDataLayout();
+  const DataLayout &DL = CB->getDataLayout();
   const SIRegisterInfo *TRI = ST->getRegisterInfo();
   TargetLowering::AsmOperandInfoVector TargetConstraints =
-      TLI->ParseConstraints(DL, ST->getRegisterInfo(), *CI);
+      TLI->ParseConstraints(DL, ST->getRegisterInfo(), *CB);
 
   const int TargetOutputIdx = Indices.empty() ? -1 : Indices[0];
 
@@ -1464,9 +1464,9 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   }
 
   // Assume all function calls are a source of divergence.
-  if (const CallInst *CI = dyn_cast<CallInst>(V)) {
-    if (CI->isInlineAsm())
-      return isInlineAsmSourceOfDivergence(CI);
+  if (const CallBase *CB = dyn_cast<CallBase>(V)) {
+    if (CB->isInlineAsm())
+      return isInlineAsmSourceOfDivergence(CB);
     return true;
   }
 
@@ -1490,9 +1490,9 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V))
     return AMDGPU::isIntrinsicAlwaysUniform(Intrinsic->getIntrinsicID());
 
-  if (const CallInst *CI = dyn_cast<CallInst>(V)) {
-    if (CI->isInlineAsm())
-      return !isInlineAsmSourceOfDivergence(CI);
+  if (const CallBase *CB = dyn_cast<CallBase>(V)) {
+    if (CB->isInlineAsm())
+      return !isInlineAsmSourceOfDivergence(CB);
     return false;
   }
 
@@ -1538,11 +1538,11 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   if (!ExtValue)
     return false;
 
-  const CallInst *CI = dyn_cast<CallInst>(ExtValue->getOperand(0));
-  if (!CI)
+  const CallBase *CB = dyn_cast<CallBase>(ExtValue->getOperand(0));
+  if (!CB)
     return false;
 
-  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(CI)) {
+  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(CB)) {
     switch (Intrinsic->getIntrinsicID()) {
     default:
       return false;
@@ -1557,8 +1557,8 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   // If we have inline asm returning mixed SGPR and VGPR results, we inferred
   // divergent for the overall struct return. We need to override it in the
   // case we're extracting an SGPR component here.
-  if (CI->isInlineAsm())
-    return !isInlineAsmSourceOfDivergence(CI, ExtValue->getIndices());
+  if (CB->isInlineAsm())
+    return !isInlineAsmSourceOfDivergence(CB, ExtValue->getIndices());
 
   return false;
 }

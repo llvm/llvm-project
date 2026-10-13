@@ -46,6 +46,21 @@ bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
   return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
 }
 
+bool isUndefTolerantBinOp(const Value *V) {
+  const BinaryOperator *BO;
+  return match(V, m_BinOp(BO)) && BO->getType()->isIntOrIntVectorTy() &&
+         !BO->isShift() && !BO->isIntDivRem();
+}
+
+const LoadInst *getLoadOfUndefTolerantBinOp(const Value *V) {
+  if (!isUndefTolerantBinOp(V))
+    return nullptr;
+  for (const Value *Op : cast<BinaryOperator>(V)->operands())
+    if (const auto *LI = dyn_cast<LoadInst>(Op))
+      return LI;
+  return nullptr;
+}
+
 unsigned getReassocCombineOpcode(unsigned Opcode) {
   switch (Opcode) {
   case Instruction::Sub:
@@ -588,16 +603,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
   if (It == VL.end())
     return std::nullopt;
-  unsigned Size = accumulate(VL, 0u, [](unsigned S, Value *V) {
-    auto *EI = dyn_cast<ExtractElementInst>(V);
-    if (!EI)
-      return S;
-    auto *VTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
-    if (!VTy)
-      return S;
-    return std::max(S, VTy->getNumElements());
-  });
-
+  unsigned Size = 0;
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
   bool HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
@@ -639,6 +645,8 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       unsigned IntIdx = Idx->getValue().getZExtValue();
       Mask[I] = IntIdx;
     }
+    // The width is defined only by the lanes that are present in the mask.
+    Size = std::max(Size, getNumElements(Vec->getType()));
     if (isUndefVector(Vec).all() && HasNonUndefVec)
       continue;
     // For correct shuffling we have to have at most 2 different vector operands
@@ -647,23 +655,31 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       Vec1 = Vec;
     } else if (!Vec2 || Vec2 == Vec) {
       Vec2 = Vec;
-      Mask[I] += Size;
     } else {
       return std::nullopt;
     }
+  }
+  if (Vec2 && Size != std::max(getNumElements(Vec1->getType()),
+                               getNumElements(Vec2->getType())))
+    return std::nullopt;
+  for (auto [I, Idx] : enumerate(Mask)) {
+    if (Idx == PoisonMaskElem)
+      continue;
+    auto *Vec = cast<ExtractElementInst>(VL[I])->getVectorOperand();
+    if (Vec == Vec2)
+      Idx += Size;
+    else if (Vec != Vec1)
+      continue;
     if (CommonShuffleMode == Permute)
       continue;
     // If the extract index is not the same as the operation number, it is a
     // permutation.
-    if (Mask[I] % Size != I) {
+    if (Idx % Size != I) {
       CommonShuffleMode = Permute;
       continue;
     }
     CommonShuffleMode = Select;
   }
-  if (Vec2 && Size != std::max(getNumElements(Vec1->getType()),
-                               getNumElements(Vec2->getType())))
-    return std::nullopt;
   // If we're not crossing lanes in different vectors, consider it as blending.
   if (CommonShuffleMode == Select && Vec2)
     return TargetTransformInfo::SK_Select;

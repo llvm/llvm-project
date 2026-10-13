@@ -2252,8 +2252,12 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
     }
   }
   if (ops.fullType->isConstantMatrixType()) {
+    if (isa<cir::MatrixType>(ops.lhs.getType()) &&
+        isa<cir::MatrixType>(ops.rhs.getType()))
+      return builder.createMatrixMultiply(loc, ops.lhs, ops.rhs);
+
     assert(!cir::MissingFeatures::matrixType());
-    cgf.cgm.errorNYI("ScalarExprEmitter::emitMul: matrix types");
+    cgf.cgm.errorNYI("ScalarExprEmitter::emitMul: matrix scalar multiply");
     return {};
   }
   if (ops.compType->isUnsignedIntegerType() &&
@@ -2475,9 +2479,15 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
     }
 
     if (ops.fullType->isConstantMatrixType()) {
-      assert(!cir::MissingFeatures::matrixType());
-      cgf.cgm.errorNYI("ScalarExprEmitter::emitSub: matrix types");
-      return {};
+      // Like llvm::MatrixBuilder::CreateSub, splat a scalar operand to the
+      // matrix type before adding.
+      auto [lhs, rhs] =
+          builder.splatMatrixOpOperandsIfNecessary(loc, ops.lhs, ops.rhs);
+
+      CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, ops.fpFeatures);
+      if (cir::isFPOrVectorOrMatrixOfFPType(lhs.getType()))
+        return builder.createFSub(loc, lhs, rhs);
+      return builder.createSub(loc, lhs, rhs);
     }
 
     if (ops.compType->isUnsignedIntegerType() &&
