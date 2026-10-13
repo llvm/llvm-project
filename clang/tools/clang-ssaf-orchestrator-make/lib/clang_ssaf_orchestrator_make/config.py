@@ -50,6 +50,7 @@ SHIM_FOR_LINK_NAME = {
 
 class SSAFPassKind(str, enum.Enum):
     ANALYSIS = "analysis"
+    TRANSFORMATION = "transformation"
 
 
 class SSAFPassConfig:
@@ -82,6 +83,26 @@ class SSAFAnalysisPassConfig(SSAFPassConfig):
         self.extractors = extractors
         self.ssaf_linker = ssaf_linker
         self.analyses = list(analyses)
+
+
+class SSAFTransformationPassConfig(SSAFPassConfig):
+    pass_kind = SSAFPassKind.TRANSFORMATION
+
+    def __init__(
+        self,
+        ssaf_clang=None,
+        ssaf_extra_clang_args=(),
+        ssaf_src_edit_merge=None,
+        transformation=None,
+        link_unit_id=None,
+    ):
+        super().__init__(ssaf_clang, ssaf_extra_clang_args)
+        self.ssaf_src_edit_merge = ssaf_src_edit_merge
+        self.transformation = transformation
+        self.link_unit_id = link_unit_id
+
+    def name_link_unit(self, link_unit_id):
+        self.link_unit_id = link_unit_id
 
 
 class SSAFWorkflowConfig:

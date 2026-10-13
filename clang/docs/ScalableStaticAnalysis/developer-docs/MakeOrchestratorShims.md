@@ -47,7 +47,7 @@ The shim bodies live in the package, as `clang_ssaf_orchestrator_make.shims`,
 split by what they do:
 
 ```text
-shim.py          the Shim class and its diagnostics
+shim.py          the Shim class, its diagnostics, merge_edits
 commands.py      Files, is_object, artifact_of, summary_of,
                  filter_build_artifacts, unique
 driver_jobs.py   Job and the -### listing reader
@@ -125,9 +125,23 @@ The kind says what went wrong; the kinds are the values of `SSAFFailureKind`:
 
 ```text
 extract      summary extraction for a compilation
+transform    source-edit generation for a compilation
 link         clang-ssaf-linker over a link's inputs
+merge        clang-ssaf-src-edit-merge over a link's inputs
 forward      handing a job to the shim that stands in for its tool
 missing      an artifact with nothing analysed behind it
 driver-jobs  the driver refused to list a command's jobs
 internal     an unhandled exception inside a shim
 ```
+
+## Carrying the link unit name into the second pass
+
+One piece of state flows from the first pass to the second: the top-most link
+unit's own name, which is not an artifact id and is unknown until the first
+pass's linker has written the link unit summary.
+
+The orchestrator reads it from that summary, as the `lu_namespace` component
+whose kind is `LinkUnit`, and puts it in the transformation pass's
+configuration; the clang shim passes it as `--ssaf-link-unit-id=` to every
+source-edit generation. This is why the second pass's configuration file
+cannot be written up front.

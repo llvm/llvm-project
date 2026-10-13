@@ -100,6 +100,10 @@ class FilterBuildArtifacts(_OverABuild):
         self._write("build/a.o", repository.SSAFArtifactKind.SUMMARY)
         self.assertEqual([self._id("build/a.o")], self._kept("build/a.o"))
 
+    def test_an_object_with_only_source_edits_is_kept(self):
+        self._write("build/a.o", repository.SSAFArtifactKind.EDITS)
+        self.assertEqual([self._id("build/a.o")], self._kept("build/a.o"))
+
     def test_an_assembled_object_with_only_a_record_is_kept(self):
         self.build_graph.record_build_step(
             self._id("build/combined.o"), [self._id("build/a.o")]

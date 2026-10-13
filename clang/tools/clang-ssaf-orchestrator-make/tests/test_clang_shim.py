@@ -148,6 +148,20 @@ class TheSsafArguments(unittest.TestCase):
         self.assertIn("--ssaf-tu-summary-file=" + summary, extra)
         self.assertTrue(os.path.isdir(os.path.dirname(summary)))
 
+    def test_transformation_names_the_link_unit_and_the_analysis_result(self):
+        pass_config = configs.transformation_config()
+        pass_config.name_link_unit(self._id("build/prg").get_path())
+        shim = self._shim(pass_config)
+        edits, extra = clang._transformation_args(shim, self._id("build/a.o"))
+        self.assertIn("--ssaf-link-unit-id=" + self._id("build/prg").get_path(), extra)
+        self.assertIn("--ssaf-src-edit-file=" + edits, extra)
+        self.assertTrue(
+            any(a.startswith("--ssaf-global-scope-analysis-result=") for a in extra)
+        )
+        self.assertTrue(
+            any(a.startswith("--ssaf-transformation-report-file=") for a in extra)
+        )
+
     def test_the_extra_clang_arguments_come_last(self):
         shim = self._shim(configs.analysis_config(ssaf_extra_clang_args=["-DX"]))
         _, extra = clang._summary_extraction_args(shim, self._id("build/a.o"))
