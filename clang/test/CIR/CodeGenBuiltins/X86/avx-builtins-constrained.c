@@ -27,7 +27,7 @@ __m256d test_mm256_round_pd_fround_no_exc(__m256d x) {
 
 __m256d test_mm256_round_pd_trunc(__m256d x) {
   // CIR-LABEL: test_mm256_round_pd_trunc
-  // CIR: cir.trunc %{{.*}} : !cir.vector<4 x !cir.double> {fenv = #cir.fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>}
+  // CIR: cir.trunc %{{.*}} : !cir.vector<4 x !cir.double> fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>
 
   // LLVM-LABEL: test_mm256_round_pd_trunc
   // LLVM: call <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double> %{{.*}}, metadata !"fpexcept.ignore")
@@ -54,7 +54,7 @@ __m256 test_mm256_round_ps_fround_no_exc(__m256 x) {
 
 __m256 test_mm256_round_ps_trunc(__m256 x) {
   // CIR-LABEL: test_mm256_round_ps_trunc
-  // CIR: cir.trunc %{{.*}} : !cir.vector<8 x !cir.float> {fenv = #cir.fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>}
+  // CIR: cir.trunc %{{.*}} : !cir.vector<8 x !cir.float> fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>
 
   // LLVM-LABEL: test_mm256_round_ps_trunc
   // LLVM: call <8 x float> @llvm.experimental.constrained.trunc.v8f32(<8 x float> %{{.*}}, metadata !"fpexcept.ignore")

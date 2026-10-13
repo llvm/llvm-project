@@ -9,7 +9,7 @@
 
 __m128d test_mm_round_pd_roundeven(__m128d x) {
   // CIR-LABEL: test_mm_round_pd_roundeven
-  // CIR: cir.roundeven %{{.*}} : !cir.vector<2 x !cir.double> {fenv = #cir.fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>}
+  // CIR: cir.roundeven %{{.*}} : !cir.vector<2 x !cir.double> fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>
 
   // LLVM-LABEL: test_mm_round_pd_roundeven
   // LLVM: call <2 x double> @llvm.experimental.constrained.roundeven.v2f64(<2 x double> %{{.*}}, metadata !"fpexcept.ignore")
@@ -36,7 +36,7 @@ __m128d test_mm_round_pd_fround_no_exc(__m128d x) {
 
 __m128 test_mm_round_ps_floor(__m128 x) {
   // CIR-LABEL: test_mm_round_ps_floor
-  // CIR: cir.floor %{{.*}} : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>}
+  // CIR: cir.floor %{{.*}} : !cir.vector<4 x !cir.float> fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>
 
   // LLVM-LABEL: test_mm_round_ps_floor
   // LLVM: call <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float> %{{.*}}, metadata !"fpexcept.ignore")
@@ -64,7 +64,7 @@ __m128 test_mm_round_ps_fround_no_exc(__m128 x) {
 __m128d test_mm_round_sd_ceil(__m128d x, __m128d y) {
   // CIR-LABEL: test_mm_round_sd_ceil
   // %[[A:.*]] = cir.vec.extract = %{{.*}}[%{{.*}} : !u64] : !cir.vector<2 x !cir.double>
-  // %[[B:.*]] = cir.ceil %[[A]] : !cir.double {fenv = #cir.fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>}
+  // %[[B:.*]] = cir.ceil %[[A]] : !cir.double fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>
   // cir.vec.insert = %[[B]], %{{.*}}[%{{.*}} : !u64] : !cir.vector<2 x !cir.double>
 
   // LLVM-LABEL: test_mm_round_sd_ceil
@@ -95,7 +95,7 @@ __m128d test_mm_round_sd_fround_no_exc(__m128d x, __m128d y) {
 __m128 test_mm_round_ss_trunc(__m128 x, __m128 y) {
   // CIR-LABEL: test_mm_round_ss_trunc
   // %[[A:.*]] = cir.vec.extract = %{{.*}}[%{{.*}} : !u64] : !cir.vector<2 x !cir.double>
-  // %[[B:.*]] = cir.trunc %[[A]] : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>}
+  // %[[B:.*]] = cir.trunc %[[A]] : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>
   // cir.vec.insert = %[[B]], %{{.*}}[%{{.*}} : !u64] : !cir.vector<2 x !cir.double>
 
   // LLVM-LABEL: test_mm_round_ss_trunc
