@@ -18,6 +18,7 @@
 #include "orc-rt/bedrock/ThreadPoolRunner.h"
 #include "orc-rt/bedrock/sps/AllSPSCI.h"
 #include "orc-rt/connect-socket/SocketConnector.h"
+#include "orc-rt/connect-tcp/TCPConnector.h"
 #include "orc-rt/connect/ConnectionSpec.h"
 #include "orc-rt/connect/ConnectorRegistry.h"
 
@@ -169,10 +170,13 @@ makeSession(const Options &Opts) noexcept {
     return Err;
 
   // Connectors establish the connection to the controller for a particular
-  // transport. Registering only the socket connector means ogre can only be
-  // reached over a socket.
+  // transport. ogre is a testing tool, so it registers "tcp:listen" as well as
+  // "tcp:connect" and "socket:adopt": a listening ogre runs code from whoever
+  // connects to it first.
   ConnectorRegistry Connectors;
   if (auto Err = registerSocketConnector(Connectors))
+    return Err;
+  if (auto Err = registerTCPConnectAndListen(Connectors))
     return Err;
 
   // Connect to the controller described by the ConnectionSpec, handing over the

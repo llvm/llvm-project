@@ -15,12 +15,13 @@ set(ORC_RT_CONNECT_SOCKET_POSIX_SOURCES
   sys/posix/sps/SimpleRemoteCAOverSocket.cpp
 )
 
-# TODO: Windows has stubs only. The connector reports the socket transport as
-# unimplemented, SocketHandle does not close the socket it owns, and there is no
-# CA.
+# TODO: Windows has stubs only. The connector and the CA report the socket
+# transport as not yet supported, and SocketHandle does not close the socket it
+# owns.
 set(ORC_RT_CONNECT_SOCKET_WINDOWS_SOURCES
   sys/windows/SocketConnector.cpp
   sys/windows/SocketHandle.cpp
+  sys/windows/sps/SimpleRemoteCAOverSocket.cpp
 )
 
 # Composed the way lib/bedrock/CMakeLists.txt composes its per-system sources;
