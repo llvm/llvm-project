@@ -93,6 +93,16 @@ def ApplyMoveAccumulatorForContractLoopPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyPrepareVectorContractLoopsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.prepare_vector_contract_loops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns that prepare vector contraction loops for x86 lowering.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyVectorContractMultiLevelUnrollForAMXPatternsOp : Op<Transform_Dialect,
     "apply_patterns.x86.vector_contract_multi_level_unroll_for_amx",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
