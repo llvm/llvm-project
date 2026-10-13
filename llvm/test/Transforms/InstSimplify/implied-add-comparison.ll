@@ -10,9 +10,7 @@ define i1 @bounded_addend(i32 noundef %address, i32 noundef %size) {
 ; CHECK-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
 ; CHECK-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
 ; CHECK-NEXT:    [[CROSSES_WORD:%.*]] = icmp ugt i32 [[END]], 4
-; CHECK-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp ugt i32 [[SIZE]], 1
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[LARGE_ENOUGH]]
-; CHECK-NEXT:    ret i1 [[BOTH]]
+; CHECK-NEXT:    ret i1 [[CROSSES_WORD]]
 ;
   %offset = and i32 %address, 3
   %end = add i32 %offset, %size
@@ -27,9 +25,7 @@ define i1 @bounded_addend_commuted(i32 %address, i32 %size) {
 ; CHECK-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
 ; CHECK-NEXT:    [[END:%.*]] = add i32 [[SIZE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    [[CROSSES_WORD:%.*]] = icmp ugt i32 [[END]], 4
-; CHECK-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp ugt i32 [[SIZE]], 1
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[LARGE_ENOUGH]], [[CROSSES_WORD]]
-; CHECK-NEXT:    ret i1 [[BOTH]]
+; CHECK-NEXT:    ret i1 [[CROSSES_WORD]]
 ;
   %offset = and i32 %address, 3
   %end = add i32 %size, %offset
@@ -44,17 +40,13 @@ define i1 @bounded_addend_swapped_compares(i32 %address, i32 %size) {
 ; SIMPLIFY-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
 ; SIMPLIFY-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
 ; SIMPLIFY-NEXT:    [[CROSSES_WORD:%.*]] = icmp ult i32 4, [[END]]
-; SIMPLIFY-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp ult i32 1, [[SIZE]]
-; SIMPLIFY-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[LARGE_ENOUGH]]
-; SIMPLIFY-NEXT:    ret i1 [[BOTH]]
+; SIMPLIFY-NEXT:    ret i1 [[CROSSES_WORD]]
 ;
 ; COMBINE-LABEL: @bounded_addend_swapped_compares(
 ; COMBINE-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
 ; COMBINE-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
 ; COMBINE-NEXT:    [[CROSSES_WORD:%.*]] = icmp ugt i32 [[END]], 4
-; COMBINE-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp ugt i32 [[SIZE]], 1
-; COMBINE-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[LARGE_ENOUGH]]
-; COMBINE-NEXT:    ret i1 [[BOTH]]
+; COMBINE-NEXT:    ret i1 [[CROSSES_WORD]]
 ;
   %offset = and i32 %address, 3
   %end = add i32 %offset, %size
@@ -70,17 +62,13 @@ define i1 @bounded_addend_or(i32 %address, i32 %size) {
 ; SIMPLIFY-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
 ; SIMPLIFY-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
 ; SIMPLIFY-NEXT:    [[FITS_WORD:%.*]] = icmp ule i32 [[END]], 4
-; SIMPLIFY-NEXT:    [[SMALL_SIZE:%.*]] = icmp ule i32 [[SIZE]], 1
-; SIMPLIFY-NEXT:    [[EITHER:%.*]] = or i1 [[FITS_WORD]], [[SMALL_SIZE]]
-; SIMPLIFY-NEXT:    ret i1 [[EITHER]]
+; SIMPLIFY-NEXT:    ret i1 [[FITS_WORD]]
 ;
 ; COMBINE-LABEL: @bounded_addend_or(
 ; COMBINE-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
 ; COMBINE-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
 ; COMBINE-NEXT:    [[FITS_WORD:%.*]] = icmp ult i32 [[END]], 5
-; COMBINE-NEXT:    [[SMALL_SIZE:%.*]] = icmp ult i32 [[SIZE]], 2
-; COMBINE-NEXT:    [[EITHER:%.*]] = or i1 [[FITS_WORD]], [[SMALL_SIZE]]
-; COMBINE-NEXT:    ret i1 [[EITHER]]
+; COMBINE-NEXT:    ret i1 [[FITS_WORD]]
 ;
   %offset = and i32 %address, 3
   %end = add i32 %offset, %size
@@ -95,17 +83,13 @@ define i1 @bounded_addend_uge(i32 %address, i32 %size) {
 ; SIMPLIFY-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
 ; SIMPLIFY-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
 ; SIMPLIFY-NEXT:    [[CROSSES_WORD:%.*]] = icmp uge i32 [[END]], 5
-; SIMPLIFY-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp uge i32 [[SIZE]], 2
-; SIMPLIFY-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[LARGE_ENOUGH]]
-; SIMPLIFY-NEXT:    ret i1 [[BOTH]]
+; SIMPLIFY-NEXT:    ret i1 [[CROSSES_WORD]]
 ;
 ; COMBINE-LABEL: @bounded_addend_uge(
 ; COMBINE-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
 ; COMBINE-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
 ; COMBINE-NEXT:    [[CROSSES_WORD:%.*]] = icmp ugt i32 [[END]], 4
-; COMBINE-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp ugt i32 [[SIZE]], 1
-; COMBINE-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[LARGE_ENOUGH]]
-; COMBINE-NEXT:    ret i1 [[BOTH]]
+; COMBINE-NEXT:    ret i1 [[CROSSES_WORD]]
 ;
   %offset = and i32 %address, 3
   %end = add i32 %offset, %size
@@ -117,21 +101,11 @@ define i1 @bounded_addend_uge(i32 %address, i32 %size) {
 
 ; The same bounds may still imply a comparison when the sum is known exactly.
 define i1 @bounded_addend_same_bound(i32 %address, i32 %size) {
-; SIMPLIFY-LABEL: @bounded_addend_same_bound(
-; SIMPLIFY-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
-; SIMPLIFY-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
-; SIMPLIFY-NEXT:    [[END_IS_FOUR:%.*]] = icmp eq i32 [[END]], 4
-; SIMPLIFY-NEXT:    [[SIZE_AT_MOST_FOUR:%.*]] = icmp ule i32 [[SIZE]], 4
-; SIMPLIFY-NEXT:    [[BOTH:%.*]] = and i1 [[END_IS_FOUR]], [[SIZE_AT_MOST_FOUR]]
-; SIMPLIFY-NEXT:    ret i1 [[BOTH]]
-;
-; COMBINE-LABEL: @bounded_addend_same_bound(
-; COMBINE-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
-; COMBINE-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
-; COMBINE-NEXT:    [[END_IS_FOUR:%.*]] = icmp eq i32 [[END]], 4
-; COMBINE-NEXT:    [[SIZE_AT_MOST_FOUR:%.*]] = icmp ult i32 [[SIZE]], 5
-; COMBINE-NEXT:    [[BOTH:%.*]] = and i1 [[END_IS_FOUR]], [[SIZE_AT_MOST_FOUR]]
-; COMBINE-NEXT:    ret i1 [[BOTH]]
+; CHECK-LABEL: @bounded_addend_same_bound(
+; CHECK-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
+; CHECK-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
+; CHECK-NEXT:    [[END_IS_FOUR:%.*]] = icmp eq i32 [[END]], 4
+; CHECK-NEXT:    ret i1 [[END_IS_FOUR]]
 ;
   %offset = and i32 %address, 3
   %end = add i32 %offset, %size
@@ -142,21 +116,8 @@ define i1 @bounded_addend_same_bound(i32 %address, i32 %size) {
 }
 
 define i1 @bounded_addend_false(i32 %address, i32 %size) {
-; SIMPLIFY-LABEL: @bounded_addend_false(
-; SIMPLIFY-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
-; SIMPLIFY-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
-; SIMPLIFY-NEXT:    [[CROSSES_WORD:%.*]] = icmp ugt i32 [[END]], 4
-; SIMPLIFY-NEXT:    [[SMALL_SIZE:%.*]] = icmp ule i32 [[SIZE]], 1
-; SIMPLIFY-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[SMALL_SIZE]]
-; SIMPLIFY-NEXT:    ret i1 [[BOTH]]
-;
-; COMBINE-LABEL: @bounded_addend_false(
-; COMBINE-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
-; COMBINE-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
-; COMBINE-NEXT:    [[CROSSES_WORD:%.*]] = icmp ugt i32 [[END]], 4
-; COMBINE-NEXT:    [[SMALL_SIZE:%.*]] = icmp ult i32 [[SIZE]], 2
-; COMBINE-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[SMALL_SIZE]]
-; COMBINE-NEXT:    ret i1 [[BOTH]]
+; CHECK-LABEL: @bounded_addend_false(
+; CHECK-NEXT:    ret i1 false
 ;
   %offset = and i32 %address, 3
   %end = add i32 %offset, %size
@@ -172,17 +133,13 @@ define i1 @negative_addend_ule(i8 %address, i8 %size) {
 ; SIMPLIFY-NEXT:    [[OFFSET:%.*]] = or i8 [[ADDRESS:%.*]], -4
 ; SIMPLIFY-NEXT:    [[END:%.*]] = add i8 [[OFFSET]], [[SIZE:%.*]]
 ; SIMPLIFY-NEXT:    [[SMALL_END:%.*]] = icmp ule i8 [[END]], 4
-; SIMPLIFY-NEXT:    [[SMALL_SIZE:%.*]] = icmp ule i8 [[SIZE]], 8
-; SIMPLIFY-NEXT:    [[BOTH:%.*]] = and i1 [[SMALL_END]], [[SMALL_SIZE]]
-; SIMPLIFY-NEXT:    ret i1 [[BOTH]]
+; SIMPLIFY-NEXT:    ret i1 [[SMALL_END]]
 ;
 ; COMBINE-LABEL: @negative_addend_ule(
 ; COMBINE-NEXT:    [[OFFSET:%.*]] = or i8 [[ADDRESS:%.*]], -4
 ; COMBINE-NEXT:    [[END:%.*]] = add i8 [[OFFSET]], [[SIZE:%.*]]
 ; COMBINE-NEXT:    [[SMALL_END:%.*]] = icmp ult i8 [[END]], 5
-; COMBINE-NEXT:    [[SMALL_SIZE:%.*]] = icmp ult i8 [[SIZE]], 9
-; COMBINE-NEXT:    [[BOTH:%.*]] = and i1 [[SMALL_END]], [[SMALL_SIZE]]
-; COMBINE-NEXT:    ret i1 [[BOTH]]
+; COMBINE-NEXT:    ret i1 [[SMALL_END]]
 ;
   %offset = or i8 %address, -4
   %end = add i8 %offset, %size
@@ -205,9 +162,7 @@ define i1 @bounded_addend_logical_and(i32 %address, i32 %size) {
 ; COMBINE-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
 ; COMBINE-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
 ; COMBINE-NEXT:    [[CROSSES_WORD:%.*]] = icmp ugt i32 [[END]], 4
-; COMBINE-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp ugt i32 [[SIZE]], 1
-; COMBINE-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[LARGE_ENOUGH]]
-; COMBINE-NEXT:    ret i1 [[BOTH]]
+; COMBINE-NEXT:    ret i1 [[CROSSES_WORD]]
 ;
   %offset = and i32 %address, 3
   %end = add i32 %offset, %size
@@ -230,9 +185,7 @@ define i1 @bounded_addend_logical_or(i32 %address, i32 %size) {
 ; COMBINE-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
 ; COMBINE-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
 ; COMBINE-NEXT:    [[FITS_WORD:%.*]] = icmp ult i32 [[END]], 5
-; COMBINE-NEXT:    [[SMALL_SIZE:%.*]] = icmp ult i32 [[SIZE]], 2
-; COMBINE-NEXT:    [[EITHER:%.*]] = or i1 [[FITS_WORD]], [[SMALL_SIZE]]
-; COMBINE-NEXT:    ret i1 [[EITHER]]
+; COMBINE-NEXT:    ret i1 [[FITS_WORD]]
 ;
   %offset = and i32 %address, 3
   %end = add i32 %offset, %size
@@ -244,30 +197,16 @@ define i1 @bounded_addend_logical_or(i32 %address, i32 %size) {
 
 ; This is the dominating false branch from the original QEMU example.
 define i1 @bounded_addend_branch(i32 %address, i32 %size) {
-; SIMPLIFY-LABEL: @bounded_addend_branch(
-; SIMPLIFY-NEXT:  entry:
-; SIMPLIFY-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
-; SIMPLIFY-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
-; SIMPLIFY-NEXT:    [[FITS_WORD:%.*]] = icmp ult i32 [[END]], 5
-; SIMPLIFY-NEXT:    br i1 [[FITS_WORD]], label [[SMALL:%.*]], label [[LARGE:%.*]]
-; SIMPLIFY:       large:
-; SIMPLIFY-NEXT:    [[SMALL_SIZE:%.*]] = icmp ult i32 [[SIZE]], 2
-; SIMPLIFY-NEXT:    [[RESULT:%.*]] = select i1 [[SMALL_SIZE]], i1 false, i1 true
-; SIMPLIFY-NEXT:    ret i1 [[RESULT]]
-; SIMPLIFY:       small:
-; SIMPLIFY-NEXT:    ret i1 false
-;
-; COMBINE-LABEL: @bounded_addend_branch(
-; COMBINE-NEXT:  entry:
-; COMBINE-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
-; COMBINE-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
-; COMBINE-NEXT:    [[FITS_WORD:%.*]] = icmp ult i32 [[END]], 5
-; COMBINE-NEXT:    br i1 [[FITS_WORD]], label [[SMALL:%.*]], label [[LARGE:%.*]]
-; COMBINE:       large:
-; COMBINE-NEXT:    [[SMALL_SIZE:%.*]] = icmp ugt i32 [[SIZE]], 1
-; COMBINE-NEXT:    ret i1 [[SMALL_SIZE]]
-; COMBINE:       small:
-; COMBINE-NEXT:    ret i1 false
+; CHECK-LABEL: @bounded_addend_branch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
+; CHECK-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
+; CHECK-NEXT:    [[FITS_WORD:%.*]] = icmp ult i32 [[END]], 5
+; CHECK-NEXT:    br i1 [[FITS_WORD]], label [[SMALL:%.*]], label [[LARGE:%.*]]
+; CHECK:       large:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       small:
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %offset = and i32 %address, 3
@@ -290,17 +229,13 @@ define i1 @zext_addend(i2 %offset, i32 %size) {
 ; SIMPLIFY-NEXT:    [[EXT:%.*]] = zext i2 [[OFFSET:%.*]] to i32
 ; SIMPLIFY-NEXT:    [[END:%.*]] = add i32 [[EXT]], [[SIZE:%.*]]
 ; SIMPLIFY-NEXT:    [[CROSSES_WORD:%.*]] = icmp ugt i32 [[END]], 4
-; SIMPLIFY-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp ugt i32 [[SIZE]], 1
-; SIMPLIFY-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[LARGE_ENOUGH]]
-; SIMPLIFY-NEXT:    ret i1 [[BOTH]]
+; SIMPLIFY-NEXT:    ret i1 [[CROSSES_WORD]]
 ;
 ; COMBINE-LABEL: @zext_addend(
 ; COMBINE-NEXT:    [[EXT:%.*]] = zext i2 [[OFFSET:%.*]] to i32
 ; COMBINE-NEXT:    [[END:%.*]] = add i32 [[SIZE:%.*]], [[EXT]]
 ; COMBINE-NEXT:    [[CROSSES_WORD:%.*]] = icmp ugt i32 [[END]], 4
-; COMBINE-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp ugt i32 [[SIZE]], 1
-; COMBINE-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[LARGE_ENOUGH]]
-; COMBINE-NEXT:    ret i1 [[BOTH]]
+; COMBINE-NEXT:    ret i1 [[CROSSES_WORD]]
 ;
   %ext = zext i2 %offset to i32
   %end = add i32 %ext, %size
@@ -315,9 +250,7 @@ define i1 @signed_bounded_addend(i8 %address, i8 %size) {
 ; CHECK-NEXT:    [[OFFSET:%.*]] = and i8 [[ADDRESS:%.*]], 3
 ; CHECK-NEXT:    [[END:%.*]] = add i8 [[OFFSET]], [[SIZE:%.*]]
 ; CHECK-NEXT:    [[CROSSES_WORD:%.*]] = icmp sgt i8 [[END]], 4
-; CHECK-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp sgt i8 [[SIZE]], 1
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[LARGE_ENOUGH]]
-; CHECK-NEXT:    ret i1 [[BOTH]]
+; CHECK-NEXT:    ret i1 [[CROSSES_WORD]]
 ;
   %offset = and i8 %address, 3
   %end = add i8 %offset, %size
@@ -332,9 +265,7 @@ define i1 @samesign_bounded_addend(i32 %address, i32 %size) {
 ; CHECK-NEXT:    [[OFFSET:%.*]] = and i32 [[ADDRESS:%.*]], 3
 ; CHECK-NEXT:    [[END:%.*]] = add i32 [[OFFSET]], [[SIZE:%.*]]
 ; CHECK-NEXT:    [[CROSSES_WORD:%.*]] = icmp samesign ugt i32 [[END]], 4
-; CHECK-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp ugt i32 [[SIZE]], 1
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[CROSSES_WORD]], [[LARGE_ENOUGH]]
-; CHECK-NEXT:    ret i1 [[BOTH]]
+; CHECK-NEXT:    ret i1 [[CROSSES_WORD]]
 ;
   %offset = and i32 %address, 3
   %end = add i32 %offset, %size
@@ -349,9 +280,7 @@ define <2 x i1> @vector_bounded_addend(<2 x i32> %address, <2 x i32> %size) {
 ; CHECK-NEXT:    [[OFFSET:%.*]] = and <2 x i32> [[ADDRESS:%.*]], splat (i32 3)
 ; CHECK-NEXT:    [[END:%.*]] = add <2 x i32> [[OFFSET]], [[SIZE:%.*]]
 ; CHECK-NEXT:    [[CROSSES_WORD:%.*]] = icmp ugt <2 x i32> [[END]], splat (i32 4)
-; CHECK-NEXT:    [[LARGE_ENOUGH:%.*]] = icmp ugt <2 x i32> [[SIZE]], splat (i32 1)
-; CHECK-NEXT:    [[BOTH:%.*]] = and <2 x i1> [[CROSSES_WORD]], [[LARGE_ENOUGH]]
-; CHECK-NEXT:    ret <2 x i1> [[BOTH]]
+; CHECK-NEXT:    ret <2 x i1> [[CROSSES_WORD]]
 ;
   %offset = and <2 x i32> %address, splat (i32 3)
   %end = add <2 x i32> %offset, %size
