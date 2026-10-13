@@ -696,8 +696,12 @@ Value *AMDGPUSwLowerLDS::getTranslatedLDSPtrOfFlat(Value *LoadMallocPtr,
   if (auto *VecTy = dyn_cast<VectorType>(FlatAddr->getType()))
     Base = IRB.CreateVectorSplat(VecTy->getElementCount(), Base);
   Value *Diff = IRB.CreateSub(FlatAddr, Base);
-  Value *Offset = IRB.CreateTrunc(Diff, DL.getIntPtrType(LDSPtrTy));
-  return IRB.CreateIntToPtr(Offset, LDSPtrTy);
+  Value *Offset = IRB.CreateTrunc(Diff, DL.getAddressType(LDSPtrTy));
+  Value *LDSPtr = IRB.CreateIntToPtr(Offset, LDSPtrTy);
+  // Flat null is 0 but LDS null is -1, which the rebased offset cannot keep.
+  Constant *LDSNull = ConstantExpr::getAddrSpaceCast(
+      Constant::getNullValue(FlatPtr->getType()), LDSPtrTy);
+  return IRB.CreateSelect(IRB.CreateIsNull(FlatPtr), LDSNull, LDSPtr);
 }
 
 void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
@@ -801,11 +805,11 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       } else {
         Value *Replacement =
             getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, AIOperand);
+        // Note: No need to add the instruction to AsanInfo instructions to be
+        // instrumented list. FLAT_ADDRESS ptr would have been already
+        // instrumented by asan pass prior to this pass.
         NewAI = IRB.CreateAddrSpaceCast(Replacement, ASC->getType());
       }
-      // Note: No need to add the instruction to AsanInfo instructions to be
-      // instrumented list. FLAT_ADDRESS ptr would have been already
-      // instrumented by asan pass prior to this pass.
       ASC->replaceAllUsesWith(NewAI);
       ASC->eraseFromParent();
     } else

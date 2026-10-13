@@ -52,7 +52,9 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP26]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i32
 ; CHECK-NEXT:    [[TMP29:%.*]] = inttoptr i32 [[TMP28]] to ptr addrspace(3)
-; CHECK-NEXT:    [[TMP30:%.*]] = ptrtoint ptr addrspace(3) [[TMP29]] to i32
+; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq ptr [[TMP24]], null
+; CHECK-NEXT:    [[TMP36:%.*]] = select i1 [[TMP35]], ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), ptr addrspace(3) [[TMP29]]
+; CHECK-NEXT:    [[TMP30:%.*]] = ptrtoint ptr addrspace(3) [[TMP36]] to i32
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP30]]
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[TMP31]], align 4
 ; CHECK-NEXT:    br label %[[CONDFREE:.*]]
