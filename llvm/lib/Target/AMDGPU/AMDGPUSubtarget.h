@@ -60,6 +60,7 @@ protected:
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
   unsigned LDSAllocationGranularity = 0;
+  unsigned LDSEncodingGranularity = 0;
   char WavefrontSizeLog2 = 0;
   unsigned FlatOffsetBitWidth = 0;
 
@@ -100,7 +101,7 @@ public:
   /// This information is currently only gathered from the !reqd_work_group_size
   /// metadata on \p F, but this may be improved in the future.
   bool hasWavefrontsEvenlySplittingXDim(const Function &F,
-                                        bool REquiresUniformYZ = false) const;
+                                        bool RequiresUniformYZ = false) const;
 
   /// \returns Subtarget's default pair of minimum/maximum number of waves per
   /// execution unit for function \p F, or minimum/maximum number of waves per

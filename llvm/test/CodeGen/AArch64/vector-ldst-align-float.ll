@@ -8315,7 +8315,7 @@ define void @store_v1double_align4_post8(ptr %ptr, <1 x double> %val, ptr %write
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v1double_align4_post8:
 ; NOSTRICTALIGN-BE:       // %bb.0:
-; NOSTRICTALIGN-BE-NEXT:    st1 { v0.1d }, [x0], #8
+; NOSTRICTALIGN-BE-NEXT:    str d0, [x0], #8
 ; NOSTRICTALIGN-BE-NEXT:    str x0, [x1]
 ; NOSTRICTALIGN-BE-NEXT:    ret
 ;
@@ -8350,9 +8350,8 @@ define void @store_v1double_align4_pre8(ptr %ptr, <1 x double> %val, ptr %writeb
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v1double_align4_pre8:
 ; NOSTRICTALIGN-BE:       // %bb.0:
-; NOSTRICTALIGN-BE-NEXT:    add x8, x0, #8
-; NOSTRICTALIGN-BE-NEXT:    str d0, [x0, #8]
-; NOSTRICTALIGN-BE-NEXT:    str x8, [x1]
+; NOSTRICTALIGN-BE-NEXT:    str d0, [x0, #8]!
+; NOSTRICTALIGN-BE-NEXT:    str x0, [x1]
 ; NOSTRICTALIGN-BE-NEXT:    ret
 ;
 ; STRICTALIGN-BE-LABEL: store_v1double_align4_pre8:
@@ -8458,9 +8457,8 @@ define void @store_v1double_align4_post16(ptr %ptr, <1 x double> %val, ptr %writ
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v1double_align4_post16:
 ; NOSTRICTALIGN-BE:       // %bb.0:
-; NOSTRICTALIGN-BE-NEXT:    add x8, x0, #16
-; NOSTRICTALIGN-BE-NEXT:    str d0, [x0]
-; NOSTRICTALIGN-BE-NEXT:    str x8, [x1]
+; NOSTRICTALIGN-BE-NEXT:    str d0, [x0], #16
+; NOSTRICTALIGN-BE-NEXT:    str x0, [x1]
 ; NOSTRICTALIGN-BE-NEXT:    ret
 ;
 ; STRICTALIGN-BE-LABEL: store_v1double_align4_post16:
@@ -8494,9 +8492,8 @@ define void @store_v1double_align4_pre16(ptr %ptr, <1 x double> %val, ptr %write
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v1double_align4_pre16:
 ; NOSTRICTALIGN-BE:       // %bb.0:
-; NOSTRICTALIGN-BE-NEXT:    add x8, x0, #16
-; NOSTRICTALIGN-BE-NEXT:    str d0, [x0, #16]
-; NOSTRICTALIGN-BE-NEXT:    str x8, [x1]
+; NOSTRICTALIGN-BE-NEXT:    str d0, [x0, #16]!
+; NOSTRICTALIGN-BE-NEXT:    str x0, [x1]
 ; NOSTRICTALIGN-BE-NEXT:    ret
 ;
 ; STRICTALIGN-BE-LABEL: store_v1double_align4_pre16:
@@ -8637,13 +8634,13 @@ define void @store_v1double_align8_post8(ptr %ptr, <1 x double> %val, ptr %write
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v1double_align8_post8:
 ; NOSTRICTALIGN-BE:       // %bb.0:
-; NOSTRICTALIGN-BE-NEXT:    st1 { v0.1d }, [x0], #8
+; NOSTRICTALIGN-BE-NEXT:    str d0, [x0], #8
 ; NOSTRICTALIGN-BE-NEXT:    str x0, [x1]
 ; NOSTRICTALIGN-BE-NEXT:    ret
 ;
 ; STRICTALIGN-BE-LABEL: store_v1double_align8_post8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    st1 { v0.1d }, [x0], #8
+; STRICTALIGN-BE-NEXT:    str d0, [x0], #8
 ; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
@@ -8667,16 +8664,14 @@ define void @store_v1double_align8_pre8(ptr %ptr, <1 x double> %val, ptr %writeb
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v1double_align8_pre8:
 ; NOSTRICTALIGN-BE:       // %bb.0:
-; NOSTRICTALIGN-BE-NEXT:    add x8, x0, #8
-; NOSTRICTALIGN-BE-NEXT:    str d0, [x0, #8]
-; NOSTRICTALIGN-BE-NEXT:    str x8, [x1]
+; NOSTRICTALIGN-BE-NEXT:    str d0, [x0, #8]!
+; NOSTRICTALIGN-BE-NEXT:    str x0, [x1]
 ; NOSTRICTALIGN-BE-NEXT:    ret
 ;
 ; STRICTALIGN-BE-LABEL: store_v1double_align8_pre8:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    add x8, x0, #8
-; STRICTALIGN-BE-NEXT:    str d0, [x0, #8]
-; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    str d0, [x0, #8]!
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 8
   store <1 x double> %val, ptr %newptr, align 8
@@ -8763,16 +8758,14 @@ define void @store_v1double_align8_post16(ptr %ptr, <1 x double> %val, ptr %writ
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v1double_align8_post16:
 ; NOSTRICTALIGN-BE:       // %bb.0:
-; NOSTRICTALIGN-BE-NEXT:    add x8, x0, #16
-; NOSTRICTALIGN-BE-NEXT:    str d0, [x0]
-; NOSTRICTALIGN-BE-NEXT:    str x8, [x1]
+; NOSTRICTALIGN-BE-NEXT:    str d0, [x0], #16
+; NOSTRICTALIGN-BE-NEXT:    str x0, [x1]
 ; NOSTRICTALIGN-BE-NEXT:    ret
 ;
 ; STRICTALIGN-BE-LABEL: store_v1double_align8_post16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    add x8, x0, #16
-; STRICTALIGN-BE-NEXT:    str d0, [x0]
-; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    str d0, [x0], #16
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <1 x double> %val, ptr %ptr, align 8
@@ -8795,16 +8788,14 @@ define void @store_v1double_align8_pre16(ptr %ptr, <1 x double> %val, ptr %write
 ;
 ; NOSTRICTALIGN-BE-LABEL: store_v1double_align8_pre16:
 ; NOSTRICTALIGN-BE:       // %bb.0:
-; NOSTRICTALIGN-BE-NEXT:    add x8, x0, #16
-; NOSTRICTALIGN-BE-NEXT:    str d0, [x0, #16]
-; NOSTRICTALIGN-BE-NEXT:    str x8, [x1]
+; NOSTRICTALIGN-BE-NEXT:    str d0, [x0, #16]!
+; NOSTRICTALIGN-BE-NEXT:    str x0, [x1]
 ; NOSTRICTALIGN-BE-NEXT:    ret
 ;
 ; STRICTALIGN-BE-LABEL: store_v1double_align8_pre16:
 ; STRICTALIGN-BE:       // %bb.0:
-; STRICTALIGN-BE-NEXT:    add x8, x0, #16
-; STRICTALIGN-BE-NEXT:    str d0, [x0, #16]
-; STRICTALIGN-BE-NEXT:    str x8, [x1]
+; STRICTALIGN-BE-NEXT:    str d0, [x0, #16]!
+; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    ret
   %newptr = getelementptr i8, ptr %ptr, i64 16
   store <1 x double> %val, ptr %newptr, align 8

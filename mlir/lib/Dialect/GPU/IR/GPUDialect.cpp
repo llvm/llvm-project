@@ -539,9 +539,9 @@ static LogicalResult verifyAttributions(Operation *op,
 static LogicalResult verifyReduceOpAndType(gpu::AllReduceOperation opName,
                                            Type resType) {
   using Kind = gpu::AllReduceOperation;
-  if (llvm::is_contained(
-          {Kind::MINNUMF, Kind::MAXNUMF, Kind::MINIMUMF, Kind::MAXIMUMF},
-          opName)) {
+  if (llvm::is_contained({Kind::MINNUMF, Kind::MAXNUMF, Kind::MINIMUMF,
+                          Kind::MAXIMUMF, Kind::MINIMUMNUMF, Kind::MAXIMUMNUMF},
+                         opName)) {
     if (!isa<FloatType>(resType))
       return failure();
   }
@@ -609,26 +609,6 @@ OpFoldResult gpu::AllReduceOp::fold(FoldAdaptor /*adaptor*/) {
   }
 
   return nullptr;
-}
-
-// TODO: Support optional custom attributes (without dialect prefix).
-static ParseResult parseAllReduceOperation(AsmParser &parser,
-                                           AllReduceOperationAttr &attr) {
-  StringRef enumStr;
-  if (!parser.parseOptionalKeyword(&enumStr)) {
-    std::optional<AllReduceOperation> op =
-        gpu::symbolizeAllReduceOperation(enumStr);
-    if (!op)
-      return parser.emitError(parser.getCurrentLocation(), "invalid op kind");
-    attr = AllReduceOperationAttr::get(parser.getContext(), *op);
-  }
-  return success();
-}
-
-static void printAllReduceOperation(AsmPrinter &printer, Operation *op,
-                                    AllReduceOperationAttr attr) {
-  if (attr)
-    attr.print(printer);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2239,7 +2219,7 @@ namespace {
 /// ...  gpu.wait ... [%t, ...]  // %t can be removed.
 struct EraseRedundantGpuWaitOpPairs : public OpRewritePattern<WaitOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(WaitOp op,
                                 PatternRewriter &rewriter) const final {
@@ -2269,7 +2249,7 @@ public:
 /// dependencies nor return any token.
 struct SimplifyGpuWaitOp : public OpRewritePattern<WaitOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(WaitOp op,
                                 PatternRewriter &rewriter) const final {

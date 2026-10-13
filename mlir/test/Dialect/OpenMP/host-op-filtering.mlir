@@ -368,6 +368,32 @@ module attributes {omp.is_target_device = true} {
     llvm.return
   }
 
+  // The dyn_groupprivate modifiers must be removed along with the size, as the
+  // verifier rejects modifiers without a size operand.
+  // CHECK-LABEL: llvm.func @dyn_groupprivate
+  // CHECK-NOT: dyn_groupprivate
+  llvm.func @dyn_groupprivate(%arg0: i32, %arg1: i64) {
+    // CHECK: omp.target kernel_type(generic) {
+    omp.target kernel_type(generic) dyn_groupprivate(%arg0 : i32) {
+      omp.terminator
+    }
+    // CHECK: omp.target kernel_type(generic) {
+    omp.target kernel_type(generic) dyn_groupprivate(cgroup, %arg1 : i64) {
+      omp.terminator
+    }
+    // CHECK: omp.target kernel_type(generic) {
+    omp.target kernel_type(generic) dyn_groupprivate(fallback(abort), %arg0 : i32) {
+      omp.terminator
+    }
+    // CHECK: omp.target kernel_type(generic) {
+    omp.target kernel_type(generic) dyn_groupprivate(cgroup, fallback(null), %arg0 : i32) {
+      omp.terminator
+    }
+    // CHECK-NOT: dyn_groupprivate
+    // CHECK: llvm.return
+    llvm.return
+  }
+
   // CHECK-LABEL: llvm.func @private_with_map_idx
   // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: i64)
   llvm.func @private_with_map_idx(%arg0: !llvm.ptr, %arg1: i64) {
@@ -462,7 +488,7 @@ module attributes {omp.is_target_device = true} {
     llvm.return
   }
 
-  llvm.func @foo() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>, sym_visibility = "private"}
+  llvm.func @foo() attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>, sym_visibility = "private"}
   omp.private {type = firstprivate} @privatizer : i32 copy {
   ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     %0 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -489,16 +515,16 @@ module attributes {omp.is_target_device = true} {
   // CHECK: llvm.mlir.global external @declare_target_enter_any
   // CHECK: llvm.mlir.global external @declare_target_enter_host
   // CHECK: llvm.mlir.global external @declare_target_enter_nohost
-  llvm.mlir.global external @declare_target_enter_any() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false>} : i32
-  llvm.mlir.global external @declare_target_enter_host() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter), automap = false>} : i32
-  llvm.mlir.global external @declare_target_enter_nohost() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter), automap = false>} : i32
+  llvm.mlir.global external @declare_target_enter_any() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter, automap = false>} : i32
+  llvm.mlir.global external @declare_target_enter_host() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = enter, automap = false>} : i32
+  llvm.mlir.global external @declare_target_enter_nohost() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = enter, automap = false>} : i32
 
   // CHECK: llvm.mlir.global external @declare_target_link_any
   // CHECK: llvm.mlir.global external @declare_target_link_host
   // CHECK: llvm.mlir.global external @declare_target_link_nohost
-  llvm.mlir.global external @declare_target_link_any() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link), automap = false>} : i32
-  llvm.mlir.global external @declare_target_link_host() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (link), automap = false>} : i32
-  llvm.mlir.global external @declare_target_link_nohost() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (link), automap = false>} : i32
+  llvm.mlir.global external @declare_target_link_any() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link, automap = false>} : i32
+  llvm.mlir.global external @declare_target_link_host() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = link, automap = false>} : i32
+  llvm.mlir.global external @declare_target_link_nohost() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = link, automap = false>} : i32
 
   llvm.func @LangRTPlaceholderFunc(!llvm.ptr {llvm.nocapture}, !llvm.ptr {llvm.nocapture}, !llvm.ptr, i8 {llvm.signext}, i32) attributes {sym_visibility = "private"}
 }

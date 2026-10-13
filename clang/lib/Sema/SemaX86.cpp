@@ -343,6 +343,46 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
          << Arg->getSourceRange();
 }
 
+bool SemaX86::CheckBuiltinVUnpackBImm(CallExpr *TheCall) {
+  const unsigned ArgNum = 1;
+
+  // Note that we don't force a hard error on the range check here, allowing
+  // template-generated or macro-generated dead code to potentially have out-of-
+  // range values. These need to code generate, but don't need to necessarily
+  // make any sense. We use a warning that defaults to an error.
+  if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 63,
+                                      /*RangeIsError*/ false))
+    return true;
+
+  llvm::APSInt Result;
+
+  // We can't check the value of a dependent argument.
+  Expr *Arg = TheCall->getArg(ArgNum);
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  // Check constant-ness first.
+  if (SemaRef.BuiltinConstantArg(TheCall, ArgNum, Result))
+    return true;
+
+  uint64_t Imm = Result.getZExtValue();
+  // Skip reserved-encoding checks when the range check already diagnosed
+  // the immediate.
+  if (Imm > 63)
+    return false;
+
+  // Make sure size (imm[4:2]) and start (imm[1:0]) form a defined pairing.
+  unsigned Size = (Imm >> 2) & 0x7;
+  unsigned Start = Imm & 0x3;
+  if (Size == 2 || ((Size == 3 || Size == 4) && Start <= 1) ||
+      (Size >= 5 && Start == 0))
+    return false;
+
+  return Diag(TheCall->getBeginLoc(),
+              diag::err_x86_builtin_reserved_vunpackb_imm)
+         << toString(Result, 10) << Arg->getSourceRange();
+}
+
 // Check if the gather/scatter scale is legal.
 bool SemaX86::CheckBuiltinGatherScatterScale(unsigned BuiltinID,
                                              CallExpr *TheCall) {
@@ -721,6 +761,10 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     l = 0;
     u = 31;
     break;
+  case X86::BI__builtin_ia32_vunpackb128:
+  case X86::BI__builtin_ia32_vunpackb256:
+  case X86::BI__builtin_ia32_vunpackb512:
+    return CheckBuiltinVUnpackBImm(TheCall);
   case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmpss:
   case X86::BI__builtin_ia32_cmppd:

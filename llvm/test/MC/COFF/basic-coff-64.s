@@ -39,7 +39,7 @@ _main:                                  # @main
 // CHECK:     Name:                 .text
 // CHECK:     VirtualSize:          0
 // CHECK:     VirtualAddress:       0
-// CHECK:     RawDataSize:          [[TextSize:[0-9]+]]
+// CHECK:     RawDataSize:          0x[[#%X,TextSize:]]
 // CHECK:     PointerToRawData:     0x{{[0-9A-F]+}}
 // CHECK:     PointerToRelocations: 0x{{[0-9A-F]+}}
 // CHECK:     PointerToLineNumbers: 0x0
@@ -61,7 +61,7 @@ _main:                                  # @main
 // CHECK:     Name:                 .data
 // CHECK:     VirtualSize:          0
 // CHECK:     VirtualAddress:       0
-// CHECK:     RawDataSize:          [[DataSize:[0-9]+]]
+// CHECK:     RawDataSize:          0x[[#%X,DataSize:]]
 // CHECK:     PointerToRawData:     0x{{[0-9A-F]+}}
 // CHECK:     PointerToRelocations: 0x0
 // CHECK:     PointerToLineNumbers: 0x0
@@ -90,7 +90,7 @@ _main:                                  # @main
 // CHECK:     StorageClass:   Static
 // CHECK:     AuxSymbolCount: 1
 // CHECK:     AuxSectionDef {
-// CHECK:       Length: [[TextSize]]
+// CHECK:       Length: [[#%u,TextSize]]
 // CHECK:       RelocationCount: 2
 // CHECK:       LineNumberCount: 0
 // CHECK:       Checksum: 0x8E1B6D20
@@ -107,7 +107,7 @@ _main:                                  # @main
 // CHECK:     StorageClass:   Static
 // CHECK:     AuxSymbolCount: 1
 // CHECK:     AuxSectionDef {
-// CHECK:       Length: [[DataSize]]
+// CHECK:       Length: [[#%u,DataSize]]
 // CHECK:       RelocationCount: 0
 // CHECK:       LineNumberCount: 0
 // CHECK:       Checksum: 0x2B95CA92

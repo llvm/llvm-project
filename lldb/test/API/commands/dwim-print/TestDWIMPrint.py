@@ -79,7 +79,7 @@ class TestCase(TestBase):
         """Test dwim-print with expressions."""
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")
-        exprs = ("argc + 1", "(void)argc", "(int)abs(argc)")
+        exprs = ("argc + 1", "(void)argc", "(int)abs(argc)", "argc - 1", "argc > 1")
         for expr in exprs:
             self._expect_cmd(f"dwim-print {expr}", "expression")
 

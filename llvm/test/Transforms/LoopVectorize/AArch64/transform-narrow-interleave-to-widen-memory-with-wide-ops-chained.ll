@@ -665,10 +665,9 @@ define void @narrow_with_select_and_invariant_cond(ptr noalias %dst, ptr noalias
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP10:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP10]]
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP3]], align 4
 ; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP3]], align 4
 ; VF2-NEXT:    [[TMP4:%.*]] = xor <2 x i64> [[WIDE_LOAD1]], splat (i64 -1)
-; VF2-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[WIDE_LOAD]], <2 x i64> [[TMP4]]
+; VF2-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[WIDE_LOAD1]], <2 x i64> [[TMP4]]
 ; VF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP10]]
 ; VF2-NEXT:    store <2 x i64> [[TMP5]], ptr [[TMP6]], align 4
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1

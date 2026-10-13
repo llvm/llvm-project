@@ -20,10 +20,10 @@ define <16 x i32> @f1() {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    # implicit-def: $xmm1
-; CHECK-NEXT:    # implicit-def: $xmm1
-; CHECK-NEXT:    # implicit-def: $xmm1
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; CHECK-NEXT:    # implicit-def: $xmm2
+; CHECK-NEXT:    # implicit-def: $xmm3
+; CHECK-NEXT:    xorps %xmm4, %xmm4
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = xmm4[0],xmm0[1,2,3]
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_3

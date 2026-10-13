@@ -732,7 +732,7 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 !1 = !{!"branch_weights", i32 3, i32 5}
 !2 = !{!3}
 !3 = distinct !{!3, !4, !"scope1"}
-!4 = distinct !{!4, !"domain"}
+!4 = distinct !{!4, i1 false, !"domain"}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ;.
@@ -740,7 +740,7 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 3, i32 5}
 ; CHECK: [[META2]] = !{[[META3:![0-9]+]]}
 ; CHECK: [[META3]] = distinct !{[[META3]], [[META4:![0-9]+]], !"scope1"}
-; CHECK: [[META4]] = distinct !{[[META4]], !"domain"}
+; CHECK: [[META4]] = distinct !{[[META4]], i1 false, !"domain"}
 ; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
 ; CHECK: [[META6]] = distinct !{[[META6]], [[META4]], !"scope1:dfa"}
 ; CHECK: [[META7]] = !{[[META8:![0-9]+]]}

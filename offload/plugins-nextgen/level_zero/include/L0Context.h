@@ -15,25 +15,17 @@
 
 #include "APIHelpers.h"
 #include "L0Compat.h"
+#include "L0Defs.h"
 #include "L0Event.h"
 #include "L0Memory.h"
-#include "PerThreadTable.h"
 #include "level_zero/ze_api.h"
+
+#include <atomic>
 
 namespace llvm::omp::target::plugin {
 
 class LevelZeroPluginTy;
 class LevelZeroPluginContextTy;
-
-class L0ContextTLSTy {
-  StagingBufferTy StagingBuffer;
-
-public:
-  StagingBufferTy &getStagingBuffer() { return StagingBuffer; }
-  const StagingBufferTy &getStagingBuffer() const { return StagingBuffer; }
-
-  Error deinit() { return StagingBuffer.clear(); }
-};
 
 // Helper for managing Level Zero APIs.
 // It provides two interfaces - by default it tries to call the function
@@ -50,53 +42,55 @@ public:
 
   [[nodiscard]]
   bool available() const {
-    if (FuncPtr != nullptr)
-      return true;
-
-    return api_helper::canCall<Fn>();
+    return api_helper::canCall<Fn>() || ExperimentalFallbackPtr != nullptr;
   }
 
   explicit operator bool() const { return available(); }
 
-  template <typename... Args>
-  decltype(auto) operator()(Args &&...ArgsList) const {
+  template <typename... Args> decltype(auto) operator()(Args &&...ArgsList) {
     // Need to cast the type to avoid mismatch of return type deduction
     using ReturnTy = std::invoke_result_t<decltype(Fn), Args...>;
-    if (FuncPtr != nullptr)
-      return FuncPtr(std::forward<Args>(ArgsList)...);
 
-    if (!api_helper::canCall<Fn>())
+    if (!api_helper::canCall<Fn>() ||
+        AvailableButUnsupported.load(std::memory_order_relaxed)) {
+      if (ExperimentalFallbackPtr != nullptr) {
+        return ExperimentalFallbackPtr(std::forward<Args>(ArgsList)...);
+      }
+
       return static_cast<ReturnTy>(UnsupportedValue);
+    }
 
-    return Fn(std::forward<Args>(ArgsList)...);
+    auto Ret = Fn(std::forward<Args>(ArgsList)...);
+
+    if (Ret == UnsupportedValue) {
+      AvailableButUnsupported.store(true, std::memory_order_relaxed);
+
+      if (ExperimentalFallbackPtr != nullptr)
+        return ExperimentalFallbackPtr(std::forward<Args>(ArgsList)...);
+    }
+
+    return Ret;
   }
 
   bool loadExperimental(ze_driver_handle_t zeDriver, const char *FuncName) {
-    assert(!api_helper::canCall<Fn>() &&
-           "ZeDispatcher::loadExperimental called without "
-           "ZeDispatcher::available check!");
-
     ze_result_t Result = ZE_RESULT_SUCCESS;
-    CALL_ZE_RET(Result, zeDriverGetExtensionFunctionAddress, zeDriver, FuncName,
-                reinterpret_cast<void **>(&FuncPtr));
+    CALL_ZE(Result, zeDriverGetExtensionFunctionAddress, zeDriver, FuncName,
+            reinterpret_cast<void **>(&ExperimentalFallbackPtr));
 
-    if (Result != ZE_RESULT_SUCCESS || FuncPtr == nullptr)
+    if (Result != ZE_RESULT_SUCCESS || ExperimentalFallbackPtr == nullptr) {
+      ODBG(OLDT_ZeDispatcher) << "Failed to load experimental variant of "
+                              << __PRETTY_FUNCTION__ << "using: " << FuncName;
       return false;
+    }
 
+    ODBG(OLDT_ZeDispatcher) << "Loaded experimental variant of "
+                            << __PRETTY_FUNCTION__ << " using: " << FuncName;
     return true;
   }
 
 private:
-  decltype(Fn) FuncPtr = nullptr;
-};
-
-struct L0ContextTLSTableTy
-    : public PerThreadContainer<
-          std::unordered_map<ze_context_handle_t, L0ContextTLSTy>> {
-  Error deinit() {
-    return PerThreadTable::deinit(
-        [](L0ContextTLSTy &Entry) -> auto { return Entry.deinit(); });
-  }
+  std::atomic<bool> AvailableButUnsupported = false;
+  decltype(Fn) ExperimentalFallbackPtr = nullptr;
 };
 
 /// Driver and context-specific resources. We assume a single context per
@@ -108,11 +102,18 @@ class L0ContextTy {
   /// Level Zero Driver handle.
   ze_driver_handle_t zeDriver = nullptr;
 
+  uint32_t DriverId;
+
   /// Common Level Zero context.
   ze_context_handle_t zeContext = nullptr;
 
   /// API version supported by the Level Zero driver.
   ze_api_version_t APIVersion = ZE_API_VERSION_CURRENT;
+
+  /// Version of the Level Zero driver.
+  std::string DriverVersion;
+
+  Expected<std::string> tryGetIntelDriverVersion();
 
   /// Imported external pointers. Track this only for user-directed
   /// imports/releases.
@@ -150,8 +151,6 @@ public:
 
   LevelZeroPluginTy &getPlugin() const { return Plugin; }
 
-  StagingBufferTy &getStagingBuffer();
-
   /// Add imported external pointer region.
   void addImported(void *Ptr, size_t Size) {
     (void)ImportedPtrs.try_emplace(reinterpret_cast<uintptr_t>(Ptr), Size);
@@ -180,6 +179,8 @@ public:
 
   ze_driver_handle_t getZeDriver() const { return zeDriver; }
 
+  uint32_t getDriverId() const { return DriverId; }
+
   /// Return context associated with the driver.
   ze_context_handle_t getZeContext() const { return zeContext; }
 
@@ -190,6 +191,9 @@ public:
 
   /// Return driver API version.
   ze_api_version_t getDriverAPIVersion() const { return APIVersion; }
+
+  /// Return driver version.
+  const std::string &getDriverVersion() const { return DriverVersion; }
 
   /// Return the event pool of this driver.
   EventPoolTy &getEventPool() { return EventPool; }
@@ -207,9 +211,9 @@ public:
 
   ZeDispatcher<zeCommandListAppendLaunchKernelWithArguments>
       LaunchKernelWithArguments;
-  ZeDispatcher<zexKernelGetArgumentSize> KernelGetArgumentSize;
   ZeDispatcher<zeCommandListAppendHostFunction> CommandListAppendHostFunction;
   ZeDispatcher<zeDriverGetDefaultContext, nullptr> DriverGetDefaultContext;
+  ZeDispatcher<zeIntelGetDriverVersionString> IntelGetDriverVersionString;
 };
 
 } // namespace llvm::omp::target::plugin

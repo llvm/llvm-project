@@ -14,23 +14,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/support/CallableTraitsHelper.h"
+#include "orc-rt/support/Compiler.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
 
-static void freeVoidVoid() {}
+ORC_RT_MAYBE_UNUSED static void freeVoidVoid() {}
 
 TEST(CallableTraitsHelperTest, FreeVoidVoid) {
-  (void)freeVoidVoid;
   typedef CallableArgInfo<decltype(freeVoidVoid)> CAI;
   static_assert(std::is_void_v<CAI::return_type>);
   static_assert(std::is_same_v<CAI::args_tuple_type, std::tuple<>>);
 }
 
-static int freeBinaryOp(int, float) { return 0; }
+ORC_RT_MAYBE_UNUSED static int freeBinaryOp(int, float) { return 0; }
 
 TEST(CallableTraitsHelperTest, FreeBinaryOp) {
-  (void)freeBinaryOp;
   typedef CallableArgInfo<decltype(freeBinaryOp)> CAI;
   static_assert(std::is_same_v<CAI::return_type, int>);
   static_assert(std::is_same_v<CAI::args_tuple_type, std::tuple<int, float>>);
@@ -133,10 +132,9 @@ TEST(CallableTraitsHelperTest, AbominableFunctionTypeIsConst) {
 
 // noexcept coverage — mirrors the const-qualifier tests above.
 
-static void freeVoidVoidNoexcept() noexcept {}
+ORC_RT_MAYBE_UNUSED static void freeVoidVoidNoexcept() noexcept {}
 
 TEST(CallableTraitsHelperTest, FreeFunctionNoexcept) {
-  (void)freeVoidVoidNoexcept;
   static_assert(!CallableArgInfo<decltype(freeVoidVoid)>::is_noexcept);
   static_assert(CallableArgInfo<decltype(freeVoidVoidNoexcept)>::is_noexcept);
 }
