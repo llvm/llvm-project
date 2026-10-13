@@ -1837,23 +1837,15 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   if (!isa<VectorType>(V1->getType()) || V1->getType() != V2->getType())
     return false;
 
-  // Make sure the mask elements make sense.
-  int V1Size =
-      cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
-  // Avoid overflow issues. Enforce that (V1Size * 2) < INT_MAX because
-  // 1. V1Size is int here.
-  // 2. We should be able to refer to all the elements of the concatenated
-  //    vector, with max index being (V1Size * 2 - 1), as per langref.
-  if (V1Size > INT_MAX / 2 + 1)
-    return false;
-  int MaxElem = *max_element(Mask);
-  if (MaxElem != PoisonMaskElem && (MaxElem + 1) / 2 > V1Size)
-    return false;
-
   if (isa<ScalableVectorType>(V1->getType()))
-    if ((Mask[0] != 0 && Mask[0] != PoisonMaskElem) || !all_equal(Mask))
-      return false;
+    return (Mask[0] == 0 || Mask[0] == PoisonMaskElem) && all_equal(Mask);
 
+  // Make sure the mask elements make sense.
+  int64_t MaxMaskSz =
+      cast<FixedVectorType>(V1->getType())->getNumElements() * 2LL;
+  for (int Elem : Mask)
+    if (Elem != PoisonMaskElem && Elem >= MaxMaskSz)
+      return false;
   return true;
 }
 
@@ -1961,7 +1953,7 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
   return ConstantVector::get(MaskConst);
 }
 
-static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
+static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int64_t NumOpElts) {
   assert(!Mask.empty() && "Shuffle mask must contain elements");
   bool UsesLHS = false;
   bool UsesRHS = false;
@@ -3504,8 +3496,15 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
       return false;
     return SrcTy->isIntOrIntVectorTy() && DstTy->isPtrOrPtrVectorTy();
   case Instruction::BitCast: {
-    PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcTy->getScalarType());
-    PointerType *DstPtrTy = dyn_cast<PointerType>(DstTy->getScalarType());
+    Type *SrcScalarTy = SrcTy->getScalarType();
+    if (SrcScalarTy->isTargetExtTy() || !SrcScalarTy->isSingleValueType())
+      return false;
+    Type *DstScalarTy = DstTy->getScalarType();
+    if (DstScalarTy->isTargetExtTy() || !DstScalarTy->isSingleValueType())
+      return false;
+
+    PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcScalarTy);
+    PointerType *DstPtrTy = dyn_cast<PointerType>(DstScalarTy);
 
     // BitCast implies a no-op cast of type only. No bits change.
     // However, you can't cast pointers to anything but pointers/bytes.

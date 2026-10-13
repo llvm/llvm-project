@@ -1,8 +1,14 @@
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
+set(LLVM_TARGET_DEFINITIONS PassesOptions.td)
+tablegen(LLVM PassesOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(PassesOptionsTableGen)
+
 add_llvm_component_library(LLVMPasses
   CodeGenPassBuilder.cpp
   PassBuilder.cpp
   PassBuilderBindings.cpp
   PassBuilderPipelines.cpp
+  PassesOptions.cpp
   RunCodeGen.cpp
   StandardInstrumentations.cpp
   TriggerCrashPasses.cpp
@@ -12,6 +18,7 @@ add_llvm_component_library(LLVMPasses
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Passes
 
   DEPENDS
+  PassesOptionsTableGen
   intrinsics_gen
 
   LINK_COMPONENTS
@@ -28,6 +35,7 @@ add_llvm_component_library(LLVMPasses
   InstCombine
   IRPrinter
   ObjCARC
+  Option
   Scalar
   Support
   Target

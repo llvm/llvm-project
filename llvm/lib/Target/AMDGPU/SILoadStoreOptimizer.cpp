@@ -949,10 +949,6 @@ char SILoadStoreOptimizerLegacy::ID = 0;
 
 char &llvm::SILoadStoreOptimizerLegacyID = SILoadStoreOptimizerLegacy::ID;
 
-FunctionPass *llvm::createSILoadStoreOptimizerLegacyPass() {
-  return new SILoadStoreOptimizerLegacy();
-}
-
 static void addDefsUsesToList(const MachineInstr &MI,
                               DenseSet<Register> &RegDefs,
                               DenseSet<Register> &RegUses) {

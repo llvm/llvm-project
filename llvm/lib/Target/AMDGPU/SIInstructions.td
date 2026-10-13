@@ -3999,7 +3999,8 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 0), (i16 VGPR_16:$src1))),
-  (v2i16 (V_LSHLREV_B32_e64 (i16 16), VGPR_16:$src1))
+  (v2i16 (V_LSHLREV_B32_e64 (i32 16),
+    (i32 (REG_SEQUENCE VGPR_32, VGPR_16:$src1, lo16, (i16 (IMPLICIT_DEF)), hi16))))
 >;
 
 def : GCNPat <

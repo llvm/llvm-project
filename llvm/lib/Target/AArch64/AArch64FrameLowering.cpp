@@ -249,7 +249,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -265,43 +264,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "frame-info"
-
-static cl::opt<bool> EnableRedZone("aarch64-redzone",
-                                   cl::desc("enable use of redzone on AArch64"),
-                                   cl::init(false), cl::Hidden);
-
-static cl::opt<bool> StackTaggingMergeSetTag(
-    "stack-tagging-merge-settag",
-    cl::desc("merge settag instruction in function epilog"), cl::init(true),
-    cl::Hidden);
-
-static cl::opt<bool> OrderFrameObjects("aarch64-order-frame-objects",
-                                       cl::desc("sort stack allocations"),
-                                       cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    SplitSVEObjects("aarch64-split-sve-objects",
-                    cl::desc("Split allocation of ZPR & PPR objects"),
-                    cl::init(true), cl::Hidden);
-
-cl::opt<bool> EnableHomogeneousPrologEpilog(
-    "homogeneous-prolog-epilog", cl::Hidden,
-    cl::desc("Emit homogeneous prologue and epilogue for the size "
-             "optimization (default = off)"));
-
-// Stack hazard size for analysis remarks. StackHazardSize takes precedence.
-static cl::opt<unsigned>
-    StackHazardRemarkSize("aarch64-stack-hazard-remark-size", cl::init(0),
-                          cl::Hidden);
-// Whether to insert padding into non-streaming functions (for testing).
-static cl::opt<bool>
-    StackHazardInNonStreaming("aarch64-stack-hazard-in-non-streaming",
-                              cl::init(false), cl::Hidden);
-
-static cl::opt<bool> DisableMultiVectorSpillFill(
-    "aarch64-disable-multivector-spill-fill",
-    cl::desc("Disable use of LD/ST pairs for SME2 or SVE2p1"), cl::init(false),
-    cl::Hidden);
 
 int64_t
 AArch64FrameLowering::getArgumentStackToRestore(MachineFunction &MF,
@@ -405,9 +367,11 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
     MachineFunction &MF, MachineBasicBlock *Exit) const {
   if (!MF.getFunction().hasMinSize())
     return false;
-  if (!EnableHomogeneousPrologEpilog)
+  const AArch64Options &CLOpts =
+      MF.getSubtarget<AArch64Subtarget>().getCLOpts();
+  if (!CLOpts.homogeneous_prolog_epilog)
     return false;
-  if (EnableRedZone)
+  if (CLOpts.redzone)
     return false;
 
   // TODO: Window is supported yet.
@@ -536,7 +500,7 @@ AArch64FrameLowering::getFixedObjectSize(const MachineFunction &MF,
 }
 
 bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
-  if (!EnableRedZone)
+  if (!MF.getSubtarget<AArch64Subtarget>().getCLOpts().redzone)
     return false;
 
   // Don't use the red zone if the function explicitly asks us not to.
@@ -992,17 +956,11 @@ bool AArch64FrameLowering::canUseAsPrologue(
   return true;
 }
 
-bool AArch64FrameLowering::needsWinCFI(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  return MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
-         F.needsUnwindTableEntry();
-}
-
 bool AArch64FrameLowering::shouldSignReturnAddressEverywhere(
     const MachineFunction &MF) const {
   // FIXME: With WinCFI, extra care should be taken to place SEH_PACSignLR
   //        and SEH_EpilogEnd instructions in the correct order.
-  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
+  if (MF.usesWindowsUnwindInfo())
     return false;
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   return AFI->getSignReturnAddressCondition() == SignReturnAddress::All;
@@ -1692,7 +1650,7 @@ MCRegister findFreePredicateReg(BitVector &SavedRegs) {
 // The multivector LD/ST are available only for SME or SVE2p1 targets
 bool enableMultiVectorSpillFill(const AArch64Subtarget &Subtarget,
                                 MachineFunction &MF) {
-  if (DisableMultiVectorSpillFill)
+  if (Subtarget.getCLOpts().disable_multivector_spill_fill)
     return false;
 
   SMEAttrs FuncAttrs = MF.getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
@@ -1720,6 +1678,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
   const AArch64InstrInfo *TII =
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   bool IsWindows = isTargetWindows(MF);
+  bool NeedsWinCFI = MF.needsWinCFI();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   unsigned StackHazardSize = getStackHazardSize(MF);
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1823,7 +1782,6 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       ByteOffset += StackFillDir * StackHazardSize;
     LastReg = RPI.Reg1;
 
-    bool NeedsWinCFI = AFL.needsWinCFI(MF);
     int Scale = TRI->getSpillSize(*RPI.RC);
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
@@ -2015,7 +1973,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   auto &TLI = *Subtarget.getTargetLowering();
   const AArch64InstrInfo &TII = *Subtarget.getInstrInfo();
-  bool NeedsWinCFI = needsWinCFI(MF);
+  bool NeedsWinCFI = MF.needsWinCFI();
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
 
@@ -2236,7 +2194,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       *MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
-  bool NeedsWinCFI = needsWinCFI(MF);
+  bool NeedsWinCFI = MF.needsWinCFI();
 
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
@@ -2420,7 +2378,10 @@ void AArch64FrameLowering::determineStackHazardSlot(
 
   // Stack hazards are only needed in streaming functions.
   SMEAttrs Attrs = AFI->getSMEFnAttrs();
-  if (!StackHazardInNonStreaming && Attrs.hasNonStreamingInterfaceAndBody())
+  const AArch64Options &CLOpts =
+      MF.getSubtarget<AArch64Subtarget>().getCLOpts();
+  if (!CLOpts.stack_hazard_in_non_streaming &&
+      Attrs.hasNonStreamingInterfaceAndBody())
     return;
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -2437,7 +2398,7 @@ void AArch64FrameLowering::determineStackHazardSlot(
   });
   bool HasFPRStackObjects = false;
   bool HasPPRStackObjects = false;
-  if (!HasFPRCSRs || SplitSVEObjects) {
+  if (!HasFPRCSRs || CLOpts.split_sve_objects) {
     enum SlotType : uint8_t {
       Unknown = 0,
       ZPRorFPR = 1 << 0,
@@ -2486,7 +2447,7 @@ void AArch64FrameLowering::determineStackHazardSlot(
   if (!AFI->hasStackHazardSlotIndex())
     return;
 
-  if (SplitSVEObjects) {
+  if (CLOpts.split_sve_objects) {
     CallingConv::ID CC = MF.getFunction().getCallingConv();
     if (AFI->isSVECC() || CC == CallingConv::AArch64_SVE_VectorCall) {
       AFI->setSplitSVEObjects(true);
@@ -3674,9 +3635,12 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
 
 void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
     MachineFunction &MF, RegScavenger *RS = nullptr) const {
+  bool MergeSetTag = MF.getSubtarget<AArch64Subtarget>()
+                         .getCLOpts()
+                         .stack_tagging_merge_settag;
   for (auto &BB : MF)
     for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();) {
-      if (StackTaggingMergeSetTag)
+      if (MergeSetTag)
         II = tryMergeAdjacentSTG(II, this, RS);
     }
 
@@ -3808,7 +3772,8 @@ void AArch64FrameLowering::orderFrameObjects(
     const MachineFunction &MF, SmallVectorImpl<int> &ObjectsToAllocate) const {
   const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
 
-  if ((!OrderFrameObjects && !AFI.hasSplitSVEObjects()) ||
+  if ((!MF.getSubtarget<AArch64Subtarget>().getCLOpts().order_frame_objects &&
+       !AFI.hasSplitSVEObjects()) ||
       ObjectsToAllocate.empty())
     return;
 
@@ -4165,9 +4130,11 @@ void AArch64FrameLowering::emitRemarks(
   if (AFI->getSMEFnAttrs().hasNonStreamingInterfaceAndBody())
     return;
 
-  unsigned StackHazardSize = getStackHazardSize(MF);
-  const uint64_t HazardSize =
-      (StackHazardSize) ? StackHazardSize : StackHazardRemarkSize;
+  uint64_t HazardSize = getStackHazardSize(MF);
+  if (!HazardSize)
+    HazardSize = MF.getSubtarget<AArch64Subtarget>()
+                     .getCLOpts()
+                     .stack_hazard_remark_size;
 
   if (HazardSize == 0)
     return;

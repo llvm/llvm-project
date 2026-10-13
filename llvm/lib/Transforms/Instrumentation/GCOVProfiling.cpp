@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -30,7 +31,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CRC.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -60,13 +60,6 @@ enum : uint32_t {
   GCOV_TAG_LINES = 0x01450000,
 };
 
-static cl::opt<std::string> DefaultGCOVVersion("default-gcov-version",
-                                               cl::init("0000"), cl::Hidden,
-                                               cl::ValueRequired);
-
-static cl::opt<bool> AtomicCounter("gcov-atomic-counter", cl::Hidden,
-                                   cl::desc("Make counter updates atomic"));
-
 // Returns the number of words which will be used to represent this string.
 static unsigned wordsOfString(StringRef s) {
   // Length + NUL-terminated string + 0~3 padding NULs.
@@ -78,13 +71,14 @@ GCOVOptions GCOVOptions::getDefault() {
   Options.EmitNotes = true;
   Options.EmitData = true;
   Options.NoRedZone = false;
-  Options.Atomic = AtomicCounter;
+  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  Options.Atomic = Opts.gcov_atomic_counter;
 
-  if (DefaultGCOVVersion.size() != 4) {
+  if (Opts.default_gcov_version.size() != 4) {
     reportFatalUsageError(Twine("Invalid -default-gcov-version: ") +
-                          DefaultGCOVVersion);
+                          Opts.default_gcov_version);
   }
-  memcpy(Options.Version, DefaultGCOVVersion.c_str(), 4);
+  memcpy(Options.Version, Opts.default_gcov_version.data(), 4);
   return Options;
 }
 

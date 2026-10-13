@@ -9,6 +9,7 @@
 #include "Descriptor.h"
 #include "Boolean.h"
 #include "Char.h"
+#include "ExprConstShared.h"
 #include "FixedPoint.h"
 #include "Floating.h"
 #include "Integral.h"
@@ -20,6 +21,8 @@
 #include "Reflect.h"
 #include "Source.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -456,17 +459,8 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
     return ElemType;
   };
 
-  if (const auto *E = asExpr()) {
-    if (isa<CXXNewExpr>(E))
-      return MakeArrayType(E->getType()->getPointeeType());
-
-    // std::allocator.allocate() call.
-    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
-        ME && ME->getRecordDecl()->getName() == "allocator" &&
-        ME->getMethodDecl()->getName() == "allocate")
-      return MakeArrayType(E->getType()->getPointeeType());
-    return E->getType();
-  }
+  if (isDynAlloc())
+    return MakeArrayType(asExpr()->getType()->getPointeeType());
 
   return getType();
 }
@@ -504,4 +498,24 @@ unsigned Descriptor::getElemDataSize() const {
     FIXED_SIZE_INT_TYPE_SWITCH(getPrimType(), { return T::bitWidth() / 8; });
   }
   return ElemSize;
+}
+
+DynAllocKind Descriptor::getDynAllocKindForExpr(const Expr *E) {
+  // new or new[] expression
+  if (const auto *NE = dyn_cast<CXXNewExpr>(E))
+    return NE->isArray() ? DynAllocKind::ArrayNew : DynAllocKind::New;
+  // std::allocator::allocate call
+  if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+      ME && ME->getRecordDecl()->getName() == "allocator" &&
+      ME->getMethodDecl()->getName() == "allocate")
+    return DynAllocKind::StdAllocator;
+  // __builtin_operator_new call
+  if (const auto *CE = dyn_cast<CallExpr>(E);
+      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_operator_new)
+    return DynAllocKind::BuiltinOperatorNew;
+  return DynAllocKind::None;
+}
+
+CharUnits Descriptor::computeAlignForDynamicAlloc(const ASTContext &Ctx) const {
+  return GetAlignOfDynamicAlloc(Ctx, getDataType(Ctx), getDynAllocKind());
 }
