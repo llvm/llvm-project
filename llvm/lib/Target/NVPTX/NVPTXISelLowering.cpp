@@ -4186,7 +4186,8 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   StoreSDNode *Store = cast<StoreSDNode>(Op);
   EVT VT = Store->getMemoryVT();
 
-  if (VT == MVT::i1)
+  // Leave truncating stores to i1 to the generic legalizer.
+  if (VT == MVT::i1 && !Store->isTruncatingStore())
     return LowerSTOREi1(Op, DAG);
 
   // Lower store of any other vector type, including v2f32 as we want to break
