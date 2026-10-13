@@ -657,7 +657,7 @@ struct VPlanTransforms {
   /// If narrowing is only profitable for a subset of VFs in \p Range, Range.End
   /// is updated.
   static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
-                                       PredicatedScalarEvolution &PSE);
+                                       VPCostContext &Ctx);
 };
 
 } // namespace llvm
