@@ -111,6 +111,18 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
 
+static cl::opt<bool> StrictAbs(
+    "nvptx-strict-abs", cl::Hidden,
+    cl::desc("NVPTX Specific: Lower floating-point absolute value to bitwise "
+             "operations to preserve NaNs"),
+    cl::init(false));
+
+static cl::opt<bool> StrictNeg(
+    "nvptx-strict-neg", cl::Hidden,
+    cl::desc("NVPTX Specific: Lower floating-point negation to bitwise "
+             "operations to preserve NaNs"),
+    cl::init(false));
+
 // PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
 // (see shouldExpandAtomicRMWInIR), so we'd normally fall back to a CAS loop
 // when they disagree. This option (enabled by default) allows using atom.add
@@ -972,6 +984,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setBF16OperationAction(ISD::FNEG, MVT::bf16, Legal, Expand);
   setBF16OperationAction(ISD::FNEG, MVT::v2bf16, Legal, Expand);
   setOperationAction(ISD::FNEG, MVT::v2f32, Expand);
+  if (StrictNeg)
+    setOperationAction(
+        ISD::FNEG,
+        {MVT::f16, MVT::v2f16, MVT::bf16, MVT::v2bf16, MVT::f32, MVT::f64},
+        Expand);
   // (would be) Library functions.
 
   // These map to conversion instructions for scalar FP types.
@@ -1089,6 +1106,15 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setBF16OperationAction(ISD::FABS, MVT::bf16, Legal, Promote);
   if (getOperationAction(ISD::FABS, MVT::bf16) == Promote)
     AddPromotedToType(ISD::FABS, MVT::bf16, MVT::f32);
+
+  // PTX abs instructions may canonicalize NaNs. Use bitwise operations to
+  // preserve every bit except the sign, including when native f16/bf16
+  // arithmetic is unavailable.
+  if (StrictAbs)
+    setOperationAction(
+        ISD::FABS,
+        {MVT::f16, MVT::v2f16, MVT::bf16, MVT::v2bf16, MVT::f32, MVT::f64},
+        Expand);
 
   for (const auto &Op :
        {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}) {
