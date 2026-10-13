@@ -519,6 +519,21 @@ define i32 @ctpop_add_no_common_bits_shifted(i32 %x) {
   ret i32 %r
 }
 
+define <4 x i32> @ctpop_add_no_common_bits_shifted_vec(<4 x i32> %x) {
+; CHECK-LABEL: @ctpop_add_no_common_bits_shifted_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 255)
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 9) <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %lo = and <4 x i32> %x, splat (i32 15)
+  %c0 = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %lo)
+  %s = lshr <4 x i32> %x, splat (i32 4)
+  %hi = and <4 x i32> %s, splat (i32 15)
+  %c1 = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %hi)
+  %r = add <4 x i32> %c0, %c1
+  ret <4 x i32> %r
+}
+
 ; TODO: We can combine these two ctpops through the truncs
 
 define i32 @ctpop_add_no_common_bits_shifted_trunc(i64 %x) {
