@@ -5552,11 +5552,7 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
     if (S.isDead())
       return true;
     auto *U = S.getUse();
-    if (!U)
-      return true;
-
-    User *Usr = U->getUser();
-    return isa<LifetimeIntrinsic, MemIntrinsic>(Usr);
+    return !U || isa<LifetimeIntrinsic, MemIntrinsic>(U->getUser());
   };
 
   for (const Slice &S : P)
