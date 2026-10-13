@@ -211,7 +211,7 @@ define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v1.l
-; GFX12-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
+; GFX12-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0xff
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -254,7 +254,7 @@ define b32 @test_bitinsert_b32_off8(b32 %base, i8 %val) {
 ; GFX12-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
-; GFX12-NEXT:    v_and_or_b32 v0, 0xffff00ff, v0, v1
+; GFX12-NEXT:    v_and_or_b32 v0, v0, 0xffff00ff, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = bitinsert b32 %base, i8 %val, i32 8
   ret b32 %result

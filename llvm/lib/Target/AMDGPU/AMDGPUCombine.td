@@ -228,8 +228,7 @@ def fmin_ieee_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINNUM_IEEE>;
 class combine_binop_s64_with_s32_mask<Instruction opcode> : GICombineRule<
   (defs root:$dst),
   (match (opcode $dst, i64:$x, i64:$y):$dst,
-         [{ return Helper.matchConstantIs32BitMask(${x}.getReg()) ||
-                   Helper.matchConstantIs32BitMask(${y}.getReg()); }]),
+         [{ return Helper.matchBinopWith32BitMask(${x}.getReg(), ${y}.getReg()); }]),
   (apply (G_UNMERGE_VALUES i32:$x_lo, i32:$x_hi, $x),
          (G_UNMERGE_VALUES i32:$y_lo, i32:$y_hi, $y),
          (opcode i32:$lo, $x_lo, $y_lo),
