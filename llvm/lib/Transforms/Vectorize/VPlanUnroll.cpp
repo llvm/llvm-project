@@ -991,14 +991,14 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       if (!vputils::onlyScalarValuesUsed(DefR)) {
         DefR->replaceUsesWithIf(
             Builder.createNaryOp(VPInstruction::BuildVector, LaneDefs),
-            [DefR](VPUser &U) { return !U.usesScalars(DefR); });
+            [DefR](VPUser *U) { return !U->usesScalars(DefR); });
       }
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
-      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U) {
-        if (U.usesFirstLaneOnly(DefR))
+      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser *U) {
+        if (U->usesFirstLaneOnly(DefR))
           return true;
-        auto *VPI = dyn_cast<VPInstruction>(&U);
+        auto *VPI = dyn_cast<VPInstruction>(U);
         return VPI && Instruction::isCast(VPI->getOpcode());
       });
       ToRemove.push_back(DefR);
