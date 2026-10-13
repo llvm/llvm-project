@@ -639,18 +639,14 @@ define void@sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
 ; CHECK-NEXT:    [[TMP79:%.*]] = load double, ptr [[TMP65]], align 8, !alias.scope [[META17]]
 ; CHECK-NEXT:    [[TMP80:%.*]] = insertelement <2 x double> poison, double [[TMP78]], i64 0
 ; CHECK-NEXT:    [[TMP81:%.*]] = insertelement <2 x double> [[TMP80]], double [[TMP79]], i64 1
-; CHECK-NEXT:    [[TMP82:%.*]] = shufflevector <2 x double> zeroinitializer, <2 x double> [[TMP69]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP82]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> [[TMP69]])
 ; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP38]], align 8, !alias.scope [[META20:![0-9]+]], !noalias [[META17]]
-; CHECK-NEXT:    [[TMP83:%.*]] = shufflevector <2 x double> zeroinitializer, <2 x double> [[TMP73]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC17:%.*]] = shufflevector <4 x double> [[TMP83]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC17]], ptr [[TMP39]], align 8, !alias.scope [[META20]], !noalias [[META17]]
-; CHECK-NEXT:    [[TMP84:%.*]] = shufflevector <2 x double> zeroinitializer, <2 x double> [[TMP77]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC18:%.*]] = shufflevector <4 x double> [[TMP84]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC18]], ptr [[TMP40]], align 8, !alias.scope [[META20]], !noalias [[META17]]
-; CHECK-NEXT:    [[TMP85:%.*]] = shufflevector <2 x double> zeroinitializer, <2 x double> [[TMP81]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC19:%.*]] = shufflevector <4 x double> [[TMP85]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC19]], ptr [[TMP41]], align 8, !alias.scope [[META20]], !noalias [[META17]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC11:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> [[TMP73]])
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC11]], ptr [[TMP39]], align 8, !alias.scope [[META20]], !noalias [[META17]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC12:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> [[TMP77]])
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC12]], ptr [[TMP40]], align 8, !alias.scope [[META20]], !noalias [[META17]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC13:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> [[TMP81]])
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC13]], ptr [[TMP41]], align 8, !alias.scope [[META20]], !noalias [[META17]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD_3]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP86:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -690,9 +686,8 @@ define void@sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
 ; CHECK-NEXT:    [[TMP101:%.*]] = load double, ptr [[TMP99]], align 8, !alias.scope [[META17]]
 ; CHECK-NEXT:    [[TMP102:%.*]] = insertelement <2 x double> poison, double [[TMP100]], i64 0
 ; CHECK-NEXT:    [[TMP103:%.*]] = insertelement <2 x double> [[TMP102]], double [[TMP101]], i64 1
-; CHECK-NEXT:    [[TMP104:%.*]] = shufflevector <2 x double> zeroinitializer, <2 x double> [[TMP103]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC26:%.*]] = shufflevector <4 x double> [[TMP104]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC26]], ptr [[TMP93]], align 8, !alias.scope [[META20]], !noalias [[META17]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC19:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> [[TMP103]])
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC19]], ptr [[TMP93]], align 8, !alias.scope [[META20]], !noalias [[META17]]
 ; CHECK-NEXT:    [[INDEX_NEXT27]] = add nuw i64 [[INDEX24]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT28]] = add <2 x i32> [[VEC_IND25]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP105:%.*]] = icmp eq i64 [[INDEX_NEXT27]], [[N_VEC23]]
