@@ -2596,7 +2596,7 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
     return IC.replaceInstUsesWith(FI, ConstantInt::getNullValue(FI.getType()));
 
   // fpto{u/s}i (trunc X) --> fpto{u/s}i X
-  Value *Src = nullptr;
+  Value *Src;
   if (match(FI.getOperand(0), m_Intrinsic<Intrinsic::trunc>(m_Value(Src))))
     return IC.replaceOperand(FI, 0, Src);
 

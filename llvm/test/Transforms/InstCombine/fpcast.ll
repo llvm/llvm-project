@@ -864,8 +864,7 @@ define i32 @fptosi_trunc_multi_use(float %x) {
 
 define i32 @fptoui_trunc_fmf(float %x) {
 ; CHECK-LABEL: @fptoui_trunc_fmf(
-; CHECK-NEXT:    [[T:%.*]] = call nnan ninf nsz float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fptoui float [[T]] to i32
+; CHECK-NEXT:    [[R:%.*]] = fptoui float [[T:%.*]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = call nnan ninf nsz float @llvm.trunc.f32(float %x)
@@ -875,8 +874,7 @@ define i32 @fptoui_trunc_fmf(float %x) {
 
 define i32 @fptosi_trunc_fmf(float %x) {
 ; CHECK-LABEL: @fptosi_trunc_fmf(
-; CHECK-NEXT:    [[T:%.*]] = call nnan ninf nsz float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fptosi float [[T]] to i32
+; CHECK-NEXT:    [[R:%.*]] = fptosi float [[T:%.*]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = call nnan ninf nsz float @llvm.trunc.f32(float %x)
