@@ -1,0 +1,74 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -amdgpu-disable-rewrite-mfma-form-sched-stage=false -o - %s | FileCheck %s
+
+# %20 is the head of the MFMA chain and its result is read by a V_ADD_U32,
+# which is neither an MFMA nor a COPY. That use does not forbid the AGPR form,
+# it only needs a bridge copy, so %20 must be rewritten along with the rest of
+# the chain.
+
+--- |
+  define void @dst_used_by_valu() #0 {
+  entry:
+    unreachable
+  }
+
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64"}
+...
+
+---
+name:            dst_used_by_valu
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    workGroupIDX:    { reg: '$sgpr6' }
+    privateSegmentWaveByteOffset: { reg: '$sgpr7' }
+    workItemIDX:     { reg: '$vgpr0' }
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; All four MFMAs move to AGPR form, and the V_ADD_U32 reads through a copy.
+  ; CHECK-LABEL: name: dst_used_by_valu
+  ; CHECK-COUNT-4: areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64
+  ; CHECK-NOT: V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64
+  ; CHECK: V_ADD_U32_e32
+  bb.0:
+   liveins: $vgpr0, $sgpr4_sgpr5
+    %0:vreg_1024 = IMPLICIT_DEF
+    %1:vreg_1024 = IMPLICIT_DEF
+    %2:vreg_1024 = IMPLICIT_DEF
+    %3:vreg_1024 = IMPLICIT_DEF
+    %4:vreg_1024 = IMPLICIT_DEF
+    %5:vreg_1024 = IMPLICIT_DEF
+    %6:vreg_1024 = IMPLICIT_DEF
+    %7:vreg_512 = IMPLICIT_DEF
+    %8:vreg_64 = IMPLICIT_DEF
+    %9:vgpr_32 = IMPLICIT_DEF
+    %10:vreg_128 = IMPLICIT_DEF
+    %11:vreg_256 = IMPLICIT_DEF
+    S_NOP 0, implicit-def %12:av_512
+    S_NOP 0, implicit-def %13:av_512
+    SCHED_BARRIER 0
+    %14:av_128_align2 = IMPLICIT_DEF
+    %15:av_128_align2 = IMPLICIT_DEF
+    %16:vreg_128_align2 = IMPLICIT_DEF
+    %17:vreg_64_align2 = IMPLICIT_DEF
+    %18:vgpr_32 = IMPLICIT_DEF
+    %19:vreg_128_align2 = IMPLICIT_DEF
+
+  bb.1:
+    %20:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %14, %15, %19, 4, 4, %17.sub0, %18, 0, 0, implicit $mode, implicit $exec
+    %21:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %14, %15, %20, 4, 4, %17.sub0, %18, 0, 0, implicit $mode, implicit $exec
+    %22:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %14, %15, %21, 4, 4, %17.sub0, %18, 0, 0, implicit $mode, implicit $exec
+    %23:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %14, %15, %22, 4, 4, %17.sub0, %18, 0, 0, implicit $mode, implicit $exec
+
+  bb.2:
+    undef %24.sub0:vreg_128_align2 = V_ADD_U32_e32 %20.sub0, %18, implicit $exec
+    %25:vreg_128_align2 = COPY %23
+    SCHED_BARRIER 0
+    KILL %0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %16, %24, %25
+    S_NOP 0, implicit %12, implicit %13
+    S_ENDPGM 0
+...
