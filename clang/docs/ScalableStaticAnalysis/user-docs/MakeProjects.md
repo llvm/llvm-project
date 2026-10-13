@@ -12,9 +12,9 @@ step:
 - A **compilation** gets a second compilation — the frontend job the build's
   own compiler said it would run, with the `--ssaf-*` options appended and
   nothing taken away, so extraction sees exactly what the build compiles.
-- A **link** gets a `clang-ssaf-linker` invocation over the summaries of what
-  went into it. It is not a copy of the build's command and carries no
-  `--ssaf-*` options.
+- An **archive** and a **link** get a `clang-ssaf-linker`
+  invocation over the summaries of what went into them. These are not copies
+  of the build's command and carry no `--ssaf-*` options.
 
 The mapping onto the SSAF tools is direct:
 
@@ -27,8 +27,10 @@ The mapping onto the SSAF tools is direct:
    * - ``$(CXX) -c -o parser.o parser.cpp``
      - ``clang -cc1 … -o parser.o -x c++ parser.cpp
        --ssaf-extract-summaries=…``
-   * - ``$(CXX) -o app main.o parser.o``
-     - ``clang-ssaf-linker main.json parser.json``
+   * - ``$(AR) rcs libparse.a parser.o lexer.o``
+     - ``clang-ssaf-linker static-library create parser.json lexer.json``
+   * - ``$(CXX) -o app main.o libparse.a``
+     - ``clang-ssaf-linker main.json libparse.json``
 ```
 
 ## Usage
@@ -199,7 +201,7 @@ either way.
 ## Interposition
 
 The orchestrator populates `<output-dir>/shims/` with links named after the
-tools a build invokes — `cc`, `clang`, `c++`, `clang++` and `ld` —
+tools a build invokes — `cc`, `clang`, `c++`, `clang++`, `ld` and `ar` —
 each pointing at the shim that stands in for it, and prepends that
 directory to `PATH`. It also puts the path of a configuration file in
 `SSAF_CONFIG`.
