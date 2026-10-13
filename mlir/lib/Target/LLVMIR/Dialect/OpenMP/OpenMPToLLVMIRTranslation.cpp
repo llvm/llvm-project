@@ -81,9 +81,9 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPAllocStackFrame)
 
   explicit OpenMPAllocStackFrame(
-      llvm::OpenMPIRBuilder::InsertPointTy allocaIP,
+      llvm::BasicBlock *allocBlock,
       llvm::ArrayRef<llvm::BasicBlock *> deallocBlocks)
-      : allocBlock(allocaIP.getNodeParent()), deallocBlocks(deallocBlocks) {}
+      : allocBlock(allocBlock), deallocBlocks(deallocBlocks) {}
   llvm::BasicBlock *allocBlock;
   llvm::SmallVector<llvm::BasicBlock *> deallocBlocks;
 };
@@ -2670,7 +2670,7 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP,
                     llvm::ArrayRef<llvm::BasicBlock *> deallocBlocks) {
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
-        moduleTranslation, allocaIP, deallocBlocks);
+        moduleTranslation, allocaIP.getNodeParent(), deallocBlocks);
     builder.restoreIP(codegenIP);
     return convertOmpOpRegions(op.getRegion(), "omp.teams.region", builder,
                                moduleTranslation)
@@ -3374,7 +3374,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   // Save the alloca insertion point on ModuleTranslation stack for use in
   // nested regions.
   LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
-      moduleTranslation, allocaIP, deallocBlocks);
+      moduleTranslation, allocaIP.getNodeParent(), deallocBlocks);
 
   // Allocate and initialize private variables
   builder.SetInsertPoint(initBlock->getTerminator());
@@ -3465,7 +3465,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     // Save the alloca insertion point on ModuleTranslation stack for use in
     // nested regions.
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
-        moduleTranslation, allocaIP, deallocBlocks);
+        moduleTranslation, allocaIP.getNodeParent(), deallocBlocks);
 
     // translate the body of the task:
     builder.restoreIP(codegenIP);
@@ -3856,7 +3856,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
       splitBB(builder, /*CreateBranch=*/true, "omp.private.init");
 
   LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
-      moduleTranslation, allocaIP, deallocBlocks);
+      moduleTranslation, allocaIP.getNodeParent(), deallocBlocks);
 
   // Allocate and initialize private variables
   builder.SetInsertPoint(initBlock->getTerminator());
@@ -3984,7 +3984,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
     // Save the alloca insertion point on ModuleTranslation stack for use in
     // nested regions.
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
-        moduleTranslation, allocaIP, deallocBlocks);
+        moduleTranslation, allocaIP.getNodeParent(), deallocBlocks);
 
     // translate the body of the taskloop:
     builder.restoreIP(codegenIP);
@@ -5049,7 +5049,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     // Save the alloca insertion point on ModuleTranslation stack for use in
     // nested regions.
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
-        moduleTranslation, allocaIP, deallocBlocks);
+        moduleTranslation, allocaIP.getNodeParent(), deallocBlocks);
 
     // ParallelOp has only one region associated with it.
     llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
@@ -8839,7 +8839,7 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
     // nested regions. This must be after allocatePrivateVars, which splits
     // the alloca block and updates allocaIP.
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
-        moduleTranslation, allocaIP, deallocBlocks);
+        moduleTranslation, allocaIP.getNodeParent(), deallocBlocks);
 
     if (handleError(initPrivateVars(builder, moduleTranslation, privVarsInfo),
                     opInst)
@@ -9770,7 +9770,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     }
 
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
-        moduleTranslation, allocaIP, deallocBlocks);
+        moduleTranslation, allocaIP.getNodeParent(), deallocBlocks);
     llvm::Expected<llvm::BasicBlock *> exitBlock = convertOmpOpRegions(
         targetRegion, "omp.target", builder, moduleTranslation);
 
