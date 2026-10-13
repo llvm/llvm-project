@@ -4,8 +4,8 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; PR39417
-; Check that the need for overflow check prevents vectorizing a loop with tiny
-; trip count (which implies opt for size).
+; Check that a loop needing an overflow check and with a tiny trip count is
+; still vectorized by folding the tail via masking.
 define void @func_34(ptr %dst) {
 ; CHECK-LABEL: define void @func_34(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
