@@ -43,10 +43,10 @@ constexpr bool test() {
   assert(std::format("{:*^7}", "abc") == "**abc**");
 
   // Several arguments
-  // assert(std::format("{} + {} = {}", 1, 2, 3) == "1 + 2 = 3");
+  assert(std::format("{} + {} = {}", 1, 2, 3) == "1 + 2 = 3");
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  // assert(std::format(L"{}", 42) == L"42");
+  assert(std::format(L"{}", 42) == L"42");
 #endif
 
   return true;
