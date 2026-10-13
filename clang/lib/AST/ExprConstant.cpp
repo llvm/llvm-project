@@ -3584,17 +3584,11 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     return false;
   }
 
+  // If the declaration holding the initializer is itself invalid, bail out
+  // rather than evaluating a potentially bogus value.
   if (Init) {
     if (InitDecl->isInvalidDecl())
       return false;
-
-    QualType InitType =
-        Info.Ctx.getCanonicalType(InitDecl->getType()).getUnqualifiedType();
-    QualType VDType =
-        Info.Ctx.getCanonicalType(VD->getType()).getUnqualifiedType();
-    if (InitType != VDType && !Info.Ctx.typesAreCompatible(InitType, VDType))
-      return false;
-
     VD = InitDecl;
   }
 

@@ -4827,32 +4827,36 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     }
 
   // Merge the types.
-  VarDecl *TypeOld = Old;
-  if (TypeOld->isInvalidDecl()) {
-    for (VarDecl *Prev = Old->getPreviousDecl(); Prev;
-         Prev = Prev->getPreviousDecl()) {
-      if (!Prev->isInvalidDecl()) {
-        TypeOld = Prev;
-        break;
-      }
+  //
+  // If Old or any prior declaration in the redeclaration chain is invalid,
+  // MergeVarDeclTypes will return early without diagnosing a type conflict.
+  // Walk the chain (using redecls(), which goes newest-to-oldest) to find the
+  // most recent declaration that is valid so we can still detect type
+  // mismatches on New. If every prior declaration is invalid, skip the type
+  // merge entirely to avoid false positives; the redefinition logic below will
+  // still run and emit the appropriate diagnostic.
+  VarDecl *TypeOld = nullptr;
+  for (VarDecl *Prev : Old->redecls()) {
+    if (!Prev->isInvalidDecl()) {
+      TypeOld = Prev;
+      break;
     }
   }
 
-  if (TypeOld->isInvalidDecl())
-    return New->setInvalidDecl();
+  if (TypeOld) {
+    VarDecl *MostRecent = TypeOld->getMostRecentDecl();
+    if (MostRecent != TypeOld && !MostRecent->isInvalidDecl()) {
+      MergeVarDeclTypes(New, MostRecent,
+                        mergeTypeWithPrevious(*this, New, MostRecent, Previous));
+      if (New->isInvalidDecl())
+        return;
+    }
 
-  VarDecl *MostRecent = TypeOld->getMostRecentDecl();
-  if (MostRecent != TypeOld && !MostRecent->isInvalidDecl()) {
-    MergeVarDeclTypes(New, MostRecent,
-                      mergeTypeWithPrevious(*this, New, MostRecent, Previous));
+    MergeVarDeclTypes(New, TypeOld,
+                      mergeTypeWithPrevious(*this, New, TypeOld, Previous));
     if (New->isInvalidDecl())
       return;
   }
-
-  MergeVarDeclTypes(New, TypeOld,
-                    mergeTypeWithPrevious(*this, New, TypeOld, Previous));
-  if (New->isInvalidDecl())
-    return;
 
   diag::kind PrevDiag;
   SourceLocation OldLocation;
