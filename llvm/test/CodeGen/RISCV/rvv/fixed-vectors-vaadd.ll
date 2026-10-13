@@ -9,20 +9,16 @@
 define <4 x i8> @vaadd_reassociate(<4 x i8> %x, <4 x i8> %y, <4 x i8> %z, <4 x i8> %w) {
 ; CHECK-LABEL: vaadd_reassociate:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsext.vf2 v12, v11
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vwsub.vv v11, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vadd.vi v10, v11, 1
-; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vaadd.vv v10, v11, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
-; CHECK-NEXT:    csrwi vxrm, 2
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vaadd.vv v9, v10, v12
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v9, v9, 0
+; CHECK-NEXT:    vnsrl.wi v9, v10, 0
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %a = sext <4 x i8> %x to <4 x i16>
