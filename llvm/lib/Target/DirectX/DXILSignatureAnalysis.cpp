@@ -414,6 +414,8 @@ static dxbc::D3DSystemValue getSystemValue(dxbc::PSV::SemanticKind Kind) {
     return dxbc::D3DSystemValue::Undefined;
   case KindTy::VertexID:
     return dxbc::D3DSystemValue::VertexID;
+  case KindTy::InstanceID:
+    return dxbc::D3DSystemValue::InstanceID;
   case KindTy::Position:
     return dxbc::D3DSystemValue::Position;
   case KindTy::IsFrontFace:
@@ -440,6 +442,8 @@ static StringRef getContainerSemanticName(const SemanticSignatureElement &E) {
     return E.SemanticName;
   case Kind::VertexID:
     return "SV_VertexID";
+  case Kind::InstanceID:
+    return "SV_InstanceID";
   case Kind::Position:
     return "SV_Position";
   case Kind::IsFrontFace:
