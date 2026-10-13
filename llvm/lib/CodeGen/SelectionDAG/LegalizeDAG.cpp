@@ -6220,6 +6220,18 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::ATOMIC_STORE: {
     AtomicSDNode *AM = cast<AtomicSDNode>(Node);
     SDLoc SL(Node);
+    if (AM->getOpcode() == ISD::ATOMIC_STORE && NVT.bitsGT(OVT)) {
+      assert(NVT.isInteger() && "unexpected promotion type");
+      MVT IntVT = MVT::getIntegerVT(OVT.getSizeInBits());
+      EVT MemVT = AM->getMemoryVT().changeTypeToInteger();
+      SDValue IntVal = DAG.getNode(ISD::BITCAST, SL, IntVT, AM->getVal());
+      SDValue ExtVal = DAG.getNode(ISD::ANY_EXTEND, SL, NVT, IntVal);
+      Results.push_back(DAG.getAtomic(ISD::ATOMIC_STORE, SL, MemVT,
+                                      AM->getChain(), ExtVal, AM->getBasePtr(),
+                                      AM->getMemOperand()));
+      break;
+    }
+
     SDValue CastVal = DAG.getNode(ISD::BITCAST, SL, NVT, AM->getVal());
     assert(NVT.getSizeInBits() == OVT.getSizeInBits() &&
            "unexpected promotion type");
@@ -6247,6 +6259,22 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::ATOMIC_LOAD: {
     AtomicSDNode *AM = cast<AtomicSDNode>(Node);
     SDLoc SL(Node);
+    if (NVT.bitsGT(OVT)) {
+      assert(NVT.isInteger() && "unexpected promotion type");
+      MVT IntVT = MVT::getIntegerVT(OVT.getSizeInBits());
+      EVT MemVT = AM->getMemoryVT().changeTypeToInteger();
+      ISD::LoadExtType ExtType = AM->getExtensionType();
+      if (ExtType == ISD::NON_EXTLOAD)
+        ExtType = ISD::EXTLOAD;
+      SDValue NewAtomic =
+          DAG.getAtomicLoad(ExtType, SL, MemVT, NVT, AM->getChain(),
+                            AM->getBasePtr(), AM->getMemOperand());
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, IntVT, NewAtomic);
+      Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, Trunc));
+      Results.push_back(NewAtomic.getValue(1));
+      break;
+    }
+
     assert(NVT.getSizeInBits() == OVT.getSizeInBits() &&
            "unexpected promotion type");
     assert(AM->getMemoryVT().getSizeInBits() == NVT.getSizeInBits() &&

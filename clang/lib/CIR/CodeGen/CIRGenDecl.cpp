@@ -538,8 +538,8 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   else
     init = emitNullConstantAttr(ty);
 
-  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
-      getMLIRContext(), getGlobalVarAddressSpace(&d));
+  mlir::ptr::MemorySpaceAttrInterface addrSpace =
+      getGlobalCIRAddressSpace(getGlobalVarAddressSpace(&d));
 
   cir::GlobalOp gv =
       builder.createVersionedGlobal(getModule(), getLoc(d.getLocation()), name,
