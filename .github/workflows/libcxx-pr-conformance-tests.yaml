@@ -68,7 +68,6 @@ jobs:
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         shell: bash
         run: |
-          git config --global --add safe.directory '*'
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
@@ -124,7 +123,6 @@ jobs:
       - name: ${{ matrix.config }}
         shell: bash
         run: |
-          git config --global --add safe.directory '*'
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
@@ -190,7 +188,6 @@ jobs:
       - name: ${{ matrix.config }}
         shell: bash
         run: |
-          git config --global --add safe.directory '*'
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
