@@ -10,13 +10,13 @@ declare double @acos(double)
 declare float @acosf(float)
 
 ;.
-; CHECK: @llvm.compiler.used = appending global [86 x ptr] [ptr @Sleef_acosdx_u10rvvm2, ptr @Sleef_acosfx_u10rvvm2, ptr @Sleef_acoshdx_u10rvvm2, ptr @Sleef_acoshfx_u10rvvm2, ptr @Sleef_asindx_u10rvvm2, ptr @Sleef_asinfx_u10rvvm2, ptr @Sleef_asinhdx_u10rvvm2, ptr @Sleef_asinhfx_u10rvvm2, ptr @Sleef_atandx_u10rvvm2, ptr @Sleef_atanfx_u10rvvm2, ptr @Sleef_atan2dx_u10rvvm2, ptr @Sleef_atan2fx_u10rvvm2, ptr @Sleef_atanhdx_u10rvvm2, ptr @Sleef_atanhfx_u10rvvm2, ptr @Sleef_cbrtdx_u10rvvm2, ptr @Sleef_cbrtfx_u10rvvm2, ptr @Sleef_copysigndx_rvvm2, ptr @Sleef_copysignfx_rvvm2, ptr @Sleef_cosdx_u10rvvm2, ptr @Sleef_cosfx_u10rvvm2, ptr @Sleef_coshdx_u10rvvm2, ptr @Sleef_coshfx_u10rvvm2, ptr @Sleef_cospidx_u05rvvm2, ptr @Sleef_cospifx_u05rvvm2, ptr @Sleef_erfdx_u10rvvm2, ptr @Sleef_erffx_u10rvvm2, ptr @Sleef_erfcdx_u15rvvm2, ptr @Sleef_erfcfx_u15rvvm2, ptr @Sleef_expdx_u10rvvm2, ptr @Sleef_expfx_u10rvvm2, ptr @Sleef_exp10dx_u10rvvm2, ptr @Sleef_exp10fx_u10rvvm2, ptr @Sleef_exp2dx_u10rvvm2, ptr @Sleef_exp2fx_u10rvvm2, ptr @Sleef_expm1dx_u10rvvm2, ptr @Sleef_expm1fx_u10rvvm2, ptr @Sleef_fdimdx_rvvm2, ptr @Sleef_fdimfx_rvvm2, ptr @Sleef_fmadx_rvvm2, ptr @Sleef_fmafx_rvvm2, ptr @Sleef_fmaxdx_rvvm2, ptr @Sleef_fmaxfx_rvvm2, ptr @Sleef_fmindx_u10rvvm2, ptr @Sleef_fminfx_u10rvvm2, ptr @Sleef_fmoddx_rvvm2, ptr @Sleef_fmodfx_rvvm2, ptr @Sleef_hypotdx_u05rvvm2, ptr @Sleef_hypotfx_u05rvvm2, ptr @Sleef_ilogbdx_rvvm2, ptr @Sleef_ilogbfx_rvvm2, ptr @Sleef_ldexpdx_rvvm2, ptr @Sleef_ldexpfx_rvvm2, ptr @Sleef_lgammadx_u10rvvm2, ptr @Sleef_lgammafx_u10rvvm2, ptr @Sleef_logdx_u10rvvm2, ptr @Sleef_logfx_u10rvvm2, ptr @Sleef_log10dx_u10rvvm2, ptr @Sleef_log10fx_u10rvvm2, ptr @Sleef_log1pdx_u10rvvm2, ptr @Sleef_log1pfx_u10rvvm2, ptr @Sleef_log2dx_u10rvvm2, ptr @Sleef_log2fx_u10rvvm2, ptr @Sleef_modfdx_rvvm2, ptr @Sleef_modffx_rvvm2, ptr @Sleef_nextafterdx_rvvm2, ptr @Sleef_nextafterfx_rvvm2, ptr @Sleef_powdx_u10rvvm2, ptr @Sleef_powfx_u10rvvm2, ptr @Sleef_sindx_u10rvvm2, ptr @Sleef_sinfx_u10rvvm2, ptr @Sleef_sincosdx_u10rvvm2, ptr @Sleef_sincosfx_u10rvvm2, ptr @Sleef_sincospidx_u10rvvm2, ptr @Sleef_sincospifx_u10rvvm2, ptr @Sleef_sinhdx_u10rvvm2, ptr @Sleef_sinhfx_u10rvvm2, ptr @Sleef_sinpidx_u05rvvm2, ptr @Sleef_sinpifx_u05rvvm2, ptr @Sleef_sqrtdx_u05rvvm2, ptr @Sleef_sqrtfx_u05rvvm2, ptr @Sleef_tandx_u10rvvm2, ptr @Sleef_tanfx_u10rvvm2, ptr @Sleef_tanhdx_u10rvvm2, ptr @Sleef_tanhfx_u10rvvm2, ptr @Sleef_tgammadx_u10rvvm2, ptr @Sleef_tgammafx_u10rvvm2], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [80 x ptr] [ptr @Sleef_acosdx_u10rvvm2, ptr @Sleef_acosfx_u10rvvm2, ptr @Sleef_acoshdx_u10rvvm2, ptr @Sleef_acoshfx_u10rvvm2, ptr @Sleef_asindx_u10rvvm2, ptr @Sleef_asinfx_u10rvvm2, ptr @Sleef_asinhdx_u10rvvm2, ptr @Sleef_asinhfx_u10rvvm2, ptr @Sleef_atandx_u10rvvm2, ptr @Sleef_atanfx_u10rvvm2, ptr @Sleef_atan2dx_u10rvvm2, ptr @Sleef_atan2fx_u10rvvm2, ptr @Sleef_atanhdx_u10rvvm2, ptr @Sleef_atanhfx_u10rvvm2, ptr @Sleef_cbrtdx_u10rvvm2, ptr @Sleef_cbrtfx_u10rvvm2, ptr @Sleef_copysigndx_rvvm2, ptr @Sleef_copysignfx_rvvm2, ptr @Sleef_cosdx_u10rvvm2, ptr @Sleef_cosfx_u10rvvm2, ptr @Sleef_coshdx_u10rvvm2, ptr @Sleef_coshfx_u10rvvm2, ptr @Sleef_cospidx_u05rvvm2, ptr @Sleef_cospifx_u05rvvm2, ptr @Sleef_erfdx_u10rvvm2, ptr @Sleef_erffx_u10rvvm2, ptr @Sleef_erfcdx_u15rvvm2, ptr @Sleef_erfcfx_u15rvvm2, ptr @Sleef_expdx_u10rvvm2, ptr @Sleef_expfx_u10rvvm2, ptr @Sleef_exp10dx_u10rvvm2, ptr @Sleef_exp10fx_u10rvvm2, ptr @Sleef_exp2dx_u10rvvm2, ptr @Sleef_exp2fx_u10rvvm2, ptr @Sleef_expm1dx_u10rvvm2, ptr @Sleef_expm1fx_u10rvvm2, ptr @Sleef_fdimdx_rvvm2, ptr @Sleef_fdimfx_rvvm2, ptr @Sleef_fmadx_rvvm2, ptr @Sleef_fmafx_rvvm2, ptr @Sleef_fmaxdx_rvvm2, ptr @Sleef_fmaxfx_rvvm2, ptr @Sleef_fmindx_rvvm2, ptr @Sleef_fminfx_rvvm2, ptr @Sleef_fmoddx_rvvm2, ptr @Sleef_fmodfx_rvvm2, ptr @Sleef_hypotdx_u05rvvm2, ptr @Sleef_hypotfx_u05rvvm2, ptr @Sleef_ilogbdx_rvvm2, ptr @Sleef_ilogbfx_rvvm2, ptr @Sleef_ldexpdx_rvvm2, ptr @Sleef_ldexpfx_rvvm2, ptr @Sleef_lgammadx_u10rvvm2, ptr @Sleef_lgammafx_u10rvvm2, ptr @Sleef_logdx_u10rvvm2, ptr @Sleef_logfx_u10rvvm2, ptr @Sleef_log10dx_u10rvvm2, ptr @Sleef_log10fx_u10rvvm2, ptr @Sleef_log1pdx_u10rvvm2, ptr @Sleef_log1pfx_u10rvvm2, ptr @Sleef_log2dx_u10rvvm2, ptr @Sleef_log2fx_u10rvvm2, ptr @Sleef_nextafterdx_rvvm2, ptr @Sleef_nextafterfx_rvvm2, ptr @Sleef_powdx_u10rvvm2, ptr @Sleef_powfx_u10rvvm2, ptr @Sleef_sindx_u10rvvm2, ptr @Sleef_sinfx_u10rvvm2, ptr @Sleef_sinhdx_u10rvvm2, ptr @Sleef_sinhfx_u10rvvm2, ptr @Sleef_sinpidx_u05rvvm2, ptr @Sleef_sinpifx_u05rvvm2, ptr @Sleef_sqrtdx_u05rvvm2, ptr @Sleef_sqrtfx_u05rvvm2, ptr @Sleef_tandx_u10rvvm2, ptr @Sleef_tanfx_u10rvvm2, ptr @Sleef_tanhdx_u10rvvm2, ptr @Sleef_tanhfx_u10rvvm2, ptr @Sleef_tgammadx_u10rvvm2, ptr @Sleef_tgammafx_u10rvvm2], section "llvm.metadata"
 ;.
 define void @acos_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @acos_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_acosdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_acosdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @acos(double [[IN:%.*]]) #[[ATTR2:[0-9]+]]
 ;
   entry:
@@ -41,7 +41,7 @@ define void @acos_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @acos_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_acosfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_acosfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @acosf(float [[IN:%.*]]) #[[ATTR3:[0-9]+]]
 ;
   entry:
@@ -69,7 +69,7 @@ define void @acosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @acosh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_acoshdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_acoshdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @acosh(double [[IN:%.*]]) #[[ATTR4:[0-9]+]]
 ;
   entry:
@@ -94,7 +94,7 @@ define void @acosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @acosh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_acoshfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_acoshfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @acoshf(float [[IN:%.*]]) #[[ATTR5:[0-9]+]]
 ;
   entry:
@@ -122,7 +122,7 @@ define void @asin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @asin_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_asindx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_asindx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @asin(double [[IN:%.*]]) #[[ATTR6:[0-9]+]]
 ;
   entry:
@@ -147,7 +147,7 @@ define void @asin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @asin_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_asinfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_asinfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @asinf(float [[IN:%.*]]) #[[ATTR7:[0-9]+]]
 ;
   entry:
@@ -175,7 +175,7 @@ define void @asinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @asinh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_asinhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_asinhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @asinh(double [[IN:%.*]]) #[[ATTR8:[0-9]+]]
 ;
   entry:
@@ -200,7 +200,7 @@ define void @asinh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @asinh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_asinhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_asinhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @asinhf(float [[IN:%.*]]) #[[ATTR9:[0-9]+]]
 ;
   entry:
@@ -228,7 +228,7 @@ define void @atan_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atan_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_atandx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_atandx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @atan(double [[IN:%.*]]) #[[ATTR10:[0-9]+]]
 ;
   entry:
@@ -253,7 +253,7 @@ define void @atan_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atan_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_atanfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_atanfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @atanf(float [[IN:%.*]]) #[[ATTR11:[0-9]+]]
 ;
   entry:
@@ -281,7 +281,7 @@ define void @atan2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atan2_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_atan2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_atan2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @atan2(double [[IN:%.*]], double [[IN]]) #[[ATTR12:[0-9]+]]
 ;
   entry:
@@ -306,7 +306,7 @@ define void @atan2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atan2_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_atan2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_atan2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @atan2f(float [[IN:%.*]], float [[IN]]) #[[ATTR13:[0-9]+]]
 ;
   entry:
@@ -334,7 +334,7 @@ define void @atanh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atanh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_atanhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_atanhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @atanh(double [[IN:%.*]]) #[[ATTR14:[0-9]+]]
 ;
   entry:
@@ -359,7 +359,7 @@ define void @atanh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @atanh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_atanhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_atanhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @atanhf(float [[IN:%.*]]) #[[ATTR15:[0-9]+]]
 ;
   entry:
@@ -387,7 +387,7 @@ define void @cbrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cbrt_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_cbrtdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_cbrtdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @cbrt(double [[IN:%.*]]) #[[ATTR16:[0-9]+]]
 ;
   entry:
@@ -412,7 +412,7 @@ define void @cbrt_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cbrt_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_cbrtfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_cbrtfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @cbrtf(float [[IN:%.*]]) #[[ATTR17:[0-9]+]]
 ;
   entry:
@@ -440,7 +440,7 @@ define void @copysign_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @copysign_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_copysigndx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_copysigndx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @copysign(double [[IN:%.*]], double [[IN]]) #[[ATTR18:[0-9]+]]
 ;
   entry:
@@ -465,7 +465,7 @@ define void @copysign_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @copysign_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_copysignfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_copysignfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @copysignf(float [[IN:%.*]], float [[IN]]) #[[ATTR19:[0-9]+]]
 ;
   entry:
@@ -493,7 +493,7 @@ define void @cos_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cos_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_cosdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_cosdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @cos(double [[IN:%.*]]) #[[ATTR20:[0-9]+]]
 ;
   entry:
@@ -518,7 +518,7 @@ define void @cos_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cos_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_cosfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_cosfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @cosf(float [[IN:%.*]]) #[[ATTR21:[0-9]+]]
 ;
   entry:
@@ -546,7 +546,7 @@ define void @cosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cosh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_coshdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_coshdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @cosh(double [[IN:%.*]]) #[[ATTR22:[0-9]+]]
 ;
   entry:
@@ -571,7 +571,7 @@ define void @cosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cosh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_coshfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_coshfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @coshf(float [[IN:%.*]]) #[[ATTR23:[0-9]+]]
 ;
   entry:
@@ -599,7 +599,7 @@ define void @cospi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cospi_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_cospidx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_cospidx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @cospi(double [[IN:%.*]]) #[[ATTR24:[0-9]+]]
 ;
   entry:
@@ -624,7 +624,7 @@ define void @cospi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @cospi_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_cospifx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_cospifx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @cospif(float [[IN:%.*]]) #[[ATTR25:[0-9]+]]
 ;
   entry:
@@ -652,7 +652,7 @@ define void @erf_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @erf_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_erfdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_erfdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @erf(double [[IN:%.*]]) #[[ATTR26:[0-9]+]]
 ;
   entry:
@@ -677,7 +677,7 @@ define void @erf_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @erf_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_erffx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_erffx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @erff(float [[IN:%.*]]) #[[ATTR27:[0-9]+]]
 ;
   entry:
@@ -705,7 +705,7 @@ define void @erfc_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @erfc_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_erfcdx_u15rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_erfcdx_u15rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @erfc(double [[IN:%.*]]) #[[ATTR28:[0-9]+]]
 ;
   entry:
@@ -730,7 +730,7 @@ define void @erfc_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @erfc_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_erfcfx_u15rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_erfcfx_u15rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @erfcf(float [[IN:%.*]]) #[[ATTR29:[0-9]+]]
 ;
   entry:
@@ -758,7 +758,7 @@ define void @exp_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_expdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_expdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @exp(double [[IN:%.*]]) #[[ATTR30:[0-9]+]]
 ;
   entry:
@@ -783,7 +783,7 @@ define void @exp_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_expfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_expfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @expf(float [[IN:%.*]]) #[[ATTR31:[0-9]+]]
 ;
   entry:
@@ -811,7 +811,7 @@ define void @exp10_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp10_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_exp10dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_exp10dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @exp10(double [[IN:%.*]]) #[[ATTR32:[0-9]+]]
 ;
   entry:
@@ -836,7 +836,7 @@ define void @exp10_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp10_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_exp10fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_exp10fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @exp10f(float [[IN:%.*]]) #[[ATTR33:[0-9]+]]
 ;
   entry:
@@ -864,7 +864,7 @@ define void @exp2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp2_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_exp2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_exp2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @exp2(double [[IN:%.*]]) #[[ATTR34:[0-9]+]]
 ;
   entry:
@@ -889,7 +889,7 @@ define void @exp2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @exp2_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_exp2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_exp2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @exp2f(float [[IN:%.*]]) #[[ATTR35:[0-9]+]]
 ;
   entry:
@@ -917,7 +917,7 @@ define void @expm1_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @expm1_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_expm1dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_expm1dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @expm1(double [[IN:%.*]]) #[[ATTR36:[0-9]+]]
 ;
   entry:
@@ -942,7 +942,7 @@ define void @expm1_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @expm1_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_expm1fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_expm1fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @expm1f(float [[IN:%.*]]) #[[ATTR37:[0-9]+]]
 ;
   entry:
@@ -970,7 +970,7 @@ define void @fdim_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fdim_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_fdimdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_fdimdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @fdim(double [[IN:%.*]], double [[IN]]) #[[ATTR38:[0-9]+]]
 ;
   entry:
@@ -995,7 +995,7 @@ define void @fdim_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fdim_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_fdimfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_fdimfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @fdimf(float [[IN:%.*]], float [[IN]]) #[[ATTR39:[0-9]+]]
 ;
   entry:
@@ -1023,7 +1023,7 @@ define void @fma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fma_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_fmadx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_fmadx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @fma(double [[IN:%.*]], double [[IN]], double [[IN]]) #[[ATTR40:[0-9]+]]
 ;
   entry:
@@ -1048,7 +1048,7 @@ define void @fma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fma_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_fmafx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_fmafx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @fmaf(float [[IN:%.*]], float [[IN]], float [[IN]]) #[[ATTR41:[0-9]+]]
 ;
   entry:
@@ -1076,7 +1076,7 @@ define void @fmax_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmax_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_fmaxdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_fmaxdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @fmax(double [[IN:%.*]], double [[IN]]) #[[ATTR42:[0-9]+]]
 ;
   entry:
@@ -1101,7 +1101,7 @@ define void @fmax_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmax_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_fmaxfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_fmaxfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @fmaxf(float [[IN:%.*]], float [[IN]]) #[[ATTR43:[0-9]+]]
 ;
   entry:
@@ -1129,7 +1129,7 @@ define void @fmin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmin_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_fmindx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_fmindx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @fmin(double [[IN:%.*]], double [[IN]]) #[[ATTR44:[0-9]+]]
 ;
   entry:
@@ -1154,7 +1154,7 @@ define void @fmin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmin_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_fminfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_fminfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @fminf(float [[IN:%.*]], float [[IN]]) #[[ATTR45:[0-9]+]]
 ;
   entry:
@@ -1182,7 +1182,7 @@ define void @fmod_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmod_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_fmoddx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_fmoddx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @fmod(double [[IN:%.*]], double [[IN]]) #[[ATTR46:[0-9]+]]
 ;
   entry:
@@ -1207,7 +1207,7 @@ define void @fmod_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @fmod_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_fmodfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_fmodfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @fmodf(float [[IN:%.*]], float [[IN]]) #[[ATTR47:[0-9]+]]
 ;
   entry:
@@ -1235,7 +1235,7 @@ define void @hypot_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @hypot_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_hypotdx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_hypotdx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call double @hypot(double [[IN:%.*]], double [[IN]]) #[[ATTR48:[0-9]+]]
 ;
   entry:
@@ -1260,7 +1260,7 @@ define void @hypot_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @hypot_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_hypotfx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_hypotfx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK:    [[CALL:%.*]] = tail call float @hypotf(float [[IN:%.*]], float [[IN]]) #[[ATTR49:[0-9]+]]
 ;
   entry:
@@ -1288,7 +1288,7 @@ define void @ilogb_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @ilogb_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x i32> @Sleef_ilogbdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x i32> @Sleef_ilogbdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call i32 @ilogb(double [[IN:%.*]]) #[[ATTR50:[0-9]+]]
 ;
   entry:
@@ -1313,7 +1313,7 @@ define void @ilogb_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @ilogb_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x i32> @Sleef_ilogbfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x i32> @Sleef_ilogbfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call i32 @ilogbf(float [[IN:%.*]]) #[[ATTR51:[0-9]+]]
 ;
   entry:
@@ -1341,7 +1341,7 @@ define void @ldexp_f64(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %
 ;
 ; CHECK-LABEL: define void @ldexp_f64
 ; CHECK-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP11:%.*]] = call <vscale x 2 x double> @Sleef_ldexpdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x i32> [[WIDE_LOAD1:%.*]])
+; CHECK:    [[TMP4:%.*]] = call <vscale x 2 x double> @Sleef_ldexpdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x i32> [[WIDE_LOAD1:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @ldexp(double [[IN1:%.*]], i32 [[IN2:%.*]]) #[[ATTR52:[0-9]+]]
 ;
   entry:
@@ -1368,7 +1368,7 @@ define void @ldexp_f32(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %
 ;
 ; CHECK-LABEL: define void @ldexp_f32
 ; CHECK-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP11:%.*]] = call <vscale x 4 x float> @Sleef_ldexpfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_LOAD1:%.*]])
+; CHECK:    [[TMP4:%.*]] = call <vscale x 4 x float> @Sleef_ldexpfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_LOAD1:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @ldexpf(float [[IN1:%.*]], i32 [[IN2:%.*]]) #[[ATTR53:[0-9]+]]
 ;
   entry:
@@ -1398,7 +1398,7 @@ define void @lgamma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @lgamma_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_lgammadx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_lgammadx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @lgamma(double [[IN:%.*]]) #[[ATTR54:[0-9]+]]
 ;
   entry:
@@ -1423,7 +1423,7 @@ define void @lgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @lgamma_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_lgammafx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_lgammafx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @lgammaf(float [[IN:%.*]]) #[[ATTR55:[0-9]+]]
 ;
   entry:
@@ -1451,7 +1451,7 @@ define void @log_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_logdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_logdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @log(double [[IN:%.*]]) #[[ATTR56:[0-9]+]]
 ;
   entry:
@@ -1476,7 +1476,7 @@ define void @log_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_logfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_logfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @logf(float [[IN:%.*]]) #[[ATTR57:[0-9]+]]
 ;
   entry:
@@ -1504,7 +1504,7 @@ define void @log10_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log10_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_log10dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_log10dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @log10(double [[IN:%.*]]) #[[ATTR58:[0-9]+]]
 ;
   entry:
@@ -1529,7 +1529,7 @@ define void @log10_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log10_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_log10fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_log10fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @log10f(float [[IN:%.*]]) #[[ATTR59:[0-9]+]]
 ;
   entry:
@@ -1557,7 +1557,7 @@ define void @log1p_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log1p_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_log1pdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_log1pdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @log1p(double [[IN:%.*]]) #[[ATTR60:[0-9]+]]
 ;
   entry:
@@ -1582,7 +1582,7 @@ define void @log1p_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log1p_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_log1pfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_log1pfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @log1pf(float [[IN:%.*]]) #[[ATTR61:[0-9]+]]
 ;
   entry:
@@ -1610,7 +1610,7 @@ define void @log2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log2_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_log2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_log2dx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call double @log2(double [[IN:%.*]]) #[[ATTR62:[0-9]+]]
 ;
   entry:
@@ -1635,7 +1635,7 @@ define void @log2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @log2_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_log2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_log2fx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[CALL:%.*]] = tail call float @log2f(float [[IN:%.*]]) #[[ATTR63:[0-9]+]]
 ;
   entry:
@@ -1663,7 +1663,7 @@ define void @modf_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ;
 ; CHECK-LABEL: define void @modf_f64
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; CHECK:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]]) #[[ATTR64:[0-9]+]]
+; CHECK:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 entry:
   br label %for.body
@@ -1688,7 +1688,7 @@ define void @modf_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ;
 ; CHECK-LABEL: define void @modf_f32
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; CHECK:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]]) #[[ATTR65:[0-9]+]]
+; CHECK:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 entry:
   br label %for.body
@@ -1716,8 +1716,8 @@ define void @nextafter_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @nextafter_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_nextafterdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
-; CHECK:    [[CALL:%.*]] = tail call double @nextafter(double [[IN:%.*]], double [[IN]]) #[[ATTR66:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_nextafterdx_rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[CALL:%.*]] = tail call double @nextafter(double [[IN:%.*]], double [[IN]]) #[[ATTR64:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -1741,8 +1741,8 @@ define void @nextafter_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @nextafter_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_nextafterfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
-; CHECK:    [[CALL:%.*]] = tail call float @nextafterf(float [[IN:%.*]], float [[IN]]) #[[ATTR67:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_nextafterfx_rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[CALL:%.*]] = tail call float @nextafterf(float [[IN:%.*]], float [[IN]]) #[[ATTR65:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -1769,8 +1769,8 @@ define void @pow_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @pow_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_powdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
-; CHECK:    [[CALL:%.*]] = tail call double @pow(double [[IN:%.*]], double [[IN]]) #[[ATTR68:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_powdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
+; CHECK:    [[CALL:%.*]] = tail call double @pow(double [[IN:%.*]], double [[IN]]) #[[ATTR66:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -1794,8 +1794,8 @@ define void @pow_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @pow_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_powfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
-; CHECK:    [[CALL:%.*]] = tail call float @powf(float [[IN:%.*]], float [[IN]]) #[[ATTR69:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_powfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK:    [[CALL:%.*]] = tail call float @powf(float [[IN:%.*]], float [[IN]]) #[[ATTR67:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -1822,8 +1822,8 @@ define void @sin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sin_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_sindx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call double @sin(double [[IN:%.*]]) #[[ATTR70:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_sindx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call double @sin(double [[IN:%.*]]) #[[ATTR68:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -1847,8 +1847,8 @@ define void @sin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sin_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_sinfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call float @sinf(float [[IN:%.*]]) #[[ATTR71:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_sinfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call float @sinf(float [[IN:%.*]]) #[[ATTR69:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -1875,7 +1875,7 @@ define void @sincos_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ;
 ; CHECK-LABEL: define void @sincos_f64
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; CHECK:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR72:[0-9]+]]
+; CHECK:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 entry:
   br label %for.body
@@ -1899,7 +1899,7 @@ define void @sincos_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ;
 ; CHECK-LABEL: define void @sincos_f32
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; CHECK:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR73:[0-9]+]]
+; CHECK:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 entry:
   br label %for.body
@@ -1926,7 +1926,7 @@ define void @sincospi_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ;
 ; CHECK-LABEL: define void @sincospi_f64
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; CHECK:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR74:[0-9]+]]
+; CHECK:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 entry:
   br label %for.body
@@ -1949,7 +1949,7 @@ for.cond.cleanup:
 define void @sincospi_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-LABEL: define void @sincospi_f32
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; CHECK:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR75:[0-9]+]]
+; CHECK:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 entry:
   br label %for.body
@@ -1976,8 +1976,8 @@ define void @sinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sinh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_sinhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call double @sinh(double [[IN:%.*]]) #[[ATTR76:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_sinhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call double @sinh(double [[IN:%.*]]) #[[ATTR70:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2001,8 +2001,8 @@ define void @sinh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sinh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_sinhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call float @sinhf(float [[IN:%.*]]) #[[ATTR77:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_sinhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call float @sinhf(float [[IN:%.*]]) #[[ATTR71:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2029,8 +2029,8 @@ define void @sinpi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sinpi_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_sinpidx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call double @sinpi(double [[IN:%.*]]) #[[ATTR78:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_sinpidx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call double @sinpi(double [[IN:%.*]]) #[[ATTR72:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2054,8 +2054,8 @@ define void @sinpi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sinpi_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_sinpifx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call float @sinpif(float [[IN:%.*]]) #[[ATTR79:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_sinpifx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call float @sinpif(float [[IN:%.*]]) #[[ATTR73:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2082,8 +2082,8 @@ define void @sqrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sqrt_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_sqrtdx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call double @sqrt(double [[IN:%.*]]) #[[ATTR80:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_sqrtdx_u05rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call double @sqrt(double [[IN:%.*]]) #[[ATTR74:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2107,8 +2107,8 @@ define void @sqrt_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @sqrt_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_sqrtfx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call float @sqrtf(float [[IN:%.*]]) #[[ATTR81:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_sqrtfx_u05rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call float @sqrtf(float [[IN:%.*]]) #[[ATTR75:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2135,8 +2135,8 @@ define void @tan_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tan_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_tandx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call double @tan(double [[IN:%.*]]) #[[ATTR82:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_tandx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call double @tan(double [[IN:%.*]]) #[[ATTR76:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2160,8 +2160,8 @@ define void @tan_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tan_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_tanfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call float @tanf(float [[IN:%.*]]) #[[ATTR83:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_tanfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call float @tanf(float [[IN:%.*]]) #[[ATTR77:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2188,8 +2188,8 @@ define void @tanh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tanh_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_tanhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call double @tanh(double [[IN:%.*]]) #[[ATTR84:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_tanhdx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call double @tanh(double [[IN:%.*]]) #[[ATTR78:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2213,8 +2213,8 @@ define void @tanh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tanh_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_tanhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call float @tanhf(float [[IN:%.*]]) #[[ATTR85:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_tanhfx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call float @tanhf(float [[IN:%.*]]) #[[ATTR79:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2241,8 +2241,8 @@ define void @tgamma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tgamma_f64
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 2 x double> @Sleef_tgammadx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call double @tgamma(double [[IN:%.*]]) #[[ATTR86:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 2 x double> @Sleef_tgammadx_u10rvvm2(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call double @tgamma(double [[IN:%.*]]) #[[ATTR80:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2266,8 +2266,8 @@ define void @tgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; CHECK-LABEL: define void @tgamma_f32
 ; CHECK-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; CHECK:    [[TMP9:%.*]] = call <vscale x 4 x float> @Sleef_tgammafx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    [[CALL:%.*]] = tail call float @tgammaf(float [[IN:%.*]]) #[[ATTR87:[0-9]+]]
+; CHECK:    [[TMP3:%.*]] = call <vscale x 4 x float> @Sleef_tgammafx_u10rvvm2(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[CALL:%.*]] = tail call float @tgammaf(float [[IN:%.*]]) #[[ATTR81:[0-9]+]]
 ;
   entry:
   br label %for.body
@@ -2331,8 +2331,8 @@ define void @tgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; CHECK: attributes #[[ATTR41]] = { "vector-function-abi-variant"="_ZGVrNxvvv_fmaf(Sleef_fmafx_rvvm2)" }
 ; CHECK: attributes #[[ATTR42]] = { "vector-function-abi-variant"="_ZGVrNxvv_fmax(Sleef_fmaxdx_rvvm2)" }
 ; CHECK: attributes #[[ATTR43]] = { "vector-function-abi-variant"="_ZGVrNxvv_fmaxf(Sleef_fmaxfx_rvvm2)" }
-; CHECK: attributes #[[ATTR44]] = { "vector-function-abi-variant"="_ZGVrNxvv_fmin(Sleef_fmindx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR45]] = { "vector-function-abi-variant"="_ZGVrNxvv_fminf(Sleef_fminfx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR44]] = { "vector-function-abi-variant"="_ZGVrNxvv_fmin(Sleef_fmindx_rvvm2)" }
+; CHECK: attributes #[[ATTR45]] = { "vector-function-abi-variant"="_ZGVrNxvv_fminf(Sleef_fminfx_rvvm2)" }
 ; CHECK: attributes #[[ATTR46]] = { "vector-function-abi-variant"="_ZGVrNxvv_fmod(Sleef_fmoddx_rvvm2)" }
 ; CHECK: attributes #[[ATTR47]] = { "vector-function-abi-variant"="_ZGVrNxvv_fmodf(Sleef_fmodfx_rvvm2)" }
 ; CHECK: attributes #[[ATTR48]] = { "vector-function-abi-variant"="_ZGVrNxvv_hypot(Sleef_hypotdx_u05rvvm2)" }
@@ -2351,30 +2351,24 @@ define void @tgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; CHECK: attributes #[[ATTR61]] = { "vector-function-abi-variant"="_ZGVrNxv_log1pf(Sleef_log1pfx_u10rvvm2)" }
 ; CHECK: attributes #[[ATTR62]] = { "vector-function-abi-variant"="_ZGVrNxv_log2(Sleef_log2dx_u10rvvm2)" }
 ; CHECK: attributes #[[ATTR63]] = { "vector-function-abi-variant"="_ZGVrNxv_log2f(Sleef_log2fx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR64]] = { "vector-function-abi-variant"="_ZGVrNxvl8_modf(Sleef_modfdx_rvvm2)" }
-; CHECK: attributes #[[ATTR65]] = { "vector-function-abi-variant"="_ZGVrNxvl4_modff(Sleef_modffx_rvvm2)" }
-; CHECK: attributes #[[ATTR66]] = { "vector-function-abi-variant"="_ZGVrNxvv_nextafter(Sleef_nextafterdx_rvvm2)" }
-; CHECK: attributes #[[ATTR67]] = { "vector-function-abi-variant"="_ZGVrNxvv_nextafterf(Sleef_nextafterfx_rvvm2)" }
-; CHECK: attributes #[[ATTR68]] = { "vector-function-abi-variant"="_ZGVrNxvv_pow(Sleef_powdx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR69]] = { "vector-function-abi-variant"="_ZGVrNxvv_powf(Sleef_powfx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR70]] = { "vector-function-abi-variant"="_ZGVrNxv_sin(Sleef_sindx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR71]] = { "vector-function-abi-variant"="_ZGVrNxv_sinf(Sleef_sinfx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR72]] = { "vector-function-abi-variant"="_ZGVrNxvl8l8_sincos(Sleef_sincosdx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR73]] = { "vector-function-abi-variant"="_ZGVrNxvl4l4_sincosf(Sleef_sincosfx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR74]] = { "vector-function-abi-variant"="_ZGVrNxvl8l8_sincospi(Sleef_sincospidx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR75]] = { "vector-function-abi-variant"="_ZGVrNxvl4l4_sincospif(Sleef_sincospifx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR76]] = { "vector-function-abi-variant"="_ZGVrNxv_sinh(Sleef_sinhdx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR77]] = { "vector-function-abi-variant"="_ZGVrNxv_sinhf(Sleef_sinhfx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR78]] = { "vector-function-abi-variant"="_ZGVrNxv_sinpi(Sleef_sinpidx_u05rvvm2)" }
-; CHECK: attributes #[[ATTR79]] = { "vector-function-abi-variant"="_ZGVrNxv_sinpif(Sleef_sinpifx_u05rvvm2)" }
-; CHECK: attributes #[[ATTR80]] = { "vector-function-abi-variant"="_ZGVrNxv_sqrt(Sleef_sqrtdx_u05rvvm2)" }
-; CHECK: attributes #[[ATTR81]] = { "vector-function-abi-variant"="_ZGVrNxv_sqrtf(Sleef_sqrtfx_u05rvvm2)" }
-; CHECK: attributes #[[ATTR82]] = { "vector-function-abi-variant"="_ZGVrNxv_tan(Sleef_tandx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR83]] = { "vector-function-abi-variant"="_ZGVrNxv_tanf(Sleef_tanfx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR84]] = { "vector-function-abi-variant"="_ZGVrNxv_tanh(Sleef_tanhdx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR85]] = { "vector-function-abi-variant"="_ZGVrNxv_tanhf(Sleef_tanhfx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR86]] = { "vector-function-abi-variant"="_ZGVrNxv_tgamma(Sleef_tgammadx_u10rvvm2)" }
-; CHECK: attributes #[[ATTR87]] = { "vector-function-abi-variant"="_ZGVrNxv_tgammaf(Sleef_tgammafx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR64]] = { "vector-function-abi-variant"="_ZGVrNxvv_nextafter(Sleef_nextafterdx_rvvm2)" }
+; CHECK: attributes #[[ATTR65]] = { "vector-function-abi-variant"="_ZGVrNxvv_nextafterf(Sleef_nextafterfx_rvvm2)" }
+; CHECK: attributes #[[ATTR66]] = { "vector-function-abi-variant"="_ZGVrNxvv_pow(Sleef_powdx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR67]] = { "vector-function-abi-variant"="_ZGVrNxvv_powf(Sleef_powfx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR68]] = { "vector-function-abi-variant"="_ZGVrNxv_sin(Sleef_sindx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR69]] = { "vector-function-abi-variant"="_ZGVrNxv_sinf(Sleef_sinfx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR70]] = { "vector-function-abi-variant"="_ZGVrNxv_sinh(Sleef_sinhdx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR71]] = { "vector-function-abi-variant"="_ZGVrNxv_sinhf(Sleef_sinhfx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR72]] = { "vector-function-abi-variant"="_ZGVrNxv_sinpi(Sleef_sinpidx_u05rvvm2)" }
+; CHECK: attributes #[[ATTR73]] = { "vector-function-abi-variant"="_ZGVrNxv_sinpif(Sleef_sinpifx_u05rvvm2)" }
+; CHECK: attributes #[[ATTR74]] = { "vector-function-abi-variant"="_ZGVrNxv_sqrt(Sleef_sqrtdx_u05rvvm2)" }
+; CHECK: attributes #[[ATTR75]] = { "vector-function-abi-variant"="_ZGVrNxv_sqrtf(Sleef_sqrtfx_u05rvvm2)" }
+; CHECK: attributes #[[ATTR76]] = { "vector-function-abi-variant"="_ZGVrNxv_tan(Sleef_tandx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR77]] = { "vector-function-abi-variant"="_ZGVrNxv_tanf(Sleef_tanfx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR78]] = { "vector-function-abi-variant"="_ZGVrNxv_tanh(Sleef_tanhdx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR79]] = { "vector-function-abi-variant"="_ZGVrNxv_tanhf(Sleef_tanhfx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR80]] = { "vector-function-abi-variant"="_ZGVrNxv_tgamma(Sleef_tgammadx_u10rvvm2)" }
+; CHECK: attributes #[[ATTR81]] = { "vector-function-abi-variant"="_ZGVrNxv_tgammaf(Sleef_tgammafx_u10rvvm2)" }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !{[[META0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

@@ -40,20 +40,11 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   initLibcalls(TT, ExceptionModel, FloatABI, ABIName,
                TT.getDefaultLongDoubleFormat());
 
-  // TODO: Tablegen should generate these sets
+  // TODO: TableGen should generate the remaining vector library sets.
   switch (VecLib) {
   case VectorLibrary::SLEEFGNUABI:
-    for (RTLIB::LibcallImpl Impl :
-         {RTLIB::impl__ZGVnN2vv_fmod, RTLIB::impl__ZGVnN4vv_fmodf,
-          RTLIB::impl__ZGVsMxvv_fmod, RTLIB::impl__ZGVsMxvv_fmodf,
-          RTLIB::impl__ZGVnN2vl8_modf, RTLIB::impl__ZGVnN4vl4_modff,
-          RTLIB::impl__ZGVsNxvl8_modf, RTLIB::impl__ZGVsNxvl4_modff,
-          RTLIB::impl__ZGVnN2vl8l8_sincos, RTLIB::impl__ZGVnN4vl4l4_sincosf,
-          RTLIB::impl__ZGVsNxvl8l8_sincos, RTLIB::impl__ZGVsNxvl4l4_sincosf,
-          RTLIB::impl__ZGVnN4vl4l4_sincospif, RTLIB::impl__ZGVnN2vl8l8_sincospi,
-          RTLIB::impl__ZGVsNxvl4l4_sincospif,
-          RTLIB::impl__ZGVsNxvl8l8_sincospi})
-      setAvailable(Impl);
+    setAvailableLibFuncs_sleef(TT, ExceptionModel, FloatABI, ABIName,
+                              TT.getDefaultLongDoubleFormat(), CallingConv::C);
     break;
   case VectorLibrary::ArmPL:
     for (RTLIB::LibcallImpl Impl : {RTLIB::impl_armpl_svfmod_f32_x,
@@ -455,6 +446,8 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
   case RTLIB::impl__ZGVnN4vv_fmodf:
   case RTLIB::impl__ZGVsMxvv_fmod:
   case RTLIB::impl__ZGVsMxvv_fmodf:
+  case RTLIB::impl_Sleef_fmoddx_rvvm2:
+  case RTLIB::impl_Sleef_fmodfx_rvvm2:
   case RTLIB::impl_armpl_vfmodq_f32:
   case RTLIB::impl_armpl_vfmodq_f64:
   case RTLIB::impl_armpl_svfmod_f32_x:
@@ -469,6 +462,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
   case RTLIB::impl_armpl_svcbrt_f64_x: {
     bool IsF32 = LibcallImpl == RTLIB::impl__ZGVnN4vv_fmodf ||
                  LibcallImpl == RTLIB::impl__ZGVsMxvv_fmodf ||
+                 LibcallImpl == RTLIB::impl_Sleef_fmodfx_rvvm2 ||
                  LibcallImpl == RTLIB::impl_armpl_svfmod_f32_x ||
                  LibcallImpl == RTLIB::impl_armpl_vfmodq_f32 ||
                  LibcallImpl == RTLIB::impl_armpl_vpowq_f32 ||
@@ -478,6 +472,8 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
 
     bool IsScalable = LibcallImpl == RTLIB::impl__ZGVsMxvv_fmod ||
                       LibcallImpl == RTLIB::impl__ZGVsMxvv_fmodf ||
+                      LibcallImpl == RTLIB::impl_Sleef_fmoddx_rvvm2 ||
+                      LibcallImpl == RTLIB::impl_Sleef_fmodfx_rvvm2 ||
                       LibcallImpl == RTLIB::impl_armpl_svfmod_f32_x ||
                       LibcallImpl == RTLIB::impl_armpl_svfmod_f64_x ||
                       LibcallImpl == RTLIB::impl_armpl_svpow_f32_x ||

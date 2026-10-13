@@ -4463,8 +4463,8 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV = {
   def Sleef_fmafx_rvvm2 : RuntimeLibcallImpl<FMA_NXV4F32>;
   def Sleef_fmaxdx_rvvm2 : RuntimeLibcallImpl<FMAX_NXV2F64>;
   def Sleef_fmaxfx_rvvm2 : RuntimeLibcallImpl<FMAX_NXV4F32>;
-  def Sleef_fmindx_u10rvvm2 : RuntimeLibcallImpl<FMIN_NXV2F64>;
-  def Sleef_fminfx_u10rvvm2 : RuntimeLibcallImpl<FMIN_NXV4F32>;
+  def Sleef_fmindx_rvvm2 : RuntimeLibcallImpl<FMIN_NXV2F64>;
+  def Sleef_fminfx_rvvm2 : RuntimeLibcallImpl<FMIN_NXV4F32>;
   def Sleef_fmoddx_rvvm2 : RuntimeLibcallImpl<REM_NXV2F64>;
   def Sleef_fmodfx_rvvm2 : RuntimeLibcallImpl<REM_NXV4F32>;
   def Sleef_hypotdx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV2F64>;
@@ -4491,8 +4491,8 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV = {
   def Sleef_powfx_u10rvvm2 : RuntimeLibcallImpl<POW_NXV4F32>;
   def Sleef_sincosdx_u10rvvm2 : RuntimeLibcallImpl<SINCOS_NXV2F64>;
   def Sleef_sincosfx_u10rvvm2 : RuntimeLibcallImpl<SINCOS_NXV4F32>;
-  def Sleef_sincospidx_u10rvvm2 : RuntimeLibcallImpl<SINCOSPI_NXV2F64>;
-  def Sleef_sincospifx_u10rvvm2 : RuntimeLibcallImpl<SINCOSPI_NXV4F32>;
+  def Sleef_sincospidx_u05rvvm2 : RuntimeLibcallImpl<SINCOSPI_NXV2F64>;
+  def Sleef_sincospifx_u05rvvm2 : RuntimeLibcallImpl<SINCOSPI_NXV4F32>;
   def Sleef_sindx_u10rvvm2 : RuntimeLibcallImpl<SIN_NXV2F64>;
   def Sleef_sinfx_u10rvvm2 : RuntimeLibcallImpl<SIN_NXV4F32>;
   def Sleef_sinhdx_u10rvvm2 : RuntimeLibcallImpl<SINH_NXV2F64>;
@@ -4508,6 +4508,29 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV = {
   def Sleef_tgammadx_u10rvvm2 : RuntimeLibcallImpl<TGAMMA_NXV2F64>;
   def Sleef_tgammafx_u10rvvm2 : RuntimeLibcallImpl<TGAMMA_NXV4F32>;
 }
+
+// Only expose implementations with supported backend call signatures and
+// lowering. Some other SLEEF functions use TargetLibraryInfo mappings.
+defvar SleefAArch64CodeGen = !filter(impl,
+  !listconcat(SLEEFGNUABI_VF2_VECFUNCS,
+              SLEEFGNUABI_VF4_VECFUNCS,
+              SLEEFGNUABI_SCALABLE_VECFUNCS),
+  !match(!cast<string>(impl.Provides),
+         "^(REM|MODF|SINCOS|SINCOSPI)_(V2F64|V4F32|NXV2F64|NXV4F32)$"));
+
+// RVV sincos[pi] and modf return both results in a doubled-width vector rather
+// than using the output pointers supported by the current lowering.
+defvar SleefRISCVCodeGen = !filter(impl,
+  SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV,
+  !or(!eq(impl.Provides, REM_NXV2F64),
+      !eq(impl.Provides, REM_NXV4F32)));
+
+// The VectorLibrary option enables this library explicitly. Do not include it
+// in SystemRuntimeLibrary, which would enable it without selecting SLEEF.
+def SleefCodeGen : LibcallLibrary<"sleef",
+  (add LibcallImpls<(add SleefAArch64CodeGen),
+                   RuntimeLibcallAvailability<(all_of IsAArch64)>>,
+       LibcallImpls<(add SleefRISCVCodeGen), isRISCV64>)>;
 
 //===----------------------------------------------------------------------===//
 // Arm Performance Libraries (ARMPL) functions
