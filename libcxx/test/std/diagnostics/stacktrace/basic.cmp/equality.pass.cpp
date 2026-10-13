@@ -16,6 +16,7 @@
 //                          const basic_stacktrace<Allocator2>& y) noexcept;
 
 #include <cassert>
+#include <cstdint>
 #include <memory_resource>
 #include <stacktrace>
 #include <utility>

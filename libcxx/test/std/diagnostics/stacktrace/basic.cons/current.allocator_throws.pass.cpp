@@ -8,6 +8,7 @@
 
 // REQUIRES: std-at-least-c++23
 // UNSUPPORTED: availability-stacktrace-missing
+// UNSUPPORTED: no-exceptions
 
 // (19.6.4.2)
 // [stacktrace.basic.cons], creation and assignment

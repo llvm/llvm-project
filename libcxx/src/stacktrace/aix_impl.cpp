@@ -76,7 +76,9 @@ void scan_images(_Images& imgs) {
 } // namespace
 
 void _Images::enumerate() {
+#  if _LIBCPP_HAS_THREADS
   std::lock_guard<std::mutex> __lock{mutex_};
+#  endif
   scan_images(*this);
 }
 

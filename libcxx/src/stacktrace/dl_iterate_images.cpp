@@ -68,7 +68,9 @@ int add_image(dl_phdr_info* info, size_t, void* state_v) {
 } // namespace
 
 void __stacktrace::_Images::enumerate() {
+#    if _LIBCPP_HAS_THREADS
   std::lock_guard<std::mutex> __lock(mutex_);
+#    endif
   _ScanState __state{*this};
   dl_iterate_phdr(add_image, &__state);
   if (__state.foundNew_) {

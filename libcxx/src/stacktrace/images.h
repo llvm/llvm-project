@@ -65,7 +65,9 @@ struct _Images {
   constexpr static size_t __max_images = 256;
   std::array<_Image, __max_images> images_{};
   unsigned count_{};
+#if _LIBCPP_HAS_THREADS
   std::mutex mutex_{};
+#endif
 
   static _Images instance_;
 

@@ -30,7 +30,9 @@ namespace {
 // and asynchronously for each image loaded after initial registration.
 void add_image(const struct mach_header* mh, intptr_t vmaddr_slide) {
   auto& images = _Images::instance_;
+#  if _LIBCPP_HAS_THREADS
   std::lock_guard<std::mutex> __lock(images.mutex_);
+#  endif
 
   if (images.count_ == _Images::__max_images) {
     return;

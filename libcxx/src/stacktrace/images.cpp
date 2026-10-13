@@ -27,7 +27,9 @@ void __populate_images(_Context& __cx) {
   _Images& images = _Images::instance_;
   images.enumerate();
 
+#  if _LIBCPP_HAS_THREADS
   std::lock_guard<std::mutex> __lock(images.mutex_);
+#  endif
   for (auto& entry : __cx.__entry_iters_(__cx.__self_)) {
     auto __i = images.find(entry.__addr_);
     if (__i == _Images::npos) {
