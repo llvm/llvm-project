@@ -33,7 +33,7 @@ all: build/prg
 build/%.o: src/%.cpp
 	$(CXX) -arch arm64 -c -o $@ $<
 build/prg: build/main.o build/helper.o
-	$(LD) -o $@ build/main.o build/helper.o $(LDFLAGS) -lc++
+	$(LD) -o $@ build/main.o build/helper.o $(LDFLAGS)
 
 #--- src/helper.cpp
 int helper(int *p) { return p[0]; }

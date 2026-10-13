@@ -19,12 +19,11 @@
 #--- Makefile
 CXX = clang++
 LD = $(CXX)
-LDFLAGS = -stdlib=libc++
 all: build/prg
 build/a.o: src/a.cpp
 	$(CXX) -c -o $@ $<
 build/prg: build/a.o
-	$(LD) $(LDFLAGS) -o $@ build/a.o
+	$(LD) -o $@ build/a.o
 
 #--- src/a.cpp
 int main() { return 0; }
