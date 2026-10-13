@@ -11,6 +11,10 @@
 
 #include <__pstl/backends/statpart/basis.h>
 #include <__pstl/backends/statpart/find_end.h>
+#include <__pstl/backends/statpart/find_if.h>
+#include <__pstl/backends/statpart/for_each.h>
+#include <__pstl/backends/statpart/is_heap_until.h>
+#include <__pstl/backends/statpart/merge.h>
 
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_if.h>
@@ -73,149 +77,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
-
-template <class _ExecutionPolicy>
-struct __for_each<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator, class _Function>
-  _LIBCPP_HIDE_FROM_ABI optional<__empty>
-  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Function __func) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      return __statpart::__for_each(
-          std::move(__first), std::move(__last), [&](auto __partition_first, auto __partition_last) {
-            std::for_each(__partition_first, __partition_last, __func);
-          });
-    } else {
-      std::for_each(std::move(__first), std::move(__last), std::move(__func));
-      return __empty{};
-    }
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __find_if<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator, class _Predicate>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
-  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      return __statpart::__find(
-          std::move(__first),
-          std::move(__last),
-          [&__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
-            return std::find_if(__brick_first, __brick_last, __pred);
-          },
-          less<>{},
-          true);
-    } else {
-      return std::find_if(std::move(__first), std::move(__last), std::move(__pred));
-    }
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __is_heap_until<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _RandomAccessIterator, class _Comp>
-  _LIBCPP_HIDE_FROM_ABI optional<_RandomAccessIterator>
-  operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy>) {
-      if (__last - __first < 2)
-        return __last; // Any sequence with less than 2 elements is a heap
-      // Run a parallel find in chunks over [first+1, last) to validate every element except the root.
-      return __statpart::__find(
-          __first + 1,
-          __last,
-          [__first, &__comp](_RandomAccessIterator __child_first, _RandomAccessIterator __child_last) {
-            // This algorithm assumes that __find() will never pass an empty brick,
-            // i.e. that __child_first != __child_last.
-            using _DifferenceType = typename std::iterator_traits<_RandomAccessIterator>::difference_type;
-
-            // Derive the indices of the children and the iterators of their parents
-            _DifferenceType __child_first_idx   = __child_first - __first;
-            _DifferenceType __child_last_idx    = __child_last - __first;
-            _RandomAccessIterator __parent      = __first + (__child_first_idx - 1) / 2;
-            _RandomAccessIterator __parent_last = __first + (__child_last_idx - 1) / 2;
-
-            // If we're starting from a right child => process this element separately in a prologue
-            if (__child_first_idx % 2 == 0) {
-              if (__comp(*__parent, *__child_first)) // Check the right child
-                return __child_first;
-              ++__parent;
-              ++__child_first;
-            }
-
-            // Iterate over the parents and check their left and right children
-            for (; __parent != __parent_last; ++__parent) {
-              if (__comp(*__parent, *__child_first)) // Check the left child
-                return __child_first;
-              ++__child_first;
-
-              if (__comp(*__parent, *__child_first)) // Check the right child
-                return __child_first;
-              ++__child_first;
-            }
-
-            // If we're ending with a right child => __parent_last also includes the left child.
-            // Process this accessible element separately in an epilogue.
-            if (__child_last_idx % 2 == 0) {
-              if (__comp(*__parent, *__child_first)) // Check the left child
-                return __child_first;
-            }
-
-            return __child_last; // No violations found in this brick
-          },
-          less<>{}, // `less` here means the lowest index among the matches
-          true      // `true` here means we want the first match, not the last
-      );
-    } else {
-      return std::is_heap_until(std::move(__first), std::move(__last), std::move(__comp));
-    }
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __merge<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Comp>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> operator()(
-      _Policy&&,
-      _ForwardIterator1 __first1,
-      _ForwardIterator1 __last1,
-      _ForwardIterator2 __first2,
-      _ForwardIterator2 __last2,
-      _ForwardOutIterator __result,
-      _Comp __comp) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
-                  __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      auto __res = __statpart::__merge(
-          __first1,
-          __last1,
-          __first2,
-          __last2,
-          __result,
-          __comp,
-          [](_ForwardIterator1 __brick_first1,
-             _ForwardIterator1 __brick_last1,
-             _ForwardIterator2 __brick_first2,
-             _ForwardIterator2 __brick_last2,
-             _ForwardOutIterator __brick_result,
-             _Comp __g_comp) {
-            std::merge(std::move(__brick_first1),
-                       std::move(__brick_last1),
-                       std::move(__brick_first2),
-                       std::move(__brick_last2),
-                       std::move(__brick_result),
-                       std::move(__g_comp));
-          });
-      if (!__res)
-        return nullopt;
-      return __result + (__last1 - __first1) + (__last2 - __first2);
-    } else {
-      return std::merge(__first1, __last1, __first2, __last2, __result, __comp);
-    }
-  }
-};
 
 template <class _ExecutionPolicy>
 struct __min_element<__statpart_backend_tag, _ExecutionPolicy> {

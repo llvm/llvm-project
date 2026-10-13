@@ -698,6 +698,10 @@ set(files
   __pstl/backends/statpart.h  
   __pstl/backends/statpart/basis.h
   __pstl/backends/statpart/find_end.h
+  __pstl/backends/statpart/find_if.h
+  __pstl/backends/statpart/for_each.h
+  __pstl/backends/statpart/is_heap_until.h
+  __pstl/backends/statpart/merge.h
   __pstl/backends/std_thread.h
   __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h
