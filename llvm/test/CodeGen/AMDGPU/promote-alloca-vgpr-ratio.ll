@@ -271,6 +271,108 @@ define amdgpu_kernel void @i32_16_elements_attrib(ptr %out) #2 {
   ret void
 }
 
+define amdgpu_cs void @i32_16_elements_dvgpr(ptr %out) #3 {
+; BASE-LABEL: define amdgpu_cs void @i32_16_elements_dvgpr(
+; BASE-SAME: ptr [[OUT:%.*]]) #[[ATTR3:[0-9]+]] {
+; BASE-NEXT:    [[X:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; BASE-NEXT:    [[Y:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
+; BASE-NEXT:    [[C1:%.*]] = icmp uge i32 [[X]], 3
+; BASE-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
+; BASE-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
+; BASE-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; BASE-NEXT:    [[ALLOCA:%.*]] = alloca [16 x i32], align 16, addrspace(5)
+; BASE-NEXT:    call void @llvm.memset.p5.i32(ptr addrspace(5) [[ALLOCA]], i8 0, i32 64, i1 false)
+; BASE-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 0
+; BASE-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 15
+; BASE-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4
+; BASE-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4
+; BASE-NEXT:    [[GEP:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[SEL2]]
+; BASE-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; BASE-NEXT:    store i32 [[LOAD]], ptr [[OUT]], align 4
+; BASE-NEXT:    ret void
+;
+  %x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %c1 = icmp uge i32 %x, 3
+  %c2 = icmp uge i32 %y, 3
+  %sel1 = select i1 %c1, i32 1, i32 2
+  %sel2 = select i1 %c2, i32 0, i32 %sel1
+  %alloca = alloca [16 x i32], align 16, addrspace(5)
+  call void @llvm.memset.p5.i32(ptr addrspace(5) %alloca, i8 0, i32 64, i1 false)
+  %gep.0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 0
+  %gep.1 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 15
+  store i32 42, ptr addrspace(5) %gep.0
+  store i32 43, ptr addrspace(5) %gep.1
+  %gep = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %sel2
+  %load = load i32, ptr addrspace(5) %gep
+  store i32 %load, ptr %out
+  ret void
+}
+
+define amdgpu_cs void @i32_4_elements_dvgpr(ptr %out) #3 {
+; DEFAULT-LABEL: define amdgpu_cs void @i32_4_elements_dvgpr(
+; DEFAULT-SAME: ptr [[OUT:%.*]]) #[[ATTR3]] {
+; DEFAULT-NEXT:    [[X:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; DEFAULT-NEXT:    [[Y:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
+; DEFAULT-NEXT:    [[C1:%.*]] = icmp uge i32 [[X]], 3
+; DEFAULT-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
+; DEFAULT-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
+; DEFAULT-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; DEFAULT-NEXT:    [[ALLOCA:%.*]] = freeze <4 x i32> poison
+; DEFAULT-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> <i32 42, i32 0, i32 0, i32 43>, i32 [[SEL2]]
+; DEFAULT-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
+; DEFAULT-NEXT:    ret void
+;
+; RATIO2-LABEL: define amdgpu_cs void @i32_4_elements_dvgpr(
+; RATIO2-SAME: ptr [[OUT:%.*]]) #[[ATTR3]] {
+; RATIO2-NEXT:    [[X:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; RATIO2-NEXT:    [[Y:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
+; RATIO2-NEXT:    [[C1:%.*]] = icmp uge i32 [[X]], 3
+; RATIO2-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
+; RATIO2-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
+; RATIO2-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; RATIO2-NEXT:    [[ALLOCA:%.*]] = freeze <4 x i32> poison
+; RATIO2-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> <i32 42, i32 0, i32 0, i32 43>, i32 [[SEL2]]
+; RATIO2-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
+; RATIO2-NEXT:    ret void
+;
+; RATIO8-LABEL: define amdgpu_cs void @i32_4_elements_dvgpr(
+; RATIO8-SAME: ptr [[OUT:%.*]]) #[[ATTR3]] {
+; RATIO8-NEXT:    [[X:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; RATIO8-NEXT:    [[Y:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
+; RATIO8-NEXT:    [[C1:%.*]] = icmp uge i32 [[X]], 3
+; RATIO8-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
+; RATIO8-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
+; RATIO8-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; RATIO8-NEXT:    [[ALLOCA:%.*]] = alloca [4 x i32], align 16, addrspace(5)
+; RATIO8-NEXT:    call void @llvm.memset.p5.i32(ptr addrspace(5) [[ALLOCA]], i8 0, i32 16, i1 false)
+; RATIO8-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 0
+; RATIO8-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 3
+; RATIO8-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4
+; RATIO8-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4
+; RATIO8-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[SEL2]]
+; RATIO8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; RATIO8-NEXT:    store i32 [[LOAD]], ptr [[OUT]], align 4
+; RATIO8-NEXT:    ret void
+;
+  %x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %c1 = icmp uge i32 %x, 3
+  %c2 = icmp uge i32 %y, 3
+  %sel1 = select i1 %c1, i32 1, i32 2
+  %sel2 = select i1 %c2, i32 0, i32 %sel1
+  %alloca = alloca [4 x i32], align 16, addrspace(5)
+  call void @llvm.memset.p5.i32(ptr addrspace(5) %alloca, i8 0, i32 16, i1 false)
+  %gep.0 = getelementptr inbounds [4 x i32], ptr addrspace(5) %alloca, i32 0, i32 0
+  %gep.1 = getelementptr inbounds [4 x i32], ptr addrspace(5) %alloca, i32 0, i32 3
+  store i32 42, ptr addrspace(5) %gep.0
+  store i32 43, ptr addrspace(5) %gep.1
+  %gep = getelementptr inbounds [4 x i32], ptr addrspace(5) %alloca, i32 0, i32 %sel2
+  %load = load i32, ptr addrspace(5) %gep
+  store i32 %load, ptr %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.workitem.id.y()
 declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, i1 immarg)
@@ -278,5 +380,4 @@ declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, 
 attributes #0 = { nounwind "amdgpu-promote-alloca-to-vector-max-regs"="24" "amdgpu-waves-per-eu"="4,4" }
 attributes #1 = { nounwind "amdgpu-promote-alloca-to-vector-max-regs"="24" "amdgpu-waves-per-eu"="4,4" "amdgpu-promote-alloca-to-vector-vgpr-ratio"="2" }
 attributes #2 = { nounwind "amdgpu-promote-alloca-to-vector-max-regs"="24" "amdgpu-waves-per-eu"="4,4" "amdgpu-promote-alloca-to-vector-vgpr-ratio"="8" }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; BASE: {{.*}}
+attributes #3 = { nounwind "amdgpu-promote-alloca-to-vector-max-regs"="24" "amdgpu-dynamic-vgpr-block-size"="16" }

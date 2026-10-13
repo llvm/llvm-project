@@ -545,8 +545,10 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, ObjectFile *SymtabObj,
 
   // Finalize the GSYM to make it ready to save to disk. This will remove
   // duplicate FunctionInfo entries where we might have found an entry from
-  // debug info and also a symbol table entry from the object file.
-  if (auto Err = Gsym.finalize(Out))
+  // debug info and also a symbol table entry from the object file. Pass along
+  // the object file that the symbols came from so the size of a trailing
+  // symbol that has no size doesn't extend past the end of its section.
+  if (auto Err = Gsym.finalize(Out, SymtabObj ? SymtabObj : &Obj))
     return Err;
 
   // Save the GSYM file to disk.

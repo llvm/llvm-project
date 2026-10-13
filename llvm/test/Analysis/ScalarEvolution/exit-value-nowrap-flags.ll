@@ -18,8 +18,8 @@ define void @dec_to_start_of_nuw_addrec(i64 %start) {
 ; CHECK-NEXT:    --> {{\{\{}}(-1 + %start),+,1}<nw><%up>,+,-1}<nw><%down> U: full-set S: full-set --> {(8 + %start),+,-1}<nw><%down> U: full-set S: full-set Exits: ((8 + %start) umin %start) LoopDispositions: { %down: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @dec_to_start_of_nuw_addrec
 ; CHECK-NEXT:  Loop %down: backedge-taken count is (8 + (-1 * ((8 + %start) umin %start)) + %start)
-; CHECK-NEXT:  Loop %down: constant max backedge-taken count is i64 8
-; CHECK-NEXT:  Loop %down: symbolic max backedge-taken count is (8 + (-1 * ((8 + %start) umin %start)) + %start)
+; CHECK-NEXT:  Loop %down: constant max backedge-taken count is i64 8, actual taken count either this or zero.
+; CHECK-NEXT:  Loop %down: symbolic max backedge-taken count is (8 + (-1 * ((8 + %start) umin %start)) + %start), actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %down: Trip multiple is 1
 ; CHECK-NEXT:  Loop %up: backedge-taken count is i32 9
 ; CHECK-NEXT:  Loop %up: constant max backedge-taken count is i32 9
@@ -64,8 +64,8 @@ define void @dec_to_start_of_nuw_ptr_addrec(ptr %start) {
 ; CHECK-NEXT:    --> {{\{\{}}(-1 + %start),+,1}<nw><%up>,+,-1}<nw><%down> U: full-set S: full-set --> {(8 + %start),+,-1}<nw><%down> U: full-set S: full-set Exits: ((-1 * (ptrtoaddr ptr %start to i64)) + ((8 + (ptrtoaddr ptr %start to i64)) umin (ptrtoaddr ptr %start to i64)) + %start) LoopDispositions: { %down: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @dec_to_start_of_nuw_ptr_addrec
 ; CHECK-NEXT:  Loop %down: backedge-taken count is (8 + (-1 * ((8 + (ptrtoaddr ptr %start to i64)) umin (ptrtoaddr ptr %start to i64))) + (ptrtoaddr ptr %start to i64))
-; CHECK-NEXT:  Loop %down: constant max backedge-taken count is i64 8
-; CHECK-NEXT:  Loop %down: symbolic max backedge-taken count is (8 + (-1 * ((8 + (ptrtoaddr ptr %start to i64)) umin (ptrtoaddr ptr %start to i64))) + (ptrtoaddr ptr %start to i64))
+; CHECK-NEXT:  Loop %down: constant max backedge-taken count is i64 8, actual taken count either this or zero.
+; CHECK-NEXT:  Loop %down: symbolic max backedge-taken count is (8 + (-1 * ((8 + (ptrtoaddr ptr %start to i64)) umin (ptrtoaddr ptr %start to i64))) + (ptrtoaddr ptr %start to i64)), actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %down: Trip multiple is 1
 ; CHECK-NEXT:  Loop %up: backedge-taken count is i32 9
 ; CHECK-NEXT:  Loop %up: constant max backedge-taken count is i32 9
@@ -110,8 +110,8 @@ define void @dec_to_start_of_wrapping_addrec(i64 %start) {
 ; CHECK-NEXT:    --> {{\{\{}}(-1 + %start),+,1}<nw><%up>,+,-1}<nw><%down> U: full-set S: full-set --> {(8 + %start),+,-1}<nw><%down> U: full-set S: full-set Exits: ((8 + %start) umin %start) LoopDispositions: { %down: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @dec_to_start_of_wrapping_addrec
 ; CHECK-NEXT:  Loop %down: backedge-taken count is (8 + (-1 * ((8 + %start) umin %start)) + %start)
-; CHECK-NEXT:  Loop %down: constant max backedge-taken count is i64 8
-; CHECK-NEXT:  Loop %down: symbolic max backedge-taken count is (8 + (-1 * ((8 + %start) umin %start)) + %start)
+; CHECK-NEXT:  Loop %down: constant max backedge-taken count is i64 8, actual taken count either this or zero.
+; CHECK-NEXT:  Loop %down: symbolic max backedge-taken count is (8 + (-1 * ((8 + %start) umin %start)) + %start), actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %down: Trip multiple is 1
 ; CHECK-NEXT:  Loop %up: backedge-taken count is i32 9
 ; CHECK-NEXT:  Loop %up: constant max backedge-taken count is i32 9

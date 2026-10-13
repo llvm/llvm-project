@@ -49,7 +49,7 @@
 ; CHECK:     dead-mi-elimination
 ; CHECK:     detect-dead-lanes
 ; CHECK:     init-undef
-; CHECK:     process-imp-defs
+; CHECK:     process-implicit-defs
 ; CHECK:     unreachable-mbb-elimination
 ; CHECK:     require<live-vars>
 ; CHECK:     require<machine-loops>

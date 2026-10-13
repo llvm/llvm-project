@@ -20,7 +20,6 @@
 #include "MipsInstrInfo.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
-#include "MipsTargetMachine.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -240,9 +239,7 @@ private:
                        unsigned &NumBytes);
   bool finishCall(CallLoweringInfo &CLI, MVT RetVT, unsigned NumBytes);
 
-  const MipsABIInfo &getABI() const {
-    return static_cast<const MipsTargetMachine &>(TM).getABI();
-  }
+  const MipsABIInfo &getABI() const { return Subtarget->getABI(); }
 
 public:
   // Backend specific FastISel code.
@@ -421,8 +418,7 @@ unsigned MipsFastISel::materializeGV(const GlobalValue *GV, MVT VT) {
   emitInst(Mips::LW, DestReg)
       .addReg(MFI->getGlobalBaseReg(*MF))
       .addGlobalAddress(GV, 0, MipsII::MO_GOT);
-  if ((GV->hasInternalLinkage() ||
-       (GV->hasLocalLinkage() && !isa<Function>(GV)))) {
+  if (GV->hasLocalLinkage()) {
     Register TempReg = createResultReg(RC);
     emitInst(Mips::ADDiu, TempReg)
         .addReg(DestReg)
@@ -986,7 +982,8 @@ bool MipsFastISel::selectBranch(const Instruction *I) {
 
   BuildMI(*BrBB, FuncInfo.InsertPt, MIMD, TII.get(Mips::BGTZ))
       .addReg(ZExtCondReg)
-      .addMBB(TBB);
+      .addMBB(TBB)
+      .setOperandDead(2); // implicit-def $at
   finishCondBranch(BI->getParent(), TBB, FBB);
   return true;
 }
@@ -1479,9 +1476,9 @@ bool MipsFastISel::fastLowerArguments() {
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
     Register ResultReg = createResultReg(Allocation[ArgNo].RC);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
-        .addReg(DstReg, getKillRegState(true));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(DstReg);
     updateValueMap(&FormalArg, ResultReg);
   }
 
@@ -2150,10 +2147,10 @@ unsigned MipsFastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
     Op0 = constrainOperandRegClass(II, Op0, II.getNumDefs());
     Op1 = constrainOperandRegClass(II, Op1, II.getNumDefs() + 1);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-      .addReg(Op0)
-      .addReg(Op1)
-      .addReg(Mips::HI0, RegState::ImplicitDefine | RegState::Dead)
-      .addReg(Mips::LO0, RegState::ImplicitDefine | RegState::Dead);
+        .addReg(Op0)
+        .addReg(Op1)
+        .setOperandDead(3)  // implicit-def $hi0
+        .setOperandDead(4); // implicit-def $lo0
     return ResultReg;
   }
 

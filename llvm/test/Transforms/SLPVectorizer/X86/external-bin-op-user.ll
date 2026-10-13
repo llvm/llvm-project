@@ -7,19 +7,19 @@ define void @test(ptr %0, ptr %1, double %2) {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[TMP2]], i64 0
 ; CHECK-NEXT:    br label %[[DOTLR_PH383_US_US_US_US:.*]]
-; CHECK:       [[_LR_PH383_US_US_US_US:.*:]]
+; CHECK:       [[DOTLR_PH383_US_US_US_US]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x double> [ [[TMP26:%.*]], %[[DOT_CRIT_EDGE384_US_US_US_US:.*]] ], [ zeroinitializer, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br i1 false, label %[[DOT_CRIT_EDGE384_US_US_US_US]], label %[[BB4:.*]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = load double, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul double [[TMP5]], 0.000000e+00
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd double [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd double [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[TMP13]], i64 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x double> [[TMP14]], double [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = load double, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP16:%.*]] = fmul double [[TMP13]], 0.000000e+00
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd double [[TMP7]], [[TMP16]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd double [[TMP7]], [[TMP16]]
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x double> [[TMP14]], double [[TMP13]], i64 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = fadd <2 x double> [[TMP15]], [[TMP17]]
 ; CHECK-NEXT:    br label %[[BB19:.*]]
 ; CHECK:       [[BB19]]:
@@ -32,7 +32,7 @@ define void @test(ptr %0, ptr %1, double %2) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = fmul <4 x double> [[TMP23]], <double 0.000000e+00, double 1.000000e+00, double 1.000000e+00, double 0.000000e+00>
 ; CHECK-NEXT:    [[TMP25:%.*]] = fadd <4 x double> [[TMP24]], [[TMP3]]
 ; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE384_US_US_US_US]]
-; CHECK:       [[__CRIT_EDGE384_US_US_US_US:.*:]]
+; CHECK:       [[DOT_CRIT_EDGE384_US_US_US_US]]:
 ; CHECK-NEXT:    [[TMP26]] = phi <4 x double> [ [[TMP25]], %[[BB20]] ], [ zeroinitializer, %[[DOTLR_PH383_US_US_US_US]] ]
 ; CHECK-NEXT:    br label %[[DOTLR_PH383_US_US_US_US]]
 ;

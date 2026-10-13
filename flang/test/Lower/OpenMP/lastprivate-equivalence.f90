@@ -17,13 +17,13 @@
 !CHECK-LABEL: func.func @_QPlastprivate_equivalence()
 !CHECK: %[[AGG:.*]] = fir.alloca !fir.array<40xi8>
 !CHECK: %[[A_PTR:.*]] = fir.convert %{{.*}} : (!fir.ref<i8>) -> !fir.ptr<!fir.array<10xi32>>
-!CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A_PTR]](%{{.*}}) storage(%[[AGG]][0]) {uniq_name = "_QFlastprivate_equivalenceEa"}
+!CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A_PTR]](%{{.*}}) storage(%[[AGG]][0]) uniq_name("_QFlastprivate_equivalenceEa")
 !CHECK: omp.parallel {
 !CHECK:   omp.wsloop private(@[[A_PRIV]] %{{.*}}
 !CHECK:     omp.loop_nest
 ! Verify lastprivate writeback copies the private array to the original
 ! EQUIVALENCE alias address.
-!CHECK:       %[[A_PRIV_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Ea"}
+!CHECK:       %[[A_PRIV_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}Ea")
 !CHECK:       fir.if %{{.*}} {
 !CHECK:         hlfir.assign %[[A_PRIV_DECL]]#0 to %[[A_DECL]]#0 : !fir.ptr<!fir.array<10xi32>>, !fir.ptr<!fir.array<10xi32>>
 !CHECK:       }
@@ -45,7 +45,7 @@ end subroutine
 !CHECK-LABEL: func.func @_QPlastprivate_equiv_char()
 !CHECK: %[[CAGG:.*]] = fir.alloca !fir.array<10xi8>
 !CHECK: %[[C1_PTR:.*]] = fir.convert %{{.*}} : (!fir.ref<i8>) -> !fir.ptr<!fir.char<1,10>>
-!CHECK: %[[C1_DECL:.*]]:2 = hlfir.declare %[[C1_PTR]] typeparams %{{.*}} storage(%[[CAGG]][0]) {uniq_name = "_QFlastprivate_equiv_charEc1"}
+!CHECK: %[[C1_DECL:.*]]:2 = hlfir.declare %[[C1_PTR]] typeparams %{{.*}} storage(%[[CAGG]][0]) uniq_name("_QFlastprivate_equiv_charEc1")
 !CHECK: omp.parallel {
 !CHECK:   omp.wsloop private(@[[C1_PRIV]] %{{.*}}
 !CHECK:     omp.loop_nest

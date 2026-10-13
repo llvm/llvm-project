@@ -11,13 +11,13 @@ define void @pluto(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) #0 {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    mov w8, #0 ; =0x0
 ; CHECK-NEXT:    ldr zt0, [x1]
-; CHECK-NEXT:    ldr z4, [x3]
+; CHECK-NEXT:    ldr z16, [x3]
 ; CHECK-NEXT:    ptrue pn8.h
 ; CHECK-NEXT:    ld1h { z0.h - z3.h }, pn8/z, [x0]
-; CHECK-NEXT:    luti4 { z16.h - z19.h }, zt0, z4[0]
-; CHECK-NEXT:    fmla za.h[w8, 0, vgx4], { z0.h - z3.h }, { z16.h - z19.h }
+; CHECK-NEXT:    luti4 { z4.h - z7.h }, zt0, z16[0]
+; CHECK-NEXT:    fmla za.h[w8, 0, vgx4], { z0.h - z3.h }, { z4.h - z7.h }
 ; CHECK-NEXT:    ldr zt0, [x2]
-; CHECK-NEXT:    luti4 { z4.h - z7.h }, zt0, z4[0]
+; CHECK-NEXT:    luti4 { z4.h - z7.h }, zt0, z16[0]
 ; CHECK-NEXT:    fmla za.h[w8, 2, vgx4], { z0.h - z3.h }, { z4.h - z7.h }
 ; CHECK-NEXT:    ret
 bb:

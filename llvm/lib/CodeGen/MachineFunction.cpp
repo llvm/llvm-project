@@ -237,7 +237,7 @@ void MachineFunction::init() {
     Alignment = std::max(Alignment, Align(4));
 
   if (AlignAllFunctions)
-    Alignment = Align(1ULL << AlignAllFunctions);
+    Alignment = Align::fromLog2(AlignAllFunctions);
 
   JumpTableInfo = nullptr;
 

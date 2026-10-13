@@ -1,4 +1,4 @@
-(irtranslator)=
+(ir-translator)=
 
 # IRTranslator
 
@@ -74,7 +74,7 @@ backends, `CallLowering` makes available a few helpers and interfaces:
   for invoking a given `ValueAssigner` and `ValueHandler` on a series of
   `ArgInfo` objects.
 
-(irtranslator-aggregates)=
+(ir-translator-aggregates)=
 
 ### Aggregates
 
@@ -95,7 +95,7 @@ information on vregs).
 See [PR26161](https://llvm.org/PR26161): [GlobalISel] Value to vreg during
 IR to MachineInstr translation for aggregate type
 
-(irtranslator-constants)=
+(ir-translator-constants)=
 
 ## Translation of Constants
 
@@ -112,7 +112,7 @@ spills and reloads in an -O0 pipeline, as these virtual registers can have long
 live ranges. This can be mitigated by running a [localizer](https://github.com/llvm/llvm-project/blob/main/llvm/lib/CodeGen/GlobalISel/Localizer.cpp)
 after the translator.
 
-(irtranslator-byte-type)=
+(ir-translator-byte-type)=
 
 ## Translation of the Byte Type
 
@@ -123,10 +123,12 @@ SelectionDAG behaviour, where `bN` maps to the same `EVT` as `iN`.
 - `getLLTForType` lowers `ByteType` to `LLT::integer(N)`.
 - `ConstantByte` is materialised via `G_CONSTANT` using the underlying
   `APInt`, the same path as `ConstantInt`.
-- A `bitcast` between a byte type and a pointer (the only ptr/non-ptr
-  `bitcast` IR permits with byte) is lowered to `G_INTTOPTR` or
-  `G_PTRTOINT` rather than `G_BITCAST`, since `G_BITCAST` cannot cross
-  the pointer/non-pointer boundary under `MachineVerifier`.
+- A `bitcast` between a byte type and a pointer type, scalar or vector, which is
+  the only pointer/non-pointer `bitcast` IR permits, becomes `G_INTTOPTR` or
+  `G_PTRTOINT` on an integer type with the pointer's shape, since
+  `G_BITCAST` can't convert between pointers and other types. When the byte
+  type has a different lane layout, as with `<2 x b32>` and `ptr`, a
+  `G_BITCAST` converts between it and that integer type.
 
 The mid-end semantics of the byte type (per-bit poison, conditional pointer
 provenance preservation) are not representable in MIR and are not consumed by
