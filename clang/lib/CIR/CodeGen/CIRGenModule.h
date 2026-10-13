@@ -82,6 +82,9 @@ private:
 
   const clang::LangOptions &langOpts;
 
+  /// Seeded from langOpts and then pushed and popped by clang::atomic.
+  clang::AtomicOptions atomicOpts;
+
   const clang::CodeGenOptions &codeGenOpts;
 
   /// A "module" matches a c/cpp source file: containing a list of functions.
@@ -175,6 +178,12 @@ public:
   clang::DiagnosticsEngine &getDiags() const { return diags; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
+
+  /// The atomic options in effect at the point currently being emitted.
+  /// clang::atomic adjusts these for the extent of the statement it is attached
+  /// to, so they are module state rather than a fixed language option.
+  clang::AtomicOptions getAtomicOpts() const { return atomicOpts; }
+  void setAtomicOpts(clang::AtomicOptions opts) { atomicOpts = opts; }
 
   CIRGenCXXABI &getCXXABI() const { return *abi; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
@@ -463,6 +472,11 @@ public:
   cir::GlobalViewAttr
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
+
+  /// Create a private constant global holding the null-terminated string
+  /// \p str, mirroring llvm::IRBuilder::CreateGlobalString.
+  cir::GlobalOp createGlobalString(mlir::Location loc, llvm::StringRef str,
+                                   llvm::StringRef name);
 
   /// Returns the address space for temporary allocations in the language. This
   /// ensures that the allocated variable's address space matches the
