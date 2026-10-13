@@ -155,9 +155,8 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
     }
 
     // Resume the debug loop.
-    ExceptionRecordSP active_exception =
-        m_session_data->m_debugger->GetActiveException();
-    if (active_exception) {
+    if (m_exception_parked) {
+      m_exception_parked = false;
       // Resume the process and continue processing debug events.  Mask the
       // exception so that from the process's view, there is no indication that
       // anything happened.
@@ -773,6 +772,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
     result = HandleGenericException(first_chance, record);
     break;
   }
+  m_exception_parked = result == ExceptionResult::BreakInDebugger;
 
   // Let the debugger establish the internal status.
   ProcessDebugger::OnDebugException(first_chance, record);

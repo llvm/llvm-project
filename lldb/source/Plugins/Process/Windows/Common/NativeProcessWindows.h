@@ -189,6 +189,9 @@ private:
   /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
   bool m_pending_halt = false;
 
+  /// Set when the handler of the last exception returned BreakInDebugger.
+  bool m_exception_parked = false;
+
   bool m_client_supports_libraries_read = false;
 
   /// PseudoConsole for the lldb-server stdio-forwarding path.

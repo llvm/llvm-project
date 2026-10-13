@@ -426,14 +426,14 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
 
   ExceptionRecordSP active_exception =
       std::make_shared<ExceptionRecord>(info.ExceptionRecord, thread_id);
+  // Reset the predicate before publishing the exception. Once it is published,
+  // other threads can continue it, and resetting the predicate after that would
+  // discard the result they set.
+  m_exception_pred.SetValue(ExceptionResult::BreakInDebugger, eBroadcastNever);
   {
     std::lock_guard<std::mutex> guard(m_active_exception_mutex);
     m_active_exception = active_exception;
   }
-  // Set this before calling the delegate. The delegate can wake up the thread
-  // driving the debugger, and that thread can call ContinueAsyncException
-  // before OnDebugException returns.
-  m_exception_pred.SetValue(ExceptionResult::BreakInDebugger, eBroadcastNever);
 
   LLDB_LOG(log, "encountered {0} chance exception {1:x} on thread {2:x}",
            first_chance ? "first" : "second",
