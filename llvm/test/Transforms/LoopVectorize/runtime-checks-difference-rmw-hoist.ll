@@ -2,8 +2,6 @@
 ; RUN: opt -passes=loop-vectorize -hoist-runtime-checks=true -force-vector-width=4 -force-vector-interleave=1 -S %s | FileCheck %s --check-prefix=HOIST
 ; RUN: opt -passes=loop-vectorize -hoist-runtime-checks=false -force-vector-width=4 -force-vector-interleave=1 -S %s | FileCheck %s --check-prefix=NO-HOIST
 
-target datalayout = "e-p:64:64-i64:64-n32:64"
-
 ; Only the destination advances: the distance varies in the parent loop.
 define void @rmw_variant_distance(ptr %dst, ptr %src, i64 %rows) {
 ; HOIST-LABEL: define void @rmw_variant_distance(
@@ -148,4 +146,3 @@ outer.latch:
 exit:
   ret void
 }
-
