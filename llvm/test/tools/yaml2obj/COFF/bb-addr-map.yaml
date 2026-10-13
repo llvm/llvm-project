@@ -305,7 +305,7 @@ symbols: []
 ## Check that an unsupported version warns and is encoded anyway.
 # RUN: yaml2obj --docnum=6 %s -o %t6 2>&1 | FileCheck %s --check-prefix=INVALID-VERSION
 
-# INVALID-VERSION: warning: unsupported BB address map version: 6; encoding using the most recent version
+# INVALID-VERSION: warning: unsupported BB address map version: 7; encoding using the most recent version
 
 --- !COFF
 header:
@@ -314,7 +314,7 @@ sections:
   - Name: .llvm_bb_addr_map
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA ]
     Entries:
-      - Version: 6
+      - Version: 7
         BBRanges:
           - BaseAddress: 0x0000000000000020
             BBEntries:

@@ -271,3 +271,59 @@ Sections:
 # INVALID-NEXT:          Type:    SHT_LLVM_BB_ADDR_MAP
 # BADNUM-NEXT:           Content: {{([[:xdigit:]]+)}}{{$}}
 # TRUNCATED-NEXT:        Content: '{{([[:xdigit:]]{16})}}'{{$}}
+
+## Check that obj2yaml can dump the function GUID in the .llvm_bb_addr_map section.
+
+# RUN: yaml2obj --docnum=5 %s -o %t7
+# RUN: obj2yaml %t7 | FileCheck %s --check-prefix=GUID
+
+# GUID:      - Name: .llvm_bb_addr_map
+# GUID-NEXT:   Type: SHT_LLVM_BB_ADDR_MAP
+# GUID-NEXT:   Entries:
+# GUID-NEXT:     - Version:  6
+# GUID-NEXT:       Feature:  0x100
+# GUID-NEXT:       FuncGUID: 0x1122334455667788
+# GUID-NEXT:       BBRanges:
+# GUID-NEXT:         - BaseAddress: 0x20
+# GUID-NEXT:           BBEntries:
+# GUID-NEXT:             - ID:            0
+# GUID-NEXT:               AddressOffset: 0x1
+# GUID-NEXT:               Size:          0x2
+# GUID-NEXT:               Metadata:      0x3
+## The 'FuncGUID' field is omitted when the feature is disabled.
+# GUID-NEXT:     - Version: 6
+# GUID-NEXT:       BBRanges:
+# GUID-NEXT:         - BaseAddress: 0x30
+# GUID-NEXT:           BBEntries:
+# GUID-NEXT:             - ID:            1
+# GUID-NEXT:               AddressOffset: 0x4
+# GUID-NEXT:               Size:          0x5
+# GUID-NEXT:               Metadata:      0x6
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .llvm_bb_addr_map
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version:  6
+        Feature:  0x100
+        FuncGUID: 0x1122334455667788
+        BBRanges:
+          - BaseAddress: 0x20
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+      - Version:  6
+        BBRanges:
+          - BaseAddress: 0x30
+            BBEntries:
+              - ID:            1
+                AddressOffset: 0x4
+                Size:          0x5
+                Metadata:      0x6

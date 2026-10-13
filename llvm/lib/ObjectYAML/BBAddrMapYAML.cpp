@@ -25,6 +25,7 @@ void MappingTraits<BBAddrMapYAML::BBAddrMapEntry>::mapping(
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("Version", E.Version);
   IO.mapOptional("Feature", E.Feature, Hex16(0));
+  IO.mapOptional("FuncGUID", E.FuncGUID);
   IO.mapOptional("NumBBRanges", E.NumBBRanges);
   IO.mapOptional("BBRanges", E.BBRanges);
 }
@@ -83,7 +84,7 @@ void encodePayload(ArrayRef<BBAddrMapEntry> Entries,
   assert((AddressSize == 4 || AddressSize == 8) && "invalid address size");
   for (const auto &[Idx, E] : llvm::enumerate(Entries)) {
     // Write version and feature values.
-    if (E.Version > 5)
+    if (E.Version > 6)
       WithColor::warning() << "unsupported BB address map version: "
                            << static_cast<int>(E.Version)
                            << "; encoding using the most recent version";
@@ -98,6 +99,10 @@ void encodePayload(ArrayRef<BBAddrMapEntry> Entries,
       WithColor::warning() << toString(FeatureOrErr.takeError());
       continue;
     }
+    // Write the function GUID. This is emitted when either the feature is
+    // enabled or 'FuncGUID' is specified, which allows testing mismatches.
+    if (FeatureOrErr->FuncGUID || E.FuncGUID.has_value())
+      CBA.write<uint64_t>(E.FuncGUID.value_or(llvm::yaml::Hex64(0)), Endian);
     bool MultiBBRangeFeatureEnabled = FeatureOrErr->MultiBBRange;
     bool MultiBBRange =
         MultiBBRangeFeatureEnabled ||

@@ -101,24 +101,27 @@ static_assert(
     "PGOAnalysisMap should use the same type for basic block ID as BBAddrMap");
 
 TEST(ELFTypesTest, BBAddrMapFeaturesEncodingTest) {
-  const std::array<BBAddrMap::Features, 14> Decoded = {
-      {{false, false, false, false, false, false, false, false},
-       {true, false, false, false, false, false, false, false},
-       {false, true, false, false, false, false, false, false},
-       {false, false, true, false, false, false, false, false},
-       {false, false, false, true, false, false, false, false},
-       {true, true, false, false, false, false, false, false},
-       {false, true, true, false, false, false, false, false},
-       {false, true, true, true, false, false, false, false},
-       {true, true, true, true, false, false, false, false},
-       {false, false, false, false, true, false, false, false},
-       {false, false, false, false, false, true, false, false},
-       {false, false, false, false, false, false, true, false},
-       {false, false, false, false, false, false, false, true},
-       {false, false, false, false, false, false, true, true}}};
-  const std::array<uint16_t, 14> Encoded = {
+  const std::array<BBAddrMap::Features, 16> Decoded = {
+      {{false, false, false, false, false, false, false, false, false},
+       {true, false, false, false, false, false, false, false, false},
+       {false, true, false, false, false, false, false, false, false},
+       {false, false, true, false, false, false, false, false, false},
+       {false, false, false, true, false, false, false, false, false},
+       {true, true, false, false, false, false, false, false, false},
+       {false, true, true, false, false, false, false, false, false},
+       {false, true, true, true, false, false, false, false, false},
+       {true, true, true, true, false, false, false, false, false},
+       {false, false, false, false, true, false, false, false, false},
+       {false, false, false, false, false, true, false, false, false},
+       {false, false, false, false, false, false, true, false, false},
+       {false, false, false, false, false, false, false, true, false},
+       {false, false, false, false, false, false, true, true, false},
+       {false, false, false, false, false, false, false, false, true},
+       {false, false, false, false, false, false, true, true, true}}};
+  const std::array<uint16_t, 16> Encoded = {
       {0b0000, 0b0001, 0b0010, 0b0100, 0b1000, 0b0011, 0b0110, 0b1110, 0b1111,
-       0b1'0000, 0b10'0000, 0b100'0000, 0b1000'0000, 0b1100'0000}};
+       0b1'0000, 0b10'0000, 0b100'0000, 0b1000'0000, 0b1100'0000, 0b1'0000'0000,
+       0b1'1100'0000}};
   for (const auto &[Feat, EncodedVal] : llvm::zip(Decoded, Encoded))
     EXPECT_EQ(Feat.encode(), EncodedVal);
   for (const auto &[Feat, EncodedVal] : llvm::zip(Decoded, Encoded)) {
@@ -131,9 +134,9 @@ TEST(ELFTypesTest, BBAddrMapFeaturesEncodingTest) {
 
 TEST(ELFTypesTest, BBAddrMapFeaturesInvalidEncodingTest) {
   const std::array<std::string, 2> Errors = {
-      "invalid encoding for BBAddrMap::Features: 0x100",
+      "invalid encoding for BBAddrMap::Features: 0x200",
       "invalid encoding for BBAddrMap::Features: 0x1000"};
-  const std::array<uint16_t, 2> Values = {{0b1'0000'0000, 0b1'0000'0000'0000}};
+  const std::array<uint16_t, 2> Values = {{0b10'0000'0000, 0b1'0000'0000'0000}};
   for (const auto &[Val, Error] : llvm::zip(Values, Errors)) {
     EXPECT_THAT_ERROR(BBAddrMap::Features::decode(Val).takeError(),
                       FailedWithMessage(Error));
