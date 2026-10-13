@@ -1115,8 +1115,8 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
   ArrayType *AllKernelsOffsetsType = ArrayType::get(LDSPtrTy, NumberKernels);
   std::vector<Constant *> OverallConstantExprElts(NumberKernels);
   for (size_t i = 0; i < NumberKernels; i++) {
-    // Null for kernels without LDS, they reach LDS instructions only on
-    // invalid paths.
+    // Null for kernels without LDS. Lowered functions still load this entry
+    // on entry, but only use it on LDS paths these kernels never take.
     Constant *SwLDS = ConstantPointerNull::get(LDSPtrTy);
     auto It = FuncLDSAccessInfo.KernelToLDSParametersMap.find(Kernels[i]);
     if (It != FuncLDSAccessInfo.KernelToLDSParametersMap.end() &&
@@ -1351,6 +1351,8 @@ bool AMDGPUSwLowerLDS::run() {
   // Get non-kernels with LDS instructions and the kernels reaching them.
   getNonKernelsWithLDSInstructions(CG);
 
+  // TODO: removeFnAttrFromReachable does not visit callees of indirect call
+  // targets.
   for (Function *Func : FuncLDSAccessInfo.KernelsWithIndirectLDSAccess)
     removeFnAttrFromReachable(CG, Func, {"amdgpu-no-lds-kernel-id"});
 

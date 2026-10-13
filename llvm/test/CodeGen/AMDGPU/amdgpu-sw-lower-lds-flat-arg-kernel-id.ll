@@ -29,7 +29,9 @@ define internal void @writer(ptr %p) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i32
 ; CHECK-NEXT:    [[TMP9:%.*]] = inttoptr i32 [[TMP8]] to ptr addrspace(3)
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr addrspace(3) [[TMP9]] to i32
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq ptr [[P]], null
+; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), ptr addrspace(3) [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr addrspace(3) [[TMP13]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP10]]
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[TMP11]], align 4
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
