@@ -216,18 +216,6 @@ static Value *createWhileLO(IRBuilder<> &Builder, unsigned ElementSizeInBits,
                                  /*FMFSource=*/{}, "pn.mask");
 }
 
-/// Returns the multi-vector load/store intrinsic ID for \p VectorScale.
-static Intrinsic::ID getPNLoadStoreIntrinsic(unsigned VectorScale,
-                                             bool IsLoad) {
-  if (VectorScale == 2)
-    return IsLoad ? Intrinsic::aarch64_sve_ld1_pn_x2
-                  : Intrinsic::aarch64_sve_st1_pn_x2;
-  if (VectorScale == 4)
-    return IsLoad ? Intrinsic::aarch64_sve_ld1_pn_x4
-                  : Intrinsic::aarch64_sve_st1_pn_x4;
-  llvm_unreachable("unsupported predicate-as-counter scale");
-}
-
 /// If \p UserI is a masked-load user of the original loop mask, rewrite it to
 /// a masked multi-vector load (using the predicate-as-counter) if the load
 /// access size matches the predicate-as-counter element size.
@@ -255,7 +243,8 @@ static bool tryRewriteMaskedLoadUser(Instruction &UserI,
   auto *LegalDataTy = VectorType::get(ScalarType, LegalEC);
 
   auto *PNLoad = cast<IntrinsicInst>(Builder.CreateIntrinsic(
-      getPNLoadStoreIntrinsic(C.VectorScale, /*IsLoad=*/true),
+      C.VectorScale == 4 ? Intrinsic::aarch64_sve_ld1_pn_x4
+                         : Intrinsic::aarch64_sve_ld1_pn_x2,
       {LegalDataTy, II->getArgOperand(0)->getType()},
       {Count, II->getArgOperand(0)},
       /*FMFSource=*/{}, "pn.ld1"));
@@ -309,7 +298,8 @@ static bool tryRewriteMaskedStoreUser(Instruction &UserI,
   StoreArgs.push_back(II->getArgOperand(1));
 
   auto *PNStore = cast<IntrinsicInst>(Builder.CreateIntrinsic(
-      getPNLoadStoreIntrinsic(C.VectorScale, /*IsLoad=*/false),
+      C.VectorScale == 4 ? Intrinsic::aarch64_sve_st1_pn_x4
+                         : Intrinsic::aarch64_sve_st1_pn_x2,
       {LegalDataTy, II->getArgOperand(1)->getType()}, StoreArgs));
 
   // Copy pointer parameter attributes.

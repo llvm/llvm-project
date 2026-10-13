@@ -558,4 +558,45 @@ exit:
   ret void
 }
 
+; A load/store of an unpacked type won't result in a prediate-as-counter loop.
+define void @negative_masked_load_store_unpacked_i16(ptr %x, i64 %n) #0 {
+; CHECK-LABEL: negative_masked_load_store_unpacked_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    whilelo p0.s, xzr, x1
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB11_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    add z0.s, z0.s, #1 // =0x1
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0, x8, lsl #1]
+; CHECK-NEXT:    incw x8
+; CHECK-NEXT:    whilelo p0.s, x8, x1
+; CHECK-NEXT:    b.mi .LBB11_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %preheader
+
+preheader:
+  %start.mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 %n)
+  %vscale = call i64 @llvm.vscale.i64()
+  %step = shl i64 %vscale, 2
+  br label %loop
+
+loop:
+  %base = phi i64 [ 0, %preheader ], [ %next.base, %loop ]
+  %update.mask = phi <vscale x 4 x i1> [ %start.mask, %preheader ], [ %new.mask, %loop ]
+  %ptr = getelementptr i16, ptr %x, i64 %base
+  %v = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(ptr %ptr, i32 2, <vscale x 4 x i1> %update.mask, <vscale x 4 x i16> poison)
+  %add = add <vscale x 4 x i16> %v, splat (i16 1)
+  call void @llvm.masked.store.nxv4i16(<vscale x 4 x i16> %add, ptr %ptr, i32 2, <vscale x 4 x i1> %update.mask)
+  %next.base = add i64 %base, %step
+  %new.mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 %next.base, i64 %n)
+  %more = extractelement <vscale x 4 x i1> %new.mask, i64 0
+  br i1 %more, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve2p1" }
