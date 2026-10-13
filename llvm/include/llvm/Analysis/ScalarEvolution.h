@@ -1610,7 +1610,7 @@ public:
 
   public:
     /// Return loop guards for loop \p L, which are collected on first use.
-    LLVM_ABI static LoopGuards collectOnDemand(const Loop *L,
+    static LoopGuards collectOnDemand(const Loop *L,
                                                ScalarEvolution &SE) {
       LoopGuards Guards(SE);
       Guards.PendingLoop = L;
