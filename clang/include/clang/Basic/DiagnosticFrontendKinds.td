@@ -509,7 +509,8 @@ def err_hlsl_signature_packing : Error<
 def warn_hlsl_signature_packing_ignored : Warning<
   "semantic signature packing mode '%0' is ignored as "
   "%select{vertex shader inputs|pixel shader outputs}1 always use "
-  "%select{stacked|indexed}1 packing">;
+  "%select{stacked|indexed}1 packing">,
+  InGroup<HLSLSemanticSignatures>;
 def warn_hlsl_failed_to_embed_source
     : Warning<"failed to embed source for '%0' into dx.source.contents">,
       InGroup<HLSLDXCCompat>;
