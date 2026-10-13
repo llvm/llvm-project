@@ -50,10 +50,13 @@ public:
     set_lhsType(TypeAndShape::Characterize(lhs, foldingContext_));
     set_isContiguous(lhs.attrs().test(Attr::CONTIGUOUS));
     set_isVolatile(lhs.attrs().test(Attr::VOLATILE));
+    set_isProtectedTarget(lhs.attrs().test(Attr::PROTECTED_TARGET));
   }
   PointerAssignmentChecker &set_lhsType(std::optional<TypeAndShape> &&);
   PointerAssignmentChecker &set_isContiguous(bool);
   PointerAssignmentChecker &set_isVolatile(bool);
+  PointerAssignmentChecker &set_isProtectedTarget(bool);
+  PointerAssignmentChecker &set_isInitialization(bool);
   PointerAssignmentChecker &set_isBoundsRemapping(bool);
   PointerAssignmentChecker &set_isAssumedRank(bool);
   PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
@@ -92,6 +95,8 @@ private:
   bool characterizedProcedure_{false};
   bool isContiguous_{false};
   bool isVolatile_{false};
+  bool isProtectedTarget_{false};
+  bool isInitialization_{false};
   bool isBoundsRemapping_{false};
   bool isAssumedRank_{false};
   bool isRHSPointerActualArgument_{false};
@@ -114,6 +119,18 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_isContiguous(
 PointerAssignmentChecker &PointerAssignmentChecker::set_isVolatile(
     bool isVolatile) {
   isVolatile_ = isVolatile;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_isProtectedTarget(
+    bool isProtectedTarget) {
+  isProtectedTarget_ = isProtectedTarget;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_isInitialization(
+    bool isInitialization) {
+  isInitialization_ = isInitialization;
   return *this;
 }
 
@@ -207,6 +224,17 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
   if (lhs_ && IsProcedure(*lhs_)) {
     return true;
   }
+  // F'2028 C870 (pointer assignment) and C871 (structure constructor);
+  // C872 for dummy arguments is checked with the call.
+  if (lhs_ && !isProtectedTarget_) {
+    if (const Symbol *protectedTarget{FindProtectedTargetPointer(rhs)}) {
+      evaluate::AttachDeclaration(
+          Say("Pointer '%s' must have the PROTECTED_TARGET attribute because its target is designated by PROTECTED_TARGET pointer '%s'"_err_en_US,
+              lhs_->name(), protectedTarget->name()),
+          *protectedTarget);
+      return false;
+    }
+  }
   if (const auto *pureProc{FindPureProcedureContaining(scope_)}) {
     if (pointerComponentLHS_) { // F'2023 C15104(4) is a hard error
       if (const Symbol * object{FindExternallyVisibleObject(rhs, *pureProc)}) {
@@ -243,13 +271,22 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
           "Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
     }
   }
-  // Warn about undefinable data targets
-  if (auto because{
-          WhyNotDefinable(foldingContext_.messages().at(), scope_, {}, rhs)}) {
-    if (auto *msg{Warn(common::UsageWarning::PointerToUndefinable,
-            "Pointer target is not a definable variable"_warn_en_US)}) {
-      msg->Attach(std::move(because->set_severity(parser::Severity::Because)));
-      return false;
+  // Warn about undefinable data targets.  A PROTECTED_TARGET pointer cannot
+  // define its target, so F'2028 8.5.16 NOTE 1 associates one with a
+  // USE-associated PROTECTED TARGET (p => x) although C864 still lists that
+  // case; this follows the note except for an initial-data-target, which the
+  // note does not show.  A target designated by a PROTECTED_TARGET pointer
+  // is subject to C870-C872 instead.
+  if ((!isProtectedTarget_ || isInitialization_) &&
+      !FindProtectedTargetPointer(rhs)) {
+    if (auto because{WhyNotDefinable(
+            foldingContext_.messages().at(), scope_, {}, rhs)}) {
+      if (auto *msg{Warn(common::UsageWarning::PointerToUndefinable,
+              "Pointer target is not a definable variable"_warn_en_US)}) {
+        msg->Attach(
+            std::move(because->set_severity(parser::Severity::Because)));
+        return false;
+      }
     }
   }
   return true;
@@ -585,7 +622,7 @@ bool CheckPointerAssignment(SemanticsContext &context,
 
 bool CheckPointerAssignment(SemanticsContext &context, const SomeExpr &lhs,
     const SomeExpr &rhs, const Scope &scope, bool isBoundsRemapping,
-    bool isAssumedRank) {
+    bool isAssumedRank, bool isInitialization) {
   const Symbol *pointer{GetLastSymbol(lhs)};
   if (!pointer) {
     return false; // error was reported
@@ -599,6 +636,7 @@ bool CheckPointerAssignment(SemanticsContext &context, const SomeExpr &lhs,
   }
   checker.set_isBoundsRemapping(isBoundsRemapping);
   checker.set_isAssumedRank(isAssumedRank);
+  checker.set_isInitialization(isInitialization);
   bool lhsOk{checker.CheckLeftHandSide(lhs)};
   bool rhsOk{checker.Check(rhs)};
   return lhsOk && rhsOk; // don't short-circuit
@@ -619,6 +657,7 @@ bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
       .set_lhsType(common::Clone(lhs.type))
       .set_isContiguous(lhs.attrs.test(DummyDataObject::Attr::Contiguous))
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
+      .set_isProtectedTarget(lhs.isProtectedTarget)
       .set_isAssumedRank(isAssumedRank)
       .set_isRHSPointerActualArgument(isPointerActualArgument)
       .set_ignoreTKR(lhs.ignoreTKR)
@@ -631,7 +670,7 @@ bool CheckInitialDataPointerTarget(SemanticsContext &context,
              &context.foldingContext().messages(), &context.foldingContext()) &&
       CheckPointerAssignment(context, pointer, init, scope,
           /*isBoundsRemapping=*/false,
-          /*isAssumedRank=*/false);
+          /*isAssumedRank=*/false, /*isInitialization=*/true);
 }
 
 } // namespace Fortran::semantics

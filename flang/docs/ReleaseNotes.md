@@ -161,6 +161,15 @@ page](https://llvm.org/releases/).
 ## Windows Support
 
 ## Fortran Language Changes in Flang
+- The `PROTECTED_TARGET` attribute and statement from the Fortran 2028 working
+  draft (J3/26-007r1, 8.5.16 and 8.6.14) are now accepted. The target of a
+  `PROTECTED_TARGET` data pointer is not definable through that pointer, and
+  the constraints C781, C866 to C874 and C8109 are checked as errors (C872
+  and C874 for references to non-intrinsic procedures). As in 8.5.16 NOTE 1,
+  such a pointer may be pointer-assigned to a use-associated `PROTECTED`
+  target without a diagnostic, although C864 in the same draft still lists
+  that case. The attribute is not a procedure characteristic (15.3.2.2,
+  15.3.3), so it does not affect interface compatibility.
 - Standard intrinsic functions are now classified as `SIMPLE` (F2023 16.1 p2).
   A procedure pointer or dummy procedure whose interface is an intrinsic
   function, such as `procedure(sqrt)`, can no longer be associated with a

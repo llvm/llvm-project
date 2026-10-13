@@ -6184,8 +6184,16 @@ void OmpStructureChecker::CheckDefinableObjects(
     if (!IsVariableListItem(*symbol)) {
       continue;
     }
-    if (auto msg{WhyNotDefinable(source, context_.FindScope(source),
-            DefinabilityFlags{}, *symbol)}) {
+    DefinabilityFlags flags;
+    // A LASTPRIVATE pointer is updated as if by pointer assignment, so the
+    // target of a PROTECTED_TARGET pointer is not defined; other pointers
+    // keep the existing checks.
+    if (clause == llvm::omp::Clause::OMPC_lastprivate && IsPointer(*symbol) &&
+        symbol->attrs().test(Attr::PROTECTED_TARGET)) {
+      flags.set(DefinabilityFlag::PointerDefinition);
+    }
+    if (auto msg{WhyNotDefinable(
+            source, context_.FindScope(source), flags, *symbol)}) {
       context_
           .Say(source,
               "Variable '%s' on the %s clause is not definable"_err_en_US,

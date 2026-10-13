@@ -70,6 +70,12 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
+    // F'2028 C873
+    if (const Symbol *protectedTarget{FindProtectedTargetPointer(*expr)}) {
+      evaluate::SayWithDeclaration(messages, *protectedTarget,
+          "Actual argument designated by PROTECTED_TARGET pointer '%s' requires an explicit interface"_err_en_US,
+          protectedTarget->name());
+    }
     if (IsBOZLiteral(*expr)) {
       messages.Say("BOZ argument %s requires an explicit interface"_err_en_US,
           expr->AsFortran());
@@ -1034,6 +1040,30 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       messages.Say(
           "ALLOCATABLE %s must be associated with an ALLOCATABLE actual argument"_err_en_US,
           dummyName);
+    }
+  }
+
+  // F'2028 C872 and C874.  A nonpointer dummy argument with INTENT(OUT) or
+  // INTENT(IN OUT) is caught above as a definition of the target, and a
+  // nonallocatable actual argument for an ALLOCATABLE dummy argument without
+  // IGNORE_TKR(P) is already an error above.
+  if (scope && !intrinsic) {
+    if (const Symbol *protectedTarget{FindProtectedTargetPointer(actual)}) {
+      bool isNonallocatableActualError{dummyIsAllocatable &&
+          !actualIsAllocatable &&
+          !dummy.ignoreTKR.test(common::IgnoreTKR::Pointer)};
+      if (dummyIsPointer) {
+        if (!dummy.isProtectedTarget) {
+          evaluate::SayWithDeclaration(messages, *protectedTarget,
+              "POINTER %s must have the PROTECTED_TARGET attribute because its actual argument is designated by PROTECTED_TARGET pointer '%s'"_err_en_US,
+              dummyName, protectedTarget->name());
+        }
+      } else if (dummy.intent == common::Intent::Default &&
+          !isNonallocatableActualError) {
+        evaluate::SayWithDeclaration(messages, *protectedTarget,
+            "Nonpointer %s must have INTENT(IN) because its actual argument is designated by PROTECTED_TARGET pointer '%s'"_err_en_US,
+            dummyName, protectedTarget->name());
+      }
     }
   }
 

@@ -441,6 +441,7 @@ std::optional<DummyDataObject> DummyDataObject::Characterize(
               {Attr::POINTER, DummyDataObject::Attr::Pointer},
               {Attr::TARGET, DummyDataObject::Attr::Target},
           });
+      result->isProtectedTarget = symbol.attrs().test(Attr::PROTECTED_TARGET);
       result->intent = GetIntent(symbol.attrs());
       result->ignoreTKR = GetIgnoreTKR(symbol);
       if (object) {

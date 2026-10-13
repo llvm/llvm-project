@@ -94,6 +94,117 @@ static bool DefinesComponentPointerTarget(
   }
 }
 
+// F'2028 8.5.16p2 (J3/26-007r1): the target of a data pointer with the
+// PROTECTED_TARGET attribute is not definable via that pointer.
+// These functions find the pointer whose target contains the object that a
+// designator defines.  When a pointer itself is being defined (a pointer
+// association context), its association is part of the object designated by
+// the rest of the designator.  With followAssociations, an associate name
+// stands for its selector (J3/26-007r1 20.6.7(11)).
+static const Symbol *FindProtectedTargetPointer(
+    const evaluate::Expr<evaluate::SomeType> &, bool isPointerDefinition,
+    bool followAssociations);
+
+static const Symbol *IfProtectedTarget(const Symbol &pointer) {
+  if (pointer.GetUltimate().attrs().test(Attr::PROTECTED_TARGET)) {
+    return &pointer;
+  } else {
+    return nullptr;
+  }
+}
+
+static const Symbol *FindProtectedTargetPointer(
+    const Symbol &symbol, bool isPointerDefinition, bool followAssociations) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  if (const auto *association{ultimate.detailsIf<AssocEntityDetails>()};
+      association && association->expr() && followAssociations) {
+    return FindProtectedTargetPointer(
+        *association->expr(), isPointerDefinition, followAssociations);
+  } else if (IsPointer(ultimate)) {
+    return isPointerDefinition ? nullptr : IfProtectedTarget(symbol);
+  } else {
+    return nullptr;
+  }
+}
+
+static const Symbol *FindProtectedTargetPointer(const evaluate::DataRef &,
+    bool isPointerDefinition, bool followAssociations);
+
+static const Symbol *FindProtectedTargetPointer(
+    const evaluate::Component &component, bool isPointerDefinition,
+    bool followAssociations) {
+  const Symbol &last{component.GetLastSymbol()};
+  if (IsPointer(last) && !isPointerDefinition) {
+    return IfProtectedTarget(last);
+  }
+  return FindProtectedTargetPointer(component.base(),
+      /*isPointerDefinition=*/false, followAssociations);
+}
+
+static const Symbol *FindProtectedTargetPointer(
+    const evaluate::DataRef &dataRef, bool isPointerDefinition,
+    bool followAssociations) {
+  return common::visit(
+      common::visitors{
+          [&](const SymbolRef &symbol) {
+            return FindProtectedTargetPointer(
+                *symbol, isPointerDefinition, followAssociations);
+          },
+          [&](const evaluate::Component &component) {
+            return FindProtectedTargetPointer(
+                component, isPointerDefinition, followAssociations);
+          },
+          [&](const evaluate::ArrayRef &arrayRef) {
+            // Elements and sections are subobjects of the base's target.
+            const evaluate::NamedEntity &base{arrayRef.base()};
+            if (const auto *component{base.UnwrapComponent()}) {
+              return FindProtectedTargetPointer(*component,
+                  /*isPointerDefinition=*/false, followAssociations);
+            } else {
+              return FindProtectedTargetPointer(base.GetLastSymbol(),
+                  /*isPointerDefinition=*/false, followAssociations);
+            }
+          },
+          [](const evaluate::CoarrayRef &) -> const Symbol * {
+            return nullptr; // a coarray is not a pointer
+          },
+      },
+      dataRef.u);
+}
+
+static const Symbol *FindProtectedTargetPointer(
+    const evaluate::Expr<evaluate::SomeType> &expr, bool isPointerDefinition,
+    bool followAssociations) {
+  if (auto dataRef{evaluate::ExtractDataRef(
+          expr, /*intoSubstring=*/true, /*intoComplexPart=*/true)}) {
+    return FindProtectedTargetPointer(
+        *dataRef, isPointerDefinition, followAssociations);
+  } else if (const auto *funcRef{evaluate::UnwrapProcedureRef(expr)};
+      funcRef && !isPointerDefinition) {
+    if (const Symbol *proc{funcRef->proc().GetSymbol()}) {
+      if (const Symbol *result{FindFunctionResult(*proc)};
+          result && IsPointer(*result)) {
+        return IfProtectedTarget(*result);
+      }
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTargetPointer(
+    const evaluate::Expr<evaluate::SomeType> &expr) {
+  return FindProtectedTargetPointer(expr, /*isPointerDefinition=*/false,
+      /*followAssociations=*/false);
+}
+
+// F'2028 C866, 8.5.16p2
+static parser::Message WhyProtectedTargetIsNotDefinable(
+    parser::CharBlock at, const Symbol &pointer) {
+  return BlameSymbol(at,
+      "The target of PROTECTED_TARGET pointer '%s' is not definable via that pointer"_en_US,
+      pointer);
+}
+
 // Check the leftmost (or only) symbol from a data-ref or expression.
 static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original,
@@ -258,6 +369,11 @@ static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
           evaluate::UnwrapWholeSymbolDataRef(dataRef) != nullptr,
           DefinesComponentPointerTarget(dataRef, flags))};
   if (!whyNotBase || !whyNotBase->IsFatal()) {
+    if (const Symbol *pointer{FindProtectedTargetPointer(dataRef,
+            flags.test(DefinabilityFlag::PointerDefinition),
+            /*followAssociations=*/true)}) {
+      return WhyProtectedTargetIsNotDefinable(at, *pointer);
+    }
     if (auto whyNotLast{
             WhyNotDefinableLast(at, scope, flags, dataRef.GetLastSymbol())}) {
       if (whyNotLast->IsFatal() || !whyNotBase) {
@@ -273,6 +389,11 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
   auto whyNotBase{WhyNotDefinableBase(at, scope, flags, original,
       /*isWholeSymbol=*/true, /*isComponentPointerTarget=*/false)};
   if (!whyNotBase || !whyNotBase->IsFatal()) {
+    if (const Symbol *pointer{FindProtectedTargetPointer(original,
+            flags.test(DefinabilityFlag::PointerDefinition),
+            /*followAssociations=*/true)}) {
+      return WhyProtectedTargetIsNotDefinable(at, *pointer);
+    }
     if (auto whyNotLast{WhyNotDefinableLast(at, scope, flags, original)}) {
       if (whyNotLast->IsFatal() || !whyNotBase) {
         return whyNotLast;
@@ -422,6 +543,10 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     }
     return parser::Message{
         at, "'%s' is not a definable pointer"_err_en_US, expr.AsFortran()};
+  } else if (const Symbol *result{
+                 FindProtectedTargetPointer(expr, /*isPointerDefinition=*/false,
+                     /*followAssociations=*/true)}) {
+    return WhyProtectedTargetIsNotDefinable(at, *result);
   } else if (!evaluate::IsVariable(expr)) {
     return parser::Message{
         at, "'%s' is not a variable or pointer"_err_en_US, expr.AsFortran()};

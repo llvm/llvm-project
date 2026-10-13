@@ -54,5 +54,13 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock, const Scope &,
 // describing why.
 const char *WhyBaseObjectIsSuspicious(const Symbol &, const Scope &);
 
+// F'2028 C870-C874 (J3/26-007r1): when an expression is a data pointer with
+// the PROTECTED_TARGET attribute, or a subobject of that pointer's target,
+// returns that pointer; for a reference to a function whose result is such
+// a pointer, returns the result.  A pointer component that follows it in the
+// designator designates its own target (F'2023 9.4.2p5).
+const Symbol *FindProtectedTargetPointer(
+    const evaluate::Expr<evaluate::SomeType> &);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_DEFINABLE_H_

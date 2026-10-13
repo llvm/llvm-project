@@ -262,6 +262,10 @@ struct DummyDataObject {
   Attrs attrs;
   common::IgnoreTKRSet ignoreTKR;
   std::optional<common::CUDADataAttr> cudaDataAttr;
+  // PROTECTED_TARGET is not a characteristic (F'2028 15.3.2.2), so it is kept
+  // apart from attrs and does not affect interface compatibility; C872 needs
+  // it.
+  bool isProtectedTarget{false};
 };
 
 // 15.3.2.3

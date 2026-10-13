@@ -215,9 +215,12 @@ TYPE_CONTEXT_PARSER("specification construct"_en_US,
 //        access-stmt | allocatable-stmt | asynchronous-stmt | bind-stmt |
 //        codimension-stmt | contiguous-stmt | dimension-stmt | external-stmt |
 //        intent-stmt | intrinsic-stmt | namelist-stmt | optional-stmt |
-//        pointer-stmt | protected-stmt | save-stmt | target-stmt |
-//        volatile-stmt | value-stmt | common-stmt | equivalence-stmt |
+//        pointer-stmt | protected-stmt | protected-target-stmt | save-stmt |
+//        target-stmt | volatile-stmt | value-stmt | common-stmt |
+//        equivalence-stmt |
 // (CUDA) CUDA-attributes-stmt
+// protected-target-stmt is tried before protected-stmt, whose keyword is
+// its prefix.
 TYPE_PARSER(first(
     construct<OtherSpecificationStmt>(indirect(Parser<AccessStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<AllocatableStmt>{})),
@@ -232,6 +235,7 @@ TYPE_PARSER(first(
     construct<OtherSpecificationStmt>(indirect(Parser<NamelistStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<OptionalStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<PointerStmt>{})),
+    construct<OtherSpecificationStmt>(indirect(Parser<ProtectedTargetStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<ProtectedStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<SaveStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<TargetStmt>{})),

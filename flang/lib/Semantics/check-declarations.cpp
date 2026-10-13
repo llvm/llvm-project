@@ -347,6 +347,16 @@ void CheckHelper::Check(const Symbol &symbol) {
           "A PROTECTED entity may not be in a common block"_err_en_US);
     }
   }
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET)) {
+    if (!IsObjectPointer(&symbol)) { // F'2028 8.5.16p1, C781, C8109
+      messages_.Say(
+          "A PROTECTED_TARGET entity must be a data pointer"_err_en_US);
+    }
+    if (FindCommonBlockContaining(symbol)) { // F'2028 C867
+      messages_.Say(
+          "A PROTECTED_TARGET entity may not be in a common block"_err_en_US);
+    }
+  }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
   }
