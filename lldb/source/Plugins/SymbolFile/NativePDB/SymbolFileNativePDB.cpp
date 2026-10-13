@@ -180,25 +180,6 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   return pdb;
 }
 
-static std::string GetClangQualifiedName(llvm::StringRef name) {
-  std::string result;
-  while (!name.empty()) {
-    size_t pos = name.find('`');
-    result += name.take_front(pos);
-    if (pos == llvm::StringRef::npos)
-      break;
-    name = name.drop_front(pos);
-    if (name.consume_front("`anonymous namespace'") ||
-        name.consume_front("`anonymous-namespace'")) {
-      result += "(anonymous namespace)";
-    } else {
-      result += name.front();
-      name = name.drop_front();
-    }
-  }
-  return result;
-}
-
 static bool IsFunctionPrologue(const CompilandIndexItem &cci,
                                lldb::addr_t addr) {
   // FIXME: Implement this.
@@ -1144,9 +1125,12 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   if (auto err = ts_or_err.takeError())
     return nullptr;
   auto ts = *ts_or_err;
+  std::string var_name = name.str();
   if (ts) {
-    if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser())
+    if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser()) {
       ast_builder->EnsureVariable(var_id);
+      var_name = ast_builder->GetQualifiedName(name);
+    }
   }
 
   DWARFExpressionList location(module_sp, location_expr, nullptr);
@@ -1158,10 +1142,9 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   bool location_is_constant_data = false;
   bool static_member = false;
   VariableSP var_sp = std::make_shared<Variable>(
-      toOpaqueUid(var_id), GetClangQualifiedName(name).c_str(),
-      mangled_name.str().c_str(), type_sp, scope, comp_unit.get(), ranges,
-      &decl, location, is_external, artificial, location_is_constant_data,
-      static_member);
+      toOpaqueUid(var_id), var_name.c_str(), mangled_name.str().c_str(),
+      type_sp, scope, comp_unit.get(), ranges, &decl, location, is_external,
+      artificial, location_is_constant_data, static_member);
 
   return var_sp;
 }
@@ -1198,12 +1181,22 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
   }
   DWARFExpressionList location(module, std::move(*location_or_err), nullptr);
 
+  std::string var_name = constant.Name.str();
+  auto ts_or_err = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  if (auto err = ts_or_err.takeError()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                   "Failed to get type system for {1}: {0}", constant.Name);
+  } else if (auto ts = *ts_or_err) {
+    if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser())
+      var_name = ast_builder->GetQualifiedName(constant.Name);
+  }
+
   bool external = false;
   bool artificial = false;
   bool location_is_constant_data = true;
   bool static_member = false;
   VariableSP var_sp = std::make_shared<Variable>(
-      toOpaqueUid(var_id), GetClangQualifiedName(constant.Name).c_str(),
+      toOpaqueUid(var_id), var_name.c_str(),
       /*mangled=*/nullptr, type_sp, eValueTypeVariableGlobal, module.get(),
       ranges, &decl, location, external, artificial, location_is_constant_data,
       static_member);

@@ -75,6 +75,8 @@ public:
   CompilerDeclContext FindNamespaceDecl(CompilerDeclContext parent_ctx,
                                         llvm::StringRef name) override;
 
+  std::string GetQualifiedName(llvm::StringRef name) override;
+
   void Dump(Stream &stream, llvm::StringRef filter, bool show_color) override;
 
   // Clang-specific
