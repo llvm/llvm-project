@@ -603,20 +603,24 @@ void spirv::ConstantOp::print(OpAsmPrinter &printer) {
     printer << " : " << getType();
 }
 
-static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
-                                        Type opType) {
+/// Verifies that `value` is a valid value for a constant of type `opType`.
+/// `typeDesc` names the role of `opType` in `op` for diagnostics, e.g.,
+/// "result" for the result type of spirv.Constant.
+static LogicalResult verifyConstantType(Operation *op, Attribute value,
+                                        Type opType, StringRef typeDesc) {
   if (isa<spirv::CooperativeMatrixType>(opType)) {
     auto denseAttr = dyn_cast<DenseElementsAttr>(value);
     if (!denseAttr || !denseAttr.isSplat())
-      return op.emitOpError("expected a splat dense attribute for cooperative "
-                            "matrix constant, but found ")
+      return op->emitOpError("expected a splat dense attribute for cooperative "
+                             "matrix constant, but found ")
              << denseAttr;
   }
   if (isa<IntegerAttr, FloatAttr>(value)) {
     auto valueType = cast<TypedAttr>(value).getType();
     if (valueType != opType)
-      return op.emitOpError("result type (")
-             << opType << ") does not match value type (" << valueType << ")";
+      return op->emitOpError()
+             << typeDesc << " type (" << opType
+             << ") does not match value type (" << valueType << ")";
     return success();
   }
   if (isa<DenseTypedElementsAttr, SparseElementsAttr>(value)) {
@@ -626,9 +630,9 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
     auto arrayType = dyn_cast<spirv::ArrayType>(opType);
     auto shapedType = dyn_cast<ShapedType>(valueType);
     if (!arrayType)
-      return op.emitOpError("result or element type (")
-             << opType << ") does not match value type (" << valueType
-             << "), must be the same or spirv.array";
+      return op->emitOpError() << typeDesc << " or element type (" << opType
+                               << ") does not match value type (" << valueType
+                               << "), must be the same or spirv.array";
 
     int numElements = arrayType.getNumElements();
     auto opElemType = arrayType.getElementType();
@@ -637,18 +641,20 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
       opElemType = t.getElementType();
     }
     if (!opElemType.isIntOrFloat())
-      return op.emitOpError("only support nested array result type");
+      return op->emitOpError("only support nested array ")
+             << typeDesc << " type";
 
     auto valueElemType = shapedType.getElementType();
     if (valueElemType != opElemType) {
-      return op.emitOpError("result element type (")
-             << opElemType << ") does not match value element type ("
-             << valueElemType << ")";
+      return op->emitOpError()
+             << typeDesc << " element type (" << opElemType
+             << ") does not match value element type (" << valueElemType << ")";
     }
 
     if (numElements != shapedType.getNumElements()) {
-      return op.emitOpError("result number of elements (")
-             << numElements << ") does not match value number of elements ("
+      return op->emitOpError()
+             << typeDesc << " number of elements (" << numElements
+             << ") does not match value number of elements ("
              << shapedType.getNumElements() << ")";
     }
     return success();
@@ -657,40 +663,46 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
     if (auto structType = dyn_cast<spirv::StructType>(opType)) {
       // Identified (possibly recursive) structs are not supported as constants.
       if (structType.isIdentified())
-        return op.emitOpError(
+        return op->emitOpError(
             "cannot have an identified struct as a constant type");
       if (arrayAttr.size() != structType.getNumElements())
-        return op.emitOpError("number of constituents (")
+        return op->emitOpError("number of constituents (")
                << arrayAttr.size()
                << ") does not match number of struct members ("
                << structType.getNumElements() << ")";
       for (auto [idx, element] : llvm::enumerate(arrayAttr.getValue())) {
-        if (failed(verifyConstantType(op, element,
-                                      structType.getElementType(idx))))
+        if (failed(verifyConstantType(
+                op, element, structType.getElementType(idx), typeDesc)))
           return failure();
       }
       return success();
     }
     auto arrayType = dyn_cast<spirv::ArrayType>(opType);
     if (!arrayType)
-      return op.emitOpError(
-          "must have spirv.array or spirv.struct result type for array value");
+      return op->emitOpError("must have spirv.array or spirv.struct ")
+             << typeDesc << " type for array value";
+    if (arrayAttr.size() != arrayType.getNumElements())
+      return op->emitOpError("number of constituents (")
+             << arrayAttr.size()
+             << ") does not match number of array elements ("
+             << arrayType.getNumElements() << ")";
     Type elemType = arrayType.getElementType();
     for (Attribute element : arrayAttr.getValue()) {
       // Verify array elements recursively.
-      if (failed(verifyConstantType(op, element, elemType)))
+      if (failed(verifyConstantType(op, element, elemType, typeDesc)))
         return failure();
     }
     return success();
   }
-  return op.emitOpError("cannot have attribute: ") << value;
+  return op->emitOpError("cannot have attribute: ") << value;
 }
 
 LogicalResult spirv::ConstantOp::verify() {
   // ODS already generates checks to make sure the result type is valid. We just
   // need to additionally check that the value's attribute type is consistent
   // with the result type.
-  return verifyConstantType(*this, getValueAttr(), getType());
+  return verifyConstantType(getOperation(), getValueAttr(), getType(),
+                            "result");
 }
 
 bool spirv::ConstantOp::isBuildableWith(Type type) {
@@ -1429,11 +1441,11 @@ ParseResult spirv::GlobalVariableOp::parse(OpAsmParser &parser,
     return failure();
   }
 
-  // Parse optional initializer
+  // Parse optional initializer: either a symbol or a constant value.
   if (succeeded(parser.parseOptionalKeyword(initializerAttrName))) {
-    FlatSymbolRefAttr initSymbol;
+    Attribute initializer;
     if (parser.parseLParen() ||
-        parser.parseAttribute(initSymbol, Type(), initializerAttrName,
+        parser.parseAttribute(initializer, initializerAttrName,
                               result.attributes) ||
         parser.parseRParen())
       return failure();
@@ -1472,10 +1484,8 @@ void spirv::GlobalVariableOp::print(OpAsmPrinter &printer) {
 
   StringRef initializerAttrName = this->getInitializerAttrName();
   // Print optional initializer
-  if (auto initializer = this->getInitializer()) {
-    printer << " " << initializerAttrName << '(';
-    printer.printSymbolName(*initializer);
-    printer << ')';
+  if (Attribute initializer = this->getInitializerAttr()) {
+    printer << " " << initializerAttrName << '(' << initializer << ')';
     elidedAttrs.push_back(initializerAttrName);
   }
 
@@ -1511,14 +1521,12 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     }
   }
 
-  if (FlatSymbolRefAttr init = getInitializerAttr()) {
+  Type pointeeType = cast<spirv::PointerType>(getType()).getPointeeType();
+  Attribute init = getInitializerAttr();
+  if (auto initSymbol = dyn_cast_or_null<FlatSymbolRefAttr>(init)) {
     Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
-        (*this)->getParentOp(), init.getAttr());
-    // TODO: Currently only variable initialization with specialization
-    // constants is supported. There could be normal constants in the module
-    // scope as well.
-    //
-    // In the current setup we also cannot initialize one global variable with
+        (*this)->getParentOp(), initSymbol.getAttr());
+    // TODO: In the current setup we cannot initialize one global variable with
     // another. The problem is that if we try to initialize pointer of type X
     // with another pointer type, the validator fails because it expects the
     // variable to be initialized to be type X, not pointer to X. Now
@@ -1530,9 +1538,15 @@ LogicalResult spirv::GlobalVariableOp::verify() {
                          "spirv.SpecConstant or "
                          "spirv.SpecConstantCompositeOp op");
     }
+  } else if (init) {
+    // The initializer is the value of a normal constant. SPIR-V spec:
+    // "Initializer must have the same type as the type pointed to by Result
+    // Type."
+    if (failed(
+            verifyConstantType(getOperation(), init, pointeeType, "pointee")))
+      return failure();
   }
 
-  Type pointeeType = cast<spirv::PointerType>(getType()).getPointeeType();
   if (failed(
           verifyPhysicalStorageBufferDecorations(getOperation(), pointeeType)))
     return failure();

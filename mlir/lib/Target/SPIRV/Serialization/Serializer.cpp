@@ -1021,7 +1021,7 @@ uint32_t Serializer::prepareConstant(Location loc, Type constType,
   // This is a composite literal. We need to handle each component separately
   // and then emit an OpConstantComposite for the whole.
 
-  if (auto id = getConstantID(valueAttr)) {
+  if (auto id = constCompositeIDMap.lookup({valueAttr, constType})) {
     return id;
   }
 
@@ -1045,7 +1045,7 @@ uint32_t Serializer::prepareConstant(Location loc, Type constType,
     return 0;
   }
 
-  constIDMap[valueAttr] = resultID;
+  constCompositeIDMap[{valueAttr, constType}] = resultID;
   return resultID;
 }
 
