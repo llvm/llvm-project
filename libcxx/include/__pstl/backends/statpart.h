@@ -18,6 +18,8 @@
 #include <__pstl/backends/statpart/min_element.h>
 #include <__pstl/backends/statpart/minmax_element.h>
 #include <__pstl/backends/statpart/mismatch.h>
+#include <__pstl/backends/statpart/reverse.h>
+#include <__pstl/backends/statpart/search.h>
 
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_if.h>
@@ -80,91 +82,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
-
-template <class _ExecutionPolicy>
-struct __reverse<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _BidirectionalIterator>
-  _LIBCPP_HIDE_FROM_ABI optional<__empty>
-  operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_BidirectionalIterator>::value) {
-      // Perform a chunked for_each on the first half of the range.
-      // Odd-sized ranges will leave the middle element untouched, which is correct for this algorithm:
-      // its reversed position is the same.
-      auto __n = (__last - __first) / 2;
-      return __statpart::__for_each(
-          __first, __first + __n, [__first, __last](_BidirectionalIterator __i, _BidirectionalIterator __j) {
-            // Derive the last position of the mirrored range by counting from the end.
-            _BidirectionalIterator __mirror_last = __last - (__i - __first);
-            // Swap the elements in the range of the first half with their mirrored counterparts in the second half.
-            std::swap_ranges(std::move(__i),
-                             std::move(__j),
-                             std::reverse_iterator<_BidirectionalIterator>(std::move(__mirror_last)));
-          });
-    } else {
-      // Non-random access iterators currently cannot be processed in parallel, use the sequential implementation.
-      std::reverse(std::move(__first), std::move(__last));
-      return __empty{};
-    }
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __search<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator1>
-  operator()(_Policy&&,
-             _ForwardIterator1 __first1,
-             _ForwardIterator1 __last1,
-             _ForwardIterator2 __first2,
-             _ForwardIterator2 __last2,
-             _BinaryPredicate __pred) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
-      typedef typename std::iterator_traits<_ForwardIterator1>::difference_type _DifferenceType;
-      _DifferenceType __size2 = __last2 - __first2; // The length of the needle to search for.
-      if (__size2 == 0) {
-        return __first1; // If the needle length is zero, the first iterator is returned.
-      }
-      _DifferenceType __size1 = __last1 - __first1;
-      if (__size1 < __size2) {
-        return __last1; // The range is too small to contain the requested number of consecutive elements.
-      }
-      // Calculate the length of the tail where a potential match cannot start by definition.
-      _DifferenceType __crop = __size2 - 1;
-      // We're only interested in the range where a potential match can start: [first, last - crop)
-      _ForwardIterator1 __last1_cropped = __last1 - __crop;
-      // Run a parallel chunked find_if, covering the range where a potential match can start.
-      auto __res = __statpart::__find(
-          __first1,
-          __last1_cropped,
-          [__first2, __last2, __crop, &__pred](_ForwardIterator1 __brick_first, _ForwardIterator1 __brick_last) {
-            // Uncrop the range to allow std::search to find a full match, which can go beyond __brick_last.
-            _ForwardIterator1 __brick_last_uncropped = __brick_last + __crop;
-            // Run a serial std::search inside each of the chunks in parallel.
-            _ForwardIterator1 __ret = std::search(__brick_first, __brick_last_uncropped, __first2, __last2, __pred);
-            // The returned iterator is either a match inside [__brick_first, __brick_last) or a miss encoded as
-            // __brick_last_uncropped. Return the miss as __brick_last to conform to expectations of __find().
-            return __ret == __brick_last_uncropped ? __brick_last : __ret;
-          },
-          less<>{}, // `less` here means the lowest index among the matches
-          true      // `true` here means we want the first match, not the last
-      );
-      if (!__res) {
-        return std::nullopt; // Failed to run the algorithm, propagate the error.
-      }
-      if (*__res == __last1_cropped) {
-        return __last1; // No match was found in the range.
-      }
-      return *__res; // Return the successful match.
-    } else {
-      // Non-random access iterators cannot be processed in parallel, fall back to the sequential implementation.
-      return std::search(
-          std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__pred));
-    }
-  }
-};
 
 template <class _ExecutionPolicy>
 struct __search_n<__statpart_backend_tag, _ExecutionPolicy> {

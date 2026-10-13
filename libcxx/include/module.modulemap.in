@@ -2444,6 +2444,12 @@ module std {
         module mismatch {
           header "__pstl/backends/statpart/mismatch.h"
         }
+        module reverse {
+          header "__pstl/backends/statpart/reverse.h"
+        }
+        module search {
+          header "__pstl/backends/statpart/search.h"
+        }
         header "__pstl/backends/statpart.h"
       }
       module std_thread {
