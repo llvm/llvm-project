@@ -365,26 +365,33 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
   llvm_unreachable("All SpecialCase enumerators should be handled in switch.");
 }
 
-// Returns true/false when we know the answer, nullopt otherwise.
-static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
+// Returns whether a pointer in AS is in the given specific address space, or
+// nullopt when this cannot be determined at compile time.
+static std::optional<bool> isInAddressSpace(unsigned AS, unsigned SpecificAS) {
   if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
       AS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
     return std::nullopt; // Got to check at run-time.
+  if (AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER &&
+      SpecificAS == NVPTXAS::ADDRESS_SPACE_SHARED)
+    return std::nullopt;
+  return AS == SpecificAS ||
+         (AS == NVPTXAS::ADDRESS_SPACE_SHARED &&
+          SpecificAS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER);
+}
+
+// Returns true/false when we know the answer, nullopt otherwise.
+static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   switch (IID) {
   case Intrinsic::nvvm_isspacep_global:
-    return AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_GLOBAL);
   case Intrinsic::nvvm_isspacep_local:
-    return AS == NVPTXAS::ADDRESS_SPACE_LOCAL;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_LOCAL);
   case Intrinsic::nvvm_isspacep_shared:
-    // If shared cluster this can't be evaluated at compile time.
-    if (AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER)
-      return std::nullopt;
-    return AS == NVPTXAS::ADDRESS_SPACE_SHARED;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_SHARED);
   case Intrinsic::nvvm_isspacep_shared_cluster:
-    return AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER ||
-           AS == NVPTXAS::ADDRESS_SPACE_SHARED;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER);
   case Intrinsic::nvvm_isspacep_const:
-    return AS == NVPTXAS::ADDRESS_SPACE_CONST;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_CONST);
   default:
     llvm_unreachable("Unexpected intrinsic");
   }
@@ -670,6 +677,18 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidy", MaxNTID[1]});
   if (MaxNTID.size() > 2)
     LB.push_back({"maxntidz", MaxNTID[2]});
+}
+
+// Global addresses can only be materialized if they are in generic global or
+// constant space.
+bool NVPTXTTIImpl::shouldBuildLookupTablesForConstant(Constant *C) const {
+  if (const auto *GV = dyn_cast<GlobalValue>(C)) {
+    const unsigned AS = GV->getAddressSpace();
+    return AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
+           AS == NVPTXAS::ADDRESS_SPACE_GLOBAL ||
+           AS == NVPTXAS::ADDRESS_SPACE_CONST;
+  }
+  return true;
 }
 
 ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {

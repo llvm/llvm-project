@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
+#include "InstCombineCLOptions.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -34,10 +35,6 @@
 
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
-
-// As a default, let's assume that we want to be aggressive,
-// and attempt to traverse with no limits in attempt to sink negation.
-static constexpr unsigned NegatorDefaultMaxDepth = ~0U;
 
 // Let's guesstimate that most often we will end up visiting/producing
 // fairly small number of new instructions.
@@ -77,11 +74,15 @@ public:
                    OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
                    BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
                    const DataLayout &DL,
-                   ReversePostOrderTraversal<BasicBlock *> &RPOT)
+                   ReversePostOrderTraversal<BasicBlock *> &RPOT,
+                   const InstCombineCLOptions &CLOpts)
       : InstCombiner(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI, DL,
-                     RPOT) {}
+                     RPOT),
+        CLOpts(CLOpts) {}
 
   ~InstCombinerImpl() override = default;
+
+  const InstCombineCLOptions &CLOpts;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
   bool prepareWorklist(Function &F);
@@ -468,9 +469,10 @@ private:
 
   /// Simplify \p V given that it is known to be non-null.
   /// Returns the simplified value if possible, otherwise returns nullptr.
-  /// If \p HasDereferenceable is true, the simplification will not perform
-  /// same object checks.
-  Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
+  /// If \p UseProvenance is true, the simplification will use provenance-based
+  /// reasoning (if the pointer is known to be dereferenceable in an
+  /// address-space where null is not defined).
+  Value *simplifyNonNullOperand(Value *V, bool UseProvenance,
                                 unsigned Depth = 0);
 
   /// Create `select C, S1, S2`. Use only when the profile cannot be calculated
@@ -885,10 +887,12 @@ class Negator final {
 
   const bool IsTrulyNegation;
 
+  const unsigned MaxDepth;
+
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT,
-          bool IsTrulyNegation);
+  Negator(Module &M, const DominatorTree &DT, bool IsTrulyNegation,
+          unsigned MaxDepth);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

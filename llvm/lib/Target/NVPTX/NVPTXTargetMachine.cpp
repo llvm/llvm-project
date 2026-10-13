@@ -364,7 +364,6 @@ void NVPTXPassConfig::addFastRegAlloc() {
 
 void NVPTXPassConfig::addOptimizedRegAlloc() {
   addPass(&ProcessImplicitDefsID);
-  addPass(&LiveVariablesID);
   addPass(&MachineLoopInfoID);
   addPass(&PHIEliminationID);
 

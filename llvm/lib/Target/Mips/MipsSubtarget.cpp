@@ -65,7 +65,8 @@ bool MipsSubtarget::GINVWarningPrinted = false;
 void MipsSubtarget::anchor() {}
 
 MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
-                             bool little, const MipsTargetMachine &TM,
+                             StringRef ABIName, bool little,
+                             const MipsTargetMachine &TM,
                              MaybeAlign StackAlignOverride)
     : MipsGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       MipsArchVersion(MipsDefault), IsLittle(little), IsSoftFloat(false),
@@ -81,6 +82,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       HasGINV(false), UseIndirectJumpsHazard(false), StrictAlign(false),
       UseCompactBranches(MipsCompactBranchPolicy != CB_Never),
       StackAlignOverride(StackAlignOverride), TM(TM),
+      ABI(MipsABIInfo::computeTargetABI(TT, ABIName)),
       InstrInfo(
           MipsInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
       FrameLowering(MipsFrameLowering::create(*this)),
@@ -276,7 +278,6 @@ Reloc::Model MipsSubtarget::getRelocationModel() const {
 bool MipsSubtarget::isABI_N64() const { return getABI().IsN64(); }
 bool MipsSubtarget::isABI_N32() const { return getABI().IsN32(); }
 bool MipsSubtarget::isABI_O32() const { return getABI().IsO32(); }
-const MipsABIInfo &MipsSubtarget::getABI() const { return TM.getABI(); }
 
 const SelectionDAGTargetInfo *MipsSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();

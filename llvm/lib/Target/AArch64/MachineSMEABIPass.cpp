@@ -767,7 +767,8 @@ PhysRegSave MachineSMEABI::createPhysRegSave(LiveRegs PhysLiveRegs,
     RegSave.StatusFlags = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS), RegSave.StatusFlags)
         .addImm(AArch64SysReg::NZCV)
-        .addReg(AArch64::NZCV, RegState::Implicit);
+        .addReg(AArch64::NZCV, RegState::Implicit)
+        .setOperandDead(2); // implicit-def $nzcv
   }
   // Note: Preserving X0 is "free" as this is before register allocation, so
   // the register allocator is still able to optimize these copies.
@@ -828,7 +829,8 @@ void MachineSMEABI::emitRestoreLazySave(EmitContext &Context,
       .addImm(1);
   // Get current TPIDR2_EL0.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS), TPIDR2EL0)
-      .addImm(AArch64SysReg::TPIDR2_EL0);
+      .addImm(AArch64SysReg::TPIDR2_EL0)
+      .setOperandDead(2); // implicit-def $nzcv
   // Get pointer to TPIDR2 block.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), TPIDR2)
       .addFrameIndex(Context.getTPIDR2Block(*MF))
@@ -933,7 +935,8 @@ void MachineSMEABI::emitSMEPrologue(MachineBasicBlock &MBB,
     Register TPIDR2EL0 = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS))
         .addReg(TPIDR2EL0, RegState::Define)
-        .addImm(AArch64SysReg::TPIDR2_EL0);
+        .addImm(AArch64SysReg::TPIDR2_EL0)
+        .setOperandDead(2); // implicit-def $nzcv
     // If TPIDR2_EL0 is non-zero, commit the lazy save.
     // NOTE: Functions that only use ZT0 don't need to zero ZA.
     auto CommitZASave =
