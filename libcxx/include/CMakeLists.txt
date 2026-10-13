@@ -707,6 +707,10 @@ set(files
   __pstl/backends/statpart/mismatch.h
   __pstl/backends/statpart/reverse.h
   __pstl/backends/statpart/search.h
+  __pstl/backends/statpart/search_n.h
+  __pstl/backends/statpart/stable_sort.h
+  __pstl/backends/statpart/swap_ranges.h
+  __pstl/backends/statpart/transform.h
   __pstl/backends/std_thread.h
   __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h

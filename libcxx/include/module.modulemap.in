@@ -2450,6 +2450,18 @@ module std {
         module search {
           header "__pstl/backends/statpart/search.h"
         }
+        module search_n {
+          header "__pstl/backends/statpart/search_n.h"
+        }
+        module stable_sort {
+          header "__pstl/backends/statpart/stable_sort.h"
+        }
+        module swap_ranges {
+          header "__pstl/backends/statpart/swap_ranges.h"
+        }
+        module transform {
+          header "__pstl/backends/statpart/transform.h"
+        }
         header "__pstl/backends/statpart.h"
       }
       module std_thread {

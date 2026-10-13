@@ -20,6 +20,10 @@
 #include <__pstl/backends/statpart/mismatch.h>
 #include <__pstl/backends/statpart/reverse.h>
 #include <__pstl/backends/statpart/search.h>
+#include <__pstl/backends/statpart/search_n.h>
+#include <__pstl/backends/statpart/stable_sort.h>
+#include <__pstl/backends/statpart/swap_ranges.h>
+#include <__pstl/backends/statpart/transform.h>
 
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_if.h>
@@ -82,163 +86,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
-
-template <class _ExecutionPolicy>
-struct __search_n<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator, class _Size, class _Tp, class _Predicate>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
-  operator()(_Policy&&,
-             _ForwardIterator __first,
-             _ForwardIterator __last,
-             _Size __count,
-             const _Tp& __value,
-             _Predicate __pred) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      typedef typename std::iterator_traits<_ForwardIterator>::difference_type _DifferenceType;
-      _DifferenceType __integral_count = std::__convert_to_integral(__count);
-      if (__integral_count <= 0) {
-        return __first; // If the count is non-positive, the first iterator is returned.
-      }
-      _DifferenceType __size = __last - __first;
-      if (__size < __integral_count) {
-        return __last; // The range is too small to contain the requested number of consecutive elements.
-      }
-      // Calculate the length of the tail where a potential match cannot start by definition.
-      _DifferenceType __crop = __integral_count - 1;
-      // We're only interested in the range where a potential match can start: [first, last - crop)
-      _ForwardIterator __last2 = __last - __crop;
-      // Run a parallel chunked find_if, covering the range where a potential match can start.
-      auto __res = __statpart::__find(
-          __first,
-          __last2,
-          [__integral_count, __crop, &__value, &__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
-            // Uncrop the range to allow std::search_n to find a full match, which can go beyond __brick_last.
-            _ForwardIterator __brick_last_uncropped = __brick_last + __crop;
-            // Run a serial std::search_n inside each of the chunks in parallel.
-            _ForwardIterator __ret =
-                std::search_n(__brick_first, __brick_last_uncropped, __integral_count, __value, __pred);
-            // The returned iterator is either a match inside [__brick_first, __brick_last) or a miss encoded as
-            // __brick_last_uncropped. Return the miss as __brick_last to conform to expectations of __find().
-            return __ret == __brick_last_uncropped ? __brick_last : __ret;
-          },
-          less<>{}, // `less` here means the lowest index among the matches
-          true      // `true` here means we want the first match, not the last
-      );
-      if (!__res) {
-        return std::nullopt; // Failed to run the algorithm, propagate the error.
-      }
-      if (*__res == __last2) {
-        return __last; // No match was found in the range.
-      }
-      return *__res; // Return the successful match.
-    } else {
-      // Non-random access iterators cannot be processed in parallel, fall back to the sequential implementation.
-      return std::search_n(std::move(__first), std::move(__last), __count, __value, std::move(__pred));
-    }
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __stable_sort<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _RandomAccessIterator, class _Comp>
-  _LIBCPP_HIDE_FROM_ABI optional<__empty>
-  operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy>) {
-      return __statpart::__stable_sort(
-          __first, __last, __comp, [](_RandomAccessIterator __g_first, _RandomAccessIterator __g_last, _Comp __g_comp) {
-            std::stable_sort(__g_first, __g_last, __g_comp);
-          });
-    } else {
-      std::stable_sort(__first, __last, __comp);
-      return __empty{};
-    }
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __swap_ranges<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
-      _Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
-      auto __res = __statpart::__for_each_iter_pair(
-          __first1,
-          __last1,
-          __first2,
-          [](_ForwardIterator1 __brick_first1, _ForwardIterator1 __brick_last1, _ForwardIterator2 __brick_first2) {
-            std::swap_ranges(std::move(__brick_first1), std::move(__brick_last1), std::move(__brick_first2));
-          });
-      if (!__res) {
-        return std::nullopt; // Failed to run the algorithm, propagate the error.
-      }
-      return __first2 + (__last1 - __first1);
-    } else {
-      // Non-random access iterators cannot be processed in parallel, fall back to the sequential implementation.
-      return std::swap_ranges(std::move(__first1), std::move(__last1), std::move(__first2));
-    }
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __transform<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _UnaryOperation>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> operator()(
-      _Policy&&, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __result, _UnaryOperation __op)
-      const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value &&
-                  __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      __statpart::__for_each(
-          __first, __last, [__op, __first, __result](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
-            return std::transform(__brick_first, __brick_last, __result + (__brick_first - __first), __op);
-          });
-      return __result + (__last - __first);
-    } else {
-      return std::transform(__first, __last, __result, __op);
-    }
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __transform_binary<__statpart_backend_tag, _ExecutionPolicy> {
-  template <class _Policy,
-            class _ForwardIterator1,
-            class _ForwardIterator2,
-            class _ForwardOutIterator,
-            class _BinaryOperation>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
-  operator()(_Policy&&,
-             _ForwardIterator1 __first1,
-             _ForwardIterator1 __last1,
-             _ForwardIterator2 __first2,
-             _ForwardOutIterator __result,
-             _BinaryOperation __op) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
-                  __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      auto __res = __statpart::__for_each(
-          __first1,
-          __last1,
-          [__op, __first1, __first2, __result](_ForwardIterator1 __brick_first, _ForwardIterator1 __brick_last) {
-            return std::transform(
-                __brick_first,
-                __brick_last,
-                __first2 + (__brick_first - __first1),
-                __result + (__brick_first - __first1),
-                __op);
-          });
-      if (!__res)
-        return nullopt;
-      return __result + (__last1 - __first1);
-    } else {
-      return std::transform(__first1, __last1, __first2, __result, __op);
-    }
-  }
-};
 
 template <class _ExecutionPolicy>
 struct __transform_reduce<__statpart_backend_tag, _ExecutionPolicy> {
