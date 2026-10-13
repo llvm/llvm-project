@@ -4838,11 +4838,10 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   auto ValidIter = llvm::find_if(Old->redecls(), [](const VarDecl *D) {
     return !D->isInvalidDecl();
   });
-  VarDecl *TypeOld = ValidIter == Old->redecls_end() ? nullptr : *ValidIter;
 
-  if (TypeOld) {
-    MergeVarDeclTypes(New, TypeOld,
-                      mergeTypeWithPrevious(*this, New, TypeOld, Previous));
+  if (ValidIter != Old->redecls_end()) {
+    MergeVarDeclTypes(New, *ValidIter,
+                      mergeTypeWithPrevious(*this, New, *ValidIter, Previous));
     if (New->isInvalidDecl())
       return;
   }
