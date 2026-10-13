@@ -13,24 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-def OlympusModel : SchedMachineModel {
-  // NOTE: Unless otherwise stated, values unspecified in the Olympus SWOG are
-  // copied from the Neoverse V2 model.
-  let IssueWidth            =  10; // Maximum macro-ops dispatched per cycle.
-  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
-  let LoadLatency           =   4; // Optimistic load latency.
-  let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.
-  let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.
-  let CompleteModel         =   1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
-                                                    SVE2p1Unsupported.F,
-                                                    [HasSVE2p1, HasSVEB16B16,
-                                                     HasSVEBFSCALE,
-                                                     HasCPA, HasCSSC,
-                                                     HasMatMulFP64, HasMOPS, HasMOPS_GO]);
-}
-
 //===----------------------------------------------------------------------===//
 // In the Olympus core, instructions are first fetched and decoded into
 // internal macro-ops (MOps). Those MOps are then renamed and dispatched to the

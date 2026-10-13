@@ -17,24 +17,6 @@
 // The following definitions describe the per-operand machine model.
 // This works with MachineScheduler. See MCSchedModel.h for details.
 
-// Cortex-A55 machine model for scheduling and other instruction cost heuristics.
-def CortexA55Model : SchedMachineModel {
-  let MicroOpBufferSize = 0;  // The Cortex-A55 is an in-order processor
-  let IssueWidth = 2;         // It dual-issues under most circumstances
-  let LoadLatency = 4;        // Cycles for loads to access the cache. The
-                              // optimisation guide shows that most loads have
-                              // a latency of 3, but some have a latency of 4
-                              // or 5. Setting it 4 looked to be good trade-off.
-  let MispredictPenalty = 8;  // A branch direction mispredict.
-  let PostRAScheduler = 1;    // Enable PostRA scheduler pass.
-  let CompleteModel = 0;      // Covers instructions applicable to Cortex-A55.
-
-  list<Predicate> UnsupportedFeatures = [HasSVE, HasMTE];
-
-  // FIXME: Remove when all errors have been fixed.
-  let FullInstRWOverlapCheck = 0;
-}
-
 //===----------------------------------------------------------------------===//
 // Define each kind of processor resource and number available.
 

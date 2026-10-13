@@ -14,17 +14,6 @@
 // The following definitions describe the per-operand machine model.
 // This works with MachineScheduler. See MCSchedModel.h for details.
 
-// Cortex-A320 machine model for scheduling and other instruction cost heuristics.
-def CortexA320Model : SchedMachineModel {
-  let MicroOpBufferSize = 0;  // Cortex-A320 is an in-order processor
-  let IssueWidth = 1;         // Cortex-A320 is a single-issue processor
-  let LoadLatency = 5;
-  let PostRAScheduler = 1;    // Enable PostRA scheduler pass.
-  let CompleteModel = 0;      // Covers instructions applicable to Cortex-A320.
-
-  let FullInstRWOverlapCheck = 0;
-}
-
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedWrite types

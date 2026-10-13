@@ -61,66 +61,7 @@ include "AArch64LFI.td"
 // AArch64 Processors supported.
 //
 
-//===----------------------------------------------------------------------===//
-// Unsupported features to disable for scheduling models
-//===----------------------------------------------------------------------===//
-
-class AArch64Unsupported { list<Predicate> F; }
-
-let F = [HasSVE2p1, HasSVE2p1_or_SME, HasSVE2p1_or_SME2, HasSVE2p1_or_StreamingSME2, HasSVE2p1_or_SME2p1] in
-def SVE2p1Unsupported : AArch64Unsupported;
-
-def SVE2Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSVE2, HasSVE2_or_SME, HasNonStreamingSVE2_or_SME2, HasSSVE_FP8FMA, HasSMEF8F16,
-                       HasSSVE_FP8DOT2, HasSSVE_FP8DOT4,
-                       HasSMEF8F32, HasSVEAES, HasSVESHA3, HasSVESM4, HasSVEBitPerm,
-                       HasSVEB16B16, HasSVEBFSCALE],
-                       SVE2p1Unsupported.F);
-}
-
-def SVEUnsupported : AArch64Unsupported {
-  let F = !listconcat([HasSVE, HasSVE_or_SME],
-                      SVE2Unsupported.F);
-}
-
-def SME2p3Unsupported : AArch64Unsupported {
-  let F = [HasSVE2p3_or_SME2p3, HasSVE_B16MM];
-}
-
-def SME2p2Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME2p2, HasSVE2p2_or_SME2p2,
-           HasNonStreamingSVE_or_SME2p2,
-           HasNonStreamingSVE2p2_or_SME2p2],
-           SME2p3Unsupported.F);
-}
-
-def SME2p1Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME2p1, HasSVE2p1_or_SME2p1,
-                       HasSME_MOP4, HasSME_TMOP, HasNonStreamingSVE_or_SSVE_FEXPA, 
-                       HasNonStreamingSVE_or_SSVE_BitPerm],
-                       SME2p2Unsupported.F);
-}
-
-def SME2Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME2, HasNonStreamingSVE2_or_SME2, HasSVE2p1_or_SME2, HasSSVE_FP8FMA,
-                      HasSSVE_FP8DOT2, HasSSVE_FP8DOT4,
-                      HasSMEF8F16, HasSMEF8F32, HasSMEF16F16_or_SMEF8F16, HasSMEB16B16,
-                      HasNonStreamingSVE_or_SSVE_AES, HasSVE2p1_or_StreamingSME2, HasSME2andIsNonStreamingSafe],
-                      SME2p1Unsupported.F);
-}
-
-def SMEUnsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME, HasSMEI16I64, HasSMEF16F16, HasSMEF64F64, HasSMEFA64,
-                       HasSMEandIsNonStreamingSafe],
-                      SME2Unsupported.F);
-}
-
-def MTEUnsupported : AArch64Unsupported {
-  let F = [HasMTE];
-}
-
-let F = [HasPAuth, HasPAuthLR] in
-def PAUnsupported : AArch64Unsupported;
+include "AArch64SchedModels.td"
 
 include "AArch64SchedA320.td"
 include "AArch64SchedA53.td"

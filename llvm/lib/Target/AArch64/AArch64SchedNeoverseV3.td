@@ -13,21 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-def NeoverseV3Model : SchedMachineModel {
-  let IssueWidth            =  10; // Expect best value to be slightly higher than V2
-  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer. NOTE: Copied from Neoverse-V2
-  let LoadLatency           =   4; // Optimistic load latency.
-  let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.  NOTE: Copied from N2.
-  let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.
-  let CompleteModel         =   1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
-                                                    SVE2p1Unsupported.F,
-                                                    [HasSVE2p1, HasSVEB16B16,
-                                                     HasSVEBFSCALE,
-                                                     HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
-}
-
 //===----------------------------------------------------------------------===//
 // Define each kind of processor resource and number available on Neoverse V3.
 // Instructions are first fetched and then decoded into internal macro-ops

@@ -20,23 +20,6 @@
 // Therefore, IssueWidth is set to the narrower of the two at three, while still
 // modeling the machine as out-of-order.
 
-def CortexA57Model : SchedMachineModel {
-  let IssueWidth        =   3; // 3-way decode and dispatch
-  let MicroOpBufferSize = 128; // 128 micro-op re-order buffer
-  let LoadLatency       =   4; // Optimistic load latency
-  let MispredictPenalty =  14; // Fetch + Decode/Rename/Dispatch + Branch
-
-  // Enable partial & runtime unrolling. The magic number is chosen based on
-  // experiments and benchmarking data.
-  let LoopMicroOpBufferSize = 16;
-  let CompleteModel = 1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F,
-                                                    SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
-}
-
 //===----------------------------------------------------------------------===//
 // Define each kind of processor resource and number available on Cortex-A57.
 // Cortex A-57 has 8 pipelines that each has its own 8-entry queue where

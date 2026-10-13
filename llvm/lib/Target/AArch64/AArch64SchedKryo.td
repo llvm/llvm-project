@@ -16,25 +16,6 @@
 // uops. Now, the latency spreadsheet has information based on fragmented uops,
 // but these do not actually take up an issue queue.
 
-def KryoModel : SchedMachineModel {
-  let IssueWidth        =   5; // 5-wide issue for expanded uops
-  let MicroOpBufferSize = 128; // Out-of-order with temporary unified issue buffer
-  let LoadLatency       =   4; // Optimistic load latency
-  let MispredictPenalty =  14; // Fetch + Decode/Rename/Dispatch + Branch
-
-  // Enable partial & runtime unrolling. The magic number is chosen based on
-  // experiments and benchmarking data.
-  let LoopMicroOpBufferSize = 16;
-  let CompleteModel = 1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F,
-                                                    SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
-  // FIXME: Remove when all errors have been fixed.
-  let FullInstRWOverlapCheck = 0;
-}
-
 //===----------------------------------------------------------------------===//
 // Define each kind of processor resource and number available on Kryo.
 

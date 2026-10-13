@@ -14,24 +14,6 @@
 // The following definitions describe the simpler per-operand machine model.
 // This works with MachineScheduler. See MCSchedule.h for details.
 
-// Cortex-A53 machine model for scheduling and other instruction cost heuristics.
-def CortexA53Model : SchedMachineModel {
-  let MicroOpBufferSize = 0; // Explicitly set to zero since A53 is in-order.
-  let IssueWidth = 2;        // 2 micro-ops are dispatched per cycle.
-  let LoadLatency = 3;       // Optimistic load latency assuming bypass.
-                             // This is overridden by OperandCycles if the
-                             // Itineraries are queried instead.
-  let MispredictPenalty = 9; // Based on "Cortex-A53 Software Optimisation
-                             // Specification - Instruction Timings"
-                             // v 1.0 Spreadsheet
-  let CompleteModel = 1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F,
-                                                    SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
-}
-
 
 //===----------------------------------------------------------------------===//
 // Define each kind of processor resource and number available.

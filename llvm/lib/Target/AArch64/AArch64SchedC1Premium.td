@@ -16,22 +16,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-def C1PremiumModel : SchedMachineModel {
-  let IssueWidth            =  10;
-  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
-  let LoadLatency           =   4; // Optimistic load latency.
-  let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.
-  let LoopMicroOpBufferSize =  16;
-  let CompleteModel         =   1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SME2p1Unsupported.F,
-                                                    SVE2p1Unsupported.F,
-                                                    [HasSVE2p1, HasSVEB16B16,
-                                                     HasSVEBFSCALE,
-                                                     HasCPA, HasCSSC,
-                                                     HasMOPS, HasMOPS_GO]);
-}
-
 //===----------------------------------------------------------------------===//
 // Define each kind of processor resource and number available on C1 Premium.
 // Instructions are first fetched and then decoded into internal macro-ops

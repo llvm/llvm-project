@@ -16,23 +16,6 @@
 // The following definitions describe the simpler per-operand machine model.
 // This works with MachineScheduler. See llvm/MC/MCSchedule.h for details.
 
-// Cavium ThunderX T8X scheduling machine model.
-def ThunderXT8XModel : SchedMachineModel {
-  let IssueWidth = 2;         // 2 micro-ops dispatched per cycle.
-  let MicroOpBufferSize = 0;  // ThunderX T88/T81/T83 are in-order.
-  let LoadLatency = 3;        // Optimistic load latency.
-  let MispredictPenalty = 8;  // Branch mispredict penalty.
-  let PostRAScheduler = 1;    // Use PostRA scheduler.
-  let CompleteModel = 1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F,
-                                                    SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
-  // FIXME: Remove when all errors have been fixed.
-  let FullInstRWOverlapCheck = 0;
-}
-
 // Modeling each pipeline with BufferSize == 0 since T8X is in-order.
 def THXT8XUnitALU    : ProcResource<2> { let BufferSize = 0; } // Int ALU
 def THXT8XUnitMAC    : ProcResource<1> { let BufferSize = 0; } // Int MAC

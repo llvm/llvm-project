@@ -14,22 +14,6 @@
 //===----------------------------------------------------------------------===//
 // Pipeline Description.
 
-def OryonModel : SchedMachineModel {
-  let IssueWidth            =  14;
-  let MicroOpBufferSize     = 376;
-  let LoadLatency           =   4;
-  let MispredictPenalty     =  13; // 13 cycles for mispredicted branch.
-  let LoopMicroOpBufferSize =   16; // Oryon-1 does not have loop micro op buffer, we enable this pseudo value to allow for aggressive unrolling based on runtime TC.
-  let PostRAScheduler       =   1; // Using PostRA sched.
-  let CompleteModel         =   1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    SMEUnsupported.F,
-                                                    MTEUnsupported.F,
-                                                    PAUnsupported.F,
-                                                    [HasPAuth, HasCSSC, HasMOPS, HasMOPS_GO]);
-}
-
 let SchedModel = OryonModel in {
 
 // Issue ports.

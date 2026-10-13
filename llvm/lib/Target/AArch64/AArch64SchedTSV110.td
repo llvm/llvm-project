@@ -15,22 +15,6 @@
 // The following definitions describe the simpler per-operand machine model.
 // This works with MachineScheduler. See llvm/MC/MCSchedule.h for details.
 
-// Huawei TSV110 scheduling machine model.
-def TSV110Model : SchedMachineModel {
-  let IssueWidth            =   4; // 4 micro-ops dispatched  per cycle. 
-  let MicroOpBufferSize     = 128; // 128 micro-op re-order buffer
-  let LoopMicroOpBufferSize =  16; 
-  let LoadLatency           =   4; // Optimistic load latency.
-  let MispredictPenalty     =  14; // Fetch + Decode/Rename/Dispatch + Branch
-  let CompleteModel         =   1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    SVE2p1Unsupported.F,
-                                                    PAUnsupported.F,
-                                                    SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
-}
-
 // Define each kind of processor resource and number available on the TSV110,
 // which has 8 pipelines, each with its own queue where micro-ops wait for
 // their operands and issue out-of-order to one of eight execution pipelines.

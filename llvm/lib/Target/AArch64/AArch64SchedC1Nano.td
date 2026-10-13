@@ -19,24 +19,6 @@
 
 // ===---------------------------------------------------------------------===//
 
-// C1-Nano machine model for scheduling and other instruction cost heuristics.
-def C1NanoModel : SchedMachineModel {
-  let MicroOpBufferSize = 0;  // The C1-Nano is an in-order processor
-  let IssueWidth = 3;         // It dual-issues under most circumstances
-  let LoadLatency = 3;        // Cycles for loads to access the cache.
-                              // 2 is best case, 4 is normal case.
-                              // 3 seems to be a good tradeoff
-  let PostRAScheduler = 1;    // Enable PostRA scheduler pass.
-  let CompleteModel = 0;      // The C1-Nano model is incomplete due
-                              // SME instruction details that are not
-                              // available in the SWOG.
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVE2Unsupported.F,
-                                                    SME2Unsupported.F,
-                                                    [HasSVEB16B16, HasSVEBFSCALE,
-                                                     HasCPA, HasMTE, HasCSSC]);
-}
-
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedWrite types

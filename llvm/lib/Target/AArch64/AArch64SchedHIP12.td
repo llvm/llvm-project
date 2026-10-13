@@ -11,20 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-def HIP12Model : SchedMachineModel {
-  let IssueWidth            =   8; // Micro-ops dispatched at a time.
-  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
-  let LoadLatency           =   4; // Optimistic load latency.
-  let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.
-  let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.
-  let CompleteModel         =   1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
-                                                    SVE2p1Unsupported.F,
-                                                    [HasSVEB16B16, HasSVEBFSCALE, HasMTE,
-                                                     HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
-}
-
 let SchedModel = HIP12Model in {
 
 // Define the (19) issue ports.

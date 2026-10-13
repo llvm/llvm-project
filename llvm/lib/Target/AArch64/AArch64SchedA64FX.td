@@ -10,23 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-def A64FXModel : SchedMachineModel {
-  let IssueWidth            =   6; // 6 micro-ops dispatched at a time.
-  let MicroOpBufferSize     = 180; // 180 entries in micro-op re-order buffer.
-  let LoadLatency           =   5; // Optimistic load latency.
-  let MispredictPenalty     =  12; // Extra cycles for mispredicted branch.
-  // Determined via a mix of micro-arch details and experimentation.
-  let LoopMicroOpBufferSize = 128;
-  let PostRAScheduler       =   1; // Using PostRA sched.
-  let CompleteModel         =   1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F, SVEUnsupported.F,
-                                                    [HasMTE, HasMatMulInt8, HasBF16,
-                                                    HasPAuth, HasPAuthLR, HasCPA,
-                                                    HasCSSC, HasMOPS, HasMOPS_GO]);
-  let FullInstRWOverlapCheck = 0;
-}
-
 let SchedModel = A64FXModel in {
 
 // Define the issue ports.

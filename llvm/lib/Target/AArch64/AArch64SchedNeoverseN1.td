@@ -14,22 +14,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-def NeoverseN1Model : SchedMachineModel {
-  let IssueWidth            =   3; // This value comes from the decode bandwidth
-                                   // and empirical measurements showed that this
-                                   // value is better.
-  let MicroOpBufferSize     = 128; // NOTE: Copied from Cortex-A76.
-  let LoadLatency           =   4; // Optimistic load latency.
-  let MispredictPenalty     =  11; // Cycles cost of branch mispredicted.
-  let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.
-  let CompleteModel         =   1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(PAUnsupported.F,
-                                                    SMEUnsupported.F,
-                                                    SVEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
-}
-
 //===----------------------------------------------------------------------===//
 // Define each kind of processor resource and number available on Neoverse N1.
 // Instructions are first fetched and then decoded into internal macro-ops

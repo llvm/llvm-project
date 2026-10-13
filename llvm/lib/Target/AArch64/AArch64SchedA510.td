@@ -14,20 +14,6 @@
 // The following definitions describe the per-operand machine model.
 // This works with MachineScheduler. See MCSchedModel.h for details.
 
-// Cortex-A510 machine model for scheduling and other instruction cost heuristics.
-def CortexA510Model : SchedMachineModel {
-  let MicroOpBufferSize = 0;  // The Cortex-A510 is an in-order processor
-  let IssueWidth = 3;         // It dual-issues under most circumstances
-  let LoadLatency = 3;        // Cycles for loads to access the cache.
-                              // Most loads have a latency of 2, but some have higher latencies.
-                              // 3 seems to be a good tradeoff
-  let PostRAScheduler = 1;    // Enable PostRA scheduler pass.
-  let CompleteModel = 0;      // Covers instructions applicable to Cortex-A510.
-
-  // FIXME: Remove when all errors have been fixed.
-  let FullInstRWOverlapCheck = 0;
-}
-
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedWrite types

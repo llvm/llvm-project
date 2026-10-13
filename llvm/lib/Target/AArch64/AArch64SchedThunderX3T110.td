@@ -14,24 +14,6 @@
 //===----------------------------------------------------------------------===//
 // Pipeline Description.
 
-def ThunderX3T110Model : SchedMachineModel {
-  let IssueWidth            =   4; // 4 micro-ops dispatched at a time.
-  let MicroOpBufferSize     =  70; // 70 entries in micro-op re-order buffer.
-  let LoadLatency           =   4; // Optimistic load latency.
-  let MispredictPenalty     =  12; // Extra cycles for mispredicted branch.
-  // Determined via a mix of micro-arch details and experimentation.
-  let LoopMicroOpBufferSize = 128; // FIXME: might be much bigger in TX3.
-  let PostRAScheduler       =   1; // Using PostRA sched.
-  let CompleteModel         =   1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F,
-                                                    SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
-  // FIXME: Remove when all errors have been fixed.
-  let FullInstRWOverlapCheck = 0;
-}
-
 let SchedModel = ThunderX3T110Model in {
 
 // Issue ports.

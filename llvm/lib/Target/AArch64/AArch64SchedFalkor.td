@@ -15,22 +15,6 @@
 // Define the SchedMachineModel and provide basic properties for coarse grained
 // instruction cost model.
 
-def FalkorModel : SchedMachineModel {
-  let IssueWidth = 8;          // 8 uops are dispatched per cycle.
-  let MicroOpBufferSize = 128; // Out-of-order with temporary unified issue buffer.
-  let LoopMicroOpBufferSize = 16;
-  let LoadLatency = 3;         // Optimistic load latency.
-  let MispredictPenalty = 11;  // Minimum branch misprediction penalty.
-  let CompleteModel = 1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F,
-                                                    SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
-  // FIXME: Remove when all errors have been fixed.
-  let FullInstRWOverlapCheck = 0;
-}
-
 //===----------------------------------------------------------------------===//
 // Define each kind of processor resource and number available on Falkor.
 

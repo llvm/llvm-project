@@ -17,20 +17,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-def C1UltraModel : SchedMachineModel {
-  let IssueWidth            =  10;
-  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer. NOTE: Copied from Neoverse-V3
-  let LoadLatency           =   4; // Optimistic load latency. NOTE: Copied from Neoverse-V3
-  let MispredictPenalty     =  10; // Extra cycles for mispredicted branch. NOTE: Copied from N3.
-  let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.
-  let CompleteModel         =   1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVE2p1Unsupported.F, SME2p1Unsupported.F,
-                                                    [HasSVEB16B16, HasCPA, HasMTE,
-                                                     HasCSSC, HasMOPS, HasMOPS_GO,
-                                                     HasSVEBFSCALE, HasFAMINMAX]);
-}
-
 //===----------------------------------------------------------------------===//
 // Define each kind of processor resource and number available on C1 Ultra.
 // Instructions are first fetched and then decoded into internal macro-ops

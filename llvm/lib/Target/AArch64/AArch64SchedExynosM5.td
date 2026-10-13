@@ -16,20 +16,6 @@
 // in-order stage for decode and dispatch and a wider issue stage.
 // The execution units and loads and stores are out-of-order.
 
-def ExynosM5Model : SchedMachineModel {
-  let IssueWidth            =   6; // Up to 6 uops per cycle.
-  let MicroOpBufferSize     = 228; // ROB size.
-  let LoopMicroOpBufferSize =  60; // Based on the instruction queue size.
-  let LoadLatency           =   4; // Optimistic load cases.
-  let MispredictPenalty     =  15; // Minimum branch misprediction penalty.
-  let CompleteModel         =   1; // Use the default model otherwise.
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F,
-                                                    SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
-}
-
 //===----------------------------------------------------------------------===//
 // Define each kind of processor resource and number available on the Exynos-M5.
 

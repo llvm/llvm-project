@@ -16,20 +16,6 @@
 // mispredicted branch.  Instructions coming out of the front end are
 // decoded into internal micro-ops (uops).
 
-def Ampere1BModel : SchedMachineModel {
-  let IssueWidth            =  12;  // Maximum micro-ops dispatch rate.
-  let MicroOpBufferSize     = 208;  // micro-op re-order buffer size
-  let LoadLatency           =   3;  // Optimistic load latency
-  let MispredictPenalty     =  10;  // Branch mispredict penalty
-  let LoopMicroOpBufferSize =  32;  // Instruction queue size
-  let CompleteModel         =   1;
-
-  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    SMEUnsupported.F,
-                                                    PAUnsupported.F,
-                                                    [HasMOPS, HasMOPS_GO]);
-}
-
 let SchedModel = Ampere1BModel in {
 
 //===----------------------------------------------------------------------===//
