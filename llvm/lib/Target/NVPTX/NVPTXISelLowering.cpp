@@ -858,7 +858,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                       ISD::MULHU, ISD::SMUL_LOHI, ISD::UMUL_LOHI,
                       ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
                       ISD::UINT_TO_FP, ISD::SETCC},
-                     {MVT::v2i16, MVT::v2i32}, Expand);
+                     MVT::v2i16, Expand);
 
   // v2i32 is not supported for any arithmetic operations
   setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX,
