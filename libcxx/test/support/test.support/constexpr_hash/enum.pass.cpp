@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// REQUIRES: std-at-least-c++26
 
 // "support/constexpr_hash.h"
 
@@ -22,9 +22,7 @@
 
 #include "test_macros.h"
 
-#if TEST_STD_VER >= 11
-#  include "poisoned_hash_helper.h"
-#endif
+#include "poisoned_hash_helper.h"
 
 enum class Colors { red, orange, yellow, green, blue, indigo, violet };
 enum class Cardinals { zero, one, two, three, five = 5 };
@@ -35,18 +33,13 @@ enum class EightBitColors : std::uint8_t { red, orange, yellow, green, blue, ind
 enum Fruits { apple, pear, grape, mango, cantaloupe };
 
 template <class T>
-TEST_CONSTEXPR_CXX26 void test() {
-#if TEST_STD_VER >= 11
+constexpr void test() {
   test_hash_disabled<const T, support::constexpr_hash<const T>>();
   test_hash_disabled<volatile T, support::constexpr_hash<volatile T>>();
   test_hash_disabled<const volatile T, support::constexpr_hash<const volatile T>>();
-#endif
 
   typedef support::constexpr_hash<T> H;
-#if TEST_STD_VER <= 17
-  static_assert((std::is_same<typename H::argument_type, T>::value), "");
-  static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
-#endif
+
   ASSERT_NOEXCEPT(H()(T()));
   typedef typename std::underlying_type<T>::type under_type;
 
@@ -60,7 +53,7 @@ TEST_CONSTEXPR_CXX26 void test() {
   }
 }
 
-TEST_CONSTEXPR_CXX26 bool test_with_hash() {
+constexpr bool test_with_hash() {
   test<Cardinals>();
 
   test<Colors>();
@@ -76,9 +69,7 @@ TEST_CONSTEXPR_CXX26 bool test_with_hash() {
 int main(int, char**) {
   assert(test_with_hash());
 
-#if TEST_STD_VER >= 26
   static_assert(test_with_hash());
-#endif
 
   return 0;
 }

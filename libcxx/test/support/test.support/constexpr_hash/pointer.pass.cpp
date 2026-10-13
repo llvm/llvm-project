@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// REQUIRES: std-at-least-c++26
 
 // "support/constexpr_hash.h"
 
@@ -21,12 +21,9 @@
 #include "test_macros.h"
 
 template <class T>
-TEST_CONSTEXPR_CXX26 void test() {
+constexpr void test() {
   typedef support::constexpr_hash<T> H;
-#if TEST_STD_VER <= 17
-  static_assert((std::is_same<typename H::argument_type, T>::value), "");
-  static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
-#endif
+
   ASSERT_NOEXCEPT(H()(T()));
   H h;
 
@@ -36,28 +33,22 @@ TEST_CONSTEXPR_CXX26 void test() {
   assert(h(&i) != h(&j));
 }
 
-TEST_CONSTEXPR_CXX26 void test_nullptr() {
+constexpr void test_nullptr() {
   typedef std::nullptr_t T;
   typedef support::constexpr_hash<T> H;
-#if TEST_STD_VER <= 17
-  static_assert((std::is_same<typename H::argument_type, T>::value), "");
-  static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
-#endif
+
   ASSERT_NOEXCEPT(H()(T()));
 }
 
-TEST_CONSTEXPR_CXX26 bool test_with_hash() {
+constexpr bool test_with_hash() {
   test_nullptr();
   return true;
 }
 
 int main(int, char**) {
   assert(test_with_hash());
-  // test<int*>();
 
-#if TEST_STD_VER >= 26
   static_assert(test_with_hash());
-#endif
 
   return 0;
 }

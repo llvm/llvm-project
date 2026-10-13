@@ -22,9 +22,7 @@
 int main(int, char**) {
   test_library_hash_specializations_available();
 
-#if TEST_STD_VER >= 26
   static_assert(test_constexpr_hash_specializations_available());
-#endif
 
   return 0;
 }

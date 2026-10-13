@@ -1,4 +1,7 @@
 
+// REQUIRES: std-at-least-c++26
+
+// "support/constexpr_hash.h"
 
 #include "constexpr_hash.h"
 
