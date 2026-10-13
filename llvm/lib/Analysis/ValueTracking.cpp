@@ -8947,101 +8947,6 @@ static SelectPatternResult matchClamp(CmpInst::Predicate Pred,
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
 
-/// Recognize variations of:
-///   a < c ? min(a,b) : min(b,c) ==> min(min(a,b),min(b,c))
-static SelectPatternResult matchMinMaxOfMinMax(CmpInst::Predicate Pred,
-                                               Value *CmpLHS, Value *CmpRHS,
-                                               Value *TVal, Value *FVal,
-                                               unsigned Depth) {
-  // TODO: Allow FP min/max with nnan/nsz.
-  assert(CmpInst::isIntPredicate(Pred) && "Expected integer comparison");
-
-  Value *A = nullptr, *B = nullptr;
-  SelectPatternResult L = matchSelectPattern(TVal, A, B, nullptr, Depth + 1);
-  if (!SelectPatternResult::isMinOrMax(L.Flavor))
-    return {SPF_UNKNOWN, SPNB_NA, false};
-
-  Value *C = nullptr, *D = nullptr;
-  SelectPatternResult R = matchSelectPattern(FVal, C, D, nullptr, Depth + 1);
-  if (L.Flavor != R.Flavor)
-    return {SPF_UNKNOWN, SPNB_NA, false};
-
-  // We have something like: x Pred y ? min(a, b) : min(c, d).
-  // Try to match the compare to the min/max operations of the select operands.
-  // First, make sure we have the right compare predicate.
-  switch (L.Flavor) {
-  case SPF_SMIN:
-    if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE) {
-      Pred = ICmpInst::getSwappedPredicate(Pred);
-      std::swap(CmpLHS, CmpRHS);
-    }
-    if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE)
-      break;
-    return {SPF_UNKNOWN, SPNB_NA, false};
-  case SPF_SMAX:
-    if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE) {
-      Pred = ICmpInst::getSwappedPredicate(Pred);
-      std::swap(CmpLHS, CmpRHS);
-    }
-    if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE)
-      break;
-    return {SPF_UNKNOWN, SPNB_NA, false};
-  case SPF_UMIN:
-    if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
-      Pred = ICmpInst::getSwappedPredicate(Pred);
-      std::swap(CmpLHS, CmpRHS);
-    }
-    if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE)
-      break;
-    return {SPF_UNKNOWN, SPNB_NA, false};
-  case SPF_UMAX:
-    if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) {
-      Pred = ICmpInst::getSwappedPredicate(Pred);
-      std::swap(CmpLHS, CmpRHS);
-    }
-    if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE)
-      break;
-    return {SPF_UNKNOWN, SPNB_NA, false};
-  default:
-    return {SPF_UNKNOWN, SPNB_NA, false};
-  }
-
-  // If there is a common operand in the already matched min/max and the other
-  // min/max operands match the compare operands (either directly or inverted),
-  // then this is min/max of the same flavor.
-
-  // a pred c ? m(a, b) : m(c, b) --> m(m(a, b), m(c, b))
-  // ~c pred ~a ? m(a, b) : m(c, b) --> m(m(a, b), m(c, b))
-  if (D == B) {
-    if ((CmpLHS == A && CmpRHS == C) || (match(C, m_Not(m_Specific(CmpLHS))) &&
-                                         match(A, m_Not(m_Specific(CmpRHS)))))
-      return {L.Flavor, SPNB_NA, false};
-  }
-  // a pred d ? m(a, b) : m(b, d) --> m(m(a, b), m(b, d))
-  // ~d pred ~a ? m(a, b) : m(b, d) --> m(m(a, b), m(b, d))
-  if (C == B) {
-    if ((CmpLHS == A && CmpRHS == D) || (match(D, m_Not(m_Specific(CmpLHS))) &&
-                                         match(A, m_Not(m_Specific(CmpRHS)))))
-      return {L.Flavor, SPNB_NA, false};
-  }
-  // b pred c ? m(a, b) : m(c, a) --> m(m(a, b), m(c, a))
-  // ~c pred ~b ? m(a, b) : m(c, a) --> m(m(a, b), m(c, a))
-  if (D == A) {
-    if ((CmpLHS == B && CmpRHS == C) || (match(C, m_Not(m_Specific(CmpLHS))) &&
-                                         match(B, m_Not(m_Specific(CmpRHS)))))
-      return {L.Flavor, SPNB_NA, false};
-  }
-  // b pred d ? m(a, b) : m(a, d) --> m(m(a, b), m(a, d))
-  // ~d pred ~b ? m(a, b) : m(a, d) --> m(m(a, b), m(a, d))
-  if (C == A) {
-    if ((CmpLHS == B && CmpRHS == D) || (match(D, m_Not(m_Specific(CmpLHS))) &&
-                                         match(B, m_Not(m_Specific(CmpRHS)))))
-      return {L.Flavor, SPNB_NA, false};
-  }
-
-  return {SPF_UNKNOWN, SPNB_NA, false};
-}
-
 /// If the input value is the result of a 'not' op, constant integer, or vector
 /// splat of a constant integer, return the bitwise-not source value.
 /// TODO: This could be extended to handle non-splat vector integer constants.
@@ -9068,10 +8973,6 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   RHS = FalseVal;
 
   SelectPatternResult SPR = matchClamp(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal);
-  if (SPR.Flavor != SelectPatternFlavor::SPF_UNKNOWN)
-    return SPR;
-
-  SPR = matchMinMaxOfMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, Depth);
   if (SPR.Flavor != SelectPatternFlavor::SPF_UNKNOWN)
     return SPR;
 
