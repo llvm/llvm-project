@@ -325,6 +325,28 @@ convertFramePointerKind(cir::FramePointerKind kind) {
   llvm_unreachable("Unknown CIR frame pointer kind");
 }
 
+/// The "frame-pointer" module flag holds an llvm::FramePointerKind value, as
+/// written by llvm::Module::setFramePointer.
+static llvm::FramePointerKind
+convertFramePointerKindToLLVMIR(cir::FramePointerKind kind) {
+  using CIR = cir::FramePointerKind;
+  using LLVM = llvm::FramePointerKind;
+
+  switch (kind) {
+  case CIR::None:
+    return LLVM::None;
+  case CIR::NonLeaf:
+    return LLVM::NonLeaf;
+  case CIR::All:
+    return LLVM::All;
+  case CIR::Reserved:
+    return LLVM::Reserved;
+  case CIR::NonLeafNoReserve:
+    return LLVM::NonLeafNoReserve;
+  }
+  llvm_unreachable("Unknown CIR frame pointer kind");
+}
+
 mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
     cir::CopyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -4572,7 +4594,7 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
         module.getContext(), mlir::LLVM::ModFlagBehavior::Max,
         builder.getStringAttr("frame-pointer"),
         builder.getI32IntegerAttr(static_cast<int32_t>(
-            convertFramePointerKind(framePointerAttr.getValue()))));
+            convertFramePointerKindToLLVMIR(framePointerAttr.getValue()))));
     mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
                                       builder.getArrayAttr({flag}));
   }

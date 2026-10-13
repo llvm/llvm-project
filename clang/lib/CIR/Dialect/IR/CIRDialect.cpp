@@ -280,6 +280,7 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
     if (!mlir::isa<cir::FramePointerKindAttr>(attr.getValue()))
       return op->emitOpError() << "expects '" << getModuleFramePointerAttrName()
                                << "' to be a #cir.frame_pointer attribute";
+    return success();
   }
 
   // LoweringPrepare uses this attribute directly as the fatbin global's
@@ -2830,6 +2831,14 @@ LogicalResult cir::VTTAddrPointOp::verify() {
 /// the name of the attribute in ODS.
 static llvm::StringRef getLinkageAttrNameString() { return "linkage"; }
 
+/// Declared cir.func attributes with no dedicated syntax, which print in and
+/// parse from the attribute dictionary instead.
+static bool isFuncAttrInDict(llvm::StringRef name) {
+  return name == CIRDialect::getMemoryEffectsAttrName() ||
+         name == CIRDialect::getUwtableAttrName() ||
+         name == CIRDialect::getFramePointerAttrName();
+}
+
 void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, FuncType type,
                         GlobalLinkageKind linkage, CallingConv callingConv) {
@@ -3115,14 +3124,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
     return failure();
 
-  // Every other declared attribute has dedicated syntax above, so
-  // memory_effects, uwtable and frame_pointer are the only ones the explicit
-  // list may carry.  Without these exceptions cir.func could not parse back
-  // what it prints.
+  // Every other declared attribute has dedicated syntax above.
   for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
-    if (disallowed == CIRDialect::getMemoryEffectsAttrName() ||
-        disallowed == CIRDialect::getUwtableAttrName() ||
-        disallowed == CIRDialect::getFramePointerAttrName())
+    if (isFuncAttrInDict(disallowed))
       continue;
     if (parsedAttrs.get(disallowed))
       return parser.emitError(loc, "attribute '")
@@ -3314,14 +3318,10 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p.printAttribute(annotations);
   }
 
-  // Every declared attribute is printed by the syntax above, except
-  // memory_effects, uwtable and frame_pointer, which have none and so must
-  // reach the dictionary.
+  // Every other declared attribute is printed by the syntax above.
   llvm::SmallVector<llvm::StringRef> elidedAttrs;
   for (llvm::StringRef name : cir::FuncOp::getAttributeNames())
-    if (name != CIRDialect::getMemoryEffectsAttrName() &&
-        name != CIRDialect::getUwtableAttrName() &&
-        name != CIRDialect::getFramePointerAttrName())
+    if (!isFuncAttrInDict(name))
       elidedAttrs.push_back(name);
   function_interface_impl::printFunctionAttributes(p, *this, elidedAttrs);
 
