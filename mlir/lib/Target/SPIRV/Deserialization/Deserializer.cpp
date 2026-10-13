@@ -1914,15 +1914,18 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc,
                      "OpConstantComposite must have type <id> and result <id>");
   }
-  if (operands.size() < 3) {
-    return emitError(unknownLoc,
-                     "OpConstantComposite must have at least 1 parameter");
-  }
-
   Type resultType = getType(operands[0]);
   if (!resultType) {
     return emitError(unknownLoc, "undefined result type from <id> ")
            << operands[0];
+  }
+
+  // An empty struct has no constituents.
+  auto structType = dyn_cast<spirv::StructType>(resultType);
+  if (operands.size() < 3 &&
+      (!structType || structType.getNumElements() != 0)) {
+    return emitError(unknownLoc,
+                     "OpConstantComposite must have at least 1 parameter");
   }
 
   SmallVector<Attribute, 4> elements;
@@ -1930,6 +1933,15 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   for (unsigned i = 2, e = operands.size(); i < e; ++i) {
     auto elementInfo = getConstant(operands[i]);
     if (!elementInfo) {
+      // An OpUndef constituent is valid SPIR-V, but `spirv.Constant` has no
+      // attribute for an undefined value. Reject it instead of replacing it
+      // with some defined value.
+      if (getUndefType(operands[i])) {
+        return emitError(unknownLoc, "OpConstantComposite component <id> ")
+               << operands[i]
+               << " is an OpUndef, which cannot be represented in "
+                  "spirv.Constant";
+      }
       return emitError(unknownLoc, "OpConstantComposite component <id> ")
              << operands[i] << " must come from a normal constant";
     }
