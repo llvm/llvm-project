@@ -26,6 +26,7 @@
 #include "mlir/IR/Value.h"
 
 #include <cassert>
+#include <numeric>
 #include <utility>
 
 using namespace clang;
@@ -420,6 +421,9 @@ public:
   }
 
   mlir::Value VisitInitListExpr(InitListExpr *e);
+  mlir::Value emitVectorInitWithSubvectors(mlir::Location loc,
+                                           cir::VectorType vectorType,
+                                           ArrayRef<mlir::Value> inits);
 
   mlir::Value VisitArrayInitIndexExpr(ArrayInitIndexExpr *e) {
     assert(cgf.getArrayInitIndex() &&
@@ -2948,6 +2952,45 @@ mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *e) {
   return emitLoadOfLValue(e);
 }
 
+mlir::Value
+ScalarExprEmitter::emitVectorInitWithSubvectors(mlir::Location loc,
+                                                cir::VectorType vectorType,
+                                                ArrayRef<mlir::Value> inits) {
+  const unsigned resElts = vectorType.getSize();
+  mlir::Value result =
+      builder.getConstant(loc, cir::PoisonAttr::get(vectorType));
+  unsigned curIdx = 0;
+  for (mlir::Value init : inits) {
+    auto initType = mlir::dyn_cast<cir::VectorType>(init.getType());
+    if (!initType) {
+      result = builder.createInsertElement(loc, result, init, curIdx++);
+      continue;
+    }
+
+    const unsigned initElts = initType.getSize();
+    SmallVector<int64_t, 16> mask(resElts, -1);
+    std::iota(mask.begin(), mask.begin() + initElts, 0);
+    mlir::Value ext = builder.createVecShuffle(loc, init, mask);
+
+    // Poison stays on the RHS of the first shuffle, matching classic codegen.
+    const unsigned offset = curIdx == 0 ? 0 : resElts;
+    std::iota(mask.begin(), mask.begin() + curIdx, 0);
+    std::iota(mask.begin() + curIdx, mask.begin() + curIdx + initElts, offset);
+    if (curIdx == 0)
+      std::swap(result, ext);
+    result = builder.createVecShuffle(loc, result, ext, mask);
+    curIdx += initElts;
+  }
+
+  if (curIdx < resElts) {
+    const mlir::Value zeroValue =
+        builder.getNullValue(vectorType.getElementType(), loc);
+    for (; curIdx < resElts; ++curIdx)
+      result = builder.createInsertElement(loc, result, zeroValue, curIdx);
+  }
+  return result;
+}
+
 mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
   const unsigned numInitElements = e->getNumInits();
 
@@ -2969,6 +3012,12 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
     for (Expr *init : e->inits()) {
       elements.push_back(Visit(init));
     }
+
+    if (llvm::any_of(elements, [](mlir::Value v) {
+          return mlir::isa<cir::VectorType>(v.getType());
+        }))
+      return emitVectorInitWithSubvectors(cgf.getLoc(e->getSourceRange()),
+                                          vectorType, elements);
 
     // Zero-initialize any remaining values.
     if (numInitElements < vectorType.getSize()) {
