@@ -1322,6 +1322,12 @@ def requireClang(func):
     )(func)
 
 
+def requireXmlSupport(func):
+    return unittest.skipUnless(
+        _get_bool_config("xml"), UnsupportedReason("requires xml")
+    )(func)
+
+
 def skipIfTargetDoesNotSupportSharedLibraries():
     """Skip tests that require shared library (dylib/so) support."""
     platform = lldbplatformutil.getPlatform()
