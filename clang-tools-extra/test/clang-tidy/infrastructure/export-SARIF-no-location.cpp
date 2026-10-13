@@ -102,4 +102,3 @@ class A { A(int) {} };
 //CHECK-SARIF-NEXT:   ],
 //CHECK-SARIF-NEXT:   "version": "{{.*}}"
 //CHECK-SARIF-NEXT: }
-

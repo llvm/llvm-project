@@ -259,6 +259,9 @@ public:
         SarifResult::create(RuleIndex)
             .setDiagnosticMessage(Error.Message.Message)
             .setDiagnosticLevel(getSarifResultLevel(EffectiveLevel));
+    // TODO: Extend SarifDocumentWriter to add an annotations property that can
+    // represent highlight ranges, when both a valid location and highlight
+    // ranges are present.
     Result =
         (Loc.isValid() ? Result.addLocations(getOffsetRange(SourceMgr, Loc))
                        : Result.addLocations(getResultRanges(Error)));
@@ -270,6 +273,10 @@ public:
       Result = Result.addProperty(
           "enabledAliases", llvm::join(Error.EnabledDiagnosticAliases, ","));
 
+    // TODO: CSA stores fullDescription from the HELPTEXT field in Checkers.inc,
+    // strip clang-analyzer- prefix then populate fullDescription with this.
+    // Also, add helpUri with this for in-tree checks, pointing to their
+    // documentation pages.
     if (StringRef(Error.DiagnosticName).starts_with("clang-analyzer-"))
       Result = Result.setThreadFlows(createThreadFlows(Error));
     else

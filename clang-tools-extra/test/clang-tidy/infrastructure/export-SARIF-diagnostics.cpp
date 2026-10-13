@@ -312,4 +312,3 @@ struct Foo {
 //CHECK-SARIF-NEXT:   ],
 //CHECK-SARIF-NEXT:   "version": "{{.*}}"
 //CHECK-SARIF-NEXT: }
-

@@ -173,4 +173,3 @@ int g() { int *ptr = NUL; return DEREF(ptr); }
 //CHECK-SARIF-NEXT:   ],
 //CHECK-SARIF-NEXT:   "version": "{{.*}}"
 //CHECK-SARIF-NEXT: }
-

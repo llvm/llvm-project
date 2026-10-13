@@ -296,4 +296,3 @@ struct Foo {
 //CHECK-NEXT:   ],
 //CHECK-NEXT:   "version": "{{.*}}"
 //CHECK-NEXT: }
-

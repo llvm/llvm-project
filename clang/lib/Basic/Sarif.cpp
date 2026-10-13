@@ -340,8 +340,6 @@ SarifDocumentWriter::createThreadFlows(ArrayRef<ThreadFlow> ThreadFlows) {
   for (const auto &ThreadFlow : ThreadFlows) {
     json::Object Loc = createLocation(createPhysicalLocation(ThreadFlow.Range),
                                       ThreadFlow.Message);
-    if (Loc.empty())
-      continue;
     Locs.emplace_back(
         createThreadFlowLocation(std::move(Loc), ThreadFlow.Importance));
   }

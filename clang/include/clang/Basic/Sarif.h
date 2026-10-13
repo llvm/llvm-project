@@ -400,7 +400,7 @@ public:
   }
 
   SarifResult addProperty(llvm::StringRef Key, llvm::StringRef Value) {
-    Properties[Key.str()] = Value.str();
+    Properties[Key] = Value.str();
     return *this;
   }
 
