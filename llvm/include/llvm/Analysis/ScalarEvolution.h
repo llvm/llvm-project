@@ -2476,6 +2476,23 @@ private:
   bool isKnownOnEveryIteration(CmpPredicate Pred, const SCEV *LHS,
                                const SCEV *RHS, const Loop *L);
 
+  /// A predicate "AR Pred Inv", with AR a recurrence of a loop and Inv
+  /// invariant in it, and how the predicate changes as the loop iterates.
+  struct MonotonicPredicate {
+    CmpPredicate Pred;
+    const SCEVAddRecExpr *AR;
+    const SCEV *Inv;
+    MonotonicPredicateType Type;
+  };
+
+  /// If "LHS Pred RHS" can be written as "AR Pred' Inv", where AR is a
+  /// recurrence of \p L, Inv is invariant in \p L, and the predicate is
+  /// monotonic in \p L, return it. Otherwise, return std::nullopt.
+  std::optional<MonotonicPredicate> getMonotonicPredicate(CmpPredicate Pred,
+                                                          const SCEV *LHS,
+                                                          const SCEV *RHS,
+                                                          const Loop *L);
+
   /// Return SCEV no-wrap flags that can be proven based on reasoning about
   /// how poison produced from no-wrap flags on this value (e.g. a nuw add)
   /// would trigger undefined behavior on overflow.

@@ -11560,10 +11560,9 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
   return std::nullopt;
 }
 
-std::optional<ScalarEvolution::LoopInvariantPredicate>
-ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
-                                           const SCEV *RHS, const Loop *L,
-                                           const Instruction *CtxI) {
+std::optional<ScalarEvolution::MonotonicPredicate>
+ScalarEvolution::getMonotonicPredicate(CmpPredicate Pred, const SCEV *LHS,
+                                       const SCEV *RHS, const Loop *L) {
   // If there is a loop-invariant, force it into the RHS, otherwise bail out.
   if (!isLoopInvariant(RHS, L)) {
     if (!isLoopInvariant(LHS, L))
@@ -11573,17 +11572,30 @@ ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
     Pred = ICmpInst::getSwappedCmpPredicate(Pred);
   }
 
-  const SCEVAddRecExpr *ArLHS = dyn_cast<SCEVAddRecExpr>(LHS);
-  if (!ArLHS || ArLHS->getLoop() != L)
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
+  if (!AR || AR->getLoop() != L)
     return std::nullopt;
 
   // Even if both are valid, we need to consistently choose the unsigned or the
   // signed predicate for the monotonicity and backedge checks below, not
   // mixtures of both. For now, prefer the unsigned predicate.
   Pred = Pred.dropSameSign();
-  auto MonotonicType = getMonotonicPredicateType(ArLHS, Pred);
-  if (!MonotonicType)
+  auto Type = getMonotonicPredicateType(AR, Pred);
+  if (!Type)
     return std::nullopt;
+  return MonotonicPredicate{Pred, AR, RHS, *Type};
+}
+
+std::optional<ScalarEvolution::LoopInvariantPredicate>
+ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
+                                           const SCEV *RHS, const Loop *L,
+                                           const Instruction *CtxI) {
+  auto MP = getMonotonicPredicate(Pred, LHS, RHS, L);
+  if (!MP)
+    return std::nullopt;
+  Pred = MP->Pred;
+  const SCEVAddRecExpr *ArLHS = MP->AR;
+  RHS = MP->Inv;
   // If the predicate "ArLHS `Pred` RHS" monotonically increases from false to
   // true as the loop iterates, and the backedge is control dependent on
   // "ArLHS `Pred` RHS" == true then we can reason as follows:
@@ -11601,10 +11613,10 @@ ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
   //
   // A similar reasoning applies for a monotonically decreasing predicate, by
   // replacing true with false and false with true in the above two bullets.
-  bool Increasing = *MonotonicType == ScalarEvolution::MonotonicallyIncreasing;
+  bool Increasing = MP->Type == ScalarEvolution::MonotonicallyIncreasing;
   auto P = Increasing ? Pred : ICmpInst::getInverseCmpPredicate(Pred);
 
-  if (isLoopBackedgeGuardedByCond(L, P, LHS, RHS))
+  if (isLoopBackedgeGuardedByCond(L, P, ArLHS, RHS))
     return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(),
                                                    RHS);
 
