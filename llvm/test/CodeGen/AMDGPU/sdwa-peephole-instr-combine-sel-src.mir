@@ -1013,6 +1013,27 @@ body:             |
 ...
 
 ---
+# The instruction sext must survive the combine into BYTE_2.
+name: op_select_word_1_instr_byte_0_sext
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: op_select_word_1_instr_byte_0_sext
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[V_LSHRREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e32 16, [[COPY]], implicit $exec
+    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 16, [[COPY]], 0, 1, 0, 6, 2, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_LSHRREV_B32_e32 16, %0, implicit $exec
+    %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %0, 16, %1, 0, 1, 0, 6, 0, implicit $exec
+
+    S_ENDPGM 0
+...
+
+---
 # The operand already moved BYTE_1 down into BYTE_0, so the BYTE_1 selection of
 # the instruction reads different bits than BYTE_1 of the operand's source. The
 # two selections must not be combined even though they are equal.
