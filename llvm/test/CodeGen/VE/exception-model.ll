@@ -1,7 +1,6 @@
 ; VE defaults to SjLj exception handling.
 
-; FIXME: The SjLj dispatch block fails the machine verifier.
-; RUN: llc -mtriple=ve -verify-machineinstrs=0 < %s | FileCheck %s
+; RUN: llc -mtriple=ve < %s | FileCheck %s
 
 ; CHECK-LABEL: f:
 ; CHECK: _Unwind_SjLj_Register
