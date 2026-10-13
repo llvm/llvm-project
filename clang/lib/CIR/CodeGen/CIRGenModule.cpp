@@ -87,7 +87,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                            const clang::CodeGenOptions &cgo,
                            DiagnosticsEngine &diags)
     : builder(mlirContext, *this), astContext(astContext),
-      langOpts(astContext.getLangOpts()), codeGenOpts(cgo),
+      langOpts(astContext.getLangOpts()), atomicOpts(astContext.getLangOpts()),
+      codeGenOpts(cgo),
       theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&mlirContext))},
       diags(diags), target(astContext.getTargetInfo()),
       abi(createCXXABI(*this)), genTypes(*this), vtables(*this) {
@@ -182,6 +183,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*cuda=*/langOpts.CUDA,
           /*cuda_is_device=*/langOpts.CUDAIsDevice,
           /*hip=*/langOpts.HIP,
+          /*hlsl=*/langOpts.HLSL,
           /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
           /*openmp=*/langOpts.OpenMP != 0,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
@@ -1294,7 +1296,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     assert(!cir::MissingFeatures::openMP());
 
     if (entry.getSymType() == ty &&
-        cir::isMatchingAddressSpace(entryCIRAS, langAS))
+        cir::normalizeDefaultAddressSpace(entryCIRAS) ==
+            cir::normalizeDefaultAddressSpace(getGlobalCIRAddressSpace(langAS)))
       return entry;
 
     // If there are two attempts to define the same mangled name, issue an
@@ -1340,7 +1343,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   }
 
   mlir::ptr::MemorySpaceAttrInterface declCIRAS =
-      cir::toCIRAddressSpaceAttr(getMLIRContext(), getGlobalVarAddressSpace(d));
+      getGlobalCIRAddressSpace(getGlobalVarAddressSpace(d));
 
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
@@ -2221,7 +2224,7 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
   LangAS as = CodeGenUtils::getGlobalConstantAddressSpace(cgm.getLangOpts(),
                                                           cgm.getTarget());
   mlir::ptr::MemorySpaceAttrInterface addrSpace =
-      cir::toCIRAddressSpaceAttr(cgm.getMLIRContext(), as);
+      cgm.getGlobalCIRAddressSpace(as);
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
@@ -2325,6 +2328,11 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
       getTypes().getPointerAddressSpace(s->getType()));
 
   return builder.getGlobalViewAttr(ptrTy, gv);
+}
+
+mlir::ptr::MemorySpaceAttrInterface
+CIRGenModule::getGlobalCIRAddressSpace(LangAS as) {
+  return getTargetCIRGenInfo().getGlobalCIRAddressSpace(as);
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
@@ -3940,8 +3948,7 @@ void CIRGenModule::release() {
     auto int8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
     auto loc = builder.getUnknownLoc();
     mlir::ptr::MemorySpaceAttrInterface addrSpace =
-        cir::LangAddressSpaceAttr::get(&getMLIRContext(),
-                                       getGlobalVarAddressSpace(nullptr));
+        getGlobalCIRAddressSpace(getGlobalVarAddressSpace(nullptr));
 
     auto gv = createGlobalOp(loc, cuidName, int8Ty,
                              /*isConstant=*/false, addrSpace);

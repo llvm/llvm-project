@@ -60,7 +60,7 @@ class TGTimer;
 //  Type Classes
 //===----------------------------------------------------------------------===//
 
-class RecTy {
+class alignas(8) RecTy {
 public:
   /// Subclass discriminator (for dyn_cast<> et al.)
   enum RecTyKind {
@@ -336,6 +336,9 @@ private:
 protected:
   uint8_t Opc; // Used by UnOpInit, BinOpInit, and TernOpInit
 
+  /// Set if resolveReferences returns this value unchanged with any resolver.
+  bool TriviallyResolved;
+
 private:
   virtual void anchor();
 
@@ -343,11 +346,22 @@ public:
   /// Get the kind (type) of the value.
   InitKind getKind() const { return Kind; }
 
+  /// Return true if \p K is a value kind that cannot contain references.
+  static bool isLeafKind(InitKind K) {
+    return K == IK_BitInit || K == IK_DefInit || K == IK_IntInit ||
+           K == IK_StringInit || K == IK_UnsetInit;
+  }
+
+  /// Return true if resolveReferences returns this value unchanged with any
+  /// resolver. This is a cheap, conservative subset of isConcrete().
+  bool isTriviallyResolved() const { return TriviallyResolved; }
+
   /// Get the record keeper that initialized this Init.
   RecordKeeper &getRecordKeeper() const;
 
 protected:
-  explicit Init(InitKind K, uint8_t Opc = 0) : Kind(K), Opc(Opc) {}
+  explicit Init(InitKind K, uint8_t Opc = 0)
+      : Kind(K), Opc(Opc), TriviallyResolved(isLeafKind(K)) {}
 
 public:
   Init(const Init &) = delete;
@@ -503,7 +517,9 @@ private:
 
 protected:
   explicit ArgumentInit(const Init *Value, ArgAuxType Aux)
-      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {}
+      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {
+    TriviallyResolved = Value->isTriviallyResolved();
+  }
 
 public:
   ArgumentInit(const ArgumentInit &) = delete;
@@ -1585,12 +1601,19 @@ public:
 private:
   const Init *Name;
   SMLoc Loc; // Source location of definition of name.
-  PointerIntPair<const RecTy *, 2, FieldKind> TyAndKind;
+  // The low two bits of the flags are the FieldKind, and bit 2 is set if the
+  // value is used.
+  PointerIntPair<const RecTy *, 3, unsigned> TyAndFlags;
+  static constexpr unsigned KindMask = 3;
+  static constexpr unsigned UsedBit = 4;
   const Init *Value;
-  bool IsUsed = false;
 
   /// Reference locations to this record value.
   SmallVector<SMRange, 0> ReferenceLocs;
+
+  FieldKind getKind() const {
+    return FieldKind(TyAndFlags.getInt() & KindMask);
+  }
 
 public:
   RecordVal(const Init *N, const RecTy *T, FieldKind K);
@@ -1614,17 +1637,13 @@ public:
   SMLoc getLoc() const { return Loc; }
 
   /// Is this a field where nonconcrete values are okay?
-  bool isNonconcreteOK() const {
-    return TyAndKind.getInt() == FK_NonconcreteOK;
-  }
+  bool isNonconcreteOK() const { return getKind() == FK_NonconcreteOK; }
 
   /// Is this a template argument?
-  bool isTemplateArg() const {
-    return TyAndKind.getInt() == FK_TemplateArg;
-  }
+  bool isTemplateArg() const { return getKind() == FK_TemplateArg; }
 
   /// Get the type of the field value as a RecTy.
-  const RecTy *getType() const { return TyAndKind.getPointer(); }
+  const RecTy *getType() const { return TyAndFlags.getPointer(); }
 
   /// Get the type of the field for printing purposes.
   std::string getPrintType() const;
@@ -1646,8 +1665,11 @@ public:
 
   /// Whether this value is used. Useful for reporting warnings, for example
   /// when a template argument is unused.
-  void setUsed(bool Used) { IsUsed = Used; }
-  bool isUsed() const { return IsUsed; }
+  void setUsed(bool Used) {
+    unsigned Flags = TyAndFlags.getInt() & ~UsedBit;
+    TyAndFlags.setInt(Used ? Flags | UsedBit : Flags);
+  }
+  bool isUsed() const { return TyAndFlags.getInt() & UsedBit; }
 
   void dump() const;
 
