@@ -19,6 +19,7 @@ class MachineFunction;
 class MachineFunctionPass;
 class VirtRegMap;
 class VirtRegAuxInfo;
+class LiveDebugVariables;
 class LiveIntervals;
 class LiveRegMatrix;
 class LiveStacks;
@@ -53,6 +54,9 @@ public:
     LiveStacks &LSS;
     MachineDominatorTree &MDT;
     const MachineBlockFrequencyInfo &MBFI;
+    /// Optional: if non-null, it is notified whenever the spiller erases an
+    /// instruction.
+    LiveDebugVariables *DebugVars = nullptr;
   };
 };
 

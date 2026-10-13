@@ -165,6 +165,7 @@ void SlotIndexes::removeMachineInstrFromMaps(MachineInstr &MI,
   mi2iMap.erase(mi2iItr);
   // FIXME: Eventually we want to actually delete these indexes.
   MIEntry.setInstr(nullptr);
+  MIEntry.setPoison();
 }
 
 void SlotIndexes::removeSingleMachineInstrFromMaps(MachineInstr &MI) {
@@ -191,6 +192,7 @@ void SlotIndexes::removeSingleMachineInstrFromMaps(MachineInstr &MI) {
   } else {
     // FIXME: Eventually we want to actually delete these indexes.
     MIEntry.setInstr(nullptr);
+    MIEntry.setPoison();
   }
 }
 
@@ -215,6 +217,7 @@ void SlotIndexes::removeMBBFromMaps(MachineBasicBlock &MBB) {
   // Clear the block-start boundary entry. MBBRanges is never renumbered, so
   // MBB's now-stale slot is simply left in place.
   StartIdx.listEntry()->setInstr(nullptr);
+  StartIdx.listEntry()->setPoison();
 }
 
 // Renumber indexes locally after curItr was inserted, but failed to get a new

@@ -45,21 +45,34 @@ class raw_ostream;
   /// SlotIndex & SlotIndexes classes for the public interface to this
   /// information.
   class IndexListEntry : public ilist_node<IndexListEntry> {
-    MachineInstr *mi;
+#ifndef NDEBUG
+    static constexpr unsigned PoisonBits = 1;
+    static constexpr unsigned PoisonVal = 1;
+#else
+    // Disable poison checks such that setPoison will do nothing and isPoisoned
+    // will return false.
+    static constexpr unsigned PoisonBits = 0;
+    static constexpr unsigned PoisonVal = 0;
+#endif
+
+    PointerIntPair<MachineInstr *, PoisonBits> mi;
     unsigned index;
 
   public:
-    IndexListEntry(MachineInstr *mi, unsigned index) : mi(mi), index(index) {}
+    IndexListEntry(MachineInstr *mi, unsigned index)
+        : mi(mi, 0), index(index) {}
 
-    MachineInstr* getInstr() const { return mi; }
-    void setInstr(MachineInstr *mi) {
-      this->mi = mi;
-    }
+    MachineInstr *getInstr() const { return mi.getPointer(); }
+    void setInstr(MachineInstr *mi) { this->mi.setPointer(mi); }
 
     unsigned getIndex() const { return index; }
     void setIndex(unsigned index) {
       this->index = index;
     }
+
+    void setPoison() { mi.setInt(PoisonVal); }
+
+    bool isPoisoned() const { return mi.getInt(); }
   };
 
   /// SlotIndex - An opaque wrapper around machine indexes.
@@ -280,6 +293,8 @@ class raw_ostream;
     SlotIndex getPrevIndex() const {
       return SlotIndex(&*--listEntry()->getIterator(), getSlot());
     }
+
+    bool isPoisoned() const { return listEntry()->isPoisoned(); }
   };
 
   inline raw_ostream& operator<<(raw_ostream &os, SlotIndex li) {
@@ -420,6 +435,38 @@ class raw_ostream;
           return SlotIndex(&*I, Index.getSlot());
       // We reached the end of the function.
       return getLastIndex();
+    }
+
+    /// Returns the closest index before \p Index that still names a position in
+    /// the function, skipping over indexes whose instruction has been erased.
+    /// The slot of \p Index is preserved if an instruction is found.
+    ///
+    /// Erasing an instruction keeps its IndexListEntry, so that stale
+    /// references stay correctly ordered, but the entry no longer has an
+    /// instruction. Unlike getNextNonNullIndex, this does not skip a block
+    /// boundary: a boundary has no instruction either, but it does still name a
+    /// position. The walk therefore stops at the start of \p Index's block,
+    /// which also bounds it, and then returns the block start index itself, as
+    /// canonicalizeIndex() does.
+    SlotIndex getPrevNonErasedIndex(SlotIndex Index) const {
+      SlotIndex MBBStart = getMBBStartIdx(getMBBFromIndex(Index));
+      do {
+        Index = Index.getPrevIndex();
+        if (SlotIndex::isSameInstr(Index, MBBStart))
+          return MBBStart;
+      } while (!getInstructionFromIndex(Index));
+      return Index;
+    }
+
+    /// The forwards equivalent of getPrevNonErasedIndex, stopping at the end of
+    /// \p Index's block.
+    SlotIndex getNextNonErasedIndex(SlotIndex Index) const {
+      SlotIndex MBBEnd = getMBBEndIdx(getMBBFromIndex(Index));
+      do {
+        Index = Index.getNextIndex();
+      } while (!getInstructionFromIndex(Index) &&
+               !SlotIndex::isSameInstr(Index, MBBEnd));
+      return Index;
     }
 
     /// getIndexBefore - Returns the index of the last indexed instruction

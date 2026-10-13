@@ -496,6 +496,21 @@ public:
   /// Return DebugLoc of this UserValue.
   const DebugLoc &getDebugLoc() { return dl; }
 
+  /// Repair any interval boundary that names the instruction at \p Idx, which
+  /// is about to be erased. Returns true if anything changed.
+  bool handleInstructionErased(SlotIndex Idx, const SlotIndexes &Indexes);
+
+  void verify() const {
+    for (auto I = locInts.begin(), E = locInts.end(); I != E; ++I) {
+      assert(!I.start().isPoisoned());
+      assert(!I.stop().isPoisoned());
+    }
+    // trimmedDefs also outlives register allocation, and is consulted by
+    // emitDebugValues, so it must not name an erased instruction either.
+    for (SlotIndex Idx : trimmedDefs)
+      assert(!Idx.isPoisoned());
+  }
+
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
 
@@ -537,6 +552,17 @@ public:
 
   /// Return DebugLoc of this UserLabel.
   const DebugLoc &getDebugLoc() { return dl; }
+
+  /// Repair \p loc if it names the instruction at \p Idx, which is about to
+  /// be erased. insertDebugLabel() goes through findInsertLocation(), which
+  /// scans backwards for a real instruction, so moving back to the previous
+  /// surviving index does not move the DBG_LABEL we go on to emit.
+  void handleInstructionErased(SlotIndex Idx, const SlotIndexes &Indexes) {
+    if (SlotIndex::isSameInstr(loc, Idx))
+      loc = Indexes.getPrevNonErasedIndex(loc);
+  }
+
+  void verify() const { assert(!loc.isPoisoned()); }
 
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
@@ -670,8 +696,35 @@ public:
     ModifiedMF = false;
   }
 
+  void verify() const {
+    // Iterate userValues rather than userVarMap: the latter only holds the
+    // values getUserValue() has interned, so it is not guaranteed to cover
+    // every allocated UserValue.
+    for (auto &UV : userValues)
+      UV->verify();
+    for (auto &UL : userLabels)
+      UL->verify();
+    // These both outlive register allocation too. PHIValToPos records where
+    // each PHI sits, and StashedDebugInstrs records where an unlinked debug
+    // instruction should be put back, so neither may name an erased one.
+    for (auto &[InstrNum, VP] : PHIValToPos)
+      assert(!VP.SI.isPoisoned());
+    for (const InstrPos &IP : StashedDebugInstrs)
+      assert(!IP.Idx.isPoisoned());
+    // handleInstructionErased relies on this to binary search.
+    assert(is_sorted(StashedDebugInstrs,
+                     [](const InstrPos &A, const InstrPos &B) {
+                       return A.Idx < B.Idx;
+                     }) &&
+           "StashedDebugInstrs not sorted by index");
+  }
+
   /// Map virtual register to an equivalence class.
   void mapVirtReg(Register VirtReg, UserValue *EC);
+
+  /// Repair any SlotIndex held into the instruction at \p Idx, which is about
+  /// to be erased.
+  void handleInstructionErased(SlotIndex Idx);
 
   /// Replace any PHI referring to OldReg with its corresponding NewReg, if
   /// present.
@@ -1258,7 +1311,7 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
     // The end of a lexical scope range is the last instruction in the
     // range. To convert to an interval we need the index of the
     // instruction after it.
-    REnd = REnd.getNextIndex();
+    REnd = LIS.getSlotIndexes()->getNextNonErasedIndex(REnd);
 
     // Advance I to first interval outside current range.
     I.advanceTo(REnd);
@@ -1356,6 +1409,11 @@ void LiveDebugVariables::releaseMemory() {
     PImpl->clear();
 }
 
+void LiveDebugVariables::verifyAnalysis() const {
+  if (PImpl)
+    PImpl->verify();
+}
+
 bool LiveDebugVariables::invalidate(
     MachineFunction &, const PreservedAnalyses &PA,
     MachineFunctionAnalysisManager::Invalidator &) {
@@ -1380,6 +1438,99 @@ void LiveDebugVariables::analyze(MachineFunction &MF, LiveIntervals *LIS) {
   // referencing?
   bool InstrRef = MF.useDebugInstrRef();
   PImpl->runOnMachineFunction(MF, InstrRef);
+}
+
+//===----------------------------------------------------------------------===//
+//                            Instruction Erasure
+//===----------------------------------------------------------------------===//
+
+bool UserValue::handleInstructionErased(SlotIndex Idx,
+                                        const SlotIndexes &Indexes) {
+  // Move any boundary naming the erased instruction back to the previous
+  // surviving index. findInsertLocation() already scans backwards from a
+  // boundary looking for a real instruction to insert after, so this does not
+  // move any DBG_VALUE that emitDebugValues() goes on to emit.
+  //
+  // Any boundary naming the instruction lies in [Base, Dead]. find() returns
+  // the first interval that stops after its argument, so start one slot
+  // earlier to also catch an interval that stops exactly at Base.
+  SlotIndex Base = Idx.getBaseIndex(), Dead = Idx.getDeadSlot();
+  SmallVector<std::tuple<SlotIndex, SlotIndex, DbgVariableValue>, 4> Repaired;
+  bool Changed = false;
+  for (LocMap::iterator I = locInts.find(Base.getPrevSlot());
+       I.valid() && I.start() <= Dead;) {
+    SlotIndex Start = I.start(), Stop = I.stop();
+    bool StartErased = SlotIndex::isSameInstr(Start, Idx);
+    bool StopErased = SlotIndex::isSameInstr(Stop, Idx);
+    if (!StartErased && !StopErased) {
+      ++I;
+      continue;
+    }
+    if (StartErased)
+      Start = Indexes.getPrevNonErasedIndex(Start);
+    if (StopErased)
+      Stop = Indexes.getPrevNonErasedIndex(Stop);
+    // Snapping can leave an interval empty, in which case it is dropped.
+    if (Start < Stop)
+      Repaired.emplace_back(Start, Stop, I.value());
+    // Take the interval out and re-insert it below, so that it can coalesce
+    // with its neighbours. erase() advances I.
+    I.erase();
+    Changed = true;
+  }
+
+  for (auto &[Start, Stop, Value] : Repaired)
+    locInts.insert(Start, Stop, Value);
+
+  // trimmedDefs holds interval start indexes, which emitDebugValues matches
+  // against the starts in locInts, so snap them the same way to keep the two
+  // in step.
+  if (any_of(trimmedDefs,
+             [&](SlotIndex I) { return SlotIndex::isSameInstr(I, Idx); })) {
+    SmallSet<SlotIndex, 2> RepairedDefs;
+    for (SlotIndex I : trimmedDefs)
+      RepairedDefs.insert(SlotIndex::isSameInstr(I, Idx)
+                              ? Indexes.getPrevNonErasedIndex(I)
+                              : I);
+    trimmedDefs = std::move(RepairedDefs);
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+void LiveDebugVariables::LDVImpl::handleInstructionErased(SlotIndex Idx) {
+  const SlotIndexes &Indexes = *LIS->getSlotIndexes();
+
+  for (auto &UV : userValues)
+    UV->handleInstructionErased(Idx, Indexes);
+
+  for (auto &UL : userLabels)
+    UL->handleInstructionErased(Idx, Indexes);
+
+  // StashedDebugInstrs records where to put an unlinked debug instruction back,
+  // so move any position naming the erased instruction back to the previous
+  // surviving one. emitDebugValues inserts after that instruction, skipping
+  // debug instructions, which is the same point as the "insert position
+  // disappeared" path would have picked by scanning forwards: everything in
+  // between has been erased, so is no longer in the block.
+  //
+  // This preserves the ordering the re-insertion loop relies on. Entries are
+  // pushed in increasing index order, and getPrevNonErasedIndex stops at the
+  // start of the block, so an entry can neither overtake an earlier one nor
+  // move out of its recorded MBB. That also keeps the entries sorted, so we
+  // can binary search for the ones naming the erased instruction.
+  SlotIndex Base = Idx.getBaseIndex(), Dead = Idx.getDeadSlot();
+  for (auto It =
+           partition_point(StashedDebugInstrs,
+                           [&](const InstrPos &IP) { return IP.Idx < Base; });
+       It != StashedDebugInstrs.end() && It->Idx <= Dead; ++It)
+    It->Idx = Indexes.getPrevNonErasedIndex(It->Idx);
+}
+
+void LiveDebugVariables::handleInstructionErased(SlotIndex Idx) {
+  if (PImpl)
+    PImpl->handleInstructionErased(Idx);
 }
 
 //===----------------------------------------------------------------------===//

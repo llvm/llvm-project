@@ -367,6 +367,19 @@ void RAGreedyLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
 //                     LiveRangeEdit delegate methods
 //===----------------------------------------------------------------------===//
 
+void RAGreedy::LRE_WillEraseInstruction(MachineInstr *MI) {
+  // Tell LiveDebugVariables before the instruction goes away, so that it can
+  // repair any SlotIndex it holds into it.
+  if (DebugVars && !LIS->isNotInMIMap(*MI))
+    DebugVars->handleInstructionErased(LIS->getInstructionIndex(*MI));
+}
+
+void RAGreedy::aboutToEraseInstruction(MachineInstr &MI) {
+  // Deferred dead rematerializations are erased by RegAllocBase directly
+  // rather than through LiveRangeEdit, so they need the same notification.
+  LRE_WillEraseInstruction(&MI);
+}
+
 bool RAGreedy::LRE_CanEraseVirtReg(Register VirtReg) {
   LiveInterval &LI = LIS->getInterval(VirtReg);
   if (VRM->hasPhys(VirtReg)) {
@@ -2987,8 +3000,8 @@ bool RAGreedy::run(MachineFunction &mf) {
   PriorityAdvisor = PriorityProvider->getAdvisor(*MF, *this, *Indexes);
 
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
-  SpillerInstance.reset(createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF,
-                                            *VRM, *VRAI, Matrix));
+  SpillerInstance.reset(createInlineSpiller(
+      {*LIS, *LSS, *DomTree, *MBFI, DebugVars}, *MF, *VRM, *VRAI, Matrix));
 
   VRAI->calculateSpillWeightsAndHints();
 

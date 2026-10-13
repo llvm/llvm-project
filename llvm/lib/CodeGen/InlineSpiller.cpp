@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
@@ -87,6 +88,7 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
   const TargetRegisterInfo &TRI;
   const MachineBlockFrequencyInfo &MBFI;
   LiveRegMatrix *Matrix;
+  LiveDebugVariables *DebugVars;
 
   InsertPointAnalysis IPA;
 
@@ -134,12 +136,14 @@ public:
       : MF(mf), LIS(Analyses.LIS), LSS(Analyses.LSS), MDT(Analyses.MDT),
         VRM(vrm), MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
         TRI(*mf.getSubtarget().getRegisterInfo()), MBFI(Analyses.MBFI),
-        Matrix(matrix), IPA(LIS, mf.getNumBlockIDs()) {}
+        Matrix(matrix), DebugVars(Analyses.DebugVars),
+        IPA(LIS, mf.getNumBlockIDs()) {}
 
   void addToMergeableSpills(MachineInstr &Spill, int StackSlot,
                             Register Original);
   bool rmFromMergeableSpills(MachineInstr &Spill, int StackSlot);
   void hoistAllSpills();
+  void LRE_WillEraseInstruction(MachineInstr *) override;
   void LRE_WillShrinkVirtReg(Register) override;
   bool LRE_CanEraseVirtReg(Register) override;
   void LRE_DidCloneVirtReg(Register, Register) override;
@@ -948,8 +952,7 @@ bool InlineSpiller::coalesceStackAccess(MachineInstr *MI, Register Reg) {
     HSpiller.rmFromMergeableSpills(*MI, StackSlot);
 
   LLVM_DEBUG(dbgs() << "Coalescing stack access: " << *MI);
-  LIS.RemoveMachineInstrFromMaps(*MI);
-  MI->eraseFromParent();
+  Edit->eraseInstruction(*MI);
 
   if (IsLoad) {
     ++NumReloadsRemoved;
@@ -1446,9 +1449,7 @@ void InlineSpiller::spillAll() {
     for (MachineInstr &MI :
          llvm::make_early_inc_range(MRI.reg_instructions(Reg))) {
       assert(SnippetCopies.count(&MI) && "Remaining use wasn't a snippet copy");
-      // FIXME: Do this with a LiveRangeEdit callback.
-      LIS.getSlotIndexes()->removeSingleMachineInstrFromMaps(MI);
-      MI.eraseFromBundle();
+      Edit->eraseInstruction(MI);
     }
   }
 
@@ -1895,6 +1896,13 @@ void HoistSpillHelper::hoistAllSpills() {
     Matrix->assign(LIS.getInterval(VReg), PhysReg);
   }
   PendingReassignments.clear();
+}
+
+/// hoistAllSpills() erases redundant spills via LiveRangeEdit, with this helper
+/// acting as its own delegate. Forward the notification to LiveDebugVariables.
+void HoistSpillHelper::LRE_WillEraseInstruction(MachineInstr *MI) {
+  if (DebugVars && !LIS.isNotInMIMap(*MI))
+    DebugVars->handleInstructionErased(LIS.getInstructionIndex(*MI));
 }
 
 /// Called when a virtual register's live interval is about to be shrunk.
