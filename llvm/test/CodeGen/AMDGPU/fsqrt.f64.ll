@@ -848,7 +848,7 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64(double inreg %x) {
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; GFX8-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; GFX8-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; GFX8-SDAG-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX8-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
@@ -984,7 +984,7 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_ninf(double inreg %x) {
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; GFX8-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; GFX8-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; GFX8-SDAG-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX8-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0

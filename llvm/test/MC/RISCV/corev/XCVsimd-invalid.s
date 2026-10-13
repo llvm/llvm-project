@@ -2744,16 +2744,16 @@ cv.extract.h t0, 0, t2
 # CHECK-ERROR: register must be a GPR
 
 cv.extract.h t0, t1, t2, t3
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
 cv.extract.h t0, t1, t2
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
 cv.extract.h t0, t1, -1
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
-cv.extract.h t0, t1, 64
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+cv.extract.h t0, t1, 2
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
 cv.extract.h t0, t1
 # CHECK-ERROR: too few operands for instruction
@@ -2769,16 +2769,16 @@ cv.extract.b t0, 0, t2
 # CHECK-ERROR: register must be a GPR
 
 cv.extract.b t0, t1, t2, t3
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.extract.b t0, t1, t2
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.extract.b t0, t1, -1
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
-cv.extract.b t0, t1, 64
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+cv.extract.b t0, t1, 4
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.extract.b t0, t1
 # CHECK-ERROR: too few operands for instruction
@@ -2794,16 +2794,16 @@ cv.extractu.h t0, 0, t2
 # CHECK-ERROR: register must be a GPR
 
 cv.extractu.h t0, t1, t2, t3
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
 cv.extractu.h t0, t1, t2
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
 cv.extractu.h t0, t1, -1
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
-cv.extractu.h t0, t1, 64
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+cv.extractu.h t0, t1, 2
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
 cv.extractu.h t0, t1
 # CHECK-ERROR: too few operands for instruction
@@ -2819,16 +2819,16 @@ cv.extractu.b t0, 0, t2
 # CHECK-ERROR: register must be a GPR
 
 cv.extractu.b t0, t1, t2, t3
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.extractu.b t0, t1, t2
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.extractu.b t0, t1, -1
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
-cv.extractu.b t0, t1, 64
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+cv.extractu.b t0, t1, 4
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.extractu.b t0, t1
 # CHECK-ERROR: too few operands for instruction
@@ -2844,16 +2844,16 @@ cv.insert.h t0, 0, t2
 # CHECK-ERROR: register must be a GPR
 
 cv.insert.h t0, t1, t2, t3
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
 cv.insert.h t0, t1, t2
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
 cv.insert.h t0, t1, -1
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
-cv.insert.h t0, t1, 64
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+cv.insert.h t0, t1, 2
+# CHECK-ERROR: immediate must be an integer in the range [0, 1]
 
 cv.insert.h t0, t1
 # CHECK-ERROR: too few operands for instruction
@@ -2869,16 +2869,16 @@ cv.insert.b t0, 0, t2
 # CHECK-ERROR: register must be a GPR
 
 cv.insert.b t0, t1, t2, t3
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.insert.b t0, t1, t2
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.insert.b t0, t1, -1
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
-cv.insert.b t0, t1, 64
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+cv.insert.b t0, t1, 4
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.insert.b t0, t1
 # CHECK-ERROR: too few operands for instruction
@@ -2938,16 +2938,16 @@ cv.shuffle.sci.h t0, 0, t2
 # CHECK-ERROR: register must be a GPR
 
 cv.shuffle.sci.h t0, t1, t2, t3
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.shuffle.sci.h t0, t1, t2
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.shuffle.sci.h t0, t1, -1
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
-cv.shuffle.sci.h t0, t1, 64
-# CHECK-ERROR: immediate must be an integer in the range [0, 63]
+cv.shuffle.sci.h t0, t1, 4
+# CHECK-ERROR: immediate must be an integer in the range [0, 3]
 
 cv.shuffle.sci.h t0, t1
 # CHECK-ERROR: too few operands for instruction
@@ -4945,4 +4945,3 @@ cv.sub.div8 t0, t1, 0
 
 cv.sub.div8 t0, t1
 # CHECK-ERROR: too few operands for instruction
-

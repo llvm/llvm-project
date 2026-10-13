@@ -32,6 +32,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <atomic>
+#include <list>
 
 using namespace llvm;
 using namespace lto;
@@ -208,8 +209,7 @@ static cl::list<std::string>
                 cl::desc("Load passes from plugin library"));
 
 static cl::opt<LTO::LTOKind> UnifiedLTOMode(
-    "unified-lto", cl::Optional,
-    cl::desc("Set LTO mode with the following options:"),
+    "unified-lto", cl::desc("Set LTO mode with the following options:"),
     cl::values(clEnumValN(LTO::LTOK_UnifiedThin, "thin",
                           "ThinLTO with Unified LTO enabled"),
                clEnumValN(LTO::LTOK_UnifiedRegular, "full",
@@ -537,10 +537,12 @@ static int run(int argc, char **argv) {
 
   FileCache Cache;
   if (!CacheDir.empty())
-    Cache = check(localCache("ThinLTO", "Thin", CacheDir, AddBuffer),
+    Cache = check(localCache("ThinLTO", "Thin", CacheDir, AddBuffer,
+                             !DTLTODistributor.empty()),
                   "failed to create cache");
 
   check(Lto->run(AddStream, Cache), "LTO::run failed");
+  Lto->waitForCleanup();
   return static_cast<int>(HasErrors);
 }
 

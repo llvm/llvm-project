@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx950 -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50 -run-pass=none -o - %s | FileCheck %s
 #
 # Round-trip test for the 'lr-split' MIR text spelling of
 # MachineInstr::LRSplit. The flag is set by SplitKit on copies inserted for

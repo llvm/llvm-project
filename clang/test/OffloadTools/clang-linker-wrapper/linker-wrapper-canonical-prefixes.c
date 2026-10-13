@@ -11,10 +11,10 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: ln -s clang-linker-wrapper %t.test_dir/clang-linker-wrapper
 
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.elf.o
-// RUN: %clang -cc1 %s -triple amdgcn-amd-amdhsa -emit-llvm-bc -o %t.amdgpu.bc
+// RUN: %clang -cc1 %s -triple amdgpu-amd-amdhsa -emit-llvm-bc -o %t.amdgpu.bc
 
 // RUN: llvm-offload-binary -o %t.out \
-// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgpu9.08-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: %t.test_dir/clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out --no-canonical-prefixes 2>&1 | FileCheck %s

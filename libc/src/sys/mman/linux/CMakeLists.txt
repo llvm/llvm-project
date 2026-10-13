@@ -306,6 +306,7 @@ add_entrypoint_object(
   HDRS
     ../shm_unlink.h
   DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.unlink
     libc.src.errno.errno
     .shm_common
 )

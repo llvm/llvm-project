@@ -37,7 +37,7 @@ void UseToStringCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseToStringCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("to_string");
-  auto CharType =
+  const auto CharType =
       Result.Nodes.getNodeAs<TemplateArgument>("char_type")->getAsType();
 
   StringRef StringType;
@@ -50,8 +50,8 @@ void UseToStringCheck::check(const MatchFinder::MatchResult &Result) {
   else
     return;
 
-  auto Loc = Call->getBeginLoc();
-  auto Diag =
+  const auto Loc = Call->getBeginLoc();
+  const auto Diag =
       diag(Loc, "use std::to_%0 instead of boost::lexical_cast<std::%0>")
       << StringType;
 

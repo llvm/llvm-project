@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx900 -verify=expected,wave64 -fsyntax-only %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1010 -target-feature +wavefrontsize64 -verify=expected,wave64 -fsyntax-only %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1010 -target-feature +wavefrontsize32 -verify=expected,wave32 -fsyntax-only %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1100 -verify=expected,wave32 -fsyntax-only %s
+// RUN: %clang_cc1 -triple amdgpu9.00-- -verify=expected,wave64 -fsyntax-only %s
+// RUN: %clang_cc1 -triple amdgpu10.10-- -target-feature +wavefrontsize64 -verify=expected,wave64 -fsyntax-only %s
+// RUN: %clang_cc1 -triple amdgpu10.10-- -target-feature +wavefrontsize32 -verify=expected,wave32 -fsyntax-only %s
+// RUN: %clang_cc1 -triple amdgpu11.00-- -verify=expected,wave32 -fsyntax-only %s
 
 // Check that -Wno-deprecated-builtins silences the warnings.
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx900 -Wno-deprecated-builtins -verify=silenced -fsyntax-only %s
+// RUN: %clang_cc1 -triple amdgpu9.00-- -Wno-deprecated-builtins -verify=silenced -fsyntax-only %s
 
 // REQUIRES: amdgpu-registered-target
 

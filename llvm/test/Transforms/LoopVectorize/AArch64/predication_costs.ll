@@ -20,6 +20,7 @@ target triple = "aarch64--linux-gnu"
 ;
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
 ; CHECK: Cost of 7 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp2>, ir<%tmp3> (S->V)
+; CHECK: Precomputed costs for VF 2: 4
 ;
 define i32 @predicated_udiv(ptr %a, ptr %b, i1 %c, i64 %n) {
 entry:
@@ -61,6 +62,7 @@ for.end:
 ;
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %tmp0, align 4
 ; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %tmp0, align 4
+; CHECK: Precomputed costs for VF 2: 8
 ;
 define void @predicated_store(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -93,8 +95,9 @@ for.end:
 ; CHECK: Found scalar instruction:   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK: Found scalar instruction:   %addr.next = getelementptr inbounds i32, ptr %addr, i64 1
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %addr, align 4
-; CHECK: Cost of 0 for VF 2: induction instruction   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
+; CHECK: Cost of 0 for VF 2: forced scalar   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %addr, align 4
+; CHECK: Precomputed costs for VF 2: 8
 ;
 define void @predicated_store_phi(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -137,6 +140,7 @@ for.end:
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp3 = add nsw i32 %tmp2, %x
 ; CHECK: Cost of 5 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp2>, ir<%tmp3> (S->V)
+; CHECK: Precomputed costs for VF 2: 7
 ;
 
 define i32 @predicated_udiv_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
@@ -183,6 +187,7 @@ for.end:
 ; CHECK: Scalarizing: %tmp2 = add nsw i32 %tmp1, %x
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %tmp0, align 4
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp2 = add nsw i32 %tmp1, %x
+; CHECK: Precomputed costs for VF 2: 9
 ;
 define void @predicated_store_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -239,6 +244,7 @@ for.end:
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%tmp2> = add ir<%tmp1>, ir<%x>
 ; CHECK: Cost of 7 for VF 2: REPLICATE ir<%tmp3> = sdiv ir<%tmp1>, ir<%tmp2>
 ; CHECK: Cost of 5 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp3>, ir<%tmp2>
+; CHECK: Precomputed costs for VF 2: 9
 ;
 define void @predication_multi_context(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:

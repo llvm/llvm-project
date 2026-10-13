@@ -355,9 +355,9 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
     FileSpecList containingModules;
     if (interpreter)
       containingModules.Append(interpreter->GetFileSpec());
-    else
-      containingModules.Append(
-          m_process->GetTarget().GetExecutableModulePointer()->GetFileSpec());
+    else if (Module *executable =
+                 m_process->GetTarget().GetExecutableModulePointer())
+      containingModules.Append(executable->GetFileSpec());
 
     dyld_break = target.CreateBreakpoint(
         &containingModules, /*containingSourceFiles=*/nullptr,
@@ -997,6 +997,11 @@ void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(
 
   ModuleSpec module_spec(process_info.GetExecutableFile(),
                          process_info.GetArchitecture());
+  // See if the process has UUID info for the executable. If this is a core
+  // file we really want the UUID in the module spec so we don't load a
+  // random executable with the same name from the current system and ignore
+  // the required UUID.
+  m_process->FindModuleUUID(module_spec);
   if (module_sp && module_sp->MatchesModuleSpec(module_spec))
     return;
 
@@ -1014,7 +1019,7 @@ void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(
     return;
   }
 
-  target.SetExecutableModule(module_sp, eLoadDependentsNo);
+  target.RebuildModuleListWithExecutable(module_sp, eLoadDependentsNo);
 }
 
 bool DynamicLoaderPOSIXDYLD::AlwaysRelyOnEHUnwindInfo(

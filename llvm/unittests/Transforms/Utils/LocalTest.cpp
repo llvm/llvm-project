@@ -30,8 +30,9 @@ using namespace llvm;
 
 TEST(Local, RecursivelyDeleteDeadPHINodes) {
   LLVMContext C;
+  Module M("", C);
 
-  IRBuilder<> builder(C);
+  IRBuilder<> builder(M);
 
   // Make blocks
   BasicBlock *bb0 = BasicBlock::Create(C);
@@ -73,7 +74,8 @@ TEST(Local, RecursivelyDeleteDeadPHINodes) {
 
 TEST(Local, RemoveDuplicatePHINodes) {
   LLVMContext C;
-  IRBuilder<> B(C);
+  Module M("", C);
+  IRBuilder<> B(M);
 
   std::unique_ptr<Function> F(
       Function::Create(FunctionType::get(B.getVoidTy(), false),
@@ -685,6 +687,74 @@ TEST(Local, FindDbgRecords) {
   EXPECT_EQ(Records.size(), 1u);
 }
 
+TEST(Local, SalvageDbgAssignAddress) {
+  // Salvage rewrites a dbg_assign's address through the address expression,
+  // which is separate from the expression on the variable location. Giving the
+  // record a constant value keeps salvage off the variable location, so the
+  // address is the only thing that moves.
+  //
+  // The GEP index is a constant since a constant offset needs no extra location
+  // operands, and that's what makes salvage keep the salvaged address rather
+  // than kill it.
+  //
+  // assignment-tracking/salvage-value.ll also covers this path end to end.
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx,
+                                      R"(
+  define dso_local void @fun(ptr %a) !dbg !11 {
+  entry:
+    %arrayidx = getelementptr inbounds i32, ptr %a, i64 1
+      #dbg_assign(i32 0, !16, !DIExpression(), !15, ptr %arrayidx, !DIExpression(), !19)
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3, !9}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.cpp", directory: "/")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
+  !11 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !14)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{null}
+  !14 = !{}
+  !15 = distinct !DIAssignID()
+  !16 = !DILocalVariable(name: "x", scope: !11, file: !1, line: 2, type: !18)
+  !18 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !19 = !DILocation(line: 0, scope: !11)
+  )");
+
+  bool BrokenDebugInfo = true;
+  verifyModule(*M, &errs(), &BrokenDebugInfo);
+  ASSERT_FALSE(BrokenDebugInfo);
+
+  Function &Fun = *cast<Function>(M->getNamedValue("fun"));
+  Value *Arg = Fun.getArg(0);
+  Instruction &GEP = *Fun.getEntryBlock().getFirstNonPHIOrDbg();
+
+  SmallVector<DbgVariableRecord *> Records;
+  findDbgUsers(&GEP, Records);
+  ASSERT_EQ(Records.size(), 1u);
+  DbgVariableRecord *Assign = Records[0];
+  ASSERT_TRUE(Assign->isDbgAssign());
+  ASSERT_EQ(Assign->getAddress(), &GEP);
+
+  salvageDebugInfo(GEP);
+
+  // The address points at the GEP's pointer operand and the constant offset
+  // moved into the address expression. i32 at index 1 is 4 bytes in.
+  EXPECT_EQ(Assign->getAddress(), Arg);
+  EXPECT_EQ(Assign->getAddressExpression()->getNumElements(), 2u);
+  EXPECT_EQ(Assign->getAddressExpression()->getElement(0),
+            dwarf::DW_OP_plus_uconst);
+  EXPECT_EQ(Assign->getAddressExpression()->getElement(1), 4u);
+  // The variable location is a constant, so salvage left it alone.
+  EXPECT_EQ(Assign->getNumVariableLocationOps(), 1u);
+  EXPECT_TRUE(isa<ConstantInt>(Assign->getVariableLocationOp(0)));
+}
+
 TEST(Local, ReplaceAllDbgUsesWith) {
   using namespace llvm::dwarf;
   LLVMContext Ctx;
@@ -1057,8 +1127,8 @@ TEST(Local, SimplifyCFGWithNullAC) {
 
 TEST(LocalTest, TargetTypeInfoHasNoReplacementProperty) {
   LLVMContext Ctx;
-  SmallVector<unsigned, 3> Ints = {};
-  auto *TT = llvm::TargetExtType::get(Ctx, "dx.RawBuffer", {}, Ints);
+  SmallVector<unsigned, 1> Ints = {};
+  auto *TT = llvm::TargetExtType::get(Ctx, "amdgpu.stridemark", {}, Ints);
 
   EXPECT_TRUE(TT->hasProperty(TargetExtType::Property::IsTokenLike));
 }
@@ -1066,7 +1136,7 @@ TEST(LocalTest, TargetTypeInfoHasNoReplacementProperty) {
 TEST(Local, CanReplaceOperandWithVariable) {
   LLVMContext Ctx;
   Module M("test_module", Ctx);
-  IRBuilder<> B(Ctx);
+  IRBuilder<> B(M);
 
   FunctionType *FnType =
     FunctionType::get(Type::getVoidTy(Ctx), {}, false);
@@ -1185,7 +1255,7 @@ TEST(Local, ExpressionForConstant) {
   EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFFFFFFFFFU);
 
   GlobalVariable *String =
-      IRBuilder<>(Context).CreateGlobalString("hello", "hello", 0, &M);
+      IRBuilder<>(M).CreateGlobalString("hello", "hello", 0, &M);
   Expr = createExpression(ConstantExpr::getPtrToInt(String, Int32Ty), Int32Ty);
   EXPECT_EQ(Expr, nullptr);
 
@@ -1299,5 +1369,5 @@ TEST(Local, ReplaceDbgVariableRecord) {
   EXPECT_EQ(DVR->getVariableLocationOp(0), FooInst);
 
   // Teardown.
-  RetInst->DebugMarker->eraseFromParent();
+  RetInst->getDbgMarker()->eraseFromParent();
 }

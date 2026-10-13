@@ -71,10 +71,9 @@ public:
 
 TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithFgetcUnlocked) {
   test_with_func(&LIBC_NAMESPACE::fgetc_unlocked,
-                 APPEND_LIBC_TEST("testdata/fgetc_unlocked.test"));
+                 "testdata/fgetc_unlocked.test");
 }
 
 TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithGetcUnlocked) {
-  test_with_func(&LIBC_NAMESPACE::getc_unlocked,
-                 APPEND_LIBC_TEST("testdata/getc_unlocked.test"));
+  test_with_func(&LIBC_NAMESPACE::getc_unlocked, "testdata/getc_unlocked.test");
 }

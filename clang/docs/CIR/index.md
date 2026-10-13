@@ -14,7 +14,7 @@ a position between Clang's AST and LLVM IR.
 
 ```{toctree}
 :maxdepth: 1
-:numbered: true
+:numbered:
 
 ABILowering
 CleanupAndEHDesign

@@ -650,10 +650,12 @@ public:
   GetInstrumentationRuntimeCallbacks(bool enabled_only = true);
 
   // TypeSystem
-  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                             TypeSystemCreateInstance create_callback,
-                             LanguageSet supported_languages_for_types,
-                             LanguageSet supported_languages_for_expressions);
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 TypeSystemCreateInstance create_callback,
+                 LanguageSet supported_languages_for_types,
+                 LanguageSet supported_languages_for_expressions,
+                 DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(TypeSystemCreateInstance create_callback);
 
@@ -687,8 +689,9 @@ public:
   static ScriptedInterfaceUsages
   GetScriptedInterfaceUsagesAtIndex(uint32_t idx);
 
-  static void AutoCompleteScriptedExtension(llvm::StringRef partial_name,
-                                            CompletionRequest &request);
+  static void AutoCompleteScriptedExtension(
+      llvm::StringRef partial_name, CompletionRequest &request,
+      lldb::ScriptLanguage language = lldb::eScriptLanguageUnknown);
 
   // REPL
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,

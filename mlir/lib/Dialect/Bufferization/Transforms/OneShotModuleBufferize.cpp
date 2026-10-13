@@ -99,8 +99,8 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
   Operation *op = returnVal.getOwner();
 
   SmallVector<int64_t> equivBbArgs;
-  if (op->hasAttr(kEquivalentArgsAttr)) {
-    auto attr = cast<ArrayAttr>(op->getAttr(kEquivalentArgsAttr));
+  if (op->hasDiscardableAttr(kEquivalentArgsAttr)) {
+    auto attr = cast<ArrayAttr>(op->getDiscardableAttr(kEquivalentArgsAttr));
     equivBbArgs = llvm::map_to_vector<4>(attr, [](Attribute a) {
       return cast<IntegerAttr>(a).getValue().getSExtValue();
     });
@@ -110,7 +110,7 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
   equivBbArgs[returnVal.getOperandNumber()] = bbArg.getArgNumber();
 
   OpBuilder b(op->getContext());
-  op->setAttr(kEquivalentArgsAttr, b.getI64ArrayAttr(equivBbArgs));
+  op->setDiscardableAttr(kEquivalentArgsAttr, b.getI64ArrayAttr(equivBbArgs));
 }
 
 /// Store function BlockArguments that are equivalent to/aliasing a returned
@@ -435,6 +435,11 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
 
   // Compute the common result types of all return ops.
   SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
+  // There is nothing to fold if the function body does not end in a
+  // func::ReturnOp (e.g., the terminator is from a different dialect). Bail
+  // out gracefully instead of asserting inside `getReturnTypes`.
+  if (returnOps.empty())
+    return;
   SmallVector<Type> resultTypes = getReturnTypes(returnOps);
 
   // Remove direct casts.

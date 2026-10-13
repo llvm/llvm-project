@@ -69,6 +69,10 @@ public:
 
 private:
   llvm::Expected<TranslationUnitDecl *> ParseOrWrapTopLevelDecl();
+
+  /// Rebuild the translation unit redeclaration chain without \p MostRecentTU,
+  /// making its predecessor the current unit again.
+  void withdrawMostRecentTU(TranslationUnitDecl *MostRecentTU);
 };
 } // end namespace clang
 

@@ -125,7 +125,8 @@ public:
   void convertToNewDbgValues();
 
   /// \see BasicBlock::convertFromNewDbgValues.
-  void convertFromNewDbgValues();
+  /// Returns true if the conversion modified the function's IR.
+  bool convertFromNewDbgValues();
 
 private:
   friend class TargetLibraryInfoImpl;
@@ -632,6 +633,9 @@ public:
     addFnAttr(Attribute::NoRecurse);
   }
 
+  /// Determine if the function has strict floating point sematics.
+  bool isStrictFP() const { return hasFnAttribute(Attribute::StrictFP); }
+
   /// Determine if the function is required to make forward progress.
   bool mustProgress() const {
     return hasFnAttribute(Attribute::MustProgress) ||
@@ -680,6 +684,13 @@ public:
 
   /// Do not optimize this function (-O0).
   bool hasOptNone() const { return hasFnAttribute(Attribute::OptimizeNone); }
+
+  /// Determine whether interprocedural transforms may rewrite this function's
+  /// signature.
+  bool canChangeSignature() const {
+    return !hasFnAttribute(Attribute::Naked) &&
+           !hasFnAttribute(Attribute::NoIPA) && !hasOptNone();
+  }
 
   /// Optimize this function for minimum size (-Oz).
   bool hasMinSize() const { return hasFnAttribute(Attribute::MinSize); }

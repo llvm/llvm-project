@@ -22,6 +22,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <optional>
@@ -688,11 +689,14 @@ TokenCollector::TokenCollector(Preprocessor &PP) : PP(PP) {
           this->PP.getLangOpts());
       Expanded.push_back(
           syntax::Token(T.getLocation(), Text.size(), tok::annot_module_name));
-    } else if (T.isAnnotation()) {
       return;
-    } else {
-      Expanded.push_back(syntax::Token(T));
     }
+
+    // These tokens do not have a one-to-one raw spelling.
+    if (T.isAnnotation() || T.is(tok::eod))
+      return;
+
+    Expanded.push_back(syntax::Token(T));
     DEBUG_WITH_TYPE("collect-tokens", llvm::dbgs()
                                           << "Token: "
                                           << syntax::Token(T).dumpForTests(

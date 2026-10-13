@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu tahiti -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu hawaii -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu6.00-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu7.01-- -verify -S -o - %s
 
 void test_vi_builtins()
 {

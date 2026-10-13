@@ -19,7 +19,7 @@ define i64 @argmin_argmax(ptr %data, i32 %start_val) {
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -123,7 +123,7 @@ define i64 @argmin_argmin(ptr %data, i32 %start_val1, i32 %start_val2) {
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT2]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -227,7 +227,7 @@ define i64 @argmax_argmax(ptr %data, i32 %start_val1, i32 %start_val2) {
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT2]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -332,7 +332,7 @@ define i64 @argmin_signed_argmax_unsigned(ptr %data, i32 %start_val1, i32 %start
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT2]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -434,7 +434,7 @@ define i64 @argmin_argmax_unsigned(ptr %data, i32 %start_val) {
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x i32> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD]], [[VEC_PHI]]

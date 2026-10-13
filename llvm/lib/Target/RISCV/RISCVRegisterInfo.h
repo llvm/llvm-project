@@ -77,8 +77,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
-  const TargetRegisterClass *getConstrainedRegClassForOperand(
-      const MachineOperand &MO, const MachineRegisterInfo &MRI) const override;
+  const TargetRegisterClass *
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB, bool Is64Bit) const;
@@ -139,11 +140,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   }
 
   const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override {
-    return &RISCV::GPRRegClass;
-  }
-
-  const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &) const override;
 
@@ -155,7 +151,7 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const override;
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                             SmallVectorImpl<MCPhysReg> &Hints,
+                             SmallSetVector<MCPhysReg, 16> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 

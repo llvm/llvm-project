@@ -11,3 +11,7 @@ void unary_not_logical_result(int x, int y) {
 void unary_minus_logical_result(int x, int y) {
   clang_analyzer_eval(-(x && y) <= 0); // expected-warning{{TRUE}}
 }
+
+void wide_bitint_logical_truth_value(unsigned _BitInt(63) x) {
+  clang_analyzer_eval((1 && x) == (x != 0)); // expected-warning{{TRUE}}
+}

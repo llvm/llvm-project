@@ -574,7 +574,7 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias 
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%.pn> = phi ir<0>, ir<%l>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = DERIVED-IV ir<2> + vp<[[VP4]]> * ir<1>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = DERIVED-IV nuw ir<2> + vp<[[VP4]]> * ir<1>
 ; CHECK-NEXT:      CLONE ir<%l> = load ir<%src>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = first-order splice ir<%.pn>, ir<%l>
 ; CHECK-NEXT:    Successor(s): pred.store

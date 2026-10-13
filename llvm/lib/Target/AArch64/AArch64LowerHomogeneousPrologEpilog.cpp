@@ -35,11 +35,6 @@ using namespace llvm;
 #define AARCH64_LOWER_HOMOGENEOUS_PROLOG_EPILOG_NAME                           \
   "AArch64 homogeneous prolog/epilog lowering pass"
 
-static cl::opt<int> FrameHelperSizeThreshold(
-    "frame-helper-size-threshold", cl::init(2), cl::Hidden,
-    cl::desc("The minimum number of instructions that are outlined in a frame "
-             "helper (default = 2)"));
-
 namespace {
 
 class AArch64LowerHomogeneousPrologEpilogImpl {
@@ -188,7 +183,11 @@ static MachineFunction &createFrameHelperMachineFunction(Module *M,
 
   MachineFunction &MF = MMI->getOrCreateMachineFunction(*F);
   // Remove unnecessary register liveness and set NoVRegs.
-  MF.getProperties().resetTracksLiveness().resetIsSSA().setNoVRegs();
+  MF.getProperties()
+      .resetTracksLiveness()
+      .resetIsSSA()
+      .setNoVRegs()
+      .setNoPHIs();
   MF.getRegInfo().freezeReservedRegs();
 
   // Create entry block.
@@ -445,7 +444,10 @@ static bool shouldUseFrameHelper(MachineBasicBlock &MBB,
   }
   }
 
-  return InstCount >= FrameHelperSizeThreshold;
+  return InstCount >= MBB.getParent()
+                          ->getSubtarget<AArch64Subtarget>()
+                          .getCLOpts()
+                          .frame_helper_size_threshold;
 }
 
 /// Lower a HOM_Epilog pseudo instruction into a helper call while

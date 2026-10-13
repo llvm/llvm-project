@@ -741,3 +741,50 @@ loop:
 exit:
   ret i32 %select.data
 }
+
+define i32 @test_sub(ptr %src, i64 %n, i32 %start) {
+; CHECK-LABEL: define i32 @test_sub(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 1
+; CHECK-NEXT:    [[RDX_NEXT:%.*]] = sub i32 [[RDX]], [[L]]
+; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[GEP_SRC_1]], align 1
+; CHECK-NEXT:    [[RDX_2:%.*]] = sub i32 [[RDX_NEXT]], [[L_1]]
+; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_1]]
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 1
+; CHECK-NEXT:    [[RDX_NEXT_2:%.*]] = sub i32 [[RDX_2]], [[L_2]]
+; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_SRC_3]], align 1
+; CHECK-NEXT:    [[RDX_NEXT_3]] = sub i32 [[RDX_NEXT_2]], [[L_3]]
+; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
+; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[BIN_RDX2]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ %start, %entry ], [ %rdx.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %gep.src = getelementptr i32, ptr %src, i64 %iv
+  %l = load i32 , ptr %gep.src, align 1
+  %rdx.next = sub i32 %rdx, %l
+  %ec = icmp ne i64 %iv.next, 1000
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret i32 %rdx.next
+}

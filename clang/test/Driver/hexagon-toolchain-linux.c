@@ -71,7 +71,7 @@
 // -----------------------------------------------------------------------------
 // Not Passing -fno-use-init-array when musl is selected
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK005 %s
 // CHECK005-NOT:          -fno-use-init-array
@@ -87,7 +87,7 @@
 // -----------------------------------------------------------------------------
 // c++ when musl is selected
 // -----------------------------------------------------------------------------
-// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -stdlib=libc++ \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK007 %s
@@ -95,14 +95,14 @@
 // -----------------------------------------------------------------------------
 // internal-isystem for linux with and without musl
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK008 %s
 // CHECK008:   "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK008-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
 // CHECK008-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
-// RUN: %clang -### --target=hexagon-unknown-linux \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-linux \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK009 %s
 // CHECK009:   "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -110,7 +110,7 @@
 // CHECK009-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
 // RUN: %clang -Werror -L/tmp \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK010 %s
 // CHECK010-NOT:  "-lstandalone"
 // CHECK010-NOT:  crt0_standalone.o
@@ -122,7 +122,7 @@
 // unwindlib
 // -----------------------------------------------------------------------------
 // RUN: %clangxx --unwindlib=none \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK011 %s
 // CHECK011:   "--eh-frame-hdr"
 // CHECK011:   crt1.o
@@ -132,10 +132,10 @@
 
 
 // RUN: %clangxx --rtlib=compiler-rt --unwindlib=libunwind \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK012 %s
 // RUN: %clangxx \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK012 %s
 // CHECK012:   crt1.o
 // CHECK012:  "-lunwind"
@@ -143,7 +143,7 @@
 // CHECK012-NOT:  "-lgcc_s"
 
 // RUN: not %clangxx --rtlib=compiler-rt --unwindlib=libgcc \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK013 %s
 // CHECK013:  error: unsupported unwind library 'libgcc' for platform 'hexagon-unknown-linux-musl'
 // CHECK013-NOT:  "-lgcc_eh"
@@ -201,6 +201,49 @@
 // CHECK-RELOC-NORMAL: "{{.*}}crt1.o"
 
 // -----------------------------------------------------------------------------
+// Startup object: -static alone gets PIE by default (see PIE-DEFAULT above),
+// so it must link the self-relocating rcrt1.o, not the plain crt1.o. Plain
+// crt1.o never processes the R_HEX_RELATIVE relocations a static-PIE image
+// needs, and the resulting binary crashes during libc startup.
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -static %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-STATIC-PIE %s
+// CHECK-STATIC-PIE:      "-static" "-pie"
+// CHECK-STATIC-PIE:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}rcrt1.o"
+// CHECK-STATIC-PIE-NOT:  "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+
+// -----------------------------------------------------------------------------
+// Startup object: -static -no-pie must still link the plain, non-relocating
+// crt1.o (a static non-PIE image has no relocations to apply).
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -static -no-pie %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-STATIC-NO-PIE %s
+// CHECK-STATIC-NO-PIE:      "-static"
+// CHECK-STATIC-NO-PIE-NOT:  "-pie"
+// CHECK-STATIC-NO-PIE:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+// CHECK-STATIC-NO-PIE-NOT:  "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}rcrt1.o"
+
+// -----------------------------------------------------------------------------
+// Startup object: a non-static (dynamic) link keeps using crt1.o even though
+// PIE is on by default -- relocation is the dynamic linker's job there, not
+// the CRT's.
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-DYNAMIC-PIE %s
+// CHECK-DYNAMIC-PIE:      "-pie"
+// CHECK-DYNAMIC-PIE:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+// CHECK-DYNAMIC-PIE-NOT:  "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}rcrt1.o"
+
+// -----------------------------------------------------------------------------
 // Sanitizer library paths: -fsanitize=memory
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \
@@ -229,20 +272,20 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=lld \
-// RUN:   -fsanitize=shadow-call-stack -ffixed-r19 \
+// RUN:   -fsanitize=shadow-call-stack -ffixed-r18 \
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-SCS %s
 // CHECK-SCS:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}scs"
 // CHECK-SCS-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
 // -----------------------------------------------------------------------------
-// Library paths: -ffixed-r19 alone must NOT select the scs multilib
+// Library paths: -ffixed-r18 alone must NOT select the scs multilib
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=lld \
-// RUN:   -ffixed-r19 \
-// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-R19-ONLY %s
-// CHECK-R19-ONLY-NOT: "-L{{.*}}{{/|\\\\}}scs"
+// RUN:   -ffixed-r18 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-R18-ONLY %s
+// CHECK-R18-ONLY-NOT: "-L{{.*}}{{/|\\\\}}scs"
 // -----------------------------------------------------------------------------
 // Startup object: -fsanitize=shadow-call-stack links the scs crt1.o, not the
 // base crt1.o. Selection is on the multilib in effect, not file presence, so
@@ -252,7 +295,7 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=lld \
-// RUN:   -fsanitize=shadow-call-stack -ffixed-r19 \
+// RUN:   -fsanitize=shadow-call-stack -ffixed-r18 \
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-SCS-CRT %s
 // CHECK-SCS-CRT:     "{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}scs{{/|\\\\}}crt1.o"
 // CHECK-SCS-CRT-NOT: "{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"

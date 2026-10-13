@@ -10,4 +10,5 @@
 
 #include "src/math/llroundf16.h"
 
-LIST_ROUND_TO_INTEGER_TESTS(float16, long long, LIBC_NAMESPACE::llroundf16)
+LIST_ROUND_TO_INTEGER_TESTS(Llroundf16, float16, long long,
+                            LIBC_NAMESPACE::llroundf16)

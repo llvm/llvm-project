@@ -157,18 +157,16 @@ std::string mlir::tblgen::buildErrorStreamingString(
 
     os << " << " << tgfmt(var, &ctx);
 
-    if (rest.empty())
-      break;
-
-    split = rest.split("{{");
-    if (split.second.empty() &&
-        errorStreamType == ErrorStreamType::InsideOpError) {
+    if (errorStreamType == ErrorStreamType::InsideOpError) {
       // To enable having part of string post, this adds a parenthesis before
       // the last string segment to match the existing one.
-      os << " << (\"" << split.first;
+      os << " << (\"";
     } else {
-      os << " << \"" << split.first;
+      os << " << \"";
     }
+
+    split = rest.split("{{");
+    os << split.first;
     msg = split.second;
   }
 

@@ -220,7 +220,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect(
             "thread trace stop",
             error=True,
-            substrs=["error: Process is not being traced"],
+            substrs=["error: process is not being traced"],
         )
 
         # the help command should be the intel-pt one now

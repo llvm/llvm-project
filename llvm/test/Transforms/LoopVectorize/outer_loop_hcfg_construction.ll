@@ -31,7 +31,7 @@ define void @non_outermost_loop_hcfg_construction(i64 %n, ptr %a) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -40,9 +40,8 @@ define void @non_outermost_loop_hcfg_construction(i64 %n, ptr %a) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[MIDDLE_LOOP_LATCH4:.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[MIDDLE_LOOP_LATCH4]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[A]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> align 8 [[TMP3]], <4 x i1> splat (i1 true), <4 x ptr> poison)
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = load <4 x ptr>, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    br label %[[INNERMOST_LOOP3:.*]]
 ; CHECK:       [[INNERMOST_LOOP3]]:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[INNERMOST_LOOP3]] ]
@@ -54,7 +53,6 @@ define void @non_outermost_loop_hcfg_construction(i64 %n, ptr %a) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_LOOP_LATCH4]], label %[[INNERMOST_LOOP3]]
 ; CHECK:       [[MIDDLE_LOOP_LATCH4]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -172,7 +170,7 @@ define void @non_outermost_loop_hcfg_construction_other_loops_at_same_level(i64 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[ADD]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -316,5 +314,5 @@ innermost.loop.j1:
 
 !3 = distinct !{!3, !4, !5, !6}
 !4 = !{!"llvm.loop.vectorize.width", i32 4}
-!5 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
-!6 = !{!"llvm.loop.vectorize.enable", i1 true}
+!5 = !{!"llvm.loop.vectorize.scalable.disable"}
+!6 = !{!"llvm.loop.vectorize.enable"}

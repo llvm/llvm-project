@@ -72,3 +72,15 @@ void testNestedNullSplitMacro(int i, int *p) {
     *p = 1; // expected-warning {{Dereference of null pointer (loaded from variable 'p')}}
             // expected-note@-1 {{Dereference of null pointer (loaded from variable 'p')}}
 }
+
+// Same comparison as above, but against an 'unsigned' variable: here the
+// literal must be spelled unsigned. Printing it as signed (as the raw APInt
+// stream operator does) would claim an unsigned value is equal to -1.
+void testNestedNullSplitMacroUnsigned(unsigned i, int *p) {
+  nested_null_split(i); // expected-note {{Assuming 'i' is equal to 4294967295}}
+                        // expected-note@-1 {{Taking false branch}}
+  if (!p) // expected-note {{Assuming 'p' is null}}
+          // expected-note@-1 {{Taking true branch}}
+    *p = 1; // expected-warning {{Dereference of null pointer (loaded from variable 'p')}}
+            // expected-note@-1 {{Dereference of null pointer (loaded from variable 'p')}}
+}

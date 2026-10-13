@@ -161,4 +161,4 @@ int a\N{LATIN CAPITAL LETTER A WITH GRAVE??>;
 #endif
 
 // GH64161
-int A\N{LEFT-TO-RIGHT OVERRIDE}; // expected-error {{character <U+202D> not allowed in an identifier}}
+int A\N{LEFT-TO-RIGHT OVERRIDE}; // expected-error {{character U+202D not allowed in an identifier}}

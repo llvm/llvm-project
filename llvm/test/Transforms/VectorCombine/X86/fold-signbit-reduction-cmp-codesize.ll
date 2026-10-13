@@ -12,7 +12,7 @@
 define i1 @throughput(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @throughput(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

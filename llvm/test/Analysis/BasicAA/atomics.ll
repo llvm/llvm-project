@@ -64,8 +64,10 @@ define void @alloca_no_escape(ptr %x) {
 ; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %1 = atomicrmw add ptr %x, i32 1 acq_rel, align 4
 ; CHECK:  Both ModRef:  Ptr: i32* %a	<->  %2 = cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic, align 4
 ; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %2 = cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic, align 4
-; CHECK:  Both ModRef:  Ptr: i32* %a	<->  %3 = load atomic i32, ptr %x acquire, align 4
-; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %3 = load atomic i32, ptr %x acquire, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %a	<->  %3 = cmpxchg ptr %x, i32 0, i32 1 monotonic acquire, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %3 = cmpxchg ptr %x, i32 0, i32 1 monotonic acquire, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %a	<->  %4 = load atomic i32, ptr %x acquire, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %4 = load atomic i32, ptr %x acquire, align 4
 ; CHECK:  Both ModRef:  Ptr: i32* %a	<->  store atomic i32 0, ptr %x release, align 4
 ; CHECK:  Both ModRef:  Ptr: i32* %x	<->  store atomic i32 0, ptr %x release, align 4
 define void @alloca_escape_after(ptr %x) {
@@ -75,6 +77,8 @@ define void @alloca_escape_after(ptr %x) {
   fence release
   atomicrmw add ptr %x, i32 1 acq_rel
   cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic
+  ; The failure ordering counts too: monotonic/acquire is an acquire operation.
+  cmpxchg ptr %x, i32 0, i32 1 monotonic acquire
   load atomic i32, ptr %x acquire, align 4
   store atomic i32 0, ptr %x release, align 4
 

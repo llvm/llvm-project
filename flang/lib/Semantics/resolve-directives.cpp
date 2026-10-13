@@ -35,15 +35,6 @@
 
 namespace Fortran::semantics {
 
-template <typename T>
-static Scope *GetScope(SemanticsContext &context, const T &x) {
-  if (auto source{GetLastSource(x)}) {
-    return &context.FindScope(*source);
-  } else {
-    return nullptr;
-  }
-}
-
 template <typename T> class DirectiveAttributeVisitor {
 public:
   explicit DirectiveAttributeVisitor(SemanticsContext &context)
@@ -61,6 +52,7 @@ protected:
     Scope &scope;
     Symbol::Flag defaultDSA{Symbol::Flag::AccShared}; // TODOACC
     std::map<const Symbol *, Symbol::Flag> objectWithDSA;
+    std::map<const Symbol *, Symbol::Flags> commonBlockClauseFlags;
     std::map<parser::OmpVariableCategory::Value,
         parser::OmpDefaultmapClause::ImplicitBehavior>
         defaultMap;
@@ -413,12 +405,7 @@ public:
 
   static bool HasStaticStorageDuration(const Symbol &symbol) {
     auto &ultSym = symbol.GetUltimate();
-    // Module-scope variable
-    return ultSym.owner().kind() == Scope::Kind::Module ||
-        // Data statement variable
-        ultSym.flags().test(Symbol::Flag::InDataStmt) ||
-        // Save attribute variable
-        ultSym.attrs().test(Attr::SAVE) ||
+    return IsSaved(ultSym) ||
         // Referenced in a common block
         ultSym.flags().test(Symbol::Flag::InCommonBlock);
   }
@@ -456,18 +443,17 @@ public:
 
   // Recognize symbols that are not created as a part of the OpenMP data-
   // sharing processing, and that are declared inside of the construct.
-  // These symbols are predetermined private, but they shouldn't be marked
-  // in any special way, because there is nothing to be done for them.
-  // They are not symbols for which private copies need to be created,
-  // they are already themselves private.
+  // Such symbols are predetermined private if they have automatic storage
+  // duration, or shared if they have static storage duration. They need
+  // no special marking, because there is nothing to be done for them.
+  // They are already themselves private or shared.
   static bool IsLocalInsideScope(const Symbol &symbol, const Scope &scope) {
     // A symbol that is marked with a DSA will be cloned in the construct
     // scope and marked as host-associated. This applies to privatized symbols
     // as well even though they will have their own storage. They should be
     // considered local regardless of the status of the original symbol.
     const Symbol &actual{GetStorageOwner(symbol)};
-    return actual.owner() != scope && scope.Contains(actual.owner()) &&
-        !HasStaticStorageDuration(actual);
+    return actual.owner() != scope && scope.Contains(actual.owner());
   }
 
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
@@ -590,6 +576,8 @@ public:
   bool Pre(const parser::OpenMPInvalidDirective &x) { return false; }
 
   bool Pre(const parser::DoConstruct &);
+  bool Pre(const parser::InputImpliedDo &);
+  bool Pre(const parser::OutputImpliedDo &);
 
   bool Pre(const parser::OpenMPSectionsConstruct &);
   void Post(const parser::OpenMPSectionsConstruct &) { PopContext(); }
@@ -641,11 +629,10 @@ public:
   void Post(const parser::OpenMPFlushConstruct &) { PopContext(); }
 
   bool Pre(const parser::OmpRequiresDirective &x) {
-    using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
     PushContext(x.source, llvm::omp::Directive::OMPD_requires);
 
     // Gather information from the clauses.
-    OmpClauseSet reqs;
+    llvm::omp::Clauses reqs;
     std::optional<common::OmpMemoryOrderType> memOrder;
     for (const parser::OmpClause &clause : x.v.Clauses().v) {
       using OmpClause = parser::OmpClause;
@@ -653,7 +640,7 @@ public:
           common::visitors{
               [&](const OmpClause::AtomicDefaultMemOrder &admo) {
                 memOrder = admo.v.v;
-                return OmpClauseSet{clause.Id()};
+                return llvm::omp::Clauses{clause.Id()};
               },
               [&](auto &&s) {
                 using TypeS = llvm::remove_cvref_t<decltype(s)>;
@@ -665,10 +652,10 @@ public:
                     std::is_same_v<TypeS, OmpClause::UnifiedAddress> ||
                     std::is_same_v<TypeS, OmpClause::UnifiedSharedMemory>) {
                   if (omp::GetLogicalArgument(s.v, context_).value_or(true)) {
-                    return OmpClauseSet{clause.Id()};
+                    return llvm::omp::Clauses{clause.Id()};
                   }
                 }
-                return OmpClauseSet{};
+                return llvm::omp::Clauses{};
               },
           },
           clause.u);
@@ -915,7 +902,7 @@ public:
   }
 
   void Post(const parser::OmpMapClause &x) {
-    unsigned version{context_.langOptions().OpenMPVersion};
+    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
     std::optional<Symbol::Flag> ompFlag;
 
     auto &mods{OmpGetModifiers(x)};
@@ -1041,7 +1028,7 @@ private:
   void CheckObjectIsPrivatizable(
       const parser::Name &, const Symbol &, Symbol::Flag);
 
-  void AddOmpRequiresToScope(Scope &, const WithOmpDeclarative::OmpClauseSet &,
+  void AddOmpRequiresToScope(Scope &, const llvm::omp::Clauses &,
       const std::optional<common::OmpMemoryOrderType> &);
 
   void CreateImplicitSymbols(const parser::Name &, const Symbol *symbol);
@@ -1056,7 +1043,13 @@ private:
 
 void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
     Scope *topScope) {
-  if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
+  // A CUDA Fortran compilation that was not given an OpenACC target still has
+  // to resolve the directives recovered from module files, because they can
+  // describe the device-side call target of a procedure through
+  // `acc routine bind(...)`. The sentinel is not recognized in the main source
+  // in that case, so no user directive can reach this point.
+  if (context.IsEnabled(common::LanguageFeature::OpenACC) ||
+      context.IsEnabled(common::LanguageFeature::CUDA)) {
     AccAttributeVisitor{context, topScope}.Walk(node);
   }
 }
@@ -1424,8 +1417,23 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
     }
     for (const auto &name : names) {
       if (Symbol * sym{ResolveFctName(name)}) {
-        Symbol &ultimate{sym->GetUltimate()};
-        AddRoutineInfoToSymbol(ultimate, x);
+        Symbol *target{&sym->GetUltimate()};
+        // OpenACC ties the named argument of a ROUTINE directive to a
+        // subroutine or function. A pure generic interface name is not a
+        // valid target. However, a generic may share its name with a specific
+        // procedure (common with interface bodies); in that case the name
+        // denotes the specific, not the generic.
+        if (auto *generic{target->detailsIf<GenericDetails>()}) {
+          if (Symbol * specific{generic->specific()}) {
+            target = &specific->GetUltimate();
+          } else {
+            context_.Say(name.source,
+                "A generic interface name may not appear in an ACC ROUTINE clause: %s"_err_en_US,
+                name.source);
+            continue;
+          }
+        }
+        AddRoutineInfoToSymbol(*target, x);
       } else {
         context_.Say(name.source,
             "No function or subroutine declared for '%s'"_err_en_US,
@@ -1760,6 +1768,11 @@ void AccAttributeVisitor::EnsureAllocatableOrPointer(
         common::visitors{
             [&](const parser::Designator &designator) {
               const auto &lastName{GetLastName(designator)};
+              if (!lastName.symbol) {
+                // Name resolution failed for this designator and has already
+                // emitted an error; there is nothing left to check.
+                return;
+              }
               if (!IsAllocatableOrObjectPointer(lastName.symbol)) {
                 context_.Say(designator.source,
                     "Argument `%s` on the %s clause must be a variable or "
@@ -1833,6 +1846,18 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
         !symbol.has<AssocEntityDetails>() && !symbol.has<MiscDetails>()) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (&symbol != found) {
+          // Don't "adjust" a name that resolution already bound to a construct
+          // entity declared within this region: a DO CONCURRENT or FORALL
+          // index-name (Forall scope) or an entity declared in a nested BLOCK
+          // construct (BlockConstruct scope). currScope() here does not descend
+          // into those construct scopes, so FindSymbol instead resolves to a
+          // like-named variable in an enclosing scope. Rebinding to it would
+          // make the construct entity alias the enclosing variable and, e.g.,
+          // trip the DO-variable redefinition check when that enclosing
+          // variable is an active DO index.
+          if (DoesScopeContain(&currScope(), symbol)) {
+            return;
+          }
           // adjust the symbol within the region
           // TODO: why didn't name resolution set the right name originally?
           name.symbol = found;
@@ -1924,6 +1949,21 @@ static bool ContainsStructureComponent(const parser::Designator &designator) {
       designator.u);
 }
 
+static bool IsOpenACCDeviceMappingFlag(Symbol::Flag flag) {
+  switch (flag) {
+  case Symbol::Flag::AccCopy:
+  case Symbol::Flag::AccCopyIn:
+  case Symbol::Flag::AccCopyInReadOnly:
+  case Symbol::Flag::AccCopyOut:
+  case Symbol::Flag::AccCreate:
+  case Symbol::Flag::AccPresent:
+  case Symbol::Flag::AccDevicePtr:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void AccAttributeVisitor::ResolveAccObject(
     const parser::AccObject &accObject, Symbol::Flag accFlag) {
   common::visit(
@@ -1958,6 +1998,11 @@ void AccAttributeVisitor::ResolveAccObject(
             const parser::Name &baseName{parser::GetFirstName(designator)};
             if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
               AddToContextObjectWithDSA(*symbol, accFlag);
+              if (GetContext().directive == llvm::acc::Directive::ACCD_data &&
+                  IsOpenACCDeviceMappingFlag(accFlag)) {
+                currScope().AddOpenACCMappedSymbol(*symbol);
+                context_.NoteOpenACCDataMapping();
+              }
               if (preciseDesignator &&
                   dataSharingAttributeFlags.test(accFlag)) {
                 CheckMultipleAppearances(
@@ -1969,6 +2014,11 @@ void AccAttributeVisitor::ResolveAccObject(
             if (auto *symbol{ResolveAccCommonBlockName(&name)}) {
               CheckMultipleAppearances(
                   name, *symbol, Symbol::Flag::AccCommonBlock);
+              // Members of a named COMMON listed in a data clause are not
+              // recorded as device-mapped. Lowering does not create an
+              // alternate device binding for them, so CUDA generic resolution
+              // must not select a DEVICE specific. A member listed as a
+              // designator is handled in the branch above.
               for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
                 if (auto *resolvedObject{
                         ResolveAcc(*object, accFlag, currScope())}) {
@@ -2104,7 +2154,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
 
 void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     const parser::Name &iv) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   // Find the parallel, teams or task generating construct enclosing the
   // sequential loop.
   auto targetIt{dirContext_.rbegin()};
@@ -2184,6 +2234,28 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
   return true;
 }
 
+static const parser::Name &GetIoImpliedDoIndex(
+    const parser::IoImpliedDoControl &control) {
+  return parser::UnwrapRef<parser::Name>(control.Name());
+}
+
+// [OMP-5.2] 5.1.1 - Implied-DO indices are predetermined private.
+bool OmpAttributeVisitor::Pre(const parser::InputImpliedDo &x) {
+  if (WithinConstruct()) {
+    ResolveSeqLoopIndexInParallelOrTaskConstruct(
+        GetIoImpliedDoIndex(std::get<parser::IoImpliedDoControl>(x.t)));
+  }
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OutputImpliedDo &x) {
+  if (WithinConstruct()) {
+    ResolveSeqLoopIndexInParallelOrTaskConstruct(
+        GetIoImpliedDoIndex(std::get<parser::IoImpliedDoControl>(x.t)));
+  }
+  return true;
+}
+
 // 2.15.1.1 Data-sharing Attribute Rules - Predetermined
 //   - The loop iteration variable(s) in the associated do-loop(s) of a do,
 //     parallel do, taskloop, or distribute construct is (are) private.
@@ -2195,7 +2267,7 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
     const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveSpecification &spec{x.BeginDir()};
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   auto [depth, _]{
       omp::GetAffectedNestDepthWithReason(spec, version, &context_)};
@@ -2251,9 +2323,8 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
     device = parser::UnwrapRef<common::OmpDeviceType>(*devClause);
   }
 
-  unsigned version{context_.langOptions().OpenMPVersion};
-  WithOmpDeclarative::OmpClauseSet clauses;
-  clauses.set(llvm::omp::Clause::OMPC_device_type);
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  llvm::omp::Clauses clauses{llvm::omp::Clause::OMPC_device_type};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (const parser::OmpObject *object{parser::omp::GetArgumentObject(arg)}) {
       if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
@@ -2306,8 +2377,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
 bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_target);
 
-  unsigned version{context_.langOptions().OpenMPVersion};
-  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   std::map<const Symbol *, WithOmpDeclarative> details;
   std::optional<common::OmpDeviceType> device;
 
@@ -2316,13 +2386,14 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
     device = parser::UnwrapRef<common::OmpDeviceType>(*devClause);
   }
 
-  auto addClause{[&](const parser::OmpObject &object,
-                     llvm::omp::Clause clauseId) {
-    if (const Symbol *sym{omp::GetObjectSymbol(object)}) {
-      auto &clauseSet{const_cast<OmpClauseSet &>(details[sym].ompDeclTarget())};
-      clauseSet.set(clauseId);
-    }
-  }};
+  auto addClause{
+      [&](const parser::OmpObject &object, llvm::omp::Clause clauseId) {
+        if (const Symbol *sym{omp::GetObjectSymbol(object)}) {
+          auto &clauseSet{
+              const_cast<llvm::omp::Clauses &>(details[sym].ompDeclTarget())};
+          clauseSet.set(clauseId);
+        }
+      }};
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{parser::omp::GetArgumentObject(arg)}) {
@@ -2348,7 +2419,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
     if (auto *proc{const_cast<Symbol *>(scope.symbol())}) {
       proc->flags().set(Symbol::Flag::OmpDeclareTarget);
       auto &clauseSet{
-          const_cast<OmpClauseSet &>(details[proc].ompDeclTarget())};
+          const_cast<llvm::omp::Clauses &>(details[proc].ompDeclTarget())};
       clauseSet.set(llvm::omp::Clause::OMPC_enter);
     }
   }
@@ -2361,7 +2432,8 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
           using TypeD = llvm::remove_cvref_t<decltype(d)>;
           if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
             d.set_version(version);
-            auto &clauseSet{const_cast<OmpClauseSet &>(d.ompDeclTarget())};
+            auto &clauseSet{
+                const_cast<llvm::omp::Clauses &>(d.ompDeclTarget())};
             clauseSet |= decl.ompDeclTarget();
             if (device) {
               clauseSet.set(llvm::omp::Clause::OMPC_device_type);
@@ -2485,22 +2557,20 @@ void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
   // The DEFAULT clause may also be used on METADIRECTIVE. In that case
   // there is nothing to do.
   using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
-  if (auto *dsa{std::get_if<DataSharingAttribute>(&x.u)}) {
-    if (!dirContext_.empty()) {
-      switch (*dsa) {
-      case DataSharingAttribute::Private:
-        SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
-        break;
-      case DataSharingAttribute::Firstprivate:
-        SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
-        break;
-      case DataSharingAttribute::Shared:
-        SetContextDefaultDSA(Symbol::Flag::OmpShared);
-        break;
-      case DataSharingAttribute::None:
-        SetContextDefaultDSA(Symbol::Flag::OmpNone);
-        break;
-      }
+  if (!dirContext_.empty()) {
+    switch (x.v) {
+    case DataSharingAttribute::Private:
+      SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
+      break;
+    case DataSharingAttribute::Firstprivate:
+      SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
+      break;
+    case DataSharingAttribute::Shared:
+      SetContextDefaultDSA(Symbol::Flag::OmpShared);
+      break;
+    case DataSharingAttribute::None:
+      SetContextDefaultDSA(Symbol::Flag::OmpNone);
+      break;
     }
   }
 }
@@ -2684,9 +2754,6 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     bool targetDir = llvm::omp::allTargetSet.test(dirContext.directive);
     bool parallelDir = llvm::omp::topParallelSet.test(dirContext.directive);
     bool teamsDir = llvm::omp::allTeamsSet.test(dirContext.directive);
-    bool isStaticStorageDuration = HasStaticStorageDuration(*symbol);
-    LLVM_DEBUG(llvm::dbgs()
-        << "HasStaticStorageDuration(" << symbol->name() << "):\n");
 
     const Symbol *crayPtr = nullptr;
     Symbol::Flags crayPtrDSA;
@@ -2701,6 +2768,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         dirContext.defaultDSA == Symbol::Flag::OmpNone) {
       checkDefaultNone = true;
     }
+    bool hasDefaultNoneError{false};
     if (checkDefaultNone) {
       auto defaultNoneError = [&](parser::CharBlock loc, const Symbol *sym) {
         if (crayPtr) {
@@ -2712,13 +2780,30 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
               "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
               sym->name());
         }
+        hasDefaultNoneError = true;
       };
+      Symbol *curSymbol{nullptr};
+      if (auto it{scope.find(symbol->name())}; it != scope.end()) {
+        curSymbol = &*it->second;
+      }
+      // Setting the DSA of a symbol with OmpNone DSA in the enclosing construct
+      // is allowed when:
+      // - The DSA is private (no read or write to the original variable).
+      // - The DSA is predetermined (should only private be allowed?).
+      // - The DSA is implicit. The standard seems to allow this only for
+      //   variables that are not referenced in the construct
+      //   (OpenMP 6.0 - 7.5.1 default Clause), but current implementation
+      //   allows the DSA to be implicitly set by a non-leaf directive.
       if (dsa.test(Symbol::Flag::OmpPrivate) ||
           crayPtrDSA.test(Symbol::Flag::OmpPrivate)) {
         checkDefaultNone = false;
-      } else if (dsa.any() || crayPtrDSA.any()) {
+      } else if ((dsa.any() && curSymbol &&
+                     curSymbol->test(Symbol::Flag::OmpExplicit)) ||
+          (crayPtrDSA.any() && crayPtr &&
+              crayPtr->test(Symbol::Flag::OmpExplicit))) {
         defaultNoneError(dirContext.directiveSource, symbol);
-      } else if (dirDepth == (int)dirContext_.size() - 1) {
+      } else if (dsa.none() && crayPtrDSA.none() &&
+          dirDepth == (int)dirContext_.size() - 1) {
         defaultNoneError(name.source, symbol);
       }
     }
@@ -2755,14 +2840,18 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
 
     if (dirContext.defaultDSA == Symbol::Flag::OmpPrivate ||
         dirContext.defaultDSA == Symbol::Flag::OmpFirstPrivate ||
-        dirContext.defaultDSA == Symbol::Flag::OmpShared) {
+        dirContext.defaultDSA == Symbol::Flag::OmpShared ||
+        (dirContext.defaultDSA == Symbol::Flag::OmpNone &&
+            !hasDefaultNoneError)) {
       // 1) default
       // Allowed only with parallel, teams and task generating constructs.
       if (!parallelDir && !taskGenDir && !teamsDir) {
         return;
       }
       dsa = {dirContext.defaultDSA};
-      makeSymbol(dsa);
+      if (dirContext.defaultDSA != Symbol::Flag::OmpNone) {
+        makeSymbol(dsa);
+      }
       PRINT_IMPLICIT_RULE("1) default");
     } else if (parallelDir) {
       // 2) parallel -> shared
@@ -2791,7 +2880,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     } else if (taskGenDir) {
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
       if (prevDSA.test(Symbol::Flag::OmpShared) ||
-          (isStaticStorageDuration &&
+          (HasStaticStorageDuration(*symbol) &&
               (prevDSA & dataSharingAttributeFlags).none())) {
         // 6) shared in enclosing context -> shared
         dsa = {Symbol::Flag::OmpShared};
@@ -2803,6 +2892,12 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         makeSymbol(dsa)->set(Symbol::Flag::OmpImplicit);
         PRINT_IMPLICIT_RULE("7) taskgen: firstprivate");
       }
+    }
+    if (hasDefaultNoneError &&
+        (dsa.none() || dsa == Symbol::Flags{Symbol::Flag::OmpNone})) {
+      // Set DSA to avoid reporting the same error multiple times.
+      dsa = {Symbol::Flag::OmpShared};
+      makeSymbol(dsa);
     }
     prevDSA = dsa;
   }
@@ -2819,6 +2914,10 @@ static bool IsOpenMPAggregate(const Symbol &symbol) {
     return false;
 
   const auto *type{symbol.GetType()};
+  // Symbols without a declared type (e.g. a derived-type name) are not
+  // variables and belong to no defaultmap category.
+  if (!type)
+    return false;
   // OpenMP categorizes Fortran characters as aggregates.
   if (type->category() == Fortran::semantics::DeclTypeSpec::Category::Character)
     return true;
@@ -2842,6 +2941,8 @@ static bool IsOpenMPScalar(const Symbol &symbol) {
       IsAllocatable(symbol))
     return false;
   const auto *type{symbol.GetType()};
+  if (!type)
+    return false;
   if ((!symbol.GetShape() || symbol.GetShape()->empty()) &&
       (type->category() ==
               Fortran::semantics::DeclTypeSpec::Category::Numeric ||
@@ -2931,8 +3032,9 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
     // in the source code was declared outside of the construct. This was
     // always the case before Fortran 2008. F2008 introduced the BLOCK
     // construct, and allowed local variable declarations.
-    // In OpenMP local (non-static) variables are always private in a given
-    // construct, if they are declared inside the construct. In those cases
+    // In OpenMP, local variables in a given construct are private if they
+    // have automatic storage duration or shared if they have static storage
+    // duration, if they are declared inside the construct. In those cases
     // we don't need to do anything here (i.e. no flags are needed or
     // anything else).
     if (!IsLocalInsideScope(*symbol, currScope())) {
@@ -3015,7 +3117,7 @@ static bool SymbolOrEquivalentIsInNamelist(const Symbol &symbol) {
 
 void OmpAttributeVisitor::ResolveOmpDesignator(
     const parser::Designator &designator, Symbol::Flag ompFlag) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Directive directive{GetContext().directive};
 
   const auto *name{parser::GetDesignatorNameIfDataRef(designator)};
@@ -3076,7 +3178,7 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
       }
     }
     if (ompFlag == Symbol::Flag::OmpDeclareTarget) {
-      if (symbol->IsFuncResult()) {
+      if (IsFunctionResultWithSameNameAsFunction(*symbol)) {
         if (Symbol * func{currScope().symbol()}) {
           CHECK(func->IsSubprogram());
           func->set(ompFlag);
@@ -3170,7 +3272,27 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
   Symbol *originalCB{ResolveOmpCommonBlockName(&cbName)};
   if (auto *symbol{cbResolved ? name.symbol : originalCB}) {
     if (!dataCopyingAttributeFlags.test(ompFlag)) {
-      CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
+      const Symbol::Flags mapFlags{Symbol::Flag::OmpMapTo,
+          Symbol::Flag::OmpMapFrom, Symbol::Flag::OmpMapToFrom,
+          Symbol::Flag::OmpMapStorage, Symbol::Flag::OmpMapDelete};
+      const Symbol *commonBlock{&symbol->GetUltimate()};
+      auto [it, inserted]{
+          GetContext().commonBlockClauseFlags.try_emplace(commonBlock)};
+      bool isTargetData{
+          GetContext().directive == llvm::omp::Directive::OMPD_target_data};
+      Symbol::Flags allowedRepeatFlags{mapFlags};
+      if (isTargetData) {
+        allowedRepeatFlags.set(Symbol::Flag::OmpUseDeviceAddr);
+      }
+      bool allowRepeatedAppearance{!inserted &&
+          (it->second & ~allowedRepeatFlags).none() &&
+          (mapFlags.test(ompFlag) ||
+              (isTargetData && ompFlag == Symbol::Flag::OmpUseDeviceAddr &&
+                  !it->second.test(Symbol::Flag::OmpUseDeviceAddr)))};
+      it->second.set(ompFlag);
+      if (!allowRepeatedAppearance) {
+        CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
+      }
     }
     // 2.15.3 When a named common block appears in a list, it has the
     // same meaning as if every explicit member of the common block
@@ -3380,13 +3502,13 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
   if (SymbolOrEquivalentIsInNamelist(symbol)) {
     context_.Say(name.source,
         "Variable '%s' in NAMELIST cannot be in a %s clause"_err_en_US,
-        name.ToString(), clauseName.str());
+        name.ToString(), clauseName);
   }
 
   if (ultimateSymbol.has<AssocEntityDetails>()) {
     context_.Say(name.source,
         "Variable '%s' in ASSOCIATE cannot be in a %s clause"_err_en_US,
-        name.ToString(), clauseName.str());
+        name.ToString(), clauseName);
   }
 
   if (stmtFunctionExprSymbols_.find(ultimateSymbol) !=
@@ -3394,14 +3516,14 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
     context_.Say(name.source,
         "Variable '%s' in statement function expression cannot be in a "
         "%s clause"_err_en_US,
-        name.ToString(), clauseName.str());
+        name.ToString(), clauseName);
   }
 }
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
-    const WithOmpDeclarative::OmpClauseSet &reqs,
+    const llvm::omp::Clauses &reqs,
     const std::optional<common::OmpMemoryOrderType> &memOrder) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   const Scope &programUnit{omp::GetProgramUnit(scope)};
 
   if (auto *symbol{const_cast<Symbol *>(programUnit.symbol())}) {

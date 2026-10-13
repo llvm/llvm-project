@@ -22,6 +22,9 @@ if @LIBUNWIND_ENABLE_CET@:
 if @LIBUNWIND_ENABLE_GCS@:
     compile_flags.append('-mbranch-protection=standard')
 
+if @HAVE_CFI_SET_RA_STATE@:
+    compile_flags.append('-DHAVE_CFI_SET_RA_STATE')
+
 # On ELF platforms, link tests with -Wl,--export-dynamic if supported by the linker.
 if len('@CMAKE_EXE_EXPORTS_CXX_FLAG@'):
     link_flags.append('@CMAKE_EXE_EXPORTS_CXX_FLAG@')
@@ -37,7 +40,7 @@ config.substitutions.append(('%{flags}',
     '-isysroot {}'.format(local_sysroot) if local_sysroot else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{{include}} {}'.format(' '.join(compile_flags))
+    '-nostdinc++ -I %{{include}} -I %{{libcxx}}/test/support {}'.format(' '.join(compile_flags))
 ))
 config.substitutions.append(('%{link_flags}',
     '%{{lib}}/libunwind.a {}'.format(' '.join(link_flags))

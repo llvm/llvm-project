@@ -24,6 +24,7 @@
 #include "lld/Common/Utils.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -173,6 +174,9 @@ auto BPOrderer<D>::computeOrder(
   MapVector<unsigned, UtilityNodes> startupSectionIdxUNs;
   // Used to define the initial order for startup functions.
   DenseMap<unsigned, size_t> sectionIdxToTimestamp;
+  uint64_t numProfiledFunctionRefs = 0, numResolvedProfiledFunctionRefs = 0;
+  DenseSet<CachedHashStringRef> uniqueProfiledFunctions;
+  DenseSet<CachedHashStringRef> uniqueResolvedProfiledFunctions;
   std::unique_ptr<InstrProfReader> reader;
   if (!profilePath.empty()) {
     auto fs = vfs::getRealFileSystem();
@@ -198,11 +202,20 @@ auto BPOrderer<D>::computeOrder(
         auto [_, parsedFuncName] = getParsedIRPGOName(
             reader->getSymtab().getFuncOrVarName(trace[timestamp]));
         parsedFuncName = lld::utils::getRootSymbol(parsedFuncName);
+        if (verbose) {
+          ++numProfiledFunctionRefs;
+          uniqueProfiledFunctions.insert(CachedHashStringRef(parsedFuncName));
+        }
 
         auto sectionIdxsIt =
             rootSymbolToSectionIdxs.find(CachedHashStringRef(parsedFuncName));
         if (sectionIdxsIt == rootSymbolToSectionIdxs.end())
           continue;
+        if (verbose) {
+          ++numResolvedProfiledFunctionRefs;
+          uniqueResolvedProfiledFunctions.insert(
+              CachedHashStringRef(parsedFuncName));
+        }
         auto &sectionIdxs = sectionIdxsIt->second;
         // If the same symbol is found in multiple sections, they might be
         // identical, so we arbitrarily use the size from the first section.
@@ -404,6 +417,12 @@ auto BPOrderer<D>::computeOrder(
            << totalOrderedSize << " bytes) using balanced partitioning:\n";
     dbgs() << "  Functions for startup: " << numStartupSections << " ("
            << startupSize << " bytes)\n";
+    if (!profilePath.empty())
+      dbgs() << "  Temporal profile function references: "
+             << numResolvedProfiledFunctionRefs << " / "
+             << numProfiledFunctionRefs << " resolved ("
+             << uniqueResolvedProfiledFunctions.size() << " / "
+             << uniqueProfiledFunctions.size() << " unique)\n";
     dbgs() << "  Sections for compression: " << numCompressionSections << " ("
            << compressionSize << " bytes)\n";
     dbgs() << "  Compression groups: " << groupsForCompression.size() << "\n";

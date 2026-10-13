@@ -25,7 +25,7 @@ define ptr @f() presplitcoroutine {
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:

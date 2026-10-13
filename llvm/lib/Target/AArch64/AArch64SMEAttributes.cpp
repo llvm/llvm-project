@@ -8,6 +8,7 @@
 
 #include "AArch64SMEAttributes.h"
 #include "AArch64ISelLowering.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include <cassert>
@@ -45,34 +46,31 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
   // To avoid introducing any compatibility issues don't reuse
   // 'aarch64_zt0_undef' for another purpose.
   Bitmask = 0;
-  if (Attrs.hasFnAttr("aarch64_pstate_sm_enabled"))
-    Bitmask |= SM_Enabled;
-  if (Attrs.hasFnAttr("aarch64_pstate_sm_compatible"))
-    Bitmask |= SM_Compatible;
-  if (Attrs.hasFnAttr("aarch64_pstate_sm_body"))
-    Bitmask |= SM_Body;
-  if (Attrs.hasFnAttr("aarch64_za_state_agnostic"))
-    Bitmask |= ZA_State_Agnostic;
-  if (Attrs.hasFnAttr("aarch64_in_za"))
-    Bitmask |= encodeZAState(StateValue::In);
-  if (Attrs.hasFnAttr("aarch64_out_za"))
-    Bitmask |= encodeZAState(StateValue::Out);
-  if (Attrs.hasFnAttr("aarch64_inout_za"))
-    Bitmask |= encodeZAState(StateValue::InOut);
-  if (Attrs.hasFnAttr("aarch64_preserves_za"))
-    Bitmask |= encodeZAState(StateValue::Preserved);
-  if (Attrs.hasFnAttr("aarch64_new_za"))
-    Bitmask |= encodeZAState(StateValue::New);
-  if (Attrs.hasFnAttr("aarch64_in_zt0"))
-    Bitmask |= encodeZT0State(StateValue::In);
-  if (Attrs.hasFnAttr("aarch64_out_zt0"))
-    Bitmask |= encodeZT0State(StateValue::Out);
-  if (Attrs.hasFnAttr("aarch64_inout_zt0"))
-    Bitmask |= encodeZT0State(StateValue::InOut);
-  if (Attrs.hasFnAttr("aarch64_preserves_zt0"))
-    Bitmask |= encodeZT0State(StateValue::Preserved);
-  if (Attrs.hasFnAttr("aarch64_new_zt0"))
-    Bitmask |= encodeZT0State(StateValue::New);
+  for (Attribute Attr : Attrs.getFnAttrs()) {
+    if (!Attr.isStringAttribute())
+      continue;
+
+    StringRef Kind = Attr.getKindAsString();
+    if (!Kind.consume_front("aarch64_"))
+      continue;
+
+    Bitmask |= StringSwitch<unsigned>(Kind)
+                   .Case("pstate_sm_enabled", SM_Enabled)
+                   .Case("pstate_sm_compatible", SM_Compatible)
+                   .Case("pstate_sm_body", SM_Body)
+                   .Case("za_state_agnostic", ZA_State_Agnostic)
+                   .Case("in_za", encodeZAState(StateValue::In))
+                   .Case("out_za", encodeZAState(StateValue::Out))
+                   .Case("inout_za", encodeZAState(StateValue::InOut))
+                   .Case("preserves_za", encodeZAState(StateValue::Preserved))
+                   .Case("new_za", encodeZAState(StateValue::New))
+                   .Case("in_zt0", encodeZT0State(StateValue::In))
+                   .Case("out_zt0", encodeZT0State(StateValue::Out))
+                   .Case("inout_zt0", encodeZT0State(StateValue::InOut))
+                   .Case("preserves_zt0", encodeZT0State(StateValue::Preserved))
+                   .Case("new_zt0", encodeZT0State(StateValue::New))
+                   .Default(Normal);
+  }
 }
 
 void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,

@@ -77,7 +77,7 @@ public:
   /// The value returned is the value of the immediate shifted right
   //  arithmetically by N.
   /// Note that this function is dedicated to specific immediate types,
-  /// e.g. simm14_lsl2, simm16_lsl2, simm21_lsl2 and simm26_lsl2.
+  /// e.g. simm14_lsl2, simm16_lsl2, simm21_lsl2{,_br} and simm26_lsl2.
   template <unsigned N>
   unsigned getImmOpValueAsr(const MCInst &MI, unsigned OpNo,
                             SmallVectorImpl<MCFixup> &Fixups,

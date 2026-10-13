@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=amdgpu8.01 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,XNACK %s
-# RUN: llc -mtriple=amdgpu8.03 -mattr=-xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgpu8.03 --amdgpu-xnack=false -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN %s
 
-# RUN: llc -mtriple=amdgpu8.03 -mattr=-xnack -passes post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgpu8.03 --amdgpu-xnack=false -passes post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN %s
 
 ---
 # Trivial clause at beginning of program

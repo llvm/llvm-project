@@ -18,7 +18,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVPrepareFunctions.h"
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
@@ -464,6 +463,74 @@ lowerConstrainedFmuladd(IntrinsicInst *II,
   EraseFromParent.push_back(II);
 }
 
+// llvm.minimum/llvm.maximum return NaN if either operand is NaN and order -0.0
+// before +0.0, whereas OpenCL.std fmin/fmax and GLSL.std.450 NMin/NMax return
+// the other operand for a NaN and may return either zero. Expand them like
+// SPIRV-LLVM-Translator does, so that both produce the same OpenCL SPIR-V. For
+// llvm.minimum (llvm.maximum is symmetrical):
+//   %m = call @llvm.minnum(%x, %y)
+//   ; unless nsz: for non-NaN operands, the result has the sign of %x if that
+//   ; is set (maximum: clear), and the sign of %y otherwise. This only changes
+//   ; %m if it is a zero of the wrong sign.
+//   %xsign = call @llvm.copysign(1.0, %x)
+//   %xneg = fcmp olt %xsign, 0.0
+//   %s = select %xneg, %x, %y
+//   %m.s = call @llvm.copysign(%m, %s)
+//   ; unless nnan
+//   %uno = fcmp uno %x, %y
+//   %res = select %uno, NaN, %m.s
+static Value *expandFMinimumMaximum(IRBuilderBase &Builder, bool IsMax,
+                                    Value *X, Value *Y, FastMathFlags FMF) {
+  Type *Ty = X->getType();
+  Value *Res = Builder.CreateIntrinsic(
+      IsMax ? Intrinsic::maxnum : Intrinsic::minnum, {Ty}, {X, Y}, FMF);
+  if (!FMF.noSignedZeros()) {
+    Value *XSign = Builder.CreateCopySign(ConstantFP::get(Ty, 1.0), X);
+    Value *XNeg = Builder.CreateFCmpOLT(XSign, ConstantFP::getZero(Ty));
+    Value *Sign = IsMax ? Builder.CreateSelect(XNeg, Y, X)
+                        : Builder.CreateSelect(XNeg, X, Y);
+    Res = Builder.CreateCopySign(Res, Sign);
+  }
+  if (!FMF.noNaNs()) {
+    Value *Uno = Builder.CreateFCmpUNO(X, Y);
+    Res = Builder.CreateSelect(Uno, ConstantFP::getQNaN(Ty), Res);
+  }
+  return Res;
+}
+
+static void lowerFMinimumMaximum(IntrinsicInst *II,
+                                 SmallVector<Instruction *> &EraseFromParent) {
+  IRBuilder<> Builder(II);
+  Value *Res = expandFMinimumMaximum(
+      Builder, II->getIntrinsicID() == Intrinsic::maximum, II->getArgOperand(0),
+      II->getArgOperand(1), II->getFastMathFlags());
+  Res->takeName(II);
+  II->replaceAllUsesWith(Res);
+  EraseFromParent.push_back(II);
+}
+
+// ExpandReductions only expands llvm.vector.reduce.fminimum/fmaximum on vectors
+// with a power-of-two number of elements. Expand the others into a chain of
+// llvm.minimum/llvm.maximum, expanded as above.
+static void
+lowerVectorReduceFMinimumMaximum(IntrinsicInst *II,
+                                 SmallVector<Instruction *> &EraseFromParent) {
+  bool IsMax = II->getIntrinsicID() == Intrinsic::vector_reduce_fmaximum;
+  Value *Vec = II->getArgOperand(0);
+  unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
+  IRBuilder<> Builder(II);
+  SmallVector<Value *> Elts;
+  for (unsigned I = 0; I < NumElts; ++I)
+    Elts.push_back(Builder.CreateExtractElement(Vec, I));
+  Value *Res = Elts[0];
+  for (Value *Elt : drop_begin(Elts))
+    Res =
+        expandFMinimumMaximum(Builder, IsMax, Res, Elt, II->getFastMathFlags());
+  Res->takeName(II);
+  II->replaceAllUsesWith(Res);
+  EraseFromParent.push_back(II);
+}
+
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
 // or calls to proper generated functions. Returns True if F was modified.
 bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
@@ -494,6 +561,16 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
       case Intrinsic::fshl:
       case Intrinsic::fshr:
         lowerFunnelShifts(II);
+        Changed = true;
+        break;
+      case Intrinsic::minimum:
+      case Intrinsic::maximum:
+        lowerFMinimumMaximum(II, EraseFromParent);
+        Changed = true;
+        break;
+      case Intrinsic::vector_reduce_fminimum:
+      case Intrinsic::vector_reduce_fmaximum:
+        lowerVectorReduceFMinimumMaximum(II, EraseFromParent);
         Changed = true;
         break;
       case Intrinsic::assume:
@@ -543,7 +620,7 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
           Changed = true;
           break;
         }
-        if (TM.getTargetTriple().getVendor() == Triple::AMD ||
+        if (STI.getTargetTriple().getVendor() == Triple::AMD ||
             any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
               if (Prefix.empty())
                 return false;
@@ -591,7 +668,7 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   if (F->isIntrinsic())
     return F;
 
-  IRBuilder<> B(F->getContext());
+  IRBuilder<> B(*F->getParent());
 
   bool HasAggrArg = llvm::any_of(F->args(), [](Argument &Arg) {
     return Arg.getType()->isAggregateType();
@@ -630,20 +707,21 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   CloneFunctionInto(NewF, F, VMap, CloneFunctionChangeType::LocalChangesOnly,
                     Returns);
   NewF->takeName(F);
+  NewF->setComdat(F->getComdat());
 
   addFunctionTypeMutation(
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
       std::move(ChangedTypes), NewF->getName());
 
-  for (auto *U : make_early_inc_range(F->users())) {
-    if (CallInst *CI;
-        (CI = dyn_cast<CallInst>(U)) && CI->getCalledFunction() == F)
-      CI->mutateFunctionType(NewF->getFunctionType());
-    if (auto *C = dyn_cast<Constant>(U))
-      C->handleOperandChange(F, NewF);
-    else
-      U->replaceUsesOfWith(F, NewF);
+  for (User *U : F->users()) {
+    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F)
+      CB->mutateFunctionType(NewF->getFunctionType());
   }
+  // NewF keeps F's address space, so their pointer types match and
+  // RAUW is safe despite the differing signatures.
+  assert(F->getType() == NewF->getType() &&
+         "RAUW requires F and NewF to share the same pointer type");
+  F->replaceAllUsesWith(NewF);
 
   // register the mutation
   if (RetType != F->getReturnType())
@@ -695,20 +773,18 @@ bool SPIRVPrepareFunctionsImpl::substituteAbortKHRCalls(Function *F) {
   if (!isAbortKHRBuiltin(*F))
     return false;
 
-  SmallVector<CallInst *> Calls;
-  for (User *U : F->users()) {
+  bool Changed = false;
+  for (User *U : make_early_inc_range(F->users())) {
     auto *CI = dyn_cast<CallInst>(U);
     if (!CI || CI->getCalledFunction() != F)
       continue;
     if (CI->arg_size() != 1)
       continue;
-    Calls.push_back(CI);
+    rewriteAbortKHRCall(CI);
+    Changed = true;
   }
 
-  for (CallInst *CI : Calls)
-    rewriteAbortKHRCall(CI);
-
-  return !Calls.empty();
+  return Changed;
 }
 
 // When the SPV_KHR_abort extension is enabled, `llvm.trap` and
@@ -734,16 +810,11 @@ bool SPIRVPrepareFunctionsImpl::terminateBlocksAfterTrap(Module &M,
   if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
     return false;
 
-  SmallVector<CallInst *> Calls;
-  for (User *U : F->users()) {
+  bool Changed = false;
+  for (User *U : make_early_inc_range(F->users())) {
     auto *CI = dyn_cast<CallInst>(U);
     if (!CI || CI->getCalledFunction() != F)
       continue;
-    Calls.push_back(CI);
-  }
-
-  bool Changed = false;
-  for (CallInst *CI : Calls) {
     Instruction *Next = CI->getNextNode();
     if (!Next || isa<UnreachableInst>(Next))
       continue;
@@ -792,7 +863,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
   if (Calls.empty())
     return false;
 
-  IRBuilder<> B(F->getContext());
+  IRBuilder<> B(*F->getParent());
 
   unsigned MutatedCallIdx = 0;
   for (auto &&[CB, NewFnTy] : Calls) {
@@ -883,6 +954,7 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
     }
   }
 
+  std::vector<Function *> FuncsWorklist;
   for (Function &F : M) {
     // MachineFunctionPass skips available_externally; strip + tag so AuxData
     // can re-emit the original linkage as NonSemantic.AuxData::Linkage.
@@ -895,11 +967,8 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);
     Changed |= removeAggregateTypesFromCalls(&F);
-  }
-
-  std::vector<Function *> FuncsWorklist;
-  for (auto &F : M)
     FuncsWorklist.push_back(&F);
+  }
 
   for (auto *F : FuncsWorklist) {
     Function *NewF = removeAggregateTypesFromSignature(F);
@@ -912,8 +981,8 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   return Changed;
 }
 
-PreservedAnalyses SPIRVPrepareFunctions::run(Module &M,
-                                             ModuleAnalysisManager &AM) {
+PreservedAnalyses SPIRVPrepareFunctionsPass::run(Module &M,
+                                                 ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto GetTTI = [&FAM](Function &F) -> const TargetTransformInfo & {

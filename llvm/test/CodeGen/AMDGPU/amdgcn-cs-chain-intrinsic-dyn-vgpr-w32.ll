@@ -17,16 +17,16 @@ define amdgpu_cs_chain void @dynamic_vgprs(i32 inreg %exec, <3 x i32> inreg %sgp
 ; GISEL-GFX12-NEXT:    s_mov_b32 s0, s1
 ; GISEL-GFX12-NEXT:    s_mov_b32 s1, s2
 ; GISEL-GFX12-NEXT:    s_mov_b32 s2, s3
-; GISEL-GFX12-NEXT:    s_mov_b32 s6, callee@abs32@lo
-; GISEL-GFX12-NEXT:    s_mov_b32 s7, callee@abs32@hi
-; GISEL-GFX12-NEXT:    s_mov_b32 s8, retry_vgpr_alloc@abs32@lo
-; GISEL-GFX12-NEXT:    s_mov_b32 s9, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s6, retry_vgpr_alloc@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s7, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s8, callee@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s9, callee@abs32@hi
 ; GISEL-GFX12-NEXT:    s_alloc_vgpr s4
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL-GFX12-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[8:9]
+; GISEL-GFX12-NEXT:    s_cselect_b64 s[8:9], s[8:9], s[6:7]
 ; GISEL-GFX12-NEXT:    s_cselect_b32 exec_lo, s5, -1
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL-GFX12-NEXT:    s_setpc_b64 s[6:7]
+; GISEL-GFX12-NEXT:    s_setpc_b64 s[8:9]
 ;
 ; DAGISEL-GFX12-LABEL: dynamic_vgprs:
 ; DAGISEL-GFX12:       ; %bb.0:
@@ -61,16 +61,16 @@ define amdgpu_cs_chain void @constants(<3 x i32> inreg %sgpr, { i32, ptr addrspa
 ; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-NEXT:    s_mov_b32 s4, callee@abs32@lo
-; GISEL-GFX12-NEXT:    s_mov_b32 s5, callee@abs32@hi
-; GISEL-GFX12-NEXT:    s_mov_b32 s6, retry_vgpr_alloc@abs32@lo
-; GISEL-GFX12-NEXT:    s_mov_b32 s7, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s4, retry_vgpr_alloc@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s5, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s6, callee@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s7, callee@abs32@hi
 ; GISEL-GFX12-NEXT:    s_alloc_vgpr 64
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL-GFX12-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[6:7]
+; GISEL-GFX12-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[4:5]
 ; GISEL-GFX12-NEXT:    s_cselect_b32 exec_lo, 7, -1
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL-GFX12-NEXT:    s_setpc_b64 s[4:5]
+; GISEL-GFX12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL-GFX12-LABEL: constants:
 ; DAGISEL-GFX12:       ; %bb.0:
@@ -101,16 +101,16 @@ define amdgpu_cs_chain void @high_sgpr_pressure(<30 x i32> inreg %sgpr, { i32, p
 ; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-NEXT:    s_mov_b32 s30, callee_high_sgpr@abs32@lo
-; GISEL-GFX12-NEXT:    s_mov_b32 s31, callee_high_sgpr@abs32@hi
-; GISEL-GFX12-NEXT:    s_mov_b32 s34, retry_vgpr_alloc@abs32@lo
-; GISEL-GFX12-NEXT:    s_mov_b32 s35, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s30, retry_vgpr_alloc@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s31, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s34, callee_high_sgpr@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s35, callee_high_sgpr@abs32@hi
 ; GISEL-GFX12-NEXT:    s_alloc_vgpr 64
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL-GFX12-NEXT:    s_cselect_b64 s[30:31], s[30:31], s[34:35]
+; GISEL-GFX12-NEXT:    s_cselect_b64 s[34:35], s[34:35], s[30:31]
 ; GISEL-GFX12-NEXT:    s_cselect_b32 exec_lo, 7, -1
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-GFX12-NEXT:    s_setpc_b64 s[34:35]
 ;
 ; DAGISEL-GFX12-LABEL: high_sgpr_pressure:
 ; DAGISEL-GFX12:       ; %bb.0:

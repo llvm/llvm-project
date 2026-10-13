@@ -41,7 +41,6 @@
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/CompletionRequest.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -104,7 +103,7 @@ constexpr Definition g_frame_child_entries[] = {
     Definition("pc", EntryType::FrameRegisterPC),
     Definition("fp", EntryType::FrameRegisterFP),
     Definition("sp", EntryType::FrameRegisterSP),
-    Definition("flags", EntryType::FrameRegisterFlags),
+    Definition("flags", EntryType::FrameRegisterTypeFlags),
     Definition("no-debug", EntryType::FrameNoDebug),
     Entry::DefinitionWithChildren("reg", EntryType::FrameRegisterByName,
                                   g_string_entry),
@@ -380,7 +379,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FrameRegisterPC);
     ENUM_TO_CSTR(FrameRegisterSP);
     ENUM_TO_CSTR(FrameRegisterFP);
-    ENUM_TO_CSTR(FrameRegisterFlags);
+    ENUM_TO_CSTR(FrameRegisterTypeFlags);
     ENUM_TO_CSTR(FrameRegisterByName);
     ENUM_TO_CSTR(FrameIsArtificial);
     ENUM_TO_CSTR(FrameKind);
@@ -437,7 +436,7 @@ void FormatEntity::Entry::Dump(Stream &s, int depth) const {
   if (number != 0)
     s.Printf("number = %" PRIu64 " (0x%" PRIx64 "), ", number, number);
   if (deref)
-    s.Printf("deref = true, ");
+    s.PutCString("deref = true, ");
   s.EOL();
   for (const auto &children : children_stack) {
     for (const auto &child : children)
@@ -461,7 +460,7 @@ static bool RunScriptFormatKeyword(Stream &s, const SymbolContext *sc,
       if (script_interpreter->RunScriptFormatKeyword(script_function_name, t,
                                                      script_output, error) &&
           error.Success()) {
-        s.Printf("%s", script_output.c_str());
+        s.PutCString(script_output.c_str());
         return true;
       } else {
         s.Printf("<error: %s>", error.AsCString());
@@ -1004,9 +1003,12 @@ bool FormatEntity::Formatter::DumpValue(Stream &s,
     llvm::StringRef special_directions;
     if (close_bracket_index != llvm::StringRef::npos &&
         subpath.size() > close_bracket_index) {
-      ConstString additional_data(subpath.drop_front(close_bracket_index + 1));
-      special_directions_stream.Printf("${%svar%s", do_deref_pointer ? "*" : "",
-                                       additional_data.GetCString());
+      llvm::StringRef additional_data(
+          subpath.drop_front(close_bracket_index + 1));
+      special_directions_stream
+          << "${"
+          << llvm::formatv("{0}var{1}", do_deref_pointer ? "*" : "",
+                           additional_data);
 
       if (entry.fmt != eFormatDefault) {
         const char format_char =
@@ -1708,7 +1710,7 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
     }
     return false;
 
-  case Entry::Type::FrameRegisterFlags:
+  case Entry::Type::FrameRegisterTypeFlags:
     if (m_exe_ctx) {
       StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
@@ -2049,12 +2051,12 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
           Address pc;
           pc.SetLoadAddress(pc_loadaddr, m_exe_ctx->GetTargetPtr());
           if (pc == *m_addr) {
-            s.Printf("-> ");
+            s.PutCString("-> ");
             return true;
           }
         }
       }
-      s.Printf("   ");
+      s.PutCString("   ");
       return true;
     }
     return false;
@@ -2337,7 +2339,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
         // hex number in the format
         if (isxdigit(format[0])) {
           // Make a string that can hold onto two hex chars plus a
-          // NULL terminator
+          // null terminator
           char hex_str[3] = {0, 0, 0};
           hex_str[0] = format[0];
 

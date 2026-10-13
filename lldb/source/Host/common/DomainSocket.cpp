@@ -12,10 +12,12 @@
 #include <lldb/Host/linux/AbstractSocket.h>
 #endif
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 
@@ -31,6 +33,41 @@ using namespace lldb_private;
 
 static const int kDomain = AF_UNIX;
 static const int kType = SOCK_STREAM;
+
+std::string DomainSocket::NativePathToURIPath(llvm::StringRef path) {
+  // A drive-letter path (e.g. "C:\\dir\\sock") is not a valid URI authority, so
+  // it is carried in the RFC 8089 URI form "/C:/dir/sock".
+  if (path.size() >= 2 && llvm::isAlpha(path[0]) && path[1] == ':') {
+    std::string uri_path = "/" + path.str();
+    std::replace(uri_path.begin(), uri_path.end(), '\\', '/');
+    return uri_path;
+  }
+  // A UNC path (e.g. "\\\\server\\share") is already anchored by its leading
+  // slashes.
+  if (path.starts_with("\\\\")) {
+    std::string uri_path = path.str();
+    std::replace(uri_path.begin(), uri_path.end(), '\\', '/');
+    return uri_path;
+  }
+  return path.str();
+}
+
+std::string DomainSocket::URIPathToNativePath(llvm::StringRef path) {
+  // Reverse of the drive-letter mapping: "/C:/dir/sock" -> "C:\\dir\\sock".
+  if (path.size() >= 3 && path[0] == '/' && llvm::isAlpha(path[1]) &&
+      path[2] == ':') {
+    std::string native = path.drop_front().str();
+    std::replace(native.begin(), native.end(), '/', '\\');
+    return native;
+  }
+  // Reverse of the UNC mapping: "//server/share" -> "\\\\server\\share".
+  if (path.starts_with("//")) {
+    std::string native = path.str();
+    std::replace(native.begin(), native.end(), '/', '\\');
+    return native;
+  }
+  return path.str();
+}
 
 static bool SetSockAddr(llvm::StringRef name, const size_t name_offset,
                         sockaddr_un *saddr_un, socklen_t &saddr_un_len) {
@@ -79,9 +116,10 @@ DomainSocket::DomainSocket(SocketProtocol protocol, NativeSocket socket,
 }
 
 Status DomainSocket::Connect(llvm::StringRef name) {
+  std::string native_name = URIPathToNativePath(name);
   sockaddr_un saddr_un;
   socklen_t saddr_un_len;
-  if (!SetSockAddr(name, GetNameOffset(), &saddr_un, saddr_un_len))
+  if (!SetSockAddr(native_name, GetNameOffset(), &saddr_un, saddr_un_len))
     return Status::FromErrorString("Failed to set socket address");
 
   Status error;
@@ -97,12 +135,13 @@ Status DomainSocket::Connect(llvm::StringRef name) {
 }
 
 Status DomainSocket::Listen(llvm::StringRef name, int backlog) {
+  std::string native_name = URIPathToNativePath(name);
   sockaddr_un saddr_un;
   socklen_t saddr_un_len;
-  if (!SetSockAddr(name, GetNameOffset(), &saddr_un, saddr_un_len))
+  if (!SetSockAddr(native_name, GetNameOffset(), &saddr_un, saddr_un_len))
     return Status::FromErrorString("Failed to set socket address");
 
-  DeleteSocketFile(name);
+  DeleteSocketFile(native_name);
 
   Status error;
   m_socket = CreateSocket(kDomain, kType, 0, error);
@@ -175,9 +214,9 @@ std::string DomainSocket::GetRemoteConnectionURI() const {
   if (name.empty())
     return name;
 
-  return llvm::formatv(
-      "{0}://{1}",
-      GetNameOffset() == 0 ? "unix-connect" : "unix-abstract-connect", name);
+  if (GetNameOffset() == 0)
+    return llvm::formatv("unix-connect://{0}", NativePathToURIPath(name));
+  return llvm::formatv("unix-abstract-connect://{0}", name);
 }
 
 std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
@@ -191,7 +230,8 @@ std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
   if (::getsockname(m_socket, (struct sockaddr *)&addr, &addr_len) != 0)
     return {};
 
-  return {llvm::formatv("unix-connect://{0}", addr.sun_path)};
+  return {
+      llvm::formatv("unix-connect://{0}", NativePathToURIPath(addr.sun_path))};
 }
 
 llvm::Expected<std::unique_ptr<DomainSocket>>

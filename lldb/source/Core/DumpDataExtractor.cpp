@@ -161,7 +161,7 @@ static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
         s->Printf("failed to decode instructions at 0x%" PRIx64 ".", addr);
     }
   } else
-    s->Printf("invalid target");
+    s->PutCString("invalid target");
 
   return offset;
 }
@@ -174,31 +174,31 @@ static bool TryDumpSpecialEscapedChar(Stream &s, const char c) {
   switch (c) {
   case '\033':
     // Common non-standard escape code for 'escape'.
-    s.Printf("\\e");
+    s.PutCString("\\e");
     return true;
   case '\a':
-    s.Printf("\\a");
+    s.PutCString("\\a");
     return true;
   case '\b':
-    s.Printf("\\b");
+    s.PutCString("\\b");
     return true;
   case '\f':
-    s.Printf("\\f");
+    s.PutCString("\\f");
     return true;
   case '\n':
-    s.Printf("\\n");
+    s.PutCString("\\n");
     return true;
   case '\r':
-    s.Printf("\\r");
+    s.PutCString("\\r");
     return true;
   case '\t':
-    s.Printf("\\t");
+    s.PutCString("\\t");
     return true;
   case '\v':
-    s.Printf("\\v");
+    s.PutCString("\\v");
     return true;
   case '\0':
-    s.Printf("\\0");
+    s.PutCString("\\0");
     return true;
   default:
     return false;
@@ -484,7 +484,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       const uint64_t ch = DE.GetMaxU64Bitfield(&offset, item_byte_size,
                                                item_bit_size, item_bit_offset);
       if (llvm::isPrint(ch))
-        s->Printf("%c", (char)ch);
+        s->PutChar((char)ch);
       else if (item_format != eFormatCharPrintable) {
         if (!TryDumpSpecialEscapedChar(*s, ch)) {
           if (item_byte_size == 1)
@@ -554,7 +554,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       const char *cstr = DE.GetCStr(&offset);
 
       if (!cstr) {
-        s->Printf("NULL");
+        s->PutCString("NULL");
         offset = LLDB_INVALID_OFFSET;
       } else {
         s->PutChar('\"');
@@ -698,12 +698,19 @@ lldb::offset_t lldb_private::DumpDataExtractor(
     } break;
 
     case eFormatUnicode16:
-      s->Printf("U+%4.4x", DE.GetU16(&offset));
+      // The Unicode notation is "U+" followed by uppercase hexadecimal digits,
+      // zero-padded to a minimum of four.
+      s->Format("U+{0:X-4}", DE.GetU16(&offset));
       break;
 
-    case eFormatUnicode32:
-      s->Printf("U+0x%8.8x", DE.GetU32(&offset));
-      break;
+    case eFormatUnicode32: {
+      const uint32_t cp = DE.GetU32(&offset);
+      // Use Unicode notation for valid code points, i.e., <= U+10FFFF.
+      if (cp <= 0x10FFFF)
+        s->Format("U+{0:X-4}", cp);
+      else
+        s->Format("0x{0:x-8}", cp);
+    } break;
 
     case eFormatAddressInfo: {
       addr_t addr = DE.GetMaxU64Bitfield(&offset, item_byte_size, item_bit_size,
@@ -747,14 +754,14 @@ lldb::offset_t lldb_private::DumpDataExtractor(
         llvm::APFloat ap_float(DE.GetFloat(&offset));
         ap_float.convertToHexString(float_cstr, 0, false,
                                     llvm::APFloat::rmNearestTiesToEven);
-        s->Printf("%s", float_cstr);
+        s->PutCString(float_cstr);
         break;
       } else if (sizeof(double) == item_byte_size) {
         char float_cstr[256];
         llvm::APFloat ap_float(DE.GetDouble(&offset));
         ap_float.convertToHexString(float_cstr, 0, false,
                                     llvm::APFloat::rmNearestTiesToEven);
-        s->Printf("%s", float_cstr);
+        s->PutCString(float_cstr);
         break;
       } else {
         s->Printf("error: unsupported byte size (%" PRIu64

@@ -47,6 +47,10 @@ struct VectorizerParams {
   /// make more than this number of comparisons.
   LLVM_ABI static unsigned RuntimeMemoryCheckThreshold;
 
+  /// The maximum allowed number of runtime memory checks. Above this many
+  /// checks the vectorizer gives up on the loop.
+  LLVM_ABI static unsigned VectorizeMemoryCheckThreshold;
+
   // When creating runtime checks for nested loops, where possible try to
   // write the checks in a form that allows them to be easily hoisted out of
   // the outermost loop. For example, we can do this by expanding the range of
@@ -54,6 +58,10 @@ struct VectorizerParams {
   // loop invariant.
   LLVM_ABI static bool HoistRuntimeChecks;
 };
+
+/// Maps a pointer to its symbolic (non-constant) stride. Strides are loop
+/// invariant, which collectStridedAccess checks before inserting.
+using SymbolicStrideMap = DenseMap<Value *, const SCEVUnknown *>;
 
 /// Checks memory dependences among accesses to the same underlying
 /// object to determine whether there vectorization is legal or not (and at
@@ -188,7 +196,7 @@ public:
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
                    DominatorTree *DT, const Loop *L,
-                   const DenseMap<Value *, const SCEV *> &SymbolicStrides,
+                   const SymbolicStrideMap &SymbolicStrides,
                    unsigned MaxTargetVectorWidthInBits,
                    std::optional<ScalarEvolution::LoopGuards> &LoopGuards)
       : PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
@@ -233,6 +241,37 @@ public:
   bool isSafeForAnyStoreLoadForwardDistances() const {
     return MaxStoreLoadForwardSafeDistanceInBits ==
            std::numeric_limits<uint64_t>::max();
+  }
+
+  /// Returns true if a memory dependence at byte distance \p Distance between
+  /// a store (with element size \p TypeByteSize bytes) widened to
+  /// \p VectorStoreSize bytes and a subsequent load of \p LoadElementSize bytes
+  /// would prevent store-to-load forwarding.
+  ///
+  /// The conflicting store must still be likely to be in the store buffer, i.e.
+  /// \c Distance / VectorStoreSize is below 8 * TypeByteSize iterations. Given
+  /// that, the load overruns from the widened store it starts in into the next
+  /// one when either:
+  ///   (a) it starts misaligned, \c R = \c Distance % VectorStoreSize bytes
+  ///       below a widened-store boundary, and is wider than those \c R bytes
+  ///       (\p LoadElementSize > \c R), or
+  ///   (b) it starts aligned (\c R == 0) but is itself wider than the widened
+  ///       store window (\p LoadElementSize > \p VectorStoreSize).
+  /// A \p LoadElementSize of 0 (the default) leaves the load width unknown and
+  /// disables both terms. Passing \p VectorStoreSize makes (a) reduce to "any
+  /// misalignment conflicts" and (b) never fire, matching the original,
+  /// width-agnostic predicate.
+  static bool isStoreLoadForwardingConflict(uint64_t Distance,
+                                            uint64_t VectorStoreSize,
+                                            uint64_t TypeByteSize,
+                                            uint64_t LoadElementSize = 0) {
+    assert(VectorStoreSize != 0 && "Expected non-zero vector store size");
+    const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
+    if (Distance / VectorStoreSize >= NumItersForStoreLoadThroughMemory)
+      return false;
+    if (uint64_t R = Distance % VectorStoreSize)
+      return LoadElementSize > R;
+    return LoadElementSize > VectorStoreSize;
   }
 
   /// Return safe power-of-2 number of elements, which do not prevent store-load
@@ -292,6 +331,8 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
+  PredicatedScalarEvolution &getPSE() const { return PSE; }
+
   DenseMap<std::pair<const SCEV *, const SCEV *>,
            std::pair<const SCEV *, const SCEV *>> &
   getPointerBounds() {
@@ -323,7 +364,7 @@ private:
 
   /// Reference to map of pointer values to
   /// their stride symbols, if they have a symbolic stride.
-  const DenseMap<Value *, const SCEV *> &SymbolicStrides;
+  const SymbolicStrideMap &SymbolicStrides;
 
   /// Maps access locations (ptr, read/write) to program order.
   DenseMap<MemAccessInfo, std::vector<unsigned> > Accesses;
@@ -529,13 +570,16 @@ public:
     const SCEV *Expr;
     /// True if the pointer expressions needs to be frozen after expansion.
     bool NeedsFreeze;
+    /// True if this entry represents one arm of a forked pointer.
+    bool IsForked;
 
     PointerInfo(Value *PointerValue, const SCEV *Start, const SCEV *End,
                 bool IsWritePtr, unsigned DependencySetId, unsigned AliasSetId,
-                const SCEV *Expr, bool NeedsFreeze)
+                const SCEV *Expr, bool NeedsFreeze, bool IsForked)
         : PointerValue(PointerValue), Start(Start), End(End),
           IsWritePtr(IsWritePtr), DependencySetId(DependencySetId),
-          AliasSetId(AliasSetId), Expr(Expr), NeedsFreeze(NeedsFreeze) {}
+          AliasSetId(AliasSetId), Expr(Expr), NeedsFreeze(NeedsFreeze),
+          IsForked(IsForked) {}
   };
 
   RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE,
@@ -556,14 +600,12 @@ public:
   /// We need \p PSE in order to compute the SCEV expression of the pointer
   /// according to the assumptions that we've made during the analysis.
   /// The method might also version the pointer stride according to \p Strides,
-  /// and add new predicates to \p PSE.
-  LLVM_ABI void insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
+  /// and add new predicates to \p PSE. Returns false without inserting anything
+  /// if the bounds of \p PtrExpr cannot be computed.
+  LLVM_ABI bool insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                        Type *AccessTy, bool WritePtr, unsigned DepSetId,
                        unsigned ASId, PredicatedScalarEvolution &PSE,
-                       bool NeedsFreeze);
-
-  /// No run-time memory checking is necessary.
-  bool empty() const { return Pointers.empty(); }
+                       bool NeedsFreeze, bool IsForked);
 
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
@@ -636,6 +678,11 @@ private:
   /// between two different groups. This will clear the CheckingGroups vector
   /// and re-compute it.
   void groupChecks(MemoryDepChecker::DepCandidates &DepCands);
+
+  /// Attempt to merge checking groups that share a base pointer and differ
+  /// by stencil functions of loop-invariant strides. This reduces runtime
+  /// checks for multi-dimensional stencil-like access patterns.
+  void mergeStencilGroups();
 
   /// Generate the checks and return them.
   SmallVector<RuntimePointerCheck, 4> generateChecks();
@@ -734,9 +781,6 @@ public:
   /// Returns true if value \p V is loop invariant.
   LLVM_ABI bool isInvariant(Value *V) const;
 
-  unsigned getNumStores() const { return NumStores; }
-  unsigned getNumLoads() const { return NumLoads;}
-
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
   const OptimizationRemarkAnalysis *getReport() const { return Report.get(); }
@@ -754,7 +798,7 @@ public:
 
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
-  const DenseMap<Value *, const SCEV *> &getSymbolicStrides() const {
+  const SymbolicStrideMap &getSymbolicStrides() const {
     return SymbolicStrides;
   }
 
@@ -838,9 +882,6 @@ private:
   /// memory accesses could be analyzed.
   bool AllowPartial;
 
-  unsigned NumLoads = 0;
-  unsigned NumStores = 0;
-
   /// Cache the result of analyzeLoop.
   bool CanVecMem = false;
   bool HasConvergentOp = false;
@@ -862,7 +903,7 @@ private:
 
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
-  DenseMap<Value *, const SCEV *> SymbolicStrides;
+  SymbolicStrideMap SymbolicStrides;
 };
 
 /// Return the SCEV corresponding to a pointer with the symbolic stride
@@ -870,14 +911,16 @@ private:
 /// \p PSE is true.
 ///
 /// If necessary this method will version the stride of the pointer according
-/// to \p PtrToStride and therefore add further predicates to \p PSE.
+/// to \p PtrToStride and therefore add further predicates to \p PSE, except
+/// when \p Predicates is given, in which case, it adds predicates there instead
+/// of to \p PSE directly.
 ///
 /// \p PtrToStride provides the mapping between the pointer value and its
 /// stride as collected by LoopVectorizationLegality::collectStridedAccess.
-LLVM_ABI const SCEV *
-replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
-                          const DenseMap<Value *, const SCEV *> &PtrToStride,
-                          Value *Ptr);
+LLVM_ABI const SCEV *replaceSymbolicStrideSCEV(
+    PredicatedScalarEvolution &PSE, const Loop *Lp,
+    const SymbolicStrideMap &PtrToStride, Value *Ptr,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
 /// If \p AR is an affine AddRec for \p Lp with a constant step, return the
 /// step in units of \p AccessTy's allocation size. Returns std::nullopt if the
@@ -905,19 +948,9 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
 LLVM_ABI std::optional<int64_t>
 getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp, const DominatorTree &DT,
-             const DenseMap<Value *, const SCEV *> &StridesMap =
-                 DenseMap<Value *, const SCEV *>(),
+             const SymbolicStrideMap &StridesMap = SymbolicStrideMap(),
              bool ShouldCheckWrap = true,
              SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
-
-/// Overload of \ref getPtrStride that adds the no-wrap predicates directly to
-/// \p PSE. The \p Assume parameter indicates whether such additional run-time
-/// assumptions are allowed.
-LLVM_ABI std::optional<int64_t>
-getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-             const Loop *Lp, const DominatorTree &DT,
-             const DenseMap<Value *, const SCEV *> &StridesMap, bool Assume,
-             bool ShouldCheckWrap = true);
 
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
 /// compatible and it is possible to calculate the distance between them. This

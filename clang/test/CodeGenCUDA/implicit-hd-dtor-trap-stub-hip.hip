@@ -5,9 +5,9 @@
 // slot uses the real mangled name, dtor body is real. With or without an
 // organic device caller, the emitted IR is the same.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip \
 // RUN:   -DWITH_DEVICE_CALLER -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -x hip \
 // RUN:   -emit-llvm -o - %s | FileCheck %s

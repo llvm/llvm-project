@@ -218,6 +218,18 @@ DiagnosticsEngine::DiagStateMap::File::lookup(unsigned Offset) const {
 DiagnosticsEngine::DiagStateMap::File *
 DiagnosticsEngine::DiagStateMap::getFile(SourceManager &SrcMgr,
                                          FileID ID) const {
+  assert(ID != FileID::getSentinel());
+  if (LastLookupFileID != ID) {
+    // getFileUncached() can recurse into getFile(), so update the cache after.
+    LastLookupFile = getFileUncached(SrcMgr, ID);
+    LastLookupFileID = ID;
+  }
+  return LastLookupFile;
+}
+
+DiagnosticsEngine::DiagStateMap::File *
+DiagnosticsEngine::DiagStateMap::getFileUncached(SourceManager &SrcMgr,
+                                                 FileID ID) const {
   // Get or insert the File for this ID.
   auto Range = Files.equal_range(ID);
   if (Range.first != Range.second)
@@ -579,11 +591,11 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
 bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
                                                SourceLocation DiagLoc,
                                                const SourceManager &SM) const {
-  PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc);
-  if (!PLoc.isValid())
-    return false;
   const Section *DiagSection = DiagToSection.lookup(DiagId);
   if (!DiagSection)
+    return false;
+  PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc);
+  if (!PLoc.isValid())
     return false;
 
   StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
@@ -594,6 +606,17 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
 
   unsigned LastEmit = DiagSection->getLastMatch("src", F, "emit");
   return LastSup > LastEmit;
+}
+
+DiagStateSystemClass
+DiagnosticsEngine::getDiagStateSystemClassForLoc(SourceLocation Loc) const {
+  const SourceManager &SM = getSourceManager();
+  unsigned Class = 0;
+  if (SM.isInSystemHeader(SM.getExpansionLoc(Loc)))
+    Class |= static_cast<unsigned>(DiagStateSystemClass::SystemHeader);
+  if (SM.isInSystemMacro(Loc))
+    Class |= static_cast<unsigned>(DiagStateSystemClass::SystemMacro);
+  return static_cast<DiagStateSystemClass>(Class);
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,
@@ -1122,11 +1145,12 @@ SmallString<16> clang::EscapeSingleCodepointForDiagnostic(StringRef Str) {
 }
 
 SmallString<16> clang::EscapeSingleCodepointForDiagnostic(llvm::UTF32 CP) {
-  std::string Str;
-  bool Converted = convertUTF32ToUTF8String(ArrayRef<llvm::UTF32>(&CP, 1), Str);
-  if (!Converted)
+  char ResultBuf[UNI_MAX_UTF8_BYTES_PER_CODE_POINT];
+  char *ResultPtr = ResultBuf;
+  if (!llvm::ConvertCodePointToUTF8(CP, ResultPtr))
     return SmallString<16>(llvm::formatv("<{0:X+}>", CP).str());
-  return EscapeSingleCodepointForDiagnostic(Str);
+  return EscapeSingleCodepointForDiagnostic(
+      StringRef(ResultBuf, ResultPtr - ResultBuf));
 }
 
 void Diagnostic::FormatDiagnostic(const char *DiagStr, const char *DiagEnd,

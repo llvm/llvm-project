@@ -102,7 +102,7 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
-                                InputSectionBase &section) {
+                                SectionBase &section) {
   Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
                            type, value, size, &section);
   if (ctx.in.symTab)
@@ -491,6 +491,12 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   // Compute size.
   size_t oldSize = size;
   finalizeContents();
+
+  // Don't allow the section to shrink; otherwise the size of the section can
+  // oscillate infinitely.
+  if (size < oldSize)
+    size = oldSize;
+
   return size != oldSize;
 }
 
@@ -507,7 +513,9 @@ void GotSection::addEntry(const Symbol &sym) {
 
 void GotSection::addAuthEntry(const Symbol &sym) {
   authEntries.push_back(
-      {(numEntries - 1) * ctx.target->gotEntrySize, sym.isFunc()});
+      {/*offset=*/(numEntries - 1) * ctx.target->gotEntrySize,
+       /*isSymbolFunc=*/sym.isFunc(),
+       /*isUndefinedNonPreemptible=*/sym.isUndefined() && !sym.isPreemptible});
 }
 
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
@@ -517,9 +525,12 @@ bool GotSection::addTlsDescEntry(const Symbol &sym) {
   return true;
 }
 
-void GotSection::addTlsDescAuthEntry() {
-  authEntries.push_back({(numEntries - 2) * ctx.target->gotEntrySize, true});
-  authEntries.push_back({(numEntries - 1) * ctx.target->gotEntrySize, false});
+void GotSection::addTlsDescAuthEntry(const Symbol &sym) {
+  authEntries.push_back({/*offset=*/(numEntries - 2) * ctx.target->gotEntrySize,
+                         /*isSymbolFunc=*/true,
+                         /*isUndefinedNonPreemptible=*/false});
+  assert(!sym.isFunc());
+  addAuthEntry(sym);
 }
 
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
@@ -568,7 +579,8 @@ void GotSection::finalizeContents() {
 bool GotSection::isNeeded() const {
   // Needed if the GOT symbol is used or the number of entries is more than just
   // the header. A GOT with just the header may not be needed.
-  return hasGotOffRel || numEntries > ctx.target->gotHeaderEntriesNum;
+  return hasGotOffRel || hasDeferredEntries ||
+         numEntries > ctx.target->gotHeaderEntriesNum;
 }
 
 void GotSection::writeTo(uint8_t *buf) {
@@ -578,6 +590,12 @@ void GotSection::writeTo(uint8_t *buf) {
   ctx.target->writeGotHeader(buf);
   ctx.target->relocateAlloc(*this, buf);
   for (const AuthEntryInfo &authEntry : authEntries) {
+    uint8_t *dest = buf + authEntry.offset;
+
+    if (authEntry.isUndefinedNonPreemptible) {
+      write64(ctx, dest, 0);
+      continue;
+    }
     // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#default-signing-schema
     //   Signed GOT entries use the IA key for symbols of type STT_FUNC and the
     //   DA key for all other symbol types, with the address of the GOT entry as
@@ -587,7 +605,6 @@ void GotSection::writeTo(uint8_t *buf) {
     // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#encoding-the-signing-schema
     //   If address diversity is set and the discriminator
     //   is 0 then modifier = Place
-    uint8_t *dest = buf + authEntry.offset;
     uint64_t key = authEntry.isSymbolFunc ? /*IA=*/0b00 : /*DA=*/0b10;
     uint64_t addrDiversity = 1;
     write64(ctx, dest, (addrDiversity << 63) | (key << 60));
@@ -1316,6 +1333,12 @@ DynamicSection<ELFT>::computeContents() {
     addInt(DT_PLTREL, ctx.arg.isRela ? DT_RELA : DT_REL);
   }
 
+  if (ctx.arg.zMarkPlt && ctx.in.plt->isNeeded()) {
+    addInSec(DT_X86_64_PLT, *ctx.in.plt);
+    addInt(DT_X86_64_PLTSZ, ctx.in.plt->getSize());
+    addInt(DT_X86_64_PLTENT, ctx.target->pltEntrySize);
+  }
+
   if (ctx.arg.emachine == EM_AARCH64) {
     if (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
       addInt(DT_AARCH64_BTI_PLT, 0);
@@ -1440,7 +1463,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *buf) {
 }
 
 uint64_t DynamicReloc::getOffset() const {
-  return inputSec->getVA(offsetInSec);
+  return inputSec->getRelocVA(offsetInSec);
 }
 
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
@@ -1521,9 +1544,14 @@ void RelocationBaseSection::finalizeContents() {
   else
     getParent()->link = 0;
 
-  if (ctx.in.relaPlt.get() == this && ctx.in.gotPlt->getParent()) {
-    getParent()->flags |= ELF::SHF_INFO_LINK;
-    getParent()->info = ctx.in.gotPlt->getParent()->sectionIndex;
+  if (ctx.in.relaPlt.get() == this) {
+    InputSection *sec = ctx.target->usesGotPlt
+                            ? static_cast<InputSection *>(ctx.in.gotPlt.get())
+                            : static_cast<InputSection *>(ctx.in.plt.get());
+    if (sec->getParent()) {
+      getParent()->flags |= ELF::SHF_INFO_LINK;
+      getParent()->info = sec->getParent()->sectionIndex;
+    }
   }
 }
 
@@ -2864,14 +2892,14 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
         FoldingSetNodeID id;
         abbrev.Profile(id);
         uint32_t newCode;
-        void *insertPos;
-        if (Abbrev *existing = abbrevSet.FindNodeOrInsertPos(id, insertPos)) {
+        FoldingSetInsertToken token;
+        if (Abbrev *existing = abbrevSet.lookup(id, token)) {
           // Found it; we've already seen an identical abbreviation.
           newCode = existing->code;
         } else {
           Abbrev *abbrev2 =
               new (abbrevAlloc.Allocate()) Abbrev(std::move(abbrev));
-          abbrevSet.InsertNode(abbrev2, insertPos);
+          abbrevSet.insert(abbrev2, token);
           abbrevTable.push_back(abbrev2);
           newCode = abbrevTable.size();
           abbrev2->code = newCode;
@@ -4107,6 +4135,32 @@ InputSection *ThunkSection::getTargetInputSection() const {
   return t->getTargetInputSection();
 }
 
+// Move forward thunks to the right half and sort them by destination VA:
+//
+// dstA, dstB, [backward A, B], [forward D, C], dstC, dstD
+//
+// A forward thunk's distance grows when a thunk after it grows. Ordering
+// forward thunks by descending destination keeps the most promotable ones
+// lowest, where their growth stays below the rest. A backward thunk's distance
+// grows only with a promotion before it, already applied by
+// ThunkSection::assignOffsets when we reach it, so backward thunks need no
+// ordering and stay ahead of forward thunks in creation order.
+void ThunkSection::sortByDestination() {
+  uint64_t base = getVA();
+  SmallVector<std::pair<uint64_t, Thunk *>, 0> keys;
+  keys.resize_for_overwrite(thunks.size());
+  for (auto [i, t] : enumerate(thunks))
+    keys[i] = {t->getDestVA(), t};
+  auto *forward =
+      std::stable_partition(keys.begin(), keys.end(),
+                            [base](const auto &k) { return k.first <= base; });
+  std::stable_sort(forward, keys.end(), [](const auto &a, const auto &b) {
+    return a.first > b.first;
+  });
+  for (auto [i, p] : llvm::enumerate(keys))
+    thunks[i] = p.second;
+}
+
 bool ThunkSection::assignOffsets() {
   uint64_t off = 0;
   bool changed = false;
@@ -4380,6 +4434,38 @@ size_t MemtagGlobalDescriptors::getSize() const {
   return createMemtagGlobalDescriptors(ctx, symbols);
 }
 
+DynamicDebugSection::DynamicDebugSection(Ctx &ctx)
+    : SyntheticSection(ctx, dynDbgSecName, SHT_LLVM_DYNDBG_ELF, 0, 8) {
+  assert(ctx.dynDbgOutput);
+}
+
+size_t DynamicDebugSection::getSize() const {
+  return ctx.dynDbgOutput->getBufferSize();
+}
+
+void DynamicDebugSection::writeTo(uint8_t *buf) {
+  memcpy(buf, ctx.dynDbgOutput->getBufferStart(),
+         ctx.dynDbgOutput->getBufferSize());
+}
+
+constexpr char dynDbgNoteName[] = "LLVM";
+
+DynamicDebugNote::DynamicDebugNote(Ctx &ctx)
+    : SyntheticSection(ctx, ".note.llvm.dyndbg", SHT_NOTE, 0, 4) {}
+
+size_t DynamicDebugNote::getSize() const {
+  return sizeof(llvm::ELF::Elf64_Nhdr) + alignTo(sizeof(dynDbgNoteName), 4) +
+         /*descsz=*/sizeof(uint32_t);
+}
+
+void DynamicDebugNote::writeTo(uint8_t *buf) {
+  write32(ctx, buf, sizeof(dynDbgNoteName));        // Name size
+  write32(ctx, buf + 4, sizeof(uint32_t));          // Content size
+  write32(ctx, buf + 8, NT_LLVM_DYNAMIC_DEBUGGING); // Type
+  memcpy(buf + 12, dynDbgNoteName, sizeof(dynDbgNoteName));
+  write32(ctx, buf + 12 + alignTo(sizeof(dynDbgNoteName), 4), 0); // Version
+}
+
 static OutputSection *findSection(Ctx &ctx, StringRef name) {
   for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
@@ -4541,7 +4627,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   // Add .relro_padding if DATA_SEGMENT_RELRO_END is used; otherwise, add the
   // section in the absence of PHDRS/SECTIONS commands.
   if (ctx.arg.zRelro &&
-      ((ctx.script->phdrsCommands.empty() && !ctx.script->hasSectionsCommand) ||
+      ((!ctx.script->hasPhdrsCommands() && !ctx.script->hasSectionsCommand) ||
        ctx.script->seenRelroEnd)) {
     ctx.in.relroPadding = std::make_unique<RelroPaddingSection>(ctx);
     add(*ctx.in.relroPadding);
@@ -4604,6 +4690,15 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
     add(*ctx.in.shStrTab);
   if (ctx.in.strTab)
     add(*ctx.in.strTab);
+
+  if (ctx.dynDbgOutput) {
+    ctx.in.dynDbg = std::make_unique<DynamicDebugSection>(ctx);
+    add(*ctx.in.dynDbg);
+    if (!ctx.arg.relocatable) {
+      ctx.in.dynDbgNote = std::make_unique<DynamicDebugNote>(ctx);
+      add(*ctx.in.dynDbgNote);
+    }
+  }
 }
 
 template void elf::splitSections<ELF32LE>(Ctx &);

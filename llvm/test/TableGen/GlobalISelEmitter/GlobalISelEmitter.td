@@ -174,8 +174,11 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:   GICXXPred_MI_Predicate_ffloor_nnan = GICXXPred_Invalid + 1,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_fadd_contract = GICXXPred_Invalid + 1,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_ffloor_nnan,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_fmul_contract,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_frag,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_fsub_contract,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_or_disjoint,
 // CHECK-NEXT:  };
 
@@ -201,12 +204,28 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GICXXPred_I64_Predicate_cimm8 = GICXXPred_Invalid + 1,
+// CHECK-NEXT:    GICXXPred_I64_Predicate_FPNoSaturation = GICXXPred_Invalid + 1,
+// CHECK-NEXT:    GICXXPred_I64_Predicate_Float8E4M3FN,
+// CHECK-NEXT:    GICXXPred_I64_Predicate_Float8E5M2,
+// CHECK-NEXT:    GICXXPred_I64_Predicate_NearestTiesToEven,
+// CHECK-NEXT:    GICXXPred_I64_Predicate_cimm8,
 // CHECK-NEXT:    GICXXPred_I64_Predicate_simm8,
 // CHECK-NEXT:  };
 
 // CHECK-NEXT: bool MyTargetInstructionSelector::testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const {
 // CHECK-NEXT:   switch (PredicateID) {
+// CHECK-NEXT:   case GICXXPred_I64_Predicate_FPNoSaturation: {
+// CHECK-NEXT:     return Imm == 0;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   case GICXXPred_I64_Predicate_Float8E4M3FN: {
+// CHECK-NEXT:     return Imm == APFloatBase::S_Float8E4M3FN;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   case GICXXPred_I64_Predicate_Float8E5M2: {
+// CHECK-NEXT:     return Imm == APFloatBase::S_Float8E5M2;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   case GICXXPred_I64_Predicate_NearestTiesToEven: {
+// CHECK-NEXT:     return Imm == static_cast<int>(RoundingMode::NearestTiesToEven);
+// CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXPred_I64_Predicate_cimm8: {
 // CHECK-NEXT:     return isInt<8>(Imm);
 // CHECK-NEXT:   }
@@ -249,11 +268,13 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-LABEL: // Custom renderers.
 // CHECK-NEXT: enum {
 // CHECK-NEXT:   GICR_Invalid,
+// CHECK-NEXT:   GICR_renderFrameIndex,
 // CHECK-NEXT:   GICR_renderImm,
 // CHECK-NEXT: };
 // CHECK-NEXT: MyTargetInstructionSelector::CustomRendererFn
 // CHECK-NEXT: MyTargetInstructionSelector::CustomRenderers[] = {
 // CHECK-NEXT:   nullptr, // GICR_Invalid
+// CHECK-NEXT:   &MyTargetInstructionSelector::renderFrameIndex,
 // CHECK-NEXT:   &MyTargetInstructionSelector::renderImm,
 // CHECK-NEXT: };
 

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -o - -triple i686-pc-darwin %s | FileCheck -check-prefix=X86 %s
-// RUN: %clang_cc1 -emit-llvm -o - -triple amdgcn %s | FileCheck -check-prefix=AMDGCN %s
+// RUN: %clang_cc1 -emit-llvm -o - -triple amdgpu %s | FileCheck -check-prefix=AMDGCN %s
 struct A {
   int x[100];
 };

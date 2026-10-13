@@ -51,7 +51,6 @@ public:
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
   std::unique_ptr<SwiftErrorValueTracking> SwiftError;
   MachineFunction *MF;
-  MachineModuleInfo *MMI;
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
@@ -280,6 +279,7 @@ public:
     OPC_CheckOrImm,
     OPC_CheckImmAllOnesV,
     OPC_CheckImmAllZerosV,
+    OPC_CheckUndef,
     OPC_CheckFoldableChainNode,
 
     OPC_EmitInteger,

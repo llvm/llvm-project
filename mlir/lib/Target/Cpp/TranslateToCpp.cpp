@@ -54,13 +54,6 @@ interleaveWithError(ForwardIterator begin, ForwardIterator end,
   return success();
 }
 
-template <typename Container, typename UnaryFunctor, typename NullaryFunctor>
-static inline LogicalResult interleaveWithError(const Container &c,
-                                                UnaryFunctor eachFn,
-                                                NullaryFunctor betweenFn) {
-  return interleaveWithError(c.begin(), c.end(), eachFn, betweenFn);
-}
-
 template <typename Container, typename UnaryFunctor>
 static inline LogicalResult interleaveCommaWithError(const Container &c,
                                                      raw_ostream &os,
@@ -109,6 +102,7 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case([&](emitc::LogicalAndOp op) { return 4; })
       .Case([&](emitc::LogicalNotOp op) { return 15; })
       .Case([&](emitc::LogicalOrOp op) { return 3; })
+      .Case([&](emitc::MemberCallOpaqueOp op) { return 16; })
       .Case([&](emitc::MemberOfPtrOp op) { return 17; })
       .Case([&](emitc::MemberOp op) { return 17; })
       .Case([&](emitc::MulOp op) { return 13; })
@@ -606,6 +600,42 @@ static LogicalResult printOperation(CppEmitter &emitter,
   emitter.ostream() << " = ";
 
   return emitter.emitOperand(assignOp.getValue());
+}
+
+static LogicalResult
+printCompoundAssignmentOperation(CppEmitter &emitter, Operation *operation,
+                                 StringRef compoundAssignmentOperator) {
+  if (failed(emitter.emitOperand(operation->getOperand(0))))
+    return failure();
+
+  emitter.ostream() << " " << compoundAssignmentOperator << " ";
+
+  return emitter.emitOperand(operation->getOperand(1));
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::AddAssignOp addAssignOp) {
+  return printCompoundAssignmentOperation(emitter, addAssignOp, "+=");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::SubAssignOp subAssignOp) {
+  return printCompoundAssignmentOperation(emitter, subAssignOp, "-=");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::MulAssignOp mulAssignOp) {
+  return printCompoundAssignmentOperation(emitter, mulAssignOp, "*=");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::DivAssignOp divAssignOp) {
+  return printCompoundAssignmentOperation(emitter, divAssignOp, "/=");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::RemAssignOp remAssignOp) {
+  return printCompoundAssignmentOperation(emitter, remAssignOp, "%=");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter, emitc::LoadOp loadOp) {
@@ -1748,6 +1778,10 @@ LogicalResult CppEmitter::emitOperand(Value value, bool isInBrackets) {
     assert(def && "Expected operand to be defined by an operation");
     if (auto expressionOp = dyn_cast<ExpressionOp>(def))
       def = expressionOp.getRootOp();
+    // Within an expression, `emitc.load` emits only its operand, so determine
+    // parentheses from the operand rather than from the load operation.
+    if (auto loadOp = dyn_cast<emitc::LoadOp>(def))
+      return emitOperand(loadOp.getOperand(), isInBrackets);
     FailureOr<int> precedence = getOperatorPrecedence(def);
     if (failed(precedence))
       return failure();
@@ -1800,9 +1834,10 @@ CppEmitter::emitOperandsAndAttributes(Operation &op,
                                       ArrayRef<StringRef> exclude) {
   if (failed(emitOperands(op)))
     return failure();
+  auto attrs = op.getDiscardableAttrs();
   // Insert comma in between operands and non-filtered attributes if needed.
   if (op.getNumOperands() > 0) {
-    for (NamedAttribute attr : op.getAttrs()) {
+    for (NamedAttribute attr : attrs) {
       if (!llvm::is_contained(exclude, attr.getName().strref())) {
         os << ", ";
         break;
@@ -1818,7 +1853,7 @@ CppEmitter::emitOperandsAndAttributes(Operation &op,
       return failure();
     return success();
   };
-  return interleaveCommaWithError(op.getAttrs(), os, emitNamedAttribute);
+  return interleaveCommaWithError(attrs, os, emitNamedAttribute);
 }
 
 LogicalResult CppEmitter::emitVariableAssignment(OpResult result) {
@@ -1927,25 +1962,26 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::AddressOfOp, emitc::AddOp, emitc::AssignOp,
-                emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
+          .Case<emitc::AddAssignOp, emitc::AddressOfOp, emitc::AddOp,
+                emitc::AssignOp, emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
                 emitc::BitwiseNotOp, emitc::BitwiseOrOp,
                 emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::ClassOp,
                 emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
-                emitc::DeclareFuncOp, emitc::DereferenceOp, emitc::DivOp,
-                emitc::DoOp, emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
-                emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp,
+                emitc::DeclareFuncOp, emitc::DereferenceOp, emitc::DivAssignOp,
+                emitc::DivOp, emitc::DoOp, emitc::ExpressionOp, emitc::FieldOp,
+                emitc::FileOp, emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp,
                 emitc::GetGlobalOp, emitc::GlobalOp, emitc::IfOp,
                 emitc::IncludeOp, emitc::LiteralOp, emitc::LoadOp,
                 emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
                 emitc::MemberCallOpaqueOp, emitc::MemberOfPtrOp,
-                emitc::MemberOp, emitc::MulOp, emitc::PostDecrementOp,
-                emitc::PostIncrementOp, emitc::PreDecrementOp,
-                emitc::PreIncrementOp, emitc::RemOp, emitc::ReturnOp,
-                emitc::SubscriptOp, emitc::SubOp, emitc::SwitchOp,
-                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
-                emitc::VerbatimOp>(
+                emitc::MemberOp, emitc::MulAssignOp, emitc::MulOp,
+                emitc::PostDecrementOp, emitc::PostIncrementOp,
+                emitc::PreDecrementOp, emitc::PreIncrementOp,
+                emitc::RemAssignOp, emitc::RemOp, emitc::ReturnOp,
+                emitc::SubAssignOp, emitc::SubscriptOp, emitc::SubOp,
+                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
+                emitc::VariableOp, emitc::VerbatimOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.

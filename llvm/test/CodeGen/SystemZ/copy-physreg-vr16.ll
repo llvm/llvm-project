@@ -25,6 +25,7 @@ define <4 x half>  @fun1(half %0) {
 ; CHECK-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; CHECK-NEXT:    aebr %f0, %f0
 ; CHECK-NEXT:    brasl %r14, __truncsfhf2@PLT
+; CHECK-NEXT:    # implicit-def: $v24
 ; CHECK-NEXT:    vlr %v24, %v0
 ; CHECK-NEXT:    lmg %r14, %r15, 272(%r15)
 ; CHECK-NEXT:    br %r14

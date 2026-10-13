@@ -3,7 +3,7 @@
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   llvm.func @_QQmain() attributes {bindc_name = "main"} {
     %0 = llvm.mlir.addressof @_QFEsp : !llvm.ptr
-    %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "sp"}
+    %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(tofrom) capture(ByRef) name("sp") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%1 -> %arg0 : !llvm.ptr) {
       %2 = llvm.mlir.constant(20 : i32) : i32
       %3 = llvm.mlir.constant(0 : i64) : i64

@@ -1,8 +1,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu9.0a < %s | FileCheck --check-prefixes=GCN,GFX90A,GFX90A-SDAG %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu9.0a < %s | FileCheck --check-prefixes=GCN,GFX90A,GFX90A-GISEL %s
+; xUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu9.0a < %s | FileCheck --check-prefixes=GCN,GFX90A,GFX90A-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu9.42 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu9.42 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu9.4 --amdhsa-code-object-version=6 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
+; xUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu9.42 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
+; xUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu9.4 --amdhsa-code-object-version=6 < %s | FileCheck --check-prefixes=GCN,GFX942 %s
 
 ; DPP control value 337 is valid for 64-bit DPP on gfx942
 

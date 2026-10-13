@@ -87,6 +87,11 @@ public:
 
   std::string_view getClobbers() const override { return ""; }
 
+  StringRef getConstraintRegister(StringRef Constraint,
+                                  StringRef Expression) const override {
+    return Expression;
+  }
+
   ArrayRef<const char *> getGCCRegNames() const override;
 
   int getEHDataRegisterNumber(unsigned RegNo) const override {

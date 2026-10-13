@@ -18,6 +18,7 @@ add_object_library(
     libc.src.__support.common
     libc.src.__support.CPP.string_view
     libc.include.sys_syscall
+    libc.src.__support.OSUtil.linux.syscall_wrappers.exit_group
 )
 
 add_header_library(
@@ -25,16 +26,35 @@ add_header_library(
   HDRS
     auxv.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.hdr.sys_auxv_macros
     libc.hdr.sys_mman_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.CPP.optional
     libc.src.__support.threads.callonce
+)
+
+add_header_library(
+  network_syscall_policy
+  HDRS
+    network_syscall_policy.h
+  DEPENDS
+    libc.hdr.types.socklen_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_sockaddr
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.recvfrom
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sendto
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socket
+    libc.src.__support.common
+    libc.src.__support.error_or
 )
 
 add_header_library(

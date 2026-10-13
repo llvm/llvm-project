@@ -86,3 +86,69 @@ subroutine func5()
   !ERROR: A variable in a THREADPRIVATE directive cannot be an element of a common block
   !$omp threadprivate(a5)
 end
+
+subroutine func6
+    common /foo/ l
+    integer :: l
+    integer :: k(l)
+    save
+    !ERROR: An automatic data object cannot appear in THREADPRIVATE, because it cannot be given the SAVE attribute
+    !$omp threadprivate(k)
+end subroutine func6
+
+subroutine func7()
+    integer :: x
+    common /blk/ x
+    save
+    !ERROR: A variable in a THREADPRIVATE directive cannot be an element of a common block
+    !$omp threadprivate(x)
+
+    ! PASS
+    !$omp threadprivate(/blk/)
+end subroutine
+
+module mod_func8
+    integer, save :: x
+contains
+    subroutine func8()
+        !ERROR: The THREADPRIVATE directive and the common block or variable in it must appear in the same declaration section of a scoping unit
+        !$omp threadprivate(x)
+    end subroutine
+end module
+
+subroutine func9()
+    use mod_func8
+    !ERROR: The THREADPRIVATE directive and the common block or variable in it must appear in the same declaration section of a scoping unit
+    !$omp threadprivate(x)
+end subroutine
+
+subroutine func10()
+    !ERROR: A variable that appears in a THREADPRIVATE directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !$omp threadprivate(x)
+    x = 1
+end subroutine
+
+subroutine func11
+    type :: t
+      integer :: a = 12
+    end type t
+    type(t) :: x
+    integer :: i, j
+
+    save :: x, j
+    !ERROR: A variable that appears in a THREADPRIVATE directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !$omp threadprivate(x, i, j)
+end subroutine
+
+subroutine func12(a)
+    integer :: a(:)
+    save
+    !ERROR: A dummy argument cannot appear in THREADPRIVATE, because it cannot be given the SAVE attribute
+    !$omp threadprivate(a)
+end subroutine
+
+integer function func13()
+    save
+    !ERROR: A function result object cannot appear in THREADPRIVATE, because it cannot be given the SAVE attribute
+    !$omp threadprivate(func13)
+end function

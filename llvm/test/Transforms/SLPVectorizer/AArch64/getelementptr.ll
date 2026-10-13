@@ -53,12 +53,16 @@ define i32 @getelementptr_4x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD16:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT:%.*]] ]
-; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
+; CHECK-NEXT:    [[SLPRDX_EXIT:%.*]] = phi <4 x i32> [ poison, [[ENTRY:%.*]] ], [ [[SLPRDX_ACC1:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ false, [[ENTRY]] ], [ true, [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ poison, [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SLPRDX_EXIT]])
+; CHECK-NEXT:    [[SLPRDX_SEL:%.*]] = select i1 [[SLPRDX_FROMLOOP]], i32 [[TMP6]], i32 [[SUM_0_LCSSA]]
+; CHECK-NEXT:    ret i32 [[SLPRDX_SEL]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_032:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[ADD16]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[T4:%.*]] = shl nsw i32 [[TMP15]], 1
+; CHECK-NEXT:    [[SUM_32:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[OP_RDX:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SLPRDX_ACC:%.*]] = phi <4 x i32> [ zeroinitializer, [[FOR_BODY_PREHEADER]] ], [ [[SLPRDX_ACC1]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[T4:%.*]] = shl nsw i32 [[SUM_32]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[T4]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], [[TMP0]]
@@ -79,10 +83,9 @@ define i32 @getelementptr_4x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> [[TMP17]], i32 [[T8]], i64 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i32> [[TMP18]], i32 [[T10]], i64 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP19]], i32 [[T12]], i64 3
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP9]])
-; CHECK-NEXT:    [[ADD16]] = add i32 [[TMP10]], [[SUM_032]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[TMP15]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-NEXT:    [[SLPRDX_ACC1]] = add <4 x i32> [[SLPRDX_ACC]], [[TMP9]]
+; CHECK-NEXT:    [[OP_RDX]] = add nuw nsw i32 [[SUM_32]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[OP_RDX]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]]
 ;
 entry:
@@ -146,12 +149,16 @@ define i32 @getelementptr_2x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OP_RDX:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT:%.*]] ]
-; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
+; CHECK-NEXT:    [[SLPRDX_EXIT:%.*]] = phi <4 x i32> [ poison, [[ENTRY:%.*]] ], [ [[SLPRDX_ACC1:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ false, [[ENTRY]] ], [ true, [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ poison, [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SLPRDX_EXIT]])
+; CHECK-NEXT:    [[SLPRDX_SEL:%.*]] = select i1 [[SLPRDX_FROMLOOP]], i32 [[TMP4]], i32 [[SUM_0_LCSSA]]
+; CHECK-NEXT:    ret i32 [[SLPRDX_SEL]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_032:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[OP_RDX]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[T4:%.*]] = shl nsw i32 [[TMP12]], 1
+; CHECK-NEXT:    [[SUM_32:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[OP_RDX1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SLPRDX_ACC:%.*]] = phi <4 x i32> [ zeroinitializer, [[FOR_BODY_PREHEADER]] ], [ [[SLPRDX_ACC1]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[T4:%.*]] = shl nsw i32 [[SUM_32]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[T4]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], [[TMP0]]
@@ -168,10 +175,9 @@ define i32 @getelementptr_2x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[T12]], i64 3
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> [[TMP13]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP14]])
-; CHECK-NEXT:    [[OP_RDX]] = add i32 [[TMP11]], [[SUM_032]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[TMP12]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-NEXT:    [[SLPRDX_ACC1]] = add <4 x i32> [[SLPRDX_ACC]], [[TMP14]]
+; CHECK-NEXT:    [[OP_RDX1]] = add nuw nsw i32 [[SUM_32]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[OP_RDX1]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]]
 ;
 entry:

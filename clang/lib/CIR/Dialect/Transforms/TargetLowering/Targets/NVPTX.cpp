@@ -30,6 +30,13 @@ public:
            "Unknown CIR address space for NVPTX target");
     return NVPTXAddrSpaceMap[idx];
   }
+
+  cir::SyncScopeKind
+  convertSyncScope(cir::SyncScopeKind syncScope) const override {
+    if (syncScope == cir::SyncScopeKind::Workgroup)
+      return cir::SyncScopeKind::Workgroup;
+    return cir::SyncScopeKind::System;
+  }
 };
 
 } // namespace
