@@ -3762,12 +3762,9 @@ bool IRTranslatorImpl::translateIntrinsic(
     } else if (Info.fallbackAddressSpace) {
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
     }
-    const MDNode *MemCacheHint =
-        Info.ptrArgIndex ? getMemCacheHintMetadata(CB, *Info.ptrArgIndex)
-                         : nullptr;
     MIB.addMemOperand(MF->getMachineMemOperand(
         MPI, Info.flags, MemTy, Alignment,
-        MMOMetadata(CB.getAAMetadata(), nullptr, MemCacheHint), Info.ssid,
+        MMOMetadata(CB.getAAMetadata(), nullptr, Info.memCacheHint), Info.ssid,
         Info.order, Info.failureOrder));
   }
 
