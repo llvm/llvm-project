@@ -11,6 +11,7 @@ define <4 x i8> @poison_build_vector_known_bits(<4 x i32> %v) {
 ; CHECK-NEXT:    packssdw %xmm0, %xmm0
 ; CHECK-NEXT:    packsswb %xmm0, %xmm0
 ; CHECK-NEXT:    psllw $7, %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtb %xmm0, %xmm1
 ; CHECK-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1

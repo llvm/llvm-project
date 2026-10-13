@@ -132,42 +132,46 @@ define <8 x float> @fadd_v8f32_commute(<8 x i1> %b, <8 x float> noundef %x, <8 x
 define <16 x float> @fadd_v16f32_swap(<16 x i1> %b, <16 x float> noundef %x, <16 x float> noundef %y) {
 ; SSE2-LABEL: fadd_v16f32_swap:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm10
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE2-NEXT:    movdqa %xmm10, %xmm8
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm8 = xmm8[4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pslld $31, %xmm8
-; SSE2-NEXT:    movdqa %xmm8, %xmm9
-; SSE2-NEXT:    psrad $31, %xmm9
-; SSE2-NEXT:    pandn {{[0-9]+}}(%rsp), %xmm9
-; SSE2-NEXT:    por %xmm8, %xmm9
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm10 = xmm10[0,0,1,1,2,2,3,3]
-; SSE2-NEXT:    pslld $31, %xmm10
-; SSE2-NEXT:    movdqa %xmm10, %xmm8
-; SSE2-NEXT:    psrad $31, %xmm8
-; SSE2-NEXT:    pandn %xmm7, %xmm8
-; SSE2-NEXT:    por %xmm10, %xmm8
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    movdqa %xmm0, %xmm10
+; SSE2-NEXT:    movaps %xmm2, %xmm8
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; SSE2-NEXT:    movdqa %xmm2, %xmm10
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm10 = xmm10[4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pslld $31, %xmm10
-; SSE2-NEXT:    movdqa %xmm10, %xmm7
-; SSE2-NEXT:    psrad $31, %xmm7
-; SSE2-NEXT:    pandn %xmm6, %xmm7
-; SSE2-NEXT:    por %xmm10, %xmm7
+; SSE2-NEXT:    psrad $31, %xmm10
+; SSE2-NEXT:    movdqa {{.*#+}} xmm11 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    movdqa %xmm11, %xmm9
+; SSE2-NEXT:    pand %xmm10, %xmm9
+; SSE2-NEXT:    pandn {{[0-9]+}}(%rsp), %xmm10
+; SSE2-NEXT:    por %xmm9, %xmm10
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    pslld $31, %xmm2
+; SSE2-NEXT:    psrad $31, %xmm2
+; SSE2-NEXT:    movdqa %xmm11, %xmm9
+; SSE2-NEXT:    pand %xmm2, %xmm9
+; SSE2-NEXT:    pandn %xmm7, %xmm2
+; SSE2-NEXT:    por %xmm9, %xmm2
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    movdqa %xmm0, %xmm9
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm9 = xmm9[4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    pslld $31, %xmm9
+; SSE2-NEXT:    psrad $31, %xmm9
+; SSE2-NEXT:    movdqa %xmm11, %xmm7
+; SSE2-NEXT:    pand %xmm9, %xmm7
+; SSE2-NEXT:    pandn %xmm6, %xmm9
+; SSE2-NEXT:    por %xmm7, %xmm9
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pslld $31, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm6
-; SSE2-NEXT:    psrad $31, %xmm6
-; SSE2-NEXT:    pandn %xmm5, %xmm6
-; SSE2-NEXT:    por %xmm6, %xmm0
+; SSE2-NEXT:    psrad $31, %xmm0
+; SSE2-NEXT:    pand %xmm0, %xmm11
+; SSE2-NEXT:    pandn %xmm5, %xmm0
+; SSE2-NEXT:    por %xmm11, %xmm0
 ; SSE2-NEXT:    addps %xmm1, %xmm0
-; SSE2-NEXT:    addps %xmm2, %xmm7
-; SSE2-NEXT:    addps %xmm3, %xmm8
-; SSE2-NEXT:    addps %xmm4, %xmm9
-; SSE2-NEXT:    movaps %xmm7, %xmm1
-; SSE2-NEXT:    movaps %xmm8, %xmm2
-; SSE2-NEXT:    movaps %xmm9, %xmm3
+; SSE2-NEXT:    addps %xmm8, %xmm9
+; SSE2-NEXT:    addps %xmm3, %xmm2
+; SSE2-NEXT:    addps %xmm4, %xmm10
+; SSE2-NEXT:    movaps %xmm9, %xmm1
+; SSE2-NEXT:    movaps %xmm10, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: fadd_v16f32_swap:
@@ -230,42 +234,46 @@ define <16 x float> @fadd_v16f32_swap(<16 x i1> %b, <16 x float> noundef %x, <16
 define <16 x float> @fadd_v16f32_commute_swap(<16 x i1> %b, <16 x float> noundef %x, <16 x float> noundef %y) {
 ; SSE2-LABEL: fadd_v16f32_commute_swap:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm10
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE2-NEXT:    movdqa %xmm10, %xmm8
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm8 = xmm8[4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pslld $31, %xmm8
-; SSE2-NEXT:    movdqa %xmm8, %xmm9
-; SSE2-NEXT:    psrad $31, %xmm9
-; SSE2-NEXT:    pandn {{[0-9]+}}(%rsp), %xmm9
-; SSE2-NEXT:    por %xmm8, %xmm9
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm10 = xmm10[0,0,1,1,2,2,3,3]
-; SSE2-NEXT:    pslld $31, %xmm10
-; SSE2-NEXT:    movdqa %xmm10, %xmm8
-; SSE2-NEXT:    psrad $31, %xmm8
-; SSE2-NEXT:    pandn %xmm7, %xmm8
-; SSE2-NEXT:    por %xmm10, %xmm8
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    movdqa %xmm0, %xmm10
+; SSE2-NEXT:    movaps %xmm2, %xmm8
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; SSE2-NEXT:    movdqa %xmm2, %xmm10
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm10 = xmm10[4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pslld $31, %xmm10
-; SSE2-NEXT:    movdqa %xmm10, %xmm7
-; SSE2-NEXT:    psrad $31, %xmm7
-; SSE2-NEXT:    pandn %xmm6, %xmm7
-; SSE2-NEXT:    por %xmm10, %xmm7
+; SSE2-NEXT:    psrad $31, %xmm10
+; SSE2-NEXT:    movdqa {{.*#+}} xmm11 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    movdqa %xmm11, %xmm9
+; SSE2-NEXT:    pand %xmm10, %xmm9
+; SSE2-NEXT:    pandn {{[0-9]+}}(%rsp), %xmm10
+; SSE2-NEXT:    por %xmm9, %xmm10
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    pslld $31, %xmm2
+; SSE2-NEXT:    psrad $31, %xmm2
+; SSE2-NEXT:    movdqa %xmm11, %xmm9
+; SSE2-NEXT:    pand %xmm2, %xmm9
+; SSE2-NEXT:    pandn %xmm7, %xmm2
+; SSE2-NEXT:    por %xmm9, %xmm2
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    movdqa %xmm0, %xmm9
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm9 = xmm9[4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    pslld $31, %xmm9
+; SSE2-NEXT:    psrad $31, %xmm9
+; SSE2-NEXT:    movdqa %xmm11, %xmm7
+; SSE2-NEXT:    pand %xmm9, %xmm7
+; SSE2-NEXT:    pandn %xmm6, %xmm9
+; SSE2-NEXT:    por %xmm7, %xmm9
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pslld $31, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm6
-; SSE2-NEXT:    psrad $31, %xmm6
-; SSE2-NEXT:    pandn %xmm5, %xmm6
-; SSE2-NEXT:    por %xmm6, %xmm0
+; SSE2-NEXT:    psrad $31, %xmm0
+; SSE2-NEXT:    pand %xmm0, %xmm11
+; SSE2-NEXT:    pandn %xmm5, %xmm0
+; SSE2-NEXT:    por %xmm11, %xmm0
 ; SSE2-NEXT:    addps %xmm1, %xmm0
-; SSE2-NEXT:    addps %xmm2, %xmm7
-; SSE2-NEXT:    addps %xmm3, %xmm8
-; SSE2-NEXT:    addps %xmm4, %xmm9
-; SSE2-NEXT:    movaps %xmm7, %xmm1
-; SSE2-NEXT:    movaps %xmm8, %xmm2
-; SSE2-NEXT:    movaps %xmm9, %xmm3
+; SSE2-NEXT:    addps %xmm8, %xmm9
+; SSE2-NEXT:    addps %xmm3, %xmm2
+; SSE2-NEXT:    addps %xmm4, %xmm10
+; SSE2-NEXT:    movaps %xmm9, %xmm1
+; SSE2-NEXT:    movaps %xmm10, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: fadd_v16f32_commute_swap:

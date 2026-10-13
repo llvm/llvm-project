@@ -1149,7 +1149,7 @@ define <32 x i16> @PR158415(<8 x i8> %arg) {
 ; X86-AVX512-NEXT:    vpsrld $16, %xmm2, %xmm2
 ; X86-AVX512-NEXT:    vpalignr {{.*#+}} xmm2 = xmm0[8,9,10,11,12,13,14,15],xmm2[0,1,2,3,4,5,6,7]
 ; X86-AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,3]
+; X86-AVX512-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; X86-AVX512-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,7,7,7]
 ; X86-AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; X86-AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
@@ -1201,7 +1201,7 @@ define <32 x i16> @PR158415(<8 x i8> %arg) {
 ; X64-AVX512-NEXT:    vpsrld $16, %xmm2, %xmm2
 ; X64-AVX512-NEXT:    vpalignr {{.*#+}} xmm2 = xmm0[8,9,10,11,12,13,14,15],xmm2[0,1,2,3,4,5,6,7]
 ; X64-AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X64-AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,3]
+; X64-AVX512-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; X64-AVX512-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,7,7,7]
 ; X64-AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0

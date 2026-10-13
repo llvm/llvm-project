@@ -470,10 +470,10 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,3,2,3]
 ; X64-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
 ; X64-NEXT:    psubd %xmm4, %xmm5
-; X64-NEXT:    movdqa {{.*#+}} xmm3 = [2147483648,2147483648,2147483648,2147483648]
-; X64-NEXT:    pand %xmm5, %xmm3
 ; X64-NEXT:    pcmpgtd %xmm5, %xmm2
-; X64-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X64-NEXT:    movdqa %xmm2, %xmm3
+; X64-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; X64-NEXT:    por %xmm3, %xmm2
 ; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,2,2,3]
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]

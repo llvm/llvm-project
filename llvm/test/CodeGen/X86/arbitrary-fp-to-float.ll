@@ -576,7 +576,9 @@ define <4 x float> @fp4_to_f32_vec(<4 x i4> %x) {
 ; CHECK-NEXT:    pand %xmm2, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm3, %xmm3
 ; CHECK-NEXT:    pxor %xmm0, %xmm3
-; CHECK-NEXT:    psubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; CHECK-NEXT:    psubb %xmm4, %xmm3
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; CHECK-NEXT:    movdqa %xmm3, %xmm5
 ; CHECK-NEXT:    pand %xmm4, %xmm5
