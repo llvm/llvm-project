@@ -2469,7 +2469,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           continue;
 
         // LOAD_CNT is only relevant to vgpr or LDS.
-        unsigned TID = LDSDMA_BEGIN;
+        VMEMID TID = LDSDMA_BEGIN;
         if (Ptr && Memop->getAAInfo()) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = static_cast<unsigned>(LDSDMAStores.size());
