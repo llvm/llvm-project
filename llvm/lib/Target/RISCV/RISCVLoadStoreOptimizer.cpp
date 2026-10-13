@@ -909,8 +909,12 @@ bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
   unsigned RealOpc = IsLoad ? RISCV::LD_RV32 : RISCV::SD_RV32;
 
   // Create register pair from the two individual registers
-  MCRegister RegPair = TRI->getMatchingSuperReg(FirstReg, RISCV::sub_gpr_even,
-                                                &RISCV::GPRPairRegClass);
+  MCRegister RegPair;
+  if (FirstReg == RISCV::X0)
+    RegPair = RISCV::X0_Pair;
+  else
+    RegPair = TRI->getMatchingSuperReg(FirstReg, RISCV::sub_gpr_even,
+                                       &RISCV::GPRPairRegClass);
   // Create the real LD/SD instruction with register pair
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(RealOpc));
 
