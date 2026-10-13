@@ -3252,6 +3252,7 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansion(const MachineInstr *MI) {
   unsigned StOpc;
   unsigned Relaxed = MI->getOperand(2).getImm();
   assert(Relaxed < 2 && "Atomic hint relaxed immediate out-of-bounds");
+  bool EmitZeroImm = Relaxed;
   switch (MI->getOpcode()) {
   case AArch64::ATOMIC_STORE_HINT_B:
     StOpc = Relaxed ? AArch64::STRBBui : AArch64::STLRB;
@@ -3265,6 +3266,18 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansion(const MachineInstr *MI) {
   case AArch64::ATOMIC_STORE_HINT_X:
     StOpc = Relaxed ? AArch64::STRXui : AArch64::STLRX;
     break;
+  case AArch64::ATOMIC_STORE_HINT_FPR16:
+    StOpc = Relaxed ? AArch64::STRHui : AArch64::STLURhi;
+    EmitZeroImm = true;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_S:
+    StOpc = Relaxed ? AArch64::STRSui : AArch64::STLURsi;
+    EmitZeroImm = true;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_D:
+    StOpc = Relaxed ? AArch64::STRDui : AArch64::STLURdi;
+    EmitZeroImm = true;
+    break;
   default:
     llvm_unreachable("Unexpected atomic hint size.");
   }
@@ -3277,7 +3290,7 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansion(const MachineInstr *MI) {
   Store.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
   Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg()));
   Store.setFlags(MI->getFlags());
-  if (Relaxed)
+  if (EmitZeroImm)
     Store.addOperand(MCOperand::createImm(0));
   EmitToStreamer(*OutStreamer, Store);
 }
@@ -3301,6 +3314,9 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionRO(
   case AArch64::ATOMIC_STORE_HINT_XroW:
     StOpc = AArch64::STRXroW;
     break;
+  case AArch64::ATOMIC_STORE_HINT_FPR16roW:
+    StOpc = AArch64::STRHroW;
+    break;
   case AArch64::ATOMIC_STORE_HINT_SroW:
     StOpc = AArch64::STRSroW;
     break;
@@ -3318,6 +3334,9 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionRO(
     break;
   case AArch64::ATOMIC_STORE_HINT_XroX:
     StOpc = AArch64::STRXroX;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_FPR16roX:
+    StOpc = AArch64::STRHroX;
     break;
   case AArch64::ATOMIC_STORE_HINT_SroX:
     StOpc = AArch64::STRSroX;
@@ -3362,6 +3381,9 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionImm(
   case AArch64::ATOMIC_STORE_HINT_Xui:
     StOpc = AArch64::STRXui;
     break;
+  case AArch64::ATOMIC_STORE_HINT_FPR16ui:
+    StOpc = AArch64::STRHui;
+    break;
   case AArch64::ATOMIC_STORE_HINT_Sui:
     StOpc = AArch64::STRSui;
     break;
@@ -3379,6 +3401,9 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionImm(
     break;
   case AArch64::ATOMIC_STORE_HINT_Xi:
     StOpc = AArch64::STURXi;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_FPR16i:
+    StOpc = AArch64::STURHi;
     break;
   case AArch64::ATOMIC_STORE_HINT_Si:
     StOpc = AArch64::STURSi;
@@ -4123,18 +4148,23 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::ATOMIC_STORE_HINT_H:
   case AArch64::ATOMIC_STORE_HINT_W:
   case AArch64::ATOMIC_STORE_HINT_X:
+  case AArch64::ATOMIC_STORE_HINT_FPR16:
+  case AArch64::ATOMIC_STORE_HINT_S:
+  case AArch64::ATOMIC_STORE_HINT_D:
     emitAtomicHintPseudoExpansion(MI);
     return;
   case AArch64::ATOMIC_STORE_HINT_BroW:
   case AArch64::ATOMIC_STORE_HINT_HroW:
   case AArch64::ATOMIC_STORE_HINT_WroW:
   case AArch64::ATOMIC_STORE_HINT_XroW:
+  case AArch64::ATOMIC_STORE_HINT_FPR16roW:
   case AArch64::ATOMIC_STORE_HINT_SroW:
   case AArch64::ATOMIC_STORE_HINT_DroW:
   case AArch64::ATOMIC_STORE_HINT_BroX:
   case AArch64::ATOMIC_STORE_HINT_HroX:
   case AArch64::ATOMIC_STORE_HINT_WroX:
   case AArch64::ATOMIC_STORE_HINT_XroX:
+  case AArch64::ATOMIC_STORE_HINT_FPR16roX:
   case AArch64::ATOMIC_STORE_HINT_SroX:
   case AArch64::ATOMIC_STORE_HINT_DroX:
     emitAtomicHintPseudoExpansionRO(MI);
@@ -4143,12 +4173,14 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::ATOMIC_STORE_HINT_Hui:
   case AArch64::ATOMIC_STORE_HINT_Wui:
   case AArch64::ATOMIC_STORE_HINT_Xui:
+  case AArch64::ATOMIC_STORE_HINT_FPR16ui:
   case AArch64::ATOMIC_STORE_HINT_Sui:
   case AArch64::ATOMIC_STORE_HINT_Dui:
   case AArch64::ATOMIC_STORE_HINT_Bi:
   case AArch64::ATOMIC_STORE_HINT_Hi:
   case AArch64::ATOMIC_STORE_HINT_Wi:
   case AArch64::ATOMIC_STORE_HINT_Xi:
+  case AArch64::ATOMIC_STORE_HINT_FPR16i:
   case AArch64::ATOMIC_STORE_HINT_Si:
   case AArch64::ATOMIC_STORE_HINT_Di:
     emitAtomicHintPseudoExpansionImm(MI);
