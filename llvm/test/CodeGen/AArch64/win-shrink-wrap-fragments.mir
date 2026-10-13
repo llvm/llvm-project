@@ -1,0 +1,266 @@
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -run-pass=aarch64-win-cfi \
+# RUN:   -verify-machineinstrs %s -o %t.mir
+# RUN: FileCheck %s --check-prefix=MIR --input-file=%t.mir
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -passes=aarch64-win-cfi,verify \
+# RUN:   %s -o - | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=aarch64-pc-windows-msvc \
+# RUN:   -run-pass=aarch64-win-cfi,aarch64-win-cfi -verify-machineinstrs \
+# RUN:   %s -o - | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=aarch64-win-cfi \
+# RUN:   -verify-machineinstrs -filetype=obj %t.mir -o %t-roundtrip.obj
+# RUN: llvm-readobj --unwind %t-roundtrip.obj | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=aarch64-win-cfi %s -o - \
+# RUN:   | FileCheck %s --check-prefix=UNCHANGED --implicit-check-not=SEH_StartProc
+# RUN: llc -mtriple=arm64ec-pc-windows-msvc -run-pass=aarch64-win-cfi %s -o - \
+# RUN:   | FileCheck %s --check-prefix=UNCHANGED --implicit-check-not=SEH_StartProc
+# UNCHANGED: name: frame_paths
+
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=unpack-mi-bundles \
+# RUN:   -verify-machineinstrs -filetype=obj %s -o %t.obj
+# RUN: llvm-readobj --unwind %t.obj | FileCheck %s
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=unpack-mi-bundles \
+# RUN:   -filetype=asm %s -o %t.s
+# RUN: FileCheck %s --check-prefix=ASM --input-file=%t.s
+# RUN: llvm-mc -triple=aarch64-pc-windows-msvc -filetype=obj %t.s -o %t-asm.obj
+# RUN: llvm-readobj --unwind %t-asm.obj | FileCheck %s
+
+# CHECK: RuntimeFunction {
+# CHECK-NEXT: Function: frame_paths +0x4 (0x4)
+# CHECK: FunctionLength: 24
+# CHECK: Prologue [
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: RuntimeFunction {
+# CHECK-NEXT: Function: frame_paths +0x20 (0x20)
+# CHECK: FunctionLength: 32
+# CHECK: EpilogueOffset: 1
+# CHECK: Prologue [
+# CHECK-NEXT: 0xe5                ; end_c
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: Epilogue [
+# CHECK-NEXT: 0xd600              ; ldp x19, lr, [sp, #0]
+
+# CHECK: Function: frame_before_prologue +0x4
+# CHECK: FunctionLength: 12
+# CHECK: Prologue [
+# CHECK-NEXT: 0xe5                ; end_c
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: Function: frame_before_prologue +0x10
+# CHECK: FunctionLength: 12
+# CHECK: Prologue [
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+
+# ASM-LABEL: frame_before_prologue:
+# ASM: DEBUG_LABEL: frame_before_prologue:before_return
+# ASM-NEXT: .pseudoprobe 1234 1 0 0 frame_before_prologue
+# ASM-NEXT: ret
+# ASM-NEXT: .seh_endfunclet
+# ASM-NEXT: .seh_endproc
+# ASM: DEBUG_LABEL: frame_before_prologue:before_branch
+# ASM-NEXT: .pseudoprobe 1234 2 0 0 frame_before_prologue
+# ASM-NEXT: b
+# ASM-NEXT: .seh_endfunclet
+# ASM-NEXT: .seh_endproc
+# ASM: .section .pseudo_probe_desc
+# ASM-NEXT: .xword 1234
+
+--- |
+  target triple = "aarch64-pc-windows-msvc"
+  define i32 @frame_paths(i32 %x, i32 %y) uwtable {
+    ret i32 0
+  }
+  define void @frame_before_prologue() uwtable !dbg !4 {
+    ret void
+  }
+  declare void @work(i32)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+  !llvm.pseudo_probe_desc = !{!10}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "test", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "win-shrink-wrap-fragments.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = !DISubroutineType(types: !7)
+  !4 = distinct !DISubprogram(name: "frame_before_prologue", scope: !1, file: !1, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !5 = !DILabel(scope: !4, name: "before_return", file: !1, line: 2)
+  !6 = !DILocation(line: 2, column: 1, scope: !4)
+  !7 = !{null}
+  !8 = !DILabel(scope: !4, name: "before_branch", file: !1, line: 3)
+  !9 = !DILocation(line: 3, column: 1, scope: !4)
+  !10 = !{i64 1234, i64 0, !"frame_before_prologue"}
+...
+---
+# A leaf-style block separating blocks with the prologue in effect in layout
+# must split their unwind records. Re-entry needs a phantom recipe; CFG joins
+# with matching state must share a range, and the leaf return stays uncovered.
+name:            frame_paths
+alignment:       4
+tracksRegLiveness: true
+hasWinCFI:       true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+registers:       []
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+  - { reg: '$w1', virtual-reg: '' }
+frameInfo:
+  stackSize:       16
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  isCalleeSavedInfoValid: true
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8,
+      callee-saved-register: '$lr' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8,
+      callee-saved-register: '$x19' }
+body:             |
+  ; MIR-LABEL: name: frame_paths
+  ; MIR: bb.0:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: bb.1:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
+  ; MIR: B %bb.3 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR: bb.2:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: RET
+  ; MIR: bb.3:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: frame-setup SEH_StackAlloc 16
+  ; MIR-NEXT: frame-setup SEH_SaveRegP 19, 30, 0
+  ; MIR-NEXT: SEH_EndC
+  ; MIR-NEXT: SEH_PrologEnd
+  ; MIR-NEXT: $w0 = ORRWrs
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: B %bb.2 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR-NOT: SEH_StartProc
+  bb.0:
+    successors: %bb.5(0x30000000), %bb.1(0x50000000)
+    liveins: $w0, $w1, $lr, $x19
+
+    CBZW renamable $w0, %bb.5
+
+  bb.1:
+    successors: %bb.3(0x30000000), %bb.2(0x50000000)
+    liveins: $w0, $w1, $lr, $x19
+
+    $sp = frame-setup SUBXri $sp, 16, 0
+    frame-setup SEH_StackAlloc 16
+    frame-setup STPXi killed $x19, killed $lr, $sp, 0 :: (store (s64) into %stack.0), (store (s64) into %stack.1)
+    frame-setup SEH_SaveRegP 19, 30, 0
+    frame-setup SEH_PrologEnd
+    $w19 = ORRWrs $wzr, killed $w1, 0
+    BL @work, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit-def $sp
+    CBZW renamable $w19, %bb.3
+    B %bb.2
+
+  bb.5:
+    liveins: $w0, $lr, $x19
+
+    RET undef $lr, implicit killed $w0
+
+  bb.2:
+    successors: %bb.4(0x80000000)
+    liveins: $w19
+
+    $w0 = ORRWrs $wzr, killed $w19, 0
+    BL @work, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit-def $sp
+    renamable $w0 = MOVZWi 2, 0
+    B %bb.4
+
+  bb.3:
+    successors: %bb.4(0x80000000)
+
+    renamable $w0 = MOVZWi 1, 0
+
+  bb.4:
+    successors: %bb.5(0x80000000)
+    liveins: $w0
+
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0 :: (load (s64) from %stack.0), (load (s64) from %stack.1)
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    B %bb.5
+...
+---
+# CFG state, not layout order, determines the recipe: an epilogue laid out
+# before the physical prologue needs a phantom range. Range ends must cover
+# both return and branch terminators without bundling nearby debug/probe pseudos
+# or disrupting their emission.
+name:            frame_before_prologue
+alignment:       4
+hasWinCFI:       true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    8
+  adjustsStack:    true
+body:             |
+  ; MIR-LABEL: name: frame_before_prologue
+  ; MIR: bb.0:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: bb.1:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: frame-setup SEH_StackAlloc 16
+  ; MIR-NEXT: frame-setup SEH_SaveRegP 19, 30, 0
+  ; MIR-NEXT: SEH_EndC
+  ; MIR-NEXT: SEH_PrologEnd
+  ; MIR-NEXT: frame-destroy SEH_EpilogStart
+  ; MIR: DBG_LABEL
+  ; MIR-NEXT: PSEUDO_PROBE 1234, 1, 0, 0
+  ; MIR: RET undef $lr {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR: bb.2:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
+  ; MIR: DBG_LABEL
+  ; MIR-NEXT: PSEUDO_PROBE 1234, 2, 0, 0
+  ; MIR: B %bb.1 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR-NOT: SEH_StartProc
+  bb.0:
+    successors: %bb.2
+    B %bb.2
+
+  bb.1:
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    DBG_LABEL !5, debug-location !6
+    PSEUDO_PROBE 1234, 1, 0, 0
+    RET undef $lr
+
+  bb.2:
+    successors: %bb.1
+    $sp = frame-setup SUBXri $sp, 16, 0
+    frame-setup SEH_StackAlloc 16
+    frame-setup STPXi $x19, $lr, $sp, 0
+    frame-setup SEH_SaveRegP 19, 30, 0
+    frame-setup SEH_PrologEnd
+    DBG_LABEL !8, debug-location !9
+    PSEUDO_PROBE 1234, 2, 0, 0
+    B %bb.1
+...

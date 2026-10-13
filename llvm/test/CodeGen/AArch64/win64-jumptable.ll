@@ -37,8 +37,10 @@ declare void @g(i32, i32)
 ; CHECK:    .text
 ; CHECK:    f:
 ; CHECK:    .seh_proc f
+; CHECK:    .seh_endfunclet
+; CHECK-NEXT: .seh_endproc
+; CHECK:    .LBB0_7:
 ; CHECK:    b g
-; CHECK-NEXT:  .seh_endfunclet
 ; CHECK-NEXT:  .section .rdata,"dr"
 ; CHECK-NEXT: .p2align  2
 ; CHECK-NEXT: .LJTI0_0:
@@ -47,7 +49,7 @@ declare void @g(i32, i32)
 ; CHECK:    .word .LBB0_3-.Ltmp0
 ; CHECK:    .word .LBB0_4-.Ltmp0
 ; CHECK:    .text
-; CHECK:    .seh_endproc
 
 ; Check that we can emit an object file with correct unwind info.
+; UNWIND: Function: f +0x8 (0x8)
 ; UNWIND: FunctionLength: {{[1-9][0-9]*}}

@@ -976,6 +976,53 @@ bool AArch64FrameLowering::canUseAsPrologue(
   return true;
 }
 
+bool AArch64FrameLowering::enableWindowsCFIShrinkWrapping(
+    const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Split unwind ranges are currently supported only for native ARM64, not
+  // ARM64EC's hybrid unwinding model.
+  if (MF.getTarget().getTargetTriple().isWindowsArm64EC())
+    return false;
+
+  // Range insertion relies on SEH pseudos, which are emitted only when the
+  // function needs an unwind table entry.
+  if (!F.needsUnwindTableEntry())
+    return false;
+
+  // Splitting ranges does not yet preserve language-specific handler data.
+  if (F.hasPersonalityFn())
+    return false;
+
+  // Funclets have independent frames; range insertion assumes a single frame.
+  if (MF.hasEHFunclets())
+    return false;
+
+  // Naked functions do not have a compiler-generated prologue to shrink-wrap.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return false;
+
+  // The copied unwind recipe currently supports only fixed-size stack frames.
+  if (MFI.hasVarSizedObjects())
+    return false;
+
+  // Dynamically realigned frames need stack-pointer recovery that is not yet
+  // supported by the split-range implementation.
+  if (MF.getSubtarget<AArch64Subtarget>()
+          .getRegisterInfo()
+          ->hasStackRealignment(MF))
+    return false;
+
+  // Signed return addresses need authentication-state handling across ranges
+  // that is not yet implemented.
+  if (MF.getInfo<AArch64FunctionInfo>()->getSignReturnAddressCondition() !=
+      SignReturnAddress::None)
+    return false;
+
+  return true;
+}
+
 bool AArch64FrameLowering::shouldSignReturnAddressEverywhere(
     const MachineFunction &MF) const {
   // FIXME: With WinCFI, extra care should be taken to place SEH_PACSignLR

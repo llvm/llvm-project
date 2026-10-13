@@ -39,6 +39,9 @@ class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {
   /// True if we are generating exception handling on Windows for ARM64.
   bool isAArch64 = false;
 
+  /// True when explicit pseudos control this function's SEH range boundaries.
+  bool HasExplicitWinCFIRanges = false;
+
   /// True if we are generating exception handling on Windows for ARM (Thumb).
   bool isThumb = false;
 

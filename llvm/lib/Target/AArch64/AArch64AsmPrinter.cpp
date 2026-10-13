@@ -111,6 +111,17 @@ public:
 
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
 
+  bool hasExplicitWinCFIRanges() const override {
+    // The late Windows CFI pass inserts SEH_StartProc only when range
+    // boundaries are explicit in MIR. Its presence tells WinException to leave
+    // procedure boundaries to the SEH_StartProc/SEH_EndProc pseudos.
+    return llvm::any_of(*MF, [](const MachineBasicBlock &MBB) {
+      return llvm::any_of(MBB, [](const MachineInstr &MI) {
+        return MI.getOpcode() == AArch64::SEH_StartProc;
+      });
+    });
+  }
+
   /// Wrapper for MCInstLowering.lowerOperand() for the
   /// tblgen'erated pseudo lowering.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
@@ -344,6 +355,7 @@ public:
                               uint64_t Offset = 0) override;
 
 private:
+  void emitInstructionImpl(const MachineInstr *MI);
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
   bool printAsmMRegister(const MachineOperand &MO, char Mode, raw_ostream &O);
   bool printAsmRegInClass(const MachineOperand &MO,
@@ -3455,6 +3467,19 @@ void AArch64AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 }
 
 void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
+  emitInstructionImpl(MI);
+  if (!MI->isBundledWithSucc())
+    return;
+
+  const MachineInstr *EndProc = MI->getNextNode();
+  assert(MI->isTerminator() && "Unexpected late AArch64 bundle head");
+  assert(EndProc->getOpcode() == AArch64::SEH_EndProc &&
+         !EndProc->isBundledWithSucc() &&
+         "Unexpected late AArch64 bundle member");
+  emitInstructionImpl(EndProc);
+}
+
+void AArch64AsmPrinter::emitInstructionImpl(const MachineInstr *MI) {
   AArch64_MC::verifyInstructionPredicates(MI->getOpcode(), STI->getFeatureBits());
 
 #ifndef NDEBUG
@@ -3977,6 +4002,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::HWASAN_CHECK_MEMACCESS_FIXEDSHADOW:
   case AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
+    return;
+
+  case AArch64::SEH_StartProc:
+    OutStreamer->emitWinCFIStartProc(CurrentFnSym);
+    return;
+
+  case AArch64::SEH_EndProc:
+    OutStreamer->emitWinCFIFuncletOrFuncEnd();
+    OutStreamer->emitWinCFIEndProc();
     return;
 
   case AArch64::SEH_EndC:
