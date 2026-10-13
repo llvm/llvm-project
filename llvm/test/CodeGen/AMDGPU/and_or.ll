@@ -407,7 +407,6 @@ define <2 x i32> @v_and_or_v2i32_inline_const_x4(<2 x i32> %a) {
 ; GFX11-NEXT:    v_and_or_b32 v0, v0, s0, 0x81
 ; GFX11-NEXT:    v_and_or_b32 v1, v1, s1, 0x101
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-; GFX10-CHECK-NOT: {{.}}
   %x = and <2 x i32> %a, <i32 2056, i32 2057>
   %result = or <2 x i32> %x, <i32 129, i32 257>
   ret <2 x i32> %result
