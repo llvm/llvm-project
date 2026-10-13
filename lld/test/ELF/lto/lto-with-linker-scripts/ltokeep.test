@@ -1,0 +1,44 @@
+# REQUIRES: aarch64
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-as %t/foo.ll -o %t/foo.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux-gnu %t/main.s -o %t/main.o
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts %t/foo.o %t/main.o -T %t/script.t -o %t/out
+# RUN: llvm-readelf -S %t/out | FileCheck %s --check-prefix=SECTIONS
+
+# SECTIONS: .text.foo
+
+#--- foo.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+declare i32 @bar()
+
+define i32 @foo() section ".text.foo" {
+  %v = call i32 @bar()
+  ret i32 %v
+}
+
+#--- main.s
+.text
+.section .text.main,"ax",@progbits
+.globl main
+.type main,@function
+main:
+  mov x0, xzr
+  ret
+.size main, .-main
+
+.section .text.bar,"ax",@progbits
+.globl bar
+.type bar,@function
+bar:
+  mov x0, xzr
+  ret
+.size bar, .-bar
+
+#--- script.t
+SECTIONS {
+  .text.foo : { KEEP(*(.text.foo)) }
+  .text.others : { *(.text.*) }
+}

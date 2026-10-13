@@ -1,0 +1,95 @@
+# Check that the machine outliner groups candidates by the linker script output
+# section during LTO. hot_0 and hot_1 are in different input sections but the
+# script maps both to .out_hot, so they are outlined together and the outlined
+# function is placed in that output section. cold_0 is mapped to .out_cold and
+# must not join them.
+
+# REQUIRES: riscv
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-as %t/1.ll -o %t/1.o
+# RUN: llvm-mc -filetype=obj -triple=riscv32 %t/2.s -o %t/2.o
+# RUN: ld.lld -m elf32lriscv --lto-linker-scripts -e main \
+# RUN:   -mllvm -enable-machine-outliner=always \
+# RUN:   -T %t/script.t %t/1.o %t/2.o -o %t/out
+# RUN: llvm-readelf -S -s -W %t/out | FileCheck %s
+
+# A single outlined function is created for the two candidates that share the
+# .out_hot output section, and it is placed in that section.
+# CHECK: [ [[HOT:[0-9]+]]] .out_hot PROGBITS
+# CHECK: [ [[COLD:[0-9]+]]] .out_cold PROGBITS
+
+# CHECK-DAG: FUNC LOCAL DEFAULT [[HOT]] OUTLINED_FUNCTION_0
+# CHECK-DAG: FUNC GLOBAL DEFAULT [[HOT]] hot_0
+# CHECK-DAG: FUNC GLOBAL DEFAULT [[HOT]] hot_1
+
+# The candidate mapped to a different output section is not grouped with them,
+# so no second outlined function exists.
+# CHECK-DAG: FUNC GLOBAL DEFAULT [[COLD]] cold_0
+# CHECK-NOT: OUTLINED_FUNCTION_1
+
+#--- 1.ll
+target datalayout = "e-m:e-p:32:32-i64:64-n32-S128"
+target triple = "riscv32-unknown-linux-gnu"
+
+define i32 @hot_0(i32 %a, i32 %b) noinline nounwind section ".text.hot_0" {
+  %a0 = xor i32 %a, %b
+  %b0 = add i32 %b, %a0
+  %a1 = shl i32 %a0, 3
+  %a2 = lshr i32 %a0, 29
+  %a3 = or i32 %a1, %a2
+  %a4 = xor i32 %a3, %b0
+  %result = add i32 %a4, 1
+  ret i32 %result
+}
+
+define i32 @hot_1(i32 %a, i32 %b) noinline nounwind section ".text.hot_1" {
+  %a0 = xor i32 %a, %b
+  %b0 = add i32 %b, %a0
+  %a1 = shl i32 %a0, 3
+  %a2 = lshr i32 %a0, 29
+  %a3 = or i32 %a1, %a2
+  %a4 = xor i32 %a3, %b0
+  %result = add i32 %a4, 2
+  ret i32 %result
+}
+
+define i32 @cold_0(i32 %a, i32 %b) noinline nounwind section ".text.cold_0" {
+  %a0 = xor i32 %a, %b
+  %b0 = add i32 %b, %a0
+  %a1 = shl i32 %a0, 3
+  %a2 = lshr i32 %a0, 29
+  %a3 = or i32 %a1, %a2
+  %a4 = xor i32 %a3, %b0
+  %result = add i32 %a4, 3
+  ret i32 %result
+}
+
+#--- 2.s
+.text
+.globl main
+.type main,@function
+main:
+  addi sp, sp, -16
+  sw ra, 12(sp)
+  li a0, 1
+  li a1, 2
+  call hot_0
+  li a0, 1
+  li a1, 2
+  call hot_1
+  li a0, 1
+  li a1, 2
+  call cold_0
+  li a0, 0
+  lw ra, 12(sp)
+  addi sp, sp, 16
+  ret
+.size main, .-main
+
+#--- script.t
+SECTIONS {
+  . = 0x10000;
+  .out_hot  : { *(.text.hot_*) }
+  .out_cold : { *(.text.cold_*) }
+  .text     : { *(.text*) }
+}
