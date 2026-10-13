@@ -240,9 +240,6 @@ protected:
                                 const MachineInstr *MI);
 
   /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
-  /// SU.
-  unsigned getHWUICyclesForSU(SUnit *SU);
-  /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
   /// MI.
   unsigned getHWUICyclesForMI(MachineInstr *MI);
 

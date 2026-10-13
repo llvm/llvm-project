@@ -206,11 +206,15 @@ SymIndexId SymbolCache::findSymbolByTypeIndex(codeview::TypeIndex Index) const {
                                                            std::move(CVT));
     break;
   case codeview::LF_CLASS:
+  case codeview::LF_CLASS2:
   case codeview::LF_STRUCTURE:
+  case codeview::LF_STRUCTURE2:
   case codeview::LF_INTERFACE:
+  case codeview::LF_INTERFACE2:
     Id = createSymbolForType<NativeTypeUDT, ClassRecord>(Index, std::move(CVT));
     break;
   case codeview::LF_UNION:
+  case codeview::LF_UNION2:
     Id = createSymbolForType<NativeTypeUDT, UnionRecord>(Index, std::move(CVT));
     break;
   case codeview::LF_POINTER:
