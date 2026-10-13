@@ -107,6 +107,13 @@ struct OptimizeAllocationLiveness
 public:
   OptimizeAllocationLiveness() = default;
 
+  /// When moving a dealloc operation to be closer to its companion alloc we
+  /// have to consider the following. The dealloc should be:
+  /// - After all the operand definitions that the dealloc uses
+  /// - Before any of ops that consume the results produced by the dealloc
+  /// To do this we first ensure the "target" position is after all the operands
+  /// Then we ensure this target dominates all consumers of deallocs results. If
+  /// not no valid position exists and return nullptr.
   static Operation *findValidInsertionPoint(DominanceInfo *domInfo,
                                             Operation *allocOp,
                                             Operation *deallocOp,
@@ -114,6 +121,12 @@ public:
 
     auto *target = lastUser;
 
+    // Start at the last user of the buffer, then move later if an operand of
+    // the dealloc is defined after it. E.g. target starts at %x but moves to
+    // %w:
+    //   %x = memref.load %a[%c0]                          // lastUser
+    //   %w = gpu.wait async [%d]                          // target
+    //   %done = gpu.dealloc async [%w] %a : memref<8xf32> // deallocOp
     for (Value operand : deallocOp->getOperands()) {
       auto *definingOp = operand.getDefiningOp();
       if (!definingOp)
@@ -126,6 +139,14 @@ public:
     if (!target)
       target = allocOp;
 
+    // Ensure target dominates all result users. Here the realloc is the
+    // deallocOp since it frees %a, and it also produces %b. The first loop
+    // leaves target at the memref.dealloc (the last user of the aliased
+    // buffer), but that op uses %b, so placing the realloc after it is invalid:
+    //   %a = memref.alloc() : memref<8xf32>
+    //   %b = memref.realloc %a : memref<8xf32> to memref<16xf32> // deallocOp
+    //   memref.dealloc %b : memref<16xf32>                       // target
+    // nullptr is returned as a result.
     for (Value result : deallocOp->getResults()) {
       for (Operation *user : result.getUsers()) {
         if (user == target ||
