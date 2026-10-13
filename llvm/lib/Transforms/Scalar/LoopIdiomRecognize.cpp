@@ -3318,8 +3318,7 @@ static bool isRightShiftBitTestKnownToTerminate(Value *X, Value *BitPos,
   if (ZeroSuccessor != Preheader)
     return false;
 
-  APInt LowBits = APInt::getLowBitsSet(Bitwidth, Pos->getZExtValue());
-  return (*Mask & LowBits) == LowBits;
+  return Mask->countr_one() >= Pos->getZExtValue();
 }
 
 /// Look for the following loop:
