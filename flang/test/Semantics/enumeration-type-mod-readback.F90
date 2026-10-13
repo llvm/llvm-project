@@ -1,9 +1,9 @@
 !RUN: rm -rf %t && mkdir -p %t
-!RUN: %flang_fc1 -fenumeration-type -fsyntax-only -DSTEP=1 -J%t %s
-!RUN: %flang_fc1 -fenumeration-type -fsyntax-only -DSTEP=2 -J%t %s
-!RUN: not %flang_fc1 -fenumeration-type -fsyntax-only -DSTEP=3 -J%t %s 2>&1 | FileCheck --check-prefix=CHECK-PRIVTYPE %s
-!RUN: not %flang_fc1 -fenumeration-type -fsyntax-only -DSTEP=4 -J%t %s 2>&1 | FileCheck --check-prefix=CHECK-LEAK %s
-!RUN: %flang_fc1 -fenumeration-type -fsyntax-only -DSTEP=5 -J%t %s
+!RUN: %flang_fc1 -fsyntax-only -DSTEP=1 -J%t %s
+!RUN: %flang_fc1 -fsyntax-only -DSTEP=2 -J%t %s
+!RUN: not %flang_fc1 -fsyntax-only -DSTEP=3 -J%t %s 2>&1 | FileCheck --check-prefix=CHECK-PRIVTYPE %s
+!RUN: not %flang_fc1 -fsyntax-only -DSTEP=4 -J%t %s 2>&1 | FileCheck --check-prefix=CHECK-LEAK %s
+!RUN: %flang_fc1 -fsyntax-only -DSTEP=5 -J%t %s
 
 ! Enumerator accessibility must survive being written to a module file and read
 ! back: each using unit below is compiled in a SEPARATE invocation that reloads

@@ -1,9 +1,9 @@
 ! Test lowering of enumeration types to HLFIR.
 ! An enumeration type lowers to a record type with a single i32 component,
 ! __ordinal, holding the 1-based ordinal of the enumerator.
-! RUN: %flang_fc1 -fenumeration-type -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -fenumeration-type -emit-fir %s -o /dev/null
-! RUN: %flang_fc1 -fenumeration-type -emit-fir -mmlir -strict-fir-volatile-verifier %s -o /dev/null
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir %s -o /dev/null
+! RUN: %flang_fc1 -emit-fir -mmlir -strict-fir-volatile-verifier %s -o /dev/null
 
 module enum_mod
   enumeration type :: color
