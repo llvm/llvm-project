@@ -238,7 +238,12 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   auto ubInt = getConstantIntValue(forOp.getUpperBound());
   auto stepInt = getConstantIntValue(forOp.getStep());
 
-  // Peeling is not needed if there is one or less iteration.
+  // Peeling is not needed if there is at most one iteration. 
+  // Per the scf.for semantics, the trip count is
+  // max(0, ceil((UB - LB) / Step)), so for a positive step there is more than
+  // one iteration exactly when UB - LB > Step. 
+  // Compare the integers directly: going through float is lossy and wrongly skipped
+  // peeling of loops with two iterations.
   if (lbInt && ubInt && stepInt && *ubInt - *lbInt <= *stepInt)
     return failure();
 
