@@ -196,15 +196,13 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // LLVM:   store %struct.HasMember poison, ptr %[[M2_ALLOCA]]
   // LLVM:   %[[CALL_RES:.*]] = call i8 @_ZNK9HasMemberssERKS_(ptr {{.*}}%[[M1_ALLOCA]], ptr {{.*}}%[[M2_ALLOCA]])
   // LLVM:   store i8 %[[CALL_RES]], ptr %[[RETVAL]]
-  // LLVM:   %[[RETVAL_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[RETVAL]]
-  // LLVM:   store %"class.std::__1::strong_ordering" %[[RETVAL_LOAD]], ptr %[[G_ALLOCA]]
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[G_ALLOCA]], ptr align 1 %[[RETVAL]], i64 1, i1 false)
   // LLVM:   ret void
   // LLVM: }
 
   // LLVM: define {{.*}} i8 @_ZNK9HasMemberssERKS_(ptr {{.*}}, ptr {{.*}})
   // LLVM:   %[[CMP_COPY:.*]] = alloca %"class.std::__1::strong_ordering"
   // LLVM:   %[[CMP_TEMP:.*]] = alloca %"class.std::__1::strong_ordering"
-  // LLVM:   %[[VALUE_SLOT:.*]] = alloca %"class.std::__1::strong_ordering"
   // LLVM:   %[[LHS_ALLOCA:.*]] = alloca ptr
   // LLVM:   %[[RHS_ALLOCA:.*]] = alloca ptr
   // LLVM:   %[[RESULT_SLOT:.*]] = alloca %"class.std::__1::strong_ordering"
@@ -243,10 +241,8 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // LLVM: [[COPY_BLOCK]]:
   // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[CMP_COPY]], ptr align 1 %[[CMP_RES]], i64 1, i1 false)
   // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[CMP_TEMP]], ptr align 1 %[[CMP_COPY]], i64 1, i1 false)
-  // LLVM:   %[[CMP_TEMP_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[CMP_TEMP]]
-  // LLVM:   store %"class.std::__1::strong_ordering" %[[CMP_TEMP_LOAD]], ptr %[[VALUE_SLOT]]
-  // LLVM:   %[[CMP_I8:.*]] = load i8, ptr %[[VALUE_SLOT]]
-  // LLVM:   %[[SO_NE_RES:.*]] = call noundef zeroext i1 @_ZNSt3__1neENS_15strong_orderingEMNS_19_CmpUnspecifiedTypeEFvvE(i8 %[[CMP_I8]], i64 0, i64 0)
+  // LLVM-NEXT:   %[[CMP_I8:.*]] = load i8, ptr %[[CMP_TEMP]], align 1
+  // LLVM-NEXT:   %[[SO_NE_RES:.*]] = call noundef zeroext i1 @_ZNSt3__1neENS_15strong_orderingEMNS_19_CmpUnspecifiedTypeEFvvE(i8 %[[CMP_I8]], i64 0, i64 0)
   // LLVM:   br i1 %[[SO_NE_RES]], label %[[SO_NE_RES_TRUE:.*]], label %[[SO_NE_RES_FALSE:.*]]
   //
   // LLVM: [[SO_NE_RES_TRUE]]:
