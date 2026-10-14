@@ -512,13 +512,7 @@ static StringRef getContainerSemanticName(const SemanticSignatureElement &E) {
 static void buildSignature(mcdxbc::Signature &Sig,
                            ArrayRef<SemanticSignatureElement> Elements,
                            bool Input, bool Native16, bool Legacy) {
-  SmallDenseMap<dxbc::PSV::SemanticKind, uint32_t, 8> SystemNameIDs;
   for (const auto &E : Elements) {
-    // Legacy serialization shares canonical system names across elements, but
-    // arbitrary elements retain their own name entry even for equal strings.
-    uint32_t NameID = E.SigId;
-    if (E.SemanticKind != dxbc::PSV::SemanticKind::Arbitrary)
-      NameID = SystemNameIDs.try_emplace(E.SemanticKind, E.SigId).first->second;
     uint8_t Mask = E.getDeclaredMask();
     uint8_t ExclusiveMask =
         Input ? E.getAlwaysReadsMask() : E.getNeverWritesMask();
