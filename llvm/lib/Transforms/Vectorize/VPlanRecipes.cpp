@@ -584,6 +584,10 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     llvm_unreachable("type must be passed explicitly");
   case Instruction::Call:
     return getCalledFunction(Operands)->getReturnType();
+  case VPInstruction::BuildVector:
+    assert(VectorType::isValidElementType(Op0Ty) &&
+           "BuildVector operands must be valid vector elements");
+    break;
   default:
     if (Instruction::isCast(Opcode))
       llvm_unreachable("type must be passed explicitly");
@@ -596,7 +600,6 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
       Instruction::isBinaryOp(Opcode) ||
       is_contained({VPInstruction::FirstOrderRecurrenceSplice,
                     VPInstruction::BuildVector,
-                    VPInstruction::BuildStructVector,
                     VPInstruction::ConcatVectors},
                    Opcode);
   if (AllOperandsSameType)
@@ -696,7 +699,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::ExtractValue:
   case Instruction::Fence:
   case VPInstruction::AnyOf:
-  case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
   case VPInstruction::Intrinsic:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -935,32 +937,11 @@ Value *VPInstruction::generate(VPTransformState &State,
         State.VF, State.get(getOperand(0), /*NeedsSingleScalar=*/true),
         "broadcast");
   }
-  case VPInstruction::BuildStructVector: {
-    assert(!GenerateSingleScalar &&
-           "Cannot generate scalar value for BuildStructVector");
-    // For struct types, we need to build a new 'wide' struct type, where each
-    // element is widened, i.e., we create a struct of vectors.
-    auto *StructTy = cast<StructType>(getOperand(0)->getScalarType());
-    Value *Res = PoisonValue::get(toVectorizedTy(StructTy, State.VF));
-    for (const auto &[LaneIndex, Op] : enumerate(operands())) {
-      for (unsigned FieldIndex = 0; FieldIndex != StructTy->getNumElements();
-           FieldIndex++) {
-        Value *ScalarValue =
-            Builder.CreateExtractValue(State.get(Op, true), FieldIndex);
-        Value *VectorValue = Builder.CreateExtractValue(Res, FieldIndex);
-        VectorValue =
-            Builder.CreateInsertElement(VectorValue, ScalarValue, LaneIndex);
-        Res = Builder.CreateInsertValue(Res, VectorValue, FieldIndex);
-      }
-    }
-    return Res;
-  }
   case VPInstruction::BuildVector: {
     assert(!GenerateSingleScalar &&
            "Cannot generate scalar value for BuildVector");
-    auto *ScalarTy = getOperand(0)->getScalarType();
-    auto NumOfElements = ElementCount::getFixed(getNumOperands());
-    Value *Res = PoisonValue::get(toVectorizedTy(ScalarTy, NumOfElements));
+    Value *Res = PoisonValue::get(
+        FixedVectorType::get(getScalarType(), getNumOperands()));
     for (const auto &[Idx, Op] : enumerate(operands()))
       Res = Builder.CreateInsertElement(Res, State.get(Op, true),
                                         Builder.getInt64(Idx));
@@ -1690,7 +1671,6 @@ void VPInstruction::addOperand(VPValue *Op) {
     break;
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::BuildVector:
-  case VPInstruction::BuildStructVector:
   case VPInstruction::ConcatVectors:
     assert(Ty == getOperand(0)->getScalarType() &&
            "appended operand must match operand 0's scalar type");
@@ -1733,8 +1713,7 @@ void VPInstruction::execute(VPTransformState &State) {
   if (!hasResult())
     return;
   assert(GeneratedValue && "generate must produce a value");
-  assert(((GeneratedValue->getType()->isVectorTy() ||
-           GeneratedValue->getType()->isStructTy()) == !GenerateSingleScalar) &&
+  assert(GeneratedValue->getType()->isVectorTy() == !GenerateSingleScalar &&
          "scalar value but not only first lane defined");
   State.set(this, GeneratedValue, GenerateSingleScalar);
   if (getOpcode() == VPInstruction::ResumeForEpilogue ||
@@ -1767,7 +1746,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case VPInstruction::Broadcast:
-  case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
   case VPInstruction::ConcatVectors:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -1827,6 +1805,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return Op == getOperand(0);
   case Instruction::PHI:
     return true;
+  case Instruction::ExtractValue:
   case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Select:
@@ -1848,7 +1827,6 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::WideVectorLoad:
-  case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
     return true;
   case VPInstruction::PtrAdd:
@@ -1943,9 +1921,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::Broadcast:
     O << "broadcast";
-    break;
-  case VPInstruction::BuildStructVector:
-    O << "buildstructvector";
     break;
   case VPInstruction::BuildVector:
     O << "buildvector";

@@ -120,6 +120,12 @@ if(CLANG_ENABLE_AMDCLANG)
     )
 endif()
 
+if(NOT WIN32)
+  list(APPEND CLANG_TEST_DEPS
+    clang-ssaf-orchestrator-make
+    )
+endif()
+
 if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
