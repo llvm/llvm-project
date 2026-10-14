@@ -46,3 +46,7 @@
 	.arch armv9-a+ls64+lsc64b
 	lda64b x0, [x13]
 # CHECK:        lda64b x0, [x13]
+
+	.arch armv9-a+fpv2
+	fcmtl s31, s0
+# CHECK:        fcmtl s31, s0
