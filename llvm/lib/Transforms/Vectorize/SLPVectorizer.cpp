@@ -13368,7 +13368,12 @@ bool BoUpSLP::collectGatherUserOps(
     if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
         TransformedToGatherNodes.contains(UserTE))
       return false;
-    UserOps.emplace_back(UserTE->getOpcode(), TE->UserTreeIndex.EdgeIdx);
+
+    Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
+    if (auto *II = dyn_cast<IntrinsicInst>(UserTE->getMainOp()))
+      IntrinsicID = II->getIntrinsicID();
+    UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID,
+                         TE->UserTreeIndex.EdgeIdx);
   }
   return !UserOps.empty();
 }
@@ -29450,7 +29455,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
                                 LoopInfo *LI_, DominatorTree *DT_,
                                 AssumptionCache *AC_, DemandedBits *DB_,
                                 OptimizationRemarkEmitter *ORE_) {
-  Opts = &VectorizeOptions::Global;
+  Opts = &F.getContext().getLibraryOptions().get<VectorizeOptions>();
   if (!Opts->vectorize_slp)
     return false;
   SE = SE_;
@@ -36578,7 +36583,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
     // The values, feeding only the assumes, and the instructions, producing no
     // code, are dropped before the codegen, the tree is rejected for them
     // anyway.
-    if (isAssumeLikeIntrinsic(&*It) || It->isDebugOrPseudoInst() ||
+    if (isAssumeLikeIntrinsic(&*It) || isa<PseudoProbeInst>(It) ||
         R.isEphemeralValue(&*It))
       continue;
 
@@ -37000,15 +37005,13 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
   stable_sort(Groups, [](const auto *A, const auto *B) {
     return A->second.size() > B->second.size();
   });
-  for (auto &Pair :
-       make_filter_range(make_pointee_range(Groups),
-                         [](auto &Pair) { return Pair.second.size() >= 2; })) {
+  auto TryToVectorizeGroup = [&](StoreListMap::value_type &Pair) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length "
                       << Pair.second.size() << ".\n");
 
     if (!isValidElementType(Pair.second.front()->getValueOperand()->getType(),
                             Opts->slp_revec))
-      continue;
+      return false;
 
     // Masked stores are only attempted when no consecutive pair exists in the
     // full base-object group.
@@ -37021,12 +37024,29 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     // to follow the stores order (reversed to meet the memory dependecies).
     SmallVector<StoreInst *> ReversedStores(Pair.second.rbegin(),
                                             Pair.second.rend());
-    Changed |= tryToVectorizeSequence<StoreInst>(
+    return tryToVectorizeSequence<StoreInst>(
         *Opts, ReversedStores, StoreSorter, AreCompatibleStores,
         [&](ArrayRef<StoreInst *> Candidates, bool) {
           return vectorizeStores(Candidates, R, Attempted, AllowMaskedStores);
         },
         /*MaxVFOnly=*/false, R);
+  };
+  // The groups, rejected before the vectorized one, were analyzed for the
+  // original scalars and may become profitable now, so they are retried once.
+  SmallVector<StoreListMap::value_type *> Rejected;
+  unsigned NumToRetry = 0;
+  for (auto &Pair :
+       make_filter_range(make_pointee_range(Groups),
+                         [](auto &Pair) { return Pair.second.size() >= 2; })) {
+    if (TryToVectorizeGroup(Pair)) {
+      Changed = true;
+      NumToRetry = Rejected.size();
+    } else {
+      Rejected.push_back(&Pair);
+    }
   }
+  Attempted.clear();
+  for (auto *Pair : ArrayRef(Rejected).take_front(NumToRetry))
+    Changed |= TryToVectorizeGroup(*Pair);
   return Changed;
 }

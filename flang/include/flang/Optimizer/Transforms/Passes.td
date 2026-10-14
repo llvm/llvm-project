@@ -263,7 +263,12 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "Command-line flags to append to DWARF producer">,
     Option<"emitFakeUseForDebugVars", "emit-fake-use-for-debug-vars",
            "bool", /*default=*/"false",
-           "Emit fake use for debug variables to extend their lifetime">
+           "Emit fake use for debug variables to extend their lifetime">,
+    Option<"boundsInStackSlots", "bounds-in-stack-slots",
+           "bool", /*default=*/"false",
+           "Keep the bounds and length parameters of a variable in stack "
+           "slots, so that they can be described wherever the variable is "
+           "visible">
   ];
 }
 
@@ -664,10 +669,15 @@ def CUFSharedTypeInfo : Pass<"cuf-shared-type-info", "mlir::ModuleOp"> {
     descriptor address from them in device code. The `acc.declare` attribute
     is dropped so OpenACC does not copy the type information to the device.
 
+    Each translation unit defining such type information also ends the
+    section with a page-aligned global, so that the registered pages hold
+    nothing but type information.
+
     Device code then sees the host binding tables, so type-bound procedures
     cannot be called from device code.
   }];
-  let dependentDialects = ["mlir::gpu::GPUDialect", "cuf::CUFDialect"];
+  let dependentDialects = ["mlir::gpu::GPUDialect", "cuf::CUFDialect",
+                           "mlir::LLVM::LLVMDialect"];
 }
 
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
