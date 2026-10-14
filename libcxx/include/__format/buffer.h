@@ -57,19 +57,20 @@ namespace __format {
 // A helper to limit the total size of code units written.
 class _LIBCPP_HIDE_FROM_ABI __max_output_size {
 public:
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __max_output_size(size_t __max_size) : __max_size_{__max_size} {}
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr explicit __max_output_size(size_t __max_size) : __max_size_{__max_size} {}
 
   // This function adjusts the size of a (bulk) write operations. It ensures the
   // number of code units written by a __output_buffer never exceeds
   // __max_size_ code units.
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __write_request(size_t __code_units) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr size_t __write_request(size_t __code_units) {
     size_t __result =
         __code_units_written_ < __max_size_ ? std::min(__code_units, __max_size_ - __code_units_written_) : 0;
     __code_units_written_ += __code_units;
     return __result;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __code_units_written() const noexcept { return __code_units_written_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr size_t 
+  __code_units_written() const noexcept { return __code_units_written_; }
 
 private:
   size_t __max_size_;
@@ -528,13 +529,13 @@ class __format_to_n_buffer : private __buffer_selector<_OutIt, _CharT>::type {
 public:
   using _Base _LIBCPP_NODEBUG = __buffer_selector<_OutIt, _CharT>::type;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __format_to_n_buffer(_OutIt __out_it, iter_difference_t<_OutIt> __n)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __format_to_n_buffer(_OutIt __out_it, iter_difference_t<_OutIt> __n)
       : _Base{std::move(__out_it), std::addressof(__max_output_size_)},
         __max_output_size_{__n < 0 ? size_t{0} : static_cast<size_t>(__n)} {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto __make_output_iterator() { return _Base::__make_output_iterator(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto __make_output_iterator() { return _Base::__make_output_iterator(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI format_to_n_result<_OutIt> __result() && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr format_to_n_result<_OutIt> __result() && {
     return {static_cast<_Base&&>(*this).__out_it(),
             static_cast<iter_difference_t<_OutIt>>(__max_output_size_.__code_units_written())};
   }
@@ -552,14 +553,14 @@ class __formatted_size_buffer : private __output_buffer<_CharT> {
 public:
   using _Base _LIBCPP_NODEBUG = __output_buffer<_CharT>;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __formatted_size_buffer()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __formatted_size_buffer()
       : _Base{nullptr, 0, __prepare_write, std::addressof(__max_output_size_)} {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto __make_output_iterator() { return _Base::__make_output_iterator(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto __make_output_iterator() { return _Base::__make_output_iterator(); }
 
   // This function does not need to be r-value qualified, however this is
   // consistent with similar objects.
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __result() && { return __max_output_size_.__code_units_written(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr size_t __result() && { return __max_output_size_.__code_units_written(); }
 
 private:
   __max_output_size __max_output_size_{0};
