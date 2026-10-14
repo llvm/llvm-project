@@ -16,11 +16,7 @@ extern "C" char *bar(int *);
 // CHECK-NEXT:    notail call void (...) @llvm.fake.use(ptr [[FAKE_USE]])
 // CHECK-NEXT:    [[CALL:%.*]] = musttail call ptr @bar(ptr noundef [[TMP0]])
 // CHECK-NEXT:    ret ptr [[CALL]]
-
-// CHECK:       [[BB1:.*:]]
-// CHECK-NEXT:    [[FAKE_USE1:%.*]] = load ptr, ptr [[E_ADDR]]
-// CHECK-NEXT:    notail call void (...) @llvm.fake.use(ptr [[FAKE_USE1]])
-// CHECK-NEXT:    ret ptr undef
+// CHECK-NOT:     ret ptr
 //
 extern "C" const char *foo(int *e) {
   [[clang::musttail]] return bar(e);

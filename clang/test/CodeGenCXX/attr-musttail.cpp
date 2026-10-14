@@ -7,11 +7,11 @@ int Baz(int);
 
 int Func1(int x) {
   if (x) {
-    // CHECK: %call = musttail call noundef i32 @_Z3Bari(i32 noundef %1)
+    // CHECK: %call = musttail call noundef i32 @_Z3Bari(i32 noundef %{{.*}})
     // CHECK-NEXT: ret i32 %call
     [[clang::musttail]] return Bar(x);
   } else {
-    [[clang::musttail]] return Baz(x); // CHECK: %call1 = musttail call noundef i32 @_Z3Bazi(i32 noundef %3)
+    [[clang::musttail]] return Baz(x); // CHECK: %call1 = musttail call noundef i32 @_Z3Bazi(i32 noundef %{{.*}})
   }
 }
 
