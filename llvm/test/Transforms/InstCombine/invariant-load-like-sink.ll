@@ -2,30 +2,7 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 declare void @clobber(ptr)
-
-define <4 x i32> @sink_masked_load_with_metadata(ptr %p, <4 x i1> %mask, <4 x i32> %passthru, i1 %cond) {
-; CHECK-LABEL: define <4 x i32> @sink_masked_load_with_metadata(
-; CHECK-SAME: ptr [[P:%.*]], <4 x i1> [[MASK:%.*]], <4 x i32> [[PASSTHRU:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @clobber(ptr [[P]])
-; CHECK-NEXT:    br i1 [[COND]], label %[[USE:.*]], label %[[EXIT:.*]]
-; CHECK:       [[USE]]:
-; CHECK-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[P]], <4 x i1> [[MASK]], <4 x i32> [[PASSTHRU]]), !invariant.load [[META0:![0-9]+]]
-; CHECK-NEXT:    ret <4 x i32> [[V]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret <4 x i32> [[PASSTHRU]]
-;
-entry:
-  %v = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %p, <4 x i1> %mask, <4 x i32> %passthru), !invariant.load !0
-  call void @clobber(ptr %p)
-  br i1 %cond, label %use, label %exit
-
-use:
-  ret <4 x i32> %v
-
-exit:
-  ret <4 x i32> %passthru
-}
+declare i32 @readonly_call(ptr) nounwind willreturn memory(read)
 
 define i32 @dont_sink_ordinary_readonly_call_with_metadata(ptr %p, i1 %cond) {
 ; CHECK-LABEL: define i32 @dont_sink_ordinary_readonly_call_with_metadata(
@@ -49,6 +26,30 @@ use:
 
 exit:
   ret i32 0
+}
+
+define <4 x i32> @sink_masked_load_with_metadata(ptr %p, <4 x i1> %mask, <4 x i32> %passthru, i1 %cond) {
+; CHECK-LABEL: define <4 x i32> @sink_masked_load_with_metadata(
+; CHECK-SAME: ptr [[P:%.*]], <4 x i1> [[MASK:%.*]], <4 x i32> [[PASSTHRU:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @clobber(ptr [[P]])
+; CHECK-NEXT:    br i1 [[COND]], label %[[USE:.*]], label %[[EXIT:.*]]
+; CHECK:       [[USE]]:
+; CHECK-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[P]], <4 x i1> [[MASK]], <4 x i32> [[PASSTHRU]]), !invariant.load [[META0]]
+; CHECK-NEXT:    ret <4 x i32> [[V]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret <4 x i32> [[PASSTHRU]]
+;
+entry:
+  %v = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %p, <4 x i1> %mask, <4 x i32> %passthru), !invariant.load !0
+  call void @clobber(ptr %p)
+  br i1 %cond, label %use, label %exit
+
+use:
+  ret <4 x i32> %v
+
+exit:
+  ret <4 x i32> %passthru
 }
 
 define i32 @sink_read_register_with_metadata(ptr %p, i1 %cond) {

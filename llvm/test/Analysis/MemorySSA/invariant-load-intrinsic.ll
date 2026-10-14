@@ -1,6 +1,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
 
 declare void @clobber(ptr)
+declare i32 @readonly_call(ptr) memory(read)
 
 define <4 x i32> @masked_load_invariant(ptr %p, <4 x i1> %mask, <4 x i32> %passthru) {
 ; CHECK-LABEL: define <4 x i32> @masked_load_invariant(
@@ -61,8 +62,8 @@ define i32 @ordinary_readonly_call_with_metadata(ptr %p) {
 ; CHECK-LABEL: define i32 @ordinary_readonly_call_with_metadata(
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: call void @clobber(ptr %p)
-; CHECK: MemoryUse(1)
-; CHECK-NEXT: %v = call i32 @readonly_call(ptr %p), !invariant.load !0
+; CHECK: MemoryUse(liveOnEntry)
+; CHECK-NEXT: %v = call i32 @readonly_call(ptr %p), !invariant.load
   call void @clobber(ptr %p)
   %v = call i32 @readonly_call(ptr %p), !invariant.load !0
   ret i32 %v

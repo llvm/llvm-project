@@ -88,6 +88,7 @@ exit:
 }
 
 define i32 @dont_sink_ordinary_readonly_call_with_metadata(ptr %p, i1 %cond) {
+; CHECK-LABEL: @dont_sink_ordinary_readonly_call_with_metadata(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BLOCK:%.*]], label [[END:%.*]]
 ; CHECK:       block:
@@ -151,6 +152,7 @@ end:
 }
 
 declare void @fn()
+declare i32 @readonly_call(ptr) nounwind willreturn memory(read)
 
 !0 = !{}
 !1 = !{!"reg"}

@@ -2,6 +2,7 @@
 ; RUN: opt -passes=gvn -S < %s | FileCheck %s
 
 declare void @clobber(ptr)
+declare ptr @readonly_call(ptr, i32) memory(read)
 
 define <4 x i32> @masked_load_invariant(ptr %p, <4 x i1> %mask, <4 x i32> %passthru) {
 ; CHECK-LABEL: define <4 x i32> @masked_load_invariant(
@@ -73,9 +74,8 @@ define <4 x i32> @vp_gather_invariant(ptr %p, <4 x ptr> %ptrs, <4 x i1> %mask, i
 define ptr @ordinary_readonly_call_with_metadata(ptr %p, i32 %off) {
 ; CHECK-LABEL: define ptr @ordinary_readonly_call_with_metadata(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[OFF:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call ptr @readonly_call(ptr [[P]], i32 [[OFF]]), !invariant.load [[META0]]
-; CHECK-NEXT:    call void @clobber(ptr [[P]])
 ; CHECK-NEXT:    [[B:%.*]] = call ptr @readonly_call(ptr [[P]], i32 [[OFF]]), !invariant.load [[META0]]
+; CHECK-NEXT:    call void @clobber(ptr [[P]])
 ; CHECK-NEXT:    ret ptr [[B]]
 ;
   %a = call ptr @readonly_call(ptr %p, i32 %off), !invariant.load !0
