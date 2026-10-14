@@ -2178,6 +2178,7 @@ public:
     DefaultedComparisonKind asComparison() const {
       return static_cast<DefaultedComparisonKind>(Comparison);
     }
+    
     PostfixOperatorKind asPostfixOperator() const {
       return static_cast<PostfixOperatorKind>(PostfixOperator);
     }
