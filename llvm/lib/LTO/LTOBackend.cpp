@@ -201,17 +201,17 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 
 // Obtain dynamic pass-plugins in registration order: the ones requested by file
 // name followed by those pre-loaded in the host application
-static SmallVector<PassPlugin *, 2>
-getPassPlugins(const Config &Conf, SmallVectorImpl<PassPlugin> &Storage) {
+static SmallVector<PassPluginLibraryInfo, 0>
+getPassPlugins(const Config &Conf) {
+  SmallVector<PassPluginLibraryInfo, 0> Plugins;
   for (const std::string &PluginFN : Conf.PassPluginFilenames) {
     Expected<PassPlugin> Plugin = PassPlugin::load(PluginFN);
     if (!Plugin)
       reportFatalUsageError(Plugin.takeError());
-    Storage.push_back(std::move(*Plugin));
+    Plugins.push_back(Plugin->getInfo());
   }
-
-  SmallVector<PassPlugin *, 2> Plugins(make_pointer_range(Storage));
-  append_range(Plugins, Conf.LoadedPassPlugins);
+  for (const PassPlugin *Plugin : Conf.LoadedPassPlugins)
+    Plugins.push_back(Plugin->getInfo());
   return Plugins;
 }
 
@@ -224,9 +224,9 @@ static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
 #undef HANDLE_EXTENSION
 
   // Dynamic plugins
-  SmallVector<PassPlugin, 2> Storage;
-  for (const PassPlugin *Plugin : getPassPlugins(Conf, Storage))
-    Plugin->registerPassBuilderCallbacks(PB);
+  for (const PassPluginLibraryInfo &Plugin : getPassPlugins(Conf))
+    if (Plugin.RegisterPassBuilderCallbacks)
+      Plugin.RegisterPassBuilderCallbacks(PB);
 }
 
 static std::unique_ptr<TargetMachine>
@@ -491,10 +491,9 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
   // Allow plugins to handle or even take over code generation entirely.
-  SmallVector<PassPlugin, 2> PluginStorage;
-  for (PassPlugin *Plugin : getPassPlugins(Conf, PluginStorage)) {
-    if (Plugin->invokePreCodeGenCallback(Mod, *TM, Conf.CGFileType,
-                                         *Stream->OS)) {
+  for (const PassPluginLibraryInfo &Plugin : getPassPlugins(Conf)) {
+    if (Plugin.PreCodeGenCallback &&
+        Plugin.PreCodeGenCallback(Mod, *TM, Conf.CGFileType, *Stream->OS)) {
       if (Error Err = Stream->commit())
         reportFatalUsageError(std::move(Err));
       return;
