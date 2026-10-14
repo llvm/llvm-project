@@ -7,13 +7,13 @@ define void @test(double %a, double %b, ptr %out0, ptr %out1, ptr %in) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[V:%.*]] = load double, ptr [[IN]], align 8
-; CHECK-NEXT:    [[T0:%.*]] = fmul double [[V]], 0.000000e+00
-; CHECK-NEXT:    [[T1:%.*]] = fmul double [[T0]], 0.000000e+00
 ; CHECK-NEXT:    [[T2:%.*]] = fadd double [[A]], 0.000000e+00
 ; CHECK-NEXT:    [[T3:%.*]] = fmul double [[T2]], 0.000000e+00
 ; CHECK-NEXT:    [[T4:%.*]] = fmul double [[T3]], 0.000000e+00
 ; CHECK-NEXT:    [[T5:%.*]] = fsub double 0.000000e+00, [[T4]]
+; CHECK-NEXT:    [[V:%.*]] = load double, ptr [[IN]], align 8
+; CHECK-NEXT:    [[T0:%.*]] = fmul double [[V]], 0.000000e+00
+; CHECK-NEXT:    [[T1:%.*]] = fmul double [[T0]], 0.000000e+00
 ; CHECK-NEXT:    [[M2:%.*]] = fmul double 1.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double poison>, double [[M2]], i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[V]], i64 3
