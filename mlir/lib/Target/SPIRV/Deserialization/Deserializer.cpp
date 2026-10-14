@@ -1920,7 +1920,6 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
            << operands[0];
   }
 
-  // An empty struct has no constituents.
   auto structType = dyn_cast<spirv::StructType>(resultType);
   if (operands.size() < 3 &&
       (!structType || structType.getNumElements() != 0)) {
@@ -1933,9 +1932,7 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   for (unsigned i = 2, e = operands.size(); i < e; ++i) {
     auto elementInfo = getConstant(operands[i]);
     if (!elementInfo) {
-      // An OpUndef constituent is valid SPIR-V, but `spirv.Constant` has no
-      // attribute for an undefined value. Reject it instead of replacing it
-      // with some defined value.
+      // spirv.Constant cannot represent undefined constituents.
       if (getUndefType(operands[i])) {
         return emitError(unknownLoc, "OpConstantComposite component <id> ")
                << operands[i]
