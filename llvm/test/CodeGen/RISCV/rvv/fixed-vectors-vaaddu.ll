@@ -12,7 +12,7 @@ define <8 x i8> @vaaddu_vv_v8i8_floor(<8 x i8> %x, <8 x i8> %y) {
   %xzv = zext <8 x i8> %x to <8 x i16>
   %yzv = zext <8 x i8> %y to <8 x i16>
   %add = add nuw nsw <8 x i16> %xzv, %yzv
-  %div = lshr <8 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %div = lshr <8 x i16> %add, splat (i16 1)
   %ret = trunc <8 x i16> %div to <8 x i8>
   ret <8 x i8> %ret
 }
@@ -45,7 +45,7 @@ define <8 x i8> @vaaddu_vv_v8i8_floor_zexti32(<8 x i8> %x, <8 x i8> %y) {
   %xzv = zext <8 x i8> %x to <8 x i32>
   %yzv = zext <8 x i8> %y to <8 x i32>
   %add = add nuw nsw <8 x i32> %xzv, %yzv
-  %div = lshr <8 x i32> %add, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %div = lshr <8 x i32> %add, splat (i32 1)
   %ret = trunc <8 x i32> %div to <8 x i8>
   ret <8 x i8> %ret
 }
@@ -60,7 +60,7 @@ define <8 x i8> @vaaddu_vv_v8i8_floor_lshr2(<8 x i8> %x, <8 x i8> %y) {
   %xzv = zext <8 x i8> %x to <8 x i16>
   %yzv = zext <8 x i8> %y to <8 x i16>
   %add = add nuw nsw <8 x i16> %xzv, %yzv
-  %div = lshr <8 x i16> %add, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %div = lshr <8 x i16> %add, splat (i16 2)
   %ret = trunc <8 x i16> %div to <8 x i8>
   ret <8 x i8> %ret
 }
@@ -75,7 +75,7 @@ define <8 x i16> @vaaddu_vv_v8i16_floor(<8 x i16> %x, <8 x i16> %y) {
   %xzv = zext <8 x i16> %x to <8 x i32>
   %yzv = zext <8 x i16> %y to <8 x i32>
   %add = add nuw nsw <8 x i32> %xzv, %yzv
-  %div = lshr <8 x i32> %add, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %div = lshr <8 x i32> %add, splat (i32 1)
   %ret = trunc <8 x i32> %div to <8 x i16>
   ret <8 x i16> %ret
 }
@@ -107,7 +107,7 @@ define <8 x i32> @vaaddu_vv_v8i32_floor(<8 x i32> %x, <8 x i32> %y) {
   %xzv = zext <8 x i32> %x to <8 x i64>
   %yzv = zext <8 x i32> %y to <8 x i64>
   %add = add nuw nsw <8 x i64> %xzv, %yzv
-  %div = lshr <8 x i64> %add, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
+  %div = lshr <8 x i64> %add, splat (i64 1)
   %ret = trunc <8 x i64> %div to <8 x i32>
   ret <8 x i32> %ret
 }
@@ -139,7 +139,7 @@ define <8 x i64> @vaaddu_vv_v8i64_floor(<8 x i64> %x, <8 x i64> %y) {
   %xzv = zext <8 x i64> %x to <8 x i128>
   %yzv = zext <8 x i64> %y to <8 x i128>
   %add = add nuw nsw <8 x i128> %xzv, %yzv
-  %div = lshr <8 x i128> %add, <i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1>
+  %div = lshr <8 x i128> %add, splat (i128 1)
   %ret = trunc <8 x i128> %div to <8 x i64>
   ret <8 x i64> %ret
 }
@@ -160,7 +160,7 @@ define <8 x i1> @vaaddu_vv_v8i1_floor(<8 x i1> %x, <8 x i1> %y) {
   %xzv = zext <8 x i1> %x to <8 x i8>
   %yzv = zext <8 x i1> %y to <8 x i8>
   %add = add nuw nsw <8 x i8> %xzv, %yzv
-  %div = lshr <8 x i8> %add, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %div = lshr <8 x i8> %add, splat (i8 1)
   %ret = trunc <8 x i8> %div to <8 x i1>
   ret <8 x i1> %ret
 }
@@ -230,7 +230,7 @@ define <8 x i8> @vaaddu_vx_ceil_splat_scalar(<8 x i8> %x, i8 %y) {
   %yhead = insertelement <8 x i16> poison, i16 %c, i32 0
   %yzv = shufflevector <8 x i16> %yhead, <8 x i16> poison, <8 x i32> zeroinitializer
   %add = add nuw nsw <8 x i16> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %add1 = add nuw nsw <8 x i16> %add, splat (i16 1)
   %div = lshr <8 x i16> %add1, splat (i16 1)
   %ret = trunc <8 x i16> %div to <8 x i8>
   ret <8 x i8> %ret
@@ -246,8 +246,8 @@ define <8 x i8> @vaaddu_vv_v8i8_ceil(<8 x i8> %x, <8 x i8> %y) {
   %xzv = zext <8 x i8> %x to <8 x i16>
   %yzv = zext <8 x i8> %y to <8 x i16>
   %add = add nuw nsw <8 x i16> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
-  %div = lshr <8 x i16> %add1, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %add1 = add nuw nsw <8 x i16> %add, splat (i16 1)
+  %div = lshr <8 x i16> %add1, splat (i16 1)
   %ret = trunc <8 x i16> %div to <8 x i8>
   ret <8 x i8> %ret
 }
@@ -264,7 +264,7 @@ define <8 x i8> @vaaddu_vx_v8i8_ceil(<8 x i8> %x, i8 %y) {
   %ysplat = shufflevector <8 x i8> %yhead, <8 x i8> poison, <8 x i32> zeroinitializer
   %yzv = zext <8 x i8> %ysplat to <8 x i16>
   %add = add nuw nsw <8 x i16> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %add1 = add nuw nsw <8 x i16> %add, splat (i16 1)
   %div = lshr <8 x i16> %add1, splat (i16 1)
   %ret = trunc <8 x i16> %div to <8 x i8>
   ret <8 x i8> %ret
@@ -280,8 +280,8 @@ define <8 x i8> @vaaddu_vv_v8i8_ceil_zexti32(<8 x i8> %x, <8 x i8> %y) {
   %xzv = zext <8 x i8> %x to <8 x i32>
   %yzv = zext <8 x i8> %y to <8 x i32>
   %add = add nuw nsw <8 x i32> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i32> %add, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %div = lshr <8 x i32> %add1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %add1 = add nuw nsw <8 x i32> %add, splat (i32 1)
+  %div = lshr <8 x i32> %add1, splat (i32 1)
   %ret = trunc <8 x i32> %div to <8 x i8>
   ret <8 x i8> %ret
 }
@@ -299,8 +299,8 @@ define <8 x i8> @vaaddu_vv_v8i8_ceil_lshr2(<8 x i8> %x, <8 x i8> %y) {
   %xzv = zext <8 x i8> %x to <8 x i16>
   %yzv = zext <8 x i8> %y to <8 x i16>
   %add = add nuw nsw <8 x i16> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i16> %add, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
-  %div = lshr <8 x i16> %add1, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %add1 = add nuw nsw <8 x i16> %add, splat (i16 2)
+  %div = lshr <8 x i16> %add1, splat (i16 2)
   %ret = trunc <8 x i16> %div to <8 x i8>
   ret <8 x i8> %ret
 }
@@ -320,8 +320,8 @@ define <8 x i8> @vaaddu_vv_v8i8_ceil_add2(<8 x i8> %x, <8 x i8> %y) {
   %xzv = zext <8 x i8> %x to <8 x i16>
   %yzv = zext <8 x i8> %y to <8 x i16>
   %add = add nuw nsw <8 x i16> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i16> %add, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
-  %div = lshr <8 x i16> %add1, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %add1 = add nuw nsw <8 x i16> %add, splat (i16 2)
+  %div = lshr <8 x i16> %add1, splat (i16 1)
   %ret = trunc <8 x i16> %div to <8 x i8>
   ret <8 x i8> %ret
 }
@@ -336,8 +336,8 @@ define <8 x i16> @vaaddu_vv_v8i16_ceil(<8 x i16> %x, <8 x i16> %y) {
   %xzv = zext <8 x i16> %x to <8 x i32>
   %yzv = zext <8 x i16> %y to <8 x i32>
   %add = add nuw nsw <8 x i32> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i32> %add, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %div = lshr <8 x i32> %add1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %add1 = add nuw nsw <8 x i32> %add, splat (i32 1)
+  %div = lshr <8 x i32> %add1, splat (i32 1)
   %ret = trunc <8 x i32> %div to <8 x i16>
   ret <8 x i16> %ret
 }
@@ -354,7 +354,7 @@ define <8 x i16> @vaaddu_vx_v8i16_ceil(<8 x i16> %x, i16 %y) {
   %ysplat = shufflevector <8 x i16> %yhead, <8 x i16> poison, <8 x i32> zeroinitializer
   %yzv = zext <8 x i16> %ysplat to <8 x i32>
   %add = add nuw nsw <8 x i32> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i32> %add, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %add1 = add nuw nsw <8 x i32> %add, splat (i32 1)
   %div = lshr <8 x i32> %add1, splat (i32 1)
   %ret = trunc <8 x i32> %div to <8 x i16>
   ret <8 x i16> %ret
@@ -370,8 +370,8 @@ define <8 x i32> @vaaddu_vv_v8i32_ceil(<8 x i32> %x, <8 x i32> %y) {
   %xzv = zext <8 x i32> %x to <8 x i64>
   %yzv = zext <8 x i32> %y to <8 x i64>
   %add = add nuw nsw <8 x i64> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i64> %add, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
-  %div = lshr <8 x i64> %add1, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
+  %add1 = add nuw nsw <8 x i64> %add, splat (i64 1)
+  %div = lshr <8 x i64> %add1, splat (i64 1)
   %ret = trunc <8 x i64> %div to <8 x i32>
   ret <8 x i32> %ret
 }
@@ -388,7 +388,7 @@ define <8 x i32> @vaaddu_vx_v8i32_ceil(<8 x i32> %x, i32 %y) {
   %ysplat = shufflevector <8 x i32> %yhead, <8 x i32> poison, <8 x i32> zeroinitializer
   %yzv = zext <8 x i32> %ysplat to <8 x i64>
   %add = add nuw nsw <8 x i64> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i64> %add, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
+  %add1 = add nuw nsw <8 x i64> %add, splat (i64 1)
   %div = lshr <8 x i64> %add1, splat (i64 1)
   %ret = trunc <8 x i64> %div to <8 x i32>
   ret <8 x i32> %ret
@@ -404,8 +404,8 @@ define <8 x i64> @vaaddu_vv_v8i64_ceil(<8 x i64> %x, <8 x i64> %y) {
   %xzv = zext <8 x i64> %x to <8 x i128>
   %yzv = zext <8 x i64> %y to <8 x i128>
   %add = add nuw nsw <8 x i128> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i128> %add, <i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1>
-  %div = lshr <8 x i128> %add1, <i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1>
+  %add1 = add nuw nsw <8 x i128> %add, splat (i128 1)
+  %div = lshr <8 x i128> %add1, splat (i128 1)
   %ret = trunc <8 x i128> %div to <8 x i64>
   ret <8 x i64> %ret
 }
@@ -426,8 +426,8 @@ define <8 x i1> @vaaddu_vv_v8i1_ceil(<8 x i1> %x, <8 x i1> %y) {
   %xzv = zext <8 x i1> %x to <8 x i8>
   %yzv = zext <8 x i1> %y to <8 x i8>
   %add = add nuw nsw <8 x i8> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i8> %add, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-  %div = lshr <8 x i8> %add1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %add1 = add nuw nsw <8 x i8> %add, splat (i8 1)
+  %div = lshr <8 x i8> %add1, splat (i8 1)
   %ret = trunc <8 x i8> %div to <8 x i1>
   ret <8 x i1> %ret
 }
@@ -459,7 +459,7 @@ define <8 x i64> @vaaddu_vx_v8i64_ceil(<8 x i64> %x, i64 %y) {
   %ysplat = shufflevector <8 x i64> %yhead, <8 x i64> poison, <8 x i32> zeroinitializer
   %yzv = zext <8 x i64> %ysplat to <8 x i128>
   %add = add nuw nsw <8 x i128> %xzv, %yzv
-  %add1 = add nuw nsw <8 x i128> %add, <i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1>
+  %add1 = add nuw nsw <8 x i128> %add, splat (i128 1)
   %div = lshr <8 x i128> %add1, splat (i128 1)
   %ret = trunc <8 x i128> %div to <8 x i64>
   ret <8 x i64> %ret
