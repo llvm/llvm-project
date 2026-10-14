@@ -984,18 +984,35 @@ static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
   if (!MaxRecurse--)
     return false;
 
+  // Vector constants with poison cannot be simplified away.
+  Constant *CX, *CY;
+  if ((match(X, m_Constant(CX)) && CX->containsUndefOrPoisonElement()) ||
+      (match(Y, m_Constant(CY)) && CY->containsUndefOrPoisonElement()))
+    return false;
+
   if (IsSigned) {
     // (X srem Y) sdiv Y --> 0
     if (match(X, m_SRem(m_Value(), m_Specific(Y))))
       return true;
 
-    // |X| / |Y| --> 0
+    // Is the signed dividend's magnitude always less than the divisor's?
+    // Use range analysis for both operands. ConstantRange::abs() maps
+    // INT_MIN to itself as an unsigned value (a very large number), so the
+    // INT_MIN divisor case is handled correctly without a special case.
+    // This handles non-constant operands with range metadata or known bits.
+    ConstantRange XRange =
+        computeConstantRangeIncludingKnownBits(X, /*ForSigned=*/true, Q);
+    ConstantRange YRange =
+        computeConstantRangeIncludingKnownBits(Y, /*ForSigned=*/true, Q);
+    if (XRange.abs().icmp(CmpInst::ICMP_ULT, YRange.abs()))
+      return true;
+
+    // Fall back to the original constant-matching approach for structural
+    // cases (e.g., sext/zext vs. constant) that computeConstantRange does
+    // not yet handle.
     //
-    // We require that 1 operand is a simple constant. That could be extended to
-    // 2 variables if we computed the sign bit for each.
-    //
-    // Make sure that a constant is not the minimum signed value because taking
-    // the abs() of that is undefined.
+    // Make sure that a constant is not the minimum signed value because
+    // taking the abs() of that is undefined.
     Type *Ty = X->getType();
     const APInt *C;
     if (match(X, m_APInt(C)) && !C->isMinSignedValue()) {
@@ -1029,11 +1046,14 @@ static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
 
   // IsSigned == false.
 
-  // Is the unsigned dividend known to be less than a constant divisor?
-  // TODO: Convert this (and above) to range analysis
-  //      ("computeConstantRangeIncludingKnownBits")?
-  const APInt *C;
-  if (match(Y, m_APInt(C)) && computeKnownBits(X, Q).getMaxValue().ult(*C))
+  // Is the unsigned dividend always less than the divisor?
+  // Use range analysis for both operands so non-constant divisors with
+  // known bits or range metadata are also handled.
+  ConstantRange XRange =
+      computeConstantRangeIncludingKnownBits(X, /*ForSigned=*/false, Q);
+  ConstantRange YRange =
+      computeConstantRangeIncludingKnownBits(Y, /*ForSigned=*/false, Q);
+  if (XRange.icmp(CmpInst::ICMP_ULT, YRange))
     return true;
 
   // Try again for any divisor:

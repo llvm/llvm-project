@@ -111,8 +111,7 @@ define void @udiv_constexpr(i32 %a) {
 ; CHECK-NEXT:    call void @use.i1(i1 [[FALSE_1]])
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i32 [[UDIV_2]], 10
 ; CHECK-NEXT:    call void @use.i1(i1 [[COND_1]])
-; CHECK-NEXT:    [[UDIV_3:%.*]] = udiv i32 ptrtoint (ptr inttoptr (i32 20 to ptr) to i32), ptrtoint (ptr inttoptr (i32 100 to ptr) to i32)
-; CHECK-NEXT:    call void @use.i32(i32 [[UDIV_3]])
+; CHECK-NEXT:    call void @use.i32(i32 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:
