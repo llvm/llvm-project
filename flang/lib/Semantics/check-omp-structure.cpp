@@ -6184,6 +6184,12 @@ void OmpStructureChecker::CheckDefinableObjects(
     if (!IsVariableListItem(*symbol)) {
       continue;
     }
+    // A POINTER list item of LASTPRIVATE is updated as if by pointer
+    // assignment (OpenMP 5.2, 5.4.5), so its target is not defined.
+    if (clause == llvm::omp::Clause::OMPC_lastprivate && IsPointer(*symbol) &&
+        IsProtectedTarget(symbol->GetUltimate())) {
+      continue;
+    }
     if (auto msg{WhyNotDefinable(source, context_.FindScope(source),
             DefinabilityFlags{}, *symbol)}) {
       context_

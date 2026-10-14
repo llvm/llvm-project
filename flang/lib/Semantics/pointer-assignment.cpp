@@ -50,6 +50,7 @@ public:
     set_lhsType(TypeAndShape::Characterize(lhs, foldingContext_));
     set_isContiguous(lhs.attrs().test(Attr::CONTIGUOUS));
     set_isVolatile(lhs.attrs().test(Attr::VOLATILE));
+    set_isProtectedTarget(IsProtectedTarget(lhs.GetUltimate()));
   }
   PointerAssignmentChecker &set_lhsType(std::optional<TypeAndShape> &&);
   PointerAssignmentChecker &set_isContiguous(bool);
@@ -59,6 +60,9 @@ public:
   PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
   PointerAssignmentChecker &set_isRHSPointerActualArgument(bool);
   PointerAssignmentChecker &set_ignoreTKR(common::IgnoreTKRSet);
+  PointerAssignmentChecker &set_isProtectedTarget(bool);
+  PointerAssignmentChecker &set_isDummyArgument(bool);
+  PointerAssignmentChecker &set_isIntrinsic(bool);
   bool CheckLeftHandSide(const SomeExpr &);
   bool Check(const SomeExpr &);
 
@@ -97,6 +101,9 @@ private:
   bool isRHSPointerActualArgument_{false};
   common::IgnoreTKRSet ignoreTKR_;
   const Symbol *pointerComponentLHS_{nullptr};
+  bool isProtectedTarget_{false};
+  bool isDummyArgument_{false};
+  bool isIntrinsic_{false};
 };
 
 PointerAssignmentChecker &PointerAssignmentChecker::set_lhsType(
@@ -132,6 +139,24 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_isAssumedRank(
 PointerAssignmentChecker &PointerAssignmentChecker::set_pointerComponentLHS(
     const Symbol *symbol) {
   pointerComponentLHS_ = symbol;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_isProtectedTarget(
+    bool isProtectedTarget) {
+  isProtectedTarget_ = isProtectedTarget;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_isDummyArgument(
+    bool isDummyArgument) {
+  isDummyArgument_ = isDummyArgument;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_isIntrinsic(
+    bool isIntrinsic) {
+  isIntrinsic_ = isIntrinsic;
   return *this;
 }
 
@@ -243,13 +268,42 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
           "Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
     }
   }
+  // F'2028 C870, C871, C872: If target is a pointer with the PROTECTED_TARGET
+  // attribute or a subobject thereof, the receiving pointer must also have
+  // the PROTECTED_TARGET attribute.
+  if (FindProtectedTargetPointer(rhs)) {
+    if (!isProtectedTarget_) {
+      if (pointerComponentLHS_) { // F'2028 C871
+        Say("A structure constructor component must have the PROTECTED_TARGET attribute when the value is a pointer with the PROTECTED_TARGET attribute or a subobject thereof"_err_en_US);
+        return false;
+      } else if (isDummyArgument_) { // F'2028 C872
+        if (!isIntrinsic_) {
+          Say("%s must have the PROTECTED_TARGET attribute when the actual argument is a pointer with the PROTECTED_TARGET attribute or a subobject thereof"_err_en_US,
+              description_);
+          return false;
+        }
+      } else { // F'2028 C870
+        Say("Data pointer object must have the PROTECTED_TARGET attribute when the target is a pointer with the PROTECTED_TARGET attribute or a subobject thereof"_err_en_US);
+        return false;
+      }
+    }
+  }
   // Warn about undefinable data targets
-  if (auto because{
-          WhyNotDefinable(foldingContext_.messages().at(), scope_, {}, rhs)}) {
-    if (auto *msg{Warn(common::UsageWarning::PointerToUndefinable,
-            "Pointer target is not a definable variable"_warn_en_US)}) {
-      msg->Attach(std::move(because->set_severity(parser::Severity::Because)));
-      return false;
+  // F'2028 C864 forbids a use-associated nonpointer PROTECTED object as a
+  // data-target or initial-data-target, while 8.5.16 NOTE 1 shows that
+  // association as valid for a PROTECTED_TARGET pointer. Follow NOTE 1: the
+  // target cannot be defined through such a pointer, so do not warn about an
+  // undefinable target.
+  if (!isProtectedTarget_ &&
+      !(isDummyArgument_ && isIntrinsic_ && FindProtectedTargetPointer(rhs))) {
+    if (auto because{WhyNotDefinable(
+            foldingContext_.messages().at(), scope_, {}, rhs)}) {
+      if (auto *msg{Warn(common::UsageWarning::PointerToUndefinable,
+              "Pointer target is not a definable variable"_warn_en_US)}) {
+        msg->Attach(
+            std::move(because->set_severity(parser::Severity::Because)));
+        return false;
+      }
     }
   }
   return true;
@@ -614,7 +668,7 @@ bool CheckStructConstructorPointerComponent(SemanticsContext &context,
 bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
     const std::string &description, const DummyDataObject &lhs,
     const SomeExpr &rhs, const Scope &scope, bool isAssumedRank,
-    bool isPointerActualArgument) {
+    bool isPointerActualArgument, bool isIntrinsic) {
   return PointerAssignmentChecker{context, scope, source, description}
       .set_lhsType(common::Clone(lhs.type))
       .set_isContiguous(lhs.attrs.test(DummyDataObject::Attr::Contiguous))
@@ -622,6 +676,10 @@ bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
       .set_isAssumedRank(isAssumedRank)
       .set_isRHSPointerActualArgument(isPointerActualArgument)
       .set_ignoreTKR(lhs.ignoreTKR)
+      .set_isProtectedTarget(
+          lhs.attrs.test(DummyDataObject::Attr::ProtectedTarget))
+      .set_isDummyArgument(true)
+      .set_isIntrinsic(isIntrinsic)
       .Check(rhs);
 }
 

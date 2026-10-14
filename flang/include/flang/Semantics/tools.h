@@ -178,6 +178,13 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+inline bool IsProtectedTarget(const Symbol &symbol) {
+  return symbol.attrs().test(Attr::PROTECTED_TARGET);
+}
+const Symbol *FindProtectedTargetPointer(
+    const evaluate::DataRef &, bool isPointerDefinition = false);
+const Symbol *FindProtectedTargetPointer(
+    const SomeExpr &, bool isPointerDefinition = false);
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }

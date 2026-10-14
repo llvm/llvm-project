@@ -811,6 +811,13 @@ void IoChecker::Leave(const parser::InquireStmt &stmt) {
     CheckForProhibitedSpecifier(IoSpecKind::File, IoSpecKind::Unit); // C1246
     CheckForRequiredSpecifier(IoSpecKind::Id, IoSpecKind::Pending); // C1248
     CheckForUselessIomsg();
+  } else if (const auto *iolength{
+                 std::get_if<parser::InquireStmt::Iolength>(&stmt.u)}) {
+    const auto &var{std::get<parser::ScalarIntVariable>(iolength->t)};
+    if (const auto *expr{GetExpr(context_, var)};
+        expr && FindProtectedTargetPointer(*expr)) { // F'2028 C866
+      CheckForDefinableVariable(var, "IOLENGTH");
+    }
   }
   Done();
 }

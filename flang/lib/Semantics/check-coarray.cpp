@@ -356,13 +356,24 @@ void CoarrayChecker::Leave(const parser::LockStmt &x) {
             std::get_if<parser::StatOrErrmsg>(&lockStat.u)}) {
       CheckSyncStat(context_, *statOrErrmsg, gotStat, gotMsg);
     } else {
-      CHECK(std::holds_alternative<
-          parser::Scalar<parser::Logical<parser::Variable>>>(lockStat.u));
+      const auto &var{
+          std::get<parser::Scalar<parser::Logical<parser::Variable>>>(
+              lockStat.u)};
       if (gotAcquired) {
         context_.Say(parser::FindSourceLocation(lockStat),
             "Multiple ACQUIRED_LOCK specifiers"_err_en_US);
       } else {
         gotAcquired = true;
+        if (const auto *expr{GetExpr(context_, var)}) {
+          if (const Symbol *ptSym{FindProtectedTargetPointer(*expr)}) {
+            auto at{parser::FindSourceLocation(var)};
+            context_
+                .Say(at, "ACQUIRED_LOCK= variable is not definable"_err_en_US)
+                .Attach(at,
+                    "The target of '%s' with the PROTECTED_TARGET attribute may not be defined"_because_en_US,
+                    ptSym->name());
+          }
+        }
       }
     }
   }
@@ -388,8 +399,17 @@ void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
 }
 
 void CoarrayChecker::Leave(const parser::FormTeamStmt &x) {
-  CheckTeamType(
-      context_, std::get<parser::TeamVariable>(x.t), /*mustBeVariable=*/true);
+  const auto &teamVar{std::get<parser::TeamVariable>(x.t)};
+  CheckTeamType(context_, teamVar, /*mustBeVariable=*/true);
+  if (const auto *expr{GetExpr(context_, teamVar)}) {
+    if (const Symbol *ptSym{FindProtectedTargetPointer(*expr)}) {
+      auto at{parser::FindSourceLocation(teamVar)};
+      context_.Say(at, "Team-variable is not definable"_err_en_US)
+          .Attach(at,
+              "The target of '%s' with the PROTECTED_TARGET attribute may not be defined"_because_en_US,
+              ptSym->name());
+    }
+  }
   for (const auto &spec :
       std::get<std::list<parser::FormTeamStmt::FormTeamSpec>>(x.t)) {
     if (const auto *statOrErrmsg{std::get_if<parser::StatOrErrmsg>(&spec.u)}) {

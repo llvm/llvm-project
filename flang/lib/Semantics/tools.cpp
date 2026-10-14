@@ -9,6 +9,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -1991,5 +1992,55 @@ bool AreSameModuleSymbol(const Symbol &symbol, const Symbol &other) {
   return symbol.name() == other.name() && symbol.owner().IsModule() &&
       other.owner().IsModule() && symbol.owner().GetName() &&
       symbol.owner().GetName() == other.owner().GetName();
+}
+
+// The nearest pointer in the designator decides (F'2023 9.4.2p5, as in
+// DefinesComponentPointerTarget). When defining a pointer component, start
+// from the component's base.
+const Symbol *FindProtectedTargetPointer(
+    const evaluate::DataRef &dataRef, bool isPointerDefinition) {
+  const Symbol *lastPtr{nullptr};
+  if (isPointerDefinition) {
+    if (const auto *comp{std::get_if<evaluate::Component>(&dataRef.u)}) {
+      lastPtr = evaluate::GetLastPointerSymbol(comp->base());
+    } else if (const auto *aRef{std::get_if<evaluate::ArrayRef>(&dataRef.u)}) {
+      if (const auto *comp{aRef->base().UnwrapComponent()}) {
+        lastPtr = evaluate::GetLastPointerSymbol(comp->base());
+      } else {
+        return nullptr;
+      }
+    } else {
+      return nullptr;
+    }
+  } else {
+    lastPtr = evaluate::GetLastPointerSymbol(dataRef);
+  }
+  if (lastPtr) {
+    const Symbol &ultimate{lastPtr->GetUltimate()};
+    return IsProtectedTarget(ultimate) ? lastPtr : nullptr;
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTargetPointer(
+    const SomeExpr &expr, bool isPointerDefinition) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTargetPointer(*dataRef, isPointerDefinition);
+  }
+  if (!isPointerDefinition) {
+    // Treat a function reference returning a PROTECTED_TARGET pointer as that
+    // pointer for F'2028 C870-C874 and 8.5.16p2 (the result entity has the
+    // attribute).
+    if (const auto *procRef{evaluate::UnwrapProcedureRef(expr)}) {
+      if (const Symbol *procSym{procRef->proc().GetSymbol()}) {
+        if (const Symbol *result{FindFunctionResult(*procSym)}) {
+          if (IsProtectedTarget(result->GetUltimate())) {
+            return &procSym->GetUltimate();
+          }
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 } // namespace Fortran::semantics

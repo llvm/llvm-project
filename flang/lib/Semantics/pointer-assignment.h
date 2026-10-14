@@ -31,7 +31,8 @@ bool CheckPointerAssignment(SemanticsContext &, const SomeExpr &lhs,
 bool CheckPointerAssignment(SemanticsContext &, parser::CharBlock source,
     const std::string &description,
     const evaluate::characteristics::DummyDataObject &, const SomeExpr &rhs,
-    const Scope &, bool isAssumedRank, bool IsPointerActualArgument);
+    const Scope &, bool isAssumedRank, bool IsPointerActualArgument,
+    bool isIntrinsic = false);
 
 bool CheckStructConstructorPointerComponent(
     SemanticsContext &, const Symbol &lhs, const SomeExpr &rhs, const Scope &);

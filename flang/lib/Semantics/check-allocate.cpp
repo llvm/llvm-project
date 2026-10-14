@@ -700,6 +700,13 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
       return false;
     }
   }
+  if (ultimate_ && IsProtectedTarget(*ultimate_)) {
+    if (!allocateInfo_.gotSource) { // F'2028 C869
+      context.Say(name_.source,
+          "An ALLOCATE statement for a pointer with the PROTECTED_TARGET attribute must have a SOURCE= clause"_err_en_US);
+      return false;
+    }
+  }
   if (allocateInfo_.gotPinned) {
     std::optional<common::CUDADataAttr> cudaAttr{GetCUDADataAttr(ultimate_)};
     if ((!cudaAttr || *cudaAttr != common::CUDADataAttr::Pinned) &&

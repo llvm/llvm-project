@@ -67,6 +67,11 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (FindProtectedTargetPointer(*expr)) { // F'2028 C873
+      messages.Say(
+          "A pointer with the PROTECTED_TARGET attribute (or a subobject thereof) may not be passed to a procedure with an implicit interface"_err_en_US);
+      return;
+    }
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
@@ -1041,14 +1046,37 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   if (dummyIsPointer) {
     if (actualIsPointer || dummy.intent == common::Intent::In) {
       if (scope) {
+        // C872 is not applied to intrinsic procedures: intrinsic pointer dummy
+        // arguments (e.g. FPTR of C_F_POINTER) only inquire or set association
+        // and never define the target through the pointer.
         semantics::CheckPointerAssignment(context, messages.at(), dummyName,
             dummy, actual, *scope,
-            /*isAssumedRank=*/dummyIsAssumedRank, actualIsPointer);
+            /*isAssumedRank=*/dummyIsAssumedRank, actualIsPointer,
+            /*isIntrinsic=*/intrinsic != nullptr);
+        // F'2028 C872: catches X%P, where X is a PROTECTED_TARGET pointer
+        // and P an ordinary pointer component, passed to a pointer dummy;
+        // there X%P is part of X's target.
+        if (!dummy.attrs.test(
+                characteristics::DummyDataObject::Attr::ProtectedTarget) &&
+            !intrinsic && actualIsPointer &&
+            !FindProtectedTargetPointer(actual) &&
+            FindProtectedTargetPointer(actual, /*isPointerDefinition=*/true)) {
+          messages.Say(
+              "%s must have the PROTECTED_TARGET attribute when the actual argument is a pointer with the PROTECTED_TARGET attribute or a subobject thereof"_err_en_US,
+              dummyName);
+        }
       }
     } else if (!actualIsPointer &&
         !dummy.ignoreTKR.test(common::IgnoreTKR::Pointer)) {
       messages.Say(
           "Actual argument associated with POINTER %s must also be POINTER unless INTENT(IN)"_err_en_US,
+          dummyName);
+    }
+  } else if (scope && dummy.intent == common::Intent::Default &&
+      !intrinsic) { // F'2028 C874
+    if (FindProtectedTargetPointer(actual)) {
+      messages.Say(
+          "Actual argument associated with %s is a pointer with the PROTECTED_TARGET attribute (or a subobject thereof) and must be associated with an INTENT(IN) dummy argument"_err_en_US,
           dummyName);
     }
   }

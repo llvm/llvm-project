@@ -233,11 +233,16 @@ private:
 
 // 15.3.2.2
 struct DummyDataObject {
+  // PROTECTED_TARGET is carried here for constraint checks at references
+  // (e.g. F'2028 C872) and is not compared because F'2028 15.3.2.2 does not
+  // list it.
   ENUM_CLASS(Attr, Optional, Allocatable, Asynchronous, Contiguous, Value,
-      Volatile, Pointer, Target, DeducedFromActual, OnlyIntrinsicInquiry)
+      Volatile, Pointer, Target, DeducedFromActual, OnlyIntrinsicInquiry,
+      ProtectedTarget)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   static bool IdenticalSignificantAttrs(const Attrs &x, const Attrs &y) {
-    return (x - Attr::DeducedFromActual) == (y - Attr::DeducedFromActual);
+    return (x - Attr::DeducedFromActual - Attr::ProtectedTarget) ==
+        (y - Attr::DeducedFromActual - Attr::ProtectedTarget);
   }
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(DummyDataObject)
   explicit DummyDataObject(const TypeAndShape &t) : type{t} {}
@@ -327,8 +332,14 @@ using DummyArguments = std::vector<DummyArgument>;
 
 // 15.3.3
 struct FunctionResult {
-  ENUM_CLASS(Attr, Allocatable, Pointer, Contiguous)
+  // PROTECTED_TARGET is recorded so that the characteristics describe the
+  // result completely; it is not compared because F'2028 15.3.3 does not
+  // list it.
+  ENUM_CLASS(Attr, Allocatable, Pointer, Contiguous, ProtectedTarget)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
+  static bool IdenticalSignificantAttrs(const Attrs &x, const Attrs &y) {
+    return (x - Attr::ProtectedTarget) == (y - Attr::ProtectedTarget);
+  }
   DECLARE_CONSTRUCTORS_AND_ASSIGNMENTS(FunctionResult)
   explicit FunctionResult(DynamicType);
   explicit FunctionResult(TypeAndShape &&);

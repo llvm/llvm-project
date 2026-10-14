@@ -66,6 +66,7 @@ private:
   void CheckVolatile(const Symbol &, const DerivedTypeSpec *);
   void CheckContiguous(const Symbol &);
   void CheckPointer(const Symbol &);
+  void CheckProtectedTarget(const Symbol &);
   void CheckPassArg(
       const Symbol &proc, const Symbol *interface, const WithPassArg &);
   void CheckProcBinding(const Symbol &, const ProcBindingDetails &);
@@ -346,6 +347,9 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "A PROTECTED entity may not be in a common block"_err_en_US);
     }
+  }
+  if (IsProtectedTarget(symbol)) {
+    CheckProtectedTarget(symbol);
   }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
@@ -2610,6 +2614,28 @@ void CheckHelper::CheckPointer(const Symbol &symbol) { // C852
   }
 }
 
+void CheckHelper::CheckProtectedTarget(const Symbol &symbol) {
+  if (symbol.owner().IsDerivedType()) {
+    if (!symbol.attrs().test(Attr::POINTER)) { // F'2028 C781
+      messages_.Say(
+          "PROTECTED_TARGET component '%s' must have the POINTER attribute"_err_en_US,
+          symbol.name());
+    }
+  } else {
+    // F'2028 8.5.16p1 (and F'2028 C8109 for the statement)
+    if (!IsPointer(symbol) || IsProcedure(symbol)) {
+      messages_.Say(
+          "PROTECTED_TARGET entity '%s' must be a data pointer"_err_en_US,
+          symbol.name());
+    }
+  }
+  if (FindCommonBlockContaining(symbol)) { // F'2028 C867
+    messages_.Say(
+        "A pointer '%s' with the PROTECTED_TARGET attribute may not be in a COMMON block"_err_en_US,
+        symbol.name());
+  }
+}
+
 // C760 constraints on the passed-object dummy argument
 // C757 constraints on procedure pointer components
 void CheckHelper::CheckPassArg(
@@ -4177,7 +4203,9 @@ void SubprogramMatchHelper::CheckDummyDataObject(const Symbol &symbol1,
     const Symbol &symbol2, const DummyDataObject &obj1,
     const DummyDataObject &obj2) {
   if (!CheckSameIntent(symbol1, symbol2, obj1.intent, obj2.intent)) {
-  } else if (!CheckSameAttrs(symbol1, symbol2, obj1.attrs, obj2.attrs)) {
+  } else if (!CheckSameAttrs(symbol1, symbol2,
+                 obj1.attrs - DummyDataObject::Attr::ProtectedTarget,
+                 obj2.attrs - DummyDataObject::Attr::ProtectedTarget)) {
   } else if (!obj1.type.type().IsEquivalentTo(obj2.type.type())) {
     Say(symbol1, symbol2,
         "Dummy argument '%s' has type %s; the corresponding argument in the interface body has distinct type %s"_err_en_US,
