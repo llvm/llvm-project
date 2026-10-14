@@ -22,9 +22,10 @@ static const char *DefaultPipelineMagicStr = "*";
 
 static constexpr char AllowFilesDelim = ',';
 
-SandboxVectorizerPass::SandboxVectorizerPass()
-    : Opts(VectorizeOptions::Global), FPM("fpm") {
-  if (Opts.sbvec_passes == DefaultPipelineMagicStr) {
+SandboxVectorizerPass::SandboxVectorizerPass() : FPM("fpm") {}
+
+void SandboxVectorizerPass::buildPipeline() {
+  if (Opts->sbvec_passes == DefaultPipelineMagicStr) {
     // TODO: Add passes to the default pipeline. It currently contains:
     //       - Seed collection, which creates seed regions and runs the pipeline
     //         - Bundle Vectorizer pass that starts from a seed
@@ -37,7 +38,7 @@ SandboxVectorizerPass::SandboxVectorizerPass()
   } else {
     // Create the user-defined pipeline.
     FPM.setPassPipeline(
-        Opts.sbvec_passes,
+        Opts->sbvec_passes,
         sandboxir::SandboxVectorizerPassBuilder::createFunctionPass);
   }
 }
@@ -67,9 +68,9 @@ bool SandboxVectorizerPass::allowFile(const std::string &SrcFilePath) {
   size_t DelimPos = 0;
   do {
     size_t LastPos = DelimPos != 0 ? DelimPos + 1 : DelimPos;
-    DelimPos = Opts.sbvec_allow_files.find(AllowFilesDelim, LastPos);
+    DelimPos = Opts->sbvec_allow_files.find(AllowFilesDelim, LastPos);
     auto FileNameToMatch =
-        Opts.sbvec_allow_files.substr(LastPos, DelimPos - LastPos);
+        Opts->sbvec_allow_files.substr(LastPos, DelimPos - LastPos);
     if (FileNameToMatch.empty())
       return false;
     // Note: This only runs when debugging so its OK not to reuse the regex.
@@ -82,16 +83,19 @@ bool SandboxVectorizerPass::allowFile(const std::string &SrcFilePath) {
 }
 
 bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
-  if (Ctx == nullptr)
+  Opts = &VectorizeOptions::Global;
+  if (Ctx == nullptr) {
     Ctx = std::make_unique<sandboxir::Context>(LLVMF.getContext());
+    buildPipeline();
+  }
 
-  if (Opts.sbvec_print_pass_pipeline) {
+  if (Opts->sbvec_print_pass_pipeline) {
     FPM.printPipeline(outs());
     return false;
   }
 
   // This is used for debugging.
-  if (LLVM_UNLIKELY(Opts.sbvec_allow_files != ".*")) {
+  if (LLVM_UNLIKELY(Opts->sbvec_allow_files != ".*")) {
     const auto &SrcFilePath = LLVMF.getParent()->getSourceFileName();
     if (!allowFile(SrcFilePath))
       return false;

@@ -24,7 +24,7 @@ struct VectorizeOptions;
 
 class SandboxVectorizerPass
     : public OptionalPassInfoMixin<SandboxVectorizerPass> {
-  const VectorizeOptions &Opts;
+  const VectorizeOptions *Opts = nullptr;
   TargetTransformInfo *TTI = nullptr;
   AAResults *AA = nullptr;
   ScalarEvolution *SE = nullptr;
@@ -45,6 +45,7 @@ class SandboxVectorizerPass
   /// `AllowFiles` option.
   bool allowFile(const std::string &SrcFilePath);
 
+  void buildPipeline();
   bool runImpl(Function &F);
 
 public:

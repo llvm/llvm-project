@@ -669,7 +669,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.is64Bit() && ST.hasStdExtF(), {{s32, s32}})
       .customFor(ST.is64Bit() && ST.hasStdExtD(), {{s32, s64}})
       .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
-      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .minScalar(1, s32)
       .libcallFor({{s32, s32},
                    {s64, s32},
                    {s32, s64},
@@ -682,7 +682,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
       .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
       .minScalar(0, sXLen)
-      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .minScalar(1, s32)
       .libcallFor({{s32, s32},
                    {s64, s32},
                    {s32, s64},
@@ -886,6 +886,26 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   switch (IntrinsicID) {
   default:
     return false;
+  case Intrinsic::riscv_orc_b: {
+    if (!STI.hasStdExtZbb())
+      return false;
+
+    MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+    MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    if (Ty == sXLen)
+      return true;
+    if (!STI.is64Bit() || Ty != LLT::scalar(32))
+      return false;
+
+    // Each output byte depends only on the corresponding input byte.
+    auto Src = MIRBuilder.buildAnyExt(sXLen, MI.getOperand(2));
+    auto Result = MIRBuilder.buildIntrinsic(IntrinsicID, {DstOp(sXLen)})
+                      .addUse(Src.getReg(0));
+    MIRBuilder.buildTrunc(MI.getOperand(0), Result);
+    MI.eraseFromParent();
+    return true;
+  }
   case Intrinsic::riscv_clmulh:
     Helper.MIRBuilder.buildInstr(TargetOpcode::G_CLMULH, {MI.getOperand(0)},
                                  {MI.getOperand(2), MI.getOperand(3)});

@@ -385,6 +385,10 @@ Makes programs 10x faster by doing Special New Thing.
   sequence. The latter API may fail if the indices cannot be converted into
   ptradd representation.
 
+* Added `LLVMIsDSOLocal()` and `LLVMSetDSOLocal()` to query and set the
+  `dso_local` runtime preemption specifier on global values (global variables,
+  functions and aliases).
+
 ### Changes to the CodeGen infrastructure
 
 * Fixed a crash
@@ -392,6 +396,11 @@ Makes programs 10x faster by doing Special New Thing.
   compiling a function containing a static alloca of `(size_t)-1` bytes, whose
   size collided with the sentinel value MachineFrameInfo used to mark dead
   stack objects.
+* Fixed a crash
+  ([#204079](https://github.com/llvm/llvm-project/issues/204079)) in the
+  SelectionDAG pre-RA schedulers when they tried to unfold a load-folded
+  instruction to break a physical register dependency and the unfolded load
+  already existed in the DAG.
 * Fixed a crash
   ([#220959](https://github.com/llvm/llvm-project/issues/220959)) when
   compiling a `landingpad` whose result type is not a struct of an exception
