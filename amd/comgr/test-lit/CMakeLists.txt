@@ -34,6 +34,14 @@ configure_file(lit.site.cfg.py.in lit.site.cfg.py @ONLY)
 add_custom_target(test-lit COMMAND "${LLVM_LIT_PATH}"
                   "${CMAKE_CURRENT_BINARY_DIR}" -v)
 
+foreach(tool FileCheck not clang lld llvm-as llvm-dis llvm-mc llvm-objcopy
+             llvm-objdump llvm-offload-binary llvm-readobj llvm-readelf
+             yaml2obj amd-llvm-spirv)
+  if(TARGET ${tool})
+    add_dependencies(test-lit ${tool})
+  endif()
+endforeach()
+
 macro(add_comgr_lit_binary name lang)
   add_executable("${name}" "comgr-sources/${name}.${lang}")
   if (${lang} STREQUAL "c")
