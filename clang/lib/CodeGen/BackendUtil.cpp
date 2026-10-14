@@ -1156,9 +1156,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     }
   } else if (mapToLevel(CodeGenOpts) > OptimizationLevel::O0 &&
              CodeGenOpts.AMDGCNSPIRVSizeOptimization) {
-    assert(TargetTriple.isSPIRV() &&
-           TargetTriple.getVendor() == llvm::Triple::VendorType::AMD &&
-           "Invalid target triple!");
+    if (!TargetTriple.isSPIRV() ||
+        (TargetTriple.getVendor() != llvm::Triple::VendorType::AMD))
+      Diags.Report(diag::err_opt_not_valid_on_target)
+          << "fenable-spirv-size-optimization";
     addAMDGCNSPIRVSizeOptimizationPasses(MPM);
   }
 
