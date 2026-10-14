@@ -65,6 +65,17 @@ enum DiagnosticClass {
   CLASS_TRAP = DiagnosticIDs::CLASS_TRAP,
 };
 
+#if defined(_AIX) && (!defined(__GNUC__) || defined(__clang__))
+// Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
+// and give the `pack` pragma push semantics.
+#define BEGIN_TWO_BYTE_PACK() _Pragma("pack(2)")
+#define END_TWO_BYTE_PACK() _Pragma("pack(pop)")
+#else
+#define BEGIN_TWO_BYTE_PACK()
+#define END_TWO_BYTE_PACK()
+#endif
+
+BEGIN_TWO_BYTE_PACK()
 struct StaticDiagInfoRec {
   uint16_t DiagID;
   LLVM_PREFERRED_TYPE(diag::Severity)
@@ -129,13 +140,12 @@ struct StaticDiagInfoRec {
     return DiagID < RHS.DiagID;
   }
 };
-#ifdef _AIX
-// On AIX, bit-fields are laid out in 4-byte containers regardless of their
-// declared type, which raises the struct's alignment to 4 and pads it to 12.
-static_assert(sizeof(StaticDiagInfoRec) == 12);
-#else
+END_TWO_BYTE_PACK()
+
+#undef BEGIN_TWO_BYTE_PACK
+#undef END_TWO_BYTE_PACK
+
 static_assert(sizeof(StaticDiagInfoRec) == 10);
-#endif
 static_assert(static_cast<unsigned>(diag::Group::NUM_GROUPS) < (1U << 14),
               "too many diagnostic groups for StaticDiagInfoRec");
 
