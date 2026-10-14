@@ -567,9 +567,10 @@ bool AArch64MIPeepholeOptImpl::checkMovImmInstr(MachineInstr &MI,
 
   // If the MOV has multiple uses, do not split the immediate because it causes
   // more instructions.
-  if (!MRI->hasOneUse(MovMI->getOperand(0).getReg()))
+  if (!MRI->hasOneNonDBGUse(MovMI->getOperand(0).getReg()))
     return false;
-  if (SubregToRegMI && !MRI->hasOneUse(SubregToRegMI->getOperand(0).getReg()))
+  if (SubregToRegMI &&
+      !MRI->hasOneNonDBGUse(SubregToRegMI->getOperand(0).getReg()))
     return false;
 
   // It is OK to perform this peephole optimization.
@@ -650,8 +651,11 @@ bool AArch64MIPeepholeOptImpl::splitTwoPartImm(MachineInstr &MI,
 
   // Record the MIs need to be removed.
   MI.eraseFromParent();
-  if (SubregToRegMI)
+  if (SubregToRegMI) {
+    MRI->markUsesInDebugValueAsUndef(SubregToRegMI->getOperand(0).getReg());
     SubregToRegMI->eraseFromParent();
+  }
+  MRI->markUsesInDebugValueAsUndef(MovMI->getOperand(0).getReg());
   MovMI->eraseFromParent();
 
   return true;
