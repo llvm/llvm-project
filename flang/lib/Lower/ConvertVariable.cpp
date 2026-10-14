@@ -1894,6 +1894,10 @@ static llvm::SmallVector<mlir::Value> lowerSharedRankOneBounds(
             Fortran::evaluate::RankOneBoundElement>(*explicitBound)) {
       if (!shared)
         shared = robe;
+      else if (!(robe->base() == shared->base()))
+        // Different dimensions extract from different rank-1 bases, so they do
+        // not share a single base; let the caller lower each bound on its own.
+        return {};
     } else {
       return {};
     }
@@ -1952,6 +1956,32 @@ static bool hasRankOneBoundElement(const Fortran::lower::BoxAnalyzer &box) {
   return false;
 }
 
+/// True when every dimension has an explicit bound on the requested side (lower
+/// or upper) and those bounds are all structurally identical.  A rank-1 bound
+/// base expands to the whole declaration -- a comma list mixing it with other
+/// specs is rejected by semantics (see declaration-explicit-array-bounds.f90)
+/// -- so the front end clones the single user-written scalar bound on the
+/// non-ROBE side (e.g. the lower bound in `a(lb : rank1base)`) into every
+/// dimension's ShapeSpec, making them identical by construction.  This is a
+/// defensive guard: if the bounds were ever not identical, the caller falls
+/// back to lowering each dimension on its own.
+static bool allSideBoundsIdentical(const Fortran::lower::BoxAnalyzer &box,
+                                   bool upper) {
+  const Fortran::semantics::SubscriptIntExpr *first = nullptr;
+  for (const Fortran::semantics::ShapeSpec *spec : box.dynamicBound()) {
+    const Fortran::semantics::Bound &bound =
+        upper ? spec->ubound() : spec->lbound();
+    const auto &explicitBound = bound.GetExplicit();
+    if (!explicitBound)
+      return false;
+    if (!first)
+      first = &*explicitBound;
+    else if (!(*explicitBound == *first))
+      return false;
+  }
+  return first != nullptr;
+}
+
 /// Lower explicit lower bounds into \p result. Does nothing if this is not an
 /// array, or if the lower bounds are deferred, or all implicit or one.
 static void lowerExplicitLowerBounds(
@@ -1975,8 +2005,11 @@ static void lowerExplicitLowerBounds(
     return;
   }
   // A non-ROBE lower bound in a rank-1-bound-expanded array is a single scalar
-  // broadcast across every dimension; evaluate it once and reuse it.
-  if (hasRankOneBoundElement(box)) {
+  // the front end cloned across every dimension; evaluate it once and reuse it.
+  // allSideBoundsIdentical is a defensive guard (the clones are identical by
+  // construction); if it ever fails, fall through to per-dimension lowering.
+  if (hasRankOneBoundElement(box) &&
+      allSideBoundsIdentical(box, /*upper=*/false)) {
     const Fortran::semantics::ShapeSpec *spec = box.dynamicBound().front();
     if (auto low = spec->lbound().GetExplicit()) {
       auto expr = Fortran::lower::SomeExpr{*low};
@@ -2030,9 +2063,12 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> sharedUpper = lowerSharedRankOneBounds(
       converter, loc, box, /*upper=*/true, idxTy, symMap, stmtCtx);
   // A non-ROBE upper bound in a rank-1-bound-expanded array is a single scalar
-  // broadcast across every dimension; evaluate it once and reuse it.
+  // the front end cloned across every dimension; evaluate it once and reuse it.
+  // allSideBoundsIdentical is a defensive guard (the clones are identical by
+  // construction); if it ever fails, fall through to per-dimension lowering.
   mlir::Value broadcastUpper;
-  if (sharedUpper.empty() && hasRankOneBoundElement(box)) {
+  if (sharedUpper.empty() && hasRankOneBoundElement(box) &&
+      allSideBoundsIdentical(box, /*upper=*/true)) {
     const Fortran::semantics::ShapeSpec *spec = box.dynamicBound().front();
     if (auto up = spec->ubound().GetExplicit()) {
       auto expr = Fortran::lower::SomeExpr{*up};
@@ -2696,16 +2732,19 @@ void Fortran::lower::mapSymbolAttributes(
     llvm::SmallVector<mlir::Value> sharedUpper = lowerSharedRankOneBounds(
         converter, loc, ba, /*upper=*/true, idxTy, symMap, stmtCtx);
     // A non-ROBE bound in a rank-1-bound-expanded array is a single scalar
-    // broadcast across every dimension; evaluate it once and reuse it.
+    // broadcast across every dimension; evaluate it once and reuse it.  Only
+    // broadcast a side whose bounds are all the same cloned expression; a mixed
+    // array with distinct per-dimension bounds is lowered dimension by
+    // dimension below.
     mlir::Value broadcastLower, broadcastUpper;
     if (hasRankOneBoundElement(ba)) {
       const Fortran::semantics::ShapeSpec *spec0 = ba.dynamicBound().front();
-      if (sharedLower.empty())
+      if (sharedLower.empty() && allSideBoundsIdentical(ba, /*upper=*/false))
         if (auto low = spec0->lbound().GetExplicit()) {
           auto expr = Fortran::lower::SomeExpr{*low};
           broadcastLower = builder.createConvert(loc, idxTy, genValue(expr));
         }
-      if (sharedUpper.empty())
+      if (sharedUpper.empty() && allSideBoundsIdentical(ba, /*upper=*/true))
         if (auto high = spec0->ubound().GetExplicit()) {
           auto expr = Fortran::lower::SomeExpr{*high};
           broadcastUpper = builder.createConvert(loc, idxTy, genValue(expr));

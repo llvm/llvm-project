@@ -397,7 +397,6 @@ private:
   MaybeExpr MakeFunctionRef(
       parser::CharBlock, ProcedureDesignator &&, ActualArguments &&);
   MaybeExpr MakeFunctionRef(parser::CharBlock intrinsic, ActualArguments &&);
-  MaybeExpr AnalyzeRankOneBoundElement(parser::CharBlock, ActualArguments &&);
   template <typename T> T Fold(T &&expr) {
     return evaluate::Fold(foldingContext_, std::move(expr));
   }

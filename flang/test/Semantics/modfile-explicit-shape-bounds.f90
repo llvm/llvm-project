@@ -71,7 +71,7 @@ contains
     integer, intent(in) :: n(2)
     real, intent(inout) :: a_lbfold(lbs_fold : n)   ! mixed const lbs_fold and dummy n
     real, intent(inout) :: a(lbs : n)
-    real, intent(inout) :: a_bothfold(lbs_fold : ubs_fold)   ! mixed const lbs_fold and dummy n
+    real, intent(inout) :: a_bothfold(lbs_fold : ubs_fold)   ! both const parameters lbs_fold and ubs_fold
   end subroutine                      
 end module
 
@@ -121,12 +121,12 @@ end module
 ! must be rendered into the mod file. The FoldOperation(RankOneBoundElement)
 ! helper tries to reduce that ROBE to an ordinary scalar element reference so
 ! the mod file round-trips as valid Fortran instead of leaking the synthetic
-! `__builtin_rank1_bound_element(...)` spelling.
+! `%ROBE(...)` spelling.
 !===============================================================================
 
 !-------------------------------------------------------------------------------
 ! Reducible bases: the single ROBE collapses to a plain scalar element ref
-! (no __builtin_rank1_bound_element in the mod file).
+! (no %ROBE in the mod file).
 !-------------------------------------------------------------------------------
 
 ! Whole array COMPONENT base -> reduces to x%c(2_8)
@@ -496,12 +496,13 @@ end module
 
 !-------------------------------------------------------------------------------
 ! Not-yet-reduced bases that keep the ROBE wrapper: a ROBE IS formed, but the
-! helper can't distribute element extraction into the base, so the synthetic
-! `__builtin_rank1_bound_element(...)` spelling is emitted. This is the safe
-! fallback that makes the wrapper necessary -- it guarantees the mod file is
-! always emittable and round-trips even when reduction isn't possible. Here the
-! elemental intrinsic merge() has a LOGICAL mask argument, which the helper (it
-! only recurses into integer array arguments) does not reduce.
+! helper can't distribute element extraction into the base, so the element
+! survives folding.  When the elemet came from an UBOUND()/LBOUND() inquiry of
+! another explicit-shape array (here `ubound(a,2)`), it carries provenance and
+! is serialized as that real intrinsic -- `ubound(a,dim=2,kind=8)` -- which
+! round-trips without the synthetic  spelling.
+! Here the elemental intrinsic merge() has a LOGICAL mask argument, which the
+! helper (it only recurses into integer array arguments) does not reduce.
 !-------------------------------------------------------------------------------
 
 ! Elemental intrinsic with a non-integer array arg -> wrapper is kept
@@ -525,7 +526,67 @@ end module
 !integer(4),intent(in)::m(1_8:2_8)
 !logical(4),intent(in)::c(1_8:2_8)
 !real(4)::a(1_8:__builtin_int(merge(n,m,c),kind=8))
-!real(4)::b(1_8:__builtin_int(__builtin_int(max(0_8,__builtin_rank1_bound_element(__builtin_int(merge(n,m,c),kind=8),dim=2)),kind=4),kind=8))
+!real(4)::b(1_8:__builtin_int(__builtin_int(max(0_8,ubound(a,dim=2,kind=8)),kind=4),kind=8))
+!end
+!end
+
+! SIZE(a,dim) on a dimension with the default lower bound of 1 folds to the same
+! provenance ROBE as UBOUND(a,dim) (size == ubound when the lower bound is 1), so
+! it serializes as max(0,ubound(a,dim)...) and lowers to the shared bound
+! arithmetic rather than a runtime SIZE inquiry -- never the synthetic %ROBE
+! spelling.
+module msizeprovenance
+contains
+  subroutine s(n, m, c, a, b)
+    integer, intent(in) :: n(2), m(2)
+    logical, intent(in) :: c(2)
+    real :: a(merge(n, m, c))
+    real :: b(size(a,2))
+    b(1) = 1.0
+    a(1,1) = b(1)
+  end subroutine
+end module
+
+!Expect: msizeprovenance.mod
+!module msizeprovenance
+!contains
+!subroutine s(n,m,c,a,b)
+!integer(4),intent(in)::n(1_8:2_8)
+!integer(4),intent(in)::m(1_8:2_8)
+!logical(4),intent(in)::c(1_8:2_8)
+!real(4)::a(1_8:__builtin_int(merge(n,m,c),kind=8))
+!real(4)::b(1_8:__builtin_int(__builtin_int(max(0_8,ubound(a,dim=2,kind=8)),kind=4),kind=8))
+!end
+!end
+
+! SIZE(a,dim) on a dimension with a NON-constant lower bound cannot fold safely:
+! the extent max(0,ub-lb+1) would mix a raw upper bound with an intrinsic
+! lbound(a,dim), which fails to round-trip for an empty dimension (LBOUND is 1
+! for an empty dimension).  GetLBOUND bails for such a bound, so SIZE keeps the
+! inquiry intact and serializes as size(a,dim) -- mirroring UBOUND(), which also
+! declines here.
+module msizenonconstlower
+contains
+  subroutine s(lo, m, c, hi, a, b)
+    integer, intent(in) :: lo(2), m(2), hi(2)
+    logical, intent(in) :: c(2)
+    real :: a(merge(lo, m, c) : hi)
+    real :: b(size(a,2))
+    b(1) = 1.0
+    a(1,1) = b(1)
+  end subroutine
+end module
+
+!Expect: msizenonconstlower.mod
+!module msizenonconstlower
+!contains
+!subroutine s(lo,m,c,hi,a,b)
+!integer(4),intent(in)::lo(1_8:2_8)
+!integer(4),intent(in)::m(1_8:2_8)
+!logical(4),intent(in)::c(1_8:2_8)
+!integer(4),intent(in)::hi(1_8:2_8)
+!real(4)::a(__builtin_int(merge(lo,m,c),kind=8):__builtin_int(hi,kind=8))
+!real(4)::b(1_8:__builtin_int(size(a,2_4),kind=8))
 !end
 !end
 
@@ -539,7 +600,7 @@ end module
 !-------------------------------------------------------------------------------
 
 ! User/specification FUNCTION base -> ubound degrades to size(a,dim=2), so no
-! ROBE is ever formed (no __builtin_rank1_bound_element).
+! ROBE is ever formed (no %ROBE).
 module muserfunc
 contains
   pure function gb() result(r)
@@ -563,5 +624,232 @@ end module
 !subroutine s(a,b)
 !real(4)::a(1_8:__builtin_int(gb(),kind=8))
 !real(4)::b(1_8:size(a,dim=2,kind=8))
+!end
+!end
+
+!===============================================================================
+! LBOUND emission
+!
+! Unlike UBOUND, an LBOUND(a,dim) inquiry on a dimension whose declared lower
+! bound is a non-constant rank-1 bound expression does NOT fold to a provenance
+! ROBE.  LBOUND is defined to return 1 for an empty dimension, so the folder
+! only replaces it with the declared lower bound when it can prove the dimension
+! is nonempty.  It cannot prove that for a non-constant bound, so it leaves the
+! inquiry intact and serializes it as lbound(a,dim) -- mirroring the size(a,dim)
+! case, never the %ROBE spelling.
+!===============================================================================
+
+! Plain rank-1 array lower bound -> lbound(a,2) stays unfolded.
+module mlboundplain
+contains
+  subroutine s(lo, hi, a, b)
+    integer, intent(in) :: lo(2), hi(2)
+    real :: a(lo : hi)
+    real :: b(lbound(a,2))
+    b(1) = 1.0
+    a(1,1) = b(1)
+  end subroutine
+end module
+
+!Expect: mlboundplain.mod
+!module mlboundplain
+!contains
+!subroutine s(lo,hi,a,b)
+!integer(4),intent(in)::lo(1_8:2_8)
+!integer(4),intent(in)::hi(1_8:2_8)
+!real(4)::a(__builtin_int(lo,kind=8):__builtin_int(hi,kind=8))
+!real(4)::b(1_8:__builtin_int(lbound(a,2_4),kind=8))
+!end
+!end
+
+! Surviving (merge) rank-1 lower base -> lbound(a,2) still stays unfolded.
+module mlboundmerge
+contains
+  subroutine s(lo, m, c, hi, a, b)
+    integer, intent(in) :: lo(2), m(2), hi(2)
+    logical, intent(in) :: c(2)
+    real :: a(merge(lo, m, c) : hi)
+    real :: b(lbound(a,2))
+    b(1) = 1.0
+    a(1,1) = b(1)
+  end subroutine
+end module
+
+!Expect: mlboundmerge.mod
+!module mlboundmerge
+!contains
+!subroutine s(lo,m,c,hi,a,b)
+!integer(4),intent(in)::lo(1_8:2_8)
+!integer(4),intent(in)::m(1_8:2_8)
+!logical(4),intent(in)::c(1_8:2_8)
+!integer(4),intent(in)::hi(1_8:2_8)
+!real(4)::a(__builtin_int(merge(lo,m,c),kind=8):__builtin_int(hi,kind=8))
+!real(4)::b(1_8:__builtin_int(lbound(a,2_4),kind=8))
+!end
+!end
+
+!===============================================================================
+! Inquiry functions WITHOUT a DIM argument
+!
+! ubound(a)/lbound(a) with no DIM are themselves rank-1 integer arrays, so they
+! are F2023 explicit-shape bases in their own right: b and d become rank-2
+! arrays, one bounds-spec per element.  These are declaration-time bounds (the
+! element carries no provenance), so the writer unwraps the whole rank-1 base
+! and serializes the folded array literal directly -- no ROBE is formed and no
+! %ROBE spelling can leak.  size(a) with no DIM is a scalar, so e is an ordinary
+! rank-1 array with a plain scalar bound.
+!===============================================================================
+module mnodim
+contains
+  subroutine s(n, a, b, d, e)
+    integer, intent(in) :: n(2)
+    real :: a(n)
+    real :: b(ubound(a))
+    real :: d(lbound(a) : ubound(a))
+    real :: e(size(a))
+    b(1,1) = 1.0
+    a(1,1) = b(1,1)
+  end subroutine
+end module
+
+!Expect: mnodim.mod
+!module mnodim
+!contains
+!subroutine s(n,a,b,d,e)
+!integer(4),intent(in)::n(1_8:2_8)
+!real(4)::a(1_8:__builtin_int(n,kind=8))
+!real(4)::b(1_8:[INTEGER(8)::__builtin_int(__builtin_int(max(0_8,__builtin_int(n(1_8),kind=8)),kind=4),kind=8),__builtin_int(__builtin_int(max(0_8,__builtin_int(n(2_8),kind=8)),kind=4),kind=8)])
+!real(4)::d([INTEGER(8)::1_8,1_8]:[INTEGER(8)::__builtin_int(__builtin_int(max(0_8,__builtin_int(n(1_8),kind=8)),kind=4),kind=8),__builtin_int(__builtin_int(max(0_8,__builtin_int(n(2_8),kind=8)),kind=4),kind=8)])
+!real(4)::e(1_8:__builtin_int(__builtin_int(max(0_8,__builtin_int(n(1_8),kind=8))*max(0_8,__builtin_int(n(2_8),kind=8)),kind=4),kind=8))
+!end
+!end
+
+!===============================================================================
+! Extent-aggregating inquiries over an irreducible (merge) base
+!
+! shape(a), size(a) with no DIM, and sizeof(a) all expand every dimension to its
+! extent and aggregate them (a rank-1 vector, a product, and a byte count).  When
+! the base cannot be reduced to a single element (here the merge() makes it
+! irreducible), the surviving upper-bound element has no Fortran surface syntax
+! and its only debug rendering is the %ROBE marker, which must never reach a mod
+! file.  With the default lower bound of 1 the extent is max(0, ub), which equals
+! max(0, UBOUND(a,dim)) even for an empty dimension, so the element is stamped
+! with ubound(a,dim) provenance when it is copied out of a's shape and all three
+! inquiries -- plus size(a,2) with DIM -- serialize as real ubound() intrinsics
+! and round-trip.  This is the regression guard for the aggregate-inquiry leak.
+!===============================================================================
+module maggregprovenance
+contains
+  subroutine s(n, m, c, a, bshape, bsizedim, bsize, bbytes)
+    integer, intent(in) :: n(2), m(2)
+    logical, intent(in) :: c(2)
+    real :: a(merge(n, m, c))
+    real :: bshape(shape(a))
+    real :: bsizedim(size(a, 2))
+    real :: bsize(size(a))
+    real :: bbytes(sizeof(a))
+    bshape(1,1) = 1.0
+    bsizedim(1) = 1.0
+    bsize(1) = 1.0
+    bbytes(1) = 1.0
+    a(1,1) = bshape(1,1)
+  end subroutine
+end module
+
+!Expect: maggregprovenance.mod
+!module maggregprovenance
+!contains
+!subroutine s(n,m,c,a,bshape,bsizedim,bsize,bbytes)
+!integer(4),intent(in)::n(1_8:2_8)
+!integer(4),intent(in)::m(1_8:2_8)
+!logical(4),intent(in)::c(1_8:2_8)
+!real(4)::a(1_8:__builtin_int(merge(n,m,c),kind=8))
+!real(4)::bshape(1_8:[INTEGER(8)::__builtin_int(__builtin_int(max(0_8,ubound(a,dim=1,kind=8)),kind=4),kind=8),__builtin_int(__builtin_int(max(0_8,ubound(a,dim=2,kind=8)),kind=4),kind=8)])
+!real(4)::bsizedim(1_8:__builtin_int(__builtin_int(max(0_8,ubound(a,dim=2,kind=8)),kind=4),kind=8))
+!real(4)::bsize(1_8:__builtin_int(__builtin_int(max(0_8,ubound(a,dim=1,kind=8))*max(0_8,ubound(a,dim=2,kind=8)),kind=4),kind=8))
+!real(4)::bbytes(1_8:4_8*max(0_8,ubound(a,dim=1,kind=8))*max(0_8,ubound(a,dim=2,kind=8)))
+!end
+!end
+
+!===============================================================================
+! Extent-aggregating inquiries over a non-constant (merge) LOWER bound
+!
+! Here the lower bound is itself an irreducible rank-1 element.  The extent
+! max(0, ub - lb + 1) embeds it raw: LBOUND(a,dim) is 1, not the declared lower
+! bound, for an empty dimension, so lbound() provenance would be inexact and the
+! element has no Fortran spelling at all.  Rather than emit the non-Fortran %ROBE
+! marker, shape(a)/size(a)/sizeof(a) keep themselves intact and serialize as the
+! real transformational inquiries, which round-trip as legal Fortran.
+!===============================================================================
+module maggregkeep
+contains
+  subroutine s(lo, m, c, hi, a, bshape, bsize, bbytes)
+    integer, intent(in) :: lo(2), m(2), hi(2)
+    logical, intent(in) :: c(2)
+    real :: a(merge(lo, m, c) : hi)
+    real :: bshape(shape(a))
+    real :: bsize(size(a))
+    real :: bbytes(sizeof(a))
+    bshape(1,1) = 1.0
+    bsize(1) = 1.0
+    bbytes(1) = 1.0
+    a(1,1) = bshape(1,1)
+  end subroutine
+end module
+
+!Expect: maggregkeep.mod
+!module maggregkeep
+!contains
+!subroutine s(lo,m,c,hi,a,bshape,bsize,bbytes)
+!integer(4),intent(in)::lo(1_8:2_8)
+!integer(4),intent(in)::m(1_8:2_8)
+!logical(4),intent(in)::c(1_8:2_8)
+!integer(4),intent(in)::hi(1_8:2_8)
+!real(4)::a(__builtin_int(merge(lo,m,c),kind=8):__builtin_int(hi,kind=8))
+!real(4)::bshape(1_8:__builtin_int(shape(a),kind=8))
+!real(4)::bsize(1_8:__builtin_int(size(a),kind=8))
+!real(4)::bbytes(1_8:sizeof(a))
+!end
+!end
+
+!===============================================================================
+! Extent-aggregating inquiries over a constant lower bound other than 1
+!
+! ubound(a,dim) provenance is exact only when the lower bound is 1: with a lower
+! bound of 0 the extent is max(0, ub + 1), but UBOUND(a,dim) of an empty
+! dimension is 0, so max(0, ubound(a,dim) + 1) would be 1 instead of 0.  The
+! element is therefore left raw and every inquiry -- including size(a,2) with
+! DIM -- declines to fold rather than serialize a semantically wrong bound.
+!===============================================================================
+module maggregzerolower
+contains
+  subroutine s(n, m, c, a, bshape, bsizedim, bsize, bbytes)
+    integer, intent(in) :: n(2), m(2)
+    logical, intent(in) :: c(2)
+    real :: a(0 : merge(n, m, c))
+    real :: bshape(shape(a))
+    real :: bsizedim(size(a, 2))
+    real :: bsize(size(a))
+    real :: bbytes(sizeof(a))
+    bshape(1,1) = 1.0
+    bsizedim(1) = 1.0
+    bsize(1) = 1.0
+    bbytes(1) = 1.0
+    a(1,1) = bshape(1,1)
+  end subroutine
+end module
+
+!Expect: maggregzerolower.mod
+!module maggregzerolower
+!contains
+!subroutine s(n,m,c,a,bshape,bsizedim,bsize,bbytes)
+!integer(4),intent(in)::n(1_8:2_8)
+!integer(4),intent(in)::m(1_8:2_8)
+!logical(4),intent(in)::c(1_8:2_8)
+!real(4)::a(0_8:__builtin_int(merge(n,m,c),kind=8))
+!real(4)::bshape(1_8:__builtin_int(shape(a),kind=8))
+!real(4)::bsizedim(1_8:__builtin_int(size(a,2_4),kind=8))
+!real(4)::bsize(1_8:__builtin_int(size(a),kind=8))
+!real(4)::bbytes(1_8:sizeof(a))
 !end
 !end

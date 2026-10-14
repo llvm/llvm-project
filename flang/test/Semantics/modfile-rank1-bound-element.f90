@@ -1,12 +1,13 @@
-! Verify that a mod file which contains a __builtin_rank1_bound_element wrapper
-! can be read back in through USE from a *separate* compilation.  The wrapper is
-! emitted for a rank-1 bound element that cannot be reduced to a plain scalar
-! reference (here the elemental intrinsic merge() has a LOGICAL mask argument,
-! which the reducer does not distribute into).  It has no true Fortran surface
-! syntax and no backing intrinsic, so reading the mod file back in must rebuild
-! the RankOneBoundElement node from the wrapper call.  The wrapper name must
-! also be spelled in lower case so it still matches after names are folded to
-! lower case when the mod file is read back in.
+! Verify that an explicit-shape array bound which survives folding as a rank-1
+! bound element round-trips through a mod file read back by a *separate*
+! compilation.  Such an element arises for a rank-1 array bound that cannot be
+! reduced to a plain scalar reference (here the elemental intrinsic merge() has
+! a LOGICAL mask argument, which the reducer does not distribute into).  It has
+! no Fortran surface syntax, so it is serialized through its UBOUND()/LBOUND()
+! provenance as a real ubound(a,dim)/lbound(a,dim) call: the mod file holds that
+! intrinsic, not the element, and reading it back simply re-analyzes an ordinary
+! ubound/lbound reference.  The synthetic %ROBE debug marker must never appear
+! in the mod file.
 !
 ! The provider and consumer are compiled separately so that the USE genuinely
 ! reads provider.mod from disk rather than reusing in-memory symbols.
@@ -19,11 +20,12 @@
 !--- provider.f90
 module m_rank1_bound_element_provider
 contains
-  subroutine s(n, m, c, a, b)
+  subroutine s(n, m, c, a, b, d)
     integer, intent(in) :: n(2), m(2)
     logical, intent(in) :: c(2)
-    real :: a(merge(n, m, c))
-    real :: b(ubound(a, 2))
+    real :: a(merge(n,m,c) : merge(n,m,c))
+    real :: b(lbound(a,1) : ubound(a,2))
+    real :: d(lbound(a,2) : size(a,2))
     b(1) = 1.0
     a(1, 1) = b(1)
   end subroutine

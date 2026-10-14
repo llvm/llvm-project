@@ -150,6 +150,12 @@ inline MaybeExtentExpr GetSize(const std::optional<Shape> &maybeShape) {
 // Utility predicate: does an expression reference any implied DO index?
 bool ContainsAnyImpliedDoIndex(const ExtentExpr &);
 
+// Utility predicate: does an expression embed a RankOneBoundElement that has
+// no ubound()/lbound() provenance?  Such an element has no Fortran spelling
+// (its debug rendering is the synthetic %ROBE marker) and must never reach a
+// mod file; an inquiry whose folded result would contain one must stay intact.
+bool ContainsUntaggedRankOneBoundElement(const ExtentExpr &);
+
 // GetShape()
 
 class GetShapeHelper

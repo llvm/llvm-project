@@ -11,6 +11,7 @@
 #include "resolve-names.h"
 #include "flang/Common/restorer.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parsing.h"
@@ -1405,6 +1406,10 @@ void PutBound(llvm::raw_ostream &os, const Bound &x) {
   } else if (x.isColon()) {
     os << ':';
   } else {
+    // A raw ROBE has no Fortran spelling; it may only live in
+    // its own array's ShapeSpec, which PutShape() unwraps whole and never
+    // routes here.  Anything else must carry ubound()/lbound() provenance.
+    CHECK(!evaluate::ContainsUntaggedRankOneBoundElement(*x.GetExplicit()));
     x.GetExplicit()->AsFortran(os);
   }
 }

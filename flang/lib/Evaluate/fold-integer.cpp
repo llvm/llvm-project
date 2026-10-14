@@ -173,6 +173,22 @@ private:
   bool arrayFromParenthesesExpr{false};
 };
 
+// Gate for folding SHAPE/SIZE/SIZEOF into a stored expression: a raw rank-1
+// bound element left in an extent (because neither UBOUND nor LBOUND is exact
+// for that dimension; see CloneBound in shape.cpp) has no Fortran spelling, so
+// the inquiry must stay intact rather than fold.
+static bool ShapeHasUntaggedRankOneBoundElement(
+    const std::optional<Shape> &shape) {
+  if (shape) {
+    for (const auto &extent : *shape) {
+      if (extent && ContainsUntaggedRankOneBoundElement(*extent)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 template <int KIND>
 Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
     FunctionRef<Type<TypeCategory::Integer, KIND>> &&funcRef) {
@@ -1410,7 +1426,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       }
     }
   } else if (name == "shape") {
-    if (auto shape{GetContextFreeShape(context, args[0])}) {
+    if (auto shape{GetContextFreeShape(context, args[0])};
+        shape && !ShapeHasUntaggedRankOneBoundElement(shape)) {
       if (auto shapeExpr{AsExtentArrayExpr(*shape)}) {
         return Fold(context, ConvertToType<T>(std::move(*shapeExpr)));
       }
@@ -1427,7 +1444,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           return result.value;
         }));
   } else if (name == "size") {
-    if (auto shape{GetContextFreeShape(context, args[0])}) {
+    if (auto shape{GetContextFreeShape(context, args[0])};
+        shape && !ShapeHasUntaggedRankOneBoundElement(shape)) {
       if (args[1]) { // DIM= is present, get one extent
         std::optional<int> dim;
         if (const auto *array{args[0].value().UnwrapExpr()}; array &&
@@ -1448,10 +1466,13 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       }
     }
   } else if (name == "sizeof") { // in bytes; extension
-    if (auto info{
-            characteristics::TypeAndShape::Characterize(args[0], context)}) {
-      if (auto bytes{info->MeasureSizeInBytes(context)}) {
-        return Expr<T>{Fold(context, ConvertToType<T>(std::move(*bytes)))};
+    if (!ShapeHasUntaggedRankOneBoundElement(
+            GetContextFreeShape(context, args[0]))) {
+      if (auto info{
+              characteristics::TypeAndShape::Characterize(args[0], context)}) {
+        if (auto bytes{info->MeasureSizeInBytes(context)}) {
+          return Expr<T>{Fold(context, ConvertToType<T>(std::move(*bytes)))};
+        }
       }
     }
   } else if (name == "storage_size") { // in bits
@@ -1884,8 +1905,13 @@ Expr<RankOneBoundElement::Result> FoldOperation(
   if (auto reduced{ExtractRankOneElement(context, folded, x.dimension())}) {
     return Fold(context, std::move(*reduced));
   }
-  return Expr<ResultType>{
-      RankOneBoundElement{std::move(folded), x.dimension()}};
+  RankOneBoundElement result{std::move(folded), x.dimension()};
+  // Preserve any serialization provenance (ubound/lbound origin) so an
+  // irreducible element still round-trips as a real intrinsic in a mod file.
+  if (x.originatingArray()) {
+    result.set_provenance(*x.originatingArray(), x.isUpperBound());
+  }
+  return Expr<ResultType>{std::move(result)};
 }
 
 std::optional<std::int64_t> ToInt64(const Expr<SomeInteger> &expr) {

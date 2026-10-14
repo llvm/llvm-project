@@ -264,3 +264,52 @@ end module
 ! CHECK:  fir.shape_shift %{{.*}} -> !fir.shapeshift<3>
 ! CHECK:  hlfir.declare {{.*}}Ea"
 
+! Two rank-1 bound elements with DIFFERENT bases on the same side: out's dim1
+! upper is ubound(b,2) (base m) and dim2 upper is ubound(d,2) (base p).  The
+! shared-base reuse must not collapse both dimensions onto the first base; each
+! dimension extracts its element from its own base.
+module test_mixed_base
+contains
+  subroutine test_mixed_base_bounds(m, p, out)
+    integer, intent(in) :: m(2), p(2)
+    real :: b(m)
+    real :: d(p)
+    real :: out(ubound(b,2), ubound(d,2))
+    out = 0.0
+  end subroutine
+end module
+! CHECK-LABEL: func.func @_QMtest_mixed_basePtest_mixed_base_bounds(
+! CHECK:  %[[M:.*]]:2 = hlfir.declare %arg0{{.*}}Em"
+! CHECK:  %[[P:.*]]:2 = hlfir.declare %arg1{{.*}}Ep"
+! CHECK:  hlfir.declare {{.*}}Eb"
+! CHECK:  hlfir.declare {{.*}}Ed"
+! CHECK:  hlfir.designate %[[M]]#0 ({{.*}}) : ({{.*}}) -> !fir.ref<i32>
+! CHECK:  hlfir.designate %[[P]]#0 ({{.*}}) : ({{.*}}) -> !fir.ref<i32>
+! CHECK:  %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
+! CHECK:  hlfir.declare %arg2(%[[SHAPE]]){{.*}}Eout"
+
+! A rank-1-bound-expanded array (b, declared with the rank-1 bound m) used only
+! as the argument of an ordinary descriptor inquiry.  ubound(b,2) folds to a
+! runtime extent query, not a RankOneBoundElement, so out itself is NOT
+! rank-1-bound-expanded: hasRankOneBoundElement(out) is false and each of out's
+! dimensions is lowered independently (dim1 loads the scalar n; dim2 designates
+! m to evaluate ubound(b,2)).  This guards against regressing that distinction --
+! an inquiry on a ROBE-expanded array must not itself be treated as a ROBE bound.
+module test_mixed_side
+contains
+  subroutine test_mixed_side_bounds(m, n, out)
+    integer, intent(in) :: m(2), n
+    real :: b(m)
+    real :: out(n, ubound(b,2))
+    out = 0.0
+  end subroutine
+end module
+! CHECK-LABEL: func.func @_QMtest_mixed_sidePtest_mixed_side_bounds(
+! CHECK:  %[[M:.*]]:2 = hlfir.declare %arg0{{.*}}Em"
+! CHECK:  %[[N:.*]]:2 = hlfir.declare %arg1{{.*}}En"
+! CHECK:  hlfir.declare {{.*}}Eb"
+! CHECK:  fir.load %[[N]]#0 : !fir.ref<i32>
+! CHECK:  hlfir.designate %[[M]]#0 ({{.*}}) : ({{.*}}) -> !fir.ref<i32>
+! CHECK:  %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
+! CHECK:  hlfir.declare %arg2(%[[SHAPE]]){{.*}}Eout"
+
