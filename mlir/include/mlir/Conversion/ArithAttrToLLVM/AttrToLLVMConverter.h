@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_ARITHCOMMON_ATTRTOLLVMCONVERTER_H
-#define MLIR_CONVERSION_ARITHCOMMON_ATTRTOLLVMCONVERTER_H
+#ifndef MLIR_CONVERSION_ARITHATTRTOLLVM_ATTRTOLLVMCONVERTER_H
+#define MLIR_CONVERSION_ARITHATTRTOLLVM_ATTRTOLLVMCONVERTER_H
 
 #include "mlir/Dialect/Arith/IR/ArithAttributes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -177,4 +177,4 @@ private:
 } // namespace arith
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_ARITHCOMMON_ATTRTOLLVMCONVERTER_H
+#endif // MLIR_CONVERSION_ARITHATTRTOLLVM_ATTRTOLLVMCONVERTER_H
