@@ -407,13 +407,17 @@ Symbols:
   - Name:  caller
 ...
 
-## Check ARM 32-bit Thumb address handling.
+## Check ARM 32-bit Thumb handling in a relocatable object file. The Thumb bit
+## is not cleared from the offsets of address fields, so a field at an odd
+## offset still gets its relocation.
 # RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t3 2>&1 | count 0
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t3 2>&1 | \
-# RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM-ARM-THUMB -DFILE=%t3
+# RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
+# RUN:     --check-prefix=LLVM-ARM-THUMB -DFILE=%t3
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t3 2>&1 | \
-# RUN:   FileCheck %s --match-full-lines --check-prefix=JSON-ARM-THUMB -DFILE=%t3
+# RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
+# RUN:     --check-prefix=JSON-ARM-THUMB -DFILE=%t3
 
 # LLVM-ARM-THUMB:      CallGraph [
 # LLVM-ARM-THUMB-NEXT:   Function {
@@ -422,6 +426,9 @@ Symbols:
 # LLVM-ARM-THUMB-NEXT:     IsIndirectTarget: No
 # LLVM-ARM-THUMB-NEXT:     TypeID: 0x123456789ABCDEF0
 # LLVM-ARM-THUMB-NEXT:     DirectCallees [
+# LLVM-ARM-THUMB-NEXT:       {
+# LLVM-ARM-THUMB-NEXT:         Name: bar
+# LLVM-ARM-THUMB-NEXT:       }
 # LLVM-ARM-THUMB-NEXT:     ]
 # LLVM-ARM-THUMB-NEXT:     IndirectTypeIDs: []
 # LLVM-ARM-THUMB-NEXT:   }
@@ -434,7 +441,11 @@ Symbols:
 # JSON-ARM-THUMB-NEXT:        "Version": 0,
 # JSON-ARM-THUMB-NEXT:        "IsIndirectTarget": false,
 # JSON-ARM-THUMB-NEXT:        "TypeID": 1311768467463790320,
-# JSON-ARM-THUMB-NEXT:        "DirectCallees": [],
+# JSON-ARM-THUMB-NEXT:        "DirectCallees": [
+# JSON-ARM-THUMB-NEXT:          {
+# JSON-ARM-THUMB-NEXT:            "Name": "bar"
+# JSON-ARM-THUMB-NEXT:          }
+# JSON-ARM-THUMB-NEXT:        ],
 # JSON-ARM-THUMB-NEXT:        "IndirectTypeIDs": []
 # JSON-ARM-THUMB-NEXT:      }
 # JSON-ARM-THUMB-NEXT:    }
@@ -455,9 +466,11 @@ Sections:
     ContentArray: [
       ## --- foo+1 (Thumb address) ---
       0x00, ## Version
-      0x00, ## Flags
+      0x02, ## Flags (HasDirectCallees)
       0x01, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1 (relative to foo)
-      0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12 ## FunctionTypeID: 0x123456789ABCDEF0
+      0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12, ## FunctionTypeID: 0x123456789ABCDEF0
+      0x01, ## NumDirectCallees
+      0x01, 0x00, 0x00, 0x00  ## Direct callee: 0x1 (relative to bar)
     ]
   - Type:   SHT_RELA
     Info:   .llvm.callgraph
@@ -465,11 +478,18 @@ Sections:
       - Offset:  0x2 ## Offset to FunctionEntryPC
         Symbol:  foo
         Type:    R_ARM_ABS32
+      - Offset:  0xF ## Offset to the direct callee, which is odd
+        Symbol:  bar
+        Type:    R_ARM_ABS32
 Symbols:
   - Name:     foo
     Type:     STT_FUNC
     Section:  .text
     Value:    0x0 
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x10
 ...
 
 ## Check multiple function names handling.
@@ -732,4 +752,58 @@ Symbols:
     Type:     STT_FUNC
     Section:  .text
     Value:    0x17A0
+...
+
+## Check that the Thumb bit is cleared from function addresses in a
+## non-relocatable EM_ARM object file.
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t7 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
+# RUN:     --check-prefix=LLVM-ARM-NONRELOC
+
+# LLVM-ARM-NONRELOC:      CallGraph [
+# LLVM-ARM-NONRELOC-NEXT:   Function {
+# LLVM-ARM-NONRELOC-NEXT:     Names: [foo]
+# LLVM-ARM-NONRELOC-NEXT:     Address: 0x1000
+# LLVM-ARM-NONRELOC-NEXT:     Version: 0
+# LLVM-ARM-NONRELOC-NEXT:     IsIndirectTarget: No
+# LLVM-ARM-NONRELOC-NEXT:     TypeID: 0x0
+# LLVM-ARM-NONRELOC-NEXT:     DirectCallees [
+# LLVM-ARM-NONRELOC-NEXT:       {
+# LLVM-ARM-NONRELOC-NEXT:         Names: [bar]
+# LLVM-ARM-NONRELOC-NEXT:         Address: 0x1010
+# LLVM-ARM-NONRELOC-NEXT:       }
+# LLVM-ARM-NONRELOC-NEXT:     ]
+# LLVM-ARM-NONRELOC-NEXT:     IndirectTypeIDs: []
+# LLVM-ARM-NONRELOC-NEXT:   }
+# LLVM-ARM-NONRELOC-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS32
+  Data:     ELFDATA2LSB
+  Type:     ET_EXEC
+  Machine:  EM_ARM
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+  - Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      0x00, ## Version
+      0x02, ## Flags (HasDirectCallees)
+      0x01, 0x10, 0x00, 0x00, ## FunctionEntryPC: 0x1001 (foo, Thumb)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionTypeID: 0
+      0x01, ## NumDirectCallees
+      0x11, 0x10, 0x00, 0x00  ## Callee: 0x1011 (bar, Thumb)
+    ]
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1001
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1011
 ...
