@@ -1604,7 +1604,7 @@ static VPValue *createDiffRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
                                         unsigned UF, DebugLoc DL) {
   // Set of operand pairs of already created compares, to allow detecting and
   // re-using redundant compares.
-  SmallDenseSet<std::pair<const SCEV *, const SCEV *>> SeenCompares;
+  SmallDenseSet<std::pair<const SCEV *, const SCEV *>, 8> SeenCompares;
   VPValue *Cond = Plan.getFalse();
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
     assert(UF * AccessSize > 0 &&
