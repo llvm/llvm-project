@@ -19,6 +19,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
@@ -177,6 +178,20 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
 
   auto *Store1 = new StoreInst(Value, Addr, BB);
   auto *Load1 = new LoadInst(IntType, Addr, "load", BB);
+  // A separate allocation that cannot alias Addr.
+  auto *OtherAddr = new AllocaInst(IntType, 0, "other", BB);
+  auto *DisjointStore = new StoreInst(Value, OtherAddr, BB);
+
+  // Atomic and volatile accesses.
+  auto *AtomicLoad = new LoadInst(IntType, Addr, "atomic_load", BB);
+  AtomicLoad->setAtomic(AtomicOrdering::Monotonic);
+
+  auto *UnorderedLoad = new LoadInst(IntType, Addr, "unordered_load", BB);
+  UnorderedLoad->setAtomic(AtomicOrdering::Unordered);
+
+  auto *VolatileLoad = new LoadInst(IntType, Addr, "volatile_load", true, BB);
+
+  auto *VolatileStore = new StoreInst(Value, Addr, true, BB);
   auto *Add1 = BinaryOperator::CreateAdd(Value, Value, "add", BB);
   auto *VAArg1 = new VAArgInst(Addr, PtrType, "vaarg", BB);
   auto *CmpXChg1 = new AtomicCmpXchgInst(
@@ -219,6 +234,19 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   EXPECT_EQ(AA.getModRefInfo(Store1, Bar), ModRefInfo::NoModRef);
   EXPECT_EQ(AA.getModRefInfo(Foo, Bar), ModRefInfo::NoModRef);
   EXPECT_EQ(AA.getModRefInfo(Foo, Foo), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Load1, Store1), ModRefInfo::Ref);
+  EXPECT_EQ(AA.getModRefInfo(Load1, Load1), ModRefInfo::Ref);
+
+  // Disjoint accesses do not interact.
+  EXPECT_EQ(AA.getModRefInfo(Load1, DisjointStore), ModRefInfo::NoModRef);
+
+  // Stronger atomic ordering remains conservative.
+  EXPECT_EQ(AA.getModRefInfo(AtomicLoad, Store1), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(UnorderedLoad, Store1), ModRefInfo::ModRef);
+
+  // Volatile accesses retain the original conservative behavior.
+  EXPECT_EQ(AA.getModRefInfo(VolatileLoad, Store1), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Load1, VolatileStore), ModRefInfo::ModRef);
 }
 
 static Instruction *getInstructionByName(Function &F, StringRef Name) {

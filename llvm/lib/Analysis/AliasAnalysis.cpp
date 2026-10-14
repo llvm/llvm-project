@@ -398,6 +398,14 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I1,
 
   // FIXME: We can have a more precise result.
   ModRefInfo MR = getModRefInfo(I1, MemoryLocation::getOrNone(I2), AAQI);
+
+  if (isa<LoadInst>(I1) && (isa<LoadInst>(I2) || isa<StoreInst>(I2)) &&
+      !I1->isAtomic() && !I2->isAtomic() && !I1->isVolatile() &&
+      !I2->isVolatile()) {
+
+    return MR;
+  }
+
   return isModOrRefSet(MR) ? ModRefInfo::ModRef : ModRefInfo::NoModRef;
 }
 
