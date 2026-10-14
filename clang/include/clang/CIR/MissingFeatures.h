@@ -48,6 +48,7 @@ struct MissingFeatures {
 
   // Load/store attributes
   static bool opLoadEmitScalarRangeCheck() { return false; }
+  static bool opLoadRangeNoundefMetadata() { return false; }
   static bool opLoadStoreTbaa() { return false; }
   static bool opLoadStoreAtomic() { return false; }
   static bool opLoadStoreObjC() { return false; }
@@ -154,6 +155,8 @@ struct MissingFeatures {
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
   static bool atomicOpenMP() { return false; }
+  static bool atomicAMDGPUNoaliasAddrspace() { return false; }
+  static bool atomicAMDGPUAvailableVisibleMMRA() { return false; }
 
   // Global ctor handling
   static bool globalCtorLexOrder() { return false; }
@@ -319,6 +322,7 @@ struct MissingFeatures {
   // Missing types
   static bool dataMemberType() { return false; }
   static bool matrixType() { return false; }
+  static bool matrixTypeIndexAssumption() { return false; }
   static bool methodType() { return false; }
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }

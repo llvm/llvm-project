@@ -1016,11 +1016,11 @@ public:
   virtual EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                                  EVT VT) const;
 
-  /// Return the ValueType for comparison libcalls. Comparison libcalls include
-  /// floating point comparison calls, and Ordered/Unordered check calls on
-  /// floating point numbers.
-  virtual MVT::SimpleValueType getCmpLibcallReturnType() const {
-    return MVT::i32; // return the default value
+  /// Return the integer type returned by comparison libcalls. Comparison
+  /// libcalls include floating point comparison calls, and Ordered/Unordered
+  /// check calls on floating point numbers.
+  virtual IntegerType *getCmpLibcallReturnType(LLVMContext &Ctx) const {
+    return Type::getInt32Ty(Ctx);
   }
 
   /// For targets without i1 registers, this gives the nature of the high-bits
@@ -6071,6 +6071,14 @@ public:
   /// Method for building the DAG expansion of ISD::VECTOR_SPLICE. This
   /// method accepts vectors as its arguments.
   SDValue expandVectorSplice(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_INTERLEAVE without introducing wider vector types.
+  void expandVectorInterleave(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                              SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_DEINTERLEAVE without introducing wider vector types.
+  void expandVectorDeinterleave(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                                SelectionDAG &DAG) const;
 
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
