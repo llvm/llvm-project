@@ -1157,6 +1157,14 @@ unsigned char Editline::TabCommand(int ch) {
       // completed.
       if (to_add == " ")
         return CC_REDISPLAY;
+      // If an autosuggestion (and its description) was drawn, it was written
+      // directly to the terminal and is invisible to libedit, so a plain
+      // refresh would leave the trailing description on screen. Force a full
+      // redisplay, which clears the line before redrawing.
+      if (m_previous_autosuggestion_size > 0) {
+        m_previous_autosuggestion_size = 0;
+        return CC_REDISPLAY;
+      }
       return CC_REFRESH;
     }
     case CompletionMode::Partial: {
@@ -1200,7 +1208,10 @@ unsigned char Editline::ApplyAutosuggestCommand(int ch) {
   llvm::StringRef line(line_info->buffer,
                        line_info->lastchar - line_info->buffer);
 
-  if (std::optional<std::string> to_add = m_suggestion_callback(line))
+  // The description is only shown inline and never inserted into the line.
+  std::string description;
+  if (std::optional<std::string> to_add =
+          m_suggestion_callback(line, description))
     el_insertstr(m_editline, to_add->c_str());
 
   return CC_REDISPLAY;
@@ -1218,13 +1229,45 @@ unsigned char Editline::TypedCharacter(int ch) {
   llvm::StringRef line(line_info->buffer,
                        line_info->lastchar - line_info->buffer);
 
-  if (std::optional<std::string> to_add = m_suggestion_callback(line)) {
+  std::string description;
+  if (std::optional<std::string> to_add =
+          m_suggestion_callback(line, description)) {
     LockedStreamFile locked_stream = m_output_stream_sp->Lock();
+    // The suggestion is what gets inserted when accepted; the description (if
+    // any) is only shown in parentheses after it and never inserted. Only show
+    // the description up to its first newline so it stays on a single line.
+    std::string suggestion = to_add.value();
+    if (!description.empty())
+      suggestion +=
+          " (" + description.substr(0, description.find('\n')) + ")";
+
+    int editline_cursor_position =
+        (int)((line_info->cursor - line_info->buffer) + GetPromptWidth());
+    int editline_cursor_row = editline_cursor_position / m_terminal_width;
+    int toColumn =
+        editline_cursor_position - (editline_cursor_row * m_terminal_width);
+
+    // The suggestion is drawn starting at the cursor and must fit on the
+    // remaining columns of the current row. If it is wider it would wrap onto
+    // the next line and corrupt the redraw, since we reposition the cursor by
+    // column only. Truncate it (with an ellipsis) so it always fits.
+    if (m_terminal_width > toColumn) {
+      const size_t available_width = m_terminal_width - toColumn;
+      if (suggestion.length() > available_width) {
+        llvm::StringRef ellipsis = "...";
+        if (available_width > ellipsis.size())
+          suggestion = suggestion.substr(0, available_width - ellipsis.size()) +
+                       ellipsis.str();
+        else
+          suggestion = suggestion.substr(0, available_width);
+      }
+    }
+
     std::string to_add_color =
-        m_suggestion_ansi_prefix + to_add.value() + m_suggestion_ansi_suffix;
+        m_suggestion_ansi_prefix + suggestion + m_suggestion_ansi_suffix;
     fputs(typed.c_str(), locked_stream.GetFile().GetStream());
     fputs(to_add_color.c_str(), locked_stream.GetFile().GetStream());
-    size_t new_autosuggestion_size = line.size() + to_add->length();
+    size_t new_autosuggestion_size = line.size() + suggestion.length();
     // Print spaces to hide any remains of a previous longer autosuggestion.
     if (new_autosuggestion_size < m_previous_autosuggestion_size) {
       size_t spaces_to_print =
@@ -1234,11 +1277,6 @@ unsigned char Editline::TypedCharacter(int ch) {
     }
     m_previous_autosuggestion_size = new_autosuggestion_size;
 
-    int editline_cursor_position =
-        (int)((line_info->cursor - line_info->buffer) + GetPromptWidth());
-    int editline_cursor_row = editline_cursor_position / m_terminal_width;
-    int toColumn =
-        editline_cursor_position - (editline_cursor_row * m_terminal_width);
     fprintf(locked_stream.GetFile().GetStream(), ANSI_SET_COLUMN_N, toColumn);
     return CC_REFRESH;
   }
