@@ -69,6 +69,50 @@ static bool isIntegerComponent(ElementType Type) {
          Type == ElementType::U32;
 }
 
+static Error validateSemanticType(const SemanticSignatureElement &E) {
+  switch (E.SemanticKind) {
+  case dxbc::PSV::SemanticKind::Position:
+    if (E.Rows != 1 || E.Cols != 4 ||
+        (E.CompType != ElementType::F16 && E.CompType != ElementType::F32))
+      return signatureError(
+          "SV_Position requires one row of four floating-point components");
+    break;
+  case dxbc::PSV::SemanticKind::VertexID:
+    if (E.Rows != 1 || E.Cols != 1 ||
+        (E.CompType != ElementType::I16 && E.CompType != ElementType::U16 &&
+         E.CompType != ElementType::I32 && E.CompType != ElementType::U32))
+      return signatureError(
+          "SV_VertexID requires a scalar 16- or 32-bit integer");
+    break;
+  case dxbc::PSV::SemanticKind::InstanceID:
+    if (E.Rows != 1 || E.Cols != 1 ||
+        (E.CompType != ElementType::U16 && E.CompType != ElementType::U32))
+      return signatureError(
+          "SV_InstanceID requires a scalar 16- or 32-bit unsigned integer");
+    break;
+  default:
+    break;
+  }
+  return Error::success();
+}
+
+static Error validateSemanticIndex(const SemanticSignatureElement &E) {
+  switch (E.SemanticKind) {
+  case dxbc::PSV::SemanticKind::Target:
+    if (E.Rows != 1 || E.SemanticIndices.front() >= 8)
+      return signatureError(
+          "pixel targets require one row and an index within 0-7");
+    break;
+  case dxbc::PSV::SemanticKind::VertexID:
+    if (E.SemanticIndices.front() != 0)
+      return signatureError("SV_VertexID requires semantic index 0");
+    break;
+  default:
+    break;
+  }
+  return Error::success();
+}
+
 static Error parseSignature(Metadata *MD,
                             SmallVectorImpl<SemanticSignatureElement> &Out,
                             ModuleSignatureInfo &Info,
@@ -135,30 +179,10 @@ static Error parseSignature(Metadata *MD,
     for (uint32_t Index : E.SemanticIndices)
       if (!Semantics.emplace(E.SemanticName.upper(), Index).second)
         return signatureError("duplicate semantic name and index");
-    if (Interpretation == SemanticInterpretation::Target &&
-        (E.Rows != 1 || E.SemanticIndices.front() >= 8))
-      return signatureError(
-          "pixel targets require one row and an index within 0-7");
-    if (Interpretation == SemanticInterpretation::SV &&
-        E.SemanticKind == dxbc::PSV::SemanticKind::Position &&
-        (E.Rows != 1 || E.Cols != 4 ||
-         (E.CompType != ElementType::F16 && E.CompType != ElementType::F32)))
-      return signatureError(
-          "SV_Position requires one row of four floating-point components");
-    if (E.SemanticKind == dxbc::PSV::SemanticKind::VertexID &&
-        (E.Rows != 1 || E.Cols != 1 ||
-         (E.CompType != ElementType::I16 && E.CompType != ElementType::U16 &&
-          E.CompType != ElementType::I32 && E.CompType != ElementType::U32)))
-      return signatureError(
-          "SV_VertexID requires a scalar 16- or 32-bit integer");
-    if (E.SemanticKind == dxbc::PSV::SemanticKind::VertexID &&
-        E.SemanticIndices.front() != 0)
-      return signatureError("SV_VertexID requires semantic index 0");
-    if (E.SemanticKind == dxbc::PSV::SemanticKind::InstanceID &&
-        (E.Rows != 1 || E.Cols != 1 ||
-         (E.CompType != ElementType::U16 && E.CompType != ElementType::U32)))
-      return signatureError(
-          "SV_InstanceID requires a scalar 16- or 32-bit unsigned integer");
+    if (Error Err = validateSemanticType(E))
+      return Err;
+    if (Error Err = validateSemanticIndex(E))
+      return Err;
 
     if (Stage == Triple::Vertex && IO == IOType::In &&
         (E.StartRow != Extent || E.StartCol != 0))
