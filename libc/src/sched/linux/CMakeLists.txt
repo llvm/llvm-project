@@ -132,9 +132,10 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.pid_t
     libc.hdr.types.struct_sched_param
-    libc.include.sys_syscall
-    libc.include.time
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_setscheduler
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 

@@ -16892,6 +16892,21 @@ libc_function(
 )
 
 libc_function(
+    name = "sched_setscheduler",
+    srcs = ["src/sched/linux/sched_setscheduler.cpp"],
+    hdrs = ["src/sched/sched_setscheduler.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sched_setscheduler",
+        ":errno",
+        ":types_pid_t",
+        ":types_struct_sched_param",
+    ],
+)
+
+libc_function(
     name = "sched_yield",
     srcs = ["src/sched/linux/sched_yield.cpp"],
     hdrs = ["src/sched/sched_yield.h"],
