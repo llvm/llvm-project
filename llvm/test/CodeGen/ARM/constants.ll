@@ -1,4 +1,6 @@
 ; RUN: llc < %s -mtriple=armv4t-unknown-linux-gnueabi -cgp-branch-opts=0 -verify-machineinstrs | FileCheck %s
+; The pre-cgp- spelling is an alias, a Flag that flips -cgp-branch-opts.
+; RUN: llc < %s -mtriple=armv4t-unknown-linux-gnueabi -disable-cgp-branch-opts -verify-machineinstrs | FileCheck %s
 
 define i32 @f1() {
 ; CHECK: f1

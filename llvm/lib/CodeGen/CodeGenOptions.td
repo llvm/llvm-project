@@ -15,37 +15,37 @@ defm : BoolField<"bbsections-guided-section-prefix", "true",
   "Use the basic-block-sections profile to determine the text section prefix for hot functions. "
   "Functions with basic-block-sections profile will be placed in `.text.hot` regardless of their FDO profile info. "
   "Other functions won't be impacted, i.e., their prefixes will be decided by FDO/sampleFDO profiles">;
-defm : BoolField<"cgp-addr-sink-combine-base-gv", "true",
+defm cgp_addr_sink_combine_base_gv : BoolField<"cgp-addr-sink-combine-base-gv", "true",
   "Allow combining of BaseGV field in Address sinking">;
-defm : BoolField<"cgp-addr-sink-combine-base-offs", "true",
+defm cgp_addr_sink_combine_base_offs : BoolField<"cgp-addr-sink-combine-base-offs", "true",
   "Allow combining of BaseOffs field in Address sinking">;
-defm : BoolField<"cgp-addr-sink-combine-base-reg", "true",
+defm cgp_addr_sink_combine_base_reg : BoolField<"cgp-addr-sink-combine-base-reg", "true",
   "Allow combining of BaseReg field in Address sinking">;
-defm : BoolField<"cgp-addr-sink-combine-scaled-reg", "true",
+defm cgp_addr_sink_combine_scaled_reg : BoolField<"cgp-addr-sink-combine-scaled-reg", "true",
   "Allow combining of ScaledReg field in Address sinking">;
-defm : BoolField<"cgp-addr-sink-new-phis", "false",
+defm cgp_addr_sink_new_phis : BoolField<"cgp-addr-sink-new-phis", "false",
   "Allow creation of Phis in Address sinking">;
-defm : BoolField<"cgp-addr-sink-new-select", "true",
+defm cgp_addr_sink_new_select : BoolField<"cgp-addr-sink-new-select", "true",
   "Allow creation of selects in Address sinking">;
-defm : OptionalBoolField<"cgp-addr-sink-using-gep",
+defm cgp_addr_sink_using_gep : OptionalBoolField<"cgp-addr-sink-using-gep",
   "Address sinking in CGP using GEPs">;
-defm : BoolField<"cgp-andcmp-sinking", "true",
+defm cgp_andcmp_sinking : BoolField<"cgp-andcmp-sinking", "true",
   "Enable sinking and/cmp into branches">;
-defm : BoolField<"cgp-branch-opts", "true",
+defm cgp_branch_opts : BoolField<"cgp-branch-opts", "true",
   "Enable branch optimizations in CodeGenPrepare">;
-defm : BoolField<"cgp-complex-addr-modes", "true",
+defm cgp_complex_addr_modes : BoolField<"cgp-complex-addr-modes", "true",
   "Enable combining addressing modes with different parts in optimizeMemoryInst">;
-defm : BoolField<"cgp-delete-phis", "true",
+defm cgp_delete_phis : BoolField<"cgp-delete-phis", "true",
   "Enable elimination of dead PHI nodes">;
-defm : BoolField<"cgp-ext-ld-promotion", "true",
+defm cgp_ext_ld_promotion : BoolField<"cgp-ext-ld-promotion", "true",
   "Enable ext(promotable(ld)) -> promoted(ext(ld)) optimization in CodeGenPrepare">;
-defm : BoolField<"cgp-force-split-store", "false",
+defm cgp_force_split_store : BoolField<"cgp-force-split-store", "false",
   "Force store splitting no matter what the target query says">;
 defm : ValueField<"cgp-freq-ratio-to-skip-merge", "uint64_t", "2",
   "Skip merging empty blocks if (frequency of empty block) / (frequency of destination block) is greater than this ratio">;
-defm : BoolField<"cgp-gc-opts", "true",
+defm cgp_gc_opts : BoolField<"cgp-gc-opts", "true",
   "Enable GC optimizations in CodeGenPrepare">;
-defm : ValueField<"cgp-huge-func", "unsigned", "10000",
+defm cgp_huge_func : ValueField<"cgp-huge-func", "unsigned", "10000",
   "Least BB number of huge function">;
 defm : BoolField<"cgp-icmp-eq2icmp-st", "false",
   "Enable ICMP_EQ to ICMP_S(L|G)T conversion">;
@@ -53,17 +53,17 @@ defm : ValueField<"cgp-max-address-users-to-scan", "unsigned", "100",
   "Max number of address users to look at">;
 defm : BoolField<"cgp-optimize-phi-types", "true",
   "Enable converting phi types in CodeGenPrepare">;
-defm : BoolField<"cgp-preheader-prot", "true",
+defm cgp_preheader_prot : BoolField<"cgp-preheader-prot", "true",
   "Protect loop preheaders from removal">;
-defm : BoolField<"cgp-select2branch", "true",
+defm cgp_select2branch : BoolField<"cgp-select2branch", "true",
   "Enable select to branch conversion">;
 defm : BoolField<"cgp-split-large-offset-gep", "true",
   "Enable splitting large offset of GEP">;
-defm : BoolField<"cgp-store-extract", "true",
+defm cgp_store_extract : BoolField<"cgp-store-extract", "true",
   "Enable store(extract) optimizations in CodeGenPrepare">;
-defm : BoolField<"cgp-stress-ext-ld-promotion", "false",
+defm cgp_stress_ext_ld_promotion : BoolField<"cgp-stress-ext-ld-promotion", "false",
   "Stress test ext(promotable(ld)) -> promoted(ext(ld)) optimization in CodeGenPrepare">;
-defm : BoolField<"cgp-stress-store-extract", "false",
+defm cgp_stress_store_extract : BoolField<"cgp-stress-store-extract", "false",
   "Stress test store(extract) optimizations in CodeGenPrepare">;
 defm : BoolField<"cgp-type-promotion-merge", "true",
   "Enable merging of redundant sexts when one is dominating the other">;
@@ -74,6 +74,30 @@ defm : BoolField<"profile-guided-section-prefix", "true",
 defm : BoolField<"profile-unknown-in-special-section", "false",
   "In profiling mode like sampleFDO, if a function doesn't have profile, we cannot tell the function is cold for sure because it may be a function newly added without ever being sampled. "
   "With the flag enabled, compiler can put such profile unknown functions into a special section, so runtime system can choose to handle it in a different way than .text section, to save RAM for example">;
+
+// The spellings from before the cgp- prefix, so that existing command lines keep
+// working. A Flag alias takes no =value: -disable-cgp-branch-opts=false is not
+// accepted, but -cgp-branch-opts=true is.
+def : FlagOrEq<["-", "--"], "addr-sink-combine-base-gv">, Alias<cgp_addr_sink_combine_base_gv>;
+def : FlagOrEq<["-", "--"], "addr-sink-combine-base-offs">, Alias<cgp_addr_sink_combine_base_offs>;
+def : FlagOrEq<["-", "--"], "addr-sink-combine-base-reg">, Alias<cgp_addr_sink_combine_base_reg>;
+def : FlagOrEq<["-", "--"], "addr-sink-combine-scaled-reg">, Alias<cgp_addr_sink_combine_scaled_reg>;
+def : FlagOrEq<["-", "--"], "addr-sink-new-phis">, Alias<cgp_addr_sink_new_phis>;
+def : FlagOrEq<["-", "--"], "addr-sink-new-select">, Alias<cgp_addr_sink_new_select>;
+def : FlagOrEq<["-", "--"], "addr-sink-using-gep">, Alias<cgp_addr_sink_using_gep>;
+def : FlagOrEq<["-", "--"], "enable-andcmp-sinking">, Alias<cgp_andcmp_sinking>;
+def : FlagOrEq<["-", "--"], "force-split-store">, Alias<cgp_force_split_store>;
+def : FlagOrEq<["-", "--"], "stress-cgp-ext-ld-promotion">, Alias<cgp_stress_ext_ld_promotion>;
+def : FlagOrEq<["-", "--"], "stress-cgp-store-extract">, Alias<cgp_stress_store_extract>;
+def : SeparateOrEq<["-", "--"], "cgpp-huge-func">, Alias<cgp_huge_func>;
+def : Flag<["-", "--"], "disable-cgp-branch-opts">, Alias<cgp_branch_opts>, AliasArgs<["false"]>;
+def : Flag<["-", "--"], "disable-complex-addr-modes">, Alias<cgp_complex_addr_modes>, AliasArgs<["false"]>;
+def : Flag<["-", "--"], "disable-cgp-delete-phis">, Alias<cgp_delete_phis>, AliasArgs<["false"]>;
+def : Flag<["-", "--"], "disable-cgp-ext-ld-promotion">, Alias<cgp_ext_ld_promotion>, AliasArgs<["false"]>;
+def : Flag<["-", "--"], "disable-cgp-gc-opts">, Alias<cgp_gc_opts>, AliasArgs<["false"]>;
+def : Flag<["-", "--"], "disable-preheader-prot">, Alias<cgp_preheader_prot>, AliasArgs<["false"]>;
+def : Flag<["-", "--"], "disable-cgp-select2branch">, Alias<cgp_select2branch>, AliasArgs<["false"]>;
+def : Flag<["-", "--"], "disable-cgp-store-extract">, Alias<cgp_store_extract>, AliasArgs<["false"]>;
 
 // TargetPassConfig.cpp
 defm : BoolField<"basic-block-section-match-infer", "false",
