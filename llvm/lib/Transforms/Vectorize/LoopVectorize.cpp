@@ -6281,15 +6281,18 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                        VPI->getOpcode()) &&
          "Should have been handled prior to this!");
 
-  // We can only replicate an extractvalue if its operand generates per lane in
-  // the same block, otherwise we would need to extract a lane from its struct
-  // operand which is invalid.
+  // An extractvalue takes the shape of its operand: we cannot extract a lane
+  // from a widened struct, nor build a struct from replicated lanes.
   if (VPI->getOpcode() == Instruction::ExtractValue &&
       !vputils::isSingleScalar(VPI->getOperand(0)))
     if (VPRecipeBase *OpR = VPI->getOperand(0)->getDefiningRecipe())
-      if (!vputils::doesGeneratePerAllLanes(OpR) ||
-          OpR->getParent() != VPI->getParent())
+      if (!vputils::doesGeneratePerAllLanes(OpR))
         return tryToWiden(VPI);
+  if (VPI->getOpcode() == Instruction::ExtractValue)
+    return new VPReplicateRecipe(Instr, VPI->operandsWithoutMask(),
+                                 vputils::isSingleScalar(VPI->getOperand(0)),
+                                 /*Mask=*/nullptr, *VPI, *VPI,
+                                 VPI->getDebugLoc());
 
   if (!shouldWiden(Instr, Range))
     return nullptr;

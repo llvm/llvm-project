@@ -1,4 +1,4 @@
-; RUN: opt -p slp-vectorizer -mtriple=riscv64 -mattr=+v -riscv-v-slp-max-vf=2 -S < %s -pass-remarks-output=%t
+; RUN: opt -p slp-vectorizer -mtriple=riscv64 -mattr=+v -riscv-v-slp-max-vf=2 -S -disable-output < %s -pass-remarks-output=%t
 ; RUN: FileCheck %s --check-prefix REMARK --input-file=%t
 
 ; The splat is operand 0 of a commutative, splattable intrinsic.

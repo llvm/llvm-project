@@ -181,6 +181,49 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
   SmallString<128> ES;
   raw_svector_ostream SS(ES);
 
+  // Reports an error unless SmallVT is strictly smaller than the type of
+  // BigVal. SmallVal is only used to describe SmallVT in error messages.
+  auto CheckSmallerThan = [&](const SDNodeValue &SmallVal, EVT SmallVT,
+                              const SDNodeValue &BigVal) {
+    EVT BigVT = BigVal.getValueType();
+
+    if (SmallVT.isInteger() != BigVT.isInteger() ||
+        SmallVT.isFloatingPoint() != BigVT.isFloatingPoint()) {
+      SS << SmallVal << " type " << SmallVT
+         << " must be the same kind of type as " << BigVal << " (" << BigVT
+         << ")";
+      reportNodeError(DAG, N, SS.str());
+    }
+    if (SmallVT.isVector() != BigVT.isVector()) {
+      SS << SmallVal << " type " << SmallVT << " and " << BigVal << " ("
+         << BigVT << ") must both be vectors or both be scalars";
+      reportNodeError(DAG, N, SS.str());
+    }
+
+    // Compare scalar sizes first; only if they match compare total sizes.
+    uint64_t SmallScalarSize = SmallVT.getScalarSizeInBits();
+    uint64_t BigScalarSize = BigVT.getScalarSizeInBits();
+    bool IsSmaller;
+    if (SmallScalarSize != BigScalarSize) {
+      IsSmaller = SmallScalarSize < BigScalarSize;
+    } else {
+      TypeSize SmallSize = SmallVT.getSizeInBits();
+      TypeSize BigSize = BigVT.getSizeInBits();
+      if (SmallVT.isScalableVector() != BigVT.isScalableVector()) {
+        SS << SmallVal << " type " << SmallVT << " and " << BigVal << " ("
+           << BigVT << ") cannot be compared; one is scalable and the "
+           << "other is fixed";
+        reportNodeError(DAG, N, SS.str());
+      }
+      IsSmaller = SmallSize.getKnownMinValue() < BigSize.getKnownMinValue();
+    }
+    if (!IsSmaller) {
+      SS << SmallVal << " type " << SmallVT << " must be smaller than "
+         << BigVal << " (" << BigVT << ")";
+      reportNodeError(DAG, N, SS.str());
+    }
+  };
+
   for (const SDTypeConstraint &C : getConstraints(N->getOpcode())) {
     SDNodeValue Val = GetConstraintValue(C.ConstrainedValIdx);
     EVT VT = Val.getValueType();
@@ -236,9 +279,19 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
       break;
     case SDTCisSameAs:
       break;
-    case SDTCisVTSmallerThanOp:
+    case SDTCisVTSmallerThanOp: {
+      const auto *VTNode = dyn_cast<VTSDNode>(Val.getValue().getNode());
+      if (!VTNode) {
+        SS << Val << " must be a VT node";
+        reportNodeError(DAG, N, SS.str());
+      }
+      EVT SmallVT = VTNode->getVT();
+
+      CheckSmallerThan(Val, SmallVT, GetConstraintValue(C.ConstrainingValIdx));
       break;
+    }
     case SDTCisOpSmallerThanOp:
+      CheckSmallerThan(Val, VT, GetConstraintValue(C.ConstrainingValIdx));
       break;
     case SDTCisEltOfVec: {
       SDNodeValue VecVal = GetConstraintValue(C.ConstrainingValIdx);
