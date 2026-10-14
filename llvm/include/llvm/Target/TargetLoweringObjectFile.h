@@ -216,6 +216,11 @@ public:
   /// emitting the address in debug info.
   virtual const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const;
 
+  /// Return an MCExpr to use for a reference to a symbol from DWARF debug info.
+  virtual const MCExpr *getDwarfSymbolReference(const MCSymbol *Label,
+                                                const TargetMachine &TM,
+                                                MCContext &Ctx) const;
+
   virtual const MCExpr *lowerRelativeReference(
       const GlobalValue *LHS, const GlobalValue *RHS, int64_t Addend,
       std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {

@@ -3886,7 +3886,10 @@ void AsmPrinter::emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
   }
 
   // Emit Label+Offset (or just Label if Offset is zero)
-  const MCExpr *Expr = MCSymbolRefExpr::create(Label, OutContext);
+  const MCExpr *Expr =
+      IsSectionRelative
+          ? getObjFileLowering().getDwarfSymbolReference(Label, TM, OutContext)
+          : MCSymbolRefExpr::create(Label, OutContext);
   if (Offset)
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(Offset, OutContext), OutContext);

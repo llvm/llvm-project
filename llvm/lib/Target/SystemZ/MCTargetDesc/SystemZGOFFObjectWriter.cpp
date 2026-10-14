@@ -9,7 +9,6 @@
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZMCAsmInfo.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
-#include "llvm/MC/MCSectionGOFF.h"
 #include <memory>
 
 using namespace llvm;
@@ -39,14 +38,6 @@ unsigned SystemZGOFFObjectWriter::getRelocType(const MCValue &Target,
   case SystemZ::S_None:
     if (Fixup.isPCRel())
       return Reloc_Type_RICon;
-    if (const MCSymbol *Sym = Target.getAddSym()) {
-      if (Sym->isInSection()) {
-        const auto &Sec = static_cast<const MCSectionGOFF &>(Sym->getSection());
-        if (Sec.isED() &&
-            Sec.getEDAttributes().LoadBehavior == GOFF::ESD_LB_NoLoad)
-          return Reloc_Type_QCon;
-      }
-    }
     return Reloc_Type_ACon;
   }
   llvm_unreachable("Modifier not supported");

@@ -538,6 +538,11 @@ const MCExpr *TargetLoweringObjectFile::getDebugThreadLocalSymbol(const MCSymbol
   return MCSymbolRefExpr::create(Sym, getContext());
 }
 
+const MCExpr *TargetLoweringObjectFile::getDwarfSymbolReference(
+    const MCSymbol *Label, const TargetMachine &TM, MCContext &Ctx) const {
+  return MCSymbolRefExpr::create(Label, Ctx);
+}
+
 void TargetLoweringObjectFile::getNameWithPrefix(
     SmallVectorImpl<char> &OutName, const GlobalValue *GV,
     const TargetMachine &TM) const {
