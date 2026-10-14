@@ -32,6 +32,8 @@ set(ORC_RT_HEADERS
     orc-rt/connect-socket/SocketConnector.h
     orc-rt/connect-socket/SocketHandle.h
     orc-rt/connect-socket/sps/SimpleRemoteCAOverSocket.h
+    orc-rt/connect-tcp/TCP.h
+    orc-rt/connect-tcp/TCPConnector.h
     orc-rt/connect/ConnectionSpec.h
     orc-rt/connect/ConnectorRegistry.h
     orc-rt/connect/VettedPeer.h
@@ -73,7 +75,6 @@ set(ORC_RT_HEADERS
 if (ORC_RT_TARGET_POSIX)
   list(APPEND ORC_RT_HEADERS
     orc-rt/bedrock/sps/DWARFEHFrameRegistrarSPSCI.h
-    orc-rt/connect-tcp/TCP.h
   )
 endif()
 
