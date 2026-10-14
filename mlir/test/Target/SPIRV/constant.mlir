@@ -362,10 +362,6 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.3,
     spirv.ReturnValue %0 : !spirv.struct<(i32, !spirv.array<2 x i32>)>
   }
 
-  // Zero-valued arrays and structs are array attributes of the zero values of
-  // their elements. This is also what OpConstantNull of these types is
-  // deserialized into.
-
   // CHECK-LABEL: @zero_array_const
   spirv.func @zero_array_const() -> (!spirv.array<4 x i32>) "None" {
     // CHECK: spirv.Constant [0 : i32, 0 : i32, 0 : i32, 0 : i32] : !spirv.array<4 x i32>
