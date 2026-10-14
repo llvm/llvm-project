@@ -5313,9 +5313,9 @@ def CIR_CoroExitOp : CIR_Op<"coro.exit", [
 ]> {
   let summary = "Branches to the enclosing cir.coroutine's exit region";
   let description = [{
-    Placeholder emitted while flattening `cir.await`.
-    `cir.coroutine` flattening rewrites it into a `cir.br`
-    to the `exit` block. It must not survive flattening.
+    Placeholder emitted while flattening `cir.await`. `cir.coroutine`flattening
+    rewrites it into a `cir.br` to the `exit` block.
+    It must not survive flattening.
   }];
   let assemblyFormat = "attr-dict";
   let hasLLVMLowering = false;
