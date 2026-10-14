@@ -855,7 +855,7 @@ static void buildFrameLayout(Function &F, const DominatorTree &DT,
   if (Shape.ABI == coro::ABI::Switch && PromiseAlloca) {
     // We assume that no alias will be create before CoroBegin.
     FrameData.Allocas.emplace_back(
-        PromiseAlloca, DenseMap<Instruction *, std::optional<APInt>>{},
+        PromiseAlloca, SmallMapVector<Instruction *, std::optional<APInt>, 4>{},
         hasAccessingPromiseBeforeCB(DT, Shape));
   }
   // Create an entry for every spilled value.
@@ -1065,7 +1065,7 @@ static void handleAccessBeforeCoroBegin(const FrameDataInfo &FrameData,
 static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   LLVMContext &C = Shape.CoroBegin->getContext();
   Function *F = Shape.CoroBegin->getFunction();
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(*F->getParent());
   DominatorTree DT(*F);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
@@ -1830,11 +1830,10 @@ static std::optional<std::pair<Value &, DIExpression &>>
 salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
                      bool UseEntryValue, Function *F, Value *Storage,
                      DIExpression *Expr, bool SkipOutermostLoad) {
-  IRBuilder<> Builder(F->getContext());
   auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
   while (isa<IntrinsicInst>(InsertPt))
     ++InsertPt;
-  Builder.SetInsertPoint(InsertPt);
+  IRBuilder<> Builder(InsertPt);
 
   while (auto *Inst = dyn_cast_or_null<Instruction>(Storage)) {
     if (auto *LdInst = dyn_cast<LoadInst>(Inst)) {

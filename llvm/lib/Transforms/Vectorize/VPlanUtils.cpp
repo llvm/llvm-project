@@ -511,8 +511,9 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
       .Case([](const VPReplicateRecipe *R) {
         // Be conservative about side-effects, except for the
         // known-side-effecting assumes and stores, which we know will be
-        // uniform.
-        return R->isSingleScalar() &&
+        // uniform. Each alloca creates a distinct allocation, so allocas are
+        // never uniform.
+        return R->isSingleScalar() && R->getOpcode() != Instruction::Alloca &&
                (!R->mayHaveSideEffects() ||
                 isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
@@ -905,6 +906,9 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
       return Plan.getOrAddLiveIn(V);
     if (!SE.DT.dominates(I->getParent(), PH))
       continue;
+    Loop *IL = SE.LI.getLoopFor(I->getParent());
+    if (IL && !IL->contains(PH))
+      continue;
     SmallVector<Instruction *> DropPoisonGeneratingInsts;
     if (!SE.canReuseInstruction(S, I, DropPoisonGeneratingInsts))
       continue;
@@ -1037,8 +1041,10 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       llvm_unreachable("Unhandled cast SCEV");
     }
 
-    // When expanding ptrtoaddr, first check if there's an existing ptrtoint we
-    // can reuse.
+    // For ptrtoaddr of an IR value, reuse an existing cast dominating the
+    // entry if there is one. Otherwise leave it to SCEVExpander, which places
+    // the cast right after the IR value's definition, so all users can share
+    // it.
     if (Opcode == Instruction::PtrToAddr) {
       VPlan &Plan = Builder.getPlan();
       BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
@@ -1049,6 +1055,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
                   return SE.DT.dominates(CI->getParent(), PH);
                 }))
           return Plan.getOrAddLiveIn(CI);
+        return vputils::getOrCreateVPValueForSCEVExpr(Plan, S);
       }
     }
 
@@ -1123,10 +1130,22 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
   case scAddRecExpr: {
     auto *AR = cast<SCEVAddRecExpr>(S);
     VPlan &Plan = Builder.getPlan();
-    [[maybe_unused]] BasicBlock *PH =
-        cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
+    BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
     assert(SE.DT.dominates(AR->getLoop()->getHeader(), PH) &&
            "can only expand AddRecs for loops outside VPlan's scope");
+
+    Type *Ty = AR->getType();
+    if (auto [LCSSAPhi, Diff] = SCEVExpander::findReusableLCSSAPhi(SE, AR, PH);
+        LCSSAPhi) {
+      VPValue *DiffV = expand(Diff);
+      VPValue *BaseV = Plan.getOrAddLiveIn(LCSSAPhi);
+      if (LCSSAPhi->getType()->isPointerTy()) {
+        if (Ty->isPointerTy())
+          return Builder.createPtrAdd(BaseV, DiffV, DL);
+        BaseV = Builder.createScalarCast(Instruction::PtrToAddr, BaseV, Ty, DL);
+      }
+      return Builder.createAdd(BaseV, DiffV, DL);
+    }
 
     // Try to expand AR by re-using an existing canonical IV in the Plan's
     // entry. A canonical IV must be affine and integer typed.
@@ -1434,7 +1453,7 @@ void vputils::detail::pullOutPermutationsImpl(
 
       VPSingleDefRecipe *Res = BuildPerm(&Def);
       Res->insertAfter(&Def);
-      Def.replaceUsesWithIf(Res, [&Res](VPUser &U) { return &U != Res; });
+      Def.replaceUsesWithIf(Res, not_equal_to(Res));
     }
   }
 }

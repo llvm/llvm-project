@@ -1,16 +1,14 @@
 // RUN: %clang_cc1 -std=c++17 -triple aarch64-unknown-linux-gnu -fno-threadsafe-statics -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 // RUN: %clang_cc1 -std=c++17 -triple aarch64-unknown-linux-gnu -fno-threadsafe-statics -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM,LLVM-CIR
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++17 -triple aarch64-unknown-linux-gnu -fno-threadsafe-statics -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM,LLVM-OGCG
+// RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 
 // On ARM-style targets (here, AArch64), function-scope static locals use the
 // ARM ABI rule that only bit 0 of the guard is checked. The guard size depends
 // on classic codegen's `useInt8GuardVariable = !threadsafe && hasInternalLinkage`
-// (see ItaniumCXXABI::EmitGuardedInit). Both branches below are NYI in the CIR
-// LoweringPrepare pass and currently fail; fill in the expected output once
-// support is added.
+// (see ItaniumCXXABI::EmitGuardedInit).
 
 int bar();
 
@@ -69,17 +67,18 @@ inline int word_guard() {
 // CIR:     %[[B_TOO:.*]] = cir.get_global static_local @_ZZ10word_guardvE1b : !cir.ptr<!s32i>
 // CIR:     %[[BAR:.*]] = cir.call @_Z3barv()
 // CIR:     cir.store{{.*}} %[[BAR]], %[[B_TOO]] : !s32i, !cir.ptr<!s32i>
-// CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR:     cir.store %[[ONE]], %[[GUARD]] : !s64i, !cir.ptr<!s64i>
+// CIR:     %[[GUARD_BYTE_PTR2:.*]] = cir.cast bitcast %[[GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
+// CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
+// CIR:     cir.store %[[ONE]], %[[GUARD_BYTE_PTR2]] : !s8i, !cir.ptr<!s8i>
 // CIR:   }
 // CIR:   %[[LOAD_B:.*]] = cir.load{{.*}} %[[B]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.store %[[LOAD_B]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[LOAD_RETVAL:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.return %[[LOAD_RETVAL]] : !s32i
 
-// Note: The guard variable is a 64-bit value, but the load and truncate of
-//       that value gets folded to an 8-byte-aligned i8 load on both LLVM via
-//       CIR and OGCG, while the store of the value only gets folded in OGCG.
+// Note: The guard variable is a 64-bit value, but both the load/truncate and
+//       the mark-initialized store get folded to an i8 access on both LLVM
+//       via CIR and OGCG.
 
 // LLVM:    define {{.*}} i32 @_Z10word_guardv()
 // LLVM:      %[[GUARD:.*]] = load i8, ptr @_ZGVZ10word_guardvE1b, align 8
@@ -89,8 +88,7 @@ inline int word_guard() {
 // LLVM:    [[DO_INIT]]:
 // LLVM:      %[[BAR:.*]] = call {{.*}} i32 @_Z3barv()
 // LLVM:      store i32 %[[BAR]], ptr @_ZZ10word_guardvE1b
-// LLVM-CIR:  store i64 1, ptr @_ZGVZ10word_guardvE1b, align 8
-// LLVM-OGCG: store i8 1, ptr @_ZGVZ10word_guardvE1b, align 8
+// LLVM:      store i8 1, ptr @_ZGVZ10word_guardvE1b
 // LLVM:      br label %[[DONE]]
 // LLVM:    [[DONE]]:
 // LLVM:      %[[LOAD_B:.*]] = load i32, ptr @_ZZ10word_guardvE1b

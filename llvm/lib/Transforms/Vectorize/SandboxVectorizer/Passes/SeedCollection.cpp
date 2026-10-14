@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/SeedCollection.h"
+#include "../../VectorizeOptions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/RegionWithScore.h"
@@ -15,21 +16,6 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
-
-static cl::opt<unsigned>
-    OverrideVecRegBits("sbvec-vec-reg-bits", cl::init(0), cl::Hidden,
-                       cl::desc("Override the vector register size in bits, "
-                                "which is otherwise found by querying TTI."));
-static cl::opt<bool>
-    AllowNonPow2("sbvec-allow-non-pow2", cl::init(false), cl::Hidden,
-                 cl::desc("Allow non-power-of-2 vectorization."));
-
-#define LoadSeedsDef "loads"
-#define StoreSeedsDef "stores"
-static cl::opt<std::string> CollectSeeds(
-    "sbvec-collect-seeds", cl::init(StoreSeedsDef), cl::Hidden,
-    cl::desc("Collect these seeds. Use empty for none or a comma-separated "
-             "list of '" StoreSeedsDef "' and '" LoadSeedsDef "'."));
 
 namespace sandboxir {
 
@@ -44,6 +30,7 @@ SeedCollection::SeedCollection(StringRef Pipeline, StringRef AuxArg)
 }
 
 bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
+  const VectorizeOptions &Opts = VectorizeOptions::Global;
   bool Change = false;
   const auto &DL = F.getParent()->getDataLayout();
 
@@ -61,8 +48,8 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
                                   Seeds[FirstUnusedIdx])),
                               DL);
         unsigned AS = getLoadStoreAddressSpace(Seeds[FirstUnusedIdx]);
-        unsigned VecRegBits = OverrideVecRegBits != 0
-                                  ? OverrideVecRegBits
+        unsigned VecRegBits = Opts.sbvec_vec_reg_bits != 0
+                                  ? Opts.sbvec_vec_reg_bits
                                   : A.getTTI().getLoadStoreVecRegBitWidth(AS);
 
         auto DivideBy2 = [](unsigned Num) {
@@ -89,8 +76,8 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
             if (Seeds.allUsed())
               break;
 
-            auto SeedSlice =
-                Seeds.getSlice(Offset, SliceElms * ElmBits, !AllowNonPow2);
+            auto SeedSlice = Seeds.getSlice(Offset, SliceElms * ElmBits,
+                                            !Opts.sbvec_allow_non_pow2);
             if (SeedSlice.empty())
               continue;
 

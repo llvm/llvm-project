@@ -387,8 +387,8 @@ void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
   emitAutoVarCleanups(emission);
 }
 
-void CIRGenFunction::emitLoopConditionVariable(
-    const VarDecl &d, DeferredLoopConditionCleanup &condCleanup) {
+void CIRGenFunction::emitLoopConditionVariable(const VarDecl &d,
+                                               CapturedCleanups &condCleanup) {
   // A condition variable always has automatic storage duration, so this
   // mirrors the auto-var path of emitVarDecl/emitAutoVarDecl. Capture the
   // lifetime-end cleanup pushed while emitting the alloca, but emit the
@@ -406,7 +406,7 @@ void CIRGenFunction::emitLoopConditionVariable(
 
   CIRGenFunction::VarDeclContext varDeclCtx{*this, &d};
   CIRGenFunction::AutoVarEmission emission = [&] {
-    DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+    CapturedCleanups::CaptureScope capture(condCleanup);
     return emitAutoVarAlloca(d);
   }();
 
@@ -439,7 +439,7 @@ void CIRGenFunction::emitLoopConditionVariable(
   }
 
   {
-    DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+    CapturedCleanups::CaptureScope capture(condCleanup);
     emitAutoVarCleanups(emission);
   }
 
@@ -536,10 +536,10 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
       d.hasAttr<CUDASharedAttr>() || d.hasAttr<LoaderUninitializedAttr>())
     init = cir::UndefAttr::get(lty);
   else
-    init = builder.getZeroInitAttr(convertType(ty));
+    init = emitNullConstantAttr(ty);
 
-  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
-      getMLIRContext(), getGlobalVarAddressSpace(&d));
+  mlir::ptr::MemorySpaceAttrInterface addrSpace =
+      getGlobalCIRAddressSpace(getGlobalVarAddressSpace(&d));
 
   cir::GlobalOp gv =
       builder.createVersionedGlobal(getModule(), getLoc(d.getLocation()), name,
@@ -761,10 +761,11 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
 
   cir::GlobalOp var = globalOp;
 
-  assert(!cir::MissingFeatures::cudaSupport());
-
+  // Sema ensures any initializer of a CUDA __shared__ variable is a no-op.
+  bool isCudaSharedVar = getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
+                         d.hasAttr<CUDASharedAttr>();
   // If this value has an initializer, emit it.
-  if (d.getInit())
+  if (d.getInit() && !isCudaSharedVar)
     var = addInitializerToStaticVarDecl(d, var, getAddrOp);
 
   var.setAlignment(alignment.getAsAlign().value());

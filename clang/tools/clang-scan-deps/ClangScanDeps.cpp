@@ -92,6 +92,7 @@ static ScanningOptimizations OptimizeArgs;
 static std::string ModuleFilesDir;
 static bool EagerLoadModules;
 static bool CacheNegativeStats;
+static std::vector<std::string> InvalidatedPaths;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
 static std::optional<std::string> ModuleNames;
@@ -203,6 +204,18 @@ static void ParseArgs(int argc, char **argv) {
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
 
   CacheNegativeStats = Args.hasArg(OPT_cache_negative_stats);
+
+  // Spell these like the reported directory-deps, which are matched textually.
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_invalidated_path_EQ)) {
+    SmallString<256> Path(A->getValue());
+    if (std::error_code EC = llvm::sys::fs::make_absolute(Path)) {
+      llvm::errs() << ToolName << ": cannot make '" << A->getValue()
+                   << "' absolute: " << EC.message() << "\n";
+      std::exit(1);
+    }
+    llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
+    InvalidatedPaths.emplace_back(Path);
+  }
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
     StringRef S{A->getValue()};
@@ -505,6 +518,9 @@ public:
             JOS.attributeArray("command-line",
                                toJSONStrings(JOS, MD.getBuildArguments()));
             JOS.attribute("context-hash", StringRef(MD.ID.ContextHash));
+            if (!MD.DirectoryDeps.empty())
+              JOS.attributeArray("directory-deps",
+                                 toJSONStrings(JOS, MD.DirectoryDeps));
             JOS.attributeArray("file-deps", [&] {
               MD.forEachFileDep([&](StringRef FileDep) {
                 // Not reporting SDKSettings.json so that test checks can remain
@@ -1163,6 +1179,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.AsyncScanModules = AsyncScanModules;
   Opts.FlushModuleCache = !NoFlushModuleCache;
   Opts.CacheNegativeStats = CacheNegativeStats;
+  Opts.ValidateAgainstInvalidatedPaths = true;
   Opts.LogPath = LogPath;
 
   llvm::Timer T;
@@ -1170,6 +1187,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   {
     DependencyScanningService Service(std::move(Opts));
+
+    for (StringRef Path : InvalidatedPaths)
+      Service.addInvalidatedPath(Path);
 
     if (Inputs.size() == 1) {
       ScanningTask(Service);

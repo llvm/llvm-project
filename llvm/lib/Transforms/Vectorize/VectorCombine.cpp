@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include "VectorizeOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -24,8 +25,6 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/LoopAccessAnalysis.h"
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -36,7 +35,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -61,41 +59,29 @@ STATISTIC(NumScalarOps, "Number of scalar unary + binary ops formed");
 STATISTIC(NumScalarCmp, "Number of scalar compares formed");
 STATISTIC(NumScalarIntrinsic, "Number of scalar intrinsic calls formed");
 
-static cl::opt<bool> DisableVectorCombine(
-    "disable-vector-combine", cl::init(false), cl::Hidden,
-    cl::desc("Disable all vector combine transforms"));
-
-static cl::opt<bool> DisableBinopExtractShuffle(
-    "disable-binop-extract-shuffle", cl::init(false), cl::Hidden,
-    cl::desc("Disable binop extract to shuffle transforms"));
-
-static cl::opt<unsigned> MaxInstrsToScan(
-    "vector-combine-max-scan-instrs", cl::init(30), cl::Hidden,
-    cl::desc("Max number of instructions to scan for vector combining."));
-
 static const unsigned InvalidIndex = std::numeric_limits<unsigned>::max();
 
 namespace {
 class VectorCombine {
 public:
-  VectorCombine(Function &F, const TargetTransformInfo &TTI,
-                const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
-                ScalarEvolution *SE, const DataLayout *DL,
+  VectorCombine(const VectorizeOptions &Opts, Function &F,
+                const TargetTransformInfo &TTI, const DominatorTree &DT,
+                AAResults &AA, AssumptionCache &AC, const DataLayout *DL,
                 TTI::TargetCostKind CostKind, bool TryEarlyFoldsOnly)
-      : F(F), Builder(F.getContext(), InstSimplifyFolder(*DL)), TTI(TTI),
-        DT(DT), AA(AA), SE(SE), DL(DL), CostKind(CostKind),
+      : Opts(Opts), F(F), Builder(*F.getParent(), InstSimplifyFolder(*DL)),
+        TTI(TTI), DT(DT), AA(AA), DL(DL), CostKind(CostKind),
         SQ(*DL, /*TLI=*/nullptr, &DT, &AC),
         TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
   bool run();
 
 private:
+  const VectorizeOptions &Opts;
   Function &F;
   IRBuilder<InstSimplifyFolder> Builder;
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
   AAResults &AA;
-  ScalarEvolution *SE;
   const DataLayout *DL;
   TTI::TargetCostKind CostKind;
   const SimplifyQuery SQ;
@@ -147,7 +133,6 @@ private:
   bool foldShuffleOfSelects(Instruction &I);
   bool foldShuffleOfCastops(Instruction &I);
   bool foldShuffleOfShuffles(Instruction &I);
-  bool foldShuffleOfAdjacentLoads(Instruction &I);
   bool foldPermuteOfIntrinsic(Instruction &I);
   bool foldShufflesOfLengthChangingShuffles(Instruction &I);
   bool foldShuffleOfIntrinsics(Instruction &I);
@@ -286,8 +271,11 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
   unsigned OffsetEltIndex = 0;
   Align Alignment = Load->getAlign();
+  // Ignore frees because the existing load proves that the object has not been
+  // freed. Allocations cannot shrink, so this is sufficient.
   if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1),
-                                   SQ.getWithInstruction(Load))) {
+                                   SQ.getWithInstruction(Load),
+                                   /*IgnoreFree=*/true)) {
     // It is not safe to load directly from the pointer, but we can still peek
     // through gep offsets and check if it safe to load from a base address with
     // updated alignment. If it is, we can shuffle the element(s) into place
@@ -314,7 +302,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     OffsetEltIndex = OffsetEltIndexAP.getZExtValue();
 
     if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1),
-                                     SQ.getWithInstruction(Load)))
+                                     SQ.getWithInstruction(Load),
+                                     /*IgnoreFree=*/true))
       return false;
 
     // Update alignment with offset value. Note that the offset could be negated
@@ -399,8 +388,11 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
   Align Alignment = Load->getAlign();
+  // Ignore frees because the existing load proves that the object has not been
+  // freed. Allocations cannot shrink, so this is sufficient.
   if (!isSafeToLoadUnconditionally(SrcPtr, Ty, Align(1),
-                                   SQ.getWithInstruction(Load)))
+                                   SQ.getWithInstruction(Load),
+                                   /*IgnoreFree=*/true))
     return false;
 
   Alignment = std::max(SrcPtr->getPointerAlignment(*DL), Alignment);
@@ -558,7 +550,7 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
 
   ConvertToShuffle = getShuffleExtract(Ext0, Ext1, PreferredExtractIndex);
   if (ConvertToShuffle) {
-    if (IsBinOp && DisableBinopExtractShuffle)
+    if (IsBinOp && Opts.disable_binop_extract_shuffle)
       return true;
 
     // If we are extracting from 2 different indexes, then one operand must be
@@ -1751,13 +1743,14 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
 
 // Check if memory is modified, freed, or synchronized between two instrs in
 // the same BB.
-static bool isMemModifiedBetween(BasicBlock::iterator Begin,
+static bool isMemModifiedBetween(const VectorizeOptions &Opts,
+                                 BasicBlock::iterator Begin,
                                  BasicBlock::iterator End,
                                  const MemoryLocation &Loc, AAResults &AA) {
   unsigned NumScanned = 0;
   if (std::any_of(Begin, End, [&](const Instruction &Instr) {
         return isModSet(AA.getModRefInfo(&Instr, Loc)) ||
-               ++NumScanned > MaxInstrsToScan;
+               ++NumScanned > Opts.vector_combine_max_scan_instrs;
       }))
     return true;
 
@@ -2044,7 +2037,7 @@ bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
       SrcAddr != SI->getPointerOperand()->stripPointerCasts())
     return false;
 
-  if (isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
+  if (isMemModifiedBetween(Opts, Load->getIterator(), SI->getIterator(),
                            MemoryLocation::get(SI), AA))
     return false;
 
@@ -2206,7 +2199,8 @@ bool VectorCombine::scalarizeLoad(Instruction &I) {
            make_range(std::next(LI->getIterator()), UI->getIterator())) {
         // Bail out if we reached the check limit or the instruction may write
         // to memory.
-        if (NumInstChecked == MaxInstrsToScan || I.mayWriteToMemory())
+        if (NumInstChecked == Opts.vector_combine_max_scan_instrs ||
+            I.mayWriteToMemory())
           return false;
         NumInstChecked++;
       }
@@ -3899,7 +3893,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   bool TraversedElCountChangingBitcast = false;
 
   while (!Candidates.empty()) {
-    if (++NumVisited > MaxInstrsToScan)
+    if (++NumVisited > Opts.vector_combine_max_scan_instrs)
       return false;
 
     auto ItemFrom = Candidates.pop_back_val();
@@ -6269,12 +6263,13 @@ static SmallVector<Value *, 8> getInstrOperandsAtIdx(ArrayRef<Value *> Members,
 
 /// Check whether the tree of elementwise operations each feeding \p Members
 /// can be rebuilt at the interleaved width.
-static bool canWidenDeinterleavedOperations(ArrayRef<Value *> Members,
+static bool canWidenDeinterleavedOperations(const VectorizeOptions &Opts,
+                                            ArrayRef<Value *> Members,
                                             unsigned &NumScanned) {
   unsigned Factor = Members.size();
   if (getCommonDeinterleavedSource(Members))
     return true;
-  if (NumScanned + Factor > MaxInstrsToScan)
+  if (NumScanned + Factor > Opts.vector_combine_max_scan_instrs)
     return false;
   NumScanned += Factor;
 
@@ -6295,7 +6290,7 @@ static bool canWidenDeinterleavedOperations(ArrayRef<Value *> Members,
   for (unsigned Op = 0, E = getNumDataOperands(FirstInst); Op != E; ++Op) {
     SmallVector<Value *, 8> Operands = getInstrOperandsAtIdx(Members, Op);
     if (!getCommonSplatValue(Operands) &&
-        !canWidenDeinterleavedOperations(Operands, NumScanned))
+        !canWidenDeinterleavedOperations(Opts, Operands, NumScanned))
       return false;
   }
   return true;
@@ -6413,7 +6408,7 @@ bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
 
   SmallVector<Value *, 8> RootMembers(Interleave->args());
   unsigned NumScanned = 0;
-  if (!canWidenDeinterleavedOperations(RootMembers, NumScanned))
+  if (!canWidenDeinterleavedOperations(Opts, RootMembers, NumScanned))
     return false;
 
   ElementCount WideEC = cast<VectorType>(I.getType())->getElementCount();
@@ -6590,8 +6585,11 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   Value *NewVecCast = Builder.CreateBitCast(DeinterleavedVal, NewVecTy);
   Value *NewDeinterleave = Builder.CreateIntrinsic(
       Intrinsic::vector_deinterleave2, {NewVecTy}, {NewVecCast});
+  Worklist.pushValue(NewVecCast);
+  Worklist.pushValue(NewDeinterleave);
   for (auto [Idx, MergeInst] : enumerate(MergeInsts)) {
     Value *NewField = Builder.CreateExtractValue(NewDeinterleave, Idx);
+    Worklist.pushValue(NewField);
     NewField = Builder.CreateBitCast(NewField, MergeInst->getType());
     replaceValue(*MergeInst, *NewField);
   }
@@ -6929,199 +6927,6 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   return false;
 }
 
-// Attempt to combine two adjacent fixed-length vector loads, that only feed
-// shufflevector instructions, into a single wider load, rewriting every such
-// shuffle so that operand 0 is the wide load and operand 1 is poison.
-// clang-format off
-// e.g.
-//   %loadA = load <16 x i8>, ptr %a
-//   %gep = getelementptr inbounds <16 x i8>, ptr %a, i64 1
-//   %loadB = load <16 x i8>, ptr %gep
-//   %shuffle0 = shufflevector <16 x i8> %loadA, <16 x i8> %loadB,
-//               <32 x i8> <...>
-//   %shuffle1 = shufflevector <16 x i8> %loadA, <16 x i8> %loadB,
-//               <32 x i8> <...>
-//
-// The fold would transform this to:
-//   %loadAB = load <32 x i8>, ptr %a
-//   %shuffle0 = shufflevector <32 x i8> %loadAB, <32 x i8> poison,
-//               <32 x i8> <...>
-//   %shuffle1 = shufflevector <32 x i8> %loadAB, <32 x i8> poison,
-//               <32 x i8> <...>
-//
-// clang-format on
-// Matching this pattern in codegen becomes difficult and hence, we prefer doing
-// this here.
-bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
-  auto *SV = cast<ShuffleVectorInst>(&I);
-
-  // The two operands must be distinct loads of the same fixed vector type.
-  auto *Load0 = dyn_cast<LoadInst>(SV->getOperand(0));
-  auto *Load1 = dyn_cast<LoadInst>(SV->getOperand(1));
-  if (!Load0 || !Load1 || Load0 == Load1 || !Load0->isSimple() ||
-      !Load1->isSimple())
-    return false;
-
-  // Confirm both loads are of fixed vector type.
-  auto *LoadTy = dyn_cast<FixedVectorType>(Load0->getType());
-  if (!LoadTy)
-    return false;
-
-  // We restrict to loads occurring in the same BB for now.
-  if (Load0->getParent() != Load1->getParent())
-    return false;
-
-  if (Load0->getPointerAddressSpace() != Load1->getPointerAddressSpace())
-    return false;
-
-  // Check that the original load type has no padding bits otherwise the wide
-  // load would be incorrect.
-  if (DL->getTypeSizeInBits(LoadTy) != 8 * DL->getTypeStoreSize(LoadTy))
-    return false;
-
-  const int NumElts = LoadTy->getNumElements();
-
-  // Determine which load is at the lower address and confirm the two loads are
-  // exactly contiguous. isConsecutiveAccess(A, B) is true only when B directly
-  // follows A, so we probe both orderings to also handle the reversed case.
-  LoadInst *LowLoad, *HighLoad;
-  assert(SE && "ScalarEvolution is only available for late folds");
-  if (isConsecutiveAccess(Load0, Load1, *DL, *SE)) {
-    LowLoad = Load0;
-    HighLoad = Load1;
-  } else if (isConsecutiveAccess(Load1, Load0, *DL, *SE)) {
-    LowLoad = Load1;
-    HighLoad = Load0;
-  } else {
-    return false;
-  }
-
-  // 1. Check all users of both loads are shuffles.
-  // 2. Check that both loads feed exactly the same set of shuffles.
-  SmallPtrSet<ShuffleVectorInst *, 4> Shuffles;
-  auto AreShufflesOnlyUsersOfLoads = [LowLoad, HighLoad, &Shuffles]() -> bool {
-    // Step 1: collect every user of LowLoad, requiring each to be a shuffle.
-    for (User *U : LowLoad->users()) {
-      auto *SV = dyn_cast<ShuffleVectorInst>(U);
-      if (!SV)
-        return false;
-      Shuffles.insert(SV);
-    }
-
-    // Step 2: every user of HighLoad must be a shuffle already collected from
-    // LowLoad, counting them as we go.
-    unsigned HighLoadUsers = 0;
-    for (User *U : HighLoad->users()) {
-      auto *SV = dyn_cast<ShuffleVectorInst>(U);
-      if (!SV || !Shuffles.contains(SV))
-        return false;
-      ++HighLoadUsers;
-    }
-
-    // Step 3: both loads must feed exactly the same set of shuffles. Combined
-    // with step 2, this guarantees every shuffle uses both LowLoad and
-    // HighLoad, so their operands are exactly {LowLoad, HighLoad}.
-    return HighLoadUsers == Shuffles.size();
-  };
-  if (!AreShufflesOnlyUsersOfLoads())
-    return false;
-
-  // The value loaded by either load must not be clobbered in between the loads.
-  auto *WideTy = FixedVectorType::get(LoadTy->getElementType(), NumElts * 2);
-  LoadInst *FirstLoad = LowLoad, *LastLoad = HighLoad;
-  bool LowComesFirst = LowLoad->comesBefore(HighLoad);
-  if (!LowComesFirst)
-    std::swap(FirstLoad, LastLoad);
-  MemoryLocation FirstLoc = MemoryLocation::get(FirstLoad);
-  if (isMemModifiedBetween(std::next(FirstLoad->getIterator()),
-                           LastLoad->getIterator(), FirstLoc, AA))
-    return false;
-
-  // case 1: wide load = LowLoad + HighLoad   ,
-  //         shuffle 0th operand = LowLoad
-  //         shuffle 1st operand = HighLoad
-  // Implication with this is shuffle mask for the wide load remains unchanged
-  // case 2: wide load = LowLoad + HighLoad   ,
-  //         shuffle 0th operand = HighLoad
-  //         shuffle 1st operand = LowLoad
-  // Implication with this is shuffle mask for the wide load changes
-  auto RemapMask = [&](ShuffleVectorInst *SV, SmallVectorImpl<int> &NewMask) {
-    Value *SVOp0 = SV->getOperand(0);
-    assert(((SVOp0 == LowLoad && SV->getOperand(1) == HighLoad) ||
-            (SVOp0 == HighLoad && SV->getOperand(1) == LowLoad)) &&
-           "Shuffle operands must be exactly {LowLoad, HighLoad} or {HighLoad, "
-           "LowLoad}");
-    NewMask.assign(SV->getShuffleMask().begin(), SV->getShuffleMask().end());
-    if (SVOp0 == HighLoad)
-      ShuffleVectorInst::commuteShuffleMask(NewMask, NumElts);
-  };
-
-  // Cost model checks
-  Value *Poison = PoisonValue::get(WideTy);
-  InstructionCost OldCost =
-      TTI.getMemoryOpCost(Instruction::Load, LoadTy, LowLoad->getAlign(),
-                          LowLoad->getPointerAddressSpace(), CostKind);
-  OldCost +=
-      TTI.getMemoryOpCost(Instruction::Load, LoadTy, HighLoad->getAlign(),
-                          HighLoad->getPointerAddressSpace(), CostKind);
-  InstructionCost NewCost =
-      TTI.getMemoryOpCost(Instruction::Load, WideTy, LowLoad->getAlign(),
-                          LowLoad->getPointerAddressSpace(), CostKind);
-  for (ShuffleVectorInst *SV : Shuffles) {
-    OldCost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SV->getType(), LoadTy,
-                                  CostKind, SV->getShuffleMask());
-    SmallVector<int, 32> NewMask;
-    RemapMask(SV, NewMask);
-    // LoadSz = initial load size
-    // WideSz = 2 * LoadSz
-    // MaxMaskSize = WideSz * 2
-    // Check if MaxMaskSize fits within an integer range.
-    if (!ShuffleVectorInst::isValidOperands(Poison, Poison, NewMask))
-      return false;
-    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SV->getType(),
-                                  WideTy, CostKind, NewMask);
-  }
-
-  LLVM_DEBUG(dbgs() << "Found adjacent loads feeding shuffles: " << *LowLoad
-                    << ", " << *HighLoad << "\n  OldCost: " << OldCost
-                    << " vs NewCost: " << NewCost << "\n");
-
-  if (!NewCost.isValid() || NewCost > OldCost)
-    return false;
-
-  // Insert the wide load at whichever original load comes last, so that both
-  // halves of the contiguous range are known to be dereferenceable there.
-  LoadInst *InsertPt = LastLoad;
-
-  // Build the wide load at the insertion point using the low load's pointer and
-  // alignment, intersecting alias metadata from both original loads.
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(InsertPt->getDebugLoc());
-  LoadInst *WideLoad = Builder.CreateAlignedLoad(
-      WideTy, LowLoad->getPointerOperand(), LowLoad->getAlign());
-
-  // Set the metadata on the wide load. copyMetadataForLoad seeds it from
-  // LowLoad, then combineMetadataForCSE intersects every known kind against
-  // HighLoad (taking the most-generic value where applicable, keeping facts
-  // only where both loads agree, and dropping unknown metadata), so nothing is
-  // asserted over the combined load unless justified by both halves.
-  copyMetadataForLoad(*WideLoad, *LowLoad);
-  combineMetadataForCSE(WideLoad, HighLoad, /*DoesKMove=*/true);
-
-  for (ShuffleVectorInst *SV : Shuffles) {
-    SmallVector<int, 32> NewMask;
-    RemapMask(SV, NewMask);
-
-    Builder.SetInsertPoint(SV);
-    Builder.SetCurrentDebugLocation(SV->getDebugLoc());
-    Value *NewShuf = Builder.CreateShuffleVector(WideLoad, Poison, NewMask);
-    // We do not want to erase shuffles immediately because they may invalidate
-    // the NextInst pointer in the caller's BB traversal.
-    replaceValue(*SV, *NewShuf, /*Erase=*/false);
-  }
-  return true;
-}
-
 // Attempt to narrow a phi of shufflevector instructions where the two incoming
 // values have the same operands but different masks. If the two shuffle masks
 // are offsets of one another we can use one branch to rotate the incoming
@@ -7220,7 +7025,7 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
-  if (DisableVectorCombine)
+  if (Opts.disable_vector_combine)
     return false;
 
   // Don't attempt vectorization if the target does not support vectors.
@@ -7315,8 +7120,6 @@ bool VectorCombine::run() {
         if (foldShuffleOfCastops(I))
           return true;
         if (foldShuffleOfShuffles(I))
-          return true;
-        if (foldShuffleOfAdjacentLoads(I))
           return true;
         if (foldPermuteOfIntrinsic(I))
           return true;
@@ -7446,13 +7249,11 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
-  ScalarEvolution *SE =
-      TryEarlyFoldsOnly ? nullptr : &FAM.getResult<ScalarEvolutionAnalysis>(F);
   const DataLayout *DL = &F.getDataLayout();
   TTI::TargetCostKind CostKind =
       F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
-  VectorCombine Combiner(F, TTI, DT, AA, AC, SE, DL, CostKind,
-                         TryEarlyFoldsOnly);
+  VectorCombine Combiner(VectorizeOptions::Global, F, TTI, DT, AA, AC, DL,
+                         CostKind, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
