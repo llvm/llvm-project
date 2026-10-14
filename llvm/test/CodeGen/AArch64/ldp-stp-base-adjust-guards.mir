@@ -1,0 +1,61 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -run-pass=aarch64-ldst-opt -aarch64-ldp-stp-base-adjust=1 %s -o - | FileCheck %s --check-prefix=ENABLED
+# RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -run-pass=aarch64-ldst-opt -aarch64-ldp-stp-base-adjust=0 %s -o - | FileCheck %s --check-prefix=DISABLED
+#
+# MIR-level tests for base-adjust safety guards (PR #223684).
+# Each function targets one decision point from the audit table.
+# See: base-adjust-decision-points.md
+
+---
+# D6 positive: Reg1 overlaps BaseReg but NO interleaved reader between
+# FirstMI and PairedMI -> Reg1ClobbersBase is false (UsedRegUnits.available
+# is true), so the pair is still accepted. This is the `ldp Rt1, Rt2, [Rt1]`
+# pattern: PairedMI's destination w8 overlaps BaseReg x8, but no instruction
+# between the two loads reads x8, so clobbering x8 is safe.
+# We use i32 loads with ByteOffset = 924*4 = 3696 (canEncodeAddXriImm = true).
+# Reg0 = w9, Reg1 = w8 (overlaps BaseReg x8). No interleaved reader.
+# Reg0 is 32-bit (W), so the GPR64 reuse path doesn't apply; scratch is
+# scavenged. The pair is still formed because Reg1ClobbersBase is false.
+name: d6_reg1_overlaps_base_no_interleaved_pairs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    $x8 = ADDXri $x0, 1, 12
+    $w9 = LDRWui $x8, 924 :: (load (s32))
+    $w8 = LDRWui killed $x8, 925 :: (load (s32))
+    STRWui killed $w9, undef $x8, 0
+    STRWui killed $w8, undef $x8, 0
+    RET undef $lr
+
+# ENABLED-LABEL: name: d6_reg1_overlaps_base_no_interleaved_pairs
+# ENABLED: ADDXri $x8, 3696, 0
+# ENABLED: LDPWi
+# DISABLED-LABEL: name: d6_reg1_overlaps_base_no_interleaved_pairs
+# DISABLED-NOT: LDPWi
+...
+
+---
+# D7: Reg0 == X16 -> GPR64 reuse path skips X16, falls through to scavenger.
+# The pair should still form with a scavenged register (not X16).
+# i64 loads with offset 100/101: ByteOffset = 100*8 = 800 (canEncode).
+# Reg0 = x16 (GPR64), Reg0 == X16 -> reuse path skips X16.
+# FirstMI base is x8 (not x16), so no self-clobber.
+name: d7_x16_excluded_scavenged
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    $x8 = ADDXri $x0, 1, 12
+    $x16 = LDRXui $x8, 100 :: (load (s64))
+    $x9 = LDRXui killed $x8, 101 :: (load (s64))
+    $x0 = ORRXrs $xzr, killed $x16, 0
+    $x0 = ORRXrs killed $x0, killed $x9, 0
+    RET undef $lr, implicit $x0
+
+# ENABLED-LABEL: name: d7_x16_excluded_scavenged
+# ENABLED: LDPXi
+# DISABLED-LABEL: name: d7_x16_excluded_scavenged
+# DISABLED-NOT: LDPXi
+...
