@@ -412,8 +412,17 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     return !AA->isNoAlias(I->getPointerOperand(), Ptr);
   };
 
-  if (const auto *F = dyn_cast<FenceInst>(DefInst))
-    return isAcquireOrStronger(F->getOrdering());
+  if (const auto *F = dyn_cast<FenceInst>(DefInst)) {
+    if (!isAcquireOrStronger(F->getOrdering()))
+      return false;
+    SIAtomicAddrSpace AccessedAS =
+        toSIAtomicAddrSpace(Ptr->getType()->getPointerAddressSpace());
+    std::optional<SIAtomicAddrSpace> SynchronizedAS =
+        getSynchronizeAddrSpace(*F);
+    // If SynchronizedAS is std::nullopt, it refers to all address spaces.
+    return !SynchronizedAS ||
+           (*SynchronizedAS & AccessedAS) != SIAtomicAddrSpace::NONE;
+  }
 
   if (const auto *I = dyn_cast<AtomicRMWInst>(DefInst))
     return isAcquireOrStronger(I->getOrdering()) || MayAlias(I);
@@ -421,6 +430,7 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
   if (const auto *I = dyn_cast<AtomicCmpXchgInst>(DefInst))
     return isAcquireOrStronger(I->getMergedOrdering()) || MayAlias(I);
 
+  // TODO This is pessimistic for one-as load-acquires from a different AS.
   if (const auto *I = dyn_cast<LoadInst>(DefInst))
     return isAcquireOrStronger(I->getOrdering());
 
