@@ -3182,9 +3182,8 @@ void LoweringPreparePass::runOnOperation() {
   mlirModule = getOperation();
   // Triple attribute is required by createLowerModule:
   if (!mlirModule->hasAttr(CIRDialect::getTripleAttrName())) {
-    mlirModule.emitError() << getArgument()
-                    << " requires a module with a '"
-                    << CIRDialect::getTripleAttrName() << "' attribute";
+    mlirModule.emitError() << getArgument() << " requires a module with a '"
+                           << CIRDialect::getTripleAttrName() << "' attribute";
     return signalPassFailure();
   }
 

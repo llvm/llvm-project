@@ -900,8 +900,7 @@ void CXXABILoweringPass::runOnOperation() {
   auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
   // Triple attribute is required by createLowerModule:
   if (!mod->hasAttr(cir::CIRDialect::getTripleAttrName())) {
-    mod.emitError() << getArgument()
-                    << " requires a module with a '"
+    mod.emitError() << getArgument() << " requires a module with a '"
                     << cir::CIRDialect::getTripleAttrName() << "' attribute";
     return signalPassFailure();
   }

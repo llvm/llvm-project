@@ -299,7 +299,7 @@ void TargetLoweringPass::runOnOperation() {
   // Triple attribute is required by createLowerModule:
   if (!mod->hasAttr(CIRDialect::getTripleAttrName())) {
     mod.emitError() << getArgument() << " requires a module with a '"
-                      << CIRDialect::getTripleAttrName() << "' attribute";
+                    << CIRDialect::getTripleAttrName() << "' attribute";
     return signalPassFailure();
   }
 

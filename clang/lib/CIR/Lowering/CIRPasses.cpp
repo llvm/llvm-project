@@ -81,8 +81,8 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   std::optional<llvm::Triple> triple = cir::getTripleFromModule(theModule);
   if (!triple)
     return theModule.emitError()
-          << "missing '" << cir::CIRDialect::getTripleAttrName()
-          << "' attribute";
+           << "missing '" << cir::CIRDialect::getTripleAttrName()
+           << "' attribute";
 
   auto abiAttr = theModule->getAttrOfType<mlir::StringAttr>(
       cir::CIRDialect::getTargetABIAttrName());
