@@ -8422,12 +8422,15 @@ Instruction *InstCombinerImpl::foldFCmpIntToFP(FCmpInst &I) {
   else
     return nullptr;
 
-  unsigned Width = std::max(A->getType()->getScalarSizeInBits(),
-                            B->getType()->getScalarSizeInBits());
-  // Exact conversions preserve both equality and ordering. Account for the
-  // sign bit, which does not consume floating-point significand bits.
-  int Precision = I.getOperand(0)->getType()->getFPMantissaWidth();
-  if (Precision < 0 || Width - IsSigned > unsigned(Precision))
+  const unsigned IntWidth = std::max(A->getType()->getScalarSizeInBits(),
+                                     B->getType()->getScalarSizeInBits());
+  const int MantissaWidth = I.getOperand(0)->getType()->getFPMantissaWidth();
+  if (MantissaWidth == -1)
+    return nullptr;
+
+  // Signed N-bit integers need N-1 significand bits: the minimum value is a
+  // power of two, and every other value has at most N-1 magnitude bits.
+  if (IntWidth > unsigned(MantissaWidth) + IsSigned)
     return nullptr;
 
   ICmpInst::Predicate Pred;
@@ -8460,7 +8463,7 @@ Instruction *InstCombinerImpl::foldFCmpIntToFP(FCmpInst &I) {
     return nullptr;
   }
 
-  Type *IntTy = A->getType()->getWithNewBitWidth(Width);
+  Type *IntTy = A->getType()->getWithNewBitWidth(IntWidth);
   A = Builder.CreateIntCast(A, IntTy, IsSigned);
   B = Builder.CreateIntCast(B, IntTy, IsSigned);
   return new ICmpInst(Pred, A, B);
