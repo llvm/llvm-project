@@ -1328,10 +1328,6 @@ public:
     // 0 or successor 1 based on condition 0.
     BranchOnTwoConds,
     Broadcast,
-    /// Given operands of (the same) struct type, creates a struct of fixed-
-    /// width vectors each containing a struct field of all operands. The
-    /// number of operands matches the element count of every vector.
-    BuildStructVector,
     /// Creates a fixed-width vector containing all operands. The number of
     /// operands matches the vector element count.
     BuildVector,
@@ -1477,7 +1473,7 @@ public:
   unsigned getOpcode() const { return Opcode; }
 
   /// Add \p Op as operand of this VPInstruction. Only supported for AnyOf,
-  /// ComputeReductionResult, BuildVector, BuildStructVector, ExtractLane,
+  /// ComputeReductionResult, BuildVector, ExtractLane,
   /// ExtractLastActive, FirstActiveLane, LastActiveLane.
   void addOperand(VPValue *Op);
 
