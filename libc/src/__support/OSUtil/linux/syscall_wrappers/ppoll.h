@@ -39,19 +39,19 @@ LIBC_INLINE ErrorOr<int> ppoll(struct pollfd *fds, nfds_t nfds,
   // signals. NSIG is the signal count, so NSIG / 8 gives the byte size.
   const size_t SIGSETSIZE = NSIG / 8;
 
-#if defined(SYS_ppoll_time64)
-  static_assert(
-      sizeof(time_t) == sizeof(int64_t),
-      "SYS_ppoll_time64 requires struct timespec with 64-bit members.");
-  return syscall_checked<int>(SYS_ppoll_time64, fds, nfds, tmo_p, sigmask,
-                              SIGSETSIZE);
-#elif defined(SYS_ppoll)
+#if defined(SYS_ppoll)
   static_assert(
       sizeof(timespec::tv_nsec) == sizeof(long),
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
   return syscall_checked<int>(SYS_ppoll, fds, nfds, tmo_p, sigmask, SIGSETSIZE);
+#elif defined(SYS_ppoll_time64)
+  static_assert(
+      sizeof(time_t) == sizeof(int64_t),
+      "SYS_ppoll_time64 requires struct timespec with 64-bit members.");
+  return syscall_checked<int>(SYS_ppoll_time64, fds, nfds, tmo_p, sigmask,
+                              SIGSETSIZE);
 #else
 #error "ppoll and ppoll_time64 syscalls not available."
 #endif
