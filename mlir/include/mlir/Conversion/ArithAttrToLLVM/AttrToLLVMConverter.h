@@ -18,7 +18,6 @@
 
 namespace mlir {
 namespace arith {
-
 /// Maps arithmetic fastmath enum values to LLVM enum values.
 LLVM::FastmathFlags
 convertArithFastMathFlagsToLLVM(arith::FastMathFlags arithFMF);
@@ -173,7 +172,6 @@ public:
 private:
   NamedAttrList convertedAttr;
 };
-
 } // namespace arith
 } // namespace mlir
 
