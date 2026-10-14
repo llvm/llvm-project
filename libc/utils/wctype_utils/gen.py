@@ -8,6 +8,15 @@
 #
 # ==------------------------------------------------------------------------==#
 
+from os import environ
+from sys import argv
+
+if len(argv) > 1:
+    environ[
+        "EXTRA_CLING_ARGS"
+    ] = f"-DLIBC_NAMESPACE=LIBC_NAMESPACE -D_DEBUG -I{argv[1]}/libc"
+
+
 from conversion.gen_conversion_data import extract_maps_from_unicode_file
 from conversion.hex_writer import write_hex_conversions
 from classification.gen_classification_data import (
@@ -16,7 +25,6 @@ from classification.gen_classification_data import (
     build_lookup_tables,
     generate_code,
 )
-from sys import argv
 from sys import exit
 
 
@@ -28,11 +36,11 @@ def write_wctype_conversion_data(
         f"{unicode_data_folder_path}/UnicodeData.txt"
     )
     write_hex_conversions(
-        file_path=f"{llvm_project_root_path}/libc/src/__support/wctype/lower_to_upper.inc",
+        file_path=f"{llvm_project_root_path}/libc/src/__support/wctype/lower_to_upper.h",
         mappings=lower_to_upper,
     )
     write_hex_conversions(
-        file_path=f"{llvm_project_root_path}/libc/src/__support/wctype/upper_to_lower.inc",
+        file_path=f"{llvm_project_root_path}/libc/src/__support/wctype/upper_to_lower.h",
         mappings=upper_to_lower,
     )
 
