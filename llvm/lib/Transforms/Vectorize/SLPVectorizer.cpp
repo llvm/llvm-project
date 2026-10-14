@@ -29019,16 +29019,16 @@ bool BoUpSLP::collectValuesToDemote(
     // lshr iff we know that the bits we would otherwise be shifting in are
     // already zeros.
     auto LShrChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
-      return all_of(E.Scalars, [&](Value *V) {
+      return all_of(seq<unsigned>(E.Scalars.size()), [&](unsigned Idx) {
+        Value *V = E.Scalars[Idx];
         if (isa<PoisonValue>(V))
           return true;
         APInt ShiftedBits = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
         if (E.isCopyableElement(V))
           return MaskedValueIsZero(V, ShiftedBits, SimplifyQuery(*DL));
-        auto *I = cast<Instruction>(V);
-        KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
+        KnownBits AmtKnownBits = computeKnownBits(E.getOperand(1)[Idx], *DL);
         return AmtKnownBits.getMaxValue().ult(BitWidth) &&
-               MaskedValueIsZero(I->getOperand(0), ShiftedBits,
+               MaskedValueIsZero(E.getOperand(0)[Idx], ShiftedBits,
                                  SimplifyQuery(*DL));
       });
     };
@@ -29063,13 +29063,15 @@ bool BoUpSLP::collectValuesToDemote(
     // UDiv and URem can be truncated if all the truncated bits are zero.
     auto Checker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
       assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
-      return all_of(E.Scalars, [&](Value *V) {
+      return all_of(seq<unsigned>(E.Scalars.size()), [&](unsigned Idx) {
+        Value *V = E.Scalars[Idx];
         APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
         if (E.hasCopyableElements() && E.isCopyableElement(V))
           return MaskedValueIsZero(V, Mask, SimplifyQuery(*DL));
-        auto *I = cast<Instruction>(V);
-        return MaskedValueIsZero(I->getOperand(0), Mask, SimplifyQuery(*DL)) &&
-               MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL));
+        return MaskedValueIsZero(E.getOperand(0)[Idx], Mask,
+                                 SimplifyQuery(*DL)) &&
+               MaskedValueIsZero(E.getOperand(1)[Idx], Mask,
+                                 SimplifyQuery(*DL));
       });
     };
     return TryProcessInstruction(
