@@ -247,6 +247,24 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
       Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
   }
 
+  // If the library function has already been declared in the AST (e.g. from an
+  // imported header or module), look it up and use its GlobalDecl so that
+  // attributes (such as dllimport) are correctly attached. Builtins are often
+  // declared noexcept while standard C library headers may lack noexcept, so
+  // we ignore exception specifications when comparing function types.
+  if (const DeclContext *TU = Context.getTranslationUnitDecl()) {
+    IdentifierInfo &II = Context.Idents.get(Name);
+    for (const auto *Result : TU->lookup(&II)) {
+      if (const auto *LibFD = dyn_cast<FunctionDecl>(Result)) {
+        if (Context.hasSameFunctionTypeIgnoringExceptionSpec(LibFD->getType(),
+                                                             FD->getType())) {
+          D = GlobalDecl(LibFD);
+          break;
+        }
+      }
+    }
+  }
+
   llvm::FunctionType *Ty =
     cast<llvm::FunctionType>(getTypes().ConvertType(FD->getType()));
 
