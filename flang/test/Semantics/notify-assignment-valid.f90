@@ -99,6 +99,7 @@ program intrinsic_notify_assignment
   end associate
   d[1, notify=n]%values(2) = 23
 
+  ! Frontend regression tests: NOTIFY= must not change atomic variable matching.
   !$omp atomic update
   b[1, notify=n] = b[1] + 1
   !$omp atomic capture

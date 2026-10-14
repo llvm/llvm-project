@@ -54,6 +54,8 @@ program invalid_notify_contexts
   type(t) :: d[*]
   type(bound_t) :: bound_d[*]
 
+  a(1)[1, notify=n] = 1
+
   !ERROR: NOTIFY= may appear only in the image selector of the variable of an intrinsic assignment statement
   event post(e[1, notify=n])
   !ERROR: NOTIFY= may appear only in the image selector of the variable of an intrinsic assignment statement
@@ -77,7 +79,6 @@ program invalid_notify_contexts
   where (a(:)[1, notify=n] > 0) a(:)[1] = 1
   !ERROR: NOTIFY= may appear only in the image selector of the variable of an intrinsic assignment statement
   forall (i=1:a(1)[1, notify=n]) a(i)[1] = 1
-  a(1)[1, notify=n] = 1
   !ERROR: NOTIFY= may appear only in the image selector of the variable of an intrinsic assignment statement
   print *, a(1)[1, notify=n]
   !ERROR: NOTIFY= may appear only in the image selector of the variable of an intrinsic assignment statement
@@ -106,6 +107,7 @@ program invalid_notify_contexts
   a(1)[1, team=teams(b[1, notify=n])] = 21
   !ERROR: NOTIFY= may appear only in the image selector of the variable of an intrinsic assignment statement
   a(1)[1, team_number=b[1, notify=n]] = 22
+  ! The inner NOTIFY= violates F2023 C933 independently of F2023 C1178.
   b[1, notify=n[2, &
     !ERROR: NOTIFY= may appear only in the image selector of the variable of an intrinsic assignment statement
     notify=n]] = 23
@@ -155,12 +157,14 @@ subroutine failed_assignment_analysis
   type(notify_type), save :: n[*]
   type(t), save :: d[*]
   integer :: local(4)
+
+  b[1, notify=n] = 1
+
   !ERROR: No explicit type declared for 'undeclared'
   b[1, notify=n] = undeclared
   !ERROR: No explicit type declared for 'missing'
   !ERROR: NOTIFY= may appear only in the image selector of the variable of an intrinsic assignment statement
   missing = b[1, notify=n]
-  b[1, notify=n] = 1
   !ERROR: NOTIFY= may appear only in the image selector of the variable of an intrinsic assignment statement
   print *, b[1, notify=n]
   !ERROR: No explicit type declared for 'missing_nested_rhs'
