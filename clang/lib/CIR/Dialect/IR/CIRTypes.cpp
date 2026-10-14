@@ -1608,7 +1608,7 @@ llvm::TypeSize cir::MatrixType::getTypeSizeInBits(
     const ::mlir::DataLayout &dataLayout,
     ::mlir::DataLayoutEntryListRef params) const {
   return llvm::TypeSize::getFixed(
-      getRowNum() * getColumnNum() *
+      getNumRows() * getNumColumns() *
       dataLayout.getTypeSizeInBits(getElementType()));
 }
 

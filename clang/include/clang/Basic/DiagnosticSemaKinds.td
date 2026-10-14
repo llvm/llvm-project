@@ -3440,12 +3440,10 @@ def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "value of 128, 256, 512, 1024 or 2048">;
 def err_attribute_arm_sm_incompat_builtin : Error<
   "builtin can only be called from a %0 function">;
-def warn_attribute_arm_za_builtin_no_za_state : Warning<
-  "builtin call is not valid when calling from a function without active ZA state">,
-  InGroup<DiagGroup<"undefined-arm-za">>;
-def warn_attribute_arm_zt0_builtin_no_zt0_state : Warning<
-  "builtin call is not valid when calling from a function without active ZT0 state">,
-  InGroup<DiagGroup<"undefined-arm-zt0">>;
+def err_attribute_arm_za_builtin_no_za_state : Error<
+  "builtin call is not valid when calling from a function without active ZA state">;
+def err_attribute_arm_zt0_builtin_no_zt0_state : Error<
+  "builtin call is not valid when calling from a function without active ZT0 state">;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_sve_vector_in_non_streaming_function : Error<
@@ -3470,6 +3468,11 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+def warn_attribute_harden_pac_ret_requires_pac_ret: Warning<
+  "'harden-pac-ret' attribute requires 'branch-protection=pac-ret'; 'target' attribute ignored">,
+  InGroup<IgnoredAttributes>;
+def err_invalid_harden_pac_ret_spec : Error<
+  "invalid or misspelled pac-ret hardening specification '%0'">;
 def err_attribute_invalid_atomic_argument : Error<
   "invalid argument '%0' to atomic attribute; valid options are: "
   "'remote_memory', 'fine_grained_memory', 'ignore_denormal_mode' (optionally "
@@ -3744,6 +3747,10 @@ def warn_nsdictionary_duplicate_key : Warning<
   InGroup<DiagGroup<"objc-dictionary-duplicate-keys">>;
 def note_nsdictionary_duplicate_key_here : Note<
   "previous equal key is here">;
+def warn_objc_dictionary_ill_formed_utf8_key : Warning<
+  "dictionary key is ill-formed as UTF-8 and will be truncated in a static "
+  "constant dictionary, so it may not be found at runtime">,
+  InGroup<DiagGroup<"objc-dictionary-invalid-utf8-key">>;
 def err_swift_param_attr_not_swiftcall : Error<
   "'%0' parameter can only be used with swiftcall%select{ or swiftasynccall|}1 "
   "calling convention%select{|s}1">;
@@ -9629,7 +9636,7 @@ def err_atomic_builtin_must_be_pointer_intptr : Error<
 
 def err_atomic_hint_builtin_must_be_pointer : Error<
   "address argument to atomic hint builtin must be a pointer to a scalar "
-  "integral or floating-point type of 8, 16, 32, or 64 bits (%0 invalid)">;
+  "%select{integral|integral or floating-point}1 type of 8, 16, 32, or 64 bits (%0 invalid)">;
 def err_atomic_hint_has_invalid_hint_type : Error<
    "invalid hint type argument to atomic hint operation (%0)">;
 
@@ -9702,7 +9709,7 @@ def err_atomic_op_needs_atomic_fp
     : Error<"address argument to atomic operation must be a pointer to "
             "%select{|atomic }0floating point type (%1 invalid)">;
 def err_atomic_op_hint_data_size : Error<
-  "address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits">;
+  "address argument to atomic %select{fetch|store}0 with hint must be of size 8, 16, 32 or 64 bits">;
 def err_atomic_hint_has_invalid_memory_order : Error<
    "invalid memory order argument to atomic hint operation (%0 invalid)">;
 def warn_atomic_hint_has_invalid_hint_type : Warning<
@@ -11144,6 +11151,14 @@ def warn_lifetime_safety_noescape_escapes
     : Warning<"parameter is marked [[clang::noescape]] but escapes">,
       InGroup<LifetimeSafetyNoescape>,
       DefaultIgnore;
+
+def warn_lifetime_safety_field_origin_escape
+    : Warning<"return value depends on the object referenced by %0, not on '*this'">,
+      InGroup<LifetimeSafetyFieldOriginEscape>,
+      DefaultIgnore;
+
+def note_lifetime_safety_owned_field_suggestion
+    : Note<"if %0 is owned by the class, mark the method [[clang::lifetimebound]]">;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -13764,6 +13779,19 @@ def note_hlsl_semantic_used_here : Note<"%0 used here">;
 def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
 def err_hlsl_semantic_indexing_not_supported
     : Error<"semantic %0 does not allow indexing">;
+def err_hlsl_semantic_index_out_of_range
+    : Error<"semantic %0 index %1 exceeds the maximum supported index %2">;
+def err_hlsl_semantic_zero_sized_array
+    : Error<"semantic %0 cannot be applied to a zero-sized array">;
+def err_hlsl_semantic_64bit_type
+    : Error<"semantic %0 cannot use 64-bit component types in DXIL shader inputs "
+            "or outputs (was %1)">;
+def err_hlsl_semantic_invalid_type
+    : Error<"semantic %0 must be a "
+            "%select{scalar|scalar or vector of up to %2 components}1 of "
+            "%select{16 or 32 bit integer|32 bit integer|"
+            "16 or 32 bit floating-point|16 or 32 bit unsigned integer|"
+            "32 bit unsigned integer}3 type (was %4)">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;

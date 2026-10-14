@@ -88,7 +88,7 @@ mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
           "convertTypeForMemory: Matrix with bool as element type");
     }
 
-    uint64_t size = matrixTy.getRowNum() * matrixTy.getColumnNum();
+    uint64_t size = matrixTy.getNumRows() * matrixTy.getNumColumns();
     mlir::Type elementType = converter.convertType(matrixTy.getElementType());
     return mlir::LLVM::LLVMArrayType::get(elementType, size);
   }
@@ -133,7 +133,7 @@ mlir::Type convertTypeForLoadStore(const mlir::TypeConverter &converter,
   // Convert the Matrix type to a vector type (the value type of
   // MatrixType), if it points to a array (the memory type of MatrixType).
   if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(type)) {
-    uint64_t size = matrixTy.getRowNum() * matrixTy.getColumnNum();
+    uint64_t size = matrixTy.getNumRows() * matrixTy.getNumColumns();
     mlir::Type elemTy = converter.convertType(matrixTy.getElementType());
     return mlir::VectorType::get(size, elemTy);
   }

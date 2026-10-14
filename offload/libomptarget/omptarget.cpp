@@ -15,7 +15,7 @@
 #include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
-#include "PluginManager.h"
+#include "OpenMP/OffloadRTL.h"
 #include "Shared/Debug.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"
@@ -222,8 +222,8 @@ void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
   // Register and page-lock the memory.
   auto LockedPtrOrErr = DeviceOrErr->registerMemory(HostPtr, Size);
   if (!LockedPtrOrErr) {
-    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr << ": "
-                        << toString(LockedPtrOrErr.takeError());
+    std::string ErrStr = toString(LockedPtrOrErr.takeError());
+    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr << ": " << ErrStr;
     return nullptr;
   }
   ODBG(ODT_Interface) << Name << " returns device ptr " << *LockedPtrOrErr;
@@ -239,9 +239,10 @@ void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   // Unregister and unlock the memory.
-  if (auto Err = DeviceOrErr->unregisterMemory(HostPtr))
-    ODBG(ODT_Interface) << "Could not unlock ptr " << HostPtr << ": "
-                        << toString(std::move(Err));
+  if (auto Err = DeviceOrErr->unregisterMemory(HostPtr)) {
+    std::string ErrStr = toString(std::move(Err));
+    ODBG(ODT_Interface) << "Could not unlock ptr " << HostPtr << ": " << ErrStr;
+  }
   ODBG(ODT_Interface) << Name << " returns";
 }
 

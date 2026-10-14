@@ -2633,14 +2633,10 @@ bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
         return true;
     }
 
-    auto *ValuDst = TII->getNamedOperand(*MI, AMDGPU::OpName::vdst);
-    if (!ValuDst || !ValuDst->isReg())
-      return false;
-
-    // WAR: Trans(I) reads, VALU(MI) writes.
-    Register ValuDef = ValuDst->getReg();
+    // WAR: Trans(I) reads, VALU(MI) writes. Use modifiesRegister for
+    // multi-dest VALUs.
     for (const MachineOperand &TransUse : I.explicit_uses()) {
-      if (TransUse.isReg() && TRI->regsOverlap(ValuDef, TransUse.getReg()))
+      if (TransUse.isReg() && MI->modifiesRegister(TransUse.getReg(), TRI))
         return true;
     }
 
@@ -2857,10 +2853,9 @@ bool GCNHazardRecognizer::hasWMMAToVALURegOverlap(
   Register B0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src1)->getReg();
   SmallVector<Register, 4> WMMARegs({D0, A0, B0});
 
-  if (SIInstrInfo::isSWMMAC(WMMA)) {
-    Register Idx0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src2)->getReg();
-    WMMARegs.push_back(Idx0);
-  }
+  const MachineOperand *Src2 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src2);
+  if (Src2->isReg())
+    WMMARegs.push_back(Src2->getReg());
 
   for (const MachineOperand &ValuDef : MI.defs()) {
     Register VDstReg = ValuDef.getReg();
