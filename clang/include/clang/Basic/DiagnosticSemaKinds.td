@@ -9636,7 +9636,7 @@ def err_atomic_builtin_must_be_pointer_intptr : Error<
 
 def err_atomic_hint_builtin_must_be_pointer : Error<
   "address argument to atomic hint builtin must be a pointer to a scalar "
-  "integral or floating-point type of 8, 16, 32, or 64 bits (%0 invalid)">;
+  "%select{integral|integral or floating-point}1 type of 8, 16, 32, or 64 bits (%0 invalid)">;
 def err_atomic_hint_has_invalid_hint_type : Error<
    "invalid hint type argument to atomic hint operation (%0)">;
 
@@ -9709,7 +9709,7 @@ def err_atomic_op_needs_atomic_fp
     : Error<"address argument to atomic operation must be a pointer to "
             "%select{|atomic }0floating point type (%1 invalid)">;
 def err_atomic_op_hint_data_size : Error<
-  "address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits">;
+  "address argument to atomic %select{fetch|store}0 with hint must be of size 8, 16, 32 or 64 bits">;
 def err_atomic_hint_has_invalid_memory_order : Error<
    "invalid memory order argument to atomic hint operation (%0 invalid)">;
 def warn_atomic_hint_has_invalid_hint_type : Warning<
@@ -11151,6 +11151,14 @@ def warn_lifetime_safety_noescape_escapes
     : Warning<"parameter is marked [[clang::noescape]] but escapes">,
       InGroup<LifetimeSafetyNoescape>,
       DefaultIgnore;
+
+def warn_lifetime_safety_field_origin_escape
+    : Warning<"return value depends on the object referenced by %0, not on '*this'">,
+      InGroup<LifetimeSafetyFieldOriginEscape>,
+      DefaultIgnore;
+
+def note_lifetime_safety_owned_field_suggestion
+    : Note<"if %0 is owned by the class, mark the method [[clang::lifetimebound]]">;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
