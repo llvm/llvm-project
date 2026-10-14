@@ -483,8 +483,8 @@ entry:
 ; GCN-POSTLINK: call fast float @llvm.log2.f32
 ; GCN-POSTLINK: fmul
 ; GCN-POSTLINK: call fast float @llvm.exp2.f32
-; GCN-POSTLINK: select fast i1
 ; GCN-POSTLINK: call fast float @llvm.copysign.f32
+; GCN-POSTLINK: select fast i1
 
 ; GCN-PRELINK: %__rootn2cbrt = tail call fast float @_Z4cbrtf(float %tmp)
 define amdgpu_kernel void @test_rootn_3(ptr addrspace(1) nocapture %a) {
