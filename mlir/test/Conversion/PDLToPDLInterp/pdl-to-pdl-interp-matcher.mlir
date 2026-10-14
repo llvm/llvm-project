@@ -756,3 +756,23 @@ module @common_connector_range {
     rewrite with "rewriter"(%rootA, %rootB, %rootC : !pdl.operation, !pdl.operation, !pdl.operation)
   }
 }
+
+// -----
+
+// CHECK-LABEL: module @root_location_after_root_constraint
+module @root_location_after_root_constraint {
+  // Check that the constraint on the root in @constrained does not remove the
+  // root from the location of @simple's match.
+
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK: pdl_interp.record_match @rewriters::@simple(%[[ROOT]] : !pdl.operation) : benefit(1), loc([%[[ROOT]]]), root("test.op")
+  pdl.pattern @constrained : benefit(1) {
+    %root = operation "test.op"
+    apply_native_constraint "c"(%root : !pdl.operation)
+    rewrite %root with "rewriter"
+  }
+  pdl.pattern @simple : benefit(1) {
+    %root = operation "test.op"
+    rewrite %root with "rewriter"
+  }
+}
