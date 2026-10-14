@@ -918,11 +918,20 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Lower Emscripten EH & SjLj **********\n");
 
   ExceptionHandling EH = M.getExceptionModel();
+  if (EH != ExceptionHandling::None && EH != ExceptionHandling::Wasm &&
+      EH != ExceptionHandling::Emscripten)
+    report_fatal_error(
+        "-exception-model should be either 'none', 'wasm', or 'emscripten'");
+
   EnableEmEH = EH == ExceptionHandling::Emscripten;
-  assert((!EnableEmEH || !EnableWasmSjLj) &&
-         "Wasm SjLj should be only used with Wasm EH");
-  assert((EH != ExceptionHandling::Wasm || !EnableEmSjLj) &&
-         "Emscripten SjLj cannot be used with Wasm EH");
+  // You can't mix Emscripten EH with Wasm SjLj.
+  if (EnableEmEH && EnableWasmSjLj)
+    report_fatal_error(
+        "-exception-model=emscripten not allowed with -wasm-enable-sjlj");
+  // You can't mix Wasm EH with Emscripten SjLj.
+  if (EH == ExceptionHandling::Wasm && EnableEmSjLj)
+    report_fatal_error(
+        "-exception-model=wasm not allowed with -enable-emscripten-sjlj");
 
   bool Changed = false;
 
