@@ -6,7 +6,7 @@ declare void @use(i32)
 define i32 @low_mask_nsw_nuw(i32 %x) {
 ; CHECK-LABEL: @low_mask_nsw_nuw(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[AND]], 63
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 63, [[AND]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %and = and i32 %x, 31
@@ -17,7 +17,7 @@ define i32 @low_mask_nsw_nuw(i32 %x) {
 define <2 x i32> @low_mask_nsw_nuw_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @low_mask_nsw_nuw_vec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 31)
-; CHECK-NEXT:    [[SUB:%.*]] = xor <2 x i32> [[AND]], splat (i32 63)
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw <2 x i32> splat (i32 63), [[AND]]
 ; CHECK-NEXT:    ret <2 x i32> [[SUB]]
 ;
   %and = and <2 x i32> %x, <i32 31, i32 31>
@@ -98,7 +98,7 @@ declare i32 @llvm.ctlz.i32(i32, i1)
 define i32 @range_masked_sub(i32 %x) {
 ; CHECK-LABEL: @range_masked_sub(
 ; CHECK-NEXT:    [[COUNT:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[COUNT]], 31
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 31, [[COUNT]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %count = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true) nounwind readnone
