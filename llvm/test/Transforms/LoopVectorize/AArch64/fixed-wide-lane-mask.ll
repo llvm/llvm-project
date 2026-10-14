@@ -88,10 +88,10 @@ define void @fixed_wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF1-LABEL: define void @fixed_wide_active_lane_mask_i32_tc(
 ; CHECK-UF1-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-UF1-NEXT:  entry:
+; CHECK-UF1-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-UF1-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-UF1-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK-UF1:       vector.memcheck:
-; CHECK-UF1-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
-; CHECK-UF1-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-UF1-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-UF1-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-UF1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 31
@@ -117,10 +117,10 @@ define void @fixed_wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4-LABEL: define void @fixed_wide_active_lane_mask_i32_tc(
 ; CHECK-UF4-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-UF4-NEXT:  entry:
+; CHECK-UF4-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-UF4-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-UF4-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK-UF4:       vector.memcheck:
-; CHECK-UF4-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
-; CHECK-UF4-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-UF4-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-UF4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-UF4-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 127
@@ -202,7 +202,7 @@ define void @fixed_known_tc(ptr noalias readonly %dst, ptr noalias readonly %src
 ; CHECK-UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-UF1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
 ; CHECK-UF1-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[ARRAYIDX]], <4 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[IV]], 4
+; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX_NEXT]], i64 15)
 ; CHECK-UF1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-UF1-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true

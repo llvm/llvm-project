@@ -7,10 +7,10 @@ define void @wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4-LABEL: define void @wide_active_lane_mask_i32_tc(
 ; CHECK-UF4-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-UF4-NEXT:  entry:
+; CHECK-UF4-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-UF4-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-UF4-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK-UF4:       vector.memcheck:
-; CHECK-UF4-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
-; CHECK-UF4-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-UF4-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-UF4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-UF4-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 15
@@ -33,7 +33,7 @@ define void @wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK-UF4:       pred.store.continue:
 ; CHECK-UF4-NEXT:    br i1 [[ACTIVE_LANE_MASK3]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5]]
-; CHECK-UF4:       pred.store.if4:
+; CHECK-UF4:       pred.store.if6:
 ; CHECK-UF4-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-UF4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[SRC]], i32 [[TMP8]]
 ; CHECK-UF4-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP9]], align 8
@@ -41,7 +41,7 @@ define void @wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4-NEXT:    [[TMP12:%.*]] = fmul double [[TMP10]], 3.000000e+00
 ; CHECK-UF4-NEXT:    store double [[TMP12]], ptr [[TMP11]], align 8
 ; CHECK-UF4-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; CHECK-UF4:       pred.store.continue5:
+; CHECK-UF4:       pred.store.continue7:
 ; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; CHECK-UF4-NEXT:    [[TMP13]] = icmp ult i32 [[INDEX_NEXT]], [[N]]
 ; CHECK-UF4-NEXT:    [[TMP14:%.*]] = add i32 [[INDEX_NEXT]], 1

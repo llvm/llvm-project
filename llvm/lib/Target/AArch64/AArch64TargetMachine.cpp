@@ -207,7 +207,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     this->Options.NoTrapAfterNoreturn = true;
   }
 
-  if (getMCAsmInfo().usesWindowsCFI()) {
+  if (getMCAsmInfo().getExceptionHandlingType() == ExceptionHandling::WinEH &&
+      getMCAsmInfo().usesWindowsCFI()) {
     // Unwinding can get confused if the last instruction in an
     // exception-handling region (function, funclet, try block, etc.)
     // is a call.
@@ -257,8 +258,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   setSupportsDebugEntryValues(true);
 
   // AArch64 supports fixing up the DWARF unwind information.
-  if (!getMCAsmInfo().usesWindowsCFI())
-    setCFIFixup(true);
+  // enableCFIFixup() checks per function for DWARF unwinding.
+  setCFIFixup(true);
 }
 
 unsigned AArch64TargetMachine::getEnableGlobalISelAtO() const {
@@ -617,7 +618,6 @@ bool AArch64PassConfig::addIRTranslator() {
 void AArch64PassConfig::addPreLegalizeMachineIR() {
   if (getAArch64TargetMachine().isGlobalISelOptNone()) {
     addPass(createAArch64O0PreLegalizerCombiner());
-    addPass(new LocalizerLegacy());
   } else {
     addPass(createAArch64PreLegalizerCombiner());
     addPass(new LocalizerLegacy());

@@ -9,6 +9,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @fneg(ptr nocapture noundef writeonly %d, ptr nocapture noundef readonly %s, i32 noundef %n) #0 {
 ; CHECK-LABEL: @fneg(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S2:%.*]] = ptrtoaddr ptr [[S:%.*]] to i64
+; CHECK-NEXT:    [[D1:%.*]] = ptrtoaddr ptr [[D:%.*]] to i64
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -20,8 +22,6 @@ define void @fneg(ptr nocapture noundef writeonly %d, ptr nocapture noundef read
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP0]], 5
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i64 [[TMP3]], -1
-; CHECK-NEXT:    [[D1:%.*]] = ptrtoaddr ptr [[D:%.*]] to i64
-; CHECK-NEXT:    [[S2:%.*]] = ptrtoaddr ptr [[S:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[D1]], [[S2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP9]], [[TMP10]]

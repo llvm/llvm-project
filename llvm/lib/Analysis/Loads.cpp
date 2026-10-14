@@ -356,7 +356,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                             : SE.getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
-  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+  auto LoopGuards = ScalarEvolution::LoopGuards::collectOnDemand(L, SE);
 
   auto &DL = L->getHeader()->getDataLayout();
   const auto &[AccessStart, AccessEnd] =
@@ -371,12 +371,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (isa<SCEVCouldNotCompute>(PtrDiff))
     return false;
 
-  if (!LoopGuards)
-    LoopGuards.emplace(
-        ScalarEvolution::LoopGuards::collect(AddRec->getLoop(), SE));
-
   APInt MaxPtrDiff =
-      SE.getUnsignedRangeMax(SE.applyLoopGuards(PtrDiff, *LoopGuards));
+      SE.getUnsignedRangeMax(SE.applyLoopGuards(PtrDiff, LoopGuards));
 
   Value *Base = nullptr;
   APInt AccessSize;
@@ -434,8 +430,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                    SE.getNoopOrZeroExtend(DerefBytesSCEV, WiderTy);
                return SE.isKnownPredicate(
                    CmpInst::ICMP_ULE,
-                   SE.applyLoopGuards(AccessSizeExt, *LoopGuards),
-                   SE.applyLoopGuards(DerefBytesExt, *LoopGuards));
+                   SE.applyLoopGuards(AccessSizeExt, LoopGuards),
+                   SE.applyLoopGuards(DerefBytesExt, LoopGuards));
              }) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, SQ);
 }

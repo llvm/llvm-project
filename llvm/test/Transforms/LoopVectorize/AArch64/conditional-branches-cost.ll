@@ -1145,6 +1145,9 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-LABEL: define void @pred_udiv_select_cost(
 ; DEFAULT-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]], i8 [[Y:%.*]]) #[[ATTR1]] {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]
+; DEFAULT-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; DEFAULT-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; DEFAULT-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
@@ -1153,12 +1156,9 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = add i64 [[TMP2]], -1
-; DEFAULT-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
-; DEFAULT-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i64 [[C1]], [[A2]]
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP6]], 1
 ; DEFAULT-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP11]], [[TMP8]]
-; DEFAULT-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = sub i64 [[C1]], [[B3]]
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP7]], 1
 ; DEFAULT-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP13]], [[TMP8]]
@@ -1201,18 +1201,18 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-LABEL: define void @pred_udiv_select_cost(
 ; PRED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]], i8 [[Y:%.*]]) #[[ATTR1]] {
 ; PRED-NEXT:  [[ENTRY:.*:]]
+; PRED-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; PRED-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; PRED-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; PRED-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; PRED:       [[VECTOR_MEMCHECK]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; PRED-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], -1
-; PRED-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
-; PRED-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[C1]], [[A2]]
 ; PRED-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP3]], 1
 ; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
-; PRED-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; PRED-NEXT:    [[TMP4:%.*]] = sub i64 [[C1]], [[B3]]
 ; PRED-NEXT:    [[TMP23:%.*]] = sub i64 [[TMP4]], 1
 ; PRED-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP23]], [[TMP5]]

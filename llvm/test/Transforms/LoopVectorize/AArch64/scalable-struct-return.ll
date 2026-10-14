@@ -117,17 +117,17 @@ define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, pt
 ; CHECK-LABEL: define void @struct_return_f32_widen_rt_checks(
 ; CHECK-SAME: ptr [[IN:%.*]], ptr writeonly [[OUT_A:%.*]], ptr writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IN3:%.*]] = ptrtoaddr ptr [[IN]] to i64
+; CHECK-NEXT:    [[OUT_A2:%.*]] = ptrtoaddr ptr [[OUT_A]] to i64
+; CHECK-NEXT:    [[OUT_B1:%.*]] = ptrtoaddr ptr [[OUT_B]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP1]], -1
-; CHECK-NEXT:    [[OUT_B1:%.*]] = ptrtoaddr ptr [[OUT_B]] to i64
-; CHECK-NEXT:    [[OUT_A2:%.*]] = ptrtoaddr ptr [[OUT_A]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[OUT_B1]], [[OUT_A2]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP23]]
-; CHECK-NEXT:    [[IN3:%.*]] = ptrtoaddr ptr [[IN]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[OUT_A2]], [[IN3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP8]], [[TMP23]]
