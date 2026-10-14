@@ -27,10 +27,9 @@
 define <16 x i8> @do_not_crash(ptr, ptr, ptr, i32, i64, i8) {
 ; X86-LABEL: do_not_crash:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movb %al, (%ecx)
-; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movd %eax, %xmm2
 ; X86-NEXT:    psllq $56, %xmm2
 ; X86-NEXT:    pcmpeqd %xmm3, %xmm3
