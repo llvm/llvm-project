@@ -192,18 +192,11 @@ struct RemoteSymbolLookupSetElement {
 
 using RemoteSymbolLookupSet = std::vector<RemoteSymbolLookupSetElement>;
 
-struct RemoteSymbolLookup {
-  uint64_t H;
-  RemoteSymbolLookupSet Symbols;
-};
-
 namespace shared {
 
 using SPSRemoteSymbolLookupSetElement = SPSTuple<SPSString, bool>;
 
 using SPSRemoteSymbolLookupSet = SPSSequence<SPSRemoteSymbolLookupSetElement>;
-
-using SPSRemoteSymbolLookup = SPSTuple<uint64_t, SPSRemoteSymbolLookupSet>;
 
 /// Tuple containing target triple, page size, and bootstrap symbols.
 using SPSSimpleRemoteEPCExecutorInfo =
@@ -231,24 +224,6 @@ public:
 };
 
 template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookup, RemoteSymbolLookup> {
-public:
-  static size_t size(const RemoteSymbolLookup &V) {
-    return SPSArgList<uint64_t, SPSRemoteSymbolLookupSet>::size(V.H, V.Symbols);
-  }
-
-  static size_t serialize(SPSOutputBuffer &OB, const RemoteSymbolLookup &V) {
-    return SPSArgList<uint64_t, SPSRemoteSymbolLookupSet>::serialize(OB, V.H,
-                                                                     V.Symbols);
-  }
-
-  static size_t deserialize(SPSInputBuffer &IB, RemoteSymbolLookup &V) {
-    return SPSArgList<uint64_t, SPSRemoteSymbolLookupSet>::deserialize(
-        IB, V.H, V.Symbols);
-  }
-};
-
-template <>
 class SPSSerializationTraits<SPSSimpleRemoteEPCExecutorInfo,
                              SimpleRemoteEPCExecutorInfo> {
 public:
@@ -268,13 +243,6 @@ public:
         IB, SI.TargetTriple, SI.PageSize, SI.BootstrapMap, SI.BootstrapSymbols);
   }
 };
-
-using SPSLoadDylibSignature = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr,
-                                                           SPSString, uint64_t);
-
-using SPSLookupSymbolsSignature =
-    SPSExpected<SPSSequence<SPSSequence<SPSExecutorAddr>>>(
-        SPSExecutorAddr, SPSSequence<SPSRemoteSymbolLookup>);
 
 } // end namespace shared
 } // end namespace orc
