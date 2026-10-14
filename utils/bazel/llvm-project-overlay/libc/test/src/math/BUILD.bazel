@@ -325,7 +325,16 @@ math_mpfr_test(
     deps = ["//libc:__support_fputil_bfloat16"],
 )
 
-# TODO: Add fma, fmaf, fmal, fmul, fmull tests.  Missing stdlib/rand dependency.
+# TODO: Add fmaf, fmal, fmull tests.  Missing stdlib/rand dependency.
+
+math_mpfr_test(
+    name = "fma",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
 
 math_mpfr_test(
     name = "fmax",
@@ -340,6 +349,15 @@ math_mpfr_test(
 math_mpfr_test(
     name = "fmod",
     hdrs = ["FModTest.h"],
+)
+
+math_mpfr_test(
+    name = "fmul",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
 )
 
 math_mpfr_test(
