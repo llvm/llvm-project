@@ -219,9 +219,8 @@ static Value *createWhileLO(IRBuilder<> &Builder, unsigned ElementSizeInBits,
 /// If \p UserI is a masked-load user of the original loop mask, rewrite it to
 /// a masked multi-vector load (using the predicate-as-counter) if the load
 /// access size matches the predicate-as-counter element size.
-static bool tryRewriteMaskedLoadUser(Instruction &UserI,
-                                     const MaskRewriteCandidate &C,
-                                     Value *Count) {
+static bool tryRewriteMaskedLoad(Instruction &UserI,
+                                 const MaskRewriteCandidate &C, Value *Count) {
   auto *II = dyn_cast<IntrinsicInst>(&UserI);
   if (!II || II->getIntrinsicID() != Intrinsic::masked_load)
     return false;
@@ -235,7 +234,6 @@ static bool tryRewriteMaskedLoadUser(Instruction &UserI,
     return false;
 
   IRBuilder<> Builder(II);
-  Builder.SetCurrentDebugLocation(II->getDebugLoc());
 
   ElementCount LegalEC = getSVEElementCount(C.ElementSizeInBits);
   Type *ScalarType = II->getType()->getScalarType();
@@ -252,6 +250,8 @@ static bool tryRewriteMaskedLoadUser(Instruction &UserI,
   // Copy pointer parameter attributes.
   for (Attribute ParamAttr : II->getParamAttributes(0))
     PNLoad->addParamAttr(1, ParamAttr);
+
+  PNLoad->copyMetadata(*II);
 
   // Concatenate all results into the original wide value.
   Value *WideData = PoisonValue::get(WideDataTy);
@@ -270,9 +270,8 @@ static bool tryRewriteMaskedLoadUser(Instruction &UserI,
 /// If \p UserI is a masked-store user of the original loop mask, rewrite it to
 /// a masked multi-vector store (using the predicate-as-counter) if the store
 /// access size matches the predicate-as-counter element size.
-static bool tryRewriteMaskedStoreUser(Instruction &UserI,
-                                      const MaskRewriteCandidate &C,
-                                      Value *Count) {
+static bool tryRewriteMaskedStore(Instruction &UserI,
+                                  const MaskRewriteCandidate &C, Value *Count) {
   auto *II = dyn_cast<IntrinsicInst>(&UserI);
   if (!II || II->getIntrinsicID() != Intrinsic::masked_store)
     return false;
@@ -283,7 +282,6 @@ static bool tryRewriteMaskedStoreUser(Instruction &UserI,
     return false;
 
   IRBuilder<> Builder(II);
-  Builder.SetCurrentDebugLocation(II->getDebugLoc());
 
   Type *ScalarType = II->getArgOperand(0)->getType()->getScalarType();
   ElementCount LegalEC = getSVEElementCount(C.ElementSizeInBits);
@@ -301,6 +299,8 @@ static bool tryRewriteMaskedStoreUser(Instruction &UserI,
       C.VectorScale == 4 ? Intrinsic::aarch64_sve_st1_pn_x4
                          : Intrinsic::aarch64_sve_st1_pn_x2,
       {LegalDataTy, II->getArgOperand(1)->getType()}, StoreArgs));
+
+  PNStore->copyMetadata(*II);
 
   // Copy pointer parameter attributes.
   for (Attribute ParamAttr : II->getParamAttributes(1))
@@ -328,7 +328,6 @@ static bool tryRewriteExtractElement(Instruction &UserI,
     return false;
 
   IRBuilder<> Builder(EEI);
-  Builder.SetCurrentDebugLocation(EEI->getDebugLoc());
 
   auto *ExtractMask = Builder.CreateIntrinsic(
       Intrinsic::aarch64_sve_pext,
@@ -527,8 +526,8 @@ bool AArch64PredicateAsCounterLoopRewrites::rewriteCandidate(
     Value *WideMask = nullptr;
     for (Use *U : UsesToRewrite) {
       auto *UserI = cast<Instruction>(U->getUser());
-      if (tryRewriteMaskedLoadUser(*UserI, C, Count) ||
-          tryRewriteMaskedStoreUser(*UserI, C, Count) ||
+      if (tryRewriteMaskedLoad(*UserI, C, Count) ||
+          tryRewriteMaskedStore(*UserI, C, Count) ||
           tryRewriteExtractElement(*UserI, C, Count))
         continue;
 
