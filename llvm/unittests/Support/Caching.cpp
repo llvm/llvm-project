@@ -72,6 +72,22 @@ TEST(Caching, Normal) {
     ASSERT_TRUE(memcmp(data, readData.data(), sizeof(data)) == 0);
   }
 
+  {
+    auto AddStreamOrErr = Cache(2, "bar", "");
+    ASSERT_TRUE(bool(AddStreamOrErr));
+
+    AddStreamFn &AddStream = *AddStreamOrErr;
+    ASSERT_TRUE(AddStream);
+
+    auto FileOrErr = AddStream(1, "");
+    ASSERT_TRUE(bool(FileOrErr));
+
+    CachedFileStream *CFS = FileOrErr->get();
+    (*CFS->OS).write(data, sizeof(data));
+    ASSERT_THAT_ERROR(CFS->abort(), Succeeded());
+    ASSERT_THAT_ERROR(CFS->commit(), Failed());
+  }
+
   ASSERT_NO_ERROR(sys::fs::remove_directories(CacheDir.str()));
 }
 

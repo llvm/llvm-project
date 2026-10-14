@@ -38,6 +38,9 @@ public:
     if (Committed)
       return createStringError(make_error_code(std::errc::invalid_argument),
                                Twine("CacheStream already committed."));
+    if (Aborted)
+      return createStringError(make_error_code(std::errc::invalid_argument),
+                               "CacheStream already aborted.");
     Committed = true;
 
     return Error::success();
@@ -47,12 +50,19 @@ public:
     return commit();
   }
 
+  virtual Error abort() {
+    OS.reset();
+    Aborted = true;
+    return Error::success();
+  }
+
   bool Committed = false;
+  bool Aborted = false;
   std::unique_ptr<raw_pwrite_stream> OS;
   std::string ObjectPathName;
   virtual ~CachedFileStream() {
-    if (!Committed)
-      report_fatal_error("CachedFileStream was not committed.\n");
+    if (!Committed && !Aborted)
+      report_fatal_error("CachedFileStream was not committed or aborted.\n");
   }
 };
 

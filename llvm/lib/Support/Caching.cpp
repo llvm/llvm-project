@@ -143,6 +143,13 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         AddBuffer(Task, ModuleName, std::move(*MBOrErr));
         return Error::success();
       }
+
+      Error abort() override {
+        if (Error E = CachedFileStream::abort())
+          return E;
+
+        return TempFile.discard();
+      }
     };
 
     // This class is responsible for renaming/moving existing file into a
