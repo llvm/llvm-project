@@ -59,8 +59,8 @@ struct Test {
   void operator()(ExecutionPolicy&& policy) {
     { // Check the return type
       int a[] = {0};
-      static_assert(
-          std::is_same_v<decltype(std::for_each(policy, Iter(std::begin(a)), Iter(std::begin(a)), [](int&) {})), void>);
+      auto f  = [](int&) {};
+      static_assert(std::is_same_v<decltype(std::for_each(policy, Iter(std::begin(a)), Iter(std::begin(a)), f)), void>);
     }
     { // Empty range, the function is never called
       int a[] = {42};
