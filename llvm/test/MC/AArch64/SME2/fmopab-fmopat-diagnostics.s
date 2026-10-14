@@ -43,7 +43,27 @@ fmopat za0.h, { z0.h, z1.h }, z0.b, z19.b
 // CHECK-NEXT: fmopat za0.h, { z0.h, z1.h }, z0.b, z19.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+fmopab za0.h, { z0.h, z1.h }, z0.b, z19.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted vector register, expected register in z20.b..z23.b or z28.b..z31.b
+// CHECK-NEXT: fmopab za0.h, { z0.h, z1.h }, z0.b, z19.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fmopat za0.h, { z0.h, z1.h }, z0.b, z24.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted vector register, expected register in z20.b..z23.b or z28.b..z31.b
+// CHECK-NEXT: fmopat za0.h, { z0.h, z1.h }, z0.b, z24.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 fmopab za0.h, { z0.h, z1.h }, z0.b, z24.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted vector register, expected register in z20.b..z23.b or z28.b..z31.b
 // CHECK-NEXT: fmopab za0.h, { z0.h, z1.h }, z0.b, z24.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fmopat za0.h, { z0.h, z1.h }, z0.b, z27.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted vector register, expected register in z20.b..z23.b or z28.b..z31.b
+// CHECK-NEXT: fmopat za0.h, { z0.h, z1.h }, z0.b, z27.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fmopab za0.h, { z0.h, z1.h }, z0.b, z27.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid restricted vector register, expected register in z20.b..z23.b or z28.b..z31.b
+// CHECK-NEXT: fmopab za0.h, { z0.h, z1.h }, z0.b, z27.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
