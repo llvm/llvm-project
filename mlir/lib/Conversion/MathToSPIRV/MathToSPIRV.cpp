@@ -251,6 +251,8 @@ struct CountLeadingZerosPattern final
 /// Converts math.cttz to GL FindILsb. GL FindILsb returns -1 for a zero
 /// input while math.cttz must return the bitwidth, so the zero case is
 /// patched up with a select.
+///
+/// OpenCL targets use OpenCL.std ctz. This pattern handles the shader fallback.
 struct CountTrailingZerosPattern final
     : public OpConversionPattern<math::CountTrailingZerosOp> {
   using Base::Base;
@@ -288,6 +290,47 @@ struct CountTrailingZerosPattern final
     Value isZero = spirv::IEqualOp::create(rewriter, loc, input, val0);
     rewriter.replaceOpWithNewOp<spirv::SelectOp>(countOp, isZero, valBitwidth,
                                                  lsb);
+    return success();
+  }
+};
+
+/// Converts math.cttz to OpenCL.std ctz, preserving the source bit width when
+/// narrow integers are emulated using wider integers.
+struct CountTrailingZerosOpenCLPattern final
+    : public OpConversionPattern<math::CountTrailingZerosOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(math::CountTrailingZerosOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (failed(checkSourceOpTypes(rewriter, op)))
+      return failure();
+
+    auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    if (!typeConverter.getTargetEnv().allows(spirv::Capability::Kernel))
+      return rewriter.notifyMatchFailure(op, "requires Kernel capability");
+    Type type = typeConverter.convertType(op.getType());
+    if (!type)
+      return failure();
+
+    Type elementType = getElementTypeOrSelf(type);
+    unsigned sourceWidth =
+        getElementTypeOrSelf(op.getType()).getIntOrFloatBitWidth();
+    unsigned targetWidth = elementType.getIntOrFloatBitWidth();
+    Value input = adaptor.getOperand();
+    if (sourceWidth < targetWidth) {
+      // Set the bit immediately above the original value. This bounds the
+      // count by sourceWidth, even when the emulated value has nonzero high
+      // bits, and gives the correct result for a zero source value.
+      Attribute sentinel = IntegerAttr::get(
+          elementType, APInt::getOneBitSet(targetWidth, sourceWidth));
+      if (auto vectorType = dyn_cast<VectorType>(type))
+        sentinel = SplatElementsAttr::get(vectorType, sentinel);
+      Value mask =
+          spirv::ConstantOp::create(rewriter, op.getLoc(), type, sentinel);
+      input = spirv::BitwiseOrOp::create(rewriter, op.getLoc(), input, mask);
+    }
+    rewriter.replaceOpWithNewOp<spirv::CLCtzOp>(op, type, input);
     return success();
   }
 };
@@ -629,7 +672,6 @@ struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
     return success();
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -691,6 +733,7 @@ void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
       CheckedElementwiseOpPattern<math::AbsFOp, spirv::CLFAbsOp>,
       CheckedElementwiseOpPattern<math::AbsIOp, spirv::CLSAbsOp>,
       CheckedElementwiseOpPattern<math::CountLeadingZerosOp, spirv::CLClzOp>,
+      CountTrailingZerosOpenCLPattern,
       CheckedElementwiseOpPattern<math::AtanOp, spirv::CLAtanOp>,
       CheckedElementwiseOpPattern<math::Atan2Op, spirv::CLAtan2Op>,
       CheckedElementwiseOpPattern<math::CbrtOp, spirv::CLCbrtOp>,
@@ -724,5 +767,4 @@ void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
       CheckedElementwiseOpPattern<math::AtanhOp, spirv::CLAtanhOp>>(
       typeConverter, patterns.getContext());
 }
-
 } // namespace mlir
