@@ -9526,14 +9526,6 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
 // functions (P3668R4).
 
 namespace {
-/// Which diagnostics to produce while analyzing a defaulted postfix increment
-/// or decrement operator function.
-enum class PostfixOperatorDiagnoseKind {
-  NoDiagnostics,
-  ExplainDeleted,
-  ExplainConstexpr
-};
-
 /// Information about a defaulted postfix increment or decrement operator
 /// function, as determined by analyzeDefaultedPostfixOperator.
 struct DefaultedPostfixOperatorInfo {
@@ -9557,11 +9549,13 @@ static QualType getPostfixOperatorFirstParamType(const FunctionDecl *FD) {
 /// function for type \p C should be defined as deleted, as specified in C++2d
 /// [over.inc.default]p2, and whether every function it would invoke is
 /// constexpr.
+///
+/// If \p Diagnose is true, explain why the function is defined as deleted or,
+/// if it is not, which of the functions it invokes are not constexpr.
 static DefaultedPostfixOperatorInfo
 analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
                                 PostfixOperatorKind Kind, QualType C,
-                                PostfixOperatorDiagnoseKind Diagnose) {
-  using DiagnoseKind = PostfixOperatorDiagnoseKind;
+                                bool Diagnose) {
   DefaultedPostfixOperatorInfo Info;
   SourceLocation Loc = FD->getLocation();
 
@@ -9582,27 +9576,27 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
     return Info;
   };
   auto InaccessibleDiag = [&](unsigned Step) {
-    return Diagnose == DiagnoseKind::ExplainDeleted
+    return Diagnose
                ? S.PDiag(diag::note_defaulted_postfix_operator_inaccessible)
                      << FD << Step
                : S.PDiag();
   };
   auto NoteCallsDeleted = [&](unsigned Step, FunctionDecl *Callee) {
-    if (Diagnose != DiagnoseKind::ExplainDeleted)
+    if (!Diagnose)
       return;
     S.Diag(Loc, diag::note_defaulted_postfix_operator_calls_deleted)
         << FD << Step;
     if (Callee)
       S.NoteDeletedFunction(Callee);
   };
+  // The non-constexpr functions are only worth explaining if the function is
+  // not deleted, which isn't known until the end of the analysis.
+  SmallVector<std::pair<const FunctionDecl *, unsigned>, 2> NonConstexpr;
   auto CheckConstexpr = [&](const FunctionDecl *Callee, unsigned Step) {
     if (Callee->isConstexpr())
       return;
     Info.Constexpr = false;
-    if (Diagnose == DiagnoseKind::ExplainConstexpr)
-      S.Diag(Callee->getLocation(),
-             diag::note_defaulted_postfix_operator_not_constexpr_here)
-          << Step;
+    NonConstexpr.push_back({Callee, Step});
   };
 
   // C++2d [over.inc.default]p2:
@@ -9618,7 +9612,7 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
         InitializationKind::CreateDirect(Loc, Loc, Loc);
     InitializationSequence Seq(S, Entity, InitKind, Args);
     if (Seq.Failed()) {
-      if (Diagnose == DiagnoseKind::ExplainDeleted) {
+      if (Diagnose) {
         OverloadCandidateSet &Cands = Seq.getFailedCandidateSet();
         OverloadingResult OR =
             Seq.getFailureKind() ==
@@ -9715,7 +9709,7 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
     break;
 
   case OR_Ambiguous:
-    if (Diagnose == DiagnoseKind::ExplainDeleted)
+    if (Diagnose)
       CandidateSet.NoteCandidates(
           PartialDiagnosticAt(
               Loc, S.PDiag(diag::note_defaulted_postfix_operator_ambiguous)
@@ -9731,12 +9725,17 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
     // Don't list the non-viable candidates: like for any other unary operator,
     // the candidate notes can't sensibly describe an arity mismatch for a
     // member postfix operator (whose object argument is not a parameter).
-    if (Diagnose == DiagnoseKind::ExplainDeleted)
+    if (Diagnose)
       S.Diag(Loc, diag::note_defaulted_postfix_operator_no_viable)
           << FD << (int)Kind << C;
     return Deleted();
   }
 
+  if (Diagnose)
+    for (auto [Callee, Step] : NonConstexpr)
+      S.Diag(Callee->getLocation(),
+             diag::note_defaulted_postfix_operator_not_constexpr_here)
+          << Step;
   return Info;
 }
 
@@ -9938,8 +9937,8 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
     return true;
 
   // Determine whether the function should be defined as deleted.
-  DefaultedPostfixOperatorInfo Info = analyzeDefaultedPostfixOperator(
-      *this, FD, Kind, C, PostfixOperatorDiagnoseKind::NoDiagnostics);
+  DefaultedPostfixOperatorInfo Info =
+      analyzeDefaultedPostfixOperator(*this, FD, Kind, C, /*Diagnose=*/false);
 
   bool First = FD == FD->getFirstDecl();
 
@@ -9954,8 +9953,7 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
       Diag(FD->getLocation(),
            diag::err_non_first_default_postfix_operator_deletes)
           << (int)Kind;
-      analyzeDefaultedPostfixOperator(
-          *this, FD, Kind, C, PostfixOperatorDiagnoseKind::ExplainDeleted);
+      analyzeDefaultedPostfixOperator(*this, FD, Kind, C, /*Diagnose=*/true);
       return true;
     }
     if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
@@ -9979,8 +9977,7 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
     if (!inTemplateInstantiation() && !FD->isImplicit()) {
       Diag(FD->getLocation(), diag::warn_defaulted_postfix_operator_deleted)
           << (int)Kind;
-      analyzeDefaultedPostfixOperator(
-          *this, FD, Kind, C, PostfixOperatorDiagnoseKind::ExplainDeleted);
+      analyzeDefaultedPostfixOperator(*this, FD, Kind, C, /*Diagnose=*/true);
       if (FD->getDefaultLoc().isValid())
         Diag(FD->getDefaultLoc(), diag::note_replace_equals_default_to_delete)
             << FixItHint::CreateReplacement(FD->getDefaultLoc(), "delete");
@@ -10006,8 +10003,7 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
     Diag(FD->getBeginLoc(),
          diag::err_defaulted_postfix_operator_constexpr_mismatch)
         << (int)Kind << FD->isConsteval();
-    analyzeDefaultedPostfixOperator(
-        *this, FD, Kind, C, PostfixOperatorDiagnoseKind::ExplainConstexpr);
+    analyzeDefaultedPostfixOperator(*this, FD, Kind, C, /*Diagnose=*/true);
     return true;
   }
 
@@ -10757,7 +10753,7 @@ void Sema::DiagnoseDeletedDefaultedFunction(FunctionDecl *FD) {
                      .getNonReferenceType()
                      .getUnqualifiedType();
     analyzeDefaultedPostfixOperator(*this, FD, DFK.asPostfixOperator(), C,
-                                    PostfixOperatorDiagnoseKind::ExplainDeleted);
+                                    /*Diagnose=*/true);
   } else {
     DefaultedComparisonAnalyzer(
         *this, cast<CXXRecordDecl>(FD->getLexicalDeclContext()), FD,
