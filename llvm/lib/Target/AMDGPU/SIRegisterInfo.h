@@ -398,8 +398,7 @@ public:
 
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &Bank) const {
-    return getRegClassForSizeOnBank(static_cast<unsigned>(Ty.getSizeInBits()),
-                                    Bank);
+    return getRegClassForSizeOnBank(Ty.getSizeInBits(), Bank);
   }
 
   const TargetRegisterClass *
