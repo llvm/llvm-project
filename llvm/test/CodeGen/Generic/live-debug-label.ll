@@ -1,4 +1,4 @@
-; RUN: llc < %s -stop-after=virtregrewriter -o - | FileCheck %s
+; RUN: llc < %s -stop-after=virt-reg-rewriter -o - | FileCheck %s
 ;
 ; NVPTX produces a different order of the BBs
 ; XFAIL: target=nvptx{{.*}}

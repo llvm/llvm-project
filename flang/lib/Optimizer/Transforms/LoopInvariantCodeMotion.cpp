@@ -19,11 +19,13 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
+#include <optional>
 #include <utility>
 
 namespace fir {
@@ -90,6 +92,12 @@ static bool isNonOptionalScalar(Value location) {
     }
     Operation *defOp = location.getDefiningOp();
     if (!defOp) {
+      // A compute-region argument forwards a mapped input. Recover its storage
+      // provenance before checking whether a speculative scalar read is safe.
+      if (Value operand = acc::getACCOperandForBlockArg(location)) {
+        location = operand;
+        continue;
+      }
       // If this is a function argument
       auto blockArg = cast<BlockArgument>(location);
       Block *block = blockArg.getOwner();
@@ -321,6 +329,21 @@ void LoopInvariantCodeMotion::runOnOperation() {
   std::function<bool(Operation *, LoopLikeOpInterface, bool)>
       shouldMoveOutOfLoop = [&](Operation *op, LoopLikeOpInterface loopLike,
                                 bool maybeConditionallyExecuted) {
+        // Never hoist a producer of a !fir.field. Lowering a consumer of a
+        // field value inspects its defining operation: for a record whose
+        // layout is known at compile time the field becomes an LLVM GEP struct
+        // index, which must be a constant. Hoisting fir.field_index out of the
+        // arms of a construct (e.g. the CASEs of a SELECT CASE, each passing a
+        // different component of the same derived type) leaves those arms as
+        // otherwise-identical blocks differing only in this operand, which lets
+        // block merging thread it through a new block argument -- destroying
+        // the defining operation that codegen needs.
+        if (llvm::any_of(op->getResultTypes(),
+                         [](mlir::Type t) { return isa<fir::FieldType>(t); })) {
+          LDBG() << "Not hoisting producer of a field value: " << *op;
+          return false;
+        }
+
         if (isPure(op)) {
           LDBG() << "Pure operation: " << *op;
           return true;
@@ -359,7 +382,22 @@ void LoopInvariantCodeMotion::runOnOperation() {
                             maybeConditionallyExecuted);
       };
 
-  getOperation()->walk([&](LoopLikeOpInterface loopLike) {
+  // Resolve the name once: ancestor checks compare interned operation names,
+  // not strings. Keep analysis scope independent of the selected loop scope.
+  std::optional<OperationName> scopeOpName;
+  if (!onlyInside.empty())
+    scopeOpName.emplace(onlyInside, &getContext());
+  Operation *function = getOperation();
+  function->walk([&](LoopLikeOpInterface loopLike) {
+    if (scopeOpName) {
+      Operation *scope = loopLike->getParentOp();
+      while (scope != function && scope->getName() != *scopeOpName)
+        scope = scope->getParentOp();
+      if (scope->getName() != *scopeOpName) {
+        LDBG() << "Skipping loop-like without " << *scopeOpName << " parent";
+        return;
+      }
+    }
     if (!fir::canMoveOutOf(loopLike, nullptr)) {
       LDBG() << "Cannot hoist anything out of loop operation: ";
       LDBG_OS([&](llvm::raw_ostream &os) {

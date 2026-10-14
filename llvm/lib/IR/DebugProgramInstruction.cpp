@@ -505,11 +505,11 @@ Value *DbgVariableRecord::getAddress() const {
 }
 
 DIAssignID *DbgVariableRecord::getAssignID() const {
-  return cast<DIAssignID>(DebugValues[2]);
+  return cast<DIAssignID>(DebugValues[AssignIDIdx]);
 }
 
 void DbgVariableRecord::setAssignId(DIAssignID *New) {
-  resetDebugValue(2, New);
+  resetDebugValue(AssignIDIdx, New);
 }
 
 void DbgVariableRecord::setKillAddress() {

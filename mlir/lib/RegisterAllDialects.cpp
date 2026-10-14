@@ -13,7 +13,7 @@
 
 #include "mlir/InitAllDialects.h"
 
-#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialectDecl.h"
 #include "mlir/Dialect/AMDGPU/Transforms/MemoryAccessOpInterfacesImpl.h"
 #include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
@@ -27,7 +27,7 @@
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/Async/IR/Async.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationDialect.h"
 #include "mlir/Dialect/Bufferization/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
@@ -59,6 +59,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
 #include "mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h"
+#include "mlir/Dialect/MemRef/Transforms//MemorySlotOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/AllocationOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/BufferViewFlowOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/RuntimeOpVerification.h"
@@ -187,7 +188,8 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   memref::registerBufferViewFlowOpInterfaceExternalModels(registry);
   memref::registerRuntimeVerifiableOpInterfaceExternalModels(registry);
   memref::registerValueBoundsOpInterfaceExternalModels(registry);
-  memref::registerMemorySlotExternalModels(registry);
+  memref::registerDestructurableTypeExternalModels(registry);
+  memref::registerMemorySlotOpInterfaceExternalModels(registry);
   ml_program::registerBufferizableOpInterfaceExternalModels(registry);
   nvgpu::registerMemoryAccessOpInterfacesExternalModels(registry);
   scf::registerBufferDeallocationOpInterfaceExternalModels(registry);
@@ -205,7 +207,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   tosa::registerShardingInterfaceExternalModels(registry);
   vector::registerBufferizableOpInterfaceExternalModels(registry);
   vector::registerIndexedAccessOpInterfaceExternalModels(registry);
-  vector::registerMemorySlotOpInterfaceExternalModels(registry);
+  vector::registerMemorySlotExternalModels(registry);
   vector::registerSubsetOpInterfaceExternalModels(registry);
   vector::registerValueBoundsOpInterfaceExternalModels(registry);
   NVVM::registerNVVMTargetInterfaceExternalModels(registry);

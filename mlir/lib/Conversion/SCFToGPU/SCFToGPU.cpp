@@ -613,6 +613,9 @@ static LogicalResult processParallelLoop(
 LogicalResult
 ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
                                              PatternRewriter &rewriter) const {
+  if (parallelOp.getUnsignedCmp())
+    return rewriter.notifyMatchFailure(
+        parallelOp, "unsigned loop bounds are not supported");
   // Mark the operation as visited for recursive legality check.
   parallelOp->setDiscardableAttr(kVisitedAttrName, rewriter.getUnitAttr());
 

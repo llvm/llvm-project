@@ -3,9 +3,9 @@
 
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -debug -disable-output < %s 2>&1 | FileCheck %s
-; CHECK-NOT: LV: We can vectorize this loop
+; CHECK-NOT: LV: Loop passed LoopVectorizationLegality checks
 ; CHECK: LV: Not vectorizing: Cannot prove legality
-; CHECK-NOT: LV: We can vectorize this loop
+; CHECK-NOT: LV: Loop passed LoopVectorizationLegality checks
 
 @a = global [32000 x i32] zeroinitializer, align 4
 

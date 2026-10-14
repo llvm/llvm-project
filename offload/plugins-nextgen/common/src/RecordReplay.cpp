@@ -271,7 +271,7 @@ Error NativeRecordReplayTy::recordDescImpl(
 
   // Export minimum and maximum for allowed number of teams. If zero, it means
   // there was no restriction provided by the program.
-  uint32_t MinMaxBlocks = std::max(LaunchArgs.UserNumBlocks[0], uint32_t(0));
+  uint32_t MinMaxBlocks = LaunchArgs.KernelLaunchInfo.RequestedNumBlocks;
   json::Array JsonTeamsLimits;
   JsonTeamsLimits.push_back(MinMaxBlocks);
   JsonTeamsLimits.push_back(MinMaxBlocks);
@@ -279,7 +279,7 @@ Error NativeRecordReplayTy::recordDescImpl(
 
   // Export minimum and maximum for allowed number of threads. If zero, it means
   // there was no restriction provided by the program.
-  uint32_t MaxThreads = Kernel.getMaxThreads();
+  uint32_t MaxThreads = LaunchArgs.KernelLaunchInfo.MaxNumThreads;
   json::Array JsonThreadsLimits;
   JsonThreadsLimits.push_back(1);
   JsonThreadsLimits.push_back(MaxThreads);

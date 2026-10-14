@@ -44,11 +44,12 @@ bb:
   ret void
 }
 
-  !0 = !{!"omnipotent char", !1, i64 0}
+  !0 = !{!8, !8, i64 0, i64 0}
   !1 = !{!1}
   !2 = !{!3}
   !3 = distinct !{!3, !4}
-  !4 = distinct !{!4}
+  !4 = distinct !{!4, i1 false}
   !5 = !{!3}
   !6 = !{!7}
   !7 = !{!7, !4}
+  !8 = !{!"omnipotent char", !1}

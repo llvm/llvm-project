@@ -958,7 +958,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   if (IsFloat && ReqdAccuracy < 1.0f)
     return false;
 
-  IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()));
+  IRBuilder<> Builder(std::next(FDiv.getIterator()));
   Builder.setFastMathFlags(DivFMF);
   Builder.SetCurrentDebugLocation(FDiv.getDebugLoc());
 
@@ -2383,15 +2383,9 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
   // On wave32, the upper 32 bits of execution mask are always 0, so
   // mbcnt.hi(mask, val) always returns val unchanged.
   if (ST.isWave32()) {
-    if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
-      // Replace mbcnt.hi(mask, val) with val only when work group size matches
-      // wave size (single wave per work group).
-      if (*MaybeX == Wave) {
-        BasicBlock::iterator BI(&I);
-        ReplaceInstWithValue(BI, I.getArgOperand(1));
-        return true;
-      }
-    }
+    BasicBlock::iterator BI(&I);
+    ReplaceInstWithValue(BI, I.getArgOperand(1));
+    return true;
   }
 
   // Optimize the complete lane ID computation pattern:

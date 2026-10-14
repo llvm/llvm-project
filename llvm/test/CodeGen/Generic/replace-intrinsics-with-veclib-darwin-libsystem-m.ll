@@ -62,3 +62,99 @@ define <3 x double> @exp_v3(<3 x double> %in) {
 }
 
 declare <3 x double> @llvm.exp.v3f64(<3 x double>) #0
+
+define <4 x float> @exp2_v4f32(<4 x float> %in) {
+; CHECK-LABEL: define {{[^@]+}}@exp2_v4f32
+; CHECK-SAME: (<4 x float> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @_simd_exp2_f4(<4 x float> [[IN]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %call = call <4 x float> @llvm.exp2.v4f32(<4 x float> %in)
+  ret <4 x float> %call
+}
+
+declare <4 x float> @llvm.exp2.v4f32(<4 x float>) #0
+
+define <2 x double> @exp2_v2f64(<2 x double> %in) {
+; CHECK-LABEL: define {{[^@]+}}@exp2_v2f64
+; CHECK-SAME: (<2 x double> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @_simd_exp2_d2(<2 x double> [[IN]])
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
+  %call = call <2 x double> @llvm.exp2.v2f64(<2 x double> %in)
+  ret <2 x double> %call
+}
+
+declare <2 x double> @llvm.exp2.v2f64(<2 x double>) #0
+
+define <4 x float> @log_v4f32(<4 x float> %in) {
+; CHECK-LABEL: define {{[^@]+}}@log_v4f32
+; CHECK-SAME: (<4 x float> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @_simd_log_f4(<4 x float> [[IN]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %call = call <4 x float> @llvm.log.v4f32(<4 x float> %in)
+  ret <4 x float> %call
+}
+
+declare <4 x float> @llvm.log.v4f32(<4 x float>) #0
+
+define <2 x double> @log_v2f64(<2 x double> %in) {
+; CHECK-LABEL: define {{[^@]+}}@log_v2f64
+; CHECK-SAME: (<2 x double> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @_simd_log_d2(<2 x double> [[IN]])
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
+  %call = call <2 x double> @llvm.log.v2f64(<2 x double> %in)
+  ret <2 x double> %call
+}
+
+declare <2 x double> @llvm.log.v2f64(<2 x double>) #0
+
+define <4 x float> @log2_v4f32(<4 x float> %in) {
+; CHECK-LABEL: define {{[^@]+}}@log2_v4f32
+; CHECK-SAME: (<4 x float> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @_simd_log2_f4(<4 x float> [[IN]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %call = call <4 x float> @llvm.log2.v4f32(<4 x float> %in)
+  ret <4 x float> %call
+}
+
+declare <4 x float> @llvm.log2.v4f32(<4 x float>) #0
+
+define <2 x double> @log2_v2f64(<2 x double> %in) {
+; CHECK-LABEL: define {{[^@]+}}@log2_v2f64
+; CHECK-SAME: (<2 x double> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @_simd_log2_d2(<2 x double> [[IN]])
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
+  %call = call <2 x double> @llvm.log2.v2f64(<2 x double> %in)
+  ret <2 x double> %call
+}
+
+declare <2 x double> @llvm.log2.v2f64(<2 x double>) #0
+
+define <4 x float> @log10_v4f32(<4 x float> %in) {
+; CHECK-LABEL: define {{[^@]+}}@log10_v4f32
+; CHECK-SAME: (<4 x float> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @_simd_log10_f4(<4 x float> [[IN]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %call = call <4 x float> @llvm.log10.v4f32(<4 x float> %in)
+  ret <4 x float> %call
+}
+
+declare <4 x float> @llvm.log10.v4f32(<4 x float>) #0
+
+define <2 x double> @log10_v2f64(<2 x double> %in) {
+; CHECK-LABEL: define {{[^@]+}}@log10_v2f64
+; CHECK-SAME: (<2 x double> [[IN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @_simd_log10_d2(<2 x double> [[IN]])
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
+  %call = call <2 x double> @llvm.log10.v2f64(<2 x double> %in)
+  ret <2 x double> %call
+}
+
+declare <2 x double> @llvm.log10.v2f64(<2 x double>) #0
