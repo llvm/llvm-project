@@ -3,12 +3,34 @@
 
 // RUN: %clang --target=%target -mcpu=%cpu %libclc_lib -cl-std=CL3.0 -O2 -fno-discard-value-names -emit-llvm -S -o - %s | FileCheck %s --check-prefix=%check_prefix
 
-// AMDGCN-LABEL: define hidden noundef float @test_float(
-// AMDGCN-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+// AMDGCN-LABEL: define hidden noundef half @test_half(
+// AMDGCN-SAME: half noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[CALL:%.*]] = tail call float @llvm.fabs.f32(float noundef [[X]]) #[[ATTR2:[0-9]+]]
+// AMDGCN-NEXT:    [[CALL:%.*]] = tail call half @llvm.fabs.f16(half noundef [[X]]) #[[ATTR2:[0-9]+]]
+// AMDGCN-NEXT:    ret half [[CALL]]
+//
+half test_half(half x) {
+  return fabs(x);
+}
+
+// AMDGCN-LABEL: define hidden noundef float @test_float(
+// AMDGCN-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AMDGCN-NEXT:  [[ENTRY:.*:]]
+// AMDGCN-NEXT:    [[CALL:%.*]] = tail call float @llvm.fabs.f32(float noundef [[X]]) #[[ATTR2]]
 // AMDGCN-NEXT:    ret float [[CALL]]
 //
 float test_float(float x) {
+  return fabs(x);
+}
+
+// AMDGCN-LABEL: define hidden noundef double @test_double(
+// AMDGCN-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AMDGCN-NEXT:  [[ENTRY:.*:]]
+// AMDGCN-NEXT:    [[CALL:%.*]] = tail call double @llvm.fabs.f64(double noundef [[X]]) #[[ATTR2]]
+// AMDGCN-NEXT:    ret double [[CALL]]
+//
+double test_double(double x) {
   return fabs(x);
 }
