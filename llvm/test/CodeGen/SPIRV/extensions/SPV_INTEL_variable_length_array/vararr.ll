@@ -50,7 +50,7 @@ target triple = "spir"
 define dso_local spir_func i32 @foo(i64 %a, i64 %b) {
 entry:
   %vector1 = alloca [42 x i32], align 16
-  call void @llvm.lifetime.start.p0(i64 168, ptr nonnull %vector1)
+  call void @llvm.lifetime.start.p0(ptr nonnull %vector1)
   %stack1 = call ptr @llvm.stacksave.p0()
   %vla = alloca i32, i64 %a, align 16
   %arrayidx = getelementptr inbounds i32, ptr %vla, i64 %b
@@ -65,7 +65,7 @@ entry:
   %elem2 = load i32, ptr %arrayidx4, align 4
   %add5 = add nsw i32 %add, %elem2
   call void @llvm.stackrestore.p0(ptr %stack2)
-  call void @llvm.lifetime.end.p0(i64 168, ptr nonnull %vector1)
+  call void @llvm.lifetime.end.p0(ptr nonnull %vector1)
   ret i32 %add5
 }
 
@@ -103,7 +103,39 @@ exit:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+; Lifetime markers on a VLA. The pointer returned by OpVariableLengthArrayINTEL
+; only points to the element type, so Size 0 would not cover the allocation.
+; With a constant element count the byte size is known: it is kept, and the
+; pointer is bitcast to uchar* because a non-zero Size requires a void/uchar
+; pointer. With a dynamic count there is no size to keep, so Size 0 is emitted
+; directly on the array pointer and no bitcast is inserted (unchanged behavior).
+; CHECK-SPIRV: %[[ConstArr:.*]] = OpVariableLengthArrayINTEL %[[IntPtr]]
+; CHECK-SPIRV: %[[Cast1:.*]] = OpBitcast %[[CharPtr]] %[[ConstArr]]
+; CHECK-SPIRV-NEXT: OpLifetimeStart %[[Cast1]] 16
+; CHECK-SPIRV: %[[Cast2:.*]] = OpBitcast %[[CharPtr]] %[[ConstArr]]
+; CHECK-SPIRV-NEXT: OpLifetimeStop %[[Cast2]] 16
+define dso_local spir_func void @const_count_lifetime() {
+entry:
+  %vla = alloca i32, i32 4, align 4
+  call void @llvm.lifetime.start.p0(ptr %vla)
+  store i32 0, ptr %vla, align 4
+  call void @llvm.lifetime.end.p0(ptr %vla)
+  ret void
+}
+
+; CHECK-SPIRV: %[[DynArr:.*]] = OpVariableLengthArrayINTEL %[[IntPtr]]
+; CHECK-SPIRV-NEXT: OpLifetimeStart %[[DynArr]] 0
+; CHECK-SPIRV: OpLifetimeStop %[[DynArr]] 0
+define dso_local spir_func void @dyn_count_lifetime(i64 %n) {
+entry:
+  %vla = alloca i32, i64 %n, align 4
+  call void @llvm.lifetime.start.p0(ptr %vla)
+  store i32 0, ptr %vla, align 4
+  call void @llvm.lifetime.end.p0(ptr %vla)
+  ret void
+}
+
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare ptr @llvm.stacksave.p0()
 declare void @llvm.stackrestore.p0(ptr)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
