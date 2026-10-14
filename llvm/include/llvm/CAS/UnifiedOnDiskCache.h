@@ -54,10 +54,8 @@ public:
 
   /// Open a \p UnifiedOnDiskCache instance for a directory.
   ///
-  /// \param Path directory for the on-disk database. The data is stored in its
-  /// \p HashName sub-directory, so that caches using different hashing
-  /// algorithms can share the same \p Path. The directory will be created if it
-  /// doesn't exist.
+  /// \param Path directory for the on-disk database. The directory will be
+  /// created if it doesn't exist.
   /// \param SizeLimit Optional size for limiting growth. This has an effect for
   /// when the instance is closed.
   /// \param HashName Identifier name for the hashing algorithm that is going to
@@ -110,13 +108,10 @@ public:
   /// skipped.
   ///
   /// \param Path directory for the on-disk database.
-  /// \param HashName Identifier name for the hashing algorithm of the data to
-  /// recover. Data using other hashing algorithms is left untouched.
   ///
   /// \returns \c Recovered if the data has been cleared, \c Skipped if
   /// recovery is not needed, or an \c Error if recovery cannot be performed.
-  LLVM_ABI static Expected<ValidationResult> recover(StringRef Path,
-                                                     StringRef HashName);
+  LLVM_ABI static Expected<ValidationResult> recover(StringRef Path);
 
   /// Validate the action cache only.
   LLVM_ABI Error validateActionCache() const;
@@ -147,8 +142,8 @@ public:
   /// \p collectGarbage call.
   bool needsGarbageCollection() const { return NeedsGarbageCollection; }
 
-  /// Remove any unused data of the hashing algorithm \p HashName from the
-  /// directory at \p Path. If there are no such data the operation is a no-op.
+  /// Remove any unused data from the directory at \p Path. If there are no such
+  /// data the operation is a no-op.
   ///
   /// This can be called concurrently, regardless of whether there is an open
   /// \p UnifiedOnDiskCache instance or not; it has no effect on readers/writers
@@ -157,8 +152,7 @@ public:
   /// It is recommended that garbage-collection is triggered concurrently in the
   /// background, so that it has minimal effect on the workload of the process.
   LLVM_ABI static Error
-  collectGarbage(StringRef Path, StringRef HashName,
-                 ondisk::OnDiskCASLogger *Logger = nullptr);
+  collectGarbage(StringRef Path, ondisk::OnDiskCASLogger *Logger = nullptr);
 
   /// Remove unused data from the current UnifiedOnDiskCache.
   LLVM_ABI Error collectGarbage();

@@ -14,11 +14,8 @@
 /// directory exceeds its intended limit a new empty directory becomes the
 /// primary one.
 ///
-/// The data of each hashing algorithm is kept in its own top-level directory,
-/// '<path>/<hash>', where 'path' is the path that \p UnifiedOnDiskCache::open
-/// receives and 'hash' is the name of the hashing algorithm, e.g. 'BLAKE3'.
-/// This allows caches using different hashing algorithms to share the same
-/// path. Within the top-level directory there are directories named like this:
+/// Within the top-level directory (the path that \p UnifiedOnDiskCache::open
+/// receives) there are directories named like this:
 ///
 /// 'v<version>.<x>'
 /// 'v<version>.<x+1>'
@@ -111,14 +108,6 @@ static constexpr StringLiteral DBDirPrefix = "v1.";
 
 static constexpr StringLiteral ValidationFilename = "v1.validation";
 static constexpr StringLiteral CorruptPrefix = "corrupt.";
-
-/// \returns the top-level directory within \p Path for the data of the hashing
-/// algorithm \p HashName.
-static std::string getRootPath(StringRef Path, StringRef HashName) {
-  SmallString<256> RootPath(Path);
-  sys::path::append(RootPath, HashName);
-  return std::string(RootPath);
-}
 
 ObjectID UnifiedOnDiskCache::getObjectIDFromValue(ArrayRef<char> Value) {
   // little endian encoded.
@@ -231,13 +220,13 @@ Error UnifiedOnDiskCache::validateActionCache() const {
   return getKeyValueDB().validate();
 }
 
-static Error validateInProcess(StringRef Path, StringRef HashName,
+static Error validateInProcess(StringRef RootPath, StringRef HashName,
                                unsigned HashByteSize, bool CheckHash,
                                OnDiskGraphDB::HashingFuncT HashFn) {
   std::shared_ptr<UnifiedOnDiskCache> UniDB;
-  if (Error E =
-          UnifiedOnDiskCache::open(Path, std::nullopt, HashName, HashByteSize)
-              .moveInto(UniDB))
+  if (Error E = UnifiedOnDiskCache::open(RootPath, std::nullopt, HashName,
+                                         HashByteSize)
+                    .moveInto(UniDB))
     return E;
   if (Error E = UniDB->getGraphDB().validate(CheckHash, HashFn))
     return E;
@@ -420,9 +409,8 @@ static Error markAllDBDirsCorrupt(StringRef RootPath) {
 }
 
 Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
-    StringRef Path, StringRef HashName, unsigned HashByteSize, bool CheckHash,
-    OnDiskGraphDB::HashingFuncT HashFn, bool ForceValidation) {
-  std::string RootPath = getRootPath(Path, HashName);
+    StringRef RootPath, StringRef HashName, unsigned HashByteSize,
+    bool CheckHash, OnDiskGraphDB::HashingFuncT HashFn, bool ForceValidation) {
   std::unique_ptr<LockedValidationFile> VF;
   if (Error E = LockedValidationFile::open(RootPath).moveInto(VF))
     return std::move(E);
@@ -458,8 +446,8 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
   if (Error E = VF->setValidationPending())
     return std::move(E);
 
-  if (Error E =
-          validateInProcess(Path, HashName, HashByteSize, CheckHash, HashFn)) {
+  if (Error E = validateInProcess(RootPath, HashName, HashByteSize, CheckHash,
+                                  HashFn)) {
     if (Logger)
       LogValidationError = toStringWithoutConsuming(E);
     return std::move(E);
@@ -470,9 +458,7 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
   return ValidationResult::Valid;
 }
 
-Expected<ValidationResult> UnifiedOnDiskCache::recover(StringRef Path,
-                                                       StringRef HashName) {
-  std::string RootPath = getRootPath(Path, HashName);
+Expected<ValidationResult> UnifiedOnDiskCache::recover(StringRef RootPath) {
   std::unique_ptr<LockedValidationFile> VF;
   if (Error E = LockedValidationFile::open(RootPath).moveInto(VF))
     return std::move(E);
@@ -516,12 +502,11 @@ Expected<ValidationResult> UnifiedOnDiskCache::recover(StringRef Path,
 }
 
 Expected<std::unique_ptr<UnifiedOnDiskCache>>
-UnifiedOnDiskCache::open(StringRef Path, std::optional<uint64_t> SizeLimit,
+UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
                          StringRef HashName, unsigned HashByteSize,
                          OnDiskGraphDB::FaultInPolicy FaultInPolicy) {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
-  std::string RootPath = getRootPath(Path, HashName);
   if (std::error_code EC = sys::fs::create_directories(RootPath))
     return createFileError(RootPath, EC);
 
@@ -709,14 +694,13 @@ UnifiedOnDiskCache::UnifiedOnDiskCache() = default;
 
 UnifiedOnDiskCache::~UnifiedOnDiskCache() { consumeError(close()); }
 
-/// Removes the unused sub-directories of the top-level directory \p RootPath.
-static Error collectGarbageInRoot(StringRef RootPath,
-                                  ondisk::OnDiskCASLogger *Logger) {
-  auto DBDirs = getAllGarbageDirs(RootPath);
+Error UnifiedOnDiskCache::collectGarbage(StringRef Path,
+                                         ondisk::OnDiskCASLogger *Logger) {
+  auto DBDirs = getAllGarbageDirs(Path);
   if (!DBDirs)
     return DBDirs.takeError();
 
-  SmallString<256> PathBuf(RootPath);
+  SmallString<256> PathBuf(Path);
   for (StringRef UnusedSubDir : *DBDirs) {
     sys::path::append(PathBuf, UnusedSubDir);
     if (Logger)
@@ -728,11 +712,6 @@ static Error collectGarbageInRoot(StringRef RootPath,
   return Error::success();
 }
 
-Error UnifiedOnDiskCache::collectGarbage(StringRef Path, StringRef HashName,
-                                         ondisk::OnDiskCASLogger *Logger) {
-  return collectGarbageInRoot(getRootPath(Path, HashName), Logger);
-}
-
 Error UnifiedOnDiskCache::collectGarbage() {
-  return collectGarbageInRoot(RootPath, Logger.get());
+  return collectGarbage(RootPath, Logger.get());
 }

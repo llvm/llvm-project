@@ -504,10 +504,8 @@ llcas_cas_validate_if_needed(llcas_cas_options_t c_opts, bool check_hash,
 llcas_validation_result_t
 llcas_cas_recover_ondisk_data(llcas_cas_options_t c_opts, char **error) {
   auto &Opts = *unwrap(c_opts);
-  return toValidationResult(
-      UnifiedOnDiskCache::recover(Opts.OnDiskPath,
-                                  PluginCASContext::getHashName()),
-      error);
+  return toValidationResult(UnifiedOnDiskCache::recover(Opts.OnDiskPath),
+                            error);
 }
 
 void llcas_cas_options_set_client_version(llcas_cas_options_t, unsigned major,
