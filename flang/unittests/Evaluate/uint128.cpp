@@ -4,6 +4,7 @@
 #include "flang/Testing/testing.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
+#include <type_traits>
 
 #if (defined __GNUC__ || defined __clang__) && defined __SIZEOF_INT128__
 #define HAS_NATIVE_UINT128_T 1
@@ -145,6 +146,39 @@ template <typename T> static void TestNumericLimitsVsNative() {
   TEST(Detail::lowest() == Common::lowest());
 }
 
+template <typename T, typename EXPECTED> static void CheckMakeUnsignedType() {
+  TEST((std::is_same_v<Fortran::common::make_unsigned_t<T>, EXPECTED>));
+}
+
+static void TestMakeUnsigned() {
+  using Fortran::common::SignedInt128;
+  using Fortran::common::UnsignedInt128;
+
+  // Types handled by std::make_unsigned
+  CheckMakeUnsignedType<char, unsigned char>();
+  CheckMakeUnsignedType<signed char, unsigned char>();
+  CheckMakeUnsignedType<int, unsigned>();
+  CheckMakeUnsignedType<const int, const unsigned>();
+  CheckMakeUnsignedType<std::int64_t, std::uint64_t>();
+
+  // Flang's 128-bit emulation classes
+  CheckMakeUnsignedType<SignedInt128, UnsignedInt128>();
+  CheckMakeUnsignedType<UnsignedInt128, UnsignedInt128>();
+  CheckMakeUnsignedType<const SignedInt128, const UnsignedInt128>();
+  CheckMakeUnsignedType<volatile UnsignedInt128, volatile UnsignedInt128>();
+  CheckMakeUnsignedType<const volatile SignedInt128,
+      const volatile UnsignedInt128>();
+
+#if HAS_NATIVE_UINT128_T
+  CheckMakeUnsignedType<__int128_t, __uint128_t>();
+  CheckMakeUnsignedType<__uint128_t, __uint128_t>();
+  CheckMakeUnsignedType<const __int128_t, const __uint128_t>();
+  CheckMakeUnsignedType<volatile __int128_t, volatile __uint128_t>();
+  CheckMakeUnsignedType<const volatile __uint128_t,
+      const volatile __uint128_t>();
+#endif
+}
+
 int main() {
   for (std::uint64_t j{0}; j < 64; ++j) {
     Test(j);
@@ -164,5 +198,6 @@ int main() {
 #else
   llvm::outs() << "Environment lacks native __uint128_t\n";
 #endif
+  TestMakeUnsigned();
   return testing::Complete();
 }

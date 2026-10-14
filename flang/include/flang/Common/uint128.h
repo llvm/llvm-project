@@ -339,6 +339,16 @@ public:
   static constexpr T lowest() { return min(); }
 };
 
+template <> class make_unsigned_impl<Fortran::common::UnsignedInt128> {
+public:
+  using type = Fortran::common::UnsignedInt128;
+};
+
+template <> class make_unsigned_impl<Fortran::common::SignedInt128> {
+public:
+  using type = Fortran::common::UnsignedInt128;
+};
+
 } // namespace detail
 
 } // namespace Fortran::common
