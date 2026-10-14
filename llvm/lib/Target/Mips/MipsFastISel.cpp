@@ -1586,8 +1586,7 @@ bool MipsFastISel::fastLowerCall(CallLoweringInfo &CLI) {
     if (Symbol)
       MIB.addSym(Symbol, MipsII::MO_JALR);
     else
-      MIB.addSym(FuncInfo.MF->getContext().getOrCreateSymbol(
-	                   Addr.getGlobalValue()->getName()), MipsII::MO_JALR);
+      MIB.addSym(TM.getSymbol(Addr.getGlobalValue()), MipsII::MO_JALR);
   }
 
   // Finish off the call including any return values.
