@@ -245,7 +245,7 @@ int ell_bitint48(Pair2 p, _BitInt(48) b) { return vf(p, b); }
 // passed through the ellipsis.
 int ell_bitint96(Pair2 p, _BitInt(96) b) { return vf(p, b); }
 
-// CIR-LABEL: cir.func {{.*}}@ell_bitint96(%arg0: !u64i loc({{.+}}), %arg1: !u64i loc({{.+}}), %arg2: !u64i loc({{.+}})) -> !s32i
+// CIR-LABEL: cir.func {{.*}}@ell_bitint96(%arg0: !u64i loc({{.+}}), %arg1: !u64i {llvm.noundef} loc({{.+}}), %arg2: !u64i {llvm.noundef} loc({{.+}})) -> !s32i
 // CIR:         %[[IN0:[0-9]+]] = cir.get_member %[[IN:[0-9]+]][0] {name = ""} : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!u64i>
 // CIR:         cir.store %arg1, %[[IN0]] : !u64i, !cir.ptr<!u64i>
 // CIR:         %[[IN1:[0-9]+]] = cir.get_member %[[IN]][1] {name = ""} : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!u64i>
@@ -255,12 +255,10 @@ int ell_bitint96(Pair2 p, _BitInt(96) b) { return vf(p, b); }
 // CIR:         %[[B0:[0-9]+]] = cir.load %[[OUT0]] : !cir.ptr<!u64i>, !u64i
 // CIR:         %[[OUT1:[0-9]+]] = cir.get_member %[[OUT]][1] {name = ""} : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!u64i>
 // CIR:         %[[B1:[0-9]+]] = cir.load %[[OUT1]] : !cir.ptr<!u64i>, !u64i
-// CIR:         cir.call @vf(%[[PV]], %[[B0]], %[[B1]]) : (!u64i, !u64i, !u64i) -> !s32i
+// CIR:         cir.call @vf(%[[PV]], %[[B0]], %[[B1]]) : (!u64i, !u64i {llvm.noundef}, !u64i {llvm.noundef}) -> !s32i
 
-// LLVM-CIR-LABEL: define dso_local i32 @ell_bitint96(
-// LLVM-CIR-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i64 %[[B0:[0-9a-zA-Z._]+]], i64 %[[B1:[0-9a-zA-Z._]+]])
-// LLVM-OGCG-LABEL: define dso_local i32 @ell_bitint96(
-// LLVM-OGCG-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i64 noundef %[[B0:[0-9a-zA-Z._]+]], i64 noundef %[[B1:[0-9a-zA-Z._]+]])
+// LLVM-LABEL: define dso_local i32 @ell_bitint96(
+// LLVM-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i64 noundef %[[B0:[0-9a-zA-Z._]+]], i64 noundef %[[B1:[0-9a-zA-Z._]+]])
 // LLVM:         %[[S0:[0-9a-zA-Z._]+]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[SLOT:[0-9a-zA-Z._]+]], i32 0, i32 0
 // LLVM:         store i64 %[[B0]], ptr %[[S0]], align 8
 // LLVM:         %[[S1:[0-9a-zA-Z._]+]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[SLOT]], i32 0, i32 1
@@ -277,8 +275,7 @@ int ell_bitint96(Pair2 p, _BitInt(96) b) { return vf(p, b); }
 // LLVM:         %[[A0:[0-9a-zA-Z._]+]] = load i64, ptr %[[C0]], align 8
 // LLVM:         %[[C1:[0-9a-zA-Z._]+]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[COERCE]], i32 0, i32 1
 // LLVM:         %[[A1:[0-9a-zA-Z._]+]] = load i64, ptr %[[C1]], align 8
-// LLVM-CIR:     call i32 (i64, ...) @vf(i64 %[[PV]], i64 %[[A0]], i64 %[[A1]])
-// LLVM-OGCG:    call i32 (i64, ...) @vf(i64 %[[PV]], i64 noundef %[[A0]], i64 noundef %[[A1]])
+// LLVM:         call i32 (i64, ...) @vf(i64 %[[PV]], i64 noundef %[[A0]], i64 noundef %[[A1]])
 
 // At exactly 128 bits it stays in its natural type.
 int ell_bitint128(Pair2 p, _BitInt(128) b) { return vf(p, b); }
