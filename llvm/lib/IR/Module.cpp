@@ -719,10 +719,7 @@ void Module::setThreadModel(ThreadModel Model) {
 ExceptionHandling Module::getExceptionModel() const {
   if (auto *Val = cast_or_null<MDString>(getModuleFlag("exception-model")))
     return *parseExceptionModel(Val->getString());
-
-  // TODO: Return getDefaultExceptionHandling when TargetOptions field is
-  // deleted.
-  return ExceptionHandling::Default;
+  return getTargetTriple().getDefaultExceptionHandling();
 }
 
 std::optional<uint64_t> Module::getLargeDataThreshold() const {

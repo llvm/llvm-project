@@ -244,7 +244,6 @@ public:
   FunctionPass *createTargetRegisterAllocator(bool) override;
 
   void addIRPasses() override;
-  void addPassesToHandleExceptions() override;
   void addISelPrepare() override;
   bool addInstSelector() override;
   void addOptimizedRegAlloc() override;
@@ -321,13 +320,6 @@ void WebAssemblyPassConfig::addIRPasses() {
       getWebAssemblyTargetMachine()));
 
   TargetPassConfig::addIRPasses();
-}
-
-void WebAssemblyPassConfig::addPassesToHandleExceptions() {
-  // Wasm EH needs WinEHPrepare to remove the catchswitch PHIs SelectionDAG
-  // cannot lower.
-  addPass(createWinEHPass());
-  addPass(createWasmEHPass());
 }
 
 void WebAssemblyPassConfig::addISelPrepare() {

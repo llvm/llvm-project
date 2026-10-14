@@ -353,6 +353,37 @@ void TargetMachine::verifyOptionsConsistency(const Module &M) const {
   }
 }
 
+bool TargetMachine::supportsExceptionModel(ExceptionHandling Model) const {
+  assert(Model != ExceptionHandling::None && "none is trivially supported");
+
+  const Triple &TT = getTargetTriple();
+
+  // Each model is valid only where its object format or architecture defines
+  // it. DwarfCFI and SjLj are the generic unwinding schemes, valid on any
+  // target that has exception handling by default.
+  switch (Model) {
+  case ExceptionHandling::DwarfCFI:
+  case ExceptionHandling::SjLj:
+    return TT.getDefaultExceptionHandling() != ExceptionHandling::None;
+  case ExceptionHandling::WinEH:
+    return TT.isOSBinFormatCOFF();
+  case ExceptionHandling::ARM:
+    return (TT.isARM() || TT.isThumb()) && TT.isOSBinFormatELF();
+  case ExceptionHandling::AIX:
+    return TT.isOSBinFormatXCOFF();
+  case ExceptionHandling::ZOS:
+    return TT.isOSBinFormatGOFF();
+  case ExceptionHandling::Wasm:
+  case ExceptionHandling::Emscripten:
+    return TT.isWasm();
+  case ExceptionHandling::None:
+  case ExceptionHandling::Default:
+    break;
+  }
+
+  llvm_unreachable("unexpected exception model");
+}
+
 const MCSubtargetInfo &TargetMachine::getMCSubtargetInfo(StringRef CPU,
                                                          StringRef FS) {
   if (CPU.empty() && FS.empty())
