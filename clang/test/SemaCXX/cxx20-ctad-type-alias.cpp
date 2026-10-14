@@ -629,3 +629,18 @@ template <typename T> using S3 = S2<T>; // expected-note {{candidate function no
                                         // expected-note {{cannot deduce template arguments for 'GH190517::S3' from 'GH190517::S1<char>'}}
 S3 foo(42); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'S3'}}
 }
+
+namespace GH207156 {
+template <typename T> struct Foo { T t; }; // expected-error {{field has incomplete type 'GH207156::Y'}}
+
+template <Missing class Y> using AFoo = Foo<Y>; // expected-error {{unknown type name 'Missing'}} \
+                                                // expected-note {{forward declaration of 'GH207156::Y'}} \
+                                                // expected-note 3 {{candidate function not viable}} \
+                                                // expected-note 3 {{implicit deduction guide declared as}}
+AFoo s = {42}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'AFoo'}} \
+               // expected-note {{in instantiation of template class 'GH207156::Foo<GH207156::Y>' requested here}}
+
+template <typename Z> using BFoo = Foo<int>; // expected-note 3 {{candidate function not viable}} \
+                                             // expected-note 3 {{implicit deduction guide declared as}}
+BFoo b = {nullptr}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'BFoo'}}
+}
