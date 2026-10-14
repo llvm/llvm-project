@@ -82,6 +82,15 @@ public:
     return *this;
   }
 
+  void subtractLine(bool WasCovered) {
+    assert(NumLines > 0 && "Cannot subtract from zero lines");
+    --NumLines;
+    if (WasCovered) {
+      assert(Covered > 0 && "Cannot subtract covered from zero");
+      --Covered;
+    }
+  }
+
   void merge(const LineCoverageInfo &RHS) {
     Covered = std::max(Covered, RHS.Covered);
     NumLines = std::max(NumLines, RHS.NumLines);
