@@ -2081,10 +2081,6 @@ public:
                              CheckType);
   }
 
-  /// The cache must be cleared before instructions that may be keys are
-  /// erased.
-  PointersDiffCache &getPointersDiffCache() const { return PtrsDiffCache; }
-
   /// Checks if the value is used only by the assume-like intrinsics.
   bool isEphemeralValue(const Value *V) const { return EphValues.contains(V); }
 
@@ -6261,7 +6257,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
               return areAllUsersVectorized(cast<Instruction>(V),
                                            UserIgnoreList);
             },
-            Opts.slp_revec, &PtrsDiffCache))
+            Opts.slp_revec, PtrsDiffCache))
       return LoadsState::CompressVectorize;
     // Widened strided loads must be legal for every group, not just the first
     // pointer, which may have a stronger alignment than the remaining loads.
@@ -6533,7 +6529,7 @@ BoUpSLP::findPartiallyOrderedLoads(const BoUpSLP::TreeEntry &TE) {
   if (!LoadEntriesToVectorize.contains(TE.Idx) &&
       clusterSortPtrAccesses(Ptrs, BBs, ScalarTy, *DL, *SE,
                              Opts.slp_recursion_max_depth, Order,
-                             &PtrsDiffCache))
+                             PtrsDiffCache))
     return std::move(Order);
   return std::nullopt;
 }
@@ -9712,7 +9708,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       if (Opts.slp_enable_masked_stores &&
           isMaskedStoreCompress(VL, PointerOps, CurrentOrder, *TTI, *DL, *SE,
                                 CommonAlignment, ReuseShuffleIndices,
-                                StoreVecTy, &PtrsDiffCache)) {
+                                StoreVecTy, PtrsDiffCache)) {
         SPtrInfo.Ty = StoreVecTy;
         return TreeEntry::ExpandVectorize;
       }
@@ -17652,8 +17648,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
             Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
             *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
-            IsMasked, InterleaveFactor, CompressMask, LoadVecTy,
-            &PtrsDiffCache);
+            IsMasked, InterleaveFactor, CompressMask, LoadVecTy, PtrsDiffCache);
         CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
                                         InterleaveFactor, IsMasked);
         Align CommonAlignment = LI0->getAlign();
@@ -26148,8 +26143,6 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // Clean Entry-to-LastInstruction table. It can be affected after scheduling,
   // need to rebuild it.
   EntryToLastInstruction.clear();
-  // Vectorization rewrites the code that the cached pointers belong to.
-  PtrsDiffCache.clear();
   // All blocks must be scheduled before any instructions are inserted.
   for (auto &BSIter : BlocksSchedules)
     scheduleBlock(*this, BSIter.second.get());
@@ -27034,6 +27027,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
   // - instructions are not deleted until later.
   removeInstructionsAndOperands(ArrayRef(RemovedInsts), VectorValuesAndScales);
+  // The cached distances refer to the code just rewritten.
+  PtrsDiffCache.clear();
 
   // The new vector code may capture pointers that were previously not captured
   // (e.g. the pointer operands of a masked gather), so the capture results
@@ -33541,7 +33536,6 @@ public:
       // fma formation), while the original code may still be vectorizable as
       // an operand tree - drop the scalar parts emitted so far and give up.
       auto *Root = cast<Instruction>(ReductionRoot);
-      V.getPointersDiffCache().clear();
       for (Instruction *I = Root->getPrevNode(); I && I != InstBeforeRoot;) {
         Instruction *Prev = I->getPrevNode();
         if (I->use_empty() && !V.isAnalyzedReductionRoot(I))

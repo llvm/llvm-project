@@ -47,8 +47,8 @@ namespace llvm::slpvectorizer {
 /// answer is a SCEV query. The first computation of (A, B) also records
 /// (B, A), so a later query in either order is a lookup.
 ///
-/// Entries are keyed by `Value` addresses: the owner must call `clear()`
-/// before it erases an instruction that may have been queried.
+/// Entries are keyed by `Value` addresses, so the owner clears the cache
+/// once it has rewritten the code, after each successful vectorization.
 class PointersDiffCache {
 public:
   /// Same contract as `llvm::getPointersDiff`.
@@ -61,7 +61,7 @@ public:
 
 private:
   using KeyT = std::tuple<Type *, Value *, Type *, Value *, unsigned>;
-  DenseMap<KeyT, std::optional<int64_t>> Cache;
+  SmallDenseMap<KeyT, std::optional<int64_t>> Cache;
 };
 
 /// \p MaxDepth is the recursion limit for getUnderlyingObject.
@@ -109,7 +109,7 @@ bool isMaskedLoadCompress(
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
     bool &IsMasked, unsigned &InterleaveFactor,
     SmallVectorImpl<int> &CompressMask, VectorType *&LoadVecTy,
-    PointersDiffCache *Cache = nullptr);
+    PointersDiffCache &Cache);
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
 /// (masked) interleaved load.
@@ -120,7 +120,7 @@ bool isMaskedLoadCompress(
     const DominatorTree &DT, const TargetLibraryInfo &TLI,
     const TargetTransformInfo::TargetCostKind CostKind,
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
-    PointersDiffCache *Cache = nullptr);
+    PointersDiffCache &Cache);
 
 /// Checks if the simple loads of \p VL, mixed with the undef and poison lanes,
 /// can be replaced by a single load of the whole \p VL width. The loads must be
@@ -146,7 +146,7 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                            ScalarEvolution &SE, Align CommonAlignment,
                            SmallVectorImpl<int> &ReuseShuffleIndices,
                            FixedVectorType *&StoreVecTy,
-                           PointersDiffCache *Cache = nullptr);
+                           PointersDiffCache &Cache);
 
 /// Clusters \p VL pointers by (basic block, underlying object) pair and sorts
 /// each cluster by offset. Returns false and leaves \p SortedIndices empty if
@@ -155,7 +155,7 @@ bool clusterSortPtrAccesses(ArrayRef<Value *> VL, ArrayRef<BasicBlock *> BBs,
                             Type *ElemTy, const DataLayout &DL,
                             ScalarEvolution &SE, unsigned MaxDepth,
                             SmallVectorImpl<unsigned> &SortedIndices,
-                            PointersDiffCache *Cache = nullptr);
+                            PointersDiffCache &Cache);
 
 } // namespace llvm::slpvectorizer
 
