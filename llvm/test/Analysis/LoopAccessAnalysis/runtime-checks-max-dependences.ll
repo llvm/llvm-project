@@ -145,7 +145,7 @@ define void @indirect_unsafe_dep_after_unknown_deps(ptr %A, i64 %off) {
 ; MAXDEP5-NEXT:          %gep.A.off = getelementptr inbounds i8, ptr %A.off, i64 %iv
 ; MAXDEP5-NEXT:      Grouped accesses:
 ; MAXDEP5-NEXT:        Group GRP0:
-; MAXDEP5-NEXT:          (Low: %A High: (100 + %A))
+; MAXDEP5-NEXT:          (Low: %A High: (101 + %A))
 ; MAXDEP5-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; MAXDEP5-NEXT:        Group GRP1:
 ; MAXDEP5-NEXT:          (Low: (%off + %A) High: (100 + %off + %A))

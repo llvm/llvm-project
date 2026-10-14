@@ -2298,8 +2298,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       // Jump to label or value in register.
       if (RetOpcode == ARM::TCRETURNdi) {
         MachineFunction *MF = MBB.getParent();
-        bool NeedsWinCFI = MF->getTarget().getMCAsmInfo().usesWindowsCFI() &&
-                           MF->getFunction().needsUnwindTableEntry();
+        bool NeedsWinCFI = MF->needsWinCFI();
         unsigned TCOpcode =
             STI->isThumb()
                 ? ((STI->isTargetMachO() || NeedsWinCFI) ? ARM::tTAILJMPd

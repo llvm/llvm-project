@@ -276,7 +276,14 @@ public:
   // constraints should use 64-bit pointers.
   const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
       InlineAsm::ConstraintCode C) const override {
-    return &AMDGPU::VGPR_32RegClass;
+    switch (C) {
+    case InlineAsm::ConstraintCode::RF:
+    case InlineAsm::ConstraintCode::m:
+      // flat_load/flat_store require a 64-bit VGPR pair for the address.
+      return &AMDGPU::VReg_64RegClass;
+    default:
+      return &AMDGPU::VGPR_32RegClass;
+    }
   }
 
   const GCNSubtarget &getSubtarget() const {
@@ -442,8 +449,8 @@ public:
 
   bool canInsertSelect(const MachineBasicBlock &MBB,
                        ArrayRef<MachineOperand> Cond, Register DstReg,
-                       Register TrueReg, Register FalseReg, int &CondCycles,
-                       int &TrueCycles, int &FalseCycles) const override;
+                       Register TrueReg, Register FalseReg,
+                       SelectExpansion &Exp) const override;
 
   void insertSelect(MachineBasicBlock &MBB,
                     MachineBasicBlock::iterator I, const DebugLoc &DL,

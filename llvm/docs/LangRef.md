@@ -3778,8 +3778,8 @@ can also be created by means not recognized by LLVM, e.g., by directly calling
 `mmap`. Those allocated objects are allowed to grow to the right (i.e.,
 keeping the same base address, but increasing their size) while maintaining the
 validity of existing pointers, as long as they always satisfy the properties
-described above. Currently, allocated objects are not permitted to grow to the
-left or to shrink, nor can they have holes.
+described above. Allocated objects are not permitted to grow to the left or to
+shrink, nor can they have holes.
 
 (objectlifetime)=
 
@@ -21541,6 +21541,8 @@ Takes one argument which must be an i1 vector, and returns a vector of the same 
 ##### Semantics:
 
 When the input is all zeroes, the result is all ones.
+
+If any element in the input vector is poison, the result is poison.
 
 ##### Examples:
 

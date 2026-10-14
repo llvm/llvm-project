@@ -355,13 +355,12 @@ bool AMDGPUDAGToDAGISel::widenRegionLoad16(SDNode *N) const {
   if (ExtType == ISD::NON_EXTLOAD)
     ExtType = ISD::EXTLOAD;
 
+  EVT MemVT = Mem->getMemoryVT().changeTypeToInteger();
   SDValue NewLoad =
       Ld ? CurDAG->getExtLoad(ExtType, SL, MVT::i32, Mem->getChain(),
-                              Mem->getBasePtr(), Mem->getMemoryVT(),
-                              Mem->getMemOperand())
-         : CurDAG->getAtomicLoad(ExtType, SL, Mem->getMemoryVT(), MVT::i32,
-                                 Mem->getChain(), Mem->getBasePtr(),
-                                 Mem->getMemOperand());
+                              Mem->getBasePtr(), MemVT, Mem->getMemOperand())
+         : CurDAG->getAtomicLoad(ExtType, SL, MemVT, MVT::i32, Mem->getChain(),
+                                 Mem->getBasePtr(), Mem->getMemOperand());
 
   SDValue Trunc = CurDAG->getNode(ISD::TRUNCATE, SL, MVT::i16, NewLoad);
   SDValue Ops[] = {CurDAG->getBitcast(VT, Trunc), NewLoad.getValue(1)};
@@ -4877,6 +4876,33 @@ void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
     }
     CurDAG->RemoveDeadNodes();
   } while (IsModified);
+}
+
+bool AMDGPUDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
+  switch (ConstraintID) {
+  case InlineAsm::ConstraintCode::m:
+    OutOps.push_back(Op);
+    return false;
+  case InlineAsm::ConstraintCode::RF: {
+    // flat_load/flat_store require the address in a VGPR. Always force a copy
+    // to the appropriate VGPR class.
+    const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+    MVT VT = Op.getSimpleValueType();
+    const TargetRegisterClass *VRC =
+        TRI->getVGPRClassForBitWidth(VT.getSizeInBits());
+    assert(VRC && "Expected valid VGPR class for RF constraint operand");
+    SDLoc DL(Op);
+    SDValue RCVal = CurDAG->getTargetConstant(VRC->getID(), DL, MVT::i32);
+    SDNode *Copy =
+        CurDAG->getMachineNode(AMDGPU::COPY_TO_REGCLASS, DL, VT, {Op, RCVal});
+    OutOps.push_back(SDValue(Copy, 0));
+    return false;
+  }
+  default:
+    return true;
+  }
 }
 
 AMDGPUDAGToDAGISelLegacy::AMDGPUDAGToDAGISelLegacy(TargetMachine &TM,
