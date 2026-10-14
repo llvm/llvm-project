@@ -5265,9 +5265,15 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
   // attribute-specifiers between `}` and the `;`/declarator are skipped with a
   // reverting tentative parse, so a trailing `[[...]]` / `__attribute__` etc.
   // doesn't defeat the check.
+  //
+  // It must also be declared directly in a record. An unnamed struct in a
+  // statement expression inside a member, such as
+  // `char a[({ struct { int n; int *__counted_by(n) p; }; 1; })];`, is a local
+  // declaration, not a member, so its fields never join the enclosing record.
   if (getLangOpts().ExperimentalLateParseAttributes && !LateTypeAttrs.empty()) {
     bool IsAnonymous = false;
-    if (!TagDecl->getIdentifier()) {
+    if (!TagDecl->getIdentifier() &&
+        isa<RecordDecl>(TagDecl->getDeclContext())) {
       TentativeParsingAction TPA(*this);
       IsAnonymous = TrySkipAttributes() && Tok.is(tok::semi);
       TPA.Revert();
