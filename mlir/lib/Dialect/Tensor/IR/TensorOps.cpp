@@ -3680,6 +3680,7 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
 
     // Extract the static info from the high and low operands. A negative
     // constant is not folded, since the attribute must be non-negative.
+    // TODO: we should consider folding to a poison value in this case.
     SmallVector<int64_t> constOperandsLow;
     SmallVector<Value> newLows;
     for (auto operand : padTensorOp.getLow()) {
