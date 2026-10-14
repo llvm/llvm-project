@@ -16781,13 +16781,15 @@ static SDValue PerformLegalizedInterleavedStoreCombine(
   if (NumParts < 2 || NumParts > 4)
     return SDValue();
 
-  if (!Subtarget->hasNEON() && NumParts == 3)
+  if (NumParts == 3 && Subtarget->hasMVEIntegerOps())
     return SDValue();
 
   EVT SubVecTy = Interleave->getValueType(0);
-  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+  if (Subtarget->hasNEON() && !SubVecTy.is64BitVector() &&
+      !SubVecTy.is128BitVector())
     return SDValue();
-
+  if (Subtarget->hasMVEIntegerOps() && !SubVecTy.is128BitVector())
+    return SDValue();
   unsigned EltBits = SubVecTy.getScalarSizeInBits();
   if (EltBits != 8 && EltBits != 16 && EltBits != 32)
     return SDValue();
@@ -16841,6 +16843,7 @@ static SDValue PerformLegalizedInterleavedStoreCombine(
     NewStore = DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, MemVT, MMO);
   } else {
+    // MVE
     for (unsigned Stage = 0; Stage < NumParts; Stage++) {
       Ops.back() = DAG.getConstant(Stage, DL, MVT::i32);
       NewStore = DAG.getMemIntrinsicNode(
@@ -16903,16 +16906,16 @@ static SDValue PerformInterleavedStoreCombine(
     return SDValue();
 
   EVT SubVecTy = ValueInterleaveOps[0].getValueType();
+  if (NumParts == 3 && Subtarget->hasMVEIntegerOps())
+    return SDValue();
 
+  if (Subtarget->hasNEON() && !SubVecTy.is64BitVector() &&
+      !SubVecTy.is128BitVector())
+    return SDValue();
+  if (Subtarget->hasMVEIntegerOps() && !SubVecTy.is128BitVector())
+    return SDValue();
   unsigned EltBits = SubVecTy.getScalarSizeInBits();
   if (EltBits != 8 && EltBits != 16 && EltBits != 32)
-    return SDValue();
-
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isTypeLegal(SubVecTy))
-    return SDValue();
-
-  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
     return SDValue();
 
   static constexpr Intrinsic::ID NEONStores[] = {Intrinsic::arm_neon_vst2,
@@ -16933,20 +16936,20 @@ static SDValue PerformInterleavedStoreCombine(
   Ops.append(ValueInterleaveOps);
 
   Ops.push_back(DAG.getConstant(ST->getAlign().value(), DL, MVT::i32));
-  if (!Subtarget->hasNEON()) {
-    SDValue NewStore;
-    for (unsigned Stage = 0; Stage < NumParts; Stage++) {
-      Ops.back() = DAG.getConstant(Stage, DL, MVT::i32);
-      NewStore = DAG.getMemIntrinsicNode(
-          ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
-          ST->getMemoryVT(), ST->getMemOperand());
-      Ops.front() = NewStore;
-    }
-    return NewStore;
+  if (Subtarget->hasNEON())
+    return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
+                                   DAG.getVTList(MVT::Other), Ops,
+                                   ST->getMemoryVT(), ST->getMemOperand());
+  // MVE
+  SDValue NewStore;
+  for (unsigned Stage = 0; Stage < NumParts; Stage++) {
+    Ops.back() = DAG.getConstant(Stage, DL, MVT::i32);
+    NewStore = DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
+                                       DAG.getVTList(MVT::Other), Ops,
+                                       ST->getMemoryVT(), ST->getMemOperand());
+    Ops.front() = NewStore;
   }
-  return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
-                                 DAG.getVTList(MVT::Other), Ops,
-                                 ST->getMemoryVT(), ST->getMemOperand());
+  return NewStore;
 }
 
 /// PerformSTORECombine - Target-specific dag combine xforms for
