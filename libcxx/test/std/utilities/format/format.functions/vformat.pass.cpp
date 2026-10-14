@@ -33,28 +33,26 @@ auto test = []<class CharT, class... Args>(
   if (TEST_IS_CONSTANT_EVALUATED)
     assert(out == expected);
   else
-  TEST_REQUIRE(out == expected,
-               TEST_WRITE_CONCATENATED(
-                   "\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
+    TEST_REQUIRE(out == expected,
+                 TEST_WRITE_CONCATENATED(
+                     "\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
 };
 
-auto test_exception =
-    []<class CharT, class... Args>(
-        [[maybe_unused]] std::string_view what,
-        [[maybe_unused]] std::basic_string_view<CharT> fmt,
-        [[maybe_unused]] Args&&... args) {
-      if (!TEST_IS_CONSTANT_EVALUATED) {
-        TEST_VALIDATE_EXCEPTION(
-            std::format_error,
-            [&]([[maybe_unused]] const std::format_error& e) {
-              TEST_LIBCPP_REQUIRE(
-                  e.what() == what,
-                  TEST_WRITE_CONCATENATED(
-                      "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
-            },
-            TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...)));
-      }
-    };
+auto test_exception = []<class CharT, class... Args>([[maybe_unused]] std::string_view what,
+                                                     [[maybe_unused]] std::basic_string_view<CharT> fmt,
+                                                     [[maybe_unused]] Args&&... args) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    TEST_VALIDATE_EXCEPTION(
+        std::format_error,
+        [&]([[maybe_unused]] const std::format_error& e) {
+          TEST_LIBCPP_REQUIRE(
+              e.what() == what,
+              TEST_WRITE_CONCATENATED(
+                  "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
+        },
+        TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...)));
+  }
+};
 
 #if TEST_STD_VER >= 26
 constexpr bool test_constexpr() {

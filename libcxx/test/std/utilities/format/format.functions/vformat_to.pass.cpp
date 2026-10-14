@@ -59,26 +59,24 @@ auto test = []<class CharT, class... Args>(
   }
 };
 
-auto test_exception =
-    []<class CharT, class... Args>(
-        [[maybe_unused]] std::string_view what,
-        [[maybe_unused]] std::basic_string_view<CharT> fmt,
-        [[maybe_unused]] Args&&... args) {
-      if (!TEST_IS_CONSTANT_EVALUATED) {
-        TEST_VALIDATE_EXCEPTION(
-            std::format_error,
-            [&]([[maybe_unused]] const std::format_error& e) {
-              TEST_LIBCPP_REQUIRE(
-                  e.what() == what,
-                  TEST_WRITE_CONCATENATED(
-                      "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
-            },
-            [&] {
-              std::basic_string<CharT> out;
-              std::vformat_to(std::back_inserter(out), fmt, std::make_format_args<context_t<CharT>>(args...));
-            }());
-      }
-    };
+auto test_exception = []<class CharT, class... Args>([[maybe_unused]] std::string_view what,
+                                                     [[maybe_unused]] std::basic_string_view<CharT> fmt,
+                                                     [[maybe_unused]] Args&&... args) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    TEST_VALIDATE_EXCEPTION(
+        std::format_error,
+        [&]([[maybe_unused]] const std::format_error& e) {
+          TEST_LIBCPP_REQUIRE(
+              e.what() == what,
+              TEST_WRITE_CONCATENATED(
+                  "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
+        },
+        [&] {
+          std::basic_string<CharT> out;
+          std::vformat_to(std::back_inserter(out), fmt, std::make_format_args<context_t<CharT>>(args...));
+        }());
+  }
+};
 
 #if TEST_STD_VER >= 26
 constexpr bool test_constexpr() {

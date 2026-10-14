@@ -119,11 +119,9 @@ template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT,
           class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
-__transform(_Iterator __first,
-            _Iterator __last,
-            output_iterator<const _OutCharT&> auto __out_it,
-            _UnaryOperation __operation) -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI constexpr auto __transform(
+    _Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it, _UnaryOperation __operation)
+    -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__transform(__first, __last, std::move(__operation));
     return __out_it;
@@ -152,7 +150,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr _OutIt __fill(_OutIt __out_it, size_t __n, _Char
 }
 
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-_LIBCPP_HIDE_FROM_ABI constexpr _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
+_LIBCPP_HIDE_FROM_ABI constexpr _OutIt
+__fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
 #  if _LIBCPP_HAS_UNICODE
   if constexpr (same_as<_CharT, char>) {
     std::size_t __bytes = std::countl_one(static_cast<unsigned char>(__value.__data[0]));

@@ -66,7 +66,7 @@ struct formatter<const _CharT*, _CharT> : public __formatter_string<_CharT> {
   using _Base _LIBCPP_NODEBUG = __formatter_string<_CharT>;
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 typename _FormatContext::iterator 
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 typename _FormatContext::iterator
   format(const _CharT* __str, _FormatContext& __ctx) const {
     _LIBCPP_ASSERT_INTERNAL(__str, "The basic_format_arg constructor should have prevented an invalid pointer.");
     // Converting the input to a basic_string_view means the data is looped over twice;

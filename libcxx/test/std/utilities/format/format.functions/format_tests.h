@@ -472,9 +472,8 @@ void format_test_buffer_full(TestFunction check) {
 // Using a const ref for world and universe so a string literal will be a character array.
 // When passed as character array W and U have different types.
 template <class CharT, class W, class U, class TestFunction, class ExceptionTest>
-TEST_CONSTEXPR_CXX26 void 
+TEST_CONSTEXPR_CXX26 void
 format_test_string(const W& world, const U& universe, TestFunction check, ExceptionTest check_exception) {
-
   // *** Valid input tests ***
   // Unused argument is ignored. TODO FMT what does the Standard mandate?
   check(SV("hello world"), SV("hello {}"), world, universe);
@@ -713,7 +712,6 @@ TEST_CONSTEXPR_CXX26 void format_string_tests(TestFunction check, ExceptionTest 
 
 template <class CharT, class TestFunction, class ExceptionTest>
 TEST_CONSTEXPR_CXX26 void format_test_bool(TestFunction check, ExceptionTest check_exception) {
-
   // *** align-fill & width ***
   check(SV("answer is 'true   '"), SV("answer is '{:7}'"), true);
   check(SV("answer is '   true'"), SV("answer is '{:>7}'"), true);
@@ -1178,7 +1176,6 @@ TEST_CONSTEXPR_CXX26 void format_test_unsigned_integer(TestFunction check, Excep
 
 template <class CharT, class TestFunction, class ExceptionTest>
 TEST_CONSTEXPR_CXX26 void format_test_char(TestFunction check, ExceptionTest check_exception) {
-
   // ***** Char type *****
   // *** align-fill & width ***
   check(SV("answer is '*     '"), SV("answer is '{:6}'"), CharT('*'));
