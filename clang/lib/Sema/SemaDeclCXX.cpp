@@ -9553,14 +9553,6 @@ static QualType getPostfixOperatorFirstParamType(const FunctionDecl *FD) {
   return FD->getParamDecl(0)->getType();
 }
 
-/// Get the type C for which a well-formed defaulted postfix increment or
-/// decrement operator function is defaulted.
-static QualType getDefaultedPostfixOperatorType(const FunctionDecl *FD) {
-  return getPostfixOperatorFirstParamType(FD)
-      .getNonReferenceType()
-      .getUnqualifiedType();
-}
-
 /// Determine whether a defaulted postfix increment or decrement operator
 /// function for type \p C should be defined as deleted, as specified in C++2d
 /// [over.inc.default]p2, and whether every function it would invoke is
@@ -10761,9 +10753,11 @@ void Sema::DiagnoseDeletedDefaultedFunction(FunctionDecl *FD) {
     ShouldDeleteSpecialMember(cast<CXXMethodDecl>(FD), DFK.asSpecialMember(),
                               nullptr, /*Diagnose=*/true);
   } else if (DFK.isPostfixOperator()) {
-    analyzeDefaultedPostfixOperator(
-        *this, FD, DFK.asPostfixOperator(), getDefaultedPostfixOperatorType(FD),
-        PostfixOperatorDiagnoseKind::ExplainDeleted);
+    QualType C = getPostfixOperatorFirstParamType(FD)
+                     .getNonReferenceType()
+                     .getUnqualifiedType();
+    analyzeDefaultedPostfixOperator(*this, FD, DFK.asPostfixOperator(), C,
+                                    PostfixOperatorDiagnoseKind::ExplainDeleted);
   } else {
     DefaultedComparisonAnalyzer(
         *this, cast<CXXRecordDecl>(FD->getLexicalDeclContext()), FD,
