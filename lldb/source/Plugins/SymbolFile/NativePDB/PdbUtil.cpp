@@ -224,10 +224,7 @@ CVTagRecord CVTagRecord::create(CVType type) {
 }
 
 CVTagRecord::CVTagRecord(ClassRecord &&c)
-    : cvclass(std::move(c)), m_kind((cvclass.Kind == TypeRecordKind::Struct ||
-                                     cvclass.Kind == TypeRecordKind::Struct2)
-                                        ? Struct
-                                        : Class) {}
+    : cvclass(std::move(c)), m_kind(cvclass.isStruct() ? Struct : Class) {}
 CVTagRecord::CVTagRecord(UnionRecord &&u)
     : cvunion(std::move(u)), m_kind(Union) {}
 CVTagRecord::CVTagRecord(EnumRecord &&e) : cvenum(std::move(e)), m_kind(Enum) {}
