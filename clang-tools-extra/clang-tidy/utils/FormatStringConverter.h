@@ -106,7 +106,8 @@ private:
 
   bool HandlePrintfSpecifier(const PrintfSpecifier &FS,
                              const char *StartSpecifier, unsigned SpecifierLen,
-                             const TargetInfo &Target) override;
+                             const TargetInfo &Target,
+                             const llvm::TextEncodingConverter &Conv) override;
 
   void appendFormatText(StringRef Text);
   void finalizeFormatText();
