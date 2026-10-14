@@ -4763,9 +4763,13 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     // CountAttributedType under another pointer, where the bounds can't be
     // maintained, so diagnose as soon as a chunk is about to wrap one. Only
     // reachable for late-parsed attributes, since the eager path applies the
-    // attribute after the declarator is built.
+    // attribute after the declarator is built. A function chunk wrapping one
+    // puts it on a return type, which is diagnosed separately; for example in
+    // `int *__counted_by(n) (*fp)(void)`, it's the return type of the function
+    // `fp` points to.
     if (DeclType.Kind == DeclaratorChunk::Pointer ||
-        DeclType.Kind == DeclaratorChunk::Array) {
+        DeclType.Kind == DeclaratorChunk::Array ||
+        DeclType.Kind == DeclaratorChunk::Function) {
       if (const auto *CATy = T->getAs<CountAttributedType>()) {
         // A counted_by-family attribute buried under another pointer or array
         // can't maintain its bounds. Diagnose it and drop it to its wrapped
@@ -4776,7 +4780,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // Record the rejection so the completion pass skips this node without
         // parsing its argument, which would otherwise diagnose the argument of
         // an attribute that has already been rejected.
-        S.Diag(DeclType.Loc, diag::err_counted_by_on_nested_pointer)
+        //
+        // FIXME: Support function return types, with a count that refers to the
+        // function's parameters.
+        S.Diag(DeclType.Loc, DeclType.Kind == DeclaratorChunk::Function
+                                 ? diag::err_counted_by_on_return_type
+                                 : diag::err_counted_by_on_nested_pointer)
             << CATy->getKind();
         S.markLateParsedBoundsTypeRejected(CATy);
         T = CATy->desugar();
@@ -9118,6 +9127,22 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
   }
 }
 
+/// Return true if the chunk directly enclosing \p chunkIndex, looking through
+/// parens, is a function chunk, i.e. the attributed type is a function's
+/// return type. In `int *__counted_by(n) (*fp)(void)`, the attributed pointer
+/// is the return type of the function `fp` points to.
+static bool isOnFunctionReturnType(TypeProcessingState &state,
+                                   unsigned chunkIndex) {
+  const auto &stateDeclarator = state.getDeclarator();
+  assert(chunkIndex <= stateDeclarator.getNumTypeObjects());
+  for (unsigned i = chunkIndex; i != 0; --i) {
+    const DeclaratorChunk &TypeObject = stateDeclarator.getTypeObject(i - 1);
+    if (TypeObject.Kind != DeclaratorChunk::Paren)
+      return TypeObject.Kind == DeclaratorChunk::Function;
+  }
+  return false;
+}
+
 /// Return the number of pointer, array and function chunks before
 /// \p chunkIndex for counted_by validation.
 ///
@@ -9159,12 +9184,25 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
     return;
 
   unsigned chunkIndex = State.getCurrentChunkIndex();
-  unsigned pointerNestLevel = getPointerNestLevel(State, chunkIndex);
+  // A function return type is diagnosed on its own below, after the type shape
+  // is checked, rather than as a nested pointer.
+  bool OnReturnType = isOnFunctionReturnType(State, chunkIndex);
+  unsigned pointerNestLevel =
+      OnReturnType ? 0 : getPointerNestLevel(State, chunkIndex);
 
   Sema::BoundsAttrFlags Flags;
   if (!S.ValidateBoundsAttrTypeForTypePosition(CurType, Attr.getKind(),
                                                Attr.getLoc(), Attr.getRange(),
                                                pointerNestLevel, Flags)) {
+    Attr.setInvalid();
+    return;
+  }
+
+  // FIXME: Support function return types, with a count that refers to the
+  // function's parameters.
+  if (OnReturnType) {
+    S.Diag(Attr.getLoc(), diag::err_counted_by_on_return_type)
+        << Sema::getBoundsAttrKind(Flags) << Attr.getRange();
     Attr.setInvalid();
     return;
   }
