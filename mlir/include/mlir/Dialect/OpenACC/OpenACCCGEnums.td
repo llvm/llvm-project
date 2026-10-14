@@ -62,6 +62,8 @@ def OpenACC_MapFlagsDescriptor : I32BitEnumAttrCaseBit<"descriptor", 21>;
 def OpenACC_MapFlagsReduction : I32BitEnumAttrCaseBit<"reduction", 22>;
 def OpenACC_MapFlagsAttach : I32BitEnumAttrCaseBit<"attach", 23>;
 def OpenACC_MapFlagsDetach : I32BitEnumAttrCaseBit<"detach", 24>;
+def OpenACC_MapFlagsNoDeviceDescriptor
+    : I32BitEnumAttrCaseBit<"no_device_descriptor", 25>;
 
 def OpenACC_MapFlagsEnum : I32BitEnumAttr<
     "MapFlags", "OpenACC offload map-type flags",
@@ -74,7 +76,7 @@ def OpenACC_MapFlagsEnum : I32BitEnumAttr<
      OpenACC_MapFlagsDeviceResident, OpenACC_MapFlagsIfPresent,
      OpenACC_MapFlagsPresent, OpenACC_MapFlagsDescriptor,
      OpenACC_MapFlagsReduction, OpenACC_MapFlagsAttach,
-     OpenACC_MapFlagsDetach]> {
+     OpenACC_MapFlagsDetach, OpenACC_MapFlagsNoDeviceDescriptor]> {
   let separator = ",";
   let cppNamespace = "::mlir::acc";
   let genSpecializedAttr = 0;
