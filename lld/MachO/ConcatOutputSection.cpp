@@ -157,7 +157,8 @@ void TextOutputSection::updateBranchTargetToThunk(Relocation &r,
 }
 
 void TextOutputSection::createThunk(const ConcatInputSection &isec,
-                                    Relocation &r, ThunkInfo &thunkInfo) {
+                                    Relocation &r) {
+  auto &thunkInfo = thunkMap[r];
   assert(getThunkInRange(isec, r, thunkInfo) == nullptr);
   assert(isec.isFinal);
   uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
@@ -295,7 +296,7 @@ void TextOutputSection::finalize() {
       if (nextEnd + slop <= highVA)
         break;
 
-      createThunk(*callerIsec, *r, thunkMap[*r]);
+      createThunk(*callerIsec, *r);
       branchesToProcess.pop_front();
     }
     finalizeOne(isec);
@@ -352,12 +353,11 @@ void TextOutputSection::finalize() {
   for (auto [isec, r] : branchesToProcess) {
     if (isTargetStubsAndInRange(*isec, *r, estimatedStubsEnd))
       continue;
-    auto &thunkInfo = thunkMap[*r];
-    if (auto *thunk = getThunkInRange(*isec, *r, thunkInfo)) {
+    if (auto *thunk = findThunkInRange(*isec, *r)) {
       updateBranchTargetToThunk(*r, thunk);
       continue;
     }
-    createThunk(*isec, *r, thunkInfo);
+    createThunk(*isec, *r);
   }
 
   if (!thunks.empty())

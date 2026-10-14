@@ -112,8 +112,7 @@ private:
   /// Update \p r to target \p thunk which is guaranteed to be in range.
   void updateBranchTargetToThunk(Relocation &r, Defined *thunk);
   /// Create a new thunk and update \p r to target the new thunk.
-  void createThunk(const ConcatInputSection &isec, Relocation &r,
-                   ThunkInfo &thunkInfo);
+  void createThunk(const ConcatInputSection &isec, Relocation &r);
   /// \return the largest possible stub section end VA or \p std::nullopt if we
   /// can't estimate this yet. Used to determine if stub symbol targets are in
   /// range.
