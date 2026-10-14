@@ -351,36 +351,36 @@ define void @vector_div_rem_constant_strictfp(<8 x i32> %a32) strictfp {
 ; SSE2-LABEL: 'vector_div_rem_constant_strictfp'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %sdiv32 = sdiv <8 x i32> %a32, splat (i32 7)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %udiv32 = udiv <8 x i32> %a32, splat (i32 7)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %srem32 = srem <8 x i32> %a32, splat (i32 7)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %urem32 = urem <8 x i32> %a32, splat (i32 7)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem32 = srem <8 x i32> %a32, splat (i32 7)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem32 = urem <8 x i32> %a32, splat (i32 7)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX2-LABEL: 'vector_div_rem_constant_strictfp'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %sdiv32 = sdiv <8 x i32> %a32, splat (i32 7)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %udiv32 = udiv <8 x i32> %a32, splat (i32 7)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %srem32 = srem <8 x i32> %a32, splat (i32 7)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %urem32 = urem <8 x i32> %a32, splat (i32 7)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem32 = srem <8 x i32> %a32, splat (i32 7)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem32 = urem <8 x i32> %a32, splat (i32 7)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'vector_div_rem_constant_strictfp'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %sdiv32 = sdiv <8 x i32> %a32, splat (i32 7)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %udiv32 = udiv <8 x i32> %a32, splat (i32 7)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %srem32 = srem <8 x i32> %a32, splat (i32 7)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %urem32 = urem <8 x i32> %a32, splat (i32 7)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem32 = srem <8 x i32> %a32, splat (i32 7)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem32 = urem <8 x i32> %a32, splat (i32 7)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-256-LABEL: 'vector_div_rem_constant_strictfp'
 ; AVX512-256-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %sdiv32 = sdiv <8 x i32> %a32, splat (i32 7)
 ; AVX512-256-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %udiv32 = udiv <8 x i32> %a32, splat (i32 7)
-; AVX512-256-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %srem32 = srem <8 x i32> %a32, splat (i32 7)
-; AVX512-256-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %urem32 = urem <8 x i32> %a32, splat (i32 7)
+; AVX512-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem32 = srem <8 x i32> %a32, splat (i32 7)
+; AVX512-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem32 = urem <8 x i32> %a32, splat (i32 7)
 ; AVX512-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512DQ-LABEL: 'vector_div_rem_constant_strictfp'
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %sdiv32 = sdiv <8 x i32> %a32, splat (i32 7)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %udiv32 = udiv <8 x i32> %a32, splat (i32 7)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %srem32 = srem <8 x i32> %a32, splat (i32 7)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %urem32 = urem <8 x i32> %a32, splat (i32 7)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %srem32 = srem <8 x i32> %a32, splat (i32 7)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %urem32 = urem <8 x i32> %a32, splat (i32 7)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512BW-LABEL: 'vector_div_rem_constant_strictfp'

@@ -53,14 +53,22 @@ define void @no_pair(i32 %a, i32 %b) {
   ret void
 }
 
-define void @pair_const_divisor(i32 %a) {
+define void @pair_const_divisor(i32 %a, <4 x i32> %v) {
 ; CHECK-LABEL: 'pair_const_divisor'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:6 SizeLat:8 for: %ur = urem i32 %a, 7
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:0 Lat:6 SizeLat:0 for: %ur = urem i32 %a, 7
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:7 Lat:5 SizeLat:7 for: %ud = udiv i32 %a, 7
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %pr = urem i32 %a, 8
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %pd = udiv i32 %a, 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:0 Lat:4 SizeLat:0 for: %vr = srem <4 x i32> %v, splat (i32 7)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %vd = sdiv <4 x i32> %v, splat (i32 7)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %ur = urem i32 %a, 7
   %ud = udiv i32 %a, 7
+  %pr = urem i32 %a, 8
+  %pd = udiv i32 %a, 8
+  %vr = srem <4 x i32> %v, splat (i32 7)
+  %vd = sdiv <4 x i32> %v, splat (i32 7)
   ret void
 }
 
@@ -76,5 +84,20 @@ define void @pair_vector(<4 x i32> %a, <4 x i32> %b, <2 x i64> %c, <2 x i64> %d)
   %vd = udiv <4 x i32> %a, %b
   %sr = srem <2 x i64> %c, %d
   %sd = sdiv <2 x i64> %c, %d
+  ret void
+}
+
+define void @pair_illegal(i128 %a, i128 %b, <2 x i128> %c, <2 x i128> %d) {
+; CHECK-LABEL: 'pair_illegal'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:0 Lat:48 SizeLat:0 for: %ur = urem i128 %a, %b
+; CHECK-NEXT:  Cost Model: Found costs of RThru:82 CodeSize:4 Lat:48 SizeLat:8 for: %ud = udiv i128 %a, %b
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:0 Lat:96 SizeLat:0 for: %vr = srem <2 x i128> %c, %d
+; CHECK-NEXT:  Cost Model: Found costs of RThru:164 CodeSize:8 Lat:96 SizeLat:16 for: %vd = sdiv <2 x i128> %c, %d
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %ur = urem i128 %a, %b
+  %ud = udiv i128 %a, %b
+  %vr = srem <2 x i128> %c, %d
+  %vd = sdiv <2 x i128> %c, %d
   ret void
 }
