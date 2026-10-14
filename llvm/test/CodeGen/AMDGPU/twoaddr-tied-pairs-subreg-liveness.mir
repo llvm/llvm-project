@@ -1,6 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -o /dev/null %s \
-# RUN:     -passes='require<live-intervals>,two-address-instruction,print<live-intervals>' 2>&1 \
-# RUN:   | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -o /dev/null %s -passes='require<live-intervals>,two-address-instruction,print<live-intervals>' 2>&1 | FileCheck %s
 
 # V_PERMLANE32_SWAP_B32 has two tied operand pairs, and here both read
 # subregisters of the same register. Two-address pass emits one copy per

@@ -1541,32 +1541,13 @@ bool TwoAddressInstructionImpl::collectTiedOperands(
 
 // Find the last copy for the LaneMask.
 static SlotIndex
-lastCopyReading(ArrayRef<std::pair<LaneBitmask, SlotIndex>> CopiedLanes,
-                LaneBitmask LaneMask, SlotIndex LastCopyIdx) {
-  SlotIndex Idx;
-  for (auto &[CopiedMask, CopyIdx] : CopiedLanes) {
-    if ((CopiedMask & LaneMask).any() && (!Idx.isValid() || Idx < CopyIdx))
-      Idx = CopyIdx;
+findLastCopyIdx(ArrayRef<std::pair<LaneBitmask, SlotIndex>> CopiedLanes,
+                LaneBitmask LaneMask, SlotIndex Default) {
+  for (const auto &[CopiedMask, CopyIdx] : reverse(CopiedLanes)) {
+    if ((CopiedMask & LaneMask).any())
+      return CopyIdx;
   }
-  return Idx.isValid() ? Idx : LastCopyIdx;
-}
-
-// Shrink the live range to the copy that reads its lanes.
-static bool
-shrinkToCopy(LiveRange &LR, LaneBitmask LaneMask,
-             ArrayRef<std::pair<LaneBitmask, SlotIndex>> CopiedLanes,
-             SlotIndex LastCopyIdx, LaneBitmask RemainingUses,
-             SlotIndex UseIdx) {
-  SlotIndex CopyIdx = lastCopyReading(CopiedLanes, LaneMask, LastCopyIdx);
-  LiveRange::Segment *S = LR.getSegmentContaining(CopyIdx);
-  if (!S)
-    return true;
-  if ((LaneMask & RemainingUses).any())
-    return false;
-  if (S->end.getBaseIndex() != UseIdx)
-    return false;
-  S->end = CopyIdx;
-  return true;
+  return Default;
 }
 
 // Process a list of tied MI operands that all use the same source register.
@@ -1728,15 +1709,25 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
     // Update LiveIntervals.
     if (LIS) {
       SlotIndex UseIdx = LIS->getInstructionIndex(*MI);
+      auto Shrink = [&](LiveRange &LR, LaneBitmask LaneMask) {
+        SlotIndex CopyIdx = findLastCopyIdx(CopiedLanes, LaneMask, LastCopyIdx);
+        LiveRange::Segment *S = LR.getSegmentContaining(CopyIdx);
+        if (!S)
+          return true;
+        if ((LaneMask & RemainingUses).any())
+          return false;
+        if (S->end.getBaseIndex() != UseIdx)
+          return false;
+        S->end = CopyIdx;
+        return true;
+      };
 
       LiveInterval &LI = LIS->getInterval(RegB);
       bool ShrinkLI = true;
       for (auto &S : LI.subranges())
-        ShrinkLI &= shrinkToCopy(S, S.LaneMask, CopiedLanes, LastCopyIdx,
-                                 RemainingUses, UseIdx);
+        ShrinkLI &= Shrink(S, S.LaneMask);
       if (ShrinkLI)
-        shrinkToCopy(LI, LaneBitmask::getAll(), CopiedLanes, LastCopyIdx,
-                     RemainingUses, UseIdx);
+        Shrink(LI, LaneBitmask::getAll());
     }
   } else if (RemovedKillFlag) {
     // Some tied uses of regB matched their destination registers, so
