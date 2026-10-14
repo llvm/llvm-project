@@ -13,7 +13,7 @@
 // Missing cir.triple.
 
 !s32i = !cir.int<s, 32>
-// expected-error @below {{Module has no target triple}}
+// expected-error @below {{cannot lower cir.cpuid without a 'cir.triple' attribute}}
 module {
   cir.func @missing_triple(%p: !cir.ptr<!s32i>, %a: !s32i, %b: !s32i) {
     // expected-error @below {{failed to legalize operation 'cir.cpuid'}}

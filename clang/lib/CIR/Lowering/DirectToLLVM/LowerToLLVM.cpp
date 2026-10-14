@@ -5818,6 +5818,16 @@ mlir::LogicalResult CIRToLLVMTokenNoneOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
     cir::CpuIdOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
+  std::optional<llvm::Triple> triple = cir::getTripleFromModule(moduleOp);
+  if (!triple) {
+    moduleOp.emitError() << "cannot lower " << op.getOperationName() << " "
+                         << "without a '"
+                         << cir::CIRDialect::getTripleAttrName() << "' "
+                         << "attribute";
+    return mlir::failure();
+  }
+
   mlir::Type i32Ty = rewriter.getI32Type();
   mlir::Type i64Ty = rewriter.getI64Type();
   mlir::Type i32PtrTy = mlir::LLVM::LLVMPointerType::get(i32Ty.getContext(), 0);
@@ -5829,10 +5839,6 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
   mlir::Value subFunctionId = adaptor.getSubFunctionId();
 
   StringRef asmString, constraints;
-  mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
-  std::optional<llvm::Triple> triple = cir::getTripleFromModule(moduleOp);
-  if (!triple)
-    return mlir::failure();
   if (triple->getArch() == llvm::Triple::x86) {
     asmString = "cpuid";
     constraints = "={ax},={bx},={cx},={dx},{ax},{cx}";

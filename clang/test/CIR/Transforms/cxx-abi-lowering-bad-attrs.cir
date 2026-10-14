@@ -1,9 +1,10 @@
 // RUN: cir-opt %s -cir-cxxabi-lowering -verify-diagnostics -split-input-file
-// RUN: cir-opt %s -cir-cxxabi-lowering -split-input-file 2>/dev/null | FileCheck %s
+// RUN: not cir-opt %s -cir-cxxabi-lowering -split-input-file 2>/dev/null \
+// RUN:   | FileCheck %s --implicit-check-not=cir.func
 
-// Check that missing cir.triple module attribute does not cause asserts or
-// compiler crashes in -cir-cxxabi-lowering, and is diagnosed properly. The pass
-// should warn and skip instead of failing. so every module is still printed.
+// Check that a missing cir.triple module attribute required by -cir-cxxabi-
+// lowering does not cause asserts or compiler crashes, and is diagnosed
+// properly.
 //
 // Malformed cir.triple and cir.opt_info attributes are rejected by the CIR
 // dialect verifier; see IR/invalid-triple.cir and IR/invalid-opt-info.cir.
@@ -11,9 +12,8 @@
 
 // Missing cir.triple.
 
-// expected-warning @below {{cannot create a CIR lower module, skipping the CXXABILowering pass}}
+// expected-error @below {{cir-cxxabi-lowering requires a module with a 'cir.triple' attribute}}
 module {
-  // CHECK-LABEL: cir.func @missing_triple(
   cir.func @missing_triple() {
     cir.return
   }
@@ -21,9 +21,10 @@ module {
 
 // -----
 
-// expected-warning @below {{cannot create a CIR lower module, skipping the CXXABILowering pass}}
+// Missing cir.triple with a valid cir.opt_info.
+
+// expected-error @below {{cir-cxxabi-lowering requires a module with a 'cir.triple' attribute}}
 module attributes {cir.opt_info = #cir.opt_info<level = 0, size = 1>} {
-  // CHECK-LABEL: cir.func @missing_triple(
   cir.func @missing_triple() {
     cir.return
   }

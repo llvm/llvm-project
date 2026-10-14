@@ -431,9 +431,6 @@ static LogicalResult verifyProducedBy(Operation *op, Value operand,
 }
 
 std::optional<llvm::Triple> cir::getTripleFromModule(mlir::ModuleOp mod) {
-  // Verifying the validity of the triple attribute happens in
-  // cir::CIRDialect::verifyOperationAttribute; verifyOperationAttribute
-  // should error first if we have an invalid attribute.
   if (!mod->hasAttr(cir::CIRDialect::getTripleAttrName()))
     return std::nullopt;
 
@@ -442,6 +439,9 @@ std::optional<llvm::Triple> cir::getTripleFromModule(mlir::ModuleOp mod) {
   if (!tripleAttr)
     return std::nullopt;
 
+  // Verifying the validity of the triple attribute happens in
+  // cir::CIRDialect::verifyOperationAttribute; verifyOperationAttribute
+  // should error first if we have an invalid attribute.
   return llvm::Triple{tripleAttr.getValue()};
 }
 

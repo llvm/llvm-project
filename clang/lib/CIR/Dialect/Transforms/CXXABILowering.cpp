@@ -898,16 +898,22 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
 
 void CXXABILoweringPass::runOnOperation() {
   auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
+  // Triple attribute is required by createLowerModule:
+  if (!mod->hasAttr(cir::CIRDialect::getTripleAttrName())) {
+    mod.emitError() << getArgument()
+                    << " requires a module with a '"
+                    << cir::CIRDialect::getTripleAttrName() << "' attribute";
+    return signalPassFailure();
+  }
+
   mlir::MLIRContext *ctx = mod.getContext();
 
   std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
-  // If lower module is not available, skip the ABI lowering pass.
   if (!lowerModule) {
-    mod.emitWarning("cannot create a CIR lower module, skipping the ")
-        << getName() << " pass: ";
-    return;
+    mod.emitError() << "cannot create a CIR lower module for " << getName()
+                    << " pass";
+    return signalPassFailure();
   }
-
   mlir::DataLayout dataLayout(mod);
   CIRABITypeConverter typeConverter(*ctx, dataLayout, *lowerModule);
 
