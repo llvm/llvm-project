@@ -1704,23 +1704,18 @@ void CheckHelper::CheckSubprogram(
     // F2023 15.6.4: the length of a CHARACTER statement function result or
     // dummy argument shall be a constant specification expression.
     auto checkCharLength{[&](const Symbol &entity, const char *what) {
-      if (const DeclTypeSpec * type{entity.GetType()};
-          type && type->category() == DeclTypeSpec::Character) {
-        const ParamValue &length{type->characterTypeSpec().length()};
-        if (length.isExplicit() && length.GetExplicit() &&
-            !evaluate::IsConstantExpr(*length.GetExplicit())) {
-          Warn(common::LanguageFeature::StatementFunctionExtensions,
-              entity.name(),
-              "The length of %s '%s' should be a constant expression"_port_en_US,
-              what, entity.name());
-        }
+      if (auto type{evaluate::DynamicType::From(entity)};
+          type && type->IsNonConstantLengthCharacter()) {
+        Warn(common::LanguageFeature::StatementFunctionExtensions,
+            entity.name(),
+            "The length of %s '%s' should be a constant expression"_port_en_US,
+            what, entity.name());
       }
     }};
     checkCharLength(details.result(), "CHARACTER statement function result");
     for (const Symbol *dummy : details.dummyArgs()) {
       if (dummy) {
-        checkCharLength(
-            *dummy, "CHARACTER statement function dummy argument");
+        checkCharLength(*dummy, "CHARACTER statement function dummy argument");
       }
     }
     if (GetProgramUnitOrBlockConstructContaining(symbol).kind() ==
