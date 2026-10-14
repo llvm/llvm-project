@@ -2500,15 +2500,16 @@ public:
         return AnyValue::poison();
 
       FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
-      DenormalMode DenormMode =
+      DenormalMode InputDenormMode =
           getCurrentDenormalMode(I.getOperand(0)->getType());
+      DenormalMode OutputDenormMode = getCurrentDenormalMode(I.getType());
 
       auto ValidatedOperand = handleFMFFlags(Operand, FMF, /*IsInput=*/true);
       if (ValidatedOperand.isPoison())
         return ValidatedOperand;
 
       APFloat FOperand = handleDenormal(ValidatedOperand.asFloat(),
-                                        DenormMode.Input, /*IsInput=*/true);
+                                        InputDenormMode.Input, /*IsInput=*/true);
       APFloat SourceNaN = FOperand;
 
       bool LosesInfo;
@@ -2518,7 +2519,7 @@ public:
           ValidateRes.isPoison())
         return ValidateRes;
 
-      FOperand = handleDenormal(std::move(FOperand), DenormMode.Output,
+      FOperand = handleDenormal(std::move(FOperand), OutputDenormMode.Output,
                                 /*IsInput=*/false);
 
       return AnyValue(applyNaNPropagation(FOperand, {&SourceNaN}));
