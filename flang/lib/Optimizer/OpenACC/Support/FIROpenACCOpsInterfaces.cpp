@@ -16,8 +16,10 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace fir::acc {
@@ -392,5 +394,31 @@ bool OperationMoveModel<mlir::acc::SerialOp>::canMoveFromDescendant(
 
 template bool OperationMoveModel<mlir::acc::SerialOp>::canMoveOutOf(
     mlir::Operation *op, mlir::Operation *candidate) const;
+
+template <>
+bool OperationMoveModel<mlir::scf::ParallelOp>::canMoveFromDescendant(
+    mlir::Operation *op, mlir::Operation *descendant,
+    mlir::Operation *candidate) const {
+  return true;
+}
+
+template <>
+bool OperationMoveModel<mlir::scf::ParallelOp>::canMoveOutOf(
+    mlir::Operation *op, mlir::Operation *candidate) const {
+  // In a compute region from an acc.parallel construct, code outside of the
+  // scf.parallel loops with gang-level worksharing is executed redundantly by
+  // all gangs. A loop moved there could later be distributed across gangs,
+  // so that each gang only computes part of a result that is needed in full.
+  // The same applies to worker and vector levels, so do not move loops out of
+  // any scf.parallel of such a region.
+  if (!candidate || !mlir::isa<mlir::LoopLikeOpInterface>(candidate))
+    return true;
+
+  // This model is attached to all scf.parallel operations, so only restrict
+  // those in acc.parallel compute regions.
+  auto computeRegion = op->getParentOfType<mlir::acc::ComputeRegionOp>();
+  return !computeRegion ||
+         computeRegion.getOrigin() != mlir::acc::ParallelOp::getOperationName();
+}
 
 } // namespace fir::acc

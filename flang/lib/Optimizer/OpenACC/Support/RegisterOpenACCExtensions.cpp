@@ -21,6 +21,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCOpsInterfaces.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCTypeInterfaces.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 
 namespace fir::acc {
 void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
@@ -124,6 +125,13 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         fir::acc::AccFortranObjectViewModel<mlir::acc::ReductionInitOp>>(*ctx);
     mlir::acc::UnwrapPrivateOp::attachInterface<
         fir::acc::AccFortranObjectViewModel<mlir::acc::UnwrapPrivateOp>>(*ctx);
+  });
+
+  // Attach FIR dialect interfaces to SCF operations that OpenACC compute
+  // regions are lowered to.
+  registry.addExtension(+[](mlir::MLIRContext *ctx, mlir::scf::SCFDialect *) {
+    mlir::scf::ParallelOp::attachInterface<
+        OperationMoveModel<mlir::scf::ParallelOp>>(*ctx);
   });
 
   registerAttrsExtensions(registry);

@@ -29,8 +29,10 @@ add_flang_library(FIROpenACCSupport
   MLIR_DEPS
   MLIROpenACCDialect
   MLIROpenACCUtils
+  MLIRSCFDialect
 
   MLIR_LIBS
   MLIROpenACCDialect
   MLIROpenACCUtils
+  MLIRSCFDialect
 )
