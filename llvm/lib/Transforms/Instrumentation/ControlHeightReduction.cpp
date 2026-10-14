@@ -1532,9 +1532,10 @@ static bool negateICmpIfUsedByBranchOrSelectOnly(ICmpInst *ICmp,
 // A helper for transformScopes. Insert a trivial phi at the scope exit block
 // for a value that's defined in the scope but used outside it (meaning it's
 // alive at the exit block).
-static void insertTrivialPHIs(CHRScope *Scope,
-                              BasicBlock *EntryBlock, BasicBlock *ExitBlock,
-                              DenseSet<PHINode *> &TrivialPHIs) {
+static void insertTrivialPHIs(CHRScope *Scope, BasicBlock *EntryBlock,
+                              BasicBlock *ExitBlock,
+                              DenseSet<PHINode *> &TrivialPHIs,
+                              DominatorTree &DT) {
   SmallSetVector<BasicBlock *, 8> BlocksInScope;
   for (RegInfo &RI : Scope->RegInfos) {
     for (BasicBlock *BB : RI.R->blocks()) { // This includes the blocks in the
@@ -1576,7 +1577,12 @@ static void insertTrivialPHIs(CHRScope *Scope,
         PHINode *PN = PHINode::Create(I.getType(), pred_size(ExitBlock), "");
         PN->insertBefore(ExitBlock->begin());
         for (BasicBlock *Pred : predecessors(ExitBlock)) {
-          PN->addIncoming(&I, Pred);
+          if (!DT.isReachableFromEntry(Pred))
+            continue;
+          if (Pred == ExitBlock)
+            PN->addIncoming(PN, Pred);
+          else
+            PN->addIncoming(&I, Pred);
         }
         TrivialPHIs.insert(PN);
         CHR_DEBUG(dbgs() << "Insert phi " << *PN << "\n");
@@ -1735,7 +1741,7 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
     // incoming values for the CHR cold paths to it below. Without this, we'd
     // miss updating phi's for such values unless there happens to already be a
     // phi for that value there.
-    insertTrivialPHIs(Scope, EntryBlock, ExitBlock, TrivialPHIs);
+    insertTrivialPHIs(Scope, EntryBlock, ExitBlock, TrivialPHIs, DT);
   }
 
   ValueToValueMapTy VMap;
