@@ -136,7 +136,6 @@ define amdgpu_ps void @sextload_P1_i16_not_natural_align_or_not_uniform_mmo_gfx1
 ; GFX12-LABEL: sextload_P1_i16_not_natural_align_or_not_uniform_mmo_gfx12:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_i16 v3, v2, s[0:1]
 ; GFX12-NEXT:    global_load_i16 v2, v2, s[2:3] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -213,7 +212,6 @@ define amdgpu_ps void @zextload_P1_i16_not_natural_align_or_not_uniform_mmo_gfx1
 ; GFX12-LABEL: zextload_P1_i16_not_natural_align_or_not_uniform_mmo_gfx12:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_u16 v3, v2, s[0:1]
 ; GFX12-NEXT:    global_load_u16 v2, v2, s[2:3] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
