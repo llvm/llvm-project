@@ -15,39 +15,36 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-NEXT:  Successor(s): vector.clamped.vf.check
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.clamped.vf.check:
-; FINAL-NEXT:    WIDEN-INTRINSIC vp<[[VP4:%[0-9]+]]> = call llvm.loop.dependence.war.mask(ir<%b1>, ir<%c2>, ir<1>)
-; FINAL-NEXT:    EMIT vp<%num.active.lanes> = num-active-lanes vp<[[VP4]]>
+; FINAL-NEXT:    WIDEN-INTRINSIC vp<[[VP2:%[0-9]+]]> = call llvm.loop.dependence.war.mask(ir<%b1>, ir<%c2>, ir<1>)
+; FINAL-NEXT:    EMIT vp<%num.active.lanes> = num-active-lanes vp<[[VP2]]>
 ; FINAL-NEXT:    EMIT vp<%vf.is.scalar> = icmp ule vp<%num.active.lanes>, ir<1>
-; FINAL-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = sub ir<-1>, ir<%n>
-; FINAL-NEXT:    EMIT vp<%vf.step.overflow> = icmp ult vp<[[VP5]]>, vp<%num.active.lanes>
-; FINAL-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = or vp<%vf.is.scalar>, vp<%vf.step.overflow>
-; FINAL-NEXT:    EMIT branch-on-cond vp<[[VP6]]>
+; FINAL-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = sub ir<-1>, ir<%n>
+; FINAL-NEXT:    EMIT vp<%vf.step.overflow> = icmp ult vp<[[VP3]]>, vp<%num.active.lanes>
+; FINAL-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = or vp<%vf.is.scalar>, vp<%vf.step.overflow>
+; FINAL-NEXT:    EMIT branch-on-cond vp<[[VP4]]>
 ; FINAL-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.ph:
 ; FINAL-NEXT:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<%n>, ir<1>
 ; FINAL-NEXT:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
-; FINAL-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = sub ir<%n>, vp<%num.active.lanes>
-; FINAL-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = icmp ugt ir<%n>, vp<%num.active.lanes>
-; FINAL-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP9]]>, vp<[[VP8]]>, ir<0>
 ; FINAL-NEXT:  Successor(s): vector.body
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.body:
 ; FINAL-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; FINAL-NEXT:    ACTIVE-LANE-MASK-PHI vp<[[VP11:%[0-9]+]]> = phi vp<%extract.entry.alm.part>, vp<%extract.next.alm.part>
-; FINAL-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = and vp<[[VP11]]>, vp<[[VP4]]>
+; FINAL-NEXT:    ACTIVE-LANE-MASK-PHI vp<[[VP6:%[0-9]+]]> = phi vp<%extract.entry.alm.part>, vp<%extract.next.alm.part>
+; FINAL-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = and vp<[[VP6]]>, vp<[[VP2]]>
 ; FINAL-NEXT:    CLONE ir<%ptr.a> = getelementptr inbounds ir<%a>, vp<%index>
-; FINAL-NEXT:    WIDEN ir<%ld.a> = load ir<%ptr.a>, vp<[[VP12]]>
+; FINAL-NEXT:    WIDEN ir<%ld.a> = load ir<%ptr.a>, vp<[[VP7]]>
 ; FINAL-NEXT:    CLONE ir<%ptr.b> = getelementptr inbounds ir<%b>, vp<%index>
-; FINAL-NEXT:    WIDEN ir<%ld.b> = load ir<%ptr.b>, vp<[[VP12]]>
+; FINAL-NEXT:    WIDEN ir<%ld.b> = load ir<%ptr.b>, vp<[[VP7]]>
 ; FINAL-NEXT:    WIDEN ir<%add> = add ir<%ld.b>, ir<%ld.a>
 ; FINAL-NEXT:    CLONE ir<%ptr.c> = getelementptr inbounds ir<%c>, vp<%index>
-; FINAL-NEXT:    WIDEN store ir<%ptr.c>, ir<%add>, vp<[[VP12]]>
+; FINAL-NEXT:    WIDEN store ir<%ptr.c>, ir<%add>, vp<[[VP7]]>
 ; FINAL-NEXT:    EMIT vp<%index.next> = add vp<%index>, vp<%num.active.lanes>
-; FINAL-NEXT:    EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index>, vp<[[VP10]]>, ir<1>
+; FINAL-NEXT:    EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, ir<%n>, ir<1>
 ; FINAL-NEXT:    EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
-; FINAL-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = not vp<%extract.next.alm.part>
-; FINAL-NEXT:    EMIT branch-on-cond vp<[[VP13]]>
+; FINAL-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = not vp<%extract.next.alm.part>
+; FINAL-NEXT:    EMIT branch-on-cond vp<[[VP8]]>
 ; FINAL-NEXT:  Successor(s): middle.block, vector.body
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  middle.block:

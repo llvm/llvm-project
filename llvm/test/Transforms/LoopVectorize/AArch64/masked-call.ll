@@ -998,11 +998,11 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    store double [[PREDPHI]], ptr [[P]], align 8
 ; TFA_INTERLEAVE-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; TFA_INTERLEAVE:       [[PRED_STORE_CONTINUE4]]:
-; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT1]] = add i64 [[INDEX_NEXT]], 2
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = icmp ult i64 [[INDEX_NEXT]], [[TMP7]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX_NEXT]], 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP11]] = icmp ult i64 [[TMP10]], [[TMP7]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = xor i1 [[ACTIVE_LANE_MASK_NEXT]], true
+; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT1]] = add i64 [[INDEX_NEXT]], 2
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; TFA_INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; TFA_INTERLEAVE-NEXT:    br label %[[END:.*]]

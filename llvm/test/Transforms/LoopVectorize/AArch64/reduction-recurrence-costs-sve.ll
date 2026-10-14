@@ -450,10 +450,10 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    [[TMP39:%.*]] = or <vscale x 4 x i32> [[WIDE_MASKED_GATHER]], [[VEC_PHI]]
 ; PRED-NEXT:    [[TMP40:%.*]] = or <vscale x 4 x i32> [[TMP39]], [[WIDE_MASKED_GATHER7]]
 ; PRED-NEXT:    [[TMP41]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> [[TMP40]], <vscale x 4 x i32> [[VEC_PHI]]
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP45]])
 ; PRED-NEXT:    [[TMP43:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PRED-NEXT:    [[TMP42:%.*]] = xor i1 [[TMP43]], true
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; PRED-NEXT:    br i1 [[TMP42]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    [[TMP44:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[TMP41]])
@@ -717,10 +717,10 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[TMP4:%.*]] = udiv <vscale x 8 x i16> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
 ; PRED-NEXT:    [[TMP5:%.*]] = or <vscale x 8 x i16> [[TMP4]], [[VEC_PHI]]
 ; PRED-NEXT:    [[TMP6]] = select <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[VEC_PHI]]
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX]], i64 [[TMP12]])
 ; PRED-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PRED-NEXT:    [[TMP8:%.*]] = xor i1 [[TMP7]], true
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; PRED-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    [[TMP9:%.*]] = call i16 @llvm.vector.reduce.or.nxv8i16(<vscale x 8 x i16> [[TMP6]])

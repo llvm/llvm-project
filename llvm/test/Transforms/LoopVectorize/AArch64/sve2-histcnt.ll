@@ -581,10 +581,10 @@ define void @simple_histogram_tailfold(ptr noalias %buckets, ptr readonly %indic
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <vscale x 4 x i32> [[WIDE_LOAD]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <vscale x 4 x i64> [[TMP9]]
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP10]], i32 1, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP7]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TMP11]], true
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_EXIT:%.*]]

@@ -427,11 +427,11 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; DEFAULT-NEXT:    [[TMP21:%.*]] = add <vscale x 16 x i8> [[TMP18]], [[TMP20]]
 ; DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP21]], ptr align 1 [[TMP22]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; DEFAULT-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP4]])
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = xor i1 [[TMP24]], true
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i8> [[VEC_IND]], [[DOTSPLAT]]
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; DEFAULT-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
@@ -473,11 +473,11 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; OPTSIZE-NEXT:    [[TMP21:%.*]] = add <vscale x 16 x i8> [[TMP18]], [[TMP20]]
 ; OPTSIZE-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
 ; OPTSIZE-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP21]], ptr align 1 [[TMP22]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; OPTSIZE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; OPTSIZE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP4]])
 ; OPTSIZE-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; OPTSIZE-NEXT:    [[TMP23:%.*]] = xor i1 [[TMP24]], true
 ; OPTSIZE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i8> [[VEC_IND]], [[DOTSPLAT]]
+; OPTSIZE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; OPTSIZE-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
 ; OPTSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
@@ -519,11 +519,11 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; MINSIZE-NEXT:    [[TMP10:%.*]] = add <vscale x 16 x i8> [[TMP7]], [[TMP9]]
 ; MINSIZE-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
 ; MINSIZE-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP10]], ptr align 1 [[TMP22]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; MINSIZE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; MINSIZE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP15]])
 ; MINSIZE-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; MINSIZE-NEXT:    [[TMP23:%.*]] = xor i1 [[TMP24]], true
 ; MINSIZE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i8> [[VEC_IND]], [[BROADCAST_SPLAT6]]
+; MINSIZE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; MINSIZE-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
 ; MINSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
