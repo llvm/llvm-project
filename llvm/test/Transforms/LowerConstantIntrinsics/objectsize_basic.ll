@@ -278,3 +278,41 @@ define i64 @out_of_bound_negative_gep(i1 %c) {
 }
 
 declare i32 @llvm.objectsize.i32.p0(ptr, i1, i1, i1)
+
+define i32 @dynamic_size_too_big_max() {
+; CHECK-LABEL: @dynamic_size_too_big_max(
+; CHECK-NEXT:    [[P:%.*]] = call ptr @malloc(i64 4294967300)
+; CHECK-NEXT:    ret i32 -1
+;
+  %p = call ptr @malloc(i64 4294967300)
+  %s = call i32 @llvm.objectsize.i32.p0(ptr %p, i1 false, i1 true, i1 true)
+  ret i32 %s
+}
+
+define i32 @dynamic_size_too_big_min() {
+; CHECK-LABEL: @dynamic_size_too_big_min(
+; CHECK-NEXT:    [[P:%.*]] = call ptr @malloc(i64 4294967300)
+; CHECK-NEXT:    ret i32 0
+;
+  %p = call ptr @malloc(i64 4294967300)
+  %s = call i32 @llvm.objectsize.i32.p0(ptr %p, i1 true, i1 true, i1 true)
+  ret i32 %s
+}
+
+define i32 @dynamic_size_narrow(i64 %n) {
+; CHECK-LABEL: @dynamic_size_narrow(
+; CHECK-NEXT:    [[P:%.*]] = call ptr @malloc(i64 [[N:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[N]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP4]])
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule i64 [[TMP3]], 4294967295
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP5]], i32 [[TMP6]], i32 -1
+; CHECK-NEXT:    ret i32 [[TMP7]]
+;
+  %p = call ptr @malloc(i64 %n)
+  %s = call i32 @llvm.objectsize.i32.p0(ptr %p, i1 false, i1 true, i1 true)
+  ret i32 %s
+}
