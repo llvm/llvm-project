@@ -2446,11 +2446,8 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
   Register IReg32 = MRI.createVirtualRegister(&VE::I32RegClass);
   addFrameReference(BuildMI(DispatchBB, DL, TII->get(VE::LDLZXrii), IReg32), FI,
                     OffsetCS);
-  Register IRegUndef = MRI.createVirtualRegister(RC);
-  BuildMI(DispatchBB, DL, TII->get(VE::IMPLICIT_DEF), IRegUndef);
   Register IReg = MRI.createVirtualRegister(RC);
-  BuildMI(DispatchBB, DL, TII->get(VE::INSERT_SUBREG), IReg)
-      .addReg(IRegUndef)
+  BuildMI(DispatchBB, DL, TII->get(VE::SUBREG_TO_REG), IReg)
       .addReg(IReg32)
       .addImm(VE::sub_i32);
   if (LPadList.size() < 64) {
@@ -2554,11 +2551,8 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
         .addReg(BReg)
         .addReg(Tmp1)
         .addImm(0);
-    Register ORegUndef = MRI.createVirtualRegister(RC);
-    BuildMI(DispContBB, DL, TII->get(VE::IMPLICIT_DEF), ORegUndef);
     Register OReg = MRI.createVirtualRegister(RC);
-    BuildMI(DispContBB, DL, TII->get(VE::INSERT_SUBREG), OReg)
-        .addReg(ORegUndef)
+    BuildMI(DispContBB, DL, TII->get(VE::SUBREG_TO_REG), OReg)
         .addReg(OReg32)
         .addImm(VE::sub_i32);
     Register BReg2 =
