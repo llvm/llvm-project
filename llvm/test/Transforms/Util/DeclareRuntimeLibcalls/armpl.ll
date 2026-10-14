@@ -25,6 +25,10 @@
 
 ; CHECK: declare void @armpl_svsincospi_f64_x(<vscale x 2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16, <vscale x 2 x i1>) [[ATTRS_PTR_ARG]]
 
+; CHECK: declare aarch64_vector_pcs <4 x float> @armpl_vcbrtq_f32(<4 x float>) [[ATTRS]]
+
+; CHECK: declare aarch64_vector_pcs <2 x double> @armpl_vcbrtq_f64(<2 x double>) [[ATTRS]]
+
 ; CHECK: declare aarch64_vector_pcs <4 x float> @armpl_vfmodq_f32(<4 x float>, <4 x float>) [[ATTRS]]
 
 ; CHECK: declare aarch64_vector_pcs <2 x double> @armpl_vfmodq_f64(<2 x double>, <2 x double>) [[ATTRS]]
