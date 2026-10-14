@@ -6761,17 +6761,10 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block.
-    auto IsUnsupported = IsaPred<SCEVAddRecExpr>;
     // Diff checks are not modelled in VPlan yet, and the VPlan expander cannot
     // hoist bounds out of an enclosing loop.
     const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
-    if (RtPtrChecking.getDiffChecks() || OrigLoop->getParentLoop() ||
-        any_of(RtPtrChecking.CheckingGroups,
-               [&](const RuntimeCheckingPtrGroup &CG) {
-                 return SCEVExprContains(CG.Low, IsUnsupported) ||
-                        SCEVExprContains(CG.High, IsUnsupported);
-               }))
+    if (RtPtrChecking.getDiffChecks() || OrigLoop->getParentLoop())
       return RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan,
                             MemCheckCond, MemCheckBlock, HasBranchWeights);
 
