@@ -699,9 +699,11 @@ private:
 #    endif
 
     template <class _PtrType>
-    static auto __make(_PtrType __p, [[__maybe_unused__]] unsigned __end_offset) noexcept {
+    static auto __make(_PtrType __p, [[__maybe_unused__]] bool __engaged) noexcept {
+      // It is valid to pass in the current size of the optional rather than a fixed capacity because
+      // engaging/disengaging the member invalidates iterators.
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-      return std::__make_bounded_iter<_PtrType>(__p, __p, __p + __end_offset);
+      return std::__make_bounded_iter<_PtrType>(__p, __p, __p + (__engaged ? 1 : 0));
 #    else
       return std::__make_static_packed_bounded_iter<_PtrType, 1>(__p, 0);
 #    endif
@@ -719,9 +721,9 @@ private:
 #    endif
 
     template <class _PtrType>
-    static auto __make(_PtrType __p, [[__maybe_unused__]] unsigned __end_offset) noexcept {
+    static auto __make(_PtrType __p, [[__maybe_unused__]] bool __engaged) noexcept {
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-      return std::__make_bounded_iter<_PtrType>(__p, __p, __p + __end_offset);
+      return std::__make_bounded_iter<_PtrType>(__p, __p, __p + (__engaged ? 1 : 0));
 #    else
       return std::__make_capacity_aware_iterator<_PtrType, 1>(__p);
 #    endif
@@ -738,13 +740,13 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI iterator begin() noexcept {
     auto* __ptr = std::addressof(this->__val_);
 
-    return __iter::__make(__ptr, this->has_value() ? 1 : 0);
+    return __iter::__make(__ptr, this->has_value());
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept {
     auto* __ptr = std::addressof(this->__val_);
 
-    return __iter::__make(__ptr, this->has_value() ? 1 : 0);
+    return __iter::__make(__ptr, this->has_value());
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI iterator end() noexcept { return begin() + (this->has_value() ? 1 : 0); }

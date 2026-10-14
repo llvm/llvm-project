@@ -67,7 +67,7 @@ constexpr bool tests() {
 int main(int, char**) {
   assert(tests());
 
-  // blocked on constexpr pointer tagging
+  // TODO: blocked on constexpr pointer tagging
   // static_assert(tests());
 
   return 0;
