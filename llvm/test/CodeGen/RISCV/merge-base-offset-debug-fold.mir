@@ -1,9 +1,9 @@
 # RUN: llc -mtriple=riscv64 -run-pass=riscv-merge-base-offset \
 # RUN:   -verify-machineinstrs %s -o - | FileCheck %s
 
-# Debug uses should not stop an offset from being folded into the address of a
-# global.
-# FIXME: They currently do.
+# Debug uses do not stop an offset from being folded into the address of a
+# global. Those that described a value the fold changes or removes become
+# undef.
 
 --- |
   @values = external hidden global [2 x i64]
@@ -26,14 +26,14 @@
   !10 = !DILocation(line: 2, scope: !8)
 ...
 
-# A debug use of the base.
+# The register that held the base now holds the address with the offset, so
+# the debug use of the base becomes undef, while that of the sum moves to it.
 # CHECK-LABEL: name: debug_use_of_base
-# CHECK:       %hi:gpr = LUI target-flags(riscv-hi) @values{{$}}
-# CHECK-NEXT:  %lo:gpr = ADDI %hi, target-flags(riscv-lo) @values{{$}}
+# CHECK:       %hi:gpr = LUI target-flags(riscv-hi) @values + 8
+# CHECK-NEXT:  %lo:gpr = ADDI %hi, target-flags(riscv-lo) @values + 8
+# CHECK-NEXT:  DBG_VALUE $noreg, $noreg
 # CHECK-NEXT:  DBG_VALUE %lo, $noreg
-# CHECK-NEXT:  %sum:gpr = ADDI %lo, 8
-# CHECK-NEXT:  DBG_VALUE %sum, $noreg
-# CHECK-NEXT:  $x10 = COPY %sum
+# CHECK-NEXT:  $x10 = COPY %lo
 ---
 name:            debug_use_of_base
 tracksRegLiveness: true
@@ -48,14 +48,13 @@ body:             |
     PseudoRET implicit $x10
 ...
 
-# A debug use of the offset.
+# The offset is folded into the address, so nothing computes it anymore.
 # CHECK-LABEL: name: debug_use_of_offset
-# CHECK:       %hi:gpr = LUI target-flags(riscv-hi) @values{{$}}
-# CHECK-NEXT:  %lo:gpr = ADDI %hi, target-flags(riscv-lo) @values{{$}}
-# CHECK-NEXT:  %off:gpr = LUI 128
-# CHECK-NEXT:  DBG_VALUE %off, $noreg
-# CHECK-NEXT:  %sum:gpr = ADD %lo, %off
-# CHECK-NEXT:  $x10 = COPY %sum
+# CHECK-NOT:   LUI 128
+# CHECK:       %hi:gpr = LUI target-flags(riscv-hi) @values + 524288
+# CHECK:       DBG_VALUE $noreg, $noreg
+# CHECK-NOT:   ADD
+# CHECK:       $x10 = COPY %lo
 ---
 name:            debug_use_of_offset
 tracksRegLiveness: true
