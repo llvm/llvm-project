@@ -481,10 +481,16 @@ public:
   /// Rewrite virtual register locations according to the provided virtual
   /// register map. Record the stack slot offsets for the locations that
   /// were spilled.
+  ///
+  /// If \p KeepUnassigned is true, virtual registers not present in \p VRM
+  /// are left as-is rather than being set to $noreg. This supports
+  /// incremental resolution across multi-stage register allocation where
+  /// not all register classes have been allocated yet.
   void rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
                         const TargetInstrInfo &TII,
                         const TargetRegisterInfo &TRI,
-                        SpillOffsetMap &SpillOffsets);
+                        SpillOffsetMap &SpillOffsets,
+                        bool KeepUnassigned = false);
 
   /// Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
@@ -495,6 +501,13 @@ public:
 
   /// Return DebugLoc of this UserValue.
   const DebugLoc &getDebugLoc() { return dl; }
+
+  /// Return true if any numbered location is a virtual register.
+  bool hasVirtualRegLocations() const {
+    return any_of(locations, [](const MachineOperand &Loc) {
+      return Loc.isReg() && Loc.getReg().isVirtual();
+    });
+  }
 
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
@@ -685,6 +698,10 @@ public:
 
   /// Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM);
+
+  /// Resolve assigned virtual register locations in \p VRM, leaving
+  /// unassigned vregs intact for later allocation stages.
+  void resolveAssignedLocations(VirtRegMap &VRM);
 
   void print(raw_ostream&);
 };
@@ -1689,7 +1706,8 @@ void LiveDebugVariables::canonicalizeIndexes(const SlotIndexes &SI) {
 void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
                                  const TargetInstrInfo &TII,
                                  const TargetRegisterInfo &TRI,
-                                 SpillOffsetMap &SpillOffsets) {
+                                 SpillOffsetMap &SpillOffsets,
+                                 bool KeepUnassigned) {
   // Build a set of new locations with new numbers so we can coalesce our
   // IntervalMap if two vreg intervals collapse to the same physical location.
   // Use MapVector instead of SetVector because MapVector::insert returns the
@@ -1725,7 +1743,7 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
 
         Loc = MachineOperand::CreateFI(VRM.getStackSlot(VirtReg));
         Spilled = true;
-      } else {
+      } else if (!KeepUnassigned) {
         Loc.setReg(0);
         Loc.setSubReg(0);
       }
@@ -1998,7 +2016,10 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   SpillOffsetMap SpillOffsets;
   for (auto &userValue : userValues) {
     LLVM_DEBUG(userValue->print(dbgs(), TRI));
-    userValue->rewriteLocations(*VRM, *MF, *TII, *TRI, SpillOffsets);
+    if (userValue->hasVirtualRegLocations())
+      userValue->rewriteLocations(*VRM, *MF, *TII, *TRI, SpillOffsets);
+    else
+      SpillOffsets.clear();
     userValue->emitDebugValues(VRM, *LIS, *TII, *TRI, SpillOffsets,
                                BBSkipInstsMap);
   }
@@ -2020,7 +2041,13 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
     unsigned SubReg = It.second.SubReg;
 
     MachineBasicBlock *OrigMBB = Slots->getMBBFromIndex(Slot);
-    if (VRM->isAssignedReg(Reg) && VRM->hasPhys(Reg)) {
+    if (Reg.isPhysical()) {
+      // Already resolved by resolveAssignedLocations at an earlier RA stage.
+      auto Builder = BuildMI(*OrigMBB, OrigMBB->begin(), DebugLoc(),
+                             TII->get(TargetOpcode::DBG_PHI));
+      Builder.addReg(Reg);
+      Builder.addImm(InstNum);
+    } else if (VRM->isAssignedReg(Reg) && VRM->hasPhys(Reg)) {
       unsigned PhysReg = VRM->getPhys(Reg);
       if (SubReg != 0)
         PhysReg = TRI->getSubReg(PhysReg, SubReg);
@@ -2139,6 +2166,45 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
 void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
   if (PImpl)
     PImpl->emitDebugValues(VRM);
+}
+
+void LiveDebugVariables::LDVImpl::resolveAssignedLocations(VirtRegMap &VRM) {
+  LLVM_DEBUG(
+      dbgs() << "********** RESOLVING ASSIGNED DEBUG LOCATIONS **********\n");
+  if (!MF)
+    return;
+
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  SpillOffsetMap SpillOffsets;
+  for (auto &UV : userValues) {
+    if (!UV->hasVirtualRegLocations())
+      continue;
+    LLVM_DEBUG(UV->print(dbgs(), TRI));
+    UV->rewriteLocations(VRM, *MF, *TII, *TRI, SpillOffsets,
+                         /*KeepUnassigned=*/true);
+  }
+
+  // Pre-resolve PHI entries whose vregs have been assigned in this stage.
+  // Replacing the vreg with its physreg here ensures the mapping survives
+  // VRM re-initialization before the next allocation stage.
+  for (auto &It : PHIValToPos) {
+    Register &Reg = It.second.Reg;
+    if (!Reg.isVirtual())
+      continue;
+    if (VRM.isAssignedReg(Reg) && VRM.hasPhys(Reg)) {
+      unsigned SubReg = It.second.SubReg;
+      Register PhysReg = VRM.getPhys(Reg);
+      if (SubReg != 0)
+        PhysReg = TRI->getSubReg(PhysReg, SubReg);
+      Reg = PhysReg;
+      It.second.SubReg = 0;
+    }
+  }
+}
+
+void LiveDebugVariables::resolveAssignedLocations(VirtRegMap *VRM) {
+  if (PImpl)
+    PImpl->resolveAssignedLocations(*VRM);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
