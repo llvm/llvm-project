@@ -129,6 +129,9 @@ private:
   /// Emit a single function.
   bool emitFunction(BinaryFunction &BF, FunctionFragment &FF);
 
+  /// Emit the input bytes between \p Pred and \p Succ, and the symbols there.
+  void emitFusedGap(const BinaryFunction &Pred, const BinaryFunction &Succ);
+
   /// Helper for emitFunctionBody to write data inside a function
   /// (used for AArch64)
   void emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
@@ -235,9 +238,11 @@ void BinaryEmitter::emitFunctions() {
       // Was any part of the function emitted.
       bool Emitted = false;
 
-      // Turn off Intel JCC Erratum mitigation for cold code if requested
-      if (HasProfile && BC.X86AlignBranchBoundaryHotOnly &&
-          !Function->hasValidProfile())
+      // Turn off Intel JCC Erratum mitigation for cold code if requested, and
+      // for frozen functions.
+      if ((HasProfile && BC.X86AlignBranchBoundaryHotOnly &&
+           !Function->hasValidProfile()) ||
+          BC.FrozenFunctions.contains(Function))
         Streamer.setAllowAutoPadding(false);
 
       FunctionLayout &Layout = Function->getLayout();
@@ -303,7 +308,22 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   Section->setHasInstructions(true);
   BC.Ctx->addGenDwarfSection(Section);
 
-  if (BC.HasRelocations) {
+  const BinaryFunction *FusedPred =
+      FF.isMainFragment() ? BC.getFusedPredecessor(Function) : nullptr;
+  const bool HasFusedSucc =
+      FF.isMainFragment() && BC.getFusedSuccessor(Function);
+  if ((FusedPred && opts::padFunctionBefore(Function)) ||
+      (HasFusedSucc && (opts::padFunctionAfter(Function) || opts::MarkFuncs))) {
+    BC.errs() << "BOLT-ERROR: cannot pad or mark function " << Function
+              << ", which is emitted back-to-back with another function\n";
+    exit(1);
+  }
+
+  if (FusedPred) {
+    assert(FusedPred->getCodeSectionName() == Function.getCodeSectionName() &&
+           "fused functions must share a section");
+    emitFusedGap(*FusedPred, Function);
+  } else if (BC.HasRelocations) {
     // Set section alignment to at least maximum possible object alignment.
     // We need this to support LongJmp and other passes that calculates
     // tentative layout.
@@ -434,6 +454,25 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     emitJumpTables(Function);
 
   return true;
+}
+
+void BinaryEmitter::emitFusedGap(const BinaryFunction &Pred,
+                                 const BinaryFunction &Succ) {
+  const uint64_t Start = Pred.getAddress() + Pred.getSize();
+  const BinarySection &Section = *Succ.getOriginSection();
+  const StringRef Bytes = Section.getContents().slice(
+      Start - Section.getAddress(), Succ.getAddress() - Section.getAddress());
+  uint64_t Emitted = 0;
+  for (uint64_t Offset = 0; Offset < Bytes.size(); ++Offset) {
+    const BinaryData *BD = BC.getBinaryDataAtAddress(Start + Offset);
+    if (!BD)
+      continue;
+    Streamer.emitBytes(Bytes.slice(Emitted, Offset));
+    Emitted = Offset;
+    for (MCSymbol *Symbol : BD->getSymbols())
+      Streamer.emitLabel(Symbol);
+  }
+  Streamer.emitBytes(Bytes.drop_front(Emitted));
 }
 
 void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,

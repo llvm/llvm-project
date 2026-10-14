@@ -57,6 +57,9 @@ protected:
 
   bool IsMoveable{true};
 
+  /// True if a symbol in the input symbol table names this data.
+  bool IsFromSymbolTable{false};
+
   /// Symbol flags (same as llvm::SymbolRef::Flags)
   unsigned Flags{0};
 
@@ -115,6 +118,7 @@ public:
 
   bool isAbsolute() const;
   bool isMoveable() const;
+  bool isFromSymbolTable() const { return IsFromSymbolTable; }
 
   uint64_t getAddress() const { return Address; }
   uint64_t getEndAddress() const { return Address + Size; }
@@ -175,6 +179,7 @@ public:
   }
 
   void setIsMoveable(bool Flag) { IsMoveable = Flag; }
+  void setIsFromSymbolTable() { IsFromSymbolTable = true; }
   void setSection(BinarySection &NewSection);
   void setOutputSection(BinarySection &NewSection) {
     OutputSection = &NewSection;

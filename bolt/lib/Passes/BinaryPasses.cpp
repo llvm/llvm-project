@@ -616,6 +616,23 @@ Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
         [](const BinaryFunction *A) { return opts::isHotTextMover(*A); });
   }
 
+  // Place fused functions right after their predecessor.
+  if (!BC.FusedSuccessors.empty()) {
+    BinaryFunctionListType Ordered;
+    Ordered.reserve(OutputFunctions.size());
+    for (BinaryFunction *BF : OutputFunctions) {
+      if (BC.getFusedPredecessor(*BF))
+        continue;
+      Ordered.push_back(BF);
+      for (BinaryFunction *Succ = BC.getFusedSuccessor(*BF); Succ;
+           Succ = BC.getFusedSuccessor(*Succ))
+        Ordered.push_back(Succ);
+    }
+    assert(Ordered.size() == OutputFunctions.size() &&
+           "fused functions must be emitted");
+    OutputFunctions.swap(Ordered);
+  }
+
   BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
   return Error::success();
 }
@@ -1390,6 +1407,12 @@ Error AssignSections::runOnFunctions(BinaryContext &BC) {
     if (Function.isSplit())
       Function.setColdCodeSectionName(BC.getColdCodeSectionName());
   }
+
+  // Fused functions share the section of their first function.
+  for (auto &[Pred, Succ] : BC.FusedSuccessors)
+    if (!BC.getFusedPredecessor(*Pred))
+      for (BinaryFunction *BF = Succ; BF; BF = BC.getFusedSuccessor(*BF))
+        BF->setCodeSectionName(Pred->getCodeSectionName());
   return Error::success();
 }
 

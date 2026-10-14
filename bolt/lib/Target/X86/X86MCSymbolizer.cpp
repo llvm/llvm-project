@@ -71,6 +71,14 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
     const MCSymbol *TargetSymbol;
     uint64_t TargetOffset;
 
+    ErrorOr<BinarySection &> TargetSection = BC.getSectionForAddress(Value);
+    if (TargetSection && TargetSection->isText())
+      BC.addUnanchoredCodeReference(
+          &Function, InstAddress, Value,
+          BC.MIB->isLEA64r(Inst)
+              ? BinaryContext::UnanchoredCodeReference::PCRelLEA
+              : BinaryContext::UnanchoredCodeReference::PCRelMemory);
+
     if (!CreateNewSymbols) {
       if (BinaryData *BD = BC.getBinaryDataContainingAddress(Value)) {
         TargetSymbol = BD->getSymbol();
