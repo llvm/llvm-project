@@ -4828,22 +4828,33 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
 
   // Merge the types.
   //
-  // If Old or any prior declaration in the redeclaration chain is invalid,
-  // MergeVarDeclTypes will return early without diagnosing a type conflict.
-  // Walk the chain (using redecls(), which goes newest-to-oldest) to find the
-  // most recent declaration that is valid so we can still detect type
-  // mismatches on New. If every prior declaration is invalid, skip the type
-  // merge entirely to avoid false positives; the redefinition logic below will
-  // still run and emit the appropriate diagnostic.
-  auto ValidIter = llvm::find_if(Old->redecls(), [](const VarDecl *D) {
-    return !D->isInvalidDecl();
-  });
+  // MergeVarDeclTypes returns early if either declaration is invalid, so
+  // merging against an invalid declaration would silently skip the type
+  // check on New. Start from the most recent declaration and walk back to
+  // the most recent one that is valid; if the whole chain is invalid, skip
+  // the type merge entirely and let the redefinition logic below diagnose
+  // New. Merging against the most recent declaration catches conflicts
+  // with the latest type, while the subsequent merge against Old is how an
+  // incomplete array adopts its bound from a preceding same-scope
+  // declaration, so both merges are still needed.
+  VarDecl *MostRecent = Old->getMostRecentDecl();
+  while (MostRecent->isInvalidDecl() && MostRecent->getPreviousDecl())
+    MostRecent = MostRecent->getPreviousDecl();
 
-  if (ValidIter != Old->redecls_end()) {
-    MergeVarDeclTypes(New, *ValidIter,
-                      mergeTypeWithPrevious(*this, New, *ValidIter, Previous));
-    if (New->isInvalidDecl())
-      return;
+  if (!MostRecent->isInvalidDecl()) {
+    if (MostRecent != Old) {
+      MergeVarDeclTypes(
+          New, MostRecent,
+          mergeTypeWithPrevious(*this, New, MostRecent, Previous));
+      if (New->isInvalidDecl())
+        return;
+    }
+    if (!Old->isInvalidDecl()) {
+      MergeVarDeclTypes(New, Old,
+                        mergeTypeWithPrevious(*this, New, Old, Previous));
+      if (New->isInvalidDecl())
+        return;
+    }
   }
 
   diag::kind PrevDiag;
