@@ -671,10 +671,12 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind,
 }
 
 Error GenericDeviceTy::dataSubmit(void *TgtPtr, const void *HstPtr,
-                                  int64_t Size, __tgt_async_info *AsyncInfo) {
+                                  int64_t Size, __tgt_async_info *AsyncInfo,
+                                  bool DirectWrite) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
-  auto Err = dataSubmitImpl(TgtPtr, HstPtr, Size, AsyncInfoWrapper);
+  auto Err =
+      dataSubmitImpl(TgtPtr, HstPtr, Size, AsyncInfoWrapper, DirectWrite);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }

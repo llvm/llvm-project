@@ -980,11 +980,15 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                          void *&BaseDevAccessiblePtr,
                                          size_t &BaseSize) const = 0;
 
-  /// Submit data to the device (host to device transfer).
+  /// Submit data to the device (host to device transfer). Set \p DirectWrite
+  /// to allow the transfer to be issued as a direct write by the host, which
+  /// can land ahead of the operations pending on the queue; none of them may
+  /// access \p TgtPtr.
   Error dataSubmit(void *TgtPtr, const void *HstPtr, int64_t Size,
-                   __tgt_async_info *AsyncInfo);
+                   __tgt_async_info *AsyncInfo, bool DirectWrite = false);
   virtual Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                               AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+                               AsyncInfoWrapperTy &AsyncInfoWrapper,
+                               bool DirectWrite) = 0;
 
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieve(void *HstPtr, const void *TgtPtr, int64_t Size,

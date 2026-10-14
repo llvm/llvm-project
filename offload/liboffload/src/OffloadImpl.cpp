@@ -1172,9 +1172,13 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_flags_t Flags,
   return Error::success();
 }
 
+/// Copy \p Size bytes from \p SrcPtr to \p DstPtr. \p DirectWrite allows a
+/// host to device copy to be issued as a direct write, see
+/// OL_MEMCPY_FLAG_DIRECT_WRITE.
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                     ol_device_handle_t DstDevice, const void *SrcPtr,
-                    ol_device_handle_t SrcDevice, size_t Size) {
+                    ol_device_handle_t SrcDevice, size_t Size,
+                    bool DirectWrite) {
   // A null device handle means the pointer belongs to the host.
   bool IsDstHost =
       !DstDevice || DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
@@ -1199,8 +1203,8 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
             SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
   } else if (IsSrcHost) {
-    if (auto Res =
-            DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl))
+    if (auto Res = DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size,
+                                                 QueueImpl, DirectWrite))
       return Res;
   } else if (SrcDevice->Platform.Plugin == DstDevice->Platform.Plugin &&
              SrcDevice->Platform.Plugin->isDataExchangable(
@@ -1227,6 +1231,21 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   }
 
   return Error::success();
+}
+
+Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
+                    ol_device_handle_t DstDevice, const void *SrcPtr,
+                    ol_device_handle_t SrcDevice, size_t Size) {
+  return memcpyImpl(Queue, DstPtr, DstDevice, SrcPtr, SrcDevice, Size,
+                    /*DirectWrite=*/false);
+}
+
+Error olMemcpyWithFlags_impl(ol_queue_handle_t Queue, void *DstPtr,
+                             ol_device_handle_t DstDevice, const void *SrcPtr,
+                             ol_device_handle_t SrcDevice, size_t Size,
+                             ol_memcpy_flags_t Flags) {
+  return memcpyImpl(Queue, DstPtr, DstDevice, SrcPtr, SrcDevice, Size,
+                    Flags & OL_MEMCPY_FLAG_DIRECT_WRITE);
 }
 
 Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
