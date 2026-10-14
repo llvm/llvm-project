@@ -317,10 +317,11 @@ json::Value ReportMerger::takeMerged() {
   std::map<std::string, int64_t> ArtifactIndex;
   json::Array MergedArtifacts;
   for (auto &[Uri, Artifact] : Artifacts) {
-    ArtifactIndex[Uri] = MergedArtifacts.size();
+    int64_t Index = MergedArtifacts.size();
+    ArtifactIndex[Uri] = Index;
     if (json::Object *Object = Artifact.getAsObject()) {
       if (json::Object *Location = Object->getObject("location")) {
-        (*Location)["index"] = ArtifactIndex[Uri];
+        (*Location)["index"] = Index;
       }
     }
     MergedArtifacts.push_back(std::move(Artifact));
