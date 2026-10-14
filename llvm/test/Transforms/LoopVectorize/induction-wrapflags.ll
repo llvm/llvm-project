@@ -512,5 +512,55 @@ exit:
   ret void
 }
 
+define void @add_induction_nsw_constant_step_lane_offset_overflow(ptr noalias %dst, i32 %start, i32 %n) {
+; CHECK-LABEL: define void @add_induction_nsw_constant_step_lane_offset_overflow(
+; CHECK-SAME: ptr noalias [[DST:%.*]], i32 [[START:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK:       [[VECTOR_SCEVCHECK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[N]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[N_VEC]], -1073741830
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[START]], [[TMP3]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[START]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 -1073741830, i32 2147483636, i32 1073741806>
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
+; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i32> [[VEC_IND]], splat (i32 -24)
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %f = phi i32 [ %start, %entry ], [ %f.next, %loop ]
+  %gep = getelementptr inbounds i32, ptr %dst, i32 %iv
+  store i32 %f, ptr %gep
+  %f.next = add nsw i32 %f, -1073741830
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.interleave.count", i32 2}
