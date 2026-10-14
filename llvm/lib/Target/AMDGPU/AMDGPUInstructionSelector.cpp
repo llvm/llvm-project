@@ -621,7 +621,7 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT(MachineInstr &I) const {
   Register SrcReg = I.getOperand(1).getReg();
   LLT DstTy = MRI->getType(DstReg);
   LLT SrcTy = MRI->getType(SrcReg);
-  const unsigned SrcSize = static_cast<unsigned>(SrcTy.getSizeInBits());
+  const uint64_t SrcSize = SrcTy.getSizeInBits();
   unsigned DstSize = static_cast<unsigned>(DstTy.getSizeInBits());
 
   // TODO: Should handle any multiple of 32 offset.
@@ -773,8 +773,7 @@ bool AMDGPUInstructionSelector::selectS16MergeToWide(MachineInstr &MI) const {
   MachineBasicBlock *BB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
   Register DstReg = MI.getOperand(0).getReg();
-  const unsigned DstSize =
-      static_cast<unsigned>(MRI->getType(DstReg).getSizeInBits());
+  const uint64_t DstSize = MRI->getType(DstReg).getSizeInBits();
   const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
   const unsigned NumSrc = MI.getNumOperands() - 1;
 
@@ -833,7 +832,7 @@ bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
 
   const DebugLoc &DL = MI.getDebugLoc();
   const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
-  const unsigned DstSize = static_cast<unsigned>(DstTy.getSizeInBits());
+  const uint64_t DstSize = DstTy.getSizeInBits();
   const TargetRegisterClass *DstRC =
       TRI.getRegClassForSizeOnBank(DstSize, *DstBank);
   if (!DstRC)
@@ -873,7 +872,7 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   LLT SrcTy = MRI->getType(SrcReg);
 
   const unsigned DstSize = static_cast<unsigned>(DstTy.getSizeInBits());
-  const unsigned SrcSize = static_cast<unsigned>(SrcTy.getSizeInBits());
+  const uint64_t SrcSize = SrcTy.getSizeInBits();
   const DebugLoc &DL = MI.getDebugLoc();
   const RegisterBank *SrcBank = RBI.getRegBank(SrcReg, *MRI, TRI);
 
@@ -1017,8 +1016,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   Register Src1Reg = I.getOperand(2).getReg();
   LLT Src1Ty = MRI->getType(Src1Reg);
 
-  unsigned DstSize =
-      static_cast<unsigned>(MRI->getType(DstReg).getSizeInBits());
+  uint64_t DstSize = MRI->getType(DstReg).getSizeInBits();
   unsigned InsSize = static_cast<unsigned>(Src1Ty.getSizeInBits());
 
   int64_t Offset = I.getOperand(3).getImm();
@@ -2569,7 +2567,7 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
   const bool IsVALU = DstRB->getID() == AMDGPU::VGPRRegBankID;
 
   unsigned DstSize = static_cast<unsigned>(DstTy.getSizeInBits());
-  unsigned SrcSize = static_cast<unsigned>(SrcTy.getSizeInBits());
+  uint64_t SrcSize = SrcTy.getSizeInBits();
 
   const TargetRegisterClass *SrcRC =
       TRI.getRegClassForSizeOnBank(SrcSize, *SrcRB);
@@ -2719,7 +2717,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
   const unsigned SrcSize = I.getOpcode() == AMDGPU::G_SEXT_INREG
                                ? static_cast<unsigned>(I.getOperand(2).getImm())
                                : static_cast<unsigned>(SrcTy.getSizeInBits());
-  const unsigned DstSize = static_cast<unsigned>(DstTy.getSizeInBits());
+  const uint64_t DstSize = DstTy.getSizeInBits();
   if (!DstTy.isScalar())
     return false;
 
@@ -4093,7 +4091,7 @@ bool AMDGPUInstructionSelector::selectWaveShuffleIntrin(
   Register IdxReg = MI.getOperand(3).getReg();
 
   const LLT DstTy = MRI->getType(DstReg);
-  unsigned DstSize = static_cast<unsigned>(DstTy.getSizeInBits());
+  uint64_t DstSize = DstTy.getSizeInBits();
   const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
   const TargetRegisterClass *DstRC =
       TRI.getRegClassForSizeOnBank(DstSize, *DstRB);

@@ -384,7 +384,7 @@ public:
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
   const TargetRegisterClass *
-  getRegClassForSizeOnBank(unsigned Size, const RegisterBank &Bank) const;
+  getRegClassForSizeOnBank(uint64_t Size, const RegisterBank &Bank) const;
 
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &Bank) const {
