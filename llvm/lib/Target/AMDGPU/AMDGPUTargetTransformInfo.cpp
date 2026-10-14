@@ -1352,19 +1352,20 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
                                        VIC);
     }
 
-    // Packed f32 pair formation for v_pk_*_f32. Only a lane holding a computed
-    // value costs the real packing work, scaled by legalization for wider
-    // vectors. A loaded lane lands in place, and arguments and constants are
-    // already in a register, so both are free. SLP prices a buildvector root
-    // with the insertelements themselves as Op1, and those lanes need no
-    // packing either.
+    // Packed f32 pair formation for v_pk_*_f32. A constant-index insert writes
+    // one subregister, so a lane holding a computed value costs at most one
+    // v_mov_b32 at any width. A loaded lane lands in place, and arguments and
+    // constants are already in a register, so both are free. SLP prices a
+    // buildvector root with the insertelements themselves as Op1, and those
+    // lanes need no packing either. Only throughput sees the move; size-based
+    // users such as the inliner and the unroller keep inserts free.
     auto *VecTy = dyn_cast<FixedVectorType>(ValTy);
     const auto *InsertedInst = dyn_cast_or_null<Instruction>(Op1);
     if (Opcode == Instruction::InsertElement && EltSize == 32 &&
-        ST->hasAnyPackedFP32Ops() && InsertedInst && VecTy &&
-        VecTy->getElementType()->isFloatTy() &&
+        CostKind == TTI::TCK_RecipThroughput && ST->hasAnyPackedFP32Ops() &&
+        InsertedInst && VecTy && VecTy->getElementType()->isFloatTy() &&
         !isa<LoadInst, InsertElementInst>(InsertedInst))
-      return getTypeLegalizationCost(ValTy).first;
+      return getFullRateInstrCost();
 
     // Extracts are just reads of a subregister, so are free. Inserts are
     // considered free because we don't want to have any cost for scalarizing
