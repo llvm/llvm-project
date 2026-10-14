@@ -1,11 +1,11 @@
-; The pass lowers the invokes the wasm models do not keep: Wasm EH keeps them
-; for WasmEHPrepare and Emscripten EH rewrites them into __invoke_* calls.
+; Without Wasm or Emscripten exception handling the pass lowers invokes to
+; calls. Wasm EH keeps them, and Emscripten EH turns them into __invoke_* calls.
 
 ; RUN: split-file %s %t
 
-; RUN: opt -mtriple=wasm32-unknown-unknown -passes=wasm-lower-em-ehsjlj -S %t/wasm.ll | FileCheck --check-prefix=WASM %s
-; RUN: opt -mtriple=wasm32-unknown-emscripten -passes=wasm-lower-em-ehsjlj -S %t/emscripten.ll | FileCheck --check-prefix=EM %s
-; RUN: opt -mtriple=wasm32-unknown-unknown -passes=wasm-lower-em-ehsjlj -S %t/noflag.ll | FileCheck --check-prefix=NOFLAG %s
+; RUN: opt -passes=wasm-lower-em-ehsjlj -S %t/wasm.ll | FileCheck --check-prefix=WASM %s
+; RUN: opt -passes=wasm-lower-em-ehsjlj -S %t/emscripten.ll | FileCheck --check-prefix=EM %s
+; RUN: opt -passes=wasm-lower-em-ehsjlj -S %t/noflag.ll | FileCheck --check-prefix=NOFLAG %s
 
 ;--- wasm.ll
 target triple = "wasm32-unknown-unknown"

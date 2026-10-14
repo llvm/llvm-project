@@ -5,7 +5,7 @@
 
 ; RUN: llc -wasm-use-legacy-eh=false -mattr=+exception-handling %t/wasm.ll -o - | FileCheck %s --check-prefix=WASM
 ; RUN: llc %t/emscripten.ll -o - | FileCheck %s --check-prefix=EM
-; RUN: llc -wasm-use-legacy-eh=false -mattr=+exception-handling %t/noflag.ll -o - | FileCheck %s --check-prefix=NOFLAG
+; RUN: llc %t/noflag.ll -o - | FileCheck %s --check-prefix=NOFLAG
 
 ; WASM: .tagtype __cpp_exception i32
 ; WASM: try_table  (catch __cpp_exception 0)

@@ -1,4 +1,4 @@
-; The pass should only run when the module selects the Wasm model.
+; The pass only transforms modules that select the Wasm model.
 
 ; RUN: split-file %s %t
 ; RUN: opt -passes=wasm-eh-prepare -S %t/wasm.ll   | FileCheck %s --check-prefix=WASM

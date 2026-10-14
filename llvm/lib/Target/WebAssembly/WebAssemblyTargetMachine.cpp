@@ -308,8 +308,8 @@ void WebAssemblyPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createWebAssemblyOptimizeReturnedLegacyPass());
 
-  // Wasm SjLj shares the runtime and the transformation with Emscripten SjLj,
-  // so it is handled here rather than in WasmEHPrepare.
+  // Wasm SjLj shares Emscripten SjLj's transformation, so it is handled here.
+  // Without Wasm or Emscripten EH, this also lowers invokes.
   addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass());
 
   // Expand indirectbr instructions to switches.
@@ -323,8 +323,8 @@ void WebAssemblyPassConfig::addIRPasses() {
 }
 
 void WebAssemblyPassConfig::addPassesToHandleExceptions() {
-  // WebAssembly prepares its own exception handling. WinEHPrepare is still
-  // needed to demote the catchswitch PHIs SelectionDAG cannot lower.
+  // Wasm EH needs WinEHPrepare to remove the catchswitch PHIs SelectionDAG
+  // cannot lower.
   addPass(createWinEHPass());
   addPass(createWasmEHPass());
 }

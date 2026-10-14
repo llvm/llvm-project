@@ -295,10 +295,10 @@ static cl::list<std::string>
 
 namespace {
 class WebAssemblyLowerEmscriptenEHSjLjImpl {
-  bool EnableEmEH = false; // Enable Emscripten exception handling
-  bool EnableEmSjLj;   // Enable Emscripten setjmp/longjmp handling
-  bool EnableWasmSjLj; // Enable Wasm setjmp/longjmp handling
-  bool DoSjLj;         // Whether we actually perform setjmp/longjmp handling
+  bool EnableEmEH = false;     // Enable Emscripten exception handling
+  bool EnableEmSjLj = false;   // Enable Emscripten setjmp/longjmp handling
+  bool EnableWasmSjLj = false; // Enable Wasm setjmp/longjmp handling
+  bool DoSjLj = false; // Whether we actually perform setjmp/longjmp handling
 
   GlobalVariable *ThrewGV = nullptr;      // __THREW__ (Emscripten)
   GlobalVariable *ThrewValueGV = nullptr; // __threwValue (Emscripten)
@@ -924,15 +924,22 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
 
   bool Changed = false;
 
-  // Only the wasm models keep invokes. Lower the rest before the setjmp/longjmp
-  // handling, which does not expect invokes.
+  // Wasm EH keeps invokes, and Emscripten EH transforms them below. With
+  // neither, lower them here, before the setjmp/longjmp handling, which does
+  // not handle invokes or the dead landing pads left behind.
   if (EH != ExceptionHandling::Wasm && !EnableEmEH) {
     for (Function &F : M) {
+      bool LoweredInvoke = false;
       for (BasicBlock &BB : F) {
         if (auto *II = dyn_cast<InvokeInst>(BB.getTerminator())) {
           changeToCall(II);
-          Changed = true;
+          LoweredInvoke = true;
         }
+      }
+
+      if (LoweredInvoke) {
+        EliminateUnreachableBlocks(F);
+        Changed = true;
       }
     }
   }

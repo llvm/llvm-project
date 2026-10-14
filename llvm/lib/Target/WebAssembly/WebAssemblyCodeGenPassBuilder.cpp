@@ -115,8 +115,8 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None)
     addFunctionPass(WebAssemblyOptimizeReturnedPass(), PMW);
 
-  // Wasm SjLj shares the runtime and the transformation with Emscripten SjLj,
-  // so it is handled here rather than in WasmEHPrepare.
+  // Wasm SjLj shares Emscripten SjLj's transformation, so it is handled here.
+  // Without Wasm or Emscripten EH, this also lowers invokes.
   flushFPMsToMPM(PMW);
   addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(), PMW);
 
@@ -131,8 +131,8 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 
 void WebAssemblyCodeGenPassBuilder::addPassesToHandleExceptions(
     PassManagerWrapper &PMW) {
-  // WebAssembly prepares its own exception handling. WinEHPrepare is still
-  // needed to demote the catchswitch PHIs SelectionDAG cannot lower.
+  // Wasm EH needs WinEHPrepare to remove the catchswitch PHIs SelectionDAG
+  // cannot lower.
   addFunctionPass(WinEHPreparePass(), PMW);
   addFunctionPass(WasmEHPreparePass(), PMW);
 }
