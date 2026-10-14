@@ -1616,11 +1616,10 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     MBBI = MBB.getFirstTerminator();
   }
 
-  uint32_t NumBytes = static_cast<uint32_t>(MFI.getStackSize());
-  uint32_t RoundedSize =
-      FuncInfo->isStackRealigned()
-          ? static_cast<uint32_t>(NumBytes + MFI.getMaxAlign().value())
-          : NumBytes;
+  int64_t NumBytes = MFI.getStackSize();
+  int64_t RoundedSize = FuncInfo->isStackRealigned()
+                            ? NumBytes + MFI.getMaxAlign().value()
+                            : NumBytes;
   const Register StackPtrReg = FuncInfo->getStackPtrOffsetReg();
   Register FramePtrReg = FuncInfo->getFrameOffsetReg();
   bool FPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(FramePtrReg);
