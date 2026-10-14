@@ -1902,6 +1902,16 @@ static int encodeCustomOperand(const CustomOperandVal *Opr, int Size,
 
 namespace DepCtr {
 
+int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI) {
+  unsigned Enc = 0;
+  for (int Idx = 0; Idx < DEP_CTR_SIZE; ++Idx) {
+    const auto &Op = DepCtrInfo[Idx];
+    if (Op.isSupported(STI))
+      Enc |= Op.encode(Op.Default);
+  }
+  return Enc;
+}
+
 bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
                               const MCSubtargetInfo &STI) {
   return isSymbolicCustomOperandEncoding(DepCtrInfo, DEP_CTR_SIZE, Code,

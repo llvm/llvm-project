@@ -9,7 +9,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 
-#include "AMDGPUAsmUtils.h"
 #include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
 #include "llvm/ADT/APFloat.h"
@@ -1201,15 +1200,7 @@ using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;
 
 namespace DepCtr {
 
-inline int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI) {
-  unsigned Enc = 0;
-  for (int Idx = 0; Idx < DEP_CTR_SIZE; ++Idx) {
-    const auto &Op = DepCtrInfo[Idx];
-    if (Op.isSupported(STI))
-      Enc |= Op.encode(Op.Default);
-  }
-  return Enc;
-}
+int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI);
 
 int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
                  const MCSubtargetInfo &STI);
