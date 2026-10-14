@@ -926,9 +926,7 @@ getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
     // VPV itself is a wide induction, separately compute the end value for exit
     // users if it is not a truncated IV.
     auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-    if (IntOrFpIV && IntOrFpIV->isTruncated())
-      return nullptr;
-    return WideIV;
+    return (IntOrFpIV && IntOrFpIV->isTruncated()) ? nullptr : WideIV;
   }
 
   // Check if VPV is an optimizable induction increment.
@@ -991,7 +989,9 @@ getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
     return nullptr;
 
   const APInt *StartC;
-  if (!match(WideIV->getStartValue(), m_APInt(StartC)))
+  // A narrowed IV computes in a narrower type than its start value.
+  if (!match(WideIV->getStartValue(), m_APInt(StartC)) ||
+      StartC->getBitWidth() != Offset.getBitWidth())
     return nullptr;
   *PostIncStart = Plan.getConstantInt(*StartC + Offset);
   if (StartOffset)

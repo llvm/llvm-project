@@ -2632,7 +2632,8 @@ public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
                                 Type *ResultTy, const VPIRFlags &Flags,
-                                DebugLoc DL, std::optional<APInt> StartOffset = std::nullopt)
+                                DebugLoc DL,
+                                std::optional<APInt> StartOffset = std::nullopt)
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
                                Start, Step, IndDesc, ResultTy, DL),
         VPIRFlags(Flags), StartOffset(std::move(StartOffset)) {
@@ -2644,7 +2645,8 @@ public:
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
         getPHINode(), getStartValue(), getStepValue(), getVFValue(),
-        getInductionDescriptor(), getScalarType(), *this, getDebugLoc(), StartOffset);
+        getInductionDescriptor(), getScalarType(), *this, getDebugLoc(),
+        StartOffset);
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenIntOrFpInductionSC)
