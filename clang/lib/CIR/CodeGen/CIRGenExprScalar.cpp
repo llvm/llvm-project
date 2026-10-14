@@ -272,11 +272,7 @@ public:
   mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *e) {
     return cgf.emitPseudoObjectRValue(e).getValue();
   }
-  mlir::Value VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: sycl unique stable name");
-    return {};
-  }
+  mlir::Value VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *e);
   mlir::Value VisitEmbedExpr(EmbedExpr *e) {
     assert(e->getDataElementCount() == 1);
     auto it = e->begin();
@@ -1828,6 +1824,24 @@ mlir::Value ScalarExprEmitter::emitCompoundAssign(
   return emitLoadOfLValue(lhs, e->getExprLoc());
 }
 
+mlir::Value
+ScalarExprEmitter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *e) {
+  ASTContext &context = cgf.getContext();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  cir::GlobalOp globalConstStr =
+      cgf.cgm.createGlobalString(loc, e->ComputeName(context), "__usn_str");
+
+  // Unlike LLVM IR, CIR pointers are typed, so the bitcast and the address
+  // space cast are emitted as separate operations when both are needed.
+  mlir::Value addr = builder.createGetGlobal(loc, globalConstStr);
+  auto exprTy = mlir::cast<cir::PointerType>(convertType(e->getType()));
+  auto addrTy = mlir::cast<cir::PointerType>(addr.getType());
+  if (addrTy.getAddrSpace() != exprTy.getAddrSpace())
+    addr = cgf.performAddrSpaceCast(
+        addr, builder.getPointerTo(addrTy.getPointee(), exprTy.getAddrSpace()));
+  return builder.createBitcast(loc, addr, exprTy);
+}
+
 mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
   CIRGenFunction::FullExprCleanupScope scope(cgf, e->getSubExpr());
   mlir::Value v = Visit(e->getSubExpr());
@@ -2290,9 +2304,18 @@ mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
   }
 
   if (ops.fullType->isConstantMatrixType()) {
-    assert(!cir::MissingFeatures::matrixType());
-    cgf.cgm.errorNYI("ScalarExprEmitter::emitDiv: matrix types");
-    return {};
+    assert(mlir::isa<cir::MatrixType>(ops.lhs.getType()) &&
+           "first operand must be a matrix");
+    assert(cir::isAnyIntegerOrFloatingPointType(ops.rhs.getType()) &&
+           "second operand must be an arithmetic type");
+
+    auto [lhs, rhs] =
+        builder.splatMatrixOpOperandsIfNecessary(loc, ops.lhs, ops.rhs);
+
+    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, ops.fpFeatures);
+    if (cir::isFPOrVectorOrMatrixOfFPType(lhs.getType()))
+      return builder.createFDiv(loc, lhs, rhs);
+    return builder.createDiv(loc, lhs, rhs);
   }
 
   if (ops.isFixedPointOp())
