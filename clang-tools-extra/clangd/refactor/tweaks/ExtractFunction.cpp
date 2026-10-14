@@ -1182,16 +1182,17 @@ bool createParameters(NewFunction &ExtractedFunc,
     QualType FullTypeInfo = VD->getType();
     QualType TypeInfo = FullTypeInfo.getNonReferenceType();
 
-    // A variably-modified type that isn't itself a plain array (e.g. a
-    // pointer to a VLA, `int (*)[N]`) has no path below that handles it
-    // safely: its bound is baked into the type at every level, so it
-    // keeps mentioning `N` whether passed by value, by reference, or
-    // (in C) by pointer -- const-qualifying or wrapping it in another
-    // pointer/reference doesn't remove the bound from the type the way
-    // decaying an array's own outer dimension does. A plain array gets
-    // a narrower, more precise check further down instead, since its
-    // outer dimension specifically isn't a problem once decayed.
-    if (TypeInfo->isVariablyModifiedType() && !TypeInfo->isArrayType())
+    // A variably-modified type is rejected outright unless it's a plain
+    // array being extracted in C: a reference's (or any other wrapping,
+    // e.g. a further pointer indirection's) declared type still spells
+    // out the bound at every level, so it keeps mentioning a name
+    // (typically some other variable's) that isn't in scope in the
+    // extracted function's declaration. A plain array in C is the one
+    // case this doesn't apply to as-is, since its outer dimension is
+    // specifically not a problem once decayed to a pointer -- that
+    // gets a narrower, more precise check further down instead.
+    if (TypeInfo->isVariablyModifiedType() &&
+        (LangOpts.CPlusPlus || !TypeInfo->isArrayType()))
       return false;
 
     // FIXME: check if parameter will be a non l-value reference.
@@ -1216,22 +1217,6 @@ bool createParameters(NewFunction &ExtractedFunc,
         TypeInfo.addConst();
       }
     }
-
-    // A reference-to-array parameter's declared type always spells out
-    // every dimension's bound, including the outermost one (unlike a
-    // decayed C pointer, which drops it). For a variable-length array,
-    // that bound is an arbitrary expression -- typically another
-    // variable's name -- that isn't in scope in the extracted
-    // function's declaration, and even making it an explicit preceding
-    // parameter doesn't help: the two don't line up at the call site
-    // (the callee's declared bound and the caller's concrete array type
-    // don't reference-bind just because both happen to be named the
-    // same). So this is rejected unconditionally, in both languages --
-    // C still gets a chance to extract it below, by decaying to a
-    // pointer instead of keeping a reference.
-    if (Kind == ParamPassKind::Reference && TypeInfo->isArrayType() &&
-        TypeInfo->isVariablyModifiedType() && LangOpts.CPlusPlus)
-      return false;
 
     // C has no references. A parameter that would otherwise need one
     // becomes a real pointer instead: the call site takes the address of
