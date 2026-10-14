@@ -356,7 +356,7 @@ define <2 x half> @commute_add_inline_imm_0.5_v2f16(<2 x half> %in) #0 {
 }
 
 ; GCN-LABEL: {{^}}commute_add_literal_v2f16:
-; GFX10: v_pk_add_f16 v0, 0x6400, v0 op_sel_hi:[0,1] ; encoding: [0x00,0x40,0x0f,0xcc,0xff,0x00,0x02,0x12,0x00,0x64,0x00,0x00]
+; GFX10: v_pk_add_f16 v0, v0, 0x6400 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x00,0xff,0x01,0x0a,0x00,0x64,0x00,0x00]
 
 ; GFX9: s_movk_i32 s4, 0x6400 ; encoding
 ; GFX9: v_pk_add_f16 v0, v0, s4 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x00,0x09,0x00,0x08]
@@ -568,7 +568,7 @@ define amdgpu_kernel void @add_inline_imm_64_v2f16(ptr addrspace(1) %out, <2 x h
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0x3800
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x3800, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x38,0x00,0x00]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0x3800 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0x38,0x00,0x00]
 define <2 x i16> @mul_inline_imm_0.5_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 0.5, half 0.5> to <2 x i16>)
   ret <2 x i16> %y
@@ -578,7 +578,7 @@ define <2 x i16> @mul_inline_imm_0.5_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0xb800
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0xffffb800, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xb8,0xff,0xff]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0xffffb800 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0xb8,0xff,0xff]
 define <2 x i16> @mul_inline_imm_neg_0.5_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half -0.5, half -0.5> to <2 x i16>)
   ret <2 x i16> %y
@@ -588,7 +588,7 @@ define <2 x i16> @mul_inline_imm_neg_0.5_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0x3c00
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x3c00, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x3c,0x00,0x00]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0x3c00 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0x3c,0x00,0x00]
 define <2 x i16> @mul_inline_imm_1.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 1.0, half 1.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -598,7 +598,7 @@ define <2 x i16> @mul_inline_imm_1.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0xbc00
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0xffffbc00, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xbc,0xff,0xff]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0xffffbc00 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0xbc,0xff,0xff]
 define <2 x i16> @mul_inline_imm_neg_1.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half -1.0, half -1.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -626,7 +626,7 @@ define <2 x i16> @shl_inline_imm_neg_2.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0x4400
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x4400, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x44,0x00,0x00]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0x4400 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0x44,0x00,0x00]
 define <2 x i16> @mul_inline_imm_4.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 4.0, half 4.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -637,7 +637,7 @@ define <2 x i16> @mul_inline_imm_4.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0xc400
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0xffffc400, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xc4,0xff,0xff]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0xffffc400 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0xc4,0xff,0xff]
 define <2 x i16> @mul_inline_imm_neg_4.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half -4.0, half -4.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -647,7 +647,7 @@ define <2 x i16> @mul_inline_imm_neg_4.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0x3118
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x3118, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x18,0x31,0x00,0x00]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0x3118 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x18,0x31,0x00,0x00]
 define <2 x i16> @mul_inline_imm_inv2pi_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 0xH3118, half 0xH3118> to <2 x i16>)
   ret <2 x i16> %y

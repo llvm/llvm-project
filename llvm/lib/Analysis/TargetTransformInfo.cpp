@@ -1626,12 +1626,6 @@ bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
   return TTIImpl->isVectorShiftByScalarCheap(Ty);
 }
 
-unsigned
-TargetTransformInfo::getNumBytesToPadGlobalArray(unsigned Size,
-                                                 Type *ArrayType) const {
-  return TTIImpl->getNumBytesToPadGlobalArray(Size, ArrayType);
-}
-
 void TargetTransformInfo::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {

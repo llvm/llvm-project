@@ -9,6 +9,7 @@ define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-LABEL: define i32 @ptrtoaddr_expanded_twice(
 ; CHECK-SAME: ptr [[BOUND:%.*]], ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[BOUND1:%.*]] = ptrtoaddr ptr [[BOUND]] to i64
 ; CHECK-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK:       [[LOOP1]]:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], %[[LOOP1_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
@@ -18,7 +19,6 @@ define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-NEXT:    br i1 [[COND_CMP]], label %[[LOOP1_LATCH]], label %[[LOOP2_PREHEADER:.*]]
 ; CHECK:       [[LOOP2_PREHEADER]]:
 ; CHECK-NEXT:    [[READ_LCSSA:%.*]] = phi ptr [ [[READ]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[BOUND1:%.*]] = ptrtoaddr ptr [[BOUND]] to i64
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[READ_LCSSA]] to i64
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND1]], i64 [[TMP15]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 3, [[BOUND1]]
@@ -50,7 +50,7 @@ define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[READ_LCSSA]], %[[LOOP2_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[DST]], %[[LOOP2_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[DST]], %[[LOOP2_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP2:.*]]
 ; CHECK:       [[LOOP1_LATCH]]:
 ; CHECK-NEXT:    [[READ_NEXT]] = getelementptr i8, ptr [[READ]], i64 4
@@ -58,7 +58,7 @@ define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-NEXT:    br label %[[LOOP1]]
 ; CHECK:       [[LOOP2]]:
 ; CHECK-NEXT:    [[SCAN:%.*]] = phi ptr [ [[SCAN_NEXT:%.*]], %[[LOOP2_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[DST_IV:%.*]] = phi ptr [ [[DST_IV_NEXT:%.*]], %[[LOOP2_LATCH]] ], [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[DST_IV:%.*]] = phi ptr [ [[DST_IV_NEXT:%.*]], %[[LOOP2_LATCH]] ], [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult ptr [[SCAN]], [[BOUND]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP2_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP2_LATCH]]:

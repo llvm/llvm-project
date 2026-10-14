@@ -297,6 +297,9 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       SmallVector<VPValue *, 4> VPOperands;
       for (Value *Op : Inst->operands())
         VPOperands.push_back(getOrCreateVPOperand(Op));
+      if (auto *EVI = dyn_cast<ExtractValueInst>(Inst))
+        for (unsigned Idx : EVI->indices())
+          VPOperands.push_back(Plan->getConstantInt(32, Idx));
       NewR = VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst,
                                       VPIRFlags(*Inst), MD, Inst->getDebugLoc(),
                                       "", Inst->getType());
@@ -934,8 +937,7 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
     auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
                                  {FOR, FOR->getBackedgeValue()});
-    FOR->replaceUsesWithIf(
-        RecurSplice, [RecurSplice](VPUser &U) { return &U != RecurSplice; });
+    FOR->replaceUsesWithIf(RecurSplice, not_equal_to(RecurSplice));
   }
 
   return true;
@@ -2448,6 +2450,6 @@ void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
 
   // Update all existing users of the header mask to "HeaderMask & AliasMask".
   auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);
-  HeaderMask->replaceUsesWithIf(
-      ClampedHeaderMask, [&](VPUser &U) { return &U != ClampedHeaderMask; });
+  HeaderMask->replaceUsesWithIf(ClampedHeaderMask,
+                                not_equal_to(ClampedHeaderMask));
 }

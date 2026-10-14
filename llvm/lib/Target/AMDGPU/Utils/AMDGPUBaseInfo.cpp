@@ -145,6 +145,11 @@ unsigned getLoadcntStorecntBitShift(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 8 : 0;
 }
 
+/// \returns barrier member count bit width in M0.
+unsigned getBarrierMemberCountBitWidth(unsigned VersionMajor) {
+  return VersionMajor >= 13 ? 8 : 6;
+}
+
 /// \returns VaSdst bit width
 inline unsigned getVaSdstBitWidth() { return 3; }
 
@@ -1688,6 +1693,10 @@ unsigned getStorecntBitMask(const IsaVersion &Version) {
   return (1 << getStorecntBitWidth(Version.Major)) - 1;
 }
 
+unsigned getBarrierMemberCountBitMask(const IsaVersion &Version) {
+  return (1 << getBarrierMemberCountBitWidth(Version.Major)) - 1;
+}
+
 unsigned getWaitcntBitMask(const IsaVersion &Version) {
   unsigned VmcntLo = getBitMask(getVmcntBitShiftLo(Version.Major),
                                 getVmcntBitWidthLo(Version.Major));
@@ -1822,18 +1831,6 @@ unsigned encodeStorecntDscnt(const IsaVersion &Version, unsigned Storecnt,
 // Custom Operand Values
 //===----------------------------------------------------------------------===//
 
-static unsigned getDefaultCustomOperandEncoding(const CustomOperandVal *Opr,
-                                                int Size,
-                                                const MCSubtargetInfo &STI) {
-  unsigned Enc = 0;
-  for (int Idx = 0; Idx < Size; ++Idx) {
-    const auto &Op = Opr[Idx];
-    if (Op.isSupported(STI))
-      Enc |= Op.encode(Op.Default);
-  }
-  return Enc;
-}
-
 static bool isSymbolicCustomOperandEncoding(const CustomOperandVal *Opr,
                                             int Size, unsigned Code,
                                             bool &HasNonDefaultVal,
@@ -1906,10 +1903,13 @@ static int encodeCustomOperand(const CustomOperandVal *Opr, int Size,
 namespace DepCtr {
 
 int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI) {
-  static int Default = -1;
-  if (Default == -1)
-    Default = getDefaultCustomOperandEncoding(DepCtrInfo, DEP_CTR_SIZE, STI);
-  return Default;
+  unsigned Enc = 0;
+  for (int Idx = 0; Idx < DEP_CTR_SIZE; ++Idx) {
+    const auto &Op = DepCtrInfo[Idx];
+    if (Op.isSupported(STI))
+      Enc |= Op.encode(Op.Default);
+  }
+  return Enc;
 }
 
 bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,

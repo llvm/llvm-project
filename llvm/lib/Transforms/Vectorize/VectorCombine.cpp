@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include "VectorizeOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -34,7 +35,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -59,35 +59,24 @@ STATISTIC(NumScalarOps, "Number of scalar unary + binary ops formed");
 STATISTIC(NumScalarCmp, "Number of scalar compares formed");
 STATISTIC(NumScalarIntrinsic, "Number of scalar intrinsic calls formed");
 
-static cl::opt<bool> DisableVectorCombine(
-    "disable-vector-combine", cl::init(false), cl::Hidden,
-    cl::desc("Disable all vector combine transforms"));
-
-static cl::opt<bool> DisableBinopExtractShuffle(
-    "disable-binop-extract-shuffle", cl::init(false), cl::Hidden,
-    cl::desc("Disable binop extract to shuffle transforms"));
-
-static cl::opt<unsigned> MaxInstrsToScan(
-    "vector-combine-max-scan-instrs", cl::init(30), cl::Hidden,
-    cl::desc("Max number of instructions to scan for vector combining."));
-
 static const unsigned InvalidIndex = std::numeric_limits<unsigned>::max();
 
 namespace {
 class VectorCombine {
 public:
-  VectorCombine(Function &F, const TargetTransformInfo &TTI,
-                const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
-                const DataLayout *DL, TTI::TargetCostKind CostKind,
-                bool TryEarlyFoldsOnly)
-      : F(F), Builder(*F.getParent(), InstSimplifyFolder(*DL)), TTI(TTI),
-        DT(DT), AA(AA), DL(DL), CostKind(CostKind),
+  VectorCombine(const VectorizeOptions &Opts, Function &F,
+                const TargetTransformInfo &TTI, const DominatorTree &DT,
+                AAResults &AA, AssumptionCache &AC, const DataLayout *DL,
+                TTI::TargetCostKind CostKind, bool TryEarlyFoldsOnly)
+      : Opts(Opts), F(F), Builder(*F.getParent(), InstSimplifyFolder(*DL)),
+        TTI(TTI), DT(DT), AA(AA), DL(DL), CostKind(CostKind),
         SQ(*DL, /*TLI=*/nullptr, &DT, &AC),
         TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
   bool run();
 
 private:
+  const VectorizeOptions &Opts;
   Function &F;
   IRBuilder<InstSimplifyFolder> Builder;
   const TargetTransformInfo &TTI;
@@ -282,8 +271,11 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
   unsigned OffsetEltIndex = 0;
   Align Alignment = Load->getAlign();
+  // Ignore frees because the existing load proves that the object has not been
+  // freed. Allocations cannot shrink, so this is sufficient.
   if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1),
-                                   SQ.getWithInstruction(Load))) {
+                                   SQ.getWithInstruction(Load),
+                                   /*IgnoreFree=*/true)) {
     // It is not safe to load directly from the pointer, but we can still peek
     // through gep offsets and check if it safe to load from a base address with
     // updated alignment. If it is, we can shuffle the element(s) into place
@@ -310,7 +302,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     OffsetEltIndex = OffsetEltIndexAP.getZExtValue();
 
     if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1),
-                                     SQ.getWithInstruction(Load)))
+                                     SQ.getWithInstruction(Load),
+                                     /*IgnoreFree=*/true))
       return false;
 
     // Update alignment with offset value. Note that the offset could be negated
@@ -395,8 +388,11 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
   Align Alignment = Load->getAlign();
+  // Ignore frees because the existing load proves that the object has not been
+  // freed. Allocations cannot shrink, so this is sufficient.
   if (!isSafeToLoadUnconditionally(SrcPtr, Ty, Align(1),
-                                   SQ.getWithInstruction(Load)))
+                                   SQ.getWithInstruction(Load),
+                                   /*IgnoreFree=*/true))
     return false;
 
   Alignment = std::max(SrcPtr->getPointerAlignment(*DL), Alignment);
@@ -554,7 +550,7 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
 
   ConvertToShuffle = getShuffleExtract(Ext0, Ext1, PreferredExtractIndex);
   if (ConvertToShuffle) {
-    if (IsBinOp && DisableBinopExtractShuffle)
+    if (IsBinOp && Opts.disable_binop_extract_shuffle)
       return true;
 
     // If we are extracting from 2 different indexes, then one operand must be
@@ -1747,13 +1743,14 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
 
 // Check if memory is modified, freed, or synchronized between two instrs in
 // the same BB.
-static bool isMemModifiedBetween(BasicBlock::iterator Begin,
+static bool isMemModifiedBetween(const VectorizeOptions &Opts,
+                                 BasicBlock::iterator Begin,
                                  BasicBlock::iterator End,
                                  const MemoryLocation &Loc, AAResults &AA) {
   unsigned NumScanned = 0;
   if (std::any_of(Begin, End, [&](const Instruction &Instr) {
         return isModSet(AA.getModRefInfo(&Instr, Loc)) ||
-               ++NumScanned > MaxInstrsToScan;
+               ++NumScanned > Opts.vector_combine_max_scan_instrs;
       }))
     return true;
 
@@ -2040,7 +2037,7 @@ bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
       SrcAddr != SI->getPointerOperand()->stripPointerCasts())
     return false;
 
-  if (isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
+  if (isMemModifiedBetween(Opts, Load->getIterator(), SI->getIterator(),
                            MemoryLocation::get(SI), AA))
     return false;
 
@@ -2202,7 +2199,8 @@ bool VectorCombine::scalarizeLoad(Instruction &I) {
            make_range(std::next(LI->getIterator()), UI->getIterator())) {
         // Bail out if we reached the check limit or the instruction may write
         // to memory.
-        if (NumInstChecked == MaxInstrsToScan || I.mayWriteToMemory())
+        if (NumInstChecked == Opts.vector_combine_max_scan_instrs ||
+            I.mayWriteToMemory())
           return false;
         NumInstChecked++;
       }
@@ -3895,7 +3893,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   bool TraversedElCountChangingBitcast = false;
 
   while (!Candidates.empty()) {
-    if (++NumVisited > MaxInstrsToScan)
+    if (++NumVisited > Opts.vector_combine_max_scan_instrs)
       return false;
 
     auto ItemFrom = Candidates.pop_back_val();
@@ -6265,12 +6263,13 @@ static SmallVector<Value *, 8> getInstrOperandsAtIdx(ArrayRef<Value *> Members,
 
 /// Check whether the tree of elementwise operations each feeding \p Members
 /// can be rebuilt at the interleaved width.
-static bool canWidenDeinterleavedOperations(ArrayRef<Value *> Members,
+static bool canWidenDeinterleavedOperations(const VectorizeOptions &Opts,
+                                            ArrayRef<Value *> Members,
                                             unsigned &NumScanned) {
   unsigned Factor = Members.size();
   if (getCommonDeinterleavedSource(Members))
     return true;
-  if (NumScanned + Factor > MaxInstrsToScan)
+  if (NumScanned + Factor > Opts.vector_combine_max_scan_instrs)
     return false;
   NumScanned += Factor;
 
@@ -6291,7 +6290,7 @@ static bool canWidenDeinterleavedOperations(ArrayRef<Value *> Members,
   for (unsigned Op = 0, E = getNumDataOperands(FirstInst); Op != E; ++Op) {
     SmallVector<Value *, 8> Operands = getInstrOperandsAtIdx(Members, Op);
     if (!getCommonSplatValue(Operands) &&
-        !canWidenDeinterleavedOperations(Operands, NumScanned))
+        !canWidenDeinterleavedOperations(Opts, Operands, NumScanned))
       return false;
   }
   return true;
@@ -6409,7 +6408,7 @@ bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
 
   SmallVector<Value *, 8> RootMembers(Interleave->args());
   unsigned NumScanned = 0;
-  if (!canWidenDeinterleavedOperations(RootMembers, NumScanned))
+  if (!canWidenDeinterleavedOperations(Opts, RootMembers, NumScanned))
     return false;
 
   ElementCount WideEC = cast<VectorType>(I.getType())->getElementCount();
@@ -7026,7 +7025,7 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
-  if (DisableVectorCombine)
+  if (Opts.disable_vector_combine)
     return false;
 
   // Don't attempt vectorization if the target does not support vectors.
@@ -7253,7 +7252,8 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   const DataLayout *DL = &F.getDataLayout();
   TTI::TargetCostKind CostKind =
       F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
-  VectorCombine Combiner(F, TTI, DT, AA, AC, DL, CostKind, TryEarlyFoldsOnly);
+  VectorCombine Combiner(VectorizeOptions::Global, F, TTI, DT, AA, AC, DL,
+                         CostKind, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
