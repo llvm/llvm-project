@@ -5969,12 +5969,12 @@ defm FNMUL  : TwoOperandFPDataNeg<0b1000, "fnmul", any_fmul>;
 defm FSUB   : TwoOperandFPData<0b0011, "fsub", any_fsub>;
 
 let Predicates = [HasFPv2] in {
-defm FMAXINM   : TwoOperandFPDataFPv2<0b1010, "fmaxinm">;
-defm FMAXMG    : TwoOperandFPDataFPv2<0b1100, "fmaxmg">;
-defm FMAXMGINM : TwoOperandFPDataFPv2<0b1110, "fmaxmginm">;
-defm FMININM   : TwoOperandFPDataFPv2<0b1011, "fmininm">;
-defm FMINMG    : TwoOperandFPDataFPv2<0b1101, "fminmg">;
-defm FMINMGINM : TwoOperandFPDataFPv2<0b1111, "fminmginm">;
+defm FMAXINM   : TwoOperandFPData<0b1010, "fmaxinm">;
+defm FMAXMG    : TwoOperandFPData<0b1100, "fmaxmg">;
+defm FMAXMGINM : TwoOperandFPData<0b1110, "fmaxmginm">;
+defm FMININM   : TwoOperandFPData<0b1011, "fmininm">;
+defm FMINMG    : TwoOperandFPData<0b1101, "fminmg">;
+defm FMINMGINM : TwoOperandFPData<0b1111, "fminmginm">;
 }
 
 multiclass FMULScalarFromIndexedLane0Patterns<string inst,

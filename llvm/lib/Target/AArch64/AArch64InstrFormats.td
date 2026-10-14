@@ -5980,20 +5980,6 @@ multiclass TwoOperandFPData<bits<4> opcode, string asm,
   }
 }
 
-multiclass TwoOperandFPDataFPv2<bits<4> opcode, string asm> {
-  def Hrr : BaseTwoOperandFPData<opcode, FPR16, asm, []> {
-    let Inst{23-22} = 0b11; // 16-bit size flag
-  }
-
-  def Srr : BaseTwoOperandFPData<opcode, FPR32, asm, []> {
-    let Inst{23-22} = 0b00; // 32-bit size flag
-  }
-
-  def Drr : BaseTwoOperandFPData<opcode, FPR64, asm, []> {
-    let Inst{23-22} = 0b01; // 64-bit size flag
-  }
-}
-
 multiclass TwoOperandFPDataNeg<bits<4> opcode, string asm,
                                SDPatternOperator node> {
   def Hrr : BaseTwoOperandFPData<opcode, FPR16, asm,
