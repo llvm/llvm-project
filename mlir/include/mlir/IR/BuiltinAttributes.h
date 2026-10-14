@@ -21,6 +21,7 @@ class AsmResourceBlob;
 class BoolAttr;
 class BuiltinDialect;
 class DenseIntElementsAttr;
+class DenseResourceBlobHandle;
 template <typename T>
 struct DialectResourceBlobHandle;
 class FlatSymbolRefAttr;
