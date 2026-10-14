@@ -9,14 +9,28 @@ target datalayout = "e-m:e-p:64:64-i64:64-n8:16:32:64-S128"
 
 ; Legal mask vectors can also form a store narrower than 128 bits.
 define void @width64(ptr %p, <64 x i1> %x) #0 {
-; CHECK-LABEL: define void @width64(
-; CHECK-SAME: ptr [[P:%.*]], <64 x i1> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <64 x i1> [[X]], <64 x i1> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[HI:%.*]] = shufflevector <64 x i1> [[X]], <64 x i1> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store <32 x i1> [[LO]], ptr [[P]], align 4
-; CHECK-NEXT:    store <32 x i1> [[HI]], ptr [[P4]], align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: define void @width64(
+; SSE-SAME: ptr [[P:%.*]], <64 x i1> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; SSE-NEXT:    [[LO:%.*]] = shufflevector <64 x i1> [[X]], <64 x i1> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; SSE-NEXT:    [[HI:%.*]] = shufflevector <64 x i1> [[X]], <64 x i1> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+; SSE-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; SSE-NEXT:    store <32 x i1> [[LO]], ptr [[P]], align 4
+; SSE-NEXT:    store <32 x i1> [[HI]], ptr [[P4]], align 4
+; SSE-NEXT:    ret void
+;
+; AVX2-LABEL: define void @width64(
+; AVX2-SAME: ptr [[P:%.*]], <64 x i1> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; AVX2-NEXT:    [[LO:%.*]] = shufflevector <64 x i1> [[X]], <64 x i1> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; AVX2-NEXT:    [[HI:%.*]] = shufflevector <64 x i1> [[X]], <64 x i1> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+; AVX2-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; AVX2-NEXT:    store <32 x i1> [[LO]], ptr [[P]], align 4
+; AVX2-NEXT:    store <32 x i1> [[HI]], ptr [[P4]], align 4
+; AVX2-NEXT:    ret void
+;
+; AVX512-LABEL: define void @width64(
+; AVX512-SAME: ptr [[P:%.*]], <64 x i1> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; AVX512-NEXT:    store <64 x i1> [[X]], ptr [[P]], align 4
+; AVX512-NEXT:    ret void
 ;
   %lo = shufflevector <64 x i1> %x, <64 x i1> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %hi = shufflevector <64 x i1> %x, <64 x i1> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -32,12 +46,8 @@ define void @width64(ptr %p, <64 x i1> %x) #0 {
 define void @width128(ptr %p, <4 x float> %x, <4 x float> %y) #3 {
 ; CHECK-LABEL: define void @width128(
 ; CHECK-SAME: ptr [[P:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[HI:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[P16:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
-; CHECK-NEXT:    store <2 x float> [[LO]], ptr [[P]], align 4, !invariant.group [[META0:![0-9]+]]
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
-; CHECK-NEXT:    store <2 x float> [[HI]], ptr [[P8]], align 4, !invariant.group [[META0]]
+; CHECK-NEXT:    store <4 x float> [[X]], ptr [[P]], align 4
 ; CHECK-NEXT:    store <4 x float> [[Y]], ptr [[P16]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -54,14 +64,24 @@ define void @width128(ptr %p, <4 x float> %x, <4 x float> %y) #3 {
 ; A folded concatenation is profitable for code size too.
 ; A 256-bit store still requires target support and a sufficient preferred width.
 define void @width256(ptr %p, <8 x float> %x) #2 {
-; CHECK-LABEL: define void @width256(
-; CHECK-SAME: ptr [[P:%.*]], <8 x float> [[X:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <8 x float> [[X]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[HI:%.*]] = shufflevector <8 x float> [[X]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[P16:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
-; CHECK-NEXT:    store <4 x float> [[LO]], ptr [[P]], align 4
-; CHECK-NEXT:    store <4 x float> [[HI]], ptr [[P16]], align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: define void @width256(
+; SSE-SAME: ptr [[P:%.*]], <8 x float> [[X:%.*]]) #[[ATTR2:[0-9]+]] {
+; SSE-NEXT:    [[LO:%.*]] = shufflevector <8 x float> [[X]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    [[HI:%.*]] = shufflevector <8 x float> [[X]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; SSE-NEXT:    [[P16:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+; SSE-NEXT:    store <4 x float> [[LO]], ptr [[P]], align 4
+; SSE-NEXT:    store <4 x float> [[HI]], ptr [[P16]], align 4
+; SSE-NEXT:    ret void
+;
+; AVX2-LABEL: define void @width256(
+; AVX2-SAME: ptr [[P:%.*]], <8 x float> [[X:%.*]]) #[[ATTR2:[0-9]+]] {
+; AVX2-NEXT:    store <8 x float> [[X]], ptr [[P]], align 4
+; AVX2-NEXT:    ret void
+;
+; AVX512-LABEL: define void @width256(
+; AVX512-SAME: ptr [[P:%.*]], <8 x float> [[X:%.*]]) #[[ATTR2:[0-9]+]] {
+; AVX512-NEXT:    store <8 x float> [[X]], ptr [[P]], align 4
+; AVX512-NEXT:    ret void
 ;
   %lo = shufflevector <8 x float> %x, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %hi = shufflevector <8 x float> %x, <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -73,14 +93,28 @@ define void @width256(ptr %p, <8 x float> %x) #2 {
 
 ; A 512-bit store requires both target support and a sufficient preferred width.
 define void @width512(ptr %p, <16 x float> %x) #4 {
-; CHECK-LABEL: define void @width512(
-; CHECK-SAME: ptr [[P:%.*]], <16 x float> [[X:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <16 x float> [[X]], <16 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[HI:%.*]] = shufflevector <16 x float> [[X]], <16 x float> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[P32:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 32
-; CHECK-NEXT:    store <8 x float> [[LO]], ptr [[P]], align 4
-; CHECK-NEXT:    store <8 x float> [[HI]], ptr [[P32]], align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: define void @width512(
+; SSE-SAME: ptr [[P:%.*]], <16 x float> [[X:%.*]]) #[[ATTR3:[0-9]+]] {
+; SSE-NEXT:    [[LO:%.*]] = shufflevector <16 x float> [[X]], <16 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; SSE-NEXT:    [[HI:%.*]] = shufflevector <16 x float> [[X]], <16 x float> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; SSE-NEXT:    [[P32:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 32
+; SSE-NEXT:    store <8 x float> [[LO]], ptr [[P]], align 4
+; SSE-NEXT:    store <8 x float> [[HI]], ptr [[P32]], align 4
+; SSE-NEXT:    ret void
+;
+; AVX2-LABEL: define void @width512(
+; AVX2-SAME: ptr [[P:%.*]], <16 x float> [[X:%.*]]) #[[ATTR3:[0-9]+]] {
+; AVX2-NEXT:    [[LO:%.*]] = shufflevector <16 x float> [[X]], <16 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX2-NEXT:    [[HI:%.*]] = shufflevector <16 x float> [[X]], <16 x float> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; AVX2-NEXT:    [[P32:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 32
+; AVX2-NEXT:    store <8 x float> [[LO]], ptr [[P]], align 4
+; AVX2-NEXT:    store <8 x float> [[HI]], ptr [[P32]], align 4
+; AVX2-NEXT:    ret void
+;
+; AVX512-LABEL: define void @width512(
+; AVX512-SAME: ptr [[P:%.*]], <16 x float> [[X:%.*]]) #[[ATTR3:[0-9]+]] {
+; AVX512-NEXT:    store <16 x float> [[X]], ptr [[P]], align 4
+; AVX512-NEXT:    ret void
 ;
   %lo = shufflevector <16 x float> %x, <16 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %hi = shufflevector <16 x float> %x, <16 x float> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -93,7 +127,7 @@ define void @width512(ptr %p, <16 x float> %x) #4 {
 ; Being below the width limit does not make a 192-bit vector type legal.
 define void @illegal_width192(ptr %p, <6 x float> %x) #4 {
 ; CHECK-LABEL: define void @illegal_width192(
-; CHECK-SAME: ptr [[P:%.*]], <6 x float> [[X:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: ptr [[P:%.*]], <6 x float> [[X:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[LO:%.*]] = shufflevector <6 x float> [[X]], <6 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    [[HI:%.*]] = shufflevector <6 x float> [[X]], <6 x float> poison, <3 x i32> <i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[P12:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
@@ -113,7 +147,7 @@ define void @illegal_width192(ptr %p, <6 x float> %x) #4 {
 ; scalar stores. Accept the shuffle plus wide store when its cost ties.
 define void @sroa_phi_stores(ptr %p, i1 %cond, <2 x float> %a0, <2 x float> %a1, <2 x float> %b0, <2 x float> %b1, float %time, float %weight) #0 {
 ; CHECK-LABEL: define void @sroa_phi_stores(
-; CHECK-SAME: ptr [[P:%.*]], i1 [[COND:%.*]], <2 x float> [[A0:%.*]], <2 x float> [[A1:%.*]], <2 x float> [[B0:%.*]], <2 x float> [[B1:%.*]], float [[TIME:%.*]], float [[WEIGHT:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[P:%.*]], i1 [[COND:%.*]], <2 x float> [[A0:%.*]], <2 x float> [[A1:%.*]], <2 x float> [[B0:%.*]], <2 x float> [[B1:%.*]], float [[TIME:%.*]], float [[WEIGHT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LEFT:.*]], label %[[RIGHT:.*]]
 ; CHECK:       [[LEFT]]:
@@ -123,9 +157,8 @@ define void @sroa_phi_stores(ptr %p, i1 %cond, <2 x float> %a0, <2 x float> %a1,
 ; CHECK:       [[MERGE]]:
 ; CHECK-NEXT:    [[LO:%.*]] = phi <2 x float> [ [[A0]], %[[LEFT]] ], [ [[A1]], %[[RIGHT]] ]
 ; CHECK-NEXT:    [[HI:%.*]] = phi <2 x float> [ [[B0]], %[[LEFT]] ], [ [[B1]], %[[RIGHT]] ]
-; CHECK-NEXT:    store <2 x float> [[LO]], ptr [[P]], align 8
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
-; CHECK-NEXT:    store <2 x float> [[HI]], ptr [[P8]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[LO]], <2 x float> [[HI]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[P16:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
 ; CHECK-NEXT:    store float [[TIME]], ptr [[P16]], align 8
 ; CHECK-NEXT:    [[P20:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 20
@@ -156,12 +189,24 @@ merge:
 
 ; A code-size cost tie also permits combining the stores.
 define void @cost_tie256(ptr %p, <4 x float> %a, <4 x float> %b) #2 {
-; CHECK-LABEL: define void @cost_tie256(
-; CHECK-SAME: ptr [[P:%.*]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[P16:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
-; CHECK-NEXT:    store <4 x float> [[A]], ptr [[P]], align 4
-; CHECK-NEXT:    store <4 x float> [[B]], ptr [[P16]], align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: define void @cost_tie256(
+; SSE-SAME: ptr [[P:%.*]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]) #[[ATTR2]] {
+; SSE-NEXT:    [[P16:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+; SSE-NEXT:    store <4 x float> [[A]], ptr [[P]], align 4
+; SSE-NEXT:    store <4 x float> [[B]], ptr [[P16]], align 4
+; SSE-NEXT:    ret void
+;
+; AVX2-LABEL: define void @cost_tie256(
+; AVX2-SAME: ptr [[P:%.*]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]) #[[ATTR2]] {
+; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX2-NEXT:    store <8 x float> [[TMP1]], ptr [[P]], align 4
+; AVX2-NEXT:    ret void
+;
+; AVX512-LABEL: define void @cost_tie256(
+; AVX512-SAME: ptr [[P:%.*]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]) #[[ATTR2]] {
+; AVX512-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX512-NEXT:    store <8 x float> [[TMP1]], ptr [[P]], align 4
+; AVX512-NEXT:    ret void
 ;
   %p16 = getelementptr inbounds i8, ptr %p, i64 16
   store <4 x float> %a, ptr %p, align 4
@@ -230,13 +275,9 @@ define void @stop_at_other_store(ptr %p, ptr %q, <4 x float> %x, float %y) #0 {
 define float @skip_noalias_accesses(ptr %p, ptr noalias %q, <4 x float> %x, float %y) #0 {
 ; CHECK-LABEL: define float @skip_noalias_accesses(
 ; CHECK-SAME: ptr [[P:%.*]], ptr noalias [[Q:%.*]], <4 x float> [[X:%.*]], float [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[HI:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
-; CHECK-NEXT:    store <2 x float> [[LO]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[Q]], align 4
 ; CHECK-NEXT:    store float [[Y]], ptr [[Q]], align 4
-; CHECK-NEXT:    store <2 x float> [[HI]], ptr [[P8]], align 4
+; CHECK-NEXT:    store <4 x float> [[X]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret float [[V]]
 ;
   %lo = shufflevector <4 x float> %x, <4 x float> poison, <2 x i32> <i32 0, i32 1>
@@ -254,10 +295,9 @@ define float @skip_noalias_accesses(ptr %p, ptr noalias %q, <4 x float> %x, floa
 define void @cost_tie_across_noalias_store(ptr %p, ptr noalias %q, <2 x float> %a, <2 x float> %b, float %y) #0 {
 ; CHECK-LABEL: define void @cost_tie_across_noalias_store(
 ; CHECK-SAME: ptr [[P:%.*]], ptr noalias [[Q:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], float [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
-; CHECK-NEXT:    store <2 x float> [[A]], ptr [[P]], align 8
 ; CHECK-NEXT:    store float [[Y]], ptr [[Q]], align 4
-; CHECK-NEXT:    store <2 x float> [[B]], ptr [[P8]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[A]], <2 x float> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %p8 = getelementptr inbounds i8, ptr %p, i64 8
@@ -272,12 +312,8 @@ define void @cost_tie_across_noalias_store(ptr %p, ptr noalias %q, <2 x float> %
 define void @cheaper_across_call(ptr %p, ptr noalias %q, <4 x float> %x) #0 {
 ; CHECK-LABEL: define void @cheaper_across_call(
 ; CHECK-SAME: ptr [[P:%.*]], ptr noalias [[Q:%.*]], <4 x float> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[HI:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
-; CHECK-NEXT:    store <2 x float> [[LO]], ptr [[P]], align 8
 ; CHECK-NEXT:    call void @touch(ptr [[Q]])
-; CHECK-NEXT:    store <2 x float> [[HI]], ptr [[P8]], align 8
+; CHECK-NEXT:    store <4 x float> [[X]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %lo = shufflevector <4 x float> %x, <4 x float> poison, <2 x i32> <i32 0, i32 1>
@@ -358,13 +394,8 @@ define void @unequal_vectors(ptr %p, <8 x float> %x) #1 {
 define void @revisit_new_store(ptr %p, float %x) #0 {
 ; CHECK-LABEL: define void @revisit_new_store(
 ; CHECK-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OLD:%.*]] = load <4 x float>, ptr [[P]], align 4
-; CHECK-NEXT:    [[UPDATED:%.*]] = insertelement <4 x float> [[OLD]], float [[X]], i32 1
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <4 x float> [[UPDATED]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[HI:%.*]] = shufflevector <4 x float> [[UPDATED]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
-; CHECK-NEXT:    store <2 x float> [[LO]], ptr [[P]], align 4
-; CHECK-NEXT:    store <2 x float> [[HI]], ptr [[P8]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x float>, ptr [[P]], i64 0, i64 1
+; CHECK-NEXT:    store float [[X]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %old = load <4 x float>, ptr %p, align 4
@@ -384,7 +415,7 @@ define void @nontemporal(ptr %p, <4 x float> %x) #0 {
 ; CHECK-NEXT:    [[LO:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[HI:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
-; CHECK-NEXT:    store <2 x float> [[LO]], ptr [[P]], align 4, !nontemporal [[META1:![0-9]+]]
+; CHECK-NEXT:    store <2 x float> [[LO]], ptr [[P]], align 4, !nontemporal [[META0:![0-9]+]]
 ; CHECK-NEXT:    store <2 x float> [[HI]], ptr [[P8]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -404,16 +435,9 @@ attributes #4 = { "prefer-vector-width"="512" }
 !0 = !{i32 1}
 !1 = !{}
 ;.
-; SSE: [[META0]] = !{}
-; SSE: [[META1]] = !{i32 1}
+; SSE: [[META0]] = !{i32 1}
 ;.
-; AVX2: [[META0]] = !{}
-; AVX2: [[META1]] = !{i32 1}
+; AVX2: [[META0]] = !{i32 1}
 ;.
-; AVX512: [[META0]] = !{}
-; AVX512: [[META1]] = !{i32 1}
+; AVX512: [[META0]] = !{i32 1}
 ;.
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX2: {{.*}}
-; AVX512: {{.*}}
-; SSE: {{.*}}
