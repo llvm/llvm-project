@@ -1123,6 +1123,7 @@ LLVM_DUMP_METHOD void ReadyQueue::dump() const {
 // Provide a vtable anchor.
 struct ScheduleDAGMI::AntiDepState {
   std::unique_ptr<AntiDepBreaker> Breaker;
+  AggressiveAntiDepBreaker *Aggressive = nullptr;
   unsigned EndIndex = 0;
   MachineBasicBlock::iterator ScanPos;
   bool RegionProcessed = false;
@@ -1146,8 +1147,10 @@ ScheduleDAGMI::ScheduleDAGMI(MachineSchedContext *C,
     SmallVector<const TargetRegisterClass *, 4> CriticalPathRCs;
     C->MF->getSubtarget().getCriticalPathRCs(CriticalPathRCs);
     AntiDep = std::make_unique<AntiDepState>();
-    AntiDep->Breaker = std::make_unique<AggressiveAntiDepBreaker>(
+    auto Breaker = std::make_unique<AggressiveAntiDepBreaker>(
         *C->MF, *C->RegClassInfo, CriticalPathRCs);
+    AntiDep->Aggressive = Breaker.get();
+    AntiDep->Breaker = std::move(Breaker);
   } else if (AntiDepMode == TargetSubtargetInfo::ANTIDEP_CRITICAL) {
     AntiDep = std::make_unique<AntiDepState>();
     AntiDep->Breaker.reset(
@@ -1239,6 +1242,8 @@ void ScheduleDAGMI::startBlock(MachineBasicBlock *bb) {
 
 void ScheduleDAGMI::finishBlock() {
   SchedImpl->leaveMBB();
+  if (AntiDep && AntiDep->Aggressive)
+    AntiDep->Aggressive->BreakLoopCarriedAntiDependencies(*BB, *MLI);
   if (AntiDep)
     AntiDep->Breaker->FinishBlock();
   ScheduleDAGInstrs::finishBlock();
