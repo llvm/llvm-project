@@ -39,9 +39,11 @@ SBCommandReturnObjectImpl::SBCommandReturnObjectImpl(
 
 SBCommandReturnObjectImpl &
 SBCommandReturnObjectImpl::operator=(const SBCommandReturnObjectImpl &rhs) {
+  // After the copy-and-swap, `copy` holds the previous state of `this`.
+  // `copy` will be destroyed when it goes out of scope.
   SBCommandReturnObjectImpl copy(rhs);
-  std::swap(m_ptr, copy.m_ptr);
-  std::swap(m_owned, copy.m_owned);
+  std::swap(this->m_ptr, copy.m_ptr);
+  std::swap(this->m_owned, copy.m_owned);
   return *this;
 }
 
