@@ -1858,7 +1858,8 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
   // InlineAsm::Flag::setRegMayBeFolded()).
   auto ParseOptionalFoldable = [&]() {
     if (Token.is(MIToken::Identifier) && Token.stringValue() == "foldable") {
-      if (!F.isRegDefKind() && !F.isRegUseKind() && !F.isRegDefEarlyClobberKind())
+      if (!F.isRegDefKind() && !F.isRegUseKind() &&
+          !F.isRegDefEarlyClobberKind())
         return error("only a register operand can be 'foldable'");
 
       F.setRegMayBeFolded(true);
