@@ -58,14 +58,18 @@ llvm.func @nvvm_ex2_ftz(%arg0: f32) -> f32 {
 
 // CHECK-LABEL: @nvvm_ex2_v1f32
 llvm.func @nvvm_ex2_v1f32(%arg0: vector<1xf32>) -> vector<1xf32> {
-  // CHECK: call <1 x float> @llvm.nvvm.ex2.approx.v1f32(<1 x float> %{{.*}})
+  // CHECK: %[[LANE:.*]] = extractelement <1 x float> %{{.*}}, i32 0
+  // CHECK: %[[RES:.*]] = call float @llvm.nvvm.ex2.approx.f32(float %[[LANE]])
+  // CHECK: insertelement <1 x float> poison, float %[[RES]], i32 0
   %0 = nvvm.ex2 %arg0 : vector<1xf32>
   llvm.return %0 : vector<1xf32>
 }
 
 // CHECK-LABEL: @nvvm_ex2_v1f32_ftz
 llvm.func @nvvm_ex2_v1f32_ftz(%arg0: vector<1xf32>) -> vector<1xf32> {
-  // CHECK: call <1 x float> @llvm.nvvm.ex2.approx.ftz.v1f32(<1 x float> %{{.*}})
+  // CHECK: %[[LANE:.*]] = extractelement <1 x float> %{{.*}}, i32 0
+  // CHECK: %[[RES:.*]] = call float @llvm.nvvm.ex2.approx.ftz.f32(float %[[LANE]])
+  // CHECK: insertelement <1 x float> poison, float %[[RES]], i32 0
   %0 = nvvm.ex2 %arg0 ftz = true : vector<1xf32>
   llvm.return %0 : vector<1xf32>
 }
