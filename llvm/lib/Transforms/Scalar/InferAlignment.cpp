@@ -16,6 +16,8 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/DomConditionCache.h"
+#include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -114,9 +116,12 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
   const DataLayout &DL = F.getDataLayout();
   bool Changed = false;
 
+  DomConditionCache DC;
   // Enforce preferred type alignment if possible. We do this as a separate
   // pass first, because it may improve the alignments we infer below.
   for (BasicBlock &BB : F) {
+    if (auto *BI = dyn_cast<CondBrInst>(BB.getTerminator()))
+      DC.registerBranch(BI);
     for (Instruction &I : BB) {
       Changed |= tryToImproveAlign(
           DL, &I, [&](Value *PtrOp, Align OldAlign, Align PrefAlign) {
@@ -128,9 +133,12 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
     }
   }
 
+  SimplifyQuery SQ(DL, /*TLI=*/nullptr, &DT, &AC, /*CxtI=*/nullptr,
+                   /*UseInstrInfo=*/true, /*CanUseUndef=*/true, &DC);
+
   // Compute alignment from known bits.
   auto InferFromKnownBits = [&](Instruction &I, Value *PtrOp) {
-    KnownBits Known = computeKnownBits(PtrOp, DL, &AC, &I, &DT);
+    KnownBits Known = computeKnownBits(PtrOp, SQ.getWithInstruction(&I));
     unsigned TrailZ =
         std::min(Known.countMinTrailingZeros(), +Value::MaxAlignmentExponent);
     return Align::fromLog2(std::min(Known.getBitWidth() - 1, TrailZ));
