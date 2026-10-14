@@ -72,6 +72,7 @@ class CompileUnitAPITestCase(TestBase):
         self.assertTrue(main_cu.IsValid(), "Main executable CU is not valid")
         return main_cu
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_is_optimized(self):
         """A compile unit built with optimization reports it."""
         self.build(dictionary={"CFLAGS_EXTRAS": "-O1"})

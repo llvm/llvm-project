@@ -952,9 +952,6 @@ public:
   /// llvm.lifetime.end marker.
   LLVM_ABI bool isLifetimeStartOrEnd() const LLVM_READONLY;
 
-  /// Return true if the instruction is a DbgInfoIntrinsic or PseudoProbeInst.
-  LLVM_ABI bool isDebugOrPseudoInst() const LLVM_READONLY;
-
   /// Create a copy of 'this' instruction that is identical in all ways except
   /// the following:
   ///   * The instruction has no parent

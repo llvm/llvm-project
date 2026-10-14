@@ -143,9 +143,9 @@ Module::Module(const ModuleSpec &module_spec)
             static_cast<void *>(this),
             module_spec.GetArchitecture().GetArchitectureName(),
             module_spec.GetFileSpec().GetPath().c_str(),
-            module_spec.GetObjectName().IsEmpty() ? "" : "(",
-            module_spec.GetObjectName().AsCString(""),
-            module_spec.GetObjectName().IsEmpty() ? "" : ")");
+            module_spec.GetObjectName().empty() ? "" : "(",
+            module_spec.GetObjectName().c_str(),
+            module_spec.GetObjectName().empty() ? "" : ")");
 
   auto extractor_sp = module_spec.GetExtractor();
   lldb::offset_t file_size = 0;
@@ -216,10 +216,10 @@ Module::Module(const ModuleSpec &module_spec)
     m_symfile_spec = matching_module_spec.GetSymbolFileSpec();
 
   // Copy the object name over
-  if (matching_module_spec.GetObjectName())
-    m_object_name = matching_module_spec.GetObjectName();
-  else
-    m_object_name = module_spec.GetObjectName();
+  if (!matching_module_spec.GetObjectName().empty())
+    m_object_name = ConstString(matching_module_spec.GetObjectName());
+  else if (!module_spec.GetObjectName().empty())
+    m_object_name = ConstString(module_spec.GetObjectName());
 
   // Always trust the object offset (file offset) and object modification time
   // (for mod time in a BSD static archive) of from the matching module
@@ -1484,11 +1484,9 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
       return false;
   }
 
-  ConstString object_name = module_ref.GetObjectName();
-  if (object_name) {
-    if (object_name != GetObjectName())
-      return false;
-  }
+  llvm::StringRef object_name = module_ref.GetObjectName();
+  if (!object_name.empty() && object_name != GetObjectName())
+    return false;
 
   // A module read from memory is the image at the address it was read from.
   std::optional<lldb::addr_t> load_addr = module_ref.GetLoadAddress();

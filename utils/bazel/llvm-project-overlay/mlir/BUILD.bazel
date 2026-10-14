@@ -4075,6 +4075,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":TransformDialect",
         ":TransformDialectInterfaces",
+        ":TransformDialectUtils",
         ":XeGPUDialect",
         ":XeGPUTransformOpsIncGen",
         ":XeGPUUtils",
@@ -5193,6 +5194,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/Vector/TransformOps/VectorTransformOps.h"],
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -12520,6 +12522,7 @@ cc_library(
     name = "TosaToLinalg",
     srcs = glob([
         "lib/Conversion/TosaToLinalg/*.cpp",
+        "lib/Conversion/TosaToLinalg/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/TosaToLinalg/*.h",
