@@ -458,7 +458,7 @@ defvar SiFiveP400TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneLUIADDIFusion,
                                  TuneAUIPCADDIFusion,
                                  TunePostRAScheduler,
-                                 TuneAvoidFixedPointInstructions];
+                                 TuneAvoidVXRM];
 
 def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                       [Feature64Bit,
@@ -535,7 +535,7 @@ defvar SiFiveP500TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneLUIADDIFusion,
                                  TuneAUIPCADDIFusion,
                                  TunePostRAScheduler,
-                                 TuneAvoidFixedPointInstructions];
+                                 TuneAvoidVXRM];
 
 def SIFIVE_P550 : RISCVProcessorModel<"sifive-p550", SiFiveP500Model,
                                       [Feature64Bit,
@@ -595,7 +595,7 @@ def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                        TuneNoSinkSplatOperands,
                                        TuneVXRMPipelineFlush,
                                        TunePostRAScheduler,
-                                       TuneAvoidFixedPointInstructions]>;
+                                       TuneAvoidVXRM]>;
 
 def SIFIVE_P870_D : RISCVProcessorModel<"sifive-p870-d", SiFiveP800Model,
                                        !listconcat(RVA23U64Features,
@@ -620,7 +620,7 @@ def SIFIVE_P870_D : RISCVProcessorModel<"sifive-p870-d", SiFiveP800Model,
                                         TuneNoSinkSplatOperands,
                                         TuneVXRMPipelineFlush,
                                         TunePostRAScheduler,
-                                        TuneAvoidFixedPointInstructions]> {
+                                        TuneAvoidVXRM]> {
   let MVendorID = 0x489;
   let MArchID = 0x8000000000000109;
   let MImpID = 0x14250606;
