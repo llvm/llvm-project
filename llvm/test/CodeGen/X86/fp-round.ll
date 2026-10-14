@@ -706,15 +706,13 @@ define <8 x double> @round_v8f64(<8 x double> %x) {
   ret <8 x double> %a
 }
 
-define i64 @round_f32_to_i64(float %x) {
+define i64 @round_f32_to_i64(float %x) nounwind {
 ; SSE2-LABEL: round_f32_to_i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    callq roundf@PLT
 ; SSE2-NEXT:    cvttss2si %xmm0, %rax
 ; SSE2-NEXT:    popq %rcx
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_f32_to_i64:
@@ -755,15 +753,13 @@ define i64 @round_f32_to_i64(float %x) {
   ret i64 %c
 }
 
-define i64 @round_f64_to_i64(double %x) {
+define i64 @round_f64_to_i64(double %x) nounwind {
 ; SSE2-LABEL: round_f64_to_i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    callq round@PLT
 ; SSE2-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE2-NEXT:    popq %rcx
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_f64_to_i64:
@@ -805,15 +801,13 @@ define i64 @round_f64_to_i64(double %x) {
   ret i64 %c
 }
 
-define i32 @round_f64_to_i32(double %x) {
+define i32 @round_f64_to_i32(double %x) nounwind {
 ; SSE2-LABEL: round_f64_to_i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    callq round@PLT
 ; SSE2-NEXT:    cvttsd2si %xmm0, %eax
 ; SSE2-NEXT:    popq %rcx
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_f64_to_i32:
@@ -855,11 +849,10 @@ define i32 @round_f64_to_i32(double %x) {
   ret i32 %c
 }
 
-define i64 @round_f64_to_u64(double %x) {
+define i64 @round_f64_to_u64(double %x) nounwind {
 ; SSE2-LABEL: round_f64_to_u64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    callq round@PLT
 ; SSE2-NEXT:    cvttsd2si %xmm0, %rcx
 ; SSE2-NEXT:    movq %rcx, %rdx
@@ -869,7 +862,6 @@ define i64 @round_f64_to_u64(double %x) {
 ; SSE2-NEXT:    andq %rdx, %rax
 ; SSE2-NEXT:    orq %rcx, %rax
 ; SSE2-NEXT:    popq %rcx
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_f64_to_u64:
@@ -926,11 +918,10 @@ define i64 @round_f64_to_u64(double %x) {
   ret i64 %c
 }
 
-define <4 x i32> @round_v4f32_to_v4i32(<4 x float> %x) {
+define <4 x i32> @round_v4f32_to_v4i32(<4 x float> %x) nounwind {
 ; SSE2-LABEL: round_v4f32_to_v4i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    subq $56, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 64
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    callq roundf@PLT
@@ -953,7 +944,6 @@ define <4 x i32> @round_v4f32_to_v4i32(<4 x float> %x) {
 ; SSE2-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; SSE2-NEXT:    cvttps2dq %xmm1, %xmm0
 ; SSE2-NEXT:    addq $56, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_v4f32_to_v4i32:
@@ -1056,18 +1046,15 @@ define i32 @trunc_f64_to_u32(double %x) {
   ret i32 %c
 }
 
-define i32 @trunc_f32_to_i32_multiple_uses(float %x, ptr %p) {
+define i32 @trunc_f32_to_i32_multiple_uses(float %x, ptr %p) nounwind {
 ; SSE2-LABEL: trunc_f32_to_i32_multiple_uses:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
-; SSE2-NEXT:    .cfi_offset %rbx, -16
 ; SSE2-NEXT:    movq %rdi, %rbx
 ; SSE2-NEXT:    callq truncf@PLT
 ; SSE2-NEXT:    movss %xmm0, (%rbx)
 ; SSE2-NEXT:    cvttss2si %xmm0, %eax
 ; SSE2-NEXT:    popq %rbx
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_f32_to_i32_multiple_uses:
