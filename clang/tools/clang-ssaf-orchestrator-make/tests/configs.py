@@ -21,6 +21,23 @@ def analysis_config(**overrides):
     return config.SSAFAnalysisPassConfig(**fields)
 
 
+def transformation_config(**overrides):
+    fields = dict(
+        ssaf_clang="/bin/clang",
+        ssaf_extra_clang_args=[],
+        ssaf_src_edit_merge="/bin/clang-ssaf-src-edit-merge",
+        ssaf_merge_transformation_report="/bin/clang-ssaf-merge-transformation-report",
+        ssaf_merge_conflict_report="/bin/clang-ssaf-merge-conflict-report",
+        transformation="x",
+    )
+    fields.update(overrides)
+    return config.SSAFTransformationPassConfig(**fields)
+
+
+def pass_configs():
+    return analysis_config(), transformation_config(link_unit_id="build/prg")
+
+
 def workflow_config(env=None, output_dir="/out", verbose=False):
     env = env or {}
     return config.SSAFWorkflowConfig(

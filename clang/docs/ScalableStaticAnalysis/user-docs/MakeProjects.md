@@ -12,9 +12,9 @@ step:
 - A **compilation** gets a second compilation — the frontend job the build's
   own compiler said it would run, with the `--ssaf-*` options appended and
   nothing taken away, so extraction sees exactly what the build compiles.
-- A **link** gets a `clang-ssaf-linker` invocation over the summaries of what
-  went into it. It is not a copy of the build's command and carries no
-  `--ssaf-*` options.
+- An **archive** and a **link** get a `clang-ssaf-linker`
+  invocation over the summaries of what went into them. These are not copies
+  of the build's command and carry no `--ssaf-*` options.
 
 The mapping onto the SSAF tools is direct:
 
@@ -27,21 +27,27 @@ The mapping onto the SSAF tools is direct:
    * - ``$(CXX) -c -o parser.o parser.cpp``
      - ``clang -cc1 … -o parser.o -x c++ parser.cpp
        --ssaf-extract-summaries=…``
-   * - ``$(CXX) -o app main.o parser.o``
-     - ``clang-ssaf-linker main.json parser.json``
+   * - ``$(AR) rcs libparse.a parser.o lexer.o``
+     - ``clang-ssaf-linker static-library create parser.json lexer.json``
+   * - ``$(CXX) -o app main.o libparse.a``
+     - ``clang-ssaf-linker main.json libparse.json``
 ```
 
 ## Usage
 
 Run it from the project root; that is where the build runs.
 
-There are two workflows, the second going one step further than the first:
+There are three workflows, each going one step further than the last:
 
 - **Summary extraction and linking**, with `--extract-summaries`. Every
   translation unit gets a summary, and the summaries are linked the way the
   build links the objects, into one link unit summary.
 - **Whole-program analysis**, adding `--analysis`. `clang-ssaf-analyzer` runs
   the named analyses over the link unit summary.
+- **Whole-program transformation**, adding `--transformation`. A second build
+  generates source edits and transformation reports from the analysis result,
+  and they are merged across the whole program, together with the reports of
+  the edits that conflicted.
 
 Summary extraction and linking:
 
@@ -62,6 +68,17 @@ $ clang-ssaf-orchestrator-make \
     -- make -j8
 ```
 
+Whole-program transformation, which ends in merged source edits and reports:
+
+```console
+$ clang-ssaf-orchestrator-make \
+    --extract-summaries=PointerFlow,UnsafeBufferUsage \
+    --analysis=UnsafeBufferReachableAnalysisResult \
+    --transformation=cpp-bounded-buffers \
+    -o ssaf-output \
+    -- make -j8
+```
+
 For a project configured by autoconf, run `configure` first and give the
 orchestrator only the `make` invocation.
 
@@ -78,6 +95,9 @@ orchestrator only the `make` invocation.
    * - ``--analysis=<name>``
      - Whole-program analysis to run on the link unit summary. Repeatable.
        Without it the run stops after summary extraction.
+   * - ``--transformation=<name>``
+     - Source transformation to run in the second pass. Requires
+       ``--analysis``. Without it the run stops after the analysis.
    * - ``-o``, ``--output-dir=<dir>``
      - Where the SSAF artifacts go, made absolute. Defaults to
        ``ssaf-output``. It must be absent, empty, or an earlier run's.
@@ -89,6 +109,15 @@ orchestrator only the `make` invocation.
    * - ``--ssaf-analyzer=<path>``
      - Path to ``clang-ssaf-analyzer``. Defaults to the name on ``PATH``, and
        is only required with ``--analysis``.
+   * - ``--ssaf-src-edit-merge=<path>``
+     - Path to ``clang-ssaf-src-edit-merge``. Defaults to the name on
+       ``PATH``, and is only required with ``--transformation``.
+   * - ``--ssaf-merge-transformation-report=<path>``
+     - Path to ``clang-ssaf-merge-transformation-report``. Defaults to the
+       name on ``PATH``, and is only required with ``--transformation``.
+   * - ``--ssaf-merge-conflict-report=<path>``
+     - Path to ``clang-ssaf-merge-conflict-report``. Defaults to the name on
+       ``PATH``, and is only required with ``--transformation``.
    * - ``--ssaf-extra-clang-arg=<arg>``
      - Extra argument for every SSAF compilation. Repeatable.
    * - ``-k``, ``--keep-going``
@@ -135,8 +164,21 @@ translation units, and only the whole path tells them apart.
      - Which build artifacts were inputs for the ``<path>`` build artifact.
    * - ``<output-dir>/wpa.json``
      - Whole-program analysis result.
+   * - ``<output-dir>/ssaf-artifacts/<path>.edits.yaml``
+     - Source edits for the ``<path>`` build artifact.
+   * - ``<output-dir>/ssaf-artifacts/<path>.conflicts.sarif``
+     - Edits dropped because they conflicted when the build assembled
+       ``<path>``.
+   * - ``<output-dir>/ssaf-artifacts/<path>.conflict-report.sarif``
+     - Every conflict behind the ``<path>`` build artifact: its own, and its
+       inputs'.
+   * - ``<output-dir>/ssaf-artifacts/<path>.report.sarif``
+     - Transformation report for the ``<path>`` build artifact: a
+       compilation's own, and its inputs' merged where the build assembled it.
    * - ``<output-dir>/config-analysis.json``
-     - Configuration for the analysis pass.
+     - Configuration for the analysis pass, the first build pass.
+   * - ``<output-dir>/config-transformation.json``
+     - Configuration for the transformation pass, the second build pass.
    * - ``<output-dir>/shims/``
      - Links to the shims named so they interpose the binary tools, recreated
        on every run.
@@ -157,6 +199,35 @@ input contributes the summary filed under its own id or nothing at all,
 so an artifact whose SSAF step failed takes the artifacts behind it down
 with it, and the run says so and exits non-zero.
 
+## Results
+
+A run names what it produced on stdout, which it shares with the build, one
+`key: value` line each:
+
+```{eval-rst}
+.. list-table::
+   :header-rows: 1
+
+   * - Key
+     - Value
+   * - ``summaries``
+     - How many summaries were written, for compilations, archives and links.
+   * - ``link-unit``
+     - The top-most build artifact.
+   * - ``link-unit-summary``
+     - Its summary.
+   * - ``analysis-result``
+     - The whole-program analysis result, with ``--analysis``.
+   * - ``source-edits``
+     - The link unit's merged source edits, with ``--transformation``.
+   * - ``transformation-report``
+     - The link unit's merged transformation report.
+   * - ``conflict-report``
+     - Every conflict found while merging the link unit's source edits.
+   * - ``output-dir``
+     - The output directory.
+```
+
 ## Failure handling
 
 A failing build step fails the run with the build's own exit status, and no
@@ -171,8 +242,8 @@ either way.
 ## Interposition
 
 The orchestrator populates `<output-dir>/shims/` with links named after the
-tools a build invokes — `cc`, `clang`, `c++`, `clang++` and `ld` —
-each pointing at the shim that stands in for it, and prepends that
+tools a build invokes — `cc`, `clang`, `c++`, `clang++`, `ld`, `ld.lld` and
+`ar` — each pointing at the shim that stands in for it, and prepends that
 directory to `PATH`. It also puts the path of a configuration file in
 `SSAF_CONFIG`.
 

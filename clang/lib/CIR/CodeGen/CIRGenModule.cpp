@@ -1417,8 +1417,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     // in both device and host compilations.
     if (getLangOpts().CUDA && d && d->hasAttr<HIPManagedAttr>() &&
         d->hasExternalStorage())
-      errorNYI(d->getSourceRange(),
-               "getOrCreateCIRGlobal: HIP managed attribute");
+      getCUDARuntime().handleVarRegistration(d, gv);
   }
 
   assert(!cir::MissingFeatures::addressSpace());
@@ -3943,6 +3942,12 @@ void CIRGenModule::release() {
                      builder.getArrayAttr(globalScopeAsm));
 
   emitGlobalAnnotations();
+
+  if (std::optional<cir::FramePointerKind> kind =
+          getFramePointerKind(codeGenOpts.getFramePointer()))
+    theModule->setAttr(
+        cir::CIRDialect::getModuleFramePointerAttrName(),
+        cir::FramePointerKindAttr::get(&getMLIRContext(), *kind));
 
   if (!recordLayoutEntries.empty())
     theModule->setAttr(

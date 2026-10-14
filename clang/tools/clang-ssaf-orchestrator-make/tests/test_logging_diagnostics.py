@@ -88,6 +88,28 @@ class Results(unittest.TestCase):
             ),
         )
 
+    def test_the_transformation_names_the_link_units_edits_and_reports(self):
+        self.assertEqual(
+            "source-edits: /out/prg.edits.yaml\n"
+            "transformation-report: /out/prg.report.sarif\n"
+            "conflict-report: /out/prg.conflict-report.sarif\n",
+            self._stdout(
+                lambda: logging_diagnostics.report_transformation(
+                    "/out/prg.edits.yaml",
+                    "/out/prg.report.sarif",
+                    "/out/prg.conflict-report.sarif",
+                )
+            ),
+        )
+        self.assertEqual(
+            "source-edits: /out/prg.edits.yaml\n",
+            self._stdout(
+                lambda: logging_diagnostics.report_transformation(
+                    "/out/prg.edits.yaml", None, None
+                )
+            ),
+        )
+
     def test_results_are_flushed_as_they_are_written(self):
         flushes = []
         stream = io.StringIO()

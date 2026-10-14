@@ -11,7 +11,12 @@ import traceback
 
 from .. import build_graph, config, failure_logs, logging_diagnostics, utils
 from ..failure_logs import SSAFFailureKind
-from ..ssaf_artifact_repository import SSAFArtifactRepository
+from ..ssaf_artifact_repository import (
+    SSAFArtifactKind,
+    SSAFArtifactRepository,
+    get_ssaf_artifact_id,
+)
+from .commands import artifact_of, unique
 
 SKIP_BINARY_TOOL_INVOCATION = "--ssaf-shim-skip-binary-tool-invocation"
 
@@ -181,3 +186,94 @@ class Shim:
                 logging_diagnostics.report_error("and its log could not be written")
         # A shim must never be the reason a build fails.
         return 0
+
+
+def _input_artifacts(ssaf_artifact_repo, input_build_artifact_ids, ssaf_artifact_kind):
+    found = []
+    for each in input_build_artifact_ids:
+        artifact = artifact_of(ssaf_artifact_repo, each, ssaf_artifact_kind)
+        if artifact:
+            found.append(artifact)
+    return unique(found)
+
+
+def _output_artifact(ssaf_artifact_repo, build_artifact_id, ssaf_artifact_kind):
+    return utils.make_parents(
+        ssaf_artifact_repo.get_path_for_artifact(
+            get_ssaf_artifact_id(build_artifact_id, ssaf_artifact_kind)
+        )
+    )
+
+
+def _report_nothing_to_merge(shim, what, build_artifact_id):
+    logging_diagnostics.report_note(
+        shim.workflow_config.verbose,
+        "no %s feed %s, nothing to merge" % (what, build_artifact_id.get_path()),
+    )
+
+
+def merge_edits(shim, build_artifact_id, input_build_artifact_ids):
+    ssaf_artifact_repo = shim.ssaf_artifact_repo
+    found = _input_artifacts(
+        ssaf_artifact_repo, input_build_artifact_ids, SSAFArtifactKind.EDITS
+    )
+    if not found:
+        _report_nothing_to_merge(shim, "edits", build_artifact_id)
+        return
+    command = [shim.pass_config.ssaf_src_edit_merge] + found
+    command += [
+        "-o",
+        _output_artifact(ssaf_artifact_repo, build_artifact_id, SSAFArtifactKind.EDITS),
+    ]
+    command += [
+        "--sarif-conflicts-out="
+        + ssaf_artifact_repo.get_path_for_artifact(
+            get_ssaf_artifact_id(build_artifact_id, SSAFArtifactKind.CONFLICTS)
+        )
+    ]
+    shim.run(command, SSAFFailureKind.MERGE, build_artifact_id)
+
+
+def merge_transformation_reports(shim, build_artifact_id, input_build_artifact_ids):
+    ssaf_artifact_repo = shim.ssaf_artifact_repo
+    found = _input_artifacts(
+        ssaf_artifact_repo, input_build_artifact_ids, SSAFArtifactKind.REPORT
+    )
+    if not found:
+        _report_nothing_to_merge(shim, "transformation reports", build_artifact_id)
+        return
+    command = [shim.pass_config.ssaf_merge_transformation_report] + found
+    command += [
+        "-o",
+        _output_artifact(
+            ssaf_artifact_repo, build_artifact_id, SSAFArtifactKind.REPORT
+        ),
+    ]
+    shim.run(command, SSAFFailureKind.TRANSFORMATION_REPORT, build_artifact_id)
+
+
+def merge_conflict_reports(shim, build_artifact_id, input_build_artifact_ids):
+    ssaf_artifact_repo = shim.ssaf_artifact_repo
+    found = _input_artifacts(
+        ssaf_artifact_repo, input_build_artifact_ids, SSAFArtifactKind.CONFLICT_REPORT
+    )
+    own = artifact_of(ssaf_artifact_repo, build_artifact_id, SSAFArtifactKind.CONFLICTS)
+    if own:
+        found.append(own)
+    if not found:
+        _report_nothing_to_merge(shim, "conflict reports", build_artifact_id)
+        return
+    command = [shim.pass_config.ssaf_merge_conflict_report] + found
+    command += [
+        "-o",
+        _output_artifact(
+            ssaf_artifact_repo, build_artifact_id, SSAFArtifactKind.CONFLICT_REPORT
+        ),
+    ]
+    shim.run(command, SSAFFailureKind.CONFLICT_REPORT, build_artifact_id)
+
+
+def merge_transformation_outputs(shim, build_artifact_id, input_build_artifact_ids):
+    merge_edits(shim, build_artifact_id, input_build_artifact_ids)
+    merge_transformation_reports(shim, build_artifact_id, input_build_artifact_ids)
+    merge_conflict_reports(shim, build_artifact_id, input_build_artifact_ids)

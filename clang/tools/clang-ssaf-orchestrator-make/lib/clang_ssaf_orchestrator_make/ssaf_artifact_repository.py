@@ -6,11 +6,15 @@
 import enum
 import os
 
-from .utils import coalesce_root_path, find_with_suffix
+from .utils import coalesce_root_path, find_with_suffix, read_json
 
 
 class SSAFArtifactKind(enum.Enum):
     SUMMARY = ".summary.json"
+    EDITS = ".edits.yaml"
+    CONFLICTS = ".conflicts.sarif"
+    REPORT = ".report.sarif"
+    CONFLICT_REPORT = ".conflict-report.sarif"
 
 
 class SSAFArtifactId:
@@ -51,8 +55,22 @@ class SSAFArtifactRepository:
     def has_artifact(self, ssaf_artifact_id):
         return os.path.exists(self.get_path_for_artifact(ssaf_artifact_id))
 
+    def get_path_if_present(self, ssaf_artifact_id):
+        if not self.has_artifact(ssaf_artifact_id):
+            return None
+        return self.get_path_for_artifact(ssaf_artifact_id)
+
     def _all_paths_of_kind(self, ssaf_artifact_kind):
         return find_with_suffix(self.ssaf_artifact_dir, ssaf_artifact_kind.value)
+
+    def get_link_unit_name(self, summary_path):
+        document = read_json(summary_path)
+        if document is None:
+            return None
+        for component in document.get("lu_namespace", []):
+            if component.get("kind") == "LinkUnit":
+                return component.get("name")
+        return None
 
     def count_summaries(self):
         return len(self._all_paths_of_kind(SSAFArtifactKind.SUMMARY))
