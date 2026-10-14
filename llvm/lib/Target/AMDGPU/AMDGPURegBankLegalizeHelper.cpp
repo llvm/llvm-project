@@ -269,7 +269,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   // Update EXEC, save the original EXEC value to SavedExec.
   B.buildInstr(LMC.AndSaveExecOpc)
       .addDef(SavedExec)
-      .addReg(CondRegLM, RegState::Kill)
+      .addReg(CondRegLM)
       .setOperandDead(3);
   MRI.setSimpleHint(SavedExec, CondRegLM);
 

@@ -1,0 +1,120 @@
+## Check that both linkers emit a DWARFv5 partial unit with a DW_UT_partial
+## header and a DW_AT_str_offsets_base.
+
+# RUN: yaml2obj %s -o %t.o
+
+# RUN: llvm-dwarfutil %t.o %t1
+# RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck %s --check-prefix=VERIFY
+
+# RUN: llvm-dwarfutil --linker parallel %t.o %t2
+# RUN: llvm-dwarfdump -a --verbose %t2 | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t2 | FileCheck %s --check-prefix=VERIFY
+
+## Without --build-accelerator, --no-garbage-collection does not run the linker.
+# RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF %t.o %t3
+# RUN: llvm-dwarfdump -a --verbose %t3 | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t3 | FileCheck %s --check-prefix=VERIFY
+
+# RUN: llvm-dwarfutil --linker parallel --no-garbage-collection --build-accelerator=DWARF %t.o %t4
+# RUN: llvm-dwarfdump -a --verbose %t4 | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t4 | FileCheck %s --check-prefix=VERIFY
+
+#CHECK: .debug_info contents:
+#CHECK: Compile Unit: {{.*}} version = 0x0005, unit_type = DW_UT_partial
+
+#CHECK: DW_TAG_partial_unit
+#CHECK: DW_AT_producer [DW_FORM_strx] {{.*}} "by_hand"
+#CHECK: DW_AT_name [DW_FORM_strx] {{.*}} "PU1"
+#CHECK: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
+
+#CHECK: DW_TAG_subprogram
+#CHECK: DW_AT_name [DW_FORM_strx] {{.*}} "foo1"
+#CHECK: DW_TAG_subprogram
+#CHECK: DW_AT_name [DW_FORM_strx] {{.*}} "foo2"
+
+#VERIFY: No errors.
+
+## DW_AT_ranges keeps the unit alive under garbage collection, and
+## DW_AT_addr_base resolves the ranges the linker rewrites.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x30
+  - Name:            .debug_rnglists
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "1d0000000500080000000000073011000000000000100750110000000000001000"
+  - Name:            .debug_addr
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0c000000050008003011000000000000"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_partial_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_ranges
+            Form:      DW_FORM_sec_offset
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_addr_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+  debug_info:
+    - Version: 5
+      UnitType:   DW_UT_partial
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: PU1
+            - Value:  0xc
+            - Value:  0x0
+            - Value:  0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+## 0x5d is the offset of the DW_TAG_base_type DIE below.
+            - Value: 0x5d
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value: 0x1150
+            - Value: 0x10
+            - Value: 0x5d
+        - AbbrCode: 3
+          Values:
+            - CStr: int
+        - AbbrCode: 0
+...
