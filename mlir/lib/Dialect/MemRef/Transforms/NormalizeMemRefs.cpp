@@ -462,6 +462,9 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
           }
         }
         if (!replacingMemRefUsesFailed) {
+          for (auto [oldRegion, newRegion] :
+               llvm::zip(op->getRegions(), newOp->getRegions()))
+            newRegion.takeBody(oldRegion);
           // Replace other ops with new op and delete the old op when the
           // replacement succeeded.
           op->replaceAllUsesWith(newOp);
@@ -510,12 +513,7 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
 /// without affine map, `oldOp` is returned without modification.
 Operation *NormalizeMemRefs::createOpResultsNormalized(func::FuncOp funcOp,
                                                        Operation *oldOp) {
-  // Prepare OperationState to create newOp containing normalized memref in
-  // the operation results.
-  OperationState result(oldOp->getLoc(), oldOp->getName());
-  result.addOperands(oldOp->getOperands());
-  result.addAttributes(oldOp->getAttrs());
-  // Add normalized MemRefType to the OperationState.
+  // Compute the normalized result types for the new operation.
   SmallVector<Type, 4> resultTypes;
   OpBuilder b(funcOp);
   bool resultTypeNormalized = false;
@@ -539,16 +537,15 @@ Operation *NormalizeMemRefs::createOpResultsNormalized(func::FuncOp funcOp,
     resultTypes.push_back(newMemRefType);
     resultTypeNormalized = true;
   }
-  result.addTypes(resultTypes);
   // When all of the results of `oldOp` have no memrefs or memrefs without
   // affine map, `oldOp` is returned without modification.
   if (resultTypeNormalized) {
     OpBuilder bb(oldOp);
-    for (auto &oldRegion : oldOp->getRegions()) {
-      Region *newRegion = result.addRegion();
-      newRegion->takeBody(oldRegion);
-    }
-    return bb.create(result);
+    Operation *newOp = Operation::create(
+        oldOp->getLoc(), oldOp->getName(), resultTypes, oldOp->getOperands(),
+        oldOp->getDiscardableAttrDictionary(), oldOp->getPropertiesStorage(),
+        /*successors=*/{}, oldOp->getNumRegions());
+    return bb.insert(newOp);
   }
   return oldOp;
 }

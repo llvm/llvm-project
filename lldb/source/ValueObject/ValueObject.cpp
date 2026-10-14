@@ -765,6 +765,19 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
         size_t bytes_read =
             target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
                                error, /*force_live_memory=*/true);
+        if (!error.Success()) {
+          // The live read failed. Fall back to the object file's read-only
+          // sections, but keep the live-memory error to report if the fallback
+          // fails too.
+          Status file_error;
+          size_t file_bytes_read =
+              target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
+                                 file_error, /*force_live_memory=*/false);
+          if (file_error.Success() || file_bytes_read > 0) {
+            bytes_read = file_bytes_read;
+            error = std::move(file_error);
+          }
+        }
         if (error.Success() || bytes_read > 0) {
           data.SetData(data_sp);
           return bytes_read;
@@ -811,8 +824,8 @@ uint64_t ValueObject::GetData(DataExtractor &data, Status &error) {
 
 bool ValueObject::SetData(DataExtractor &data, Status &error) {
   error.Clear();
-  if (GetIsConstant()) {
-    error = Status::FromErrorString("Cannot change the value of a constant");
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
   // Make sure our value is up to date first so that our location and location
@@ -953,14 +966,20 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
     if (cstr_address.address == 0 ||
         cstr_address.address == LLDB_INVALID_ADDRESS) {
       if (cstr_address.type == eAddressTypeHost && is_array) {
-        const char *cstr = GetDataExtractor().PeekCStr(0);
+        // The array is not required to be null-terminated, so ask for the
+        // bytes rather than for a C string. Its data can also be shorter than
+        // the array type, as for a DW_AT_const_value string, so clamp the
+        // length to what is really there.
+        DataExtractor &data = GetDataExtractor();
+        const uint8_t *cstr = data.PeekData(0, 1);
         if (cstr == nullptr) {
           s << "<invalid address>";
           error = Status::FromErrorString("invalid address");
           CopyStringDataToBufferSP(s, buffer_sp);
           return {0, was_capped};
         }
-        s << llvm::StringRef(cstr, cstr_len);
+        cstr_len = std::min<uint64_t>(cstr_len, data.GetByteSize());
+        s << llvm::StringRef(reinterpret_cast<const char *>(cstr), cstr_len);
         CopyStringDataToBufferSP(s, buffer_sp);
         return {cstr_len, was_capped};
       } else {
@@ -1001,8 +1020,12 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       // takes care of this
       while ((bytes_read = GetPointeeData(data, offset, k_max_buf_size)) > 0) {
         total_bytes_read += bytes_read;
-        const char *cstr = data.PeekCStr(0);
-        size_t len = strnlen(cstr, k_max_buf_size);
+        // The chunk holds the middle of a string as often as its end, so scan
+        // for a terminator instead of requiring one.
+        const uint8_t *bytes = data.PeekData(0, bytes_read);
+        if (bytes == nullptr)
+          break;
+        size_t len = strnlen(reinterpret_cast<const char *>(bytes), bytes_read);
         if (cstr_len_displayed < 0)
           cstr_len_displayed = len;
 
@@ -1228,6 +1251,8 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
   }
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
+  if (val_type.IsNullPtrType())
+    return false;
 
   return llvm::createStringError("type cannot be converted to bool");
 }
@@ -1715,8 +1740,8 @@ static const char *ConvertBoolean(lldb::LanguageType language_type,
 
 bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   error.Clear();
-  if (GetIsConstant()) {
-    error = Status::FromErrorString("Cannot change the value of a constant");
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
   // Make sure our value is up to date first so that our location and location
@@ -3266,10 +3291,15 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObjectConstResult::Create(
               exe_ctx.GetBestExecutionContextScope(),
               Status::FromErrorStringWithFormat(
-                  "invalid type cast detected: %s",
-                  llvm::toString(float_value_or_err.takeError()).c_str()));
+                  "invalid cast from float to integer"));
         return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                        "result");
+      } else {
+        return ValueObjectConstResult::Create(
+            exe_ctx.GetBestExecutionContextScope(),
+            Status::FromErrorStringWithFormat(
+                "cannot get value as APFloat: %s",
+                llvm::toString(float_value_or_err.takeError()).c_str()));
       }
     }
   }
@@ -3851,9 +3881,10 @@ bool ValueImpl::IsValid() {
   return target_sp && target_sp->IsValid();
 }
 
-lldb::ValueObjectSP
-ValueImpl::GetSP(Process::StopLocker &stop_locker,
-                 std::unique_lock<std::recursive_mutex> &lock, Status &error) {
+lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
+                                     TargetAPIMutex &api_mutex,
+                                     std::unique_lock<TargetAPIMutex> &lock,
+                                     Status &error) {
   if (!m_valobj_sp) {
     error = Status::FromErrorString("invalid value object");
     return m_valobj_sp;
@@ -3869,7 +3900,8 @@ ValueImpl::GetSP(Process::StopLocker &stop_locker,
   if (!target)
     return ValueObjectSP();
 
-  lock = std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
+  api_mutex = target->GetAPIMutex();
+  lock = std::unique_lock<TargetAPIMutex>(api_mutex);
 
   ProcessSP process_sp(value_sp->GetProcessSP());
   if (process_sp && !stop_locker.TryLock(&process_sp->GetRunLock())) {

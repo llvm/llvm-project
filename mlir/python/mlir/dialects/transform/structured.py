@@ -549,8 +549,8 @@ class TileUsingForOp(TileUsingForOp):
         loop_types: Union[Type, List[Type]],
         target: Union[Operation, Value],
         *,
-        sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
-        interchange: OptionalIntList = None,
+        sizes: MixedValues | DynamicIndexList | None = None,
+        interchange: MixedValues | None = None,
         loc=None,
         ip=None,
     ):
@@ -561,8 +561,8 @@ class TileUsingForOp(TileUsingForOp):
         self,
         target: Union[Operation, Value, OpView],
         *,
-        sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
-        interchange: OptionalIntList = None,
+        sizes: MixedValues | DynamicIndexList | None = None,
+        interchange: MixedValues | None = None,
         loc=None,
         ip=None,
     ):
@@ -573,18 +573,65 @@ class TileUsingForOp(TileUsingForOp):
         loop_types_or_target: Union[Type, List[Type], Operation, Value],
         target_or_none: Optional[Union[Operation, Value, OpView]] = None,
         *,
-        sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
-        interchange: OptionalIntList = None,
+        sizes: MixedValues | DynamicIndexList | None = None,
+        interchange: MixedValues | None = None,
         loc=None,
         ip=None,
     ):
-        (
-            dynamic_sizes,
-            static_sizes,
-            scalable_sizes,
-        ) = _dispatch_dynamic_index_list(sizes)
-
-        num_loops = sum(v if v == 0 else 1 for v in static_sizes)
+        packed_tile_sizes = None
+        if isinstance(sizes, (Operation, Value, OpView)):
+            dynamic_sizes, packed_tile_sizes, static_sizes = _dispatch_mixed_values(
+                sizes
+            )
+            scalable_sizes = []
+        else:
+            has_scalable_sizes = any(
+                isinstance(v, Sequence) and not isinstance(v, (str, bytes, ArrayAttr))
+                for v in (sizes or [])
+            )
+            if has_scalable_sizes:
+                (
+                    dynamic_sizes,
+                    static_sizes,
+                    scalable_sizes,
+                ) = _dispatch_dynamic_index_list(sizes)
+            else:
+                (
+                    dynamic_sizes,
+                    packed_tile_sizes,
+                    static_sizes,
+                ) = _dispatch_mixed_values(sizes)
+                if packed_tile_sizes is None:
+                    _, _, scalable_sizes = _dispatch_dynamic_index_list(sizes)
+                else:
+                    scalable_sizes = []
+        num_loops = (
+            1
+            if packed_tile_sizes is not None
+            else sum(v if v == 0 else 1 for v in static_sizes)
+        )
+        dynamic_interchange = []
+        packed_interchange = None
+        static_interchange = []
+        if isinstance(interchange, (Operation, Value, OpView)):
+            (
+                dynamic_interchange,
+                packed_interchange,
+                static_interchange,
+            ) = _dispatch_mixed_values(interchange)
+        elif (
+            isinstance(interchange, Sequence)
+            and not isinstance(interchange, (str, bytes))
+        ) or isinstance(interchange, (ArrayAttr, DenseI64ArrayAttr)):
+            (
+                dynamic_interchange,
+                static_interchange,
+                _,
+            ) = _dispatch_dynamic_index_list(interchange)
+        elif interchange is not None:
+            raise ValueError(
+                f"expected {interchange=} to be an MLIR object or sequence of mixed values"
+            )
 
         if isinstance(loop_types_or_target, (Operation, Value, OpView)):
             loop_types = [transform.AnyOpType.get()] * num_loops
@@ -605,8 +652,11 @@ class TileUsingForOp(TileUsingForOp):
             loop_types,
             target,
             dynamic_sizes=dynamic_sizes,
+            packed_tile_sizes=packed_tile_sizes,
             static_sizes=static_sizes,
-            interchange=interchange,
+            interchange=dynamic_interchange,
+            packed_interchange=packed_interchange,
+            static_interchange=static_interchange,
             scalable_sizes=scalable_sizes,
             loc=loc,
             ip=ip,

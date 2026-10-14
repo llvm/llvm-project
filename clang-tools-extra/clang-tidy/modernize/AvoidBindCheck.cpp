@@ -181,10 +181,10 @@ initializeBindArgumentForCallExpr(const MatchFinder::MatchResult &Result,
 static bool anyDescendantIsLocal(const Stmt *Statement) {
   if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Statement)) {
     const ValueDecl *Decl = DeclRef->getDecl();
-    if (const auto *Var = dyn_cast_or_null<VarDecl>(Decl)) {
-      if (Var->isLocalVarDeclOrParm())
-        return true;
-    }
+    if (const auto *Var = dyn_cast_or_null<VarDecl>(Decl);
+        Var && Var->isLocalVarDeclOrParm())
+      return true;
+
   } else if (isa<CXXThisExpr>(Statement)) {
     return true;
   }
@@ -378,12 +378,10 @@ static void addFunctionCallArgs(ArrayRef<BindArgument> Args,
 
 static bool isPlaceHolderIndexRepeated(const ArrayRef<BindArgument> Args) {
   llvm::SmallSet<size_t, 4> PlaceHolderIndices;
-  for (const BindArgument &B : Args) {
-    if (B.PlaceHolderIndex) {
-      if (!PlaceHolderIndices.insert(B.PlaceHolderIndex).second)
-        return true;
-    }
-  }
+  for (const BindArgument &B : Args)
+    if (B.PlaceHolderIndex &&
+        !PlaceHolderIndices.insert(B.PlaceHolderIndex).second)
+      return true;
   return false;
 }
 

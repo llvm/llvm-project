@@ -322,7 +322,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void push_back(const value_type& __x);
-#if _LIBCPP_STD_VER >= 14
+#ifndef _LIBCPP_CXX03_LANG
   template <class... _Args>
 #  if _LIBCPP_STD_VER >= 17
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference emplace_back(_Args&&... __args)
@@ -349,7 +349,7 @@ public:
     --__size_;
   }
 
-#if _LIBCPP_STD_VER >= 14
+#ifndef _LIBCPP_CXX03_LANG
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator emplace(const_iterator __position, _Args&&... __args) {
     return insert(__position, value_type(std::forward<_Args>(__args)...));

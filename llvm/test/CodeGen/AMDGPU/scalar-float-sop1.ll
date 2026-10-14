@@ -74,12 +74,28 @@ define amdgpu_vs float @fpext_f16_to_f32(half inreg %val) {
 }
 
 define amdgpu_vs float @fpext_hif16_to_32(<2 x half> inreg %val) {
-; CHECK-LABEL: fpext_hif16_to_32:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_cvt_hi_f32_f16 s0, s0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    ; return to shader part epilog
+; SDAG-LABEL: fpext_hif16_to_32:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_cvt_hi_f32_f16 s0, s0
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; SDAG-NEXT:    ; return to shader part epilog
+;
+; GISEL-GFX11-LABEL: fpext_hif16_to_32:
+; GISEL-GFX11:       ; %bb.0:
+; GISEL-GFX11-NEXT:    s_lshr_b32 s0, s0, 16
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GISEL-GFX11-NEXT:    s_cvt_f32_f16 s0, s0
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX11-NEXT:    ; return to shader part epilog
+;
+; GISEL-GFX12-LABEL: fpext_hif16_to_32:
+; GISEL-GFX12:       ; %bb.0:
+; GISEL-GFX12-NEXT:    s_lshr_b32 s0, s0, 16
+; GISEL-GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GISEL-GFX12-NEXT:    s_cvt_f32_f16 s0, s0
+; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX12-NEXT:    ; return to shader part epilog
   %hielt = extractelement <2 x half> %val, i32 1
   %res = fpext half %hielt to float
   ret float %res

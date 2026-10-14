@@ -274,6 +274,8 @@ public:
     return Def->getValueAsListOfDefs("allowedLoopModifiers");
   }
 
+  int getPureSince() const { return Def->getValueAsInt("pureSince"); }
+
   // Clang uses a different format for names of its directives enum.
   std::string getClangAccSpelling() const {
     StringRef Name = getSpellingForIdentifier();

@@ -454,6 +454,6 @@ for.end:
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.vectorize.width", i32 8}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.scalable.enable"}
 !3 = !{!"llvm.loop.interleave.count", i32 2}
 !4 = !{!"llvm.loop.vectorize.enable"}

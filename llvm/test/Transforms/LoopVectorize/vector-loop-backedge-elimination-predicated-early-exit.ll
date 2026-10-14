@@ -21,7 +21,7 @@ define i64 @early_exit_predicated_single_iter(i1 %c) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP0]], i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label %[[EARLY_EXIT:.*]]
 ; CHECK:       [[EARLY_EXIT]]:
 ; CHECK-NEXT:    ret i64 [[TMP3]]
@@ -50,5 +50,5 @@ exit:
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.mustprogress"}
-!2 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.predicate.enable"}
 !3 = !{!"llvm.loop.vectorize.enable"}

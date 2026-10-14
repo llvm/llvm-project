@@ -190,6 +190,44 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
   ABIName = getGnuCompatibleMipsABIName(ABIName);
 
+  // Handle features corresponding to GCC's -ffixed-REG options. MIPS spells
+  // its GPRs numerically, so preserve that spelling in the driver interface.
+#define RESERVE_GPR(REG)                                                       \
+  if (Args.hasArg(options::OPT_ffixed_##REG))                                  \
+    Features.push_back("+reserve-gpr" #REG);
+  RESERVE_GPR(1)
+  RESERVE_GPR(2)
+  RESERVE_GPR(3)
+  RESERVE_GPR(4)
+  RESERVE_GPR(5)
+  RESERVE_GPR(6)
+  RESERVE_GPR(7)
+  RESERVE_GPR(8)
+  RESERVE_GPR(9)
+  RESERVE_GPR(10)
+  RESERVE_GPR(11)
+  RESERVE_GPR(12)
+  RESERVE_GPR(13)
+  RESERVE_GPR(14)
+  RESERVE_GPR(15)
+  RESERVE_GPR(16)
+  RESERVE_GPR(17)
+  RESERVE_GPR(18)
+  RESERVE_GPR(19)
+  RESERVE_GPR(20)
+  RESERVE_GPR(21)
+  RESERVE_GPR(22)
+  RESERVE_GPR(23)
+  RESERVE_GPR(24)
+  RESERVE_GPR(25)
+  RESERVE_GPR(26)
+  RESERVE_GPR(27)
+  RESERVE_GPR(28)
+  RESERVE_GPR(29)
+  RESERVE_GPR(30)
+  RESERVE_GPR(31)
+#undef RESERVE_GPR
+
   // Historically, PIC code for MIPS was associated with -mabicalls, a.k.a
   // SVR4 abicalls. Static code does not use SVR4 calling sequences. An ABI
   // extension was developed by Richard Sandiford & Code Sourcery to support

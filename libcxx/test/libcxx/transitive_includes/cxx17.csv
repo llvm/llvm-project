@@ -198,6 +198,7 @@ ctgmath version
 cwchar cctype
 cwchar cwctype
 cwctype cctype
+debugging version
 deque cctype
 deque compare
 deque cstdint
@@ -527,11 +528,17 @@ map stdexcept
 map tuple
 map version
 mdspan version
+memory cctype
+memory climits
 memory compare
 memory cstdint
 memory cstring
+memory ctime
+memory cwchar
+memory cwctype
 memory initializer_list
 memory limits
+memory ratio
 memory tuple
 memory typeinfo
 memory version

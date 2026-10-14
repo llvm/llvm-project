@@ -432,7 +432,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
       return false;
     }
 
-    LLDB_LOG(log, "Found CFStringCreateWithBytes at {0}",
+    LLDB_LOG(log, "Found CFStringCreateWithBytes at {0:x}",
              CFStringCreateWithBytes_addr);
 
     // Build the function type:
@@ -807,7 +807,7 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
     if (sel_registerName_addr == LLDB_INVALID_ADDRESS || missing_weak)
       return false;
 
-    LLDB_LOG(log, "Found sel_registerName at {0}", sel_registerName_addr);
+    LLDB_LOG(log, "Found sel_registerName at {0:x}", sel_registerName_addr);
 
     // Build the function type: struct objc_selector
     // *sel_registerName(uint8_t*)
@@ -1094,7 +1094,7 @@ bool IRForTarget::HandleSymbol(Value *symbol) {
     return false;
   }
 
-  LLDB_LOG(log, "Found \"{0}\" at {1}", name, symbol_addr);
+  LLDB_LOG(log, "Found \"{0}\" at {1:x}", name, symbol_addr);
 
   Type *symbol_type = symbol->getType();
 
@@ -1151,7 +1151,7 @@ bool IRForTarget::HandleObjCClass(Value *classlist_reference) {
   lldb::addr_t class_ptr =
       m_decl_map->GetSymbolAddress(name_cstr, lldb::eSymbolTypeObjCClass);
 
-  LLDB_LOG(log, "Found reference to Objective-C class {0} ({1})", name,
+  LLDB_LOG(log, "Found reference to Objective-C class {0} ({1:x})", name,
            (unsigned long long)class_ptr);
 
   if (class_ptr == LLDB_INVALID_ADDRESS)

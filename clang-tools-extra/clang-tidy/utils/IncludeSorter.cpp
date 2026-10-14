@@ -82,18 +82,16 @@ determineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
         CanonicalInclude.split("/public/");
     StringRef FileCopy = CanonicalFile;
     if (FileCopy.consume_front(Parts.first) &&
-        FileCopy.consume_back(Parts.second)) {
-      // Determine the kind of this inclusion.
-      if (FileCopy == "/internal/" || FileCopy == "/proto/")
-        return IncludeSorter::IK_MainTUInclude;
-    }
+        FileCopy.consume_back(Parts.second) &&
+        // Determine the kind of this inclusion.
+        (FileCopy == "/internal/" || FileCopy == "/proto/"))
+      return IncludeSorter::IK_MainTUInclude;
   }
-  if (Style == IncludeSorter::IS_Google_ObjC) {
-    if (IncludeFile.ends_with(".generated.h") ||
-        IncludeFile.ends_with(".proto.h") ||
-        IncludeFile.ends_with(".pbobjc.h")) {
-      return IncludeSorter::IK_GeneratedInclude;
-    }
+  if (Style == IncludeSorter::IS_Google_ObjC &&
+      (IncludeFile.ends_with(".generated.h") ||
+       IncludeFile.ends_with(".proto.h") ||
+       IncludeFile.ends_with(".pbobjc.h"))) {
+    return IncludeSorter::IK_GeneratedInclude;
   }
   return IncludeSorter::IK_NonSystemInclude;
 }
@@ -201,19 +199,18 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
     return std::nullopt;
 
   if (NonEmptyKind < IncludeKind) {
-    // Create a block after.
+    // Insert directly after the nearest preceding group.
+    // This keeps clang-format able to fix up the ordering within group.
     const std::string &LastInclude = IncludeBucket[NonEmptyKind].back();
     const SourceRange LastIncludeLocation =
         IncludeLocations[LastInclude].back();
-    IncludeStmt.insert(0, LineEnding);
     return FixItHint::CreateInsertion(LastIncludeLocation.getEnd(),
                                       IncludeStmt);
   }
-  // Create a block before.
+  // Insert directly before the nearest group for the same reason as above.
   const std::string &FirstInclude = IncludeBucket[NonEmptyKind][0];
   const SourceRange FirstIncludeLocation =
       IncludeLocations[FirstInclude].back();
-  IncludeStmt.append(LineEnding);
   return FixItHint::CreateInsertion(FirstIncludeLocation.getBegin(),
                                     IncludeStmt);
 }

@@ -5,7 +5,7 @@ import gdbremote_testcase
 
 
 class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
-    @requireNotWindows  # no SIGSEGV support
+    @requireSignals
     @add_test_categories(["llgs"])
     def test_run(self):
         self.build()

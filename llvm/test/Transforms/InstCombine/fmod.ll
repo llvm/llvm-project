@@ -16,7 +16,7 @@ define float @test_inf_const(float %f) {
 ;
 entry:
   %abs = tail call float @llvm.fabs.f32(float %f)
-  %isinf = fcmp oeq float %abs, 0x7FF0000000000000
+  %isinf = fcmp oeq float %abs, +inf
   br i1 %isinf, label %return, label %if.end
 
 if.end:
@@ -132,7 +132,7 @@ define float @test_nan_input_noerrno(float nofpclass(zero) %g, i1 %c) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
-  %f = select i1 %c, float 0x7FF8000000000000, float 1.0
+  %f = select i1 %c, float +qnan, float 1.0
   %call = tail call float @fmodf(float %f, float %g)
   ret float %call
 }

@@ -79,9 +79,8 @@ lw a0, -2049(a3)
 lw a0, -2049(f0)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-2]]:8: note: operand must be a bare symbol name
-# CHECK: :[[@LINE-3]]:8: note: expected '('
-# CHECK: :[[@LINE-4]]:8: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
-# CHECK: :[[@LINE-5]]:8: note: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[@LINE-3]]:8: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+# CHECK: :[[@LINE-4]]:8: note: immediate must be an integer in the range [-2048, 2047]
 ld a0, (a3)
 # CHECK: :[[@LINE-1]]:1: error: instruction requires the following: 'Zilsd' (Load/Store pair instructions)
 

@@ -17,7 +17,7 @@ using MemPtrTy = void (Struct::*)();
 
 MemPtrTy not_noundef_memptr(MemPtrTy t){}
 // CIR: cir.func no_inline dso_local @_Z18not_noundef_memptrM6StructFvvE({{.*}}) -> !rec_anon_struct attributes {{{.*}}nothrow} {
-// LLVM: define dso_local { i64, i64 } @_Z18not_noundef_memptrM6StructFvvE({{.*}})
+// LLVM: define dso_local { i64, i64 } @_Z18not_noundef_memptrM6StructFvvE(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 
 void not_noundef_void(){}
 // CIR: cir.func no_inline dso_local @_Z16not_noundef_voidv()
@@ -52,8 +52,8 @@ void calls(MemPtrTy mpt) {
   // LLVM: call void @_Z16not_noundef_voidv()
 
   not_noundef_memptr(mpt);
-  // CIR: cir.call @_Z18not_noundef_memptrM6StructFvvE(%2) : (!rec_anon_struct) -> !rec_anon_struct
-  // LLVM: call { i64, i64 } @_Z18not_noundef_memptrM6StructFvvE({{.*}})
+  // CIR: cir.call @_Z18not_noundef_memptrM6StructFvvE(%{{.+}}, %{{.+}}) : (!s64i, !s64i) -> !rec_anon_struct
+  // LLVM: call { i64, i64 } @_Z18not_noundef_memptrM6StructFvvE(i64 %{{.+}}, i64 %{{.+}})
 
   has_noundef_ref();
   // CIR: cir.call @_Z15has_noundef_refv() : () -> (!cir.ptr<!s32i> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef})

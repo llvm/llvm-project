@@ -1,4 +1,4 @@
-!RUN: %python %S/../test_errors.py %s %flang -fopenmp
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50
 
 integer :: i, j
 ! ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1

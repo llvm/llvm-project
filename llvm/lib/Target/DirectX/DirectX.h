@@ -11,7 +11,13 @@
 #ifndef LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
 #define LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
 
+#include "llvm/Support/CommandLine.h"
+
 namespace llvm {
+namespace dxil {
+extern cl::opt<bool> PdbInPrivate;
+} // namespace dxil
+
 class AttributeMask;
 class FunctionPass;
 class ModulePass;
@@ -29,6 +35,12 @@ void initializeDXILPrepareModulePass(PassRegistry &);
 
 /// Pass to convert modules into DXIL-compatable modules
 ModulePass *createDXILPrepareModulePass();
+
+/// Initializer for DXIL debug info lowering.
+void initializeDXILDebugInfoLegacyPass(PassRegistry &);
+
+/// Pass to downgrade debug information to forms supported by DXIL.
+ModulePass *createDXILDebugInfoLegacyPass();
 
 /// Initializer for DXIL Intrinsic Expansion
 void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);

@@ -17,6 +17,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolLocator.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -800,28 +801,56 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       ModuleSpec module_spec;
       module_spec.SetTarget(target.shared_from_this());
       module_spec.GetUUID() = m_uuid;
-      if (!m_uuid.IsValid())
-        module_spec.GetArchitecture() = target.GetArchitecture();
       module_spec.GetFileSpec() = FileSpec(m_name);
 
-      // If the current platform is PlatformDarwinKernel, create a ModuleSpec
-      // with the filename set to be the bundle ID for this kext, e.g.
-      // "com.apple.filesystems.msdosfs", and ask the platform to find it.
-      // PlatformDarwinKernel does a special scan for kexts on the local
-      // system.
-      PlatformSP platform_sp(target.GetPlatform());
-      if (platform_sp) {
-        platform_sp->GetSharedModule(module_spec, process, m_module_sp, nullptr,
-                                     nullptr);
-      }
+      if (IsKernel()) {
+        // The platform's index has to win over the shared module list.
+        PlatformSP platform_sp(target.GetPlatform());
+        if (platform_sp) {
+          platform_sp->GetSharedModule(module_spec, target, m_module_sp,
+                                       nullptr, nullptr);
+        }
 
-      // Ask the Target to find this file on the local system, if possible.
-      // This will search in the list of currently-loaded files, look in the
-      // standard search paths on the system, and on a Mac it will try calling
-      // the DebugSymbols framework with the UUID to find the binary via its
-      // search methods.
-      if (!m_module_sp) {
-        m_module_sp = target.GetOrCreateModule(module_spec, true /* notify */);
+        // Ask the Target to find this file on the local system, if possible.
+        // This will search in the list of currently-loaded files, look in the
+        // standard search paths on the system, and on a Mac it will try
+        // calling the DebugSymbols framework with the UUID to find the binary
+        // via its search methods.
+        if (!m_module_sp) {
+          m_module_sp =
+              target.GetOrCreateModule(module_spec, true /* notify */);
+        }
+      } else {
+        // SymbolLocator asks the platform first, and PlatformDarwinKernel
+        // answers from its kext index, using the bundle ID in the file name.
+        StatisticsMap statistics;
+        ModuleSP shared_module_sp;
+        ModuleList::GetSharedModule(module_spec, shared_module_sp, nullptr,
+                                    nullptr, /*invoke_locate_callback=*/false,
+                                    /*invoke_symbol_locators=*/false);
+        if (!shared_module_sp) {
+          SymbolLocator::Request request;
+          request.module_spec = module_spec;
+          request.platform = target.GetPlatform();
+
+          llvm::Expected<SymbolLocator::Result> located =
+              SymbolLocator::Locate(request, target.GetDebugFileSearchPaths());
+          if (located) {
+            module_spec = located->module_spec;
+            module_spec.SetTarget(target.shared_from_this());
+            statistics = std::move(located->statistics);
+          } else {
+            // The caller reports the kexts that failed to load.
+            llvm::consumeError(located.takeError());
+          }
+        }
+
+        // Already searched, so the Target must not search again.
+        m_module_sp =
+            target.GetOrCreateModule(module_spec, false /* notify */, nullptr,
+                                     /*invoke_symbol_locators=*/false);
+        if (m_module_sp)
+          m_module_sp->GetSymbolLocatorStatistics().merge(statistics);
       }
 
       // For the kernel, we really do need an on-disk file copy of the binary

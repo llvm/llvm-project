@@ -42,6 +42,9 @@ public:
   uint8_t getStringOffsetSize() const override {
     return Header::getStringOffsetSize();
   }
+  StringRef getUUID() const override {
+    return StringRef(reinterpret_cast<const char *>(Hdr->UUID), Hdr->UUIDSize);
+  }
 
   using GsymReader::dump;
   void dump(raw_ostream &OS) override;

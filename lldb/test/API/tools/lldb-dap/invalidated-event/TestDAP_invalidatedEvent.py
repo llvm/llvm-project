@@ -4,7 +4,7 @@ stack, variables, threads has changes but the client does not
 know about it.
 """
 
-from lldbsuite.test.decorators import skipIfWasm
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs

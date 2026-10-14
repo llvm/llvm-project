@@ -106,6 +106,12 @@ void materializeOpenMPDeclareMappers(
     Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
     const Fortran::semantics::Scope *scope = nullptr);
 
+// Mark declare target globals and functions that were imported from a
+// module file.
+void markOpenMPImportedDeclareTargets(
+    Fortran::lower::AbstractConverter &converter,
+    semantics::SemanticsContext &semaCtx);
+
 namespace omp {
 /// If \p base carries OpenMP DECLARE VARIANT entries, return the variant symbol
 /// that best matches the enclosing OpenMP context, or nullptr if none matches.

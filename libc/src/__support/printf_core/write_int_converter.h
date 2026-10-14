@@ -19,8 +19,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-template <WriteMode write_mode>
-LIBC_INLINE int convert_write_int(Writer<write_mode> *writer,
+template <OverflowMode mode>
+LIBC_INLINE int convert_write_int(Writer<mode> *writer,
                                   const FormatSection &to_conv) {
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
@@ -63,11 +63,11 @@ LIBC_INLINE int convert_write_int(Writer<write_mode> *writer,
 #endif // LIBC_COPT_PRINTF_DISABLE_BITINT
     *reinterpret_cast<uintmax_t *>(to_conv.conv_val_ptr) = written;
     break;
-#if defined(LIBC_TYPES_HAS_FLOAT128)
+#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   case (LengthModifier::Q): // 'Q' is not valid for integer format; this case
                             // should not be reachable.
     break;
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
   }
   return WRITE_OK;
 }

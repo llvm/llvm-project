@@ -675,3 +675,21 @@ func.func @expect_to_parse_literal() {
   %0 = arith.constant dense<[23]> : tensor<1x!unknown<>>
   return
 }
+
+// -----
+
+// f8E8M0FNU has no encoding for a negative value. Converting the literal used
+// to keep the sign bit, and printing the result asserted in APFloat.
+func.func @negative_literal_without_signed_repr() {
+  // expected-error@below {{negative floating point literal for a type with no signed representation}}
+  %0 = arith.constant -2.000000e+00 : f8E8M0FNU
+  return
+}
+
+// -----
+
+func.func @negative_elements_literal_without_signed_repr() {
+  // expected-error@below {{negative floating point literal for a type with no signed representation}}
+  %0 = arith.constant dense<[1.000000e+00, -2.000000e+00]> : tensor<2xf8E8M0FNU>
+  return
+}

@@ -18,6 +18,8 @@
 #include "mlir/IR/MLIRContext.h"
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/DeclOpenACC.h"
+#include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/CIRDataLayoutSpec.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/InitAllDialects.h"
@@ -45,6 +47,8 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   this->astContext = &astContext;
 
   mlirContext = std::make_unique<mlir::MLIRContext>();
+  // MLIR multithreading stays enabled; the CIRDiagnosticHandler is only ever
+  // invoked from a single thread.
   cir::registerAllDialects(*mlirContext);
   mlirContext->loadDialect<mlir::DLTIDialect, cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
@@ -61,6 +65,21 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
 bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }
 
 mlir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }
+
+const Decl *CIRGenerator::getDeclForMangledName(llvm::StringRef mangledName) {
+  GlobalDecl result;
+  if (!cgm->lookupRepresentativeDecl(mangledName, result))
+    return nullptr;
+  const Decl *decl = result.getCanonicalDecl().getDecl();
+  if (auto *fd = dyn_cast<FunctionDecl>(decl)) {
+    if (fd->hasBody(fd))
+      return fd;
+  } else if (auto *td = dyn_cast<TagDecl>(decl)) {
+    if (auto *def = td->getDefinition())
+      return def;
+  }
+  return decl;
+}
 
 bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
   if (diags.hasUnrecoverableErrorOccurred())

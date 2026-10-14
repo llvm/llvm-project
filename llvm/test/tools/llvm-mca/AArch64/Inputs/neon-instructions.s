@@ -1081,6 +1081,7 @@ sshl v0.8b, v0.8b, v0.8b
 sshll v9.8h, v2.8b, #0
 sshll v12.4s, v3.4h, #4
 sshll v0.2d, v0.2s, #3
+sxtl v0.8h, v1.8b
 sshll2 v28.8h, v12.16b, #7
 sshll2 v0.4s, v0.8h, #3
 sshll2 v17.2d, v13.4s, #22
@@ -1471,6 +1472,7 @@ ushl v0.8h, v0.8h, v0.8h
 ushll v0.4s, v0.4h, #3
 ushll v18.8h, v24.8b, #4
 ushll v16.2d, v16.2s, #31
+uxtl v0.8h, v1.8b
 ushll2 v31.2d, v12.4s, #11
 ushll2 v18.4s, v22.8h, #13
 ushll2 v0.8h, v0.16b, #3

@@ -24,11 +24,11 @@ func.func @cancel_shape_cast(%arg0: vector<16xf32>) -> vector<16xf32> {
 //
 //       CHECK: %[[EX0:.*]] = vector.extract %[[A]][0] : vector<2xf32> from vector<2x2xf32>
 //       CHECK: %[[IN0:.*]] = vector.insert_strided_slice %[[EX0]], %[[UB]]
-//  CHECK-SAME:    {offsets = [0], strides = [1]} : vector<2xf32> into vector<4xf32>
+//  CHECK-SAME:    offsets = [0], strides = [1] : vector<2xf32> into vector<4xf32>
 //
 //       CHECK: %[[EX1:.*]] = vector.extract %{{.*}}[1] : vector<2xf32> from vector<2x2xf32>
 //       CHECK: %[[IN2:.*]] = vector.insert_strided_slice %[[EX1]], %[[IN0]]
-//  CHECK-SAME:    {offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
+//  CHECK-SAME:    offsets = [2], strides = [1] : vector<2xf32> into vector<4xf32>
 //       CHECK: return %[[IN2]] : vector<4xf32>
 func.func @shape_cast_2d1d(%a: vector<2x2xf32>) -> (vector<4xf32>) {
   %0 = vector.shape_cast %a : vector<2x2xf32> to vector<4xf32>
@@ -42,15 +42,15 @@ func.func @shape_cast_2d1d(%a: vector<2x2xf32>) -> (vector<4xf32>) {
 //
 //       CHECK: %[[T0:.*]] = vector.extract %[[A]][0, 0] : vector<2xf32> from vector<1x3x2xf32>
 //       CHECK: %[[T1:.*]] = vector.insert_strided_slice %[[T0]], %[[UB]]
-//  CHECK-SAME:    {offsets = [0], strides = [1]} : vector<2xf32> into vector<6xf32>
+//  CHECK-SAME:    offsets = [0], strides = [1] : vector<2xf32> into vector<6xf32>
 //
 //       CHECK: %[[T2:.*]] = vector.extract %[[A]][0, 1] : vector<2xf32> from vector<1x3x2xf32>
 //       CHECK: %[[T3:.*]] = vector.insert_strided_slice %[[T2]], %[[T1]]
-//  CHECK-SAME:    {offsets = [2], strides = [1]} : vector<2xf32> into vector<6xf32>
+//  CHECK-SAME:    offsets = [2], strides = [1] : vector<2xf32> into vector<6xf32>
 //
 //       CHECK: %[[T4:.*]] = vector.extract %[[A]][0, 2] : vector<2xf32> from vector<1x3x2xf32>
 //       CHECK: %[[T5:.*]] = vector.insert_strided_slice %[[T4]], %[[T3]]
-//  CHECK-SAME:    {offsets = [4], strides = [1]} : vector<2xf32> into vector<6xf32>
+//  CHECK-SAME:    offsets = [4], strides = [1] : vector<2xf32> into vector<6xf32>
 //       CHECK: return %[[T5]] : vector<6xf32>
 func.func @shape_cast_3d1d(%arg0 : vector<1x3x2xf32>) -> vector<6xf32> {
   %s = vector.shape_cast %arg0 : vector<1x3x2xf32> to vector<6xf32>
@@ -63,13 +63,13 @@ func.func @shape_cast_3d1d(%arg0 : vector<1x3x2xf32>) -> vector<6xf32> {
 //       CHECK: %[[UB:.*]] = ub.poison : vector<2x2xf32>
 //
 //       CHECK: %[[SS0:.*]] = vector.extract_strided_slice %[[A]]
-//  CHECK-SAME:    {offsets = [0], sizes = [2], strides = [1]} :
+//  CHECK-SAME:    offsets = [0], sizes = [2], strides = [1] :
 //  CHECK-SAME:    vector<4xf32> to vector<2xf32>
 //       CHECK: %[[res0:.*]] = vector.insert %[[SS0]], %[[UB]] [0] :
 //  CHECK-SAME:    vector<2xf32> into vector<2x2xf32>
 //
 //       CHECK: %[[SS2:.*]] = vector.extract_strided_slice %[[A]]
-//  CHECK-SAME:    {offsets = [2], sizes = [2], strides = [1]} :
+//  CHECK-SAME:    offsets = [2], sizes = [2], strides = [1] :
 //  CHECK-SAME:    vector<4xf32> to vector<2xf32>
 //       CHECK: %[[res1:.*]] = vector.insert %[[SS2]], %[[res0]] [1] :
 //  CHECK-SAME:    vector<2xf32> into vector<2x2xf32>
@@ -85,13 +85,13 @@ func.func @shape_cast_1d2d(%a: vector<4xf32>) -> (vector<2x2xf32>) {
 //       CHECK: %[[UB:.*]] = ub.poison : vector<2x1x3xf32>
 //
 //       CHECK: %[[T0:.*]] = vector.extract_strided_slice %[[A]]
-//  CHECK-SAME:    {offsets = [0], sizes = [3], strides = [1]} :
+//  CHECK-SAME:    offsets = [0], sizes = [3], strides = [1] :
 //  CHECK-SAME:    vector<6xf32> to vector<3xf32>
 //       CHECK: %[[T1:.*]] = vector.insert %[[T0]], %[[UB]] [0, 0] :
 //  CHECK-SAME:    vector<3xf32> into vector<2x1x3xf32>
 //
 //       CHECK: %[[T2:.*]] = vector.extract_strided_slice %[[A]]
-//  CHECK-SAME:    {offsets = [3], sizes = [3], strides = [1]} :
+//  CHECK-SAME:    offsets = [3], sizes = [3], strides = [1] :
 //  CHECK-SAME:    vector<6xf32> to vector<3xf32>
 //       CHECK: %[[T3:.*]] = vector.insert %[[T2]], %[[T1]] [1, 0] :
 //  CHECK-SAME:    vector<3xf32> into vector<2x1x3xf32>
@@ -232,20 +232,20 @@ func.func @postpend_unit_dims(%arg0 : vector<4xf32>) -> vector<4x1x1xf32> {
 //
 //       CHECK: %[[E0:.*]] = vector.extract %[[A]][0] : vector<10xf32>
 //       CHECK: %[[S0:.*]] = vector.extract_strided_slice %[[E0]]
-//  CHECK-SAME:    {offsets = [0], sizes = [5], {{.*}} to vector<5xf32>
+//  CHECK-SAME:    offsets = [0], sizes = [5], {{.*}} to vector<5xf32>
 //       CHECK: %[[I0:.*]] = vector.insert %[[S0]], %[[UB]] [0, 0]
 //
 //       CHECK: %[[S1:.*]] = vector.extract_strided_slice %[[E0]]
-//  CHECK-SAME:    {offsets = [5], sizes = [5], {{.*}} to vector<5xf32>
+//  CHECK-SAME:    offsets = [5], sizes = [5], {{.*}} to vector<5xf32>
 //       CHECK: %[[I1:.*]] = vector.insert %[[S1]], %[[I0]] [0, 1]
 //
 //       CHECK: %[[E1:.*]] = vector.extract %[[A]][1] : vector<10xf32>
 //       CHECK: %[[S2:.*]] = vector.extract_strided_slice %[[E1]]
-//  CHECK-SAME:    {offsets = [0], sizes = [5], {{.*}} to vector<5xf32>
+//  CHECK-SAME:    offsets = [0], sizes = [5], {{.*}} to vector<5xf32>
 //       CHECK: %[[I2:.*]] = vector.insert %[[S2]], %[[I1]] [1, 0]
 //
 //       CHECK: %[[S3:.*]] = vector.extract_strided_slice %[[E1]]
-//  CHECK-SAME:    {offsets = [5], sizes = [5], {{.*}} to vector<5xf32>
+//  CHECK-SAME:    offsets = [5], sizes = [5], {{.*}} to vector<5xf32>
 //       CHECK: %[[I3:.*]] = vector.insert %[[S3]], %[[I2]] [1, 1]
 //       CHECK: return %[[I3]] : vector<2x2x5xf32>
 func.func @expand_inner_dims(%arg0 : vector<2x10xf32>) -> vector<2x2x5xf32> {
@@ -274,18 +274,18 @@ func.func @expand_inner_dims(%arg0 : vector<2x10xf32>) -> vector<2x2x5xf32> {
 //
 //       CHECK: %[[EX0:.*]] = vector.extract %[[A]][0, 0]
 //       CHECK: %[[IN0:.*]] = vector.insert_strided_slice %[[EX0]], %[[UBSMALL]]
-//  CHECK-SAME:    {offsets = [0], {{.*}}
+//  CHECK-SAME:    offsets = [0], {{.*}}
 //       CHECK: %[[EX1:.*]] = vector.extract %[[A]][0, 1]
 //       CHECK: %[[IN1:.*]] = vector.insert_strided_slice %[[EX1]], %[[IN0]]
-//  CHECK-SAME:    {offsets = [5], {{.*}}
+//  CHECK-SAME:    offsets = [5], {{.*}}
 //       CHECK: %[[IN2:.*]] = vector.insert %[[IN1]], %[[UBLARGE]] [0, 0, 0]
 //
 //       CHECK: %[[EX2:.*]] = vector.extract %[[A]][1, 0]
 //       CHECK: %[[IN3:.*]] = vector.insert_strided_slice %[[EX2]], %[[UBSMALL]]
-//  CHECK-SAME:    {offsets = [0], {{.*}}
+//  CHECK-SAME:    offsets = [0], {{.*}}
 //       CHECK: %[[EX3:.*]] = vector.extract %[[A]][1, 1]
 //       CHECK: %[[IN4:.*]] = vector.insert_strided_slice %[[EX3]], %[[IN3]]
-//  CHECK-SAME:    {offsets = [5], {{.*}}
+//  CHECK-SAME:    offsets = [5], {{.*}}
 //       CHECK: %[[IN5:.*]] = vector.insert %[[IN4]], %[[IN2]] [0, 1, 0]
 //       CHECK: return %[[IN5]] : vector<1x2x1x10xi8>
 func.func @collapse_inner_dims(%arg0 : vector<2x2x5xi8>) -> vector<1x2x1x10xi8> {
@@ -319,36 +319,36 @@ func.func @collapse_inner_dims(%arg0 : vector<2x2x5xi8>) -> vector<1x2x1x10xi8> 
 // First 10 elements:
 //       CHECK: %[[EX0:.*]] = vector.extract %[[A]][0] : vector<15xi8> from vector<2x15xi8>
 //       CHECK: %[[SS0:.*]] = vector.extract_strided_slice %[[EX0]]
-//  CHECK-SAME:    {offsets = [0], {{.*}} to vector<5xi8>
+//  CHECK-SAME:    offsets = [0], {{.*}} to vector<5xi8>
 //       CHECK: %[[IN0:.*]] = vector.insert_strided_slice %[[SS0]], %[[UB0]]
-//  CHECK-SAME:    {offsets = [0], {{.*}}
+//  CHECK-SAME:    offsets = [0], {{.*}}
 //       CHECK: %[[SS1:.*]] = vector.extract_strided_slice %[[EX0]]
-//  CHECK-SAME:    {offsets = [5], {{.*}} to vector<5xi8>
+//  CHECK-SAME:    offsets = [5], {{.*}} to vector<5xi8>
 //       CHECK: %[[IN1:.*]] = vector.insert_strided_slice %[[SS1]], %[[IN0]]
-//  CHECK-SAME:    {offsets = [5], {{.*}}
+//  CHECK-SAME:    offsets = [5], {{.*}}
 //       CHECK: %[[IN2:.*]] = vector.insert %[[IN1]], %[[UB1]] [0] : vector<10xi8> into vector<3x10xi8>
 //
 // Next 10 elements:
 //       CHECK: %[[SS2:.*]] = vector.extract_strided_slice %[[EX0]]
-//  CHECK-SAME:    {offsets = [10], {{.*}} to vector<5xi8>
+//  CHECK-SAME:    offsets = [10], {{.*}} to vector<5xi8>
 //       CHECK: %[[IN3:.*]] = vector.insert_strided_slice %[[SS2]], %[[UB0]]
-//  CHECK-SAME:    {offsets = [0], {{.*}}
+//  CHECK-SAME:    offsets = [0], {{.*}}
 //       CHECK: %[[EX1:.*]] = vector.extract %[[A]][1] : vector<15xi8> from vector<2x15xi8>
 //       CHECK: %[[SS3:.*]] = vector.extract_strided_slice %[[EX1]]
-//  CHECK-SAME:    {offsets = [0], {{.*}} to vector<5xi8>
+//  CHECK-SAME:    offsets = [0], {{.*}} to vector<5xi8>
 //       CHECK: %[[IN4:.*]] = vector.insert_strided_slice %[[SS3]], %[[IN3]]
-//  CHECK-SAME:    {offsets = [5], {{.*}}
+//  CHECK-SAME:    offsets = [5], {{.*}}
 //       CHECK: %[[IN5:.*]] = vector.insert %[[IN4]], %[[IN2]] [1] : vector<10xi8> into vector<3x10xi8>
 //
 // Final 10 elements:
 //       CHECK: %[[SS4:.*]] = vector.extract_strided_slice %[[EX1]]
-//  CHECK-SAME:    {offsets = [5], {{.*}} to vector<5xi8>
+//  CHECK-SAME:    offsets = [5], {{.*}} to vector<5xi8>
 //       CHECK: %[[IN6:.*]] = vector.insert_strided_slice %[[SS4]], %[[UB0]]
-//  CHECK-SAME:    {offsets = [0], {{.*}}
+//  CHECK-SAME:    offsets = [0], {{.*}}
 //       CHECK: %[[SS5:.*]] = vector.extract_strided_slice %[[EX1]]
-//  CHECK-SAME:    {offsets = [10], {{.*}} to vector<5xi8>
+//  CHECK-SAME:    offsets = [10], {{.*}} to vector<5xi8>
 //       CHECK: %[[IN7:.*]] = vector.insert_strided_slice %[[SS5]], %[[IN6]]
-//  CHECK-SAME:    {offsets = [5], {{.*}}
+//  CHECK-SAME:    offsets = [5], {{.*}}
 //       CHECK: %[[IN8:.*]] = vector.insert %[[IN7]], %[[IN5]] [2] : vector<10xi8> into vector<3x10xi8>
 //       CHECK: return %[[IN8]] : vector<3x10xi8>
 func.func @non_dividing_gcd_decreasing(%arg0 : vector<2x15xi8>) -> vector<3x10xi8> {

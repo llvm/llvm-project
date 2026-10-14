@@ -69,14 +69,14 @@ class TestGdbRemoteAuxvSupport(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(content_raw)
         return (word_size, self.decode_gdbremote_binary(content_raw))
 
-    @requireNotWindows  # no auxv support.
-    @requireNotDarwin
+    @requireNotWindows("no auxv support.")
+    @requireNotDarwin("no auxv support.")
     def test_supports_auxv(self):
         self.build()
         self.set_inferior_startup_launch()
         self.assertTrue(self.has_auxv_support())
 
-    @requireNotWindows
+    @requireNotWindows("no auxv support.")
     @expectedFailureNetBSD
     def test_auxv_data_is_correct_size(self):
         self.build()
@@ -90,7 +90,7 @@ class TestGdbRemoteAuxvSupport(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertEqual(len(auxv_data) % (2 * word_size), 0)
         self.trace("auxv contains {} entries".format(len(auxv_data) / (2 * word_size)))
 
-    @requireNotWindows
+    @requireNotWindows("no auxv support.")
     @expectedFailureNetBSD
     def test_auxv_keys_look_valid(self):
         self.build()
@@ -120,7 +120,7 @@ class TestGdbRemoteAuxvSupport(gdbremote_testcase.GdbRemoteTestCaseBase):
             self.assertGreaterEqual(auxv_key, 1)
             self.assertLessEqual(auxv_key, 2500)
 
-    @requireNotWindows
+    @requireNotWindows("no auxv support.")
     @expectedFailureNetBSD
     def test_auxv_chunked_reads_work(self):
         self.build()

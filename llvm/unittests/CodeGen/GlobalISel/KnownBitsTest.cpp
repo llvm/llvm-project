@@ -1180,7 +1180,9 @@ static void AddRangeMetadata(LLVMContext &Context, MachineInstr *Load) {
   MachineMemOperand *NewMMO =
       Load->getParent()->getParent()->getMachineMemOperand(
           OldMMO->getPointerInfo(), OldMMO->getFlags(), OldMMO->getMemoryType(),
-          OldMMO->getAlign(), OldMMO->getAAInfo(), NewMDNode);
+          OldMMO->getAlign(),
+          MMOMetadata(/*AAInfo=*/OldMMO->getAAInfo(),
+                      /*Ranges=*/NewMDNode));
   MachineIRBuilder MIB(*Load);
   MIB.buildLoadInstr(Load->getOpcode(), Load->getOperand(0),
                      Load->getOperand(1), *NewMMO);
@@ -2119,7 +2121,8 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
     EXPECT_EQ(64u, Res.getBitWidth());
     EXPECT_EQ(NumBits - 1, Res.Zero.countr_one());
     EXPECT_EQ(64u, Res.One.countr_zero());
-    EXPECT_EQ(Align(1ull << (NumBits - 1)), Info.computeKnownAlignment(Copies[Idx]));
+    EXPECT_EQ(Align::fromLog2(NumBits - 1),
+              Info.computeKnownAlignment(Copies[Idx]));
   };
 
   const unsigned NumSetupCopies = 5;

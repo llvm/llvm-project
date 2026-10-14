@@ -4,10 +4,9 @@
 
 %st.half = type { half }
 
-; Allow speculateSelectInstLoads to fold load and select
-; even if there is an intervening bitcast.
-define <2 x i16> @test_load_bitcast_select(i1 %cond1, i1 %cond2) {
-; CHECK-LABEL: @test_load_bitcast_select(
+; Allow speculateSelectInstLoads to fold a load of a select.
+define <2 x i16> @test_load_select(i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @test_load_select(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half -nan(0x1FF) to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half 0.000000e+00 to i16
@@ -35,7 +34,7 @@ entry:
 
 %st.args = type { i32, ptr }
 
-; A bitcasted load and a direct load of select.
+; Multiple loads of a select.
 define void @test_multiple_loads_select(i1 %cmp) {
 ; CHECK-LABEL: @test_multiple_loads_select(
 ; CHECK-NEXT:  entry:

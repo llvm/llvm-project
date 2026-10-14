@@ -25,6 +25,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Frontend/OpenMP/OMPVersion.h"
 #include "llvm/Support/AllocToken.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
@@ -317,6 +318,13 @@ public:
     AKey,
     /// Return address signing uses APIB key.
     BKey
+  };
+
+  enum class SignReturnAddressHardeningKind {
+    /// Regular return address signing.
+    None,
+    /// Hardened return address signing with load from the return address.
+    LoadReturnAddress
   };
 
   enum class ThreadModelKind {
@@ -763,6 +771,12 @@ public:
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
   }
 
+  /// Check if return address authentication hardening is enabled
+  bool hasSignReturnAddressHardening() const {
+    return getSignReturnAddressHardening() !=
+           SignReturnAddressHardeningKind::None;
+  }
+
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }
 
   bool hasDefaultVisibilityExportMapping() const {
@@ -820,6 +834,11 @@ public:
   /// True when compiling for an offloading target device.
   bool isTargetDevice() const {
     return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
+  }
+
+  /// Return the OpenMP version.
+  llvm::omp::Version getOpenMPVersion() const {
+    return llvm::omp::Version(OpenMP);
   }
 
   /// Returns the most applicable C standard-compliant language version code.

@@ -77,48 +77,6 @@ struct ShuffleVectorPseudo {
   ShuffleVectorPseudo() = default;
 };
 
-/// Check if a G_EXT instruction can handle a shuffle mask \p M when the vector
-/// sources of the shuffle are different.
-std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
-                                                    unsigned NumElts) {
-  // Look for the first non-undef element.
-  auto FirstRealElt = find_if(M, [](int Elt) { return Elt >= 0; });
-  if (FirstRealElt == M.end())
-    return std::nullopt;
-
-  // Use APInt to handle overflow when calculating expected element.
-  unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
-  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1, false, true);
-
-  // The following shuffle indices must be the successive elements after the
-  // first real element.
-  if (any_of(
-          make_range(std::next(FirstRealElt), M.end()),
-          [&ExpectedElt](int Elt) { return Elt != ExpectedElt++ && Elt >= 0; }))
-    return std::nullopt;
-
-  // The index of an EXT is the first element if it is not UNDEF.
-  // Watch out for the beginning UNDEFs. The EXT index should be the expected
-  // value of the first element.  E.g.
-  // <-1, -1, 3, ...> is treated as <1, 2, 3, ...>.
-  // <-1, -1, 0, 1, ...> is treated as <2*NumElts-2, 2*NumElts-1, 0, 1, ...>.
-  // ExpectedElt is the last mask index plus 1.
-  uint64_t Imm = ExpectedElt.getZExtValue();
-  bool ReverseExt = false;
-
-  // There are two difference cases requiring to reverse input vectors.
-  // For example, for vector <4 x i32> we have the following cases,
-  // Case 1: shufflevector(<4 x i32>,<4 x i32>,<-1, -1, -1, 0>)
-  // Case 2: shufflevector(<4 x i32>,<4 x i32>,<-1, -1, 7, 0>)
-  // For both cases, we finally use mask <5, 6, 7, 0>, which requires
-  // to reverse two input vectors.
-  if (Imm < NumElts)
-    ReverseExt = true;
-  else
-    Imm -= NumElts;
-  return std::make_pair(ReverseExt, Imm);
-}
-
 /// Helper function for matchINS.
 ///
 /// \returns a value when \p M is an ins mask for \p NumInputElements.
@@ -192,15 +150,16 @@ bool matchTRN(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
-  unsigned OperandOrder;
+  unsigned OperandOrder = 0;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
+  bool TRNMask = isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder);
+  if (!TRNMask && !isTRN_v_undef_Mask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_TRN1 : AArch64::G_TRN2;
   Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
-  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 && TRNMask ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -217,11 +176,12 @@ bool matchUZP(MachineInstr &MI, MachineRegisterInfo &MRI,
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isUZPMask(ShuffleMask, NumElts, WhichResult))
+  bool UZPMask = isUZPMask(ShuffleMask, NumElts, WhichResult);
+  if (!UZPMask && !isUZP_v_undef_Mask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_UZP1 : AArch64::G_UZP2;
   Register V1 = MI.getOperand(1).getReg();
-  Register V2 = MI.getOperand(2).getReg();
+  Register V2 = MI.getOperand(UZPMask ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -230,15 +190,16 @@ bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
-  unsigned OperandOrder;
+  unsigned OperandOrder = 0;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
+  bool ZIPMask = isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder);
+  if (!ZIPMask && !isZIP_v_undef_Mask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_ZIP1 : AArch64::G_ZIP2;
   Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
-  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 && ZIPMask ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -323,35 +284,6 @@ bool matchDup(MachineInstr &MI, MachineRegisterInfo &MRI,
   return false;
 }
 
-// Check if an EXT instruction can handle the shuffle mask when the vector
-// sources of the shuffle are the same.
-bool isSingletonExtMask(ArrayRef<int> M, LLT Ty) {
-  unsigned NumElts = Ty.getNumElements();
-
-  // Assume that the first shuffle index is not UNDEF.  Fail if it is.
-  if (M[0] < 0)
-    return false;
-
-  // If this is a VEXT shuffle, the immediate value is the index of the first
-  // element.  The other shuffle indices must be the successive elements after
-  // the first one.
-  unsigned ExpectedElt = M[0];
-  for (unsigned I = 1; I < NumElts; ++I) {
-    // Increment the expected index.  If it wraps around, just follow it
-    // back to index zero and keep going.
-    ++ExpectedElt;
-    if (ExpectedElt == NumElts)
-      ExpectedElt = 0;
-
-    if (M[I] < 0)
-      continue; // Ignore UNDEF indices.
-    if (ExpectedElt != static_cast<unsigned>(M[I]))
-      return false;
-  }
-
-  return true;
-}
-
 bool matchEXT(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
@@ -360,25 +292,26 @@ bool matchEXT(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register V1 = MI.getOperand(1).getReg();
   Register V2 = MI.getOperand(2).getReg();
   auto Mask = MI.getOperand(3).getShuffleMask();
-  uint64_t Imm;
-  auto ExtInfo = getExtMask(Mask, DstTy.getNumElements());
   uint64_t ExtFactor = MRI.getType(V1).getScalarSizeInBits() / 8;
 
-  if (!ExtInfo) {
-    if (!getOpcodeDef<GImplicitDef>(V2, MRI) ||
-        !isSingletonExtMask(Mask, DstTy))
-      return false;
-
-    Imm = Mask[0] * ExtFactor;
-    MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst, {V1, V1, Imm});
+  unsigned Imm;
+  bool ReverseExt;
+  if (isEXTMask(Mask, DstTy.getNumElements(), ReverseExt, Imm)) {
+    if (ReverseExt)
+      std::swap(V1, V2);
+    Imm *= ExtFactor;
+    MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst,
+                                    {V1, V2, static_cast<uint64_t>(Imm)});
     return true;
   }
-  bool ReverseExt;
-  std::tie(ReverseExt, Imm) = *ExtInfo;
-  if (ReverseExt)
-    std::swap(V1, V2);
-  Imm *= ExtFactor;
-  MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst, {V1, V2, Imm});
+
+  if (!getOpcodeDef<GImplicitDef>(V2, MRI) ||
+      !isSingletonEXTMask(Mask, DstTy.getNumElements(), Imm))
+    return false;
+
+  Imm = Mask[0] * ExtFactor;
+  MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst,
+                                  {V1, V1, static_cast<uint64_t>(Imm)});
   return true;
 }
 
@@ -1168,6 +1101,8 @@ bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
                          Register &SrcReg) {
   assert(MI.getOpcode() == TargetOpcode::G_STORE);
   Register DstReg = MI.getOperand(0).getReg();
+  if (cast<GLoadStore>(MI).isAtomic())
+    return false;
   if (MRI.getType(DstReg).isVector())
     return false;
   // Match a store of a truncate.

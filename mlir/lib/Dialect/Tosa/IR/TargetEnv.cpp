@@ -182,7 +182,8 @@ TargetEnvAttr lookupTargetEnv(Operation *op) {
     if (!op)
       break;
 
-    if (auto attr = op->getAttrOfType<TargetEnvAttr>(TargetEnvAttr::name))
+    if (auto attr =
+            op->getDiscardableAttrOfType<TargetEnvAttr>(TargetEnvAttr::name))
       return attr;
 
     op = op->getParentOp();

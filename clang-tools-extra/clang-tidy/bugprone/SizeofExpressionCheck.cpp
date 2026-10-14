@@ -375,15 +375,14 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
 
     const auto *SzOfExpr = Result.Nodes.getNodeAs<Expr>("sizeof-expr");
 
-    if (const auto *Type = dyn_cast<ArrayType>(SizeofArgTy)) {
-      // check if the array element size is larger than one. If true,
-      // the size of the array is higher than the number of elements
-      if (!getSizeOfType(Ctx, Type->getElementType().getTypePtr()).isOne()) {
-        diag(SzOfExpr->getBeginLoc(),
-             "suspicious usage of 'sizeof' in the loop")
-            << SzOfExpr->getSourceRange();
-      }
-    }
+    // check if the array element size is larger than one. If true,
+    // the size of the array is higher than the number of elements
+    if (const auto *Type = dyn_cast<ArrayType>(SizeofArgTy);
+        Type &&
+        !getSizeOfType(Ctx, Type->getElementType().getTypePtr()).isOne())
+      diag(SzOfExpr->getBeginLoc(), "suspicious usage of 'sizeof' in the loop")
+          << SzOfExpr->getSourceRange();
+
   } else if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-pointer")) {
     diag(E->getBeginLoc(), "suspicious usage of 'sizeof()' on an expression "
                            "of pointer type")
