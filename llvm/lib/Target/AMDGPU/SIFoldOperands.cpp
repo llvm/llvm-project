@@ -1281,7 +1281,8 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
   if (UseOpIdx >= Desc.getNumOperands())
     return false;
 
-  if (!AMDGPU::isSISrcInlinableOperand(Desc, UseOpIdx))
+  // Filter out unhandled pseudos.
+  if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
     return false;
 
   if (OpToFold.isImm() && OpToFold.isOperandLegal(*TII, *UseMI, UseOpIdx)) {
