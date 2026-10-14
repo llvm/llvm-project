@@ -4,9 +4,7 @@
 define arm_aapcs_vfpcc <4 x i32> @cmpeqz_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: cmpeqz_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vorr q2, q0, q1
-; CHECK-NEXT:    vcmp.i32 eq, q2, zr
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <4 x i32> %a, zeroinitializer
@@ -479,9 +477,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @cmpeqz_v8i1(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: cmpeqz_v8i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vorr q2, q0, q1
-; CHECK-NEXT:    vcmp.i16 eq, q2, zr
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <8 x i16> %a, zeroinitializer
@@ -527,9 +523,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @cmpeqz_v16i1(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: cmpeqz_v16i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vorr q2, q0, q1
-; CHECK-NEXT:    vcmp.i8 eq, q2, zr
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <16 x i8> %a, zeroinitializer
@@ -575,18 +569,7 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @cmpeqz_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: cmpeqz_v2i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vorr q2, q0, q1
-; CHECK-NEXT:    vmov r0, r1, d4
-; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    mov.w r1, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r1, r0, #0, #8
-; CHECK-NEXT:    vmov r0, r2, d5
-; CHECK-NEXT:    orrs r0, r2
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r1, r0, #8, #8
-; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <2 x i64> %a, zeroinitializer
