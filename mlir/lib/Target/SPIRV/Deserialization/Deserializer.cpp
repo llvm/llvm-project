@@ -515,8 +515,9 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
     attributes.set("spirv.func_param_attr", it->second);
     functionParameterAttrs.erase(it);
   }
-  for (NamedAttribute decAttr : decorations[argID]) {
-    if (decAttr.getName() == "alignment") {
+  for (NamedAttribute decAttr : decorations.lookup(argID)) {
+    if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
+                                 spirv::Decoration::Alignment))) {
       attributes.set("spirv.alignment", decAttr.getValue());
       continue;
     }
