@@ -832,12 +832,22 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
     freeAfterSynchronization(Device, AsyncInfo, *ReductionAllocOrErr);
   }
 
-  if (Device.submitData(*AllocOrErr, &LocalKLE,
-                        sizeof(KernelLaunchEnvironmentTy), AsyncInfo,
-                        /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
-                        /*Loc=*/nullptr, /*Name=*/"KernelLaunchEnv"))
+  INFO(OMP_INFOTYPE_DATA_TRANSFER, Device.DeviceID,
+       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
+       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
+       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
+       sizeof(KernelLaunchEnvironmentTy));
+
+  // The allocation is fresh, so no work pending on the queue accesses it and
+  // the copy can bypass the queue. Without a queue, the plugin may write the
+  // memory directly.
+  if (const auto *Res = olMemcpy(
+          /*Queue=*/nullptr, *AllocOrErr, Device.DeviceHandle, &LocalKLE,
+          /*SrcDevice=*/nullptr, sizeof(KernelLaunchEnvironmentTy)))
     return createError(ErrorCode::BackendFailure,
-                       "failed to copy the kernel launch environment");
+                       "failed to copy the kernel launch environment to "
+                       "device %d: %s",
+                       Device.DeviceID, Res->Details);
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 
