@@ -18,7 +18,6 @@
 #include "Common/CodeGenTarget.h"
 #include "DFAEmitter.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
@@ -118,14 +117,20 @@ int DFAPacketizerEmitter::collectAllFuncUnits(
     // Convert macros to bits for each stage.
     unsigned numFUs = FUs.size();
     for (unsigned j = 0; j < numFUs; ++j) {
-      assert((j < DFA_MAX_RESOURCES) &&
-             "Exceeded maximum number of representable resources");
-      uint64_t FuncResources = 1ULL << j;
-      FUNameToBitsMap[FUs[j]->getName().str()] = FuncResources;
+      std::string FuncName = FUs[j]->getName().str();
+      auto It = FUNameToBitsMap.find(FuncName);
+      uint64_t FuncResources;
+      if (It != FUNameToBitsMap.end()) {
+        FuncResources = It->second;
+      } else {
+        assert((TotalFUs < DFA_MAX_RESOURCES) &&
+               "Exceeded maximum number of representable resources");
+        FuncResources = 1ULL << TotalFUs++;
+        FUNameToBitsMap[FuncName] = FuncResources;
+      }
       LLVM_DEBUG(dbgs() << " " << FUs[j]->getName() << ":0x"
                         << Twine::utohexstr(FuncResources));
     }
-    TotalFUs += numFUs;
     LLVM_DEBUG(dbgs() << "\n");
   }
   return TotalFUs;
@@ -217,16 +222,16 @@ void DFAPacketizerEmitter::run(raw_ostream &OS) {
   CodeGenTarget CGT(Records);
   CodeGenSchedModels CGS(Records, CGT);
 
-  StringMap<std::vector<const CodeGenProcModel *>> ItinsByNamespace;
+  std::map<std::string, std::vector<const CodeGenProcModel *>> ItinsByNamespace;
   for (const CodeGenProcModel &ProcModel : CGS.procModels()) {
     if (ProcModel.hasItineraries()) {
       auto NS = ProcModel.ItinsDef->getValueAsString("PacketizerNamespace");
-      ItinsByNamespace[NS].push_back(&ProcModel);
+      ItinsByNamespace[NS.str()].push_back(&ProcModel);
     }
   }
 
   for (auto &KV : ItinsByNamespace)
-    emitForItineraries(OS, KV.second, KV.first().str());
+    emitForItineraries(OS, KV.second, KV.first);
   OS << "} // end namespace llvm\n";
 }
 
