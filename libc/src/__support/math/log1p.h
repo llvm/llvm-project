@@ -944,10 +944,10 @@ LIBC_INLINE double log1p(double x) {
 
       volatile float tpv = 1.0f;
       volatile float tnv = -1.0f;
-      
+
       float tp = tpv - 0x1p-25f;
       float tn = tnv - 0x1p-25f;
-	  
+
       bool rdp = (tp != tpv);
       bool rdn = (tn != tnv);
 
