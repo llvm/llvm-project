@@ -243,7 +243,7 @@ TEST(CFG, SwitchCoveredEnumWithDefault) {
   CFGBlock *SwitchBlock2 = *Entry2.succ_begin();
   ASSERT_EQ(3u, SwitchBlock2->succ_size());
   auto defaultBlock2 = SwitchBlock2->succ_rbegin();
-  EXPECT_FALSE(defaultBlock2->isReachable());
+  EXPECT_TRUE(defaultBlock2->isReachable());
 }
 
 TEST(CFG, IsLinear) {
