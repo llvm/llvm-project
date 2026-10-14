@@ -5024,7 +5024,8 @@ private:
           for (auto &symbol : typeCaseScopes[typeGuardIdx]->GetSymbols()) {
             if (symbol->GetUltimate()
                     .detailsIf<Fortran::semantics::AssocEntityDetails>()) {
-              if (Fortran::evaluate::IsCoarray(
+              if (Fortran::evaluate::IsCoarray(*symbol) ||
+                  Fortran::evaluate::IsCoarray(
                       Fortran::semantics::GetAssociationRoot(symbol)))
                 TODO(loc, "coarray: associating coarray entity in select type "
                           "construct.");
