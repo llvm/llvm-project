@@ -417,6 +417,9 @@ function(create_libc_unittest fq_target_name)
     ${fq_build_target_name}
     ${fq_deps_list}
   )
+  if(TARGET libc-headers)
+    add_dependencies(${fq_build_target_name} libc-headers)
+  endif()
 
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
@@ -717,6 +720,9 @@ function(add_integration_test test_name)
   add_dependencies(${fq_build_target_name}
     libc.test.IntegrationTest.test
     ${INTEGRATION_TEST_DEPENDS})
+  if(TARGET libc-headers)
+    add_dependencies(${fq_build_target_name} libc-headers)
+  endif()
 
   # We have to use a separate var to store the command as a list because
   # the COMMAND option of `add_custom_target` cannot handle empty vars in the
@@ -1089,6 +1095,9 @@ function(add_libc_hermetic test_name)
       ${compiler_runtime}
   )
   add_dependencies(${fq_build_target_name} ${fq_deps_list})
+  if(TARGET libc-headers)
+    add_dependencies(${fq_build_target_name} libc-headers)
+  endif()
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     if(LIBC_TEST_CMD)

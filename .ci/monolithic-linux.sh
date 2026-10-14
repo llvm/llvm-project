@@ -38,6 +38,14 @@ if [[ " ${runtime_targets} " == *" check-libclc "* ]]; then
   )
 fi
 
+if [[ " ${runtime_targets} " == *" check-libc "* ]]; then
+  runtime_cmake_args+=(
+    -D LLVM_LIBC_FULL_BUILD=ON
+    -D LIBC_TEST_SKIP_DEATH_TESTS=ON
+    -D LIBC_TEST_SKIP_SHARED_TESTS=ON
+  )
+fi
+
 start-group "CMake"
 
 # Set the system llvm-symbolizer as preferred.
