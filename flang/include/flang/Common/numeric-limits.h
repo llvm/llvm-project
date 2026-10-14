@@ -22,9 +22,9 @@ public:
 };
 
 #if defined(__SIZEOF_INT128__)
-// Handle discrepancy of support of bit 128 bit integers by compiler and
+// Handle discrepancy of support of 128-bit integers by compiler and
 // standard library. The compiler may treat __int128 as a builtin type, but the
-// standard library does not define common::numeric_limits for it. Two cases are
+// standard library does not define std::numeric_limits for it. Two cases are
 // known:
 //
 // 1. clang-cl supports __int128, but MSVC, and therefore its STL used by
@@ -79,8 +79,10 @@ using numeric_limits = numeric_limits_impl<std::remove_cv_t<T>>;
 /// Same as std::numeric_limits, but also defined for 128-bit integers. While
 /// std::numeric_limits is allowed to be extended for user-defined types such
 /// as UnsignedInt128/SignedInt128 (C++ [namespace.std]), it is not for
-/// non-standard compiler extentions such as
+/// non-standard compiler extensions such as
 /// __int128/__uint128/__float128.
+///
+/// FIXME: __float128 not yet handled by detail::numeric_limits
 ///
 /// Only defining members that are actually used in Flang/Flang-RT. Feel free to
 /// add more members as needed.
@@ -90,16 +92,19 @@ using numeric_limits =
             !std::numeric_limits<T>::is_specialized,
         detail::numeric_limits<T>, std::numeric_limits<T>>;
 
+/// Same as the std:: versions, but guaranteed to be defined for 128-bit
+/// integers (__uint128/__uint128) as well. Uses the equivalent definitions of
+/// detail::numeric_limits.
 template <typename T>
-static inline constexpr bool is_arithmetic_v{numeric_limits<T>::is_specialized};
+inline constexpr bool is_arithmetic_v{numeric_limits<T>::is_specialized};
 template <typename T>
 static inline constexpr bool is_integral_v{
     numeric_limits<T>::is_specialized && numeric_limits<T>::is_integer};
 template <typename T>
-static inline constexpr bool is_signed_v{
+inline constexpr bool is_signed_v{
     numeric_limits<T>::is_specialized && numeric_limits<T>::is_signed};
 template <typename T>
-static inline constexpr bool is_unsigned_v{
+inline constexpr bool is_unsigned_v{
     numeric_limits<T>::is_specialized && !numeric_limits<T>::is_signed};
 
 } // namespace Fortran::common

@@ -131,7 +131,7 @@ template <typename T> static void TestNumericLimitsVsNative() {
     TEST(Detail::max() == Std::max());
     TEST(Detail::lowest() == Std::lowest());
   } else {
-    llvm::outs() << "common::numeric_limits is not specialized for this type\n";
+    llvm::outs() << "std::numeric_limits is not specialized for this type\n";
   }
 
   // Common may refer to either Std or Detail; in either case it must be

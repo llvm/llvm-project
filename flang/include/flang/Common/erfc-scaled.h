@@ -10,6 +10,7 @@
 #define FORTRAN_COMMON_ERFC_SCALED_H_
 
 #include "flang/Common/api-attrs.h"
+#include "flang/Common/numeric-limits.h"
 #include <cmath>
 #include <limits>
 

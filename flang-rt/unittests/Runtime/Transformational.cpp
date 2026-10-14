@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 #include "flang-rt/runtime/type-code.h"
 #include "flang/Common/float128.h"
+#include "flang/Common/numeric-limits.h"
 #include <vector>
 
 using namespace Fortran::runtime;
