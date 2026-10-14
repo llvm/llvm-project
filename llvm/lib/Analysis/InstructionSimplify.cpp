@@ -7209,6 +7209,20 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (match(Op1, m_Zero()))
       return Op0;
     break;
+  case Intrinsic::sdiv_poison:
+  case Intrinsic::udiv_poison:
+  case Intrinsic::srem_poison:
+  case Intrinsic::urem_poison:
+    // X / 0 -> poison. Unlike the instructions, a zero divisor only makes its
+    // own lane poison, so every lane of the divisor must be zero (or poison).
+    if (match(Op1, m_ZeroInt()))
+      return PoisonValue::get(ReturnType);
+    // X / 1 -> X, X % 1 -> 0
+    if (match(Op1, m_One()))
+      return IID == Intrinsic::sdiv_poison || IID == Intrinsic::udiv_poison
+                 ? Op0
+                 : Constant::getNullValue(ReturnType);
+    break;
   case Intrinsic::load_relative:
     if (auto *C0 = dyn_cast<Constant>(Op0))
       if (auto *C1 = dyn_cast<Constant>(Op1))

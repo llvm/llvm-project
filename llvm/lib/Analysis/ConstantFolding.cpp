@@ -1858,6 +1858,10 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::usub_sat:
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
+  case Intrinsic::sdiv_poison:
+  case Intrinsic::udiv_poison:
+  case Intrinsic::srem_poison:
+  case Intrinsic::urem_poison:
   case Intrinsic::bitreverse:
   case Intrinsic::is_constant:
   case Intrinsic::vector_reduce_add:
@@ -3981,6 +3985,34 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantInt::get(Ty, C0->usub_sat(*C1));
       else
         return ConstantInt::get(Ty, C0->ssub_sat(*C1));
+    case Intrinsic::sdiv_poison:
+    case Intrinsic::udiv_poison:
+    case Intrinsic::srem_poison:
+    case Intrinsic::urem_poison: {
+      // These never have undefined behavior, so an undef operand does not
+      // imply anything about the result.
+      if (!C0 || !C1)
+        return nullptr;
+      // Division by zero, and signed division of the minimum value by -1,
+      // yield poison instead of undefined behavior.
+      bool IsSigned = IntrinsicID == Intrinsic::sdiv_poison ||
+                      IntrinsicID == Intrinsic::srem_poison;
+      if (C1->isZero() ||
+          (IsSigned && C1->isAllOnes() && C0->isMinSignedValue()))
+        return PoisonValue::get(Ty);
+      switch (IntrinsicID) {
+      case Intrinsic::sdiv_poison:
+        return ConstantInt::get(Ty, C0->sdiv(*C1));
+      case Intrinsic::udiv_poison:
+        return ConstantInt::get(Ty, C0->udiv(*C1));
+      case Intrinsic::srem_poison:
+        return ConstantInt::get(Ty, C0->srem(*C1));
+      case Intrinsic::urem_poison:
+        return ConstantInt::get(Ty, C0->urem(*C1));
+      default:
+        llvm_unreachable("div/rem poison intrinsic");
+      }
+    }
     case Intrinsic::cttz:
     case Intrinsic::ctlz:
       assert(C1 && "Must be constant int");

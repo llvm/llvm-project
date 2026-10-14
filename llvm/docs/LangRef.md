@@ -24272,6 +24272,153 @@ call <void> @llvm.masked.compressstore.v8f64(<8 x double> %Tmp, ptr %Bptr, <8 x 
 
 Other targets may support this intrinsic differently, for example, by lowering it into a sequence of branches that guard scalar store operations.
 
+### Division and Remainder Intrinsics That Return Poison
+
+These intrinsics behave like the corresponding division and remainder
+instructions, except that they never have undefined behavior: the operands
+for which the instruction has undefined behavior produce a poison result
+instead. For vectors this is element-wise, so only the offending elements of
+the result are poison. The result of a `freeze` of a poison result is an
+arbitrary, but fixed, value.
+
+#### '`llvm.sdiv.poison.*`' Intrinsics
+
+##### Syntax:
+This is an overloaded intrinsic. You can use `llvm.sdiv.poison`
+on any integer bit width or vectors of integers.
+
+```
+declare i32 @llvm.sdiv.poison.i32(i32 <op1>, i32 <op2>)
+declare <4 x i32> @llvm.sdiv.poison.v4i32(<4 x i32> <op1>, <4 x i32> <op2>)
+```
+
+##### Overview:
+
+Performs signed division ({ref}`sdiv <i_sdiv>`) of two integers without
+undefined behavior.
+
+##### Arguments:
+
+The two arguments and the result have the same integer type. `<op1>` is the
+dividend and `<op2>` is the divisor.
+
+##### Semantics:
+
+Follows the same semantics as {ref}`sdiv <i_sdiv>`, except that the result is
+poison instead of undefined behavior if the divisor is 0, or if the dividend is
+the minimum signed value representable by the argument type and the divisor is
+-1.
+
+##### Examples:
+
+```llvm
+%res = call i4 @llvm.sdiv.poison.i4(i4 7, i4 2)   ; %res = 3
+%res = call i4 @llvm.sdiv.poison.i4(i4 7, i4 0)   ; %res = poison
+%res = call i4 @llvm.sdiv.poison.i4(i4 -8, i4 -1) ; %res = poison
+```
+
+#### '`llvm.udiv.poison.*`' Intrinsics
+
+##### Syntax:
+This is an overloaded intrinsic. You can use `llvm.udiv.poison`
+on any integer bit width or vectors of integers.
+
+```
+declare i32 @llvm.udiv.poison.i32(i32 <op1>, i32 <op2>)
+declare <4 x i32> @llvm.udiv.poison.v4i32(<4 x i32> <op1>, <4 x i32> <op2>)
+```
+
+##### Overview:
+
+Performs unsigned division ({ref}`udiv <i_udiv>`) of two integers without
+undefined behavior.
+
+##### Arguments:
+
+The two arguments and the result have the same integer type. `<op1>` is the
+dividend and `<op2>` is the divisor.
+
+##### Semantics:
+
+Follows the same semantics as {ref}`udiv <i_udiv>`, except that the result is
+poison instead of undefined behavior if the divisor is 0.
+
+##### Examples:
+
+```llvm
+%res = call i4 @llvm.udiv.poison.i4(i4 7, i4 2) ; %res = 3
+%res = call i4 @llvm.udiv.poison.i4(i4 7, i4 0) ; %res = poison
+```
+
+#### '`llvm.srem.poison.*`' Intrinsics
+
+##### Syntax:
+This is an overloaded intrinsic. You can use `llvm.srem.poison`
+on any integer bit width or vectors of integers.
+
+```
+declare i32 @llvm.srem.poison.i32(i32 <op1>, i32 <op2>)
+declare <4 x i32> @llvm.srem.poison.v4i32(<4 x i32> <op1>, <4 x i32> <op2>)
+```
+
+##### Overview:
+
+Computes the remainder from the signed division ({ref}`srem <i_srem>`) of two
+integers without undefined behavior.
+
+##### Arguments:
+
+The two arguments and the result have the same integer type. `<op1>` is the
+dividend and `<op2>` is the divisor.
+
+##### Semantics:
+
+Follows the same semantics as {ref}`srem <i_srem>`, except that the result is
+poison instead of undefined behavior if the divisor is 0, or if the dividend is
+the minimum signed value representable by the argument type and the divisor is
+-1.
+
+##### Examples:
+
+```llvm
+%res = call i4 @llvm.srem.poison.i4(i4 7, i4 2)   ; %res = 1
+%res = call i4 @llvm.srem.poison.i4(i4 7, i4 0)   ; %res = poison
+%res = call i4 @llvm.srem.poison.i4(i4 -8, i4 -1) ; %res = poison
+```
+
+#### '`llvm.urem.poison.*`' Intrinsics
+
+##### Syntax:
+This is an overloaded intrinsic. You can use `llvm.urem.poison`
+on any integer bit width or vectors of integers.
+
+```
+declare i32 @llvm.urem.poison.i32(i32 <op1>, i32 <op2>)
+declare <4 x i32> @llvm.urem.poison.v4i32(<4 x i32> <op1>, <4 x i32> <op2>)
+```
+
+##### Overview:
+
+Computes the remainder from the unsigned division ({ref}`urem <i_urem>`) of two
+integers without undefined behavior.
+
+##### Arguments:
+
+The two arguments and the result have the same integer type. `<op1>` is the
+dividend and `<op2>` is the divisor.
+
+##### Semantics:
+
+Follows the same semantics as {ref}`urem <i_urem>`, except that the result is
+poison instead of undefined behavior if the divisor is 0.
+
+##### Examples:
+
+```llvm
+%res = call i4 @llvm.urem.poison.i4(i4 7, i4 2) ; %res = 1
+%res = call i4 @llvm.urem.poison.i4(i4 7, i4 0) ; %res = poison
+```
+
 ### Masked Vector Arithmetic Intrinsics
 
 #### '`llvm.masked.udiv.*`' Intrinsics
