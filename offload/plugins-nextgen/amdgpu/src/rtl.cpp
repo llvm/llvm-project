@@ -2931,13 +2931,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper,
-                       bool DirectWrite) override {
+                       DataSubmitFlagsTy Flags) override {
     AMDGPUStreamTy *Stream = nullptr;
     void *PinnedPtr = nullptr;
 
     // The direct H2D write is independent of any queueing, so the caller has
     // to allow it.
-    if (DirectWrite && allowsDirectWrite(Size) &&
+    if (Flags.DirectWrite && allowsDirectWrite(Size) &&
         isHostWritable(TgtPtr, Size)) {
       publishToDeviceMemory(TgtPtr, HstPtr, Size, HostLinkIsXGMI);
       return Plugin::success();
