@@ -175,7 +175,6 @@ _LIBCPP_EXPORTED_FROM_ABI const char* __get_locale_encoding(__locale_t __loc);
 //
 
 // the *_l functions are prefixed on Windows, only available for msvcr80+, VS2005+
-// _strtold_l is not available on MinGW, so long double must be split.
 template <class _FloatT>
 _LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
 
@@ -195,9 +194,14 @@ inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(co
   return ::_strtold_l(__nptr, __endptr, __get_c_locale());
 }
 #else
-// No _LIBCPP_HIDE_FROM_ABI as exported specialisation must not inherit abi_tag.
+// _strtold_l is unavailable on MinGW. Export a plain (non-template) helper so
+// that no abi_tag is inherited from the primary template, then delegate to it.
+_LIBCPP_EXPORTED_FROM_ABI long double __strtold_c_locale(const char*, char**);
+
 template <>
-_LIBCPP_EXPORTED_FROM_ABI long double __str_to_float_c_locale<long double>(const char*, char**);
+inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
+  return __strtold_c_locale(__nptr, __endptr);
+}
 #endif
 
 //
