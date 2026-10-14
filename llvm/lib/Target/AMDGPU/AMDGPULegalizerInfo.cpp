@@ -472,6 +472,9 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   if (MemSize != RegSize && RegSize != 32)
     return false;
 
+  if (IsLoad && RegSize == 16 && !ST.d16PreservesUnusedBits())
+    return false;
+
   if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad,
                                     Query.MMODescrs[0].Ordering !=
                                         AtomicOrdering::NotAtomic))
@@ -1664,13 +1667,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
          {V4S32, ConstantPtr, V4S32, GlobalAlign32},
          {S64, ConstantPtr, S64, GlobalAlign32}});
 
-    Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
-                                     {{S16, GlobalPtr, S8, GlobalAlign8},
-                                      {S16, GlobalPtr, S16, GlobalAlign16},
-                                      {S16, LocalPtr, S8, 8},
-                                      {S16, LocalPtr, S16, 16},
-                                      {S16, PrivatePtr, S8, 8},
-                                      {S16, PrivatePtr, S16, 16}});
+    if (IsStore || ST.d16PreservesUnusedBits()) {
+      Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
+                                       {{S16, GlobalPtr, S8, GlobalAlign8},
+                                        {S16, GlobalPtr, S16, GlobalAlign16},
+                                        {S16, LocalPtr, S8, 8},
+                                        {S16, LocalPtr, S16, 16},
+                                        {S16, PrivatePtr, S8, 8},
+                                        {S16, PrivatePtr, S16, 16}});
+    }
 
     Actions.legalIf(
       [=](const LegalityQuery &Query) -> bool {
