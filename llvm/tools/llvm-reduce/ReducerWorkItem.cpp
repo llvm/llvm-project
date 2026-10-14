@@ -858,7 +858,7 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
       ExitOnError ExitOnErr(std::string(ToolName) + ": error: ");
       TM = ExitOnErr(codegen::createTargetMachineForTriple(TheTriple));
 
-      return TM->createDataLayout().getStringRepresentation();
+      return TheTriple.computeDataLayout();
     };
 
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);

@@ -7,6 +7,8 @@ RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --make-blob --data %t/input/a
 RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --make-blob --data %t/input/large
 RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --validate-if-needed -check-hash
 RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --validate-if-needed -force -allow-recovery
+RUN: rm %t/cas/v1.1/data.v1
+RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --validate-if-needed -force -allow-recovery
 RUN: FileCheck %s --input-file %t/cas/v1.log
 RUN: FileCheck %s --input-file %t/cas/v1.log --check-prefix=STANDALONE
 
@@ -30,8 +32,10 @@ RUN: FileCheck %s --input-file %t/cas/v1.log --check-prefix=STANDALONE
 // CHECK: resize mapped file '{{.*}}index.v{{[0-9]+}}'
 // CHECK: close mmap '{{.*}}index.v{{[0-9]+}}'
 
-// CHECK: validate-if-needed '{{.*}}cas' boot=[[BOOT:[0-9]+]] last-valid=0 check-hash=1 allow-recovery=0 force=0 llvm-cas={{.*}}llvm-cas
-// CHECK: validate-if-needed '{{.*}}cas' boot=[[BOOT]] last-valid=[[BOOT]] check-hash=0 allow-recovery=1 force=1 llvm-cas={{.*}}llvm-cas
+// CHECK: validate-if-needed '{{.*}}cas' boot=[[BOOT:[0-9]+]] last-valid=0 check-hash=1 force=0{{$}}
+// CHECK: validate-if-needed '{{.*}}cas' boot=[[BOOT]] last-valid=[[BOOT]] check-hash=0 force=1{{$}}
+// CHECK: validate-if-needed '{{.*}}cas' boot=[[BOOT]] last-valid=[[BOOT]] check-hash=0 force=1 data was invalid
+// CHECK: recover '{{.*}}cas' boot=[[BOOT]]{{$}}
 
 // STANDALONE: standalone file create '[[PATH:.*leaf.[0-9a-f]*.v[0-9]+]].[[SUFFIX:[0-9a-f]*]]'
 // STANDALONE: standalone file rename '[[PATH]].[[SUFFIX]]' to '[[PATH]]'

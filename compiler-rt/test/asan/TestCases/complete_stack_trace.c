@@ -7,11 +7,6 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 // REQUIRES: stable-runtime
 
-// On Alpha the fast unwinder walks a frame layout the target does not use, so
-// every trace but the access one stops early. Fixed by
-// https://github.com/llvm/llvm-project/pull/220231.
-// XFAIL: alpha-target-arch
-
 #include <stdlib.h>
 
 char *p;
@@ -40,19 +35,19 @@ int main() {
 
 // CHECK: ERROR: AddressSanitizer: heap-use-after-free on address
 // CHECK: READ of size 1 at 0x{{.*}} thread T0
-// CHECK-NEXT: {{ *#0 0x.* in read_3 .*complete_stack_trace.c}}
-// CHECK-NEXT: {{ *#1 0x.* in read_2 .*complete_stack_trace.c}}
-// CHECK-NEXT: {{ *#2 0x.* in read_1 .*complete_stack_trace.c}}
-// CHECK-NEXT: {{ *#3 0x.* in main .*complete_stack_trace.c:}}[[@LINE-12]]
+// CHECK-NEXT: {{ *#0 0x.* in \.?read_3 .*complete_stack_trace.c}}
+// CHECK-NEXT: {{ *#1 0x.* in \.?read_2 .*complete_stack_trace.c}}
+// CHECK-NEXT: {{ *#2 0x.* in \.?read_1 .*complete_stack_trace.c}}
+// CHECK-NEXT: {{ *#3 0x.* in \.?main .*complete_stack_trace.c:}}[[@LINE-12]]
 
 // CHECK: freed by thread T0 here:
-// CHECK: {{ *#[0-9]+ 0x.* in free_3 .*complete_stack_trace.c}}
-// CHECK-NEXT: {{ *#[0-9]+ 0x.* in free_2 .*complete_stack_trace.c}}
-// CHECK-NEXT: {{ *#[0-9]+ 0x.* in free_1 .*complete_stack_trace.c}}
-// CHECK-NEXT: {{ *#[0-9]+ 0x.* in main .*complete_stack_trace.c:}}[[@LINE-19]]
+// CHECK: {{ *#[0-9]+ 0x.* in \.?free_3 .*complete_stack_trace.c}}
+// CHECK-NEXT: {{ *#[0-9]+ 0x.* in \.?free_2 .*complete_stack_trace.c}}
+// CHECK-NEXT: {{ *#[0-9]+ 0x.* in \.?free_1 .*complete_stack_trace.c}}
+// CHECK-NEXT: {{ *#[0-9]+ 0x.* in \.?main .*complete_stack_trace.c:}}[[@LINE-19]]
 
 // CHECK: previously allocated by thread T0 here:
-// CHECK: {{ *#[0-9]+ 0x.* in alloc_3 .*complete_stack_trace.c}}
-// CHECK-NEXT: {{ *#[0-9]+ 0x.* in alloc_2 .*complete_stack_trace.c}}
-// CHECK-NEXT: {{ *#[0-9]+ 0x.* in alloc_1 .*complete_stack_trace.c}}
-// CHECK-NEXT: {{ *#[0-9]+ 0x.* in main .*complete_stack_trace.c:}}[[@LINE-26]]
+// CHECK: {{ *#[0-9]+ 0x.* in \.?alloc_3 .*complete_stack_trace.c}}
+// CHECK-NEXT: {{ *#[0-9]+ 0x.* in \.?alloc_2 .*complete_stack_trace.c}}
+// CHECK-NEXT: {{ *#[0-9]+ 0x.* in \.?alloc_1 .*complete_stack_trace.c}}
+// CHECK-NEXT: {{ *#[0-9]+ 0x.* in \.?main .*complete_stack_trace.c:}}[[@LINE-26]]

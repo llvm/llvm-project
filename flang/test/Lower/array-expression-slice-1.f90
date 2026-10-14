@@ -1,10 +1,10 @@
 ! RUN: bbc -emit-hlfir -fwrapv -o - --outline-intrinsics %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "P"} {
-! CHECK:         %[[a1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFEa1"}
-! CHECK:         %[[a2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFEa2"}
-! CHECK:         %[[a3:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFEa3"}
-! CHECK:         %[[iv:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFEiv"}
+! CHECK:         %[[a1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFEa1")
+! CHECK:         %[[a2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFEa2")
+! CHECK:         %[[a3:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFEa3")
+! CHECK:         %[[iv:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFEiv")
 
 ! CHECK:         fir.do_loop
 ! CHECK:           fir.do_loop

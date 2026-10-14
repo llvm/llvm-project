@@ -5,8 +5,8 @@
 ! CHECK-LABEL: func.func @_QPtest_scalar(
 ! CHECK-SAME:                            %[[VAL_0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "cptr"},
 ! CHECK-SAME:                            %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "fptr"}) {
-! CHECK:         %[[CPTR:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} {uniq_name = "_QFtest_scalarEcptr"}
-! CHECK:         %[[FPTR:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_scalarEfptr"}
+! CHECK:         %[[CPTR:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} uniq_name("_QFtest_scalarEcptr")
+! CHECK:         %[[FPTR:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}} uniq_name("_QFtest_scalarEfptr") fortran_attrs<pointer>
 ! CHECK:         %[[ADDR:.*]] = fir.coordinate_of %[[CPTR]]#0, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[ADDR_VAL:.*]] = fir.load %[[ADDR]] : !fir.ref<i64>
 ! CHECK:         %[[PTR:.*]] = fir.convert %[[ADDR_VAL]] : (i64) -> !fir.ptr<f32>
@@ -26,9 +26,9 @@ end
 ! CHECK-LABEL: func.func @_QPtest_array(
 ! CHECK-SAME:                           %[[VAL_0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "cptr"},
 ! CHECK-SAME:                           %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>> {fir.bindc_name = "fptr"}) {
-! CHECK:         %[[CPTR:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} {uniq_name = "_QFtest_arrayEcptr"}
-! CHECK:         %[[FPTR:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_arrayEfptr"}
-! CHECK:         %[[ARR:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xi32>>, !fir.heap<!fir.array<2xi32>>)
+! CHECK:         %[[CPTR:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} uniq_name("_QFtest_arrayEcptr")
+! CHECK:         %[[FPTR:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}} uniq_name("_QFtest_arrayEfptr") fortran_attrs<pointer>
+! CHECK:         %[[ARR:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp.arrayctor") : (!fir.heap<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xi32>>, !fir.heap<!fir.array<2xi32>>)
 ! CHECK:         %[[ASSOC:.*]]:3 = hlfir.associate %{{.*}}({{.*}}) {{.*}} : (!hlfir.expr<2xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>, i1)
 ! CHECK:         %[[ADDR:.*]] = fir.coordinate_of %[[CPTR]]#0, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[ADDR_VAL:.*]] = fir.load %[[ADDR]] : !fir.ref<i64>
@@ -57,8 +57,8 @@ end
 ! CHECK-LABEL: func.func @_QPtest_char(
 ! CHECK-SAME:                          %[[VAL_0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "cptr"},
 ! CHECK-SAME:                          %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,10>>>> {fir.bindc_name = "fptr"}) {
-! CHECK:         %[[CPTR:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} {uniq_name = "_QFtest_charEcptr"}
-! CHECK:         %[[FPTR:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_charEfptr"}
+! CHECK:         %[[CPTR:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} uniq_name("_QFtest_charEcptr")
+! CHECK:         %[[FPTR:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %{{.*}} uniq_name("_QFtest_charEfptr") fortran_attrs<pointer>
 ! CHECK:         %[[ADDR:.*]] = fir.coordinate_of %[[CPTR]]#0, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[ADDR_VAL:.*]] = fir.load %[[ADDR]] : !fir.ref<i64>
 ! CHECK:         %[[PTR:.*]] = fir.convert %[[ADDR_VAL]] : (i64) -> !fir.ptr<!fir.char<1,10>>
@@ -79,12 +79,12 @@ end
 ! CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "cptr"},
 ! CHECK-SAME:                               %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x!fir.char<1,?>>>>> {fir.bindc_name = "fptr"},
 ! CHECK-SAME:                               %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:         %[[N:.*]]:2 = hlfir.declare %[[VAL_2]] {{.*}} {uniq_name = "_QFtest_chararrayEn"}
+! CHECK:         %[[N:.*]]:2 = hlfir.declare %[[VAL_2]] {{.*}} uniq_name("_QFtest_chararrayEn")
 ! CHECK:         %[[N_VAL:.*]] = fir.load %[[N]]#0 : !fir.ref<i32>
 ! CHECK:         %[[ZERO:.*]] = arith.constant 0 : i32
 ! CHECK:         %[[CMP:.*]] = arith.cmpi sgt, %[[N_VAL]], %[[ZERO]] : i32
 ! CHECK:         %[[LEN:.*]] = arith.select %[[CMP]], %[[N_VAL]], %[[ZERO]] : i32
-! CHECK:         %[[FPTR:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[LEN]] {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_chararrayEfptr"}
+! CHECK:         %[[FPTR:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[LEN]] {{.*}} uniq_name("_QFtest_chararrayEfptr") fortran_attrs<pointer>
 ! CHECK:         %[[ASSOC:.*]]:3 = hlfir.associate %{{.*}}({{.*}}) {{.*}} : (!hlfir.expr<2xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>, i1)
 ! CHECK:         %[[ADDR:.*]] = fir.coordinate_of %{{.*}}#0, __address
 ! CHECK:         %[[ADDR_VAL:.*]] = fir.load %[[ADDR]] : !fir.ref<i64>
@@ -116,7 +116,7 @@ subroutine dynamic_shape_size(cptr, fptr, shape)
   type(c_ptr)  :: cptr
   real, pointer :: fptr(:, :)
   integer :: shape(:)
-! CHECK:         %[[SHAPE_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdynamic_shape_sizeEshape"}
+! CHECK:         %[[SHAPE_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdynamic_shape_sizeEshape")
 ! CHECK:         %[[CZERO:.*]] = arith.constant 0 : index
 ! CHECK:         %[[E0:.*]] = fir.coordinate_of %[[SHAPE_DECL]]#1, %[[CZERO]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 ! CHECK:         %[[D1_VAL:.*]] = fir.load %[[E0]] : !fir.ref<i32>
@@ -136,7 +136,7 @@ subroutine dynamic_shape_size_2(cptr, fptr, shape, n)
   real, pointer :: fptr(:, :)
   integer :: n
   integer :: shape(n)
-! CHECK:         %[[SHAPE_DECL:.*]]:2 = hlfir.declare %{{.*}}({{.*}}) {{.*}} {uniq_name = "_QFdynamic_shape_size_2Eshape"}
+! CHECK:         %[[SHAPE_DECL:.*]]:2 = hlfir.declare %{{.*}}({{.*}}) {{.*}} uniq_name("_QFdynamic_shape_size_2Eshape")
 ! CHECK:         %[[CZERO:.*]] = arith.constant 0 : index
 ! CHECK:         %[[E0:.*]] = fir.coordinate_of %[[SHAPE_DECL]]#1, %[[CZERO]] : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 ! CHECK:         %[[D1_VAL:.*]] = fir.load %[[E0]] : !fir.ref<i32>
@@ -163,9 +163,9 @@ subroutine dynamic_shape_lower(cptr, fpr, shape, lower)
 ! CHECK:         %[[ZERO_SHAPE:.*]] = fir.shape %[[ZERO_INDEX]], %[[ZERO_INDEX]] : (index, index) -> !fir.shape<2>
 ! CHECK:         %[[INIT_BOX:.*]] = fir.embox %[[ZERO_BITS]](%[[ZERO_SHAPE]]) : (!fir.ptr<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
 ! CHECK:         fir.store %[[INIT_BOX]] to %[[FPTR_ALLOCA]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
-! CHECK:         %[[FPTR_DECL:.*]]:2 = hlfir.declare %[[FPTR_ALLOCA]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFdynamic_shape_lowerEfptr"}
-! CHECK:         %[[LOWER_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {uniq_name = "_QFdynamic_shape_lowerElower"}
-! CHECK:         %[[SHAPE_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {uniq_name = "_QFdynamic_shape_lowerEshape"}
+! CHECK:         %[[FPTR_DECL:.*]]:2 = hlfir.declare %[[FPTR_ALLOCA]] uniq_name("_QFdynamic_shape_lowerEfptr") fortran_attrs<pointer>
+! CHECK:         %[[LOWER_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} uniq_name("_QFdynamic_shape_lowerElower")
+! CHECK:         %[[SHAPE_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} uniq_name("_QFdynamic_shape_lowerEshape")
 ! CHECK:         %[[ADDR:.*]] = fir.coordinate_of %{{.*}}#0, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[ADDR_VAL:.*]] = fir.load %[[ADDR]] : !fir.ref<i64>
 ! CHECK:         %[[PTR:.*]] = fir.convert %[[ADDR_VAL]] : (i64) -> !fir.ptr<!fir.array<?x?xf32>>
@@ -200,9 +200,9 @@ subroutine dynamic_shape_lower_2(cptr, fpr, shape, lower, n)
   integer :: shape(n)
   integer :: lower(n)
 ! CHECK:         %[[FPTR_ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
-! CHECK:         %[[FPTR_DECL:.*]]:2 = hlfir.declare %[[FPTR_ALLOCA]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFdynamic_shape_lower_2Efptr"}
-! CHECK:         %[[LOWER_DECL:.*]]:2 = hlfir.declare %{{.*}}({{.*}}) {{.*}} {uniq_name = "_QFdynamic_shape_lower_2Elower"}
-! CHECK:         %[[SHAPE_DECL:.*]]:2 = hlfir.declare %{{.*}}({{.*}}) {{.*}} {uniq_name = "_QFdynamic_shape_lower_2Eshape"}
+! CHECK:         %[[FPTR_DECL:.*]]:2 = hlfir.declare %[[FPTR_ALLOCA]] uniq_name("_QFdynamic_shape_lower_2Efptr") fortran_attrs<pointer>
+! CHECK:         %[[LOWER_DECL:.*]]:2 = hlfir.declare %{{.*}}({{.*}}) {{.*}} uniq_name("_QFdynamic_shape_lower_2Elower")
+! CHECK:         %[[SHAPE_DECL:.*]]:2 = hlfir.declare %{{.*}}({{.*}}) {{.*}} uniq_name("_QFdynamic_shape_lower_2Eshape")
 ! CHECK:         %[[ADDR:.*]] = fir.coordinate_of %{{.*}}#0, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[ADDR_VAL:.*]] = fir.load %[[ADDR]] : !fir.ref<i64>
 ! CHECK:         %[[PTR:.*]] = fir.convert %[[ADDR_VAL]] : (i64) -> !fir.ptr<!fir.array<?x?xf32>>

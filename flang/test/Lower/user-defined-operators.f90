@@ -17,8 +17,8 @@ subroutine user_assignment(a, i)
   end subroutine
  end interface
  type(t) :: a
-! CHECK: %[[A:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {uniq_name = "_QFuser_assignmentEa"}
-! CHECK: %[[I:.*]]:2 = hlfir.declare %[[arg1]] {{.*}} {uniq_name = "_QFuser_assignmentEi"}
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} uniq_name("_QFuser_assignmentEa")
+! CHECK: %[[I:.*]]:2 = hlfir.declare %[[arg1]] {{.*}} uniq_name("_QFuser_assignmentEi")
 ! CHECK: hlfir.region_assign {
 ! CHECK:   %[[V_1:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
 ! CHECK:   hlfir.yield %[[V_1]] : i32

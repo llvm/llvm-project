@@ -2,103 +2,40 @@
 ; RUN: llc -mtriple=aarch64-none-eabi -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-eabi -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for uadd_v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v3i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v3i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v3i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v3i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v4i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v4i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v4i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v4i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v8i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v8i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v8i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v8i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v16i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v16i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v16i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v16i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v32i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v32i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v32i8
+; CHECK-GI:       warning: Instruction selection used fallback path for sadd_v32i8
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v32i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v2i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v2i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v2i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v2i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v3i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v3i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v3i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v3i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v4i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v4i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v4i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v4i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v8i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v8i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v8i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v8i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v16i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v16i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v16i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v16i16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v2i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v2i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v2i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v2i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v3i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v3i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v3i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v3i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v4i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v4i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v4i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v4i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v8i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v8i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v8i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v8i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v2i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v2i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v2i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v2i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v3i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v3i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v3i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v3i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v4i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v4i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v4i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v4i64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v2i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v2i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v2i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v2i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v3i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v3i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v3i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v3i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uadd_v4i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sadd_v4i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for usub_v4i128
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ssub_v4i128
 
 define <2 x i8> @uadd_v2i8(<2 x i8> %a, <2 x i8> %b) {
-; CHECK-LABEL: uadd_v2i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d2, #0x0000ff000000ff
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    and v2.8b, v0.8b, v2.8b
-; CHECK-NEXT:    add v1.2s, v2.2s, v1.2s
-; CHECK-NEXT:    fmov d2, d1
-; CHECK-NEXT:    bic v2.2s, #1, lsl #8
-; CHECK-NEXT:    cmeq v2.2s, v2.2s, v1.2s
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v2i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi d2, #0x0000ff000000ff
+; CHECK-SD-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    and v2.8b, v0.8b, v2.8b
+; CHECK-SD-NEXT:    add v1.2s, v2.2s, v1.2s
+; CHECK-SD-NEXT:    fmov d2, d1
+; CHECK-SD-NEXT:    bic v2.2s, #1, lsl #8
+; CHECK-SD-NEXT:    cmeq v2.2s, v2.2s, v1.2s
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v2i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    add v2.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    mov w9, v1.s[1]
+; CHECK-GI-NEXT:    mov w8, v2.s[1]
+; CHECK-GI-NEXT:    mov v3.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.b[1], w9
+; CHECK-GI-NEXT:    mov v3.b[1], w8
+; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    umov w8, v1.b[0]
+; CHECK-GI-NEXT:    umov w9, v1.b[1]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v1.s[1], w9
+; CHECK-GI-NEXT:    shl v1.2s, v1.2s, #31
+; CHECK-GI-NEXT:    cmlt v1.2s, v1.2s, #0
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i8>, <2 x i1>} @llvm.uadd.with.overflow(<2 x i8> %a, <2 x i8> %b)
   %e0 = extractvalue {<2 x i8>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i8>, <2 x i1>} %o, 1
@@ -107,17 +44,47 @@ define <2 x i8> @uadd_v2i8(<2 x i8> %a, <2 x i8> %b) {
 }
 
 define <2 x i8> @sadd_v2i8(<2 x i8> %a, <2 x i8> %b) {
-; CHECK-LABEL: sadd_v2i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v2.2s, v0.2s, #24
-; CHECK-NEXT:    shl v1.2s, v1.2s, #24
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #24
-; CHECK-NEXT:    ssra v2.2s, v1.2s, #24
-; CHECK-NEXT:    shl v1.2s, v2.2s, #24
-; CHECK-NEXT:    sshr v1.2s, v1.2s, #24
-; CHECK-NEXT:    cmeq v1.2s, v1.2s, v2.2s
-; CHECK-NEXT:    bif v0.8b, v2.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v2i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shl v2.2s, v0.2s, #24
+; CHECK-SD-NEXT:    shl v1.2s, v1.2s, #24
+; CHECK-SD-NEXT:    sshr v2.2s, v2.2s, #24
+; CHECK-SD-NEXT:    ssra v2.2s, v1.2s, #24
+; CHECK-SD-NEXT:    shl v1.2s, v2.2s, #24
+; CHECK-SD-NEXT:    sshr v1.2s, v1.2s, #24
+; CHECK-SD-NEXT:    cmeq v1.2s, v1.2s, v2.2s
+; CHECK-SD-NEXT:    bif v0.8b, v2.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v2i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    add v3.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    mov w9, v0.s[1]
+; CHECK-GI-NEXT:    mov w10, v1.s[1]
+; CHECK-GI-NEXT:    mov v5.16b, v0.16b
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov w8, v3.s[1]
+; CHECK-GI-NEXT:    mov v4.16b, v3.16b
+; CHECK-GI-NEXT:    mov v5.b[1], w9
+; CHECK-GI-NEXT:    mov v1.b[1], w10
+; CHECK-GI-NEXT:    mov v4.b[1], w8
+; CHECK-GI-NEXT:    cmgt v1.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    cmgt v4.8b, v5.8b, v4.8b
+; CHECK-GI-NEXT:    umov w8, v1.b[0]
+; CHECK-GI-NEXT:    umov w10, v1.b[1]
+; CHECK-GI-NEXT:    umov w9, v4.b[0]
+; CHECK-GI-NEXT:    umov w11, v4.b[1]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    mov v1.s[1], w10
+; CHECK-GI-NEXT:    mov v2.s[1], w11
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    shl v1.2s, v1.2s, #31
+; CHECK-GI-NEXT:    cmlt v1.2s, v1.2s, #0
+; CHECK-GI-NEXT:    bit v0.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i8>, <2 x i1>} @llvm.sadd.with.overflow(<2 x i8> %a, <2 x i8> %b)
   %e0 = extractvalue {<2 x i8>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i8>, <2 x i1>} %o, 1
@@ -126,16 +93,36 @@ define <2 x i8> @sadd_v2i8(<2 x i8> %a, <2 x i8> %b) {
 }
 
 define <2 x i8> @usub_v2i8(<2 x i8> %a, <2 x i8> %b) {
-; CHECK-LABEL: usub_v2i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d2, #0x0000ff000000ff
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    and v3.8b, v0.8b, v2.8b
-; CHECK-NEXT:    sub v1.2s, v3.2s, v1.2s
-; CHECK-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEXT:    cmeq v2.2s, v2.2s, v1.2s
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v2i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi d2, #0x0000ff000000ff
+; CHECK-SD-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    and v3.8b, v0.8b, v2.8b
+; CHECK-SD-NEXT:    sub v1.2s, v3.2s, v1.2s
+; CHECK-SD-NEXT:    and v2.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    cmeq v2.2s, v2.2s, v1.2s
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v2i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v1.s[1]
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    sub v3.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    mov v2.b[1], w8
+; CHECK-GI-NEXT:    mov v1.b[1], w9
+; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    umov w8, v1.b[0]
+; CHECK-GI-NEXT:    umov w9, v1.b[1]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v1.s[1], w9
+; CHECK-GI-NEXT:    shl v1.2s, v1.2s, #31
+; CHECK-GI-NEXT:    cmlt v1.2s, v1.2s, #0
+; CHECK-GI-NEXT:    bit v0.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i8>, <2 x i1>} @llvm.usub.with.overflow(<2 x i8> %a, <2 x i8> %b)
   %e0 = extractvalue {<2 x i8>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i8>, <2 x i1>} %o, 1
@@ -144,18 +131,48 @@ define <2 x i8> @usub_v2i8(<2 x i8> %a, <2 x i8> %b) {
 }
 
 define <2 x i8> @ssub_v2i8(<2 x i8> %a, <2 x i8> %b) {
-; CHECK-LABEL: ssub_v2i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v1.2s, v1.2s, #24
-; CHECK-NEXT:    shl v2.2s, v0.2s, #24
-; CHECK-NEXT:    sshr v1.2s, v1.2s, #24
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #24
-; CHECK-NEXT:    sub v1.2s, v2.2s, v1.2s
-; CHECK-NEXT:    shl v2.2s, v1.2s, #24
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #24
-; CHECK-NEXT:    cmeq v2.2s, v2.2s, v1.2s
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v2i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shl v1.2s, v1.2s, #24
+; CHECK-SD-NEXT:    shl v2.2s, v0.2s, #24
+; CHECK-SD-NEXT:    sshr v1.2s, v1.2s, #24
+; CHECK-SD-NEXT:    sshr v2.2s, v2.2s, #24
+; CHECK-SD-NEXT:    sub v1.2s, v2.2s, v1.2s
+; CHECK-SD-NEXT:    shl v2.2s, v1.2s, #24
+; CHECK-SD-NEXT:    sshr v2.2s, v2.2s, #24
+; CHECK-SD-NEXT:    cmeq v2.2s, v2.2s, v1.2s
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v2i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    sub v3.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v1.s[1]
+; CHECK-GI-NEXT:    mov v4.16b, v0.16b
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov w10, v3.s[1]
+; CHECK-GI-NEXT:    mov v5.16b, v3.16b
+; CHECK-GI-NEXT:    mov v4.b[1], w8
+; CHECK-GI-NEXT:    mov v1.b[1], w9
+; CHECK-GI-NEXT:    mov v5.b[1], w10
+; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v4.8b
+; CHECK-GI-NEXT:    cmgt v2.8b, v2.8b, v5.8b
+; CHECK-GI-NEXT:    umov w8, v1.b[0]
+; CHECK-GI-NEXT:    umov w10, v1.b[1]
+; CHECK-GI-NEXT:    umov w9, v2.b[0]
+; CHECK-GI-NEXT:    umov w11, v2.b[1]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    mov v1.s[1], w10
+; CHECK-GI-NEXT:    mov v2.s[1], w11
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    shl v1.2s, v1.2s, #31
+; CHECK-GI-NEXT:    cmlt v1.2s, v1.2s, #0
+; CHECK-GI-NEXT:    bit v0.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i8>, <2 x i1>} @llvm.ssub.with.overflow(<2 x i8> %a, <2 x i8> %b)
   %e0 = extractvalue {<2 x i8>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i8>, <2 x i1>} %o, 1
@@ -252,26 +269,53 @@ define <2 x i8> @smul_v2i8(<2 x i8> %a, <2 x i8> %b) {
 }
 
 define <3 x i8> @uadd_v3i8(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-LABEL: uadd_v3i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    fmov s1, w3
-; CHECK-NEXT:    mov v0.h[1], w1
-; CHECK-NEXT:    mov v1.h[1], w4
-; CHECK-NEXT:    mov v0.h[2], w2
-; CHECK-NEXT:    mov v1.h[2], w5
-; CHECK-NEXT:    fmov d2, d0
-; CHECK-NEXT:    bic v1.4h, #255, lsl #8
-; CHECK-NEXT:    bic v2.4h, #255, lsl #8
-; CHECK-NEXT:    add v1.4h, v2.4h, v1.4h
-; CHECK-NEXT:    fmov d2, d1
-; CHECK-NEXT:    bic v2.4h, #1, lsl #8
-; CHECK-NEXT:    cmeq v2.4h, v2.4h, v1.4h
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    umov w0, v0.h[0]
-; CHECK-NEXT:    umov w1, v0.h[1]
-; CHECK-NEXT:    umov w2, v0.h[2]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v3i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    fmov s1, w3
+; CHECK-SD-NEXT:    mov v0.h[1], w1
+; CHECK-SD-NEXT:    mov v1.h[1], w4
+; CHECK-SD-NEXT:    mov v0.h[2], w2
+; CHECK-SD-NEXT:    mov v1.h[2], w5
+; CHECK-SD-NEXT:    fmov d2, d0
+; CHECK-SD-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-SD-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-SD-NEXT:    add v1.4h, v2.4h, v1.4h
+; CHECK-SD-NEXT:    fmov d2, d1
+; CHECK-SD-NEXT:    bic v2.4h, #1, lsl #8
+; CHECK-SD-NEXT:    cmeq v2.4h, v2.4h, v1.4h
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    umov w0, v0.h[0]
+; CHECK-SD-NEXT:    umov w1, v0.h[1]
+; CHECK-SD-NEXT:    umov w2, v0.h[2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v3i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov s0, w3
+; CHECK-GI-NEXT:    fmov s1, w0
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v1.h[1], w1
+; CHECK-GI-NEXT:    mov v0.b[1], w4
+; CHECK-GI-NEXT:    mov v2.h[1], w4
+; CHECK-GI-NEXT:    mov v1.h[2], w2
+; CHECK-GI-NEXT:    mov v2.h[2], w5
+; CHECK-GI-NEXT:    add v2.4h, v1.4h, v2.4h
+; CHECK-GI-NEXT:    uzp1 v3.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    mov v0.b[2], w5
+; CHECK-GI-NEXT:    cmhi v0.8b, v0.8b, v3.8b
+; CHECK-GI-NEXT:    movi d3, #0xffffffffffffffff
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #15
+; CHECK-GI-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-GI-NEXT:    eor v3.8b, v0.8b, v3.8b
+; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    umov w0, v0.h[0]
+; CHECK-GI-NEXT:    umov w1, v0.h[1]
+; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i8>, <3 x i1>} @llvm.uadd.with.overflow(<3 x i8> %a, <3 x i8> %b)
   %e0 = extractvalue {<3 x i8>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i8>, <3 x i1>} %o, 1
@@ -280,26 +324,70 @@ define <3 x i8> @uadd_v3i8(<3 x i8> %a, <3 x i8> %b) {
 }
 
 define <3 x i8> @sadd_v3i8(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-LABEL: sadd_v3i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    fmov s1, w3
-; CHECK-NEXT:    mov v0.h[1], w1
-; CHECK-NEXT:    mov v1.h[1], w4
-; CHECK-NEXT:    mov v0.h[2], w2
-; CHECK-NEXT:    mov v1.h[2], w5
-; CHECK-NEXT:    shl v2.4h, v0.4h, #8
-; CHECK-NEXT:    shl v1.4h, v1.4h, #8
-; CHECK-NEXT:    sshr v2.4h, v2.4h, #8
-; CHECK-NEXT:    ssra v2.4h, v1.4h, #8
-; CHECK-NEXT:    shl v1.4h, v2.4h, #8
-; CHECK-NEXT:    sshr v1.4h, v1.4h, #8
-; CHECK-NEXT:    cmeq v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    bif v0.8b, v2.8b, v1.8b
-; CHECK-NEXT:    umov w0, v0.h[0]
-; CHECK-NEXT:    umov w1, v0.h[1]
-; CHECK-NEXT:    umov w2, v0.h[2]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v3i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    fmov s1, w3
+; CHECK-SD-NEXT:    mov v0.h[1], w1
+; CHECK-SD-NEXT:    mov v1.h[1], w4
+; CHECK-SD-NEXT:    mov v0.h[2], w2
+; CHECK-SD-NEXT:    mov v1.h[2], w5
+; CHECK-SD-NEXT:    shl v2.4h, v0.4h, #8
+; CHECK-SD-NEXT:    shl v1.4h, v1.4h, #8
+; CHECK-SD-NEXT:    sshr v2.4h, v2.4h, #8
+; CHECK-SD-NEXT:    ssra v2.4h, v1.4h, #8
+; CHECK-SD-NEXT:    shl v1.4h, v2.4h, #8
+; CHECK-SD-NEXT:    sshr v1.4h, v1.4h, #8
+; CHECK-SD-NEXT:    cmeq v1.4h, v1.4h, v2.4h
+; CHECK-SD-NEXT:    bif v0.8b, v2.8b, v1.8b
+; CHECK-SD-NEXT:    umov w0, v0.h[0]
+; CHECK-SD-NEXT:    umov w1, v0.h[1]
+; CHECK-SD-NEXT:    umov w2, v0.h[2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v3i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov s1, w0
+; CHECK-GI-NEXT:    fmov s2, w3
+; CHECK-GI-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v3.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.b[1], w1
+; CHECK-GI-NEXT:    mov v2.b[1], w4
+; CHECK-GI-NEXT:    mov v0.h[1], w1
+; CHECK-GI-NEXT:    mov v3.h[1], w4
+; CHECK-GI-NEXT:    mov v1.b[2], w2
+; CHECK-GI-NEXT:    mov v2.b[2], w5
+; CHECK-GI-NEXT:    mov v0.h[2], w2
+; CHECK-GI-NEXT:    mov v3.h[2], w5
+; CHECK-GI-NEXT:    cmgt v2.8b, v5.8b, v2.8b
+; CHECK-GI-NEXT:    add v3.4h, v0.4h, v3.4h
+; CHECK-GI-NEXT:    mov b5, v2.b[1]
+; CHECK-GI-NEXT:    mov b7, v2.b[2]
+; CHECK-GI-NEXT:    uzp1 v4.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    fmov w8, s5
+; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v4.8b
+; CHECK-GI-NEXT:    mov v2.h[1], w8
+; CHECK-GI-NEXT:    fmov w8, s7
+; CHECK-GI-NEXT:    mov b4, v1.b[1]
+; CHECK-GI-NEXT:    mov b6, v1.b[2]
+; CHECK-GI-NEXT:    mov v2.h[2], w8
+; CHECK-GI-NEXT:    fmov w9, s4
+; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    fmov w9, s6
+; CHECK-GI-NEXT:    mov v1.h[2], w9
+; CHECK-GI-NEXT:    eor v1.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    movi d2, #0xffffffffffffffff
+; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
+; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    umov w0, v0.h[0]
+; CHECK-GI-NEXT:    umov w1, v0.h[1]
+; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i8>, <3 x i1>} @llvm.sadd.with.overflow(<3 x i8> %a, <3 x i8> %b)
   %e0 = extractvalue {<3 x i8>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i8>, <3 x i1>} %o, 1
@@ -308,26 +396,55 @@ define <3 x i8> @sadd_v3i8(<3 x i8> %a, <3 x i8> %b) {
 }
 
 define <3 x i8> @usub_v3i8(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-LABEL: usub_v3i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    fmov s1, w3
-; CHECK-NEXT:    mov v0.h[1], w1
-; CHECK-NEXT:    mov v1.h[1], w4
-; CHECK-NEXT:    mov v0.h[2], w2
-; CHECK-NEXT:    mov v1.h[2], w5
-; CHECK-NEXT:    fmov d2, d0
-; CHECK-NEXT:    bic v1.4h, #255, lsl #8
-; CHECK-NEXT:    bic v2.4h, #255, lsl #8
-; CHECK-NEXT:    sub v1.4h, v2.4h, v1.4h
-; CHECK-NEXT:    fmov d2, d1
-; CHECK-NEXT:    bic v2.4h, #255, lsl #8
-; CHECK-NEXT:    cmeq v2.4h, v2.4h, v1.4h
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    umov w0, v0.h[0]
-; CHECK-NEXT:    umov w1, v0.h[1]
-; CHECK-NEXT:    umov w2, v0.h[2]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v3i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    fmov s1, w3
+; CHECK-SD-NEXT:    mov v0.h[1], w1
+; CHECK-SD-NEXT:    mov v1.h[1], w4
+; CHECK-SD-NEXT:    mov v0.h[2], w2
+; CHECK-SD-NEXT:    mov v1.h[2], w5
+; CHECK-SD-NEXT:    fmov d2, d0
+; CHECK-SD-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-SD-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-SD-NEXT:    sub v1.4h, v2.4h, v1.4h
+; CHECK-SD-NEXT:    fmov d2, d1
+; CHECK-SD-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-SD-NEXT:    cmeq v2.4h, v2.4h, v1.4h
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    umov w0, v0.h[0]
+; CHECK-SD-NEXT:    umov w1, v0.h[1]
+; CHECK-SD-NEXT:    umov w2, v0.h[2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v3i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w3
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.b[1], w1
+; CHECK-GI-NEXT:    mov v1.b[1], w4
+; CHECK-GI-NEXT:    mov v2.h[1], w1
+; CHECK-GI-NEXT:    mov v3.h[1], w4
+; CHECK-GI-NEXT:    mov v0.b[2], w2
+; CHECK-GI-NEXT:    mov v1.b[2], w5
+; CHECK-GI-NEXT:    mov v2.h[2], w2
+; CHECK-GI-NEXT:    mov v3.h[2], w5
+; CHECK-GI-NEXT:    cmhi v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    movi d1, #0xffffffffffffffff
+; CHECK-GI-NEXT:    sub v3.4h, v2.4h, v3.4h
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #15
+; CHECK-GI-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-GI-NEXT:    eor v1.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    and v1.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    umov w0, v0.h[0]
+; CHECK-GI-NEXT:    umov w1, v0.h[1]
+; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i8>, <3 x i1>} @llvm.usub.with.overflow(<3 x i8> %a, <3 x i8> %b)
   %e0 = extractvalue {<3 x i8>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i8>, <3 x i1>} %o, 1
@@ -336,27 +453,71 @@ define <3 x i8> @usub_v3i8(<3 x i8> %a, <3 x i8> %b) {
 }
 
 define <3 x i8> @ssub_v3i8(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-LABEL: ssub_v3i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w3
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    mov v0.h[1], w4
-; CHECK-NEXT:    mov v1.h[1], w1
-; CHECK-NEXT:    mov v0.h[2], w5
-; CHECK-NEXT:    mov v1.h[2], w2
-; CHECK-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-NEXT:    shl v2.4h, v1.4h, #8
-; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-NEXT:    sshr v2.4h, v2.4h, #8
-; CHECK-NEXT:    sub v0.4h, v2.4h, v0.4h
-; CHECK-NEXT:    shl v2.4h, v0.4h, #8
-; CHECK-NEXT:    sshr v2.4h, v2.4h, #8
-; CHECK-NEXT:    cmeq v2.4h, v2.4h, v0.4h
-; CHECK-NEXT:    bit v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    umov w0, v0.h[0]
-; CHECK-NEXT:    umov w1, v0.h[1]
-; CHECK-NEXT:    umov w2, v0.h[2]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v3i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, w3
+; CHECK-SD-NEXT:    fmov s1, w0
+; CHECK-SD-NEXT:    mov v0.h[1], w4
+; CHECK-SD-NEXT:    mov v1.h[1], w1
+; CHECK-SD-NEXT:    mov v0.h[2], w5
+; CHECK-SD-NEXT:    mov v1.h[2], w2
+; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-SD-NEXT:    shl v2.4h, v1.4h, #8
+; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-SD-NEXT:    sshr v2.4h, v2.4h, #8
+; CHECK-SD-NEXT:    sub v0.4h, v2.4h, v0.4h
+; CHECK-SD-NEXT:    shl v2.4h, v0.4h, #8
+; CHECK-SD-NEXT:    sshr v2.4h, v2.4h, #8
+; CHECK-SD-NEXT:    cmeq v2.4h, v2.4h, v0.4h
+; CHECK-SD-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    umov w0, v0.h[0]
+; CHECK-SD-NEXT:    umov w1, v0.h[1]
+; CHECK-SD-NEXT:    umov w2, v0.h[2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v3i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov s1, w0
+; CHECK-GI-NEXT:    fmov s2, w3
+; CHECK-GI-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v3.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.b[1], w1
+; CHECK-GI-NEXT:    mov v2.b[1], w4
+; CHECK-GI-NEXT:    mov v0.h[1], w1
+; CHECK-GI-NEXT:    mov v3.h[1], w4
+; CHECK-GI-NEXT:    mov v1.b[2], w2
+; CHECK-GI-NEXT:    mov v2.b[2], w5
+; CHECK-GI-NEXT:    mov v0.h[2], w2
+; CHECK-GI-NEXT:    mov v3.h[2], w5
+; CHECK-GI-NEXT:    cmgt v1.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    sub v3.4h, v0.4h, v3.4h
+; CHECK-GI-NEXT:    mov b6, v1.b[2]
+; CHECK-GI-NEXT:    uzp1 v4.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    cmgt v2.8b, v5.8b, v4.8b
+; CHECK-GI-NEXT:    mov b4, v1.b[1]
+; CHECK-GI-NEXT:    mov b5, v2.b[1]
+; CHECK-GI-NEXT:    mov b7, v2.b[2]
+; CHECK-GI-NEXT:    fmov w8, s4
+; CHECK-GI-NEXT:    fmov w9, s5
+; CHECK-GI-NEXT:    mov v1.h[1], w8
+; CHECK-GI-NEXT:    fmov w8, s6
+; CHECK-GI-NEXT:    mov v2.h[1], w9
+; CHECK-GI-NEXT:    fmov w9, s7
+; CHECK-GI-NEXT:    mov v1.h[2], w8
+; CHECK-GI-NEXT:    mov v2.h[2], w9
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    movi d2, #0xffffffffffffffff
+; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
+; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    umov w0, v0.h[0]
+; CHECK-GI-NEXT:    umov w1, v0.h[1]
+; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i8>, <3 x i1>} @llvm.ssub.with.overflow(<3 x i8> %a, <3 x i8> %b)
   %e0 = extractvalue {<3 x i8>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i8>, <3 x i1>} %o, 1
@@ -510,17 +671,33 @@ define <3 x i8> @smul_v3i8(<3 x i8> %a, <3 x i8> %b) {
 }
 
 define <4 x i8> @uadd_v4i8(<4 x i8> %a, <4 x i8> %b) {
-; CHECK-LABEL: uadd_v4i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d2, d0
-; CHECK-NEXT:    bic v1.4h, #255, lsl #8
-; CHECK-NEXT:    bic v2.4h, #255, lsl #8
-; CHECK-NEXT:    add v1.4h, v2.4h, v1.4h
-; CHECK-NEXT:    fmov d2, d1
-; CHECK-NEXT:    bic v2.4h, #1, lsl #8
-; CHECK-NEXT:    cmeq v2.4h, v2.4h, v1.4h
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v4i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov d2, d0
+; CHECK-SD-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-SD-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-SD-NEXT:    add v1.4h, v2.4h, v1.4h
+; CHECK-SD-NEXT:    fmov d2, d1
+; CHECK-SD-NEXT:    bic v2.4h, #1, lsl #8
+; CHECK-SD-NEXT:    cmeq v2.4h, v2.4h, v1.4h
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v4i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v3.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    uzp1 v4.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v4.8b
+; CHECK-GI-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
+; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i8>, <4 x i1>} @llvm.uadd.with.overflow(<4 x i8> %a, <4 x i8> %b)
   %e0 = extractvalue {<4 x i8>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i8>, <4 x i1>} %o, 1
@@ -529,17 +706,38 @@ define <4 x i8> @uadd_v4i8(<4 x i8> %a, <4 x i8> %b) {
 }
 
 define <4 x i8> @sadd_v4i8(<4 x i8> %a, <4 x i8> %b) {
-; CHECK-LABEL: sadd_v4i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v2.4h, v0.4h, #8
-; CHECK-NEXT:    shl v1.4h, v1.4h, #8
-; CHECK-NEXT:    sshr v2.4h, v2.4h, #8
-; CHECK-NEXT:    ssra v2.4h, v1.4h, #8
-; CHECK-NEXT:    shl v1.4h, v2.4h, #8
-; CHECK-NEXT:    sshr v1.4h, v1.4h, #8
-; CHECK-NEXT:    cmeq v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    bif v0.8b, v2.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v4i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shl v2.4h, v0.4h, #8
+; CHECK-SD-NEXT:    shl v1.4h, v1.4h, #8
+; CHECK-SD-NEXT:    sshr v2.4h, v2.4h, #8
+; CHECK-SD-NEXT:    ssra v2.4h, v1.4h, #8
+; CHECK-SD-NEXT:    shl v1.4h, v2.4h, #8
+; CHECK-SD-NEXT:    sshr v1.4h, v1.4h, #8
+; CHECK-SD-NEXT:    cmeq v1.4h, v1.4h, v2.4h
+; CHECK-SD-NEXT:    bif v0.8b, v2.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v4i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v3.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    uzp1 v5.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v4.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    cmgt v1.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    cmgt v4.8b, v5.8b, v4.8b
+; CHECK-GI-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-GI-NEXT:    zip1 v2.8b, v4.8b, v4.8b
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
+; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i8>, <4 x i1>} @llvm.sadd.with.overflow(<4 x i8> %a, <4 x i8> %b)
   %e0 = extractvalue {<4 x i8>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i8>, <4 x i1>} %o, 1
@@ -548,17 +746,33 @@ define <4 x i8> @sadd_v4i8(<4 x i8> %a, <4 x i8> %b) {
 }
 
 define <4 x i8> @usub_v4i8(<4 x i8> %a, <4 x i8> %b) {
-; CHECK-LABEL: usub_v4i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d2, d0
-; CHECK-NEXT:    bic v1.4h, #255, lsl #8
-; CHECK-NEXT:    bic v2.4h, #255, lsl #8
-; CHECK-NEXT:    sub v1.4h, v2.4h, v1.4h
-; CHECK-NEXT:    fmov d2, d1
-; CHECK-NEXT:    bic v2.4h, #255, lsl #8
-; CHECK-NEXT:    cmeq v2.4h, v2.4h, v1.4h
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v4i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov d2, d0
+; CHECK-SD-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-SD-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-SD-NEXT:    sub v1.4h, v2.4h, v1.4h
+; CHECK-SD-NEXT:    fmov d2, d1
+; CHECK-SD-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-SD-NEXT:    cmeq v2.4h, v2.4h, v1.4h
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v4i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    uzp1 v3.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v4.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    sub v1.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    cmhi v3.8b, v4.8b, v3.8b
+; CHECK-GI-NEXT:    zip1 v3.8b, v3.8b, v3.8b
+; CHECK-GI-NEXT:    shl v3.4h, v3.4h, #15
+; CHECK-GI-NEXT:    cmlt v3.4h, v3.4h, #0
+; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i8>, <4 x i1>} @llvm.usub.with.overflow(<4 x i8> %a, <4 x i8> %b)
   %e0 = extractvalue {<4 x i8>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i8>, <4 x i1>} %o, 1
@@ -567,18 +781,39 @@ define <4 x i8> @usub_v4i8(<4 x i8> %a, <4 x i8> %b) {
 }
 
 define <4 x i8> @ssub_v4i8(<4 x i8> %a, <4 x i8> %b) {
-; CHECK-LABEL: ssub_v4i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v1.4h, v1.4h, #8
-; CHECK-NEXT:    shl v2.4h, v0.4h, #8
-; CHECK-NEXT:    sshr v1.4h, v1.4h, #8
-; CHECK-NEXT:    sshr v2.4h, v2.4h, #8
-; CHECK-NEXT:    sub v1.4h, v2.4h, v1.4h
-; CHECK-NEXT:    shl v2.4h, v1.4h, #8
-; CHECK-NEXT:    sshr v2.4h, v2.4h, #8
-; CHECK-NEXT:    cmeq v2.4h, v2.4h, v1.4h
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v4i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shl v1.4h, v1.4h, #8
+; CHECK-SD-NEXT:    shl v2.4h, v0.4h, #8
+; CHECK-SD-NEXT:    sshr v1.4h, v1.4h, #8
+; CHECK-SD-NEXT:    sshr v2.4h, v2.4h, #8
+; CHECK-SD-NEXT:    sub v1.4h, v2.4h, v1.4h
+; CHECK-SD-NEXT:    shl v2.4h, v1.4h, #8
+; CHECK-SD-NEXT:    sshr v2.4h, v2.4h, #8
+; CHECK-SD-NEXT:    cmeq v2.4h, v2.4h, v1.4h
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v4i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v3.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    uzp1 v4.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v5.8b, v3.8b, v0.8b
+; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v4.8b
+; CHECK-GI-NEXT:    cmgt v2.8b, v2.8b, v5.8b
+; CHECK-GI-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-GI-NEXT:    zip1 v2.8b, v2.8b, v2.8b
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
+; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i8>, <4 x i1>} @llvm.ssub.with.overflow(<4 x i8> %a, <4 x i8> %b)
   %e0 = extractvalue {<4 x i8>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i8>, <4 x i1>} %o, 1
@@ -672,12 +907,19 @@ define <4 x i8> @smul_v4i8(<4 x i8> %a, <4 x i8> %b) {
 }
 
 define <8 x i8> @uadd_v8i8(<8 x i8> %a, <8 x i8> %b) {
-; CHECK-LABEL: uadd_v8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.8b, v0.8b, v1.8b
-; CHECK-NEXT:    cmhi v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    bit v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v8i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v1.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    cmhi v2.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v8i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i8>, <8 x i1>} @llvm.uadd.with.overflow(<8 x i8> %a, <8 x i8> %b)
   %e0 = extractvalue {<8 x i8>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i8>, <8 x i1>} %o, 1
@@ -686,13 +928,22 @@ define <8 x i8> @uadd_v8i8(<8 x i8> %a, <8 x i8> %b) {
 }
 
 define <8 x i8> @sadd_v8i8(<8 x i8> %a, <8 x i8> %b) {
-; CHECK-LABEL: sadd_v8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    add v1.8b, v0.8b, v1.8b
-; CHECK-NEXT:    cmeq v2.8b, v1.8b, v2.8b
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v8i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v2.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    add v1.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    cmeq v2.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v8i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmlt v1.8b, v1.8b, #0
+; CHECK-GI-NEXT:    cmgt v3.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i8>, <8 x i1>} @llvm.sadd.with.overflow(<8 x i8> %a, <8 x i8> %b)
   %e0 = extractvalue {<8 x i8>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i8>, <8 x i1>} %o, 1
@@ -701,12 +952,19 @@ define <8 x i8> @sadd_v8i8(<8 x i8> %a, <8 x i8> %b) {
 }
 
 define <8 x i8> @usub_v8i8(<8 x i8> %a, <8 x i8> %b) {
-; CHECK-LABEL: usub_v8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v1.8b, v0.8b, v1.8b
-; CHECK-NEXT:    cmhi v2.8b, v1.8b, v0.8b
-; CHECK-NEXT:    bit v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v8i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v1.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    cmhi v2.8b, v1.8b, v0.8b
+; CHECK-SD-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v8i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmhi v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i8>, <8 x i1>} @llvm.usub.with.overflow(<8 x i8> %a, <8 x i8> %b)
   %e0 = extractvalue {<8 x i8>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i8>, <8 x i1>} %o, 1
@@ -715,13 +973,22 @@ define <8 x i8> @usub_v8i8(<8 x i8> %a, <8 x i8> %b) {
 }
 
 define <8 x i8> @ssub_v8i8(<8 x i8> %a, <8 x i8> %b) {
-; CHECK-LABEL: ssub_v8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    sub v1.8b, v0.8b, v1.8b
-; CHECK-NEXT:    cmeq v2.8b, v1.8b, v2.8b
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v8i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v2.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    sub v1.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    cmeq v2.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v8i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    cmlt v3.8b, v2.8b, #0
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i8>, <8 x i1>} @llvm.ssub.with.overflow(<8 x i8> %a, <8 x i8> %b)
   %e0 = extractvalue {<8 x i8>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i8>, <8 x i1>} %o, 1
@@ -785,12 +1052,19 @@ define <8 x i8> @smul_v8i8(<8 x i8> %a, <8 x i8> %b) {
 }
 
 define <16 x i8> @uadd_v16i8(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-LABEL: uadd_v16i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmhi v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v16i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v1.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    cmhi v2.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v16i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmhi v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<16 x i8>, <16 x i1>} @llvm.uadd.with.overflow(<16 x i8> %a, <16 x i8> %b)
   %e0 = extractvalue {<16 x i8>, <16 x i1>} %o, 0
   %e1 = extractvalue {<16 x i8>, <16 x i1>} %o, 1
@@ -799,13 +1073,22 @@ define <16 x i8> @uadd_v16i8(<16 x i8> %a, <16 x i8> %b) {
 }
 
 define <16 x i8> @sadd_v16i8(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-LABEL: sadd_v16i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    add v1.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmeq v2.16b, v1.16b, v2.16b
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v16i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v2.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    add v1.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    cmeq v2.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v16i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmlt v1.16b, v1.16b, #0
+; CHECK-GI-NEXT:    cmgt v3.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<16 x i8>, <16 x i1>} @llvm.sadd.with.overflow(<16 x i8> %a, <16 x i8> %b)
   %e0 = extractvalue {<16 x i8>, <16 x i1>} %o, 0
   %e1 = extractvalue {<16 x i8>, <16 x i1>} %o, 1
@@ -814,12 +1097,19 @@ define <16 x i8> @sadd_v16i8(<16 x i8> %a, <16 x i8> %b) {
 }
 
 define <16 x i8> @usub_v16i8(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-LABEL: usub_v16i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v1.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmhi v2.16b, v1.16b, v0.16b
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v16i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v1.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    cmhi v2.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v16i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmhi v1.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<16 x i8>, <16 x i1>} @llvm.usub.with.overflow(<16 x i8> %a, <16 x i8> %b)
   %e0 = extractvalue {<16 x i8>, <16 x i1>} %o, 0
   %e1 = extractvalue {<16 x i8>, <16 x i1>} %o, 1
@@ -828,13 +1118,22 @@ define <16 x i8> @usub_v16i8(<16 x i8> %a, <16 x i8> %b) {
 }
 
 define <16 x i8> @ssub_v16i8(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-LABEL: ssub_v16i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    sub v1.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmeq v2.16b, v1.16b, v2.16b
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v16i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v2.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    sub v1.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    cmeq v2.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v16i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmgt v1.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    cmlt v3.16b, v2.16b, #0
+; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<16 x i8>, <16 x i1>} @llvm.ssub.with.overflow(<16 x i8> %a, <16 x i8> %b)
   %e0 = extractvalue {<16 x i8>, <16 x i1>} %o, 0
   %e1 = extractvalue {<16 x i8>, <16 x i1>} %o, 1
@@ -902,15 +1201,25 @@ define <16 x i8> @smul_v16i8(<16 x i8> %a, <16 x i8> %b) {
 }
 
 define <32 x i8> @uadd_v32i8(<32 x i8> %a, <32 x i8> %b) {
-; CHECK-LABEL: uadd_v32i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v3.16b, v1.16b, v3.16b
-; CHECK-NEXT:    add v2.16b, v0.16b, v2.16b
-; CHECK-NEXT:    cmhi v4.16b, v1.16b, v3.16b
-; CHECK-NEXT:    cmhi v5.16b, v0.16b, v2.16b
-; CHECK-NEXT:    bit v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    bit v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v32i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v3.16b, v1.16b, v3.16b
+; CHECK-SD-NEXT:    add v2.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    cmhi v4.16b, v1.16b, v3.16b
+; CHECK-SD-NEXT:    cmhi v5.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    bit v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    bit v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v32i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v4.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    add v5.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    cmhi v2.16b, v2.16b, v4.16b
+; CHECK-GI-NEXT:    cmhi v3.16b, v3.16b, v5.16b
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v3.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<32 x i8>, <32 x i1>} @llvm.uadd.with.overflow(<32 x i8> %a, <32 x i8> %b)
   %e0 = extractvalue {<32 x i8>, <32 x i1>} %o, 0
   %e1 = extractvalue {<32 x i8>, <32 x i1>} %o, 1
@@ -938,15 +1247,25 @@ define <32 x i8> @sadd_v32i8(<32 x i8> %a, <32 x i8> %b) {
 }
 
 define <32 x i8> @usub_v32i8(<32 x i8> %a, <32 x i8> %b) {
-; CHECK-LABEL: usub_v32i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v3.16b, v1.16b, v3.16b
-; CHECK-NEXT:    sub v2.16b, v0.16b, v2.16b
-; CHECK-NEXT:    cmhi v4.16b, v3.16b, v1.16b
-; CHECK-NEXT:    cmhi v5.16b, v2.16b, v0.16b
-; CHECK-NEXT:    bit v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    bit v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v32i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v3.16b, v1.16b, v3.16b
+; CHECK-SD-NEXT:    sub v2.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    cmhi v4.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    cmhi v5.16b, v2.16b, v0.16b
+; CHECK-SD-NEXT:    bit v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    bit v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v32i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v4.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    sub v5.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    cmhi v2.16b, v2.16b, v0.16b
+; CHECK-GI-NEXT:    cmhi v3.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v3.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<32 x i8>, <32 x i1>} @llvm.usub.with.overflow(<32 x i8> %a, <32 x i8> %b)
   %e0 = extractvalue {<32 x i8>, <32 x i1>} %o, 0
   %e1 = extractvalue {<32 x i8>, <32 x i1>} %o, 1
@@ -1062,17 +1381,30 @@ define <32 x i8> @smul_v32i8(<32 x i8> %a, <32 x i8> %b) {
 }
 
 define <2 x i16> @uadd_v2i16(<2 x i16> %a, <2 x i16> %b) {
-; CHECK-LABEL: uadd_v2i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d2, #0x00ffff0000ffff
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    and v2.8b, v0.8b, v2.8b
-; CHECK-NEXT:    add v1.2s, v2.2s, v1.2s
-; CHECK-NEXT:    fmov d2, d1
-; CHECK-NEXT:    bic v2.2s, #1, lsl #16
-; CHECK-NEXT:    cmeq v2.2s, v2.2s, v1.2s
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v2i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi d2, #0x00ffff0000ffff
+; CHECK-SD-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    and v2.8b, v0.8b, v2.8b
+; CHECK-SD-NEXT:    add v1.2s, v2.2s, v1.2s
+; CHECK-SD-NEXT:    fmov d2, d1
+; CHECK-SD-NEXT:    bic v2.2s, #1, lsl #16
+; CHECK-SD-NEXT:    cmeq v2.2s, v2.2s, v1.2s
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v2i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi d2, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    add v3.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    and v4.8b, v3.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    cmhi v1.2s, v1.2s, v4.2s
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i16>, <2 x i1>} @llvm.uadd.with.overflow(<2 x i16> %a, <2 x i16> %b)
   %e0 = extractvalue {<2 x i16>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i16>, <2 x i1>} %o, 1
@@ -1081,17 +1413,38 @@ define <2 x i16> @uadd_v2i16(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <2 x i16> @sadd_v2i16(<2 x i16> %a, <2 x i16> %b) {
-; CHECK-LABEL: sadd_v2i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v2.2s, v0.2s, #16
-; CHECK-NEXT:    shl v1.2s, v1.2s, #16
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #16
-; CHECK-NEXT:    ssra v2.2s, v1.2s, #16
-; CHECK-NEXT:    shl v1.2s, v2.2s, #16
-; CHECK-NEXT:    sshr v1.2s, v1.2s, #16
-; CHECK-NEXT:    cmeq v1.2s, v1.2s, v2.2s
-; CHECK-NEXT:    bif v0.8b, v2.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v2i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shl v2.2s, v0.2s, #16
+; CHECK-SD-NEXT:    shl v1.2s, v1.2s, #16
+; CHECK-SD-NEXT:    sshr v2.2s, v2.2s, #16
+; CHECK-SD-NEXT:    ssra v2.2s, v1.2s, #16
+; CHECK-SD-NEXT:    shl v1.2s, v2.2s, #16
+; CHECK-SD-NEXT:    sshr v1.2s, v1.2s, #16
+; CHECK-SD-NEXT:    cmeq v1.2s, v1.2s, v2.2s
+; CHECK-SD-NEXT:    bif v0.8b, v2.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v2i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v3.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    shl v5.2s, v0.2s, #16
+; CHECK-GI-NEXT:    shl v1.2s, v1.2s, #16
+; CHECK-GI-NEXT:    shl v4.2s, v3.2s, #16
+; CHECK-GI-NEXT:    sshr v5.2s, v5.2s, #16
+; CHECK-GI-NEXT:    sshr v1.2s, v1.2s, #16
+; CHECK-GI-NEXT:    sshll v2.4s, v2.4h, #0
+; CHECK-GI-NEXT:    sshr v4.2s, v4.2s, #16
+; CHECK-GI-NEXT:    cmgt v1.2s, v2.2s, v1.2s
+; CHECK-GI-NEXT:    movi d2, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    cmgt v4.2s, v5.2s, v4.2s
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v4.8b
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i16>, <2 x i1>} @llvm.sadd.with.overflow(<2 x i16> %a, <2 x i16> %b)
   %e0 = extractvalue {<2 x i16>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i16>, <2 x i1>} %o, 1
@@ -1100,16 +1453,29 @@ define <2 x i16> @sadd_v2i16(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <2 x i16> @usub_v2i16(<2 x i16> %a, <2 x i16> %b) {
-; CHECK-LABEL: usub_v2i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d2, #0x00ffff0000ffff
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    and v3.8b, v0.8b, v2.8b
-; CHECK-NEXT:    sub v1.2s, v3.2s, v1.2s
-; CHECK-NEXT:    and v2.8b, v1.8b, v2.8b
-; CHECK-NEXT:    cmeq v2.2s, v2.2s, v1.2s
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v2i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi d2, #0x00ffff0000ffff
+; CHECK-SD-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    and v3.8b, v0.8b, v2.8b
+; CHECK-SD-NEXT:    sub v1.2s, v3.2s, v1.2s
+; CHECK-SD-NEXT:    and v2.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    cmeq v2.2s, v2.2s, v1.2s
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v2i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi d2, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    sub v3.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    and v4.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    cmhi v1.2s, v1.2s, v4.2s
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i16>, <2 x i1>} @llvm.usub.with.overflow(<2 x i16> %a, <2 x i16> %b)
   %e0 = extractvalue {<2 x i16>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i16>, <2 x i1>} %o, 1
@@ -1118,18 +1484,39 @@ define <2 x i16> @usub_v2i16(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <2 x i16> @ssub_v2i16(<2 x i16> %a, <2 x i16> %b) {
-; CHECK-LABEL: ssub_v2i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v1.2s, v1.2s, #16
-; CHECK-NEXT:    shl v2.2s, v0.2s, #16
-; CHECK-NEXT:    sshr v1.2s, v1.2s, #16
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #16
-; CHECK-NEXT:    sub v1.2s, v2.2s, v1.2s
-; CHECK-NEXT:    shl v2.2s, v1.2s, #16
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #16
-; CHECK-NEXT:    cmeq v2.2s, v2.2s, v1.2s
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v2i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shl v1.2s, v1.2s, #16
+; CHECK-SD-NEXT:    shl v2.2s, v0.2s, #16
+; CHECK-SD-NEXT:    sshr v1.2s, v1.2s, #16
+; CHECK-SD-NEXT:    sshr v2.2s, v2.2s, #16
+; CHECK-SD-NEXT:    sub v1.2s, v2.2s, v1.2s
+; CHECK-SD-NEXT:    shl v2.2s, v1.2s, #16
+; CHECK-SD-NEXT:    sshr v2.2s, v2.2s, #16
+; CHECK-SD-NEXT:    cmeq v2.2s, v2.2s, v1.2s
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v2i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v3.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    shl v4.2s, v0.2s, #16
+; CHECK-GI-NEXT:    shl v1.2s, v1.2s, #16
+; CHECK-GI-NEXT:    shl v5.2s, v3.2s, #16
+; CHECK-GI-NEXT:    sshr v4.2s, v4.2s, #16
+; CHECK-GI-NEXT:    sshr v1.2s, v1.2s, #16
+; CHECK-GI-NEXT:    sshll v2.4s, v2.4h, #0
+; CHECK-GI-NEXT:    sshr v5.2s, v5.2s, #16
+; CHECK-GI-NEXT:    cmgt v1.2s, v1.2s, v4.2s
+; CHECK-GI-NEXT:    movi d4, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    cmgt v2.2s, v2.2s, v5.2s
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v4.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i16>, <2 x i1>} @llvm.ssub.with.overflow(<2 x i16> %a, <2 x i16> %b)
   %e0 = extractvalue {<2 x i16>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i16>, <2 x i1>} %o, 1
@@ -1218,12 +1605,23 @@ define <2 x i16> @smul_v2i16(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <3 x i16> @uadd_v3i16(<3 x i16> %a, <3 x i16> %b) {
-; CHECK-LABEL: uadd_v3i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmhi v2.4h, v0.4h, v1.4h
-; CHECK-NEXT:    bit v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v3i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v1.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    cmhi v2.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v3i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v3.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    movi d2, #0xffffffffffffffff
+; CHECK-GI-NEXT:    cmhi v1.4h, v1.4h, v3.4h
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i16>, <3 x i1>} @llvm.uadd.with.overflow(<3 x i16> %a, <3 x i16> %b)
   %e0 = extractvalue {<3 x i16>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i16>, <3 x i1>} %o, 1
@@ -1232,13 +1630,27 @@ define <3 x i16> @uadd_v3i16(<3 x i16> %a, <3 x i16> %b) {
 }
 
 define <3 x i16> @sadd_v3i16(<3 x i16> %a, <3 x i16> %b) {
-; CHECK-LABEL: sadd_v3i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v2.4h, v0.4h, v1.4h
-; CHECK-NEXT:    add v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmeq v2.4h, v1.4h, v2.4h
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v3i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v2.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    add v1.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    cmeq v2.4h, v1.4h, v2.4h
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v3i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    add v3.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    cmgt v4.4h, v0.4h, v3.4h
+; CHECK-GI-NEXT:    cmgt v1.4h, v2.4h, v1.4h
+; CHECK-GI-NEXT:    movi d2, #0xffffffffffffffff
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v4.8b
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i16>, <3 x i1>} @llvm.sadd.with.overflow(<3 x i16> %a, <3 x i16> %b)
   %e0 = extractvalue {<3 x i16>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i16>, <3 x i1>} %o, 1
@@ -1247,12 +1659,23 @@ define <3 x i16> @sadd_v3i16(<3 x i16> %a, <3 x i16> %b) {
 }
 
 define <3 x i16> @usub_v3i16(<3 x i16> %a, <3 x i16> %b) {
-; CHECK-LABEL: usub_v3i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmhi v2.4h, v1.4h, v0.4h
-; CHECK-NEXT:    bit v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v3i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v1.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    cmhi v2.4h, v1.4h, v0.4h
+; CHECK-SD-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v3i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi d2, #0xffffffffffffffff
+; CHECK-GI-NEXT:    cmhi v3.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    sub v1.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i16>, <3 x i1>} @llvm.usub.with.overflow(<3 x i16> %a, <3 x i16> %b)
   %e0 = extractvalue {<3 x i16>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i16>, <3 x i1>} %o, 1
@@ -1261,13 +1684,27 @@ define <3 x i16> @usub_v3i16(<3 x i16> %a, <3 x i16> %b) {
 }
 
 define <3 x i16> @ssub_v3i16(<3 x i16> %a, <3 x i16> %b) {
-; CHECK-LABEL: ssub_v3i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v2.4h, v0.4h, v1.4h
-; CHECK-NEXT:    sub v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmeq v2.4h, v1.4h, v2.4h
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v3i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v2.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    sub v1.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    cmeq v2.4h, v1.4h, v2.4h
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v3i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    sub v3.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    cmgt v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    movi d4, #0xffffffffffffffff
+; CHECK-GI-NEXT:    cmgt v2.4h, v2.4h, v3.4h
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v4.8b
+; CHECK-GI-NEXT:    and v1.8b, v3.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i16>, <3 x i1>} @llvm.ssub.with.overflow(<3 x i16> %a, <3 x i16> %b)
   %e0 = extractvalue {<3 x i16>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i16>, <3 x i1>} %o, 1
@@ -1369,12 +1806,19 @@ define <3 x i16> @smul_v3i16(<3 x i16> %a, <3 x i16> %b) {
 }
 
 define <4 x i16> @uadd_v4i16(<4 x i16> %a, <4 x i16> %b) {
-; CHECK-LABEL: uadd_v4i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmhi v2.4h, v0.4h, v1.4h
-; CHECK-NEXT:    bit v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v1.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    cmhi v2.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    cmhi v1.4h, v1.4h, v2.4h
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i16>, <4 x i1>} @llvm.uadd.with.overflow(<4 x i16> %a, <4 x i16> %b)
   %e0 = extractvalue {<4 x i16>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i16>, <4 x i1>} %o, 1
@@ -1383,13 +1827,22 @@ define <4 x i16> @uadd_v4i16(<4 x i16> %a, <4 x i16> %b) {
 }
 
 define <4 x i16> @sadd_v4i16(<4 x i16> %a, <4 x i16> %b) {
-; CHECK-LABEL: sadd_v4i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v2.4h, v0.4h, v1.4h
-; CHECK-NEXT:    add v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmeq v2.4h, v1.4h, v2.4h
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v2.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    add v1.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    cmeq v2.4h, v1.4h, v2.4h
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-GI-NEXT:    cmgt v3.4h, v0.4h, v2.4h
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i16>, <4 x i1>} @llvm.sadd.with.overflow(<4 x i16> %a, <4 x i16> %b)
   %e0 = extractvalue {<4 x i16>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i16>, <4 x i1>} %o, 1
@@ -1398,12 +1851,19 @@ define <4 x i16> @sadd_v4i16(<4 x i16> %a, <4 x i16> %b) {
 }
 
 define <4 x i16> @usub_v4i16(<4 x i16> %a, <4 x i16> %b) {
-; CHECK-LABEL: usub_v4i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmhi v2.4h, v1.4h, v0.4h
-; CHECK-NEXT:    bit v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v1.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    cmhi v2.4h, v1.4h, v0.4h
+; CHECK-SD-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    cmhi v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i16>, <4 x i1>} @llvm.usub.with.overflow(<4 x i16> %a, <4 x i16> %b)
   %e0 = extractvalue {<4 x i16>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i16>, <4 x i1>} %o, 1
@@ -1412,13 +1872,22 @@ define <4 x i16> @usub_v4i16(<4 x i16> %a, <4 x i16> %b) {
 }
 
 define <4 x i16> @ssub_v4i16(<4 x i16> %a, <4 x i16> %b) {
-; CHECK-LABEL: ssub_v4i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v2.4h, v0.4h, v1.4h
-; CHECK-NEXT:    sub v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    cmeq v2.4h, v1.4h, v2.4h
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v2.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    sub v1.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    cmeq v2.4h, v1.4h, v2.4h
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    cmgt v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    cmlt v3.4h, v2.4h, #0
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i16>, <4 x i1>} @llvm.ssub.with.overflow(<4 x i16> %a, <4 x i16> %b)
   %e0 = extractvalue {<4 x i16>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i16>, <4 x i1>} %o, 1
@@ -1482,12 +1951,19 @@ define <4 x i16> @smul_v4i16(<4 x i16> %a, <4 x i16> %b) {
 }
 
 define <8 x i16> @uadd_v8i16(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-LABEL: uadd_v8i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.8h, v0.8h, v1.8h
-; CHECK-NEXT:    cmhi v2.8h, v0.8h, v1.8h
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v8i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v1.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    cmhi v2.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v8i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    cmhi v1.8h, v1.8h, v2.8h
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i16>, <8 x i1>} @llvm.uadd.with.overflow(<8 x i16> %a, <8 x i16> %b)
   %e0 = extractvalue {<8 x i16>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i16>, <8 x i1>} %o, 1
@@ -1496,13 +1972,22 @@ define <8 x i16> @uadd_v8i16(<8 x i16> %a, <8 x i16> %b) {
 }
 
 define <8 x i16> @sadd_v8i16(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-LABEL: sadd_v8i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v2.8h, v0.8h, v1.8h
-; CHECK-NEXT:    add v1.8h, v0.8h, v1.8h
-; CHECK-NEXT:    cmeq v2.8h, v1.8h, v2.8h
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v8i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v2.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    add v1.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    cmeq v2.8h, v1.8h, v2.8h
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v8i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    cmlt v1.8h, v1.8h, #0
+; CHECK-GI-NEXT:    cmgt v3.8h, v0.8h, v2.8h
+; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i16>, <8 x i1>} @llvm.sadd.with.overflow(<8 x i16> %a, <8 x i16> %b)
   %e0 = extractvalue {<8 x i16>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i16>, <8 x i1>} %o, 1
@@ -1511,12 +1996,19 @@ define <8 x i16> @sadd_v8i16(<8 x i16> %a, <8 x i16> %b) {
 }
 
 define <8 x i16> @usub_v8i16(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-LABEL: usub_v8i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v1.8h, v0.8h, v1.8h
-; CHECK-NEXT:    cmhi v2.8h, v1.8h, v0.8h
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v8i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v1.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    cmhi v2.8h, v1.8h, v0.8h
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v8i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    cmhi v1.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i16>, <8 x i1>} @llvm.usub.with.overflow(<8 x i16> %a, <8 x i16> %b)
   %e0 = extractvalue {<8 x i16>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i16>, <8 x i1>} %o, 1
@@ -1525,13 +2017,22 @@ define <8 x i16> @usub_v8i16(<8 x i16> %a, <8 x i16> %b) {
 }
 
 define <8 x i16> @ssub_v8i16(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-LABEL: ssub_v8i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v2.8h, v0.8h, v1.8h
-; CHECK-NEXT:    sub v1.8h, v0.8h, v1.8h
-; CHECK-NEXT:    cmeq v2.8h, v1.8h, v2.8h
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v8i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v2.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    sub v1.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    cmeq v2.8h, v1.8h, v2.8h
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v8i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    cmgt v1.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    cmlt v3.8h, v2.8h, #0
+; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i16>, <8 x i1>} @llvm.ssub.with.overflow(<8 x i16> %a, <8 x i16> %b)
   %e0 = extractvalue {<8 x i16>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i16>, <8 x i1>} %o, 1
@@ -1599,15 +2100,25 @@ define <8 x i16> @smul_v8i16(<8 x i16> %a, <8 x i16> %b) {
 }
 
 define <16 x i16> @uadd_v16i16(<16 x i16> %a, <16 x i16> %b) {
-; CHECK-LABEL: uadd_v16i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v3.8h, v1.8h, v3.8h
-; CHECK-NEXT:    add v2.8h, v0.8h, v2.8h
-; CHECK-NEXT:    cmhi v4.8h, v1.8h, v3.8h
-; CHECK-NEXT:    cmhi v5.8h, v0.8h, v2.8h
-; CHECK-NEXT:    bit v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    bit v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v16i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v3.8h, v1.8h, v3.8h
+; CHECK-SD-NEXT:    add v2.8h, v0.8h, v2.8h
+; CHECK-SD-NEXT:    cmhi v4.8h, v1.8h, v3.8h
+; CHECK-SD-NEXT:    cmhi v5.8h, v0.8h, v2.8h
+; CHECK-SD-NEXT:    bit v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    bit v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v16i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v4.8h, v0.8h, v2.8h
+; CHECK-GI-NEXT:    add v5.8h, v1.8h, v3.8h
+; CHECK-GI-NEXT:    cmhi v2.8h, v2.8h, v4.8h
+; CHECK-GI-NEXT:    cmhi v3.8h, v3.8h, v5.8h
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v3.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<16 x i16>, <16 x i1>} @llvm.uadd.with.overflow(<16 x i16> %a, <16 x i16> %b)
   %e0 = extractvalue {<16 x i16>, <16 x i1>} %o, 0
   %e1 = extractvalue {<16 x i16>, <16 x i1>} %o, 1
@@ -1616,17 +2127,34 @@ define <16 x i16> @uadd_v16i16(<16 x i16> %a, <16 x i16> %b) {
 }
 
 define <16 x i16> @sadd_v16i16(<16 x i16> %a, <16 x i16> %b) {
-; CHECK-LABEL: sadd_v16i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v4.8h, v1.8h, v3.8h
-; CHECK-NEXT:    sqadd v5.8h, v0.8h, v2.8h
-; CHECK-NEXT:    add v3.8h, v1.8h, v3.8h
-; CHECK-NEXT:    add v2.8h, v0.8h, v2.8h
-; CHECK-NEXT:    cmeq v4.8h, v3.8h, v4.8h
-; CHECK-NEXT:    cmeq v5.8h, v2.8h, v5.8h
-; CHECK-NEXT:    bif v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    bif v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v16i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v4.8h, v1.8h, v3.8h
+; CHECK-SD-NEXT:    sqadd v5.8h, v0.8h, v2.8h
+; CHECK-SD-NEXT:    add v3.8h, v1.8h, v3.8h
+; CHECK-SD-NEXT:    add v2.8h, v0.8h, v2.8h
+; CHECK-SD-NEXT:    cmeq v4.8h, v3.8h, v4.8h
+; CHECK-SD-NEXT:    cmeq v5.8h, v2.8h, v5.8h
+; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    bif v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v16i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v4.8h, v0.8h, v2.8h
+; CHECK-GI-NEXT:    add v5.8h, v1.8h, v3.8h
+; CHECK-GI-NEXT:    cmlt v2.8h, v2.8h, #0
+; CHECK-GI-NEXT:    cmlt v3.8h, v3.8h, #0
+; CHECK-GI-NEXT:    cmgt v6.8h, v0.8h, v4.8h
+; CHECK-GI-NEXT:    cmgt v7.8h, v1.8h, v5.8h
+; CHECK-GI-NEXT:    uzp1 v2.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    uzp1 v3.16b, v6.16b, v7.16b
+; CHECK-GI-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    sshll v3.8h, v2.8b, #0
+; CHECK-GI-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<16 x i16>, <16 x i1>} @llvm.sadd.with.overflow(<16 x i16> %a, <16 x i16> %b)
   %e0 = extractvalue {<16 x i16>, <16 x i1>} %o, 0
   %e1 = extractvalue {<16 x i16>, <16 x i1>} %o, 1
@@ -1635,15 +2163,25 @@ define <16 x i16> @sadd_v16i16(<16 x i16> %a, <16 x i16> %b) {
 }
 
 define <16 x i16> @usub_v16i16(<16 x i16> %a, <16 x i16> %b) {
-; CHECK-LABEL: usub_v16i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v3.8h, v1.8h, v3.8h
-; CHECK-NEXT:    sub v2.8h, v0.8h, v2.8h
-; CHECK-NEXT:    cmhi v4.8h, v3.8h, v1.8h
-; CHECK-NEXT:    cmhi v5.8h, v2.8h, v0.8h
-; CHECK-NEXT:    bit v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    bit v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v16i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v3.8h, v1.8h, v3.8h
+; CHECK-SD-NEXT:    sub v2.8h, v0.8h, v2.8h
+; CHECK-SD-NEXT:    cmhi v4.8h, v3.8h, v1.8h
+; CHECK-SD-NEXT:    cmhi v5.8h, v2.8h, v0.8h
+; CHECK-SD-NEXT:    bit v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    bit v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v16i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v4.8h, v0.8h, v2.8h
+; CHECK-GI-NEXT:    sub v5.8h, v1.8h, v3.8h
+; CHECK-GI-NEXT:    cmhi v2.8h, v2.8h, v0.8h
+; CHECK-GI-NEXT:    cmhi v3.8h, v3.8h, v1.8h
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v3.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<16 x i16>, <16 x i1>} @llvm.usub.with.overflow(<16 x i16> %a, <16 x i16> %b)
   %e0 = extractvalue {<16 x i16>, <16 x i1>} %o, 0
   %e1 = extractvalue {<16 x i16>, <16 x i1>} %o, 1
@@ -1652,17 +2190,34 @@ define <16 x i16> @usub_v16i16(<16 x i16> %a, <16 x i16> %b) {
 }
 
 define <16 x i16> @ssub_v16i16(<16 x i16> %a, <16 x i16> %b) {
-; CHECK-LABEL: ssub_v16i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v4.8h, v1.8h, v3.8h
-; CHECK-NEXT:    sqsub v5.8h, v0.8h, v2.8h
-; CHECK-NEXT:    sub v3.8h, v1.8h, v3.8h
-; CHECK-NEXT:    sub v2.8h, v0.8h, v2.8h
-; CHECK-NEXT:    cmeq v4.8h, v3.8h, v4.8h
-; CHECK-NEXT:    cmeq v5.8h, v2.8h, v5.8h
-; CHECK-NEXT:    bif v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    bif v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v16i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v4.8h, v1.8h, v3.8h
+; CHECK-SD-NEXT:    sqsub v5.8h, v0.8h, v2.8h
+; CHECK-SD-NEXT:    sub v3.8h, v1.8h, v3.8h
+; CHECK-SD-NEXT:    sub v2.8h, v0.8h, v2.8h
+; CHECK-SD-NEXT:    cmeq v4.8h, v3.8h, v4.8h
+; CHECK-SD-NEXT:    cmeq v5.8h, v2.8h, v5.8h
+; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    bif v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v16i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v4.8h, v0.8h, v2.8h
+; CHECK-GI-NEXT:    sub v5.8h, v1.8h, v3.8h
+; CHECK-GI-NEXT:    cmgt v2.8h, v2.8h, v0.8h
+; CHECK-GI-NEXT:    cmgt v3.8h, v3.8h, v1.8h
+; CHECK-GI-NEXT:    cmlt v6.8h, v4.8h, #0
+; CHECK-GI-NEXT:    cmlt v7.8h, v5.8h, #0
+; CHECK-GI-NEXT:    uzp1 v2.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    uzp1 v3.16b, v6.16b, v7.16b
+; CHECK-GI-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    sshll v3.8h, v2.8b, #0
+; CHECK-GI-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<16 x i16>, <16 x i1>} @llvm.ssub.with.overflow(<16 x i16> %a, <16 x i16> %b)
   %e0 = extractvalue {<16 x i16>, <16 x i1>} %o, 0
   %e1 = extractvalue {<16 x i16>, <16 x i1>} %o, 1
@@ -1759,12 +2314,19 @@ define <16 x i16> @smul_v16i16(<16 x i16> %a, <16 x i16> %b) {
 }
 
 define <2 x i32> @uadd_v2i32(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: uadd_v2i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    cmhi v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    bit v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v1.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    cmhi v2.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    cmhi v1.2s, v1.2s, v2.2s
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i32>, <2 x i1>} @llvm.uadd.with.overflow(<2 x i32> %a, <2 x i32> %b)
   %e0 = extractvalue {<2 x i32>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i32>, <2 x i1>} %o, 1
@@ -1773,13 +2335,22 @@ define <2 x i32> @uadd_v2i32(<2 x i32> %a, <2 x i32> %b) {
 }
 
 define <2 x i32> @sadd_v2i32(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: sadd_v2i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    add v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    cmeq v2.2s, v1.2s, v2.2s
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v2.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    add v1.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    cmeq v2.2s, v1.2s, v2.2s
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    cmlt v1.2s, v1.2s, #0
+; CHECK-GI-NEXT:    cmgt v3.2s, v0.2s, v2.2s
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i32>, <2 x i1>} @llvm.sadd.with.overflow(<2 x i32> %a, <2 x i32> %b)
   %e0 = extractvalue {<2 x i32>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i32>, <2 x i1>} %o, 1
@@ -1788,12 +2359,19 @@ define <2 x i32> @sadd_v2i32(<2 x i32> %a, <2 x i32> %b) {
 }
 
 define <2 x i32> @usub_v2i32(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: usub_v2i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    cmhi v2.2s, v1.2s, v0.2s
-; CHECK-NEXT:    bit v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v1.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    cmhi v2.2s, v1.2s, v0.2s
+; CHECK-SD-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    cmhi v1.2s, v1.2s, v0.2s
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i32>, <2 x i1>} @llvm.usub.with.overflow(<2 x i32> %a, <2 x i32> %b)
   %e0 = extractvalue {<2 x i32>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i32>, <2 x i1>} %o, 1
@@ -1802,13 +2380,22 @@ define <2 x i32> @usub_v2i32(<2 x i32> %a, <2 x i32> %b) {
 }
 
 define <2 x i32> @ssub_v2i32(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: ssub_v2i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    sub v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    cmeq v2.2s, v1.2s, v2.2s
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v2.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    sub v1.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    cmeq v2.2s, v1.2s, v2.2s
+; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    cmgt v1.2s, v1.2s, v0.2s
+; CHECK-GI-NEXT:    cmlt v3.2s, v2.2s, #0
+; CHECK-GI-NEXT:    eor v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    bit v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i32>, <2 x i1>} @llvm.ssub.with.overflow(<2 x i32> %a, <2 x i32> %b)
   %e0 = extractvalue {<2 x i32>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i32>, <2 x i1>} %o, 1
@@ -1872,12 +2459,23 @@ define <2 x i32> @smul_v2i32(<2 x i32> %a, <2 x i32> %b) {
 }
 
 define <3 x i32> @uadd_v3i32(<3 x i32> %a, <3 x i32> %b) {
-; CHECK-LABEL: uadd_v3i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v3i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v1.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmhi v2.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v3i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v3.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    cmhi v1.4s, v1.4s, v3.4s
+; CHECK-GI-NEXT:    eor v2.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i32>, <3 x i1>} @llvm.uadd.with.overflow(<3 x i32> %a, <3 x i32> %b)
   %e0 = extractvalue {<3 x i32>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i32>, <3 x i1>} %o, 1
@@ -1886,13 +2484,29 @@ define <3 x i32> @uadd_v3i32(<3 x i32> %a, <3 x i32> %b) {
 }
 
 define <3 x i32> @sadd_v3i32(<3 x i32> %a, <3 x i32> %b) {
-; CHECK-LABEL: sadd_v3i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmeq v2.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v3i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v2.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    add v1.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmeq v2.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v3i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    add v3.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    cmgt v4.4s, v0.4s, v3.4s
+; CHECK-GI-NEXT:    cmgt v1.4s, v2.4s, v1.4s
+; CHECK-GI-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v4.16b
+; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
+; CHECK-GI-NEXT:    eor v2.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i32>, <3 x i1>} @llvm.sadd.with.overflow(<3 x i32> %a, <3 x i32> %b)
   %e0 = extractvalue {<3 x i32>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i32>, <3 x i1>} %o, 1
@@ -1901,12 +2515,23 @@ define <3 x i32> @sadd_v3i32(<3 x i32> %a, <3 x i32> %b) {
 }
 
 define <3 x i32> @usub_v3i32(<3 x i32> %a, <3 x i32> %b) {
-; CHECK-LABEL: usub_v3i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v2.4s, v1.4s, v0.4s
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v3i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v1.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmhi v2.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v3i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    cmhi v3.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    sub v1.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    eor v2.16b, v3.16b, v2.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i32>, <3 x i1>} @llvm.usub.with.overflow(<3 x i32> %a, <3 x i32> %b)
   %e0 = extractvalue {<3 x i32>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i32>, <3 x i1>} %o, 1
@@ -1915,13 +2540,29 @@ define <3 x i32> @usub_v3i32(<3 x i32> %a, <3 x i32> %b) {
 }
 
 define <3 x i32> @ssub_v3i32(<3 x i32> %a, <3 x i32> %b) {
-; CHECK-LABEL: ssub_v3i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    sub v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmeq v2.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v3i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v2.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    sub v1.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmeq v2.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v3i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    sub v3.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    cmgt v1.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    cmgt v2.4s, v2.4s, v3.4s
+; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
+; CHECK-GI-NEXT:    eor v2.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i32>, <3 x i1>} @llvm.ssub.with.overflow(<3 x i32> %a, <3 x i32> %b)
   %e0 = extractvalue {<3 x i32>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i32>, <3 x i1>} %o, 1
@@ -2025,12 +2666,19 @@ define <3 x i32> @smul_v3i32(<3 x i32> %a, <3 x i32> %b) {
 }
 
 define <4 x i32> @uadd_v4i32(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-LABEL: uadd_v4i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v4i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v1.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmhi v2.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    cmhi v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i32>, <4 x i1>} @llvm.uadd.with.overflow(<4 x i32> %a, <4 x i32> %b)
   %e0 = extractvalue {<4 x i32>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i32>, <4 x i1>} %o, 1
@@ -2039,13 +2687,22 @@ define <4 x i32> @uadd_v4i32(<4 x i32> %a, <4 x i32> %b) {
 }
 
 define <4 x i32> @sadd_v4i32(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-LABEL: sadd_v4i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmeq v2.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v4i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v2.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    add v1.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmeq v2.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
+; CHECK-GI-NEXT:    cmgt v3.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i32>, <4 x i1>} @llvm.sadd.with.overflow(<4 x i32> %a, <4 x i32> %b)
   %e0 = extractvalue {<4 x i32>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i32>, <4 x i1>} %o, 1
@@ -2054,12 +2711,19 @@ define <4 x i32> @sadd_v4i32(<4 x i32> %a, <4 x i32> %b) {
 }
 
 define <4 x i32> @usub_v4i32(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-LABEL: usub_v4i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v2.4s, v1.4s, v0.4s
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v4i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v1.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmhi v2.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    cmhi v1.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i32>, <4 x i1>} @llvm.usub.with.overflow(<4 x i32> %a, <4 x i32> %b)
   %e0 = extractvalue {<4 x i32>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i32>, <4 x i1>} %o, 1
@@ -2068,13 +2732,22 @@ define <4 x i32> @usub_v4i32(<4 x i32> %a, <4 x i32> %b) {
 }
 
 define <4 x i32> @ssub_v4i32(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-LABEL: ssub_v4i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    sub v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmeq v2.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v4i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v2.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    sub v1.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmeq v2.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    cmgt v1.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    cmlt v3.4s, v2.4s, #0
+; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i32>, <4 x i1>} @llvm.ssub.with.overflow(<4 x i32> %a, <4 x i32> %b)
   %e0 = extractvalue {<4 x i32>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i32>, <4 x i1>} %o, 1
@@ -2142,15 +2815,25 @@ define <4 x i32> @smul_v4i32(<4 x i32> %a, <4 x i32> %b) {
 }
 
 define <8 x i32> @uadd_v8i32(<8 x i32> %a, <8 x i32> %b) {
-; CHECK-LABEL: uadd_v8i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v3.4s, v1.4s, v3.4s
-; CHECK-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-NEXT:    cmhi v4.4s, v1.4s, v3.4s
-; CHECK-NEXT:    cmhi v5.4s, v0.4s, v2.4s
-; CHECK-NEXT:    bit v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    bit v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v8i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v3.4s, v1.4s, v3.4s
+; CHECK-SD-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    cmhi v4.4s, v1.4s, v3.4s
+; CHECK-SD-NEXT:    cmhi v5.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    bit v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    bit v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v8i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v4.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    add v5.4s, v1.4s, v3.4s
+; CHECK-GI-NEXT:    cmhi v2.4s, v2.4s, v4.4s
+; CHECK-GI-NEXT:    cmhi v3.4s, v3.4s, v5.4s
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v3.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i32>, <8 x i1>} @llvm.uadd.with.overflow(<8 x i32> %a, <8 x i32> %b)
   %e0 = extractvalue {<8 x i32>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i32>, <8 x i1>} %o, 1
@@ -2159,17 +2842,34 @@ define <8 x i32> @uadd_v8i32(<8 x i32> %a, <8 x i32> %b) {
 }
 
 define <8 x i32> @sadd_v8i32(<8 x i32> %a, <8 x i32> %b) {
-; CHECK-LABEL: sadd_v8i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v4.4s, v1.4s, v3.4s
-; CHECK-NEXT:    sqadd v5.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v3.4s, v1.4s, v3.4s
-; CHECK-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-NEXT:    cmeq v4.4s, v3.4s, v4.4s
-; CHECK-NEXT:    cmeq v5.4s, v2.4s, v5.4s
-; CHECK-NEXT:    bif v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    bif v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v8i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v4.4s, v1.4s, v3.4s
+; CHECK-SD-NEXT:    sqadd v5.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    add v3.4s, v1.4s, v3.4s
+; CHECK-SD-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    cmeq v4.4s, v3.4s, v4.4s
+; CHECK-SD-NEXT:    cmeq v5.4s, v2.4s, v5.4s
+; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    bif v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v8i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v4.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    add v5.4s, v1.4s, v3.4s
+; CHECK-GI-NEXT:    cmlt v2.4s, v2.4s, #0
+; CHECK-GI-NEXT:    cmlt v3.4s, v3.4s, #0
+; CHECK-GI-NEXT:    cmgt v6.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    cmgt v7.4s, v1.4s, v5.4s
+; CHECK-GI-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-GI-NEXT:    uzp1 v3.8h, v6.8h, v7.8h
+; CHECK-GI-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    sshll v3.4s, v2.4h, #0
+; CHECK-GI-NEXT:    sshll2 v2.4s, v2.8h, #0
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i32>, <8 x i1>} @llvm.sadd.with.overflow(<8 x i32> %a, <8 x i32> %b)
   %e0 = extractvalue {<8 x i32>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i32>, <8 x i1>} %o, 1
@@ -2178,15 +2878,25 @@ define <8 x i32> @sadd_v8i32(<8 x i32> %a, <8 x i32> %b) {
 }
 
 define <8 x i32> @usub_v8i32(<8 x i32> %a, <8 x i32> %b) {
-; CHECK-LABEL: usub_v8i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v3.4s, v1.4s, v3.4s
-; CHECK-NEXT:    sub v2.4s, v0.4s, v2.4s
-; CHECK-NEXT:    cmhi v4.4s, v3.4s, v1.4s
-; CHECK-NEXT:    cmhi v5.4s, v2.4s, v0.4s
-; CHECK-NEXT:    bit v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    bit v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v8i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v3.4s, v1.4s, v3.4s
+; CHECK-SD-NEXT:    sub v2.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    cmhi v4.4s, v3.4s, v1.4s
+; CHECK-SD-NEXT:    cmhi v5.4s, v2.4s, v0.4s
+; CHECK-SD-NEXT:    bit v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    bit v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v8i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v4.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    sub v5.4s, v1.4s, v3.4s
+; CHECK-GI-NEXT:    cmhi v2.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    cmhi v3.4s, v3.4s, v1.4s
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v3.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i32>, <8 x i1>} @llvm.usub.with.overflow(<8 x i32> %a, <8 x i32> %b)
   %e0 = extractvalue {<8 x i32>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i32>, <8 x i1>} %o, 1
@@ -2195,17 +2905,34 @@ define <8 x i32> @usub_v8i32(<8 x i32> %a, <8 x i32> %b) {
 }
 
 define <8 x i32> @ssub_v8i32(<8 x i32> %a, <8 x i32> %b) {
-; CHECK-LABEL: ssub_v8i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v4.4s, v1.4s, v3.4s
-; CHECK-NEXT:    sqsub v5.4s, v0.4s, v2.4s
-; CHECK-NEXT:    sub v3.4s, v1.4s, v3.4s
-; CHECK-NEXT:    sub v2.4s, v0.4s, v2.4s
-; CHECK-NEXT:    cmeq v4.4s, v3.4s, v4.4s
-; CHECK-NEXT:    cmeq v5.4s, v2.4s, v5.4s
-; CHECK-NEXT:    bif v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    bif v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v8i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v4.4s, v1.4s, v3.4s
+; CHECK-SD-NEXT:    sqsub v5.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    sub v3.4s, v1.4s, v3.4s
+; CHECK-SD-NEXT:    sub v2.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    cmeq v4.4s, v3.4s, v4.4s
+; CHECK-SD-NEXT:    cmeq v5.4s, v2.4s, v5.4s
+; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    bif v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v8i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v4.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    sub v5.4s, v1.4s, v3.4s
+; CHECK-GI-NEXT:    cmgt v2.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    cmgt v3.4s, v3.4s, v1.4s
+; CHECK-GI-NEXT:    cmlt v6.4s, v4.4s, #0
+; CHECK-GI-NEXT:    cmlt v7.4s, v5.4s, #0
+; CHECK-GI-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-GI-NEXT:    uzp1 v3.8h, v6.8h, v7.8h
+; CHECK-GI-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    sshll v3.4s, v2.4h, #0
+; CHECK-GI-NEXT:    sshll2 v2.4s, v2.8h, #0
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<8 x i32>, <8 x i1>} @llvm.ssub.with.overflow(<8 x i32> %a, <8 x i32> %b)
   %e0 = extractvalue {<8 x i32>, <8 x i1>} %o, 0
   %e1 = extractvalue {<8 x i32>, <8 x i1>} %o, 1
@@ -2302,12 +3029,19 @@ define <8 x i32> @smul_v8i32(<8 x i32> %a, <8 x i32> %b) {
 }
 
 define <2 x i64> @uadd_v2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-LABEL: uadd_v2i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v1.2d, v0.2d, v1.2d
-; CHECK-NEXT:    cmhi v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v2i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v1.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    cmhi v2.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v2i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    cmhi v1.2d, v1.2d, v2.2d
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i64>, <2 x i1>} @llvm.uadd.with.overflow(<2 x i64> %a, <2 x i64> %b)
   %e0 = extractvalue {<2 x i64>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i64>, <2 x i1>} %o, 1
@@ -2316,13 +3050,22 @@ define <2 x i64> @uadd_v2i64(<2 x i64> %a, <2 x i64> %b) {
 }
 
 define <2 x i64> @sadd_v2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-LABEL: sadd_v2i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    add v1.2d, v0.2d, v1.2d
-; CHECK-NEXT:    cmeq v2.2d, v1.2d, v2.2d
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v2i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v2.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    add v1.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    cmeq v2.2d, v1.2d, v2.2d
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v2i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v2.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    cmlt v1.2d, v1.2d, #0
+; CHECK-GI-NEXT:    cmgt v3.2d, v0.2d, v2.2d
+; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i64>, <2 x i1>} @llvm.sadd.with.overflow(<2 x i64> %a, <2 x i64> %b)
   %e0 = extractvalue {<2 x i64>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i64>, <2 x i1>} %o, 1
@@ -2331,12 +3074,19 @@ define <2 x i64> @sadd_v2i64(<2 x i64> %a, <2 x i64> %b) {
 }
 
 define <2 x i64> @usub_v2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-LABEL: usub_v2i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v1.2d, v0.2d, v1.2d
-; CHECK-NEXT:    cmhi v2.2d, v1.2d, v0.2d
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v2i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v1.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    cmhi v2.2d, v1.2d, v0.2d
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v2i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    cmhi v1.2d, v1.2d, v0.2d
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i64>, <2 x i1>} @llvm.usub.with.overflow(<2 x i64> %a, <2 x i64> %b)
   %e0 = extractvalue {<2 x i64>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i64>, <2 x i1>} %o, 1
@@ -2345,13 +3095,22 @@ define <2 x i64> @usub_v2i64(<2 x i64> %a, <2 x i64> %b) {
 }
 
 define <2 x i64> @ssub_v2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-LABEL: ssub_v2i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    sub v1.2d, v0.2d, v1.2d
-; CHECK-NEXT:    cmeq v2.2d, v1.2d, v2.2d
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v2i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v2.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    sub v1.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    cmeq v2.2d, v1.2d, v2.2d
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v2i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v2.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    cmgt v1.2d, v1.2d, v0.2d
+; CHECK-GI-NEXT:    cmlt v3.2d, v2.2d, #0
+; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i64>, <2 x i1>} @llvm.ssub.with.overflow(<2 x i64> %a, <2 x i64> %b)
   %e0 = extractvalue {<2 x i64>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i64>, <2 x i1>} %o, 1
@@ -2469,25 +3228,55 @@ define <2 x i64> @smul_v2i64(<2 x i64> %a, <2 x i64> %b) {
 }
 
 define <3 x i64> @uadd_v3i64(<3 x i64> %a, <3 x i64> %b) {
-; CHECK-LABEL: uadd_v3i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    add d4, d2, d5
-; CHECK-NEXT:    add v1.2d, v0.2d, v3.2d
-; CHECK-NEXT:    cmhi v3.2d, v0.2d, v1.2d
-; CHECK-NEXT:    bit v0.16b, v1.16b, v3.16b
-; CHECK-NEXT:    cmhi v1.2d, v2.2d, v4.2d
-; CHECK-NEXT:    bit v2.16b, v4.16b, v1.16b
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v3i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    add d4, d2, d5
+; CHECK-SD-NEXT:    add v1.2d, v0.2d, v3.2d
+; CHECK-SD-NEXT:    cmhi v3.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v3.16b
+; CHECK-SD-NEXT:    cmhi v1.2d, v2.2d, v4.2d
+; CHECK-SD-NEXT:    bit v2.16b, v4.16b, v1.16b
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v3i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    mov v6.16b, v0.16b
+; CHECK-GI-NEXT:    mov v7.16b, v3.16b
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-GI-NEXT:    fmov x8, d2
+; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    fmov x9, d5
+; CHECK-GI-NEXT:    mov v6.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v7.d[1], v4.d[0]
+; CHECK-GI-NEXT:    add x9, x8, x9
+; CHECK-GI-NEXT:    add v4.2d, v6.2d, v7.2d
+; CHECK-GI-NEXT:    cmhi v1.2d, v3.2d, v4.2d
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v1.16b
+; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    cmhi v2.2d, v5.2d, v1.2d
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov x10, d2
+; CHECK-GI-NEXT:    and x9, x9, x10
+; CHECK-GI-NEXT:    bic x8, x8, x10
+; CHECK-GI-NEXT:    orr x8, x9, x8
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i64>, <3 x i1>} @llvm.uadd.with.overflow(<3 x i64> %a, <3 x i64> %b)
   %e0 = extractvalue {<3 x i64>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i64>, <3 x i1>} %o, 1
@@ -2496,28 +3285,79 @@ define <3 x i64> @uadd_v3i64(<3 x i64> %a, <3 x i64> %b) {
 }
 
 define <3 x i64> @sadd_v3i64(<3 x i64> %a, <3 x i64> %b) {
-; CHECK-LABEL: sadd_v3i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d5 killed $d5 def $q5
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    sqadd v4.2d, v2.2d, v5.2d
-; CHECK-NEXT:    add v5.2d, v2.2d, v5.2d
-; CHECK-NEXT:    sqadd v1.2d, v0.2d, v3.2d
-; CHECK-NEXT:    add v3.2d, v0.2d, v3.2d
-; CHECK-NEXT:    cmeq v1.2d, v3.2d, v1.2d
-; CHECK-NEXT:    bif v0.16b, v3.16b, v1.16b
-; CHECK-NEXT:    cmeq v1.2d, v5.2d, v4.2d
-; CHECK-NEXT:    bif v2.16b, v5.16b, v1.16b
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v3i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    sqadd v4.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    add v5.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    sqadd v1.2d, v0.2d, v3.2d
+; CHECK-SD-NEXT:    add v3.2d, v0.2d, v3.2d
+; CHECK-SD-NEXT:    cmeq v1.2d, v3.2d, v1.2d
+; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    cmeq v1.2d, v5.2d, v4.2d
+; CHECK-SD-NEXT:    bif v2.16b, v5.16b, v1.16b
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v3i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    mov v7.16b, v0.16b
+; CHECK-GI-NEXT:    mov v16.16b, v3.16b
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-GI-NEXT:    mov v17.16b, v0.16b
+; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-GI-NEXT:    fmov x10, d2
+; CHECK-GI-NEXT:    fmov x11, d5
+; CHECK-GI-NEXT:    movi d6, #0000000000000000
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v7.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v16.d[1], v4.d[0]
+; CHECK-GI-NEXT:    mov v17.d[1], v1.d[0]
+; CHECK-GI-NEXT:    add x11, x10, x11
+; CHECK-GI-NEXT:    cmlt v3.2d, v3.2d, #0
+; CHECK-GI-NEXT:    cmgt v5.2d, v6.2d, v5.2d
+; CHECK-GI-NEXT:    add v4.2d, v7.2d, v16.2d
+; CHECK-GI-NEXT:    fmov d16, x11
+; CHECK-GI-NEXT:    fmov x12, d3
+; CHECK-GI-NEXT:    mov x8, v3.d[1]
+; CHECK-GI-NEXT:    cmgt v7.2d, v17.2d, v4.2d
+; CHECK-GI-NEXT:    cmgt v2.2d, v2.2d, v16.2d
+; CHECK-GI-NEXT:    fmov s3, w12
+; CHECK-GI-NEXT:    fmov x13, d7
+; CHECK-GI-NEXT:    mov x9, v7.d[1]
+; CHECK-GI-NEXT:    mov v3.h[1], w8
+; CHECK-GI-NEXT:    fmov s7, w13
+; CHECK-GI-NEXT:    mov v3.h[2], v5.h[0]
+; CHECK-GI-NEXT:    mov v7.h[1], w9
+; CHECK-GI-NEXT:    mov v7.h[2], v2.h[0]
+; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v7.8b
+; CHECK-GI-NEXT:    zip1 v3.4h, v2.4h, v2.4h
+; CHECK-GI-NEXT:    smov x8, v2.h[2]
+; CHECK-GI-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-GI-NEXT:    and x9, x11, x8
+; CHECK-GI-NEXT:    bic x8, x10, x8
+; CHECK-GI-NEXT:    orr x8, x9, x8
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    shl v3.2d, v3.2d, #63
+; CHECK-GI-NEXT:    cmlt v1.2d, v3.2d, #0
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v1.16b
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i64>, <3 x i1>} @llvm.sadd.with.overflow(<3 x i64> %a, <3 x i64> %b)
   %e0 = extractvalue {<3 x i64>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i64>, <3 x i1>} %o, 1
@@ -2526,25 +3366,57 @@ define <3 x i64> @sadd_v3i64(<3 x i64> %a, <3 x i64> %b) {
 }
 
 define <3 x i64> @usub_v3i64(<3 x i64> %a, <3 x i64> %b) {
-; CHECK-LABEL: usub_v3i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    sub d4, d2, d5
-; CHECK-NEXT:    sub v1.2d, v0.2d, v3.2d
-; CHECK-NEXT:    cmhi v3.2d, v1.2d, v0.2d
-; CHECK-NEXT:    bit v0.16b, v1.16b, v3.16b
-; CHECK-NEXT:    cmhi v1.2d, v4.2d, v2.2d
-; CHECK-NEXT:    bit v2.16b, v4.16b, v1.16b
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v3i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    sub d4, d2, d5
+; CHECK-SD-NEXT:    sub v1.2d, v0.2d, v3.2d
+; CHECK-SD-NEXT:    cmhi v3.2d, v1.2d, v0.2d
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v3.16b
+; CHECK-SD-NEXT:    cmhi v1.2d, v4.2d, v2.2d
+; CHECK-SD-NEXT:    bit v2.16b, v4.16b, v1.16b
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v3i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    mov v6.16b, v3.16b
+; CHECK-GI-NEXT:    mov v7.16b, v0.16b
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-GI-NEXT:    mov v16.16b, v0.16b
+; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    fmov x8, d2
+; CHECK-GI-NEXT:    fmov x9, d5
+; CHECK-GI-NEXT:    mov v6.d[1], v4.d[0]
+; CHECK-GI-NEXT:    mov v7.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v16.d[1], v1.d[0]
+; CHECK-GI-NEXT:    sub x9, x8, x9
+; CHECK-GI-NEXT:    sub v1.2d, v7.2d, v6.2d
+; CHECK-GI-NEXT:    cmhi v3.2d, v3.2d, v16.2d
+; CHECK-GI-NEXT:    bit v0.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    cmhi v3.2d, v5.2d, v2.2d
+; CHECK-GI-NEXT:    fmov x10, d3
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    and x9, x9, x10
+; CHECK-GI-NEXT:    bic x8, x8, x10
+; CHECK-GI-NEXT:    orr x8, x9, x8
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i64>, <3 x i1>} @llvm.usub.with.overflow(<3 x i64> %a, <3 x i64> %b)
   %e0 = extractvalue {<3 x i64>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i64>, <3 x i1>} %o, 1
@@ -2553,28 +3425,79 @@ define <3 x i64> @usub_v3i64(<3 x i64> %a, <3 x i64> %b) {
 }
 
 define <3 x i64> @ssub_v3i64(<3 x i64> %a, <3 x i64> %b) {
-; CHECK-LABEL: ssub_v3i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d5 killed $d5 def $q5
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    sqsub v4.2d, v2.2d, v5.2d
-; CHECK-NEXT:    sub v5.2d, v2.2d, v5.2d
-; CHECK-NEXT:    sqsub v1.2d, v0.2d, v3.2d
-; CHECK-NEXT:    sub v3.2d, v0.2d, v3.2d
-; CHECK-NEXT:    cmeq v1.2d, v3.2d, v1.2d
-; CHECK-NEXT:    bif v0.16b, v3.16b, v1.16b
-; CHECK-NEXT:    cmeq v1.2d, v5.2d, v4.2d
-; CHECK-NEXT:    bif v2.16b, v5.16b, v1.16b
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v3i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    sqsub v4.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    sub v5.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    sqsub v1.2d, v0.2d, v3.2d
+; CHECK-SD-NEXT:    sub v3.2d, v0.2d, v3.2d
+; CHECK-SD-NEXT:    cmeq v1.2d, v3.2d, v1.2d
+; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    cmeq v1.2d, v5.2d, v4.2d
+; CHECK-SD-NEXT:    bif v2.16b, v5.16b, v1.16b
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v3i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    mov v7.16b, v0.16b
+; CHECK-GI-NEXT:    mov v16.16b, v3.16b
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-GI-NEXT:    mov v17.16b, v0.16b
+; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-GI-NEXT:    fmov x10, d2
+; CHECK-GI-NEXT:    fmov x11, d5
+; CHECK-GI-NEXT:    movi d6, #0000000000000000
+; CHECK-GI-NEXT:    cmgt v2.2d, v5.2d, v2.2d
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v7.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v16.d[1], v4.d[0]
+; CHECK-GI-NEXT:    mov v17.d[1], v1.d[0]
+; CHECK-GI-NEXT:    sub x11, x10, x11
+; CHECK-GI-NEXT:    sub v4.2d, v7.2d, v16.2d
+; CHECK-GI-NEXT:    cmgt v3.2d, v3.2d, v17.2d
+; CHECK-GI-NEXT:    fmov d16, x11
+; CHECK-GI-NEXT:    cmlt v7.2d, v4.2d, #0
+; CHECK-GI-NEXT:    fmov x12, d3
+; CHECK-GI-NEXT:    mov x8, v3.d[1]
+; CHECK-GI-NEXT:    cmgt v5.2d, v6.2d, v16.2d
+; CHECK-GI-NEXT:    fmov x13, d7
+; CHECK-GI-NEXT:    mov x9, v7.d[1]
+; CHECK-GI-NEXT:    fmov s3, w12
+; CHECK-GI-NEXT:    fmov s7, w13
+; CHECK-GI-NEXT:    mov v3.h[1], w8
+; CHECK-GI-NEXT:    mov v7.h[1], w9
+; CHECK-GI-NEXT:    mov v3.h[2], v2.h[0]
+; CHECK-GI-NEXT:    mov v7.h[2], v5.h[0]
+; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v7.8b
+; CHECK-GI-NEXT:    zip1 v3.4h, v2.4h, v2.4h
+; CHECK-GI-NEXT:    smov x8, v2.h[2]
+; CHECK-GI-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-GI-NEXT:    and x9, x11, x8
+; CHECK-GI-NEXT:    bic x8, x10, x8
+; CHECK-GI-NEXT:    orr x8, x9, x8
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    shl v3.2d, v3.2d, #63
+; CHECK-GI-NEXT:    cmlt v1.2d, v3.2d, #0
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v1.16b
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i64>, <3 x i1>} @llvm.ssub.with.overflow(<3 x i64> %a, <3 x i64> %b)
   %e0 = extractvalue {<3 x i64>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i64>, <3 x i1>} %o, 1
@@ -2787,15 +3710,25 @@ define <3 x i64> @smul_v3i64(<3 x i64> %a, <3 x i64> %b) {
 }
 
 define <4 x i64> @uadd_v4i64(<4 x i64> %a, <4 x i64> %b) {
-; CHECK-LABEL: uadd_v4i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v3.2d, v1.2d, v3.2d
-; CHECK-NEXT:    add v2.2d, v0.2d, v2.2d
-; CHECK-NEXT:    cmhi v4.2d, v1.2d, v3.2d
-; CHECK-NEXT:    cmhi v5.2d, v0.2d, v2.2d
-; CHECK-NEXT:    bit v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    bit v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v4i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v3.2d, v1.2d, v3.2d
+; CHECK-SD-NEXT:    add v2.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    cmhi v4.2d, v1.2d, v3.2d
+; CHECK-SD-NEXT:    cmhi v5.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    bit v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    bit v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v4i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v4.2d, v0.2d, v2.2d
+; CHECK-GI-NEXT:    add v5.2d, v1.2d, v3.2d
+; CHECK-GI-NEXT:    cmhi v2.2d, v2.2d, v4.2d
+; CHECK-GI-NEXT:    cmhi v3.2d, v3.2d, v5.2d
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v3.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i64>, <4 x i1>} @llvm.uadd.with.overflow(<4 x i64> %a, <4 x i64> %b)
   %e0 = extractvalue {<4 x i64>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i64>, <4 x i1>} %o, 1
@@ -2804,17 +3737,34 @@ define <4 x i64> @uadd_v4i64(<4 x i64> %a, <4 x i64> %b) {
 }
 
 define <4 x i64> @sadd_v4i64(<4 x i64> %a, <4 x i64> %b) {
-; CHECK-LABEL: sadd_v4i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd v4.2d, v1.2d, v3.2d
-; CHECK-NEXT:    sqadd v5.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v3.2d, v1.2d, v3.2d
-; CHECK-NEXT:    add v2.2d, v0.2d, v2.2d
-; CHECK-NEXT:    cmeq v4.2d, v3.2d, v4.2d
-; CHECK-NEXT:    cmeq v5.2d, v2.2d, v5.2d
-; CHECK-NEXT:    bif v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    bif v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v4i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqadd v4.2d, v1.2d, v3.2d
+; CHECK-SD-NEXT:    sqadd v5.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    add v3.2d, v1.2d, v3.2d
+; CHECK-SD-NEXT:    add v2.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    cmeq v4.2d, v3.2d, v4.2d
+; CHECK-SD-NEXT:    cmeq v5.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    bif v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v4i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v4.2d, v0.2d, v2.2d
+; CHECK-GI-NEXT:    add v5.2d, v1.2d, v3.2d
+; CHECK-GI-NEXT:    cmlt v2.2d, v2.2d, #0
+; CHECK-GI-NEXT:    cmlt v3.2d, v3.2d, #0
+; CHECK-GI-NEXT:    cmgt v6.2d, v0.2d, v4.2d
+; CHECK-GI-NEXT:    cmgt v7.2d, v1.2d, v5.2d
+; CHECK-GI-NEXT:    uzp1 v2.4s, v2.4s, v3.4s
+; CHECK-GI-NEXT:    uzp1 v3.4s, v6.4s, v7.4s
+; CHECK-GI-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    sshll v3.2d, v2.2s, #0
+; CHECK-GI-NEXT:    sshll2 v2.2d, v2.4s, #0
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i64>, <4 x i1>} @llvm.sadd.with.overflow(<4 x i64> %a, <4 x i64> %b)
   %e0 = extractvalue {<4 x i64>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i64>, <4 x i1>} %o, 1
@@ -2823,15 +3773,25 @@ define <4 x i64> @sadd_v4i64(<4 x i64> %a, <4 x i64> %b) {
 }
 
 define <4 x i64> @usub_v4i64(<4 x i64> %a, <4 x i64> %b) {
-; CHECK-LABEL: usub_v4i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v3.2d, v1.2d, v3.2d
-; CHECK-NEXT:    sub v2.2d, v0.2d, v2.2d
-; CHECK-NEXT:    cmhi v4.2d, v3.2d, v1.2d
-; CHECK-NEXT:    cmhi v5.2d, v2.2d, v0.2d
-; CHECK-NEXT:    bit v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    bit v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v4i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub v3.2d, v1.2d, v3.2d
+; CHECK-SD-NEXT:    sub v2.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    cmhi v4.2d, v3.2d, v1.2d
+; CHECK-SD-NEXT:    cmhi v5.2d, v2.2d, v0.2d
+; CHECK-SD-NEXT:    bit v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    bit v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v4i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v4.2d, v0.2d, v2.2d
+; CHECK-GI-NEXT:    sub v5.2d, v1.2d, v3.2d
+; CHECK-GI-NEXT:    cmhi v2.2d, v2.2d, v0.2d
+; CHECK-GI-NEXT:    cmhi v3.2d, v3.2d, v1.2d
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v2.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v3.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i64>, <4 x i1>} @llvm.usub.with.overflow(<4 x i64> %a, <4 x i64> %b)
   %e0 = extractvalue {<4 x i64>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i64>, <4 x i1>} %o, 1
@@ -2840,17 +3800,34 @@ define <4 x i64> @usub_v4i64(<4 x i64> %a, <4 x i64> %b) {
 }
 
 define <4 x i64> @ssub_v4i64(<4 x i64> %a, <4 x i64> %b) {
-; CHECK-LABEL: ssub_v4i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub v4.2d, v1.2d, v3.2d
-; CHECK-NEXT:    sqsub v5.2d, v0.2d, v2.2d
-; CHECK-NEXT:    sub v3.2d, v1.2d, v3.2d
-; CHECK-NEXT:    sub v2.2d, v0.2d, v2.2d
-; CHECK-NEXT:    cmeq v4.2d, v3.2d, v4.2d
-; CHECK-NEXT:    cmeq v5.2d, v2.2d, v5.2d
-; CHECK-NEXT:    bif v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    bif v1.16b, v3.16b, v4.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v4i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sqsub v4.2d, v1.2d, v3.2d
+; CHECK-SD-NEXT:    sqsub v5.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    sub v3.2d, v1.2d, v3.2d
+; CHECK-SD-NEXT:    sub v2.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    cmeq v4.2d, v3.2d, v4.2d
+; CHECK-SD-NEXT:    cmeq v5.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    bif v1.16b, v3.16b, v4.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v4i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub v4.2d, v0.2d, v2.2d
+; CHECK-GI-NEXT:    sub v5.2d, v1.2d, v3.2d
+; CHECK-GI-NEXT:    cmgt v2.2d, v2.2d, v0.2d
+; CHECK-GI-NEXT:    cmgt v3.2d, v3.2d, v1.2d
+; CHECK-GI-NEXT:    cmlt v6.2d, v4.2d, #0
+; CHECK-GI-NEXT:    cmlt v7.2d, v5.2d, #0
+; CHECK-GI-NEXT:    uzp1 v2.4s, v2.4s, v3.4s
+; CHECK-GI-NEXT:    uzp1 v3.4s, v6.4s, v7.4s
+; CHECK-GI-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    sshll v3.2d, v2.2s, #0
+; CHECK-GI-NEXT:    sshll2 v2.2d, v2.4s, #0
+; CHECK-GI-NEXT:    bit v0.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    bit v1.16b, v5.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i64>, <4 x i1>} @llvm.ssub.with.overflow(<4 x i64> %a, <4 x i64> %b)
   %e0 = extractvalue {<4 x i64>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i64>, <4 x i1>} %o, 1
@@ -3043,17 +4020,41 @@ define <4 x i64> @smul_v4i64(<4 x i64> %a, <4 x i64> %b) {
 }
 
 define <2 x i128> @uadd_v2i128(<2 x i128> %a, <2 x i128> %b) {
-; CHECK-LABEL: uadd_v2i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x0, x4
-; CHECK-NEXT:    adcs x9, x1, x5
-; CHECK-NEXT:    csel x1, x9, x1, hs
-; CHECK-NEXT:    csel x0, x8, x0, hs
-; CHECK-NEXT:    adds x8, x2, x6
-; CHECK-NEXT:    adcs x9, x3, x7
-; CHECK-NEXT:    csel x2, x8, x2, hs
-; CHECK-NEXT:    csel x3, x9, x3, hs
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v2i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    adds x8, x0, x4
+; CHECK-SD-NEXT:    adcs x9, x1, x5
+; CHECK-SD-NEXT:    csel x1, x9, x1, hs
+; CHECK-SD-NEXT:    csel x0, x8, x0, hs
+; CHECK-SD-NEXT:    adds x8, x2, x6
+; CHECK-SD-NEXT:    adcs x9, x3, x7
+; CHECK-SD-NEXT:    csel x2, x8, x2, hs
+; CHECK-SD-NEXT:    csel x3, x9, x3, hs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v2i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adds x8, x0, x4
+; CHECK-GI-NEXT:    adc x9, x1, x5
+; CHECK-GI-NEXT:    adds x10, x2, x6
+; CHECK-GI-NEXT:    adc x11, x3, x7
+; CHECK-GI-NEXT:    cmp x8, x4
+; CHECK-GI-NEXT:    cset w12, lo
+; CHECK-GI-NEXT:    cmp x9, x5
+; CHECK-GI-NEXT:    cset w13, lo
+; CHECK-GI-NEXT:    csel w12, w12, w13, eq
+; CHECK-GI-NEXT:    cmp x10, x6
+; CHECK-GI-NEXT:    cset w13, lo
+; CHECK-GI-NEXT:    cmp x11, x7
+; CHECK-GI-NEXT:    cset w14, lo
+; CHECK-GI-NEXT:    csel w13, w13, w14, eq
+; CHECK-GI-NEXT:    tst w12, #0x1
+; CHECK-GI-NEXT:    csel x0, x8, x0, ne
+; CHECK-GI-NEXT:    csel x1, x9, x1, ne
+; CHECK-GI-NEXT:    tst w13, #0x1
+; CHECK-GI-NEXT:    csel x2, x10, x2, ne
+; CHECK-GI-NEXT:    csel x3, x11, x3, ne
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i128>, <2 x i1>} @llvm.uadd.with.overflow(<2 x i128> %a, <2 x i128> %b)
   %e0 = extractvalue {<2 x i128>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i128>, <2 x i1>} %o, 1
@@ -3062,17 +4063,57 @@ define <2 x i128> @uadd_v2i128(<2 x i128> %a, <2 x i128> %b) {
 }
 
 define <2 x i128> @sadd_v2i128(<2 x i128> %a, <2 x i128> %b) {
-; CHECK-LABEL: sadd_v2i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x0, x4
-; CHECK-NEXT:    adcs x9, x1, x5
-; CHECK-NEXT:    csel x1, x9, x1, vs
-; CHECK-NEXT:    csel x0, x8, x0, vs
-; CHECK-NEXT:    adds x8, x2, x6
-; CHECK-NEXT:    adcs x9, x3, x7
-; CHECK-NEXT:    csel x2, x8, x2, vs
-; CHECK-NEXT:    csel x3, x9, x3, vs
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v2i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    adds x8, x0, x4
+; CHECK-SD-NEXT:    adcs x9, x1, x5
+; CHECK-SD-NEXT:    csel x1, x9, x1, vs
+; CHECK-SD-NEXT:    csel x0, x8, x0, vs
+; CHECK-SD-NEXT:    adds x8, x2, x6
+; CHECK-SD-NEXT:    adcs x9, x3, x7
+; CHECK-SD-NEXT:    csel x2, x8, x2, vs
+; CHECK-SD-NEXT:    csel x3, x9, x3, vs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v2i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adds x8, x0, x4
+; CHECK-GI-NEXT:    adc x9, x1, x5
+; CHECK-GI-NEXT:    adds x10, x2, x6
+; CHECK-GI-NEXT:    adc x11, x3, x7
+; CHECK-GI-NEXT:    cmp x8, x0
+; CHECK-GI-NEXT:    cset w12, lo
+; CHECK-GI-NEXT:    cmp x9, x1
+; CHECK-GI-NEXT:    cset w13, lt
+; CHECK-GI-NEXT:    csel w12, w12, w13, eq
+; CHECK-GI-NEXT:    cmp x10, x2
+; CHECK-GI-NEXT:    cset w13, lo
+; CHECK-GI-NEXT:    cmp x11, x3
+; CHECK-GI-NEXT:    fmov s1, w12
+; CHECK-GI-NEXT:    cset w14, lt
+; CHECK-GI-NEXT:    csel w13, w13, w14, eq
+; CHECK-GI-NEXT:    cmp x5, #0
+; CHECK-GI-NEXT:    cset w14, mi
+; CHECK-GI-NEXT:    mov v1.s[1], w13
+; CHECK-GI-NEXT:    csel w14, wzr, w14, eq
+; CHECK-GI-NEXT:    cmp x7, #0
+; CHECK-GI-NEXT:    fmov s0, w14
+; CHECK-GI-NEXT:    cset w15, mi
+; CHECK-GI-NEXT:    csel w15, wzr, w15, eq
+; CHECK-GI-NEXT:    mov v0.s[1], w15
+; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-GI-NEXT:    fmov w12, s0
+; CHECK-GI-NEXT:    tst w12, #0x1
+; CHECK-GI-NEXT:    csel x0, x8, x0, ne
+; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    tst w12, #0x1
+; CHECK-GI-NEXT:    csel x1, x9, x1, ne
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x2, x10, x2, ne
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x3, x11, x3, ne
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i128>, <2 x i1>} @llvm.sadd.with.overflow(<2 x i128> %a, <2 x i128> %b)
   %e0 = extractvalue {<2 x i128>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i128>, <2 x i1>} %o, 1
@@ -3081,17 +4122,41 @@ define <2 x i128> @sadd_v2i128(<2 x i128> %a, <2 x i128> %b) {
 }
 
 define <2 x i128> @usub_v2i128(<2 x i128> %a, <2 x i128> %b) {
-; CHECK-LABEL: usub_v2i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x0, x4
-; CHECK-NEXT:    sbcs x9, x1, x5
-; CHECK-NEXT:    csel x1, x9, x1, lo
-; CHECK-NEXT:    csel x0, x8, x0, lo
-; CHECK-NEXT:    subs x8, x2, x6
-; CHECK-NEXT:    sbcs x9, x3, x7
-; CHECK-NEXT:    csel x2, x8, x2, lo
-; CHECK-NEXT:    csel x3, x9, x3, lo
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v2i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    subs x8, x0, x4
+; CHECK-SD-NEXT:    sbcs x9, x1, x5
+; CHECK-SD-NEXT:    csel x1, x9, x1, lo
+; CHECK-SD-NEXT:    csel x0, x8, x0, lo
+; CHECK-SD-NEXT:    subs x8, x2, x6
+; CHECK-SD-NEXT:    sbcs x9, x3, x7
+; CHECK-SD-NEXT:    csel x2, x8, x2, lo
+; CHECK-SD-NEXT:    csel x3, x9, x3, lo
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v2i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    subs x8, x0, x4
+; CHECK-GI-NEXT:    sbc x9, x1, x5
+; CHECK-GI-NEXT:    subs x10, x2, x6
+; CHECK-GI-NEXT:    sbc x11, x3, x7
+; CHECK-GI-NEXT:    cmp x0, x4
+; CHECK-GI-NEXT:    cset w12, lo
+; CHECK-GI-NEXT:    cmp x1, x5
+; CHECK-GI-NEXT:    cset w13, lo
+; CHECK-GI-NEXT:    csel w12, w12, w13, eq
+; CHECK-GI-NEXT:    cmp x2, x6
+; CHECK-GI-NEXT:    cset w13, lo
+; CHECK-GI-NEXT:    cmp x3, x7
+; CHECK-GI-NEXT:    cset w14, lo
+; CHECK-GI-NEXT:    csel w13, w13, w14, eq
+; CHECK-GI-NEXT:    tst w12, #0x1
+; CHECK-GI-NEXT:    csel x0, x8, x0, ne
+; CHECK-GI-NEXT:    csel x1, x9, x1, ne
+; CHECK-GI-NEXT:    tst w13, #0x1
+; CHECK-GI-NEXT:    csel x2, x10, x2, ne
+; CHECK-GI-NEXT:    csel x3, x11, x3, ne
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i128>, <2 x i1>} @llvm.usub.with.overflow(<2 x i128> %a, <2 x i128> %b)
   %e0 = extractvalue {<2 x i128>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i128>, <2 x i1>} %o, 1
@@ -3100,17 +4165,57 @@ define <2 x i128> @usub_v2i128(<2 x i128> %a, <2 x i128> %b) {
 }
 
 define <2 x i128> @ssub_v2i128(<2 x i128> %a, <2 x i128> %b) {
-; CHECK-LABEL: ssub_v2i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x0, x4
-; CHECK-NEXT:    sbcs x9, x1, x5
-; CHECK-NEXT:    csel x1, x9, x1, vs
-; CHECK-NEXT:    csel x0, x8, x0, vs
-; CHECK-NEXT:    subs x8, x2, x6
-; CHECK-NEXT:    sbcs x9, x3, x7
-; CHECK-NEXT:    csel x2, x8, x2, vs
-; CHECK-NEXT:    csel x3, x9, x3, vs
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v2i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    subs x8, x0, x4
+; CHECK-SD-NEXT:    sbcs x9, x1, x5
+; CHECK-SD-NEXT:    csel x1, x9, x1, vs
+; CHECK-SD-NEXT:    csel x0, x8, x0, vs
+; CHECK-SD-NEXT:    subs x8, x2, x6
+; CHECK-SD-NEXT:    sbcs x9, x3, x7
+; CHECK-SD-NEXT:    csel x2, x8, x2, vs
+; CHECK-SD-NEXT:    csel x3, x9, x3, vs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v2i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    subs x8, x0, x4
+; CHECK-GI-NEXT:    sbc x9, x1, x5
+; CHECK-GI-NEXT:    subs x10, x2, x6
+; CHECK-GI-NEXT:    sbc x11, x3, x7
+; CHECK-GI-NEXT:    cmp x0, x4
+; CHECK-GI-NEXT:    cset w12, lo
+; CHECK-GI-NEXT:    cmp x1, x5
+; CHECK-GI-NEXT:    cset w13, lt
+; CHECK-GI-NEXT:    csel w12, w12, w13, eq
+; CHECK-GI-NEXT:    cmp x2, x6
+; CHECK-GI-NEXT:    cset w13, lo
+; CHECK-GI-NEXT:    cmp x3, x7
+; CHECK-GI-NEXT:    fmov s0, w12
+; CHECK-GI-NEXT:    cset w14, lt
+; CHECK-GI-NEXT:    csel w13, w13, w14, eq
+; CHECK-GI-NEXT:    cmp x9, #0
+; CHECK-GI-NEXT:    cset w14, mi
+; CHECK-GI-NEXT:    mov v0.s[1], w13
+; CHECK-GI-NEXT:    csel w14, wzr, w14, eq
+; CHECK-GI-NEXT:    cmp x11, #0
+; CHECK-GI-NEXT:    fmov s1, w14
+; CHECK-GI-NEXT:    cset w15, mi
+; CHECK-GI-NEXT:    csel w15, wzr, w15, eq
+; CHECK-GI-NEXT:    mov v1.s[1], w15
+; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-GI-NEXT:    fmov w12, s0
+; CHECK-GI-NEXT:    tst w12, #0x1
+; CHECK-GI-NEXT:    csel x0, x8, x0, ne
+; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    tst w12, #0x1
+; CHECK-GI-NEXT:    csel x1, x9, x1, ne
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x2, x10, x2, ne
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x3, x11, x3, ne
+; CHECK-GI-NEXT:    ret
   %o = call {<2 x i128>, <2 x i1>} @llvm.ssub.with.overflow(<2 x i128> %a, <2 x i128> %b)
   %e0 = extractvalue {<2 x i128>, <2 x i1>} %o, 0
   %e1 = extractvalue {<2 x i128>, <2 x i1>} %o, 1
@@ -3454,23 +4559,59 @@ define <2 x i128> @smul_v2i128(<2 x i128> %a, <2 x i128> %b) {
 }
 
 define <3 x i128> @uadd_v3i128(<3 x i128> %a, <3 x i128> %b) {
-; CHECK-LABEL: uadd_v3i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [sp]
-; CHECK-NEXT:    adds x8, x2, x8
-; CHECK-NEXT:    adcs x9, x3, x9
-; CHECK-NEXT:    csel x3, x9, x3, hs
-; CHECK-NEXT:    ldp x9, x10, [sp, #16]
-; CHECK-NEXT:    csel x2, x8, x2, hs
-; CHECK-NEXT:    adds x8, x0, x6
-; CHECK-NEXT:    adcs x11, x1, x7
-; CHECK-NEXT:    csel x1, x11, x1, hs
-; CHECK-NEXT:    csel x0, x8, x0, hs
-; CHECK-NEXT:    adds x8, x4, x9
-; CHECK-NEXT:    adcs x9, x5, x10
-; CHECK-NEXT:    csel x4, x8, x4, hs
-; CHECK-NEXT:    csel x5, x9, x5, hs
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v3i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldp x8, x9, [sp]
+; CHECK-SD-NEXT:    adds x8, x2, x8
+; CHECK-SD-NEXT:    adcs x9, x3, x9
+; CHECK-SD-NEXT:    csel x3, x9, x3, hs
+; CHECK-SD-NEXT:    ldp x9, x10, [sp, #16]
+; CHECK-SD-NEXT:    csel x2, x8, x2, hs
+; CHECK-SD-NEXT:    adds x8, x0, x6
+; CHECK-SD-NEXT:    adcs x11, x1, x7
+; CHECK-SD-NEXT:    csel x1, x11, x1, hs
+; CHECK-SD-NEXT:    csel x0, x8, x0, hs
+; CHECK-SD-NEXT:    adds x8, x4, x9
+; CHECK-SD-NEXT:    adcs x9, x5, x10
+; CHECK-SD-NEXT:    csel x4, x8, x4, hs
+; CHECK-SD-NEXT:    csel x5, x9, x5, hs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v3i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldp x8, x9, [sp]
+; CHECK-GI-NEXT:    adds x10, x0, x6
+; CHECK-GI-NEXT:    ldp x11, x12, [sp, #16]
+; CHECK-GI-NEXT:    adc x13, x1, x7
+; CHECK-GI-NEXT:    adds x14, x2, x8
+; CHECK-GI-NEXT:    adc x15, x3, x9
+; CHECK-GI-NEXT:    adds x16, x4, x11
+; CHECK-GI-NEXT:    adc x17, x5, x12
+; CHECK-GI-NEXT:    cmp x10, x6
+; CHECK-GI-NEXT:    cset w18, lo
+; CHECK-GI-NEXT:    cmp x13, x7
+; CHECK-GI-NEXT:    cset w6, lo
+; CHECK-GI-NEXT:    csel w18, w18, w6, eq
+; CHECK-GI-NEXT:    cmp x14, x8
+; CHECK-GI-NEXT:    cset w8, lo
+; CHECK-GI-NEXT:    cmp x15, x9
+; CHECK-GI-NEXT:    cset w9, lo
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
+; CHECK-GI-NEXT:    cmp x16, x11
+; CHECK-GI-NEXT:    cset w9, lo
+; CHECK-GI-NEXT:    cmp x17, x12
+; CHECK-GI-NEXT:    cset w11, lo
+; CHECK-GI-NEXT:    csel w9, w9, w11, eq
+; CHECK-GI-NEXT:    tst w18, #0x1
+; CHECK-GI-NEXT:    csel x0, x10, x0, ne
+; CHECK-GI-NEXT:    csel x1, x13, x1, ne
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x2, x14, x2, ne
+; CHECK-GI-NEXT:    csel x3, x15, x3, ne
+; CHECK-GI-NEXT:    tst w9, #0x1
+; CHECK-GI-NEXT:    csel x4, x16, x4, ne
+; CHECK-GI-NEXT:    csel x5, x17, x5, ne
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i128>, <3 x i1>} @llvm.uadd.with.overflow(<3 x i128> %a, <3 x i128> %b)
   %e0 = extractvalue {<3 x i128>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i128>, <3 x i1>} %o, 1
@@ -3479,23 +4620,81 @@ define <3 x i128> @uadd_v3i128(<3 x i128> %a, <3 x i128> %b) {
 }
 
 define <3 x i128> @sadd_v3i128(<3 x i128> %a, <3 x i128> %b) {
-; CHECK-LABEL: sadd_v3i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [sp]
-; CHECK-NEXT:    adds x8, x2, x8
-; CHECK-NEXT:    adcs x9, x3, x9
-; CHECK-NEXT:    csel x3, x9, x3, vs
-; CHECK-NEXT:    ldp x9, x10, [sp, #16]
-; CHECK-NEXT:    csel x2, x8, x2, vs
-; CHECK-NEXT:    adds x8, x0, x6
-; CHECK-NEXT:    adcs x11, x1, x7
-; CHECK-NEXT:    csel x1, x11, x1, vs
-; CHECK-NEXT:    csel x0, x8, x0, vs
-; CHECK-NEXT:    adds x8, x4, x9
-; CHECK-NEXT:    adcs x9, x5, x10
-; CHECK-NEXT:    csel x4, x8, x4, vs
-; CHECK-NEXT:    csel x5, x9, x5, vs
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v3i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldp x8, x9, [sp]
+; CHECK-SD-NEXT:    adds x8, x2, x8
+; CHECK-SD-NEXT:    adcs x9, x3, x9
+; CHECK-SD-NEXT:    csel x3, x9, x3, vs
+; CHECK-SD-NEXT:    ldp x9, x10, [sp, #16]
+; CHECK-SD-NEXT:    csel x2, x8, x2, vs
+; CHECK-SD-NEXT:    adds x8, x0, x6
+; CHECK-SD-NEXT:    adcs x11, x1, x7
+; CHECK-SD-NEXT:    csel x1, x11, x1, vs
+; CHECK-SD-NEXT:    csel x0, x8, x0, vs
+; CHECK-SD-NEXT:    adds x8, x4, x9
+; CHECK-SD-NEXT:    adcs x9, x5, x10
+; CHECK-SD-NEXT:    csel x4, x8, x4, vs
+; CHECK-SD-NEXT:    csel x5, x9, x5, vs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v3i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldp x8, x14, [sp]
+; CHECK-GI-NEXT:    adds x10, x0, x6
+; CHECK-GI-NEXT:    ldp x9, x15, [sp, #16]
+; CHECK-GI-NEXT:    adc x13, x1, x7
+; CHECK-GI-NEXT:    adds x11, x2, x8
+; CHECK-GI-NEXT:    adc x12, x3, x14
+; CHECK-GI-NEXT:    adds x8, x4, x9
+; CHECK-GI-NEXT:    adc x9, x5, x15
+; CHECK-GI-NEXT:    cmp x10, x0
+; CHECK-GI-NEXT:    cset w16, lo
+; CHECK-GI-NEXT:    cmp x13, x1
+; CHECK-GI-NEXT:    cset w17, lt
+; CHECK-GI-NEXT:    csel w16, w16, w17, eq
+; CHECK-GI-NEXT:    cmp x11, x2
+; CHECK-GI-NEXT:    cset w17, lo
+; CHECK-GI-NEXT:    cmp x12, x3
+; CHECK-GI-NEXT:    fmov s0, w16
+; CHECK-GI-NEXT:    cset w18, lt
+; CHECK-GI-NEXT:    csel w17, w17, w18, eq
+; CHECK-GI-NEXT:    cmp x8, x4
+; CHECK-GI-NEXT:    cset w18, lo
+; CHECK-GI-NEXT:    cmp x9, x5
+; CHECK-GI-NEXT:    mov v0.h[1], w17
+; CHECK-GI-NEXT:    cset w6, lt
+; CHECK-GI-NEXT:    csel w18, w18, w6, eq
+; CHECK-GI-NEXT:    cmp x7, #0
+; CHECK-GI-NEXT:    cset w6, mi
+; CHECK-GI-NEXT:    csel w6, wzr, w6, eq
+; CHECK-GI-NEXT:    cmp x14, #0
+; CHECK-GI-NEXT:    mov v0.h[2], w18
+; CHECK-GI-NEXT:    fmov s1, w6
+; CHECK-GI-NEXT:    cset w14, mi
+; CHECK-GI-NEXT:    csel w14, wzr, w14, eq
+; CHECK-GI-NEXT:    cmp x15, #0
+; CHECK-GI-NEXT:    mov v1.h[1], w14
+; CHECK-GI-NEXT:    cset w14, mi
+; CHECK-GI-NEXT:    csel w14, wzr, w14, eq
+; CHECK-GI-NEXT:    mov v1.h[2], w14
+; CHECK-GI-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    umov w14, v0.h[0]
+; CHECK-GI-NEXT:    umov w15, v0.h[1]
+; CHECK-GI-NEXT:    umov w16, v0.h[2]
+; CHECK-GI-NEXT:    and w14, w14, #0x1
+; CHECK-GI-NEXT:    and w15, w15, #0x1
+; CHECK-GI-NEXT:    and w16, w16, #0x1
+; CHECK-GI-NEXT:    tst w14, #0x1
+; CHECK-GI-NEXT:    csel x0, x10, x0, ne
+; CHECK-GI-NEXT:    csel x1, x13, x1, ne
+; CHECK-GI-NEXT:    tst w15, #0x1
+; CHECK-GI-NEXT:    csel x2, x11, x2, ne
+; CHECK-GI-NEXT:    csel x3, x12, x3, ne
+; CHECK-GI-NEXT:    tst w16, #0x1
+; CHECK-GI-NEXT:    csel x4, x8, x4, ne
+; CHECK-GI-NEXT:    csel x5, x9, x5, ne
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i128>, <3 x i1>} @llvm.sadd.with.overflow(<3 x i128> %a, <3 x i128> %b)
   %e0 = extractvalue {<3 x i128>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i128>, <3 x i1>} %o, 1
@@ -3504,23 +4703,59 @@ define <3 x i128> @sadd_v3i128(<3 x i128> %a, <3 x i128> %b) {
 }
 
 define <3 x i128> @usub_v3i128(<3 x i128> %a, <3 x i128> %b) {
-; CHECK-LABEL: usub_v3i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [sp]
-; CHECK-NEXT:    subs x8, x2, x8
-; CHECK-NEXT:    sbcs x9, x3, x9
-; CHECK-NEXT:    csel x3, x9, x3, lo
-; CHECK-NEXT:    ldp x9, x10, [sp, #16]
-; CHECK-NEXT:    csel x2, x8, x2, lo
-; CHECK-NEXT:    subs x8, x0, x6
-; CHECK-NEXT:    sbcs x11, x1, x7
-; CHECK-NEXT:    csel x1, x11, x1, lo
-; CHECK-NEXT:    csel x0, x8, x0, lo
-; CHECK-NEXT:    subs x8, x4, x9
-; CHECK-NEXT:    sbcs x9, x5, x10
-; CHECK-NEXT:    csel x4, x8, x4, lo
-; CHECK-NEXT:    csel x5, x9, x5, lo
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v3i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldp x8, x9, [sp]
+; CHECK-SD-NEXT:    subs x8, x2, x8
+; CHECK-SD-NEXT:    sbcs x9, x3, x9
+; CHECK-SD-NEXT:    csel x3, x9, x3, lo
+; CHECK-SD-NEXT:    ldp x9, x10, [sp, #16]
+; CHECK-SD-NEXT:    csel x2, x8, x2, lo
+; CHECK-SD-NEXT:    subs x8, x0, x6
+; CHECK-SD-NEXT:    sbcs x11, x1, x7
+; CHECK-SD-NEXT:    csel x1, x11, x1, lo
+; CHECK-SD-NEXT:    csel x0, x8, x0, lo
+; CHECK-SD-NEXT:    subs x8, x4, x9
+; CHECK-SD-NEXT:    sbcs x9, x5, x10
+; CHECK-SD-NEXT:    csel x4, x8, x4, lo
+; CHECK-SD-NEXT:    csel x5, x9, x5, lo
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v3i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldp x8, x9, [sp]
+; CHECK-GI-NEXT:    subs x10, x0, x6
+; CHECK-GI-NEXT:    ldp x11, x12, [sp, #16]
+; CHECK-GI-NEXT:    sbc x13, x1, x7
+; CHECK-GI-NEXT:    subs x14, x2, x8
+; CHECK-GI-NEXT:    sbc x15, x3, x9
+; CHECK-GI-NEXT:    subs x16, x4, x11
+; CHECK-GI-NEXT:    sbc x17, x5, x12
+; CHECK-GI-NEXT:    cmp x0, x6
+; CHECK-GI-NEXT:    cset w18, lo
+; CHECK-GI-NEXT:    cmp x1, x7
+; CHECK-GI-NEXT:    cset w6, lo
+; CHECK-GI-NEXT:    csel w18, w18, w6, eq
+; CHECK-GI-NEXT:    cmp x2, x8
+; CHECK-GI-NEXT:    cset w8, lo
+; CHECK-GI-NEXT:    cmp x3, x9
+; CHECK-GI-NEXT:    cset w9, lo
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
+; CHECK-GI-NEXT:    cmp x4, x11
+; CHECK-GI-NEXT:    cset w9, lo
+; CHECK-GI-NEXT:    cmp x5, x12
+; CHECK-GI-NEXT:    cset w11, lo
+; CHECK-GI-NEXT:    csel w9, w9, w11, eq
+; CHECK-GI-NEXT:    tst w18, #0x1
+; CHECK-GI-NEXT:    csel x0, x10, x0, ne
+; CHECK-GI-NEXT:    csel x1, x13, x1, ne
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x2, x14, x2, ne
+; CHECK-GI-NEXT:    csel x3, x15, x3, ne
+; CHECK-GI-NEXT:    tst w9, #0x1
+; CHECK-GI-NEXT:    csel x4, x16, x4, ne
+; CHECK-GI-NEXT:    csel x5, x17, x5, ne
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i128>, <3 x i1>} @llvm.usub.with.overflow(<3 x i128> %a, <3 x i128> %b)
   %e0 = extractvalue {<3 x i128>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i128>, <3 x i1>} %o, 1
@@ -3529,23 +4764,81 @@ define <3 x i128> @usub_v3i128(<3 x i128> %a, <3 x i128> %b) {
 }
 
 define <3 x i128> @ssub_v3i128(<3 x i128> %a, <3 x i128> %b) {
-; CHECK-LABEL: ssub_v3i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [sp]
-; CHECK-NEXT:    subs x8, x2, x8
-; CHECK-NEXT:    sbcs x9, x3, x9
-; CHECK-NEXT:    csel x3, x9, x3, vs
-; CHECK-NEXT:    ldp x9, x10, [sp, #16]
-; CHECK-NEXT:    csel x2, x8, x2, vs
-; CHECK-NEXT:    subs x8, x0, x6
-; CHECK-NEXT:    sbcs x11, x1, x7
-; CHECK-NEXT:    csel x1, x11, x1, vs
-; CHECK-NEXT:    csel x0, x8, x0, vs
-; CHECK-NEXT:    subs x8, x4, x9
-; CHECK-NEXT:    sbcs x9, x5, x10
-; CHECK-NEXT:    csel x4, x8, x4, vs
-; CHECK-NEXT:    csel x5, x9, x5, vs
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v3i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldp x8, x9, [sp]
+; CHECK-SD-NEXT:    subs x8, x2, x8
+; CHECK-SD-NEXT:    sbcs x9, x3, x9
+; CHECK-SD-NEXT:    csel x3, x9, x3, vs
+; CHECK-SD-NEXT:    ldp x9, x10, [sp, #16]
+; CHECK-SD-NEXT:    csel x2, x8, x2, vs
+; CHECK-SD-NEXT:    subs x8, x0, x6
+; CHECK-SD-NEXT:    sbcs x11, x1, x7
+; CHECK-SD-NEXT:    csel x1, x11, x1, vs
+; CHECK-SD-NEXT:    csel x0, x8, x0, vs
+; CHECK-SD-NEXT:    subs x8, x4, x9
+; CHECK-SD-NEXT:    sbcs x9, x5, x10
+; CHECK-SD-NEXT:    csel x4, x8, x4, vs
+; CHECK-SD-NEXT:    csel x5, x9, x5, vs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v3i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldp x14, x15, [sp]
+; CHECK-GI-NEXT:    subs x10, x0, x6
+; CHECK-GI-NEXT:    ldp x16, x17, [sp, #16]
+; CHECK-GI-NEXT:    sbc x13, x1, x7
+; CHECK-GI-NEXT:    subs x11, x2, x14
+; CHECK-GI-NEXT:    sbc x12, x3, x15
+; CHECK-GI-NEXT:    subs x8, x4, x16
+; CHECK-GI-NEXT:    sbc x9, x5, x17
+; CHECK-GI-NEXT:    cmp x0, x6
+; CHECK-GI-NEXT:    cset w18, lo
+; CHECK-GI-NEXT:    cmp x1, x7
+; CHECK-GI-NEXT:    cset w6, lt
+; CHECK-GI-NEXT:    csel w18, w18, w6, eq
+; CHECK-GI-NEXT:    cmp x2, x14
+; CHECK-GI-NEXT:    cset w14, lo
+; CHECK-GI-NEXT:    cmp x3, x15
+; CHECK-GI-NEXT:    fmov s0, w18
+; CHECK-GI-NEXT:    cset w15, lt
+; CHECK-GI-NEXT:    csel w14, w14, w15, eq
+; CHECK-GI-NEXT:    cmp x4, x16
+; CHECK-GI-NEXT:    cset w15, lo
+; CHECK-GI-NEXT:    cmp x5, x17
+; CHECK-GI-NEXT:    mov v0.h[1], w14
+; CHECK-GI-NEXT:    cset w16, lt
+; CHECK-GI-NEXT:    csel w15, w15, w16, eq
+; CHECK-GI-NEXT:    cmp x13, #0
+; CHECK-GI-NEXT:    cset w16, mi
+; CHECK-GI-NEXT:    csel w16, wzr, w16, eq
+; CHECK-GI-NEXT:    cmp x12, #0
+; CHECK-GI-NEXT:    mov v0.h[2], w15
+; CHECK-GI-NEXT:    fmov s1, w16
+; CHECK-GI-NEXT:    cset w17, mi
+; CHECK-GI-NEXT:    csel w16, wzr, w17, eq
+; CHECK-GI-NEXT:    cmp x9, #0
+; CHECK-GI-NEXT:    cset w14, mi
+; CHECK-GI-NEXT:    mov v1.h[1], w16
+; CHECK-GI-NEXT:    csel w14, wzr, w14, eq
+; CHECK-GI-NEXT:    mov v1.h[2], w14
+; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    umov w14, v0.h[0]
+; CHECK-GI-NEXT:    umov w15, v0.h[1]
+; CHECK-GI-NEXT:    umov w16, v0.h[2]
+; CHECK-GI-NEXT:    and w14, w14, #0x1
+; CHECK-GI-NEXT:    and w15, w15, #0x1
+; CHECK-GI-NEXT:    and w16, w16, #0x1
+; CHECK-GI-NEXT:    tst w14, #0x1
+; CHECK-GI-NEXT:    csel x0, x10, x0, ne
+; CHECK-GI-NEXT:    csel x1, x13, x1, ne
+; CHECK-GI-NEXT:    tst w15, #0x1
+; CHECK-GI-NEXT:    csel x2, x11, x2, ne
+; CHECK-GI-NEXT:    csel x3, x12, x3, ne
+; CHECK-GI-NEXT:    tst w16, #0x1
+; CHECK-GI-NEXT:    csel x4, x8, x4, ne
+; CHECK-GI-NEXT:    csel x5, x9, x5, ne
+; CHECK-GI-NEXT:    ret
   %o = call {<3 x i128>, <3 x i1>} @llvm.ssub.with.overflow(<3 x i128> %a, <3 x i128> %b)
   %e0 = extractvalue {<3 x i128>, <3 x i1>} %o, 0
   %e1 = extractvalue {<3 x i128>, <3 x i1>} %o, 1
@@ -4097,29 +5390,89 @@ define <3 x i128> @smul_v3i128(<3 x i128> %a, <3 x i128> %b) {
 }
 
 define <4 x i128> @uadd_v4i128(<4 x i128> %a, <4 x i128> %b) {
-; CHECK-LABEL: uadd_v4i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [sp, #16]
-; CHECK-NEXT:    ldp x10, x11, [sp, #32]
-; CHECK-NEXT:    adds x8, x2, x8
-; CHECK-NEXT:    adcs x9, x3, x9
-; CHECK-NEXT:    csel x3, x9, x3, hs
-; CHECK-NEXT:    csel x2, x8, x2, hs
-; CHECK-NEXT:    adds x8, x4, x10
-; CHECK-NEXT:    adcs x9, x5, x11
-; CHECK-NEXT:    ldp x10, x11, [sp]
-; CHECK-NEXT:    csel x4, x8, x4, hs
-; CHECK-NEXT:    csel x5, x9, x5, hs
-; CHECK-NEXT:    adds x8, x0, x10
-; CHECK-NEXT:    ldp x9, x10, [sp, #48]
-; CHECK-NEXT:    adcs x11, x1, x11
-; CHECK-NEXT:    csel x1, x11, x1, hs
-; CHECK-NEXT:    csel x0, x8, x0, hs
-; CHECK-NEXT:    adds x8, x6, x9
-; CHECK-NEXT:    adcs x9, x7, x10
-; CHECK-NEXT:    csel x6, x8, x6, hs
-; CHECK-NEXT:    csel x7, x9, x7, hs
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uadd_v4i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldp x8, x9, [sp, #16]
+; CHECK-SD-NEXT:    ldp x10, x11, [sp, #32]
+; CHECK-SD-NEXT:    adds x8, x2, x8
+; CHECK-SD-NEXT:    adcs x9, x3, x9
+; CHECK-SD-NEXT:    csel x3, x9, x3, hs
+; CHECK-SD-NEXT:    csel x2, x8, x2, hs
+; CHECK-SD-NEXT:    adds x8, x4, x10
+; CHECK-SD-NEXT:    adcs x9, x5, x11
+; CHECK-SD-NEXT:    ldp x10, x11, [sp]
+; CHECK-SD-NEXT:    csel x4, x8, x4, hs
+; CHECK-SD-NEXT:    csel x5, x9, x5, hs
+; CHECK-SD-NEXT:    adds x8, x0, x10
+; CHECK-SD-NEXT:    ldp x9, x10, [sp, #48]
+; CHECK-SD-NEXT:    adcs x11, x1, x11
+; CHECK-SD-NEXT:    csel x1, x11, x1, hs
+; CHECK-SD-NEXT:    csel x0, x8, x0, hs
+; CHECK-SD-NEXT:    adds x8, x6, x9
+; CHECK-SD-NEXT:    adcs x9, x7, x10
+; CHECK-SD-NEXT:    csel x6, x8, x6, hs
+; CHECK-SD-NEXT:    csel x7, x9, x7, hs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uadd_v4i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x23, [sp, #-48]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-GI-NEXT:    .cfi_offset w19, -8
+; CHECK-GI-NEXT:    .cfi_offset w20, -16
+; CHECK-GI-NEXT:    .cfi_offset w21, -24
+; CHECK-GI-NEXT:    .cfi_offset w22, -32
+; CHECK-GI-NEXT:    .cfi_offset w23, -48
+; CHECK-GI-NEXT:    ldp x8, x9, [sp, #48]
+; CHECK-GI-NEXT:    ldp x10, x11, [sp, #64]
+; CHECK-GI-NEXT:    ldp x12, x13, [sp, #80]
+; CHECK-GI-NEXT:    adds x14, x0, x8
+; CHECK-GI-NEXT:    ldp x17, x18, [sp, #96]
+; CHECK-GI-NEXT:    adc x15, x1, x9
+; CHECK-GI-NEXT:    adds x16, x2, x10
+; CHECK-GI-NEXT:    adc x19, x3, x11
+; CHECK-GI-NEXT:    adds x20, x4, x12
+; CHECK-GI-NEXT:    adc x21, x5, x13
+; CHECK-GI-NEXT:    adds x22, x6, x17
+; CHECK-GI-NEXT:    adc x23, x7, x18
+; CHECK-GI-NEXT:    cmp x14, x8
+; CHECK-GI-NEXT:    cset w8, lo
+; CHECK-GI-NEXT:    cmp x15, x9
+; CHECK-GI-NEXT:    cset w9, lo
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
+; CHECK-GI-NEXT:    cmp x16, x10
+; CHECK-GI-NEXT:    cset w9, lo
+; CHECK-GI-NEXT:    cmp x19, x11
+; CHECK-GI-NEXT:    cset w10, lo
+; CHECK-GI-NEXT:    csel w9, w9, w10, eq
+; CHECK-GI-NEXT:    cmp x20, x12
+; CHECK-GI-NEXT:    cset w10, lo
+; CHECK-GI-NEXT:    cmp x21, x13
+; CHECK-GI-NEXT:    cset w11, lo
+; CHECK-GI-NEXT:    csel w10, w10, w11, eq
+; CHECK-GI-NEXT:    cmp x22, x17
+; CHECK-GI-NEXT:    cset w11, lo
+; CHECK-GI-NEXT:    cmp x23, x18
+; CHECK-GI-NEXT:    cset w12, lo
+; CHECK-GI-NEXT:    csel w11, w11, w12, eq
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x0, x14, x0, ne
+; CHECK-GI-NEXT:    csel x1, x15, x1, ne
+; CHECK-GI-NEXT:    tst w9, #0x1
+; CHECK-GI-NEXT:    csel x2, x16, x2, ne
+; CHECK-GI-NEXT:    csel x3, x19, x3, ne
+; CHECK-GI-NEXT:    tst w10, #0x1
+; CHECK-GI-NEXT:    csel x4, x20, x4, ne
+; CHECK-GI-NEXT:    csel x5, x21, x5, ne
+; CHECK-GI-NEXT:    tst w11, #0x1
+; CHECK-GI-NEXT:    csel x6, x22, x6, ne
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    csel x7, x23, x7, ne
+; CHECK-GI-NEXT:    ldr x23, [sp], #48 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i128>, <4 x i1>} @llvm.uadd.with.overflow(<4 x i128> %a, <4 x i128> %b)
   %e0 = extractvalue {<4 x i128>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i128>, <4 x i1>} %o, 1
@@ -4128,29 +5481,119 @@ define <4 x i128> @uadd_v4i128(<4 x i128> %a, <4 x i128> %b) {
 }
 
 define <4 x i128> @sadd_v4i128(<4 x i128> %a, <4 x i128> %b) {
-; CHECK-LABEL: sadd_v4i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [sp, #16]
-; CHECK-NEXT:    ldp x10, x11, [sp, #32]
-; CHECK-NEXT:    adds x8, x2, x8
-; CHECK-NEXT:    adcs x9, x3, x9
-; CHECK-NEXT:    csel x3, x9, x3, vs
-; CHECK-NEXT:    csel x2, x8, x2, vs
-; CHECK-NEXT:    adds x8, x4, x10
-; CHECK-NEXT:    adcs x9, x5, x11
-; CHECK-NEXT:    ldp x10, x11, [sp]
-; CHECK-NEXT:    csel x4, x8, x4, vs
-; CHECK-NEXT:    csel x5, x9, x5, vs
-; CHECK-NEXT:    adds x8, x0, x10
-; CHECK-NEXT:    ldp x9, x10, [sp, #48]
-; CHECK-NEXT:    adcs x11, x1, x11
-; CHECK-NEXT:    csel x1, x11, x1, vs
-; CHECK-NEXT:    csel x0, x8, x0, vs
-; CHECK-NEXT:    adds x8, x6, x9
-; CHECK-NEXT:    adcs x9, x7, x10
-; CHECK-NEXT:    csel x6, x8, x6, vs
-; CHECK-NEXT:    csel x7, x9, x7, vs
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sadd_v4i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldp x8, x9, [sp, #16]
+; CHECK-SD-NEXT:    ldp x10, x11, [sp, #32]
+; CHECK-SD-NEXT:    adds x8, x2, x8
+; CHECK-SD-NEXT:    adcs x9, x3, x9
+; CHECK-SD-NEXT:    csel x3, x9, x3, vs
+; CHECK-SD-NEXT:    csel x2, x8, x2, vs
+; CHECK-SD-NEXT:    adds x8, x4, x10
+; CHECK-SD-NEXT:    adcs x9, x5, x11
+; CHECK-SD-NEXT:    ldp x10, x11, [sp]
+; CHECK-SD-NEXT:    csel x4, x8, x4, vs
+; CHECK-SD-NEXT:    csel x5, x9, x5, vs
+; CHECK-SD-NEXT:    adds x8, x0, x10
+; CHECK-SD-NEXT:    ldp x9, x10, [sp, #48]
+; CHECK-SD-NEXT:    adcs x11, x1, x11
+; CHECK-SD-NEXT:    csel x1, x11, x1, vs
+; CHECK-SD-NEXT:    csel x0, x8, x0, vs
+; CHECK-SD-NEXT:    adds x8, x6, x9
+; CHECK-SD-NEXT:    adcs x9, x7, x10
+; CHECK-SD-NEXT:    csel x6, x8, x6, vs
+; CHECK-SD-NEXT:    csel x7, x9, x7, vs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sadd_v4i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    stp x24, x23, [sp, #-48]! // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-GI-NEXT:    .cfi_offset w19, -8
+; CHECK-GI-NEXT:    .cfi_offset w20, -16
+; CHECK-GI-NEXT:    .cfi_offset w21, -24
+; CHECK-GI-NEXT:    .cfi_offset w22, -32
+; CHECK-GI-NEXT:    .cfi_offset w23, -40
+; CHECK-GI-NEXT:    .cfi_offset w24, -48
+; CHECK-GI-NEXT:    ldp x8, x18, [sp, #48]
+; CHECK-GI-NEXT:    ldp x9, x19, [sp, #64]
+; CHECK-GI-NEXT:    ldp x11, x16, [sp, #80]
+; CHECK-GI-NEXT:    adds x13, x0, x8
+; CHECK-GI-NEXT:    ldp x8, x17, [sp, #96]
+; CHECK-GI-NEXT:    adc x14, x1, x18
+; CHECK-GI-NEXT:    adds x10, x2, x9
+; CHECK-GI-NEXT:    adc x15, x3, x19
+; CHECK-GI-NEXT:    adds x11, x4, x11
+; CHECK-GI-NEXT:    adc x12, x5, x16
+; CHECK-GI-NEXT:    adds x8, x6, x8
+; CHECK-GI-NEXT:    adc x9, x7, x17
+; CHECK-GI-NEXT:    cmp x13, x0
+; CHECK-GI-NEXT:    cset w20, lo
+; CHECK-GI-NEXT:    cmp x14, x1
+; CHECK-GI-NEXT:    cset w21, lt
+; CHECK-GI-NEXT:    csel w20, w20, w21, eq
+; CHECK-GI-NEXT:    cmp x10, x2
+; CHECK-GI-NEXT:    cset w21, lo
+; CHECK-GI-NEXT:    cmp x15, x3
+; CHECK-GI-NEXT:    fmov s0, w20
+; CHECK-GI-NEXT:    cset w22, lt
+; CHECK-GI-NEXT:    csel w21, w21, w22, eq
+; CHECK-GI-NEXT:    cmp x11, x4
+; CHECK-GI-NEXT:    cset w22, lo
+; CHECK-GI-NEXT:    cmp x12, x5
+; CHECK-GI-NEXT:    mov v0.h[1], w21
+; CHECK-GI-NEXT:    cset w23, lt
+; CHECK-GI-NEXT:    csel w22, w22, w23, eq
+; CHECK-GI-NEXT:    cmp x8, x6
+; CHECK-GI-NEXT:    cset w23, lo
+; CHECK-GI-NEXT:    cmp x9, x7
+; CHECK-GI-NEXT:    cset w24, lt
+; CHECK-GI-NEXT:    mov v0.h[2], w22
+; CHECK-GI-NEXT:    csel w23, w23, w24, eq
+; CHECK-GI-NEXT:    cmp x18, #0
+; CHECK-GI-NEXT:    cset w18, mi
+; CHECK-GI-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    csel w18, wzr, w18, eq
+; CHECK-GI-NEXT:    cmp x19, #0
+; CHECK-GI-NEXT:    fmov s1, w18
+; CHECK-GI-NEXT:    cset w19, mi
+; CHECK-GI-NEXT:    mov v0.h[3], w23
+; CHECK-GI-NEXT:    csel w18, wzr, w19, eq
+; CHECK-GI-NEXT:    cmp x16, #0
+; CHECK-GI-NEXT:    cset w16, mi
+; CHECK-GI-NEXT:    mov v1.h[1], w18
+; CHECK-GI-NEXT:    csel w16, wzr, w16, eq
+; CHECK-GI-NEXT:    cmp x17, #0
+; CHECK-GI-NEXT:    mov v1.h[2], w16
+; CHECK-GI-NEXT:    cset w16, mi
+; CHECK-GI-NEXT:    csel w16, wzr, w16, eq
+; CHECK-GI-NEXT:    mov v1.h[3], w16
+; CHECK-GI-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    umov w16, v0.h[0]
+; CHECK-GI-NEXT:    umov w17, v0.h[1]
+; CHECK-GI-NEXT:    umov w18, v0.h[2]
+; CHECK-GI-NEXT:    umov w19, v0.h[3]
+; CHECK-GI-NEXT:    and w16, w16, #0x1
+; CHECK-GI-NEXT:    and w17, w17, #0x1
+; CHECK-GI-NEXT:    and w18, w18, #0x1
+; CHECK-GI-NEXT:    tst w16, #0x1
+; CHECK-GI-NEXT:    and w19, w19, #0x1
+; CHECK-GI-NEXT:    csel x0, x13, x0, ne
+; CHECK-GI-NEXT:    csel x1, x14, x1, ne
+; CHECK-GI-NEXT:    tst w17, #0x1
+; CHECK-GI-NEXT:    csel x2, x10, x2, ne
+; CHECK-GI-NEXT:    csel x3, x15, x3, ne
+; CHECK-GI-NEXT:    tst w18, #0x1
+; CHECK-GI-NEXT:    csel x4, x11, x4, ne
+; CHECK-GI-NEXT:    csel x5, x12, x5, ne
+; CHECK-GI-NEXT:    tst w19, #0x1
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    csel x6, x8, x6, ne
+; CHECK-GI-NEXT:    csel x7, x9, x7, ne
+; CHECK-GI-NEXT:    ldp x24, x23, [sp], #48 // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i128>, <4 x i1>} @llvm.sadd.with.overflow(<4 x i128> %a, <4 x i128> %b)
   %e0 = extractvalue {<4 x i128>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i128>, <4 x i1>} %o, 1
@@ -4159,29 +5602,89 @@ define <4 x i128> @sadd_v4i128(<4 x i128> %a, <4 x i128> %b) {
 }
 
 define <4 x i128> @usub_v4i128(<4 x i128> %a, <4 x i128> %b) {
-; CHECK-LABEL: usub_v4i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [sp, #16]
-; CHECK-NEXT:    ldp x10, x11, [sp, #32]
-; CHECK-NEXT:    subs x8, x2, x8
-; CHECK-NEXT:    sbcs x9, x3, x9
-; CHECK-NEXT:    csel x3, x9, x3, lo
-; CHECK-NEXT:    csel x2, x8, x2, lo
-; CHECK-NEXT:    subs x8, x4, x10
-; CHECK-NEXT:    sbcs x9, x5, x11
-; CHECK-NEXT:    ldp x10, x11, [sp]
-; CHECK-NEXT:    csel x4, x8, x4, lo
-; CHECK-NEXT:    csel x5, x9, x5, lo
-; CHECK-NEXT:    subs x8, x0, x10
-; CHECK-NEXT:    ldp x9, x10, [sp, #48]
-; CHECK-NEXT:    sbcs x11, x1, x11
-; CHECK-NEXT:    csel x1, x11, x1, lo
-; CHECK-NEXT:    csel x0, x8, x0, lo
-; CHECK-NEXT:    subs x8, x6, x9
-; CHECK-NEXT:    sbcs x9, x7, x10
-; CHECK-NEXT:    csel x6, x8, x6, lo
-; CHECK-NEXT:    csel x7, x9, x7, lo
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: usub_v4i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldp x8, x9, [sp, #16]
+; CHECK-SD-NEXT:    ldp x10, x11, [sp, #32]
+; CHECK-SD-NEXT:    subs x8, x2, x8
+; CHECK-SD-NEXT:    sbcs x9, x3, x9
+; CHECK-SD-NEXT:    csel x3, x9, x3, lo
+; CHECK-SD-NEXT:    csel x2, x8, x2, lo
+; CHECK-SD-NEXT:    subs x8, x4, x10
+; CHECK-SD-NEXT:    sbcs x9, x5, x11
+; CHECK-SD-NEXT:    ldp x10, x11, [sp]
+; CHECK-SD-NEXT:    csel x4, x8, x4, lo
+; CHECK-SD-NEXT:    csel x5, x9, x5, lo
+; CHECK-SD-NEXT:    subs x8, x0, x10
+; CHECK-SD-NEXT:    ldp x9, x10, [sp, #48]
+; CHECK-SD-NEXT:    sbcs x11, x1, x11
+; CHECK-SD-NEXT:    csel x1, x11, x1, lo
+; CHECK-SD-NEXT:    csel x0, x8, x0, lo
+; CHECK-SD-NEXT:    subs x8, x6, x9
+; CHECK-SD-NEXT:    sbcs x9, x7, x10
+; CHECK-SD-NEXT:    csel x6, x8, x6, lo
+; CHECK-SD-NEXT:    csel x7, x9, x7, lo
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: usub_v4i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x23, [sp, #-48]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-GI-NEXT:    .cfi_offset w19, -8
+; CHECK-GI-NEXT:    .cfi_offset w20, -16
+; CHECK-GI-NEXT:    .cfi_offset w21, -24
+; CHECK-GI-NEXT:    .cfi_offset w22, -32
+; CHECK-GI-NEXT:    .cfi_offset w23, -48
+; CHECK-GI-NEXT:    ldp x8, x9, [sp, #48]
+; CHECK-GI-NEXT:    ldp x10, x11, [sp, #64]
+; CHECK-GI-NEXT:    ldp x12, x13, [sp, #80]
+; CHECK-GI-NEXT:    subs x14, x0, x8
+; CHECK-GI-NEXT:    ldp x17, x18, [sp, #96]
+; CHECK-GI-NEXT:    sbc x15, x1, x9
+; CHECK-GI-NEXT:    subs x16, x2, x10
+; CHECK-GI-NEXT:    sbc x19, x3, x11
+; CHECK-GI-NEXT:    subs x20, x4, x12
+; CHECK-GI-NEXT:    sbc x21, x5, x13
+; CHECK-GI-NEXT:    subs x22, x6, x17
+; CHECK-GI-NEXT:    sbc x23, x7, x18
+; CHECK-GI-NEXT:    cmp x0, x8
+; CHECK-GI-NEXT:    cset w8, lo
+; CHECK-GI-NEXT:    cmp x1, x9
+; CHECK-GI-NEXT:    cset w9, lo
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
+; CHECK-GI-NEXT:    cmp x2, x10
+; CHECK-GI-NEXT:    cset w9, lo
+; CHECK-GI-NEXT:    cmp x3, x11
+; CHECK-GI-NEXT:    cset w10, lo
+; CHECK-GI-NEXT:    csel w9, w9, w10, eq
+; CHECK-GI-NEXT:    cmp x4, x12
+; CHECK-GI-NEXT:    cset w10, lo
+; CHECK-GI-NEXT:    cmp x5, x13
+; CHECK-GI-NEXT:    cset w11, lo
+; CHECK-GI-NEXT:    csel w10, w10, w11, eq
+; CHECK-GI-NEXT:    cmp x6, x17
+; CHECK-GI-NEXT:    cset w11, lo
+; CHECK-GI-NEXT:    cmp x7, x18
+; CHECK-GI-NEXT:    cset w12, lo
+; CHECK-GI-NEXT:    csel w11, w11, w12, eq
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x0, x14, x0, ne
+; CHECK-GI-NEXT:    csel x1, x15, x1, ne
+; CHECK-GI-NEXT:    tst w9, #0x1
+; CHECK-GI-NEXT:    csel x2, x16, x2, ne
+; CHECK-GI-NEXT:    csel x3, x19, x3, ne
+; CHECK-GI-NEXT:    tst w10, #0x1
+; CHECK-GI-NEXT:    csel x4, x20, x4, ne
+; CHECK-GI-NEXT:    csel x5, x21, x5, ne
+; CHECK-GI-NEXT:    tst w11, #0x1
+; CHECK-GI-NEXT:    csel x6, x22, x6, ne
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    csel x7, x23, x7, ne
+; CHECK-GI-NEXT:    ldr x23, [sp], #48 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i128>, <4 x i1>} @llvm.usub.with.overflow(<4 x i128> %a, <4 x i128> %b)
   %e0 = extractvalue {<4 x i128>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i128>, <4 x i1>} %o, 1
@@ -4190,29 +5693,118 @@ define <4 x i128> @usub_v4i128(<4 x i128> %a, <4 x i128> %b) {
 }
 
 define <4 x i128> @ssub_v4i128(<4 x i128> %a, <4 x i128> %b) {
-; CHECK-LABEL: ssub_v4i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [sp, #16]
-; CHECK-NEXT:    ldp x10, x11, [sp, #32]
-; CHECK-NEXT:    subs x8, x2, x8
-; CHECK-NEXT:    sbcs x9, x3, x9
-; CHECK-NEXT:    csel x3, x9, x3, vs
-; CHECK-NEXT:    csel x2, x8, x2, vs
-; CHECK-NEXT:    subs x8, x4, x10
-; CHECK-NEXT:    sbcs x9, x5, x11
-; CHECK-NEXT:    ldp x10, x11, [sp]
-; CHECK-NEXT:    csel x4, x8, x4, vs
-; CHECK-NEXT:    csel x5, x9, x5, vs
-; CHECK-NEXT:    subs x8, x0, x10
-; CHECK-NEXT:    ldp x9, x10, [sp, #48]
-; CHECK-NEXT:    sbcs x11, x1, x11
-; CHECK-NEXT:    csel x1, x11, x1, vs
-; CHECK-NEXT:    csel x0, x8, x0, vs
-; CHECK-NEXT:    subs x8, x6, x9
-; CHECK-NEXT:    sbcs x9, x7, x10
-; CHECK-NEXT:    csel x6, x8, x6, vs
-; CHECK-NEXT:    csel x7, x9, x7, vs
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ssub_v4i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldp x8, x9, [sp, #16]
+; CHECK-SD-NEXT:    ldp x10, x11, [sp, #32]
+; CHECK-SD-NEXT:    subs x8, x2, x8
+; CHECK-SD-NEXT:    sbcs x9, x3, x9
+; CHECK-SD-NEXT:    csel x3, x9, x3, vs
+; CHECK-SD-NEXT:    csel x2, x8, x2, vs
+; CHECK-SD-NEXT:    subs x8, x4, x10
+; CHECK-SD-NEXT:    sbcs x9, x5, x11
+; CHECK-SD-NEXT:    ldp x10, x11, [sp]
+; CHECK-SD-NEXT:    csel x4, x8, x4, vs
+; CHECK-SD-NEXT:    csel x5, x9, x5, vs
+; CHECK-SD-NEXT:    subs x8, x0, x10
+; CHECK-SD-NEXT:    ldp x9, x10, [sp, #48]
+; CHECK-SD-NEXT:    sbcs x11, x1, x11
+; CHECK-SD-NEXT:    csel x1, x11, x1, vs
+; CHECK-SD-NEXT:    csel x0, x8, x0, vs
+; CHECK-SD-NEXT:    subs x8, x6, x9
+; CHECK-SD-NEXT:    sbcs x9, x7, x10
+; CHECK-SD-NEXT:    csel x6, x8, x6, vs
+; CHECK-SD-NEXT:    csel x7, x9, x7, vs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ssub_v4i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x23, [sp, #-48]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-GI-NEXT:    .cfi_offset w19, -8
+; CHECK-GI-NEXT:    .cfi_offset w20, -16
+; CHECK-GI-NEXT:    .cfi_offset w21, -24
+; CHECK-GI-NEXT:    .cfi_offset w22, -32
+; CHECK-GI-NEXT:    .cfi_offset w23, -48
+; CHECK-GI-NEXT:    ldp x16, x17, [sp, #48]
+; CHECK-GI-NEXT:    ldp x18, x19, [sp, #64]
+; CHECK-GI-NEXT:    ldp x20, x21, [sp, #80]
+; CHECK-GI-NEXT:    subs x13, x0, x16
+; CHECK-GI-NEXT:    ldp x22, x23, [sp, #96]
+; CHECK-GI-NEXT:    sbc x14, x1, x17
+; CHECK-GI-NEXT:    subs x10, x2, x18
+; CHECK-GI-NEXT:    sbc x15, x3, x19
+; CHECK-GI-NEXT:    subs x11, x4, x20
+; CHECK-GI-NEXT:    sbc x12, x5, x21
+; CHECK-GI-NEXT:    subs x8, x6, x22
+; CHECK-GI-NEXT:    sbc x9, x7, x23
+; CHECK-GI-NEXT:    cmp x0, x16
+; CHECK-GI-NEXT:    cset w16, lo
+; CHECK-GI-NEXT:    cmp x1, x17
+; CHECK-GI-NEXT:    cset w17, lt
+; CHECK-GI-NEXT:    csel w16, w16, w17, eq
+; CHECK-GI-NEXT:    cmp x2, x18
+; CHECK-GI-NEXT:    cset w17, lo
+; CHECK-GI-NEXT:    cmp x3, x19
+; CHECK-GI-NEXT:    fmov s0, w16
+; CHECK-GI-NEXT:    cset w18, lt
+; CHECK-GI-NEXT:    csel w17, w17, w18, eq
+; CHECK-GI-NEXT:    cmp x4, x20
+; CHECK-GI-NEXT:    cset w18, lo
+; CHECK-GI-NEXT:    cmp x5, x21
+; CHECK-GI-NEXT:    mov v0.h[1], w17
+; CHECK-GI-NEXT:    cset w19, lt
+; CHECK-GI-NEXT:    csel w18, w18, w19, eq
+; CHECK-GI-NEXT:    cmp x6, x22
+; CHECK-GI-NEXT:    cset w19, lo
+; CHECK-GI-NEXT:    cmp x7, x23
+; CHECK-GI-NEXT:    cset w20, lt
+; CHECK-GI-NEXT:    mov v0.h[2], w18
+; CHECK-GI-NEXT:    csel w19, w19, w20, eq
+; CHECK-GI-NEXT:    cmp x14, #0
+; CHECK-GI-NEXT:    cset w20, mi
+; CHECK-GI-NEXT:    csel w20, wzr, w20, eq
+; CHECK-GI-NEXT:    cmp x15, #0
+; CHECK-GI-NEXT:    fmov s1, w20
+; CHECK-GI-NEXT:    cset w21, mi
+; CHECK-GI-NEXT:    mov v0.h[3], w19
+; CHECK-GI-NEXT:    csel w16, wzr, w21, eq
+; CHECK-GI-NEXT:    cmp x12, #0
+; CHECK-GI-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[1], w16
+; CHECK-GI-NEXT:    cset w16, mi
+; CHECK-GI-NEXT:    csel w16, wzr, w16, eq
+; CHECK-GI-NEXT:    cmp x9, #0
+; CHECK-GI-NEXT:    mov v1.h[2], w16
+; CHECK-GI-NEXT:    cset w16, mi
+; CHECK-GI-NEXT:    csel w16, wzr, w16, eq
+; CHECK-GI-NEXT:    mov v1.h[3], w16
+; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    umov w16, v0.h[0]
+; CHECK-GI-NEXT:    umov w17, v0.h[1]
+; CHECK-GI-NEXT:    umov w18, v0.h[2]
+; CHECK-GI-NEXT:    umov w19, v0.h[3]
+; CHECK-GI-NEXT:    and w16, w16, #0x1
+; CHECK-GI-NEXT:    and w17, w17, #0x1
+; CHECK-GI-NEXT:    and w18, w18, #0x1
+; CHECK-GI-NEXT:    tst w16, #0x1
+; CHECK-GI-NEXT:    and w19, w19, #0x1
+; CHECK-GI-NEXT:    csel x0, x13, x0, ne
+; CHECK-GI-NEXT:    csel x1, x14, x1, ne
+; CHECK-GI-NEXT:    tst w17, #0x1
+; CHECK-GI-NEXT:    csel x2, x10, x2, ne
+; CHECK-GI-NEXT:    csel x3, x15, x3, ne
+; CHECK-GI-NEXT:    tst w18, #0x1
+; CHECK-GI-NEXT:    csel x4, x11, x4, ne
+; CHECK-GI-NEXT:    csel x5, x12, x5, ne
+; CHECK-GI-NEXT:    tst w19, #0x1
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    csel x6, x8, x6, ne
+; CHECK-GI-NEXT:    csel x7, x9, x7, ne
+; CHECK-GI-NEXT:    ldr x23, [sp], #48 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %o = call {<4 x i128>, <4 x i1>} @llvm.ssub.with.overflow(<4 x i128> %a, <4 x i128> %b)
   %e0 = extractvalue {<4 x i128>, <4 x i1>} %o, 0
   %e1 = extractvalue {<4 x i128>, <4 x i1>} %o, 1

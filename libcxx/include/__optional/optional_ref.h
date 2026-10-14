@@ -63,7 +63,7 @@ struct __optional_ref_iterator_base<_Tp&> {
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator = __bounded_iter<_Tp*>;
 #    else
-  using iterator = __capacity_aware_iterator<_Tp*, optional<_Tp&>, 1>;
+  using iterator = __capacity_aware_iterator<_Tp*, 1>;
 #    endif
 };
 
@@ -77,6 +77,9 @@ public:
   static_assert(!is_same_v<remove_cv_t<_Tp>, nullopt_t>, "instantiation of optional with nullopt_t is ill-formed");
 
 private:
+  template <class>
+  friend class optional;
+
   _Tp* __value_ = nullptr;
 
   template <class _Up>
@@ -280,7 +283,7 @@ public:
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(__value_, __value_, __value_ + (this->has_value() ? 1 : 0));
 #    else
-    return std::__make_capacity_aware_iterator<_Tp*, optional<_Tp&>, 1>(__value_);
+    return std::__make_capacity_aware_iterator<_Tp*, 1>(__value_);
 #    endif
   }
 

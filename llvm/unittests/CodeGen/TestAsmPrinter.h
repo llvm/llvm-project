@@ -10,6 +10,8 @@
 #define LLVM_UNITTESTS_CODEGEN_TESTASMPRINTER_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCStreamer.h"
 #include "gmock/gmock.h"
 
@@ -51,6 +53,8 @@ class TestAsmPrinter {
   std::unique_ptr<MCContext> MC;
   MockMCStreamer *MS = nullptr; // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;
+  LLVMContext Context;
+  std::unique_ptr<Module> M;
   std::unique_ptr<AsmPrinter> Asm;
 
   /// Private constructor; call TestAsmPrinter::create(...)

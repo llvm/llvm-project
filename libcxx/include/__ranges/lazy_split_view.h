@@ -50,9 +50,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
@@ -193,12 +193,12 @@ private:
 
     struct value_type : view_interface<value_type> {
     private:
+      friend struct __outer_iterator;
       __outer_iterator __i_ = __outer_iterator();
 
-    public:
-      _LIBCPP_HIDE_FROM_ABI value_type() = default;
       _LIBCPP_HIDE_FROM_ABI constexpr explicit value_type(__outer_iterator __i) : __i_(std::move(__i)) {}
 
+    public:
       [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __inner_iterator<_Const> begin() const {
         return __inner_iterator<_Const>{__i_};
       }
@@ -442,9 +442,9 @@ inline constexpr auto lazy_split = __lazy_split_view::__fn{};
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

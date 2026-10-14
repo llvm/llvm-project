@@ -302,7 +302,7 @@ public:
   ///     number is less than \a max_path_length, then the path is
   ///     properly copied and terminated. If the return value is
   ///     >= \a max_path_length, then the path was truncated (but is
-  ///     still NULL terminated).
+  ///     still null-terminated).
   size_t GetPath(char *path, size_t max_path_length,
                  bool denormalize = true) const;
 

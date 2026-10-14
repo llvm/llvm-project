@@ -1037,7 +1037,7 @@ def TaskOp : OpenMP_Op<"task", traits = [
     OpenMP_FinalClause, OpenMP_IfClause,
     OpenMP_InReductionClauseSkip<assemblyFormat = true>,
     OpenMP_MergeableClause, OpenMP_PriorityClause, OpenMP_PrivateClause,
-    OpenMP_UntiedClause, OpenMP_DetachClause
+    OpenMP_ThreadsetClause, OpenMP_UntiedClause, OpenMP_DetachClause
   ], singleRegion = true> {
   let summary = "task construct";
   let description = [{
@@ -1084,7 +1084,7 @@ def TaskloopContextOp : OpenMP_Op<"taskloop.context", traits = [
     OpenMP_IfClause, OpenMP_InReductionClauseSkip<assemblyFormat = true>,
     OpenMP_MergeableClause, OpenMP_NogroupClause, OpenMP_NumTasksClause,
     OpenMP_PriorityClause, OpenMP_PrivateClause, OpenMP_ReductionClause,
-    OpenMP_UntiedClause
+    OpenMP_ThreadsetClause, OpenMP_UntiedClause
   ], singleRegion = true> {
   let summary = "OutlinableOpenMPOpInterface wrapper for taskloop construct";
   let description = [{
@@ -2426,6 +2426,37 @@ def MaskedOp : OpenMP_Op<"masked", traits = [
 }
 
 //===----------------------------------------------------------------------===//
+// [Spec 5.2] 7.6 dispatch Construct
+//===----------------------------------------------------------------------===//
+def DispatchOp : OpenMP_Op<"dispatch", traits = [
+    AttrSizedOperandSegments, NoRegionArguments
+  ], clauses = [
+    // TODO: Complete clause list (device, depend, is_device_ptr).
+    OpenMP_NocontextClause, OpenMP_NovariantsClause, OpenMP_NowaitClause
+  ], singleRegion = true> {
+  let summary = "dispatch construct";
+  let description = [{
+    The dispatch construct enables the invocation of a variant of a
+    base procedure. It was introduced in OpenMP 5.1; the section numbers cited
+    here follow the OpenMP 5.2 spec (7.6). At the source level (C/C++/Fortran)
+    the structured block of a dispatch construct is a single expression
+    statement containing a function or subroutine call. That is a restriction on
+    the source form, not an invariant of this op: the region may contain
+    multiple blocks and control flow (for example, a runtime base/variant
+    branch).
+
+    The producer of the region is responsible for materializing the base/variant
+    selection inside the region. The `nocontext` and `novariants` operands are
+    retained on the op only so the producer can read them back during call
+    lowering; the LLVM IR translation deliberately ignores these operands.
+  }] # clausesDescription;
+
+  let builders = [
+    OpBuilder<(ins CArg<"const DispatchOperands &">:$clauses)>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // [Spec 5.2] 6.5 allocate Directive
 //===----------------------------------------------------------------------===//
 def AllocateDirOp : OpenMP_Op<"allocate_dir", [AttrSizedOperandSegments], clauses = [
@@ -2696,7 +2727,7 @@ def AffinityEntryOp : OpenMP_Op<"affinity_entry", [Pure]> {
 // Iterator Op
 //===----------------------------------------------------------------------===//
 
-def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments, SingleBlock],
+def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments],
                            clauses = [OpenMP_LoopRelatedClause]> {
   let summary = "OpenMP iterator modifier";
   let description = [{
@@ -2704,6 +2735,9 @@ def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments, SingleBlock],
     `!omp.iterated<T>`, representing the list of yielded values. This handle
     can be directly consumed by OpenMP clauses that accept iterator modifiers,
     such as `affinity`, `map`, `to`, `from`, or `depend`.
+
+    The region may contain multiple blocks. Exactly one of them is terminated
+    by `omp.yield`; every other block branches to a block of the region.
 
     Example:
       %it = omp.iterator(%i, %j) =
@@ -2713,7 +2747,7 @@ def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments, SingleBlock],
       } -> !omp.iterated<ptr>
   }];
 
-  let regions = (region SizedRegion<1>:$region);
+  let regions = (region MinSizedRegion<1>:$region);
   let results = (outs OpenMP_IteratedType:$iterated);
 
   let assemblyFormat = [{
@@ -2723,7 +2757,14 @@ def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments, SingleBlock],
     (`inclusive` $loop_inclusive^)? `->` qualified(type($iterated)) attr-dict
   }];
 
+  let extraClassDeclaration = [{
+    /// Returns the region's unique `omp.yield`, or null if the region has none
+    /// or more than one.
+    YieldOp getYieldOp();
+  }] # clausesExtraClassDeclaration;
+
   let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

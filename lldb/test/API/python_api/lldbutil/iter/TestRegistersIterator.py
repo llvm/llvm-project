@@ -19,21 +19,9 @@ class RegistersIteratorTestCase(TestBase):
     def test_iter_registers(self):
         """Test iterator works correctly for lldbutil.iter_registers()."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation("main.cpp", self.line1)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        if not process:
-            self.fail("SBTarget.LaunchProcess() failed")
-
-        import lldbsuite.test.lldbutil as lldbutil
+        _, process, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), self.line1, only_one_thread=False
+        )
 
         for thread in process:
             if thread.GetStopReason() == lldb.eStopReasonBreakpoint:
