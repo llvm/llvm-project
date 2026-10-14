@@ -113,6 +113,10 @@ private:
   bool equalsConstant(const InputSection *a, const InputSection *b);
   bool equalsVariable(const InputSection *a, const InputSection *b);
 
+  template <class RelTy>
+  uint64_t constantKey(const InputSection *sec, Relocs<RelTy> rels);
+  uint64_t constantKey(const InputSection *sec);
+
   size_t findBoundary(size_t begin, size_t end);
 
   void forEachClassRange(size_t begin, size_t end,
@@ -444,6 +448,68 @@ void ICF<ELFT>::parallelForEachClass(
   ++cnt;
 }
 
+// Combine two 64-bit values using a golden-ratio hash combine followed by a
+// single-multiply SplitMix64 bit mixer (see llvm/ADT/Hashing.h).
+static uint64_t mixKey(uint64_t a, uint64_t b) {
+  uint64_t x = a ^ (b + 0x9e3779b97f4a7c15ULL);
+  x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
+  return x ^ (x >> 27);
+}
+
+// Hash the relocation properties that constantEq() compares so that sections
+// with different constant relocations start in different initial classes.
+template <class ELFT>
+template <class RelTy>
+uint64_t ICF<ELFT>::constantKey(const InputSection *sec, Relocs<RelTy> rels) {
+  uint64_t h = mixKey(sec->flags, rels.size());
+  for (RelTy rel : rels) {
+    uint64_t addend = getAddend<ELFT>(rel);
+    Symbol &s = sec->file->getRelocTargetSym(rel);
+    uint64_t v;
+    auto *d = dyn_cast<Defined>(&s);
+    if (!d || d->scriptDefined || d->isPreemptible) {
+      // Undefined, preemptible, or linker-script symbols must be the exact
+      // same symbol and addend.
+      v = mixKey(1, xxh3_64bits(s.getName()) + addend);
+    } else if (!d->section) {
+      // Absolute symbols (not associated with a section) must have the same
+      // resolved value + addend.
+      v = mixKey(2, d->value + addend);
+    } else if (isa<InputSection>(d->section)) {
+      // Regular InputSection targets must have the same section kind and
+      // offset; the target section's equivalence class is handled by
+      // combineRelocHashes.
+      v = mixKey(3 + d->section->kind(), d->value + addend);
+    } else if (auto *ms = dyn_cast<MergeInputSection>(d->section)) {
+      // MergeInputSection targets (e.g. string literals and constant pools)
+      // must resolve to the same offset in the merged parent section.
+      uint64_t off = 0;
+      if (!s.isSection())
+        off = ms->getParentOffset(d->value) + addend;
+      else if (addend < ms->content().size())
+        off = ms->getParentOffset(addend);
+      v = mixKey(6 + ms->entsize, off);
+    } else {
+      // Any other section kind (e.g. EHInputSection) requires the exact same
+      // symbol and addend in constantEq().
+      v = mixKey(7, xxh3_64bits(s.getName()) + addend);
+    }
+    h = mixKey(h, (uint64_t(rel.r_offset) << 32) ^
+                      rel.getType(ctx.arg.isMips64EL));
+    h = mixKey(h, v);
+  }
+  return h;
+}
+
+template <class ELFT> uint64_t ICF<ELFT>::constantKey(const InputSection *sec) {
+  const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
+  if (rels.areRelocsCrel())
+    return constantKey(sec, rels.crels);
+  if (rels.areRelocsRel())
+    return constantKey(sec, rels.rels);
+  return constantKey(sec, rels.relas);
+}
+
 // Combine the hashes of the sections referenced by the given section into its
 // hash.
 template <class RelTy>
@@ -489,8 +555,13 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // Initially, we use hash values to partition sections.
   parallelForEach(sections, [&](InputSection *s) {
+    uint64_t h = xxh3_64bits(s->content());
+    if (s->relSecIdx != 0) {
+      h = mixKey(h, constantKey(s));
+      h ^= h >> 32;
+    }
     // Set MSB to 1 to avoid collisions with unique IDs.
-    s->eqClass[0] = xxh3_64bits(s->content()) | (1U << 31);
+    s->eqClass[0] = uint32_t(h) | (1U << 31);
   });
 
   // Perform 2 rounds of relocation hash propagation. 2 is an empirical value to
