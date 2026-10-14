@@ -145,14 +145,15 @@ bool GCNNSAReassignImpl::canAssign(unsigned StartReg, unsigned NumRegs) const {
 
 bool GCNNSAReassignImpl::scavengeRegs(
     SmallVectorImpl<LiveInterval *> &Intervals) const {
-  unsigned NumRegs = static_cast<unsigned>(Intervals.size());
+  size_t NumRegs = Intervals.size();
 
   if (NumRegs > MaxNumVGPRs)
     return false;
-  unsigned MaxReg = MaxNumVGPRs - NumRegs + AMDGPU::VGPR0;
+  unsigned NumRegsEnc = static_cast<unsigned>(NumRegs);
+  unsigned MaxReg = MaxNumVGPRs - NumRegsEnc + AMDGPU::VGPR0;
 
   for (unsigned Reg = AMDGPU::VGPR0; Reg <= MaxReg; ++Reg) {
-    if (!canAssign(Reg, NumRegs))
+    if (!canAssign(Reg, NumRegsEnc))
       continue;
 
     if (tryAssignRegisters(Intervals, Reg))
