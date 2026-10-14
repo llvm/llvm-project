@@ -273,6 +273,12 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
         ::llvm::ArrayRef<::mlir::DictionaryAttr> argAttrs,
         ::llvm::ArrayRef<::mlir::Location> argLocs) {
       unsigned originalNumArgs = $_op.getNumArguments();
+      if (argIndices.size() != argTypes.size() ||
+          argIndices.size() != argLocs.size() ||
+          (!argAttrs.empty() && argIndices.size() != argAttrs.size()) ||
+          !::mlir::function_interface_impl::areValidInsertionIndices(
+              argIndices, originalNumArgs))
+        return ::llvm::failure();
       ::mlir::Type newType = $_op.getTypeWithArgsAndResults(
           argIndices, argTypes, /*resultIndices=*/{}, /*resultTypes=*/{});
       if (!newType)
@@ -301,6 +307,11 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
         ::mlir::TypeRange resultTypes,
         ::llvm::ArrayRef<::mlir::DictionaryAttr> resultAttrs) {
       unsigned originalNumResults = $_op.getNumResults();
+      if (resultIndices.size() != resultTypes.size() ||
+          (!resultAttrs.empty() && resultIndices.size() != resultAttrs.size()) ||
+          !::mlir::function_interface_impl::areValidInsertionIndices(
+              resultIndices, originalNumResults))
+        return ::llvm::failure();
       ::mlir::Type newType = $_op.getTypeWithArgsAndResults(
         /*argIndices=*/{}, /*argTypes=*/{}, resultIndices, resultTypes);
       if (!newType)
