@@ -908,6 +908,9 @@ def TuningPreferLegacySetCC
     : SubtargetFeature<"prefer-legacy-setcc", "PreferLegacySetCC", "true",
                        "Prefer to emit legacy SetCC.", [], InlineIgnore>;
 
+def TuningAlwaysILP : SubtargetFeature<"always-ilp", "AlwaysILP", "true",
+                       "Always use ILP instruction selection.">;
+
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
 // TODO: Remove these - use general tuning features to determine codegen.
@@ -1341,7 +1344,8 @@ def ProcessorFeatures {
                                        TuningLEAUsesAG,
                                        TuningPadShortFunctions,
                                        TuningInsertVZEROUPPER,
-                                       TuningNoDomainDelay];
+                                       TuningNoDomainDelay,
+                                       TuningAlwaysILP];
 
   // Silvermont
   list<SubtargetFeature> SLMAdditionalFeatures = [FeatureSSE42,
