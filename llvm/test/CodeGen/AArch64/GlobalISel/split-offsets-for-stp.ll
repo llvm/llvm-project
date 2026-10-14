@@ -5,12 +5,12 @@
 define void @basic_split(ptr %p) {
 ; CHECK-NO-SPLIT-LABEL: basic_split:
 ; CHECK-NO-SPLIT:       ; %bb.0:
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-192]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-176]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-160]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-192]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-176]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-160]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
 ; CHECK-SPLIT-LABEL: basic_split:
@@ -40,22 +40,22 @@ define void @basic_multi_use_ptr(ptr %p, ptr %p2) {
 ; CHECK-NO-SPLIT-LABEL: basic_multi_use_ptr:
 ; CHECK-NO-SPLIT:       ; %bb.0:
 ; CHECK-NO-SPLIT-NEXT:    mov w8, #8008 ; =0x1f48
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-192]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    add x2, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x2, #-192]
+; CHECK-NO-SPLIT-NEXT:    add x2, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    add x8, x0, x8
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-176]
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x2, #-176]
 ; CHECK-NO-SPLIT-NEXT:    str x8, [x1]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
 ; CHECK-SPLIT-LABEL: basic_multi_use_ptr:
 ; CHECK-SPLIT:       ; %bb.0:
 ; CHECK-SPLIT-NEXT:    mov w8, #8008 ; =0x1f48
-; CHECK-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x9, #-192]
-; CHECK-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
+; CHECK-SPLIT-NEXT:    add x2, x0, #2, lsl #12 ; =8192
+; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x2, #-192]
+; CHECK-SPLIT-NEXT:    add x2, x0, #2, lsl #12 ; =8192
 ; CHECK-SPLIT-NEXT:    add x8, x0, x8
-; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x9, #-176]
+; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x2, #-176]
 ; CHECK-SPLIT-NEXT:    str x8, [x1]
 ; CHECK-SPLIT-NEXT:    ret
   %bigoffset = getelementptr i64, ptr %p, i64 1000
@@ -74,18 +74,18 @@ define void @basic_multi_use_ptr(ptr %p, ptr %p2) {
 define void @not_consecutive(ptr %p) {
 ; CHECK-NO-SPLIT-LABEL: not_consecutive:
 ; CHECK-NO-SPLIT:       ; %bb.0:
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-192]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-168]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-192]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-168]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
 ; CHECK-SPLIT-LABEL: not_consecutive:
 ; CHECK-SPLIT:       ; %bb.0:
-; CHECK-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x9, #-192]
-; CHECK-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x9, #-168]
+; CHECK-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x1, #-192]
+; CHECK-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x1, #-168]
 ; CHECK-SPLIT-NEXT:    ret
   %bigoffset = getelementptr i64, ptr %p, i64 1000
   store i64 0, ptr %bigoffset
@@ -101,14 +101,14 @@ define void @not_consecutive(ptr %p) {
 define void @early_store_is_invalid_but_split_rest(ptr %p) {
 ; CHECK-NO-SPLIT-LABEL: early_store_is_invalid_but_split_rest:
 ; CHECK-NO-SPLIT:       ; %bb.0:
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8000]
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-176]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-160]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-176]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-160]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8080]
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-144]
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-144]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
 ; CHECK-SPLIT-LABEL: early_store_is_invalid_but_split_rest:
@@ -144,14 +144,14 @@ define void @vector(ptr %p) {
 ; CHECK-NO-SPLIT-LABEL: vector:
 ; CHECK-NO-SPLIT:       ; %bb.0:
 ; CHECK-NO-SPLIT-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #4, lsl #12 ; =16384
-; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x9, #-384]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #4, lsl #12 ; =16384
-; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x9, #-352]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #4, lsl #12 ; =16384
-; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x9, #-320]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #4, lsl #12 ; =16384
-; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x9, #-288]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #4, lsl #12 ; =16384
+; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x1, #-384]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #4, lsl #12 ; =16384
+; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x1, #-352]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #4, lsl #12 ; =16384
+; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x1, #-320]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #4, lsl #12 ; =16384
+; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x1, #-288]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
 ; CHECK-SPLIT-LABEL: vector:
@@ -216,25 +216,25 @@ define void @use_of_load_in_between(ptr %p, ptr %ldptr, ptr %ldptr2) {
 ; CHECK-NO-SPLIT-LABEL: use_of_load_in_between:
 ; CHECK-NO-SPLIT:       ; %bb.0:
 ; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8000]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    ldr x8, [x1]
-; CHECK-NO-SPLIT-NEXT:    stp x8, xzr, [x9, #-184]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    stp x8, xzr, [x1, #-184]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    ldr x8, [x2]
 ; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8040]
-; CHECK-NO-SPLIT-NEXT:    stp x8, xzr, [x9, #-168]
+; CHECK-NO-SPLIT-NEXT:    stp x8, xzr, [x1, #-168]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
 ; CHECK-SPLIT-LABEL: use_of_load_in_between:
 ; CHECK-SPLIT:       ; %bb.0:
 ; CHECK-SPLIT-NEXT:    str xzr, [x0, #8000]
-; CHECK-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
 ; CHECK-SPLIT-NEXT:    ldr x8, [x1]
-; CHECK-SPLIT-NEXT:    stp x8, xzr, [x9, #-184]
-; CHECK-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
+; CHECK-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-SPLIT-NEXT:    stp x8, xzr, [x1, #-184]
+; CHECK-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-SPLIT-NEXT:    ldr x8, [x2]
 ; CHECK-SPLIT-NEXT:    str xzr, [x0, #8040]
-; CHECK-SPLIT-NEXT:    stp x8, xzr, [x9, #-168]
+; CHECK-SPLIT-NEXT:    stp x8, xzr, [x1, #-168]
 ; CHECK-SPLIT-NEXT:    ret
   %bigoffset = getelementptr i64, ptr %p, i64 1000
   store i64 0, ptr %bigoffset
@@ -256,9 +256,9 @@ define void @use_of_load_in_between(ptr %p, ptr %ldptr, ptr %ldptr2) {
 define void @offset_legal_for_add_imm(ptr %p) {
 ; CHECK-NO-SPLIT-LABEL: offset_legal_for_add_imm:
 ; CHECK-NO-SPLIT:       ; %bb.0:
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #3200
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #3200
 ; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #3216]
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9]
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
 ; CHECK-SPLIT-LABEL: offset_legal_for_add_imm:
@@ -279,16 +279,16 @@ define void @offset_legal_for_add_imm(ptr %p) {
 define void @offset_illegal_for_add_imm(ptr %p) {
 ; CHECK-NO-SPLIT-LABEL: offset_illegal_for_add_imm:
 ; CHECK-NO-SPLIT:       ; %bb.0:
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8016]
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-192]
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-192]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
 ; CHECK-SPLIT-LABEL: offset_illegal_for_add_imm:
 ; CHECK-SPLIT:       ; %bb.0:
-; CHECK-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
+; CHECK-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-SPLIT-NEXT:    str xzr, [x0, #8016]
-; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x9, #-192]
+; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x1, #-192]
 ; CHECK-SPLIT-NEXT:    ret
   %bigoffset = getelementptr i64, ptr %p, i64 1000
   store i64 0, ptr %bigoffset
@@ -302,10 +302,10 @@ define void @offset_illegal_for_add_imm(ptr %p) {
 define void @offset_legal_for_add_imm_4_stores(ptr %p) {
 ; CHECK-NO-SPLIT-LABEL: offset_legal_for_add_imm_4_stores:
 ; CHECK-NO-SPLIT:       ; %bb.0:
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #3200
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #3216
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #3200
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #3216
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
 ; CHECK-SPLIT-LABEL: offset_legal_for_add_imm_4_stores:
@@ -328,10 +328,10 @@ define void @offset_legal_for_add_imm_4_stores(ptr %p) {
 define void @offset_illegal_for_add_imm_4_stores(ptr %p) {
 ; CHECK-NO-SPLIT-LABEL: offset_illegal_for_add_imm_4_stores:
 ; CHECK-NO-SPLIT:       ; %bb.0:
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-192]
-; CHECK-NO-SPLIT-NEXT:    add x9, x0, #2, lsl #12 ; =8192
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x9, #-176]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-192]
+; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-176]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
 ; CHECK-SPLIT-LABEL: offset_illegal_for_add_imm_4_stores:

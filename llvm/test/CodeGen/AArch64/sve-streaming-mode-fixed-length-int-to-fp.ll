@@ -2795,6 +2795,7 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    ldp q3, q2, [x0, #32]
+; NONEON-NOSVE-NEXT:    add x0, sp, #264
 ; NONEON-NOSVE-NEXT:    str q1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    stp q0, q2, [sp]
 ; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp]
@@ -2826,9 +2827,8 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #208]
 ; NONEON-NOSVE-NEXT:    scvtf d1, w9
 ; NONEON-NOSVE-NEXT:    scvtf d0, w8
-; NONEON-NOSVE-NEXT:    add x9, sp, #264
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #224]
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [x9]
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q4, q6, [sp, #208]
 ; NONEON-NOSVE-NEXT:    scvtf d1, w9
 ; NONEON-NOSVE-NEXT:    scvtf d0, w8

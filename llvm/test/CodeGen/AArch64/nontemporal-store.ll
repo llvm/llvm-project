@@ -738,10 +738,10 @@ define void @test_stnp_v16i32_invalid_offset(<16 x i32> %v, ptr %ptr) {
 ;
 ; CHECK-BE-LABEL: test_stnp_v16i32_invalid_offset:
 ; CHECK-BE:       // %bb.0: // %entry
-; CHECK-BE-NEXT:    add x9, x0, #8, lsl #12 // =32768
-; CHECK-BE-NEXT:    stp q2, q3, [x9, #-736]
-; CHECK-BE-NEXT:    add x9, x0, #8, lsl #12 // =32768
-; CHECK-BE-NEXT:    stp q0, q1, [x9, #-768]
+; CHECK-BE-NEXT:    add x1, x0, #8, lsl #12 // =32768
+; CHECK-BE-NEXT:    stp q2, q3, [x1, #-736]
+; CHECK-BE-NEXT:    add x1, x0, #8, lsl #12 // =32768
+; CHECK-BE-NEXT:    stp q0, q1, [x1, #-768]
 ; CHECK-BE-NEXT:    ret
 entry:
   %gep = getelementptr <16 x i32>, ptr %ptr, i32 500
