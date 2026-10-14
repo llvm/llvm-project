@@ -239,7 +239,7 @@ def ol_memcpy_flag_t : Enum {
   let desc = "Flags controlling a memcpy operation.";
   let is_bit_field = 1;
   let etors = [
-    Etor<"DIRECT_WRITE", "The memcpy may be issued as a direct write, which can land ahead of earlier work on the queue; that work must not access its memory">,
+    Etor<"DIRECT_WRITE", "The memcpy may be issued as a direct write, which can land ahead of earlier work on the queue; that work must not access this memory">,
   ];
 }
 

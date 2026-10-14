@@ -360,7 +360,8 @@ struct DataSubmitFlagsTy {
   /// Allow the transfer to be issued as a direct write by the host, which can
   /// land ahead of the operations pending on the queue; none of them may
   /// access the destination.
-  bool DirectWrite = false;
+  uint64_t DirectWrite : 1;
+  uint64_t Unused : 63;
 };
 
 /// The subset of KernelArgsTy fields the plugin interface needs to launch a
