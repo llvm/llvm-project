@@ -560,7 +560,7 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   if (!PacketSize || !PacketAlign)
     return false;
 
-  unsigned Size = static_cast<unsigned>(PacketSize->getZExtValue());
+  uint64_t Size = PacketSize->getZExtValue();
   Align Alignment = PacketAlign->getAlignValue();
   if (Alignment != Size)
     return false;
