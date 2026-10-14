@@ -425,13 +425,14 @@ subroutine test_dynamic_user_match_any_static_score(flag)
 #endif
 end subroutine
 
-! The explicit directive variant wins this tie over the earlier implicit
-! nothing candidate.
-! CHECK-LABEL: func.func @_QPtest_dynamic_implicit_nothing_tie_break(
-! CHECK-NOT:     fir.if
-! CHECK:         omp.barrier
+! The vendor-only selector is a strict subset of the implicit NOTHING's
+! selector. The user condition determines which replacement is selected.
+! CHECK-LABEL: func.func @_QPtest_dynamic_implicit_nothing_more_specific(
+! CHECK:         fir.if
+! CHECK-NEXT:    } else {
+! CHECK-NEXT:      omp.barrier
 ! CHECK:         return
-subroutine test_dynamic_implicit_nothing_tie_break(flag)
+subroutine test_dynamic_implicit_nothing_more_specific(flag)
   logical, intent(in) :: flag
   !$omp metadirective &
   !$omp & when(implementation={vendor(llvm)}, user={condition(flag)}:) &
@@ -542,5 +543,63 @@ subroutine test_multi_dynamic_multi_static(a, b)
   !$omp & otherwise(nothing)
 #else
   !$omp & default(nothing)
+#endif
+end subroutine
+
+!===----------------------------------------------------------------------===!
+! Condition identity in strict-subset checks
+!===----------------------------------------------------------------------===!
+
+! Blanks do not change the expression, so the first selector is a strict subset
+! of the second.
+! CHECK-LABEL: func.func @_QPtest_condition_spelling()
+! CHECK-NOT:     omp.taskyield
+! CHECK:         omp.taskwait
+! CHECK-NOT:     omp.taskyield
+! CHECK:         return
+subroutine test_condition_spelling()
+  !$omp metadirective &
+  !$omp & when(user={condition(1==1)}: taskyield) &
+  !$omp & when(user={condition(1 == 1)}, implementation={vendor(llvm)}: taskwait)
+end subroutine
+
+! The first WHEN always applies through vendor(llvm), and its distinct
+! condition keeps it from being a subset of the second WHEN.
+! CHECK-LABEL: func.func @_QPtest_match_any_distinct_conditions(
+! CHECK-NOT:     fir.if
+! CHECK:         omp.taskyield
+! CHECK-NOT:     omp.taskwait
+! CHECK:         return
+subroutine test_match_any_distinct_conditions(a, b)
+  logical, intent(in) :: a, b
+  !$omp metadirective &
+  !$omp & when(implementation={vendor(score(50): llvm), extension(match_any)}, &
+  !$omp & user={condition(a)}: taskyield) &
+  !$omp & when(implementation={vendor(llvm), extension(match_any)}, &
+  !$omp & device={kind(cpu)}, user={condition(b)}: taskwait)
+end subroutine
+
+! An omitted directive keeps its condition's identity: the higher-scored
+! implicit NOTHING is evaluated first.
+! CHECK-LABEL: func.func @_QPtest_implicit_nothing_distinct_conditions(
+! CHECK:         %[[A:.*]] = fir.load %{{.*}} : !fir.ref<!fir.logical<4>>
+! CHECK:         %[[A_COND:.*]] = fir.convert %[[A]]
+! CHECK:         fir.if %[[A_COND]] {
+! CHECK-NEXT:    } else {
+! CHECK:           fir.if
+! CHECK-NEXT:        omp.taskwait
+! CHECK-NEXT:      } else {
+! CHECK-NEXT:        omp.taskyield
+! CHECK:         return
+subroutine test_implicit_nothing_distinct_conditions(a, b)
+  logical, intent(in) :: a, b
+  !$omp metadirective &
+  !$omp & when(implementation={vendor(score(50): llvm)}, user={condition(a)}: ) &
+  !$omp & when(implementation={vendor(llvm)}, device={kind(cpu)}, &
+  !$omp & user={condition(b)}: taskwait) &
+#ifdef OMP_52
+  !$omp & otherwise(taskyield)
+#else
+  !$omp & default(taskyield)
 #endif
 end subroutine

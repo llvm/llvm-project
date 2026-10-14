@@ -229,8 +229,8 @@ static bool isStrictSubset(const VariantMatchInfo &VMI0,
   if (!isOrderedSubset<TraitProperty>(VMI0.ConstructTraits,
                                       VMI1.ConstructTraits))
     return false;
-  // RequiredTraits is a bit vector, so repeated construct properties only
-  // make the ordered vector strict.
+  // Repeated construct properties appear only in ConstructTraits, not in the
+  // bit vector.
   return TraitCount0 < TraitCount1 || HasAdditionalISATrait ||
          VMI0.ConstructTraits.size() < VMI1.ConstructTraits.size();
 }

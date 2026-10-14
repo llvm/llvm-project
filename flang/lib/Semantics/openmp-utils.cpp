@@ -28,6 +28,7 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Evaluate/variable.h"
 #include "flang/Parser/openmp-utils.h"
+#include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-directive-sets.h"
@@ -38,6 +39,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2410,10 +2412,9 @@ void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
       vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
           name->v, scorePtr);
     } else {
-      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
-      // mean the variant cannot match. Add an invalid trait to ensure it is
-      // not selected.
-      vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
+      // Unknown properties remain inactive, but their selectors still
+      // contribute to scoring under match_any or match_none.
+      vmi.addUnknownTrait(selector, name->v, scorePtr);
     }
   }
 }
@@ -2474,6 +2475,101 @@ static void AppendConstructTraitsForDirective(
     add(llvm::omp::TraitProperty::construct_dispatch_dispatch);
 }
 
+namespace {
+/// Visitor that profiles a user condition for strict-subset checks. Names are
+/// identified by their ultimate symbols and literals by value and kind; folding
+/// the whole expression would merge conditions on different variables.
+struct ConditionIdentity {
+  SemanticsContext &context;
+  llvm::FoldingSetNodeID id;
+
+  template <typename A> void AddNode() {
+    // Tag and symbol addresses are only compared within this compilation.
+    static char tag;
+    id.AddPointer(&tag);
+  }
+  template <typename A> bool Pre(const A &x) {
+    AddNode<A>();
+    if constexpr (std::is_enum_v<A> || std::is_integral_v<A>)
+      id.AddInteger(static_cast<uint64_t>(x));
+    else if constexpr (std::is_same_v<A, std::string>)
+      id.AddString(x);
+    return true;
+  }
+  template <typename A> void Post(const A &) { id.AddInteger(0); }
+  // CharBlocks in expression nodes carry source locations, not structure.
+  bool Pre(const parser::CharBlock &) { return false; }
+  bool Pre(const parser::Name &name) {
+    AddNode<parser::Name>();
+    if (name.symbol)
+      id.AddPointer(&name.symbol->GetUltimate());
+    else
+      id.AddString(name.source.ToString());
+    return false;
+  }
+  bool Pre(const parser::SignedIntLiteralConstant &literal) {
+    AddNode<parser::SignedIntLiteralConstant>();
+    if (auto value{evaluate::ExpressionAnalyzer{context}.Analyze(literal)}) {
+      id.AddString(value->AsFortran());
+      return false;
+    }
+    return true;
+  }
+  bool Pre(const parser::SignedRealLiteralConstant &literal) {
+    AddNode<parser::SignedRealLiteralConstant>();
+    if (auto value{evaluate::ExpressionAnalyzer{context}.Analyze(literal)}) {
+      id.AddString(value->AsFortran());
+      return false;
+    }
+    return true;
+  }
+  bool Pre(const parser::Expr &expr) {
+    AddNode<parser::Expr>();
+    if (const auto *negate{std::get_if<parser::Expr::Negate>(&expr.u)}) {
+      if (const auto *literal{
+              std::get_if<parser::LiteralConstant>(&negate->v.value().u)}) {
+        if (std::holds_alternative<parser::IntLiteralConstant>(literal->u)) {
+          // Analyze the signed literal as a whole: the magnitude of the most
+          // negative integer is not representable in its kind.
+          if (auto value{evaluate::ExpressionAnalyzer{context}.Analyze(expr)}) {
+            AddNode<parser::Expr::Negate>();
+            id.AddString(value->AsFortran());
+            return false;
+          }
+        }
+      }
+    }
+    if (const auto *literal{std::get_if<parser::LiteralConstant>(&expr.u)}) {
+      // Complex literal parts may name declarations: retain their structure.
+      if (!std::holds_alternative<parser::ComplexLiteralConstant>(literal->u)) {
+        if (auto value{evaluate::ExpressionAnalyzer{context}.Analyze(expr)}) {
+          AddNode<parser::LiteralConstant>();
+          id.AddString(value->AsFortran());
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+};
+
+llvm::StringRef GetConditionIdentity(
+    const parser::ScalarExpr &condition, SemanticsContext &context) {
+  const auto *expr{parser::Unwrap<parser::Expr>(condition)};
+  CHECK(expr);
+  // Outer parentheses are insignificant; inner ones constrain reassociation.
+  while (const auto *parens{std::get_if<parser::Expr::Parentheses>(&expr->u)})
+    expr = &parens->v.value();
+  ConditionIdentity profile{context, {}};
+  parser::Walk(*expr, profile);
+  llvm::FoldingSetNodeIDRef data{profile.id.getRef()};
+  SourceName saved{context.SaveTempName(
+      std::string{reinterpret_cast<const char *>(data.data()),
+          data.size() * sizeof(unsigned)})};
+  return {saved.begin(), saved.size()};
+}
+} // namespace
+
 static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
     const parser::OmpTraitSelector &selector, llvm::omp::VariantMatchInfo &vmi,
     SemanticsContext &semaCtx,
@@ -2500,9 +2596,7 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
       if (!scalarExpr) {
         continue;
       }
-      // Subset checks compare condition identities; distinct conditions must
-      // not share one.
-      llvm::StringRef identity{prop.source.begin(), prop.source.size()};
+      llvm::StringRef identity{GetConditionIdentity(*scalarExpr, semaCtx)};
       if (auto constValue{EvaluateUserCondition(semaCtx, *scalarExpr)}) {
         vmi.addTrait(set,
             *constValue ? llvm::omp::TraitProperty::user_condition_true
@@ -2636,9 +2730,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
         // Only match_any can remain applicable when the static traits do not
         // match, because a true runtime condition may satisfy the selector.
         if (!isStaticVMIApplicable) {
-          if (!hasMatchAny ||
-              staticVMI.RequiredTraits.test(
-                  unsigned(llvm::omp::TraitProperty::invalid))) {
+          if (!hasMatchAny) {
             continue;
           }
 
@@ -2662,26 +2754,35 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
 
         if (hasMatchAny && isStaticVMIApplicable) {
           // Represent both outcomes: a guarded candidate with the condition's
-          // score and an unguarded candidate with only the static traits. If
-          // the WHEN clause omits its directive, only add the unguarded
-          // candidate.
+          // score and an unguarded candidate whose false condition preserves
+          // selector identity for subset checks. If the WHEN clause omits its
+          // directive, only add the unguarded candidate.
           if (isExplicit) {
             llvm::omp::VariantMatchInfo conditionTrueVMI{staticVMI};
             addConditionTraitForRanking(conditionTrueVMI);
             result.candidates.push_back({spec, std::move(conditionTrueVMI),
                 isExplicit, dynamicCondition});
           }
+          staticVMI.addTrait(llvm::omp::TraitProperty::user_condition_false,
+              conditionIdentity, conditionScorePtr);
           result.candidates.push_back({spec, std::move(staticVMI), isExplicit});
           continue;
         }
 
         llvm::omp::VariantMatchInfo rankingVMI{staticVMI};
-        // Preserve the existing lowering behavior for an omitted directive:
-        // do not let its runtime condition raise the implicit NOTHING rank.
-        if (!isExplicit && hasMatchAny && !isStaticVMIApplicable)
-          rankingVMI = llvm::omp::VariantMatchInfo();
-        else if (isExplicit)
+        if (isExplicit) {
           addConditionTraitForRanking(rankingVMI);
+        } else {
+          // Preserve the existing lowering behavior for an omitted directive:
+          // do not let its runtime condition raise the implicit NOTHING rank,
+          // but keep the condition's identity for subset checks.
+          if (hasMatchAny && !isStaticVMIApplicable)
+            rankingVMI = llvm::omp::VariantMatchInfo();
+          rankingVMI.addTrait(hasMatchNone
+                  ? dynamicConditionTrait
+                  : llvm::omp::TraitProperty::user_condition_true,
+              conditionIdentity);
+        }
         result.candidates.push_back({spec, std::move(rankingVMI), isExplicit,
             dynamicCondition, /*conditionShouldBeTrue=*/!hasMatchNone});
         continue;
@@ -2915,7 +3016,8 @@ bool MayVariantBeSelected(
   bool userTrue{required.test(unsigned(TP::user_condition_true))};
   bool userUnknown{required.test(unsigned(TP::user_condition_unknown))};
   bool userFalse{required.test(unsigned(TP::user_condition_false))};
-  bool invalid{required.test(unsigned(TP::invalid))};
+  bool invalid{
+      required.test(unsigned(TP::invalid)) || !vmi.UnknownTraits.empty()};
 
   // The target-only LLVM matcher below skips user and construct traits while
   // retaining the global match kind. Account for those skipped traits first;

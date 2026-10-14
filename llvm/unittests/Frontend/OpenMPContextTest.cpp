@@ -357,9 +357,8 @@ TEST_F(OpenMPContextTest, ScoringMatchAnyConstructs) {
   MatchAny.addTrait(TraitProperty::construct_parallel_parallel, "");
   MatchAny.addTrait(TraitProperty::implementation_extension_match_any, "");
 
-  // Both construct matches contribute: 1 + 1 + 2 for MATCH_ANY beats the
-  // explicitly scored candidate's 1 + 2. Retaining only either construct
-  // match would not select MATCH_ANY.
+  // Both construct matches contribute: 1 + 1 + 2 for MatchAny beats Scored's
+  // 1 + 2. Keeping only one of the construct matches would not select MatchAny.
   SmallVector<VariantMatchInfo, 2> Candidates{Scored, MatchAny};
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, TargetParallel), 1);
 }
@@ -377,8 +376,8 @@ TEST_F(OpenMPContextTest, ScoringMatchAnyWithoutMatchingConstructs) {
   VariantMatchInfo Scored;
   Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
 
-  // The vendor match makes MATCH_ANY applicable, but the absent construct
-  // must not add to its score. The scored candidate wins by 2 to 1.
+  // The vendor match makes MatchAny applicable, but the absent construct adds
+  // no score. Scored wins by 2 to 1.
   SmallVector<VariantMatchInfo, 2> Candidates{MatchAny, Scored};
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, NoConstruct), 1);
 }
@@ -397,7 +396,7 @@ TEST_F(OpenMPContextTest, ScoringMatchAnyFalseCondition) {
   ScoredTrue.addTrait(TraitProperty::user_condition_true, "other condition",
                       &LowScore);
 
-  // A matching static trait keeps MATCH_ANY applicable, but a false condition
+  // A matching static trait keeps match_any applicable, but a false condition
   // does not contribute its score.
   SmallVector<VariantMatchInfo, 2> Candidates{MatchAnyFalse, ScoredTrue};
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
@@ -415,7 +414,7 @@ TEST_F(OpenMPContextTest, ScoringMatchAnyFalseCondition) {
                           "");
   MatchNoneFalse.addTrait(TraitProperty::user_condition_false, "condition",
                           &HighScore);
-  // A false condition is the selector that makes MATCH_NONE applicable, so
+  // A false condition is the selector that makes match_none applicable, so
   // its score still participates in ranking.
   Candidates[0] = MatchNoneFalse;
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
@@ -432,7 +431,7 @@ TEST_F(OpenMPContextTest, ScoringUnknownProperty) {
   VariantMatchInfo UserTrue;
   UserTrue.addTrait(TraitProperty::user_condition_true, "");
   SmallVector<VariantMatchInfo, 2> Candidates{Unknown, UserTrue};
-  // An unscored vendor contributes zero, so lexical order breaks the tie.
+  // An unscored vendor contributes zero, so candidate order breaks the tie.
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
 
   APInt Score(64, 1);
@@ -524,6 +523,7 @@ TEST_F(OpenMPContextTest, ScoringMultipleProperties) {
   // KIND contributes one weight regardless of its number of properties.
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
 
+  // An unknown kind property shares the selector's single weight.
   Candidates[1].addTrait(TraitProperty::implementation_extension_match_any, "");
   Candidates[1].addUnknownTrait(TraitSelector::device_kind, "unknown");
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
@@ -588,9 +588,6 @@ TEST_F(OpenMPContextTest, PreserveSubsetAdjustedScores) {
   EXPECT_EQ(Scores[0]->getZExtValue(), 0u);
   EXPECT_EQ(Scores[1]->getZExtValue(), 22u);
   EXPECT_EQ(Scores[2]->getZExtValue(), 11u);
-  // Consumers can retain these scores after the superset's runtime guard
-  // fails, so Other continues to precede Subset.
-  EXPECT_TRUE(Scores[0]->zext(64).ult(Scores[2]->zext(64)));
 }
 
 TEST_F(OpenMPContextTest, IncompatibleSupersetDoesNotZeroScore) {
@@ -637,8 +634,8 @@ TEST_F(OpenMPContextTest, DistinctUserConditionsAreNotSubsets) {
   MoreTraits.addTrait(TraitProperty::user_condition_true, "low");
   MoreTraits.addTrait(TraitProperty::device_kind_host, "");
 
-  // The condition expressions are different properties. HIGH is not a strict
-  // subset of MORE_TRAITS and retains its explicit score.
+  // The condition expressions are different properties. High is not a strict
+  // subset of MoreTraits and retains its explicit score.
   SmallVector<VariantMatchInfo, 2> Candidates{MoreTraits, High};
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
 }
@@ -680,8 +677,8 @@ TEST_F(OpenMPContextTest, DifferentConstructOrderIsNotSubset) {
   Low.addTrait(TraitProperty::construct_parallel_parallel, "");
   Low.addTrait(TraitProperty::construct_simd_simd, "");
 
-  // HIGH's construct sequence is not a subsequence of LOW's, despite each
-  // distinct construct property being present in LOW.
+  // High's construct sequence is not a subsequence of Low's, despite each
+  // distinct construct property being present in Low.
   SmallVector<VariantMatchInfo, 2> Candidates{High, Low};
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
   std::swap(Candidates[0], Candidates[1]);
@@ -704,13 +701,14 @@ TEST_F(OpenMPContextTest, DifferentISAPropertiesAreNotSubsets) {
   Low.addTrait(TraitProperty::target_device_isa___ANY, "sse2");
   Low.addTrait(TraitProperty::user_condition_true, "");
 
+  // The same ISA names under different selectors are different properties.
   SmallVector<VariantMatchInfo, 2> Candidates{High, Low};
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
   std::swap(Candidates[0], Candidates[1]);
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
 
-  // Once the ISA properties and their selectors are identical, HIGH is a
-  // strict subset of LOW.
+  // Once the ISA properties and their selectors are identical, High is a
+  // strict subset of Low.
   Candidates[0].ISATraits[0].Name = "sse2";
   Candidates[0].ISATraits[1].Name = "avx";
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
@@ -862,6 +860,23 @@ TEST_F(OpenMPContextTest, ScoringDeepConstructs) {
     EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
     Candidates[0].addTrait(TraitProperty::user_condition_true, "", &Weight);
     EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+  }
+}
+
+TEST_F(OpenMPContextTest, GetConstructTraits) {
+  using TP = TraitProperty;
+  // Leaves appear in source order. DISTRIBUTE has no selector property, so a
+  // placeholder keeps its nesting level.
+  EXPECT_EQ(getConstructTraits(OMPD_target_teams_distribute_parallel_do_simd),
+            (SmallVector<TP, 8>{
+                TP::construct_target_target, TP::construct_teams_teams,
+                TP::invalid, TP::construct_parallel_parallel,
+                TP::construct_for_for, TP::construct_simd_simd}));
+  EXPECT_EQ(getConstructTraits(OMPD_task), (SmallVector<TP, 8>{TP::invalid}));
+  for (Directive D : {OMPD_section, OMPD_dispatch, OMPD_nothing,
+                      OMPD_metadirective, OMPD_requires, OMPD_assume}) {
+    SCOPED_TRACE(getOpenMPDirectiveName(D));
+    EXPECT_TRUE(getConstructTraits(D).empty());
   }
 }
 

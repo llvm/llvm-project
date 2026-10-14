@@ -186,15 +186,15 @@ struct VariantMatchInfo {
   SmallVector<TraitProperty, 8> ConstructTraits;
   SmallDenseMap<TraitProperty, APInt> ScoreMap;
   SmallVector<UnknownTrait, 2> UnknownTraits;
-  /// Identity of a user condition expression, when the producer can retain
-  /// it. Applicability uses the folded property above; subset checks use this
-  /// identity to avoid conflating distinct dynamic expressions.
+  /// Identity of the user condition expression; empty when there is none.
+  /// Subset checks compare it instead of the folded condition property.
   StringRef UserCondition;
 };
 
-/// Return a directive's enclosing construct traits in source order. Constructs
-/// without selector properties use invalid placeholders to retain scoring
-/// depth. DISPATCH is omitted; callers handle its target call separately.
+/// Return the construct traits that \p Kind contributes to a context, in
+/// source order. Constructs without selector properties use invalid
+/// placeholders to retain scoring depth. DISPATCH is omitted; callers handle
+/// its target call separately.
 LLVM_ABI SmallVector<TraitProperty, 8> getConstructTraits(Directive Kind);
 
 /// The context for a source location is made up of active property traits,
@@ -214,9 +214,7 @@ struct OMPContext {
       ConstructTraits.push_back(Property);
   }
 
-  /// Record an enclosing construct that has no corresponding construct
-  /// selector property. Such constructs still contribute to the positions
-  /// and device-selector weights used during variant scoring.
+  /// Record an enclosing construct that has no construct selector property.
   void addUnknownConstruct() {
     ConstructTraits.push_back(TraitProperty::invalid);
   }
@@ -244,7 +242,7 @@ isVariantApplicableInContext(const VariantMatchInfo &VMI, const OMPContext &Ctx,
 
 /// Compute scores for all applicable variants, including strict-subset
 /// adjustments against the complete candidate set. Inapplicable entries have
-/// no score. Keep these scores when testing dynamic candidates in order.
+/// no score. Scores remain valid for any subset of the candidates.
 LLVM_ABI SmallVector<std::optional<APInt>, 4>
 getVariantMatchScores(const SmallVectorImpl<VariantMatchInfo> &VMIs,
                       const OMPContext &Ctx);

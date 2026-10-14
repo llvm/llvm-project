@@ -5,6 +5,46 @@
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 %s -o - | FileCheck %s
 
+! MATCH_NONE accepts an unknown vendor; clause order breaks the scoring tie.
+! CHECK-LABEL: func.func @_QPtest_unknown_vendor_match_none()
+! CHECK-NOT: omp.barrier
+! CHECK: omp.taskyield
+! CHECK-NEXT: return
+subroutine test_unknown_vendor_match_none()
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(bogus_vendor), extension(match_none)}: &
+  !$omp& taskyield) &
+  !$omp& when(user={condition(.true.)}: barrier)
+end subroutine
+
+! Distinct unknown vendors keep the first selector from being a subset, so its
+! higher score wins.
+! CHECK-LABEL: func.func @_QPtest_distinct_unknown_vendors()
+! CHECK-NOT: omp.taskwait
+! CHECK: omp.taskyield
+! CHECK-NEXT: return
+subroutine test_distinct_unknown_vendors()
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(score(10): foo), extension(match_none)}: &
+  !$omp& taskyield) &
+  !$omp& when(implementation={vendor(score(1): bar), extension(match_none)}, &
+  !$omp& device={kind(gpu)}: taskwait)
+end subroutine
+
+! With the same unknown vendor, the first selector is a strict subset of the
+! second and scores zero.
+! CHECK-LABEL: func.func @_QPtest_identical_unknown_vendors()
+! CHECK-NOT: omp.taskyield
+! CHECK: omp.taskwait
+! CHECK-NEXT: return
+subroutine test_identical_unknown_vendors()
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(score(10): foo), extension(match_none)}: &
+  !$omp& taskyield) &
+  !$omp& when(implementation={vendor(score(1): foo), extension(match_none)}, &
+  !$omp& device={kind(gpu)}: taskwait)
+end subroutine
+
 ! CHECK-LABEL: func.func @_QPtest_vendor_llvm()
 ! CHECK:         omp.taskwait
 ! CHECK:         return

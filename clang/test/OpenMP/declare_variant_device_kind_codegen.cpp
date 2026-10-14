@@ -78,7 +78,15 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t -DNOHOST
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple ppc64le-unknown-linux -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - -DNOHOST | FileCheck %s
 
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fexceptions -fcxx-exceptions -o - -DHOST | FileCheck %s --check-prefix=UNUSED
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fexceptions -fcxx-exceptions -o - -DCPU | FileCheck %s --check-prefix=UNUSED
+
 // expected-no-diagnostics
+
+// Unselected static variants are not emitted.
+// UNUSED-NOT: define {{.*}}@_ZL12stat_unused_v(
+// UNUSED-NOT: define {{.*}}@_ZL5prio3v(
+// UNUSED-NOT: define {{.*}}@_ZL5prio4v(
 
 // Verify no unexpected global symbol aliasing
 // CHECK-NOT: @{{[^ ]+}} = {{.*}}alias
