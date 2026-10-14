@@ -1814,7 +1814,6 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
    FeatureUnalignedDSAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength63,
-   FeatureMixedLoadStoreClauses,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureVmemWriteVgprInOrder, FeatureVMemToLDSLoad, FeatureCubeInsts,
@@ -2213,7 +2212,8 @@ def FeatureISAVersion10_Common : FeatureSet<
 
 def FeatureISAVersion10_1_Common : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
-    [FeatureLDSAllocGranularity512,
+    [FeatureMixedLoadStoreClauses,
+     FeatureLDSAllocGranularity512,
      FeatureScalarStores,
      FeatureScalarAtomics,
      FeatureScalarFlatScratchInsts,
