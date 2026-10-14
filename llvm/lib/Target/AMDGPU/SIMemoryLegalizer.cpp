@@ -15,6 +15,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUMachineModuleInfo.h"
+#include "AMDGPUMemoryUtils.h"
 #include "GCNSubtarget.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringExtras.h"
@@ -24,7 +25,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
@@ -67,28 +67,6 @@ enum class SIAtomicScope {
   CLUSTER, // Promoted to AGENT on targets without workgroup clusters.
   AGENT,
   SYSTEM
-};
-
-/// The distinct address spaces supported by the AMDGPU target for
-/// atomic memory operation. Can be ORed together.
-enum class SIAtomicAddrSpace {
-  NONE = 0u,
-  GLOBAL = 1u << 0,
-  LDS = 1u << 1,
-  SCRATCH = 1u << 2,
-  GDS = 1u << 3,
-  OTHER = 1u << 4,
-
-  /// The address spaces that can be accessed by a FLAT instruction.
-  FLAT = GLOBAL | LDS | SCRATCH,
-
-  /// The address spaces that support atomic instructions.
-  ATOMIC = GLOBAL | LDS | SCRATCH | GDS,
-
-  /// All address spaces.
-  ALL = GLOBAL | LDS | SCRATCH | GDS | OTHER,
-
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
 
 #ifndef NDEBUG
@@ -291,9 +269,6 @@ private:
   /// spaces.
   std::optional<std::tuple<SIAtomicScope, SIAtomicAddrSpace, bool>>
   toSIAtomicScope(SyncScope::ID SSID, SIAtomicAddrSpace InstrAddrSpace) const;
-
-  /// \return Return a bit set of the address spaces accessed by \p AS.
-  SIAtomicAddrSpace toSIAtomicAddrSpace(unsigned AS) const;
 
   /// \returns Info constructed from \p MI, which has at least machine memory
   /// operand.
@@ -687,50 +662,20 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-static const StringMap<SIAtomicAddrSpace> ASNames = {{
-    {"global", SIAtomicAddrSpace::GLOBAL},
-    {"local", SIAtomicAddrSpace::LDS},
-}};
-
-void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
-  const MachineFunction *MF = MI.getMF();
-  const Function &Fn = MF->getFunction();
-  SmallString<128> Str;
-  raw_svector_ostream OS(Str);
-  OS << "unknown address space '" << AS << "'; expected one of ";
-  ListSeparator LS;
-  for (const auto &[Name, Val] : ASNames)
-    OS << LS << '\'' << Name << '\'';
-  Fn.getContext().diagnose(
-      DiagnosticInfoUnsupported(Fn, Str.str(), MI.getDebugLoc(), DS_Warning));
-}
-
 /// Reads \p MI's MMRAs to parse the "amdgpu-synchronize-as" MMRA.
 /// If this tag isn't present, or if it has no meaningful values, returns
 /// \p none, otherwise returns the address spaces specified by the MD.
+/// Issues a diagnostic if an unexpected suffix is observed for the MMRA tag.
 static std::optional<SIAtomicAddrSpace>
 getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
-  static constexpr StringLiteral FenceASPrefix = "amdgpu-synchronize-as";
-
-  auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
-  if (!MMRA)
-    return std::nullopt;
-
-  SIAtomicAddrSpace Result = SIAtomicAddrSpace::NONE;
-  for (const auto &[Prefix, Suffix] : MMRA) {
-    if (Prefix != FenceASPrefix)
-      continue;
-
-    if (auto It = ASNames.find(Suffix); It != ASNames.end())
-      Result |= It->second;
-    else
-      diagnoseUnknownMMRAASName(MI, Suffix);
-  }
-
-  if (Result == SIAtomicAddrSpace::NONE)
-    return std::nullopt;
-
-  return Result;
+  const auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
+  auto Diag = [&MI](StringRef S) {
+    const MachineFunction *MF = MI.getMF();
+    const Function &Fn = MF->getFunction();
+    Fn.getContext().diagnose(
+        DiagnosticInfoUnsupported(Fn, S, MI.getDebugLoc(), DS_Warning));
+  };
+  return getSynchronizeAddrSpace(MMRA, Diag);
 }
 
 static void diagnoseUnknownAVMetadata(const MachineInstr &MI,
@@ -804,24 +749,6 @@ SIMemOpAccess::toSIAtomicScope(SyncScope::ID SSID,
     return std::tuple(SIAtomicScope::SINGLETHREAD,
                       SIAtomicAddrSpace::ATOMIC & InstrAddrSpace, false);
   return std::nullopt;
-}
-
-SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
-  if (AS == AMDGPUAS::FLAT_ADDRESS)
-    return SIAtomicAddrSpace::FLAT;
-  if (AS == AMDGPUAS::GLOBAL_ADDRESS)
-    return SIAtomicAddrSpace::GLOBAL;
-  if (AS == AMDGPUAS::LOCAL_ADDRESS)
-    return SIAtomicAddrSpace::LDS;
-  if (AS == AMDGPUAS::PRIVATE_ADDRESS)
-    return SIAtomicAddrSpace::SCRATCH;
-  if (AS == AMDGPUAS::REGION_ADDRESS)
-    return SIAtomicAddrSpace::GDS;
-  if (AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE ||
-      AS == AMDGPUAS::BUFFER_STRIDED_POINTER)
-    return SIAtomicAddrSpace::GLOBAL;
-
-  return SIAtomicAddrSpace::OTHER;
 }
 
 SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_,
