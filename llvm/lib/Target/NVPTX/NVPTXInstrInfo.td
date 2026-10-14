@@ -1718,7 +1718,7 @@ defm SETP_BOOL_f64 : FSETP_BOOL_ALL<F64RT, allow_ftz = false>;
 let Predicates = [allowFP16Math] in
   defm SETP_BOOL_f16 : FSETP_BOOL_ALL<F16RT>;
 let Predicates = [hasBF16Math, PTX78, SM90] in
-  defm SETP_BOOL_bf16 : FSETP_BOOL_ALL<BF16RT>;
+  defm SETP_BOOL_bf16 : FSETP_BOOL_ALL<BF16RT, allow_ftz = false>;
 
 //-----------------------------------
 // Data Movement (Load / Store, Move)

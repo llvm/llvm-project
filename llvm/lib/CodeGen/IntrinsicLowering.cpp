@@ -326,10 +326,6 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     break;
   }
 
-  case Intrinsic::dbg_declare:
-  case Intrinsic::dbg_label:
-    break;    // Simply strip out debugging intrinsics
-
   case Intrinsic::eh_typeid_for:
     // Return something different to eh_selector.
     CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 1));
