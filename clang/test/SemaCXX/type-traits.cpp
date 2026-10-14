@@ -3506,6 +3506,14 @@ static_assert(__has_unique_object_representations(const volatile int *), "as are
 
 static_assert(__has_unique_object_representations(_Atomic(int)), "layout-identical atomics are");
 static_assert(!__has_unique_object_representations(_Atomic(float)), "value type is not unique");
+// Sema rejects _Atomic directly on a _BitInt (Sema::BuildAtomicType), so go
+// through a trivially copyable wrapper to reach the _BitInt padding-bit check.
+struct AtomicReprBitIntPadded { _BitInt(12) x; };
+static_assert(!__has_unique_object_representations(_Atomic(AtomicReprBitIntPadded)),
+              "_BitInt(12) has padding bits");
+struct AtomicReprBitIntExact { _BitInt(32) x; };
+static_assert(__has_unique_object_representations(_Atomic(AtomicReprBitIntExact)),
+              "_BitInt(32) has no padding bits");
 struct AtomicReprThreeChars { char a, b, c; };
 static_assert(!__has_unique_object_representations(_Atomic(AtomicReprThreeChars)),
               "atomic size rounded up to a power of two adds padding");
