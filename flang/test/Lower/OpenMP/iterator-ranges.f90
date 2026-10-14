@@ -124,6 +124,27 @@ end
 ! CAN: omp.iterator(%{{[^:]+}}: i32) =
 ! CAN-SAME: (%[[ONE]] to %[[FOUR]] step %[[ONE]])
 
+! A reference removed by folding still selects its range, so an empty range
+! removes the locator instead of mapping it unconditionally.
+subroutine folded_reference(a, n)
+  integer, parameter :: stride = 0
+  integer :: a(10), n
+  !$omp target update from(iterator(i=1:n): a(stride*i + 1))
+  !$omp target update to(iterator(i=1:n): a(stride*i + 1))
+  !$omp target enter data map(iterator(i=1:0), to: a(1 + 0*i))
+end
+! CHECK-LABEL: func.func @_QPfolded_reference
+! CHECK: omp.iterator(%{{[^:]+}}: i32) =
+! CHECK: omp.target_update map_iterated(
+! CHECK: omp.iterator(%{{[^:]+}}: i32) =
+! CHECK: omp.target_update map_iterated(
+! CHECK: omp.iterator(%{{[^:]+}}: i32) =
+! CHECK: omp.target_enter_data map_iterated(
+! CAN-LABEL: func.func @_QPfolded_reference
+! CAN: omp.target_update map_iterated(
+! CAN: omp.target_update map_iterated(
+! CAN: omp.target_enter_data map_iterated(
+
 ! Values beyond the index width must reach the iterator and its body intact.
 subroutine wide_range(a, hi, step)
   integer :: a(2)

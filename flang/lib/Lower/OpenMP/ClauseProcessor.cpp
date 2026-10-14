@@ -2006,16 +2006,8 @@ void ClauseProcessor::processMapObjectsWithIterator(
   // Objects in an iterator-modified clause may independently reference
   // iterator variables, so handle each object separately.
   for (const omp::Object &object : objects) {
-    llvm::SmallPtrSet<const semantics::Symbol *, 4> referencedSymbols;
-    if (const auto &ref = object.ref())
-      for (const semantics::SymbolRef &symbol : evaluate::CollectSymbols(*ref))
-        referencedSymbols.insert(&symbol->GetUltimate());
-
-    llvm::SmallVector<IteratorRange> objectRanges;
-    for (const IteratorRange &range : iteratorRanges)
-      if (referencedSymbols.contains(&range.ivSym->GetUltimate()))
-        objectRanges.push_back(range);
-
+    llvm::SmallVector<IteratorRange> objectRanges =
+        getIteratorRangesForObject(object, iteratorRanges);
     if (!objectRanges.empty()) {
       if (hasUnsupportedReferenceModifier)
         TODO(clauseLocation,

@@ -1080,10 +1080,11 @@ From make(const parser::OmpClause::From &inp,
     return std::nullopt;
   }();
 
+  auto objects = makeIteratorObjects(t5, iterator, semaCtx);
   return From{{/*Expectation=*/maybeExp,
                /*Mappers=*/std::move(mappers),
                /*Iterator=*/std::move(iterator),
-               /*LocatorList=*/makeObjects(t5, semaCtx)}};
+               /*LocatorList=*/std::move(objects)}};
 }
 
 // Full: empty
@@ -1398,12 +1399,13 @@ Map make(const parser::OmpClause::Map &inp,
     return std::nullopt;
   }();
 
+  auto objects = makeIteratorObjects(t2, iterator, semaCtx);
   return Map{{/*MapType=*/std::move(type),
               /*MapTypeModifiers=*/std::move(maybeTypeMods),
               /*AttachModifier=*/std::move(attachMod),
               /*RefModifier=*/std::move(refMod), /*Mapper=*/std::move(mappers),
               /*Iterator=*/std::move(iterator),
-              /*LocatorList=*/makeObjects(t2, semaCtx)}};
+              /*LocatorList=*/std::move(objects)}};
 }
 
 Match make(const parser::OmpClause::Match &inp,
@@ -1820,10 +1822,11 @@ To make(const parser::OmpClause::To &inp,
     return std::nullopt;
   }();
 
+  auto objects = makeIteratorObjects(t5, iterator, semaCtx);
   return To{{/*Expectation=*/maybeExp,
              /*Mappers=*/{std::move(mappers)},
              /*Iterator=*/std::move(iterator),
-             /*LocatorList=*/makeObjects(t5, semaCtx)}};
+             /*LocatorList=*/std::move(objects)}};
 }
 
 UnifiedAddress make(const parser::OmpClause::UnifiedAddress &inp,
