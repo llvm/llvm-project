@@ -44,12 +44,12 @@ define void @stp_far_offset_i64(ptr %p, i64 %v0, i64 %v1) {
 ; (GPR64RegClass), so an exact register compare would miss that X9 aliases
 ; W9 and pick a scratch that clobbers the stored value before the STP reads
 ; it.  The inline-asm constraints pin the stored values to W9 and W8. The
-; scratch capture `1[0-5]` cannot match 8 or 9, so this fails if the
-; aliasing-aware skip is ever dropped.
+; scratch regex [0-7] excludes 8 and 9, so this fails if the aliasing-aware
+; skip (regsOverlap) is ever dropped and the scratch becomes X8 or X9.
 define void @stp_far_offset_i32_w9w8_dst(ptr %p) {
 ; ENABLED-LABEL: stp_far_offset_i32_w9w8_dst:
 ; ENABLED:       // %bb.0:
-; ENABLED-NEXT:    add x[[SCRATCH:1[0-5]]], x0, #400
+; ENABLED-NEXT:    add x[[SCRATCH:[0-7]]], x0, #400
 ; ENABLED:         stp w9, w8, [x[[SCRATCH]]]
 ; ENABLED:         ret
 ;

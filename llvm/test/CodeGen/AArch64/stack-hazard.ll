@@ -356,9 +356,9 @@ define i32 @csr_d8_allocd_framepointer(double %d) "aarch64_pstate_sm_compatible"
 ; CHECK1024-LABEL: csr_d8_allocd_framepointer:
 ; CHECK1024:       // %bb.0: // %entry
 ; CHECK1024-NEXT:    sub sp, sp, #1056
-; CHECK1024-NEXT:    add x9, sp, #1032
+; CHECK1024-NEXT:    add x0, sp, #1032
 ; CHECK1024-NEXT:    str d8, [sp] // 8-byte Spill
-; CHECK1024-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp x29, x30, [x0] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    add x29, sp, #1032
 ; CHECK1024-NEXT:    sub sp, sp, #1040
 ; CHECK1024-NEXT:    .cfi_def_cfa w29, 24
@@ -549,18 +549,18 @@ define i32 @csr_x18_25_d8_15_allocdi64(i64 %d, double %e) "aarch64_pstate_sm_com
 ; CHECK1024-LABEL: csr_x18_25_d8_15_allocdi64:
 ; CHECK1024:       // %bb.0: // %entry
 ; CHECK1024-NEXT:    sub sp, sp, #1152
-; CHECK1024-NEXT:    add x9, sp, #1088
+; CHECK1024-NEXT:    add x1, sp, #1088
 ; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp x29, x25, [x9] // 16-byte Folded Spill
-; CHECK1024-NEXT:    add x9, sp, #1104
-; CHECK1024-NEXT:    stp x24, x23, [x9] // 16-byte Folded Spill
-; CHECK1024-NEXT:    add x9, sp, #1120
-; CHECK1024-NEXT:    stp x22, x21, [x9] // 16-byte Folded Spill
-; CHECK1024-NEXT:    add x9, sp, #1136
+; CHECK1024-NEXT:    stp x29, x25, [x1] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1104
+; CHECK1024-NEXT:    stp x24, x23, [x1] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1120
+; CHECK1024-NEXT:    stp x22, x21, [x1] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1136
 ; CHECK1024-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp x20, x19, [x9] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp x20, x19, [x1] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1056
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 2208
 ; CHECK1024-NEXT:    .cfi_offset w19, -8
@@ -765,21 +765,21 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK1024:       // %bb.0: // %entry
 ; CHECK1024-NEXT:    sub sp, sp, #1168
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 1168
-; CHECK1024-NEXT:    add x9, sp, #1088
-; CHECK1024-NEXT:    add x10, sp, #1104
-; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1088
 ; CHECK1024-NEXT:    cntd x9
-; CHECK1024-NEXT:    stp x9, x25, [x10] // 16-byte Folded Spill
-; CHECK1024-NEXT:    add x9, sp, #1120
-; CHECK1024-NEXT:    stp x24, x23, [x9] // 16-byte Folded Spill
-; CHECK1024-NEXT:    add x9, sp, #1136
-; CHECK1024-NEXT:    stp x22, x21, [x9] // 16-byte Folded Spill
-; CHECK1024-NEXT:    add x9, sp, #1152
+; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp x29, x30, [x1] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1104
+; CHECK1024-NEXT:    stp x9, x25, [x1] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1120
+; CHECK1024-NEXT:    stp x24, x23, [x1] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1136
+; CHECK1024-NEXT:    stp x22, x21, [x1] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1152
 ; CHECK1024-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp x20, x19, [x9] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp x20, x19, [x1] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    .cfi_offset w19, -8
 ; CHECK1024-NEXT:    .cfi_offset w20, -16
 ; CHECK1024-NEXT:    .cfi_offset w21, -24
@@ -1531,14 +1531,14 @@ define i32 @svecc_csr_x18_25_d8_15_allocdi64(i64 %d, double %e, <vscale x 4 x i3
 ; CHECK1024-NOSPLITSVE-LABEL: svecc_csr_x18_25_d8_15_allocdi64:
 ; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
 ; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1088
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1024
-; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x25, [x9] // 16-byte Folded Spill
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1040
-; CHECK1024-NOSPLITSVE-NEXT:    stp x24, x23, [x9] // 16-byte Folded Spill
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1056
-; CHECK1024-NOSPLITSVE-NEXT:    stp x22, x21, [x9] // 16-byte Folded Spill
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1072
-; CHECK1024-NOSPLITSVE-NEXT:    stp x20, x19, [x9] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x1, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x25, [x1] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x1, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    stp x24, x23, [x1] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x1, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    stp x22, x21, [x1] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x1, sp, #1072
+; CHECK1024-NOSPLITSVE-NEXT:    stp x20, x19, [x1] // 16-byte Folded Spill
 ; CHECK1024-NOSPLITSVE-NEXT:    addvl sp, sp, #-8
 ; CHECK1024-NOSPLITSVE-NEXT:    str z15, [sp] // 16-byte Folded Spill
 ; CHECK1024-NOSPLITSVE-NEXT:    str z14, [sp, #1, mul vl] // 16-byte Folded Spill
@@ -1856,19 +1856,19 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024:       // %bb.0:
 ; CHECK1024-NEXT:    sub sp, sp, #1152
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 1152
-; CHECK1024-NEXT:    add x9, sp, #1088
-; CHECK1024-NEXT:    add x10, sp, #1104
-; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x2, sp, #1088
 ; CHECK1024-NEXT:    cntd x9
-; CHECK1024-NEXT:    stp x9, x28, [x10] // 16-byte Folded Spill
-; CHECK1024-NEXT:    add x9, sp, #1120
-; CHECK1024-NEXT:    stp x22, x21, [x9] // 16-byte Folded Spill
-; CHECK1024-NEXT:    add x9, sp, #1136
+; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp x29, x30, [x2] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x2, sp, #1104
+; CHECK1024-NEXT:    stp x9, x28, [x2] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x2, sp, #1120
+; CHECK1024-NEXT:    stp x22, x21, [x2] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x2, sp, #1136
 ; CHECK1024-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp x20, x19, [x9] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp x20, x19, [x2] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    .cfi_offset w19, -8
 ; CHECK1024-NEXT:    .cfi_offset w20, -16
 ; CHECK1024-NEXT:    .cfi_offset w21, -24
@@ -1887,24 +1887,24 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:    .cfi_offset b15, -1152
 ; CHECK1024-NEXT:    sub sp, sp, #1088
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 2240
-; CHECK1024-NEXT:    add x9, sp, #1056
-; CHECK1024-NEXT:    mov w19, w1
 ; CHECK1024-NEXT:    mov w20, w0
-; CHECK1024-NEXT:    stp q2, q3, [x9] // 32-byte Folded Spill
-; CHECK1024-NEXT:    add x9, sp, #1024
-; CHECK1024-NEXT:    stp q0, q1, [x9] // 32-byte Folded Spill
+; CHECK1024-NEXT:    add x0, sp, #1056
+; CHECK1024-NEXT:    mov w19, w1
+; CHECK1024-NEXT:    stp q2, q3, [x0] // 32-byte Folded Spill
+; CHECK1024-NEXT:    add x0, sp, #1024
+; CHECK1024-NEXT:    stp q0, q1, [x0] // 32-byte Folded Spill
 ; CHECK1024-NEXT:    bl __arm_sme_state
 ; CHECK1024-NEXT:    mov x21, x0
 ; CHECK1024-NEXT:    tbz w21, #0, .LBB27_2
 ; CHECK1024-NEXT:  // %bb.1:
 ; CHECK1024-NEXT:    smstop sm
 ; CHECK1024-NEXT:  .LBB27_2:
-; CHECK1024-NEXT:    add x9, sp, #1024
-; CHECK1024-NEXT:    ldp q0, q1, [x9] // 32-byte Folded Reload
+; CHECK1024-NEXT:    add x0, sp, #1024
+; CHECK1024-NEXT:    ldp q0, q1, [x0] // 32-byte Folded Reload
 ; CHECK1024-NEXT:    bl __lttf2
-; CHECK1024-NEXT:    add x9, sp, #1056
 ; CHECK1024-NEXT:    mov w22, w0
-; CHECK1024-NEXT:    ldp q0, q1, [x9] // 32-byte Folded Reload
+; CHECK1024-NEXT:    add x0, sp, #1056
+; CHECK1024-NEXT:    ldp q0, q1, [x0] // 32-byte Folded Reload
 ; CHECK1024-NEXT:    bl __getf2
 ; CHECK1024-NEXT:    tbz w21, #0, .LBB27_4
 ; CHECK1024-NEXT:  // %bb.3:
@@ -2212,14 +2212,14 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
 ; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1088
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 1088
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1024
-; CHECK1024-NOSPLITSVE-NEXT:    add x10, sp, #1040
-; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1072] // 8-byte Spill
-; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x1, sp, #1024
 ; CHECK1024-NOSPLITSVE-NEXT:    cntd x9
-; CHECK1024-NOSPLITSVE-NEXT:    stp x9, x28, [x10] // 16-byte Folded Spill
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1056
-; CHECK1024-NOSPLITSVE-NEXT:    stp x27, x26, [x9] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1072] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x30, [x1] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x1, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    stp x9, x28, [x1] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x1, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    stp x27, x26, [x1] // 16-byte Folded Spill
 ; CHECK1024-NOSPLITSVE-NEXT:    add x29, sp, #1024
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa w29, 64
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w19, -16
@@ -2736,14 +2736,14 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
 ; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1088
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 1088
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1024
-; CHECK1024-NOSPLITSVE-NEXT:    add x10, sp, #1040
-; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1072] // 8-byte Spill
-; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x0, sp, #1024
 ; CHECK1024-NOSPLITSVE-NEXT:    cntd x9
-; CHECK1024-NOSPLITSVE-NEXT:    stp x9, x28, [x10] // 16-byte Folded Spill
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1056
-; CHECK1024-NOSPLITSVE-NEXT:    stp x27, x26, [x9] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1072] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x30, [x0] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x0, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    stp x9, x28, [x0] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x0, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    stp x27, x26, [x0] // 16-byte Folded Spill
 ; CHECK1024-NOSPLITSVE-NEXT:    add x29, sp, #1024
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa w29, 64
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w19, -16
@@ -3040,9 +3040,9 @@ define void @call_with_doubles() "aarch64_pstate_sm_compatible" {
 ; CHECK1024-LABEL: call_with_doubles:
 ; CHECK1024:       // %bb.0: // %entry
 ; CHECK1024-NEXT:    sub sp, sp, #1056
-; CHECK1024-NEXT:    add x9, sp, #1032
+; CHECK1024-NEXT:    add x0, sp, #1032
 ; CHECK1024-NEXT:    str d8, [sp] // 8-byte Spill
-; CHECK1024-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp x29, x30, [x0] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1024
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 2080
 ; CHECK1024-NEXT:    .cfi_offset w30, -16
@@ -3327,17 +3327,17 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024:       // %bb.0: // %entry
 ; CHECK1024-NEXT:    sub sp, sp, #1136
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 1136
-; CHECK1024-NEXT:    add x9, sp, #1088
-; CHECK1024-NEXT:    add x10, sp, #1104
-; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1088
 ; CHECK1024-NEXT:    cntd x9
-; CHECK1024-NEXT:    stp x9, x28, [x10] // 16-byte Folded Spill
-; CHECK1024-NEXT:    add x9, sp, #1120
+; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp x29, x30, [x1] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1104
+; CHECK1024-NEXT:    stp x9, x28, [x1] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1120
 ; CHECK1024-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp x20, x19, [x9] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp x20, x19, [x1] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    add x29, sp, #1088
 ; CHECK1024-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK1024-NEXT:    .cfi_offset w19, -8
@@ -3474,11 +3474,11 @@ define i32 @sve_stack_object_and_vla(double %d, i64 %sz) "aarch64_pstate_sm_comp
 ; CHECK1024-LABEL: sve_stack_object_and_vla:
 ; CHECK1024:       // %bb.0: // %entry
 ; CHECK1024-NEXT:    sub sp, sp, #1056
-; CHECK1024-NEXT:    add x9, sp, #1024
-; CHECK1024-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
-; CHECK1024-NEXT:    add x9, sp, #1040
+; CHECK1024-NEXT:    add x1, sp, #1024
+; CHECK1024-NEXT:    stp x29, x30, [x1] // 16-byte Folded Spill
+; CHECK1024-NEXT:    add x1, sp, #1040
 ; CHECK1024-NEXT:    add x29, sp, #1024
-; CHECK1024-NEXT:    stp x28, x19, [x9] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp x28, x19, [x1] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1024
 ; CHECK1024-NEXT:    addvl sp, sp, #-1
 ; CHECK1024-NEXT:    mov x19, sp
@@ -3794,15 +3794,15 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
 ; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1088
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 1088
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1024
-; CHECK1024-NOSPLITSVE-NEXT:    add x10, sp, #1040
-; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x2, sp, #1024
 ; CHECK1024-NOSPLITSVE-NEXT:    cntd x9
-; CHECK1024-NOSPLITSVE-NEXT:    stp x9, x28, [x10] // 16-byte Folded Spill
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1056
-; CHECK1024-NOSPLITSVE-NEXT:    stp x27, x26, [x9] // 16-byte Folded Spill
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1072
-; CHECK1024-NOSPLITSVE-NEXT:    stp x20, x19, [x9] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x30, [x2] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x2, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    stp x9, x28, [x2] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x2, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    stp x27, x26, [x2] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x2, sp, #1072
+; CHECK1024-NOSPLITSVE-NEXT:    stp x20, x19, [x2] // 16-byte Folded Spill
 ; CHECK1024-NOSPLITSVE-NEXT:    add x29, sp, #1024
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa w29, 64
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w19, -8
@@ -4344,14 +4344,14 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
 ; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1088
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 1088
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1024
-; CHECK1024-NOSPLITSVE-NEXT:    add x10, sp, #1040
-; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1072] // 8-byte Spill
-; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x0, sp, #1024
 ; CHECK1024-NOSPLITSVE-NEXT:    cntd x9
-; CHECK1024-NOSPLITSVE-NEXT:    stp x9, x28, [x10] // 16-byte Folded Spill
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1056
-; CHECK1024-NOSPLITSVE-NEXT:    stp x27, x26, [x9] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1072] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x30, [x0] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x0, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    stp x9, x28, [x0] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x0, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    stp x27, x26, [x0] // 16-byte Folded Spill
 ; CHECK1024-NOSPLITSVE-NEXT:    add x29, sp, #1024
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa w29, 64
 ; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w19, -16
@@ -4837,14 +4837,14 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK1024-NOSPLITSVE-LABEL: svecc_call_dynamic_and_scalable_alloca:
 ; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
 ; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1088
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    add x1, sp, #1024
 ; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1072] // 8-byte Spill
-; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    stp x29, x30, [x1] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x1, sp, #1040
 ; CHECK1024-NOSPLITSVE-NEXT:    add x29, sp, #1024
-; CHECK1024-NOSPLITSVE-NEXT:    stp x28, x27, [x9] // 16-byte Folded Spill
-; CHECK1024-NOSPLITSVE-NEXT:    add x9, sp, #1056
-; CHECK1024-NOSPLITSVE-NEXT:    stp x26, x20, [x9] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp x28, x27, [x1] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x1, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    stp x26, x20, [x1] // 16-byte Folded Spill
 ; CHECK1024-NOSPLITSVE-NEXT:    addvl sp, sp, #-18
 ; CHECK1024-NOSPLITSVE-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
 ; CHECK1024-NOSPLITSVE-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill

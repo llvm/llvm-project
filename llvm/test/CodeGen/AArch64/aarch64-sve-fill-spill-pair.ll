@@ -122,8 +122,8 @@ define void @nxv16i8_outside_range(ptr %ldptr, ptr %stptr) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0, #-65, mul vl]
 ; CHECK-NEXT:    ldr z1, [x0, #-64, mul vl]
-; CHECK-NEXT:    add x9, x1, #1024
-; CHECK-NEXT:    stp q0, q1, [x9]
+; CHECK-NEXT:    add x0, x1, #1024
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: nxv16i8_outside_range:
@@ -149,8 +149,8 @@ define void @nxv16i8_outside_range(ptr %ldptr, ptr %stptr) {
 ; CHECK-LDPALIGNEDONLY:       // %bb.0:
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z0, [x0, #-65, mul vl]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z1, [x0, #-64, mul vl]
-; CHECK-LDPALIGNEDONLY-NEXT:    add x9, x1, #1024
-; CHECK-LDPALIGNEDONLY-NEXT:    stp q0, q1, [x9]
+; CHECK-LDPALIGNEDONLY-NEXT:    add x0, x1, #1024
+; CHECK-LDPALIGNEDONLY-NEXT:    stp q0, q1, [x0]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ret
 ;
 ; CHECK-STPALIGNEDONLY-LABEL: nxv16i8_outside_range:
@@ -290,10 +290,10 @@ define void @nxv2f64_32b_aligned(ptr %ldptr, ptr %stptr) {
 define void @sve_base_adjust_vls128_vs_scalable(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: sve_base_adjust_vls128_vs_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x9, x0, #1024
-; CHECK-NEXT:    ldp q0, q1, [x9]
-; CHECK-NEXT:    add x9, x1, #1024
-; CHECK-NEXT:    stp q0, q1, [x9]
+; CHECK-NEXT:    add x2, x0, #1024
+; CHECK-NEXT:    add x0, x1, #1024
+; CHECK-NEXT:    ldp q0, q1, [x2]
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: sve_base_adjust_vls128_vs_scalable:
@@ -315,14 +315,14 @@ define void @sve_base_adjust_vls128_vs_scalable(ptr %ldptr, ptr %stptr) {
 ; CHECK-LDPALIGNEDONLY:       // %bb.0:
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z0, [x0, #64, mul vl]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z1, [x0, #65, mul vl]
-; CHECK-LDPALIGNEDONLY-NEXT:    add x9, x1, #1024
-; CHECK-LDPALIGNEDONLY-NEXT:    stp q0, q1, [x9]
+; CHECK-LDPALIGNEDONLY-NEXT:    add x0, x1, #1024
+; CHECK-LDPALIGNEDONLY-NEXT:    stp q0, q1, [x0]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ret
 ;
 ; CHECK-STPALIGNEDONLY-LABEL: sve_base_adjust_vls128_vs_scalable:
 ; CHECK-STPALIGNEDONLY:       // %bb.0:
-; CHECK-STPALIGNEDONLY-NEXT:    add x9, x0, #1024
-; CHECK-STPALIGNEDONLY-NEXT:    ldp q0, q1, [x9]
+; CHECK-STPALIGNEDONLY-NEXT:    add x2, x0, #1024
+; CHECK-STPALIGNEDONLY-NEXT:    ldp q0, q1, [x2]
 ; CHECK-STPALIGNEDONLY-NEXT:    str z0, [x1, #64, mul vl]
 ; CHECK-STPALIGNEDONLY-NEXT:    str z1, [x1, #65, mul vl]
 ; CHECK-STPALIGNEDONLY-NEXT:    ret

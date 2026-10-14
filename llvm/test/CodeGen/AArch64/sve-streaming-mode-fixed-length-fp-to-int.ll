@@ -1377,6 +1377,7 @@ define void @fcvtzu_v16f64_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldp q6, q7, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0, #64]
 ; NONEON-NOSVE-NEXT:    ldp q4, q5, [x0, #96]
+; NONEON-NOSVE-NEXT:    add x0, sp, #296
 ; NONEON-NOSVE-NEXT:    stp q1, q7, [sp, #64]
 ; NONEON-NOSVE-NEXT:    stp q0, q2, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #64]
@@ -1444,9 +1445,8 @@ define void @fcvtzu_v16f64_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #280]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #224]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #278]
-; NONEON-NOSVE-NEXT:    add x9, sp, #296
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #276]
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [x9]
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [x0]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #274]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #272]
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [sp, #256]
@@ -3059,6 +3059,7 @@ define void @fcvtzs_v16f64_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldp q6, q7, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0, #64]
 ; NONEON-NOSVE-NEXT:    ldp q4, q5, [x0, #96]
+; NONEON-NOSVE-NEXT:    add x0, sp, #296
 ; NONEON-NOSVE-NEXT:    stp q1, q7, [sp, #64]
 ; NONEON-NOSVE-NEXT:    stp q0, q2, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #64]
@@ -3126,9 +3127,8 @@ define void @fcvtzs_v16f64_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #280]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #224]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #278]
-; NONEON-NOSVE-NEXT:    add x9, sp, #296
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #276]
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [x9]
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [x0]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #274]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #272]
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [sp, #256]

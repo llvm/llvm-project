@@ -82,15 +82,15 @@ define void @foo_streaming_compatible_pass_arg(ptr %arg) #1 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #1136
 ; CHECK-NEXT:    .cfi_def_cfa_offset 1136
-; CHECK-NEXT:    add x9, sp, #1088
-; CHECK-NEXT:    add x10, sp, #1104
-; CHECK-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK-NEXT:    add x1, sp, #1088
 ; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [x1] // 16-byte Folded Spill
+; CHECK-NEXT:    add x1, sp, #1104
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x28, [x10] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x9, x28, [x1] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x19, [sp, #1120] // 8-byte Spill
 ; CHECK-NEXT:    add x29, sp, #1088
 ; CHECK-NEXT:    .cfi_def_cfa w29, 48
@@ -168,15 +168,15 @@ define void @foo_streaming_pass_arg(ptr %arg) #0 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #1120
 ; CHECK-NEXT:    .cfi_def_cfa_offset 1120
-; CHECK-NEXT:    add x9, sp, #1088
-; CHECK-NEXT:    add x10, sp, #1104
-; CHECK-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK-NEXT:    add x1, sp, #1088
 ; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [x1] // 16-byte Folded Spill
+; CHECK-NEXT:    add x1, sp, #1104
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x28, [x10] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x9, x28, [x1] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #1088
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w28, -8
@@ -316,17 +316,17 @@ define void @foo_streaming_compatible_retval(ptr %ptr) #1 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #1136
 ; CHECK-NEXT:    .cfi_def_cfa_offset 1136
-; CHECK-NEXT:    add x9, sp, #1088
-; CHECK-NEXT:    add x10, sp, #1104
-; CHECK-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK-NEXT:    add x1, sp, #1088
 ; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    stp x9, x28, [x10] // 16-byte Folded Spill
-; CHECK-NEXT:    add x9, sp, #1120
+; CHECK-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [x1] // 16-byte Folded Spill
+; CHECK-NEXT:    add x1, sp, #1104
+; CHECK-NEXT:    stp x9, x28, [x1] // 16-byte Folded Spill
+; CHECK-NEXT:    add x1, sp, #1120
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [x9] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [x1] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #1088
 ; CHECK-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
@@ -407,15 +407,15 @@ define void @foo_streaming_retval(ptr %ptr) #0 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #1136
 ; CHECK-NEXT:    .cfi_def_cfa_offset 1136
-; CHECK-NEXT:    add x9, sp, #1088
-; CHECK-NEXT:    add x10, sp, #1104
-; CHECK-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [x9] // 16-byte Folded Spill
+; CHECK-NEXT:    add x1, sp, #1088
 ; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [x1] // 16-byte Folded Spill
+; CHECK-NEXT:    add x1, sp, #1104
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x9, x28, [x10] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x9, x28, [x1] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x19, [sp, #1120] // 8-byte Spill
 ; CHECK-NEXT:    add x29, sp, #1088
 ; CHECK-NEXT:    .cfi_def_cfa w29, 48

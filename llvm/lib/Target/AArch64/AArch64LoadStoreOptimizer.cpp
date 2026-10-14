@@ -29,12 +29,12 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
@@ -77,16 +77,6 @@ STATISTIC(NumBaseAdjustStpCreated,
 
 DEBUG_COUNTER(RegRenamingCounter, DEBUG_TYPE "-reg-renaming",
               "Controls which pairs are considered for renaming");
-
-// Check whether Val can be encoded as the immediate operand of an ADDXri
-// instruction (12-bit unsigned immediate with shift 0 or 12).
-static bool canEncodeAddXriImm(int64_t Val) {
-  if (Val < 0)
-    return false;
-  if (Val <= 0xFFF)
-    return true;
-  return (Val & 0xFFF) == 0 && (Val >> 12) <= 0xFFF;
-}
 
 #define AARCH64_LOAD_STORE_OPT_NAME "AArch64 load / store optimization pass"
 
@@ -158,9 +148,7 @@ static bool trySplitForPair(int64_t ByteOffset, int MemScale,
       continue;
     int64_t Base = ByteOffset - Rc;
     int64_t AbsBase = Base >= 0 ? Base : -Base;
-    if (AbsBase & 0xFFF)
-      continue;
-    if ((AbsBase >> 12) > 0xFFF)
+    if (!AArch64_AM::isLegalArithImmed(static_cast<uint64_t>(AbsBase)))
       continue;
     EncodableBase = Base;
     ResidualScaled = ScaledR;
@@ -1098,12 +1086,9 @@ static void addDebugSubstitutionsToTable(MachineFunction *MF,
                                    {InstrNumToSet, OperandNo});
 }
 
-Register AArch64LoadStoreOpt::tryMergeBaseAdjust(MachineInstr &FirstMI,
-                                                 MachineInstr &PairedMI,
-                                                 MCPhysReg BaseReg,
-                                                 int64_t ByteOffset,
-                                                 int MemScale,
-                                                 int64_t &ResidualScaled) {
+Register AArch64LoadStoreOpt::tryMergeBaseAdjust(
+    MachineInstr &FirstMI, MachineInstr &PairedMI, MCPhysReg BaseReg,
+    int64_t ByteOffset, int MemScale, int64_t &ResidualScaled) {
   ResidualScaled = 0;
   MachineBasicBlock *MBB = FirstMI.getParent();
 
@@ -1206,9 +1191,8 @@ Register AArch64LoadStoreOpt::tryMergeBaseAdjust(MachineInstr &FirstMI,
   // sub-registers observe the loaded value, not the changed base.
   if (!PairWritesBaseReg) {
     MachineInstr *AfterPair = PairedMI.getNextNode();
-    if (AfterPair &&
-        !CheckRange(AfterPair->getIterator(), MBB->instr_end(),
-                    /*Exact=*/false))
+    if (AfterPair && !CheckRange(AfterPair->getIterator(), MBB->instr_end(),
+                                 /*Exact=*/false))
       return AArch64::NoRegister;
   }
 
@@ -1220,10 +1204,9 @@ Register AArch64LoadStoreOpt::tryMergeBaseAdjust(MachineInstr &FirstMI,
   else
     CombinedOffset = ByteOffset - DefImm;
 
-  int64_t AbsCombined =
-      CombinedOffset >= 0 ? CombinedOffset : -CombinedOffset;
+  int64_t AbsCombined = CombinedOffset >= 0 ? CombinedOffset : -CombinedOffset;
 
-  if (!canEncodeAddXriImm(AbsCombined)) {
+  if (!AArch64_AM::isLegalArithImmed(static_cast<uint64_t>(AbsCombined))) {
     int64_t EncodableBase, Residual;
     if (!trySplitForPair(CombinedOffset, MemScale, EncodableBase, Residual))
       return AArch64::NoRegister;
@@ -1411,10 +1394,10 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
       // Without this, truncating ByteOffset to a 12-bit immediate would
       // silently drop the low bits and produce a wrong address.
       int64_t EncodableBase = ByteOffset;
-      if (!canEncodeAddXriImm(ByteOffset)) {
+      if (!AArch64_AM::isLegalArithImmed(static_cast<uint64_t>(ByteOffset))) {
         int64_t Residual;
-        bool Ok = trySplitForPair(ByteOffset, MemScale,
-                                  EncodableBase, Residual);
+        bool Ok =
+            trySplitForPair(ByteOffset, MemScale, EncodableBase, Residual);
         (void)Ok;
         assert(Ok && "ByteOffset not encodable and split failed; "
                      "findMatchingInsn should have rejected this");
@@ -1453,11 +1436,11 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   // register from a folded preceding ADDXri/SUBXri).
   MachineOperand BaseRegOpForLDP = BaseRegOp;
   if (Flags.getRequiresBaseAdjust()) {
-    BaseRegOpForLDP =
-        MachineOperand::CreateReg(AdjustBaseReg, /*isDef=*/false, /*isImp=*/false,
-                                  /*isKill=*/false, /*isDead=*/false,
-                                  /*isUndef=*/false, /*isEarlyClobber=*/false,
-                                  /*isImplicit=*/false);
+    BaseRegOpForLDP = MachineOperand::CreateReg(
+        AdjustBaseReg, /*isDef=*/false, /*isImp=*/false,
+        /*isKill=*/false, /*isDead=*/false,
+        /*isUndef=*/false, /*isEarlyClobber=*/false,
+        /*isImplicit=*/false);
   }
 
   int Offset = AArch64InstrInfo::getLdStOffsetOp(*I).getImm();
@@ -2488,6 +2471,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           // immediate offset of merging these instructions is out of range for
           // a pairwise instruction, try base register adjustment.
           if (!inBoundsForPair(IsUnscaled, MinOffset, OffsetStride)) {
+            bool BaseAdjustAccepted = false;
             if (Subtarget->getCLOpts().ldp_stp_base_adjust) {
               int MemScale = getBaseAdjustMemScale(TII, FirstMI);
               int64_t ByteOffset =
@@ -2498,10 +2482,11 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
               // This must match tryToPairLdStInst's early gate, otherwise
               // the pair is formed but the merge path rejects the offset.
               int64_t SplitBase, SplitResidual;
-               if (ByteOffset >= 0 &&
-                   (canEncodeAddXriImm(ByteOffset) ||
-                    trySplitForPair(ByteOffset, MemScale,
-                                    SplitBase, SplitResidual))) {
+              if (ByteOffset >= 0 &&
+                  (AArch64_AM::isLegalArithImmed(
+                       static_cast<uint64_t>(ByteOffset)) ||
+                   trySplitForPair(ByteOffset, MemScale, SplitBase,
+                                   SplitResidual))) {
                 Register Reg0 = getLdStRegOp(FirstMI).getReg();
                 Register Reg1 = getLdStRegOp(MI).getReg();
                 Register Scratch = AArch64::NoRegister;
@@ -2512,9 +2497,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
                 // PairedMI. If Reg1 overlaps BaseReg and an interleaved
                 // instruction reads BaseReg, the write clobbers the base
                 // before the read — a miscompile. Reject the pair.
-                bool Reg1ClobbersBase =
-                    TRI->regsOverlap(Reg1, BaseReg) &&
-                    !UsedRegUnits.available(BaseReg);
+                bool Reg1ClobbersBase = TRI->regsOverlap(Reg1, BaseReg) &&
+                                        !UsedRegUnits.available(BaseReg);
 
                 // For GPR64 loads, reuse the first destination register as
                 // the adjusted base. It is dead-by-construction (about to
@@ -2530,23 +2514,21 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
                 else {
                   // Stores and sub-64-bit loads cannot reuse a dest/source
                   // register (it holds the value to store, or is not a
-                  // 64-bit base), so scavenge from caller-saved temporaries
-                  // x9-x15. X16/X17 (IP0/IP1) are excluded: the linker may
-                  // clobber them with veneers/PLT entries, and holding a
-                  // live adjusted base in IP0/IP1 across the add/ldp is
-                  // unsound under CSPGO, where long-range branch veneers
-                  // are common. If no register is free, leave the accesses
+                  // 64-bit base), so scavenge from caller-saved GPR64
+                  // registers. X16/X17 (IP0/IP1) are excluded: they are not
+                  // guaranteed to be preserved across the add/ldp sequence
+                  // because the linker may clobber them with veneers/PLT
+                  // entries. If no register is free, leave the accesses
                   // unpaired; a missed optimization beats a miscompile.
                   computeScratchAvailability();
-                  static const MCPhysReg ScratchCandidates[] = {
-                      AArch64::X9,  AArch64::X10, AArch64::X11, AArch64::X12,
-                      AArch64::X13, AArch64::X14, AArch64::X15};
-                  // Candidates are 64-bit while Reg0/Reg1 may be 32-bit (Wn)
-                  // for sub-64-bit accesses, so skip by register overlap: an
-                  // exact compare would miss that Xn aliases Wn and let the
-                  // ADDXri clobber the stored value before the STP reads it.
+                  // Reg0/Reg1 may be 32-bit (Wn) for sub-64-bit accesses,
+                  // so use regsOverlap: an exact compare would miss that Xn
+                  // aliases Wn and let the ADDXri clobber the stored value
+                  // before the STP reads it.
                   if (ScavengerReady) {
-                    for (MCPhysReg Reg : ScratchCandidates) {
+                    for (MCPhysReg Reg : AArch64::GPR64RegClass) {
+                      if (Reg == AArch64::X16 || Reg == AArch64::X17)
+                        continue;
                       if (TRI->regsOverlap(Reg, Reg0) ||
                           TRI->regsOverlap(Reg, Reg1))
                         continue;
@@ -2561,19 +2543,20 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
                   Flags.setRequiresBaseAdjust(true);
                   Flags.setBaseAdjustByteOffset(ByteOffset);
                   Flags.setBaseAdjustScratchReg(Scratch);
-                  goto base_adjust_accepted;
+                  BaseAdjustAccepted = true;
                 }
               }
             }
-            LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,
-                                              UsedRegUnits, TRI);
-            MemInsns.push_back(&MI);
-            LLVM_DEBUG(dbgs() << "No base adjust opportunity, "
-                              << "keep looking.\n");
-            continue;
+            if (!BaseAdjustAccepted) {
+              LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,
+                                                UsedRegUnits, TRI);
+              MemInsns.push_back(&MI);
+              LLVM_DEBUG(dbgs() << "No base adjust opportunity, "
+                                << "keep looking.\n");
+              continue;
+            }
           }
-        base_adjust_accepted:
-           // If the alignment requirements of the paired (scaled) instruction
+          // If the alignment requirements of the paired (scaled) instruction
           // can't express the offset of the unscaled input, bail and keep
           // looking.
           if (IsUnscaled && (alignTo(MinOffset, OffsetStride) != MinOffset)) {
@@ -3321,7 +3304,7 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
     // formed but the merge path rejects the offset.
     int64_t SplitBase, SplitResidual;
     if (ByteOffset < 0 ||
-        !(canEncodeAddXriImm(ByteOffset) ||
+        !(AArch64_AM::isLegalArithImmed(static_cast<uint64_t>(ByteOffset)) ||
           trySplitForPair(ByteOffset, MemScale, SplitBase, SplitResidual)))
       return false;
     LLVM_DEBUG(dbgs() << "Offset " << Offset
