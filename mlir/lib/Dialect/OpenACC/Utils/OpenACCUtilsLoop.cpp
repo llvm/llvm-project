@@ -330,6 +330,7 @@ scf::ParallelOp convertACCLoopToSCFParallel(LoopOp loopOp,
                       loopOp.getStep()[idx]);
 
   setCollapseCountAttr(parallelOp, parallelOp.getNumLoops());
+  setLoopConstructAttr(parallelOp);
   copyLoopAnnotationAttr(loopOp, parallelOp);
   return parallelOp;
 }
@@ -362,5 +363,13 @@ uint64_t getCollapseCount(Operation *op) {
   return 1;
 }
 
+void setLoopConstructAttr(Operation *op) {
+  op->setDiscardableAttr(getLoopConstructAttrName(),
+                         UnitAttr::get(op->getContext()));
+}
+
+bool hasLoopConstructAttr(Operation *op) {
+  return op->getDiscardableAttr(getLoopConstructAttrName()) != nullptr;
+}
 } // namespace acc
 } // namespace mlir
