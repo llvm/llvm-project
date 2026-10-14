@@ -427,7 +427,7 @@ define i32 @main() nounwind {
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-32, %esp
-; X86-SSE2-NEXT:    subl $64, %esp
+; X86-SSE2-NEXT:    subl $32, %esp
 ; X86-SSE2-NEXT:    movaps n1+16, %xmm0
 ; X86-SSE2-NEXT:    movaps n1, %xmm1
 ; X86-SSE2-NEXT:    movl zero+4, %ecx
@@ -461,7 +461,7 @@ define i32 @main() nounwind {
 ; X64-SSSE3-NEXT:    pushq %rbp
 ; X64-SSSE3-NEXT:    movq %rsp, %rbp
 ; X64-SSSE3-NEXT:    andq $-32, %rsp
-; X64-SSSE3-NEXT:    subq $64, %rsp
+; X64-SSSE3-NEXT:    subq $32, %rsp
 ; X64-SSSE3-NEXT:    movq n1@GOTPCREL(%rip), %rax
 ; X64-SSSE3-NEXT:    movaps (%rax), %xmm0
 ; X64-SSSE3-NEXT:    movaps 16(%rax), %xmm1
@@ -494,7 +494,7 @@ define i32 @main() nounwind {
 ; X64-AVX-NEXT:    pushq %rbp
 ; X64-AVX-NEXT:    movq %rsp, %rbp
 ; X64-AVX-NEXT:    andq $-32, %rsp
-; X64-AVX-NEXT:    subq $64, %rsp
+; X64-AVX-NEXT:    subq $32, %rsp
 ; X64-AVX-NEXT:    movq n1@GOTPCREL(%rip), %rax
 ; X64-AVX-NEXT:    vmovaps (%rax), %ymm0
 ; X64-AVX-NEXT:    movl zero+4(%rip), %ecx

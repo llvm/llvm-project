@@ -120,6 +120,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fchownat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fchownat
+)
+
+add_entrypoint_object(
   fdatasync
   ALIAS
   DEPENDS
@@ -274,6 +281,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lchown
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.lchown
+)
+
+add_entrypoint_object(
   link
   ALIAS
   DEPENDS
@@ -285,6 +299,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.linkat
+)
+
+add_entrypoint_object(
+  lockf
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.lockf
 )
 
 add_entrypoint_object(
@@ -439,6 +460,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.__llvm_libc_syscall
+)
+
+add_entrypoint_object(
+  sync
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sync
+)
+
+add_entrypoint_object(
+  syncfs
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.syncfs
 )
 
 add_entrypoint_object(

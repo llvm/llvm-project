@@ -283,7 +283,7 @@ loop.end:
 define i64 @loop_contains_load_after_early_exit(ptr dereferenceable(1024) align(8) %p2) {
 ; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_load_after_early_exit'
 ; DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
-; DEBUG-NEXT:  LV: We can vectorize this loop!
+; DEBUG-NEXT:  LV: Loop passed LoopVectorizationLegality checks!
 ; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit is not yet supported.
 ; CHECK-LABEL: define i64 @loop_contains_load_after_early_exit(
 ; CHECK-SAME: ptr align 8 dereferenceable(1024) [[P2:%.*]]) {
@@ -349,7 +349,7 @@ loop.end:
 define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; DEBUG-LABEL: LV: Checking a loop in 'diff_exit_block_needs_scev_check'
 ; DEBUG:       Found an early exit loop with symbolic max backedge taken count: (-1 + (1 umax (zext i10 (trunc i32 %end to i10) to i32)))<nsw>
-; DEBUG-NEXT:  LV: We can vectorize this loop!
+; DEBUG-NEXT:  LV: Loop passed LoopVectorizationLegality checks!
 ; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit is not yet supported.
 ; CHECK-LABEL: define i32 @diff_exit_block_needs_scev_check(
 ; CHECK-SAME: i32 [[END:%.*]]) {

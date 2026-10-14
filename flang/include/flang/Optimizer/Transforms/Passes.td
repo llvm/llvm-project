@@ -263,7 +263,12 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "Command-line flags to append to DWARF producer">,
     Option<"emitFakeUseForDebugVars", "emit-fake-use-for-debug-vars",
            "bool", /*default=*/"false",
-           "Emit fake use for debug variables to extend their lifetime">
+           "Emit fake use for debug variables to extend their lifetime">,
+    Option<"boundsInStackSlots", "bounds-in-stack-slots",
+           "bool", /*default=*/"false",
+           "Keep the bounds and length parameters of a variable in stack "
+           "slots, so that they can be described wherever the variable is "
+           "visible">
   ];
 }
 
@@ -411,6 +416,22 @@ def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
   let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
+def O0CanonicalizerPass : Pass<"fir-o0-canonicalize"> {
+  let summary = "Simplify operations while preserving statement-entry branches";
+  let description = [{
+    Clean up IR after CFG lowering at O0, using canonicalization patterns from
+    all loaded dialects except ControlFlow. CF canonicalizations can bypass
+    loop-entry branches carrying an array assignment's source location and
+    move its PHI initializations into preceding statements, losing the
+    assignment's breakpoint location outside the loop.
+
+    Both dialect-wide and operation-level CF pattern registrations are omitted.
+    Folding and dead operation elimination remain enabled; region simplification
+    is disabled. This pass does not promise to preserve arbitrary CFG structure
+    against transformations registered by other dialects.
+  }];
+}
+
 def SimplifyRegionLite : Pass<"simplify-region-lite"> {
   let summary = "Region simplification";
   let description = [{
@@ -452,6 +473,12 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     loops to be vectorized as well as other loop optimizations.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
+  let options = [
+    Option<"enableSlices", "enable-slices", "bool",
+           /*default=*/"true",
+           "Enable versioning for supported static-unit array slices; disabling "
+           "this option leaves other loop versioning active">
+  ];
 }
 
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
@@ -589,14 +616,15 @@ def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect", "hlfir::hlfirDialect",
-                           "mlir::gpu::GPUDialect", "mlir::DLTIDialect"];
+                           "mlir::arith::ArithDialect", "mlir::gpu::GPUDialect",
+                           "mlir::DLTIDialect"];
   let options = [Option<
       "deferAccRoutineDataTransfers", "defer-acc-routine-data-transfers",
       "bool", /*default=*/"false",
-      "Do not convert cuf.data_transfer operations in the host copy of an "
-      "OpenACC routine. The routine is later specialized for host and device, "
-      "after which each copy can be handled according to its execution "
-      "context.">];
+      "Do not convert cuf.data_transfer or cuf.on_device operations in the "
+      "host copy of an OpenACC routine. The routine is later specialized for "
+      "host and device, after which each copy can be handled according to its "
+      "execution context.">];
 }
 
 def CUFOpConversionLate : Pass<"cuf-convert-late", "mlir::ModuleOp"> {
@@ -624,6 +652,34 @@ def CUFDeviceGlobal :
   ];
 }
 
+def CUFSharedTypeInfo : Pass<"cuf-shared-type-info", "mlir::ModuleOp"> {
+  let summary = "Share host runtime type information with device code";
+  let description = [{
+    Under -gpu=mem:managed, a descriptor in managed memory can be written by
+    device code and read by host code, so the type descriptor address it holds
+    must be valid on both sides.
+
+    This pass makes the host runtime type information writable and places it
+    in the `__nv_type_info` section, which CUFAddConstructor registers with the
+    CUDA runtime so device code can read it through its host address. Each
+    type descriptor present in the GPU module gets a managed pointer, which
+    the CUDA Fortran constructor sets to the host address of the type
+    descriptor. The GPU module attribute `cuf.shared_type_descs` maps type
+    descriptor names to these pointers, and code generation loads the type
+    descriptor address from them in device code. The `acc.declare` attribute
+    is dropped so OpenACC does not copy the type information to the device.
+
+    Each translation unit defining such type information also ends the
+    section with a page-aligned global, so that the registered pages hold
+    nothing but type information.
+
+    Device code then sees the host binding tables, so type-bound procedures
+    cannot be called from device code.
+  }];
+  let dependentDialects = ["mlir::gpu::GPUDialect", "cuf::CUFDialect",
+                           "mlir::LLVM::LLVMDialect"];
+}
+
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
@@ -641,6 +697,11 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
            "GPU module via cuf.register_variable_static, so the CUDA driver "
            "maps the device-side symbol to the host pointer at module-load "
            "time and HMM/ATS handles migration.">,
+    Option<"cudaManagedTypeInfo", "cuda-managed-type-info", "bool",
+           /*default=*/"false",
+           "Register the runtime type information shared with device code "
+           "under -gpu=mem:managed (see cuf-shared-type-info): register the "
+           "pages of its section with the CUDA runtime.">,
     Option<"priority", "priority", "int32_t", /*default=*/"0",
            "Priority for the CUDA Fortran global constructor in "
            "llvm.mlir.global_ctors.">,
@@ -712,18 +773,6 @@ def CUFDeviceFuncTransform
               /*default=*/"false",
               "Report an error if device code contains a call to "
               "descriptor I/O">];
-}
-
-def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
-  let summary = "Convert some CUDA Fortran specific call";
-  let dependentDialects = ["fir::FIROpsDialect"];
-  let options = [Option<
-      "deferAccRoutines", "defer-acc-routines", "bool", /*default=*/"false",
-      "Do not fold device-detection intrinsics located in the host copy of an "
-      "OpenACC routine. Such a routine is later cloned to build its device "
-      "counterpart, so folding it to the host value here would bake that value "
-      "into the device clone. Deferred calls are folded by a later run that "
-      "executes after device specialization.">];
 }
 
 def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {

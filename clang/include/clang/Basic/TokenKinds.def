@@ -544,6 +544,12 @@ KEYWORD(__noinline__                , KEYCUDA)
 KEYWORD(cbuffer                     , KEYHLSL)
 KEYWORD(tbuffer                     , KEYHLSL)
 KEYWORD(groupshared                 , KEYHLSL)
+KEYWORD(nointerpolation             , KEYHLSL)
+KEYWORD(linear                      , KEYHLSL)
+KEYWORD(centroid                    , KEYHLSL)
+KEYWORD(noperspective               , KEYHLSL)
+KEYWORD(sample                      , KEYHLSL)
+KEYWORD(center                      , KEYHLSL)
 KEYWORD(in                          , KEYHLSL)
 KEYWORD(inout                       , KEYHLSL)
 KEYWORD(out                         , KEYHLSL)
@@ -552,6 +558,9 @@ KEYWORD(column_major                , KEYHLSL)
 // HLSL Intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) KEYWORD(Name, KEYHLSL)
 #include "clang/Basic/HLSLIntangibleTypes.def"
+// HLSL Packed Types
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) KEYWORD(Name, KEYHLSL)
+#include "clang/Basic/HLSLPackedTypes.def"
 
 // Borland Extensions.
 KEYWORD(__pascal                    , KEYALL)
@@ -654,6 +663,7 @@ ALIAS("_multiple_inheritance", __multiple_inheritance, KEYMSCOMPAT)
 ALIAS("_ptr32"           , __ptr32      , KEYMSCOMPAT)
 ALIAS("_ptr64"           , __ptr64      , KEYMSCOMPAT)
 ALIAS("_restrict"        , restrict     , KEYMSCOMPAT)
+ALIAS("_single_inheritance", __single_inheritance, KEYMSCOMPAT)
 ALIAS("_stdcall"         , __stdcall    , KEYMS | KEYBORLAND)
 ALIAS("_thiscall"        , __thiscall   , KEYMS)
 ALIAS("_try"             , __try        , KEYMSCOMPAT)

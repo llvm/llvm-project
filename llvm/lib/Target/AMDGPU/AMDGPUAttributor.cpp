@@ -1188,7 +1188,7 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
   unsigned AGPRDefCount = 0;
   unsigned AGPRUseCount = 0;
   unsigned MaxPhysReg = 0;
-  const DataLayout &DL = Call.getFunction()->getParent()->getDataLayout();
+  const DataLayout &DL = Call.getFunction()->getDataLayout();
 
   // TODO: Overestimates due to not accounting for tied operands
   for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
@@ -1575,6 +1575,8 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = DeleteFns;
   AC.DefaultInitializeLiveInternals = false;
+  // AAIsDead is not allowed, so nothing is ever assumed dead.
+  AC.UseLiveness = false;
   AC.IndirectCalleeSpecializationCallback =
       [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
          Function &Callee, unsigned NumAssumedCallees) {

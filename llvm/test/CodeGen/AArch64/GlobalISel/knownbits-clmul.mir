@@ -11,9 +11,9 @@ body:             |
   ; CHECK-NEXT: %0:_ KnownBits:00000000000000000000000000000011 SignBits:30 IsKnownNeverZero:1
   ; CHECK-NEXT: %1:_ KnownBits:00000000000000000000000000000101 SignBits:29 IsKnownNeverZero:1
   ; CHECK-NEXT: %2:_ KnownBits:00000000000000000000000000001111 SignBits:28 IsKnownNeverZero:1
-    %0:_(s32) = G_CONSTANT i32 3
-    %1:_(s32) = G_CONSTANT i32 5
-    %2:_(s32) = G_CLMUL %0, %1
+    %0:_(i32) = G_CONSTANT i32 3
+    %1:_(i32) = G_CONSTANT i32 5
+    %2:_(i32) = G_CLMUL %0, %1
 ...
 ---
 # One operand is a single set bit at position 4 (0b10000), so clmul shifts the
@@ -27,9 +27,9 @@ body:             |
   ; CHECK-NEXT: %0:_ KnownBits:00000000000000000000000000010000 SignBits:27 IsKnownNeverZero:1
   ; CHECK-NEXT: %1:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %2:_ KnownBits:????????????????????????????0000 SignBits:1 IsKnownNeverZero:0
-    %0:_(s32) = G_CONSTANT i32 16
-    %1:_(s32) = COPY $w0
-    %2:_(s32) = G_CLMUL %0, %1
+    %0:_(i32) = G_CONSTANT i32 16
+    %1:_(i32) = COPY $w0
+    %2:_(i32) = G_CLMUL %0, %1
 ...
 ---
 # Both operands are masked to 4 bits ([0,15]), so the highest set bit of each is
@@ -46,12 +46,12 @@ body:             |
   ; CHECK-NEXT: %3:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %4:_ KnownBits:0000000000000000000000000000???? SignBits:28 IsKnownNeverZero:0
   ; CHECK-NEXT: %5:_ KnownBits:0000000000000000000000000??????? SignBits:25 IsKnownNeverZero:0
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = G_CONSTANT i32 15
-    %2:_(s32) = G_AND %0, %1
-    %3:_(s32) = COPY $w1
-    %4:_(s32) = G_AND %3, %1
-    %5:_(s32) = G_CLMUL %2, %4
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = G_CONSTANT i32 15
+    %2:_(i32) = G_AND %0, %1
+    %3:_(i32) = COPY $w1
+    %4:_(i32) = G_AND %3, %1
+    %5:_(i32) = G_CLMUL %2, %4
 ...
 ---
 # Vector: the same 4-bit-mask reasoning applies per lane, so each lane has result
@@ -68,11 +68,11 @@ body:             |
   ; CHECK-NEXT: %4:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %5:_ KnownBits:0000000000000000000000000000???? SignBits:28 IsKnownNeverZero:0
   ; CHECK-NEXT: %6:_ KnownBits:0000000000000000000000000??????? SignBits:25 IsKnownNeverZero:0
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(s32) = G_CONSTANT i32 15
-    %2:_(<4 x s32>) = G_BUILD_VECTOR %1, %1, %1, %1
-    %3:_(<4 x s32>) = G_AND %0, %2
-    %4:_(<4 x s32>) = COPY $q1
-    %5:_(<4 x s32>) = G_AND %4, %2
-    %6:_(<4 x s32>) = G_CLMUL %3, %5
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(i32) = G_CONSTANT i32 15
+    %2:_(<4 x i32>) = G_BUILD_VECTOR %1, %1, %1, %1
+    %3:_(<4 x i32>) = G_AND %0, %2
+    %4:_(<4 x i32>) = COPY $q1
+    %5:_(<4 x i32>) = G_AND %4, %2
+    %6:_(<4 x i32>) = G_CLMUL %3, %5
 ...

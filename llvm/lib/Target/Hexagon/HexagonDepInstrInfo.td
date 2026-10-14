@@ -20987,6 +20987,199 @@ let BaseOpcode = "S2_storerb_pci";
 let isNVStorable = 1;
 let Constraints = "$Rx32 = $Rx32in";
 }
+def S2_pstorerbf_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Rt32),
+"if (!$Pv4) memb($Rx32++#$Ii):nt = $Rt32",
+tc_9edefe01, TypeST>,
+Enc_cc449f, Requires<[HasV79]> {
+let Inst{2-2} = 0b1;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10101010000;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let addrMode = PostInc;
+let accessSize = ByteAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def S2_pstorerbt_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Rt32),
+"if ($Pv4) memb($Rx32++#$Ii):nt = $Rt32",
+tc_9edefe01, TypeST>,
+Enc_cc449f, Requires<[HasV79]> {
+let Inst{2-2} = 0b0;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10101010000;
+let isPredicated = 1;
+let addrMode = PostInc;
+let accessSize = ByteAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def S2_pstorerdf_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_3Imm:$Ii, DoubleRegs:$Rtt32),
+"if (!$Pv4) memd($Rx32++#$Ii):nt = $Rtt32",
+tc_9edefe01, TypeST>,
+Enc_9a33d5, Requires<[HasV79]> {
+let Inst{2-2} = 0b1;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10101010110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let addrMode = PostInc;
+let accessSize = DoubleWordAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def S2_pstorerdt_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_3Imm:$Ii, DoubleRegs:$Rtt32),
+"if ($Pv4) memd($Rx32++#$Ii):nt = $Rtt32",
+tc_9edefe01, TypeST>,
+Enc_9a33d5, Requires<[HasV79]> {
+let Inst{2-2} = 0b0;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10101010110;
+let isPredicated = 1;
+let addrMode = PostInc;
+let accessSize = DoubleWordAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def S2_pstorerhf_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
+"if (!$Pv4) memh($Rx32++#$Ii):nt = $Rt32",
+tc_9edefe01, TypeST>,
+Enc_b886fd, Requires<[HasV79]> {
+let Inst{2-2} = 0b1;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10101010010;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let addrMode = PostInc;
+let accessSize = HalfWordAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def S2_pstorerht_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
+"if ($Pv4) memh($Rx32++#$Ii):nt = $Rt32",
+tc_9edefe01, TypeST>,
+Enc_b886fd, Requires<[HasV79]> {
+let Inst{2-2} = 0b0;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10101010010;
+let isPredicated = 1;
+let addrMode = PostInc;
+let accessSize = HalfWordAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def S2_pstorerif_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Rt32),
+"if (!$Pv4) memw($Rx32++#$Ii):nt = $Rt32",
+tc_9edefe01, TypeST>,
+Enc_7eaeb6, Requires<[HasV79]> {
+let Inst{2-2} = 0b1;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10101010100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let addrMode = PostInc;
+let accessSize = WordAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def S2_pstorerit_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Rt32),
+"if ($Pv4) memw($Rx32++#$Ii):nt = $Rt32",
+tc_9edefe01, TypeST>,
+Enc_7eaeb6, Requires<[HasV79]> {
+let Inst{2-2} = 0b0;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10101010100;
+let isPredicated = 1;
+let addrMode = PostInc;
+let accessSize = WordAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def S2_storerb_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Rt32),
+"memb($Rx32++#$Ii):nt = $Rt32",
+tc_9edefe01, TypeST>, Enc_10bc21,
+Requires<[HasV79]> {
+let Inst{2-0} = 0b000;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10101010000;
+let addrMode = PostInc;
+let accessSize = ByteAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def S2_storerd_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins IntRegs:$Rx32in, s4_3Imm:$Ii, DoubleRegs:$Rtt32),
+"memd($Rx32++#$Ii):nt = $Rtt32",
+tc_9edefe01, TypeST>, Enc_85bf58,
+Requires<[HasV79]> {
+let Inst{2-0} = 0b000;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10101010110;
+let addrMode = PostInc;
+let accessSize = DoubleWordAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def S2_storerh_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
+"memh($Rx32++#$Ii):nt = $Rt32",
+tc_9edefe01, TypeST>, Enc_052c7d,
+Requires<[HasV79]> {
+let Inst{2-0} = 0b000;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10101010010;
+let addrMode = PostInc;
+let accessSize = HalfWordAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def S2_storeri_pi_nt : HInst<
+(outs IntRegs:$Rx32),
+(ins IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Rt32),
+"memw($Rx32++#$Ii):nt = $Rt32",
+tc_9edefe01, TypeST>, Enc_db40cd,
+Requires<[HasV79]> {
+let Inst{2-0} = 0b000;
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10101010100;
+let addrMode = PostInc;
+let accessSize = WordAccess;
+let mayStore = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+
 def S2_storerb_pcr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
@@ -41208,6 +41401,17 @@ let addrMode = BaseImmOffset;
 let isRestrictNoSlot1Store = 1;
 let hasSideEffects = 1;
 }
+def Y2_dcfetchbo_nt : HInst<
+(outs),
+(ins IntRegs:$Rs32, u11_3Imm:$Ii),
+"dcfetch($Rs32+#$Ii):nt",
+tc_2237d952, TypeLD>, Enc_2d829e,
+Requires<[HasV79]> {
+let Inst{13-11} = 0b100;
+let Inst{31-21} = 0b10010100000;
+let addrMode = BaseImmOffset;
+let isRestrictNoSlot1Store = 1;
+}
 def Y2_dcinva : HInst<
 (outs),
 (ins IntRegs:$Rs32),
@@ -41267,6 +41471,16 @@ let Inst{31-21} = 0b10100000110;
 let isRestrictSlot1AOK = 1;
 let mayStore = 1;
 let hasSideEffects = 1;
+}
+def Y2_dczeroa_nt : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"dczeroa($Rs32):nt",
+tc_b1ae5f67, TypeST>, Enc_ecbcc8, Requires<[HasV79]> {
+let Inst{13-0} = 0b10000000000000;
+let Inst{31-21} = 0b10100000110;
+let isRestrictSlot1AOK = 1;
+let mayStore = 1;
 }
 def Y2_getimask : HInst<
 (outs IntRegs:$Rd32),

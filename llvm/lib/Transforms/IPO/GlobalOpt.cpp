@@ -1840,7 +1840,7 @@ static void RemovePreallocated(Function *F) {
 
   auto *M = F->getParent();
 
-  IRBuilder<> Builder(M->getContext());
+  IRBuilder<> Builder(*M);
 
   // Cannot modify users() while iterating over it, so make a copy.
   SmallVector<User *, 4> PreallocatedCalls(F->users());

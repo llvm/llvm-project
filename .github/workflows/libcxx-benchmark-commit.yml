@@ -18,7 +18,7 @@ on:
         required: true
         type: string
       lnt-machine:
-        description: 'The LNT machine to run the benchmarks on'
+        description: 'The LNT machine configuration to use when benchmarking and to report results as'
         required: true
         type: string
       benchmark-suite-override:
@@ -105,10 +105,14 @@ jobs:
         include: ${{ fromJSON(needs.select-machine.outputs.matrix) }}
       fail-fast: false
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container || null }}
+    defaults:
+      run:
+        shell: bash
     env:
       COMPILER: ${{ matrix.cxx }}
-      # Where the library is installed when we build it. This lives inside the workspace
-      # so that actions/checkout cleans it up between runs on self-hosted runners.
+      # Where we install the library. This lives inside the workspace so that actions/checkout
+      # cleans it up between runs on self-hosted runners.
       INSTALL_DIR: ${{ github.workspace }}/install
     steps:
       - name: Checkout the LLVM monorepo
@@ -118,12 +122,11 @@ jobs:
           # We benchmark arbitrary historical commits, which requires the full history to be available.
           fetch-depth: 0
           fetch-tags: true
-
-      - name: Install Python
-        if: runner.os == 'Linux' # installed via Homebrew on macOS
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.14'
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
 
       - name: Select Xcode
         if: runner.os == 'macOS'
@@ -131,13 +134,9 @@ jobs:
 
       - name: Install dependencies via Homebrew
         if: runner.os == 'macOS'
-        env:
-          # Extra packages needed by the test configuration
-          EXTRA_BREW_PACKAGES: ${{ join(matrix.brew-packages, ' ') }}
         run: |
-          read -ra extra_packages <<< "${EXTRA_BREW_PACKAGES}"
           brew update
-          brew install ninja cmake python@3.14 "${extra_packages[@]}"
+          brew install ninja cmake python@3.14
           echo "$(brew --prefix python@3.14)/bin" >> "$GITHUB_PATH"
 
       - name: Diagnose tools in use
@@ -153,27 +152,30 @@ jobs:
           source .venv/bin/activate
           pip install -r libcxx/utils/ci/lnt/requirements.txt
 
-      # Build the library. This is only done when the machine configuration provides a 'build' key,
-      # otherwise we assume that the configuration does not require building anything (e.g. a system
-      # standard library).
+      # Build the library.
       #
       # A build failure is tolerated on purpose, since the library doesn't build at every historical commit.
       # We still submit an empty run for such commits.
       - name: Build libc++ at ${{ inputs.commit }}
-        if: ${{ matrix.build != '' }}
         continue-on-error: true
-        uses: ./.github/workflows/libcxx/build-at-commit
-        with:
-          git-repo: ${{ github.workspace }}
-          commit: ${{ inputs.commit }}
-          install-dir: ${{ env.INSTALL_DIR }}
-          compiler: ${{ matrix.cxx }}
-          cmake-cache: ${{ matrix.build.cmake-cache }}
+        env:
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          # Clean up any stale install directory
+          rm -rf "${INSTALL_DIR}"
+
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${COMMIT}"                             \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
 
       - name: Run the benchmarks
         env:
           BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
-          BUILT_LIBCXX: ${{ matrix.build != '' }}
           COMMIT: ${{ inputs.commit }}
           FILTER: ${{ inputs.filter }}
           LIT_PARAMS: ${{ join(matrix.lit-params, ' ') }}
@@ -192,15 +194,10 @@ jobs:
             lit_params+=(--param "${param}")
           done
 
-          # When the library is built in this workflow, point the testing configuration at the installation.
-          # Everything else needed by the configuration comes from machines.json.
-          if [ "${BUILT_LIBCXX}" = "true" ]; then
-            # If the library build failed, still create an install directory so we
-            # run the benchmarks. The benchmarks will fail, and we'll submit an empty
-            # LNT report.
-            mkdir -p "${INSTALL_DIR}"
-            lit_params+=(--param "libcxx_installation=${INSTALL_DIR}")
-          fi
+          # If the library build failed, still create an install directory so we
+          # run the benchmarks. The benchmarks will fail, and we'll submit an empty
+          # LNT report.
+          mkdir -p "${INSTALL_DIR}"
 
           libcxx/utils/ci/lnt/run-benchmarks                            \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
@@ -210,7 +207,7 @@ jobs:
             --test-config "${TEST_CONFIG}"                              \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"                                   \
-            -- "${lit_params[@]}"
+            -- "${lit_params[@]}" --param "libcxx_installation=${INSTALL_DIR}"
 
           cat "${COMMIT}.json"
 
