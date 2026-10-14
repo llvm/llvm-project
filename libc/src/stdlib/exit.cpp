@@ -26,7 +26,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-extern "C" void __cxa_finalize(void *);
+// Defined with the rest of the exit handlers. Visibility is declared here as
+// well as there: the parts of the library are merged into one object before
+// it becomes a shared one, and the narrower of the two would otherwise win
+// and keep it in.
+extern "C" LIBC_SHARED_INTERNAL void __cxa_finalize(void *);
 
 // TODO: use recursive mutex to protect this routine.
 [[noreturn]] LLVM_LIBC_FUNCTION(void, exit, (int status)) {
