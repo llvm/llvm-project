@@ -3443,7 +3443,10 @@ static Value *trySimplifyExpr(Instruction &Expr,
 
   // Only handle Cast, BinOp, UnaryOp for now. Excluding PHIs also means the
   // operand graph below is acyclic, so the walk always terminates.
-  if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr)) {
+  auto isSupportedExpr = [](const Value *V) {
+    return isa<CastInst, BinaryOperator, UnaryOperator>(V);
+  };
+  if (!isSupportedExpr(&Expr)) {
     SimplifiedExprs[&Expr] = &Expr;
     return &Expr;
   }
@@ -3467,7 +3470,7 @@ static Value *trySimplifyExpr(Instruction &Expr,
       if (SimplifiedExprs.count(Op))
         continue;
       auto *OpI = dyn_cast<Instruction>(Op);
-      if (OpI && isa<CastInst, BinaryOperator, UnaryOperator>(OpI))
+      if (OpI && isSupportedExpr(OpI))
         Stack.push_back({OpI, 0});
       continue;
     }
