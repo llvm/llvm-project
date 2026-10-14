@@ -8861,8 +8861,8 @@ cc_library(
 
 cc_library(
     name = "ArithAttrToLLVMConversion",
-    srcs = glob(["lib/Conversion/ArithCommon/*.cpp"]),
-    hdrs = glob(["include/mlir/Conversion/ArithCommon/*.h"]),
+    srcs = glob(["lib/Conversion/ArithAttrToLLVM/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArithAttrToLLVM/*.h"]),
     includes = ["include"],
     deps = [
         ":ArithDialect",

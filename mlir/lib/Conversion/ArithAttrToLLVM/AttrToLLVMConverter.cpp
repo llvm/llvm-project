@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ArithAttrToLLVM/AttrToLLVMConverter.h"
 
 using namespace mlir;
 

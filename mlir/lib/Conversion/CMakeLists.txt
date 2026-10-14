@@ -1,6 +1,6 @@
 add_subdirectory(AffineToStandard)
 add_subdirectory(AMDGPUToROCDL)
-add_subdirectory(ArithCommon)
+add_subdirectory(ArithAttrToLLVM)
 add_subdirectory(ArithToAMDGPU)
 add_subdirectory(ArithAndMathToAPFloat)
 add_subdirectory(ArithToArmSME)

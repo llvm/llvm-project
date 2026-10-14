@@ -9,7 +9,7 @@
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 
 #include "mlir/Analysis/DataLayoutAnalysis.h"
-#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ArithAttrToLLVM/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
