@@ -196,14 +196,8 @@ define <1 x i32> @test_dot_product_with_transposed_shuffle_op(<4 x i32> %a, <2 x
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i32> [[SPLIT]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[SPLIT1]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[SPLIT]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[SPLIT1]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[SPLIT]], <2 x i32> [[SPLIT1]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[SPLIT]], <2 x i32> [[SPLIT1]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> zeroinitializer, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <2 x i32> [[SHUFFLE]], [[B:%.*]]

@@ -2315,6 +2315,66 @@ public:
     return Result;
   }
 
+  /// Transposes the square matrix \p Input, whose number of vectors is a
+  /// power of two, with N * log2(N) two-source shuffles for N vectors.
+  MatrixTy lowerSquareTransposeWithShuffles(MatrixTy &Input,
+                                            IRBuilder<> &Builder) {
+    SmallVector<Value *, 16> Vecs(Input.vectors());
+    const unsigned N = Vecs.size();
+    FixedVectorType *VecTy = Input.getVectorTy();
+
+    // Masks for step B of either network: a zip interleaves vectors J and
+    // J + N / 2, a block swap exchanges the off-diagonal BxB blocks of vectors
+    // K and K + B.
+    auto GetMasks = [N](bool Zip, unsigned B, MutableArrayRef<int> LoMask,
+                        MutableArrayRef<int> HiMask) {
+      for (unsigned I = 0; I < N; ++I) {
+        if (Zip) {
+          LoMask[I] = I / 2 + (I % 2) * N;
+          HiMask[I] = N / 2 + I / 2 + (I % 2) * N;
+        } else {
+          bool InUpperHalf = I & B;
+          LoMask[I] = InUpperHalf ? N + I - B : I;
+          HiMask[I] = InUpperHalf ? N + I : I + B;
+        }
+      }
+    };
+
+    SmallVector<int, 16> LoMask(N), HiMask(N);
+    auto GetNetworkCost = [&](bool Zip) {
+      InstructionCost Cost = 0;
+      for (unsigned B = 1; B < N; B *= 2) {
+        GetMasks(Zip, B, LoMask, HiMask);
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy, VecTy,
+                                   TTI::TCK_RecipThroughput, LoMask);
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy, VecTy,
+                                   TTI::TCK_RecipThroughput, HiMask);
+      }
+      return Cost;
+    };
+    const bool Zip = GetNetworkCost(true) <= GetNetworkCost(false);
+
+    for (unsigned B = 1; B < N; B *= 2) {
+      GetMasks(Zip, B, LoMask, HiMask);
+      SmallVector<Value *, 16> NewVecs(N);
+      for (unsigned J = 0; J < N / 2; ++J) {
+        // Vectors Src and Src + Dist go to vectors Dst and Dst + DstDist.
+        unsigned Src = Zip ? J : (J & ~(B - 1)) * 2 + (J & (B - 1));
+        unsigned Dist = Zip ? N / 2 : B;
+        unsigned Dst = Zip ? 2 * J : Src;
+        unsigned DstDist = Zip ? 1 : B;
+        Value *First = Vecs[Src];
+        Value *Second = Vecs[Src + Dist];
+        NewVecs[Dst] = Builder.CreateShuffleVector(First, Second, LoMask);
+        NewVecs[Dst + DstDist] =
+            Builder.CreateShuffleVector(First, Second, HiMask);
+      }
+      Vecs = std::move(NewVecs);
+    }
+
+    return MatrixTy(Vecs).addNumComputeOps(N * Log2_32(N));
+  }
+
   /// Lowers llvm.matrix.transpose.
   MatrixTy LowerTranspose(CallInst *Inst, IRBuilder<> &Builder) {
     MatrixTy Result;
@@ -2327,6 +2387,10 @@ public:
         InputMatrix.isColumnMajor() ? ArgShape.NumRows : ArgShape.NumColumns;
     const unsigned NewNumElts =
         InputMatrix.isColumnMajor() ? ArgShape.NumColumns : ArgShape.NumRows;
+
+    if (NewNumVecs == NewNumElts && NewNumVecs > 1 && isPowerOf2_32(NewNumVecs))
+      return lowerSquareTransposeWithShuffles(InputMatrix, Builder)
+          .addNumExposedTransposes(1);
 
     for (unsigned I = 0; I < NewNumVecs; ++I) {
       // Build a single result vector. First initialize it.
