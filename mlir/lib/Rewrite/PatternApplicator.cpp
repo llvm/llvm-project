@@ -203,6 +203,8 @@ LogicalResult PatternApplicator::matchAndRewrite(
           Operation *dumpRootOp = getDumpRootOp(op);
 #endif
           if (pdlMatch) {
+            LDBG() << "Applying PDL rewrite \""
+                   << pdlMatch->pattern->getDebugName() << "\"";
             result =
                 bytecode->rewrite(rewriter, *pdlMatch, *mutableByteCodeState);
           } else {
