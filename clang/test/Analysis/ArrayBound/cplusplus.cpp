@@ -185,5 +185,5 @@ struct Incomplete;
 void useIncomplete(Incomplete &);
 
 void test_incomplete(void *p) {
-  useIncomplete(*static_cast<Incomplete *>(p));
+  useIncomplete(*static_cast<Incomplete *>(p)); // no-crash
 }
