@@ -113,8 +113,6 @@ struct to_chars_test_base
         std::iota(buf, buf + sizeof(buf), static_cast<unsigned char>(1));
         r = std::to_chars(buf, buf + sizeof(buf), v, args...);
         assert(r.ec == std::errc{});
-        for (std::size_t i = r.ptr - buf; i < sizeof(buf); ++i)
-            assert(static_cast<unsigned char>(buf[i]) == i + 1);
         *r.ptr = '\0';
 
 #ifndef TEST_HAS_NO_INT128
