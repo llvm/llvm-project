@@ -78,6 +78,87 @@ struct RemoveEmptyKernelEnvironment
   }
 };
 
+struct KernelEnvironmentDedupDataOperands
+    : public OpRewritePattern<acc::KernelEnvironmentOp> {
+  using OpRewritePattern<acc::KernelEnvironmentOp>::OpRewritePattern;
+
+  static bool isReductionDataOperand(Value operand) {
+    Operation *def = operand.getDefiningOp();
+    if (!def)
+      return false;
+    if (std::optional<DataClause> clause = getDataClause(def))
+      return *clause == DataClause::acc_reduction;
+    return false;
+  }
+
+  // Later clauses for one variable receive the same address, so the first
+  // remains. acc.map_info is a finalized mapping: its order and semantics
+  // stand. The variable alone does not identify it, since the flags and
+  // descriptors would have to be compared as well.
+  static bool isSameMappedVariable(Value lhs, Value rhs) {
+    if (lhs == rhs)
+      return true;
+    Operation *lhsDef = lhs.getDefiningOp();
+    Operation *rhsDef = rhs.getDefiningOp();
+    if (!lhsDef || !rhsDef || isa<MapInfoOp>(lhsDef) || isa<MapInfoOp>(rhsDef))
+      return false;
+    Value lhsVar = getVar(lhsDef);
+    return lhsVar && lhsVar == getVar(rhsDef) &&
+           getBounds(lhsDef) == getBounds(rhsDef);
+  }
+
+  LogicalResult matchAndRewrite(acc::KernelEnvironmentOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> operands(op.getDataClauseOperands());
+    const unsigned numOperands = operands.size();
+    if (numOperands < 2)
+      return failure();
+
+    SmallVector<Value> kept;
+    SmallVector<std::pair<Value, Value>> useRewrites;
+    SmallVector<bool> grouped(numOperands, false);
+    for (unsigned i = 0; i < numOperands; ++i) {
+      if (grouped[i])
+        continue;
+      SmallVector<unsigned> group;
+      for (unsigned j = i; j < numOperands; ++j) {
+        if (grouped[j])
+          continue;
+        if (j != i && !isSameMappedVariable(operands[i], operands[j]))
+          continue;
+        group.push_back(j);
+        grouped[j] = true;
+      }
+
+      // A reduction acc.copyin is that copyin plus the reduction. Keeping
+      // another clause would drop the reduction.
+      Value survivor = operands[group.front()];
+      for (unsigned idx : group) {
+        if (!isReductionDataOperand(operands[idx]))
+          continue;
+        survivor = operands[idx];
+        break;
+      }
+      kept.push_back(survivor);
+      for (unsigned idx : group) {
+        if (operands[idx] != survivor)
+          useRewrites.emplace_back(operands[idx], survivor);
+      }
+    }
+    if (kept.size() == numOperands)
+      return failure();
+
+    for (auto [from, to] : useRewrites) {
+      rewriter.replaceUsesWithIf(from, to, [&](OpOperand &use) {
+        return op->isProperAncestor(use.getOwner());
+      });
+    }
+    rewriter.modifyOpInPlace(
+        op, [&] { op.getDataClauseOperandsMutable().assign(kept); });
+    return success();
+  }
+};
+
 // Capture `hasStream` before erasing inputs because segment metadata is only
 // repaired at the end of the modification transaction.
 static void setComputeRegionInputOperandSegments(ComputeRegionOp op,
@@ -315,7 +396,8 @@ ValueRange KernelEnvironmentOp::getSuccessorInputs(RegionSuccessor successor) {
 
 void KernelEnvironmentOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveEmptyKernelEnvironment>(context);
+  results.add<RemoveEmptyKernelEnvironment, KernelEnvironmentDedupDataOperands>(
+      context);
 }
 
 /// Extract async for `clauseDeviceType`. Returns true if a clause was found.
