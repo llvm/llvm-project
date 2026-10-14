@@ -916,7 +916,7 @@ void GCNSubtarget::adjustSchedDependency(
         } else {
           // VOP2 form with implicit VCC input.
           const MachineOperand &UseOp = UseI->getOperand(UseOpIdx);
-          Register Reg = UseI->getOperand(UseOpIdx).getReg();
+          Register Reg = UseOp.getReg();
           UseIsMask = UseOp.isImplicit() &&
                       (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO);
         }
