@@ -210,7 +210,7 @@ static mlir::Value emitNeonCall(CIRGenModule &cgm, CIRGenBuilderTy &builder,
 static cir::VectorType getNeonPairwiseWidenInputType(cir::VectorType resType,
                                                      bool usgn) {
   mlir::Type elemTy = resType.getElementType();
-  uint64_t resLanes = resType.getSize();
+  uint64_t resLanes = resType.getSize().getFixedValue();
   auto intTy = mlir::dyn_cast<cir::IntType>(elemTy);
   assert(intTy && "vpaddl result type must be an integer vector");
 
@@ -632,7 +632,7 @@ emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
 
   bool scalarCmp = !isa<cir::VectorType>(src.getType());
   if (!scalarCmp) {
-    assert(!cast<cir::VectorType>(retTy).getIsScalable() &&
+    assert(!cast<cir::VectorType>(retTy).getSize().isScalable() &&
            "This is only intended for fixed-width vectors");
     // Vector types are cast to i8 vectors. Recover original type.
     src = builder.createBitcast(src, retTy);
@@ -906,7 +906,7 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_splat_laneq_v:
   case NEON::BI__builtin_neon_splatq_lane_v:
   case NEON::BI__builtin_neon_splatq_laneq_v: {
-    uint64_t numElements = vTy.getSize();
+    uint64_t numElements = vTy.getSize().getFixedValue();
     if (builtinID == NEON::BI__builtin_neon_splatq_lane_v)
       numElements *= 2;
     if (builtinID == NEON::BI__builtin_neon_splat_laneq_v)
@@ -1511,8 +1511,8 @@ mlir::Value CIRGenFunction::emitSVEPredicateCast(mlir::Value pred,
 
   // TODO: Handle "aarch64.svcount" once we get round to supporting SME.
 
-  auto retTy = cir::VectorType::get(builder.getUIntNTy(1), minNumElts,
-                                    /*is_scalable=*/true);
+  auto retTy = cir::VectorType::get(
+      builder.getUIntNTy(1), llvm::ElementCount::getScalable(minNumElts));
   if (pred.getType() == retTy)
     return pred;
 
@@ -1585,33 +1585,46 @@ cir::VectorType CIRGenFunction::getSVEType(const SVETypeFlags &typeFlags) {
     llvm_unreachable("Invalid SVETypeFlag!");
 
   case SVETypeFlags::EltTyInt8:
-    return cir::VectorType::get(builder.getUInt8Ty(), 16, true);
+    return cir::VectorType::get(builder.getUInt8Ty(),
+                                llvm::ElementCount::getScalable(16));
   case SVETypeFlags::EltTyInt16:
-    return cir::VectorType::get(builder.getUInt16Ty(), 8, true);
+    return cir::VectorType::get(builder.getUInt16Ty(),
+                                llvm::ElementCount::getScalable(8));
   case SVETypeFlags::EltTyInt32:
-    return cir::VectorType::get(builder.getUInt32Ty(), 4, true);
+    return cir::VectorType::get(builder.getUInt32Ty(),
+                                llvm::ElementCount::getScalable(4));
   case SVETypeFlags::EltTyInt64:
-    return cir::VectorType::get(builder.getUInt64Ty(), 2, true);
+    return cir::VectorType::get(builder.getUInt64Ty(),
+                                llvm::ElementCount::getScalable(2));
 
   case SVETypeFlags::EltTyMFloat8:
-    return cir::VectorType::get(builder.getUInt8Ty(), 16, true);
+    return cir::VectorType::get(builder.getUInt8Ty(),
+                                llvm::ElementCount::getScalable(16));
   case SVETypeFlags::EltTyFloat16:
-    return cir::VectorType::get(builder.getFp16Ty(), 8, true);
+    return cir::VectorType::get(builder.getFp16Ty(),
+                                llvm::ElementCount::getScalable(8));
   case SVETypeFlags::EltTyBFloat16:
-    return cir::VectorType::get(builder.getBF16Type(), 8, true);
+    return cir::VectorType::get(builder.getBF16Type(),
+                                llvm::ElementCount::getScalable(8));
   case SVETypeFlags::EltTyFloat32:
-    return cir::VectorType::get(builder.getF32Type(), 4, true);
+    return cir::VectorType::get(builder.getF32Type(),
+                                llvm::ElementCount::getScalable(4));
   case SVETypeFlags::EltTyFloat64:
-    return cir::VectorType::get(builder.getDoubleTy(), 2, true);
+    return cir::VectorType::get(builder.getDoubleTy(),
+                                llvm::ElementCount::getScalable(2));
 
   case SVETypeFlags::EltTyBool8:
-    return cir::VectorType::get(builder.getUIntNTy(1), 16, true);
+    return cir::VectorType::get(builder.getUIntNTy(1),
+                                llvm::ElementCount::getScalable(16));
   case SVETypeFlags::EltTyBool16:
-    return cir::VectorType::get(builder.getUIntNTy(1), 8, true);
+    return cir::VectorType::get(builder.getUIntNTy(1),
+                                llvm::ElementCount::getScalable(8));
   case SVETypeFlags::EltTyBool32:
-    return cir::VectorType::get(builder.getUIntNTy(1), 4, true);
+    return cir::VectorType::get(builder.getUIntNTy(1),
+                                llvm::ElementCount::getScalable(4));
   case SVETypeFlags::EltTyBool64:
-    return cir::VectorType::get(builder.getUIntNTy(1), 2, true);
+    return cir::VectorType::get(builder.getUIntNTy(1),
+                                llvm::ElementCount::getScalable(2));
   }
 }
 
@@ -1622,7 +1635,7 @@ static cir::VectorType getSVEVectorForElementType(CIRGenModule &cgm,
                                                   mlir::Type eltTy) {
   unsigned numElts =
       sveBitsPerBlock / cgm.getDataLayout().getTypeSizeInBits(eltTy);
-  return cir::VectorType::get(eltTy, numElts, /*is_scalable=*/true);
+  return cir::VectorType::get(eltTy, llvm::ElementCount::getScalable(numElts));
 }
 
 //===----------------------------------------------------------------------===//
@@ -3203,10 +3216,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     // same shape as the result vector.
     cir::VectorType sourceTy = cir::VectorType::get(
         ty.getElementType(), builtinID == NEON::BI__builtin_neon_vfmaq_lane_v
-                                 ? ty.getSize() / 2
-                                 : ty.getSize());
+                                 ? ty.getSize().getFixedValue() / 2
+                                 : ty.getSize().getFixedValue());
     mlir::Value laneSource = builder.createBitcast(ops[2], sourceTy);
-    laneSource = emitNeonSplat(builder, loc, laneSource, ops[3], ty.getSize());
+    laneSource = emitNeonSplat(builder, loc, laneSource, ops[3],
+                               ty.getSize().getFixedValue());
 
     llvm::SmallVector<mlir::Value> fmaOps = {multiplicand, laneSource, addend};
     return emitNeonCallToOp<cir::FMAOp>(cgm, builder, {ty, ty, ty}, fmaOps,
@@ -3241,7 +3255,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cir::VectorType sourceTy =
         cir::VectorType::get(ty.getElementType(), ty.getSize() * 2);
     mlir::Value laneSource = builder.createBitcast(ops[2], sourceTy);
-    laneSource = emitNeonSplat(builder, loc, laneSource, ops[3], ty.getSize());
+    laneSource = emitNeonSplat(builder, loc, laneSource, ops[3],
+                               ty.getSize().getFixedValue());
 
     llvm::SmallVector<mlir::Value> fmaOps = {laneSource, multiplicand, addend};
     return emitNeonCallToOp<cir::FMAOp>(cgm, builder, {ty, ty, ty}, fmaOps,
@@ -3251,7 +3266,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     mlir::Value addend = builder.createBitcast(ops[0], ty);
     mlir::Value multiplicand = builder.createBitcast(ops[1], ty);
     mlir::Value laneSource = builder.createBitcast(ops[2], ty);
-    laneSource = emitNeonSplat(builder, loc, laneSource, ops[3], ty.getSize());
+    laneSource = emitNeonSplat(builder, loc, laneSource, ops[3],
+                               ty.getSize().getFixedValue());
 
     llvm::SmallVector<mlir::Value> fmaOps = {laneSource, multiplicand, addend};
     return emitNeonCallToOp<cir::FMAOp>(cgm, builder, {ty, ty, ty}, fmaOps,
@@ -3843,7 +3859,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
     for (unsigned vi = 0; vi != 2; ++vi) {
       llvm::SmallVector<int64_t, 16> indices;
-      for (unsigned i = 0, e = ty.getSize(); i != e; i += 2) {
+      for (unsigned i = 0, e = ty.getSize().getFixedValue(); i != e; i += 2) {
         indices.push_back(i + vi);
         indices.push_back(i + e + vi);
       }
@@ -3864,7 +3880,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     mlir::Value sv;
     for (unsigned vi = 0; vi != 2; ++vi) {
       llvm::SmallVector<int64_t, 16> indices;
-      for (unsigned i = 0, e = ty.getSize(); i != e; ++i) {
+      for (unsigned i = 0, e = ty.getSize().getFixedValue(); i != e; ++i) {
         indices.push_back(2 * i + vi);
       }
       cir::ConstantOp idx = builder.getConstInt(loc, builder.getSInt32Ty(), vi);
@@ -3884,7 +3900,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     mlir::Value sv;
     for (unsigned vi = 0; vi != 2; ++vi) {
       llvm::SmallVector<int64_t, 16> indices;
-      for (unsigned i = 0, e = ty.getSize(); i != e; i += 2) {
+      for (unsigned i = 0, e = ty.getSize().getFixedValue(); i != e; i += 2) {
         indices.push_back((i + vi * e) >> 1);
         indices.push_back(((i + vi * e) >> 1) + e);
       }

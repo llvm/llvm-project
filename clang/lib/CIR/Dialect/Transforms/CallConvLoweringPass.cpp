@@ -203,7 +203,7 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   if (auto vecTy = dyn_cast<cir::VectorType>(ty)) {
     // A scalable vector has no size the SysV eightbyte rules can read, and
     // x86_64 has no calling convention for one.
-    if (vecTy.getIsScalable())
+    if (vecTy.getSize().isScalable())
       return false;
     // mapCIRType maps a bool as a one-bit integer, so a bool vector is sized
     // one bit per element, as clang packs it.  Vectors of a _BitInt whose
@@ -346,8 +346,8 @@ static mlir::Type unwrapLongDoubleVectorElement(mlir::Type ty) {
   if (auto vecTy = dyn_cast<cir::VectorType>(ty)) {
     if (auto longDoubleTy =
             dyn_cast<cir::LongDoubleType>(vecTy.getElementType()))
-      return cir::VectorType::get(longDoubleTy.getUnderlying(), vecTy.getSize(),
-                                  vecTy.getIsScalable());
+      return cir::VectorType::get(longDoubleTy.getUnderlying(),
+                                  vecTy.getSize());
   }
   return ty;
 }
@@ -407,8 +407,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // always fixed here.
         return tb.getVectorType(
             mapCIRType(vecTy.getElementType(), typeMapper, dl, modOp),
-            llvm::ElementCount::getFixed(vecTy.getSize()),
-            llvm::Align(dl.getTypeABIAlignment(type)));
+            vecTy.getSize(), llvm::Align(dl.getTypeABIAlignment(type)));
       })
       .Case([&](cir::ArrayType arrTy) {
         const llvm::abi::Type *elemAbi =
