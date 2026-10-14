@@ -3061,30 +3061,23 @@ def fir_UseStmtOp
 
   let arguments = (ins StrAttr:$module_name,
       OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames,
-      OptionalAttr<ArrayAttr>:$common_block_members,
-      DefaultValuedAttr<BoolAttr, "false">:$hasOnlyWithRenames);
+      OptionalAttr<ArrayAttr>:$common_block_members);
 
   let assemblyFormat = [{
     $module_name
     (`only_symbols` `[` $only_symbols^ `]`)?
     (`renames` `[` $renames^ `]`)?
     (`common_block_members` `[` $common_block_members^ `]`)?
-    (`hasOnlyWithRenames` $hasOnlyWithRenames^)?
     attr-dict
   }];
 
   let extraClassDeclaration = [{
-    /// Returns true if this is a USE with ONLY clause
+    /// Returns true if this is a USE with ONLY clause. The only_symbols list
+    /// is present, possibly empty, whenever there is an ONLY clause.
     bool hasOnlyClause() { return getOnlySymbols().has_value(); }
 
     /// Returns true if this has any renames
     bool hasRenames() { return getRenames().has_value(); }
-
-    /// Returns true if this imports the entire module (no ONLY clause)
-    bool importsAll() { return !(hasOnlyClause() || getHasOnlyWithRenames()); }
-
-    /// Returns true if this USE statement has both ONLY clause and renames
-    bool hasOnlyWithRenames() { return getHasOnlyWithRenames(); }
   }];
 }
 

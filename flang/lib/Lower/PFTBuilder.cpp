@@ -264,7 +264,6 @@ public:
                             std::string localName{
                                 std::get<0>(names.t).source.ToString()};
                             stmt.renames.push_back(localName);
-                            stmt.hasOnlyWithRenames = true;
                           },
                           [&](const parser::Rename::Operators &) {
                             // Operator renames - not commonly needed for debug

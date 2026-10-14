@@ -41,25 +41,25 @@ end program
 
 ! HLFIR-LABEL: func.func @_QPuse_all()
 ! HLFIR: fir.use_stmt "eqmod" common_block_members
-! HLFIR-SAME: #fir.use_common_block_member<"w", "_QMeqmodEw", @arr_, !fir.array<2xi32>, 0>
-! HLFIR-SAME: #fir.use_common_block_member<"v", "_QMeqmodEv", @arr_, i32, 4>
-! HLFIR-SAME: #fir.use_common_block_member<"a", "_QMeqmodEa", @blk_, i32, 0>
-! HLFIR-SAME: #fir.use_common_block_member<"c", "_QMeqmodEc", @blk_, i32, 4>
-! HLFIR-SAME: #fir.use_common_block_member<"b", "_QMeqmodEb", @blk_, i32, 0>
+! HLFIR-SAME: #fir.use_common_block_member<"w", "_QMeqmodEw", @arr_, !fir.array<2xi32>, 0, #loc
+! HLFIR-SAME: #fir.use_common_block_member<"v", "_QMeqmodEv", @arr_, i32, 4, #loc
+! HLFIR-SAME: #fir.use_common_block_member<"a", "_QMeqmodEa", @blk_, i32, 0, #loc
+! HLFIR-SAME: #fir.use_common_block_member<"c", "_QMeqmodEc", @blk_, i32, 4, #loc
+! HLFIR-SAME: #fir.use_common_block_member<"b", "_QMeqmodEb", @blk_, i32, 0, #loc
 ! HLFIR: return
 
 ! HLFIR-LABEL: func.func @_QPonly_alias()
 ! HLFIR: fir.use_stmt "eqmod" only_symbols
-! HLFIR-SAME: #fir.use_common_block_member<"local_b", "_QMeqmodEb", @blk_, i32, 0>
+! HLFIR-SAME: #fir.use_common_block_member<"local_b", "_QMeqmodEb", @blk_, i32, 0, #loc
 ! HLFIR-NOT: #fir.use_common_block_member<"a"
 ! HLFIR-NOT: #fir.use_common_block_member<"c"
 ! HLFIR: return
 
 ! HLFIR: fir.module_debug_imports "eqmod" common_block_members
-! HLFIR-SAME: #fir.use_common_block_member<"w", "_QMeqmodEw", @arr_, !fir.array<2xi32>, 0>
-! HLFIR-SAME: #fir.use_common_block_member<"v", "_QMeqmodEv", @arr_, i32, 4>
-! HLFIR-SAME: #fir.use_common_block_member<"a", "_QMeqmodEa", @blk_, i32, 0>
-! HLFIR-SAME: #fir.use_common_block_member<"b", "_QMeqmodEb", @blk_, i32, 0>
+! HLFIR-SAME: #fir.use_common_block_member<"w", "_QMeqmodEw", @arr_, !fir.array<2xi32>, 0, #loc
+! HLFIR-SAME: #fir.use_common_block_member<"v", "_QMeqmodEv", @arr_, i32, 4, #loc
+! HLFIR-SAME: #fir.use_common_block_member<"a", "_QMeqmodEa", @blk_, i32, 0, #loc
+! HLFIR-SAME: #fir.use_common_block_member<"b", "_QMeqmodEb", @blk_, i32, 0, #loc
 
 ! LLVM-DAG: ![[INT:.*]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
 

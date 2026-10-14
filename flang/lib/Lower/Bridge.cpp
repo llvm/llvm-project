@@ -236,18 +236,15 @@ static void addCommonBlockMemberAttr(
       Fortran::semantics::FindCommonBlockContaining(ultimate);
   if (!common)
     return;
-  // A COMMON object and an EQUIVALENCE alias of it can both reach here.
-  for (mlir::Attribute existing : attrs) {
-    auto member = mlir::cast<fir::UseCommonBlockMemberAttr>(existing);
-    if (member.getName().getValue() == localName &&
-        member.getLinkageName().getValue() == mangledName)
-      return;
-  }
-  attrs.push_back(fir::UseCommonBlockMemberAttr::get(
+  auto attr = fir::UseCommonBlockMemberAttr::get(
       context, mlir::StringAttr::get(context, localName),
       mlir::StringAttr::get(context, mangledName),
       mlir::FlatSymbolRefAttr::get(context, converter.mangleName(*common)),
-      converter.genType(ultimate), ultimate.offset()));
+      converter.genType(ultimate), ultimate.offset(),
+      converter.genLocation(ultimate.name()));
+  // A COMMON object and an EQUIVALENCE alias of it can both reach here.
+  if (!llvm::is_contained(attrs, attr))
+    attrs.push_back(attr);
 }
 
 /// Symbols placed in a COMMON block by EQUIVALENCE are not in the COMMON
@@ -372,12 +369,9 @@ static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
       commonBlockMemberAttrs.empty()
           ? mlir::ArrayAttr()
           : mlir::ArrayAttr::get(context, commonBlockMemberAttrs);
-  mlir::BoolAttr hasOnlyWithRenamesAttr =
-      mlir::BoolAttr::get(context, stmt.hasOnlyWithRenames);
 
   fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
-                         renamesAttr, commonBlockMembersAttr,
-                         hasOnlyWithRenamesAttr);
+                         renamesAttr, commonBlockMembersAttr);
 }
 
 /// Emit fir.module_debug_imports for USE statements in a module. The operation

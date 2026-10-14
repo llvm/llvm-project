@@ -237,12 +237,13 @@ for common block.
 
 For a COMMON block member imported by a USE statement, `fir.use_stmt` carries a
 `#fir.use_common_block_member` attribute with the local name, linkage name,
-storage symbol, type, and byte offset. This lets the debug information pass
-build the same metadata without requiring an otherwise unused `fir.declare` for
-each imported member.
+storage symbol, type, byte offset, and declaration location. This lets the debug
+information pass build the same metadata without requiring an otherwise unused
+`fir.declare` for each imported member.
 The same attributes are stored on `fir.module_debug_imports` for a module's own
 COMMON members, so contained procedures retain host-associated debug visibility
-without declarations for unused members.
+without declarations for unused members. A procedure of a submodule also sees
+the COMMON members of the submodule's ancestry.
 
 ```
 integer a, b
