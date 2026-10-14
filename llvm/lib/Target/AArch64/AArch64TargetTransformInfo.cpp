@@ -1382,7 +1382,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // vectors we know for the worst case it can be scalarised.
     EVT VT = getTLI()->getValueType(DL, RetTy);
     RTLIB::Libcall LC = RTLIB::getPOW(VT);
-    bool HasLibcall = getTLI()->getLibcallImpl(LC) != RTLIB::Unsupported;
+    bool HasLibcall =
+        getTLI()->getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC) !=
+        RTLIB::Unsupported;
     bool CanLowerWithLibcalls = !isa<ScalableVectorType>(RetTy) || HasLibcall;
 
     // If we know that the call can be lowered with libcalls then it's safe to

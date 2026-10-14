@@ -20568,8 +20568,8 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
     // Do not create a cbrt() libcall if the target does not have it, and do not
     // turn a pow that has lowering support into a cbrt() libcall.
     RTLIB::Libcall LC = RTLIB::getCBRT(VT);
-    bool HasLibCall =
-        DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported;
+    bool HasLibCall = DAG.getLibcalls().getVectorLibcallImplOrMasked(LC) !=
+                      RTLIB::Unsupported;
     if (!HasLibCall ||
         (!DAG.getTargetLoweringInfo().isOperationExpand(ISD::FPOW, VT) &&
          DAG.getTargetLoweringInfo().isOperationExpand(ISD::FCBRT, VT)))
