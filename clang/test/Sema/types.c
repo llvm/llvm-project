@@ -87,6 +87,18 @@ char __attribute__((vector_size(8388609))) v5;   // expected-error {{vector size
 char __attribute__((vector_size(8388608))) v6;
 int __attribute__((vector_size(0x10000001))) v7; // expected-error {{vector size too large}}
 
+typedef const int cint;
+typedef int __attribute__((vector_size(16))) vec4_int;
+typedef cint __attribute__((vector_size(16))) vec4_cint;
+_Static_assert(!__builtin_types_compatible_p(vec4_int*, const vec4_int*), "'vec4_int' and 'const vec4_int' are not different");
+_Static_assert(!__builtin_types_compatible_p(vec4_int*, volatile vec4_int*), "'vec4_int' and 'const vec4_int' are not different");
+_Static_assert(__builtin_types_compatible_p(const vec4_int*, vec4_cint*), "'const vec4_int' and 'vec4_cint' are different");
+typedef int __attribute__((ext_vector_type(4))) ext_vec4_int;
+typedef cint __attribute__((ext_vector_type(4))) ext_vec4_cint;
+_Static_assert(!__builtin_types_compatible_p(ext_vec4_int*, const ext_vec4_int*), "'ext_vec4_int' and 'const ext_vec4_int' are not different");
+_Static_assert(!__builtin_types_compatible_p(ext_vec4_int*, volatile ext_vec4_int*), "'ext_vec4_int' and 'const ext_vec4_int' are not different");
+_Static_assert(__builtin_types_compatible_p(const ext_vec4_int*, ext_vec4_cint*), "'const ext_vec4_int' and 'ext_vec4_cint' are different");
+
 // no support for vector enum type
 enum { e_2 } x3 __attribute__((vector_size(64))); // expected-error {{invalid vector element type}}
 
