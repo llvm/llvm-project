@@ -36,6 +36,44 @@ def Arith_Dialect : Dialect {
     canonicalization: round-to-nearest, ties-to-even. The runtime behavior of
     operations without an explicit rounding mode is deferred to the target
     backend and may differ from the default arith rounding mode.
+
+    ### Canonical form
+
+    `arith` IR is in canonical form if:
+
+    * Constant operands of commutative ops (`addi`, `muli`, ...) appear last.
+      `cmpi` mirrors this by swapping operands and inverting the predicate
+      (e.g., `cmpi slt, c, %x` -> `cmpi sgt, %x, c`).
+    * Constant subexpressions are folded. Folding is suppressed when the
+      original IR has undefined behavior (div/rem by zero, signed-div overflow,
+      shift-by-bitwidth) or the folded IR suffers a loss of precision loss
+      (`truncf`/`extf` between non-representable float semantics). Poisoned
+      constant values are folded to `ub.poison`.
+    * Constant operands are coalesced along chains. Chains of 
+      commutative/associative ops collapse into a single `op(%x, c)`
+      (e.g., `addi(addi(%x, c0), c1)` -> `addi(%x, c0+c1)`).
+    * Algebraic identities and absorbing elements are removed. E.g., `x+0`,
+      `x*1`, `x&allOnes`, `x^0`, `select(_, x, x)`, `min/max(x, x)`, etc. all
+      simplify away.
+    * Inverse-op chains/pairs are folded away. E.g.,
+      `addi(subi(a, b), b)` -> `a`, `xori(xori(x, a), a)` -> `x`,
+      `negf(negf(x))` -> `x`, `bitcast(bitcast(...))`, `ext(ext(...))` collapses,
+      lossless `trunc(ext(...))` collapses.
+    * Among semantically equivalent ops, the simpler/narrower one wins.
+      Concretely:
+      * prefer `subi` over `addi` of a `*-1`;
+      * prefer `xori` (`not`) over `select` on boolean constants, and push
+        `not` into a `cmpi` predicate;
+      * push integer extensions outward through bitwise ops
+        (`xor(extui x, extui y)` -> `extui(xor x, y)`), so bitwise work
+        happens in the narrow type;
+      * fold redundant extensions into casts
+        (`sitofp(extui x)` -> `uitofp x`, `index_cast(extsi x)` ->
+        `index_cast x`);
+      * strip extensions inside equality `cmpi`.
+    * Dead "extended" results are dropped. `addui_extended`,
+      `mulsi_extended`, and `mului_extended` collapse to plain `addi`/`muli`
+      when the overflow/high result is unused.
   }];
 
   let hasConstantMaterializer = 1;
