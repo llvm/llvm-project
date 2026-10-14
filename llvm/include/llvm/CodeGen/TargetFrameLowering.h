@@ -28,7 +28,7 @@ namespace llvm {
   class RegScavenger;
 
 namespace TargetStackID {
-enum Value {
+enum Value : uint8_t {
   Default = 0,
   SGPRSpill = 1,
   ScalableVector = 2,
