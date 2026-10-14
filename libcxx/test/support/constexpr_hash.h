@@ -56,11 +56,11 @@ concept UnqualifiedArithmeticOrEnum =
     (std::integral<Key> || std::floating_point<Key> || std::is_enum_v<Key>);
 
 template <size_t N>
-constexpr std::size_t array_hash(std::array<char, N> arr) {
+constexpr std::size_t array_hash(std::array<std::byte, N> arr) {
   // use a simple implementation for "hash"-ing
   std::size_t res{0};
-  for (char c : arr) {
-    res ^= c;
+  for (auto c : arr) {
+    res ^= (std::size_t)c;
   }
   return res;
 }
@@ -72,19 +72,19 @@ struct constexpr_hash<Key> {
       if constexpr (sizeof(Key) <= sizeof(size_t)) {
         return static_cast<size_t>(key);
       } else {
-        return array_hash(std::bit_cast<std::array<char, sizeof(Key)>>(key));
+        return array_hash(std::bit_cast<std::array<std::byte, sizeof(Key)>>(key));
       }
     } else if constexpr (std::floating_point<Key>) {
       if (key == 0.0f)
         return 0;
 
-      return array_hash(std::bit_cast<std::array<char, sizeof(Key)>>(key));
+      return array_hash(std::bit_cast<std::array<std::byte, sizeof(Key)>>(key));
 
     } else if constexpr (std::is_enum_v<Key>) {
       using type = decltype(std::to_underlying(std::declval<Key>()));
       return constexpr_hash<type>()(static_cast<type>(key));
     }
-    std::unreachable(); // todo: revisit
+    std::unreachable();
   }
 
   constexpr_hash() noexcept                        = default;
