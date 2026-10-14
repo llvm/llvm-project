@@ -1168,6 +1168,8 @@ features cannot lower the translation-unit ABI level;
   virtual function that could not be optimised out would cause the program to
   fail to assemble. This is now fixed. (#GH49183) (#GH67533)
 
+- External CUDA kernel declarations now use the correct calling convention. (#GH118212)
+
 #### AIX Support
 
 #### NetBSD Support
