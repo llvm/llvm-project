@@ -14415,13 +14415,13 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
       return false;
 
     auto *LI0 = cast<LoadInst>(E.Scalars.front());
-    CompressedLoadInfo CompressInfo;
-    if (!isMaskedLoadCompress(
-            E.Scalars, PointerOps, {}, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
-            [](Value *) { return true; }, Opts.slp_revec, CompressInfo))
+    std::optional<CompressedLoadInfo> CompressInfo = isMaskedLoadCompress(
+        E.Scalars, PointerOps, {}, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
+        [](Value *) { return true; }, Opts.slp_revec);
+    if (!CompressInfo)
       return false;
     InstructionCost CompressedCost =
-        getCompressedLoadCost(*TTI, LI0, CompressInfo, CostKind);
+        getCompressedLoadCost(*TTI, LI0, *CompressInfo, CostKind);
 
     auto *VecTy =
         cast<FixedVectorType>(getWidenedType(ScalarTy, E.getVectorFactor()));
@@ -17697,14 +17697,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         SmallVector<Value *> PointerOps(Scalars.size());
         for (auto [I, V] : enumerate(Scalars))
           PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
-        CompressedLoadInfo CompressInfo;
-        [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
+        std::optional<CompressedLoadInfo> CompressInfo = isMaskedLoadCompress(
             Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
-            *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
-            CompressInfo);
-        assert(IsVectorized && "Expected compressed load candidate.");
-        CompressEntryToData.try_emplace(E, CompressInfo);
-        VecLdCost = getCompressedLoadCost(*TTI, LI0, CompressInfo, CostKind);
+            *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec);
+        assert(CompressInfo && "Expected compressed load candidate.");
+        CompressEntryToData.try_emplace(E, *CompressInfo);
+        VecLdCost = getCompressedLoadCost(*TTI, LI0, *CompressInfo, CostKind);
         break;
       }
       case TreeEntry::ScatterVectorize: {

@@ -21,6 +21,7 @@
 #include "llvm/Support/Alignment.h"
 
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 class AssumptionCache;
@@ -70,18 +71,7 @@ const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
 /// (masked) interleaved load.
-bool isMaskedLoadCompress(
-    ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
-    ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
-    const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
-    const DominatorTree &DT, const TargetLibraryInfo &TLI,
-    const TargetTransformInfo::TargetCostKind CostKind,
-    const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
-    CompressedLoadInfo &CLI);
-
-/// Checks if the \p VL can be transformed to a (masked)load + compress or
-/// (masked) interleaved load.
-bool isMaskedLoadCompress(
+std::optional<CompressedLoadInfo> isMaskedLoadCompress(
     ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
     ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
     const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
