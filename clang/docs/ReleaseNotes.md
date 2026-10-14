@@ -757,6 +757,12 @@ features cannot lower the translation-unit ABI level;
   `__builtin_dynamic_object_size` is called with an out-of-range type argument
   during constant evaluation. (#GH225041)
 
+- `__has_unique_object_representations` now returns `true` for `_Atomic` types
+  whose object representation is identical to that of their value type, such
+  as `_Atomic(int)`. Atomic types whose size is rounded up to a power of two
+  (adding padding bits) continue to report `false`. This also fixes a false
+  positive in the `bugprone-suspicious-memory-comparison` clang-tidy check.
+
 #### Bug Fixes to Attribute Support
 
 - Fixed an assertion failure when parsing malformed GNU `__attribute__`
@@ -1161,6 +1167,8 @@ features cannot lower the translation-unit ABI level;
   `__cxa_deleted_virtual()`; previously, any (potential) call to a pure/deleted
   virtual function that could not be optimised out would cause the program to
   fail to assemble. This is now fixed. (#GH49183) (#GH67533)
+
+- External CUDA kernel declarations now use the correct calling convention. (#GH118212)
 
 #### AIX Support
 
