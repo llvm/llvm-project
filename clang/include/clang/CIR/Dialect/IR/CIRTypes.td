@@ -478,7 +478,7 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 }
 
 //===----------------------------------------------------------------------===//
-// VectorType (fixed size)
+// VectorType
 //===----------------------------------------------------------------------===//
 
 def CIR_VectorType : CIR_Type<"Vector", "vector", [
@@ -488,8 +488,9 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let summary = "CIR vector type";
   let description = [{
     The `!cir.vector` type represents a one-dimensional vector.
-    It takes three parameters: the element type, the number of elements and the
-    scalability flag (optional, defaults to `false`).
+    It takes two parameters: the element type and an element count, which
+    records both the known minimum number of elements and whether the vector is
+    scalable.
 
     Syntax:
 
@@ -524,16 +525,20 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
   let parameters = (ins
     CIR_VectorElementType:$element_type,
-    "uint64_t":$size,
-    OptionalParameter<"bool">:$is_scalable
+    "llvm::ElementCount":$size
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$element_type, "uint64_t":$size, CArg<"bool",
-      "false">:$is_scalable
+      "mlir::Type":$element_type, "llvm::ElementCount":$size
     ), [{
-        return $_get(element_type.getContext(), element_type, size, is_scalable);
+        return $_get(element_type.getContext(), element_type, size);
+    }]>,
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$element_type, "uint64_t":$size
+    ), [{
+        return $_get(element_type.getContext(), element_type,
+                     llvm::ElementCount::getFixed(size));
     }]>,
   ];
 

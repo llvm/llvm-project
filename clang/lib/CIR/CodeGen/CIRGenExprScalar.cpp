@@ -1619,12 +1619,14 @@ public:
     mlir::Type srcTy = src.getType();
     mlir::Type dstTy = cgf.convertType(e->getType());
 
-    unsigned numElementsSrc = isa<cir::VectorType>(srcTy)
-                                  ? cast<cir::VectorType>(srcTy).getSize()
-                                  : 0;
-    unsigned numElementsDst = isa<cir::VectorType>(dstTy)
-                                  ? cast<cir::VectorType>(dstTy).getSize()
-                                  : 0;
+    unsigned numElementsSrc =
+        isa<cir::VectorType>(srcTy)
+            ? cast<cir::VectorType>(srcTy).getSize().getFixedValue()
+            : 0;
+    unsigned numElementsDst =
+        isa<cir::VectorType>(dstTy)
+            ? cast<cir::VectorType>(dstTy).getSize().getFixedValue()
+            : 0;
 
     // Use bit vector expansion for ext_vector_type boolean vectors.
     if (e->getType()->isExtVectorBoolType()) {
@@ -2994,11 +2996,12 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
     }
 
     // Zero-initialize any remaining values.
-    if (numInitElements < vectorType.getSize()) {
+    const uint64_t vectorSize = vectorType.getSize().getFixedValue();
+    if (numInitElements < vectorSize) {
       const mlir::Value zeroValue = cgf.getBuilder().getNullValue(
           vectorType.getElementType(), cgf.getLoc(e->getSourceRange()));
-      std::fill_n(std::back_inserter(elements),
-                  vectorType.getSize() - numInitElements, zeroValue);
+      std::fill_n(std::back_inserter(elements), vectorSize - numInitElements,
+                  zeroValue);
     }
 
     return cir::VecCreateOp::create(cgf.getBuilder(),
@@ -3211,7 +3214,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     return builder.getConstantInt(loc, cgf.cgm.sizeTy, alignment);
   } else if (e->getKind() == UETT_VectorElements) {
     auto vecTy = cast<cir::VectorType>(convertType(e->getTypeOfArgument()));
-    if (vecTy.getIsScalable()) {
+    if (vecTy.getSize().isScalable()) {
       cgf.getCIRGenModule().errorNYI(
           e->getSourceRange(),
           "VisitUnaryExprOrTypeTraitExpr: sizeOf scalable vector");
@@ -3221,7 +3224,8 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     }
 
     return builder.getConstant(
-        loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getSize()));
+        loc,
+        cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getSize().getFixedValue()));
   }
 
   // The result type is size_t (target-dependent width); use it so the IntAttr

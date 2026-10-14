@@ -4161,10 +4161,14 @@ LogicalResult cir::VecCreateOp::verify() {
   // vector, and that the type of all the arguments matches the type of the
   // elements in the vector.
   const cir::VectorType vecTy = getType();
-  if (getElements().size() != vecTy.getSize()) {
+  if (vecTy.getSize().isScalable())
+    return emitOpError() << "scalable vectors are not supported";
+
+  if (getElements().size() != vecTy.getSize().getFixedValue()) {
     return emitOpError() << "operand count of " << getElements().size()
                          << " doesn't match vector type " << vecTy
-                         << " element count of " << vecTy.getSize();
+                         << " element count of "
+                         << vecTy.getSize().getFixedValue();
   }
 
   const mlir::Type elementType = vecTy.getElementType();
@@ -4401,9 +4405,14 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
 }
 
 LogicalResult cir::VecShuffleOp::verify() {
+  if (getVec1().getType().getSize().isScalable() ||
+      getVec2().getType().getSize().isScalable() ||
+      getResult().getType().getSize().isScalable())
+    return emitOpError() << "scalable vectors are not supported";
+
   // The number of elements in the indices array must match the number of
   // elements in the result type.
-  if (getIndices().size() != getResult().getType().getSize()) {
+  if (getIndices().size() != getResult().getType().getSize().getFixedValue()) {
     return emitOpError() << ": the number of elements in " << getIndices()
                          << " and " << getResult().getType() << " don't match";
   }
@@ -4416,8 +4425,9 @@ LogicalResult cir::VecShuffleOp::verify() {
                          << " and " << getResult().getType() << " don't match";
   }
 
-  const uint64_t maxValidIndex =
-      getVec1().getType().getSize() + getVec2().getType().getSize() - 1;
+  const uint64_t maxValidIndex = getVec1().getType().getSize().getFixedValue() +
+                                 getVec2().getType().getSize().getFixedValue() -
+                                 1;
   if (llvm::any_of(
           getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
             return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;

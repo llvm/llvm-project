@@ -1496,32 +1496,35 @@ llvm::TypeSize cir::VectorType::getTypeSizeInBits(
     ::mlir::DataLayoutEntryListRef params) const {
   // Clang packs a fixed-length bool vector one bit per element and rounds the
   // vector's size up to a power of two of at least a byte.
-  if (mlir::isa<cir::BoolType>(getElementType()) && !getIsScalable()) {
+  if (mlir::isa<cir::BoolType>(getElementType()) && getSize().isFixed()) {
     assert(!cir::MissingFeatures::hlsl());
     return llvm::TypeSize::getFixed(llvm::PowerOf2Ceil(getBoolStorageWidth()));
   }
-  return llvm::TypeSize::getFixed(
-      getSize() * dataLayout.getTypeSizeInBits(getElementType()));
+
+  llvm::TypeSize elementSize = dataLayout.getTypeSizeInBits(getElementType());
+  return llvm::TypeSize::get(getSize().getKnownMinValue() *
+                                 elementSize.getFixedValue(),
+                             getSize().isScalable());
 }
 
 uint64_t cir::VectorType::getBoolStorageWidth() const {
   assert(mlir::isa<cir::BoolType>(getElementType()) &&
          "only a bool vector is stored as an integer");
-  return std::max<uint64_t>(getSize(), 8);
+  return std::max<uint64_t>(getSize().getFixedValue(), 8);
 }
 
 uint64_t
 cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                  ::mlir::DataLayoutEntryListRef params) const {
   // This hook answers in bytes, not bits.
-  return llvm::PowerOf2Ceil(
-      llvm::divideCeil(dataLayout.getTypeSizeInBits(*this), 8u));
+  return llvm::PowerOf2Ceil(llvm::divideCeil(
+      dataLayout.getTypeSizeInBits(*this).getKnownMinValue(), uint64_t{8}));
 }
 
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type elementType, uint64_t size, bool scalable) {
-  if (size == 0)
+    mlir::Type elementType, llvm::ElementCount size) {
+  if (size.isZero())
     return emitError() << "the number of vector elements must be non-zero";
   return success();
 }
@@ -1532,7 +1535,7 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
   mlir::Builder odsBuilder(odsParser.getContext());
   mlir::FailureOr<::mlir::Type> elementType;
   mlir::FailureOr<uint64_t> size;
-  bool isScalabe = false;
+  bool isScalable = false;
 
   // Parse literal '<'
   if (odsParser.parseLess())
@@ -1540,7 +1543,7 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
 
   // Parse literal '[', if present, and set the scalability flag accordingly
   if (odsParser.parseOptionalLSquare().succeeded())
-    isScalabe = true;
+    isScalable = true;
 
   // Parse variable 'size'
   size = mlir::FieldParser<uint64_t>::parse(odsParser);
@@ -1553,7 +1556,7 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
 
   // Parse literal ']', which is expected when dealing with scalable
   // dim sizes
-  if (isScalabe && odsParser.parseRSquare().failed()) {
+  if (isScalable && odsParser.parseRSquare().failed()) {
     odsParser.emitError(odsParser.getCurrentLocation(),
                         "missing closing `]` for scalable dim size");
     return {};
@@ -1575,19 +1578,19 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
   // Parse literal '>'
   if (odsParser.parseGreater())
     return {};
-  return odsParser.getChecked<VectorType>(odsLoc, odsParser.getContext(),
-                                          mlir::Type((*elementType)),
-                                          uint64_t((*size)), isScalabe);
+  return odsParser.getChecked<VectorType>(
+      odsLoc, odsParser.getContext(), mlir::Type((*elementType)),
+      llvm::ElementCount::get(*size, isScalable));
 }
 
 void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
   mlir::Builder odsBuilder(getContext());
   odsPrinter << "<";
-  if (this->getIsScalable())
+  if (getSize().isScalable())
     odsPrinter << "[";
 
-  odsPrinter.printStrippedAttrOrType(getSize());
-  if (this->getIsScalable())
+  odsPrinter.printStrippedAttrOrType(getSize().getKnownMinValue());
+  if (getSize().isScalable())
     odsPrinter << "]";
   odsPrinter << ' ' << "x";
   odsPrinter << ' ';
