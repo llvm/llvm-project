@@ -798,7 +798,7 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       MI->eraseFromParent();
     } else if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(Inst)) {
       Value *AIOperand = ASC->getPointerOperand();
-      Value *NewAI;
+      Value *NewAI = nullptr;
       if (ASC->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
         NewAI =
             getTranslatedLDSPtrOfFlat(LoadMallocPtr, AIOperand, ASC->getType());
