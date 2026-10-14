@@ -168,6 +168,35 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
   case AMDGPU::BI__builtin_amdgcn_s_setreg:
     return SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/0, /*Low=*/0,
                                            /*High=*/UINT16_MAX);
+  case AMDGPU::BI__builtin_amdgcn_flat_prefetch:
+  case AMDGPU::BI__builtin_amdgcn_global_prefetch: {
+    // Only th (bits 0-2, where 7 is reserved), scope (bits 3-4) and nv (bit 5)
+    // may be set.
+    llvm::APSInt CPol;
+    if (SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/1, /*Low=*/0,
+                                        /*High=*/63) ||
+        SemaRef.BuiltinConstantArg(TheCall, /*ArgNum=*/1, CPol))
+      return true;
+    if ((CPol.getZExtValue() & 0x7) != 0x7)
+      return false;
+    Expr *ArgExpr = TheCall->getArg(1);
+    SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                       diag::err_amdgcn_prefetch_reserved_th)
+        << ArgExpr->getSourceRange();
+    return true;
+  }
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_prefetch_data: {
+    // The length may be a register; a constant one is encoded in 5 bits.
+    unsigned LenArgNo =
+        BuiltinID == AMDGPU::BI__builtin_amdgcn_s_buffer_prefetch_data ? 2 : 1;
+    const Expr *Len = TheCall->getArg(LenArgNo);
+    if (Len->isValueDependent() || !Len->isIntegerConstantExpr(getASTContext()))
+      return false;
+    return SemaRef.BuiltinConstantArgRange(TheCall, LenArgNo, /*Low=*/0,
+                                           /*High=*/31);
+  }
   case AMDGPU::BI__builtin_amdgcn_s_wait_event: {
     llvm::APSInt Result;
     if (SemaRef.BuiltinConstantArg(TheCall, 0, Result))

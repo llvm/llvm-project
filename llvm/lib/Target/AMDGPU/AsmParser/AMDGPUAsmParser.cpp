@@ -1616,6 +1616,7 @@ private:
   bool validateOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateFlatOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
+  bool validateSMEMSData(const MCInst &Inst, const OperandVector &Operands);
   bool validateBF16InlineConst(const MCInst &Inst,
                                const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst, const OperandVector &Operands);
@@ -4675,6 +4676,22 @@ bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
   return false;
 }
 
+// GFX12+ SMEM prefetches and probes encode an immediate sdata in 5 bits.
+bool AMDGPUAsmParser::validateSMEMSData(const MCInst &Inst,
+                                        const OperandVector &Operands) {
+  if (!isGFX12Plus() || !SIInstrFlags::isSMRD(MII, Inst))
+    return true;
+
+  int OpNum =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::sdata);
+  if (OpNum == -1 || !Inst.getOperand(OpNum).isImm() ||
+      isUInt<5>(Inst.getOperand(OpNum).getImm()))
+    return true;
+
+  Error(getOperandLoc(Operands, OpNum), "expected a 5-bit unsigned immediate");
+  return false;
+}
+
 // On subtargets with FeatureBF16InlineConstFromUpperFP32 the hardware generates
 // a bf16 inline constant in the high half of the corresponding fp32 inline
 // constant. A VOP1 bf16 opcode (v_cvt_f32_bf16 and the bf16 transcendentals)
@@ -5652,6 +5669,8 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
   if (!validateOffset(Inst, Operands)) {
     return false;
   }
+  if (!validateSMEMSData(Inst, Operands))
+    return false;
   if (!validateBF16InlineConst(Inst, Operands)) {
     return false;
   }
