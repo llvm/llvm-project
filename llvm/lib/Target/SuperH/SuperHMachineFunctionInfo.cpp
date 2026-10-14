@@ -19,8 +19,6 @@
 
 using namespace llvm;
 
-void SuperHMachineFunctionInfo::anchor() {}
-
 MachineFunctionInfo *SuperHMachineFunctionInfo::clone(
     BumpPtrAllocator &Allocator, MachineFunction &DestMF,
     const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)

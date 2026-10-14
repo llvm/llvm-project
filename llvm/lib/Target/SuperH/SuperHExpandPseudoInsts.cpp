@@ -33,6 +33,10 @@ using namespace llvm;
 #define DEBUG_TYPE "sh-expand-pseudo"
 #define SH_EXPAND_PSEUDO_NAME "SH pseudo instruction expansion pass"
 
+static cl::opt<int64_t>
+    CFPMaxAdd("sh-fp-max-add", cl::Hidden, cl::init(16),
+                cl::desc("Maximum amount of add instructions to generate for heap fp load/stores."));
+
 #ifndef NDEBUG
 static cl::opt<bool>
     CNoExpand("sh-no-expand", cl::Hidden, cl::init(false),
@@ -43,6 +47,23 @@ static cl::opt<bool>
 #endif
 
 namespace {
+struct StackAddr {
+
+  /// Relative base address of the stack index.
+  int64_t Base;
+
+  /// < Offset from base address.
+  int64_t Offset;
+};
+
+struct StackRange {
+  int64_t Start;
+  int64_t End;
+
+  /// Gets the size of the stack range.
+  int64_t stride() { return End - Start; }
+};
+
 class SuperHExpandPseudo : public MachineFunctionPass {
 public:
   static char ID;
@@ -54,18 +75,27 @@ public:
   StringRef getPassName() const override { return SH_EXPAND_PSEUDO_NAME; }
 
 private:
-  typedef MachineBasicBlock Block;
-  typedef Block::iterator BlockIt;
+  using Block = MachineBasicBlock;
+  using BlockIt = Block::iterator;
 
   const SuperHSubtarget *STI;
   const SuperHRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
+  const SuperHInstrInfo *TII;
+
+  /// getStackBucketFor - Gets the enclosing bucket for a given Offset
+  /// from the start of a stack frame.
+  StackRange getStackBucketFor(const MachineFunction &MF, int64_t Offset, 
+                               uint8_t Bits, uint8_t Scale);
+
+  /// getStackOffset - Calculates the base and offset address for accessing
+  /// a stack slot.
+  StackAddr getStackOffset(const MachineFunction &MF, Register FrameReg,
+                           int64_t Offset, uint8_t Bits, uint8_t Scale = 1);
 
   bool expandMBB(Block &MBB);
   bool expandMI(Block &MBB, BlockIt MBBI);
   template <unsigned OP> bool expand(Block &MBB, BlockIt MBBI);
-  void getStackOffset(Block &MBB, BlockIt MBBI, Register FrameReg, 
-                      int64_t &Offset, uint8_t Bits, uint8_t Scale = 1);
+  void emitStackAdj(Block &MBB, BlockIt MBBI, Register FrameReg, StackAddr Addr);
 
   bool storeToFrame(Block &MBB, BlockIt MBBI, int Scale);
   bool storeToAddress(Block &MBB, BlockIt MBBI);
@@ -94,33 +124,68 @@ static bool eraseMI(MachineInstr &MI) {
   return true;
 }
 
-// getStackOffset - Sets up the R1 stack reference register to access the 
-// stack at the given offset via negative add instructions, Offset is set
-// to the needed scaled offset for the stack access.
-void SuperHExpandPseudo::getStackOffset(Block &MBB, BlockIt MBBI, Register FrameReg, 
-                                        int64_t &Offset, uint8_t Bits, uint8_t Scale) {
-  const DebugLoc &DL = MBBI->getDebugLoc();
-  const SuperHInstrInfo *TII = STI->getInstrInfo();
-  const MachineFunction &MF = *MBB.getParent();
+/// truncdiv - Performs a truncating division with 8 bits
+/// of fixed point preceision.
+static int64_t truncdiv(int64_t V, int64_t D) {
+  return ((V << 8LL) / D) >> 8LL;
+}
+
+
+
+//===----------------------------------------------------------------------===//
+//                            Stack Offset Calculation
+//===----------------------------------------------------------------------===//
+// SuperH instructions have a very limited indexing range for indirect
+// operations, additionally indirect loads and stores can only index positively.
+// All SuperH ABIs have the stack grow down, as a result indirect loads cannot
+// indirectly index into the stack. To access any stack slot a negative offset
+// must be applied to a temporary anchor to positively index from it.
+//
+// The algorithm for calculating stack offsets is roughly designed as such:
+//  1.  The stack is split up into buckets, the bucket size is a multiple of
+//      the implicit scaling factor for the stack operation multiplied by
+//      the amount of bits in the load/store operand.
+//  2.  The stack/frame pointer is copied to R1.
+//  3.  If the reference point is based on R14 (frame pointer), the size of 
+//      the stack is subtracted from the index, ensuring the index is 
+//      relative to the start of the stack frame.
+//  4.  R1 is adjusted via a sequence of ADDI instructions to the nearest
+//      bucket boundary.
+//  5.  The output offset is adjusted such that it is indexing relative to the
+//      end of the enclosing bucket.
+//===----------------------------------------------------------------------===//
+
+StackRange SuperHExpandPseudo::getStackBucketFor(const MachineFunction &MF,
+                                                 int64_t Offset, uint8_t Bits, 
+                                                 uint8_t Scale) {
+  int64_t BucketStride = (1 << Bits) * Scale;
+  int64_t BucketIdx = truncdiv(Offset-1, BucketStride);
+  return { BucketIdx*BucketStride, ((BucketIdx+1)*BucketStride) };
+}
+
+StackAddr SuperHExpandPseudo::getStackOffset(const MachineFunction &MF, 
+                                            Register FrameReg, int64_t Offset, 
+                                            uint8_t Bits, uint8_t Scale) {
+  assert(TRI->getFrameRegister(MF) == FrameReg && "Unexpected frame register!");
+  const TargetFrameLowering *TFI = TRI->getFrameLowering(MF);
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineInstr &MI = *MBBI;
 
-  // Split the stack up into indexable chunks, each instruction has
-  // a fixed range that it can access, this range is positive only.
   int64_t StackSize = MFI.getStackSize();
-  int64_t AccessRange = ((1 << Bits) * Scale);
+  StackRange Bucket = getStackBucketFor(MF, Offset, Bits, Scale);
 
-  // The stack grows down, so the offset needs to be adjusted so that
-  // we index correctly into the negative stack with a positive index.
-  int64_t RealOffset = (StackSize-Offset);
+  // NOTE: The 4 here adjusts out the stack frame pointer, otherwise
+  //       the offset will be wrong.
+  return {
+    (StackSize-Bucket.End),
+    (Bucket.stride() - (Offset-Bucket.Start))
+  };
+}
 
-  // Adjust the offset to be within the access range.
-  Offset = AccessRange-(RealOffset % AccessRange);
-
-  // On big endian systems, adjust the pointer for
-  // < 32-bit offsets.
-  if (!STI->isLittleEndian() && Scale != 4)
-    Offset += Scale;
+void SuperHExpandPseudo::emitStackAdj(Block &MBB, BlockIt MBBI, Register FrameReg, 
+                                      StackAddr Addr) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  const MachineFunction &MF = *MBB.getParent();
+  MachineInstr &MI = *MBBI;
 
   switch(MI.getOpcode()) {
   case SH::MOVF32SF:
@@ -132,7 +197,7 @@ void SuperHExpandPseudo::getStackOffset(Block &MBB, BlockIt MBBI, Register Frame
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
       .addReg(FrameReg);
 
-    TII->emitAddressAdjust(SH::R1, MBB, MBBI, RealOffset, INT_MAX);
+    TII->emitAddressAdjust(SH::R1, MBB, MBBI, Addr.Base + Addr.Offset, INT_MAX);
     break;
   }
   default: {
@@ -140,11 +205,10 @@ void SuperHExpandPseudo::getStackOffset(Block &MBB, BlockIt MBBI, Register Frame
     // Expand sequence to
     // mov      <frame reg>,  r1
     // add      #-SpOffset,   r1 ! Repeats until offset is reached.
-    int64_t SpAdjust = AccessRange * (alignTo(RealOffset, Scale) / AccessRange);
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
       .addReg(FrameReg);
 
-    TII->emitAddressAdjust(SH::R1, MBB, MBBI, SpAdjust, INT_MAX);
+    TII->emitAddressAdjust(SH::R1, MBB, MBBI, Addr.Base, INT_MAX);
     break;
   }
   }
@@ -166,7 +230,9 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
   auto SrcReg = MI.getOperand(0).getReg();
   auto FrameReg = MI.getOperand(1).getReg();
   auto Offset = MI.getOperand(2).getImm();
-  getStackOffset(MBB, MBBI, FrameReg, Offset, 4, Scale);
+
+  StackAddr Addr = getStackOffset(MF, FrameReg, Offset, 4, Scale);
+  emitStackAdj(MBB, MBBI, FrameReg, Addr);
 
   switch (MI.getOpcode()) {
   default:
@@ -180,7 +246,7 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
           .addReg(SrcReg, getKillRegState(SrcIsKill));
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBS4))
         .addReg(SH::R1, RegState::Kill)
-        .addImm(Offset);
+        .addImm(Addr.Offset);
     break;
   }
   case SH::MOVWSF: {
@@ -192,7 +258,7 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
           .addReg(SrcReg, getKillRegState(SrcIsKill));
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWS4))
         .addReg(SH::R1, RegState::Kill)
-        .addImm(Offset);
+        .addImm(Addr.Offset);
     break;
   }
   case SH::MOVLSF: {
@@ -201,15 +267,16 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLS4))
         .addReg(SrcReg, getKillRegState(SrcIsKill))
         .addReg(SH::R1, RegState::Kill)
-        .addImm(Offset);
+        .addImm(Addr.Offset);
     break;
   }
   case SH::MOVF32SF: {
 
     // fmov.s   <src reg>, @r1
     BuildMI(MBB, MBBI, DL, TII->get(SH::FMOV_STORE))
-        .addReg(SH::R1, RegState::Kill)
-        .addReg(SrcReg, RegState::Kill);
+        .addReg(SrcReg, RegState::Kill)
+        .addReg(SH::R1, RegState::Kill);
+    break;
   }
   }
 
@@ -264,11 +331,17 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
     break;
   }
   case SH::MOVF32SP: {
-    if (Offset == 0)
-      Opc = SH::FMOV_STORE;
-    else
-      Opc = SH::FMOV_INDEX_STORE;
-    break;
+    if (Offset != 0) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
+        .addReg(DstReg);
+      TII->emitAddressAdjust(SH::R1, MBB, MBBI, Offset, CFPMaxAdd);
+      DstReg = SH::R1;
+    }
+
+    BuildMI(MBB, MBBI, DL, TII->get(SH::FMOV_STORE))
+      .addReg(SrcReg, getKillRegState(SrcIsKill))
+      .addReg(DstReg);
+    return eraseMI(MI);
   }
   }
 
@@ -359,7 +432,9 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
   bool DstIsKill = MI.getOperand(0).isKill();
   auto FrameReg = MI.getOperand(1).getReg();
   auto Offset = MI.getOperand(2).getImm();
-  getStackOffset(MBB, MBBI, FrameReg, Offset, 4, Scale);
+
+  StackAddr Addr = getStackOffset(MF, FrameReg, Offset, 4, Scale);
+  emitStackAdj(MBB, MBBI, FrameReg, Addr);
 
   switch (MI.getOpcode()) {
   default:
@@ -370,7 +445,7 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
     // mov      r0,           <dst reg>
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBL4))
         .addReg(SH::R1)
-        .addImm(Offset)
+        .addImm(Addr.Offset)
         .addReg(SH::R0, RegState::Define);
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV))
         .addReg(DstReg, getKillRegState(DstIsKill))
@@ -383,7 +458,7 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
     // mov      r0,           <dst reg>
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWL4))
       .addReg(SH::R1)
-      .addImm(Offset);
+      .addImm(Addr.Offset);
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV))
         .addReg(DstReg, getKillRegState(DstIsKill))
         .addReg(SH::R0, RegState::Define);
@@ -395,14 +470,15 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLL4))
         .addReg(DstReg, getKillRegState(DstIsKill))
         .addReg(SH::R1)
-        .addImm(Offset);
+        .addImm(Addr.Offset);
     break;
   }
   case SH::MOVF32LF: {
 
     // fmov.s   @r1, <dst reg>
-    BuildMI(MBB, MBBI, DL, TII->get(SH::FMOV_STORE), DstReg)
+    BuildMI(MBB, MBBI, DL, TII->get(SH::FMOV_LOAD), DstReg)
         .addReg(SH::R1);
+    break;
   }
   }
 
@@ -439,7 +515,6 @@ bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
       Opc = SH::MOVBL;
     else
       Opc = SH::MOVBL4;
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBL), DstReg).addReg(SrcReg);
     break;
   }
   case SH::MOVWLP: {
@@ -447,7 +522,6 @@ bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
       Opc = SH::MOVWL;
     else
       Opc = SH::MOVWL4;
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWL), DstReg).addReg(SrcReg);
     break;
   }
   case SH::MOVLLP: {
@@ -458,11 +532,16 @@ bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
     break;
   }
   case SH::MOVF32LP: {
-    if (Offset == 0)
-      Opc = SH::FMOV_LOAD;
-    else
-      Opc = SH::FMOV_INDEX_LOAD;
-    break;
+    if (Offset != 0) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
+        .addReg(DstReg);
+      TII->emitAddressAdjust(SH::R1, MBB, MBBI, Offset, CFPMaxAdd);
+      DstReg = SH::R1;
+    }
+
+    BuildMI(MBB, MBBI, DL, TII->get(SH::FMOV_LOAD), DstReg)
+      .addReg(SrcReg);
+    return eraseMI(MI);
   }
   }
 

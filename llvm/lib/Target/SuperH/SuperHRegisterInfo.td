@@ -184,9 +184,11 @@ let Namespace = "SH" in {
 // Register Classes
 //===----------------------------------------------------------------------===//
 
-def GPR8  : RegisterClass<"SH", [ i8 ], 32, (sequence "R%u", 0, 15)>;
+def GPR8  : RegisterClass<"SH", [ i8 ],  32,  (sequence "R%u", 0, 15)>;
 def GPR16 : RegisterClass<"SH", [ i16 ], 32, (sequence "R%u", 0, 15)>;
 def GPR32 : RegisterClass<"SH", [ i32 ], 32, (sequence "R%u", 0, 15)>;
+
+let Size = 32 in
 def GPR   : RegisterClass<"SH", [ i8, i16, i32 ], 32, (sequence "R%u", 0, 15)>;
 
 // 32-bit floating point registers.

@@ -47,17 +47,9 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   auto *RegInfo = Subtarget->getRegisterInfo();
 
   // GPR Registers are always 32 bit on SuperH.
+  addRegisterClass(MVT::i8, &SH::GPRRegClass);
+  addRegisterClass(MVT::i16, &SH::GPRRegClass);
   addRegisterClass(MVT::i32, &SH::GPRRegClass);
-
-  // Loads and stores are legal
-  for (MVT VT : MVT::integer_valuetypes()) {
-    for (auto N : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}) {
-      setLoadExtAction(N, VT, MVT::i1, Promote);
-      setLoadExtAction(N, VT, MVT::i64, Expand);
-    }
-
-    setTruncStoreAction(VT, MVT::i1, Promote);
-  }
 
   // Division and remainders are multi-instruction sequences
   // on SuperH. Use a custom pass to lower those.
@@ -154,6 +146,34 @@ static bool RetCC_SH_SRet(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
 
+
+
+
+//===----------------------------------------------------------------------===//
+//                              TYPE LOWERING
+//===----------------------------------------------------------------------===//
+
+void SuperHTargetLowering::ReplaceNodeResults(SDNode *N,
+                                              SmallVectorImpl<SDValue> &Results,
+                                              SelectionDAG &DAG) const {
+
+  SDLoc DL(N);
+
+  switch (N->getOpcode()) {
+  case SH::MULS: break;
+  case SH::MULU: break;
+  case SH::MULL: break;
+
+  default: {
+    SDValue Res = LowerOperation(SDValue(N, 0), DAG);
+
+    for (unsigned I = 0, E = N->getNumValues(); I != E; ++I)
+      Results.push_back(Res.getValue(I));
+
+    break;
+  }
+  }
+}
 
 
 
@@ -381,31 +401,6 @@ SDValue SuperHTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
 
 //===----------------------------------------------------------------------===//
-//                              TYPE LOWERING
-//===----------------------------------------------------------------------===//
-
-void SuperHTargetLowering::ReplaceNodeResults(SDNode *N,
-                                              SmallVectorImpl<SDValue> &Results,
-                                              SelectionDAG &DAG) const {
-
-  SDLoc DL(N);
-
-  switch (N->getOpcode()) {
-  default: {
-    SDValue Res = LowerOperation(SDValue(N, 0), DAG);
-
-    for (unsigned I = 0, E = Res->getNumValues(); I != E; ++I)
-      Results.push_back(Res.getValue(I));
-
-    break;
-  }
-  }
-}
-
-
-
-
-//===----------------------------------------------------------------------===//
 //                            CONSTANT LOWERING
 //===----------------------------------------------------------------------===//
 
@@ -539,11 +534,11 @@ SDValue SuperHTargetLowering::LowerFormalArguments(
       EVT RegVT = VA.getLocVT();
       const TargetRegisterClass *RC;
       if (RegVT == MVT::i8) {
-        RC = &SH::GPRRegClass;
+        RC = &SH::GPR8RegClass;
       } else if (RegVT == MVT::i16) {
-        RC = &SH::GPRRegClass;
+        RC = &SH::GPR16RegClass;
       } else if (RegVT == MVT::i32) {
-        RC = &SH::GPRRegClass;
+        RC = &SH::GPR32RegClass;
       } else if (RegVT == MVT::f32) {
         RC = &SH::FR32RegClass;
       } else {
