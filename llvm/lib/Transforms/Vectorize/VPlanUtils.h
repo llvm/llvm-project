@@ -143,7 +143,7 @@ VPIRFlags getFlagsForInduction(const InductionDescriptor &ID,
 /// recipes with definitions.
 template <typename PredT>
 inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
-  SetVector<VPValue *> Worklist;
+  SmallSetVector<VPValue *, 16> Worklist;
   Worklist.insert(Start);
   for (unsigned I = 0; I != Worklist.size(); ++I) {
     VPValue *Cur = Worklist[I];

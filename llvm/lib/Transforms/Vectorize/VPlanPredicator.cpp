@@ -177,7 +177,7 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
   // This is the block mask. We OR all unique incoming edges.
-  for (auto *Predecessor : SetVector<VPBlockBase *>(
+  for (auto *Predecessor : SmallSetVector<VPBlockBase *, 8>(
            VPBB->getPredecessors().begin(), VPBB->getPredecessors().end())) {
     VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is
@@ -281,7 +281,8 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
   for (auto [InVal, InVPBB] : Phi->incoming_values_and_blocks())
     AddEdge(InVPBB, Phi->getParent(), InVal);
 
-  SetVector<const VPBlockBase *> Worklist(from_range, Phi->incoming_blocks());
+  SmallSetVector<const VPBlockBase *, 16> Worklist(from_range,
+                                                   Phi->incoming_blocks());
   while (!Worklist.empty()) {
     auto *VPBB = cast<VPBasicBlock>(Worklist.pop_back_val());
 

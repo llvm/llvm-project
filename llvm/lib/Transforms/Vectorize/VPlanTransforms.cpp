@@ -352,7 +352,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
   bool ScalarVFOnly = Plan.hasScalarVFOnly();
   bool Changed = false;
 
-  SetVector<std::pair<VPBasicBlock *, VPSingleDefRecipe *>> WorkList;
+  SmallSetVector<std::pair<VPBasicBlock *, VPSingleDefRecipe *>, 16> WorkList;
   auto InsertIfValidSinkCandidate = [ScalarVFOnly, &WorkList](
                                         VPBasicBlock *SinkTo, VPValue *Op) {
     auto *Candidate = dyn_cast<VPSingleDefRecipe>(Op);

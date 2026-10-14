@@ -1222,7 +1222,7 @@ void vputils::recursivelyDeleteDeadRecipes(VPValue *V) {
 }
 
 SmallVector<VPUser *> vputils::collectUsersRecursively(VPValue *V) {
-  SetVector<VPUser *> Users(llvm::from_range, V->users());
+  SmallSetVector<VPUser *, 16> Users(llvm::from_range, V->users());
   for (unsigned I = 0; I != Users.size(); ++I) {
     VPRecipeBase *Cur = cast<VPRecipeBase>(Users[I]);
     for (VPValue *V : Cur->definedValues())

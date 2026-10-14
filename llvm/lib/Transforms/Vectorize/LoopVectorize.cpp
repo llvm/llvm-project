@@ -2399,7 +2399,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   };
 
   // Worklist containing uniform instructions demanding lane 0.
-  SetVector<Instruction *> Worklist;
+  SmallSetVector<Instruction *, 16> Worklist;
 
   // Add uniform instructions demanding lane 0 to the worklist. Instructions
   // that require predication must not be considered uniform after
@@ -2500,7 +2500,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // here is something which only demands lane 0 of the unrolled iterations;
   // it does not imply that all lanes produce the same value (e.g. this is not
   // the usual meaning of uniform)
-  SetVector<Value *> HasUniformUse;
+  SmallSetVector<Value *, 16> HasUniformUse;
 
   // Scan the loop for instructions which are either a) known to have only
   // lane 0 demanded or b) are uses which demand only lane 0 of their operand.

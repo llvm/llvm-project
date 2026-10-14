@@ -1098,7 +1098,7 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
         IsFPRecurrence ? FastMathFlags::getFast() : FastMathFlags();
 
     // Collect the chain of "link" recipes for the reduction starting at PhiR.
-    SetVector<VPSingleDefRecipe *> Worklist;
+    SmallSetVector<VPSingleDefRecipe *, 16> Worklist;
     Worklist.insert(PhiR);
     for (unsigned I = 0; I != Worklist.size(); ++I) {
       VPSingleDefRecipe *Cur = Worklist[I];
