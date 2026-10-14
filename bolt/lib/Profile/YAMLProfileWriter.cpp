@@ -267,7 +267,8 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
     YamlBB.ExecCount = BB->getKnownExecutionCount();
 
     for (const MCInst &Instr : *BB) {
-      if (!BC.MIB->isCall(Instr) && !BC.MIB->isIndirectBranch(Instr))
+      if (!BC.MIB->isCall(Instr) && !BC.MIB->isIndirectBranch(Instr) &&
+          !BC.MIB->isExternalBranch(Instr))
         continue;
 
       SmallVector<std::pair<StringRef, yaml::bolt::CallSiteInfo>> CSTargets;
@@ -292,7 +293,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
           CSI.Mispreds = CSP.Mispreds;
           CSTargets.emplace_back(TargetName, CSI);
         }
-      } else { // direct call or a tail call
+      } else { // direct call, tail call, or external branch
         StringRef TargetName = "";
         const MCSymbol *CalleeSymbol = BC.MIB->getTargetSymbol(Instr);
         const BinaryFunction *const Callee =
@@ -308,6 +309,9 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
           CSI.Mispreds = getAnnotationWithDefault(Instr, "CTCMispredCount");
         } else {
           CSI.Count = getAnnotationWithDefault(Instr, "Count");
+          if (BC.MIB->isExternalBranch(Instr) &&
+              BC.MIB->isConditionalBranch(Instr))
+            CSI.Mispreds = getAnnotationWithDefault(Instr, "MispredCount");
         }
 
         if (CSI.Count)

@@ -1043,8 +1043,11 @@ void assignProfile(BinaryFunction &BF,
         // is executed; conservatively, setting it to the count of the block
         setOrUpdateAnnotation(Instr, "CTCTakenCount", Block.Flow);
         BC.MIB->removeAnnotation(Instr, "CTCMispredCount");
-      } else if (BC.MIB->isCall(Instr)) {
+      } else if (BC.MIB->isCall(Instr) || BC.MIB->isExternalBranch(Instr)) {
         setOrUpdateAnnotation(Instr, "Count", Block.Flow);
+        if (BC.MIB->isExternalBranch(Instr) &&
+            BC.MIB->isConditionalBranch(Instr))
+          BC.MIB->removeAnnotation(Instr, "MispredCount");
       }
     }
   }

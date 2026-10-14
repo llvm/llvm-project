@@ -2732,7 +2732,11 @@ public:
       if (isPseudo(*I) || isNoop(*I))
         continue;
 
-      // Stop when we find the first non-terminator
+      // An external exit cannot be rewritten using local CFG successors.
+      if (isExternalBranch(*I))
+        return false;
+
+      // Stop at instructions not represented by a branch in the local CFG.
       if (!isTerminator(*I) || isTailCall(*I) || !isBranch(*I))
         break;
 
@@ -3044,11 +3048,11 @@ public:
     case ELF::R_AARCH64_PREL16:
     case ELF::R_AARCH64_PREL32:
     case ELF::R_AARCH64_PREL64:
-      return true;
-    case ELF::R_AARCH64_CALL26:
     case ELF::R_AARCH64_JUMP26:
     case ELF::R_AARCH64_TSTBR14:
     case ELF::R_AARCH64_CONDBR19:
+      return true;
+    case ELF::R_AARCH64_CALL26:
     case ELF::R_AARCH64_TLSDESC_CALL:
     case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
     case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:

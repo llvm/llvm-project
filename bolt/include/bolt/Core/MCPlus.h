@@ -68,6 +68,7 @@ public:
     kJumpTable,           /// Jump Table.
     kTailCall,            /// Tail call.
     kConditionalTailCall, /// CTC.
+    kExternalBranch,      /// Branch to a target outside the current function.
     kOffset,              /// Offset in the function.
     kLabel,               /// MCSymbol pointing to this instruction.
     kSize,                /// Size of the instruction.

@@ -1165,20 +1165,32 @@ MCSymbol *BinaryFunction::handleExternalReference(MCInst &Instruction,
   assert(!MIB->isTailCall(Instruction) &&
          "synthetic tail call instruction found");
 
-  // This is a call regardless of the opcode.
-  // Assign proper opcode for tail calls, so that they could be
-  // treated as calls.
+  // AArch64 branches against non-function symbols can carry live IP0/IP1.
+  // PLT entries are an exception: they use these registers even when the
+  // relocation names an undefined STT_NOTYPE symbol.
+  const Relocation *BranchRelocation =
+      BC.isAArch64() ? getRelocationAt(Offset) : nullptr;
+  const bool IsFunction =
+      BranchRelocation && BranchRelocation->ELFSymType == ELF::STT_FUNC;
+  const BinaryFunction *TargetBF = BC.getBinaryFunctionAtAddress(TargetAddress);
+  const bool IsPLTTarget = TargetBF && TargetBF->isPLTFunction();
+
   if (!IsCall) {
-    if (!MIB->convertJmpToTailCall(Instruction)) {
-      assert(MIB->isConditionalBranch(Instruction) &&
-             "unknown tail call instruction");
-      if (opts::Verbosity >= 2) {
-        BC.errs() << "BOLT-WARNING: conditional tail call detected in "
-                  << "function " << *this << " at 0x"
-                  << Twine::utohexstr(AbsoluteInstrAddr) << ".\n";
+    if (BranchRelocation && !IsFunction && !IsPLTTarget) {
+      MIB->setExternalBranch(Instruction);
+    } else {
+      // Assign proper opcode for tail calls, so they can be treated as calls.
+      if (!MIB->convertJmpToTailCall(Instruction)) {
+        assert(MIB->isConditionalBranch(Instruction) &&
+               "unknown tail call instruction");
+        if (opts::Verbosity >= 2) {
+          BC.errs() << "BOLT-WARNING: conditional tail call detected in "
+                    << "function " << *this << " at 0x"
+                    << Twine::utohexstr(AbsoluteInstrAddr) << ".\n";
+        }
       }
+      IsCall = true;
     }
-    IsCall = true;
   }
 
   if (opts::Verbosity >= 2 && TargetAddress == 0) {
@@ -1459,7 +1471,7 @@ Error BinaryFunction::disassemble() {
           }
         }
 
-        if (!IsCall) {
+        if (!IsCall && containsAddress(TargetAddress)) {
           // Add taken branch info.
           TakenBranches.emplace_back(Offset, TargetAddress - getAddress());
         }
@@ -2349,7 +2361,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     if (!InsertBB) {
       // It must be a fallthrough or unreachable code. Create a new block unless
       // we see an unconditional branch following a conditional one. The latter
-      // should not be a conditional tail call.
+      // should not be a conditional tail call or external branch.
       assert(PrevBB && "no previous basic block for a fall through");
       MCInst *PrevInstr = PrevBB->getLastNonPseudoInstr();
       assert(PrevInstr && "no previous instruction for a fall through");
@@ -2357,7 +2369,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
           !MIB->isIndirectBranch(*PrevInstr) &&
           !MIB->isUnconditionalBranch(*PrevInstr) &&
           !MIB->getConditionalTailCall(*PrevInstr) &&
-          !MIB->isReturn(*PrevInstr)) {
+          !MIB->isExternalBranch(*PrevInstr) && !MIB->isReturn(*PrevInstr)) {
         // Temporarily restore inserter basic block.
         InsertBB = PrevBB;
       } else {
@@ -2458,14 +2470,12 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
            "should have non-pseudo instruction in non-empty block");
 
     if (BB->succ_size() == 0) {
-      // Since there's no existing successors, we know the last instruction is
-      // not a conditional branch. Thus if it's a terminator, it shouldn't be a
-      // fall-through.
-      //
-      // Conditional tail call is a special case since we don't add a taken
-      // branch successor for it.
-      IsPrevFT = !MIB->isTerminator(*LastInstr) ||
-                 MIB->getConditionalTailCall(*LastInstr);
+      // Conditional tail calls and external branches have no local taken
+      // successor, but can still fall through.
+      IsPrevFT =
+          !MIB->isTerminator(*LastInstr) ||
+          (MIB->isConditionalBranch(*LastInstr) &&
+           (MIB->isExternalBranch(*LastInstr) || MIB->isTailCall(*LastInstr)));
     } else if (BB->succ_size() == 1) {
       IsPrevFT = MIB->isConditionalBranch(*LastInstr);
     } else {
@@ -2541,9 +2551,9 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
 
 void BinaryFunction::postProcessCFG() {
   if (isSimple() && !BasicBlocks.empty()) {
-    // Convert conditional tail call branches to conditional branches that jump
-    // to a tail call.
-    removeConditionalTailCalls();
+    // Convert conditional tail calls and conditional external branches into
+    // conditional branches to blocks with unconditional transfers.
+    removeConditionalExits();
 
     postProcessProfile();
 
@@ -2587,78 +2597,87 @@ void BinaryFunction::removeTagsFromProfile() {
   }
 }
 
-void BinaryFunction::removeConditionalTailCalls() {
+void BinaryFunction::removeConditionalExits() {
   // Blocks to be appended at the end.
   std::vector<std::unique_ptr<BinaryBasicBlock>> NewBlocks;
 
   for (auto BBI = begin(); BBI != end(); ++BBI) {
     BinaryBasicBlock &BB = *BBI;
-    MCInst *CTCInstr = BB.getLastNonPseudoInstr();
-    if (!CTCInstr)
+    MCInst *CondBranch = BB.getLastNonPseudoInstr();
+    if (!CondBranch || !BC.MIB->isConditionalBranch(*CondBranch))
       continue;
 
-    std::optional<uint64_t> TargetAddressOrNone =
-        BC.MIB->getConditionalTailCall(*CTCInstr);
-    if (!TargetAddressOrNone)
+    const bool IsTailCall = BC.MIB->isTailCall(*CondBranch);
+    const bool IsExternalBranch = BC.MIB->isExternalBranch(*CondBranch);
+
+    if (!IsTailCall && !IsExternalBranch)
       continue;
 
-    // Gather all necessary information about CTC instruction before
-    // annotations are destroyed.
-    const int32_t CFIStateBeforeCTC = BB.getCFIStateAtInstr(CTCInstr);
-    uint64_t CTCTakenCount = BinaryBasicBlock::COUNT_NO_PROFILE;
-    uint64_t CTCMispredCount = BinaryBasicBlock::COUNT_NO_PROFILE;
+    assert(IsTailCall != IsExternalBranch &&
+           "cannot be both tail call and external branch");
+
+    // Gather information before the branch annotations are destroyed.
+    const int32_t CFIStateBeforeBranch = BB.getCFIStateAtInstr(CondBranch);
+    uint64_t TakenCount = BinaryBasicBlock::COUNT_NO_PROFILE;
+    uint64_t MispredCount = BinaryBasicBlock::COUNT_NO_PROFILE;
     if (hasValidProfile()) {
-      CTCTakenCount = BC.MIB->getAnnotationWithDefault<uint64_t>(
-          *CTCInstr, "CTCTakenCount");
-      CTCMispredCount = BC.MIB->getAnnotationWithDefault<uint64_t>(
-          *CTCInstr, "CTCMispredCount");
+      TakenCount = BC.MIB->getAnnotationWithDefault<uint64_t>(
+          *CondBranch, IsExternalBranch ? "Count" : "CTCTakenCount");
+      MispredCount = BC.MIB->getAnnotationWithDefault<uint64_t>(
+          *CondBranch, IsExternalBranch ? "MispredCount" : "CTCMispredCount");
     }
 
-    // Assert that the tail call does not throw.
-    assert(!BC.MIB->getEHInfo(*CTCInstr) &&
-           "found tail call with associated landing pad");
+    assert(!BC.MIB->getEHInfo(*CondBranch) &&
+           "found conditional exit with associated landing pad");
 
-    // Create a basic block with an unconditional tail call instruction using
-    // the same destination.
-    const MCSymbol *CTCTargetLabel = BC.MIB->getTargetSymbol(*CTCInstr);
-    assert(CTCTargetLabel && "symbol expected for conditional tail call");
-    MCInst TailCallInstr;
-    BC.MIB->createTailCall(TailCallInstr, CTCTargetLabel, BC.Ctx.get());
-
-    // Move offset from CTCInstr to TailCallInstr.
-    if (const std::optional<uint32_t> Offset = BC.MIB->getOffset(*CTCInstr)) {
-      BC.MIB->setOffset(TailCallInstr, *Offset);
-      BC.MIB->clearOffset(*CTCInstr);
+    // Create an unconditional transfer to the same destination.
+    const MCSymbol *TargetLabel = BC.MIB->getTargetSymbol(*CondBranch);
+    assert(TargetLabel && "symbol expected for conditional exit");
+    MCInst TransferInstr;
+    if (IsExternalBranch) {
+      BC.MIB->createUncondBranch(TransferInstr, TargetLabel, BC.Ctx.get());
+      BC.MIB->setExternalBranch(TransferInstr);
+    } else {
+      BC.MIB->createTailCall(TransferInstr, TargetLabel, BC.Ctx.get());
     }
 
-    // Link new BBs to the original input offset of the BB where the CTC
-    // is, so we can map samples recorded in new BBs back to the original BB
-    // seem in the input binary (if using BAT)
-    std::unique_ptr<BinaryBasicBlock> TailCallBB =
-        createBasicBlock(BC.Ctx->createNamedTempSymbol("TC"));
-    TailCallBB->setOffset(BB.getInputOffset());
-    TailCallBB->addInstruction(TailCallInstr);
-    TailCallBB->setCFIState(CFIStateBeforeCTC);
+    // Move offset from the conditional branch to the unconditional transfer.
+    if (const std::optional<uint32_t> Offset = BC.MIB->getOffset(*CondBranch)) {
+      BC.MIB->setOffset(TransferInstr, *Offset);
+      BC.MIB->clearOffset(*CondBranch);
+    }
 
-    // Add CFG edge with profile info from BB to TailCallBB.
-    BB.addSuccessor(TailCallBB.get(), CTCTakenCount, CTCMispredCount);
+    // Link the new block to the input offset for BAT sample mapping.
+    std::unique_ptr<BinaryBasicBlock> TransferBB = createBasicBlock(
+        BC.Ctx->createNamedTempSymbol(IsExternalBranch ? "EB" : "TC"));
+    TransferBB->setOffset(BB.getInputOffset());
+    TransferBB->addInstruction(TransferInstr);
+    TransferBB->setCFIState(CFIStateBeforeBranch);
+
+    // Add CFG edge with profile info from BB to TransferBB.
+    BB.addSuccessor(TransferBB.get(), TakenCount, MispredCount);
 
     // Add execution count for the block.
-    TailCallBB->setExecutionCount(CTCTakenCount);
+    TransferBB->setExecutionCount(TakenCount);
 
-    BC.MIB->convertTailCallToJmp(*CTCInstr);
+    if (IsExternalBranch)
+      BC.MIB->removeAnnotation(*CondBranch,
+                               MCPlus::MCAnnotation::kExternalBranch);
+    else
+      BC.MIB->convertTailCallToJmp(*CondBranch);
 
-    BC.MIB->replaceBranchTarget(*CTCInstr, TailCallBB->getLabel(),
+    BC.MIB->replaceBranchTarget(*CondBranch, TransferBB->getLabel(),
                                 BC.Ctx.get());
 
-    // Add basic block to the list that will be added to the end.
-    NewBlocks.emplace_back(std::move(TailCallBB));
+    // Add the transfer block to the end of the function.
+    NewBlocks.emplace_back(std::move(TransferBB));
 
-    // Swap edges as the TailCallBB corresponds to the taken branch.
+    // The new block corresponds to the taken branch.
     BB.swapConditionalSuccessors();
 
-    // This branch is no longer a conditional tail call.
-    BC.MIB->unsetConditionalTailCall(*CTCInstr);
+    // X86's convertTailCallToJmp leaves conditional branches unchanged.
+    if (IsTailCall)
+      BC.MIB->unsetConditionalTailCall(*CondBranch);
   }
 
   insertBasicBlocks(std::prev(end()), std::move(NewBlocks),
@@ -4869,7 +4888,7 @@ bool BinaryFunction::isPossibleVeneer() const {
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
                                    uint32_t RelType, uint64_t Addend,
-                                   uint64_t Value) {
+                                   uint64_t Value, uint8_t ELFSymType) {
   assert(Address >= getAddress() && Address < getAddress() + getMaxSize() &&
          "address is outside of the function");
   uint64_t Offset = Address - getAddress();
@@ -4880,7 +4899,8 @@ void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
   std::map<uint64_t, Relocation> &Rels =
       IsCI ? Islands->Relocations : Relocations;
   if (BC.MIB->shouldRecordCodeRelocation(RelType))
-    Rels[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
+    Rels[Offset] =
+        Relocation{Offset, Symbol, RelType, Addend, Value, ELFSymType};
 }
 
 } // namespace bolt
