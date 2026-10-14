@@ -90,7 +90,6 @@ mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRPtrDialect
   MLIRLLVMDialect
   MLIRNVVMDialect
-  MLIRParallelCombiningOpInterface
   MLIRPass
   MLIRReduce
   MLIRTensorDialect
