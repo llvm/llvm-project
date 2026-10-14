@@ -34,8 +34,8 @@ uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags);
 uptr internal_close(fd_t fd);
 
 #  if SANITIZER_AIX
-__sanitizer_FILE *internal_popen(const char *command, const char *type);
-int internal_pclose(__sanitizer_FILE *file);
+__sanitizer_FILE* internal_popen(const char* command, const char* type);
+int internal_pclose(__sanitizer_FILE* file);
 #  endif
 
 uptr internal_read(fd_t fd, void *buf, uptr count);

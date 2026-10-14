@@ -447,10 +447,10 @@ uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
   // mmap on this memory again.
   if (fixed_addr) {
     MmapFixed(fixed_addr, size, MAP_PRIVATE | MAP_FIXED | MAP_ANON, name);
-    base_ = (void *)fixed_addr;
+    base_ = (void*)fixed_addr;
   } else {
-    base_ = (void *)internal_mmap(nullptr, size, PROT_READ | PROT_WRITE,
-                                  MAP_PRIVATE | MAP_ANON, -1, 0);
+    base_ = (void*)internal_mmap(nullptr, size, PROT_READ | PROT_WRITE,
+                                 MAP_PRIVATE | MAP_ANON, -1, 0);
   }
 #  endif
   size_ = size;
