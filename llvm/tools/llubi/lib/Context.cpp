@@ -1335,7 +1335,7 @@ std::optional<uint64_t> Context::isSupportedType(
       auto ElementBits = isSupportedType(OS, ValidAggTys, ElementType);
       if (!ElementBits)
         return std::nullopt;
-      if (!STy->isPacked()) {
+      if (!STy->isPacked() && ElementType->isSized()) {
         uint64_t ElementAlignment = DL.getABITypeAlign(ElementType).value() * 8;
         Size = alignTo(Size, ElementAlignment);
         Alignment = std::max(Alignment, ElementAlignment);
@@ -1344,7 +1344,7 @@ std::optional<uint64_t> Context::isSupportedType(
       Size += *ElementBits;
     }
     Size = std::max(Size, (uint64_t)1);
-    if (!STy->isPacked()) {
+    if (!STy->isPacked() && STy->isSized()) {
       // If it is not packed, we need to respect StructABIAlignment specified in
       // the DL string.
       Alignment = std::max(Alignment, DL.getABITypeAlign(STy).value() * 8);
