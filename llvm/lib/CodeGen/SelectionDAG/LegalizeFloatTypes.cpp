@@ -2846,7 +2846,8 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_ExpOp(SDNode *N) {
 
   SDValue Res;
   if (IsStrict) {
-    Res = DAG.getNode(N->getOpcode(), dl, {NVT, MVT::Other}, {N->getOperand(0), Op0, Op1}, N->getFlags());
+    Res = DAG.getNode(N->getOpcode(), dl, {NVT, MVT::Other},
+                      {N->getOperand(0), Op0, Op1}, N->getFlags());
     ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
   } else {
     Res = DAG.getNode(N->getOpcode(), dl, NVT, Op0, Op1);
@@ -3184,10 +3185,12 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
 
   assert(New != N && "Expected a new node!");
 
-  assert(New->getNumValues() == N->getNumValues() && "Invalid operand expansion");
+  assert(New->getNumValues() == N->getNumValues() &&
+         "Invalid operand expansion");
 
   for (unsigned i = 0, e = N->getNumValues(); i < e; ++i) {
-    assert(New->getValueType(i) == N->getValueType(i) && "Invalid operand expansion");
+    assert(New->getValueType(i) == N->getValueType(i) &&
+           "Invalid operand expansion");
     ReplaceValueWith(SDValue(N, i), SDValue(New, i));
   }
   return false;
@@ -3387,7 +3390,8 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_SETCC(SDNode *N) {
 
   if (IsStrict) {
     SDValue Chain = N->getOperand(0);
-    return DAG.getNode(N->getOpcode(), dl, N->getVTList(), Chain, Op0, Op1, DAG.getCondCode(CCCode));
+    return DAG.getNode(N->getOpcode(), dl, N->getVTList(), Chain, Op0, Op1,
+                       DAG.getCondCode(CCCode));
   } else {
     return DAG.getSetCC(SDLoc(N), N->getValueType(0), Op0, Op1, CCCode);
   }
