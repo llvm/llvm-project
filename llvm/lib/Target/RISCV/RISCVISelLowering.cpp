@@ -19555,9 +19555,10 @@ static SDValue combineNegOfSelectCCSubs(SDNode *N, SelectionDAG &DAG) {
 
   SDValue TrueV = Sel.getOperand(3);
   SDValue FalseV = Sel.getOperand(4);
-  if (TrueV.getOpcode() != ISD::SUB || FalseV.getOpcode() != ISD::SUB ||
-      TrueV.getOperand(0) != FalseV.getOperand(1) ||
-      TrueV.getOperand(1) != FalseV.getOperand(0))
+  using namespace SDPatternMatch;
+  SDValue X, Y;
+  if (!sd_match(TrueV, m_Sub(m_Value(X), m_Value(Y))) ||
+      !sd_match(FalseV, m_Sub(m_Specific(Y), m_Specific(X))))
     return SDValue();
 
   return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), N->getValueType(0),
