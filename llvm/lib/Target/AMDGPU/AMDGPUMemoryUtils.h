@@ -10,9 +10,12 @@
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUMEMORYUTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include <optional>
 
 namespace llvm {
 
@@ -20,9 +23,11 @@ struct Align;
 class AAResults;
 class DataLayout;
 class GlobalVariable;
+class Instruction;
 class LoadInst;
 class MemoryDef;
 class MemorySSA;
+class MMRAMetadata;
 class Value;
 class Function;
 class CallGraph;
@@ -112,6 +117,46 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA);
 /// Check is a \p Load is clobbered in its function.
 bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
                            AAResults *AA);
+
+/// The distinct address spaces supported by the AMDGPU target for
+/// atomic memory operation. Can be ORed together.
+enum class SIAtomicAddrSpace {
+  NONE = 0u,
+  GLOBAL = 1u << 0,
+  LDS = 1u << 1,
+  SCRATCH = 1u << 2,
+  GDS = 1u << 3,
+  OTHER = 1u << 4,
+
+  /// The address spaces that can be accessed by a FLAT instruction.
+  FLAT = GLOBAL | LDS | SCRATCH,
+
+  /// The address spaces that support atomic instructions.
+  ATOMIC = GLOBAL | LDS | SCRATCH | GDS,
+
+  /// All address spaces.
+  ALL = GLOBAL | LDS | SCRATCH | GDS | OTHER,
+
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
+};
+
+/// \return Return a bit set of the address spaces accessed by \p AS.
+SIAtomicAddrSpace toSIAtomicAddrSpace(unsigned AS);
+
+/// Reads \p I's MMRAs to parse the "amdgpu-synchronize-as" MMRA.
+/// If this tag isn't present, or if it has no meaningful values, returns
+/// \p none, otherwise returns the address spaces specified by the MD.
+/// Does not diagnose unexpected MMRA tag suffixes.
+std::optional<SIAtomicAddrSpace> getSynchronizeAddrSpace(const Instruction &I);
+
+/// Parses the values for the "amdgpu-synchronize-as" MMRA.
+/// If this tag isn't present, or if it has no meaningful values, returns
+/// \p none, otherwise returns the address spaces specified by the MD.
+/// If an unexpected suffix for the MMRA tag is found, \p Diag is called with
+/// an error message.
+std::optional<SIAtomicAddrSpace>
+getSynchronizeAddrSpace(const MMRAMetadata &MMRA,
+                        function_ref<void(StringRef)> Diag);
 
 } // end namespace AMDGPU
 
