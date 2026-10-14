@@ -414,6 +414,17 @@ int test_iteration_spaces() {
   for (int a{0}; a < 10; ++a) {
   }
 
+#pragma omp parallel
+#pragma omp for
+  for (int a = {0}; a < 10; ++a) {
+  }
+
+#pragma omp parallel
+// expected-error@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+#pragma omp for
+  for (int a = {}; a < 10; ++a) {
+  }
+
   return 0;
 }
 

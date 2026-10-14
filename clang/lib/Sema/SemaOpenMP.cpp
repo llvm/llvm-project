@@ -8674,6 +8674,15 @@ static const StmtExpr *findStmtExpr(const Expr *E) {
   return nullptr;
 }
 
+static Expr *ignoreTransparentInitLists(Expr *E) {
+  while (auto *ILE = dyn_cast<InitListExpr>(E)) {
+    if (!ILE->isTransparent())
+      break;
+    E = ILE->getInit(0);
+  }
+  return E;
+}
+
 bool OpenMPIterationSpaceChecker::checkNonRectangularBound(
     const Expr *E, bool IsInitializer) const {
   // Such a bound is emitted at every use, its declarations cannot be.
@@ -8694,6 +8703,15 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
          UB == nullptr && Step == nullptr && !TestIsLessOp && !TestIsStrictOp);
   if (!NewLCDecl || !NewLB || NewLB->containsErrors())
     return true;
+  if (!SemaRef.CurContext->isDependentContext()) {
+    NewLB = ignoreTransparentInitLists(NewLB);
+    if (auto *ILE = dyn_cast<InitListExpr>(NewLB)) {
+      if (EmitDiags)
+        SemaRef.Diag(ILE->getBeginLoc(), diag::err_omp_loop_not_canonical_init)
+            << ILE->getSourceRange();
+      return true;
+    }
+  }
   LCDecl = getCanonicalDecl(NewLCDecl);
   LCRef = NewLCRefExpr;
   if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(NewLB))
@@ -8738,6 +8756,14 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
   assert(LCDecl != nullptr && LB != nullptr && Step == nullptr);
   if (!NewStep || NewStep->containsErrors())
     return true;
+  if (!SemaRef.CurContext->isDependentContext()) {
+    NewStep = ignoreTransparentInitLists(NewStep);
+    if (auto *ILE = dyn_cast<InitListExpr>(NewStep)) {
+      SemaRef.Diag(ILE->getBeginLoc(), diag::err_omp_loop_not_canonical_incr)
+          << ILE->getSourceRange() << LCDecl;
+      return true;
+    }
+  }
   if (!NewStep->isValueDependent()) {
     // Check that the step is integer expression.
     SourceLocation StepLoc = NewStep->getBeginLoc();

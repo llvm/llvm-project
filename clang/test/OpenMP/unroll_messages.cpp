@@ -137,3 +137,64 @@ void f(void) {
     ;
 }
 }
+
+namespace GH202562 {
+void braced_init() {
+#pragma omp unroll partial
+  for (int i = {0}; i < 2; i++)
+    ;
+
+#pragma omp unroll partial(2)
+  for (int i = {0}; i < 2; i++)
+    ;
+
+  // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+#pragma omp unroll partial
+  for (int i{0}; i < 2; i++)
+    ;
+
+  // expected-warning@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+#pragma omp unroll partial
+  for (int i(0); i < 2; i++)
+    ;
+
+  int j;
+#pragma omp unroll partial
+  for (j = {0}; j < 2; j++)
+    ;
+
+  // expected-error@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
+#pragma omp unroll partial
+  for (int i = {}; i < 2; i++)
+    ;
+
+  // expected-warning@+2 {{too many braces around scalar initializer}}
+#pragma omp unroll partial
+  for (int i = {{0}}; i < 2; i++)
+    ;
+
+#pragma omp unroll partial
+  for (int i = 0; i < 2; i += {1})
+    ;
+
+#pragma omp unroll partial
+  for (int i = 0; i < 2; i -= {-1})
+    ;
+
+  // expected-error@+2 {{increment clause of OpenMP for loop must perform simple addition or subtraction on loop variable 'i'}}
+#pragma omp unroll partial
+  for (int i = 0; i < 2; i += {})
+    ;
+
+#pragma omp unroll partial
+  for (int i = 0; i < 2; i++)
+    ;
+}
+
+template <typename T> void braced_init_templ() {
+#pragma omp unroll partial
+  for (T i = {0}; i < 2; i++)
+    ;
+}
+void braced_init_inst() { braced_init_templ<int>(); }
+}
