@@ -18,6 +18,7 @@ can spell the compiler several ways, so several names lead to the same shim:
 ```text
 cc, clang, c++, clang++  ->  clang
 ld                       ->  ld
+ar                       ->  ar
 ```
 
 It also writes the configuration for the shims into a JSON document and puts
@@ -47,12 +48,12 @@ The shim bodies live in the package, as `clang_ssaf_orchestrator_make.shims`,
 split by what they do:
 
 ```text
-shim.py          the Shim class and its diagnostics
-commands.py      Files, is_object, artifact_of, summary_of,
+shim.py          the Shim class, its diagnostics, the transformation merges
+commands.py      Files, is_object, is_archive, artifact_of, summary_of,
                  filter_build_artifacts, unique
 driver_jobs.py   Job and the -### listing reader
 run.py           run_shim
-clang.py ld.py
+clang.py ld.py ar.py
 ```
 
 Every shim has the same shape, which `run_shim` implements: run the tool the
@@ -96,10 +97,11 @@ run it, and there is no SSAF step for its tool.
 
 ## Recording what the build assembled
 
-`ld` reads its command line for the artifact it produces and the artifacts it
-consumes, and records them in `<output-dir>/build-graph/<path>.buildstep.json`.
-The top-most link unit is found from these records, and they tell an artifact
-the build assembled from one it never touched.
+`ld` and `ar` each read their command line for the artifact it produces and
+the artifacts it consumes, and record them in
+`<output-dir>/build-graph/<path>.buildstep.json`. The top-most link unit is
+found from these records, and they tell an artifact the build assembled from
+one it never touched.
 
 Everything a shim writes is named for a build artifact's path plus a suffix,
 such as `ssaf-artifacts/<path>.summary.json`.
@@ -125,9 +127,29 @@ The kind says what went wrong; the kinds are the values of `SSAFFailureKind`:
 
 ```text
 extract      summary extraction for a compilation
+transform    source-edit generation for a compilation
 link         clang-ssaf-linker over a link's inputs
+archive      the same for an archive
+merge        clang-ssaf-src-edit-merge over a link's or an archive's inputs
+transformation-report
+             clang-ssaf-merge-transformation-report over the same inputs
+conflict-report
+             clang-ssaf-merge-conflict-report over the same inputs and the
+             conflicts of the merge itself
 forward      handing a job to the shim that stands in for its tool
 missing      an artifact with nothing analysed behind it
 driver-jobs  the driver refused to list a command's jobs
 internal     an unhandled exception inside a shim
 ```
+
+## Carrying the link unit name into the second pass
+
+One piece of state flows from the first pass to the second: the top-most link
+unit's own name, which is not an artifact id and is unknown until the first
+pass's linker has written the link unit summary.
+
+The orchestrator reads it from that summary, as the `lu_namespace` component
+whose kind is `LinkUnit`, and puts it in the transformation pass's
+configuration; the clang shim passes it as `--ssaf-link-unit-id=` to every
+source-edit generation. This is why the second pass's configuration file
+cannot be written up front.

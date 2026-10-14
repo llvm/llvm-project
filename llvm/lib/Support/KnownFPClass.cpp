@@ -930,6 +930,12 @@ KnownFPClass KnownFPClass::sinh(const KnownFPClass &KnownSrc) {
   if (KnownSrc.isKnownNever(fcNegative))
     Known.knownNot(fcNegative);
 
+  // A nonzero positive result requires a nonzero positive input.
+  // Zero remains possible: sinh(+/-0.0) = +/-0.0, and flushing a subnormal
+  // may produce +0.0.
+  if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf))
+    Known.knownNot(fcPosSubnormal | fcPosNormal | fcPosInf);
+
   Known.propagateNonNaN(KnownSrc);
 
   return Known;
@@ -1016,9 +1022,19 @@ KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
   // atan is bounded to (-pi/2, pi/2), never Inf. atan(+-Inf) = +-pi/2 (finite).
   Known.knownNot(fcInf);
 
-  // atan is sign-preserving: atan(x) < 0 iff x < 0.
-  if (KnownSrc.isKnownNever(fcNegative))
-    Known.knownNot(fcNegative);
+  // Ruling out Subnormal/Normal from the result requires the
+  // input to never be finite-nonzero and never inf, since
+  // atan(+-inf) = +-pi/2
+  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf))
+    Known.knownNot(fcNegSubnormal | fcNegNormal);
+
+  if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf))
+    Known.knownNot(fcPosSubnormal | fcPosNormal);
+
+  // atan(-0.0) = -0.0. Negative finite inputs may also produce -0.0
+  // if the result rounds to a negative subnormal that is flushed to zero.
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegSubnormal | fcNegZero))
+    Known.knownNot(fcNegZero);
 
   Known.propagateNonNaN(KnownSrc);
 
@@ -1094,7 +1110,7 @@ KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc) {
 }
 
 KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
-                                           bool IsTrunc, bool IsMultiUnitFPType,
+                                           bool MayBeMultiUnitFPType,
                                            DenormalMode Mode) {
   KnownFPClass Known;
 
@@ -1103,9 +1119,8 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
 
   Known.propagateNonNaN(KnownSrc);
 
-  // Pass through infinities, except PPC_FP128 is a special case for
-  // intrinsics other than trunc.
-  if (IsTrunc || !IsMultiUnitFPType) {
+  // Pass through infinities, except PPC_FP128 is a special case for intrinsics.
+  if (!MayBeMultiUnitFPType) {
     if (KnownSrc.isKnownNeverPosInfinity())
       Known.knownNot(fcPosInf);
     if (KnownSrc.isKnownNeverNegInfinity())
@@ -1127,6 +1142,41 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
       (KnownSrc.isKnownNever(fcNegSubnormal) ||
        !Mode.inputsMayBePositiveZero()))
     Known.knownNot(fcPosZero);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::trunc(const KnownFPClass &KnownSrc,
+                                 DenormalMode Mode) {
+  KnownFPClass Known = roundToIntegral(KnownSrc,
+                                       /*MayBeMultiUnitFPType=*/true, Mode);
+
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
+  if (KnownSrc.isKnownNeverNegInfinity())
+    Known.knownNot(fcNegInf);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::floor(const KnownFPClass &KnownSrc,
+                                 bool IsMultiUnitFPType, DenormalMode Mode) {
+  KnownFPClass Known = roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+
+  // Applicable for multi-unit floating point types.
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::ceil(const KnownFPClass &KnownSrc,
+                                bool IsMultiUnitFPType, DenormalMode Mode) {
+  KnownFPClass Known = roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+
+  // Applicable for multi-unit floating point types.
+  if (KnownSrc.isKnownNeverNegInfinity())
+    Known.knownNot(fcNegInf);
 
   return Known;
 }
