@@ -43,15 +43,16 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   switch (VecLib) {
   case VectorLibrary::SLEEFGNUABI:
     setAvailableLibFuncs_sleef(TT, ExceptionModel, FloatABI, ABIName,
-                              TT.getDefaultLongDoubleFormat(), CallingConv::C);
+                               TT.getDefaultLongDoubleFormat(), CallingConv::C);
     break;
   case VectorLibrary::ArmPL:
     setAvailableLibFuncs_armpl(TT, ExceptionModel, FloatABI, ABIName,
-                              TT.getDefaultLongDoubleFormat(), CallingConv::C);
+                               TT.getDefaultLongDoubleFormat(), CallingConv::C);
     break;
   case VectorLibrary::AMDLIBM:
     setAvailableLibFuncs_amdlibm(TT, ExceptionModel, FloatABI, ABIName,
-                                TT.getDefaultLongDoubleFormat(), CallingConv::C);
+                                 TT.getDefaultLongDoubleFormat(),
+                                 CallingConv::C);
     break;
   default:
     break;
