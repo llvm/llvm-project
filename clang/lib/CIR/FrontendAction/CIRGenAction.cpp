@@ -28,18 +28,15 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/Offloading/OffloadWrapper.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Linker/Linker.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IPO/Internalize.h"
 
 using namespace cir;
 using namespace clang;
@@ -83,45 +80,6 @@ static void printCIRModule(mlir::ModuleOp MLIRModule, raw_ostream &OS) {
   mlir::OpPrintingFlags Flags;
   Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
   MLIRModule->print(OS, Flags);
-}
-
-// TODO: share with BackendConsumer::LinkInModules once the rest of the
-// linking logic (not just diagnostics) is unified.
-static bool linkInModules(CompilerInstance &CI, llvm::Module &M,
-                          SmallVectorImpl<::clang::LinkModule> &LinkModules,
-                          BackendDiagnosticConsumer &DiagConsumer) {
-  for (auto &LM : LinkModules) {
-    assert(LM.Module && "LinkModule does not actually have a module");
-
-    if (LM.PropagateAttrs)
-      for (llvm::Function &F : *LM.Module) {
-        if (F.isIntrinsic())
-          continue;
-        clang::CodeGen::mergeDefaultFunctionDefinitionAttributes(
-            F, CI.getCodeGenOpts(), CI.getLangOpts(), CI.getTargetOpts(),
-            LM.Internalize);
-      }
-
-    DiagConsumer.setCurLinkModule(LM.Module.get());
-    bool Err;
-    if (LM.Internalize) {
-      Err = llvm::Linker::linkModules(
-          M, std::move(LM.Module), LM.LinkFlags,
-          [](llvm::Module &M, const llvm::StringSet<> &GVS) {
-            llvm::internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
-              return !GV.hasName() || (GVS.count(GV.getName()) == 0);
-            });
-          });
-    } else {
-      Err = llvm::Linker::linkModules(M, std::move(LM.Module), LM.LinkFlags);
-    }
-
-    if (Err)
-      return true;
-  }
-
-  LinkModules.clear();
-  return false;
 }
 
 // Reads the device binary named by -foffload-include-binary and embeds it
@@ -220,7 +178,8 @@ static void emitCIRModuleOutput(
     if (AddFunctionSourceLocations)
       AddFunctionSourceLocations(*LLVMModule);
 
-    if (linkInModules(CI, *LLVMModule, LinkModules, DiagConsumer))
+    if (linkInModules(*LLVMModule, LinkModules, CGO, CI.getLangOpts(),
+                      CI.getTargetOpts(), DiagConsumer))
       return;
 
     const LangOptions &LangOpts = CI.getLangOpts();
