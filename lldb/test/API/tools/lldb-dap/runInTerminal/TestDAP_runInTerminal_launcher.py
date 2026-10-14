@@ -1,5 +1,5 @@
 """
-Test the lldb-dap runInTerminal launcher flow. 
+Test the lldb-dap runInTerminal launcher flow.
 """
 
 import json
