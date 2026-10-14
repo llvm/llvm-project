@@ -57,6 +57,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 using namespace cir;
 using namespace llvm;
@@ -1363,40 +1364,43 @@ getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
   llvm_unreachable("unknown memory order");
 }
 
-static llvm::StringRef getLLVMSyncScope(cir::SyncScopeKind syncScope,
-                                        mlir::ModuleOp moduleOp) {
+static llvm::AtomicScope getAtomicScope(cir::SyncScopeKind syncScope) {
   switch (syncScope) {
   case cir::SyncScopeKind::SingleThread:
   case cir::SyncScopeKind::HIPSingleThread:
-    return "singlethread";
-  case cir::SyncScopeKind::System:
-  case cir::SyncScopeKind::HIPSystem:
-  case cir::SyncScopeKind::OpenCLAllSVMDevices:
-    return "";
+    return llvm::AtomicScope::Single;
+  case cir::SyncScopeKind::Wavefront:
+  case cir::SyncScopeKind::HIPWavefront:
+  case cir::SyncScopeKind::OpenCLSubGroup:
+    return llvm::AtomicScope::Wavefront;
+  case cir::SyncScopeKind::Workgroup:
+  case cir::SyncScopeKind::HIPWorkgroup:
+  case cir::SyncScopeKind::OpenCLWorkGroup:
+    return llvm::AtomicScope::Workgroup;
+  case cir::SyncScopeKind::Cluster:
+  case cir::SyncScopeKind::HIPCluster:
+    return llvm::AtomicScope::Cluster;
   case cir::SyncScopeKind::Device:
   case cir::SyncScopeKind::HIPAgent:
   case cir::SyncScopeKind::OpenCLDevice:
-    return "agent";
-  case cir::SyncScopeKind::Workgroup:
-  case cir::SyncScopeKind::HIPWorkgroup:
-  case cir::SyncScopeKind::OpenCLWorkGroup: {
-    // NVPTX uses "block" for workgroup sync scope; AMDGPU uses "workgroup".
-    auto tripleAttr = moduleOp->getAttrOfType<mlir::StringAttr>(
-        cir::CIRDialect::getTripleAttrName());
-    if (tripleAttr && llvm::Triple(tripleAttr.getValue()).isNVPTX())
-      return "block";
-    return "workgroup";
-  }
-  case cir::SyncScopeKind::Wavefront:
-  case cir::SyncScopeKind::HIPWavefront:
-    return "wavefront";
-  case cir::SyncScopeKind::Cluster:
-  case cir::SyncScopeKind::HIPCluster:
-    return "cluster";
-  case cir::SyncScopeKind::OpenCLSubGroup:
-    return "sub_group";
+    return llvm::AtomicScope::Device;
+  case cir::SyncScopeKind::System:
+  case cir::SyncScopeKind::HIPSystem:
+  case cir::SyncScopeKind::OpenCLAllSVMDevices:
+    return llvm::AtomicScope::System;
   }
   llvm_unreachable("unknown sync scope");
+}
+
+static llvm::StringRef getLLVMSyncScope(cir::SyncScopeKind syncScope,
+                                        mlir::ModuleOp moduleOp) {
+  llvm::AtomicScope scope = getAtomicScope(syncScope);
+  if (auto triple = moduleOp->getAttrOfType<mlir::StringAttr>(
+          cir::CIRDialect::getTripleAttrName()))
+    if (std::optional<llvm::StringRef> name = llvm::getAtomicScopeIRString(
+            llvm::Triple(triple.getValue()), scope))
+      return *name;
+  return scope == llvm::AtomicScope::Single ? "singlethread" : "";
 }
 
 static std::optional<llvm::StringRef>
@@ -1495,6 +1499,9 @@ mlir::LogicalResult CIRToLLVMAtomicFenceOpLowering::matchAndRewrite(
   auto fence = mlir::LLVM::FenceOp::create(rewriter, op.getLoc(), llvmOrder);
   fence.setSyncscope(getLLVMSyncScope(op.getSyncscope(),
                                       op->getParentOfType<mlir::ModuleOp>()));
+  if (mlir::Attribute mmra =
+          op->getAttr(mlir::LLVM::LLVMDialect::getMmraAttrName()))
+    fence->setAttr(mlir::LLVM::LLVMDialect::getMmraAttrName(), mmra);
 
   rewriter.replaceOp(op, fence);
 
