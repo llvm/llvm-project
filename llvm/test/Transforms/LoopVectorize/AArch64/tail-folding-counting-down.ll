@@ -14,9 +14,7 @@ define void @tail_folding_scalable(ptr %a, ptr noalias %b, ptr noalias %c, i32 %
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[TMP2]])
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP10]], i64 [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP2]], i64 [[TMP4]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

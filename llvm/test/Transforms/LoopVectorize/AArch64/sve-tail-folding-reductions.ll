@@ -15,9 +15,7 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP6]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
@@ -46,9 +44,7 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-IN-LOOP-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-IN-LOOP-NEXT:    [[TMP3:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-IN-LOOP-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; CHECK-IN-LOOP-NEXT:    [[TMP7:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
+; CHECK-IN-LOOP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP6]])
 ; CHECK-IN-LOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-IN-LOOP:       vector.body:
 ; CHECK-IN-LOOP-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
@@ -95,9 +91,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP6]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
@@ -125,9 +119,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-IN-LOOP-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-IN-LOOP-NEXT:    [[TMP3:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-IN-LOOP-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; CHECK-IN-LOOP-NEXT:    [[TMP7:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
+; CHECK-IN-LOOP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP6]])
 ; CHECK-IN-LOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-IN-LOOP:       vector.body:
 ; CHECK-IN-LOOP-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
@@ -172,9 +164,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[TMP6]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP6]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -206,9 +196,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-IN-LOOP-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N:%.*]])
-; CHECK-IN-LOOP-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[TMP6]]
-; CHECK-IN-LOOP-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N]], [[TMP6]]
-; CHECK-IN-LOOP-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 [[TMP2]], i64 0
+; CHECK-IN-LOOP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP6]])
 ; CHECK-IN-LOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-IN-LOOP:       vector.body:
 ; CHECK-IN-LOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

@@ -12,9 +12,7 @@ define i32 @partial_reduce_dotprod(ptr %a, ptr %b, ptr %c, ptr %d, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP11]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -71,9 +69,7 @@ define i32 @chained_partial_reduce_dotprod(ptr %a, ptr %b, ptr %c, ptr %d, i64 %
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
-; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i64 [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -149,9 +145,7 @@ define i32 @chained_reduce_iv_derived_first_link(ptr %c, ptr %d, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
-; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i64 [[TMP16]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.stepvector.nxv16i8()
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP3]], i64 0

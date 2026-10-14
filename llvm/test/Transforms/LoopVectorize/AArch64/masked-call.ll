@@ -976,9 +976,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE:       [[VECTOR_PH]]:
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = icmp ult i64 0, [[TMP0]]
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = icmp ult i64 1, [[TMP0]]
-; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP0]], 2
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[TMP0]], 2
-; TFA_INTERLEAVE-NEXT:    [[TMP7:%.*]] = select i1 [[TMP4]], i64 [[TMP6]], i64 0
+; TFA_INTERLEAVE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 2)
 ; TFA_INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFA_INTERLEAVE:       [[VECTOR_BODY]]:
 ; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT1:%.*]], %[[PRED_STORE_CONTINUE4:.*]] ]

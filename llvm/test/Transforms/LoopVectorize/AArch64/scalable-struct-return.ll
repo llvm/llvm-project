@@ -14,9 +14,7 @@ define void @struct_return_f32_widen(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 1024)
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 1024, [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 1024, [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP6]], i64 [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 1024, i64 [[TMP3]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -71,9 +69,7 @@ define void @struct_return_f64_widen(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1024)
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 1024, [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 1024, [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP6]], i64 [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 1024, i64 [[TMP3]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -146,9 +142,7 @@ define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, pt
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 1024)
-; CHECK-NEXT:    [[TMP24:%.*]] = sub i64 1024, [[TMP11]]
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp ugt i64 1024, [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP25]], i64 [[TMP24]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.usub.sat.i64(i64 1024, i64 [[TMP11]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

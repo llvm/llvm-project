@@ -18,9 +18,7 @@ define void @wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4:       vector.ph:
 ; CHECK-UF4-NEXT:    [[TMP2:%.*]] = icmp ult i32 0, [[N]]
 ; CHECK-UF4-NEXT:    [[TMP3:%.*]] = icmp ult i32 1, [[N]]
-; CHECK-UF4-NEXT:    [[TMP14:%.*]] = sub i32 [[N]], 2
-; CHECK-UF4-NEXT:    [[TMP18:%.*]] = icmp ugt i32 [[N]], 2
-; CHECK-UF4-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP14]], i32 0
+; CHECK-UF4-NEXT:    [[TMP19:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 2)
 ; CHECK-UF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UF4:       vector.body:
 ; CHECK-UF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE5:%.*]] ]

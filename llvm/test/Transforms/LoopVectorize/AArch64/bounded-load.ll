@@ -638,9 +638,7 @@ define i32 @bounded_load_bound64_tail_folded(ptr %A, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[N]], [[TMP3]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i64 [[N]], [[TMP3]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP11]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP3]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

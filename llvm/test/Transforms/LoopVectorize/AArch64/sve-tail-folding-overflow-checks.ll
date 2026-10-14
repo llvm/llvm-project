@@ -76,9 +76,7 @@ define void @can_overflow_i64_induction_var(ptr noalias %dst, ptr readonly %src,
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP7]], i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

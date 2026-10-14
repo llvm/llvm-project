@@ -569,9 +569,7 @@ define void @simple_histogram_tailfold(ptr noalias %buckets, ptr readonly %indic
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i64 [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

@@ -13,9 +13,7 @@ define void @fixed_wide_active_lane_mask(ptr noalias %dst, ptr noalias readonly 
 ; CHECK-UF1-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-UF1:       vector.ph:
 ; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[N]])
-; CHECK-UF1-NEXT:    [[TMP0:%.*]] = sub i64 [[N]], 4
-; CHECK-UF1-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[N]], 4
-; CHECK-UF1-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 [[TMP0]], i64 0
+; CHECK-UF1-NEXT:    [[TMP2:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 4)
 ; CHECK-UF1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UF1:       vector.body:
 ; CHECK-UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -42,9 +40,7 @@ define void @fixed_wide_active_lane_mask(ptr noalias %dst, ptr noalias readonly 
 ; CHECK-UF4-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 4)
 ; CHECK-UF4-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 8)
 ; CHECK-UF4-NEXT:    [[TMP4:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 12)
-; CHECK-UF4-NEXT:    [[TMP0:%.*]] = sub i64 [[N]], 16
-; CHECK-UF4-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[N]], 16
-; CHECK-UF4-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i64 [[TMP0]], i64 0
+; CHECK-UF4-NEXT:    [[TMP6:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 16)
 ; CHECK-UF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UF4:       vector.body:
 ; CHECK-UF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -104,9 +100,7 @@ define void @fixed_wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF1-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-UF1:       vector.ph:
 ; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 [[N]])
-; CHECK-UF1-NEXT:    [[TMP7:%.*]] = sub i32 [[N]], 4
-; CHECK-UF1-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[N]], 4
-; CHECK-UF1-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 [[TMP7]], i32 0
+; CHECK-UF1-NEXT:    [[TMP9:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 4)
 ; CHECK-UF1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UF1:       vector.body:
 ; CHECK-UF1-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -140,9 +134,7 @@ define void @fixed_wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 4)
 ; CHECK-UF4-NEXT:    [[TMP4:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 8)
 ; CHECK-UF4-NEXT:    [[TMP5:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 12)
-; CHECK-UF4-NEXT:    [[TMP24:%.*]] = sub i32 [[N]], 16
-; CHECK-UF4-NEXT:    [[TMP25:%.*]] = icmp ugt i32 [[N]], 16
-; CHECK-UF4-NEXT:    [[TMP26:%.*]] = select i1 [[TMP25]], i32 [[TMP24]], i32 0
+; CHECK-UF4-NEXT:    [[TMP26:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 16)
 ; CHECK-UF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UF4:       vector.body:
 ; CHECK-UF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

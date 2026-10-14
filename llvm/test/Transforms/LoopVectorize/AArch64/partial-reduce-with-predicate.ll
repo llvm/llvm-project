@@ -55,9 +55,7 @@ define i32 @pred_reduction(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TAILFOLD-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
-; CHECK-TAILFOLD-NEXT:    [[TMP11:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP12:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP11]], i64 0
+; CHECK-TAILFOLD-NEXT:    [[TMP13:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -162,9 +160,7 @@ define i32 @pred_reduction_sext(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TAILFOLD-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
-; CHECK-TAILFOLD-NEXT:    [[TMP11:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP12:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP11]], i64 0
+; CHECK-TAILFOLD-NEXT:    [[TMP13:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -277,9 +273,7 @@ define i32 @pred_reduction_dotprod(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TAILFOLD-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
-; CHECK-TAILFOLD-NEXT:    [[TMP14:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP15:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 [[TMP14]], i64 0
+; CHECK-TAILFOLD-NEXT:    [[TMP16:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -401,9 +395,7 @@ define i32 @pred_sub_reduction(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TAILFOLD-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
-; CHECK-TAILFOLD-NEXT:    [[TMP15:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP16:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i64 [[TMP15]], i64 0
+; CHECK-TAILFOLD-NEXT:    [[TMP17:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -525,9 +517,7 @@ define i32 @chained_pred_reduction(ptr %src, ptr noalias %src_b, ptr %cond, i64 
 ; CHECK-TAILFOLD-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TAILFOLD-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
-; CHECK-TAILFOLD-NEXT:    [[TMP14:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP15:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 [[TMP14]], i64 0
+; CHECK-TAILFOLD-NEXT:    [[TMP16:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -649,9 +639,7 @@ define i32 @reduction_before_pred(ptr %src, ptr noalias %src_b, ptr %cond, i64 %
 ; CHECK-TAILFOLD-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TAILFOLD-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
-; CHECK-TAILFOLD-NEXT:    [[TMP14:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP15:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 [[TMP14]], i64 0
+; CHECK-TAILFOLD-NEXT:    [[TMP16:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -773,9 +761,7 @@ define i32 @pred_reduction_incoming_1(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TAILFOLD-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
-; CHECK-TAILFOLD-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; CHECK-TAILFOLD-NEXT:    [[TMP7:%.*]] = select i1 [[TMP3]], i64 [[TMP2]], i64 0
+; CHECK-TAILFOLD-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

@@ -12,9 +12,7 @@ define void @tf_ctlz_range(ptr %p, i32 %n) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 [[N]])
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 [[N]], 4
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[N]], 4
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 4)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -72,9 +70,7 @@ define void @tf_minnum_noundef(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 [[N]])
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[N]], 4
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[N]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 4)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
