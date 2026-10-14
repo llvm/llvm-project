@@ -1298,6 +1298,40 @@ TEST_F(ExtractFunctionTest, CXXRejectSingleDimensionVariableLengthArray) {
             "fail: Too complex to extract.");
 }
 
+TEST_F(ExtractFunctionTest, CXXRejectPointerToVariableLengthArray) {
+  // A pointer to a VLA (`int (*)[N]`) isn't an array type itself, so
+  // the array-specific VLA checks above don't apply to it -- but it
+  // has the exact same hazard: its pointee's bound is baked into the
+  // type regardless of how the pointer itself ends up passed (by
+  // value, by reference, or, in C, by a further pointer indirection),
+  // so it can't be printed without mentioning a name that isn't in
+  // scope.
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int (*A)[N];
+         [[(*A)[0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectMutatedPointerToVariableLengthArray) {
+  // Same hazard as above, but in C, and with the pointer additionally
+  // mutated (so it would otherwise go through the C pointer-adapter
+  // path instead of being passed by value): the bound is baked into
+  // the pointee type regardless, so `int (**A)[N]` is just as broken
+  // as the unmutated `int (*A)[N]` would have been.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int (*A)[N];
+         A = 0;
+         [[(*A)[0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

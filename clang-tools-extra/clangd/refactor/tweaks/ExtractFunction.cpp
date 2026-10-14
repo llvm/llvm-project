@@ -1181,6 +1181,19 @@ bool createParameters(NewFunction &ExtractedFunc,
     // Parameter qualifiers are same as the Decl's qualifiers.
     QualType FullTypeInfo = VD->getType();
     QualType TypeInfo = FullTypeInfo.getNonReferenceType();
+
+    // A variably-modified type that isn't itself a plain array (e.g. a
+    // pointer to a VLA, `int (*)[N]`) has no path below that handles it
+    // safely: its bound is baked into the type at every level, so it
+    // keeps mentioning `N` whether passed by value, by reference, or
+    // (in C) by pointer -- const-qualifying or wrapping it in another
+    // pointer/reference doesn't remove the bound from the type the way
+    // decaying an array's own outer dimension does. A plain array gets
+    // a narrower, more precise check further down instead, since its
+    // outer dimension specifically isn't a problem once decayed.
+    if (TypeInfo->isVariablyModifiedType() && !TypeInfo->isArrayType())
+      return false;
+
     // FIXME: check if parameter will be a non l-value reference.
     ParamPassKind Kind = ParamPassKind::Reference;
     if (!DeclInfo.IsPossiblyMutated) {
