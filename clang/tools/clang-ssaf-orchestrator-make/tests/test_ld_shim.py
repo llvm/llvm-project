@@ -11,6 +11,7 @@ from clang_ssaf_orchestrator_make import utils
 from clang_ssaf_orchestrator_make.shims import ld
 from clang_ssaf_orchestrator_make import ssaf_artifact_repository as repository
 from clang_ssaf_orchestrator_make import build_graph
+from clang_ssaf_orchestrator_make.failure_logs import SSAFFailureKind
 
 from . import configs
 
@@ -149,9 +150,89 @@ class SsafStep(unittest.TestCase):
     def test_in_the_transformation_pass_the_edits_are_merged_instead(self):
         shim = self._run(["build/a.o"], configs.transformation_config())
         self.assertEqual(
-            ["no edits feed %s, nothing to merge" % self._id("build/prg").get_path()],
+            [
+                "no %s feed %s, nothing to merge"
+                % (what, self._id("build/prg").get_path())
+                for what in ("edits", "transformation reports", "conflict reports")
+            ],
             self.notes,
         )
+
+    def _artifact(self, relative, ssaf_artifact_kind):
+        path = utils.make_parents(
+            self.ssaf_artifact_repo.get_path_for_artifact(
+                repository.get_ssaf_artifact_id(self._id(relative), ssaf_artifact_kind)
+            )
+        )
+        open(path, "w").close()
+        return path
+
+    def test_the_reports_follow_the_edits_into_the_link(self):
+        a_edits = self._artifact("build/a.o", repository.SSAFArtifactKind.EDITS)
+        a_report = self._artifact("build/a.o", repository.SSAFArtifactKind.REPORT)
+        x_edits = self._artifact("build/libx.a", repository.SSAFArtifactKind.EDITS)
+        x_report = self._artifact("build/libx.a", repository.SSAFArtifactKind.REPORT)
+        x_conflicts = self._artifact(
+            "build/libx.a", repository.SSAFArtifactKind.CONFLICT_REPORT
+        )
+        own_conflicts = self._artifact(
+            "build/prg", repository.SSAFArtifactKind.CONFLICTS
+        )
+        shim = self._run(["build/a.o", "build/libx.a"], configs.transformation_config())
+        prg = self._id("build/prg")
+        self.assertEqual(
+            [
+                (SSAFFailureKind.MERGE, prg),
+                (SSAFFailureKind.TRANSFORMATION_REPORT, prg),
+                (SSAFFailureKind.CONFLICT_REPORT, prg),
+            ],
+            [failure for failure, _ in shim.commands],
+        )
+        _, edits = shim.commands[0]
+        _, report = shim.commands[1]
+        _, conflicts = shim.commands[2]
+        self.assertEqual(
+            ["/bin/clang-ssaf-src-edit-merge", a_edits, x_edits], edits[:3]
+        )
+        self.assertEqual(
+            [
+                "/bin/clang-ssaf-merge-transformation-report",
+                a_report,
+                x_report,
+                "-o",
+                self.ssaf_artifact_repo.get_path_for_artifact(
+                    repository.get_ssaf_artifact_id(
+                        prg, repository.SSAFArtifactKind.REPORT
+                    )
+                ),
+            ],
+            report,
+        )
+        self.assertEqual(
+            [
+                "/bin/clang-ssaf-merge-conflict-report",
+                x_conflicts,
+                own_conflicts,
+                "-o",
+                self.ssaf_artifact_repo.get_path_for_artifact(
+                    repository.get_ssaf_artifact_id(
+                        prg, repository.SSAFArtifactKind.CONFLICT_REPORT
+                    )
+                ),
+            ],
+            conflicts,
+        )
+
+    def test_a_report_is_merged_even_where_no_edits_are(self):
+        self._summary("build/a.o")
+        a_report = self._artifact("build/a.o", repository.SSAFArtifactKind.REPORT)
+        shim = self._run(["build/a.o"], configs.transformation_config())
+        self.assertEqual(
+            [(SSAFFailureKind.TRANSFORMATION_REPORT, self._id("build/prg"))],
+            [failure for failure, _ in shim.commands],
+        )
+        _, report = shim.commands[0]
+        self.assertEqual(a_report, report[1])
 
 
 if __name__ == "__main__":
