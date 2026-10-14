@@ -7,22 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
+#include "../VectorizeOptions.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/SandboxIR/Instruction.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 
 namespace llvm::sandboxir {
-
-static cl::opt<unsigned> MaxUsersToConsider(
-    "sbvec-max-users-to-consider", cl::init(16), cl::Hidden,
-    cl::desc("Limit the number of a seed's users that getNextUserBundles() "
-             "will examine as candidates for a matching bundle, to cap "
-             "compilation time."));
 
 static SmallVector<unsigned, 2> getOperandIndicesInUser(User *U, Value *Op) {
   SmallVector<unsigned, 2> OpIdxVec;
@@ -80,7 +74,8 @@ VecUtils::getNextUserBundles(ArrayRef<Value *> Bndl, const InstrMaps &IMaps,
   // since each one may trigger an O(Bndl.size()) search across the other
   // lanes' users.
   for (User *U0 : V0->users()) {
-    if (SeenUsers.size() >= MaxUsersToConsider)
+    if (SeenUsers.size() >=
+        VectorizeOptions::Global.sbvec_max_users_to_consider)
       break;
     if (!SeenUsers.insert(U0).second)
       continue;

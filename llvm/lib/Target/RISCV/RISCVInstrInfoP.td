@@ -2002,7 +2002,7 @@ def shiftMask64 : ComplexPattern<XLenVT, 1, "selectShiftMask<64>", [], [], 0>;
 
 // Build a GPRPair from two GPR registers for narrowing shift instructions.
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
-  (REG_SEQUENCE GPRPair, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
+  (REG_SEQUENCE GPRPairNoX0, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
 
 def SDT_RISCVPPair : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSameAs<0, 1>,
