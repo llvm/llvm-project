@@ -3282,6 +3282,13 @@ TEST_CONSTEXPR_CXX26 void format_tests_constexpr(TestFunction check, ExceptionTe
   format_test_unsigned_integer<CharT>(check, check_exception);
   format_test_char<CharT>(check, check_exception);
   format_test_char_as_integer<CharT>(check, check_exception);
+
+  // *** Storing a non-constexpr-formattable argument is constexpr. ***
+  check(SV("42"), SV("{}"), 42, 3.0);
+  check(SV("42"), SV("{}"), 42, nullptr);
+
+  // *** No arguments. ***
+  check(SV("hello"), SV("hello"));
 }
 
 #endif // TEST_STD_UTILITIES_FORMAT_FORMAT_FUNCTIONS_FORMAT_TESTS_H
