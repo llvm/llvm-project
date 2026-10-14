@@ -11152,6 +11152,14 @@ def warn_lifetime_safety_noescape_escapes
       InGroup<LifetimeSafetyNoescape>,
       DefaultIgnore;
 
+def warn_lifetime_safety_field_origin_escape
+    : Warning<"return value depends on the object referenced by %0, not on '*this'">,
+      InGroup<LifetimeSafetyFieldOriginEscape>,
+      DefaultIgnore;
+
+def note_lifetime_safety_owned_field_suggestion
+    : Note<"if %0 is owned by the class, mark the method [[clang::lifetimebound]]">;
+
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
 // Array comparisons have similar warnings
