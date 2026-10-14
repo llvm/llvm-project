@@ -2504,6 +2504,21 @@ def int_masked_srem:
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrNoMem]>;
 
+// Signed/unsigned division and remainder that return poison for the operands
+// for which the corresponding instruction has undefined behavior.
+def int_sdiv_poison : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                             [LLVMMatchType<0>, LLVMMatchType<0>],
+                             [IntrNoMem, IntrSpeculatable]>;
+def int_udiv_poison : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                             [LLVMMatchType<0>, LLVMMatchType<0>],
+                             [IntrNoMem, IntrSpeculatable]>;
+def int_srem_poison : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                             [LLVMMatchType<0>, LLVMMatchType<0>],
+                             [IntrNoMem, IntrSpeculatable]>;
+def int_urem_poison : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                             [LLVMMatchType<0>, LLVMMatchType<0>],
+                             [IntrNoMem, IntrSpeculatable]>;
+
 // Speculatively load a value from memory.
 def int_speculative_load:
   DefaultAttrsIntrinsic<[llvm_any_ty],
