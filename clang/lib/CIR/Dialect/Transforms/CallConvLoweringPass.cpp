@@ -204,7 +204,7 @@ static uint64_t getDataExtentInBytes(mlir::Type ty, const DataLayout &dl) {
     if (!arrTy.getSize())
       return 0;
     mlir::Type elemTy = arrTy.getElementType();
-    return (arrTy.getSize() - 1) * dl.getTypeSize(elemTy).getFixedValue() +
+    return (arrTy.getSize() - 1) * dl.getTypeAllocSize(elemTy).getFixedValue() +
            getDataExtentInBytes(elemTy, dl);
   }
   return dl.getTypeSize(ty).getFixedValue();
