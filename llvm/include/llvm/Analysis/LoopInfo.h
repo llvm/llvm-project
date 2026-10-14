@@ -33,9 +33,7 @@ class ScalarEvolution;
 class raw_ostream;
 
 // Implementation in Support/GenericLoopInfoImpl.h
-LLVM_SUPPRESS_MSVC_EXPORTED_BASE_INSTANTIATION_PUSH
 extern template class LLVM_TEMPLATE_ABI LoopBase<BasicBlock, Loop>;
-LLVM_SUPPRESS_MSVC_EXPORTED_BASE_INSTANTIATION_POP
 
 /// Represents a single loop in the control flow graph.  Note that not all SCCs
 /// in the CFG are necessarily loops.
