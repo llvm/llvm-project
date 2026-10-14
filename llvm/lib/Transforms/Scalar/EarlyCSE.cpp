@@ -339,8 +339,6 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
              GCR1->getBasePtr() == GCR2->getBasePtr() &&
              GCR1->getDerivedPtr() == GCR2->getDerivedPtr();
 
-  // Min/max can occur with commuted operands, non-canonical predicates,
-  // and/or non-canonical operands.
   // Selects can be non-trivially equivalent via inverted conditions and swaps.
   Value *CondL, *CondR, *LHSA, *RHSA, *LHSB, *RHSB;
   if (matchSelectWithOptionalNotCond(LHSI, CondL, LHSA, LHSB) &&
@@ -357,16 +355,6 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
     // inverse, because we looked through a 'not' in the matching function and
     // swapped A/B:
     // select (cmp Pred, X, Y), A, B <--> select (not (cmp InvPred, X, Y)), B, A
-    //
-    // This intentionally does NOT handle patterns with a double-negation in
-    // the sense of not + not, because doing so could result in values
-    // comparing
-    // as equal that hash differently in the min/max cases like:
-    // select (cmp slt, X, Y), X, Y <--> select (not (not (cmp slt, X, Y))), X, Y
-    //   ^ hashes as min                  ^ would not hash as min
-    // In the context of the EarlyCSE pass, however, such cases never reach
-    // this code, as we simplify the double-negation before hashing the second
-    // select (and so still succeed at CSEing them).
     if (LHSA == RHSB && LHSB == RHSA) {
       CmpPredicate PredL, PredR;
       Value *X, *Y;
