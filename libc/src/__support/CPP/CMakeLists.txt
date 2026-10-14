@@ -57,6 +57,14 @@ add_header_library(
 )
 
 add_header_library(
+  memory
+  HDRS
+    memory.h
+  DEPENDS
+    libc.src.__support.common
+)
+
+add_header_library(
   mutex
   HDRS
     mutex.h
