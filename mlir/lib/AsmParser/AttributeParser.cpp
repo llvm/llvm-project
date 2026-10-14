@@ -647,7 +647,7 @@ TensorLiteralParser::getIntAttrElements(SMLoc loc, Type eltTy,
 
     if (token.is(Token::string)) {
       return p.emitError(tokenLoc)
-            << "expected integer elements, but parsed string";
+             << "expected integer elements, but parsed string";
     }
     assert(token.isAny(Token::integer, Token::kw_true, Token::kw_false) &&
            "unexpected token type");
