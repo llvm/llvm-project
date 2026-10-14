@@ -77,6 +77,38 @@ define i1 @unsigned_float_inexact(i25 %a, i25 %b) {
   ret i1 %cmp
 }
 
+define i1 @unsigned_masked_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: define i1 @unsigned_masked_i32(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[AA:%.*]] = and i32 [[A]], 16777215
+; CHECK-NEXT:    [[BB:%.*]] = and i32 [[B]], 16777215
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[AA]], [[BB]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %aa = and i32 %a, 16777215
+  %bb = and i32 %b, 16777215
+  %fa = uitofp i32 %aa to float
+  %fb = uitofp i32 %bb to float
+  %cmp = fcmp olt float %fa, %fb
+  ret i1 %cmp
+}
+
+define i1 @unsigned_shifted_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: define i1 @unsigned_shifted_i32(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP_UNSHIFTED:%.*]] = xor i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP_MASK:%.*]] = and i32 [[CMP_UNSHIFTED]], 16777215
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_MASK]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %aa = shl i32 %a, 8
+  %bb = shl i32 %b, 8
+  %fa = uitofp i32 %aa to float
+  %fb = uitofp i32 %bb to float
+  %cmp = fcmp oeq float %fa, %fb
+  ret i1 %cmp
+}
+
 define i1 @signed_float_exact_boundary(i25 %a, i25 %b) {
 ; CHECK-LABEL: define i1 @signed_float_exact_boundary(
 ; CHECK-SAME: i25 [[A:%.*]], i25 [[B:%.*]]) {

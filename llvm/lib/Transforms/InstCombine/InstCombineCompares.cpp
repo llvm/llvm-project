@@ -8424,13 +8424,16 @@ Instruction *InstCombinerImpl::foldFCmpIntToFP(FCmpInst &I) {
 
   const unsigned IntWidth = std::max(A->getType()->getScalarSizeInBits(),
                                      B->getType()->getScalarSizeInBits());
-  const int MantissaWidth = I.getOperand(0)->getType()->getFPMantissaWidth();
+  Type *FPTy = I.getOperand(0)->getType();
+  const int MantissaWidth = FPTy->getFPMantissaWidth();
   if (MantissaWidth == -1)
     return nullptr;
 
   // Signed N-bit integers need N-1 significand bits: the minimum value is a
   // power of two, and every other value has at most N-1 magnitude bits.
-  if (IntWidth > unsigned(MantissaWidth) + IsSigned)
+  if (IntWidth > unsigned(MantissaWidth) + IsSigned &&
+      (!canBeCastedExactlyIntToFP(A, FPTy, IsSigned, &I) ||
+       !canBeCastedExactlyIntToFP(B, FPTy, IsSigned, &I)))
     return nullptr;
 
   ICmpInst::Predicate Pred;
