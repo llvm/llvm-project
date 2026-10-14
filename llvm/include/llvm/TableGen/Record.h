@@ -2293,22 +2293,16 @@ public:
     clearCachedResults();
   }
 
-  /// Return the cached result of resolving \p I, or nullptr.
-  virtual const Init *getCachedResult(const Init *I) { return nullptr; }
+  /// Return the cached result of resolving \p I, or nullptr. \p FoundUnresolved
+  /// is set if the result has unresolved references.
+  virtual const Init *getCachedResult(const Init *I,
+                                      bool &FoundUnresolved) const {
+    return nullptr;
+  }
 
   /// Cache the result of resolving \p I.
   virtual void cacheResult(const Init *I, const Init *Result,
                            bool FoundUnresolved) {}
-
-  /// Cache lookup for TrackUnresolvedResolvers wrapping this resolver.
-  virtual const Init *getCachedTrackedResult(const Init *I,
-                                             bool &FoundUnresolved) const {
-    return nullptr;
-  }
-
-  /// Cache insertion for TrackUnresolvedResolvers wrapping this resolver.
-  virtual void cacheTrackedResult(const Init *I, const Init *Result,
-                                  bool FoundUnresolved) {}
 
   /// Called when a cached result has unresolved references.
   virtual void noteUnresolved() {}
@@ -2328,8 +2322,7 @@ class MapResolver final : public Resolver {
   };
 
   DenseMap<const Init *, MappedValue> Map;
-  DenseMap<const Init *, const Init *> ResultCache;
-  DenseMap<const Init *, std::pair<const Init *, bool>> TrackedResultCache;
+  DenseMap<const Init *, std::pair<const Init *, bool>> ResultCache;
   // Number of mapped values being resolved. Each is removed from Map while it
   // is resolved to prevent infinite recursion, so results computed meanwhile
   // may be incomplete and are not cached.
@@ -2351,43 +2344,29 @@ public:
 
   const Init *resolve(const Init *VarName) override;
 
-  const Init *getCachedResult(const Init *I) override {
-    return NumInProgress ? nullptr : ResultCache.lookup(I);
+  const Init *getCachedResult(const Init *I,
+                              bool &FoundUnresolved) const override {
+    if (NumInProgress)
+      return nullptr;
+    auto [Result, Unresolved] = ResultCache.lookup(I);
+    FoundUnresolved = Unresolved;
+    return Result;
   }
 
   void cacheResult(const Init *I, const Init *Result,
                    bool FoundUnresolved) override {
     if (!NumInProgress)
-      ResultCache[I] = Result;
-  }
-
-  const Init *getCachedTrackedResult(const Init *I,
-                                     bool &FoundUnresolved) const override {
-    if (NumInProgress)
-      return nullptr;
-    auto [Result, Unresolved] = TrackedResultCache.lookup(I);
-    FoundUnresolved = Unresolved;
-    return Result;
-  }
-
-  void cacheTrackedResult(const Init *I, const Init *Result,
-                          bool FoundUnresolved) override {
-    if (!NumInProgress)
-      TrackedResultCache[I] = {Result, FoundUnresolved};
+      ResultCache[I] = {Result, FoundUnresolved};
   }
 
 protected:
-  void clearCachedResults() override {
-    ResultCache.clear();
-    TrackedResultCache.clear();
-  }
+  void clearCachedResults() override { ResultCache.clear(); }
 };
 
 /// Resolve all variables from a record except for unset variables.
 class RecordResolver final : public Resolver {
   DenseMap<const Init *, const Init *> Cache;
-  DenseMap<const Init *, const Init *> ResultCache;
-  DenseMap<const Init *, std::pair<const Init *, bool>> TrackedResultCache;
+  DenseMap<const Init *, std::pair<const Init *, bool>> ResultCache;
   SmallVector<const Init *, 4> Stack;
   const Init *Name = nullptr;
 
@@ -2405,36 +2384,23 @@ public:
 
   // Variables on the stack resolve to nullptr to prevent infinite recursion,
   // so results computed meanwhile may be incomplete and are not cached.
-  const Init *getCachedResult(const Init *I) override {
-    return Stack.empty() ? ResultCache.lookup(I) : nullptr;
+  const Init *getCachedResult(const Init *I,
+                              bool &FoundUnresolved) const override {
+    if (!Stack.empty())
+      return nullptr;
+    auto [Result, Unresolved] = ResultCache.lookup(I);
+    FoundUnresolved = Unresolved;
+    return Result;
   }
 
   void cacheResult(const Init *I, const Init *Result,
                    bool FoundUnresolved) override {
     if (Stack.empty())
-      ResultCache[I] = Result;
-  }
-
-  const Init *getCachedTrackedResult(const Init *I,
-                                     bool &FoundUnresolved) const override {
-    if (!Stack.empty())
-      return nullptr;
-    auto [Result, Unresolved] = TrackedResultCache.lookup(I);
-    FoundUnresolved = Unresolved;
-    return Result;
-  }
-
-  void cacheTrackedResult(const Init *I, const Init *Result,
-                          bool FoundUnresolved) override {
-    if (Stack.empty())
-      TrackedResultCache[I] = {Result, FoundUnresolved};
+      ResultCache[I] = {Result, FoundUnresolved};
   }
 
 protected:
-  void clearCachedResults() override {
-    ResultCache.clear();
-    TrackedResultCache.clear();
-  }
+  void clearCachedResults() override { ResultCache.clear(); }
 };
 
 /// Delegate resolving to a sub-resolver, but shadow some variable names.
@@ -2472,28 +2438,14 @@ public:
   const Init *resolve(const Init *VarName) override;
 
   // Tracking doesn't change results, so share the underlying resolver's cache.
-  const Init *getCachedResult(const Init *I) override {
-    bool Unresolved = false;
-    const Init *Result = getCachedTrackedResult(I, Unresolved);
-    if (Result && Unresolved)
-      noteUnresolved();
-    return Result;
+  const Init *getCachedResult(const Init *I, bool &Unresolved) const override {
+    return R ? R->getCachedResult(I, Unresolved) : nullptr;
   }
 
   void cacheResult(const Init *I, const Init *Result,
-                   bool FoundUnresolved) override {
-    cacheTrackedResult(I, Result, FoundUnresolved);
-  }
-
-  const Init *getCachedTrackedResult(const Init *I,
-                                     bool &FoundUnresolved) const override {
-    return R ? R->getCachedTrackedResult(I, FoundUnresolved) : nullptr;
-  }
-
-  void cacheTrackedResult(const Init *I, const Init *Result,
-                          bool FoundUnresolved) override {
+                   bool Unresolved) override {
     if (R)
-      R->cacheTrackedResult(I, Result, FoundUnresolved);
+      R->cacheResult(I, Result, Unresolved);
   }
 
   void noteUnresolved() override {

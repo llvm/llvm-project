@@ -2422,8 +2422,12 @@ const DefInit *VarDefInit::instantiate() {
 }
 
 const Init *VarDefInit::resolveReferences(Resolver &R) const {
-  if (const Init *Cached = R.getCachedResult(this))
+  bool CachedUnresolved = false;
+  if (const Init *Cached = R.getCachedResult(this, CachedUnresolved)) {
+    if (CachedUnresolved)
+      R.noteUnresolved();
     return Cached;
+  }
 
   TrackUnresolvedResolver UR(&R);
   bool Changed = false;
