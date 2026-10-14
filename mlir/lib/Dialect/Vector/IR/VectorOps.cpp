@@ -8685,6 +8685,60 @@ std::optional<SmallVector<int64_t, 4>> DeinterleaveOp::getShapeForUnroll() {
 }
 
 //===----------------------------------------------------------------------===//
+// PrintOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult
+parsePrintBody(OpAsmParser &parser,
+               std::optional<OpAsmParser::UnresolvedOperand> &source,
+               Type &sourceType, StringAttr &stringLiteral,
+               PrintPunctuationAttr &punctuation) {
+  OpAsmParser::UnresolvedOperand operand;
+  if (auto parseResult = parser.parseOptionalOperand(operand);
+      parseResult.has_value()) {
+    if (failed(*parseResult) || parser.parseColonType(sourceType))
+      return failure();
+    source = operand;
+  }
+  while (true) {
+    if (succeeded(parser.parseOptionalKeyword("str"))) {
+      if (stringLiteral)
+        return parser.emitError(parser.getNameLoc(), "duplicate `str` clause");
+      if (parser.parseCustomAttributeWithFallback(stringLiteral))
+        return failure();
+    } else if (succeeded(parser.parseOptionalKeyword("punctuation"))) {
+      if (punctuation)
+        return parser.emitError(parser.getNameLoc(),
+                                "duplicate `punctuation` clause");
+      if (parser.parseCustomAttributeWithFallback(punctuation))
+        return failure();
+    } else {
+      return success();
+    }
+  }
+}
+
+static void printPrintBody(OpAsmPrinter &printer, Operation *, Value source,
+                           Type sourceType, StringAttr stringLiteral,
+                           PrintPunctuationAttr punctuation) {
+  if (source)
+    printer << source << " : " << sourceType;
+  if (stringLiteral) {
+    if (source)
+      printer << ' ';
+    printer << "str ";
+    printer.printStrippedAttrOrType(stringLiteral);
+  }
+  if (punctuation && (punctuation.getValue() != PrintPunctuation::NewLine ||
+                      (!source && !stringLiteral))) {
+    if (source || stringLiteral)
+      printer << ' ';
+    printer << "punctuation ";
+    printer.printStrippedAttrOrType(punctuation);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
