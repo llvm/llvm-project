@@ -368,7 +368,7 @@ CIRGenAction::CIRGenAction(OutputType Act, mlir::MLIRContext *MLIRCtx)
 CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
 
 bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
-  cantFail(Ctx->getLibraryOptions().set(CI.getLibraryOptions().args()));
+  cantFail(Ctx->getLibraryOptions().assign(CI.getLibraryOptions().args()));
   if (clang::loadLinkModules(CI, *Ctx, LinkModules))
     return false;
   return ASTFrontendAction::BeginSourceFileAction(CI);

@@ -1446,7 +1446,8 @@ Error ExpansionContext::readConfigFile(StringRef CfgFile,
 }
 
 static void initCommonOptions();
-static bool parseCommandLineOptionsImpl(LibraryOptionsContext *Context, ArrayRef<const char *> Args,
+static bool parseCommandLineOptionsImpl(LibraryOptionsContext *Context,
+                                        ArrayRef<const char *> Args,
                                         StringRef Overview, raw_ostream *Errs,
                                         vfs::FileSystem *VFS,
                                         const char *EnvVar) {
@@ -2942,7 +2943,9 @@ void cl::addLibraryOptions(LibraryOptions &L) {
   globalParser().Libraries.push_back(&L);
 }
 
-Error LibraryOptionsContext::set(ArrayRef<const char *> Args) {
+Error LibraryOptionsContext::assign(ArrayRef<const char *> Args) {
+  Values.clear();
+  this->Args.clear();
   for (size_t I = 0, E = Args.size(); I != E;) {
     StringRef Name = Args[I];
     LibraryOptions *L = nullptr;

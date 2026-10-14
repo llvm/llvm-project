@@ -119,7 +119,7 @@ public:
   ~LibraryOptTable() override;
 };
 
-/// Connects options struct T to cl::ParseCommandLineOptions and
+/// Connects options struct T to cl::parseCommandLineOptions and
 /// cl::LibraryOptionsContext.
 class LLVM_ABI LibraryOptionsParser final : public cl::LibraryOptions {
 public:

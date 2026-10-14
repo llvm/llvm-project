@@ -351,12 +351,16 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "#include \"llvm/ADT/ArrayRef.h\"\n";
   OS << "#include \"llvm/ADT/BoolOrDefault.h\"\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
-  OS << "#include \"llvm/Support/Allocator.h\"\n\n";
+  OS << "#include \"llvm/Support/Allocator.h\"\n";
+  bool PerContext = Struct.getValueAsBit("PerContext");
+  if (PerContext)
+    OS << "#include \"llvm/Support/LibraryOptionsContext.h\"\n";
+  OS << "\n";
   StringRef Namespace = Struct.getValueAsString("Namespace");
-  OS << "namespace llvm {\nnamespace cl {\nclass LibraryOptionsContext;\n"
-        "} // namespace cl\nnamespace opt {\nclass Arg;\n"
-        "class LibraryOptionsParser;\nclass OptTable;\n} // namespace opt\n"
-        "} // namespace llvm\n\n";
+  OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n";
+  if (PerContext)
+    OS << "class LibraryOptionsParser;\n";
+  OS << "class OptTable;\n} // namespace opt\n} // namespace llvm\n\n";
   OS << "namespace " << Namespace << " {\n";
   OS << "struct " << Name << " {\n";
   if (Namespace != "llvm")
@@ -365,7 +369,6 @@ static void emitOptionsStruct(const Record &Struct,
     ConditionScope CS(OS, *R);
     OS << "  " << M.Type << " " << M.Name << "{" << M.Default << "};\n";
   }
-  bool PerContext = Struct.getValueAsBit("PerContext");
   OS << "\n  static constexpr bool PerContext = "
      << (PerContext ? "true" : "false") << ";\n";
   OS << "  static const llvm::opt::OptTable &optTable();\n";

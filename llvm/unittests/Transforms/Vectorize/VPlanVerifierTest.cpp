@@ -13,7 +13,6 @@
 #include "VPlanTestBase.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -485,8 +484,7 @@ TEST_F(VPVerifierTest, testRUN_VPLAN_PASS) {
   VPBB1->appendRecipe(UseI);
   VPBB1->appendRecipe(DefI);
 
-  llvm::SaveAndRestore<bool> RestoreVerifyEachVPlan(
-      VectorizeOptions::Global.vplan_verify_each, true);
+  cantFail(C.getLibraryOptions().assign({"-vplan-verify-each"}));
   auto NopPass = [](VPlan &Plan) {};
   EXPECT_DEATH(
       { VPlanTransforms::runPass("simplifyRecipes", NopPass, Plan); },

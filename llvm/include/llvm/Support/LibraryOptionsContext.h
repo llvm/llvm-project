@@ -23,20 +23,20 @@ namespace cl {
 
 class LibraryOptions;
 
-// Values of library options that override their global() in one compilation
-// context, such as an LLVMContext.
+// The library options of one compilation context, such as an LLVMContext.
+// Libraries declared with perContext read their options here.
 class LLVM_ABI LibraryOptionsContext {
 public:
-  // Sets the library options that Args spell, e.g. {"-x=v"}. A library's values
-  // start as a copy of its global(), and later calls add to them. Fails at the
-  // first argument that is not a library option or has an invalid value.
+  // Replaces the library options with those that Args spell, e.g. {"-x=v"}.
+  // Fails at the first argument that is not a library option or has an invalid
+  // value.
   //
-  // Strings copied from global() die with ResetAllOptionOccurrences. The first
-  // call (or ParseCommandLineOptions) indexes the registry, which is not
-  // thread-safe.
-  Error set(ArrayRef<const char *> Args);
+  // A library's values start as a copy of its global(), which may refer to
+  // strings that ResetAllOptionOccurrences frees.
+  // Indexing libraries registered since the last parse is not thread-safe.
+  Error assign(ArrayRef<const char *> Args);
 
-  // Parses the option of L that Args[0] spells, as set() does.
+  // Parses the option of L that Args[0] spells, keeping the other values.
   Error parse(LibraryOptions &L, ArrayRef<const char *> Args,
               unsigned &Consumed);
 

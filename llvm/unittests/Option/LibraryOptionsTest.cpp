@@ -208,30 +208,28 @@ TEST(LibraryOptionsTest, Values) {
   opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
   cl::opt<bool> NotLibrary("lib-cl-opt");
   cl::LibraryOptionsContext V;
-  auto Set = [&](std::initializer_list<const char *> Args) {
-    return toString(V.set(Args));
+  auto Assign = [&](std::initializer_list<const char *> Args) {
+    return toString(V.assign(Args));
   };
+  EXPECT_EQ(Assign({"-lib-list=9"}), "");
   std::string Path = "-lib-path=q";
-  EXPECT_EQ(Set({"-lib-count", "7", Path.c_str(), "--lib-list=1,2"}), "");
+  EXPECT_EQ(Assign({"-lib-count", "7", Path.c_str(), "--lib-list=1,2"}), "");
   Path.assign(Path.size(), ' ');
   EXPECT_EQ(TestLibraryOptions::Global.count, 3u);
-
-  // A later call keeps the earlier values.
-  EXPECT_EQ(Set({"-lib-list=3"}), "");
-  EXPECT_THAT(V.get<TestLibraryOptions>().list,
-              testing::ElementsAre(1u, 2u, 3u));
+  // The earlier call's values are discarded.
+  EXPECT_THAT(V.get<TestLibraryOptions>().list, testing::ElementsAre(1u, 2u));
 
   // Another context replays the arguments, which outlive the caller's.
   cl::LibraryOptionsContext Copy;
-  EXPECT_EQ(toString(Copy.set(V.args())), "");
+  EXPECT_EQ(toString(Copy.assign(V.args())), "");
   const TestLibraryOptions &C = Copy.get<TestLibraryOptions>();
   EXPECT_EQ(C.count, 7u);
   EXPECT_EQ(C.Path, "q");
-  EXPECT_THAT(C.list, testing::ElementsAre(1u, 2u, 3u));
+  EXPECT_THAT(C.list, testing::ElementsAre(1u, 2u));
 
-  EXPECT_EQ(Set({"-lib-count=x"}), "invalid value 'x' in '-lib-count=x'");
-  EXPECT_EQ(Set({"-lib-cl-opt"}), "'-lib-cl-opt' is not a library option");
-  EXPECT_EQ(Set({"lib-count=1"}), "'lib-count=1' is not a library option");
+  EXPECT_EQ(Assign({"-lib-count=x"}), "invalid value 'x' in '-lib-count=x'");
+  EXPECT_EQ(Assign({"-lib-cl-opt"}), "'-lib-cl-opt' is not a library option");
+  EXPECT_EQ(Assign({"lib-count=1"}), "'lib-count=1' is not a library option");
   cl::ResetCommandLineParser();
 }
 
