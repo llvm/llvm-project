@@ -28,16 +28,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/CUFCommon.h"
-#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/Statistic.h"
@@ -98,8 +97,9 @@ static bool isConstantInt(mlir::Value val, int64_t expected) {
   return cst && cst->trySExtValue() == expected;
 }
 
-/// An absent shape or a plain fir.shape has lower bound one in every
-/// dimension; a fir.shape_shift must say so explicitly.
+/// The shape operand is optional on fir.array_coor. An absent shape or a plain
+/// fir.shape carries only extents, so the lower bound is one in every
+/// dimension; only a fir.shape_shift can say otherwise.
 static bool hasUnitLeadingLowerBound(mlir::Value shapeLike) {
   if (!shapeLike || shapeLike.getDefiningOp<fir::ShapeOp>())
     return true;
@@ -205,7 +205,7 @@ static std::optional<int64_t> getSectionExtent(fir::DoLoopOp loop,
 ///
 /// The conditions and trip counts must dominate \p loop. Loop results are
 /// forwarded through fir.result.
-static void versionLoop(fir::FirOpBuilder &builder, fir::DoLoopOp loop,
+static void versionLoop(mlir::OpBuilder &builder, fir::DoLoopOp loop,
                         llvm::ArrayRef<LoopVersion> versions) {
   assert(!versions.empty() && "nothing to version on");
   mlir::Location loc = loop.getLoc();
@@ -313,8 +313,7 @@ void LoopTripCountVersioningPass::runOnOperation() {
     return;
   }
 
-  mlir::ModuleOp module = func->getParentOfType<mlir::ModuleOp>();
-  fir::FirOpBuilder builder{module, fir::getKindMapping(module)};
+  mlir::OpBuilder builder(func.getContext());
 
   for (const SectionExtentCandidate &candidate : candidates) {
     fir::DoLoopOp loop = candidate.loop;
@@ -323,8 +322,9 @@ void LoopTripCountVersioningPass::runOnOperation() {
 
     // Define the guard values before the loop so they dominate the fir.if.
     builder.setInsertionPoint(loop);
-    mlir::Value extentCst =
-        builder.createIntegerConstant(loc, ub.getType(), candidate.extent);
+    mlir::Value extentCst = mlir::arith::ConstantOp::create(
+        builder, loc, ub.getType(),
+        builder.getIntegerAttr(ub.getType(), candidate.extent));
     mlir::Value isDeclaredExtent = mlir::arith::CmpIOp::create(
         builder, loc, mlir::arith::CmpIPredicate::eq, ub, extentCst);
 
