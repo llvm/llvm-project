@@ -169,7 +169,8 @@ protected:
         std::optional<llvm::Expected<lldb_private::SymbolLocator::Result>>
             located);
 
-    /// PrepareSearch, the search and LoadLocatedImage for a single binary.
+    /// Load this binary on its own: PrepareSearch, then the search, then
+    /// LoadLocatedImage.
     bool LoadImageUsingMemoryModule(lldb_private::Process *process);
 
     /// Searches for the kernel and sets the module, without SymbolLocator.
