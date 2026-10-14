@@ -1832,7 +1832,7 @@ def : GCNPat<
 def : GCNPat <
   (i16 (DivergentUnaryFrag<trunc>
     (i32 (srl_oneuse i32:$src, (i32 16))))),
-  (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src, VGPR_32)), hi16)
+  (vgpr32_hi16 $src)
 >;
 
 def : GCNPat <
