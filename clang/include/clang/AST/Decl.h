@@ -2151,6 +2151,7 @@ public:
         : DefaultedFunctionKind() {
       Comparison = llvm::to_underlying(Comp);
     }
+    
     DefaultedFunctionKind(PostfixOperatorKind PO) : DefaultedFunctionKind() {
       PostfixOperator = llvm::to_underlying(PO);
     }
