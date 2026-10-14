@@ -759,6 +759,55 @@ func.func @f32_reduction_from_load_nd(%arg0: memref<16x16xf32>, %arg1: memref<25
 }
 
 // -----
+// The consumer slices exactly the reduction dim, so its parent is reused and
+// lends its blocking on dim 0: inst_data = [8, 16], not the [1, 16] lane
+// footprint. That keeps the whole normalize chain on one blocking, so no
+// convert_layout is needed between the reduction and the divf.
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_keeps_consumer_blocking(
+// CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[0, 0] <{layout = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+// CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %[[LOAD]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>} [1] : vector<16x64xf32> to vector<16xf32>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[RED]] {layout_result_0 = #xegpu.layout<inst_data = [8, 1], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16xf32> to vector<16x1xf32>
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[CAST]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x1xf32> to vector<16x64xf32>
+// CHECK: arith.divf %[[LOAD]], %[[BCAST]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x64xf32>
+// CHECK-NOT: xegpu.convert_layout
+func.func @reduction_keeps_consumer_blocking(%arg0: memref<16x64xf32>, %arg1: memref<16x64xf32>) {
+  %cst = arith.constant dense<0.000000e+00> : vector<16xf32>
+  %t = xegpu.create_nd_tdesc %arg0 : memref<16x64xf32> -> !xegpu.tensor_desc<16x64xf32>
+  %v = xegpu.load_nd %t[0, 0] : !xegpu.tensor_desc<16x64xf32> -> vector<16x64xf32>
+  %0 = vector.multi_reduction <add>, %v, %cst [1] : vector<16x64xf32> to vector<16xf32>
+  %1 = vector.shape_cast %0 : vector<16xf32> to vector<16x1xf32>
+  %2 = vector.broadcast %1 : vector<16x1xf32> to vector<16x64xf32>
+  %3 = arith.divf %v, %2 : vector<16x64xf32>
+  %o = xegpu.create_nd_tdesc %arg1 : memref<16x64xf32> -> !xegpu.tensor_desc<16x64xf32>
+  xegpu.store_nd %3, %o[0, 0] : vector<16x64xf32>, !xegpu.tensor_desc<16x64xf32>
+  return
+}
+}
+
+// -----
+// Same reuse, but the reduction dim holds only 4 elements while the parent
+// spreads all 16 lanes along it -- it sized that dim against the unit dim the
+// consumer sliced away, not against the source. The reused lane_layout is
+// capped to what the dim has to give, [1, 4], so the source stays
+// distributable; dim 0 still takes the parent's blocking of 8.
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_narrow_dim_clamps_parent_lanes(
+// CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %{{.*}}, %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 4], lane_layout = [1, 4], lane_data = [1, 1]>, dims = [1]>} [1] : vector<16x4xf32> to vector<16xf32>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[RED]] {layout_result_0 = #xegpu.layout<inst_data = [8, 1], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16xf32> to vector<16x1xf32>
+// CHECK: vector.broadcast %[[CAST]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x1xf32> to vector<16x64xf32>
+func.func @reduction_narrow_dim_clamps_parent_lanes(%arg0: vector<16x4xf32>, %arg1: memref<16x64xf32>) {
+  %cst = arith.constant dense<0.000000e+00> : vector<16xf32>
+  %0 = vector.multi_reduction <add>, %arg0, %cst [1] : vector<16x4xf32> to vector<16xf32>
+  %1 = vector.shape_cast %0 : vector<16xf32> to vector<16x1xf32>
+  %2 = vector.broadcast %1 : vector<16x1xf32> to vector<16x64xf32>
+  %o = xegpu.create_nd_tdesc %arg1 : memref<16x64xf32> -> !xegpu.tensor_desc<16x64xf32>
+  xegpu.store_nd %2, %o[0, 0] : vector<16x64xf32>, !xegpu.tensor_desc<16x64xf32>
+  return
+}
+}
+
+// -----
 gpu.module @test {
 // CHECK-LABEL: func.func @shape_cast_split_fills_strided_inner_dim(
 // CHECK: %[[CAST:.*]] = vector.shape_cast %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 2, 32], lane_layout = [1, 2, 8], lane_data = [1, 1, 4]>} : vector<16x1024xbf16> to vector<16x32x32xbf16>
