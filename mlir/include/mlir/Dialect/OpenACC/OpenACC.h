@@ -221,6 +221,13 @@ static constexpr StringLiteral getCollapseCountAttrName() {
   return StringLiteral("acc.collapse_count");
 }
 
+/// Name for a unit attribute attached to a parallel loop lowered from an
+/// acc.loop operation. It distinguishes such loops from the parallel loops
+/// created later, e.g. by parallelizing sequential loops.
+static constexpr StringLiteral getLoopConstructAttrName() {
+  return StringLiteral("acc.loop_construct");
+}
+
 /// Name for a unit attribute attached to the region an unstructured
 /// independent loop was converted to, recording that the loop could not be
 /// represented as a structured loop and is therefore not parallelized.
