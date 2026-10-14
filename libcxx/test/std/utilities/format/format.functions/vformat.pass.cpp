@@ -30,6 +30,9 @@
 auto test = []<class CharT, class... Args>(
                 std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt, Args&&... args) constexpr {
   std::basic_string<CharT> out = std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
+  if (TEST_IS_CONSTANT_EVALUATED)
+    assert(out == expected);
+  else
   TEST_REQUIRE(out == expected,
                TEST_WRITE_CONCATENATED(
                    "\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
@@ -80,6 +83,10 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   format_tests_char_to_wchar_t(test);
   format_tests<wchar_t, execution_modus::full>(test, test_exception);
+#endif
+
+#if TEST_STD_VER >= 26
+  static_assert(test_constexpr());
 #endif
 
   return 0;
