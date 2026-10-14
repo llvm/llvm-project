@@ -292,7 +292,7 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
     auto tripleStr = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
     if (!tripleStr)
       return op->emitOpError() << "expects '" << getTripleAttrName() << "' to "
-                               << " be a string";
+                               << "be a string";
     llvm::Triple triple = llvm::Triple(tripleStr.getValue());
     clang::TargetOptions targetOptions;
     targetOptions.Triple = tripleStr.getValue();
