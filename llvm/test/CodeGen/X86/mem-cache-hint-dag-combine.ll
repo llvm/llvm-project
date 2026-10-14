@@ -131,7 +131,7 @@ define void @shrink_load_replace_store(ptr %p, i8 %v) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-  ; CHECK-NEXT:   MOV8mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[COPY2]] :: (store (s8) into %ir.p, align 4, !alias.scope !6, !noalias !9, !mem.cache_hint !1)
+  ; CHECK-NEXT:   MOV8mr [[COPY1]], 1, $noreg, 0, $noreg, [[COPY2]] :: (store (s8) into %ir.p, align 4, !alias.scope !6, !noalias !9, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0
   %old = load i32, ptr %p, align 4
   %keep = and i32 %old, -256
@@ -163,7 +163,7 @@ define void @merge_trunc_stores_same(ptr %p, i16 %v) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-  ; CHECK-NEXT:   MOV16mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[COPY2]] :: (store (s16) into %ir.p, !mem.cache_hint !1)
+  ; CHECK-NEXT:   MOV16mr [[COPY1]], 1, $noreg, 0, $noreg, [[COPY2]] :: (store (s16) into %ir.p, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0
   %lo = trunc i16 %v to i8
   store i8 %lo, ptr %p, align 2, !mem.cache_hint !2
@@ -182,7 +182,7 @@ define void @merge_trunc_stores_different(ptr %p, i16 %v) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-  ; CHECK-NEXT:   MOV16mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[COPY2]] :: (store (s16) into %ir.p)
+  ; CHECK-NEXT:   MOV16mr [[COPY1]], 1, $noreg, 0, $noreg, [[COPY2]] :: (store (s16) into %ir.p)
   ; CHECK-NEXT:   RET 0
   %lo = trunc i16 %v to i8
   store i8 %lo, ptr %p, align 2, !mem.cache_hint !2
@@ -295,7 +295,7 @@ define void @merge_store_of_loads_same(ptr noalias %dst, ptr noalias %src) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.src, !mem.cache_hint !1)
-  ; CHECK-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV32rm]] :: (store (s32) into %ir.dst, !mem.cache_hint !1)
+  ; CHECK-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, [[MOV32rm]] :: (store (s32) into %ir.dst, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0
   %a = load i8, ptr %src, align 4, !mem.cache_hint !0
   %s1 = getelementptr i8, ptr %src, i64 1
@@ -322,7 +322,7 @@ define void @merge_store_of_loads_different(ptr noalias %dst, ptr noalias %src) 
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.src)
-  ; CHECK-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV32rm]] :: (store (s32) into %ir.dst)
+  ; CHECK-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, [[MOV32rm]] :: (store (s32) into %ir.dst)
   ; CHECK-NEXT:   RET 0
   %a = load i8, ptr %src, align 4, !mem.cache_hint !0
   %s1 = getelementptr i8, ptr %src, i64 1
@@ -401,9 +401,9 @@ define i32 @select_loads_same(i1 %c, ptr %p, ptr %q) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $edi
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr8 = COPY [[COPY2]].sub_8bit
-  ; CHECK-NEXT:   TEST8ri killed [[COPY3]], 1, implicit-def $eflags
+  ; CHECK-NEXT:   TEST8ri [[COPY3]], 1, implicit-def $eflags
   ; CHECK-NEXT:   [[CMOV64rr:%[0-9]+]]:gr64 = CMOV64rr [[COPY]], [[COPY1]], 5, implicit $eflags
-  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm killed [[CMOV64rr]], 1, $noreg, 0, $noreg :: (load (s32), !mem.cache_hint !1)
+  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[CMOV64rr]], 1, $noreg, 0, $noreg :: (load (s32), !mem.cache_hint !1)
   ; CHECK-NEXT:   $eax = COPY [[MOV32rm]]
   ; CHECK-NEXT:   RET 0, $eax
   %a = load i32, ptr %p, align 4, !mem.cache_hint !0
@@ -421,9 +421,9 @@ define i32 @select_loads_different(i1 %c, ptr %p, ptr %q) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $edi
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr8 = COPY [[COPY2]].sub_8bit
-  ; CHECK-NEXT:   TEST8ri killed [[COPY3]], 1, implicit-def $eflags
+  ; CHECK-NEXT:   TEST8ri [[COPY3]], 1, implicit-def $eflags
   ; CHECK-NEXT:   [[CMOV64rr:%[0-9]+]]:gr64 = CMOV64rr [[COPY]], [[COPY1]], 5, implicit $eflags
-  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm killed [[CMOV64rr]], 1, $noreg, 0, $noreg :: (load (s32))
+  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[CMOV64rr]], 1, $noreg, 0, $noreg :: (load (s32))
   ; CHECK-NEXT:   $eax = COPY [[MOV32rm]]
   ; CHECK-NEXT:   RET 0, $eax
   %a = load i32, ptr %p, align 4, !mem.cache_hint !0
