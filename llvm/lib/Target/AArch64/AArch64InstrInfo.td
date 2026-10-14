@@ -243,8 +243,6 @@ def HasLSC64B        : Predicate<"Subtarget->hasLSC64B()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSC64B), "lsc64b">;
 def HasSVE_RCPC      : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_RCPC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_RCPC), "sve-rcpc">;
-def HasSVE_PERM256     : Predicate<"Subtarget->hasSVE_PERM256()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureSVE_PERM256), "sve-perm256">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -324,8 +322,8 @@ def HasNonStreamingSVE2p2_or_SME2p2
                 AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
                 "sme2p2 or sve2p2">;
 
-def HasMatMulFP64_or_SVE_PERM256
-    : Predicate<"Subtarget->hasSVE_PERM256() || (Subtarget->isSVEAvailable() && Subtarget->hasMatMulFP64())">,
+def HasNonStreamingMatMulFP64_or_SVE_PERM256
+    : Predicate<"(Subtarget->isSVEorStreamingSVEAvailable()  && Subtarget->hasSVE_PERM256()) || (Subtarget->isSVEAvailable() && Subtarget->hasMatMulFP64())">,
                 AssemblerPredicateWithAll<(any_of FeatureMatMulFP64, FeatureSVE_PERM256),
                 "f64mm or sve-perm256">;
 
