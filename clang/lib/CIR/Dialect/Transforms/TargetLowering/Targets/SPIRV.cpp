@@ -26,13 +26,8 @@ constexpr unsigned SPIRVAddrSpaceMap[] = {
     6, // GlobalHost
 };
 
-class SPIRVTargetLoweringInfo : public TargetLoweringInfo {
-  // SPIR keeps the default system scope, like CommonSPIRTargetCodeGenInfo.
-  bool isSPIRV;
-
+class CommonSPIRTargetLoweringInfo : public TargetLoweringInfo {
 public:
-  explicit SPIRVTargetLoweringInfo(bool isSPIRV) : isSPIRV(isSPIRV) {}
-
   unsigned getTargetAddrSpaceFromCIRAddrSpace(
       cir::LangAddressSpace addrSpace) const override {
     // TODO(cir): SYCL and CUDA/HIP device code map Default to Generic
@@ -43,19 +38,24 @@ public:
            "Unknown CIR address space for SPIR-V target");
     return SPIRVAddrSpaceMap[idx];
   }
+};
 
+class SPIRVTargetLoweringInfo : public CommonSPIRTargetLoweringInfo {
+public:
   cir::SyncScopeKind
   convertSyncScope(cir::SyncScopeKind syncScope) const override {
-    return isSPIRV ? syncScope
-                   : TargetLoweringInfo::convertSyncScope(syncScope);
+    return syncScope;
   }
 };
 
 } // namespace
 
-std::unique_ptr<TargetLoweringInfo>
-createSPIRVTargetLoweringInfo(bool isSPIRV) {
-  return std::make_unique<SPIRVTargetLoweringInfo>(isSPIRV);
+std::unique_ptr<TargetLoweringInfo> createCommonSPIRTargetLoweringInfo() {
+  return std::make_unique<CommonSPIRTargetLoweringInfo>();
+}
+
+std::unique_ptr<TargetLoweringInfo> createSPIRVTargetLoweringInfo() {
+  return std::make_unique<SPIRVTargetLoweringInfo>();
 }
 
 } // namespace cir
