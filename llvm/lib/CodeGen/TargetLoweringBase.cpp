@@ -802,11 +802,15 @@ void TargetLoweringBase::initActions() {
     }
   }
 
-  for (MVT VT : MVT::fp_valuetypes()) {
-    MVT IntVT = MVT::getIntegerVT(VT.getFixedSizeInBits());
-    if (IntVT.isValid()) {
-      setOperationAction(ISD::ATOMIC_SWAP, VT, Promote);
-      AddPromotedToType(ISD::ATOMIC_SWAP, VT, IntVT);
+  // Atomic exchange operates on the bit representation, so promote
+  // non-integer types to an integer type of the same width.
+  for (auto VTs : {MVT::fp_valuetypes(), MVT::fixedlen_vector_valuetypes()}) {
+    for (MVT VT : VTs) {
+      MVT IntVT = MVT::getIntegerVT(VT.getFixedSizeInBits());
+      if (IntVT.isValid()) {
+        setOperationAction(ISD::ATOMIC_SWAP, VT, Promote);
+        AddPromotedToType(ISD::ATOMIC_SWAP, VT, IntVT);
+      }
     }
   }
 

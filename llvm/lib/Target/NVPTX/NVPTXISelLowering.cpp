@@ -7978,11 +7978,14 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   if (AI->isFloatingPointOperation())
     return AtomicExpansionKind::CmpXChg;
 
-  if (Ty->isVectorTy())
+  if (Ty->isVectorTy() && AI->getOperation() != AtomicRMWInst::BinOp::Xchg)
     return AtomicExpansionKind::CmpXChg;
 
-  assert(Ty->isIntegerTy() && "Ty should be integer at this point");
-  const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
+  assert(
+      (Ty->isIntegerTy() || AI->getOperation() == AtomicRMWInst::BinOp::Xchg) &&
+      "non-integer types are only supported for atomicrmw xchg");
+  const unsigned BitWidth =
+      AI->getDataLayout().getTypeSizeInBits(Ty).getFixedValue();
 
   switch (AI->getOperation()) {
   default:

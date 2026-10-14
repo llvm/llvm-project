@@ -85,6 +85,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ATOMIC_LOAD:
     R = ScalarizeVecRes_ATOMIC_LOAD(cast<AtomicSDNode>(N));
     break;
+  case ISD::ATOMIC_SWAP:
+    R = ScalarizeVecRes_ATOMIC_SWAP(cast<AtomicSDNode>(N));
+    break;
   case ISD::LOAD:           R = ScalarizeVecRes_LOAD(cast<LoadSDNode>(N));break;
   case ISD::SCALAR_TO_VECTOR:  R = ScalarizeVecRes_SCALAR_TO_VECTOR(N); break;
   case ISD::VECTOR_DEINTERLEAVE:
@@ -591,6 +594,11 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N) {
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Result.getValue(1));
   return Result;
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_ATOMIC_SWAP(AtomicSDNode *N) {
+  SDValue Swap = BitcastToInt_ATOMIC_SWAP(N);
+  return DAG.getBitcast(N->getValueType(0).getVectorElementType(), Swap);
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_LOAD(LoadSDNode *N) {
@@ -1451,6 +1459,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SIGN_EXTEND_INREG: SplitVecRes_InregOp(N, Lo, Hi); break;
   case ISD::ATOMIC_LOAD:
     SplitVecRes_ATOMIC_LOAD(cast<AtomicSDNode>(N), Lo, Hi);
+    break;
+  case ISD::ATOMIC_SWAP:
+    SplitVecRes_ATOMIC_SWAP(cast<AtomicSDNode>(N), Lo, Hi);
     break;
   case ISD::LOAD:
     SplitVecRes_LOAD(cast<LoadSDNode>(N), Lo, Hi);
@@ -2462,6 +2473,21 @@ void DAGTypeLegalizer::SplitVecRes_ATOMIC_LOAD(AtomicSDNode *LD, SDValue &Lo,
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(LD, 1), ALD.getValue(1));
+}
+
+void DAGTypeLegalizer::SplitVecRes_ATOMIC_SWAP(AtomicSDNode *N, SDValue &Lo,
+                                               SDValue &Hi) {
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
+
+  SDValue Swap = BitcastToInt_ATOMIC_SWAP(N);
+  EVT LoIntVT = EVT::getIntegerVT(*DAG.getContext(), LoVT.getSizeInBits());
+  EVT HiIntVT = EVT::getIntegerVT(*DAG.getContext(), HiVT.getSizeInBits());
+  SDValue LoInt, HiInt;
+  SplitInteger(Swap, LoIntVT, HiIntVT, LoInt, HiInt);
+
+  Lo = DAG.getBitcast(LoVT, LoInt);
+  Hi = DAG.getBitcast(HiVT, HiInt);
 }
 
 void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
@@ -5350,6 +5376,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ATOMIC_LOAD:
     Res = WidenVecRes_ATOMIC_LOAD(cast<AtomicSDNode>(N));
     break;
+  case ISD::ATOMIC_SWAP:
+    Res = WidenVecRes_ATOMIC_SWAP(cast<AtomicSDNode>(N));
+    break;
   case ISD::LOAD:              Res = WidenVecRes_LOAD(N); break;
   case ISD::STEP_VECTOR:
   case ISD::SPLAT_VECTOR:
@@ -6851,6 +6880,15 @@ SDValue DAGTypeLegalizer::WidenVecRes_ATOMIC_LOAD(AtomicSDNode *LD) {
   // the new one.
   ReplaceValueWith(SDValue(LD, 1), LdOp.getValue(1));
   return Result;
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_ATOMIC_SWAP(AtomicSDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDValue Swap = BitcastToInt_ATOMIC_SWAP(N);
+  return coerceLoadedValue(Swap, Swap.getValueType(), WidenVT,
+                           VT.getSizeInBits(), Swap.getValueSizeInBits(),
+                           SDLoc(N), DAG);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_LOAD(SDNode *N) {

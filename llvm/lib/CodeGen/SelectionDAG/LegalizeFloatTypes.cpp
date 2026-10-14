@@ -2496,28 +2496,6 @@ static ISD::NodeType GetPromotionOpcodeStrict(EVT OpVT, EVT RetVT) {
   report_fatal_error("Attempt at an invalid promotion-related conversion");
 }
 
-SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
-  AtomicSDNode *AM = cast<AtomicSDNode>(N);
-  SDLoc SL(N);
-
-  SDValue CastVal = BitConvertToInteger(AM->getVal());
-  EVT CastVT = CastVal.getValueType();
-
-  SDValue NewAtomic
-    = DAG.getAtomic(ISD::ATOMIC_SWAP, SL, CastVT,
-                    DAG.getVTList(CastVT, MVT::Other),
-                    { AM->getChain(), AM->getBasePtr(), CastVal },
-                    AM->getMemOperand());
-
-  SDValue Result = NewAtomic;
-
-  // Legalize the chain result by replacing uses of the old value chain with the
-  // new one
-  ReplaceValueWith(SDValue(N, 1), NewAtomic.getValue(1));
-
-  return Result;
-}
-
 //===----------------------------------------------------------------------===//
 //  Half Result Soft Promotion
 //===----------------------------------------------------------------------===//
