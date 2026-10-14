@@ -93,20 +93,15 @@ def ApplyMoveAccumulatorForContractLoopPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyVectorContractMultiLevelUnrollPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.x86.vector_contract_multi_level_unroll",
+def ApplyVectorContractMultiLevelUnrollForAMXPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.vector_contract_multi_level_unroll_for_amx",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Collect patterns that tile and unroll contractions in order to prepare them
-    for the nanokernel lowerings.
-
-    The following flags control the decomposition:
-    - `enable_amx`: Prepare for AMX tile dot-product
+    for the AMX nanokernel lowerings.
   }];
 
-  let arguments = (ins UnitAttr:$enable_amx);
-
-  let assemblyFormat = "(`enable_amx` $enable_amx^)? attr-dict";
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // X86_TRANSFORM_OPS

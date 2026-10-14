@@ -31,14 +31,6 @@ static constexpr auto nativeShapeAttrName = "x86_vcmlu_native_shape";
 namespace {
 // Shared state for the pattern match and IR transformation.
 struct MLUCandidate {
-  MLUCandidate(const x86::MultiLevelUnrollOptions &options,
-               vector::ContractionOp contract)
-      : options(options), contract(contract) {}
-
-  // Native shapes and supported data types for operands and the accumulator are
-  // determined based on the feature flags in the options struct.
-  const x86::MultiLevelUnrollOptions &options;
-
   // Anchor operation.
   vector::ContractionOp contract;
   bool isInVnniLayout = false;
@@ -47,6 +39,7 @@ struct MLUCandidate {
   VectorType accType;
   VectorType lhsType;
   VectorType rhsType;
+  SmallVector<int64_t> contractShape;
 
   // Shape of the register-tiled contraction. We'll insert a loop nest to cover
   // the original shape.
@@ -80,6 +73,12 @@ struct MLUCandidate {
   // (depending on which ops could be integrated into the new loop nest).
   SmallVector<Operation *> opsToDelete;
 };
+
+// A target-specific function that inspects shapes and types of a candidate, and
+// computes a decomposition strategy encoded in the `*regTileType`,
+// `*nativeType` and `contractNativeShape` fields.
+using MatchShapesAndTypesFn =
+    std::function<LogicalResult(MLUCandidate &, PatternRewriter &)>;
 } // anonymous namespace
 
 //----------------------------------------------------------------------------//
@@ -328,92 +327,58 @@ static LogicalResult matchCanonicalMatmul(MLUCandidate &candidate,
   candidate.lhsType = lhsType;
   candidate.rhsType = rhsType;
 
+  // Contraction shape is {m, n, k} or {m, n, k, vnni}.
+  ArrayRef<int64_t> rhsShape = rhsType.getShape();
+  ArrayRef<int64_t> lhsShape = lhsType.getShape();
+  candidate.contractShape = {lhsShape[0], rhsShape[1], lhsShape[1]};
+  if (isInVnniLayout)
+    candidate.contractShape.push_back(lhsShape[2]);
+
   return success();
 }
 
-// Check compatibility of datatypes with the given target ISA extension, and try
-// to determine a suitable tiling strategy for it. If successful, the strategy
-// is encoded in the *RegTileType and *NativeType fields of the candidate
-// struct.
-static LogicalResult matchShapesAndTypes(MLUCandidate &candidate,
-                                         PatternRewriter &rewriter) {
+// Check that the tiling and unroll strategy recorded in the candidate is
+// complete and can be transformed with the current capabilities of this
+// pattern.
+static LogicalResult verifyStrategy(MLUCandidate &candidate,
+                                    PatternRewriter &rewriter) {
   vector::ContractionOp contract = candidate.contract;
+  if (!candidate.accRegTileType || !candidate.lhsRegTileType ||
+      !candidate.rhsRegTileType || !candidate.accNativeType ||
+      !candidate.lhsNativeType || !candidate.rhsNativeType ||
+      candidate.contractNativeShape.empty())
+    return rewriter.notifyMatchFailure(contract, "strategy is incomplete");
 
-  Type accElemType = candidate.accType.getElementType();
-  Type inpElemType = candidate.lhsType.getElementType();
+  if (!computeShapeRatio(candidate.accType.getShape(),
+                         candidate.accRegTileType.getShape()) ||
+      !computeShapeRatio(candidate.lhsType.getShape(),
+                         candidate.lhsRegTileType.getShape()) ||
+      !computeShapeRatio(candidate.rhsType.getShape(),
+                         candidate.rhsRegTileType.getShape()))
+    return rewriter.notifyMatchFailure(
+        contract, "original shape cannot be register-tiled");
 
-  ArrayRef<int64_t> accShape = candidate.accType.getShape();
-  ArrayRef<int64_t> lhsShape = candidate.lhsType.getShape();
+  if (!computeShapeRatio(candidate.accRegTileType.getShape(),
+                         candidate.accNativeType.getShape()) ||
+      !computeShapeRatio(candidate.lhsRegTileType.getShape(),
+                         candidate.lhsNativeType.getShape()) ||
+      !computeShapeRatio(candidate.rhsRegTileType.getShape(),
+                         candidate.rhsNativeType.getShape()))
+    return rewriter.notifyMatchFailure(
+        contract, "register-tile shape does not unroll to native shape");
 
-  int64_t origM = accShape[0];
-  int64_t origN = accShape[1];
-  int64_t origK = lhsShape[1];
-  int64_t origVnni = candidate.isInVnniLayout ? lhsShape[2] : -1;
-
-  int64_t regTileM, regTileN, regTileK;
-  int64_t nativeM, nativeN, nativeK, vnni;
-
-  if (candidate.options.enableAMX) {
-    if (!((inpElemType.isBF16() && accElemType.isF32()) ||
-          (inpElemType.isInteger(8) && accElemType.isInteger(32))))
-      return rewriter.notifyMatchFailure(
-          contract, "unsupported combination of input and accumulator types");
-
-    nativeM = nativeN = 16;
-    vnni = 32 / inpElemType.getIntOrFloatBitWidth();
-
-    if (candidate.isInVnniLayout) {
-      nativeK = 16;
-      if (origM % nativeM != 0 || origN % nativeN != 0)
-        return rewriter.notifyMatchFailure(
-            contract, "vector shape cannot be cleanly unrolled");
-      if (origK != nativeK || origVnni != vnni)
-        return rewriter.notifyMatchFailure(
-            contract, "K dimension or VNNI factor mismatch");
-      if (origM == nativeM && origN == nativeN)
-        return rewriter.notifyMatchFailure(contract,
-                                           "already in native tile size");
-      // Prefer 2x2 tiling if shapes allow.
-      regTileM = origM % (2 * nativeM) == 0 ? 2 * nativeM : nativeM;
-      regTileN = origN % (2 * nativeN) == 0 ? 2 * nativeN : nativeN;
-      regTileK = nativeK;
-    } else {
-      // Online packing requires a contract pair in the N-dimension.
-      nativeK = 16 * vnni;
-      if (origM % nativeM != 0 || origN % (2 * nativeN) != 0)
-        return rewriter.notifyMatchFailure(
-            contract, "vector shape cannot be cleanly unrolled");
-      if (origK != nativeK)
-        return rewriter.notifyMatchFailure(contract, "K dimension mismatch");
-      regTileM = origM % (2 * nativeM) == 0 ? 2 * nativeM : nativeM;
-      regTileN = 2 * nativeN;
-      regTileK = nativeK;
-    }
-  } else {
-    return rewriter.notifyMatchFailure(contract, "empty target feature set");
-  }
-
-  candidate.accRegTileType = VectorType::get({regTileM, regTileN}, accElemType);
-  candidate.accNativeType = VectorType::get({nativeM, nativeN}, accElemType);
-
-  auto getOperandType = [&](ArrayRef<int64_t> shape) {
-    if (candidate.isInVnniLayout) {
-      SmallVector<int64_t, 3> newShape(shape.begin(), shape.end());
-      newShape.push_back(vnni);
-      return VectorType::get(newShape, inpElemType);
-    }
-    return VectorType::get(shape, inpElemType);
-  };
-
-  candidate.lhsRegTileType = getOperandType({regTileM, regTileK});
-  candidate.rhsRegTileType = getOperandType({regTileK, regTileN});
-
-  candidate.lhsNativeType = getOperandType({nativeM, nativeK});
-  candidate.rhsNativeType = getOperandType({nativeK, nativeN});
-
-  candidate.contractNativeShape = {nativeM, nativeN, nativeK};
-  if (candidate.isInVnniLayout)
-    candidate.contractNativeShape.push_back(vnni);
+  auto maybeContractShapeRatio =
+      computeShapeRatio(candidate.contractShape, candidate.contractNativeShape);
+  if (!maybeContractShapeRatio)
+    return rewriter.notifyMatchFailure(
+        contract, "contract shape is incompatible with native shape");
+  if (all_of(*maybeContractShapeRatio, [](int64_t v) { return v == 1; }))
+    return rewriter.notifyMatchFailure(
+        contract, "contraction is already in native shape");
+  if (!all_of(drop_begin(*maybeContractShapeRatio, 2),
+              [](int64_t v) { return v == 1; }))
+    return rewriter.notifyMatchFailure(
+        contract, "cannot tile/unroll on the reduction dimensions");
 
   return success();
 }
@@ -457,7 +422,7 @@ static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
                                        "is not in an index-based for-loop");
 
   if (auto step = getConstantIntValue(accLoop.getStep());
-      !step || (*step != 1 && *step != candidate.lhsType.getShape()[1]))
+      !step || (*step != 1 && *step != candidate.contractShape[2]))
     return rewriter.notifyMatchFailure(contract,
                                        "accumulation loop step is not 1 or K");
 
@@ -808,10 +773,10 @@ namespace {
 struct VectorContractMultiLevelUnroll
     : public OpRewritePattern<vector::ContractionOp> {
   VectorContractMultiLevelUnroll(MLIRContext *context,
-                                 const x86::MultiLevelUnrollOptions &options,
+                                 MatchShapesAndTypesFn matchShapesAndTypesFn,
                                  PatternBenefit benefit = 1)
       : OpRewritePattern<vector::ContractionOp>(context, benefit),
-        options(options) {}
+        matchShapesAndTypesFn(std::move(matchShapesAndTypesFn)) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp contract,
                                 PatternRewriter &rewriter) const override {
@@ -820,9 +785,11 @@ struct VectorContractMultiLevelUnroll
     if (contract->hasAttr(nativeShapeAttrName))
       return failure();
 
-    MLUCandidate candidate(options, contract);
+    MLUCandidate candidate;
+    candidate.contract = contract;
     if (failed(matchCanonicalMatmul(candidate, rewriter)) ||
-        failed(matchShapesAndTypes(candidate, rewriter)) ||
+        failed(matchShapesAndTypesFn(candidate, rewriter)) ||
+        failed(verifyStrategy(candidate, rewriter)) ||
         failed(matchAccumulationLoop(candidate, rewriter)))
       return failure();
 
@@ -837,13 +804,82 @@ struct VectorContractMultiLevelUnroll
   }
 
 private:
-  x86::MultiLevelUnrollOptions options;
+  MatchShapesAndTypesFn matchShapesAndTypesFn;
 };
 } // namespace
 
-void x86::populateVectorContractMultiLevelUnrollPatterns(
-    RewritePatternSet &patterns, const MultiLevelUnrollOptions &options) {
-  patterns.add<VectorContractMultiLevelUnroll>(patterns.getContext(), options);
+//----------------------------------------------------------------------------//
+// Target-specific matchers                                                   //
+//----------------------------------------------------------------------------//
+
+// Tiling strategy for AMX tile dot-product: The preferred native layout is
+// to keep the accumulator on a 2x2 grid of tile registers, though 1x2 and
+// VNNI-prepacked 1x1 and 2x1 configurations are also supported (NB: online
+// packing requires two neighboring tiles in the N-dimension).
+static LogicalResult matchShapesAndTypesForAMX(MLUCandidate &candidate,
+                                               PatternRewriter &rewriter) {
+  vector::ContractionOp contract = candidate.contract;
+
+  Type accElemType = candidate.accType.getElementType();
+  Type inpElemType = candidate.lhsType.getElementType();
+
+  if (!((inpElemType.isBF16() && accElemType.isF32()) ||
+        (inpElemType.isInteger(8) && accElemType.isInteger(32))))
+    return rewriter.notifyMatchFailure(
+        contract, "unsupported combination of input and accumulator types");
+
+  SmallVector<int64_t> &origShape = candidate.contractShape;
+  int64_t origM = origShape[0];
+  int64_t origN = origShape[1];
+
+  int64_t regTileM, regTileN, regTileK;
+  int64_t nativeM, nativeN, nativeK, vnni;
+
+  vnni = 32 / inpElemType.getIntOrFloatBitWidth();
+  nativeM = nativeN = 16;
+  nativeK = candidate.isInVnniLayout ? 16 : 16 * vnni;
+
+  // Prefer 2x2 tiling if shapes allow. Online packing requires a contract pair
+  // in the N-dimension.
+  regTileM = origM % (2 * nativeM) == 0 ? 2 * nativeM : nativeM;
+  regTileN = origN % (2 * nativeN) == 0 || !candidate.isInVnniLayout
+                 ? 2 * nativeN
+                 : nativeN;
+  regTileK = nativeK;
+
+  candidate.accRegTileType = VectorType::get({regTileM, regTileN}, accElemType);
+  candidate.accNativeType = VectorType::get({nativeM, nativeN}, accElemType);
+
+  auto getOperandType = [&](ArrayRef<int64_t> shape) {
+    if (candidate.isInVnniLayout) {
+      SmallVector<int64_t, 3> newShape(shape.begin(), shape.end());
+      newShape.push_back(vnni);
+      return VectorType::get(newShape, inpElemType);
+    }
+    return VectorType::get(shape, inpElemType);
+  };
+
+  candidate.lhsRegTileType = getOperandType({regTileM, regTileK});
+  candidate.rhsRegTileType = getOperandType({regTileK, regTileN});
+
+  candidate.lhsNativeType = getOperandType({nativeM, nativeK});
+  candidate.rhsNativeType = getOperandType({nativeK, nativeN});
+
+  candidate.contractNativeShape = {nativeM, nativeN, nativeK};
+  if (candidate.isInVnniLayout)
+    candidate.contractNativeShape.push_back(vnni);
+
+  return success();
+}
+
+//----------------------------------------------------------------------------//
+// Public interface                                                           //
+//----------------------------------------------------------------------------//
+
+void x86::populateVectorContractMultiLevelUnrollForAMXPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<VectorContractMultiLevelUnroll>(patterns.getContext(),
+                                               matchShapesAndTypesForAMX);
   vector::UnrollVectorOptions nativeUnrollOptions;
   nativeUnrollOptions.setNativeShapeFn(getFromNativeShapeAttr);
   vector::populateVectorUnrollPatterns(patterns, nativeUnrollOptions);
