@@ -1108,9 +1108,9 @@ static LogicalResult verifyFunctionParameterAttributes(
   if (!attrs || attrs.empty() ||
       !llvm::all_of(attrs,
                     llvm::IsaPred<spirv::FunctionParameterAttributeAttr>))
-    return emitError(loc,
-                     "'spirv.func_param_attr' must be a non-empty array of "
-                     "spirv::FunctionParameterAttributeAttr");
+    return emitError(loc, "'") << spirv::getFuncParamAttrName()
+                               << "' must be a non-empty array of "
+                                  "spirv::FunctionParameterAttributeAttr";
 
   SmallVector<spirv::FunctionParameterAttribute, 8> seen;
   bool hasZext = false, hasSext = false;
@@ -1166,11 +1166,12 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
   if (attribute.getName() == spirv::getFuncParamAlignmentAttrName()) {
     auto alignment = dyn_cast<IntegerAttr>(attribute.getValue());
     if (!alignment || !alignment.getType().isSignlessInteger(32))
-      return op->emitError(
-          "'spirv.alignment' must be a 32-bit signless integer "
-          "attribute");
+      return op->emitError("'")
+             << spirv::getFuncParamAlignmentAttrName()
+             << "' must be a 32-bit signless integer attribute";
     if (!isa<spirv::PointerType>(argType))
-      return op->emitError("'spirv.alignment' requires a pointer parameter");
+      return op->emitError("'") << spirv::getFuncParamAlignmentAttrName()
+                                << "' requires a pointer parameter";
     return success();
   }
   if (attribute.getName() == spirv::getFuncParamAttrName())
