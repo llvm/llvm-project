@@ -524,10 +524,10 @@ def NVVM_Ex2Op
     auto *vecTy = llvm::dyn_cast<llvm::FixedVectorType>(src->getType());
     if (vecTy && vecTy->getNumElements() == 1) {
       // There is no one-lane PTX form; use the scalar f32 intrinsic.
-      llvm::Value *lane = builder.CreateExtractElement(src, builder.getInt32(0));
-      llvm::Value *res = createIntrinsicCall(builder, id, lane->getType(), {lane});
-      $res = builder.CreateInsertElement(llvm::PoisonValue::get(vecTy), res,
-                                         builder.getInt32(0));
+      llvm::Type *f32Ty = vecTy->getElementType();
+      llvm::Value *scalar = builder.CreateBitCast(src, f32Ty);
+      llvm::Value *res = createIntrinsicCall(builder, id, f32Ty, {scalar});
+      $res = builder.CreateBitCast(res, vecTy);
     } else {
       $res = createIntrinsicCall(
           builder, id, moduleTranslation.convertType(op.getRes().getType()),
