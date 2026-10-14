@@ -8197,6 +8197,17 @@ private:
   SmallVectorImpl<LateParsedTypeAttribute *> *CurRecordLateParsedTypeAttrs =
       nullptr;
 
+  /// Whether type attributes in \p D are late-parsed. Only member declarators
+  /// are: their arguments are resolved in the record's scope at its closing
+  /// brace. Other declarators nested in a member, such as a function-pointer
+  /// member's parameters or a type name in `sizeof`, parse them eagerly.
+  /// Parameters are tracked by
+  /// https://github.com/llvm/llvm-project/issues/166454.
+  bool isLateParsedTypeAttrContext(const Declarator &D) const {
+    return CurRecordLateParsedTypeAttrs &&
+           D.getContext() == DeclaratorContext::Member;
+  }
+
   /// We've parsed something that could plausibly be intended to be a template
   /// name (\p LHS) followed by a '<' token, and the following code can't
   /// possibly be an expression. Determine if this is likely to be a template-id
