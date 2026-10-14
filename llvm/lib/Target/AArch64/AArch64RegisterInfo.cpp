@@ -756,7 +756,7 @@ bool AArch64RegisterInfo::requiresRegisterScavenging(
 
 bool AArch64RegisterInfo::requiresVirtualBaseRegisters(
     const MachineFunction &MF) const {
-  return true;
+  return MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
 }
 
 bool
