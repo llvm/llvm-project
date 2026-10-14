@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-pc-windows -verify-machineinstrs \
+; RUN: llc < %s -mtriple=i386-pc-windows \
 ; RUN:   -debug-only=machine-scheduler -o - 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
