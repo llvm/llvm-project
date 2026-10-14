@@ -66,6 +66,64 @@ entry:
 
 }
 
+define i64 @crbitsoff_64(i64 %v1, i64 %v2) #0 {
+; CHECK-LABEL: crbitsoff_64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpldi 7, 3, 0
+; CHECK-NEXT:    mfocrf 3, 1
+; CHECK-NEXT:    cmpldi 7, 4, 0
+; CHECK-NEXT:    mfocrf 4, 1
+; CHECK-NEXT:    rlwinm 3, 3, 31, 31, 31
+; CHECK-NEXT:    xori 3, 3, 1
+; CHECK-NEXT:    rlwinm 4, 4, 31, 31, 31
+; CHECK-NEXT:    and 3, 3, 4
+; CHECK-NEXT:    blr
+;
+; CHECK-NO-ISEL-LABEL: crbitsoff_64:
+; CHECK-NO-ISEL:       # %bb.0: # %entry
+; CHECK-NO-ISEL-NEXT:    cmpldi 7, 3, 0
+; CHECK-NO-ISEL-NEXT:    mfocrf 3, 1
+; CHECK-NO-ISEL-NEXT:    cmpldi 7, 4, 0
+; CHECK-NO-ISEL-NEXT:    mfocrf 4, 1
+; CHECK-NO-ISEL-NEXT:    rlwinm 3, 3, 31, 31, 31
+; CHECK-NO-ISEL-NEXT:    xori 3, 3, 1
+; CHECK-NO-ISEL-NEXT:    rlwinm 4, 4, 31, 31, 31
+; CHECK-NO-ISEL-NEXT:    and 3, 3, 4
+; CHECK-NO-ISEL-NEXT:    blr
+entry:
+  %tobool = icmp ne i64 %v1, 0
+  %lnot = icmp eq i64 %v2, 0
+  %and3 = and i1 %tobool, %lnot
+  %and = zext i1 %and3 to i64
+  ret i64 %and
+}
+
+define i64 @crbitson_64(i64 %v1, i64 %v2) #1 {
+; CHECK-LABEL: crbitson_64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cntlzd 4, 4
+; CHECK-NEXT:    addic 5, 3, -1
+; CHECK-NEXT:    subfe 3, 5, 3
+; CHECK-NEXT:    rldicl 4, 4, 58, 63
+; CHECK-NEXT:    and 3, 3, 4
+; CHECK-NEXT:    blr
+;
+; CHECK-NO-ISEL-LABEL: crbitson_64:
+; CHECK-NO-ISEL:       # %bb.0: # %entry
+; CHECK-NO-ISEL-NEXT:    cntlzd 4, 4
+; CHECK-NO-ISEL-NEXT:    addic 5, 3, -1
+; CHECK-NO-ISEL-NEXT:    subfe 3, 5, 3
+; CHECK-NO-ISEL-NEXT:    rldicl 4, 4, 58, 63
+; CHECK-NO-ISEL-NEXT:    and 3, 3, 4
+; CHECK-NO-ISEL-NEXT:    blr
+entry:
+  %tobool = icmp ne i64 %v1, 0
+  %lnot = icmp eq i64 %v2, 0
+  %and3 = and i1 %tobool, %lnot
+  %and = zext i1 %and3 to i64
+  ret i64 %and
+}
+
 
 attributes #0 = { nounwind readnone "target-features"="-crbits" }
 attributes #1 = { nounwind readnone }
