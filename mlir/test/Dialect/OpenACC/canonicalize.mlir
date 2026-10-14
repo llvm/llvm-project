@@ -392,8 +392,8 @@ func.func @kernel_environment_copyin_then_create(%var: memref<i32>, %other: memr
 // CHECK-LABEL: func.func @kernel_environment_map_info
 // CHECK-SAME: %[[VAR:.*]]: memref<i32>
 // CHECK: %[[COPY:.*]] = acc.copyin varPtr(%[[VAR]] : memref<i32>) -> memref<i32>
-// CHECK: %[[TO:.*]] = acc.map_info varPtr(%[[VAR]] : memref<i32>) varType(i32) descKind(none) mapFlags(to) -> memref<i32>
-// CHECK: %[[FROM:.*]] = acc.map_info varPtr(%[[VAR]] : memref<i32>) varType(i32) descKind(none) mapFlags(from) -> memref<i32>
+// CHECK: %[[TO:.*]] = acc.map_info varPtr(%[[VAR]] : memref<i32>) descKind(none) mapFlags(to) -> memref<i32>
+// CHECK: %[[FROM:.*]] = acc.map_info varPtr(%[[VAR]] : memref<i32>) descKind(none) mapFlags(from) -> memref<i32>
 // CHECK: acc.kernel_environment dataOperands(%[[COPY]], %[[TO]], %[[FROM]] : memref<i32>, memref<i32>, memref<i32>) {
 // CHECK: memref.load %[[TO]]
 // CHECK: memref.load %[[FROM]]
