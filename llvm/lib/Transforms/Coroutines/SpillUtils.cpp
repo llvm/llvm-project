@@ -378,17 +378,29 @@ private:
     //  1) Potentially treat sret as nocapture in calls
     //  2) Special handle the return object and put it on the stack
     //  3) Utilize lifetime.end intrinsic
+    return isEscapedOrUsedAcrossSuspend(/*IgnoreLifetimeMarkers=*/false);
+  }
+
+public:
+  bool isEscapedOrUsedAcrossSuspend(bool IgnoreLifetimeMarkers) const {
     if (PI.isEscaped())
       return true;
 
-    for (auto *U1 : Users)
-      for (auto *U2 : Users)
+    for (auto *U1 : Users) {
+      if (IgnoreLifetimeMarkers && U1->isLifetimeStartOrEnd())
+        continue;
+      for (auto *U2 : Users) {
+        if (IgnoreLifetimeMarkers && U2->isLifetimeStartOrEnd())
+          continue;
         if (Checker.isDefinitionAcrossSuspend(*U1, U2))
           return true;
+      }
+    }
 
     return false;
   }
 
+private:
   void handleMayWrite(const Instruction &I) {
     if (!DT.dominates(CoroShape.CoroBegin, &I))
       MayWriteBeforeCoroBegin = true;
@@ -449,6 +461,13 @@ static void collectFrameAlloca(AllocaInst *AI, const coro::Shape &Shape,
                            ShouldUseLifetimeStartInfo};
   Visitor.visitPtr(*AI);
   if (!Visitor.getShouldLiveOnFrame())
+    return;
+  // Scalable allocas cannot be placed on the frame. Lifetime markers can
+  // conservatively span a suspend point even when no use does, so keep the
+  // alloca on the stack if its address does not escape and its uses do not
+  // cross a suspend point.
+  if (AI->getAllocatedType()->isScalableTy() &&
+      !Visitor.isEscapedOrUsedAcrossSuspend(/*IgnoreLifetimeMarkers=*/true))
     return;
   Allocas.emplace_back(AI, Visitor.getAliasesCopy(),
                        Visitor.getMayWriteBeforeCoroBegin());
