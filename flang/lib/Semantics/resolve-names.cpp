@@ -6831,7 +6831,7 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
                    Attr::SAVE, Attr::TARGET, Attr::VALUE, Attr::VOLATILE})) {
       ConvertToObjectEntity(symbol);
     }
-    if (attrs.test(Attr::BIND_C)) {
+    if (attrs.test(Attr::BIND_C) && !context().HasError(symbol)) {
       SetBindNameOn(symbol);
     }
     return symbol;
