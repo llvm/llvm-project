@@ -415,52 +415,28 @@ workdistributeDoLower(omp::WorkdistributeOp workdistribute,
   return false;
 }
 
-/// Check if the enclosed type in fir.ref is fir.box and fir.box encloses array
-static bool isEnclosedTypeRefToBoxArray(Type type) {
-  // Check if it's a reference type
-  if (auto refType = dyn_cast<fir::ReferenceType>(type)) {
-    // Get the referenced type (should be fir.box)
-    auto referencedType = refType.getEleTy();
-    // Check if referenced type is a box
-    if (auto boxType = dyn_cast<fir::BoxType>(referencedType)) {
-      // Get the boxed type and check if it's an array
-      auto boxedType = boxType.getEleTy();
-      // Check if boxed type is a sequence (array)
-      return isa<fir::SequenceType>(boxedType);
-    }
+/// Returns the box type of a FortranAAssign operand if it describes an array of
+/// known rank, peeling a fir.ref when \p isRef is set. Returns null otherwise.
+/// Allocatable and pointer descriptors (box of heap/ptr array) are accepted.
+static fir::BaseBoxType getAssignArrayBoxType(Type type, bool isRef) {
+  if (isRef) {
+    if (!fir::isBoxAddress(type))
+      return {};
+    type = fir::unwrapRefType(type);
   }
-  return false;
-}
-
-/// Check if the enclosed type in fir.box is scalar (not array)
-static bool isEnclosedTypeBoxScalar(Type type) {
-  // Check if it's a box type
-  if (auto boxType = dyn_cast<fir::BoxType>(type)) {
-    // Get the boxed type
-    auto boxedType = boxType.getEleTy();
-    // Check if boxed type is NOT a sequence (array)
-    return !isa<fir::SequenceType>(boxedType);
-  }
-  return false;
-}
-
-/// Check if the type is a fir.box that encloses an array (by value, no ref).
-static bool isEnclosedTypeBoxArray(Type type) {
-  if (auto boxType = dyn_cast<fir::BoxType>(type))
-    return isa<fir::SequenceType>(boxType.getEleTy());
-  return false;
-}
-
-/// Element type of a boxed array, peeling an optional enclosing fir.ref.
-/// Returns null if the type is not a (ref to) box of a sequence.
-static Type getBoxArraySeqEleTy(Type type) {
-  if (auto refType = dyn_cast<fir::ReferenceType>(type))
-    type = refType.getEleTy();
-  auto boxType = dyn_cast<fir::BoxType>(type);
-  if (!boxType)
+  auto boxTy = dyn_cast<fir::BaseBoxType>(type);
+  if (!boxTy)
     return {};
-  auto seqType = dyn_cast<fir::SequenceType>(boxType.getEleTy());
-  return seqType ? seqType.getEleTy() : Type{};
+  auto seqTy =
+      dyn_cast_or_null<fir::SequenceType>(fir::extractSequenceType(boxTy));
+  if (!seqTy || seqTy.hasUnknownShape())
+    return {};
+  return boxTy;
+}
+
+/// Returns the sequence type described by an array box value.
+static fir::SequenceType getBoxSequenceType(Value arrayBox) {
+  return cast<fir::SequenceType>(fir::extractSequenceType(arrayBox.getType()));
 }
 
 /// Check if the FortranAAssign call has src as scalar and dest as array
@@ -482,8 +458,9 @@ static bool isFortranAssignSrcScalarAndDestArray(fir::CallOp callOp) {
   auto destOrigType = destConvert.getValue().getType();
 
   // Check if src is scalar and dest is array
-  bool srcIsScalar = isEnclosedTypeBoxScalar(srcOrigType);
-  bool destIsArray = isEnclosedTypeRefToBoxArray(destOrigType);
+  auto srcBoxTy = dyn_cast<fir::BoxType>(srcOrigType);
+  bool srcIsScalar = srcBoxTy && !srcBoxTy.isArray();
+  bool destIsArray = bool(getAssignArrayBoxType(destOrigType, /*isRef=*/true));
   return srcIsScalar && destIsArray;
 }
 
@@ -498,15 +475,16 @@ static bool isFortranAssignSrcArrayAndDestArray(fir::CallOp callOp) {
   auto destConvert = callOp.getOperand(0).getDefiningOp<fir::ConvertOp>();
   if (!srcConvert || !destConvert)
     return false;
-  Type srcTy = srcConvert.getValue().getType();
-  Type destTy = destConvert.getValue().getType();
-  if (!isEnclosedTypeBoxArray(srcTy) || !isEnclosedTypeRefToBoxArray(destTy))
+  fir::BaseBoxType srcBoxTy =
+      getAssignArrayBoxType(srcConvert.getValue().getType(), /*isRef=*/false);
+  fir::BaseBoxType destBoxTy =
+      getAssignArrayBoxType(destConvert.getValue().getType(), /*isRef=*/true);
+  if (!srcBoxTy || !destBoxTy)
     return false;
   // The raw element load/store only handles trivial, matching element types.
   // Derived types need finalization and characters need length parameters.
-  Type srcEleTy = getBoxArraySeqEleTy(srcTy);
-  Type destEleTy = getBoxArraySeqEleTy(destTy);
-  return srcEleTy && fir::isa_trivial(srcEleTy) && srcEleTy == destEleTy;
+  Type srcEleTy = srcBoxTy.unwrapInnerType();
+  return fir::isa_trivial(srcEleTy) && srcEleTy == destBoxTy.unwrapInnerType();
 }
 
 /// Convert a flat index to multi-dimensional indices for an array box
@@ -523,9 +501,7 @@ static SmallVector<Value> convertFlatToMultiDim(OpBuilder &builder,
                                                 Location loc, Value flatIdx,
                                                 Value arrayBox) {
   // Get array type and rank
-  auto boxType = cast<fir::BoxType>(arrayBox.getType());
-  auto seqType = cast<fir::SequenceType>(boxType.getEleTy());
-  int rank = seqType.getDimension();
+  int rank = getBoxSequenceType(arrayBox).getDimension();
 
   // Get all extents
   SmallVector<Value> extents;
@@ -558,9 +534,7 @@ static SmallVector<Value> convertFlatToMultiDim(OpBuilder &builder,
 /// (totalElems = extent(1) * extent(2) * ... * extent(n))
 static Value CalculateTotalElements(OpBuilder &builder, Location loc,
                                     Value arrayBox) {
-  auto boxType = cast<fir::BoxType>(arrayBox.getType());
-  auto seqType = cast<fir::SequenceType>(boxType.getEleTy());
-  int rank = seqType.getDimension();
+  int rank = getBoxSequenceType(arrayBox).getDimension();
 
   Value totalElems = nullptr;
   for (int i = 0; i < rank; ++i) {
@@ -666,9 +640,7 @@ static void replaceArrayToArrayAssignWithUnorderedDoLoop(OpBuilder &builder,
   Value srcBox = getAssignArrayBox(builder, loc, srcConvert.getValue());
 
   // Element type comes from the destination sequence.
-  auto destBoxType = cast<fir::BoxType>(destBox.getType());
-  auto destSeqType = cast<fir::SequenceType>(destBoxType.getEleTy());
-  Type eleTy = destSeqType.getEleTy();
+  Type eleTy = getBoxSequenceType(destBox).getEleTy();
   auto eleRefTy = fir::ReferenceType::get(eleTy);
 
   auto c0 = arith::ConstantIndexOp::create(builder, loc, 0);
