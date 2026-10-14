@@ -330,3 +330,23 @@ func.func @test_constant_address_ops() -> (!ptr.ptr<#ptr.generic_space>, !ptr.pt
   %null = ptr.constant #ptr.null : !ptr.ptr<#ptr.generic_space> 
   return %addr_0, %null : !ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>
 }
+
+// CHECK-LABEL:  func @test_load_ops
+// CHECK-SAME:     %[[ARG0:.*]]: !llvm.ptr
+//       CHECK:    %[[LOAD_0:.*]] = llvm.load %[[ARG0]] : !llvm.ptr -> f32
+//       CHECK:    %[[LOAD_1:.*]] = llvm.load volatile %[[ARG0]] : !llvm.ptr -> f32
+//       CHECK:    %[[LOAD_2:.*]] = llvm.load %[[ARG0]] {nontemporal} : !llvm.ptr -> f32
+//       CHECK:    %[[LOAD_3:.*]] = llvm.load %[[ARG0]] invariant : !llvm.ptr -> f32
+//       CHECK:    %[[LOAD_4:.*]] = llvm.load %[[ARG0]] invariant_group : !llvm.ptr -> f32
+//       CHECK:    %[[LOAD_5:.*]] = llvm.load %[[ARG0]] atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+//       CHECK:    %[[LOAD_6:.*]] = llvm.load volatile %[[ARG0]] atomic syncscope("workgroup") acquire {alignment = 4 : i64, nontemporal} : !llvm.ptr -> i32
+func.func @test_load_ops(%arg0: !ptr.ptr<#ptr.generic_space>) -> (f32, f32, f32, f32, f32, i64, i32) {
+  %0 = ptr.load %arg0 : !ptr.ptr<#ptr.generic_space> -> f32
+  %1 = ptr.load volatile %arg0 : !ptr.ptr<#ptr.generic_space> -> f32
+  %2 = ptr.load %arg0 nontemporal : !ptr.ptr<#ptr.generic_space> -> f32
+  %3 = ptr.load %arg0 invariant : !ptr.ptr<#ptr.generic_space> -> f32
+  %4 = ptr.load %arg0 invariant_group : !ptr.ptr<#ptr.generic_space> -> f32
+  %5 = ptr.load %arg0 atomic monotonic alignment = 8 : !ptr.ptr<#ptr.generic_space> -> i64
+  %6 = ptr.load volatile %arg0 atomic syncscope("workgroup") acquire nontemporal alignment = 4 : !ptr.ptr<#ptr.generic_space> -> i32
+  func.return %0, %1, %2, %3, %4, %5, %6 : f32, f32, f32, f32, f32, i64, i32
+}
