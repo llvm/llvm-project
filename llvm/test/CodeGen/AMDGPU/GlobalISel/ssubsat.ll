@@ -5551,9 +5551,9 @@ define amdgpu_ps <4 x float> @ssubsat_i128_sv(i128 inreg %lhs, i128 %rhs) {
 ; GFX11-TRUE16-NEXT:    v_sub_co_ci_u32_e32 v4, vcc_lo, s2, v2, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_sub_co_ci_u32_e64 v5, null, s3, v3, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_u64_e32 vcc_lo, s[0:1], v[0:1]
-; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e64 s0, s[2:3], v[2:3]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, s0
+; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e32 vcc_lo, s[2:3], v[2:3]
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0, v[4:5]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[2:3], v[2:3]
@@ -5720,9 +5720,9 @@ define amdgpu_ps <4 x float> @ssubsat_i128_vs(i128 %lhs, i128 inreg %rhs) {
 ; GFX11-TRUE16-NEXT:    v_subrev_co_ci_u32_e32 v4, vcc_lo, s2, v2, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_subrev_co_ci_u32_e64 v5, null, s3, v3, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[0:1], v[0:1]
-; GFX11-TRUE16-NEXT:    v_cmp_gt_i64_e64 s0, s[2:3], v[2:3]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, s0
+; GFX11-TRUE16-NEXT:    v_cmp_gt_i64_e32 vcc_lo, s[2:3], v[2:3]
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0, v[4:5]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[2:3], v[2:3]
@@ -5976,13 +5976,13 @@ define <2 x i128> @v_ssubsat_v2i128(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GFX11-TRUE16-NEXT:    v_sub_co_ci_u32_e32 v16, vcc_lo, v2, v10, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_sub_co_ci_u32_e64 v17, null, v3, v11, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[8:9]
-; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e64 s0, v[2:3], v[10:11]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, s0
+; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[2:3], v[10:11]
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0, v[16:17]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[10:11]
-; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e64 s0, v[6:7], v[14:15]
+; GFX11-TRUE16-NEXT:    v_ashrrev_i32_e32 v2, 31, v17
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.h, v0.l, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[16:17]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.l, 0, vcc_lo
@@ -5993,20 +5993,20 @@ define <2 x i128> @v_ssubsat_v2i128(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[4:5], v[12:13]
 ; GFX11-TRUE16-NEXT:    v_xor_b16 v0.l, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, vcc_lo
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, s0
+; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[6:7], v[14:15]
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0, v[8:9]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[6:7], v[14:15]
-; GFX11-TRUE16-NEXT:    v_ashrrev_i32_e32 v2, 31, v17
+; GFX11-TRUE16-NEXT:    v_ashrrev_i32_e32 v6, 31, v9
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v1.l, v0.h, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[8:9]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, v1.h, 0, vcc_lo
-; GFX11-TRUE16-NEXT:    v_ashrrev_i32_e32 v6, 31, v9
 ; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v3, 0x80000000, v2
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v7, 0x80000000, v6
 ; GFX11-TRUE16-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v0.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v18, v2, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_xor_b16 v4.l, v1.l, v1.h
-; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v7, 0x80000000, v6
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v1, v19, v2, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_dual_cndmask_b32 v2, v16, v2 :: v_dual_cndmask_b32 v3, v17, v3
 ; GFX11-TRUE16-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v4.l

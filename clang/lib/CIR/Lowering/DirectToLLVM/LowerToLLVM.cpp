@@ -57,6 +57,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 using namespace cir;
 using namespace llvm;
@@ -304,6 +305,48 @@ convertUWTableKind(cir::UnwindTableKind kind) {
     return LLVM::Async;
   }
   llvm_unreachable("Unknown CIR unwind table kind");
+}
+
+static mlir::LLVM::framePointerKind::FramePointerKind
+convertFramePointerKind(cir::FramePointerKind kind) {
+  using CIR = cir::FramePointerKind;
+  using LLVM = mlir::LLVM::framePointerKind::FramePointerKind;
+
+  switch (kind) {
+  case CIR::None:
+    return LLVM::None;
+  case CIR::NonLeaf:
+    return LLVM::NonLeaf;
+  case CIR::All:
+    return LLVM::All;
+  case CIR::Reserved:
+    return LLVM::Reserved;
+  case CIR::NonLeafNoReserve:
+    return LLVM::NonLeafNoReserve;
+  }
+  llvm_unreachable("Unknown CIR frame pointer kind");
+}
+
+/// The "frame-pointer" module flag holds an llvm::FramePointerKind value, as
+/// written by llvm::Module::setFramePointer.
+static llvm::FramePointerKind
+convertFramePointerKindToLLVMIR(cir::FramePointerKind kind) {
+  using CIR = cir::FramePointerKind;
+  using LLVM = llvm::FramePointerKind;
+
+  switch (kind) {
+  case CIR::None:
+    return LLVM::None;
+  case CIR::NonLeaf:
+    return LLVM::NonLeaf;
+  case CIR::All:
+    return LLVM::All;
+  case CIR::Reserved:
+    return LLVM::Reserved;
+  case CIR::NonLeafNoReserve:
+    return LLVM::NonLeafNoReserve;
+  }
+  llvm_unreachable("Unknown CIR frame pointer kind");
 }
 
 mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
@@ -593,6 +636,25 @@ mlir::LogicalResult lowerToConstrainedFPIntrinsic(
       rewriter, op, "llvm.experimental.constrained." + constrainedMnemonic,
       llvmResTy, callOperands, fastmathFlags);
   return mlir::success();
+}
+
+static mlir::Value createConstrainedFPIntrinsicCall(
+    mlir::ConversionPatternRewriter &rewriter, mlir::Location loc,
+    mlir::ValueRange operands, mlir::Type llvmResTy, cir::FenvAttr fenv,
+    llvm::StringRef constrainedMnemonic, bool hasRoundingMode,
+    mlir::LLVM::FastmathFlags fastmathFlags = {}) {
+  llvm::SmallVector<mlir::Value> callOperands(operands.begin(), operands.end());
+  if (hasRoundingMode)
+    callOperands.push_back(createFenvMetadataValue(
+        rewriter, loc, getConstrainedRoundingMetadata(fenv)));
+
+  callOperands.push_back(createFenvMetadataValue(
+      rewriter, loc, getConstrainedExceptMetadata(fenv)));
+
+  mlir::LLVM::CallIntrinsicOp intrinsic = createCallLLVMIntrinsicOp(
+      rewriter, loc, "llvm.experimental.constrained." + constrainedMnemonic,
+      llvmResTy, callOperands, fastmathFlags);
+  return intrinsic->getResult(0);
 }
 
 template <typename LLVMOp>
@@ -1302,40 +1364,43 @@ getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
   llvm_unreachable("unknown memory order");
 }
 
-static llvm::StringRef getLLVMSyncScope(cir::SyncScopeKind syncScope,
-                                        mlir::ModuleOp moduleOp) {
+static llvm::AtomicScope getAtomicScope(cir::SyncScopeKind syncScope) {
   switch (syncScope) {
   case cir::SyncScopeKind::SingleThread:
   case cir::SyncScopeKind::HIPSingleThread:
-    return "singlethread";
-  case cir::SyncScopeKind::System:
-  case cir::SyncScopeKind::HIPSystem:
-  case cir::SyncScopeKind::OpenCLAllSVMDevices:
-    return "";
+    return llvm::AtomicScope::Single;
+  case cir::SyncScopeKind::Wavefront:
+  case cir::SyncScopeKind::HIPWavefront:
+  case cir::SyncScopeKind::OpenCLSubGroup:
+    return llvm::AtomicScope::Wavefront;
+  case cir::SyncScopeKind::Workgroup:
+  case cir::SyncScopeKind::HIPWorkgroup:
+  case cir::SyncScopeKind::OpenCLWorkGroup:
+    return llvm::AtomicScope::Workgroup;
+  case cir::SyncScopeKind::Cluster:
+  case cir::SyncScopeKind::HIPCluster:
+    return llvm::AtomicScope::Cluster;
   case cir::SyncScopeKind::Device:
   case cir::SyncScopeKind::HIPAgent:
   case cir::SyncScopeKind::OpenCLDevice:
-    return "agent";
-  case cir::SyncScopeKind::Workgroup:
-  case cir::SyncScopeKind::HIPWorkgroup:
-  case cir::SyncScopeKind::OpenCLWorkGroup: {
-    // NVPTX uses "block" for workgroup sync scope; AMDGPU uses "workgroup".
-    auto tripleAttr = moduleOp->getAttrOfType<mlir::StringAttr>(
-        cir::CIRDialect::getTripleAttrName());
-    if (tripleAttr && llvm::Triple(tripleAttr.getValue()).isNVPTX())
-      return "block";
-    return "workgroup";
-  }
-  case cir::SyncScopeKind::Wavefront:
-  case cir::SyncScopeKind::HIPWavefront:
-    return "wavefront";
-  case cir::SyncScopeKind::Cluster:
-  case cir::SyncScopeKind::HIPCluster:
-    return "cluster";
-  case cir::SyncScopeKind::OpenCLSubGroup:
-    return "sub_group";
+    return llvm::AtomicScope::Device;
+  case cir::SyncScopeKind::System:
+  case cir::SyncScopeKind::HIPSystem:
+  case cir::SyncScopeKind::OpenCLAllSVMDevices:
+    return llvm::AtomicScope::System;
   }
   llvm_unreachable("unknown sync scope");
+}
+
+static llvm::StringRef getLLVMSyncScope(cir::SyncScopeKind syncScope,
+                                        mlir::ModuleOp moduleOp) {
+  llvm::AtomicScope scope = getAtomicScope(syncScope);
+  if (auto triple = moduleOp->getAttrOfType<mlir::StringAttr>(
+          cir::CIRDialect::getTripleAttrName()))
+    if (std::optional<llvm::StringRef> name = llvm::getAtomicScopeIRString(
+            llvm::Triple(triple.getValue()), scope))
+      return *name;
+  return scope == llvm::AtomicScope::Single ? "singlethread" : "";
 }
 
 static std::optional<llvm::StringRef>
@@ -1434,6 +1499,9 @@ mlir::LogicalResult CIRToLLVMAtomicFenceOpLowering::matchAndRewrite(
   auto fence = mlir::LLVM::FenceOp::create(rewriter, op.getLoc(), llvmOrder);
   fence.setSyncscope(getLLVMSyncScope(op.getSyncscope(),
                                       op->getParentOfType<mlir::ModuleOp>()));
+  if (mlir::Attribute mmra =
+          op->getAttr(mlir::LLVM::LLVMDialect::getMmraAttrName()))
+    fence->setAttr(mlir::LLVM::LLVMDialect::getMmraAttrName(), mmra);
 
   rewriter.replaceOp(op, fence);
 
@@ -2990,6 +3058,11 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   if (std::optional<cir::UnwindTableKind> uwtableKind = op.getUwtable())
     fn.setUwtableKindAttr(mlir::LLVM::UWTableKindAttr::get(
         fn.getContext(), convertUWTableKind(*uwtableKind)));
+
+  if (std::optional<cir::FramePointerKind> framePointerKind =
+          op.getFramePointer())
+    fn.setFramePointerAttr(mlir::LLVM::FramePointerKindAttr::get(
+        fn.getContext(), convertFramePointerKind(*framePointerKind)));
 
   // Function attributes with no dedicated field on the LLVM dialect's
   // LLVMFuncOp are routed through the `passthrough` array. The MLIR LLVM IR
@@ -4597,6 +4670,19 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
     module->setAttr(mlir::LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
                     asmAttr);
 
+  if (auto framePointerAttr = module->getAttrOfType<cir::FramePointerKindAttr>(
+          cir::CIRDialect::getModuleFramePointerAttrName())) {
+    mlir::OpBuilder builder(module.getContext());
+    builder.setInsertionPointToEnd(module.getBody());
+    auto flag = mlir::LLVM::ModuleFlagAttr::get(
+        module.getContext(), mlir::LLVM::ModFlagBehavior::Max,
+        builder.getStringAttr("frame-pointer"),
+        builder.getI32IntegerAttr(static_cast<int32_t>(
+            convertFramePointerKindToLLVMIR(framePointerAttr.getValue()))));
+    mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
+                                      builder.getArrayAttr({flag}));
+  }
+
   lowerOpenCLModuleMetadataAttrs(module);
 }
 
@@ -4768,9 +4854,8 @@ mlir::LogicalResult CIRToLLVMInsertMemberOpLowering::matchAndRewrite(
 void createLLVMFuncOpIfNotExist(mlir::ConversionPatternRewriter &rewriter,
                                 mlir::SymbolTableCollection &symbolTables,
                                 mlir::Operation *srcOp, llvm::StringRef fnName,
-                                mlir::Type fnTy,
-                                mlir::ArrayAttr argAttrs = nullptr,
-                                mlir::ArrayAttr resAttrs = nullptr) {
+                                mlir::Type fnTy, mlir::ArrayAttr argAttrs,
+                                mlir::ArrayAttr resAttrs) {
   mlir::ModuleOp modOp = srcOp->getParentOfType<mlir::ModuleOp>();
   mlir::Operation *sourceSymbol = symbolTables.lookupSymbolIn(
       modOp, mlir::StringAttr::get(fnTy.getContext(), fnName));
@@ -5662,11 +5747,24 @@ mlir::LogicalResult CIRToLLVMComplexFAddOpLowering::matchAndRewrite(
       rewriter, loc, complexElemTy, rhs, ArrayRef(int64_t{1}));
 
   assert(!cir::MissingFeatures::fastMathFlags());
-  assert(!cir::MissingFeatures::fpConstraints());
-  mlir::Value newReal = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy,
-                                                   lhsReal, rhsReal);
-  mlir::Value newImag = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy,
-                                                   lhsImag, rhsImag);
+  mlir::Value newReal;
+  mlir::Value newImag;
+  if (cir::FenvAttr fenv = op.getFenvAttr()) {
+    newReal = createConstrainedFPIntrinsicCall(
+        rewriter, loc, {lhsReal, rhsReal}, complexElemTy, fenv,
+        /*constrainedMnemonic=*/"fadd",
+        /*hasRoundingMode=*/true);
+
+    newImag = createConstrainedFPIntrinsicCall(
+        rewriter, loc, {lhsImag, rhsImag}, complexElemTy, fenv,
+        /*constrainedMnemonic=*/"fadd",
+        /*hasRoundingMode=*/true);
+  } else {
+    newReal = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy, lhsReal,
+                                         rhsReal);
+    newImag = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy, lhsImag,
+                                         rhsImag);
+  }
 
   mlir::Type complexLLVMTy =
       getTypeConverter()->convertType(op.getResult().getType());
@@ -5702,11 +5800,24 @@ mlir::LogicalResult CIRToLLVMComplexFSubOpLowering::matchAndRewrite(
       rewriter, loc, complexElemTy, rhs, ArrayRef(int64_t{1}));
 
   assert(!cir::MissingFeatures::fastMathFlags());
-  assert(!cir::MissingFeatures::fpConstraints());
-  mlir::Value newReal = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy,
-                                                   lhsReal, rhsReal);
-  mlir::Value newImag = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy,
-                                                   lhsImag, rhsImag);
+  mlir::Value newReal;
+  mlir::Value newImag;
+  if (cir::FenvAttr fenv = op.getFenvAttr()) {
+    newReal = createConstrainedFPIntrinsicCall(
+        rewriter, loc, {lhsReal, rhsReal}, complexElemTy, fenv,
+        /*constrainedMnemonic=*/"fsub",
+        /*hasRoundingMode=*/true);
+
+    newImag = createConstrainedFPIntrinsicCall(
+        rewriter, loc, {lhsImag, rhsImag}, complexElemTy, fenv,
+        /*constrainedMnemonic=*/"fsub",
+        /*hasRoundingMode=*/true);
+  } else {
+    newReal = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy, lhsReal,
+                                         rhsReal);
+    newImag = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy, lhsImag,
+                                         rhsImag);
+  }
 
   mlir::Type complexLLVMTy =
       getTypeConverter()->convertType(op.getResult().getType());

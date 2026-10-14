@@ -5572,9 +5572,9 @@ define amdgpu_ps <4 x float> @saddsat_i128_sv(i128 inreg %lhs, i128 %rhs) {
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, v3, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[0:1], v[4:5]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GFX11-TRUE16-NEXT:    v_cmp_gt_i64_e32 vcc_lo, s[2:3], v[6:7]
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0, v[2:3]
-; GFX11-TRUE16-NEXT:    v_cmp_gt_i64_e64 s0, s[2:3], v[6:7]
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, s0
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[2:3], v[6:7]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.h, v0.l, vcc_lo
@@ -5744,13 +5744,13 @@ define amdgpu_ps <4 x float> @saddsat_i128_vs(i128 %lhs, i128 inreg %rhs) {
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, s1, v1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, s2, v2, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, v3, vcc_lo
-; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e64 s1, s[2:3], 0
+; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e64 s0, s[2:3], 0
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[4:5], v[0:1]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
-; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e64 s0, v[6:7], v[2:3]
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, s0
+; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[6:7], v[2:3]
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[6:7], v[2:3]
-; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i32_e32 v2, 31, v7
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.h, v0.l, vcc_lo
@@ -6004,9 +6004,9 @@ define <2 x i128> @v_saddsat_v2i128(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v17, null, v3, v11, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[8:9], v[0:1]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[16:17], v[2:3]
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0, v[10:11]
-; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e64 s0, v[16:17], v[2:3]
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, s0
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[16:17], v[2:3]
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i32_e32 v2, 31, v17
@@ -6020,8 +6020,8 @@ define <2 x i128> @v_saddsat_v2i128(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[10:11], v[4:5]
 ; GFX11-TRUE16-NEXT:    v_xor_b16 v0.l, v0.h, v0.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, vcc_lo
-; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e64 s0, v[12:13], v[6:7]
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, s0
+; GFX11-TRUE16-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[12:13], v[6:7]
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0, v[14:15]
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[12:13], v[6:7]

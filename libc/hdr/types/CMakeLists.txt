@@ -31,6 +31,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  fpos_t
+  HDRS
+    fpos_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.fpos_t
+)
+
+add_proxy_header_library(
   div_t
   HDRS
     div_t.h
