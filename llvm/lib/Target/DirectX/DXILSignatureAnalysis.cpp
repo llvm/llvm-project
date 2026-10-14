@@ -90,6 +90,12 @@ static Error validateSemanticType(const SemanticSignatureElement &E) {
       return signatureError(
           "SV_InstanceID requires a scalar 16- or 32-bit unsigned integer");
     break;
+  case dxbc::PSV::SemanticKind::ShadingRate:
+    if (E.Rows != 1 || E.Cols != 1 ||
+        (E.CompType != ElementType::U16 && E.CompType != ElementType::U32))
+      return signatureError(
+          "SV_ShadingRate requires a scalar 16- or 32-bit unsigned integer");
+    break;
   default:
     break;
   }
@@ -476,6 +482,8 @@ static dxbc::D3DSystemValue getSystemValue(dxbc::PSV::SemanticKind Kind) {
     return dxbc::D3DSystemValue::CullDistance;
   case KindTy::Target:
     return dxbc::D3DSystemValue::Target;
+  case KindTy::ShadingRate:
+    return dxbc::D3DSystemValue::ShadingRate;
   default:
     llvm_unreachable("validated vertex/pixel signature semantic");
   }
@@ -504,6 +512,8 @@ static StringRef getContainerSemanticName(const SemanticSignatureElement &E) {
     return "SV_CullDistance";
   case Kind::Target:
     return "SV_Target";
+  case Kind::ShadingRate:
+    return "SV_ShadingRate";
   default:
     llvm_unreachable("validated vertex/pixel signature semantic");
   }

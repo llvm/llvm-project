@@ -191,6 +191,17 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
         {Triple::Pixel, IOType::In, SemanticInterpretation::SGV}};
     return Stages;
   }
+  case dxbc::PSV::SemanticKind::ShadingRate: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::Out, SemanticInterpretation::SV},
+        {Triple::Hull, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Domain, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Geometry, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SV},
+        {Triple::Mesh, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::SV}};
+    return Stages;
+  }
   case dxbc::PSV::SemanticKind::Position: {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Vertex, IOType::In, SemanticInterpretation::Arbitrary},
