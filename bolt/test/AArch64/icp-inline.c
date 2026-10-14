@@ -30,8 +30,8 @@ __attribute__((noinline)) int indirectTailCall(int Argc) {
   __attribute__((musttail)) return Func(0);
 }
 
-// FDATA: 1 indirectTailCall 28 1 foo 0 0 1
-// FDATA: 1 indirectTailCall 28 1 bar 0 0 2
+// FDATA: 1 indirectTailCall 2c 1 foo 0 0 1
+// FDATA: 1 indirectTailCall 2c 1 bar 0 0 2
 
 int main(int Argc, char **Argv) {
   (void)Argv;
