@@ -438,7 +438,7 @@ struct NewFunction {
     QualType TypeInfo;
     ParamPassKind Kind;
     unsigned OrderPriority; // Lower value parameters are preferred first.
-    std::string render(const DeclContext *Context) const;
+    std::string render(const DeclContext &Context) const;
     bool operator<(const Parameter &Other) const {
       return OrderPriority < Other.OrderPriority;
     }
@@ -510,7 +510,7 @@ std::string NewFunction::renderParametersForDeclaration(
     if (NeedCommaBefore)
       Result += ", ";
     NeedCommaBefore = true;
-    Result += P.render(&Enclosing);
+    Result += P.render(Enclosing);
   }
   return Result;
 }
@@ -641,9 +641,27 @@ NewFunction::getFuncBody(const SourceManager &SM) const {
   return *NewBody + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
 }
 
-std::string NewFunction::Parameter::render(const DeclContext *Context) const {
-  return printType(TypeInfo, *Context) +
-         (Kind == ParamPassKind::Reference ? " &" : " ") + Name;
+std::string NewFunction::Parameter::render(const DeclContext &Context) const {
+  // Passing Name as printType()'s declarator placeholder (rather than just
+  // appending it after the printed type) lets clang's own type printer
+  // place it correctly for declarator syntax that doesn't simply put the
+  // name after the type, e.g. a function pointer (`void (*name)(int)`, not
+  // `void (*)(int) name`). This only threads correctly through an outer
+  // pointer or reference, though, not through a bare array type on its
+  // own (confirmed empirically: it prints as `int[5] name`, not the
+  // intended `int name[5]`) -- harmless here, since createParameters
+  // never leaves TypeInfo as a bare array: it's always either decayed
+  // to a pointer (in C) or wrapped in the reference built just below
+  // (in C++). For that reference case, building the actual reference
+  // QualType (rather than just prepending "&" to the placeholder
+  // string) is what lets the printer correctly parenthesize a
+  // reference-to-array (`int (&name)[5]`, not the invalid
+  // `int &name[5]`).
+  QualType RenderedType =
+      Kind == ParamPassKind::Reference
+          ? Context.getParentASTContext().getLValueReferenceType(TypeInfo)
+          : TypeInfo;
+  return printType(RenderedType, Context, Name);
 }
 
 // Stores captured information about Extraction Zone.
@@ -1163,6 +1181,20 @@ bool createParameters(NewFunction &ExtractedFunc,
     // Parameter qualifiers are same as the Decl's qualifiers.
     QualType FullTypeInfo = VD->getType();
     QualType TypeInfo = FullTypeInfo.getNonReferenceType();
+
+    // A variably-modified type is rejected outright unless it's a plain
+    // array being extracted in C: a reference's (or any other wrapping,
+    // e.g. a further pointer indirection's) declared type still spells
+    // out the bound at every level, so it keeps mentioning a name
+    // (typically some other variable's) that isn't in scope in the
+    // extracted function's declaration. A plain array in C is the one
+    // case this doesn't apply to as-is, since its outer dimension is
+    // specifically not a problem once decayed to a pointer -- that
+    // gets a narrower, more precise check further down instead.
+    if (TypeInfo->isVariablyModifiedType() &&
+        (LangOpts.CPlusPlus || !TypeInfo->isArrayType()))
+      return false;
+
     // FIXME: check if parameter will be a non l-value reference.
     ParamPassKind Kind = ParamPassKind::Reference;
     if (!DeclInfo.IsPossiblyMutated) {
@@ -1173,12 +1205,15 @@ bool createParameters(NewFunction &ExtractedFunc,
           !FullTypeInfo->isReferenceType() &&
           Context.getTypeSizeInChars(TypeInfo) <= 2 * WordSize) {
         Kind = ParamPassKind::Value;
-      } else if (!TypeInfo->isArrayType()) {
+      } else if (!TypeInfo->isArrayType() && !TypeInfo->isFunctionType()) {
         // Still passed by reference to avoid a copy, but the reference
         // doesn't need to be mutable. Array types are never made const:
         // mutating array elements through a non-const-ref loop variable
         // or a decayed pointer argument is common and easy to miss
-        // conservatively, so we don't try.
+        // conservatively, so we don't try. A (non-pointer) function type
+        // can't be cv-qualified at all -- doing so anyway produces
+        // unparseable output, e.g. `void (const &F)(int)` for a
+        // captured function reference.
         TypeInfo.addConst();
       }
     }
@@ -1190,9 +1225,10 @@ bool createParameters(NewFunction &ExtractedFunc,
     // NewFunction::getFuncBody). Array types are the exception: they decay
     // to a pointer on their own wherever they're used, so no rewriting or
     // address-of is needed for them at all -- except that TypeInfo itself
-    // must be decayed too (NewFunction::Parameter::render() has no special
-    // case for array declarator syntax, so leaving it as an array type
-    // would print as the uncompilable `int[5] name`).
+    // must still be decayed explicitly (confirmed empirically): unlike a
+    // pointer or reference, printType()'s declarator placeholder doesn't
+    // thread correctly through a *bare* array type on its own, printing
+    // the uncompilable `int[5] name` instead of `int name[5]`.
     if (Kind == ParamPassKind::Reference && !LangOpts.CPlusPlus) {
       if (TypeInfo->isArrayType()) {
         // A decayed pointer no longer reports the array's own size,
@@ -1200,7 +1236,23 @@ bool createParameters(NewFunction &ExtractedFunc,
         // sizeof/alignof/typeof (or similar) on it.
         if (DeclInfo.HasUnsafeTypeQueryUseInZone)
           return false;
-        TypeInfo = Context.getArrayDecayedType(TypeInfo);
+        QualType Decayed = Context.getArrayDecayedType(TypeInfo);
+        // The array's own outermost dimension is never a problem, VLA
+        // or not: once decayed, it no longer appears in the type at
+        // all (`int A[N]` decays to plain `int *A`). An inner
+        // dimension that's still variable-length (e.g. the `N` in
+        // `int A[2][N]`, which decays to `int (*A)[N]`) is the actual
+        // hazard: its bound is an arbitrary expression, typically just
+        // some other variable's name, that isn't necessarily (and
+        // often isn't) also a parameter of the extracted function, and
+        // even if it is, a mutated one would itself have been turned
+        // into a pointer, which the bound expression can't account for
+        // either way. Bail out rather than risk printing a parameter
+        // type that references a name meaningless (or absent) in the
+        // new scope.
+        if (Decayed->getPointeeType()->isVariablyModifiedType())
+          return false;
+        TypeInfo = Decayed;
         Kind = ParamPassKind::Value;
       } else {
         // Bail out rather than rewrite a use whose location (or, for a
