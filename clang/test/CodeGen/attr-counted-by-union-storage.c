@@ -54,7 +54,8 @@ unsigned int test_index(struct domain *d, int i) {
   return d->masks[i];
 }
 
-// A bit-field count can't be loaded by byte offset, so the size is unknown.
+// A bit-field count is loaded through its l-value, extracting the bit-field
+// from its storage unit.
 struct bitfield_count {
   unsigned int pad : 20;
   unsigned int count : 12;
@@ -62,7 +63,9 @@ struct bitfield_count {
 };
 
 // CHECK-LABEL: define {{.*}} @test_bitfield_count(
-// CHECK: ret i64 -1
+// CHECK: [[BF:%.*]] = load i32, ptr %p, align 4
+// CHECK: lshr i32 [[BF]], 18
+// CHECK: ret i64 %flexible_array_member_size
 unsigned long test_bitfield_count(struct bitfield_count *p) {
   return __builtin_dynamic_object_size(p->fam, 1);
 }

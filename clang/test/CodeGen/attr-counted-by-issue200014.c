@@ -84,8 +84,8 @@ extern size_t sink;
 // FRONTEND-NEXT:    store i64 [[TMP1]], ptr @sink, align 8
 // FRONTEND-NEXT:    [[FAM1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX]], ptr [[AF]], i32 0, i32 2
 // FRONTEND-NEXT:    [[ARRAYDECAY2:%.*]] = getelementptr inbounds [0 x i8], ptr [[FAM1]], i64 0, i64 0
-// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[AF]], i64 0
-// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNTED_BY_GEP]], align 4
+// FRONTEND-NEXT:    [[COUNT3:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX]], ptr [[AF]], i32 0, i32 0
+// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNT3]], align 8
 // FRONTEND-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNTED_BY_LOAD]], 1
 // FRONTEND-NEXT:    [[TMP2:%.*]] = icmp sgt i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], -1
 // FRONTEND-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0
@@ -129,8 +129,8 @@ size_t local_fam(size_t n) {
 // FRONTEND-NEXT:    store i64 [[TMP1]], ptr @sink, align 8
 // FRONTEND-NEXT:    [[FAM1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX]], ptr [[AF]], i32 0, i32 2
 // FRONTEND-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [0 x i8], ptr [[FAM1]], i64 0, i64 2
-// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[AF]], i64 0
-// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNTED_BY_GEP]], align 4
+// FRONTEND-NEXT:    [[COUNT3:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX]], ptr [[AF]], i32 0, i32 0
+// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNT3]], align 8
 // FRONTEND-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNTED_BY_LOAD]], 1
 // FRONTEND-NEXT:    [[RESULT:%.*]] = sub nuw i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], 2
 // FRONTEND-NEXT:    [[TMP2:%.*]] = icmp sgt i64 [[RESULT]], -1
@@ -203,7 +203,7 @@ size_t local_addrof(size_t n) {
 // FRONTEND-LABEL: define dso_local i64 @global_fam(
 // FRONTEND-SAME: ) #[[ATTR0]] {
 // FRONTEND-NEXT:  [[ENTRY:.*:]]
-// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr @gaf, align 4
+// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr @gaf, align 8
 // FRONTEND-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNTED_BY_LOAD]], 1
 // FRONTEND-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], -1
 // FRONTEND-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0
@@ -212,7 +212,7 @@ size_t local_addrof(size_t n) {
 // O2-LABEL: define dso_local range(i64 0, -9223372036854775808) i64 @global_fam(
 // O2-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // O2-NEXT:  [[ENTRY:.*:]]
-// O2-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr @gaf, align 8
+// O2-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr @gaf, align 8, !tbaa [[LONG_TBAA6]]
 // O2-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.smax.i64(i64 [[COUNTED_BY_LOAD]], i64 0)
 // O2-NEXT:    ret i64 [[TMP0]]
 //
@@ -227,7 +227,7 @@ size_t global_fam(void) {
 // FRONTEND-LABEL: define dso_local i64 @global_subscript(
 // FRONTEND-SAME: ) #[[ATTR0]] {
 // FRONTEND-NEXT:  [[ENTRY:.*:]]
-// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr @gaf, align 4
+// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr @gaf, align 8
 // FRONTEND-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNTED_BY_LOAD]], 1
 // FRONTEND-NEXT:    [[RESULT:%.*]] = sub nuw i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], 3
 // FRONTEND-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[RESULT]], -1
@@ -238,7 +238,7 @@ size_t global_fam(void) {
 // O2-LABEL: define dso_local range(i64 0, -9223372036854775808) i64 @global_subscript(
 // O2-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // O2-NEXT:  [[ENTRY:.*:]]
-// O2-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr @gaf, align 8
+// O2-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr @gaf, align 8, !tbaa [[LONG_TBAA6]]
 // O2-NEXT:    [[RESULT:%.*]] = add i64 [[COUNTED_BY_LOAD]], -3
 // O2-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.smax.i64(i64 [[RESULT]], i64 0)
 // O2-NEXT:    ret i64 [[TMP0]]
@@ -274,8 +274,8 @@ size_t global_addrof(void) {
 // FRONTEND-NEXT:  [[ENTRY:.*:]]
 // FRONTEND-NEXT:    [[FAM:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX:%.*]], ptr [[P]], i32 0, i32 2
 // FRONTEND-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [0 x i8], ptr [[FAM]], i64 0, i64 0
-// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 0
-// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNTED_BY_GEP]], align 4
+// FRONTEND-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX]], ptr [[P]], i32 0, i32 0
+// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNT]], align 8
 // FRONTEND-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNTED_BY_LOAD]], 1
 // FRONTEND-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], -1
 // FRONTEND-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0
@@ -284,7 +284,7 @@ size_t global_addrof(void) {
 // O2-LABEL: define dso_local range(i64 0, -9223372036854775808) i64 @ptr_fam(
 // O2-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // O2-NEXT:  [[ENTRY:.*:]]
-// O2-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[P]], align 4
+// O2-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[P]], align 8, !tbaa [[LONG_TBAA6]]
 // O2-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.smax.i64(i64 [[COUNTED_BY_LOAD]], i64 0)
 // O2-NEXT:    ret i64 [[TMP0]]
 //
@@ -300,8 +300,8 @@ size_t ptr_fam(struct annotated_flex *p) {
 // FRONTEND-NEXT:  [[ENTRY:.*:]]
 // FRONTEND-NEXT:    [[FAM:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX:%.*]], ptr [[P]], i32 0, i32 2
 // FRONTEND-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[FAM]], i64 0, i64 3
-// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 0
-// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNTED_BY_GEP]], align 4
+// FRONTEND-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX]], ptr [[P]], i32 0, i32 0
+// FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNT]], align 8
 // FRONTEND-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNTED_BY_LOAD]], 1
 // FRONTEND-NEXT:    [[RESULT:%.*]] = sub nuw i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], 3
 // FRONTEND-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[RESULT]], -1
@@ -312,7 +312,7 @@ size_t ptr_fam(struct annotated_flex *p) {
 // O2-LABEL: define dso_local range(i64 0, -9223372036854775808) i64 @ptr_subscript(
 // O2-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR4]] {
 // O2-NEXT:  [[ENTRY:.*:]]
-// O2-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[P]], align 4
+// O2-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[P]], align 8, !tbaa [[LONG_TBAA6]]
 // O2-NEXT:    [[RESULT:%.*]] = add i64 [[COUNTED_BY_LOAD]], -3
 // O2-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.smax.i64(i64 [[RESULT]], i64 0)
 // O2-NEXT:    ret i64 [[TMP0]]

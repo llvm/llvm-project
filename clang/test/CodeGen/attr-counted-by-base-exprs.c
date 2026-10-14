@@ -55,19 +55,19 @@ unsigned long test_bdos_call_base(void) {
 // CHECK-SAME: i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @get_s() #[[ATTR9:[0-9]+]]
-// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[CALL]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META6:![0-9]+]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]], !nosanitize [[META6]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF7:![0-9]+]], !nosanitize [[META6]]
+// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[CALL]], align 4, !tbaa [[INT_TBAA6:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META7:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]], !nosanitize [[META7]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8:![0-9]+]], !nosanitize [[META7]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10:[0-9]+]], !nosanitize [[META6]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10:[0-9]+]], !nosanitize [[META7]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META7]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARRAY]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA8:![0-9]+]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
 int test_index_call_base(int i) {
@@ -82,20 +82,20 @@ int test_index_call_base(int i) {
 // CHECK-SAME: i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @get_p() #[[ATTR9]]
-// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[CALL]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]], !nosanitize [[META6]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[CALL]], align 8, !tbaa [[INT_TBAA9:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]], !nosanitize [[META7]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META6]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META7]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META7]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 8
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[INTPTR_TBAA9:![0-9]+]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[INTPTR_TBAA13:![0-9]+]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP3]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA8]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret i32 [[TMP4]]
 //
 int test_index_call_base_ptr(int i) {
@@ -105,21 +105,21 @@ int test_index_call_base_ptr(int i) {
 // CHECK-LABEL: define dso_local i32 @test_index_side_effect_base_ptr(
 // CHECK-SAME: ptr nofree noundef readonly captures(none) [[PP:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PP]], align 8, !tbaa [[_ZTS1PPTR_TBAA13:![0-9]+]]
-// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META6]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PP]], align 8, !tbaa [[_ZTS1PPTR_TBAA14:![0-9]+]]
+// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 8, !tbaa [[INT_TBAA9]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META7]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META6]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META7]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META7]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[INTPTR_TBAA9]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[INTPTR_TBAA13]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP4]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA8]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret i32 [[TMP5]]
 //
 int test_index_side_effect_base_ptr(struct p **pp, int i) {
@@ -131,23 +131,23 @@ struct p *global_p;
 // CHECK-LABEL: define dso_local i32 @test_index_post_inc_base_ptr(
 // CHECK-SAME: i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @global_p, align 8, !tbaa [[_ZTS1PPTR_TBAA13]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @global_p, align 8, !tbaa [[_ZTS1PPTR_TBAA14]]
 // CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
-// CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr @global_p, align 8, !tbaa [[_ZTS1PPTR_TBAA13]]
-// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META6]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr @global_p, align 8, !tbaa [[_ZTS1PPTR_TBAA14]]
+// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 8, !tbaa [[INT_TBAA9]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META7]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META6]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META7]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META7]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[INTPTR_TBAA9]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[INTPTR_TBAA13]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP4]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA8]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret i32 [[TMP5]]
 //
 int test_index_post_inc_base_ptr(int i) {
@@ -161,10 +161,10 @@ int test_index_post_inc_base_ptr(int i) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @get_p() #[[ATTR9]]
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[INTPTR_TBAA9]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[INTPTR_TBAA13]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[CHAR_TBAA15:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[CHAR_TBAA16:![0-9]+]]
 // CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32
 // CHECK-NEXT:    ret i32 [[CONV]]
 //
@@ -184,20 +184,20 @@ unsigned long test_bdos_side_effect_base(struct s **pp) {
 // CHECK-LABEL: define dso_local i32 @test_index_side_effect_base(
 // CHECK-SAME: ptr nofree noundef readonly captures(none) [[PP:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PP]], align 8, !tbaa [[_ZTS1SPTR_TBAA16:![0-9]+]]
-// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META6]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PP]], align 8, !tbaa [[_ZTS1SPTR_TBAA17:![0-9]+]]
+// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META7]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META6]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META7]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META7]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARRAY]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA8]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret i32 [[TMP4]]
 //
 int test_index_side_effect_base(struct s **pp, int i) {
@@ -209,10 +209,10 @@ int test_index_side_effect_base(struct s **pp, int i) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[PP]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS1SPTR_TBAA16]]
-// CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK-NEXT:    [[COUNT:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
-// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT]], 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS1SPTR_TBAA17]]
+// CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    [[COUNT3:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
+// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT3]], 2
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[COUNTED_BY_LOAD]], -1
 // CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0
 // CHECK-NEXT:    ret i64 [[TMP2]]
@@ -225,10 +225,10 @@ unsigned long test_bdos_array_of_ptrs(struct s **pp, int i) {
 // CHECK-SAME: ptr nofree noundef readonly captures(none) [[W:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S:%.*]] = getelementptr inbounds nuw i8, ptr [[W]], i64 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S]], align 8, !tbaa [[_ZTS1SPTR_TBAA18:![0-9]+]]
-// CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK-NEXT:    [[COUNT:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
-// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT]], 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S]], align 8, !tbaa [[_ZTS1SPTR_TBAA19:![0-9]+]]
+// CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    [[COUNT2:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
+// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT2]], 2
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[COUNTED_BY_LOAD]], -1
 // CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0
 // CHECK-NEXT:    ret i64 [[TMP2]]
@@ -241,20 +241,20 @@ unsigned long test_bdos_through_ptr_member(struct wrap *w) {
 // CHECK-SAME: ptr nofree noundef readonly captures(none) [[W:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S:%.*]] = getelementptr inbounds nuw i8, ptr [[W]], i64 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S]], align 8, !tbaa [[_ZTS1SPTR_TBAA18]]
-// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META6]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S]], align 8, !tbaa [[_ZTS1SPTR_TBAA19]]
+// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[TMP0]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META7]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META6]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META7]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META7]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARRAY]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA8]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret i32 [[TMP4]]
 //
 int test_index_through_ptr_member(struct wrap *w, int i) {
@@ -264,9 +264,9 @@ int test_index_through_ptr_member(struct wrap *w, int i) {
 // CHECK-LABEL: define dso_local range(i64 -8589934592, 8589934589) i64 @test_bdos_explicit_deref(
 // CHECK-SAME: ptr nofree noundef readonly captures(none) [[A:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[A]], align 4
-// CHECK-NEXT:    [[COUNT:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
-// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT]], 2
+// CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[A]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    [[COUNT1:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
+// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT1]], 2
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[COUNTED_BY_LOAD]], -1
 // CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0
 // CHECK-NEXT:    ret i64 [[TMP1]]
@@ -289,19 +289,19 @@ unsigned long test_bdos_conditional_base(struct s *a, struct s *b, int c) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[C]], 0
 // CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], ptr [[B]], ptr [[A]]
-// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[COND]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]], !nosanitize [[META6]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[COND]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]], !nosanitize [[META7]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META6]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META7]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META7]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARRAY]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA8]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
 int test_index_conditional_base(struct s *a, struct s *b, int c, int i) {
@@ -320,9 +320,9 @@ unsigned long test_bdos_negative_const_index(struct s *a) {
 // CHECK-LABEL: define dso_local range(i64 0, 17179869181) i64 @test_bdos_enum_count(
 // CHECK-SAME: ptr nofree noundef readonly captures(none) [[A:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[A]], align 4
-// CHECK-NEXT:    [[COUNT:%.*]] = zext i32 [[COUNTED_BY_LOAD]] to i64
-// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nuw nsw i64 [[COUNT]], 2
+// CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[A]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    [[COUNT1:%.*]] = zext i32 [[COUNTED_BY_LOAD]] to i64
+// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nuw nsw i64 [[COUNT1]], 2
 // CHECK-NEXT:    ret i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]]
 //
 unsigned long test_bdos_enum_count(struct e *a) {
@@ -332,17 +332,17 @@ unsigned long test_bdos_enum_count(struct e *a) {
 // CHECK-LABEL: define dso_local i32 @test_index_enum_count(
 // CHECK-SAME: ptr nofree noundef readonly captures(none) [[A:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR8:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[A]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META6]]
-// CHECK-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[A]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META7]]
+// CHECK-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META6]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META7]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META7]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARRAY]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA8]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int test_index_enum_count(struct e *a, int i) {
@@ -353,20 +353,20 @@ int test_index_enum_count(struct e *a, int i) {
 // CHECK-LABEL: define dso_local i32 @test_index_char(
 // CHECK-SAME: ptr nofree noundef readonly captures(none) [[A:%.*]], i8 noundef signext [[I:%.*]]) local_unnamed_addr #[[ATTR8]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[A]], align 4
+// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[A]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[TMP0:%.*]] = sext i8 [[I]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[DOTCOUNTED_BY_LOAD]], [[TMP0]], !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META6]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[DOTCOUNTED_BY_LOAD]], [[TMP0]], !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META7]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META6]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META7]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META7]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i8 [[I]] to i64
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARRAY]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA8]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret i32 [[TMP4]]
 //
 int test_index_char(struct s *a, signed char i) {
@@ -376,19 +376,19 @@ int test_index_char(struct s *a, signed char i) {
 // CHECK-LABEL: define dso_local i32 @test_index_unsigned_long(
 // CHECK-SAME: ptr nofree noundef readonly captures(none) [[A:%.*]], i64 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR8]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[A]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[DOTCOUNTED_BY_LOAD]] to i64, !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[I]], [[TMP0]], !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META6]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[A]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[DOTCOUNTED_BY_LOAD]] to i64, !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[I]], [[TMP0]], !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META7]]
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]], !nosanitize [[META7]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF8]], !nosanitize [[META7]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META6]]
-// CHECK-NEXT:    unreachable, !nosanitize [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META7]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META7]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARRAY]], i64 [[I]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA8]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    ret i32 [[TMP4]]
 //
 int test_index_unsigned_long(struct s *a, unsigned long i) {
@@ -398,19 +398,20 @@ int test_index_unsigned_long(struct s *a, unsigned long i) {
 // CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[META6]] = !{}
-// CHECK: [[PROF7]] = !{!"branch_weights", i32 1048575, i32 1}
-// CHECK: [[INT_TBAA8]] = !{[[META3]], [[META3]], i64 0}
-// CHECK: [[INTPTR_TBAA9]] = !{[[META10:![0-9]+]], [[META11:![0-9]+]], i64 8}
-// CHECK: [[META10]] = !{!"p", [[META3]], i64 0, [[META11]], i64 8}
+// CHECK: [[INT_TBAA6]] = !{[[META3]], [[META3]], i64 0}
+// CHECK: [[META7]] = !{}
+// CHECK: [[PROF8]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[INT_TBAA9]] = !{[[META10:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META10]] = !{!"p", [[META3]], i64 0, [[META11:![0-9]+]], i64 8}
 // CHECK: [[META11]] = !{!"p1 int", [[META12:![0-9]+]], i64 0}
 // CHECK: [[META12]] = !{!"any pointer", [[META4]], i64 0}
-// CHECK: [[_ZTS1PPTR_TBAA13]] = !{[[META14:![0-9]+]], [[META14]], i64 0}
-// CHECK: [[META14]] = !{!"p1 _ZTS1p", [[META12]], i64 0}
-// CHECK: [[CHAR_TBAA15]] = !{[[META4]], [[META4]], i64 0}
-// CHECK: [[_ZTS1SPTR_TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
-// CHECK: [[META17]] = !{!"p1 _ZTS1s", [[META12]], i64 0}
-// CHECK: [[_ZTS1SPTR_TBAA18]] = !{[[META19:![0-9]+]], [[META17]], i64 8}
-// CHECK: [[META19]] = !{!"wrap", [[META20:![0-9]+]], i64 0, [[META17]], i64 8}
-// CHECK: [[META20]] = !{!"long", [[META4]], i64 0}
+// CHECK: [[INTPTR_TBAA13]] = !{[[META10]], [[META11]], i64 8}
+// CHECK: [[_ZTS1PPTR_TBAA14]] = !{[[META15:![0-9]+]], [[META15]], i64 0}
+// CHECK: [[META15]] = !{!"p1 _ZTS1p", [[META12]], i64 0}
+// CHECK: [[CHAR_TBAA16]] = !{[[META4]], [[META4]], i64 0}
+// CHECK: [[_ZTS1SPTR_TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
+// CHECK: [[META18]] = !{!"p1 _ZTS1s", [[META12]], i64 0}
+// CHECK: [[_ZTS1SPTR_TBAA19]] = !{[[META20:![0-9]+]], [[META18]], i64 8}
+// CHECK: [[META20]] = !{!"wrap", [[META21:![0-9]+]], i64 0, [[META18]], i64 8}
+// CHECK: [[META21]] = !{!"long", [[META4]], i64 0}
 //.

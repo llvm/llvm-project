@@ -1234,26 +1234,89 @@ static const RecordDecl *getEnclosingNamedRecord(const FieldDecl *FD) {
   return RD;
 }
 
+/// Collects into \p Path the chain of fields leading from \p RD down to
+/// \p Field, outermost first, descending through nested (possibly anonymous)
+/// records. Returns false if \p Field isn't transitively a member of \p RD.
+static bool getFieldPathToField(const RecordDecl *RD, const FieldDecl *Field,
+                                SmallVectorImpl<const FieldDecl *> &Path) {
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD == Field) {
+      Path.push_back(FD);
+      return true;
+    }
+
+    if (const RecordDecl *SubRD = FD->getType()->getAsRecordDecl()) {
+      Path.push_back(FD);
+      if (getFieldPathToField(SubRD, Field, Path))
+        return true;
+
+      Path.pop_back();
+    }
+  }
+
+  return false;
+}
+
+/// Emits an l-value for \p Field, a (possibly nested) member of the record
+/// \p RecLV. Going through EmitLValueForField, rather than a raw GEP, gives the
+/// access the field's real alignment, qualifiers, and in-memory type, and
+/// handles bit-fields.
+static std::optional<LValue> emitLValueForNestedField(CodeGenFunction &CGF,
+                                                      LValue RecLV,
+                                                      const FieldDecl *Field) {
+  const RecordDecl *RD = RecLV.getType()->getAsRecordDecl();
+  SmallVector<const FieldDecl *, 4> Path;
+  if (!RD || !getFieldPathToField(RD, Field, Path))
+    return std::nullopt;
+
+  for (const FieldDecl *FD : Path)
+    RecLV = CGF.EmitLValueForField(RecLV, FD);
+
+  return RecLV;
+}
+
+/// Emits an l-value for the innermost struct in \p Base that transitively
+/// contains \p CountDecl, or std::nullopt if that would require evaluating an
+/// expression with side-effects.
+static std::optional<LValue>
+emitCountedByStructBase(CodeGenFunction &CGF, const Expr *Base,
+                        const FieldDecl *CountDecl) {
+  // Walk Base to find the deepest sub-expression whose struct type transitively
+  // contains CountDecl. The path from that struct down to CountDecl is then
+  // derived from the record layout, handling any intermediate nesting without
+  // requiring us to pre-compute a RecordDecl from Base's type or from
+  // CountDecl's parent chain.
+  const Expr *StructBase = StructAccessBase(CountDecl).Visit(Base);
+  if (!StructBase || StructBase->HasSideEffects(CGF.getContext()))
+    return std::nullopt;
+
+  if (const auto *PtrTy = StructBase->getType()->getAs<PointerType>()) {
+    LValueBaseInfo BaseInfo;
+    TBAAAccessInfo TBAAInfo;
+    Address Addr =
+        CGF.EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
+    return CGF.MakeAddrLValue(Addr, PtrTy->getPointeeType(), BaseInfo,
+                              TBAAInfo);
+  }
+
+  if (StructBase->isLValue())
+    return CGF.EmitLValue(StructBase);
+
+  return std::nullopt;
+}
+
 llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
-  // Walk Base to find the deepest sub-expression whose struct type transitively
-  // contains CountDecl. This is our GEP anchor — getFieldOffsetInBits then
-  // computes the offset from that struct down to CountDecl, handling any
-  // intermediate nesting without requiring us to pre-compute a RecordDecl from
-  // Base's type or from CountDecl's parent chain.
-  const Expr *StructBase = StructAccessBase(CountDecl).Visit(Base);
-  if (!StructBase || StructBase->HasSideEffects(getContext()))
+  std::optional<LValue> BaseLV =
+      emitCountedByStructBase(*this, Base, CountDecl);
+  if (!BaseLV)
     return nullptr;
 
-  // Derive the record type from the anchor expression itself.
-  QualType StructTy = StructBase->getType();
-  if (StructTy->isPointerType())
-    StructTy = StructTy->getPointeeType();
-  const RecordDecl *RD = StructTy->getAsRecordDecl();
+  const RecordDecl *RD = BaseLV->getType()->getAsRecordDecl();
   if (!RD)
     return nullptr;
 
-  // A bit-field count has no byte offset of its own to load from.
+  // A bit-field count has no byte offset of its own to point at.
   if (CountDecl->isBitField())
     return nullptr;
 
@@ -1263,23 +1326,22 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
   if (!getFieldOffsetInBits(*this, RD, CountDecl, Offset))
     return nullptr;
 
-  llvm::Value *Res = nullptr;
-  if (StructBase->getType()->isPointerType()) {
-    LValueBaseInfo BaseInfo;
-    TBAAAccessInfo TBAAInfo;
-    Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
-    Res = Addr.emitRawPointer(*this);
-  } else if (StructBase->isLValue()) {
-    LValue LV = EmitLValue(StructBase);
-    Address Addr = LV.getAddress();
-    Res = Addr.emitRawPointer(*this);
-  } else {
-    return nullptr;
-  }
-
   return Builder.CreateInBoundsGEP(
-      Int8Ty, Res, Builder.getSize(getContext().toCharUnitsFromBits(Offset)),
+      Int8Ty, BaseLV->getAddress().emitRawPointer(*this),
+      Builder.getSize(getContext().toCharUnitsFromBits(Offset)),
       "counted_by.gep");
+}
+
+/// Loads the count from \p CountLV, naming the result so that it's
+/// recognizable in the IR.
+static llvm::Value *emitLoadOfCount(CodeGenFunction &CGF, LValue CountLV,
+                                    SourceLocation Loc,
+                                    const llvm::Twine &Name) {
+  llvm::Value *Count = CGF.EmitLoadOfLValue(CountLV, Loc).getScalarVal();
+  if (!isa<llvm::Constant>(Count))
+    Count->setName(Name);
+
+  return Count;
 }
 
 /// This method is typically called in contexts where we can't generate
@@ -1292,10 +1354,18 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
 /// - \p CountDecl: must be within the same non-anonymous struct as \p FAMDecl.
 llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
-  if (llvm::Value *GEP = GetCountedByFieldExprGEP(Base, FAMDecl, CountDecl))
-    return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), GEP,
-                                     getIntAlign(), "counted_by.load");
-  return nullptr;
+  std::optional<LValue> BaseLV =
+      emitCountedByStructBase(*this, Base, CountDecl);
+  if (!BaseLV)
+    return nullptr;
+
+  std::optional<LValue> CountLV =
+      emitLValueForNestedField(*this, *BaseLV, CountDecl);
+  if (!CountLV)
+    return nullptr;
+
+  return emitLoadOfCount(*this, *CountLV, Base->getExprLoc(),
+                         "counted_by.load");
 }
 
 void CodeGenFunction::EmitBoundsCheck(const Expr *ArrayExpr,
@@ -5057,30 +5127,6 @@ struct StructFieldAccess
 
 } // end anonymous namespace
 
-/// Returns the relative offset difference between \p FD1 and \p FD2.
-/// \code
-///   offsetof(struct foo, FD1) - offsetof(struct foo, FD2)
-/// \endcode
-/// Both fields must be within the same struct.
-static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
-                                                        const FieldDecl *FD1,
-                                                        const FieldDecl *FD2) {
-  const RecordDecl *RD = getEnclosingNamedRecord(FD1);
-  if (getEnclosingNamedRecord(FD2) != RD)
-    // Fields must be within the same RecordDecl.
-    return std::optional<int64_t>();
-
-  int64_t FD1Offset = 0;
-  if (!getFieldOffsetInBits(CGF, RD, FD1, FD1Offset))
-    return std::optional<int64_t>();
-
-  int64_t FD2Offset = 0;
-  if (!getFieldOffsetInBits(CGF, RD, FD2, FD2Offset))
-    return std::optional<int64_t>();
-
-  return std::make_optional<int64_t>(FD1Offset - FD2Offset);
-}
-
 /// Convert a '__sized_by' byte-count bound to an element-count bound so it can
 /// be compared against an element index. \p BoundsVal is the loaded byte count
 /// and \p PointeeTy is the pointer's pointee type. Returns \p BoundsVal
@@ -5155,8 +5201,13 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
   if (!CountFD)
     return;
 
-  if (std::optional<int64_t> Diff =
-          getOffsetDifferenceInBits(*this, CountFD, FD)) {
+  // The count and the counted field must be in the same struct. Stepping back
+  // from the counted field to the start of that struct always stays within
+  // the object, and the paths from it to both fields are unique.
+  const RecordDecl *RD = getEnclosingNamedRecord(FD);
+  int64_t FieldOffset = 0;
+  if (getEnclosingNamedRecord(CountFD) == RD &&
+      getFieldOffsetInBits(*this, RD, FD, FieldOffset)) {
     if (!ArrayInst.isValid()) {
       // An invalid Address indicates we're checking a pointer array access.
       // Emit the checked L-Value here.
@@ -5164,21 +5215,28 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
       ArrayInst = LV.getAddress();
     }
 
-    // FIXME: The 'static_cast' is necessary, otherwise the result turns into a
-    // uint64_t, which messes things up if we have a negative offset difference.
-    Diff = *Diff / static_cast<int64_t>(CGM.getContext().getCharWidth());
+    // Step back from the counted field to the start of the enclosing struct,
+    // then load the count through its l-value. Loading it that way, rather
+    // than as a raw integer at a byte offset, respects the count's alignment
+    // (which may be less than an 'int's), qualifiers (e.g. 'volatile'), and
+    // in-memory type (e.g. '_BitInt'), and handles bit-field counts.
+    CharUnits FieldOffsetInChars =
+        getContext().toCharUnitsFromBits(FieldOffset);
+    Address RecAddr = Builder.CreateConstInBoundsByteGEP(
+        ArrayInst.withElementType(Int8Ty), -FieldOffsetInChars,
+        ".counted_by.struct");
+    CanQualType RecTy = getContext().getCanonicalTagType(RD);
+    LValue RecLV = MakeAddrLValue(
+        RecAddr.withElementType(ConvertTypeForMem(RecTy)), RecTy);
 
-    // Create a GEP with the byte offset between the counted object and the
-    // count and use that to load the count value.
-    Address CountAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-        ArrayInst, Int8PtrTy, Int8Ty);
+    std::optional<LValue> CountLV =
+        emitLValueForNestedField(*this, RecLV, CountFD);
+    if (!CountLV)
+      return;
 
     llvm::Type *BoundsType = ConvertType(CountFD->getType());
-    llvm::Value *BoundsVal =
-        Builder.CreateInBoundsGEP(Int8Ty, CountAddr.emitRawPointer(*this),
-                                  Builder.getInt32(*Diff), ".counted_by.gep");
-    BoundsVal = Builder.CreateAlignedLoad(BoundsType, BoundsVal, getIntAlign(),
-                                          ".counted_by.load");
+    llvm::Value *BoundsVal = emitLoadOfCount(
+        *this, *CountLV, ArrayExpr->getExprLoc(), ".counted_by.load");
 
     const auto *CountAttributedTy = FD->getType()->getAs<CountAttributedType>();
     assert(CountAttributedTy && "expected FD to have a CountAttributedType");

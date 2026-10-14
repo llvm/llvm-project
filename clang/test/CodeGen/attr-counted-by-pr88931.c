@@ -15,9 +15,9 @@ void init(void * __attribute__((pass_dynamic_object_size(0))));
 // CHECK-SAME: ptr noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
-// CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[P]], align 4
-// CHECK-NEXT:    [[COUNT:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
-// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT]], 2
+// CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-NEXT:    [[COUNT1:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
+// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT1]], 2
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[COUNTED_BY_LOAD]], -1
 // CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0
 // CHECK-NEXT:    tail call void @init(ptr noundef nonnull [[ARRAY]], i64 noundef [[TMP1]]) #[[ATTR2:[0-9]+]]
@@ -43,3 +43,9 @@ struct bux { struct mux x; };
 void test2(struct bux *p) {
   init(p);
 }
+//.
+// CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[TBAA6]] = !{[[META3]], [[META3]], i64 0}
+//.
