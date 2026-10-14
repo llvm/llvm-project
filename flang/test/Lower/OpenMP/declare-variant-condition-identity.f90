@@ -68,6 +68,16 @@
 ! IMPORTED-NOT: omp.taskyield
 ! IMPORTED: return
 
+! Each match_any outcome of the first selector is a strict subset of the same
+! outcome of the second, so TASKWAIT is selected without a runtime branch.
+! IMPORTED-LABEL: func.func @_QPruntime_any(
+! IMPORTED-NOT: fir.if
+! IMPORTED-NOT: omp.taskyield
+! IMPORTED: omp.taskwait
+! IMPORTED-NOT: fir.if
+! IMPORTED-NOT: omp.taskyield
+! IMPORTED: return
+
 !--- settings.f90
 module settings
   logical, parameter :: on = .true., other = .true.
@@ -300,6 +310,15 @@ subroutine false_conditions()
   !$omp& implementation={extension(match_none), vendor(score(100): gnu)}: taskyield) &
   !$omp& when(user={condition((.false.))}, device={kind(gpu)}, &
   !$omp& implementation={extension(match_none), vendor(score(1): gnu)}: taskwait)
+end subroutine
+
+subroutine runtime_any()
+  use settings, only: flag, alias => flag
+  !$omp metadirective &
+  !$omp& when(user={condition(flag)}, &
+  !$omp& implementation={extension(match_any), vendor(score(100): llvm)}: taskyield) &
+  !$omp& when(user={condition((alias))}, device={kind(cpu)}, &
+  !$omp& implementation={extension(match_any), vendor(score(1): llvm)}: taskwait)
 end subroutine
 
 ! Relational operator spellings share an identity in runtime conditions.
