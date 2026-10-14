@@ -545,14 +545,13 @@ AMDGPUMangledLibFunc::AMDGPUMangledLibFunc(EFuncId id, FunctionType *FT,
 // Demangling
 
 static unsigned char parseVecSize(StringRef &mangledName) {
-  size_t const Len = eatNumber(mangledName);
+  int const Len = eatNumber(mangledName);
   switch (Len) {
   case 2: case 3: case 4: case 8: case 16:
     return static_cast<unsigned char>(Len);
   default:
-    break;
+    return 1;
   }
-  return 1;
 }
 
 static AMDGPULibFunc::ENamePrefix parseNamePrefix(StringRef& mangledName) {
