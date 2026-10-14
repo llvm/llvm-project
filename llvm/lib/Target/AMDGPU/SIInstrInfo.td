@@ -270,7 +270,7 @@ class SDGlobalAtomicNoRtn<string opcode, ValueType ty> : SDNode <opcode,
 >;
 
 def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
-  SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>]>
+  SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>
 >;
 
 def SIpc_add_rel_offset64 : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET64",
@@ -3657,6 +3657,12 @@ def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),
 
 def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
   (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
+
+def vgpr32_lo16 : OutPatFrag<(ops node:$op),
+  (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $op, VGPR_32)), lo16)>;
+
+def vgpr32_hi16 : OutPatFrag<(ops node:$op),
+  (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $op, VGPR_32)), hi16)>;
 
 // Direct lookup table for VOPDXY eligibility, indexed by the packed
 // (VOPDOp << 5) | (Subtarget << 1) | VOPD3 key.

@@ -1,8 +1,6 @@
 
 set(ORC_RT_BEDROCK_SOURCES
   BootstrapInfo.cpp
-  ConnectionSpec.cpp
-  ConnectorRegistry.cpp
   ExecutorProcessInfo.cpp
   GDBJITRegistrar.cpp
   InProcessControllerAccess.cpp
@@ -19,7 +17,6 @@ set(ORC_RT_BEDROCK_SOURCES
   sps/NativeDylibManagerSPSCI.cpp
   sps/SessionSPSCI.cpp
   sps/SimpleNativeMemoryMapSPSCI.cpp
-  sps/SimpleRemoteCA.cpp
   )
 
 # System implementations are composed, not merely selected: a target gets one
@@ -43,10 +40,7 @@ set(ORC_RT_BEDROCK_POSIX_SOURCES
   sys/posix/DynamicLibrary.cpp
   sys/posix/Memory.cpp
   sys/posix/PageSize.cpp
-  sys/posix/SocketConnector.cpp
-  sys/posix/SocketHandle.cpp
   sys/posix/sps/DWARFEHFrameRegistrarSPSCI.cpp
-  sys/posix/sps/SimpleRemoteCAOverSocket.cpp
 )
 
 set(ORC_RT_BEDROCK_DARWIN_SOURCES
@@ -66,8 +60,6 @@ set(ORC_RT_BEDROCK_WINDOWS_SOURCES
   sys/windows/Memory.cpp
   sys/windows/CPUFeatures.cpp
   sys/windows/PageSize.cpp
-  sys/windows/SocketConnector.cpp
-  sys/windows/SocketHandle.cpp
   sys/windows/TargetTriple.cpp
 )
 
