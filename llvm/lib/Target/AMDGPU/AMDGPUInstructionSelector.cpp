@@ -4672,22 +4672,6 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_EXTRACT_VECTOR_ELT(I);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     return selectG_INSERT_VECTOR_ELT(I);
-  case TargetOpcode::G_FMA: {
-    if (!STI.hasPkF32InvalidOpSel())
-      return selectImpl(I, *CoverageInfo);
-
-    Register VReg = I.getOperand(0).getReg();
-    if (!selectImpl(I, *CoverageInfo))
-      return false;
-
-    MachineInstr *Sel = MRI->getVRegDef(VReg);
-    // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
-    if (Sel->getOpcode() == AMDGPU::V_PK_FMA_F32 &&
-        !TII.isLegalPkFMAF32OpSel(*Sel))
-      TII.decomposePkFMAF32(*Sel, *MRI);
-
-    return true;
-  }
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_NORET:
