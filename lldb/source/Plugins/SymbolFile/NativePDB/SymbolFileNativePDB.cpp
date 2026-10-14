@@ -2236,11 +2236,16 @@ void SymbolFileNativePDB::FindGlobalVariables(
 
   CacheGlobalBaseNames();
 
+  // A leading "::" requests a variable from the global namespace.
+  llvm::StringRef lookup_name = name.GetStringRef();
+  bool is_rooted = lookup_name.consume_front("::");
+
   llvm::StringRef context;
   llvm::StringRef basename;
-  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetStringRef(),
-                                                      context, basename))
-    basename = name.GetStringRef();
+  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(lookup_name, context,
+                                                      basename))
+    basename = lookup_name;
+  std::string scoped_suffix = ("::" + lookup_name).str();
 
   std::vector<uint32_t> results;
   m_global_variable_base_names.GetValues(ConstString(basename), results);
@@ -2256,9 +2261,12 @@ void SymbolFileNativePDB::FindGlobalVariables(
     VariableSP var = GetOrCreateGlobalVariable(global);
     if (!var)
       continue;
-    if (!context.empty() &&
-        !var->GetName().GetStringRef().contains(name.GetStringRef()))
-      continue;
+    if (is_rooted || !context.empty()) {
+      llvm::StringRef var_name = var->GetName().GetStringRef();
+      if (var_name != lookup_name &&
+          (is_rooted || !var_name.ends_with(scoped_suffix)))
+        continue;
+    }
     variables.AddVariable(var);
 
     if (++n_matches >= max_matches)
