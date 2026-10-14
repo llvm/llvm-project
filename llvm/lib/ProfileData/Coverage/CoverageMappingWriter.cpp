@@ -225,17 +225,19 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
     case CounterMappingRegion::GapRegion:
       writeCounter(MinExpressions, Count, OS);
       break;
-    case CounterMappingRegion::ExpansionRegion: {
+    case CounterMappingRegion::ExpansionRegion:
+    case CounterMappingRegion::MacroExpansionRegion: {
       assert(Count.isZero());
-      assert(I->ExpandedFileID <=
-             (std::numeric_limits<unsigned>::max() >>
-              Counter::EncodingCounterTagAndExpansionRegionTagBits));
-      // Mark an expansion region with a set bit that follows the counter tag,
-      // and pack the expanded file id into the remaining bits.
+      // Both ExpansionRegion and MacroExpansionRegion use the same encoding:
+      // - bit 2: ExpansionRegionBit (set for both types)
+      // - bit 3: MacroExpansionRegionBit (set only for MacroExpansionRegion)
+      // - bit 4+: ExpandedFileID
+      bool IsMacro = I->Kind == CounterMappingRegion::MacroExpansionRegion;
       unsigned EncodedTagExpandedFileID =
-          (1 << Counter::EncodingTagBits) |
-          (I->ExpandedFileID
-           << Counter::EncodingCounterTagAndExpansionRegionTagBits);
+          Counter::EncodingExpansionRegionBit |
+          (I->ExpandedFileID << Counter::EncodingTagBitsMacroExpansion);
+      if (IsMacro)
+        EncodedTagExpandedFileID |= Counter::EncodingMacroExpansionRegionBit;
       encodeULEB128(EncodedTagExpandedFileID, OS);
       break;
     }
