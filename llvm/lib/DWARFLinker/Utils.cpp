@@ -52,7 +52,7 @@ bool isStaticDataMember(const DWARFDie &Die) {
       {dwarf::DW_AT_data_member_location, dwarf::DW_AT_data_bit_offset});
 }
 
-bool isIdentifiedByContents(dwarf::Tag Tag) {
+bool isIdentifiedByChildren(dwarf::Tag Tag) {
   switch (Tag) {
   case dwarf::DW_TAG_class_type:
   case dwarf::DW_TAG_enumeration_type:
@@ -65,7 +65,7 @@ bool isIdentifiedByContents(dwarf::Tag Tag) {
   }
 }
 
-bool isIdentifyingContent(const DWARFDie &Die) {
+bool isIdentifyingChild(const DWARFDie &Die) {
   // Units disagree on implicit member functions and on how static data
   // members are spelled.
   switch (Die.getTag()) {

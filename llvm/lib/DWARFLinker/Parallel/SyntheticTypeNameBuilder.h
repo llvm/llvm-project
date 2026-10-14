@@ -134,6 +134,9 @@ protected:
   /// Recursion counter
   size_t RecursionDepth = 0;
 
+  /// Bounds RecursionDepth, which malformed input can make unbounded.
+  static constexpr size_t MaxRecursionDepth = 1000;
+
   /// Type pool
   TypePool &TypePoolRef;
 };

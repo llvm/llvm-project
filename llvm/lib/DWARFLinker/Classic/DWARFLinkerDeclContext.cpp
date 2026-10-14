@@ -28,13 +28,16 @@ makeSimpleTemplateNameWithParams(StringRef Name, const DWARFDie &DIE) {
   return Result;
 }
 
+/// Bounds walks along DW_AT_type, which malformed input can make cyclic.
+static constexpr unsigned MaxTypeReferenceDepth = 256;
+
 static void appendUnnamedTypeContents(const DWARFDie &DIE, raw_ostream &OS,
                                       unsigned Depth);
 
 /// Appends the type \p DIE refers to, through unnamed types up to a named one.
 static void appendUnqualifiedTypeName(DWARFDie DIE, raw_ostream &OS,
                                       unsigned Depth) {
-  for (; Depth < 256; ++Depth) {
+  for (; Depth < MaxTypeReferenceDepth; ++Depth) {
     DWARFDie Type = DIE.getAttributeValueAsReferencedDie(dwarf::DW_AT_type);
     if (!Type)
       return;
@@ -50,12 +53,12 @@ static void appendUnqualifiedTypeName(DWARFDie DIE, raw_ostream &OS,
 
 static void appendUnnamedTypeContents(const DWARFDie &DIE, raw_ostream &OS,
                                       unsigned Depth) {
-  if (!dwarf_linker::isIdentifiedByContents(DIE.getTag()))
+  if (!dwarf_linker::isIdentifiedByChildren(DIE.getTag()))
     return;
 
   OS << '\0' << '(';
   for (const DWARFDie &Child : DIE.children()) {
-    if (!dwarf_linker::isIdentifyingContent(Child))
+    if (!dwarf_linker::isIdentifyingChild(Child))
       continue;
 
     OS << '\0' << dwarf::TagString(Child.getTag());
@@ -167,7 +170,7 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     DWARFDie CurDie = DIE;
     // Guard against malformed input DWARF with cycles in DW_AT_type references;
     // the parallel linker uses a similar guard in addReferencedODRDies.
-    for (unsigned Depth = 0; Depth < 256; ++Depth) {
+    for (unsigned Depth = 0; Depth < MaxTypeReferenceDepth; ++Depth) {
       auto TypeAttr = CurDie.find(dwarf::DW_AT_type);
       if (!TypeAttr)
         break;

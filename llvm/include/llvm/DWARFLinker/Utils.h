@@ -29,17 +29,18 @@ namespace dwarf_linker {
 /// DW_OP_addr DW_OP_stack_value.
 LLVM_ABI bool hasImplicitAddressLocation(const DWARFDie &Die);
 
-/// Test if the DW_TAG_member \p Die declares a C++ static data member instead
-/// of describing storage in the record.
+/// Test if the DW_TAG_member \p Die is a DWARF 2-4 style static data member: a
+/// declaration with no storage in the record. DWARF 5 uses a DW_TAG_variable
+/// instead.
 LLVM_ABI bool isStaticDataMember(const DWARFDie &Die);
 
-/// Test if an unnamed type with tag \p Tag is told apart from others declared
-/// on the same line by its contents.
-LLVM_ABI bool isIdentifiedByContents(dwarf::Tag Tag);
+/// Test if an unnamed type with tag \p Tag is identified by its children, which
+/// tell it apart from other unnamed types declared on the same line. Other
+/// unnamed types, like pointer types, have no such children.
+LLVM_ABI bool isIdentifiedByChildren(dwarf::Tag Tag);
 
-/// Test if the child \p Die is part of the contents that identify an unnamed
-/// type.
-LLVM_ABI bool isIdentifyingContent(const DWARFDie &Die);
+/// Test if \p Die is a child that identifies its unnamed parent type.
+LLVM_ABI bool isIdentifyingChild(const DWARFDie &Die);
 
 /// Build a map from an input DW_AT_LLVM_stmt_sequence byte offset to
 /// the first-row index (in \p LT.Rows) of the corresponding line-table

@@ -293,7 +293,7 @@ SyntheticTypeNameBuilder::resolveReference(UnitEntryPairTy InputUnitEntryPair,
 }
 
 Error SyntheticTypeNameBuilder::incrementRecursionDepth() {
-  if (++RecursionDepth > 1000)
+  if (++RecursionDepth > MaxRecursionDepth)
     return createStringError(std::errc::invalid_argument,
                              "cannot parse input DWARF: recursive dependence");
   return Error::success();
@@ -455,7 +455,7 @@ Error SyntheticTypeNameBuilder::addDIETypeName(
 
 Error SyntheticTypeNameBuilder::addUnnamedTypeContents(
     UnitEntryPairTy InputUnitEntryPair) {
-  if (!isIdentifiedByContents(InputUnitEntryPair.DieEntry->getTag()))
+  if (!isIdentifiedByChildren(InputUnitEntryPair.DieEntry->getTag()))
     return Error::success();
 
   CompileUnit &CU = *InputUnitEntryPair.CU;
@@ -464,7 +464,7 @@ Error SyntheticTypeNameBuilder::addUnnamedTypeContents(
            CU.getFirstChildEntry(InputUnitEntryPair.DieEntry);
        CurChild && CurChild->getAbbreviationDeclarationPtr();
        CurChild = CU.getSiblingEntry(CurChild)) {
-    if (!isIdentifyingContent(DWARFDie(&CU.getOrigUnit(), CurChild)))
+    if (!isIdentifyingChild(DWARFDie(&CU.getOrigUnit(), CurChild)))
       continue;
 
     if (SyntheticName.back() != '(')
