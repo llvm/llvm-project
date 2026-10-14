@@ -218,8 +218,6 @@ bool Sema::ValidateBoundsAttrTypeForTypePosition(
     SourceRange AttrRange, unsigned PointerNestLevel, BoundsAttrFlags &Flags) {
   Flags = BoundsAttrFlags::get(AttrKind);
 
-  // Preserve the counted_by kind for the GNU void pointer extension to match
-  // the field path. The count is still interpreted as a byte size.
   if (!ValidateBoundsAttrTypeShape(Ty, AttrLoc, AttrRange, Flags,
                                    /*AttrSpelling=*/{}, /*AllowRedecl=*/false,
                                    /*AttrArg=*/nullptr, /*UpdateFlags=*/false))
