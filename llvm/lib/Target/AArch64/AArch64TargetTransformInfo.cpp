@@ -7147,11 +7147,8 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     // i8 -> i64 is supported with an extra level of extends
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i8)
-      // FIXME: This cost should probably be a little higher, e.g. Cost + 2
-      // because it requires two extra extends on the inputs. But if we'd change
-      // that now, a regular reduction would be cheaper because the costs of
-      // the extends in the IR are still counted. This can be fixed
-      // after https://github.com/llvm/llvm-project/pull/147302 has landed.
+      // FIXME: Also account for folding the i32 dot product results into the
+      // i64 accumulator, as the NEON case below does.
       return Cost + INegCost;
     // i8 -> i16 is natively supported with SVE2p3 udot/sdot
     // For sub-reductions, we prefer using the *mlslb/t instructions.
@@ -7160,6 +7157,26 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
         (ST->hasSVE2p3() || ST->hasSME2p3()) && !IsSub)
       return Cost;
   }
+
+  // With +dotprod, NEON lowers an extended i8 -> i64 partial reduction to a
+  // udot/sdot into a zeroed i32 vector followed by an [SU]ADALP into the i64
+  // accumulator. Charge one basic cost for each of the two steps per legal
+  // input vector. This must stay after the SVE cases, as IsSupported's NEON
+  // predicate also holds for fixed-length vectors on SVE targets.
+  // TODO: Handle zero-extended multiplies and sub-reductions. In loops,
+  // CodeGenPrepare turns zero extends that do not directly feed the partial
+  // reduction (such as the operands of a multiply, or of the negation in a
+  // sub-reduction) into TBLs, which hides the udot from instruction selection.
+  // Sign-extended sub-reductions have not been measured yet.
+  // TODO: Without +dotprod, pure adds with a ratio of 4 or 8 lower to a chain
+  // of [SU]ADDLPs and an [SU]ADALP, which is not costed yet either.
+  bool IsSExtMul = BinOp && OpAExtend == TTI::PR_SignExtend &&
+                   OpBExtend == TTI::PR_SignExtend;
+  if ((!BinOp || IsSExtMul) && !IsSub &&
+      AccumLT.second.getScalarType() == MVT::i64 &&
+      InputLT.second.getScalarType() == MVT::i8 &&
+      IsSupported(false, ST->hasDotProd()))
+    return Cost * 2;
 
   // f16 -> f32 is natively supported for fdot using either
   // SVE or NEON instruction.

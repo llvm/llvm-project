@@ -23212,8 +23212,12 @@ static bool isSetCCOrZExtSetCC(const SDValue& Op, SetCCInfoAndKind &Info) {
 // (csel x, (add x, 1), !cc ...)
 //
 // The latter will get matched to a CSINC instruction.
-static SDValue performSetccAddFolding(SDNode *Op, SelectionDAG &DAG) {
-  assert(Op && Op->getOpcode() == ISD::ADD && "Unexpected operation!");
+static SDValue performSetccAddFolding(SDNode *Op,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  if (DCI.isBeforeLegalizeOps() || Op->getOpcode() != ISD::ADD)
+    return SDValue();
+
   SDValue LHS = Op->getOperand(0);
   SDValue RHS = Op->getOperand(1);
   SetCCInfoAndKind InfoAndKind;
@@ -23497,11 +23501,8 @@ static SDValue performAddSubLongCombine(SDNode *N,
     return SDValue();
 
   MVT VT = N->getSimpleValueType(0);
-  if (!VT.is128BitVector()) {
-    if (N->getOpcode() == ISD::ADD)
-      return performSetccAddFolding(N, DAG);
+  if (!VT.is128BitVector())
     return SDValue();
-  }
 
   if (SDValue R = reassociateAddSubLong(N, DAG))
     return R;
@@ -24644,6 +24645,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddMulZextCombine(N, DCI))
+    return Val;
+  if (SDValue Val = performSetccAddFolding(N, DCI))
     return Val;
 
   return performAddSubLongCombine(N, DCI);
