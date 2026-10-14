@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../private.h"
-#include "PluginManager.h"
+#include "OpenMP/OffloadRTL.h"
 #include "device.h"
 #include "omptarget.h"
 #include "rtl.h"

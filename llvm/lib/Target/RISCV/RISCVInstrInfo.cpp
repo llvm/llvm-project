@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -602,6 +603,22 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (RISCV::FPR64RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D), DstReg)
         .addReg(SrcReg, KillFlag)
+        .addReg(SrcReg, KillFlag);
+    return;
+  }
+
+  if (RISCV::FPR16RegClass.contains(DstReg) &&
+      RISCV::GPRRegClass.contains(SrcReg)) {
+    assert(STI.hasHalfFPLoadStoreMove() && "Unexpected extensions");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_H_X), DstReg)
+        .addReg(SrcReg, KillFlag);
+    return;
+  }
+
+  if (RISCV::GPRRegClass.contains(DstReg) &&
+      RISCV::FPR16RegClass.contains(SrcReg)) {
+    assert(STI.hasHalfFPLoadStoreMove() && "Unexpected extensions");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_H), DstReg)
         .addReg(SrcReg, KillFlag);
     return;
   }
@@ -3736,22 +3753,6 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_QC_ACCESS, "riscv-qc-access"},
   };
   return ArrayRef(TargetFlags);
-}
-bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
-    MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
-  const Function &F = MF.getFunction();
-
-  // Can F be deduplicated by the linker? If it can, don't outline from it.
-  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
-    return false;
-
-  // Don't outline from functions with section markings; the program could
-  // expect that all the code is in the named section.
-  if (F.hasSection())
-    return false;
-
-  // It's safe to outline from MF.
-  return true;
 }
 
 bool RISCVInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,

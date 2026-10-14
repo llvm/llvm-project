@@ -445,6 +445,7 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def LDEXP_#S : RuntimeLibcall;
   def LGAMMA_#S : RuntimeLibcall;
   def LOG_#S : RuntimeLibcall;
+  def LOG_FINITE_#S : RuntimeLibcall;
   def LOG10_#S : RuntimeLibcall;
   def LOG1P_#S : RuntimeLibcall;
   def LOG2_#S : RuntimeLibcall;
@@ -452,6 +453,7 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def MODF_#S : RuntimeLibcall;
   def NEXTAFTER_#S : RuntimeLibcall;
   def POW_#S : RuntimeLibcall;
+  def POW_FINITE_#S : RuntimeLibcall;
   def REMAINDER_#S : RuntimeLibcall;
   def SINCOS_#S : RuntimeLibcall;
   def SINCOSPI_#S : RuntimeLibcall;
@@ -466,11 +468,6 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def CDFNORM_#S : RuntimeLibcall;
   def CDFNORMINV_#S : RuntimeLibcall;
   def ROUND_#S : RuntimeLibcall;
-}
-
-foreach S = F64VectorSuffixes in {
-  def LOG_FINITE_#S : RuntimeLibcall;
-  def POW_FINITE_#S : RuntimeLibcall;
 }
 
 def FEGETENV : RuntimeLibcall;
@@ -2029,38 +2026,6 @@ defvar ExceptionModelCalls = (add
 // module's exception model.
 def ExceptionRuntime : LibcallLibrary<"unwind", ExceptionModelCalls>;
 
-// FIXME: Should move to explicit opt-in to different sets of libcalls
-// instead of trying to remove from a default set. We have
-// unreasonable defaults like reporting f80 calls on most targets when
-// they are relevant to only one.
-
-defvar AllDefaultRuntimeLibcallImpls
-  = !listconcat(CompilerRtLibgccImpls, LibmCoreImpls, LibcCoreImpls);
-
-defvar DefaultRuntimeLibcallImpls_f80 =
-    !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry.Provides), "F80"));
-
-// The l-suffixed libm math functions, only correct when long double is x87.
-defvar DefaultRuntimeLibcallImpls_longdouble_f80 =
-    !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry), "l_f80"));
-
-// The compiler-rt helpers, keyed to the x86_fp80 IR type and available on all
-// x86 regardless of the long double format.
-defvar DefaultRuntimeLibcallImpls_f80_helpers =
-    !listremove(DefaultRuntimeLibcallImpls_f80,
-                DefaultRuntimeLibcallImpls_longdouble_f80);
-
-defvar DefaultRuntimeLibcallImpls_ppcf128 =
-    !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry.Provides), "PPCF128"));
-
-// The l-suffixed libm functions are fp128 only when long double is fp128.
-defvar DefaultRuntimeLibcallImpls_longdouble_f128 =
-    !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry), "l_f128"));
-
 // Width-specific slices of the compiler-rt/libgcc body. The core definition
 // contains the integer, f32, f64 and f128 helpers, while the f80 and ppcf128
 // slices are added separately.
@@ -2077,24 +2042,6 @@ defvar CompilerRtLibgccImpls_core =
       !listremove(CompilerRtLibgccImpls, CompilerRtLibgccImpls_f80),
                   CompilerRtLibgccImpls_ppcf128);
 
-// FIXME: Ideally we would just use dags everywhere, but for the
-// arm64ec case we need iterable lists so we can add the # prefix
-//
-// The fp128 long double libcalls are added on a per-target basis.
-defvar DefaultRuntimeLibcallImplsBaseList =
-!listremove(
-  !listremove(
-    !listremove(
-      !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
-                  DefaultRuntimeLibcallImpls_f80),
-                  DefaultRuntimeLibcallImpls_ppcf128),
-                  DefaultRuntimeLibcallImpls_longdouble_f128);
-
-defvar DefaultRuntimeLibcallImpls =
-  (add DefaultRuntimeLibcallImplsBaseList,
-       LibcallImpls<(add DefaultRuntimeLibcallImpls_longdouble_f128),
-                    isLongDoubleF128>,
-       ExceptionModelCalls);
 
 // TODO: Guessing sincospi added at same time as sincos_stret
 defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret,
@@ -2133,20 +2080,6 @@ defvar LibmHasExp10F64 = LibcallImpls<(add exp10), hasExp10>;
 
 defvar LibmHasFrexpF32 = LibcallImpls<(add frexpf), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF32 = LibcallImpls<(add ldexpf), isNotOSWindowsOrIsCygwinMinGW>;
-
-defvar WindowsMathRemovals = [
-  ldexpf, ldexpl_f80, ldexpl_f128, ldexpl_ppcf128,
-  frexpf, frexpl_f80, frexpl_f128, frexpl_ppcf128
-];
-
-defvar MostPowI = !listremove(PowiLibcallImpls, [__powitf2_f128, __powitf2_ppc128]);
-defvar WindowsExclusions = !listconcat(WindowsMathRemovals, MostPowI);
-
-// Targets which support windows start with this as a base and add in calls for
-// other OSes.
-defvar WinDefaultLibcallImplsBaseList =
-  !listremove(DefaultRuntimeLibcallImplsBaseList,
-              WindowsExclusions);
 
 defvar LibmHasFrexpF128 = LibcallImpls<(add frexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
@@ -2396,7 +2329,7 @@ def isWindowsArm64EC : RuntimeLibcallAvailability<(all_of IsWindowsArm64EC)>;
 
 // frexpl/ldexpl/exp10l are added separately based on the Target Triple.
 defvar AArch64LongDoubleF128Body =
-    !listremove(DefaultRuntimeLibcallImpls_longdouble_f128,
+    !listremove(LibmCoreImpls_f128,
                 [frexpl_f128, ldexpl_f128, exp10l_f128]);
 
 // AArch64 libm extras.
@@ -2422,9 +2355,16 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        AArch64SMERuntime, SafeStackRuntime)
 >;
 
+// The Windows runtime lacks the f32 and f64 powi helpers, and frexpf/ldexpf.
+defvar Arm64ECCompilerRtImpls =
+    !listremove(CompilerRtLibgccImpls_core,
+                !listremove(PowiLibcallImpls, [__powitf2_f128, __powitf2_ppc128]));
+defvar Arm64ECLibmImpls = !listremove(LibmCoreImpls_core, LibmFrexpLdexpF32);
+
 // Prepend a # to every name
 defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
-  foreach libcall = WinDefaultLibcallImplsBaseList in {
+  foreach libcall = !listconcat(Arm64ECCompilerRtImpls, Arm64ECLibmImpls,
+                                LibcCoreImpls) in {
     def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
   }
 
@@ -4015,14 +3955,14 @@ defset list<RuntimeLibcallImpl> LIBMVEC_X86_VECFUNCS = {
   def LIBMVEC__ZGVbN2v_tan : LibmvecLibcall<TAN_V2F64>;
   def LIBMVEC__ZGVbN2vv___pow_finite : LibmvecLibcall<POW_FINITE_V2F64>;
   def LIBMVEC__ZGVbN2vv_pow : LibmvecLibcall<POW_V2F64>;
-  def LIBMVEC__ZGVbN4v___expf_finite : LibmvecLibcall<EXP_FINITE_V4F64>;
-  def LIBMVEC__ZGVbN4v___logf_finite : LibmvecLibcall<LOG_FINITE_V4F64>;
+  def LIBMVEC__ZGVbN4v___expf_finite : LibmvecLibcall<EXP_FINITE_V4F32>;
+  def LIBMVEC__ZGVbN4v___logf_finite : LibmvecLibcall<LOG_FINITE_V4F32>;
   def LIBMVEC__ZGVbN4v_cosf : LibmvecLibcall<COS_V4F32>;
   def LIBMVEC__ZGVbN4v_expf : LibmvecLibcall<EXP_V4F32>;
   def LIBMVEC__ZGVbN4v_logf : LibmvecLibcall<LOG_V4F32>;
   def LIBMVEC__ZGVbN4v_sinf : LibmvecLibcall<SIN_V4F32>;
   def LIBMVEC__ZGVbN4v_tanf : LibmvecLibcall<TAN_V4F32>;
-  def LIBMVEC__ZGVbN4vv___powf_finite : LibmvecLibcall<POW_FINITE_V4F64>;
+  def LIBMVEC__ZGVbN4vv___powf_finite : LibmvecLibcall<POW_FINITE_V4F32>;
   def LIBMVEC__ZGVbN4vv_powf : LibmvecLibcall<POW_V4F32>;
   def LIBMVEC__ZGVdN4v___exp_finite : LibmvecLibcall<EXP_FINITE_V4F64>;
   def LIBMVEC__ZGVdN4v___log_finite : LibmvecLibcall<LOG_FINITE_V4F64>;
@@ -4033,14 +3973,14 @@ defset list<RuntimeLibcallImpl> LIBMVEC_X86_VECFUNCS = {
   def LIBMVEC__ZGVdN4v_tan : LibmvecLibcall<TAN_V4F64>;
   def LIBMVEC__ZGVdN4vv___pow_finite : LibmvecLibcall<POW_FINITE_V4F64>;
   def LIBMVEC__ZGVdN4vv_pow : LibmvecLibcall<POW_V4F64>;
-  def LIBMVEC__ZGVdN8v___expf_finite : LibmvecLibcall<EXP_FINITE_V8F64>;
-  def LIBMVEC__ZGVdN8v___logf_finite : LibmvecLibcall<LOG_FINITE_V8F64>;
+  def LIBMVEC__ZGVdN8v___expf_finite : LibmvecLibcall<EXP_FINITE_V8F32>;
+  def LIBMVEC__ZGVdN8v___logf_finite : LibmvecLibcall<LOG_FINITE_V8F32>;
   def LIBMVEC__ZGVdN8v_cosf : LibmvecLibcall<COS_V8F32>;
   def LIBMVEC__ZGVdN8v_expf : LibmvecLibcall<EXP_V8F32>;
   def LIBMVEC__ZGVdN8v_logf : LibmvecLibcall<LOG_V8F32>;
   def LIBMVEC__ZGVdN8v_sinf : LibmvecLibcall<SIN_V8F32>;
   def LIBMVEC__ZGVdN8v_tanf : LibmvecLibcall<TAN_V8F32>;
-  def LIBMVEC__ZGVdN8vv___powf_finite : LibmvecLibcall<POW_FINITE_V8F64>;
+  def LIBMVEC__ZGVdN8vv___powf_finite : LibmvecLibcall<POW_FINITE_V8F32>;
   def LIBMVEC__ZGVdN8vv_powf : LibmvecLibcall<POW_V8F32>;
 }
 
@@ -4753,9 +4693,12 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
 //===----------------------------------------------------------------------===//
 
 defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
+  def amd_vrd2_acos : RuntimeLibcallImpl<ACOS_V2F64>;
   def amd_vrd2_atan : RuntimeLibcallImpl<ATAN_V2F64>;
+  def amd_vrd2_atan2 : RuntimeLibcallImpl<ATAN2_V2F64>;
   def amd_vrd2_cbrt : RuntimeLibcallImpl<CBRT_V2F64>;
   def amd_vrd2_cos : RuntimeLibcallImpl<COS_V2F64>;
+  def amd_vrd2_cosh : RuntimeLibcallImpl<COSH_V2F64>;
   def amd_vrd2_erf : RuntimeLibcallImpl<ERF_V2F64>;
   def amd_vrd2_exp : RuntimeLibcallImpl<EXP_V2F64>;
   def amd_vrd2_exp10 : RuntimeLibcallImpl<EXP10_V2F64>;
@@ -4768,10 +4711,15 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_sin : RuntimeLibcallImpl<SIN_V2F64>;
   def amd_vrd2_sincos : RuntimeLibcallImpl<SINCOS_V2F64>;
   def amd_vrd2_tan : RuntimeLibcallImpl<TAN_V2F64>;
+  def amd_vrd2_tanh : RuntimeLibcallImpl<TANH_V2F64>;
+  def amd_vrd4_acos : RuntimeLibcallImpl<ACOS_V4F64>;
   def amd_vrd4_atan : RuntimeLibcallImpl<ATAN_V4F64>;
+  def amd_vrd4_atan2 : RuntimeLibcallImpl<ATAN2_V4F64>;
   def amd_vrd4_cos : RuntimeLibcallImpl<COS_V4F64>;
-  def amd_vrd4_erf : RuntimeLibcallImpl<ERF_V4F32>;
+  def amd_vrd4_cosh : RuntimeLibcallImpl<COSH_V4F64>;
+  def amd_vrd4_erf : RuntimeLibcallImpl<ERF_V4F64>;
   def amd_vrd4_exp : RuntimeLibcallImpl<EXP_V4F64>;
+  def amd_vrd4_exp10 : RuntimeLibcallImpl<EXP10_V4F64>;
   def amd_vrd4_exp2 : RuntimeLibcallImpl<EXP2_V4F64>;
   def amd_vrd4_log : RuntimeLibcallImpl<LOG_V4F64>;
   def amd_vrd4_log2 : RuntimeLibcallImpl<LOG2_V4F64>;
@@ -4779,11 +4727,16 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd4_sin : RuntimeLibcallImpl<SIN_V4F64>;
   def amd_vrd4_sincos : RuntimeLibcallImpl<SINCOS_V4F64>;
   def amd_vrd4_tan : RuntimeLibcallImpl<TAN_V4F64>;
+  def amd_vrd4_tanh : RuntimeLibcallImpl<TANH_V4F64>;
+  def amd_vrd8_acos : RuntimeLibcallImpl<ACOS_V8F64>;
   def amd_vrd8_asin : RuntimeLibcallImpl<ASIN_V8F64>;
   def amd_vrd8_atan : RuntimeLibcallImpl<ATAN_V8F64>;
+  def amd_vrd8_atan2 : RuntimeLibcallImpl<ATAN2_V8F64>;
   def amd_vrd8_cos : RuntimeLibcallImpl<COS_V8F64>;
-  def amd_vrd8_erf : RuntimeLibcallImpl<ERF_V8F32>;
+  def amd_vrd8_cosh : RuntimeLibcallImpl<COSH_V8F64>;
+  def amd_vrd8_erf : RuntimeLibcallImpl<ERF_V8F64>;
   def amd_vrd8_exp : RuntimeLibcallImpl<EXP_V8F64>;
+  def amd_vrd8_exp10 : RuntimeLibcallImpl<EXP10_V8F64>;
   def amd_vrd8_exp2 : RuntimeLibcallImpl<EXP2_V8F64>;
   def amd_vrd8_log : RuntimeLibcallImpl<LOG_V8F64>;
   def amd_vrd8_log2 : RuntimeLibcallImpl<LOG2_V8F64>;
@@ -4791,6 +4744,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd8_sin : RuntimeLibcallImpl<SIN_V8F64>;
   def amd_vrd8_sincos : RuntimeLibcallImpl<SINCOS_V8F64>;
   def amd_vrd8_tan : RuntimeLibcallImpl<TAN_V8F64>;
+  def amd_vrd8_tanh : RuntimeLibcallImpl<TANH_V8F64>;
   def amd_vrd2_erfinv : RuntimeLibcallImpl<ERFINV_V2F64>;
   def amd_vrd4_erfinv : RuntimeLibcallImpl<ERFINV_V4F64>;
   def amd_vrd8_erfinv : RuntimeLibcallImpl<ERFINV_V8F64>;
@@ -4801,7 +4755,9 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs16_asinf : RuntimeLibcallImpl<ASIN_V16F32>;
   def amd_vrs16_atanf : RuntimeLibcallImpl<ATAN_V16F32>;
   def amd_vrs16_cosf : RuntimeLibcallImpl<COS_V16F32>;
+  def amd_vrs16_coshf : RuntimeLibcallImpl<COSH_V16F32>;
   def amd_vrs16_erff : RuntimeLibcallImpl<ERF_V16F32>;
+  def amd_vrs16_exp10f : RuntimeLibcallImpl<EXP10_V16F32>;
   def amd_vrs16_exp2f : RuntimeLibcallImpl<EXP2_V16F32>;
   def amd_vrs16_expf : RuntimeLibcallImpl<EXP_V16F32>;
   def amd_vrs16_log10f : RuntimeLibcallImpl<LOG10_V16F32>;
@@ -4839,6 +4795,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_cosf : RuntimeLibcallImpl<COS_V8F32>;
   def amd_vrs8_coshf : RuntimeLibcallImpl<COSH_V8F32>;
   def amd_vrs8_erff : RuntimeLibcallImpl<ERF_V8F32>;
+  def amd_vrs8_exp10f : RuntimeLibcallImpl<EXP10_V8F32>;
   def amd_vrs8_exp2f : RuntimeLibcallImpl<EXP2_V8F32>;
   def amd_vrs8_expf : RuntimeLibcallImpl<EXP_V8F32>;
   def amd_vrs8_log10f : RuntimeLibcallImpl<LOG10_V8F32>;
