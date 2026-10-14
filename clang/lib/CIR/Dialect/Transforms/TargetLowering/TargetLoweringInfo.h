@@ -38,7 +38,7 @@ std::unique_ptr<TargetLoweringInfo> createAMDGPUTargetLoweringInfo();
 
 std::unique_ptr<TargetLoweringInfo> createNVPTXTargetLoweringInfo();
 
-std::unique_ptr<TargetLoweringInfo> createSPIRVTargetLoweringInfo();
+std::unique_ptr<TargetLoweringInfo> createSPIRVTargetLoweringInfo(bool isSPIRV);
 
 } // namespace cir
 
