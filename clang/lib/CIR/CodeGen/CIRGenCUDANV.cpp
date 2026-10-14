@@ -354,7 +354,6 @@ void CIRGenNVCUDARuntime::emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
     auto gv = cir::GlobalViewAttr::get(fnPtrTy, sym);
 
     globalOp->setAttr("initial_value", gv);
-    globalOp->removeAttr("sym_visibility");
     globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                        cgm.getPointerAlign().getQuantity()));
 
