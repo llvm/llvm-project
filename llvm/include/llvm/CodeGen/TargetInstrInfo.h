@@ -1091,13 +1091,6 @@ public:
     return nullptr;
   }
 
-  /// Check target-specific restrictions on introducing a copy between physical
-  /// registers. This supplements register class constraints, which the caller
-  /// must also check.
-  virtual bool isCopyPhysRegLegal(MCRegister DestReg, MCRegister SrcReg) const {
-    return true;
-  }
-
   /// Emit instructions to copy a pair of physical registers.
   ///
   /// This function should support copies within any legal register class as

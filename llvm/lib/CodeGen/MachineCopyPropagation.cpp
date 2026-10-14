@@ -737,10 +737,18 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
   /// so we have reduced the number of cross-class COPYs and potentially
   /// introduced a nop COPY that can be removed.
 
+  MCRegister UseDst = getDstMCReg(*UseICopyOperands);
+
+  // If the source requires a different register class for copies, the new
+  // destination must belong to that class.
+  const TargetRegisterClass *SrcRC = TRI->getMinimalPhysRegClass(CopySrc);
+  const TargetRegisterClass *CrossRC = TRI->getCrossCopyRegClass(SrcRC);
+  if (CrossRC && CrossRC != SrcRC && !CrossRC->contains(UseDst))
+    return false;
+
   // Allow forwarding if src and dst belong to any common class, so long as they
   // don't belong to any (possibly smaller) common class that requires copies to
   // go via a different class.
-  MCRegister UseDst = getDstMCReg(*UseICopyOperands);
   bool Found = false;
   bool IsCrossClass = false;
   for (const TargetRegisterClass &RC : TRI->regclasses()) {
@@ -880,13 +888,6 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
       continue;
 
     if (!isForwardableRegClassCopy(*Copy, MI, OpIdx))
-      continue;
-
-    // Sharing a register class does not guarantee that this physical copy can
-    // be expanded without an intermediate register.
-    if (auto UseCopy = isCopyInstr(MI, *TII, UseCopyInstr);
-        UseCopy &&
-        !TII->isCopyPhysRegLegal(getDstMCReg(*UseCopy), ForwardedReg))
       continue;
 
     if (hasImplicitOverlap(MI, MOUse))
