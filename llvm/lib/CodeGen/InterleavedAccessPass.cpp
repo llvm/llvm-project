@@ -277,6 +277,14 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
   return getMask(WideMask, Factor, LeafValueTy->getElementCount());
 }
 
+// Function getMask() may insert new instructions to materialise the per-lane
+// mask before we bail out. This recursively deletes them so we don't leave dead
+// IR around.
+static void eraseDeadMaskInstructions(Value *Mask) {
+  if (auto *MaskI = dyn_cast_or_null<Instruction>(Mask))
+    RecursivelyDeleteTriviallyDeadInstructions(MaskI);
+}
+
 bool InterleavedAccessImpl::lowerInterleavedLoad(
     Instruction *Load, SmallSetVector<Instruction *, 32> &DeadInsts) {
   if (isa<ScalableVectorType>(Load->getType()))
@@ -383,8 +391,15 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
     std::tie(Mask, GapMask) = getMask(getMaskOperand(II), Factor, VecTy);
+
+    // tryReplaceExtracts and replaceBinOpShuffles above can mutate the IR as a
+    // side-effect of succeeding. tryReplaceExtracts rewrites every entry in
+    // Extracts when it can rewrite all of them . And replaceBinOpShuffles returns
+    // true iff it rewrote at least one binop(shuffle()) pair. If we end up
+    // bailing out of the rest of the interleaved-load transformation below, we
+    // must still report those earlier mutations.
     if (!Mask)
-      return false;
+      return !Extracts.empty() || BinOpShuffleChanged;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.load or masked.load: "
                       << *Load << "\n");
@@ -396,8 +411,7 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   // shuffles.
   if (!TLI->lowerInterleavedLoad(cast<Instruction>(Load), Mask, Shuffles,
                                  Indices, Factor, GapMask))
-    // If Extracts is not empty, tryReplaceExtracts made changes earlier.
-    return !Extracts.empty() || BinOpShuffleChanged;
+    return true;
 
   DeadInsts.insert_range(Shuffles);
 
@@ -551,8 +565,10 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
 
   // Try to create target specific intrinsics to replace the store and
   // shuffle.
-  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor, GapMask))
+  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor, GapMask)) {
+    eraseDeadMaskInstructions(Mask);
     return false;
+  }
 
   // Already have a new target specific interleaved store. Erase the old store.
   DeadInsts.insert(Store);
@@ -725,8 +741,10 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   }
 
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerDeinterleaveIntrinsicToLoad(LoadedVal, Mask, DI, GapMask))
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(LoadedVal, Mask, DI, GapMask)) {
+    eraseDeadMaskInstructions(Mask);
     return false;
+  }
 
   DeadInsts.insert(DI);
   // We now have a target-specific load, so delete the old one.
@@ -777,8 +795,10 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
   }
 
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerInterleaveIntrinsicToStore(StoredBy, Mask, InterleaveValues))
+  if (!TLI->lowerInterleaveIntrinsicToStore(StoredBy, Mask, InterleaveValues)) {
+    eraseDeadMaskInstructions(Mask);
     return false;
+  }
 
   // We now have a target-specific store, so delete the old one.
   DeadInsts.insert(StoredBy);
