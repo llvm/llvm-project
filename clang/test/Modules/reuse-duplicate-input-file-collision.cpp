@@ -21,8 +21,8 @@
 // reason. Neither module may reuse the other's copy, so both write their own
 // entries and the SLoc index stays nonzero.
 
-// CHECK: <INPUT_FILE {{.*}}op1=[[SIZE:[0-9]+]] {{.*}}op7={{[1-9][0-9]*}} {{.*}}a/shared.h
-// CHECK: <INPUT_FILE {{.*}}op1=[[SIZE]] {{.*}}op7={{[1-9][0-9]*}} {{.*}}b/shared.h
+// CHECK: <INPUT_FILE {{.*}}op1=[[SIZE:[0-9]+]] {{.*}}op7={{[1-9][0-9]*}} {{.*}}a{{[/\\]}}shared.h
+// CHECK: <INPUT_FILE {{.*}}op1=[[SIZE]] {{.*}}op7={{[1-9][0-9]*}} {{.*}}b{{[/\\]}}shared.h
 
 //--- mods.map
 module mod1 { header "mod1.h" export * }
