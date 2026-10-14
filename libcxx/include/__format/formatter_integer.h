@@ -56,6 +56,39 @@ public:
   __format_spec::__parser<_CharT> __parser_;
 };
 
+// A _BitInt wider than 128 bits has no 32/64/128-bit promotion target, so the
+// promoting base above does not apply. This base formats the value in place;
+// __format_integer routes it through the charconv bignum path.
+template <__fmt_char_type _CharT>
+struct __formatter_bitint {
+public:
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    typename _ParseContext::iterator __result = __parser_.__parse(__ctx, __format_spec::__fields_integral);
+    __format_spec::__process_parsed_integer(__parser_, "an integer");
+    return __result;
+  }
+
+  template <class _Tp, class _FormatContext>
+    requires(integral<_Tp> && __is_wide_bitint_v<_Tp>)
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(_Tp __value, _FormatContext& __ctx) const {
+    __format_spec::__parsed_specifications<_CharT> __specs = __parser_.__get_parsed_std_specifications(__ctx);
+
+    if (__specs.__std_.__type_ == __format_spec::__type::__char)
+      return __formatter::__format_char(__value, __ctx.out(), __specs);
+
+    return __formatter::__format_integer(__value, __ctx, __specs);
+  }
+
+  __format_spec::__parser<_CharT> __parser_;
+};
+
+// __is_wide_bitint_v is sizeof-based, so it must be paired with an integral
+// check; otherwise this specialization would also claim large non-integer types.
+template <class _Tp, __fmt_char_type _CharT>
+  requires(integral<_Tp> && __is_wide_bitint_v<_Tp>)
+struct formatter<_Tp, _CharT> : public __formatter_bitint<_CharT> {};
+
 // Signed integral types.
 template <__fmt_char_type _CharT>
 struct formatter<signed char, _CharT> : public __formatter_integer<_CharT> {};
