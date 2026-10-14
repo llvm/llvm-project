@@ -1629,3 +1629,273 @@ loop:
 exit:
   ret void
 }
+
+define void @load_factor3_lut(ptr noalias %a, ptr noalias %lut, ptr noalias %out, i64 %n) vscale_range(2, 1024) {
+; CHECK-LABEL: @load_factor3_lut(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [3 x i8], ptr [[A:%.*]], i64 [[INDEX]], i32 0
+; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds [3 x i8], ptr [[A]], i64 [[INDEX]], i32 1
+; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds [3 x i8], ptr [[A]], i64 [[INDEX]], i32 2
+; CHECK-NEXT:    [[X2:%.*]] = load i8, ptr [[P2]], align 1
+; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i64
+; CHECK-NEXT:    [[T0:%.*]] = getelementptr inbounds i64, ptr [[LUT:%.*]], i64 [[Z0]]
+; CHECK-NEXT:    [[L0:%.*]] = load i64, ptr [[T0]], align 8
+; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i64
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z1]]
+; CHECK-NEXT:    [[L1:%.*]] = load i64, ptr [[T1]], align 8
+; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[X2]] to i64
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z2]]
+; CHECK-NEXT:    [[L2:%.*]] = load i64, ptr [[T2]], align 8
+; CHECK-NEXT:    [[ADD0:%.*]] = add i64 [[L0]], [[L1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[L2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[OUT:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    store i64 [[ADD1]], ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw nsw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[CURRENT_ITERATION_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+; FIXED-LABEL: @load_factor3_lut(
+; FIXED-NEXT:  entry:
+; FIXED-NEXT:    br label [[LOOP:%.*]]
+; FIXED:       loop:
+; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; FIXED-NEXT:    [[P0:%.*]] = getelementptr inbounds [3 x i8], ptr [[A:%.*]], i64 [[IV]], i32 0
+; FIXED-NEXT:    [[X0:%.*]] = load i8, ptr [[P0]], align 1
+; FIXED-NEXT:    [[P1:%.*]] = getelementptr inbounds [3 x i8], ptr [[A]], i64 [[IV]], i32 1
+; FIXED-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
+; FIXED-NEXT:    [[P2:%.*]] = getelementptr inbounds [3 x i8], ptr [[A]], i64 [[IV]], i32 2
+; FIXED-NEXT:    [[X2:%.*]] = load i8, ptr [[P2]], align 1
+; FIXED-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i64
+; FIXED-NEXT:    [[T0:%.*]] = getelementptr inbounds i64, ptr [[LUT:%.*]], i64 [[Z0]]
+; FIXED-NEXT:    [[L0:%.*]] = load i64, ptr [[T0]], align 8
+; FIXED-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i64
+; FIXED-NEXT:    [[T1:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z1]]
+; FIXED-NEXT:    [[L1:%.*]] = load i64, ptr [[T1]], align 8
+; FIXED-NEXT:    [[Z2:%.*]] = zext i8 [[X2]] to i64
+; FIXED-NEXT:    [[T2:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z2]]
+; FIXED-NEXT:    [[L2:%.*]] = load i64, ptr [[T2]], align 8
+; FIXED-NEXT:    [[ADD0:%.*]] = add i64 [[L0]], [[L1]]
+; FIXED-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[L2]]
+; FIXED-NEXT:    [[Q:%.*]] = getelementptr inbounds i64, ptr [[OUT:%.*]], i64 [[IV]]
+; FIXED-NEXT:    store i64 [[ADD1]], ptr [[Q]], align 8
+; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; FIXED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; FIXED-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; FIXED:       exit:
+; FIXED-NEXT:    ret void
+;
+; SCALABLE-LABEL: @load_factor3_lut(
+; SCALABLE-NEXT:  entry:
+; SCALABLE-NEXT:    br label [[VECTOR_BODY:%.*]]
+; SCALABLE:       loop:
+; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; SCALABLE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [3 x i8], ptr [[A:%.*]], i64 [[INDEX]], i32 0
+; SCALABLE-NEXT:    [[X0:%.*]] = load i8, ptr [[TMP1]], align 1
+; SCALABLE-NEXT:    [[P1:%.*]] = getelementptr inbounds [3 x i8], ptr [[A]], i64 [[INDEX]], i32 1
+; SCALABLE-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
+; SCALABLE-NEXT:    [[P2:%.*]] = getelementptr inbounds [3 x i8], ptr [[A]], i64 [[INDEX]], i32 2
+; SCALABLE-NEXT:    [[X2:%.*]] = load i8, ptr [[P2]], align 1
+; SCALABLE-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i64
+; SCALABLE-NEXT:    [[T0:%.*]] = getelementptr inbounds i64, ptr [[LUT:%.*]], i64 [[Z0]]
+; SCALABLE-NEXT:    [[L0:%.*]] = load i64, ptr [[T0]], align 8
+; SCALABLE-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i64
+; SCALABLE-NEXT:    [[T1:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z1]]
+; SCALABLE-NEXT:    [[L1:%.*]] = load i64, ptr [[T1]], align 8
+; SCALABLE-NEXT:    [[Z2:%.*]] = zext i8 [[X2]] to i64
+; SCALABLE-NEXT:    [[T2:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z2]]
+; SCALABLE-NEXT:    [[L2:%.*]] = load i64, ptr [[T2]], align 8
+; SCALABLE-NEXT:    [[ADD0:%.*]] = add i64 [[L0]], [[L1]]
+; SCALABLE-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[L2]]
+; SCALABLE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[OUT:%.*]], i64 [[INDEX]]
+; SCALABLE-NEXT:    store i64 [[ADD1]], ptr [[TMP10]], align 8
+; SCALABLE-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw nsw i64 [[INDEX]], 1
+; SCALABLE-NEXT:    [[EC:%.*]] = icmp eq i64 [[CURRENT_ITERATION_NEXT]], [[N:%.*]]
+; SCALABLE-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; SCALABLE:       exit:
+; SCALABLE-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %p0 = getelementptr inbounds [3 x i8], ptr %a, i64 %iv, i32 0
+  %x0 = load i8, ptr %p0
+  %p1 = getelementptr inbounds [3 x i8], ptr %a, i64 %iv, i32 1
+  %x1 = load i8, ptr %p1
+  %p2 = getelementptr inbounds [3 x i8], ptr %a, i64 %iv, i32 2
+  %x2 = load i8, ptr %p2
+  %z0 = zext i8 %x0 to i64
+  %t0 = getelementptr inbounds i64, ptr %lut, i64 %z0
+  %l0 = load i64, ptr %t0
+  %z1 = zext i8 %x1 to i64
+  %t1 = getelementptr inbounds i64, ptr %lut, i64 %z1
+  %l1 = load i64, ptr %t1
+  %z2 = zext i8 %x2 to i64
+  %t2 = getelementptr inbounds i64, ptr %lut, i64 %z2
+  %l2 = load i64, ptr %t2
+  %add0 = add i64 %l0, %l1
+  %add1 = add i64 %add0, %l2
+  %q = getelementptr inbounds i64, ptr %out, i64 %iv
+  store i64 %add1, ptr %q
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @load_factor4_lut(ptr noalias %a, ptr noalias %lut, ptr noalias %out, i64 %n) vscale_range(2, 1024) {
+; CHECK-LABEL: @load_factor4_lut(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[INDEX]], i32 0
+; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDEX]], i32 1
+; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDEX]], i32 2
+; CHECK-NEXT:    [[X2:%.*]] = load i8, ptr [[P2]], align 1
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDEX]], i32 3
+; CHECK-NEXT:    [[X3:%.*]] = load i8, ptr [[P3]], align 1
+; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i64
+; CHECK-NEXT:    [[T0:%.*]] = getelementptr inbounds i64, ptr [[LUT:%.*]], i64 [[Z0]]
+; CHECK-NEXT:    [[L0:%.*]] = load i64, ptr [[T0]], align 8
+; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i64
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z1]]
+; CHECK-NEXT:    [[L1:%.*]] = load i64, ptr [[T1]], align 8
+; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[X2]] to i64
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z2]]
+; CHECK-NEXT:    [[L2:%.*]] = load i64, ptr [[T2]], align 8
+; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[X3]] to i64
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z3]]
+; CHECK-NEXT:    [[L3:%.*]] = load i64, ptr [[T3]], align 8
+; CHECK-NEXT:    [[ADD0:%.*]] = add i64 [[L0]], [[L1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[L2]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[ADD1]], [[L3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[OUT:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    store i64 [[ADD2]], ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw nsw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[CURRENT_ITERATION_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+; FIXED-LABEL: @load_factor4_lut(
+; FIXED-NEXT:  entry:
+; FIXED-NEXT:    br label [[LOOP:%.*]]
+; FIXED:       loop:
+; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; FIXED-NEXT:    [[P0:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[IV]], i32 0
+; FIXED-NEXT:    [[X0:%.*]] = load i8, ptr [[P0]], align 1
+; FIXED-NEXT:    [[P1:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[IV]], i32 1
+; FIXED-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
+; FIXED-NEXT:    [[P2:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[IV]], i32 2
+; FIXED-NEXT:    [[X2:%.*]] = load i8, ptr [[P2]], align 1
+; FIXED-NEXT:    [[P3:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[IV]], i32 3
+; FIXED-NEXT:    [[X3:%.*]] = load i8, ptr [[P3]], align 1
+; FIXED-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i64
+; FIXED-NEXT:    [[T0:%.*]] = getelementptr inbounds i64, ptr [[LUT:%.*]], i64 [[Z0]]
+; FIXED-NEXT:    [[L0:%.*]] = load i64, ptr [[T0]], align 8
+; FIXED-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i64
+; FIXED-NEXT:    [[T1:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z1]]
+; FIXED-NEXT:    [[L1:%.*]] = load i64, ptr [[T1]], align 8
+; FIXED-NEXT:    [[Z2:%.*]] = zext i8 [[X2]] to i64
+; FIXED-NEXT:    [[T2:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z2]]
+; FIXED-NEXT:    [[L2:%.*]] = load i64, ptr [[T2]], align 8
+; FIXED-NEXT:    [[Z3:%.*]] = zext i8 [[X3]] to i64
+; FIXED-NEXT:    [[T3:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z3]]
+; FIXED-NEXT:    [[L3:%.*]] = load i64, ptr [[T3]], align 8
+; FIXED-NEXT:    [[ADD0:%.*]] = add i64 [[L0]], [[L1]]
+; FIXED-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[L2]]
+; FIXED-NEXT:    [[ADD2:%.*]] = add i64 [[ADD1]], [[L3]]
+; FIXED-NEXT:    [[Q:%.*]] = getelementptr inbounds i64, ptr [[OUT:%.*]], i64 [[IV]]
+; FIXED-NEXT:    store i64 [[ADD2]], ptr [[Q]], align 8
+; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; FIXED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; FIXED-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; FIXED:       exit:
+; FIXED-NEXT:    ret void
+;
+; SCALABLE-LABEL: @load_factor4_lut(
+; SCALABLE-NEXT:  entry:
+; SCALABLE-NEXT:    br label [[VECTOR_BODY:%.*]]
+; SCALABLE:       loop:
+; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; SCALABLE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[INDEX]], i32 0
+; SCALABLE-NEXT:    [[X0:%.*]] = load i8, ptr [[TMP1]], align 1
+; SCALABLE-NEXT:    [[P1:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDEX]], i32 1
+; SCALABLE-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
+; SCALABLE-NEXT:    [[P2:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDEX]], i32 2
+; SCALABLE-NEXT:    [[X2:%.*]] = load i8, ptr [[P2]], align 1
+; SCALABLE-NEXT:    [[P3:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDEX]], i32 3
+; SCALABLE-NEXT:    [[X3:%.*]] = load i8, ptr [[P3]], align 1
+; SCALABLE-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i64
+; SCALABLE-NEXT:    [[T0:%.*]] = getelementptr inbounds i64, ptr [[LUT:%.*]], i64 [[Z0]]
+; SCALABLE-NEXT:    [[L0:%.*]] = load i64, ptr [[T0]], align 8
+; SCALABLE-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i64
+; SCALABLE-NEXT:    [[T1:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z1]]
+; SCALABLE-NEXT:    [[L1:%.*]] = load i64, ptr [[T1]], align 8
+; SCALABLE-NEXT:    [[Z2:%.*]] = zext i8 [[X2]] to i64
+; SCALABLE-NEXT:    [[T2:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z2]]
+; SCALABLE-NEXT:    [[L2:%.*]] = load i64, ptr [[T2]], align 8
+; SCALABLE-NEXT:    [[Z3:%.*]] = zext i8 [[X3]] to i64
+; SCALABLE-NEXT:    [[T3:%.*]] = getelementptr inbounds i64, ptr [[LUT]], i64 [[Z3]]
+; SCALABLE-NEXT:    [[L3:%.*]] = load i64, ptr [[T3]], align 8
+; SCALABLE-NEXT:    [[ADD0:%.*]] = add i64 [[L0]], [[L1]]
+; SCALABLE-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[L2]]
+; SCALABLE-NEXT:    [[ADD2:%.*]] = add i64 [[ADD1]], [[L3]]
+; SCALABLE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[OUT:%.*]], i64 [[INDEX]]
+; SCALABLE-NEXT:    store i64 [[ADD2]], ptr [[TMP13]], align 8
+; SCALABLE-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw nsw i64 [[INDEX]], 1
+; SCALABLE-NEXT:    [[EC:%.*]] = icmp eq i64 [[CURRENT_ITERATION_NEXT]], [[N:%.*]]
+; SCALABLE-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; SCALABLE:       exit:
+; SCALABLE-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %p0 = getelementptr inbounds [4 x i8], ptr %a, i64 %iv, i32 0
+  %x0 = load i8, ptr %p0
+  %p1 = getelementptr inbounds [4 x i8], ptr %a, i64 %iv, i32 1
+  %x1 = load i8, ptr %p1
+  %p2 = getelementptr inbounds [4 x i8], ptr %a, i64 %iv, i32 2
+  %x2 = load i8, ptr %p2
+  %p3 = getelementptr inbounds [4 x i8], ptr %a, i64 %iv, i32 3
+  %x3 = load i8, ptr %p3
+  %z0 = zext i8 %x0 to i64
+  %t0 = getelementptr inbounds i64, ptr %lut, i64 %z0
+  %l0 = load i64, ptr %t0
+  %z1 = zext i8 %x1 to i64
+  %t1 = getelementptr inbounds i64, ptr %lut, i64 %z1
+  %l1 = load i64, ptr %t1
+  %z2 = zext i8 %x2 to i64
+  %t2 = getelementptr inbounds i64, ptr %lut, i64 %z2
+  %l2 = load i64, ptr %t2
+  %z3 = zext i8 %x3 to i64
+  %t3 = getelementptr inbounds i64, ptr %lut, i64 %z3
+  %l3 = load i64, ptr %t3
+  %add0 = add i64 %l0, %l1
+  %add1 = add i64 %add0, %l2
+  %add2 = add i64 %add1, %l3
+  %q = getelementptr inbounds i64, ptr %out, i64 %iv
+  store i64 %add2, ptr %q
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
