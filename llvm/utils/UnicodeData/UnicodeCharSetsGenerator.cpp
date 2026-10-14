@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
@@ -72,6 +73,7 @@ struct Properties {
   unsigned MathStart : 1;
   unsigned MathContinue : 1;
   unsigned Printable : 1;
+  unsigned Control : 1;
   unsigned Format : 1;
   unsigned Combining : 1;
   unsigned DoubleWidth : 1;
@@ -93,7 +95,8 @@ static StringRef fromXmlChar(const xmlChar *S) {
 }
 
 static bool isPrintableGC(StringRef GC) {
-  return GC == "Zs" || (!GC.empty() && StringRef("LMNPS").contains(GC.front()));
+  static SmallSet<StringRef, 5> NonPrintableGCs{"Cc", "Cs", "Zl", "Zp"};
+  return !NonPrintableGCs.contains(GC);
 }
 
 // Loads the properties we care about from the flat XML representation of the
@@ -157,9 +160,12 @@ static CharacterDatabase loadDatabase(StringRef Path) {
         P.MathContinue = Value == "Y";
         ++Found;
       } else if (Name == "gc") {
-        P.Printable = isPrintableGC(Value);
-        P.Format = Value == "Cf";
-        P.Combining = Value == "Mn" || Value == "Me";
+        if (Element == "char") {
+          P.Printable = isPrintableGC(Value);
+          P.Control = Value == "Cc";
+          P.Format = Value == "Cf";
+          P.Combining = Value == "Mn" || Value == "Me";
+        }
         ++Found;
       } else if (Name == "ea") {
         P.DoubleWidth = Value == "F" || Value == "W";
@@ -243,8 +249,10 @@ int main(int argc, char **argv) {
   writeFile(
       LLVMOutput, "llvm::sys::unicode", UCD.Version, [&](raw_ostream &OS) {
         emitTable(OS, "GeneratedPrintableRanges",
-                  "General_Category=L|M|N|P|S|Zs", Chars,
+                  "General_Category!=Cc|Cs|Zl|Zp", Chars,
                   [](Properties P) { return P.Printable; });
+        emitTable(OS, "GeneratedControlCharacterRanges", "General_Category=Cc",
+                  Chars, [](Properties P) { return P.Control; });
         emitTable(OS, "GeneratedFormatCharacterRanges", "General_Category=Cf",
                   Chars, [](Properties P) { return P.Format; });
         emitTable(OS, "GeneratedCombiningCharacterRanges",

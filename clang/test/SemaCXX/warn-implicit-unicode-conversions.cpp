@@ -24,7 +24,7 @@ void test(char8_t u8, char16_t u16, char32_t u32) {
     c8(char16_t(0x7f));
     c8(char16_t(0x80));   // expected-warning {{implicit conversion from 'char16_t' to 'char8_t' changes the meaning of the code point U+0080}}
     c8(char16_t(0xD800)); // expected-warning {{implicit conversion from 'char16_t' to 'char8_t' changes the meaning of the code unit <0xD800>}}
-    c8(char16_t(0xE000)); // expected-warning {{implicit conversion from 'char16_t' to 'char8_t' changes the meaning of the code point U+E000}}
+    c8(char16_t(0xE000)); // expected-warning {{implicit conversion from 'char16_t' to 'char8_t' changes the meaning of the code point '' U+E000}}
 
 
     c16(char32_t(0x7f));

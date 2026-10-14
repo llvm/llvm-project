@@ -20,6 +20,7 @@ namespace sys {
 namespace unicode {
 
 extern const UnicodeCharSet::CharRanges GeneratedPrintableRanges;
+extern const UnicodeCharSet::CharRanges GeneratedControlCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedFormatCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedCombiningCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedDoubleWidthCharacterRanges;
@@ -29,6 +30,13 @@ extern const UnicodeCharSet::CharRanges GeneratedDoubleWidthCharacterRanges;
 bool isPrintable(int UCS) {
   static const UnicodeCharSet Printables(GeneratedPrintableRanges);
   return Printables.contains(UCS);
+}
+
+/// Unicode code points of the Cc category are considered
+/// control characters.
+bool isControl(int UCS) {
+  static const UnicodeCharSet Control(GeneratedControlCharacterRanges);
+  return Control.contains(UCS);
 }
 
 /// Unicode code points of the Cf category are considered
@@ -46,12 +54,20 @@ bool isFormatting(int UCS) {
 /// \return Character width:
 ///   * ErrorNonPrintableCharacter (-1) for non-printable characters (as
 ///     identified by isPrintable);
-///   * 0 for non-spacing and enclosing combining marks;
+///   * 0 for non-spacing and enclosing combining marks, and for formatting
+///     characters (as identified by isFormatting), with the exception of
+///     U+00AD;
 ///   * 2 for CJK characters excluding halfwidth forms;
 ///   * 1 for all remaining characters.
 static inline int charWidth(int UCS) {
   if (!isPrintable(UCS))
     return ErrorNonPrintableCharacter;
+
+  if (isFormatting(UCS)) {
+    // Special case 0x00AD (SOFT HYPHEN) which is rendered as an actual hyphen
+    // in most terminals.
+    return UCS == 0x00AD ? 1 : 0;
+  }
 
   static const UnicodeCharSet CombiningCharacters(
       GeneratedCombiningCharacterRanges);

@@ -1108,11 +1108,8 @@ static void EscapeStringForDiagnostic(StringRef Str,
       assert(Begin == CodepointEnd &&
              "we must be further along in the string now");
 
-      // Clang special cases 0x00AD (SOFT HYPHEN) which is rendered as an actual
-      // hyphen in most terminals.
-      if (CodepointValue == 0x00AD ||
-          llvm::sys::unicode::isPrintable(CodepointValue) ||
-          (!ForCodepoint && llvm::sys::unicode::isFormatting(CodepointValue))) {
+      // Do not let through control characters which could mess up the terminal.
+      if (!llvm::sys::unicode::isControl(CodepointValue)) {
         OutStream << (ForCodepoint ? "'" : "")
                   << StringRef(reinterpret_cast<const char *>(CodepointBegin),
                                std::distance(CodepointBegin, CodepointEnd))
@@ -1120,7 +1117,6 @@ static void EscapeStringForDiagnostic(StringRef Str,
         if (!ForCodepoint)
           continue;
       }
-      // Unprintable code point.
       OutStream << (ForCodepoint ? "" : "<") << "U+"
                 << llvm::format_hex_no_prefix(CodepointValue, 4, true)
                 << (ForCodepoint ? "" : ">");

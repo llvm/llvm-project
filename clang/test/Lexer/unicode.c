@@ -88,7 +88,7 @@ extern int 👷; // expected-error {{unexpected character '👷' U+1F477}} \
 
 extern int 👷‍♀; // expected-warning {{declaration does not declare anything}} \
                   expected-error {{unexpected character '👷' U+1F477}} \
-                  expected-error {{character U+200D not allowed at the start of an identifier}} \
+                  expected-error {{character '‍' U+200D not allowed at the start of an identifier}} \
                   expected-error {{unexpected character '♀' U+2640}}
 #else
 
@@ -106,10 +106,10 @@ int *n꞉꞉v = &n;; // expected-warning 2{{treating character '꞉' U+A789 as 
 int v＝［＝］（auto）｛return～x；｝（）; // expected-warning 12{{treating character}}
 
 int ⁠x﻿x‍;
-// expected-warning@-1 {{identifier contains character U+2060 that is invisible in some environments}}
-// expected-warning@-2 {{identifier contains character U+FEFF that is invisible in some environments}}
-// expected-warning@-3 {{identifier contains character U+200D that is invisible in some environments}}
-int foo​bar = 0; // expected-warning {{identifier contains character U+200B that is invisible in some environments}}
+// expected-warning@-1 {{identifier contains character '⁠' U+2060 that is invisible in some environments}}
+// expected-warning@-2 {{identifier contains character '﻿' U+FEFF that is invisible in some environments}}
+// expected-warning@-3 {{identifier contains character '‍' U+200D that is invisible in some environments}}
+int foo​bar = 0; // expected-warning {{identifier contains character '​' U+200B that is invisible in some environments}}
 int x = foobar; // expected-error {{undeclared identifier}}
 
 int ∣foo; // expected-error {{unexpected character '∣' U+2223}}
