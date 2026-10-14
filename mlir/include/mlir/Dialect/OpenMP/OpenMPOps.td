@@ -276,7 +276,8 @@ def TeamsOp : OpenMP_Op<"teams", traits = [
 //===----------------------------------------------------------------------===//
 
 def SectionOp : OpenMP_Op<"section", traits = [
-    BlockArgOpenMPOpInterface, HasParent<"SectionsOp">
+    BlockArgOpenMPOpInterface, HasParent<"SectionsOp">,
+    RecursiveMemoryEffects
   ], singleRegion = true> {
   let summary = "section directive";
   let description = [{
@@ -298,7 +299,8 @@ def SectionOp : OpenMP_Op<"section", traits = [
 }
 
 def SectionsOp : OpenMP_Op<"sections", traits = [
-    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>, RecursiveMemoryEffects
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_NowaitClause, OpenMP_PrivateClause,
     OpenMP_ReductionClause
