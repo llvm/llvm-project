@@ -117,8 +117,12 @@ list(APPEND CLANG_TEST_DEPS
 
 if(NOT WIN32)
   list(APPEND CLANG_TEST_DEPS
+    clang-ssaf-driver
     clang-ssaf-orchestrator-make
     )
+  if(TARGET clang-apply-replacements)
+    list(APPEND CLANG_TEST_DEPS clang-apply-replacements)
+  endif()
 endif()
 
 if(CLANG_ENABLE_CIR)
