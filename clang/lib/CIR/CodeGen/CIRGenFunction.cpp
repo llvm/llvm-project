@@ -559,8 +559,9 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   // When the current function is not void, create an address to store the
   // result value.
   if (!returnType->isVoidType()) {
-    // Determine the function body end location.
-    // If fd is null or has no body, use loc as fallback.
+    // Determine the function body end location.  A function without a body
+    // uses its declaration's location, as classic codegen does, and a null fd
+    // uses loc.
     SourceLocation bodyEndLoc = loc;
     if (fd) {
       if (Stmt *body = fd->getBody())
@@ -578,8 +579,9 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   emitStartEHSpec(d);
   prologueCleanupDepth = ehStack.stable_begin();
 
-  // Determine the function body begin location for the prolog.
-  // If fd is null or has no body, use startLoc as fallback.
+  // Determine the function body begin location for the prolog.  A function
+  // without a body uses its declaration's location, as classic codegen does,
+  // and a null fd uses startLoc.
   SourceLocation bodyBeginLoc = startLoc;
   if (fd) {
     if (Stmt *body = fd->getBody())
