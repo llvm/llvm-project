@@ -7222,9 +7222,10 @@ public:
   /// variable will have in the given scope.
   QualType getCapturedDeclRefType(ValueDecl *Var, SourceLocation Loc);
 
-  /// Diagnose a use of the variably modified type \p T in a local class or
-  /// block when one of its array bounds is evaluated in an enclosing function.
-  /// Returns false if a diagnostic was emitted.
+  /// Handle a use of the variably modified type \p T in the current context.
+  /// Array bounds evaluated in an enclosing context are captured by the
+  /// lambdas in between; if a local class or a block is in between instead,
+  /// the use is diagnosed. Returns false if the use is invalid.
   bool CheckVariablyModifiedTypeUse(QualType T, SourceLocation Loc);
 
   /// Mark all of the declarations referenced within a particular AST node as

@@ -12,6 +12,11 @@ void var_in_block(void) {
   ^{ X x; }(); // expected-error {{cannot be used in a block}}
 }
 
+void typedef_in_block(void) {
+  typedef int X[size_tab()]; // expected-note {{size expression is evaluated here}}
+  ^{ typedef X Y; }(); // expected-error {{cannot be used in a block}}
+}
+
 // Valid: VLA declared inside the block itself.
 int own_vla_in_block(void) {
   return (^ int(void) { int a[size_tab()]; return sizeof(a); })();

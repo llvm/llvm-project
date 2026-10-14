@@ -4782,44 +4782,20 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
   });
 }
 
-/// Find what separates \p DC from \p Owner, the context in which a VLA bound
-/// is evaluated: 0 for a local class, 1 for a block, or std::nullopt if the
-/// bound is available in \p DC or \p Owner does not enclose it.
-static std::optional<unsigned> findVLABoundBarrier(const DeclContext *DC,
-                                                   const DeclContext *Owner) {
-  std::optional<unsigned> Barrier;
-  for (; DC; DC = DC->getParent()) {
-    if (DC == Owner)
-      return Barrier;
-    // Lambdas and captured regions can capture a VLA bound (see
-    // captureVariablyModifiedType), so they are not barriers here.
-    if (isLambdaCallOperator(DC) || isa<CapturedDecl>(DC))
-      continue;
-    if (const auto *RD = dyn_cast<CXXRecordDecl>(DC); RD && RD->isLambda())
-      continue;
-    if (isa<BlockDecl>(DC)) {
-      if (!Barrier)
-        Barrier = 1;
-      continue;
-    }
-    if (isa<RecordDecl>(DC) && !Barrier)
-      Barrier = 0;
+/// Find the capturing scope that is being built for the lambda call operator
+/// or captured declaration \p DC, if any.
+static CapturingScopeInfo *
+findCapturingScope(ArrayRef<FunctionScopeInfo *> Scopes,
+                   const DeclContext *DC) {
+  for (FunctionScopeInfo *FSI : llvm::reverse(Scopes)) {
+    if (auto *LSI = dyn_cast<LambdaScopeInfo>(FSI);
+        LSI && LSI->CallOperator == DC)
+      return LSI;
+    if (auto *CRSI = dyn_cast<CapturedRegionScopeInfo>(FSI);
+        CRSI && CRSI->TheCapturedDecl == DC)
+      return CRSI;
   }
-  return std::nullopt;
-}
-
-static bool isInLocalClassOrBlock(const DeclContext *DC) {
-  for (; DC; DC = DC->getParent()) {
-    if (isa<BlockDecl>(DC))
-      return true;
-    if (const auto *RD = dyn_cast<RecordDecl>(DC)) {
-      if (const auto *CRD = dyn_cast<CXXRecordDecl>(RD); CRD && CRD->isLambda())
-        continue;
-      if (RD->getParentFunctionOrMethod())
-        return true;
-    }
-  }
-  return false;
+  return nullptr;
 }
 
 bool Sema::CheckVariablyModifiedTypeUse(QualType T, SourceLocation Loc) {
@@ -4828,11 +4804,11 @@ bool Sema::CheckVariablyModifiedTypeUse(QualType T, SourceLocation Loc) {
   // Deduced types (auto, __auto_type) do not propagate the variably modified
   // bit, so look at the canonical type.
   QualType CanonT = T.getCanonicalType();
-  if (!CanonT->isVariablyModifiedType() || !isInLocalClassOrBlock(CurContext))
+  if (!CanonT->isVariablyModifiedType())
     return true;
 
   const Expr *BadSize = nullptr;
-  std::optional<unsigned> Barrier;
+  unsigned BadKind = 0;
   forEachVariableArrayType(Context, CanonT, [&](const VariableArrayType *VAT) {
     const Expr *Size = VAT->getSizeExpr();
     if (BadSize || !Size)
@@ -4840,19 +4816,56 @@ bool Sema::CheckVariablyModifiedTypeUse(QualType T, SourceLocation Loc) {
     auto It = VLASizeExprOwners.find(Size);
     if (It == VLASizeExprOwners.end())
       return;
-    Barrier = findVLABoundBarrier(CurContext, It->second);
-    if (Barrier)
+
+    // Walk from the use to the context in which the bound is evaluated.
+    // Lambdas and captured regions on the way capture the bound; a local
+    // class or a block cannot see it.
+    SmallVector<CapturingScopeInfo *, 2> Capturers;
+    std::optional<unsigned> Barrier;
+    const DeclContext *DC = CurContext;
+    for (; DC && DC != It->second; DC = DC->getParent()) {
+      if (isLambdaCallOperator(DC) || isa<CapturedDecl>(DC)) {
+        if (CapturingScopeInfo *CSI = findCapturingScope(FunctionScopes, DC))
+          Capturers.push_back(CSI);
+      } else if (isa<BlockDecl>(DC)) {
+        Barrier = Barrier.value_or(1);
+      } else if (const auto *RD = dyn_cast<RecordDecl>(DC)) {
+        if (const auto *CRD = dyn_cast<CXXRecordDecl>(RD);
+            !CRD || !CRD->isLambda())
+          Barrier = Barrier.value_or(0);
+      }
+    }
+    // Nothing to do if the bound is not evaluated in an enclosing context.
+    if (!DC)
+      return;
+    if (Barrier) {
       BadSize = Size;
+      BadKind = *Barrier;
+      return;
+    }
+    // VAT is a canonical type; the bound may already have been captured
+    // through a different type node with the same size expression.
+    for (CapturingScopeInfo *CSI : Capturers)
+      if (llvm::none_of(CSI->Captures, [&](const Capture &C) {
+            return C.isVLATypeCapture() &&
+                   C.getCapturedVLAType()->getSizeExpr() == Size;
+          }))
+        CSI->addVLATypeCapture(Size->getExprLoc(), VAT, Context.getSizeType());
   });
   if (!BadSize)
     return true;
 
-  // A member typedef naming such a type has already been diagnosed.
+  // Default arguments and default member initializers are evaluated where
+  // they are used, and unevaluated operands are not evaluated at all.
+  if (isUnevaluatedContext() || isCheckingDefaultArgumentOrInitializer())
+    return true;
+
+  // A typedef naming such a type has already been diagnosed.
   if (const auto *TT = T->getAs<TypedefType>();
       TT && TT->getDecl()->isInvalidDecl())
     return false;
 
-  Diag(Loc, diag::err_vm_type_from_enclosing_function) << T << *Barrier;
+  Diag(Loc, diag::err_vm_type_from_enclosing_function) << T << BadKind;
   Diag(BadSize->getBeginLoc(), diag::note_vm_type_size_evaluated_here);
   return false;
 }
@@ -4935,29 +4948,9 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
                                        ExprKind))
     return true;
 
-  if (ExprType->isVariablyModifiedType() && FunctionScopes.size() > 1) {
-    if (auto *TT = ExprType->getAs<TypedefType>()) {
-      for (auto I = FunctionScopes.rbegin(),
-                E = std::prev(FunctionScopes.rend());
-           I != E; ++I) {
-        auto *CSI = dyn_cast<CapturingScopeInfo>(*I);
-        if (CSI == nullptr)
-          break;
-        DeclContext *DC = nullptr;
-        if (auto *LSI = dyn_cast<LambdaScopeInfo>(CSI))
-          DC = LSI->CallOperator;
-        else if (auto *CRSI = dyn_cast<CapturedRegionScopeInfo>(CSI))
-          DC = CRSI->TheCapturedDecl;
-        else if (auto *BSI = dyn_cast<BlockScopeInfo>(CSI))
-          DC = BSI->TheDecl;
-        if (DC) {
-          if (DC->containsDecl(TT->getDecl()))
-            break;
-          captureVariablyModifiedType(Context, ExprType, CSI);
-        }
-      }
-    }
-  }
+  if (ExprType->getAs<TypedefType>() &&
+      !CheckVariablyModifiedTypeUse(ExprType, OpLoc))
+    return true;
 
   return false;
 }
