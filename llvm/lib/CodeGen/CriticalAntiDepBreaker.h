@@ -92,7 +92,7 @@ class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
                  unsigned InsertPosIndex) override;
 
     /// Finish anti-dep breaking for a basic block.
-    void FinishBlock() override;
+    void FinishBlock(const MachineLoopInfo *MLI) override;
 
   private:
     void PrescanInstruction(MachineInstr &MI);

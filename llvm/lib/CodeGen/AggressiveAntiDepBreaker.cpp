@@ -54,7 +54,7 @@ DebugMod("agg-antidep-debugmod",
 
 AggressiveAntiDepState::AggressiveAntiDepState(const unsigned TargetRegs,
                                                MachineBasicBlock *BB)
-    : NumTargetRegs(TargetRegs), GroupNodes(TargetRegs, 0),
+    : MBB(BB), NumTargetRegs(TargetRegs), GroupNodes(TargetRegs, 0),
       GroupNodeIndices(TargetRegs, 0), KillIndices(TargetRegs, 0),
       DefIndices(TargetRegs, 0) {
   const unsigned BBSize = BB->size();
@@ -181,7 +181,9 @@ void AggressiveAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   }
 }
 
-void AggressiveAntiDepBreaker::FinishBlock() {
+void AggressiveAntiDepBreaker::FinishBlock(const MachineLoopInfo *MLI) {
+  if (MLI)
+    BreakLoopCarriedAntiDependencies(State->GetMBB(), *MLI);
   delete State;
   State = nullptr;
 }
