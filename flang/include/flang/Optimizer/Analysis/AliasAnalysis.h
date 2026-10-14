@@ -186,10 +186,7 @@ struct AliasAnalysis {
       /// record type). Null for non-Component steps.
       mlir::StringAttr component;
       /// For Component steps: the record type that `component` is a field
-      /// of. Component names are only comparable between steps that select
-      /// fields of the same record type: the same object may be accessed
-      /// through views of different types (e.g. CLASS(base) views of an
-      /// extended type object). Null for non-Component steps.
+      /// of. Null for non-Component steps.
       mlir::Type recordType;
 
       bool operator==(const PathStep &o) const {
@@ -218,23 +215,11 @@ struct AliasAnalysis {
       /// MustAlias.
       bool isApproximate{false};
 
-      /// Whether the component steps of the path may not contain the
-      /// queried memory location, so they cannot prove that two accesses
-      /// are disjoint. This happens when the path goes through:
-      ///   - a view that reinterprets memory as an unrelated type, e.g.
-      ///     storage association through EQUIVALENCE or COMMON, so that the
-      ///     steps collected after the view do not describe the layout of
-      ///     the root variable;
-      ///   - a view that may address memory outside of its source, e.g. an
-      ///     array element viewed as an array (sequence association) or a
-      ///     box with arbitrary byte strides, followed by steps selecting
-      ///     the subobject of the root variable that contains the source;
-      ///   - a view that reinterprets a descriptor as data or vice versa, so
-      ///     that the location may not be told apart from a descriptor based
-      ///     on its type.
-      /// The snapshots of the path taken at declarations (see ScopedOrigin)
-      /// inherit the opacity of the views crossed after them.
-      bool isOpaque{false};
+      /// The storage-associated (EQUIVALENCE/COMMON) declaration crossed by
+      /// the path, if any. Objects of the same type may partially overlap
+      /// only through storage association, so component steps are only
+      /// compared between paths crossing the same such declaration.
+      mlir::Operation *storageDecl{nullptr};
 
       /// Return true if any step is a PointerDeref.
       bool hasPointerDeref() const {
@@ -244,8 +229,8 @@ struct AliasAnalysis {
       }
 
       bool operator==(const AccessPath &o) const {
-        return isApproximate == o.isApproximate && isOpaque == o.isOpaque &&
-               steps == o.steps;
+        return isApproximate == o.isApproximate &&
+               storageDecl == o.storageDecl && steps == o.steps;
       }
       bool operator!=(const AccessPath &o) const { return !(*this == o); }
 
