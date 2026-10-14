@@ -221,25 +221,28 @@ void transform::ApplyUnrollContractPatternsOp::populatePatterns(
     return SmallVector<int64_t>({m, n, k});
   };
 
+  auto constraint = [](Operation *op) {
+    auto contract = dyn_cast<vector::ContractionOp>(op);
+    if (!contract)
+      return failure();
+
+    auto iterators = contract.getIteratorTypesArray();
+    if (iterators.size() != 3 ||
+        iterators[0] != vector::IteratorType::parallel ||
+        iterators[1] != vector::IteratorType::parallel ||
+        iterators[1] != vector::IteratorType::reduction)
+      return failure();
+
+    auto type = dyn_cast<VectorType>(contract.getType());
+    if (!type || type.getRank() != 2)
+      return failure();
+    return success();
+  };
+
   vector::populateVectorContractUnrollPatterns(
       patterns, vector::UnrollVectorOptions()
                     .setNativeShapeFn(nativeShapeFn)
-                    .setFilterConstraint([](Operation *op) {
-                      auto contract = dyn_cast<vector::ContractionOp>(op);
-                      if (!contract)
-                        return failure();
-
-                      if (contract.getIteratorTypesArray() !=
-                          SmallVector<vector::IteratorType>{
-                              vector::IteratorType::parallel,
-                              vector::IteratorType::parallel,
-                              vector::IteratorType::reduction})
-                        return failure();
-                      auto type = dyn_cast<VectorType>(contract.getType());
-                      if (!type || type.getRank() != 2)
-                        return failure();
-                      return success();
-                    }));
+                    .setFilterConstraint(constraint));
 }
 
 void transform::ApplyUnrollToElementsPatternsOp::populatePatterns(
