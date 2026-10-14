@@ -459,9 +459,8 @@ static bool isFortranAssignSrcScalarAndDestArray(fir::CallOp callOp) {
 
   // Check if src is scalar and dest is array
   auto srcBoxTy = dyn_cast<fir::BoxType>(srcOrigType);
-  bool srcIsScalar = srcBoxTy && !srcBoxTy.isArray();
-  bool destIsArray = bool(getAssignArrayBoxType(destOrigType, /*isRef=*/true));
-  return srcIsScalar && destIsArray;
+  return srcBoxTy && !srcBoxTy.isArray() &&
+         getAssignArrayBoxType(destOrigType, /*isRef=*/true);
 }
 
 /// Check if the FortranAAssign call has both src and dest as array descriptors.
