@@ -38,6 +38,7 @@
 ; CHECK-NEXT:   expand-reductions
 ; CHECK-NEXT:   typepromotion
 ; CHECK-NEXT:   codegenprepare
+; CHECK-NEXT:   sjlj-eh-prepare
 ; CHECK-NEXT:   dwarf-eh-prepare
 ; CHECK-NEXT:   inline-asm-prepare
 ; CHECK-NEXT:   safe-stack

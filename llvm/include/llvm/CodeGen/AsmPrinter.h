@@ -276,6 +276,9 @@ private:
   /// CFISection type the module needs i.e. either .eh_frame or .debug_frame.
   CFISection ModuleCFISection = CFISection::None;
 
+  /// The exception model for the current module.
+  ExceptionHandling ModuleExceptionModel = ExceptionHandling::None;
+
   /// True if the module contains split-stack functions. This is used to
   /// emit .note.GNU-split-stack section as required by the linker for
   /// special handling split-stack function calling no-split-stack function.
@@ -532,6 +535,11 @@ public:
 
   /// Get the CFISection type for the module.
   CFISection getModuleCFISectionType() const { return ModuleCFISection; }
+
+  /// Get the exception model resolved for the current module.
+  ExceptionHandling getModuleExceptionModel() const {
+    return ModuleExceptionModel;
+  }
 
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }

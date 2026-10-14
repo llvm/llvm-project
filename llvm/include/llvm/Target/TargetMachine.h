@@ -265,14 +265,6 @@ public:
   /// assembly.
   const MCSubtargetInfo &getMCSubtargetInfo(StringRef CPU, StringRef FS);
 
-  /// Return the ExceptionHandling to use. A Default model resolves to the
-  /// triple's default; None means exceptions are disabled.
-  ExceptionHandling getExceptionModel() const {
-    return Options.ExceptionModel == ExceptionHandling::Default
-               ? TargetTriple.getDefaultExceptionHandling()
-               : Options.ExceptionModel;
-  }
-
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
   void setRequiresStructuredCFG(bool Value) { RequireStructuredCFG = Value; }
 
@@ -580,6 +572,10 @@ public:
   /// this function returns false, the intrinsic will be supported generically
   /// but without loop detection support.
   virtual bool canLowerCondLoop() const { return false; }
+
+  /// Return true if this target can lower exceptions using \p Model. Used to
+  /// guard scheduling of the exception-handling preparation passes.
+  bool supportsExceptionModel(ExceptionHandling Model) const;
 };
 
 } // end namespace llvm
