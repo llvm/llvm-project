@@ -103,9 +103,7 @@ bool __sanitizer::MemoryMappingLayout::Next(MemoryMappedSegment* segment) {
     segment->protection |= kProtectionWrite;
   if (flags & MA_EXEC)
     segment->protection |= kProtectionExecute;
-
-  uint32_t type = mapIter->pr_mflags & MA_TYPE_MASK;
-  if (type == MA_SLIBTEXT || type == MA_PLIBDATA)
+  if (flags & MA_SHARED)
     segment->protection |= kProtectionShared;
 
   // Handle filenames for loaded objects.
