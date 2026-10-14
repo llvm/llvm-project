@@ -61,20 +61,25 @@ using namespace mlir::vector;
 /// reduction, and unit slice strides.
 static bool isUnitStrideSliceOfStaticParent(memref::SubViewOp subView) {
   MemRefType srcType = subView.getSourceType();
+  // vector requires a static parent shape.
   if (!srcType.hasStaticShape())
     return false;
 
+  // implementation limitation: vector.extract_strided_slice must have the same
+  // rank (static). Alternative vector.extract could be used but only drop
+  // leading dimensions.
   if (srcType.getRank() != subView.getType().getRank())
     return false;
 
+  // No straightforward mapping to vector code for non-unit stride slices.
   if (!subView.hasUnitStride())
     return false;
 
   return VectorType::isValidElementType(srcType.getElementType());
 }
 
-/// Returns whether `subView` can alias a slice of the parent vector using
-/// `vector.extract_strided_slice` and `vector.insert_strided_slice`.
+/// Returns whether static `subView` can alias a slice of the parent vector
+/// using `vector.extract_strided_slice` and `vector.insert_strided_slice`.
 /// Requires static source and result shapes, constant offsets, unit strides,
 /// and no rank reduction.
 static bool isAliasableStaticShapeSubView(memref::SubViewOp subView) {
@@ -84,13 +89,15 @@ static bool isAliasableStaticShapeSubView(memref::SubViewOp subView) {
   if (!isUnitStrideSliceOfStaticParent(subView))
     return false;
 
+  // extract/insert_strided_slice requires all offsets to be constant.
   return llvm::all_of(subView.getMixedOffsets(), [](OpFoldResult offset) {
     return getConstantIntValue(offset).has_value();
   });
 }
 
-/// Returns whether `subView` can be promoted as an alias of the whole parent
-/// vector. Requires a static source shape, a dynamic result shape, zero
+/// Returns whether dynamic `subView` can alias the whole parent vector. The
+/// alias uses the parent vector's shape because vector dimensions cannot be
+/// dynamic. Requires a static source shape, a dynamic result shape, zero
 /// offsets, unit strides, and no rank reduction.
 static bool isAliasableDynamicShapeSubView(memref::SubViewOp subView) {
   if (subView.getType().hasStaticShape())
@@ -99,9 +106,7 @@ static bool isAliasableDynamicShapeSubView(memref::SubViewOp subView) {
   if (!isUnitStrideSliceOfStaticParent(subView))
     return false;
 
-  /// The alias uses the parent vector's shape because vector dimensions cannot
-  /// be dynamic. Zero offsets allow `vector.create_mask` to select the
-  /// subview's extent.
+  /// TODO: Allow non-zero offsets by improving buildSubViewMask().
   return subView.hasZeroOffset();
 }
 

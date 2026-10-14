@@ -78,7 +78,7 @@ func.func @read_with_mask_dyn_subview(%v: vector<8x16xf32>, %n: index, %m: vecto
 // A dynamic subview of a static subview uses the static subview's shape (4x16)
 // for its mask.
 
-// CHECK-LABEL: func.func @dyn_subview_of_static_subview(
+// CHECK-LABEL: func.func @read_dyn_subview_of_static_subview(
 // CHECK-SAME:      %[[V:[a-z0-9_]+]]: vector<8x16xf32>, %[[N:[a-z0-9_]+]]: index
 // CHECK-NOT:     memref.alloca
 // CHECK-NOT:     memref.subview
@@ -87,7 +87,7 @@ func.func @read_with_mask_dyn_subview(%v: vector<8x16xf32>, %n: index, %m: vecto
 // CHECK:         %[[PS:.*]] = vector.broadcast
 // CHECK:         %[[SEL:.*]] = arith.select %[[CM]], %[[EX]], %[[PS]]
 // CHECK:         return %[[SEL]]
-func.func @dyn_subview_of_static_subview(%v: vector<8x16xf32>, %n: index,
+func.func @read_dyn_subview_of_static_subview(%v: vector<8x16xf32>, %n: index,
                                          %pad: f32) -> vector<4x16xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8x16xf32>
@@ -103,7 +103,7 @@ func.func @dyn_subview_of_static_subview(%v: vector<8x16xf32>, %n: index,
 // The promoted value flows across control flow: the `scf.if` returns the
 // masked store on one path and the untouched value on the other.
 
-// CHECK-LABEL: func.func @dyn_subview_in_scf_if(
+// CHECK-LABEL: func.func @write_dyn_subview_in_scf_if(
 // CHECK-SAME:      %[[V:[a-z0-9_]+]]: vector<8x16xf32>, %[[W:[a-z0-9_]+]]: vector<8x16xf32>, %[[N:[a-z0-9_]+]]: index
 // CHECK-NOT:     memref.alloca
 // CHECK:         %[[IF:.*]] = scf.if %{{.*}} -> (vector<8x16xf32>) {
@@ -114,7 +114,7 @@ func.func @dyn_subview_of_static_subview(%v: vector<8x16xf32>, %n: index,
 // CHECK:           scf.yield %[[V]] : vector<8x16xf32>
 // CHECK:         }
 // CHECK:         return %[[IF]]
-func.func @dyn_subview_in_scf_if(%v: vector<8x16xf32>, %w: vector<8x16xf32>,
+func.func @write_dyn_subview_in_scf_if(%v: vector<8x16xf32>, %w: vector<8x16xf32>,
                                  %n: index, %pad: f32, %c: i1) -> vector<8x16xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8x16xf32>
@@ -131,11 +131,11 @@ func.func @dyn_subview_in_scf_if(%v: vector<8x16xf32>, %w: vector<8x16xf32>,
 
 // Negative: a subview with a dynamic offset prevents buffer promotion.
 
-// CHECK-LABEL: func.func @neg_dynamic_offset(
+// CHECK-LABEL: func.func @negative_read_dyn_subview_dynamic_offset(
 // CHECK:         memref.alloca
 // CHECK:         memref.subview
 // CHECK:         vector.transfer_read
-func.func @neg_dynamic_offset(%v: vector<8x16xf32>, %off: index, %n: index,
+func.func @negative_read_dyn_subview_dynamic_offset(%v: vector<8x16xf32>, %off: index, %n: index,
                               %pad: f32) -> vector<8x16xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8x16xf32>
@@ -153,11 +153,11 @@ func.func @neg_dynamic_offset(%v: vector<8x16xf32>, %off: index, %n: index,
 // Negative: a dynamic size with a static but non-zero offset. The valid region
 // no longer starts at the parent's origin, which `vector.create_mask` cannot
 // express, so the buffer is not promoted.
-// CHECK-LABEL: func.func @neg_static_offset_dyn_size(
+// CHECK-LABEL: func.func @negative_read_dyn_subview_static_offset_dyn_size(
 // CHECK:         memref.alloca
 // CHECK:         memref.subview
 // CHECK:         vector.transfer_read
-func.func @neg_static_offset_dyn_size(%v: vector<8x16xf32>, %n: index,
+func.func @negative_read_dyn_subview_static_offset_dyn_size(%v: vector<8x16xf32>, %n: index,
                                       %pad: f32) -> vector<8x16xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8x16xf32>
