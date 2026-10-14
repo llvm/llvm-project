@@ -30,6 +30,11 @@ void pointer_to_vla() {
   struct S { unsigned long f(P p) { return sizeof(*p); } }; // expected-error {{cannot be used in a local class}}
 }
 
+void typedef_in_member_function() {
+  using X = int[foo()]; // expected-note {{size expression is evaluated here}}
+  struct S { void f() { typedef X Y; } }; // expected-error {{cannot be used in a local class}}
+}
+
 template <typename T> void in_template() {
   using X = int[foo()]; // expected-note {{size expression is evaluated here}}
   struct S { S() { X x; } }; // expected-error {{cannot be used in a local class}}
