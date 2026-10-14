@@ -155,6 +155,29 @@ RValue CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E) {
       E, this, GetVprintfDeclaration(CGM.getModule()), false);
 }
 
+// Collects the constant global variables that \p S refers to.
+static void
+collectReferencedGlobalVars(const ASTContext &Ctx, const Stmt *S,
+                            SmallVectorImpl<const VarDecl *> &Vars) {
+  if (!S)
+    return;
+  const ValueDecl *D = nullptr;
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
+    if (DRE->isNonOdrUse() == NOUR_None)
+      D = DRE->getDecl();
+  } else if (const auto *ME = dyn_cast<MemberExpr>(S)) {
+    if (ME->isNonOdrUse() == NOUR_None)
+      D = ME->getMemberDecl();
+  }
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(D))
+    if (VD->hasGlobalStorage() && !VD->isStaticLocal() &&
+        VD->getType().isConstantStorage(Ctx, /*ExcludeCtor=*/true,
+                                        /*ExcludeDtor=*/true))
+      Vars.push_back(VD);
+  for (const Stmt *Child : S->children())
+    collectReferencedGlobalVars(Ctx, Child, Vars);
+}
+
 RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   assert(getTarget().getTriple().isAMDGCN() ||
          (getTarget().getTriple().isSPIRV() &&
@@ -162,6 +185,15 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   assert(E->getBuiltinCallee() == Builtin::BIprintf ||
          E->getBuiltinCallee() == Builtin::BI__builtin_printf);
   assert(E->getNumArgs() >= 1); // printf always has at least one arg.
+
+  // The expansion finds constant format and %s strings in the initializers of
+  // the globals they point to, so emit any that are still deferred before the
+  // arguments refer to them.
+  SmallVector<const VarDecl *, 4> Globals;
+  for (const Expr *Arg : E->arguments())
+    collectReferencedGlobalVars(getContext(), Arg, Globals);
+  for (const VarDecl *VD : Globals)
+    CGM.emitDeferredGlobalVarDefinition(VD);
 
   CallArgList CallArgs;
   EmitCallArgs(CallArgs,

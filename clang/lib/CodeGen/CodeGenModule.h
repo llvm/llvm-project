@@ -866,6 +866,11 @@ public:
   bool lookupRepresentativeDecl(StringRef MangledName,
                                 GlobalDecl &Result) const;
 
+  /// If the constant-initialized definition of \p VD is deferred, emit it now
+  /// so that its initializer can be inspected before the end of the
+  /// translation unit. Does nothing if that would replace an existing global.
+  void emitDeferredGlobalVarDefinition(const VarDecl *VD);
+
   llvm::Constant *getAtomicSetterHelperFnMap(QualType Ty) {
     return AtomicSetterHelperFnMap[Ty];
   }

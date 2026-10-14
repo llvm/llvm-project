@@ -8579,6 +8579,29 @@ bool CodeGenModule::lookupRepresentativeDecl(StringRef MangledName,
   return true;
 }
 
+void CodeGenModule::emitDeferredGlobalVarDefinition(const VarDecl *VD) {
+  const VarDecl *Def = VD->getDefinition();
+  // Definitions that must be emitted can be emitted directly by EmitGlobal, so
+  // emitting them here could define them twice. Deferred ones are only emitted
+  // by EmitDeferred, which skips globals that are already defined.
+  if (!Def || MustBeEmitted(Def) || !Def->hasConstantInitialization())
+    return;
+  // Defining a global that is already declared with a different type or
+  // address space replaces it, which would leave the caller's values referring
+  // to the erased global.
+  if (llvm::GlobalValue *GV = GetGlobalValue(getMangledName(Def))) {
+    if (!GV->isDeclaration())
+      return;
+    llvm::Constant *Init =
+        ConstantEmitter(*this).tryEmitAbstractForInitializer(*Def);
+    if (!Init || GV->getValueType() != Init->getType() ||
+        GV->getAddressSpace() !=
+            getContext().getTargetAddressSpace(GetGlobalVarAddressSpace(Def)))
+      return;
+  }
+  EmitGlobalVarDefinition(Def);
+}
+
 /// Emits metadata nodes associating all the global values in the
 /// current module with the Decls they came from.  This is useful for
 /// projects using IR gen as a subroutine.
