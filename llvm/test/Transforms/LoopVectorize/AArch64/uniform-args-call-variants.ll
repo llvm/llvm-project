@@ -27,10 +27,10 @@ define void @test_uniform(ptr noalias %dst, ptr readonly %src, i64 %uniform , i6
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x double> @foo_uniform(<vscale x 2 x double> [[WIDE_MASKED_LOAD]], i64 [[UNIFORM]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP6]], ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP4]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i1 [[TMP8]], true
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
@@ -66,12 +66,12 @@ define void @test_uniform(ptr noalias %dst, ptr readonly %src, i64 %uniform , i6
 ; INTERLEAVE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[TMP10]], i64 [[TMP1]]
 ; INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP8]], ptr align 8 [[TMP10]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP9]], ptr align 8 [[TMP11]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
-; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP5]])
 ; INTERLEAVE-NEXT:    [[EXTRACT_NEXT_ALM_PART]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0)
 ; INTERLEAVE-NEXT:    [[EXTRACT_NEXT_ALM_PART4]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 2)
 ; INTERLEAVE-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x i1> [[EXTRACT_NEXT_ALM_PART]], i64 0
 ; INTERLEAVE-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP12]], true
+; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; INTERLEAVE:       middle.block:
 ; INTERLEAVE-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
@@ -117,10 +117,10 @@ define void @test_uniform_smaller_scalar(ptr noalias %dst, ptr readonly %src, i3
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x double> @bar_uniform(<vscale x 2 x double> [[WIDE_MASKED_LOAD]], i32 [[UNIFORM]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP6]], ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP4]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i1 [[TMP8]], true
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
@@ -156,12 +156,12 @@ define void @test_uniform_smaller_scalar(ptr noalias %dst, ptr readonly %src, i3
 ; INTERLEAVE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[TMP10]], i64 [[TMP1]]
 ; INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP8]], ptr align 8 [[TMP10]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP9]], ptr align 8 [[TMP11]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
-; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP5]])
 ; INTERLEAVE-NEXT:    [[EXTRACT_NEXT_ALM_PART]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0)
 ; INTERLEAVE-NEXT:    [[EXTRACT_NEXT_ALM_PART4]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 2)
 ; INTERLEAVE-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x i1> [[EXTRACT_NEXT_ALM_PART]], i64 0
 ; INTERLEAVE-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP12]], true
+; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; INTERLEAVE:       middle.block:
 ; INTERLEAVE-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
@@ -239,11 +239,11 @@ define void @test_uniform_not_invariant(ptr noalias %dst, ptr readonly %src, i64
 ; INTERLEAVE-NEXT:    store double [[TMP12]], ptr [[TMP13]], align 8
 ; INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; INTERLEAVE:       pred.store.continue3:
-; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; INTERLEAVE-NEXT:    [[TMP14]] = icmp ult i64 [[INDEX]], [[TMP4]]
 ; INTERLEAVE-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 1
 ; INTERLEAVE-NEXT:    [[TMP16]] = icmp ult i64 [[TMP15]], [[TMP4]]
 ; INTERLEAVE-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP14]], true
+; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; INTERLEAVE-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; INTERLEAVE:       middle.block:
 ; INTERLEAVE-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]

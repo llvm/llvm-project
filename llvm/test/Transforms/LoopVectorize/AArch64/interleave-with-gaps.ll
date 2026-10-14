@@ -321,11 +321,11 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-TF-NEXT:    store i64 0, ptr [[H]], align 8
 ; CHECK-TF-NEXT:    store i64 0, ptr [[I]], align 8
 ; CHECK-TF-NEXT:    store i64 0, ptr [[L]], align 8
-; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX]], i64 [[TMP10]])
 ; CHECK-TF-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TF-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
 ; CHECK-TF-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-TF:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NEXT:    br label %[[EXIT:.*]]
@@ -525,10 +525,10 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; CHECK-TF-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i32> [[TMP6]], [[TMP4]]
 ; CHECK-TF-NEXT:    [[TMP8:%.*]] = add <vscale x 4 x i32> [[TMP7]], [[TMP5]]
 ; CHECK-TF-NEXT:    [[TMP9]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]]
-; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP15]])
 ; CHECK-TF-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TF-NEXT:    [[TMP11:%.*]] = xor i1 [[TMP10]], true
+; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-TF:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP9]])

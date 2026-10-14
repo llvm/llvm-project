@@ -44,12 +44,12 @@ define void @wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4-NEXT:    [[TMP12:%.*]] = fmul double [[TMP10]], 3.000000e+00
 ; CHECK-UF4-NEXT:    store double [[TMP12]], ptr [[TMP11]], align 8
 ; CHECK-UF4-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; CHECK-UF4:       pred.store.continue7:
-; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
+; CHECK-UF4:       pred.store.continue5:
 ; CHECK-UF4-NEXT:    [[TMP13]] = icmp ult i32 [[INDEX]], [[TMP19]]
 ; CHECK-UF4-NEXT:    [[TMP17:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-UF4-NEXT:    [[TMP15]] = icmp ult i32 [[TMP17]], [[TMP19]]
 ; CHECK-UF4-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP13]], true
+; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; CHECK-UF4-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-UF4:       middle.block:
 ;

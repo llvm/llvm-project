@@ -26,10 +26,10 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-UF1-NEXT:    [[TMP4:%.*]] = mul <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], splat (i8 3)
 ; CHECK-UF1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-UF1-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP4]], ptr align 1 [[TMP5]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP9]])
 ; CHECK-UF1-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-UF1-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
+; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-UF1-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-UF1:       middle.block:
 ;
@@ -78,7 +78,6 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP14]], ptr align 1 [[TMP18]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK1]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP15]], ptr align 1 [[TMP19]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK2]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP16]], ptr align 1 [[TMP20]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK3]])
-; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <vscale x 64 x i1> @llvm.get.active.lane.mask.nxv64i1.i64(i64 [[INDEX]], i64 [[TMP5]])
 ; CHECK-UF4-NEXT:    [[TMP21]] = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1(<vscale x 64 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0)
 ; CHECK-UF4-NEXT:    [[TMP22]] = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1(<vscale x 64 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 16)
@@ -86,6 +85,7 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-UF4-NEXT:    [[TMP24]] = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1(<vscale x 64 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 48)
 ; CHECK-UF4-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 16 x i1> [[TMP21]], i64 0
 ; CHECK-UF4-NEXT:    [[TMP26:%.*]] = xor i1 [[TMP25]], true
+; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; CHECK-UF4-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-UF4:       middle.block:
 ;
@@ -131,10 +131,10 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF1-NEXT:    [[TMP4:%.*]] = fmul <vscale x 2 x double> [[WIDE_MASKED_LOAD]], splat (double 3.000000e+00)
 ; CHECK-UF1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-UF1-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP4]], ptr align 8 [[TMP5]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP9]])
 ; CHECK-UF1-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-UF1-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
+; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-UF1-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-UF1:       middle.block:
 ;
@@ -186,7 +186,6 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP14]], ptr align 8 [[TMP18]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK1]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP15]], ptr align 8 [[TMP19]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP16]], ptr align 8 [[TMP20]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK3]])
-; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX]], i64 [[TMP5]])
 ; CHECK-UF4-NEXT:    [[TMP21]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0)
 ; CHECK-UF4-NEXT:    [[TMP22]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 2)
@@ -194,6 +193,7 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF4-NEXT:    [[TMP24]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 6)
 ; CHECK-UF4-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 2 x i1> [[TMP21]], i64 0
 ; CHECK-UF4-NEXT:    [[TMP26:%.*]] = xor i1 [[TMP25]], true
+; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; CHECK-UF4-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-UF4:       middle.block:
 ;

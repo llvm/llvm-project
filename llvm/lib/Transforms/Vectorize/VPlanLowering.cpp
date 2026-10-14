@@ -170,7 +170,8 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   // If the canonical IV increment could overflow, adjust the trip count (TC)
   // to TC - VF * UF.
   VPValue *IncrementValue = CanonicalIVIncrement;
-  if (!TopRegion->hasCanonicalIVNUW()) {
+  if (!TopRegion->hasCanonicalIVNUW() &&
+      !vputils::findIncomingAliasMask(Plan)) {
     IncrementValue = TopRegion->getCanonicalIV();
     VPValue &VFxUF = Plan.getVFxUF();
     VPValue *Sub = Builder.createSub(TC, &VFxUF);
