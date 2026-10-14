@@ -234,3 +234,56 @@ func.func private @test_alloc_with_multiple_results() -> () {
   memref.dealloc %alloc2 : memref<64xf32>
   return
 }
+
+// -----
+func.func private @work()
+// CHECK-LABEL:   func.func private @test_alloc_with_no_uses() {
+// CHECK:           %[[ALLOC_0:.*]] = memref.alloc() : memref<1048576xi32>
+// CHECK:           memref.dealloc %[[ALLOC_0]] : memref<1048576xi32>
+// CHECK:           call @work() : () -> ()
+// CHECK:           return
+// CHECK:         }
+func.func private @test_alloc_with_no_uses() -> () {
+    %alloc = memref.alloc() : memref<1048576xi32>
+    call @work() : () -> ()
+    memref.dealloc %alloc : memref<1048576xi32>
+    return
+}
+
+// -----
+// CHECK-LABEL:   func.func @test_alloc_with_dealloc_operand(
+// CHECK-SAME:      %[[ARG0:.*]]: !gpu.async.token) {
+// CHECK:           %[[ALLOC_0:.*]] = gpu.alloc  () : memref<8xf32>
+// CHECK:           %[[WAIT_0:.*]] = gpu.wait async {{\[}}%[[ARG0]]]
+// CHECK:           %[[DEALLOC_0:.*]] = gpu.dealloc async {{\[}}%[[WAIT_0]]] %[[ALLOC_0]] : memref<8xf32>
+// CHECK:           gpu.wait {{\[}}%[[DEALLOC_0]]]
+// CHECK:           return
+// CHECK:         }
+func.func @test_alloc_with_dealloc_operand(%d: !gpu.async.token) {
+  %a = gpu.alloc () : memref<8xf32>
+  %w = gpu.wait async [%d]
+  %done = gpu.dealloc async [%w] %a : memref<8xf32>
+  gpu.wait [%done]
+  return
+}
+
+// -----
+// CHECK-LABEL:   func.func @test_alloc_with_dealloc_operand_and_load(
+// CHECK-SAME:      %[[ARG0:.*]]: !gpu.async.token) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[ALLOC_0:.*]] = gpu.alloc  () : memref<8xf32>
+// CHECK:           %[[LOAD_0:.*]] = memref.load %[[ALLOC_0]]{{\[}}%[[CONSTANT_0]]] : memref<8xf32>
+// CHECK:           %[[WAIT_0:.*]] = gpu.wait async {{\[}}%[[ARG0]]]
+// CHECK:           %[[DEALLOC_0:.*]] = gpu.dealloc async {{\[}}%[[WAIT_0]]] %[[ALLOC_0]] : memref<8xf32>
+// CHECK:           gpu.wait {{\[}}%[[DEALLOC_0]]]
+// CHECK:           return
+// CHECK:         }
+func.func @test_alloc_with_dealloc_operand_and_load(%d: !gpu.async.token) {
+  %c0 = arith.constant 0 : index
+  %a = gpu.alloc () : memref<8xf32>
+  %x = memref.load %a[%c0] : memref<8xf32>
+  %w = gpu.wait async [%d]
+  %done = gpu.dealloc async [%w] %a : memref<8xf32>
+  gpu.wait [%done]
+  return
+}
