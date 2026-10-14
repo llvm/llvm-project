@@ -1546,14 +1546,8 @@ Error olMemIsAccessible_impl(ol_context_handle_t Context,
     } else {
       // Not knowing the pointer is not an error, it may still be accessible,
       // so only swallow NOT_FOUND and report anything else.
-      if (auto Err = llvm::handleErrors(
-              AllocOrErr.takeError(),
-              [](std::unique_ptr<error::OffloadError> E) -> llvm::Error {
-                if (E->convertToErrorCode() ==
-                    error::make_error_code(ErrorCode::NOT_FOUND))
-                  return Error::success();
-                return Error(std::move(E));
-              }))
+      if (auto Err = error::consumeErrorIfCode(AllocOrErr.takeError(),
+                                               ErrorCode::NOT_FOUND))
         return Err;
     }
   }
