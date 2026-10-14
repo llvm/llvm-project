@@ -126,7 +126,7 @@ TEST(BuildCompilerInvocation, SuppressDiags) {
   Cfg.Diagnostics.Suppress = {"drv_unknown_argument"};
   WithContextValue SuppressFilterWithCfg(Config::Key, std::move(Cfg));
   EXPECT_NE(buildCompilerInvocation(Inputs, Diags), nullptr);
-  EXPECT_THAT(Diags.take(), IsEmpty());
+  EXPECT_THAT(Diags.take(Inputs.Contents), IsEmpty());
 }
 } // namespace
 } // namespace clangd
