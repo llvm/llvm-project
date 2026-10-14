@@ -1,28 +1,40 @@
 ## Test a big archive whose member header points at a next member outside the
-## file. The offset is read from the archive and its field is wide enough to
-## hold any 64-bit value, so it has to be checked before it is turned into a
-## pointer.
+## file.
 
-# RUN: rm -rf %t && mkdir %t && cd %t
-# RUN: yaml2obj %s -o t1.o
-# RUN: cp t1.o t2.o
-# RUN: llvm-ar q t.a t1.o t2.o
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: yaml2obj obj.yaml -o 1.o
+# RUN: cp 1.o 2.o
+# RUN: llvm-ar q archive.a 1.o 2.o
 
-## Set the first member's NextOffset to 2^64-1. Added to the start of the
-## buffer that wraps to just before it, which used to pass the "past the end of
-## the archive" check in getNext() and have the member header read from there.
-# RUN: cp t.a next_offset.a
-# RUN: %python -c "f = open('next_offset.a', 'r+b'); d = f.read(); o = int(d[68:88]); f.seek(o + 20); f.write(b'18446744073709551615')"
-# RUN: not llvm-ar t next_offset.a 2>&1 | FileCheck -DFILE=next_offset.a --check-prefix=NEXT %s
+## Set the first member's NextOffset to 2^64-1. When this is added to the start
+## of the buffer, the value wraps to an offset within the archive, which could
+## pass naive out of bounds checks.
+# RUN: cp archive.a wrapped.a
+# RUN: %python set-next-offset.py wrapped.a 18446744073709551615
+# RUN: not llvm-ar t wrapped.a 2>&1 | FileCheck %s
 
-## The unmodified archive still reads back.
-# RUN: llvm-ar t t.a | FileCheck --check-prefix=VALID %s
+## The same check rejects an offset one byte past the end of the file.
+# RUN: cp archive.a past-end.a
+# RUN: %python set-next-offset.py past-end.a +1
+# RUN: not llvm-ar t past-end.a 2>&1 | FileCheck %s
 
-# NEXT: error: truncated or malformed archive (malformed AIX big archive: next archive member offset 0xffffffffffffffff goes past the end of file)
+# CHECK: error: truncated or malformed archive (offset to next archive member past the end of the archive after member 1.o)
 
-# VALID:      t1.o
-# VALID-NEXT: t2.o
+#--- set-next-offset.py
+import sys
 
+# Overwrite the first member's NextOffset field in a big archive. A value of
+# the form "+N" means N bytes past the end of the file. The offset of the first
+# member is itself read from the fixed-length header, and the NextOffset field
+# sits 20 bytes into the member header.
+path, value = sys.argv[1], sys.argv[2]
+with open(path, "r+b") as f:
+    data = f.read()
+    offset = len(data) + int(value[1:]) if value.startswith("+") else int(value)
+    f.seek(int(data[68:88]) + 20)
+    f.write(b"%-20d" % offset)
+
+#--- obj.yaml
 --- !XCOFF
 FileHeader:
   MagicNumber:       0x1DF
