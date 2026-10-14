@@ -449,6 +449,44 @@ bool Vreg1LoweringHelper::lowerCopiesFromI1() {
   return Changed;
 }
 
+static void instrDefsUsesSCC(const MachineInstr &MI, bool &Def, bool &Use) {
+  Def = false;
+  Use = false;
+
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isReg() && MO.getReg() == AMDGPU::SCC) {
+      if (MO.isUse())
+        Use = true;
+      else
+        Def = true;
+    }
+  }
+}
+
+/// Return true when the value is consumed by control flow or exec-state
+/// bookkeeping instead of by ordinary per-lane boolean data.
+static bool isControlLikeUse(const MachineInstr &MI) {
+  if (MI.isPHI() || MI.isTerminator() || MI.isBranch())
+    return true;
+
+  bool DefSCC, UseSCC;
+  instrDefsUsesSCC(MI, DefSCC, UseSCC);
+  return DefSCC || UseSCC;
+}
+
+static bool isControlPhi(Register Reg, const MachineRegisterInfo &MRI,
+                         const MachineBasicBlock &LoopHeader) {
+  for (const MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
+    if (UseMI.isBranch() || UseMI.isTerminator() || isControlLikeUse(UseMI))
+      return true;
+
+    if (UseMI.isPHI() && UseMI.getParent() == &LoopHeader)
+      return true;
+  }
+
+  return false;
+}
+
 AMDGPU::PhiLoweringHelper::PhiLoweringHelper(MachineFunction &MF,
                                              MachineDominatorTree &DT,
                                              MachinePostDominatorTree &PDT)
@@ -569,7 +607,27 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
     PhiRegisters.insert(DstReg);
 #endif
 
+    // The deciding factor is the actual consumers of this PHI, not whether we
+    // happened to find a loop level. A control PHI that feeds branch or EXEC
+    // bookkeeping must bypass the normal lane-mask merge path even when the
+    // loop-level heuristic is not the direct trigger.
+    bool IsControlPhiValue = isControlPhi(DstReg, *MRI, MBB);
+
     MachineIDFSSAUpdater SSAUpdater(DT, MF, DstReg);
+
+    if (IsControlPhiValue) {
+      SSAUpdater.addUseBlock(&MBB);
+      for (const auto &Incoming : Incomings)
+        SSAUpdater.addAvailableValue(Incoming.Block, Incoming.Reg);
+      Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
+      if (NewReg != DstReg) {
+        replaceDstReg(NewReg, DstReg, &MBB);
+        MI->eraseFromParent();
+      }
+      Incomings.clear();
+      continue;
+    }
+
     mergeIncomingLaneMasks(DstReg, MBB, Incomings, SSAUpdater, LF, PIA);
 
     Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
@@ -696,20 +754,6 @@ bool AMDGPU::PhiLoweringHelper::isConstantLaneMask(Register Reg,
   }
 
   return false;
-}
-
-static void instrDefsUsesSCC(const MachineInstr &MI, bool &Def, bool &Use) {
-  Def = false;
-  Use = false;
-
-  for (const MachineOperand &MO : MI.operands()) {
-    if (MO.isReg() && MO.getReg() == AMDGPU::SCC) {
-      if (MO.isUse())
-        Use = true;
-      else
-        Def = true;
-    }
-  }
 }
 
 /// Return a point at the end of the given \p MBB to insert SALU instructions

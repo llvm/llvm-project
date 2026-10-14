@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=amdgpu12.01-amd-amdhsa < %s | FileCheck %s
 ; CHECK-LABEL: CSMain:
 ; CHECK: s_or_b32 exec_lo, exec_lo, {{s[0-9]+}}
-; CHECK: s_and_not1_b32 {{s[0-9]+}}, {{s[0-9]+}}, exec_lo
-; CHECK: s_and_b32 {{s[0-9]+}}, {{s[0-9]+}}, exec_lo
-; CHECK: s_or_b32 {{s[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
+; CHECK-NOT: s_and_not1_b32 {{s[0-9]+}}, {{s[0-9]+}}, exec_lo
+; CHECK-NOT: s_and_b32 {{s[0-9]+}}, {{s[0-9]+}}, exec_lo
+; CHECK-NOT: s_or_b32 {{s[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
 ; CHECK: s_or_b32 exec_lo, exec_lo, {{s[0-9]+}}
 
 define amdgpu_kernel void @CSMain(ptr addrspace(1) %buf) {
