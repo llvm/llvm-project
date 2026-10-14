@@ -27,7 +27,7 @@ namespace {
 /// and offset must be a constant integer in the range [0, 31].
 struct PromoteShuffleToSwizzlePattern
     : public OpRewritePattern<gpu::ShuffleOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(gpu::ShuffleOp op,
                                 PatternRewriter &rewriter) const override {
@@ -64,7 +64,7 @@ struct PromoteShuffleToSwizzlePattern
 /// and offset must be a constant integer in the set {16, 32}.
 struct PromoteShuffleToPermlanePattern
     : public OpRewritePattern<gpu::ShuffleOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(gpu::ShuffleOp op,
                                 PatternRewriter &rewriter) const override {

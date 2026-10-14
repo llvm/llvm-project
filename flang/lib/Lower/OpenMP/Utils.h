@@ -216,9 +216,12 @@ struct IteratorRange {
   Fortran::semantics::Symbol *ivSym = nullptr;
 };
 
-bool hasIteratorIVReference(
-    const omp::Object &object,
-    const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms);
+/// Select ranges referenced in the locator source, even if folding removes
+/// their occurrences from the analyzed expression. Preserve declaration order.
+/// An empty result means the locator is not iterator-dependent.
+llvm::SmallVector<IteratorRange>
+getIteratorRangesForObject(const omp::Object &object,
+                           llvm::ArrayRef<IteratorRange> ranges);
 
 /// Default name mangler for implicit default mappers.
 ///
@@ -227,11 +230,6 @@ bool hasIteratorIVReference(
 /// \param memberName The name of the member to mangle.
 void defaultMangler(Fortran::lower::AbstractConverter &converter,
                     std::string &mapperIdName, llvm::StringRef memberName);
-
-mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
-                                  hlfir::Entity entity,
-                                  llvm::ArrayRef<mlir::Value> ivs,
-                                  mlir::Location loc);
 
 /// Resolve the declare mapper symbol to attach to a mapped object.
 ///
@@ -253,10 +251,6 @@ mlir::FlatSymbolRefAttr resolveMapperId(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const omp::Object &object, llvm::StringRef mapperIdName,
     mlir::omp::ClauseMapFlags mapTypeBits, llvm::omp::Directive directive);
-
-std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
-    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
-    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
 
 /// Walk the already-emitted MLIR parent operations starting from \p op and
 /// collect the implied OpenMP construct traits in outermost-to-innermost

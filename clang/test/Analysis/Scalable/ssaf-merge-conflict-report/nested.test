@@ -1,0 +1,17 @@
+// A merged report merges again like the reports it was made from, so that the
+// conflicts found while merging an archive's edits reach the report of the
+// program it is linked into.
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: clang-ssaf-merge-conflict-report %S/Inputs/conflicts-a.sarif \
+// RUN:   %S/Inputs/conflicts-b.sarif -o %t/ab.sarif
+// RUN: clang-ssaf-merge-conflict-report %t/ab.sarif \
+// RUN:   %S/Inputs/conflicts-c.sarif -o %t/ab-c.sarif
+// RUN: clang-ssaf-merge-conflict-report %S/Inputs/conflicts-a.sarif \
+// RUN:   %S/Inputs/conflicts-b.sarif %S/Inputs/conflicts-c.sarif -o %t/abc.sarif
+// RUN: diff %t/ab-c.sarif %t/abc.sarif
+
+// Merging a report with itself adds nothing.
+// RUN: clang-ssaf-merge-conflict-report %t/ab.sarif %t/ab.sarif \
+// RUN:   -o %t/ab-ab.sarif
+// RUN: diff %t/ab.sarif %t/ab-ab.sarif

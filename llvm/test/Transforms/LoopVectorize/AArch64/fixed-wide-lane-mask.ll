@@ -202,7 +202,7 @@ define void @fixed_known_tc(ptr noalias readonly %dst, ptr noalias readonly %src
 ; CHECK-UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-UF1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
 ; CHECK-UF1-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[ARRAYIDX]], <4 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[IV]], 4
+; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX_NEXT]], i64 15)
 ; CHECK-UF1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-UF1-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
