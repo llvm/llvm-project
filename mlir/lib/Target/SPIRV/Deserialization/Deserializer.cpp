@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
@@ -104,6 +105,11 @@ LogicalResult spirv::Deserializer::deserialize() {
 
   if (failed(resolveDeferredIdDecorations()))
     return failure();
+
+  if (!functionParameterAttrs.empty())
+    return emitError(unknownLoc, "FuncParamAttr decoration on result <id> ")
+           << functionParameterAttrs.begin()->first
+           << " is not supported: expected OpFunctionParameter or OpFunction";
 
   attachVCETriple();
 
@@ -290,6 +296,24 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
         symbol, FPRoundingModeAttr::get(opBuilder.getContext(),
                                         static_cast<FPRoundingMode>(words[2])));
     break;
+  case spirv::Decoration::FuncParamAttr: {
+    if (words.size() != 3)
+      return emitError(unknownLoc,
+                       "OpDecorate with FuncParamAttr needs a single "
+                       "function parameter attribute");
+    auto value = spirv::symbolizeFunctionParameterAttribute(words[2]);
+    if (!value)
+      return emitError(unknownLoc, "invalid FunctionParameterAttribute code: ")
+             << words[2];
+    SmallVector<Attribute> attrs;
+    if (auto previous = functionParameterAttrs.lookup(words[0]))
+      llvm::append_range(attrs, previous);
+    attrs.push_back(
+        spirv::FunctionParameterAttributeAttr::get(context, *value));
+    functionParameterAttrs[words[0]] = opBuilder.getArrayAttr(attrs);
+    break;
+  }
+  case spirv::Decoration::Alignment:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
   case spirv::Decoration::Location:
@@ -486,13 +510,21 @@ LogicalResult spirv::Deserializer::processMemberName(ArrayRef<uint32_t> words) {
 
 LogicalResult spirv::Deserializer::setFunctionArgAttrs(
     uint32_t argID, SmallVectorImpl<Attribute> &argAttrs, size_t argIndex) {
-  if (!decorations.contains(argID)) {
-    argAttrs[argIndex] = DictionaryAttr::get(context, {});
-    return success();
-  }
-
   spirv::DecorationAttr foundDecorationAttr;
-  for (NamedAttribute decAttr : decorations[argID]) {
+  NamedAttrList attributes;
+  if (auto it = functionParameterAttrs.find(argID);
+      it != functionParameterAttrs.end()) {
+    attributes.set(spirv::getFuncParamAttrName(), it->second);
+    functionParameterAttrs.erase(it);
+  }
+  for (NamedAttribute decAttr : decorations.lookup(argID)) {
+    if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
+                                 spirv::Decoration::Alignment))) {
+      attributes.set(spirv::getFuncParamAlignmentAttrName(),
+                     decAttr.getValue());
+      continue;
+    }
+    bool handled = false;
     for (auto decoration :
          {spirv::Decoration::Aliased, spirv::Decoration::Restrict,
           spirv::Decoration::AliasedPointer,
@@ -509,8 +541,11 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
                << argID;
 
       foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
+      handled = true;
       break;
     }
+    if (handled)
+      continue;
 
     if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
                                  spirv::Decoration::RelaxedPrecision))) {
@@ -525,17 +560,17 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
 
       foundDecorationAttr = spirv::DecorationAttr::get(
           context, spirv::Decoration::RelaxedPrecision);
+      continue;
     }
+
+    return emitError(unknownLoc, "unhandled decoration '")
+           << decAttr.getName().getValue()
+           << "' on function argument with result <id> " << argID;
   }
 
-  if (!foundDecorationAttr)
-    return emitError(unknownLoc, "unimplemented decoration support for "
-                                 "function argument with result <id> ")
-           << argID;
-
-  NamedAttribute attr(StringAttr::get(context, spirv::DecorationAttr::name),
-                      foundDecorationAttr);
-  argAttrs[argIndex] = DictionaryAttr::get(context, attr);
+  if (foundDecorationAttr)
+    attributes.set(spirv::DecorationAttr::name, foundDecorationAttr);
+  argAttrs[argIndex] = attributes.getDictionary(context);
   return success();
 }
 
@@ -582,6 +617,15 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   std::string fnName = getFunctionSymbol(fnID);
   auto funcOp = spirv::FuncOp::create(opBuilder, unknownLoc, fnName,
                                       functionType, fnControl.value());
+  if (auto it = functionParameterAttrs.find(fnID);
+      it != functionParameterAttrs.end()) {
+    if (functionType.getNumResults() == 0)
+      return emitError(unknownLoc,
+                       "FuncParamAttr decoration requires a non-void function "
+                       "result");
+    funcOp.setResultAttr(0, spirv::getFuncParamAttrName(), it->second);
+    functionParameterAttrs.erase(it);
+  }
   // Processing other function attributes.
   if (decorations.count(fnID)) {
     for (auto attr : decorations[fnID].getAttrs()) {
