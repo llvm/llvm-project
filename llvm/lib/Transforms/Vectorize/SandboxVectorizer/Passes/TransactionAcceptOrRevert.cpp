@@ -7,29 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionAcceptOrRevert.h"
-#include "llvm/Support/CommandLine.h"
+#include "../../VectorizeOptions.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/RegionWithScore.h"
 
 namespace llvm {
 
-cl::opt<int> CostThreshold("sbvec-cost-threshold", cl::init(0), cl::Hidden,
-                           cl::desc("Vectorization cost threshold."));
-
 namespace sandboxir {
 
 bool TransactionAcceptOrRevert::runOnRegion(Region &Rgn, const Analyses &A) {
+  const VectorizeOptions &Opts = VectorizeOptions::Global;
   const auto &SB = cast<RegionWithScore>(Rgn).getScoreboard();
   [[maybe_unused]] auto CostBefore = SB.getBeforeCost();
   [[maybe_unused]] auto CostAfter = SB.getAfterCost();
   InstructionCost CostAfterMinusBefore = SB.getAfterCost() - SB.getBeforeCost();
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Cost gain: " << CostAfterMinusBefore
                     << " (before/after/threshold: " << CostBefore << "/"
-                    << CostAfter << "/" << CostThreshold << ")\n");
+                    << CostAfter << "/" << Opts.sbvec_cost_threshold << ")\n");
   // TODO: Print costs / write to remarks.
   auto &Tracker = Rgn.getContext().getTracker();
-  if (CostAfterMinusBefore < -CostThreshold) {
+  if (CostAfterMinusBefore < -Opts.sbvec_cost_threshold) {
     bool HasChanges = !Tracker.empty();
     Tracker.accept();
     LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "*** Transaction Accept ***\n");

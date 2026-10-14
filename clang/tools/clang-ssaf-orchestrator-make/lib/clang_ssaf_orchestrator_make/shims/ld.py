@@ -12,11 +12,12 @@ from . import run
 from .commands import (
     Files,
     filter_build_artifacts,
+    is_archive,
     is_object,
     summary_of,
     unique,
 )
-from .shim import merge_edits
+from .shim import merge_transformation_outputs
 
 
 def identify_inputs_output(argv):
@@ -29,7 +30,7 @@ def identify_inputs_output(argv):
             output = argv[index + 1]
             index += 2
             continue
-        if not arg.startswith("-") and is_object(arg):
+        if not arg.startswith("-") and (is_object(arg) or is_archive(arg)):
             inputs.append(arg)
         index += 1
     return Files(inputs, output) if inputs else None
@@ -79,7 +80,7 @@ def invoke_ssaf_tools(shim, cwd):
     )
 
     if shim.pass_config.pass_kind == config.SSAFPassKind.TRANSFORMATION:
-        merge_edits(shim, build_artifact_id, input_build_artifact_ids)
+        merge_transformation_outputs(shim, build_artifact_id, input_build_artifact_ids)
         return
 
     shim.build_graph.record_build_step(

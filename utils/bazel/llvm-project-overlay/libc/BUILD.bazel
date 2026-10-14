@@ -2347,6 +2347,8 @@ libc_support_library(
         ":hdr_stdio_macros",
         ":hdr_wchar_macros",
         ":string_memory_utils",
+        ":types_char32_t",
+        ":types_char8_t",
         ":types_off_t",
         ":types_wchar_t",
         ":types_wint_t",
@@ -2744,6 +2746,21 @@ libc_support_library(
         ":__support_osutil_syscall",
         ":types_pid_t",
         ":types_struct_sched_param",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_sched_yield",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sched_yield.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
     ],
 )
 
@@ -16870,6 +16887,34 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_fchdir",
         ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "sched_setscheduler",
+    srcs = ["src/sched/linux/sched_setscheduler.cpp"],
+    hdrs = ["src/sched/sched_setscheduler.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sched_setscheduler",
+        ":errno",
+        ":types_pid_t",
+        ":types_struct_sched_param",
+    ],
+)
+
+libc_function(
+    name = "sched_yield",
+    srcs = ["src/sched/linux/sched_yield.cpp"],
+    hdrs = ["src/sched/sched_yield.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sched_yield",
         ":errno",
     ],
 )

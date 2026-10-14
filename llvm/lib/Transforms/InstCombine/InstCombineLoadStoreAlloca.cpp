@@ -1523,9 +1523,8 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   for (unsigned ScanInsts = 6; BBI != SI.getParent()->begin() && ScanInsts;
        --ScanInsts) {
     --BBI;
-    // Don't count debug info directives, lest they affect codegen,
-    // and we skip pointer-to-pointer bitcasts, which are NOPs.
-    if (BBI->isDebugOrPseudoInst()) {
+    // Don't count pseudo probes, lest they affect codegen.
+    if (isa<PseudoProbeInst>(BBI)) {
       ScanInsts++;
       continue;
     }
@@ -1695,8 +1694,8 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   StoreInst *OtherStore = nullptr;
   if (isa<UncondBrInst>(BBI)) {
     --BBI;
-    // Skip over debugging info and pseudo probes.
-    while (BBI->isDebugOrPseudoInst()) {
+    // Skip over pseudo probes.
+    while (isa<PseudoProbeInst>(BBI)) {
       if (BBI==OtherBB->begin())
         return false;
       --BBI;

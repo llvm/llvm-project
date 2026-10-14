@@ -11,17 +11,21 @@ from ..ssaf_artifact_repository import SSAFArtifactKind, get_ssaf_artifact_id
 Files = collections.namedtuple("Files", "inputs output")
 
 _OBJECT_EXTENSIONS = frozenset([".o", ".obj"])
+_ARCHIVE_EXTENSIONS = frozenset([".a"])
 
 
 def is_object(filename):
     return os.path.splitext(filename)[1] in _OBJECT_EXTENSIONS
 
 
+def is_archive(filename):
+    return os.path.splitext(filename)[1] in _ARCHIVE_EXTENSIONS
+
+
 def artifact_of(ssaf_artifact_repo, build_artifact_id, ssaf_artifact_kind):
-    ssaf_artifact_id = get_ssaf_artifact_id(build_artifact_id, ssaf_artifact_kind)
-    if not ssaf_artifact_repo.has_artifact(ssaf_artifact_id):
-        return None
-    return ssaf_artifact_repo.get_path_for_artifact(ssaf_artifact_id)
+    return ssaf_artifact_repo.get_path_if_present(
+        get_ssaf_artifact_id(build_artifact_id, ssaf_artifact_kind)
+    )
 
 
 def summary_of(ssaf_artifact_repo, build_artifact_id):
