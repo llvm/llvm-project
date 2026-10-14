@@ -2508,8 +2508,8 @@ public:
       if (ValidatedOperand.isPoison())
         return ValidatedOperand;
 
-      APFloat FOperand = handleDenormal(ValidatedOperand.asFloat(),
-                                        InputDenormMode.Input, /*IsInput=*/true);
+      APFloat FOperand = handleDenormal(
+          ValidatedOperand.asFloat(), InputDenormMode.Input, /*IsInput=*/true);
       APFloat SourceNaN = FOperand;
 
       bool LosesInfo;
