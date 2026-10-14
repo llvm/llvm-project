@@ -519,6 +519,27 @@ define i32 @ctpop_add_no_common_bits_shifted(i32 %x) {
   ret i32 %r
 }
 
+define i16 @ctpop_add_no_common_bits_shifted_full_width(i16 %x) {
+; CHECK-LABEL: @ctpop_add_no_common_bits_shifted_full_width(
+; CHECK-NEXT:    [[R2:%.*]] = call range(i16 0, 17) i16 @llvm.ctpop.i16(i16 [[X:%.*]])
+; CHECK-NEXT:    ret i16 [[R2]]
+;
+  %nibble0 = and i16 %x, 15
+  %c0 = call i16 @llvm.ctpop(i16 %nibble0)
+  %lshr1 = lshr i16 %x, 4
+  %nibble1 = and i16 %lshr1, 15
+  %c1 = call i16 @llvm.ctpop(i16 %nibble1)
+  %lshr2 = lshr i16 %x, 8
+  %nibble2 = and i16 %lshr2, 15
+  %c2 = call i16 @llvm.ctpop(i16 %nibble2)
+  %nibble3 = lshr i16 %x, 12
+  %c3 = call i16 @llvm.ctpop(i16 %nibble3)
+  %r0 = add i16 %c0, %c1
+  %r1 = add i16 %r0, %c2
+  %r2 = add i16 %r1, %c3
+  ret i16 %r2
+}
+
 define <4 x i32> @ctpop_add_no_common_bits_shifted_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits_shifted_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 255)
@@ -618,4 +639,27 @@ define i64 @ctpop_add_no_common_bits_different_source(i64 %x, i64 %y) {
   %c1 = call i64 @llvm.ctpop.i64(i64 %hi)
   %r = add i64 %c0, %c1
   ret i64 %r
+}
+
+; Negative test, ctpop has multiple uses
+
+define i32 @ctpop_add_no_common_bits_shifted_multi_use(i32 %x, ptr %p) {
+; CHECK-LABEL: @ctpop_add_no_common_bits_shifted_multi_use(
+; CHECK-NEXT:    [[LO:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[C0:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[LO]])
+; CHECK-NEXT:    store i32 [[C0]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X]], 4
+; CHECK-NEXT:    [[HI:%.*]] = and i32 [[S]], 15
+; CHECK-NEXT:    [[C1:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[HI]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[C0]], [[C1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lo = and i32 %x, 15
+  %c0 = call i32 @llvm.ctpop.i32(i32 %lo)
+  store i32 %c0, ptr %p
+  %s = lshr i32 %x, 4
+  %hi = and i32 %s, 15
+  %c1 = call i32 @llvm.ctpop.i32(i32 %hi)
+  %r = add i32 %c0, %c1
+  ret i32 %r
 }
