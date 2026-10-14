@@ -20,13 +20,16 @@
 ; CHECK-NEXT: OpFunctionParameter
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF]] [[FN]]
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V3]] [[V3]] [[V10]] [[V11]]
 ; CHECK-NEXT: [[T0:%[0-9]+]] = OpIAdd [[I32]]
 ; CHECK-NOT:  OpExtInst [[VOID]] [[EXT]] DebugLine
 ; CHECK-NEXT: OpBranch
 
-; then block: mul reuses line 3; region must be reopened at the block boundary.
+; then block: mul reuses line 3; both DebugScope and DebugLine regions must be
+; reopened at the block boundary, even though neither scope nor line changed.
 ; CHECK:      OpLabel
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V3]] [[V3]] [[V10]] [[V11]]
 ; CHECK-NEXT: [[T1:%[0-9]+]] = OpIMul [[I32]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V5]] [[V5]] [[V3]] [[V4]]

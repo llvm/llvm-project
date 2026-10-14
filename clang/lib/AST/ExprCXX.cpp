@@ -13,6 +13,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclAccessPair.h"
@@ -24,6 +25,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/Reflection.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -530,9 +532,8 @@ OverloadExpr::OverloadExpr(StmtClass SC, const ASTContext &Context,
   }
 
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingASTTemplateKWAndArgsInfo()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingTemplateArgumentLoc(), Deps);
+        TemplateKWLoc, *TemplateArgs, getTrailingTemplateArgumentLoc());
   } else if (TemplateKWLoc.isValid()) {
     getTrailingASTTemplateKWAndArgsInfo()->initializeFrom(TemplateKWLoc);
   }
@@ -561,9 +562,8 @@ DependentScopeDeclRefExpr::DependentScopeDeclRefExpr(
   DependentScopeDeclRefExprBits.HasTemplateKWAndArgsInfo =
       (Args != nullptr) || TemplateKWLoc.isValid();
   if (Args) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *Args, getTrailingObjects<TemplateArgumentLoc>(), Deps);
+        TemplateKWLoc, *Args, getTrailingObjects<TemplateArgumentLoc>());
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -1555,10 +1555,9 @@ CXXDependentScopeMemberExpr::CXXDependentScopeMemberExpr(
   CXXDependentScopeMemberExprBits.OperatorLoc = OperatorLoc;
 
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
-        Deps);
+        TemplateKWLoc, *TemplateArgs,
+        getTrailingObjects<TemplateArgumentLoc>());
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -1889,10 +1888,10 @@ bool MaterializeTemporaryExpr::isUsableInConstantExpressions(
          VD->isUsableInConstantExpressions(Context);
 }
 
-TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
-                             ArrayRef<TypeSourceInfo *> Args,
-                             SourceLocation RParenLoc,
-                             std::variant<bool, APValue> Value)
+TypeTraitExpr::TypeTraitExpr(
+    QualType T, SourceLocation Loc, TypeTrait Kind,
+    ArrayRef<TypeSourceInfo *> Args, SourceLocation RParenLoc,
+    std::variant<bool, APValue, ComparisonCategoryResult> Value)
     : Expr(TypeTraitExprClass, T, VK_PRValue, OK_Ordinary), Loc(Loc),
       RParenLoc(RParenLoc) {
   assert(Kind <= TT_Last && "invalid enum value!");
@@ -1902,11 +1901,18 @@ TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
          "TypeTraitExprBits.Kind overflow!");
 
   TypeTraitExprBits.IsBooleanTypeTrait = std::holds_alternative<bool>(Value);
+  TypeTraitExprBits.IsComparisonResult =
+      std::holds_alternative<ComparisonCategoryResult>(Value);
   if (TypeTraitExprBits.IsBooleanTypeTrait)
     TypeTraitExprBits.Value = std::get<bool>(Value);
-  else
-    ::new (getTrailingObjects<APValue>())
-        APValue(std::get<APValue>(std::move(Value)));
+  else {
+    if (auto *CCR = std::get_if<ComparisonCategoryResult>(&Value)) {
+      llvm::APSInt EncodedValue = llvm::APSInt::get(llvm::to_underlying(*CCR));
+      ::new (getTrailingObjects<APValue>()) APValue(std::move(EncodedValue));
+    } else
+      ::new (getTrailingObjects<APValue>())
+          APValue(std::get<APValue>(std::move(Value)));
+  }
 
   TypeTraitExprBits.NumArgs = Args.size();
   assert(Args.size() == TypeTraitExprBits.NumArgs &&
@@ -1948,6 +1954,16 @@ TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
   return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
 }
 
+TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
+                                     SourceLocation Loc, TypeTrait Kind,
+                                     ArrayRef<TypeSourceInfo *> Args,
+                                     SourceLocation RParenLoc,
+                                     ComparisonCategoryResult Value) {
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(1, Args.size()));
+  return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
+}
+
 TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
                                                  bool IsStoredAsBool,
                                                  unsigned NumArgs) {
@@ -1959,15 +1975,15 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
 CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
     : Expr(CXXReflectExprClass, Empty) {}
 
-CXXReflectExpr::CXXReflectExpr(SourceLocation CaretCaretLoc,
+CXXReflectExpr::CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc,
                                const TypeSourceInfo *TSI)
-    : Expr(CXXReflectExprClass, TSI->getType(), VK_PRValue, OK_Ordinary),
-      CaretCaretLoc(CaretCaretLoc), Operand(TSI) {}
+    : Expr(CXXReflectExprClass, C.MetaInfoTy, VK_PRValue, OK_Ordinary),
+      CaretCaretLoc(CaretCaretLoc), Kind(ReflectionKind::Type), Operand(TSI) {}
 
 CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
                                        SourceLocation CaretCaretLoc,
-                                       TypeSourceInfo *TSI) {
-  return new (C) CXXReflectExpr(CaretCaretLoc, TSI);
+                                       const TypeSourceInfo *TSI) {
+  return new (C) CXXReflectExpr(C, CaretCaretLoc, TSI);
 }
 
 CXXReflectExpr *CXXReflectExpr::CreateEmpty(ASTContext &C) {

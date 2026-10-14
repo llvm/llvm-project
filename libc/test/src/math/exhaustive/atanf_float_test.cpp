@@ -22,7 +22,7 @@ using LlvmLibcAtanfFloatExhaustiveTest =
 static constexpr uint32_t POS_START = 0x0000'0000U;
 static constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
-TEST_F(LlvmLibcAtanfFloatExhaustiveTest, PostiveRange) {
+TEST_F(LlvmLibcAtanfFloatExhaustiveTest, PositiveRange) {
   std::cout << "-- Testing for FE_TONEAREST in range [0x" << std::hex
             << POS_START << ", 0x" << POS_STOP << ") --" << std::dec
             << std::endl;

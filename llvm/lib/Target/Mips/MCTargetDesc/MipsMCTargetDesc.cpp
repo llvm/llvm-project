@@ -16,6 +16,7 @@
 #include "MipsELFStreamer.h"
 #include "MipsInstPrinter.h"
 #include "MipsMCAsmInfo.h"
+#include "MipsMCOptions.h"
 #include "MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -28,6 +29,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -44,6 +46,80 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "MipsGenRegisterInfo.inc"
+
+#define GET_REGISTER_MATCHER
+#include "MipsGenAsmMatcher.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "MipsMCOptions.inc"
+
+MCRegister MIPS_MC::matchRegisterName(StringRef Name, const MCRegisterInfo &MRI,
+                                      unsigned RegClassID, unsigned AltIdx) {
+  MCRegister Reg = MatchRegisterAltName(Name, AltIdx);
+  if (!Reg)
+    Reg = MatchRegisterName(Name);
+  if (!Reg)
+    return MCRegister();
+
+  const MCRegisterClass &RC = MRI.getRegClass(RegClassID);
+  // GPR32 and GPR64 share names; select the requested width.
+  if (!RC.contains(Reg)) {
+    if (RegClassID == Mips::GPR32RegClassID &&
+        MRI.getRegClass(Mips::GPR64RegClassID).contains(Reg))
+      Reg = MRI.getSubReg(Reg, Mips::sub_32);
+    else if (RegClassID == Mips::GPR64RegClassID &&
+             MRI.getRegClass(Mips::GPR32RegClassID).contains(Reg))
+      Reg = MRI.getMatchingSuperReg(Reg, Mips::sub_32, &RC);
+  }
+  return RC.contains(Reg) ? Reg : MCRegister();
+}
+
+int MIPS_MC::getCPURegisterIndex(StringRef Name, const MCRegisterInfo &MRI,
+                                 unsigned AltIdx, bool *IsDeprecated) {
+  if (IsDeprecated)
+    *IsDeprecated = false;
+
+  if (MCRegister Reg =
+          matchRegisterName(Name, MRI, Mips::GPR32RegClassID, AltIdx))
+    return MRI.getEncodingValue(Reg);
+
+  static const struct {
+    StringLiteral Name;
+    MCPhysReg Reg;
+    // NoRegAltName applies to all ABIs.
+    unsigned AltIdx;
+  } Aliases[] = {
+      {"AT", Mips::AT, Mips::NoRegAltName},
+      {"s8", Mips::FP, Mips::NoRegAltName},
+      {"kt0", Mips::K0, Mips::NABIRegAltName},
+      {"kt1", Mips::K1, Mips::NABIRegAltName},
+  };
+  for (const auto &Alias : Aliases)
+    if (Name == Alias.Name &&
+        (Alias.AltIdx == Mips::NoRegAltName || Alias.AltIdx == AltIdx))
+      return MRI.getEncodingValue(Alias.Reg);
+
+  // GNU also accepts t4-t7 for NABI's t0-t3.
+  if (AltIdx == Mips::NABIRegAltName) {
+    static const struct {
+      StringLiteral Name;
+      MCPhysReg Reg;
+    } Deprecated[] = {
+        {"t4", Mips::T4},
+        {"t5", Mips::T5},
+        {"t6", Mips::T6},
+        {"t7", Mips::T7},
+    };
+    for (const auto &Alias : Deprecated) {
+      if (Name == Alias.Name) {
+        if (IsDeprecated)
+          *IsDeprecated = true;
+        return MRI.getEncodingValue(Alias.Reg);
+      }
+    }
+  }
+  return -1;
+}
 
 void MIPS_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
   // Mapping from CodeView to MC register id.
@@ -256,6 +332,7 @@ static MCInstrAnalysis *createMipsMCInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTargetMC() {
+  static opt::RegisterLibraryOptions<MipsMCOptions> O;
   for (Target *T : {&getTheMipsTarget(), &getTheMipselTarget(),
                     &getTheMips64Target(), &getTheMips64elTarget()}) {
     // Register the MC asm info.

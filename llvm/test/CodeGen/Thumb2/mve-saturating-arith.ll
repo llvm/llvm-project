@@ -36,19 +36,19 @@ define arm_aapcs_vfpcc <2 x i64> @sadd_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vmov r0, r1, d2
-; CHECK-NEXT:    vmov r2, r3, d0
+; CHECK-NEXT:    vmov r0, r2, d2
+; CHECK-NEXT:    vmov r3, r1, d0
 ; CHECK-NEXT:    vmov r4, r5, d1
-; CHECK-NEXT:    adds.w r12, r2, r0
-; CHECK-NEXT:    adc.w r0, r3, r1
-; CHECK-NEXT:    subs.w r2, r12, r2
-; CHECK-NEXT:    sbcs.w r2, r0, r3
+; CHECK-NEXT:    adds.w r12, r3, r0
+; CHECK-NEXT:    adc.w r0, r1, r2
+; CHECK-NEXT:    subs.w r3, r12, r3
+; CHECK-NEXT:    sbcs.w r1, r0, r1
 ; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    cset r2, lt
-; CHECK-NEXT:    cmp.w r3, r1, lsr #31
+; CHECK-NEXT:    cset r1, lt
+; CHECK-NEXT:    cmp.w r3, r2, lsr #31
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    eorne r2, r2, #1
-; CHECK-NEXT:    rsb.w lr, r2, #0
+; CHECK-NEXT:    eorne r1, r1, #1
+; CHECK-NEXT:    rsb.w lr, r1, #0
 ; CHECK-NEXT:    vmov r2, r1, d3
 ; CHECK-NEXT:    adds r2, r2, r4
 ; CHECK-NEXT:    adc.w r6, r5, r1

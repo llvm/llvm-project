@@ -42,13 +42,18 @@ necessary verification and accessors; it also supports operations, such as
 `builtin.module`, that conditionally define a symbol. `Symbol`s must have the
 following properties:
 
-*   A `StringAttr` attribute named
-    'SymbolTable::getSymbolAttrName()'(`sym_name`).
-    -   This attribute defines the symbolic 'name' of the operation.
-*   An optional `StringAttr` attribute named
-    'SymbolTable::getVisibilityAttrName()'(`sym_visibility`)
-    -   This attribute defines the [visibility](#symbol-visibility) of the
-        symbol, or more specifically in-which scopes it may be accessed.
+*   A `StringAttr` name exposed by `SymbolOpInterface::getNameAttr`. The
+    `SymbolName` trait provides the conventional implementation backed by an
+    inherent `StringAttr` named `sym_name`.
+*   A [visibility](#symbol-visibility) (`getVisibility`/`setVisibility`)
+    -   The visibility defines in which scopes the symbol may be accessed.
+    -   The `SymbolVisibility` trait provides the conventional implementation,
+        stored in an optional inherent `StringAttr` named
+        `SymbolOpInterface::getDefaultVisibilityAttrName()` (`sym_visibility`),
+        where the absence of the attribute means public visibility. Operations
+        may instead implement `getVisibility`/`setVisibility` using a different
+        representation. Client code should not make any assumptions about the
+        presence of a visibility attribute.
 *   No SSA results
     -   Intermixing the different ways to `use` an operation quickly becomes
         unwieldy and difficult to analyze.

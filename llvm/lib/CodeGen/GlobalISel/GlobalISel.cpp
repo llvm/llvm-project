@@ -19,8 +19,8 @@ void llvm::initializeGlobalISel(PassRegistry &Registry) {
   initializeLegalizerLegacyPass(Registry);
   initializeLoadStoreOptLegacyPass(Registry);
   initializeLocalizerLegacyPass(Registry);
-  initializeRegBankSelectPass(Registry);
-  initializeInstructionSelectPass(Registry);
+  initializeRegBankSelectLegacyPass(Registry);
+  initializeInstructionSelectLegacyPass(Registry);
   initializeGISelValueTrackingAnalysisLegacyPass(Registry);
   initializeGISelCSEAnalysisWrapperPassPass(Registry);
 }

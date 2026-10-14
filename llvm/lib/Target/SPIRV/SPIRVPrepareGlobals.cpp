@@ -16,7 +16,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVPrepareGlobals.h"
 #include "SPIRV.h"
 #include "SPIRVUtils.h"
 
@@ -27,7 +26,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 
-#include <climits>
 #include <string>
 
 #define DEBUG_TYPE "spirv-prepare-globals"
@@ -72,7 +70,9 @@ bool tryReplaceAliasWithAliasee(GlobalAlias &GA) {
     return false;
   }
 
-  if (AO->isInterposable()) {
+  // noipa doesn't affect which definition is used at link time, so it doesn't
+  // prevent replacing the alias.
+  if (AO->isInterposable(/*CheckNoIPA=*/false)) {
     LLVM_DEBUG(dbgs() << "Skipping interposable aliasee: " << AO->getName()
                       << "\n");
     return false;
@@ -160,8 +160,8 @@ char SPIRVPrepareGlobalsLegacy::ID = 0;
 INITIALIZE_PASS(SPIRVPrepareGlobalsLegacy, "spirv-prepare-globals",
                 "SPIRV prepare global variables", false, false)
 
-PreservedAnalyses SPIRVPrepareGlobals::run(Module &M,
-                                           ModuleAnalysisManager &AM) {
+PreservedAnalyses SPIRVPrepareGlobalsPass::run(Module &M,
+                                               ModuleAnalysisManager &AM) {
   return SPIRVPrepareGlobalsImpl().runOnModule(M) ? PreservedAnalyses::none()
                                                   : PreservedAnalyses::all();
 }

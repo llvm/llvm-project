@@ -44,7 +44,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
@@ -63,6 +62,11 @@
 #include <algorithm>
 #include <memory>
 #include <optional>
+
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
+
 using namespace llvm;
 using namespace opt_tool;
 
@@ -286,6 +290,11 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
+static cl::list<std::string>
+    PluginArgs("plugin-arg",
+               cl::desc("Pass <arg> to the pass plugin named <plugin>"),
+               cl::value_desc("plugin>,<arg"));
+
 //===----------------------------------------------------------------------===//
 // CodeGen-related helper functions.
 //
@@ -401,8 +410,6 @@ static bool shouldForceLegacyPM() {
 extern "C" int
 optMain(int argc, char **argv,
         ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks) {
-  InitLLVM X(argc, argv);
-
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
 
@@ -446,19 +453,23 @@ optMain(int argc, char **argv,
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);
 
-  SmallVector<PassPlugin, 1> PluginList;
-  PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::Load(PluginPath);
-    if (!Plugin)
-      reportFatalUsageError(Plugin.takeError());
-    PluginList.emplace_back(Plugin.get());
-  });
-
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
 
   cl::ParseCommandLineOptions(
       argc, argv, "llvm .bc -> .bc modular optimizer and analysis printer\n");
+
+  SmallVector<PassPluginLibraryInfo, 0> Extensions;
+  for (const std::string &Path : PassPlugins) {
+    auto Plugin = PassPlugin::load(Path);
+    if (!Plugin)
+      reportFatalUsageError(Plugin.takeError());
+    Extensions.push_back(Plugin->getInfo());
+  }
+#define HANDLE_EXTENSION(Ext) Extensions.push_back(get##Ext##PluginInfo());
+#include "llvm/Support/Extension.def"
+  if (Error E = passPluginArguments(Extensions, PluginArgs))
+    reportFatalUsageError(std::move(E));
 
   LLVMContext Context;
 
@@ -475,7 +486,7 @@ optMain(int argc, char **argv,
     return 1;
   }
 
-  if (!UseNPM && PluginList.size()) {
+  if (!UseNPM && !PassPlugins.empty()) {
     errs() << argv[0] << ": " << PassPlugins.ArgStr
            << " specified with legacy PM.\n";
     return 1;
@@ -734,9 +745,8 @@ optMain(int argc, char **argv,
     TLII.disableAllFunctions();
   else {
     // Disable individual builtin functions in TargetLibraryInfo.
-    LibFunc F;
     for (const std::string &FuncName : DisableBuiltins) {
-      if (TLII.getLibFunc(FuncName, F))
+      if (LibFunc F = TLII.getLibFunc(FuncName))
         TLII.setUnavailable(F);
       else {
         errs() << argv[0] << ": cannot disable nonexistent builtin function "
@@ -746,7 +756,7 @@ optMain(int argc, char **argv,
     }
 
     for (const std::string &FuncName : EnableBuiltins) {
-      if (TLII.getLibFunc(FuncName, F))
+      if (LibFunc F = TLII.getLibFunc(FuncName))
         TLII.setAvailable(F);
       else {
         errs() << argv[0] << ": cannot enable nonexistent builtin function "
@@ -804,7 +814,7 @@ optMain(int argc, char **argv,
     // layer.
     if (!runPassPipeline(
             argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
-            RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks, OK,
+            RemarksFile.get(), Pipeline, Extensions, PassBuilderCallbacks, OK,
             VK, /* ShouldPreserveAssemblyUseListOrder */ false,
             /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,
             EmitModuleHash, EnableDebugify, VerifyDebugInfoPreserve,
@@ -851,9 +861,8 @@ optMain(int argc, char **argv,
       (VerifyDebugInfoPreserve && !VerifyEachDebugInfoPreserve);
 
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
-  Passes.add(new RuntimeLibraryInfoWrapper(
-      Options->ExceptionModel, Options->EABIVersion, Options->MCOptions.ABIName,
-      Options->VecLib));
+  Passes.add(new RuntimeLibraryInfoWrapper(Options->MCOptions.ABIName,
+                                           Options->VecLib));
 
   // Add internal analysis passes from the target machine.
   Passes.add(createTargetTransformInfoWrapperPass(TM ? TM->getTargetIRAnalysis()
@@ -931,10 +940,11 @@ optMain(int argc, char **argv,
       BOS = std::make_unique<raw_svector_ostream>(Buffer);
       OS = BOS.get();
     }
-    if (OutputAssembly)
+    if (OutputAssembly) {
       Passes.add(createPrintModulePass(
-          *OS, "", /* ShouldPreserveAssemblyUseListOrder */ false));
-    else
+          *OS, "", /*ShouldPreserveAssemblyUseListOrder=*/false,
+          /*ShouldRenumberMetadata=*/true));
+    } else
       Passes.add(createBitcodeWriterPass(
           *OS, /* ShouldPreserveBitcodeUseListOrder */ true));
   }

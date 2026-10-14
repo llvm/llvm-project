@@ -64,7 +64,10 @@ struct SimplifyAffineStructures
     }
 
     // Simplification was successful, so update the attribute.
-    op->setAttr(name, simplified);
+    if (op->getInherentAttr(name).has_value())
+      op->setInherentAttr(name, simplified);
+    else
+      op->setDiscardableAttr(name, simplified);
   }
 
   IntegerSet simplify(IntegerSet set) { return simplifyIntegerSet(set); }
@@ -99,7 +102,10 @@ void SimplifyAffineStructures::runOnOperation() {
   // fold/apply canonicalization patterns when we have affine dialect ops.
   SmallVector<Operation *> opsToSimplify;
   func.walk([&](Operation *op) {
-    for (auto attr : op->getAttrs()) {
+    NamedAttrList attrs(op->getDiscardableAttrDictionary());
+    op->getName().walkInherentAttrs(
+        op, [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+    for (auto attr : attrs) {
       if (auto mapAttr = dyn_cast<AffineMapAttr>(attr.getValue()))
         simplifyAndUpdateAttribute(op, attr.getName(), mapAttr);
       else if (auto setAttr = dyn_cast<IntegerSetAttr>(attr.getValue()))

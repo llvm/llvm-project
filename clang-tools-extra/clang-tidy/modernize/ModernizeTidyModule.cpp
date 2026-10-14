@@ -53,6 +53,7 @@
 #include "UseStdPrintCheck.h"
 #include "UseStringViewCheck.h"
 #include "UseStructuredBindingCheck.h"
+#include "UseToUnderlyingCheck.h"
 #include "UseTrailingReturnTypeCheck.h"
 #include "UseTransparentFunctorsCheck.h"
 #include "UseUncaughtExceptionsCheck.h"
@@ -138,6 +139,8 @@ public:
         "modernize-use-string-view");
     CheckFactories.registerCheck<UseStructuredBindingCheck>(
         "modernize-use-structured-binding");
+    CheckFactories.registerCheck<UseToUnderlyingCheck>(
+        "modernize-use-to-underlying");
     CheckFactories.registerCheck<UseTrailingReturnTypeCheck>(
         "modernize-use-trailing-return-type");
     CheckFactories.registerCheck<UseTransparentFunctorsCheck>(

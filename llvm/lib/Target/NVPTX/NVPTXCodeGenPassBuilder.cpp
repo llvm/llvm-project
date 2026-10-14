@@ -18,9 +18,7 @@
 #include "NVPTXTargetMachine.h"
 #include "llvm/Analysis/KernelInfo.h"
 #include "llvm/CodeGen/AtomicExpand.h"
-#include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/FuncletLayout.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -34,7 +32,6 @@
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/ShrinkWrap.h"
-#include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
@@ -282,12 +279,6 @@ Error NVPTXCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
 
 Error NVPTXCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(ProcessImplicitDefsPass(), PMW);
-  // LiveVariables requires pure SSA form and no unreachable blocks; the legacy
-  // pass manager pulls UnreachableMachineBlockElim in as an implicit
-  // dependency, so add it explicitly here.
-  addMachineFunctionPass(UnreachableMachineBlockElimPass(), PMW);
-  addMachineFunctionPass(
-      RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>(), PMW);
   addMachineFunctionPass(
       RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>(), PMW);
   addMachineFunctionPass(PHIEliminationPass(), PMW);

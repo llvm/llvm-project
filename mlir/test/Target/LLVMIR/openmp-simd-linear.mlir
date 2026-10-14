@@ -45,9 +45,9 @@ llvm.func @test_simd_linear() {
 // CHECK:       omp.region.cont1:
 
 llvm.func @test_simd_linear2(%a : !llvm.ptr) {
-  %c0_i64 = llvm.mlir.constant(0 : index) : i64
-  %c1_i64 = llvm.mlir.constant(1 : index) : i64
-  %c100_i64 = llvm.mlir.constant(100 : index) : i64
+  %c0_i64 = llvm.mlir.constant(0 : i64) : i64
+  %c1_i64 = llvm.mlir.constant(1 : i64) : i64
+  %c100_i64 = llvm.mlir.constant(100 : i64) : i64
   %c1_i32 = llvm.mlir.constant(1 : i32) : i32
   %c100_i32 = llvm.mlir.constant(100 : i32) : i32
 

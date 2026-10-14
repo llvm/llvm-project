@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_EXPRCXX_H
 
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -25,6 +26,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/Reflection.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/TemplateBase.h"
@@ -2905,7 +2907,7 @@ class TypeTraitExpr final
 
   TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                 ArrayRef<TypeSourceInfo *> Args, SourceLocation RParenLoc,
-                std::variant<bool, APValue> Value);
+                std::variant<bool, APValue, ComparisonCategoryResult> Value);
 
   TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool);
 
@@ -2934,6 +2936,12 @@ public:
                                ArrayRef<TypeSourceInfo *> Args,
                                SourceLocation RParenLoc, APValue Value);
 
+  static TypeTraitExpr *Create(const ASTContext &C, QualType T,
+                               SourceLocation Loc, TypeTrait Kind,
+                               ArrayRef<TypeSourceInfo *> Args,
+                               SourceLocation RParenLoc,
+                               ComparisonCategoryResult Value);
+
   static TypeTraitExpr *CreateDeserialized(const ASTContext &C,
                                            bool IsStoredAsBool,
                                            unsigned NumArgs);
@@ -2945,6 +2953,10 @@ public:
 
   bool isStoredAsBoolean() const {
     return TypeTraitExprBits.IsBooleanTypeTrait;
+  }
+
+  bool isStoredAsComparisonResult() const {
+    return TypeTraitExprBits.IsComparisonResult;
   }
 
   bool getBoolValue() const {
@@ -3496,12 +3508,14 @@ public:
   TemplateName getTemplateName() const { return Name; }
 
   TemplateTemplateParmDecl *getParameter() const {
-    return cast<TemplateTemplateParmDecl>(Name.getAsTemplateDecl());
+    TemplateTemplateParmDecl *P = Name.getAsTemplateTemplateParmDecl();
+    assert(
+        P &&
+        "A dependent template-id always names a template template parameter");
+    return P;
   }
 
-  bool isConceptReference() const {
-    return getParameter()->templateParameterKind() == TNK_Concept_template;
-  }
+  bool isConceptReference() const { return Name.isConceptName(); }
 
   SourceLocation getLAngleLoc() const { return KWAndArgs.LAngleLoc; }
   SourceLocation getRAngleLoc() const { return KWAndArgs.RAngleLoc; }
@@ -4998,11 +5012,11 @@ public:
   }
 
   LifetimeExtendedTemporaryDecl *getLifetimeExtendedTemporaryDecl() {
-    return State.dyn_cast<LifetimeExtendedTemporaryDecl *>();
+    return dyn_cast<LifetimeExtendedTemporaryDecl *>(State);
   }
   const LifetimeExtendedTemporaryDecl *
   getLifetimeExtendedTemporaryDecl() const {
-    return State.dyn_cast<LifetimeExtendedTemporaryDecl *>();
+    return dyn_cast<LifetimeExtendedTemporaryDecl *>(State);
   }
 
   /// Get the declaration which triggered the lifetime-extension of this
@@ -5546,27 +5560,32 @@ public:
 ///  - a type-id, or
 ///  - an id-expression.
 class CXXReflectExpr : public Expr {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
 
+private:
   // TODO(Reflection): add support for TemplateReference, NamespaceReference and
   // DeclRefExpr
   using operand_type = llvm::PointerUnion<const TypeSourceInfo *>;
 
   SourceLocation CaretCaretLoc;
+  ReflectionKind Kind;
   operand_type Operand;
 
-  CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeSourceInfo *TSI);
+  CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc,
+                 const TypeSourceInfo *TSI);
   CXXReflectExpr(EmptyShell Empty);
 
 public:
   static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
-                                TypeSourceInfo *TL);
+                                const TypeSourceInfo *TSI);
 
   static CXXReflectExpr *CreateEmpty(ASTContext &C);
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
         .Case<const TypeSourceInfo *>(
-            [](auto *Ptr) { return Ptr->getTypeLoc().getBeginLoc(); });
+            [](const auto *Ptr) { return Ptr->getTypeLoc().getBeginLoc(); });
   }
 
   SourceLocation getEndLoc() const LLVM_READONLY {
@@ -5577,6 +5596,11 @@ public:
 
   /// Returns location of the '^^'-operator.
   SourceLocation getOperatorLoc() const { return CaretCaretLoc; }
+  ReflectionKind getKind() const { return Kind; }
+  const void *getOpaqueValue() const { return Operand.getOpaqueValue(); }
+  const TypeSourceInfo *getTypeSourceInfo() const {
+    return cast<const TypeSourceInfo *>(Operand);
+  }
 
   child_range children() {
     // TODO(Reflection)

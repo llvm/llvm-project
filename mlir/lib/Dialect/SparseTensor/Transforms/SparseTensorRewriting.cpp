@@ -287,7 +287,7 @@ struct FuseExtractSliceWithConcat
 /// Rewriting rule that fuses sparse_tensor.convert into producer.
 struct FoldConvertIntoProducer : public OpRewritePattern<ConvertOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ConvertOp op,
                                 PatternRewriter &rewriter) const override {
@@ -711,7 +711,7 @@ public:
 /// which only require very light-weight runtime support.
 struct PrintRewriter : public OpRewritePattern<PrintOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(PrintOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
@@ -1131,7 +1131,7 @@ struct TensorLike {
 };
 
 struct SparseTensorDimOpRewriter : public OpRewritePattern<tensor::DimOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(tensor::DimOp op,
                                 PatternRewriter &rewriter) const override {
     std::optional<int64_t> dim = op.getConstantIndex();
@@ -1175,7 +1175,7 @@ struct SparseTensorDimOpRewriter : public OpRewritePattern<tensor::DimOp> {
 };
 
 struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(ConcatenateOp op,
                                 PatternRewriter &rewriter) const override {
     if (op.needsExtraSort())
@@ -1257,7 +1257,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
 };
 
 struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(ConvertOp op,
                                 PatternRewriter &rewriter) const override {
     if (op.needsExtraSort())
@@ -1334,12 +1334,14 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
 };
 
 struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(CrdTranslateOp op,
                                 PatternRewriter &rewriter) const override {
     AffineMap map = op.getDirection() == CrdTransDirectionKind::dim2lvl
                         ? op.getEncoder().getDimToLvl()
                         : op.getEncoder().getLvlToDim();
+    if (!map || map.getNumSymbols() != 0)
+      return failure();
 
     SmallVector<Value> outCrds;
     for (AffineExpr result : map.getResults()) {
@@ -1359,7 +1361,7 @@ struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
 /// Sparse rewriting rule for the foreach operator.
 struct ForeachRewriter : public OpRewritePattern<ForeachOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ForeachOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1495,7 +1497,7 @@ public:
 
 /// Sparse rewriting rule for the new operator.
 struct NewRewriter : public OpRewritePattern<NewOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(NewOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
@@ -1532,7 +1534,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
 
 /// Sparse rewriting rule for the out operator.
 struct OutRewriter : public OpRewritePattern<OutOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(OutOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();

@@ -76,17 +76,21 @@ class ChangeValueAPITestCase(TestBase):
         self.assertEqual(actual_value, 12345, "Got the right changed value from val")
 
         # A normal variable backed by memory reports that it can be modified.
+        self.assertSuccess(val_value.CanSet(), "val can be modified")
         self.assertTrue(val_value.CanSetValue(), "val can be modified")
 
         # A constant expression result has no writable storage, so it cannot be
-        # modified and CanSetValue() is False.
+        # modified and CanSet() returns an error.
         const_value = frame0.EvaluateExpression("val + 1")
         self.assertTrue(const_value.IsValid(), "Got a valid expression result")
+        can_set_error = const_value.CanSet()
+        self.assertTrue(can_set_error.Fail(), "A constant cannot be modified")
+        self.assertIn("not in a writable location", can_set_error.GetCString())
         self.assertFalse(const_value.CanSetValue(), "A constant cannot be modified")
         error.Clear()
         result = const_value.SetValueFromCString("0", error)
         self.assertFalse(result, "SetValueFromCString on a constant failed")
-        self.assertIn("constant", error.GetCString())
+        self.assertIn("not in a writable location", error.GetCString())
 
         # Now check that we can set a structure element:
 

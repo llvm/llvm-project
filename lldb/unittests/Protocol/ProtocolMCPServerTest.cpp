@@ -211,41 +211,7 @@ public:
     Response resp = promised_result.get_future().get();
     return toJSON(resp);
   }
-
-  template <typename Result>
-  Expected<json::Value>
-  Capture(llvm::unique_function<void(Reply<Result>)> &fn) {
-    std::promise<llvm::Expected<Result>> promised_result;
-    fn([&promised_result](llvm::Expected<Result> result) {
-      promised_result.set_value(std::move(result));
-    });
-    Run();
-    llvm::Expected<Result> result = promised_result.get_future().get();
-    if (!result)
-      return result.takeError();
-    return toJSON(*result);
-  }
-
-  template <typename Result, typename Params>
-  Expected<json::Value>
-  Capture(llvm::unique_function<void(const Params &, Reply<Result>)> &fn,
-          const Params &params) {
-    std::promise<llvm::Expected<Result>> promised_result;
-    fn(params, [&promised_result](llvm::Expected<Result> result) {
-      promised_result.set_value(std::move(result));
-    });
-    Run();
-    llvm::Expected<Result> result = promised_result.get_future().get();
-    if (!result)
-      return result.takeError();
-    return toJSON(*result);
-  }
 };
-
-template <typename T>
-inline testing::internal::EqMatcher<llvm::json::Value> HasJSON(T x) {
-  return testing::internal::EqMatcher<llvm::json::Value>(toJSON(x));
-}
 
 } // namespace
 

@@ -20,6 +20,8 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/InstrTypes.h"
+#include <tuple>
+#include <utility>
 
 namespace llvm {
 namespace MIPatternMatch {
@@ -645,6 +647,50 @@ inline GInstrBind<GBuildVector> m_GBuildVector(GBuildVector *&Inst) {
 }
 inline GInstrBind<GConcatVectors> m_GConcatVectors(GConcatVectors *&Inst) {
   return Inst;
+}
+
+/// Binds the defining instruction of \p Reg if it is a GIntrinsic (any of the
+/// four G_INTRINSIC* opcodes).
+inline GInstrBind<GIntrinsic> m_GIntrinsic(GIntrinsic *&Inst) { return Inst; }
+inline GInstrBind<const GIntrinsic> m_GIntrinsic(const GIntrinsic *&Inst) {
+  return Inst;
+}
+
+/// Matches a GIntrinsic with a specific intrinsic ID and optionally, matchers
+/// for its leading arguments.
+template <Intrinsic::ID IntrID, typename... OpMatchers>
+struct GIntrinsic_match {
+  std::tuple<OpMatchers...> Operands;
+
+  GIntrinsic_match(const OpMatchers &...Ops) : Operands(Ops...) {}
+
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
+    MachineInstr *TmpMI;
+    if (!mi_match(Op, MRI, m_MInstr(TmpMI)))
+      return false;
+    auto *GI = dyn_cast<GIntrinsic>(TmpMI);
+    if (!GI || !GI->is(IntrID))
+      return false;
+    return matchOperands(MRI, *GI, std::index_sequence_for<OpMatchers...>{});
+  }
+
+private:
+  template <size_t... Is>
+  bool matchOperands(const MachineRegisterInfo &MRI, GIntrinsic &GI,
+                     std::index_sequence<Is...>) {
+    // Intrinsic arguments follow the ID operand.
+    unsigned FirstArg = GI.getNumExplicitDefs() + 1;
+    return (std::get<Is>(Operands).match(
+                MRI, GI.getOperand(FirstArg + Is).getReg()) &&
+            ...);
+  }
+};
+
+template <Intrinsic::ID IntrID, typename... OpMatchers>
+inline GIntrinsic_match<IntrID, OpMatchers...>
+m_GIntrinsic(const OpMatchers &...Ops) {
+  return GIntrinsic_match<IntrID, OpMatchers...>(Ops...);
 }
 
 /// Matches a G_SHUFFLE_VECTOR, binding its two source operands and its mask.

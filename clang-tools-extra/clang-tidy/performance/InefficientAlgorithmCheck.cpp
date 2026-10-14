@@ -134,8 +134,8 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
         SM, LangOpts);
     // There is no source text for an expression that covers only part of a
     // macro expansion. Building the replacement from an empty string would
-    // incorrectly drop the value.
-    if (!ParamText.empty()) {
+    // incorrectly drop the container or the value.
+    if (!ContainerText.empty() && !ParamText.empty()) {
       const std::string ReplacementText =
           (llvm::Twine(ContainerText) + (PtrToContainer ? "->" : ".") +
            AlgDecl->getName() + "(" + ParamText + ")")

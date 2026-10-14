@@ -683,7 +683,10 @@ RegAllocEvictionAdvisor::getOrderLimit(const LiveInterval &VirtReg,
 
     // It is normal for register classes to have a long tail of registers with
     // the same cost. We don't need to look at them if they're too expensive.
-    if (RegCosts[Order.getOrder().back()] >= CostPerUseLimit) {
+    // LastCostChange is an index into the original RegisterClassInfo order, so
+    // it cannot be used to shorten a custom order.
+    if (!Order.hasCustomOrder() &&
+        RegCosts[Order.getOrder().back()] >= CostPerUseLimit) {
       OrderLimit = RegClassInfo.getLastCostChange(RC);
       LLVM_DEBUG(dbgs() << "Only trying the first " << OrderLimit
                         << " regs.\n");
@@ -2452,11 +2455,16 @@ void RAGreedy::initializeCSRCost() {
     }
   } else {
     uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
-    CSRCost = BlockFrequency(TRI->getCSRFirstUseCost() * EntryFreq);
-    if (CSRCostScale < 100)
-      CSRCost *= BranchProbability(CSRCostScale, 100);
+    CSRCost = BlockFrequency(TRI->getCSRFirstUseCost(*MF) * EntryFreq);
+    unsigned Scale = TRI->getCSRCostScale(*MF);
+    // Command line specified CSRCostScale can override target's default value.
+    if (CSRCostScale.getNumOccurrences())
+      Scale = CSRCostScale;
+
+    if (Scale < 100)
+      CSRCost *= BranchProbability(Scale, 100);
     else
-      CSRCost /= BranchProbability(100, CSRCostScale);
+      CSRCost /= BranchProbability(100, Scale);
   }
 }
 
@@ -2499,8 +2507,7 @@ void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
 
     // Push the collected information.
     if (OtherPhysReg) {
-      Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
-                             OtherPhysReg));
+      Out.push_back(HintInfo(Instr.getParent(), OtherReg, OtherPhysReg));
     }
   }
 }
@@ -2513,7 +2520,7 @@ BlockFrequency RAGreedy::getBrokenHintFreq(const HintsInfo &List,
   BlockFrequency Cost = BlockFrequency(0);
   for (const HintInfo &Info : List) {
     if (Info.PhysReg != PhysReg)
-      Cost += Info.Freq;
+      Cost += MBFI->getBlockFreq(Info.MBB);
   }
   return Cost;
 }
@@ -2535,7 +2542,7 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   MCRegister PhysReg = VRM->getPhys(Reg);
   // Start the recoloring algorithm from the input live-interval, then
   // it will propagate to the ones that are copy-related with it.
-  SmallSet<Register, 4> Visited = {Reg};
+  SmallDenseSet<Register, 8> Visited = {Reg};
   SmallVector<Register, 2> RecoloringCandidates = {Reg};
 
   LLVM_DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI)
@@ -2950,6 +2957,13 @@ bool RAGreedy::run(MachineFunction &mf) {
   // physical register.
   if (!hasVirtRegAlloc())
     return false;
+
+  // Canonicalize LiveDebugVariables' indexes here and again in
+  // emitDebugValues(); those are the only two points where it is clean, as
+  // splitting stales indexes again mid-run. Reclaiming erased entries needs
+  // its own entry point called from both, not a hook in packIndexes(), which
+  // renumberIndexes() also reaches.
+  DebugVars->canonicalizeIndexes(*Indexes);
 
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.

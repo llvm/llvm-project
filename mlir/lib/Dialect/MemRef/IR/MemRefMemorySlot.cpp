@@ -96,8 +96,15 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
   MemRefType type = getType();
 
   // A single-element memref is promoted to a scalar SSA value.
-  if (type.hasStaticShape() && type.getNumElements() == 1)
-    return {MemorySlot{getResult(), type.getElementType()}};
+  if (type.hasStaticShape()) {
+    std::optional<int64_t> numElements =
+        ShapedType::tryGetNumElements(type.getShape());
+    // Element count overflow: not promotable.
+    if (!numElements)
+      return {};
+    if (*numElements == 1)
+      return {MemorySlot{getResult(), type.getElementType()}};
+  }
 
   // A multi-element memref can be promoted to a single vector SSA value when it
   // is only ever accessed as a whole buffer (e.g. through whole-buffer
@@ -130,7 +137,7 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
 
 Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                         OpBuilder &builder) {
-  return ub::PoisonOp::create(builder, getLoc(), slot.elemType);
+  return ub::PoisonOp::create(builder, getLoc(), slot.valueType);
 }
 
 std::optional<PromotableAllocationOpInterface>
@@ -216,7 +223,7 @@ bool memref::LoadOp::canUsesBeRemoved(
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getMemRef() == slot.ptr &&
-         getResult().getType() == slot.elemType;
+         getResult().getType() == slot.valueType;
 }
 
 DeletionKind memref::LoadOp::removeBlockingUses(
@@ -296,7 +303,7 @@ bool memref::StoreOp::canUsesBeRemoved(
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getMemRef() == slot.ptr &&
-         getValue() != slot.ptr && getValue().getType() == slot.elemType;
+         getValue() != slot.ptr && getValue().getType() == slot.valueType;
 }
 
 DeletionKind memref::StoreOp::removeBlockingUses(
@@ -345,9 +352,12 @@ struct MemRefDestructurableTypeExternalModel
   getSubelementIndexMap(Type type) const {
     auto memrefType = llvm::cast<MemRefType>(type);
     constexpr int64_t maxMemrefSizeForDestructuring = 16;
-    if (!memrefType.hasStaticShape() ||
-        memrefType.getNumElements() > maxMemrefSizeForDestructuring ||
-        memrefType.getNumElements() == 1)
+    if (!memrefType.hasStaticShape())
+      return {};
+    std::optional<int64_t> numElements =
+        ShapedType::tryGetNumElements(memrefType.getShape());
+    if (!numElements || *numElements > maxMemrefSizeForDestructuring ||
+        *numElements == 1)
       return {};
 
     DenseMap<Attribute, Type> destructured;
@@ -384,7 +394,8 @@ struct MemRefDestructurableTypeExternalModel
 //  Register external models
 //===----------------------------------------------------------------------===//
 
-void mlir::memref::registerMemorySlotExternalModels(DialectRegistry &registry) {
+void mlir::memref::registerDestructurableTypeExternalModels(
+    DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
     MemRefType::attachInterface<MemRefDestructurableTypeExternalModel>(*ctx);
   });

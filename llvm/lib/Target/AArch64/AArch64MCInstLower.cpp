@@ -13,6 +13,7 @@
 
 #include "AArch64MCInstLower.h"
 #include "AArch64MachineFunctionInfo.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -21,19 +22,17 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 using namespace llvm::object;
-
-extern cl::opt<bool> EnableAArch64ELFLocalDynamicTLSGeneration;
 
 AArch64MCInstLower::AArch64MCInstLower(MCContext &ctx, AsmPrinter &printer)
     : Ctx(ctx), Printer(printer) {}
@@ -45,7 +44,7 @@ AArch64MCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 
 MCSymbol *AArch64MCInstLower::GetGlobalValueSymbol(const GlobalValue *GV,
                                                    unsigned TargetFlags) const {
-  const Triple &TheTriple = Printer.TM.getTargetTriple();
+  const Triple &TheTriple = GV->getParent()->getTargetTriple();
   if (!TheTriple.isOSBinFormatCOFF())
     return Printer.getSymbolPreferLocal(*GV);
 
@@ -173,7 +172,7 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandMachO(const MachineOperand &MO,
   }
   // TODO: Migrate to MCSpecifierExpr::create like ELF.
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Spec, Ctx);
-  if (!MO.isJTI() && MO.getOffset())
+  if (!MO.isJTI() && !MO.isMBB() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
   return MCOperand::createExpr(Expr);
@@ -184,20 +183,22 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
   uint32_t RefFlags = 0;
 
   if (MO.getTargetFlags() & AArch64II::MO_GOT) {
-    const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+    const MachineFunction *MF = Printer.MF;
     RefFlags |= (MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
                      ? AArch64::S_GOT_AUTH
                      : AArch64::S_GOT);
   } else if (MO.getTargetFlags() & AArch64II::MO_TLS) {
     TLSModel::Model Model;
     if (MO.isGlobal()) {
-      const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+      const MachineFunction *MF = Printer.MF;
       if (MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()) {
         Model = TLSModel::GeneralDynamic;
       } else {
         const GlobalValue *GV = MO.getGlobal();
         Model = Printer.TM.getTLSModel(GV);
-        if (!EnableAArch64ELFLocalDynamicTLSGeneration &&
+        if (!MF->getSubtarget<AArch64Subtarget>()
+                 .getCLOpts()
+                 .elf_ldtls_generation &&
             Model == TLSModel::LocalDynamic)
           Model = TLSModel::GeneralDynamic;
       }
@@ -224,7 +225,7 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
       // running hasELFSignedGOT() every time, but existing flags already
       // cover all 12 bits of SubReg_TargetFlags field in MachineOperand, and
       // making the field wider breaks static assertions.
-      const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+      const MachineFunction *MF = Printer.MF;
       RefFlags |= MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
                       ? AArch64::S_TLSDESC_AUTH
                       : AArch64::S_TLSDESC;
@@ -259,7 +260,7 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
     RefFlags |= AArch64::S_NC;
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
-  if (!MO.isJTI() && MO.getOffset())
+  if (!MO.isJTI() && !MO.isMBB() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
@@ -310,7 +311,7 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
   }
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
-  if (!MO.isJTI() && MO.getOffset())
+  if (!MO.isJTI() && !MO.isMBB() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
@@ -347,8 +348,7 @@ bool AArch64MCInstLower::lowerOperand(const MachineOperand &MO,
     MCOp = MCOperand::createImm(MO.getImm());
     break;
   case MachineOperand::MO_MachineBasicBlock:
-    MCOp = MCOperand::createExpr(
-        MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
+    MCOp = LowerSymbolOperand(MO, MO.getMBB()->getSymbol());
     break;
   case MachineOperand::MO_GlobalAddress:
     MCOp = LowerSymbolOperand(MO, GetGlobalAddressSymbol(MO));

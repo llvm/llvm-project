@@ -4,7 +4,7 @@
 
 func.func @tile_elementwise(%A: tensor<128x256xf32>, %B: tensor<128x256xf32>,
                             %C: tensor<128x256xf32>) -> tensor<128x256xf32> {
-  %r = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %r = linalg.elementwise <add>
       ins(%A, %B : tensor<128x256xf32>, tensor<128x256xf32>)
       outs(%C : tensor<128x256xf32>) -> tensor<128x256xf32>
   return %r : tensor<128x256xf32>
@@ -36,7 +36,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-DAG:       %[[AT:.+]] = tensor.extract_slice %[[A]][%[[IV0]], %[[IV1]]] [32, 64] [1, 1]
 //  CHECK-DAG:       %[[BT:.+]] = tensor.extract_slice %[[B]][%[[IV0]], %[[IV1]]] [32, 64] [1, 1]
 //  CHECK-DAG:       %[[CT:.+]] = tensor.extract_slice %[[INIT1]][%[[IV0]], %[[IV1]]] [32, 64] [1, 1]
-//      CHECK:       %[[TILED:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
+//      CHECK:       %[[TILED:.+]] = linalg.elementwise <add>
 // CHECK-SAME:           ins(%[[AT]], %[[BT]] :
 // CHECK-SAME:           outs(%[[CT]] :
 //      CHECK:       %[[INS:.+]] = tensor.insert_slice %[[TILED]] into %[[INIT1]]
@@ -50,7 +50,7 @@ module attributes {transform.with_named_sequence} {
 
 func.func @tile_elementwise_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
                                     %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
-  %r = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %r = linalg.elementwise <add>
       ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%C : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %r : tensor<?x?xf32>
@@ -87,7 +87,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-DAG:       %[[AT:.+]] = tensor.extract_slice %[[A]][%[[IV0]], %[[IV1]]] [%[[TS0]], %[[TS1]]] [1, 1]
 //  CHECK-DAG:       %[[BT:.+]] = tensor.extract_slice %[[B]][%[[IV0]], %[[IV1]]] [%[[TS0]], %[[TS1]]] [1, 1]
 //  CHECK-DAG:       %[[CT:.+]] = tensor.extract_slice %[[INIT1]][%[[IV0]], %[[IV1]]] [%[[TS0]], %[[TS1]]] [1, 1]
-//      CHECK:       %[[TILED:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
+//      CHECK:       %[[TILED:.+]] = linalg.elementwise <add>
 // CHECK-SAME:           ins(%[[AT]], %[[BT]] :
 // CHECK-SAME:           outs(%[[CT]] :
 //      CHECK:       tensor.insert_slice %[[TILED]] into %[[INIT1]]
@@ -99,7 +99,7 @@ module attributes {transform.with_named_sequence} {
 
 func.func @tile_elementwise_memref(%A: memref<128x256xf32>,
                                    %B: memref<128x256xf32>) {
-  linalg.elementwise kind=#linalg.elementwise_kind<negf>
+  linalg.elementwise <negf>
       ins(%A : memref<128x256xf32>)
       outs(%B : memref<128x256xf32>)
   return
@@ -128,7 +128,7 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:     scf.for %[[IV1:.+]] = %[[C0]] to %[[C256]] step %[[C64]]
 //  CHECK-DAG:       %[[AT:.+]] = memref.subview %[[A]][%[[IV0]], %[[IV1]]] [32, 64] [1, 1]
 //  CHECK-DAG:       %[[BT:.+]] = memref.subview %[[B]][%[[IV0]], %[[IV1]]] [32, 64] [1, 1]
-//      CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<negf>
+//      CHECK:       linalg.elementwise <negf>
 // CHECK-SAME:           ins(%[[AT]] :
 // CHECK-SAME:           outs(%[[BT]] :
 
@@ -138,7 +138,7 @@ module attributes {transform.with_named_sequence} {
 
 func.func @tile_elementwise_forall(%A: tensor<128x256xf32>, %B: tensor<128x256xf32>,
                                    %C: tensor<128x256xf32>) -> tensor<128x256xf32> {
-  %r = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %r = linalg.elementwise <add>
       ins(%A, %B : tensor<128x256xf32>, tensor<128x256xf32>)
       outs(%C : tensor<128x256xf32>) -> tensor<128x256xf32>
   return %r : tensor<128x256xf32>
@@ -167,7 +167,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-DAG:     %[[AT:.+]] = tensor.extract_slice %[[A]][%[[OFF0]], %[[OFF1]]] [32, 64] [1, 1]
 //  CHECK-DAG:     %[[BT:.+]] = tensor.extract_slice %[[B]][%[[OFF0]], %[[OFF1]]] [32, 64] [1, 1]
 //  CHECK-DAG:     %[[CT:.+]] = tensor.extract_slice %[[INIT]][%[[OFF0]], %[[OFF1]]] [32, 64] [1, 1]
-//      CHECK:     %[[TILED:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
+//      CHECK:     %[[TILED:.+]] = linalg.elementwise <add>
 // CHECK-SAME:         ins(%[[AT]], %[[BT]] :
 // CHECK-SAME:         outs(%[[CT]] :
 //      CHECK:     scf.forall.in_parallel
@@ -185,7 +185,7 @@ module attributes {transform.with_named_sequence} {
 
 func.func @tile_elementwise_broadcast(%A: tensor<256xf32>,
                                       %B: tensor<128x256xf32>) -> tensor<128x256xf32> {
-  %r = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  %r = linalg.elementwise <exp>
       indexing_maps = [#map_in, #map_out]
       ins(%A : tensor<256xf32>)
       outs(%B : tensor<128x256xf32>) -> tensor<128x256xf32>
@@ -212,7 +212,7 @@ module attributes {transform.with_named_sequence} {
 // Input is 1-D: sliced only along d1, not d0.
 //      CHECK:       %[[AT:.+]] = tensor.extract_slice %[[A]][%[[IV1]]] [64] [1]
 //      CHECK:       %[[BT:.+]] = tensor.extract_slice %[[INIT1]][%[[IV0]], %[[IV1]]] [32, 64] [1, 1]
-//      CHECK:       %[[TILED:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+//      CHECK:       %[[TILED:.+]] = linalg.elementwise <exp>
 // CHECK-SAME:           ins(%[[AT]] : tensor<64xf32>)
 // CHECK-SAME:           outs(%[[BT]] : tensor<32x64xf32>)
 //      CHECK:       tensor.insert_slice %[[TILED]] into %[[INIT1]]
@@ -225,11 +225,11 @@ module attributes {transform.with_named_sequence} {
 func.func @tile_and_fuse_elementwise(%A: tensor<128x256xf32>,
                                      %B: tensor<128x256xf32>) -> tensor<128x256xf32> {
   %empty0 = tensor.empty() : tensor<128x256xf32>
-  %exp = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  %exp = linalg.elementwise <exp>
       ins(%A : tensor<128x256xf32>)
       outs(%empty0 : tensor<128x256xf32>) -> tensor<128x256xf32>
   %empty1 = tensor.empty() : tensor<128x256xf32>
-  %r = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %r = linalg.elementwise <add>
       ins(%exp, %B : tensor<128x256xf32>, tensor<128x256xf32>)
       outs(%empty1 : tensor<128x256xf32>) -> tensor<128x256xf32>
   return %r : tensor<128x256xf32>
@@ -256,10 +256,10 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:         iter_args(%[[INIT1:[a-zA-Z0-9]+]] = %[[INIT0]])
 // exp tile is generated from the original input, not the full exp result.
 //  CHECK-DAG:       %[[AT:.+]] = tensor.extract_slice %[[A]][%[[IV0]], %[[IV1]]] [32, 64] [1, 1]
-//      CHECK:       %[[EXP_TILE:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+//      CHECK:       %[[EXP_TILE:.+]] = linalg.elementwise <exp>
 // CHECK-SAME:           ins(%[[AT]] :
 //  CHECK-DAG:       %[[BT:.+]] = tensor.extract_slice %[[B]][%[[IV0]], %[[IV1]]] [32, 64] [1, 1]
-//      CHECK:       %[[ADD_TILE:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
+//      CHECK:       %[[ADD_TILE:.+]] = linalg.elementwise <add>
 // CHECK-SAME:           ins(%[[EXP_TILE]], %[[BT]] :
 //      CHECK:       tensor.insert_slice %[[ADD_TILE]] into %[[INIT1]]
 // CHECK-SAME:           [%[[IV0]], %[[IV1]]] [32, 64] [1, 1]

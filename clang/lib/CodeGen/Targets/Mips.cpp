@@ -50,7 +50,7 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
-  ABIArgInfo extendType(QualType Ty) const;
+  ABIArgInfo extendType(QualType Ty, llvm::Type *Padding = nullptr) const;
 };
 
 class MIPSTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -299,12 +299,19 @@ ABIArgInfo MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset,
          !getContext().getTargetInfo().hasInt128Type()))
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
+  // Scalars never get explicit padding on O32: CC_MipsO32 already does the
+  // alignment itself based on the argument's original alignment.
+  //
+  // For __int128 and other types that are 16-byte aligned this padding ensures
+  // that the value starts in an even-numbered register or stack slot.
+  llvm::Type *Padding =
+      IsO32 ? nullptr : getPaddingType(OrigOffset, CurrOffset);
+
   // All integral types are promoted to the GPR width.
   if (Ty->isIntegralOrEnumerationType())
-    return extendType(Ty);
+    return extendType(Ty, Padding);
 
-  return ABIArgInfo::getDirect(
-      nullptr, 0, IsO32 ? nullptr : getPaddingType(OrigOffset, CurrOffset));
+  return ABIArgInfo::getDirect(nullptr, 0, Padding);
 }
 
 llvm::Type*
@@ -495,14 +502,14 @@ RValue MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return Res;
 }
 
-ABIArgInfo MipsABIInfo::extendType(QualType Ty) const {
+ABIArgInfo MipsABIInfo::extendType(QualType Ty, llvm::Type *Padding) const {
   int TySize = getContext().getTypeSize(Ty);
 
   // MIPS64 ABI requires unsigned 32 bit integers to be sign extended.
   if (Ty->isUnsignedIntegerOrEnumerationType() && TySize == 32)
-    return ABIArgInfo::getSignExtend(Ty);
+    return ABIArgInfo::getSignExtend(Ty, /*T=*/nullptr, Padding);
 
-  return ABIArgInfo::getExtend(Ty);
+  return ABIArgInfo::getExtend(Ty, /*T=*/nullptr, Padding);
 }
 
 bool

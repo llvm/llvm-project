@@ -607,6 +607,12 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     enabling link-time optimization. Possible values are `Off`, `On`, `Thin`
     and `Full`. Defaults to OFF.
 
+**LLVM_ENABLE_LZMA**:STRING
+
+:   Used to decide if LLVM tools should support decompression of xz streams
+    with liblzma. Allowed values are `OFF`, `ON` (default, enable if liblzma is
+    found), and `FORCE_ON` (error if liblzma is not found).
+
 **LLVM_ENABLE_MODULES**:BOOL
 
 :   Compile with [Clang Header
@@ -638,6 +644,21 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     parallel to llvm instead of nested in `llvm/tools`. This feature allows
     having one build for only LLVM and another for clang+llvm using the same
     source checkout.
+
+    When Flang enables Clang and MLIR automatically as dependencies, they
+    contribute only targets needed by Flang to the default build. Their test
+    suites are disabled by default, and installation includes the libraries,
+    headers, and resources needed by Flang's installed binaries and CMake
+    package. Listing Clang or MLIR explicitly restores that project's complete
+    default build, test, and install behavior. Clang also retains its normal
+    behavior when LLDB or clang-tools-extra is enabled.
+
+    Flang's dependency libraries and headers can be selected in distributions
+    with `flang-dependencies` and `flang-dependency-headers`. Their CMake targets
+    are included in Flang's usual exports; an SDK distribution also needs the
+    corresponding LLVM libraries, headers, and CMake exports. Toolchain-only
+    installations omit dependency SDK libraries and headers, but retain shared
+    libraries, runtime tools, and compiler resource headers.
 
     The full list is:
 
@@ -864,11 +885,12 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 
 **LLVM_LIT_TOOLS_DIR**:PATH
 
-:   The path to GnuWin32 tools for tests. Valid on Windows host. Defaults to
-    the empty string, in which case lit will look for tools needed for tests
-    (e.g., `grep`, `sort`, etc.) in your `%PATH%`. If GnuWin32 is not in your
-    `%PATH%`, then you can set this variable to the GnuWin32 directory so that
-    lit can find tools needed for tests in that directory.
+:   The path to the [Git for Windows](https://git-scm.com/) tools for tests.
+    Valid on Windows host. Defaults to the empty string, in which case lit will
+    look for tools needed for tests (e.g., `grep`, `sort`, etc.) in your
+    `%PATH%`. If Git for Windows is not in your `%PATH%`, then you can set this
+    variable to the Git for Windows `usr/bin` sub-directory so that lit can
+    find tools needed for tests in that directory.
 
 **LLVM_NATIVE_TOOL_DIR**:STRING
 

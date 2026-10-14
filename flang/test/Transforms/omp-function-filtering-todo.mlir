@@ -56,7 +56,7 @@ module attributes {omp.is_gpu = true, omp.is_target_device = true} {
     omp.yield(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   }
 
-  func.func @f2(%ia : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false>} {
+  func.func @f2(%ia : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter, automap = false>} {
     %c1_i32 = arith.constant 1 : i32
     omp.wsloop reduction(byref @red2 %ia -> %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
       omp.loop_nest (%arg1) : i32 = (%c1_i32) to (%c1_i32) inclusive step (%c1_i32) {

@@ -88,3 +88,54 @@ body: |
     %3:_(<vscale x 4 x i16>) = G_AND %0, %2
     %4:_(<vscale x 2 x i16>) = G_EXTRACT_SUBVECTOR %3, 0
 ...
+---
+---
+# computeNumSignBits: sign bits propagate through extract subvector
+# Tests both lower and upper half extraction
+name: ExtractSubvector_Sext
+body: |
+  bb.0:
+  ; CHECK-LABEL: name: @ExtractSubvector_Sext
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %4:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %5:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+    %0:_(i8) = COPY $b0
+    %1:_(i16) = COPY $h1
+    %2:_(i16) = G_SEXT %0
+    %3:_(<8 x i16>) = G_BUILD_VECTOR %2, %2, %2, %2, %2, %1, %2, %2
+    %4:_(<4 x i16>) = G_EXTRACT_SUBVECTOR %3, 0
+    %5:_(<4 x i16>) = G_EXTRACT_SUBVECTOR %3, 4
+...
+---
+# computeNumSignBits: unknown in lower half, extract upper half
+name: ExtractSubvector_Sext_HighIndex
+body: |
+  bb.0:
+  ; CHECK-LABEL: name: @ExtractSubvector_Sext_HighIndex
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %4:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+    %0:_(i8) = COPY $b0
+    %1:_(i16) = COPY $h1
+    %2:_(i16) = G_SEXT %0
+    %3:_(<8 x i16>) = G_BUILD_VECTOR %1, %1, %1, %1, %2, %2, %2, %2
+    %4:_(<4 x i16>) = G_EXTRACT_SUBVECTOR %3, 4
+...
+---
+# computeNumSignBits: scalable vector conservative
+name: ExtractSubvector_Sext_Scalable
+body: |
+  bb.0:
+  ; CHECK-LABEL: name: @ExtractSubvector_Sext_Scalable
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+    %0:_(<vscale x 4 x i8>) = COPY $z0
+    %1:_(<vscale x 4 x i16>) = G_SEXT %0
+    %2:_(<vscale x 2 x i16>) = G_EXTRACT_SUBVECTOR %1, 0
+...

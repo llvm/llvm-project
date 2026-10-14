@@ -132,6 +132,12 @@ namespace strcmp {
   static_assert(__builtin_strncmp("abaa", "abba", 0) == 0);
   static_assert(__builtin_strncmp(0, 0, 0) == 0);
   static_assert(__builtin_strncmp("abab\0banana", "abab\0canada", 100) == 0);
+
+
+  constexpr char missingInit[] = bar__; // both-error {{use of undeclared identifier 'bar__'}} \
+                                        // ref-note {{declared here}}
+  static_assert(__builtin_strcmp(missingInit, "bar") == 0, ""); // both-error {{not an integral constant expression}} \
+                                                                // ref-note {{initializer of 'missingInit' is unknown}}
 }
 
 namespace WcsCmp {
@@ -180,7 +186,7 @@ namespace WcsCmp {
 
 /// Copied from constant-expression-cxx11.cpp
 namespace strlen {
-constexpr const char *a = "foo\0quux";
+  constexpr const char *a = "foo\0quux";
   constexpr char b[] = "foo\0quux";
   constexpr int f() { return 'u'; }
   constexpr char c[] = { 'f', 'o', 'o', 0, 'q', f(), 'u', 'x', 0 };
@@ -2034,9 +2040,9 @@ namespace WithinLifetime {
     constexpr const int &temp = 0; // both-error {{must be initialized by a constant expression}} \
                                    // both-note {{reference to temporary is not a constant expression}} \
                                    // both-note {{temporary created here}} \
-                                   // ref-note {{declared here}}
-    static_assert(__builtin_is_within_lifetime(&temp)); // ref-error {{not an integral constant expression}} \
-                                                        // ref-note {{initializer of 'temp' is not a constant expression}}
+                                   // both-note {{declared here}}
+    static_assert(__builtin_is_within_lifetime(&temp)); // both-error {{not an integral constant expression}} \
+                                                        // both-note {{initializer of 'temp' is not a constant expression}}
   }
 }
 
@@ -2146,4 +2152,14 @@ namespace SubCb {
 namespace ReduceMin {
   typedef float v4f __attribute__((__vector_size__(16)));
   static_assert(__builtin_reduce_min((v4f){1.123, 2.123, 3.123, 4.123}) == 0); // both-error {{not an integral constant expression}}
+}
+
+namespace Rejected {
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+    __builtin_alloca(10 / 0); // both-note 2{{subexpression not valid in a constant expression}} \
+                              // both-warning {{division by zero is undefined}}
+    return 1;
+  }
+  static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
 }
