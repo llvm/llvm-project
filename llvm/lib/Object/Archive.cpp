@@ -574,15 +574,21 @@ Expected<const char *> BigArchiveMemberHeader::getNextChildLoc() const {
   if (!NextOffsetOrErr)
     return NextOffsetOrErr.takeError();
 
-  // NextOffset is read from the member header, whose field is wide enough to
-  // hold any 64-bit value. Check it against the archive's size before forming
-  // the pointer: adding a large offset to the start of the buffer wraps, and
-  // the result then compares as though it pointed inside the archive.
+  // NextOffset is read from the member header, so check it against the
+  // archive's size before forming the pointer. Adding a large offset to the
+  // start of the buffer wraps, and the result then compares as though it
+  // pointed inside the archive, so Child::getNext() cannot catch it.
   uint64_t NextOffset = NextOffsetOrErr.get();
-  if (NextOffset > Parent->getData().size())
-    return malformedError(
-        "malformed AIX big archive: next archive member offset 0x" +
-        Twine::utohexstr(NextOffset) + " goes past the end of file");
+  if (NextOffset > Parent->getData().size()) {
+    std::string Msg("offset to next archive member past the end of the archive "
+                    "after member ");
+    Expected<StringRef> NameOrErr = getRawName();
+    if (!NameOrErr) {
+      consumeError(NameOrErr.takeError());
+      return malformedError(Msg + "at offset " + Twine(getOffset()));
+    }
+    return malformedError(Msg + *NameOrErr);
+  }
 
   return Parent->getData().data() + NextOffset;
 }
