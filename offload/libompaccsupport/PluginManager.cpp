@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginManager.h"
-#include "OffloadPolicy.h"
 #include "OmpAccError.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/OffloadRTL.h"
