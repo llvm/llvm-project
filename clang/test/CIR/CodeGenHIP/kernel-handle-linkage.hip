@@ -13,11 +13,11 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip -fhip-new-launch-api \
 // RUN:            -mrelocation-model pic -pic-level 2 -pic-is-pie \
 // RUN:            -fclangir -I%S/../CodeGenCUDA/Inputs/ -emit-llvm %s -o - \
-// RUN:   | FileCheck --check-prefixes=PIE,PIE-CIR %s
+// RUN:   | FileCheck --check-prefix=PIE %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip -fhip-new-launch-api \
 // RUN:            -mrelocation-model pic -pic-level 2 -pic-is-pie \
 // RUN:            -I%S/../CodeGenCUDA/Inputs/ -emit-llvm %s -o - \
-// RUN:   | FileCheck --check-prefixes=PIE,PIE-OGCG %s
+// RUN:   | FileCheck --check-prefix=PIE %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip -fhip-new-launch-api \
 // RUN:            -mrelocation-model static \
@@ -119,18 +119,12 @@ static __global__ void fwd_kernel(int *p) {}
 // STATIC-DAG: @_Z15ext_decl_kernelPi = external dso_local constant ptr, align 8
 
 // Under PIE, a handle defined in the executable can't be replaced by another
-// definition, so CIR marks it dso_local as it would any global variable.
-// Classic codegen copies the stub's dso_local while the stub is still a
-// declaration, so its handles are not. Both are correct. A handle that is only
-// declared is dso_local in neither, as it may be defined in a shared library.
+// definition, so it is dso_local as any global variable would be. A handle that
+// is only declared is not, as it may be defined in a shared library.
 // PIE-DAG: @_ZL13static_kernelPi = internal constant ptr @_ZL28__device_stub__static_kernelPi, align 8
 // PIE-DAG: @_Z17hidden_ext_kernelPi = external hidden constant ptr, align 8
 // PIE-DAG: @_Z15ext_decl_kernelPi = external constant ptr, align 8
-// PIE-CIR-DAG: @_Z10ext_kernelPi = dso_local constant ptr @_Z25__device_stub__ext_kernelPi, align 8
-// PIE-CIR-DAG: @_Z4tmplIiEvPT_ = linkonce_odr dso_local constant ptr @_Z19__device_stub__tmplIiEvPT_, comdat, align 8
-// PIE-CIR-DAG: @_Z4instIfEvPT_ = weak_odr dso_local constant ptr @_Z19__device_stub__instIfEvPT_, comdat, align 8
-// PIE-CIR-DAG: @_Z9decl_onlyIiEvPT_ = dso_local constant ptr @_Z24__device_stub__decl_onlyIiEvPT_, align 8
-// PIE-OGCG-DAG: @_Z10ext_kernelPi = constant ptr @_Z25__device_stub__ext_kernelPi, align 8
-// PIE-OGCG-DAG: @_Z4tmplIiEvPT_ = linkonce_odr constant ptr @_Z19__device_stub__tmplIiEvPT_, comdat, align 8
-// PIE-OGCG-DAG: @_Z4instIfEvPT_ = weak_odr constant ptr @_Z19__device_stub__instIfEvPT_, comdat, align 8
-// PIE-OGCG-DAG: @_Z9decl_onlyIiEvPT_ = constant ptr @_Z24__device_stub__decl_onlyIiEvPT_, align 8
+// PIE-DAG: @_Z10ext_kernelPi = dso_local constant ptr @_Z25__device_stub__ext_kernelPi, align 8
+// PIE-DAG: @_Z4tmplIiEvPT_ = linkonce_odr dso_local constant ptr @_Z19__device_stub__tmplIiEvPT_, comdat, align 8
+// PIE-DAG: @_Z4instIfEvPT_ = weak_odr dso_local constant ptr @_Z19__device_stub__instIfEvPT_, comdat, align 8
+// PIE-DAG: @_Z9decl_onlyIiEvPT_ = dso_local constant ptr @_Z24__device_stub__decl_onlyIiEvPT_, align 8
