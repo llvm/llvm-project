@@ -8963,11 +8963,10 @@ static Value *getNotValue(Value *V) {
 }
 
 /// Match non-obvious integer minimum and maximum sequences.
-static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
-                                       Value *CmpLHS, Value *CmpRHS,
-                                       Value *TrueVal, Value *FalseVal,
-                                       Value *&LHS, Value *&RHS,
-                                       unsigned Depth) {
+static SelectPatternResult matchMinMax(CmpInst::Predicate Pred, Value *CmpLHS,
+                                       Value *CmpRHS, Value *TrueVal,
+                                       Value *FalseVal, Value *&LHS,
+                                       Value *&RHS) {
   // Assume success. If there's no match, callers should not use these anyway.
   LHS = TrueVal;
   RHS = FalseVal;
@@ -9355,7 +9354,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   }
 
   if (CmpInst::isIntPredicate(Pred))
-    return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS, Depth);
+    return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
 
   // According to (IEEE 754-2008 5.3.1), minNum(0.0, -0.0) and similar
   // may return either -0.0 or 0.0, so fcmp/select pair has stricter
