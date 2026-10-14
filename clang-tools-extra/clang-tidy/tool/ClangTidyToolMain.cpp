@@ -15,7 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangTidyMain.h"
+#include "llvm/Support/LLVMDriver.h"
 
-int main(int argc, const char **argv) {
+int clang_tidy_main(int argc, char **argv, const llvm::ToolContext &) {
   return clang::tidy::clangTidyMain(argc, argv);
 }
