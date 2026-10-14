@@ -1468,7 +1468,8 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
       // Pass the Predicates pointer to isDereferenceableAndAlignedInLoop so
       // that it will consider loops that need guarding by SCEV checks. The
       // vectoriser will generate these checks if we decide to vectorise.
-      if (LI && !LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI) &&
+      if (LI && canVectorizeTy(LI->getType()) &&
+          !mustSuppressSpeculation(*LI) &&
           CanSpeculatePointerOp(LI->getPointerOperand()) &&
           isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC,
                                             &Predicates))
