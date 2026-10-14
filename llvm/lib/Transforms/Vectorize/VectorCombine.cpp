@@ -7236,8 +7236,9 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   const DataLayout *DL = &F.getDataLayout();
   TTI::TargetCostKind CostKind =
       F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
-  VectorCombine Combiner(VectorizeOptions::Global, F, TTI, DT, AA, AC, DL,
-                         CostKind, TryEarlyFoldsOnly);
+  VectorCombine Combiner(
+      F.getContext().getLibraryOptions().get<VectorizeOptions>(), F, TTI, DT,
+      AA, AC, DL, CostKind, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
