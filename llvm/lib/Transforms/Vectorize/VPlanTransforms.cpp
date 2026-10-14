@@ -3532,12 +3532,22 @@ static bool handleUncountableExitsWithSideEffects(
 }
 
 /// Returns true if any non-branch recipe in the loop may have side effects.
-static bool loopHasSideEffects(VPBasicBlock *HeaderVPBB) {
-  for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB))
-    for (VPRecipeBase &R : *VPBB)
-      if (R.mayHaveSideEffects() && &R != VPBB->getTerminator())
-        return true;
-  return false;
+static bool loopMayHaveSideEffects(VPBasicBlock *HeaderVPBB) {
+  return any_of(vp_rpo_plain_cfg_loop_body(HeaderVPBB), [](VPBasicBlock *VPBB) {
+    return any_of(*VPBB, [VPBB](VPRecipeBase &R) {
+      if (&R == VPBB->getTerminator() || !R.mayHaveSideEffects())
+        return false;
+      // Match LoopVectorizationLegality::isVectorizableEarlyExitLoop and check
+      // mayWriteToMemory
+      // // TODO: Remove reliance on underlying value once memory
+      // attrs are modeled in VPlan.
+      if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
+        if (auto *I =
+                dyn_cast_if_present<Instruction>(Def->getUnderlyingValue()))
+          return I->mayWriteToMemory();
+      return true;
+    });
+  });
 }
 
 bool VPlanTransforms::handleUncountableEarlyExits(
@@ -3551,7 +3561,7 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
 
-  if (loopHasSideEffects(HeaderVPBB))
+  if (loopMayHaveSideEffects(HeaderVPBB))
     Style = UncountableExitStyle::MaskedHandleExitInScalarLoop;
 
   // Dereferenceability is checked separately for uncountable exit loops with
