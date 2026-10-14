@@ -236,8 +236,8 @@ public:
 
   void exportSarifResult(const ClangTidyError &Error,
                          const SourceLocation Loc) {
-    assert(SarifWriter &&
-           "SarifWriter must be initialized to export SARIF results");
+    if (!SarifWriter)
+      return;
 
     const auto [RuleIndexEntryIt, Inserted] =
         SarifRuleIdx.try_emplace(Error.DiagnosticName, 0);
@@ -282,7 +282,8 @@ public:
     else
       for (const tooling::DiagnosticMessage &Note : Error.Notes)
         Result = Result.addRelatedLocations(getNoteRange(Note), Note.Message);
-    SarifWriter->appendResult(Result);
+    if (SarifWriter)
+      SarifWriter->appendResult(Result);
   }
 
   // SARIF regions need a character range: use 1 char at Loc, or 0 at EOF.
@@ -379,6 +380,8 @@ private:
   }
 
   void finalizeSarif() {
+    if (!SarifWriter)
+      return;
     const llvm::json::Value Document = SarifWriter->createDocument();
     if (SarifExportPath == "-") {
       llvm::outs() << llvm::formatv("{0:2}", Document);

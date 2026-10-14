@@ -751,7 +751,7 @@ int clangTidyMain(int argc, const char **argv) {
   if (!SarifExport.empty() && SarifExport != "-") {
     std::error_code EC;
     {
-      llvm::raw_fd_ostream OS(SarifExport, EC, llvm::sys::fs::OF_Text);
+      const llvm::raw_fd_ostream OS(SarifExport, EC, llvm::sys::fs::OF_Text);
     }
     if (EC) {
       llvm::errs() << "Error opening SARIF export file '" << SarifExport
