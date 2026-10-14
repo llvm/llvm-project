@@ -95,10 +95,12 @@ InstructionCost
 getCompressedLoadCost(const TargetTransformInfo &TTI, const LoadInst *LI0,
                       const CompressedLoadInfo &Info,
                       TargetTransformInfo::TargetCostKind CostKind) {
-  if (Info.InterleaveFactor)
+  if (Info.InterleaveFactor) {
+    assert(!Info.IsMasked && "Masked interleaved loads are not supported");
     return TTI.getInterleavedMemoryOpCost(
         Instruction::Load, Info.LoadVecTy, Info.InterleaveFactor, {},
         LI0->getAlign(), LI0->getPointerAddressSpace(), CostKind);
+  }
 
   InstructionCost Cost;
   if (Info.IsMasked) {
