@@ -19543,9 +19543,34 @@ static SDValue combineSubShiftToOrcB(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::ORC_B, SDLoc(N), VT, LeftShiftOperand);
 }
 
+// fold (sub 0, (select_cc lhs, rhs, cc, (sub X, Y), (sub Y, X))) ->
+//      (select_cc lhs, rhs, cc, (sub Y, X), (sub X, Y))
+static SDValue combineNegOfSelectCCSubs(SDNode *N, SelectionDAG &DAG) {
+  if (!isNullConstant(N->getOperand(0)))
+    return SDValue();
+
+  SDValue Sel = N->getOperand(1);
+  if (Sel.getOpcode() != RISCVISD::SELECT_CC || !Sel.hasOneUse())
+    return SDValue();
+
+  SDValue TrueV = Sel.getOperand(3);
+  SDValue FalseV = Sel.getOperand(4);
+  if (TrueV.getOpcode() != ISD::SUB || FalseV.getOpcode() != ISD::SUB ||
+      TrueV.getOperand(0) != FalseV.getOperand(1) ||
+      TrueV.getOperand(1) != FalseV.getOperand(0))
+    return SDValue();
+
+  return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), N->getValueType(0),
+                     Sel.getOperand(0), Sel.getOperand(1), Sel.getOperand(2),
+                     FalseV, TrueV);
+}
+
 static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   if (SDValue V = combineSubOfBoolean(N, DAG))
+    return V;
+
+  if (SDValue V = combineNegOfSelectCCSubs(N, DAG))
     return V;
 
   EVT VT = N->getValueType(0);
