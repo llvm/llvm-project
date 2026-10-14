@@ -195,7 +195,12 @@ def run_ssaf_transformation_pass(
         )
     logging_diagnostics.report_transformation(
         ssaf_artifact_repo.get_path_for_artifact(edits),
-        ssaf_artifact_repo.get_conflicts(),
+        ssaf_artifact_repo.get_path_if_present(
+            get_ssaf_artifact_id(link_unit, SSAFArtifactKind.REPORT)
+        ),
+        ssaf_artifact_repo.get_path_if_present(
+            get_ssaf_artifact_id(link_unit, SSAFArtifactKind.CONFLICT_REPORT)
+        ),
     )
     return None
 
