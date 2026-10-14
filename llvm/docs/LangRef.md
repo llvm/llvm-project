@@ -8789,9 +8789,9 @@ Irreducible loop header weights are typically based on profile data.
 
 #### '`invariant.load`' Metadata
 
-The `invariant.load` metadata may be attached to load operations or to intrinsic
-calls that only read memory (though it is possible this may be extended in the
-future if the need arises).
+The `invariant.load` metadata may be attached to load operations or to
+calls that only read memory. (This may be extended in the
+future for calls that both read/write the memory, i.e. MemIntrinsic, if the need arises)
 
 If an `invariant.load`-tagged operation is executed, every memory location
 read by that operation must contain the same value at all points in the program
@@ -8812,6 +8812,9 @@ call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %p, <4 x i1> %mask, <4 x i32> zero
 call i32 @llvm.read_register.i32(metadata !1), !invariant.load !0
 !0 = !{}
 !1 = !{!"reg"}
+
+;; Invariant load from a call.
+call <4 x float> @readonly_call(ptr %p), !invariant.load !0
 ```
 
 (md_invariant.group)=

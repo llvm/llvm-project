@@ -57,4 +57,15 @@ define <4 x i32> @vp_gather_invariant(ptr %p, <4 x ptr> %ptrs, <4 x i1> %mask, i
   ret <4 x i32> %v
 }
 
+define i32 @ordinary_readonly_call_with_metadata(ptr %p) {
+; CHECK-LABEL: define i32 @ordinary_readonly_call_with_metadata(
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: call void @clobber(ptr %p)
+; CHECK: MemoryUse(1)
+; CHECK-NEXT: %v = call i32 @readonly_call(ptr %p), !invariant.load !0
+  call void @clobber(ptr %p)
+  %v = call i32 @readonly_call(ptr %p), !invariant.load !0
+  ret i32 %v
+}
+
 !0 = !{}

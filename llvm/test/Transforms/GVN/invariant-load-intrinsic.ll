@@ -70,6 +70,20 @@ define <4 x i32> @vp_gather_invariant(ptr %p, <4 x ptr> %ptrs, <4 x i1> %mask, i
   ret <4 x i32> %b
 }
 
+define ptr @ordinary_readonly_call_with_metadata(ptr %p, i32 %off) {
+; CHECK-LABEL: define ptr @ordinary_readonly_call_with_metadata(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[OFF:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call ptr @readonly_call(ptr [[P]], i32 [[OFF]]), !invariant.load [[META0]]
+; CHECK-NEXT:    call void @clobber(ptr [[P]])
+; CHECK-NEXT:    [[B:%.*]] = call ptr @readonly_call(ptr [[P]], i32 [[OFF]]), !invariant.load [[META0]]
+; CHECK-NEXT:    ret ptr [[B]]
+;
+  %a = call ptr @readonly_call(ptr %p, i32 %off), !invariant.load !0
+  call void @clobber(ptr %p)
+  %b = call ptr @readonly_call(ptr %p, i32 %off), !invariant.load !0
+  ret ptr %b
+}
+
 define i32 @read_register_with_metadata(ptr %p) {
 ; CHECK-LABEL: define i32 @read_register_with_metadata(
 ; CHECK-SAME: ptr [[P:%.*]]) {

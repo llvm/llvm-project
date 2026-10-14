@@ -6098,10 +6098,10 @@ void Verifier::visitInstruction(Instruction &I) {
   }
 
   if (I.hasMetadata(LLVMContext::MD_invariant_load)) {
-    auto *II = dyn_cast<IntrinsicInst>(&I);
-    Check(isa<LoadInst>(I) || (II && II->onlyReadsMemory()),
+    auto *CB = dyn_cast<CallBase>(&I);
+    Check(isa<LoadInst>(I) || (CB && CB->onlyReadsMemory()),
           "invariant.load metadata is only for loads and readonly "
-          "intrinsic calls",
+          "calls",
           &I);
   }
 
