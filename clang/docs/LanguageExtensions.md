@@ -2236,12 +2236,15 @@ int foo() {
 On targets where the platform's default ordinary literal encoding differs from
 UTF-8 (such as z/OS, where the system default encoding is IBM-1047):
 
-* **ASM template strings**: Asm template strings used in `asm` statements or
-  `asm` labels (such as `asm("...")` or `__asm__("...")`) are parsed and
-  interpreted using the target system's default encoding (such as IBM-1047 on
-  z/OS) rather than the literal encoding specified by `-fexec-charset=`. This
-  ensures that escape sequences (such as octal or hexadecimal byte escapes) are
-  interpreted as system/assembler code points.
+* **String literals**: A string literal used as the template string in an
+  extended asm statement, as the instruction string in a basic asm statement,
+  or as the string specifying the assembler name or register in an asm label or
+  a global/local register variable declaration (such as `asm("...")` or
+  `__asm__("...")`) is parsed and interpreted using the target system's default
+  encoding (such as IBM-1047 on z/OS) rather than the literal encoding
+  specified by `-fexec-charset=`. This ensures that escape sequences (such as
+  octal or hexadecimal byte escapes) are interpreted as system/assembler code
+  points.
 
 * **Constexpr string expressions in ASM statements**: When a parenthesized
   constant expression is provided in place of an `asm` string, string literals
@@ -2259,8 +2262,8 @@ constexpr std::string_view takeStringAndReturnEmptyStringView(const char *str) {
 
 int main(void) {
   // Template strings in asm statements are interpreted in the system encoding
-  // (IBM-1047).
-  asm("\t\x95\x96\x97");
+  // (IBM-1047 on z/OS).
+  asm("\t\x95\x96\x97"); // This generates a "nop" in IBM-1047
 
   // String literals within the constexpr expression are encoded in the
   // execution character set specified by -fexec-charset=.
@@ -5615,11 +5618,11 @@ The builtins return 0 if the values are equal, or 1 if they are unequal.
 
 #### ASM string literal encoding
 
-On z/OS, the system default encoding is IBM-1047. Template strings in `asm`
-statements and `asm` labels are interpreted using IBM-1047 regardless of
-`-fexec-charset=`. When using parenthesized constant expressions in `asm`
-statements, string literals within the constant expression are instead encoded
-using the execution character set specified by `-fexec-charset=`.
+On z/OS, the system default encoding is IBM-1047, which has implications for
+ASM strings. See
+[String literal encoding in ASM statements](#string-literal-encoding-in-asm-statements)
+for details.
+
 
 ## Extensions for Static Analysis
 
