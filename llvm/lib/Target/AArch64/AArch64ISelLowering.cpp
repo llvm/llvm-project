@@ -20198,10 +20198,9 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
       EVT VT = getValueType(DL, Ty);
 
       if (I) {
-        if (User *U = I->getUniqueUndroppableUser()) {
-          if (isa<ZExtInst, SExtInst>(U))
-            VT = getValueType(DL, U->getType());
-        }
+        User *U = I->getUniqueUndroppableUser();
+        if (isa_and_nonnull<ZExtInst, SExtInst>(U))
+          VT = getValueType(DL, U->getType());
       }
 
       LLVMContext &Ctx = Ty->getContext();
