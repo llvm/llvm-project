@@ -137,6 +137,7 @@ LLVM_ABI extern const bool PrintDAGs;
 #endif
 
 class AAResults;
+class AntiDepBreaker;
 class LiveIntervals;
 class MachineFunction;
 class MachineInstr;
@@ -324,8 +325,27 @@ protected:
   MachineBlockFrequencyInfo *MBFI;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
 
-  struct AntiDepState;
-  std::unique_ptr<AntiDepState> AntiDep;
+  struct AntiDepState {
+    std::unique_ptr<AntiDepBreaker> Breaker;
+    unsigned EndIndex = 0;
+    MachineBasicBlock::iterator ScanPos;
+    bool RegionProcessed = false;
+
+    AntiDepState(MachineSchedContext *C,
+                 TargetSubtargetInfo::AntiDepBreakMode AntiDepMode);
+    ~AntiDepState();
+
+    void startBlock(MachineBasicBlock *MBB);
+    void finishBlock();
+    void enterRegion(MachineBasicBlock *MBB, MachineBasicBlock::iterator End);
+    void exitRegion(MachineBasicBlock::iterator Begin,
+                    MachineBasicBlock::iterator End);
+    bool breakAntiDependencies(const std::vector<SUnit> &SUnits,
+                               MachineBasicBlock::iterator Begin,
+                               MachineBasicBlock::iterator End,
+                               DbgValueVector &DbgValues);
+    void finishRegion();
+  } AntiDep;
 
   /// Ordered list of DAG postprocessing steps.
   std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;

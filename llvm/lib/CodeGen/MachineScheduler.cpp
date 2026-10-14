@@ -400,7 +400,7 @@ public:
   struct RequiredAnalyses {
     MachineLoopInfo &MLI;
     AAResults &AA;
-    RegisterClassInfo &RegClassInfo;
+    RegisterClassInfo &RCI;
   };
   PostMachineSchedulerImpl() = default;
   // Migration only
@@ -740,7 +740,7 @@ bool PostMachineSchedulerImpl::run(MachineFunction &Func,
   MLI = &Analyses.MLI;
   this->TM = &TM;
   AA = &Analyses.AA;
-  RegClassInfo = &Analyses.RegClassInfo;
+  RegClassInfo = &Analyses.RCI;
 
   if (VerifyScheduling) {
     const char *PostMSchedBanner = "Before post machine scheduling.";
@@ -921,10 +921,9 @@ bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto &RegClassInfo =
-      getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  auto &RCI = getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   Impl.setLegacyPass(this);
-  return Impl.run(MF, TM, {MLI, AA, RegClassInfo});
+  return Impl.run(MF, TM, {MLI, AA, RCI});
 }
 
 PreservedAnalyses
@@ -942,10 +941,10 @@ PostMachineSchedulerPass::run(MachineFunction &MF,
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   auto &AA = FAM.getResult<AAManager>(MF.getFunction());
-  auto &RegClassInfo = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  auto &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
 
   Impl->setMFAM(&MFAM);
-  bool Changed = Impl->run(MF, *TM, {MLI, AA, RegClassInfo});
+  bool Changed = Impl->run(MF, *TM, {MLI, AA, RCI});
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -1120,40 +1119,105 @@ LLVM_DUMP_METHOD void ReadyQueue::dump() const {
 // virtual registers.
 // ===----------------------------------------------------------------------===/
 
-// Provide a vtable anchor.
-struct ScheduleDAGMI::AntiDepState {
-  std::unique_ptr<AntiDepBreaker> Breaker;
-  unsigned EndIndex = 0;
-  MachineBasicBlock::iterator ScanPos;
-  bool RegionProcessed = false;
-};
+ScheduleDAGMI::AntiDepState::AntiDepState(
+    MachineSchedContext *C, TargetSubtargetInfo::AntiDepBreakMode AntiDepMode) {
+  if (AntiDepMode == TargetSubtargetInfo::ANTIDEP_NONE)
+    return;
 
+  assert(C->MF->getRegInfo().tracksLiveness() &&
+         "Live-ins must be accurate for anti-dependency breaking");
+  assert(C->RegClassInfo &&
+         "Register class info is required for anti-dependency breaking");
+  if (AntiDepMode == TargetSubtargetInfo::ANTIDEP_ALL) {
+    SmallVector<const TargetRegisterClass *, 4> CriticalPathRCs;
+    C->MF->getSubtarget().getCriticalPathRCs(CriticalPathRCs);
+    Breaker = std::make_unique<AggressiveAntiDepBreaker>(
+        *C->MF, *C->RegClassInfo, CriticalPathRCs);
+  } else {
+    assert(AntiDepMode == TargetSubtargetInfo::ANTIDEP_CRITICAL);
+    Breaker.reset(createCriticalAntiDepBreaker(*C->MF, *C->RegClassInfo));
+  }
+}
+
+ScheduleDAGMI::AntiDepState::~AntiDepState() = default;
+
+void ScheduleDAGMI::AntiDepState::startBlock(MachineBasicBlock *MBB) {
+  if (!Breaker)
+    return;
+  Breaker->StartBlock(MBB);
+  ScanPos = MBB->end();
+  EndIndex = MBB->size();
+}
+
+void ScheduleDAGMI::AntiDepState::finishBlock() {
+  if (!Breaker)
+    return;
+  Breaker->FinishBlock();
+}
+
+void ScheduleDAGMI::AntiDepState::enterRegion(MachineBasicBlock *MBB,
+                                              MachineBasicBlock::iterator End) {
+  if (!Breaker)
+    return;
+
+  unsigned Count =
+      std::distance(MBB->instr_begin(), ScanPos.getInstrIterator());
+  for (auto I = ScanPos; I != End;) {
+    MachineInstr &MI = *--I;
+    --Count;
+    if (!MI.isDebugOrPseudoInstr())
+      Breaker->Observe(MI, Count, EndIndex);
+    if (MI.isBundle())
+      Count -= MI.getBundleSize();
+  }
+  EndIndex = std::distance(MBB->instr_begin(), End.getInstrIterator());
+  RegionProcessed = false;
+}
+
+void ScheduleDAGMI::AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
+                                             MachineBasicBlock::iterator End) {
+  if (!Breaker)
+    return;
+
+  if (!RegionProcessed) {
+    unsigned Count = EndIndex;
+    for (auto I = End; I != Begin;) {
+      MachineInstr &MI = *--I;
+      --Count;
+      if (!MI.isDebugOrPseudoInstr())
+        Breaker->Observe(MI, Count, EndIndex);
+      if (MI.isBundle())
+        Count -= MI.getBundleSize();
+    }
+  }
+  ScanPos = Begin;
+}
+
+bool ScheduleDAGMI::AntiDepState::breakAntiDependencies(
+    const std::vector<SUnit> &SUnits, MachineBasicBlock::iterator Begin,
+    MachineBasicBlock::iterator End, DbgValueVector &DbgValues) {
+  if (!Breaker)
+    return false;
+  return Breaker->BreakAntiDependencies(SUnits, Begin, End, EndIndex,
+                                        DbgValues) != 0;
+}
+
+void ScheduleDAGMI::AntiDepState::finishRegion() {
+  if (!Breaker)
+    return;
+  RegionProcessed = true;
+}
+
+// Provide a vtable anchor.
 ScheduleDAGMI::ScheduleDAGMI(MachineSchedContext *C,
                              std::unique_ptr<MachineSchedStrategy> S,
                              bool RemoveKillFlags,
                              TargetSubtargetInfo::AntiDepBreakMode AntiDepMode)
     : ScheduleDAGInstrs(*C->MF, C->MLI, RemoveKillFlags), AA(C->AA),
-      LIS(C->LIS), MBFI(C->MBFI), SchedImpl(std::move(S)) {
-  if (SchedImpl->doMBBSchedRegionsTopDown())
-    AntiDepMode = TargetSubtargetInfo::ANTIDEP_NONE;
-  assert((AntiDepMode == TargetSubtargetInfo::ANTIDEP_NONE ||
-          C->MF->getRegInfo().tracksLiveness()) &&
-         "Live-ins must be accurate for anti-dependency breaking");
-  assert(
-      (AntiDepMode == TargetSubtargetInfo::ANTIDEP_NONE || C->RegClassInfo) &&
-      "Register class info is required for anti-dependency breaking");
-  if (AntiDepMode == TargetSubtargetInfo::ANTIDEP_ALL) {
-    SmallVector<const TargetRegisterClass *, 4> CriticalPathRCs;
-    C->MF->getSubtarget().getCriticalPathRCs(CriticalPathRCs);
-    AntiDep = std::make_unique<AntiDepState>();
-    AntiDep->Breaker = std::make_unique<AggressiveAntiDepBreaker>(
-        *C->MF, *C->RegClassInfo, CriticalPathRCs);
-  } else if (AntiDepMode == TargetSubtargetInfo::ANTIDEP_CRITICAL) {
-    AntiDep = std::make_unique<AntiDepState>();
-    AntiDep->Breaker.reset(
-        createCriticalAntiDepBreaker(*C->MF, *C->RegClassInfo));
-  }
-}
+      LIS(C->LIS), MBFI(C->MBFI), SchedImpl(std::move(S)),
+      AntiDep(C, SchedImpl->doMBBSchedRegionsTopDown()
+                     ? TargetSubtargetInfo::ANTIDEP_NONE
+                     : AntiDepMode) {}
 
 ScheduleDAGMI::~ScheduleDAGMI() = default;
 
@@ -1230,17 +1294,12 @@ void ScheduleDAGMI::releasePredecessors(SUnit *SU) {
 void ScheduleDAGMI::startBlock(MachineBasicBlock *bb) {
   ScheduleDAGInstrs::startBlock(bb);
   SchedImpl->enterMBB(bb);
-  if (AntiDep) {
-    AntiDep->Breaker->StartBlock(bb);
-    AntiDep->ScanPos = bb->end();
-    AntiDep->EndIndex = bb->size();
-  }
+  AntiDep.startBlock(bb);
 }
 
 void ScheduleDAGMI::finishBlock() {
   SchedImpl->leaveMBB();
-  if (AntiDep)
-    AntiDep->Breaker->FinishBlock();
+  AntiDep.finishBlock();
   ScheduleDAGInstrs::finishBlock();
 }
 
@@ -1254,21 +1313,7 @@ void ScheduleDAGMI::enterRegion(MachineBasicBlock *bb,
                                      unsigned regioninstrs)
 {
   ScheduleDAGInstrs::enterRegion(bb, begin, end, regioninstrs);
-  if (AntiDep) {
-    unsigned Count =
-        std::distance(bb->instr_begin(), AntiDep->ScanPos.getInstrIterator());
-    for (auto I = AntiDep->ScanPos; I != end;) {
-      MachineInstr &MI = *--I;
-      --Count;
-      if (!MI.isDebugOrPseudoInstr())
-        AntiDep->Breaker->Observe(MI, Count, AntiDep->EndIndex);
-      if (MI.isBundle())
-        Count -= MI.getBundleSize();
-    }
-    AntiDep->EndIndex =
-        std::distance(bb->instr_begin(), end.getInstrIterator());
-    AntiDep->RegionProcessed = false;
-  }
+  AntiDep.enterRegion(bb, end);
 
   SchedImpl->initPolicy(begin, end, regioninstrs);
 
@@ -1284,20 +1329,7 @@ void ScheduleDAGMI::enterRegion(MachineBasicBlock *bb,
 }
 
 void ScheduleDAGMI::exitRegion() {
-  if (AntiDep) {
-    if (!AntiDep->RegionProcessed) {
-      unsigned Count = AntiDep->EndIndex;
-      for (auto I = RegionEnd; I != RegionBegin;) {
-        MachineInstr &MI = *--I;
-        --Count;
-        if (!MI.isDebugOrPseudoInstr())
-          AntiDep->Breaker->Observe(MI, Count, AntiDep->EndIndex);
-        if (MI.isBundle())
-          Count -= MI.getBundleSize();
-      }
-    }
-    AntiDep->ScanPos = RegionBegin;
-  }
+  AntiDep.exitRegion(RegionBegin, RegionEnd);
   ScheduleDAGInstrs::exitRegion();
 }
 
@@ -1343,13 +1375,13 @@ void ScheduleDAGMI::schedule() {
   // Build the DAG.
   buildSchedGraph(AA);
 
-  if (AntiDep) {
-    unsigned Broken = AntiDep->Breaker->BreakAntiDependencies(
-        SUnits, RegionBegin, RegionEnd, AntiDep->EndIndex, DbgValues);
-    if (Broken != 0) {
-      ScheduleDAG::clearDAG();
-      buildSchedGraph(AA);
-    }
+  if (AntiDep.breakAntiDependencies(SUnits, RegionBegin, RegionEnd,
+                                    DbgValues)) {
+    // BreakAntiDependencies needs the original DAG to identify safe renames.
+    // Renaming invalidates its register dependencies, so rebuild it as the
+    // existing SchedulePostRATDList scheduler does. buildSchedGraph clears the
+    // old DAG itself, and this path runs only if a dependency was broken.
+    buildSchedGraph(AA);
   }
 
   postProcessDAG();
@@ -1418,8 +1450,7 @@ void ScheduleDAGMI::schedule() {
     dbgs() << '\n';
   });
 
-  if (AntiDep)
-    AntiDep->RegionProcessed = true;
+  AntiDep.finishRegion();
 }
 
 /// Apply each ScheduleDAGMutation step in order.
