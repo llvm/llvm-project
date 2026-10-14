@@ -684,6 +684,13 @@ features cannot lower the translation-unit ABI level;
   `-Wunsafe-buffer-usage-in-format-attr-call` now works when it is the only
   Safe Buffers warning enabled.
 
+- Added one diagnostic group per family of libc functions under
+  `-Wunsafe-buffer-usage-in-libc-call`, named by the suffixes
+  `-numeric-conversion`, `-string-manipulation`, `-string-examination`,
+  `-memory`, `-io`, `-printf` and `-scanf`. For example,
+  `-Wno-unsafe-buffer-usage-in-libc-call-string-examination` silences `strlen`
+  while `memcpy` is still diagnosed. (#GH127849)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
