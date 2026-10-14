@@ -107,6 +107,57 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_EQ(O.ratio, 0.25);
 }
 
+// An alias sets its target's member. A Flag alias supplies the value in its
+// AliasArgs.
+TEST(LibraryOptionsTest, Alias) {
+  BumpPtrAllocator Alloc;
+  TestLibraryOptions O;
+  auto Apply = [&](std::initializer_list<const char *> Argv) {
+    unsigned MissingIndex, MissingCount;
+    opt::InputArgList Args = TestLibraryOptions::optTable().ParseArgs(
+        Argv, MissingIndex, MissingCount);
+    std::vector<bool> Applied;
+    for (const opt::Arg *A : Args)
+      Applied.push_back(O.apply(*A, Alloc));
+    return Applied;
+  };
+
+  // A FlagOrEq alias of a FlagOrEq target, and a SeparateOrEq of a
+  // SeparateOrEq.
+  EXPECT_THAT(Apply({"-lib-old-enable", "--lib-old-count=9"}),
+              testing::Each(true));
+  EXPECT_TRUE(O.enable);
+  EXPECT_EQ(O.count, 9u);
+  EXPECT_THAT(Apply({"-lib-old-enable=false", "-lib-old-count", "4"}),
+              testing::Each(true));
+  EXPECT_FALSE(O.enable);
+  EXPECT_EQ(O.count, 4u);
+  EXPECT_THAT(Apply({"-lib-old-print"}), testing::Each(true));
+  EXPECT_EQ(O.print, test::Mode::B);
+  EXPECT_THAT(Apply({"-lib-old-print=a"}), testing::Each(true));
+  EXPECT_EQ(O.print, test::Mode::A);
+
+  // A Flag alias of a bool, BoolOrDefault, SeparateOrEq or enum target.
+  EXPECT_THAT(Apply({"-lib-enable", "-lib-disable"}), testing::Each(true));
+  EXPECT_FALSE(O.enable);
+  EXPECT_THAT(Apply({"--lib-disable"}), testing::Each(true));
+  EXPECT_THAT(Apply({"-lib-no-override"}), testing::Each(true));
+  EXPECT_EQ(O.override, BoolOrDefault::False);
+  EXPECT_THAT(Apply({"-lib-count-one"}), testing::Each(true));
+  EXPECT_EQ(O.count, 1u);
+  EXPECT_THAT(Apply({"-lib-mode-b"}), testing::Each(true));
+  EXPECT_EQ(O.mode, test::Mode::B);
+
+  // The Arg is the target's, whichever spelling was given.
+  unsigned MissingIndex, MissingCount;
+  opt::InputArgList Args = TestLibraryOptions::optTable().ParseArgs(
+      {"-lib-disable", "-lib-old-count=2"}, MissingIndex, MissingCount);
+  std::vector<std::string> Seen;
+  for (const opt::Arg *A : Args)
+    Seen.push_back((A->getOption().getName() + "=" + A->getValue()).str());
+  EXPECT_THAT(Seen, testing::ElementsAre("lib-enable=false", "lib-count=2"));
+}
+
 TEST(LibraryOptionsTest, BoolOrDefault) {
   EXPECT_TRUE(valueOr(BoolOrDefault::Default, true));
   EXPECT_FALSE(valueOr(BoolOrDefault::Default, false));
@@ -122,16 +173,22 @@ TEST(LibraryOptionsTest, Parser) {
   P.forEachOption([&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
     Rows.push_back((Spelling + "|" + MetaVar + "|" + Help).str());
   });
-  EXPECT_THAT(Rows,
-              testing::ElementsAre(
-                  "lib-count|=<value>|An unsigned", "lib-enable||A bool",
-                  "lib-in-build||Available", "lib-limit|=<value>|An optional",
-                  "lib-list|=<value>|A list", "lib-modes|=<a|b>|An enum list",
-                  "lib-mode|=<a|b>|An enum", "lib-override||An optional bool",
-                  "lib-path|=<value>|A string",
-                  "lib-print|[=<a|b>]|A flag or enum",
-                  "lib-ratio|=<value>|A double",
-                  "lib-tristate|=<Default|Enable|Disable>|A tri-state"));
+  // An alias is listed too, including a Flag, with the target's metavar only
+  // for a kind that takes a value. -lib-old-not-in-build is absent with its
+  // target.
+  EXPECT_THAT(
+      Rows,
+      testing::ElementsAre(
+          "lib-count-one||", "lib-count|=<value>|An unsigned",
+          "lib-disable||Same as -lib-enable=false", "lib-enable||A bool",
+          "lib-in-build||Available", "lib-limit|=<value>|An optional",
+          "lib-list|=<value>|A list", "lib-mode-b||",
+          "lib-modes|=<a|b>|An enum list", "lib-mode|=<a|b>|An enum",
+          "lib-no-override||", "lib-old-count|=<value>|", "lib-old-enable||",
+          "lib-old-in-build||", "lib-old-print||",
+          "lib-override||An optional bool", "lib-path|=<value>|A string",
+          "lib-print|[=<a|b>]|A flag or enum", "lib-ratio|=<value>|A double",
+          "lib-tristate|=<Default|Enable|Disable>|A tri-state"));
 
   BumpPtrAllocator Alloc;
   auto Parse = [&](std::initializer_list<const char *> Argv) {
@@ -152,6 +209,21 @@ TEST(LibraryOptionsTest, Parser) {
   EXPECT_EQ(Parse({"-lib-not-in-build"}),
             "1 unknown argument '-lib-not-in-build'");
   EXPECT_EQ(Parse({"-lib-enable", "0"}), "1 ");
+  // An alias dispatches like its target; a Flag alias takes no value.
+  EXPECT_EQ(Parse({"-lib-old-count", "6"}), "2 ");
+  EXPECT_EQ(TestLibraryOptions::Global.count, 6u);
+  EXPECT_EQ(Parse({"-lib-old-count=x"}),
+            "1 invalid value 'x' in '-lib-old-count=x'");
+  EXPECT_EQ(Parse({"-lib-count-one", "7"}), "1 ");
+  EXPECT_EQ(TestLibraryOptions::Global.count, 1u);
+  EXPECT_EQ(Parse({"-lib-disable"}), "1 ");
+  EXPECT_FALSE(TestLibraryOptions::Global.enable);
+  EXPECT_EQ(Parse({"-lib-disable=true"}),
+            "1 unknown argument '-lib-disable=true'");
+  EXPECT_EQ(Parse({"-lib-old-in-build"}), "1 ");
+  EXPECT_TRUE(TestLibraryOptions::Global.in_build);
+  EXPECT_EQ(Parse({"-lib-old-not-in-build"}),
+            "1 unknown argument '-lib-old-not-in-build'");
   EXPECT_EQ(Parse({"-lib-print", "a"}), "1 ");
   EXPECT_EQ(Parse({"-lib-count", "x"}),
             "2 invalid value 'x' in '-lib-count=x'");
@@ -232,5 +304,89 @@ TEST(LibraryOptionsTest, Values) {
   EXPECT_EQ(Copy.args().size(), V.args().size());
   cl::ResetCommandLineParser();
 }
+
+// Aliases in the arguments of a context, as -mllvm values are: the target's
+// member is set, and assign() replays the spellings that were given.
+TEST(LibraryOptionsTest, AliasValues) {
+  cl::ResetCommandLineParser();
+  opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
+  opt::LibraryOptionsParser L{std::in_place_type<TestLibraryOptions>};
+  auto Parse = [&](cl::LibraryOptionsContext &V, ArrayRef<const char *> Args) {
+    unsigned N;
+    return toString(V.parse(L, Args, N));
+  };
+  cl::LibraryOptionsContext V;
+  EXPECT_EQ(Parse(V, "-lib-enable"), "");
+  EXPECT_EQ(Parse(V, "-lib-disable"), "");
+  EXPECT_EQ(Parse(V, {"-lib-old-count", "4"}), "");
+  EXPECT_EQ(Parse(V, "-lib-mode-b"), "");
+  EXPECT_EQ(Parse(V, "-lib-no-override"), "");
+  EXPECT_EQ(Parse(V, "-lib-disable=true"),
+            "unknown argument '-lib-disable=true'");
+  const TestLibraryOptions &O = V.get<TestLibraryOptions>();
+  EXPECT_FALSE(O.enable);
+  EXPECT_EQ(O.count, 4u);
+  EXPECT_EQ(O.mode, test::Mode::B);
+  EXPECT_EQ(O.override, BoolOrDefault::False);
+  EXPECT_EQ(TestLibraryOptions::Global.count, 3u);
+
+  cl::LibraryOptionsContext Copy;
+  EXPECT_EQ(Parse(Copy, "-lib-count-one"), "");
+  Copy.assign(V);
+  const TestLibraryOptions &C = Copy.get<TestLibraryOptions>();
+  EXPECT_FALSE(C.enable);
+  EXPECT_EQ(C.count, 4u);
+  EXPECT_EQ(C.mode, test::Mode::B);
+  EXPECT_EQ(C.override, BoolOrDefault::False);
+  std::vector<std::string> Replayed(Copy.args().begin(), Copy.args().end());
+  EXPECT_THAT(Replayed, testing::ElementsAre(
+                            "-lib-enable", "-lib-disable", "-lib-old-count",
+                            "4", "-lib-mode-b", "-lib-no-override"));
+  cl::ResetCommandLineParser();
+}
+
+// cl:: dispatches every spelling of an alias, a Flag included, to the struct,
+// and lists the aliases that have help text in -help-hidden.
+TEST(LibraryOptionsTest, AliasRegister) {
+  cl::ResetCommandLineParser();
+  opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
+  const TestLibraryOptions &G = TestLibraryOptions::Global;
+  const char *Args[] = {
+      "prog",         "-lib-old-count", "5",          "-lib-old-enable",
+      "-lib-disable", "-lib-count-one", "-lib-mode-b"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, "", &nulls()));
+  EXPECT_EQ(G.count, 1u);
+  EXPECT_FALSE(G.enable);
+  EXPECT_EQ(G.mode, test::Mode::B);
+  cl::ResetAllOptionOccurrences();
+  EXPECT_EQ(G.mode, test::Mode::A);
+
+  // A Flag alias takes no value, and the alias of an option that this build
+  // excludes is unknown.
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+  const char *Bad[] = {"prog", "-lib-disable=true", "-lib-old-not-in-build"};
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(Bad), Bad, "", &OS));
+  EXPECT_EQ(Errs, "prog: unknown argument '-lib-disable=true'\n"
+                  "prog: Unknown command line argument "
+                  "'-lib-old-not-in-build'.  Try: 'prog --help'\n");
+  cl::ResetCommandLineParser();
+}
+
+#if GTEST_HAS_DEATH_TEST
+// An alias is indexed like any option, so a cl::opt cannot reuse its name.
+TEST(LibraryOptionsTest, AliasConflict) {
+  cl::ResetCommandLineParser();
+  opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
+  const char *Args[] = {"prog"};
+  EXPECT_DEATH(
+      {
+        cl::opt<bool> Clash("lib-disable");
+        cl::ParseCommandLineOptions(std::size(Args), Args);
+      },
+      "Option 'lib-disable' registered more than once");
+  cl::ResetCommandLineParser();
+}
+#endif
 
 } // namespace

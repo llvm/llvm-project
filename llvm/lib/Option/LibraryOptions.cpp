@@ -22,7 +22,11 @@ void LibraryOptionsParser::forEachOption(
   const OptTable &T = Table();
   for (unsigned ID = 1, E = T.getNumOptions(); ID <= E; ++ID) {
     unsigned Kind = T.getOptionKind(ID);
-    if (Kind != Option::FlagOrEqClass && Kind != Option::SeparateOrEqClass)
+    // A Flag is an alias, which supplies the target's value in its AliasArgs.
+    bool IsFlagAlias =
+        Kind == Option::FlagClass && T.getOption(ID).getAlias().isValid();
+    if (Kind != Option::FlagOrEqClass && Kind != Option::SeparateOrEqClass &&
+        !IsFlagAlias)
       continue;
     StringRef V = T.getOptionMetaVar(ID);
     std::string MetaVar;
