@@ -15,9 +15,7 @@ define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) #
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[N]])
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[N]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[N]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 4)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -65,9 +63,7 @@ define void @cond_uniform_load(ptr noalias nocapture %dst, ptr nocapture readonl
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[N]])
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[N]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP3]], i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[SRC]], i64 0
 ; CHECK-NEXT:    [[SRC_SPLAT:%.*]] = shufflevector <4 x ptr> [[TMP1]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

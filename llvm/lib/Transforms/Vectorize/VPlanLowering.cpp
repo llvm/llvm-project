@@ -174,10 +174,8 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
       !vputils::findIncomingAliasMask(Plan)) {
     IncrementValue = TopRegion->getCanonicalIV();
     VPValue &VFxUF = Plan.getVFxUF();
-    VPValue *Sub = Builder.createSub(TC, &VFxUF);
-    VPValue *Cmp = Builder.createICmp(CmpInst::Predicate::ICMP_UGT, TC, &VFxUF);
-    VPValue *Zero = Plan.getConstantInt(TC->getScalarType(), 0);
-    TC = Builder.createSelect(Cmp, Sub, Zero);
+    TC = Builder.createScalarIntrinsic(Intrinsic::usub_sat, {TC, &VFxUF},
+                                       TC->getScalarType(), DL);
   }
 
   // Create the active lane mask for the next iteration of the loop before the

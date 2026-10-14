@@ -110,9 +110,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA_AND_CONTROL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_AND_CONTROL-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[N]])
-; DATA_AND_CONTROL-NEXT:    [[TMP9:%.*]] = sub i64 [[N]], [[TMP1]]
-; DATA_AND_CONTROL-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; DATA_AND_CONTROL-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i64 [[TMP9]], i64 0
+; DATA_AND_CONTROL-NEXT:    [[TMP10:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[START]], i64 0
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; DATA_AND_CONTROL-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
@@ -278,9 +276,7 @@ define i64 @argmin_last_index(ptr %arr, i64 %n, i64 %start) {
 ; DATA_AND_CONTROL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_AND_CONTROL-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[N]])
-; DATA_AND_CONTROL-NEXT:    [[TMP9:%.*]] = sub i64 [[N]], [[TMP1]]
-; DATA_AND_CONTROL-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; DATA_AND_CONTROL-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i64 [[TMP9]], i64 0
+; DATA_AND_CONTROL-NEXT:    [[TMP10:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[START]], i64 0
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; DATA_AND_CONTROL-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()

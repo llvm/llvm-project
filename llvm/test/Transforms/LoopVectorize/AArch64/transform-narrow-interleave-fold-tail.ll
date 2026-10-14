@@ -66,9 +66,7 @@ define void @load_store_interleave_group(ptr noalias %data, i64 %n) {
 ; SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; SVE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; SVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[N]])
-; SVE-NEXT:    [[TMP8:%.*]] = sub i64 [[N]], [[TMP1]]
-; SVE-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[N]], [[TMP1]]
-; SVE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[TMP8]], i64 0
+; SVE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVE:       [[VECTOR_BODY]]:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

@@ -20,9 +20,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT: vector.ph:
 ; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = wide active lane mask ir<0>, vp<[[TC]]>, ir<1>
 ; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY_EXTRACT:%.+]]> = extract-vector-for-part vp<[[LANEMASK_ENTRY]]>, ir<0>
-; VPLANS-NEXT:   EMIT vp<[[SUB:%.+]]> = sub vp<[[TC]]>, vp<[[VFxUF]]>
-; VPLANS-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp ugt vp<[[TC]]>, vp<[[VFxUF]]>
-; VPLANS-NEXT:   EMIT vp<[[TC_MINUS_VF:%.+]]> = select vp<[[CMP]]>, vp<[[SUB]]>, ir<0>
+; VPLANS-NEXT:   EMIT-SCALAR vp<[[TC_MINUS_VF:%.+]]> = call i64 @llvm.usub.sat(vp<[[TC]]>, vp<[[VFxUF]]>)
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: <x1> vector loop: {
@@ -51,9 +49,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP6]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

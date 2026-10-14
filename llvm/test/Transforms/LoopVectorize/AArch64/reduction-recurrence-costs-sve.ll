@@ -417,9 +417,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    [[TMP19:%.*]] = zext <vscale x 4 x i32> [[TMP18]] to <vscale x 4 x i64>
 ; PRED-NEXT:    [[DOTSPLAT:%.*]] = getelementptr i32, ptr [[SRC_2]], <vscale x 4 x i64> [[TMP19]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP0]])
-; PRED-NEXT:    [[TMP21:%.*]] = sub i64 [[TMP0]], [[TMP2]]
-; PRED-NEXT:    [[TMP28:%.*]] = icmp ugt i64 [[TMP0]], [[TMP2]]
-; PRED-NEXT:    [[TMP45:%.*]] = select i1 [[TMP28]], i64 [[TMP21]], i64 0
+; PRED-NEXT:    [[TMP45:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 [[TMP2]])
 ; PRED-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vscale.i32()
 ; PRED-NEXT:    [[TMP23:%.*]] = mul nuw i32 [[TMP22]], 4
 ; PRED-NEXT:    [[TMP24:%.*]] = sub i32 [[TMP23]], 1
@@ -702,9 +700,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP0]])
-; PRED-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP0]], [[TMP2]]
-; PRED-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP0]], [[TMP2]]
-; PRED-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i64 [[TMP10]], i64 0
+; PRED-NEXT:    [[TMP12:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 [[TMP2]])
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[X]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]

@@ -75,9 +75,7 @@ define void @masked_strided1(ptr noalias nocapture readonly %p, ptr noalias noca
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 1024)
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = sub i32 1024, [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = icmp ugt i32 1024, [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i32 [[TMP15]], i32 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = call i32 @llvm.usub.sat.i32(i32 1024, i32 [[TMP1]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
@@ -208,9 +206,7 @@ define void @masked_strided2(ptr noalias nocapture readnone %p, ptr noalias noca
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 1024)
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = sub i32 1024, [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = icmp ugt i32 1024, [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 [[TMP9]], i32 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = call i32 @llvm.usub.sat.i32(i32 1024, i32 [[TMP1]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
@@ -333,9 +329,7 @@ define void @masked_strided3(ptr noalias nocapture readnone %p, ptr noalias noca
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 1024)
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = sub i32 1024, [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP12:%.*]] = icmp ugt i32 1024, [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i32 [[TMP11]], i32 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP13:%.*]] = call i32 @llvm.usub.sat.i32(i32 1024, i32 [[TMP1]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV3]], i64 0
@@ -483,9 +477,7 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 1024)
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP20:%.*]] = sub i32 1024, [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP21:%.*]] = icmp ugt i32 1024, [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP22:%.*]] = select i1 [[TMP21]], i32 [[TMP20]], i32 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP22:%.*]] = call i32 @llvm.usub.sat.i32(i32 1024, i32 [[TMP1]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()

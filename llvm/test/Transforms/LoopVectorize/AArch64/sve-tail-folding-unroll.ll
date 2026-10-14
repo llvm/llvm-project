@@ -18,9 +18,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK_ENTRY1]], i64 4)
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY4:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK_ENTRY1]], i64 8)
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY5:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK_ENTRY1]], i64 12)
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[UMAX]], [[TMP62]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[UMAX]], [[TMP62]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i64 [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP62]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -83,9 +81,7 @@ define void @cond_memset(i32 %val, ptr noalias readonly %cond_ptr, ptr noalias %
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK_ENTRY1]], i64 4)
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY4:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK_ENTRY1]], i64 8)
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY5:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK_ENTRY1]], i64 12)
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i64 [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP6]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

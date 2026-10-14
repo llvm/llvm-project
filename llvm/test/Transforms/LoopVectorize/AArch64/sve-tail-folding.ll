@@ -13,9 +13,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP6]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -57,9 +55,7 @@ define void @simple_memset_v4i32(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[UMAX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[UMAX]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 4)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -103,9 +99,7 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP6]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
@@ -154,9 +148,7 @@ define void @copy_stride4(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP2]])
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP2]], [[TMP9]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP2]], [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP7]], i64 [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP2]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul nsw <vscale x 4 x i64> [[TMP13]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP17:%.*]] = shl nsw i64 [[TMP9]], 2
@@ -209,9 +201,7 @@ define void @simple_gather_scatter(ptr noalias %dst, ptr noalias %src, ptr noali
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP6]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
@@ -262,9 +252,7 @@ define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) #
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[TMP6]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP6]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -314,9 +302,7 @@ define void @cond_uniform_load(ptr noalias %dst, ptr noalias readonly %src, ptr 
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[TMP6]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP6]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[SRC:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -379,9 +365,7 @@ define void @uniform_store(ptr noalias %dst, ptr noalias readonly %src, i64 %n) 
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[TMP6]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP6]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[DST:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -428,9 +412,7 @@ define void @simple_fdiv(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP6]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VECTOR_BODY]] ]
@@ -481,9 +463,7 @@ define void @simple_idiv(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMAX]], i64 [[TMP6]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VECTOR_BODY]] ]

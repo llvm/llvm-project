@@ -68,9 +68,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; PRED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 101)
-; PRED-NEXT:    [[TMP5:%.*]] = sub i64 101, [[TMP3]]
-; PRED-NEXT:    [[TMP6:%.*]] = icmp ugt i64 101, [[TMP3]]
-; PRED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP6]], i64 [[TMP5]], i64 0
+; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 101, i64 [[TMP3]])
 ; PRED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PRED:       vector.body:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

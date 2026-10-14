@@ -273,9 +273,7 @@ define void @alias_mask_reverse_iterate(ptr noalias %ptrA, ptr %ptrB, ptr %ptrC,
 ; CHECK-TF-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-TF:       [[VECTOR_PH]]:
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[IV_START]])
-; CHECK-TF-NEXT:    [[TMP7:%.*]] = sub i64 [[IV_START]], [[TMP4]]
-; CHECK-TF-NEXT:    [[TMP14:%.*]] = icmp ugt i64 [[IV_START]], [[TMP4]]
-; CHECK-TF-NEXT:    [[TMP19:%.*]] = select i1 [[TMP14]], i64 [[TMP7]], i64 0
+; CHECK-TF-NEXT:    [[TMP19:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[IV_START]], i64 [[TMP4]])
 ; CHECK-TF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF:       [[VECTOR_BODY]]:
 ; CHECK-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

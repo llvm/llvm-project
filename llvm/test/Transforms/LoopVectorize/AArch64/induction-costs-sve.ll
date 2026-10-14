@@ -128,9 +128,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP8:%.*]] = trunc <vscale x 16 x i32> [[BROADCAST_SPLAT]] to <vscale x 16 x i16>
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[TMP0]])
-; PRED-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP0]], [[TMP7]]
-; PRED-NEXT:    [[TMP19:%.*]] = icmp ugt i64 [[TMP0]], [[TMP7]]
-; PRED-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i64 [[TMP18]], i64 0
+; PRED-NEXT:    [[TMP20:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 [[TMP7]])
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

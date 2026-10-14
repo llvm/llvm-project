@@ -519,9 +519,7 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT28:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C_0]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT29:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT28]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP0]])
-; PRED-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP0]], [[TMP9]]
-; PRED-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP0]], [[TMP9]]
-; PRED-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i64 [[TMP10]], i64 0
+; PRED-NEXT:    [[TMP12:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 [[TMP9]])
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[E]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -618,9 +616,7 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 1
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 257)
-; PRED-NEXT:    [[TMP2:%.*]] = sub i64 257, [[TMP7]]
-; PRED-NEXT:    [[TMP3:%.*]] = icmp ugt i64 257, [[TMP7]]
-; PRED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 [[TMP2]], i64 0
+; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 257, i64 [[TMP7]])
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -919,9 +915,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    br i1 [[TMP14]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 0, i64 [[TMP0]])
-; PRED-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP0]], 8
-; PRED-NEXT:    [[TMP16:%.*]] = icmp ugt i64 [[TMP0]], 8
-; PRED-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i64 [[TMP15]], i64 0
+; PRED-NEXT:    [[TMP17:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 8)
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE27:.*]] ]
@@ -1274,9 +1268,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP0]])
-; PRED-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP0]], [[TMP8]]
-; PRED-NEXT:    [[TMP25:%.*]] = icmp ugt i64 [[TMP0]], [[TMP8]]
-; PRED-NEXT:    [[TMP26:%.*]] = select i1 [[TMP25]], i64 [[TMP24]], i64 0
+; PRED-NEXT:    [[TMP26:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 [[TMP8]])
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[Y]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
