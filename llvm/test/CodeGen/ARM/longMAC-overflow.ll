@@ -2,45 +2,25 @@
 ; RUN: llc -mtriple=armv7-eabi %s -o - | FileCheck %s --check-prefix=ARM
 ; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s --check-prefix=THUMB2
 
-; FIXME: SMLALBB does not set flags, so forming SMLALBB when the ADDE overflow
-; flag is used duplicates the multiply-accumulate (SMULBB+ADDS+ADCS and SMLALBB).
 define { i64, i1 } @saddo_smlalbb(i64 %acc, i16 %a, i16 %b) {
 ; ARM-LABEL: saddo_smlalbb:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    .save {r4, lr}
-; ARM-NEXT:    push {r4, lr}
-; ARM-NEXT:    smulbb lr, r2, r3
-; ARM-NEXT:    sxth r4, r3
-; ARM-NEXT:    mov r12, r0
-; ARM-NEXT:    sxth r2, r2
-; ARM-NEXT:    mov r3, r1
-; ARM-NEXT:    smlalbb r12, r3, r2, r4
+; ARM-NEXT:    smulbb r3, r2, r3
 ; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    adds r0, r0, lr
-; ARM-NEXT:    adcs r0, r1, lr, asr #31
+; ARM-NEXT:    adds r0, r0, r3
+; ARM-NEXT:    adcs r1, r1, r3, asr #31
 ; ARM-NEXT:    movwvs r2, #1
-; ARM-NEXT:    mov r0, r12
-; ARM-NEXT:    mov r1, r3
-; ARM-NEXT:    pop {r4, pc}
+; ARM-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: saddo_smlalbb:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    .save {r4, lr}
-; THUMB2-NEXT:    push {r4, lr}
-; THUMB2-NEXT:    smulbb lr, r2, r3
-; THUMB2-NEXT:    sxth r4, r3
-; THUMB2-NEXT:    mov r12, r0
-; THUMB2-NEXT:    sxth r2, r2
-; THUMB2-NEXT:    mov r3, r1
-; THUMB2-NEXT:    smlalbb r12, r3, r2, r4
+; THUMB2-NEXT:    smulbb r3, r2, r3
 ; THUMB2-NEXT:    movs r2, #0
-; THUMB2-NEXT:    adds.w r0, r0, lr
-; THUMB2-NEXT:    adcs.w r0, r1, lr, asr #31
+; THUMB2-NEXT:    adds r0, r0, r3
+; THUMB2-NEXT:    adcs.w r1, r1, r3, asr #31
 ; THUMB2-NEXT:    it vs
 ; THUMB2-NEXT:    movvs r2, #1
-; THUMB2-NEXT:    mov r0, r12
-; THUMB2-NEXT:    mov r1, r3
-; THUMB2-NEXT:    pop {r4, pc}
+; THUMB2-NEXT:    bx lr
 entry:
   %sext.a = sext i16 %a to i32
   %sext.b = sext i16 %b to i32
@@ -50,44 +30,24 @@ entry:
   ret { i64, i1 } %res
 }
 
-; FIXME: SMLALBB does not set flags, so forming SMLALBB when the ADDE carry
-; flag is used duplicates the multiply-accumulate (SMULBB+ADDS+ADCS and SMLALBB).
 define { i64, i1 } @uaddo_smlalbb(i64 %acc, i16 %a, i16 %b) {
 ; ARM-LABEL: uaddo_smlalbb:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    .save {r4, lr}
-; ARM-NEXT:    push {r4, lr}
-; ARM-NEXT:    smulbb lr, r2, r3
-; ARM-NEXT:    sxth r4, r3
-; ARM-NEXT:    mov r12, r0
-; ARM-NEXT:    sxth r2, r2
-; ARM-NEXT:    mov r3, r1
-; ARM-NEXT:    smlalbb r12, r3, r2, r4
-; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    adds r0, r0, lr
-; ARM-NEXT:    adcs r0, r1, lr, asr #31
-; ARM-NEXT:    adc r2, r2, #0
-; ARM-NEXT:    mov r0, r12
-; ARM-NEXT:    mov r1, r3
-; ARM-NEXT:    pop {r4, pc}
+; ARM-NEXT:    smulbb r2, r2, r3
+; ARM-NEXT:    mov r3, #0
+; ARM-NEXT:    adds r0, r0, r2
+; ARM-NEXT:    adcs r1, r1, r2, asr #31
+; ARM-NEXT:    adc r2, r3, #0
+; ARM-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: uaddo_smlalbb:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    .save {r4, lr}
-; THUMB2-NEXT:    push {r4, lr}
-; THUMB2-NEXT:    smulbb lr, r2, r3
-; THUMB2-NEXT:    sxth r4, r3
-; THUMB2-NEXT:    mov r12, r0
-; THUMB2-NEXT:    sxth r2, r2
-; THUMB2-NEXT:    mov r3, r1
-; THUMB2-NEXT:    smlalbb r12, r3, r2, r4
-; THUMB2-NEXT:    movs r2, #0
-; THUMB2-NEXT:    adds.w r0, r0, lr
-; THUMB2-NEXT:    adcs.w r0, r1, lr, asr #31
-; THUMB2-NEXT:    adc r2, r2, #0
-; THUMB2-NEXT:    mov r0, r12
-; THUMB2-NEXT:    mov r1, r3
-; THUMB2-NEXT:    pop {r4, pc}
+; THUMB2-NEXT:    smulbb r2, r2, r3
+; THUMB2-NEXT:    movs r3, #0
+; THUMB2-NEXT:    adds r0, r0, r2
+; THUMB2-NEXT:    adcs.w r1, r1, r2, asr #31
+; THUMB2-NEXT:    adc r2, r3, #0
+; THUMB2-NEXT:    bx lr
 entry:
   %sext.a = sext i16 %a to i32
   %sext.b = sext i16 %b to i32
@@ -97,41 +57,25 @@ entry:
   ret { i64, i1 } %res
 }
 
-; FIXME: SMLAL does not set flags, so forming SMLAL when the ADDE overflow flag
-; is used duplicates the multiply-accumulate (SMULL+ADDS+ADCS and SMLAL).
 define { i64, i1 } @saddo_smlal(i64 %acc, i32 %a, i32 %b) {
 ; ARM-LABEL: saddo_smlal:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    .save {r4, r5, r11, lr}
-; ARM-NEXT:    push {r4, r5, r11, lr}
-; ARM-NEXT:    smull r4, r5, r2, r3
-; ARM-NEXT:    mov r12, r0
-; ARM-NEXT:    mov lr, r1
-; ARM-NEXT:    smlal r12, lr, r2, r3
+; ARM-NEXT:    smull r3, r12, r2, r3
 ; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    adds r0, r0, r4
-; ARM-NEXT:    adcs r0, r1, r5
+; ARM-NEXT:    adds r0, r0, r3
+; ARM-NEXT:    adcs r1, r1, r12
 ; ARM-NEXT:    movwvs r2, #1
-; ARM-NEXT:    mov r0, r12
-; ARM-NEXT:    mov r1, lr
-; ARM-NEXT:    pop {r4, r5, r11, pc}
+; ARM-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: saddo_smlal:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    .save {r4, r5, r7, lr}
-; THUMB2-NEXT:    push {r4, r5, r7, lr}
-; THUMB2-NEXT:    smull r4, r5, r2, r3
-; THUMB2-NEXT:    mov r12, r0
-; THUMB2-NEXT:    mov lr, r1
-; THUMB2-NEXT:    smlal r12, lr, r2, r3
+; THUMB2-NEXT:    smull r3, r12, r2, r3
 ; THUMB2-NEXT:    movs r2, #0
-; THUMB2-NEXT:    adds r0, r0, r4
-; THUMB2-NEXT:    adcs.w r0, r1, r5
+; THUMB2-NEXT:    adds r0, r0, r3
+; THUMB2-NEXT:    adcs.w r1, r1, r12
 ; THUMB2-NEXT:    it vs
 ; THUMB2-NEXT:    movvs r2, #1
-; THUMB2-NEXT:    mov r0, r12
-; THUMB2-NEXT:    mov r1, lr
-; THUMB2-NEXT:    pop {r4, r5, r7, pc}
+; THUMB2-NEXT:    bx lr
 entry:
   %sext.a = sext i32 %a to i64
   %sext.b = sext i32 %b to i64
@@ -140,40 +84,24 @@ entry:
   ret { i64, i1 } %res
 }
 
-; FIXME: UMLAL does not set flags, so forming UMLAL when the ADDE carry flag
-; is used duplicates the multiply-accumulate (UMULL+ADDS+ADCS and UMLAL).
 define { i64, i1 } @uaddo_umlal(i64 %acc, i32 %a, i32 %b) {
 ; ARM-LABEL: uaddo_umlal:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    .save {r4, r5, r11, lr}
-; ARM-NEXT:    push {r4, r5, r11, lr}
-; ARM-NEXT:    umull r4, r5, r2, r3
-; ARM-NEXT:    mov r12, r0
-; ARM-NEXT:    mov lr, r1
-; ARM-NEXT:    umlal r12, lr, r2, r3
-; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    adds r0, r0, r4
-; ARM-NEXT:    adcs r0, r1, r5
-; ARM-NEXT:    adc r2, r2, #0
-; ARM-NEXT:    mov r0, r12
-; ARM-NEXT:    mov r1, lr
-; ARM-NEXT:    pop {r4, r5, r11, pc}
+; ARM-NEXT:    umull r2, r3, r2, r3
+; ARM-NEXT:    mov r12, #0
+; ARM-NEXT:    adds r0, r0, r2
+; ARM-NEXT:    adcs r1, r1, r3
+; ARM-NEXT:    adc r2, r12, #0
+; ARM-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: uaddo_umlal:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    .save {r4, r5, r7, lr}
-; THUMB2-NEXT:    push {r4, r5, r7, lr}
-; THUMB2-NEXT:    umull r4, r5, r2, r3
-; THUMB2-NEXT:    mov r12, r0
-; THUMB2-NEXT:    mov lr, r1
-; THUMB2-NEXT:    umlal r12, lr, r2, r3
-; THUMB2-NEXT:    movs r2, #0
-; THUMB2-NEXT:    adds r0, r0, r4
-; THUMB2-NEXT:    adcs.w r0, r1, r5
-; THUMB2-NEXT:    adc r2, r2, #0
-; THUMB2-NEXT:    mov r0, r12
-; THUMB2-NEXT:    mov r1, lr
-; THUMB2-NEXT:    pop {r4, r5, r7, pc}
+; THUMB2-NEXT:    umull r2, r3, r2, r3
+; THUMB2-NEXT:    mov.w r12, #0
+; THUMB2-NEXT:    adds r0, r0, r2
+; THUMB2-NEXT:    adcs r1, r3
+; THUMB2-NEXT:    adc r2, r12, #0
+; THUMB2-NEXT:    bx lr
 entry:
   %zext.a = zext i32 %a to i64
   %zext.b = zext i32 %b to i64
@@ -209,44 +137,30 @@ entry:
   ret { i64, i1 } %res
 }
 
-; FIXME: UMAAL does not set flags, so forming UMAAL when the ADDE carry flag
-; is used duplicates the multiply-accumulate.
 define { i64, i1 } @uaddo_umaal(i32 %a, i32 %b, i32 %lo, i32 %hi) {
 ; ARM-LABEL: uaddo_umaal:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    .save {r4, r5, r11, lr}
-; ARM-NEXT:    push {r4, r5, r11, lr}
-; ARM-NEXT:    mov lr, r2
-; ARM-NEXT:    mov r4, #0
-; ARM-NEXT:    mov r5, lr
-; ARM-NEXT:    mov r12, r3
-; ARM-NEXT:    umlal r5, r4, r0, r1
-; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    umaal lr, r12, r0, r1
-; ARM-NEXT:    adds r0, r5, r3
-; ARM-NEXT:    adcs r0, r4, #0
-; ARM-NEXT:    adc r2, r2, #0
-; ARM-NEXT:    mov r0, lr
-; ARM-NEXT:    mov r1, r12
-; ARM-NEXT:    pop {r4, r5, r11, pc}
+; ARM-NEXT:    .save {r11, lr}
+; ARM-NEXT:    push {r11, lr}
+; ARM-NEXT:    mov lr, #0
+; ARM-NEXT:    mov r12, #0
+; ARM-NEXT:    umlal r2, lr, r0, r1
+; ARM-NEXT:    adds r0, r2, r3
+; ARM-NEXT:    adcs r1, lr, #0
+; ARM-NEXT:    adc r2, r12, #0
+; ARM-NEXT:    pop {r11, pc}
 ;
 ; THUMB2-LABEL: uaddo_umaal:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    .save {r4, r5, r7, lr}
-; THUMB2-NEXT:    push {r4, r5, r7, lr}
-; THUMB2-NEXT:    mov lr, r2
-; THUMB2-NEXT:    movs r4, #0
-; THUMB2-NEXT:    mov r5, lr
-; THUMB2-NEXT:    mov r12, r3
-; THUMB2-NEXT:    umlal r5, r4, r0, r1
-; THUMB2-NEXT:    movs r2, #0
-; THUMB2-NEXT:    umaal lr, r12, r0, r1
-; THUMB2-NEXT:    adds r0, r5, r3
-; THUMB2-NEXT:    adcs r0, r4, #0
-; THUMB2-NEXT:    adc r2, r2, #0
-; THUMB2-NEXT:    mov r0, lr
-; THUMB2-NEXT:    mov r1, r12
-; THUMB2-NEXT:    pop {r4, r5, r7, pc}
+; THUMB2-NEXT:    .save {r7, lr}
+; THUMB2-NEXT:    push {r7, lr}
+; THUMB2-NEXT:    mov.w lr, #0
+; THUMB2-NEXT:    mov.w r12, #0
+; THUMB2-NEXT:    umlal r2, lr, r0, r1
+; THUMB2-NEXT:    adds r0, r2, r3
+; THUMB2-NEXT:    adcs r1, lr, #0
+; THUMB2-NEXT:    adc r2, r12, #0
+; THUMB2-NEXT:    pop {r7, pc}
 entry:
   %zext.a = zext i32 %a to i64
   %zext.b = zext i32 %b to i64
