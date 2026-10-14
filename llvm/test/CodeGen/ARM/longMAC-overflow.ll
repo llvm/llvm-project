@@ -2,39 +2,45 @@
 ; RUN: llc -mtriple=armv7-eabi %s -o - | FileCheck %s --check-prefix=ARM
 ; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s --check-prefix=THUMB2
 
-; FIXME: Combining ADDC+ADDE into SMLALBB loses the high-word ADDE overflow
-; check, testing only the low 32-bit addition for overflow.
+; FIXME: SMLALBB does not set flags, so forming SMLALBB when the ADDE overflow
+; flag is used duplicates the multiply-accumulate (SMULBB+ADDS+ADCS and SMLALBB).
 define { i64, i1 } @saddo_smlalbb(i64 %acc, i16 %a, i16 %b) {
 ; ARM-LABEL: saddo_smlalbb:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    .save {r11, lr}
-; ARM-NEXT:    push {r11, lr}
-; ARM-NEXT:    smulbb r12, r2, r3
-; ARM-NEXT:    sxth lr, r3
-; ARM-NEXT:    mov r3, r0
+; ARM-NEXT:    .save {r4, lr}
+; ARM-NEXT:    push {r4, lr}
+; ARM-NEXT:    smulbb lr, r2, r3
+; ARM-NEXT:    sxth r4, r3
+; ARM-NEXT:    mov r12, r0
 ; ARM-NEXT:    sxth r2, r2
-; ARM-NEXT:    smlalbb r3, r1, r2, lr
+; ARM-NEXT:    mov r3, r1
+; ARM-NEXT:    smlalbb r12, r3, r2, r4
 ; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    adds r0, r0, r12
+; ARM-NEXT:    adds r0, r0, lr
+; ARM-NEXT:    adcs r0, r1, lr, asr #31
 ; ARM-NEXT:    movwvs r2, #1
-; ARM-NEXT:    mov r0, r3
-; ARM-NEXT:    pop {r11, pc}
+; ARM-NEXT:    mov r0, r12
+; ARM-NEXT:    mov r1, r3
+; ARM-NEXT:    pop {r4, pc}
 ;
 ; THUMB2-LABEL: saddo_smlalbb:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    .save {r7, lr}
-; THUMB2-NEXT:    push {r7, lr}
-; THUMB2-NEXT:    smulbb r12, r2, r3
-; THUMB2-NEXT:    sxth.w lr, r3
-; THUMB2-NEXT:    mov r3, r0
+; THUMB2-NEXT:    .save {r4, lr}
+; THUMB2-NEXT:    push {r4, lr}
+; THUMB2-NEXT:    smulbb lr, r2, r3
+; THUMB2-NEXT:    sxth r4, r3
+; THUMB2-NEXT:    mov r12, r0
 ; THUMB2-NEXT:    sxth r2, r2
-; THUMB2-NEXT:    smlalbb r3, r1, r2, lr
+; THUMB2-NEXT:    mov r3, r1
+; THUMB2-NEXT:    smlalbb r12, r3, r2, r4
 ; THUMB2-NEXT:    movs r2, #0
-; THUMB2-NEXT:    adds.w r0, r0, r12
+; THUMB2-NEXT:    adds.w r0, r0, lr
+; THUMB2-NEXT:    adcs.w r0, r1, lr, asr #31
 ; THUMB2-NEXT:    it vs
 ; THUMB2-NEXT:    movvs r2, #1
-; THUMB2-NEXT:    mov r0, r3
-; THUMB2-NEXT:    pop {r7, pc}
+; THUMB2-NEXT:    mov r0, r12
+; THUMB2-NEXT:    mov r1, r3
+; THUMB2-NEXT:    pop {r4, pc}
 entry:
   %sext.a = sext i16 %a to i32
   %sext.b = sext i16 %b to i32
@@ -44,38 +50,44 @@ entry:
   ret { i64, i1 } %res
 }
 
-; FIXME: Combining ADDC+ADDE into SMLALBB loses the high-word ADDE carry check,
-; testing only the low 32-bit addition for carry.
+; FIXME: SMLALBB does not set flags, so forming SMLALBB when the ADDE carry
+; flag is used duplicates the multiply-accumulate (SMULBB+ADDS+ADCS and SMLALBB).
 define { i64, i1 } @uaddo_smlalbb(i64 %acc, i16 %a, i16 %b) {
 ; ARM-LABEL: uaddo_smlalbb:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    .save {r11, lr}
-; ARM-NEXT:    push {r11, lr}
-; ARM-NEXT:    smulbb r12, r2, r3
-; ARM-NEXT:    sxth lr, r3
-; ARM-NEXT:    mov r3, r0
+; ARM-NEXT:    .save {r4, lr}
+; ARM-NEXT:    push {r4, lr}
+; ARM-NEXT:    smulbb lr, r2, r3
+; ARM-NEXT:    sxth r4, r3
+; ARM-NEXT:    mov r12, r0
 ; ARM-NEXT:    sxth r2, r2
-; ARM-NEXT:    smlalbb r3, r1, r2, lr
+; ARM-NEXT:    mov r3, r1
+; ARM-NEXT:    smlalbb r12, r3, r2, r4
 ; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    adds r0, r0, r12
+; ARM-NEXT:    adds r0, r0, lr
+; ARM-NEXT:    adcs r0, r1, lr, asr #31
 ; ARM-NEXT:    adc r2, r2, #0
-; ARM-NEXT:    mov r0, r3
-; ARM-NEXT:    pop {r11, pc}
+; ARM-NEXT:    mov r0, r12
+; ARM-NEXT:    mov r1, r3
+; ARM-NEXT:    pop {r4, pc}
 ;
 ; THUMB2-LABEL: uaddo_smlalbb:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    .save {r7, lr}
-; THUMB2-NEXT:    push {r7, lr}
-; THUMB2-NEXT:    smulbb r12, r2, r3
-; THUMB2-NEXT:    sxth.w lr, r3
-; THUMB2-NEXT:    mov r3, r0
+; THUMB2-NEXT:    .save {r4, lr}
+; THUMB2-NEXT:    push {r4, lr}
+; THUMB2-NEXT:    smulbb lr, r2, r3
+; THUMB2-NEXT:    sxth r4, r3
+; THUMB2-NEXT:    mov r12, r0
 ; THUMB2-NEXT:    sxth r2, r2
-; THUMB2-NEXT:    smlalbb r3, r1, r2, lr
+; THUMB2-NEXT:    mov r3, r1
+; THUMB2-NEXT:    smlalbb r12, r3, r2, r4
 ; THUMB2-NEXT:    movs r2, #0
-; THUMB2-NEXT:    adds.w r0, r0, r12
+; THUMB2-NEXT:    adds.w r0, r0, lr
+; THUMB2-NEXT:    adcs.w r0, r1, lr, asr #31
 ; THUMB2-NEXT:    adc r2, r2, #0
-; THUMB2-NEXT:    mov r0, r3
-; THUMB2-NEXT:    pop {r7, pc}
+; THUMB2-NEXT:    mov r0, r12
+; THUMB2-NEXT:    mov r1, r3
+; THUMB2-NEXT:    pop {r4, pc}
 entry:
   %sext.a = sext i16 %a to i32
   %sext.b = sext i16 %b to i32
