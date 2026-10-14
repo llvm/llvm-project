@@ -25,6 +25,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -86,25 +87,11 @@ struct KernelEnvironmentDedupDataOperands
     Operation *def = operand.getDefiningOp();
     if (!def)
       return false;
-    if (std::optional<DataClause> clause = getDataClause(def))
-      return *clause == DataClause::acc_reduction;
-    return false;
-  }
-
-  // Later clauses for one variable receive the same address, so the first
-  // remains. acc.map_info is a finalized mapping: its order and semantics
-  // stand. The variable alone does not identify it, since the flags and
-  // descriptors would have to be compared as well.
-  static bool isSameMappedVariable(Value lhs, Value rhs) {
-    if (lhs == rhs)
-      return true;
-    Operation *lhsDef = lhs.getDefiningOp();
-    Operation *rhsDef = rhs.getDefiningOp();
-    if (!lhsDef || !rhsDef || isa<MapInfoOp>(lhsDef) || isa<MapInfoOp>(rhsDef))
+    std::optional<DataClause> clause = getDataClause(def);
+    if (!clause || *clause != DataClause::acc_reduction)
       return false;
-    Value lhsVar = getVar(lhsDef);
-    return lhsVar && lhsVar == getVar(rhsDef) &&
-           getBounds(lhsDef) == getBounds(rhsDef);
+    assert(isa<CopyinOp>(def) && "reduction clause must be an acc.copyin");
+    return true;
   }
 
   LogicalResult matchAndRewrite(acc::KernelEnvironmentOp op,
@@ -116,34 +103,41 @@ struct KernelEnvironmentDedupDataOperands
 
     SmallVector<Value> kept;
     SmallVector<std::pair<Value, Value>> useRewrites;
-    SmallVector<bool> grouped(numOperands, false);
-    for (unsigned i = 0; i < numOperands; ++i) {
-      if (grouped[i])
+    SmallVector<SmallVector<Value>> boundsStorage;
+    boundsStorage.reserve(numOperands);
+    llvm::DenseMap<std::pair<Value, ArrayRef<Value>>, unsigned>
+        keptIndexByVarAndBounds;
+    for (Value operand : operands) {
+      Operation *def = operand.getDefiningOp();
+      // acc.map_info is a finalized mapping. Its order and semantics stand;
+      // matching only its variable and bounds would ignore flags and
+      // descriptors.
+      if (!def || isa<MapInfoOp>(def)) {
+        kept.push_back(operand);
         continue;
-      SmallVector<unsigned> group;
-      for (unsigned j = i; j < numOperands; ++j) {
-        if (grouped[j])
-          continue;
-        if (j != i && !isSameMappedVariable(operands[i], operands[j]))
-          continue;
-        group.push_back(j);
-        grouped[j] = true;
       }
 
+      Value var = getVar(def);
+      if (!var) {
+        kept.push_back(operand);
+        continue;
+      }
+
+      boundsStorage.push_back(getBounds(def));
+      auto [it, inserted] = keptIndexByVarAndBounds.try_emplace(
+          std::make_pair(var, ArrayRef<Value>(boundsStorage.back())),
+          kept.size());
+      if (inserted) {
+        kept.push_back(operand);
+        continue;
+      }
+
+      Value &survivor = kept[it->second];
       // A reduction acc.copyin is that copyin plus the reduction. Keeping
       // another clause would drop the reduction.
-      Value survivor = operands[group.front()];
-      for (unsigned idx : group) {
-        if (!isReductionDataOperand(operands[idx]))
-          continue;
-        survivor = operands[idx];
-        break;
-      }
-      kept.push_back(survivor);
-      for (unsigned idx : group) {
-        if (operands[idx] != survivor)
-          useRewrites.emplace_back(operands[idx], survivor);
-      }
+      if (isReductionDataOperand(operand) && !isReductionDataOperand(survivor))
+        std::swap(survivor, operand);
+      useRewrites.emplace_back(operand, survivor);
     }
     if (kept.size() == numOperands)
       return failure();
