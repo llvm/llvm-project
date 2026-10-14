@@ -852,6 +852,14 @@ public:
                                     OMPTraitInfo &TI, unsigned NumAppendArgs,
                                     SourceRange SR);
 
+  /// Called on well-formed 'adjust_args' clause of a '\#pragma omp declare
+  /// variant' directive. Returns nullptr if the clause is invalid.
+  OMPAdjustArgsDescriptor *
+  ActOnOpenMPAdjustArgsClause(OpenMPAdjustArgsOpKind AdjustOp,
+                              OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+                              ArrayRef<OMPAdjustArgsItem> Items,
+                              SourceLocation Loc);
+
   /// Called on well-formed '\#pragma omp declare variant' after parsing of
   /// the associated method/function.
   /// \param FD Function declaration to which declare variant directive is
@@ -866,7 +874,7 @@ public:
   /// \param SR The SourceRange of the 'declare variant' directive.
   void ActOnOpenMPDeclareVariantDirective(
       FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
-      ArrayRef<OMPAdjustArgsClause *> AdjustArgs,
+      ArrayRef<OMPAdjustArgsDescriptor *> AdjustArgs,
       ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
       SourceLocation AppendArgsLoc, SourceRange SR);
 

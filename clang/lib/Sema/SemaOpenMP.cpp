@@ -7963,9 +7963,25 @@ static SourceLocation getOMPAdjustArgsItemLoc(const OMPAdjustArgsItem &Item,
   return FallbackLoc;
 }
 
+OMPAdjustArgsDescriptor *SemaOpenMP::ActOnOpenMPAdjustArgsClause(
+    OpenMPAdjustArgsOpKind AdjustOp,
+    OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+    ArrayRef<OMPAdjustArgsItem> Items, SourceLocation Loc) {
+  // OpenMP 6.0 [9.6.2]: the fallback modifier is only valid with
+  // need_device_ptr.
+  if (NeedDevicePtrModifier != OMPC_NEED_DEVICE_PTR_unknown &&
+      AdjustOp != OMPC_ADJUST_ARGS_need_device_ptr) {
+    Diag(Loc, diag::err_omp_unexpected_clause_modifier)
+        << getOpenMPClauseName(OMPC_adjust_args);
+    return nullptr;
+  }
+  return OMPAdjustArgsDescriptor::Create(getASTContext(), AdjustOp,
+                                         NeedDevicePtrModifier, Items);
+}
+
 void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
-    ArrayRef<OMPAdjustArgsClause *> AdjustArgs,
+    ArrayRef<OMPAdjustArgsDescriptor *> AdjustArgs,
     ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
     SourceLocation AppendArgsLoc, SourceRange SR) {
 
@@ -7996,14 +8012,8 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
   llvm::SmallPtrSet<const VarDecl *, 4> AdjustVars; // named items
   llvm::SmallSet<uint64_t, 4> AdjustPositions; // positions, including ranges
 
-  for (const OMPAdjustArgsClause *Clause : AdjustArgs) {
-    if (Clause->NeedDevicePtrModifier != OMPC_NEED_DEVICE_PTR_unknown &&
-        Clause->AdjustOp != OMPC_ADJUST_ARGS_need_device_ptr) {
-      Diag(AdjustArgsLoc, diag::err_omp_unexpected_clause_modifier)
-          << getOpenMPClauseName(OMPC_adjust_args);
-      return;
-    }
-    for (const OMPAdjustArgsItem &ItemInfo : Clause->items()) {
+  for (const OMPAdjustArgsDescriptor *Desc : AdjustArgs) {
+    for (const OMPAdjustArgsItem &ItemInfo : Desc->items()) {
       if (ItemInfo.Kind == OMPAdjustArgsItem::Range) {
         if (!checkOMPAdjustArgsRange(*this, ItemInfo))
           continue;
@@ -8092,10 +8102,10 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
   // so positions and ranges are checked too, via the shared item-to-positions
   // resolver.
   if (getLangOpts().OpenMP >= 60) {
-    for (const OMPAdjustArgsClause *Clause : AdjustArgs) {
-      if (Clause->AdjustOp != OMPC_ADJUST_ARGS_need_device_addr)
+    for (const OMPAdjustArgsDescriptor *Desc : AdjustArgs) {
+      if (Desc->AdjustOp != OMPC_ADJUST_ARGS_need_device_addr)
         continue;
-      for (const OMPAdjustArgsItem &Item : Clause->items()) {
+      for (const OMPAdjustArgsItem &Item : Desc->items()) {
         SmallVector<unsigned, 8> Positions;
         // With no call site in hand, 'omp_num_args' is the declared parameter
         // count (OpenMP 6.0 [20.1]). Positions past it denote variadic
@@ -8126,8 +8136,9 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
 
   auto *NewAttr = OMPDeclareVariantAttr::CreateImplicit(
       getASTContext(), VariantRef, &TI,
-      const_cast<OMPAdjustArgsClause **>(AdjustArgs.data()), AdjustArgs.size(),
-      const_cast<OMPInteropInfo *>(AppendArgs.data()), AppendArgs.size(), SR);
+      const_cast<OMPAdjustArgsDescriptor **>(AdjustArgs.data()),
+      AdjustArgs.size(), const_cast<OMPInteropInfo *>(AppendArgs.data()),
+      AppendArgs.size(), SR);
   FD->addAttr(NewAttr);
 }
 

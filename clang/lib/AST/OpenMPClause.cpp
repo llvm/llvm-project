@@ -31,16 +31,15 @@ using namespace clang;
 using namespace llvm;
 using namespace omp;
 
-OMPAdjustArgsClause *
-OMPAdjustArgsClause::Create(const ASTContext &C,
-                            OpenMPAdjustArgsOpKind AdjustOp,
-                            OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
-                            ArrayRef<OMPAdjustArgsItem> Items) {
+OMPAdjustArgsDescriptor *OMPAdjustArgsDescriptor::Create(
+    const ASTContext &C, OpenMPAdjustArgsOpKind AdjustOp,
+    OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+    ArrayRef<OMPAdjustArgsItem> Items) {
   void *Mem = C.Allocate(totalSizeToAlloc<OMPAdjustArgsItem>(Items.size()));
-  auto *Clause = new (Mem)
-      OMPAdjustArgsClause(AdjustOp, NeedDevicePtrModifier, Items.size());
-  llvm::copy(Items, Clause->getTrailingObjects());
-  return Clause;
+  auto *Desc = new (Mem)
+      OMPAdjustArgsDescriptor(AdjustOp, NeedDevicePtrModifier, Items.size());
+  llvm::copy(Items, Desc->getTrailingObjects());
+  return Desc;
 }
 
 OMPClause::child_range OMPClause::children() {

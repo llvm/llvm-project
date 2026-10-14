@@ -969,10 +969,10 @@ namespace {
     }
   };
 
-  class VariadicOMPAdjustArgsClauseArgument : public VariadicArgument {
+  class VariadicOMPAdjustArgsDescriptorArgument : public VariadicArgument {
   public:
-    VariadicOMPAdjustArgsClauseArgument(const Record &Arg, StringRef Attr)
-        : VariadicArgument(Arg, Attr, "OMPAdjustArgsClause *") {}
+    VariadicOMPAdjustArgsDescriptorArgument(const Record &Arg, StringRef Attr)
+        : VariadicArgument(Arg, Attr, "OMPAdjustArgsDescriptor *") {}
 
     void writeDump(raw_ostream &OS) const override {
       OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
@@ -984,7 +984,7 @@ namespace {
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    unsigned " << getLowerName() << "Size = Record.readInt();\n";
-      OS << "    SmallVector<OMPAdjustArgsClause *, 4> " << getLowerName()
+      OS << "    SmallVector<OMPAdjustArgsDescriptor *, 4> " << getLowerName()
          << ";\n";
       OS << "    " << getLowerName() << ".reserve(" << getLowerName()
          << "Size);\n";
@@ -1014,19 +1014,19 @@ namespace {
       OS << "        Items.push_back(Item);\n";
       OS << "      }\n";
       OS << "      " << getLowerName()
-         << ".push_back(OMPAdjustArgsClause::Create("
+         << ".push_back(OMPAdjustArgsDescriptor::Create("
             "Context, AdjustOp, NeedDevicePtrModifier, Items));\n";
       OS << "    }\n";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    Record.push_back(SA->" << getLowerName() << "_size());\n";
-      OS << "    for (const OMPAdjustArgsClause *Clause : SA->"
+      OS << "    for (const OMPAdjustArgsDescriptor *Desc : SA->"
          << getLowerName() << "()) {\n";
-      OS << "      Record.push_back(Clause->AdjustOp);\n";
-      OS << "      Record.push_back(Clause->NeedDevicePtrModifier);\n";
-      OS << "      Record.push_back(Clause->items().size());\n";
-      OS << "      for (const OMPAdjustArgsItem &Item : Clause->items()) {\n";
+      OS << "      Record.push_back(Desc->AdjustOp);\n";
+      OS << "      Record.push_back(Desc->NeedDevicePtrModifier);\n";
+      OS << "      Record.push_back(Desc->items().size());\n";
+      OS << "      for (const OMPAdjustArgsItem &Item : Desc->items()) {\n";
       OS << "        Record.push_back(Item.Kind);\n";
       OS << "        Record.writeBool(Item.E != nullptr);\n";
       OS << "        if (Item.E) Record.AddStmt(Item.E);\n";
@@ -1042,9 +1042,9 @@ namespace {
     }
 
     void writeASTVisitorTraversal(raw_ostream &OS) const override {
-      OS << "  for (OMPAdjustArgsClause *Clause : A->" << getLowerName()
+      OS << "  for (OMPAdjustArgsDescriptor *Desc : A->" << getLowerName()
          << "())\n";
-      OS << "    for (const OMPAdjustArgsItem &Item : Clause->items()) {\n";
+      OS << "    for (const OMPAdjustArgsItem &Item : Desc->items()) {\n";
       for (StringRef E : {"Item.E", "Item.Lower.E", "Item.Upper.E"}) {
         OS << "      if (" << E << " && !getDerived().TraverseStmt(" << E
            << "))\n";
@@ -1054,9 +1054,9 @@ namespace {
     }
 
     void writeDumpChildren(raw_ostream &OS) const override {
-      OS << "    for (const OMPAdjustArgsClause *Clause : SA->"
+      OS << "    for (const OMPAdjustArgsDescriptor *Desc : SA->"
          << getLowerName() << "())\n";
-      OS << "      for (const OMPAdjustArgsItem &Item : Clause->items()) {\n";
+      OS << "      for (const OMPAdjustArgsItem &Item : Desc->items()) {\n";
       for (StringRef E : {"Item.E", "Item.Lower.E", "Item.Upper.E"})
         OS << "        if (" << E << ") Visit(" << E << ");\n";
       OS << "      }\n";
@@ -1752,8 +1752,8 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "OMPTraitInfo *");
   else if (ArgName == "VariadicOMPInteropInfoArgument")
     Ptr = std::make_unique<VariadicOMPInteropInfoArgument>(Arg, Attr);
-  else if (ArgName == "VariadicOMPAdjustArgsClauseArgument")
-    Ptr = std::make_unique<VariadicOMPAdjustArgsClauseArgument>(Arg, Attr);
+  else if (ArgName == "VariadicOMPAdjustArgsDescriptorArgument")
+    Ptr = std::make_unique<VariadicOMPAdjustArgsDescriptorArgument>(Arg, Attr);
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.

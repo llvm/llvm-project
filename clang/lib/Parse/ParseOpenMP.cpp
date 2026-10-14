@@ -1373,7 +1373,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
       Actions.OpenMP().getOMPTraitInfoForSurroundingScope();
   ASTContext &ASTCtx = Actions.getASTContext();
   OMPTraitInfo &TI = ASTCtx.getNewOMPTraitInfo();
-  SmallVector<OMPAdjustArgsClause *, 3> AdjustArgs;
+  SmallVector<OMPAdjustArgsDescriptor *, 3> AdjustArgs;
   SmallVector<OMPInteropInfo, 3> AppendArgs;
   SourceLocation AdjustArgsLoc, AppendArgsLoc;
 
@@ -1404,7 +1404,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
         ConsumeToken();
         SemaOpenMP::OpenMPVarListDataTy Data;
         SmallVector<Expr *> Vars;
-        SmallVector<OMPAdjustArgsItem> Items;
+        SmallVector<OMPAdjustArgsItem, 4> Items;
         IsError = ParseOpenMPVarList(OMPD_declare_variant, OMPC_adjust_args,
                                      Vars, Data, Items);
         if (!IsError) {
@@ -1420,8 +1420,13 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
           if (Data.NeedDevicePtrModifierLoc.isValid())
             NeedDevicePtrModifier = static_cast<OpenMPNeedDevicePtrModifier>(
                 Data.NeedDevicePtrModifier);
-          AdjustArgs.push_back(OMPAdjustArgsClause::Create(
-              ASTCtx, AdjustOp, NeedDevicePtrModifier, Items));
+          OMPAdjustArgsDescriptor *Desc =
+              Actions.OpenMP().ActOnOpenMPAdjustArgsClause(
+                  AdjustOp, NeedDevicePtrModifier, Items, AdjustArgsLoc);
+          if (Desc)
+            AdjustArgs.push_back(Desc);
+          else
+            IsError = true;
         }
         break;
       }

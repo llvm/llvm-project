@@ -69,16 +69,17 @@ struct OMPAdjustArgsItem {
   Bound Upper;
 };
 
-/// The source-level contents of one OpenMP 'adjust_args' clause.
-class OMPAdjustArgsClause final
-    : private llvm::TrailingObjects<OMPAdjustArgsClause, OMPAdjustArgsItem> {
+/// Describes the source-level contents of one OpenMP 'adjust_args' clause.
+class OMPAdjustArgsDescriptor final
+    : private llvm::TrailingObjects<OMPAdjustArgsDescriptor,
+                                    OMPAdjustArgsItem> {
   friend TrailingObjects;
 
   unsigned NumItems;
 
-  OMPAdjustArgsClause(OpenMPAdjustArgsOpKind AdjustOp,
-                      OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
-                      unsigned NumItems)
+  OMPAdjustArgsDescriptor(OpenMPAdjustArgsOpKind AdjustOp,
+                          OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+                          unsigned NumItems)
       : NumItems(NumItems), AdjustOp(AdjustOp),
         NeedDevicePtrModifier(NeedDevicePtrModifier) {}
 
@@ -86,7 +87,7 @@ public:
   OpenMPAdjustArgsOpKind AdjustOp;
   OpenMPNeedDevicePtrModifier NeedDevicePtrModifier;
 
-  static OMPAdjustArgsClause *
+  static OMPAdjustArgsDescriptor *
   Create(const ASTContext &C, OpenMPAdjustArgsOpKind AdjustOp,
          OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
          ArrayRef<OMPAdjustArgsItem> Items);

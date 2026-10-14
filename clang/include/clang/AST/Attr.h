@@ -38,7 +38,7 @@ namespace clang {
 class ASTContext;
 class AttributeCommonInfo;
 class FunctionDecl;
-class OMPAdjustArgsClause;
+class OMPAdjustArgsDescriptor;
 class OMPTraitInfo;
 class OpenACCClause;
 struct StructuralEquivalenceContext;

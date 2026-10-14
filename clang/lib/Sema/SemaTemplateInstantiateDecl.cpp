@@ -554,7 +554,7 @@ static void instantiateOMPDeclareVariantAttr(
     }
   }
 
-  SmallVector<OMPAdjustArgsClause *, 4> AdjustArgs;
+  SmallVector<OMPAdjustArgsDescriptor *, 4> AdjustArgs;
   SmallVector<OMPInteropInfo, 4> AppendArgs;
 
   auto SubstAdjustArgsExpr = [&](Expr *&E) {
@@ -566,9 +566,9 @@ static void instantiateOMPDeclareVariantAttr(
     E = ER.get();
     return false;
   };
-  for (const OMPAdjustArgsClause *Clause : Attr.adjustArgs()) {
+  for (const OMPAdjustArgsDescriptor *Desc : Attr.adjustArgs()) {
     SmallVector<OMPAdjustArgsItem, 4> Items;
-    for (const OMPAdjustArgsItem &Item : Clause->items()) {
+    for (const OMPAdjustArgsItem &Item : Desc->items()) {
       OMPAdjustArgsItem NewItem = Item;
       if (SubstAdjustArgsExpr(NewItem.E) ||
           SubstAdjustArgsExpr(NewItem.Lower.E) ||
@@ -577,8 +577,9 @@ static void instantiateOMPDeclareVariantAttr(
       Items.push_back(NewItem);
     }
     if (!Items.empty())
-      AdjustArgs.push_back(OMPAdjustArgsClause::Create(
-          S.Context, Clause->AdjustOp, Clause->NeedDevicePtrModifier, Items));
+      AdjustArgs.push_back(S.OpenMP().ActOnOpenMPAdjustArgsClause(
+          Desc->AdjustOp, Desc->NeedDevicePtrModifier, Items,
+          Attr.getLocation()));
   }
   for (OMPInteropInfo &II : Attr.appendArgs()) {
     OMPInteropInfo Info(II.IsTarget, II.IsTargetSync);
