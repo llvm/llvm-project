@@ -2243,7 +2243,7 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
                                AMDGPU::FlatAddrSpace::FlatScratch))
       return false;
   } else {
-    if (TII->isLegalMUBUFImmOffset(static_cast<unsigned>(MaxOffset)))
+    if (TII->isLegalMUBUFImmOffset(MaxOffset))
       return false;
   }
 
