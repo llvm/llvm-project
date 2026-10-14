@@ -106,7 +106,7 @@ private:
   size_t __partitions_count_;
 
   template <class _Iter>
-  friend optional<__iterator_partitions<_Iter>>
+  friend optional<__iterator_partitions<_Iter>> _LIBCPP_HIDE_FROM_ABI
   __partition(_Iter, _Iter, __partitioning_result&, size_t, size_t, size_t, size_t) noexcept;
 };
 
