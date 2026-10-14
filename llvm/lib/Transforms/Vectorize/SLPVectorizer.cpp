@@ -36578,7 +36578,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
     // The values, feeding only the assumes, and the instructions, producing no
     // code, are dropped before the codegen, the tree is rejected for them
     // anyway.
-    if (isAssumeLikeIntrinsic(&*It) || It->isDebugOrPseudoInst() ||
+    if (isAssumeLikeIntrinsic(&*It) || isa<PseudoProbeInst>(It) ||
         R.isEphemeralValue(&*It))
       continue;
 

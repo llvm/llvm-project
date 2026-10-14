@@ -1871,7 +1871,7 @@ LoadInst *GVNPassImpl::findLoadToHoistIntoPred(BasicBlock *Pred,
 
   unsigned int NumInsts = Opts.gvn_max_num_insns;
   for (Instruction &Inst : *SuccBB) {
-    if (Inst.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(Inst))
       continue;
     if (--NumInsts == 0)
       return nullptr;

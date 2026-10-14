@@ -5715,7 +5715,7 @@ static BasicBlock::iterator findInsertPos(Value *Addr, Instruction *MemoryInst,
   for (User *U : Addr->users()) {
     Instruction *UserInst = dyn_cast<Instruction>(U);
     if (UserInst && UserInst->getParent() == MemoryInst->getParent()) {
-      if (isa<PHINode>(UserInst) || UserInst->isDebugOrPseudoInst())
+      if (isa<PHINode>(UserInst))
         continue;
       if (UserInst->comesBefore(Earliest))
         Earliest = UserInst;
@@ -9157,7 +9157,7 @@ bool CodeGenPrepare::placePseudoProbes(Function &F) {
   for (auto &Block : F) {
     // Move the rest probes to the beginning of the block.
     auto FirstInst = Block.getFirstInsertionPt();
-    while (FirstInst != Block.end() && FirstInst->isDebugOrPseudoInst())
+    while (FirstInst != Block.end() && isa<PseudoProbeInst>(FirstInst))
       ++FirstInst;
     BasicBlock::iterator I(FirstInst);
     I++;
