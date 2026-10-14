@@ -453,13 +453,13 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     // Add the chain last
     Ops.push_back(Node->getOperand(0));
     bool IsRetCall = Node->getOpcode() == WebAssemblyISD::RET_CALL;
-    unsigned Params = IsRetCall ? WebAssembly::RET_CALL_PARAMS
-                               : WebAssembly::CALL_PARAMS;
+    unsigned Params =
+        IsRetCall ? WebAssembly::RET_CALL_PARAMS : WebAssembly::CALL_PARAMS;
     MachineSDNode *CallParams =
         CurDAG->getMachineNode(Params, DL, MVT::Glue, Ops);
 
-    unsigned Results = IsRetCall ? WebAssembly::RET_CALL_RESULTS
-                                : WebAssembly::CALL_RESULTS;
+    unsigned Results =
+        IsRetCall ? WebAssembly::RET_CALL_RESULTS : WebAssembly::CALL_RESULTS;
 
     SDValue Link(CallParams, 0);
     MachineSDNode *CallResults =
