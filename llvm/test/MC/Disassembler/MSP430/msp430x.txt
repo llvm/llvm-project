@@ -16,3 +16,9 @@
 0x40 0x18 0x49 0x59           # CHECK: addx.b r9, r9
 0x40 0x18 0x0c 0x55           # CHECK: addx r5, r12
 0x40 0x18 0x47 0x55           # CHECK: addx.b r5, r7
+0x04 0x15                     # CHECK: pushm #1, r4
+0x6a 0x15                     # CHECK: pushm #7, r10
+0xff 0x15                     # CHECK: pushm #16, r15
+0x04 0x17                     # CHECK: popm #1, r4
+0x64 0x17                     # CHECK: popm #7, r10
+0xf0 0x17                     # CHECK: popm #16, r15

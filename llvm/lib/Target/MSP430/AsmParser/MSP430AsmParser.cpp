@@ -56,6 +56,8 @@ class MSP430AsmParser : public MCTargetAsmParser {
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
+  bool validateInstruction(const MCInst &Inst, const OperandVector &Operands);
+
   bool parseJccInstruction(ParseInstructionInfo &Info, StringRef Name,
                            SMLoc NameLoc, OperandVector &Operands);
 
@@ -186,6 +188,18 @@ public:
     return false;
   }
 
+  /// Count from 1 to 16, encoded as count - 1 in a 4-bit field.
+  bool isRpt4Imm() const {
+    int64_t Val;
+    if (!isImm() || !Imm->evaluateAsAbsolute(Val))
+      return false;
+
+    if (Val >= 1 && Val <= 16)
+      return true;
+
+    return false;
+  }
+
   StringRef getToken() const {
     assert(Kind == k_Tok && "Invalid access!");
     return Tok;
@@ -271,6 +285,8 @@ bool MSP430AsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
 
   switch (MatchResult) {
   case Match_Success:
+    if (validateInstruction(Inst, Operands))
+      return true;
     Inst.setLoc(Loc);
     Out.emitInstruction(Inst, *STI);
     return false;
@@ -293,6 +309,25 @@ bool MSP430AsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
   }
   default:
     return true;
+  }
+}
+
+bool MSP430AsmParser::validateInstruction(const MCInst &Inst,
+                                          const OperandVector &Operands) {
+  switch (Inst.getOpcode()) {
+  case MSP430::PUSHM16r:
+  case MSP430::POPM16r: {
+    // The range counts down from the given register, so it must not go below
+    // r0.
+    int64_t Count = Inst.getOperand(0).getImm();
+    MCRegister Reg = Inst.getOperand(1).getReg();
+    if (Count > getContext().getRegisterInfo()->getEncodingValue(Reg) + 1)
+      return Error(((MSP430Operand &)*Operands[2]).getStartLoc(),
+                   "register range extends below r0");
+    return false;
+  }
+  default:
+    return false;
   }
 }
 

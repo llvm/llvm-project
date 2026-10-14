@@ -527,6 +527,29 @@ class I16rExtended<bits<4> opcode, bit zc, bit rpt,
                    dag outs, dag ins, string asmstr, list<dag> pattern>
   : IExtRegForm<opcode, 0, zc, rpt, outs, ins, asmstr, pattern>;
 
+// PUSHM and POPM. Single-word MSP430X instructions with their own layout in
+// the Format II opcode space, without an extension word. TI calls them Format
+// II exceptions.
+class IIExtExcPushPopForm<bit ispop, ALKind al,
+                          dag outs, dag ins, string asmstr, list<dag> pattern>
+  : MSP430Inst<outs, ins, 2, asmstr> {
+  let Pattern = pattern;
+  let DecoderNamespace = "MSP430X";
+
+  bits<4> cnt;
+  bits<4> rs;
+
+  let Inst{15-10} = 0b000101;
+  let Inst{9}     = ispop;
+  let Inst{8}     = al.Value;
+  let Inst{7-4}   = cnt;
+  let Inst{3-0}   = rs;
+}
+
+class IIExtExcPushPopForm16<bit ispop,
+                            dag outs, dag ins, string asmstr, list<dag> pattern>
+  : IIExtExcPushPopForm<ispop, ALWord, outs, ins, asmstr, pattern>;
+
 // Pseudo instructions
 class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
   : MSP430Inst<outs, ins, 0, asmstr> {

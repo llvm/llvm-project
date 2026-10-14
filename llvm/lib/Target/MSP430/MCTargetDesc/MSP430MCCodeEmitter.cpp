@@ -70,9 +70,19 @@ class MSP430MCCodeEmitter : public MCCodeEmitter {
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
+  /// Encode a count from 1 to 16 in a 4-bit field.
+  unsigned getRpt4ImmOpValue(const MCInst &MI, unsigned Op,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
+
   unsigned getCCOpValue(const MCInst &MI, unsigned Op,
                         SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
+
+  /// POPM encodes Rdst - n + 1 for Rdst, while PUSHM encodes Rdst.
+  unsigned getPOPMRegOpValue(const MCInst &MI, unsigned Op,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
 
 public:
   MSP430MCCodeEmitter(MCContext &ctx, MCInstrInfo const &MCII)
@@ -210,6 +220,18 @@ MSP430MCCodeEmitter::getRpt2ImmOpValue(const MCInst &MI, unsigned Op,
   return Imm - 1;
 }
 
+unsigned
+MSP430MCCodeEmitter::getRpt4ImmOpValue(const MCInst &MI, unsigned Op,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(Op);
+  assert(MO.isImm() && "expr operand expected");
+
+  int64_t Imm = MO.getImm();
+  assert((Imm >= 1 && Imm <= 16) && "invalid repetition count");
+  return Imm - 1;
+}
+
 unsigned MSP430MCCodeEmitter::getCCOpValue(const MCInst &MI, unsigned Op,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
@@ -226,6 +248,20 @@ unsigned MSP430MCCodeEmitter::getCCOpValue(const MCInst &MI, unsigned Op,
   default:
     llvm_unreachable("Unknown condition code");
   }
+}
+
+unsigned
+MSP430MCCodeEmitter::getPOPMRegOpValue(const MCInst &MI, unsigned Op,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  const MCOperand &CountMO = MI.getOperand(0);
+  const MCOperand &RegMO = MI.getOperand(Op);
+  assert(CountMO.isImm() && RegMO.isReg() && "unexpected POPM operands");
+
+  unsigned Reg = Ctx.getRegisterInfo()->getEncodingValue(RegMO.getReg());
+  int64_t Count = CountMO.getImm();
+  assert(Count >= 1 && Count <= int64_t(Reg) + 1 && "POPM range below r0");
+  return Reg - Count + 1;
 }
 
 MCCodeEmitter *createMSP430MCCodeEmitter(const MCInstrInfo &MCII,

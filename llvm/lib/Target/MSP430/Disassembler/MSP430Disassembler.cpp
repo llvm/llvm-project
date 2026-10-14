@@ -123,10 +123,10 @@ static DecodeStatus DecodeCGImm(MCInst &MI, uint64_t Bits, uint64_t Address,
   return MCDisassembler::Success;
 }
 
-/// Decode the 2-bit shift count of RRCM, RRAM, RRUM and RLAM. It is stored as
-/// count - 1.
-static DecodeStatus decodeRpt2Imm(MCInst &MI, uint64_t Bits, uint64_t Address,
-                                  const MCDisassembler *Decoder) {
+/// Decode a count stored as count - 1. Used for the 2-bit shift count of RRCM,
+/// RRAM, RRUM and RLAM and the 4-bit register count of PUSHM and POPM.
+static DecodeStatus decodeRptImm(MCInst &MI, uint64_t Bits, uint64_t Address,
+                                 const MCDisassembler *Decoder) {
   int64_t Imm = Bits + 1;
   MI.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
@@ -144,6 +144,17 @@ static DecodeStatus DecodeMemOperand(MCInst &MI, uint64_t Bits,
   
   MI.addOperand(MCOperand::createImm((int16_t)Imm));
   return MCDisassembler::Success;
+}
+
+/// POPM encodes Rdst - n + 1 for Rdst, while PUSHM encodes Rdst. The count n
+/// is decoded before the register.
+static DecodeStatus decodePOPMRegOperand(MCInst &MI, uint64_t Bits,
+                                         uint64_t Address,
+                                         const MCDisassembler *Decoder) {
+  assert(MI.getNumOperands() == 1 && MI.getOperand(0).isImm() &&
+         "count must be decoded before the register");
+  int64_t Count = MI.getOperand(0).getImm();
+  return DecodeGR16RegisterClass(MI, (Bits & 15) + Count - 1, Address, Decoder);
 }
 
 #include "MSP430GenDisassemblerTables.inc"
@@ -406,19 +417,27 @@ DecodeStatus MSP430Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
     return MCDisassembler::Fail;
   }
 
-  // The first word selects the instruction format:
-  //   0x0000-0x0fff  MSP430X address instructions
-  //   0x1000-0x17ff  Format II
-  //   0x1800-0x1fff  MSP430X extension word, followed by a Format I or II word
-  //   0x2000-0x3fff  Jumps
-  //   0x4000-0xffff  Format I
+  // The first word selects the decoder. MSP430X and Format II are interleaved
+  // below 0x2000. II* is a single-word MSP430X instruction with its own layout
+  // in the Format II opcode space (TI: Format II exception).
+  //
+  //   Range          Decoder  Format     Instructions
+  //   0x0000-0x0fff  X        addr, II*  MOVA, ADDA, ..., RRCM, RRAM, RLAM, ...
+  //   0x1000-0x13ff  II       II         RRC, SWPB, RRA, SXT, PUSH, CALL, RETI
+  //   0x1400-0x17ff  X        II*        PUSHM, POPM
+  //   0x1800-0x1fff  X        ext+I/II   RRCX, RRAX, ADDX, ...
+  //   0x2000-0x3fff  CJ       jump       JMP, JNE, ...
+  //   0x4000-0xffff  I        I          MOV, ADD, ...
+  //
+  // ext+I/II is an extension word followed by a Format I or II word.
   uint64_t Insn = support::endian::read16le(Bytes.data());
   unsigned FormatBits = fieldFromInstruction(Insn, 13, 3);
   switch (FormatBits) {
   case 0:
-    if (!(Insn & 0x1000) || isExtensionWord(Insn))
-      return getInstructionX(MI, Size, Bytes, Address, CStream);
-    return getInstructionII(MI, Size, Bytes, Address, CStream);
+    // 0x1000-0x13ff
+    if ((Insn & 0x1c00) == 0x1000)
+      return getInstructionII(MI, Size, Bytes, Address, CStream);
+    return getInstructionX(MI, Size, Bytes, Address, CStream);
   case 1:
     return getInstructionCJ(MI, Size, Bytes, Address, CStream);
   default:

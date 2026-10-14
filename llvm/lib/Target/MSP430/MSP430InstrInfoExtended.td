@@ -18,6 +18,9 @@
 // required in the small memory model, and have increased size/cycle count
 // compared to their 430 versions.
 
+//===----------------------------------------------------------------------===//
+//  Operands
+//
 def Rpt2ImmAsmOperand : AsmOperandClass {
   let Name = "Rpt2Imm";
   let RenderMethod = "addImmOperands";
@@ -27,7 +30,25 @@ def rpt2imm : Operand<i8>,
               ImmLeaf<i8, [{return Imm >= 1 && Imm <= 4;}]> {
   let ParserMatchClass = Rpt2ImmAsmOperand;
   let EncoderMethod = "getRpt2ImmOpValue";
-  let DecoderMethod = "decodeRpt2Imm";
+  let DecoderMethod = "decodeRptImm";
+}
+
+def Rpt4ImmAsmOperand : AsmOperandClass {
+  let Name = "Rpt4Imm";
+  let RenderMethod = "addImmOperands";
+}
+
+def rpt4imm : Operand<i8>,
+              ImmLeaf<i8, [{return Imm >= 1 && Imm <= 16;}]> {
+  let ParserMatchClass = Rpt4ImmAsmOperand;
+  let EncoderMethod = "getRpt4ImmOpValue";
+  let DecoderMethod = "decodeRptImm";
+}
+
+// POPM encodes Rdst - n + 1 for Rdst, while PUSHM encodes Rdst.
+def popmreg : RegisterOperand<GR16> {
+  let EncoderMethod = "getPOPMRegOpValue";
+  let DecoderMethod = "decodePOPMRegOperand";
 }
 
 //===----------------------------------------------------------------------===//
@@ -81,4 +102,19 @@ let Defs = [SR], Constraints = "$src2 = $rd" in {
 // Alias printing is disabled for the same reason as for RLA.
 def RLAX8r  : InstAlias<"rlax.b\t$dst", (ADDX8rr  GR8:$dst,  GR8:$dst),  0>;
 def RLAX16r : InstAlias<"rlax\t$dst",   (ADDX16rr GR16:$dst, GR16:$dst), 0>;
+
+//===----------------------------------------------------------------------===//
+//  Push/Pop Multiple Registers
+//
+// $rs is the highest register of the range. The other registers depend on the
+// count, so codegen must add them as implicit operands when it builds the
+// instruction.
+let Defs = [SP], Uses = [SP], hasSideEffects = 0 in {
+let mayStore = 1 in
+def PUSHM16r : IIExtExcPushPopForm16<0, (outs), (ins rpt4imm:$cnt, GR16:$rs),
+                                     "pushm\t$cnt, $rs", []>;
+let mayLoad = 1 in
+def POPM16r  : IIExtExcPushPopForm16<1, (outs), (ins rpt4imm:$cnt, popmreg:$rs),
+                                     "popm\t$cnt, $rs", []>;
+}
 } // Predicates = [HasMSP430X]

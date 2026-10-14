@@ -7,3 +7,7 @@
 // CHECK: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   rlax r12
 // CHECK: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
+  pushm #1, r4
+// CHECK: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
+  popm #1, r4
+// CHECK: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
