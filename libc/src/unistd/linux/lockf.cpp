@@ -27,9 +27,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace {
-
-LIBC_INLINE ErrorOr<int> lockf_impl(int fd, int cmd, off_t len) {
+static ErrorOr<int> lockf_impl(int fd, int cmd, off_t len) {
   struct flock fl = {};
   fl.l_whence = SEEK_CUR;
   fl.l_start = 0;
@@ -58,8 +56,6 @@ LIBC_INLINE ErrorOr<int> lockf_impl(int fd, int cmd, off_t len) {
     return Error(EINVAL);
   }
 }
-
-} // anonymous namespace
 
 LLVM_LIBC_FUNCTION(int, lockf, (int fd, int cmd, off_t len)) {
   auto result = lockf_impl(fd, cmd, len);

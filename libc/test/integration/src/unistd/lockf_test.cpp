@@ -11,6 +11,7 @@
 #include "hdr/sys_stat_macros.h"
 #include "hdr/sys_wait_macros.h"
 #include "hdr/unistd_macros.h"
+#include "src/__support/CPP/scope.h"
 #include "src/fcntl/open.h"
 #include "src/stdlib/exit.h"
 #include "src/sys/wait/waitpid.h"
@@ -29,6 +30,11 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
 
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU);
   ASSERT_TRUE(fd > 0);
+
+  LIBC_NAMESPACE::cpp::scope_exit cleanup([&] {
+    ASSERT_EQ(LIBC_NAMESPACE::close(fd), 0);
+    ASSERT_EQ(LIBC_NAMESPACE::unlink(TEST_FILE), 0);
+  });
 
   // Acquire an exclusive lock on the file in the parent process.
   ASSERT_EQ(LIBC_NAMESPACE::lockf(fd, F_LOCK, 0), 0);
@@ -65,11 +71,6 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
   ASSERT_EQ(cpid, pid);
   ASSERT_TRUE(WIFEXITED(status));
   ASSERT_EQ(WEXITSTATUS(status), 0);
-
-  // Release lock and clean up file.
-  ASSERT_EQ(LIBC_NAMESPACE::lockf(fd, F_ULOCK, 0), 0);
-  ASSERT_EQ(LIBC_NAMESPACE::close(fd), 0);
-  ASSERT_EQ(LIBC_NAMESPACE::unlink(TEST_FILE), 0);
 
   return 0;
 }
