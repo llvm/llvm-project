@@ -2327,7 +2327,8 @@ public:
 };
 
 /// Generates code to create an FP constant that defines a TempReg.
-/// \p Val is the IEEE bit pattern of the TempReg's (scalar) type.
+/// \p Val is the IEEE bit pattern, truncated to the scalar width.
+/// It does not support values bigger than 64 bits.
 class BuildFConstantAction : public MatchAction {
   unsigned TempRegID;
   int64_t Val;

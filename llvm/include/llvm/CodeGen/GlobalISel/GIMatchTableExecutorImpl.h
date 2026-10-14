@@ -1142,7 +1142,16 @@ bool GIMatchTableExecutor::executeMatchTable(
       initializeBuilder();
       Register TempReg = State.TempRegisters[TempRegID];
       LLT Ty = MRI.getType(TempReg).getScalarType();
-      APFloat Val(getFltSemanticForLLT(Ty), APInt(Ty.getSizeInBits(), Bits));
+      unsigned Width = Ty.getScalarSizeInBits();
+      // Any value bigger than 64 bits is not supported as a scalar FP type
+      // due to the tablegen limitations.
+      if (Width > 64 && Bits != 0)
+        report_fatal_error("GIR_BuildFConstant cannot represent a non-zero "
+                           "bit pattern for a scalar FP type wider than 64 "
+                           "bits");
+      APFloat Val(getFltSemanticForLLT(Ty),
+                  APInt(Width, Bits, /*isSigned=*/false,
+                        /*implicitTrunc=*/true));
       Builder.buildFConstant(TempReg, Val);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_BuildFConstant(TempReg["

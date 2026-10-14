@@ -185,9 +185,9 @@ def GIReplaceRegWithConstant : GIBuiltinInst;
 //
 // Operands:
 // - $reg (out) register defined by the match root
-// - Imm: an integer literal, interpreted as the IEEE bit pattern of $reg's
-//   (scalar) type, not a decimal fp value: e.g. for an f32 $reg, `0` means
-//   the bit pattern 0x00000000 (i.e. +0.0).
+// - Imm: an integer literal, the IEEE bit pattern of $reg's scalar type,
+//   not a decimal fp value (f32 `0` is +0.0). Truncated to that width;
+//   above 64 bits, only `0` is valid.
 //
 // Semantics:
 // - Can only appear in an 'apply' pattern.
