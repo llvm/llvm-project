@@ -839,7 +839,7 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
 
   SmallVector<LoopIV> firstIVs(firstPloop.getNumLoops());
   SmallVector<LoopIV> secondIVs(secondPloop.getNumLoops());
-  llvm::SmallSetVector<LoopIV, 6> unique;
+  llvm::SmallSetVector<LoopIV, 8> unique;
   for (unsigned index : llvm::seq(firstPloop.getNumLoops())) {
     firstIVs[index].lBound = firstPloop.getLowerBound()[index];
     firstIVs[index].uBound = firstPloop.getUpperBound()[index];

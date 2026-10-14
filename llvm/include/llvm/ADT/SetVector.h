@@ -348,8 +348,8 @@ class SmallSetVector
                        std::conditional_t<std::is_pointer_v<T>,
                                           SmallPtrSet<T, N>, DenseSet<T>>,
                        N> {
-  static_assert(N != 0 && "SmallSetVector is not meant to be used with zero "
-                          "size-hint; use SetVector instead");
+  static_assert(isPowerOf2_64(N) &&
+                "SmallSetVector is meant to be used with power-of-2 size-hint");
 
 public:
   using SetVector<
