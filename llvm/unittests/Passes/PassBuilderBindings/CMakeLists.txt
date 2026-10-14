@@ -1,4 +1,4 @@
-set(LLVM_LINK_COMPONENTS Support Passes Core Target native AllTargetsInfos)
+set(LLVM_LINK_COMPONENTS Support Passes Core Target AllTargetsCodeGens AllTargetsDescs AllTargetsInfos)
 add_llvm_unittest(PassesBindingsTests
 PassBuilderBindingsTest.cpp
 )
