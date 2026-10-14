@@ -441,7 +441,7 @@ struct VPlanTransforms {
   static bool removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
 
   /// Perform common-subexpression-elimination on \p Plan.
-  static void cse(VPlan &Plan);
+  static void cse(VPlan &Plan, const VPDominatorTree &VPDT);
 
   /// Replace each VPExpandSCEVRecipe in \p Plan's entry block with an earlier
   /// VPExpandSCEVRecipe there expanding the same SCEV, if any.
