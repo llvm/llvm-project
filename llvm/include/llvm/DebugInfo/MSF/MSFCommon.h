@@ -112,13 +112,13 @@ inline bool isValidBlockSize(uint32_t Size) {
 inline uint64_t getMaxFileSizeFromBlockSize(uint32_t Size) {
   switch (Size) {
   case 8192:
-    return (uint64_t)UINT32_MAX * 2ULL;
+    return (uint64_t)1 << 33; // 8 GiB
   case 16384:
-    return (uint64_t)UINT32_MAX * 3ULL;
+    return (uint64_t)1 << 34; // 16 GiB
   case 32768:
-    return (uint64_t)UINT32_MAX * 4ULL;
+    return (uint64_t)1 << 35; // 32 GiB
   default:
-    return (uint64_t)UINT32_MAX;
+    return (uint64_t)1 << 32; // 4 GiB
   }
 }
 
