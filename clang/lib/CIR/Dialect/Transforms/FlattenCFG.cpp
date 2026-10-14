@@ -2124,7 +2124,7 @@ collectCoReturnsOps(mlir::Region &region,
 }
 
 // Flatten `cir.coroutine`. It runs once every nested op (awaits, scopes,
-// cleanups, ...) has been flattened. The initialSuspend, body and finalSuspend
+// cleanups, ...) has been flattened. This initialSuspend, body and finalSuspend
 // regions become the body of a cleanup scope whose cleanup is the destroy
 // region; the exit region follows the scope:
 //
@@ -2246,7 +2246,7 @@ public:
     for (auto &coroExit : coroExitsOps) {
       // TODO(cir): once the GRO region is supported, this may need to branch
       // there instead of to the exit region.
-      assert(!cir::MissingFeatures::coroutineGroManager());
+      assert(!cir::MissingFeatures::coroutineGetRetObjManager());
       rewriter.setInsertionPoint(coroExit);
       rewriter.replaceOpWithNewOp<cir::BrOp>(coroExit, mlir::ValueRange{},
                                              beforeExit);
@@ -2410,7 +2410,7 @@ public:
       mlir::Block *retBlock = nullptr;
       {
         mlir::OpBuilder::InsertionGuard guard(rewriter);
-        assert(!cir::MissingFeatures::coroutineGroManager());
+        assert(!cir::MissingFeatures::coroutineGetRetObjManager());
         retBlock = rewriter.createBlock(remainingOpsBlock);
         cir::CoroExitOp::create(rewriter, loc);
       }
