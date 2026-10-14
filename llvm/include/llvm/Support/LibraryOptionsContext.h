@@ -27,21 +27,19 @@ class LibraryOptions;
 // Libraries declared with perContext read their options here.
 class LLVM_ABI LibraryOptionsContext {
 public:
-  // Replaces the library options with those that Args spell, e.g. {"-x=v"}.
-  // Fails at the first argument that is not a library option or has an invalid
-  // value.
+  // Replaces the library options with Other's by replaying its arguments.
   //
   // A library's values start as a copy of its global(), which may refer to
   // strings that ResetAllOptionOccurrences frees.
   // Indexing libraries registered since the last parse is not thread-safe.
-  Error assign(ArrayRef<const char *> Args);
+  void assign(const LibraryOptionsContext &Other);
 
   // Parses the option of L that Args[0] spells, keeping the other values.
   Error parse(LibraryOptions &L, ArrayRef<const char *> Args,
               unsigned &Consumed);
 
-  // The arguments set so far, for replaying into another context.
-  ArrayRef<const char *> args() const { return Args; }
+  // The arguments assigned so far.
+  ArrayRef<const char *> args() const { return SavedArgs; }
 
   // T's values, or T::Global if there are none.
   template <typename T> const T &get() const {
@@ -54,7 +52,7 @@ public:
 
 private:
   DenseMap<const void *, void *> Values;
-  SmallVector<const char *, 0> Args;
+  SmallVector<const char *, 0> SavedArgs;
   BumpPtrAllocator Alloc;
 };
 

@@ -206,30 +206,30 @@ TEST(LibraryOptionsTest, ParseIntoGlobal) {
 TEST(LibraryOptionsTest, Values) {
   cl::ResetCommandLineParser();
   opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
-  cl::opt<bool> NotLibrary("lib-cl-opt");
-  cl::LibraryOptionsContext V;
-  auto Assign = [&](std::initializer_list<const char *> Args) {
-    return toString(V.assign(Args));
+  opt::LibraryOptionsParser L{std::in_place_type<TestLibraryOptions>};
+  auto Parse = [&](cl::LibraryOptionsContext &V, ArrayRef<const char *> Args) {
+    unsigned N;
+    return toString(V.parse(L, Args, N));
   };
-  EXPECT_EQ(Assign({"-lib-list=9"}), "");
+  cl::LibraryOptionsContext V;
   std::string Path = "-lib-path=q";
-  EXPECT_EQ(Assign({"-lib-count", "7", Path.c_str(), "--lib-list=1,2"}), "");
+  EXPECT_EQ(Parse(V, {"-lib-count", "7"}), "");
+  EXPECT_EQ(Parse(V, Path.c_str()), "");
+  EXPECT_EQ(Parse(V, "--lib-list=1,2"), "");
   Path.assign(Path.size(), ' ');
   EXPECT_EQ(TestLibraryOptions::Global.count, 3u);
-  // The earlier call's values are discarded.
-  EXPECT_THAT(V.get<TestLibraryOptions>().list, testing::ElementsAre(1u, 2u));
+  EXPECT_EQ(Parse(V, "-lib-count=x"), "invalid value 'x' in '-lib-count=x'");
 
-  // Another context replays the arguments, which outlive the caller's.
+  // assign() replays the arguments, which outlive the caller's, and discards
+  // the earlier values.
   cl::LibraryOptionsContext Copy;
-  EXPECT_EQ(toString(Copy.assign(V.args())), "");
+  EXPECT_EQ(Parse(Copy, "-lib-list=9"), "");
+  Copy.assign(V);
   const TestLibraryOptions &C = Copy.get<TestLibraryOptions>();
   EXPECT_EQ(C.count, 7u);
   EXPECT_EQ(C.Path, "q");
   EXPECT_THAT(C.list, testing::ElementsAre(1u, 2u));
-
-  EXPECT_EQ(Assign({"-lib-count=x"}), "invalid value 'x' in '-lib-count=x'");
-  EXPECT_EQ(Assign({"-lib-cl-opt"}), "'-lib-cl-opt' is not a library option");
-  EXPECT_EQ(Assign({"lib-count=1"}), "'lib-count=1' is not a library option");
+  EXPECT_EQ(Copy.args().size(), V.args().size());
   cl::ResetCommandLineParser();
 }
 

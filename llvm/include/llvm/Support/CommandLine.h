@@ -72,9 +72,9 @@ LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
                                       vfs::FileSystem *VFS = nullptr,
                                       const char *EnvVar = nullptr);
 
-// Like ParseCommandLineOptions, but sets the library registered options
-// as per-context in LibraryOptions rather than in their global().
-LLVM_ABI bool parseCommandLineOptions(LibraryOptionsContext &LibraryOptions,
+// Like ParseCommandLineOptions, but sets per-context libraries' options in
+// Context instead of their global().
+LLVM_ABI bool parseCommandLineOptions(LibraryOptionsContext &Context,
                                       ArrayRef<const char *> Args,
                                       StringRef Overview = "",
                                       raw_ostream *Errs = nullptr,

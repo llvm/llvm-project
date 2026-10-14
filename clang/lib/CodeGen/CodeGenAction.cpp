@@ -367,8 +367,7 @@ CodeGenerator *CodeGenAction::getCodeGenerator() const {
 }
 
 bool CodeGenAction::BeginSourceFileAction(CompilerInstance &CI) {
-  cantFail(
-      VMContext->getLibraryOptions().assign(CI.getLibraryOptions().args()));
+  VMContext->getLibraryOptions().assign(CI.getLibraryOptions());
   if (CI.getFrontendOpts().GenReducedBMI)
     CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
   return ASTFrontendAction::BeginSourceFileAction(CI);

@@ -1480,11 +1480,11 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                      Errs, VFS, EnvVar);
 }
 
-bool cl::parseCommandLineOptions(LibraryOptionsContext &LibraryOptions,
+bool cl::parseCommandLineOptions(LibraryOptionsContext &Context,
                                  ArrayRef<const char *> Args,
                                  StringRef Overview, raw_ostream *Errs,
                                  vfs::FileSystem *VFS, const char *EnvVar) {
-  return parseCommandLineOptionsImpl(&LibraryOptions, Args, Overview, Errs, VFS,
+  return parseCommandLineOptionsImpl(&Context, Args, Overview, Errs, VFS,
                                      EnvVar);
 }
 
@@ -2943,25 +2943,21 @@ void cl::addLibraryOptions(LibraryOptions &L) {
   globalParser().Libraries.push_back(&L);
 }
 
-Error LibraryOptionsContext::assign(ArrayRef<const char *> Args) {
+void LibraryOptionsContext::assign(const LibraryOptionsContext &Other) {
+  assert(this != &Other);
   Values.clear();
-  this->Args.clear();
+  SavedArgs.clear();
+  ArrayRef<const char *> Args = Other.SavedArgs;
   for (size_t I = 0, E = Args.size(); I != E;) {
     StringRef Name = Args[I];
-    LibraryOptions *L = nullptr;
-    if (Name.consume_front("-")) {
-      Name.consume_front("-");
-      L = globalParser().lookupLibraryOption(Name.split('=').first);
-    }
-    if (!L)
-      return createStringError("'" + Twine(Args[I]) +
-                               "' is not a library option");
+    Name.consume_front("-");
+    Name.consume_front("-");
+    LibraryOptions *L =
+        globalParser().lookupLibraryOption(Name.split('=').first);
     unsigned N;
-    if (Error Err = parse(*L, Args.drop_front(I), N))
-      return Err;
+    cantFail(parse(*L, Args.drop_front(I), N));
     I += N;
   }
-  return Error::success();
 }
 
 Error LibraryOptionsContext::parse(LibraryOptions &L,
@@ -2970,7 +2966,7 @@ Error LibraryOptionsContext::parse(LibraryOptions &L,
   auto [It, Inserted] = Values.try_emplace(L.global());
   if (Inserted)
     It->second = L.copyGlobal(Alloc);
-  return parseLibraryOption(L, It->second, Args, Consumed, Alloc, &this->Args);
+  return parseLibraryOption(L, It->second, Args, Consumed, Alloc, &SavedArgs);
 }
 
 void cl::ResetAllOptionOccurrences() {
