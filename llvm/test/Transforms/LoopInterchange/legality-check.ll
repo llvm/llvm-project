@@ -149,7 +149,8 @@ exit:
 ;;      for (int k = 0; k < 19; k++)
 ;;        b[i][j][k] = b[i][5][k + 1];
 ;;
-;; The direction vector of `b` is [= * *]. We cannot interchange all the loops.
+;; The direction vector of `b` is [= * *]. We can interchange the i-loop and
+;; the j-loop.
 
 ; CHECK:      Dependency matrix before interchange:
 ; CHECK-NEXT: = * *
@@ -157,8 +158,10 @@ exit:
 ; CHECK-NEXT: Failed interchange InnerLoopId = 2 and OuterLoopId = 1 due to dependence
 ; CHECK-NEXT: Cannot prove legality, not interchanging loops 'for.j.header' and 'for.k'
 ; CHECK-NEXT: Processing InnerLoopId = 1 and OuterLoopId = 0
-; CHECK-NEXT: Failed interchange InnerLoopId = 1 and OuterLoopId = 0 due to dependence
-; CHECK-NEXT: Cannot prove legality, not interchanging loops 'for.i.header' and 'for.j.header'
+; CHECK-NEXT: Checking if loops 'for.i.header' and 'for.j.header' are tightly nested
+; CHECK-NEXT: Checking instructions in Loop header and Loop latch
+; CHECK-NEXT: Loops are perfectly nested
+; CHECK-NEXT: Loops 'for.i.header' and 'for.j.header' are legal to interchange
 
 define void @eq_all_lt() {
 entry:
