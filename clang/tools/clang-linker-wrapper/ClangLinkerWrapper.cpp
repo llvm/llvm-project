@@ -1358,6 +1358,11 @@ getDeviceInput(const ArgList &Args) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
+  // ld64 also searches its default library paths under each -syslibroot.
+  for (StringRef Dir : {"/usr/lib", "/usr/local/lib"})
+    for (const opt::Arg *Arg : Args.filtered(OPT_syslibroot))
+      LibraryPaths.push_back(Saver.save(Twine(Arg->getValue()) + Dir));
+
   // Try to extract device code from the linker input files.
   bool WholeArchive = Args.hasArg(OPT_wholearchive_flag);
   SmallVector<OffloadFile> ObjectFilesToExtract;

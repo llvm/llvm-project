@@ -198,6 +198,13 @@ __attribute__((visibility("protected"), used)) int x;
 
 // MACHO-LIBRARY: ld{{.*}} {{.*}}.o -o a.out
 
+// RUN: mkdir -p %t.dir/sdk/usr/lib && touch %t.dir/sdk/usr/lib/libbaz.tbd
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-apple-macosx15.0.0 \
+// RUN:   --linker-path=/usr/bin/ld -syslibroot %t.dir/sdk -lbaz %t.elf.o -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MACHO-SYSLIBROOT
+
+// MACHO-SYSLIBROOT: ld{{.*}} -syslibroot {{.*}}sdk {{.*}}.o -o a.out
+
 // RUN: llvm-offload-binary -o %t-lib.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgpu9.0a-amd-amdhsa,arch=gfx90a
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t-lib.out
