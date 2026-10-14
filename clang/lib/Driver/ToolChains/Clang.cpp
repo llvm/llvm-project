@@ -7482,7 +7482,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                       options::OPT_fno_hip_kernel_arg_name);
     if (TC.getTriple().isSPIRV() &&
         TC.getTriple().getVendor() == llvm::Triple::VendorType::AMD)
-    Args.addLastArg(CmdArgs, options::OPT_fenable_spirv_size_optimization);
+      Args.addLastArg(CmdArgs, options::OPT_fenable_spirv_size_optimization);
   }
 
   if ((IsCuda || IsHIP || IsSYCL) && IsRDCMode)
