@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements memory slot interface models used by Mem2Reg to promote
-// a memref to a single vector SSA value. `PromotableAliaserInterface` exposes
-// `memref.subview` aliases, and `PromotableOpInterface` removes the subviews
-// after promotion. Vector transfer ops are handled by the models in the
-// Vector dialect.
+// a memref to a single vector SSA value. `PromotableMemOpInterface` handles
+// `memref.copy`. `PromotableAliaserInterface` exposes `memref.subview` aliases,
+// and `PromotableOpInterface` removes the subviews after promotion. Vector
+// transfer ops are handled by the models in the Vector dialect.
 //
 // A memory slot pairs a memref with the vector type used to represent its
 // contents. Promotion replaces accesses to the slot with uses and definitions
@@ -18,6 +18,10 @@
 // supported by the models.
 //
 // The accesses are rewritten as follows:
+//
+//   * A `memref.copy` into the slot becomes a `vector.transfer_read` of the
+//     source. A copy out of the slot becomes a `vector.transfer_write` to the
+//     target. A copy between two slots is rewritten one slot at a time.
 //
 //   * A same-rank, unit-stride `memref.subview` gets an alias slot that is
 //     promoted together with the parent:
@@ -31,9 +35,9 @@
 //       accesses to the subview's extent. The subview must start at the
 //       parent's origin.
 //
-// Subviews require a statically shaped parent buffer. A dynamically
+// Copies and subviews require a statically shaped parent buffer. A dynamically
 // shaped buffer can instead promote to a 1-D scalable vector through
-// whole-buffer transfers, but subviews are not supported.
+// whole-buffer transfers, but copies and subviews are not supported.
 //
 // Unsupported accesses, such as dynamic subview offsets, rank reduction,
 // non-unit subview strides, or non-zero transfer indices, prevent promotion.
@@ -162,7 +166,130 @@ Value mlir::memref::buildDynamicSubViewMask(OpBuilder &builder, Location loc,
   return buildSubViewMask(builder, loc, subView);
 }
 
+/// Produces the value that a `memref.copy` stores into a slot: reads `mem` at
+/// the origin into `vecType` with an identity map, marking a dimension
+/// in-bounds only when the memref extent is statically at least the vector
+/// extent.
+///
+/// The padding value does not affect the copy: both operands must have the same
+/// runtime shape. For a whole-buffer slot, the source covers the whole vector.
+/// For a dynamic-subview slot,
+/// `PromotableAliaserInterface::projectAliasValueToSlotValue` discards lanes
+/// outside the subview's extent with a masked select.
+static Value readMemRefAsVector(OpBuilder &builder, Location loc, Value mem,
+                                VectorType vecType) {
+  assert(!vecType.isScalable() && "expected a fixed-size vector");
+  auto memType = cast<MemRefType>(mem.getType());
+  int64_t rank = vecType.getRank();
+  Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
+  SmallVector<Value> indices(rank, zero);
+  Value padding = arith::ConstantOp::create(
+      builder, loc, builder.getZeroAttr(vecType.getElementType()));
+  SmallVector<bool> inBounds(rank);
+  for (int64_t d = 0; d < rank; ++d)
+    inBounds[d] = !memType.isDynamicDim(d) &&
+                  memType.getDimSize(d) >= vecType.getDimSize(d);
+  return vector::TransferReadOp::create(
+      builder, loc, vecType, mem, indices,
+      AffineMapAttr::get(builder.getMultiDimIdentityMap(rank)), padding,
+      /*mask=*/Value(), builder.getBoolArrayAttr(inBounds));
+}
+
+/// Stores a slot's value to the target of a `memref.copy`: writes `vec` into
+/// `mem` at the origin, with the identity map and in-bounds rule of
+/// `readMemRefAsVector`. `mask`, when set, restricts the write to the lanes it
+/// selects.
+static void writeVectorToMemRef(OpBuilder &builder, Location loc, Value vec,
+                                Value mem, Value mask = {}) {
+  auto memType = cast<MemRefType>(mem.getType());
+  auto vecType = cast<VectorType>(vec.getType());
+  assert(!vecType.isScalable() && "expected a fixed-size vector");
+  int64_t rank = vecType.getRank();
+  Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
+  SmallVector<Value> indices(rank, zero);
+  SmallVector<bool> inBounds(rank);
+  for (int64_t d = 0; d < rank; ++d)
+    inBounds[d] = !memType.isDynamicDim(d) &&
+                  memType.getDimSize(d) >= vecType.getDimSize(d);
+  vector::TransferWriteOp::create(
+      builder, loc, vec, mem, indices,
+      AffineMapAttr::get(builder.getMultiDimIdentityMap(rank)), mask,
+      builder.getBoolArrayAttr(inBounds));
+}
+
+//===----------------------------------------------------------------------===//
+//  PromotableMemOpInterface model for memref.copy
+//===----------------------------------------------------------------------===//
 namespace {
+/// `PromotableMemOpInterface` model for `memref.copy`.
+///
+/// A copy into the slot becomes a `vector.transfer_read` of the source in
+/// `getStored`. A copy out of the slot becomes a `vector.transfer_write` of the
+/// reaching definition in `removeBlockingUses`.
+///
+/// A copy between two slots is rewritten one slot at a time, in either order.
+/// For dynamic subviews,
+/// `PromotableAliaserInterface::projectAliasValueToSlotValue` masks writes into
+/// the slot, and this model masks copies out of it.
+struct CopyOpMemOpModel
+    : public PromotableMemOpInterface::ExternalModel<CopyOpMemOpModel,
+                                                     memref::CopyOp> {
+  bool loadsFrom(Operation *op, const MemorySlot &slot) const {
+    return cast<memref::CopyOp>(op).getSource() == slot.ptr;
+  }
+
+  bool storesTo(Operation *op, const MemorySlot &slot) const {
+    return cast<memref::CopyOp>(op).getTarget() == slot.ptr;
+  }
+
+  // Promotion replaces the slot with a vector value, so a copy into the slot
+  // becomes the code producing that value: a read of the copy's source.
+  Value getStored(Operation *op, const MemorySlot &slot, OpBuilder &builder,
+                  Value reachingDef, const DataLayout &dataLayout) const {
+    auto copyOp = cast<memref::CopyOp>(op);
+    return readMemRefAsVector(builder, op->getLoc(), copyOp.getSource(),
+                              cast<VectorType>(slot.valueType));
+  }
+
+  bool canUsesBeRemoved(Operation *op, const MemorySlot &slot,
+                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                        SmallVectorImpl<OpOperand *> &newBlockingUses,
+                        const DataLayout &dataLayout) const {
+    auto copyOp = cast<memref::CopyOp>(op);
+    auto vecType = dyn_cast<VectorType>(slot.valueType);
+    if (!vecType || vecType.isScalable())
+      return false;
+    bool srcIsSlot = copyOp.getSource() == slot.ptr;
+    bool dstIsSlot = copyOp.getTarget() == slot.ptr;
+    // Exactly one side must be this slot. A self-copy (both sides the slot) is
+    // not modeled here.
+    if (srcIsSlot == dstIsSlot)
+      return false;
+    // No further check: `memref.copy` verifies that both operands have the same
+    // shape and element type.
+    return true;
+  }
+
+  // A copy out of the slot is a use of the slot's vector value: it becomes a
+  // `vector.transfer_write` of that value into the copy's target.
+  DeletionKind
+  removeBlockingUses(Operation *op, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                     OpBuilder &builder, Value reachingDefinition,
+                     const DataLayout &dataLayout) const {
+    auto copyOp = cast<memref::CopyOp>(op);
+    if (copyOp.getSource() == slot.ptr) {
+      Location loc = op->getLoc();
+      Value mask;
+      if (memref::SubViewOp subView = getDynamicSubView(slot.ptr))
+        mask = buildSubViewMask(builder, loc, subView);
+      writeVectorToMemRef(builder, loc, reachingDefinition, copyOp.getTarget(),
+                          mask);
+    }
+    return DeletionKind::Delete;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 //  PromotableOpInterface model for memref.subview
 //===----------------------------------------------------------------------===//
@@ -295,5 +422,6 @@ void mlir::memref::registerMemorySlotOpInterfaceExternalModels(
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
     memref::SubViewOp::attachInterface<SubViewOpAliasModel>(*ctx);
     memref::SubViewOp::attachInterface<SubViewOpPromotableModel>(*ctx);
+    memref::CopyOp::attachInterface<CopyOpMemOpModel>(*ctx);
   });
 }
