@@ -46,7 +46,7 @@ namespace llvm::slpvectorizer {
 
 /// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
 /// \p IsReverse is set, or nullptr if \p Stride is not a constant.
-ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
+ConstantInt *getStrideBytesIfConstant(ConstantInt *Stride, Type *ScalarTy,
                                       const DataLayout &DL,
                                       bool IsReverse = false);
 
