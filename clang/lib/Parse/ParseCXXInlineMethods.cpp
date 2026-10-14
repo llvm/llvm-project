@@ -745,8 +745,7 @@ bool Parser::checkLateAttributeParamRefs(
   // attribute rather than instantiate it wrongly.
   // FIXME: Map these parameters during template instantiation.
   if (Actions.CurContext->isDependentContext() ||
-      getCurScope()->getTemplateParamParent() ||
-      Actions.getCurGenericLambda()) {
+      getCurScope()->getTemplateParamParent()) {
     const auto *DParam = dyn_cast_or_null<ParmVarDecl>(D);
     for (const DeclRefExpr *DRE : ParamRefs) {
       const auto *PVD = cast<ParmVarDecl>(DRE->getDecl());
