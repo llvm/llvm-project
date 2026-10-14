@@ -626,8 +626,8 @@ bool GlobalValue::isLargeGlobalValue() const {
     StringRef SectionName;
     auto Attrs = GV->getAttributes();
     if (!GV->isConstant()) {
-      if (GV->getInitializer() && GV->getInitializer()->isNullValue() &&
-          Attrs.hasAttribute("bss-section"))
+      if (const Constant *I = GV->getInitializer();
+          I && I->isNullOrUndef() && Attrs.hasAttribute("bss-section"))
         SectionName = Attrs.getAttribute("bss-section").getValueAsString();
       else if (Attrs.hasAttribute("data-section"))
         SectionName = Attrs.getAttribute("data-section").getValueAsString();
