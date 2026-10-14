@@ -57,3 +57,353 @@ define i1 @test_scale_lhs_exact_shift(i64 %iv, i64 %sub) {
   %check = icmp ule i64 %sub, %scaled
   ret i1 %check
 }
+
+; Preserving the unscaled constraint on %ashr so downstream arithmetic on %ashr
+; still simplifies (regression test from PR #223212).
+define i1 @precond_icmp_ashr_and_constant_regression(i64 %x) {
+; CHECK-LABEL: define i1 @precond_icmp_ashr_and_constant_regression(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr exact i64 [[X]], 3
+; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i64 [[ASHR]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[ASHR]], -1
+; CHECK-NEXT:    ret i1 false
+;
+  %ashr = ashr exact i64 %x, 3
+  %cond = icmp ugt i64 %ashr, 4
+  call void @llvm.assume(i1 %cond)
+  %add = add nsw i64 %ashr, -1
+  %cmp = icmp eq i64 %add, 0
+  ret i1 %cmp
+}
+
+; Preserving the unscaled constraint on %ashr when used in a multi-variable sub.
+define i1 @ashr_used_in_sub_regression(i64 %x, i64 %n) {
+; CHECK-LABEL: define i1 @ashr_used_in_sub_regression(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr exact i64 [[X]], 3
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[ASHR]], [[N]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[N]], [[ASHR]]
+; CHECK-NEXT:    ret i1 false
+;
+  %ashr = ashr exact i64 %x, 3
+  %cond = icmp ult i64 %ashr, %n
+  call void @llvm.assume(i1 %cond)
+  %sub = sub nuw i64 %n, %ashr
+  %cmp = icmp eq i64 %sub, 0
+  ret i1 %cmp
+}
+
+; lshr exact has full two-way equality in the unsigned system:
+; iv <=u (sub >>u 2) implies 4 * iv <=u sub.
+define i1 @test_lshr_rhs_unsigned(i64 %iv, i64 %sub) {
+; CHECK-LABEL: define i1 @test_lshr_rhs_unsigned(
+; CHECK-SAME: i64 [[IV:%.*]], i64 [[SUB:%.*]]) {
+; CHECK-NEXT:    [[SIZE:%.*]] = lshr exact i64 [[SUB]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[IV]], [[SIZE]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SCALED:%.*]] = mul nuw i64 [[IV]], 4
+; CHECK-NEXT:    ret i1 true
+;
+  %size = lshr exact i64 %sub, 2
+  %c = icmp ule i64 %iv, %size
+  call void @llvm.assume(i1 %c)
+  %scaled = mul nuw i64 %iv, 4
+  %check = icmp ule i64 %scaled, %sub
+  ret i1 %check
+}
+
+; lshr exact on LHS in the unsigned system:
+; sub <=u 4 * iv implies (sub >>u 2) <=u iv.
+define i1 @test_lshr_lhs_unsigned(i64 %iv, i64 %sub) {
+; CHECK-LABEL: define i1 @test_lshr_lhs_unsigned(
+; CHECK-SAME: i64 [[IV:%.*]], i64 [[SUB:%.*]]) {
+; CHECK-NEXT:    [[SCALED:%.*]] = mul nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[SUB]], [[SCALED]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SIZE:%.*]] = lshr exact i64 [[SUB]], 2
+; CHECK-NEXT:    ret i1 true
+;
+  %scaled = mul nuw i64 %iv, 4
+  %c = icmp ule i64 %sub, %scaled
+  call void @llvm.assume(i1 %c)
+  %size = lshr exact i64 %sub, 2
+  %check = icmp ule i64 %size, %iv
+  ret i1 %check
+}
+
+; ashr exact has full two-way equality in the signed system:
+; iv <=s (sub >>s 2) implies 4 * iv <=s sub.
+define i1 @test_ashr_rhs_signed(i64 %iv, i64 %sub) {
+; CHECK-LABEL: define i1 @test_ashr_rhs_signed(
+; CHECK-SAME: i64 [[IV:%.*]], i64 [[SUB:%.*]]) {
+; CHECK-NEXT:    [[SIZE:%.*]] = ashr exact i64 [[SUB]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp sle i64 [[IV]], [[SIZE]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SCALED:%.*]] = mul nsw i64 [[IV]], 4
+; CHECK-NEXT:    ret i1 true
+;
+  %size = ashr exact i64 %sub, 2
+  %c = icmp sle i64 %iv, %size
+  call void @llvm.assume(i1 %c)
+  %scaled = mul nsw i64 %iv, 4
+  %check = icmp sle i64 %scaled, %sub
+  ret i1 %check
+}
+
+; ashr exact on LHS in the signed system:
+; sub <=s 4 * iv implies (sub >>s 2) <=s iv.
+define i1 @test_ashr_lhs_signed(i64 %iv, i64 %sub) {
+; CHECK-LABEL: define i1 @test_ashr_lhs_signed(
+; CHECK-SAME: i64 [[IV:%.*]], i64 [[SUB:%.*]]) {
+; CHECK-NEXT:    [[SCALED:%.*]] = mul nsw i64 [[IV]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp sle i64 [[SUB]], [[SCALED]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SIZE:%.*]] = ashr exact i64 [[SUB]], 2
+; CHECK-NEXT:    ret i1 true
+;
+  %scaled = mul nsw i64 %iv, 4
+  %c = icmp sle i64 %sub, %scaled
+  call void @llvm.assume(i1 %c)
+  %size = ashr exact i64 %sub, 2
+  %check = icmp sle i64 %size, %iv
+  ret i1 %check
+}
+
+; ashr exact on RHS in the unsigned system when %sub is known non-negative:
+; sub >=s 0 and iv <=u (sub >>s 2) implies 4 * iv <=u sub.
+define i1 @test_ashr_rhs_unsigned_known_nneg(i64 %iv, i64 %sub) {
+; CHECK-LABEL: define i1 @test_ashr_rhs_unsigned_known_nneg(
+; CHECK-SAME: i64 [[IV:%.*]], i64 [[SUB:%.*]]) {
+; CHECK-NEXT:    [[NNEG:%.*]] = icmp sge i64 [[SUB]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NNEG]])
+; CHECK-NEXT:    [[SIZE:%.*]] = ashr exact i64 [[SUB]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[IV]], [[SIZE]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SCALED:%.*]] = mul nuw i64 [[IV]], 4
+; CHECK-NEXT:    ret i1 true
+;
+  %nneg = icmp sge i64 %sub, 0
+  call void @llvm.assume(i1 %nneg)
+  %size = ashr exact i64 %sub, 2
+  %c = icmp ule i64 %iv, %size
+  call void @llvm.assume(i1 %c)
+  %scaled = mul nuw i64 %iv, 4
+  %check = icmp ule i64 %scaled, %sub
+  ret i1 %check
+}
+
+; ashr exact compared against 0 in the unsigned system:
+; (sub >>s 2) != 0 implies sub >u 0.
+define i1 @test_ashr_ne_zero(i64 %sub) {
+; CHECK-LABEL: define i1 @test_ashr_ne_zero(
+; CHECK-SAME: i64 [[SUB:%.*]]) {
+; CHECK-NEXT:    [[SIZE:%.*]] = ashr exact i64 [[SUB]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i64 [[SIZE]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    ret i1 true
+;
+  %size = ashr exact i64 %sub, 2
+  %c = icmp ne i64 %size, 0
+  call void @llvm.assume(i1 %c)
+  %check = icmp ugt i64 %sub, 0
+  ret i1 %check
+}
+
+; Negative test: ashr exact on RHS of unsigned fact must NOT imply
+; 4 * iv <=u sub when %sub may be negative (e.g. %sub = -8, %iv = 2^62 - 1).
+define i1 @test_ashr_rhs_unsigned_neg(i64 %iv, i64 %sub) {
+; CHECK-LABEL: define i1 @test_ashr_rhs_unsigned_neg(
+; CHECK-SAME: i64 [[IV:%.*]], i64 [[SUB:%.*]]) {
+; CHECK-NEXT:    [[SIZE:%.*]] = ashr exact i64 [[SUB]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[IV]], [[SIZE]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SCALED:%.*]] = mul nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp ule i64 [[SCALED]], [[SUB]]
+; CHECK-NEXT:    ret i1 [[CHECK]]
+;
+  %size = ashr exact i64 %sub, 2
+  %c = icmp ule i64 %iv, %size
+  call void @llvm.assume(i1 %c)
+  %scaled = mul nuw i64 %iv, 4
+  %check = icmp ule i64 %scaled, %sub
+  ret i1 %check
+}
+
+; Negative test: sub <=u 4 * iv must NOT imply (sub >>s 2) <=u iv when %sub
+; may be negative.
+define i1 @test_ashr_lhs_unsigned_query_neg(i64 %iv, i64 %sub) {
+; CHECK-LABEL: define i1 @test_ashr_lhs_unsigned_query_neg(
+; CHECK-SAME: i64 [[IV:%.*]], i64 [[SUB:%.*]]) {
+; CHECK-NEXT:    [[SCALED:%.*]] = mul nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[SUB]], [[SCALED]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SIZE:%.*]] = ashr exact i64 [[SUB]], 2
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp ule i64 [[SIZE]], [[IV]]
+; CHECK-NEXT:    ret i1 [[CHECK]]
+;
+  %scaled = mul nuw i64 %iv, 4
+  %c = icmp ule i64 %sub, %scaled
+  call void @llvm.assume(i1 %c)
+  %size = ashr exact i64 %sub, 2
+  %check = icmp ule i64 %size, %iv
+  ret i1 %check
+}
+
+; Negative test: for %x = shl nuw i8 %y, 2 and %ashr = ashr exact i8 %x, 2,
+; %ashr <=u %y is false when %y = 63 (%x = -4, %ashr = 255), so it must not
+; fold to true. However, %ashr <u %y is always false and can fold to false.
+define i1 @test_ashr_unsigned_cancel_ule_neg(i8 %y) {
+; CHECK-LABEL: define i1 @test_ashr_unsigned_cancel_ule_neg(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = shl nuw i8 [[Y]], 2
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr exact i8 [[X]], 2
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp ule i8 [[ASHR]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CHECK]]
+;
+  %x = shl nuw i8 %y, 2
+  %ashr = ashr exact i8 %x, 2
+  %check = icmp ule i8 %ashr, %y
+  ret i1 %check
+}
+
+define i1 @test_ashr_unsigned_cancel_ult(i8 %y) {
+; CHECK-LABEL: define i1 @test_ashr_unsigned_cancel_ult(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = shl nuw i8 [[Y]], 2
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr exact i8 [[X]], 2
+; CHECK-NEXT:    ret i1 false
+;
+  %x = shl nuw i8 %y, 2
+  %ashr = ashr exact i8 %x, 2
+  %check = icmp ult i8 %ashr, %y
+  ret i1 %check
+}
+
+; Negative test: lshr exact in the signed system must NOT scale when %sub may
+; be negative (for %sub = -8 and %x = 0, %sub <s 4 * %x is true, but
+; %lshr = 62 <s %x is false).
+define i1 @test_lshr_signed_neg(i8 %sub, i8 %x) {
+; CHECK-LABEL: define i1 @test_lshr_signed_neg(
+; CHECK-SAME: i8 [[SUB:%.*]], i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[SCALED:%.*]] = mul nsw i8 [[X]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[SUB]], [[SCALED]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i8 [[SUB]], 2
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp slt i8 [[LSHR]], [[X]]
+; CHECK-NEXT:    ret i1 [[CHECK]]
+;
+  %scaled = mul nsw i8 %x, 4
+  %c = icmp slt i8 %sub, %scaled
+  call void @llvm.assume(i1 %c)
+  %lshr = lshr exact i8 %sub, 2
+  %check = icmp slt i8 %lshr, %x
+  ret i1 %check
+}
+
+; Negative test: 4 * iv == sub (with mul nuw) must NOT imply iv == (sub >>s 2)
+; when %sub may be negative (e.g. in i8, %iv = 62, %sub = -8 = 248, %size = -2).
+define i1 @test_ashr_eq_unsigned_neg(i8 %iv, i8 %sub) {
+; CHECK-LABEL: define i1 @test_ashr_eq_unsigned_neg(
+; CHECK-SAME: i8 [[IV:%.*]], i8 [[SUB:%.*]]) {
+; CHECK-NEXT:    [[SCALED:%.*]] = mul nuw i8 [[IV]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[SCALED]], [[SUB]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SIZE:%.*]] = ashr exact i8 [[SUB]], 2
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp eq i8 [[IV]], [[SIZE]]
+; CHECK-NEXT:    ret i1 [[CHECK]]
+;
+  %scaled = mul nuw i8 %iv, 4
+  %c = icmp eq i8 %scaled, %sub
+  call void @llvm.assume(i1 %c)
+  %size = ashr exact i8 %sub, 2
+  %check = icmp eq i8 %iv, %size
+  ret i1 %check
+}
+
+; Positive test: 4 * iv == sub (with mul nsw) DOES imply iv == (sub >>s 2)
+; via the signed constraint system.
+define i1 @test_ashr_eq_signed(i8 %iv, i8 %sub) {
+; CHECK-LABEL: define i1 @test_ashr_eq_signed(
+; CHECK-SAME: i8 [[IV:%.*]], i8 [[SUB:%.*]]) {
+; CHECK-NEXT:    [[SCALED:%.*]] = mul nsw i8 [[IV]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[SCALED]], [[SUB]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SIZE:%.*]] = ashr exact i8 [[SUB]], 2
+; CHECK-NEXT:    ret i1 true
+;
+  %scaled = mul nsw i8 %iv, 4
+  %c = icmp eq i8 %scaled, %sub
+  call void @llvm.assume(i1 %c)
+  %size = ashr exact i8 %sub, 2
+  %check = icmp eq i8 %iv, %size
+  ret i1 %check
+}
+
+; Negative test: dual shifts with mismatched opcodes (ashr vs lshr) must not
+; be simplified when %sub0 and %sub1 may be negative.
+define i1 @test_both_shifts_mismatched_opcode_neg(i64 %sub0, i64 %sub1) {
+; CHECK-LABEL: define i1 @test_both_shifts_mismatched_opcode_neg(
+; CHECK-SAME: i64 [[SUB0:%.*]], i64 [[SUB1:%.*]]) {
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[SUB0]], [[SUB1]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SH0:%.*]] = ashr exact i64 [[SUB0]], 2
+; CHECK-NEXT:    [[SH1:%.*]] = lshr exact i64 [[SUB1]], 2
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp ule i64 [[SH0]], [[SH1]]
+; CHECK-NEXT:    ret i1 [[CHECK]]
+;
+  %c = icmp ule i64 %sub0, %sub1
+  call void @llvm.assume(i1 %c)
+  %sh0 = ashr exact i64 %sub0, 2
+  %sh1 = lshr exact i64 %sub1, 2
+  %check = icmp ule i64 %sh0, %sh1
+  ret i1 %check
+}
+
+; Negative test: dual lshr exact with signed predicate (slt) must not be
+; simplified when operands may be negative (%sub0 = -8, %sub1 = 4).
+define i1 @test_both_lshr_signed_pred_neg(i64 %sub0, i64 %sub1) {
+; CHECK-LABEL: define i1 @test_both_lshr_signed_pred_neg(
+; CHECK-SAME: i64 [[SUB0:%.*]], i64 [[SUB1:%.*]]) {
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[SUB0]], [[SUB1]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SH0:%.*]] = lshr exact i64 [[SUB0]], 2
+; CHECK-NEXT:    [[SH1:%.*]] = lshr exact i64 [[SUB1]], 2
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp slt i64 [[SH0]], [[SH1]]
+; CHECK-NEXT:    ret i1 [[CHECK]]
+;
+  %c = icmp slt i64 %sub0, %sub1
+  call void @llvm.assume(i1 %c)
+  %sh0 = lshr exact i64 %sub0, 2
+  %sh1 = lshr exact i64 %sub1, 2
+  %check = icmp slt i64 %sh0, %sh1
+  ret i1 %check
+}
+
+; Positive test: dual lshr exact with signed predicate (slt) CAN be simplified
+; when both operands are known non-negative.
+define i1 @test_both_lshr_signed_pred_nneg(i64 %sub0, i64 %sub1) {
+; CHECK-LABEL: define i1 @test_both_lshr_signed_pred_nneg(
+; CHECK-SAME: i64 [[SUB0:%.*]], i64 [[SUB1:%.*]]) {
+; CHECK-NEXT:    [[NNEG0:%.*]] = icmp sge i64 [[SUB0]], 0
+; CHECK-NEXT:    [[NNEG1:%.*]] = icmp sge i64 [[SUB1]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NNEG0]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NNEG1]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[SUB0]], [[SUB1]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SH0:%.*]] = lshr exact i64 [[SUB0]], 2
+; CHECK-NEXT:    [[SH1:%.*]] = lshr exact i64 [[SUB1]], 2
+; CHECK-NEXT:    ret i1 true
+;
+  %nneg0 = icmp sge i64 %sub0, 0
+  %nneg1 = icmp sge i64 %sub1, 0
+  call void @llvm.assume(i1 %nneg0)
+  call void @llvm.assume(i1 %nneg1)
+  %c = icmp slt i64 %sub0, %sub1
+  call void @llvm.assume(i1 %c)
+  %sh0 = lshr exact i64 %sub0, 2
+  %sh1 = lshr exact i64 %sub1, 2
+  %check = icmp slt i64 %sh0, %sh1
+  ret i1 %check
+}

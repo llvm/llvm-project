@@ -267,15 +267,20 @@ struct ConstraintTy {
   ConstraintTy() = default;
 
   ConstraintTy(RowTy Coefficients, unsigned NumVars, bool IsSigned, bool IsEq,
-               bool IsNe)
+               bool IsNe, bool CanProveTrue = true, bool CanProveFalse = true)
       : Coefficients(std::move(Coefficients)), NumVars(NumVars),
-        IsSigned(IsSigned), IsEq(IsEq), IsNe(IsNe) {}
+        IsSigned(IsSigned), IsEq(IsEq), IsNe(IsNe), CanProveTrue(CanProveTrue),
+        CanProveFalse(CanProveFalse) {}
 
   bool empty() const { return Coefficients.empty(); }
 
   bool isEq() const { return IsEq; }
 
   bool isNe() const { return IsNe; }
+
+  bool canProveTrue() const { return CanProveTrue; }
+
+  bool canProveFalse() const { return CanProveFalse; }
 
   /// Check if the current constraint is implied by the given ConstraintSystem.
   ///
@@ -287,6 +292,8 @@ struct ConstraintTy {
 private:
   bool IsEq = false;
   bool IsNe = false;
+  bool CanProveTrue = true;
+  bool CanProveFalse = true;
 };
 
 /// Represents a (Coefficient * Variable) entry after IR decomposition.
@@ -421,7 +428,8 @@ public:
   /// \p NewVariables.
   ConstraintTy getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                              SmallVectorImpl<Value *> &NewVariables,
-                             bool ForceSignedSystem = false);
+                             bool ForceSignedSystem = false,
+                             bool ScaleExactShifts = false);
 
   /// Turns a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
   /// constraints using getConstraint. Returns an empty constraint if the result
@@ -431,7 +439,8 @@ public:
   /// which increases the effectiveness of the signed <-> unsigned transfer
   /// logic.
   ConstraintTy getConstraintForSolving(CmpInst::Predicate Pred, Value *Op0,
-                                       Value *Op1);
+                                       Value *Op1,
+                                       bool ScaleExactShifts = false);
 
   /// Try to add information from \p A \p Pred \p B to the unsigned/signed
   /// system if \p Pred is signed/unsigned.
@@ -445,7 +454,7 @@ private:
   /// specified.
   void addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                    unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack,
-                   bool ForceSignedSystem);
+                   bool ForceSignedSystem, bool ScaleExactShifts = false);
 
   /// Try to use the inequality \p A != \p B to tighten a non-strict bound the
   /// system already implies to the corresponding strict bound.
@@ -870,7 +879,7 @@ static RowTy getRowForLessEqual(const Decomposition &ADec,
 ConstraintTy
 ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                               SmallVectorImpl<Value *> &NewVariables,
-                              bool ForceSignedSystem) {
+                              bool ForceSignedSystem, bool ScaleExactShifts) {
   assert(NewVariables.empty() && "NewVariables must be empty when passed in");
   assert((!ForceSignedSystem || CmpInst::isEquality(Pred)) &&
          "signed system can only be forced on eq/ne");
@@ -915,51 +924,87 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
 
   bool IsSigned = ForceSignedSystem || CmpInst::isSigned(Pred);
   auto &Value2Index = getValue2Index(IsSigned);
-  auto ADec = decompose(Op0->stripPointerCastsSameRepresentation(), *this,
-                        IsSigned, DL);
-  auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(), *this,
-                        IsSigned, DL);
+  bool CanProveTrue = true;
+  bool CanProveFalse = true;
+  Decomposition ADec(int64_t(0)), BDec(int64_t(0));
+  if (ScaleExactShifts) {
+    Type *Ty = Op0->getType();
+    if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
+      return {};
+
+    // For comparisons where an operand is an exact right shift
+    // (e.g. X < (Sub >> k)), scale the comparison by multiplying the opposite
+    // side by (1 << k), yielding (1 << k) * X < Sub. If both operands share the
+    // same exact right shift, decompose the unshifted sub-expressions directly.
+    unsigned MaxShift = std::min<unsigned>(Ty->getIntegerBitWidth(), 63);
+    Value *Sub0 = nullptr, *Sub1 = nullptr;
+    ConstantInt *Shift0 = nullptr, *Shift1 = nullptr;
+    bool IsShift0 =
+        match(Op0, m_Exact(m_Shr(m_Value(Sub0), m_ConstantInt(Shift0)))) &&
+        Shift0->getValue().ult(MaxShift);
+    bool IsShift1 =
+        match(Op1, m_Exact(m_Shr(m_Value(Sub1), m_ConstantInt(Shift1)))) &&
+        Shift1->getValue().ult(MaxShift);
+    if (!IsShift0 && !IsShift1)
+      return {};
+
+    // Sub <= (1 << k) * Shr always holds in both systems for exact shifts.
+    // The converse (1 << k) * Shr <= Sub holds when the shift matches the
+    // system's signedness, when Sub >=s 0, or for unsigned compares against 0.
+    auto HasExactScaleEquality = [&](Value *Shr, Value *Sub, Value *OtherOp) {
+      unsigned Opc = cast<Instruction>(Shr)->getOpcode();
+      return (IsSigned ? Opc == Instruction::AShr : Opc == Instruction::LShr) ||
+             (!IsSigned && match(OtherOp, m_Zero())) || isKnownNonNegative(Sub);
+    };
+
+    bool Scaled = false;
+    if (IsShift0 && IsShift1 && Shift0->getValue() == Shift1->getValue() &&
+        cast<Instruction>(Op0)->getOpcode() ==
+            cast<Instruction>(Op1)->getOpcode()) {
+      unsigned Opc = cast<Instruction>(Op0)->getOpcode();
+      if (Opc == Instruction::AShr || !IsSigned || IsEq || IsNe ||
+          Shift0->isZero() ||
+          (isKnownNonNegative(Sub0) && isKnownNonNegative(Sub1))) {
+        ADec = decompose(Sub0, *this, IsSigned, DL);
+        BDec = decompose(Sub1, *this, IsSigned, DL);
+        Scaled = true;
+      }
+    }
+    if (!Scaled && IsShift1 && !Shift1->isZero()) {
+      bool HasEq1 = HasExactScaleEquality(Op1, Sub1, Op0);
+      if (HasEq1 || (!IsEq && !IsNe)) {
+        ADec = decompose(Op0, *this, IsSigned, DL);
+        int64_t Factor = int64_t(1) << Shift1->getZExtValue();
+        if (!ADec.mul(Factor)) {
+          BDec = decompose(Sub1, *this, IsSigned, DL);
+          CanProveFalse = HasEq1;
+          Scaled = true;
+        }
+      }
+    }
+    if (!Scaled && IsShift0 && !Shift0->isZero()) {
+      bool HasEq0 = HasExactScaleEquality(Op0, Sub0, Op1);
+      if (HasEq0 || (!IsEq && !IsNe)) {
+        BDec = decompose(Op1, *this, IsSigned, DL);
+        int64_t Factor = int64_t(1) << Shift0->getZExtValue();
+        if (!BDec.mul(Factor)) {
+          ADec = decompose(Sub0, *this, IsSigned, DL);
+          CanProveTrue = HasEq0;
+          Scaled = true;
+        }
+      }
+    }
+    if (!Scaled)
+      return {};
+  } else {
+    ADec = decompose(Op0->stripPointerCastsSameRepresentation(), *this,
+                     IsSigned, DL);
+    BDec = decompose(Op1->stripPointerCastsSameRepresentation(), *this,
+                     IsSigned, DL);
+  }
 
   RowTy R = getRowForLessEqual(ADec, BDec, Value2Index, NewVariables);
   if (R.empty())
-    return {};
-
-  // For relational comparisons where an operand is an exact right shift
-  // (e.g. X < (Sub >> k)), scale the comparison by multiplying the opposite
-  // side by (1 << k), yielding (1 << k) * X < Sub. If both operands share the
-  // same exact right shift, decompose the unshifted sub-expressions directly.
-  Value *Sub0 = nullptr, *Sub1 = nullptr;
-  ConstantInt *Shift0 = nullptr, *Shift1 = nullptr;
-  bool IsShift0 =
-      match(Op0, m_Exact(m_Shr(m_Value(Sub0), m_ConstantInt(Shift0)))) &&
-      canUseSExt(Shift0);
-  bool IsShift1 =
-      match(Op1, m_Exact(m_Shr(m_Value(Sub1), m_ConstantInt(Shift1)))) &&
-      canUseSExt(Shift1);
-  if (IsShift0 && IsShift1 && Shift0->getValue() == Shift1->getValue()) {
-    ADec = decompose(Sub0->stripPointerCastsSameRepresentation(), *this,
-                     IsSigned, DL);
-    BDec = decompose(Sub1->stripPointerCastsSameRepresentation(), *this,
-                     IsSigned, DL);
-  } else if (IsShift1 && Shift1->getSExtValue() > 0 &&
-             Shift1->getSExtValue() < 63) {
-    int64_t Factor = int64_t(1) << Shift1->getSExtValue();
-    if (BDec.Vars.size() <= 1 && !ADec.mul(Factor)) {
-      BDec = decompose(Sub1->stripPointerCastsSameRepresentation(), *this,
-                       IsSigned, DL);
-    }
-  } else if (IsShift0 && Shift0->getSExtValue() > 0 &&
-             Shift0->getSExtValue() < 63) {
-    int64_t Factor = int64_t(1) << Shift0->getSExtValue();
-    if (ADec.Vars.size() <= 1 && !BDec.mul(Factor)) {
-      ADec = decompose(Sub0->stripPointerCastsSameRepresentation(), *this,
-                       IsSigned, DL);
-    }
-  }
-
-  int64_t Offset1 = ADec.Offset;
-  int64_t Offset2 = BDec.Offset;
-  if (MulOverflow(Offset1, int64_t(-1), Offset1))
     return {};
 
   if (Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT)
@@ -971,16 +1016,17 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   NewVariables.truncate(R.back().Id > NumV2I ? R.back().Id - NumV2I : 0);
 
   return ConstraintTy(std::move(R), Value2Index.size() + NewVariables.size(),
-                      IsSigned, IsEq, IsNe);
+                      IsSigned, IsEq, IsNe, CanProveTrue, CanProveFalse);
 }
 
 ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
-                                                     Value *Op0, Value *Op1) {
+                                                     Value *Op0, Value *Op1,
+                                                     bool ScaleExactShifts) {
   Constant *NullC = Constant::getNullValue(Op0->getType());
   // Handle trivially true compares directly to avoid adding V UGE 0 constraints
   // for all variables in the unsigned system.
-  if ((Pred == CmpInst::ICMP_ULE && Op0 == NullC) ||
-      (Pred == CmpInst::ICMP_UGE && Op1 == NullC)) {
+  if (!ScaleExactShifts && ((Pred == CmpInst::ICMP_ULE && Op0 == NullC) ||
+                            (Pred == CmpInst::ICMP_UGE && Op1 == NullC))) {
     // Return constraint that's trivially true.
     return ConstraintTy(RowTy(1, Entry(0, 0)), /*NumVars=*/0,
                         /*IsSigned=*/false, /*IsEq=*/false, /*IsNe=*/false);
@@ -995,7 +1041,8 @@ ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
     Pred = ICmpInst::getUnsignedPredicate(Pred);
 
   SmallVector<Value *> NewVariables;
-  ConstraintTy R = getConstraint(Pred, Op0, Op1, NewVariables);
+  ConstraintTy R = getConstraint(Pred, Op0, Op1, NewVariables,
+                                 /*ForceSignedSystem=*/false, ScaleExactShifts);
   if (!NewVariables.empty())
     return {};
   return R;
@@ -1004,9 +1051,12 @@ ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
 std::optional<bool>
 ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
   const auto &[SubCS, NewCoefficients] = CS.getSubSystem(Coefficients);
-  bool IsConditionImplied = SubCS.isConditionImplied(NewCoefficients);
+  bool IsConditionImplied =
+      CanProveTrue && SubCS.isConditionImplied(NewCoefficients);
 
   if (IsEq || IsNe) {
+    assert(CanProveTrue && CanProveFalse &&
+           "equality constraints must be two-way");
     auto NegatedOrEqual = ConstraintSystem::negateOrEqual(NewCoefficients);
     bool IsNegatedOrEqualImplied =
         !NegatedOrEqual.empty() && SubCS.isConditionImplied(NegatedOrEqual);
@@ -1038,19 +1088,26 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
   if (IsConditionImplied)
     return true;
 
-  auto Negated = ConstraintSystem::negate(NewCoefficients);
-  auto IsNegatedImplied = !Negated.empty() && SubCS.isConditionImplied(Negated);
-  if (IsNegatedImplied)
-    return false;
+  if (CanProveFalse) {
+    auto Negated = ConstraintSystem::negate(NewCoefficients);
+    auto IsNegatedImplied =
+        !Negated.empty() && SubCS.isConditionImplied(Negated);
+    if (IsNegatedImplied)
+      return false;
+  }
 
   // Neither the condition nor its negated holds, did not prove anything.
   return std::nullopt;
 }
 
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
-  auto R = getConstraintForSolving(Pred, A, B);
-  return !R.empty() &&
-         getCS(R.IsSigned).isConditionImpliedInSubSystem(R.Coefficients);
+  for (bool ScaleExactShifts : {false, true}) {
+    auto R = getConstraintForSolving(Pred, A, B, ScaleExactShifts);
+    if (!R.empty() && R.canProveTrue() &&
+        getCS(R.IsSigned).isConditionImpliedInSubSystem(R.Coefficients))
+      return true;
+  }
+  return false;
 }
 
 bool ConstraintInfo::isKnownNonNegative(Value *V) {
@@ -2008,39 +2065,48 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
     return Res;
   };
 
-  auto R = Info.getConstraintForSolving(Pred, A, B);
-  if (auto ImpliedCondition = TryWithConstraint(R))
-    return ImpliedCondition;
-  if (auto ImpliedCondition = TryWithLinkedDecomposition(R))
-    return ImpliedCondition;
+  for (bool ScaleExactShifts : {false, true}) {
+    auto R = Info.getConstraintForSolving(Pred, A, B, ScaleExactShifts);
+    if (auto ImpliedCondition = TryWithConstraint(R))
+      return ImpliedCondition;
+    if (auto ImpliedCondition = TryWithLinkedDecomposition(R))
+      return ImpliedCondition;
+  }
 
   // For non-negative operands unsigned queries can also be checked against the
   // signed system.
   if (CmpInst::isUnsigned(Pred) && A->getType()->isIntegerTy()) {
-    SmallVector<Value *> NewVariables;
-    auto SR = Info.getConstraint(ICmpInst::getSignedPredicate(Pred), A, B,
-                                 NewVariables);
-    if (NewVariables.empty() && !SR.empty() && Info.isKnownNonNegative(A) &&
-        Info.isKnownNonNegative(B))
-      if (auto ImpliedCondition = TryWithConstraint(SR))
-        return ImpliedCondition;
+    for (bool ScaleExactShifts : {false, true}) {
+      SmallVector<Value *> NewVariables;
+      auto SR = Info.getConstraint(ICmpInst::getSignedPredicate(Pred), A, B,
+                                   NewVariables, /*ForceSignedSystem=*/false,
+                                   ScaleExactShifts);
+      if (NewVariables.empty() && !SR.empty() && Info.isKnownNonNegative(A) &&
+          Info.isKnownNonNegative(B))
+        if (auto ImpliedCondition = TryWithConstraint(SR))
+          return ImpliedCondition;
+    }
   }
 
   // Additionally, query the signed system for eq/ne predicates if we know about
   // A or B.
   if (CmpInst::isEquality(Pred)) {
     const auto &Value2Index = Info.getValue2Index(/*Signed=*/true);
-    if (!Value2Index.contains(A) && !Value2Index.contains(B))
-      return std::nullopt;
+    for (bool ScaleExactShifts : {false, true}) {
+      if (!ScaleExactShifts && !Value2Index.contains(A) &&
+          !Value2Index.contains(B))
+        continue;
 
-    SmallVector<Value *> NewVariables;
-    auto SR = Info.getConstraint(Pred, A, B, NewVariables,
-                                 /*ForceSignedSystem=*/true);
-    if (NewVariables.empty()) {
-      if (auto ImpliedCondition = TryWithConstraint(SR))
-        return ImpliedCondition;
-      if (auto ImpliedCondition = TryWithLinkedDecomposition(SR))
-        return ImpliedCondition;
+      SmallVector<Value *> NewVariables;
+      auto SR =
+          Info.getConstraint(Pred, A, B, NewVariables,
+                             /*ForceSignedSystem=*/true, ScaleExactShifts);
+      if (NewVariables.empty()) {
+        if (auto ImpliedCondition = TryWithConstraint(SR))
+          return ImpliedCondition;
+        if (auto ImpliedCondition = TryWithLinkedDecomposition(SR))
+          return ImpliedCondition;
+      }
     }
   }
   return std::nullopt;
@@ -2263,10 +2329,14 @@ static bool checkOrAndOpImpliedByOther(
 void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack) {
-  addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack, false);
-  // If the Pred is eq/ne, also add the fact to signed system.
-  if (CmpInst::isEquality(Pred))
-    addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack, true);
+  for (bool ScaleExactShifts : {false, true}) {
+    addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack,
+                /*ForceSignedSystem=*/false, ScaleExactShifts);
+    // If the Pred is eq/ne, also add the fact to signed system.
+    if (CmpInst::isEquality(Pred))
+      addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack,
+                  /*ForceSignedSystem=*/true, ScaleExactShifts);
+  }
   if (Pred == CmpInst::ICMP_NE)
     tightenBoundUsingNe(A, B, NumIn, NumOut, DFSInStack);
 }
@@ -2305,8 +2375,9 @@ void ConstraintInfo::tightenBoundUsingNe(
                  dumpUnpackedICmp(dbgs(), NonStrict, A, B); dbgs() << "' to '";
                  dumpUnpackedICmp(dbgs(), Strict, A, B);
                  dbgs() << "' using inequality\n");
-      addFactImpl(Strict, A, B, NumIn, NumOut, DFSInStack,
-                  /*ForceSignedSystem=*/false);
+      for (bool ScaleExactShifts : {false, true})
+        addFactImpl(Strict, A, B, NumIn, NumOut, DFSInStack,
+                    /*ForceSignedSystem=*/false, ScaleExactShifts);
       break;
     }
   }
@@ -2315,12 +2386,14 @@ void ConstraintInfo::tightenBoundUsingNe(
 void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
                                  unsigned NumIn, unsigned NumOut,
                                  SmallVectorImpl<StackEntry> &DFSInStack,
-                                 bool ForceSignedSystem) {
+                                 bool ForceSignedSystem,
+                                 bool ScaleExactShifts) {
   SmallVector<Value *> NewVariables;
-  auto R = getConstraint(Pred, A, B, NewVariables, ForceSignedSystem);
+  auto R = getConstraint(Pred, A, B, NewVariables, ForceSignedSystem,
+                         ScaleExactShifts);
 
   // TODO: Support non-equality for facts as well.
-  if (R.empty() || R.isNe())
+  if (R.empty() || R.isNe() || !R.canProveFalse())
     return;
 
   auto &CSToUse = getCS(R.IsSigned);
