@@ -10359,6 +10359,13 @@ AArch64InstrInfo::getSerializableMachineMemOperandTargetFlags() const {
 /// * Call construction overhead: 3 (save + BL + restore)
 /// * Frame construction overhead: 1 (ret)
 /// * Requires stack fixups? No
+///
+/// When Pointer Authentication (PAC) is enabled:
+/// - MachineOutlinerDefault, MachineOutlinerRegSave, MachineOutlinerThunk,
+///   and MachineOutlinerNoLRSave: Return address is signed in the prologue and
+///   authenticated in the epilogue.
+/// - MachineOutlinerTailCall: Rejected to avoid corrupting the caller's LR.
+
 enum MachineOutlinerClass {
   MachineOutlinerDefault,  /// Emit a save, restore, call, and return.
   MachineOutlinerTailCall, /// Only emit a branch.
@@ -10580,61 +10587,6 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // SequenceSize, so account for it for more precise results.
     if (isTailCallReturnInst(RepeatedSequenceLocs[0].back()))
       SequenceSize += NumBytesToCheckLRInTCEpilogue;
-
-    // We have to check if sp modifying instructions would get outlined.
-    // If so we only allow outlining if sp is unchanged overall, so matching
-    // sub and add instructions are okay to outline, all other sp modifications
-    // are not
-    auto hasIllegalSPModification = [&TRI](outliner::Candidate &C) {
-      int SPValue = 0;
-      for (auto &MI : C) {
-        if (MI.modifiesRegister(AArch64::SP, &TRI)) {
-          switch (MI.getOpcode()) {
-          case AArch64::ADDXri:
-          case AArch64::ADDWri:
-            assert(MI.getNumOperands() == 4 && "Wrong number of operands");
-            assert(MI.getOperand(2).isImm() &&
-                   "Expected operand to be immediate");
-            assert(MI.getOperand(1).isReg() &&
-                   "Expected operand to be a register");
-            // Check if the add just increments sp. If so, we search for
-            // matching sub instructions that decrement sp. If not, the
-            // modification is illegal
-            if (MI.getOperand(1).getReg() == AArch64::SP)
-              SPValue += MI.getOperand(2).getImm();
-            else
-              return true;
-            break;
-          case AArch64::SUBXri:
-          case AArch64::SUBWri:
-            assert(MI.getNumOperands() == 4 && "Wrong number of operands");
-            assert(MI.getOperand(2).isImm() &&
-                   "Expected operand to be immediate");
-            assert(MI.getOperand(1).isReg() &&
-                   "Expected operand to be a register");
-            // Check if the sub just decrements sp. If so, we search for
-            // matching add instructions that increment sp. If not, the
-            // modification is illegal
-            if (MI.getOperand(1).getReg() == AArch64::SP)
-              SPValue -= MI.getOperand(2).getImm();
-            else
-              return true;
-            break;
-          default:
-            return true;
-          }
-        }
-      }
-      if (SPValue)
-        return true;
-      return false;
-    };
-    // Remove candidates with illegal stack modifying instructions
-    llvm::erase_if(RepeatedSequenceLocs, hasIllegalSPModification);
-
-    // If the sequence doesn't have enough candidates left, then we're done.
-    if (RepeatedSequenceLocs.size() < MinRepeats)
-      return std::nullopt;
   }
 
   // Properties about candidate MBBs that hold for all of them.
@@ -10744,6 +10696,12 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
   if (RepeatedSequenceLocs[0].back().isTerminator()) {
+
+    // Reject tail calls if PAC is enabled, as we cannot safely sign them
+    // without corrupting the caller's inherited LR.
+    if (RASignCondition != SignReturnAddress::None)
+      return std::nullopt;
+
     FrameID = MachineOutlinerTailCall;
     NumBytesToCreateFrame = 0;
     unsigned NumBytesForCall = 4 + NumBytesToCheckLRInTCEpilogue;
@@ -10923,6 +10881,62 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // can be a tail call
   if (FrameID != MachineOutlinerTailCall && CFICount > 0)
     return std::nullopt;
+  if (FrameID != MachineOutlinerTailCall &&
+      RASignCondition != SignReturnAddress::None) {
+    bool ContainsNonTailCall =
+        any_of(RepeatedSequenceLocs[0], [&](const MachineInstr &MI) {
+          if (FrameID == MachineOutlinerThunk &&
+              &MI == &RepeatedSequenceLocs[0].back())
+            return false;
+          return MI.isCall() && !MI.isReturn();
+        });
+
+    bool SignAll = RASignCondition == SignReturnAddress::All;
+
+    if (ContainsNonTailCall || SignAll) {
+      auto hasIllegalSPModification = [&TRI, FrameID](outliner::Candidate &C) {
+        int SPValue = 0;
+        for (auto &MI : C) {
+          if (MI.modifiesRegister(AArch64::SP, &TRI)) {
+            if (FrameID == MachineOutlinerThunk && &MI == &C.back())
+              continue;
+            switch (MI.getOpcode()) {
+            case AArch64::ADDXri:
+            case AArch64::ADDWri:
+              assert(MI.getNumOperands() == 4 && "Wrong number of operands");
+              assert(MI.getOperand(2).isImm() &&
+                     "Expected operand to be immediate");
+              assert(MI.getOperand(1).isReg() &&
+                     "Expected operand to be a register");
+              if (MI.getOperand(1).getReg() == AArch64::SP)
+                SPValue += MI.getOperand(2).getImm();
+              else
+                return true;
+              break;
+            case AArch64::SUBXri:
+            case AArch64::SUBWri:
+              assert(MI.getNumOperands() == 4 && "Wrong number of operands");
+              assert(MI.getOperand(2).isImm() &&
+                     "Expected operand to be immediate");
+              assert(MI.getOperand(1).isReg() &&
+                     "Expected operand to be a register");
+              if (MI.getOperand(1).getReg() == AArch64::SP)
+                SPValue -= MI.getOperand(2).getImm();
+              else
+                return true;
+              break;
+            default:
+              return true;
+            }
+          }
+        }
+        return SPValue != 0;
+      };
+
+      if (hasIllegalSPModification(RepeatedSequenceLocs[0]))
+        return std::nullopt;
+    }
+  }
 
   return std::make_unique<outliner::OutlinedFunction>(
       RepeatedSequenceLocs, SequenceSize, NumBytesToCreateFrame, FrameID);
@@ -11286,6 +11300,11 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
   if (!ShouldSignReturnAddr)
     return;
 
+  // Thunks do not naturally have LR in their live-ins, but PAC signing
+  // requires it. Add it to prevent machine verifier crashes.
+  if (!MBB.isLiveIn(AArch64::LR))
+    MBB.addLiveIn(AArch64::LR);
+
   BuildMI(MBB, MBB.begin(), DebugLoc(), TII->get(AArch64::PAUTH_PROLOGUE))
       .setMIFlag(MachineInstr::FrameSetup);
   TII->createPauthEpilogueInstr(MBB, DebugLoc());
@@ -11425,9 +11444,10 @@ void AArch64InstrInfo::buildOutlinedFrame(
   bool ShouldSignReturnAddr = AArch64FunctionInfo::shouldSignReturnAddress(
       RASignCondition, !IsLeafFunction);
 
+  auto MOC = static_cast<MachineOutlinerClass>(OF.FrameConstructionID);
+
   // If this is a tail call outlined function, then there's already a return.
-  if (OF.FrameConstructionID == MachineOutlinerTailCall ||
-      OF.FrameConstructionID == MachineOutlinerThunk) {
+  if (MOC == MachineOutlinerTailCall || MOC == MachineOutlinerThunk) {
     signOutlinedFunction(MF, MBB, this, ShouldSignReturnAddr);
     return;
   }
