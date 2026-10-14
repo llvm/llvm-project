@@ -239,9 +239,9 @@ bool matchDupFromInsertVectorElt(int Lane, MachineInstr &MI,
   if (!mi_match(InsMI->getOperand(3).getReg(), MRI, m_ZeroInt()))
     return false;
 
-  MatchInfo =
-      ShuffleVectorPseudo(AArch64::G_SPLAT_VECTOR, MI.getOperand(0).getReg(),
-                          {InsMI->getOperand(2).getReg()});
+  MatchInfo = ShuffleVectorPseudo(TargetOpcode::G_SPLAT_VECTOR,
+                                  MI.getOperand(0).getReg(),
+                                  {InsMI->getOperand(2).getReg()});
   return true;
 }
 
@@ -263,7 +263,7 @@ bool matchDupFromBuildVector(int Lane, MachineInstr &MI,
   if (!BuildVecMI)
     return false;
   Register Reg = BuildVecMI->getOperand(Lane + 1).getReg();
-  MatchInfo = ShuffleVectorPseudo(AArch64::G_SPLAT_VECTOR,
+  MatchInfo = ShuffleVectorPseudo(TargetOpcode::G_SPLAT_VECTOR,
                                   MI.getOperand(0).getReg(), {Reg});
   return true;
 }
@@ -852,7 +852,8 @@ bool matchBuildVectorToDup(MachineInstr &MI, Register &Src,
 void applyBuildVectorToDup(MachineInstr &MI, Register Src,
                            MachineRegisterInfo &MRI, MachineIRBuilder &B) {
   B.setInstrAndDebugLoc(MI);
-  B.buildInstr(AArch64::G_SPLAT_VECTOR, {MI.getOperand(0).getReg()}, {Src});
+  B.buildInstr(TargetOpcode::G_SPLAT_VECTOR, {MI.getOperand(0).getReg()},
+               {Src});
   MI.eraseFromParent();
 }
 

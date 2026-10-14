@@ -2166,7 +2166,7 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
         .addReg(FPRDst);
     return true;
   }
-  case AArch64::G_SPLAT_VECTOR: {
+  case TargetOpcode::G_SPLAT_VECTOR: {
     // Convert the type from p0 to s64 to help selection.
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
     if (!DstTy.isPointerVector())
@@ -2374,7 +2374,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   switch (I.getOpcode()) {
-  case AArch64::G_SPLAT_VECTOR: {
+  case TargetOpcode::G_SPLAT_VECTOR: {
     Register Dst = I.getOperand(0).getReg();
     LLT DstTy = MRI.getType(Dst);
     if (DstTy.isScalableVector())
@@ -8238,7 +8238,7 @@ AArch64InstructionSelector::selectCVTFixedPointBase(const MachineOperand &Root,
   Register Reg = Root.getReg();
   MachineInstr *Dup = getDefIgnoringCopies(Reg, MRI);
 
-  if (Dup && Dup->getOpcode() == AArch64::G_SPLAT_VECTOR)
+  if (Dup && Dup->getOpcode() == TargetOpcode::G_SPLAT_VECTOR)
     Reg = Dup->getOperand(1).getReg();
 
   std::optional<ValueAndVReg> CstVal =
