@@ -36,7 +36,7 @@ _Static_assert(OBJECT_SIZE_BUILTIN((void *)0, 4), ""); // expected-error {{stati
                                                           expected-note {{argument value 4 is outside the valid range [0, 3]}}
 
 _Static_assert(OBJECT_SIZE_BUILTIN((void *)0, 1 / 0), ""); // expected-error {{static assertion expression is not an integral constant expression}} \
-                                                           expected-note {{division by zero}}
+                                                              expected-note {{division by zero}}
 
 int get_object_size_type(void);
 _Static_assert(OBJECT_SIZE_BUILTIN((void *)0, get_object_size_type()), ""); // expected-error {{static assertion expression is not an integral constant expression}}
