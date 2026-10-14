@@ -306,6 +306,48 @@ convertUWTableKind(cir::UnwindTableKind kind) {
   llvm_unreachable("Unknown CIR unwind table kind");
 }
 
+static mlir::LLVM::framePointerKind::FramePointerKind
+convertFramePointerKind(cir::FramePointerKind kind) {
+  using CIR = cir::FramePointerKind;
+  using LLVM = mlir::LLVM::framePointerKind::FramePointerKind;
+
+  switch (kind) {
+  case CIR::None:
+    return LLVM::None;
+  case CIR::NonLeaf:
+    return LLVM::NonLeaf;
+  case CIR::All:
+    return LLVM::All;
+  case CIR::Reserved:
+    return LLVM::Reserved;
+  case CIR::NonLeafNoReserve:
+    return LLVM::NonLeafNoReserve;
+  }
+  llvm_unreachable("Unknown CIR frame pointer kind");
+}
+
+/// The "frame-pointer" module flag holds an llvm::FramePointerKind value, as
+/// written by llvm::Module::setFramePointer.
+static llvm::FramePointerKind
+convertFramePointerKindToLLVMIR(cir::FramePointerKind kind) {
+  using CIR = cir::FramePointerKind;
+  using LLVM = llvm::FramePointerKind;
+
+  switch (kind) {
+  case CIR::None:
+    return LLVM::None;
+  case CIR::NonLeaf:
+    return LLVM::NonLeaf;
+  case CIR::All:
+    return LLVM::All;
+  case CIR::Reserved:
+    return LLVM::Reserved;
+  case CIR::NonLeafNoReserve:
+    return LLVM::NonLeafNoReserve;
+  }
+  llvm_unreachable("Unknown CIR frame pointer kind");
+}
+
 mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
     cir::CopyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -3010,6 +3052,11 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     fn.setUwtableKindAttr(mlir::LLVM::UWTableKindAttr::get(
         fn.getContext(), convertUWTableKind(*uwtableKind)));
 
+  if (std::optional<cir::FramePointerKind> framePointerKind =
+          op.getFramePointer())
+    fn.setFramePointerAttr(mlir::LLVM::FramePointerKindAttr::get(
+        fn.getContext(), convertFramePointerKind(*framePointerKind)));
+
   // Function attributes with no dedicated field on the LLVM dialect's
   // LLVMFuncOp are routed through the `passthrough` array. The MLIR LLVM IR
   // translator forwards `passthrough` entries to LLVM IR as function
@@ -4615,6 +4662,19 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
           module->getAttr(cir::CIRDialect::getModuleLevelAsmAttrName()))
     module->setAttr(mlir::LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
                     asmAttr);
+
+  if (auto framePointerAttr = module->getAttrOfType<cir::FramePointerKindAttr>(
+          cir::CIRDialect::getModuleFramePointerAttrName())) {
+    mlir::OpBuilder builder(module.getContext());
+    builder.setInsertionPointToEnd(module.getBody());
+    auto flag = mlir::LLVM::ModuleFlagAttr::get(
+        module.getContext(), mlir::LLVM::ModFlagBehavior::Max,
+        builder.getStringAttr("frame-pointer"),
+        builder.getI32IntegerAttr(static_cast<int32_t>(
+            convertFramePointerKindToLLVMIR(framePointerAttr.getValue()))));
+    mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
+                                      builder.getArrayAttr({flag}));
+  }
 
   lowerOpenCLModuleMetadataAttrs(module);
 }
