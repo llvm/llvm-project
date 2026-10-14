@@ -775,9 +775,10 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   // A rem paired with the div on the same variable operands in the same block
   // is free, since the divider already returns the remainder.
-  if ((ISD == ISD::UREM || ISD == ISD::SREM) && LT.first == 1 &&
-      !LT.second.isVector() && CostKind != TTI::TCK_Latency && CtxI &&
-      CtxI->getOpcode() == Opcode && !isa<Constant>(CtxI->getOperand(1))) {
+  if ((ISD == ISD::UREM || ISD == ISD::SREM) && CostKind != TTI::TCK_Latency &&
+      CtxI && CtxI->getOpcode() == Opcode &&
+      !isa<Constant>(CtxI->getOperand(1)) &&
+      hasDivRemOp(Ty, ISD == ISD::SREM)) {
     using namespace PatternMatch;
     // Limit the use list walk to save compile time.
     constexpr unsigned MaxUses = 64;
