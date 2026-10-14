@@ -1356,62 +1356,6 @@ int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::create_event(int32_t DeviceId, void **EventPtr) {
-  auto Err = getDevice(DeviceId).createEvent(EventPtr);
-  if (Err) {
-    REPORT() << "Failure to create event: " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::record_event(int32_t DeviceId, void *EventPtr,
-                                      __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).recordEvent(EventPtr, AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to record event " << EventPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::wait_event(int32_t DeviceId, void *EventPtr,
-                                    __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).waitEvent(EventPtr, AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to wait event " << EventPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::sync_event(int32_t DeviceId, void *EventPtr) {
-  auto Err = getDevice(DeviceId).syncEvent(EventPtr);
-  if (Err) {
-    REPORT() << "Failure to synchronize event " << EventPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::destroy_event(int32_t DeviceId, void *EventPtr) {
-  auto Err = getDevice(DeviceId).destroyEvent(EventPtr);
-  if (Err) {
-    REPORT() << "Failure to destroy event " << EventPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
   return getDevice(DeviceId).useAutoZeroCopy();
 }

@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -S -passes=loop-fusion -debug-only=loop-fusion -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DA
+; RUN: opt -S -passes=loop-fusion -loop-fusion-disable-cost-model -debug-only=loop-fusion -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DA
 
 define void @loop_invariant(i32 %N) {
 ; CHECK-DA: Performing Loop Fusion on function loop_invariant
