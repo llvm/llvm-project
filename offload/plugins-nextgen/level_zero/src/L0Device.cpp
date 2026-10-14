@@ -352,7 +352,7 @@ Error L0DeviceTy::free(void *TgtPtr, TargetAllocTy Kind) {
 
 Error L0DeviceTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper,
-                                 bool DirectWrite) {
+                                 DataSubmitFlagsTy Flags) {
   if (Size == 0)
     return Plugin::success();
 

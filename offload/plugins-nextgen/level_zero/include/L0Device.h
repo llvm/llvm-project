@@ -546,7 +546,7 @@ public:
                        bool *IsQueueWorkCompleted) override;
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper,
-                       bool DirectWrite) override;
+                       DataSubmitFlagsTy Flags) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
