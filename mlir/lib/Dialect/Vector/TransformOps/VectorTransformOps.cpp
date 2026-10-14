@@ -230,7 +230,7 @@ void transform::ApplyUnrollContractPatternsOp::populatePatterns(
     if (iterators.size() != 3 ||
         iterators[0] != vector::IteratorType::parallel ||
         iterators[1] != vector::IteratorType::parallel ||
-        iterators[1] != vector::IteratorType::reduction)
+        iterators[2] != vector::IteratorType::reduction)
       return failure();
 
     auto type = dyn_cast<VectorType>(contract.getType());

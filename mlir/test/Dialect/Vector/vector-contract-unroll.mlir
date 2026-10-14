@@ -7,7 +7,7 @@
 // CHECK-LABEL: @matmul
 func.func @matmul(%mask: vector<8x8x4xi1>, %lhs: vector<8x4xf32>, %rhs: vector<4x8xf32>, %acc: vector<8x8xf32>) -> vector<8x8xf32> {
 
-// CHECK-REPEAT-8: vector.contract  {{.*}} : vector<1x4xf32>, vector<4x8xf32> into vector<1x8xf32>
+// CHECK-COUNT-8: vector.contract  {{.*}} : vector<1x4xf32>, vector<4x8xf32> into vector<1x8xf32>
   %res = vector.contract {
     indexing_maps = [affine_map<(m, n, k) -> (m, k)>, affine_map<(m, n, k) -> (k, n)>, affine_map<(m, n, k) -> (m, n)>],
     iterator_types = ["parallel", "parallel", "reduction"],
