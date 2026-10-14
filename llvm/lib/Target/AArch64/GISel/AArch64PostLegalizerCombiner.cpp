@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64GlobalISelUtils.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
@@ -40,6 +41,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/Debug.h"
 
 #define GET_GICOMBINER_DEPS
@@ -558,6 +560,41 @@ static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
       M2->getOpcode() != AArch64::G_UMULL)
     return false;
   return true;
+}
+
+/// Lower a vector G_ASHR/G_LSHR by a non-immediate amount to SSHL/USHL of the
+/// negated amount, so the negation can be combined (e.g. folded into a
+/// constant). Splat-immediate shifts are left for vashr_vlshr_imm.
+bool matchVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
+         MI.getOpcode() == TargetOpcode::G_LSHR);
+  if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
+    return false;
+  Register Amt = MI.getOperand(2).getReg();
+  if (AArch64GISelUtils::getAArch64VectorSplatScalar(*MRI.getVRegDef(Amt), MRI))
+    return false;
+  // Constant splats with undef lanes (e.g. from widening odd-sized vectors) are
+  // still immediates for vashr_vlshr_imm once the undef lanes are cleaned up.
+  if (auto *BV = getOpcodeDef<GBuildVector>(Amt, MRI))
+    for (unsigned I = 0, E = BV->getNumSources(); I < E; ++I)
+      if (auto Cst = getIConstantVRegVal(BV->getSourceReg(I), MRI))
+        return !isBuildVectorConstantSplat(Amt, MRI, *Cst, /*AllowUndef=*/true);
+  return true;
+}
+
+void applyVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B) {
+  B.setInstrAndDebugLoc(MI);
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  auto Neg = B.buildSub(Ty, B.buildConstant(Ty, 0), MI.getOperand(2).getReg());
+  Intrinsic::ID IntrID = MI.getOpcode() == TargetOpcode::G_ASHR
+                             ? Intrinsic::aarch64_neon_sshl
+                             : Intrinsic::aarch64_neon_ushl;
+  B.buildIntrinsic(IntrID, ArrayRef<Register>{Dst})
+      .addUse(MI.getOperand(1).getReg())
+      .addUse(Neg.getReg(0));
+  MI.eraseFromParent();
 }
 
 class AArch64PostLegalizerCombinerImpl : public Combiner {

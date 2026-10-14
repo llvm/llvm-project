@@ -45,7 +45,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
@@ -579,48 +578,6 @@ void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
       Opc == TargetOpcode::G_ASHR ? AArch64::G_VASHR : AArch64::G_VLSHR;
   MachineIRBuilder MIB(MI);
   MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1)}).addImm(Imm);
-  MI.eraseFromParent();
-}
-
-/// Match a vector G_ASHR or G_LSHR whose shift amount is a non-splat
-/// G_BUILD_VECTOR of constants, collecting the negated amounts. These shifts
-/// are selected as SSHL/USHL of the negated amount; negating the constants
-/// here lets the negation fold away instead of becoming a NEG at selection.
-bool matchVAshrLshrConstVec(MachineInstr &MI, MachineRegisterInfo &MRI,
-                            SmallVectorImpl<APInt> &NegAmts) {
-  assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
-         MI.getOpcode() == TargetOpcode::G_LSHR);
-  if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
-    return false;
-  MachineInstr *AmtMI = MRI.getVRegDef(MI.getOperand(2).getReg());
-  // Splat amounts are handled by vashr_vlshr_imm.
-  if (getAArch64VectorSplatScalar(*AmtMI, MRI))
-    return false;
-  auto *BV = dyn_cast<GBuildVector>(AmtMI);
-  if (!BV)
-    return false;
-  NegAmts.clear();
-  for (unsigned I = 0, E = BV->getNumSources(); I < E; ++I) {
-    std::optional<APInt> Cst = getIConstantVRegVal(BV->getSourceReg(I), MRI);
-    if (!Cst)
-      return false;
-    NegAmts.push_back(-*Cst);
-  }
-  return true;
-}
-
-void applyVAshrLshrConstVec(MachineInstr &MI, MachineRegisterInfo &MRI,
-                            MachineIRBuilder &B,
-                            SmallVectorImpl<APInt> &NegAmts) {
-  B.setInstrAndDebugLoc(MI);
-  Register Dst = MI.getOperand(0).getReg();
-  auto NegAmt = B.buildBuildVectorConstant(MRI.getType(Dst), NegAmts);
-  Intrinsic::ID IntrID = MI.getOpcode() == TargetOpcode::G_ASHR
-                             ? Intrinsic::aarch64_neon_sshl
-                             : Intrinsic::aarch64_neon_ushl;
-  B.buildIntrinsic(IntrID, ArrayRef<Register>{Dst})
-      .addUse(MI.getOperand(1).getReg())
-      .addUse(NegAmt.getReg(0));
   MI.eraseFromParent();
 }
 
