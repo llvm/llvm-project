@@ -5,8 +5,8 @@
 # outlined sequence that contains a call and therefore saves LR on the stack.
 # The add/sub immediates must be adjusted by +16.
 #
-# Also check that unencodable cases prevent the call from being included in the
-# outlined sequence.
+# Also check that unencodable cases and add/sub instructions that write SP
+# prevent the call from being included in the outlined sequence.
 
 --- |
   ; @callee is a leaf function so the outliner treat BL @callee as a legal
@@ -36,6 +36,10 @@
   define void @overflow1() #0 { ret void }
   define void @overflow2() #0 { ret void }
   define void @overflow3() #0 { ret void }
+  define void @sp_write0() #0 { ret void }
+  define void @sp_write1() #0 { ret void }
+  define void @sp_write2() #0 { ret void }
+  define void @sp_write3() #0 { ret void }
   attributes #0 = { minsize noinline noredzone "frame-pointer"="all" }
   attributes #1 = { minsize noinline noredzone "frame-pointer"="none" }
 ...
@@ -505,6 +509,82 @@ body:             |
     RET undef $lr
 
 ...
+---
+
+name:            sp_write0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sp_write0
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[SP_WRITE_FUNC:OUTLINED_FUNCTION_[0-9]+]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $sp = SUBXri $sp, 16, 0
+    $sp = ADDXri $sp, 16, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            sp_write1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sp_write1
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[SP_WRITE_FUNC]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $sp = SUBXri $sp, 16, 0
+    $sp = ADDXri $sp, 16, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            sp_write2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sp_write2
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[SP_WRITE_FUNC]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $sp = SUBXri $sp, 16, 0
+    $sp = ADDXri $sp, 16, 0
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            sp_write3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $lr = ORRXri $xzr, 1
+  bb.1:
+    ; CHECK-LABEL: name:            sp_write3
+    ; CHECK: BL @callee
+    ; CHECK-NEXT: BL @[[SP_WRITE_FUNC]]
+    BL @callee, implicit-def dead $lr, implicit $sp
+    $sp = SUBXri $sp, 16, 0
+    $sp = ADDXri $sp, 16, 0
+  bb.2:
+    RET undef $lr
+
+...
 
 # CHECK:       name:            [[ADD_FUNC]]
 # CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
@@ -538,14 +618,20 @@ body:             |
 # CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
 # CHECK-NEXT:  RET $lr
 
-# CHECK:       name:            [[SHIFTED_ADD_FUNC]]
+# CHECK:       name:            [[SP_WRITE_FUNC]]
 # CHECK-NOT:   STRXpre
-# CHECK:       $x15 = ADDXri $sp, 1, 12
-# CHECK-NEXT:  $x15 = ADDXri $sp, 1, 12
+# CHECK:       $sp = SUBXri $sp, 16, 0
+# CHECK-NEXT:  $sp = ADDXri $sp, 16, 0
 # CHECK-NEXT:  RET $lr
 
 # CHECK:       name:            [[OVERFLOW_FUNC]]
 # CHECK-NOT:   STRXpre
 # CHECK:       $x15 = ADDXri $sp, 4095, 0
 # CHECK-NEXT:  $x15 = ADDXri $sp, 4095, 0
+# CHECK-NEXT:  RET $lr
+
+# CHECK:       name:            [[SHIFTED_ADD_FUNC]]
+# CHECK-NOT:   STRXpre
+# CHECK:       $x15 = ADDXri $sp, 1, 12
+# CHECK-NEXT:  $x15 = ADDXri $sp, 1, 12
 # CHECK-NEXT:  RET $lr
