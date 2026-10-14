@@ -1121,7 +1121,7 @@ template <class ELFT>
 static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
                                                opt::InputArgList &args) {
   DenseSet<StringRef> typeInfoSymbols;
-  SmallSetVector<StringRef, 0> vtableSymbols;
+  SetVector<StringRef> vtableSymbols;
   auto processVtableAndTypeInfoSymbols = [&](StringRef name) {
     if (name.consume_front("_ZTI"))
       typeInfoSymbols.insert(name);
@@ -1150,7 +1150,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
     }
   }
 
-  SmallSetVector<StringRef, 0> vtableSymbolsWithNoRTTI;
+  SetVector<StringRef> vtableSymbolsWithNoRTTI;
   for (StringRef s : vtableSymbols)
     if (!typeInfoSymbols.contains(s))
       vtableSymbolsWithNoRTTI.insert(s);

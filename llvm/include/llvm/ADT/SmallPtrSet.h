@@ -385,8 +385,8 @@ public:
   /// Returns whether the pointer was in the set. Invalidates iterators if
   /// true is returned. To remove elements while iterating over the set, use
   /// remove_if() instead.
-  bool erase(PtrType Ptr) {
-    return erase_imp(PtrTraits::getAsVoidPointer(Ptr));
+  bool erase(ConstPtrType Ptr) {
+    return erase_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
   }
 
   /// Remove elements that match the given predicate.

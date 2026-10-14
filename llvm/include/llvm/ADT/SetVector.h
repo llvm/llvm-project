@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -342,9 +343,20 @@ private:
 /// A SetVector that performs no allocations if smaller than
 /// a certain size.
 template <typename T, unsigned N>
-class SmallSetVector : public SetVector<T, SmallVector<T, N>, DenseSet<T>, N> {
+class SmallSetVector
+    : public SetVector<
+          T, SmallVector<T, N>,
+          std::conditional_t<std::is_pointer_v<T>, SmallPtrSet<T, N>,
+                             SmallDenseSet<T, N>>,
+          N> {
+  static_assert(N != 0 && "SmallSetVector is not meant to be used with zero "
+                          "size-hint; use SetVector instead");
+
 public:
-  using SetVector<T, SmallVector<T, N>, DenseSet<T>, N>::SetVector;
+  using SetVector<T, SmallVector<T, N>,
+                  std::conditional_t<std::is_pointer_v<T>, SmallPtrSet<T, N>,
+                                     SmallDenseSet<T, N>>,
+                  N>::SetVector;
 };
 
 } // end namespace llvm
