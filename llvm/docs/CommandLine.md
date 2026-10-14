@@ -1604,3 +1604,33 @@ The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `
 A library that otherwise needs only `llvm-min-tblgen` sets `LLVM_TABLEGEN_PROJECT` to `LLVM_HEADERS` before its `tablegen()` call, so that its sources need not wait for `llvm-tblgen`.
 Code reads `FooOptions::Global.enable_foo`, the instance the command line sets.
 Keep the header in `lib/`, as private as the `static cl::opt` it replaces; another library that needs a value calls a function or takes a parameter.
+
+### Option aliases
+
+The TableGen Option library supports option aliases, and these can be used to create a compatibility bridge when renaming options.
+
+Name the target's `defm`, and give the alias the target's kind.
+Use `FlagOrEq` for a `BoolField` and `SeparateOrEq` for a `ValueField`:
+
+```text
+// -enable-foo was renamed to -foo-enabled.
+defm foo_enabled : BoolField<"foo-enabled", "true", "Enable foo">;
+def : FlagOrEq<["-", "--"], "enable-foo">, Alias<foo_enabled>;
+// -foo-limit was renamed to -foo-threshold.
+defm threshold : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
+def : SeparateOrEq<["-", "--"], "foo-limit">, Alias<threshold>;
+```
+
+`-foo-enabled` and `-enable-foo`, with or without `=true|false`, set `foo_enabled`, and `-foo-limit=8` and `-foo-limit 8` set `threshold`.
+The alias is registered with `cl::` like any option, so a `cl::opt` or another library cannot reuse its name.
+
+A `Flag` alias with `AliasArgs` supplies the target's value, which can flip the meaning of a bool:
+
+```text
+def : Flag<["-", "--"], "disable-foo">, Alias<foo_enabled>, AliasArgs<["false"]>;
+```
+
+`-disable-foo` then sets `foo_enabled` to false.
+A `Flag` takes no `=value`, so `-disable-foo=true` is an unknown argument.
+
+An alias can only name a library option; use `cl::alias` for a `cl::opt`.

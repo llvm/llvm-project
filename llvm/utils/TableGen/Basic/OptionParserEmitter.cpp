@@ -259,11 +259,39 @@ static std::string getStructOptionID(const Record &R) {
   return getSpellingIdentifier(R);
 }
 
-// The preprocessor expression of R's Condition, or "" if it has none.
+// The preprocessor expression of R's Condition, or "" if it has none. An alias
+// is built where its target is.
 static StringRef getCondition(const Record &R) {
+  if (const auto *Alias = dyn_cast<DefInit>(R.getValueInit("Alias")))
+    return getCondition(*Alias->getDef());
   const RecordVal *V = R.getValue("Condition");
   const auto *DI = V ? dyn_cast<DefInit>(V->getValue()) : nullptr;
   return DI ? DI->getDef()->getValueAsString("Expr") : "";
+}
+
+// An alias is applied as its target, so it must parse the target's arguments:
+// the same kind, or a Flag that supplies the value in AliasArgs.
+static void checkAlias(const Record &R, const Record &Target, StringRef Kind) {
+  if (!Target.getValue("FieldName"))
+    PrintFatalError(R.getLoc(), "the target of an alias must be declared with "
+                                "BoolField or ValueField, not be an alias");
+  StringRef TargetKind = Target.getValueAsDef("Kind")->getValueAsString("Name");
+  size_t NumAliasArgs = R.getValueAsListOfStrings("AliasArgs").size();
+  if (Kind == "Flag") {
+    if (NumAliasArgs > 1)
+      PrintFatalError(R.getLoc(), "a Flag alias takes at most one AliasArg");
+    if (TargetKind == "SeparateOrEq" && !NumAliasArgs)
+      PrintFatalError(R.getLoc(), "a Flag alias of a SeparateOrEq option needs "
+                                  "an AliasArg to supply the value");
+    return;
+  }
+  if (Kind != "FlagOrEq" && Kind != "SeparateOrEq")
+    PrintFatalError(R.getLoc(), "an alias is a FlagOrEq, SeparateOrEq or Flag");
+  if (Kind != TargetKind)
+    PrintFatalError(R.getLoc(), "a " + Kind + " alias must have a " + Kind +
+                                    " target, not " + TargetKind);
+  if (NumAliasArgs)
+    PrintFatalError(R.getLoc(), "only a Flag alias can have AliasArgs");
 }
 
 namespace {
@@ -310,13 +338,24 @@ static void emitOptionsStruct(const Record &Struct,
     StringRef Type, Default, Spelling;
   };
   std::vector<const Record *> Fields;
+  StringMap<const Record *> Spellings;
   for (const Record *R : Opts) {
     StringRef Kind = R->getValueAsDef("Kind")->getValueAsString("Name");
+    if (Kind != "Input" && Kind != "Unknown") {
+      auto [It, Inserted] =
+          Spellings.try_emplace(R->getValueAsString("Name"), R);
+      if (!Inserted)
+        PrintFatalError(R->getLoc(), "option '-" + It->first() +
+                                         "' is declared more than once");
+    }
     if (!R->getValue("FieldName")) {
-      if (Kind != "Input" && Kind != "Unknown" &&
-          isa<UnsetInit>(R->getValueInit("Alias")))
+      if (Kind == "Input" || Kind == "Unknown")
+        continue;
+      const auto *Alias = dyn_cast<DefInit>(R->getValueInit("Alias"));
+      if (!Alias)
         PrintFatalError(R->getLoc(), "an option of an OptionsStruct must be "
                                      "declared with BoolField or ValueField");
+      checkAlias(*R, *Alias->getDef(), Kind);
       continue;
     }
     if (Kind != "FlagOrEq" && Kind != "SeparateOrEq")
@@ -702,10 +741,6 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
                         /*EmitComment=*/true);
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
-    if (const auto *DI = dyn_cast<DefInit>(R.getValueInit("Alias"));
-        DI && !getCondition(*DI->getDef()).empty())
-      PrintFatalError(R.getLoc(), "an alias cannot refer to an option with a "
-                                  "Condition");
     OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
     OS << ", " << ExtraOffset.lookup(&R);
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
