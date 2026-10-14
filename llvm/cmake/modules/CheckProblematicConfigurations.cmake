@@ -1,5 +1,5 @@
 
-option(LLVM_ALLOW_PROBLEMATIC_CONFIGURATIONS OFF "Set this option to ON to allow problematic toolchain configurations. Use on your own risk.")
+option(LLVM_ALLOW_PROBLEMATIC_CONFIGURATIONS "Set this option to ON to allow problematic toolchain configurations. Use on your own risk." OFF)
 
 macro(log_problematic MESSAGE)
   if(LLVM_ALLOW_PROBLEMATIC_CONFIGURATIONS)
