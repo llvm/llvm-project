@@ -2596,7 +2596,7 @@ private:
   /// to in.
   bool matchesSelectOfBits(const TreeEntry &SelectTE) const;
 
-  /// Convert the give compressed load node into a strided
+  /// Convert the given compressed load node into a strided
   /// load if legal and profitable.
   void convertCompressedLoadToStrided(TreeEntry &E);
 
@@ -14395,7 +14395,7 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
 void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   StridedPtrInfo SPtrInfo;
   auto PreferStridedOverCompressed = [&]() -> bool {
-    // In cases where a shuffle is mandatory regarless of load type,
+    // In cases where a shuffle is mandatory regardless of load type,
     // prefer Compressed since the reorder/reuse shuffle can be merged
     // with the compress shuffle.
     if (!E.ReorderIndices.empty() || !E.ReuseShuffleIndices.empty())
