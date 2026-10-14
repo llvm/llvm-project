@@ -313,11 +313,20 @@ struct CountTrailingZerosOpenCLPattern final
     if (!type)
       return failure();
 
-    Type elementType = getElementTypeOrSelf(type);
-    unsigned sourceWidth =
-        getElementTypeOrSelf(op.getType()).getIntOrFloatBitWidth();
-    unsigned targetWidth = elementType.getIntOrFloatBitWidth();
     Value input = adaptor.getOperand();
+    Type elementType = getElementTypeOrSelf(type);
+    if (elementType.isInteger(1)) {
+      // cttz(false) is true and cttz(true) is false.
+      rewriter.replaceOpWithNewOp<spirv::LogicalNotOp>(op, type, input);
+      return success();
+    }
+
+    Type sourceElementType = getElementTypeOrSelf(op.getType());
+    unsigned targetWidth = elementType.getIntOrFloatBitWidth();
+    // Index values use the bit width chosen by the type converter.
+    unsigned sourceWidth = sourceElementType.isIndex()
+                               ? targetWidth
+                               : sourceElementType.getIntOrFloatBitWidth();
     if (sourceWidth < targetWidth) {
       // Set the bit immediately above the original value. This bounds the
       // count by sourceWidth, even when the emulated value has nonzero high

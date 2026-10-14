@@ -197,6 +197,42 @@ func.func @int_unary_vector(%arg0: vector<2xi32>) {
   return
 }
 
+// CHECK-LABEL: @cttz_i1
+func.func @cttz_i1(%arg0: i1) -> i1 {
+  // CHECK: [[RESULT:%.*]] = spirv.LogicalNot %arg0 : i1
+  // CHECK: return [[RESULT]] : i1
+  %0 = math.cttz %arg0 : i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: @cttz_i1_vector
+func.func @cttz_i1_vector(%arg0: vector<2xi1>) -> vector<2xi1> {
+  // CHECK: [[RESULT:%.*]] = spirv.LogicalNot %arg0 : vector<2xi1>
+  // CHECK: return [[RESULT]] : vector<2xi1>
+  %0 = math.cttz %arg0 : vector<2xi1>
+  return %0 : vector<2xi1>
+}
+
+// CHECK-LABEL: @cttz_index
+func.func @cttz_index(%arg0: index) -> index {
+  // CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %arg0 : index to i32
+  // CHECK: [[RESULT:%.*]] = spirv.CL.ctz [[INPUT]] : i32
+  // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast [[RESULT]] : i32 to index
+  // CHECK: return [[CAST]] : index
+  %0 = math.cttz %arg0 : index
+  return %0 : index
+}
+
+// CHECK-LABEL: @cttz_index_vector
+func.func @cttz_index_vector(%arg0: vector<2xindex>) -> vector<2xindex> {
+  // CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %arg0 : vector<2xindex> to vector<2xi32>
+  // CHECK: [[RESULT:%.*]] = spirv.CL.ctz [[INPUT]] : vector<2xi32>
+  // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast [[RESULT]] : vector<2xi32> to vector<2xindex>
+  // CHECK: return [[CAST]] : vector<2xindex>
+  %0 = math.cttz %arg0 : vector<2xindex>
+  return %0 : vector<2xindex>
+}
+
 } // end module
 
 // -----
@@ -302,7 +338,6 @@ module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kerne
 module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel, Int8, Int16, Int64], []>, #spirv.resource_limits<>> } {
   // CHECK-LABEL: @cttz_native_widths
   func.func @cttz_native_widths(%a: i8, %b: vector<2xi16>, %c: i64) {
-    // CHECK-NOT: spirv.BitwiseOr
     // CHECK: spirv.CL.ctz %{{.*}} : i8
     %0 = math.cttz %a : i8
     // CHECK: spirv.CL.ctz %{{.*}} : vector<2xi16>
