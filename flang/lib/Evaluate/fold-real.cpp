@@ -408,6 +408,23 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "sign") {
     return FoldElementalIntrinsic<T, T, T>(
         context, std::move(funcRef), &Scalar<T>::SIGN);
+  } else if (name == "sind") {
+    // Rewrite SIND(x) -> SIN(x * pi/180); the SIN call then folds when x is
+    // constant.  pi and 180 are first rounded to the target precision so that
+    // folded results match the lowering of SIND, which uses the same sequence
+    // (see IntrinsicLibrary::genSind).
+    CHECK(args.size() == 1);
+    if (auto *xExpr{UnwrapExpr<Expr<T>>(args[0])}) {
+      const char *piStr{
+          "3.141592653589793238462643383279502884"}; // llvm::numbers::pis
+      const char *oneEightyStr{"180.0"};
+      Scalar<T> pi{Scalar<T>::Read(piStr).value};
+      Scalar<T> oneEighty{Scalar<T>::Read(oneEightyStr).value};
+      Scalar<T> piOver180{pi.Divide(oneEighty).value};
+      *xExpr = std::move(*xExpr) * Expr<T>{Constant<T>{std::move(piOver180)}};
+      intrinsic->name = "sin";
+      return FoldIntrinsicFunction<KIND>(context, std::move(funcRef));
+    }
   } else if (name == "spacing") {
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
         ScalarFunc<T, T>(
