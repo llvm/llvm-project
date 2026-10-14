@@ -179,7 +179,7 @@ LLVM_ABI void timeTraceProfilerEnd(TimeTraceProfilerEntry *E);
 /// of the time trace profiler.  When the object is constructed, it begins
 /// the section; and when it is destroyed, it stops it. If the time profiler
 /// is not initialized, the overhead is a single branch.
-class TimeTraceScope {
+class [[nodiscard]] TimeTraceScope {
 public:
   TimeTraceScope() = delete;
   TimeTraceScope(const TimeTraceScope &) = delete;

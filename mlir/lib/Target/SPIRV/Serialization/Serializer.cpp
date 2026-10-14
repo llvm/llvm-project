@@ -371,6 +371,14 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
     }
     return emitError(loc, "expected FPRoundingModeAttr attribute for ")
            << stringifyDecoration(decoration);
+  case spirv::Decoration::FuncParamAttr:
+    return processDecorationList<FunctionParameterAttributeAttr>(
+        loc, decoration, attr, "FunctionParameterAttribute",
+        [&](FunctionParameterAttributeAttr attr) {
+          return emitDecoration(resultID, decoration,
+                                {static_cast<uint32_t>(attr.getValue())});
+        });
+  case spirv::Decoration::Alignment:
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
@@ -416,6 +424,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
   case spirv::Decoration::Volatile:
+  case spirv::Decoration::SaturatedConversion:
     // For unit attributes and decoration attributes, the args list
     // has no values so we do nothing.
     if (isa<UnitAttr, DecorationAttr>(attr))
