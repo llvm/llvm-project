@@ -6121,6 +6121,11 @@ namespace {
     }
     void VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
+      // FIXME: The location of the ellipsis is not recorded here. The parser
+      // knows it when it first parses the pack indexing type, but it is dropped
+      // when the type is annotated (see
+      // Parser::AnnotateExistingIndexedTypeNamePack), so DS.getEllipsisLoc()
+      // is invalid when this runs.
       TL.setEllipsisLoc(DS.getEllipsisLoc());
       TL.getPatternLoc().initialize(Context, DS.getTypeSpecTypeLoc());
     }

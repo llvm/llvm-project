@@ -36,6 +36,7 @@ public:
     Lang_CXX14,
     Lang_CXX17,
     Lang_CXX2a,
+    Lang_CXX26,
     Lang_OBJC,
     Lang_OBJCXX11,
     Lang_CXX = Lang_CXX98
@@ -63,6 +64,9 @@ public:
       break;
     case Lang_CXX2a:
       Args.push_back("-std=c++2a");
+      break;
+    case Lang_CXX26:
+      Args.push_back("-std=c++26");
       break;
     case Lang_OBJC:
       Args.push_back("-ObjC");
