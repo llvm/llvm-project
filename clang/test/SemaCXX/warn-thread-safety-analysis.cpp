@@ -8147,6 +8147,41 @@ void test3() {
 
 } // namespace WideStringLiteral
 
+namespace PointerToMemberCall {
+
+struct Guarded {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+  Mutex *(Guarded::*mu_of)();
+};
+
+// A call through a pointer to member function has no method declaration; it
+// must not crash when used as a capability expression. The analysis cannot
+// name the callee, so the expression does not resolve to a capability.
+void testCallInCapabilityExpr(Guarded *g, Guarded &h) {
+  (g->*g->mu_of)()->Lock(); // expected-warning {{cannot resolve lock expression}}
+  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}}
+  (g->*g->mu_of)()->Unlock(); // expected-warning {{cannot resolve lock expression}}
+  (h.*h.mu_of)()->Lock(); // expected-warning {{cannot resolve lock expression}}
+  (h.*h.mu_of)()->Unlock(); // expected-warning {{cannot resolve lock expression}}
+}
+
+// Nor are calls through different objects taken for one capability: neither
+// the second acquire nor the mismatched release is reported as such.
+void testCallInCapabilityExprObjects(Guarded *g, Guarded &h) {
+  (g->*g->mu_of)()->Lock(); // expected-warning {{cannot resolve lock expression}}
+  (h.*h.mu_of)()->Lock(); // expected-warning {{cannot resolve lock expression}}
+  (g->*g->mu_of)()->Unlock(); // expected-warning {{cannot resolve lock expression}}
+  (h.*h.mu_of)()->Unlock(); // expected-warning {{cannot resolve lock expression}}
+}
+
+void testCallInCapabilityExprMismatch(Guarded *g, Guarded &h) {
+  (g->*g->mu_of)()->Lock(); // expected-warning {{cannot resolve lock expression}}
+  (h.*h.mu_of)()->Unlock(); // expected-warning {{cannot resolve lock expression}}
+}
+
+} // namespace PointerToMemberCall
+
 namespace FunctionPointers {
 
 Mutex mu;

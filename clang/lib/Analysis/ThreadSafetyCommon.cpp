@@ -560,6 +560,9 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
   }
 
   til::SExpr *E = translate(CE->getCallee(), Ctx);
+  // Explicitly propagate Undefined, when the callee couldn't be analyzed.
+  if (isa<til::Undefined>(E))
+    return new (Arena) til::Undefined(CE);
   for (const auto *Arg : CE->arguments()) {
     til::SExpr *A = translate(Arg, Ctx);
     E = new (Arena) til::Apply(E, A);
@@ -570,9 +573,10 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
 til::SExpr *SExprBuilder::translateCXXMemberCallExpr(
     const CXXMemberCallExpr *ME, CallingContext *Ctx) {
   if (CapabilityExprMode) {
-    // Ignore calls to get() on smart pointers.
-    if (ME->getMethodDecl()->getNameAsString() == "get" &&
-        ME->getNumArgs() == 0) {
+    // Ignore calls to get() on smart pointers. A call through a pointer to
+    // member function has no method declaration.
+    const CXXMethodDecl *MD = ME->getMethodDecl();
+    if (MD && MD->getNameAsString() == "get" && ME->getNumArgs() == 0) {
       auto *E = translate(ME->getImplicitObjectArgument(), Ctx);
       return new (Arena) til::Cast(til::CAST_objToPtr, E);
       // return E;
