@@ -455,3 +455,10 @@ define ptr @associated_ifunc_resolver() {
 @a = external global i8, !absolute_symbol !0
 !0 = !{i64 -1, i64 -1}
 
+
+; // -----
+
+; Globals render by name only: a large initializer must not be embedded.
+; WARN: warning: unhandled associated metadata: {{.*}} on @big{{ *}}{{$}}
+@big = global [300 x i8] c"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", !associated !0
+!0 = !{ptr null}

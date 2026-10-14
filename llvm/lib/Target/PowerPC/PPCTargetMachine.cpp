@@ -266,7 +266,7 @@ static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
                                : createSchedLive<GenericScheduler>(C);
   // add DAG Mutations here.
   if (ST.hasStoreFusion())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   if (ST.hasFusion())
     DAG->addMutation(createPowerPCMacroFusionDAGMutation());
 
@@ -281,7 +281,7 @@ createPPCPostMachineScheduler(MachineSchedContext *C) {
                            : createSchedPostRA<PostGenericScheduler>(C);
   // add DAG Mutations here.
   if (ST.hasStoreFusion())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   if (ST.hasFusion())
     DAG->addMutation(createPowerPCMacroFusionDAGMutation());
   return DAG;

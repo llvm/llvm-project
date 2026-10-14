@@ -107,11 +107,19 @@ list(APPEND CLANG_TEST_DEPS
   clang-ssaf-analyzer
   clang-ssaf-format
   clang-ssaf-linker
+  clang-ssaf-merge-conflict-report
+  clang-ssaf-merge-transformation-report
   clang-ssaf-src-edit-merge
   clang-sycl-linker
   diagtool
   hmaptool
   )
+
+if(NOT WIN32)
+  list(APPEND CLANG_TEST_DEPS
+    clang-ssaf-orchestrator-make
+    )
+endif()
 
 if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
@@ -264,6 +272,7 @@ if(CLANG_ENABLE_CIR)
       llvm-dis
       llvm-objdump
       llvm-readelf
+      llvm-strings
       not
       opt
       split-file
