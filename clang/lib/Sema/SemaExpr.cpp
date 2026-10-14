@@ -5718,32 +5718,10 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
   assert(VK == VK_PRValue || LangOpts.CPlusPlus ||
          !ResultType.isCForbiddenLValueType());
 
-  if (LHSExp->IgnoreParenImpCasts()->getType()->isVariablyModifiedType() &&
-      FunctionScopes.size() > 1) {
-    if (auto *TT =
-            LHSExp->IgnoreParenImpCasts()->getType()->getAs<TypedefType>()) {
-      for (auto I = FunctionScopes.rbegin(),
-                E = std::prev(FunctionScopes.rend());
-           I != E; ++I) {
-        auto *CSI = dyn_cast<CapturingScopeInfo>(*I);
-        if (CSI == nullptr)
-          break;
-        DeclContext *DC = nullptr;
-        if (auto *LSI = dyn_cast<LambdaScopeInfo>(CSI))
-          DC = LSI->CallOperator;
-        else if (auto *CRSI = dyn_cast<CapturedRegionScopeInfo>(CSI))
-          DC = CRSI->TheCapturedDecl;
-        else if (auto *BSI = dyn_cast<BlockScopeInfo>(CSI))
-          DC = BSI->TheDecl;
-        if (DC) {
-          if (DC->containsDecl(TT->getDecl()))
-            break;
-          captureVariablyModifiedType(
-              Context, LHSExp->IgnoreParenImpCasts()->getType(), CSI);
-        }
-      }
-    }
-  }
+  QualType BaseType = LHSExp->IgnoreParenImpCasts()->getType();
+  if (BaseType->getAs<TypedefType>() &&
+      !CheckVariablyModifiedTypeUse(BaseType, LLoc))
+    return ExprError();
 
   return new (Context)
       ArraySubscriptExpr(LHSExp, RHSExp, ResultType, VK, OK, RLoc);
