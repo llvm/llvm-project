@@ -1314,9 +1314,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                "emitLValue: MatrixSingleSubscriptExpr");
     return LValue();
   case Expr::MatrixSubscriptExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: MatrixSubscriptExpr");
-    return LValue();
+    return emitMatrixSubscriptExpr(cast<MatrixSubscriptExpr>(e));
   case Expr::ArraySectionExprClass:
     getCIRGenModule().errorNYI(e->getSourceRange(),
                                "emitLValue: ArraySectionExpr");

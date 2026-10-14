@@ -4772,10 +4772,10 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
       SatMax = DAG.getSetCC(dl, BoolNVT, ResultHH, NVTZero, ISD::SETNE);
     } else if (Scale < VTSize) {
       // Overflow happened if ((HH >> (Scale - NVTSize)) != 0).
-      SDValue HLAdjusted =
-          DAG.getNode(ISD::SRL, dl, NVT, ResultHL,
+      SDValue HHAdjusted =
+          DAG.getNode(ISD::SRL, dl, NVT, ResultHH,
                       DAG.getShiftAmountConstant(Scale - NVTSize, NVT, dl));
-      SatMax = DAG.getSetCC(dl, BoolNVT, HLAdjusted, NVTZero, ISD::SETNE);
+      SatMax = DAG.getSetCC(dl, BoolNVT, HHAdjusted, NVTZero, ISD::SETNE);
     } else
       llvm_unreachable("Scale must be less or equal to VTSize for UMULFIXSAT"
                        "(and saturation can't happen with Scale==VTSize).");
@@ -6465,13 +6465,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_GET_ACTIVE_LANE_MASK(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntRes_MASK_BEFOREFIRST(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-
-  // If the promoted MASK_BEFOREFIRST isn't supported by the target, try to
-  // expand now so the target can lower cttz_elts on the original mask type.
-  if (!TLI.isOperationLegalOrCustom(ISD::MASK_BEFOREFIRST, NVT))
-    return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT,
-                       TLI.expandMaskBeforeFirst(N, DAG));
-
   SDValue Op = PromoteTargetBoolean(N->getOperand(0), NVT);
   return DAG.getNode(ISD::MASK_BEFOREFIRST, SDLoc(N), NVT, Op);
 }

@@ -332,6 +332,14 @@ public:
   findReusableCastForPtrToAddr(Value *PtrOp, Type *Ty, const DataLayout &DL,
                                function_ref<bool(const CastInst *)> Dominates);
 
+  /// Find a phi in the exit block of \p S's loop, which must dominate
+  /// \p InsertBB, such that \p S can be expanded in \p InsertBB as the phi
+  /// plus a simple difference. Returns the phi and the difference, or
+  /// {nullptr, nullptr}.
+  LLVM_ABI static std::pair<PHINode *, const SCEV *>
+  findReusableLCSSAPhi(ScalarEvolution &SE, SCEVUseT<const SCEVAddRecExpr *> S,
+                       const BasicBlock *InsertBB);
+
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
   LLVM_ABI Value *expandCodeFor(SCEVUse SH, Type *Ty, BasicBlock::iterator I);

@@ -21,5 +21,3 @@ inline int foo() { return 42; }
 int r3 = foo();
 
 return;
-printf("not crashed\n");
-// CHECK-NEXT: not crashed
