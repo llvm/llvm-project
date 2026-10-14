@@ -428,14 +428,12 @@ struct RemoveRecurringExpressionOperands
   LogicalResult matchAndRewrite(ExpressionOp expressionOp,
                                 PatternRewriter &rewriter) const override {
     SetVector<Value> uniqueOperands;
-    DenseMap<Value, int> firstIndexOf;
 
     // Collect duplicate operands and prepare to remove excessive copies.
-    for (auto [i, operand] : llvm::enumerate(expressionOp.getDefs())) {
+    for (Value operand : expressionOp.getDefs()) {
       if (uniqueOperands.contains(operand))
         continue;
       uniqueOperands.insert(operand);
-      firstIndexOf[operand] = i;
     }
 
     // If every operand is unique, bail out.
@@ -449,13 +447,20 @@ struct RemoveRecurringExpressionOperands
         uniqueOperands.getArrayRef(), expressionOp.getDoNotInline());
     Block &uniqueExpressionBody = uniqueExpression.createBody();
 
-    // Map each original block arguments to the unique block argument taking
-    // the same operand.
+    // Map operands directly because removing duplicates changes block argument
+    // indices, so indices from the original expression cannot be reused.
+    DenseMap<Value, BlockArgument> uniqueArgFor;
+    for (auto [operand, arg] : llvm::zip(uniqueExpression.getOperands(),
+                                         uniqueExpressionBody.getArguments()))
+      uniqueArgFor[operand] = arg;
+
+    // Map each original block argument to the unique block argument taking the
+    // same operand.
     IRMapping mapper;
     Block *expressionBody = expressionOp.getBody();
     for (auto [operand, arg] :
          llvm::zip(expressionOp.getOperands(), expressionBody->getArguments()))
-      mapper.map(arg, uniqueExpressionBody.getArgument(firstIndexOf[operand]));
+      mapper.map(arg, uniqueArgFor[operand]);
 
     rewriter.setInsertionPointToStart(&uniqueExpressionBody);
     for (Operation &opToClone : *expressionOp.getBody())
