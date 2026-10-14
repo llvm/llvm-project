@@ -101,6 +101,9 @@ void encodePayload(ArrayRef<BBAddrMapEntry> Entries,
     }
     // Write the function GUID. This is emitted when either the feature is
     // enabled or 'FuncGUID' is specified, which allows testing mismatches.
+    if (!FeatureOrErr->FuncGUID && E.FuncGUID.has_value())
+      WithColor::warning() << "feature value(" << E.Feature
+                           << ") does not support function GUID.";
     if (FeatureOrErr->FuncGUID || E.FuncGUID.has_value())
       CBA.write<uint64_t>(E.FuncGUID.value_or(llvm::yaml::Hex64(0)), Endian);
     bool MultiBBRangeFeatureEnabled = FeatureOrErr->MultiBBRange;
