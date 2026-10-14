@@ -5,15 +5,11 @@
 ; Test coverage adapted from llvm/test/CodeGen/AArch64/conditional-subtract.ll.
 ; Unsigned comparisons.
 
-define i64 @conditional_subtract(i64 %x, i64 %q) {
+define i64 @conditional_subtract(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: conditional_subtract:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -29,9 +25,7 @@ define i64 @conditional_subtract(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: conditional_subtract:
@@ -46,7 +40,7 @@ define i64 @conditional_subtract(i64 %x, i64 %q) {
   ret i64 %r
 }
 
-define i32 @ge32(i32 %x, i32 %q) {
+define i32 @ge32(i32 %x, i32 %q) nounwind {
 ; X86-LABEL: ge32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -70,18 +64,12 @@ define i32 @ge32(i32 %x, i32 %q) {
   ret i32 %r
 }
 
-define i64 @lt64(i64 %x, i64 %q) {
+define i64 @lt64(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: lt64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -99,11 +87,8 @@ define i64 @lt64(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %ebx, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: lt64:
@@ -118,15 +103,11 @@ define i64 @lt64(i64 %x, i64 %q) {
   ret i64 %r
 }
 
-define i64 @gt64(i64 %x, i64 %q) {
+define i64 @gt64(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: gt64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -142,9 +123,7 @@ define i64 @gt64(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: gt64:
@@ -159,15 +138,11 @@ define i64 @gt64(i64 %x, i64 %q) {
   ret i64 %r
 }
 
-define i64 @le64(i64 %x, i64 %q) {
+define i64 @le64(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: le64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -183,9 +158,7 @@ define i64 @le64(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: le64:
@@ -200,15 +173,11 @@ define i64 @le64(i64 %x, i64 %q) {
   ret i64 %r
 }
 
-define i64 @below64(i64 %x, i64 %q) {
+define i64 @below64(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: below64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -224,9 +193,7 @@ define i64 @below64(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: below64:
@@ -243,7 +210,7 @@ define i64 @below64(i64 %x, i64 %q) {
 
 ; Signed comparisons with either select arm zero.
 
-define i32 @slt32_zero_true(i32 %x, i32 %q) {
+define i32 @slt32_zero_true(i32 %x, i32 %q) nounwind {
 ; X86-LABEL: slt32_zero_true:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -267,7 +234,7 @@ define i32 @slt32_zero_true(i32 %x, i32 %q) {
   ret i32 %r
 }
 
-define i32 @sle32_zero_false(i32 %x, i32 %q) {
+define i32 @sle32_zero_false(i32 %x, i32 %q) nounwind {
 ; X86-LABEL: sle32_zero_false:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -291,18 +258,12 @@ define i32 @sle32_zero_false(i32 %x, i32 %q) {
   ret i32 %r
 }
 
-define i64 @sgt64_zero_true(i64 %x, i64 %q) {
+define i64 @sgt64_zero_true(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: sgt64_zero_true:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -320,11 +281,8 @@ define i64 @sgt64_zero_true(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %ebx, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sgt64_zero_true:
@@ -339,15 +297,11 @@ define i64 @sgt64_zero_true(i64 %x, i64 %q) {
   ret i64 %r
 }
 
-define i64 @sge64_zero_false(i64 %x, i64 %q) {
+define i64 @sge64_zero_false(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: sge64_zero_false:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -363,9 +317,7 @@ define i64 @sge64_zero_false(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sge64_zero_false:
@@ -382,7 +334,7 @@ define i64 @sge64_zero_false(i64 %x, i64 %q) {
 
 ; Equality comparisons also reuse the original flags.
 
-define i32 @eq32_zero_false(i32 %x, i32 %q) {
+define i32 @eq32_zero_false(i32 %x, i32 %q) nounwind {
 ; X86-LABEL: eq32_zero_false:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -406,21 +358,13 @@ define i32 @eq32_zero_false(i32 %x, i32 %q) {
   ret i32 %r
 }
 
-define i64 @eq64_zero_true(i64 %x, i64 %q) {
+define i64 @eq64_zero_true(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: eq64_zero_true:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -440,13 +384,9 @@ define i64 @eq64_zero_true(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %ebx, %eax
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: eq64_zero_true:
@@ -461,7 +401,7 @@ define i64 @eq64_zero_true(i64 %x, i64 %q) {
   ret i64 %r
 }
 
-define i32 @ne32_zero_true(i32 %x, i32 %q) {
+define i32 @ne32_zero_true(i32 %x, i32 %q) nounwind {
 ; X86-LABEL: ne32_zero_true:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -485,18 +425,12 @@ define i32 @ne32_zero_true(i32 %x, i32 %q) {
   ret i32 %r
 }
 
-define i64 @ne64_zero_false(i64 %x, i64 %q) {
+define i64 @ne64_zero_false(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: ne64_zero_false:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -514,11 +448,8 @@ define i64 @ne64_zero_false(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ne64_zero_false:
@@ -535,7 +466,7 @@ define i64 @ne64_zero_false(i64 %x, i64 %q) {
 
 ; Overflow controls the select; the wrapping difference is valid in either arm.
 
-define i32 @overflow32_zero_false(i32 %x, i32 %q) {
+define i32 @overflow32_zero_false(i32 %x, i32 %q) nounwind {
 ; X86-LABEL: overflow32_zero_false:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -560,7 +491,7 @@ define i32 @overflow32_zero_false(i32 %x, i32 %q) {
   ret i32 %r
 }
 
-define i32 @overflow32_zero_true(i32 %x, i32 %q) {
+define i32 @overflow32_zero_true(i32 %x, i32 %q) nounwind {
 ; X86-LABEL: overflow32_zero_true:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -585,15 +516,11 @@ define i32 @overflow32_zero_true(i32 %x, i32 %q) {
   ret i32 %r
 }
 
-define i64 @overflow64_zero_false(i64 %x, i64 %q) {
+define i64 @overflow64_zero_false(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: overflow64_zero_false:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -609,9 +536,7 @@ define i64 @overflow64_zero_false(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: overflow64_zero_false:
@@ -627,18 +552,12 @@ define i64 @overflow64_zero_false(i64 %x, i64 %q) {
   ret i64 %r
 }
 
-define i64 @overflow64_zero_true(i64 %x, i64 %q) {
+define i64 @overflow64_zero_true(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: overflow64_zero_true:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -656,11 +575,8 @@ define i64 @overflow64_zero_true(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %ebx, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: overflow64_zero_true:
@@ -678,18 +594,12 @@ define i64 @overflow64_zero_true(i64 %x, i64 %q) {
 
 ; Reusing SUB must preserve other arithmetic-result and flag consumers.
 
-define i64 @shared_flags(i64 %x, i64 %q, ptr %out) {
+define i64 @shared_flags(i64 %x, i64 %q, ptr %out) nounwind {
 ; X86-LABEL: shared_flags:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -710,11 +620,8 @@ define i64 @shared_flags(i64 %x, i64 %q, ptr %out) {
 ; X86-NEXT:    subl %edi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shared_flags:
@@ -734,21 +641,13 @@ define i64 @shared_flags(i64 %x, i64 %q, ptr %out) {
   ret i64 %r
 }
 
-define i64 @shared_difference(i64 %x, i64 %q, ptr %out) {
+define i64 @shared_difference(i64 %x, i64 %q, ptr %out) nounwind {
 ; X86-LABEL: shared_difference:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -768,13 +667,9 @@ define i64 @shared_difference(i64 %x, i64 %q, ptr %out) {
 ; X86-NEXT:    subl %edi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shared_difference:
@@ -792,18 +687,12 @@ define i64 @shared_difference(i64 %x, i64 %q, ptr %out) {
   ret i64 %r
 }
 
-define i64 @shared_signed_flags(i64 %x, i64 %q, ptr %out) {
+define i64 @shared_signed_flags(i64 %x, i64 %q, ptr %out) nounwind {
 ; X86-LABEL: shared_signed_flags:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -824,11 +713,8 @@ define i64 @shared_signed_flags(i64 %x, i64 %q, ptr %out) {
 ; X86-NEXT:    subl %edi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shared_signed_flags:
@@ -849,18 +735,12 @@ define i64 @shared_signed_flags(i64 %x, i64 %q, ptr %out) {
   ret i64 %r
 }
 
-define i64 @shared_overflow(i64 %x, i64 %q, ptr %out) {
+define i64 @shared_overflow(i64 %x, i64 %q, ptr %out) nounwind {
 ; X86-LABEL: shared_overflow:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -881,11 +761,8 @@ define i64 @shared_overflow(i64 %x, i64 %q, ptr %out) {
 ; X86-NEXT:    subl %edi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shared_overflow:
@@ -909,18 +786,12 @@ define i64 @shared_overflow(i64 %x, i64 %q, ptr %out) {
 
 ; Keep both SUB results live while overflow controls the conditional subtraction.
 
-define i64 @overflow_shared_results64(i64 %x, i64 %q, ptr %diff_out, ptr %overflow_out) {
+define i64 @overflow_shared_results64(i64 %x, i64 %q, ptr %diff_out, ptr %overflow_out) nounwind {
 ; X86-LABEL: overflow_shared_results64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -942,11 +813,8 @@ define i64 @overflow_shared_results64(i64 %x, i64 %q, ptr %diff_out, ptr %overfl
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: overflow_shared_results64:
@@ -969,15 +837,11 @@ define i64 @overflow_shared_results64(i64 %x, i64 %q, ptr %diff_out, ptr %overfl
 
 ; An outer nuw subtraction can also reuse the wrapping SUB result.
 
-define i64 @nuw_sub(i64 %x, i64 %q) {
+define i64 @nuw_sub(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: nuw_sub:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -993,9 +857,7 @@ define i64 @nuw_sub(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: nuw_sub:
@@ -1012,15 +874,11 @@ define i64 @nuw_sub(i64 %x, i64 %q) {
 
 ; Negative matches: different operands, nonzero alternatives, or shared selects.
 
-define i64 @wrong_lhs(i64 %x, i64 %q, i64 %a) {
+define i64 @wrong_lhs(i64 %x, i64 %q, i64 %a) nounwind {
 ; X86-LABEL: wrong_lhs:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -1036,9 +894,7 @@ define i64 @wrong_lhs(i64 %x, i64 %q, i64 %a) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: wrong_lhs:
@@ -1055,12 +911,10 @@ define i64 @wrong_lhs(i64 %x, i64 %q, i64 %a) {
   ret i64 %r
 }
 
-define i64 @wrong_rhs(i64 %x, i64 %q, i64 %a) {
+define i64 @wrong_rhs(i64 %x, i64 %q, i64 %a) nounwind {
 ; X86-LABEL: wrong_rhs:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
@@ -1078,7 +932,6 @@ define i64 @wrong_rhs(i64 %x, i64 %q, i64 %a) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: wrong_rhs:
@@ -1095,15 +948,11 @@ define i64 @wrong_rhs(i64 %x, i64 %q, i64 %a) {
   ret i64 %r
 }
 
-define i64 @nonzero_arm(i64 %x, i64 %q) {
+define i64 @nonzero_arm(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: nonzero_arm:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1122,9 +971,7 @@ define i64 @nonzero_arm(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: nonzero_arm:
@@ -1141,18 +988,12 @@ define i64 @nonzero_arm(i64 %x, i64 %q) {
   ret i64 %r
 }
 
-define i64 @shared_select(i64 %x, i64 %q, ptr %out) {
+define i64 @shared_select(i64 %x, i64 %q, ptr %out) nounwind {
 ; X86-LABEL: shared_select:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
@@ -1171,11 +1012,8 @@ define i64 @shared_select(i64 %x, i64 %q, ptr %out) {
 ; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %edi, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shared_select:
@@ -1196,12 +1034,10 @@ define i64 @shared_select(i64 %x, i64 %q, ptr %out) {
 
 ; Narrow comparisons have different DAG operands from the outer subtraction.
 
-define i64 @narrow_compare(i64 %x, i64 %q) {
+define i64 @narrow_compare(i64 %x, i64 %q) nounwind {
 ; X86-LABEL: narrow_compare:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1217,7 +1053,6 @@ define i64 @narrow_compare(i64 %x, i64 %q) {
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: narrow_compare:
@@ -1236,7 +1071,7 @@ define i64 @narrow_compare(i64 %x, i64 %q) {
   ret i64 %r
 }
 
-define i32 @signed_narrow_compare32(i32 %x, i32 %q) {
+define i32 @signed_narrow_compare32(i32 %x, i32 %q) nounwind {
 ; X86-LABEL: signed_narrow_compare32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1268,12 +1103,10 @@ define i32 @signed_narrow_compare32(i32 %x, i32 %q) {
 
 ; Conditional subtraction with a constant operand.
 
-define i64 @constant_q(i64 %x) {
+define i64 @constant_q(i64 %x) nounwind {
 ; X86-LABEL: constant_q:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %ecx, %ecx
@@ -1288,7 +1121,6 @@ define i64 @constant_q(i64 %x) {
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    sbbl $0, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: constant_q:
