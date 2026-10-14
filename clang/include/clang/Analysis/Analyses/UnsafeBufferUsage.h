@@ -183,6 +183,11 @@ public:
   virtual bool
   ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const = 0;
 
+  /// \return true iff unsafe calls to functions with the format attribute
+  /// should NOT be reported at `Loc`
+  virtual bool
+  ignoreUnsafeBufferInFormatAttrCall(const SourceLocation &Loc) const = 0;
+
   /// \return true iff array subscript accesses on fixed size arrays should NOT
   /// be reported at `Loc`
   virtual bool
