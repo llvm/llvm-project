@@ -14,7 +14,13 @@ def my_enum_t : Enum {
   ];
 }
 
-// CHECK: inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, enum my_enum_t value)
+// CHECK-NOT: raw_ostream
+// CHECK: namespace ol_print {
+// CHECK: struct is_stream
+// CHECK: using enable_if_stream_t = std::enable_if_t<is_stream_v<OS>, OS &>;
+// CHECK: } // namespace ol_print
+
+// CHECK: inline ol_print::enable_if_stream_t<OS> operator<<(OS &os, enum my_enum_t value) {
 // CHECK: switch (value) {
 // CHECK: case MY_ENUM_VALUE_ONE:
 // CHECK:   os << "MY_ENUM_VALUE_ONE";

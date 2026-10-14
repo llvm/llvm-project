@@ -9,6 +9,7 @@
 #include <OffloadAPI.h>
 #include <OffloadPrint.hpp>
 #include <gtest/gtest.h>
+#include <llvm/Support/raw_ostream.h>
 #include <optional>
 #include <string>
 #include <thread>
