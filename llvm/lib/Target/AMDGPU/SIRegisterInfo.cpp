@@ -4401,8 +4401,8 @@ bool SIRegisterInfo::isRegWithinOccupancyBudget(
   if (!RC || !hasVectorRegisters(RC))
     return true;
 
-  unsigned RegEndIndex =
-      getHWRegIndex(Reg) + divideCeil(getRegSizeInBits(*RC), 32);
+  unsigned BitWidth = static_cast<unsigned>(getRegSizeInBits(*RC));
+  unsigned RegEndIndex = getHWRegIndex(Reg) + divideCeil(BitWidth, 32);
 
   unsigned MaxVGPR = NumVGPRs;
   unsigned MaxAGPR = NumAGPRs;
