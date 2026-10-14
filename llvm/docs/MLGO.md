@@ -670,8 +670,14 @@ headers into LLVM without requiring TensorFlow at build time.
 :::{warning}
 Textual TOSA models produced by `tosa-converter-for-tflite` currently use a
 syntax that this MLIR pipeline does not accept. Until the converter is updated,
-export the model as MLIR bytecode (`.bc`) and use that file directly in
-`LLVM_MLGO_MODELS`. Conversion to textual MLIR is optional.
+export the model as MLIR bytecode (`.bc`), then convert it to textual MLIR with
+the built `mlir-opt`:
+
+```console
+mlir-opt model.bc -o model.mlir
+```
+
+Use the resulting `model.mlir` file in `LLVM_MLGO_MODELS`.
 :::
 
 Set `LLVM_MLGO_MODELS` to a semicolon-separated list of entries in the form
