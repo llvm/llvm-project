@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
@@ -512,13 +513,14 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
   NamedAttrList attributes;
   if (auto it = functionParameterAttrs.find(argID);
       it != functionParameterAttrs.end()) {
-    attributes.set("spirv.func_param_attr", it->second);
+    attributes.set(spirv::getFuncParamAttrName(), it->second);
     functionParameterAttrs.erase(it);
   }
   for (NamedAttribute decAttr : decorations.lookup(argID)) {
     if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
                                  spirv::Decoration::Alignment))) {
-      attributes.set("spirv.alignment", decAttr.getValue());
+      attributes.set(spirv::getFuncParamAlignmentAttrName(),
+                     decAttr.getValue());
       continue;
     }
     bool handled = false;
@@ -620,7 +622,7 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
       return emitError(unknownLoc,
                        "FuncParamAttr decoration requires a non-void function "
                        "result");
-    funcOp.setResultAttr(0, "spirv.func_param_attr", it->second);
+    funcOp.setResultAttr(0, spirv::getFuncParamAttrName(), it->second);
     functionParameterAttrs.erase(it);
   }
   // Processing other function attributes.

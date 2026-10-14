@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Target/SPIRV/SPIRVExtInstSets.h"
@@ -268,11 +269,12 @@ LogicalResult Serializer::processFuncParameter(spirv::FuncOp op) {
     // Process decoration attributes of arguments.
     auto funcOp = cast<FunctionOpInterface>(*op);
     for (auto argAttr : funcOp.getArgAttrs(idx)) {
-      if (argAttr.getName() == "spirv.alignment" ||
-          argAttr.getName() == "spirv.func_param_attr") {
-        auto decoration = argAttr.getName() == "spirv.alignment"
-                              ? Decoration::Alignment
-                              : Decoration::FuncParamAttr;
+      if (argAttr.getName() == spirv::getFuncParamAlignmentAttrName() ||
+          argAttr.getName() == spirv::getFuncParamAttrName()) {
+        auto decoration =
+            argAttr.getName() == spirv::getFuncParamAlignmentAttrName()
+                ? Decoration::Alignment
+                : Decoration::FuncParamAttr;
         if (failed(processDecorationAttr(op.getLoc(), argValueID, decoration,
                                          argAttr.getValue())))
           return failure();
@@ -324,7 +326,7 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   encodeInstructionInto(functionHeader, spirv::Opcode::OpFunction, operands);
 
   if (!resultTypes.empty()) {
-    if (Attribute attr = op.getResultAttr(0, "spirv.func_param_attr"))
+    if (Attribute attr = op.getResultAttr(0, spirv::getFuncParamAttrName()))
       if (failed(processDecorationAttr(op.getLoc(), funcID,
                                        Decoration::FuncParamAttr, attr)))
         return failure();

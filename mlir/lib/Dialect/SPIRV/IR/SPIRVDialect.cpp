@@ -1163,7 +1163,7 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
     return success();
   Type argType = funcOp.getArgumentTypes()[argIndex];
 
-  if (attribute.getName() == "spirv.alignment") {
+  if (attribute.getName() == spirv::getFuncParamAlignmentAttrName()) {
     auto alignment = dyn_cast<IntegerAttr>(attribute.getValue());
     if (!alignment || !alignment.getType().isSignlessInteger(32))
       return op->emitError(
@@ -1173,7 +1173,7 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
       return op->emitError("'spirv.alignment' requires a pointer parameter");
     return success();
   }
-  if (attribute.getName() == "spirv.func_param_attr")
+  if (attribute.getName() == spirv::getFuncParamAttrName())
     return verifyFunctionParameterAttributes(op->getLoc(), argType,
                                              attribute.getValue(), argIndex);
 
@@ -1184,7 +1184,7 @@ LogicalResult SPIRVDialect::verifyRegionResultAttribute(
     Operation *op, unsigned /*regionIndex*/, unsigned resultIndex,
     NamedAttribute attribute) {
   if (auto funcOp = dyn_cast<spirv::FuncOp>(op)) {
-    if (attribute.getName() == "spirv.func_param_attr")
+    if (attribute.getName() == spirv::getFuncParamAttrName())
       return verifyFunctionParameterAttributes(
           op->getLoc(), funcOp.getResultTypes()[resultIndex],
           attribute.getValue());
