@@ -317,8 +317,9 @@ struct AngleOpPattern final : OpConversionPattern<complex::AngleOp> {
 };
 
 /// Computes complex.sign as z / abs(z), selecting a zero result when z is
-/// zero to avoid a division by zero.
-template <typename SqrtOp>
+/// zero to avoid a division by zero. abs(z) is computed as
+/// max * sqrt(1 + (min / max)^2) to avoid overflow in squaring.
+template <typename SqrtOp, typename FAbsOp, typename FMaxOp, typename FMinOp>
 struct SignOpPattern final : OpConversionPattern<complex::SignOp> {
   using OpConversionPattern<complex::SignOp>::OpConversionPattern;
 
@@ -338,10 +339,16 @@ struct SignOpPattern final : OpConversionPattern<complex::SignOp> {
     Value im =
         spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
 
-    Value reSq = spirv::FMulOp::create(rewriter, loc, re, re);
-    Value imSq = spirv::FMulOp::create(rewriter, loc, im, im);
-    Value sum = spirv::FAddOp::create(rewriter, loc, reSq, imSq);
-    Value abs = SqrtOp::create(rewriter, loc, sum);
+    Value absRe = FAbsOp::create(rewriter, loc, re);
+    Value absIm = FAbsOp::create(rewriter, loc, im);
+    Value max = FMaxOp::create(rewriter, loc, absRe, absIm);
+    Value min = FMinOp::create(rewriter, loc, absRe, absIm);
+    Value ratio = spirv::FDivOp::create(rewriter, loc, min, max);
+    Value ratioSq = spirv::FMulOp::create(rewriter, loc, ratio, ratio);
+    Value one = createFPConstant(rewriter, loc, re.getType(), 1.0);
+    Value ratioSqPlusOne = spirv::FAddOp::create(rewriter, loc, ratioSq, one);
+    Value sqrt = SqrtOp::create(rewriter, loc, ratioSqPlusOne);
+    Value abs = spirv::FMulOp::create(rewriter, loc, max, sqrt);
 
     Value signRe = spirv::FDivOp::create(rewriter, loc, re, abs);
     Value signIm = spirv::FDivOp::create(rewriter, loc, im, abs);
@@ -363,7 +370,6 @@ struct SignOpPattern final : OpConversionPattern<complex::SignOp> {
     return success();
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -387,6 +393,8 @@ void mlir::populateComplexToSPIRVPatterns(
            NegationOpPattern<complex::ConjOp, /*NegateReal=*/false>,
            AbsOpPattern<spirv::GLSqrtOp>, AbsOpPattern<spirv::CLSqrtOp>,
            AngleOpPattern<spirv::GLAtan2Op>, AngleOpPattern<spirv::CLAtan2Op>,
-           SignOpPattern<spirv::GLSqrtOp>, SignOpPattern<spirv::CLSqrtOp>>(
-          typeConverter, context);
+           SignOpPattern<spirv::GLSqrtOp, spirv::GLFAbsOp, spirv::GLFMaxOp,
+                         spirv::GLFMinOp>,
+           SignOpPattern<spirv::CLSqrtOp, spirv::CLFAbsOp, spirv::CLFMaxOp,
+                         spirv::CLFMinOp>>(typeConverter, context);
 }
