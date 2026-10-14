@@ -13,6 +13,8 @@
 // RUN: %clang_cc1 -Og -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -fenable-spirv-size-optimization -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
 // RUN: %clang_cc1 -Os -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -fenable-spirv-size-optimization -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
 // RUN: %clang_cc1 -Oz -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -fenable-spirv-size-optimization -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
+// RUN: %clang_cc1 -Oz -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefix=O0-BC
+// RUN: %clang_cc1 -Oz -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm -fenable-spirv-size-optimization -o - %s | FileCheck %s --check-prefix=O-BC
 
 // O0-NOT: Running pass: LowerExpectIntrinsic
 // O0-NOT: Running pass: SimplifyCFG
@@ -40,4 +42,9 @@
 // O-DAG: Running pass: InstCombine
 // O-DAG: Running pass: PostOrderFunctionAttrs
 
-void foo() {}
+// O0-BC: alloca
+// O-BC-NOT: alloca
+int foo(int x) {
+    int y = x;
+    return y;
+}
