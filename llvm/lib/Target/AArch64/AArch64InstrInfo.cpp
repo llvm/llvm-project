@@ -10492,13 +10492,17 @@ static bool adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta,
     return false;
   }
 
-  if (!MI.getOperand(0).isReg() || !MI.getOperand(1).isReg() ||
-      !MI.getOperand(2).isImm() || !MI.getOperand(3).isImm())
-    return false;
+  assert(MI.getNumExplicitOperands() == 4 && "Wrong number of operands");
+  assert(MI.getOperand(0).isReg() && MI.getOperand(1).isReg() &&
+         MI.getOperand(3).isImm() && "Unexpected add/sub immediate operands");
 
   if (MI.getOperand(0).getReg() == AArch64::SP)
     return false;
   if (MI.getOperand(1).getReg() != AArch64::SP)
+    return false;
+
+  // The immediate operand can also be a symbol which we cannot fix up.
+  if (!MI.getOperand(2).isImm())
     return false;
 
   // ADD/SUBXri encode a 12-bit unsigned immediate with an optional left shift
