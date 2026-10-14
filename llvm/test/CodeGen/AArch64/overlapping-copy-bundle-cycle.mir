@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=aarch64-apple-ios -run-pass=greedy -run-pass=virtregrewriter %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=aarch64-apple-ios -run-pass=greedy -run-pass=virt-reg-rewriter %s -o /dev/null 2>&1 | FileCheck %s
 
 # Check we don't infinitely loop on cycles in copy bundles.
 # CHECK: error: register rewriting failed: cycle in copy bundle

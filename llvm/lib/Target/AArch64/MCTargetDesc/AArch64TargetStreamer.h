@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 
 #include "AArch64MCAsmInfo.h"
+#include "AArch64MCOptions.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCELFStreamer.h"
@@ -24,6 +25,8 @@ class AArch64ELFStreamer;
 namespace llvm {
 
 class AArch64TargetStreamer : public MCTargetStreamer {
+  const AArch64MCOptions &CLOpts;
+
 public:
   AArch64TargetStreamer(MCStreamer &S);
   ~AArch64TargetStreamer() override;

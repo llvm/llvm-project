@@ -4560,6 +4560,14 @@ public:
 
   /// Push the parameters of D, which must be a function, into scope.
   void ActOnReenterFunctionContext(Scope *S, Decl *D);
+
+  /// Add \p Params to scope, so a late-parsed attribute can name them.
+  void ActOnReenterFunctionPrototypeParams(Scope *S,
+                                           ArrayRef<ParmVarDecl *> Params);
+  /// Undo the above, for when \p S outlives the attribute so no scope pop
+  /// removes them.
+  void ActOnExitFunctionPrototypeParams(Scope *S,
+                                        ArrayRef<ParmVarDecl *> Params);
   void ActOnExitFunctionContext();
 
   /// Add this decl to the scope shadowed decl chains.
@@ -5303,10 +5311,9 @@ public:
     // In C++ the implicit 'this' function parameter also counts.
     // Parameters are counted from one.
     bool HP = hasFunctionProto(D);
-    bool HasImplicitThisParam = hasImplicitObjectParameter(D);
     bool IV = HP && isFunctionOrMethodVariadic(D);
     unsigned NumParams =
-        (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
+        HP ? getFunctionOrMethodNumParams(D, /*IncludeThis=*/true) : 0;
 
     std::optional<llvm::APSInt> IdxInt;
     if (IdxExpr->isTypeDependent() ||
@@ -5325,7 +5332,7 @@ public:
           << &AI << AttrArgNum << IdxExpr->getSourceRange();
       return false;
     }
-    if (HasImplicitThisParam && !CanIndexImplicitThis) {
+    if (hasImplicitObjectParameter(D) && !CanIndexImplicitThis) {
       if (IdxSource == 1) {
         Diag(getAttrLoc(AI), diag::err_attribute_invalid_implicit_this_argument)
             << &AI << IdxExpr->getSourceRange();
@@ -13029,6 +13036,11 @@ public:
       const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
       bool PartialOrdering, bool *StrictPackMatch);
 
+  /// Determine the declared type of the constant template parameter that \p Arg
+  /// names, if any.
+  static QualType
+  getTypeOfConstantTemplateParameter(const TemplateArgument &Arg);
+
   /// Mark which template parameters are used in a given expression.
   ///
   /// \param E the expression from which template parameters will be deduced.
@@ -15363,6 +15375,12 @@ public:
   QualType BuildArrayType(QualType T, ArraySizeModifier ASM, Expr *ArraySize,
                           unsigned Quals, SourceRange Brackets,
                           DeclarationName Entity);
+
+  /// Diagnose an array of \p NumElements elements of type \p ElementType
+  /// that is too large. Returns true if a diagnostic was emitted.
+  bool checkArrayTooLarge(QualType ElementType, const llvm::APSInt &NumElements,
+                          SourceLocation Loc,
+                          SourceRange Range = SourceRange());
   QualType BuildVectorType(QualType T, Expr *VecSize, SourceLocation AttrLoc);
 
   /// Build an ext-vector type.

@@ -89,7 +89,6 @@ protected:
   unsigned BufferResourceNumRecordsWidth = 0;
 
   // Dynamically set bits that enable features.
-  bool ScalarizeGlobal = false;
   const bool BufferOOBRelaxed;
   const bool TBufferOOBRelaxed;
 
@@ -124,8 +123,10 @@ public:
       AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any);
   ~GCNSubtarget() override;
 
-  GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
-                                                StringRef FS);
+  GCNSubtarget &
+  initializeSubtargetDependencies(const Triple &TT, StringRef GPU, StringRef FS,
+                                  AMDGPU::TargetIDSetting XnackSetting,
+                                  AMDGPU::TargetIDSetting SramEccSetting);
 
   /// Diagnose inconsistent subtarget features before attempting to codegen
   /// function \p F.
@@ -220,8 +221,6 @@ public:
   /// a 32-bit register implicitly zeroes the high 16-bits, rather than preserve
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
-
-  bool hasHWFP64() const { return HasFP64; }
 
   bool hasAddr64() const {
     return (getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS);
@@ -382,10 +381,6 @@ public:
            (EnableFlatScratch && hasFlatScratchInsts());
   }
 
-  bool hasGlobalAddTidInsts() const { return HasGFX10_BEncoding; }
-
-  bool hasAtomicCSub() const { return HasGFX10_BEncoding; }
-
   bool hasExportInsts() const {
     return !hasGFX940Insts() && !hasGFX1250Insts();
   }
@@ -484,9 +479,6 @@ public:
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override { return true; }
-
-  void setScalarizeGlobalBehavior(bool b) { ScalarizeGlobal = b; }
-  bool getScalarizeGlobalBehavior() const { return ScalarizeGlobal; }
 
   // XXX - Why is this here if it isn't in the default pass set?
   bool enableEarlyIfConversion() const override { return true; }
@@ -915,8 +907,6 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const Function &F) const;
 
-  unsigned getMaxNumAGPRs(const Function &F) const { return getMaxNumVGPRs(F); }
-
   /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
   /// of waves per execution unit required for the function \p MF.
   std::pair<unsigned, unsigned> getMaxNumVectorRegs(const Function &F) const;
@@ -1097,8 +1087,6 @@ public:
   bool hasPrivateSegmentSize() const { return PrivateSegmentSize; }
 
   unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
-
-  unsigned getNumUsedUserSGPRs() const { return NumUsedUserSGPRs; }
 
   unsigned getNumFreeUserSGPRs();
 

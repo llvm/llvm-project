@@ -1357,10 +1357,15 @@ void ModuleMap::recordDirectoryDependencies(Module *Mod, StringRef Dir) {
   FileMgr.getVirtualFileSystem().getDirectoryContentRealSources(Dir, Sources);
   for (StringRef Source : Sources) {
     SmallString<256> Canonical(Source);
-    FileMgr.makeAbsolutePath(Canonical);
-    llvm::sys::path::remove_dots(Canonical, /*remove_dot_dot=*/true);
+    canonicalizeDirectoryDependency(FileMgr, Canonical);
     Mod->addDirectoryDependency(Canonical);
   }
+}
+
+void ModuleMap::canonicalizeDirectoryDependency(const FileManager &FileMgr,
+                                                SmallVectorImpl<char> &Path) {
+  FileMgr.makeAbsolutePath(Path);
+  llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
 }
 
 void ModuleMap::setUmbrellaDirAsWritten(

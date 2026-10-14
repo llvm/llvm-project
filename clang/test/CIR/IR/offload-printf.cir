@@ -1,0 +1,17 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!s8i = !cir.int<s, 8>
+!rec_S = !cir.struct<"S" {data !s32i}>
+module {
+  cir.func @f(%fmt : !cir.ptr<!s8i>, %i : !s32i, %l : !s64i, %d : !cir.double,
+              %p : !cir.ptr<!s8i>, %m : !cir.data_member<!s32i in !rec_S>,
+              %v : !cir.vector<4 x !s32i>) -> !s32i {
+    // CHECK: cir.offload.printf(%{{.*}}) : (!cir.ptr<!s8i>) -> !s32i
+    %0 = cir.offload.printf(%fmt) : (!cir.ptr<!s8i>) -> !s32i
+    // CHECK: cir.offload.printf(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!cir.ptr<!s8i>, !s32i, !s64i, !cir.double, !cir.ptr<!s8i>, !cir.data_member<!s32i in !rec_S>, !cir.vector<4 x !s32i>) -> !s32i
+    %1 = cir.offload.printf(%fmt, %i, %l, %d, %p, %m, %v) : (!cir.ptr<!s8i>, !s32i, !s64i, !cir.double, !cir.ptr<!s8i>, !cir.data_member<!s32i in !rec_S>, !cir.vector<4 x !s32i>) -> !s32i
+    cir.return %1 : !s32i
+  }
+}
