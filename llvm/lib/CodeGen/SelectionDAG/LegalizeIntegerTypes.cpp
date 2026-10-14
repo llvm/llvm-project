@@ -99,10 +99,6 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
   case ISD::SETCC:       Res = PromoteIntRes_SETCC(N); break;
-  case ISD::SMIN:
-  case ISD::SMAX:        Res = PromoteIntRes_SExtIntBinOp(N); break;
-  case ISD::UMIN:
-  case ISD::UMAX:        Res = PromoteIntRes_UMINUMAX(N); break;
 
   case ISD::SHL:         Res = PromoteIntRes_SHL(N); break;
   case ISD::SIGN_EXTEND_INREG:
@@ -205,6 +201,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SUB:
   case ISD::MUL:          Res = PromoteIntRes_SimpleIntBinOp(N); break;
 
+  case ISD::SMIN:
+  case ISD::SMAX:
   case ISD::ABDS:
   case ISD::AVGCEILS:
   case ISD::AVGFLOORS:
@@ -213,13 +211,16 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_SDIV:
   case ISD::VP_SREM:      Res = PromoteIntRes_SExtIntBinOp(N); break;
 
-  case ISD::ABDU:
   case ISD::AVGCEILU:
   case ISD::AVGFLOORU:
   case ISD::UDIV:
   case ISD::UREM:
   case ISD::VP_UDIV:
   case ISD::VP_UREM:     Res = PromoteIntRes_ZExtIntBinOp(N); break;
+
+  case ISD::UMIN:
+  case ISD::UMAX:
+  case ISD::ABDU:        Res = PromoteIntRes_SExtOrZExtIntBinOp(N); break;
 
   case ISD::MASKED_UDIV:
   case ISD::MASKED_UREM:
@@ -1506,7 +1507,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SExtMaskedIntBinOp(SDNode *N) {
                      Mask);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_UMINUMAX(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_SExtOrZExtIntBinOp(SDNode *N) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
