@@ -2663,7 +2663,8 @@ public:
   /// incoming value, its start value.
   unsigned getNumIncoming() const override { return 1; }
 
-  /// Returns true if this induction is truncated.
+  /// Returns true if this induction is evaluated in a narrower type than the
+  /// start value.
   bool isTruncated() const {
     return getStartValue() && getScalarType()->isIntegerTy() &&
            getScalarType()->getPrimitiveSizeInBits() <
