@@ -7975,12 +7975,8 @@ define <4 x float> @global_addr_64bit_lsr_iv(ptr addrspace(1) %arg) {
 ; GFX1250-ISEL-NEXT:    s_cbranch_scc0 .LBB60_1
 ; GFX1250-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-ISEL-NEXT:    s_mov_b32 s1, 0
-; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-ISEL-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
-; GFX1250-ISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-ISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX1250-ISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-ISEL-NEXT:    v_lshl_add_u64 v[0:1], s[0:1], 2, v[0:1]
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]
@@ -8244,12 +8240,8 @@ define <4 x float> @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) %arg, pt
 ; GFX1250-ISEL-NEXT:    s_cbranch_scc0 .LBB61_1
 ; GFX1250-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-ISEL-NEXT:    s_mov_b32 s1, 0
-; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-ISEL-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
-; GFX1250-ISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-ISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX1250-ISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-ISEL-NEXT:    v_lshl_add_u64 v[0:1], s[0:1], 2, v[0:1]
 ; GFX1250-ISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]

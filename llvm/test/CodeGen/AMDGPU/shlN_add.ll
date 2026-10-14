@@ -418,8 +418,7 @@ define amdgpu_ps float @shl1_add_u32_vgpr1(i32 inreg %src0, i32 %src1) {
 ;
 ; GFX10-LABEL: shl1_add_u32_vgpr1:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_lshl_b32 s0, s0, 1
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX10-NEXT:    v_lshl_add_u32 v0, s0, 1, v0
 ; GFX10-NEXT:    ; return to shader part epilog
   %shl = shl i32 %src0, 1
   %add = add i32 %shl, %src1
@@ -458,8 +457,7 @@ define amdgpu_ps float @shl2_add_u32_vgpr1(i32 inreg %src0, i32 %src1) {
 ;
 ; GFX10-LABEL: shl2_add_u32_vgpr1:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX10-NEXT:    v_lshl_add_u32 v0, s0, 2, v0
 ; GFX10-NEXT:    ; return to shader part epilog
   %shl = shl i32 %src0, 2
   %add = add i32 %shl, %src1
@@ -498,8 +496,7 @@ define amdgpu_ps float @shl3_add_u32_vgpr1(i32 inreg %src0, i32 %src1) {
 ;
 ; GFX10-LABEL: shl3_add_u32_vgpr1:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_lshl_b32 s0, s0, 3
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX10-NEXT:    v_lshl_add_u32 v0, s0, 3, v0
 ; GFX10-NEXT:    ; return to shader part epilog
   %shl = shl i32 %src0, 3
   %add = add i32 %shl, %src1
@@ -538,8 +535,7 @@ define amdgpu_ps float @shl4_add_u32_vgpr1(i32 inreg %src0, i32 %src1) {
 ;
 ; GFX10-LABEL: shl4_add_u32_vgpr1:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_lshl_b32 s0, s0, 4
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX10-NEXT:    v_lshl_add_u32 v0, s0, 4, v0
 ; GFX10-NEXT:    ; return to shader part epilog
   %shl = shl i32 %src0, 4
   %add = add i32 %shl, %src1
@@ -578,8 +574,7 @@ define amdgpu_ps float @shl5_add_u32_vgpr1(i32 inreg %src0, i32 %src1) {
 ;
 ; GFX10-LABEL: shl5_add_u32_vgpr1:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_lshl_b32 s0, s0, 5
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX10-NEXT:    v_lshl_add_u32 v0, s0, 5, v0
 ; GFX10-NEXT:    ; return to shader part epilog
   %shl = shl i32 %src0, 5
   %add = add i32 %shl, %src1

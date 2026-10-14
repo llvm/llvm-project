@@ -490,7 +490,7 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v0, vcc, 64, v22
 ; GISEL-NEXT:    v_lshr_b64 v[0:1], v[16:17], v0
 ; GISEL-NEXT:    v_lshl_b64 v[2:3], v[18:19], v22
-; GISEL-NEXT:    v_add_i32_e32 v20, vcc, 0xffffffc0, v22
+; GISEL-NEXT:    v_subrev_i32_e32 v20, vcc, 64, v22
 ; GISEL-NEXT:    v_lshl_b64 v[8:9], v[16:17], v22
 ; GISEL-NEXT:    v_or_b32_e32 v2, v0, v2
 ; GISEL-NEXT:    v_or_b32_e32 v3, v1, v3
@@ -515,7 +515,7 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v2, vcc, 64, v28
 ; GISEL-NEXT:    v_lshr_b64 v[0:1], v[16:17], v28
 ; GISEL-NEXT:    v_lshl_b64 v[2:3], v[18:19], v2
-; GISEL-NEXT:    v_add_i32_e32 v32, vcc, 0xffffffc0, v28
+; GISEL-NEXT:    v_subrev_i32_e32 v32, vcc, 64, v28
 ; GISEL-NEXT:    v_lshr_b64 v[22:23], v[18:19], v28
 ; GISEL-NEXT:    v_or_b32_e32 v2, v0, v2
 ; GISEL-NEXT:    v_or_b32_e32 v3, v1, v3
@@ -679,7 +679,7 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v0, vcc, 64, v14
 ; GISEL-NEXT:    v_lshr_b64 v[0:1], v[6:7], v0
 ; GISEL-NEXT:    v_lshl_b64 v[2:3], v[10:11], v14
-; GISEL-NEXT:    v_add_i32_e32 v15, vcc, 0xffffffc0, v14
+; GISEL-NEXT:    v_subrev_i32_e32 v15, vcc, 64, v14
 ; GISEL-NEXT:    v_lshl_b64 v[12:13], v[6:7], v14
 ; GISEL-NEXT:    v_or_b32_e32 v2, v0, v2
 ; GISEL-NEXT:    v_or_b32_e32 v3, v1, v3
@@ -704,7 +704,7 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v2, vcc, 64, v26
 ; GISEL-NEXT:    v_lshr_b64 v[0:1], v[6:7], v26
 ; GISEL-NEXT:    v_lshl_b64 v[2:3], v[10:11], v2
-; GISEL-NEXT:    v_add_i32_e32 v30, vcc, 0xffffffc0, v26
+; GISEL-NEXT:    v_subrev_i32_e32 v30, vcc, 64, v26
 ; GISEL-NEXT:    v_lshr_b64 v[16:17], v[10:11], v26
 ; GISEL-NEXT:    v_or_b32_e32 v2, v0, v2
 ; GISEL-NEXT:    v_or_b32_e32 v3, v1, v3
@@ -1290,7 +1290,7 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v2, vcc, 64, v24
 ; GISEL-NEXT:    v_lshr_b64 v[2:3], v[0:1], v2
 ; GISEL-NEXT:    v_lshl_b64 v[18:19], v[16:17], v24
-; GISEL-NEXT:    v_add_i32_e32 v22, vcc, 0xffffffc0, v24
+; GISEL-NEXT:    v_subrev_i32_e32 v22, vcc, 64, v24
 ; GISEL-NEXT:    v_lshl_b64 v[20:21], v[0:1], v24
 ; GISEL-NEXT:    v_or_b32_e32 v18, v2, v18
 ; GISEL-NEXT:    v_or_b32_e32 v19, v3, v19
@@ -1313,7 +1313,7 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    s_cbranch_execz .LBB2_5
 ; GISEL-NEXT:  ; %bb.2: ; %udiv-preheader4
 ; GISEL-NEXT:    v_sub_i32_e32 v20, vcc, 64, v26
-; GISEL-NEXT:    v_add_i32_e32 v30, vcc, 0xffffffc0, v26
+; GISEL-NEXT:    v_subrev_i32_e32 v30, vcc, 64, v26
 ; GISEL-NEXT:    v_lshr_b64 v[18:19], v[0:1], v26
 ; GISEL-NEXT:    v_lshl_b64 v[20:21], v[16:17], v20
 ; GISEL-NEXT:    v_lshr_b64 v[24:25], v[16:17], v26
@@ -1461,7 +1461,7 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v0, vcc, 64, v20
 ; GISEL-NEXT:    v_lshr_b64 v[0:1], v[4:5], v0
 ; GISEL-NEXT:    v_lshl_b64 v[8:9], v[6:7], v20
-; GISEL-NEXT:    v_add_i32_e32 v21, vcc, 0xffffffc0, v20
+; GISEL-NEXT:    v_subrev_i32_e32 v21, vcc, 64, v20
 ; GISEL-NEXT:    v_lshl_b64 v[10:11], v[4:5], v20
 ; GISEL-NEXT:    v_or_b32_e32 v22, v0, v8
 ; GISEL-NEXT:    v_or_b32_e32 v23, v1, v9
@@ -1484,7 +1484,7 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    s_cbranch_execz .LBB2_11
 ; GISEL-NEXT:  ; %bb.8: ; %udiv-preheader
 ; GISEL-NEXT:    v_sub_i32_e32 v20, vcc, 64, v24
-; GISEL-NEXT:    v_add_i32_e32 v26, vcc, 0xffffffc0, v24
+; GISEL-NEXT:    v_subrev_i32_e32 v26, vcc, 64, v24
 ; GISEL-NEXT:    v_lshr_b64 v[10:11], v[4:5], v24
 ; GISEL-NEXT:    v_lshl_b64 v[20:21], v[6:7], v20
 ; GISEL-NEXT:    v_lshr_b64 v[22:23], v[6:7], v24
@@ -2143,7 +2143,7 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v0, vcc, 64, v21
 ; GISEL-NEXT:    v_lshr_b64 v[0:1], v[10:11], v0
 ; GISEL-NEXT:    v_lshl_b64 v[2:3], v[8:9], v21
-; GISEL-NEXT:    v_add_i32_e32 v22, vcc, 0xffffffc0, v21
+; GISEL-NEXT:    v_subrev_i32_e32 v22, vcc, 64, v21
 ; GISEL-NEXT:    v_lshl_b64 v[19:20], v[10:11], v21
 ; GISEL-NEXT:    v_or_b32_e32 v2, v0, v2
 ; GISEL-NEXT:    v_or_b32_e32 v3, v1, v3
@@ -2168,7 +2168,7 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v2, vcc, 64, v18
 ; GISEL-NEXT:    v_lshr_b64 v[0:1], v[10:11], v18
 ; GISEL-NEXT:    v_lshl_b64 v[2:3], v[8:9], v2
-; GISEL-NEXT:    v_add_i32_e32 v25, vcc, 0xffffffc0, v18
+; GISEL-NEXT:    v_subrev_i32_e32 v25, vcc, 64, v18
 ; GISEL-NEXT:    v_lshr_b64 v[23:24], v[8:9], v18
 ; GISEL-NEXT:    v_or_b32_e32 v2, v0, v2
 ; GISEL-NEXT:    v_or_b32_e32 v3, v1, v3
@@ -2332,7 +2332,7 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v0, vcc, 64, v20
 ; GISEL-NEXT:    v_lshr_b64 v[0:1], v[6:7], v0
 ; GISEL-NEXT:    v_lshl_b64 v[2:3], v[4:5], v20
-; GISEL-NEXT:    v_add_i32_e32 v21, vcc, 0xffffffc0, v20
+; GISEL-NEXT:    v_subrev_i32_e32 v21, vcc, 64, v20
 ; GISEL-NEXT:    v_lshl_b64 v[14:15], v[6:7], v20
 ; GISEL-NEXT:    v_or_b32_e32 v2, v0, v2
 ; GISEL-NEXT:    v_or_b32_e32 v3, v1, v3
@@ -2357,7 +2357,7 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v2, vcc, 64, v36
 ; GISEL-NEXT:    v_lshr_b64 v[0:1], v[6:7], v36
 ; GISEL-NEXT:    v_lshl_b64 v[2:3], v[4:5], v2
-; GISEL-NEXT:    v_add_i32_e32 v24, vcc, 0xffffffc0, v36
+; GISEL-NEXT:    v_subrev_i32_e32 v24, vcc, 64, v36
 ; GISEL-NEXT:    v_lshr_b64 v[22:23], v[4:5], v36
 ; GISEL-NEXT:    v_or_b32_e32 v2, v0, v2
 ; GISEL-NEXT:    v_or_b32_e32 v3, v1, v3
@@ -2950,7 +2950,7 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v16, vcc, 64, v20
 ; GISEL-NEXT:    v_lshr_b64 v[16:17], v[0:1], v16
 ; GISEL-NEXT:    v_lshl_b64 v[18:19], v[2:3], v20
-; GISEL-NEXT:    v_add_i32_e32 v23, vcc, 0xffffffc0, v20
+; GISEL-NEXT:    v_subrev_i32_e32 v23, vcc, 64, v20
 ; GISEL-NEXT:    v_lshl_b64 v[21:22], v[0:1], v20
 ; GISEL-NEXT:    v_or_b32_e32 v18, v16, v18
 ; GISEL-NEXT:    v_or_b32_e32 v19, v17, v19
@@ -2975,7 +2975,7 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v18, vcc, 64, v29
 ; GISEL-NEXT:    v_lshr_b64 v[16:17], v[0:1], v29
 ; GISEL-NEXT:    v_lshl_b64 v[18:19], v[2:3], v18
-; GISEL-NEXT:    v_add_i32_e32 v20, vcc, 0xffffffc0, v29
+; GISEL-NEXT:    v_subrev_i32_e32 v20, vcc, 64, v29
 ; GISEL-NEXT:    v_lshr_b64 v[27:28], v[2:3], v29
 ; GISEL-NEXT:    v_or_b32_e32 v18, v16, v18
 ; GISEL-NEXT:    v_or_b32_e32 v19, v17, v19
@@ -3121,7 +3121,7 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v16, vcc, 64, v24
 ; GISEL-NEXT:    v_lshr_b64 v[16:17], v[4:5], v16
 ; GISEL-NEXT:    v_lshl_b64 v[18:19], v[6:7], v24
-; GISEL-NEXT:    v_add_i32_e32 v25, vcc, 0xffffffc0, v24
+; GISEL-NEXT:    v_subrev_i32_e32 v25, vcc, 64, v24
 ; GISEL-NEXT:    v_lshl_b64 v[22:23], v[4:5], v24
 ; GISEL-NEXT:    v_or_b32_e32 v18, v16, v18
 ; GISEL-NEXT:    v_or_b32_e32 v19, v17, v19
@@ -3146,7 +3146,7 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_sub_i32_e32 v18, vcc, 64, v34
 ; GISEL-NEXT:    v_lshr_b64 v[16:17], v[4:5], v34
 ; GISEL-NEXT:    v_lshl_b64 v[18:19], v[6:7], v18
-; GISEL-NEXT:    v_add_i32_e32 v28, vcc, 0xffffffc0, v34
+; GISEL-NEXT:    v_subrev_i32_e32 v28, vcc, 64, v34
 ; GISEL-NEXT:    v_lshr_b64 v[26:27], v[6:7], v34
 ; GISEL-NEXT:    v_or_b32_e32 v18, v16, v18
 ; GISEL-NEXT:    v_or_b32_e32 v19, v17, v19

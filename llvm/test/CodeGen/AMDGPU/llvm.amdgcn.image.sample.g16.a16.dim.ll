@@ -13,8 +13,6 @@ define amdgpu_ps <4 x float> @sample_d_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ;
 ; GFX10GISEL-LABEL: sample_d_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_d v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -60,10 +58,10 @@ define amdgpu_ps <4 x float> @sample_d_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ;
 ; GFX10GISEL-LABEL: sample_d_3d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v9, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v6, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v7, v9, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v9, v7
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v7, v8
+; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
+; GFX10GISEL-NEXT:    v_or_b32_sdwa v6, v8, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -81,8 +79,6 @@ define amdgpu_ps <4 x float> @sample_c_d_1d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ;
 ; GFX10GISEL-LABEL: sample_c_d_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v4, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v3, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_c_d v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -146,10 +142,10 @@ define amdgpu_ps <4 x float> @sample_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ;
 ; GFX10GISEL-LABEL: sample_d_cl_2d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v7, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v4, v5, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v5, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v7, v5
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v5, v6
+; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v7
+; GFX10GISEL-NEXT:    v_or_b32_sdwa v4, v6, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_d_cl v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -194,10 +190,10 @@ define amdgpu_ps <4 x float> @sample_c_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> 
 ;
 ; GFX10GISEL-LABEL: sample_c_d_cl_2d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v8, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v5, v6, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v6, v8, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v8, v6
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v6, v7
+; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v8
+; GFX10GISEL-NEXT:    v_or_b32_sdwa v5, v7, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_c_d_cl v[0:3], v[0:6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -215,8 +211,6 @@ define amdgpu_ps <4 x float> @sample_cd_1d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ;
 ; GFX10GISEL-LABEL: sample_cd_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_cd v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -254,8 +248,6 @@ define amdgpu_ps <4 x float> @sample_c_cd_1d(<8 x i32> inreg %rsrc, <4 x i32> in
 ;
 ; GFX10GISEL-LABEL: sample_c_cd_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v4, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v3, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_c_cd v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -319,10 +311,10 @@ define amdgpu_ps <4 x float> @sample_cd_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> i
 ;
 ; GFX10GISEL-LABEL: sample_cd_cl_2d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v7, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v4, v5, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v5, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v7, v5
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v5, v6
+; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v7
+; GFX10GISEL-NEXT:    v_or_b32_sdwa v4, v6, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_cd_cl v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -367,10 +359,10 @@ define amdgpu_ps <4 x float> @sample_c_cd_cl_2d(<8 x i32> inreg %rsrc, <4 x i32>
 ;
 ; GFX10GISEL-LABEL: sample_c_cd_cl_2d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v8, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v5, v6, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v6, v8, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v8, v6
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v6, v7
+; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v8
+; GFX10GISEL-NEXT:    v_or_b32_sdwa v5, v7, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_c_cd_cl v[0:3], v[0:6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -396,10 +388,10 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1(<8 x i32> inreg %rsrc, <4 x i32>
 ;
 ; GFX10GISEL-LABEL: sample_c_d_o_2darray_V1:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v9, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v6, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v7, v9, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v9, v7
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v7, v8
+; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
+; GFX10GISEL-NEXT:    v_or_b32_sdwa v6, v8, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_c_d_o v0, v[0:7], s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -425,10 +417,10 @@ define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 
 ;
 ; GFX10GISEL-LABEL: sample_c_d_o_2darray_V2:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v9, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v6, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v7, v9, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v9, v7
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v7, v8
+; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
+; GFX10GISEL-NEXT:    v_or_b32_sdwa v6, v8, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_c_d_o v[0:1], v[0:7], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -468,9 +460,6 @@ define amdgpu_ps <4 x float> @sample_g16_noa16_d_1d(<8 x i32> inreg %rsrc, <4 x 
 ;
 ; GFX10GISEL-LABEL: sample_g16_noa16_d_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v1, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_d_g16 v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -515,15 +504,12 @@ define amdgpu_ps <4 x float> @sample_g16_noa16_d_3d(<8 x i32> inreg %rsrc, <4 x 
 ;
 ; GFX10GISEL-LABEL: sample_g16_noa16_d_3d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_mov_b32_e32 v9, v2
-; GFX10GISEL-NEXT:    v_mov_b32_e32 v10, v3
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v9, v3
 ; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v11, 16, s0
 ; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX10GISEL-NEXT:    v_or_b32_sdwa v2, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v3, v11, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v4, v4, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v5, v11, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10GISEL-NEXT:    v_or_b32_sdwa v4, v4, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_d_g16 v[0:3], v[2:8], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -541,9 +527,6 @@ define amdgpu_ps <4 x float> @sample_g16_noa16_c_d_1d(<8 x i32> inreg %rsrc, <4 
 ;
 ; GFX10GISEL-LABEL: sample_g16_noa16_c_d_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v4, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_c_d_g16 v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -584,9 +567,6 @@ define amdgpu_ps <4 x float> @sample_g16_noa16_d_cl_1d(<8 x i32> inreg %rsrc, <4
 ;
 ; GFX10GISEL-LABEL: sample_g16_noa16_d_cl_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v4, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_d_cl_g16 v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -627,9 +607,6 @@ define amdgpu_ps <4 x float> @sample_g16_noa16_c_d_cl_1d(<8 x i32> inreg %rsrc, 
 ;
 ; GFX10GISEL-LABEL: sample_g16_noa16_c_d_cl_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v5, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v1, v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v2, v5, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -675,9 +652,6 @@ define amdgpu_ps <4 x float> @sample_g16_noa16_cd_1d(<8 x i32> inreg %rsrc, <4 x
 ;
 ; GFX10GISEL-LABEL: sample_g16_noa16_cd_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v1, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_cd_g16 v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -718,9 +692,6 @@ define amdgpu_ps <4 x float> @sample_g16_noa16_c_cd_1d(<8 x i32> inreg %rsrc, <4
 ;
 ; GFX10GISEL-LABEL: sample_g16_noa16_c_cd_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v4, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_c_cd_g16 v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -761,9 +732,6 @@ define amdgpu_ps <4 x float> @sample_g16_noa16_cd_cl_1d(<8 x i32> inreg %rsrc, <
 ;
 ; GFX10GISEL-LABEL: sample_g16_noa16_cd_cl_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v4, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_cd_cl_g16 v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -804,9 +772,6 @@ define amdgpu_ps <4 x float> @sample_g16_noa16_c_cd_cl_1d(<8 x i32> inreg %rsrc,
 ;
 ; GFX10GISEL-LABEL: sample_g16_noa16_c_cd_cl_1d:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v5, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v1, v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v2, v5, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_c_cd_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -938,10 +903,6 @@ define amdgpu_ps <4 x float> @sample_d_1d_g16_a16(<8 x i32> inreg %rsrc, <4 x i3
 ;
 ; GFX10GISEL-LABEL: sample_d_1d_g16_a16:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v1, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10GISEL-NEXT:    image_sample_d_g16 v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
@@ -991,17 +952,17 @@ define amdgpu_ps <4 x float> @sample_d_3d_g16_a16(<8 x i32> inreg %rsrc, <4 x i3
 ;
 ; GFX10GISEL-LABEL: sample_d_3d_g16_a16:
 ; GFX10GISEL:       ; %bb.0: ; %main_body
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v9, v7
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v10, v3
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v7, v8
 ; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e64 v9, 16, s0
 ; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v1, v9, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v2, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v3, v9, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v4, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    v_or_b32_sdwa v5, v9, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10GISEL-NEXT:    image_sample_d_g16 v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16
+; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
+; GFX10GISEL-NEXT:    v_mov_b32_e32 v3, v2
+; GFX10GISEL-NEXT:    v_or_b32_sdwa v2, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10GISEL-NEXT:    v_or_b32_sdwa v4, v4, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10GISEL-NEXT:    v_or_b32_sdwa v6, v8, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10GISEL-NEXT:    image_sample_d_g16 v[0:3], v[2:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
 main_body:
