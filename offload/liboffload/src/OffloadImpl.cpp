@@ -1531,17 +1531,30 @@ Error olMemIsAccessible_impl(ol_context_handle_t Context,
 
     // Allocations made in a user context are not tracked by the device, so
     // look them up in the context first.
-    if (auto AllocOrErr = Context->getAllocInfo(Ptr)) {
+    auto AllocOrErr = Context->getAllocInfo(Ptr);
+    if (AllocOrErr) {
       uintptr_t Begin = reinterpret_cast<uintptr_t>(Ptr);
       uintptr_t AllocBegin = reinterpret_cast<uintptr_t>(AllocOrErr->Base);
-      if (Begin + Size <= AllocBegin + AllocOrErr->Size &&
-          (AllocOrErr->Kind != TARGET_ALLOC_DEVICE ||
-           AllocOrErr->Device == Device->Device)) {
+      size_t Offset = Begin - AllocBegin;
+      bool InRange = Begin >= AllocBegin && Offset <= AllocOrErr->Size &&
+                     Size <= AllocOrErr->Size - Offset;
+      if (InRange && (AllocOrErr->Kind != TARGET_ALLOC_DEVICE ||
+                      AllocOrErr->Device == Device->Device)) {
         *IsAccessible = true;
         return Error::success();
       }
     } else {
-      llvm::consumeError(AllocOrErr.takeError());
+      // Not knowing the pointer is not an error, it may still be accessible,
+      // so only swallow NOT_FOUND and report anything else.
+      if (auto Err = llvm::handleErrors(
+              AllocOrErr.takeError(),
+              [](std::unique_ptr<error::OffloadError> E) -> llvm::Error {
+                if (E->convertToErrorCode() ==
+                    error::make_error_code(ErrorCode::NOT_FOUND))
+                  return Error::success();
+                return Error(std::move(E));
+              }))
+        return Err;
     }
   }
 
