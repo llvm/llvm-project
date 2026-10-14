@@ -3468,6 +3468,11 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+def warn_attribute_harden_pac_ret_requires_pac_ret: Warning<
+  "'harden-pac-ret' attribute requires 'branch-protection=pac-ret'; 'target' attribute ignored">,
+  InGroup<IgnoredAttributes>;
+def err_invalid_harden_pac_ret_spec : Error<
+  "invalid or misspelled pac-ret hardening specification '%0'">;
 def err_attribute_invalid_atomic_argument : Error<
   "invalid argument '%0' to atomic attribute; valid options are: "
   "'remote_memory', 'fine_grained_memory', 'ignore_denormal_mode' (optionally "
@@ -3742,6 +3747,10 @@ def warn_nsdictionary_duplicate_key : Warning<
   InGroup<DiagGroup<"objc-dictionary-duplicate-keys">>;
 def note_nsdictionary_duplicate_key_here : Note<
   "previous equal key is here">;
+def warn_objc_dictionary_ill_formed_utf8_key : Warning<
+  "dictionary key is ill-formed as UTF-8 and will be truncated in a static "
+  "constant dictionary, so it may not be found at runtime">,
+  InGroup<DiagGroup<"objc-dictionary-invalid-utf8-key">>;
 def err_swift_param_attr_not_swiftcall : Error<
   "'%0' parameter can only be used with swiftcall%select{ or swiftasynccall|}1 "
   "calling convention%select{|s}1">;
