@@ -250,3 +250,13 @@ constexpr __UINT_LEAST8_TYPE__ float_scalar_n8_fail = stdc_load8_leu8((const uns
 
 constexpr double double_scalar = 1.0;
 constexpr __UINT_LEAST64_TYPE__ double_scalar_fail = stdc_load8_leu64((const unsigned char *)&double_scalar); // expected-error{{must be initialized by a constant expression}} expected-note{{this conversion is not allowed in a constant expression}}
+
+// The return types are the least-width types.
+_Static_assert(_Generic(stdc_load8_leu8(le8_u), __UINT_LEAST8_TYPE__ : 1, default : 0) == 1, "wrong return type");
+_Static_assert(_Generic(stdc_load8_leu16(le8_u), __UINT_LEAST16_TYPE__ : 1, default : 0) == 1, "wrong return type");
+_Static_assert(_Generic(stdc_load8_leu32(le8_u), __UINT_LEAST32_TYPE__ : 1, default : 0) == 1, "wrong return type");
+_Static_assert(_Generic(stdc_load8_leu64(le8_u), __UINT_LEAST64_TYPE__ : 1, default : 0) == 1, "wrong return type");
+_Static_assert(_Generic(stdc_load8_les8(le8_u), __INT_LEAST8_TYPE__ : 1, default : 0) == 1, "wrong return type");
+_Static_assert(_Generic(stdc_load8_les16(le8_u), __INT_LEAST16_TYPE__ : 1, default : 0) == 1, "wrong return type");
+_Static_assert(_Generic(stdc_load8_les32(le8_u), __INT_LEAST32_TYPE__ : 1, default : 0) == 1, "wrong return type");
+_Static_assert(_Generic(stdc_load8_les64(le8_u), __INT_LEAST64_TYPE__ : 1, default : 0) == 1, "wrong return type");
