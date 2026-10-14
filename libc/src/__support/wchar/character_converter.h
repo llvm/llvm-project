@@ -44,6 +44,17 @@ private:
                                                         0x10ffff};
   static constexpr int MAX_UTF8_LENGTH = 4;
 
+  static constexpr char16_t UTF16_SURROGATE_START = 0xD800;
+  static constexpr char16_t UTF16_SURROGATE_END = 0xDFFF;
+  static constexpr char16_t UTF16_HIGH_SURROGATE_START = 0xD800;
+  static constexpr char16_t UTF16_HIGH_SURROGATE_END = 0xDBFF;
+  static constexpr char16_t UTF16_LOW_SURROGATE_START = 0xDC00;
+  static constexpr char16_t UTF16_LOW_SURROGATE_END = 0xDFFF;
+  static constexpr char32_t UTF16_SURROGATE_ENCODED_BASE = 0x10000;
+  static constexpr size_t ENCODED_BITS_PER_UTF16_SURROGATE = 10;
+  static constexpr uint16_t MASK_ENCODED_BITS_UTF16_SURROGATE =
+      mask_trailing_ones<uint16_t, ENCODED_BITS_PER_UTF16_SURROGATE>();
+
 public:
   explicit LIBC_INLINE CharacterConverter(mbstate *state_ptr)
       : state(state_ptr) {}
@@ -100,7 +111,7 @@ public:
     if (isEmpty() || isFull())
       return false;
     // When neither empty nor full, state->total_bytes is at least 2
-    char32_t threshold = MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 2];
+    const char32_t threshold = MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 2];
     return state->partial > threshold;
   }
 
@@ -134,7 +145,7 @@ LIBC_INLINE bool CharacterConverter::isValidState() {
 }
 
 LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
-  uint8_t num_ones = static_cast<uint8_t>(cpp::countl_one(utf8_byte));
+  const uint8_t num_ones = static_cast<uint8_t>(cpp::countl_one(utf8_byte));
   // Checking the first byte if first push
   if (isEmpty()) {
     // UTF-8 char has 1 byte total
@@ -146,7 +157,7 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
       /* Since the format is 110xxxxx, 1110xxxx, and 11110xxx for 2, 3, and 4,
       we will make the base mask with 7 ones and right shift it as necessary. */
       constexpr size_t SIGNIFICANT_BITS = 7;
-      char8_t base_mask =
+      constexpr char8_t base_mask =
           static_cast<char8_t>(mask_trailing_ones<uint8_t, SIGNIFICANT_BITS>());
       state->total_bytes = num_ones;
       utf8_byte &= (base_mask >> num_ones);
@@ -162,14 +173,11 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
     return 0;
   }
   // Pushing when partially popping is a misuse in the library
-  if (isPartiallyPopping()) {
-    clear();
-    return -1;
-  }
+  LIBC_ASSERT(!isPartiallyPopping());
   // Any subsequent push
   // Adding 6 more bits so need to left shift
   if (num_ones == 1 && !isFull()) {
-    char32_t byte = utf8_byte & MASK_ENCODED_BITS;
+    const char32_t byte = utf8_byte & MASK_ENCODED_BITS;
     state->partial = state->partial << ENCODED_BITS_PER_UTF8;
     state->partial |= byte;
     state->bytes_stored++;
@@ -195,25 +203,28 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
 }
 
 LIBC_INLINE int CharacterConverter::push(char16_t utf16) {
+  const bool is_high_surrogate =
+      utf16 >= UTF16_HIGH_SURROGATE_START && utf16 <= UTF16_HIGH_SURROGATE_END;
+  const bool is_low_surrogate =
+      utf16 >= UTF16_LOW_SURROGATE_START && utf16 <= UTF16_LOW_SURROGATE_END;
   // Checking for high surrogate if first push
   if (isEmpty()) {
-    bool is_surrogate = (utf16 & 0xF800) == 0xD800;
-    if (is_surrogate) {
-      bool is_high_surrogate = (utf16 & 0x400) == 0;
-      if (!is_high_surrogate) {
-        // unpaired surrogate -> reset the state
-        // bytes_stored and total_bytes will always be 0 here
-        state->partial = static_cast<char32_t>(0);
-        return EILSEQ;
-      }
+    if (is_low_surrogate) {
+      // unpaired surrogate -> reset the state
+      // bytes_stored and total_bytes will always be 0 here
+      state->partial = static_cast<char32_t>(0);
+      return EILSEQ;
+    }
+    if (is_high_surrogate) {
       // high surrogate
       // code point between 0x10000 and 0x10FFFF
       state->total_bytes = 4;
       state->bytes_stored = 2;
-      // 10 bits each from the high surrogate and the low surrogate, and the
-      // full code point is from 0x10000, so we add 0x40 to partial, which after
-      // shifting becomes 0x10000
-      state->partial = static_cast<char32_t>(utf16 & 0x3FF) + 0x40;
+      constexpr char32_t ENCODED_BASE_PRESHIFT =
+          UTF16_SURROGATE_ENCODED_BASE >> ENCODED_BITS_PER_UTF16_SURROGATE;
+      state->partial =
+          static_cast<char32_t>(utf16 & MASK_ENCODED_BITS_UTF16_SURROGATE) +
+          ENCODED_BASE_PRESHIFT;
     } else {
       state->partial = static_cast<char32_t>(utf16);
       // determine number of utf-8 bytes needed to represent this utf16 value
@@ -228,17 +239,13 @@ LIBC_INLINE int CharacterConverter::push(char16_t utf16) {
     return 0;
   }
   // Pushing when partially popping is a misuse in the library
-  if (isFull() || isPartiallyPopping()) {
-    clear();
-    return -1;
-  }
-  bool is_low_surrogate = (utf16 & 0xFC00) == 0xDC00;
+  LIBC_ASSERT(!isFull() && !isPartiallyPopping());
   if (!is_low_surrogate) {
     // unpaired surrogate -> reset the state
     clear();
     return EILSEQ;
   }
-  char32_t low = utf16 & 0x3FF;
+  const char32_t low = utf16 & MASK_ENCODED_BITS_UTF16_SURROGATE;
   state->partial <<= 10;
   state->partial |= low;
   state->bytes_stored += 2;
@@ -272,7 +279,7 @@ LIBC_INLINE ErrorOr<char32_t> CharacterConverter::pop_utf32() {
   // whether enough bytes have been pushed
   if (!isFull())
     return Error(-1);
-  char32_t utf32 = state->partial;
+  const char32_t utf32 = state->partial;
   // reset if successful pop
   clear();
   return utf32;
@@ -286,7 +293,8 @@ LIBC_INLINE ErrorOr<char16_t> CharacterConverter::pop_utf16() {
     // no surrogates needed
     output = state->partial;
     // disallow using UTF-8 or UTF-32 to encode unpaired surrogates
-    bool is_surrogate = (output & 0xF800) == 0xD800;
+    const bool is_surrogate =
+        output >= UTF16_SURROGATE_START && output <= UTF16_SURROGATE_END;
     if (is_surrogate) {
       clear();
       return Error(EILSEQ);
@@ -295,11 +303,15 @@ LIBC_INLINE ErrorOr<char16_t> CharacterConverter::pop_utf16() {
   } else {
     if (isFull()) {
       // high surrogate first
-      output = ((state->partial - 0x10000) >> 10) | 0xD800;
+      output = ((state->partial - UTF16_SURROGATE_ENCODED_BASE) >>
+                ENCODED_BITS_PER_UTF16_SURROGATE) |
+               UTF16_HIGH_SURROGATE_START;
       state->bytes_stored = 2;
     } else {
       // low surrogate
-      output = ((state->partial - 0x10000) & 0x3FF) | 0xDC00;
+      output = ((state->partial - UTF16_SURROGATE_ENCODED_BASE) &
+                MASK_ENCODED_BITS_UTF16_SURROGATE) |
+               UTF16_LOW_SURROGATE_START;
       clear();
     }
   }
