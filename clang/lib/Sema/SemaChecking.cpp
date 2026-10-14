@@ -1416,7 +1416,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     std::optional<unsigned> FormatIndex = Checker.TranslateIndex(IsChk ? 3 : 1);
     if (!FormatIndex)
       return;
-    auto *FormatExpr = TheCall->getArg(*FormatIndex)->IgnoreParenImpCasts();
+    const auto *FormatExpr =
+        TheCall->getArg(*FormatIndex)->IgnoreParenImpCasts();
 
     StringRef FormatStrRef;
     size_t StrLen;
