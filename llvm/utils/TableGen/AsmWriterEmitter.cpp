@@ -1146,10 +1146,12 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
         // Change (any_of FeatureAll, (any_of ...)) to (any_of FeatureAll, ...).
         if (IsOr && D->getNumArgs() == 2 && isa<DagInit>(D->getArg(1))) {
           const DagInit *RHS = cast<DagInit>(D->getArg(1));
-          SmallVector<std::pair<const Init *, const StringInit *>> Args{
-              *D->getArgAndNames().begin()};
-          llvm::append_range(Args, RHS->getArgAndNames());
-          D = DagInit::get(D->getOperator(), Args);
+          if (RHS->getOperator()->getAsString() == "any_of") {
+            SmallVector<std::pair<const Init *, const StringInit *>> Args{
+                *D->getArgAndNames().begin()};
+            llvm::append_range(Args, RHS->getArgAndNames());
+            D = DagInit::get(D->getOperator(), Args);
+          }
         }
 
         for (auto *Arg : D->getArgs()) {
