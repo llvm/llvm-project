@@ -1698,13 +1698,6 @@ td_library(
 )
 
 td_library(
-    name = "ArmTargetTdFiles",
-    srcs = glob([
-        "lib/Target/ARM/**/*.td",
-    ]),
-)
-
-td_library(
     name = "AArch64TargetTdFiles",
     srcs = glob([
         "lib/Target/AArch64/**/*.td",
