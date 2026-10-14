@@ -58,12 +58,21 @@ static bool hasInterestingIntrinsics(Module &M, Module *&CachedModule,
 static bool reduceToAnyAllTrue(Function &F, WebAssemblyTargetMachine &TM,
                                Module *&CachedModule,
                                bool &ModuleHasInterestingIntrinsics) {
-  if (!TM.getSubtarget<WebAssemblySubtarget>(F).hasSIMD128())
+  const WebAssemblySubtarget &ST = TM.getSubtarget<WebAssemblySubtarget>(F);
+  if (!ST.hasSIMD128())
     return false;
 
   if (!hasInterestingIntrinsics(*F.getParent(), CachedModule,
                                 ModuleHasInterestingIntrinsics))
     return false;
+
+  // Legalization cannot split or widen an intrinsic's operand.
+  const WebAssemblyTargetLowering &TLI = *ST.getTargetLowering();
+  const DataLayout &DL = F.getDataLayout();
+  auto IsLegalVector = [&](Value *V) {
+    return TLI.isTypeLegal(
+        TLI.getValueType(DL, V->getType(), /*AllowUnknown=*/true));
+  };
 
   bool Changed = false;
 
@@ -97,6 +106,8 @@ static bool reduceToAnyAllTrue(Function &F, WebAssemblyTargetMachine &TM,
       switch (II->getIntrinsicID()) {
       case Intrinsic::vector_reduce_or: {
         // reduce.or(X) != 0  -> anytrue(X)
+        if (!IsLegalVector(Vec))
+          continue;
         Value *Any = makeIntrinsic(Intrinsic::wasm_anytrue, Vec);
         New = B.CreateICmpNE(Any, ConstantInt::get(Any->getType(), 0));
         break;
@@ -110,7 +121,7 @@ static bool reduceToAnyAllTrue(Function &F, WebAssemblyTargetMachine &TM,
         Value *LHS = nullptr;
         if (!match(Vec, m_ZExt(m_c_ICmp(Pred, m_Value(LHS), m_Zero()))))
           continue;
-        if (Pred != ICmpInst::ICMP_NE)
+        if (Pred != ICmpInst::ICMP_NE || !IsLegalVector(LHS))
           continue;
 
         Value *All = makeIntrinsic(Intrinsic::wasm_alltrue, LHS);
