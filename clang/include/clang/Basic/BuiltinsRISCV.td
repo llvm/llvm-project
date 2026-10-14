@@ -550,6 +550,15 @@ def pnsra_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, int>, unsigned in
 def pnsrar_s_i8x4 : RISCVBuiltin<"_Vector<4, signed char>(_Vector<4, short>, unsigned int)">;
 def pnsrar_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, int>, unsigned int)">;
 
+// Packed Narrowing Clip
+def pnclipu_s_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned short>, unsigned int)">;
+def pnclipu_s_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned int>, unsigned int)">;
+def pnclipru_s_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned short>, unsigned int)">;
+def pnclipru_s_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned int>, unsigned int)">;
+def pnclip_s_i8x4 : RISCVBuiltin<"_Vector<4, signed char>(_Vector<4, short>, unsigned int)">;
+def pnclip_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, int>, unsigned int)">;
+def pnclipr_s_i8x4 : RISCVBuiltin<"_Vector<4, signed char>(_Vector<4, short>, unsigned int)">;
+def pnclipr_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, int>, unsigned int)">;
 
 // Packed Narrowing Clip Pair (32-bit)
 def pnclipp_i8x4   : RISCVBuiltin<"_Vector<4, signed char>(_Vector<2, short>, _Vector<2, short>)">;
