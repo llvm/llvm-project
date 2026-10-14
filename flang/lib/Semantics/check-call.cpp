@@ -67,6 +67,14 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (const Symbol *pointer{FindProtectingPointer(*expr)}) {
+      evaluate::AttachDeclaration(
+          messages.Say(
+              "PROTECTED_TARGET pointer '%s' or its subobject requires an explicit interface"_err_en_US,
+              pointer->name()),
+          *pointer);
+      return;
+    }
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
@@ -827,6 +835,39 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualLastSymbol->name(), dummyName);
   }
 
+  if (scope && procedure.isStmtFunction) {
+    if (const Symbol *pointer{FindProtectingPointer(actual)}) {
+      evaluate::AttachDeclaration(
+          messages.Say(
+              "PROTECTED_TARGET pointer '%s' or its subobject requires an explicit interface"_err_en_US,
+              pointer->name()),
+          *pointer);
+      return;
+    }
+  }
+  // NULL's synthesized MOLD dummy has no INTENT(IN); adding it would stop
+  // NoteDefinedSymbol below from recording the MOLD actual. Exempt NULL
+  // here since MOLD is INTENT(IN) (J3/26-007r1 17.2.1p3).
+  if (scope && !dummyIsPointer && dummy.intent != common::Intent::In &&
+      !(intrinsic && intrinsic->name == "null")) {
+    if (const Symbol *pointer{FindProtectingPointer(actual)}) {
+      evaluate::AttachDeclaration(
+          messages.Say(
+              "PROTECTED_TARGET pointer '%s' or its subobject may be associated only with an INTENT(IN) nonpointer %s"_err_en_US,
+              pointer->name(), dummyName),
+          *pointer);
+      return;
+    }
+  }
+  if (scope && dummyIsPointer && actualIsPointer &&
+      !dummy.attrs.test(
+          characteristics::DummyDataObject::Attr::ProtectedTarget) &&
+      FindProtectingPointer(actual, /*pointerDefinition=*/true)) {
+    semantics::CheckPointerAssignment(context, messages.at(), dummyName, dummy,
+        actual, *scope, /*isAssumedRank=*/dummyIsAssumedRank, actualIsPointer);
+    return;
+  }
+
   // Definability checking
   // Problems with polymorphism are caught in the callee's definition.
   if (scope) {
@@ -1480,6 +1521,18 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
       }
     }
     if (dummyIsPointer) {
+      if (argProcDesignator && IsProcedurePointer(*expr)) {
+        if (const auto *component{argProcDesignator->GetComponent()}) {
+          if (const Symbol *pointer{FindProtectingPointer(component->base())}) {
+            evaluate::AttachDeclaration(
+                messages.Say(
+                    "PROTECTED_TARGET pointer '%s' or its subobject may not be associated with procedure pointer %s"_err_en_US,
+                    pointer->name(), dummyName),
+                *pointer);
+            return;
+          }
+        }
+      }
       if (dummy.intent == common::Intent::In) {
         // need not be definable, can be a target
       } else if (!IsProcedurePointer(*expr)) {

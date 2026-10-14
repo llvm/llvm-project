@@ -50,10 +50,12 @@ public:
     set_lhsType(TypeAndShape::Characterize(lhs, foldingContext_));
     set_isContiguous(lhs.attrs().test(Attr::CONTIGUOUS));
     set_isVolatile(lhs.attrs().test(Attr::VOLATILE));
+    set_isProtectedTarget(FindProtectingPointer(lhs) != nullptr);
   }
   PointerAssignmentChecker &set_lhsType(std::optional<TypeAndShape> &&);
   PointerAssignmentChecker &set_isContiguous(bool);
   PointerAssignmentChecker &set_isVolatile(bool);
+  PointerAssignmentChecker &set_isProtectedTarget(bool);
   PointerAssignmentChecker &set_isBoundsRemapping(bool);
   PointerAssignmentChecker &set_isAssumedRank(bool);
   PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
@@ -92,6 +94,7 @@ private:
   bool characterizedProcedure_{false};
   bool isContiguous_{false};
   bool isVolatile_{false};
+  bool isProtectedTarget_{false};
   bool isBoundsRemapping_{false};
   bool isAssumedRank_{false};
   bool isRHSPointerActualArgument_{false};
@@ -114,6 +117,12 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_isContiguous(
 PointerAssignmentChecker &PointerAssignmentChecker::set_isVolatile(
     bool isVolatile) {
   isVolatile_ = isVolatile;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_isProtectedTarget(
+    bool isProtectedTarget) {
+  isProtectedTarget_ = isProtectedTarget;
   return *this;
 }
 
@@ -207,6 +216,31 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
   if (lhs_ && IsProcedure(*lhs_)) {
     return true;
   }
+  if (!isProtectedTarget_) {
+    const Symbol *pointer{FindProtectingPointer(rhs)};
+    if (!pointer && isRHSPointerActualArgument_) {
+      pointer = FindProtectingPointer(rhs, /*pointerDefinition=*/true);
+    }
+    if (pointer) {
+      evaluate::AttachDeclaration(
+          Say("PROTECTED_TARGET pointer '%s' or its subobject may not be associated with %s without PROTECTED_TARGET"_err_en_US,
+              pointer->name(), description_),
+          *pointer);
+      return false;
+    }
+  } else if (auto dataRef{evaluate::ExtractDataRef(rhs, true, true)}) {
+    if (const Symbol *target{
+            evaluate::GetLastTarget(evaluate::GetSymbolVector(*dataRef))};
+        target && !IsPointer(*target) && IsProtected(*target) &&
+        IsUseAssociated(*target, scope_)) {
+      // J3/26-007r1 C864 takes precedence over the conflicting 8.5.16 NOTE 1.
+      evaluate::AttachDeclaration(
+          Say("Nonpointer USE-associated PROTECTED object '%s' may not be a pointer target, even for a PROTECTED_TARGET pointer"_err_en_US,
+              target->name()),
+          *target);
+      return false;
+    }
+  }
   if (const auto *pureProc{FindPureProcedureContaining(scope_)}) {
     if (pointerComponentLHS_) { // F'2023 C15104(4) is a hard error
       if (const Symbol * object{FindExternallyVisibleObject(rhs, *pureProc)}) {
@@ -244,12 +278,15 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
     }
   }
   // Warn about undefinable data targets
-  if (auto because{
-          WhyNotDefinable(foldingContext_.messages().at(), scope_, {}, rhs)}) {
-    if (auto *msg{Warn(common::UsageWarning::PointerToUndefinable,
-            "Pointer target is not a definable variable"_warn_en_US)}) {
-      msg->Attach(std::move(because->set_severity(parser::Severity::Because)));
-      return false;
+  if (!isProtectedTarget_) {
+    if (auto because{WhyNotDefinable(
+            foldingContext_.messages().at(), scope_, {}, rhs)}) {
+      if (auto *msg{Warn(common::UsageWarning::PointerToUndefinable,
+              "Pointer target is not a definable variable"_warn_en_US)}) {
+        msg->Attach(
+            std::move(because->set_severity(parser::Severity::Because)));
+        return false;
+      }
     }
   }
   return true;
@@ -288,6 +325,10 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (!funcResult->attrs.test(FunctionResult::Attr::Pointer)) {
     msg =
         "%s is associated with the result of a reference to function '%s' that is not a pointer"_err_en_US;
+  } else if (funcResult->attrs.test(FunctionResult::Attr::ProtectedTarget) &&
+      !isProtectedTarget_) {
+    msg =
+        "%s may not be associated with the PROTECTED_TARGET result of function '%s' without PROTECTED_TARGET"_err_en_US;
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
     auto restorer{common::ScopedSet(lhs_, symbol)};
@@ -619,6 +660,8 @@ bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
       .set_lhsType(common::Clone(lhs.type))
       .set_isContiguous(lhs.attrs.test(DummyDataObject::Attr::Contiguous))
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
+      .set_isProtectedTarget(
+          lhs.attrs.test(DummyDataObject::Attr::ProtectedTarget))
       .set_isAssumedRank(isAssumedRank)
       .set_isRHSPointerActualArgument(isPointerActualArgument)
       .set_ignoreTKR(lhs.ignoreTKR)

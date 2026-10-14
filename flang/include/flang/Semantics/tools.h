@@ -178,6 +178,16 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+// Return the PROTECTED_TARGET pointer protecting the referenced object, if
+// any. Stop at intervening pointer targets. With pointerDefinition, check
+// the final pointer's association, or an allocatable object's allocation
+// when acceptAllocatable is also set, rather than its value.
+const Symbol *FindProtectingPointer(const evaluate::DataRef &,
+    bool pointerDefinition = false, bool acceptAllocatable = false);
+const Symbol *FindProtectingPointer(const SomeExpr &,
+    bool pointerDefinition = false, bool acceptAllocatable = false);
+const Symbol *FindProtectingPointer(const Symbol &,
+    bool pointerDefinition = false, bool acceptAllocatable = false);
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }

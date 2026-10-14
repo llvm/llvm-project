@@ -171,6 +171,23 @@ static void CheckSyncStatList(
   }
 }
 
+template <typename A>
+static void CheckProtectedTargetDefinition(
+    SemanticsContext &context, const A &variable, const char *what) {
+  if (const auto *expr{GetExpr(context, variable)};
+      expr && FindProtectingPointer(*expr)) {
+    auto at{parser::FindSourceLocation(variable)};
+    if (auto why{WhyNotDefinable(at, context.FindScope(at),
+            {DefinabilityFlag::DoNotNoteDefinition,
+                DefinabilityFlag::AllowEventLockOrNotifyType},
+            *expr)}) {
+      why->set_severity(parser::Severity::Because);
+      context.Say(at, "%s variable is not definable"_err_en_US, what)
+          .Attach(std::move(*why));
+    }
+  }
+}
+
 static void CheckEventVariable(
     SemanticsContext &context, const parser::EventVariable &eventVar) {
   if (const auto *expr{GetExpr(context, eventVar)}) {
@@ -178,6 +195,7 @@ static void CheckEventVariable(
       context.Say(parser::FindSourceLocation(eventVar),
           "The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
     }
+    CheckProtectedTargetDefinition(context, eventVar, "Event");
   }
 }
 
@@ -364,6 +382,9 @@ void CoarrayChecker::Leave(const parser::LockStmt &x) {
       } else {
         gotAcquired = true;
       }
+      CheckProtectedTargetDefinition(context_,
+          std::get<parser::ScalarLogicalVariable>(lockStat.u),
+          "ACQUIRED_LOCK=");
     }
   }
 }
@@ -383,6 +404,14 @@ void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
     if (const auto *stat{std::get_if<parser::ImageSelectorSpec::Stat>(
             &imageSelectorSpec.u)}) {
       CheckTeamStat(context_, *stat);
+      CheckProtectedTargetDefinition(context_,
+          parser::UnwrapRef<parser::Variable>(*stat), "Image selector STAT");
+    } else if (const auto *notify{
+                   std::get_if<parser::ImageSelectorSpec::Notify>(
+                       &imageSelectorSpec.u)}) {
+      CheckProtectedTargetDefinition(context_,
+          parser::UnwrapRef<parser::Variable>(*notify),
+          "Image selector NOTIFY");
     }
   }
 }
@@ -390,6 +419,8 @@ void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
 void CoarrayChecker::Leave(const parser::FormTeamStmt &x) {
   CheckTeamType(
       context_, std::get<parser::TeamVariable>(x.t), /*mustBeVariable=*/true);
+  CheckProtectedTargetDefinition(
+      context_, std::get<parser::TeamVariable>(x.t), "Team");
   for (const auto &spec :
       std::get<std::list<parser::FormTeamStmt::FormTeamSpec>>(x.t)) {
     if (const auto *statOrErrmsg{std::get_if<parser::StatOrErrmsg>(&spec.u)}) {

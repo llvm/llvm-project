@@ -4694,6 +4694,18 @@ static void FixMisparsedFunctionReference(
   }
 }
 
+static Expr<SomeType> FoldForCaching(
+    FoldingContext &context, Expr<SomeType> &&expr) {
+  const bool wasVariable{IsVariable(expr)};
+  auto folded{Fold(context, std::move(expr))};
+  if (!wasVariable && semantics::FindProtectingPointer(folded)) {
+    // An identity conversion may fold to a designator, but its result must
+    // remain a value for PROTECTED_TARGET checks.
+    return Parenthesize(std::move(folded));
+  }
+  return folded;
+}
+
 // Common handling of parse tree node types that retain the
 // representation of the analyzed expression.
 template <typename PARSED>
@@ -4741,7 +4753,7 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
             "NULL() may not be used as an expression in this context"_err_en_US);
       }
     }
-    SetExpr(x, Fold(std::move(*result)));
+    SetExpr(x, FoldForCaching(GetFoldingContext(), std::move(*result)));
     return x.typedExpr->v;
   } else {
     ResetExpr(x);
@@ -4866,10 +4878,12 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Selector &selector) {
             writable.u = parser::Expr{std::move(*ctor)};
             auto &expr{std::get<parser::Expr>(writable.u)};
             expr.source = source;
-            SetExpr(expr, Fold(std::move(*result)));
+            SetExpr(
+                expr, FoldForCaching(GetFoldingContext(), std::move(*result)));
             return expr.typedExpr->v;
           } else {
-            SetExpr(*var, Fold(std::move(*result)));
+            SetExpr(
+                *var, FoldForCaching(GetFoldingContext(), std::move(*result)));
             return var->typedExpr->v;
           }
         } else {

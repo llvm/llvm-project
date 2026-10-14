@@ -347,6 +347,14 @@ void CheckHelper::Check(const Symbol &symbol) {
           "A PROTECTED entity may not be in a common block"_err_en_US);
     }
   }
+  // J3/26-007r1 C781 and C8109 require POINTER for data components and
+  // statement variables. Apply the same rule to type-declaration attr-specs.
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET) &&
+      !IsObjectPointer(&symbol)) {
+    messages_.Say(
+        "PROTECTED_TARGET entity '%s' must be a data pointer"_err_en_US,
+        symbol.name());
+  }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
   }
@@ -562,6 +570,13 @@ void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
       evaluate::AttachDeclaration(
           messages_.Say(
               "ALLOCATABLE object '%s' may not appear in COMMON block /%s/"_err_en_US,
+              ref->name(), symbol.name()),
+          *ref);
+    }
+    if (ref->attrs().test(Attr::PROTECTED_TARGET)) { // J3/26-007r1 C867
+      evaluate::AttachDeclaration(
+          messages_.Say(
+              "PROTECTED_TARGET pointer '%s' may not appear in COMMON block /%s/"_err_en_US,
               ref->name(), symbol.name()),
           *ref);
     }
@@ -4177,7 +4192,9 @@ void SubprogramMatchHelper::CheckDummyDataObject(const Symbol &symbol1,
     const Symbol &symbol2, const DummyDataObject &obj1,
     const DummyDataObject &obj2) {
   if (!CheckSameIntent(symbol1, symbol2, obj1.intent, obj2.intent)) {
-  } else if (!CheckSameAttrs(symbol1, symbol2, obj1.attrs, obj2.attrs)) {
+  } else if (!CheckSameAttrs(symbol1, symbol2,
+                 obj1.attrs - DummyDataObject::Attr::ProtectedTarget,
+                 obj2.attrs - DummyDataObject::Attr::ProtectedTarget)) {
   } else if (!obj1.type.type().IsEquivalentTo(obj2.type.type())) {
     Say(symbol1, symbol2,
         "Dummy argument '%s' has type %s; the corresponding argument in the interface body has distinct type %s"_err_en_US,

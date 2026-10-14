@@ -68,6 +68,11 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
               } else if (!IsAllocatableOrObjectPointer(symbol)) { // C936
                 context_.Say(source,
                     "Name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
+              } else if (symbol->attrs().test(
+                             Attr::PROTECTED_TARGET)) { // J3/26-007r1 C868
+                context_.Say(source,
+                    "PROTECTED_TARGET pointer '%s' may not appear in DEALLOCATE"_err_en_US,
+                    symbol->name());
               } else if (auto whyNot{
                              WhyNotDefinable(source, context_.FindScope(source),
                                  {DefinabilityFlag::PointerDefinition,
@@ -108,6 +113,11 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                     !IsAllocatableOrObjectPointer(symbol)) { // F'2023 C936
                   context_.Say(source,
                       "Component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
+                } else if (symbol->attrs().test(
+                               Attr::PROTECTED_TARGET)) { // J3/26-007r1 C868
+                  context_.Say(source,
+                      "PROTECTED_TARGET pointer '%s' may not appear in DEALLOCATE"_err_en_US,
+                      symbol->name());
                 } else if (auto whyNot{WhyNotDefinable(source,
                                context_.FindScope(source),
                                {DefinabilityFlag::PointerDefinition,

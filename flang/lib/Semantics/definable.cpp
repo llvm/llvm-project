@@ -23,6 +23,13 @@ static parser::Message BlameSymbol(parser::CharBlock at,
   return message;
 }
 
+static parser::Message BlameProtectingPointer(
+    parser::CharBlock at, const Symbol &pointer) {
+  return BlameSymbol(at,
+      "Target of PROTECTED_TARGET pointer '%s' is not definable via that pointer"_en_US,
+      pointer);
+}
+
 static bool IsPointerDummyOfPureFunction(const Symbol &x) {
   return IsPointerDummy(x) && FindPureProcedureContaining(x.owner()) &&
       x.owner().symbol() && IsFunction(*x.owner().symbol());
@@ -253,6 +260,11 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
 static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::DataRef &dataRef) {
+  if (const Symbol *pointer{FindProtectingPointer(dataRef,
+          flags.test(DefinabilityFlag::PointerDefinition),
+          flags.test(DefinabilityFlag::AcceptAllocatable))}) {
+    return BlameProtectingPointer(at, *pointer);
+  }
   auto whyNotBase{
       WhyNotDefinableBase(at, scope, flags, dataRef.GetFirstSymbol(),
           evaluate::UnwrapWholeSymbolDataRef(dataRef) != nullptr,
@@ -270,6 +282,11 @@ static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
 
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
+  if (const Symbol *pointer{FindProtectingPointer(original,
+          flags.test(DefinabilityFlag::PointerDefinition),
+          flags.test(DefinabilityFlag::AcceptAllocatable))}) {
+    return BlameProtectingPointer(at, *pointer);
+  }
   auto whyNotBase{WhyNotDefinableBase(at, scope, flags, original,
       /*isWholeSymbol=*/true, /*isComponentPointerTarget=*/false)};
   if (!whyNotBase || !whyNotBase->IsFatal()) {
@@ -397,6 +414,10 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     if (auto whyNotDataRef{WhyNotDefinable(at, scope, flags, *dataRef)}) {
       return whyNotDataRef;
     }
+  } else if (const Symbol *pointer{FindProtectingPointer(expr,
+                 flags.test(DefinabilityFlag::PointerDefinition),
+                 flags.test(DefinabilityFlag::AcceptAllocatable))}) {
+    return BlameProtectingPointer(at, *pointer);
   } else if (evaluate::IsNullPointerOrAllocatable(&expr)) {
     return parser::Message{
         at, "'%s' is a null pointer"_err_en_US, expr.AsFortran()};
@@ -412,6 +433,9 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
         }
         if (const auto *component{procDesignator->GetComponent()}) {
           flags.reset(DefinabilityFlag::PointerDefinition);
+          if (const Symbol *pointer{FindProtectingPointer(component->base())}) {
+            return BlameProtectingPointer(at, *pointer);
+          }
           return WhyNotDefinableBase(at, scope, flags,
               component->base().GetFirstSymbol(), false,
               DefinesComponentPointerTarget(component->base(), flags));

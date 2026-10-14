@@ -327,6 +327,54 @@ bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
 }
 
+const Symbol *FindProtectingPointer(const evaluate::DataRef &dataRef,
+    bool pointerDefinition, bool acceptAllocatable) {
+  auto symbols{evaluate::GetSymbolVector(dataRef)};
+  if (pointerDefinition && !symbols.empty() &&
+      (IsPointer(symbols.back()) ||
+          (acceptAllocatable && IsAllocatable(symbols.back())))) {
+    symbols.pop_back();
+    pointerDefinition = false;
+  }
+  for (auto iter{symbols.rbegin()}; iter != symbols.rend(); ++iter) {
+    const Symbol &symbol{iter->get().GetUltimate()};
+    if (IsPointer(symbol)) {
+      return symbol.attrs().test(Attr::PROTECTED_TARGET) ? &symbol : nullptr;
+    }
+    if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()};
+        assoc && assoc->expr()) {
+      return FindProtectingPointer(
+          *assoc->expr(), pointerDefinition, acceptAllocatable);
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectingPointer(
+    const SomeExpr &expr, bool pointerDefinition, bool acceptAllocatable) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectingPointer(
+        *dataRef, pointerDefinition, acceptAllocatable);
+  }
+  if (!pointerDefinition && evaluate::IsVariable(expr)) {
+    if (const auto *call{evaluate::UnwrapProcedureRef(expr)}) {
+      if (const Symbol *interface{call->proc().GetInterfaceSymbol()}) {
+        if (const Symbol *result{FindFunctionResult(*interface)}) {
+          return result->attrs().test(Attr::PROTECTED_TARGET) ? result
+                                                              : nullptr;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectingPointer(
+    const Symbol &symbol, bool pointerDefinition, bool acceptAllocatable) {
+  return FindProtectingPointer(evaluate::DataRef{SymbolRef{symbol}},
+      pointerDefinition, acceptAllocatable);
+}
+
 bool IsBindCProcedure(const Symbol &original) {
   const Symbol &symbol{original.GetUltimate()};
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
