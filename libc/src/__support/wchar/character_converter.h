@@ -229,10 +229,8 @@ LIBC_INLINE int CharacterConverter::push(char16_t utf16) {
       state->partial = static_cast<char32_t>(utf16);
       // determine number of utf-8 bytes needed to represent this utf16 value
       uint8_t i;
-      for (i = 0; i < 2; i++) {
-        if (state->partial <= MAX_VALUE_PER_UTF8_LEN[i])
-          break;
-      }
+      for (i = 0; i < 2 && MAX_VALUE_PER_UTF8_LEN[i] < state->partial; i++)
+        ;
       state->total_bytes = i + 1;
       state->bytes_stored = i + 1;
     }
