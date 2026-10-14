@@ -882,6 +882,13 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     if (!isForwardableRegClassCopy(*Copy, MI, OpIdx))
       continue;
 
+    // Sharing a register class does not guarantee that this physical copy can
+    // be expanded without an intermediate register.
+    if (auto UseCopy = isCopyInstr(MI, *TII, UseCopyInstr);
+        UseCopy &&
+        !TII->isCopyPhysRegLegal(getDstMCReg(*UseCopy), ForwardedReg))
+      continue;
+
     if (hasImplicitOverlap(MI, MOUse))
       continue;
 

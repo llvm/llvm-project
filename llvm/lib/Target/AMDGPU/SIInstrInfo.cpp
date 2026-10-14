@@ -940,6 +940,23 @@ static void expandSGPRCopy(const SIInstrInfo &TII, MachineBasicBlock &MBB,
     LastMI->addRegisterKilled(SrcReg, &RI);
 }
 
+bool SIInstrInfo::isCopyPhysRegLegal(MCRegister DestReg,
+                                     MCRegister SrcReg) const {
+  if (!AMDGPU::APERTURE_ClassRegClass.contains(SrcReg) ||
+      !AMDGPU::VReg_64RegClass.contains(DestReg))
+    return true;
+
+  // Aperture registers have no independently readable high half. A copy to a
+  // VGPR pair must use a full-width move rather than two 32-bit moves.
+  auto CanCopyWith = [&](unsigned Opc, unsigned SrcOp) {
+    const MCInstrDesc &Desc = get(Opc);
+    return getRegClass(Desc, 0)->contains(DestReg) &&
+           getRegClass(Desc, SrcOp)->contains(SrcReg);
+  };
+  return (ST.hasVMovB64Inst() && CanCopyWith(AMDGPU::V_MOV_B64_e32, 1)) ||
+         (ST.hasPkMovB32() && CanCopyWith(AMDGPU::V_PK_MOV_B32, 2));
+}
+
 void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI,
                               const DebugLoc &DL, Register DestReg,
