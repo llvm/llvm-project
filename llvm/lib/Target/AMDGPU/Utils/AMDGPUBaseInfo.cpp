@@ -3339,8 +3339,16 @@ struct AlwaysUniform {
 };
 const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 
+struct ExponentOnlyScaleIntrinsic {
+  unsigned Intr;
+  uint8_t ScaleArg;
+};
+const ExponentOnlyScaleIntrinsic *
+lookupExponentOnlyScaleIntrinsic(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
+#define GET_ExponentOnlyScaleIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -3355,6 +3363,13 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
 
 bool isIntrinsicAlwaysUniform(unsigned IntrID) {
   return lookupAlwaysUniform(IntrID);
+}
+
+std::optional<unsigned> getExponentOnlyScaleArgIdx(unsigned IntrID) {
+  if (const ExponentOnlyScaleIntrinsic *Info =
+          lookupExponentOnlyScaleIntrinsic(IntrID))
+    return Info->ScaleArg;
+  return std::nullopt;
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

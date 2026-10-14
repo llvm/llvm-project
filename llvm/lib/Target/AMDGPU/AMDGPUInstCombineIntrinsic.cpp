@@ -613,6 +613,40 @@ bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
   return false;
 }
 
+static bool isExponentOnlyScaleUse(const Use &U) {
+  auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+  if (!II)
+    return false;
+  std::optional<unsigned> ScaleArgIdx =
+      AMDGPU::getExponentOnlyScaleArgIdx(II->getIntrinsicID());
+  return ScaleArgIdx && U.getOperandNo() == *ScaleArgIdx;
+}
+
+/// Simplify the f32 scale operand of a V_CVT_SCALEF32_* conversion, of which
+/// only the exponent field is read.
+static bool simplifyExponentOnlyScaleArg(InstCombiner &IC, IntrinsicInst &II,
+                                         unsigned ScaleArgIdx) {
+  Value *Scale = II.getArgOperand(ScaleArgIdx);
+  Value *Mag;
+  if (match(Scale, m_FNeg(m_Value(Mag))) ||
+      match(Scale, m_FAbs(m_Value(Mag))) ||
+      match(Scale, m_CopySign(m_Value(Mag), m_Value()))) {
+    IC.replaceOperand(II, ScaleArgIdx, Mag);
+    return true;
+  }
+
+  auto *BC = dyn_cast<BitCastInst>(Scale);
+  if (!BC || !BC->getSrcTy()->isIntegerTy(32))
+    return false;
+  // Simplifying the bitcast source changes it for every user of the bitcast.
+  if (!all_of(BC->uses(), isExponentOnlyScaleUse))
+    return false;
+
+  KnownBits Known(32);
+  return IC.SimplifyDemandedBits(
+      BC, 0, AMDGPU::getExponentOnlyScaleDemandedBits(), Known);
+}
+
 static CallInst *rewriteCall(IRBuilderBase &B, CallInst &Old,
                              Function &NewCallee, ArrayRef<Value *> Ops) {
   SmallVector<OperandBundleDef, 2> OpBundles;
@@ -2301,6 +2335,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(II.getIntrinsicID())) {
     return simplifyAMDGCNImageIntrinsic(ST, ImageDimIntr, II, IC);
+  }
+  if (std::optional<unsigned> ScaleArgIdx =
+          AMDGPU::getExponentOnlyScaleArgIdx(IID)) {
+    if (simplifyExponentOnlyScaleArg(IC, II, *ScaleArgIdx))
+      return &II;
   }
   return std::nullopt;
 }
