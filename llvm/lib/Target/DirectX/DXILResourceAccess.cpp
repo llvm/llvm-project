@@ -1145,11 +1145,11 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     if (TrueAccessIdx.hasGetPtrIdx() && FalseAccessIdx.hasGetPtrIdx())
       GetPtrSelect =
           Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.GetPtrIdx,
-                               FalseAccessIdx.GetPtrIdx);
+                               FalseAccessIdx.GetPtrIdx, "", Select);
 
     auto *HandleSelect =
         Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.HandleIdx,
-                             FalseAccessIdx.HandleIdx);
+                             FalseAccessIdx.HandleIdx, "", Select);
 
     if (TrueAccessIdx.hasOffsetIdx() || FalseAccessIdx.hasOffsetIdx()) {
       Value *Zero = ConstantInt::get(Builder.getInt32Ty(), 0);
@@ -1157,8 +1157,8 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
           TrueAccessIdx.hasOffsetIdx() ? TrueAccessIdx.OffsetIdx : Zero;
       Value *FalseOffset =
           FalseAccessIdx.hasOffsetIdx() ? FalseAccessIdx.OffsetIdx : Zero;
-      OffsetSelect =
-          Builder.CreateSelect(Select->getCondition(), TrueOffset, FalseOffset);
+      OffsetSelect = Builder.CreateSelect(Select->getCondition(), TrueOffset,
+                                          FalseOffset, "", Select);
     }
 
     DeadInsts.insert(Select);
