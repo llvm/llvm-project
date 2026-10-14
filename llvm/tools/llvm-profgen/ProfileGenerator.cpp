@@ -847,16 +847,15 @@ void ProfileGenerator::populateDataAccessSamples(
     if (Global.DeclLine == 0 && Global.Start != 0 && Global.Start != Address)
       Global = Binary->symbolizeData(Global.Start);
 
-    bool HasLocation =
-        !Global.DeclFile.empty() && Global.DeclFile != DILineInfo::BadString;
-    std::string SymName =
-        HasLocation
-            ? (sys::path::filename(Global.DeclFile) + ":" + Global.Name).str()
-            : Global.Name;
-
-    memprof::DataAccessProfRecord &Record = DataAccessRecords[SymName];
+    memprof::DataAccessProfRecord &Record = DataAccessRecords[Global.Name];
     Record.AccessCount += Count;
-    if (HasLocation && Record.Locations.empty())
+    if (Global.DeclFile.empty() || Global.DeclFile == DILineInfo::BadString)
+      continue;
+
+    auto IsSameLocation = [&](const memprof::SourceLocation &L) {
+      return L.FileName == Global.DeclFile && L.Line == Global.DeclLine;
+    };
+    if (!llvm::any_of(Record.Locations, IsSameLocation))
       Record.Locations.emplace_back(Global.DeclFile, Global.DeclLine);
   }
 
