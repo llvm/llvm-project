@@ -235,6 +235,17 @@ bool Sema::ValidateBoundsAttrTypeForTypePosition(
     return false;
   }
 
+  // A pointer takes only one bounds attribute. This sees one applied eagerly
+  // or late, since a late-parsed one is an incomplete CountAttributedType until
+  // its count is parsed. The -fbounds-safety attribute model checks conflicting
+  // attributes itself (see checkBoundsAttrTypeConflictsAndMisc).
+  if (!getLangOpts().hasBoundsSafetyAttributes())
+    if (const auto *CATy = Ty->getAs<CountAttributedType>()) {
+      Diag(AttrLoc, diag::err_counted_by_on_bounds_attributed_type)
+          << getBoundsAttrKind(Flags) << CATy->getKind() << AttrRange;
+      return false;
+    }
+
   return true;
 }
 

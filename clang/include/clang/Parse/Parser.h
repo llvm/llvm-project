@@ -247,6 +247,12 @@ struct LateParsedTypeAttribute : public LateParsedAttribute {
   /// attribute this is; Sema dispatches on the concrete kind when completing.
   BoundsAttributedType *TypeToComplete = nullptr;
 
+  /// Set by `Sema::ProcessLateParsedTypeAttr` once type construction has
+  /// rejected and diagnosed this attribute, so declarators sharing it (a
+  /// declaration-specifier attribute) skip it rather than diagnose it again.
+  /// The eager path does the same with `ParsedAttr::setInvalid`.
+  bool Invalid = false;
+
   /// The attribute kind, resolved when the GNU attribute was parsed.
   ParsedAttr::Kind AttrKind;
 
@@ -8188,7 +8194,7 @@ private:
   /// Implements Sema::GetLateParsedTypeAttrCB.
   static BoundsAttributedType **
   GetLateParsedTypeAttrCallback(LateParsedAttribute *LA, ParsedAttr::Kind &Kind,
-                                SourceLocation &Loc);
+                                SourceLocation &Loc, bool *&Invalid);
 
   /// The late-parsed type attributes of the record currently being parsed, so a
   /// nested anonymous record can hand its unresolved attributes to the

@@ -1386,11 +1386,11 @@ public:
 
   /// Callback into the parser for the fields of a late-parsed type attribute,
   /// which Sema cannot see. Returns the slot holding the type built for \p LA
-  /// and sets \p Kind and \p Loc, or returns null if \p LA is not a type
-  /// attribute.
+  /// and sets \p Kind, \p Loc and \p Invalid (the attribute's rejected flag),
+  /// or returns null if \p LA is not a type attribute.
   typedef BoundsAttributedType **
   GetLateParsedTypeAttrCB(LateParsedAttribute *LA, ParsedAttr::Kind &Kind,
-                          SourceLocation &Loc);
+                          SourceLocation &Loc, bool *&Invalid);
   GetLateParsedTypeAttrCB *GetLateParsedTypeAttrCallback = nullptr;
 
   /// Validate the late-parsed type attribute \p LA and wrap \p type in a

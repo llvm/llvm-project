@@ -409,7 +409,7 @@ processTypeAttrs(TypeProcessingState &state, QualType &type,
                  TypeAttrLocation TAL, const ParsedAttributesView &attrs,
                  CUDAFunctionTarget CFT = CUDAFunctionTarget::HostDevice);
 
-static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type,
+static void processLateTypeAttrs(TypeProcessingState &state, QualType &type,
                                  const LateParsedAttrList &LateAttrs);
 
 static void
@@ -9220,25 +9220,31 @@ bool Sema::ProcessLateParsedTypeAttr(LateParsedAttribute *LA, QualType &type) {
   assert(GetLateParsedTypeAttrCallback);
   ParsedAttr::Kind AttrKind;
   SourceLocation AttrNameLoc;
+  bool *Invalid = nullptr;
   BoundsAttributedType **TypeToComplete =
-      GetLateParsedTypeAttrCallback(LA, AttrKind, AttrNameLoc);
+      GetLateParsedTypeAttrCallback(LA, AttrKind, AttrNameLoc, Invalid);
   if (!TypeToComplete)
     return true;
 
   // A DeclSpec attribute runs this once per declarator, as in
   // `IP __counted_by(n) a, b;`. Reuse one node, as the eager path does, so no
-  // node is left without a count.
+  // node is left without a count. Likewise, an attribute already rejected for
+  // an earlier declarator was diagnosed then, so skip it silently.
   if (*TypeToComplete) {
     type = QualType(*TypeToComplete, 0);
     return true;
   }
+  if (*Invalid)
+    return false;
 
   // Nesting is checked once the enclosing declarator chunks wrap the node.
   BoundsAttrFlags Flags;
   if (!ValidateBoundsAttrTypeForTypePosition(type, AttrKind, AttrNameLoc,
                                              SourceRange(AttrNameLoc),
-                                             /*PointerNestLevel=*/0, Flags))
+                                             /*PointerNestLevel=*/0, Flags)) {
+    *Invalid = true;
     return false;
+  }
 
   // The argument isn't parsed yet, so build the type without a count.
   auto *CATy = getASTContext().getIncompleteCountAttributedType(
@@ -9248,19 +9254,14 @@ bool Sema::ProcessLateParsedTypeAttr(LateParsedAttribute *LA, QualType &type) {
   return true;
 }
 
-static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type,
+static void processLateTypeAttrs(TypeProcessingState &state, QualType &type,
                                  const LateParsedAttrList &LateAttrs) {
-
-  if (LateAttrs.empty())
-    return true;
-
   Sema &S = state.getSema();
 
+  // Process every attribute even if one is rejected, as processTypeAttrs does,
+  // so each one is diagnosed.
   for (auto *LA : LateAttrs)
-    if (!S.ProcessLateParsedTypeAttr(LA, type))
-      return false;
-
-  return true;
+    S.ProcessLateParsedTypeAttr(LA, type);
 }
 
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,

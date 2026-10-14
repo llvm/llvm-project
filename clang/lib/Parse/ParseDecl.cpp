@@ -5089,13 +5089,16 @@ void Parser::CompleteLateParsedTypeAttributes(
   LateTypeAttrs.clear();
 }
 
-BoundsAttributedType **Parser::GetLateParsedTypeAttrCallback(
-    LateParsedAttribute *LA, ParsedAttr::Kind &Kind, SourceLocation &Loc) {
+BoundsAttributedType **
+Parser::GetLateParsedTypeAttrCallback(LateParsedAttribute *LA,
+                                      ParsedAttr::Kind &Kind,
+                                      SourceLocation &Loc, bool *&Invalid) {
   auto *LTA = dyn_cast<LateParsedTypeAttribute>(LA);
   if (!LTA)
     return nullptr;
   Kind = LTA->AttrKind;
   Loc = LTA->AttrNameLoc;
+  Invalid = &LTA->Invalid;
   return &LTA->TypeToComplete;
 }
 

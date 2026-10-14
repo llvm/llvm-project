@@ -7283,6 +7283,10 @@ def err_counted_by_on_nested_pointer : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute on nested pointer type is not allowed">;
 def err_counted_by_on_return_type : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute cannot be applied to a function return type">;
+def err_counted_by_on_bounds_attributed_type : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute "
+  "cannot be applied to a pointer that already has a "
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}1' attribute">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
