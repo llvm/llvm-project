@@ -7,7 +7,8 @@
 ; i.e. ~3.2e-7, so every guard's deopt exit is more likely than twice the latch
 ; exit.
 
-; The only competing exit is the deopt exit of the guard being predicated.
+; The only competing exit is the deopt exit of the guard being predicated, so
+; the guard is predicated.
 define i32 @single_guard(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: define i32 @single_guard(
 ; CHECK-SAME: ptr [[ARRAY:%.*]], i32 [[LENGTH:%.*]], i32 [[N:%.*]]) {
@@ -15,18 +16,23 @@ define i32 @single_guard(ptr %array, i32 %length, i32 %n) {
 ; CHECK-NEXT:    [[ZERO_TRIP:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_TRIP]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[N]], [[LENGTH]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[LENGTH]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[TMP2]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], %[[GUARDED:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[GUARDED]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[GUARD_COND:%.*]] = and i1 [[WITHIN_BOUNDS]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[GUARD_COND]], label %[[GUARDED]], label %[[DEOPT:.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = and i1 [[TMP3]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[GUARDED]], label %[[DEOPT:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       [[DEOPT]]:
 ; CHECK-NEXT:    [[DEOPTCALL:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[DEOPTCALL]]
 ; CHECK:       [[GUARDED]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
@@ -74,7 +80,8 @@ exit:
   ret i32 %result
 }
 
-; Each guard competes with the deopt exit of the other one.
+; Each guard competes with the deopt exit of the other one, so neither guard is
+; predicated.
 define i32 @two_guards(ptr %array.a, i32 %length.a, ptr %array.b, i32 %length.b, i32 %n) {
 ; CHECK-LABEL: define i32 @two_guards(
 ; CHECK-SAME: ptr [[ARRAY_A:%.*]], i32 [[LENGTH_A:%.*]], ptr [[ARRAY_B:%.*]], i32 [[LENGTH_B:%.*]], i32 [[N:%.*]]) {
@@ -166,7 +173,7 @@ exit:
 }
 
 ; The early exit has weights {1, 10}, i.e. it is taken with probability ~9.1%,
-; more than twice the latch exit.
+; more than twice the latch exit, so the guard is not predicated.
 define i32 @frequent_early_exit(ptr %array, i32 %length, i32 %n, i32 %key) {
 ; CHECK-LABEL: define i32 @frequent_early_exit(
 ; CHECK-SAME: ptr [[ARRAY:%.*]], i32 [[LENGTH:%.*]], i32 [[N:%.*]], i32 [[KEY:%.*]]) {

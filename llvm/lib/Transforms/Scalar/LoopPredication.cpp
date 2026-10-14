@@ -285,7 +285,8 @@ class LoopPredication {
   // predicate based on the latch check. For example, the latch check can be a
   // very coarse grained check and there can be more fine grained exit checks
   // within the loop.
-  bool isLoopProfitableToPredicate();
+  // If Guard is given, its deopt exit does not compete with the latch exit.
+  bool isLoopProfitableToPredicate(const CondBrInst *Guard = nullptr);
 
   bool predicateLoopExits(Loop *L, SCEVExpander &Rewriter);
 
@@ -845,7 +846,7 @@ std::optional<LoopICmp> LoopPredication::parseLoopLatchICmp() {
   return Result;
 }
 
-bool LoopPredication::isLoopProfitableToPredicate() {
+bool LoopPredication::isLoopProfitableToPredicate(const CondBrInst *Guard) {
   if (Opts.loop_predication_skip_profitability_checks)
     return true;
 
@@ -928,6 +929,11 @@ bool LoopPredication::isLoopProfitableToPredicate() {
   const auto LatchProbabilityThreshold = LatchExitProbability * ScaleFactor;
 
   for (const auto &ExitEdge : ExitEdges) {
+    // Predicating a guard cannot make its own deopt exit taken spuriously; it
+    // can only move an actual failure to the loop entry.
+    if (Guard && ExitEdge.first == Guard->getParent() &&
+        ExitEdge.second == Guard->getSuccessor(1))
+      continue;
     BranchProbability ExitingBlockProbability =
         ComputeBranchProbability(ExitEdge.first, ExitEdge.second);
     // Some exiting edge has higher probability than the latch exiting edge.
@@ -1190,10 +1196,10 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
   LLVM_DEBUG(dbgs() << "Latch check:\n");
   LLVM_DEBUG(LatchCheck.dump());
 
-  if (!isLoopProfitableToPredicate()) {
+  // Guards expressed as widenable branches are checked one by one below.
+  bool IsLoopProfitable = isLoopProfitableToPredicate();
+  if (!IsLoopProfitable)
     LLVM_DEBUG(dbgs() << "Loop not profitable to predicate!\n");
-    return false;
-  }
   // Collect all the guards into a vector and process later, so as not
   // to invalidate the instruction iterator.
   SmallVector<IntrinsicInst *, 4> Guards;
@@ -1210,11 +1216,21 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
 
   SCEVExpander Expander(*SE, "loop-predication");
   bool Changed = false;
-  for (auto *Guard : Guards)
-    Changed |= widenGuardConditions(Guard, Expander);
-  for (auto *Guard : GuardsAsWidenableBranches)
+  if (IsLoopProfitable)
+    for (auto *Guard : Guards)
+      Changed |= widenGuardConditions(Guard, Expander);
+  for (auto *Guard : GuardsAsWidenableBranches) {
+    // Widening does not change the exits or their weights, so the checks for
+    // the remaining guards are not affected.
+    if (!isLoopProfitableToPredicate(Guard)) {
+      LLVM_DEBUG(dbgs() << "Guard not profitable to predicate:\n");
+      LLVM_DEBUG(Guard->dump());
+      continue;
+    }
     Changed |= widenWidenableBranchGuardConditions(Guard, Expander);
-  Changed |= predicateLoopExits(L, Expander);
+  }
+  if (IsLoopProfitable)
+    Changed |= predicateLoopExits(L, Expander);
 
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
