@@ -6868,11 +6868,14 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                     std::move(DS.getAttributes()), SourceLocation(),
                     std::move(DS.getLateAttributes()));
     } else {
-      assert(DS.getLateAttributes().empty());
       // Remember that we parsed a Block type, and remember the type-quals.
+      // Hand over late-parsed type attributes too, as for a pointer: Sema
+      // rejects a counted_by-family attribute on a block pointer when it builds
+      // the chunk, just as it does when the attribute is parsed eagerly.
       D.AddTypeInfo(
           DeclaratorChunk::getBlockPointer(DS.getTypeQualifiers(), Loc),
-          std::move(DS.getAttributes()), SourceLocation());
+          std::move(DS.getAttributes()), SourceLocation(),
+          std::move(DS.getLateAttributes()));
     }
   } else {
     // Is a reference
