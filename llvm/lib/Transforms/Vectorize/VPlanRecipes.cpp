@@ -3109,8 +3109,8 @@ void VPWidenIntOrFpInductionRecipe::printRecipe(
   printFlags(O);
   printOperands(O, SlotTracker);
 
-  if (auto *TI = getTruncInst())
-    O << " (truncated to " << *TI->getType() << ")";
+  if (isTruncated())
+    O << " (truncated to " << *getScalarType() << ")";
 }
 #endif
 
