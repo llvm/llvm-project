@@ -789,6 +789,25 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "PluginFortranLanguage",
+    srcs = glob(["Language/Fortran/*.cpp"]),
+    hdrs = glob(["Language/Fortran/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:DataFormatters",
+        "//lldb:Expression",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "LanguageCPlusPlusProperties",
     strip_include_prefix = "Language/CPlusPlus",

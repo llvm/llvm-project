@@ -36,6 +36,7 @@ DEFAULT_PLUGINS = [
     "DynamicLoaderStatic",
     "DynamicLoaderWasmDYLD",
     "DynamicLoaderWindowsDYLD",
+    "FortranLanguage",
     "GNUstepObjCRuntime",
     "InstructionARM",
     "InstructionARM64",
