@@ -38,6 +38,29 @@ add_integration_test(
     libc.include.sys_syscall
 )
 
+add_integration_test(
+  lockf_test
+  SUITE
+    unistd-integration-tests
+  SRCS
+    lockf_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.sys_wait_macros
+    libc.hdr.unistd_macros
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.stdlib.exit
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.close
+    libc.src.unistd.fork
+    libc.src.unistd.lockf
+    libc.src.unistd.unlink
+)
+
 if((${LIBC_TARGET_OS} STREQUAL "linux") AND (${LIBC_TARGET_ARCHITECTURE_IS_X86}))
   add_integration_test(
     stack_smashing_test
