@@ -1201,8 +1201,8 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
             SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
   } else if (IsSrcHost) {
-    DataSubmitFlagsTy SubmitFlags;
-    SubmitFlags.DirectWrite = Flags & OL_MEMCPY_FLAG_DIRECT_WRITE;
+    DataSubmitFlagsTy SubmitFlags{};
+    SubmitFlags.DirectWrite = (Flags & OL_MEMCPY_FLAG_DIRECT_WRITE) != 0;
     if (auto Res = DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size,
                                                  QueueImpl, SubmitFlags))
       return Res;
