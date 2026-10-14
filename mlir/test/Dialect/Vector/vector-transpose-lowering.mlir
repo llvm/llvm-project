@@ -365,3 +365,25 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// CHECK-LABEL: func.func @extract_transpose_0d
+// CHECK-SAME: (%[[ARG:.*]]: vector<f32>) -> f32
+func.func @extract_transpose_0d(%arg: vector<f32>) -> f32 {
+  %t = vector.transpose %arg, [] : vector<f32> to vector<f32>
+  %x = vector.extract %t[] : f32 from vector<f32>
+  // CHECK: %[[RES:.*]] = vector.extract %[[ARG]]
+  // CHECK: return %[[RES]] : f32
+  return %x : f32
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.lower_transpose lowering_strategy = "eltwise"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
+}
