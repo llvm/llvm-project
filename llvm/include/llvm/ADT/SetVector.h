@@ -183,22 +183,13 @@ public:
     insert(adl_begin(R), adl_end(R));
   }
 
-  /// Remove an item from the set vector.
-  bool remove(const value_type& X) {
-    if constexpr (canBeSmall())
-      if (isSmall()) {
-        typename vector_type::iterator I = find(vector_, X);
-        if (I != vector_.end()) {
-          vector_.erase(I);
-          return true;
-        }
-        return false;
-      }
-
-    if (set_.erase(X)) {
-      typename vector_type::iterator I = find(vector_, X);
-      assert(I != vector_.end() && "Corrupted SetVector instances!");
-      vector_.erase(I);
+  /// Erase an item from the set vector.
+  /// \returns true if element was erased.
+  /// TODO: Should rename to erase for consistency.
+  bool remove(const value_type &X) {
+    iterator I = find(vector_, X);
+    if (I != end()) {
+      erase(I);
       return true;
     }
     return false;
@@ -208,14 +199,13 @@ public:
   /// \returns an iterator pointing to the next element that followed the
   /// element erased. This is the end of the SetVector if the last element is
   /// erased.
-  iterator erase(const_iterator I) {
+  iterator erase(iterator I) {
     if constexpr (canBeSmall())
       if (isSmall())
         return vector_.erase(I);
 
-    const key_type &V = *I;
-    assert(set_.count(V) && "Corrupted SetVector instances!");
-    set_.erase(V);
+    assert(set_.count(*I) && "Corrupted SetVector instances!");
+    set_.erase(*I);
     return vector_.erase(I);
   }
 
