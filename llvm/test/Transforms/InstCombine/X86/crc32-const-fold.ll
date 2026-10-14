@@ -185,8 +185,7 @@ define i64 @crc32_i64_5() {
 define i32 @test_same_arg_crc32(i32 %x) {
 ; CHECK-LABEL: define i32 @test_same_arg_crc32(
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = tail call noundef i32 @llvm.x86.sse42.crc32.32.32(i32 [[X]], i32 [[X]])
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 0
 ;
   %crc = tail call noundef i32 @llvm.x86.sse42.crc32.32.32(i32 %x, i32 %x)
   ret i32 %crc
