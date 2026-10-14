@@ -1,0 +1,88 @@
+# REQUIRES: ssaf-orchestrator-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+
+# The link unit's transformation report holds the findings of every
+# translation unit once, and its conflict report holds the conflicts found
+# while merging any of its parts.
+
+# RUN: cd %t
+# RUN: %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow,UnsafeBufferUsage \
+# RUN:     --analysis=UnsafeBufferReachableAnalysisResult \
+# RUN:     --transformation=cpp-bounded-buffers \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/out -- make \
+# RUN:   | FileCheck %s --check-prefix=STDOUT
+# STDOUT: source-edits: {{[^ ]*}}/out/ssaf-artifacts{{[^ ]*}}/build/prg.edits.yaml
+# STDOUT: transformation-report: {{[^ ]*}}/out/ssaf-artifacts{{[^ ]*}}/build/prg.report.sarif
+# STDOUT: conflict-report: {{[^ ]*}}/out/ssaf-artifacts{{[^ ]*}}/build/prg.conflict-report.sarif
+
+# Every translation unit reports the declaration group in the header; the
+# link unit's report has each of its two declarators once.
+# RUN: FileCheck %s --check-prefix=REPORT \
+# RUN:   --input-file=%t/out/ssaf-artifacts%t/build/prg.report.sarif
+# RUN: grep 'multi-declarator group' \
+# RUN:   %t/out/ssaf-artifacts%t/build/prg.report.sarif | count 4
+# REPORT:      "results": [
+# REPORT:        "uri": "file://{{.*}}/src/main.cpp"
+# REPORT:        "uri": "file://{{.*}}/src/main.cpp"
+# REPORT:        "uri": "file://{{.*}}/src/shared.h"
+# REPORT:        "text": "declarator of a multi-declarator group is not yet rewritten"
+# REPORT:        "uri": "file://{{.*}}/src/shared.h"
+# REPORT:        "text": "declarator of a multi-declarator group is not yet rewritten"
+# REPORT-NOT:    "uri":
+# REPORT:      "tool": {
+
+# The two halves of the archive disagree on the header, so the archive's
+# merge drops both edits. The link's own merge finds no conflict, yet the
+# link unit's conflict report has the archive's.
+# RUN: grep clang-reforge-replacement-conflict \
+# RUN:   %t/out/ssaf-artifacts%t/build/libparts.a.conflicts.sarif | count 1
+# RUN: not grep clang-reforge-replacement-conflict \
+# RUN:   %t/out/ssaf-artifacts%t/build/prg.conflicts.sarif
+# RUN: FileCheck %s --check-prefix=CONFLICTS \
+# RUN:   --input-file=%t/out/ssaf-artifacts%t/build/prg.conflict-report.sarif
+# CONFLICTS:      "results": [
+# CONFLICTS:        "uri": "file://{{.*}}/src/shared.h"
+# CONFLICTS:        "byteOffset": 39
+# CONFLICTS:        "ruleId": "clang-reforge-replacement-conflict"
+# CONFLICTS-NOT:    "ruleId":
+# CONFLICTS:        "name": "clang-ssaf-src-edit-merge",
+
+#--- Makefile
+CXX = clang++
+all: build/prg
+build/%.o: src/%.cpp src/shared.h
+	$(CXX) -c -o $@ $<
+build/libparts.a: build/a.o build/b.o
+	ar rcs $@ build/a.o build/b.o
+build/prg: build/main.o build/libparts.a
+	$(CXX) -o $@ build/main.o build/libparts.a
+
+#--- src/shared.h
+extern int *p, *q;
+extern
+#if USE_LONG
+long
+#else
+int
+#endif
+*g;
+
+#--- src/a.cpp
+#include "shared.h"
+int *g;
+int a() { return p[1] + q[1] + g[5]; }
+
+#--- src/b.cpp
+#define USE_LONG 1
+#include "shared.h"
+long b() { return p[2] + g[7]; }
+
+#--- src/main.cpp
+#include "shared.h"
+int *p, *q;
+int a();
+long b();
+int main() { return a() + (int)b(); }
