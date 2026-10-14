@@ -11,22 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mips.h"
+#include "MipsSubtarget.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "mips-os16"
-
-static cl::opt<std::string> Mips32FunctionMask(
-  "mips32-function-mask",
-  cl::init(""),
-  cl::desc("Force function to be mips32"),
-  cl::Hidden);
 
 namespace {
   class MipsOs16 : public ModulePass {
@@ -108,7 +102,8 @@ static bool needsFP(Function &F) {
 
 
 bool MipsOs16::runOnModule(Module &M) {
-  bool usingMask = Mips32FunctionMask.length() > 0;
+  StringRef Mips32FunctionMask = MipsOptions::Global.mips32_function_mask;
+  bool usingMask = !Mips32FunctionMask.empty();
   bool doneUsingMask = false; // this will make it stop repeating
 
   LLVM_DEBUG(dbgs() << "Run on Module MipsOs16 \n"
@@ -126,7 +121,7 @@ bool MipsOs16::runOnModule(Module &M) {
     LLVM_DEBUG(dbgs() << "Working on " << F.getName() << "\n");
     if (usingMask) {
       if (!doneUsingMask) {
-        if (functionIndex == Mips32FunctionMask.length())
+        if (functionIndex == Mips32FunctionMask.size())
           functionIndex = 0;
         switch (Mips32FunctionMask[functionIndex]) {
         case '1':

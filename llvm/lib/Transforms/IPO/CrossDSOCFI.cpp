@@ -23,6 +23,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/IPO/LowerTypeTests.h"
 
 using namespace llvm;
 
@@ -35,51 +36,17 @@ namespace {
 struct CrossDSOCFI {
   MDNode *VeryLikelyWeights;
 
-  ConstantInt *extractNumericTypeId(MDNode *MD);
   void buildCFICheck(Module &M);
   bool runOnModule(Module &M);
 };
 
 } // anonymous namespace
 
-/// Extracts a numeric type identifier from an MDNode containing type metadata.
-ConstantInt *CrossDSOCFI::extractNumericTypeId(MDNode *MD) {
-  // This check excludes vtables for classes inside anonymous namespaces.
-  auto TM = dyn_cast<ValueAsMetadata>(MD->getOperand(1));
-  if (!TM)
-    return nullptr;
-  auto C = dyn_cast_or_null<ConstantInt>(TM->getValue());
-  if (!C) return nullptr;
-  // We are looking for i64 constants.
-  if (C->getBitWidth() != 64) return nullptr;
-
-  return C;
-}
-
 /// buildCFICheck - emits __cfi_check for the current module.
 void CrossDSOCFI::buildCFICheck(Module &M) {
   // FIXME: verify that __cfi_check ends up near the end of the code section,
   // but before the jump slots created in LowerTypeTests.
-  SetVector<uint64_t> TypeIds;
-  SmallVector<MDNode *, 2> Types;
-  for (GlobalObject &GO : M.global_objects()) {
-    Types.clear();
-    GO.getMetadata(LLVMContext::MD_type, Types);
-    for (MDNode *Type : Types)
-      if (ConstantInt *TypeId = extractNumericTypeId(Type))
-        TypeIds.insert(TypeId->getZExtValue());
-  }
-
-  NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
-  if (CfiFunctionsMD) {
-    for (auto *Func : CfiFunctionsMD->operands()) {
-      assert(Func->getNumOperands() >= 2);
-      for (unsigned I = 2; I < Func->getNumOperands(); ++I)
-        if (ConstantInt *TypeId =
-                extractNumericTypeId(cast<MDNode>(Func->getOperand(I).get())))
-          TypeIds.insert(TypeId->getZExtValue());
-    }
-  }
+  SetVector<uint64_t> TypeIds = lowertypetests::findCfiTypeIds(M);
 
   LLVMContext &Ctx = M.getContext();
   FunctionCallee C = M.getOrInsertFunction(

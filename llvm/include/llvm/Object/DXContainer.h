@@ -210,7 +210,8 @@ struct DescriptorTableView : RootParameterView {
     Current += sizeof(uint32_t);
 
     Table.Ranges.Data = ParamData.substr(2 * sizeof(uint32_t),
-                                         Table.NumRanges * Table.Ranges.Stride);
+                                         static_cast<size_t>(Table.NumRanges) *
+                                             Table.Ranges.Stride);
     return Table;
   }
 };
@@ -479,6 +480,8 @@ private:
   DirectX::Signature PatchConstantSignature;
   std::optional<mcdxbc::DebugName> DebugName;
   std::optional<mcdxbc::CompilerVersion> VersionInfo;
+  std::optional<mcdxbc::SourceInfo> SourceInfo;
+  std::optional<StringRef> PrivateData;
 
   Error parseHeader();
   Error parsePartOffsets();
@@ -488,8 +491,9 @@ private:
   Error parseHash(StringRef Part);
   Error parseRootSignature(StringRef Part);
   Error parsePSVInfo(StringRef Part);
-  Error parseSignature(StringRef Part, DirectX::Signature &Array);
   Error parseCompilerVersionInfo(StringRef Part);
+  Error parseSourceInfo(StringRef Part);
+  Error parsePrivateData(StringRef Part);
   friend class PartIterator;
 
 public:
@@ -607,6 +611,12 @@ public:
   const std::optional<mcdxbc::CompilerVersion> &getCompilerVersionInfo() const {
     return VersionInfo;
   }
+
+  const std::optional<mcdxbc::SourceInfo> &getSourceInfo() const {
+    return SourceInfo;
+  }
+
+  const std::optional<StringRef> &getPrivateData() const { return PrivateData; }
 };
 
 class LLVM_ABI DXContainerObjectFile : public ObjectFile {

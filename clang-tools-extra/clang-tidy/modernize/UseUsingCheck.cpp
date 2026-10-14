@@ -235,7 +235,7 @@ static constexpr StringRef DeclStmtName = "decl-stmt";
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreMacros(Options.get("IgnoreMacros", true)),
-      IgnoreExternC(Options.get("IgnoreExternC", false)) {}
+      IgnoreExternC(Options.get("IgnoreExternC", true)) {}
 
 void UseUsingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
@@ -456,10 +456,10 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     LastReplacementEnd = ReplaceRange.getEnd().getLocWithOffset(Offset);
   }
 
-  auto Diag = diag(ReplaceRange.getBegin(), UseUsingWarning);
+  const auto Diag = diag(ReplaceRange.getBegin(), UseUsingWarning);
 
   // If typedef contains a full tag declaration, extract its full text.
-  auto LastTagDeclRange = LastTagDeclRanges.find(ParentDecl);
+  const auto LastTagDeclRange = LastTagDeclRanges.find(ParentDecl);
   if (LastTagDeclRange != LastTagDeclRanges.end() &&
       LastTagDeclRange->second.isValid() &&
       ReplaceRange.fullyContains(LastTagDeclRange->second)) {

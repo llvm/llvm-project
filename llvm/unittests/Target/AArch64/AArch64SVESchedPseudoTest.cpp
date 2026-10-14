@@ -87,6 +87,13 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
     int Latency = 0;
     int LatencyOrig = 0;
 
+    ASSERT_TRUE(SCDesc->isValid());
+    ASSERT_TRUE(SCDescOrig->isValid());
+    // We need to handle the variant if this becomes true
+    ASSERT_FALSE(SCDesc->isVariant());
+    ASSERT_FALSE(SCDescOrig->isVariant());
+    ASSERT_EQ(SCDesc->NumWriteLatencyEntries,
+              SCDescOrig->NumWriteLatencyEntries);
     for (unsigned DefIdx = 0, DefEnd = SCDesc->NumWriteLatencyEntries;
          DefIdx != DefEnd; ++DefIdx) {
       const MCWriteLatencyEntry *WLEntry =
@@ -94,49 +101,67 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
       const MCWriteLatencyEntry *WLEntryOrig =
           STI.getWriteLatencyEntry(SCDescOrig, DefIdx);
       Latency = std::max(Latency, static_cast<int>(WLEntry->Cycles));
-      LatencyOrig = std::max(Latency, static_cast<int>(WLEntryOrig->Cycles));
+      LatencyOrig =
+          std::max(LatencyOrig, static_cast<int>(WLEntryOrig->Cycles));
     }
 
     ASSERT_EQ(Latency, LatencyOrig);
-    ASSERT_TRUE(SCDesc->isValid());
   }
 }
 
 // TODO : Add more CPUs that support SVE/SVE2
-TEST(AArch64SVESchedPseudoTesta320, IsCorrect) {
+TEST(AArch64SVEPseudoTest, SchedCortexA320) {
   runSVEPseudoTestForCPU("cortex-a320");
 }
 
-TEST(AArch64SVESchedPseudoTesta510, IsCorrect) {
+TEST(AArch64SVEPseudoTest, SchedCortexA510) {
   runSVEPseudoTestForCPU("cortex-a510");
 }
 
-TEST(AArch64SVESchedPseudoTestn2, IsCorrect) {
+TEST(AArch64SVEPseudoTest, SchedNeoverseN2) {
   runSVEPseudoTestForCPU("neoverse-n2");
 }
 
-TEST(AArch64SVESchedPseudoTestn3, IsCorrect) {
+TEST(AArch64SVEPseudoTest, SchedNeoverseN3) {
   runSVEPseudoTestForCPU("neoverse-n3");
 }
 
-TEST(AArch64SVESchedPseudoTestv1, IsCorrect) {
+TEST(AArch64SVEPseudoTest, SchedNeoverseV1) {
   runSVEPseudoTestForCPU("neoverse-v1");
 }
 
-TEST(AArch64SVESchedPseudoTestv2, IsCorrect) {
+TEST(AArch64SVEPseudoTest, SchedNeoverseV2) {
   runSVEPseudoTestForCPU("neoverse-v2");
 }
 
-TEST(AArch64SVESchedPseudoTestv3, IsCorrect) {
+TEST(AArch64SVEPseudoTest, SchedNeoverseV3) {
   runSVEPseudoTestForCPU("neoverse-v3");
 }
 
-TEST(AArch64SVESchedPseudoTestv3ae, IsCorrect) {
+TEST(AArch64SVEPseudoTest, SchedNeoverseV3AE) {
   runSVEPseudoTestForCPU("neoverse-v3ae");
 }
 
-TEST(AArch64SVESchedPseudoTestOlympus, IsCorrect) {
-  runSVEPseudoTestForCPU("olympus");
+TEST(AArch64SVEPseudoTest, SchedOlympus) { runSVEPseudoTestForCPU("olympus"); }
+
+TEST(AArch64SVEPseudoTest, ElementSize) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine("generic");
+  ASSERT_TRUE(TM);
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  ASSERT_TRUE(II);
+
+  for (unsigned Opc = 0; Opc < AArch64::INSTRUCTION_LIST_END; ++Opc) {
+    // If Opc is a pseudo, return its equivalent real instruction opcode.
+    int RealOpc = AArch64::getSVEPseudoMap(Opc);
+    if (RealOpc == -1)
+      continue;
+
+    unsigned OpcElementSize = II->getElementSizeForOpcode(Opc);
+    unsigned RealOpcElementSize = II->getElementSizeForOpcode(RealOpc);
+    EXPECT_EQ(OpcElementSize, RealOpcElementSize)
+        << "PseudoOpcode: " << II->getName(Opc)
+        << " Opcode: " << II->getName(RealOpc);
+  }
 }
 
 } // namespace

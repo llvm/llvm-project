@@ -84,15 +84,15 @@ llvm.func @truncf_bf16_to_hf8(%src: vector<16xbf16>) -> vector<16xi8> {
 // CHECK-LABEL: llvm.func @truncf_f16_to_e2m1
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xf16>
 llvm.func @truncf_f16_to_e2m1(%src: vector<16xf16>) -> vector<8xi8> {
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : vector<2xi32>
-  // CHECK: %[[C7:.*]] = llvm.mlir.constant(7 : i32) : i32
-  // CHECK: %[[C6:.*]] = llvm.mlir.constant(6 : i32) : i32
-  // CHECK: %[[C5:.*]] = llvm.mlir.constant(5 : i32) : i32
-  // CHECK: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: %[[C3:.*]] = llvm.mlir.constant(3 : i32) : i32
-  // CHECK: %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
-  // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[UNDEF:.*]] = llvm.mlir.undef : vector<2xi32>
+  // CHECK-DAG: %[[C7:.*]] = llvm.mlir.constant(7 : i32) : i32
+  // CHECK-DAG: %[[C6:.*]] = llvm.mlir.constant(6 : i32) : i32
+  // CHECK-DAG: %[[C5:.*]] = llvm.mlir.constant(5 : i32) : i32
+  // CHECK-DAG: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
+  // CHECK-DAG: %[[C3:.*]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK-DAG: %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK-DAG: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[BC:.*]] = llvm.bitcast %[[ARG0]] : vector<16xf16> to vector<8xi32>
   // CHECK: %[[E0:.*]] = llvm.extractelement %[[BC]][%[[C0]] : i32] : vector<8xi32>
   // CHECK: %[[E2:.*]] = llvm.extractelement %[[BC]][%[[C2]] : i32] : vector<8xi32>
@@ -125,15 +125,15 @@ llvm.func @truncf_f16_to_e2m1(%src: vector<16xf16>) -> vector<8xi8> {
 // CHECK-LABEL: llvm.func @truncf_bf16_to_e2m1
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xbf16>
 llvm.func @truncf_bf16_to_e2m1(%src: vector<16xbf16>) -> vector<8xi8> {
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : vector<2xi32>
-  // CHECK: %[[C7:.*]] = llvm.mlir.constant(7 : i32) : i32
-  // CHECK: %[[C6:.*]] = llvm.mlir.constant(6 : i32) : i32
-  // CHECK: %[[C5:.*]] = llvm.mlir.constant(5 : i32) : i32
-  // CHECK: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: %[[C3:.*]] = llvm.mlir.constant(3 : i32) : i32
-  // CHECK: %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
-  // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[UNDEF:.*]] = llvm.mlir.undef : vector<2xi32>
+  // CHECK-DAG: %[[C7:.*]] = llvm.mlir.constant(7 : i32) : i32
+  // CHECK-DAG: %[[C6:.*]] = llvm.mlir.constant(6 : i32) : i32
+  // CHECK-DAG: %[[C5:.*]] = llvm.mlir.constant(5 : i32) : i32
+  // CHECK-DAG: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
+  // CHECK-DAG: %[[C3:.*]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK-DAG: %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK-DAG: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[BC:.*]] = llvm.bitcast %[[ARG0]] : vector<16xbf16> to vector<8xi32>
   // CHECK: %[[E0:.*]] = llvm.extractelement %[[BC]][%[[C0]] : i32] : vector<8xi32>
   // CHECK: %[[E2:.*]] = llvm.extractelement %[[BC]][%[[C2]] : i32] : vector<8xi32>
@@ -158,6 +158,120 @@ llvm.func @truncf_bf16_to_e2m1(%src: vector<16xbf16>) -> vector<8xi8> {
   // CHECK: %[[RES:.*]] = llvm.bitcast %[[INS1]] : vector<2xi32> to vector<8xi8>
   %dst = xevm.truncf %src { src_etype = bf16, dst_etype = e2m1 } : (vector<16xbf16>) -> vector<8xi8>
   llvm.return %dst : vector<8xi8>
+}
+
+// -----
+
+// CHECK: llvm.func spir_funccc @__builtin_IB_bf8tohf_16(vector<16xi8>) -> vector<16xf16>
+// CHECK-SAME: attributes {convergent, memory_effects = #llvm.memory_effects<other = none,
+// CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
+// CHECK-SAME:   targetMem0 = none, targetMem1 = none>, no_unwind, will_return}
+// CHECK-LABEL: llvm.func @extf_bf8_to_f16
+// CHECK-SAME: %[[ARG0:.*]]: vector<16xi8>
+llvm.func @extf_bf8_to_f16(%src: vector<16xi8>) -> vector<16xf16> {
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @__builtin_IB_bf8tohf_16(%[[ARG0]])
+  // CHECK-SAME: {convergent, function_type = !llvm.func<vector<16xf16> (vector<16xi8>)>,
+  // CHECK-SAME: linkage = #llvm.linkage<external>, memory_effects = #llvm.memory_effects<other = none,
+  // CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
+  // CHECK-SAME:   targetMem0 = none, targetMem1 = none>,
+  // CHECK-SAME: no_unwind, sym_name = "__builtin_IB_bf8tohf_16",
+  // CHECK-SAME: visibility_ = 0 : i64, will_return} :
+  // CHECK-SAME: (vector<16xi8>) -> vector<16xf16>
+  %dst = xevm.extf %src { src_etype = bf8, dst_etype = f16 } : (vector<16xi8>) -> vector<16xf16>
+  llvm.return %dst : vector<16xf16>
+}
+
+// -----
+
+// CHECK: llvm.func spir_funccc @__builtin_IB_hf8tohf_16(vector<16xi8>) -> vector<16xf16>
+// CHECK-SAME: attributes {convergent, memory_effects = #llvm.memory_effects<other = none,
+// CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
+// CHECK-SAME:   targetMem0 = none, targetMem1 = none>, no_unwind, will_return}
+// CHECK-LABEL: llvm.func @extf_f8_to_f16
+// CHECK-SAME: %[[ARG0:.*]]: vector<16xi8>
+llvm.func @extf_f8_to_f16(%src: vector<16xi8>) -> vector<16xf16> {
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @__builtin_IB_hf8tohf_16(%[[ARG0]])
+  // CHECK-SAME: {convergent, function_type = !llvm.func<vector<16xf16> (vector<16xi8>)>,
+  // CHECK-SAME: linkage = #llvm.linkage<external>, memory_effects = #llvm.memory_effects<other = none,
+  // CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
+  // CHECK-SAME:   targetMem0 = none, targetMem1 = none>,
+  // CHECK-SAME: no_unwind, sym_name = "__builtin_IB_hf8tohf_16",
+  // CHECK-SAME: visibility_ = 0 : i64, will_return} :
+  // CHECK-SAME: (vector<16xi8>) -> vector<16xf16>
+  %dst = xevm.extf %src { src_etype = f8, dst_etype = f16 } : (vector<16xi8>) -> vector<16xf16>
+  llvm.return %dst : vector<16xf16>
+}
+
+// -----
+
+// CHECK: llvm.func spir_funccc @__builtin_IB_ftobf_16(vector<16xf32>) -> vector<16xi16>
+// CHECK: llvm.func spir_funccc @_Z15convert_float16Dv16_Dh(vector<16xf16>) -> vector<16xf32>
+// CHECK: llvm.func spir_funccc @__builtin_IB_bf8tohf_16(vector<16xi8>) -> vector<16xf16>
+// CHECK-LABEL: llvm.func @extf_bf8_to_bf16
+// CHECK-SAME: %[[ARG0:.*]]: vector<16xi8>
+llvm.func @extf_bf8_to_bf16(%src: vector<16xi8>) -> vector<16xbf16> {
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @__builtin_IB_bf8tohf_16(%[[ARG0]])
+  // CHECK-SAME: : (vector<16xi8>) -> vector<16xf16>
+  // CHECK: %[[VAR1:.*]] = llvm.call spir_funccc @_Z15convert_float16Dv16_Dh(%[[VAR0]])
+  // CHECK-SAME: : (vector<16xf16>) -> vector<16xf32>
+  // CHECK: %[[VAR2:.*]] = llvm.call spir_funccc @__builtin_IB_ftobf_16(%[[VAR1]])
+  // CHECK-SAME: : (vector<16xf32>) -> vector<16xi16>
+  // CHECK: %[[VAR3:.*]] = llvm.bitcast %[[VAR2]] : vector<16xi16> to vector<16xbf16>
+  %dst = xevm.extf %src { src_etype = bf8, dst_etype = bf16 } : (vector<16xi8>) -> vector<16xbf16>
+  llvm.return %dst : vector<16xbf16>
+}
+
+// -----
+
+// CHECK: llvm.func spir_funccc @__builtin_IB_ftobf_16(vector<16xf32>) -> vector<16xi16>
+// CHECK: llvm.func spir_funccc @_Z15convert_float16Dv16_Dh(vector<16xf16>) -> vector<16xf32>
+// CHECK: llvm.func spir_funccc @__builtin_IB_hf8tohf_16(vector<16xi8>) -> vector<16xf16>
+// CHECK-LABEL: llvm.func @extf_f8_to_bf16
+// CHECK-SAME: %[[ARG0:.*]]: vector<16xi8>
+llvm.func @extf_f8_to_bf16(%src: vector<16xi8>) -> vector<16xbf16> {
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @__builtin_IB_hf8tohf_16(%[[ARG0]])
+  // CHECK-SAME: : (vector<16xi8>) -> vector<16xf16>
+  // CHECK: %[[VAR1:.*]] = llvm.call spir_funccc @_Z15convert_float16Dv16_Dh(%[[VAR0]])
+  // CHECK-SAME: : (vector<16xf16>) -> vector<16xf32>
+  // CHECK: %[[VAR2:.*]] = llvm.call spir_funccc @__builtin_IB_ftobf_16(%[[VAR1]])
+  // CHECK-SAME: : (vector<16xf32>) -> vector<16xi16>
+  // CHECK: %[[VAR3:.*]] = llvm.bitcast %[[VAR2]] : vector<16xi16> to vector<16xbf16>
+  %dst = xevm.extf %src { src_etype = f8, dst_etype = bf16 } : (vector<16xi8>) -> vector<16xbf16>
+  llvm.return %dst : vector<16xbf16>
+}
+
+// -----
+
+// CHECK: llvm.func spir_funccc @__builtin_IB_shfl_idx4_to_fp16_8_packed(vector<16xi32>, vector<8xi8>) -> vector<8xi32>
+// CHECK: llvm.func spir_funccc @__builtin_IB_shfl_idx4_lut(i32) -> vector<16xi32>
+// CHECK-LABEL: llvm.func @extf_e2m1_to_f16
+// CHECK-SAME: %[[ARG0:.*]]: vector<8xi8>
+llvm.func @extf_e2m1_to_f16(%src: vector<8xi8>) -> vector<16xf16> {
+  // CHECK: %[[LUTIDX:.*]] = llvm.mlir.constant(7 : i32) : i32
+  // CHECK: %[[LUT:.*]] = llvm.call spir_funccc @__builtin_IB_shfl_idx4_lut(%[[LUTIDX]])
+  // CHECK-SAME: : (i32) -> vector<16xi32>
+  // CHECK: %[[CONV:.*]] = llvm.call spir_funccc @__builtin_IB_shfl_idx4_to_fp16_8_packed(%[[LUT]], %[[ARG0]])
+  // CHECK-SAME: : (vector<16xi32>, vector<8xi8>) -> vector<8xi32>
+  // CHECK: %[[RES:.*]] = llvm.bitcast %[[CONV]] : vector<8xi32> to vector<16xf16>
+  %dst = xevm.extf %src { src_etype = e2m1, dst_etype = f16 } : (vector<8xi8>) -> vector<16xf16>
+  llvm.return %dst : vector<16xf16>
+}
+
+// -----
+
+// CHECK: llvm.func spir_funccc @__builtin_IB_shfl_idx4_to_fp16_8_packed(vector<16xi32>, vector<8xi8>) -> vector<8xi32>
+// CHECK: llvm.func spir_funccc @__builtin_IB_shfl_idx4_lut(i32) -> vector<16xi32>
+// CHECK-LABEL: llvm.func @extf_e2m1_to_bf16
+// CHECK-SAME: %[[ARG0:.*]]: vector<8xi8>
+llvm.func @extf_e2m1_to_bf16(%src: vector<8xi8>) -> vector<16xbf16> {
+  // CHECK: %[[LUTIDX:.*]] = llvm.mlir.constant(5 : i32) : i32
+  // CHECK: %[[LUT:.*]] = llvm.call spir_funccc @__builtin_IB_shfl_idx4_lut(%[[LUTIDX]])
+  // CHECK-SAME: : (i32) -> vector<16xi32>
+  // CHECK: %[[CONV:.*]] = llvm.call spir_funccc @__builtin_IB_shfl_idx4_to_fp16_8_packed(%[[LUT]], %[[ARG0]])
+  // CHECK-SAME: : (vector<16xi32>, vector<8xi8>) -> vector<8xi32>
+  // CHECK: %[[RES:.*]] = llvm.bitcast %[[CONV]] : vector<8xi32> to vector<16xbf16>
+  %dst = xevm.extf %src { src_etype = e2m1, dst_etype = bf16 } : (vector<8xi8>) -> vector<16xbf16>
+  llvm.return %dst : vector<16xbf16>
 }
 
 // -----

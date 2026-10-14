@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=armv7-- -run-pass=prologepilog -run-pass=machine-outliner \
+# RUN: llc -mtriple=armv7-- -run-pass=prolog-epilog -run-pass=machine-outliner \
 # RUN: -verify-machineinstrs %s -o - | FileCheck %s
 
 --- |

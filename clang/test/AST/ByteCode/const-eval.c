@@ -185,3 +185,11 @@ union ToUnion_U { struct ToUnion_X x; double y; int z : 3; };
 _Static_assert(((union ToUnion_U)(struct ToUnion_X){67}).x.a == 67, "");
 _Static_assert(((union ToUnion_U)1.0).y == 1.0, "");
 _Static_assert(((union ToUnion_U)9).z == 1, "");
+
+struct S s; // both-error {{tentative definition has type 'struct S' that is never completed}} \
+            // both-note {{forward declaration of 'struct S'}}
+int foo[2 * ((long)&s + 42i) == 2]; // both-error {{variable length array declaration not allowed at file scope}}
+
+struct FD fd; // both-error {{tentative definition has type 'struct FD' that is never completed}} \
+              // both-note {{forward declaration of 'struct FD'}}
+EVAL_EXPR(55, &fd < (struct FD *)((int *)&fd + 42)) // both-error {{not an integer constant expression}}

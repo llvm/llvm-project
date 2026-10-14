@@ -215,9 +215,9 @@ PlatformAppleSimulator::DebugProcess(ProcessLaunchInfo &launch_info,
         // been used where the secondary side was given as the file to open for
         // stdin/out/err after we have already opened the primary so we can
         // read/write stdin/out/err.
-        int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
-        if (pty_fd != PseudoTerminal::invalid_fd) {
-          process_sp->SetSTDIOFileDescriptor(pty_fd);
+        if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
+            PseudoTerminal::invalid_fd) {
+          process_sp->SetSTDIOPseudoTerminal(launch_info.GetPTY());
         }
       }
     }
@@ -281,23 +281,21 @@ std::vector<ArchSpec> PlatformAppleSimulator::GetSupportedArchitectures(
   return result;
 }
 
-static llvm::StringRef GetXcodeSDKDir(std::string preferred,
-                                      std::string secondary) {
-  llvm::StringRef sdk;
-  auto get_sdk = [&](std::string sdk) -> llvm::StringRef {
+static std::string GetXcodeSDKDir(std::string preferred,
+                                  std::string secondary) {
+  auto get_sdk = [&](std::string sdk) -> std::string {
     auto sdk_path_or_err =
-        HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK(std::move(sdk))});
+        PlatformDarwin::ResolveXcodeSDK(XcodeSDK(std::move(sdk)));
     if (!sdk_path_or_err) {
-      Debugger::ReportError("Error while searching for Xcode SDK: " +
-                            toString(sdk_path_or_err.takeError()));
+      Debugger::ReportError(toString(sdk_path_or_err.takeError()));
       return {};
     }
-    return *sdk_path_or_err;
+    return sdk_path_or_err->GetPath();
   };
 
-  sdk = get_sdk(preferred);
+  std::string sdk = get_sdk(std::move(preferred));
   if (sdk.empty())
-    sdk = get_sdk(secondary);
+    sdk = get_sdk(std::move(secondary));
   return sdk;
 }
 
@@ -419,12 +417,12 @@ Status PlatformAppleSimulator::GetSymbolFile(const FileSpec &platform_file,
 }
 
 Status PlatformAppleSimulator::GetSharedModule(
-    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
+    const ModuleSpec &module_spec, Target &target, ModuleSP &module_sp,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
 
   Status error;
-  error = GetModuleFromSharedCaches(module_spec, process, module_sp,
-                                    old_modules, did_create_ptr);
+  error = GetModuleFromSharedCaches(module_spec, target, module_sp, old_modules,
+                                    did_create_ptr);
   if (module_sp)
     return error;
 

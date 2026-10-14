@@ -66,10 +66,10 @@ group("symlinks") {
 driver_executable("llvm-objcopy") {
   deps = [
     ":BitcodeStripOpts",
+    ":ExtractBundleEntryOpts",
     ":InstallNameToolOpts",
     ":ObjcopyOpts",
     ":StripOpts",
-    ":ExtractBundleEntryOpts",
     "//llvm/lib/MC",
     "//llvm/lib/ObjCopy",
     "//llvm/lib/Object",

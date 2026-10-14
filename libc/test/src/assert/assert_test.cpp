@@ -9,16 +9,15 @@
 #undef NDEBUG
 #include "hdr/signal_macros.h"
 #include "src/assert/assert.h"
+#include "src/unistd/close.h"
 #include "test/UnitTest/Test.h"
-
-extern "C" int close(int);
 
 TEST(LlvmLibcAssert, Enabled) {
   // Close standard error for the child process so we don't print the assertion
   // failure message.
   EXPECT_DEATH(
       [] {
-        close(2);
+        LIBC_NAMESPACE::close(2);
         assert(0);
       },
       WITH_SIGNAL(SIGABRT));

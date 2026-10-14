@@ -13,6 +13,7 @@
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Testing/Support/Error.h"
@@ -50,6 +51,12 @@ TEST(DXCFile, EmptyFile) {
       FailedWithMessage("Reading structure out of file bounds"));
 }
 
+TEST(DXCFile, NullBuffer) {
+  EXPECT_THAT_EXPECTED(
+      DXContainer::create(MemoryBufferRef(StringRef(), "")),
+      FailedWithMessage("Reading structure out of file bounds"));
+}
+
 TEST(DXCFile, ParseHeader) {
   uint8_t Buffer[] = {0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -62,6 +69,15 @@ TEST(DXCFile, ParseHeader) {
                      "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 16) == 0);
   EXPECT_EQ(C.getHeader().Version.Major, 1u);
   EXPECT_EQ(C.getHeader().Version.Minor, 0u);
+}
+
+TEST(DXCFile, MissingHeaderMagic) {
+  uint8_t Buffer[] = {0xFF, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+                      0x70, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  EXPECT_THAT_EXPECTED(DXContainer::create(getMemoryBuffer<32>(Buffer)),
+                       FailedWithMessage("Missing DXBC header magic"));
 }
 
 TEST(DXCFile, ParsePartMissingOffsets) {
@@ -304,6 +320,36 @@ TEST(DXCFile, ParseILDNPart) {
   EXPECT_EQ(ILDN->Filename, "abc.pdb");
 }
 
+// This test verifies that PRIV part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            PRIV
+//     Size:            5
+//     PrivateData:     [ 0xDE, 0xAD, 0xBE, 0xEF, 0x42 ]
+// ...
+TEST(DXCFile, ParsePRIVPart) {
+  uint8_t Buffer[] = {0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x31, 0x00, 0x00,
+                      0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+                      0x50, 0x52, 0x49, 0x56, 0x05, 0x00, 0x00, 0x00, 0xDE,
+                      0xAD, 0xBE, 0xEF, 0x42};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<49>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<StringRef> &PrivateData = C.getPrivateData();
+  EXPECT_TRUE(PrivateData.has_value());
+  EXPECT_EQ(*PrivateData, "\xDE\xAD\xBE\xEF\x42");
+}
+
 // This test verifies that VERS part is correctly parsed.
 // This test is based on the binary output constructed from this yaml.
 // --- !dxcontainer
@@ -350,6 +396,218 @@ TEST(DXCFile, ParseVERSPart) {
   EXPECT_EQ(Header.ContentSizeInBytes, 21u);
   EXPECT_EQ(VERS->CommitSha, "21f060b7");
   EXPECT_EQ(VERS->CustomVersionString, "1.9.0.15267");
+}
+
+// This test verifies that SRCI part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   FileSize:        324
+//   PartCount:       1
+//   PartOffsets:     [ 44 ]
+// Parts:
+//   - Name:            SRCI
+//     Size:            272
+//     SourceInfo:
+//       Header:
+//         AlignedSizeInBytes: 272
+//         Flags:           0
+//         SectionCount:    3
+//       Names:
+//         SectionHeader:
+//           AlignedSizeInBytes: 104
+//           Flags:           0
+//           Type:            SourceNames
+//         Header:
+//           Flags:           0
+//           Count:           3
+//           EntriesSizeInBytes: 84
+//         Entries:
+//           - AlignedSizeInBytes: 28
+//             Flags:           0
+//             NameSizeInBytes: 11
+//             ContentSizeInBytes: 13
+//             FileName:        smoke.hlsl
+//           - AlignedSizeInBytes: 28
+//             Flags:           0
+//             NameSizeInBytes: 11
+//             ContentSizeInBytes: 12
+//             FileName:        inc2.hlsli
+//           - AlignedSizeInBytes: 28
+//             Flags:           0
+//             NameSizeInBytes: 11
+//             ContentSizeInBytes: 12
+//             FileName:        inc1.hlsli
+//       Contents:
+//         SectionHeader:
+//           AlignedSizeInBytes: 72
+//           Flags:           0
+//           Type:            SourceContents
+//         Header:
+//           AlignedSizeInBytes: 64
+//           Flags:           0
+//           Type:            Zlib
+//           EntriesSizeInBytes: 44
+//           UncompressedEntriesSizeInBytes: 76
+//           Count:           3
+//         Entries:
+//           - AlignedSizeInBytes: 28
+//             Flags:           0
+//             ContentSizeInBytes: 13
+//             FileContent:     smoke_source
+//           - AlignedSizeInBytes: 24
+//             Flags:           0
+//             ContentSizeInBytes: 12
+//             FileContent:     inc2_source
+//           - AlignedSizeInBytes: 24
+//             Flags:           0
+//             ContentSizeInBytes: 12
+//             FileContent:     inc1_source
+//       Args:
+//         SectionHeader:
+//           AlignedSizeInBytes: 88
+//           Flags:           0
+//           Type:            Args
+//         Header:
+//           Flags:           0
+//           SizeInBytes:     67
+//           Count:           5
+//         Args:
+//           - Arg:             E
+//             Value:           main
+//           - Arg:             T
+//             Value:           ps_6_0
+//           - Arg:             Zi
+//             Value:           ''
+//           - Arg:             Fd
+//             Value:           fd_zs.test.tmp.pdb
+//           - Arg:             Fo
+//             Value:           fd_zs.test.tmp.dxo_fd
+TEST(DXCFile, ParseSRCIPart) {
+  if (!compression::zlib::isAvailable())
+    GTEST_SKIP() << "Test skipped because zlib is not available.";
+
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x44, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x2C, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x53, 0x52, 0x43, 0x49,
+      0x10, 0x01, 0x00, 0x00, 0x10, 0x01, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00,
+      0x68, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x03, 0x00, 0x00, 0x00, 0x54, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x0D, 0x00, 0x00, 0x00, 0x73, 0x6D,
+      0x6F, 0x6B, 0x65, 0x2E, 0x68, 0x6C, 0x73, 0x6C, 0x00, 0x00, 0x1C, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x0C, 0x00,
+      0x00, 0x00, 0x69, 0x6E, 0x63, 0x32, 0x2E, 0x68, 0x6C, 0x73, 0x6C, 0x69,
+      0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0B, 0x00,
+      0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x69, 0x6E, 0x63, 0x31, 0x2E, 0x68,
+      0x6C, 0x73, 0x6C, 0x69, 0x00, 0x00, 0x00, 0x00, 0x48, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+      0x2C, 0x00, 0x00, 0x00, 0x4C, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+      0x78, 0xDA, 0x93, 0x61, 0x80, 0x00, 0x5E, 0x20, 0x2E, 0xCE, 0xCD, 0xCF,
+      0x4E, 0x8D, 0x2F, 0xCE, 0x2F, 0x2D, 0x4A, 0x4E, 0x05, 0x89, 0x49, 0x40,
+      0xE5, 0x78, 0x80, 0x38, 0x33, 0x2F, 0xD9, 0x08, 0x26, 0x85, 0x26, 0x6E,
+      0x08, 0x13, 0x07, 0x00, 0xE2, 0x43, 0x0E, 0x38, 0x58, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x43, 0x00, 0x00, 0x00,
+      0x05, 0x00, 0x00, 0x00, 0x45, 0x00, 0x6D, 0x61, 0x69, 0x6E, 0x00, 0x54,
+      0x00, 0x70, 0x73, 0x5F, 0x36, 0x5F, 0x30, 0x00, 0x5A, 0x69, 0x00, 0x00,
+      0x46, 0x64, 0x00, 0x66, 0x64, 0x5F, 0x7A, 0x73, 0x2E, 0x74, 0x65, 0x73,
+      0x74, 0x2E, 0x74, 0x6D, 0x70, 0x2E, 0x70, 0x64, 0x62, 0x00, 0x46, 0x6F,
+      0x00, 0x66, 0x64, 0x5F, 0x7A, 0x73, 0x2E, 0x74, 0x65, 0x73, 0x74, 0x2E,
+      0x74, 0x6D, 0x70, 0x2E, 0x64, 0x78, 0x6F, 0x5F, 0x66, 0x64, 0x00, 0x00};
+
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<324>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<mcdxbc::SourceInfo> &SRCI = C.getSourceInfo();
+  EXPECT_TRUE(SRCI.has_value());
+  dxbc::SourceInfo::Header Header = SRCI->Parameters;
+  EXPECT_EQ(Header.AlignedSizeInBytes, 272u);
+  EXPECT_EQ(Header.Flags, 0u);
+  EXPECT_EQ(Header.SectionCount, 3u);
+
+  EXPECT_EQ(SRCI->Names.GenericHeader.AlignedSizeInBytes, 104u);
+  EXPECT_EQ(SRCI->Names.GenericHeader.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.GenericHeader.Type,
+            dxbc::SourceInfo::SectionType::SourceNames);
+
+  EXPECT_EQ(SRCI->Names.Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Parameters.Count, 3u);
+  EXPECT_EQ(SRCI->Names.Parameters.EntriesSizeInBytes, 84u);
+
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.NameSizeInBytes, 11u);
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.ContentSizeInBytes, 13u);
+  EXPECT_EQ(SRCI->Names.Entries[0].FileName, "smoke.hlsl");
+
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.NameSizeInBytes, 11u);
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Names.Entries[1].FileName, "inc2.hlsli");
+
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.NameSizeInBytes, 11u);
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Names.Entries[2].FileName, "inc1.hlsli");
+
+  EXPECT_EQ(SRCI->Contents.GenericHeader.AlignedSizeInBytes, 72u);
+  EXPECT_EQ(SRCI->Contents.GenericHeader.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.GenericHeader.Type,
+            dxbc::SourceInfo::SectionType::SourceContents);
+
+  EXPECT_EQ(SRCI->Contents.Parameters.AlignedSizeInBytes, 64u);
+  EXPECT_EQ(SRCI->Contents.Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Parameters.Type,
+            dxbc::SourceInfo::Contents::CompressionType::Zlib);
+  EXPECT_EQ(SRCI->Contents.Parameters.EntriesSizeInBytes, 44u);
+  EXPECT_EQ(SRCI->Contents.Parameters.UncompressedEntriesSizeInBytes, 76u);
+  EXPECT_EQ(SRCI->Contents.Parameters.Count, 3u);
+
+  EXPECT_EQ(SRCI->Contents.Entries[0].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Contents.Entries[0].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Entries[0].Parameters.ContentSizeInBytes, 13u);
+  EXPECT_EQ(SRCI->Contents.Entries[0].FileContent, "smoke_source");
+
+  EXPECT_EQ(SRCI->Contents.Entries[1].Parameters.AlignedSizeInBytes, 24u);
+  EXPECT_EQ(SRCI->Contents.Entries[1].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Entries[1].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Contents.Entries[1].FileContent, "inc2_source");
+
+  EXPECT_EQ(SRCI->Contents.Entries[2].Parameters.AlignedSizeInBytes, 24u);
+  EXPECT_EQ(SRCI->Contents.Entries[2].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Entries[2].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Contents.Entries[2].FileContent, "inc1_source");
+
+  EXPECT_EQ(SRCI->Args.GenericHeader.AlignedSizeInBytes, 88u);
+  EXPECT_EQ(SRCI->Args.GenericHeader.Flags, 0u);
+  EXPECT_EQ(SRCI->Args.GenericHeader.Type, dxbc::SourceInfo::SectionType::Args);
+
+  EXPECT_EQ(SRCI->Args.Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Args.Parameters.SizeInBytes, 67u);
+  EXPECT_EQ(SRCI->Args.Parameters.Count, 5u);
+
+  EXPECT_EQ(SRCI->Args.Args[0].first, "E");
+  EXPECT_EQ(SRCI->Args.Args[0].second, "main");
+
+  EXPECT_EQ(SRCI->Args.Args[1].first, "T");
+  EXPECT_EQ(SRCI->Args.Args[1].second, "ps_6_0");
+
+  EXPECT_EQ(SRCI->Args.Args[2].first, "Zi");
+  EXPECT_EQ(SRCI->Args.Args[2].second, "");
+
+  EXPECT_EQ(SRCI->Args.Args[3].first, "Fd");
+  EXPECT_EQ(SRCI->Args.Args[3].second, "fd_zs.test.tmp.pdb");
+
+  EXPECT_EQ(SRCI->Args.Args[4].first, "Fo");
+  EXPECT_EQ(SRCI->Args.Args[4].second, "fd_zs.test.tmp.dxo_fd");
 }
 
 static Expected<DXContainer>

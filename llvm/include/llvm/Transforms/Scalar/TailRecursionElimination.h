@@ -64,7 +64,7 @@ class TailCallElimPass : public OptionalPassInfoMixin<TailCallElimPass> {
 public:
   TailCallElimPass(bool UpdateFunctionEntryCount = true)
       : UpdateFunctionEntryCount(UpdateFunctionEntryCount) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 }
 

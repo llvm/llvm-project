@@ -13,6 +13,18 @@
 // NO-RESULTS:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}missing-results.json'
 // NO-RESULTS-NEXT: failed to read WPA results from field 'results': expected JSON array
 
+// 'type' field is absent.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-TYPE
+// MISSING-TYPE:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}missing-type.json'
+// MISSING-TYPE-NEXT: failed to read summary type from field 'type': expected JSON string
+
+// 'type' field names a different artifact kind.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/mismatched-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISMATCHED-TYPE
+// MISMATCHED-TYPE:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}mismatched-type.json'
+// MISMATCHED-TYPE-NEXT: expected 'WPASuite' for field 'type' but got 'TUSummary'
+
 // 'results' is an object, not an array.
 // RUN: not clang-ssaf-format --type wpa %S/Inputs/results-not-array.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=RESULTS-OBJ

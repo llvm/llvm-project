@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
@@ -15,7 +15,6 @@
 #include <cstddef>
 #include <span>
 
-#include "test_convertible.h"
 #include "test_macros.h"
 
 struct Sink {

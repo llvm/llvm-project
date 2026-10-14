@@ -42,22 +42,6 @@ static cl::opt<bool> UseConstantIntForFixedLengthSplat(
 static cl::opt<bool> UseConstantIntForScalableSplat(
     "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantInt's native scalable vector splat support."));
-static cl::opt<bool> UseConstantPtrNullForFixedLengthSplat(
-    "use-constant-ptrnull-for-fixed-length-splat", cl::init(true), cl::Hidden,
-    cl::desc("Use ConstantPointerNull's native fixed-length vector splat "
-             "support."));
-static cl::opt<bool> UseConstantPtrNullForScalableSplat(
-    "use-constant-ptrnull-for-scalable-splat", cl::init(true), cl::Hidden,
-    cl::desc(
-        "Use ConstantPointerNull's native scalable vector splat support."));
-
-static bool shouldUseConstantPointerNullForVector(VectorType *VTy) {
-  if (!VTy->getElementType()->isPointerTy())
-    return false;
-  return VTy->getElementCount().isScalable()
-             ? UseConstantPtrNullForScalableSplat
-             : UseConstantPtrNullForFixedLengthSplat;
-}
 
 //===----------------------------------------------------------------------===//
 //                              Constant Class
@@ -79,26 +63,6 @@ bool Constant::isNegativeZeroValue() const {
 
   // Otherwise, just use +0.0.
   return isNullValue();
-}
-
-bool Constant::isNullValue() const {
-  // 0 is null.
-  if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
-    return CI->isZero();
-
-  // 0 is null.
-  if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
-    return CB->isZero();
-
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
-    // ppc_fp128 determine isZero using high order double only
-    // so check the bitwise value to make sure all bits are zero.
-    return CFP->getValue().bitcastToAPInt().isZero();
-
-  // constant zero is zero for aggregates, cpnull is null for pointers, none for
-  // tokens.
-  return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this) ||
-         isa<ConstantTokenNone>(this) || isa<ConstantTargetNone>(this);
 }
 
 bool Constant::isAllOnesValue() const {
@@ -345,26 +309,47 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
 }
 
+static std::optional<unsigned> getNumWalkableElements(Type *Ty) {
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+    return FVTy->getNumElements();
+  if (auto *STy = dyn_cast<StructType>(Ty))
+    return STy->getNumElements();
+  if (auto *ATy = dyn_cast<ArrayType>(Ty))
+    return ATy->getNumElements();
+  return std::nullopt;
+}
+
+static bool
+containsMatchingElement(const Constant *C,
+                        function_ref<bool(const Constant *)> PredFn) {
+  // Simple pruning for large size array. UndefValue is fine as it is filtered
+  // out by PredFn already.
+  if (isa<ConstantData>(C))
+    return false;
+
+  std::optional<unsigned> NumElts = getNumWalkableElements(C->getType());
+  if (!NumElts)
+    return false;
+
+  for (unsigned I = 0; I != *NumElts; ++I) {
+    Constant *Elt = C->getAggregateElement(I);
+    if (Elt && (PredFn(Elt) || containsMatchingElement(Elt, PredFn)))
+      return true;
+  }
+  return false;
+}
+
 static bool
 containsUndefinedElement(const Constant *C,
                          function_ref<bool(const Constant *)> HasFn) {
-  if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
-    if (HasFn(C))
-      return true;
-    if (isa<ConstantAggregateZero>(C))
-      return false;
-    if (isa<ScalableVectorType>(C->getType()))
-      return false;
+  Type *Ty = C->getType();
+  if (!Ty->isVectorTy() && !Ty->isAggregateType())
+    return false;
 
-    for (unsigned i = 0, e = cast<FixedVectorType>(VTy)->getNumElements();
-         i != e; ++i) {
-      if (Constant *Elem = C->getAggregateElement(i))
-        if (HasFn(Elem))
-          return true;
-    }
-  }
+  if (HasFn(C))
+    return true;
 
-  return false;
+  return containsMatchingElement(C, HasFn);
 }
 
 bool Constant::containsUndefOrPoisonElement() const {
@@ -387,11 +372,22 @@ bool Constant::containsConstantExpression() const {
   if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
     return false;
 
-  if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
-    for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
-      if (isa<ConstantExpr>(getAggregateElement(i)))
-        return true;
+  return containsMatchingElement(this, IsaPred<ConstantExpr>);
+}
+
+bool Constant::containsMatchingVectorElement(
+    function_ref<bool(Constant *)> PredFn) const {
+  auto *FVTy = dyn_cast<FixedVectorType>(getType());
+  if (!FVTy)
+    return false;
+
+  unsigned NumElts = FVTy->getNumElements();
+  for (unsigned I = 0; I != NumElts; ++I) {
+    Constant *Elem = getAggregateElement(I);
+    if (Elem && PredFn(Elem))
+      return true;
   }
+
   return false;
 }
 
@@ -414,10 +410,14 @@ Constant *Constant::getNullValue(Type *Ty) {
   case Type::PointerTyID:
     return ConstantPointerNull::get(cast<PointerType>(Ty));
   case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID:
-    if (shouldUseConstantPointerNullForVector(cast<VectorType>(Ty)))
+  case Type::ScalableVectorTyID: {
+    Type *EltTy = cast<VectorType>(Ty)->getElementType();
+    if (EltTy->isFloatingPointTy())
+      return ConstantFP::get(Ty, APFloat::getZero(EltTy->getFltSemantics()));
+    if (EltTy->isPointerTy())
       return ConstantPointerNull::get(Ty);
     return ConstantAggregateZero::get(Ty);
+  }
   case Type::StructTyID:
   case Type::ArrayTyID:
     return ConstantAggregateZero::get(Ty);
@@ -788,7 +788,7 @@ static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
   if (RemoveDeadUsers) {
     // If C is only used by metadata, it should not be preserved but should
     // have its uses replaced.
-    ReplaceableMetadataImpl::SalvageDebugInfo(*C);
+    ReplaceableUses::SalvageDebugInfo(*C);
     const_cast<Constant *>(C)->destroyConstant();
   }
 
@@ -922,6 +922,8 @@ ConstantInt::ConstantInt(Type *Ty, const APInt &V)
   assert(V.getBitWidth() ==
              cast<IntegerType>(Ty->getScalarType())->getBitWidth() &&
          "Invalid constant for type");
+  if (V.isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 ConstantInt *ConstantInt::getTrue(LLVMContext &Context) {
@@ -1047,6 +1049,8 @@ ConstantByte::ConstantByte(Type *Ty, const APInt &V)
   assert(V.getBitWidth() ==
              cast<ByteType>(Ty->getScalarType())->getBitWidth() &&
          "Invalid constant for type");
+  if (V.isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 // Get a ConstantByte from an APInt.
@@ -1232,6 +1236,10 @@ ConstantFP::ConstantFP(Type *Ty, const APFloat &V)
     : ConstantData(Ty, ConstantFPVal), Val(V) {
   assert(&V.getSemantics() == &Ty->getScalarType()->getFltSemantics() &&
          "FP type Mismatch");
+  // ppc_fp128 determine isZero using high order double only
+  // so check the bitwise value to make sure all bits are zero.
+  if (V.bitcastToAPInt().isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 bool ConstantFP::isExactlyValue(const APFloat &V) const {
@@ -1579,8 +1587,7 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isSplatFP = isa<ConstantFP>(C);
   bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
   bool isSplatByte = isa<ConstantByte>(C);
-  bool isSplatPtrNull =
-      UseConstantPtrNullForFixedLengthSplat && isa<ConstantPointerNull>(C);
+  bool isSplatPtrNull = isa<ConstantPointerNull>(C);
 
   if (isZero || isUndef || isSplatFP || isSplatInt || isSplatByte ||
       isSplatPtrNull) {
@@ -1623,8 +1630,7 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
 Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   if (isa<ConstantPointerNull>(V)) {
     VectorType *VTy = VectorType::get(V->getType(), EC);
-    if (shouldUseConstantPointerNullForVector(VTy))
-      return ConstantPointerNull::get(VTy);
+    return ConstantPointerNull::get(VTy);
   }
 
   if (auto *CB = dyn_cast<ConstantByte>(V))
@@ -1739,9 +1745,11 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::GetElementPtr: {
     auto *GEPO = cast<GEPOperator>(this);
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
         GEPO->getNoWrapFlags(), GEPO->getInRange(), OnlyIfReducedTy);
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   }
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
@@ -2086,7 +2094,7 @@ BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
 
 BlockAddress::BlockAddress(Type *Ty, BasicBlock *BB)
     : Constant(Ty, Value::BlockAddressVal, AllocMarker) {
-  setOperand(0, BB);
+  Block = BB;
   BB->setHasAddressTaken(true);
 }
 
@@ -2111,17 +2119,15 @@ Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
 
   // See if the 'new' entry already exists, if not, just update this in place
   // and return early.
-  BlockAddress *&NewBA = getContext().pImpl->BlockAddresses[NewBB];
-  if (NewBA)
+  if (BlockAddress *NewBA = getContext().pImpl->BlockAddresses.lookup(NewBB))
     return NewBA;
 
   getBasicBlock()->setHasAddressTaken(false);
 
-  // Remove the old entry, this can't cause the map to rehash (just a
-  // tombstone will get added).
+  // erase invalidates iterators/references, hence the duplicate NewBB lookup.
   getContext().pImpl->BlockAddresses.erase(getBasicBlock());
-  NewBA = this;
-  setOperand(0, NewBB);
+  getContext().pImpl->BlockAddresses[NewBB] = this;
+  Block = NewBB;
   getBasicBlock()->setHasAddressTaken(true);
 
   // If we just want to keep the existing value, then return null.
@@ -2154,35 +2160,27 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
   assert(From == getGlobalValue() && "Changing value does not match operand.");
   assert(isa<Constant>(To) && "Can only replace the operands with a constant");
 
-  // The replacement is with another global value.
-  if (const auto *ToObj = dyn_cast<GlobalValue>(To)) {
-    DSOLocalEquivalent *&NewEquiv =
-        getContext().pImpl->DSOLocalEquivalents[ToObj];
-    if (NewEquiv)
-      return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
-  }
-
   // If the argument is replaced with a null value, just replace this constant
   // with a null value.
   if (isa<ConstantPointerNull>(To))
     return To;
 
-  // The replacement could be a bitcast or an alias to another function. We can
-  // replace it with a bitcast to the dso_local_equivalent of that function.
-  auto *Func = cast<Function>(To->stripPointerCastsAndAliases());
-  DSOLocalEquivalent *&NewEquiv = getContext().pImpl->DSOLocalEquivalents[Func];
-  if (NewEquiv)
+  // The replacement could be a bitcast to another GlobalValue. We can
+  // replace it with a bitcast to the dso_local_equivalent of that GV.
+  GlobalValue *GV = cast<GlobalValue>(To->stripPointerCasts());
+  if (DSOLocalEquivalent *NewEquiv =
+          getContext().pImpl->DSOLocalEquivalents.lookup(GV))
     return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
 
-  // Replace this with the new one.
+  // erase invalidates iterators/references, hence the duplicate GV lookup.
   getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
-  NewEquiv = this;
-  setOperand(0, Func);
+  getContext().pImpl->DSOLocalEquivalents[GV] = this;
+  setOperand(0, GV);
 
-  if (Func->getType() != getType()) {
+  if (GV->getType() != getType()) {
     // It is ok to mutate the type here because this constant should always
     // reflect the type of the function it's holding.
-    mutateType(Func->getType());
+    mutateType(GV->getType());
   }
   return nullptr;
 }
@@ -2214,12 +2212,12 @@ Value *NoCFIValue::handleOperandChangeImpl(Value *From, Value *To) {
   GlobalValue *GV = dyn_cast<GlobalValue>(To->stripPointerCasts());
   assert(GV && "Can only replace the operands with a global value");
 
-  NoCFIValue *&NewNC = getContext().pImpl->NoCFIValues[GV];
-  if (NewNC)
+  if (NoCFIValue *NewNC = getContext().pImpl->NoCFIValues.lookup(GV))
     return llvm::ConstantExpr::getBitCast(NewNC, getType());
 
+  // erase invalidates iterators/references, hence the duplicate GV lookup.
   getContext().pImpl->NoCFIValues.erase(getGlobalValue());
-  NewNC = this;
+  getContext().pImpl->NoCFIValues[GV] = this;
   setOperand(0, GV);
 
   if (GV->getType() != getType())
@@ -2671,9 +2669,11 @@ Constant *ConstantExpr::getSizeOf(Type* Ty) {
   // sizeof is implemented as: (i64) gep (Ty*)null, 1
   // Note that a non-inbounds gep is used, as null isn't within any object.
   Constant *GEPIdx = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   Constant *GEP = getGetElementPtr(
       Ty, Constant::getNullValue(PointerType::getUnqual(Ty->getContext())),
       GEPIdx);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   return getPtrToInt(GEP,
                      Type::getInt64Ty(Ty->getContext()));
 }
@@ -2687,7 +2687,9 @@ Constant *ConstantExpr::getAlignOf(Type* Ty) {
   Constant *Zero = ConstantInt::get(Type::getInt64Ty(Ty->getContext()), 0);
   Constant *One = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
   Constant *Indices[2] = {Zero, One};
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   Constant *GEP = getGetElementPtr(AligningTy, NullPtr, Indices);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   return getPtrToInt(GEP, Type::getInt64Ty(Ty->getContext()));
 }
 
@@ -2740,6 +2742,84 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
+}
+
+Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
+                                         Constant *C, ArrayRef<Constant *> Idxs,
+                                         GEPNoWrapFlags NW,
+                                         std::optional<ConstantRange> InRange,
+                                         Type *OnlyIfReducedTy) {
+  // Handle already canonical GEP.
+  if (Ty->isIntegerTy(8) && Idxs[0]->getType() == DL.getIndexType(C->getType()))
+    return getPtrAdd(C, Idxs[0], NW, InRange, OnlyIfReducedTy);
+
+  // Some API require an ArrayRef of Value * instead of Constant *.
+  ArrayRef<Value *> ValIdxs =
+      ArrayRef((Value *const *)Idxs.data(), Idxs.size());
+  assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
+
+  if (!isSupportedGetElementPtr(Ty))
+    return nullptr;
+
+  Type *RetTy = GetElementPtrInst::getGEPReturnType(C, ValIdxs);
+  Type *IdxTy = DL.getIndexType(RetTy);
+
+  Constant *Offset = Constant::getNullValue(IdxTy);
+  auto GTI = gep_type_begin(Ty, ValIdxs), GTE = gep_type_end(Ty, ValIdxs);
+  for (; GTI != GTE; ++GTI) {
+    auto *Idx = cast<Constant>(GTI.getOperand());
+    if (Idx->isNullValue())
+      continue;
+
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
+      uint64_t OpValue = Idx->getUniqueInteger().getZExtValue();
+      uint64_t Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
+      if (!Size)
+        continue;
+
+      Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset,
+                                             ConstantInt::get(IdxTy, Size));
+      if (!Offset)
+        return nullptr;
+
+      continue;
+    }
+
+    // Splat the index if needed.
+    if (IdxTy->isVectorTy() && !Idx->getType()->isVectorTy())
+      Idx = ConstantVector::getSplat(cast<VectorType>(IdxTy)->getElementCount(),
+                                     Idx);
+
+    // Convert to correct type.
+    if (Idx->getType() != IdxTy) {
+      Idx = ConstantFoldCastInstruction(Idx->getType()->getScalarSizeInBits() <
+                                                IdxTy->getScalarSizeInBits()
+                                            ? Instruction::SExt
+                                            : Instruction::Trunc,
+                                        Idx, IdxTy);
+      if (!Idx)
+        return nullptr;
+    }
+
+    TypeSize TySize = GTI.getSequentialElementStride(DL);
+    if (TySize.isScalable())
+      return nullptr;
+
+    // Multiply by scale.
+    if (TySize != TypeSize::getFixed(1)) {
+      Constant *Scale = ConstantInt::getSigned(IdxTy, TySize.getFixedValue(),
+                                               /*ImplicitTrunc=*/true);
+      Idx = ConstantFoldBinaryInstruction(Instruction::Mul, Idx, Scale);
+      if (!Idx)
+        return nullptr;
+    }
+
+    Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset, Idx);
+    if (!Offset)
+      return nullptr;
+  }
+
+  return getPtrAdd(C, Offset, NW, InRange, OnlyIfReducedTy);
 }
 
 Constant *ConstantExpr::getExtractElement(Constant *Val, Constant *Idx,
@@ -2925,10 +3005,10 @@ Constant *ConstantExpr::getIntrinsicIdentity(Intrinsic::ID ID, Type *Ty) {
     return Constant::getAllOnesValue(Ty);
   case Intrinsic::smax:
     return Constant::getIntegerValue(
-        Ty, APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
+        Ty, APInt::getSignedMinValue(Ty->getScalarSizeInBits()));
   case Intrinsic::smin:
     return Constant::getIntegerValue(
-        Ty, APInt::getSignedMaxValue(Ty->getIntegerBitWidth()));
+        Ty, APInt::getSignedMaxValue(Ty->getScalarSizeInBits()));
   default:
     return nullptr;
   }
@@ -3398,15 +3478,15 @@ uint64_t ConstantDataSequential::getElementAsInteger(uint64_t Elt) const {
 
   // The data is stored in host byte order, make sure to cast back to the right
   // type to load with the right endianness.
-  switch (getElementType()->getScalarSizeInBits()) {
+  switch (getElementByteSize()) {
   default: llvm_unreachable("Invalid bitwidth for CDS");
-  case 8:
+  case 1:
     return *reinterpret_cast<const uint8_t *>(EltPtr);
-  case 16:
+  case 2:
     return *reinterpret_cast<const uint16_t *>(EltPtr);
-  case 32:
+  case 4:
     return *reinterpret_cast<const uint32_t *>(EltPtr);
-  case 64:
+  case 8:
     return *reinterpret_cast<const uint64_t *>(EltPtr);
   }
 }
@@ -3419,21 +3499,21 @@ APInt ConstantDataSequential::getElementAsAPInt(uint64_t Elt) const {
 
   // The data is stored in host byte order, make sure to cast back to the right
   // type to load with the right endianness.
-  switch (getElementType()->getScalarSizeInBits()) {
+  switch (getElementByteSize()) {
   default: llvm_unreachable("Invalid bitwidth for CDS");
-  case 8: {
+  case 1: {
     auto EltVal = *reinterpret_cast<const uint8_t *>(EltPtr);
     return APInt(8, EltVal);
   }
-  case 16: {
+  case 2: {
     auto EltVal = *reinterpret_cast<const uint16_t *>(EltPtr);
     return APInt(16, EltVal);
   }
-  case 32: {
+  case 4: {
     auto EltVal = *reinterpret_cast<const uint32_t *>(EltPtr);
     return APInt(32, EltVal);
   }
-  case 64: {
+  case 8: {
     auto EltVal = *reinterpret_cast<const uint64_t *>(EltPtr);
     return APInt(64, EltVal);
   }

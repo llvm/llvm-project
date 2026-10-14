@@ -394,8 +394,6 @@ TEST(TBDv4, WriteMultipleDocuments) {
       Target(AK_i386, Platform),
       Target(AK_x86_64, Platform),
   };
-  TargetToAttr Uuids = {{Targets[0], "00000000-0000-0000-0000-000000000002"},
-                        {Targets[1], "11111111-1111-1111-1111-111111111112"}};
   File.setInstallName("/System/Library/Frameworks/Umbrella.framework/Umbrella");
   File.setFileType(FileType::TBD_V4);
   File.addTargets(Targets);
@@ -409,8 +407,6 @@ TEST(TBDv4, WriteMultipleDocuments) {
                             Targets[1]);
 
   // Write Second Document
-  Uuids = {{Targets[0], "00000000-0000-0000-0000-000000000000"},
-           {Targets[1], "11111111-1111-1111-1111-111111111111"}};
   InterfaceFile Document;
   Document.setInstallName("/System/Library/Frameworks/A.framework/A");
   Document.setFileType(FileType::TBD_V4);

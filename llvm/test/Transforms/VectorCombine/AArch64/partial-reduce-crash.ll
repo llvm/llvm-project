@@ -13,13 +13,29 @@ target triple = "aarch64-unknown-linux-gnu"
 define i32 @partial_reduce_extract_subvector_crash(<4 x i32> %vec) {
 ; CHECK-LABEL: define i32 @partial_reduce_extract_subvector_crash(
 ; CHECK-SAME: <4 x i32> [[VEC:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[VEC]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[VEC]], [[SHIFT]]
-; CHECK-NEXT:    [[RESULT:%.*]] = extractelement <4 x i32> [[ADD]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[VEC]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %shift = shufflevector <4 x i32> %vec, <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %add = add <4 x i32> %vec, %shift
+  %result = extractelement <4 x i32> %add, i32 0
+  ret i32 %result
+}
+
+; Same crash with a two-shuffle subvector split (256 -> 128).
+define i32 @subvector_split_crash(<8 x i32> %vec) {
+; CHECK-LABEL: define i32 @subvector_split_crash(
+; CHECK-SAME: <8 x i32> [[VEC:%.*]]) {
+; CHECK-NEXT:    [[LO:%.*]] = shufflevector <8 x i32> [[VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[HI:%.*]] = shufflevector <8 x i32> [[VEC]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[LO]], [[HI]]
+; CHECK-NEXT:    [[RESULT:%.*]] = extractelement <4 x i32> [[ADD]], i32 0
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %lo = shufflevector <8 x i32> %vec, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %hi = shufflevector <8 x i32> %vec, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %add = add <4 x i32> %lo, %hi
   %result = extractelement <4 x i32> %add, i32 0
   ret i32 %result
 }

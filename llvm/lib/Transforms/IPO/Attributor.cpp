@@ -222,26 +222,6 @@ bool AA::isGPU(const Module &M) {
   return T.isGPU();
 }
 
-bool AA::isGPUGenericAddressSpace(const Module &M, unsigned AS) {
-  assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
-
-  if (T.isSPIRV())
-    return AS == static_cast<unsigned>(SPIRVAddressSpace::Generic);
-
-  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Generic);
-}
-
-bool AA::isGPUGlobalAddressSpace(const Module &M, unsigned AS) {
-  assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
-
-  if (T.isSPIRV())
-    return AS == static_cast<unsigned>(SPIRVAddressSpace::Global);
-
-  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Global);
-}
-
 bool AA::isGPUSharedAddressSpace(const Module &M, unsigned AS) {
   assert(AA::isGPU(M) && "Only callable on GPU targets");
   Triple T(M.getTargetTriple());
@@ -1331,10 +1311,6 @@ ChangeStatus Attributor::manifestAttrs(const IRPosition &IRP,
   };
   return updateAttrMap<Attribute>(IRP, Attrs, AddAttrCB);
 }
-
-const IRPosition IRPosition::EmptyKey(DenseMapInfo<void *>::getEmptyKey());
-const IRPosition
-    IRPosition::TombstoneKey(DenseMapInfo<void *>::getTombstoneKey());
 
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
@@ -2431,7 +2407,6 @@ void Attributor::identifyDeadInternalFunctions() {
       isModulePass()
           ? nullptr
           : getInfoCache().getTargetLibraryInfoForFunction(*Functions.back());
-  LibFunc LF;
 
   // Identify dead internal functions and delete them. This happens outside
   // the other fixpoint analysis as we might treat potentially dead functions
@@ -2440,7 +2415,8 @@ void Attributor::identifyDeadInternalFunctions() {
 
   SmallVector<Function *, 8> InternalFns;
   for (Function *F : Functions)
-    if (F->hasLocalLinkage() && (isModulePass() || !TLI->getLibFunc(*F, LF)))
+    if (F->hasLocalLinkage() &&
+        (isModulePass() || TLI->getLibFunc(*F) == NotLibFunc))
       InternalFns.push_back(F);
 
   SmallPtrSet<Function *, 8> LiveInternalFns;
@@ -2533,10 +2509,13 @@ ChangeStatus Attributor::cleanupIR() {
       auto *CB = cast<CallBase>(U->getUser());
       if (CB->isArgOperand(U)) {
         unsigned Idx = CB->getArgOperandNo(U);
-        CB->removeParamAttr(Idx, Attribute::NoUndef);
+        // Drop all attributes that make passing undef UB, e.g., dereferenceable
+        // implies noundef.
+        AttributeMask UBImplying = AttributeFuncs::getUBImplyingAttributes();
+        CB->removeParamAttrs(Idx, UBImplying);
         auto *Callee = dyn_cast_if_present<Function>(CB->getCalledOperand());
         if (Callee && Callee->arg_size() > Idx)
-          Callee->removeParamAttr(Idx, Attribute::NoUndef);
+          Callee->removeParamAttrs(Idx, UBImplying);
       }
     }
     if (isa<Constant>(NewV) && isa<CondBrInst>(U->getUser())) {
@@ -3183,7 +3162,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       }
 
       // Copy over various properties and the new attributes.
-      NewCB->copyMetadata(*OldCB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+      NewCB->copyProfileAndDebugMetadata(*OldCB);
       NewCB->setCallingConv(OldCB->getCallingConv());
       NewCB->takeName(OldCB);
       NewCB->setAttributes(AttributeList::get(
@@ -3872,8 +3851,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
 
 static bool runAttributorOnFunctions(InformationCache &InfoCache,
                                      SetVector<Function *> &Functions,
-                                     AnalysisGetter &AG,
                                      CallGraphUpdater &CGUpdater,
+                                     FunctionAnalysisManager &FAM,
                                      bool DeleteFns, bool IsModulePass) {
   if (Functions.empty())
     return false;
@@ -3890,6 +3869,11 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   AttributorConfig AC(CGUpdater);
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = DeleteFns;
+  auto OREGetter = [&FAM](Function *F) -> OptimizationRemarkEmitter & {
+    return FAM.getResult<OptimizationRemarkEmitterAnalysis>(*F);
+  };
+  AC.OREGetter = OREGetter;
+  AC.PassName = DEBUG_TYPE;
 
   /// Tracking callback for specialization of indirect calls.
   DenseMap<CallBase *, std::unique_ptr<SmallPtrSet<Function *, 8>>>
@@ -3978,7 +3962,6 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
 
 static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
                                           SetVector<Function *> &Functions,
-                                          AnalysisGetter &AG,
                                           CallGraphUpdater &CGUpdater,
                                           FunctionAnalysisManager &FAM,
                                           bool IsModulePass) {
@@ -4097,13 +4080,14 @@ PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
   AnalysisGetter AG(FAM);
 
   SetVector<Function *> Functions;
+  Functions.reserve(M.size());
   for (Function &F : M)
     Functions.insert(&F);
 
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
-  if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
+  if (runAttributorOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                /* DeleteFns */ true, /* IsModulePass */ true)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
@@ -4120,6 +4104,7 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   AnalysisGetter AG(FAM);
 
   SetVector<Function *> Functions;
+  Functions.reserve(C.size());
   for (LazyCallGraph::Node &N : C)
     Functions.insert(&N.getFunction());
 
@@ -4131,7 +4116,7 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   CGUpdater.initialize(CG, C, AM, UR);
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
-  if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
+  if (runAttributorOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                /* DeleteFns */ false,
                                /* IsModulePass */ false)) {
     // FIXME: Think about passes we will preserve and add them here.
@@ -4149,13 +4134,14 @@ PreservedAnalyses AttributorLightPass::run(Module &M,
   AnalysisGetter AG(FAM, /* CachedOnly */ true);
 
   SetVector<Function *> Functions;
+  Functions.reserve(M.size());
   for (Function &F : M)
     Functions.insert(&F);
 
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
-  if (runAttributorLightOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+  if (runAttributorLightOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                     /* IsModulePass */ true)) {
     PreservedAnalyses PA;
     // We have not added or removed functions.
@@ -4187,7 +4173,7 @@ PreservedAnalyses AttributorLightCGSCCPass::run(LazyCallGraph::SCC &C,
   CGUpdater.initialize(CG, C, AM, UR);
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
-  if (runAttributorLightOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+  if (runAttributorLightOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                     /* IsModulePass */ false)) {
     PreservedAnalyses PA;
     // We have not added or removed functions.

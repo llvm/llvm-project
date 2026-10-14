@@ -55,6 +55,7 @@ void test_builtin_ptrauth_type_discriminator(unsigned s) {
   static_assert(__builtin_ptrauth_type_discriminator(long (*)(long)) == d5);
   static_assert(__builtin_ptrauth_type_discriminator(unsigned int (*)(unsigned int)) == d5);
   static_assert(__builtin_ptrauth_type_discriminator(int (&)(int)) == d5);
+  static_assert(__builtin_ptrauth_type_discriminator(int (&&)(int)) == d5);
   static_assert(__builtin_ptrauth_string_discriminator("FiiE") == d5);
   static_assert(d5 == 2981);
 
@@ -64,6 +65,8 @@ void test_builtin_ptrauth_type_discriminator(unsigned s) {
   (void)__builtin_ptrauth_type_discriminator(&t); // expected-error {{expected a type}}
   (void)__builtin_ptrauth_type_discriminator(decltype(vmarray)); // expected-error {{cannot pass undiscriminated type 'decltype(vmarray)' (aka 'int[s]')}}
   (void)__builtin_ptrauth_type_discriminator(int *); // expected-error {{cannot pass undiscriminated type 'int *' to '__builtin_ptrauth_type_discriminator'}}
+  (void)__builtin_ptrauth_type_discriminator(int (S::*&)()); // expected-error {{cannot pass undiscriminated type 'int (S::*&)()' to '__builtin_ptrauth_type_discriminator'}}
+  (void)__builtin_ptrauth_type_discriminator(int (*&)(int)); // expected-error {{cannot pass undiscriminated type 'int (*&)(int)' to '__builtin_ptrauth_type_discriminator'}}
   (void)__builtin_ptrauth_type_discriminator(); // expected-error {{expected a type}}
   (void)__builtin_ptrauth_type_discriminator(int (*)(int), int (*)(int));
   // expected-error@-1 {{expected ')'}}

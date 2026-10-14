@@ -8,7 +8,7 @@ module mymod
      integer(4)::val
      integer(4)::otherval
   end type advancedtype
-  !CHECK: not yet implemented: declare reduction currently only supports trival types or derived types containing trivial types
+  !CHECK: not yet implemented: declare reduction currently only supports trivial types, fixed-length CHARACTER, or derived types containing them
   !$omp declare reduction(myreduction: advancedtype: omp_out = omp_in) initializer(omp_priv = omp_orig)
 end module mymod
 

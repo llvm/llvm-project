@@ -196,11 +196,11 @@ define void @loop_invariant_float_store(ptr %p, i32 %a) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    store float [[TMP10]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store float [[TMP10]], ptr [[P]], align 4
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -236,26 +236,10 @@ define void @test_store_to_invariant_address_needs_mask_due_to_low_trip_count(pt
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    store i32 1, ptr [[DST]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; CHECK:       [[PRED_STORE_IF1]]:
 ; CHECK-NEXT:    store i32 1, ptr [[DST]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; CHECK:       [[PRED_STORE_IF3]]:
 ; CHECK-NEXT:    store i32 1, ptr [[DST]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; CHECK:       [[PRED_STORE_CONTINUE4]]:
-; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; CHECK:       [[PRED_STORE_IF5]]:
 ; CHECK-NEXT:    store i32 1, ptr [[DST]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; CHECK:       [[PRED_STORE_CONTINUE6]]:
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]

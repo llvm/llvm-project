@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; Diagnose register constraints that are not wide enough.
 
@@ -53,6 +53,63 @@ define void @inline_asm_scalar_read_too_wide() {
 ; ERR: error: could not allocate output register for constraint '{s[4:4]}'
 define void @inline_asm_scalar_read_too_narrow() {
   %asm = call i64 asm sideeffect "; def $0 ", "={s[4:4]}"()
+  ret void
+}
+
+; A single named register cannot hold a scalar wider than 32 bits; this must be
+; diagnosed instead of silently synthesising the missing high bits.
+
+; ERR: error: could not allocate output register for constraint '{v0}'
+define i64 @inline_asm_i64_in_single_v_def() {
+  %asm = call i64 asm sideeffect "; def $0", "={v0}"()
+  ret i64 %asm
+}
+
+; ERR: error: could not allocate output register for constraint '{s4}'
+define i64 @inline_asm_i64_in_single_s_def() {
+  %asm = call i64 asm sideeffect "; def $0", "={s4}"()
+  ret i64 %asm
+}
+
+; ERR: error: could not allocate input reg for constraint '{v0}'
+define void @inline_asm_i64_in_single_v_use(i64 %val) {
+  call void asm sideeffect "; use $0", "{v0}"(i64 %val)
+  ret void
+}
+
+; ERR: error: could not allocate output register for constraint '{v0}'
+define ptr @inline_asm_ptr_in_single_v_def() {
+  %asm = call ptr asm sideeffect "; def $0", "={v0}"()
+  ret ptr %asm
+}
+
+; ERR: error: could not allocate input reg for constraint '{v0}'
+define void @inline_asm_ptr_in_single_v_use(ptr %val) {
+  call void asm sideeffect "; use $0", "{v0}"(ptr %val)
+  ret void
+}
+
+; ERR: error: could not allocate output register for constraint '{v0}'
+define double @inline_asm_double_in_single_v_def() {
+  %asm = call double asm sideeffect "; def $0", "={v0}"()
+  ret double %asm
+}
+
+; ERR: error: could not allocate input reg for constraint '{v0}'
+define void @inline_asm_double_in_single_v_use(double %val) {
+  call void asm sideeffect "; use $0", "{v0}"(double %val)
+  ret void
+}
+
+; ERR: error: could not allocate output register for constraint '{v0}'
+define <2 x i32> @inline_asm_2xi32_in_single_v_def() {
+  %asm = call <2 x i32> asm sideeffect "; def $0", "={v0}"()
+  ret <2 x i32> %asm
+}
+
+; ERR: error: could not allocate input reg for constraint '{v0}'
+define void @inline_asm_2xi32_in_single_v_use(<2 x i32> %val) {
+  call void asm sideeffect "; use $0", "{v0}"(<2 x i32> %val)
   ret void
 }
 

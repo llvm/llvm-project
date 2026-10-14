@@ -5,16 +5,17 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-// template <class ElementType, size_t Extent>
-//     span<byte,
-//          Extent == dynamic_extent
-//              ? dynamic_extent
-//              : sizeof(ElementType) * Extent>
+// template<class ElementType, size_t Extent>
+//   span<byte, Extent == dynamic_extent ? dynamic_extent : sizeof(ElementType) * Extent>
 //     as_writable_bytes(span<ElementType, Extent> s) noexcept;
+//
+// Constraints:
+//   is_const_v<ElementType> is false and is_volatile_v<ElementType> is false.
 
 #include <cassert>
 #include <cstddef>
@@ -22,6 +23,9 @@
 #include <string>
 
 #include "test_macros.h"
+
+template <class T, std::size_t Extent = std::dynamic_extent>
+concept hasAsWritableBytes = requires(std::span<T, Extent> s) { std::as_writable_bytes(s); };
 
 template <typename Span>
 void testRuntimeSpan(Span sp) {
@@ -43,7 +47,59 @@ void testRuntimeSpan(Span sp) {
 struct A {};
 int iArr2[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
+void test_constraints() {
+  static_assert(hasAsWritableBytes<int>);
+  static_assert(hasAsWritableBytes<long>);
+  static_assert(hasAsWritableBytes<double>);
+  static_assert(hasAsWritableBytes<A>);
+  static_assert(hasAsWritableBytes<std::string>);
+
+  static_assert(!hasAsWritableBytes<const int>);
+  static_assert(!hasAsWritableBytes<const long>);
+  static_assert(!hasAsWritableBytes<const double>);
+  static_assert(!hasAsWritableBytes<const A>);
+  static_assert(!hasAsWritableBytes<const std::string>);
+
+  static_assert(!hasAsWritableBytes<volatile int>);
+  static_assert(!hasAsWritableBytes<volatile long>);
+  static_assert(!hasAsWritableBytes<volatile double>);
+  static_assert(!hasAsWritableBytes<volatile A>);
+  static_assert(!hasAsWritableBytes<volatile std::string>);
+
+  static_assert(!hasAsWritableBytes<const volatile int>);
+  static_assert(!hasAsWritableBytes<const volatile long>);
+  static_assert(!hasAsWritableBytes<const volatile double>);
+  static_assert(!hasAsWritableBytes<const volatile A>);
+  static_assert(!hasAsWritableBytes<const volatile std::string>);
+
+  static_assert(hasAsWritableBytes<int, 0>);
+  static_assert(hasAsWritableBytes<long, 0>);
+  static_assert(hasAsWritableBytes<double, 0>);
+  static_assert(hasAsWritableBytes<A, 0>);
+  static_assert(hasAsWritableBytes<std::string, 0>);
+
+  static_assert(!hasAsWritableBytes<const int, 0>);
+  static_assert(!hasAsWritableBytes<const long, 0>);
+  static_assert(!hasAsWritableBytes<const double, 0>);
+  static_assert(!hasAsWritableBytes<const A, 0>);
+  static_assert(!hasAsWritableBytes<const std::string, 0>);
+
+  static_assert(!hasAsWritableBytes<volatile int, 0>);
+  static_assert(!hasAsWritableBytes<volatile long, 0>);
+  static_assert(!hasAsWritableBytes<volatile double, 0>);
+  static_assert(!hasAsWritableBytes<volatile A, 0>);
+  static_assert(!hasAsWritableBytes<volatile std::string, 0>);
+
+  static_assert(!hasAsWritableBytes<const volatile int, 0>);
+  static_assert(!hasAsWritableBytes<const volatile long, 0>);
+  static_assert(!hasAsWritableBytes<const volatile double, 0>);
+  static_assert(!hasAsWritableBytes<const volatile A, 0>);
+  static_assert(!hasAsWritableBytes<const volatile std::string, 0>);
+}
+
 int main(int, char**) {
+  test_constraints();
+
   testRuntimeSpan(std::span<int>());
   testRuntimeSpan(std::span<long>());
   testRuntimeSpan(std::span<double>());

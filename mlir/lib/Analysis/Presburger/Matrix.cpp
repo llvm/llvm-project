@@ -160,17 +160,17 @@ void Matrix<T>::insertColumns(unsigned pos, unsigned count) {
   }
   nColumns += count;
 
+  int colStart = nColumns - 1;
+  if (oldNReservedColumns != nReservedColumns)
+    colStart = nReservedColumns - 1;
   for (int ri = nRows - 1; ri >= 0; --ri) {
-    for (int ci = nReservedColumns - 1; ci >= 0; --ci) {
+    for (int ci = colStart; ci >= 0; --ci) {
       unsigned r = ri;
       unsigned c = ci;
       T &dest = data[r * nReservedColumns + c];
       if (c >= nColumns) { // NOLINT
         // Out of bounds columns are zero-initialized. NOLINT because clang-tidy
         // complains about this branch being the same as the c >= pos one.
-        //
-        // TODO: this case can be skipped if the number of reserved columns
-        // didn't change.
         dest = 0;
       } else if (c >= pos + count) {
         // Shift the data occuring after the inserted columns.

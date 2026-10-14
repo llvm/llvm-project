@@ -16,6 +16,9 @@
 
 namespace lldb_private {
 
+/// Returns true if the host permits opening a listening socket.
+bool HostSupportsListeningSockets();
+
 /// Check if the debugger supports the given platform.
 bool DebuggerSupportsLLVMTarget(llvm::StringRef target);
 

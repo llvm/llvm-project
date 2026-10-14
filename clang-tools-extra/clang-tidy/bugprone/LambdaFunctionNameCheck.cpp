@@ -94,7 +94,7 @@ void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
     if (IgnoreMacros)
       return;
 
-    auto ER =
+    const auto ER =
         Result.SourceManager->getImmediateExpansionRange(E->getLocation());
     if (SuppressMacroExpansions.contains(ER.getAsRange())) {
       // This is a macro expansion for which we should not warn.

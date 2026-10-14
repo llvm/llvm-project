@@ -194,12 +194,16 @@ if lldb_use_simulator:
     else:
         lit_config.error("Unknown simulator id '{}'".format(lldb_use_simulator))
 
+# Simulator tests can interfer with each other when they access the same device
+# kind, so prevent them from running at the same time.
+lit_config.parallelism_groups["apple-simulator"] = 1
+
 # Set a default per-test timeout of 10 minutes. Setting a timeout per test
 # requires that killProcessAndChildren() is supported on the platform and
 # lit complains if the value is set but it is not supported.
 supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
 if supported:
-    lit_config.maxIndividualTestTime = 600
+    config.maxIndividualTestTime = 600
 else:
     lit_config.warning("Could not set a default per-test timeout. " + errormsg)
 
@@ -220,6 +224,16 @@ if is_configured("llvm_include_dir"):
 # This path may be needed to locate required llvm tools
 if is_configured("llvm_tools_dir"):
     dotest_cmd += ["--env", "LLVM_TOOLS_DIR=" + config.llvm_tools_dir]
+
+# Prevent tests from accidentally invoking the real dsymForUUID, which can
+# make slow network requests. Tests that need a working dsymForUUID mock
+# should override this with their own script.
+if platform.system() == "Darwin":
+    dotest_cmd += [
+        "--env",
+        "LLDB_APPLE_DSYMFORUUID_EXECUTABLE="
+        + os.path.join(config.lldb_src_root, "test", "Utils", "fake-dsymForUUID.sh"),
+    ]
 
 # If we have a just-built libcxx, prefer it over the system one.
 if is_configured("has_libcxx") and config.has_libcxx:
@@ -250,11 +264,44 @@ if is_configured("lldb_module_cache"):
     dotest_cmd += ["--lldb-module-cache-dir", config.lldb_module_cache]
 
 if is_configured("clang_module_cache"):
-    delete_module_cache(config.clang_module_cache)
     dotest_cmd += ["--clang-module-cache-dir", config.clang_module_cache]
 
 if is_configured("lldb_executable"):
     dotest_cmd += ["--executable", config.lldb_executable]
+    try:
+        version_output = subprocess.check_output(
+            [config.lldb_executable, "--version"],
+            stderr=subprocess.STDOUT,
+            text=True,
+        ).strip()
+        for line in version_output.splitlines():
+            lit_config.note(line.strip())
+    except (subprocess.CalledProcessError, OSError) as e:
+        lit_config.warning(
+            "Could not get lldb version from {}: {}".format(config.lldb_executable, e)
+        )
+
+    # Discover the directory that contains the 'lldb' Python module once here,
+    # so each dotest invocation doesn't have to spawn '<lldb> -P' itself.
+    try:
+        lldb_dash_p_output = subprocess.check_output(
+            [config.lldb_executable, "-P"],
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        for line in lldb_dash_p_output.splitlines():
+            line = line.strip()
+            if os.path.isdir(line) and os.path.exists(
+                os.path.join(line, "lldb", "__init__.py")
+            ):
+                dotest_cmd += ["--lldb-python-dir", line]
+                break
+    except (subprocess.CalledProcessError, OSError) as e:
+        lit_config.warning(
+            "Could not discover lldb python path from {}: {}".format(
+                config.lldb_executable, e
+            )
+        )
 
 if is_configured("test_compiler"):
     dotest_cmd += ["--compiler", config.test_compiler]
@@ -330,6 +377,8 @@ if is_configured("lldb_platform_working_dir"):
     dotest_cmd += ["--platform-working-dir", config.lldb_platform_working_dir]
 if is_configured("cmake_sysroot"):
     dotest_cmd += ["--sysroot", config.cmake_sysroot]
+if is_configured("test_resource_dir"):
+    dotest_cmd += ["--resource-dir", config.test_resource_dir]
 
 if is_configured("dotest_user_args_str"):
     dotest_cmd.extend(config.dotest_user_args_str.split(";"))
@@ -342,6 +391,7 @@ if is_configured("dotest_lit_args_str"):
     dotest_cmd.extend(shlex.split(config.dotest_lit_args_str))
 
 # Load LLDB test format.
+sys.path.append(os.path.join(config.lldb_src_root, "test"))
 sys.path.append(os.path.join(config.lldb_src_root, "test", "API"))
 import lldbtest
 
@@ -365,8 +415,9 @@ if platform.system() == "Windows":
         if v in os.environ:
             config.environment[v] = os.environ[v]
 
-    if getattr(config, "lldb_use_lldb_server", False):
-        config.environment["LLDB_USE_LLDB_SERVER"] = "1"
+    config.environment["LLDB_USE_LLDB_SERVER"] = (
+        "1" if getattr(config, "lldb_use_lldb_server", False) else "0"
+    )
 
     # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
     # escape sequences into the output stream, which breaks tests that check

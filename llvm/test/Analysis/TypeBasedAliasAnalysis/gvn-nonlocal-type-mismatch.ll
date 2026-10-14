@@ -8,30 +8,17 @@ target datalayout = "e-p:64:64:64"
 ; fully redundant.
 
 define void @yes(i1 %c, ptr %p, ptr %p1, ptr %q) nounwind {
-; CHECK-MEMDEP-LABEL: define void @yes(
-; CHECK-MEMDEP-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P1:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-MEMDEP-NEXT:  [[ENTRY:.*:]]
-; CHECK-MEMDEP-NEXT:    store i32 0, ptr [[P]], align 4, !tbaa [[RED_TBAA0:![0-9]+]]
-; CHECK-MEMDEP-NEXT:    store i32 1, ptr [[P1]], align 4, !tbaa [[BLU_TBAA3:![0-9]+]]
-; CHECK-MEMDEP-NEXT:    br i1 [[C]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
-; CHECK-MEMDEP:       [[IF_THEN]]:
-; CHECK-MEMDEP-NEXT:    store i32 0, ptr [[Q]], align 4
-; CHECK-MEMDEP-NEXT:    ret void
-; CHECK-MEMDEP:       [[IF_ELSE]]:
-; CHECK-MEMDEP-NEXT:    ret void
-;
-; CHECK-MEMSSA-LABEL: define void @yes(
-; CHECK-MEMSSA-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P1:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-MEMSSA-NEXT:  [[ENTRY:.*:]]
-; CHECK-MEMSSA-NEXT:    store i32 0, ptr [[P]], align 4, !tbaa [[RED_TBAA0:![0-9]+]]
-; CHECK-MEMSSA-NEXT:    store i32 1, ptr [[P1]], align 4, !tbaa [[BLU_TBAA3:![0-9]+]]
-; CHECK-MEMSSA-NEXT:    br i1 [[C]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
-; CHECK-MEMSSA:       [[IF_THEN]]:
-; CHECK-MEMSSA-NEXT:    [[T:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[RED_TBAA0]]
-; CHECK-MEMSSA-NEXT:    store i32 [[T]], ptr [[Q]], align 4
-; CHECK-MEMSSA-NEXT:    ret void
-; CHECK-MEMSSA:       [[IF_ELSE]]:
-; CHECK-MEMSSA-NEXT:    ret void
+; CHECK-LABEL: define void @yes(
+; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P1:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4, !tbaa [[RED_TBAA0:![0-9]+]]
+; CHECK-NEXT:    store i32 1, ptr [[P1]], align 4, !tbaa [[BLU_TBAA3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   store i32 0, ptr %p, !tbaa !1
@@ -53,20 +40,34 @@ if.else:
 ; should just be conservative.
 
 define void @watch_out_for_type_change(i1 %c, ptr %p, ptr %p1, ptr %q) nounwind {
-; CHECK-LABEL: define void @watch_out_for_type_change(
-; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P1:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    store i32 0, ptr [[P]], align 4, !tbaa [[RED_TBAA0:![0-9]+]]
-; CHECK-NEXT:    store i32 1, ptr [[P1]], align 4, !tbaa [[BLU_TBAA3:![0-9]+]]
-; CHECK-NEXT:    br i1 [[C]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
-; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[OUTER_SPACE_TBAA5:![0-9]+]]
-; CHECK-NEXT:    store i32 [[T]], ptr [[Q]], align 4
-; CHECK-NEXT:    ret void
-; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[U:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[BRICK_RED_TBAA8:![0-9]+]]
-; CHECK-NEXT:    store i32 [[U]], ptr [[Q]], align 4
-; CHECK-NEXT:    ret void
+; CHECK-MEMDEP-LABEL: define void @watch_out_for_type_change(
+; CHECK-MEMDEP-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P1:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
+; CHECK-MEMDEP-NEXT:  [[ENTRY:.*:]]
+; CHECK-MEMDEP-NEXT:    store i32 0, ptr [[P]], align 4, !tbaa [[RED_TBAA0]]
+; CHECK-MEMDEP-NEXT:    store i32 1, ptr [[P1]], align 4, !tbaa [[BLU_TBAA3]]
+; CHECK-MEMDEP-NEXT:    br i1 [[C]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
+; CHECK-MEMDEP:       [[IF_THEN]]:
+; CHECK-MEMDEP-NEXT:    [[T:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[OUTER_SPACE_TBAA5:![0-9]+]]
+; CHECK-MEMDEP-NEXT:    store i32 [[T]], ptr [[Q]], align 4
+; CHECK-MEMDEP-NEXT:    ret void
+; CHECK-MEMDEP:       [[IF_ELSE]]:
+; CHECK-MEMDEP-NEXT:    [[U:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[BRICK_RED_TBAA8:![0-9]+]]
+; CHECK-MEMDEP-NEXT:    store i32 [[U]], ptr [[Q]], align 4
+; CHECK-MEMDEP-NEXT:    ret void
+;
+; CHECK-MEMSSA-LABEL: define void @watch_out_for_type_change(
+; CHECK-MEMSSA-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P1:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
+; CHECK-MEMSSA-NEXT:  [[ENTRY:.*:]]
+; CHECK-MEMSSA-NEXT:    store i32 0, ptr [[P]], align 4, !tbaa [[RED_TBAA0]]
+; CHECK-MEMSSA-NEXT:    store i32 1, ptr [[P1]], align 4, !tbaa [[BLU_TBAA3]]
+; CHECK-MEMSSA-NEXT:    br i1 [[C]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
+; CHECK-MEMSSA:       [[IF_THEN]]:
+; CHECK-MEMSSA-NEXT:    [[T:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[OUTER_SPACE_TBAA5:![0-9]+]]
+; CHECK-MEMSSA-NEXT:    store i32 [[T]], ptr [[Q]], align 4
+; CHECK-MEMSSA-NEXT:    ret void
+; CHECK-MEMSSA:       [[IF_ELSE]]:
+; CHECK-MEMSSA-NEXT:    store i32 0, ptr [[Q]], align 4
+; CHECK-MEMSSA-NEXT:    ret void
 ;
 entry:
   store i32 0, ptr %p, !tbaa !1
@@ -88,34 +89,19 @@ if.else:
 ; eliminate one of the loads before noticing the type mismatch.
 
 define void @watch_out_for_another_type_change(i1 %c, ptr %p, ptr %p1, ptr %q) nounwind {
-; CHECK-MEMDEP-LABEL: define void @watch_out_for_another_type_change(
-; CHECK-MEMDEP-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P1:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
-; CHECK-MEMDEP-NEXT:  [[ENTRY:.*:]]
-; CHECK-MEMDEP-NEXT:    store i32 0, ptr [[P]], align 4, !tbaa [[RED_TBAA0]]
-; CHECK-MEMDEP-NEXT:    store i32 1, ptr [[P1]], align 4, !tbaa [[BLU_TBAA3]]
-; CHECK-MEMDEP-NEXT:    br i1 [[C]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
-; CHECK-MEMDEP:       [[IF_THEN]]:
-; CHECK-MEMDEP-NEXT:    store i32 0, ptr [[Q]], align 4
-; CHECK-MEMDEP-NEXT:    ret void
-; CHECK-MEMDEP:       [[IF_ELSE]]:
-; CHECK-MEMDEP-NEXT:    [[U:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[OUTER_SPACE_TBAA5]]
-; CHECK-MEMDEP-NEXT:    store i32 [[U]], ptr [[Q]], align 4
-; CHECK-MEMDEP-NEXT:    ret void
-;
-; CHECK-MEMSSA-LABEL: define void @watch_out_for_another_type_change(
-; CHECK-MEMSSA-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P1:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
-; CHECK-MEMSSA-NEXT:  [[ENTRY:.*:]]
-; CHECK-MEMSSA-NEXT:    store i32 0, ptr [[P]], align 4, !tbaa [[RED_TBAA0]]
-; CHECK-MEMSSA-NEXT:    store i32 1, ptr [[P1]], align 4, !tbaa [[BLU_TBAA3]]
-; CHECK-MEMSSA-NEXT:    br i1 [[C]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
-; CHECK-MEMSSA:       [[IF_THEN]]:
-; CHECK-MEMSSA-NEXT:    [[T:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[BRICK_RED_TBAA8]]
-; CHECK-MEMSSA-NEXT:    store i32 [[T]], ptr [[Q]], align 4
-; CHECK-MEMSSA-NEXT:    ret void
-; CHECK-MEMSSA:       [[IF_ELSE]]:
-; CHECK-MEMSSA-NEXT:    [[U:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[OUTER_SPACE_TBAA5]]
-; CHECK-MEMSSA-NEXT:    store i32 [[U]], ptr [[Q]], align 4
-; CHECK-MEMSSA-NEXT:    ret void
+; CHECK-LABEL: define void @watch_out_for_another_type_change(
+; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P1:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4, !tbaa [[RED_TBAA0]]
+; CHECK-NEXT:    store i32 1, ptr [[P1]], align 4, !tbaa [[BLU_TBAA3]]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    [[U:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[OUTER_SPACE_TBAA5:![0-9]+]]
+; CHECK-NEXT:    store i32 [[U]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   store i32 0, ptr %p, !tbaa !1
@@ -163,6 +149,4 @@ if.else:
 ; CHECK-MEMSSA: [[OUTER_SPACE_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
 ; CHECK-MEMSSA: [[META6]] = !{!"outer space", [[META7:![0-9]+]]}
 ; CHECK-MEMSSA: [[META7]] = !{!"observable universe"}
-; CHECK-MEMSSA: [[BRICK_RED_TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
-; CHECK-MEMSSA: [[META9]] = !{!"brick red", [[META1]]}
 ;.

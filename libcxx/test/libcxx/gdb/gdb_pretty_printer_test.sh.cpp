@@ -41,6 +41,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -293,6 +294,17 @@ void tuple_test() {
   ComparePrettyPrintToChars(
       test1,
       "empty std::tuple");
+}
+
+void pair_test() {
+  std::pair<int, int> ints(1, 2);
+  ComparePrettyPrintToChars(ints, "{first = 1, second = 2}");
+
+  std::pair<std::string, int> mixed("hello", 42);
+  ComparePrettyPrintToChars(mixed, "{first = \"hello\", second = 42}");
+
+  std::pair<int, std::pair<int, int>> nested(1, {2, 3});
+  ComparePrettyPrintToChars(nested, "{first = 1, second = {first = 2, second = 3}}");
 }
 
 void unique_ptr_test() {
@@ -747,6 +759,7 @@ int main(int, char**) {
   //u16string_test();
   u32string_test();
   tuple_test();
+  pair_test();
   unique_ptr_test();
   shared_ptr_test();
   bitset_test();

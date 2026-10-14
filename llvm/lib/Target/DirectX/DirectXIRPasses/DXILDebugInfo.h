@@ -13,31 +13,19 @@
 #ifndef LLVM_LIB_TARGET_DIRECTX_DXILDEBUGINFO_H
 #define LLVM_LIB_TARGET_DIRECTX_DXILDEBUGINFO_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 
-class Module;
-class Metadata;
-
 namespace dxil {
 
-class DXILDebugInfoMap {
+/// A pass that downgrades debug information to forms supported by DXIL.
+class DXILDebugInfo : public OptionalPassInfoMixin<DXILDebugInfo> {
 public:
-  using MDMap = DenseMap<const Metadata *, const Metadata *>;
-
-  /// Enumerate extra metadata when Key is encountered in ValueEnumerator.
-  MDMap MDExtra;
-
-  /// Completely replace one metadata with another in ValueEnumerator.
-  MDMap MDReplace;
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 
-namespace DXILDebugInfoPass {
-
-DXILDebugInfoMap run(Module &M);
-
-} // namespace DXILDebugInfoPass
 } // namespace dxil
 } // namespace llvm
 

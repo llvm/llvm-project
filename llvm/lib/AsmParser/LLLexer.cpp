@@ -699,6 +699,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(amdgpu_gfx_whole_wave);
   KEYWORD(tailcc);
   KEYWORD(m68k_rtdcc);
+  KEYWORD(wasm_emscripten_invokecc);
   KEYWORD(graalcc);
   KEYWORD(riscv_vector_cc);
   KEYWORD(riscv_vls_cc);
@@ -801,7 +802,6 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   // Use-list order directives.
   KEYWORD(uselistorder);
-  KEYWORD(uselistorder_bb);
 
   KEYWORD(personality);
   KEYWORD(cleanup);
@@ -996,6 +996,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(cleanuppad,   CleanupPad);
 
   INSTKEYWORD(freeze,       Freeze);
+  INSTKEYWORD(bitinsert, BitInsert);
+  INSTKEYWORD(bitextract, BitExtract);
 
 #undef INSTKEYWORD
 
@@ -1010,6 +1012,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(TAG, DwarfTag);
   DWKEYWORD(ATE, DwarfAttEncoding);
   DWKEYWORD(VIRTUALITY, DwarfVirtuality);
+  DWKEYWORD(LLVM_LANG_DIALECT, DwarfLangDialect);
   DWKEYWORD(LANG, DwarfLang);
   DWKEYWORD(LNAME, DwarfSourceLangName);
   DWKEYWORD(CC, DwarfCC);

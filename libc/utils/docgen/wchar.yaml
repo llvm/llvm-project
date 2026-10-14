@@ -57,6 +57,10 @@ functions:
     c-definition: 7.31.4.6.2
   wcscmp:
     c-definition: 7.31.4.5.2
+  wcscasecmp:
+    in-latest-posix: ''
+  wcsncasecmp:
+    in-latest-posix: ''
   wcscoll:
     c-definition: 7.31.4.5.3
   wcscpy:

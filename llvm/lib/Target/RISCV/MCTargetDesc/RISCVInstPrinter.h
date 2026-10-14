@@ -13,16 +13,19 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVINSTPRINTER_H
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVINSTPRINTER_H
 
+#include "MCTargetDesc/RISCVMCOptions.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
 
 class RISCVInstPrinter : public MCInstPrinter {
+  const RISCVMCOptions &CLOpts;
+
 public:
   RISCVInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                    const MCRegisterInfo &MRI)
-      : MCInstPrinter(MAI, MII, MRI) {}
+      : MCInstPrinter(MAI, MII, MRI), CLOpts(RISCVMCOptions::Global) {}
 
   bool applyTargetSpecificCLOption(StringRef Opt) override;
 
@@ -37,6 +40,8 @@ public:
   void printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printFenceArg(const MCInst *MI, unsigned OpNo,
+                     const MCSubtargetInfo &STI, raw_ostream &O);
+  void printSMTVType(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printFRMArg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
@@ -54,6 +59,8 @@ public:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printVScaleReg(const MCInst *MI, unsigned OpNo,
                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printTileLambda(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
   void printImm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
   void printRegList(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

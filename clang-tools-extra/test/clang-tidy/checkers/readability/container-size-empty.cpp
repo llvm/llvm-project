@@ -27,6 +27,12 @@ namespace string_literals{
 string operator""s(const char *, size_t);
 }
 
+template <class C>
+auto size(const C& c) -> decltype(c.size());
+
+template <class C>
+auto empty(const C& c) -> decltype(c.empty());
+
 }
 
 template <typename T>
@@ -923,6 +929,62 @@ public:
     }
   }
 };
+
+void testStdSize(const std::string &str, std::vector<int> vect) {
+  if (std::size(vect))
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: if (!vect.empty())
+
+  if (!std::size(vect))
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: if (vect.empty())
+
+  if (std::size(vect) == 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: if (vect.empty())
+
+  if (std::size(vect) != 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: if (!vect.empty())
+
+  if (std::size(vect) > 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: if (!vect.empty())
+
+  if (std::size(str))
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: if (!str.empty())
+
+  if (std::size(str) == 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: if (str.empty())
+
+  // No warning when std::empty is already used.
+  if (std::empty(vect)) {}
+
+  // using declaration resolves to ::std::size, should also warn.
+  using std::size;
+  if (size(str) == 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: if (str.empty())
+}
+
+#define SIZE std::size
+void testStdSizeMacro(const std::string &str) {
+  if (SIZE(str) == 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+  // CHECK-FIXES: if (str.empty())
+}
+#undef SIZE
 
 
 

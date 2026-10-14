@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=kaveri < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
+; RUN: llc -mtriple=amdgpu7.00 < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
 
 ; FUNC-LABEL: sin_f32
 ; EG: MULADD_IEEE *

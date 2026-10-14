@@ -27,6 +27,25 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/TargetParser/Triple.h"
+#include <optional>
+
+namespace llvm::AArch64 {
+// Mode for selecting how to insert frame record info into the stack ring
+// buffer.
+enum class StackTaggingRecordStackHistoryMode {
+  // Do not record frame record info.
+  None,
+
+  // Insert instructions into the prologue for storing into the stack ring
+  // buffer directly.
+  Instr,
+};
+
+enum class UncheckedLdStMode { Never, Safe, Always };
+} // namespace llvm::AArch64
+
+#define OPTIONS_STRUCT_DECL
+#include "AArch64Options.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AArch64GenSubtargetInfo.inc"
@@ -36,6 +55,8 @@ class GlobalValue;
 class StringRef;
 
 class AArch64Subtarget final : public AArch64GenSubtargetInfo {
+  const AArch64Options &CLOpts;
+
 public:
   enum ARMProcFamilyEnum : uint8_t {
     Generic,
@@ -59,7 +80,7 @@ protected:
   unsigned EpilogueVectorizationMinVF = 16;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
-  uint16_t CacheLineSize = 0;
+  uint16_t CacheLineSize = 64;
   // Default scatter/gather overhead.
   unsigned ScatterOverhead = 10;
   unsigned GatherOverhead = 10;
@@ -71,6 +92,7 @@ protected:
   unsigned MaxBytesForLoopAlignment = 0;
   unsigned MinimumJumpTableEntries = 4;
   unsigned MaxJumpTableSize = 0;
+  unsigned FixedLoadLatency = 0;
 
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
   BitVector ReserveXRegister;
@@ -85,7 +107,6 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
-  std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   bool EnableSRLTSubregToRegMitigation;
@@ -132,6 +153,8 @@ public:
                    bool HasMinSize = false,
                    bool EnableSRLTSubregToRegMitigation = false);
 
+  const AArch64Options &getCLOpts() const { return CLOpts; }
+
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
@@ -159,7 +182,6 @@ public:
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
   bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
-  bool enableSpillageCopyElimination() const override { return true; }
 
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
@@ -199,7 +221,7 @@ public:
   /// Returns the size of memory region that if accessed by both the CPU and
   /// the SME unit could result in a hazard. 0 = disabled.
   unsigned getStreamingHazardSize() const {
-    return StreamingHazardSize.value_or(
+    return CLOpts.streaming_hazard_size.value_or(
         !hasSMEFA64() && hasSME() && hasSVE() ? 1024 : 0);
   }
 
@@ -265,8 +287,19 @@ public:
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
            hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCmpCSel() ||
            hasFuseFCmpFCSel() || hasFuseCmpCSet() || hasFuseAdrpAdd() ||
-           hasFuseLiterals();
+           hasFuseLiterals() || hasFuseAppleSMECompute() || hasFuseFMinFMax();
   }
+
+  /// Return true if the subtarget fuses this pair of move immediate
+  /// instructions.
+  bool fusesMOVImmPair(unsigned FirstOpc, unsigned FirstShift,
+                       unsigned SecondOpc, unsigned SecondShift) const;
+
+  /// Return true if the subtarget fuses this pair of move immediate
+  /// instructions. The 1st instruction is a wildcard when it is nullptr, which
+  /// tells whether the 2nd one can be fused at all.
+  bool fusesMOVImmPair(const MachineInstr *FirstMI,
+                       const MachineInstr &SecondMI) const;
 
   unsigned getEpilogueVectorizationMinVF() const {
     return EpilogueVectorizationMinVF;
@@ -299,6 +332,8 @@ public:
   unsigned getMinimumJumpTableEntries() const {
     return MinimumJumpTableEntries;
   }
+
+  unsigned getFixedLoadLatency() const { return FixedLoadLatency; }
 
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.
@@ -444,6 +479,12 @@ public:
     if (MinSVEVectorSizeInBits == MaxSVEVectorSizeInBits)
       return MaxSVEVectorSizeInBits;
     return 0;
+  }
+
+  // Return the known bit length of SVE predicate registers. A value of 0 means
+  // the length is unknown beyond what's implied by the architecture.
+  unsigned getSVEPredicateSizeInBits() const {
+    return getSVEVectorSizeInBits() / 8;
   }
 
   bool useSVEForFixedLengthVectors() const {

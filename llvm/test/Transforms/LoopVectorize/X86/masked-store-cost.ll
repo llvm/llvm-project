@@ -189,21 +189,14 @@ define void @test_scalar_cost_single_store_loop_varying_cond(ptr %dst, ptr noali
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP2]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:    [[WIDE_VEC1:%.*]] = load <16 x i32>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <16 x i32> [[WIDE_VEC1]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[STRIDED_VEC]], splat (i32 123)
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i32> [[STRIDED_VEC2]], splat (i32 123)
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i64 4
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> zeroinitializer, ptr align 4 [[NEXT_GEP]], <4 x i1> [[TMP5]])
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> zeroinitializer, ptr align 4 [[TMP7]], <4 x i1> [[TMP6]])
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP1]]
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i32>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i32> [[WIDE_VEC]], <32 x i32> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i32> [[STRIDED_VEC]], splat (i32 123)
+; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr align 4 [[NEXT_GEP]], <8 x i1> [[TMP3]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:

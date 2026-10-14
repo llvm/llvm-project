@@ -1,13 +1,9 @@
 # Including the native target is important because some of LLVM's tests fail if
 # you don't.
-set(LLVM_TARGETS_TO_BUILD "Native;SPIRV" CACHE STRING "")
-
-# Include the DirectX target for DXIL code generation.
-set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD "DirectX" CACHE STRING "")
+# The DirectX target is included for DXIL code generation.
+set(LLVM_TARGETS_TO_BUILD "Native;SPIRV;DirectX" CACHE STRING "")
 
 set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra" CACHE STRING "")
-
-set(CLANG_ENABLE_HLSL On CACHE BOOL "")
 
 if (HLSL_ENABLE_DISTRIBUTION)
   set(LLVM_DISTRIBUTION_COMPONENTS
@@ -21,6 +17,10 @@ endif()
 # (docs/offload-distribution.md) for setup, prerequisites, and run
 # instructions.
 if (HLSL_ENABLE_OFFLOAD_DISTRIBUTION)
+  # Cache scripts run before the project's cmake_minimum_required takes
+  # effect, so CMP0057 still defaults to OLD here and IN_LIST would be
+  # parsed as a literal token. Opt in explicitly so the check below works.
+  cmake_policy(SET CMP0057 NEW)
   if (NOT "OffloadTest" IN_LIST LLVM_EXTERNAL_PROJECTS)
     message(FATAL_ERROR
       "HLSL_ENABLE_OFFLOAD_DISTRIBUTION requires OffloadTest to be enabled "

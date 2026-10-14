@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_COROUTINES_COROSHAPE_H
 #define LLVM_TRANSFORMS_COROUTINES_COROSHAPE_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
@@ -57,6 +58,11 @@ struct Shape {
   SmallVector<CoroSizeInst *, 2> CoroSizes;
   SmallVector<CoroAlignInst *, 2> CoroAligns;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
+  // Map from suspend instructions to their execution frequency, used for branch
+  // weights in the resume function.
+  SmallDenseMap<AnyCoroSuspendInst *, uint64_t, 4> SuspendFreqs;
+  // Estimated profile execution count for the resume function if available.
+  std::optional<uint64_t> ResumeEntryCount;
   SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
   SmallVector<CallInst *, 2> SymmetricTransfers;
 
@@ -70,6 +76,8 @@ struct Shape {
     CoroSizes.clear();
     CoroAligns.clear();
     CoroSuspends.clear();
+    SuspendFreqs.clear();
+    ResumeEntryCount = std::nullopt;
     CoroAwaitSuspends.clear();
     SymmetricTransfers.clear();
 
@@ -87,8 +95,6 @@ struct Shape {
   LLVM_ABI void
   invalidateCoroutine(Function &F,
                       SmallVectorImpl<CoroFrameInst *> &CoroFrames);
-  // Perform ABI related initial transformation
-  LLVM_ABI void initABI();
   // Remove orphaned and unnecessary intrinsics
   LLVM_ABI void
   cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
@@ -112,6 +118,7 @@ struct Shape {
     unsigned IndexOffset;
     bool HasFinalSuspend;
     bool HasUnwindCoroEnd;
+    bool HasCoroElideNoAllocVariant;
   };
 
   struct RetconLoweringStorage {
@@ -211,7 +218,10 @@ struct Shape {
   CallingConv::ID getResumeFunctionCC() const {
     switch (ABI) {
     case coro::ABI::Switch:
-      return CallingConv::Fast;
+      // Use the platform C calling convention so that resume/destroy
+      // function pointers stored in the coroutine frame are
+      // interoperable with other compilers.
+      return CallingConv::C;
 
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:

@@ -413,7 +413,7 @@ template <typename T, typename BlockBeginHandler, typename BlockEndHandler,
 llvm::Error
 ClangDocBitcodeReader::parseBlock(unsigned ID, T I, BlockBeginHandler &&BBH,
                                   BlockEndHandler &&BEH, RecordHandler &&RH) {
-  llvm::TimeTraceScope("Reducing infos", "readBlock");
+  llvm::TimeTraceScope TimeTrace("Reducing infos", "readBlock");
   if (llvm::Error Err = Stream.EnterSubBlock(ID))
     return Err;
 
@@ -569,13 +569,13 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, CommentInfo *I) {
       [&]() -> llvm::Error {
         if (!LocalChildren.empty())
           I->Children =
-              allocateArray<CommentInfo>(LocalChildren, TransientArena);
+              allocateArray<CommentInfo>(LocalChildren, getTransientArena());
         if (!AttrKeys.empty())
-          I->AttrKeys = allocateArray(AttrKeys, TransientArena);
+          I->AttrKeys = allocateArray(AttrKeys, getTransientArena());
         if (!AttrValues.empty())
-          I->AttrValues = allocateArray(AttrValues, TransientArena);
+          I->AttrValues = allocateArray(AttrValues, getTransientArena());
         if (!Args.empty())
-          I->Args = allocateArray(Args, TransientArena);
+          I->Args = allocateArray(Args, getTransientArena());
 
         return llvm::Error::success();
       },
@@ -608,9 +608,9 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FunctionInfo *I) {
         return routeReferenceBlock(BlockOrCode, LocalNamespaces, I);
       },
       [&]() -> llvm::Error {
-        I->Params = allocateArray(LocalParams, TransientArena);
+        I->Params = allocateArray(LocalParams, getTransientArena());
         if (!LocalNamespaces.empty())
-          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
+          I->Namespace = allocateArray(LocalNamespaces, getTransientArena());
         return llvm::Error::success();
       });
 }
@@ -632,9 +632,9 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, EnumInfo *I) {
         return routeReferenceBlock(BlockOrCode, LocalNamespaces, I);
       },
       [&]() -> llvm::Error {
-        I->Members = allocateArray(LocalMembers, TransientArena);
+        I->Members = allocateArray(LocalMembers, getTransientArena());
         if (!LocalNamespaces.empty())
-          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
+          I->Namespace = allocateArray(LocalNamespaces, getTransientArena());
         return llvm::Error::success();
       });
 }
@@ -679,14 +679,14 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, BaseRecordInfo *I) {
       },
       [&]() -> llvm::Error {
         if (!LocalMembers.empty())
-          I->Members = allocateArray(LocalMembers, TransientArena);
+          I->Members = allocateArray(LocalMembers, getTransientArena());
         if (!LocalParents.empty())
-          I->Parents = allocateArray(LocalParents, TransientArena);
+          I->Parents = allocateArray(LocalParents, getTransientArena());
         if (!LocalVirtualParents.empty())
           I->VirtualParents =
-              allocateArray(LocalVirtualParents, TransientArena);
-        I->Bases = allocateArray(LocalBases, TransientArena);
-        I->Friends = allocateArray(LocalFriends, TransientArena);
+              allocateArray(LocalVirtualParents, getTransientArena());
+        I->Bases = allocateArray(LocalBases, getTransientArena());
+        I->Friends = allocateArray(LocalFriends, getTransientArena());
         return llvm::Error::success();
       });
 }
@@ -730,16 +730,16 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, RecordInfo *I) {
       },
       [&]() -> llvm::Error {
         if (!LocalMembers.empty())
-          I->Members = allocateArray(LocalMembers, TransientArena);
+          I->Members = allocateArray(LocalMembers, getTransientArena());
         if (!LocalParents.empty())
-          I->Parents = allocateArray(LocalParents, TransientArena);
+          I->Parents = allocateArray(LocalParents, getTransientArena());
         if (!LocalVirtualParents.empty())
           I->VirtualParents =
-              allocateArray(LocalVirtualParents, TransientArena);
+              allocateArray(LocalVirtualParents, getTransientArena());
         if (!LocalNamespaces.empty())
-          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
-        I->Bases = allocateArray(LocalBases, TransientArena);
-        I->Friends = allocateArray(LocalFriends, TransientArena);
+          I->Namespace = allocateArray(LocalNamespaces, getTransientArena());
+        I->Bases = allocateArray(LocalBases, getTransientArena());
+        I->Friends = allocateArray(LocalFriends, getTransientArena());
         return llvm::Error::success();
       });
 }
@@ -769,8 +769,8 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, TemplateInfo *I) {
         return false;
       },
       [&]() -> llvm::Error {
-        I->Params = allocateArray(LocalParams, TransientArena);
-        I->Constraints = allocateArray(LocalConstraints, TransientArena);
+        I->Params = allocateArray(LocalParams, getTransientArena());
+        I->Constraints = allocateArray(LocalConstraints, getTransientArena());
         return llvm::Error::success();
       },
       [&](unsigned BlockOrCode) -> llvm::Error {
@@ -796,7 +796,7 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID,
         return false;
       },
       [&]() -> llvm::Error {
-        I->Params = allocateArray(LocalParams, TransientArena);
+        I->Params = allocateArray(LocalParams, getTransientArena());
         return llvm::Error::success();
       },
       [&](unsigned BlockOrCode) -> llvm::Error {
@@ -1099,8 +1099,9 @@ static void addChild(Target I, Child &&R) {
     if constexpr (has_children<Pointee>::value) {
       using BareChild = std::remove_cv_t<std::remove_reference_t<Child>>;
       if constexpr (is_valid_child<BareChild>::value) {
-        auto *Node = allocatePtr<BareChild>(std::forward<Child>(R));
-        getList(I->Children, Node).push_back(*allocateListNodeTransient(Node));
+        auto *Node =
+            allocateListNodeTransient<BareChild>(std::forward<Child>(R));
+        getList(I->Children, Node->Ptr).push_back(*Node);
         return;
       }
     }
@@ -1184,7 +1185,7 @@ llvm::Error ClangDocBitcodeReader::readRecord(unsigned ID, T I) {
 
 template <>
 llvm::Error ClangDocBitcodeReader::readRecord(unsigned ID, Reference *I) {
-  llvm::TimeTraceScope("Reducing infos", "readRecord");
+  llvm::TimeTraceScope TimeTrace("Reducing infos", "readRecord");
   Record R;
   llvm::StringRef Blob;
   llvm::Expected<unsigned> MaybeRecID = Stream.readRecord(ID, R, &Blob);
@@ -1220,7 +1221,7 @@ llvm::Error ClangDocBitcodeReader::readBlockWithNamespace(unsigned ID, T I) {
       },
       [&]() -> llvm::Error {
         if (!LocalNamespaces.empty())
-          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
+          I->Namespace = allocateArray(LocalNamespaces, getTransientArena());
         return llvm::Error::success();
       });
 }
@@ -1253,7 +1254,8 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FriendInfo *I) {
       },
       [&]() -> llvm::Error {
         if (!LocalParams.empty())
-          I->Params = allocateArray<FieldTypeInfo>(LocalParams, TransientArena);
+          I->Params =
+              allocateArray<FieldTypeInfo>(LocalParams, getTransientArena());
         return llvm::Error::success();
       },
       [&](unsigned BlockOrCode) -> llvm::Error {
@@ -1278,7 +1280,7 @@ llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent,
 
 template <typename InfoType, typename T>
 llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent) {
-  InfoType *Info = allocatePtr<InfoType>();
+  InfoType *Info = allocateTransient<InfoType>();
   if (auto Err = readBlock(ID, Info))
     return Err;
   addChildPtr(Parent, Info);
@@ -1287,7 +1289,7 @@ llvm::Error ClangDocBitcodeReader::handleSubBlock(unsigned ID, T Parent) {
 
 template <typename T>
 llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
-  llvm::TimeTraceScope("Reducing infos", "readSubBlock");
+  llvm::TimeTraceScope TimeTrace("Reducing infos", "readSubBlock");
 
   static auto CreateAddFunc = [](auto AddFunc) {
     return [AddFunc](auto Parent, auto Child) {
@@ -1375,7 +1377,7 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
 
 llvm::Expected<ClangDocBitcodeReader::Cursor>
 ClangDocBitcodeReader::skipUntilRecordOrBlock(unsigned &BlockOrRecordID) {
-  llvm::TimeTraceScope("Reducing infos", "skipUntilRecordOrBlock");
+  llvm::TimeTraceScope TimeTrace("Reducing infos", "skipUntilRecordOrBlock");
   BlockOrRecordID = 0;
 
   while (!Stream.AtEndOfStream()) {
@@ -1431,7 +1433,7 @@ llvm::Error ClangDocBitcodeReader::validateStream() {
 }
 
 llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
-  llvm::TimeTraceScope("Reducing infos", "readBlockInfoBlock");
+  llvm::TimeTraceScope TimeTrace("Reducing infos", "readBlockInfoBlock");
   Expected<std::optional<llvm::BitstreamBlockInfo>> MaybeBlockInfo =
       Stream.ReadBlockInfoBlock();
   if (!MaybeBlockInfo)
@@ -1445,17 +1447,16 @@ llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
 }
 
 template <typename T>
-llvm::Expected<OwnedPtr<Info>> ClangDocBitcodeReader::createInfo(unsigned ID) {
-  llvm::TimeTraceScope("Reducing infos", "createInfo");
-  OwnedPtr<Info> I = doc::allocatePtr<T>();
-  if (auto Err = readBlock(ID, static_cast<T *>(getPtr(I))))
+llvm::Expected<Info *> ClangDocBitcodeReader::createInfo(unsigned ID) {
+  llvm::TimeTraceScope TimeTrace("Reducing infos", "createInfo");
+  auto *I = doc::allocateTransient<T>();
+  if (auto Err = readBlock(ID, I))
     return std::move(Err);
-  return OwnedPtr<Info>{std::move(I)};
+  return I;
 }
 
-llvm::Expected<OwnedPtr<Info>>
-ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
-  llvm::TimeTraceScope("Reducing infos", "readBlockToInfo");
+llvm::Expected<Info *> ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
+  llvm::TimeTraceScope TimeTrace("Reducing infos", "readBlockToInfo");
   switch (ID) {
   case BI_NAMESPACE_BLOCK_ID:
     return createInfo<NamespaceInfo>(ID);

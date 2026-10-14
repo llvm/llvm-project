@@ -414,21 +414,6 @@ void populateMemRefFlattenAndVectorNarrowTypeEmulationPatterns(
     arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns);
 
-/// Rewrite a vector `bitcast(trunci)` to use a more efficient sequence of
-/// vector operations comprising `shuffle` and `bitwise` ops.
-/// Warning: these patterns currently only work for little endian targets.
-FailureOr<Value> rewriteBitCastOfTruncI(RewriterBase &rewriter,
-                                        vector::BitCastOp bitCastOp,
-                                        arith::TruncIOp truncOp,
-                                        vector::BroadcastOp maybeBroadcastOp);
-
-/// Rewrite a vector `ext(bitcast)` to use a more efficient sequence of
-/// vector operations comprising `shuffle` and `bitwise` ops.
-/// Warning: these patterns currently only work for little endian targets.
-FailureOr<Value> rewriteExtOfBitCast(RewriterBase &rewriter, Operation *extOp,
-                                     vector::BitCastOp bitCastOp,
-                                     vector::BroadcastOp maybeBroadcastOp);
-
 /// Appends patterns for rewriting vector operations over narrow types with
 /// ops over wider types.
 /// Warning: these patterns currently only work for little endian targets.
@@ -458,6 +443,12 @@ void populateVectorTransposeNarrowTypeRewritePatterns(
 /// conversions for linearizing scf/cf/func operations
 void populateForVectorLinearize(TypeConverter &typeConverter,
                                 ConversionTarget &conversionTarget);
+
+/// Extends `conversionTarget` so that ops whose inner-most vector dimension is
+/// at least `targetBitWidth` bits wide (or has `index` elements) stay legal.
+/// Must be called after `populateForVectorLinearize`.
+void populateVectorLinearizeBitWidthTargetRules(
+    ConversionTarget &conversionTarget, unsigned targetBitWidth);
 
 /// Populates `patterns` for ND vector (N >= 2) linearization. This currently
 /// contains patterns for converting ConstantLike, Vectorizable, and

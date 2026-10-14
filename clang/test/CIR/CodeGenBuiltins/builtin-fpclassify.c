@@ -30,22 +30,22 @@ void test_fpclassify_nan(){
 // CIR: cir.select if %[[IS_NORMAL]] then %[[NORMAL_VAL]] else %[[SUBNORMAL_VAL]] : (!cir.bool, !s32i, !s32i) -> !s32i
 
 // LLVM: %[[VAL:.*]] = load float, ptr
-// LLVM-NEXT: %[[IS_ZERO:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 96)
+// LLVM-NEXT: %[[IS_ZERO:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (zero) */ i32 96)
 // LLVM-NEXT: br i1 %[[IS_ZERO]], label %[[BB_ZERO:.*]], label %[[BB_NOT_ZERO:.*]]
 // LLVM: [[BB_ZERO]]:
 // LLVM-NEXT: br label %[[BB_RET:.*]]
 // LLVM: [[BB_NOT_ZERO]]:
-// LLVM-NEXT: %[[IS_NAN:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 3)
+// LLVM-NEXT: %[[IS_NAN:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (nan) */ i32 3)
 // LLVM-NEXT: br i1 %[[IS_NAN]], label %[[BB_NAN:.*]], label %[[BB_NOT_NAN:.*]]
 // LLVM: [[BB_NAN]]:
 // LLVM-NEXT: br label %[[BB_MERGE1:.*]]
 // LLVM: [[BB_NOT_NAN]]:
-// LLVM-NEXT: %[[IS_INF:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 516)
+// LLVM-NEXT: %[[IS_INF:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (inf) */ i32 516)
 // LLVM-NEXT: br i1 %[[IS_INF]], label %[[BB_INF:.*]], label %[[BB_NOT_INF:.*]]
 // LLVM: [[BB_INF]]:
 // LLVM-NEXT: br label %[[BB_MERGE2:.*]]
 // LLVM: [[BB_NOT_INF]]:
-// LLVM-NEXT: %[[IS_NORMAL:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 264)
+// LLVM-NEXT: %[[IS_NORMAL:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (norm) */ i32 264)
 // LLVM-NEXT: %[[NORMAL_OR_SUBNORMAL:.*]] = select i1 %[[IS_NORMAL]], i32 264, i32 144
 // LLVM-NEXT: br label %[[BB_MERGE2]]
 // LLVM: [[BB_MERGE2]]:
@@ -99,22 +99,22 @@ void test_fpclassify_inf(){
 // CIR: cir.select if %[[IS_NORMAL]] then %[[NORMAL_VAL]] else %[[SUBNORMAL_VAL]] : (!cir.bool, !s32i, !s32i) -> !s32i
 
 // LLVM: %[[VAL:.+]] = load float, ptr
-// LLVM-NEXT: %[[IS_ZERO:.+]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 96)
+// LLVM-NEXT: %[[IS_ZERO:.+]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (zero) */ i32 96)
 // LLVM-NEXT: br i1 %[[IS_ZERO]], label %[[BB_ZERO:.+]], label %[[BB_NOT_ZERO:.+]]
 // LLVM: [[BB_ZERO]]:
 // LLVM-NEXT: br label %[[BB_RET:.+]]
 // LLVM: [[BB_NOT_ZERO]]:
-// LLVM-NEXT: %[[IS_NAN:.+]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 3)
+// LLVM-NEXT: %[[IS_NAN:.+]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (nan) */ i32 3)
 // LLVM-NEXT: br i1 %[[IS_NAN]], label %[[BB_NAN:.+]], label %[[BB_NOT_NAN:.+]]
 // LLVM: [[BB_NAN]]:
 // LLVM-NEXT: br label %[[BB_MERGE1:.+]]
 // LLVM: [[BB_NOT_NAN]]:
-// LLVM-NEXT: %[[IS_INF:.+]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 516)
+// LLVM-NEXT: %[[IS_INF:.+]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (inf) */ i32 516)
 // LLVM-NEXT: br i1 %[[IS_INF]], label %[[BB_INF:.+]], label %[[BB_NOT_INF:.+]]
 // LLVM: [[BB_INF]]:
 // LLVM-NEXT: br label %[[BB_MERGE2:.+]]
 // LLVM: [[BB_NOT_INF]]:
-// LLVM-NEXT: %[[IS_NORMAL:.+]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 264)
+// LLVM-NEXT: %[[IS_NORMAL:.+]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (norm) */ i32 264)
 // LLVM-NEXT: %[[SEL:.+]] = select i1 %[[IS_NORMAL]], i32 264, i32 144
 // LLVM-NEXT: br label %[[BB_MERGE2]]
 // LLVM: [[BB_MERGE2]]:
@@ -167,22 +167,22 @@ void test_fpclassify_normal(){
 // CIR: cir.select if %[[IS_NORMAL]] then %[[NORMAL_VAL]] else %[[SUBNORMAL_VAL]] : (!cir.bool, !s32i, !s32i) -> !s32i
 
 // LLVM: %[[VAL:.*]] = load float, ptr
-// LLVM-NEXT: %[[IS_ZERO:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 96)
+// LLVM-NEXT: %[[IS_ZERO:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (zero) */ i32 96)
 // LLVM-NEXT: br i1 %[[IS_ZERO]], label %[[BB_ZERO:.*]], label %[[BB_NOT_ZERO:.*]]
 // LLVM: [[BB_ZERO]]:
 // LLVM-NEXT: br label %[[BB_RET:.*]]
 // LLVM: [[BB_NOT_ZERO]]:
-// LLVM-NEXT: %[[IS_NAN:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 3)
+// LLVM-NEXT: %[[IS_NAN:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (nan) */ i32 3)
 // LLVM-NEXT: br i1 %[[IS_NAN]], label %[[BB_NAN:.*]], label %[[BB_NOT_NAN:.*]]
 // LLVM: [[BB_NAN]]:
 // LLVM-NEXT: br label %[[BB_MERGE1:.*]]
 // LLVM: [[BB_NOT_NAN]]:
-// LLVM-NEXT: %[[IS_INF:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 516)
+// LLVM-NEXT: %[[IS_INF:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (inf) */ i32 516)
 // LLVM-NEXT: br i1 %[[IS_INF]], label %[[BB_INF:.*]], label %[[BB_NOT_INF:.*]]
 // LLVM: [[BB_INF]]:
 // LLVM-NEXT: br label %[[BB_MERGE2:.*]]
 // LLVM: [[BB_NOT_INF]]:
-// LLVM-NEXT: %[[IS_NORMAL:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 264)
+// LLVM-NEXT: %[[IS_NORMAL:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (norm) */ i32 264)
 // LLVM-NEXT: %[[NORMAL_OR_SUBNORMAL:.*]] = select i1 %[[IS_NORMAL]], i32 264, i32 144
 // LLVM-NEXT: br label %[[BB_MERGE2]]
 // LLVM: [[BB_MERGE2]]:
@@ -236,22 +236,22 @@ void test_fpclassify_subnormal(){
 // CIR: cir.select if %[[IS_NORMAL]] then %[[NORMAL_VAL]] else %[[SUBNORMAL_VAL]] : (!cir.bool, !s32i, !s32i) -> !s32i
 
 // LLVM: %[[VAL:.*]] = load float, ptr
-// LLVM-NEXT: %[[IS_ZERO:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 96)
+// LLVM-NEXT: %[[IS_ZERO:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (zero) */ i32 96)
 // LLVM-NEXT: br i1 %[[IS_ZERO]], label %[[BB_ZERO:.*]], label %[[BB_NOT_ZERO:.*]]
 // LLVM: [[BB_ZERO]]:
 // LLVM-NEXT: br label %[[BB_RET:.*]]
 // LLVM: [[BB_NOT_ZERO]]:
-// LLVM-NEXT: %[[IS_NAN:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 3)
+// LLVM-NEXT: %[[IS_NAN:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (nan) */ i32 3)
 // LLVM-NEXT: br i1 %[[IS_NAN]], label %[[BB_NAN:.*]], label %[[BB_NOT_NAN:.*]]
 // LLVM: [[BB_NAN]]:
 // LLVM-NEXT: br label %[[BB_MERGE1:.*]]
 // LLVM: [[BB_NOT_NAN]]:
-// LLVM-NEXT: %[[IS_INF:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 516)
+// LLVM-NEXT: %[[IS_INF:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (inf) */ i32 516)
 // LLVM-NEXT: br i1 %[[IS_INF]], label %[[BB_INF:.*]], label %[[BB_NOT_INF:.*]]
 // LLVM: [[BB_INF]]:
 // LLVM-NEXT: br label %[[BB_MERGE2:.*]]
 // LLVM: [[BB_NOT_INF]]:
-// LLVM-NEXT: %[[IS_NORMAL:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 264)
+// LLVM-NEXT: %[[IS_NORMAL:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (norm) */ i32 264)
 // LLVM-NEXT: %[[NORMAL_OR_SUBNORMAL:.*]] = select i1 %[[IS_NORMAL]], i32 264, i32 144
 // LLVM-NEXT: br label %[[BB_MERGE2]]
 // LLVM: [[BB_MERGE2]]:
@@ -305,22 +305,22 @@ void test_fpclassify_zero(){
 // CIR: cir.select if %[[IS_NORMAL]] then %[[NORMAL_VAL]] else %[[SUBNORMAL_VAL]] : (!cir.bool, !s32i, !s32i) -> !s32i
 
 // LLVM: %[[VAL:.*]] = load float, ptr
-// LLVM-NEXT: %[[IS_ZERO:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 96)
+// LLVM-NEXT: %[[IS_ZERO:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (zero) */ i32 96)
 // LLVM-NEXT: br i1 %[[IS_ZERO]], label %[[BB_ZERO:.*]], label %[[BB_NOT_ZERO:.*]]
 // LLVM: [[BB_ZERO]]:
 // LLVM-NEXT: br label %[[BB_RET:.*]]
 // LLVM: [[BB_NOT_ZERO]]:
-// LLVM-NEXT: %[[IS_NAN:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 3)
+// LLVM-NEXT: %[[IS_NAN:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (nan) */ i32 3)
 // LLVM-NEXT: br i1 %[[IS_NAN]], label %[[BB_NAN:.*]], label %[[BB_NOT_NAN:.*]]
 // LLVM: [[BB_NAN]]:
 // LLVM-NEXT: br label %[[BB_MERGE1:.*]]
 // LLVM: [[BB_NOT_NAN]]:
-// LLVM-NEXT: %[[IS_INF:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 516)
+// LLVM-NEXT: %[[IS_INF:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (inf) */ i32 516)
 // LLVM-NEXT: br i1 %[[IS_INF]], label %[[BB_INF:.*]], label %[[BB_NOT_INF:.*]]
 // LLVM: [[BB_INF]]:
 // LLVM-NEXT: br label %[[BB_MERGE2:.*]]
 // LLVM: [[BB_NOT_INF]]:
-// LLVM-NEXT: %[[IS_NORMAL:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], i32 264)
+// LLVM-NEXT: %[[IS_NORMAL:.*]] = call i1 @llvm.is.fpclass.f32(float %[[VAL]], /* (norm) */ i32 264)
 // LLVM-NEXT: %[[NORMAL_OR_SUBNORMAL:.*]] = select i1 %[[IS_NORMAL]], i32 264, i32 144
 // LLVM-NEXT: br label %[[BB_MERGE2]]
 // LLVM: [[BB_MERGE2]]:

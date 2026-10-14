@@ -90,6 +90,11 @@ UnrollRuntimeEpilog("unroll-runtime-epilog", cl::init(false), cl::Hidden,
                     cl::desc("Allow runtime unrolled loops to be unrolled "
                              "with epilog instead of prolog."));
 
+static cl::opt<bool> UnrollUniformWeights(
+    "unroll-uniform-weights", cl::init(false), cl::Hidden,
+    cl::desc("If new branch weights must be found, work harder to keep them "
+             "uniform."));
+
 static cl::opt<bool>
 UnrollVerifyDomtree("unroll-verify-domtree", cl::Hidden,
                     cl::desc("Verify domtree after unrolling"),
@@ -421,26 +426,6 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
   }
 }
 
-// Loops containing convergent instructions that are uncontrolled or controlled
-// from outside the loop must have a count that divides their TripMultiple.
-LLVM_ATTRIBUTE_USED
-static bool canHaveUnrollRemainder(const Loop *L) {
-  if (getLoopConvergenceHeart(L))
-    return false;
-
-  // Check for uncontrolled convergent operations.
-  for (auto &BB : L->blocks()) {
-    for (auto &I : *BB) {
-      if (isa<ConvergenceControlInst>(I))
-        return true;
-      if (auto *CB = dyn_cast<CallBase>(&I))
-        if (CB->isConvergent())
-          return CB->getConvergenceControlToken();
-    }
-  }
-  return true;
-}
-
 // If LoopUnroll has proven OriginalLoopProb is incorrect for some iterations
 // of the original loop, adjust latch probabilities in the unrolled loop to
 // maintain the original total frequency of the original loop body.
@@ -495,9 +480,9 @@ static bool canHaveUnrollRemainder(const Loop *L) {
 //
 // There are often many sets of latch probabilities that can produce the
 // original total loop body frequency.  If there are many remaining conditional
-// latches, this function just quickly hacks a few of their probabilities to
-// restore the original total loop body frequency.  Otherwise, it determines
-// less arbitrary probabilities.
+// latches and !UnrollUniformWeights, this function just quickly hacks a few of
+// their probabilities to restore the original total loop body frequency.
+// Otherwise, it tries harder to determine less arbitrary probabilities.
 static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
                                  OptimizationRemarkEmitter *ORE,
                                  BranchProbability OriginalLoopProb,
@@ -582,10 +567,11 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
       SetProb(I, Prob);
   };
 
-  // If n <= 2, we choose the simplest probability model we can think of: every
-  // remaining conditional branch instruction has the same probability, Prob,
-  // of continuing to the next iteration.  This model has several helpful
-  // properties:
+  // If UnrollUniformWeights or n <= 2, we choose the simplest probability model
+  // we can think of: every remaining conditional branch instruction has the
+  // same probability, Prob, of continuing to the next iteration.  This model
+  // has several helpful properties:
+  // - There is only one search parameter, Prob.
   // - We have no reason to think one latch branch's probability should be
   //   higher or lower than another, and so this model makes them all the same.
   //   In the worst cases, we thus avoid setting just some probabilities to 0 or
@@ -598,20 +584,53 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
   //
   //     FreqOne = Sum(i=0..n)(c_i * p^i)
   //
-  // - If the backedge has been eliminated, FreqOne is the total frequency of
-  //   the original loop body in the unrolled loop.
-  // - If the backedge remains, Sum(i=0..inf)(FreqOne * p^(n*i)) =
-  //   FreqOne / (1 - p^n) is the total frequency of the original loop body in
-  //   the unrolled loop, regardless of whether the backedge is conditional or
-  //   unconditional.
+  // - If the backedge has been eliminated:
+  //   - FreqOne is the total frequency of the original loop body in the
+  //     unrolled loop.
+  //   - If Prob == 1, the total frequency of the original loop body is exactly
+  //     the number of remaining loop iterations, as expected because every
+  //     remaining loop iteration always then executes.
+  // - If the backedge remains:
+  //   - Sum(i=0..inf)(FreqOne * p^(n*i)) = FreqOne / (1 - p^n) is the total
+  //     frequency of the original loop body in the unrolled loop, regardless of
+  //     whether the backedge is conditional or unconditional.
+  //   - As Prob approaches 1, the total frequency of the original loop body
+  //     approaches infinity, as expected because the loop approaches never
+  //     exiting.
   // - For n <= 2, we can use simple formulas to solve the above polynomial
   //   equations exactly for p without performing a search.
+  // - For n > 2, evaluating each point in the search space, using ComputeFreq
+  //   below, requires about as few instructions as we could hope for.  That is,
+  //   the probability is constant across the conditional branches, so the only
+  //   computation is across conditional branches and any backedge, as required
+  //   for any model for Prob.
+  // - Prob == 1 produces the maximum possible total frequency for the original
+  //   loop body, as described above.  Prob == 0 produces the minimum, 0.
+  //   Increasing or decreasing Prob monotonically increases or decreases the
+  //   frequency, respectively.  Thus, for every possible frequency, there
+  //   exists some Prob that can produce it, and we can easily use bisection to
+  //   search the problem space.
 
   // When iterating for a solution, we stop early if we find probabilities
-  // that produce a Freq whose difference from FreqDesired is small
+  // that produce a Freq whose relative difference from FreqDesired is small
   // (FreqPrec).  Otherwise, we expect to compute a solution at least that
   // accurate (but surely far more accurate).
   const double FreqPrec = 1e-6;
+
+  // Compute the new frequency produced by using Prob throughout CondLatches.
+  auto ComputeFreq = [&](double Prob) {
+    double ProbReaching = 1;        // p^0
+    double FreqOne = IterCounts[0]; // c_0*p^0
+    for (unsigned I = 0, E = CondLatches.size(); I < E; ++I) {
+      ProbReaching *= Prob;                        // p^(I+1)
+      FreqOne += IterCounts[I + 1] * ProbReaching; // c_(I+1)*p^(I+1)
+    }
+    double ProbReachingBackedge = CompletelyUnroll ? 0 : ProbReaching;
+    assert(FreqOne > 0 && "Expected at least one iteration before first latch");
+    if (ProbReachingBackedge == 1)
+      return std::numeric_limits<double>::infinity();
+    return FreqOne / (1 - ProbReachingBackedge);
+  };
 
   // Compute the probability that, used at CondLaches[0] where
   // CondLatches.size() == 1, gets as close as possible to FreqDesired.
@@ -621,6 +640,11 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     double B = IterCounts[0] - FreqDesired;
     assert(A > 0 && "Expected iterations after last conditional latch");
     double Prob = -B / A;
+    // If it computes an invalid Prob, FreqDesired is impossibly low or high.
+    // Otherwise, Prob should produce nearly FreqDesired.
+    assert((Prob < 0 || Prob > 1 ||
+            fabs(ComputeFreq(Prob) - FreqDesired) / FreqDesired < FreqPrec) &&
+           "Expected accurate frequency when linear case is possible");
     Prob = std::max(Prob, 0.);
     Prob = std::min(Prob, 1.);
     return Prob;
@@ -635,6 +659,11 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     double C = IterCounts[0] - FreqDesired;
     assert(A > 0 && "Expected iterations after last conditional latch");
     double Prob = (-B + sqrt(B * B - 4 * A * C)) / (2 * A);
+    // If it computes an invalid Prob, FreqDesired is impossibly low or high.
+    // Otherwise, Prob should produce nearly FreqDesired.
+    assert((Prob < 0 || Prob > 1 ||
+            fabs(ComputeFreq(Prob) - FreqDesired) / FreqDesired < FreqPrec) &&
+           "Expected accurate frequency when quadratic case is possible");
     Prob = std::max(Prob, 0.);
     Prob = std::min(Prob, 1.);
     return Prob;
@@ -774,12 +803,17 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
   };
 
   // Determine and set branch weights.
+  //
+  // Prob < 0 and Prob > 1 cannot be represented as branch weights.  We might
+  // compute such a Prob if FreqDesired is impossible (e.g., due to inaccurate
+  // profile data) for the maximum trip count we have determined when completely
+  // unrolling.  In that case, so just go with whichever is closest.
   if (CondLatches.size() == 1) {
     SetAllProbs(ComputeProbForLinear());
   } else if (CondLatches.size() == 2) {
     SetAllProbs(ComputeProbForQuadratic());
-  } else {
-    // The polynomial is too complex for a simple formula, so the quick and
+  } else if (!UnrollUniformWeights) {
+    // The polynomial is too complex for a simple formula, and the quick and
     // dirty fix has been selected.  Adjust probabilities starting from the
     // first latch, which has the most influence on the total frequency, so
     // starting there should minimize the number of latches that have to be
@@ -790,9 +824,43 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     double FreqBefore = -1, FreqAfter = -1; // Inits expected to be unused.
     for (unsigned I = 0; I != CondLatches.size(); ++I) {
       double Freq = AdjustProb(I, ProbBefore, ProbAfter, FreqBefore, FreqAfter);
-      if (fabs(Freq - FreqDesired) < FreqPrec)
+      if (fabs(Freq - FreqDesired) / FreqDesired < FreqPrec)
         break;
     }
+  } else {
+    // The polynomial is too complex for a simple formula, and uniform branch
+    // weights have been selected, so bisect.
+    double ProbMin = -1, ProbMax = -1; // Inits expected to be unused.
+    double ProbPrev = -1;              // Inits expected to be unused.
+    auto TryProb = [&](double Prob) {
+      ProbPrev = Prob;
+      double FreqDelta = ComputeFreq(Prob) - FreqDesired;
+      if (fabs(FreqDelta) / FreqDesired < FreqPrec)
+        return 0;
+      if (FreqDelta < 0) {
+        ProbMin = Prob;
+        return -1;
+      }
+      ProbMax = Prob;
+      return 1;
+    };
+    // If Prob == 0 is too small and Prob == 1 is too large, bisect between
+    // them.  Accuracy (relative difference) is controlled by FreqPrec above.
+    // However, to place a hard upper limit on the search time, we stop
+    // bisecting when Prob stops changing (ProbDelta) by much (ProbPrec).  In
+    // this case, we compute an absolute difference not a relative difference,
+    // which could produce more search time for smaller probabilities.
+    if (TryProb(0.) < 0 && TryProb(1.) > 0) {
+      assert(ProbMin == 0 && ProbMax == 1 &&
+             "expected probability bounds to be initialized");
+      const double ProbPrec = 1e-12;
+      double Prob, ProbDelta;
+      do {
+        Prob = (ProbMin + ProbMax) / 2;
+        ProbDelta = Prob - ProbPrev;
+      } while (TryProb(Prob) != 0 && fabs(ProbDelta) > ProbPrec);
+    }
+    SetAllProbs(ProbPrev);
   }
 
   // FIXME: We have not considered non-latch loop exits:
@@ -876,7 +944,6 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   BasicBlock *LatchBlock = L->getLoopLatch();
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
-  std::vector<BasicBlock *> OriginalLoopBlocks = L->getBlocks();
 
   const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
   const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
@@ -1106,6 +1173,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   std::vector<BasicBlock*> UnrolledLoopBlocks = L->getBlocks();
 
+  // Snapshot the blocks to be cloned after remainder generation, which may
+  // delete blocks from L, but before cloning adds new blocks to L.
+  const std::vector<BasicBlock *> PostRemainderLoopBlocks = L->getBlocks();
+
   // Loop Unrolling might create new loops. While we do preserve LoopInfo, we
   // might break loop-simplified form for these loops (as they, e.g., would
   // share the same exit blocks). We'll keep track of loops for which we can
@@ -1284,6 +1355,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // Loop over the PHI nodes in the original block, setting incoming values.
   for (PHINode *PN : OrigPHINode) {
     if (CompletelyUnroll) {
+      // The RAUW below disconnects the original PHI from its users.
+      // Invalidate cached SCEVs while the def-use chain is still intact.
+      if (SE)
+        SE->forgetValue(PN);
       PN->replaceAllUsesWith(PN->getIncomingValueForBlock(Preheader));
       PN->eraseFromParent();
     } else if (ULO.Count > 1) {
@@ -1320,7 +1395,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // routes which can lead to the exit: we can now reach it from the copied
   // iterations too.
   if (ULO.Count > 1) {
-    for (auto *BB : OriginalLoopBlocks) {
+    for (auto *BB : PostRemainderLoopBlocks) {
       auto *BBDomNode = DT->getNode(BB);
       SmallVector<BasicBlock *, 16> ChildrenToUpdate;
       for (auto *ChildDomNode : BBDomNode->children()) {
@@ -1530,13 +1605,16 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         continue;
       if (!RdxResult) {
         RdxResult = PartialReductions.front();
-        IRBuilder Builder(ExitBlock, ExitBlock->getFirstNonPHIIt());
+        IRBuilder Builder(ExitBlock->getFirstNonPHIIt());
         Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
-          RdxResult = Builder.CreateBinOp(
-              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
-              RdxPart, RdxResult, "bin.rdx");
+          if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
+            RdxResult = createMinMaxOp(Builder, RK, RdxResult, RdxPart);
+          else
+            RdxResult = Builder.CreateBinOp(
+                (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
+                RdxPart, RdxResult, "bin.rdx");
         }
         NeedToFixLCSSA = true;
         for (Instruction *RdxPart : PartialReductions)
@@ -1620,7 +1698,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // LoopInfo should not be valid, confirm that.
   if (UnrollVerifyLoopInfo)
-    LI->verify(*DT);
+    LI->verify();
 
   // After complete unrolling most of the blocks should be contained in OuterL.
   // However, some of them might happen to be out of OuterL (e.g. if they
@@ -1677,11 +1755,8 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
   assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
   assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
 
-  for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
-    MDNode *MD = dyn_cast<MDNode>(MDO);
-    if (!MD)
-      continue;
-
+  for (MDNode *MD :
+       make_isa_range<MDNode>(llvm::drop_begin(LoopID->operands()))) {
     MDString *S = dyn_cast<MDString>(MD->getOperand(0));
     if (!S)
       continue;
@@ -1712,12 +1787,17 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   if (RdxDesc.hasUsesOutsideReductionChain())
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
-  // Skip unsupported reductions.
-  // TODO: Handle additional reductions, including FP and min-max
-  // reductions.
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
+  static const auto ValidRKs = {
+      RecurKind::Add,         RecurKind::Mul,      RecurKind::Or,
+      RecurKind::And,         RecurKind::Xor,      RecurKind::SMin,
+      RecurKind::SMax,        RecurKind::UMin,     RecurKind::UMax,
+      RecurKind::FAdd,        RecurKind::FMul,     RecurKind::FMin,
+      RecurKind::FMax,        RecurKind::FMinNum,  RecurKind::FMaxNum,
+      RecurKind::FMinimum,    RecurKind::FMaximum, RecurKind::FMinimumNum,
+      RecurKind::FMaximumNum, RecurKind::FMulAdd};
+  // Skip unsupported reductions, including sub, any-of and find-last.
+  // TODO: Handle sub, any-of and find-last reductions.
+  if (!any_of(ValidRKs, equal_to(RK)))
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
@@ -1726,18 +1806,21 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   if (RdxDesc.IntermediateStore)
     return std::nullopt;
 
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!Latch)
+    return std::nullopt;
+  Instruction *LatchInst =
+      cast<Instruction>(Phi.getIncomingValueForBlock(Latch));
   // Don't unroll reductions with constant ops; those can be folded to a
-  // single induction update.
-  if (any_of(cast<Instruction>(Phi.getIncomingValueForBlock(L->getLoopLatch()))
-                 ->operands(),
-             IsaPred<Constant>))
+  // single induction update. For calls (e.g. fmuladd or min/max
+  // intrinsics), the called function is itself a Constant operand and is
+  // not a reduction operand, so restrict the check to the argument list.
+  auto Ops = isa<CallBase>(LatchInst) ? cast<CallBase>(LatchInst)->args()
+                                      : LatchInst->operands();
+  if (any_of(Ops, IsaPred<Constant>))
     return std::nullopt;
 
-  BasicBlock *Latch = L->getLoopLatch();
-  if (!Latch ||
-      !is_contained(
-          cast<Instruction>(Phi.getIncomingValueForBlock(Latch))->operands(),
-          &Phi))
+  if (!is_contained(LatchInst->operands(), &Phi))
     return std::nullopt;
 
   return RdxDesc;

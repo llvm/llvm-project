@@ -26,7 +26,7 @@ define void @foo(ptr %d, ptr %e) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr @a, align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x double>, ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP12]], <2 x double> [[TMP10]], <2 x double> [[TMP9]])
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP8]], align 8

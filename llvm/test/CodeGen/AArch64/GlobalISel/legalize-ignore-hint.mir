@@ -12,12 +12,12 @@ body: |
     ; CHECK-LABEL: name: assert_zext
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:_(s32) = COPY $w1
-    ; CHECK-NEXT: %hint:_(s32) = G_ASSERT_ZEXT %copy, 16
-    ; CHECK-NEXT: $w0 = COPY %hint(s32)
+    ; CHECK-NEXT: %copy:_(i32) = COPY $w1
+    ; CHECK-NEXT: %hint:_(i32) = G_ASSERT_ZEXT %copy, 16
+    ; CHECK-NEXT: $w0 = COPY %hint(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %copy:_(s32) = COPY $w1
-    %hint:_(s32) = G_ASSERT_ZEXT %copy, 16
+    %copy:_(i32) = COPY $w1
+    %hint:_(i32) = G_ASSERT_ZEXT %copy, 16
     $w0 = COPY %hint
     RET_ReallyLR implicit $w0
 ...

@@ -19,6 +19,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
@@ -26,6 +27,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DJB.h"
+#include "llvm/Support/Error.h"
 #include <optional>
 
 using namespace lldb;
@@ -35,6 +37,19 @@ char ObjCLanguageRuntime::ID = 0;
 
 // Destructor
 ObjCLanguageRuntime::~ObjCLanguageRuntime() = default;
+
+bool ObjCLanguageRuntime::IsSupportedForArchitecture(const ArchSpec &arch) {
+  // These are the only object file formats clang can emit Objective-C
+  // metadata for; it aborts on any other.
+  switch (arch.GetTriple().getObjectFormat()) {
+  case llvm::Triple::MachO:
+  case llvm::Triple::ELF:
+  case llvm::Triple::COFF:
+    return true;
+  default:
+    return false;
+  }
+}
 
 ObjCLanguageRuntime::ObjCLanguageRuntime(Process *process)
     : LanguageRuntime(process), m_impl_cache(), m_impl_str_cache(),
@@ -266,14 +281,31 @@ ObjCLanguageRuntime::GetClassDescriptor(ValueObject &valobj) {
 
       Process *process = exe_ctx.GetProcessPtr();
       if (process) {
-        Status error;
-        ObjCISA isa = process->ReadPointerFromMemory(isa_pointer, error);
-        if (isa != LLDB_INVALID_ADDRESS)
-          objc_class_sp = GetClassDescriptorFromISA(isa);
+        std::optional<lldb::addr_t> isa = llvm::expectedToOptional(
+            process->ReadPointerFromMemory(isa_pointer));
+        if (isa)
+          objc_class_sp = GetClassDescriptorFromISA(*isa);
       }
     }
   }
   return objc_class_sp;
+}
+
+bool ObjCLanguageRuntime::IsTaggedPointerValue(ValueObject &in_value) {
+  TaggedPointerVendor *tagged_pointer_vendor = GetTaggedPointerVendor();
+  if (!tagged_pointer_vendor)
+    return false;
+
+  // Only Objective-C object values can be tagged pointers.
+  if (!(in_value.GetTypeInfo() & lldb::eTypeIsObjC))
+    return false;
+
+  addr_t ptr = in_value.IsPointerType() ? in_value.GetPointerValue().address
+                                        : in_value.GetAddressOf().address;
+  if (ptr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  return tagged_pointer_vendor->IsPossibleTaggedPointer(ptr);
 }
 
 ObjCLanguageRuntime::ClassDescriptorSP

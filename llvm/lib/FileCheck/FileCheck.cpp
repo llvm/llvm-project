@@ -1292,6 +1292,25 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
   }
 }
 
+void Pattern::printVariableDefAttempts(const SourceMgr &SM, StringRef Buffer,
+                                       FileCheckDiagList *Diags) const {
+  if (VariableDefs.empty() && NumericVariableDefs.empty())
+    return;
+  SmallString<256> Msg;
+  raw_svector_ostream OS(Msg);
+  OS << "pattern attempts to capture variables: ";
+  llvm::ListSeparator LS;
+  for (const auto &Def : VariableDefs)
+    OS << LS << '"' << Def.first << '"';
+  for (const auto &Def : NumericVariableDefs)
+    OS << LS << '"' << Def.getKey() << '"';
+  SMLoc Start = SMLoc::getFromPointer(Buffer.data());
+  if (Diags)
+    Diags->emplace<MatchCustomNoteDiag>(OS.str());
+  else
+    SM.PrintMessage(Start, SourceMgr::DK_Note, OS.str());
+}
+
 void Pattern::printVariableDefs(const SourceMgr &SM,
                                 FileCheckDiagList *Diags) const {
   if (VariableDefs.empty() && NumericVariableDefs.empty())
@@ -1503,10 +1522,6 @@ StringRef FileCheck::CanonicalizeFile(MemoryBuffer &MB,
   OutputBuffer.push_back('\0');
   return StringRef(OutputBuffer.data(), OutputBuffer.size() - 1);
 }
-
-FileCheckDiag::~FileCheckDiag() {}
-MatchResultDiag::~MatchResultDiag() {}
-MatchNoteDiag::~MatchNoteDiag() {}
 
 static bool IsPartOfWord(char c) {
   return (isAlnum(c) || c == '-' || c == '_');
@@ -2123,6 +2138,7 @@ static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
     for (StringRef ErrorMsg : ErrorMsgs)
       Diags->emplace<MatchCustomNoteDiag>(ErrorMsg);
     Pat.printSubstitutions(SM, Buffer, SearchRange, Diags);
+    Pat.printVariableDefAttempts(SM, Buffer, Diags);
   }
   if (!PrintDiag) {
     assert(!HasError && "expected to report more diagnostics for error");
@@ -2149,6 +2165,8 @@ static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
   // Print additional information, which can be useful even after a pattern
   // error.
   Pat.printSubstitutions(SM, Buffer, SearchRange, nullptr);
+  Pat.printVariableDefAttempts(SM, Buffer, nullptr);
+
   if (ExpectedMatch)
     Pat.printFuzzyMatch(SM, Buffer, Diags);
   return ErrorReported::reportedOrSuccess(HasError);

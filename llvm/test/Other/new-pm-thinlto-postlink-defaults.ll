@@ -26,10 +26,15 @@
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager -debug-info-for-profiling \
 ; RUN:     -passes='thinlto<O2>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23,CHECK-POSTLINK-O,%llvmcheckext
+; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
+; RUN:     -passes='thinlto<O1>' -S %s -passes-ep-thin-link-time-optimization-early=no-op-module \
+; RUN:     -passes-ep-thin-link-time-optimization-last=no-op-module 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-POSTLINK-O,%llvmcheckext,CHECK-EP-THINLTO-EARLY,CHECK-EP-THINLTO-LAST
 
 ; Suppress FileCheck --allow-unused-prefixes=false diagnostics.
 ; CHECK-NOEXT: {{^}}
 
+; CHECK-EP-THINLTO-EARLY: Running pass: NoOpModulePass
 ; CHECK-EP-PIPELINE-START: Running pass: NoOpModulePass
 ; CHECK-DIS: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-DIS-NEXT: Running pass: AddDiscriminatorsPass
@@ -93,11 +98,12 @@
 ; CHECK-O23-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: ReassociatePass
+; CHECK-O-NEXT: Running analysis: UniformityInfoAnalysis
 ; CHECK-O23-NEXT: Running pass: ConstraintEliminationPass
 ; CHECK-O23-NEXT: Running analysis: LoopAnalysis
 ; CHECK-O23-NEXT: Running analysis: ScalarEvolutionAnalysis
-; CHECK-O-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O1-NEXT: Running analysis: LoopAnalysis
+; CHECK-O-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O-NEXT: Running pass: LCSSAPass
 ; CHECK-O1-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
@@ -126,6 +132,7 @@
 ; CHECK-O-NEXT: Running pass: BDCEPass
 ; CHECK-O-NEXT: Running analysis: DemandedBitsAnalysis
 ; CHECK-O-NEXT: Running pass: InstCombinePass
+; CHECK-O23-NEXT: Running pass: DFAJumpThreadingPass
 ; CHECK-O23-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O23-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23-NEXT: Running pass: CorrelatedValuePropagationPass
@@ -169,6 +176,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: LCSSAPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopRotatePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopDeletionPass
+; CHECK-POSTLINK-O-NEXT: Running pass: LoopInterchangePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopDistributePass
 ; CHECK-POSTLINK-O-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-POSTLINK-O-NEXT: Running pass: InjectTLIMappings
@@ -205,6 +213,8 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: RelLookupTableConverterPass
 ; CHECK-EP-OPT-EARLY-NEXT: Running pass: NoOpModulePass
 ; CHECK-EP-OPT-LAST-NEXT: Running pass: NoOpModulePass
+; CHECK-POSTLINK-O-NEXT: Running pass: LowerCommentStringPass
+; CHECK-EP-THINLTO-LAST-NEXT: Running pass: NoOpModulePass
 ; CHECK-O-NEXT:          Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 

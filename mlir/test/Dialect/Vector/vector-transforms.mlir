@@ -3,14 +3,14 @@
 // CHECK-DAG: #[[MAP1:map[0-9]*]] = affine_map<(d0, d1, d2) -> (d1, d2)>
 
 // CHECK-LABEL: func @add4x2
-//      CHECK: %[[S1:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[S2:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
+//      CHECK: %[[S1:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 0], sizes = [2, 2], strides = [1, 1] : vector<4x2xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S2:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 0], sizes = [2, 2], strides = [1, 1] : vector<4x2xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[A1:.*]] = arith.addf %[[S1]], %[[S2]] : vector<2x2xf32>
-// CHECK-NEXT: %[[VEC0:.*]] = vector.insert_strided_slice %[[A1]], %{{.*}} {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x2xf32>
-// CHECK-NEXT: %[[S3:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[S4:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[VEC0:.*]] = vector.insert_strided_slice %[[A1]], %{{.*}} offsets = [0, 0], strides = [1, 1] : vector<2x2xf32> into vector<4x2xf32>
+// CHECK-NEXT: %[[S3:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2, 0], sizes = [2, 2], strides = [1, 1] : vector<4x2xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S4:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2, 0], sizes = [2, 2], strides = [1, 1] : vector<4x2xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[A2:.*]] = arith.addf %[[S3]], %[[S4]] : vector<2x2xf32>
-// CHECK-NEXT: %[[VEC1:.*]] = vector.insert_strided_slice %[[A2]], %[[VEC0]] {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x2xf32>
+// CHECK-NEXT: %[[VEC1:.*]] = vector.insert_strided_slice %[[A2]], %[[VEC0]] offsets = [2, 0], strides = [1, 1] : vector<2x2xf32> into vector<4x2xf32>
 // CHECK-NEXT: return %[[VEC1:.*]] : vector<4x2xf32>
 
 func.func @add4x2(%0: vector<4x2xf32>) -> vector<4x2xf32> {
@@ -36,7 +36,7 @@ func.func @no_change(%arg0: vector<2x[4]x1xf32>, %arg1: vector<2x[4]x1xf32>) -> 
 
 // CHECK-LABEL:   func.func @cast_away_leading_one_dim(
 // CHECK:           %[[MUL:.*]] = arith.mulf %{{.*}}, %{{.*}} : vector<4x1xf32>
-// CHECK:           vector.shape_cast %[[MUL]] : vector<4x1xf32> to vector<1x4x1xf32>
+// CHECK:           vector.broadcast %[[MUL]] : vector<4x1xf32> to vector<1x4x1xf32>
 func.func @cast_away_leading_one_dim(%arg0: vector<1x4x1xf32>, %arg1: vector<1x4x1xf32>) -> vector<1x4x1xf32> {
   %1 = arith.mulf %arg0, %arg1 : vector<1x4x1xf32>
   return %1: vector<1x4x1xf32>
@@ -44,47 +44,47 @@ func.func @cast_away_leading_one_dim(%arg0: vector<1x4x1xf32>, %arg1: vector<1x4
 
 // CHECK-LABEL:   func.func @cast_away_leading_one_dim_scalable(
 // CHECK:           %[[MUL:.*]] = arith.mulf %{{.*}}, %{{.*}} : vector<[4]x1xf32>
-// CHECK:           vector.shape_cast %[[MUL]] : vector<[4]x1xf32> to vector<1x[4]x1xf32>
+// CHECK:           vector.broadcast %[[MUL]] : vector<[4]x1xf32> to vector<1x[4]x1xf32>
 func.func @cast_away_leading_one_dim_scalable(%arg0: vector<1x[4]x1xf32>, %arg1: vector<1x[4]x1xf32>) -> vector<1x[4]x1xf32> {
   %1 = arith.mulf %arg0, %arg1 : vector<1x[4]x1xf32>
   return %1: vector<1x[4]x1xf32>
 }
 
 // CHECK-LABEL: func @add4x4
-//      CHECK: %[[S1:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[S2:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+//      CHECK: %[[S1:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 0], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S2:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 0], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
 
 // CHECK-NEXT: %[[A1:.*]] = arith.addf %[[S1]], %[[S2]] : vector<2x2xf32>
 
-// CHECK-NEXT: %[[S3:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[S4:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S3:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 2], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S4:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 2], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
 
 // CHECK-NEXT: %[[A2:.*]] = arith.addf %[[S3]], %[[S4]] : vector<2x2xf32>
 
-// CHECK-NEXT: %[[S5:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[S6:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S5:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2, 0], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S6:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2, 0], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[A3:.*]] = arith.addf %[[S5]], %[[S6]] : vector<2x2xf32>
 
-// CHECK-NEXT: %[[S7:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
-// CHECK-NEXT: %[[S8:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S7:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2, 2], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S8:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2, 2], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[A4:.*]] = arith.addf %[[S7]], %[[S8]] : vector<2x2xf32>
 
-// CHECK-NEXT: %[[S9:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S9:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 0], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[A5:.*]] = arith.addf %[[S9]], %[[A1]] : vector<2x2xf32>
-// CHECK-NEXT: %[[R1:.*]] = vector.insert_strided_slice %[[A5]], %{{.*}} {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK-NEXT: %[[R1:.*]] = vector.insert_strided_slice %[[A5]], %{{.*}} offsets = [0, 0], strides = [1, 1] : vector<2x2xf32> into vector<4x4xf32>
 
 
-// CHECK-NEXT: %[[S11:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S11:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 2], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[A6:.*]] = arith.addf %[[S11]], %[[A2]] : vector<2x2xf32>
-// CHECK-NEXT: %[[R2:.*]] = vector.insert_strided_slice %[[A6]], %[[R1]] {offsets = [0, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK-NEXT: %[[R2:.*]] = vector.insert_strided_slice %[[A6]], %[[R1]] offsets = [0, 2], strides = [1, 1] : vector<2x2xf32> into vector<4x4xf32>
 
-// CHECK-NEXT: %[[S13:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S13:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2, 0], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[A7:.*]] = arith.addf %[[S13]], %[[A3]] : vector<2x2xf32>
-// CHECK-NEXT: %[[R3:.*]] = vector.insert_strided_slice %[[A7]], %[[R2]] {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK-NEXT: %[[R3:.*]] = vector.insert_strided_slice %[[A7]], %[[R2]] offsets = [2, 0], strides = [1, 1] : vector<2x2xf32> into vector<4x4xf32>
 
-// CHECK-NEXT: %[[S15:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
+// CHECK-NEXT: %[[S15:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2, 2], sizes = [2, 2], strides = [1, 1] : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[A8:.*]] = arith.addf %[[S15]], %[[A4]] : vector<2x2xf32>
-// CHECK-NEXT: %[[R4:.*]] = vector.insert_strided_slice %[[A8]], %[[R3]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK-NEXT: %[[R4:.*]] = vector.insert_strided_slice %[[A8]], %[[R3]] offsets = [2, 2], strides = [1, 1] : vector<2x2xf32> into vector<4x4xf32>
 
 // CHECK-NEXT: return %[[R4]] : vector<4x4xf32>
 
@@ -277,15 +277,13 @@ func.func @contraction4x4_ikj_xfer_read_tensor(%arg0 : tensor<4x2xf32>,
 func.func @bubble_down_bitcast_in_extract(%src: vector<4xf32>) -> (f16, f16) {
   %0 = vector.bitcast %src : vector<4xf32> to vector<8xf16>
   // CHECK: %[[EXTRACT1:.+]] = vector.extract %[[SRC]][1] : f32 from vector<4xf32>
-  // CHECK:  %[[INSERT1:.+]] = vector.insert %[[EXTRACT1]], %{{.+}} [] : f32 into vector<f32>
-  // CHECK:  %[[SHAPE_CAST1:.+]] = vector.shape_cast %[[INSERT1]] : vector<f32> to vector<1xf32>
-  // CHECK:    %[[CAST1:.+]] = vector.bitcast %[[SHAPE_CAST1]] : vector<1xf32> to vector<2xf16>
+  // CHECK:  %[[INSERT1:.+]] = vector.insert %[[EXTRACT1]], %{{.+}} [0] : f32 into vector<1xf32>
+  // CHECK:    %[[CAST1:.+]] = vector.bitcast %[[INSERT1]] : vector<1xf32> to vector<2xf16>
   // CHECK: %[[EXTRACT2:.+]] = vector.extract %[[CAST1]][1] : f16 from vector<2xf16>
   %1 = vector.extract %0[3] : f16 from vector<8xf16>
   // CHECK: %[[EXTRACT3:.+]] = vector.extract %[[SRC]][2] : f32 from vector<4xf32>
-  // CHECK:  %[[INSERT3:.+]] = vector.insert %[[EXTRACT3]], %{{.+}} [] : f32 into vector<f32>
-  // CHECK:  %[[SHAPE_CAST2:.+]] = vector.shape_cast %[[INSERT3]] : vector<f32> to vector<1xf32>
-  // CHECK:    %[[CAST2:.+]] = vector.bitcast %[[SHAPE_CAST2]] : vector<1xf32> to vector<2xf16>
+  // CHECK:  %[[INSERT3:.+]] = vector.insert %[[EXTRACT3]], %{{.+}} [0] : f32 into vector<1xf32>
+  // CHECK:    %[[CAST2:.+]] = vector.bitcast %[[INSERT3]] : vector<1xf32> to vector<2xf16>
   // CHECK: %[[EXTRACT4:.+]] = vector.extract %[[CAST2]][0] : f16 from vector<2xf16>
   %2 = vector.extract %0[4] : f16 from vector<8xf16>
   // CHECK: return %[[EXTRACT2]], %[[EXTRACT4]]
@@ -295,10 +293,10 @@ func.func @bubble_down_bitcast_in_extract(%src: vector<4xf32>) -> (f16, f16) {
 // CHECK-LABEL: func @bubble_down_bitcast_in_strided_slice_extract
 //  CHECK-SAME: %[[SRC:.+]]: vector<4xf32>
 func.func @bubble_down_bitcast_in_strided_slice_extract(%arg0: vector<4xf32>) -> vector<4xf16> {
-  // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[SRC]] {offsets = [2], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
+  // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[SRC]] offsets = [2], sizes = [2], strides = [1] : vector<4xf32> to vector<2xf32>
   // CHECK: %[[CAST:.+]] = vector.bitcast %[[EXTRACT]] : vector<2xf32> to vector<4xf16>
   %cast = vector.bitcast %arg0: vector<4xf32> to vector<8xf16>
-  %0 = vector.extract_strided_slice %cast {offsets = [4], sizes = [4], strides = [1]} : vector<8xf16> to vector<4xf16>
+  %0 = vector.extract_strided_slice %cast offsets = [4], sizes = [4], strides = [1] : vector<8xf16> to vector<4xf16>
   // CHECK: return %[[CAST]]
   return %0: vector<4xf16>
 }
@@ -306,10 +304,10 @@ func.func @bubble_down_bitcast_in_strided_slice_extract(%arg0: vector<4xf32>) ->
 // CHECK-LABEL: func @bubble_down_bitcast_in_strided_slice_extract_full_last_dim
 //  CHECK-SAME: %[[SRC:.+]]: vector<4x2xf32>
 func.func @bubble_down_bitcast_in_strided_slice_extract_full_last_dim(%arg0: vector<4x2xf32>) -> vector<2x4xf16> {
-  // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[SRC]] {offsets = [1], sizes = [2], strides = [1]} : vector<4x2xf32> to vector<2x2xf32>
+  // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[SRC]] offsets = [1], sizes = [2], strides = [1] : vector<4x2xf32> to vector<2x2xf32>
   // CHECK: %[[CAST:.+]] = vector.bitcast %[[EXTRACT]] : vector<2x2xf32> to vector<2x4xf16>
   %cast = vector.bitcast %arg0: vector<4x2xf32> to vector<4x4xf16>
-  %0 = vector.extract_strided_slice %cast {offsets = [1], sizes = [2], strides = [1]} : vector<4x4xf16> to vector<2x4xf16>
+  %0 = vector.extract_strided_slice %cast offsets = [1], sizes = [2], strides = [1] : vector<4x4xf16> to vector<2x4xf16>
   // CHECK: return %[[CAST]]
   return %0: vector<2x4xf16>
 }
@@ -319,7 +317,7 @@ func.func @bubble_down_bitcast_in_strided_slice_extract_odd_offset(%arg0: vector
   // CHECK: vector.bitcast
   // CHECK-NEXT: vector.extract_strided_slice
   %cast = vector.bitcast %arg0: vector<4xf32> to vector<8xf16>
-  %0 = vector.extract_strided_slice %cast {offsets = [3], sizes = [4], strides = [1]} : vector<8xf16> to vector<4xf16>
+  %0 = vector.extract_strided_slice %cast offsets = [3], sizes = [4], strides = [1] : vector<8xf16> to vector<4xf16>
   return %0: vector<4xf16>
 }
 
@@ -328,7 +326,7 @@ func.func @bubble_down_bitcast_in_strided_slice_extract_odd_size(%arg0: vector<4
   // CHECK: vector.bitcast
   // CHECK-NEXT: vector.extract_strided_slice
   %cast = vector.bitcast %arg0: vector<4xf32> to vector<8xf16>
-  %0 = vector.extract_strided_slice %cast {offsets = [0], sizes = [3], strides = [1]} : vector<8xf16> to vector<3xf16>
+  %0 = vector.extract_strided_slice %cast offsets = [0], sizes = [3], strides = [1] : vector<8xf16> to vector<3xf16>
   return %0: vector<3xf16>
 }
 
@@ -383,10 +381,10 @@ func.func @bubble_up_bitcast_in_strided_slice_insert(%dst: vector<8xf16>, %src1:
   // CHECK-DAG: %[[CAST_SRC1:.+]] = vector.bitcast %[[SRC1]] : vector<4xf16> to vector<2xf32>
   // CHECK-DAG: %[[CAST_SRC2:.+]] = vector.bitcast %[[SRC2]] : vector<4xf16> to vector<2xf32>
   // CHECK-DAG: %[[CAST_DST:.+]] = vector.bitcast %[[DST]] : vector<8xf16> to vector<4xf32>
-  // CHECK: %[[INSERT1:.+]] = vector.insert_strided_slice %[[CAST_SRC1]], %[[CAST_DST]] {offsets = [0], strides = [1]} : vector<2xf32> into vector<4xf32>
-  // CHECK: %[[INSERT2:.+]] = vector.insert_strided_slice %[[CAST_SRC2]], %[[INSERT1]] {offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
-  %0 = vector.insert_strided_slice %src1, %dst {offsets = [0], strides = [1]} : vector<4xf16> into vector<8xf16>
-  %1 = vector.insert_strided_slice %src2, %0   {offsets = [4], strides = [1]} : vector<4xf16> into vector<8xf16>
+  // CHECK: %[[INSERT1:.+]] = vector.insert_strided_slice %[[CAST_SRC1]], %[[CAST_DST]] offsets = [0], strides = [1] : vector<2xf32> into vector<4xf32>
+  // CHECK: %[[INSERT2:.+]] = vector.insert_strided_slice %[[CAST_SRC2]], %[[INSERT1]] offsets = [2], strides = [1] : vector<2xf32> into vector<4xf32>
+  %0 = vector.insert_strided_slice %src1, %dst offsets = [0], strides = [1] : vector<4xf16> into vector<8xf16>
+  %1 = vector.insert_strided_slice %src2, %0 offsets = [4], strides = [1] : vector<4xf16> into vector<8xf16>
   %cast = vector.bitcast %1: vector<8xf16> to vector<4xf32>
   // CHECK: return %[[INSERT2]]
   return %cast: vector<4xf32>
@@ -396,7 +394,7 @@ func.func @bubble_up_bitcast_in_strided_slice_insert(%dst: vector<8xf16>, %src1:
 func.func @bubble_up_bitcast_in_strided_slice_insert_odd_offset(%dst: vector<8xf16>, %src: vector<4xf16>) -> vector<4xf32> {
   // CHECK: vector.insert_strided_slice
   // CHECK-NEXT: vector.bitcast
-  %0 = vector.insert_strided_slice %src, %dst {offsets = [3], strides = [1]} : vector<4xf16> into vector<8xf16>
+  %0 = vector.insert_strided_slice %src, %dst offsets = [3], strides = [1] : vector<4xf16> into vector<8xf16>
   %cast = vector.bitcast %0: vector<8xf16> to vector<4xf32>
   return %cast: vector<4xf32>
 }
@@ -405,7 +403,7 @@ func.func @bubble_up_bitcast_in_strided_slice_insert_odd_offset(%dst: vector<8xf
 func.func @bubble_up_bitcast_in_strided_slice_insert_different_rank(%dst: vector<16x4x8xf16>, %src: vector<2x4xf16>) -> vector<16x4x4xf32> {
   // CHECK: vector.insert_strided_slice
   // CHECK-NEXT: vector.bitcast
-  %0 = vector.insert_strided_slice %src, %dst {offsets = [0, 0, 2], strides = [1, 1]} : vector<2x4xf16> into vector<16x4x8xf16>
+  %0 = vector.insert_strided_slice %src, %dst offsets = [0, 0, 2], strides = [1, 1] : vector<2x4xf16> into vector<16x4x8xf16>
   %cast = vector.bitcast %0: vector<16x4x8xf16> to vector<16x4x4xf32>
   return %cast: vector<16x4x4xf32>
 }
@@ -414,7 +412,7 @@ func.func @bubble_up_bitcast_in_strided_slice_insert_different_rank(%dst: vector
 func.func @bubble_up_bitcast_in_strided_slice_insert_odd_shape(%dst: vector<2xf16>, %src: vector<1xf16>) -> vector<1xf32> {
   // CHECK: vector.insert_strided_slice
   // CHECK-NEXT: vector.bitcast
-  %0 = vector.insert_strided_slice %src, %dst {offsets = [0], strides = [1]} : vector<1xf16> into vector<2xf16>
+  %0 = vector.insert_strided_slice %src, %dst offsets = [0], strides = [1] : vector<1xf16> into vector<2xf16>
   %cast = vector.bitcast %0: vector<2xf16> to vector<1xf32>
   return %cast: vector<1xf32>
 }
@@ -423,7 +421,7 @@ func.func @bubble_up_bitcast_in_strided_slice_insert_odd_shape(%dst: vector<2xf1
 func.func @bubble_up_bitcast_in_strided_slice_insert_larger_odd_shape(%dst: vector<8xf16>, %src: vector<3xf16>) -> vector<4xf32> {
   // CHECK: vector.insert_strided_slice
   // CHECK-NEXT: vector.bitcast
-  %0 = vector.insert_strided_slice %src, %dst {offsets = [0], strides = [1]} : vector<3xf16> into vector<8xf16>
+  %0 = vector.insert_strided_slice %src, %dst offsets = [0], strides = [1] : vector<3xf16> into vector<8xf16>
   %cast = vector.bitcast %0: vector<8xf16> to vector<4xf32>
   return %cast: vector<4xf32>
 }

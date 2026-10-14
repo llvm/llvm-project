@@ -9,11 +9,12 @@
 # RUN: llvm-readobj -r %tlocal.ro | FileCheck --check-prefix=REL %s
 
 # RUN: ld.lld -r --discard-all %t.o -o %tall.ro
-# RUN: llvm-readelf -s %tall.ro | FileCheck --check-prefix=DISCARD-ALL %s
+# RUN: llvm-readelf -s %tall.ro | FileCheck --check-prefix=DISCARD-ALL --implicit-check-not=FILE %s
 # RUN: llvm-readobj -r %tall.ro | FileCheck --check-prefix=REL %s
 
 ## --discard-locals removes unused local symbols which start with ".L"
 # DISCARD-LOCALS:    0: {{0+}} 0 NOTYPE  LOCAL  DEFAULT UND
+# DISCARD-LOCALS-NEXT:           FILE    LOCAL  DEFAULT ABS {{.*}}.o
 # DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} .Lused
 # DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} used
 # DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} .L.str
@@ -25,7 +26,8 @@
 # DISCARD-LOCALS-NEXT:           SECTION LOCAL  DEFAULT {{.*}} .rodata.str1.1
 # DISCARD-LOCALS-NEXT:           NOTYPE  GLOBAL DEFAULT {{.*}} _start
 
-## --discard-all removes all unused regular local symbols.
+## --discard-all removes all unused regular local symbols and STT_FILE
+## symbols; no STT_FILE is synthesized.
 # DISCARD-ALL:    0: {{0+}} 0 NOTYPE  LOCAL  DEFAULT UND
 # DISCARD-ALL-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} .Lused
 # DISCARD-ALL-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} used

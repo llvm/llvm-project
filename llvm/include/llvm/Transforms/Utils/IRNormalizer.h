@@ -28,7 +28,8 @@ public:
   IRNormalizerPass(IRNormalizerOptions Options = IRNormalizerOptions())
       : Options(Options) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) const;
+  LLVM_ABI PreservedAnalyses run(Function &F,
+                                 FunctionAnalysisManager &AM) const;
 };
 
 } // namespace llvm

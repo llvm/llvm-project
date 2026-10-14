@@ -421,14 +421,14 @@ define <4 x float> @vfrem_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x 
 ; RV32-NEXT:    addi a0, a0, 32
 ; RV32-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; RV32-NEXT:    vslidedown.vi v8, v8, 3
+; RV32-NEXT:    vfmv.f.s fa0, v8
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 32
-; RV32-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
-; RV32-NEXT:    vslidedown.vi v9, v9, 3
-; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    vfmv.f.s fa1, v9
+; RV32-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; RV32-NEXT:    vslidedown.vi v8, v8, 3
+; RV32-NEXT:    vfmv.f.s fa1, v8
 ; RV32-NEXT:    call fmodf
 ; RV32-NEXT:    addi a0, sp, 32
 ; RV32-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
@@ -513,14 +513,14 @@ define <4 x float> @vfrem_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x 
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; RV64-NEXT:    vslidedown.vi v8, v8, 3
+; RV64-NEXT:    vfmv.f.s fa0, v8
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    add a0, sp, a0
 ; RV64-NEXT:    addi a0, a0, 16
-; RV64-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
-; RV64-NEXT:    vslidedown.vi v9, v9, 3
-; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    vfmv.f.s fa1, v9
+; RV64-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; RV64-NEXT:    vslidedown.vi v8, v8, 3
+; RV64-NEXT:    vfmv.f.s fa1, v8
 ; RV64-NEXT:    call fmodf
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
@@ -609,14 +609,14 @@ define <4 x float> @vfrem_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32
 ; RV32-NEXT:    addi a0, a0, 32
 ; RV32-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; RV32-NEXT:    vslidedown.vi v8, v8, 3
+; RV32-NEXT:    vfmv.f.s fa0, v8
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 32
-; RV32-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
-; RV32-NEXT:    vslidedown.vi v9, v9, 3
-; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:    vfmv.f.s fa1, v9
+; RV32-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; RV32-NEXT:    vslidedown.vi v8, v8, 3
+; RV32-NEXT:    vfmv.f.s fa1, v8
 ; RV32-NEXT:    call fmodf
 ; RV32-NEXT:    addi a0, sp, 32
 ; RV32-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
@@ -701,14 +701,14 @@ define <4 x float> @vfrem_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; RV64-NEXT:    vslidedown.vi v8, v8, 3
+; RV64-NEXT:    vfmv.f.s fa0, v8
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    add a0, sp, a0
 ; RV64-NEXT:    addi a0, a0, 16
-; RV64-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
-; RV64-NEXT:    vslidedown.vi v9, v9, 3
-; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:    vfmv.f.s fa1, v9
+; RV64-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; RV64-NEXT:    vslidedown.vi v8, v8, 3
+; RV64-NEXT:    vfmv.f.s fa1, v8
 ; RV64-NEXT:    call fmodf
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload

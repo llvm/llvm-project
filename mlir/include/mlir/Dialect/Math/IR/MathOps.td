@@ -48,7 +48,8 @@ class Math_FloatClassificationOp<string mnemonic, list<Trait> traits = []> :
                         "::mlir::arith::FastMathFlags::none">:$fastmath);
   let results = (outs BoolLike:$result);
 
-  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+  let assemblyFormat = [{ $operand (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($operand) }];
 }
 
 // Base class for unary math operations on floating point types. Require an

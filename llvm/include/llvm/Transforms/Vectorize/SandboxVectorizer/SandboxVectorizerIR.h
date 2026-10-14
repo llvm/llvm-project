@@ -38,11 +38,11 @@ class PackInst final : public Instruction {
       : Instruction(ClassID::Pack, Opcode::Pack, LLVMInstrs[0], Ctx) {}
 
 public:
-  static Value *create(ArrayRef<Value *> PackOps, InsertPosition InsertBefore,
-                       SBVecContext &Ctx);
+  LLVM_ABI static Value *create(ArrayRef<Value *> PackOps,
+                                InsertPosition InsertBefore, SBVecContext &Ctx);
 
   /// For isa/dyn_cast.
-  static bool classof(const Value *From);
+  LLVM_ABI static bool classof(const Value *From);
 };
 
 class SBVecContext : public Context {

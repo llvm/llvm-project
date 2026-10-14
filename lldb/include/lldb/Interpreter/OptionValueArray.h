@@ -35,11 +35,6 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    m_values.clear();
-    m_value_was_set = false;
-  }
-
   lldb::OptionValueSP
   DeepCopy(const lldb::OptionValueSP &new_parent) const override;
 
@@ -115,6 +110,11 @@ public:
   Status SetArgs(const Args &args, VarSetOperationType op);
 
 protected:
+  void ClearImpl() override {
+    m_values.clear();
+    m_value_was_set = false;
+  }
+
   typedef std::vector<lldb::OptionValueSP> collection;
 
   uint32_t m_type_mask;

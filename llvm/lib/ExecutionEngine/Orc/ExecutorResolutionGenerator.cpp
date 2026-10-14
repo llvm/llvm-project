@@ -9,7 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorResolutionGenerator.h"
 
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/Support/Error.h"
 
 #define DEBUG_TYPE "orc"
@@ -66,8 +65,8 @@ Error ExecutorResolutionGenerator::tryToGenerate(
         SymbolMap NewSyms;
         for (auto &[Name, Flags] : LookupSymbols) {
           const auto &Sym = *Syms++;
-          if (Sym && Sym->getAddress())
-            NewSyms[Name] = *Sym;
+          if (Sym && *Sym)
+            NewSyms[Name] = {*Sym, JITSymbolFlags::Exported};
           else if (LLVM_UNLIKELY(!Sym &&
                                  Flags == SymbolLookupFlags::RequiredSymbol))
             MissingSymbols.insert(Name);

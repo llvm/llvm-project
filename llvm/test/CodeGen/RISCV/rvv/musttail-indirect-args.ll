@@ -30,15 +30,15 @@ define <vscale x 32 x i32> @caller_musttail_scalable_forwarded(<vscale x 32 x i3
 define <vscale x 32 x i32> @caller_musttail_scalable_computed(<vscale x 32 x i32> %x, <vscale x 32 x i32> %y) nounwind {
 ; CHECK-LABEL: caller_musttail_scalable_computed:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vl8re32.v v0, (a1)
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v24
-; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vadd.vv v16, v16, v0
+; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    tail callee_musttail_scalable
   %s = add <vscale x 32 x i32> %x, %y
@@ -51,9 +51,9 @@ define <vscale x 32 x i32> @caller_musttail_scalable_computed(<vscale x 32 x i32
 define <vscale x 32 x i32> @caller_musttail_scalable_mixed(<vscale x 32 x i32> %x, <vscale x 32 x i32> %y) nounwind {
 ; CHECK-LABEL: caller_musttail_scalable_mixed:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vl8re32.v v0, (a1)
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma

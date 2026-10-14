@@ -186,6 +186,7 @@ enum Kind {
   kw_amdgpu_gfx_whole_wave,
   kw_tailcc,
   kw_m68k_rtdcc,
+  kw_wasm_emscripten_invokecc,
   kw_graalcc,
   kw_riscv_vector_cc,
   kw_riscv_vls_cc,
@@ -380,6 +381,8 @@ enum Kind {
   kw_dso_local_equivalent,
   kw_no_cfi,
   kw_ptrauth,
+  kw_bitinsert,
+  kw_bitextract,
 
   kw_freeze,
 
@@ -388,7 +391,6 @@ enum Kind {
 
   // Use-list order directives.
   kw_uselistorder,
-  kw_uselistorder_bb,
 
   // Summary index keywords
   kw_path,
@@ -513,6 +515,7 @@ enum Kind {
   DwarfVirtuality,     // DW_VIRTUALITY_foo
   DwarfLang,           // DW_LANG_foo
   DwarfSourceLangName, // DW_LNAME_foo
+  DwarfLangDialect,    // DW_LLVM_LANG_DIALECT_foo
   DwarfCC,             // DW_CC_foo
   EmissionKind,        // lineTablesOnly
   NameTableKind,       // GNU

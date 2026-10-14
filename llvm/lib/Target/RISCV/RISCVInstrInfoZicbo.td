@@ -37,7 +37,7 @@ class CBO_r<bits<12> optype, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
 class Prefetch_ri<bits<5> optype, string opcodestr>
-    : RVInstS<0b110, OPC_OP_IMM, (outs), (ins GPRMem:$rs1, simm12_lsb00000:$imm12),
+    : RVInstS<0b110, OPC_OP_IMM, (outs), (ins BasePtr:$rs1, simm12_lsb00000:$imm12),
               opcodestr, "${imm12}(${rs1})"> {
   let Inst{11-7} = 0b00000;
   let rs2 = optype;
@@ -70,6 +70,9 @@ def PREFETCH_W : Prefetch_ri<0b00011, "prefetch.w">, Sched<[]>;
 //===----------------------------------------------------------------------===//
 
 def AddrRegImmLsb00000 : ComplexPattern<iPTR, 2, "SelectAddrRegImmLsb00000">;
+def gi_addr_regimm_lsb00000
+    : GIComplexOperandMatcher<s64, "selectAddrRegImmLsb00000">,
+      GIComplexPatternEquiv<AddrRegImmLsb00000>;
 
 let Predicates = [NoVendorXMIPSCBOP] in {
   def : Pat<(prefetch (AddrRegImmLsb00000 (XLenVT GPR:$rs1), simm12_lsb00000:$imm12),

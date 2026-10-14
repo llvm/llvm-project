@@ -12,6 +12,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
+#include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
@@ -21,6 +22,11 @@
 #include "lldb/Version/Version.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
+
+#if LLDB_ENABLE_PYTHON
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
+#include "lldb/lldb-enumerations.h"
+#endif
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wglobal-constructors"
@@ -41,6 +47,19 @@ llvm::Error SystemInitializerFull::Initialize() {
   llvm::Error error = SystemInitializerCommon::Initialize();
   if (error)
     return error;
+
+#if LLDB_ENABLE_PYTHON
+  // The dynamic script interpreter plugin references Python data symbols (type
+  // and exception objects), which can't be bound lazily, so Python must be
+  // mapped before loading the plugin. Failure isn't fatal. The plugin itself
+  // is initialized by ScriptInterpreterPython::Initialize, which reports the
+  // cached load result.
+  if (llvm::Expected<ScriptInterpreterRuntimeLoader &> python_loader =
+          ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython))
+    llvm::consumeError(python_loader->Load());
+  else
+    llvm::consumeError(python_loader.takeError());
+#endif
 
   // Initialize LLVM and Clang
   llvm::InitializeAllTargets();
@@ -115,6 +134,14 @@ llvm::Error SystemInitializerFull::Initialize() {
 
   Debugger::Initialize(LoadPlugin);
 
+  // Warm up DataVisualization and common language categories ahead of time.
+  [[maybe_unused]] lldb::TypeCategoryImplSP entry;
+  DataVisualization::Categories::GetCategory(lldb::eLanguageTypeC_plus_plus,
+                                             entry);
+  DataVisualization::Categories::GetCategory(lldb::eLanguageTypeObjC_plus_plus,
+                                             entry);
+  DataVisualization::Categories::GetCategory(lldb::eLanguageTypeObjC, entry);
+  DataVisualization::Categories::GetCategory(lldb::eLanguageTypeSwift, entry);
   return llvm::Error::success();
 }
 

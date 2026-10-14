@@ -104,6 +104,11 @@ Status PipeWindows::CreateNew(llvm::StringRef name) {
   if (INVALID_HANDLE_VALUE == m_read)
     return Status(::GetLastError(), eErrorTypeWin32);
   m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
+  if (m_read_fd < 0) {
+    ::CloseHandle(m_read);
+    m_read = INVALID_HANDLE_VALUE;
+    return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+  }
   ZeroMemory(&m_read_overlapped, sizeof(m_read_overlapped));
   m_read_overlapped.hEvent = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
@@ -176,6 +181,11 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name, bool is_read) {
       return Status(::GetLastError(), eErrorTypeWin32);
 
     m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
+    if (m_read_fd < 0) {
+      ::CloseHandle(m_read);
+      m_read = INVALID_HANDLE_VALUE;
+      return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    }
 
     ZeroMemory(&m_read_overlapped, sizeof(m_read_overlapped));
     m_read_overlapped.hEvent = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
@@ -186,6 +196,11 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name, bool is_read) {
       return Status(::GetLastError(), eErrorTypeWin32);
 
     m_write_fd = _open_osfhandle((intptr_t)m_write, _O_WRONLY);
+    if (m_write_fd < 0) {
+      ::CloseHandle(m_write);
+      m_write = INVALID_HANDLE_VALUE;
+      return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    }
 
     ZeroMemory(&m_write_overlapped, sizeof(m_write_overlapped));
     m_write_overlapped.hEvent = ::CreateEventA(nullptr, TRUE, FALSE, nullptr);
@@ -276,8 +291,18 @@ llvm::Expected<size_t> PipeWindows::Read(void *buf, size_t size,
     return bytes_read;
 
   DWORD failure_error = ::GetLastError();
-  if (failure_error != ERROR_IO_PENDING)
+  switch (failure_error) {
+  // A closed write end is EOF, not an error. POSIX read() returns 0
+  // in this case. Mirror that so cross-platform callers can detect EOF
+  // uniformly.
+  case ERROR_BROKEN_PIPE:
+  case ERROR_HANDLE_EOF:
+    return 0;
+  case ERROR_IO_PENDING:
+    break;
+  default:
     return Status(failure_error, eErrorTypeWin32).takeError();
+  }
 
   DWORD timeout_msec =
       timeout ? std::chrono::ceil<std::chrono::milliseconds>(*timeout).count()
@@ -304,8 +329,14 @@ llvm::Expected<size_t> PipeWindows::Read(void *buf, size_t size,
 
   // Now we call GetOverlappedResult setting bWait to false, since we've
   // already waited as long as we're willing to.
-  if (!::GetOverlappedResult(m_read, &m_read_overlapped, &bytes_read, FALSE))
-    return Status(::GetLastError(), eErrorTypeWin32).takeError();
+  if (!::GetOverlappedResult(m_read, &m_read_overlapped, &bytes_read, FALSE)) {
+    DWORD overlapped_error = ::GetLastError();
+    // See above: a closed write end is end-of-file, not an error.
+    if (overlapped_error == ERROR_BROKEN_PIPE ||
+        overlapped_error == ERROR_HANDLE_EOF)
+      return 0;
+    return Status(overlapped_error, eErrorTypeWin32).takeError();
+  }
 
   return bytes_read;
 }

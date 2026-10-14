@@ -169,3 +169,33 @@ entry:
   %min = select i1 %cmp, float %mul, float 1.000000e+00
   ret float %min
 }
+
+define float @max_oge_swapped(float %a, float %b) {
+; CHECK-LABEL: max_oge_swapped:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmul s0, s0, s1
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    fcsel s0, s1, s0, ge
+; CHECK-NEXT:    ret
+entry:
+  %mul = fmul float %a, %b
+  %cmp = fcmp nsz oge float %mul, 1.000000e+00
+  %max = select i1 %cmp, float 1.000000e+00, float %mul
+  ret float %max
+}
+
+define float @min_ole_swapped(float %a, float %b) {
+; CHECK-LABEL: min_ole_swapped:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmul s0, s0, s1
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    fcsel s0, s1, s0, ls
+; CHECK-NEXT:    ret
+entry:
+  %mul = fmul float %a, %b
+  %cmp = fcmp nsz ole float %mul, 1.000000e+00
+  %min = select i1 %cmp, float 1.000000e+00, float %mul
+  ret float %min
+}

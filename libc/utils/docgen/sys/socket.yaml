@@ -122,6 +122,8 @@ functions:
     in-latest-posix: ''
   recvfrom:
     in-latest-posix: ''
+  recvmmsg:
+    c-definition: ''
   recvmsg:
     in-latest-posix: ''
   send:

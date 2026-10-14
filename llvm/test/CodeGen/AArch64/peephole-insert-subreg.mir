@@ -21,6 +21,10 @@
     %or.i = or <8 x i16> %mul.i109, %bc
     ret <8 x i16> %or.i
   }
+
+  define void @killed_replace() {
+    unreachable
+  }
 ...
 ---
 ---
@@ -112,4 +116,46 @@ body:             |
     $q0 = COPY %11
     RET_ReallyLR implicit $q0
 
+...
+---
+name:            killed_replace
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: killed_replace
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+    ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[MOVIv2d_ns]].dsub, %subreg.dsub
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $xzr
+    ; CHECK-NEXT: [[FMOVXDr:%[0-9]+]]:fpr64 = FMOVXDr [[COPY1]]
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[FMOVXDr]], %subreg.dsub
+    ; CHECK-NEXT: STURQi [[INSERT_SUBREG1]], [[COPY]], 8 :: (store (s128), align 8)
+    ; CHECK-NEXT: [[MOVIv2d_ns1:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[MOVIv2d_ns1]].dsub, %subreg.dsub
+    ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG2]], 1, [[INSERT_SUBREG1]], 0
+    ; CHECK-NEXT: $x0 = COPY [[COPY1]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:gpr64common = COPY $x0
+    %1:fpr128 = MOVIv2d_ns 0
+    %4:fpr128 = IMPLICIT_DEF
+    %3:fpr128 = INSERT_SUBREG %4, %1.dsub, %subreg.dsub
+    %5:gpr64 = COPY $xzr
+    %6:fpr64 = COPY %5
+    %8:fpr128 = IMPLICIT_DEF
+    %7:fpr128 = INSERT_SUBREG %8, killed %6, %subreg.dsub
+    %9:fpr128 = INSvi64lane %7, 1, killed %3, 0
+    STURQi killed %9, %0, 8 :: (store (s128), align 8)
+    %10:fpr128 = MOVIv2d_ns 0
+    %13:fpr128 = IMPLICIT_DEF
+    %12:fpr128 = INSERT_SUBREG %13, %10.dsub, %subreg.dsub
+    %14:fpr128 = INSvi64lane %12, 1, %7, 0
+    $x0 = COPY %5
+    RET_ReallyLR implicit $x0
 ...

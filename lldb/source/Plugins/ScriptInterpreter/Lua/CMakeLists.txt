@@ -6,7 +6,8 @@ set(lua_plugin_sources
 if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   # Shared library loaded at runtime by PluginManager. Private lldb symbols are
   # resolved via liblldb's re-exports, so lldb_private libs aren't linked here.
-  add_lldb_library(lldbPluginScriptInterpreterLua SHARED
+  lldb_add_scriptinterpreter_dynamic_library(
+    lldbPluginScriptInterpreterLua
     ${lua_plugin_sources}
     LINK_LIBS
       liblldb

@@ -54,8 +54,8 @@ public:
   static constexpr result_type _Max = _Engine::max();
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Engine::min(); }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Engine::max(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Engine::min(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Engine::max(); }
 
   // constructors and seeding functions
   _LIBCPP_HIDE_FROM_ABI discard_block_engine() : __n_(0) {}
@@ -83,14 +83,14 @@ public:
   }
 
   // generating functions
-  _LIBCPP_HIDE_FROM_ABI result_type operator()();
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()();
   _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
     for (; __z; --__z)
-      operator()();
+      (void)operator()();
   }
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI const _Engine& base() const _NOEXCEPT { return __e_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Engine& base() const _NOEXCEPT { return __e_; }
 
   template <class _Eng, size_t _Pp, size_t _Rp>
   friend bool

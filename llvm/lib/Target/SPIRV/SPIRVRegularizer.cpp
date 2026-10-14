@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVRegularizer.h"
 #include "SPIRV.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -92,57 +92,19 @@ static void runLowerConstExpr(Function &F) {
     };
 
     WorkList.pop_front();
-    auto LowerConstantVec = [&II, &LowerOp, &WorkList,
-                             &Ctx](ConstantVector *Vec,
-                                   unsigned NumOfOp) -> Value * {
-      if (std::all_of(Vec->op_begin(), Vec->op_end(), [](Value *V) {
-            return isa<ConstantExpr>(V) || isa<Function>(V);
-          })) {
-        // Expand a vector of constexprs and construct it back with
-        // series of insertelement instructions.
-        std::list<Value *> OpList;
-        std::transform(Vec->op_begin(), Vec->op_end(),
-                       std::back_inserter(OpList),
-                       [LowerOp](Value *V) { return LowerOp(V); });
-        Value *Repl = nullptr;
-        unsigned Idx = 0;
-        auto *PhiII = dyn_cast<PHINode>(II);
-        Instruction *InsPoint =
-            PhiII ? &PhiII->getIncomingBlock(NumOfOp)->back() : II;
-        std::list<Instruction *> ReplList;
-        for (auto V : OpList) {
-          if (auto *Inst = dyn_cast<Instruction>(V))
-            ReplList.push_back(Inst);
-          Repl = InsertElementInst::Create(
-              (Repl ? Repl : PoisonValue::get(Vec->getType())), V,
-              ConstantInt::get(Type::getInt32Ty(Ctx), Idx++), "",
-              InsPoint->getIterator());
-        }
-        WorkList.splice(WorkList.begin(), ReplList);
-        return Repl;
-      }
-      return nullptr;
-    };
     for (unsigned OI = 0, OE = II->getNumOperands(); OI != OE; ++OI) {
       auto *Op = II->getOperand(OI);
-      if (auto *Vec = dyn_cast<ConstantVector>(Op)) {
-        Value *ReplInst = LowerConstantVec(Vec, OI);
-        if (ReplInst)
-          II->replaceUsesOfWith(Op, ReplInst);
-      } else if (auto CE = dyn_cast<ConstantExpr>(Op)) {
+      if (auto CE = dyn_cast<ConstantExpr>(Op)) {
         WorkList.push_front(cast<Instruction>(LowerOp(CE)));
       } else if (auto MDAsVal = dyn_cast<MetadataAsValue>(Op)) {
         auto ConstMD = dyn_cast<ConstantAsMetadata>(MDAsVal->getMetadata());
         if (!ConstMD)
           continue;
         Constant *C = ConstMD->getValue();
-        Value *ReplInst = nullptr;
-        if (auto *Vec = dyn_cast<ConstantVector>(C))
-          ReplInst = LowerConstantVec(Vec, OI);
-        if (auto *CE = dyn_cast<ConstantExpr>(C))
-          ReplInst = LowerOp(CE);
-        if (!ReplInst)
+        auto *CE = dyn_cast<ConstantExpr>(C);
+        if (!CE)
           continue;
+        Value *ReplInst = LowerOp(CE);
         Metadata *RepMD = ValueAsMetadata::get(ReplInst);
         Value *RepMDVal = MetadataAsValue::get(Ctx, RepMD);
         II->setOperand(OI, RepMDVal);
@@ -162,7 +124,7 @@ static void runLowerI1Comparisons(Function &F) {
     if (!Cmp)
       continue;
 
-    bool IsI1 = Cmp->getOperand(0)->getType()->isIntegerTy(1);
+    bool IsI1 = Cmp->getOperand(0)->getType()->getScalarType()->isIntegerTy(1);
     if (!IsI1)
       continue;
 
@@ -214,8 +176,8 @@ static bool runImpl(Function &F) {
   return true;
 }
 
-PreservedAnalyses SPIRVRegularizer::run(Function &F,
-                                        FunctionAnalysisManager &AM) {
+PreservedAnalyses SPIRVRegularizerPass::run(Function &F,
+                                            FunctionAnalysisManager &AM) {
   return runImpl(F) ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 

@@ -2120,7 +2120,7 @@ attributes #0 = { "split-stack" }
 ; X64-Linux-Large: .section ".note.GNU-split-stack","",@progbits
 ; X64-Linux-Large-NEXT: .section ".note.GNU-no-split-stack","",@progbits
 ; X64-Linux-Large-NEXT: .section	".note.GNU-stack","",@progbits
-; X64-Linux-Large-NEXT: .rodata
+; X64-Linux-Large-NEXT: .lrodata
 ; X64-Linux-Large-NEXT: __morestack_addr:
 ; X64-Linux-Large-NEXT: .quad	__morestack
 

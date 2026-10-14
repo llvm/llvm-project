@@ -28,15 +28,16 @@
 namespace llvm {
 
 class UnreachableBlockElimPass
-    : public OptionalPassInfoMixin<UnreachableBlockElimPass> {
+    : public RequiredPassInfoMixin<UnreachableBlockElimPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 class UnreachableMachineBlockElimPass
-    : public OptionalPassInfoMixin<UnreachableMachineBlockElimPass> {
+    : public RequiredPassInfoMixin<UnreachableMachineBlockElimPass> {
 public:
-  PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &F,
+                                 MachineFunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

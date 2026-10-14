@@ -14,12 +14,9 @@
 namespace llvm {
 
 class WinEHPreparePass : public RequiredPassInfoMixin<WinEHPreparePass> {
-  bool DemoteCatchSwitchPHIOnly;
-
 public:
-  WinEHPreparePass(bool DemoteCatchSwitchPHIOnly_ = false)
-      : DemoteCatchSwitchPHIOnly(DemoteCatchSwitchPHIOnly_) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  WinEHPreparePass() = default;
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

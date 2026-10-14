@@ -12,7 +12,8 @@ define dso_local i32 @variadics1(i32 noundef %first, ...) {
 ; CHECK-SAME: i32 noundef [[FIRST:%.*]], ptr addrspace(5) [[VARARGS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VLIST:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    store ptr addrspace(5) [[VARARGS]], ptr [[VLIST]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = addrspacecast ptr addrspace(5) [[VARARGS]] to ptr
+; CHECK-NEXT:    store ptr [[TMP9]], ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i64 4
 ; CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VLIST]], align 8
@@ -151,7 +152,8 @@ define dso_local i32 @variadics2(i32 noundef %first, ...) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VLIST:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[S1_SROA_3:%.*]] = alloca [3 x i8], align 1
-; CHECK-NEXT:    store ptr addrspace(5) [[VARARGS]], ptr [[VLIST]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[VARARGS]] to ptr
+; CHECK-NEXT:    store ptr [[TMP1]], ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 7
 ; CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP0]], i64 -8)
@@ -236,7 +238,8 @@ define dso_local i32 @variadics3(i32 noundef %first, ...) {
 ; CHECK-SAME: i32 noundef [[FIRST:%.*]], ptr addrspace(5) [[VARARGS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VLIST:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    store ptr addrspace(5) [[VARARGS]], ptr [[VLIST]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = addrspacecast ptr addrspace(5) [[VARARGS]] to ptr
+; CHECK-NEXT:    store ptr [[TMP6]], ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 15
 ; CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP0]], i64 -16)
@@ -294,7 +297,8 @@ define dso_local i32 @variadics4(ptr noundef byval(%struct.S2) align 8 %first, .
 ; CHECK-SAME: ptr noundef byval([[STRUCT_S2:%.*]]) align 8 [[FIRST:%.*]], ptr addrspace(5) [[VARARGS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VLIST:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    store ptr addrspace(5) [[VARARGS]], ptr [[VLIST]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(5) [[VARARGS]] to ptr
+; CHECK-NEXT:    store ptr [[TMP4]], ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VLIST]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 7
 ; CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP0]], i64 -8)

@@ -101,11 +101,21 @@ struct ModuleDeps {
 
   /// A collection of absolute paths to module map files that this module needs
   /// to know about. The ordering is significant.
+
+  /// TODO: Track these as `FileEntryRef`s, so they can be
+  /// compared by file identity instead of by looking up their paths.
   std::vector<std::string> ModuleMapFileDeps;
 
   /// A collection of prebuilt modular dependencies this module directly depends
   /// on, not including transitive dependencies.
   std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
+
+  /// Absolute paths to directories this module depends on the listing of,
+  /// including their subdirectories. When one of those listings changes, for
+  /// example as seen by comparing directory modification times, report the
+  /// path as spelled here via \c DependencyScanningService::addInvalidatedPath
+  /// on the next scan.
+  std::vector<std::string> DirectoryDeps;
 
   /// A list of module identifiers this module directly depends on, not
   /// including transitive dependencies.
@@ -206,10 +216,6 @@ inline hash_code hash_value(const clang::dependencies::ModuleID &ID) {
 
 template <> struct DenseMapInfo<clang::dependencies::ModuleID> {
   using ModuleID = clang::dependencies::ModuleID;
-  static inline ModuleID getEmptyKey() { return ModuleID{"", ""}; }
-  static inline ModuleID getTombstoneKey() {
-    return ModuleID{"~", "~"}; // ~ is not a valid module name or context hash
-  }
   static unsigned getHashValue(const ModuleID &ID) { return hash_value(ID); }
   static bool isEqual(const ModuleID &LHS, const ModuleID &RHS) {
     return LHS == RHS;

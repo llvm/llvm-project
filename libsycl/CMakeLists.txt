@@ -2,6 +2,13 @@
 # Setup Project
 #===============================================================================
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
 
 set(LLVM_SUBPROJECT_TITLE "libsycl")
 
@@ -16,12 +23,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Limitations
 #===============================================================================
 
-if (CMAKE_SYSTEM_NAME STREQUAL Windows AND NOT MSVC)
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
 # Build with other compilers is not configured, not guaranteed and not tested.
+  if (NOT MSVC)
     message(FATAL_ERROR
       "When compiling for Windows, libsycl requires a"
       " version of Microsoft Visual C++ or another compiler"
       " that uses the Visual C++ cl command-line syntax.")
+  endif()
+  if (CMAKE_MSVC_RUNTIME_LIBRARY AND (NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$"))
+      message(FATAL_ERROR "libsycl requires a DLL version of the MSVC CRT.")
+  endif()
 endif()
 
 #===============================================================================
@@ -61,6 +73,7 @@ endif()
 set(LIBSYCL_INCLUDE_DIR include)
 set(LIBSYCL_BUILD_INCLUDE_DIR ${LLVM_BINARY_DIR}/${LIBSYCL_INCLUDE_DIR})
 set(LIBSYCL_SOURCE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(LIBSYCL_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
@@ -119,9 +132,6 @@ install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/CL" DESTINATION ${LIBSYCL_INCLU
 set(LIBSYCL_LIB_NAME "LLVMSYCL")
 set(LIBSYCL_SHARED_OUTPUT_NAME "${LIBSYCL_LIB_NAME}")
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  if (CMAKE_MSVC_RUNTIME_LIBRARY AND (NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$"))
-      message(FATAL_ERROR "libsycl requires a DLL version of the MSVC CRT.")
-  endif()
   if ((NOT CMAKE_MSVC_RUNTIME_LIBRARY AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
       OR (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebugDLL"))
     set(LIBSYCL_SHARED_OUTPUT_NAME "${LIBSYCL_SHARED_OUTPUT_NAME}d")
@@ -132,6 +142,9 @@ set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME})
 add_custom_target(libsycl-runtime-libraries
   DEPENDS ${LIBSYCL_RT_LIBS}
 )
+
+# Shared object-library target name used by libsycl and unit tests.
+set(LIBSYCL_OBJ_TARGET sycl_object)
 
 add_subdirectory(src)
 add_subdirectory(tools)
@@ -145,3 +158,13 @@ add_custom_target(libsycl-toolchain ALL
           sycl-ls
   COMMENT "Building libsycl toolchain..."
 )
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+
+if(LLVM_INCLUDE_TESTS)
+  add_subdirectory(unittests)
+
+  if(TARGET check-sycl AND TARGET check-sycl-unittests)
+    add_dependencies(check-sycl check-sycl-unittests)
+  endif()
+endif()

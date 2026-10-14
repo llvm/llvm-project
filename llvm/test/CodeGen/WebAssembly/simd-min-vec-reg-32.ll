@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=slp-vectorizer -S -mtriple=wasm32-unknown-unknown -mattr=+simd128 | llc --mtriple=wasm32-unknown-unknown -mattr=+simd128 -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; Test that SLP vectorizer can vectorize consecutive sub-128-bit operations
-; into SIMD when getMinVectorRegisterBitWidth is overriden to 32.
+; into SIMD when getMinVectorRegisterBitWidth is overridden to 32.
 
 target triple = "wasm32-unknown-unknown"
 

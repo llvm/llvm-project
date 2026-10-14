@@ -18,7 +18,7 @@ int main(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @main
-// CIR:         %[[RET:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:         %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:         cir.store %[[ZERO]], %[[RET]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[LOAD:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
@@ -51,7 +51,7 @@ int main(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @main
-// CIR:         %[[RET:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:         %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:         cir.store %[[ZERO]], %[[RET]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.if

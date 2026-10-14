@@ -2,6 +2,8 @@ header: sys/mman.h
 standards:
   - posix
 macros:
+  - macro_name: MAP_ANON
+    macro_header: sys-mman-macros.h
   - macro_name: MAP_FAILED
     macro_header: sys-mman-macros.h
 types:
@@ -39,14 +41,14 @@ functions:
       - posix
     return_type: int
     arguments:
-      - type: void *
+      - type: const void *
       - type: size_t
   - name: mlock2
     standards:
       - linux
     return_type: int
     arguments:
-      - type: void *
+      - type: const void *
       - type: size_t
       - type: unsigned int
   - name: mlockall
@@ -93,10 +95,11 @@ functions:
       - type: size_t
       - type: int
   - name: munlock
-    standards: POSIX
+    standards:
+      - posix
     return_type: int
     arguments:
-      - type: void *
+      - type: const void *
       - type: size_t
   - name: munlockall
     standards:

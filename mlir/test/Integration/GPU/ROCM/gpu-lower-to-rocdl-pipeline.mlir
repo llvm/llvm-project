@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   --gpu-lower-to-rocdl-pipeline="chip=%chip" \
+// RUN:   --gpu-lower-to-rocdl-pipeline="arch=%chip" \
 // RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_rocm_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
@@ -23,7 +23,7 @@ func.func @vecadd(%arg0 : memref<5xf32>, %arg1 : memref<5xf32>, %arg2 : memref<5
              threads(%tx, %ty, %tz) in (%block_x = %block_dim, %block_y = %c1, %block_z = %c1) {
     %a = memref.load %arg0[%tx] : memref<5xf32>
     %b = memref.load %arg1[%tx] : memref<5xf32>
-    amdgpu.sched_barrier allow = <none>
+    amdgpu.sched_barrier allow = none
     %c = arith.addf %a, %b : f32
     memref.store %c, %arg2[%tx] : memref<5xf32>
     gpu.terminator

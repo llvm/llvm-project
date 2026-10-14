@@ -11,11 +11,13 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 
 #include <ctime>
 #include <memory>
+#include <optional>
 #include <sys/types.h>
 #include <system_error>
 
@@ -26,6 +28,7 @@ class MemoryBufferRef;
 } // namespace llvm
 
 namespace clang {
+class AtomicLineLogger;
 class InMemoryModuleCache;
 
 /// The address of an instance of this class represents the identity of a module
@@ -42,7 +45,13 @@ class ModuleCache {
   llvm::DenseMap<llvm::sys::fs::UniqueID, std::unique_ptr<ModuleCacheDirectory>>
       ByUID;
 
+protected:
+  /// A logger to record timestamp read/write and file read/write.
+  AtomicLineLogger &Logger;
+
 public:
+  explicit ModuleCache(AtomicLineLogger &Logger) : Logger(Logger) {}
+
   /// Returns an opaque pointer representing the module cache directory. This
   /// returns the same pointer regardless of the path spelling, as long as it
   /// resolves to the same file system entity. This also resolves links in the
@@ -65,6 +74,13 @@ public:
   /// were validated.
   virtual void updateModuleTimestamp(StringRef ModuleFilename) = 0;
 
+  /// Whether the build system reported that \p Directory changed before the
+  /// build session started, or std::nullopt if this cache can't tell and the
+  /// file system has to be checked instead.
+  virtual std::optional<bool> isDirectoryInvalidated(StringRef Directory) {
+    return std::nullopt;
+  }
+
   /// Prune module files that haven't been accessed in a long time.
   virtual void maybePrune(StringRef Path, time_t PruneInterval,
                           time_t PruneAfter) = 0;
@@ -81,6 +97,8 @@ public:
   read(StringRef FileName, off_t &Size, time_t &ModTime) = 0;
 
   virtual ~ModuleCache() = default;
+
+  AtomicLineLogger &getLogger() { return Logger; }
 };
 
 /// Creates new \c ModuleCache backed by a file system directory that may be
@@ -90,8 +108,13 @@ public:
 std::shared_ptr<ModuleCache> createCrossProcessModuleCache();
 
 /// Shared implementation of `ModuleCache::maybePrune()`.
+///
+/// If \p OnPrune is non-empty, it is invoked once per file or directory that
+/// is successfully removed from the cache. The path passed to \p OnPrune is
+/// absolute.
 void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter,
-                    bool PruneTopLevel = false);
+                    bool PruneTopLevel = false,
+                    llvm::function_ref<void(StringRef)> OnPrune = {});
 
 /// Shared implementation of `ModuleCache::write()`.
 std::error_code writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer,

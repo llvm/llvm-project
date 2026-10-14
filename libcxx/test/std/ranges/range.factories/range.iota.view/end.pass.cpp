@@ -8,11 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include "test_macros.h"
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
 
-TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
-TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
-TEST_MSVC_DIAGNOSTIC_IGNORED(4018 4389) // various "signed/unsigned mismatch"
+// various "signed/unsigned mismatch"
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4018 /wd4389
 
 // constexpr auto end() const;
 // constexpr iterator end() const requires same_as<W, Bound>;
@@ -21,6 +20,7 @@ TEST_MSVC_DIAGNOSTIC_IGNORED(4018 4389) // various "signed/unsigned mismatch"
 #include <ranges>
 #include <utility>
 
+#include "test_macros.h"
 #include "types.h"
 
 template<class T, class U>

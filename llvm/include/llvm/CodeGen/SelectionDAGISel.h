@@ -42,7 +42,7 @@ class ScheduleDAGSDNodes;
 
 /// SelectionDAGISel - This is the common base class used for SelectionDAG-based
 /// pattern-matching instruction selectors.
-class SelectionDAGISel {
+class LLVM_ABI SelectionDAGISel {
 public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
@@ -51,7 +51,6 @@ public:
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
   std::unique_ptr<SwiftErrorValueTracking> SwiftError;
   MachineFunction *MF;
-  MachineModuleInfo *MMI;
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
@@ -280,6 +279,7 @@ public:
     OPC_CheckOrImm,
     OPC_CheckImmAllOnesV,
     OPC_CheckImmAllZerosV,
+    OPC_CheckUndef,
     OPC_CheckFoldableChainNode,
 
     OPC_EmitInteger,
@@ -568,7 +568,7 @@ private:
                     bool isMorphNodeTo);
 };
 
-class SelectionDAGISelLegacy : public MachineFunctionPass {
+class LLVM_ABI SelectionDAGISelLegacy : public MachineFunctionPass {
   std::unique_ptr<SelectionDAGISel> Selector;
 
 public:
@@ -590,8 +590,8 @@ protected:
       : Selector(std::move(Selector)) {}
 
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 }
 

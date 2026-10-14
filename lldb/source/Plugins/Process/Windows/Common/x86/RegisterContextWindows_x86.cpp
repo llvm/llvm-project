@@ -25,7 +25,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#define DEFINE_GPR(reg, alt) #reg, alt, 4, 0, eEncodingUint, eFormatHexUppercase
+#define DEFINE_GPR(reg, alt) #reg, alt, 4, 0, eEncodingUint, eFormatHex
 #define DEFINE_GPR_BIN(reg, alt) #reg, alt, 4, 0, eEncodingUint, eFormatBinary
 
 namespace {
@@ -258,6 +258,7 @@ bool RegisterContextWindows_x86::WriteRegister(const RegisterInfo *reg_info,
   default:
     LLDB_LOG(log, "Write value {0:x} to unknown register {1}",
              reg_value.GetAsUInt32(), reg);
+    return false;
   }
 
   // Physically update the registers in the target process.

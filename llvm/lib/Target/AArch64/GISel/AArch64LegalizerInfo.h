@@ -71,6 +71,12 @@ private:
                              MachineIRBuilder &MIRBuilder) const;
   bool legalizeFptrunc(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                        MachineRegisterInfo &MRI) const;
+  bool legalizeGetRounding(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                           MachineRegisterInfo &MRI,
+                           LegalizerHelper &Helper) const;
+  bool legalizeSetRounding(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                           MachineRegisterInfo &MRI,
+                           LegalizerHelper &Helper) const;
   const AArch64Subtarget *ST;
 };
 } // End llvm namespace.

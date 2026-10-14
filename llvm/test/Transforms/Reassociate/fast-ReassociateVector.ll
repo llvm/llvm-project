@@ -476,11 +476,11 @@ define float @test19_scalar(float %x, float %y) {
 
 define <4 x float> @test19_vector(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @test19_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz <4 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[NEG:%.*]] = fneg reassoc nsz <4 x float> [[Y:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = fadd reassoc nsz <4 x float> [[NEG]], [[X1:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz <4 x float> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc nsz <4 x float> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3_NEG:%.*]] = fmul reassoc nsz <4 x float> [[Y:%.*]], splat (float -0.000000e+00)
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz <4 x float> [[TMP2]], [[TMP3_NEG]]
-; CHECK-NEXT:    ret <4 x float> [[TMP4]]
+; CHECK-NEXT:    ret <4 x float> [[TMP2]]
 ;
   %tmp1 = fmul reassoc nsz <4 x float> %x, zeroinitializer
   %tmp2 = fadd reassoc nsz <4 x float> zeroinitializer, %tmp1
@@ -491,11 +491,11 @@ define <4 x float> @test19_vector(<4 x float> %x, <4 x float> %y) {
 
 define <vscale x 4 x float> @test19_scalable_vector(<vscale x 4 x float> %x, <vscale x 4 x float> %y) {
 ; CHECK-LABEL: @test19_scalable_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz <vscale x 4 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[NEG:%.*]] = fneg reassoc nsz <vscale x 4 x float> [[Y:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = fadd reassoc nsz <vscale x 4 x float> [[NEG]], [[X1:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz <vscale x 4 x float> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc nsz <vscale x 4 x float> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3_NEG:%.*]] = fmul reassoc nsz <vscale x 4 x float> [[Y:%.*]], splat (float -0.000000e+00)
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz <vscale x 4 x float> [[TMP2]], [[TMP3_NEG]]
-; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP4]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP2]]
 ;
   %tmp1 = fmul reassoc nsz <vscale x 4 x float> %x, zeroinitializer
   %tmp2 = fadd reassoc nsz <vscale x 4 x float> zeroinitializer, %tmp1

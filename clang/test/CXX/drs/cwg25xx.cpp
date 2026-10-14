@@ -247,9 +247,6 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
     x;
   };
   static_assert(ErrorRequires<int>);
-  // since-cxx20-error@-1 {{static assertion failed}} \
-  //   since-cxx20-note@-1 {{because 'int' does not satisfy 'ErrorRequires'}} \
-  //   since-cxx20-note@#cwg2565-expr {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 
   template<typename T>
   concept NestedErrorInRequires = requires (T x) { // #cwg2565-NEIR
@@ -261,9 +258,6 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
     };
   };
   static_assert(NestedErrorInRequires<int>);
-  // since-cxx20-error@-1 {{static assertion failed}} \
-  //   since-cxx20-note@-1 {{because 'int' does not satisfy 'NestedErrorInRequires'}} \
-  //   since-cxx20-note-re@#cwg2565-NEIR-inner {{because {{.*}} would be invalid: constraint depends on a previously diagnosed expression}}
 
 #endif
 } // namespace cwg2565

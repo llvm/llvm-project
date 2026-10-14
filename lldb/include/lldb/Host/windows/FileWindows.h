@@ -48,6 +48,8 @@ protected:
   bool TryWriteStreamUnlocked(const void *buf, size_t &num_bytes,
                               Status &error) override;
 
+  void OnStreamOpened() override;
+
 private:
   /// Set when this file wraps stdin/stdout/stderr connected to a console;
   /// triggers the raw_fd_ostream path for correct non-ASCII output.

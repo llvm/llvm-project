@@ -15,14 +15,13 @@
 
 #if defined(_MSC_VER)
 /* Merge read-write sections into .data. */
-#pragma comment(linker, "/MERGE:.lprfb=.data")
 #pragma comment(linker, "/MERGE:.lprfd=.data")
 #pragma comment(linker, "/MERGE:.lprfv=.data")
 #pragma comment(linker, "/MERGE:.lprfnd=.data")
 /* Do *NOT* merge .lprfn and .lcovmap into .rdata. llvm-cov must be able to find
  * after the fact.
- * Do *NOT* merge .lprfc .rdata. When binary profile correlation is enabled,
- * llvm-cov must be able to find after the fact.
+ * Do *NOT* merge .lprfb .lprfc .rdata. When binary profile correlation is
+ * enabled, llvm-cov must be able to find after the fact.
  */
 
 /* Allocate read-only section bounds. */
@@ -40,7 +39,15 @@
 #pragma section(".lprfnd$Z", read, write)
 #endif
 
+/* Pin the section-boundary sentinels to the same alignment as the records the
+ * compiler emits into .lprfd$M (INSTR_PROF_DATA_ALIGNMENT). Without this the
+ * AMD64 preferred-alignment heuristic over-aligns these >=16-byte globals to 16
+ * bytes; when sizeof(__llvm_profile_data) is not a multiple of 16 the 16-byte
+ * $Z sentinel leaves a gap after the 8-byte-aligned $M records, which
+ * __llvm_profile_get_num_data rounds up into a phantom data record. */
+COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
 __llvm_profile_data COMPILER_RT_SECTION(".lprfd$A") DataStart = {0};
+COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
 __llvm_profile_data COMPILER_RT_SECTION(".lprfd$Z") DataEnd = {0};
 
 const char COMPILER_RT_SECTION(".lprfn$A") NamesStart = '\0';

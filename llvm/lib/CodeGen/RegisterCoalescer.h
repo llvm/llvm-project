@@ -20,7 +20,8 @@
 namespace llvm {
 
 class MachineInstr;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 /// A helper class for register coalescers. When deciding if

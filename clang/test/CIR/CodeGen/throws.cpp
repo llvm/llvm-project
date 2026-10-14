@@ -5,6 +5,145 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+int throw_in_global_init = (throw 1, 0);
+
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init() {
+// CIR-NEXT:    cir.scope {
+// CIR:           cir.throw
+// CIR-NEXT:      cir.unreachable
+// CIR:         ^bb1:
+// CIR:           cir.store {{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    }
+// CIR-NEXT:    cir.return
+
+// LLVM-LABEL: define internal void @__cxx_global_var_init()
+// LLVM:         call void @__cxa_throw
+// LLVM-NEXT:    unreachable
+// LLVM:         store i32 0, ptr @throw_in_global_init
+// LLVM:         ret void
+
+// OGCG-LABEL: define internal void @__cxx_global_var_init()
+// OGCG:         call void @__cxa_throw
+// OGCG-NEXT:    unreachable
+// OGCG:         store i32 0, ptr @throw_in_global_init
+// OGCG:         ret void
+
+int trap_in_global_init = (__builtin_trap(), 1);
+
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.1() {
+// CIR-NEXT:    cir.scope {
+// CIR:           cir.trap
+// CIR:         ^bb1:
+// CIR:           cir.yield
+// CIR-NEXT:    }
+// CIR-NEXT:    cir.return
+
+// LLVM-LABEL: define internal void @__cxx_global_var_init.1()
+// LLVM:         call void @llvm.trap()
+// LLVM-NEXT:    unreachable
+// LLVM:         store i32 1, ptr @trap_in_global_init
+// LLVM:         ret void
+
+// OGCG-LABEL: define internal void @__cxx_global_var_init.1()
+// OGCG:         call void @llvm.trap()
+// OGCG-NEXT:    unreachable
+// OGCG:         store i32 1, ptr @trap_in_global_init
+// OGCG:         ret void
+
+struct ThrowInGlobalCtorArg {
+  ThrowInGlobalCtorArg(int);
+};
+ThrowInGlobalCtorArg throw_in_global_ctor_arg = ThrowInGlobalCtorArg((throw 1, 0));
+
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.2() {
+// CIR-NEXT:    cir.scope {
+// CIR:           cir.throw
+// CIR-NEXT:      cir.unreachable
+// CIR:         ^bb1:
+// CIR:           cir.call @_ZN20ThrowInGlobalCtorArgC1Ei
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    }
+// CIR-NEXT:    cir.return
+
+// LLVM-LABEL: define internal void @__cxx_global_var_init.2()
+// LLVM:         call void @__cxa_throw
+// LLVM-NEXT:    unreachable
+// LLVM:         call void @_ZN20ThrowInGlobalCtorArgC1Ei
+// LLVM:         ret void
+
+// OGCG-LABEL: define internal void @__cxx_global_var_init.2()
+// OGCG:         call void @__cxa_throw
+// OGCG-NEXT:    unreachable
+// OGCG:         call void @_ZN20ThrowInGlobalCtorArgC1Ei
+// OGCG:         ret void
+
+inline int throw_in_inline_global = (throw 1, 0);
+int use_throw_in_inline_global() { return throw_in_inline_global; }
+
+// CIR-LABEL: cir.func comdat("throw_in_inline_global") internal private @__cxx_global_var_init.3() {
+// CIR:         cir.call @__cxa_guard_acquire
+// CIR:         cir.cleanup.scope {
+// CIR-NEXT:      cir.scope {
+// CIR:             cir.throw
+// CIR-NEXT:        cir.unreachable
+// CIR:           ^bb1:
+// CIR:             cir.store {{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    } cleanup eh {
+// CIR-NEXT:      cir.call @__cxa_guard_abort
+
+// LLVM-LABEL: define internal void @__cxx_global_var_init.3() comdat($throw_in_inline_global)
+// LLVM:         call i32 @__cxa_guard_acquire
+// LLVM:         invoke void @__cxa_throw
+// LLVM:         call void @__cxa_guard_abort
+
+template <class X> struct ThrowInTemplateStatic {
+  static inline int w = (throw 1, 0);
+};
+int use_throw_in_template_static() { return ThrowInTemplateStatic<int>::w; }
+
+// CIR-LABEL: cir.func comdat("_ZN21ThrowInTemplateStaticIiE1wE") internal private @__cxx_global_var_init.4() {
+// CIR:         cir.if {{.*}} {
+// CIR:           cir.scope {
+// CIR:             cir.throw
+// CIR-NEXT:        cir.unreachable
+// CIR:           ^bb1:
+// CIR:             cir.store {{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR-NEXT:    }
+// CIR-NEXT:    cir.return
+
+// LLVM-LABEL: define internal void @__cxx_global_var_init.4() comdat($_ZN21ThrowInTemplateStaticIiE1wE)
+// LLVM:         call void @__cxa_throw
+// LLVM-NEXT:    unreachable
+// LLVM:         store i32 0, ptr @_ZN21ThrowInTemplateStaticIiE1wE
+
+int throw_in_static_local_init() {
+  static int s = (throw 1, 0);
+  return s;
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z26throw_in_static_local_initv
+// CIR:         cir.scope {
+// CIR:           cir.throw
+// CIR-NEXT:      cir.unreachable
+// CIR:         ^bb1:
+// CIR:           cir.store {{.*}} : !s32i, !cir.ptr<!s32i>
+
+// LLVM-LABEL: define {{.*}} @_Z26throw_in_static_local_initv
+// LLVM:         call i32 @__cxa_guard_acquire
+// LLVM:         invoke void @__cxa_throw
+// LLVM:         call void @__cxa_guard_abort
+
+// OGCG-LABEL: define {{.*}} @_Z26throw_in_static_local_initv
+// OGCG:         call i32 @__cxa_guard_acquire
+// OGCG:         invoke void @__cxa_throw
+// OGCG:         call void @__cxa_guard_abort
+
 void rethrow() {
   throw;
 }
@@ -24,9 +163,9 @@ int rethrow_from_block(int a, int b) {
   return a / b;
 }
 
-// CIR:  %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR:  %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
-// CIR:  %[[RES_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:  %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR:  %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR:  %[[RES_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:  cir.store %{{.*}}, %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:  cir.store %{{.*}}, %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:  cir.scope {
@@ -45,9 +184,9 @@ int rethrow_from_block(int a, int b) {
 // CIR:  %[[RESULT:.*]] = cir.load %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.return %[[RESULT]] : !s32i
 
-// LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[RES_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM: %[[RES_ADDR:.*]] = alloca i32, align 4
 // LLVM: store i32 %{{.*}}, ptr %[[A_ADDR]], align 4
 // LLVM: store i32 %{{.*}}, ptr %[[B_ADDR]], align 4
 // LLVM: br label %[[CHECK_COND:.*]]
@@ -149,14 +288,14 @@ void throw_vector_type() {
   throw a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 16 -> !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[TMP_A]], %[[EXCEPTION_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, @_ZTIDv4_i
 // CIR: cir.unreachable
 
-// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 16)
 // LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
 // LLVM: store <4 x i32> %[[TMP_A]], ptr %[[EXCEPTION_ADDR]], align 16
@@ -175,14 +314,14 @@ void throw_ext_vector_type() {
   throw a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 16 -> !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[TMP_A]], %[[EXCEPTION_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, @_ZTIDv4_i
 // CIR: cir.unreachable
 
-// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 16)
 // LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
 // LLVM: store <4 x i32> %[[TMP_A]], ptr %[[EXCEPTION_ADDR]], align 16
@@ -249,7 +388,7 @@ void throw_pointer_type() {
   throw ptr;
 }
 
-// CIR: %[[PTR_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["ptr", init]
+// CIR: %[[PTR_ADDR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[VAR_ADDR:.*]] = cir.get_global @_ZZ18throw_pointer_typevE3var : !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %[[VAR_ADDR]], %[[PTR_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 8 -> !cir.ptr<!cir.ptr<!s32i>>

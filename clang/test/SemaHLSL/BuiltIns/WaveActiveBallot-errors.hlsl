@@ -17,5 +17,5 @@ struct Foo
 
 uint4 test_type_check(Foo p0) {
   return __builtin_hlsl_wave_active_ballot(p0);
-  // expected-error@-1 {{no viable conversion from 'Foo' to 'bool'}}
+  // expected-error@-1 {{cannot initialize a parameter of type 'bool' with an lvalue of type 'Foo'}}
 }
