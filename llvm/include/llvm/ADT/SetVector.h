@@ -25,20 +25,19 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
+#include <unordered_set>
 
 namespace llvm {
 
 namespace detail {
 /// This set is only used when SmallSetVector grows large enough that linear
-/// scanning would be unprofitable. Try to use SmallPtrSet, falling back to a
-/// DenseSet, but don't inline any elements.
+/// scanning would be unprofitable.
 template <typename T>
-using Set = std::conditional_t<std::is_pointer_v<T>, llvm::SmallPtrSet<T, 0>,
-                               llvm::DenseSet<T>>;
+using Set = std::conditional_t<std::is_integral_v<std::hash<T>>,
+                               std::unordered_set<T>, llvm::DenseSet<T>>;
 } // namespace detail
 
 /// A vector that has set insertion semantics.
