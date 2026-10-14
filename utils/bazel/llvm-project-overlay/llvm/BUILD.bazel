@@ -2058,6 +2058,17 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "VectorizeOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/Vectorize",
+    tbl_outs = {
+        "lib/Transforms/Vectorize/VectorizeOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/Vectorize/VectorizeOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Vectorize",
     srcs = glob([
@@ -2074,11 +2085,13 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":Option",
         ":SandboxIR",
         ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
+        ":VectorizeOptionsTableGen",
         ":config",
     ],
 )
@@ -3271,6 +3284,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/Mips/MipsGenSubtargetInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":MipsMCOptionsTableGen",
+            ":MipsOptionsTableGen",
+        ],
     },
     {
         "name": "MSP430",
@@ -4129,6 +4146,24 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/AArch64/AArch64Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AArch64/AArch64Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MipsMCOptionsTableGen",
+    strip_include_prefix = "lib/Target/Mips",
+    tbl_outs = {"lib/Target/Mips/MipsMCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Mips/MCTargetDesc/MipsMCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MipsOptionsTableGen",
+    strip_include_prefix = "lib/Target/Mips",
+    tbl_outs = {"lib/Target/Mips/MipsOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Mips/MipsOptions.td",
     deps = [":OptParserTdFiles"],
 )
 

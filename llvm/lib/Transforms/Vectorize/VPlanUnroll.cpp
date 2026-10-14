@@ -804,8 +804,7 @@ static void processLaneForReplicateRegion(VPlan &Plan, Type *IdxTy,
         assert(vputils::onlyFirstLaneUsed(OldPhi) &&
                "VPPhis expected to have only first lane used");
         auto *BVUser = dyn_cast_or_null<VPInstruction>(OldPhi->getSingleUser());
-        if (BVUser && match(BVUser, m_CombineOr(m_BuildVector(),
-                                                m_BuildStructVector()))) {
+        if (BVUser && match(BVUser, m_BuildVector())) {
           assert(BVUser->getOperand(0) == OldPhi &&
                  "Unexpected first operand of build vector user");
           BVUser->setOperand(Lane, NewPhi);
@@ -846,12 +845,12 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
     return;
   }
 
-  // Create a BuildVector or BuildStructVector in successor block for every
-  // VPPhi in (first lane's) exiting block having vector uses. All their
+  // Create a BuildVector in successor block for every VPPhi in (first lane's)
+  // exiting block having vector uses. All their
   // operands are initialized to poison and will be replaced when processing
   // each clone, except for the operand of the first lane which set here.
   // BuildVectors are recorded to be replaced later by chains of insert-element
-  // and widen phi's.
+  // and widen phis.
   unsigned NumLanes = VF.getFixedValue();
   SmallVector<VPInstruction *> BuildVectors;
   for (auto &R : FirstLaneExiting->phis()) {
@@ -860,14 +859,10 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
       continue;
 
     Type *ScalarTy = Phi->getScalarType();
-    bool IsStruct = isa<StructType>(ScalarTy);
     VPValue *Poison = Plan.getPoison(ScalarTy);
     SmallVector<VPValue *> BVOps(NumLanes, Poison);
-    auto *BV = new VPInstruction(IsStruct ? VPInstruction::BuildStructVector
-                                          : VPInstruction::BuildVector,
-                                 BVOps);
-    if (!IsStruct)
-      BuildVectors.push_back(BV);
+    auto *BV = new VPInstruction(VPInstruction::BuildVector, BVOps);
+    BuildVectors.push_back(BV);
     Phi->replaceAllUsesWith(BV);
     BV->setOperand(0, Phi);
     BV->insertBefore(*Successor, Successor->getFirstNonPhi());
@@ -994,19 +989,16 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       Def2LaneDefs[DefR] = LaneDefs;
       // Pack the lanes for vector users.
       if (!vputils::onlyScalarValuesUsed(DefR)) {
-        unsigned Opcode = DefR->getScalarType()->isStructTy()
-                              ? VPInstruction::BuildStructVector
-                              : VPInstruction::BuildVector;
         DefR->replaceUsesWithIf(
-            Builder.createNaryOp(Opcode, LaneDefs),
-            [DefR](VPUser &U) { return !U.usesScalars(DefR); });
+            Builder.createNaryOp(VPInstruction::BuildVector, LaneDefs),
+            [DefR](VPUser *U) { return !U->usesScalars(DefR); });
       }
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
-      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U) {
-        if (U.usesFirstLaneOnly(DefR))
+      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser *U) {
+        if (U->usesFirstLaneOnly(DefR))
           return true;
-        auto *VPI = dyn_cast<VPInstruction>(&U);
+        auto *VPI = dyn_cast<VPInstruction>(U);
         return VPI && Instruction::isCast(VPI->getOpcode());
       });
       ToRemove.push_back(DefR);
