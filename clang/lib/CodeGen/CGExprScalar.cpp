@@ -2655,6 +2655,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
   case CK_LValueToRValueBitCast: {
     LValue SourceLVal = CGF.EmitLValue(E);
+    assert(SourceLVal.isSimple() && "bit_cast operand has no address");
     Address Addr =
         SourceLVal.getAddress().withElementType(CGF.ConvertTypeForMem(DestTy));
     LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
