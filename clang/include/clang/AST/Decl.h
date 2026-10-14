@@ -2151,7 +2151,7 @@ public:
         : DefaultedFunctionKind() {
       Comparison = llvm::to_underlying(Comp);
     }
-    
+
     DefaultedFunctionKind(PostfixOperatorKind PO) : DefaultedFunctionKind() {
       PostfixOperator = llvm::to_underlying(PO);
     }
@@ -2179,7 +2179,7 @@ public:
     DefaultedComparisonKind asComparison() const {
       return static_cast<DefaultedComparisonKind>(Comparison);
     }
-    
+
     PostfixOperatorKind asPostfixOperator() const {
       return static_cast<PostfixOperatorKind>(PostfixOperator);
     }
