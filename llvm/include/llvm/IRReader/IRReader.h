@@ -18,6 +18,7 @@
 #include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ToolInterface.h"
 #include <memory>
 
 namespace llvm {
@@ -60,10 +61,13 @@ parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err, LLVMContext &Context,
 /// Otherwise, attempt to parse it as LLVM Assembly and return a Module
 /// for it.
 /// \param DataLayoutCallback Override datalayout in the llvm assembly.
-LLVM_ABI std::unique_ptr<Module>
-parseIRFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
-            ParserCallbacks Callbacks = {},
-            AsmParserContext *ParserContext = nullptr);
+/// \param StdinSource Read from a different source instead of STDIN, for
+///        in-process tool execution. This is provided to the tool's run
+///        function, for example by the daemon driver.
+LLVM_ABI std::unique_ptr<Module> parseIRFile(
+    StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
+    ParserCallbacks Callbacks = {}, AsmParserContext *ParserContext = nullptr,
+    const StandardInputSource &StdinSource = StandardInputSource::fromStdin());
 }
 
 #endif
