@@ -20164,24 +20164,47 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
     return false;
 
   if (Ty->isScalableTy()) {
+    if (AM.BaseOffs)
+      return false;
+
     if (isa<ScalableVectorType>(Ty)) {
+      EVT VT = getValueType(DL, Ty);
+      LLVMContext &Ctx = Ty->getContext();
+      TargetLowering::LegalizeTypeAction Action = getTypeAction(Ctx, VT);
+
+      // Note: If VT cannot be legalized (e.g. no scalable vectors) then LegalVT
+      // could be MVT::Other (which would assert on getStoreSize()).
+      EVT LegalVT = getLegalTypeToTransformTo(Ctx, VT);
+      if (Action == TargetLowering::TypeSplitVector && LegalVT.isScalableVT() &&
+          LegalVT.getVectorElementType() == VT.getVectorElementType()) {
+        uint64_t LegalNumBytes = LegalVT.getStoreSize().getKnownMinValue();
+        assert(VT.getStoreSize().getKnownMinValue() % LegalNumBytes == 0 &&
+               "expected vector split");
+
+        // Don't prefer scaled access if the type may need splitting. Only the
+        // first access can use the scaled offset. Later accesses need to
+        // materialize a new base + mul vl offset.
+        if (AM.Scale)
+          return false;
+        if (AM.ScalableOffset && AM.ScalableOffset % LegalNumBytes == 0)
+          return true;
+      }
+
       // See if we have a foldable vscale-based offset, for vector types which
-      // are either legal or smaller than the minimum; more work will be
-      // required if we need to consider addressing for types which need
-      // legalization by splitting.
-      uint64_t VecNumBytes = DL.getTypeSizeInBits(Ty).getKnownMinValue() / 8;
-      if (AM.HasBaseReg && !AM.BaseOffs && AM.ScalableOffset && !AM.Scale &&
+      // are either legal or smaller than the minimum.
+      uint64_t VecNumBytes = VT.getStoreSize().getKnownMinValue();
+      if (AM.ScalableOffset && !AM.Scale &&
           (AM.ScalableOffset % VecNumBytes == 0) && VecNumBytes <= 16 &&
           isPowerOf2_64(VecNumBytes))
         return isInt<4>(AM.ScalableOffset / (int64_t)VecNumBytes);
 
       uint64_t VecElemNumBytes =
           DL.getTypeSizeInBits(cast<VectorType>(Ty)->getElementType()) / 8;
-      return AM.HasBaseReg && !AM.BaseOffs && !AM.ScalableOffset &&
+      return !AM.ScalableOffset &&
              (AM.Scale == 0 || (uint64_t)AM.Scale == VecElemNumBytes);
     }
 
-    return AM.HasBaseReg && !AM.BaseOffs && !AM.ScalableOffset && !AM.Scale;
+    return !AM.ScalableOffset && !AM.Scale;
   }
 
   // No scalable offsets allowed for non-scalable types.
