@@ -279,6 +279,9 @@ extern char &SILoadStoreOptimizerLegacyID;
 void initializeSIWholeQuadModeLegacyPass(PassRegistry &);
 extern char &SIWholeQuadModeID;
 
+void initializeAMDGPUSSAWholeQuadModeLegacyPass(PassRegistry &);
+extern char &AMDGPUSSAWholeQuadModeID;
+
 void initializeSILowerControlFlowLegacyPass(PassRegistry &);
 extern char &SILowerControlFlowLegacyID;
 
