@@ -5396,6 +5396,13 @@ def HLSLInterpolationModifier : InheritableAttr {
   let Documentation = [HLSLInterpolationModifierDocs];
 }
 
+def HLSLPrecise : InheritableAttr {
+  let Spellings = [CustomKeyword<"precise">];
+  let Subjects = SubjectList<[Var, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLPreciseDocs];
+}
+
 def HLSLParamModifier : ParameterABIAttr {
   let Spellings = [CustomKeyword<"in">, CustomKeyword<"inout">, CustomKeyword<"out">];
   let Accessors = [Accessor<"isIn", [CustomKeyword<"in">]>,

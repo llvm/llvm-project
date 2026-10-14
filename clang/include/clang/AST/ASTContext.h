@@ -325,6 +325,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<HLSLAttributedResourceType, ASTContext &>
       HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
+  /// Whether the HLSL `precise` keyword appears in this translation unit.
+  bool HLSLPreciseUsed = false;
 
   mutable llvm::FoldingSet<CountAttributedType> CountAttributedTypes;
 
@@ -2102,6 +2104,9 @@ public:
   QualType getHLSLInlineSpirvType(uint32_t Opcode, uint32_t Size,
                                   uint32_t Alignment,
                                   ArrayRef<SpirvOperand> Operands);
+
+  void setHLSLPreciseUsed() { HLSLPreciseUsed = true; }
+  bool isHLSLPreciseUsed() const { return HLSLPreciseUsed; }
 
   QualType getSubstTemplateTypeParmType(QualType Replacement,
                                         Decl *AssociatedDecl, unsigned Index,

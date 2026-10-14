@@ -26,6 +26,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 
@@ -65,6 +66,22 @@ namespace {
     std::unique_ptr<llvm::Module> M;
     std::unique_ptr<CodeGen::CodeGenModule> Builder;
     SmallVector<FunctionDecl *, 8> DeferredInlineMemberFuncDefs;
+
+    /// HLSL defers all code generation to the end of the translation unit
+    /// because a use of the `precise` keyword anywhere in it changes the
+    /// floating-point mode of the whole translation unit. The deferred
+    /// callbacks are replayed in their original order.
+    struct DeferredHLSLDecl {
+      enum KindTy { TopLevel, InlineFunction, StaticMemberVar } Kind;
+      DeclGroupRef DG;
+    };
+    SmallVector<DeferredHLSLDecl, 0> DeferredHLSLDecls;
+    bool EmittingDeferredHLSLDecls = false;
+
+    bool shouldDeferForHLSL() const {
+      return Ctx && Ctx->getLangOpts().HLSL && !IRGenFinished &&
+             !EmittingDeferredHLSLDecls;
+    }
 
     static llvm::StringRef ExpandModuleName(llvm::StringRef ModuleName,
                                             const CodeGenOptions &CGO) {
@@ -182,6 +199,12 @@ namespace {
       if (Diags.hasErrorOccurred())
         return;
 
+      if (shouldDeferForHLSL()) {
+        DeferredHLSLDecls.push_back(
+            {DeferredHLSLDecl::StaticMemberVar, DeclGroupRef(VD)});
+        return;
+      }
+
       Builder->HandleCXXStaticMemberVarInstantiation(VD);
     }
 
@@ -194,13 +217,63 @@ namespace {
       if (Diags.hasUnrecoverableErrorOccurred())
         return true;
 
+      if (shouldDeferForHLSL()) {
+        DeferredHLSLDecls.push_back({DeferredHLSLDecl::TopLevel, DG});
+        return true;
+      }
+
+      EmitTopLevelDeclGroup(DG);
+      return true;
+    }
+
+    void EmitTopLevelDeclGroup(DeclGroupRef DG) {
       HandlingTopLevelDeclRAII HandlingDecl(*this);
 
       // Make sure to emit all elements of a Decl.
       for (auto &I : DG)
         Builder->EmitTopLevelDecl(I);
+    }
 
-      return true;
+    /// Clang implements a simplified version of the HLSL `precise` keyword: if
+    /// it is used anywhere in the translation unit, the whole translation unit
+    /// is compiled in IEEE-strict mode, matching -Gis (-ffp-model=strict).
+    void applyHLSLPreciseFPMode() {
+      if (!Ctx->isHLSLPreciseUsed())
+        return;
+      // ASTContext refers to the CompilerInvocation's mutable LangOptions.
+      LangOptions &LO = const_cast<LangOptions &>(Ctx->getLangOpts());
+      LO.setDefaultFPContractMode(LangOptions::FPM_Off);
+      LO.setComplexRange(LangOptions::CX_Full);
+      // Like CompilerInstance::createTarget, only enable the rounding and
+      // exception modes on targets that support them.
+      if (Ctx->getTargetInfo().hasStrictFP() || LO.ExpStrictFP) {
+        LO.RoundingMath = true;
+        LO.setFPExceptionMode(LangOptions::FPE_Strict);
+      }
+    }
+
+    void EmitDeferredHLSLDecls() {
+      // Callbacks triggered while emitting are handled directly.
+      llvm::SaveAndRestore Emitting(EmittingDeferredHLSLDecls, true);
+      for (DeferredHLSLDecl &D : DeferredHLSLDecls) {
+        if (Diags.hasUnrecoverableErrorOccurred())
+          return;
+        switch (D.Kind) {
+        case DeferredHLSLDecl::TopLevel:
+          EmitTopLevelDeclGroup(D.DG);
+          break;
+        case DeferredHLSLDecl::InlineFunction:
+          DeferredInlineMemberFuncDefs.push_back(
+              cast<FunctionDecl>(D.DG.getSingleDecl()));
+          break;
+        case DeferredHLSLDecl::StaticMemberVar:
+          Builder->HandleCXXStaticMemberVarInstantiation(
+              cast<VarDecl>(D.DG.getSingleDecl()));
+          break;
+        }
+      }
+      DeferredHLSLDecls.clear();
+      EmitDeferredDecls();
     }
 
     void EmitDeferredDecls() {
@@ -230,7 +303,11 @@ namespace {
       //     void bar();
       //     void foo() { bar(); }
       //   } A;
-      DeferredInlineMemberFuncDefs.push_back(D);
+      if (shouldDeferForHLSL())
+        DeferredHLSLDecls.push_back(
+            {DeferredHLSLDecl::InlineFunction, DeclGroupRef(D)});
+      else
+        DeferredInlineMemberFuncDefs.push_back(D);
 
       // Provide some coverage mapping even for methods that aren't emitted.
       // Don't do this for templated classes though, as they may not be
@@ -310,6 +387,12 @@ namespace {
     }
 
     void HandleTranslationUnit(ASTContext &Ctx) override {
+      if (!Diags.hasUnrecoverableErrorOccurred() && Builder &&
+          shouldDeferForHLSL()) {
+        applyHLSLPreciseFPMode();
+        EmitDeferredHLSLDecls();
+      }
+
       // Release the Builder when there is no error.
       if (!Diags.hasUnrecoverableErrorOccurred() && Builder)
         Builder->Release();
