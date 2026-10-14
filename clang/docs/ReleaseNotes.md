@@ -1188,8 +1188,6 @@ features cannot lower the translation-unit ABI level;
 %   - Moved checkers
 %   - Diagnostic changes
 
-- Fixed an assertion failure in the `alpha.security.ArrayBound` checker when analyzing incomplete types.
-
 #### Improvements
 
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
