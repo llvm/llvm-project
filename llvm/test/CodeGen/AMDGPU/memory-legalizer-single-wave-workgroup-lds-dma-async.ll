@@ -11,8 +11,6 @@ define void @lds_wg_fence_release_single32(ptr addrspace(3) inreg %lds) #0 {
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    ds_load_b32 v1, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
