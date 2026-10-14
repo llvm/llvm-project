@@ -751,6 +751,82 @@ private:
 #undef _LIBSYCL_MULTI_PTR_REL_OP
 #undef _LIBSYCL_MULTI_PTR_REL_OPS
 
+// SYCL 2020 4.7.7.2. Explicit pointer aliases.
+//
+// These default to access::decorated::legacy, so they name the deprecated
+// interface unless a decoration is given explicitly. raw_* and decorated_*
+// below name the current one.
+
+template <typename ElementType,
+          access::decorated IsDecorated = access::decorated::legacy>
+using global_ptr =
+    multi_ptr<ElementType, access::address_space::global_space, IsDecorated>;
+
+template <typename ElementType,
+          access::decorated IsDecorated = access::decorated::legacy>
+using local_ptr =
+    multi_ptr<ElementType, access::address_space::local_space, IsDecorated>;
+
+// Deprecated in SYCL 2020 together with the constant address space.
+template <typename ElementType>
+using constant_ptr =
+    multi_ptr<ElementType, access::address_space::constant_space,
+              access::decorated::legacy>;
+
+template <typename ElementType,
+          access::decorated IsDecorated = access::decorated::legacy>
+using private_ptr =
+    multi_ptr<ElementType, access::address_space::private_space, IsDecorated>;
+
+template <typename ElementType,
+          access::decorated IsDecorated = access::decorated::legacy>
+using generic_ptr =
+    multi_ptr<ElementType, access::address_space::generic_space, IsDecorated>;
+
+// The interface exposes a non-decorated pointer while keeping the address
+// space information internally.
+
+template <typename ElementType>
+using raw_global_ptr =
+    multi_ptr<ElementType, access::address_space::global_space,
+              access::decorated::no>;
+
+template <typename ElementType>
+using raw_local_ptr = multi_ptr<ElementType, access::address_space::local_space,
+                                access::decorated::no>;
+
+template <typename ElementType>
+using raw_private_ptr =
+    multi_ptr<ElementType, access::address_space::private_space,
+              access::decorated::no>;
+
+template <typename ElementType>
+using raw_generic_ptr =
+    multi_ptr<ElementType, access::address_space::generic_space,
+              access::decorated::no>;
+
+// The interface exposes a decorated pointer.
+
+template <typename ElementType>
+using decorated_global_ptr =
+    multi_ptr<ElementType, access::address_space::global_space,
+              access::decorated::yes>;
+
+template <typename ElementType>
+using decorated_local_ptr =
+    multi_ptr<ElementType, access::address_space::local_space,
+              access::decorated::yes>;
+
+template <typename ElementType>
+using decorated_private_ptr =
+    multi_ptr<ElementType, access::address_space::private_space,
+              access::decorated::yes>;
+
+template <typename ElementType>
+using decorated_generic_ptr =
+    multi_ptr<ElementType, access::address_space::generic_space,
+              access::decorated::yes>;
+
 /// \return a multi_ptr in address space Space created from Ptr. The result
 /// is nullptr if Ptr does not point into Space.
 template <access::address_space Space, access::decorated DecorateAddress,
