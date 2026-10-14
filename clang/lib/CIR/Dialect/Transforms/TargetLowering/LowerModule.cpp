@@ -79,8 +79,7 @@ const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
 }
 
 // TODO: not to create it every time
-std::unique_ptr<LowerModule>
-createLowerModule(mlir::ModuleOp module) {
+std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   // If the triple is not present, e.g. CIR modules parsed from text, we
   // cannot init LowerModule properly.
   assert(!cir::MissingFeatures::makeTripleAlwaysPresent());

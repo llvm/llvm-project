@@ -299,9 +299,9 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
     // "Validate" our triple by checking if it can successfully initialize into
     // a TargetInfo:
     if (!clang::targets::AllocateTarget(triple, targetOptions)) {
-      return op->emitOpError() << "unknown triple '" << tripleStr.getValue()
-                               << "' in '" << getTripleAttrName()
-                               << "' attribute";
+      return op->emitOpError()
+             << "unknown triple '" << tripleStr.getValue() << "' in '"
+             << getTripleAttrName() << "' attribute";
     }
   }
 
@@ -310,9 +310,9 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
     // Checks whether or not OptInfoAttr is even parseable; opt info range
     // sanity checks are done in OptInfoAttr::verify.
     if (!optInfo)
-      return op->emitOpError() << "malformed "
-                               << cir::CIRDialect::getOptInfoAttrName()
-                               << " attribute";
+      return op->emitOpError()
+             << "malformed " << cir::CIRDialect::getOptInfoAttrName()
+             << " attribute";
   }
 
   return success();
@@ -433,7 +433,7 @@ static LogicalResult verifyProducedBy(Operation *op, Value operand,
 std::optional<llvm::Triple> cir::getTripleFromModule(mlir::ModuleOp mod) {
   // Verifying the validity of the triple attribute happens in
   // cir::CIRDialect::verifyOperationAttribute; verifyOperationAttribute
-  // should error first if we have an invalid attribute. 
+  // should error first if we have an invalid attribute.
   if (!mod->hasAttr(cir::CIRDialect::getTripleAttrName()))
     return std::nullopt;
 

@@ -3184,7 +3184,7 @@ void LoweringPreparePass::runOnOperation() {
   lowerModule = cir::createLowerModule(mlirModule);
   if (!lowerModule) {
     mlirModule.emitError("cannot create a CIR lower module for ")
-           << getName() << " pass: ";
+        << getName() << " pass: ";
     return signalPassFailure();
   }
 

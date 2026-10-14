@@ -300,7 +300,7 @@ void TargetLoweringPass::runOnOperation() {
   // If lower module is not available, skip the target lowering pass.
   if (!lowerModule) {
     mod.emitWarning("cannot create a CIR lower module, skipping the ")
-           << getName() << " pass: ";
+        << getName() << " pass: ";
     return;
   }
 
