@@ -4113,11 +4113,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FMAXIMUMNUM: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = Ty.getSizeInBits();
-    // Outside IEEE mode the mode-dependent scalar min/max (e.g. s_max_f32) has
-    // the correct numeric behavior, so a uniform op can map to SGPR. In IEEE
-    // mode those scalar ops would require explicit input canonicalization, so
-    // only map to SGPR when a scalar _num_ min/max (e.g. s_max_num_f32) exists;
-    // otherwise force VGPR to use the self-canonicalizing v_*_num_f* form.
+    // This case is for GFX11.7, which has the following features:
+    //    1. `hasIEEEMinimumMaximumInsts()` returns true
+    //    2. `hasSALUMinimumMaximumInsts()` returns false
+    // This indicates that GFX11.7 is using:
+    //    1. `s_max/min_f32/f16` for scalar
+    //    2. `v_max/min_num_f32/f16` for vector
+    // By testing on real card, `s_max/min_f32/f16` has the same behavior
+    // as `v_max/min_num_f32/f16`. So for GFX11.7, even if
+    // `hasSALUMinimumMaximumInsts()` returns false, we can still choose SGPR
     const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     bool ScalarNumIsSafe =
         !MFI->getMode().IEEE || Subtarget.hasIEEEMinimumMaximumInsts();
