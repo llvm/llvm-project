@@ -421,7 +421,7 @@ def UseAlternateSExtLoadCVTF32
 
 def UseNegativeImmediates
                      : Predicate<"false">,
-                                 AssemblerPredicate<(all_of (not FeatureNoNegativeImmediates)),
+                                 AssemblerPredicate<(all_of (none_of FeatureNoNegativeImmediates)),
                                  "NegativeImmediates">;
 
 def UseScalarIncVL   : Predicate<"Subtarget->useScalarIncVL()">;
