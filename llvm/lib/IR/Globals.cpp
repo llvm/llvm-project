@@ -16,7 +16,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"

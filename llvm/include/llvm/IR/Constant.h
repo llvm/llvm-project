@@ -63,7 +63,8 @@ public:
   /// Return true if this is the value that would be returned by getNullValue.
   bool isNullValue() const { return SubclassOptionalData & IsNullValue; }
 
-  bool isNullOrUndef() const;
+  /// Return true if is all zeros or undefs.
+  LLVM_ABI bool isNullOrUndef() const;
 
   /// Returns true if the value is one.
   LLVM_ABI bool isOneValue() const;
