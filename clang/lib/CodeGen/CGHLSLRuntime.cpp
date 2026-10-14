@@ -1094,7 +1094,8 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
 }
 
 static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
-                                      unsigned BuiltIn, bool NeedsFlat = false) {
+                                      unsigned BuiltIn,
+                                      bool NeedsFlat = false) {
   LLVMContext &Ctx = GV->getContext();
   IRBuilder<> B(*GV->getParent());
   // Emit all decorations as a single spirv.Decorations node.
@@ -1578,10 +1579,9 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
       // Non-float pixel inputs cannot be interpolated and must be Flat.
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::FrontFacing */ 17,
-                                    inputRequiresFlatDecoration(Type));
+      return createSPIRVBuiltinLoad(
+          B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
+          /* BuiltIn::FrontFacing */ 17, inputRequiresFlatDecoration(Type));
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
