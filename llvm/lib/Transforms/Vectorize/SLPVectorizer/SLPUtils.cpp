@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SLPUtils.h"
+#include "SLPMemoryUtils.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -605,7 +606,7 @@ SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
 /// ShuffleVectorInst/getShuffleCost?
 std::optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
-                     AssumptionCache *AC) {
+                     AssumptionCache *AC, SLPAnalysisCache &Cache) {
   const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
   if (It == VL.end())
     return std::nullopt;
@@ -622,7 +623,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
                                 Value *Vec = EE->getVectorOperand();
                                 if (isa<UndefValue>(Vec))
                                   return false;
-                                return isGuaranteedNotToBePoison(Vec, AC);
+                                return Cache.isGuaranteedNotToBePoison(Vec, AC);
                               });
     return *HasNonUndefVec;
   };
