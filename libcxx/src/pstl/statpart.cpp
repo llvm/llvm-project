@@ -8,10 +8,15 @@
 
 #include <__config>
 #include <__pstl/backends/statpart.h>
-#include <dispatch/dispatch.h>
 
 // Hardcoded to use libdispatch for now.
 // CMake switches to be introduced later.
+
+#if __has_include(<dispatch/dispatch.h>)
+#  include <dispatch/dispatch.h>
+#else
+#  error "Currently statpart only supports parallelism provided by libdispatch."
+#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
