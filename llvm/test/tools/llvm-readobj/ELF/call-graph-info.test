@@ -809,7 +809,9 @@ Symbols:
 ...
 
 ## Check that direct callees are listed in section order and that a callee
-## address that appears more than once is listed once.
+## address that appears more than once is listed once. main has five distinct
+## callees, because callees used to be printed in address order once there were
+## more than four. foo has fewer.
 # RUN: yaml2obj --docnum=8 %s -o %t8
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t8 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
@@ -846,6 +848,24 @@ Symbols:
 # LLVM-DUP-CALLEE-NEXT:     ]
 # LLVM-DUP-CALLEE-NEXT:     IndirectTypeIDs: []
 # LLVM-DUP-CALLEE-NEXT:   }
+# LLVM-DUP-CALLEE-NEXT:   Function {
+# LLVM-DUP-CALLEE-NEXT:     Names: [foo]
+# LLVM-DUP-CALLEE-NEXT:     Address: 0x1790
+# LLVM-DUP-CALLEE-NEXT:     Version: 0
+# LLVM-DUP-CALLEE-NEXT:     IsIndirectTarget: No
+# LLVM-DUP-CALLEE-NEXT:     TypeID: 0x0
+# LLVM-DUP-CALLEE-NEXT:     DirectCallees [
+# LLVM-DUP-CALLEE-NEXT:       {
+# LLVM-DUP-CALLEE-NEXT:         Names: [baz]
+# LLVM-DUP-CALLEE-NEXT:         Address: 0x17B0
+# LLVM-DUP-CALLEE-NEXT:       }
+# LLVM-DUP-CALLEE-NEXT:       {
+# LLVM-DUP-CALLEE-NEXT:         Names: [bar]
+# LLVM-DUP-CALLEE-NEXT:         Address: 0x17A0
+# LLVM-DUP-CALLEE-NEXT:       }
+# LLVM-DUP-CALLEE-NEXT:     ]
+# LLVM-DUP-CALLEE-NEXT:     IndirectTypeIDs: []
+# LLVM-DUP-CALLEE-NEXT:   }
 # LLVM-DUP-CALLEE-NEXT: ]
 
 --- !ELF
@@ -868,9 +888,17 @@ Sections:
       0xA0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 1: 0x17A0 (bar)
       0x90, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 2: 0x1790 (foo)
       0xB0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 3: 0x17B0 (baz)
-      0xA0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 4: 0x17A0 (bar again)
-      0x80, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 5: 0x1780 (qux)
-      0xD0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  ## Callee 6: 0x17D0 (quux)
+      0x80, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 4: 0x1780 (qux)
+      0xD0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 5: 0x17D0 (quux)
+      0xA0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 6: 0x17A0 (bar again)
+      0x00, ## Version
+      0x02, ## Flags (HasDirectCallees)
+      0x90, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1790 (foo)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionTypeID: 0
+      0x03, ## NumDirectCallees
+      0xB0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 1: 0x17B0 (baz)
+      0xA0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 2: 0x17A0 (bar)
+      0xB0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  ## Callee 3: 0x17B0 (baz again)
     ]
 Symbols:
   - Name:     qux
