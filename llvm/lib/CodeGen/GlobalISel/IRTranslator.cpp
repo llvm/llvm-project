@@ -337,6 +337,11 @@ class IRTranslatorImpl {
       const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
       ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos = {});
 
+  /// Report an intrinsic the subtarget does not support and define its results
+  /// with G_IMPLICIT_DEF. Prevents creating a malformed MIR.
+  bool handleUnsupportedIntrinsic(const CallBase &CB, Intrinsic::ID ID,
+                                  MachineIRBuilder &MIRBuilder);
+
   /// When an invoke or a cleanupret unwinds to the next EH pad, there are
   /// many places it could ultimately go. In the IR, we have a single unwind
   /// destination, but in the machine CFG, we enumerate all the possible blocks.
@@ -3069,24 +3074,6 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
     MF->setHasFakeUses(true);
     return true;
   }
-  case Intrinsic::dbg_declare: {
-    const DbgDeclareInst &DI = cast<DbgDeclareInst>(CI);
-    assert(DI.getVariable() && "Missing variable");
-    translateDbgDeclareRecord(DI.getAddress(), DI.hasArgList(), DI.getVariable(),
-                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
-    return true;
-  }
-  case Intrinsic::dbg_label: {
-    const DbgLabelInst &DI = cast<DbgLabelInst>(CI);
-    assert(DI.getLabel() && "Missing label");
-
-    assert(DI.getLabel()->isValidLocationForIntrinsic(
-               MIRBuilder.getDebugLoc()) &&
-           "Expected inlined-at fields to agree");
-
-    MIRBuilder.buildDbgLabel(DI.getLabel());
-    return true;
-  }
   case Intrinsic::vaend:
     // No target I know of cares about va_end. Certainly no in-tree target
     // does. Simplest intrinsic ever!
@@ -3100,20 +3087,6 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
         .addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Ptr),
                                                 MachineMemOperand::MOStore,
                                                 ListSize, Alignment));
-    return true;
-  }
-  case Intrinsic::dbg_assign:
-    // A dbg.assign is a dbg.value with more information about stack locations,
-    // typically produced during optimisation of variables with leaked
-    // addresses. We can treat it like a normal dbg_value intrinsic here; to
-    // benefit from the full analysis of stack/SSA locations, GlobalISel would
-    // need to register for and use the AssignmentTrackingAnalysis pass.
-    [[fallthrough]];
-  case Intrinsic::dbg_value: {
-    // This form of DBG_VALUE is target-independent.
-    const DbgValueInst &DI = cast<DbgValueInst>(CI);
-    translateDbgValueRecord(DI.getValue(), DI.hasArgList(), DI.getVariable(),
-                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
     return true;
   }
   case Intrinsic::uadd_with_overflow:
@@ -3670,11 +3643,8 @@ bool IRTranslatorImpl::translateCall(const User &U,
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 
-  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
-    const Function &Fn = MF->getFunction();
-    Fn.getContext().diagnose(
-        DiagnosticInfoUnsupportedTargetIntrinsic(Fn, ID, CI.getDebugLoc()));
-  }
+  if (!MF->getSubtarget().isIntrinsicSupported(ID))
+    return handleUnsupportedIntrinsic(CI, ID, MIRBuilder);
 
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
     return true;
@@ -3685,15 +3655,26 @@ bool IRTranslatorImpl::translateCall(const User &U,
   return translateIntrinsic(CI, ID, MIRBuilder, Infos);
 }
 
+bool IRTranslatorImpl::handleUnsupportedIntrinsic(
+    const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder) {
+  const Function &F = MF->getFunction();
+  F.getContext().diagnose(
+      DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
+
+  if (!CB.getType()->isVoidTy()) {
+    for (Register Reg : getOrCreateVRegs(CB))
+      MIRBuilder.buildUndef(Reg);
+  }
+
+  return true;
+}
+
 /// Translate a call or callbr to an intrinsic.
 bool IRTranslatorImpl::translateIntrinsic(
     const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
     ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos) {
-  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
-    const Function &F = MF->getFunction();
-    F.getContext().diagnose(
-        DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
-  }
+  if (!MF->getSubtarget().isIntrinsicSupported(ID))
+    return handleUnsupportedIntrinsic(CB, ID, MIRBuilder);
 
   ArrayRef<Register> ResultRegs;
   if (!CB.getType()->isVoidTy())

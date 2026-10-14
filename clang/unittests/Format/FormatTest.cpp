@@ -21740,6 +21740,58 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  })));\n"
                "}",
                Style);
+
+  FormatStyle BeforeLambdaBodyStyle = getLLVMStyle();
+  BeforeLambdaBodyStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
+  BeforeLambdaBodyStyle.BraceWrapping.BeforeLambdaBody = true;
+  BeforeLambdaBodyStyle.AllowShortLambdasOnASingleLine =
+      FormatStyle::ShortLambdaStyle::SLS_None;
+
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       c);\n"
+               "}",
+               BeforeLambdaBodyStyle);
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       [](int y)\n"
+               "       {\n"
+               "         return y;\n"
+               "       });\n"
+               "}",
+               BeforeLambdaBodyStyle);
+
+  BeforeLambdaBodyStyle.AllowShortLambdasOnASingleLine =
+      FormatStyle::ShortLambdaStyle::SLS_Empty;
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       c);\n"
+               "}",
+               BeforeLambdaBodyStyle);
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       [](int y)\n"
+               "       {\n"
+               "         return y;\n"
+               "       });\n"
+               "}",
+               BeforeLambdaBodyStyle);
 }
 
 TEST_F(FormatTest, LambdaWithLineComments) {

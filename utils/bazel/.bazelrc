@@ -243,9 +243,6 @@ build:hermetic-toolchain --@llvm-project//libc:mpc=disable
 build:hermetic-toolchain --@llvm-project//libc:mpfr=disable
 build:hermetic-toolchain --@llvm-project//llvm:pfm=disable
 
-# TODO: Remove once @llvm is updated >0.7.1
-build:hermetic-toolchain --copt=-Wno-modules-import-nested-redundant --host_copt=-Wno-modules-import-nested-redundant
-
 ###############################################################################
 # Options for Emscripten WebAssembly builds.
 ###############################################################################

@@ -1980,6 +1980,9 @@ def HLSLAvailability : DiagGroup<"hlsl-availability">;
 // Warnings specifically for DXC incompatabilities.
 def HLSLDXCCompat : DiagGroup<"hlsl-dxc-compatability">;
 
+// Warnings for semantics and their signatures.
+def HLSLSemanticSignatures : DiagGroup<"hlsl-semantic-signatures">;
+
 // Warnings for legacy binding behavior
 def LegacyConstantRegisterBinding : DiagGroup<"legacy-constant-register-binding">;
 
@@ -1996,7 +1999,8 @@ def UnsafeBufferUsageInUniquePtrArrayAccess : DiagGroup<"unsafe-buffer-usage-in-
 def UnsafeBufferUsageInStaticSizedArray : DiagGroup<"unsafe-buffer-usage-in-static-sized-array">;
 def UnsafeBufferUsageInFormatAttrCall : DiagGroup<"unsafe-buffer-usage-in-format-attr-call">;
 def UnsafeBufferUsageInStringView : DiagGroup<"unsafe-buffer-usage-in-string-view">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall, UnsafeBufferUsageInStringView]>;
+def UnsafeBufferUsageMainArgv : DiagGroup<"unsafe-buffer-usage-main-argv">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall, UnsafeBufferUsageInStringView, UnsafeBufferUsageMainArgv]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;

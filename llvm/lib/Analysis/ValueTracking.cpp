@@ -890,6 +890,10 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
     // We're running this loop for once for each value queried resulting in a
     // runtime of ~O(#assumes * #values).
 
+    if (match(I->getArgOperand(0), m_Trunc(m_Specific(V))) &&
+        isValidAssumeForContext(I, Q))
+      return true;
+
     Value *RHS;
     CmpPredicate Pred;
     auto m_V = m_CombineOr(m_Specific(V), m_PtrToInt(m_Specific(V)));
@@ -3116,15 +3120,18 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
     // Consider only compare instructions uniquely controlling a branch
     Value *RHS;
     CmpPredicate Pred;
-    if (!match(UI, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS))))
-      continue;
-
     bool NonNullIfTrue;
-    if (cmpExcludesZero(Pred, RHS))
+    if (match(UI, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS)))) {
+      if (cmpExcludesZero(Pred, RHS))
+        NonNullIfTrue = true;
+      else if (cmpExcludesZero(CmpInst::getInversePredicate(Pred), RHS))
+        NonNullIfTrue = false;
+      else
+        continue;
+    } else if (UI->getType()->isIntegerTy(1) &&
+               match(UI, m_Trunc(m_Specific(V)))) {
       NonNullIfTrue = true;
-    else if (cmpExcludesZero(CmpInst::getInversePredicate(Pred), RHS))
-      NonNullIfTrue = false;
-    else
+    } else
       continue;
 
     SmallVector<const User *, 4> WorkList;
@@ -5666,16 +5673,41 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::roundeven: {
       KnownFPClass KnownSrc;
       FPClassTest InterestedSrcs = InterestedClasses;
-      if (InterestedSrcs & fcPosFinite)
-        InterestedSrcs |= fcPosFinite;
+
+      // Negative round ups towards zero produce negative zero.
       if (InterestedSrcs & fcNegFinite)
         InterestedSrcs |= fcNegFinite;
+
+      // Negative subnormals may flush to positive zero.
+      if (InterestedSrcs & fcPosFinite)
+        InterestedSrcs |= fcPosFinite | fcNegSubnormal;
+
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
 
-      Known = KnownFPClass::roundToIntegral(
-          KnownSrc, IID == Intrinsic::trunc,
-          V->getType()->getScalarType()->isMultiUnitFPType());
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      const bool IsMultiUnitFPType =
+          V->getType()->getScalarType()->isMultiUnitFPType();
+
+      switch (IID) {
+      case Intrinsic::trunc:
+        Known = KnownFPClass::trunc(KnownSrc, Mode);
+        break;
+      case Intrinsic::floor:
+        Known = KnownFPClass::floor(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      case Intrinsic::ceil:
+        Known = KnownFPClass::ceil(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      default:
+        Known =
+            KnownFPClass::roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      }
       break;
     }
     case Intrinsic::exp:
@@ -5737,7 +5769,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           F ? F->getDenormalMode(
                   II->getType()->getScalarType()->getFltSemantics())
             : DenormalMode::getDynamic();
-      Known = KnownFPClass::log(KnownSrc, Mode);
+      const bool IsMultiUnitFPType =
+          V->getType()->getScalarType()->isMultiUnitFPType();
+      Known = KnownFPClass::log(KnownSrc, Mode, IsMultiUnitFPType);
       break;
     }
     case Intrinsic::pow: {
