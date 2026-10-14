@@ -2144,7 +2144,7 @@ def OpenACC_SerialOp
 def OpenACC_KernelsOp
     : OpenACC_Op<"kernels",
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
-                  HasParallelRegion, RecursiveMemoryEffects,
+                  RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                             ["getSuccessorInputs"]>,

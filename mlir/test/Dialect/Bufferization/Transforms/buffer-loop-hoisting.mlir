@@ -984,18 +984,18 @@ func.func @while_exit_alias_parallel_parent(%condition: i1, %out: memref<2xindex
 
 // -----
 
-// Hoisting into acc.loop would allow a subsequent hoist to share the allocation
-// between parallel iterations. Keep it inside scf.while.
-// CHECK-LABEL: func @no_hoist_while_parallel_acc_parent(
+// Hoist out of scf.while, but keep the allocation private to each parallel
+// OpenACC iteration. HasParallelRegion prevents further hoisting out of acc.loop.
+// CHECK-LABEL: func @hoist_while_within_acc_parallel_loop(
 //  CHECK-NOT: memref.alloc
 //      CHECK: acc.parallel
 // CHECK-NEXT: acc.loop
-// CHECK-NEXT: %[[LAST:.*]] = scf.while
 // CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
 // CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
 //      CHECK: scf.condition{{.*}} %[[ALLOC]]
 //      CHECK: memref.load %[[LAST]]
-func.func @no_hoist_while_parallel_acc_parent(%out: memref<2xindex>) {
+func.func @hoist_while_within_acc_parallel_loop(%out: memref<2xindex>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -1103,14 +1103,16 @@ func.func @hoist_with_unrelated_loop_effect(%out: memref<f32>, %value: f32) {
 
 // -----
 
-// Preserve dominator-based hoisting from sequential OpenACC loops.
-// CHECK-LABEL: func @hoist_sequential_acc_loop(
-//      CHECK: %[[ALLOC:.*]] = memref.alloc()
-// CHECK-NEXT: acc.loop
+// HasParallelRegion conservatively prevents hoisting out of acc.loop, even
+// when it is marked sequential.
+// CHECK-LABEL: func @no_hoist_sequential_acc_loop(
+//  CHECK-NOT: memref.alloc
+//      CHECK: acc.loop
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
 // CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
 // CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[ALLOC]]
 // CHECK-NEXT: memref.store %[[VALUE]]
-func.func @hoist_sequential_acc_loop(%n: index, %out: memref<?xindex>) {
+func.func @no_hoist_sequential_acc_loop(%n: index, %out: memref<?xindex>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   acc.loop control(%i : index) = (%c0 : index) to (%n : index) step (%c1 : index) {

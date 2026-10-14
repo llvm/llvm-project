@@ -39,8 +39,9 @@ namespace OpTrait {
 // parallel execution semantics. Whether it executes in parallel may depend on
 // the operation's attributes or enclosing context. Transformations must account
 // for possible parallel execution unless they can prove sequential execution.
-// For example, hoisting a buffer allocation out of the region may cause parallel
-// executions to share a buffer that was previously private.
+// For example, hoisting a buffer allocation out of the region may cause
+// parallel executions to share a buffer that was previously private.
+// TODO: Turn this trait into an op interface.
 template <typename ConcreteType>
 class HasParallelRegion : public TraitBase<ConcreteType, HasParallelRegion> {
 public:
