@@ -45,8 +45,9 @@ There are three workflows, each going one step further than the last:
 - **Whole-program analysis**, adding `--analysis`. `clang-ssaf-analyzer` runs
   the named analyses over the link unit summary.
 - **Whole-program transformation**, adding `--transformation`. A second build
-  generates source edits from the analysis result, and they are merged across
-  the whole program.
+  generates source edits and transformation reports from the analysis result,
+  and they are merged across the whole program, together with the reports of
+  the edits that conflicted.
 
 Summary extraction and linking:
 
@@ -67,7 +68,7 @@ $ clang-ssaf-orchestrator-make \
     -- make -j8
 ```
 
-Whole-program transformation, which ends in merged source edits:
+Whole-program transformation, which ends in merged source edits and reports:
 
 ```console
 $ clang-ssaf-orchestrator-make \
@@ -110,6 +111,12 @@ orchestrator only the `make` invocation.
        is only required with ``--analysis``.
    * - ``--ssaf-src-edit-merge=<path>``
      - Path to ``clang-ssaf-src-edit-merge``. Defaults to the name on
+       ``PATH``, and is only required with ``--transformation``.
+   * - ``--ssaf-merge-transformation-report=<path>``
+     - Path to ``clang-ssaf-merge-transformation-report``. Defaults to the
+       name on ``PATH``, and is only required with ``--transformation``.
+   * - ``--ssaf-merge-conflict-report=<path>``
+     - Path to ``clang-ssaf-merge-conflict-report``. Defaults to the name on
        ``PATH``, and is only required with ``--transformation``.
    * - ``--ssaf-extra-clang-arg=<arg>``
      - Extra argument for every SSAF compilation. Repeatable.
@@ -160,9 +167,14 @@ translation units, and only the whole path tells them apart.
    * - ``<output-dir>/ssaf-artifacts/<path>.edits.yaml``
      - Source edits for the ``<path>`` build artifact.
    * - ``<output-dir>/ssaf-artifacts/<path>.conflicts.sarif``
-     - Edits dropped because they conflicted.
+     - Edits dropped because they conflicted when the build assembled
+       ``<path>``.
+   * - ``<output-dir>/ssaf-artifacts/<path>.conflict-report.sarif``
+     - Every conflict behind the ``<path>`` build artifact: its own, and its
+       inputs'.
    * - ``<output-dir>/ssaf-artifacts/<path>.report.sarif``
-     - Transformation report for the ``<path>`` build artifact.
+     - Transformation report for the ``<path>`` build artifact: a
+       compilation's own, and its inputs' merged where the build assembled it.
    * - ``<output-dir>/config-analysis.json``
      - Configuration for the analysis pass, the first build pass.
    * - ``<output-dir>/config-transformation.json``
@@ -186,6 +198,35 @@ The buildstep records are what the top-most link unit is found from. An
 input contributes the summary filed under its own id or nothing at all,
 so an artifact whose SSAF step failed takes the artifacts behind it down
 with it, and the run says so and exits non-zero.
+
+## Results
+
+A run names what it produced on stdout, which it shares with the build, one
+`key: value` line each:
+
+```{eval-rst}
+.. list-table::
+   :header-rows: 1
+
+   * - Key
+     - Value
+   * - ``summaries``
+     - How many summaries were written, for compilations, archives and links.
+   * - ``link-unit``
+     - The top-most build artifact.
+   * - ``link-unit-summary``
+     - Its summary.
+   * - ``analysis-result``
+     - The whole-program analysis result, with ``--analysis``.
+   * - ``source-edits``
+     - The link unit's merged source edits, with ``--transformation``.
+   * - ``transformation-report``
+     - The link unit's merged transformation report.
+   * - ``conflict-report``
+     - Every conflict found while merging the link unit's source edits.
+   * - ``output-dir``
+     - The output directory.
+```
 
 ## Failure handling
 

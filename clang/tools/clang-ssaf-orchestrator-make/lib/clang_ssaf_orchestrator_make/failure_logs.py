@@ -18,6 +18,8 @@ class SSAFFailureKind(enum.Enum):
     LINK = "link"
     ARCHIVE = "archive"
     MERGE = "merge"
+    TRANSFORMATION_REPORT = "transformation-report"
+    CONFLICT_REPORT = "conflict-report"
     FORWARD = "forward"
     MISSING = "missing"
     DRIVER_JOBS = "driver-jobs"

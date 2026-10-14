@@ -5632,6 +5632,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
     RUN_VPLAN_PASS(VPlanTransforms::expandSCEVsToVPInstructions, BestVPlan,
                    *PSE.getSE());
+  RUN_VPLAN_PASS(VPlanTransforms::removeRedundantExpandSCEVRecipes, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::cse, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   // Removing branches and incoming values may expose additional simplification
@@ -7400,7 +7401,8 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, DominatorTree *DT,
 }
 
 bool LoopVectorizePass::processLoop(Loop *L) {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
+  const VectorizeOptions &Opts =
+      L->getHeader()->getContext().getLibraryOptions().get<VectorizeOptions>();
   assert((Opts.enable_vplan_native_path || L->isInnermost()) &&
          "VPlan-native path is not enabled. Only process inner loops.");
 
@@ -7963,8 +7965,10 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
   // and can invalidate iterators across the loops.
   SmallVector<Loop *, 8> Worklist;
 
+  const VectorizeOptions &Opts =
+      F.getContext().getLibraryOptions().get<VectorizeOptions>();
   for (Loop *L : *LI)
-    collectSupportedLoops(VectorizeOptions::Global, *L, LI, ORE, Worklist);
+    collectSupportedLoops(Opts, *L, LI, ORE, Worklist);
 
   LoopsAnalyzed += Worklist.size();
 

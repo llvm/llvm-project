@@ -41,7 +41,7 @@ struct VPlanTransforms {
   LLVM_ABI_FOR_TEST static void verifyIfRequested(VPlan &Plan);
 
 #ifndef NDEBUG
-  LLVM_ABI_FOR_TEST static bool isPrintingRequested();
+  LLVM_ABI_FOR_TEST static bool isPrintingRequested(const VPlan &Plan);
 
   /// Print \p Plan of \p Fn before or after the pass \p NumberedPassName if
   /// requested.
@@ -65,7 +65,7 @@ struct VPlanTransforms {
     unsigned Instance;
     std::string NumberedPassName;
 
-    if (isPrintingRequested()) {
+    if (isPrintingRequested(Plan)) {
       Instance = ++PassCounter[{Fn, PassName}];
 
       NumberedPassName = Instance == 1
@@ -438,6 +438,10 @@ struct VPlanTransforms {
 
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan);
+
+  /// Replace each VPExpandSCEVRecipe in \p Plan's entry block with an earlier
+  /// VPExpandSCEVRecipe there expanding the same SCEV, if any.
+  static void removeRedundantExpandSCEVRecipes(VPlan &Plan);
 
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken

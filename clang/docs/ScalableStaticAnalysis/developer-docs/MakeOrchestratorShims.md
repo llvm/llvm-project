@@ -48,7 +48,7 @@ The shim bodies live in the package, as `clang_ssaf_orchestrator_make.shims`,
 split by what they do:
 
 ```text
-shim.py          the Shim class, its diagnostics, merge_edits
+shim.py          the Shim class, its diagnostics, the transformation merges
 commands.py      Files, is_object, is_archive, artifact_of, summary_of,
                  filter_build_artifacts, unique
 driver_jobs.py   Job and the -### listing reader
@@ -131,6 +131,11 @@ transform    source-edit generation for a compilation
 link         clang-ssaf-linker over a link's inputs
 archive      the same for an archive
 merge        clang-ssaf-src-edit-merge over a link's or an archive's inputs
+transformation-report
+             clang-ssaf-merge-transformation-report over the same inputs
+conflict-report
+             clang-ssaf-merge-conflict-report over the same inputs and the
+             conflicts of the merge itself
 forward      handing a job to the shim that stands in for its tool
 missing      an artifact with nothing analysed behind it
 driver-jobs  the driver refused to list a command's jobs

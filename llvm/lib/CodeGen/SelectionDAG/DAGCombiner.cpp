@@ -8805,6 +8805,11 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
        sd_match(N1, m_Or(m_Specific(X), m_Specific(Y)))))
     return DAG.getNode(ISD::OR, DL, VT, X, Y);
 
+  // fold or (not x), (and x, y) --> or (not x), y
+  if (sd_match(N0, m_Not(m_Value(X))) &&
+      sd_match(N1, m_And(m_Specific(X), m_Value(Y))))
+    return DAG.getNode(ISD::OR, DL, VT, N0, Y);
+
   if (SDValue R = foldLogicOfShifts(N, N0, N1, DAG))
     return R;
 
