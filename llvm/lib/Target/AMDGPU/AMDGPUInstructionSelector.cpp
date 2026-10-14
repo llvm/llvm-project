@@ -6571,7 +6571,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
       getPtrBaseWithConstantOffset(VAddr, *MRI);
   int MatchedFI;
   if (ConstOffset != 0) {
-    if (TII.isLegalMUBUFImmOffset(static_cast<unsigned>(ConstOffset)) &&
+    if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
         (!STI.privateMemoryResourceIsRangeChecked() ||
          VT->signBitIsZero(PtrBase))) {
       if (mi_match(PtrBase, *MRI, m_GFrameIndex(MatchedFI)))
@@ -6769,7 +6769,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
   if (mi_match(Reg, *MRI,
                m_GPtrAdd(m_Reg(BasePtr),
                          m_any_of(m_ICst(Offset), m_Copy(m_ICst(Offset)))))) {
-    if (!TII.isLegalMUBUFImmOffset(static_cast<unsigned>(Offset)))
+    if (!TII.isLegalMUBUFImmOffset(Offset))
       return {};
     MachineInstr *BasePtrDef = getDefIgnoringCopies(BasePtr, *MRI);
     Register WaveBase = getWaveAddress(BasePtrDef);
@@ -6788,7 +6788,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
   }
 
   if (!mi_match(Root.getReg(), *MRI, m_ICst(Offset)) ||
-      !TII.isLegalMUBUFImmOffset(static_cast<unsigned>(Offset)))
+      !TII.isLegalMUBUFImmOffset(Offset))
     return {};
 
   return {{
@@ -7025,7 +7025,7 @@ bool AMDGPUInstructionSelector::shouldUseAddr64(MUBUFAddressData Addr) const {
 /// component.
 void AMDGPUInstructionSelector::splitIllegalMUBUFOffset(
   MachineIRBuilder &B, Register &SOffset, int64_t &ImmOffset) const {
-  if (TII.isLegalMUBUFImmOffset(static_cast<unsigned>(ImmOffset)))
+  if (TII.isLegalMUBUFImmOffset(ImmOffset))
     return;
 
   // Illegal offset, store it in soffset.
