@@ -25,6 +25,7 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Target/SPIRV/SPIRVExtInstSets.h"
+#include "mlir/Target/SPIRV/Serialization.h"
 #include "gmock/gmock.h"
 
 #include <memory>
@@ -63,8 +64,7 @@ protected:
     EXPECT_THAT(diagnostic->str(), StrEq(std::string(errorMessage)));
   }
 
-  /// Checks that `module` is valid and has exactly one spirv.Constant op, which
-  /// is of the given `type` and has the given `value`.
+  /// Checks the module contains exactly one constant with the expected value.
   void expectConstant(spirv::ModuleOp module, Type type, Attribute value) {
     EXPECT_TRUE(succeeded(verify(module.getOperation())));
 
@@ -75,6 +75,17 @@ protected:
       ++numConstants;
     });
     EXPECT_EQ(numConstants, 1u);
+  }
+
+  void expectConstantRoundTrip(spirv::ModuleOp module, Type type,
+                               Attribute value) {
+    expectConstant(module, type, value);
+    SmallVector<uint32_t> serialized;
+    ASSERT_TRUE(succeeded(spirv::serialize(module, serialized)));
+    OwningOpRef<spirv::ModuleOp> roundTripped =
+        spirv::deserialize(serialized, &context);
+    ASSERT_TRUE(roundTripped);
+    expectConstant(roundTripped.get(), type, value);
   }
 
   //===--------------------------------------------------------------------===//
@@ -212,9 +223,7 @@ protected:
 
   void addReturn() { addInstruction(spirv::Opcode::OpReturn, {}); }
 
-  /// Adds a function returning the value with the given <id>. Constants are
-  /// materialized at their uses, so this is what creates a spirv.Constant op
-  /// for a constant <id>.
+  /// Adds a use of the constant so it is materialized during deserialization.
   void addFunctionReturning(uint32_t type, uint32_t value) {
     auto fnType = addFunctionType(type, {});
     addFunction(type, fnType);
@@ -416,7 +425,7 @@ TEST_F(DeserializationTest, OpMemberNameExcessOperands) {
 // The serializer emits OpConstantComposite for zero-valued arrays and structs,
 // so OpConstantNull of these types is only reachable from a SPIR-V binary.
 
-TEST_F(DeserializationTest, ConstantNullArraySuccess) {
+TEST_F(DeserializationTest, ConstantNullArrayRoundTrip) {
   addHeader();
   addMemoryModel();
   auto int32Type = addIntType(32);
@@ -431,11 +440,11 @@ TEST_F(DeserializationTest, ConstantNullArraySuccess) {
   Builder builder(&context);
   Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
   Attribute zero = builder.getIntegerAttr(si32, 0);
-  expectConstant(module.get(), spirv::ArrayType::get(si32, 2),
-                 builder.getArrayAttr({zero, zero}));
+  expectConstantRoundTrip(module.get(), spirv::ArrayType::get(si32, 2),
+                          builder.getArrayAttr({zero, zero}));
 }
 
-TEST_F(DeserializationTest, ConstantNullNestedArraySuccess) {
+TEST_F(DeserializationTest, ConstantNullNestedArrayRoundTrip) {
   addHeader();
   addMemoryModel();
   auto int32Type = addIntType(32);
@@ -453,12 +462,12 @@ TEST_F(DeserializationTest, ConstantNullNestedArraySuccess) {
   Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
   Attribute zero = builder.getIntegerAttr(si32, 0);
   Attribute inner = builder.getArrayAttr({zero, zero, zero});
-  expectConstant(module.get(),
-                 spirv::ArrayType::get(spirv::ArrayType::get(si32, 3), 2),
-                 builder.getArrayAttr({inner, inner}));
+  expectConstantRoundTrip(
+      module.get(), spirv::ArrayType::get(spirv::ArrayType::get(si32, 3), 2),
+      builder.getArrayAttr({inner, inner}));
 }
 
-TEST_F(DeserializationTest, ConstantNullArrayOfVectorsSuccess) {
+TEST_F(DeserializationTest, ConstantNullArrayOfVectorsRoundTrip) {
   addHeader();
   addMemoryModel();
   auto int32Type = addIntType(32);
@@ -475,11 +484,11 @@ TEST_F(DeserializationTest, ConstantNullArrayOfVectorsSuccess) {
   Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
   VectorType vector = VectorType::get({4}, si32);
   Attribute zero = builder.getZeroAttr(vector);
-  expectConstant(module.get(), spirv::ArrayType::get(vector, 2),
-                 builder.getArrayAttr({zero, zero}));
+  expectConstantRoundTrip(module.get(), spirv::ArrayType::get(vector, 2),
+                          builder.getArrayAttr({zero, zero}));
 }
 
-TEST_F(DeserializationTest, ConstantNullStructSuccess) {
+TEST_F(DeserializationTest, ConstantNullStructRoundTrip) {
   addHeader();
   addMemoryModel();
   auto int32Type = addIntType(32);
@@ -496,12 +505,13 @@ TEST_F(DeserializationTest, ConstantNullStructSuccess) {
   Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
   Attribute zero = builder.getIntegerAttr(si32, 0);
   Attribute array = builder.getArrayAttr({zero, zero});
-  expectConstant(module.get(),
-                 spirv::StructType::get({si32, spirv::ArrayType::get(si32, 2)}),
-                 builder.getArrayAttr({zero, array}));
+  expectConstantRoundTrip(
+      module.get(),
+      spirv::StructType::get({si32, spirv::ArrayType::get(si32, 2)}),
+      builder.getArrayAttr({zero, array}));
 }
 
-TEST_F(DeserializationTest, ConstantNullEmptyStructSuccess) {
+TEST_F(DeserializationTest, ConstantNullEmptyStructRoundTrip) {
   addHeader();
   addMemoryModel();
   auto structType = addStructType({});
@@ -512,8 +522,8 @@ TEST_F(DeserializationTest, ConstantNullEmptyStructSuccess) {
   ASSERT_TRUE(module);
 
   Builder builder(&context);
-  expectConstant(module.get(), spirv::StructType::getEmpty(&context),
-                 builder.getArrayAttr({}));
+  expectConstantRoundTrip(module.get(), spirv::StructType::getEmpty(&context),
+                          builder.getArrayAttr({}));
 }
 
 TEST_F(DeserializationTest, ConstantCompositeMissingConstituentsFailure) {
@@ -527,7 +537,7 @@ TEST_F(DeserializationTest, ConstantCompositeMissingConstituentsFailure) {
   expectDiagnostic("OpConstantComposite must have at least 1 parameter");
 }
 
-TEST_F(DeserializationTest, ConstantCompositeNullConstituentSuccess) {
+TEST_F(DeserializationTest, ConstantCompositeNullConstituentRoundTrip) {
   addHeader();
   addMemoryModel();
   auto int32Type = addIntType(32);
@@ -549,9 +559,9 @@ TEST_F(DeserializationTest, ConstantCompositeNullConstituentSuccess) {
   Attribute zeros = builder.getArrayAttr({zero, zero});
   Attribute oneTwo = builder.getArrayAttr(
       {builder.getIntegerAttr(si32, 1), builder.getIntegerAttr(si32, 2)});
-  expectConstant(module.get(),
-                 spirv::ArrayType::get(spirv::ArrayType::get(si32, 2), 2),
-                 builder.getArrayAttr({zeros, oneTwo}));
+  expectConstantRoundTrip(
+      module.get(), spirv::ArrayType::get(spirv::ArrayType::get(si32, 2), 2),
+      builder.getArrayAttr({zeros, oneTwo}));
 }
 
 TEST_F(DeserializationTest, ConstantNullPointerFailure) {

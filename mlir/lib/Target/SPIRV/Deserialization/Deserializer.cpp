@@ -1894,7 +1894,6 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
            << operands[0];
   }
 
-  // An empty struct has no constituents.
   auto structType = dyn_cast<spirv::StructType>(resultType);
   if (operands.size() < 3 &&
       (!structType || structType.getNumElements() != 0)) {
@@ -1907,9 +1906,7 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   for (unsigned i = 2, e = operands.size(); i < e; ++i) {
     auto elementInfo = getConstant(operands[i]);
     if (!elementInfo) {
-      // An OpUndef constituent is valid SPIR-V, but `spirv.Constant` has no
-      // attribute for an undefined value. Reject it instead of replacing it
-      // with some defined value.
+      // spirv.Constant cannot represent undefined constituents.
       if (getUndefType(operands[i])) {
         return emitError(unknownLoc, "OpConstantComposite component <id> ")
                << operands[i]
@@ -2154,13 +2151,8 @@ Value spirv::Deserializer::materializeSpecConstantOperation(
   return specConstOperationOp.getResult();
 }
 
-/// Returns the attribute `spirv.Constant` uses for the null value of `type`, or
-/// a null attribute if there is none, in which case `unsupportedType` is set to
-/// `type` or to the nested type that has no null constant representation.
-///
-/// Null arrays and literal structs are array attributes holding the null value
-/// of every element or member, which is what an OpConstantComposite of null
-/// constituents is deserialized into.
+/// Returns the attribute for a null constant, or null on failure, setting
+/// unsupportedType to the type that could not be represented.
 static Attribute getNullConstantAttr(Builder &builder, Type type,
                                      Type &unsupportedType) {
   if (type.isIntOrFloat() || isa<VectorType>(type)) {
