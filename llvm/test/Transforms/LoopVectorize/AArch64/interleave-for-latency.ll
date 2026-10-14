@@ -389,6 +389,56 @@ exit:
   ret void
 }
 
+; If we have a load before the replicate region then interleaving looks like it
+; would reduce the effect of the latency of the load. However the extra loads
+; (and intructions that depend on them) would later be sunk to just before the
+; interleaved copy of the replicate region, negating any gain. Therefore we
+; shouldn't interleave here.
+define void @load_outside_replicate_region(ptr %p, i64 %n) #0 {
+; CHECK-LATENCY1-LABEL: define void @load_outside_replicate_region(
+; CHECK-LATENCY1-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-LATENCY1:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0:%.*]], align 4
+;
+; CHECK-LATENCY2-LABEL: define void @load_outside_replicate_region(
+; CHECK-LATENCY2-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-LATENCY2:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP1:%.*]], align 4
+;
+; CHECK-LATENCY8-LABEL: define void @load_outside_replicate_region(
+; CHECK-LATENCY8-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-LATENCY8:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP3:%.*]], align 4
+;
+; CHECK-A510-LABEL: define void @load_outside_replicate_region(
+; CHECK-A510-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-A510:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP1:%.*]], align 4
+;
+; CHECK-A320-LABEL: define void @load_outside_replicate_region(
+; CHECK-A320-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-A320:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP3:%.*]], align 4
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %p, i64 %iv
+  %val = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %val, 1
+  %cmp = icmp ne i32 %add, 0
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  store i32 %add, ptr %arrayidx, align 4
+  br label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 ; FIXME: Interleaving to reduces stalls is currently disabled when the VF is
 ; scalar, meaning the load latency has no effect on interleaving.
 define void @i32_add4_scalar_vf(ptr noalias readonly %src, ptr noalias writeonly %dst, i32 %argval) {

@@ -3629,6 +3629,14 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   if (Opts.enable_interleave_to_reduce_stalls && VF.isVector()) {
     LLVM_DEBUG(dbgs() << "LV: Interleaving to reduce stall cycles due to "
                          "instruction latency.\n");
+    // Interleaving a replicator region means we get extra copies of the blocks
+    // in the region. Vector values used in those blocks are expected to later
+    // be sunk to just before them, negating any reduction in stalls. Therefore
+    // there's no gain to be had from interleaving.
+    if (hasReplicatorRegion(Plan)) {
+      LLVM_DEBUG(dbgs() << "LV: Not interleaving due to replicator region.\n");
+      return 1;
+    }
     VPCostContext LatencyCtx(*TLI, Plan, *CM, Config,
                              /*ReusePrintingSlotTracker=*/true);
     LatencyCtx.CostKind = TTI::TCK_Latency;
