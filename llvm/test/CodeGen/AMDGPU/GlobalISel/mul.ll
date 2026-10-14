@@ -3564,9 +3564,9 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v12, s2
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[12:13], s2, v19, v8, v[3:4]
+; GFX12-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s5
 ; GFX12-NEXT:    v_mul_lo_u32 v20, v16, v15
 ; GFX12-NEXT:    v_mul_lo_u32 v9, v17, v14
-; GFX12-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s5
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[14:15], s5, v21, v8, v[10:11]
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v10, null, 0, v1, s2

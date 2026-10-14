@@ -8278,8 +8278,8 @@ define void @buffer_fat_ptr_agent_atomic_fmax_noret_v2bf16__offset__amdgpu_no_fi
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v5, 16, 1
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v6, v0, 16, 1
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v0
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v6, v6, v0, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
@@ -8874,8 +8874,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__waterf
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v11, v6, 16, 1
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v10, v5, 16, 1
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v12, 0x400000, v5
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v13, 0x400000, v6
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v13, 0x400000, v6
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v11, v11, v6, 0x7fff
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v10, v10, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
@@ -8981,8 +8981,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__waterf
 ; GFX12-FAKE16-NEXT:    v_bfe_u32 v11, v6, 16, 1
 ; GFX12-FAKE16-NEXT:    v_bfe_u32 v10, v5, 16, 1
 ; GFX12-FAKE16-NEXT:    v_or_b32_e32 v12, 0x400000, v5
-; GFX12-FAKE16-NEXT:    v_or_b32_e32 v13, 0x400000, v6
 ; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
+; GFX12-FAKE16-NEXT:    v_or_b32_e32 v13, 0x400000, v6
 ; GFX12-FAKE16-NEXT:    v_add3_u32 v11, v11, v6, 0x7fff
 ; GFX12-FAKE16-NEXT:    v_add3_u32 v10, v10, v5, 0x7fff
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)

@@ -1363,11 +1363,11 @@ define <2 x half> @v_test_fmin_legacy_ule_v2f16_safe(<2 x half> %a, <2 x half> %
 ; GFX1170-TRUE16-LABEL: v_test_fmin_legacy_ule_v2f16_safe:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.l, v1.l
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s0, v0.h, v1.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, s0
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.h, v1.h
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s0, v0.l, v1.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmin_legacy_ule_v2f16_safe:
@@ -1458,11 +1458,11 @@ define <2 x half> @v_test_fmin_legacy_ule_v2f16_nnan_flag(<2 x half> %a, <2 x ha
 ; GFX1170-TRUE16-LABEL: v_test_fmin_legacy_ule_v2f16_nnan_flag:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.l, v1.l
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s0, v0.h, v1.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, s0
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.h, v1.h
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s0, v0.l, v1.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmin_legacy_ule_v2f16_nnan_flag:
@@ -1553,11 +1553,11 @@ define <2 x half> @v_test_fmin_legacy_ule_v2f16_nsz_flag(<2 x half> %a, <2 x hal
 ; GFX1170-TRUE16-LABEL: v_test_fmin_legacy_ule_v2f16_nsz_flag:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.l, v1.l
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s0, v0.h, v1.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, s0
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.h, v1.h
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s0, v0.l, v1.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmin_legacy_ule_v2f16_nsz_flag:
@@ -1692,11 +1692,11 @@ define <2 x half> @v_test_fmax_legacy_uge_v2f16_safe(<2 x half> %a, <2 x half> %
 ; GFX1170-TRUE16-LABEL: v_test_fmax_legacy_uge_v2f16_safe:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.l, v1.l
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s0, v0.h, v1.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, s0
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.h, v1.h
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s0, v0.l, v1.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmax_legacy_uge_v2f16_safe:
@@ -1787,11 +1787,11 @@ define <2 x half> @v_test_fmax_legacy_uge_v2f16_nnan_flag(<2 x half> %a, <2 x ha
 ; GFX1170-TRUE16-LABEL: v_test_fmax_legacy_uge_v2f16_nnan_flag:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.l, v1.l
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s0, v0.h, v1.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, s0
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.h, v1.h
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s0, v0.l, v1.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmax_legacy_uge_v2f16_nnan_flag:
@@ -1882,11 +1882,11 @@ define <2 x half> @v_test_fmax_legacy_uge_v2f16_nsz_flag(<2 x half> %a, <2 x hal
 ; GFX1170-TRUE16-LABEL: v_test_fmax_legacy_uge_v2f16_nsz_flag:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.l, v1.l
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s0, v0.h, v1.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, s0
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.h, v1.h
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s0, v0.l, v1.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmax_legacy_uge_v2f16_nsz_flag:
@@ -2041,16 +2041,15 @@ define <4 x half> @v_test_fmin_legacy_ule_v4f16_safe(<4 x half> %a, <4 x half> %
 ; GFX1170-TRUE16-LABEL: v_test_fmin_legacy_ule_v4f16_safe:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.h, v2.h
 ; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s0, v0.l, v2.l
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s1, v0.h, v2.h
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s2, v1.h, v3.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s1, v1.h, v3.h
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s2, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, s2
 ; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, v0.l, s0
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, s1
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s2
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, vcc_lo
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s1
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmin_legacy_ule_v4f16_safe:
@@ -2181,16 +2180,15 @@ define <4 x half> @v_test_fmin_legacy_ule_v4f16_nnan_flag(<4 x half> %a, <4 x ha
 ; GFX1170-TRUE16-LABEL: v_test_fmin_legacy_ule_v4f16_nnan_flag:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.h, v2.h
 ; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s0, v0.l, v2.l
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s1, v0.h, v2.h
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s2, v1.h, v3.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s1, v1.h, v3.h
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s2, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, s2
 ; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, v0.l, s0
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, s1
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s2
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, vcc_lo
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s1
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmin_legacy_ule_v4f16_nnan_flag:
@@ -2321,16 +2319,15 @@ define <4 x half> @v_test_fmin_legacy_ule_v4f16_nsz_flag(<4 x half> %a, <4 x hal
 ; GFX1170-TRUE16-LABEL: v_test_fmin_legacy_ule_v4f16_nsz_flag:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.h, v2.h
 ; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s0, v0.l, v2.l
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s1, v0.h, v2.h
-; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s2, v1.h, v3.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s1, v1.h, v3.h
+; GFX1170-TRUE16-NEXT:    v_cmp_ngt_f16_e64 s2, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, s2
 ; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, v0.l, s0
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, s1
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s2
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, vcc_lo
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s1
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmin_legacy_ule_v4f16_nsz_flag:
@@ -2520,16 +2517,15 @@ define <4 x half> @v_test_fmax_legacy_uge_v4f16_safe(<4 x half> %a, <4 x half> %
 ; GFX1170-TRUE16-LABEL: v_test_fmax_legacy_uge_v4f16_safe:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.h, v2.h
 ; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s0, v0.l, v2.l
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s1, v0.h, v2.h
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s2, v1.h, v3.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s1, v1.h, v3.h
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s2, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, s2
 ; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, v0.l, s0
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, s1
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s2
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, vcc_lo
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s1
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmax_legacy_uge_v4f16_safe:
@@ -2660,16 +2656,15 @@ define <4 x half> @v_test_fmax_legacy_uge_v4f16_nnan_flag(<4 x half> %a, <4 x ha
 ; GFX1170-TRUE16-LABEL: v_test_fmax_legacy_uge_v4f16_nnan_flag:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.h, v2.h
 ; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s0, v0.l, v2.l
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s1, v0.h, v2.h
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s2, v1.h, v3.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s1, v1.h, v3.h
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s2, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, s2
 ; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, v0.l, s0
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, s1
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s2
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, vcc_lo
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s1
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmax_legacy_uge_v4f16_nnan_flag:
@@ -2800,16 +2795,15 @@ define <4 x half> @v_test_fmax_legacy_uge_v4f16_nsz_flag(<4 x half> %a, <4 x hal
 ; GFX1170-TRUE16-LABEL: v_test_fmax_legacy_uge_v4f16_nsz_flag:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.h, v2.h
 ; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s0, v0.l, v2.l
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s1, v0.h, v2.h
-; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s2, v1.h, v3.h
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, vcc_lo
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s1, v1.h, v3.h
+; GFX1170-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s2, v1.l, v3.l
+; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, s2
 ; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, v0.l, s0
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, s1
-; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s2
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, vcc_lo
+; GFX1170-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s1
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_test_fmax_legacy_uge_v4f16_nsz_flag:

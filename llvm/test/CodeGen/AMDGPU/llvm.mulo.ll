@@ -307,21 +307,21 @@ define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v10, null, 0, v9, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v5
-; GFX12-NEXT:    v_ashrrev_i32_e32 v5, 31, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v6, v7, v2, vcc_lo
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX12-NEXT:    v_cndmask_b32_e32 v8, v9, v10, vcc_lo
-; GFX12-NEXT:    v_cndmask_b32_e32 v2, v7, v2, vcc_lo
-; GFX12-NEXT:    v_mov_b32_e32 v6, v5
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_sub_co_u32 v4, vcc_lo, v2, v4
+; GFX12-NEXT:    v_cndmask_b32_e32 v5, v9, v10, vcc_lo
+; GFX12-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX12-NEXT:    v_sub_co_u32 v4, vcc_lo, v6, v4
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v7, null, 0, v8, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v7, null, 0, v5, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v3
+; GFX12-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_dual_cndmask_b32 v3, v8, v7 :: v_dual_cndmask_b32 v2, v2, v4
+; GFX12-NEXT:    v_dual_cndmask_b32 v4, v6, v4 :: v_dual_cndmask_b32 v5, v5, v7
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[2:3], v[5:6]
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[4:5], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -770,9 +770,10 @@ define { i64, i1 } @smulo_i64_v_4(i64 %i) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_ashrrev_i64 v[5:6], 2, v[4:5]
 ; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[5:6], v[0:1]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX12-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %umulo = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %i, i64 4)
@@ -838,14 +839,14 @@ define { i64, i1 } @umulo_i64_v_4(i64 %i) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_lshlrev_b64_e32 v[4:5], 2, v[0:1]
 ; GFX12-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_and_b32 v7, 0x3fffffff, v1
+; GFX12-NEXT:    v_lshlrev_b64_e32 v[4:5], 2, v[0:1]
 ; GFX12-NEXT:    v_alignbit_b32 v3, v1, v0, 30
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[6:7], v[0:1]
+; GFX12-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX12-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %umulo = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %i, i64 4)

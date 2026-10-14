@@ -129,8 +129,8 @@ define amdgpu_ps <2 x bfloat> @fadd_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b) 
 ; GFX12-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX12-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX12-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX12-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
 ; GFX12-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
@@ -190,8 +190,8 @@ define amdgpu_ps <2 x bfloat> @fadd_v2bf16_vs(<2 x bfloat> %a, <2 x bfloat> inre
 ; GFX12-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX12-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX12-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
 ; GFX12-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX12-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
@@ -318,8 +318,8 @@ define amdgpu_ps <2 x bfloat> @fadd_v2bf16_vc(<2 x bfloat> %a) {
 ; GFX12-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX12-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX12-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
 ; GFX12-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX12-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
@@ -373,8 +373,8 @@ define amdgpu_ps <2 x bfloat> @fadd_v2bf16_vl(<2 x bfloat> %a) {
 ; GFX12-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX12-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX12-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
 ; GFX12-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX12-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
@@ -449,20 +449,20 @@ define amdgpu_ps <3 x bfloat> @fadd_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b) 
 ; GFX12-NEXT:    v_bfe_u32 v7, v0, 16, 1
 ; GFX12-NEXT:    v_bfe_u32 v3, v4, 16, 1
 ; GFX12-NEXT:    v_or_b32_e32 v2, 0x400000, v4
+; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v4
 ; GFX12-NEXT:    v_add3_u32 v5, v5, v1, 0x7fff
 ; GFX12-NEXT:    v_or_b32_e32 v8, 0x400000, v0
-; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v4
 ; GFX12-NEXT:    v_add3_u32 v3, v3, v4, 0x7fff
 ; GFX12-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc_lo
-; GFX12-NEXT:    v_add3_u32 v3, v7, v0, 0x7fff
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
+; GFX12-NEXT:    v_add3_u32 v3, v7, v0, 0x7fff
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX12-NEXT:    v_mov_b16_e32 v1.l, v1.h
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, v3, v8, vcc_lo
 ; GFX12-NEXT:    v_mov_b16_e32 v0.l, v2.h
-; GFX12-NEXT:    v_mov_b16_e32 v1.l, v1.h
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: fadd_v3bf16_vv:
@@ -659,9 +659,9 @@ define amdgpu_ps <4 x bfloat> @fadd_v4bf16_vv(<4 x bfloat> %a, <4 x bfloat> %b) 
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc_lo
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, v3.h
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v1, v7, v9, vcc_lo
-; GFX12-NEXT:    v_mov_b16_e32 v0.l, v3.h
 ; GFX12-NEXT:    v_mov_b16_e32 v1.l, v2.h
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
@@ -890,9 +890,9 @@ define amdgpu_ps <5 x bfloat> @fadd_v5bf16_vv(<5 x bfloat> %a, <5 x bfloat> %b) 
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, v8, v6, vcc_lo
 ; GFX12-NEXT:    v_bfe_u32 v9, v7, 16, 1
-; GFX12-NEXT:    v_bfe_u32 v6, v1, 16, 1
 ; GFX12-NEXT:    v_or_b32_e32 v4, 0x400000, v7
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v7
+; GFX12-NEXT:    v_bfe_u32 v6, v1, 16, 1
 ; GFX12-NEXT:    v_mov_b16_e32 v0.l, v3.h
 ; GFX12-NEXT:    v_add3_u32 v8, v9, v7, 0x7fff
 ; GFX12-NEXT:    v_or_b32_e32 v9, 0x400000, v1
@@ -903,10 +903,10 @@ define amdgpu_ps <5 x bfloat> @fadd_v5bf16_vv(<5 x bfloat> %a, <5 x bfloat> %b) 
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v2, v5, v10, vcc_lo
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
+; GFX12-NEXT:    v_mov_b16_e32 v2.l, v2.h
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v1, v6, v9, vcc_lo
 ; GFX12-NEXT:    v_mov_b16_e32 v1.l, v4.h
-; GFX12-NEXT:    v_mov_b16_e32 v2.l, v2.h
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: fadd_v5bf16_vv:

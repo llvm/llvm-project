@@ -309,9 +309,9 @@ define amdgpu_ps bfloat @fptrunc_f64_to_bf16_v(double %a) {
 ; GFX12-FAKE16-NEXT:    v_cvt_f32_f64_e32 v4, v[0:1]
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[2:3], v4
-; GFX12-FAKE16-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-FAKE16-NEXT:    v_cmp_ngt_f64_e64 s0, |v[0:1]|, |v[2:3]|
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-FAKE16-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s0
 ; GFX12-FAKE16-NEXT:    v_or_b32_e32 v0, 1, v0
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
@@ -336,9 +336,9 @@ define amdgpu_ps bfloat @fptrunc_f64_to_bf16_v(double %a) {
 ; GFX12-TRUE16-NEXT:    v_cvt_f32_f64_e32 v4, v[0:1]
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[2:3], v4
-; GFX12-TRUE16-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-TRUE16-NEXT:    v_cmp_ngt_f64_e64 s0, |v[0:1]|, |v[2:3]|
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s0
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v0, 1, v0
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
@@ -607,8 +607,8 @@ define amdgpu_ps <2 x bfloat> @fptrunc_v2f32_to_v2bf16_v(<2 x float> %a) {
 ; GFX12-FAKE16-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX12-FAKE16-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX12-FAKE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX12-FAKE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX12-FAKE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-FAKE16-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX12-FAKE16-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
@@ -625,8 +625,8 @@ define amdgpu_ps <2 x bfloat> @fptrunc_v2f32_to_v2bf16_v(<2 x float> %a) {
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
@@ -733,48 +733,49 @@ define amdgpu_ps <3 x bfloat> @fptrunc_v3f32_to_v3bf16(<3 x float> %a) {
 ; GFX12-FAKE16-LABEL: fptrunc_v3f32_to_v3bf16:
 ; GFX12-FAKE16:       ; %bb.0:
 ; GFX12-FAKE16-NEXT:    v_bfe_u32 v3, v0, 16, 1
-; GFX12-FAKE16-NEXT:    v_bfe_u32 v5, v1, 16, 1
-; GFX12-FAKE16-NEXT:    v_bfe_u32 v6, v2, 16, 1
 ; GFX12-FAKE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX12-FAKE16-NEXT:    v_or_b32_e32 v7, 0x400000, v1
-; GFX12-FAKE16-NEXT:    v_add3_u32 v3, v3, v0, 0x7fff
-; GFX12-FAKE16-NEXT:    v_or_b32_e32 v8, 0x400000, v2
-; GFX12-FAKE16-NEXT:    v_add3_u32 v5, v5, v1, 0x7fff
-; GFX12-FAKE16-NEXT:    v_add3_u32 v6, v6, v2, 0x7fff
+; GFX12-FAKE16-NEXT:    v_bfe_u32 v5, v1, 16, 1
 ; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX12-FAKE16-NEXT:    v_bfe_u32 v6, v2, 16, 1
+; GFX12-FAKE16-NEXT:    v_add3_u32 v3, v3, v0, 0x7fff
+; GFX12-FAKE16-NEXT:    v_or_b32_e32 v7, 0x400000, v1
+; GFX12-FAKE16-NEXT:    v_add3_u32 v5, v5, v1, 0x7fff
+; GFX12-FAKE16-NEXT:    v_or_b32_e32 v8, 0x400000, v2
+; GFX12-FAKE16-NEXT:    v_add3_u32 v6, v6, v2, 0x7fff
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v3, v4, vcc_lo
 ; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v1, v5, v7, vcc_lo
 ; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v2
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX12-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v2, v6, v8, vcc_lo
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
 ; GFX12-FAKE16-NEXT:    v_alignbit_b32 v1, s0, v2, 16
 ; GFX12-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-TRUE16-LABEL: fptrunc_v3f32_to_v3bf16:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v3, v0, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v5, v2, 16, 1
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v6, v1, 16, 1
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v2
-; GFX12-TRUE16-NEXT:    v_add3_u32 v3, v3, v0, 0x7fff
-; GFX12-TRUE16-NEXT:    v_add3_u32 v5, v5, v2, 0x7fff
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v7, 0x400000, v1
-; GFX12-TRUE16-NEXT:    v_add3_u32 v6, v6, v1, 0x7fff
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX12-TRUE16-NEXT:    v_add3_u32 v3, v3, v0, 0x7fff
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v7, 0x400000, v1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v2
+; GFX12-TRUE16-NEXT:    v_add3_u32 v5, v5, v2, 0x7fff
+; GFX12-TRUE16-NEXT:    v_add3_u32 v6, v6, v1, 0x7fff
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc_lo
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v2
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v5, v8, vcc_lo
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.h
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v6, v7, vcc_lo
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v3.h
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.h
 ; GFX12-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-FAKE16-LABEL: fptrunc_v3f32_to_v3bf16:

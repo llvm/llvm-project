@@ -7041,8 +7041,8 @@ define void @local_atomic_fmax_noret_v2bf16(ptr addrspace(3) %ptr, <2 x bfloat> 
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v5, 16, 1
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v6, v4, 16, 1
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v4
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v4, v4
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v6, v6, v4, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
@@ -7503,8 +7503,8 @@ define void @local_atomic_fmax_noret_v2bf16__ofset(ptr addrspace(3) %ptr, <2 x b
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v5, 16, 1
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v6, v4, 16, 1
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v4
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v4, v4
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v6, v6, v4, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)

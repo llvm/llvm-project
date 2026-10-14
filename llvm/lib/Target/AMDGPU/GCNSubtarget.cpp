@@ -822,12 +822,113 @@ Register GCNSubtarget::getRealSchedDependency(const MachineInstr &DefI,
   return TRI->isSubRegisterEq(DefMCReg, UseMCReg) ? UseMCReg : DefMCReg;
 }
 
+bool GCNSubtarget::isFastForwardProducer(const MachineInstr &MI,
+                                         int OpNo) const {
+  assert(OpNo >= 0 && (unsigned)OpNo < MI.getNumOperands());
+  unsigned Opcode = MI.getOpcode();
+  // Handle VOP1/2/C cases which implicitly write to VCC.
+  switch (Opcode) {
+  default:
+    if (!SIInstrInfo::isVOPC(MI))
+      break;
+    [[fallthrough]];
+  case AMDGPU::V_ADDC_U32_dpp:
+  case AMDGPU::V_ADDC_U32_e32:
+  case AMDGPU::V_ADDC_U32_sdwa:
+  case AMDGPU::V_ADD_CO_U32_dpp:
+  case AMDGPU::V_ADD_CO_U32_e32:
+  case AMDGPU::V_ADD_CO_U32_sdwa:
+  case AMDGPU::V_SUBBREV_U32_dpp:
+  case AMDGPU::V_SUBBREV_U32_e32:
+  case AMDGPU::V_SUBBREV_U32_sdwa:
+  case AMDGPU::V_SUBB_U32_dpp:
+  case AMDGPU::V_SUBB_U32_e32:
+  case AMDGPU::V_SUBB_U32_sdwa:
+  case AMDGPU::V_SUBREV_CO_U32_dpp:
+  case AMDGPU::V_SUBREV_CO_U32_e32:
+  case AMDGPU::V_SUBREV_CO_U32_sdwa:
+  case AMDGPU::V_SUB_CO_U32_dpp:
+  case AMDGPU::V_SUB_CO_U32_e32:
+  case AMDGPU::V_SUB_CO_U32_sdwa:
+    const MachineOperand &MO = MI.getOperand(OpNo);
+    return MO.isReg() && MO.isDef() && MO.isImplicit() &&
+           (MO.getReg() == AMDGPU::VCC || MO.getReg() == AMDGPU::VCC_LO);
+  }
+  // Generally any VALU with an sdst operand is a VOP3 producer. This includes
+  // VOP3-encoded V_CMP_* and V_CMPX_* with an explicit SGPR result.
+  if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false) ||
+      OpNo != AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::sdst))
+    return false;
+  switch (Opcode) {
+  case AMDGPU::V_DIV_SCALE_F32_e64:
+  case AMDGPU::V_DIV_SCALE_F64_e64:
+  case AMDGPU::V_DIV_SCALE_F64_e64_dpp:
+  case AMDGPU::V_MAD_I64_I32_e64:
+  case AMDGPU::V_MAD_I64_I32_e64_dpp:
+  case AMDGPU::V_MAD_U64_U32_e64:
+  case AMDGPU::V_MAD_U64_U32_e64_dpp:
+    // These specific cases were producers until GFX9 only.
+    return getGeneration() <= AMDGPUSubtarget::GFX9;
+  case AMDGPU::V_MAD_I64_I32_gfx11_e64:
+  case AMDGPU::V_MAD_U64_U32_gfx11_e64:
+    return false;
+  default:
+    return true;
+  }
+}
+
+bool GCNSubtarget::isFastForwardConsumer(const MachineInstr &MI,
+                                         int OpNo) const {
+  assert(OpNo >= 0 && (unsigned)OpNo < MI.getNumOperands());
+  unsigned Opcode = MI.getOpcode();
+  // Note that V_DIV_FMAS_F32 and V_DIV_FMAS_F64 are not fast forward consumers.
+  switch (Opcode) {
+  case AMDGPU::V_ADDC_U32_dpp:
+  case AMDGPU::V_ADDC_U32_e32:
+  case AMDGPU::V_ADDC_U32_sdwa:
+  case AMDGPU::V_CNDMASK_B16_fake16_dpp:
+  case AMDGPU::V_CNDMASK_B16_fake16_e32:
+  case AMDGPU::V_CNDMASK_B16_fake16_sdwa:
+  case AMDGPU::V_CNDMASK_B16_t16_dpp:
+  case AMDGPU::V_CNDMASK_B16_t16_e32:
+  case AMDGPU::V_CNDMASK_B16_t16_sdwa:
+  case AMDGPU::V_CNDMASK_B32_dpp:
+  case AMDGPU::V_CNDMASK_B32_e32:
+  case AMDGPU::V_CNDMASK_B32_sdwa:
+  case AMDGPU::V_SUBBREV_U32_dpp:
+  case AMDGPU::V_SUBBREV_U32_e32:
+  case AMDGPU::V_SUBBREV_U32_sdwa:
+  case AMDGPU::V_SUBB_U32_dpp:
+  case AMDGPU::V_SUBB_U32_e32:
+  case AMDGPU::V_SUBB_U32_sdwa: {
+    const MachineOperand &MO = MI.getOperand(OpNo);
+    return MO.isReg() && MO.isUse() && MO.isImplicit() &&
+           (MO.getReg() == AMDGPU::VCC || MO.getReg() == AMDGPU::VCC_LO);
+  }
+  case AMDGPU::V_ADDC_U32_e64:
+  case AMDGPU::V_ADDC_U32_e64_dpp:
+  case AMDGPU::V_CNDMASK_B16_fake16_e64:
+  case AMDGPU::V_CNDMASK_B16_fake16_e64_dpp:
+  case AMDGPU::V_CNDMASK_B16_t16_e64:
+  case AMDGPU::V_CNDMASK_B16_t16_e64_dpp:
+  case AMDGPU::V_CNDMASK_B32_e64:
+  case AMDGPU::V_CNDMASK_B32_e64_dpp:
+  case AMDGPU::V_SUBBREV_U32_e64:
+  case AMDGPU::V_SUBBREV_U32_e64_dpp:
+  case AMDGPU::V_SUBB_U32_e64:
+  case AMDGPU::V_SUBB_U32_e64_dpp:
+    return OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
+  }
+  return false;
+}
+
 void GCNSubtarget::adjustSchedDependency(
     SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx, SDep &Dep,
     const TargetSchedModel *SchedModel) const {
   if (Dep.getKind() != SDep::Kind::Data || !Dep.getReg() || !Def->isInstr() ||
       !Use->isInstr())
     return;
+  assert(DefOpIdx >= 0 && UseOpIdx >= 0);
 
   MachineInstr *DefI = Def->getInstr();
   MachineInstr *UseI = Use->getInstr();
@@ -890,41 +991,16 @@ void GCNSubtarget::adjustSchedDependency(
         DefI, DefOpIdx, UseI, UseOpIdx));
   }
 
-  // Handle "fast-forward" cases for VALU dependencies via a lanemask-like SGPR:
-  //   V_CMP* -> V_CNDMASK_B32
-  //   V_ADD/SUB with carryout -> V_ADD/SUB with carryin (on GFX10+)
-  if (UseOpIdx >= 0) {
-    switch (UseI->getOpcode()) {
-    case AMDGPU::V_ADDC_U32_e32:
-    case AMDGPU::V_ADDC_U32_e64:
-    case AMDGPU::V_SUBB_U32_e32:
-    case AMDGPU::V_SUBB_U32_e64:
-    case AMDGPU::V_SUBBREV_U32_e32:
-    case AMDGPU::V_SUBBREV_U32_e64:
-      if (!hasCarryOutCarryInFastForward())
-        break;
-      [[fallthrough]];
-    case AMDGPU::V_CNDMASK_B32_e32:
-    case AMDGPU::V_CNDMASK_B32_e64:
-      if (SIInstrInfo::isVALU(*DefI, /*AllowLDSDMA=*/false)) {
-        bool UseIsMask;
-        int Src2Idx =
-            AMDGPU::getNamedOperandIdx(UseI->getOpcode(), AMDGPU::OpName::src2);
-        if (Src2Idx >= 0) {
-          // VOP3 form with explicit mask input.
-          UseIsMask = UseOpIdx == Src2Idx;
-        } else {
-          // VOP2 form with implicit VCC input.
-          const MachineOperand &UseOp = UseI->getOperand(UseOpIdx);
-          Register Reg = UseOp.getReg();
-          UseIsMask = UseOp.isImplicit() &&
-                      (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO);
-        }
-        if (UseIsMask)
-          Dep.setLatency(0);
-      }
-    }
-  }
+  // Handle fast forward cases for VALU dependencies via a lanemask-like SGPR:
+  //   V_CMP -> V_CNDMASK
+  //   V_ADD/SUB with carry out -> V_ADD/SUB with carry in
+  // But don't do this on subtargets that have hazards between VALU SGPR
+  // producers and consumers, since it would just require more hazard fixes.
+  if (hasVALUReadSGPRHazard() || (hasVALUMaskWriteHazard() && isWave64()))
+    return;
+  if (isFastForwardConsumer(*UseI, UseOpIdx) &&
+      isFastForwardProducer(*DefI, DefOpIdx))
+    Dep.setLatency(0);
 }
 
 unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {

@@ -769,14 +769,6 @@ public:
 
   bool hasAnyPackedU64Ops() const { return hasPackedU64SingleSGPROps(); };
 
-  /// \returns true if the VALU has a fast-forward path from v_add/sub with
-  /// carry-out -> v_add/sub with carry-in instructions.
-  bool hasCarryOutCarryInFastForward() const {
-    // GFX10 onwards definitely does. For GFX9 and earlier the documentation is
-    // inconclusive.
-    return HasGFX10Insts;
-  }
-
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::getSGPRAllocGranule(getTargetID().getGPUKind());
@@ -973,6 +965,14 @@ public:
   unsigned getMinWavesPerEU() const override {
     return AMDGPU::getMinWavesPerEU();
   }
+
+  /// \returns true if \p MI is a VALU fast forward producer via the operand at
+  /// position \p OpNo writing to an SGPR.
+  bool isFastForwardProducer(const MachineInstr &MI, int OpNo) const;
+
+  /// \returns true if \p MI is a VALU fast forward consumer via the operand at
+  /// position \p OpNo reading from an SGPR.
+  bool isFastForwardConsumer(const MachineInstr &MI, int OpNo) const;
 
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
                              SDep &Dep,

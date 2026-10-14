@@ -124,8 +124,8 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_v(<2 x bfloat> %src) {
 ; GFX12-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX12-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX12-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX12-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
 ; GFX12-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX12-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
