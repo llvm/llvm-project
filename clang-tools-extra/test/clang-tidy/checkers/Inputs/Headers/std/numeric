@@ -1,0 +1,6 @@
+#ifndef CLANG_TIDY_TEST_STD_NUMERIC
+#define CLANG_TIDY_TEST_STD_NUMERIC
+namespace std {
+template <class T> constexpr T midpoint(T a, T b) { return a + (b - a) / 2; }
+} // namespace std
+#endif

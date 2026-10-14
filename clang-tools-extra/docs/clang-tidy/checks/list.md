@@ -334,6 +334,7 @@ readability/*
 | {doc}`modernize-use-starts-ends-with <modernize/use-starts-ends-with>` | Yes |
 | {doc}`modernize-use-std-bit <modernize/use-std-bit>` | Yes |
 | {doc}`modernize-use-std-format <modernize/use-std-format>` | Yes |
+| {doc}`modernize-use-std-interpolation <modernize/use-std-interpolation>` | Yes |
 | {doc}`modernize-use-std-numbers <modernize/use-std-numbers>` | Yes |
 | {doc}`modernize-use-std-print <modernize/use-std-print>` | Yes |
 | {doc}`modernize-use-string-view <modernize/use-string-view>` | Yes |

@@ -1,0 +1,10 @@
+#ifndef CLANG_TIDY_TEST_STD_CMATH
+#define CLANG_TIDY_TEST_STD_CMATH
+namespace std {
+constexpr float lerp(float a, float b, float t) { return a + (b - a) * t; }
+constexpr double lerp(double a, double b, double t) { return a + (b - a) * t; }
+constexpr long double lerp(long double a, long double b, long double t) {
+  return a + (b - a) * t;
+}
+} // namespace std
+#endif

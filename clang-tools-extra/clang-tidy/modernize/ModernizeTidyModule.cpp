@@ -49,6 +49,7 @@
 #include "UseStartsEndsWithCheck.h"
 #include "UseStdBitCheck.h"
 #include "UseStdFormatCheck.h"
+#include "UseStdInterpolationCheck.h"
 #include "UseStdNumbersCheck.h"
 #include "UseStdPrintCheck.h"
 #include "UseStringViewCheck.h"
@@ -100,6 +101,8 @@ public:
         "modernize-use-starts-ends-with");
     CheckFactories.registerCheck<UseStdBitCheck>("modernize-use-std-bit");
     CheckFactories.registerCheck<UseStdFormatCheck>("modernize-use-std-format");
+    CheckFactories.registerCheck<UseStdInterpolationCheck>(
+        "modernize-use-std-interpolation");
     CheckFactories.registerCheck<UseStdNumbersCheck>(
         "modernize-use-std-numbers");
     CheckFactories.registerCheck<UseStdPrintCheck>("modernize-use-std-print");
