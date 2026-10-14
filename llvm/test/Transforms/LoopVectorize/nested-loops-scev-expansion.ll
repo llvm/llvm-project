@@ -468,4 +468,196 @@ exit:
   ret void
 }
 
+; Outer loop does not have a canonical induction phi. The i32 canonical IV
+; needed for the step of %ind.i32 is a truncate of the i64 one needed for the
+; step of %ind.i64.
+define void @test_expand_narrow_canonical_iv_as_trunc_of_wider(ptr noalias %dst.i32, ptr noalias %dst.i64) {
+; CHECK-LABEL: define void @test_expand_narrow_canonical_iv_as_trunc_of_wider(
+; CHECK-SAME: ptr noalias [[DST_I32:%.*]], ptr noalias [[DST_I64:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER:.*]]
+; CHECK:       [[OUTER]]:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[OUTER_IV_I32:%.*]] = phi i32 [ 10, %[[ENTRY]] ], [ [[OUTER_IV_I32_NEXT:%.*]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[OUTER_IV_I64:%.*]] = phi i64 [ 5, %[[ENTRY]] ], [ [[OUTER_IV_I64_NEXT:%.*]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[INDVAR]], 12
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVAR]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[TMP1]], 13
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i64> splat (i64 2), [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <2 x i32> <i32 0, i32 1>, [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i64> <i64 0, i64 1>, [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ [[TMP5]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND3:%.*]] = phi <2 x i64> [ [[TMP6]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], [[TMP3]]
+; CHECK-NEXT:    [[STEP_ADD4:%.*]] = add <2 x i64> [[VEC_IND3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[DST_I32]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i64 2
+; CHECK-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP7]], align 4
+; CHECK-NEXT:    store <2 x i32> [[STEP_ADD]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[DST_I64]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP9]], i64 2
+; CHECK-NEXT:    store <2 x i64> [[VEC_IND3]], ptr [[TMP9]], align 4
+; CHECK-NEXT:    store <2 x i64> [[STEP_ADD4]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD]], [[TMP3]]
+; CHECK-NEXT:    [[VEC_IND_NEXT5]] = add <2 x i64> [[STEP_ADD4]], [[TMP4]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[OUTER_IV_I32_NEXT]] = add nuw i32 [[OUTER_IV_I32]], 1
+; CHECK-NEXT:    [[OUTER_IV_I64_NEXT]] = add nuw i64 [[OUTER_IV_I64]], 1
+; CHECK-NEXT:    [[EC_OUTER:%.*]] = icmp eq i32 [[OUTER_IV_I32_NEXT]], 100
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
+; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[EXIT:.*]], label %[[OUTER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer
+
+outer:
+  %outer.iv.i32 = phi i32 [ 10, %entry ], [ %outer.iv.i32.next, %outer.latch ]
+  %outer.iv.i64 = phi i64 [ 5, %entry ], [ %outer.iv.i64.next, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %ind.i32 = phi i32 [ 0, %outer ], [ %ind.i32.next, %inner ]
+  %ind.i64 = phi i64 [ 0, %outer ], [ %ind.i64.next, %inner ]
+  %step.i32 = add i32 %outer.iv.i32, 3
+  %step.i64 = add i64 %outer.iv.i64, 7
+  %gep.i32 = getelementptr i32, ptr %dst.i32, i64 %iv
+  store i32 %ind.i32, ptr %gep.i32
+  %gep.i64 = getelementptr i64, ptr %dst.i64, i64 %iv
+  store i64 %ind.i64, ptr %gep.i64
+  %ind.i32.next = add i32 %ind.i32, %step.i32
+  %ind.i64.next = add i64 %ind.i64, %step.i64
+  %iv.next = add nuw i64 %iv, 1
+  %ec.inner = icmp ult i64 %iv.next, 1000
+  br i1 %ec.inner, label %inner, label %outer.latch
+
+outer.latch:
+  %outer.iv.i32.next = add nuw i32 %outer.iv.i32, 1
+  %outer.iv.i64.next = add nuw i64 %outer.iv.i64, 1
+  %ec.outer = icmp eq i32 %outer.iv.i32.next, 100
+  br i1 %ec.outer, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; The wider i64 canonical IV belongs to a different loop than the i32 one and
+; must not be reused.
+define void @test_no_reuse_of_wider_canonical_iv_of_other_loop(ptr noalias %dst.i32, ptr noalias %dst.i64) {
+; CHECK-LABEL: define void @test_no_reuse_of_wider_canonical_iv_of_other_loop(
+; CHECK-SAME: ptr noalias [[DST_I32:%.*]], ptr noalias [[DST_I64:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER:.*]]
+; CHECK:       [[OUTER]]:
+; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i64 [ [[INDVAR_NEXT2:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[OUTER_IV_I64:%.*]] = phi i64 [ 5, %[[ENTRY]] ], [ [[OUTER_IV_I64_NEXT:%.*]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    br label %[[MIDDLE:.*]]
+; CHECK:       [[MIDDLE]]:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ [[INDVAR_NEXT:%.*]], %[[MIDDLE_LATCH:.*]] ], [ 0, %[[OUTER]] ]
+; CHECK-NEXT:    [[MIDDLE_IV_I32:%.*]] = phi i32 [ 10, %[[OUTER]] ], [ [[MIDDLE_IV_I32_NEXT:%.*]], %[[MIDDLE_LATCH]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[INDVAR1]], 12
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[INDVAR]], 13
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT3]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i64> splat (i64 2), [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i32> <i32 0, i32 1>, [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <2 x i64> <i64 0, i64 1>, [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ [[TMP4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND5:%.*]] = phi <2 x i64> [ [[TMP5]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], [[TMP2]]
+; CHECK-NEXT:    [[STEP_ADD6:%.*]] = add <2 x i64> [[VEC_IND5]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[DST_I32]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP6]], i64 2
+; CHECK-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    store <2 x i32> [[STEP_ADD]], ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[DST_I64]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 2
+; CHECK-NEXT:    store <2 x i64> [[VEC_IND5]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    store <2 x i64> [[STEP_ADD6]], ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD]], [[TMP2]]
+; CHECK-NEXT:    [[VEC_IND_NEXT7]] = add <2 x i64> [[STEP_ADD6]], [[TMP3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[MIDDLE_LATCH]]
+; CHECK:       [[MIDDLE_LATCH]]:
+; CHECK-NEXT:    [[MIDDLE_IV_I32_NEXT]] = add nuw i32 [[MIDDLE_IV_I32]], 1
+; CHECK-NEXT:    [[EC_MIDDLE:%.*]] = icmp eq i32 [[MIDDLE_IV_I32_NEXT]], 100
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
+; CHECK-NEXT:    br i1 [[EC_MIDDLE]], label %[[OUTER_LATCH]], label %[[MIDDLE]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[OUTER_IV_I64_NEXT]] = add nuw i64 [[OUTER_IV_I64]], 1
+; CHECK-NEXT:    [[EC_OUTER:%.*]] = icmp eq i64 [[OUTER_IV_I64_NEXT]], 100
+; CHECK-NEXT:    [[INDVAR_NEXT2]] = add i64 [[INDVAR1]], 1
+; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[EXIT:.*]], label %[[OUTER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer
+
+outer:
+  %outer.iv.i64 = phi i64 [ 5, %entry ], [ %outer.iv.i64.next, %outer.latch ]
+  br label %middle
+
+middle:
+  %middle.iv.i32 = phi i32 [ 10, %outer ], [ %middle.iv.i32.next, %middle.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %middle ], [ %iv.next, %inner ]
+  %ind.i32 = phi i32 [ 0, %middle ], [ %ind.i32.next, %inner ]
+  %ind.i64 = phi i64 [ 0, %middle ], [ %ind.i64.next, %inner ]
+  %step.i32 = add i32 %middle.iv.i32, 3
+  %step.i64 = add i64 %outer.iv.i64, 7
+  %gep.i32 = getelementptr i32, ptr %dst.i32, i64 %iv
+  store i32 %ind.i32, ptr %gep.i32
+  %gep.i64 = getelementptr i64, ptr %dst.i64, i64 %iv
+  store i64 %ind.i64, ptr %gep.i64
+  %ind.i32.next = add i32 %ind.i32, %step.i32
+  %ind.i64.next = add i64 %ind.i64, %step.i64
+  %iv.next = add nuw i64 %iv, 1
+  %ec.inner = icmp ult i64 %iv.next, 1000
+  br i1 %ec.inner, label %inner, label %middle.latch
+
+middle.latch:
+  %middle.iv.i32.next = add nuw i32 %middle.iv.i32, 1
+  %ec.middle = icmp eq i32 %middle.iv.i32.next, 100
+  br i1 %ec.middle, label %outer.latch, label %middle
+
+outer.latch:
+  %outer.iv.i64.next = add nuw i64 %outer.iv.i64, 1
+  %ec.outer = icmp eq i64 %outer.iv.i64.next, 100
+  br i1 %ec.outer, label %exit, label %outer
+
+exit:
+  ret void
+}
+
 declare void @cond()

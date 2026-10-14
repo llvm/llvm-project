@@ -1153,29 +1153,31 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     // {0,+,1} and non-affine AddRecs to IR (which will be created outside the
     // scope of VPlan). The AddRec is then scaled and offset using
     // VPInstructions.
-    auto GetCanonicalIV = [&](Type *T) {
-      return SE.getAddRecExpr(SE.getZero(T), SE.getOne(T), AR->getLoop(),
-                              SCEV::FlagNone);
-    };
-    bool IsCanonicalIV =
-        match(AR, m_scev_AffineAddRec(m_scev_Zero(), m_scev_One()));
-    PHINode *WideIV = AR->getLoop()->getCanonicalInductionVariable();
-    if (IsCanonicalIV && WideIV &&
-        SE.getTypeSizeInBits(WideIV->getType()) > SE.getTypeSizeInBits(Ty)) {
-      VPValue *Wide = expand(GetCanonicalIV(WideIV->getType()));
-      return Builder.createScalarCast(Instruction::Trunc, Wide, Ty, DL);
+    const Loop *L = AR->getLoop();
+    auto CanonicalIVPat =
+        m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(), m_SpecificLoop(L));
+    bool IsCanonicalIV = match(AR, CanonicalIVPat);
+    if (IsCanonicalIV) {
+      // Try to reuse a wider existing canonical IV of the loop by truncating
+      // it.
+      for (VPRecipeBase &R : *Plan.getEntry()) {
+        if (&R == Builder.getRecipeAtInsertPoint())
+          break;
+        auto *ExpR = dyn_cast<VPExpandSCEVRecipe>(&R);
+        if (ExpR && match(ExpR->getSCEV(), CanonicalIVPat) &&
+            ExpR->getScalarType()->getIntegerBitWidth() >
+                Ty->getIntegerBitWidth())
+          return Builder.createScalarCast(Instruction::Trunc, ExpR, Ty, DL);
+      }
     }
-    if (!AR->isAffine() || IsCanonicalIV) {
-      VPValue *&IRExpansion = IRExpansions[AR];
-      if (!IRExpansion)
-        IRExpansion = vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
-      return IRExpansion;
-    }
+    if (!AR->isAffine() || IsCanonicalIV)
+      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
 
     const SCEV *Step = AR->getStepRecurrence(SE);
     // {0,+,F} --> {0,+,1} * F
     if (AR->getStart()->isZero()) {
-      VPValue *IV = expand(GetCanonicalIV(Ty));
+      VPValue *IV = expand(
+          SE.getAddRecExpr(SE.getZero(Ty), SE.getOne(Ty), L, SCEV::FlagNone));
       return Builder.createOverflowingOp(Instruction::Mul, {IV, expand(Step)},
                                          {}, DL);
     }
@@ -1184,7 +1186,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     if (Ty->isPointerTy())
       return expandAsPtrAdd(AR, AR->hasNoUnsignedWrap());
     VPValue *Start = expand(AR->getStart());
-    VPValue *Rest = expand(SE.getAddRecExpr(SE.getZero(Ty), Step, AR->getLoop(),
+    VPValue *Rest = expand(SE.getAddRecExpr(SE.getZero(Ty), Step, L,
                                             AR->getNoWrapFlags(SCEV::FlagNW)));
     return Builder.createAdd(Rest, Start, DL, "",
                              {AR->hasNoUnsignedWrap(), false});

@@ -273,9 +273,6 @@ class VPSCEVExpander {
   /// zero, matching SCEVExpander's SafeUDivMode.
   bool SafeUDivMode = false;
 
-  /// VPExpandSCEVRecipes created for AddRecs, shared by repeated uses.
-  SmallDenseMap<const SCEV *, VPValue *> IRExpansions;
-
   /// Try to find a loop-invariant IR value in the plan's entry block whose
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
   /// if none is found.
