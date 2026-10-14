@@ -61,7 +61,8 @@ struct MemoryRequirements {
 } // namespace
 
 /// PhysicalStorageBuffer pointers always need Aligned, derived from pointee
-/// size unless preferredAlignment is set; other storage classes may omit it.
+/// element size unless preferredAlignment is set. Other storage classes may
+/// omit it.
 static FailureOr<MemoryRequirements>
 calculateMemoryRequirements(Value accessedPtr, uint64_t preferredAlignment) {
   if (preferredAlignment >= std::numeric_limits<uint32_t>::max())
@@ -75,16 +76,14 @@ calculateMemoryRequirements(Value accessedPtr, uint64_t preferredAlignment) {
   if (mayOmitAlignment)
     return MemoryRequirements{spirv::MemoryAccessAttr{}, IntegerAttr{}};
 
-  // PhysicalStorageBuffer pointers require Aligned.
+  // PhysicalStorageBuffer pointers require Aligned. The vector pointer is a
+  // bitcast of a scalar element pointer, so only element alignment is known.
   std::optional<int64_t> sizeInBytes;
   Type pointeeType = ptrType.getPointeeType();
-  if (auto scalarType = dyn_cast<spirv::ScalarType>(pointeeType)) {
+  if (auto vecType = dyn_cast<VectorType>(pointeeType))
+    pointeeType = vecType.getElementType();
+  if (auto scalarType = dyn_cast<spirv::ScalarType>(pointeeType))
     sizeInBytes = scalarType.getSizeInBytes();
-  } else if (auto vecType = dyn_cast<VectorType>(pointeeType)) {
-    if (auto scalarElem = dyn_cast<spirv::ScalarType>(vecType.getElementType()))
-      if (auto elemSize = scalarElem.getSizeInBytes())
-        sizeInBytes = *elemSize * vecType.getNumElements();
-  }
 
   if (!sizeInBytes)
     return failure();

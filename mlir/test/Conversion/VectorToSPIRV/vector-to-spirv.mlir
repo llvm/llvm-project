@@ -1324,7 +1324,7 @@ module attributes {
   } {
 
 // CHECK-LABEL: @vector_load_physical
-//       CHECK:   spirv.Load "PhysicalStorageBuffer" {{%.*}} ["Aligned", 16] : vector<4xf32>
+//       CHECK:   spirv.Load "PhysicalStorageBuffer" {{%.*}} ["Aligned", 4] : vector<4xf32>
 func.func @vector_load_physical(%arg0 : memref<4xf32, #spirv.storage_class<PhysicalStorageBuffer>>
     {spirv.decoration = #spirv.decoration<Aliased>}) -> vector<4xf32> {
   %idx = arith.constant 0 : index
@@ -1333,7 +1333,7 @@ func.func @vector_load_physical(%arg0 : memref<4xf32, #spirv.storage_class<Physi
 }
 
 // CHECK-LABEL: @vector_store_physical
-//       CHECK:   spirv.Store "PhysicalStorageBuffer" {{%.*}}, {{%.*}} ["Aligned", 16] : vector<4xf32>
+//       CHECK:   spirv.Store "PhysicalStorageBuffer" {{%.*}}, {{%.*}} ["Aligned", 4] : vector<4xf32>
 func.func @vector_store_physical(%arg0 : memref<4xf32, #spirv.storage_class<PhysicalStorageBuffer>>
     {spirv.decoration = #spirv.decoration<Aliased>}, %arg1 : vector<4xf32>) {
   %idx = arith.constant 0 : index
