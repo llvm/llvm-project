@@ -217,7 +217,7 @@ static constexpr StringLiteral getFromDefaultClauseAttrName() {
 
 /// Name for a unit attribute on a data entry operation stating that nothing in
 /// the region reads the descriptor its variable is reached through, so the
-/// mapping still supplies the bounds but needs no device copy of the descriptor.
+/// mapping supplies the bounds but needs no device copy of the descriptor.
 static constexpr StringLiteral getNoDeviceDescriptorAttrName() {
   return StringLiteral("acc.no_device_descriptor");
 }
