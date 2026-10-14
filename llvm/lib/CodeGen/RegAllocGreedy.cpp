@@ -61,6 +61,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
@@ -107,11 +108,17 @@ static cl::opt<bool> ExhaustiveSearch(
              "and interference cutoffs of last chance recoloring"),
     cl::Hidden);
 
+// This option should be deprecated!
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned>
 CSRFirstTimeCost("regalloc-csr-first-time-cost",
               cl::desc("Cost for first time use of callee-saved register."),
               cl::init(0), cl::Hidden);
+
+static cl::opt<unsigned> CSRCostScale(
+    "regalloc-csr-cost-scale",
+    cl::desc("Scale for the callee-saved register cost, in percentage."),
+    cl::init(80), cl::Hidden);
 
 static cl::opt<unsigned long> GrowRegionComplexityBudget(
     "grow-region-complexity-budget",
@@ -169,9 +176,7 @@ public:
 } // end anonymous namespace
 
 RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
-    : MachineFunctionPass(ID), F(std::move(F)) {
-  initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID), F(std::move(F)) {}
 
 struct RAGreedy::RequiredAnalyses {
   VirtRegMap *VRM = nullptr;
@@ -253,7 +258,6 @@ PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<MachineBlockFrequencyAnalysis>();
   PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<SlotIndexesAnalysis>();
   PA.preserve<LiveDebugVariablesAnalysis>();
@@ -337,7 +341,6 @@ FunctionPass *llvm::createGreedyRegisterAllocator(RegAllocFilterFunc Ftor) {
 void RAGreedyLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-  AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<SlotIndexesWrapperPass>();
@@ -347,9 +350,7 @@ void RAGreedyLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LiveStacksWrapperLegacy>();
   AU.addPreserved<LiveStacksWrapperLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
-  AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addRequired<VirtRegMapWrapperLegacy>();
   AU.addPreserved<VirtRegMapWrapperLegacy>();
   AU.addRequired<LiveRegMatrixWrapperLegacy>();
@@ -644,6 +645,8 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
 
     Matrix->unassign(*Intf);
     assert((ExtraInfo->getCascade(Intf->reg()) < Cascade ||
+            (Cascade < ExtraInfo->getCascade(Intf->reg()) &&
+             EvictAdvisor->isUrgentEviction(VirtReg, *Intf)) ||
             VirtReg.isSpillable() < Intf->isSpillable()) &&
            "Cannot decrease cascade number, illegal eviction");
     ExtraInfo->setCascade(Intf->reg(), Cascade);
@@ -680,7 +683,10 @@ RegAllocEvictionAdvisor::getOrderLimit(const LiveInterval &VirtReg,
 
     // It is normal for register classes to have a long tail of registers with
     // the same cost. We don't need to look at them if they're too expensive.
-    if (RegCosts[Order.getOrder().back()] >= CostPerUseLimit) {
+    // LastCostChange is an index into the original RegisterClassInfo order, so
+    // it cannot be used to shorten a custom order.
+    if (!Order.hasCustomOrder() &&
+        RegCosts[Order.getOrder().back()] >= CostPerUseLimit) {
       OrderLimit = RegClassInfo.getLastCostChange(RC);
       LLVM_DEBUG(dbgs() << "Only trying the first " << OrderLimit
                         << " regs.\n");
@@ -761,7 +767,7 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
 
     // Interference for the live-in value.
     if (BI.LiveIn) {
-      if (Intf.first() <= Indexes->getMBBStartIdx(BC.Number)) {
+      if (Intf.first() <= Indexes->getMBBStartIdx(BI.MBB)) {
         BC.Entry = SpillPlacement::MustSpill;
         ++Ins;
       } else if (Intf.first() < BI.FirstInstr) {
@@ -836,8 +842,15 @@ bool RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
         SlotIndex::isEarlierInstr(LIS->getInstructionIndex(*FirstNonDebugInstr),
                                   SA->getFirstSplitPoint(Number)))
       return false;
+
     // Interference for the live-in value.
-    if (Intf.first() <= Indexes->getMBBStartIdx(Number))
+    Register Reg = SA->getParent().reg();
+    auto InsertPt = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), Reg);
+    SlotIndex InsertIdx = InsertPt == MBB->end()
+                              ? Indexes->getMBBEndIdx(MBB)
+                              : LIS->getInstructionIndex(*InsertPt);
+    if (Intf.first() <= Indexes->getMBBStartIdx(MBB) ||
+        SlotIndex::isEarlierInstr(Intf.first(), InsertIdx))
       BCS[B].Entry = SpillPlacement::MustSpill;
     else
       BCS[B].Entry = SpillPlacement::PrefSpill;
@@ -979,9 +992,9 @@ bool RAGreedy::calcCompactRegion(GlobalSplitCandidate &Cand) {
   return true;
 }
 
-/// calcSpillCost - Compute how expensive it would be to split the live range in
-/// SA around all use blocks instead of forming bundle regions.
-BlockFrequency RAGreedy::calcSpillCost() {
+/// calcBlockSplitCost - Compute how expensive it would be to split the live
+/// range in SA around all use blocks instead of forming bundle regions.
+BlockFrequency RAGreedy::calcBlockSplitCost() {
   BlockFrequency Cost = BlockFrequency(0);
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
   for (const SplitAnalysis::BlockInfo &BI : UseBlocks) {
@@ -1199,7 +1212,7 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   if (!TRI->shouldRegionSplitForVirtReg(*MF, VirtReg))
     return MCRegister::NoRegister;
   unsigned NumCands = 0;
-  BlockFrequency SpillCost = calcSpillCost();
+  BlockFrequency SpillCost = calcBlockSplitCost();
   BlockFrequency BestCost;
 
   // Check if we can split this live range around a compact region.
@@ -2341,6 +2354,30 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
   return Reg;
 }
 
+/// calcSpillCost - Compute how expensive it would be to spill the live range in
+/// LI into memory.
+BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
+  uint64_t SpillCost = 0;
+  SmallPtrSet<MachineInstr *, 8> Visited;
+
+  for (MachineRegisterInfo::reg_instr_nodbg_iterator
+           I = MRI->reg_instr_nodbg_begin(LI.reg()),
+           E = MRI->reg_instr_nodbg_end();
+       I != E;) {
+    MachineInstr *MI = &*(I++);
+    if (MI->isMetaInstruction())
+      continue;
+    if (!Visited.insert(MI).second)
+      continue;
+
+    auto [Reads, Writes] = MI->readsWritesVirtualRegister(LI.reg());
+    auto MBBFreq = SpillPlacer->getBlockFrequency(MI->getParent()->getNumber());
+    SpillCost += (Reads + Writes) * MBBFreq.getFrequency();
+  }
+
+  return BlockFrequency(SpillCost);
+}
+
 /// Using a CSR for the first time has a cost because it causes push|pop
 /// to be added to prologue|epilogue. Splitting a cold section of the live
 /// range can have lower cost than using the CSR for the first time;
@@ -2354,7 +2391,7 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
     // We choose spill over using the CSR for the first time if the spill cost
     // is lower than CSRCost.
     SA->analyze(&VirtReg);
-    if (calcSpillCost() >= CSRCost)
+    if (calcSpillCost(VirtReg) >= CSRCost)
       return PhysReg;
 
     // We are going to spill, set CostPerUseLimit to 1 to make sure that
@@ -2387,31 +2424,48 @@ void RAGreedy::aboutToRemoveInterval(const LiveInterval &LI) {
 }
 
 void RAGreedy::initializeCSRCost() {
-  // We use the command-line option if it is explicitly set, otherwise use the
-  // larger one out of the command-line option and the value reported by TRI.
-  CSRCost = BlockFrequency(
-      CSRFirstTimeCost.getNumOccurrences()
-          ? CSRFirstTimeCost
-          : std::max((unsigned)CSRFirstTimeCost, TRI->getCSRFirstUseCost()));
-  if (!CSRCost.getFrequency())
-    return;
+  if (!CSRCostScale.getNumOccurrences() &&
+      (CSRFirstTimeCost.getNumOccurrences() || TRI->getCSRCost())) {
+    // We should deprecate the usage of CSRFirstTimeCost!
+    // We use the command-line option if it is explicitly set, otherwise use the
+    // larger one out of the command-line option and the value reported by TRI.
+    CSRCost = BlockFrequency(
+        CSRFirstTimeCost.getNumOccurrences()
+            ? CSRFirstTimeCost
+            : std::max((unsigned)CSRFirstTimeCost, TRI->getCSRCost()));
+    if (!CSRCost.getFrequency())
+      return;
 
-  // Raw cost is relative to Entry == 2^14; scale it appropriately.
-  uint64_t ActualEntry = MBFI->getEntryFreq().getFrequency();
-  if (!ActualEntry) {
-    CSRCost = BlockFrequency(0);
-    return;
+    // Raw cost is relative to Entry == 2^14; scale it appropriately.
+    uint64_t ActualEntry = MBFI->getEntryFreq().getFrequency();
+    if (!ActualEntry) {
+      CSRCost = BlockFrequency(0);
+      return;
+    }
+    uint64_t FixedEntry = 1 << 14;
+    if (ActualEntry < FixedEntry) {
+      CSRCost *= BranchProbability(ActualEntry, FixedEntry);
+    } else if (ActualEntry <= UINT32_MAX) {
+      // Invert the fraction and divide.
+      CSRCost /= BranchProbability(FixedEntry, ActualEntry);
+    } else {
+      // Can't use BranchProbability in general, since it takes 32-bit numbers.
+      CSRCost =
+          BlockFrequency(CSRCost.getFrequency() * (ActualEntry / FixedEntry));
+    }
+  } else {
+    uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
+    CSRCost = BlockFrequency(TRI->getCSRFirstUseCost(*MF) * EntryFreq);
+    unsigned Scale = TRI->getCSRCostScale(*MF);
+    // Command line specified CSRCostScale can override target's default value.
+    if (CSRCostScale.getNumOccurrences())
+      Scale = CSRCostScale;
+
+    if (Scale < 100)
+      CSRCost *= BranchProbability(Scale, 100);
+    else
+      CSRCost /= BranchProbability(100, Scale);
   }
-  uint64_t FixedEntry = 1 << 14;
-  if (ActualEntry < FixedEntry)
-    CSRCost *= BranchProbability(ActualEntry, FixedEntry);
-  else if (ActualEntry <= UINT32_MAX)
-    // Invert the fraction and divide.
-    CSRCost /= BranchProbability(FixedEntry, ActualEntry);
-  else
-    // Can't use BranchProbability in general, since it takes 32-bit numbers.
-    CSRCost =
-        BlockFrequency(CSRCost.getFrequency() * (ActualEntry / FixedEntry));
 }
 
 /// Collect the hint info for \p Reg.
@@ -2453,8 +2507,7 @@ void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
 
     // Push the collected information.
     if (OtherPhysReg) {
-      Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
-                             OtherPhysReg));
+      Out.push_back(HintInfo(Instr.getParent(), OtherReg, OtherPhysReg));
     }
   }
 }
@@ -2467,7 +2520,7 @@ BlockFrequency RAGreedy::getBrokenHintFreq(const HintsInfo &List,
   BlockFrequency Cost = BlockFrequency(0);
   for (const HintInfo &Info : List) {
     if (Info.PhysReg != PhysReg)
-      Cost += Info.Freq;
+      Cost += MBFI->getBlockFreq(Info.MBB);
   }
   return Cost;
 }
@@ -2489,7 +2542,7 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   MCRegister PhysReg = VRM->getPhys(Reg);
   // Start the recoloring algorithm from the input live-interval, then
   // it will propagate to the ones that are copy-related with it.
-  SmallSet<Register, 4> Visited = {Reg};
+  SmallDenseSet<Register, 8> Visited = {Reg};
   SmallVector<Register, 2> RecoloringCandidates = {Reg};
 
   LLVM_DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI)
@@ -2904,6 +2957,13 @@ bool RAGreedy::run(MachineFunction &mf) {
   // physical register.
   if (!hasVirtRegAlloc())
     return false;
+
+  // Canonicalize LiveDebugVariables' indexes here and again in
+  // emitDebugValues(); those are the only two points where it is clean, as
+  // splitting stales indexes again mid-run. Reclaiming erased entries needs
+  // its own entry point called from both, not a hook in packIndexes(), which
+  // renumberIndexes() also reaches.
+  DebugVars->canonicalizeIndexes(*Indexes);
 
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.

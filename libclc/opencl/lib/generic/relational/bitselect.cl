@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/relational/bitselect.h>
-#include <clc/relational/clc_bitselect.h>
+#include "clc/relational/clc_bitselect.h"
 
-#define __CLC_BODY <bitselect.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_FUNCTION bitselect
 
-#define __CLC_BODY <bitselect.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/shared/ternary_def.inc"
+#include "clc/integer/gentype.inc"
+
+#define __CLC_BODY "clc/shared/ternary_def.inc"
+#include "clc/math/gentype.inc"

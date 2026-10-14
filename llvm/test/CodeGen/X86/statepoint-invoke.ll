@@ -56,7 +56,7 @@ exceptional_return:
 ; CHECK: .uleb128  .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
 ; CHECK: .uleb128  .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
 ; CHECK: .byte  0
-; CHECK: .p2align 4
+; CHECK: .prefalign 4
 
 define ptr addrspace(1) @test_result(ptr addrspace(1) %obj,
 ; CHECK-LABEL: test_result:
@@ -99,7 +99,7 @@ exceptional_return:
 ; CHECK: .uleb128 .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
 ; CHECK: .uleb128 .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
 ; CHECK: .byte 0
-; CHECK: .p2align 4
+; CHECK: .prefalign 4
 
 define ptr addrspace(1) @test_same_val(i1 %cond, ptr addrspace(1) %val1, ptr addrspace(1) %val2, ptr addrspace(1) %val3)
 ; CHECK-LABEL: test_same_val:

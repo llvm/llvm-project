@@ -171,11 +171,18 @@
 // || `[0x36000000, 0x39ffffff]` || ShadowGap  ||
 // || `[0x30000000, 0x35ffffff]` || LowShadow  ||
 // || `[0x00000000, 0x2fffffff]` || LowMem     ||
+//
+// Default Hexagon/Linux mapping (32-bit, 4 GB VA):
+// || `[0x40000000, 0xffffffff]` || HighMem    ||
+// || `[0x28000000, 0x3fffffff]` || HighShadow ||
+// || `[0x24000000, 0x27ffffff]` || ShadowGap  ||
+// || `[0x20000000, 0x23ffffff]` || LowShadow  ||
+// || `[0x00000000, 0x1fffffff]` || LowMem     ||
 
 #define ASAN_SHADOW_SCALE 3
 
 #if SANITIZER_FUCHSIA
-#  define ASAN_SHADOW_OFFSET_CONST (0)
+#  define ASAN_SHADOW_OFFSET_DYNAMIC
 #elif SANITIZER_WORDSIZE == 32
 #  if SANITIZER_ANDROID
 #    define ASAN_SHADOW_OFFSET_DYNAMIC
@@ -189,6 +196,8 @@
 #    define ASAN_SHADOW_OFFSET_CONST 0x30000000
 #  elif SANITIZER_IOS
 #    define ASAN_SHADOW_OFFSET_DYNAMIC
+#  elif defined(__hexagon__)
+#    define ASAN_SHADOW_OFFSET_CONST 0x20000000
 #  else
 #    define ASAN_SHADOW_OFFSET_CONST 0x20000000
 #  endif
@@ -201,6 +210,8 @@
 #    define ASAN_SHADOW_OFFSET_CONST 0x0000800000000000
 #  elif SANITIZER_RISCV64
 #    define ASAN_SHADOW_OFFSET_DYNAMIC
+#  elif SANITIZER_ALPHA
+#    define ASAN_SHADOW_OFFSET_CONST 0x70000000000
 #  elif defined(__aarch64__)
 #    define ASAN_SHADOW_OFFSET_CONST 0x0000001000000000
 #  elif defined(__powerpc64__)
@@ -302,6 +313,15 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 
 #    define kMidShadowBeg MEM_TO_SHADOW(kMidMemBeg)
 #    define kMidShadowEnd MEM_TO_SHADOW(kMidMemEnd)
+
+// If the first byte of shadow can be placed after the last byte of app mem,
+// we don't need a gap since the shadow's shadow won't be in the middle
+// of app mem.
+#    if SANITIZER_APPLE
+#      define kGaplessShadow (kLowShadowBeg > kHighMemEnd)
+#    else
+#      define kGaplessShadow (false)
+#    endif
 
 // With the zero shadow base we can not actually map pages starting from 0.
 // This constant is somewhat arbitrary.

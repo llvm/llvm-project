@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[VAR:%.*]] = load atomic i32, ptr addrspace(1) poison unordered, align 8, !range [[RNG0:![0-9]+]], !invariant.load !1, !noundef !1
+; CHECK-NEXT:    [[VAR:%.*]] = load atomic i32, ptr addrspace(1) poison unordered, align 8, !range [[RNG0:![0-9]+]], !invariant.load [[META1:![0-9]+]], !noundef [[META1]]
 ; CHECK-NEXT:    [[VAR2:%.*]] = icmp eq i32 [[VAR]], 0
 ; CHECK-NEXT:    br i1 [[VAR2]], label [[BB18:%.*]], label [[BB19:%.*]]
 ; CHECK:       bb3:
@@ -16,9 +16,9 @@ define void @test() {
 ; CHECK:       bb7:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb8:
-; CHECK-NEXT:    [[VAR9:%.*]] = load atomic i32, ptr addrspace(1) poison unordered, align 8, !range [[RNG0]], !invariant.load !1, !noundef !1
+; CHECK-NEXT:    [[VAR9:%.*]] = load atomic i32, ptr addrspace(1) poison unordered, align 8, !range [[RNG0]], !invariant.load [[META1]], !noundef [[META1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[VAR9]] to i64
-; CHECK-NEXT:    [[VAR10:%.*]] = icmp ult i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[VAR10:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[VAR10]], label [[BB12]], label [[BB11:%.*]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void

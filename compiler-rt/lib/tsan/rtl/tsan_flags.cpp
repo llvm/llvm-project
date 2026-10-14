@@ -37,7 +37,7 @@ inline bool FlagHandler<LockDuringWriteSetting>::Parse(const char *value) {
     *t_ = kNoLockDuringWritesAllProcesses;
     return true;
   }
-  Printf("ERROR: Invalid value for signal handler option: '%s'\n", value);
+  Printf("ERROR: Invalid value for lock_during_write option: '%s'\n", value);
   return false;
 }
 

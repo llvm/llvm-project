@@ -629,12 +629,13 @@ multiclass vmaxmin_inst<string op, bit opc, PatFrags SD> {
 defm VFP_VMAXNM : vmaxmin_inst<"vmaxnm", 0, any_fmaxnum>;
 defm VFP_VMINNM : vmaxmin_inst<"vminnm", 1, any_fminnum>;
 
-// Match reassociated forms only if not sign dependent rounding.
+// These reassociated forms assume default rounding; only
+// non-constrained fmul matches.
 def : Pat<(fmul (fneg DPR:$a), (f64 DPR:$b)),
           (VNMULD DPR:$a, DPR:$b)>,
-          Requires<[NoHonorSignDependentRounding,HasDPVFP]>;
+          Requires<[HasDPVFP]>;
 def : Pat<(fmul (fneg SPR:$a), SPR:$b),
-          (VNMULS SPR:$a, SPR:$b)>, Requires<[NoHonorSignDependentRounding]>;
+          (VNMULS SPR:$a, SPR:$b)>;
 
 // These are encoded as unary instructions.
 let Defs = [FPSCR_NZCV], mayRaiseFPException = 1, Uses = [FPSCR_RM] in {
@@ -814,7 +815,7 @@ def VCVTBHS: ASuI<0b11101, 0b11, 0b0010, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
 
 def : FP16Pat<(f32 (any_fpextend (f16 HPR:$Sm))),
               (VCVTBHS (COPY_TO_REGCLASS (f16 HPR:$Sm), SPR))>;
-def : FP16Pat<(f16_to_fp GPR:$a),
+def : FP16Pat<(any_f16_to_fp GPR:$a),
               (VCVTBHS (COPY_TO_REGCLASS GPR:$a, SPR))>;
 
 let hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPSCR_RM] in
@@ -826,7 +827,7 @@ def VCVTBSH: ASuI<0b11101, 0b11, 0b0011, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sda,
 
 def : FP16Pat<(f16 (any_fpround SPR:$Sm)),
               (COPY_TO_REGCLASS (VCVTBSH (IMPLICIT_DEF), SPR:$Sm), HPR)>;
-def : FP16Pat<(fp_to_f16 SPR:$a),
+def : FP16Pat<(any_fp_to_f16 SPR:$a),
               (i32 (COPY_TO_REGCLASS (VCVTBSH (IMPLICIT_DEF), SPR:$a), GPR))>;
 def : FP16Pat<(insertelt (v8f16 MQPR:$src1), (f16 (any_fpround (f32 SPR:$src2))), imm_even:$lane),
               (v8f16 (INSERT_SUBREG (v8f16 MQPR:$src1),
@@ -891,7 +892,7 @@ def VCVTBHD : ADuI<0b11101, 0b11, 0b0010, 0b01, 0,
 def : FullFP16Pat<(f64 (any_fpextend (f16 HPR:$Sm))),
                   (VCVTBHD (COPY_TO_REGCLASS (f16 HPR:$Sm), SPR))>,
                   Requires<[HasFPARMv8, HasDPVFP]>;
-def : FP16Pat<(f64 (f16_to_fp GPR:$a)),
+def : FP16Pat<(f64 (any_f16_to_fp GPR:$a)),
               (VCVTBHD (COPY_TO_REGCLASS GPR:$a, SPR))>,
               Requires<[HasFPARMv8, HasDPVFP]>;
 
@@ -917,7 +918,7 @@ def VCVTBDH : ADuI<0b11101, 0b11, 0b0011, 0b01, 0,
 def : FullFP16Pat<(f16 (any_fpround DPR:$Dm)),
                   (COPY_TO_REGCLASS (VCVTBDH (IMPLICIT_DEF), DPR:$Dm), HPR)>,
                   Requires<[HasFPARMv8, HasDPVFP]>;
-def : FP16Pat<(fp_to_f16 (f64 DPR:$a)),
+def : FP16Pat<(any_fp_to_f16 (f64 DPR:$a)),
               (i32 (COPY_TO_REGCLASS (VCVTBDH (IMPLICIT_DEF), DPR:$a), GPR))>,
                    Requires<[HasFPARMv8, HasDPVFP]>;
 
@@ -2102,6 +2103,10 @@ class BF16_VCVT<string opc, bits<2> op7_6>
 def BF16_VCVTB : BF16_VCVT<"vcvtb", 0b01>;
 def BF16_VCVTT : BF16_VCVT<"vcvtt", 0b11>;
 
+let Predicates = [HasBF16] in
+def : Pat<(bf16 (any_fpround (f32 SPR:$Sm))),
+          (COPY_TO_REGCLASS (BF16_VCVTB (IMPLICIT_DEF), SPR:$Sm), HPR)>;
+
 //===----------------------------------------------------------------------===//
 // FP Multiply-Accumulate Operations.
 //
@@ -2296,7 +2301,7 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFMAD : ADbI<0b11101, 0b10, 0, 0,
                  (outs DPR:$Dd), (ins DPR:$Ddin, DPR:$Dn, DPR:$Dm),
                  IIC_fpFMAC64, "vfma", ".f64\t$Dd, $Dn, $Dm",
-                 [(set DPR:$Dd, (fadd_mlx (fmul_su DPR:$Dn, DPR:$Dm),
+                 [(set DPR:$Dd, (fadd_mlx_contract (fmul_su_contract DPR:$Dn, DPR:$Dm),
                                           (f64 DPR:$Ddin)))]>,
               RegConstraint<"$Ddin = $Dd">,
               Requires<[HasVFP4,HasDPVFP,UseFusedMAC]>,
@@ -2306,7 +2311,7 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFMAS : ASbIn<0b11101, 0b10, 0, 0,
                   (outs SPR:$Sd), (ins SPR:$Sdin, SPR:$Sn, SPR:$Sm),
                   IIC_fpFMAC32, "vfma", ".f32\t$Sd, $Sn, $Sm",
-                  [(set SPR:$Sd, (fadd_mlx (fmul_su SPR:$Sn, SPR:$Sm),
+                  [(set SPR:$Sd, (fadd_mlx_contract (fmul_su_contract SPR:$Sn, SPR:$Sm),
                                            SPR:$Sdin))]>,
               RegConstraint<"$Sdin = $Sd">,
               Requires<[HasVFP4,DontUseNEONForFP,UseFusedMAC]>,
@@ -2319,19 +2324,19 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFMAH : AHbI<0b11101, 0b10, 0, 0,
                   (outs HPR:$Sd), (ins HPR:$Sdin, HPR:$Sn, HPR:$Sm),
                   IIC_fpFMAC16, "vfma", ".f16\t$Sd, $Sn, $Sm",
-                  [(set (f16 HPR:$Sd), (fadd_mlx (fmul_su (f16 HPR:$Sn), (f16 HPR:$Sm)),
+                  [(set (f16 HPR:$Sd), (fadd_mlx_contract (fmul_su_contract (f16 HPR:$Sn), (f16 HPR:$Sm)),
                                            (f16 HPR:$Sdin)))]>,
               RegConstraint<"$Sdin = $Sd">,
               Requires<[HasFullFP16,UseFusedMAC]>,
             Sched<[WriteFPMAC32, ReadFPMAC, ReadFPMUL, ReadFPMUL]>;
 
-def : Pat<(fadd_mlx DPR:$dstin, (fmul_su DPR:$a, (f64 DPR:$b))),
+def : Pat<(fadd_mlx_contract DPR:$dstin, (fmul_su_contract DPR:$a, (f64 DPR:$b))),
           (VFMAD DPR:$dstin, DPR:$a, DPR:$b)>,
           Requires<[HasVFP4,HasDPVFP,UseFusedMAC]>;
-def : Pat<(fadd_mlx SPR:$dstin, (fmul_su SPR:$a, SPR:$b)),
+def : Pat<(fadd_mlx_contract SPR:$dstin, (fmul_su_contract SPR:$a, SPR:$b)),
           (VFMAS SPR:$dstin, SPR:$a, SPR:$b)>,
           Requires<[HasVFP4,DontUseNEONForFP,UseFusedMAC]>;
-def : Pat<(fadd_mlx HPR:$dstin, (fmul_su (f16 HPR:$a), HPR:$b)),
+def : Pat<(fadd_mlx_contract HPR:$dstin, (fmul_su_contract (f16 HPR:$a), HPR:$b)),
           (VFMAH HPR:$dstin, (f16 HPR:$a), HPR:$b)>,
           Requires<[HasFullFP16,DontUseNEONForFP,UseFusedMAC]>;
 
@@ -2351,7 +2356,7 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFMSD : ADbI<0b11101, 0b10, 1, 0,
                  (outs DPR:$Dd), (ins DPR:$Ddin, DPR:$Dn, DPR:$Dm),
                  IIC_fpFMAC64, "vfms", ".f64\t$Dd, $Dn, $Dm",
-                 [(set DPR:$Dd, (fadd_mlx (fneg (fmul_su DPR:$Dn,DPR:$Dm)),
+                 [(set DPR:$Dd, (fadd_mlx_contract (fneg (fmul_su_contract DPR:$Dn,DPR:$Dm)),
                                           (f64 DPR:$Ddin)))]>,
               RegConstraint<"$Ddin = $Dd">,
               Requires<[HasVFP4,HasDPVFP,UseFusedMAC]>,
@@ -2361,7 +2366,7 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFMSS : ASbIn<0b11101, 0b10, 1, 0,
                   (outs SPR:$Sd), (ins SPR:$Sdin, SPR:$Sn, SPR:$Sm),
                   IIC_fpFMAC32, "vfms", ".f32\t$Sd, $Sn, $Sm",
-                  [(set SPR:$Sd, (fadd_mlx (fneg (fmul_su SPR:$Sn, SPR:$Sm)),
+                  [(set SPR:$Sd, (fadd_mlx_contract (fneg (fmul_su_contract SPR:$Sn, SPR:$Sm)),
                                            SPR:$Sdin))]>,
               RegConstraint<"$Sdin = $Sd">,
               Requires<[HasVFP4,DontUseNEONForFP,UseFusedMAC]>,
@@ -2374,19 +2379,19 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFMSH : AHbI<0b11101, 0b10, 1, 0,
                   (outs HPR:$Sd), (ins HPR:$Sdin, HPR:$Sn, HPR:$Sm),
                   IIC_fpFMAC16, "vfms", ".f16\t$Sd, $Sn, $Sm",
-                  [(set (f16 HPR:$Sd), (fadd_mlx (fneg (fmul_su (f16 HPR:$Sn), (f16 HPR:$Sm))),
+                  [(set (f16 HPR:$Sd), (fadd_mlx_contract (fneg (fmul_su_contract (f16 HPR:$Sn), (f16 HPR:$Sm))),
                                            (f16 HPR:$Sdin)))]>,
               RegConstraint<"$Sdin = $Sd">,
               Requires<[HasFullFP16,UseFusedMAC]>,
               Sched<[WriteFPMAC32, ReadFPMAC, ReadFPMUL, ReadFPMUL]>;
 
-def : Pat<(fsub_mlx DPR:$dstin, (fmul_su DPR:$a, (f64 DPR:$b))),
+def : Pat<(fsub_mlx_contract DPR:$dstin, (fmul_su_contract DPR:$a, (f64 DPR:$b))),
           (VFMSD DPR:$dstin, DPR:$a, DPR:$b)>,
           Requires<[HasVFP4,HasDPVFP,UseFusedMAC]>;
-def : Pat<(fsub_mlx SPR:$dstin, (fmul_su SPR:$a, SPR:$b)),
+def : Pat<(fsub_mlx_contract SPR:$dstin, (fmul_su_contract SPR:$a, SPR:$b)),
           (VFMSS SPR:$dstin, SPR:$a, SPR:$b)>,
           Requires<[HasVFP4,DontUseNEONForFP,UseFusedMAC]>;
-def : Pat<(fsub_mlx HPR:$dstin, (fmul_su (f16 HPR:$a), HPR:$b)),
+def : Pat<(fsub_mlx_contract HPR:$dstin, (fmul_su_contract (f16 HPR:$a), HPR:$b)),
           (VFMSH HPR:$dstin, (f16 HPR:$a), HPR:$b)>,
           Requires<[HasFullFP16,DontUseNEONForFP,UseFusedMAC]>;
 
@@ -2406,7 +2411,7 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFNMAD : ADbI<0b11101, 0b01, 1, 0,
                   (outs DPR:$Dd), (ins DPR:$Ddin, DPR:$Dn, DPR:$Dm),
                   IIC_fpFMAC64, "vfnma", ".f64\t$Dd, $Dn, $Dm",
-                  [(set DPR:$Dd,(fsub_mlx (fneg (fmul_su DPR:$Dn,DPR:$Dm)),
+                  [(set DPR:$Dd,(fsub_mlx_contract (fneg (fmul_su_contract DPR:$Dn,DPR:$Dm)),
                                           (f64 DPR:$Ddin)))]>,
                 RegConstraint<"$Ddin = $Dd">,
                 Requires<[HasVFP4,HasDPVFP,UseFusedMAC]>,
@@ -2416,7 +2421,7 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFNMAS : ASbI<0b11101, 0b01, 1, 0,
                   (outs SPR:$Sd), (ins SPR:$Sdin, SPR:$Sn, SPR:$Sm),
                   IIC_fpFMAC32, "vfnma", ".f32\t$Sd, $Sn, $Sm",
-                  [(set SPR:$Sd, (fsub_mlx (fneg (fmul_su SPR:$Sn, SPR:$Sm)),
+                  [(set SPR:$Sd, (fsub_mlx_contract (fneg (fmul_su_contract SPR:$Sn, SPR:$Sm)),
                                            SPR:$Sdin))]>,
                 RegConstraint<"$Sdin = $Sd">,
                 Requires<[HasVFP4,DontUseNEONForFP,UseFusedMAC]>,
@@ -2429,16 +2434,16 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFNMAH : AHbI<0b11101, 0b01, 1, 0,
                   (outs HPR:$Sd), (ins HPR:$Sdin, HPR:$Sn, HPR:$Sm),
                   IIC_fpFMAC16, "vfnma", ".f16\t$Sd, $Sn, $Sm",
-                  [(set (f16 HPR:$Sd), (fsub_mlx (fneg (fmul_su (f16 HPR:$Sn), (f16 HPR:$Sm))),
+                  [(set (f16 HPR:$Sd), (fsub_mlx_contract (fneg (fmul_su_contract (f16 HPR:$Sn), (f16 HPR:$Sm))),
                                            (f16 HPR:$Sdin)))]>,
                 RegConstraint<"$Sdin = $Sd">,
                 Requires<[HasFullFP16,UseFusedMAC]>,
                 Sched<[WriteFPMAC32, ReadFPMAC, ReadFPMUL, ReadFPMUL]>;
 
-def : Pat<(fsub_mlx (fneg (fmul_su DPR:$a, (f64 DPR:$b))), DPR:$dstin),
+def : Pat<(fsub_mlx_contract (fneg (fmul_su_contract DPR:$a, (f64 DPR:$b))), DPR:$dstin),
           (VFNMAD DPR:$dstin, DPR:$a, DPR:$b)>,
           Requires<[HasVFP4,HasDPVFP,UseFusedMAC]>;
-def : Pat<(fsub_mlx (fneg (fmul_su SPR:$a, SPR:$b)), SPR:$dstin),
+def : Pat<(fsub_mlx_contract (fneg (fmul_su_contract SPR:$a, SPR:$b)), SPR:$dstin),
           (VFNMAS SPR:$dstin, SPR:$a, SPR:$b)>,
           Requires<[HasVFP4,DontUseNEONForFP,UseFusedMAC]>;
 
@@ -2468,7 +2473,7 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFNMSD : ADbI<0b11101, 0b01, 0, 0,
                   (outs DPR:$Dd), (ins DPR:$Ddin, DPR:$Dn, DPR:$Dm),
                   IIC_fpFMAC64, "vfnms", ".f64\t$Dd, $Dn, $Dm",
-                  [(set DPR:$Dd, (fsub_mlx (fmul_su DPR:$Dn, DPR:$Dm),
+                  [(set DPR:$Dd, (fsub_mlx_contract (fmul_su_contract DPR:$Dn, DPR:$Dm),
                                            (f64 DPR:$Ddin)))]>,
                RegConstraint<"$Ddin = $Dd">,
                Requires<[HasVFP4,HasDPVFP,UseFusedMAC]>,
@@ -2478,7 +2483,7 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFNMSS : ASbI<0b11101, 0b01, 0, 0,
                   (outs SPR:$Sd), (ins SPR:$Sdin, SPR:$Sn, SPR:$Sm),
                   IIC_fpFMAC32, "vfnms", ".f32\t$Sd, $Sn, $Sm",
-             [(set SPR:$Sd, (fsub_mlx (fmul_su SPR:$Sn, SPR:$Sm), SPR:$Sdin))]>,
+             [(set SPR:$Sd, (fsub_mlx_contract (fmul_su_contract SPR:$Sn, SPR:$Sm), SPR:$Sdin))]>,
                          RegConstraint<"$Sdin = $Sd">,
                   Requires<[HasVFP4,DontUseNEONForFP,UseFusedMAC]>,
                   Sched<[WriteFPMAC32, ReadFPMAC, ReadFPMUL, ReadFPMUL]> {
@@ -2490,15 +2495,15 @@ let mayRaiseFPException = 1, Uses = [FPSCR_RM] in
 def VFNMSH : AHbI<0b11101, 0b01, 0, 0,
                   (outs HPR:$Sd), (ins HPR:$Sdin, HPR:$Sn, HPR:$Sm),
                   IIC_fpFMAC16, "vfnms", ".f16\t$Sd, $Sn, $Sm",
-             [(set (f16 HPR:$Sd), (fsub_mlx (fmul_su (f16 HPR:$Sn), (f16 HPR:$Sm)), (f16 HPR:$Sdin)))]>,
+             [(set (f16 HPR:$Sd), (fsub_mlx_contract (fmul_su_contract (f16 HPR:$Sn), (f16 HPR:$Sm)), (f16 HPR:$Sdin)))]>,
                          RegConstraint<"$Sdin = $Sd">,
                   Requires<[HasFullFP16,UseFusedMAC]>,
                   Sched<[WriteFPMAC32, ReadFPMAC, ReadFPMUL, ReadFPMUL]>;
 
-def : Pat<(fsub_mlx (fmul_su DPR:$a, (f64 DPR:$b)), DPR:$dstin),
+def : Pat<(fsub_mlx_contract (fmul_su_contract DPR:$a, (f64 DPR:$b)), DPR:$dstin),
           (VFNMSD DPR:$dstin, DPR:$a, DPR:$b)>,
           Requires<[HasVFP4,HasDPVFP,UseFusedMAC]>;
-def : Pat<(fsub_mlx (fmul_su SPR:$a, SPR:$b), SPR:$dstin),
+def : Pat<(fsub_mlx_contract (fmul_su_contract SPR:$a, SPR:$b), SPR:$dstin),
           (VFNMSS SPR:$dstin, SPR:$a, SPR:$b)>,
           Requires<[HasVFP4,DontUseNEONForFP,UseFusedMAC]>;
 

@@ -312,7 +312,7 @@ private:
   const LiveInterval *dequeue(PQueue &CurQueue);
 
   bool hasVirtRegAlloc();
-  BlockFrequency calcSpillCost();
+  BlockFrequency calcBlockSplitCost();
   bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &);
   bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
   bool growRegion(GlobalSplitCandidate &Cand);
@@ -360,6 +360,7 @@ private:
                                    AllocationOrder &Order, MCRegister PhysReg,
                                    uint8_t &CostPerUseLimit,
                                    SmallVectorImpl<Register> &NewVRegs);
+  BlockFrequency calcSpillCost(const LiveInterval &LI);
   void initializeCSRCost();
   MCRegister tryBlockSplit(const LiveInterval &, AllocationOrder &,
                            SmallVectorImpl<Register> &);
@@ -380,16 +381,16 @@ private:
 
   /// Model the information carried by one end of a copy.
   struct HintInfo {
-    /// The frequency of the copy.
-    BlockFrequency Freq;
+    /// The block containing the copy.
+    const MachineBasicBlock *MBB;
     /// The virtual register or physical register.
     Register Reg;
     /// Its currently assigned register.
     /// In case of a physical register Reg == PhysReg.
     MCRegister PhysReg;
 
-    HintInfo(BlockFrequency Freq, Register Reg, MCRegister PhysReg)
-        : Freq(Freq), Reg(Reg), PhysReg(PhysReg) {}
+    HintInfo(const MachineBasicBlock *MBB, Register Reg, MCRegister PhysReg)
+        : MBB(MBB), Reg(Reg), PhysReg(PhysReg) {}
   };
   using HintsInfo = SmallVector<HintInfo, 4>;
 

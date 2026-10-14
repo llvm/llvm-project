@@ -222,22 +222,23 @@ define <4 x i32> @vec_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X64-LABEL: vec_v8i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa %xmm1, %xmm2
-; X64-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
-; X64-NEXT:    pslld $23, %xmm2
-; X64-NEXT:    movdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
-; X64-NEXT:    paddd %xmm3, %xmm2
-; X64-NEXT:    cvttps2dq %xmm2, %xmm4
-; X64-NEXT:    pslld $16, %xmm4
-; X64-NEXT:    psrad $16, %xmm4
-; X64-NEXT:    movdqa %xmm1, %xmm2
-; X64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3]
-; X64-NEXT:    pslld $23, %xmm2
-; X64-NEXT:    paddd %xmm3, %xmm2
-; X64-NEXT:    cvttps2dq %xmm2, %xmm2
+; X64-NEXT:    pxor %xmm2, %xmm2
+; X64-NEXT:    movdqa %xmm1, %xmm3
+; X64-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
+; X64-NEXT:    pslld $23, %xmm3
+; X64-NEXT:    movdqa {{.*#+}} xmm4 = [1065353216,1065353216,1065353216,1065353216]
+; X64-NEXT:    paddd %xmm4, %xmm3
+; X64-NEXT:    cvttps2dq %xmm3, %xmm3
+; X64-NEXT:    pslld $16, %xmm3
+; X64-NEXT:    psrad $16, %xmm3
+; X64-NEXT:    movdqa %xmm1, %xmm5
+; X64-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm2[0],xmm5[1],xmm2[1],xmm5[2],xmm2[2],xmm5[3],xmm2[3]
+; X64-NEXT:    pslld $23, %xmm5
+; X64-NEXT:    paddd %xmm4, %xmm5
+; X64-NEXT:    cvttps2dq %xmm5, %xmm2
 ; X64-NEXT:    pslld $16, %xmm2
 ; X64-NEXT:    psrad $16, %xmm2
-; X64-NEXT:    packssdw %xmm4, %xmm2
+; X64-NEXT:    packssdw %xmm3, %xmm2
 ; X64-NEXT:    pmullw %xmm0, %xmm2
 ; X64-NEXT:    psllw $12, %xmm1
 ; X64-NEXT:    movdqa %xmm1, %xmm3
@@ -416,9 +417,9 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X64-NEXT:    pcmpgtb %xmm1, %xmm5
 ; X64-NEXT:    movdqa %xmm5, %xmm6
 ; X64-NEXT:    pandn %xmm2, %xmm6
-; X64-NEXT:    psllw $2, %xmm2
+; X64-NEXT:    paddb %xmm2, %xmm2
+; X64-NEXT:    paddb %xmm2, %xmm2
 ; X64-NEXT:    pand %xmm5, %xmm2
-; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; X64-NEXT:    por %xmm6, %xmm2
 ; X64-NEXT:    paddb %xmm1, %xmm1
 ; X64-NEXT:    pcmpgtb %xmm1, %xmm3
@@ -457,8 +458,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X64-AVX2-NEXT:    vpsllw $4, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm2
-; X64-AVX2-NEXT:    vpsllw $2, %xmm2, %xmm3
-; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; X64-AVX2-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
+; X64-AVX2-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
 ; X64-AVX2-NEXT:    vpaddb %xmm1, %xmm1, %xmm4
 ; X64-AVX2-NEXT:    vpblendvb %xmm4, %xmm3, %xmm2, %xmm2
 ; X64-AVX2-NEXT:    vpaddb %xmm2, %xmm2, %xmm3

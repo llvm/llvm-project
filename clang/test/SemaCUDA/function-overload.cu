@@ -91,10 +91,7 @@ __host__ HostReturnTy h() { return HostReturnTy(); }
 // devdefer-note@-4 1+ {{candidate function not viable: call to __host__ function from __global__ function}}
 
 __global__ void g() {}
-// dev-note@-1 1+ {{'g' declared here}}
-// devdefer-note@-2 1+ {{candidate function not viable: call to __global__ function from __device__ function}}
 // expected-note@-3 0+ {{candidate function not viable: call to __global__ function from __host__ __device__ function}}
-// devdefer-note@-4 1+ {{candidate function not viable: call to __global__ function from __global__ function}}
 
 extern "C" __device__ DeviceReturnTy cd() { return DeviceReturnTy(); }
 // host-note@-1 1+ {{'cd' declared here}}
@@ -144,9 +141,9 @@ __device__ void devicef() {
   DeviceFnPtr fp_cdh = cdh;
   DeviceReturnTy ret_cdh = cdh();
 
-  GlobalFnPtr fp_g = g; // dev-error {{reference to __global__ function 'g' in __device__ function}}
-  g(); // devdefer-error {{no matching function for call to 'g'}}
-  g<<<0,0>>>(); // dev-error {{reference to __global__ function 'g' in __device__ function}}
+  GlobalFnPtr fp_g = g;
+  g(); // expected-error {{call to global function 'g' not configured}}
+  g<<<0,0>>>(); // expected-error {{kernel launch from __device__ or __global__ function requires relocatable device code (i.e. requires -fgpu-rdc)}}
 }
 
 __global__ void globalf() {
@@ -165,9 +162,9 @@ __global__ void globalf() {
   DeviceFnPtr fp_cdh = cdh;
   DeviceReturnTy ret_cdh = cdh();
 
-  GlobalFnPtr fp_g = g; // dev-error {{reference to __global__ function 'g' in __global__ function}}
-  g(); // devdefer-error {{no matching function for call to 'g'}}
-  g<<<0,0>>>(); // dev-error {{reference to __global__ function 'g' in __global__ function}}
+  GlobalFnPtr fp_g = g;
+  g(); // expected-error {{call to global function 'g' not configured}}
+  g<<<0,0>>>(); // expected-error {{kernel launch from __device__ or __global__ function requires relocatable device code (i.e. requires -fgpu-rdc)}}
 }
 
 __host__ __device__ void hostdevicef() {
@@ -199,20 +196,13 @@ __host__ __device__ void hostdevicef() {
   CurrentReturnTy ret_cdh = cdh();
 
   GlobalFnPtr fp_g = g;
-#if defined(__CUDA_ARCH__)
-  // expected-error@-2 {{reference to __global__ function 'g' in __host__ __device__ function}}
-#endif
 
   g();
-#if defined (__CUDA_ARCH__)
-  // expected-error@-2 {{reference to __global__ function 'g' in __host__ __device__ function}}
-#else
-  // expected-error@-4 {{call to global function 'g' not configured}}
-#endif
+  // expected-error@-1 {{call to global function 'g' not configured}}
 
   g<<<0,0>>>();
 #if defined(__CUDA_ARCH__)
-  // expected-error@-2 {{reference to __global__ function 'g' in __host__ __device__ function}}
+  // expected-error@-2 {{kernel launch from __device__ or __global__ function requires relocatable device code (i.e. requires -fgpu-rdc)}}
 #endif
 }
 

@@ -16,9 +16,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 struct from_range_t {
   explicit from_range_t() = default;
@@ -26,8 +26,8 @@ struct from_range_t {
 
 inline constexpr from_range_t from_range{};
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___RANGES_FROM_RANGE_H

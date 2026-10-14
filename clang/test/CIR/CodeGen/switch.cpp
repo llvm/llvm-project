@@ -20,14 +20,14 @@ void sw1(int a) {
 }
 
 // CIR: cir.func{{.*}} @_Z3sw1i
-// CIR: cir.switch (%[[COND:.*]] : !s32i) {
+// CIR: cir.switch(%[[COND:.*]] : !s32i) {
 // CIR-NEXT: cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR: cir.break
 // CIR: cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR-NEXT: cir.break
 // CIR: cir.case(equal, [#cir.int<2> : !s32i]) {
 // CIR: cir.scope {
-// CIR: cir.alloca !s32i, !cir.ptr<!s32i>, ["yolo", init]
+// CIR: cir.alloca "yolo" {{.*}} init : !cir.ptr<!s32i>
 // CIR: cir.break
 
 // LLVM: define{{.*}} void @_Z3sw1i
@@ -99,9 +99,9 @@ void sw2(int a) {
 
 // CIR: cir.func{{.*}} @_Z3sw2i
 // CIR: cir.scope {
-// CIR-NEXT:   %[[YOLO:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["yolo", init]
-// CIR-NEXT:   %[[FOMO:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["fomo", init]
-// CIR:        cir.switch (%[[COND:.*]] : !s32i) {
+// CIR-NEXT:   %[[YOLO:.*]] = cir.alloca "yolo" {{.*}} init : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[FOMO:.*]] = cir.alloca "fomo" {{.*}} init : !cir.ptr<!s32i>
+// CIR:        cir.switch(%[[COND:.*]] : !s32i) {
 // CIR-NEXT:   cir.case(equal, [#cir.int<3> : !s32i]) {
 // CIR-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-NEXT:     cir.store{{.*}} %[[ZERO]], %[[FOMO]] : !s32i, !cir.ptr<!s32i>
@@ -154,7 +154,7 @@ void sw3(int a) {
 // CIR: cir.func{{.*}} @_Z3sw3i
 // CIR: cir.scope {
 // CIR-NEXT:   %[[COND:.*]] = cir.load{{.*}} %[[A:.*]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:   cir.switch (%[[COND]] : !s32i) {
+// CIR-NEXT:   cir.switch(%[[COND]] : !s32i) {
 // CIR-NEXT:   cir.case(default, []) {
 // CIR-NEXT:     cir.break
 // CIR-NEXT:   }
@@ -196,7 +196,7 @@ int sw4(int a) {
 }
 
 // CIR: cir.func{{.*}} @_Z3sw4i
-// CIR:       cir.switch (%[[COND:.*]] : !s32i) {
+// CIR:       cir.switch(%[[COND:.*]] : !s32i) {
 // CIR-NEXT:       cir.case(equal, [#cir.int<42> : !s32i]) {
 // CIR-NEXT:         cir.scope {
 // CIR-NEXT:           %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
@@ -216,8 +216,8 @@ int sw4(int a) {
 // CIR-NEXT:  }
 
 // LLVM: define{{.*}} i32 @_Z3sw4i
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -264,7 +264,7 @@ void sw5(int a) {
 }
 
 // CIR: cir.func{{.*}} @_Z3sw5i
-// CIR: cir.switch (%[[A:.*]] : !s32i) {
+// CIR: cir.switch(%[[A:.*]] : !s32i) {
 // CIR-NEXT:   cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   }
@@ -272,7 +272,7 @@ void sw5(int a) {
 // CIR-NEXT:   }
 
 // LLVM-LABEL: define{{.*}} void @_Z3sw5i
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -314,7 +314,7 @@ void sw6(int a) {
 }
 
 // CIR: cir.func{{.*}} @_Z3sw6i
-// CIR: cir.switch (%[[A:.*]] : !s32i) {
+// CIR: cir.switch(%[[A:.*]] : !s32i) {
 // CIR-NEXT: cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR-NEXT:     cir.yield
 // CIR-NEXT: }
@@ -405,8 +405,8 @@ void sw7(int a) {
 }
 
 // CIR: cir.func{{.*}} @_Z3sw7i
-// CIR: %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"]
-// CIR: cir.switch (%[[A:.*]] : !s32i)
+// CIR: %[[X:.*]] = cir.alloca "x" {{.*}} : !cir.ptr<!s32i>
+// CIR: cir.switch(%[[A:.*]] : !s32i)
 // CIR-NEXT: cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR-NEXT:     cir.yield
 // CIR-NEXT: }
@@ -499,7 +499,7 @@ void sw8(int a) {
 }
 
 // CIR:    cir.func{{.*}} @_Z3sw8i
-// CIR:    cir.switch (%[[A:.*]] : !s32i)
+// CIR:    cir.switch(%[[A:.*]] : !s32i)
 // CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
@@ -557,7 +557,7 @@ void sw9(int a) {
 }
 
 // CIR:    cir.func{{.*}} @_Z3sw9i
-// CIR:    cir.switch (%[[A:.*]] : !s32i)
+// CIR:    cir.switch(%[[A:.*]] : !s32i)
 // CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
@@ -616,7 +616,7 @@ void sw10(int a) {
 }
 
 // CIR:    cir.func{{.*}} @_Z4sw10i
-// CIR:    cir.switch (%[[A:.*]] : !s32i)
+// CIR:    cir.switch(%[[A:.*]] : !s32i)
 // CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
@@ -688,7 +688,7 @@ void sw11(int a) {
 }
 
 // CIR:    cir.func{{.*}} @_Z4sw11i
-// CIR:    cir.switch (%[[A:.*]] : !s32i)
+// CIR:    cir.switch(%[[A:.*]] : !s32i)
 // CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
@@ -978,7 +978,7 @@ void sw15(int x) {
 }
 
 // CIR:      cir.func{{.*}} @_Z4sw15i
-// CIR:      %[[Y:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y"]
+// CIR:      %[[Y:.*]] = cir.alloca "y" {{.*}} : !cir.ptr<!s32i>
 // CIR:      cir.switch
 // CIR-NEXT: cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR-NEXT:   cir.yield
@@ -1063,7 +1063,7 @@ int nested_switch(int a) {
   return 0;
 }
 
-// CIR: cir.switch (%[[COND:.*]] : !s32i) {
+// CIR: cir.switch(%[[COND:.*]] : !s32i) {
 // CIR:   cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR:     cir.yield
 // CIR:   }
@@ -1082,9 +1082,9 @@ int nested_switch(int a) {
 // CIR:           cir.return
 
 // LLVM: define{{.*}} i32 @_Z13nested_switchi
-// LLVM:   %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RES_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RES_ADDR:.*]] = alloca i32, align 4
 // LLVM:   store i32 %[[ARG:.*]], ptr %[[A_ADDR]], align 4
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
@@ -1198,7 +1198,7 @@ int sw_return_multi_cases(int x) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z21sw_return_multi_casesi
-// CIR:       cir.switch (%{{.*}} : !s32i) {
+// CIR:       cir.switch(%{{.*}} : !s32i) {
 // CIR-NEXT:  cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:         cir.store{{.*}} %[[ZERO]], %{{.*}} : !s32i, !cir.ptr<!s32i>
@@ -1218,9 +1218,8 @@ int sw_return_multi_cases(int x) {
 // CIR-NEXT:    cir.return %[[RET2]] : !s32i
 // CIR-NEXT:  }
 // CIR-NEXT:  cir.case(default, []) {
-// CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:         %[[NEG:.*]] = cir.unary(minus, %[[ONE]]) {{.*}} : !s32i, !s32i
-// CIR:         cir.store{{.*}} %[[NEG]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:         %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
+// CIR:         cir.store{{.*}} %[[MINUS_ONE]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[RETDEF:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:    cir.return %[[RETDEF]] : !s32i
 // CIR-NEXT:  }
@@ -1270,3 +1269,86 @@ int sw_return_multi_cases(int x) {
 // OGCG: [[RETURN]]:
 // OGCG:   %[[RETVAL_LOAD:.*]] = load i32, ptr %[[RETVAL]], align 4
 // OGCG:   ret i32 %[[RETVAL_LOAD]]
+
+enum M {
+ Six,
+ Seven
+};
+
+void testSwitchCoverAllCase(M m) {
+  switch (m) {
+  case Six:case Seven:
+    break;
+  }
+}
+// CIR: cir.switch(%[[ARG:.*]] : !s32i) all_enum_cases_covered {
+
+void testSwitchNotCoverAllCase(M m) {
+  switch (m) {
+  case Six:
+  default:
+    break;
+  }
+}
+// CIR: cir.switch(%[[ARG:.*]] : !s32i) {
+
+enum class IsBoolClass : bool { F, T };
+
+void switch_enum_class(IsBoolClass b) {
+// CIR-LABEL: cir.func {{.*}}@_Z17switch_enum_class11IsBoolClass
+// CIR: %[[ARG:.*]] = cir.alloca "b" align(1) init : !cir.ptr<!cir.bool>
+// CIR: %[[ARG_LOAD:.*]] = cir.load align(1) %[[ARG]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: %[[CAST:.*]] = cir.cast bool_to_int %[[ARG_LOAD]] : !cir.bool -> !cir.int<u, 1>
+// CIR: cir.switch(%[[CAST]] : !cir.int<u, 1>) all_enum_cases_covered {
+// CIR: cir.case(equal, [#cir.int<1> : !cir.int<u, 1>]) {
+// CIR: cir.case(equal, [#cir.int<0> : !cir.int<u, 1>]) {
+
+// CIR: %[[ARG_LOAD:.*]] = cir.load align(1) %[[ARG]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: %[[CAST:.*]] = cir.cast bool_to_int %[[ARG_LOAD]] : !cir.bool -> !cir.int<u, 1>
+// CIR: cir.switch(%[[CAST]] : !cir.int<u, 1>) all_enum_cases_covered {
+// CIR: cir.case(range, [#cir.int<0> : !cir.int<u, 1>, #cir.int<1> : !cir.int<u, 1>]) {
+
+// LLVM-LABEL: define {{.*}}@_Z17switch_enum_class11IsBoolClass
+// LLVM: %[[ARG:.*]] = alloca i8
+// LLVM: %[[ARG_LOAD:.*]] = load i8, ptr %[[ARG]]
+// LLVM: %[[CAST:.*]] = trunc i8 %[[ARG_LOAD]] to i1
+// LLVM: switch i1 %[[CAST]], label %{{.*}} [
+// LLVM:   i1 true, label %
+// LLVM:   i1 false, label %
+// LLVM: ]
+//
+// LLVM: %[[ARG_LOAD:.*]] = load i8, ptr %[[ARG]]
+// LLVM: %[[CAST:.*]] = trunc i8 %[[ARG_LOAD]] to i1
+// LLVM: switch i1 %[[CAST]], label %{{.*}} [
+// LLVM:   i1 false, label %
+// LLVM:   i1 true, label %
+// LLVM: ]
+//
+//
+// OGCG-LABEL: define {{.*}}@_Z17switch_enum_class11IsBoolClass
+// OGCG: %[[ARG:.*]] = alloca i8
+// OGCG: %[[ARG_LOAD:.*]] = load i8, ptr %[[ARG]]
+// OGCG: %[[CAST:.*]] = icmp ne i8 %[[ARG_LOAD]], 0
+// OGCG: switch i1 %[[CAST]], label %{{.*}} [
+// OGCG:   i1 true, label %
+// OGCG:   i1 false, label %
+// OGCG: ]
+//
+// OGCG: %[[ARG_LOAD:.*]] = load i8, ptr %[[ARG]]
+// OGCG: %[[CAST:.*]] = icmp ne i8 %[[ARG_LOAD]], 0
+// OGCG: switch i1 %[[CAST]], label %{{.*}} [
+// OGCG:   i1 false, label %
+// OGCG:   i1 true, label %
+// OGCG: ]
+
+  switch(b) {
+    case IsBoolClass::T:
+    break;
+    case IsBoolClass::F:
+    break;
+  }
+  switch(b) {
+    case IsBoolClass::F ... IsBoolClass::T:
+    break;
+  }
+}

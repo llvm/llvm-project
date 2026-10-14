@@ -28,6 +28,17 @@ protected:
   }
 };
 
+TEST_F(FormatTestJava, IndentAccessModifiersAfterFirstDoesNotAffectJava) {
+  FormatStyle Style = getDefaultStyle();
+  Style.IndentWidth = 4;
+  Style.IndentAccessModifiers = FormatStyle::IAMS_AfterFirstAccessModifier;
+  verifyFormat("class C {\n"
+               "        int before;\n"
+               "        public int after;\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTestJava, NoAlternativeOperatorNames) {
   verifyFormat("someObject.and();");
 }
@@ -596,7 +607,8 @@ TEST_F(FormatTestJava, RetainsLogicalShifts) {
 
 TEST_F(FormatTestJava, ShortFunctions) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_Java);
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
   verifyFormat("enum Enum {\n"
                "  E1,\n"
                "  E2;\n"
@@ -846,6 +858,13 @@ TEST_F(FormatTestJava, TextBlock) {
 
   verifyNoChange("String name = \"\"\"\n"
                  "              Pat Q. Smith");
+
+  verifyFormat("String foo = \"\"\"\n"
+               "    bar\n"
+               "    \\\\\"\"\";",
+               "String foo=\"\"\"\n"
+               "    bar\n"
+               "    \\\\\"\"\" ;");
 }
 
 TEST_F(FormatTestJava, BreakAfterRecord) {
@@ -859,6 +878,13 @@ TEST_F(FormatTestJava, BreakAfterRecord) {
                "{\n"
                "}",
                "public record Foo(int i) {}", Style);
+}
+
+TEST_F(FormatTestJava, EmptyRecordBodyOnASingleLine) {
+  auto Style = getGoogleStyle(FormatStyle::LK_Java);
+  verifyFormat("public interface Marker {}", Style);
+  verifyFormat("public record Marker() {}", Style);
+  verifyFormat("public class Marker {}", Style);
 }
 
 } // namespace

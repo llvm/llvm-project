@@ -67,10 +67,10 @@ public:
   }
 };
 
-#define LIST_FLOOR_TESTS(T, func)                                              \
-  using LlvmLibcFloorTest = FloorTest<T>;                                      \
-  TEST_F(LlvmLibcFloorTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcFloorTest, RoundedNubmers) { testRoundedNumbers(&func); }     \
-  TEST_F(LlvmLibcFloorTest, Fractions) { testFractions(&func); }
+#define LIST_FLOOR_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = FloorTest<T>;                                   \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbers) { testRoundedNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, Fractions) { testFractions(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FLOORTEST_H

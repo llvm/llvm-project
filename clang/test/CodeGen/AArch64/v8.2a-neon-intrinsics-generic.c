@@ -230,88 +230,6 @@ float16x8_t test_vmovq_n_f16(float16_t a) {
   return vmovq_n_f16(a);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test_vdup_n_f16
-// CHECK-SAME: (half noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> poison, half [[A]], i32 0
-// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <4 x half> [[VECINIT]], half [[A]], i32 1
-// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x half> [[VECINIT1]], half [[A]], i32 2
-// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x half> [[VECINIT2]], half [[A]], i32 3
-// CHECK-NEXT:    ret <4 x half> [[VECINIT3]]
-//
-float16x4_t test_vdup_n_f16(float16_t a) {
-  return vdup_n_f16(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vdupq_n_f16
-// CHECK-SAME: (half noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> poison, half [[A]], i32 0
-// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <8 x half> [[VECINIT]], half [[A]], i32 1
-// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <8 x half> [[VECINIT1]], half [[A]], i32 2
-// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <8 x half> [[VECINIT2]], half [[A]], i32 3
-// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <8 x half> [[VECINIT3]], half [[A]], i32 4
-// CHECK-NEXT:    [[VECINIT5:%.*]] = insertelement <8 x half> [[VECINIT4]], half [[A]], i32 5
-// CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <8 x half> [[VECINIT5]], half [[A]], i32 6
-// CHECK-NEXT:    [[VECINIT7:%.*]] = insertelement <8 x half> [[VECINIT6]], half [[A]], i32 7
-// CHECK-NEXT:    ret <8 x half> [[VECINIT7]]
-//
-float16x8_t test_vdupq_n_f16(float16_t a) {
-  return vdupq_n_f16(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vdup_lane_f16
-// CHECK-SAME: (<4 x half> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
-// CHECK-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[TMP2]], <4 x half> [[TMP2]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-// CHECK-NEXT:    ret <4 x half> [[LANE]]
-//
-float16x4_t test_vdup_lane_f16(float16x4_t a) {
-  return vdup_lane_f16(a, 3);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vdupq_lane_f16
-// CHECK-SAME: (<4 x half> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
-// CHECK-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[TMP2]], <4 x half> [[TMP2]], <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-// CHECK-NEXT:    ret <8 x half> [[LANE]]
-//
-float16x8_t test_vdupq_lane_f16(float16x4_t a) {
-  return vdupq_lane_f16(a, 3);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vdup_laneq_f16
-// CHECK-SAME: (<8 x half> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x half>
-// CHECK-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[TMP2]], <8 x half> [[TMP2]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-// CHECK-NEXT:    ret <4 x half> [[LANE]]
-//
-float16x4_t test_vdup_laneq_f16(float16x8_t a) {
-  return vdup_laneq_f16(a, 1);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vdupq_laneq_f16
-// CHECK-SAME: (<8 x half> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x half>
-// CHECK-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[TMP2]], <8 x half> [[TMP2]], <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-// CHECK-NEXT:    ret <8 x half> [[LANE]]
-//
-float16x8_t test_vdupq_laneq_f16(float16x8_t a) {
-  return vdupq_laneq_f16(a, 7);
-}
-
 // CHECK-LABEL: define {{[^@]+}}@test_vext_f16
 // CHECK-SAME: (<4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
@@ -482,24 +400,4 @@ float16x4_t test_vtrn2_f16(float16x4_t a, float16x4_t b) {
 //
 float16x8_t test_vtrn2q_f16(float16x8_t a, float16x8_t b) {
   return vtrn2q_f16(a, b);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vduph_laneq_f16
-// CHECK-SAME: (<8 x half> noundef [[VEC:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x half> [[VEC]], i32 7
-// CHECK-NEXT:    ret half [[VGETQ_LANE]]
-//
-float16_t test_vduph_laneq_f16(float16x8_t vec) {
-  return vduph_laneq_f16(vec, 7);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vduph_lane_f16
-// CHECK-SAME: (<4 x half> noundef [[VEC:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x half> [[VEC]], i32 3
-// CHECK-NEXT:    ret half [[VGET_LANE]]
-//
-float16_t test_vduph_lane_f16(float16x4_t vec) {
-  return vduph_lane_f16(vec, 3);
 }

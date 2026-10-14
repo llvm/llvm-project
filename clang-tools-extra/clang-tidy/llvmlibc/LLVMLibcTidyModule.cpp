@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "CalleeNamespaceCheck.h"
 #include "ImplementationInNamespaceCheck.h"
 #include "InlineFunctionDeclCheck.h"
@@ -16,6 +15,7 @@
 
 namespace clang::tidy {
 namespace llvm_libc {
+namespace {
 
 class LLVMLibcModule : public ClangTidyModule {
 public:
@@ -30,6 +30,8 @@ public:
         "llvmlibc-restrict-system-libc-headers");
   }
 };
+
+} // namespace
 
 // Register the LLVMLibcTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<LLVMLibcModule>

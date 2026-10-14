@@ -128,7 +128,7 @@ private:
 /// variable and q is a local variable. Let us put the constraints:
 ///       `1 <= x <= 7, x = 2q`
 /// on this space to get the set:
-///       `(x) : (exists q : q <= x <= 7, x = 2q)`.
+///       `(x) : (exists q : 1 <= x <= 7, x = 2q)`.
 /// An assignment to symbolic and dimension variables is valid if there
 /// exists some assignment to the local variable `q` satisfying these
 /// constraints. For this example, the set is equivalent to {2, 4, 6}.
@@ -136,7 +136,7 @@ private:
 /// of projection. In this example, `q` is existentially quantified. This can be
 /// thought of as the result of projecting out `q` from the previous example,
 /// i.e. we obtained {2, 4, 6} by projecting out the second dimension from
-/// {(2, 1), (4, 2), (6, 2)}.
+/// {(2, 1), (4, 2), (6, 3)}.
 ///
 /// Dimension variables are further divided into Domain and Range variables
 /// to support building relations.

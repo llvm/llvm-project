@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -verify -std=c99 -Dbool=_Bool -Wno-bool-conversion %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -verify -x c++ -Wno-bool-conversion %s
+// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,unix.Malloc -verify -std=c99 -Dbool=_Bool -Wno-bool-conversion %s
+// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,unix.Malloc -verify -x c++ -Wno-bool-conversion %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 char const *p;
@@ -89,4 +89,15 @@ struct child_stack_context_s return_child_stack_context_field() {
     s.p = &a;
   }
   return s; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}}
+}
+
+// Returns an 'int' block taking an 'int'.
+int (^copy_self_referencing_block(void))(int) {
+  // It is important that the 'fib' block captures itself.
+  __block int (^fib)(int) = ^(int n) {
+    if (n <= 1) return n;
+    return fib(n - 1) + fib(n - 2);
+  };
+  return fib; // no-crash when copying a self-referencing 'fib'
+  // expected-warning-re@-1 {{Address of stack-allocated block declared on line {{[0-9]+}} is captured by a returned block}}
 }

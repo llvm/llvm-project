@@ -539,8 +539,7 @@ unsigned CodeCompleteConsumer::OverloadCandidate::getNumParams() const {
     return Template->getTemplateParameters()->size();
 
   if (Kind == CK_Aggregate) {
-    unsigned Count =
-        std::distance(AggregateType->field_begin(), AggregateType->field_end());
+    unsigned Count = AggregateType->getNumFields();
     if (const auto *CRD = dyn_cast<CXXRecordDecl>(AggregateType))
       Count += CRD->getNumBases();
     return Count;

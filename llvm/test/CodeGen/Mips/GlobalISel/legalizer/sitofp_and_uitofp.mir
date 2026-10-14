@@ -36,7 +36,7 @@ body:             |
     ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $a0 = COPY [[COPY]](s32)
     ; FP32: $a1 = COPY [[COPY1]](s32)
-    ; FP32: JAL &__floatdisf, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
+    ; FP32: JAL &__floatdisf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
     ; FP32: [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
     ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $f0 = COPY [[COPY2]](s32)
@@ -48,7 +48,7 @@ body:             |
     ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $a0 = COPY [[COPY]](s32)
     ; FP64: $a1 = COPY [[COPY1]](s32)
-    ; FP64: JAL &__floatdisf, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
+    ; FP64: JAL &__floatdisf, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
     ; FP64: [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
     ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $f0 = COPY [[COPY2]](s32)
@@ -168,7 +168,7 @@ body:             |
     ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $a0 = COPY [[COPY]](s32)
     ; FP32: $a1 = COPY [[COPY1]](s32)
-    ; FP32: JAL &__floatdidf, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $d0
+    ; FP32: JAL &__floatdidf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $d0
     ; FP32: [[COPY2:%[0-9]+]]:_(s64) = COPY $d0
     ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $d0 = COPY [[COPY2]](s64)
@@ -180,7 +180,7 @@ body:             |
     ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $a0 = COPY [[COPY]](s32)
     ; FP64: $a1 = COPY [[COPY1]](s32)
-    ; FP64: JAL &__floatdidf, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $d0_64
+    ; FP64: JAL &__floatdidf, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $d0_64
     ; FP64: [[COPY2:%[0-9]+]]:_(s64) = COPY $d0_64
     ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $d0 = COPY [[COPY2]](s64)
@@ -300,7 +300,7 @@ body:             |
     ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $a0 = COPY [[COPY]](s32)
     ; FP32: $a1 = COPY [[COPY1]](s32)
-    ; FP32: JAL &__floatundisf, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
+    ; FP32: JAL &__floatundisf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
     ; FP32: [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
     ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $f0 = COPY [[COPY2]](s32)
@@ -312,7 +312,7 @@ body:             |
     ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $a0 = COPY [[COPY]](s32)
     ; FP64: $a1 = COPY [[COPY1]](s32)
-    ; FP64: JAL &__floatundisf, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
+    ; FP64: JAL &__floatundisf, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
     ; FP64: [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
     ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $f0 = COPY [[COPY2]](s32)
@@ -338,7 +338,7 @@ body:             |
     ; FP32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; FP32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32)
-    ; FP32: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP32: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP32: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C1]]
     ; FP32: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[FSUB]](s64)
     ; FP32: $f0 = COPY [[FPTRUNC]](s32)
@@ -348,7 +348,7 @@ body:             |
     ; FP64: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; FP64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP64: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32)
-    ; FP64: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP64: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP64: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C1]]
     ; FP64: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[FSUB]](s64)
     ; FP64: $f0 = COPY [[FPTRUNC]](s32)
@@ -374,7 +374,7 @@ body:             |
     ; FP32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; FP32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[C1]](s32)
-    ; FP32: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP32: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP32: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C2]]
     ; FP32: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[FSUB]](s64)
     ; FP32: $f0 = COPY [[FPTRUNC]](s32)
@@ -386,7 +386,7 @@ body:             |
     ; FP64: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; FP64: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP64: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[C1]](s32)
-    ; FP64: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP64: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP64: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C2]]
     ; FP64: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[FSUB]](s64)
     ; FP64: $f0 = COPY [[FPTRUNC]](s32)
@@ -413,7 +413,7 @@ body:             |
     ; FP32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; FP32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[C1]](s32)
-    ; FP32: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP32: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP32: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C2]]
     ; FP32: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[FSUB]](s64)
     ; FP32: $f0 = COPY [[FPTRUNC]](s32)
@@ -425,7 +425,7 @@ body:             |
     ; FP64: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; FP64: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP64: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[C1]](s32)
-    ; FP64: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP64: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP64: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C2]]
     ; FP64: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[FSUB]](s64)
     ; FP64: $f0 = COPY [[FPTRUNC]](s32)
@@ -452,7 +452,7 @@ body:             |
     ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $a0 = COPY [[COPY]](s32)
     ; FP32: $a1 = COPY [[COPY1]](s32)
-    ; FP32: JAL &__floatundidf, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $d0
+    ; FP32: JAL &__floatundidf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $d0
     ; FP32: [[COPY2:%[0-9]+]]:_(s64) = COPY $d0
     ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $d0 = COPY [[COPY2]](s64)
@@ -464,7 +464,7 @@ body:             |
     ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $a0 = COPY [[COPY]](s32)
     ; FP64: $a1 = COPY [[COPY1]](s32)
-    ; FP64: JAL &__floatundidf, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $d0_64
+    ; FP64: JAL &__floatundidf, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $d0_64
     ; FP64: [[COPY2:%[0-9]+]]:_(s64) = COPY $d0_64
     ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $d0 = COPY [[COPY2]](s64)
@@ -490,7 +490,7 @@ body:             |
     ; FP32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; FP32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32)
-    ; FP32: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP32: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP32: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C1]]
     ; FP32: $d0 = COPY [[FSUB]](s64)
     ; FP32: RetRA implicit $d0
@@ -499,7 +499,7 @@ body:             |
     ; FP64: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; FP64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP64: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32)
-    ; FP64: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP64: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP64: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C1]]
     ; FP64: $d0 = COPY [[FSUB]](s64)
     ; FP64: RetRA implicit $d0
@@ -524,7 +524,7 @@ body:             |
     ; FP32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; FP32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[C1]](s32)
-    ; FP32: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP32: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP32: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C2]]
     ; FP32: $d0 = COPY [[FSUB]](s64)
     ; FP32: RetRA implicit $d0
@@ -535,7 +535,7 @@ body:             |
     ; FP64: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; FP64: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP64: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[C1]](s32)
-    ; FP64: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP64: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP64: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C2]]
     ; FP64: $d0 = COPY [[FSUB]](s64)
     ; FP64: RetRA implicit $d0
@@ -561,7 +561,7 @@ body:             |
     ; FP32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; FP32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[C1]](s32)
-    ; FP32: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP32: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP32: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C2]]
     ; FP32: $d0 = COPY [[FSUB]](s64)
     ; FP32: RetRA implicit $d0
@@ -572,7 +572,7 @@ body:             |
     ; FP64: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; FP64: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1127219200
     ; FP64: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[C1]](s32)
-    ; FP64: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
+    ; FP64: [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP64: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[MV]], [[C2]]
     ; FP64: $d0 = COPY [[FSUB]](s64)
     ; FP64: RetRA implicit $d0

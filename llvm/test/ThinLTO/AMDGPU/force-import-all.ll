@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -module-summary %s -o %t.main.bc
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -module-summary %p/Inputs/in-f1.ll -o %t.in.bc
+; RUN: opt -mtriple=amdgpu7.00-amd-amdhsa -module-summary %s -o %t.main.bc
+; RUN: opt -mtriple=amdgpu7.00-amd-amdhsa -module-summary %p/Inputs/in-f1.ll -o %t.in.bc
 ; RUN: llvm-lto -thinlto-action=run -force-import-all %t.main.bc %t.in.bc --thinlto-save-temps=%t.2.
 ; RUN: llvm-dis %t.2.0.3.imported.bc -o - | FileCheck --check-prefix=MOD1 %s
 ; RUN: llvm-dis %t.2.1.3.imported.bc -o - | FileCheck --check-prefix=MOD2 %s

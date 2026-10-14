@@ -33,25 +33,13 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTION
-};
 
-class TLICheckerOptTable : public opt::GenericOptTable {
+class TLICheckerOptTable : public opt::OptTable {
 public:
-  TLICheckerOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  TLICheckerOptTable() : OptTable(optionTables()) {}
 };
 } // end anonymous namespace
 
@@ -129,10 +117,19 @@ static void dumpTLIEntries(const TargetLibraryInfo &TLI) {
   for (unsigned FI = LibFunc::Begin_LibFunc; FI != LibFunc::End_LibFunc; ++FI) {
     LibFunc LF = static_cast<LibFunc>(FI);
     bool IsAvailable = TLI.has(LF);
-    StringRef FuncName = TargetLibraryInfo::getStandardName(LF);
 
     outs() << (IsAvailable ? "    " : "not ") << "available: ";
-    printPrintableName(outs(), FuncName) << '\n';
+
+    if (IsAvailable) {
+      // Print the (possibly custom) name.
+      // TODO: Should we include the standard name in the printed line?
+      printPrintableName(outs(), TLI.getName(LF));
+    } else {
+      // If it's not available, refer to it by the standard name.
+      printPrintableName(outs(), TargetLibraryInfo::getStandardName(LF));
+    }
+
+    outs() << '\n';
   }
 }
 

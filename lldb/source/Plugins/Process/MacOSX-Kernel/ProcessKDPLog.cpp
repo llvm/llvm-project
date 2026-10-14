@@ -36,3 +36,4 @@ template <> Log::Channel &lldb_private::LogChannelFor<KDPLog>() {
 }
 
 void ProcessKDPLog::Initialize() { Log::Register("kdp-remote", g_channel); }
+void ProcessKDPLog::Terminate() { Log::Unregister("kdp-remote"); }

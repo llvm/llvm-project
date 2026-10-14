@@ -150,8 +150,11 @@ public:
     EI_NORMALIZE,
     EI_POPCOUNT,
     EI_POW,
+    EI_POW_FAST,
     EI_POWN,
+    EI_POWN_FAST,
     EI_POWR,
+    EI_POWR_FAST,
     EI_PREFETCH,
     EI_RADIANS,
     EI_RECIP,
@@ -162,6 +165,7 @@ public:
     EI_RHADD,
     EI_RINT,
     EI_ROOTN,
+    EI_ROOTN_FAST,
     EI_ROTATE,
     EI_ROUND,
     EI_RSQRT,
@@ -308,9 +312,6 @@ public:
     }
 
     static Param getFromTy(Type *Ty, bool Signed);
-
-    template <typename Stream>
-    void mangleItanium(Stream& os);
   };
   static bool isMangled(EFuncId Id) {
     return static_cast<unsigned>(Id) <= static_cast<unsigned>(EI_LAST_MANGLED);
@@ -443,7 +444,6 @@ public:
   std::string getName() const override;
   unsigned getNumArgs() const override;
   FunctionType *getFunctionType(const Module &M) const override;
-  static StringRef getUnmangledName(StringRef MangledName);
 
   bool parseFuncName(StringRef &mangledName) override;
 
@@ -455,7 +455,6 @@ public:
 private:
   std::string mangleNameItanium() const;
 
-  std::string mangleName(StringRef Name) const;
   bool parseUnmangledName(StringRef MangledName);
 
   template <typename Stream> void writeName(Stream &OS) const;

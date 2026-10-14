@@ -80,7 +80,7 @@ uint32_t SBListener::StartListeningForEventClass(SBDebugger &debugger,
     Debugger *lldb_debugger = debugger.get();
     if (!lldb_debugger)
       return 0;
-    BroadcastEventSpec event_spec(ConstString(broadcaster_class), event_mask);
+    BroadcastEventSpec event_spec(broadcaster_class, event_mask);
     return m_opaque_sp->StartListeningForEventSpec(
         lldb_debugger->GetBroadcasterManager(), event_spec);
   } else
@@ -96,7 +96,7 @@ bool SBListener::StopListeningForEventClass(SBDebugger &debugger,
     Debugger *lldb_debugger = debugger.get();
     if (!lldb_debugger)
       return false;
-    BroadcastEventSpec event_spec(ConstString(broadcaster_class), event_mask);
+    BroadcastEventSpec event_spec(broadcaster_class, event_mask);
     return m_opaque_sp->StopListeningForEventSpec(
         lldb_debugger->GetBroadcasterManager(), event_spec);
   } else

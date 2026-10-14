@@ -6,7 +6,7 @@
 // RUN: mkdir %t
 //
 // Install the mock libc++ (simulates the libc++ directory structure).
-// RUN: cp -r %S/Inputs/mock-libcxx %t/
+// RUN: cp -R %S/Inputs/mock-libcxx %t/
 //
 // RUN: cp clang-check %t/mock-libcxx/bin/
 // RUN: cp %s %t/test.cpp

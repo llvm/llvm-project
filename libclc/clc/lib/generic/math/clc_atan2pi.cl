@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/float/definitions.h>
-#include <clc/internal/clc.h>
-#include <clc/math/clc_copysign.h>
-#include <clc/math/clc_fabs.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_ldexp.h>
-#include <clc/math/clc_mad.h>
-#include <clc/math/math.h>
-#include <clc/math/tables.h>
-#include <clc/relational/clc_isinf.h>
-#include <clc/relational/clc_isnan.h>
-#include <clc/relational/clc_select.h>
-#include <clc/shared/clc_max.h>
-#include <clc/shared/clc_min.h>
+#include "clc/float/definitions.h"
+#include "clc/internal/clc.h"
+#include "clc/math/clc_atan_helpers.h"
+#include "clc/math/clc_copysign.h"
+#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_fma.h"
+#include "clc/math/clc_fmax.h"
+#include "clc/math/clc_fmin.h"
+#include "clc/math/clc_mad.h"
+#include "clc/relational/clc_isinf.h"
+#include "clc/relational/clc_isunordered.h"
+#include "clc/relational/clc_select.h"
+#include "clc/relational/clc_signbit.h"
+#include "clc/shared/clc_max.h"
+#include "clc/shared/clc_min.h"
 
-#define __CLC_BODY <clc_atan2pi.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_atan2pi.inc"
+#include "clc/math/gentype.inc"

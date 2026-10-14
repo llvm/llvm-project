@@ -45,6 +45,18 @@ tablegen("MipsGenRegisterBank") {
   td_file = "Mips.td"
 }
 
+tablegen("MipsGenSDNodeInfo") {
+  visibility = [ ":LLVMMipsCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "Mips.td"
+}
+
+tablegen("MipsOptions") {
+  visibility = [ ":LLVMMipsCodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "MipsOptions.td"
+}
+
 static_library("LLVMMipsCodeGen") {
   deps = [
     ":MipsGenCallingConv",
@@ -54,6 +66,8 @@ static_library("LLVMMipsCodeGen") {
     ":MipsGenMCPseudoLowering",
     ":MipsGenPostLegalizeGICombiner",
     ":MipsGenRegisterBank",
+    ":MipsGenSDNodeInfo",
+    ":MipsOptions",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -64,6 +78,7 @@ static_library("LLVMMipsCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
@@ -95,7 +110,6 @@ static_library("LLVMMipsCodeGen") {
     "MipsLegalizerInfo.cpp",
     "MipsMCInstLower.cpp",
     "MipsMachineFunction.cpp",
-    "MipsModuleISelDAGToDAG.cpp",
     "MipsMulMulBugPass.cpp",
     "MipsOptimizePICCall.cpp",
     "MipsOs16.cpp",

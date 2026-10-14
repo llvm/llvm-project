@@ -143,8 +143,9 @@ Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values);
 Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
                     Type resultType);
 
-// Map strings to float types.
-std::optional<FloatType> parseFloatType(MLIRContext *ctx, StringRef name);
+// Map strings to float types. Returns nullptr if the name is not a known
+// floating-point type.
+FloatType parseFloatType(MLIRContext *ctx, StringRef name);
 
 } // namespace arith
 } // namespace mlir

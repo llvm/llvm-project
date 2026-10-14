@@ -429,7 +429,7 @@ _mm512_maskz_rsqrt_pbh(__mmask32 __U, __m512bh __A) {
       (__v32bf)_mm512_setzero_pbh(), (__mmask32)(__U)))
 
 static __inline__ __m512bh __DEFAULT_FN_ATTRS512 _mm512_sqrt_pbh(__m512bh __A) {
-  return (__m512bh)__builtin_ia32_vsqrtbf16512((__v32bf)__A);
+  return __builtin_elementwise_sqrt(__A);
 }
 
 static __inline__ __m512bh __DEFAULT_FN_ATTRS512

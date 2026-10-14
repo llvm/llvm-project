@@ -52,6 +52,14 @@ public:
 
   const HexagonRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &Hexagon::IntRegsRegClass;
+  }
+
+  bool isMIBefore(const MachineInstr *A, const MachineInstr *B) const;
+  bool hasQFPInstrs(const MachineFunction &MF) const;
+
   /// TargetInstrInfo overrides.
 
   /// If the specified machine instruction is a direct
@@ -83,6 +91,8 @@ public:
   bool hasStoreToStackSlot(
       const MachineInstr &MI,
       SmallVectorImpl<const MachineMemOperand *> &Accesses) const override;
+
+  using TargetInstrInfo::analyzeBranch;
 
   /// Analyze the branching code at the end of MBB, returning
   /// true if it cannot be understood (e.g. it's a switch dispatch or isn't
@@ -197,7 +207,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   /// This function is called for all pseudo instructions
@@ -212,8 +222,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      bool &OffsetIsScalable, LocationSize &Width) const override;
 
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.
@@ -229,6 +238,7 @@ public:
 
   /// Return true for post-incremented instructions.
   bool isPostIncrement(const MachineInstr &MI) const override;
+  bool isPostIncWithImmOffset(const MachineInstr &MI) const;
 
   /// Convert the instruction into a predicated instruction.
   /// It returns true if the operation was successful.
@@ -413,8 +423,7 @@ public:
                            const MachineInstr &MI2) const;
   bool isHVXVec(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
-  bool isValidOffset(unsigned Opcode, int Offset,
-                     const TargetRegisterInfo *TRI, bool Extend = true) const;
+  bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
   bool isVecAcc(const MachineInstr &MI) const;
   bool isVecALU(const MachineInstr &MI) const;
   bool isVecUsableNextPacket(const MachineInstr &ProdMI,
@@ -471,7 +480,7 @@ public:
   int getMinValue(const MachineInstr &MI) const;
   short getNonExtOpcode(const MachineInstr &MI) const;
   bool getPredReg(ArrayRef<MachineOperand> Cond, Register &PredReg,
-                  unsigned &PredRegPos, unsigned &PredRegFlags) const;
+                  unsigned &PredRegPos, RegState &PredRegFlags) const;
   short getPseudoInstrPair(const MachineInstr &MI) const;
   short getRegForm(const MachineInstr &MI) const;
   unsigned getSize(const MachineInstr &MI) const;
@@ -505,6 +514,9 @@ public:
                              bool ToBigInstrs = true) const;
   void translateInstrsForDup(MachineBasicBlock::instr_iterator MII,
                              bool ToBigInstrs) const;
+  bool useMachineCombiner() const override { return true; }
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
 
   // Addressing mode relations.
   short changeAddrMode_abs_io(short Opc) const;
@@ -537,6 +549,17 @@ public:
 
   MCInst getNop() const override;
   bool isQFPMul(const MachineInstr *MF) const;
+
+  // Check if the instruction uses a qf32/qf16 operand.
+  // 'Index' specifies the input operand number (1..3). If 0, check any.
+  bool usesQF32Operand(MachineInstr *MI, unsigned Index = 0) const;
+  bool usesQF16Operand(MachineInstr *MI, unsigned Index = 0) const;
+  bool usesQFOperand(MachineInstr *MI, unsigned Index = 0) const;
+
+  // Check if the instruction has a qf32/qf16 output.
+  bool isQFP32Instr(MachineInstr *MI) const;
+  bool isQFP16Instr(MachineInstr *MI) const;
+  bool isQFPInstr(MachineInstr *MI) const;
 };
 
 /// \brief Create RegSubRegPair from a register MachineOperand

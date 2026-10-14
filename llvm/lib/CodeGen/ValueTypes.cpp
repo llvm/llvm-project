@@ -254,6 +254,8 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
     llvm_unreachable("Unknown type!");
   case Type::VoidTyID:
     return MVT::isVoid;
+  case Type::ByteTyID:
+    return getIntegerVT(cast<ByteType>(Ty)->getBitWidth());
   case Type::IntegerTyID:
     return getIntegerVT(cast<IntegerType>(Ty)->getBitWidth());
   case Type::HalfTyID:      return MVT(MVT::f16);
@@ -266,6 +268,10 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
     TargetExtType *TargetExtTy = cast<TargetExtType>(Ty);
     if (TargetExtTy->getName() == "aarch64.svcount")
       return MVT(MVT::aarch64svcount);
+    else if (TargetExtTy->getName() == "wasm.externref")
+      return MVT(MVT::externref);
+    else if (TargetExtTy->getName() == "wasm.funcref")
+      return MVT(MVT::funcref);
     else if (TargetExtTy->getName().starts_with("spirv."))
       return MVT(MVT::spirvbuiltin);
     if (TargetExtTy->getName() == "riscv.vector.tuple") {
@@ -304,6 +310,8 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
     return MVT::getVT(Ty, HandleUnknown);
   case Type::TokenTyID:
     return MVT::Untyped;
+  case Type::ByteTyID:
+    return getIntegerVT(Ty->getContext(), cast<ByteType>(Ty)->getBitWidth());
   case Type::IntegerTyID:
     return getIntegerVT(Ty->getContext(), cast<IntegerType>(Ty)->getBitWidth());
   case Type::FixedVectorTyID:

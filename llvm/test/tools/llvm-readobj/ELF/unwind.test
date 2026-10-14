@@ -358,3 +358,36 @@ ProgramHeaders:
 # BROKEN-CONTENT2-NEXT:   Size:   [[SIZE]]
 # BROKEN-CONTENT2-NEXT:   Corresponding Section:
 # BROKEN-CONTENT2-NEXT: error: '[[FILE]]': program header [index 0] has a p_offset ([[OFFSET]]) + p_filesz ([[SIZE]]) that cannot be represented
+
+## Check we report an error for an unsupported table_enc encoding.
+# RUN: yaml2obj --docnum=5 %s -o %t.badtableenc
+# RUN: not llvm-readelf --unwind %t.badtableenc 2>&1 | FileCheck %s -DFILE=%t.badtableenc --check-prefix=BAD-TABLE-ENC
+
+# BAD-TABLE-ENC:      EHFrameHeader {
+# BAD-TABLE-ENC-NEXT:   Address: 0x1000
+# BAD-TABLE-ENC:        table_enc: 0xfe
+# BAD-TABLE-ENC-NEXT: error: '[[FILE]]': unexpected encoding table_enc 0xfe
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .eh_frame_hdr
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x1000
+    AddressAlign: 4
+## Header with invalid table_enc (0xfe)
+    Content:      011b03fe00000000
+ProgramHeaders:
+  - Type:     PT_GNU_EH_FRAME
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    PAddr:    0x1000
+    MemSize:  0x8
+    FileSize: 0x8
+    FirstSec: .eh_frame_hdr
+    LastSec:  .eh_frame_hdr

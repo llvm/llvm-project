@@ -6,21 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__opencl_c_atomic_order_seq_cst) &&                                \
-    defined(__opencl_c_atomic_scope_device)
-
-#include <clc/atomic/clc_atomic_load.h>
-#include <clc/opencl/atomic/atomic_load.h>
+#include "clc/atomic/clc_atomic_load.h"
+#include "clc/opencl/utils.h"
 
 #define __CLC_FUNCTION atomic_load
 #define __CLC_IMPL_FUNCTION __clc_atomic_load
 #define __CLC_NO_VALUE_ARG
 
-#define __CLC_BODY <atomic_def.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "atomic_def.inc"
+#include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <atomic_def.inc>
-#include <clc/math/gentype.inc>
-
-#endif // defined(__opencl_c_atomic_order_seq_cst) &&
-       // defined(__opencl_c_atomic_scope_device)
+#define __CLC_BODY "atomic_def.inc"
+#include "clc/math/gentype.inc"

@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen -gen-ctags %s | FileCheck %s
-// XFAIL: vg_leak
 
 // Ensure that generated names for anonymous records are valid identifiers via the ctags index.
 

@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-not-null-terminated-result %t -- \
-// RUN: -- -std=c++17 -I %S/Inputs/not-null-terminated-result
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-not-null-terminated-result %t -- \
+// RUN: -- -I %S/Inputs/not-null-terminated-result
 
 // This test case reproduces the crash when the check tries to evaluate
 // a value-dependent expression using EvaluateAsInt() in

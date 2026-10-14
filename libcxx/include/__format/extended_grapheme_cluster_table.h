@@ -61,7 +61,7 @@
 #ifndef _LIBCPP___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H
 #define _LIBCPP___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H
 
-#include <__algorithm/ranges_upper_bound.h>
+#include <__algorithm/upper_bound.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__iterator/access.h>
@@ -1647,7 +1647,8 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[1501] = {
   // size. Then the upper bound for code point 3 will return the entry after
   // 0x1810. After moving to the previous entry the algorithm arrives at the
   // correct entry.
-  ptrdiff_t __i = std::ranges::upper_bound(__entries, (__code_point << 11) | 0x7ffu) - __entries;
+  ptrdiff_t __i =
+      std::upper_bound(std::begin(__entries), std::end(__entries), (__code_point << 11) | 0x7ffu) - __entries;
   if (__i == 0)
     return __property::__none;
 

@@ -30,6 +30,7 @@ const char *NVPTXSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::LoadV2)
     MAKE_CASE(NVPTXISD::LoadV4)
     MAKE_CASE(NVPTXISD::LoadV8)
+    MAKE_CASE(NVPTXISD::MLoad)
     MAKE_CASE(NVPTXISD::LDUV2)
     MAKE_CASE(NVPTXISD::LDUV4)
     MAKE_CASE(NVPTXISD::StoreV2)
@@ -58,6 +59,9 @@ void NVPTXSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   switch (N->getOpcode()) {
   default:
     break;
+  case NVPTXISD::ST_ASYNC_MBARRIER_B128:
+    // invalid node: operand #4 must have pointer type i64, but has type i32
+    return;
   case NVPTXISD::ProxyReg:
     // invalid number of results; expected 2, got 1
     return;

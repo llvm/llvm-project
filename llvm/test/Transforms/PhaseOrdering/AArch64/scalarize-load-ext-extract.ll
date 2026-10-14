@@ -3,18 +3,11 @@
 
 define noundef i32 @load_ext_extract(ptr %src) {
 ; CHECK-LABEL: define noundef range(i32 0, 1021) i32 @load_ext_extract(
-; CHECK-SAME: ptr readonly captures(none) [[SRC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[SRC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = lshr i32 [[TMP14]], 24
-; CHECK-NEXT:    [[TMP16:%.*]] = lshr i32 [[TMP14]], 16
-; CHECK-NEXT:    [[TMP17:%.*]] = and i32 [[TMP16]], 255
-; CHECK-NEXT:    [[TMP18:%.*]] = lshr i32 [[TMP14]], 8
-; CHECK-NEXT:    [[TMP19:%.*]] = and i32 [[TMP18]], 255
-; CHECK-NEXT:    [[TMP20:%.*]] = and i32 [[TMP14]], 255
-; CHECK-NEXT:    [[ADD1:%.*]] = add nuw nsw i32 [[TMP20]], [[TMP19]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i32 [[ADD1]], [[TMP17]]
-; CHECK-NEXT:    [[ADD3:%.*]] = add nuw nsw i32 [[ADD2]], [[TMP15]]
+; CHECK-NEXT:    [[X12:%.*]] = load <4 x i8>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[X12]] to <4 x i32>
+; CHECK-NEXT:    [[ADD3:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    ret i32 [[ADD3]]
 ;
 entry:

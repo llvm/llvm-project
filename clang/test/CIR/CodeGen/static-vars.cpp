@@ -57,7 +57,7 @@ void func1(void) {
   j++;
   // CHECK-DAG: %[[#V2:]] = cir.get_global @_ZZ5func1vE1j : !cir.ptr<!s32i>
   // CHECK-DAG: %[[#V3:]] = cir.load{{.*}} %[[#V2]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-DAG: %[[#V4:]] = cir.unary(inc, %[[#V3]]) nsw : !s32i, !s32i
+  // CHECK-DAG: %[[#V4:]] = cir.inc nsw %[[#V3]] : !s32i
   // CHECK-DAG: cir.store{{.*}} %[[#V4]], %[[#V2]] : !s32i, !cir.ptr<!s32i>
 }
 

@@ -77,7 +77,9 @@ def warn_doc_param_not_attached_to_a_function_decl : Warning<
   InGroup<Documentation>, DefaultIgnore;
 
 def warn_doc_function_method_decl_mismatch : Warning<
-  "'%select{\\|@}0%select{function|functiongroup|method|methodgroup|callback}1' "
+  "'%select{\\|@}0%enum_select<CallableKind>{"
+  "%Function{function}|%FunctionGroup{functiongroup}|"
+  "%Method{method}|%MethodGroup{methodgroup}|%Callback{callback}}1' "
   "command should be used in a comment attached to "
   "%select{a function|a function|an Objective-C method|an Objective-C method|"
   "a pointer to function}2 declaration">,

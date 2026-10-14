@@ -29,8 +29,12 @@ MLIR_CAPI_EXPORTED MlirType mlirNVGPUTensorMapDescriptorTypeGet(
     MlirContext ctx, MlirType tensorMemrefType, int swizzle, int l2promo,
     int oobFill, int interleave);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirNVGPUTensorMapDescriptorTypeGetName(void);
+
 #ifdef __cplusplus
 }
 #endif
+
+#include "mlir/Dialect/NVGPU/Transforms/Passes.capi.h.inc"
 
 #endif // MLIR_C_DIALECT_NVGPU_H

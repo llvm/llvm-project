@@ -211,7 +211,7 @@ TYPED_TEST(ThreadPoolTest, AsyncRAIICaptures) {
   // Create an RAII object that when destroyed schedules more work. This makes
   // it easy to check that the RAII is resolved at the same point as a task runs
   // on the thread pool.
-  auto schedule_next = llvm::make_scope_exit([&Group, &value] {
+  llvm::scope_exit schedule_next([&Group, &value] {
     // We sleep before scheduling the final task to make it much more likely
     // that an incorrect implementation actually exbitits a bug. Without the
     // sleep, we may get "lucky" and have the second task finish before the

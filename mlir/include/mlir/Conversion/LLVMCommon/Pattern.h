@@ -54,19 +54,45 @@ LogicalResult intrinsicRewrite(Operation *op, StringRef intrinsic,
                                const LLVMTypeConverter &typeConverter,
                                RewriterBase &rewriter);
 
+/// Return "true" if the given type is an unsupported floating point type.
+/// In case of a vector type, return "true" if the element type is an
+/// unsupported floating point type.
+bool isUnsupportedFloatingPointType(const TypeConverter &typeConverter,
+                                    Type type);
+/// Return "true" if the given op has any unsupported floating point
+/// types (either operands or results).
+bool opHasUnsupportedFloatingPointTypes(Operation *op,
+                                        const TypeConverter &typeConverter);
 } // namespace detail
 
 /// Decomposes a `src` value into a set of values of type `dstType` through
-/// series of bitcasts and vector ops. Src and dst types are expected to be int
-/// or float types or vector types of them.
-SmallVector<Value> decomposeValue(OpBuilder &builder, Location loc, Value src,
-                                  Type dstType);
+/// series of bitcasts and vector ops. Handles int, float, vector types as well
+/// as LLVM aggregate types (LLVMArrayType, LLVMStructType) by recursively
+/// extracting elements.
+///
+/// When a non-aggregate's bitwidth is not evenly divisible by the bitwidth of
+/// `dstType` width, the source value will be zero-extended to the next
+/// (multiple of) that bitwidth before decomposition.
+///
+/// When `permitVariablySizedScalars` is true, leaf types that have no fixed
+/// bit width (e.g., `!llvm.ptr`) are passed through as-is (1 element in
+/// result). When false (default), encountering such a type returns failure.
+LogicalResult decomposeValue(OpBuilder &builder, Location loc, Value src,
+                             Type dstType, SmallVectorImpl<Value> &result,
+                             bool permitVariablySizedScalars = false);
 
 /// Composes a set of `src` values into a single value of type `dstType` through
-/// series of bitcasts and vector ops. Inversely to `decomposeValue`, this
-/// function is used to combine multiple values into a single value.
+/// series of bitcasts and vector ops, and aggregate builders. This is the
+/// inverse of `decomposeValue` and expects the values in `src` to have the
+/// order and padding bits that that function would produce.
 Value composeValue(OpBuilder &builder, Location loc, ValueRange src,
                    Type dstType);
+
+/// Creates an `llvm.mlir.constant` producing `value` as `resultType`, which is
+/// expected to be the converted index type. The value attribute is built from
+/// `resultType` so that the two agree.
+Value createIndexAttrConstant(OpBuilder &builder, Location loc, Type resultType,
+                              int64_t value);
 
 /// Performs the index computation to get to the element at `indices` of the
 /// memory pointed to by `memRefDesc`, using the layout map of `type`.
@@ -142,9 +168,9 @@ protected:
   /// buffer size from these sizes.
   ///
   /// For example, memref<4x?xf32> with `sizeInBytes = true` emits:
-  /// `sizes[0]`   = llvm.mlir.constant(4 : index) : i64
+  /// `sizes[0]`   = llvm.mlir.constant(4 : i64) : i64
   /// `sizes[1]`   = `dynamicSizes[0]`
-  /// `strides[1]` = llvm.mlir.constant(1 : index) : i64
+  /// `strides[1]` = llvm.mlir.constant(1 : i64) : i64
   /// `strides[0]` = `sizes[0]`
   /// %size        = llvm.mul `sizes[0]`, `sizes[1]` : i64
   /// %nullptr     = llvm.mlir.zero : !llvm.ptr
@@ -153,9 +179,9 @@ protected:
   /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr to i64
   ///
   /// If `sizeInBytes = false`, memref<4x?xf32> emits:
-  /// `sizes[0]`   = llvm.mlir.constant(4 : index) : i64
+  /// `sizes[0]`   = llvm.mlir.constant(4 : i64) : i64
   /// `sizes[1]`   = `dynamicSizes[0]`
-  /// `strides[1]` = llvm.mlir.constant(1 : index) : i64
+  /// `strides[1]` = llvm.mlir.constant(1 : i64) : i64
   /// `strides[0]` = `sizes[0]`
   /// %size        = llvm.mul `sizes[0]`, `sizes[1]` : i64
   void getMemRefDescriptorSizes(Location loc, MemRefType memRefType,
@@ -203,7 +229,7 @@ protected:
 
 /// Utility class for operation conversions targeting the LLVM dialect that
 /// match exactly one source operation.
-template <typename SourceOp>
+template <typename SourceOp, bool FailOnUnsupportedFP = false>
 class ConvertOpToLLVMPattern : public ConvertToLLVMPattern {
 public:
   using OpAdaptor = typename SourceOp::Adaptor;
@@ -220,12 +246,24 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
+    // Bail on unsupported floating point types. (These are type-converted to
+    // integer types.)
+    if (FailOnUnsupportedFP && LLVM::detail::opHasUnsupportedFloatingPointTypes(
+                                   op, *this->typeConverter)) {
+      return rewriter.notifyMatchFailure(op, "unsupported floating point type");
+    }
     auto sourceOp = cast<SourceOp>(op);
     return matchAndRewrite(sourceOp, OpAdaptor(operands, sourceOp), rewriter);
   }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const final {
+    // Bail on unsupported floating point types. (These are type-converted to
+    // integer types.)
+    if (FailOnUnsupportedFP && LLVM::detail::opHasUnsupportedFloatingPointTypes(
+                                   op, *this->typeConverter)) {
+      return rewriter.notifyMatchFailure(op, "unsupported floating point type");
+    }
     auto sourceOp = cast<SourceOp>(op);
     return matchAndRewrite(sourceOp, OneToNOpAdaptor(operands, sourceOp),
                            rewriter);
@@ -306,8 +344,9 @@ public:
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     return LLVM::detail::oneToOneRewrite(
-        op, TargetOp::getOperationName(), adaptor.getOperands(), op->getAttrs(),
-        /*propertiesAttr=*/Attribute{}, *this->getTypeConverter(), rewriter);
+        op, TargetOp::getOperationName(), adaptor.getOperands(),
+        op->getDiscardableAttrDictionary().getValue(),
+        op->getPropertiesAsAttribute(), *this->getTypeConverter(), rewriter);
   }
 };
 

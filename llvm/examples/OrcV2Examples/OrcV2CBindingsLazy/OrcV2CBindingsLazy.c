@@ -71,16 +71,19 @@ LLVMErrorRef parseExampleModule(const char *Source, size_t Len,
   // Create an LLVMContext for the Module.
   LLVMContextRef Ctx = LLVMContextCreate();
 
-  // Wrap Source in a MemoryBuffer
-  LLVMMemoryBufferRef MB =
-      LLVMCreateMemoryBufferWithMemoryRange(Source, Len, Name, 0);
-
   // Parse the LLVM module.
   LLVMModuleRef M;
   char *ErrMsg;
-  if (LLVMParseIRInContext(Ctx, MB, &M, &ErrMsg)) {
-    return LLVMCreateStringError(ErrMsg);
-    // TODO: LLVMDisposeMessage(ErrMsg);
+  // Wrap Source in a MemoryBuffer.
+  LLVMMemoryBufferRef MB =
+      LLVMCreateMemoryBufferWithMemoryRange(Source, Len, Name, 0);
+  LLVMBool Ret = LLVMParseIRInContext2(Ctx, MB, &M, &ErrMsg);
+  LLVMDisposeMemoryBuffer(MB);
+
+  if (Ret) {
+    LLVMErrorRef Err = LLVMCreateStringError(ErrMsg);
+    LLVMDisposeMessage(ErrMsg);
+    return Err;
   }
 
   // Create a new ThreadSafeContext to hold the context.

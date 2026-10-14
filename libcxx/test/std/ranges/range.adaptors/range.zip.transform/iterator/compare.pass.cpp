@@ -16,6 +16,7 @@
 
 #include <ranges>
 
+#include <cassert>
 #include <compare>
 
 #include "test_iterators.h"

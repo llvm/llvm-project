@@ -17,6 +17,7 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenSchedule.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
@@ -39,18 +40,25 @@ static cl::opt<unsigned>
                  cl::desc("Make -gen-asm-writer emit assembly writer #N"),
                  cl::cat(AsmWriterCat));
 
-/// getValueType - Return the MVT::SimpleValueType that the specified TableGen
+/// Returns the MVT that the specified TableGen
 /// record corresponds to.
-MVT::SimpleValueType llvm::getValueType(const Record *Rec) {
-  return (MVT::SimpleValueType)Rec->getValueAsInt("Value");
+MVT llvm::getValueType(const Record *Rec) {
+  static const DenseMap<StringRef, MVT> ValueTypes = {
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)      \
+  {#Ty, MVT::Ty},
+#include "llvm/CodeGen/GenVT.inc"
+#undef GET_VT_ATTR
+      {"INVALID_SIMPLE_VALUE_TYPE", MVT::INVALID_SIMPLE_VALUE_TYPE}};
+  return ValueTypes.lookup(Rec->getValueAsString("LLVMName"));
 }
 
-StringRef llvm::getEnumName(MVT::SimpleValueType T) {
+StringRef llvm::getEnumName(MVT T) {
   // clang-format off
-  switch (T) {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)   \
+  switch (T.SimpleTy) {
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)   \
   case MVT::Ty: return "MVT::" # Ty;
 #include "llvm/CodeGen/GenVT.inc"
+#undef GET_VT_ATTR
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
   }
   // clang-format on
@@ -83,6 +91,19 @@ CodeGenTarget::~CodeGenTarget() = default;
 
 StringRef CodeGenTarget::getName() const { return TargetRec->getName(); }
 
+ArrayRef<const Record *> CodeGenTarget::getAllRegClassByHwMode() const {
+  if (!RegClassByHwModeList) {
+    RegClassByHwModeList.emplace();
+    for (const Record *R :
+         Records.getAllDerivedDefinitions("RegClassByHwMode")) {
+      if (!R->getValueAsListOfDefs("Objects").empty())
+        RegClassByHwModeList->push_back(R);
+    }
+  }
+
+  return *RegClassByHwModeList;
+}
+
 /// getInstNamespace - Find and return the target machine's instruction
 /// namespace. The namespace is cached because it is requested multiple times.
 StringRef CodeGenTarget::getInstNamespace() const {
@@ -109,7 +130,11 @@ const Record *CodeGenTarget::getInstructionSet() const {
 }
 
 bool CodeGenTarget::getAllowRegisterRenaming() const {
-  return TargetRec->getValueAsInt("AllowRegisterRenaming");
+  return TargetRec->getValueAsBit("AllowRegisterRenaming");
+}
+
+bool CodeGenTarget::getRegistersAreIntervals() const {
+  return TargetRec->getValueAsBit("RegistersAreIntervals");
 }
 
 /// getAsmParser - Return the AssemblyParser definition for this target.
@@ -155,7 +180,8 @@ const Record *CodeGenTarget::getAsmWriter() const {
 
 CodeGenRegBank &CodeGenTarget::getRegBank() const {
   if (!RegBank)
-    RegBank = std::make_unique<CodeGenRegBank>(Records, getHwModes());
+    RegBank = std::make_unique<CodeGenRegBank>(Records, getHwModes(),
+                                               getRegistersAreIntervals());
   return *RegBank;
 }
 
@@ -166,8 +192,8 @@ const CodeGenRegister *CodeGenTarget::getRegisterByName(StringRef Name) const {
 }
 
 const CodeGenRegisterClass &
-CodeGenTarget::getRegisterClass(const Record *R) const {
-  return *getRegBank().getRegClass(R);
+CodeGenTarget::getRegisterClass(const Record *R, ArrayRef<SMLoc> Loc) const {
+  return *getRegBank().getRegClass(R, Loc);
 }
 
 std::vector<ValueTypeByHwMode>
@@ -220,12 +246,14 @@ const Record *CodeGenTarget::getInitValueAsRegClassLike(const Init *V) const {
   const DefInit *VDefInit = dyn_cast<DefInit>(V);
   if (!VDefInit)
     return nullptr;
+  return getAsRegClassLike(VDefInit->getDef());
+}
 
-  const Record *RegClass = VDefInit->getDef();
-  if (RegClass->isSubClassOf("RegisterOperand"))
-    return RegClass->getValueAsDef("RegClass");
+const Record *CodeGenTarget::getAsRegClassLike(const Record *Rec) const {
+  if (Rec->isSubClassOf("RegisterOperand"))
+    return Rec->getValueAsDef("RegClass");
 
-  return RegClass->isSubClassOf("RegisterClassLike") ? RegClass : nullptr;
+  return Rec->isSubClassOf("RegisterClassLike") ? Rec : nullptr;
 }
 
 CodeGenSchedModels &CodeGenTarget::getSchedModels() const {

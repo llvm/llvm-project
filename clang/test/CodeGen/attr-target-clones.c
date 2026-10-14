@@ -125,6 +125,35 @@ void __attribute__((target_clones("default, arch=ivybridge"))) unused(void) {}
 // WINDOWS: musttail call void @unused.arch_ivybridge.0
 // WINDOWS: musttail call void @unused.default.1
 
+int __attribute__((target_clones("sse4.2, default"))) inherited(void);
+int inherited(void) { return 0; }
+// LINUX: define {{.*}}i32 @inherited.sse4.2.0()
+// LINUX: define {{.*}}i32 @inherited.default.1()
+// LINUX: define weak_odr ptr @inherited.resolver() #[[ATTR_RESOLVER]] comdat
+// LINUX: ret ptr @inherited.sse4.2.0
+// LINUX: ret ptr @inherited.default.1
+
+// DARWIN: define {{.*}}i32 @inherited.sse4.2.0()
+// DARWIN: define {{.*}}i32 @inherited.default.1()
+// DARWIN: define weak_odr ptr @inherited.resolver() #[[ATTR_RESOLVER]] {
+// DARWIN: ret ptr @inherited.sse4.2.0
+// DARWIN: ret ptr @inherited.default.1
+
+// WINDOWS: define dso_local i32 @inherited.sse4.2.0()
+// WINDOWS: define dso_local i32 @inherited.default.1()
+// WINDOWS: define weak_odr dso_local i32 @inherited() #[[ATTR_RESOLVER]] comdat
+// WINDOWS: musttail call i32 @inherited.sse4.2.0
+// WINDOWS: musttail call i32 @inherited.default.1
+
+int test_inherited(void) {
+  // LINUX: define {{.*}}i32 @test_inherited() #[[DEF:[0-9]+]]
+  // DARWIN: define {{.*}}i32 @test_inherited() #[[DEF:[0-9]+]]
+  // WINDOWS: define dso_local i32 @test_inherited() #[[DEF:[0-9]+]]
+  return inherited();
+  // LINUX: call i32 @inherited()
+  // DARWIN: call i32 @inherited()
+  // WINDOWS: call i32 @inherited()
+}
 
 inline int __attribute__((target_clones("arch=sandybridge,default,sse4.2")))
 foo_inline(void) { return 0; }
@@ -215,16 +244,16 @@ int isa_level(int) { return 0; }
 // LINUX:      define{{.*}} i32 @isa_level.arch_x86-64-v4.3(
 // LINUX:      define weak_odr ptr @isa_level.resolver() #[[ATTR_RESOLVER]] comdat
 // LINUX:        call void @__cpu_indicator_init()
-// LINUX-NEXT:   load i32, ptr getelementptr inbounds ([3 x i32], ptr @__cpu_features2, i32 0, i32 2)
+// LINUX-NEXT:   load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8)
 // LINUX-NEXT:   and i32 %[[#]], 4
 // LINUX:        ret ptr @isa_level.arch_x86-64-v4.3
-// LINUX:        load i32, ptr getelementptr inbounds ([3 x i32], ptr @__cpu_features2, i32 0, i32 2)
+// LINUX:        load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8)
 // LINUX-NEXT:   and i32 %[[#]], 2
 // LINUX:        ret ptr @isa_level.arch_x86-64-v3.2
-// LINUX:        load i32, ptr getelementptr inbounds ([3 x i32], ptr @__cpu_features2, i32 0, i32 2)
+// LINUX:        load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8)
 // LINUX-NEXT:   and i32 %[[#]], 1
 // LINUX:        ret ptr @isa_level.arch_x86-64-v2.1
-// LINUX:        load i32, ptr getelementptr inbounds ([3 x i32], ptr @__cpu_features2, i32 0, i32 1)
+// LINUX:        load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 4)
 // LINUX-NEXT:   and i32 %[[#]], -2147483648
 // LINUX:        ret ptr @isa_level.arch_x86-64.0
 // LINUX:        ret ptr @isa_level.default.4
@@ -236,16 +265,16 @@ int isa_level(int) { return 0; }
 // DARWIN:      define{{.*}} i32 @isa_level.arch_x86-64-v4.3(
 // DARWIN:      define weak_odr ptr @isa_level.resolver() #[[ATTR_RESOLVER]] {
 // DARWIN:        call void @__cpu_indicator_init()
-// DARWIN-NEXT:   load i32, ptr getelementptr inbounds ([3 x i32], ptr @__cpu_features2, i32 0, i32 2)
+// DARWIN-NEXT:   load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8)
 // DARWIN-NEXT:   and i32 %[[#]], 4
 // DARWIN:        ret ptr @isa_level.arch_x86-64-v4.3
-// DARWIN:        load i32, ptr getelementptr inbounds ([3 x i32], ptr @__cpu_features2, i32 0, i32 2)
+// DARWIN:        load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8)
 // DARWIN-NEXT:   and i32 %[[#]], 2
 // DARWIN:        ret ptr @isa_level.arch_x86-64-v3.2
-// DARWIN:        load i32, ptr getelementptr inbounds ([3 x i32], ptr @__cpu_features2, i32 0, i32 2)
+// DARWIN:        load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8)
 // DARWIN-NEXT:   and i32 %[[#]], 1
 // DARWIN:        ret ptr @isa_level.arch_x86-64-v2.1
-// DARWIN:        load i32, ptr getelementptr inbounds ([3 x i32], ptr @__cpu_features2, i32 0, i32 1)
+// DARWIN:        load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 4)
 // DARWIN-NEXT:   and i32 %[[#]], -2147483648
 // DARWIN:        ret ptr @isa_level.arch_x86-64.0
 // DARWIN:        ret ptr @isa_level.default.4

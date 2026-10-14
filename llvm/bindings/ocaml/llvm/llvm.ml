@@ -180,7 +180,7 @@ module Opcode  = struct
   | Invalid (* not an instruction *)
   (* Terminator Instructions *)
   | Ret
-  | Br
+  | Invalid3
   | Switch
   | IndirectBr
   | Invoke
@@ -252,6 +252,9 @@ module Opcode  = struct
   | FNeg
   | CallBr
   | Freeze
+  | PtrToAddr
+  | UncondBr
+  | CondBr
 end
 
 module LandingPadClauseTy = struct
@@ -352,6 +355,52 @@ module ModuleFlagBehavior = struct
   | AppendUnique
 end
 
+module GEPNoWrapFlags = struct
+  let none = 0
+  let inbounds = 1
+  let nusw = 2
+  let nuw = 4
+end
+
+module Endian = struct
+  type t =
+  | Big
+  | Little
+end
+
+module DataLayout = struct
+  type t
+
+  external of_string : string -> t = "llvm_datalayout_of_string"
+  external as_string : t -> string = "llvm_datalayout_as_string"
+  external byte_order : t -> Endian.t = "llvm_datalayout_byte_order"
+  external pointer_size : t -> int = "llvm_datalayout_pointer_size"
+  external intptr_type : llcontext -> t -> lltype
+                       = "llvm_datalayout_intptr_type"
+  external qualified_pointer_size : int -> t -> int
+                                  = "llvm_datalayout_qualified_pointer_size"
+  external qualified_intptr_type : llcontext -> int -> t -> lltype
+                                 = "llvm_datalayout_qualified_intptr_type"
+  external size_in_bits : lltype -> t -> Int64.t
+                        = "llvm_datalayout_size_in_bits"
+  external store_size : lltype -> t -> Int64.t
+                      = "llvm_datalayout_store_size"
+  external abi_size : lltype -> t -> Int64.t
+                    = "llvm_datalayout_abi_size"
+  external abi_align : lltype -> t -> int
+                     = "llvm_datalayout_abi_align"
+  external stack_align : lltype -> t -> int
+                       = "llvm_datalayout_stack_align"
+  external preferred_align : lltype -> t -> int
+                           = "llvm_datalayout_preferred_align"
+  external preferred_align_of_global : llvalue -> t -> int
+                                   = "llvm_datalayout_preferred_align_of_global"
+  external element_at_offset : lltype -> Int64.t -> t -> int
+                             = "llvm_datalayout_element_at_offset"
+  external offset_of_element : lltype -> int -> t -> Int64.t
+                             = "llvm_datalayout_offset_of_element"
+end
+
 exception IoError of string
 
 let () = Callback.register_exception "Llvm.IoError" (IoError "")
@@ -390,7 +439,6 @@ external set_diagnostic_handler
 (*===-- Contexts ----------------------------------------------------------===*)
 external create_context : unit -> llcontext = "llvm_create_context"
 external dispose_context : llcontext -> unit = "llvm_dispose_context"
-external global_context : unit -> llcontext = "llvm_global_context"
 external mdkind_id : llcontext -> string -> llmdkind = "llvm_mdkind_id"
 
 (*===-- Attributes --------------------------------------------------------===*)
@@ -441,9 +489,9 @@ external target_triple: llmodule -> string
                       = "llvm_target_triple"
 external set_target_triple: string -> llmodule -> unit
                           = "llvm_set_target_triple"
-external data_layout: llmodule -> string
+external data_layout: llmodule -> DataLayout.t
                     = "llvm_data_layout"
-external set_data_layout: string -> llmodule -> unit
+external set_data_layout: DataLayout.t -> llmodule -> unit
                         = "llvm_set_data_layout"
 external dump_module : llmodule -> unit = "llvm_dump_module"
 external print_module : string -> llmodule -> unit = "llvm_print_module"
@@ -455,8 +503,8 @@ external module_context : llmodule -> llcontext = "llvm_get_module_context"
 external get_module_identifier : llmodule -> string
                                = "llvm_get_module_identifier"
 
-external set_module_identifer : llmodule -> string -> unit
-                              = "llvm_set_module_identifier"
+external set_module_identifier : llmodule -> string -> unit
+                               = "llvm_set_module_identifier"
 
 external get_module_flag : llmodule -> string -> llmetadata option
                          = "llvm_get_module_flag"
@@ -645,11 +693,8 @@ external aggregate_element : llvalue -> int -> llvalue option
                            = "llvm_aggregate_element"
 
 (*--... Constant expressions ...............................................--*)
-external align_of : lltype -> llvalue = "llvm_align_of"
-external size_of : lltype -> llvalue = "llvm_size_of"
 external const_neg : llvalue -> llvalue = "llvm_const_neg"
 external const_nsw_neg : llvalue -> llvalue = "llvm_const_nsw_neg"
-external const_nuw_neg : llvalue -> llvalue = "llvm_const_nuw_neg"
 external const_not : llvalue -> llvalue = "llvm_const_not"
 external const_add : llvalue -> llvalue -> llvalue = "llvm_const_add"
 external const_nsw_add : llvalue -> llvalue -> llvalue = "llvm_const_nsw_add"
@@ -658,10 +703,11 @@ external const_sub : llvalue -> llvalue -> llvalue = "llvm_const_sub"
 external const_nsw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nsw_sub"
 external const_nuw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nuw_sub"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
-external const_gep : lltype -> llvalue -> llvalue array -> llvalue
-                   = "llvm_const_gep"
-external const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
-                             = "llvm_const_in_bounds_gep"
+external const_ptradd : llvalue -> llvalue -> int -> llvalue
+                      = "llvm_const_ptradd"
+external const_ptradd_from_indices : DataLayout.t -> lltype -> llvalue ->
+                                     llvalue array -> int -> llvalue option
+                                   = "llvm_const_ptradd_from_indices"
 external const_trunc : llvalue -> lltype -> llvalue = "llvm_const_trunc"
 external const_ptrtoint : llvalue -> lltype -> llvalue = "llvm_const_ptrtoint"
 external const_inttoptr : llvalue -> lltype -> llvalue = "llvm_const_inttoptr"
@@ -793,7 +839,17 @@ external define_function : string -> lltype -> llmodule -> llvalue
 external lookup_function : string -> llmodule -> llvalue option
                          = "llvm_lookup_function"
 external delete_function : llvalue -> unit = "llvm_delete_function"
-external is_intrinsic : llvalue -> bool = "llvm_is_intrinsic"
+external lookup_intrinsic_id : string -> int = "llvm_lookup_intrinsic_id"
+external intrinsic_id : llvalue -> int = "llvm_intrinsic_id"
+let is_intrinsic v = intrinsic_id v <> 0
+external intrinsic_declaration : llmodule -> int -> lltype array -> llvalue
+                               = "llvm_intrinsic_declaration"
+external intrinsic_type : llcontext -> int -> lltype array -> lltype
+                        = "llvm_intrinsic_type"
+external intrinsic_name : int -> string = "llvm_intrinsic_name"
+external intrinsic_overloaded_name : llmodule -> int -> lltype array -> string
+                                   = "llvm_intrinsic_overloaded_name"
+external intrinsic_is_overloaded : int -> bool = "llvm_intrinsic_is_overloaded"
 external function_call_conv : llvalue -> int = "llvm_function_call_conv"
 external set_function_call_conv : int -> llvalue -> unit
                                 = "llvm_set_function_call_conv"
@@ -1081,7 +1137,7 @@ let is_terminator llv =
   let open ValueKind in
   let open Opcode in
   match classify_value llv with
-    | Instruction (Br | IndirectBr | Invoke | Resume | Ret | Switch | Unreachable)
+    | Instruction (UncondBr | CondBr | IndirectBr | Invoke | Resume | Ret | Switch | Unreachable)
       -> true
     | _ -> false
 
@@ -1125,12 +1181,13 @@ external set_condition : llvalue -> llvalue -> unit
 external is_conditional : llvalue -> bool = "llvm_is_conditional"
 
 let get_branch llv =
-  if classify_value llv <> ValueKind.Instruction Opcode.Br then
-    None
-  else if is_conditional llv then
+  let kind = classify_value llv in
+  if kind = ValueKind.Instruction Opcode.UncondBr then
+    Some (`Unconditional (successor llv 0))
+  else if kind = ValueKind.Instruction Opcode.CondBr then
     Some (`Conditional (condition llv, successor llv 0, successor llv 1))
   else
-    Some (`Unconditional (successor llv 0))
+    None
 
 (*--... Operations on phi nodes ............................................--*)
 external add_incoming : (llvalue * llbasicblock) -> llvalue -> unit
@@ -1264,8 +1321,6 @@ external build_neg : llvalue -> string -> llbuilder -> llvalue
                    = "llvm_build_neg"
 external build_nsw_neg : llvalue -> string -> llbuilder -> llvalue
                        = "llvm_build_nsw_neg"
-external build_nuw_neg : llvalue -> string -> llbuilder -> llvalue
-                       = "llvm_build_nuw_neg"
 external build_fneg : llvalue -> string -> llbuilder -> llvalue
                     = "llvm_build_fneg"
 external build_not : llvalue -> string -> llbuilder -> llvalue

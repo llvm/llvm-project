@@ -463,10 +463,9 @@ define <8 x i16> @test_vrev32Q16_undef(ptr %A) nounwind {
 define void @test_vrev64(ptr nocapture %source, ptr nocapture %dst) nounwind ssp {
 ; CHECK-SD-LABEL: test_vrev64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr q0, [x0]
-; CHECK-SD-NEXT:    mov h1, v0[5]
-; CHECK-SD-NEXT:    st1.h { v0 }[6], [x1]
-; CHECK-SD-NEXT:    str h1, [x1, #2]
+; CHECK-SD-NEXT:    ldr d0, [x0, #8]
+; CHECK-SD-NEXT:    mov.h v0[0], v0[2]
+; CHECK-SD-NEXT:    str s0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_vrev64:
@@ -492,7 +491,6 @@ define void @float_vrev64(ptr nocapture %source, ptr nocapture %dest) nounwind n
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-SD-NEXT:    add x8, x0, #12
-; CHECK-SD-NEXT:    dup.4s v0, v0[0]
 ; CHECK-SD-NEXT:    ld1.s { v0 }[1], [x8]
 ; CHECK-SD-NEXT:    str q0, [x1, #176]
 ; CHECK-SD-NEXT:    ret
@@ -530,28 +528,22 @@ declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>) nounwind readnone
 define void @test_rev16_truncstore() {
 ; CHECK-SD-LABEL: test_rev16_truncstore:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cbnz wzr, .LBB38_2
 ; CHECK-SD-NEXT:  .LBB38_1: // %cleanup
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    ldrh w8, [x8]
 ; CHECK-SD-NEXT:    rev16 w8, w8
 ; CHECK-SD-NEXT:    strh w8, [x8]
-; CHECK-SD-NEXT:    cbz wzr, .LBB38_1
-; CHECK-SD-NEXT:  .LBB38_2: // %fail
-; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:    b .LBB38_1
 ;
 ; CHECK-GI-LABEL: test_rev16_truncstore:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    tbnz wzr, #0, .LBB38_2
 ; CHECK-GI-NEXT:  .LBB38_1: // %cleanup
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldrh w8, [x8]
 ; CHECK-GI-NEXT:    rev w8, w8
 ; CHECK-GI-NEXT:    lsr w8, w8, #16
 ; CHECK-GI-NEXT:    strh w8, [x8]
-; CHECK-GI-NEXT:    tbz wzr, #0, .LBB38_1
-; CHECK-GI-NEXT:  .LBB38_2: // %fail
-; CHECK-GI-NEXT:    ret
+; CHECK-GI-NEXT:    b .LBB38_1
 entry:
   br label %body
 

@@ -8,7 +8,6 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
@@ -22,11 +21,9 @@ namespace lldb_dap {
 
 /// Launch request; value of command field is 'launch'.
 Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
-  // Validate that we have a well formed launch request.
-  if (!arguments.launchCommands.empty() &&
-      arguments.console != protocol::eConsoleInternal)
-    return make_error<DAPError>(
-        "'launchCommands' and non-internal 'console' are mutually exclusive");
+  // Initialize DAP debugger.
+  if (Error err = dap.InitializeDebugger())
+    return err;
 
   dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
   dap.last_launch_request = arguments;
@@ -65,10 +62,6 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
   dap.RunPostRunCommands();
 
   return Error::success();
-}
-
-void LaunchRequestHandler::PostRun() const {
-  dap.SendJSON(CreateEventObject("initialized"));
 }
 
 } // namespace lldb_dap

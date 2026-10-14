@@ -11,6 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 let TargetPrefix = "riscv" in {
+  // Andes Performance Extension
+  def int_riscv_nds_ffb     : Intrinsic<[llvm_anyint_ty],
+                                        [LLVMMatchType<0>, LLVMMatchType<0>],
+                                        [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_nds_ffzmism : Intrinsic<[llvm_anyint_ty],
+                                        [LLVMMatchType<0>, LLVMMatchType<0>],
+                                        [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_nds_ffmism  : Intrinsic<[llvm_anyint_ty],
+                                        [LLVMMatchType<0>, LLVMMatchType<0>],
+                                        [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_nds_flmism  : Intrinsic<[llvm_anyint_ty],
+                                        [LLVMMatchType<0>, LLVMMatchType<0>],
+                                        [IntrNoMem, IntrSpeculatable]>;
+
   // Andes Vector BFloat16 Conversion Extension
   def int_riscv_nds_vfwcvt_s_bf16 : RISCVConversionUnMasked;
   def int_riscv_nds_vfncvt_bf16_s : RISCVConversionUnMaskedRoundingMode;

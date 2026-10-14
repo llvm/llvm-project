@@ -629,6 +629,20 @@ void fn() {
 
 }
 
+namespace GH176045 {
+
+template <int NumArgs> struct MessageFormat {
+  template <int N> consteval MessageFormat(const char (&)[N]) {}
+};
+template <typename... Ts> void format(MessageFormat<sizeof...(Ts)>, Ts ...args);
+
+auto message = [] {
+   format("");
+   format("");
+};
+
+}
+
 
 namespace GH109096 {
 consteval void undefined();
@@ -636,7 +650,7 @@ template <typename T>
 struct scope_exit {
     T t;
     constexpr ~scope_exit() { t(); }
-    // expected-error@-1 {{call to immediate function 'GH109096::(anonymous class)::operator()' is not a constant expression}} \
+    // expected-error@-1 {{call to immediate function 'GH109096::(lambda)::operator()' is not a constant expression}} \
     // expected-note@-1 {{implicit use of 'this' pointer is only allowed within the evaluation}}
 };
 

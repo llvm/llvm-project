@@ -6,8 +6,7 @@ tablegen(LLVM ARMGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM ARMGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM ARMGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM ARMGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM ARMGenDisassemblerTables.inc -gen-disassembler
-              -ignore-non-decodable-operands)
+tablegen(LLVM ARMGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM ARMGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM ARMGenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM ARMGenInstrInfo.inc -gen-instr-info)
@@ -18,6 +17,7 @@ tablegen(LLVM ARMGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM ARMGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM ARMGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM ARMGenSystemRegister.inc -gen-searchable-tables)
+tablegen(LLVM ARMGenTargetDef.inc -gen-arm-target-def)
 
 add_public_tablegen_target(ARMCommonTableGen)
 

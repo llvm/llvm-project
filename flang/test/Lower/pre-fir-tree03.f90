@@ -21,7 +21,6 @@ program test_omp
     ! CHECK: EndDoStmt
     end do
     ! CHECK: <<End DoConstruct>>
-    ! CHECK: OmpEndLoopDirective
     !$omp end do
     ! CHECK: <<End OpenMPConstruct>>
 
@@ -39,7 +38,6 @@ program test_omp
     end do
     ! CHECK: <<End DoConstruct>>
     ! CHECK: <<End OpenMPConstruct>>
-    ! CHECK-NOT: OmpEndLoopDirective
     ! CHECK: PrintStmt
     print *, "no in omp do"
   !$omp end parallel

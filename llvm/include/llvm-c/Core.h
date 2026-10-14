@@ -18,9 +18,8 @@
 #include "llvm-c/Deprecated.h"
 #include "llvm-c/ErrorHandling.h"
 #include "llvm-c/ExternC.h"
-#include "llvm-c/Visibility.h"
-
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -31,6 +30,8 @@ LLVM_C_EXTERN_C_BEGIN
  *
  * @{
  */
+
+typedef struct LLVMOpaqueTargetData *LLVMTargetDataRef;
 
 /**
  * @defgroup LLVMCTransforms Transforms
@@ -58,10 +59,13 @@ LLVM_C_EXTERN_C_BEGIN
 
 /// External users depend on the following values being stable. It is not safe
 /// to reorder them.
+// clang-format off
 typedef enum {
   /* Terminator Instructions */
   LLVMRet            = 1,
-  LLVMBr             = 2,
+  /* removed 2 due to API changes */
+  LLVMUncondBr       = 70,
+  LLVMCondBr         = 71,
   LLVMSwitch         = 3,
   LLVMIndirectBr     = 4,
   LLVMInvoke         = 5,
@@ -131,6 +135,8 @@ typedef enum {
   LLVMExtractValue   = 53,
   LLVMInsertValue    = 54,
   LLVMFreeze         = 68,
+  LLVMBitInsert      = 72,
+  LLVMBitExtract     = 73,
 
   /* Atomic operators */
   LLVMFence          = 55,
@@ -146,6 +152,7 @@ typedef enum {
   LLVMCleanupPad     = 64,
   LLVMCatchSwitch    = 65
 } LLVMOpcode;
+// clang-format on
 
 typedef enum {
   LLVMVoidTypeKind = 0,     /**< type with no size */
@@ -169,6 +176,7 @@ typedef enum {
   LLVMBFloatTypeKind = 18,         /**< 16 bit brain floating point type */
   LLVMX86_AMXTypeKind = 19,        /**< X86 AMX */
   LLVMTargetExtTypeKind = 20,      /**< Target extension type */
+  LLVMByteTypeKind = 21,           /**< Arbitrary bit width bytes */
 } LLVMTypeKind;
 
 typedef enum {
@@ -278,6 +286,7 @@ typedef enum {
   LLVMConstantDataArrayValueKind,
   LLVMConstantDataVectorValueKind,
   LLVMConstantIntValueKind,
+  LLVMConstantByteValueKind,
   LLVMConstantFPValueKind,
   LLVMConstantPointerNullValueKind,
   LLVMConstantTokenNoneValueKind,
@@ -399,6 +408,12 @@ typedef enum {
                            original using an floating point comparison and
                            return the old one */
   LLVMAtomicRMWBinOpFMinimum, /**< Sets the value if it's smaller than the
+                           original using an floating point comparison and
+                           return the old one */
+  LLVMAtomicRMWBinOpFMaximumNum, /**< Sets the value if it's greater than the
+                           original using an floating point comparison and
+                           return the old one */
+  LLVMAtomicRMWBinOpFMinimumNum, /**< Sets the value if it's smaller than the
                            original using an floating point comparison and
                            return the old one */
 } LLVMAtomicRMWBinOp;
@@ -589,7 +604,10 @@ LLVM_C_ABI LLVMContextRef LLVMContextCreate(void);
 /**
  * Obtain the global context instance.
  */
-LLVM_C_ABI LLVMContextRef LLVMGetGlobalContext(void);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMContextRef LLVMGetGlobalContext(void),
+                            "Use of the global context is deprecated, create "
+                            "one using LLVMContextCreate instead");
 
 /**
  * Set the diagnostic handler for this context.
@@ -662,7 +680,10 @@ LLVMGetDiagInfoSeverity(LLVMDiagnosticInfoRef DI);
 
 LLVM_C_ABI unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char *Name,
                                              unsigned SLen);
-LLVM_C_ABI unsigned LLVMGetMDKindID(const char *Name, unsigned SLen);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    unsigned LLVMGetMDKindID(const char *Name, unsigned SLen),
+    "Use of the global context is deprecated, use LLVMGetMDKindIDInContext "
+    "instead");
 
 /**
  * Maps a synchronization scope name to a ID unique within this context.
@@ -726,6 +747,40 @@ LLVM_C_ABI LLVMAttributeRef LLVMCreateConstantRangeAttribute(
     const uint64_t LowerWords[], const uint64_t UpperWords[]);
 
 /**
+ * Represent different denormal handling kinds for use with
+ * LLVMCreateDenormalFPEnvAttribute.
+ */
+typedef enum {
+  LLVMDenormalModeKindIEEE = 0,
+  LLVMDenormalModeKindPreserveSign = 1,
+  LLVMDenormalModeKindPositiveZero = 2,
+  LLVMDenormalModeKindDynamic = 3
+} LLVMDenormalModeKind;
+
+/**
+ * Create a DenormalFPEnv attribute.
+ *
+ * \p DefaultModeOutput is the assumed denormal handling for the outputs of most
+ *    floating-point types.
+ *
+ * \p DefaultModeInput is the assumed denormal handling for the inputs of most
+ *    floating-point types.
+ *
+ * \p FloatModeOutput is the assumed denormal handling for the outputs of
+ *    float. This should always be the same as as DefaultModeOutput for most
+ *    targets.
+ *
+ * \p FloatModeInput is the assumed denormal handling for the inputs of
+ *    float. This should always be the same as as DefaultModeInput for most
+ *    targets.
+ *
+ */
+LLVM_C_ABI LLVMAttributeRef LLVMCreateDenormalFPEnvAttribute(
+    LLVMContextRef C, LLVMDenormalModeKind DefaultModeOutput,
+    LLVMDenormalModeKind DefaultModeInput, LLVMDenormalModeKind FloatModeOutput,
+    LLVMDenormalModeKind FloatModeInput);
+
+/**
  * Create a string attribute.
  */
 LLVM_C_ABI LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,
@@ -781,7 +836,10 @@ LLVM_C_ABI LLVMTypeRef LLVMGetTypeByName2(LLVMContextRef C, const char *Name);
  * Every invocation should be paired with LLVMDisposeModule() or memory
  * will be leaked.
  */
-LLVM_C_ABI LLVMModuleRef LLVMModuleCreateWithName(const char *ModuleID);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMModuleRef LLVMModuleCreateWithName(const char *ModuleID),
+    "Use of the global context is deprecated, use "
+    "LLVMModuleCreateWithNameInContext instead");
 
 /**
  * Create a new, empty module in a specific context.
@@ -1302,6 +1360,7 @@ LLVM_C_ABI void LLVMSetModuleInlineAsm(LLVMModuleRef M, const char *Asm);
  *
  *   types:
  *     integer type
+ *     byte type
  *     real type
  *     function type
  *     sequence types:
@@ -1354,6 +1413,25 @@ LLVM_C_ABI void LLVMDumpType(LLVMTypeRef Val);
 LLVM_C_ABI char *LLVMPrintTypeToString(LLVMTypeRef Val);
 
 /**
+ * @}
+ */
+
+/**
+ * @defgroup LLVMCCoreTypeByte Byte Types
+ *
+ * Functions in this section operate on byte types.
+ *
+ * @{
+ */
+
+/**
+ * Obtain a byte type from a context with specified bit width.
+ */
+LLVM_C_ABI LLVMTypeRef LLVMByteTypeInContext(LLVMContextRef C,
+                                             unsigned NumBits);
+LLVM_C_ABI unsigned LLVMGetByteTypeWidth(LLVMTypeRef ByteTy);
+
+/**
  * @defgroup LLVMCCoreTypeInt Integer Types
  *
  * Functions in this section operate on integer types.
@@ -1376,13 +1454,35 @@ LLVM_C_ABI LLVMTypeRef LLVMIntTypeInContext(LLVMContextRef C, unsigned NumBits);
  * Obtain an integer type from the global context with a specified bit
  * width.
  */
-LLVM_C_ABI LLVMTypeRef LLVMInt1Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMInt8Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMInt16Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMInt32Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMInt64Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMInt128Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMIntType(unsigned NumBits);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt1Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt1TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt8Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt8TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt16Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt16TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt32Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt32TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt64Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt64TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMInt128Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMInt128TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMIntType(unsigned NumBits),
+                            "Use of the global context is deprecated, use "
+                            "LLVMIntTypeInContext instead");
+
 LLVM_C_ABI unsigned LLVMGetIntTypeWidth(LLVMTypeRef IntegerTy);
 
 /**
@@ -1436,13 +1536,34 @@ LLVM_C_ABI LLVMTypeRef LLVMPPCFP128TypeInContext(LLVMContextRef C);
  *
  * These map to the functions in this group of the same name.
  */
-LLVM_C_ABI LLVMTypeRef LLVMHalfType(void);
-LLVM_C_ABI LLVMTypeRef LLVMBFloatType(void);
-LLVM_C_ABI LLVMTypeRef LLVMFloatType(void);
-LLVM_C_ABI LLVMTypeRef LLVMDoubleType(void);
-LLVM_C_ABI LLVMTypeRef LLVMX86FP80Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMFP128Type(void);
-LLVM_C_ABI LLVMTypeRef LLVMPPCFP128Type(void);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMHalfType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMHalfTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMBFloatType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMBFloatTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMFloatType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMFloatTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMDoubleType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMDoubleTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMX86FP80Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMX86FP80TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMFP128Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMFP128TypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMPPCFP128Type(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMPPCFP128TypeInContext instead");
 
 /**
  * @}
@@ -1524,8 +1645,11 @@ LLVM_C_ABI LLVMTypeRef LLVMStructTypeInContext(LLVMContextRef C,
  *
  * @see llvm::StructType::create()
  */
-LLVM_C_ABI LLVMTypeRef LLVMStructType(LLVMTypeRef *ElementTypes,
-                                      unsigned ElementCount, LLVMBool Packed);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMTypeRef LLVMStructType(LLVMTypeRef *ElementTypes, unsigned ElementCount,
+                               LLVMBool Packed),
+    "Use of the global context is deprecated, use LLVMStructTypeInContext "
+    "instead");
 
 /**
  * Create an empty structure in a context having a specified name.
@@ -1818,9 +1942,18 @@ LLVM_C_ABI LLVMTypeRef LLVMMetadataTypeInContext(LLVMContextRef C);
  * These are similar to the above functions except they operate on the
  * global context.
  */
-LLVM_C_ABI LLVMTypeRef LLVMVoidType(void);
-LLVM_C_ABI LLVMTypeRef LLVMLabelType(void);
-LLVM_C_ABI LLVMTypeRef LLVMX86AMXType(void);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMVoidType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMVoidTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMLabelType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMLabelTypeInContext instead");
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMX86AMXType(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMX86AMXTypeInContext instead");
 
 /**
  * Create a target extension type in LLVM context.
@@ -1914,6 +2047,7 @@ LLVM_C_ABI unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy,
       macro(ConstantExpr)                   \
       macro(ConstantFP)                     \
       macro(ConstantInt)                    \
+      macro(ConstantByte)                   \
       macro(ConstantPointerNull)            \
       macro(ConstantStruct)                 \
       macro(ConstantTokenNone)              \
@@ -1952,7 +2086,8 @@ LLVM_C_ABI unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy,
       macro(SelectInst)                     \
       macro(ShuffleVectorInst)              \
       macro(StoreInst)                      \
-      macro(BranchInst)                     \
+      macro(UncondBrInst)                   \
+      macro(CondBrInst)                     \
       macro(IndirectBrInst)                 \
       macro(InvokeInst)                     \
       macro(ReturnInst)                     \
@@ -2098,6 +2233,10 @@ LLVM_C_ABI LLVMBool LLVMIsPoison(LLVMValueRef Val);
 #define LLVM_DECLARE_VALUE_CAST(name)                                          \
   LLVM_C_ABI LLVMValueRef LLVMIsA##name(LLVMValueRef Val);
 LLVM_FOR_EACH_VALUE_SUBCLASS(LLVM_DECLARE_VALUE_CAST)
+
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMIsABranchInst(LLVMValueRef Val),
+    "Use LLVMIsAUncondBrInst/LLVMIsACondBrInst instead");
 
 LLVM_C_ABI LLVMValueRef LLVMIsAMDNode(LLVMValueRef Val);
 LLVM_C_ABI LLVMValueRef LLVMIsAValueAsMetadata(LLVMValueRef Val);
@@ -2326,6 +2465,36 @@ LLVM_C_ABI LLVMValueRef LLVMConstIntOfStringAndSize(LLVMTypeRef IntTy,
                                                     uint8_t Radix);
 
 /**
+ * Obtain a constant value for a byte type.
+ *
+ * The returned value corresponds to a llvm::ConstantByte.
+ *
+ * @see llvm::ConstantByte::get()
+ *
+ * @param ByteTy Byte type to obtain value of.
+ * @param N The value the returned instance should refer to.
+ */
+LLVM_C_ABI LLVMValueRef LLVMConstByte(LLVMTypeRef ByteTy, unsigned long long N);
+
+/**
+ * Obtain a constant value for a byte of arbitrary precision.
+ *
+ * @see llvm::ConstantByte::get()
+ */
+LLVM_C_ABI LLVMValueRef LLVMConstByteOfArbitraryPrecision(
+    LLVMTypeRef ByteTy, unsigned NumWords, const uint64_t Words[]);
+
+/**
+ * Obtain a constant value for a byte parsed from a string with specified
+ * length.
+ * @see llvm::ConstantByte::get()
+ */
+LLVM_C_ABI LLVMValueRef LLVMConstByteOfStringAndSize(LLVMTypeRef ByteTy,
+                                                     const char *Text,
+                                                     size_t SLen,
+                                                     uint8_t Radix);
+
+/**
  * Obtain a constant value referring to a double floating point value.
  */
 LLVM_C_ABI LLVMValueRef LLVMConstReal(LLVMTypeRef RealTy, double N);
@@ -2347,6 +2516,14 @@ LLVM_C_ABI LLVMValueRef LLVMConstRealOfStringAndSize(LLVMTypeRef RealTy,
                                                      unsigned SLen);
 
 /**
+ * Obtain a constant for a floating point value from array of 64 bit values.
+ * The length of the array N must be ceildiv(bits, 64), where bits is the
+ * scalar size in bits of the floating-point type.
+ */
+
+LLVM_C_ABI LLVMValueRef LLVMConstFPFromBits(LLVMTypeRef Ty, const uint64_t N[]);
+
+/**
  * Obtain the zero extended value for an integer constant value.
  *
  * @see llvm::ConstantInt::getZExtValue()
@@ -2360,6 +2537,21 @@ LLVMConstIntGetZExtValue(LLVMValueRef ConstantVal);
  * @see llvm::ConstantInt::getSExtValue()
  */
 LLVM_C_ABI long long LLVMConstIntGetSExtValue(LLVMValueRef ConstantVal);
+
+/**
+ * Obtain the zero extended value for a byte constant value.
+ *
+ * @see llvm::ConstantByte::getZExtValue()
+ */
+LLVM_C_ABI unsigned long long
+LLVMConstByteGetZExtValue(LLVMValueRef ConstantVal);
+
+/**
+ * Obtain the sign extended value for a byte constant value.
+ *
+ * @see llvm::ConstantByte::getSExtValue()
+ */
+LLVM_C_ABI long long LLVMConstByteGetSExtValue(LLVMValueRef ConstantVal);
 
 /**
  * Obtain the double value for an floating point constant value.
@@ -2413,8 +2605,11 @@ LLVM_C_ABI LLVMValueRef LLVMConstStringInContext2(LLVMContextRef C,
  * @see LLVMConstStringInContext()
  * @see llvm::ConstantDataArray::getString()
  */
-LLVM_C_ABI LLVMValueRef LLVMConstString(const char *Str, unsigned Length,
-                                        LLVMBool DontNullTerminate);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstString(const char *Str, unsigned Length,
+                                 LLVMBool DontNullTerminate),
+    "Use of the global context is deprecated, use LLVMConstStringInContext2 "
+    "instead");
 
 /**
  * Returns true if the specified constant is an array of i8.
@@ -2459,8 +2654,11 @@ LLVM_C_ABI LLVMValueRef LLVMConstStructInContext(LLVMContextRef C,
  *
  * @see LLVMConstStructInContext()
  */
-LLVM_C_ABI LLVMValueRef LLVMConstStruct(LLVMValueRef *ConstantVals,
-                                        unsigned Count, LLVMBool Packed);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstStruct(LLVMValueRef *ConstantVals, unsigned Count,
+                                 LLVMBool Packed),
+    "Use of the global context is deprecated, use LLVMConstStructInContext "
+    "instead");
 
 /**
  * Create a ConstantArray from values.
@@ -2554,8 +2752,12 @@ LLVM_C_ABI LLVMValueRef LLVMConstantPtrAuth(LLVMValueRef Ptr, LLVMValueRef Key,
  * @{
  */
 LLVM_C_ABI LLVMOpcode LLVMGetConstOpcode(LLVMValueRef ConstantVal);
-LLVM_C_ABI LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty);
-LLVM_C_ABI LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty),
+    "Create a constant based on LLVMABIAlignmentOfType() instead");
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty),
+    "Create a constant based on LLVMABISizeOfType() instead");
 LLVM_C_ABI LLVMValueRef LLVMConstNeg(LLVMValueRef ConstantVal);
 LLVM_C_ABI LLVMValueRef LLVMConstNSWNeg(LLVMValueRef ConstantVal);
 LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
@@ -2576,22 +2778,46 @@ LLVM_C_ABI LLVMValueRef LLVMConstNUWSub(LLVMValueRef LHSConstant,
                                         LLVMValueRef RHSConstant);
 LLVM_C_ABI LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant,
                                      LLVMValueRef RHSConstant);
-LLVM_C_ABI LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
-                                      LLVMValueRef *ConstantIndices,
-                                      unsigned NumIndices);
-LLVM_C_ABI LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty,
-                                              LLVMValueRef ConstantVal,
-                                              LLVMValueRef *ConstantIndices,
-                                              unsigned NumIndices);
+
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                               LLVMValueRef *ConstantIndices,
+                               unsigned NumIndices),
+    "Use LLVMConstPtrAdd() or LLVMConstPtrAddFromIndices() instead");
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                                       LLVMValueRef *ConstantIndices,
+                                       unsigned NumIndices),
+    "Use LLVMConstPtrAdd() or LLVMConstPtrAddFromIndices() instead");
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstGEPWithNoWrapFlags(
+        LLVMTypeRef Ty, LLVMValueRef ConstantVal, LLVMValueRef *ConstantIndices,
+        unsigned NumIndices, LLVMGEPNoWrapFlags NoWrapFlags),
+    "Use LLVMConstPtrAdd() or LLVMConstPtrAddFromIndices() instead");
+
 /**
- * Creates a constant GetElementPtr expression. Similar to LLVMConstGEP2, but
- * allows specifying the no-wrap flags.
+ * Creates a constant ptradd expression (getelementptr i8).
+ *
+ * @see llvm::ConstantExpr::getPtrAdd()
+ */
+LLVM_C_ABI LLVMValueRef LLVMConstPtrAdd(LLVMValueRef ConstantVal,
+                                        LLVMValueRef ConstantOffset,
+                                        LLVMGEPNoWrapFlags NoWrapFlags);
+
+/**
+ * Creates a constant ptradd expression (getelementptr i8) by converting the
+ * provided GEP indices for the provided source element type into a constant
+ * offset using the provided data layout.
+ *
+ * May return null if the indices are not representable as a constant ptradd.
  *
  * @see llvm::ConstantExpr::getGetElementPtr()
  */
-LLVM_C_ABI LLVMValueRef LLVMConstGEPWithNoWrapFlags(
-    LLVMTypeRef Ty, LLVMValueRef ConstantVal, LLVMValueRef *ConstantIndices,
-    unsigned NumIndices, LLVMGEPNoWrapFlags NoWrapFlags);
+LLVM_C_ABI LLVMValueRef LLVMConstPtrAddFromIndices(
+    LLVMTargetDataRef DataLayout, LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+    LLVMValueRef *ConstantIndices, unsigned NumIndices,
+    LLVMGEPNoWrapFlags NoWrapFlags);
+
 LLVM_C_ABI LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal,
                                        LLVMTypeRef ToType);
 LLVM_C_ABI LLVMValueRef LLVMConstPtrToInt(LLVMValueRef ConstantVal,
@@ -2663,6 +2889,24 @@ LLVM_C_ABI void LLVMSetDLLStorageClass(LLVMValueRef Global,
 LLVM_C_ABI LLVMUnnamedAddr LLVMGetUnnamedAddress(LLVMValueRef Global);
 LLVM_C_ABI void LLVMSetUnnamedAddress(LLVMValueRef Global,
                                       LLVMUnnamedAddr UnnamedAddr);
+
+/**
+ * Returns whether the global value is marked as dso_local, i.e. whether it
+ * will resolve to a symbol within the same linkage unit.
+ *
+ * @see llvm::GlobalValue::isDSOLocal()
+ */
+LLVM_C_ABI LLVMBool LLVMIsDSOLocal(LLVMValueRef Global);
+
+/**
+ * Sets whether the global value is marked as dso_local.
+ *
+ * Note that globals with local linkage or non-default visibility are always
+ * implicitly dso_local.
+ *
+ * @see llvm::GlobalValue::setDSOLocal()
+ */
+LLVM_C_ABI void LLVMSetDSOLocal(LLVMValueRef Global, LLVMBool IsDSOLocal);
 
 /**
  * Returns the "value type" of a global value.  This differs from the formal
@@ -2954,25 +3198,25 @@ LLVM_C_ABI unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
 LLVM_C_ABI unsigned LLVMGetIntrinsicID(LLVMValueRef Fn);
 
 /**
- * Get or insert the declaration of an intrinsic.  For overloaded intrinsics,
- * parameter types must be provided to uniquely identify an overload.
+ * Get or insert the declaration of an intrinsic. For overloaded intrinsics,
+ * overload types must be provided to uniquely identify an overload.
  *
  * @see llvm::Intrinsic::getOrInsertDeclaration()
  */
 LLVM_C_ABI LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
                                                     unsigned ID,
-                                                    LLVMTypeRef *ParamTypes,
-                                                    size_t ParamCount);
+                                                    LLVMTypeRef *OverloadTypes,
+                                                    size_t OverloadCount);
 
 /**
- * Retrieves the type of an intrinsic.  For overloaded intrinsics, parameter
+ * Retrieves the type of an intrinsic. For overloaded intrinsics, overload
  * types must be provided to uniquely identify an overload.
  *
  * @see llvm::Intrinsic::getType()
  */
 LLVM_C_ABI LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
-                                            LLVMTypeRef *ParamTypes,
-                                            size_t ParamCount);
+                                            LLVMTypeRef *OverloadTypes,
+                                            size_t OverloadCount);
 
 /**
  * Retrieves the name of an intrinsic.
@@ -2983,13 +3227,13 @@ LLVM_C_ABI const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength);
 
 /** Deprecated: Use LLVMIntrinsicCopyOverloadedName2 instead. */
 LLVM_C_ABI char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
-                                                 LLVMTypeRef *ParamTypes,
-                                                 size_t ParamCount,
+                                                 LLVMTypeRef *OverloadTypes,
+                                                 size_t OverloadCount,
                                                  size_t *NameLength);
 
 /**
  * Copies the name of an overloaded intrinsic identified by a given list of
- * parameter types.
+ * overload types.
  *
  * Unlike LLVMIntrinsicGetName, the caller is responsible for freeing the
  * returned string.
@@ -3000,8 +3244,8 @@ LLVM_C_ABI char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
  */
 LLVM_C_ABI char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod,
                                                   unsigned ID,
-                                                  LLVMTypeRef *ParamTypes,
-                                                  size_t ParamCount,
+                                                  LLVMTypeRef *OverloadTypes,
+                                                  size_t OverloadCount,
                                                   size_t *NameLength);
 
 /**
@@ -3397,12 +3641,18 @@ LLVM_C_ABI void LLVMReplaceMDNodeOperandWith(LLVMValueRef V, unsigned Index,
 LLVM_C_ABI LLVMValueRef LLVMMDStringInContext(LLVMContextRef C, const char *Str,
                                               unsigned SLen);
 /** Deprecated: Use LLVMMDStringInContext2 instead. */
-LLVM_C_ABI LLVMValueRef LLVMMDString(const char *Str, unsigned SLen);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMMDString(const char *Str, unsigned SLen),
+    "Use of the global context is deprecated, use LLVMMDStringInContext2 "
+    "instead");
 /** Deprecated: Use LLVMMDNodeInContext2 instead. */
 LLVM_C_ABI LLVMValueRef LLVMMDNodeInContext(LLVMContextRef C,
                                             LLVMValueRef *Vals, unsigned Count);
 /** Deprecated: Use LLVMMDNodeInContext2 instead. */
-LLVM_C_ABI LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count),
+    "Use of the global context is deprecated, use LLVMMDNodeInContext2 "
+    "instead");
 
 /**
  * @}
@@ -3629,8 +3879,10 @@ LLVM_C_ABI LLVMBasicBlockRef LLVMAppendBasicBlockInContext(LLVMContextRef C,
  *
  * @see llvm::BasicBlock::Create()
  */
-LLVM_C_ABI LLVMBasicBlockRef LLVMAppendBasicBlock(LLVMValueRef Fn,
-                                                  const char *Name);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMBasicBlockRef LLVMAppendBasicBlock(LLVMValueRef Fn, const char *Name),
+    "Use of the global context is deprecated, use "
+    "LLVMAppendBasicBlockInContext instead");
 
 /**
  * Insert a basic block in a function before another basic block.
@@ -3649,8 +3901,11 @@ LLVM_C_ABI LLVMBasicBlockRef LLVMInsertBasicBlockInContext(LLVMContextRef C,
  *
  * @see llvm::BasicBlock::Create()
  */
-LLVM_C_ABI LLVMBasicBlockRef
-LLVMInsertBasicBlock(LLVMBasicBlockRef InsertBeforeBB, const char *Name);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMBasicBlockRef LLVMInsertBasicBlock(LLVMBasicBlockRef InsertBeforeBB,
+                                           const char *Name),
+    "Use of the global context is deprecated, use "
+    "LLVMInsertBasicBlockInContext instead");
 
 /**
  * Remove a basic block from a function and delete it.
@@ -3908,31 +4163,33 @@ LLVMGetPreviousDbgRecord(LLVMDbgRecordRef DbgRecord);
  *
  * @see llvm::DbgRecord::getDebugLoc()
  */
-LLVMMetadataRef LLVMDbgRecordGetDebugLoc(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMMetadataRef LLVMDbgRecordGetDebugLoc(LLVMDbgRecordRef Rec);
 
-LLVMDbgRecordKind LLVMDbgRecordGetKind(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMDbgRecordKind LLVMDbgRecordGetKind(LLVMDbgRecordRef Rec);
 
 /**
  * Get the value of the DbgVariableRecord.
  *
  * @see llvm::DbgVariableRecord::getValue()
  */
-LLVMValueRef LLVMDbgVariableRecordGetValue(LLVMDbgRecordRef Rec,
-                                           unsigned OpIdx);
+LLVM_C_ABI LLVMValueRef LLVMDbgVariableRecordGetValue(LLVMDbgRecordRef Rec,
+                                                      unsigned OpIdx);
 
 /**
  * Get the debug info variable of the DbgVariableRecord.
  *
  * @see llvm::DbgVariableRecord::getVariable()
  */
-LLVMMetadataRef LLVMDbgVariableRecordGetVariable(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMMetadataRef
+LLVMDbgVariableRecordGetVariable(LLVMDbgRecordRef Rec);
 
 /**
  * Get the debug info expression of the DbgVariableRecord.
  *
  * @see llvm::DbgVariableRecord::getExpression()
  */
-LLVMMetadataRef LLVMDbgVariableRecordGetExpression(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMMetadataRef
+LLVMDbgVariableRecordGetExpression(LLVMDbgRecordRef Rec);
 
 /**
  * @defgroup LLVMCCoreValueInstructionCall Call Sites and Invocations
@@ -4170,29 +4427,27 @@ LLVM_C_ABI void LLVMSetSuccessor(LLVMValueRef Term, unsigned i,
                                  LLVMBasicBlockRef block);
 
 /**
- * Return if a branch is conditional.
+ * Return if an instruction is a conditional branch.
  *
- * This only works on llvm::BranchInst instructions.
- *
- * @see llvm::BranchInst::isConditional
+ * Deprecated: Use LLVMIsACondBrInst instead.
  */
 LLVM_C_ABI LLVMBool LLVMIsConditional(LLVMValueRef Branch);
 
 /**
  * Return the condition of a branch instruction.
  *
- * This only works on llvm::BranchInst instructions.
+ * This only works on llvm::CondBrInst instructions.
  *
- * @see llvm::BranchInst::getCondition
+ * @see llvm::CondBrInst::getCondition
  */
 LLVM_C_ABI LLVMValueRef LLVMGetCondition(LLVMValueRef Branch);
 
 /**
  * Set the condition of a branch instruction.
  *
- * This only works on llvm::BranchInst instructions.
+ * This only works on llvm::CondBrInst instructions.
  *
- * @see llvm::BranchInst::setCondition
+ * @see llvm::CondBrInst::setCondition
  */
 LLVM_C_ABI void LLVMSetCondition(LLVMValueRef Branch, LLVMValueRef Cond);
 
@@ -4204,6 +4459,30 @@ LLVM_C_ABI void LLVMSetCondition(LLVMValueRef Branch, LLVMValueRef Cond);
  * @see llvm::SwitchInst::getDefaultDest()
  */
 LLVM_C_ABI LLVMBasicBlockRef LLVMGetSwitchDefaultDest(LLVMValueRef SwitchInstr);
+
+/**
+ * Obtain the case value for a successor of a switch instruction. i corresponds
+ * to the successor index. The first successor is the default destination, so i
+ * must be greater than zero.
+ *
+ * This only works on llvm::SwitchInst instructions.
+ *
+ * @see llvm::SwitchInst::CaseHandle::getCaseValue()
+ */
+LLVM_C_ABI LLVMValueRef LLVMGetSwitchCaseValue(LLVMValueRef SwitchInstr,
+                                               unsigned i);
+
+/**
+ * Set the case value for a successor of a switch instruction. i corresponds to
+ * the successor index. The first successor is the default destination, so i
+ * must be greater than zero.
+ *
+ * This only works on llvm::SwitchInst instructions.
+ *
+ * @see llvm::SwitchInst::CaseHandle::setValue()
+ */
+LLVM_C_ABI void LLVMSetSwitchCaseValue(LLVMValueRef SwitchInstr, unsigned i,
+                                       LLVMValueRef CaseValue);
 
 /**
  * @}
@@ -4351,7 +4630,10 @@ LLVM_C_ABI const unsigned *LLVMGetIndices(LLVMValueRef Inst);
  */
 
 LLVM_C_ABI LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C);
-LLVM_C_ABI LLVMBuilderRef LLVMCreateBuilder(void);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMBuilderRef LLVMCreateBuilder(void),
+                            "Use of the global context is deprecated, use "
+                            "LLVMCreateBuilderInContext instead");
 /**
  * Set the builder position before Instr but after any attached debug records,
  * or if Instr is null set the position to the end of Block.
@@ -4412,18 +4694,17 @@ LLVM_C_ABI void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder,
  * current debug location for the given builder.  If the builder has no current
  * debug location, this function is a no-op.
  *
- * @deprecated LLVMSetInstDebugLocation is deprecated in favor of the more general
- *             LLVMAddMetadataToInst.
- *
  * @see llvm::IRBuilder::SetInstDebugLocation()
  */
 LLVM_C_ABI void LLVMSetInstDebugLocation(LLVMBuilderRef Builder,
                                          LLVMValueRef Inst);
 
 /**
- * Adds the metadata registered with the given builder to the given instruction.
+ * Same as LLVMSetInstDebugLocation.
  *
- * @see llvm::IRBuilder::AddMetadataToInst()
+ * @deprecated Use the identical LLVMSetInstDebugLocation.
+ *
+ * @see llvm::IRBuilder::SetInstDebugLocation()
  */
 LLVM_C_ABI void LLVMAddMetadataToInst(LLVMBuilderRef Builder,
                                       LLVMValueRef Inst);
@@ -4911,6 +5192,14 @@ LLVM_C_ABI LLVMValueRef LLVMBuildInsertValue(LLVMBuilderRef,
                                              unsigned Index, const char *Name);
 LLVM_C_ABI LLVMValueRef LLVMBuildFreeze(LLVMBuilderRef, LLVMValueRef Val,
                                         const char *Name);
+LLVM_C_ABI LLVMValueRef LLVMBuildBitExtract(LLVMBuilderRef, LLVMTypeRef Type,
+                                            LLVMValueRef Src,
+                                            LLVMValueRef Offset,
+                                            const char *Name);
+LLVM_C_ABI LLVMValueRef LLVMBuildBitInsert(LLVMBuilderRef, LLVMValueRef Base,
+                                           LLVMValueRef Val,
+                                           LLVMValueRef Offset,
+                                           const char *Name);
 
 LLVM_C_ABI LLVMValueRef LLVMBuildIsNull(LLVMBuilderRef, LLVMValueRef Val,
                                         const char *Name);
@@ -5117,6 +5406,133 @@ LLVM_C_ABI void LLVMStopMultithreaded(void);
 /** Check whether LLVM is executing in thread-safe mode or not.
     @see llvm::llvm_is_multithreaded */
 LLVM_C_ABI LLVMBool LLVMIsMultithreaded(void);
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup LLVMCCoreDataLayout Data Layout
+ *
+ * @{
+ */
+
+enum LLVMByteOrdering { LLVMBigEndian, LLVMLittleEndian };
+
+/**
+ * Obtain the data layout for a module.
+ *
+ * @see Module::getDataLayout()
+ */
+LLVM_C_ABI LLVMTargetDataRef LLVMGetModuleDataLayout(LLVMModuleRef M);
+
+/**
+ * Set the data layout for a module.
+ *
+ * @see Module::setDataLayout()
+ */
+LLVM_C_ABI void LLVMSetModuleDataLayout(LLVMModuleRef M, LLVMTargetDataRef DL);
+
+/** Creates target data from a target layout string.
+    See the constructor llvm::DataLayout::DataLayout. */
+LLVM_C_ABI LLVMTargetDataRef LLVMCreateTargetData(const char *StringRep);
+
+/** Deallocates a TargetData.
+    See the destructor llvm::DataLayout::~DataLayout. */
+LLVM_C_ABI void LLVMDisposeTargetData(LLVMTargetDataRef TD);
+
+/** Converts target data to a target layout string. The string must be disposed
+    with LLVMDisposeMessage.
+    See the constructor llvm::DataLayout::DataLayout. */
+LLVM_C_ABI char *LLVMCopyStringRepOfTargetData(LLVMTargetDataRef TD);
+
+/** Returns the byte order of a target, either LLVMBigEndian or
+    LLVMLittleEndian.
+    See the method llvm::DataLayout::isLittleEndian. */
+LLVM_C_ABI enum LLVMByteOrdering LLVMByteOrder(LLVMTargetDataRef TD);
+
+/** Returns the pointer size in bytes for a target.
+    See the method llvm::DataLayout::getPointerSize. */
+LLVM_C_ABI unsigned LLVMPointerSize(LLVMTargetDataRef TD);
+
+/** Returns the pointer size in bytes for a target for a specified
+    address space.
+    See the method llvm::DataLayout::getPointerSize. */
+LLVM_C_ABI unsigned LLVMPointerSizeForAS(LLVMTargetDataRef TD, unsigned AS);
+
+/** Returns the integer type that is the same size as a pointer on a target.
+    See the method llvm::DataLayout::getIntPtrType. */
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMIntPtrType(LLVMTargetDataRef TD),
+                            "Use of the global context is deprecated, use "
+                            "LLVMIntPtrTypeInContext instead");
+
+/** Returns the integer type that is the same size as a pointer on a target.
+    This version allows the address space to be specified.
+    See the method llvm::DataLayout::getIntPtrType. */
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMTypeRef LLVMIntPtrTypeForAS(LLVMTargetDataRef TD, unsigned AS),
+    "Use of the global context is deprecated, use LLVMIntPtrTypeForASInContext "
+    "instead");
+
+/** Returns the integer type that is the same size as a pointer on a target.
+    See the method llvm::DataLayout::getIntPtrType. */
+LLVM_C_ABI LLVMTypeRef LLVMIntPtrTypeInContext(LLVMContextRef C,
+                                               LLVMTargetDataRef TD);
+
+/** Returns the integer type that is the same size as a pointer on a target.
+    This version allows the address space to be specified.
+    See the method llvm::DataLayout::getIntPtrType. */
+LLVM_C_ABI LLVMTypeRef LLVMIntPtrTypeForASInContext(LLVMContextRef C,
+                                                    LLVMTargetDataRef TD,
+                                                    unsigned AS);
+
+/** Computes the size of a type in bits for a target.
+    See the method llvm::DataLayout::getTypeSizeInBits. */
+LLVM_C_ABI unsigned long long LLVMSizeOfTypeInBits(LLVMTargetDataRef TD,
+                                                   LLVMTypeRef Ty);
+
+/** Computes the storage size of a type in bytes for a target.
+    See the method llvm::DataLayout::getTypeStoreSize. */
+LLVM_C_ABI unsigned long long LLVMStoreSizeOfType(LLVMTargetDataRef TD,
+                                                  LLVMTypeRef Ty);
+
+/** Computes the ABI size of a type in bytes for a target.
+    See the method llvm::DataLayout::getTypeAllocSize. */
+LLVM_C_ABI unsigned long long LLVMABISizeOfType(LLVMTargetDataRef TD,
+                                                LLVMTypeRef Ty);
+
+/** Computes the ABI alignment of a type in bytes for a target.
+    See the method llvm::DataLayout::getTypeABISize. */
+LLVM_C_ABI unsigned LLVMABIAlignmentOfType(LLVMTargetDataRef TD,
+                                           LLVMTypeRef Ty);
+
+/** Computes the call frame alignment of a type in bytes for a target.
+    See the method llvm::DataLayout::getTypeABISize. */
+LLVM_C_ABI unsigned LLVMCallFrameAlignmentOfType(LLVMTargetDataRef TD,
+                                                 LLVMTypeRef Ty);
+
+/** Computes the preferred alignment of a type in bytes for a target.
+    See the method llvm::DataLayout::getTypeABISize. */
+LLVM_C_ABI unsigned LLVMPreferredAlignmentOfType(LLVMTargetDataRef TD,
+                                                 LLVMTypeRef Ty);
+
+/** Computes the preferred alignment of a global variable in bytes for a target.
+    See the method llvm::DataLayout::getPreferredAlignment. */
+LLVM_C_ABI unsigned LLVMPreferredAlignmentOfGlobal(LLVMTargetDataRef TD,
+                                                   LLVMValueRef GlobalVar);
+
+/** Computes the structure element that contains the byte offset for a target.
+    See the method llvm::StructLayout::getElementContainingOffset. */
+LLVM_C_ABI unsigned LLVMElementAtOffset(LLVMTargetDataRef TD,
+                                        LLVMTypeRef StructTy,
+                                        unsigned long long Offset);
+
+/** Computes the byte offset of the indexed struct element for a target.
+    See the method llvm::StructLayout::getElementContainingOffset. */
+LLVM_C_ABI unsigned long long LLVMOffsetOfElement(LLVMTargetDataRef TD,
+                                                  LLVMTypeRef StructTy,
+                                                  unsigned Element);
 
 /**
  * @}

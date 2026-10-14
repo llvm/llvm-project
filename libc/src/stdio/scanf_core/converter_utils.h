@@ -83,11 +83,13 @@ LIBC_INLINE void write_float_with_length(char *str,
     *reinterpret_cast<double *>(output_ptr) = value;
     break;
   }
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   case (LengthModifier::L): {
     auto value = internal::strtofloatingpoint<long double>(str);
     *reinterpret_cast<long double *>(output_ptr) = value;
     break;
   }
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   default: {
     auto value = internal::strtofloatingpoint<float>(str);
     *reinterpret_cast<float *>(output_ptr) = value;

@@ -14,6 +14,28 @@ void check__hlt() {
   __hlt(65536); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
+struct NonScalar { int a, b; };
+
+void check__hvc(unsigned int x, double d, void *p, struct NonScalar s) {
+  __hvc(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __hvc(65536); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __hvc(x); // expected-error {{argument to '__hvc' must be a constant integer}}
+  __hvc(1, 2, 3, 4, 5); // no-error: immediate plus four register arguments
+  __hvc(1, 2, 3, 4, 5, 6); // expected-error {{too many arguments to function call, expected at most 5, have 6}}
+  __hvc(1, d, p, x); // no-error: floating-point, pointer and integer arguments
+  __hvc(1, s); // expected-error {{2nd argument to '__hvc' must have integer, floating-point, or pointer type}}
+}
+
+void check__svc(unsigned int x, double d, void *p, struct NonScalar s) {
+  __svc(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __svc(65536); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __svc(x); // expected-error {{argument to '__svc' must be a constant integer}}
+  __svc(1, 2, 3, 4, 5); // no-error: immediate plus four register arguments
+  __svc(1, 2, 3, 4, 5, 6); // expected-error {{too many arguments to function call, expected at most 5, have 6}}
+  __svc(1, d, p, x); // no-error: floating-point, pointer and integer arguments
+  __svc(1, s); // expected-error {{2nd argument to '__svc' must have integer, floating-point, or pointer type}}
+}
+
 void check__getReg(void) {
   __getReg(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __getReg(32); // expected-error-re {{argument value {{.*}} is outside the valid range}}
@@ -25,9 +47,28 @@ void check_ReadWriteStatusReg(int v) {
   _WriteStatusReg(x, v); // expected-error {{argument to '_WriteStatusReg' must be a constant integer}}
 }
 
+void check_ReadWriteStatusReg_range(int v) {
+  // Bit 14 is o0 (op0 - 2), so op0 == 2 registers encode below 0x4000 and are
+  // valid. 0x3fff is S2_7_C15_C15_7; 18 is MDSCR_EL1 (S2_0_C0_C2_2).
+  _ReadStatusReg(0x3fff);      // no-error
+  _ReadStatusReg(18);          // no-error
+  _ReadStatusReg(-1);     // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  _ReadStatusReg(0x8000); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+  _WriteStatusReg(0x3fff, v);  // no-error
+  _WriteStatusReg(18, v);      // no-error
+  _WriteStatusReg(-1, v);     // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  _WriteStatusReg(0x8000, v); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+}
+
 void check__sys(int v) {
   int x;
   __sys(x, v); // expected-error {{argument to '__sys' must be a constant integer}}
+}
+
+void check__sys_range(int v) {
+  __sys(-1, v);      // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __sys(0x4000, v);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
 unsigned int check__sys_retval() {

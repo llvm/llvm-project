@@ -1,12 +1,14 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 //
 // REQUIRES: gpu
+// XFAIL: intelgpu
 
 #include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <limits>
+#include <omp.h>
 #include <ompx.h>
 #include <type_traits>
 

@@ -95,9 +95,10 @@ void RuntimeLibrary::loadLibrary(StringRef LibPath, BOLTLinker &Linker,
   file_magic Magic = identify_magic(B->getBuffer());
 
   if (Magic == file_magic::archive) {
-    Error Err = Error::success();
-    object::Archive Archive(B->getMemBufferRef(), Err);
-    for (const object::Archive::Child &C : Archive.children(Err)) {
+    std::unique_ptr<object::Archive> Archive;
+    Error Err = object::Archive::create(B->getMemBufferRef()).moveInto(Archive);
+    check_error(std::move(Err), B->getBufferIdentifier());
+    for (const object::Archive::Child &C : Archive->children(Err)) {
       std::unique_ptr<object::Binary> Bin = cantFail(C.getAsBinary());
       if (object::ObjectFile *Obj = dyn_cast<object::ObjectFile>(&*Bin))
         Linker.loadObject(Obj->getMemoryBufferRef(), MapSections);

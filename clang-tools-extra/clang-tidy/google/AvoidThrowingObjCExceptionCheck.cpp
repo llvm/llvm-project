@@ -14,7 +14,6 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::google::objc {
 
 void AvoidThrowingObjCExceptionCheck::registerMatchers(MatchFinder *Finder) {
-
   Finder->addMatcher(objcThrowStmt().bind("throwStmt"), this);
   Finder->addMatcher(
       objcMessageExpr(anyOf(hasSelector("raise:format:"),
@@ -30,8 +29,9 @@ void AvoidThrowingObjCExceptionCheck::check(
       Result.Nodes.getNodeAs<ObjCAtThrowStmt>("throwStmt");
   const auto *MatchedExpr =
       Result.Nodes.getNodeAs<ObjCMessageExpr>("raiseException");
-  auto SourceLoc = MatchedStmt == nullptr ? MatchedExpr->getSelectorStartLoc()
-                                          : MatchedStmt->getThrowLoc();
+  const auto SourceLoc = MatchedStmt == nullptr
+                             ? MatchedExpr->getSelectorStartLoc()
+                             : MatchedStmt->getThrowLoc();
 
   // Early return on invalid locations.
   if (SourceLoc.isInvalid())
@@ -41,7 +41,7 @@ void AvoidThrowingObjCExceptionCheck::check(
   // header.
   if (SourceLoc.isMacroID()) {
     const SourceManager &SM = *Result.SourceManager;
-    auto MacroLoc = SM.getImmediateMacroCallerLoc(SourceLoc);
+    const auto MacroLoc = SM.getImmediateMacroCallerLoc(SourceLoc);
 
     // Matches in system header macros should be ignored.
     if (SM.isInSystemHeader(MacroLoc))

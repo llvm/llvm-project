@@ -414,7 +414,7 @@ define void @test_08(i32 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i64 [[IV]], [[SEXT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[IV]], [[ZEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp samesign ult i64 [[IV]], [[ZEXT]]
 ; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -600,7 +600,7 @@ define void @test_13b(i32 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[IV]], 1024
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp samesign ult i64 [[IV]], 1024
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -625,7 +625,7 @@ define void @test_13c(i32 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[IV]], 1024
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp samesign ult i64 [[IV]], 1024
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

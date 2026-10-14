@@ -33,9 +33,7 @@
 #include <cstring>
 #include <functional>
 #include <list>
-#include <memory>
 #include <optional>
-#include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -216,10 +214,12 @@ public:
       return result;
     }
     Messages messages{std::move(state.messages())};
+    const char *start{state.GetLocation()};
     bool hadAnyTokenMatched{state.anyTokenMatched()};
     state.set_anyTokenMatched(false);
     std::optional<resultType> result{parser_.Parse(state)};
     bool emitMessage{false};
+    bool emitAtStart{false};
     if (result) {
       messages.Annex(std::move(state.messages()));
       if (hadAnyTokenMatched) {
@@ -230,13 +230,18 @@ public:
       messages.Annex(std::move(state.messages()));
     } else {
       emitMessage = true;
+      emitAtStart = true;
       if (hadAnyTokenMatched) {
         state.set_anyTokenMatched();
       }
     }
     state.messages() = std::move(messages);
     if (emitMessage) {
-      state.Say(text_);
+      if (emitAtStart) {
+        state.Say(start, text_);
+      } else {
+        state.Say(text_);
+      }
     }
     return result;
   }
@@ -395,7 +400,7 @@ public:
     }
     if (bx) {
       // Error recovery situations must also produce messages.
-      CHECK(state.anyDeferredMessages() || state.messages().AnyFatalError());
+      CHECK(hadDeferredMessages || state.messages().AnyFatalError());
       state.set_anyErrorRecovery();
     }
     return bx;

@@ -4,8 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+experimental-zvfbfa \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s --check-prefixes=CHECK
 
-declare <vscale x 1 x bfloat> @llvm.riscv.vfmv.s.f.nxv1bf16(<vscale x 1 x bfloat>, bfloat, iXLen)
-
 define <vscale x 1 x bfloat> @intrinsic_vfmv.s.f_f_nxv1bf16(<vscale x 1 x bfloat> %0, bfloat %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.s.f_f_nxv1bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -16,8 +14,6 @@ entry:
   %a = call <vscale x 1 x bfloat> @llvm.riscv.vfmv.s.f.nxv1bf16(<vscale x 1 x bfloat> %0, bfloat %1, iXLen %2)
   ret <vscale x 1 x bfloat> %a
 }
-
-declare <vscale x 2 x bfloat> @llvm.riscv.vfmv.s.f.nxv2bf16(<vscale x 2 x bfloat>, bfloat, iXLen)
 
 define <vscale x 2 x bfloat> @intrinsic_vfmv.s.f_f_nxv2bf16(<vscale x 2 x bfloat> %0, bfloat %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.s.f_f_nxv2bf16:
@@ -30,8 +26,6 @@ entry:
   ret <vscale x 2 x bfloat> %a
 }
 
-declare <vscale x 4 x bfloat> @llvm.riscv.vfmv.s.f.nxv4bf16(<vscale x 4 x bfloat>, bfloat, iXLen)
-
 define <vscale x 4 x bfloat> @intrinsic_vfmv.s.f_f_nxv4bf16(<vscale x 4 x bfloat> %0, bfloat %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.s.f_f_nxv4bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -42,8 +36,6 @@ entry:
   %a = call <vscale x 4 x bfloat> @llvm.riscv.vfmv.s.f.nxv4bf16(<vscale x 4 x bfloat> %0, bfloat %1, iXLen %2)
   ret <vscale x 4 x bfloat> %a
 }
-
-declare <vscale x 8 x bfloat> @llvm.riscv.vfmv.s.f.nxv8bf16(<vscale x 8 x bfloat>, bfloat, iXLen)
 
 define <vscale x 8 x bfloat> @intrinsic_vfmv.s.f_f_nxv8bf16(<vscale x 8 x bfloat> %0, bfloat %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.s.f_f_nxv8bf16:
@@ -56,8 +48,6 @@ entry:
   ret <vscale x 8 x bfloat> %a
 }
 
-declare <vscale x 16 x bfloat> @llvm.riscv.vfmv.s.f.nxv16bf16(<vscale x 16 x bfloat>, bfloat, iXLen)
-
 define <vscale x 16 x bfloat> @intrinsic_vfmv.s.f_f_nxv16bf16(<vscale x 16 x bfloat> %0, bfloat %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.s.f_f_nxv16bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -68,8 +58,6 @@ entry:
   %a = call <vscale x 16 x bfloat> @llvm.riscv.vfmv.s.f.nxv16bf16(<vscale x 16 x bfloat> %0, bfloat %1, iXLen %2)
   ret <vscale x 16 x bfloat> %a
 }
-
-declare <vscale x 32 x bfloat> @llvm.riscv.vfmv.s.f.nxv32bf16(<vscale x 32 x bfloat>, bfloat, iXLen)
 
 define <vscale x 32 x bfloat> @intrinsic_vfmv.s.f_f_nxv32bf16(<vscale x 32 x bfloat> %0, bfloat %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.s.f_f_nxv32bf16:

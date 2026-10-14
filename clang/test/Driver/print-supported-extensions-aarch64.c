@@ -9,7 +9,7 @@
 // CHECK-NEXT:     brbe                FEAT_BRBE                                              Enable Branch Record Buffer Extension
 // CHECK-NEXT:     bti                 FEAT_BTI                                               Enable Branch Target Identification
 // CHECK-NEXT:     btie                FEAT_BTIE                                              Enable Enhanced Branch Target Identification extension
-// CHECK-NEXT:     cmh                 FEAT_CMH                                               Enable Armv9.7-A Contention Management Hints
+// CHECK-NEXT:     cflt                FEAT_CFLT                                              Enable Armv9.8-A Conditional Fault instructions
 // CHECK-NEXT:     cmpbr               FEAT_CMPBR                                             Enable Armv9.6-A base compare and branch instructions
 // CHECK-NEXT:     fcma                FEAT_FCMA                                              Enable Armv8.3-A Floating-point complex number support
 // CHECK-NEXT:     cpa                 FEAT_CPA                                               Enable Armv9.5-A Checked Pointer Arithmetic
@@ -39,10 +39,12 @@
 // CHECK-NEXT:     gcie                FEAT_GCIE                                              Enable GICv5 (Generic Interrupt Controller) CPU Interface Extension
 // CHECK-NEXT:     gcs                 FEAT_GCS                                               Enable Armv9.4-A Guarded Call Stack Extension
 // CHECK-NEXT:     hbc                 FEAT_HBC                                               Enable Armv8.8-A Hinted Conditional Branches Extension
+// CHECK-NEXT:     hinte               FEAT_HINTE                                             Enable extended A64 hint instruction space
 // CHECK-NEXT:     i8mm                FEAT_I8MM                                              Enable Matrix Multiply Int8 Extension
 // CHECK-NEXT:     ite                 FEAT_ITE                                               Enable Armv9.4-A Instrumentation Extension
 // CHECK-NEXT:     jscvt               FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions
 // CHECK-NEXT:     ls64                FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA              Enable Armv8.7-A LD64B/ST64B Accelerator Extension
+// CHECK-NEXT:     lsc64b              FEAT_LSC64B                                            Enable Armv9.8-A Single-copy atomic 64-byte load/store consistency extension
 // CHECK-NEXT:     lscp                FEAT_LSCP                                              Enable Armv9.7-A Load-acquire and store-release pair extension
 // CHECK-NEXT:     lse                 FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     lse128              FEAT_LSE128                                            Enable Armv9.4-A 128-bit Atomic instructions
@@ -51,14 +53,12 @@
 // CHECK-NEXT:     lut                 FEAT_LUT                                               Enable Lookup Table instructions
 // CHECK-NEXT:     mops                FEAT_MOPS                                              Enable Armv8.8-A memcpy and memset acceleration instructions
 // CHECK-NEXT:     mops-go             FEAT_MOPS_GO                                           Enable memset acceleration granule only
-// CHECK-NEXT:     mpamv2              FEAT_MPAMv2                                            Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions
 // CHECK-NEXT:     memtag              FEAT_MTE, FEAT_MTE2                                    Enable Memory Tagging Extension
 // CHECK-NEXT:     mtetc               FEAT_MTETC                                             Enable Virtual Memory Tagging Extension
 // CHECK-NEXT:     simd                FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // CHECK-NEXT:     occmo               FEAT_OCCMO                                             Enable Armv9.6-A Outer cacheable cache maintenance operations
 // CHECK-NEXT:     pauth               FEAT_PAuth                                             Enable Armv8.3-A Pointer Authentication extension
 // CHECK-NEXT:     pauth-lr            FEAT_PAuth_LR                                          Enable Armv9.5-A PAC enhancements
-// CHECK-NEXT:     pcdphint            FEAT_PCDPHINT                                          Enable Armv9.6-A Producer Consumer Data Placement hints
 // CHECK-NEXT:     pmuv3               FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
 // CHECK-NEXT:     poe2                FEAT_S1POE2                                            Enable Stage 1 Permission Overlays Extension 2 instructions
 // CHECK-NEXT:     pops                FEAT_PoPS                                              Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions

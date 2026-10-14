@@ -49,7 +49,7 @@ Error release(MemoryMapper &M, const std::vector<ExecutorAddr> &Reservations) {
 }
 
 // A basic function to be used as both initializer/deinitializer
-CWrapperFunctionResult incrementWrapper(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer incrementWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr A) -> Error {
@@ -68,7 +68,7 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
     std::unique_ptr<MemoryMapper> Mapper =
         cantFail(InProcessMemoryMapper::Create());
     jitlink::LinkGraph G("G", std::make_shared<SymbolStringPool>(),
-                         Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+                         Triple("x86_64-apple-darwin"), 8, SubtargetFeatures(),
                          jitlink::getGenericEdgeKindName);
 
     // We will do two separate allocations

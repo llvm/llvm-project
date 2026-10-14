@@ -15,6 +15,7 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/prev.h>
 #include <__memory/pointer_traits.h>
@@ -25,14 +26,15 @@
 #include <__type_traits/is_class.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_cv.h>
+#include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
@@ -87,35 +89,35 @@ public:
   }
 
   template <class _D2 = _Derived>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto data()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto data()
     requires contiguous_iterator<iterator_t<_D2>>
   {
     return std::to_address(ranges::begin(__derived()));
   }
 
   template <class _D2 = _Derived>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto data() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto data() const
     requires range<const _D2> && contiguous_iterator<iterator_t<const _D2>>
   {
     return std::to_address(ranges::begin(__derived()));
   }
 
   template <class _D2 = _Derived>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires forward_range<_D2> && sized_sentinel_for<sentinel_t<_D2>, iterator_t<_D2>>
   {
     return std::__to_unsigned_like(ranges::end(__derived()) - ranges::begin(__derived()));
   }
 
   template <class _D2 = _Derived>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires forward_range<const _D2> && sized_sentinel_for<sentinel_t<const _D2>, iterator_t<const _D2>>
   {
     return std::__to_unsigned_like(ranges::end(__derived()) - ranges::begin(__derived()));
   }
 
   template <class _D2 = _Derived>
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) front()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) front()
     requires forward_range<_D2>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -124,7 +126,7 @@ public:
   }
 
   template <class _D2 = _Derived>
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) front() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) front() const
     requires forward_range<const _D2>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -133,7 +135,7 @@ public:
   }
 
   template <class _D2 = _Derived>
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) back()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) back()
     requires bidirectional_range<_D2> && common_range<_D2>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -142,7 +144,7 @@ public:
   }
 
   template <class _D2 = _Derived>
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) back() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) back() const
     requires bidirectional_range<const _D2> && common_range<const _D2>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -151,20 +153,42 @@ public:
   }
 
   template <random_access_range _RARange = _Derived>
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](range_difference_t<_RARange> __index) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](range_difference_t<_RARange> __index) {
     return ranges::begin(__derived())[__index];
   }
 
   template <random_access_range _RARange = const _Derived>
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](range_difference_t<_RARange> __index) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](range_difference_t<_RARange> __index) const {
     return ranges::begin(__derived())[__index];
   }
+
+#  if _LIBCPP_STD_VER >= 29
+
+  template <random_access_range _RARange = _Derived>
+    requires sized_range<_RARange>
+  [[nodiscard]] constexpr decltype(auto) at(range_difference_t<_RARange> __index) {
+    if (__index < 0 || __index >= ranges::distance(__derived())) {
+      std::__throw_out_of_range("The index passed to `view_interface::at()` is out of bounds.");
+    }
+    return (*this)[__index];
+  }
+
+  template <random_access_range _RARange = const _Derived>
+    requires sized_range<_RARange>
+  [[nodiscard]] constexpr decltype(auto) at(range_difference_t<_RARange> __index) const {
+    if (__index < 0 || __index >= ranges::distance(__derived())) {
+      std::__throw_out_of_range("The index passed to `view_interface::at()` is out of bounds.");
+    }
+    return (*this)[__index];
+  }
+
+#  endif // _LIBCPP_STD_VER >= 29
 };
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___RANGES_VIEW_INTERFACE_H

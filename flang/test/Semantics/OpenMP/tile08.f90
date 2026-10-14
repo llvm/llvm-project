@@ -6,9 +6,9 @@ subroutine do_concurrent
   implicit none
   integer i, j
 
-
+  !ERROR: This construct requires a canonical loop nest
   !$omp tile sizes(2,2)
-  !ERROR: DO CONCURRENT loops cannot form part of a loop nest.
+  !BECAUSE: DO CONCURRENT loop is not a valid affected loop
   do concurrent (i = 1:42, j = 1:42)
     print *, i, j
   end do

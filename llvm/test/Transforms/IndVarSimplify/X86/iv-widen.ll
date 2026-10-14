@@ -16,7 +16,7 @@ declare void @use(i64 %x)
 define void @loop_0(ptr %a, i1 %arg) {
 ; CHECK-LABEL: @loop_0(
 ; CHECK-NEXT:  Prologue:
-; CHECK-NEXT:    br i1 %arg, label [[B18_PREHEADER:%.*]], label [[B6:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[B18_PREHEADER:%.*]], label [[B6:%.*]]
 ; CHECK:       B18.preheader:
 ; CHECK-NEXT:    br label [[B18:%.*]]
 ; CHECK:       B18:
@@ -70,7 +70,7 @@ exit24:                      ; preds = %B18
 define void @loop_0_dead(ptr %a, i1 %arg) {
 ; CHECK-LABEL: @loop_0_dead(
 ; CHECK-NEXT:  Prologue:
-; CHECK-NEXT:    br i1 %arg, label [[B18_PREHEADER:%.*]], label [[B6:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[B18_PREHEADER:%.*]], label [[B6:%.*]]
 ; CHECK:       B18.preheader:
 ; CHECK-NEXT:    br label [[B18:%.*]]
 ; CHECK:       B18:

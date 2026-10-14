@@ -104,6 +104,7 @@ private:
   /// corresponding type.
   llvm::TempDICompositeType translateTemporaryImpl(DICompositeTypeAttr attr);
   llvm::TempDISubprogram translateTemporaryImpl(DISubprogramAttr attr);
+  llvm::TempDICompileUnit translateTemporaryImpl(DICompileUnitAttr attr);
 
   /// Constructs a string metadata node from the string attribute. Returns
   /// nullptr if `stringAttr` is null or contains and empty string.
@@ -112,6 +113,10 @@ private:
   /// Constructs a tuple metadata node from the `elements`. Returns nullptr if
   /// `elements` is empty.
   llvm::MDTuple *getMDTupleOrNull(ArrayRef<DINodeAttr> elements);
+
+  /// Consturct a DISubprogram's retainedNodes metadata node from the
+  /// `retainedNodes`. Returns nullptr if `retainedNodes` is empty.
+  llvm::MDTuple *getRetainedNodesOrNull(ArrayRef<Attribute> retainedNodes);
 
   /// Constructs a DIExpression metadata node from the DIExpressionAttr. Returns
   /// nullptr if `DIExpressionAttr` is null.

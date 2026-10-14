@@ -30,7 +30,7 @@ public:
   void SetText(std::string text) {
     static std::hash<std::string> hasher;
     m_text = std::move(text);
-    m_hash = hasher(text);
+    m_hash = hasher(m_text);
   }
 
   size_t GetHash() const { return m_hash; }
@@ -38,6 +38,10 @@ public:
   lldb::LanguageType GetLanguage() const { return m_language; }
 
   void SetLanguage(lldb::LanguageType language) { m_language = language; }
+
+  lldb::BreakpointConditionMode GetMode() const { return m_condition_mode; }
+
+  void SetMode(lldb::BreakpointConditionMode mode) { m_condition_mode = mode; }
 
 private:
   /// The condition to test.
@@ -48,6 +52,10 @@ private:
 
   /// The language for this condition.
   lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
+
+  /// The evaluation mode for this condition.
+  lldb::BreakpointConditionMode m_condition_mode =
+      lldb::eBreakpointConditionModeDefault;
 };
 
 } // namespace lldb_private

@@ -1,0 +1,52 @@
+# REQUIRES: lldb-formatters-compatibility
+#
+# RUN: split-file %s %t
+# RUN: lldb -x \
+# RUN:   -o 'command script import %llvm_src_root/utils/lldbDataFormatters.py' \
+# RUN:   -s %t/commands.input %llvm_tools_dir/check-lldb-llvm-support-expected \
+# RUN:   -o quit \
+# RUN:   | FileCheck %t/checks
+
+#--- commands.input
+break set -p "Break here"
+run
+
+v -T ExpectedInt
+v -T ExpectedPtr
+v -T ExpectedRef
+v -T ExpectedVec
+v -T ExpectedVecRef
+
+#--- checks
+# CHECK:      (lldb) v -T ExpectedInt
+# CHECK-NEXT: (llvm::Expected<int>) ExpectedInt = {
+# CHECK-NEXT:   (llvm::Expected<int>::storage_type) value = 42
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T ExpectedPtr
+# CHECK-NEXT: (llvm::Expected<int *>) ExpectedPtr = {
+# CHECK-NEXT:   (llvm::Expected<int *>::storage_type) value = 0x{{[0-9a-fA-F]+}}
+# CHECK-NEXT: }
+
+# Reference types are unwrapped from std::reference_wrapper<T> to T.
+# CHECK:      (lldb) v -T ExpectedRef
+# CHECK-NEXT: (llvm::Expected<int &>) ExpectedRef = {
+# CHECK-NEXT:   ({{.*}}) value = 100
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T ExpectedVec
+# CHECK-NEXT: (llvm::Expected<llvm::SmallVector<int, 2> >) ExpectedVec = {
+# CHECK-NEXT:   (llvm::Expected<llvm::SmallVector<int, 2> >::storage_type) value = size=2 {
+# CHECK-NEXT:     (int) [0] = 1
+# CHECK-NEXT:     (int) [1] = 2
+# CHECK-NEXT:   }
+# CHECK-NEXT: }
+
+# Templated reference types are also unwrapped from std::reference_wrapper<T> to T.
+# CHECK:      (lldb) v -T ExpectedVecRef
+# CHECK-NEXT: (llvm::Expected<llvm::SmallVector<int, 2> &>) ExpectedVecRef = {
+# CHECK-NEXT:   ({{.*}}) value = size=2 {
+# CHECK-NEXT:     (int) [0] = 3
+# CHECK-NEXT:     (int) [1] = 4
+# CHECK-NEXT:   }
+# CHECK-NEXT: }

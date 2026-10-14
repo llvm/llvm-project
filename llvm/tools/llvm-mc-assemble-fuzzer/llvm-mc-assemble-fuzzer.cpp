@@ -94,12 +94,11 @@ class LLVMFuzzerInputBuffer : public MemoryBuffer
         init(Data, Data+Size, false);
       }
 
-
-    virtual BufferKind getBufferKind() const {
-      return MemoryBuffer_Malloc; // it's not disk-backed so I think that's
-                                  // the intent ... though AFAIK it
-                                  // probably came from an mmap or sbrk
-    }
+      virtual BufferKind getBufferKind() const override {
+        return MemoryBuffer_Malloc; // it's not disk-backed so I think that's
+                                    // the intent ... though AFAIK it
+                                    // probably came from an mmap or sbrk
+      }
 
   private:
     const char *Data;
@@ -116,7 +115,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
     createMCAsmParser(SrcMgr, Ctx, Str, MAI));
 
   std::unique_ptr<MCTargetAsmParser> TAP(
-    TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
+      TheTarget->createMCAsmParser(STI, *Parser, MCII));
 
   if (!TAP) {
     errs() << ProgName
@@ -156,7 +155,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
     abort();
   }
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI) {
     errs() << "Unable to create target register info!\n";
     abort();
@@ -164,20 +163,20 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI) {
     errs() << "Unable to create target asm info!\n";
     abort();
   }
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
   if (!STI) {
     errs() << "Unable to create subtargettarget info!\n";
     abort();
   }
 
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  MCContext Ctx(TheTriple, *MAI, *MRI, *STI, &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
   Ctx.setObjectFileInfo(MOFI.get());

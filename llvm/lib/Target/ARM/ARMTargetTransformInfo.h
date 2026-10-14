@@ -40,13 +40,13 @@ class Type;
 class Value;
 
 namespace TailPredication {
-  enum Mode {
-    Disabled = 0,
-    EnabledNoReductions,
-    Enabled,
-    ForceEnabledNoReductions,
-    ForceEnabled
-  };
+enum Mode {
+  Disabled = 0,
+  EnabledNoReductions,
+  Enabled,
+  ForceEnabledNoReductions,
+  ForceEnabled
+};
 }
 
 // For controlling conversion of memcpy into Tail Predicated loop.
@@ -63,39 +63,6 @@ class ARMTTIImpl final : public BasicTTIImplBase<ARMTTIImpl> {
   const ARMSubtarget *ST;
   const ARMTargetLowering *TLI;
 
-  // Currently the following features are excluded from InlineFeaturesAllowed.
-  // ModeThumb, FeatureNoARM, ModeSoftFloat, FeatureFP64, FeatureD32
-  // Depending on whether they are set or unset, different
-  // instructions/registers are available. For example, inlining a callee with
-  // -thumb-mode in a caller with +thumb-mode, may cause the assembler to
-  // fail if the callee uses ARM only instructions, e.g. in inline asm.
-  const FeatureBitset InlineFeaturesAllowed = {
-      ARM::FeatureVFP2, ARM::FeatureVFP3, ARM::FeatureNEON, ARM::FeatureThumb2,
-      ARM::FeatureFP16, ARM::FeatureVFP4, ARM::FeatureFPARMv8,
-      ARM::FeatureFullFP16, ARM::FeatureFP16FML, ARM::FeatureHWDivThumb,
-      ARM::FeatureHWDivARM, ARM::FeatureDB, ARM::FeatureV7Clrex,
-      ARM::FeatureAcquireRelease, ARM::FeatureSlowFPBrcc,
-      ARM::FeaturePerfMon, ARM::FeatureTrustZone, ARM::Feature8MSecExt,
-      ARM::FeatureCrypto, ARM::FeatureCRC, ARM::FeatureRAS,
-      ARM::FeatureFPAO, ARM::FeatureFuseAES, ARM::FeatureZCZeroing,
-      ARM::FeatureProfUnpredicate, ARM::FeatureSlowVGETLNi32,
-      ARM::FeatureSlowVDUP32, ARM::FeaturePreferVMOVSR,
-      ARM::FeaturePrefISHSTBarrier, ARM::FeatureMuxedUnits,
-      ARM::FeatureSlowOddRegister, ARM::FeatureSlowLoadDSubreg,
-      ARM::FeatureDontWidenVMOVS, ARM::FeatureExpandMLx,
-      ARM::FeatureHasVMLxHazards, ARM::FeatureNEONForFPMovs,
-      ARM::FeatureNEONForFP, ARM::FeatureCheckVLDnAlign,
-      ARM::FeatureHasSlowFPVMLx, ARM::FeatureHasSlowFPVFMx,
-      ARM::FeatureVMLxForwarding, ARM::FeaturePref32BitThumb,
-      ARM::FeatureAvoidPartialCPSR, ARM::FeatureCheapPredicableCPSR,
-      ARM::FeatureAvoidMOVsShOp, ARM::FeatureHasRetAddrStack,
-      ARM::FeatureHasNoBranchPredictor, ARM::FeatureDSP, ARM::FeatureMP,
-      ARM::FeatureVirtualization, ARM::FeatureMClass, ARM::FeatureRClass,
-      ARM::FeatureAClass, ARM::FeatureStrictAlign, ARM::FeatureLongCalls,
-      ARM::FeatureExecuteOnly, ARM::FeatureReserveR9, ARM::FeatureNoMovt,
-      ARM::FeatureNoNegativeImmediates
-  };
-
   const ARMSubtarget *getST() const { return ST; }
   const ARMTargetLowering *getTLI() const { return TLI; }
 
@@ -103,9 +70,6 @@ public:
   explicit ARMTTIImpl(const ARMBaseTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
-
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const override;
 
   bool enableInterleavedAccessVectorization() const override { return true; }
 
@@ -180,18 +144,23 @@ public:
     llvm_unreachable("Unsupported register kind");
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override {
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
     return ST->getMaxInterleaveFactor();
   }
 
   bool isProfitableLSRChainElement(Instruction *I) const override;
 
-  bool isLegalMaskedLoad(Type *DataTy, Align Alignment,
-                         unsigned AddressSpace) const override;
+  bool
+  isLegalMaskedLoad(Type *DataTy, Align Alignment, unsigned AddressSpace,
+                    TTI::MaskKind MaskKind =
+                        TTI::MaskKind::VariableOrConstantMask) const override;
 
-  bool isLegalMaskedStore(Type *DataTy, Align Alignment,
-                          unsigned AddressSpace) const override {
-    return isLegalMaskedLoad(DataTy, Alignment, AddressSpace);
+  bool
+  isLegalMaskedStore(Type *DataTy, Align Alignment, unsigned AddressSpace,
+                     TTI::MaskKind MaskKind =
+                         TTI::MaskKind::VariableOrConstantMask) const override {
+    return isLegalMaskedLoad(DataTy, Alignment, AddressSpace, MaskKind);
   }
 
   bool forceScalarizeMaskedGather(VectorType *VTy,
@@ -224,9 +193,11 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CtxI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
 
   bool preferInLoopReduction(RecurKind Kind, Type *Ty) const override;
 
@@ -252,13 +223,14 @@ public:
       const Instruction *I = nullptr) const override;
 
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
 
   InstructionCost
-  getAddressComputationCost(Type *Val, ScalarEvolution *SE, const SCEV *Ptr,
+  getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr,
                             TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getArithmeticInstrCost(
@@ -266,7 +238,7 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      const Instruction *CtxI = nullptr) const override;
 
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
@@ -275,19 +247,19 @@ public:
       const Instruction *I = nullptr) const override;
 
   InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const override;
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const override;
+
+  InstructionCost getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                        TTI::TargetCostKind CostKind) const;
 
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
 
-  InstructionCost
-  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const override;
+  InstructionCost getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                         TTI::TargetCostKind CostKind) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
@@ -310,6 +282,15 @@ public:
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
 
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
+
   /// getScalingFactorCost - Return the cost of the scaling used in
   /// addressing mode represented by AM.
   /// If the AM is supported, the return value must be >= 0.
@@ -324,13 +305,12 @@ public:
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const override;
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override;
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override;
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;
 
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const override;
+  TailFoldingStyle getPreferredTailFoldingStyle() const override;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP) const override;
@@ -344,13 +324,12 @@ public:
     return true;
   }
 
+  bool shouldConsiderVectorizationRegPressure() const override;
+
   bool hasArmWideBranch(bool Thumb) const override;
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
-
-  unsigned getNumBytesToPadGlobalArray(unsigned Size,
-                                       Type *ArrayType) const override;
 
   /// @}
 };
@@ -380,6 +359,236 @@ inline bool isVREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
     if ((unsigned)M[i] != (i - i % BlockElts) + (BlockElts - 1 - i % BlockElts))
       return false;
   }
+
+  return true;
+}
+
+inline unsigned SelectPairHalf(unsigned Elements, ArrayRef<int> Mask,
+                               unsigned Index) {
+  if (Mask.size() == Elements * 2)
+    return Index / Elements;
+  return Mask[Index] == 0 ? 0 : 1;
+}
+
+// Checks whether the shuffle mask represents a vector transpose (VTRN) by
+// checking that pairs of elements in the shuffle mask represent the same index
+// in each vector, incrementing the expected index by 2 at each step.
+// e.g. For v1,v2 of type v4i32 a valid shuffle mask is: [0, 4, 2, 6]
+//  v1={a,b,c,d} => x=shufflevector v1, v2 shufflemask => x={a,e,c,g}
+//  v2={e,f,g,h}
+// WhichResult gives the offset for each element in the mask based on which
+// of the two results it belongs to.
+//
+// The transpose can be represented either as:
+// result1 = shufflevector v1, v2, result1_shuffle_mask
+// result2 = shufflevector v1, v2, result2_shuffle_mask
+// where v1/v2 and the shuffle masks have the same number of elements
+// (here WhichResult (see below) indicates which result is being checked)
+//
+// or as:
+// results = shufflevector v1, v2, shuffle_mask
+// where both results are returned in one vector and the shuffle mask has twice
+// as many elements as v1/v2 (here WhichResult will always be 0 if true) here we
+// want to check the low half and high half of the shuffle mask as if it were
+// the other case
+inline bool isVTRNMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
+    return false;
+
+  // If the mask is twice as long as the input vector then we need to check the
+  // upper and lower parts of the mask with a matching value for WhichResult
+  // FIXME: A mask with only even values will be rejected in case the first
+  // element is undefined, e.g. [-1, 4, 2, 6] will be rejected, because only
+  // M[0] is used to determine WhichResult
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    for (unsigned j = 0; j < NumElts; j += 2) {
+      if ((M[i + j] >= 0 && (unsigned)M[i + j] != j + WhichResult) ||
+          (M[i + j + 1] >= 0 &&
+           (unsigned)M[i + j + 1] != j + NumElts + WhichResult))
+        return false;
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  return true;
+}
+
+/// isVTRN_v_undef_Mask - Special case of isVTRNMask for canonical form of
+/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
+/// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
+inline bool isVTRN_v_undef_Mask(ArrayRef<int> M, EVT VT,
+                                unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
+    return false;
+
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    for (unsigned j = 0; j < NumElts; j += 2) {
+      if ((M[i + j] >= 0 && (unsigned)M[i + j] != j + WhichResult) ||
+          (M[i + j + 1] >= 0 && (unsigned)M[i + j + 1] != j + WhichResult))
+        return false;
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  return true;
+}
+
+// Checks whether the shuffle mask represents a vector unzip (VUZP) by checking
+// that the mask elements are either all even and in steps of size 2 or all odd
+// and in steps of size 2.
+// e.g. For v1,v2 of type v4i32 a valid shuffle mask is: [0, 2, 4, 6]
+//  v1={a,b,c,d} => x=shufflevector v1, v2 shufflemask => x={a,c,e,g}
+//  v2={e,f,g,h}
+// Requires similar checks to that of isVTRNMask with
+// respect the how results are returned.
+inline bool isVUZPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if (M.size() != NumElts && M.size() != NumElts * 2)
+    return false;
+
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    for (unsigned j = 0; j < NumElts; ++j) {
+      if (M[i + j] >= 0 && (unsigned)M[i + j] != 2 * j + WhichResult)
+        return false;
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  // VUZP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
+  if (VT.is64BitVector() && EltSz == 32)
+    return false;
+
+  return true;
+}
+
+/// isVUZP_v_undef_Mask - Special case of isVUZPMask for canonical form of
+/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
+/// Mask is e.g., <0, 2, 0, 2> instead of <0, 2, 4, 6>,
+inline bool isVUZP_v_undef_Mask(ArrayRef<int> M, EVT VT,
+                                unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if (M.size() != NumElts && M.size() != NumElts * 2)
+    return false;
+
+  unsigned Half = NumElts / 2;
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    for (unsigned j = 0; j < NumElts; j += Half) {
+      unsigned Idx = WhichResult;
+      for (unsigned k = 0; k < Half; ++k) {
+        int MIdx = M[i + j + k];
+        if (MIdx >= 0 && (unsigned)MIdx != Idx)
+          return false;
+        Idx += 2;
+      }
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  // VUZP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
+  if (VT.is64BitVector() && EltSz == 32)
+    return false;
+
+  return true;
+}
+
+// Checks whether the shuffle mask represents a vector zip (VZIP) by checking
+// that pairs of elements of the shufflemask represent the same index in each
+// vector incrementing sequentially through the vectors.
+// e.g. For v1,v2 of type v4i32 a valid shuffle mask is: [0, 4, 1, 5]
+//  v1={a,b,c,d} => x=shufflevector v1, v2 shufflemask => x={a,e,b,f}
+//  v2={e,f,g,h}
+// Requires similar checks to that of isVTRNMask with respect the how results
+// are returned.
+inline bool isVZIPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
+    return false;
+
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    unsigned Idx = WhichResult * NumElts / 2;
+    for (unsigned j = 0; j < NumElts; j += 2) {
+      if ((M[i + j] >= 0 && (unsigned)M[i + j] != Idx) ||
+          (M[i + j + 1] >= 0 && (unsigned)M[i + j + 1] != Idx + NumElts))
+        return false;
+      Idx += 1;
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  // VZIP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
+  if (VT.is64BitVector() && EltSz == 32)
+    return false;
+
+  return true;
+}
+
+/// isVZIP_v_undef_Mask - Special case of isVZIPMask for canonical form of
+/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
+/// Mask is e.g., <0, 0, 1, 1> instead of <0, 4, 1, 5>.
+inline bool isVZIP_v_undef_Mask(ArrayRef<int> M, EVT VT,
+                                unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
+    return false;
+
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    unsigned Idx = WhichResult * NumElts / 2;
+    for (unsigned j = 0; j < NumElts; j += 2) {
+      if ((M[i + j] >= 0 && (unsigned)M[i + j] != Idx) ||
+          (M[i + j + 1] >= 0 && (unsigned)M[i + j + 1] != Idx))
+        return false;
+      Idx += 1;
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  // VZIP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
+  if (VT.is64BitVector() && EltSz == 32)
+    return false;
 
   return true;
 }

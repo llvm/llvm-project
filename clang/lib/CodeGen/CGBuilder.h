@@ -11,7 +11,9 @@
 
 #include "Address.h"
 #include "CGValue.h"
+#include "CodeGenModule.h"
 #include "CodeGenTypeCache.h"
+#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GEPNoWrapFlags.h"
@@ -36,7 +38,7 @@ public:
 
   /// This forwards to CodeGenFunction::InsertHelper.
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
-                    llvm::BasicBlock::iterator InsertPt) const override;
+                    llvm::BasicBlock::iterator InsertPt) const;
 
 private:
   CodeGenFunction *CGF = nullptr;
@@ -44,7 +46,7 @@ private:
 
 typedef CGBuilderInserter CGBuilderInserterTy;
 
-typedef llvm::IRBuilder<llvm::ConstantFolder, CGBuilderInserterTy>
+typedef llvm::IRBuilder<llvm::TargetFolder, CGBuilderInserterTy>
     CGBuilderBaseTy;
 
 class CGBuilderTy : public CGBuilderBaseTy {
@@ -63,7 +65,7 @@ class CGBuilderTy : public CGBuilderBaseTy {
   template <bool IsInBounds>
   Address createConstGEP2_32(Address Addr, unsigned Idx0, unsigned Idx1,
                              const llvm::Twine &Name) {
-    const llvm::DataLayout &DL = BB->getDataLayout();
+    const llvm::DataLayout &DL = getDataLayout();
     llvm::Value *V;
     if (IsInBounds)
       V = CreateConstInBoundsGEP2_32(Addr.getElementType(),
@@ -89,19 +91,25 @@ class CGBuilderTy : public CGBuilderBaseTy {
   }
 
 public:
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::LLVMContext &C)
-      : CGBuilderBaseTy(C), TypeCache(TypeCache) {}
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::LLVMContext &C,
-              const llvm::ConstantFolder &F,
+  CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C)
+      : CGBuilderBaseTy(CGM.getModule(),
+                        llvm::TargetFolder(CGM.getDataLayout())),
+        TypeCache(CGM) {}
+  CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C,
               const CGBuilderInserterTy &Inserter)
-      : CGBuilderBaseTy(C, F, Inserter), TypeCache(TypeCache) {}
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::Instruction *I)
-      : CGBuilderBaseTy(I), TypeCache(TypeCache) {}
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::BasicBlock *BB)
-      : CGBuilderBaseTy(BB), TypeCache(TypeCache) {}
+      : CGBuilderBaseTy(CGM.getModule(),
+                        llvm::TargetFolder(CGM.getDataLayout()), Inserter),
+        TypeCache(CGM) {}
+  CGBuilderTy(const CodeGenModule &CGM, llvm::Instruction *I)
+      : CGBuilderBaseTy(I->getIterator(),
+                        llvm::TargetFolder(CGM.getDataLayout())),
+        TypeCache(CGM) {}
+  CGBuilderTy(const CodeGenModule &CGM, llvm::BasicBlock *BB)
+      : CGBuilderBaseTy(BB, llvm::TargetFolder(CGM.getDataLayout())),
+        TypeCache(CGM) {}
 
   llvm::ConstantInt *getSize(CharUnits N) {
-    return llvm::ConstantInt::get(TypeCache.SizeTy, N.getQuantity());
+    return llvm::ConstantInt::getSigned(TypeCache.SizeTy, N.getQuantity());
   }
   llvm::ConstantInt *getSize(uint64_t N) {
     return llvm::ConstantInt::get(TypeCache.SizeTy, N);
@@ -223,7 +231,7 @@ public:
   Address CreateStructGEP(Address Addr, unsigned Index,
                           const llvm::Twine &Name = "") {
     llvm::StructType *ElTy = cast<llvm::StructType>(Addr.getElementType());
-    const llvm::DataLayout &DL = BB->getDataLayout();
+    const llvm::DataLayout &DL = getDataLayout();
     const llvm::StructLayout *Layout = DL.getStructLayout(ElTy);
     auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
 
@@ -245,7 +253,7 @@ public:
   Address CreateConstArrayGEP(Address Addr, uint64_t Index,
                               const llvm::Twine &Name = "") {
     llvm::ArrayType *ElTy = cast<llvm::ArrayType>(Addr.getElementType());
-    const llvm::DataLayout &DL = BB->getDataLayout();
+    const llvm::DataLayout &DL = getDataLayout();
     CharUnits EltSize =
         CharUnits::fromQuantity(DL.getTypeAllocSize(ElTy->getElementType()));
 
@@ -265,7 +273,7 @@ public:
   Address CreateConstInBoundsGEP(Address Addr, uint64_t Index,
                                  const llvm::Twine &Name = "") {
     llvm::Type *ElTy = Addr.getElementType();
-    const llvm::DataLayout &DL = BB->getDataLayout();
+    const llvm::DataLayout &DL = getDataLayout();
     CharUnits EltSize = CharUnits::fromQuantity(DL.getTypeAllocSize(ElTy));
 
     return Address(
@@ -282,7 +290,7 @@ public:
   Address CreateConstGEP(Address Addr, uint64_t Index,
                          const llvm::Twine &Name = "") {
     llvm::Type *ElTy = Addr.getElementType();
-    const llvm::DataLayout &DL = BB->getDataLayout();
+    const llvm::DataLayout &DL = getDataLayout();
     CharUnits EltSize = CharUnits::fromQuantity(DL.getTypeAllocSize(ElTy));
 
     return Address(CreateGEP(ElTy, Addr.getBasePointer(), getSize(Index), Name),
@@ -295,7 +303,7 @@ public:
   using CGBuilderBaseTy::CreateGEP;
   Address CreateGEP(CodeGenFunction &CGF, Address Addr, llvm::Value *Index,
                     const llvm::Twine &Name = "") {
-    const llvm::DataLayout &DL = BB->getDataLayout();
+    const llvm::DataLayout &DL = getDataLayout();
     CharUnits EltSize =
         CharUnits::fromQuantity(DL.getTypeAllocSize(Addr.getElementType()));
 
@@ -351,6 +359,28 @@ public:
                             llvm::Type *ElementType, CharUnits Align,
                             const Twine &Name = "") {
     return RawAddress(CreateInBoundsGEP(Addr.getElementType(),
+                                        emitRawPointerFromAddress(Addr),
+                                        IdxList, Name),
+                      ElementType, Align, Addr.isKnownNonNull());
+  }
+
+  using CGBuilderBaseTy::CreateStructuredGEP;
+  llvm::Value *CreateAccessChain(bool Logical, llvm::Type *BaseType,
+                                 llvm::Value *PtrBase,
+                                 ArrayRef<llvm::Value *> IdxList,
+                                 const Twine &Name = "") {
+
+    if (Logical)
+      return CreateStructuredGEP(BaseType, PtrBase, IdxList, Name);
+    return CreateInBoundsGEP(BaseType, PtrBase, IdxList, Name);
+  }
+
+  Address CreateAccessChain(bool Logical, Address Addr,
+                            ArrayRef<llvm::Value *> IdxList,
+                            llvm::Type *ElementType, CharUnits Align,
+                            const Twine &Name = "") {
+
+    return RawAddress(CreateAccessChain(Logical, Addr.getElementType(),
                                         emitRawPointerFromAddress(Addr),
                                         IdxList, Name),
                       ElementType, Align, Addr.isKnownNonNull());
@@ -418,7 +448,7 @@ public:
                                           unsigned FieldIndex,
                                           llvm::MDNode *DbgInfo) {
     llvm::StructType *ElTy = cast<llvm::StructType>(Addr.getElementType());
-    const llvm::DataLayout &DL = BB->getDataLayout();
+    const llvm::DataLayout &DL = getDataLayout();
     const llvm::StructLayout *Layout = DL.getStructLayout(ElTy);
     auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
 
@@ -440,12 +470,6 @@ public:
   using CGBuilderBaseTy::CreateLaunderInvariantGroup;
   Address CreateLaunderInvariantGroup(Address Addr) {
     Addr.replaceBasePointer(CreateLaunderInvariantGroup(Addr.getBasePointer()));
-    return Addr;
-  }
-
-  using CGBuilderBaseTy::CreateStripInvariantGroup;
-  Address CreateStripInvariantGroup(Address Addr) {
-    Addr.replaceBasePointer(CreateStripInvariantGroup(Addr.getBasePointer()));
     return Addr;
   }
 };

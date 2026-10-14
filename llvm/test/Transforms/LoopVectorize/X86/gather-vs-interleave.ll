@@ -24,7 +24,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @strided_load_i64() {
   br label %1
 
-; <label>:1:                                      ; preds = %0, %1
+; <label>:1:
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
   %2 = getelementptr inbounds [10240 x i64], ptr @A, i64 0, i64 %indvars.iv
   %3 = load i64, ptr %2, align 16
@@ -35,7 +35,7 @@ define void @strided_load_i64() {
   %6 = icmp slt i64 %indvars.iv.next, 1024
   br i1 %6, label %1, label %7
 
-; <label>:7:                                      ; preds = %1
+; <label>:7:
   ret void
 }
 

@@ -1,12 +1,8 @@
-//===- RedundantStringCStrCheck.cpp - Check for redundant c_str calls -----===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-//  This file implements a check for redundant calls of c_str() on strings.
 //
 //===----------------------------------------------------------------------===//
 
@@ -158,11 +154,11 @@ void RedundantStringCStrCheck::registerMatchers(
     // Detect redundant 'c_str()' calls in parameters passed to std::format in
     // C++20 onwards and std::print in C++23 onwards.
     Finder->addMatcher(
-        traverse(TK_AsIs,
-                 callExpr(callee(functionDecl(matchers::matchesAnyListedName(
-                              StringParameterFunctions))),
-                          forEachArgumentWithParam(StringCStrCallExpr,
-                                                   parmVarDecl()))),
+        traverse(TK_AsIs, callExpr(callee(functionDecl(
+                                       matchers::matchesAnyListedRegexName(
+                                           StringParameterFunctions))),
+                                   forEachArgumentWithParam(StringCStrCallExpr,
+                                                            parmVarDecl()))),
         this);
   }
 }

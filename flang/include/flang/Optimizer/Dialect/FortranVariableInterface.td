@@ -114,6 +114,20 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
                         fir::FortranVariableFlagsEnum::pointer);
     }
 
+    /// Is this variable a Cray pointer?
+    bool isCrayPointer() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::cray_pointer);
+    }
+
+    /// Is this variable a Cray pointee?
+    bool isCrayPointee() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::cray_pointee);
+    }
+
     /// Is this variable a Fortran allocatable?
     bool isAllocatable() {
       auto attrs = getFortranAttrs();
@@ -316,6 +330,49 @@ def fir_FortranObjectViewOpInterface
         assert($_op.getOperation() == resultView.getOwner() &&
                "resultView must be a result of this operation");
         return $_op.getViewOffset(resultView);
+      }]>,
+  ];
+}
+
+def fir_FortranObjectLoadOpInterface
+    : OpInterface<"FortranObjectLoadOpInterface"> {
+  let description = [{
+    Interface for operations that produce a result by reading the contents
+    of a memory reference passed as one of their operands.
+    For example:
+    ```
+    %0 = fir.load %x : !fir.ref<!fir.box<!fir.heap<f32>>>
+    ```
+    This is the value-producing counterpart of
+    `FortranObjectViewOpInterface`: a view op forwards an *address*, while
+    an op implementing this interface yields the *value* that was read from
+    an address. FIR alias analysis uses it to continue the walk from a
+    loaded descriptor to the memory it was read from, so that it can find
+    the original Fortran object that the descriptor refers to.
+
+    The interface describes provenance only. It states where the result was
+    read from; it does not state that the operation is a pure load. An
+    implementation may produce a result that depends on more than the
+    contents of the memory reference, in which case it must model those
+    extra dependences through its memory effects. Consumers must therefore
+    not use this interface to justify value-based transformations such as
+    CSE or load forwarding.
+  }];
+  let cppNamespace = "::fir";
+
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/
+           [{ Returns the memory reference operand that the given OpResult
+              was read from. }],
+           /*retTy=*/"::mlir::Value",
+           /*methodName=*/"getLoadSource",
+           /*args=*/(ins "::mlir::OpResult":$resultValue),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
+        assert($_op.getOperation() == resultValue.getOwner() &&
+               "resultValue must be a result of this operation");
+        return $_op.getLoadSource(resultValue);
       }]>,
   ];
 }

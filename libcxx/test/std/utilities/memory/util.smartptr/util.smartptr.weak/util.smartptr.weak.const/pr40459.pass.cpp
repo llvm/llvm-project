@@ -39,11 +39,7 @@ struct Deleter {
 };
 
 int main(int, char**) {
-#if TEST_STD_VER >= 11
-  alignas(B) char buffer[sizeof(B)];
-#else
-  std::aligned_storage<sizeof(B), std::alignment_of<B>::value>::type buffer;
-#endif
+  TEST_ALIGNAS(TEST_ALIGNOF(B)) char buffer[sizeof(B)];
   B* pb                 = ::new ((void*)&buffer) B();
   std::shared_ptr<B> sp = std::shared_ptr<B>(pb, Deleter());
   std::weak_ptr<B> wp   = sp;

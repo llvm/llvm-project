@@ -1,7 +1,5 @@
-; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri -mattr=-promote-alloca < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
-; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 -mattr=-promote-alloca < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
-
-target triple = "amdgcn-amd-amdhsa"
+; RUN: opt -passes=amdgpu-attributor -mtriple=amdgpu7.00-amd-amdhsa -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
+; RUN: opt -passes=amdgpu-attributor -mtriple=amdgpu9.00-amd-amdhsa -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
 
 ; HSA-LABEL: {{^}}use_group_to_flat_addrspacecast:
 
@@ -167,9 +165,6 @@ define amdgpu_kernel void @use_flat_to_group_addrspacecast(ptr %ptr) #0 {
 ; HSA-LABEL: {{^}}use_flat_to_private_addrspacecast:
 
 ; HSA: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]]
-; CI-DAG v_cmp_ne_u64_e64 vcc, s[[[PTR_LO]]:[[PTR_HI]]], 0{{$}}
-; CI-DAG v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], s[[PTR_LO]]
-; CI-DAG v_cndmask_b32_e32 [[CASTPTR:v[0-9]+]], -1, v[[VPTR_LO]]
 ; CI-DAG: v_cmp_ne_u64_e64 s[[[CMP_LO:[0-9]+]]:[[CMP_HI:[0-9]+]]], s[[[PTR_LO]]:[[PTR_HI]]], 0{{$}}
 ; CI-DAG: s_and_b64 s{{[[0-9]+:[0-9]+]}}, s[[[CMP_LO]]:[[CMP_HI]]], exec
 ; CI-DAG: s_cselect_b32 [[CASTPTR:s[0-9]+]], s[[PTR_LO]], -1
@@ -227,7 +222,7 @@ define amdgpu_kernel void @use_flat_to_constant_addrspacecast(ptr %ptr) #0 {
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
 ; HSA: flat_store_dword v[[[LO]]:[[HI]]], v[[K]]
 define amdgpu_kernel void @cast_0_group_to_flat_addrspacecast() #0 {
-  %cast = addrspacecast ptr addrspace(3) null to ptr
+  %cast = addrspacecast ptr addrspace(3) zeroinitializer to ptr
   store volatile i32 7, ptr %cast
   ret void
 }
@@ -270,7 +265,7 @@ define amdgpu_kernel void @cast_neg1_flat_to_group_addrspacecast() #0 {
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
 ; HSA: flat_store_dword v[[[LO]]:[[HI]]], v[[K]]
 define amdgpu_kernel void @cast_0_private_to_flat_addrspacecast() #0 {
-  %cast = addrspacecast ptr addrspace(5) null to ptr
+  %cast = addrspacecast ptr addrspace(5) zeroinitializer to ptr
   store volatile i32 7, ptr %cast
   ret void
 }

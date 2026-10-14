@@ -55,7 +55,7 @@ protected:
     MC.reset(new MCContext(TM->getTargetTriple(), TM->getMCAsmInfo(),
                            TM->getMCRegisterInfo(), TM->getMCSubtargetInfo()));
     MC->setObjectFileInfo(TM->getObjFileLowering());
-    TM->getObjFileLowering()->Initialize(*MC, *TM);
+    TM->getObjFileLowering()->initialize(*MC, *TM, *M);
     MC->setObjectFileInfo(TM->getObjFileLowering());
 
     // Use a new MCContext for AsmPrinter for testing.
@@ -84,7 +84,7 @@ protected:
         @G = external global i32
 
         define i32 @foo() {
-          %1 = load i32, i32* @G; load the global variable
+          %1 = load i32, ptr @G; load the global variable
           %2 = call i32 @f()
           %3 = mul i32 %1, %2
           ret i32 %3
@@ -118,7 +118,7 @@ protected:
     M = parseAssemblyString(AssemblyF, SMError, Context);
     if (!M)
       report_fatal_error(SMError.getMessage());
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
     // Get llvm::Function from M
     Foo = M->getFunction("foo");
@@ -131,7 +131,7 @@ protected:
                               TM->getMCRegisterInfo(),
                               TM->getMCSubtargetInfo()));
     MCFoo->setObjectFileInfo(TM->getObjFileLowering());
-    TM->getObjFileLowering()->Initialize(*MCFoo, *TM);
+    TM->getObjFileLowering()->initialize(*MCFoo, *TM, *M);
     MCFoo->setObjectFileInfo(TM->getObjFileLowering());
   }
 

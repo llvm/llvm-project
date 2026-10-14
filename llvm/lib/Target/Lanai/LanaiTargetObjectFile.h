@@ -22,7 +22,8 @@ class LanaiTargetObjectFile : public TargetLoweringObjectFileELF {
                                   const TargetMachine &TM) const;
 
 public:
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   /// Return true if this global address should be placed into small data/bss
   /// section.
@@ -36,8 +37,8 @@ public:
   bool isConstantInSmallSection(const DataLayout &DL, const Constant *CN) const;
 
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                   const Constant *C,
-                                   Align &Alignment) const override;
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override;
 };
 } // end namespace llvm
 

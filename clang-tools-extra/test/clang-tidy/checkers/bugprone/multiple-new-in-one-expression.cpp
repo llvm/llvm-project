@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++11 -check-suffixes=ALL,CPP11 %s bugprone-multiple-new-in-one-expression %t -- -- -target x86_64-unknown-unknown
-// RUN: %check_clang_tidy -std=c++17 -check-suffixes=ALL,CPP17 %s bugprone-multiple-new-in-one-expression %t -- -- -target x86_64-unknown-unknown
+// RUN: %check_clang_tidy -std=c++11,c++14 -check-suffixes=ALL,CPP11 %s bugprone-multiple-new-in-one-expression %t -- -- -target x86_64-unknown-unknown
+// RUN: %check_clang_tidy -std=c++17-or-later -check-suffixes=ALL,CPP17 %s bugprone-multiple-new-in-one-expression %t -- -- -target x86_64-unknown-unknown
 
 namespace std {
 typedef __typeof__(sizeof(0)) size_t;

@@ -1,0 +1,49 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+// CHECK-LABEL: @and_idempotent
+// CHECK-NEXT: cir.return %arg0
+cir.func @and_idempotent(%arg0 : !s32i) -> !s32i {
+  %0 = cir.and %arg0, %arg0 : !s32i
+  cir.return %0 : !s32i
+}
+
+// CHECK-LABEL: @or_idempotent
+// CHECK-NEXT: cir.return %arg0
+cir.func @or_idempotent(%arg0 : !s32i) -> !s32i {
+  %0 = cir.or %arg0, %arg0 : !s32i
+  cir.return %0 : !s32i
+}
+
+// CHECK-LABEL: @and_commutative
+// CHECK: cir.and %arg0, %{{.*}} : !s32i
+cir.func @and_commutative(%arg0 : !s32i) -> !s32i {
+  %0 = cir.const #cir.int<42> : !s32i
+  %1 = cir.and %0, %arg0 : !s32i
+  cir.return %1 : !s32i
+}
+
+// CHECK-LABEL: @or_commutative
+// CHECK: cir.or %arg0, %{{.*}} : !s32i
+cir.func @or_commutative(%arg0 : !s32i) -> !s32i {
+  %0 = cir.const #cir.int<42> : !s32i
+  %1 = cir.or %0, %arg0 : !s32i
+  cir.return %1 : !s32i
+}
+
+// CHECK-LABEL: @xor_commutative
+// CHECK: cir.xor %arg0, %{{.*}} : !s32i
+cir.func @xor_commutative(%arg0 : !s32i) -> !s32i {
+  %0 = cir.const #cir.int<42> : !s32i
+  %1 = cir.xor %0, %arg0 : !s32i
+  cir.return %1 : !s32i
+}
+
+// CHECK-LABEL: @max_commutative
+// CHECK: cir.max %arg0, %{{.*}} : !s32i
+cir.func @max_commutative(%arg0 : !s32i) -> !s32i {
+  %0 = cir.const #cir.int<42> : !s32i
+  %1 = cir.max %0, %arg0 : !s32i
+  cir.return %1 : !s32i
+}

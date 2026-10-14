@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
-# RUN:   -stop-after=prologepilog | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prolog-epilog \
+# RUN:   -stop-after=prolog-epilog | FileCheck %s
 # Test that stack probe results in Nop unwind codes in the prologue.  Test
 # save_fplr, save_reg_x and stack_alloc with multiple updates.
 

@@ -71,14 +71,34 @@ public:
 
   void verifyTargetNode(const SelectionDAG &DAG,
                         const SDNode *N) const override;
+  std::pair<SDValue, SDValue>
+  EmitTargetCodeForMemccpy(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                           SDValue Dst, SDValue Src, SDValue C, SDValue Size,
+                           const CallInst *CI) const override;
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForMemcmp(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                           SDValue Op1, SDValue Op2, SDValue Op3,
                           const CallInst *CI) const override;
+  std::pair<SDValue, SDValue> EmitTargetCodeForStrcmp(
+      SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Op1,
+      SDValue Op2, MachinePointerInfo Op1PtrInfo, MachinePointerInfo Op2PtrInfo,
+      const CallInst *CI) const override;
+  std::pair<SDValue, SDValue>
+  EmitTargetCodeForStrcpy(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                          SDValue Dest, SDValue Src,
+                          MachinePointerInfo DestPtrInfo,
+                          MachinePointerInfo SrcPtrInfo, bool isStpcpy,
+                          const CallInst *CI) const override;
+
   std::pair<SDValue, SDValue>
   EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
                           SDValue Src, const CallInst *CI) const override;
+
+  std::pair<SDValue, SDValue>
+  EmitTargetCodeForStrstr(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                          SDValue Op1, SDValue Op2,
+                          const CallInst *CI) const override;
 };
 
 } // namespace llvm

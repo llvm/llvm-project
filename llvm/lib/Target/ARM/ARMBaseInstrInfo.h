@@ -119,6 +119,8 @@ protected:
   describeLoadedValue(const MachineInstr &MI, Register Reg) const override;
 
 public:
+  const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
+
   // Return whether the target has an explicit NOP encoding.
   bool hasNOP() const;
 
@@ -129,6 +131,11 @@ public:
   const ARMBaseRegisterInfo &getRegisterInfo() const {
     return static_cast<const ARMBaseRegisterInfo &>(
         TargetInstrInfo::getRegisterInfo());
+  }
+
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &ARM::GPRRegClass;
   }
 
   const ARMSubtarget &getSubtarget() const { return Subtarget; }
@@ -164,10 +171,9 @@ public:
   bool isPredicated(const MachineInstr &MI) const override;
 
   // MIR printer helper function to annotate Operands with a comment.
-  std::string
-  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
-                          unsigned OpIdx,
-                          const TargetRegisterInfo *TRI) const override;
+  std::string createMIROperandComment(const MachineInstr &MI,
+                                      const MachineOperand &Op,
+                                      unsigned OpIdx) const override;
 
   ARMCC::CondCodes getPredicate(const MachineInstr &MI) const {
     int PIdx = MI.findFirstPredOperandIdx();
@@ -192,6 +198,15 @@ public:
   /// GetInstSize - Returns the size of the specified MachineInstr.
   ///
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override {
+    // FIXME: These instructions report an incorrect size, but the ARM constant
+    // islands pass somehow depends on it being incorrect.
+    if (MI.getOpcode() == ARM::tTBB_JT || MI.getOpcode() == ARM::tTBH_JT)
+      return InstSizeVerifyMode::NoVerify;
+    return InstSizeVerifyMode::AllowOverEstimate;
+  }
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -222,23 +237,24 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   bool shouldSink(const MachineInstr &MI) const override;
 
-  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig) const override;
+  void
+  reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
+                LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
   MachineInstr &
   duplicate(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
             const MachineInstr &Orig) const override;
 
   const MachineInstrBuilder &AddDReg(MachineInstrBuilder &MIB, unsigned Reg,
-                                     unsigned SubIdx, unsigned State) const;
+                                     unsigned SubIdx, RegState State) const;
 
   bool produceSameValue(const MachineInstr &MI0, const MachineInstr &MI1,
                         const MachineRegisterInfo *MRI) const override;
@@ -304,10 +320,6 @@ public:
                             Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
-  bool analyzeSelect(const MachineInstr &MI,
-                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
-                     unsigned &FalseOp, bool &Optimizable) const override;
-
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
                                bool) const override;
@@ -335,11 +347,9 @@ public:
   getExecutionDomain(const MachineInstr &MI) const override;
   void setExecutionDomain(MachineInstr &MI, unsigned Domain) const override;
 
-  unsigned
-  getPartialRegUpdateClearance(const MachineInstr &, unsigned,
-                               const TargetRegisterInfo *) const override;
-  void breakPartialRegDependency(MachineInstr &, unsigned,
-                                 const TargetRegisterInfo *TRI) const override;
+  unsigned getPartialRegUpdateClearance(const MachineInstr &,
+                                        unsigned) const override;
+  void breakPartialRegDependency(MachineInstr &, unsigned) const override;
 
   /// Get the number of addresses by LDM or VLDM or zero for unknown.
   unsigned getNumLDMAddresses(const MachineInstr &MI) const;
@@ -418,8 +428,6 @@ private:
   /// and updates it if requested.
   bool checkAndUpdateStackOffset(MachineInstr *MI, int64_t Fixup,
                                  bool Updt) const;
-
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
 
   std::optional<unsigned> getVLDMDefCycle(const InstrItineraryData *ItinData,
                                           const MCInstrDesc &DefMCID,

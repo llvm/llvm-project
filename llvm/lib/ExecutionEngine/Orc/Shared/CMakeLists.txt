@@ -1,13 +1,15 @@
 add_llvm_component_library(LLVMOrcShared
   AllocationActions.cpp
+  ConnectionSpec.cpp
   MachOObjectFormat.cpp
   ObjectFormats.cpp
   OrcError.cpp
   OrcRTBridge.cpp
   SimpleRemoteEPCUtils.cpp
   SymbolStringPool.cpp
+
   ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc/Shared
 
   DEPENDS
   intrinsics_gen

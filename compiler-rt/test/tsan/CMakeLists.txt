@@ -31,6 +31,8 @@ endif()
 foreach(arch ${TSAN_TEST_ARCH})
   set(TSAN_TEST_APPLE_PLATFORM "osx")
   set(TSAN_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_osx_MIN_VER_FLAG}")
+  set(TSAN_TEST_APPLE_TARGET_IS_HOST ON)
+  pythonize_bool(TSAN_TEST_APPLE_TARGET_IS_HOST)
 
   set(TSAN_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}" TSAN_TEST_CONFIG_SUFFIX)
@@ -97,6 +99,8 @@ if(APPLE)
       set(CONFIG_NAME "${PLATFORM_CAPITALIZED}${ARCH_UPPER_CASE}Config")
       set(TSAN_TEST_CONFIG_SUFFIX "-${arch}-${platform}")
       set(TSAN_TEST_APPLE_PLATFORM "${platform}")
+      set(TSAN_TEST_APPLE_TARGET_IS_HOST OFF)
+      pythonize_bool(TSAN_TEST_APPLE_TARGET_IS_HOST)
       set(TSAN_TEST_TARGET_ARCH "${arch}")
       set(TSAN_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_${platform}_MIN_VER_FLAG}")
       configure_lit_site_cfg(
@@ -128,7 +132,7 @@ endif()
 add_lit_testsuite(check-tsan "Running ThreadSanitizer tests"
   ${TSAN_TESTSUITES}
   DEPENDS ${TSAN_TEST_DEPS})
-set_target_properties(check-tsan PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(check-tsan PROPERTIES FOLDER "compiler-rt Tests")
 
 if(COMPILER_RT_TSAN_HAS_STATIC_RUNTIME)
   add_lit_testsuite(check-tsan-dynamic "Running the ThreadSanitizer tests with dynamic runtime"

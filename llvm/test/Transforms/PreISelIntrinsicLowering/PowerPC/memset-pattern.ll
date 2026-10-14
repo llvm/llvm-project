@@ -7,8 +7,8 @@
 define void @memset.pattern(ptr %a, i128 %value, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset.pattern(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]], i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOADSTORELOOP:.*]], label %[[SPLIT:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i128, ptr [[A]], i64 [[TMP3]]

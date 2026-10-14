@@ -14,7 +14,7 @@ This check implements `I.11
 `R.3
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#r3-a-raw-pointer-a-t-is-non-owning>`_
 and `GSL.Views
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#SS-views>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#ss-views>`_
 from the C++ Core Guidelines.
 The definition of a ``gsl::owner<T*>`` is straight forward
 
@@ -23,7 +23,7 @@ The definition of a ``gsl::owner<T*>`` is straight forward
   namespace gsl { template <typename T> owner = T; }
 
 It is therefore simple to introduce the owner even without using an implementation of
-the `Guideline Support Library <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#S-gsl>`_.
+the `Guideline Support Library <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#s-gsl>`_.
 
 All checks are purely type based and not (yet) flow sensitive.
 

@@ -27,7 +27,7 @@ class MMAMatrixType;
 #define GEN_PASS_DECL_CONVERTGPUOPSTONVVMOPS
 #include "mlir/Conversion/Passes.h.inc"
 
-LLVM::LLVMStructType convertMMAToLLVMType(gpu::MMAMatrixType type);
+Type convertMMAToLLVMType(gpu::MMAMatrixType type);
 
 /// Configure target to convert from the GPU dialect to NVVM.
 void configureGpuToNVVMConversionLegality(ConversionTarget &target);
@@ -35,12 +35,6 @@ void configureGpuToNVVMConversionLegality(ConversionTarget &target);
 /// Configure the LLVM type convert to convert types and address spaces from the
 /// GPU dialect to NVVM.
 void configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter);
-
-/// Populate patterns that lower certain arith and math dialect ops to
-/// libdevice calls.
-void populateLibDeviceConversionPatterns(const LLVMTypeConverter &converter,
-                                         RewritePatternSet &patterns,
-                                         PatternBenefit benefit = 1);
 
 /// Collect a set of patterns to convert from the GPU dialect to NVVM.
 void populateGpuToNVVMConversionPatterns(const LLVMTypeConverter &converter,

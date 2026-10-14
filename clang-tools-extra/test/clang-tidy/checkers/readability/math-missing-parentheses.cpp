@@ -173,3 +173,22 @@ void CompareAsParentBinOp(int b) {
 
   }
 }
+
+void test_with_parentheses() {
+  // CHECK-MESSAGES: :[[@LINE+2]]:14: warning: '/' has higher precedence than '-'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+  // CHECK-FIXES: int z = (2-(4*3/2)) / (3-1);
+  int z = (2-4*3/2) / (3-1);
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:14: warning: '/' has higher precedence than '-'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+  // CHECK-FIXES: int x = (2-(4*3/2));
+  int x = (2-4*3/2);
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:17: warning: '*' has higher precedence than '+'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+  // CHECK-FIXES: int y = ((1 + (2 * 3)));
+  int y = ((1 + 2 * 3));
+
+  short s = 0;
+  // CHECK-MESSAGES: :[[@LINE+2]]:13: warning: '*' has higher precedence than '+'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+  // CHECK-FIXES: s = ((1 + (2 * 3)));
+  s = ((1 + 2 * 3));
+}

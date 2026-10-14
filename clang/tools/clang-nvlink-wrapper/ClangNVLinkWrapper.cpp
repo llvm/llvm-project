@@ -16,6 +16,8 @@
 
 #include "clang/Basic/Version.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -109,24 +111,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "NVLinkOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "NVLinkOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "NVLinkOpts.inc"
-#undef OPTION
-};
-
-class WrapperOptTable : public opt::GenericOptTable {
+class WrapperOptTable : public opt::OptTable {
 public:
-  WrapperOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  WrapperOptTable() : opt::OptTable(optionTables()) {}
 };
 
 const OptTable &getOptTable() {
@@ -163,6 +153,19 @@ void diagnosticHandler(const DiagnosticInfo &DI) {
     WithColor::remark(errs()) << ErrStorage << "\n";
     break;
   }
+}
+
+bool hasFatBinary(const ArgList &Args, MemoryBufferRef Buffer) {
+  if (Args.hasArg(OPT_dry_run) && Args.hasArg(OPT_assume_device_object))
+    return false;
+  if (identify_magic(Buffer.getBuffer()) != file_magic::elf_relocatable)
+    return false;
+  Expected<std::unique_ptr<ObjectFile>> ObjFile =
+      ObjectFile::createObjectFile(Buffer);
+  if (!ObjFile) // Assume fatbin if the object creation fails.
+    return !errorToBool(ObjFile.takeError());
+  return (*ObjFile)->getArch() != Triple::nvptx &&
+         (*ObjFile)->getArch() != Triple::nvptx64;
 }
 
 Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
@@ -242,6 +245,44 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   errs() << join(std::next(CmdArgs.begin()), CmdArgs.end(), " ") << "\n";
 }
 
+Error executeProgram(StringRef Executable, ArrayRef<StringRef> Args,
+                     const ArgList &WrapperArgs) {
+  if (WrapperArgs.hasArg(OPT_dry_run) || WrapperArgs.hasArg(OPT_verbose))
+    printCommands(Args);
+  if (WrapperArgs.hasArg(OPT_dry_run))
+    return Error::success();
+
+  if (sys::commandLineFitsWithinSystemLimits(Executable, Args)) {
+    if (sys::ExecuteAndWait(Executable, Args))
+      return createStringError("'%s' failed",
+                               sys::path::filename(Executable).str().c_str());
+    return Error::success();
+  }
+
+  auto TempFileOrErr = createTempFile(WrapperArgs, "response", "txt");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
+
+  SmallString<256> Contents;
+  raw_svector_ostream OS(Contents);
+  for (StringRef Arg : llvm::drop_begin(Args)) {
+    sys::printArg(OS, Arg, /*Quote=*/true);
+    OS << " ";
+  }
+
+  if (std::error_code EC = sys::writeFileWithEncoding(*TempFileOrErr, Contents))
+    return createStringError("failed to write response file: %s",
+                             EC.message().c_str());
+
+  // How nvlink spells its response file support.
+  std::string ResponseFile = ("--options-file=" + *TempFileOrErr).str();
+  SmallVector<StringRef, 2> NewArgs = {Args.front(), ResponseFile};
+  if (sys::ExecuteAndWait(Executable, NewArgs))
+    return createStringError("'%s' failed",
+                             sys::path::filename(Executable).str().c_str());
+  return Error::success();
+}
+
 /// A minimum symbol interface that provides the necessary information to
 /// extract archive members and resolve LTO symbols.
 struct Symbol {
@@ -309,23 +350,22 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
   if (Args.hasArg(OPT_verbose))
     AssemblerArgs.push_back("-v");
   if (Args.hasArg(OPT_g)) {
-    if (Args.hasArg(OPT_O))
+    if (Args.getLastArgValue(OPT_O, "3") != "0")
       WithColor::warning(errs(), Executable)
           << "Optimized debugging not supported, overriding to '-O0'\n";
     AssemblerArgs.push_back("-O0");
-  } else
+    AssemblerArgs.push_back("-g");
+  } else {
     AssemblerArgs.push_back(
         Args.MakeArgString("-O" + Args.getLastArgValue(OPT_O, "3")));
+  }
   AssemblerArgs.append({"-arch", Args.getLastArgValue(OPT_arch)});
+  for (const Arg *A : Args.filtered(OPT_Xptxas))
+    AssemblerArgs.push_back(A->getValue());
   AssemblerArgs.append({"-o", *TempFileOrErr});
 
-  if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))
-    printCommands(AssemblerArgs);
-  if (Args.hasArg(OPT_dry_run))
-    return Args.MakeArgString(*TempFileOrErr);
-  if (sys::ExecuteAndWait(*PTXAsPath, AssemblerArgs))
-    return createStringError("'" + sys::path::filename(*PTXAsPath) + "'" +
-                             " failed");
+  if (Error Err = executeProgram(*PTXAsPath, AssemblerArgs, Args))
+    return Err;
   return Args.MakeArgString(*TempFileOrErr);
 }
 
@@ -365,7 +405,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.DefaultTriple = Triple.getTriple();
 
   Conf.OptPipeline = Args.getLastArgValue(OPT_lto_newpm_passes, "");
-  Conf.PassPlugins = PassPlugins;
+  Conf.PassPluginFilenames = PassPlugins;
   Conf.DebugPassManager = Args.hasArg(OPT_lto_debug_pass_manager);
 
   Conf.DiagHandler = diagnosticHandler;
@@ -556,6 +596,11 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       if (!Input)
         continue;
 
+      if (hasFatBinary(Args, *Input)) {
+        LinkerInput.emplace_back(std::move(Input));
+        continue;
+      }
+
       // Archive members only extract if they define needed symbols. We will
       // re-scan all the inputs if any files were extracted for the link job.
       Expected<bool> ExtractOrErr = getSymbols(*Input, SymTab, IsLazy);
@@ -674,7 +719,8 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
   // of this input files could be extracted from an archive.
   for (auto &Input : LinkerInput) {
     auto TempFileOrErr = createTempFile(
-        Args, sys::path::stem(Input->getBufferIdentifier()), "cubin");
+        Args, sys::path::stem(Input->getBufferIdentifier()),
+        hasFatBinary(Args, Input->getMemBufferRef()) ? "o" : "cubin");
     if (!TempFileOrErr)
       return TempFileOrErr.takeError();
     Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
@@ -730,14 +776,7 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
   for (StringRef Arg : NewLinkerArgs)
     LinkerArgs.push_back(Arg);
 
-  if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))
-    printCommands(LinkerArgs);
-  if (Args.hasArg(OPT_dry_run))
-    return Error::success();
-  if (sys::ExecuteAndWait(*NVLinkPath, LinkerArgs))
-    return createStringError("'" + sys::path::filename(*NVLinkPath) + "'" +
-                             " failed");
-  return Error::success();
+  return executeProgram(*NVLinkPath, LinkerArgs, Args);
 }
 
 } // namespace

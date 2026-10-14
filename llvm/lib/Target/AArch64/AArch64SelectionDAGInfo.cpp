@@ -21,12 +21,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-selectiondag-info"
 
-static cl::opt<bool>
-    LowerToSMERoutines("aarch64-lower-to-sme-routines", cl::Hidden,
-                       cl::desc("Enable AArch64 SME memory operations "
-                                "to lower to librt functions"),
-                       cl::init(true));
-
 AArch64SelectionDAGInfo::AArch64SelectionDAGInfo()
     : SelectionDAGGenTargetInfo(AArch64GenSDNodeInfo) {}
 
@@ -43,25 +37,11 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
 #ifndef NDEBUG
   // Some additional checks not yet implemented by verifyTargetNode.
   switch (N->getOpcode()) {
-  case AArch64ISD::SADDWT:
-  case AArch64ISD::SADDWB:
-  case AArch64ISD::UADDWT:
-  case AArch64ISD::UADDWB: {
-    EVT VT = N->getValueType(0);
-    EVT Op0VT = N->getOperand(0).getValueType();
-    EVT Op1VT = N->getOperand(1).getValueType();
-    assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
-           VT.isInteger() && Op0VT.isInteger() && Op1VT.isInteger() &&
-           "Expected integer vectors!");
-    assert(VT == Op0VT &&
-           "Expected result and first input to have the same type!");
-    assert(Op0VT.getSizeInBits() == Op1VT.getSizeInBits() &&
-           "Expected vectors of equal size!");
-    assert(Op0VT.getVectorElementCount() * 2 == Op1VT.getVectorElementCount() &&
-           "Expected result vector and first input vector to have half the "
-           "lanes of the second input vector!");
+  case AArch64ISD::CTTZ_ELTS:
+  case AArch64ISD::CTTZ_ELTS_ZERO_POISON:
+    assert(N->getOperand(0).getValueType() == N->getOperand(1).getValueType() &&
+           "Expected the general-predicate and mask to have matching types");
     break;
-  }
   case AArch64ISD::SUNPKLO:
   case AArch64ISD::SUNPKHI:
   case AArch64ISD::UUNPKLO:
@@ -112,15 +92,15 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
 SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
                                           const SDLoc &DL, SDValue Chain,
                                           SDValue Dst, SDValue SrcOrValue,
-                                          SDValue Size, Align Alignment,
-                                          bool isVolatile,
+                                          SDValue Size, Align DstAlign,
+                                          Align SrcAlign, bool isVolatile,
                                           MachinePointerInfo DstPtrInfo,
                                           MachinePointerInfo SrcPtrInfo) const {
 
   // Get the constant size of the copy/set.
-  uint64_t ConstSize = 0;
+  LocationSize MemSize = LocationSize::afterPointer();
   if (auto *C = dyn_cast<ConstantSDNode>(Size))
-    ConstSize = C->getZExtValue();
+    MemSize = LocationSize::precise(C->getZExtValue());
 
   const bool IsSet = Opcode == AArch64::MOPSMemorySetPseudo ||
                      Opcode == AArch64::MOPSMemorySetTaggingPseudo;
@@ -131,7 +111,7 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
       isVolatile ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
   auto DstFlags = MachineMemOperand::MOStore | Vol;
   auto *DstOp =
-      MF.getMachineMemOperand(DstPtrInfo, DstFlags, ConstSize, Alignment);
+      MF.getMachineMemOperand(DstPtrInfo, DstFlags, MemSize, DstAlign);
 
   if (IsSet) {
     // Extend value to i64, if required.
@@ -149,36 +129,44 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
 
     auto SrcFlags = MachineMemOperand::MOLoad | Vol;
     auto *SrcOp =
-        MF.getMachineMemOperand(SrcPtrInfo, SrcFlags, ConstSize, Alignment);
+        MF.getMachineMemOperand(SrcPtrInfo, SrcFlags, MemSize, SrcAlign);
     DAG.setNodeMemRefs(Node, {DstOp, SrcOp});
     return SDValue(Node, 3);
   }
 }
 
 SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
-    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Op0, SDValue Op1,
     SDValue Size, RTLIB::Libcall LC) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
   const AArch64TargetLowering *TLI = STI.getTargetLowering();
   TargetLowering::ArgListTy Args;
-  Args.emplace_back(Dst, PointerType::getUnqual(*DAG.getContext()));
+  Args.emplace_back(Op0, PointerType::getUnqual(*DAG.getContext()));
 
+  bool UsesResult = false;
   RTLIB::Libcall NewLC;
   switch (LC) {
   case RTLIB::MEMCPY: {
     NewLC = RTLIB::SC_MEMCPY;
-    Args.emplace_back(Src, PointerType::getUnqual(*DAG.getContext()));
+    Args.emplace_back(Op1, PointerType::getUnqual(*DAG.getContext()));
     break;
   }
   case RTLIB::MEMMOVE: {
     NewLC = RTLIB::SC_MEMMOVE;
-    Args.emplace_back(Src, PointerType::getUnqual(*DAG.getContext()));
+    Args.emplace_back(Op1, PointerType::getUnqual(*DAG.getContext()));
     break;
   }
   case RTLIB::MEMSET: {
     NewLC = RTLIB::SC_MEMSET;
-    Args.emplace_back(DAG.getZExtOrTrunc(Src, DL, MVT::i32),
+    Args.emplace_back(DAG.getZExtOrTrunc(Op1, DL, MVT::i32),
+                      Type::getInt32Ty(*DAG.getContext()));
+    break;
+  }
+  case RTLIB::MEMCHR: {
+    UsesResult = true;
+    NewLC = RTLIB::SC_MEMCHR;
+    Args.emplace_back(DAG.getZExtOrTrunc(Op1, DL, MVT::i32),
                       Type::getInt32Ty(*DAG.getContext()));
     break;
   }
@@ -186,31 +174,41 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
     return SDValue();
   }
 
+  RTLIB::LibcallImpl NewLCImpl = DAG.getLibcalls().getLibcallImpl(NewLC);
+  if (NewLCImpl == RTLIB::Unsupported)
+    return SDValue();
+
   EVT PointerVT = TLI->getPointerTy(DAG.getDataLayout());
-  SDValue Symbol = DAG.getExternalSymbol(TLI->getLibcallName(NewLC), PointerVT);
+  SDValue Symbol = DAG.getExternalSymbol(NewLCImpl, PointerVT);
   Args.emplace_back(Size, DAG.getDataLayout().getIntPtrType(*DAG.getContext()));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   PointerType *RetTy = PointerType::getUnqual(*DAG.getContext());
   CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-      TLI->getLibcallCallingConv(NewLC), RetTy, Symbol, std::move(Args));
-  return TLI->LowerCallTo(CLI).second;
+      DAG.getLibcalls().getLibcallImplCallingConv(NewLCImpl), RetTy, Symbol,
+      std::move(Args));
+
+  auto [Result, ChainOut] = TLI->LowerCallTo(CLI);
+  return UsesResult ? DAG.getMergeValues({Result, ChainOut}, DL) : ChainOut;
 }
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+    SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
-  if (STI.hasMOPS())
+  if (STI.getCLOpts().use_mops && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemoryCopyPseudo, DAG, DL, Chain, Dst, Src,
-                    Size, Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
+                    Size, DstAlign, SrcAlign, isVolatile, DstPtrInfo,
+                    SrcPtrInfo);
 
   auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
   SMEAttrs Attrs = AFI->getSMEFnAttrs();
-  if (LowerToSMERoutines && !Attrs.hasNonStreamingInterfaceAndBody())
+  if (STI.getCLOpts().lower_to_sme_routines &&
+      !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, DL, Chain, Dst, Src, Size,
                                              RTLIB::MEMCPY);
   return SDValue();
@@ -223,14 +221,15 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
-  if (STI.hasMOPS())
+  if (STI.getCLOpts().use_mops && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemorySetPseudo, DAG, dl, Chain, Dst, Src,
-                    Size, Alignment, isVolatile, DstPtrInfo,
+                    Size, Alignment, Alignment, isVolatile, DstPtrInfo,
                     MachinePointerInfo{});
 
   auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
   SMEAttrs Attrs = AFI->getSMEFnAttrs();
-  if (LowerToSMERoutines && !Attrs.hasNonStreamingInterfaceAndBody())
+  if (STI.getCLOpts().lower_to_sme_routines &&
+      !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
                                              RTLIB::MEMSET);
   return SDValue();
@@ -238,21 +237,37 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile,
+    SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
-  if (STI.hasMOPS())
+  if (STI.getCLOpts().use_mops && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemoryMovePseudo, DAG, dl, Chain, Dst, Src,
-                    Size, Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
+                    Size, DstAlign, SrcAlign, isVolatile, DstPtrInfo,
+                    SrcPtrInfo);
 
   auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
   SMEAttrs Attrs = AFI->getSMEFnAttrs();
-  if (LowerToSMERoutines && !Attrs.hasNonStreamingInterfaceAndBody())
+  if (STI.getCLOpts().lower_to_sme_routines &&
+      !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
                                              RTLIB::MEMMOVE);
   return SDValue();
+}
+
+std::pair<SDValue, SDValue> AArch64SelectionDAGInfo::EmitTargetCodeForMemchr(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Src,
+    SDValue Char, SDValue Length, MachinePointerInfo SrcPtrInfo) const {
+  auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  SMEAttrs Attrs = AFI->getSMEFnAttrs();
+  if (DAG.getSubtarget<AArch64Subtarget>().getCLOpts().lower_to_sme_routines &&
+      !Attrs.hasNonStreamingInterfaceAndBody()) {
+    SDValue Result = EmitStreamingCompatibleMemLibCall(
+        DAG, dl, Chain, Src, Char, Length, RTLIB::MEMCHR);
+    return std::make_pair(Result.getValue(0), Result.getValue(1));
+  }
+  return std::make_pair(SDValue(), SDValue());
 }
 
 static const int kSetTagLoopThreshold = 176;

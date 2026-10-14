@@ -86,7 +86,7 @@ body:             |
   ; CHECK-NEXT:   TSTri killed renamable $r0, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK-NEXT:   renamable $r0 = MOVi 0, 1 /* CC::ne */, $cpsr, $noreg
   ; CHECK-NEXT:   renamable $r0 = MOVi 1, 0 /* CC::eq */, killed $cpsr, $noreg, implicit killed $r0
-  ; CHECK-NEXT:   INLINEASM_BR &".word b, ${1:l}, ${0:c}\0A\09", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 0, 13 /* imm */, %bb.1
+  ; CHECK-NEXT:   INLINEASM_BR &".word b, ${1:l}, ${0:c}\0A\09", sideeffect mayload attdialect, imm, 0, imm, %bb.1
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.if.end.sink.split (machine-block-address-taken, inlineasm-br-indirect-target):
@@ -109,7 +109,7 @@ body:             |
     successors: %bb.3(0x80000000), %bb.2(0x00000000)
 
     renamable $r0 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
-    INLINEASM_BR &".word b, ${1:l}, ${0:c}\0A\09", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 0, 13 /* imm */, %bb.2
+    INLINEASM_BR &".word b, ${1:l}, ${0:c}\0A\09", sideeffect mayload attdialect, imm, 0, imm, %bb.2
     B %bb.3
 
   bb.2.if.end.sink.split (machine-block-address-taken, inlineasm-br-indirect-target):
@@ -126,7 +126,7 @@ body:             |
     successors: %bb.3(0x80000000), %bb.2(0x00000000)
 
     renamable $r0 = MOVi 0, 14 /* CC::al */, $noreg, $noreg
-    INLINEASM_BR &".word b, ${1:l}, ${0:c}\0A\09", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 0, 13 /* imm */, %bb.2
+    INLINEASM_BR &".word b, ${1:l}, ${0:c}\0A\09", sideeffect mayload attdialect, imm, 0, imm, %bb.2
     B %bb.3
 
 ...

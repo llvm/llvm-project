@@ -10,12 +10,13 @@ define void @func() sspreq nounwind {
 ; LINUX32-NEXT:    addi.w $sp, $sp, -16
 ; LINUX32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LINUX32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
-; LINUX32-NEXT:    pcalau12i $fp, %pc_hi20(__stack_chk_guard)
-; LINUX32-NEXT:    ld.w $a0, $fp, %pc_lo12(__stack_chk_guard)
+; LINUX32-NEXT:  .Lpcadd_hi0:
+; LINUX32-NEXT:    pcaddu12i $fp, %pcadd_hi20(__stack_chk_guard)
+; LINUX32-NEXT:    ld.w $a0, $fp, %pcadd_lo12(.Lpcadd_hi0)
 ; LINUX32-NEXT:    st.w $a0, $sp, 4
 ; LINUX32-NEXT:    addi.w $a0, $sp, 0
 ; LINUX32-NEXT:    bl capture
-; LINUX32-NEXT:    ld.w $a0, $fp, %pc_lo12(__stack_chk_guard)
+; LINUX32-NEXT:    ld.w $a0, $fp, %pcadd_lo12(.Lpcadd_hi0)
 ; LINUX32-NEXT:    ld.w $a1, $sp, 4
 ; LINUX32-NEXT:    bne $a0, $a1, .LBB0_2
 ; LINUX32-NEXT:  # %bb.1:
@@ -54,12 +55,13 @@ define void @func() sspreq nounwind {
 ; OPENBSD32-NEXT:    addi.w $sp, $sp, -16
 ; OPENBSD32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; OPENBSD32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
-; OPENBSD32-NEXT:    pcalau12i $fp, %pc_hi20(__guard_local)
-; OPENBSD32-NEXT:    ld.w $a0, $fp, %pc_lo12(__guard_local)
+; OPENBSD32-NEXT:  .Lpcadd_hi0:
+; OPENBSD32-NEXT:    pcaddu12i $fp, %pcadd_hi20(__guard_local)
+; OPENBSD32-NEXT:    ld.w $a0, $fp, %pcadd_lo12(.Lpcadd_hi0)
 ; OPENBSD32-NEXT:    st.w $a0, $sp, 4
 ; OPENBSD32-NEXT:    addi.w $a0, $sp, 0
 ; OPENBSD32-NEXT:    bl capture
-; OPENBSD32-NEXT:    ld.w $a0, $fp, %pc_lo12(__guard_local)
+; OPENBSD32-NEXT:    ld.w $a0, $fp, %pcadd_lo12(.Lpcadd_hi0)
 ; OPENBSD32-NEXT:    ld.w $a1, $sp, 4
 ; OPENBSD32-NEXT:    bne $a0, $a1, .LBB0_2
 ; OPENBSD32-NEXT:  # %bb.1: # %SP_return
@@ -68,8 +70,9 @@ define void @func() sspreq nounwind {
 ; OPENBSD32-NEXT:    addi.w $sp, $sp, 16
 ; OPENBSD32-NEXT:    ret
 ; OPENBSD32-NEXT:  .LBB0_2: # %CallStackCheckFailBlk
-; OPENBSD32-NEXT:    pcalau12i $a0, %pc_hi20(.LSSH)
-; OPENBSD32-NEXT:    addi.w $a0, $a0, %pc_lo12(.LSSH)
+; OPENBSD32-NEXT:  .Lpcadd_hi1:
+; OPENBSD32-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LSSH)
+; OPENBSD32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi1)
 ; OPENBSD32-NEXT:    bl __stack_smash_handler
 ;
 ; OPENBSD64-LABEL: func:

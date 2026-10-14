@@ -230,8 +230,6 @@ exit:
 
 ; The control-flow before and after the load of qval shouldn't prevent postindex
 ; addressing from happening.
-; FIXME: We choose postindex addressing, but the scevgep is placed in for.inc so
-; during codegen we will fail to actually generate a postindex load.
 define void @middle_block_load(ptr %p, ptr %q, i64 %n) {
 ; CHECK-LABEL: define void @middle_block_load(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i64 [[N:%.*]]) {
@@ -254,6 +252,7 @@ define void @middle_block_load(ptr %p, ptr %q, i64 %n) {
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[QVAL:%.*]] = load i32, ptr [[LSR_IV1]], align 4
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[QVAL]], 0
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    br i1 [[CMP2]], label %[[IF_THEN2:.*]], label %[[IF_ELSE2:.*]]
 ; CHECK:       [[IF_THEN2]]:
 ; CHECK-NEXT:    tail call void @otherfn1()
@@ -263,7 +262,6 @@ define void @middle_block_load(ptr %p, ptr %q, i64 %n) {
 ; CHECK-NEXT:    br label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
-; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[CMP3]], label %[[EXIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:

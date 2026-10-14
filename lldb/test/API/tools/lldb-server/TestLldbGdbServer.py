@@ -25,9 +25,12 @@ from lldbsuite.test import lldbutil, lldbplatformutil
 # On Linux systems with Yama ptrace_scope = 1 there is a race condition when the
 # debugee enables tracing. See https://github.com/llvm/llvm-project/issues/161510.
 @skipIfLinux
+@skipIfMTE  # MTE security transition shims restrict socket operations.
 class LldbGdbServerTestCase(
     gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcodeParser
 ):
+    SHARED_BUILD_TESTCASE = False
+
     def test_thread_suffix_supported(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
@@ -88,7 +91,6 @@ class LldbGdbServerTestCase(
     # Sometimes fails:
     # regex '^\$QC([0-9a-fA-F]+)#' failed to match against content '$E45#ae'
     # See https://github.com/llvm/llvm-project/issues/138085.
-    @skipIfWindows
     def test_first_launch_stop_reply_thread_matches_first_qC(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()
@@ -112,12 +114,14 @@ class LldbGdbServerTestCase(
         context = self.expect_gdbremote_sequence()
         self.assertEqual(context.get("thread_id_QC"), context.get("thread_id_?"))
 
-    # This test is flaky on Windows. Sometimes returns 'Exception 0x80000003'.
-    @skipIf(oslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/138085")
     def test_attach_commandline_continue_app_exits(self):
         self.build()
         self.set_inferior_startup_attach()
-        procs = self.prep_debug_monitor_and_inferior()
+        attached_file = lldbutil.append_to_process_working_directory(self, "attached")
+        procs = self.prep_debug_monitor_and_inferior(
+            inferior_args=["waitfile:" + attached_file], inferior_sleep_seconds=0
+        )
+        lldbutil.create_file_on_target(self, attached_file)
         self.test_sequence.add_log_lines(
             ["read packet: $vCont;c#a8", "send packet: $W00#00"], True
         )
@@ -315,7 +319,6 @@ class LldbGdbServerTestCase(
             self.assertEqual(int(context.get("thread_id"), 16), thread)
 
     # This test is flaky on Windows. Sometimes returns '$E37#af'.
-    @skipIf(oslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/138085")
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     def test_Hg_switches_to_3_threads_launch(self):
         self.build()
@@ -356,7 +359,6 @@ class LldbGdbServerTestCase(
         self.Hg_fails_on_pid(0)
 
     @add_test_categories(["llgs"])
-    @skipIfWindows  # Sometimes returns '$E37'.
     def test_Hg_fails_on_minus_one_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -476,7 +478,7 @@ class LldbGdbServerTestCase(
             self.assertEqual(post_handle_thread_id, print_thread_id)
 
     @expectedFailureDarwin
-    @skipIfWindows  # no SIGSEGV support
+    @requireSignals
     @expectedFailureNetBSD
     def test_Hc_then_Csignal_signals_correct_thread_launch(self):
         self.build()
@@ -628,7 +630,7 @@ class LldbGdbServerTestCase(
         target_arch = self.getArchitecture()
 
         # Set the breakpoint.
-        if target_arch in ["arm", "arm64", "aarch64"]:
+        if target_arch in ["arm", "arm64", "aarch64", "arm64e"]:
             # TODO: Handle case when setting breakpoint in thumb code
             BREAKPOINT_KIND = 4
         else:

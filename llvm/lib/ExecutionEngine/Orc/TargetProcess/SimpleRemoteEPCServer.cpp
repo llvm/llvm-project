@@ -8,14 +8,11 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
 
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
-
-#include "OrcRTBootstrap.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -62,7 +59,7 @@ StringMap<ExecutorAddr> SimpleRemoteEPCServer::defaultBootstrapSymbols() {
 Expected<SimpleRemoteEPCTransportClient::HandleMessageAction>
 SimpleRemoteEPCServer::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                                      ExecutorAddr TagAddr,
-                                     SimpleRemoteEPCArgBytesVector ArgBytes) {
+                                     shared::WrapperFunctionBuffer ArgBytes) {
 
   LLVM_DEBUG({
     dbgs() << "SimpleRemoteEPCServer::handleMessage: opc = ";
@@ -79,7 +76,6 @@ SimpleRemoteEPCServer::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
@@ -100,8 +96,15 @@ SimpleRemoteEPCServer::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
   case SimpleRemoteEPCOpcode::Setup:
     return make_error<StringError>("Unexpected Setup opcode",
                                    inconvertibleErrorCode());
-  case SimpleRemoteEPCOpcode::Hangup:
+  case SimpleRemoteEPCOpcode::Hangup: {
+    {
+      std::lock_guard<std::mutex> Lock(ServerStateMutex);
+      RemoteHangup = true;
+    }
+    if (auto Err = decodeHangupPayload(std::move(ArgBytes)))
+      return std::move(Err);
     return SimpleRemoteEPCTransportClient::EndSession;
+  }
   case SimpleRemoteEPCOpcode::Result:
     if (auto Err = handleResult(SeqNo, TagAddr, std::move(ArgBytes)))
       return std::move(Err);
@@ -131,7 +134,7 @@ void SimpleRemoteEPCServer::handleDisconnect(Error Err) {
   // Send out-of-band errors to any waiting threads.
   for (auto &KV : TmpPending)
     KV.second->set_value(
-        shared::WrapperFunctionResult::createOutOfBandError("disconnecting"));
+        shared::WrapperFunctionBuffer::createOutOfBandError("disconnecting"));
 
   // Wait for dispatcher to clear.
   D->shutdown();
@@ -144,7 +147,26 @@ void SimpleRemoteEPCServer::handleDisconnect(Error Err) {
   }
 
   std::lock_guard<std::mutex> Lock(ServerStateMutex);
-  ShutdownErr = joinErrors(std::move(ShutdownErr), std::move(Err));
+
+  // The server never initiates a disconnection, so if the transport reported no
+  // error and no hangup arrived then the controller went away without telling
+  // us. The cause is not knowable from here -- it may have crashed, been
+  // killed, or become unreachable -- so report what was observed rather than a
+  // cause.
+  //
+  // A missing hangup is evidence, not proof: a hangup can also be lost in
+  // transit, since closing a TCP socket with unread data queued sends an RST,
+  // which can discard bytes the peer had already delivered. We accept that
+  // rather than draining the read side before closing -- the cost is a
+  // misleading diagnostic on a session that is ending regardless, whereas a
+  // drain risks stalling teardown on a peer that never closes.
+  Error DisconnectReason =
+      (!Err && !RemoteHangup)
+          ? make_error<StringError>("Connection closed without hangup",
+                                    inconvertibleErrorCode())
+          : std::move(Err);
+
+  ShutdownErr = joinErrors(std::move(ShutdownErr), std::move(DisconnectReason));
   RunState = ServerShutDown;
   ShutdownCV.notify_all();
 }
@@ -168,7 +190,6 @@ Error SimpleRemoteEPCServer::sendMessage(SimpleRemoteEPCOpcode OpC,
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
@@ -212,7 +233,7 @@ Error SimpleRemoteEPCServer::sendSetupMessage(
   using SPSSerialize =
       shared::SPSArgList<shared::SPSSimpleRemoteEPCExecutorInfo>;
   auto SetupPacketBytes =
-      shared::WrapperFunctionResult::allocate(SPSSerialize::size(EI));
+      shared::WrapperFunctionBuffer::allocate(SPSSerialize::size(EI));
   shared::SPSOutputBuffer OB(SetupPacketBytes.data(), SetupPacketBytes.size());
   if (!SPSSerialize::serialize(OB, EI))
     return make_error<StringError>("Could not send setup packet",
@@ -224,8 +245,13 @@ Error SimpleRemoteEPCServer::sendSetupMessage(
 
 Error SimpleRemoteEPCServer::handleResult(
     uint64_t SeqNo, ExecutorAddr TagAddr,
-    SimpleRemoteEPCArgBytesVector ArgBytes) {
-  std::promise<shared::WrapperFunctionResult> *P = nullptr;
+    shared::WrapperFunctionBuffer ArgBytes) {
+  std::promise<shared::WrapperFunctionBuffer> *P = nullptr;
+
+  auto R = decodeResultMessage(TagAddr, std::move(ArgBytes));
+  if (!R)
+    return R.takeError();
+
   {
     std::lock_guard<std::mutex> Lock(ServerStateMutex);
     auto I = PendingJITDispatchResults.find(SeqNo);
@@ -237,38 +263,36 @@ Error SimpleRemoteEPCServer::handleResult(
     PendingJITDispatchResults.erase(I);
     releaseSeqNo(SeqNo);
   }
-  auto R = shared::WrapperFunctionResult::allocate(ArgBytes.size());
-  memcpy(R.data(), ArgBytes.data(), ArgBytes.size());
-  P->set_value(std::move(R));
+  P->set_value(std::move(*R));
   return Error::success();
 }
 
 void SimpleRemoteEPCServer::handleCallWrapper(
     uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
-    SimpleRemoteEPCArgBytesVector ArgBytes) {
+    shared::WrapperFunctionBuffer ArgBytes) {
   D->dispatch([this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() {
     using WrapperFnTy =
-        shared::CWrapperFunctionResult (*)(const char *, size_t);
+        shared::CWrapperFunctionBuffer (*)(const char *, size_t);
     auto *Fn = TagAddr.toPtr<WrapperFnTy>();
-    shared::WrapperFunctionResult ResultBytes(
+    shared::WrapperFunctionBuffer ResultBytes(
         Fn(ArgBytes.data(), ArgBytes.size()));
+    auto [ResultTag, Payload] = encodeResultMessage(std::move(ResultBytes));
     if (auto Err = sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
-                               ExecutorAddr(),
-                               {ResultBytes.data(), ResultBytes.size()}))
+                               ResultTag, {Payload.data(), Payload.size()}))
       ReportError(std::move(Err));
   });
 }
 
-shared::WrapperFunctionResult
+shared::WrapperFunctionBuffer
 SimpleRemoteEPCServer::doJITDispatch(const void *FnTag, const char *ArgData,
                                      size_t ArgSize) {
   uint64_t SeqNo;
-  std::promise<shared::WrapperFunctionResult> ResultP;
+  std::promise<shared::WrapperFunctionBuffer> ResultP;
   auto ResultF = ResultP.get_future();
   {
     std::lock_guard<std::mutex> Lock(ServerStateMutex);
     if (RunState != ServerRunning)
-      return shared::WrapperFunctionResult::createOutOfBandError(
+      return shared::WrapperFunctionBuffer::createOutOfBandError(
           "jit_dispatch not available (EPC server shut down)");
 
     SeqNo = getNextSeqNo();
@@ -283,7 +307,7 @@ SimpleRemoteEPCServer::doJITDispatch(const void *FnTag, const char *ArgData,
   return ResultF.get();
 }
 
-shared::CWrapperFunctionResult
+shared::CWrapperFunctionBuffer
 SimpleRemoteEPCServer::jitDispatchEntry(void *DispatchCtx, const void *FnTag,
                                         const char *ArgData, size_t ArgSize) {
   return reinterpret_cast<SimpleRemoteEPCServer *>(DispatchCtx)

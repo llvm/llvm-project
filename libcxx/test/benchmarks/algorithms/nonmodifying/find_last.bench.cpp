@@ -18,19 +18,14 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto ranges_find_last_if = [](auto first, auto last, auto const& value) {
-    return std::ranges::find_last_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
+    return std::ranges::find_last_if(first, last, [&](auto element) { return element == value; });
   };
   auto ranges_find_last_if_not = [](auto first, auto last, auto const& value) {
-    return std::ranges::find_last_if_not(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element != value;
-    });
+    return std::ranges::find_last_if_not(first, last, [&](auto element) { return element != value; });
   };
 
   // Benchmark ranges::{find_last,find_last_if,find_last_if_not} where the last element
@@ -39,7 +34,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto find_last) {
       benchmark::RegisterBenchmark(
           name,
-          [find_last](auto& st) {
+          [find_last](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -92,7 +87,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto find_last) {
       benchmark::RegisterBenchmark(
           name,
-          [find_last](auto& st) {
+          [find_last](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();

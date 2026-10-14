@@ -1,17 +1,7 @@
 // RUN: %check_clang_tidy %s readability-redundant-smartptr-get %t -- \
 // RUN:   -config="{CheckOptions: {readability-redundant-smartptr-get.IgnoreMacros: false}}"
 
-namespace std {
-
-template <typename T>
-struct shared_ptr {
-  T &operator*() const;
-  T *operator->() const;
-  T *get() const;
-  explicit operator bool() const noexcept;
-};
-
-} // namespace std
+#include <memory>
 
 #define MACRO(p) p.get()
 

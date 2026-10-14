@@ -22,7 +22,7 @@ situations where the variable's volatility is a crucial aspect of program
 correctness and reliability.
 
 This rule is part of the `Type safety (Type 3)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-type-constcast>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-constcast>`_
 profile and `ES.50: Don’t cast away const
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es50-dont-cast-away-const>`_
 rule from the C++ Core Guidelines.

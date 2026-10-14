@@ -13,8 +13,8 @@ while.body.lr.ph:
 while.body:
   %it.sroa.0.091 = phi ptr [ %p, %while.body.lr.ph ], [ %incdec.ptr.i, %while.body ]
   %incdec.ptr.i = getelementptr inbounds i32, ptr %it.sroa.0.091, i64 1
-  %inc32 = add i32 undef, 1                                        ; <------------- Make sure we don't set NSW flags to the undef.
-  %cmp.i11 = icmp eq ptr %incdec.ptr.i, undef
+  %inc32 = add i32 poison, 1                                        ; <------------- Make sure we don't set NSW flags to the poison.
+  %cmp.i11 = icmp eq ptr %incdec.ptr.i, poison
   br i1 %cmp.i11, label %while.end, label %while.body
 
 while.end:

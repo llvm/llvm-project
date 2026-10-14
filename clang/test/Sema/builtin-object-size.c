@@ -30,6 +30,10 @@ int f3(void) {
   return OBJECT_SIZE_BUILTIN(&a, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 
+_Static_assert(OBJECT_SIZE_BUILTIN((void *)0, -1), ""); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                                           expected-note {{argument value -1 is outside the valid range [0, 3]}}
+_Static_assert(OBJECT_SIZE_BUILTIN((void *)0, 4), ""); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                                          expected-note {{argument value 4 is outside the valid range [0, 3]}}
 
 // cannot call vsnprintf with va_list on x86_64
 void f4(const char *fmt, ...) {
@@ -50,7 +54,7 @@ void f5(void)
 {
   char buf[10];
   memset((void *)0x100000000ULL, 0, 0x1000);
-  memcpy((char *)NULL + 0x10000, buf, 0x10);
+  memcpy((char *)NULL + 0x10000, buf, 0x10);  // expected-warning {{'memcpy' reading 16 bytes from a region of size 10}}
   memcpy1((char *)NULL + 0x10000, buf, 0x10); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 

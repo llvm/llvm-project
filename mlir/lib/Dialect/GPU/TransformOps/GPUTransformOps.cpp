@@ -8,12 +8,12 @@
 
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 
+#include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
@@ -61,29 +61,7 @@ using namespace mlir::transform::gpu;
 void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
-  // NVVM uses alloca in the default address space to represent private
-  // memory allocations, so drop private annotations. NVVM uses address
-  // space 3 for shared memory. NVVM uses the default address space to
-  // represent global memory.
-  // Used in populateGpuToNVVMConversionPatternsso attaching here for now.
-  // TODO: We should have a single to_nvvm_type_converter.
-  populateGpuMemorySpaceAttributeConversions(
-      llvmTypeConverter, [](AddressSpace space) -> unsigned {
-        switch (space) {
-        case AddressSpace::Global:
-          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
-        case AddressSpace::Workgroup:
-          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
-        case AddressSpace::Private:
-          return 0;
-        }
-        llvm_unreachable("unknown address space enum value");
-        return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
-      });
-  // Used in GPUToNVVM/WmmaOpsToNvvm.cpp so attaching here for now.
-  // TODO: We should have a single to_nvvm_type_converter.
-  llvmTypeConverter.addConversion(
-      [&](MMAMatrixType type) -> Type { return convertMMAToLLVMType(type); });
+  configureGpuToNVVMTypeConverter(llvmTypeConverter);
   // Set higher benefit, so patterns will run before generic LLVM lowering.
   populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns,
                                       getBenefit());
@@ -128,33 +106,21 @@ LogicalResult transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
 void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
-  populateGpuMemorySpaceAttributeConversions(
-      llvmTypeConverter, [](AddressSpace space) {
-        switch (space) {
-        case AddressSpace::Global:
-          return ROCDL::ROCDLDialect::kGlobalMemoryAddressSpace;
-        case AddressSpace::Workgroup:
-          return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
-        case AddressSpace::Private:
-          return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
-        }
-        llvm_unreachable("unknown address space enum value");
-      });
-  FailureOr<amdgpu::Chipset> maybeChipset =
-      amdgpu::Chipset::parse(getChipset());
-  assert(llvm::succeeded(maybeChipset) && "expected valid chipset");
+  amdgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
+  // The verifier has already rejected anything unparseable.
+  FailureOr<ROCDL::TargetInfo> targetInfo =
+      ROCDL::TargetInfo::get(getArch(), getWavesize().value_or(0));
+  assert(llvm::succeeded(targetInfo) && "verifier accepted this target");
   populateGpuToROCDLConversionPatterns(
-      llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *maybeChipset);
+      llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *targetInfo);
 }
 
 LogicalResult
 transform::ApplyGPUToROCDLConversionPatternsOp::verifyTypeConverter(
     transform::TypeConverterBuilderOpInterface builder) {
-  FailureOr<amdgpu::Chipset> maybeChipset =
-      amdgpu::Chipset::parse(getChipset());
-  if (failed(maybeChipset)) {
-    return emitOpError("Invalid chipset name: " + getChipset());
-  }
+  if (failed(ROCDL::TargetInfo::get(getArch(), getWavesize().value_or(0),
+                                    [&] { return emitOpError(); })))
+    return failure();
   if (builder.getTypeConverterType() != "LLVMTypeConverter")
     return emitOpError("expected LLVMTypeConverter");
   return success();
@@ -170,16 +136,27 @@ void ApplyGPURewritePatternsOp::populatePatterns(RewritePatternSet &patterns) {
 
 void transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  std::optional<StringRef> chipsetName = getChipset();
-  std::optional<amdgpu::Chipset> maybeChipset;
-  if (chipsetName) {
-    FailureOr<amdgpu::Chipset> parsedChipset =
-        amdgpu::Chipset::parse(*chipsetName);
-    assert(llvm::succeeded(parsedChipset) && "expected valid chipset");
-    maybeChipset = parsedChipset;
+  std::optional<StringRef> archName = getArch();
+  std::optional<ROCDL::TargetInfo> targetInfo;
+  if (archName) {
+    // The verifier has already rejected anything unparseable.
+    FailureOr<ROCDL::TargetInfo> parsed = ROCDL::TargetInfo::get(*archName);
+    assert(llvm::succeeded(parsed) && "verifier accepted this target");
+    targetInfo = *parsed;
   }
 
-  populateGpuPromoteShuffleToAMDGPUPatterns(patterns, maybeChipset);
+  populateGpuPromoteShuffleToAMDGPUPatterns(patterns, targetInfo);
+}
+
+LogicalResult transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::verify() {
+  std::optional<StringRef> archName = getArch();
+  if (!archName)
+    return success();
+
+  if (failed(ROCDL::TargetInfo::get(*archName, /*waveSize=*/0,
+                                    [&] { return emitOpError(); })))
+    return failure();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -773,6 +750,10 @@ static DiagnosedSilenceableFailure checkMappingSpec(
     std::optional<TransformOpInterface> transformOp, scf::ForallOp forallOp,
     ArrayRef<int64_t> numParallelIterations, ArrayRef<int64_t> blockOrGridSizes,
     int factor, bool useLinearMapping = false) {
+  if (llvm::any_of(blockOrGridSizes, [](int64_t i) { return i <= 0; })) {
+    return definiteFailureHelper(transformOp, forallOp,
+                                 "block/grid sizes must be strictly positive");
+  }
   if (!useLinearMapping && blockOrGridSizes.front() % factor != 0) {
     auto diag = definiteFailureHelper(
         transformOp, forallOp,
@@ -780,15 +761,23 @@ static DiagnosedSilenceableFailure checkMappingSpec(
             Twine(factor));
     return diag;
   }
-  if (computeProduct(numParallelIterations) * factor >
-      computeProduct(blockOrGridSizes)) {
+  bool hasZeroParallelIteration =
+      llvm::any_of(numParallelIterations, [](int64_t i) { return i == 0; });
+  // `computeProduct` requires strictly positive inputs, so handle the
+  // zero-iteration case explicitly to avoid asserting on valid degenerate
+  // loop bounds.
+  int64_t requiredResourceCount =
+      hasZeroParallelIteration ? 0
+                               : computeProduct(numParallelIterations) * factor;
+  int64_t availableResourceCount = computeProduct(blockOrGridSizes);
+  if (requiredResourceCount > availableResourceCount) {
     auto diag = definiteFailureHelper(
         transformOp, forallOp,
         Twine("the number of required parallel resources (blocks or "
               "threads) ") +
-            Twine(computeProduct(numParallelIterations) * factor) +
+            Twine(requiredResourceCount) +
             " overflows the number of available resources " +
-            Twine(computeProduct(blockOrGridSizes)));
+            Twine(availableResourceCount));
     return diag;
   }
   return DiagnosedSilenceableFailure::success();

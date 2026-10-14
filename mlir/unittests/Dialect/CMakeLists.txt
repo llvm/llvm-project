@@ -7,8 +7,10 @@ mlir_target_link_libraries(MLIRDialectTests
   MLIRDialect)
 
 add_subdirectory(AMDGPU)
+add_subdirectory(Arith)
 add_subdirectory(ArmSME)
 add_subdirectory(Index)
+add_subdirectory(Linalg)
 add_subdirectory(LLVMIR)
 add_subdirectory(MemRef)
 add_subdirectory(OpenACC)

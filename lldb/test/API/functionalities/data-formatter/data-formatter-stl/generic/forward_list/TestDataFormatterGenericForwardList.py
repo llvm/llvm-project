@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestDataFormatterGenericForwardList(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         TestBase.setUp(self)
         self.line = line_number("main.cpp", "// break here")

@@ -110,6 +110,25 @@ namespace FunctionCompare {
   }
 }
 
+namespace FunctionReferenceCompare {
+  // GH46362: a reference to a function is never null, like a bare function name.
+  // No fix-it note is emitted, since prefixing '&' would not silence it.
+  void test(void (&f)(), int *&ptr) {
+    if (f == 0) {}
+    // expected-warning@-1{{comparison of function 'f' equal to a null pointer is always false}}
+    if (f != 0) {}
+    // expected-warning@-1{{comparison of function 'f' not equal to a null pointer is always true}}
+    if (f == nullptr) {}
+    // expected-warning@-1{{comparison of function 'f' equal to a null pointer is always false}}
+    if (nullptr != f) {}
+    // expected-warning@-1{{comparison of function 'f' not equal to a null pointer is always true}}
+
+    // A reference to a pointer can be null: no warning.
+    if (ptr == nullptr) {}
+    if (ptr != nullptr) {}
+  }
+}
+
 namespace PointerCompare {
   extern int a __attribute__((weak));
   int b;

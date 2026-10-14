@@ -73,6 +73,12 @@ int v;
 #ifdef __BPF_FEATURE_GOTOX
 int w;
 #endif
+#ifdef __BPF_FEATURE_ATOMIC_MEM_ORDERING
+int x;
+#endif
+#ifdef __BPF_FEATURE_STACK_ARGUMENT
+int y;
+#endif
 
 // CHECK: int b;
 // CHECK: int c;
@@ -114,6 +120,16 @@ int w;
 
 // CPU_V4: int v;
 // CPU_V4: int w;
+
+// CPU_V1: int x;
+// CPU_V2: int x;
+// CPU_V3: int x;
+// CPU_V4: int x;
+
+// CPU_V1: int y;
+// CPU_V2: int y;
+// CPU_V3: int y;
+// CPU_V4: int y;
 
 // CPU_GENERIC: int g;
 

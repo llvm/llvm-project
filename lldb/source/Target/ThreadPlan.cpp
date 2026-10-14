@@ -8,13 +8,18 @@
 
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+
+#include <atomic>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -144,7 +149,7 @@ bool ThreadPlan::WillResume(StateType resume_state, bool current_plan) {
 }
 
 lldb::user_id_t ThreadPlan::GetNextID() {
-  static uint32_t g_nextPlanID = 0;
+  static std::atomic<uint32_t> g_nextPlanID{0};
   return ++g_nextPlanID;
 }
 
@@ -201,10 +206,10 @@ bool ThreadPlanNull::ValidatePlan(Stream *error) {
           LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #else
   Log *log = GetLog(LLDBLog::Thread);
-  if (log)
-    log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
-               ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
+  LLDB_LOGF(log,
+            "error: %s called on thread that has been destroyed "
+            "(tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
+            LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return true;
 }
@@ -217,10 +222,10 @@ bool ThreadPlanNull::ShouldStop(Event *event_ptr) {
           LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #else
   Log *log = GetLog(LLDBLog::Thread);
-  if (log)
-    log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
-               ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
+  LLDB_LOGF(log,
+            "error: %s called on thread that has been destroyed "
+            "(tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
+            LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return true;
 }
@@ -233,10 +238,10 @@ bool ThreadPlanNull::WillStop() {
           LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #else
   Log *log = GetLog(LLDBLog::Thread);
-  if (log)
-    log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
-               ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
+  LLDB_LOGF(log,
+            "error: %s called on thread that has been destroyed "
+            "(tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
+            LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return true;
 }
@@ -249,10 +254,10 @@ bool ThreadPlanNull::DoPlanExplainsStop(Event *event_ptr) {
           LLVM_PRETTY_FUNCTION, GetThread().GetID(), GetThread().GetProtocolID());
 #else
   Log *log = GetLog(LLDBLog::Thread);
-  if (log)
-    log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
-               ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
+  LLDB_LOGF(log,
+            "error: %s called on thread that has been destroyed "
+            "(tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
+            LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return true;
 }
@@ -267,10 +272,10 @@ bool ThreadPlanNull::MischiefManaged() {
           LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #else
   Log *log = GetLog(LLDBLog::Thread);
-  if (log)
-    log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
-               ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
+  LLDB_LOGF(log,
+            "error: %s called on thread that has been destroyed "
+            "(tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
+            LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return false;
 }
@@ -284,10 +289,60 @@ lldb::StateType ThreadPlanNull::GetPlanRunState() {
           LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #else
   Log *log = GetLog(LLDBLog::Thread);
-  if (log)
-    log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
-               ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
+  LLDB_LOGF(log,
+            "error: %s called on thread that has been destroyed "
+            "(tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
+            LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return eStateRunning;
+}
+
+llvm::Expected<std::vector<addr_t>> lldb_private::GetStepUntilAddresses(
+    StackFrame &frame, const FileSpec &file, llvm::ArrayRef<uint32_t> lines,
+    llvm::ArrayRef<addr_t> requested_addresses) {
+  const SymbolContext &frame_sc =
+      frame.GetSymbolContext(eSymbolContextCompUnit | eSymbolContextFunction);
+  TargetSP target_sp = frame.CalculateTarget();
+  if (!target_sp)
+    return llvm::createStringError("null target from StepUntil frame");
+  if (!frame_sc.comp_unit || !frame_sc.function)
+    return llvm::createStringError("frame has no function debug information");
+
+  std::vector<addr_t> until_addrs;
+  auto add_if_in_scope = [&](const Address &addr) {
+    addr_t load_addr = addr.GetLoadAddress(target_sp.get());
+    if (load_addr != LLDB_INVALID_ADDRESS && frame.IsAddressInFrameScope(addr))
+      until_addrs.push_back(load_addr);
+  };
+
+  bool found_some_line_table_entry = false;
+  for (uint32_t line : lines) {
+    LineEntry line_entry;
+    uint32_t idx = frame_sc.comp_unit->FindLineEntry(
+        0, line, &file, /*exact=*/false, &line_entry);
+    if (idx == UINT32_MAX)
+      continue;
+    found_some_line_table_entry = true;
+    const uint32_t actual_line = line_entry.line;
+    while (idx != UINT32_MAX) {
+      add_if_in_scope(line_entry.range.GetBaseAddress());
+      idx = frame_sc.comp_unit->FindLineEntry(idx + 1, actual_line, &file,
+                                              /*exact=*/true, &line_entry);
+    }
+  }
+
+  for (addr_t address : requested_addresses) {
+    Address addr;
+    if (target_sp->ResolveLoadAddress(address, addr))
+      add_if_in_scope(addr);
+  }
+
+  if (!until_addrs.empty())
+    return until_addrs;
+  // Historically, LLDB has emphasized the error when "only lines were
+  // requested, but none of those lines had a line table entry".
+  if (requested_addresses.empty() && !found_some_line_table_entry)
+    return llvm::createStringError("No line entries matching until target");
+  return llvm::createStringError(
+      "Until target outside of the current function");
 }

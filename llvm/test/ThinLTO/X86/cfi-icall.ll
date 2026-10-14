@@ -27,8 +27,8 @@ declare i1 @llvm.type.test(ptr %ptr, metadata %type) nounwind readnone
 !0 = !{i64 0, !"typeid1"}
 
 ; COMBINED:   <GLOBALVAL_SUMMARY_BLOCK
-; COMBINED:     <CFI_FUNCTION_DEFS op0=0 op1=3/>
-; COMBINED:     <CFI_FUNCTION_DECLS op0=3 op1=3/>
+; COMBINED:     <CFI_FUNCTION_DEFS op0={{.*}} op1=0 op2=3/>
+; COMBINED:     <CFI_FUNCTION_DECLS op0={{.*}} op1=3 op2=3/>
 ; COMBINED:     <TYPE_ID op0=6 op1=7 op2=4 op3=7 op4=0 op5=0 op6=0 op7=0/>
 ; COMBINED:   </GLOBALVAL_SUMMARY_BLOCK>
 

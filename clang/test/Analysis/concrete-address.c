@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.core.FixedAddressDereference -verify %s
 
 extern void __assert_fail (__const char *__assertion, __const char *__file,
     unsigned int __line, __const char *__function)
@@ -74,7 +74,7 @@ int f4_2(void) {
 
   if (p != (short *)1) {
     *p = 5; // no-warning
-    p = (short *)1; // expected-warning {{Using a fixed address is not portable}}
+    p = (short *)1;
   }
   else return 1;
 
@@ -138,7 +138,7 @@ void f8(struct f8_s *s, int coin) {
 
 void f9() {
   int (*p_function) (char, char) = (int (*)(char, char))0x04040; // FIXME: warn at this initialization
-  p_function = (int (*)(char, char))0x04080; // expected-warning {{Using a fixed address is not portable}}
+  p_function = (int (*)(char, char))0x04080;
   // FIXME: there should be a warning from calling the function pointer with fixed address
   int x = (*p_function) ('x', 'y');
 }

@@ -289,8 +289,7 @@ public:
   /// HasOneImplicitDefWithKnownVT - If the instruction has at least one
   /// implicit def and it has a known VT, return the VT, otherwise return
   /// MVT::Other.
-  MVT::SimpleValueType
-  HasOneImplicitDefWithKnownVT(const CodeGenTarget &TargetInfo) const;
+  MVT HasOneImplicitDefWithKnownVT(const CodeGenTarget &TargetInfo) const;
 
   /// FlattenAsmStringVariants - Flatten the specified AsmString to only
   /// include text from the specified variant, returning the new string.

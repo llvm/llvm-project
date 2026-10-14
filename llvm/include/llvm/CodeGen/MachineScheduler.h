@@ -82,11 +82,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -94,6 +96,7 @@
 #include <algorithm>
 #include <cassert>
 #include <llvm/Support/raw_ostream.h>
+#include <list>
 #include <memory>
 #include <string>
 #include <vector>
@@ -103,6 +106,7 @@ namespace impl_detail {
 // FIXME: Remove these declarations once RegisterClassInfo is queryable as an
 // analysis.
 class MachineSchedulerImpl;
+class SSAMachineSchedulerImpl;
 class PostMachineSchedulerImpl;
 } // namespace impl_detail
 
@@ -115,8 +119,11 @@ enum Direction {
 };
 } // namespace MISched
 
-LLVM_ABI extern cl::opt<MISched::Direction> PreRADirection;
-LLVM_ABI extern cl::opt<bool> VerifyScheduling;
+/// Returns -misched-prera-direction.
+LLVM_ABI MISched::Direction getPreRADirection();
+/// Returns whether -verify-misched is set.
+LLVM_ABI bool shouldVerifyScheduling();
+
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
 extern cl::opt<bool> PrintDAGs;
@@ -127,13 +134,11 @@ LLVM_ABI extern const bool PrintDAGs;
 
 class AAResults;
 class LiveIntervals;
-class MachineDominatorTree;
 class MachineFunction;
 class MachineInstr;
 class MachineLoopInfo;
 class RegisterClassInfo;
 class SchedDFSResult;
-class ScheduleHazardRecognizer;
 class TargetInstrInfo;
 class TargetPassConfig;
 class TargetRegisterInfo;
@@ -143,12 +148,12 @@ class TargetRegisterInfo;
 struct LLVM_ABI MachineSchedContext {
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
-  const MachineDominatorTree *MDT = nullptr;
   const TargetMachine *TM = nullptr;
   AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
 
-  RegisterClassInfo *RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
 
   MachineSchedContext();
   MachineSchedContext &operator=(const MachineSchedContext &other) = delete;
@@ -214,6 +219,9 @@ struct MachineSchedPolicy {
 
   // Compute DFSResult for use in scheduling heuristics.
   bool ComputeDFSResult = false;
+
+  // If enabled, some extra cases of physreg defs will be biased towards user.
+  bool BiasPRegsExtra = false;
 
   MachineSchedPolicy() = default;
 };
@@ -309,6 +317,7 @@ class LLVM_ABI ScheduleDAGMI : public ScheduleDAGInstrs {
 protected:
   AAResults *AA;
   LiveIntervals *LIS;
+  MachineBlockFrequencyInfo *MBFI;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
 
   /// Ordered list of DAG postprocessing steps.
@@ -330,7 +339,7 @@ public:
   ScheduleDAGMI(MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S,
                 bool RemoveKillFlags)
       : ScheduleDAGInstrs(*C->MF, C->MLI, RemoveKillFlags), AA(C->AA),
-        LIS(C->LIS), SchedImpl(std::move(S)) {}
+        LIS(C->LIS), MBFI(C->MBFI), SchedImpl(std::move(S)) {}
 
   // Provide a vtable anchor
   ~ScheduleDAGMI() override;
@@ -869,7 +878,7 @@ public:
   ReadyQueue Available;
   ReadyQueue Pending;
 
-  ScheduleHazardRecognizer *HazardRec = nullptr;
+  std::unique_ptr<ScheduleHazardRecognizer> HazardRec;
 
 private:
   /// True if the pending Q should be checked/updated before scheduling another
@@ -1229,6 +1238,7 @@ private:
 };
 
 // Utility functions used by heuristics in tryCandidate().
+LLVM_ABI unsigned computeRemLatency(SchedBoundary &CurrZone);
 LLVM_ABI bool tryLess(int TryVal, int CandVal,
                       GenericSchedulerBase::SchedCandidate &TryCand,
                       GenericSchedulerBase::SchedCandidate &Cand,
@@ -1247,8 +1257,12 @@ LLVM_ABI bool tryPressure(const PressureChange &TryP,
                           GenericSchedulerBase::CandReason Reason,
                           const TargetRegisterInfo *TRI,
                           const MachineFunction &MF);
+LLVM_ABI bool tryBiasPhysRegs(GenericSchedulerBase::SchedCandidate &TryCand,
+                              GenericSchedulerBase::SchedCandidate &Cand,
+                              SchedBoundary *Zone, bool BiasPRegsExtra);
 LLVM_ABI unsigned getWeakLeft(const SUnit *SU, bool isTop);
-LLVM_ABI int biasPhysReg(const SUnit *SU, bool isTop);
+LLVM_ABI int biasPhysReg(const SUnit *SU, bool isTop,
+                         bool BiasPRegsExtra = false);
 
 /// GenericScheduler shrinks the unscheduled zone using heuristics to balance
 /// the schedule.
@@ -1401,19 +1415,16 @@ protected:
 /// reduce reordering due to store clustering.
 LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
 createLoadClusterDAGMutation(const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI,
                              bool ReorderWhileClustering = false);
 
 /// If ReorderWhileClustering is set to true, no attempt will be made to
 /// reduce reordering due to store clustering.
 LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
 createStoreClusterDAGMutation(const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI,
                               bool ReorderWhileClustering = false);
 
 LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
-createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
-                               const TargetRegisterInfo *TRI);
+createCopyConstrainDAGMutation(const TargetInstrInfo *TII);
 
 /// Create the standard converging machine scheduler. This will be used as the
 /// default scheduler if the target does not set a default.
@@ -1427,30 +1438,19 @@ ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
   // FIXME: extend the mutation API to allow earlier mutations to instantiate
   // data and pass it to later mutations. Have a single mutation that gathers
   // the interesting nodes in one pass.
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
-
-  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
-  // Add MacroFusion mutation if fusions are not empty.
-  const auto &MacroFusions = STI.getMacroFusions();
-  if (!MacroFusions.empty())
-    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
+  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
   return DAG;
 }
 
 /// Create a generic scheduler with no vreg liveness or DAG mutation passes.
 template <typename Strategy = PostGenericScheduler>
 ScheduleDAGMI *createSchedPostRA(MachineSchedContext *C) {
-  ScheduleDAGMI *DAG = new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
-                                         /*RemoveKillFlags=*/true);
-  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
-  // Add MacroFusion mutation if fusions are not empty.
-  const auto &MacroFusions = STI.getMacroFusions();
-  if (!MacroFusions.empty())
-    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
-  return DAG;
+  return new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
+                           /*RemoveKillFlags=*/true);
 }
 
-class MachineSchedulerPass : public PassInfoMixin<MachineSchedulerPass> {
+class MachineSchedulerPass
+    : public OptionalPassInfoMixin<MachineSchedulerPass> {
   // FIXME: Remove this member once RegisterClassInfo is queryable as an
   // analysis.
   std::unique_ptr<impl_detail::MachineSchedulerImpl> Impl;
@@ -1464,8 +1464,23 @@ public:
                                  MachineFunctionAnalysisManager &MFAM);
 };
 
+class SSAMachineSchedulerPass
+    : public OptionalPassInfoMixin<SSAMachineSchedulerPass> {
+  // FIXME: Remove this member once RegisterClassInfo is queryable as an
+  // analysis.
+  std::unique_ptr<impl_detail::SSAMachineSchedulerImpl> Impl;
+  const TargetMachine *TM;
+
+public:
+  LLVM_ABI SSAMachineSchedulerPass(const TargetMachine *TM);
+  LLVM_ABI SSAMachineSchedulerPass(SSAMachineSchedulerPass &&Other);
+  LLVM_ABI ~SSAMachineSchedulerPass();
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
+
 class PostMachineSchedulerPass
-    : public PassInfoMixin<PostMachineSchedulerPass> {
+    : public OptionalPassInfoMixin<PostMachineSchedulerPass> {
   // FIXME: Remove this member once RegisterClassInfo is queryable as an
   // analysis.
   std::unique_ptr<impl_detail::PostMachineSchedulerImpl> Impl;

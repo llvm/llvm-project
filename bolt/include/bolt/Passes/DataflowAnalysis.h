@@ -11,6 +11,7 @@
 
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/Errc.h"
 #include <optional>
 #include <queue>
@@ -332,23 +333,41 @@ public:
     }
 
     std::queue<BinaryBasicBlock *> Worklist;
-    // TODO: Pushing this in a DFS ordering will greatly speed up the dataflow
-    // performance.
+    DenseSet<BinaryBasicBlock *> BBs;
     if (!Backward) {
-      for (BinaryBasicBlock &BB : Func) {
-        Worklist.push(&BB);
-        MCInst *Prev = nullptr;
-        for (MCInst &Inst : BB) {
-          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(&BB);
-          Prev = &Inst;
-        }
+      llvm::ReversePostOrderTraversal<BinaryFunction *> RPOT(&Func);
+      for (BinaryBasicBlock *BB : RPOT) {
+        Worklist.push(BB);
+        BBs.insert(BB);
       }
     } else {
-      for (BinaryBasicBlock &BB : llvm::reverse(Func)) {
-        Worklist.push(&BB);
-        MCInst *Prev = nullptr;
-        for (MCInst &Inst : llvm::reverse(BB)) {
-          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(&BB);
+      for (BinaryBasicBlock *BB : post_order(&Func)) {
+        Worklist.push(BB);
+        BBs.insert(BB);
+      }
+    }
+
+    // Reverse post-order and post-order will leave unreachable basic
+    // blocks. Here will identify and add them to the worklist.
+    if (BBs.size() != Func.size()) {
+      for (BinaryBasicBlock &BB : Func) {
+        if (!BBs.count(&BB)) {
+          Worklist.push(&BB);
+          BBs.insert(&BB);
+        }
+      }
+    }
+
+    for (auto *BB : BBs) {
+      MCInst *Prev = nullptr;
+      if (!Backward) {
+        for (MCInst &Inst : *BB) {
+          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(BB);
+          Prev = &Inst;
+        }
+      } else {
+        for (MCInst &Inst : llvm::reverse(*BB)) {
+          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(BB);
           Prev = &Inst;
         }
       }
@@ -385,10 +404,12 @@ public:
       // Propagate information from first instruction down to the last one
       StateTy *PrevState = &St;
       const MCInst *LAST = nullptr;
-      if (!Backward)
-        LAST = &*BB->rbegin();
-      else
-        LAST = &*BB->begin();
+      if (!BB->empty()) {
+        if (!Backward)
+          LAST = &*BB->rbegin();
+        else
+          LAST = &*BB->begin();
+      }
 
       auto doNext = [&](MCInst &Inst, const BinaryBasicBlock &BB) {
         StateTy CurState = derived().computeNext(Inst, *PrevState);
@@ -544,16 +565,6 @@ public:
 /// DenseMapInfo allows us to use the DenseMap LLVM data structure to store
 /// ProgramPoints.
 template <> struct DenseMapInfo<bolt::ProgramPoint> {
-  static inline bolt::ProgramPoint getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<MCInst *>::NumLowBitsAvailable;
-    return bolt::ProgramPoint(reinterpret_cast<MCInst *>(Val));
-  }
-  static inline bolt::ProgramPoint getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
-    Val <<= PointerLikeTypeTraits<MCInst *>::NumLowBitsAvailable;
-    return bolt::ProgramPoint(reinterpret_cast<MCInst *>(Val));
-  }
   static unsigned getHashValue(const bolt::ProgramPoint &PP) {
     return (unsigned((uintptr_t)PP.Data.BB) >> 4) ^
            (unsigned((uintptr_t)PP.Data.BB) >> 9);

@@ -391,6 +391,34 @@ TEST(StringRefTest, ConsumeFront) {
   EXPECT_TRUE(Str.consume_front(""));
 }
 
+TEST(StringRefTest, ConsumeFrontChar) {
+  {
+    StringRef Str("hello");
+    EXPECT_EQ("hello", Str);
+    EXPECT_TRUE(Str.consume_front('h'));
+    EXPECT_EQ("ello", Str);
+    EXPECT_FALSE(Str.consume_front('h'));
+    EXPECT_EQ("ello", Str);
+  }
+
+  {
+    StringRef Str("\0");
+    EXPECT_FALSE(Str.consume_front('\0'));
+    EXPECT_EQ("", Str);
+    EXPECT_FALSE(Str.consume_front('\0'));
+    EXPECT_EQ("", Str);
+  }
+
+  {
+    char Prefix = 'h';
+    StringRef Str("h");
+    EXPECT_TRUE(Str.consume_front(Prefix));
+    EXPECT_EQ("", Str);
+    EXPECT_FALSE(Str.consume_front('\0'));
+    EXPECT_EQ("", Str);
+  }
+}
+
 TEST(StringRefTest, ConsumeFrontInsensitive) {
   StringRef Str("heLLo");
   EXPECT_TRUE(Str.consume_front_insensitive(""));
@@ -940,6 +968,65 @@ TEST(StringRefTest, consumeIntegerSigned) {
   }
 }
 
+TEST(StringRefTest, consumeIntegerAPIntBitWidth) {
+  // Decimal large number (12535824225335233)
+  // Fits in 64 bits, so should not grow beyond initial 64 bits.
+  {
+    APInt U;
+    StringRef Str = "12535824225335233";
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 12535824225335233ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+  }
+
+  // Hex version of same number (2c894405eaf7c1)
+  // Fits in 64 bits, so should not grow beyond initial 64 bits.
+  {
+    APInt U;
+    StringRef Str = "2c894405eaf7c1";
+    bool Success = Str.consumeInteger(16, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 12535824225335233ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+  }
+
+  // A very large decimal number (100 digits)
+  // Needs 333 bits. Started at 64, doubled to 128, 256, 512.
+  {
+    APInt U;
+    std::string LargeDec(100, '9');
+    StringRef Str = LargeDec;
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getBitWidth(), 512U);
+  }
+
+  // Trailing garbage should not trigger growth or failure.
+  {
+    APInt U;
+    StringRef Str = "123g";
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 123ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+    EXPECT_EQ(Str, "g");
+  }
+
+  // Very long trailing garbage should also not trigger growth or failure.
+  {
+    APInt U;
+    std::string LongGarbage = "1";
+    LongGarbage.append(10000, 'g');
+    StringRef Str = LongGarbage;
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 1ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+    EXPECT_EQ(Str.size(), 10000U);
+  }
+}
+
 struct GetDoubleStrings {
   const char *Str;
   bool AllowInexact;
@@ -1065,7 +1152,7 @@ TEST(StringRefTest, Take) {
 }
 
 TEST(StringRefTest, FindIf) {
-  StringRef Punct("Test.String");
+  StringRef Punct("This.Is.Test.String");
   StringRef NoPunct("ABCDEFG");
   StringRef Empty;
 
@@ -1078,6 +1165,16 @@ TEST(StringRefTest, FindIf) {
   EXPECT_EQ(4U, Punct.find_if_not(IsAlpha));
   EXPECT_EQ(StringRef::npos, NoPunct.find_if_not(IsAlpha));
   EXPECT_EQ(StringRef::npos, Empty.find_if_not(IsAlpha));
+
+  EXPECT_EQ(12U, Punct.rfind_if(IsPunct));
+  EXPECT_EQ(7U, Punct.rfind_if(IsPunct, /*End=*/12));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if(IsPunct, /*End=*/4));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if(IsPunct, /*End=*/0));
+
+  EXPECT_EQ(12U, Punct.rfind_if_not(IsAlpha));
+  EXPECT_EQ(7U, Punct.rfind_if_not(IsAlpha, /*End=*/12));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if_not(IsAlpha, /*End=*/4));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if_not(IsAlpha, /*End=*/0));
 }
 
 TEST(StringRefTest, TakeWhileUntil) {
@@ -1168,6 +1265,13 @@ TEST(StringRefTest, LFCRLineEnding) {
   EXPECT_EQ(StringRef("\n\r"), Cases[0].detectEOL());
   EXPECT_EQ(StringRef("\n\r"), Cases[1].detectEOL());
   EXPECT_EQ(StringRef("\n\r"), Cases[2].detectEOL());
+}
+
+TEST(StringRefTest, NonEmptyOr) {
+  constexpr StringLiteral empty("");
+  constexpr StringLiteral populated("yay!");
+  EXPECT_EQ(populated, empty.nonEmptyOr("yay!"));
+  EXPECT_EQ(populated, populated.nonEmptyOr("boo!"));
 }
 
 static_assert(std::is_trivially_copyable_v<StringRef>, "trivially copyable");

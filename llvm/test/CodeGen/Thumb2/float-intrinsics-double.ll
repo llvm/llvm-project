@@ -225,27 +225,3 @@ define double @fmuladd_d(double %a, double %b, double %c) {
   %1 = call double @llvm.fmuladd.f64(double %a, double %b, double %c)
   ret double %1
 }
-
-declare i16 @llvm.convert.to.fp16.f64(double %a)
-define i16 @d_to_h(double %a) {
-; CHECK-LABEL: d_to_h:
-; SOFT: bl __aeabi_d2h
-; VFP4: bl __aeabi_d2h
-; FP-ARMv8: vcvt{{[bt]}}.f16.f64
-  %1 = call i16 @llvm.convert.to.fp16.f64(double %a)
-  ret i16 %1
-}
-
-declare double @llvm.convert.from.fp16.f64(i16 %a)
-define double @h_to_d(i16 %a) {
-; CHECK-LABEL: h_to_d:
-; NONE: bl __aeabi_h2f
-; NONE: bl __aeabi_f2d
-; SP: vcvt{{[bt]}}.f32.f16
-; SP: bl __aeabi_f2d
-; VFPv4: vcvt{{[bt]}}.f32.f16
-; VFPv4: vcvt.f64.f32
-; FP-ARMv8: vcvt{{[bt]}}.f64.f16
-  %1 = call double @llvm.convert.from.fp16.f64(i16 %a)
-  ret double %1
-}

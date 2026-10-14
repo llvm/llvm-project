@@ -1,16 +1,11 @@
 import("//compiler-rt/target.gni")
 
-if (current_toolchain == host_toolchain) {
-  copy("ignorelist") {
-    sources = [ "asan_ignorelist.txt" ]
-    outputs = [ "$clang_resource_dir/share/{{source_target_relative}}" ]
-  }
-} else {
+if (current_toolchain != host_toolchain) {
   asan_sources = [
-    "asan_aix.cpp",
     "asan_activation.cpp",
     "asan_activation.h",
     "asan_activation_flags.inc",
+    "asan_aix.cpp",
     "asan_allocator.cpp",
     "asan_allocator.h",
     "asan_debugging.cpp",
@@ -109,6 +104,7 @@ if (current_toolchain == host_toolchain) {
 
         # ubsan
         "-Wl,-U,___ubsan_default_options",
+        "-Wl,-U,___ubsan_default_suppressions",
 
         # sanitizer_common
         "-Wl,-U,___sanitizer_free_hook",

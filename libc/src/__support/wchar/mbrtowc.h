@@ -19,8 +19,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
-                        size_t n, mbstate *__restrict ps);
+ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict src_ptr,
+                        size_t max_src_bytes, mbstate *__restrict ps);
 
 } // namespace internal
 

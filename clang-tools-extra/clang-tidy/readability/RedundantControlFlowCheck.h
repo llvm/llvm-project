@@ -30,19 +30,6 @@ public:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
-
-private:
-  void
-  checkRedundantReturn(const ast_matchers::MatchFinder::MatchResult &Result,
-                       const CompoundStmt *Block);
-
-  void
-  checkRedundantContinue(const ast_matchers::MatchFinder::MatchResult &Result,
-                         const CompoundStmt *Block);
-
-  void issueDiagnostic(const ast_matchers::MatchFinder::MatchResult &Result,
-                       const CompoundStmt *Block, const SourceRange &StmtRange,
-                       const char *Diag);
 };
 
 } // namespace clang::tidy::readability

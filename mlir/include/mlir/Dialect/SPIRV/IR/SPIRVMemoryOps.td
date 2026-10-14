@@ -81,10 +81,44 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [Pure]> {
 
 // -----
 
+def SPIRV_InBoundsAccessChainOp : SPIRV_Op<"InBoundsAccessChain", [Pure]> {
+  let summary = [{
+    Create a pointer into a composite object that is known to stay within the
+    base object.
+  }];
+
+  let description = [{
+    Has the same operands, result, and type rules as `spirv.AccessChain`, with
+    the additional contract that the resulting pointer points within the base
+    object.
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$base_ptr,
+    Variadic<SPIRV_Integer>:$indices
+  );
+
+  let results = (outs
+    SPIRV_AnyPtr:$component_ptr
+  );
+
+  let builders = [OpBuilder<(ins "Value":$basePtr, "ValueRange":$indices)>];
+
+  let hasCanonicalizer = 1;
+
+  let hasCustomAssemblyFormat = 0;
+
+  let assemblyFormat = [{
+    $base_ptr `[` $indices `]` attr-dict `:` type($base_ptr) `,` type($indices) `->` type(results)
+  }];
+}
+
+// -----
+
 def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = [{
     Copy from the memory pointed to by Source to the memory pointed to by
-    Target. Both operands must be non-void pointers and having the same <id>
+    Target. Both operands must be non-void pointers and having the same `<id>`
     Type operand in their OpTypePointer type declaration.  Matching Storage
     Class is not required.  The amount of memory copied is the size of the
     type pointed to. The copied type must have a fixed size; i.e., it must
@@ -381,7 +415,7 @@ def SPIRV_VariableOp : SPIRV_Op<"Variable", []> {
 
     Initializer is optional. If Initializer is present, it will be the
     initial value of the variable's memory content. Initializer must be an
-    <id> from a constant instruction or a global (module scope) OpVariable
+    `<id>` from a constant instruction or a global (module scope) OpVariable
     instruction. Initializer must have the same type as the type pointed to
     by Result Type.
 

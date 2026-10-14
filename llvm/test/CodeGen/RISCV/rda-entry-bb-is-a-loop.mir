@@ -1,0 +1,26 @@
+# RUN: llc %s -mtriple=riscv64 --passes='print<reaching-def>'  -o - 2>&1 | FileCheck %s
+---
+name:            entry_bb_is_a_loop
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: Reaching definitions for for machine function: entry_bb_is_a_loop
+  ; CHECK-NEXT: %bb.0:
+  ; CHECK-NEXT: $x10:{ 1 }
+  ; CHECK-NEXT: 0: $x10 = ADDI $x10, 1
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: $x10:{ 0 }
+  ; CHECK-NEXT: 1: $x10 = ADDI $x10, 2
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: $x10:{ 1 }
+  ; CHECK-NEXT: $x0:{ }
+  ; CHECK-NEXT: 2: BNE $x10, $x0, %bb.0
+  bb.0.entry:
+    liveins: $x10
+    $x10 = ADDI $x10, 1
+    $x10 = ADDI $x10, 2
+    BNE $x10, $x0, %bb.0
+
+  bb.1:
+    PseudoRET
+
+...

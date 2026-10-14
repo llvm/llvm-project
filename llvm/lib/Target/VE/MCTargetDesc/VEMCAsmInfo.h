@@ -25,7 +25,8 @@ class VEELFMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit VEELFMCAsmInfo(const Triple &TheTriple);
+  explicit VEELFMCAsmInfo(const Triple &TheTriple,
+                          const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,

@@ -6,6 +6,9 @@ extern foo : dword, bar : word, baz : proc
 ; CHECK: .extern bar
 ; CHECK: .extern baz
 
+extrn quux : dword
+; CHECK: .extern quux
+
 .code
 mov ebx, foo
 ; CHECK-32: mov ebx, dword ptr [foo]
@@ -14,5 +17,9 @@ mov ebx, foo
 mov bx, bar
 ; CHECK-32: mov bx, word ptr [bar]
 ; CHECK-64: mov bx, word ptr [rip + bar]
+
+mov edx, quux
+; CHECK-32: mov edx, dword ptr [quux]
+; CHECK-64: mov edx, dword ptr [rip + quux]
 
 END

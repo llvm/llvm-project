@@ -15,7 +15,7 @@ define void @drop_exact(ptr %p, ptr %p1) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ -47436, [[BB:%.*]] ], [ [[TMP15:%.*]], [[BB12]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP42:%.*]], [[BB12]] ]
 ; CHECK-NEXT:    [[TMP15]] = add nsw i32 [[TMP13]], -1
-; CHECK-NEXT:    [[TMP16:%.*]] = shl i32 [[TMP15]], 1
+; CHECK-NEXT:    [[TMP16:%.*]] = shl nsw i32 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = sub nsw i32 42831, [[TMP16]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = lshr i32 [[TMP17]], 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = urem i32 [[TMP19]], 250
@@ -62,7 +62,7 @@ define void @dont_drop_exact(ptr %p, ptr %p1) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ -47436, [[BB:%.*]] ], [ [[TMP15:%.*]], [[BB12]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP42:%.*]], [[BB12]] ]
 ; CHECK-NEXT:    [[TMP15]] = add nsw i32 [[TMP13]], -1
-; CHECK-NEXT:    [[TMP16:%.*]] = shl i32 [[TMP15]], 1
+; CHECK-NEXT:    [[TMP16:%.*]] = shl nsw i32 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = sub nsw i32 42831, [[TMP16]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = lshr i32 [[TMP17]], 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = urem i32 [[TMP19]], 250

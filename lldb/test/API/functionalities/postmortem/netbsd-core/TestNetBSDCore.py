@@ -172,9 +172,7 @@ class NetBSD2LWPT2CoreTestCase(NetBSDCoreCommonTestCase):
 
         # thread 1 should have no signal
         thread = process.GetThreadByID(1)
-        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
-        self.assertEqual(thread.GetStopReasonDataCount(), 1)
-        self.assertEqual(thread.GetStopReasonDataAtIndex(0), 0)
+        self.assertFalse(thread.is_stopped)
 
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_thread_signaled(self):

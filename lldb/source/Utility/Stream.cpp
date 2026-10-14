@@ -24,10 +24,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Stream::Stream(uint32_t flags, uint32_t addr_size, ByteOrder byte_order,
-               bool colors)
-    : m_flags(flags), m_addr_size(addr_size), m_byte_order(byte_order),
-      m_forwarder(*this, colors) {}
+Stream::Stream(uint32_t flags, ByteOrder byte_order, bool colors)
+    : m_flags(flags), m_byte_order(byte_order), m_forwarder(*this, colors) {}
 
 Stream::Stream(bool colors)
     : m_flags(0), m_byte_order(endian::InlHostByteOrder()),
@@ -61,12 +59,12 @@ size_t Stream::PutULEB128(uint64_t uval) {
     return Printf("0x%" PRIx64, uval);
 }
 
-// Print a raw NULL terminated C string to the stream.
+// Print a raw null-terminated C string to the stream.
 size_t Stream::PutCString(llvm::StringRef str) {
   size_t bytes_written = 0;
   bytes_written = Write(str.data(), str.size());
 
-  // when in binary mode, emit the NULL terminator
+  // when in binary mode, emit the null terminator
   if (m_flags.Test(eBinary))
     bytes_written += PutChar('\0');
   return bytes_written;
@@ -81,7 +79,9 @@ void Stream::PutCStringColorHighlighted(
     return;
   }
 
-  llvm::Regex reg_pattern(pattern_info->pattern);
+  llvm::Regex reg_pattern(pattern_info->pattern, pattern_info->ignore_case
+                                                     ? llvm::Regex::IgnoreCase
+                                                     : llvm::Regex::NoFlags);
   llvm::SmallVector<llvm::StringRef, 1> matches;
   llvm::StringRef remaining = text;
   std::string format_str = lldb_private::ansi::FormatAnsiTerminalCodes(
@@ -97,7 +97,7 @@ void Stream::PutCStringColorHighlighted(
     PutCString(remaining);
 }
 
-// Print a double quoted NULL terminated C string to the stream using the
+// Print a double quoted null-terminated C string to the stream using the
 // printf format in "format".
 void Stream::QuotedCString(const char *cstr, const char *format) {
   Printf(format, cstr);
@@ -144,7 +144,7 @@ size_t Stream::PrintfVarArg(const char *format, va_list args) {
   llvm::SmallString<1024> buf;
   VASprintf(buf, format, args);
 
-  // Include the NULL termination byte for binary output
+  // Include the null terminator for binary output
   size_t length = buf.size();
   if (m_flags.Test(eBinary))
     ++length;
@@ -166,7 +166,7 @@ Stream &Stream::operator<<(char ch) {
   return *this;
 }
 
-// Stream the NULL terminated C string out to this stream.
+// Stream the null-terminated C string out to this stream.
 Stream &Stream::operator<<(const char *s) {
   Printf("%s", s);
   return *this;
@@ -180,6 +180,12 @@ Stream &Stream::operator<<(llvm::StringRef str) {
 // Stream the pointer value out to this stream.
 Stream &Stream::operator<<(const void *p) {
   Printf("0x%.*tx", static_cast<int>(sizeof(const void *)) * 2, (ptrdiff_t)p);
+  return *this;
+}
+
+// Stream the result of a formatv expression to this stream.
+Stream &Stream::operator<<(const llvm::formatv_object_base &obj) {
+  obj.format(m_forwarder);
   return *this;
 }
 
@@ -209,12 +215,6 @@ Stream::IndentScope Stream::MakeIndentScope(unsigned indent_amount) {
   IndentMore(indent_amount);
   return indent_scope;
 }
-
-// Get the address size in bytes
-uint32_t Stream::GetAddressByteSize() const { return m_addr_size; }
-
-// Set the address size in bytes
-void Stream::SetAddressByteSize(uint32_t addr_size) { m_addr_size = addr_size; }
 
 // The flags get accessor
 Flags &Stream::GetFlags() { return m_flags; }

@@ -26,7 +26,8 @@ include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 def AlternativesOp : TransformDialectOp<"alternatives",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands",
-         "getRegionInvocationBounds"]>,
+         "getRegionInvocationBounds",
+         "getSuccessorInputs"]>,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      IsolatedFromAbove, PossibleTopLevelTransformOpTrait,
@@ -221,8 +222,7 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
 
   let assemblyFormat = [{
     `to` $target $patterns
-    (`with` `type_converter` $default_type_converter_region^)?
-    attr-dict `:` type($target)
+    (`with` `type_converter` $default_type_converter_region^)? prop-dict attr-dict `:` type($target)
   }];
   let hasVerifier = 1;
 
@@ -338,7 +338,7 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
   let results = (outs);
   let regions = (region MaxSizedRegion<1>:$patterns);
 
-  let assemblyFormat = "`to` $target $patterns attr-dict `:` type($target)";
+  let assemblyFormat = "`to` $target $patterns oilist(`apply_cse` $apply_cse | `max_iterations` `=` $max_iterations | `max_num_rewrites` `=` $max_num_rewrites) attr-dict `:` type($target)";
   let hasVerifier = 1;
 
   let skipDefaultBuilders = 1;
@@ -612,8 +612,7 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
           )
     `in`
     $root (`,` $forwarded_inputs^)?
-    custom<ForeachMatchSymbols>($matchers, $actions)
-    attr-dict
+    custom<ForeachMatchSymbols>($matchers, $actions) attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -624,7 +623,7 @@ def ForeachOp : TransformDialectOp<"foreach",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-         "getEntrySuccessorOperands"]>,
+         "getEntrySuccessorOperands", "getSuccessorInputs"]>,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">
     ]> {
   let summary = "Executes the body for each element of the payload";
@@ -758,7 +757,7 @@ def GetParentOp : TransformDialectOp<"get_parent_op",
                                          "1">:$nth_parent);
   let results = (outs TransformHandleTypeInterface:$parent);
   let assemblyFormat =
-    "$target attr-dict `:` functional-type(operands, results)";
+    "$target prop-dict attr-dict `:` functional-type(operands, results)";
 }
 
 def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
@@ -906,7 +905,7 @@ def IncludeOp : TransformDialectOp<"include",
 
   let assemblyFormat =
       "$target `failures` `(` $failure_propagation_mode `)`"
-      "`(` $operands `)` attr-dict `:` functional-type($operands, $results)";
+      "`(` $operands `)` oilist(`arg_attrs` `=` $arg_attrs | `res_attrs` `=` $res_attrs) attr-dict `:` functional-type($operands, $results)";
 
   let extraClassDeclaration = [{
     ::mlir::CallInterfaceCallable getCallableForCallee() {
@@ -1006,7 +1005,7 @@ def MergeHandlesOp : TransformDialectOp<"merge_handles",
 }
 
 def NamedSequenceOp : TransformDialectOp<"named_sequence",
-    [FunctionOpInterface,
+    [SymbolName, SymbolVisibility, FunctionOpInterface,
      IsolatedFromAbove,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
@@ -1115,7 +1114,7 @@ def SplitHandleOp : TransformDialectOp<"split_handle",
   ];
 
   let assemblyFormat = [{
-    $handle attr-dict `:` functional-type(operands, results)
+    $handle oilist(`pass_through_empty_handle` `=` $pass_through_empty_handle | `fail_on_payload_too_small` `=` $fail_on_payload_too_small | `overflow_result` `=` $overflow_result) attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -1135,6 +1134,23 @@ def ParamConstantOp : Op<Transform_Dialect, "param.constant", [
   let arguments = (ins AnyAttr:$value);
   let results = (outs TransformParamTypeInterface:$param);
   let assemblyFormat = "$value attr-dict `->` type($param)";
+}
+
+def PayloadOp : Op<Transform_Dialect, "payload",
+                   [NoTerminator, NoRegionArguments,
+                    DeclareOpInterfaceMethods<NormalFormCheckedOpInterface>]> {
+  let summary = "Optional container for transform payloads";
+  let description = [{
+    Contains payload operations on which transforms operate and serves as a
+    storage location for information between multiple transform invocations.
+
+    The operations contained in this payload must satisfy the normal forms specified by the `normal_forms` attribute.
+  }];
+  let regions = (region AnyRegion:$body);
+  let arguments =
+      (ins TypedArrayAttrBase<NormalFormAttrInterface,
+                              "normal form attributes">:$normal_forms);
+  let assemblyFormat = "`normal_forms` `=` $normal_forms attr-dict-with-keyword regions";
 }
 
 def PrintOp : TransformDialectOp<"print",
@@ -1172,7 +1188,7 @@ def PrintOp : TransformDialectOp<"print",
     OpBuilder<(ins "Value":$target, CArg<"StringRef", "StringRef()">:$name)>
   ];
 
-  let assemblyFormat = "$target attr-dict (`:` type($target)^)?";
+  let assemblyFormat = "$target oilist(`name` `=` $name | `assume_verified` $assume_verified | `use_local_scope` $use_local_scope | `skip_regions` $skip_regions) attr-dict (`:` type($target)^)?";
 }
 
 def ReplicateOp : TransformDialectOp<"replicate",
@@ -1238,7 +1254,8 @@ def SelectOp : TransformDialectOp<"select",
 def SequenceOp : TransformDialectOp<"sequence",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands",
-         "getRegionInvocationBounds"]>,
+         "getRegionInvocationBounds",
+         "getSuccessorInputs"]>,
      MatchOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,

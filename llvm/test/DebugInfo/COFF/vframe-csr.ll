@@ -16,9 +16,9 @@
 ; ASM:         .cv_fpo_setframe        %ebp
 ; ASM:         andl    $-8, %esp
 ; ASM:         .cv_fpo_stackalign      8
-; FIXME: Why 24 bytes? We only need 12 bytes of data.
-; ASM:         subl    $24, %esp
-; ASM:         .cv_fpo_stackalloc      24
+; 12 bytes of data, rounded up to the 8-byte realignment.
+; ASM:         subl    $16, %esp
+; ASM:         .cv_fpo_stackalloc      16
 ; ASM:         .cv_fpo_endprologue
 
 ; 'x' should be EBP-relative, 'a' and 'force_alignment' ESP relative.
@@ -70,7 +70,7 @@
 ; OBJ:     LocalFramePtrReg: VFRAME (0x7536)
 ; OBJ:     ParamFramePtrReg: EBP (0x16)
 ; OBJ:   }
-; 	ESP is VFRAME - 24, ESP offset of 'a' is 4, so -20.
+; 	ESP is VFRAME - 16, ESP offset of 'a' is 4, so -12.
 ; OBJ:   LocalSym {
 ; OBJ:     Kind: S_LOCAL (0x113E)
 ; OBJ:     Type: int (0x74)
@@ -80,7 +80,7 @@
 ; OBJ:   }
 ; OBJ:   DefRangeFramePointerRelSym {
 ; OBJ:     Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
-; OBJ:     Offset: -20
+; OBJ:     Offset: -12
 ; OBJ:   }
 ; 	ESP is VFRAME - 16, ESP offset of 'force_alignment' is 8, so -8.
 ; OBJ:   LocalSym {
@@ -92,7 +92,7 @@
 ; OBJ:   }
 ; OBJ:   DefRangeFramePointerRelSym {
 ; OBJ:     Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
-; OBJ:     Offset: -16
+; OBJ:     Offset: -8
 ; OBJ:   }
 ; OBJ:   ProcEnd {
 ; OBJ:     Kind: S_PROC_ID_END (0x114F)

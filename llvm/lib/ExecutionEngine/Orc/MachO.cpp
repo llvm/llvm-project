@@ -26,7 +26,7 @@ static std::string objDesc(const MemoryBufferRef &Obj, const Triple &TT,
                            bool ObjIsSlice) {
   std::string Desc;
   if (ObjIsSlice)
-    Desc += (TT.getArchName() + " slice of universal binary").str();
+    Desc += (TT.getArchName() + " slice of universal binary ").str();
   Desc += Obj.getBufferIdentifier();
   return Desc;
 }
@@ -48,11 +48,12 @@ static Error checkMachORelocatableObject(MemoryBufferRef Obj,
                                        " is not a MachO relocatable object",
                                    inconvertibleErrorCode());
 
-  auto ObjArch = object::MachOObjectFile::getArch(Hdr.cputype, Hdr.cpusubtype);
-  if (ObjArch != TT.getArch())
+  auto ObjArchTT =
+      object::MachOObjectFile::getArchTriple(Hdr.cputype, Hdr.cpusubtype);
+  if (ObjArchTT.getArch() != TT.getArch())
     return make_error<StringError>(
-        objDesc(Obj, TT, ObjIsSlice) + Triple::getArchTypeName(ObjArch) +
-            ", cannot be loaded into " + TT.str() + " process",
+        objDesc(Obj, TT, ObjIsSlice) + " (" + ObjArchTT.getArchName() +
+            "), cannot be loaded into " + TT.str() + " process",
         inconvertibleErrorCode());
 
   return Error::success();
@@ -112,7 +113,7 @@ loadMachORelocatableObject(StringRef Path, const Triple &TT, LoadArchives LA,
   if (!FDOrErr)
     return createFileError(Path, FDOrErr.takeError());
   sys::fs::file_t FD = *FDOrErr;
-  auto CloseFile = make_scope_exit([&]() { sys::fs::closeFile(FD); });
+  llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(FD); });
 
   auto Buf =
       MemoryBuffer::getOpenFile(FD, *IdentifierOverride, /*FileSize=*/-1);

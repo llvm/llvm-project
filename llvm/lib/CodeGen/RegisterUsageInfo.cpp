@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -20,8 +21,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cstdint>
@@ -29,10 +30,6 @@
 #include <vector>
 
 using namespace llvm;
-
-static cl::opt<bool> DumpRegUsage(
-    "print-regusage", cl::init(false), cl::Hidden,
-    cl::desc("print register usage details collected for analysis."));
 
 INITIALIZE_PASS(PhysicalRegisterUsageInfoWrapperLegacy, "reg-usage-info",
                 "Register Usage Information Storage", false, true)
@@ -49,7 +46,7 @@ bool PhysicalRegisterUsageInfo::doInitialization(Module &M) {
 }
 
 bool PhysicalRegisterUsageInfo::doFinalization(Module &M) {
-  if (DumpRegUsage)
+  if (CodeGenOptions::Global.print_regusage)
     print(errs());
 
   RegMasks.shrink_and_clear();
@@ -70,7 +67,7 @@ PhysicalRegisterUsageInfo::getRegUsageInfo(const Function &FP) {
 }
 
 void PhysicalRegisterUsageInfo::print(raw_ostream &OS, const Module *M) const {
-  using FuncPtrRegMaskPair = std::pair<const Function *, std::vector<uint32_t>>;
+  using FuncPtrRegMaskPair = decltype(RegMasks)::value_type;
 
   // Create a vector of pointer to RegMasks entries
   SmallVector<const FuncPtrRegMaskPair *, 64> FPRMPairVector(

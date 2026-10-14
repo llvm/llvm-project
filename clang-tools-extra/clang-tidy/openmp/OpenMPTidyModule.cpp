@@ -8,12 +8,12 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "ExceptionEscapeCheck.h"
 #include "UseDefaultNoneCheck.h"
 
 namespace clang::tidy {
 namespace openmp {
+namespace {
 
 /// This module is for OpenMP-specific checks.
 class OpenMPModule : public ClangTidyModule {
@@ -25,6 +25,8 @@ public:
         "openmp-use-default-none");
   }
 };
+
+} // namespace
 
 // Register the OpenMPTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<OpenMPModule>

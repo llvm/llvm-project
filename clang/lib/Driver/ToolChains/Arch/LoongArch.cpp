@@ -136,17 +136,10 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
   // -mrelax is default, unless -mno-relax is specified.
   // FIXME: Only for loongarch64, loongarch32 has not been fully verified.
   if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax,
-                   Triple.isLoongArch64() ? true : false)) {
+                   Triple.isLoongArch64() ? true : false))
     Features.push_back("+relax");
-    // -gsplit-dwarf -mrelax requires DW_AT_high_pc/DW_AT_ranges/... indexing
-    // into .debug_addr, which is currently not implemented.
-    Arg *A;
-    if (getDebugFissionKind(D, Args, A) != DwarfFissionKind::None)
-      D.Diag(clang::diag::err_drv_loongarch_unsupported_with_linker_relaxation)
-          << A->getAsString(Args);
-  } else if (Args.getLastArg(options::OPT_mno_relax)) {
+  else if (Args.getLastArg(options::OPT_mno_relax))
     Features.push_back("-relax");
-  }
 
   std::string ArchName;
   const Arg *MArch = Args.getLastArg(options::OPT_march_EQ);
@@ -306,7 +299,8 @@ std::string loongarch::getLoongArchTargetCPU(const llvm::opt::ArgList &Args,
   // If we have -march, use that.
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
     Arch = A->getValue();
-    if (Arch == "la64v1.0" || Arch == "la64v1.1")
+    if (Arch == "la64v1.0" || Arch == "la64v1.1" || Arch == "la32v1.0" ||
+        Arch == "la32rv1.0")
       CPU = llvm::LoongArch::getDefaultArch(Triple.isLoongArch64());
     else
       CPU = Arch;

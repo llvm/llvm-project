@@ -1081,3 +1081,95 @@ static_assert(X{}.
 static_assert(X{}.
                 foo() == 10001);
 }
+
+#ifdef MS
+namespace GH178324 {
+  struct a {
+    using e = int;
+  };
+  void current(const char * = __builtin_FUNCSIG());
+  template <class> void c() { decltype(a(current()))::e; }
+} // namespace GH178324
+#endif
+
+namespace GH122657 {
+template <unsigned long long n>
+struct Sized {
+  char data[n];
+};
+
+template <typename T>
+int baz() {
+  static constexpr auto funcSize = sizeof(__func__);
+  static constexpr auto functionSize = sizeof(__FUNCTION__);
+  static constexpr auto prettySize = sizeof(__PRETTY_FUNCTION__);
+
+  auto lfunc = []() noexcept(sizeof(__func__) == funcSize) -> Sized<sizeof(__func__)> { return {}; };
+  auto lfunction = []() noexcept(sizeof(__FUNCTION__) == functionSize) -> Sized<sizeof(__FUNCTION__)> { return {}; };
+  auto lpretty = []() noexcept(sizeof(__PRETTY_FUNCTION__) == prettySize) -> Sized<sizeof(__PRETTY_FUNCTION__)> { return {}; };
+
+  static_assert(sizeof(lfunc()) == 4, "baz");
+  static_assert(noexcept(lfunc()) == true, "noexcept");
+
+#ifdef MS
+  static_assert(sizeof(lfunction()) == 14, "GH122657::baz");
+#else
+  static_assert(sizeof(lfunction()) == 4, "baz");
+#endif
+  static_assert(noexcept(lfunction()) == true, "noexcept");
+
+  static_assert(sizeof(lpretty()) == 30, "int GH122657::baz() [T = int]");
+  static_assert(noexcept(lpretty()) == true, "noexcept");
+
+  return 0;
+}
+
+int main() {
+  static constexpr auto funcSize = sizeof(__func__);
+  static constexpr auto functionSize = sizeof(__FUNCTION__);
+  static constexpr auto prettySize = sizeof(__PRETTY_FUNCTION__);
+
+  auto lfunc = []() noexcept(sizeof(__func__) == funcSize) -> Sized<sizeof(__func__)> { return {}; };
+  auto lfunction = []() noexcept(sizeof(__FUNCTION__) == functionSize) -> Sized<sizeof(__FUNCTION__)> { return {}; };
+  auto lpretty = []() noexcept(sizeof(__PRETTY_FUNCTION__) == prettySize) -> Sized<sizeof(__PRETTY_FUNCTION__)> { return {}; };
+
+  static_assert(sizeof(lfunc()) == 5, "main");
+  static_assert(noexcept(lfunc()) == true, "noexcept");
+
+#ifdef MS
+  static_assert(sizeof(lfunction()) == 15, "GH122657::main");
+#else
+  static_assert(sizeof(lfunction()) == 5, "main");
+#endif
+  static_assert(noexcept(lfunction()) == true, "noexcept");
+
+  static_assert(sizeof(lpretty()) == 21, "int GH122657::main()");
+  static_assert(noexcept(lpretty()) == true, "noexcept");
+
+  return baz<int>();
+}
+} // namespace GH122657
+
+namespace GH213420 {
+template <unsigned long long n>
+struct Sized {
+  char data[n];
+};
+
+void baz() {
+  auto lfunc = []() {
+    struct F {
+      auto foo(Sized<sizeof(__func__)> s = Sized<sizeof(__func__)>{}) {
+        return s;
+      }
+    };
+    return F{}.foo();
+  };
+  static_assert(sizeof(lfunc()) == 11, "operator()");
+
+  auto lfuncparam = [](Sized<sizeof(__func__)> s = Sized<sizeof(__func__)>{}) -> Sized<sizeof(s)> {
+   return s;
+  };
+  static_assert(sizeof(lfuncparam()) == 4, "baz");
+}
+} // namespace GH213420

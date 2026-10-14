@@ -10,8 +10,10 @@
 #define LLDB_HOST_COMMON_NATIVETHREADPROTOCOL_H
 
 #include <memory>
+#include <string>
 
 #include "lldb/Host/Debug.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-types.h"
@@ -56,9 +58,18 @@ public:
     return llvm::make_error<UnimplementedError>();
   }
 
+  virtual StructuredData::ObjectSP GetExtendedInfo() const { return nullptr; }
+
 protected:
+  void ClearStopInfo() {
+    m_stop_info = ThreadStopInfo();
+    m_stop_description.clear();
+  }
+
   NativeProcessProtocol &m_process;
   lldb::tid_t m_tid;
+  ThreadStopInfo m_stop_info = {};
+  std::string m_stop_description;
 };
 }
 

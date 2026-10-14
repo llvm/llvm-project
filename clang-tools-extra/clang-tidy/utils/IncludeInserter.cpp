@@ -68,7 +68,7 @@ IncludeSorter &IncludeInserter::getOrCreate(FileID FileID) {
 }
 
 std::optional<FixItHint>
-IncludeInserter::createIncludeInsertion(FileID FileID, llvm::StringRef Header) {
+IncludeInserter::createIncludeInsertion(FileID FileID, StringRef Header) {
   const bool IsAngled = Header.consume_front("<");
   if (IsAngled != Header.consume_back(">"))
     return std::nullopt;

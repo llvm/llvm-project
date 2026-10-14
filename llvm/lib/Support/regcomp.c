@@ -192,7 +192,7 @@ struct parse {
   sopno slen;       /* malloced strip length (used) */
   int ncsalloc;     /* number of csets allocated */
   struct re_guts *g;
-#define NPAREN 10       /* we need to remember () 1-9 for back refs */
+#define NPAREN 21       /* we need to remember () 1-20 for back refs */
   sopno pbegin[NPAREN]; /* -> ( ([0] unused) */
   sopno pend[NPAREN];   /* -> ) ([0] unused) */
 };
@@ -211,6 +211,7 @@ static char p_b_symbol(struct parse *);
 static char p_b_coll_elem(struct parse *, int);
 static char othercase(int);
 static void bothcases(struct parse *, int);
+static void uncased(struct parse *, int);
 static void ordinary(struct parse *, int);
 static void nonnewline(struct parse *);
 static void repeat(struct parse *, sopno, int, int);
@@ -506,27 +507,72 @@ static void p_ere_exp(struct parse *p) {
        * least 4 matching groups specified in the pattern previously).
        */
       backrefnum = c - '0';
-      if (p->pend[backrefnum] == 0) {
-        SETERROR(REG_ESUBREG);
-        break;
-      }
-
-      /* Make sure everything checks out and emit the sequence
-       * that marks a back-reference to the parse structure.
+    } else if (c == 'g') {
+      /* Support back-references with index greater 9.
+       * These look like that: \g{n}
+       * Extract the number inside the brackets.
        */
-      assert(backrefnum <= p->g->nsub);
-      EMIT(OBACK_, backrefnum);
-      assert(p->pbegin[backrefnum] != 0);
-      assert(OP(p->strip[p->pbegin[backrefnum]]) == OLPAREN);
-      assert(OP(p->strip[p->pend[backrefnum]]) == ORPAREN);
-      (void)dupl(p, p->pbegin[backrefnum] + 1, p->pend[backrefnum]);
-      EMIT(O_BACK, backrefnum);
-      p->g->backrefs = 1;
+      MUSTEAT('{', REG_BADRPT);
+
+      backrefnum = 0;
+      while (MORE() && isdigit(PEEK())) {
+        c = GETNEXT();
+        backrefnum = backrefnum * 10 + c - '0';
+      }
+      MUSTEAT('}', REG_BADRPT);
+    } else if (c == 'n') {
+      ordinary(p, '\n');
+      break;
+    } else if (c == 't') {
+      ordinary(p, '\t');
+      break;
+    } else if (c == 'x') {
+      /* Support \xAA hexadecimal escape sequences. \x must be followed by
+       * exactly two hex digits, otherwise it is interpreted literally.
+       */
+      char hexstr[3] = {0};
+      char *hexp;
+      int val;
+      if (MORE2()) {
+        hexstr[0] = PEEK();
+        hexstr[1] = PEEK2();
+        val = strtol(hexstr, &hexp, 16);
+        if (*hexp == '\0') {
+          NEXT2();
+          uncased(p, (char)val);
+          break;
+        }
+      }
+      ordinary(p, 'x');
+      break;
     } else {
       /* Other chars are simply themselves when escaped with a backslash.
        */
       ordinary(p, c);
+      break;
     }
+
+    if (backrefnum >= NPAREN) {
+      SETERROR(REG_ESUBREG);
+      break;
+    }
+
+    if (p->pend[backrefnum] == 0) {
+      SETERROR(REG_ESUBREG);
+      break;
+    }
+
+    /* Make sure everything checks out and emit the sequence
+     * that marks a back-reference to the parse structure.
+     */
+    assert(backrefnum <= p->g->nsub);
+    EMIT(OBACK_, backrefnum);
+    assert(p->pbegin[backrefnum] != 0);
+    assert(OP(p->strip[p->pbegin[backrefnum]]) == OLPAREN);
+    assert(OP(p->strip[p->pend[backrefnum]]) == ORPAREN);
+    (void)dupl(p, p->pbegin[backrefnum] + 1, p->pend[backrefnum]);
+    EMIT(O_BACK, backrefnum);
+    p->g->backrefs = 1;
     break;
   case '{': /* okay as ordinary except if digit follows */
     REQUIRE(!MORE() || !isdigit((uch)PEEK()), REG_BADRPT);
@@ -1043,18 +1089,24 @@ static void bothcases(struct parse *p, int ch) {
 }
 
 /*
+ - uncased - emit an ordinary character that is never treated as cased
+ */
+static void uncased(struct parse *p, int ch) {
+  cat_t *cap = p->g->categories;
+
+  EMIT(OCHAR, (uch)ch);
+  if (cap[ch] == 0)
+    cap[ch] = p->g->ncategories++;
+}
+
+/*
  - ordinary - emit an ordinary character
  */
 static void ordinary(struct parse *p, int ch) {
-  cat_t *cap = p->g->categories;
-
   if ((p->g->cflags & REG_ICASE) && isalpha((uch)ch) && othercase(ch) != ch)
     bothcases(p, ch);
-  else {
-    EMIT(OCHAR, (uch)ch);
-    if (cap[ch] == 0)
-      cap[ch] = p->g->ncategories++;
-  }
+  else
+    uncased(p, ch);
 }
 
 /*

@@ -1329,7 +1329,7 @@
 # CHECK-NEXT:  1      1     0.50                        rsb	r4, r5, #61440
 # CHECK-NEXT:  1      1     0.50                        rsb	r7, r8, #-2147483638
 # CHECK-NEXT:  1      1     0.50                        rsb	r7, r8, #40, #2
-# CHECK-NEXT:  1      1     0.50                  U     rsb	r4, r5, r6
+# CHECK-NEXT:  1      1     0.50                        rsb	r4, r5, r6
 # CHECK-NEXT:  1      2     1.00                        rsb	r4, r5, r6, lsl #5
 # CHECK-NEXT:  1      2     1.00                        rsblo	r4, r5, r6, lsr #5
 # CHECK-NEXT:  1      2     1.00                        rsb	r4, r5, r6, lsr #5
@@ -1341,7 +1341,7 @@
 # CHECK-NEXT:  1      2     0.50                        rsble	r6, r7, r8, ror r9
 # CHECK-NEXT:  1      2     1.00                        rsb	r4, r5, r6, rrx
 # CHECK-NEXT:  1      1     0.50                        rsb	r5, r5, #61440
-# CHECK-NEXT:  1      1     0.50                  U     rsb	r4, r4, r5
+# CHECK-NEXT:  1      1     0.50                        rsb	r4, r4, r5
 # CHECK-NEXT:  1      2     1.00                        rsb	r4, r4, r5, lsl #5
 # CHECK-NEXT:  1      2     1.00                        rsb	r4, r4, r5, lsr #5
 # CHECK-NEXT:  1      2     1.00                        rsbne	r4, r4, r5, lsr #5
@@ -1416,8 +1416,8 @@
 # CHECK-NEXT:  1      2     1.00                        sbc	r6, r6, r7, lsr r9
 # CHECK-NEXT:  1      2     1.00                        sbc	r6, r6, r7, asr r9
 # CHECK-NEXT:  1      2     1.00                        sbc	r6, r6, r7, ror r9
-# CHECK-NEXT:  1      1     0.50                  U     sbfx	r4, r5, #16, #1
-# CHECK-NEXT:  1      1     0.50                  U     sbfxgt	r4, r5, #16, #16
+# CHECK-NEXT:  1      1     0.50                        sbfx	r4, r5, #16, #1
+# CHECK-NEXT:  1      1     0.50                        sbfxgt	r4, r5, #16, #16
 # CHECK-NEXT:  1      1     0.50    *                   sel	r9, r2, r1
 # CHECK-NEXT:  1      2     0.50    *                   selne	r9, r2, r1
 # CHECK-NEXT:  0      0     0.00                  U     setend	be
@@ -1478,9 +1478,9 @@
 # CHECK-NEXT:  1      3     1.00                        smmlar	r4, r3, r2, r1
 # CHECK-NEXT:  1      3     1.00                        smmlalo	r1, r2, r3, r4
 # CHECK-NEXT:  1      3     1.00                        smmlarhs	r4, r3, r2, r1
-# CHECK-NEXT:  1      3     1.00                  U     smmls	r1, r2, r3, r4
+# CHECK-NEXT:  1      3     1.00                        smmls	r1, r2, r3, r4
 # CHECK-NEXT:  1      3     1.00                        smmlsr	r4, r3, r2, r1
-# CHECK-NEXT:  1      3     1.00                  U     smmlslo	r1, r2, r3, r4
+# CHECK-NEXT:  1      3     1.00                        smmlslo	r1, r2, r3, r4
 # CHECK-NEXT:  1      3     1.00                        smmlsrhs	r4, r3, r2, r1
 # CHECK-NEXT:  1      3     1.00                        smmul	r2, r3, r4
 # CHECK-NEXT:  1      3     1.00                        smmulr	r3, r2, r1
@@ -1644,8 +1644,8 @@
 # CHECK-NEXT:  2      4     1.00    *      *      U     uadd8le	r1, r2, r3
 # CHECK-NEXT:  2      3     1.00    *      *      U     uasx	r9, r12, r0
 # CHECK-NEXT:  2      5     1.00    *      *      U     uasxeq	r9, r12, r0
-# CHECK-NEXT:  1      1     0.50                  U     ubfx	r4, r5, #16, #1
-# CHECK-NEXT:  1      1     0.50                  U     ubfxgt	r4, r5, #16, #16
+# CHECK-NEXT:  1      1     0.50                        ubfx	r4, r5, #16, #1
+# CHECK-NEXT:  1      1     0.50                        ubfxgt	r4, r5, #16, #16
 # CHECK-NEXT:  1      2     1.00                        uhadd16	r4, r8, r2
 # CHECK-NEXT:  1      2     1.00                        uhadd16gt	r4, r8, r2
 # CHECK-NEXT:  1      2     1.00                        uhadd8	r4, r8, r2

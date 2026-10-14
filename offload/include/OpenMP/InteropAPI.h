@@ -160,17 +160,11 @@ struct InteropTableEntry {
     Interops.push_back(obj);
   }
 
-  template <class ClearFuncTy> void clear(ClearFuncTy f) {
-    for (auto &Obj : Interops) {
-      f(Obj);
-    }
-  }
-
   /// vector interface
   int size() const { return Interops.size(); }
   iterator begin() { return Interops.begin(); }
   iterator end() { return Interops.end(); }
-  iterator erase(iterator it) { return Interops.erase(it); }
+  void clear() { Interops.clear(); }
 };
 
 struct InteropTblTy

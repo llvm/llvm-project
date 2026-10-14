@@ -80,41 +80,43 @@ public:
 
   /// This method must be called before any actual lowering is done.  This
   /// specifies the current context for codegen, and gives the lowering
-  /// implementations a chance to set up their default sections.
-  virtual void Initialize(MCContext &ctx, const TargetMachine &TM);
+  /// implementations a chance to set up their default sections and to inspect
+  /// the module-level metadata the platform cares about.
+  virtual void initialize(MCContext &ctx, const TargetMachine &TM,
+                          const Module &M);
 
   virtual void emitPersonalityValue(MCStreamer &Streamer, const DataLayout &TM,
                                     const MCSymbol *Sym,
                                     const MachineModuleInfo *MMI) const;
 
   /// Emit the module-level metadata that the platform cares about.
-  virtual void emitModuleMetadata(MCStreamer &Streamer, Module &M) const {}
+  virtual void emitModuleMetadata(MCStreamer &Streamer, const Module &M) const {
+  }
 
   /// Emit Call Graph Profile metadata.
-  void emitCGProfileMetadata(MCStreamer &Streamer, Module &M) const;
+  void emitCGProfileMetadata(MCStreamer &Streamer, const Module &M) const;
 
   /// Emit pseudo_probe_desc metadata.
-  void emitPseudoProbeDescMetadata(MCStreamer &Streamer, Module &M,
+  void emitPseudoProbeDescMetadata(MCStreamer &Streamer, const Module &M,
                                    std::function<void(MCStreamer &Streamer)>
                                        COMDATSymEmitter = nullptr) const;
 
   /// Process linker options metadata and emit platform-specific bits.
-  virtual void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const {}
-
-  /// Get the module-level metadata that the platform cares about.
-  virtual void getModuleMetadata(Module &M) {}
+  virtual void emitLinkerDirectives(MCStreamer &Streamer,
+                                    const Module &M) const {}
 
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
-                                           Align &Alignment) const;
+                                           Align &Alignment,
+                                           const Function *F) const;
 
   /// Similar to the function above, but append \p SectionSuffix to the section
   /// name.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
-                                           Align &Alignment,
+                                           Align &Alignment, const Function *F,
                                            StringRef SectionSuffix) const;
 
   virtual MCSection *
@@ -130,6 +132,11 @@ public:
   /// categories embodied in SectionKind.
   static SectionKind getKindForGlobal(const GlobalObject *GO,
                                       const TargetMachine &TM);
+
+  /// Return the section name specified by '#pragma clang section' or the
+  /// section attribute.
+  static StringRef getCustomSectionName(const GlobalObject *GO,
+                                        const TargetMachine &TM);
 
   /// This method computes the appropriate section to emit the specified global
   /// variable or function definition. This should not be passed external (or
@@ -269,7 +276,7 @@ public:
   /// On targets that use separate function descriptor symbols, return a section
   /// for the descriptor given its symbol. Use only with defined functions.
   virtual MCSection *
-  getSectionForFunctionDescriptor(const Function *F,
+  getSectionForFunctionDescriptor(const GlobalObject *F,
                                   const TargetMachine &TM) const {
     return nullptr;
   }

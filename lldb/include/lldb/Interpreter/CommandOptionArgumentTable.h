@@ -154,6 +154,49 @@ static constexpr OptionEnumValueElement g_running_mode[] = {
      "Run only this thread while stepping"},
 };
 
+static constexpr OptionEnumValueElement g_exception_stage[] = {
+    {lldb::eExceptionStageThrow, "throw", "Stop when the exception is thrown."},
+    {lldb::eExceptionStageReThrow, "re-throw",
+     "Stop when the exception is re-thrown."},
+    {lldb::eExceptionStageCatch, "catch", "Stop when the exception is caught."},
+};
+
+static constexpr OptionEnumValueElement g_name_match_style[] = {
+    {lldb::eNameMatchStyleAuto, "auto",
+     "Match against the leaf nodes of the identifier, or against methods or "
+     "selectors."},
+    {lldb::eNameMatchStyleFull, "full", "Match the full identifier name."},
+    {lldb::eNameMatchStyleBase, "base",
+     "Match against the leaf node of the identifier."},
+    {lldb::eNameMatchStyleMethod, "method", "Match only against method names."},
+    {lldb::eNameMatchStyleSelector, "selector",
+     "Match only against selector names."},
+    {lldb::eNameMatchStyleRegex, "regex",
+     "Match the identifier using a regular expression."},
+};
+
+static constexpr OptionEnumValueElement g_plugin_domain_values[] = {
+    {lldb::ePluginDomainKindGlobal, "global",
+     "Apply to all debugger instances."},
+    {lldb::ePluginDomainKindDebugger, "debugger",
+     "Apply to the current debugger instance."},
+    {lldb::ePluginDomainKindTarget, "target", "Apply to the current target."},
+};
+
+static constexpr OptionEnumValueElement g_resolver_mask_values[] = {
+    {lldb::eResolverFileAndLine, "file_and_line",
+     "Matches file and line breakpoint resolvers."},
+    {lldb::eResolverAddress, "address",
+     "Matches address breakpoint resolvers."},
+    {lldb::eResolverName, "name", "Matches symbol name breakpoint resolvers."},
+    {lldb::eResolverFileRegex, "source",
+     "Matches source text pattern resolvers."},
+    {lldb::eResolverPython, "scripted",
+     "Matches scripted breakpoint resolvers."},
+    {lldb::eResolverException, "exception",
+     "Matches language exception breakpoint resolvers."},
+};
+
 static constexpr OptionEnumValueElement g_completion_type[] = {
     {lldb::eNoCompletion, "none", "No completion."},
     {lldb::eSourceFileCompletion, "source-file", "Completes to a source file."},
@@ -200,6 +243,15 @@ static constexpr OptionEnumValueElement g_completion_type[] = {
     {lldb::eThreadIDCompletion, "thread-id", "Completes to a thread ID."},
 };
 
+static constexpr OptionEnumValueElement g_breakpoint_condition_mode[] = {
+    {lldb::eBreakpointConditionModeDIL, "dil",
+     "Use Data Inspection Language (DIL) to evaluate the condition."},
+    {lldb::eBreakpointConditionModeExpr, "expr",
+     "Use UserExpression to evaluate the condition."},
+    {lldb::eBreakpointConditionModeDWIM, "dwim",
+     "Use DIL to evaluate the condition, and if it fails, "
+     "fall back to UserExpression."}};
+
 llvm::StringRef RegisterNameHelpTextCallback();
 llvm::StringRef BreakpointIDHelpTextCallback();
 llvm::StringRef BreakpointIDRangeHelpTextCallback();
@@ -219,6 +271,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeAliasOptions, "options-for-aliased-command", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Command options to be used as part of an alias (abbreviation) definition.  (See 'help commands alias' for more information.)" },
     { lldb::eArgTypeArchitecture, "arch", lldb::eArchitectureCompletion, {}, { arch_helper, true }, "The architecture name, e.g. i386 or x86_64." },
     { lldb::eArgTypeBoolean, "boolean", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "A Boolean value: 'true' or 'false'" },
+    { lldb::eArgTypeBreakpointConditionMode, "condition-mode", lldb::CompletionType::eNoCompletion, g_breakpoint_condition_mode, { nullptr, false }, "Specifies the mode to use when evaluating the condition expression of breakpoints." },
     { lldb::eArgTypeBreakpointID, "breakpt-id", lldb::CompletionType::eNoCompletion, {}, { BreakpointIDHelpTextCallback, false }, nullptr },
     { lldb::eArgTypeBreakpointIDRange, "breakpt-id-list", lldb::CompletionType::eNoCompletion, {}, { BreakpointIDRangeHelpTextCallback, false }, nullptr },
     { lldb::eArgTypeBreakpointName, "breakpoint-name", lldb::eBreakpointNameCompletion, {}, { BreakpointNameHelpTextCallback, false }, nullptr },
@@ -237,6 +290,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeFilename, "filename", lldb::eDiskFileCompletion, {}, { nullptr, false }, "The name of a file (can include path)." },
     { lldb::eArgTypeFormat, "format", lldb::CompletionType::eNoCompletion, {}, { FormatHelpTextCallback, true }, nullptr },
     { lldb::eArgTypeFrameIndex, "frame-index", lldb::eFrameIndexCompletion, {}, { nullptr, false }, "Index into a thread's list of frames." },
+    { lldb::eArgTypeFrameProviderIDRange, "frame-provider-id-range", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "A single frame provider ID, a range of IDs (e.g., '0', '0-2', '0 to 2'), or '*'/'all' to show every provider. ID 0 is the base unwinder, 1+ are synthetic providers." },
     { lldb::eArgTypeFullName, "fullname", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Help text goes here." },
     { lldb::eArgTypeFunctionName, "function-name", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of a function." },
     { lldb::eArgTypeFunctionOrSymbol, "function-or-symbol", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of a function or symbol." },
@@ -316,6 +370,11 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeCPUFeatures, "cpu-features", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The CPU feature string." },
     { lldb::eArgTypeManagedPlugin, "managed-plugin", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Plugins managed by the PluginManager" },
     { lldb::eArgTypeProtocol, "protocol", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of the protocol." },
+    { lldb::eArgTypeExceptionStage, "exception-stage", lldb::CompletionType::eNoCompletion, g_exception_stage, { nullptr, false }, "Specify at which stage of the exception raise to stop." },
+    { lldb::eArgTypeNameMatchStyle, "match-style", lldb::CompletionType::eNoCompletion, g_name_match_style, { nullptr, false }, "Specify the kind of match to use when looking up names." },
+    { lldb::eArgTypePluginDomain, "plugin-domain", lldb::CompletionType::eNoCompletion, g_plugin_domain_values, { nullptr, false }, "The domain to apply the plugin operation to." },
+    { lldb::eArgTypeBreakpointResolverMask, "resolver-mask", lldb::CompletionType::eNoCompletion, g_resolver_mask_values, { nullptr, false }, "Specify the breakpoint resolver type your override will handle. Can be specified more than once to specify a mask of resolver types." },
+    { lldb::eArgTypeScriptedExtension, "scripting-extension", lldb::CompletionType::eScriptedExtensionCompletion, {}, { nullptr, false }, "The name of a scripting extension." },
     // clang-format on
 };
 

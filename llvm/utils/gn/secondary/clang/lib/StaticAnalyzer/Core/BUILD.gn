@@ -10,6 +10,8 @@ static_library("Core") {
     "//clang/lib/CrossTU",
     "//clang/lib/Lex",
     "//clang/lib/Rewrite",
+    "//clang/lib/Tooling/Core",
+    "//clang/lib/UnifiedSymbolResolution",
     "//llvm/lib/Support",
   ]
   sources = [

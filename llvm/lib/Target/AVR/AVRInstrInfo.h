@@ -68,6 +68,12 @@ public:
   explicit AVRInstrInfo(const AVRSubtarget &STI);
 
   const AVRRegisterInfo &getRegisterInfo() const { return RI; }
+
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &AVR::PTRDISPREGSRegClass;
+  }
+
   const MCInstrDesc &getBrCond(AVRCC::CondCodes CC) const;
   AVRCC::CondCodes getCondFromBranchOpc(unsigned Opc) const;
   AVRCC::CondCodes getOppositeCondition(AVRCC::CondCodes CC) const;
@@ -84,6 +90,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
       int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;

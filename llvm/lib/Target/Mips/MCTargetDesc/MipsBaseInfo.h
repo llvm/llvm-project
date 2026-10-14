@@ -153,6 +153,7 @@ inline static MCRegister getMSARegFromFReg(MCRegister Reg) {
   else
     return MCRegister();
 }
+
 } // namespace llvm
 
 #endif

@@ -27,6 +27,7 @@
 
 # RUN: ld.lld -shared -z now a.32.o c.32.o -o rel.32.so -z rel
 # RUN: llvm-readobj -r -x .got rel.32.so | FileCheck --check-prefix=GD32-REL %s
+# RUN: llvm-objdump --no-show-raw-insn -h -d rel.32.so | FileCheck %s --check-prefix=GD32
 
 # GD64-RELA:      .rela.dyn {
 # GD64-RELA-NEXT:   0x20400 R_LARCH_TLS_DESC64 - 0x7FF
@@ -64,7 +65,7 @@
 # GD64-NEXT:          jirl $ra, $ra, 0
 # GD64-NEXT:          add.d $a2, $a0, $tp
 
-## &.got[c]-. = 0x23e0+16 - 0x10308: 0x10 pages, page offset 0x3f0
+## &.got[c]-. = 0x203e0+16 - 0x10308: 0x10 pages, page offset 0x3f0
 # GD64:        10308: pcalau12i $a0, 16
 # GD64-NEXT:          addi.d $a0, $a0, 1008
 # GD64-NEXT:          ld.d $ra, $a0, 0
@@ -126,6 +127,29 @@
 # GD32-REL:      Hex dump of section '.got':
 # GD32-REL-NEXT: 0x00020260 00000000 00000000 00000000 00000000 .
 # GD32-REL-NEXT: 0x00020270 00000000 ff070000                   .
+
+# GD32:      .got     00000018 00020260
+
+## &.got[a]-. = 0x20260 - 0x101c4
+# GD32:        101c4: pcaddu12i $a0, 32
+# GD32-NEXT:          addi.w $a0, $a0, 608
+# GD32-NEXT:          ld.w $ra, $a0, 0
+# GD32-NEXT:          jirl $ra, $ra, 0
+# GD32-NEXT:          add.w $a1, $a0, $tp
+
+## &.got[b]-. = 0x20260+16 - 0x101d8
+# GD32:        101d8: pcaddu12i $a0, 32
+# GD32-NEXT:          addi.w $a0, $a0, 624
+# GD32-NEXT:          ld.w $ra, $a0, 0
+# GD32-NEXT:          jirl $ra, $ra, 0
+# GD32-NEXT:          add.w $a2, $a0, $tp
+
+## &.got[c]-. = 0x20260+8 - 0x101ec
+# GD32:        101ec: pcaddu12i $a0, 32
+# GD32-NEXT:          addi.w $a0, $a0, 616
+# GD32-NEXT:          ld.w $ra, $a0, 0
+# GD32-NEXT:          jirl $ra, $ra, 0
+# GD32-NEXT:          add.w $a3, $a0, $tp
 
 #--- a.s
 .macro add dst, src1, src2

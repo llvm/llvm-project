@@ -69,9 +69,8 @@ template <class _Tm, class _Date>
   requires(same_as<_Date, chrono::year_month_day> || same_as<_Date, chrono::year_month_day_last>)
 _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _Date& __date, chrono::weekday __weekday) {
   _Tm __result = {};
-#  ifdef __GLIBC__
-  __result.tm_zone = "UTC";
-#  endif
+  if constexpr (requires { __result.tm_zone = const_cast<char*>("UTC"); })
+    __result.tm_zone = const_cast<char*>("UTC");
   __result.tm_year = static_cast<int>(__date.year()) - 1900;
   __result.tm_mon  = static_cast<unsigned>(__date.month()) - 1;
   __result.tm_mday = static_cast<unsigned>(__date.day());
@@ -127,7 +126,10 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::tai_time<_Duration> __tp) {
 
 template <class _Tm, class _Duration>
 _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::gps_time<_Duration> __tp) {
-  return std::__convert_to_tm<_Tm>(chrono::utc_clock::to_sys(chrono::gps_clock::to_utc(__tp)));
+  using _Rp = common_type_t<_Duration, chrono::seconds>;
+  // The time between the GPS epoch (1980-01-06) and UNIX epoch (1970-01-01).
+  constexpr chrono::seconds __offset{3657 * 24 * 60 * 60};
+  return std::__convert_to_tm<_Tm>(chrono::sys_time<_Rp>{__tp.time_since_epoch() + __offset});
 }
 
 #    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
@@ -138,9 +140,8 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::gps_time<_Duration> __tp) {
 template <class _Tm, class _ChronoT>
 _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
   _Tm __result = {};
-#  ifdef __GLIBC__
-  __result.tm_zone = "UTC";
-#  endif
+  if constexpr (requires { __result.tm_zone = const_cast<char*>("UTC"); })
+    __result.tm_zone = const_cast<char*>("UTC");
 
   if constexpr (__is_time_point<_ChronoT>) {
     if constexpr (same_as<typename _ChronoT::clock, chrono::file_clock>)

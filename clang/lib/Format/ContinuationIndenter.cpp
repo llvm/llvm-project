@@ -144,14 +144,48 @@ static bool startsNextOperand(const FormatToken &Current) {
   return isAlignableBinaryOperator(Previous) && !Current.isTrailingComment();
 }
 
+// Returns the number of operands in the chain containing \c Op.
+// For example, `a && b && c` has 3 operands (and 2 operators).
+static unsigned getChainLength(const FormatToken &Op) {
+  const FormatToken *Last = &Op;
+  while (Last->NextOperator)
+    Last = Last->NextOperator;
+  return Last->OperatorIndex + 2;
+}
+
 // Returns \c true if \c Current is a binary operation that must break.
 static bool mustBreakBinaryOperation(const FormatToken &Current,
                                      const FormatStyle &Style) {
-  return Style.BreakBinaryOperations != FormatStyle::BBO_Never &&
-         Current.CanBreakBefore &&
-         (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None
-              ? startsNextOperand
-              : isAlignableBinaryOperator)(Current);
+  if (!Current.CanBreakBefore)
+    return false;
+
+  // Determine the operator token: when breaking after the operator,
+  // it is Current.Previous; when breaking before, it is Current itself.
+  bool BreakBefore = Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None;
+  const FormatToken *OpToken = BreakBefore ? &Current : Current.Previous;
+
+  if (!OpToken)
+    return false;
+
+  // Check that this is an alignable binary operator.
+  if (BreakBefore) {
+    if (!isAlignableBinaryOperator(Current))
+      return false;
+  } else if (!startsNextOperand(Current)) {
+    return false;
+  }
+
+  // Look up per-operator rule or fall back to Default.
+  const auto OperatorBreakStyle =
+      Style.BreakBinaryOperations.getStyleForOperator(OpToken->Tok.getKind());
+  if (OperatorBreakStyle == FormatStyle::BBO_Never)
+    return false;
+
+  // Check MinChainLength: if the chain is too short, don't force a break.
+  const unsigned MinChain =
+      Style.BreakBinaryOperations.getMinChainLengthForOperator(
+          OpToken->Tok.getKind());
+  return MinChain == 0 || getChainLength(*OpToken) >= MinChain;
 }
 
 static bool opensProtoMessageField(const FormatToken &LessTok,
@@ -238,6 +272,45 @@ RawStringFormatStyleManager::getEnclosingFunctionStyle(
   if (It == EnclosingFunctionStyle.end())
     return std::nullopt;
   return It->second;
+}
+
+IndentationAndAlignment
+IndentationAndAlignment::addPadding(unsigned Spaces) const {
+  return IndentationAndAlignment(Total + Spaces, IndentedFrom);
+}
+
+IndentationAndAlignment
+IndentationAndAlignment::operator+(unsigned Spaces) const {
+  return IndentationAndAlignment(Total + Spaces, Total);
+}
+
+IndentationAndAlignment
+IndentationAndAlignment::operator-(unsigned Spaces) const {
+  return IndentationAndAlignment(Total - Spaces, Total);
+}
+
+IndentationAndAlignment &IndentationAndAlignment::operator+=(unsigned Spaces) {
+  *this = *this + Spaces;
+  return *this;
+}
+
+IndentationAndAlignment::IndentationAndAlignment(unsigned Total,
+                                                 unsigned IndentedFrom)
+    : Total(Total), IndentedFrom(IndentedFrom) {}
+
+IndentationAndAlignment::IndentationAndAlignment(unsigned Spaces)
+    : Total(Spaces), IndentedFrom(Spaces) {}
+
+bool IndentationAndAlignment::operator<(
+    const IndentationAndAlignment &Other) const {
+  if (Total != Other.Total)
+    return Total < Other.Total;
+  // The sign to use here was decided arbitrarily. This operator is mostly used
+  // when a line's indentation should be the max of 2 things. Using this sign
+  // here makes the program prefer alignment over continuation indentation. That
+  // is, it makes the alignment step that follows prefer to move the line when
+  // aligning the previous line.
+  return IndentedFrom > Other.IndentedFrom;
 }
 
 ContinuationIndenter::ContinuationIndenter(const FormatStyle &Style,
@@ -376,6 +449,9 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
       // enabled.
       (!Style.BraceWrapping.BeforeLambdaBody ||
        Current.isNot(TT_LambdaLBrace)) &&
+      // Same for the opening brace of requires expressions.
+      (!Style.BraceWrapping.AfterRequiresExpression ||
+       Current.isNot(TT_RequiresExpressionLBrace)) &&
       CurrentState.NoLineBreakInOperand) {
     return false;
   }
@@ -399,10 +475,10 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   const FormatToken &Current = *State.NextToken;
   const FormatToken &Previous = *Current.Previous;
   const auto &CurrentState = State.Stack.back();
-  if (Style.BraceWrapping.BeforeLambdaBody && Current.CanBreakBefore &&
-      Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
-    auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
-    return LambdaBodyLength > getColumnLimit(State);
+  if (Style.BraceWrapping.AfterRequiresExpression && Current.CanBreakBefore &&
+      Current.is(TT_RequiresExpressionLBrace) &&
+      getLengthToMatchingParen(Current, State.Stack) > getColumnLimit(State)) {
+    return true;
   }
   if (Current.MustBreakBefore ||
       (Current.is(TT_InlineASMColon) &&
@@ -410,6 +486,12 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         (Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_OnlyMultiline &&
          Style.ColumnLimit > 0)))) {
     return true;
+  }
+  if (Style.BraceWrapping.BeforeLambdaBody && Current.CanBreakBefore &&
+      Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
+    const auto LambdaBodyLength =
+        getLengthToMatchingParen(Current, State.Stack);
+    return LambdaBodyLength > getColumnLimit(State);
   }
   if (CurrentState.BreakBeforeClosingBrace &&
       (Current.closesBlockOrBlockTypeList(Style) ||
@@ -441,7 +523,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         // completely unnecessary line break after a template type that isn't
         // line-wrapped.
         (Previous.NestingLevel == 1 ||
-         Style.BinPackParameters == FormatStyle::BPPS_BinPack)) ||
+         (Style.PackParameters.BinPack == FormatStyle::BPPS_BinPack ||
+          Style.PackParameters.BinPack == FormatStyle::BPPS_UseBreakAfter))) ||
        (Style.BreakBeforeTernaryOperators && Current.is(TT_ConditionalExpr) &&
         Previous.isNot(tok::question)) ||
        (!Style.BreakBeforeTernaryOperators &&
@@ -471,7 +554,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon
           ? Previous
           : Current;
-  if (BreakConstructorInitializersToken.is(TT_CtorInitializerColon) &&
+  if (Style.BreakConstructorInitializers != FormatStyle::BCIS_AfterComma &&
+      BreakConstructorInitializersToken.is(TT_CtorInitializerColon) &&
       (State.Column + State.Line->Last->TotalLength - Previous.TotalLength >
            getColumnLimit(State) ||
        CurrentState.BreakBeforeParameter) &&
@@ -491,7 +575,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     return true;
   }
 
-  unsigned NewLineColumn = getNewLineColumn(State);
+  unsigned NewLineColumn = getNewLineColumn(State).Total;
   if (Current.isMemberAccess() && Style.ColumnLimit != 0 &&
       State.Column + getLengthToNextOperator(Current) > Style.ColumnLimit &&
       (State.Column > NewLineColumn ||
@@ -636,7 +720,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         return false;
       if (Tok->is(TT_TemplateCloser)) {
         Tok = Tok->MatchingParen;
-        assert(Tok);
+        if (!Tok)
+          return false;
       }
       if (Tok->FirstAfterPPLine)
         return false;
@@ -741,6 +826,13 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     if (Prev->BlockParameterCount == 0)
       return false;
 
+    // A lambda brace that must break makes the single-line strategy impossible.
+    for (const auto *Tok = &Current; Tok && Tok != Prev->MatchingParen;
+         Tok = Tok->Next) {
+      if (Tok->is(TT_LambdaLBrace) && Tok->MustBreakBefore)
+        return false;
+    }
+
     // Multiple lambdas in the same function call.
     if (Prev->BlockParameterCount > 1)
       return true;
@@ -804,7 +896,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
         State.Line->InMacroBody && Current.isNot(TT_LineComment);
     Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
                                   State.Column + Spaces + PPColumnCorrection,
-                                  /*IsAligned=*/false, ContinuePPDirective);
+                                  /*AlignTo=*/nullptr, ContinuePPDirective);
   }
 
   // If "BreakBeforeInheritanceComma" mode, don't break within the inheritance
@@ -819,8 +911,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   }
 
   if (Current.is(TT_SelectorName) && !CurrentState.ObjCSelectorNameFound) {
-    unsigned MinIndent = std::max(
-        State.FirstIndent + Style.ContinuationIndentWidth, CurrentState.Indent);
+    unsigned MinIndent =
+        std::max(State.FirstIndent + Style.ContinuationIndentWidth,
+                 CurrentState.Indent.Total);
     unsigned FirstColonPos = State.Column + Spaces + Current.ColumnWidth;
     if (Current.LongestObjCSelectorName == 0)
       CurrentState.AlignColons = false;
@@ -910,7 +1003,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return !Next || Next->isMemberAccess() ||
            Next->is(TT_FunctionDeclarationLParen) || IsFunctionCallParen(*Next);
   };
-  if (IsOpeningBracket(Previous) && State.Column > getNewLineColumn(State) &&
+  if (IsOpeningBracket(Previous) &&
+      State.Column > getNewLineColumn(State).Total &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
@@ -940,14 +1034,11 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
        (Previous.is(BK_BracedInit) &&
-        (Style.Cpp11BracedListStyle != FormatStyle::BLS_FunctionCall ||
-         !Previous.Previous ||
-         Previous.Previous->isNoneOf(tok::identifier, tok::l_paren,
-                                     BK_BracedInit))) ||
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_FunctionCall) ||
        Previous.is(TT_VerilogMultiLineListLParen)) &&
       !IsInTemplateString(Current, false)) {
     CurrentState.Indent = State.Column + Spaces;
-    CurrentState.IsAligned = true;
+    CurrentState.AlignedTo = &Previous;
   }
   if (CurrentState.AvoidBinPacking && startsNextParameter(Current, Style))
     CurrentState.NoLineBreak = true;
@@ -955,7 +1046,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.NoLineBreak = true;
 
   if (startsSegmentOfBuilderTypeCall(Current) &&
-      State.Column > getNewLineColumn(State)) {
+      State.Column > getNewLineColumn(State).Total) {
     CurrentState.ContainsUnwrappedBuilder = true;
   }
 
@@ -1086,7 +1177,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     Penalty += Style.PenaltyBreakFirstLessLess;
   }
 
-  State.Column = getNewLineColumn(State);
+  const auto [TotalColumn, IndentedFromColumn] = getNewLineColumn(State);
+  State.Column = TotalColumn;
 
   // Add Penalty proportional to amount of whitespace away from FirstColumn
   // This tends to penalize several lines that are far-right indented,
@@ -1132,9 +1224,9 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       } else {
         CurrentState.ColonPos =
             (shouldIndentWrappedSelectorName(Style, State.Line->Type)
-                 ? std::max(CurrentState.Indent,
+                 ? std::max(CurrentState.Indent.Total,
                             State.FirstIndent + Style.ContinuationIndentWidth)
-                 : CurrentState.Indent) +
+                 : CurrentState.Indent.Total) +
             std::max(NextNonComment->LongestObjCSelectorName,
                      NextNonComment->ColumnWidth);
       }
@@ -1155,9 +1247,29 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     // when we consume all of the "}"'s FakeRParens at the "{".
     if (State.Stack.size() > 1) {
       State.Stack[State.Stack.size() - 2].LastSpace =
-          std::max(CurrentState.LastSpace, CurrentState.Indent) +
+          std::max(CurrentState.LastSpace, CurrentState.Indent.Total) +
           Style.ContinuationIndentWidth;
     }
+  }
+
+  switch (Style.BreakInheritanceList) {
+  case FormatStyle::BILS_BeforeColon:
+  case FormatStyle::BILS_AfterComma:
+    if (Current.is(TT_InheritanceColon) || Previous.is(TT_InheritanceComma)) {
+      CurrentState.AlignedTo = Previous.getPreviousOneOf(
+          tok::kw_class, tok::kw_struct, tok::kw_union);
+    }
+    break;
+  case FormatStyle::BILS_BeforeComma:
+    if (Current.isOneOf(TT_InheritanceColon, TT_InheritanceComma)) {
+      CurrentState.AlignedTo = Previous.getPreviousOneOf(
+          tok::kw_class, tok::kw_struct, tok::kw_union);
+    }
+    break;
+  case FormatStyle::BILS_AfterColon:
+    if (Previous.isOneOf(TT_InheritanceColon, TT_InheritanceComma))
+      CurrentState.AlignedTo = &Previous;
+    break;
   }
 
   if ((PreviousNonComment &&
@@ -1176,8 +1288,26 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       (PreviousNonComment && PreviousNonComment->is(tok::question))) {
     CurrentState.BreakBeforeParameter = true;
   }
-  if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore)
+  if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore) {
     CurrentState.BreakBeforeParameter = false;
+    CurrentState.AlignedTo = &Current;
+  }
+  if (Style.AlignOperands != FormatStyle::OAS_DontAlign &&
+      Current.is(TT_ConditionalExpr)) {
+    switch (Style.AlignOperands) {
+    case FormatStyle::OAS_Align:
+      CurrentState.AlignedTo = Current.is(tok::question)
+                                   ? Current.getPrevious(tok::equal)
+                                   : Current.getPrevious(tok::question);
+      break;
+    case FormatStyle::OAS_AlignAfterOperator:
+      if (Current.is(tok::colon))
+        CurrentState.AlignedTo = Current.getPrevious(tok::question);
+      break;
+    case FormatStyle::OAS_DontAlign:
+      break;
+    }
+  }
 
   if (!DryRun) {
     unsigned MaxEmptyLinesToKeep = Style.MaxEmptyLinesToKeep + 1;
@@ -1187,8 +1317,10 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         !Current.MatchingParen->Children.empty()) {
       // lambdas and arrow functions are expressions, thus their r_brace is not
       // on its own line, and thus not covered by UnwrappedLineFormatter's logic
-      // about removing empty lines on closing blocks. Special case them here.
-      MaxEmptyLinesToKeep = 1;
+      // about removing empty lines on closing blocks. Special case them here
+      // with an exception if the KeepEmptyLines.AtEndOfBlock is used.
+      if (!Style.KeepEmptyLines.AtEndOfBlock)
+        MaxEmptyLinesToKeep = 1;
     }
     const unsigned Newlines =
         std::max(1u, std::min(Current.NewlinesBefore, MaxEmptyLinesToKeep));
@@ -1196,7 +1328,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
                                      State.Line->Type != LT_ImportStatement &&
                                      Current.isNot(TT_LineComment);
     Whitespaces.replaceWhitespace(Current, Newlines, State.Column, State.Column,
-                                  CurrentState.IsAligned, ContinuePPDirective);
+                                  CurrentState.AlignedTo, ContinuePPDirective,
+                                  IndentedFromColumn);
   }
 
   if (!Current.isTrailingComment())
@@ -1264,8 +1397,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         !PreviousNonComment->ClosesRequiresClause) ||
        Current.NestingLevel != 0) &&
       PreviousNonComment->isNoneOf(
-          TT_BinaryOperator, TT_FunctionAnnotationRParen, TT_JavaAnnotation,
-          TT_LeadingJavaAnnotation) &&
+          TT_BinaryOperator, TT_EnumEqual, TT_FunctionAnnotationRParen,
+          TT_JavaAnnotation, TT_LeadingJavaAnnotation) &&
       Current.isNot(TT_BinaryOperator) && !PreviousNonComment->opensScope() &&
       // We don't want to enforce line breaks for subsequent arguments just
       // because we have been forced to break before a lambda body.
@@ -1340,7 +1473,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   return Penalty;
 }
 
-unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
+IndentationAndAlignment
+ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (!State.NextToken || !State.NextToken->Previous)
     return 0;
 
@@ -1354,8 +1488,9 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
 
   const FormatToken &Previous = *Current.Previous;
   // If we are continuing an expression, we want to use the continuation indent.
-  unsigned ContinuationIndent =
-      std::max(CurrentState.LastSpace, CurrentState.Indent) +
+  const auto ContinuationIndent =
+      std::max(IndentationAndAlignment(CurrentState.LastSpace),
+               CurrentState.Indent) +
       Style.ContinuationIndentWidth;
   const FormatToken *PreviousNonComment = Current.getPreviousNonComment();
   const FormatToken *NextNonComment = Previous.getNextNonComment();
@@ -1365,7 +1500,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   // Java specific bits.
   if (Style.isJava() &&
       Current.isOneOf(Keywords.kw_implements, Keywords.kw_extends)) {
-    return std::max(CurrentState.LastSpace,
+    return std::max(IndentationAndAlignment(CurrentState.LastSpace),
                     CurrentState.Indent + Style.ContinuationIndentWidth);
   }
 
@@ -1378,7 +1513,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
 
   if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
       State.Line->First->is(tok::kw_enum)) {
-    return (Style.IndentWidth * State.Line->First->IndentLevel) +
+    return IndentationAndAlignment(Style.IndentWidth *
+                                   State.Line->First->IndentLevel) +
            Style.IndentWidth;
   }
 
@@ -1388,6 +1524,13 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
                           ? CurrentState.Indent
                           : State.FirstIndent;
     return From + Style.IndentWidth;
+  }
+
+  // Align the wrapped opening brace of a requires expression with its
+  // closing brace.
+  if (Style.BraceWrapping.AfterRequiresExpression &&
+      Current.is(TT_RequiresExpressionLBrace)) {
+    return CurrentState.NestedBlockIndent;
   }
 
   if ((NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) ||
@@ -1410,8 +1553,26 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Stack.size() > 1) {
     if (Current.closesBlockOrBlockTypeList(Style))
       return State.Stack[State.Stack.size() - 2].NestedBlockIndent;
-    if (Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit))
+    if (Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit)) {
+      // The brace should line up with the start of the line in this case. The
+      // stack depth is checked to make sure that the brace is at the top
+      // level. It should contain the levels for the top, the assignment if
+      // there is an equal sign, and the braces.
+      //
+      // SomeStruct //
+      //     s = {
+      //         "xxxxxxxxxxxxx",
+      // };
+      if ((State.Stack.size() == 2 &&
+           Current.MatchingParen->getPreviousNonComment() &&
+           Current.MatchingParen->getPreviousNonComment()->is(
+               TT_StartOfName)) ||
+          (State.Stack.size() == 3 &&
+           State.Stack[1].Precedence == prec::Assignment)) {
+        return State.FirstIndent;
+      }
       return State.Stack[State.Stack.size() - 2].LastSpace;
+    }
     return State.FirstIndent;
   }
   // Indent a closing parenthesis at the previous level if followed by a semi,
@@ -1461,7 +1622,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   // in ProtoBuf:
   //   optional int32 b = 2 [(foo_options) = {aaaaaaaaaaaaaaaaaaa: 123,
   //                                          bbbbbbbbbbbbbbbbbbbbbbbb:"baz"}];
-  // For Verilog, a quote following a brace is treated as an identifier.  And
+  // For Verilog, a quote preceding a brace is treated as an identifier.  And
   // Both braces and colons get annotated as TT_DictLiteral.  So we have to
   // check.
   if (Current.is(tok::identifier) && Current.Next &&
@@ -1497,7 +1658,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       //    * not remove the 'lead' ContinuationIndentWidth
       //    * always un-indent by the operator when
       //    BreakBeforeTernaryOperators=true
-      unsigned Indent = CurrentState.Indent;
+      unsigned Indent = CurrentState.Indent.Total;
       if (Style.AlignOperands != FormatStyle::OAS_DontAlign)
         Indent -= Style.ContinuationIndentWidth;
       if (Style.BreakBeforeTernaryOperators && CurrentState.UnindentOperator)
@@ -1536,15 +1697,19 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
                                     TT_JavaAnnotation,
                                     TT_LeadingJavaAnnotation))) ||
       (!Style.IndentWrappedFunctionNames &&
-       NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName))) {
-    return std::max(CurrentState.LastSpace, CurrentState.Indent);
+       NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName)) ||
+      (State.Line->ReturnTypeWrapped && PreviousNonComment &&
+       isReturnTypePrefixSpecifier(*PreviousNonComment))) {
+    return std::max(IndentationAndAlignment(CurrentState.LastSpace),
+                    CurrentState.Indent);
   }
   if (NextNonComment->is(TT_SelectorName)) {
     if (!CurrentState.ObjCSelectorNameFound) {
-      unsigned MinIndent = CurrentState.Indent;
+      auto MinIndent = CurrentState.Indent;
       if (shouldIndentWrappedSelectorName(Style, State.Line->Type)) {
-        MinIndent = std::max(MinIndent,
-                             State.FirstIndent + Style.ContinuationIndentWidth);
+        MinIndent =
+            std::max(MinIndent, IndentationAndAlignment(State.FirstIndent) +
+                                    Style.ContinuationIndentWidth);
       }
       // If LongestObjCSelectorName is 0, we are indenting the first
       // part of an ObjC selector (or a selector component which is
@@ -1555,10 +1720,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       // component of the ObjC selector.
       //
       // In either case, we want to respect Style.IndentWrappedFunctionNames.
-      return MinIndent +
-             std::max(NextNonComment->LongestObjCSelectorName,
-                      NextNonComment->ColumnWidth) -
-             NextNonComment->ColumnWidth;
+      return MinIndent.addPadding(
+          std::max(NextNonComment->LongestObjCSelectorName,
+                   NextNonComment->ColumnWidth) -
+          NextNonComment->ColumnWidth);
     }
     if (!CurrentState.AlignColons)
       return CurrentState.Indent;
@@ -1628,7 +1793,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return CurrentState.Indent - NextNonComment->Tok.getLength() -
            NextNonComment->SpacesRequiredBefore;
   }
-  if (CurrentState.Indent == State.FirstIndent && PreviousNonComment &&
+  if (CurrentState.Indent.Total == State.FirstIndent && PreviousNonComment &&
       PreviousNonComment->isNoneOf(tok::r_brace, TT_CtorInitializerComma)) {
     // Ensure that we fall back to the continuation indent width instead of
     // just flushing continuations left.
@@ -1718,7 +1883,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
                                                   FormatStyle::BCIS_BeforeComma
                                               ? 0
                                               : 2);
-    CurrentState.NestedBlockIndent = CurrentState.Indent;
+    CurrentState.NestedBlockIndent = CurrentState.Indent.Total;
     if (Style.PackConstructorInitializers > FormatStyle::PCIS_BinPack) {
       CurrentState.AvoidBinPacking = true;
       CurrentState.BreakBeforeParameter =
@@ -1733,7 +1898,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
       Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon) {
     CurrentState.Indent =
         State.FirstIndent + Style.ConstructorInitializerIndentWidth;
-    CurrentState.NestedBlockIndent = CurrentState.Indent;
+    CurrentState.NestedBlockIndent = CurrentState.Indent.Total;
     if (Style.PackConstructorInitializers > FormatStyle::PCIS_BinPack)
       CurrentState.AvoidBinPacking = true;
     else
@@ -1859,6 +2024,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     NewParenState.UnindentOperator = false;
     NewParenState.NoLineBreak =
         NewParenState.NoLineBreak || CurrentState.NoLineBreakInOperand;
+    NewParenState.Precedence = PrecedenceLevel;
 
     // Don't propagate AvoidBinPacking into subexpressions of arg/param lists.
     if (PrecedenceLevel > prec::Comma)
@@ -1877,8 +2043,9 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         (!Style.isTableGen() ||
          (Previous && Previous->isOneOf(TT_TableGenDAGArgListComma,
                                         TT_TableGenDAGArgListCommaToBreak)))) {
-      NewParenState.Indent = std::max(
-          std::max(State.Column, NewParenState.Indent), CurrentState.LastSpace);
+      NewParenState.Indent =
+          std::max({IndentationAndAlignment(State.Column), NewParenState.Indent,
+                    IndentationAndAlignment(CurrentState.LastSpace)});
     }
 
     // Special case for generic selection expressions, its comma-separated
@@ -1901,7 +2068,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         NewParenState.UnindentOperator = true;
       // Mark indentation as alignment if the expression is aligned.
       if (Style.AlignOperands != FormatStyle::OAS_DontAlign)
-        NewParenState.IsAligned = true;
+        NewParenState.AlignedTo = Previous;
     }
 
     // Do not indent relative to the fake parentheses inserted for "." or "->".
@@ -1986,7 +2153,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     return Prev->is(tok::comma);
   }(Current.MatchingParen);
 
-  unsigned NewIndent;
+  IndentationAndAlignment NewIndent = 0;
   unsigned LastSpace = CurrentState.LastSpace;
   bool AvoidBinPacking;
   bool BreakBeforeParameter = false;
@@ -1999,24 +2166,25 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
                   std::min(State.Column, CurrentState.NestedBlockIndent);
     } else if (Current.is(tok::l_brace)) {
       const auto Width = Style.BracedInitializerIndentWidth;
-      NewIndent = CurrentState.LastSpace +
+      NewIndent = IndentationAndAlignment(CurrentState.LastSpace) +
                   (Width < 0 ? Style.ContinuationIndentWidth : Width);
     } else {
       NewIndent = CurrentState.LastSpace + Style.ContinuationIndentWidth;
     }
     const FormatToken *NextNonComment = Current.getNextNonComment();
-    AvoidBinPacking = EndsInComma || Current.is(TT_DictLiteral) ||
-                      Style.isProto() || !Style.BinPackArguments ||
-                      (NextNonComment && NextNonComment->isOneOf(
-                                             TT_DesignatedInitializerPeriod,
-                                             TT_DesignatedInitializerLSquare));
+    AvoidBinPacking =
+        EndsInComma || Current.is(TT_DictLiteral) || Style.isProto() ||
+        Style.PackArguments.BinPack == FormatStyle::BPAS_OnePerLine ||
+        (NextNonComment &&
+         NextNonComment->isOneOf(TT_DesignatedInitializerPeriod,
+                                 TT_DesignatedInitializerLSquare));
     BreakBeforeParameter = EndsInComma;
     if (Current.ParameterCount > 1)
       NestedBlockIndent = std::max(NestedBlockIndent, State.Column + 1);
   } else {
-    NewIndent =
-        Style.ContinuationIndentWidth +
-        std::max(CurrentState.LastSpace, CurrentState.StartOfFunctionCall);
+    NewIndent = IndentationAndAlignment(std::max(
+                    CurrentState.LastSpace, CurrentState.StartOfFunctionCall)) +
+                Style.ContinuationIndentWidth;
 
     if (Style.isTableGen() && Current.is(TT_TableGenDAGArgOpenerToBreak) &&
         Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakElements) {
@@ -2035,19 +2203,21 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     // FIXME: We likely want to do this for more combinations of brackets.
     if (Current.is(tok::less) && Current.ParentBracket == tok::l_paren) {
       NewIndent = std::max(NewIndent, CurrentState.Indent);
-      LastSpace = std::max(LastSpace, CurrentState.Indent);
+      LastSpace = std::max(LastSpace, CurrentState.Indent.Total);
     }
 
     // If ObjCBinPackProtocolList is unspecified, fall back to BinPackParameters
     // for backwards compatibility.
     bool ObjCBinPackProtocolList =
         (Style.ObjCBinPackProtocolList == FormatStyle::BPS_Auto &&
-         Style.BinPackParameters == FormatStyle::BPPS_BinPack) ||
+         (Style.PackParameters.BinPack == FormatStyle::BPPS_BinPack ||
+          Style.PackParameters.BinPack == FormatStyle::BPPS_UseBreakAfter)) ||
         Style.ObjCBinPackProtocolList == FormatStyle::BPS_Always;
 
     bool BinPackDeclaration =
         (State.Line->Type != LT_ObjCDecl &&
-         Style.BinPackParameters == FormatStyle::BPPS_BinPack) ||
+         (Style.PackParameters.BinPack == FormatStyle::BPPS_BinPack ||
+          Style.PackParameters.BinPack == FormatStyle::BPPS_UseBreakAfter)) ||
         (State.Line->Type == LT_ObjCDecl && ObjCBinPackProtocolList);
 
     bool GenericSelection =
@@ -2058,7 +2228,8 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
         (CurrentState.IsCSharpGenericTypeConstraint) || GenericSelection ||
         (Style.isJavaScript() && EndsInComma) ||
         (State.Line->MustBeDeclaration && !BinPackDeclaration) ||
-        (!State.Line->MustBeDeclaration && !Style.BinPackArguments) ||
+        (!State.Line->MustBeDeclaration &&
+         Style.PackArguments.BinPack == FormatStyle::BPAS_OnePerLine) ||
         (Style.ExperimentalAutoDetectBinPacking &&
          (Current.is(PPK_OnePerLine) ||
           (!BinPackInconclusiveFunctions && Current.is(PPK_Inconclusive))));
@@ -2281,7 +2452,7 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   unsigned CurrentIndent =
       (!Newline && Current.Next && Current.Next->is(tok::r_paren))
           ? State.Stack.back().NestedBlockIndent
-          : State.Stack.back().Indent;
+          : State.Stack.back().Indent.Total;
   unsigned NextStartColumn = ContentStartsOnNewline
                                  ? CurrentIndent + Style.IndentWidth
                                  : FirstStartColumn;
@@ -2416,7 +2587,7 @@ unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
       Strict = StrictPenalty <= Penalty;
       if (Strict) {
         Penalty = StrictPenalty;
-        State = StrictState;
+        State = std::move(StrictState);
       }
     }
     if (!DryRun) {

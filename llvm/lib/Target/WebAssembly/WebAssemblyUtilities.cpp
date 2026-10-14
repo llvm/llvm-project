@@ -13,7 +13,7 @@
 
 #include "WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "WebAssemblyTargetMachine.h"
+#include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
@@ -185,12 +185,33 @@ unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
 
 bool WebAssembly::canLowerMultivalueReturn(
     const WebAssemblySubtarget *Subtarget) {
-  const auto &TM = static_cast<const WebAssemblyTargetMachine &>(
-      Subtarget->getTargetLowering()->getTargetMachine());
-  return Subtarget->hasMultivalue() && TM.usesMultivalueABI();
+  return Subtarget->hasMultivalue() && Subtarget->usesMultivalueABI();
 }
 
 bool WebAssembly::canLowerReturn(size_t ResultSize,
                                  const WebAssemblySubtarget *Subtarget) {
   return ResultSize <= 1 || canLowerMultivalueReturn(Subtarget);
+}
+
+MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
+                                       const WebAssemblySubtarget *Subtarget,
+                                       SDValue Chain) {
+  MVT PtrVT = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
+
+  unsigned Opcode;
+  const char *SymName;
+  if (Subtarget->hasLibcallThreadContext()) {
+    Opcode = WebAssembly::CALL;
+    SymName = "__wasm_get_tls_base";
+  } else {
+    Opcode = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
+                               : WebAssembly::GLOBAL_GET_I32;
+    SymName = "__tls_base";
+  }
+
+  SDValue Sym = DAG.getTargetExternalSymbol(SymName, PtrVT);
+
+  if (Chain.getNode())
+    return DAG.getMachineNode(Opcode, DL, {PtrVT, MVT::Other}, {Sym, Chain});
+  return DAG.getMachineNode(Opcode, DL, PtrVT, Sym);
 }

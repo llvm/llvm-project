@@ -9,6 +9,8 @@
 // RUN: ld.lld --be8 %t.o -o %t
 // RUN: llvm-objdump -d --start-address=0x2200b4 --stop-address=0x2200be %t | FileCheck %s
 
+// RUN: rm %t.o %t
+
         /// Create a conditional branch too far away from a precreated thunk
         /// section. This will need a thunk section created within range.
         .syntax unified

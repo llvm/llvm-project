@@ -21,7 +21,7 @@ using namespace mlir::linalg;
 /// This helps to reduce the fill footprint.
 struct SwapExtractSliceOfFill final
     : public OpRewritePattern<tensor::ExtractSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tensor::ExtractSliceOp extractOp,
                                 PatternRewriter &rewriter) const override {

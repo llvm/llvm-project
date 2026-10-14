@@ -31,14 +31,14 @@ entry:
   %cmp8 = icmp eq i32 %nElts, 0
   br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %nElts to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
 ; Check that we vectorized the load, and that there is no nontemporal hint.
 ; CHECK: %wide.load = load <4 x i32>, ptr %{{[0-9]+}}, align 4{{$}}
@@ -61,14 +61,14 @@ entry:
   %cmp8 = icmp eq i32 %nElts, 0
   br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %nElts to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -89,14 +89,14 @@ entry:
   %cmp8 = icmp eq i32 %nElts, 0
   br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %nElts to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %for.body.preheader
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
 ; Check that the load is not vectorized and that we don't lose the !nontemporal hint in it.

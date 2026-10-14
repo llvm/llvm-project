@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import libcxx.header_information
@@ -27,8 +27,6 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["version"]
     elif header == "__hash_table":
         return ["unordered_map", "unordered_set"]
-    elif header == "__locale":
-        return ["locale"]
     elif re.match("__locale_dir/.+", header):
         return ["locale"]
     elif re.match("__math/.+", header):

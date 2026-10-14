@@ -11,7 +11,7 @@ from lldbsuite.test import lldbutil
 
 
 class StdU8StringViewDataFormatterTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
 
     def do_test(self):
         lldbutil.run_to_source_breakpoint(
@@ -40,7 +40,6 @@ class StdU8StringViewDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
 
-    @expectedFailureAll(bugnumber="No libstdc++ formatters for std::u8string_view yet.")
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})

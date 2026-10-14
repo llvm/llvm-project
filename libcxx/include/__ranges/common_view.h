@@ -32,9 +32,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
@@ -56,16 +56,16 @@ public:
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
     if constexpr (random_access_range<_View> && sized_range<_View>)
       return ranges::begin(__base_);
     else
       return common_iterator<iterator_t<_View>, sentinel_t<_View>>(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires range<const _View>
   {
     if constexpr (random_access_range<const _View> && sized_range<const _View>)
@@ -74,14 +74,14 @@ public:
       return common_iterator<iterator_t<const _View>, sentinel_t<const _View>>(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (random_access_range<_View> && sized_range<_View>)
       return ranges::begin(__base_) + ranges::size(__base_);
     else
       return common_iterator<iterator_t<_View>, sentinel_t<_View>>(ranges::end(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires range<const _View>
   {
     if constexpr (random_access_range<const _View> && sized_range<const _View>)
@@ -90,13 +90,13 @@ public:
       return common_iterator<iterator_t<const _View>, sentinel_t<const _View>>(ranges::end(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
     return ranges::size(__base_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
     return ranges::size(__base_);
@@ -133,9 +133,9 @@ inline constexpr auto common = __common::__fn{};
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

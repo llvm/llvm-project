@@ -19,6 +19,15 @@ namespace formatters {
 bool GenericOptionalSummaryProvider(ValueObject &valobj, Stream &stream,
                                     const TypeSummaryOptions &options);
 
+bool GenericErrorCodeSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+GenericErrorCodeSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                         lldb::ValueObjectSP valobj_sp);
+
+bool GenericFilesystemPathSummaryProvider(ValueObject &valobj, Stream &stream,
+                                          const TypeSummaryOptions &options);
+
 /// Return the ValueObjectSP of the underlying pointer member whose type
 /// is a desugared 'std::shared_ptr::element_type *'.
 lldb::ValueObjectSP GetDesugaredSmartPointerValue(ValueObject &ptr,
@@ -27,6 +36,12 @@ lldb::ValueObjectSP GetDesugaredSmartPointerValue(ValueObject &ptr,
 SyntheticChildrenFrontEnd *
 GenericInitializerListSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                lldb::ValueObjectSP valobj_sp);
+
+// std::queue / std::stack / std::priority_queue. The underlying container
+// is the standard protected member `c`.
+SyntheticChildrenFrontEnd *
+GenericContainerAdaptorFrontEndCreator(CXXSyntheticChildren *,
+                                       lldb::ValueObjectSP valobj_sp);
 } // namespace formatters
 } // namespace lldb_private
 

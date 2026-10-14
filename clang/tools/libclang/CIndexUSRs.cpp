@@ -15,8 +15,8 @@
 #include "CXString.h"
 #include "CXTranslationUnit.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Lex/PreprocessingRecord.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 
