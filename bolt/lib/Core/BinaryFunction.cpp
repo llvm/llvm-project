@@ -1705,6 +1705,28 @@ bool BinaryFunction::scanExternalRefs() {
         continue;
     }
 
+    if (BC.isRISCV()) {
+      // RISC-V instruction relocations cannot be rewritten in retained code.
+      // Entry patches are not a safe fallback: they clobber t0, which can be
+      // live at the target (including as the link register of jal t0).
+      // Keep referenced functions in place and continue scanning, including
+      // references in call and address-materialization pairs.
+      bool NeedsRelocation = false;
+      for (const MCOperand &Op : MCPlus::primeOperands(Instruction)) {
+        if (!Op.isExpr())
+          continue;
+        const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Op.getExpr());
+        if (ignoreReference(Symbol))
+          continue;
+        if (BinaryFunction *Target = BC.getFunctionForSymbol(Symbol))
+          InvalidTargets.insert(Target);
+        else
+          NeedsRelocation = true;
+      }
+      if (!NeedsRelocation)
+        continue;
+    }
+
     // For AArch64, we need to undo relaxation done by the linker if the target
     // of the instruction is a function that we plan to move.
     //
