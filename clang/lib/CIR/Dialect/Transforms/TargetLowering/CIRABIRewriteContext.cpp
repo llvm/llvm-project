@@ -671,21 +671,6 @@ static mlir::Value emitCoercedRecordLoad(
                                offset);
 }
 
-/// Whether \p ty is a struct that ends in pad members, as CIRGen emits for tail
-/// padding another object may reuse.  It is also true of other structs CIRGen
-/// ends in pad members, such as an over-aligned one.
-static bool hasTailPadding(mlir::Type ty) {
-  auto structTy = mlir::dyn_cast<cir::StructType>(ty);
-  if (!structTy)
-    return false;
-  llvm::ArrayRef<mlir::Type> members = structTy.getMembers();
-  llvm::ArrayRef<cir::RecordMemberKind> kinds = structTy.getMemberKinds();
-  for (auto [member, kind] : llvm::reverse(llvm::zip_equal(members, kinds)))
-    if (cir::memberOwnsBytes(member))
-      return kind == cir::RecordMemberKind::Pad;
-  return false;
-}
-
 /// Whether a cir.copy of \p ty into \p dst that stands in for a store of it
 /// skips tail padding.  Unless \p dst is an alloca, which holds a complete
 /// object, it can be a potentially-overlapping subobject, such as a
@@ -693,9 +678,19 @@ static bool hasTailPadding(mlir::Type ty) {
 /// object.  Classic CodeGen writes only the data size into a destination it is
 /// handed (EmitCall) and into one that may overlap (EmitAggregateCopy).
 /// Copying the whole object into an alloca is equivalent, since nothing else
-/// lives in its tail padding.
+/// lives in its tail padding.  A struct has tail padding when its last members
+/// are pad members, which CIRGen emits for padding another object may reuse and
+/// for some other structs, such as an over-aligned one.
 static bool shouldSkipTailPadding(mlir::Value dst, mlir::Type ty) {
-  return !cir::getUnderlyingAlloca(dst) && hasTailPadding(ty);
+  auto structTy = mlir::dyn_cast<cir::StructType>(ty);
+  if (!structTy || cir::getUnderlyingAlloca(dst))
+    return false;
+  llvm::ArrayRef<mlir::Type> members = structTy.getMembers();
+  llvm::ArrayRef<cir::RecordMemberKind> kinds = structTy.getMemberKinds();
+  for (auto [member, kind] : llvm::reverse(llvm::zip_equal(members, kinds)))
+    if (cir::memberOwnsBytes(member))
+      return kind == cir::RecordMemberKind::Pad;
+  return false;
 }
 
 /// Rewire the uses of the record value \p val, whose bytes sit at \p addr,
@@ -729,25 +724,23 @@ rewireRecordUses(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value val,
     mlir::Operation *user = use.getOwner();
     if (exceptions.contains(user))
       continue;
-    auto store = mlir::dyn_cast<cir::StoreOp>(user);
-    if (!store) {
-      auto member = mlir::dyn_cast<cir::ExtractMemberOp>(user);
-      bool isFieldRead =
-          member && !mlir::isa<cir::RecordType>(member.getType());
-      if (!isFieldRead &&
-          !mlir::isa<cir::CIRCallOpInterface, cir::ReturnOp>(user))
-        return user->emitOpError()
-               << "use of a record argument or result other than by a "
-                  "store, call, return or member read not yet implemented "
-                  "in CallConvLowering";
-      otherUses.push_back(&use);
+    if (auto store = mlir::dyn_cast<cir::StoreOp>(user)) {
+      if (store.getMemOrder())
+        return store.emitOpError()
+               << "atomic store of a record argument or result not yet "
+                  "implemented in CallConvLowering";
+      stores.push_back(store);
       continue;
     }
-    if (store.getMemOrder())
-      return store.emitOpError()
-             << "atomic store of a record argument or result not yet "
-                "implemented in CallConvLowering";
-    stores.push_back(store);
+    auto member = mlir::dyn_cast<cir::ExtractMemberOp>(user);
+    bool isFieldRead = member && !mlir::isa<cir::RecordType>(member.getType());
+    if (!isFieldRead &&
+        !mlir::isa<cir::CIRCallOpInterface, cir::ReturnOp>(user))
+      return user->emitOpError()
+             << "use of a record argument or result other than by a store, "
+                "call, return or member read not yet implemented in "
+                "CallConvLowering";
+    otherUses.push_back(&use);
   }
 
   mlir::IntegerAttr srcAlign = builder.getI64IntegerAttr(addrAlign);
