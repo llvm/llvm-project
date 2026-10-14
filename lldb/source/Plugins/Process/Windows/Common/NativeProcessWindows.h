@@ -196,6 +196,10 @@ private:
   /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
   bool m_pending_halt = false;
 
+  /// Set by Resume when it leaves at least one thread stopped. A thread
+  /// created during such a resume is stopped and reported (OnCreateThread).
+  bool m_resume_leaves_threads_stopped = false;
+
   bool m_client_supports_libraries_read = false;
 
   /// PseudoConsole for the lldb-server stdio-forwarding path.

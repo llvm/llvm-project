@@ -114,6 +114,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
     LLDB_LOG(log, "resuming {0} threads.", m_threads.size());
 
     m_pending_library_events = false;
+    m_resume_leaves_threads_stopped = false;
 
     bool failed = false;
     for (uint32_t i = 0; i < m_threads.size(); ++i) {
@@ -121,8 +122,10 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
       thread->ClearSingleStepping();
       const ResumeAction *const action =
           resume_actions.GetActionForThread(thread->GetID(), true);
-      if (action == nullptr)
+      if (action == nullptr) {
+        m_resume_leaves_threads_stopped = true;
         continue;
+      }
 
       switch (action->state) {
       case eStateRunning:
@@ -139,6 +142,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
       }
       case eStateSuspended:
       case eStateStopped:
+        m_resume_leaves_threads_stopped = true;
         break;
 
       default:
@@ -835,20 +839,40 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
                           wp.m_hardware);
   }
 
-  if (StateType state = GetState();
-      state == eStateStopped || state == eStateCrashed) {
+  StateType state = GetState();
+  const bool stopped = state == eStateStopped || state == eStateCrashed;
+  const bool report =
+      !stopped && m_resume_leaves_threads_stopped && !m_pending_halt;
+  if (stopped || report) {
     if (Status error = thread->DoStop(); error.Fail()) {
       Log *log = GetLog(WindowsLog::Thread);
       LLDB_LOG(log, "failed to suspend newly-created thread {0}: {1}",
                thread->GetID(), error);
     }
-    ThreadStopInfo stop_info;
+    ThreadStopInfo stop_info = {};
     stop_info.reason = lldb::eStopReasonNone;
     thread->SetStopReason(stop_info, "");
   }
 
-  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
-  m_threads.push_back(std::move(thread));
+  const lldb::tid_t tid = thread->GetID();
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+    m_threads.push_back(std::move(thread));
+    if (!report)
+      return;
+
+    Log *log = GetLog(WindowsLog::Thread);
+    LLDB_LOG(log,
+             "stopping to report thread {0}, created while some threads "
+             "are stopped",
+             tid);
+    for (const auto &t : m_threads)
+      if (Status error = static_cast<NativeThreadWindows &>(*t).DoStop();
+          error.Fail())
+        LLDB_LOG(log, "failed to stop thread {0}: {1}", t->GetID(), error);
+  }
+  SetCurrentThreadID(tid);
+  SetState(eStateStopped, true);
 }
 
 void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
