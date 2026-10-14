@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/LoadStoreVec.h"
+#include "../../VectorizeOptions.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Region.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
@@ -20,8 +20,6 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
-
-extern cl::opt<int> CostThreshold; // Defined in TransactionAcceptOrRevert.cpp
 
 namespace sandboxir {
 
@@ -57,7 +55,7 @@ bool LoadStoreVec::acceptOrRevert() {
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX_LOCAL << "CostGain=" << CostGain
                     << " (After=" << CostAfter << " Before=" << CostBefore
                     << ")\n");
-  if (CostGain > CostThreshold) {
+  if (CostGain > VectorizeOptions::Global.sbvec_cost_threshold) {
     LLVM_DEBUG(dbgs() << DEBUG_PREFIX_LOCAL << "Not profitable, reverting.\n");
     Ctx->revert();
     return false;

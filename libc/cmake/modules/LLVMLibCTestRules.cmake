@@ -4,10 +4,9 @@ else()
   set(LIBC_TEST_SUBPROCESS_TESTS 0)
 endif()
 
-function(_get_common_test_compile_options output_var c_test flags)
-  _get_compile_options_from_flags(compile_flags ${flags})
-  _get_compile_options_from_config(config_flags)
-  _get_compile_options_from_arch(arch_flags)
+function(_get_common_test_compile_options_impl output_var c_test)
+  set(config_flags ${LIBC_COMPILE_OPTIONS_FROM_CONFIG})
+  set(arch_flags ${LIBC_COMPILE_OPTIONS_FROM_ARCH})
 
   # Death test executor is only available in Linux for now.
   if(NOT ${LIBC_TARGET_OS} STREQUAL "linux")
@@ -19,9 +18,6 @@ function(_get_common_test_compile_options output_var c_test flags)
   endif()
 
   set(compile_options
-    ${LIBC_COMPILE_OPTIONS_DEFAULT}
-    ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
-    ${compile_flags}
     ${config_flags}
     ${arch_flags})
   libc_add_definition(compile_options
@@ -109,9 +105,30 @@ function(_get_common_test_compile_options output_var c_test flags)
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
+_get_common_test_compile_options_impl(LIBC_COMMON_TEST_COMPILE_OPTIONS_CPP FALSE)
+_get_common_test_compile_options_impl(LIBC_COMMON_TEST_COMPILE_OPTIONS_C TRUE)
 
-function(_get_hermetic_test_compile_options output_var c_test flags)
-  _get_common_test_compile_options(compile_options "${c_test}" "${flags}")
+function(_get_common_test_compile_options output_var c_test flags)
+  _get_compile_options_from_flags(compile_flags ${flags})
+  if(c_test)
+    set(common_test_opts ${LIBC_COMMON_TEST_COMPILE_OPTIONS_C})
+  else()
+    set(common_test_opts ${LIBC_COMMON_TEST_COMPILE_OPTIONS_CPP})
+  endif()
+  set(${output_var}
+    ${LIBC_COMPILE_OPTIONS_DEFAULT}
+    ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
+    ${compile_flags}
+    ${common_test_opts}
+    PARENT_SCOPE)
+endfunction()
+
+function(_get_hermetic_test_compile_options_impl output_var c_test)
+  if(c_test)
+    set(compile_options ${LIBC_COMMON_TEST_COMPILE_OPTIONS_C})
+  else()
+    set(compile_options ${LIBC_COMMON_TEST_COMPILE_OPTIONS_CPP})
+  endif()
 
   # null check tests are death tests, remove from hermetic tests for now.
   if(LIBC_ADD_NULL_CHECKS)
@@ -134,6 +151,23 @@ function(_get_hermetic_test_compile_options output_var c_test flags)
   endif()
 
   set(${output_var} ${compile_options} PARENT_SCOPE)
+endfunction()
+_get_hermetic_test_compile_options_impl(LIBC_HERMETIC_TEST_COMPILE_OPTIONS_CPP FALSE)
+_get_hermetic_test_compile_options_impl(LIBC_HERMETIC_TEST_COMPILE_OPTIONS_C TRUE)
+
+function(_get_hermetic_test_compile_options output_var c_test flags)
+  _get_compile_options_from_flags(compile_flags ${flags})
+  if(c_test)
+    set(hermetic_test_opts ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS_C})
+  else()
+    set(hermetic_test_opts ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS_CPP})
+  endif()
+  set(${output_var}
+    ${LIBC_COMPILE_OPTIONS_DEFAULT}
+    ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
+    ${compile_flags}
+    ${hermetic_test_opts}
+    PARENT_SCOPE)
 endfunction()
 
 # This is a helper function and not a build rule. It is to be used by the

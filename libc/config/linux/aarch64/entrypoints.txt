@@ -509,6 +509,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
     libc.src.unistd.sync
+    libc.src.unistd.syncfs
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
@@ -1306,6 +1307,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fflush
     libc.src.stdio.fgetc
     libc.src.stdio.fgetc_unlocked
+    libc.src.stdio.fgetpos
     libc.src.stdio.fgets
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
@@ -1319,6 +1321,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fread_unlocked
     libc.src.stdio.fseek
     libc.src.stdio.fseeko
+    libc.src.stdio.fsetpos
     libc.src.stdio.ftell
     libc.src.stdio.ftello
     libc.src.stdio.funlockfile
@@ -1341,6 +1344,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.ungetc
 
     # stdlib.h entrypoints
+    libc.src.stdlib.__cxa_thread_atexit_impl
     libc.src.stdlib._Exit
     libc.src.stdlib.abort
     libc.src.stdlib.at_quick_exit

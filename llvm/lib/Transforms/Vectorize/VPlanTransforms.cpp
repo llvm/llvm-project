@@ -20,6 +20,7 @@
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
+#include "VectorizeOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -38,7 +39,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
@@ -47,6 +48,37 @@ using namespace LoopVectorizationUtils;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
+void VPlanTransforms::verifyIfRequested(VPlan &Plan) {
+  if (VectorizeOptions::Global.vplan_verify_each && !verifyVPlanIsValid(Plan))
+    report_fatal_error("Broken VPlan found, compilation aborted!");
+}
+
+#ifndef NDEBUG
+bool VPlanTransforms::isPrintingRequested() {
+  const VectorizeOptions &Opts = VectorizeOptions::Global;
+  return Opts.vplan_print_before_all || Opts.vplan_print_after_all ||
+         !Opts.vplan_print_before.empty() || !Opts.vplan_print_after.empty();
+}
+
+void VPlanTransforms::printIfRequested(VPlan &Plan, Function *Fn,
+                                       StringRef NumberedPassName, bool After) {
+  const VectorizeOptions &Opts = VectorizeOptions::Global;
+  bool All = After ? Opts.vplan_print_after_all : Opts.vplan_print_before_all;
+  ArrayRef<StringRef> Passes =
+      After ? Opts.vplan_print_after : Opts.vplan_print_before;
+  if (!All && none_of(Passes, [&](StringRef Entry) {
+        return Regex(Entry).match(NumberedPassName);
+      }))
+    return;
+  dbgs() << "VPlan for loop in '" << Fn->getName() << "' "
+         << (After ? "after" : "before") << " " << NumberedPassName << '\n';
+  if (Opts.vplan_print_vector_region_scope && Plan.getVectorLoopRegion())
+    Plan.getVectorLoopRegion()->print(dbgs());
+  else
+    dbgs() << Plan << '\n';
+}
+#endif
+
 /// Returns the metadata attached to \p R, or an empty set for a recipe that
 /// does not carry any.
 static VPIRMetadata getMetadataOf(VPRecipeBase *R) {
@@ -54,13 +86,6 @@ static VPIRMetadata getMetadataOf(VPRecipeBase *R) {
     return *MD;
   return {};
 }
-
-// TODO: Remove this once the partial reduction intrinsics are no worse than
-//       normal vector operations.
-static cl::opt<bool> UsePartialReductionsByDefault(
-    "use-partial-reductions-by-default", cl::init(false), cl::Hidden,
-    cl::desc("Use partial reduction intrinsics for "
-             "all supported unordered reductions."));
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
@@ -584,11 +609,24 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   VPBlockUtils::insertTwoBlocksAfter(Pred, Exiting, Entry);
   VPBlockUtils::connectBlocks(Pred, Exiting);
 
-  if (!PredRecipe->user_empty()) {
-    auto *PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask,
-                                              RecipeWithoutMask->getDebugLoc());
+  PredRecipe->replaceAllUsesWith(RecipeWithoutMask);
+  // Move the extracts of a struct result into the region, so only scalars
+  // leave it.
+  SmallVector<VPUser *> Defs = {RecipeWithoutMask};
+  if (RecipeWithoutMask->getScalarType()->isStructTy())
+    Defs = to_vector(RecipeWithoutMask->users());
+  for (VPUser *U : Defs) {
+    auto *Def = cast<VPReplicateRecipe>(U);
+    assert((Def == RecipeWithoutMask ||
+            Def->getOpcode() == Instruction::ExtractValue) &&
+           "only extracts can use a predicated struct");
+    Def->moveBefore(*Pred, Pred->end());
+    if (Def->user_empty())
+      continue;
+    auto *PHIRecipe = new VPPredInstPHIRecipe(Def, Def->getDebugLoc());
     Exiting->appendRecipe(PHIRecipe);
-    PredRecipe->replaceAllUsesWith(PHIRecipe);
+    Def->replaceAllUsesWith(PHIRecipe);
+    PHIRecipe->setOperand(0, Def);
   }
   PredRecipe->eraseFromParent();
   return Region;
@@ -2742,6 +2780,8 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(createAndOptimizeReplicateRegions, Plan);
   RUN_VPLAN_PASS(mergeBlocksIntoPredecessors, Plan);
   RUN_VPLAN_PASS(licm, Plan);
+  RUN_VPLAN_PASS(cse, Plan);
+  RUN_VPLAN_PASS(removeDeadRecipes, Plan);
 }
 
 void VPlanTransforms::simplifyLiveInsWithSCEV(VPlan &Plan,
@@ -3959,11 +3999,12 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     // reduce.add(ext(mul(ext(A), ext(B))))
     // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
     // The inner extends must either have the same opcode as the outer extend or
-    // be the same, in which case the multiply can never result in a negative
+    // be the same sext, in which case the multiply cannot result in a negative
     // value and the outer extend can be folded away by doing wider
     // extends for the operands of the mul.
     if (Ext0 && Ext1 &&
-        (Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
+        (Ext->getOpcode() == Ext0->getOpcode() ||
+         (Ext0 == Ext1 && Ext0->getOpcode() == Instruction::SExt)) &&
         Ext0->getOpcode() == Ext1->getOpcode() &&
         IsMulAccValidAndClampRange(Mul, Ext0, Ext1, Ext) && Mul->hasOneUse()) {
       auto *NewExt0 = new VPWidenCastRecipe(
@@ -5646,7 +5687,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
        make_isa_range<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
     if (auto Chain = getScaledReductionChain(&RedPhiR))
       PhiToChain.try_emplace(&RedPhiR, std::move(*Chain));
-    else if (UsePartialReductionsByDefault &&
+    else if (CostCtx.Opts.use_partial_reductions_by_default &&
              (RedPhiR.getRecurrenceKind() == RecurKind::Add ||
               (RedPhiR.getRecurrenceKind() == RecurKind::FAdd &&
                !RedPhiR.isOrdered() && !RedPhiR.isInLoop())))
@@ -6007,6 +6048,11 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
 
       // If executing other lanes produces side-effects we can't avoid them.
       if (VPI.mayHaveSideEffects())
+        continue;
+
+      // ExtractValue takes the shape of its aggregate, decided in
+      // tryToCreateWidenNonPhiRecipe.
+      if (VPI.getOpcode() == Instruction::ExtractValue)
         continue;
 
       // We want to drop the mask operand, verify we can safely do that.

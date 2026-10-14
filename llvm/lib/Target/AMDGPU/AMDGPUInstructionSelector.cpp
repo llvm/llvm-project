@@ -4672,6 +4672,22 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_EXTRACT_VECTOR_ELT(I);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     return selectG_INSERT_VECTOR_ELT(I);
+  case TargetOpcode::G_FMA: {
+    if (!STI.hasPkF32InvalidOpSel())
+      return selectImpl(I, *CoverageInfo);
+
+    Register VReg = I.getOperand(0).getReg();
+    if (!selectImpl(I, *CoverageInfo))
+      return false;
+
+    MachineInstr *Sel = MRI->getVRegDef(VReg);
+    // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
+    if (Sel->getOpcode() == AMDGPU::V_PK_FMA_F32 &&
+        !TII.isLegalPkFMAF32OpSel(*Sel))
+      TII.decomposePkFMAF32(*Sel, *MRI);
+
+    return true;
+  }
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_NORET:
@@ -6689,16 +6705,18 @@ bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
                                                     unsigned ShAmtBits) const {
   assert(MI.getOpcode() == TargetOpcode::G_AND);
 
-  std::optional<APInt> RHS =
-      getIConstantVRegVal(MI.getOperand(2).getReg(), *MRI);
+  // The mask constant is an SGPR G_CONSTANT copied to VGPR; the matcher looks
+  // through that COPY, so look through it here too.
+  std::optional<ValueAndVReg> RHS =
+      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), *MRI);
   if (!RHS)
     return false;
 
-  if (RHS->countr_one() >= ShAmtBits)
+  if (RHS->Value.countr_one() >= ShAmtBits)
     return true;
 
   const APInt &LHSKnownZeros = VT->getKnownZeroes(MI.getOperand(1).getReg());
-  return (LHSKnownZeros | *RHS).countr_one() >= ShAmtBits;
+  return (LHSKnownZeros | RHS->Value).countr_one() >= ShAmtBits;
 }
 
 InstructionSelector::ComplexRendererFns
