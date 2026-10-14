@@ -1812,7 +1812,7 @@ TEST(APFloatTest, toString) {
               APInt(128, {0x3ff0000000000000ULL, 0x7ff0000000000001ULL}));
     F.toString(Str, /*FormatPrecision=*/6, /*FormatMaxPadding=*/0,
                /*TruncateZero=*/false);
-    ASSERT_EQ("1.000000e+00", Str);
+    EXPECT_EQ("1.000000e+00", Str);
   }
 }
 
