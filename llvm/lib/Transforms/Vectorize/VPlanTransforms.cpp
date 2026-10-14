@@ -3000,8 +3000,10 @@ void VPlanTransforms::createInterleaveGroups(
       }
     }
 
+    // Force to require scalar epilogue if a load group with tail gap and scalar
+    // epilogue is allowed.
     RequiresScalarEpilogue |=
-        EpilogueAllowed && StoredValues.empty() && IG->requiresScalarEpilogue();
+        StoredValues.empty() && IG->requiresScalarEpilogue() && EpilogueAllowed;
 
     bool NeedsMaskForGaps =
         (IG->requiresScalarEpilogue() && !EpilogueAllowed) ||
