@@ -1394,10 +1394,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_FPOW)
       .customFor({F32})
+      .widenScalarFor({BF16}, changeElementTo(0, F32))
       .clampScalar(0, F32, F32)
       .scalarize(0);
 
-  getActionDefinitionsBuilder(G_FPOWI).clampScalar(0, F32, F32).lower();
+  getActionDefinitionsBuilder(G_FPOWI)
+      .widenScalarFor({BF16}, changeElementTo(0, F32))
+      .clampScalar(0, F32, F32)
+      .scalarize(0)
+      .lower();
 
   getActionDefinitionsBuilder(G_FLOG2)
       .legalFor(ST.has16BitInsts(), {F16})
@@ -1417,10 +1422,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder({G_FLOG, G_FLOG10})
       .customFor({F16, F32})
+      .widenScalarFor({BF16}, changeElementTo(0, F32))
       .scalarize(0);
 
   getActionDefinitionsBuilder({G_FEXP, G_FEXP10})
       .customFor({F16, F32, F64})
+      .widenScalarFor({BF16}, changeElementTo(0, F32))
       .scalarize(0);
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
