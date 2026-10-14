@@ -2755,9 +2755,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // See allocate() for the registration of host / shared memory as pinned
     // memory.
-    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED) {
       if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
         return Err;
+    }
 
     AMDGPUMemoryPoolTy *MemoryPool = nullptr;
     switch (Kind) {
