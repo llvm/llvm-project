@@ -82,6 +82,7 @@ class FastDivInsertionTask {
   DomTreeUpdater *DTU = nullptr;
   LoopInfo *LI = nullptr;
   BranchProbabilityInfo *BPI = nullptr;
+  bool HasBranchDivergence = false;
 
   BasicBlock *splitMainBB();
   bool isHashLikeValue(Value *V, VisitedSetTy &Visited);
@@ -108,18 +109,17 @@ class FastDivInsertionTask {
 public:
   FastDivInsertionTask(Instruction *I, const BypassWidthsTy &BypassWidths,
                        DomTreeUpdater *DTU, LoopInfo *LI,
-                       BranchProbabilityInfo *BPI);
+                       BranchProbabilityInfo *BPI, bool HasBranchDivergence);
 
   Value *getReplacement(DivCacheTy &Cache);
 };
 
 } // end anonymous namespace
 
-FastDivInsertionTask::FastDivInsertionTask(Instruction *I,
-                                           const BypassWidthsTy &BypassWidths,
-                                           DomTreeUpdater *DTU, LoopInfo *LI,
-                                           BranchProbabilityInfo *BPI)
-    : DTU(DTU), LI(LI), BPI(BPI) {
+FastDivInsertionTask::FastDivInsertionTask(
+    Instruction *I, const BypassWidthsTy &BypassWidths, DomTreeUpdater *DTU,
+    LoopInfo *LI, BranchProbabilityInfo *BPI, bool HasBranchDivergence)
+    : DTU(DTU), LI(LI), BPI(BPI), HasBranchDivergence(HasBranchDivergence) {
   switch (I->getOpcode()) {
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -429,7 +429,7 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   IRBuilder<> Builder(MainBB->end());
   Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
 
-  if (DividendShort && !isSignedOp()) {
+  if (DividendShort && !isSignedOp() && !HasBranchDivergence) {
     // If the division is unsigned and Dividend is known to be short, then
     // either
     // 1) Divisor is less or equal to Dividend, and the result can be computed
@@ -440,6 +440,9 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     // So instead of checking at runtime whether Divisor fits into BypassType,
     // we emit a runtime check to differentiate between these two cases. This
     // lets us entirely avoid a long div.
+    // If Dividend varies across lanes but Divisor does not, comparing them
+    // can introduce divergence. Since Dividend is already known to fit,
+    // the general case below only checks Divisor's width.
 
     // Split the basic block before the div/rem.
     BasicBlock *SuccessorBB = splitMainBB();
@@ -492,9 +495,10 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
 /// This optimization identifies DIV/REM instructions in a BB that can be
 /// profitably bypassed and carried out with a shorter, faster divide.
 bool llvm::bypassSlowDivision(BasicBlock *BB,
-                              const BypassWidthsTy &BypassWidths,
-                              DomTreeUpdater *DTU, LoopInfo *LI,
-                              BranchProbabilityInfo *BPI) {
+                             const BypassWidthsTy &BypassWidths,
+                             DomTreeUpdater *DTU, LoopInfo *LI,
+                             BranchProbabilityInfo *BPI,
+                             bool HasBranchDivergence) {
   DivCacheTy PerBBDivCache;
 
   bool MadeChange = false;
@@ -509,7 +513,7 @@ bool llvm::bypassSlowDivision(BasicBlock *BB,
     if (I->use_empty())
       continue;
 
-    FastDivInsertionTask Task(I, BypassWidths, DTU, LI, BPI);
+    FastDivInsertionTask Task(I, BypassWidths, DTU, LI, BPI, HasBranchDivergence);
     if (Value *Replacement = Task.getReplacement(PerBBDivCache)) {
       I->replaceAllUsesWith(Replacement);
       I->eraseFromParent();
