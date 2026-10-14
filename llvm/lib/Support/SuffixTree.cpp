@@ -27,8 +27,9 @@ static size_t numElementsInSubstring(const SuffixTreeNode *N) {
 }
 
 SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str,
-                       bool OutlinerLeafDescendants)
-    : Str(Str), OutlinerLeafDescendants(OutlinerLeafDescendants) {
+                       bool OutlinerLeafDescendants, unsigned BoundaryStart)
+    : Str(Str), OutlinerLeafDescendants(OutlinerLeafDescendants),
+      BoundaryStart(BoundaryStart) {
   Root = insertRoot();
   Active.Node = Root;
 

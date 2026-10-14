@@ -56,6 +56,10 @@ public:
   };
 
 private:
+  const unsigned BoundaryStart;
+
+  bool isBoundary(unsigned Value) const { return Value >= BoundaryStart; }
+
   /// Maintains internal nodes in the tree.
   SpecificBumpPtrAllocator<SuffixTreeInternalNode> InternalNodeAllocator;
   /// Maintains leaf nodes in the tree.
@@ -149,8 +153,11 @@ public:
   /// \param Str The string to construct the suffix tree for.
   /// \param OutlinerLeafDescendants Whether to consider leaf descendants or
   /// only leaf children (used by Machine Outliner).
+  /// \param BoundaryStart Values at or above this lower bound must be unique
+  /// terminators.
   LLVM_ABI SuffixTree(const ArrayRef<unsigned> &Str,
-                      bool OutlinerLeafDescendants = false);
+                      bool OutlinerLeafDescendants = false,
+                      unsigned BoundaryStart = SuffixTreeNode::EmptyIdx);
 
   /// Iterator for finding all repeated substrings in the suffix tree.
   struct RepeatedSubstringIterator {
