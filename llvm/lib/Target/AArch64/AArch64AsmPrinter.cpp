@@ -3690,13 +3690,30 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     Register AddrDisc = MI->getOperand(4).getReg();
 
-    Register ScratchReg = Callee == AArch64::X16 ? AArch64::X17 : AArch64::X16;
-
     emitPtrauthTailCallHardening(MI);
 
     // See the comments in emitPtrauthBranch.
     if (Callee == AddrDisc)
       report_fatal_error("Call target is signed with its own value");
+
+    // BTI requires an indirect tail call target to be in x16 or x17, but the
+    // PAUTH_EPILOGUE sequence may have clobbered both. In that case the target
+    // is kept in another register until the end of the epilogue, and moved
+    // to x17 here.
+    if (AArch64FI->branchTargetEnforcement() &&
+        AArch64FI->mayClobberTailCallRegsInEpilogue(*MF, {AArch64::X17})) {
+      assert(Callee != AArch64::X16 && Callee != AArch64::X17 &&
+             "Tail call target must not be in a register clobbered by the "
+             "epilogue");
+      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ORRXrs)
+                                       .addReg(AArch64::X17)
+                                       .addReg(AArch64::XZR)
+                                       .addReg(Callee)
+                                       .addImm(0));
+      Callee = AArch64::X17;
+    }
+
+    Register ScratchReg = Callee == AArch64::X16 ? AArch64::X17 : AArch64::X16;
 
     // After isX16X17Safer predicate was introduced, emitPtrauthDiscriminator is
     // no longer restricted to only reusing AddrDisc when it is X16 or X17
@@ -3718,9 +3735,24 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     emitPtrauthTailCallHardening(MI);
 
     recordIfImportCall(MI);
+
+    Register Callee = MI->getOperand(0).getReg();
+    if (AArch64FI->branchTargetEnforcement() &&
+        AArch64FI->mayClobberTailCallRegsInEpilogue(*MF, {AArch64::X17})) {
+      assert(Callee != AArch64::X16 && Callee != AArch64::X17 &&
+             "Tail call target must not be in a register clobbered by the "
+             "epilogue");
+      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ORRXrs)
+                                       .addReg(AArch64::X17)
+                                       .addReg(AArch64::XZR)
+                                       .addReg(Callee)
+                                       .addImm(0));
+      Callee = AArch64::X17;
+    }
+
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::BR);
-    TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+    TmpInst.addOperand(MCOperand::createReg(Callee));
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }

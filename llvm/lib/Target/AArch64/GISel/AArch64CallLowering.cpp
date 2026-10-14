@@ -1156,20 +1156,29 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
   if (!IsIndirect)
     return AArch64::TCRETURNdi;
 
-  // When BTI is enabled, we need to use TCRETURNriBTI to make sure that we use
-  // x16 or x17.
-  bool MayClobber = FuncInfo->mayClobberTailCallRegsInEpilogue(CallerF);
-  if (FuncInfo->branchTargetEnforcement()) {
+  // When BTI is enabled, the target must end up in x16 or x17. Use them
+  // directly if we can guarantee that the epilogue will leave them alone.
+  // Otherwise keep the target out of x15-x17 and let AsmPrinter move it into
+  // x17 after the epilogue.
+  bool BTI = FuncInfo->branchTargetEnforcement();
+  bool MayClobberX17 =
+      FuncInfo->mayClobberTailCallRegsInEpilogue(CallerF, {AArch64::X17});
+  if (BTI && !MayClobberX17) {
+    bool MayClobberX16 =
+        FuncInfo->mayClobberTailCallRegsInEpilogue(CallerF, {AArch64::X16});
     if (PAI)
-      return MayClobber ? AArch64::AUTH_TCRETURN_BTIx17
-                        : AArch64::AUTH_TCRETURN_BTI;
-    return MayClobber ? AArch64::TCRETURNrix17 : AArch64::TCRETURNrix16x17;
+      return MayClobberX16 ? AArch64::AUTH_TCRETURN_BTIx17
+                           : AArch64::AUTH_TCRETURN_BTI;
+    return MayClobberX16 ? AArch64::TCRETURNrix17 : AArch64::TCRETURNrix16x17;
   }
 
+  bool MayClobberX151617 = FuncInfo->mayClobberTailCallRegsInEpilogue(
+      CallerF, {AArch64::X15, AArch64::X16, AArch64::X17});
   if (PAI)
-    return MayClobber ? AArch64::AUTH_TCRETURNnotx15x16x17
-                      : AArch64::AUTH_TCRETURN;
-  return MayClobber ? AArch64::TCRETURNrinotx15x16x17 : AArch64::TCRETURNri;
+    return MayClobberX151617 ? AArch64::AUTH_TCRETURNnotx15x16x17
+                             : AArch64::AUTH_TCRETURN;
+  return MayClobberX151617 ? AArch64::TCRETURNrinotx15x16x17
+                           : AArch64::TCRETURNri;
 }
 
 static const uint32_t *

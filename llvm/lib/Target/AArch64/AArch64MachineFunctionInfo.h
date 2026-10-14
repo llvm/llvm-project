@@ -596,13 +596,13 @@ public:
   getPauthEpilogueClobberedRegs(const MachineFunction &MF,
                                 const MachineBasicBlock *MBB) const;
 
-  /// \returns true if the epilogue may clobber a register that holds an
-  /// indirect tail call operand. The SP adjustment needed for argument stack is
-  /// not known until after register allocation, so this assumes the worst case.
-  /// The tcGPRnotx15x16x17 register class (and the pseudos/predicates built on
-  /// it) exclude the whole {x15, x16, x17} set.
-  bool mayClobberTailCallRegsInEpilogue(const MachineFunction &MF) const {
-    return !getPauthEpilogueClobberedRegs(MF, /*MBB=*/nullptr).empty();
+  /// \returns true if the PAUTH_EPILOGUE expansion may clobber any of the
+  /// registers in the \p Regs list while authenticating LR.
+  bool mayClobberTailCallRegsInEpilogue(const MachineFunction &MF,
+                                        ArrayRef<MCPhysReg> Regs) const {
+    return llvm::any_of(
+        getPauthEpilogueClobberedRegs(MF, /*MBB=*/nullptr),
+        [&](MCPhysReg R) { return llvm::is_contained(Regs, R); });
   }
 
   void setHasSwiftAsyncContext(bool HasContext) {

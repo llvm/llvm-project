@@ -238,6 +238,14 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     NumBytes = Desc.getSize() ? Desc.getSize() : 4;
 
     const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
+
+    // The final `mov x17, xN`, after the epilogue of an indirect tail call that
+    // needed to clobber x17 during the aut sequence.
+    if (MI.getOpcode() != AArch64::TCRETURNdi &&
+        MFI->branchTargetEnforcement() &&
+        MFI->mayClobberTailCallRegsInEpilogue(*MF, {AArch64::X17}))
+      NumBytes += 4;
+
     if (!MFI->shouldSignReturnAddress(*MF))
       return NumBytes;
 

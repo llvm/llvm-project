@@ -74,3 +74,28 @@ define swifttailcc void @auth_bti_addrdisc(ptr swiftasync %ctx, i64 %a1) "frame-
   musttail call swifttailcc void %fn(ptr swiftasync %ctx, i64 %a1) [ "ptrauth"(i32 0, i64 %b) ]
   ret void
 }
+
+; With BTI the call target must be x16 or x17, but the AUTIB171615 epilogue
+; (PAuth_LR with an SP adjustment) clobbers both, so the target is kept in
+; another register until the end of the epilogue.
+define swifttailcc void @bti_pauthlr(ptr swiftasync %ctx, ptr %fn, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9) "frame-pointer"="non-leaf" "ptrauth-returns" "ptrauth-calls" "branch-target-enforcement" "branch-protection-pauth-lr" "target-features"="+pauth-lr" {
+; CHECK-LABEL: bti_pauthlr:
+; CHECK:         autib171615
+; CHECK-NEXT:    mov x30, x17
+; CHECK-NEXT:    mov x17, x{{([0-9]|1[0-4])$}}
+; CHECK-NEXT:    br x17
+  call void @g()
+  musttail call swifttailcc void %fn(ptr swiftasync %ctx, i64 %a9)
+  ret void
+}
+
+; Likewise for an authenticated tail call.
+define swifttailcc void @bti_pauthlr_auth(ptr swiftasync %ctx, ptr %fn, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9) "frame-pointer"="non-leaf" "ptrauth-returns" "ptrauth-calls" "branch-target-enforcement" "branch-protection-pauth-lr" "target-features"="+pauth-lr" {
+; CHECK-LABEL: bti_pauthlr_auth:
+; CHECK:         autib171615
+; CHECK-NEXT:    mov x30, x17
+; CHECK:         braa x17, x16
+  call void @g()
+  musttail call swifttailcc void %fn(ptr swiftasync %ctx, i64 %a9) [ "ptrauth"(i32 0, i64 42) ]
+  ret void
+}

@@ -1374,16 +1374,23 @@ let RecomputePerFunction = 1 in {
   //   and we can't load anything from the stack after this because the
   //   authentication instruction checks that SP is the same as it was at function
   //   entry, so we can't have anything on the stack.
-  //   With BTI this leaves x17 as the only choice.
+  // - With BTI, the branch target must be in x16 or x17. If the epilogue
+  //   clobbers x16 but not x17, x17 can hold the target throughout. If it
+  //   clobbers x17, the target is kept in another register until the end of the
+  //   epilogue, and then moved to x17 just before the branch.
 
-  // BTI on, LR not signed: x16 or x17
-  def TailCallX16X17 : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF) }]>;
-  // BTI on, LR signed: x17 only
-  def TailCallX17 : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF) }]>;
-  // BTI off, LR signed: Any non-callee-saved register except x15, x16 and x17
-  def TailCallNotX15X16X17 : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF) }]>;
+  // BTI on, x16 and x17 are not clobbered by the epilogue: x16 or x17
+  def TailCallX16X17 : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF, {AArch64::X16, AArch64::X17}) }]>;
+  // BTI on, the epilogue clobbers x16 but not x17: x17 only
+  def TailCallX17 : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF, {AArch64::X16}) && !MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF, {AArch64::X17}) }]>;
+  // BTI off, and the epilogue clobbers x15, x16, or x17:
+  //    Any non-callee-saved-register except x15, x16, x17
+  // BTI on, and the epilogue clobbers x17:
+  //    Any non-callee-saved-register, and the AsmPrinter lowering copies the
+  //    target into x17 just before the branch.
+  def TailCallNotX15X16X17 : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF, {AArch64::X15, AArch64::X16, AArch64::X17}) && (!MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() || MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF, {AArch64::X17})) }]>;
   // BTI off, LR not signed: Any non-callee-saved register
-  def TailCallAny : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF) }]>;
+  def TailCallAny : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF, {AArch64::X15, AArch64::X16, AArch64::X17}) }]>;
 
   def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
   def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
