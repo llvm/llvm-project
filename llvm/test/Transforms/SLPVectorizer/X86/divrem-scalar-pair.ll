@@ -75,15 +75,11 @@ define void @urem_without_udiv(ptr %p, i32 %x, i32 %y, i32 %n, i32 %m) {
 define void @udiv_urem_both_stored(ptr %p, ptr %q, ptr %a, ptr %b) {
 ; CHECK-LABEL: define void @udiv_urem_both_stored(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = urem <2 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv <2 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP3]], i64 0
-; CHECK-NEXT:    store i32 [[TMP5]], ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
-; CHECK-NEXT:    store i32 [[TMP6]], ptr [[P1]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = urem <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[P]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -63,3 +63,18 @@ define void @pair_const_divisor(i32 %a) {
   %ud = udiv i32 %a, 7
   ret void
 }
+
+define void @pair_vector(<4 x i32> %a, <4 x i32> %b, <2 x i64> %c, <2 x i64> %d) {
+; CHECK-LABEL: 'pair_vector'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:0 Lat:4 SizeLat:0 for: %vr = urem <4 x i32> %a, %b
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2000 CodeSize:4 Lat:4 SizeLat:4 for: %vd = udiv <4 x i32> %a, %b
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:0 Lat:4 SizeLat:0 for: %sr = srem <2 x i64> %c, %d
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1640 CodeSize:4 Lat:4 SizeLat:4 for: %sd = sdiv <2 x i64> %c, %d
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %vr = urem <4 x i32> %a, %b
+  %vd = udiv <4 x i32> %a, %b
+  %sr = srem <2 x i64> %c, %d
+  %sd = sdiv <2 x i64> %c, %d
+  ret void
+}

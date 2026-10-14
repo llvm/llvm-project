@@ -394,6 +394,26 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     return LT.first * Cost;
   }
 
+  // A rem paired with a div on the same variable operands in the same block is
+  // free: the pair is priced as the div alone.
+  if ((ISD == ISD::UREM || ISD == ISD::SREM) && CostKind != TTI::TCK_Latency &&
+      CtxI && CtxI->getOpcode() == Opcode &&
+      !isa<Constant>(CtxI->getOperand(1)) &&
+      (Ty->isVectorTy() || hasDivRemOp(Ty, ISD == ISD::SREM))) {
+    using namespace PatternMatch;
+    // Same use limit as SLP, bounds the walk over the divisor users.
+    constexpr unsigned MaxUses = 64;
+    unsigned DivOpcode =
+        ISD == ISD::SREM ? Instruction::SDiv : Instruction::UDiv;
+    const Value *X = CtxI->getOperand(0);
+    const Value *Y = CtxI->getOperand(1);
+    if (!Y->hasNUsesOrMore(MaxUses) && any_of(Y->users(), [&](const User *U) {
+          return match(U, m_BinOp(DivOpcode, m_Specific(X), m_Specific(Y))) &&
+                 cast<Instruction>(U)->getParent() == CtxI->getParent();
+        }))
+      return TTI::TCC_Free;
+  }
+
   static const CostKindTblEntry GFNIUniformConstCostTable[] = {
     { ISD::SHL,  MVT::v16i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
     { ISD::SRL,  MVT::v16i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
@@ -772,26 +792,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::i64, { 41, 24, 2, 4 } },
     { ISD::UREM, MVT::i64, { 41, 24, 2, 4 } },
   };
-
-  // A rem paired with the div on the same variable operands in the same block
-  // is free, since the divider already returns the remainder.
-  if ((ISD == ISD::UREM || ISD == ISD::SREM) && CostKind != TTI::TCK_Latency &&
-      CtxI && CtxI->getOpcode() == Opcode &&
-      !isa<Constant>(CtxI->getOperand(1)) &&
-      hasDivRemOp(Ty, ISD == ISD::SREM)) {
-    using namespace PatternMatch;
-    // Limit the use list walk to save compile time.
-    constexpr unsigned MaxUses = 64;
-    unsigned DivOpcode =
-        ISD == ISD::UREM ? Instruction::UDiv : Instruction::SDiv;
-    const Value *X = CtxI->getOperand(0);
-    const Value *Y = CtxI->getOperand(1);
-    if (!Y->hasNUsesOrMore(MaxUses) && any_of(Y->users(), [&](const User *U) {
-          return match(U, m_BinOp(DivOpcode, m_Specific(X), m_Specific(Y))) &&
-                 cast<Instruction>(U)->getParent() == CtxI->getParent();
-        }))
-      return TTI::TCC_Free;
-  }
 
   if (!LT.second.isVector() && !Op2Info.isConstant())
     if (const auto *Entry =
