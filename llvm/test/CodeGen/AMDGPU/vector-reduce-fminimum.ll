@@ -1123,30 +1123,30 @@ define half @test_vector_reduce_fminimum_v16half(<16 x half> %v) {
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_fminimum_v16half:
 ; GFX11-SDAG-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_pk_min_f16 v8, v1, v5
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1.l, v5.l
-; GFX11-SDAG-TRUE16-NEXT:    v_pk_min_f16 v9, v0, v4
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0x7e00, v8.l, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1.h, v5.h
-; GFX11-SDAG-TRUE16-NEXT:    v_pk_min_f16 v5, v2, v6
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0x7e00, v8.h, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0.l, v4.l
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v9.l, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0.h, v4.h
-; GFX11-SDAG-TRUE16-NEXT:    v_pk_min_f16 v4, v3, v7
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v9.h, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v2.l, v6.l
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v2.l, 0x7e00, v5.l, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v2.h, v6.h
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v2.h, 0x7e00, v5.h, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_pk_min_f16 v8, v3, v7
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v3.l, v7.l
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v3.l, 0x7e00, v4.l, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_pk_min_f16 v9, v2, v6
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v3.l, 0x7e00, v8.l, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v3.h, v7.h
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v3.h, 0x7e00, v4.h, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_pk_min_f16 v7, v1, v5
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v3.h, 0x7e00, v8.h, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v2.l, v6.l
+; GFX11-SDAG-TRUE16-NEXT:    v_pk_min_f16 v8, v0, v4
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v2.l, 0x7e00, v9.l, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v2.h, v6.h
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v2.h, 0x7e00, v9.h, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0.l, v4.l
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v8.l, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0.h, v4.h
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v8.h, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1.l, v5.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_min_f16 v4, v0, v2
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0x7e00, v7.l, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1.h, v5.h
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0x7e00, v7.h, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0.l, v2.l
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_min_f16 v5, v1, v3
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v4.l, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0.h, v2.h
