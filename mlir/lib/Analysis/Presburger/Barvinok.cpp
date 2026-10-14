@@ -416,6 +416,20 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
         ineq[k] = subset(j, k);
       tangentCone.addInequality(ineq);
     }
+    // There might be more active inequalities other than the ones chosen.
+    // For an inequality Ax + Bp + c >= 0 to be active, the equality must hold;
+    // This means the corresponding row of the active region must be zero,
+    // since that is produced by substituting `x` back into the inequality.
+    for (unsigned j = 0, e = activeRegion.getNumRows(); j < e; ++j) {
+      if (llvm::any_of(activeRegion.getRow(j),
+                       [](const Fraction &x) { return x != 0; }))
+        continue;
+      SmallVector<DynamicAPInt> ineq(numVars + 1);
+      for (unsigned k = 0; k < numVars; ++k)
+        ineq[k] = remainder(j, k);
+      tangentCone.addInequality(ineq);
+    }
+
     // We assume that the tangent cone is unimodular, so there is no need
     // to decompose it.
     //
