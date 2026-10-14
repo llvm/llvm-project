@@ -38,7 +38,7 @@ template <contiguous_iterator _Iterator>
 __parse_number_result(_Iterator, uint32_t) -> __parse_number_result<_Iterator>;
 
 template <contiguous_iterator _Iterator>
-_LIBCPP_HIDE_FROM_ABI constexpr __parse_number_result<_Iterator> __parse_number(_Iterator __begin, _Iterator __end);
+constexpr __parse_number_result<_Iterator> __parse_number(_Iterator __begin, _Iterator __end);
 
 /**
  * The maximum value of a numeric argument.
@@ -55,15 +55,13 @@ inline constexpr uint32_t __number_max = INT32_MAX;
 
 namespace __detail {
 template <contiguous_iterator _Iterator>
-_LIBCPP_HIDE_FROM_ABI constexpr __parse_number_result<_Iterator>
-__parse_zero(_Iterator __begin, _Iterator, auto& __parse_ctx) {
+constexpr __parse_number_result<_Iterator> __parse_zero(_Iterator __begin, _Iterator, auto& __parse_ctx) {
   __parse_ctx.check_arg_id(0);
   return {++__begin, 0}; // can never be larger than the maximum.
 }
 
 template <contiguous_iterator _Iterator>
-_LIBCPP_HIDE_FROM_ABI constexpr __parse_number_result<_Iterator>
-__parse_automatic(_Iterator __begin, _Iterator, auto& __parse_ctx) {
+constexpr __parse_number_result<_Iterator> __parse_automatic(_Iterator __begin, _Iterator, auto& __parse_ctx) {
   size_t __value = __parse_ctx.next_arg_id();
   _LIBCPP_ASSERT_UNCATEGORIZED(__value <= __number_max, "Compilers don't support this number of arguments");
 
@@ -71,8 +69,7 @@ __parse_automatic(_Iterator __begin, _Iterator, auto& __parse_ctx) {
 }
 
 template <contiguous_iterator _Iterator>
-_LIBCPP_HIDE_FROM_ABI constexpr __parse_number_result<_Iterator>
-__parse_manual(_Iterator __begin, _Iterator __end, auto& __parse_ctx) {
+constexpr __parse_number_result<_Iterator> __parse_manual(_Iterator __begin, _Iterator __end, auto& __parse_ctx) {
   __parse_number_result<_Iterator> __r = __format::__parse_number(__begin, __end);
   __parse_ctx.check_arg_id(__r.__value);
   return __r;
@@ -87,8 +84,7 @@ __parse_manual(_Iterator __begin, _Iterator __end, auto& __parse_ctx) {
  * allows a maximum value of 2147483647.
  */
 template <contiguous_iterator _Iterator>
-_LIBCPP_HIDE_FROM_ABI constexpr __parse_number_result<_Iterator>
-__parse_number(_Iterator __begin, _Iterator __end_input) {
+constexpr __parse_number_result<_Iterator> __parse_number(_Iterator __begin, _Iterator __end_input) {
   using _CharT = iter_value_t<_Iterator>;
   static_assert(__format::__number_max == INT32_MAX, "The algorithm is implemented based on this value.");
   /*
@@ -131,8 +127,7 @@ __parse_number(_Iterator __begin, _Iterator __end_input) {
  * should be the closing '}' of the arg-id.
  */
 template <contiguous_iterator _Iterator>
-_LIBCPP_HIDE_FROM_ABI constexpr __parse_number_result<_Iterator>
-__parse_arg_id(_Iterator __begin, _Iterator __end, auto& __parse_ctx) {
+constexpr __parse_number_result<_Iterator> __parse_arg_id(_Iterator __begin, _Iterator __end, auto& __parse_ctx) {
   using _CharT = iter_value_t<_Iterator>;
   switch (*__begin) {
   case _CharT('0'):

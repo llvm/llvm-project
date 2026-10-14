@@ -52,14 +52,12 @@ template <input_or_output_iterator _Iter, sentinel_for<_Iter> _Sent>
   requires(!same_as<_Iter, _Sent> && copyable<_Iter>)
 class common_iterator {
   struct __proxy {
-    _LIBCPP_HIDE_FROM_ABI constexpr const iter_value_t<_Iter>* operator->() const noexcept {
-      return std::addressof(__value_);
-    }
+    constexpr const iter_value_t<_Iter>* operator->() const noexcept { return std::addressof(__value_); }
     iter_value_t<_Iter> __value_;
   };
 
   struct __postfix_proxy {
-    _LIBCPP_HIDE_FROM_ABI constexpr const iter_value_t<_Iter>& operator*() const noexcept { return __value_; }
+    constexpr const iter_value_t<_Iter>& operator*() const noexcept { return __value_; }
     iter_value_t<_Iter> __value_;
   };
 
@@ -69,16 +67,16 @@ class common_iterator {
   friend class common_iterator;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI common_iterator()
+  common_iterator()
     requires default_initializable<_Iter>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr common_iterator(_Iter __i) : __hold_(in_place_type<_Iter>, std::move(__i)) {}
-  _LIBCPP_HIDE_FROM_ABI constexpr common_iterator(_Sent __s) : __hold_(in_place_type<_Sent>, std::move(__s)) {}
+  constexpr common_iterator(_Iter __i) : __hold_(in_place_type<_Iter>, std::move(__i)) {}
+  constexpr common_iterator(_Sent __s) : __hold_(in_place_type<_Sent>, std::move(__s)) {}
 
   template <class _I2, class _S2>
     requires convertible_to<const _I2&, _Iter> && convertible_to<const _S2&, _Sent>
-  _LIBCPP_HIDE_FROM_ABI constexpr common_iterator(const common_iterator<_I2, _S2>& __other)
+  constexpr common_iterator(const common_iterator<_I2, _S2>& __other)
       : __hold_([&]() -> variant<_Iter, _Sent> {
           _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
               !__other.__hold_.valueless_by_exception(), "Attempted to construct from a valueless common_iterator");
@@ -90,7 +88,7 @@ public:
   template <class _I2, class _S2>
     requires convertible_to<const _I2&, _Iter> && convertible_to<const _S2&, _Sent> &&
              assignable_from<_Iter&, const _I2&> && assignable_from<_Sent&, const _S2&>
-  _LIBCPP_HIDE_FROM_ABI common_iterator& operator=(const common_iterator<_I2, _S2>& __other) {
+  common_iterator& operator=(const common_iterator<_I2, _S2>& __other) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__other.__hold_.valueless_by_exception(), "Attempted to assign from a valueless common_iterator");
 
@@ -112,13 +110,13 @@ public:
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() {
+  [[nodiscard]] constexpr decltype(auto) operator*() {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         std::holds_alternative<_Iter>(__hold_), "Attempted to dereference a non-dereferenceable common_iterator");
     return *std::__unchecked_get<_Iter>(__hold_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const
+  constexpr decltype(auto) operator*() const
     requires __dereferenceable<const _Iter>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -127,7 +125,7 @@ public:
   }
 
   template <class _I2 = _Iter>
-  _LIBCPP_HIDE_FROM_ABI auto operator->() const
+  auto operator->() const
     requires indirectly_readable<const _I2> && (requires(const _I2& __i) {
                __i.operator->();
              } || is_reference_v<iter_reference_t<_I2>> || constructible_from<iter_value_t<_I2>, iter_reference_t<_I2>>)
@@ -144,14 +142,14 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI common_iterator& operator++() {
+  common_iterator& operator++() {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         std::holds_alternative<_Iter>(__hold_), "Attempted to increment a non-dereferenceable common_iterator");
     ++std::__unchecked_get<_Iter>(__hold_);
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI decltype(auto) operator++(int) {
+  decltype(auto) operator++(int) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         std::holds_alternative<_Iter>(__hold_), "Attempted to increment a non-dereferenceable common_iterator");
     if constexpr (forward_iterator<_Iter>) {
@@ -171,8 +169,7 @@ public:
 
   template <class _I2, sentinel_for<_Iter> _S2>
     requires sentinel_for<_Sent, _I2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator==(const common_iterator& __x, const common_iterator<_I2, _S2>& __y) {
+  friend constexpr bool operator==(const common_iterator& __x, const common_iterator<_I2, _S2>& __y) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__x.__hold_.valueless_by_exception(), "Attempted to compare a valueless common_iterator");
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -192,8 +189,7 @@ public:
 
   template <class _I2, sentinel_for<_Iter> _S2>
     requires sentinel_for<_Sent, _I2> && equality_comparable_with<_Iter, _I2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator==(const common_iterator& __x, const common_iterator<_I2, _S2>& __y) {
+  friend constexpr bool operator==(const common_iterator& __x, const common_iterator<_I2, _S2>& __y) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__x.__hold_.valueless_by_exception(), "Attempted to compare a valueless common_iterator");
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -216,8 +212,7 @@ public:
 
   template <sized_sentinel_for<_Iter> _I2, sized_sentinel_for<_Iter> _S2>
     requires sized_sentinel_for<_Sent, _I2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_I2>
-  operator-(const common_iterator& __x, const common_iterator<_I2, _S2>& __y) {
+  friend constexpr iter_difference_t<_I2> operator-(const common_iterator& __x, const common_iterator<_I2, _S2>& __y) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__x.__hold_.valueless_by_exception(), "Attempted to subtract from a valueless common_iterator");
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -238,7 +233,7 @@ public:
     return std::__unchecked_get<_Sent>(__x.__hold_) - std::__unchecked_get<_I2>(__y.__hold_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
+  [[nodiscard]] friend constexpr decltype(auto)
   iter_move(const common_iterator& __i) noexcept(noexcept(ranges::iter_move(std::declval<const _Iter&>())))
     requires input_iterator<_Iter>
   {
@@ -248,8 +243,7 @@ public:
   }
 
   template <indirectly_swappable<_Iter> _I2, class _S2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr void
-  iter_swap(const common_iterator& __x, const common_iterator<_I2, _S2>& __y) noexcept(
+  friend constexpr void iter_swap(const common_iterator& __x, const common_iterator<_I2, _S2>& __y) noexcept(
       noexcept(ranges::iter_swap(std::declval<const _Iter&>(), std::declval<const _I2&>()))) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         std::holds_alternative<_Iter>(__x.__hold_), "Attempted to iter_swap a non-dereferenceable common_iterator");

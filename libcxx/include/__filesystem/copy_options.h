@@ -34,33 +34,27 @@ enum class copy_options : unsigned short {
   __in_recursive_copy = 512,
 };
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator&(copy_options __lhs, copy_options __rhs) {
+[[nodiscard]] inline constexpr copy_options operator&(copy_options __lhs, copy_options __rhs) {
   return static_cast<copy_options>(static_cast<unsigned short>(__lhs) & static_cast<unsigned short>(__rhs));
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator|(copy_options __lhs, copy_options __rhs) {
+[[nodiscard]] inline constexpr copy_options operator|(copy_options __lhs, copy_options __rhs) {
   return static_cast<copy_options>(static_cast<unsigned short>(__lhs) | static_cast<unsigned short>(__rhs));
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator^(copy_options __lhs, copy_options __rhs) {
+[[nodiscard]] inline constexpr copy_options operator^(copy_options __lhs, copy_options __rhs) {
   return static_cast<copy_options>(static_cast<unsigned short>(__lhs) ^ static_cast<unsigned short>(__rhs));
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator~(copy_options __lhs) {
+[[nodiscard]] inline constexpr copy_options operator~(copy_options __lhs) {
   return static_cast<copy_options>(~static_cast<unsigned short>(__lhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline copy_options& operator&=(copy_options& __lhs, copy_options __rhs) {
-  return __lhs = __lhs & __rhs;
-}
+inline copy_options& operator&=(copy_options& __lhs, copy_options __rhs) { return __lhs = __lhs & __rhs; }
 
-_LIBCPP_HIDE_FROM_ABI inline copy_options& operator|=(copy_options& __lhs, copy_options __rhs) {
-  return __lhs = __lhs | __rhs;
-}
+inline copy_options& operator|=(copy_options& __lhs, copy_options __rhs) { return __lhs = __lhs | __rhs; }
 
-_LIBCPP_HIDE_FROM_ABI inline copy_options& operator^=(copy_options& __lhs, copy_options __rhs) {
-  return __lhs = __lhs ^ __rhs;
-}
+inline copy_options& operator^=(copy_options& __lhs, copy_options __rhs) { return __lhs = __lhs ^ __rhs; }
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

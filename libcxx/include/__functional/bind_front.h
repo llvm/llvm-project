@@ -31,8 +31,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __bind_front_op {
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const noexcept(
-      noexcept(std::invoke(std::forward<_Args>(__args)...))) -> decltype(std::invoke(std::forward<_Args>(__args)...)) {
+  constexpr auto operator()(_Args&&... __args) const noexcept(noexcept(std::invoke(std::forward<_Args>(__args)...)))
+      -> decltype(std::invoke(std::forward<_Args>(__args)...)) {
     return std::invoke(std::forward<_Args>(__args)...);
   }
 };
@@ -45,7 +45,7 @@ struct __bind_front_t : __perfect_forward<__bind_front_op, _Fn, _BoundArgs...> {
 template <class _Fn, class... _Args>
   requires is_constructible_v<decay_t<_Fn>, _Fn> && is_move_constructible_v<decay_t<_Fn>> &&
            (is_constructible_v<decay_t<_Args>, _Args> && ...) && (is_move_constructible_v<decay_t<_Args>> && ...)
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto bind_front(_Fn&& __f, _Args&&... __args) {
+[[nodiscard]] constexpr auto bind_front(_Fn&& __f, _Args&&... __args) {
   return __bind_front_t<decay_t<_Fn>, decay_t<_Args>...>(std::forward<_Fn>(__f), std::forward<_Args>(__args)...);
 }
 
@@ -61,7 +61,7 @@ struct __nttp_bind_front_t<_Fn, index_sequence<_Indices...>, _BoundArgs...> {
   tuple<_BoundArgs...> __bound_args_;
 
   template <class _Self, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(this _Self&& __self, _Args&&... __args) noexcept(noexcept(std::invoke(
+  constexpr auto operator()(this _Self&& __self, _Args&&... __args) noexcept(noexcept(std::invoke(
       _Fn, std::get<_Indices>(std::forward<_Self>(__self).__bound_args_)..., std::forward<_Args>(__args)...)))
       -> decltype(std::invoke(
           _Fn, std::get<_Indices>(std::forward<_Self>(__self).__bound_args_)..., std::forward<_Args>(__args)...)) {
@@ -73,7 +73,7 @@ struct __nttp_bind_front_t<_Fn, index_sequence<_Indices...>, _BoundArgs...> {
 template <auto _Fn>
 struct __nttp_bind_without_bound_args_t {
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  static constexpr auto
   operator()(_Args&&... __args) noexcept(noexcept(std::invoke(_Fn, std::forward<_Args>(__args)...)))
       -> decltype(std::invoke(_Fn, std::forward<_Args>(__args)...)) {
     return std::invoke(_Fn, std::forward<_Args>(__args)...);
@@ -81,7 +81,7 @@ struct __nttp_bind_without_bound_args_t {
 };
 
 template <auto _Fn, class... _Args>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto bind_front(_Args&&... __args) {
+[[nodiscard]] constexpr auto bind_front(_Args&&... __args) {
   static_assert((is_constructible_v<decay_t<_Args>, _Args> && ...),
                 "bind_front requires all decay_t<Args> to be constructible from respective Args");
   static_assert((is_move_constructible_v<decay_t<_Args>> && ...),

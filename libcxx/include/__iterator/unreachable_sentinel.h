@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct unreachable_sentinel_t {
   template <weakly_incrementable _Iter>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(unreachable_sentinel_t, const _Iter&) noexcept {
+  friend constexpr bool operator==(unreachable_sentinel_t, const _Iter&) noexcept {
     return false;
   }
 };
