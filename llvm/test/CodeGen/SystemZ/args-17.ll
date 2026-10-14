@@ -8,6 +8,6 @@ define i8 @callee_MissingRetAttr() {
   ret i8 -1
 }
 
-; CHECK: ERROR:  (C ABI violation) missing extension attribute on arg 0.
+; CHECK: ERROR: (C ABI violation) missing extension attribute on return value.
 ; CHECK: Returning from function: i8 @callee_MissingRetAttr()
 ; CHECK: UNREACHABLE executed

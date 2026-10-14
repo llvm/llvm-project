@@ -14,7 +14,7 @@ define i64 @bar(i32 zeroext %Arg, ...) {
   ret i64 %S
 }
 
-; CHECK: ERROR:  (C ABI violation) missing extension attribute on arg 1.
+; CHECK: ERROR: (C ABI violation) missing extension attribute on arg 1.
 ; CHECK: Callee: i64 @bar(i32 zeroext, ...)
 ; CHECK: Caller: i64 @caller(i32)
 ; CHECK:         %res = call i64 @bar(i32 zeroext %Arg, i32 0)

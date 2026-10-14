@@ -11596,8 +11596,9 @@ bool SystemZTargetLowering::verifyNarrowIntegerArgs(
 
     // Per the C ABI there must be an extension.
     if (C_ABI && !Flags.isSExt() && !Flags.isZExt() && !Flags.isNoExt()) {
-      errs() << "ERROR:  (C ABI violation) missing extension attribute on arg "
-             << OrigIdx << ".\n";
+      errs() << "ERROR: (C ABI violation) missing extension attribute on "
+             << (IsRet ? "return value" : Twine("arg ") + Twine(OrigIdx))
+             << ".\n";
       return false;
     }
 
@@ -11607,11 +11608,11 @@ bool SystemZTargetLowering::verifyNarrowIntegerArgs(
       const AttributeSet Attrs =
           IsRet ? FunAttrs.getRetAttrs() : FunAttrs.getParamAttrs(OrigIdx);
       if (Attrs.hasAttribute(Attribute::SExt) && !Flags.isSExt()) {
-        errs() << "ERROR : Missing SExt on arg " << OrigIdx << ".\n";
+        errs() << "ERROR: Missing SExt on arg " << OrigIdx << ".\n";
         return false;
       }
       if (Attrs.hasAttribute(Attribute::ZExt) && !Flags.isZExt()) {
-        errs() << "ERROR : Missing ZExt on arg " << OrigIdx << ".\n";
+        errs() << "ERROR: Missing ZExt on arg " << OrigIdx << ".\n";
         return false;
       }
     }

@@ -10,7 +10,7 @@ define void @caller(ptr %fptr) {
   ret void
 }
 
-; CHECK: ERROR:  (C ABI violation) missing extension attribute on arg 0.
+; CHECK: ERROR: (C ABI violation) missing extension attribute on arg 0.
 ; CHECK: Callee: -
 ; CHECK: Caller: void @caller(ptr)
 ; CHECK:         call void %fptr(i32 0)
