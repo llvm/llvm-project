@@ -585,6 +585,12 @@ functions:
     return_type: void
     arguments:
       - type: void
+  - name: syncfs
+    standards:
+      - linux
+    return_type: int
+    arguments:
+      - type: int
   - name: sysconf
     standards:
       - posix

@@ -1041,8 +1041,10 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       llvm_unreachable("Unhandled cast SCEV");
     }
 
-    // When expanding ptrtoaddr, first check if there's an existing ptrtoint we
-    // can reuse.
+    // For ptrtoaddr of an IR value, reuse an existing cast dominating the
+    // entry if there is one. Otherwise leave it to SCEVExpander, which places
+    // the cast right after the IR value's definition, so all users can share
+    // it.
     if (Opcode == Instruction::PtrToAddr) {
       VPlan &Plan = Builder.getPlan();
       BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
@@ -1053,6 +1055,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
                   return SE.DT.dominates(CI->getParent(), PH);
                 }))
           return Plan.getOrAddLiveIn(CI);
+        return vputils::getOrCreateVPValueForSCEVExpr(Plan, S);
       }
     }
 

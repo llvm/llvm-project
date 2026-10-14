@@ -4075,6 +4075,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":TransformDialect",
         ":TransformDialectInterfaces",
+        ":TransformDialectUtils",
         ":XeGPUDialect",
         ":XeGPUTransformOpsIncGen",
         ":XeGPUUtils",

@@ -45,6 +45,7 @@ class StoreInst;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Value;
+struct VectorizeOptions;
 class WeakTrackingVH;
 
 /// A private "module" namespace for types and utilities used by this pass.
@@ -62,6 +63,7 @@ struct SLPVectorizerPass : public OptionalPassInfoMixin<SLPVectorizerPass> {
   using GEPListMap = MapVector<Value *, GEPList>;
   using InstSetVector = SmallSetVector<Instruction *, 8>;
 
+  const VectorizeOptions *Opts = nullptr;
   ScalarEvolution *SE = nullptr;
   TargetTransformInfo *TTI = nullptr;
   TargetLibraryInfo *TLI = nullptr;

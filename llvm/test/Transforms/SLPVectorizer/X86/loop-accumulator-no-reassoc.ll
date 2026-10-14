@@ -4,21 +4,19 @@
 define float @two_value_no_reassoc(ptr %p, float %init) {
 ; CHECK-LABEL: @two_value_no_reassoc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SLPRDX_INIT:%.*]] = insertelement <2 x float> splat (float -0.000000e+00), float [[INIT:%.*]], i32 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SLPRDX_ACC:%.*]] = phi <2 x float> [ [[SLPRDX_INIT]], [[ENTRY]] ], [ [[SLPRDX_ACC1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi float [ [[INIT:%.*]], [[ENTRY]] ], [ [[SUM:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr <2 x float>, ptr [[P:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    [[V:%.*]] = load <2 x float>, ptr [[P0]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[V]], <2 x float> <float -0.000000e+00, float poison>, <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    [[SLPRDX_ACC1]] = fadd <2 x float> [[SLPRDX_ACC]], [[TMP0]]
+; CHECK-NEXT:    [[M:%.*]] = extractelement <2 x float> [[V]], i64 1
+; CHECK-NEXT:    [[SUM]] = fadd float [[ACC]], [[M]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[SLPRDX_EXIT:%.*]] = phi <2 x float> [ [[SLPRDX_ACC1]], [[LOOP]] ]
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.vector.reduce.fadd.v2f32(float -0.000000e+00, <2 x float> [[SLPRDX_EXIT]])
+; CHECK-NEXT:    [[RES:%.*]] = phi float [ [[SUM]], [[LOOP]] ]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
 entry:
@@ -43,21 +41,19 @@ exit:
 define float @two_value_reassoc(ptr %p, float %init) {
 ; CHECK-LABEL: @two_value_reassoc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SLPRDX_INIT:%.*]] = insertelement <2 x float> splat (float -0.000000e+00), float [[INIT:%.*]], i32 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SLPRDX_ACC:%.*]] = phi <2 x float> [ [[SLPRDX_INIT]], [[ENTRY]] ], [ [[SLPRDX_ACC1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi float [ [[INIT:%.*]], [[ENTRY]] ], [ [[SUM:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr <2 x float>, ptr [[P:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    [[V:%.*]] = load <2 x float>, ptr [[P0]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[V]], <2 x float> <float -0.000000e+00, float poison>, <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc <2 x float> [[SLPRDX_ACC]], [[TMP0]]
+; CHECK-NEXT:    [[M:%.*]] = extractelement <2 x float> [[V]], i64 1
+; CHECK-NEXT:    [[SUM]] = fadd reassoc float [[ACC]], [[M]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[SLPRDX_EXIT:%.*]] = phi <2 x float> [ [[SLPRDX_ACC1]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v2f32(float -0.000000e+00, <2 x float> [[SLPRDX_EXIT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = phi float [ [[SUM]], [[LOOP]] ]
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
