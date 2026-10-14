@@ -75,6 +75,7 @@
 !rec_UDataMarkHoldsData = !cir.union<"UDataMarkHoldsData" {data !rec_NotEmpty, data !s8i}>
 !rec_SWithNuaEmptyUnion = !cir.struct<"SWithNuaEmptyUnion" {data !rec_UNuaEmptyInt, data !s32i}>
 !rec_UX87Scalar = !cir.union<"UX87Scalar" {data !cir.long_double<!cir.f80>, data !cir.array<!u8i x 11>}>
+!rec_UX87VecArr = !cir.union<"UX87VecArr" {data !cir.long_double<!cir.f80>, data !cir.array<!cir.vector<3 x !s8i> x 3>}>
 !rec_UX87Twice = !cir.union<"UX87Twice" {data !cir.vector<1 x !cir.long_double<!cir.f80>>, data !cir.vector<1 x !cir.long_double<!cir.f80>>}>
 !rec_UX87Bytes = !cir.union<"UX87Bytes" {data !cir.vector<1 x !cir.long_double<!cir.f80>>, data !cir.array<!u8i x 16>}>
 !rec_SX87 = !cir.struct<"SX87" {data !cir.vector<1 x !cir.long_double<!cir.f80>>}>
@@ -293,6 +294,14 @@ module attributes {
   // CHECK:   %[[X87SPILL:.*]] = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87Scalar>
   // CHECK-NEXT:   cir.copy %[[X87VIEW]] align(16) to %[[X87SPILL]] align(16) : !cir.ptr<!rec_UX87Scalar>
   // CHECK-NEXT:   cir.return
+
+  // A three-byte vector's alloc size is 4, so the last of these three array
+  // elements reaches byte 11, past the 10 bytes a long double stores.
+  cir.func @take_union_x87_vec_arr(%arg0: !rec_UX87VecArr) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_union_x87_vec_arr(%arg0: !u64i, %arg1: !u64i)
 
   // Two one-element vectors pass in one SSE register, classified SSE plus
   // SSEUP.

@@ -94,6 +94,18 @@ add_header_library(
 )
 
 add_header_library(
+  sched_yield
+  HDRS
+    sched_yield.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   close
   HDRS
     close.h
@@ -1083,6 +1095,18 @@ add_header_library(
   DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  syncfs
+  HDRS
+    syncfs.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.include.sys_syscall
 )

@@ -302,6 +302,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lockf
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.lockf
+)
+
+add_entrypoint_object(
   lseek
   ALIAS
   DEPENDS
@@ -460,6 +467,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sync
+)
+
+add_entrypoint_object(
+  syncfs
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.syncfs
 )
 
 add_entrypoint_object(
