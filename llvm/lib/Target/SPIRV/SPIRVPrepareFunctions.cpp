@@ -509,6 +509,34 @@ static void lowerFMinimumMaximum(IntrinsicInst *II,
   EraseFromParent.push_back(II);
 }
 
+// Replace single NaNs before minnum/maxnum and correct the zero ordering.
+static void
+lowerFMinimumMaximumNum(IntrinsicInst *II,
+                        SmallVector<Instruction *> &EraseFromParent) {
+  IRBuilder<> Builder(II);
+  bool IsMax = II->getIntrinsicID() == Intrinsic::maximumnum;
+  Value *X = II->getArgOperand(0), *Y = II->getArgOperand(1);
+  Type *Ty = X->getType();
+  FastMathFlags FMF = II->getFastMathFlags();
+  if (!FMF.noNaNs()) {
+    X = Builder.CreateSelect(Builder.CreateFCmpUNO(X, X), Y, X);
+    Y = Builder.CreateSelect(Builder.CreateFCmpUNO(Y, Y), X, Y);
+  }
+  // No flags: SPIR-V NSZ and Fast would also drop the sign of same-sign zeros.
+  Value *Res = Builder.CreateIntrinsic(
+      IsMax ? Intrinsic::maxnum : Intrinsic::minnum, {Ty}, {X, Y});
+  if (!FMF.noSignedZeros()) {
+    Value *XNeg = Builder.CreateFCmpOLT(
+        Builder.CreateCopySign(ConstantFP::get(Ty, 1.0), X),
+        ConstantFP::getZero(Ty));
+    Res = Builder.CreateCopySign(Res, IsMax ? Builder.CreateSelect(XNeg, Y, X)
+                                            : Builder.CreateSelect(XNeg, X, Y));
+  }
+  Res->takeName(II);
+  II->replaceAllUsesWith(Res);
+  EraseFromParent.push_back(II);
+}
+
 // ExpandReductions only expands llvm.vector.reduce.fminimum/fmaximum on vectors
 // with a power-of-two number of elements. Expand the others into a chain of
 // llvm.minimum/llvm.maximum, expanded as above.
@@ -566,6 +594,11 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
       case Intrinsic::minimum:
       case Intrinsic::maximum:
         lowerFMinimumMaximum(II, EraseFromParent);
+        Changed = true;
+        break;
+      case Intrinsic::minimumnum:
+      case Intrinsic::maximumnum:
+        lowerFMinimumMaximumNum(II, EraseFromParent);
         Changed = true;
         break;
       case Intrinsic::vector_reduce_fminimum:
