@@ -49,20 +49,24 @@ using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
 void VPlanTransforms::verifyIfRequested(VPlan &Plan) {
-  if (VectorizeOptions::Global.vplan_verify_each && !verifyVPlanIsValid(Plan))
+  const VectorizeOptions &Opts =
+      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  if (Opts.vplan_verify_each && !verifyVPlanIsValid(Plan))
     report_fatal_error("Broken VPlan found, compilation aborted!");
 }
 
 #ifndef NDEBUG
-bool VPlanTransforms::isPrintingRequested() {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
+bool VPlanTransforms::isPrintingRequested(const VPlan &Plan) {
+  const VectorizeOptions &Opts =
+      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
   return Opts.vplan_print_before_all || Opts.vplan_print_after_all ||
          !Opts.vplan_print_before.empty() || !Opts.vplan_print_after.empty();
 }
 
 void VPlanTransforms::printIfRequested(VPlan &Plan, Function *Fn,
                                        StringRef NumberedPassName, bool After) {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
+  const VectorizeOptions &Opts =
+      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
   bool All = After ? Opts.vplan_print_after_all : Opts.vplan_print_before_all;
   ArrayRef<StringRef> Passes =
       After ? Opts.vplan_print_after : Opts.vplan_print_before;
