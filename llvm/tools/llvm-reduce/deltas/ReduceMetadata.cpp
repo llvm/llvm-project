@@ -15,7 +15,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
@@ -25,10 +25,6 @@ static cl::opt<bool> AggressiveMetadataReduction(
     "aggressive-named-md-reduction",
     cl::desc("Reduce named metadata without taking its type into account"),
     cl::cat(LLVMReduceOptions));
-
-static bool shouldKeepDebugIntrinsicMetadata(Instruction &I, MDNode &MD) {
-  return isa<DILocation>(MD) && isa<DbgInfoIntrinsic>(I);
-}
 
 static bool shouldKeepDebugNamedMetadata(NamedMDNode &MD) {
   return MD.getName() == "llvm.dbg.cu" && MD.getNumOperands() != 0;
@@ -115,7 +111,7 @@ void llvm::reduceMetadataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
       SmallVector<std::pair<unsigned, MDNode *>> MDs;
       I.getAllMetadata(MDs);
       for (std::pair<unsigned, MDNode *> &MD : MDs) {
-        if (!shouldKeepDebugIntrinsicMetadata(I, *MD.second) && !O.shouldKeep())
+        if (!O.shouldKeep())
           I.setMetadata(MD.first, nullptr);
       }
     }
