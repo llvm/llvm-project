@@ -4303,7 +4303,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     if (PairedPhys)
       // isLo(Paired) is implicitly true here from the API of
       // getMatchingSuperReg.
-      Hints.insert(static_cast<unsigned short>(PairedPhys));
+      Hints.insert(static_cast<MCPhysReg>(PairedPhys));
     return false;
   }
   case AMDGPURI::Size16: {
@@ -4318,7 +4318,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
     // First prefer the paired physreg.
     if (PairedPhys)
-      Hints.insert(static_cast<unsigned short>(PairedPhys));
+      Hints.insert(static_cast<MCPhysReg>(PairedPhys));
     else {
       // Add all the lo16 physregs.
       // When the Paired operand has not yet been assigned a physreg it is
