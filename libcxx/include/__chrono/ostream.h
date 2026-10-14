@@ -95,6 +95,9 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const file_time<_Duration> __tp
 }
 
 template <class _CharT, class _Traits, class _Duration>
+  requires(requires(basic_ostream<_CharT, _Traits>& __os, const local_time<_Duration> __tp) {
+    __os << sys_time<_Duration>{__tp.time_since_epoch()};
+  })
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const local_time<_Duration> __tp) {
   return __os << sys_time<_Duration>{__tp.time_since_epoch()};
