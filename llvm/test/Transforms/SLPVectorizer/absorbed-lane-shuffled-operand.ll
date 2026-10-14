@@ -15,52 +15,39 @@ define i32 @swap_bytes(ptr %params, ptr %out) {
 ; CHECK-NEXT:    [[TYPE:%.*]] = getelementptr inbounds nuw i8, ptr [[TY]], i64 4
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[TYPE]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @get_size(i32 noundef [[T]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[CALL]], 255
-; CHECK-NEXT:    [[NOT:%.*]] = sub i32 0, [[CALL]]
 ; CHECK-NEXT:    [[PRIV:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 16
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc i32 [[SUB]] to i8
-; CHECK-NEXT:    store i8 [[TMP11]], ptr [[PRIV]], align 1
-; CHECK-NEXT:    [[AND_1:%.*]] = and i32 [[NOT]], 1
-; CHECK-NEXT:    [[SUB2_1:%.*]] = and i32 [[SUB]], 254
-; CHECK-NEXT:    [[OR_1:%.*]] = or disjoint i32 [[AND_1]], [[SUB2_1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = trunc nuw i32 [[OR_1]] to i8
 ; CHECK-NEXT:    [[P_1:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 17
-; CHECK-NEXT:    store i8 [[TMP12]], ptr [[P_1]], align 1
-; CHECK-NEXT:    [[AND_2:%.*]] = and i32 [[NOT]], 2
-; CHECK-NEXT:    [[SUB2_2:%.*]] = and i32 [[SUB]], 253
-; CHECK-NEXT:    [[OR_2:%.*]] = or disjoint i32 [[AND_2]], [[SUB2_2]]
-; CHECK-NEXT:    [[TMP13:%.*]] = trunc nuw i32 [[OR_2]] to i8
 ; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 18
-; CHECK-NEXT:    store i8 [[TMP13]], ptr [[P_2]], align 1
-; CHECK-NEXT:    [[AND_3:%.*]] = and i32 [[NOT]], 3
-; CHECK-NEXT:    [[SUB2_3:%.*]] = and i32 [[SUB]], 252
-; CHECK-NEXT:    [[OR_3:%.*]] = or disjoint i32 [[AND_3]], [[SUB2_3]]
-; CHECK-NEXT:    [[TMP14:%.*]] = trunc nuw i32 [[OR_3]] to i8
 ; CHECK-NEXT:    [[P_3:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 19
-; CHECK-NEXT:    store i8 [[TMP14]], ptr [[P_3]], align 1
-; CHECK-NEXT:    [[AND_4:%.*]] = and i32 [[NOT]], 4
-; CHECK-NEXT:    [[SUB2_4:%.*]] = and i32 [[SUB]], 251
-; CHECK-NEXT:    [[OR_4:%.*]] = or disjoint i32 [[AND_4]], [[SUB2_4]]
-; CHECK-NEXT:    [[TMP15:%.*]] = trunc nuw i32 [[OR_4]] to i8
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 20
-; CHECK-NEXT:    store i8 [[TMP15]], ptr [[P_4]], align 1
-; CHECK-NEXT:    [[AND_5:%.*]] = and i32 [[NOT]], 5
-; CHECK-NEXT:    [[SUB2_5:%.*]] = and i32 [[SUB]], 250
-; CHECK-NEXT:    [[OR_5:%.*]] = or disjoint i32 [[AND_5]], [[SUB2_5]]
-; CHECK-NEXT:    [[TMP16:%.*]] = trunc nuw i32 [[OR_5]] to i8
 ; CHECK-NEXT:    [[P_5:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 21
-; CHECK-NEXT:    store i8 [[TMP16]], ptr [[P_5]], align 1
-; CHECK-NEXT:    [[AND_6:%.*]] = and i32 [[NOT]], 6
-; CHECK-NEXT:    [[SUB2_6:%.*]] = and i32 [[SUB]], 249
-; CHECK-NEXT:    [[OR_6:%.*]] = or disjoint i32 [[AND_6]], [[SUB2_6]]
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc nuw i32 [[OR_6]] to i8
 ; CHECK-NEXT:    [[P_6:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 22
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[CALL]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> <i32 -255, i32 poison>, i32 [[CALL]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = and <8 x i32> [[TMP3]], <i32 -1, i32 1, i32 253, i32 3, i32 251, i32 5, i32 249, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> <i32 -1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, <8 x i32> [[TMP3]], <8 x i32> <i32 0, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 1, i32 2, i32 1, i32 2, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = and <8 x i32> <i32 0, i32 254, i32 2, i32 252, i32 4, i32 250, i32 6, i32 248>, [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or disjoint <8 x i32> [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <8 x i32> [[TMP9]] to <8 x i8>
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i8> [[TMP10]], i64 0
+; CHECK-NEXT:    store i8 [[TMP11]], ptr [[PRIV]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x i8> [[TMP10]], i64 1
+; CHECK-NEXT:    store i8 [[TMP12]], ptr [[P_1]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i8> [[TMP10]], i64 2
+; CHECK-NEXT:    store i8 [[TMP13]], ptr [[P_2]], align 1
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <8 x i8> [[TMP10]], i64 3
+; CHECK-NEXT:    store i8 [[TMP14]], ptr [[P_3]], align 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x i8> [[TMP10]], i64 4
+; CHECK-NEXT:    store i8 [[TMP15]], ptr [[P_4]], align 1
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i8> [[TMP10]], i64 5
+; CHECK-NEXT:    store i8 [[TMP16]], ptr [[P_5]], align 1
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i8> [[TMP10]], i64 6
 ; CHECK-NEXT:    store i8 [[TMP17]], ptr [[P_6]], align 1
-; CHECK-NEXT:    [[AND_7:%.*]] = and i32 [[NOT]], 7
-; CHECK-NEXT:    [[SUB2_7:%.*]] = and i32 [[SUB]], 248
-; CHECK-NEXT:    [[OR_7:%.*]] = or disjoint i32 [[AND_7]], [[SUB2_7]]
-; CHECK-NEXT:    [[TMP18:%.*]] = trunc nuw i32 [[OR_7]] to i8
 ; CHECK-NEXT:    [[P_7:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 23
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x i8> [[TMP10]], i64 7
 ; CHECK-NEXT:    store i8 [[TMP18]], ptr [[P_7]], align 1
 ; CHECK-NEXT:    ret i32 0
 ;

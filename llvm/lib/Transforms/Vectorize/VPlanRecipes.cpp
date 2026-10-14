@@ -16,6 +16,7 @@
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
+#include "VectorizeOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,7 +36,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -47,10 +47,6 @@ using namespace llvm::VPlanPatternMatch;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
-
-namespace llvm {
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-} // namespace llvm
 
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
@@ -325,12 +321,11 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     RecipeCost = 0;
   } else {
     RecipeCost = computeCost(VF, Ctx);
-    if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
-        RecipeCost.isValid()) {
+    if (Ctx.Opts.force_target_instruction_cost && RecipeCost.isValid()) {
       // VPDerivedIVRecipe and VPScalarIVStepsRecipe never have underlying
       // instructions.
       if (UI || isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(this))
-        RecipeCost = InstructionCost(ForceTargetInstructionCost);
+        RecipeCost = InstructionCost(*Ctx.Opts.force_target_instruction_cost);
       else
         RecipeCost = InstructionCost(0);
     }
@@ -3691,7 +3686,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   // TODO: Support any-of reductions.
   assert(
       (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) ||
-       ForceTargetInstructionCost.getNumOccurrences() > 0) &&
+       Ctx.Opts.force_target_instruction_cost) &&
       "Any-of reduction not implemented in VPlan-based cost model currently.");
 
   // Note that TTI should model the cost of moving result to the scalar register
