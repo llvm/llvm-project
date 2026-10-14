@@ -299,7 +299,7 @@ protected:
   virtual Error addMachinePasses(PassManagerWrapper &PMW);
 
   /// Add passes to lower exception handling for the code generator.
-  void addPassesToHandleExceptions(PassManagerWrapper &PMW);
+  virtual void addPassesToHandleExceptions(PassManagerWrapper &PMW);
 
   /// Add common target configurable passes that perform LLVM IR to IR
   /// transforms following machine independent optimization.
