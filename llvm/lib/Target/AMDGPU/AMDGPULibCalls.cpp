@@ -1157,7 +1157,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   nval = Exp2Call;
 
   if (needcopysign) {
-    Type *nTyS = B.getIntNTy(eltType->getScalarSizeInBits());
+    Type *nTyS =
+        B.getIntNTy(static_cast<unsigned>(eltType->getPrimitiveSizeInBits()));
     Type *nTy = FPOp->getType()->getWithNewType(nTyS);
     Value *opr_n = FPOp->getOperand(1);
     if (opr_n->getType()->getScalarType()->isIntegerTy())
