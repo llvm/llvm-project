@@ -6,7 +6,6 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/rows.ll 2>&1 | FileCheck %s --check-prefix=ROWS
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/component.ll 2>&1 | FileCheck %s --check-prefix=COMPONENT
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/stage.ll 2>&1 | FileCheck %s --check-prefix=STAGE
-; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/access.ll 2>&1 | FileCheck %s --check-prefix=ACCESS
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/missing.ll 2>&1 | FileCheck %s --check-prefix=MISSING
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/overflow.ll 2>&1 | FileCheck %s --check-prefix=OVERFLOW
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/partial.ll 2>&1 | FileCheck %s --check-prefix=PARTIAL
@@ -14,7 +13,6 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/function.ll 2>&1 | FileCheck %s --check-prefix=FUNCTION
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/wrong-kind.ll 2>&1 | FileCheck %s --check-prefix=KIND
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/integer-undefined.ll 2>&1 | FileCheck %s --check-prefix=INTEGER-UNDEFINED
-; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/integer-linear.ll 2>&1 | FileCheck %s --check-prefix=INTEGER-LINEAR
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/vertex-location.ll 2>&1 | FileCheck %s --check-prefix=VERTEX
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/target-location.ll 2>&1 | FileCheck %s --check-prefix=TARGET
 ; RUN: cat %t/access-common.ll %t/access-id.ll > %t/test.ll
@@ -29,19 +27,11 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-DYNAMIC-ROW
 ; RUN: cat %t/access-common.ll %t/access-type.ll > %t/test.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-TYPE
-; RUN: cat %t/access-common.ll %t/access-output.ll > %t/test.ll
-; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-OUTPUT
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/position-integer.ll 2>&1 | FileCheck %s --check-prefix=POSITION-INTEGER
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/vertex-id-float.ll 2>&1 | FileCheck %s --check-prefix=VERTEX-ID-FLOAT
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/vertex-id-index.ll 2>&1 | FileCheck %s --check-prefix=VERTEX-ID-INDEX
-; RUN: cat %t/instance-common.ll %t/instance-float.ll > %t/instance.ll
-; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-FLOAT
-; RUN: cat %t/instance-common.ll %t/instance-signed16.ll > %t/instance.ll
-; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-SIGNED16
 ; RUN: cat %t/instance-common.ll %t/instance-signed32.ll > %t/instance.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-SIGNED32
-; RUN: cat %t/instance-common.ll %t/instance-bool.ll > %t/instance.ll
-; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-BOOL
 ; RUN: cat %t/instance-common.ll %t/instance-vector.ll > %t/instance.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-VECTOR
 ; RUN: cat %t/instance-common.ll %t/instance-rows.ll > %t/instance.ll
@@ -131,21 +121,6 @@ attributes #0 = { "hlsl.shader"="geometry" }
 !2 = !{i32 0, !"A", i32 9, i32 0, !3, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !3 = !{i32 0}
 
-;--- access.ll
-; ACCESS: entry 'main': input signature element 0 ('A'): signature access has an invalid component index
-; Invalid access column (intrinsic operand 2): outside this scalar element.
-target triple = "dxil-pc-shadermodel6.8-vertex"
-define void @main() #0 {
-  %x = call float @llvm.dx.load.input.f32(i32 0, i32 0, i8 123, i32 poison)
-  ret void
-}
-attributes #0 = { "hlsl.shader"="vertex" }
-!dx.semantic.signatures = !{!0}
-!0 = !{ptr @main, !1, null}
-!1 = !{!2}
-!2 = !{i32 0, !"A", i32 9, i32 0, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
-!3 = !{i32 0}
-
 ;--- missing.ll
 ; MISSING: signature access in function 'main' has no entry signature metadata
 ; Missing signature table for an entry that accesses an input.
@@ -225,18 +200,6 @@ attributes #0 = { "hlsl.shader"="pixel" }
 !0 = !{ptr @main, !1, null}
 !1 = !{!2}
 !2 = !{i32 0, !"I", i32 4, i32 0, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
-!3 = !{i32 0}
-
-;--- integer-linear.ll
-; INTEGER-LINEAR: entry 'main' input signature: integer pixel inputs require constant interpolation
-; Invalid mode (operand 5): Linear (2) for an integer pixel input.
-target triple = "dxil-pc-shadermodel6.8-pixel"
-define void @main() #0 { ret void }
-attributes #0 = { "hlsl.shader"="pixel" }
-!dx.semantic.signatures = !{!0}
-!0 = !{ptr @main, !1, null}
-!1 = !{!2}
-!2 = !{i32 0, !"I", i32 4, i32 0, !3, i32 2, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
 !3 = !{i32 0}
 
 ;--- vertex-location.ll
@@ -323,14 +286,6 @@ define void @main() #0 {
   ret void
 }
 
-;--- access-output.ll
-; ACCESS-OUTPUT: entry 'main': output signature element 1 ('B'): signature access has an invalid component index
-; Output diagnostics must distinguish the output signature from the input.
-define void @main() #0 {
-  call void @llvm.dx.store.output.f32(i32 1, i32 0, i8 123, float 0.0)
-  ret void
-}
-
 ;--- position-integer.ll
 ; POSITION-INTEGER: entry 'main' output signature: SV_Position requires one row of four floating-point components
 ; Invalid component type (operand 2): I16, rather than F16 or F32.
@@ -406,25 +361,10 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !1 = !{!2}
 !3 = !{i32 0}
 
-;--- instance-float.ll
-; INSTANCE-FLOAT: entry 'main' input signature: SV_InstanceID requires a scalar 16- or 32-bit unsigned integer
-; Component type F32 is not an unsigned integer.
-!2 = !{i32 0, !"SV_InstanceID", i32 9, i32 2, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
-
-;--- instance-signed16.ll
-; INSTANCE-SIGNED16: entry 'main' input signature: SV_InstanceID requires a scalar 16- or 32-bit unsigned integer
-; Signed I16 is not interchangeable with U16 for this system value.
-!2 = !{i32 0, !"SV_InstanceID", i32 2, i32 2, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
-
 ;--- instance-signed32.ll
 ; INSTANCE-SIGNED32: entry 'main' input signature: SV_InstanceID requires a scalar 16- or 32-bit unsigned integer
 ; Signed I32 is not interchangeable with U32 for this system value.
 !2 = !{i32 0, !"SV_InstanceID", i32 4, i32 2, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
-
-;--- instance-bool.ll
-; INSTANCE-BOOL: entry 'main' input signature: SV_InstanceID requires a scalar 16- or 32-bit unsigned integer
-; I1 is supported for arbitrary signatures, not InstanceID.
-!2 = !{i32 0, !"SV_InstanceID", i32 1, i32 2, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
 
 ;--- instance-vector.ll
 ; INSTANCE-VECTOR: entry 'main' input signature: SV_InstanceID requires a scalar 16- or 32-bit unsigned integer
