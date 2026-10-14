@@ -51,7 +51,7 @@ int func3(B *b) {
   return local1->i;
 }
 
-// CHECK-LABEL: define dso_local noundef signext i8 @{{.*}}func4{{.*}}(
+// CHECK-LABEL: define dso_local noundef i8 @{{.*}}func4{{.*}}(
 // CHECK:         [[A_ADDR:%.*]] = getelementptr inbounds nuw %class.C, ptr {{%.*}}, i32 0, i32 1
 // CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[A_ADDR]],
 // CHECK-NEXT:      #dbg_value(ptr [[A]], [[META6:![0-9]+]], !DIExpression(),
@@ -64,7 +64,7 @@ char func4(C *c) {
   return foo(c->a->i)->c;
 }
 
-// CHECK-LABEL: define dso_local noundef signext i8 @{{.*}}func5{{.*}}(
+// CHECK-LABEL: define dso_local noundef i8 @{{.*}}func5{{.*}}(
 // CHECK:           #dbg_declare(ptr {{%.*}}, [[META7:![0-9]+]], !DIExpression(),
 // CHECK:           #dbg_declare(ptr {{%.*}}, [[META8:![0-9]+]], !DIExpression(),
 // CHECK:         [[A_ADDR:%.*]] = getelementptr inbounds %class.A, ptr {{%.*}}, i64 {{%.*}},

@@ -26,7 +26,7 @@ void test_members(char some) {
   // DEFAULT-NEXT: %inc{{\d*}} = add i32 %[[CONV]], 1
   (++foo.a);
 
-  // DEFAULT: %[[CALL:.*]] = call noundef signext i8 @_ZNK3Foo4getAEv
+  // DEFAULT: %[[CALL:.*]] = call noundef i8 @_ZNK3Foo4getAEv
   // DEFAULT-NEXT: sext i8 %[[CALL]] to i32
   // DEFAULT-NEXT: add i32 {{.*}}, 1
   (void)(foo.getA() + 1);

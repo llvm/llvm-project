@@ -39,6 +39,7 @@ protected:
   llvm::BumpPtrAllocator Alloc;
   TypeBuilder TB;
   const ABIType *I8;
+  const ABIType *I16;
   const ABIType *I32;
   const ABIType *I64;
   const ABIType *F32;
@@ -56,6 +57,7 @@ protected:
 
   X86TargetInfoTest()
       : TB(Alloc), I8(TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true)),
+        I16(TB.getIntegerType(16, llvm::Align(2), /*Signed=*/true)),
         I32(TB.getIntegerType(32, llvm::Align(4), /*Signed=*/true)),
         I64(TB.getIntegerType(64, llvm::Align(8), /*Signed=*/true)),
         F32(TB.getFloatType(llvm::APFloat::IEEEsingle(), llvm::Align(4))),
@@ -112,6 +114,16 @@ protected:
     TI->computeInfo(*FI);
     return FI->getArgInfo(0).Info;
   }
+
+  const ArgInfo &classifyRet(const ABIType *RetTy,
+                             std::unique_ptr<FunctionInfo> &FI,
+                             std::unique_ptr<TargetInfo> &TI,
+                             X86AVXABILevel AVXLevel = X86AVXABILevel::None) {
+    TI = target(AVXLevel);
+    FI = FunctionInfo::create(llvm::CallingConv::C, RetTy, {});
+    TI->computeInfo(*FI);
+    return FI->getReturnInfo();
+  }
 };
 
 static void expectDirectInteger(const ArgInfo &Info, unsigned Bits) {
@@ -121,6 +133,13 @@ static void expectDirectInteger(const ArgInfo &Info, unsigned Bits) {
   const auto *IT = llvm::dyn_cast<llvm::abi::IntegerType>(Coerce);
   ASSERT_NE(IT, nullptr);
   EXPECT_EQ(IT->getSizeInBits().getFixedValue(), Bits);
+}
+
+static void expectExtendInteger(const ArgInfo &Info, const ABIType *Ty,
+                                bool IsSigned) {
+  EXPECT_TRUE(Info.isExtend());
+  EXPECT_EQ(Info.isSignExt(), IsSigned);
+  EXPECT_EQ(Info.getCoerceToType(), Ty);
 }
 
 static void expectInteger(const ABIType *Ty, unsigned Bits) {
@@ -905,6 +924,36 @@ TEST_F(X86TargetInfoTest, BitIntVectorInMemoryIsNotNarrowed) {
   ASSERT_EQ(Pair.size(), 2u);
   expectInteger(Pair[0].FieldType, 64);
   expectInteger(Pair[1].FieldType, 64);
+}
+
+TEST_F(X86TargetInfoTest, IntReturnExtension) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+
+  // bool must be zero-extended.
+  expectExtendInteger(classifyRet(Bool, FI, TI), Bool, /*IsSigned=*/false);
+
+  // _BitInt(1) types must not be extended.
+  const ABIType *BitInt1 =
+      TB.getIntegerType(1, llvm::Align(1), /*IsSigned=*/false,
+                        /*IsBitInt=*/true);
+  expectDirectInteger(classifyRet(BitInt1, FI, TI), 1);
+  const ABIType *BitInt13 =
+      TB.getIntegerType(13, llvm::Align(2), /*IsSigned=*/true,
+                        /*IsBitInt=*/true);
+  expectDirectInteger(classifyRet(BitInt13, FI, TI), 13);
+
+  // _BitInt > 32-bit gets passed as 64-bit, to match Clang ABI behavior.
+  // Returning this as i40 would be equivalent.
+  const ABIType *BitInt40 =
+      TB.getIntegerType(40, llvm::Align(8), /*IsSigned=*/false,
+                        /*IsBitInt=*/true);
+  expectDirectInteger(classifyRet(BitInt40, FI, TI), 64);
+
+  // char, short and int must not be extended.
+  expectDirectInteger(classifyRet(I8, FI, TI), 8);
+  expectDirectInteger(classifyRet(I16, FI, TI), 16);
+  expectDirectInteger(classifyRet(I32, FI, TI), 32);
 }
 
 } // namespace

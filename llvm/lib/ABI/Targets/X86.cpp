@@ -75,6 +75,8 @@ private:
                                unsigned &NeededInt, unsigned &NeededSse,
                                bool IsNamedArg, bool IsRegCall = false) const;
 
+  bool shouldExtendReturnType(const IntegerType *RetTy) const;
+
 public:
   X86_64TargetInfo(TypeBuilder &TypeBuilder, X86AVXABILevel AVXABILevel,
                    bool Has64BitPtrs, const X86ABICompatInfo &Compat)
@@ -136,6 +138,19 @@ static const Type *reduceUnionForX8664(const RecordType *UnionType,
     }
   }
   return StorageType;
+}
+
+bool X86_64TargetInfo::shouldExtendReturnType(const IntegerType *RetTy) const {
+  // Bools need to be zero-extended to 8 bits for all ABIs.
+  if (RetTy->isBool())
+    return true;
+
+  // Promotable integer types get extended only for Darwin.
+  bool IsDarwin = false; // TODO: Currently not supported by ABI library.
+  if (!IsDarwin)
+    return false;
+
+  return isPromotableInteger(RetTy);
 }
 
 void X86_64TargetInfo::postMerge(unsigned AggregateSize, Class &Lo,
@@ -743,10 +758,10 @@ ArgInfo X86_64TargetInfo::classifyReturnType(const Type *RetTy) const {
     // If we have a sign or zero extended integer, make sure to return Extend
     // so that the parameter gets the right LLVM IR attributes.
     if (Hi == NoClass && ResType->isInteger()) {
-      if (const IntegerType *IntTy = dyn_cast<IntegerType>(RetTy)) {
+      if (const IntegerType *IntTy = dyn_cast<IntegerType>(RetTy))
         if (isPromotableInteger(IntTy))
-          return ArgInfo::getExtend(RetTy);
-      }
+          return shouldExtendReturnType(IntTy) ? ArgInfo::getExtend(RetTy)
+                                               : ArgInfo::getDirect(RetTy);
     }
     if (ResType->isInteger() && ResType->getSizeInBits() == 128) {
       assert(Hi == Integer);
@@ -1315,7 +1330,7 @@ ArgInfo X86_64TargetInfo::getIndirectReturnResult(const Type *Ty) const {
     if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
       if (IntTy->isBitInt())
         return getNaturalAlignIndirect(IntTy, getAllocaAddrSpace());
-      if (isPromotableInteger(IntTy))
+      if (shouldExtendReturnType(IntTy))
         return ArgInfo::getExtend(Ty);
     }
     return ArgInfo::getDirect();
