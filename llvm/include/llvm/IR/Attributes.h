@@ -207,6 +207,9 @@ public:
   LLVM_ABI static Attribute getWithByValType(LLVMContext &Context, Type *Ty);
   LLVM_ABI static Attribute getWithStructRetType(LLVMContext &Context,
                                                  Type *Ty);
+  LLVM_ABI static Attribute getWithByRefType(LLVMContext &Context, Type *Ty);
+  LLVM_ABI static Attribute getWithPreallocatedType(LLVMContext &Context,
+                                                    Type *Ty);
   LLVM_ABI static Attribute getWithInAllocaType(LLVMContext &Context, Type *Ty);
   LLVM_ABI static Attribute getWithUWTableKind(LLVMContext &Context,
                                                UWTableKind Kind);
@@ -1222,6 +1225,17 @@ public:
   /// Retrieve the byval type.
   Type *getByValType() const { return getTypeAttr(Attribute::ByVal); }
 
+  /// Retrieve the sret type.
+  Type *getStructRetType() const { return getTypeAttr(Attribute::StructRet); }
+
+  /// Retrieve the byref type.
+  Type *getByRefType() const { return getTypeAttr(Attribute::ByRef); }
+
+  /// Retrieve the preallocated type.
+  Type *getPreallocatedType() const {
+    return getTypeAttr(Attribute::Preallocated);
+  }
+
   /// Retrieve the inalloca type.
   Type *getInAllocaType() const { return getTypeAttr(Attribute::InAlloca); }
 
@@ -1289,6 +1303,9 @@ public:
 
   /// This turns a byref type into the form used internally in Attribute.
   LLVM_ABI AttrBuilder &addByRefAttr(Type *Ty);
+
+  /// This turns a preallocated type into the form used internally in Attribute.
+  LLVM_ABI AttrBuilder &addPreallocatedAttr(Type *Ty);
 
   /// This turns an inalloca type into the form used internally in Attribute.
   LLVM_ABI AttrBuilder &addInAllocaAttr(Type *Ty);

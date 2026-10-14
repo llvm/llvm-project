@@ -248,6 +248,14 @@ Attribute Attribute::getWithStructRetType(LLVMContext &Context, Type *Ty) {
   return get(Context, StructRet, Ty);
 }
 
+Attribute Attribute::getWithByRefType(LLVMContext &Context, Type *Ty) {
+  return get(Context, ByRef, Ty);
+}
+
+Attribute Attribute::getWithPreallocatedType(LLVMContext &Context, Type *Ty) {
+  return get(Context, Preallocated, Ty);
+}
+
 Attribute Attribute::getWithInAllocaType(LLVMContext &Context, Type *Ty) {
   return get(Context, InAlloca, Ty);
 }
@@ -2298,6 +2306,10 @@ AttrBuilder &AttrBuilder::addStructRetAttr(Type *Ty) {
 
 AttrBuilder &AttrBuilder::addByRefAttr(Type *Ty) {
   return addTypeAttr(Attribute::ByRef, Ty);
+}
+
+AttrBuilder &AttrBuilder::addPreallocatedAttr(Type *Ty) {
+  return addTypeAttr(Attribute::Preallocated, Ty);
 }
 
 AttrBuilder &AttrBuilder::addInAllocaAttr(Type *Ty) {
