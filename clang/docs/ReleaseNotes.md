@@ -374,6 +374,33 @@ features cannot lower the translation-unit ABI level;
   };
   ```
 
+- Under `-fexperimental-late-parse-attributes`, the thread safety capability
+  attributes (`requires_capability`, `acquire_capability`,
+  `release_capability`, `assert_capability`, `try_acquire_capability`,
+  `locks_excluded` and `lock_returned`) are now late parsed, as `guarded_by`
+  and `pt_guarded_by` already were, so a requirement may name a member declared
+  later in the same record:
+
+  ```c++
+  struct Cache {
+    void (*read)(void) REQUIRES(mu);   // 'mu' declared below
+    Mutex mu;
+  };
+  ```
+
+  and a requirement on a parameter may name another parameter of the same
+  prototype, declared later:
+
+  ```c++
+  int kref_put_lock(struct kref *kref,
+                    void (*release)(struct kref *) RELEASE(lock),
+                    spinlock_t *lock);
+  ```
+
+  A requirement naming a parameter of the pointee, such as
+  `void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)`, keeps
+  working. Without the flag both forward references remain errors.
+
 ### Improvements to Clang's diagnostics
 
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
@@ -729,6 +756,12 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when `__builtin_object_size` or
   `__builtin_dynamic_object_size` is called with an out-of-range type argument
   during constant evaluation. (#GH225041)
+
+- `__has_unique_object_representations` now returns `true` for `_Atomic` types
+  whose object representation is identical to that of their value type, such
+  as `_Atomic(int)`. Atomic types whose size is rounded up to a power of two
+  (adding padding bits) continue to report `false`. This also fixes a false
+  positive in the `bugprone-suspicious-memory-comparison` clang-tidy check.
 
 #### Bug Fixes to Attribute Support
 
@@ -1135,6 +1168,8 @@ features cannot lower the translation-unit ABI level;
   virtual function that could not be optimised out would cause the program to
   fail to assemble. This is now fixed. (#GH49183) (#GH67533)
 
+- External CUDA kernel declarations now use the correct calling convention. (#GH118212)
+
 #### AIX Support
 
 #### NetBSD Support
@@ -1220,6 +1255,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 (release-notes-sanitizers)=
 
 ### Sanitizers
+
+- Added the `typefunchash` and `typefunchashpointersplit` token assignment
+  modes for `-fsanitize=alloc-token`, selected with
+  `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both
+  the allocated type and the name of the function containing the allocation.
 
 ### Python Binding Changes
 
