@@ -418,6 +418,11 @@ createRelocationHandler(Triple::ArchType Arch) {
     return createRISCVRelocationHandler(true);
 #endif
 
+#ifdef POWERPC_AVAILABLE
+  if (Arch == Triple::ppc64 || Arch == Triple::ppc64le)
+    return createPPC64RelocationHandler();
+#endif
+
   llvm_unreachable("architecture unsupported by RelocationHandler");
 }
 
@@ -3223,7 +3228,7 @@ bool RewriteInstance::analyzeRelocation(
       errs() << "PPC64 verify mismatch @off=0x"
              << Twine::utohexstr(Rel.getOffset()) << " type="
              << object::getELFRelocationTypeName(ELF::EM_PPC64, RType)
-             << " size=" << Relocation::getSizeForType(RType)
+             << " size=" << BC->getRelocationHandler().getSizeForType(RType)
              << " extracted=" << truncateToSize(ExtractedValue, RelSize)
              << " expected="
              << truncateToSize(SymbolAddress + Addend - PCRelOffset, RelSize)

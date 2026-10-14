@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   MC
   MCDisassembler
+  Object
   Support
   PowerPCDesc
 )
@@ -18,6 +19,7 @@ endif()
 add_llvm_library(LLVMBOLTTargetPowerPC
   PPCMCPlusBuilder.cpp
   PPCMCSymbolizer.cpp
+  PPCRelocationHandler.cpp
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
   DEPENDS
