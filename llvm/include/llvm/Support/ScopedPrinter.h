@@ -820,7 +820,7 @@ private:
   }
 };
 
-struct DictScope : DelimitedScope {
+struct [[nodiscard]] DictScope : DelimitedScope {
   explicit DictScope() = default;
   explicit DictScope(ScopedPrinter &W) : DelimitedScope(W) { W.objectBegin(); }
 
@@ -839,7 +839,7 @@ struct DictScope : DelimitedScope {
   }
 };
 
-struct ListScope : DelimitedScope {
+struct [[nodiscard]] ListScope : DelimitedScope {
   explicit ListScope() = default;
   explicit ListScope(ScopedPrinter &W) : DelimitedScope(W) { W.arrayBegin(); }
 
