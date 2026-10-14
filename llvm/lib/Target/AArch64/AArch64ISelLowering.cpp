@@ -22123,6 +22123,19 @@ static SDValue performReinterpretCastCombine(SDNode *N) {
 static SDValue performSVEAndCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
+
+  // Fold AND of a predicated NOT into BIC when NOT's inactive lanes do not
+  // matter, leaving standalone NOTs available for predicated selection.
+  for (unsigned I = 0; I != 2; ++I) {
+    SDValue Not = N->getOperand(I);
+    if (getIntrinsicID(Not.getNode()) != Intrinsic::aarch64_sve_not)
+      continue;
+    if (Not.getOperand(1).isUndef() ||
+        isAllActivePredicate(DAG, Not.getOperand(2)))
+      return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
+                         N->getOperand(1 - I), Not.getOperand(3));
+  }
+
   SDValue Src = N->getOperand(0);
   unsigned Opc = Src->getOpcode();
 
@@ -25350,6 +25363,37 @@ static SDValue lowerPredCounterWhile(Intrinsic::ID IID, SDNode *N,
                      DAG.getTargetConstant(ElementSizeInBits, DL, MVT::i64));
 }
 
+static SDValue performSVEAndNotIntrinsicCombine(SDNode *N, SelectionDAG &DAG) {
+  bool IsUndef = getIntrinsicID(N) == Intrinsic::aarch64_sve_and_u;
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Pg = N->getOperand(1);
+  SDValue A = N->getOperand(2);
+  SDValue B = N->getOperand(3);
+
+  // Fold before lowering AND_U loses its predicate. Only commute AND_U:
+  // a merging AND must keep its first operand for the inactive lanes.
+  for (unsigned I = 0, E = IsUndef ? 2 : 1; I != E; ++I) {
+    if (I)
+      std::swap(A, B);
+    if (getIntrinsicID(B.getNode()) != Intrinsic::aarch64_sve_not ||
+        (B.getOperand(2) != Pg && !isAllActivePredicate(DAG, B.getOperand(2))))
+      continue;
+
+    SDValue NotInput = B.getOperand(3);
+    if (IsUndef || isAllActivePredicate(DAG, Pg))
+      return DAG.getNode(AArch64ISD::BIC, DL, VT, A, NotInput);
+
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, VT,
+        DAG.getConstant(Intrinsic::aarch64_sve_bic, DL, MVT::i32), Pg, A,
+        NotInput);
+  }
+  if (!IsUndef)
+    return SDValue();
+  return DAG.getNode(ISD::AND, DL, VT, N->getOperand(2), N->getOperand(3));
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -25568,9 +25612,9 @@ static SDValue performIntrinsicCombine(SDNode *N,
                        N->getOperand(3));
   case Intrinsic::aarch64_sve_subr:
     return convertMergedOpToPredOp(N, ISD::SUB, DAG, true, true);
+  case Intrinsic::aarch64_sve_and:
   case Intrinsic::aarch64_sve_and_u:
-    return DAG.getNode(ISD::AND, SDLoc(N), N->getValueType(0), N->getOperand(2),
-                       N->getOperand(3));
+    return performSVEAndNotIntrinsicCombine(N, DAG);
   case Intrinsic::aarch64_sve_bic_u:
     return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
                        N->getOperand(2), N->getOperand(3));
