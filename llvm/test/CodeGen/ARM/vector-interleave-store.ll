@@ -5,9 +5,9 @@
 define arm_aapcs_vfpcc void @arm_vector_interleave_idx_st2(ptr %dst, <4 x float> %v0, <4 x float> %v1) {
 ; CHECK-LABEL: arm_vector_interleave_idx_st2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vzip.32 q0, q1
-; CHECK-NEXT:    vst1.32 {d0, d1}, [r0:128]!
-; CHECK-NEXT:    vst1.64 {d2, d3}, [r0:128]
+; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    vst2.32 {d0, d1, d2, d3}, [r0:128]
 ; CHECK-NEXT:    bx lr
 entry:
   %interleave = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> %v0, <4 x float> %v1)
@@ -51,8 +51,7 @@ define arm_aapcs_vfpcc void @vector_interleave2_v8i8(ptr %dst, <8 x i8> %v0, <8 
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0 def $q0
 ; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0 def $q0
-; CHECK-NEXT:    vzip.8 d0, d1
-; CHECK-NEXT:    vst1.64 {d0, d1}, [r0]
+; CHECK-NEXT:    vst2.8 {d0, d1}, [r0:64]
 ; CHECK-NEXT:    bx lr
   %interleave = call <16 x i8> @llvm.vector.interleave2.v16i8(<8 x i8> %v0, <8 x i8> %v1)
   store <16 x i8> %interleave, ptr %dst
@@ -62,9 +61,9 @@ define arm_aapcs_vfpcc void @vector_interleave2_v8i8(ptr %dst, <8 x i8> %v0, <8 
 define arm_aapcs_vfpcc void @vector_interleave2_v8i16(ptr %dst, <8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-LABEL: vector_interleave2_v8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vzip.16 q0, q1
-; CHECK-NEXT:    vst1.16 {d0, d1}, [r0:128]!
-; CHECK-NEXT:    vst1.64 {d2, d3}, [r0:128]
+; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    vst2.16 {d0, d1, d2, d3}, [r0:256]
 ; CHECK-NEXT:    bx lr
   %interleave = call <16 x i16> @llvm.vector.interleave2.v16i16(<8 x i16> %v0, <8 x i16> %v1)
   store <16 x i16> %interleave, ptr %dst
@@ -74,9 +73,9 @@ define arm_aapcs_vfpcc void @vector_interleave2_v8i16(ptr %dst, <8 x i16> %v0, <
 define arm_aapcs_vfpcc void @vector_interleave2_v8f16(ptr %dst, <8 x half> %v0, <8 x half> %v1) {
 ; CHECK-LABEL: vector_interleave2_v8f16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vzip.16 q0, q1
-; CHECK-NEXT:    vst1.16 {d0, d1}, [r0:128]!
-; CHECK-NEXT:    vst1.64 {d2, d3}, [r0:128]
+; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    vst2.16 {d0, d1, d2, d3}, [r0:256]
 ; CHECK-NEXT:    bx lr
   %interleave = call <16 x half> @llvm.vector.interleave2.v16f16(<8 x half> %v0, <8 x half> %v1)
   store <16 x half> %interleave, ptr %dst
@@ -86,12 +85,12 @@ define arm_aapcs_vfpcc void @vector_interleave2_v8f16(ptr %dst, <8 x half> %v0, 
 define arm_aapcs_vfpcc void @vector_interleave2_v8i32(ptr %dst, <8 x i32> %v0, <8 x i32> %v1) {
 ; CHECK-LABEL: vector_interleave2_v8i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vzip.32 q0, q2
-; CHECK-NEXT:    vzip.32 q1, q3
-; CHECK-NEXT:    vst1.32 {d0, d1}, [r0:128]!
-; CHECK-NEXT:    vst1.32 {d4, d5}, [r0:128]!
-; CHECK-NEXT:    vst1.32 {d2, d3}, [r0:128]!
-; CHECK-NEXT:    vst1.64 {d6, d7}, [r0:128]
+; CHECK-NEXT:    @ kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
+; CHECK-NEXT:    vorr q9, q2, q2
+; CHECK-NEXT:    vorr q8, q0, q0
+; CHECK-NEXT:    vorr q2, q1, q1
+; CHECK-NEXT:    vst2.32 {d16, d17, d18, d19}, [r0:256]!
+; CHECK-NEXT:    vst2.32 {d4, d5, d6, d7}, [r0:256]
 ; CHECK-NEXT:    bx lr
   %interleave = call <16 x i32> @llvm.vector.interleave2.v16i32(<8 x i32> %v0, <8 x i32> %v1)
   store <16 x i32> %interleave, ptr %dst
@@ -101,12 +100,12 @@ define arm_aapcs_vfpcc void @vector_interleave2_v8i32(ptr %dst, <8 x i32> %v0, <
 define arm_aapcs_vfpcc void @vector_interleave2_v8f32(ptr %dst, <8 x float> %v0, <8 x float> %v1) {
 ; CHECK-LABEL: vector_interleave2_v8f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vzip.32 q0, q2
-; CHECK-NEXT:    vzip.32 q1, q3
-; CHECK-NEXT:    vst1.32 {d0, d1}, [r0:128]!
-; CHECK-NEXT:    vst1.32 {d4, d5}, [r0:128]!
-; CHECK-NEXT:    vst1.32 {d2, d3}, [r0:128]!
-; CHECK-NEXT:    vst1.64 {d6, d7}, [r0:128]
+; CHECK-NEXT:    @ kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
+; CHECK-NEXT:    vorr q9, q2, q2
+; CHECK-NEXT:    vorr q8, q0, q0
+; CHECK-NEXT:    vorr q2, q1, q1
+; CHECK-NEXT:    vst2.32 {d16, d17, d18, d19}, [r0:256]!
+; CHECK-NEXT:    vst2.32 {d4, d5, d6, d7}, [r0:256]
 ; CHECK-NEXT:    bx lr
   %interleave = call <16 x float> @llvm.vector.interleave2.v16f32(<8 x float> %v0, <8 x float> %v1)
   store <16 x float> %interleave, ptr %dst
