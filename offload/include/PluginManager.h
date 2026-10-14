@@ -138,12 +138,18 @@ struct PluginManager {
   /// Returns the number of plugins that are active.
   int getNumActivePlugins() const;
 
+  /// Return liboffload's host device, which identifies host memory to it.
+  ol_device_handle_t getHostDevice() const { return HostDevice; }
+
 private:
   bool RTLsLoaded = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
   // List of all plugins, in use or not.
   llvm::SmallVector<GenericPluginTy *> Plugins;
+
+  // liboffload's host device.
+  ol_device_handle_t HostDevice = nullptr;
 
   // Mapping of device handles to the OpenMP device identifier.
   llvm::DenseMap<ol_device_handle_t, int32_t> DeviceIds;
