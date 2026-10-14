@@ -16,7 +16,7 @@ namespace llvm {
 class MachineInstr;
 
 /// Whether rematerializing VReg for MI can produce an assignable register.
-bool canGuaranteeAssignmentAfterRemat(Register VReg, MachineInstr &MI);
+bool canGuaranteeAssignmentAfterRemat(Register VReg, const MachineInstr &MI);
 
 } // end namespace llvm
 

@@ -1,8 +1,6 @@
 # RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -passes='greedy<sgpr>' %s -o - | FileCheck %s
 
 --- |
-  target triple = "amdgcn-amd-amdhsa"
-
   define void @one_use() { ret void }
   define void @implicit_def() { ret void }
   define void @two_uses() { ret void }

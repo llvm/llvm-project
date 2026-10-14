@@ -619,7 +619,8 @@ void InlineSpiller::markValueUsed(LiveInterval *LI, VNInfo *VNI) {
   } while (!WorkList.empty());
 }
 
-bool llvm::canGuaranteeAssignmentAfterRemat(Register VReg, MachineInstr &MI) {
+bool llvm::canGuaranteeAssignmentAfterRemat(Register VReg,
+                                            const MachineInstr &MI) {
   if (!RestrictStatepointRemat)
     return true;
   // Here's a quick explanation of the problem we're trying to handle here:
@@ -645,7 +646,7 @@ bool llvm::canGuaranteeAssignmentAfterRemat(Register VReg, MachineInstr &MI) {
   for (unsigned Idx = StatepointOpers(&MI).getVarIdx(),
                 EndIdx = MI.getNumOperands();
        Idx < EndIdx; ++Idx) {
-    MachineOperand &MO = MI.getOperand(Idx);
+    const MachineOperand &MO = MI.getOperand(Idx);
     if (MO.isReg() && MO.getReg() == VReg)
       return false;
   }
