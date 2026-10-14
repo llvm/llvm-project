@@ -180,17 +180,6 @@ static void setArgListEntryAttributes(TargetLoweringBase::ArgListEntry &Entry,
     Entry.IndirectType = Src.getParamStructRetType(ArgIdx);
 }
 
-TargetLoweringBase::ArgListEntry::ArgListEntry(SDValue Node, Type *Ty,
-                                               Attribute::AttrKind Attr)
-    : ArgListEntry(nullptr, Node, Ty) {
-  if (Attr == Attribute::SExt)
-    IsSExt = true;
-  else if (Attr == Attribute::ZExt)
-    IsZExt = true;
-  else if (Attr != Attribute::None)
-    llvm_unreachable("Unexpected attribute left unhandled.");
-}
-
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
   setArgListEntryAttributes(*this, *Call, ArgIdx);
@@ -199,6 +188,20 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
 void TargetLoweringBase::ArgListEntry::setAttributes(const AttributeList &Attrs,
                                                      unsigned ArgIdx) {
   setArgListEntryAttributes(*this, Attrs, ArgIdx);
+}
+
+void TargetLoweringBase::ArgListEntry::setExtAttribute(
+    Attribute::AttrKind Attr) {
+  if (Attr != Attribute::None) {
+    if (Attr == Attribute::SExt)
+      IsSExt = true;
+    else if (Attr == Attribute::ZExt)
+      IsZExt = true;
+    else if (Attr == Attribute::NoExt)
+      IsNoExt = true;
+    else
+      llvm_unreachable("Unexpected extension attribute!");
+  }
 }
 
 TargetLowering::ArgListTy
