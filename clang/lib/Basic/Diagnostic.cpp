@@ -1110,7 +1110,8 @@ static void EscapeStringForDiagnostic(StringRef Str,
 
       // Do not let through control characters which could mess up the terminal.
       if (!llvm::sys::unicode::isControl(CodepointValue) &&
-          (!ForCodepoint || !llvm::sys::unicode::isFormatting(CodepointValue))) {
+          (!ForCodepoint ||
+           !llvm::sys::unicode::isFormatting(CodepointValue))) {
         OutStream << (ForCodepoint ? "'" : "")
                   << StringRef(reinterpret_cast<const char *>(CodepointBegin),
                                std::distance(CodepointBegin, CodepointEnd))
