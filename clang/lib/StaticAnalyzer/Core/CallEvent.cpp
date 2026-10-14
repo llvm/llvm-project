@@ -1329,17 +1329,6 @@ RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
   return {};
 }
 
-bool ObjCMethodCall::argumentsMayEscape() const {
-  if (isInSystemHeader() && !isInstanceMessage()) {
-    Selector Sel = getSelector();
-    if (Sel.getNumArgs() == 1 &&
-        Sel.getIdentifierInfoForSlot(0)->isStr("valueWithPointer"))
-      return true;
-  }
-
-  return CallEvent::argumentsMayEscape();
-}
-
 void ObjCMethodCall::getInitialStackFrameContents(const StackFrame *CalleeSF,
                                                   BindingsTy &Bindings) const {
   const auto *D = cast<ObjCMethodDecl>(CalleeSF->getDecl());

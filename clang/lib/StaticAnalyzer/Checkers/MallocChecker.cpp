@@ -813,19 +813,11 @@ private:
   void checkUseZeroAllocated(SymbolRef Sym, CheckerContext &C,
                              const Stmt *S) const;
 
-  /// Check if the function is known to free memory, or if it is
-  /// "interesting" and should be modeled explicitly.
-  ///
-  /// \param [out] EscapingSymbol A function might not free memory in general,
-  ///   but could be known to free a particular symbol. In this case, false is
-  ///   returned and the single escaping symbol is returned through the out
-  ///   parameter.
-  ///
-  /// We assume that pointers do not escape through calls to system functions
-  /// not handled by this checker.
-  bool mayFreeAnyEscapedMemoryOrIsModeledExplicitly(const CallEvent *Call,
-                                   ProgramStateRef State,
-                                   SymbolRef &EscapingSymbol) const;
+  /// Returns true if the call may release memory that escapes to it.
+  /// Returns false for allocation functions which are modelled
+  /// explicitly and for system calls that this checker does not
+  /// handle.
+  bool mayReleaseEscapedRegions(const CallEvent &Call) const;
 
   /// Implementation of the checkPointerEscape callbacks.
   [[nodiscard]] ProgramStateRef
@@ -3730,8 +3722,8 @@ ProgramStateRef MallocChecker::evalAssume(ProgramStateRef state,
 // later and callees that let an argument escape even through a
 // pointer to a const parameter. Also returns true for a non-null
 // callback argument or a void pointer to non-const argument.
-static bool mayFreeOrLetArgumentsEscape(const CallEvent *Call) {
-  const Decl *D = Call->getDecl();
+static bool mayFreeOrLetArgumentsEscape(const CallEvent &Call) {
+  const Decl *D = Call.getDecl();
   if (!D)
     return false;
 
@@ -3750,8 +3742,8 @@ static bool mayFreeOrLetArgumentsEscape(const CallEvent *Call) {
     // Look for the deallocator argument. We know that the memory ownership
     // is not transferred only if the deallocator argument is
     // 'kCFAllocatorNull'.
-    for (unsigned i = 1; i < Call->getNumArgs(); ++i) {
-      const Expr *ArgE = Call->getArgExpr(i)->IgnoreParenCasts();
+    for (unsigned i = 1; i < Call.getNumArgs(); ++i) {
+      const Expr *ArgE = Call.getArgExpr(i)->IgnoreParenCasts();
       if (const DeclRefExpr *DE = dyn_cast<DeclRefExpr>(ArgE)) {
         StringRef DeallocatorName = DE->getFoundDecl()->getName();
         if (DeallocatorName == "kCFAllocatorNull")
@@ -3766,7 +3758,7 @@ static bool mayFreeOrLetArgumentsEscape(const CallEvent *Call) {
   // but it will not if closefn is not specified.
   // Currently, we do not inspect the 'closefn' function (PR12101).
   if (FName == "funopen") {
-    if (Call->getNumArgs() >= 4 && Call->getArgSVal(4).isConstant(0))
+    if (Call.getNumArgs() >= 4 && Call.getArgSVal(4).isConstant(0))
       return false;
     return true;
   }
@@ -3776,8 +3768,8 @@ static bool mayFreeOrLetArgumentsEscape(const CallEvent *Call) {
   // http://stackoverflow.com/questions/2671151/who-frees-setvbuf-buffer
   if (FName == "setbuf" || FName == "setbuffer" || FName == "setlinebuf" ||
       FName == "setvbuf") {
-    if (Call->getNumArgs() >= 1) {
-      const Expr *ArgE = Call->getArgExpr(0)->IgnoreParenCasts();
+    if (Call.getNumArgs() >= 1) {
+      const Expr *ArgE = Call.getArgExpr(0)->IgnoreParenCasts();
       if (const DeclRefExpr *ArgDRE = dyn_cast<DeclRefExpr>(ArgE))
         if (const VarDecl *D = dyn_cast<VarDecl>(ArgDRE->getDecl()))
           if (D->getCanonicalDecl()->getName().contains("std"))
@@ -3854,19 +3846,18 @@ static bool mayFreeOrLetArgumentsEscape(const CallEvent *Call) {
            FName.contains_insensitive("AppendValue") ||
            FName.contains_insensitive("SetAttribute");
   }
-
-  if (Call->argumentsMayEscape() || Call->hasVoidPointerToNonConstArg())
+  if (Call.hasNonZeroCallbackArg() || Call.hasVoidPointerToNonConstArg())
     return true;
   return false;
 }
 
-static bool mayEscapeThroughKnownObjCAPI(const CallEvent *Call,
+static bool mayEscapeThroughKnownObjCAPI(const CallEvent &Call,
                                          SymbolRef &EscapingSymbol) {
   // Check Objective-C messages by selector name.
-  if (const ObjCMethodCall *Msg = dyn_cast<ObjCMethodCall>(Call)) {
+  if (const ObjCMethodCall *Msg = dyn_cast<ObjCMethodCall>(&Call)) {
     EscapingSymbol = nullptr;
     // If it takes a callback, assume it can free memory.
-    if (Call->argumentsMayEscape())
+    if (Call.hasNonZeroCallbackArg())
       return true;
 
     // If it's a method we know about, handle it explicitly post-call.
@@ -3914,12 +3905,15 @@ static bool mayEscapeThroughKnownObjCAPI(const CallEvent *Call,
   return false;
 }
 
-bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
-    const CallEvent *Call, ProgramStateRef State,
-    SymbolRef &EscapingSymbol) const {
-  assert(Call);
-  EscapingSymbol = nullptr;
+// Return true for calls that may release memory escaping to them even
+// when it is escaped through a pointer-to-const parameter.
+static bool mayReleaseThroughPtrToConstParam(const CallEvent &Call,
+                                             SymbolRef &EscapingSymbol) {
+  return mayFreeOrLetArgumentsEscape(Call) ||
+         mayEscapeThroughKnownObjCAPI(Call, EscapingSymbol);
+}
 
+bool MallocChecker::mayReleaseEscapedRegions(const CallEvent &Call) const {
   // For now, assume that any C++ or block call can free memory.
   // TODO: If we want to be more optimistic here, we'll need to make sure that
   // regions escape to C++ containers. They seem to do that even now, but for
@@ -3929,19 +3923,11 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
 
   // If it's one of the allocation functions we can reason about, we model
   // its behavior explicitly.
-  if (isMemCall(*Call))
+  if (isMemCall(Call))
     return false;
 
   // If it's not a system call, assume it frees memory.
-  if (!Call->isInSystemHeader())
-    return true;
-
-  // Handle cases where we know a buffer's /address/ can escape.
-  // Note that the above checks handle some special cases where we know that
-  // even though the address escapes, it's still our responsibility to free the
-  // buffer.
-  if (mayFreeOrLetArgumentsEscape(Call) ||
-      mayEscapeThroughKnownObjCAPI(Call, EscapingSymbol))
+  if (!Call.isInSystemHeader())
     return true;
 
   // Otherwise, assume that the function does not free memory.
@@ -3977,10 +3963,16 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
   // If we know that the call does not free memory, or we want to process the
   // call later, keep tracking the top level arguments.
   SymbolRef EscapingSymbol = nullptr;
-  if (Kind == PSK_DirectEscapeOnCall &&
-      !mayFreeAnyEscapedMemoryOrIsModeledExplicitly(Call, State,
-                                                    EscapingSymbol) &&
-      !EscapingSymbol) {
+
+  bool MayReleaseEscaped = false;
+  bool MayReleaseThroughPTConst = false;
+  if (Call) {
+    MayReleaseEscaped = mayReleaseEscapedRegions(*Call);
+    MayReleaseThroughPTConst =
+        mayReleaseThroughPtrToConstParam(*Call, EscapingSymbol);
+  }
+  if (Kind == PSK_DirectEscapeOnCall && !MayReleaseThroughPTConst &&
+      !MayReleaseEscaped) {
     return State;
   }
 
@@ -3991,8 +3983,7 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
     if (const RefState *RS = State->get<RegionState>(sym))
       if (RS->isAllocated() || RS->isAllocatedOfSizeZero())
         if (!IsConstPointerEscape || checkIfNewOrNewArrayFamily(RS) ||
-            (Call && mayFreeOrLetArgumentsEscape(Call)) ||
-            (Call && mayEscapeThroughKnownObjCAPI(Call, EscapingSymbol)))
+            MayReleaseThroughPTConst)
           State = State->set<RegionState>(sym, RefState::getEscaped(RS));
   }
   return State;

@@ -328,13 +328,6 @@ public:
   /// Returns true if any of the arguments is void*.
   bool hasVoidPointerToNonConstArg() const;
 
-  /// Returns true if any of the arguments are known to escape to long-
-  /// term storage, even if this method will not modify them.
-  // NOTE: The exact semantics of this are still being defined!
-  // We don't really want a list of hardcoded exceptions in the long run,
-  // but we don't want duplicated lists of known APIs in the short term either.
-  virtual bool argumentsMayEscape() const { return hasNonZeroCallbackArg(); }
-
   /// Returns true if the callee is an externally-visible function in the
   /// top-level namespace, such as \c malloc.
   ///
@@ -665,8 +658,6 @@ public:
 
     return RuntimeDefinition(LambdaCallOperator);
   }
-
-  bool argumentsMayEscape() const override { return true; }
 
   void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
@@ -1335,8 +1326,6 @@ public:
   const ObjCPropertyDecl *getAccessedProperty() const;
 
   RuntimeDefinition getRuntimeDefinition() const override;
-
-  bool argumentsMayEscape() const override;
 
   void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;

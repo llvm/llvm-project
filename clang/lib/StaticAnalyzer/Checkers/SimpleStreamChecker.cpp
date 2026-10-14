@@ -201,7 +201,7 @@ bool SimpleStreamChecker::guaranteedNotToCloseFile(const CallEvent &Call) const{
     return false;
 
   // Handle cases where we know a buffer's /address/ can escape.
-  if (Call.argumentsMayEscape())
+  if (Call.hasNonZeroCallbackArg())
     return false;
 
   // Note, even though fclose closes the file, we do not list it here
