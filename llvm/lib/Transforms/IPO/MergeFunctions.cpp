@@ -460,7 +460,7 @@ static bool isEligibleForMerging(Function &F) {
   // llvm.speculative.load, so they can neither become thunks nor be called.
   return !F.isDeclaration() && !F.hasAvailableExternallyLinkage() &&
          !F.hasFnAttribute(Attribute::NoIPA) &&
-         !F.hasFnAttribute("speculative-load-oracle") &&
+         !F.hasFnAttribute("oracle-function") &&
          !hasDistinctMetadataIntrinsic(F);
 }
 

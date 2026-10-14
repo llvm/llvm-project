@@ -4,7 +4,7 @@
 ; Oracle functions must be only used as operands of @llvm.speculative.load.
 ; Make sure oracles are never merged.
 
-define internal i64 @oracle_1(ptr %p, i64 %n) memory(argmem: read) nounwind nosync willreturn "speculative-load-oracle" {
+define internal i64 @oracle_1(ptr %p, i64 %n) memory(argmem: read) nounwind nosync willreturn "oracle-function" {
 ; CHECK-LABEL: define internal i64 @oracle_1(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = add i64 [[N]], 1
@@ -18,7 +18,7 @@ define internal i64 @oracle_1(ptr %p, i64 %n) memory(argmem: read) nounwind nosy
   ret i64 %c
 }
 
-define internal i64 @oracle_2(ptr %p, i64 %n) memory(argmem: read) nounwind nosync willreturn "speculative-load-oracle" {
+define internal i64 @oracle_2(ptr %p, i64 %n) memory(argmem: read) nounwind nosync willreturn "oracle-function" {
 ; CHECK-LABEL: define internal i64 @oracle_2(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = add i64 [[N]], 1

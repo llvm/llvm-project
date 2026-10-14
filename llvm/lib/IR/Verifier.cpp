@@ -3529,7 +3529,7 @@ void Verifier::visitFunction(const Function &F) {
 
   // Oracle functions of llvm.speculative.load may not be referenced in any
   // other way.
-  if (isMaterialized && F.hasFnAttribute("speculative-load-oracle")) {
+  if (isMaterialized && F.hasFnAttribute("oracle-function")) {
     Check(F.hasLocalLinkage(), "oracle function must have local linkage", &F);
     for (const Use &U : F.uses()) {
       auto *II = dyn_cast<IntrinsicInst>(U.getUser());
@@ -7106,9 +7106,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "reference to an oracle function",
             &Call);
 
-      Check(OracleFn->hasFnAttribute("speculative-load-oracle"),
+      Check(OracleFn->hasFnAttribute("oracle-function"),
             "llvm.speculative.load oracle function must have the "
-            "\"speculative-load-oracle\" attribute",
+            "\"oracle-function\" attribute",
             &Call);
 
       // Make sure the called oracle matches the attributes of the intrinsic.
