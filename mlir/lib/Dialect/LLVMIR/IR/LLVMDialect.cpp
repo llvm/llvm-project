@@ -4043,16 +4043,26 @@ OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
 }
 
 /// Computes the primitive bit size of an LLVM-compatible scalar or vector
-/// type, following the rules of `llvm::Type::getPrimitiveSizeInBits`.
-/// Returns failure for types without a primitive bit size.
+/// type, following the rules of \c llvm::Type::getPrimitiveSizeInBits.
+/// Returns failure for types without a primitive bit size (pointers, void,
+/// labels, metadata, functions, tokens, target extensions and aggregates)
+/// and for vector sizes overflowing \c uint64_t. Vector dimensions are always
+/// positive (dynamic dimensions are not representable in \c VectorType).
+///
+/// This intentionally does not reuse \c getPrimitiveTypeSizeInBits, whose
+/// assert-based contract and conflation of sizeless types with size 0 make it
+/// unsuitable for use in a verifier.
 static FailureOr<llvm::TypeSize> getBitcastSizeInBits(Type type) {
   if (type.isIntOrFloat())
     return llvm::TypeSize::getFixed(type.getIntOrFloatBitWidth());
-  // Not builtin float types, but have fixed primitive sizes.
-  if (isa<LLVMPPCFP128Type>(type))
-    return llvm::TypeSize::getFixed(128);
-  if (isa<LLVMX86AMXType>(type))
-    return llvm::TypeSize::getFixed(8192);
+  if (auto byteTy = dyn_cast<LLVMByteType>(type))
+    return llvm::TypeSize::getFixed(byteTy.getBitWidth());
+  // Not builtin float types, but have fixed primitive sizes reported by the
+  // type definitions.
+  if (auto ppcTy = dyn_cast<LLVMPPCFP128Type>(type))
+    return llvm::TypeSize::getFixed(ppcTy.getPrimitiveBitWidth());
+  if (auto amxTy = dyn_cast<LLVMX86AMXType>(type))
+    return llvm::TypeSize::getFixed(amxTy.getPrimitiveBitWidth());
   auto vecType = dyn_cast<VectorType>(type);
   if (!vecType)
     return failure();
@@ -4060,20 +4070,17 @@ static FailureOr<llvm::TypeSize> getBitcastSizeInBits(Type type) {
       getBitcastSizeInBits(vecType.getElementType());
   if (failed(elemSize) || !elemSize->isFixed())
     return failure();
-  constexpr uint64_t max = std::numeric_limits<uint64_t>::max();
+  constexpr uint64_t kMaxBits = std::numeric_limits<uint64_t>::max();
   uint64_t elemBits = elemSize->getFixedValue();
   uint64_t numElements = 1;
   for (int64_t dim : vecType.getShape()) {
-    // TODO: Diagnose dynamic dimensions explicitly instead of saturating.
-    if (dim < 0)
-      return llvm::TypeSize::get(max, vecType.isScalable());
     if (static_cast<uint64_t>(dim) != 0 &&
-        numElements > max / static_cast<uint64_t>(dim))
-      return llvm::TypeSize::get(max, vecType.isScalable());
+        numElements > kMaxBits / static_cast<uint64_t>(dim))
+      return failure();
     numElements *= static_cast<uint64_t>(dim);
   }
-  if (elemBits != 0 && numElements > max / elemBits)
-    return llvm::TypeSize::get(max, vecType.isScalable());
+  if (elemBits != 0 && numElements > kMaxBits / elemBits)
+    return failure();
   return llvm::TypeSize::get(numElements * elemBits, vecType.isScalable());
 }
 
@@ -4083,14 +4090,15 @@ LogicalResult LLVM::BitcastOp::verify() {
   Type srcElemType = extractVectorElementType(srcType);
   Type dstElemType = extractVectorElementType(dstType);
 
-  // Byte types may be cast from/to any type pointer constraints.
-  // TODO: Tighten to byte <-> pointer only; mismatched byte bitcasts such
-  // as i64 to byte<8> are accepted here but crash LLVM IR translation.
-  if (isa<LLVMByteType>(srcElemType) || isa<LLVMByteType>(dstElemType))
-    return success();
-
   auto resultType = llvm::dyn_cast<LLVMPointerType>(dstElemType);
   auto sourceType = llvm::dyn_cast<LLVMPointerType>(srcElemType);
+
+  // Bitcasts between bytes and pointers are always valid, matching
+  // 'CastInst::castIsValid'. Byte casts against anything else are
+  // size-checked below like any other type.
+  if ((isa<LLVMByteType>(srcElemType) && resultType) ||
+      (sourceType && isa<LLVMByteType>(dstElemType)))
+    return success();
 
   // If one of the types is a pointer (or vector of pointers), then
   // both source and result type have to be pointers.
@@ -4100,18 +4108,21 @@ LogicalResult LLVM::BitcastOp::verify() {
   if (!resultType) {
     FailureOr<llvm::TypeSize> srcSize = getBitcastSizeInBits(srcType);
     FailureOr<llvm::TypeSize> dstSize = getBitcastSizeInBits(dstType);
-    // TODO: Reject bitcasts of types without a primitive bit width (void,
-    // labels, metadata, functions, tokens, target extensions) instead of
-    // skipping the check; they crash LLVM IR translation today.
+    // Types without a primitive bit width (void, labels, metadata,
+    // functions, tokens, target extensions) cannot be bitcast, matching
+    // 'CastInst::castIsValid'.
     if (failed(srcSize) || failed(dstSize))
-      return success();
+      return emitOpError("operand and result must have a primitive bit width");
     if (*srcSize != *dstSize) {
-      std::string srcStr, dstStr;
-      llvm::raw_string_ostream(srcStr) << *srcSize;
-      llvm::raw_string_ostream(dstStr) << *dstSize;
+      auto sizeToString = [](llvm::TypeSize size) {
+        std::string str;
+        llvm::raw_string_ostream(str) << size;
+        return str;
+      };
       return emitOpError("operand and result must have the same bit width, "
                          "got ")
-             << srcStr << " bits and " << dstStr << " bits";
+             << sizeToString(*srcSize) << " bits and " << sizeToString(*dstSize)
+             << " bits";
     }
     return success();
   }
@@ -4120,6 +4131,8 @@ LogicalResult LLVM::BitcastOp::verify() {
 
   // Due to bitcast requiring both operands to be of the same size, it is not
   // possible for only one of the two to be a pointer of vectors.
+  // Note: this is stricter than 'CastInst::castIsValid', which permits casts
+  // between scalar pointers and 1-element pointer vectors.
   if (isVector(dstType) && !isVector(srcType))
     return emitOpError("cannot cast pointer to vector of pointers");
 
@@ -4127,6 +4140,8 @@ LogicalResult LLVM::BitcastOp::verify() {
     return emitOpError("cannot cast vector of pointers to pointer");
 
   if (auto dstVecType = dyn_cast<VectorType>(dstType)) {
+    // Safe: the checks above guarantee that if one side is a vector of
+    // pointers, so is the other.
     auto srcVecType = cast<VectorType>(srcType);
     if (dstVecType.getShape() != srcVecType.getShape() ||
         dstVecType.isScalable() != srcVecType.isScalable())

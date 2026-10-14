@@ -422,12 +422,6 @@ func.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
   %12 = llvm.bitcast %arg1 : i64 to !llvm.byte<64>
 // CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to i64
   %13 = llvm.bitcast %12 : !llvm.byte<64> to i64
-// CHECK:  = llvm.bitcast %[[I64]] : i64 to !llvm.byte<8>
-  %14 = llvm.bitcast %arg1 : i64 to !llvm.byte<8>
-// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to i32
-  %15 = llvm.bitcast %12 : !llvm.byte<64> to i32
-// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to !llvm.byte<8>
-  %16 = llvm.bitcast %12 : !llvm.byte<64> to !llvm.byte<8>
 // CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to !llvm.ptr
   %17 = llvm.bitcast %12 : !llvm.byte<64> to !llvm.ptr
 // CHECK:  = llvm.bitcast %[[PTR]] : !llvm.ptr to !llvm.byte<8>
@@ -1384,6 +1378,21 @@ llvm.func @bitcast_same_size(%arg0: !llvm.ppc_fp128, %arg1: vector<[4]xi32>,
   // CHECK: llvm.bitcast {{.*}} : i64 to vector<4xbf16>
   %c = llvm.mlir.constant(0 : i64) : i64
   %3 = llvm.bitcast %c : i64 to vector<4xbf16>
+  llvm.return
+}
+
+// CHECK-LABEL: @bitcast_byte
+llvm.func @bitcast_byte(%ptr: !llvm.ptr, %i64: i64) {
+  // Byte casts against non-pointers are size-checked.
+  // CHECK: llvm.bitcast {{.*}} : i64 to !llvm.byte<64>
+  %0 = llvm.bitcast %i64 : i64 to !llvm.byte<64>
+  // CHECK: llvm.bitcast {{.*}} : !llvm.byte<64> to i64
+  %1 = llvm.bitcast %0 : !llvm.byte<64> to i64
+  // Byte casts to and from pointers are always valid.
+  // CHECK: llvm.bitcast {{.*}} : !llvm.ptr to !llvm.byte<64>
+  %2 = llvm.bitcast %ptr : !llvm.ptr to !llvm.byte<64>
+  // CHECK: llvm.bitcast {{.*}} : !llvm.byte<64> to !llvm.ptr
+  %3 = llvm.bitcast %2 : !llvm.byte<64> to !llvm.ptr
   llvm.return
 }
 
