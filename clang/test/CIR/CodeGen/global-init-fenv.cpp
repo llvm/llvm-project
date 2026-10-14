@@ -69,11 +69,11 @@ float g_const = c_x / c_y;
 
 // CIR-CONSTRAINED: cir.func {{.*}} @__cxx_global_var_init.1() attributes {strictfp}
 // CIR-CONSTRAINED:   %[[G:.*]] = cir.get_global @g_const : !cir.ptr<!cir.float>
-// CIR-CONSTRAINED:   %[[XP:.*]] = cir.get_global @_ZL3c_x : !cir.ptr<!cir.float>
-// CIR-CONSTRAINED:   %[[X:.*]] = cir.load {{.*}} %[[XP]]
-// CIR-CONSTRAINED:   %[[YP:.*]] = cir.get_global @_ZL3c_y : !cir.ptr<!cir.float>
-// CIR-CONSTRAINED:   %[[Y:.*]] = cir.load {{.*}} %[[YP]]
+// CIR-STRICT:        %[[X:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
+// CIR-STRICT:        %[[Y:.*]] = cir.const #cir.fp<1.000000e+01> : !cir.float
 // CIR-STRICT:        %[[R:.*]] = cir.fdiv %[[X]], %[[Y]] : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+// CIR-MAYTRAP:       %[[X:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
+// CIR-MAYTRAP:       %[[Y:.*]] = cir.const #cir.fp<1.000000e+01> : !cir.float
 // CIR-MAYTRAP:       %[[R:.*]] = cir.fdiv %[[X]], %[[Y]] : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = false>
 // CIR-CONSTRAINED:   cir.store {{.*}} %[[R]], %[[G]] : !cir.float, !cir.ptr<!cir.float>
 
@@ -96,10 +96,8 @@ float g_mixed = ce_x / ce_y / nc_z;
 // CIR-CONSTRAINED: cir.func {{.*}} @__cxx_global_var_init.2() attributes {strictfp}
 // CIR-DEFAULT:     cir.func {{.*}} @__cxx_global_var_init.1()
 // CIR:               %[[G:.*]] = cir.get_global @g_mixed : !cir.ptr<!cir.float>
-// CIR:               %[[AP:.*]] = cir.get_global @_ZL4ce_x : !cir.ptr<!cir.float>
-// CIR:               %[[A:.*]] = cir.load {{.*}} %[[AP]]
-// CIR:               %[[BP:.*]] = cir.get_global @_ZL4ce_y : !cir.ptr<!cir.float>
-// CIR:               %[[B:.*]] = cir.load {{.*}} %[[BP]]
+// CIR:               %[[A:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
+// CIR:               %[[B:.*]] = cir.const #cir.fp<1.000000e+01> : !cir.float
 // CIR-STRICT:        %[[R0:.*]] = cir.fdiv %[[A]], %[[B]] : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 // CIR-MAYTRAP:       %[[R0:.*]] = cir.fdiv %[[A]], %[[B]] : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = false>
 // CIR-DEFAULT:       %[[R0:.*]] = cir.fdiv %[[A]], %[[B]] : !cir.float

@@ -49,8 +49,8 @@ int f2() {
 // CHECK:    %[[I_PTR:.*]] = cir.alloca "i" align(4) init const : !cir.ptr<!s32i>
 // CHECK:    %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CHECK:    cir.store{{.*}} %[[TWO]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
-// CHECK:    %[[I:.*]] = cir.load{{.*}} %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
-// CHECK:    cir.store{{.*}} %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[TWO_FOLDED:.*]] = cir.const #cir.int<2> : !s32i
+// CHECK:    cir.store{{.*}} %[[TWO_FOLDED]], %[[RV]] : !s32i, !cir.ptr<!s32i>
 // CHECK:    %[[R:.*]] = cir.load{{.*}} %[[RV]] : !cir.ptr<!s32i>, !s32i
 // CHECK:    cir.return %[[R]] : !s32i
 

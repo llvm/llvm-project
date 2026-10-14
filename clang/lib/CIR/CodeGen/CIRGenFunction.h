@@ -802,9 +802,10 @@ public:
     bool isReference() const { return valueAndIsReference.getInt(); }
     LValue getReferenceLValue(CIRGenFunction &cgf, Expr *refExpr) const {
       assert(isReference());
-      cgf.cgm.errorNYI(refExpr->getSourceRange(),
-                       "ConstantEmission::getReferenceLValue");
-      return {};
+      auto attr = mlir::cast<mlir::TypedAttr>(valueAndIsReference.getPointer());
+      mlir::Value val = cgf.getBuilder().getConstant(
+          cgf.getLoc(refExpr->getSourceRange()), attr);
+      return cgf.makeNaturalAlignAddrLValue(val, refExpr->getType());
     }
 
     mlir::TypedAttr getValue() const {
