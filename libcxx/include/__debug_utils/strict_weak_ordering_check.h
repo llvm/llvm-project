@@ -24,7 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _RandomAccessIterator, class _Comp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+_LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __check_strict_weak_ordering_sorted(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp& __comp) {
 #if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
   using __diff_t  = __iterator_difference_type<_RandomAccessIterator>;
