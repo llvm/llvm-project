@@ -1212,8 +1212,8 @@ void State::addInfoForInductions(BasicBlock &BB) {
   CmpPredicate Pred;
   auto BaseInd = m_CombineOr(m_Phi(PN), m_IncrementOf(m_Phi(PN), IncStep));
   auto IndValue = m_Value(
-      A, m_CombineOr(BaseInd,
-                     m_CombineOr(m_ZExt(m_Phi(PN)), m_SExt(m_Phi(PN)))));
+      A,
+      m_CombineOr(BaseInd, m_CombineOr(m_ZExt(m_Phi(PN)), m_SExt(m_Phi(PN)))));
 
   auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
   if (!Br)
