@@ -11,6 +11,7 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
@@ -42,6 +43,47 @@ transform::ApplyVectorToLLVMConversionPatternsOp::verifyTypeConverter(
   if (builder.getTypeConverterType() != "LLVMTypeConverter")
     return emitOpError("expected LLVMTypeConverter");
   return success();
+}
+
+void transform::ApplyVectorLinearizeConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  ConversionTarget target(*getContext());
+  vector::populateVectorLinearizeBasePatterns(typeConverter, target, patterns);
+  if (getShuffleLikeOps())
+    vector::populateVectorLinearizeShuffleLikeOpsPatterns(typeConverter, target,
+                                                          patterns);
+}
+
+void transform::ApplyVectorLinearizeConversionPatternsOp::
+    populateConversionTargetRules(const TypeConverter &typeConverter,
+                                  ConversionTarget &conversionTarget) {
+  // The legality rules need a mutable converter; they keep their own copy.
+  TypeConverter linearizer;
+  vector::populateForVectorLinearize(linearizer, conversionTarget);
+  if (std::optional<int64_t> bitwidth = getTargetVectorBitwidth())
+    vector::populateVectorLinearizeBitWidthTargetRules(conversionTarget,
+                                                       *bitwidth);
+}
+
+LogicalResult
+transform::ApplyVectorLinearizeConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() !=
+      VectorLinearizeTypeConverterOp::getTypeConverterType())
+    return emitOpError("expected VectorLinearizeTypeConverter");
+  return success();
+}
+
+std::unique_ptr<TypeConverter>
+transform::VectorLinearizeTypeConverterOp::getTypeConverter() {
+  auto typeConverter = std::make_unique<TypeConverter>();
+  ConversionTarget target(*getContext());
+  vector::populateForVectorLinearize(*typeConverter, target);
+  return typeConverter;
+}
+
+StringRef transform::VectorLinearizeTypeConverterOp::getTypeConverterType() {
+  return "VectorLinearizeTypeConverter";
 }
 
 //===----------------------------------------------------------------------===//
@@ -271,6 +313,7 @@ public:
 
   VectorTransformDialectExtension() {
     declareGeneratedDialect<vector::VectorDialect>();
+    declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<LLVM::LLVMDialect>();
     registerTransformOps<
 #define GET_OP_LIST
