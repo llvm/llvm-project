@@ -166,7 +166,10 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
     unsigned FirstChar = Str[Active.Idx];
 
     // Have we inserted anything starting with FirstChar at the current node?
-    if (auto It = Active.Node->Children.find(FirstChar);
+    // Each boundary symbol is unique, so it cannot already label an outgoing
+    // edge at the active node. Skip the child lookup.
+    if (auto It = isBoundary(FirstChar) ? Active.Node->Children.end()
+                                        : Active.Node->Children.find(FirstChar);
         It == Active.Node->Children.end()) {
       // If not, then we can just insert a leaf and move to the next step.
       insertLeaf(*Active.Node, EndIdx, FirstChar);
