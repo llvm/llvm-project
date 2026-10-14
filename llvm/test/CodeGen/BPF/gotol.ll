@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=bpfel -mcpu=v4 -gotol-abs-low-bound 0 -verify-machineinstrs -show-mc-encoding < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -mcpu=v4 -verify-machineinstrs < %s | FileCheck %s --check-prefix=NORMAL
 ; Source:
 ;   // This test covers all three cases:
 ;   //   (1). jmp to another basic block (not the follow-through one)
@@ -35,11 +36,17 @@ entry:
   %cmp = icmp ult i32 %a, %b
   br i1 %cmp, label %next, label %next2
 
-; case (3): conditional jmp followed by an unconditional jmp
 ; CHECK:        w0 = w2
-; CHECK-NEXT:   if w1 < w2 goto
+; CHECK-NEXT:   if w1 >= w2 goto
 ; CHECK:        gotol .LBB0_4   # encoding: [0x06'A',A,A,A,0x00,0x00,0x00,0x00]
 ; CHECK-NEXT:                   # fixup A - offset: 0, value: .LBB0_4, kind: FK_BPF_PCRel_4
+
+; Without forced gotol, the inverted branch needs no extra goto.
+; NORMAL-LABEL: foo:
+; NORMAL:       w0 = w2
+; NORMAL-NEXT:  if w1 >= w2 goto
+; NORMAL-NOT:   goto
+; NORMAL:       w0 *= w1
 
 begin:                                            ; preds = %next2, %next
   %s.0 = phi i32 [ %mul3, %next ], [ %mul7, %next2 ]
@@ -49,20 +56,17 @@ begin:                                            ; preds = %next2, %next
 
 ; case (2): conditional jmp
 ; CHECK:        w0 *= w1
-; CHECK-NEXT:   if w0 > w2 goto .LBB0_7
-; CHECK:        goto .LBB0_4
-; CHECK-LABEL:  .LBB0_7:
+; CHECK-NEXT:   if w0 <= w2 goto .LBB0_9
+; CHECK:        goto .LBB0_2
+; CHECK-LABEL:  .LBB0_9:
 ; CHECK:        gotol
-
-; CHECK-LABEL:  .LBB0_4:
 
 if.then2:                                         ; preds = %begin
   %mul = mul i32 %div, %div
   br label %cleanup
 
-; case (1): unconditional jmp
 ; CHECK:        w0 *= w0
-; CHECK-NEXT:   gotol
+; CHECK:        exit
 
 next:                                             ; preds = %begin, %entry
   %s.1 = phi i32 [ %b, %entry ], [ %div, %begin ]
@@ -75,6 +79,14 @@ next2:                                            ; preds = %next, %entry
   %mul7 = mul i32 %s.2, %b
   %cmp8 = icmp ugt i32 %mul7, %a
   br i1 %cmp8, label %begin, label %cleanup
+
+; case (3): conditional jmp followed by an unconditional jmp
+; CHECK-LABEL:  .LBB0_4:
+; CHECK:        w0 *= w2
+; CHECK-NEXT:   if w0 > w1 goto .LBB0_12
+; CHECK:        gotol .LBB0_5
+; CHECK-LABEL:  .LBB0_12:
+; CHECK:        gotol .LBB0_2
 
 cleanup:                                          ; preds = %next2, %if.then2
   %retval.0 = phi i32 [ %mul, %if.then2 ], [ %mul7, %next2 ]

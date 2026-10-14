@@ -245,8 +245,7 @@ good:
 ; CHECK-LABEL: check:
 ; CHECK:         call fail
 ; CHECK-NEXT:    unwind_goto [[PAD:.LBB[0-9_]+]]
-; CHECK-NEXT:    goto [[PAD]]
-; CHECK:       [[PAD]]:
+; CHECK-NEXT:  [[PAD]]:
 ; CHECK-NEXT:    r0 = 0
 ; CHECK-NEXT:    unwind_exit
 
