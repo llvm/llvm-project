@@ -12521,6 +12521,7 @@ cc_library(
     name = "TosaToLinalg",
     srcs = glob([
         "lib/Conversion/TosaToLinalg/*.cpp",
+        "lib/Conversion/TosaToLinalg/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/TosaToLinalg/*.h",
