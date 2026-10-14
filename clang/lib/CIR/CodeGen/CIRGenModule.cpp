@@ -87,7 +87,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                            const clang::CodeGenOptions &cgo,
                            DiagnosticsEngine &diags)
     : builder(mlirContext, *this), astContext(astContext),
-      langOpts(astContext.getLangOpts()), codeGenOpts(cgo),
+      langOpts(astContext.getLangOpts()), atomicOpts(astContext.getLangOpts()),
+      codeGenOpts(cgo),
       theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&mlirContext))},
       diags(diags), target(astContext.getTargetInfo()),
       abi(createCXXABI(*this)), genTypes(*this), vtables(*this) {
@@ -1416,8 +1417,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     // in both device and host compilations.
     if (getLangOpts().CUDA && d && d->hasAttr<HIPManagedAttr>() &&
         d->hasExternalStorage())
-      errorNYI(d->getSourceRange(),
-               "getOrCreateCIRGlobal: HIP managed attribute");
+      getCUDARuntime().handleVarRegistration(d, gv);
   }
 
   assert(!cir::MissingFeatures::addressSpace());
@@ -2327,6 +2327,19 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
       getTypes().getPointerAddressSpace(s->getType()));
 
   return builder.getGlobalViewAttr(ptrTy, gv);
+}
+
+cir::GlobalOp CIRGenModule::createGlobalString(mlir::Location loc,
+                                               StringRef str, StringRef name) {
+  mlir::Attribute init = builder.getString(str, convertType(astContext.CharTy),
+                                           /*size=*/std::nullopt);
+
+  // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
+  // we need to do that explicitly.
+  return generateStringLiteral(loc, mlir::cast<mlir::TypedAttr>(init),
+                               cir::GlobalLinkageKind::PrivateLinkage, *this,
+                               getUniqueGlobalName(name.str()),
+                               CharUnits::One());
 }
 
 mlir::ptr::MemorySpaceAttrInterface
@@ -3929,6 +3942,12 @@ void CIRGenModule::release() {
                      builder.getArrayAttr(globalScopeAsm));
 
   emitGlobalAnnotations();
+
+  if (std::optional<cir::FramePointerKind> kind =
+          getFramePointerKind(codeGenOpts.getFramePointer()))
+    theModule->setAttr(
+        cir::CIRDialect::getModuleFramePointerAttrName(),
+        cir::FramePointerKindAttr::get(&getMLIRContext(), *kind));
 
   if (!recordLayoutEntries.empty())
     theModule->setAttr(

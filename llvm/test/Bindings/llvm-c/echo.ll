@@ -23,6 +23,7 @@ module asm "classical GAS"
 @section = global i32 27, section ".custom"
 @align = global i32 31, align 4
 @nullptr = global ptr null
+@dso_local_var = dso_local global i32 37
 
 @const_gep = global ptr getelementptr (i8, ptr @var, i64 8)
 @const_inbounds_gep = global ptr getelementptr inbounds (i8, ptr @var, i64 4)
@@ -35,6 +36,7 @@ module asm "classical GAS"
 @aliased3 = external alias i32, ptr @var
 @aliased4 = weak alias i32, ptr @var
 @aliased5 = weak_odr alias i32, ptr @var
+@aliased6 = dso_local alias i32, ptr @var
 
 @ifunc = ifunc i32 (i32), ptr @ifunc_resolver
 
@@ -57,6 +59,10 @@ define { i64, ptr } @unpackrepack(%S %s) {
 }
 
 declare void @decl()
+
+define dso_local void @dso_local_fn() {
+  ret void
+}
 
 ; TODO: label and metadata types
 define void @types() {

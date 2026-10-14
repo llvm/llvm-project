@@ -16,6 +16,7 @@
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
+#include "VectorizeOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,7 +36,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -47,10 +47,6 @@ using namespace llvm::VPlanPatternMatch;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
-
-namespace llvm {
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-} // namespace llvm
 
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
@@ -325,12 +321,11 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     RecipeCost = 0;
   } else {
     RecipeCost = computeCost(VF, Ctx);
-    if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
-        RecipeCost.isValid()) {
+    if (Ctx.Opts.force_target_instruction_cost && RecipeCost.isValid()) {
       // VPDerivedIVRecipe and VPScalarIVStepsRecipe never have underlying
       // instructions.
       if (UI || isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(this))
-        RecipeCost = InstructionCost(ForceTargetInstructionCost);
+        RecipeCost = InstructionCost(*Ctx.Opts.force_target_instruction_cost);
       else
         RecipeCost = InstructionCost(0);
     }
@@ -584,6 +579,10 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     llvm_unreachable("type must be passed explicitly");
   case Instruction::Call:
     return getCalledFunction(Operands)->getReturnType();
+  case VPInstruction::BuildVector:
+    assert(VectorType::isValidElementType(Op0Ty) &&
+           "BuildVector operands must be valid vector elements");
+    break;
   default:
     if (Instruction::isCast(Opcode))
       llvm_unreachable("type must be passed explicitly");
@@ -596,7 +595,6 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
       Instruction::isBinaryOp(Opcode) ||
       is_contained({VPInstruction::FirstOrderRecurrenceSplice,
                     VPInstruction::BuildVector,
-                    VPInstruction::BuildStructVector,
                     VPInstruction::ConcatVectors},
                    Opcode);
   if (AllOperandsSameType)
@@ -696,7 +694,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::ExtractValue:
   case Instruction::Fence:
   case VPInstruction::AnyOf:
-  case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
   case VPInstruction::Intrinsic:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -935,32 +932,11 @@ Value *VPInstruction::generate(VPTransformState &State,
         State.VF, State.get(getOperand(0), /*NeedsSingleScalar=*/true),
         "broadcast");
   }
-  case VPInstruction::BuildStructVector: {
-    assert(!GenerateSingleScalar &&
-           "Cannot generate scalar value for BuildStructVector");
-    // For struct types, we need to build a new 'wide' struct type, where each
-    // element is widened, i.e., we create a struct of vectors.
-    auto *StructTy = cast<StructType>(getOperand(0)->getScalarType());
-    Value *Res = PoisonValue::get(toVectorizedTy(StructTy, State.VF));
-    for (const auto &[LaneIndex, Op] : enumerate(operands())) {
-      for (unsigned FieldIndex = 0; FieldIndex != StructTy->getNumElements();
-           FieldIndex++) {
-        Value *ScalarValue =
-            Builder.CreateExtractValue(State.get(Op, true), FieldIndex);
-        Value *VectorValue = Builder.CreateExtractValue(Res, FieldIndex);
-        VectorValue =
-            Builder.CreateInsertElement(VectorValue, ScalarValue, LaneIndex);
-        Res = Builder.CreateInsertValue(Res, VectorValue, FieldIndex);
-      }
-    }
-    return Res;
-  }
   case VPInstruction::BuildVector: {
     assert(!GenerateSingleScalar &&
            "Cannot generate scalar value for BuildVector");
-    auto *ScalarTy = getOperand(0)->getScalarType();
-    auto NumOfElements = ElementCount::getFixed(getNumOperands());
-    Value *Res = PoisonValue::get(toVectorizedTy(ScalarTy, NumOfElements));
+    Value *Res = PoisonValue::get(
+        FixedVectorType::get(getScalarType(), getNumOperands()));
     for (const auto &[Idx, Op] : enumerate(operands()))
       Res = Builder.CreateInsertElement(Res, State.get(Op, true),
                                         Builder.getInt64(Idx));
@@ -1690,7 +1666,6 @@ void VPInstruction::addOperand(VPValue *Op) {
     break;
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::BuildVector:
-  case VPInstruction::BuildStructVector:
   case VPInstruction::ConcatVectors:
     assert(Ty == getOperand(0)->getScalarType() &&
            "appended operand must match operand 0's scalar type");
@@ -1733,8 +1708,7 @@ void VPInstruction::execute(VPTransformState &State) {
   if (!hasResult())
     return;
   assert(GeneratedValue && "generate must produce a value");
-  assert(((GeneratedValue->getType()->isVectorTy() ||
-           GeneratedValue->getType()->isStructTy()) == !GenerateSingleScalar) &&
+  assert(GeneratedValue->getType()->isVectorTy() == !GenerateSingleScalar &&
          "scalar value but not only first lane defined");
   State.set(this, GeneratedValue, GenerateSingleScalar);
   if (getOpcode() == VPInstruction::ResumeForEpilogue ||
@@ -1767,7 +1741,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case VPInstruction::Broadcast:
-  case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
   case VPInstruction::ConcatVectors:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -1827,6 +1800,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return Op == getOperand(0);
   case Instruction::PHI:
     return true;
+  case Instruction::ExtractValue:
   case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Select:
@@ -1848,7 +1822,6 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::WideVectorLoad:
-  case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
     return true;
   case VPInstruction::PtrAdd:
@@ -1943,9 +1916,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::Broadcast:
     O << "broadcast";
-    break;
-  case VPInstruction::BuildStructVector:
-    O << "buildstructvector";
     break;
   case VPInstruction::BuildVector:
     O << "buildvector";
@@ -3716,7 +3686,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   // TODO: Support any-of reductions.
   assert(
       (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) ||
-       ForceTargetInstructionCost.getNumOccurrences() > 0) &&
+       Ctx.Opts.force_target_instruction_cost) &&
       "Any-of reduction not implemented in VPlan-based cost model currently.");
 
   // Note that TTI should model the cost of moving result to the scalar register
@@ -3763,8 +3733,8 @@ VPExpressionRecipe::VPExpressionRecipe(
       // clone those external users.
       VPSingleDefRecipe *CopyForExtUsers = R->clone();
       R->replaceUsesWithIf(CopyForExtUsers,
-                           [&ExpressionRecipesAsSetOfUsers](VPUser &U) {
-                             return !ExpressionRecipesAsSetOfUsers.contains(&U);
+                           [&ExpressionRecipesAsSetOfUsers](VPUser *U) {
+                             return !ExpressionRecipesAsSetOfUsers.contains(U);
                            });
       CopyForExtUsers->insertBefore(R);
     }

@@ -92,6 +92,10 @@ MLIRContext *spirv::TargetEnv::getContext() const {
 // Utility functions
 //===----------------------------------------------------------------------===//
 
+StringRef spirv::getFuncParamAlignmentAttrName() { return "spirv.alignment"; }
+
+StringRef spirv::getFuncParamAttrName() { return "spirv.func_param_attr"; }
+
 StringRef spirv::getInterfaceVarABIAttrName() {
   return "spirv.interface_var_abi";
 }

@@ -335,14 +335,6 @@ public:
 
   bool hasArgList() const { return getWrappedLocation().hasArgList(); }
 
-  /// Determine if this describes the value of a local variable. It is true for
-  /// dbg.value, but false for dbg.declare, which describes its address, and
-  /// false for dbg.assign, which describes a combination of the variable's
-  /// value and address.
-  bool isValueOfVariable() const {
-    return getIntrinsicID() == Intrinsic::dbg_value;
-  }
-
   bool isKillLocation() const {
     return getWrappedLocation().isKillLocation(getExpression());
   }
@@ -369,28 +361,6 @@ public:
 
   Metadata *getRawExpression() const {
     return cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
-  }
-
-  /// Get the size (in bits) of the variable, or fragment of the variable that
-  /// is described.
-  LLVM_ABI std::optional<uint64_t> getFragmentSizeInBits() const;
-
-  /// Get the FragmentInfo for the variable.
-  std::optional<DIExpression::FragmentInfo> getFragment() const {
-    return getExpression()->getFragmentInfo();
-  }
-
-  /// Get the FragmentInfo for the variable if it exists, otherwise return a
-  /// FragmentInfo that covers the entire variable if the variable size is
-  /// known, otherwise return a zero-sized fragment.
-  DIExpression::FragmentInfo getFragmentOrEntireVariable() const {
-    DIExpression::FragmentInfo VariableSlice(0, 0);
-    // Get the fragment or variable size, or zero.
-    if (auto Sz = getFragmentSizeInBits())
-      VariableSlice.SizeInBits = *Sz;
-    if (auto Frag = getExpression()->getFragmentInfo())
-      VariableSlice.OffsetInBits = Frag->OffsetInBits;
-    return VariableSlice;
   }
 
   /// \name Casting methods
@@ -444,9 +414,6 @@ public:
   Value *getValue(unsigned OpIdx = 0) const {
     return getVariableLocationOp(OpIdx);
   }
-  iterator_range<location_op_iterator> getValues() const {
-    return location_ops();
-  }
 
   /// \name Casting methods
   /// @{
@@ -486,9 +453,7 @@ public:
   DIExpression *getAddressExpression() const {
     return cast<DIExpression>(getRawAddressExpression());
   }
-  LLVM_ABI void setAssignId(DIAssignID *New);
   LLVM_ABI void setAddress(Value *V);
-  LLVM_ABI void setValue(Value *V);
   /// \name Casting methods
   /// @{
   static bool classof(const IntrinsicInst *I) {

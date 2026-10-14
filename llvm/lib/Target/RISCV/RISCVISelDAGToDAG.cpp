@@ -958,7 +958,7 @@ bool RISCVDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
 static SDValue buildGPRPair(SelectionDAG *CurDAG, const SDLoc &DL, MVT VT,
                             SDValue Lo, SDValue Hi) {
   SDValue Ops[] = {
-      CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32), Lo,
+      CurDAG->getTargetConstant(RISCV::GPRPairNoX0RegClassID, DL, MVT::i32), Lo,
       CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32), Hi,
       CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
 
