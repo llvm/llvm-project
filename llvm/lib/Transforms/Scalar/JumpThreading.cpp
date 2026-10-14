@@ -543,11 +543,9 @@ static Constant *getKnownConstant(Value *Val, ConstantPreference Preference) {
 ///   BB: L = phi [A, PredBB], ...   ; L -> A on the PredBB edge
 ///       R = phi [B, PredBB], ...   ; R -> B on the PredBB edge
 ///       br (icmp <pred> L, R)      ; == C, false => thread past it
-static std::optional<bool> isImpliedByEdgeBranch(BasicBlock *PredBB,
-                                                 BasicBlock *BB,
-                                                 CmpInst::Predicate Pred,
-                                                 Value *LHS, Value *RHS,
-                                                 const DataLayout &DL) {
+static std::optional<bool>
+isImpliedByEdgeBranch(BasicBlock *PredBB, BasicBlock *BB, CmpPredicate Pred,
+                      Value *LHS, Value *RHS, const DataLayout &DL) {
   auto DefinedInBB = [&](Value *V) {
     auto *I = dyn_cast<Instruction>(V);
     return I && I->getParent() == BB;
@@ -786,7 +784,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     Type *CmpType = Cmp->getType();
     Value *CmpLHS = Cmp->getOperand(0);
     Value *CmpRHS = Cmp->getOperand(1);
-    CmpInst::Predicate Pred = Cmp->getPredicate();
+    CmpPredicate Pred = CmpPredicate::get(Cmp);
 
     PHINode *PN = dyn_cast<PHINode>(CmpLHS);
     if (!PN)

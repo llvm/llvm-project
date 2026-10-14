@@ -340,3 +340,76 @@ if.eq:
 if.ne:
   ret i32 0
 }
+
+; Positive: on the %entry edge the compare is `icmp samesign ult %a, %b`, which
+; is implied by %c = `icmp slt %a, %b`, so thread %entry -> %t.
+define i32 @thread_samesign_cmp_of_phi(i64 %a, i64 %b, i64 %y) {
+; CHECK-LABEL: define i32 @thread_samesign_cmp_of_phi(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[JOIN:.*]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[Y]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[T]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[F]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %c = icmp slt i64 %a, %b
+  br i1 %c, label %join, label %other
+
+other:
+  br label %join
+
+join:
+  %p = phi i64 [ %a, %entry ], [ %y, %other ]
+  %cmp = icmp samesign ult i64 %p, %b
+  br i1 %cmp, label %t, label %f
+
+t:
+  ret i32 1
+
+f:
+  ret i32 0
+}
+
+; Negative: without samesign, `icmp ult %a, %b` is not implied by
+; `icmp slt %a, %b`.
+define i32 @no_thread_ult_cmp_of_phi(i64 %a, i64 %b, i64 %y) {
+; CHECK-LABEL: define i32 @no_thread_ult_cmp_of_phi(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[C]], label %[[JOIN:.*]], label %[[OTHER:.*]]
+; CHECK:       [[OTHER]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[A]], %[[ENTRY]] ], [ [[Y]], %[[OTHER]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[P]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[F]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %c = icmp slt i64 %a, %b
+  br i1 %c, label %join, label %other
+
+other:
+  br label %join
+
+join:
+  %p = phi i64 [ %a, %entry ], [ %y, %other ]
+  %cmp = icmp ult i64 %p, %b
+  br i1 %cmp, label %t, label %f
+
+t:
+  ret i32 1
+
+f:
+  ret i32 0
+}
