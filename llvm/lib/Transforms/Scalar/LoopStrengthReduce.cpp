@@ -2476,11 +2476,14 @@ ICmpInst *LSRInstance::OptimizeLoopTermCondToEquality(
   if (isa<SCEVCouldNotCompute>(ExitCount))
     return Cond;
 
-  // The recurrence must not visit its exit value before the exiting
-  // iteration. Do not rely on poison-derived no-wrap flags here.
+  // A W-bit add recurrence with step S has period
+  // 2^W / gcd(2^W, S) = 2^(W - countr_zero(S)). Require the exit count to be
+  // smaller without relying on poison-derived no-wrap flags, so equality
+  // cannot match on an earlier iteration.
   const APInt &StepValue = Step->getAPInt();
-  unsigned PeriodLog2 = StepValue.getBitWidth() - StepValue.countr_zero();
-  if (SE.getUnsignedRangeMax(ExitCount).getActiveBits() > PeriodLog2)
+  unsigned RecurrencePeriodLog2 =
+      StepValue.getBitWidth() - StepValue.countr_zero();
+  if (!SE.getUnsignedRangeMax(ExitCount).isIntN(RecurrencePeriodLog2))
     return Cond;
 
   const auto *ExitValue =
