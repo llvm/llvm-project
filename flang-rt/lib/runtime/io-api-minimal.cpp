@@ -11,11 +11,11 @@
 
 #include "edit-output.h"
 #include "io-api-common.h"
-#include "unit.h"
 #include "flang-rt/runtime/format.h"
 #include "flang-rt/runtime/io-stmt.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang/Runtime/io-api.h"
 
 namespace Fortran::runtime::io {
@@ -145,20 +145,5 @@ bool IODEF(OutputLogical)(Cookie cookie, bool truth) {
 }
 
 } // namespace Fortran::runtime::io
-
-#if defined(_LIBCPP_VERBOSE_ABORT)
-// Provide own definition for `std::__libcpp_verbose_abort` to avoid dependency
-// on the version provided by libc++.
-
-void std::__libcpp_verbose_abort(char const *format, ...) noexcept(
-    noexcept(std::__libcpp_verbose_abort(""))) {
-  va_list list;
-  va_start(list, format);
-  std::vfprintf(stderr, format, list);
-  va_end(list);
-
-  std::abort();
-}
-#endif
 
 RT_EXT_API_GROUP_END

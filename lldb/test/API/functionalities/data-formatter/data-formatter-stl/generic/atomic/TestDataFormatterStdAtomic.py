@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdAtomicTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def get_variable(self, name):
         var = self.frame().FindVariable(name)
         var.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)

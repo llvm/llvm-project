@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-braces-around-statements %t -- -- -std=c++17
+// RUN: %check_clang_tidy -std=c++17-or-later %s readability-braces-around-statements %t
 
 void handle(bool);
 

@@ -53,11 +53,11 @@ void InefficientStringConcatenationCheck::registerMatchers(
     Finder->addMatcher(cxxOperatorCallExpr(anyOf(AssignOperator, PlusOperator)),
                        this);
   } else {
-    Finder->addMatcher(
-        cxxOperatorCallExpr(anyOf(AssignOperator, PlusOperator),
-                            hasAncestor(stmt(anyOf(cxxForRangeStmt(),
-                                                   whileStmt(), forStmt())))),
-        this);
+    Finder->addMatcher(cxxOperatorCallExpr(anyOf(AssignOperator, PlusOperator),
+                                           hasAncestor(stmt(anyOf(
+                                               cxxForRangeStmt(), whileStmt(),
+                                               forStmt(), doStmt())))),
+                       this);
   }
 }
 

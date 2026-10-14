@@ -48,9 +48,14 @@ define void @pair_call() {
 
 ; CHECK-LABEL: pair_call_return:
 ; CHECK-NEXT: .functype pair_call_return () -> (i32, i64)
+; CHECK-NEXT: .local i32, i64
 ; CHECK-NEXT: call pair_const{{$}}
+; CHECK-NEXT: local.set 1
+; CHECK-NEXT: local.set 0
+; CHECK-NEXT: local.get 0
+; CHECK-NEXT: local.get 1
 ; CHECK-NEXT: end_function{{$}}
-; REGS: call $push{{[0-9]+}}=, $push{{[0-9]+}}=, pair_const{{$}}
+; REGS: call $0=, $1=, pair_const{{$}}
 define %pair @pair_call_return() {
   %p = call %pair @pair_const()
   ret %pair %p
@@ -58,11 +63,16 @@ define %pair @pair_call_return() {
 
 ; CHECK-LABEL: pair_call_indirect:
 ; CHECK-NEXT: .functype pair_call_indirect (i32) -> (i32, i64)
+; CHECK-NEXT: .local i64
 ; CHECK-NEXT: local.get 0{{$}}
 ; CHECK-NEXT: call_indirect () -> (i32, i64){{$}}
+; CHECK-NEXT: local.set 1
+; CHECK-NEXT: local.set 0
+; CHECK-NEXT: local.get 0
+; CHECK-NEXT: local.get 1
 ; REF:        call_indirect __indirect_function_table, () -> (i32, i64){{$}}
 ; CHECK-NEXT: end_function{{$}}
-; REGS: call_indirect $push{{[0-9]+}}=, $push{{[0-9]+}}=, $0{{$}}
+; REGS: call_indirect () -> (i32, i64), ${{[0-9]+}}=, ${{[0-9]+}}=, $0{{$}}
 define %pair @pair_call_indirect(ptr %f) {
   %p = call %pair %f()
   ret %pair %p
@@ -80,10 +90,13 @@ define %pair @pair_tail_call() {
 
 ; CHECK-LABEL: pair_call_return_first:
 ; CHECK-NEXT: .functype pair_call_return_first () -> (i32)
+; CHECK-NEXT: .local i32
 ; CHECK-NEXT: call pair_const{{$}}
 ; CHECK-NEXT: drop{{$}}
+; CHECK-NEXT: local.set 0
+; CHECK-NEXT: local.get 0
 ; CHECK-NEXT: end_function{{$}}
-; REGS: call $push{{[0-9]+}}=, $drop=, pair_const{{$}}
+; REGS: call $0=, $drop=, pair_const{{$}}
 define i32 @pair_call_return_first() {
   %p = call %pair @pair_const()
   %v = extractvalue %pair %p, 0
@@ -107,11 +120,14 @@ define i64 @pair_call_return_second() {
 
 ; CHECK-LABEL: pair_call_use_first:
 ; CHECK-NEXT: .functype pair_call_use_first () -> ()
+; CHECK-NEXT: .local i32
 ; CHECK-NEXT: call pair_const{{$}}
 ; CHECK-NEXT: drop{{$}}
+; CHECK-NEXT: local.set 0
+; CHECK-NEXT: local.get 0
 ; CHECK-NEXT: call use_i32{{$}}
 ; CHECK-NEXT: end_function{{$}}
-; REGS: call $push{{[0-9]+}}=, $drop=, pair_const{{$}}
+; REGS: call $0=, $drop=, pair_const{{$}}
 define void @pair_call_use_first() {
   %p = call %pair @pair_const()
   %v = extractvalue %pair %p, 0
@@ -138,13 +154,15 @@ define void @pair_call_use_second() {
 
 ; CHECK-LABEL: pair_call_use_first_return_second:
 ; CHECK-NEXT: .functype pair_call_use_first_return_second () -> (i64)
-; CHECK-NEXT: .local i64{{$}}
+; CHECK-NEXT: .local i32, i64{{$}}
 ; CHECK-NEXT: call pair_const{{$}}
+; CHECK-NEXT: local.set 1{{$}}
 ; CHECK-NEXT: local.set 0{{$}}
-; CHECK-NEXT: call use_i32{{$}}
 ; CHECK-NEXT: local.get 0{{$}}
+; CHECK-NEXT: call use_i32{{$}}
+; CHECK-NEXT: local.get 1{{$}}
 ; CHECK-NEXT: end_function{{$}}
-; REGS: call $push{{[0-9]+}}=, $0=, pair_const{{$}}
+; REGS: call $0=, $1=, pair_const{{$}}
 define i64 @pair_call_use_first_return_second() {
   %p = call %pair @pair_const()
   %v = extractvalue %pair %p, 0
@@ -177,8 +195,12 @@ define i32 @pair_call_use_second_return_first() {
 ; CHECK-NEXT: local.get 0
 ; CHECK-NEXT: local.get 1
 ; CHECK-NEXT: call pair_ident{{$}}
+; CHECK-NEXT: local.set 1
+; CHECK-NEXT: local.set 0
+; CHECK-NEXT: local.get 0
+; CHECK-NEXT: local.get 1
 ; CHECK-NEXT: end_function{{$}}
-; REGS: call $push{{[0-9]+}}=, $push{{[0-9]+}}=, pair_ident, $0, $1{{$}}
+; REGS: call $0=, $1=, pair_ident, $0, $1{{$}}
 define %pair @pair_pass_through(%pair %p) {
   %r = call %pair @pair_ident(%pair %p)
   ret %pair %r

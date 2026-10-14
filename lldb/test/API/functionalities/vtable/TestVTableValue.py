@@ -32,7 +32,7 @@ class TestVTableValue(TestBase):
         self.assertEqual(vtable.GetNumChildren(), 4)
 
         # Verify vtable address
-        vtable_addr = vtable.GetValueAsUnsigned(0)
+        vtable_addr = vtable.GetValueAsAddress()
         expected_addr = self.expected_vtable_addr(shape)
         self.assertEqual(vtable_addr, expected_addr)
 
@@ -49,7 +49,7 @@ class TestVTableValue(TestBase):
         self.assertEqual(vtable.GetNumChildren(), 4)
 
         # Verify vtable address
-        vtable_addr = vtable.GetValueAsUnsigned(0)
+        vtable_addr = vtable.GetValueAsAddress()
         expected_addr = self.expected_vtable_addr(shape)
         self.assertEqual(vtable_addr, expected_addr)
 
@@ -67,7 +67,7 @@ class TestVTableValue(TestBase):
         self.assertEqual(vtable.GetNumChildren(), 5)
 
         # Verify vtable address
-        vtable_addr = vtable.GetValueAsUnsigned()
+        vtable_addr = vtable.GetValueAsAddress()
         expected_addr = self.expected_vtable_addr(rect)
         self.assertEqual(vtable_addr, expected_addr)
 
@@ -89,11 +89,11 @@ class TestVTableValue(TestBase):
         shape_ptr_vtable = shape_ptr.GetVTable()
         self.assertEqual(shape_ptr_vtable.GetName(), "vtable for Rectangle")
         self.assertEqual(shape_ptr_vtable.GetNumChildren(), 5)
-        self.assertEqual(shape_ptr.GetValueAsUnsigned(0), rect.GetLoadAddress())
+        self.assertEqual(shape_ptr.GetValueAsAddress(), rect.GetLoadAddress())
         lldbutil.continue_to_source_breakpoint(
             self, process, "Shape is Shape", lldb.SBFileSpec("main.cpp")
         )
-        self.assertEqual(shape_ptr.GetValueAsUnsigned(0), shape.GetLoadAddress())
+        self.assertEqual(shape_ptr.GetValueAsAddress(), shape.GetLoadAddress())
         self.assertEqual(shape_ptr_vtable.GetNumChildren(), 4)
         self.assertEqual(shape_ptr_vtable.GetName(), "vtable for Shape")
 
@@ -134,7 +134,7 @@ class TestVTableValue(TestBase):
 
         # Overwrite the first entry in the vtable and make sure we can still
         # see the bogus value which should have no summary
-        vtable_addr = vtable.GetValueAsUnsigned()
+        vtable_addr = vtable.GetValueAsAddress()
 
         is_64bit = self.process().GetAddressByteSize() == 8
         data = str(
@@ -161,6 +161,7 @@ class TestVTableValue(TestBase):
         vtable_addr = self.process().ReadPointerFromMemory(
             load_addr, read_from_memory_error
         )
+        vtable_addr = self.process().FixAddress(vtable_addr)
         self.assertTrue(read_from_memory_error.Success())
         return vtable_addr
 
@@ -170,6 +171,7 @@ class TestVTableValue(TestBase):
         func_ptr = self.process().ReadPointerFromMemory(
             vtable_entry_addr, read_func_ptr_error
         )
+        func_ptr = self.process().FixAddress(func_ptr)
         self.assertTrue(read_func_ptr_error.Success())
         return func_ptr
 
@@ -182,7 +184,7 @@ class TestVTableValue(TestBase):
 
         """
         # Check function ptr
-        vtable_entry_func_ptr = vtable_entry.GetValueAsUnsigned(0)
+        vtable_entry_func_ptr = vtable_entry.GetValueAsAddress()
         self.assertEqual(
             vtable_entry_func_ptr,
             self.expected_vtable_entry_func_ptr(vtable_addr, idx),
@@ -198,4 +200,4 @@ class TestVTableValue(TestBase):
 
         # The summary should be the address description of the function pointer
         summary = vtable_entry.GetSummary()
-        self.assertEqual(str(sb_addr), summary)
+        self.assertIn(str(sb_addr), summary)

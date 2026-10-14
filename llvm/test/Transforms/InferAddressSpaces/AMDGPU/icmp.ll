@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
 
 ; CHECK-LABEL: @icmp_flat_cmp_self(
 ; CHECK: %cmp = icmp eq ptr addrspace(3) %group.ptr.0, %group.ptr.0
@@ -82,7 +82,7 @@ define i1 @icmp_group_flat_cmp_constant_inttoptr(ptr addrspace(3) %group.ptr.0) 
 ; CHECK: %cmp = icmp eq ptr %cast0, addrspacecast (ptr addrspace(5) null to ptr)
 define i1 @icmp_mismatch_flat_group_private_cmp_null(ptr addrspace(3) %group.ptr.0) #0 {
   %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
-  %cmp = icmp eq ptr %cast0, addrspacecast (ptr addrspace(5) null to ptr)
+  %cmp = icmp eq ptr %cast0, addrspacecast (ptr addrspace(5) zeroinitializer to ptr)
   ret i1 %cmp
 }
 
@@ -135,7 +135,7 @@ define i1 @icmp_group_flat_cmp_poison(ptr addrspace(3) %group.ptr.0) #0 {
 ; CHECK: %cmp = icmp eq ptr addrspacecast (ptr addrspace(5) null to ptr), %cast0
 define i1 @icmp_mismatch_flat_group_private_cmp_null_swap(ptr addrspace(3) %group.ptr.0) #0 {
   %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
-  %cmp = icmp eq ptr addrspacecast (ptr addrspace(5) null to ptr), %cast0
+  %cmp = icmp eq ptr addrspacecast (ptr addrspace(5) zeroinitializer to ptr), %cast0
   ret i1 %cmp
 }
 

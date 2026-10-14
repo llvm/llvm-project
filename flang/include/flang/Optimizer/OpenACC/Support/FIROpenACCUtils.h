@@ -14,6 +14,9 @@
 #define FORTRAN_OPTIMIZER_OPENACC_SUPPORT_FIROPENACCUTILS_H
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
 #include <string>
 
@@ -24,7 +27,10 @@ namespace acc {
 /// FIR operations and looking for variable names.
 /// \param v The value to extract the variable name from
 /// \param preferDemangledName If true, prefers demangled/bindc names over
-///        mangled/unique names. If false, prefers mangled names.
+///        mangled/unique names. If false, prefers mangled names. A component
+///        or an element is named through a path whose root is the variable
+///        that holds it; only that root is uniqued, so only it is spelled
+///        differently by the two.
 /// Returns empty string if no name is found.
 std::string getVariableName(mlir::Value v, bool preferDemangledName = true);
 
@@ -50,6 +56,62 @@ std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type,
 /// \param bounds Array of DataBoundsOp values to check
 /// \return true if all bounds have constant lowerbound/upperbound or extent
 bool areAllBoundsConstant(llvm::ArrayRef<mlir::Value> bounds);
+
+/// Create or get a private recipe for the given type and name.
+/// \param builder The FIR builder
+/// \param loc The location
+/// \param ty The type of the variable
+/// \param dataBoundOps Optional bounds for the variable
+/// \return The existing or created PrivateRecipeOp symbol
+mlir::SymbolRefAttr
+createOrGetPrivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
+                         mlir::Value var,
+                         llvm::SmallVector<mlir::Value> &dataBoundOps);
+
+/// Create or get a firstprivate recipe for the given type and name.
+/// \param builder The FIR builder
+/// \param loc The location
+/// \param ty The type of the variable
+/// \param dataBoundOps Optional bounds for the variable
+/// \return The existing or created FirstprivateRecipeOp symbol
+mlir::SymbolRefAttr
+createOrGetFirstprivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
+                              mlir::Value var,
+                              llvm::SmallVector<mlir::Value> &dataBoundOps);
+
+/// Create or get a reduction recipe for the given type, name and operator.
+/// \param builder The FIR builder
+/// \param loc The location
+/// \param ty The type of the variable
+/// \param op The reduction operator
+/// \param dataBoundOps Optional bounds for the variable
+/// \param fastMathAttr Optional fast math attributes
+/// \return The existing or created ReductionRecipeOp symbol
+mlir::SymbolRefAttr
+createOrGetReductionRecipe(mlir::OpBuilder &builder, mlir::Location loc,
+                           mlir::Value var, mlir::acc::ReductionOperator op,
+                           llvm::SmallVector<mlir::Value> &dataBoundOps,
+                           mlir::Attribute fastMathAttr = {});
+
+/// Walks through operations that forward or view their operand and returns
+/// the original defining value. This strips operations like fir.convert,
+/// ViewLikeOpInterface, and optionally fir.declare/hlfir.declare. Block
+/// arguments of `acc.compute_region` are unwrapped to the corresponding
+/// `ins` operand.
+/// \param value The value to trace back to its origin
+/// \param stripDeclare If true (default), also strips declare operations
+/// \return The original value after stripping all intermediate operations
+mlir::Value getOriginalDef(mlir::Value value, bool stripDeclare = true);
+
+/// Returns true if \p symbol, used by \p user, is valid in an OpenACC offload
+/// region for FIR. When \p definingOpPtr is provided, it is set to the
+/// defining operation of \p symbol if one is found.
+bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
+                      mlir::Operation **definingOpPtr = nullptr);
+
+/// Returns true if \p val may be used from OpenACC region \p region without
+/// further implicit data mapping.
+bool isValidValueUse(mlir::Value val, mlir::Region &region);
 
 } // namespace acc
 } // namespace fir

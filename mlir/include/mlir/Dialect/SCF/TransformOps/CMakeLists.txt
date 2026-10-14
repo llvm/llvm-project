@@ -3,4 +3,4 @@ mlir_tablegen(SCFTransformOps.h.inc -gen-op-decls)
 mlir_tablegen(SCFTransformOps.cpp.inc -gen-op-defs)
 add_mlir_dialect_tablegen_target(MLIRSCFTransformOpsIncGen)
 
-add_mlir_doc(SCFTransformOps SCFLoopTransformOps Dialects/ -gen-op-doc)
+add_mlir_doc(SCFTransformOps SCFLoopTransformOps Dialects/ -gen-op-doc -dialect=transform)

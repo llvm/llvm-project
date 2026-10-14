@@ -4,42 +4,47 @@ Test lldb-dap RestartRequest.
 
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
-import lldbdap_testcase
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
-class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_restart(DAPTestCaseBase):
     @skipIfWindows
     def test_basic_functionality(self):
         """
         Tests the basic restarting functionality: set two breakpoints in
         sequence, restart at the second, check that we hit the first one.
         """
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
         line_A = line_number("main.c", "// breakpoint A")
         line_B = line_number("main.c", "// breakpoint B")
 
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        [bp_A, bp_B] = self.set_source_breakpoints("main.c", [line_A, line_B])
+        with session.configure(LaunchArgs(program)) as ctx:
+            [bp_A, bp_B] = session.resolve_source_breakpoints(
+                "main.c", [line_A, line_B]
+            )
 
         # Verify we hit A, then B.
-        self.continue_to_breakpoints([bp_A])
-        self.continue_to_breakpoints([bp_B])
+        session.verify_stopped_on_breakpoint(bp_A, after=ctx.process_event)
+        stop_event = session.continue_to_breakpoint(bp_B)
 
         # Make sure i has been modified from its initial value of 0.
+        top_frame = session.top_frame_from(stop_event)
+        i_val = top_frame.locals["i"]
         self.assertEqual(
-            int(self.dap_server.get_local_variable_value("i")),
-            1234,
-            "i != 1234 after hitting breakpoint B",
+            i_val.value_as_int, 1234, "i != 1234 after hitting breakpoint B"
         )
 
         # Restart then check we stop back at A and program state has been reset.
-        resp = self.dap_server.request_restart()
-        self.assertTrue(resp["success"])
-        self.verify_breakpoint_hit([bp_A])
+        last_event = session.last_event()
+        session.restart()
+
+        stop_event = session.verify_stopped_on_breakpoint(bp_A, after=last_event)
+        top_frame = session.top_frame_from(stop_event)
+        i_val = top_frame.locals["i"]
         self.assertEqual(
-            int(self.dap_server.get_local_variable_value("i")),
-            0,
-            "i != 0 after hitting breakpoint A on restart",
+            i_val.value_as_int, 0, "i != 0 after hitting breakpoint A on restart"
         )
 
     @skipIfWindows
@@ -48,20 +53,19 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         Check that the stopOnEntry setting is still honored after a restart.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
-        [bp_main] = self.set_function_breakpoints(["main"])
+        session = self.build_and_create_session()
+        with session.configure(LaunchArgs(program, stopOnEntry=True)) as ctx:
+            [bp_main] = session.resolve_function_breakpoints(["main"])
 
-        self.continue_to_next_stop()
-        self.verify_stop_on_entry()
+        session.verify_stopped_on_entry(after=ctx.process_event)
 
         # Then, if we continue, we should hit the breakpoint at main.
-        self.continue_to_breakpoints([bp_main])
+        bp_stop_event = session.continue_to_breakpoint(bp_main)
 
         # Restart and check that we still get a stopped event before reaching
         # main.
-        resp = self.dap_server.request_restart()
-        self.assertTrue(resp["success"])
-        self.verify_stop_on_entry()
+        session.restart()
+        session.verify_stopped_on_entry(after=bp_stop_event)
 
     @skipIfWindows
     def test_arguments(self):
@@ -69,37 +73,30 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         Tests that lldb-dap will use updated launch arguments included
         with a restart request.
         """
+        session = self.build_and_create_session()
+        program = self.getBuildArtifact("a.out")
         line_A = line_number("main.c", "// breakpoint A")
 
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        [bp_A] = self.set_source_breakpoints("main.c", [line_A])
+        with session.configure(LaunchArgs(program)) as ctx:
+            [bp_A] = session.resolve_source_breakpoints("main.c", [line_A])
 
         # Verify we hit A, then B.
-        self.continue_to_breakpoints([bp_A])
+        stop_event = session.verify_stopped_on_breakpoint(bp_A, after=ctx.process_event)
 
+        top_frame = session.top_frame_from(stop_event)
+        argc_val = top_frame.locals["argc"]
         # We don't set any arguments in the initial launch request, so argc
         # should be 1.
-        self.assertEqual(
-            int(self.dap_server.get_local_variable_value("argc")),
-            1,
-            "argc != 1 before restart",
-        )
+        self.assertEqual(argc_val.value_as_int, 1, "argc != 1 before restart")
 
+        last_event = session.last_event()
         # Restart with some extra 'args' and check that the new argc reflects
         # the updated launch config.
-        resp = self.dap_server.request_restart(
-            restartArguments={
-                "arguments": {
-                    "program": program,
-                    "args": ["a", "b", "c", "d"],
-                }
-            }
-        )
-        self.assertTrue(resp["success"])
-        self.verify_breakpoint_hit([bp_A])
-        self.assertEqual(
-            int(self.dap_server.get_local_variable_value("argc")),
-            5,
-            "argc != 5 after restart",
-        )
+        session.restart(LaunchArgs(program, args=["a", "b", "c", "d"]))
+
+        stop_event = session.verify_stopped_on_breakpoint(bp_A, after=last_event)
+        top_frame = session.top_frame_from(stop_event)
+        argc_val = top_frame.locals["argc"]
+        self.assertEqual(argc_val.value_as_int, 5, "argc != 5 after restart")
+
+        session.continue_to_exit()

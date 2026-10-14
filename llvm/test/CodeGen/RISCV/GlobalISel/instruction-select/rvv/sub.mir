@@ -16,7 +16,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_MF8_:%[0-9]+]]:vr = PseudoVSUB_VV_MF8 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_MF8_:%[0-9]+]]:vr = PseudoVSUB_VV_MF8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF8_]]
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -26,7 +26,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_MF8_:%[0-9]+]]:vr = PseudoVSUB_VV_MF8 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_MF8_:%[0-9]+]]:vr = PseudoVSUB_VV_MF8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 1 x s8>) = COPY $v8
@@ -51,7 +51,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_MF4_:%[0-9]+]]:vr = PseudoVSUB_VV_MF4 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_MF4_:%[0-9]+]]:vr = PseudoVSUB_VV_MF4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF4_]]
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -61,7 +61,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_MF4_:%[0-9]+]]:vr = PseudoVSUB_VV_MF4 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_MF4_:%[0-9]+]]:vr = PseudoVSUB_VV_MF4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 2 x s8>) = COPY $v8
@@ -86,7 +86,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF2_]]
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -96,7 +96,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 4 x s8>) = COPY $v8
@@ -121,7 +121,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -131,7 +131,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 8 x s8>) = COPY $v8
@@ -156,7 +156,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm2 = COPY $v10m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -166,7 +166,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm2 = COPY $v10m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:vrb(<vscale x 16 x s8>) = COPY $v8m2
@@ -191,7 +191,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm4 = COPY $v12m4
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -201,7 +201,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm4 = COPY $v12m4
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:vrb(<vscale x 32 x s8>) = COPY $v8m4
@@ -226,7 +226,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm8 = COPY $v8m8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm8 = COPY $v16m8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -236,7 +236,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm8 = COPY $v8m8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm8 = COPY $v16m8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1, 3 /* e8 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:vrb(<vscale x 64 x s8>) = COPY $v8m8
@@ -261,7 +261,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_MF4_:%[0-9]+]]:vr = PseudoVSUB_VV_MF4 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_MF4_:%[0-9]+]]:vr = PseudoVSUB_VV_MF4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF4_]]
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -271,7 +271,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_MF4_:%[0-9]+]]:vr = PseudoVSUB_VV_MF4 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_MF4_:%[0-9]+]]:vr = PseudoVSUB_VV_MF4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 1 x s16>) = COPY $v8
@@ -296,7 +296,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF2_]]
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -306,7 +306,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 2 x s16>) = COPY $v8
@@ -331,7 +331,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -341,7 +341,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 4 x s16>) = COPY $v8
@@ -366,7 +366,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm2 = COPY $v10m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -376,7 +376,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm2 = COPY $v10m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:vrb(<vscale x 8 x s16>) = COPY $v8m2
@@ -401,7 +401,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm4 = COPY $v12m4
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -411,7 +411,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm4 = COPY $v12m4
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:vrb(<vscale x 16 x s16>) = COPY $v8m4
@@ -436,7 +436,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm8 = COPY $v8m8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm8 = COPY $v16m8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -446,7 +446,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm8 = COPY $v8m8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm8 = COPY $v16m8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:vrb(<vscale x 32 x s16>) = COPY $v8m8
@@ -471,7 +471,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF2_]]
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -481,7 +481,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_MF2_:%[0-9]+]]:vr = PseudoVSUB_VV_MF2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_MF2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 1 x s32>) = COPY $v8
@@ -506,7 +506,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -516,7 +516,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 2 x s32>) = COPY $v8
@@ -541,7 +541,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm2 = COPY $v10m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -551,7 +551,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm2 = COPY $v10m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:vrb(<vscale x 4 x s32>) = COPY $v8m2
@@ -576,7 +576,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm4 = COPY $v12m4
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -586,7 +586,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm4 = COPY $v12m4
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:vrb(<vscale x 8 x s32>) = COPY $v8m4
@@ -611,7 +611,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm8 = COPY $v8m8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm8 = COPY $v16m8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -621,7 +621,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm8 = COPY $v8m8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm8 = COPY $v16m8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:vrb(<vscale x 16 x s32>) = COPY $v8m8
@@ -646,7 +646,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -656,7 +656,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVSUB_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 1 x s64>) = COPY $v8
@@ -681,7 +681,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm2 = COPY $v10m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -691,7 +691,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm2 = COPY $v10m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M2_:%[0-9]+]]:vrm2 = PseudoVSUB_VV_M2 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY [[PseudoVSUB_VV_M2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:vrb(<vscale x 2 x s64>) = COPY $v8m2
@@ -716,7 +716,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm4 = COPY $v12m4
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -726,7 +726,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm4 = COPY $v12m4
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M4_:%[0-9]+]]:vrm4 = PseudoVSUB_VV_M4 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY [[PseudoVSUB_VV_M4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:vrb(<vscale x 4 x s64>) = COPY $v8m4
@@ -751,7 +751,7 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm8 = COPY $v8m8
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrm8 = COPY $v16m8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV32I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -761,7 +761,7 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm8 = COPY $v8m8
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrm8 = COPY $v16m8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: [[PseudoVSUB_VV_M8_:%[0-9]+]]:vrm8 = PseudoVSUB_VV_M8 [[DEF]], [[COPY]], [[COPY1]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY [[PseudoVSUB_VV_M8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:vrb(<vscale x 8 x s64>) = COPY $v8m8

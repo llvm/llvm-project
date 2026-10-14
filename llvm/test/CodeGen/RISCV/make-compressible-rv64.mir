@@ -98,7 +98,7 @@
     ret void
   }
 
-  attributes #0 = { minsize "target-features"="+c" }
+  attributes #0 = { optsize "target-features"="+c" }
 
 ...
 ---

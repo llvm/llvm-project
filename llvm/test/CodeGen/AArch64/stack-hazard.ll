@@ -1737,30 +1737,20 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK0-NEXT:  .LBB27_2:
 ; CHECK0-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK0-NEXT:    bl __lttf2
+; CHECK0-NEXT:    ldp q0, q1, [sp, #32] // 32-byte Folded Reload
+; CHECK0-NEXT:    mov w22, w0
+; CHECK0-NEXT:    bl __getf2
 ; CHECK0-NEXT:    tbz w21, #0, .LBB27_4
 ; CHECK0-NEXT:  // %bb.3:
 ; CHECK0-NEXT:    smstart sm
 ; CHECK0-NEXT:  .LBB27_4:
 ; CHECK0-NEXT:    cmp w0, #0
-; CHECK0-NEXT:    cset w22, mi
-; CHECK0-NEXT:    tbz w21, #0, .LBB27_6
-; CHECK0-NEXT:  // %bb.5:
-; CHECK0-NEXT:    smstop sm
-; CHECK0-NEXT:  .LBB27_6:
-; CHECK0-NEXT:    ldp q0, q1, [sp, #32] // 32-byte Folded Reload
-; CHECK0-NEXT:    bl __getf2
-; CHECK0-NEXT:    tbz w21, #0, .LBB27_8
-; CHECK0-NEXT:  // %bb.7:
-; CHECK0-NEXT:    smstart sm
-; CHECK0-NEXT:  .LBB27_8:
-; CHECK0-NEXT:    cmp w0, #0
 ; CHECK0-NEXT:    ldp x29, x30, [sp, #128] // 16-byte Folded Reload
-; CHECK0-NEXT:    cset w8, pl
-; CHECK0-NEXT:    ldp d9, d8, [sp, #112] // 16-byte Folded Reload
-; CHECK0-NEXT:    tst w8, w22
+; CHECK0-NEXT:    ccmp w22, #0, #0, pl
 ; CHECK0-NEXT:    ldp x22, x21, [sp, #160] // 16-byte Folded Reload
-; CHECK0-NEXT:    csel w0, w20, w19, ne
+; CHECK0-NEXT:    csel w0, w20, w19, mi
 ; CHECK0-NEXT:    ldp x20, x19, [sp, #176] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp d9, d8, [sp, #112] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldp d11, d10, [sp, #96] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldp d13, d12, [sp, #80] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldp d15, d14, [sp, #64] // 16-byte Folded Reload
@@ -1824,32 +1814,22 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:  .LBB27_2:
 ; CHECK64-NEXT:    ldp q0, q1, [sp, #64] // 32-byte Folded Reload
 ; CHECK64-NEXT:    bl __lttf2
+; CHECK64-NEXT:    ldp q0, q1, [sp, #96] // 32-byte Folded Reload
+; CHECK64-NEXT:    mov w22, w0
+; CHECK64-NEXT:    bl __getf2
 ; CHECK64-NEXT:    tbz w21, #0, .LBB27_4
 ; CHECK64-NEXT:  // %bb.3:
 ; CHECK64-NEXT:    smstart sm
 ; CHECK64-NEXT:  .LBB27_4:
 ; CHECK64-NEXT:    cmp w0, #0
-; CHECK64-NEXT:    cset w22, mi
-; CHECK64-NEXT:    tbz w21, #0, .LBB27_6
-; CHECK64-NEXT:  // %bb.5:
-; CHECK64-NEXT:    smstop sm
-; CHECK64-NEXT:  .LBB27_6:
-; CHECK64-NEXT:    ldp q0, q1, [sp, #96] // 32-byte Folded Reload
-; CHECK64-NEXT:    bl __getf2
-; CHECK64-NEXT:    tbz w21, #0, .LBB27_8
-; CHECK64-NEXT:  // %bb.7:
-; CHECK64-NEXT:    smstart sm
-; CHECK64-NEXT:  .LBB27_8:
-; CHECK64-NEXT:    cmp w0, #0
 ; CHECK64-NEXT:    ldp x29, x30, [sp, #256] // 16-byte Folded Reload
-; CHECK64-NEXT:    cset w8, pl
-; CHECK64-NEXT:    ldp d9, d8, [sp, #176] // 16-byte Folded Reload
-; CHECK64-NEXT:    tst w8, w22
+; CHECK64-NEXT:    ccmp w22, #0, #0, pl
 ; CHECK64-NEXT:    ldp x22, x21, [sp, #288] // 16-byte Folded Reload
-; CHECK64-NEXT:    csel w0, w20, w19, ne
+; CHECK64-NEXT:    csel w0, w20, w19, mi
 ; CHECK64-NEXT:    ldp x20, x19, [sp, #304] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d11, d10, [sp, #160] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp d9, d8, [sp, #176] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr x28, [sp, #280] // 8-byte Reload
+; CHECK64-NEXT:    ldp d11, d10, [sp, #160] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldp d13, d12, [sp, #144] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldp d15, d14, [sp, #128] // 16-byte Folded Reload
 ; CHECK64-NEXT:    add sp, sp, #320
@@ -1922,27 +1902,17 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:    ldr q0, [sp, #1024] // 16-byte Reload
 ; CHECK1024-NEXT:    ldr q1, [sp, #1040] // 16-byte Reload
 ; CHECK1024-NEXT:    bl __lttf2
+; CHECK1024-NEXT:    ldr q0, [sp, #1056] // 16-byte Reload
+; CHECK1024-NEXT:    ldr q1, [sp, #1072] // 16-byte Reload
+; CHECK1024-NEXT:    mov w22, w0
+; CHECK1024-NEXT:    bl __getf2
 ; CHECK1024-NEXT:    tbz w21, #0, .LBB27_4
 ; CHECK1024-NEXT:  // %bb.3:
 ; CHECK1024-NEXT:    smstart sm
 ; CHECK1024-NEXT:  .LBB27_4:
 ; CHECK1024-NEXT:    cmp w0, #0
-; CHECK1024-NEXT:    cset w22, mi
-; CHECK1024-NEXT:    tbz w21, #0, .LBB27_6
-; CHECK1024-NEXT:  // %bb.5:
-; CHECK1024-NEXT:    smstop sm
-; CHECK1024-NEXT:  .LBB27_6:
-; CHECK1024-NEXT:    ldr q0, [sp, #1056] // 16-byte Reload
-; CHECK1024-NEXT:    ldr q1, [sp, #1072] // 16-byte Reload
-; CHECK1024-NEXT:    bl __getf2
-; CHECK1024-NEXT:    tbz w21, #0, .LBB27_8
-; CHECK1024-NEXT:  // %bb.7:
-; CHECK1024-NEXT:    smstart sm
-; CHECK1024-NEXT:  .LBB27_8:
-; CHECK1024-NEXT:    cmp w0, #0
-; CHECK1024-NEXT:    cset w8, pl
-; CHECK1024-NEXT:    tst w8, w22
-; CHECK1024-NEXT:    csel w0, w20, w19, ne
+; CHECK1024-NEXT:    ccmp w22, #0, #0, pl
+; CHECK1024-NEXT:    csel w0, w20, w19, mi
 ; CHECK1024-NEXT:    add sp, sp, #1088
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 1152
 ; CHECK1024-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
@@ -3090,8 +3060,8 @@ define void @call_with_doubles() "aarch64_pstate_sm_compatible" {
 ; CHECK1024-NEXT:    add sp, sp, #1056
 ; CHECK1024-NEXT:    b calld
 entry:
-  %call = tail call i32 @calld(double 0x7FF8000000000000)
-  %call.1 = tail call i32 @calld(double 0x7FF8000000000000)
+  %call = tail call i32 @calld(double +qnan)
+  %call.1 = tail call i32 @calld(double +qnan)
   ret void
 }
 declare i32 @calld(double) "aarch64_pstate_sm_compatible"
@@ -3238,9 +3208,9 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK0-NEXT:    sub sp, sp, #16
 ; CHECK0-NEXT:    rdsvl x8, #1
 ; CHECK0-NEXT:    mov x9, sp
-; CHECK0-NEXT:    mov w20, w0
 ; CHECK0-NEXT:    msub x9, x8, x8, x9
 ; CHECK0-NEXT:    mov sp, x9
+; CHECK0-NEXT:    mov w20, w0
 ; CHECK0-NEXT:    sub x10, x29, #80
 ; CHECK0-NEXT:    stp x9, x8, [x29, #-80]
 ; CHECK0-NEXT:    msr TPIDR2_EL0, x10
@@ -3309,10 +3279,10 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    sub sp, sp, #80
 ; CHECK64-NEXT:    rdsvl x8, #1
 ; CHECK64-NEXT:    mov x9, sp
-; CHECK64-NEXT:    mov w20, w0
-; CHECK64-NEXT:    msub x9, x8, x8, x9
 ; CHECK64-NEXT:    mov x19, sp
+; CHECK64-NEXT:    msub x9, x8, x8, x9
 ; CHECK64-NEXT:    mov sp, x9
+; CHECK64-NEXT:    mov w20, w0
 ; CHECK64-NEXT:    add x10, x19, #0
 ; CHECK64-NEXT:    stp x9, x8, [x19]
 ; CHECK64-NEXT:    msr TPIDR2_EL0, x10
@@ -3387,10 +3357,10 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    sub sp, sp, #1040
 ; CHECK1024-NEXT:    rdsvl x8, #1
 ; CHECK1024-NEXT:    mov x9, sp
-; CHECK1024-NEXT:    mov w20, w0
-; CHECK1024-NEXT:    msub x9, x8, x8, x9
 ; CHECK1024-NEXT:    mov x19, sp
+; CHECK1024-NEXT:    msub x9, x8, x8, x9
 ; CHECK1024-NEXT:    mov sp, x9
+; CHECK1024-NEXT:    mov w20, w0
 ; CHECK1024-NEXT:    add x10, x19, #0
 ; CHECK1024-NEXT:    stp x9, x8, [x19]
 ; CHECK1024-NEXT:    msr TPIDR2_EL0, x10

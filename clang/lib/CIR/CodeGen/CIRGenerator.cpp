@@ -12,14 +12,18 @@
 
 #include "CIRGenModule.h"
 
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Target/LLVMIR/Import.h"
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/DeclOpenACC.h"
+#include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/CIRDataLayoutSpec.h"
 #include "clang/CIR/CIRGenerator.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/Dialect/OpenACC/RegisterOpenACCExtensions.h"
+#include "clang/CIR/InitAllDialects.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/IR/DataLayout.h"
 
 using namespace cir;
@@ -37,39 +41,45 @@ CIRGenerator::~CIRGenerator() {
   assert(deferredInlineMemberFuncDefs.empty() || diags.hasErrorOccurred());
 }
 
-static void setMLIRDataLayout(mlir::ModuleOp &mod, const llvm::DataLayout &dl) {
-  mlir::MLIRContext *mlirContext = mod.getContext();
-  mlir::DataLayoutSpecInterface dlSpec =
-      mlir::translateDataLayout(dl, mlirContext);
-  mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
-}
-
 void CIRGenerator::Initialize(ASTContext &astContext) {
   using namespace llvm;
 
   this->astContext = &astContext;
 
   mlirContext = std::make_unique<mlir::MLIRContext>();
-  mlirContext->loadDialect<mlir::DLTIDialect>();
-  mlirContext->loadDialect<cir::CIRDialect>();
+  // MLIR multithreading stays enabled; the CIRDiagnosticHandler is only ever
+  // invoked from a single thread.
+  cir::registerAllDialects(*mlirContext);
+  mlirContext->loadDialect<mlir::DLTIDialect, cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
-
-  // Register extensions to integrate CIR types with OpenACC.
-  mlir::DialectRegistry registry;
-  cir::acc::registerOpenACCExtensions(registry);
-  mlirContext->appendDialectRegistry(registry);
+  mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
 
   cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
       *mlirContext.get(), astContext, codeGenOpts, diags);
   mlir::ModuleOp mod = cgm->getModule();
   llvm::DataLayout layout =
       llvm::DataLayout(astContext.getTargetInfo().getDataLayoutString());
-  setMLIRDataLayout(mod, layout);
+  cir::setMLIRDataLayout(mod, layout);
 }
 
 bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }
 
 mlir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }
+
+const Decl *CIRGenerator::getDeclForMangledName(llvm::StringRef mangledName) {
+  GlobalDecl result;
+  if (!cgm->lookupRepresentativeDecl(mangledName, result))
+    return nullptr;
+  const Decl *decl = result.getCanonicalDecl().getDecl();
+  if (auto *fd = dyn_cast<FunctionDecl>(decl)) {
+    if (fd->hasBody(fd))
+      return fd;
+  } else if (auto *td = dyn_cast<TagDecl>(decl)) {
+    if (auto *def = td->getDefinition())
+      return def;
+  }
+  return decl;
+}
 
 bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
   if (diags.hasUnrecoverableErrorOccurred())
@@ -147,9 +157,22 @@ void CIRGenerator::HandleTagDeclDefinition(TagDecl *d) {
   // inline initializers as definitions.
   if (astContext->getTargetInfo().getCXXABI().isMicrosoft())
     cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: MSABI");
-  // For OpenMP emit declare reduction functions, if required.
-  if (astContext->getLangOpts().OpenMP)
-    cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: OpenMP");
+
+  // For OpenMP emit declare reduction functions or declare mapper, if
+  // required.
+  if (astContext->getLangOpts().OpenMP) {
+    for (Decl *member : d->decls()) {
+      if (auto *drd = dyn_cast<OMPDeclareReductionDecl>(member)) {
+        if (astContext->DeclMustBeEmitted(drd))
+          cgm->errorNYI(d->getSourceRange(),
+                        "HandleTagDeclDefinition: OMPDeclareReductionDecl");
+      } else if (auto *dmd = dyn_cast<OMPDeclareMapperDecl>(member)) {
+        if (astContext->DeclMustBeEmitted(dmd))
+          cgm->errorNYI(d->getSourceRange(),
+                        "HandleTagDeclDefinition: OMPDeclareMapperDecl");
+      }
+    }
+  }
 }
 
 void CIRGenerator::HandleTagDeclRequiredDefinition(const TagDecl *D) {

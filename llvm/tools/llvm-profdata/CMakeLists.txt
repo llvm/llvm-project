@@ -12,4 +12,4 @@ add_llvm_tool(llvm-profdata
   intrinsics_gen
   )
 
-target_link_libraries(llvm-profdata PRIVATE LLVMDebuginfod)
+target_link_libraries(llvm-profdata PRIVATE LLVMDebuginfod LLVMHTTP)

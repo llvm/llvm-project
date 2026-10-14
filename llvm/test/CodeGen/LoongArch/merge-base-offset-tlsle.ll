@@ -661,7 +661,7 @@ if.end:
   ret void
 }
 
-@g_a64 = dso_local thread_local(localexec) global [614750729487779976 x i64] zeroinitializer, align 8
+@g_a64 = dso_local thread_local(localexec) global [536870911 x i64] zeroinitializer, align 8
 
 define dso_local ptr @tlsle_load_addr_offset_1() nounwind {
 ; LA32-LABEL: tlsle_load_addr_offset_1:

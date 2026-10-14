@@ -2,89 +2,92 @@
 Test lldb-dap RestartRequest.
 """
 
-from typing import Dict, Any, List
-
-import lldbdap_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import Console, LaunchArgs
 
 
 @skipIfBuildType(["debug"])
-class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
+@skipIfWasm  # runInTerminal has the client run the program, and a Wasm module is not executable
+class TestDAP_restart_console(DAPTestCaseBase):
     @skipIfAsan
-    @skipIfWindows
+    @skipIfWindows  # https://github.com/llvm/llvm-project/issues/200840
     @skipIf(oslist=["linux"], archs=["arm$"])  # Always times out on buildbot
     def test_basic_functionality(self):
         """
         Test basic restarting functionality when the process is running in
         a terminal.
         """
-        line_A = line_number("main.c", "// breakpoint A")
-        line_B = line_number("main.c", "// breakpoint B")
-
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, console="integratedTerminal")
-        [bp_A, bp_B] = self.set_source_breakpoints("main.c", [line_A, line_B])
+        session = self.build_and_create_session()
+        launch_args = LaunchArgs(program, console=Console.INTEGRATED_TERMINAL)
+        with session.configure(launch_args) as ctx:
+            line_A = line_number("main.c", "// breakpoint A")
+            line_B = line_number("main.c", "// breakpoint B")
+
+            [bp_A, bp_B] = session.resolve_source_breakpoints(
+                "main.c", [line_A, line_B]
+            )
 
         # Verify we hit A, then B.
-        self.dap_server.request_configurationDone()
-        self.verify_breakpoint_hit([bp_A])
-        self.dap_server.request_continue()
-        self.verify_breakpoint_hit([bp_B])
+        stop_A = session.verify_stopped_on_breakpoint(bp_A, after=ctx.process_event)
+        session.do_continue()
+        stop_B = session.verify_stopped_on_breakpoint(bp_B, after=stop_A)
 
         # Make sure i has been modified from its initial value of 0.
+        top_frame = session.top_frame_from(stop_B)
         self.assertEqual(
-            int(self.dap_server.get_local_variable_value("i")),
+            top_frame.locals["i"].value_as_int,
             1234,
             "i != 1234 after hitting breakpoint B",
         )
 
+        last_event = session.last_event()
         # Restart.
-        self.dap_server.request_restart()
+        session.restart()
 
         # Finally, check we stop back at A and program state has been reset.
-        self.verify_breakpoint_hit([bp_A])
-        self.assertEqual(
-            int(self.dap_server.get_local_variable_value("i")),
-            0,
-            "i != 0 after hitting breakpoint A on restart",
-        )
+        stop_A = session.verify_stopped_on_breakpoint(bp_A, after=last_event)
+        top_frame = session.top_frame_from(stop_A)
+        i_val = top_frame.locals["i"].value_as_int
+        self.assertEqual(i_val, 0, "i != 0 after hitting breakpoint A on restart")
 
-        # Check breakpoint B
-        self.dap_server.request_continue()
-        self.verify_breakpoint_hit([bp_B])
+        # Check breakpoint B.
+        session.do_continue()
+        stop_B = session.verify_stopped_on_breakpoint(bp_B, after=stop_A)
+        top_frame = session.top_frame_from(stop_B)
         self.assertEqual(
-            int(self.dap_server.get_local_variable_value("i")),
+            top_frame.locals["i"].value_as_int,
             1234,
             "i != 1234 after hitting breakpoint B",
         )
-        self.continue_to_exit()
+        session.continue_to_exit()
 
     @skipIfAsan
-    @skipIfWindows
+    @skipIfWindows  # https://github.com/llvm/llvm-project/issues/200840
     @skipIf(oslist=["linux"], archs=["arm$"])  # Always times out on buildbot
     def test_stopOnEntry(self):
         """
         Check that stopOnEntry works correctly when using console.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, console="integratedTerminal", stopOnEntry=True)
-        [bp_main] = self.set_function_breakpoints(["main"])
-
-        self.dap_server.request_configurationDone()
-        self.verify_stop_on_entry()
+        session = self.build_and_create_session()
+        launch_args = LaunchArgs(
+            program, console=Console.INTEGRATED_TERMINAL, stopOnEntry=True
+        )
+        with session.configure(launch_args) as ctx:
+            [bp_main] = session.resolve_function_breakpoints(["main"])
+        session.verify_stopped_on_entry(after=ctx.process_event)
 
         # Then, if we continue, we should hit the breakpoint at main.
-        self.dap_server.request_continue()
-        self.verify_breakpoint_hit([bp_main])
+        stop_event = session.continue_to_breakpoint(bp_main)
 
         # Restart and check that we still get a stopped event before reaching
         # main.
-        self.dap_server.request_restart()
-        self.verify_stop_on_entry()
+        session.restart()
+        session.verify_stopped_on_entry(after=stop_event)
 
         # continue to main
-        self.dap_server.request_continue()
-        self.verify_breakpoint_hit([bp_main])
-
-        self.continue_to_exit()
+        session.continue_to_breakpoint(bp_main)
+        session.continue_to_exit()

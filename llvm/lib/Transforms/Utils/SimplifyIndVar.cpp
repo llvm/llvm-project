@@ -959,7 +959,7 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
 
     // Go further for the bitcast 'prtoint ptr to i64' or if the cast is done
     // by truncation
-    if ((isa<PtrToIntInst>(UseInst)) || (isa<TruncInst>(UseInst)))
+    if (isa<PtrToIntInst, PtrToAddrInst, TruncInst>(UseInst))
       for (Use &U : UseInst->uses()) {
         Instruction *User = cast<Instruction>(U.getUser());
         if (replaceIVUserWithLoopInvariant(User))
@@ -1035,7 +1035,7 @@ std::pair<bool, bool> simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE,
 bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
                      LoopInfo *LI, const TargetTransformInfo *TTI,
                      SmallVectorImpl<WeakTrackingVH> &Dead) {
-  SCEVExpander Rewriter(*SE, SE->getDataLayout(), "indvars");
+  SCEVExpander Rewriter(*SE, "indvars");
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif
@@ -1821,8 +1821,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     assert(LoopExitingBlock && L->contains(LoopExitingBlock) &&
            "Not a LCSSA Phi?");
     WidePN->addIncoming(WideBO, LoopExitingBlock);
-    Builder.SetInsertPoint(User->getParent(),
-                           User->getParent()->getFirstInsertionPt());
+    Builder.SetInsertPoint(User->getParent()->getFirstInsertionPt());
     auto *TruncPN = Builder.CreateTrunc(WidePN, User->getType());
     User->replaceAllUsesWith(TruncPN);
     DeadInsts.emplace_back(User);
@@ -1885,7 +1884,7 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
                           UsePhi->getIterator());
         WidePhi->addIncoming(DU.WideDef, UsePhi->getIncomingBlock(0));
         BasicBlock *WidePhiBB = WidePhi->getParent();
-        IRBuilder<> Builder(WidePhiBB, WidePhiBB->getFirstInsertionPt());
+        IRBuilder<> Builder(WidePhiBB->getFirstInsertionPt());
         Value *Trunc = Builder.CreateTrunc(WidePhi, DU.NarrowDef->getType(), "",
                                            CanWidenByZExt, CanWidenBySExt);
         UsePhi->replaceAllUsesWith(Trunc);
@@ -2231,22 +2230,17 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
     auto *TI = BB->getTerminator();
     UpdateRangeFromGuards(TI);
 
-    auto *BI = dyn_cast<BranchInst>(TI);
-    if (!BI || !BI->isConditional())
+    auto *BI = dyn_cast<CondBrInst>(TI);
+    if (!BI)
       continue;
 
     auto *TrueSuccessor = BI->getSuccessor(0);
     auto *FalseSuccessor = BI->getSuccessor(1);
 
-    auto DominatesNarrowUser = [this, NarrowUser] (BasicBlockEdge BBE) {
-      return BBE.isSingleEdge() &&
-             DT->dominates(BBE, NarrowUser->getParent());
-    };
-
-    if (DominatesNarrowUser(BasicBlockEdge(BB, TrueSuccessor)))
+    if (DT->dominates(BasicBlockEdge(BB, TrueSuccessor), NarrowUserBB))
       UpdateRangeFromCondition(BI->getCondition(), /*TrueDest=*/true);
 
-    if (DominatesNarrowUser(BasicBlockEdge(BB, FalseSuccessor)))
+    if (DT->dominates(BasicBlockEdge(BB, FalseSuccessor), NarrowUserBB))
       UpdateRangeFromCondition(BI->getCondition(), /*TrueDest=*/false);
   }
 }

@@ -38,8 +38,8 @@ public:
       IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
 
   /// Returns an ASTConsumer that runs the specified clang-tidy checks.
-  std::unique_ptr<clang::ASTConsumer>
-  createASTConsumer(clang::CompilerInstance &Compiler, StringRef File);
+  std::unique_ptr<ASTConsumer> createASTConsumer(CompilerInstance &Compiler,
+                                                 StringRef File);
 
   /// Get the list of enabled checks.
   std::vector<std::string> getCheckNames();
@@ -91,13 +91,12 @@ void filterCheckOptions(ClangTidyOptions &Options,
 /// the profile will not be output to stderr, but will instead be stored
 /// as a JSON file in the specified directory.
 std::vector<ClangTidyError>
-runClangTidy(clang::tidy::ClangTidyContext &Context,
+runClangTidy(ClangTidyContext &Context,
              const tooling::CompilationDatabase &Compilations,
              ArrayRef<std::string> InputFiles,
              llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
              bool ApplyAnyFix, bool EnableCheckProfile = false,
-             llvm::StringRef StoreCheckProfile = StringRef(),
-             bool Quiet = false);
+             StringRef StoreCheckProfile = {}, bool Quiet = false);
 
 /// Controls what kind of fixes clang-tidy is allowed to apply.
 enum FixBehaviour {

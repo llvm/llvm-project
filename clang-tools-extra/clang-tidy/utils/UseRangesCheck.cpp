@@ -35,6 +35,7 @@ using namespace clang::ast_matchers;
 static constexpr const char BoundCall[] = "CallExpr";
 static constexpr const char FuncDecl[] = "FuncDecl";
 static constexpr const char ArgName[] = "ArgName";
+static constexpr const char StructuredBindingResult[] = "StructuredBinding";
 
 namespace clang::tidy::utils {
 
@@ -53,6 +54,16 @@ AST_MATCHER(Expr, hasSideEffects) {
   return Node.HasSideEffects(Finder->getASTContext());
 }
 } // namespace
+
+static auto hasStructuredBindingResult() {
+  return callExpr(
+      anyOf(hasParent(decompositionDecl()),
+            hasParent(exprWithCleanups(hasParent(decompositionDecl())))));
+}
+
+static auto hasStructuredBindingResult(StringRef ID) {
+  return hasStructuredBindingResult().bind(ID);
+}
 
 static auto
 makeExprMatcher(const ast_matchers::internal::Matcher<Expr> &ArgumentMatcher,
@@ -110,20 +121,20 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
   auto Replaces = getReplacerMap();
   ReverseDescriptor = getReverseDescriptor();
   auto BeginEndNames = getFreeBeginEndMethods();
-  const llvm::SmallVector<StringRef, 4> BeginNames{
+  const SmallVector<StringRef, 4> BeginNames{
       llvm::make_first_range(BeginEndNames)};
-  const llvm::SmallVector<StringRef, 4> EndNames{
+  const SmallVector<StringRef, 4> EndNames{
       llvm::make_second_range(BeginEndNames)};
   Replacers.clear();
   llvm::DenseSet<Replacer *> SeenRepl;
   for (auto I = Replaces.begin(), E = Replaces.end(); I != E; ++I) {
-    auto Replacer = I->getValue();
+    const auto Replacer = I->getValue();
     if (!SeenRepl.insert(Replacer.get()).second)
       continue;
     Replacers.push_back(Replacer);
     assert(!Replacer->getReplacementSignatures().empty() &&
            llvm::all_of(Replacer->getReplacementSignatures(),
-                        [](auto Index) { return !Index.empty(); }));
+                        [](const Signature &Index) { return !Index.empty(); }));
     std::vector<StringRef> Names(1, I->getKey());
     for (auto J = std::next(I); J != E; ++J)
       if (J->getValue() == Replacer)
@@ -155,15 +166,16 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
                 ast_matchers::internal::DynTypedMatcher::VO_AnyOf,
                 ASTNodeKind::getFromNodeKind<CallExpr>(),
                 std::move(TotalMatchers))
-                .convertTo<CallExpr>()),
+                .convertTo<CallExpr>(),
+            optionally(hasStructuredBindingResult(StructuredBindingResult))),
         this);
   }
 }
 
-static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
-                               ArrayRef<unsigned> Indexes,
+static void removeFunctionArgs(const DiagnosticBuilder &Diag,
+                               const CallExpr &Call, ArrayRef<unsigned> Indexes,
                                const ASTContext &Ctx) {
-  llvm::SmallVector<unsigned> Sorted(Indexes);
+  SmallVector<unsigned> Sorted(Indexes);
   llvm::sort(Sorted);
   // Keep track of commas removed
   llvm::SmallBitVector Commas(Call.getNumArgs());
@@ -191,6 +203,51 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
   }
 }
 
+static bool isResultUsed(const DynTypedNode &Node,
+                         const ast_matchers::MatchFinder::MatchResult &Result) {
+  const DynTypedNodeList Parents = Result.Context->getParents(Node);
+  assert(Parents.size() == 1 &&
+         "Expected exactly one parent for a matched algorithm call");
+  const DynTypedNode &Parent = Parents[0];
+  if (Parent.get<CompoundStmt>())
+    return false;
+  if (const auto *Cleanups = Parent.get<ExprWithCleanups>())
+    return isResultUsed(DynTypedNode::create(*Cleanups), Result);
+  if (const auto *Temporary = Parent.get<CXXBindTemporaryExpr>())
+    return isResultUsed(DynTypedNode::create(*Temporary), Result);
+  return true;
+}
+
+static bool isResultUsed(const CallExpr &Call,
+                         const ast_matchers::MatchFinder::MatchResult &Result) {
+  return isResultUsed(DynTypedNode::create(Call), Result);
+}
+
+static bool shouldEmitFixIts(UseRangesCheck::Replacer::ResultUsePolicy Policy,
+                             bool ResultUsed, bool IsStructuredBinding) {
+  using Kind = UseRangesCheck::Replacer::ResultUsePolicy::Kind;
+  if (!ResultUsed)
+    return true;
+  switch (Policy.PolicyKind) {
+  case Kind::Preserve:
+  case Kind::AppendAccessorForUsedResult:
+    return true;
+  case Kind::KeepFixItOnlyForStructuredBinding:
+    return IsStructuredBinding;
+  case Kind::SuppressFixItForUsedResult:
+    return false;
+  }
+  llvm_unreachable("Unhandled result use policy");
+}
+
+static void insertAccessor(const DiagnosticBuilder &Diag, const CallExpr &Call,
+                           StringRef Accessor, const ASTContext &Ctx) {
+  const SourceLocation End = Lexer::getLocForEndOfToken(
+      Call.getEndLoc(), 0, Ctx.getSourceManager(), Ctx.getLangOpts());
+  if (End.isValid())
+    Diag << FixItHint::CreateInsertion(End, Accessor);
+}
+
 void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
   const Replacer *Replacer = nullptr;
   const FunctionDecl *Function = nullptr;
@@ -199,10 +256,9 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
     if (!NodeStr.consume_front(FuncDecl))
       continue;
     Function = Value.get<FunctionDecl>();
-    size_t Index;
-    if (NodeStr.getAsInteger(10, Index)) {
+    size_t Index = 0;
+    if (NodeStr.getAsInteger(10, Index))
       llvm_unreachable("Unable to extract replacer index");
-    }
     assert(Index < Replacers.size());
     Replacer = Replacers[Index].get();
     break;
@@ -227,14 +283,23 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
         return;
     }
 
-    auto Diag = createDiag(*Call);
+    const bool IsStructuredBinding =
+        Result.Nodes.getNodeAs<CallExpr>(StructuredBindingResult) != nullptr;
+    const bool ResultUsed = isResultUsed(*Call, Result);
+    const auto ResultPolicy =
+        Replacer->getResultUsePolicy(*Function, IsStructuredBinding);
+
+    const auto Diag = createDiag(*Call);
+    if (!shouldEmitFixIts(ResultPolicy, ResultUsed, IsStructuredBinding))
+      return;
+
     if (auto ReplaceName = Replacer->getReplaceName(*Function))
       Diag << FixItHint::CreateReplacement(Call->getCallee()->getSourceRange(),
                                            *ReplaceName);
     if (auto Include = Replacer->getHeaderInclusion(*Function))
       Diag << Inserter.createIncludeInsertion(
           Result.SourceManager->getFileID(Call->getBeginLoc()), *Include);
-    llvm::SmallVector<unsigned, 3> ToRemove;
+    SmallVector<unsigned, 3> ToRemove;
     for (const auto &[First, Second, Replace] : Sig) {
       auto ArgNode = ArgName + std::to_string(First);
       if (const auto *ArgExpr = Result.Nodes.getNodeAs<Expr>(ArgNode)) {
@@ -272,6 +337,11 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
       ToRemove.push_back(Replace == Indexes::Second ? First : Second);
     }
     removeFunctionArgs(Diag, *Call, ToRemove, *Result.Context);
+    using ResultPolicyKind = Replacer::ResultUsePolicy::Kind;
+    if (ResultUsed && ResultPolicy.PolicyKind ==
+                          ResultPolicyKind::AppendAccessorForUsedResult) {
+      insertAccessor(Diag, *Call, ResultPolicy.Accessor, *Result.Context);
+    }
     return;
   }
   llvm_unreachable("No valid signature found");
@@ -300,6 +370,11 @@ void UseRangesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 std::optional<std::string>
 UseRangesCheck::Replacer::getHeaderInclusion(const NamedDecl &) const {
   return std::nullopt;
+}
+
+UseRangesCheck::Replacer::ResultUsePolicy
+UseRangesCheck::Replacer::getResultUsePolicy(const NamedDecl &, bool) const {
+  return {};
 }
 
 DiagnosticBuilder UseRangesCheck::createDiag(const CallExpr &Call) {

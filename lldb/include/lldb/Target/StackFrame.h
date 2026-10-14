@@ -52,11 +52,11 @@ public:
 
   enum ExpressionPathOption {
     eExpressionPathOptionCheckPtrVsMember = (1u << 0),
-    eExpressionPathOptionsNoFragileObjcIvar = (1u << 1),
-    eExpressionPathOptionsNoSyntheticChildren = (1u << 2),
-    eExpressionPathOptionsNoSyntheticArrayRange = (1u << 3),
-    eExpressionPathOptionsAllowDirectIVarAccess = (1u << 4),
-    eExpressionPathOptionsInspectAnonymousUnions = (1u << 5)
+    eExpressionPathOptionsNoSyntheticChildren = (1u << 1),
+    eExpressionPathOptionsAllowDirectIVarAccess = (1u << 2),
+    eExpressionPathOptionsInspectAnonymousUnions = (1u << 3),
+    eExpressionPathOptionsAllowVarUpdates = (1u << 4),
+    eExpressionPathOptionsDisallowGlobals = (1u << 5)
   };
 
   enum class Kind {
@@ -231,6 +231,12 @@ public:
   ///   not be provided.
   virtual Block *GetFrameBlock();
 
+  /// Let F be this frame's function. Returns true if \p addr points to code
+  /// inside F.
+  /// Note: if some other function F2 has been inlined into F, and \p
+  /// addr points to code of the inlined copy of F2, this returns false.
+  bool IsAddressInFrameScope(const Address &addr);
+
   /// Get the RegisterContext for this frame, if possible.
   ///
   /// Returns a shared pointer to the RegisterContext for this stack frame.
@@ -262,6 +268,12 @@ public:
   ///     that are visible to the entire compilation unit (e.g. file
   ///     static in C, globals that are homed in this CU).
   ///
+  /// \param[in] include_synthetic_vars
+  ///     Whether to also include synthetic variables from other
+  ///     sources. For example, synthetic frames can produce
+  ///     variables that aren't strictly 'variables', but can still
+  ///     be displayed with their values.
+  ///
   /// \param [out] error_ptr
   ///   If there is an error in the debug information that prevents variables
   ///   from being fetched. \see SymbolFile::GetFrameVariableError() for full
@@ -270,6 +282,7 @@ public:
   /// \return
   ///     A pointer to a list of variables.
   virtual VariableList *GetVariableList(bool get_file_globals,
+                                        bool include_synthetic_vars,
                                         Status *error_ptr);
 
   /// Retrieve the list of variables that are in scope at this StackFrame's
@@ -284,6 +297,14 @@ public:
   ///     that are visible to the entire compilation unit (e.g. file
   ///     static in C, globals that are homed in this CU).
   ///
+  /// \param[in] include_synthetic_vars
+  ///     Whether to also include synthetic variables from other
+  ///     sources. For example, synthetic frames can produce
+  ///     variables that aren't strictly 'variables', but can still
+  ///     be displayed with their values. Defaults to `true` because
+  ///     we are assuming that if a user's context has synthetic variables,
+  ///     they want them shown.
+  ///
   /// \param[in] must_have_valid_location
   ///     Whether to filter variables whose location is not available at this
   ///     StackFrame's pc.
@@ -291,6 +312,7 @@ public:
   ///     A pointer to a list of variables.
   virtual lldb::VariableListSP
   GetInScopeVariableList(bool get_file_globals,
+                         bool include_synthetic_vars = true,
                          bool must_have_valid_location = false);
 
   /// Create a ValueObject for a variable name / pathname, possibly including
@@ -316,11 +338,16 @@ public:
   /// \param[in] error
   ///     Record any errors encountered while evaluating var_expr.
   ///
+  /// \param[in] mode
+  ///     Data Inspection Language (DIL) evaluation mode.
+  ///     \see lldb::DILMode
+  ///
   /// \return
   ///     A shared pointer to the ValueObject described by var_expr.
   virtual lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+      uint32_t options, lldb::VariableSP &var_sp, Status &error,
+      lldb::DILMode mode = lldb::eDILModeFull);
 
   /// Determine whether this StackFrame has debug information available or not.
   ///
@@ -363,7 +390,7 @@ public:
   /// \param [in] frame_marker
   ///   Optional string that will be prepended to the frame output description.
   virtual void DumpUsingSettingsFormat(Stream *strm, bool show_unique = false,
-                                       const char *frame_marker = nullptr);
+                                       const llvm::StringRef frame_marker = "");
 
   /// Print a description for this frame using a default format.
   ///
@@ -400,7 +427,7 @@ public:
   ///   Returns true if successful.
   virtual bool GetStatus(Stream &strm, bool show_frame_info, bool show_source,
                          bool show_unique = false,
-                         const char *frame_marker = nullptr);
+                         const llvm::StringRef frame_marker = "");
 
   /// Query whether this frame is a concrete frame on the call stack, or if it
   /// is an inlined frame derived from the debug information and presented by
@@ -513,8 +540,8 @@ public:
   ///
   /// \return
   ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
-  virtual lldb::ValueObjectSP GuessValueForRegisterAndOffset(ConstString reg,
-                                                             int64_t offset);
+  virtual lldb::ValueObjectSP
+  GuessValueForRegisterAndOffset(llvm::StringRef reg, int64_t offset);
 
   /// Attempt to reconstruct the ValueObject for a variable with a given \a name
   /// from within the current StackFrame, within the current block. The search
@@ -542,17 +569,25 @@ public:
 
   virtual lldb::RecognizedStackFrameSP GetRecognizedFrame();
 
-  /// Get the StackFrameList that contains this frame.
+  // Return a ThreadPlanSP or an error.  Returning an empty ThreadPlanSP means
+  // the frame doesn't have a custom step plan, only return an error if the
+  // frame intended to provide a plan but there was an error in doing so.
+  virtual llvm::Expected<lldb::ThreadPlanSP>
+  GetThreadPlanForStepType(lldb::StepType step_type) {
+    return lldb::ThreadPlanSP();
+  }
+
+  /// Get the identifier of the StackFrameList that contains this frame.
   ///
-  /// Returns the StackFrameList that contains this frame, allowing
+  /// Returns the StackFrameList identifier that contains this frame, allowing
   /// frames to resolve execution contexts without calling
   /// Thread::GetStackFrameList(), which can cause circular dependencies
   /// during frame provider initialization.
   ///
   /// \return
-  ///   The StackFrameList that contains this frame, or nullptr if not set.
-  virtual lldb::StackFrameListSP GetContainingStackFrameList() const {
-    return m_frame_list_wp.lock();
+  ///   The identifier of the containing StackFrameList
+  lldb::frame_list_id_t GetContainingStackFrameListIdentifier() const {
+    return m_frame_list_id;
   }
 
 protected:
@@ -598,8 +633,8 @@ protected:
   /// be the first address of its function). True for actual frame zero as
   /// well as any other frame with the same trait.
   bool m_behaves_like_zeroth_frame;
+  lldb::frame_list_id_t m_frame_list_id = 0;
   lldb::VariableListSP m_variable_list_sp;
-  lldb::StackFrameListWP m_frame_list_wp;
   /// Value objects for each variable in m_variable_list_sp.
   ValueObjectList m_variable_list_value_objects;
   std::optional<lldb::RecognizedStackFrameSP> m_recognized_frame_sp;
@@ -615,7 +650,8 @@ private:
 
   lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+      uint32_t options, lldb::VariableSP &var_sp, Status &error,
+      lldb::DILMode mode = lldb::eDILModeFull);
 
   StackFrame(const StackFrame &) = delete;
   const StackFrame &operator=(const StackFrame &) = delete;

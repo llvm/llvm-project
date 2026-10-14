@@ -49,10 +49,7 @@ bool isValidSMETileVectorType(VectorType vType) {
     return false;
 
   unsigned minNumElts = getSMETileSliceMinNumElts(elemType);
-  if (vType.getShape() != ArrayRef<int64_t>({minNumElts, minNumElts}))
-    return false;
-
-  return true;
+  return vType.getShape() == ArrayRef<int64_t>({minNumElts, minNumElts});
 }
 
 std::optional<ArmSMETileType> getSMETileType(VectorType type) {

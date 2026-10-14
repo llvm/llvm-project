@@ -1,7 +1,11 @@
+// clang-format off
 // RUN: %libomptarget-compilexx-generic -O3 && %libomptarget-run-generic
 // RUN: %libomptarget-compilexx-generic -O3 -ffast-math && %libomptarget-run-generic
 // RUN: %libomptarget-compileoptxx-generic -O3 && %libomptarget-run-generic
 // RUN: %libomptarget-compileoptxx-generic -O3 -ffast-math && %libomptarget-run-generic
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
+// clang-format on
 
 #include <iostream>
 

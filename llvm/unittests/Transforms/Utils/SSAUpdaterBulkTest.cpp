@@ -23,7 +23,7 @@ TEST(SSAUpdaterBulk, SimpleMerge) {
   SSAUpdaterBulk Updater;
   LLVMContext C;
   Module M("SSAUpdaterTest", C);
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   Type *I32Ty = B.getInt32Ty();
   auto *F = Function::Create(FunctionType::get(B.getVoidTy(), {I32Ty}, false),
                              GlobalValue::ExternalLinkage, "F", &M);
@@ -44,6 +44,7 @@ TEST(SSAUpdaterBulk, SimpleMerge) {
   //     %6 = add i32 %3, 6
   //     %7 = add i32 %2, %4
   //     %8 = sub i32 %2, %4
+  //     ret void
   Argument *FirstArg = &*(F->arg_begin());
   BasicBlock *IfBB = BasicBlock::Create(C, "if", F);
   BasicBlock *TrueBB = BasicBlock::Create(C, "true", F);
@@ -63,11 +64,12 @@ TEST(SSAUpdaterBulk, SimpleMerge) {
   Value *SubOp2 = B.CreateSub(FirstArg, ConstantInt::get(I32Ty, 4));
   B.CreateBr(MergeBB);
 
-  B.SetInsertPoint(MergeBB, MergeBB->begin());
+  B.SetInsertPoint(MergeBB->begin());
   auto *I1 = cast<Instruction>(B.CreateAdd(AddOp1, ConstantInt::get(I32Ty, 5)));
   auto *I2 = cast<Instruction>(B.CreateAdd(AddOp2, ConstantInt::get(I32Ty, 6)));
   auto *I3 = cast<Instruction>(B.CreateAdd(SubOp1, SubOp2));
   auto *I4 = cast<Instruction>(B.CreateSub(SubOp1, SubOp2));
+  B.CreateRetVoid();
 
   // Now rewrite uses in instructions %5, %6, %7. They need to use a phi, which
   // SSAUpdater should insert into %merge.
@@ -110,7 +112,7 @@ TEST(SSAUpdaterBulk, Irreducible) {
   SSAUpdaterBulk Updater;
   LLVMContext C;
   Module M("SSAUpdaterTest", C);
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   Type *I32Ty = B.getInt32Ty();
   auto *F = Function::Create(FunctionType::get(B.getVoidTy(), {I32Ty}, false),
                              GlobalValue::ExternalLinkage, "F", &M);
@@ -373,9 +375,6 @@ TEST(SSAUpdaterBulk, SimplifyPHIs) {
   EXPECT_EQ(Val, Cmp->getOperand(0));
   EXPECT_EQ(Phi, Cmp->getOperand(1));
 }
-
-bool EliminateNewDuplicatePHINodes(BasicBlock *BB,
-                                   BasicBlock::phi_iterator FirstExistingPN);
 
 // Helper to run both versions on the same input.
 static void RunEliminateNewDuplicatePHINode(

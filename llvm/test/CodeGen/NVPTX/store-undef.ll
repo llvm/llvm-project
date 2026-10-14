@@ -12,7 +12,6 @@ define void @test_store_param_undef() {
 ; CHECK-LABEL: test_store_param_undef(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[32];
@@ -52,7 +51,6 @@ define void @test_store_param_def(i64 %param0, i32 %param1) {
 define void @test_store_undef(ptr %out) {
 ; CHECK-LABEL: test_store_undef(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret;

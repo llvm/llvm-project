@@ -20,11 +20,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 class SPIRVSubtarget;
 class MachineFunction;
-class MachineModuleInfo;
 
 namespace SPIRV {
 // The enum contains logical module sections for the instruction collection.
@@ -130,6 +130,8 @@ using InstrList = SmallVector<const MachineInstr *>;
 using LocalToGlobalRegTable = std::map<Register, MCRegister>;
 using RegisterAliasMapTy =
     std::map<const MachineFunction *, LocalToGlobalRegTable>;
+using FPFastMathDefaultInfoMapTy =
+    DenseMap<const Function *, FPFastMathDefaultInfoVector>;
 
 // The struct contains results of the module analysis and methods
 // to access them.
@@ -144,8 +146,8 @@ struct ModuleAnalysisInfo {
   DenseMap<unsigned, MCRegister> ExtInstSetMap;
   // Contains the list of all global OpVariables in the module.
   SmallVector<const MachineInstr *, 4> GlobalVarList;
-  // Maps functions to corresponding function ID registers.
-  DenseMap<const Function *, MCRegister> FuncMap;
+  // Maps functions and global variables to corresponding ID registers.
+  DenseMap<const GlobalObject *, MCRegister> GlobalObjMap;
   // The set contains machine instructions which are necessary
   // for correct MIR but will not be emitted in function bodies.
   DenseSet<const MachineInstr *> InstrsToDelete;
@@ -159,17 +161,32 @@ struct ModuleAnalysisInfo {
   InstrList MS[NUM_MODULE_SECTIONS];
   // The table maps MBB number to SPIR-V unique ID register.
   DenseMap<std::pair<const MachineFunction *, int>, MCRegister> BBNumToRegMap;
+  // Basic block IDs and names to emit as OpName.
+  SmallVector<std::pair<MCRegister, StringRef>> MBBNames;
   // The table maps function pointers to their default FP fast math info. It can
   // be assumed that the SmallVector is sorted by the bit width of the type. The
   // first element is the smallest bit width, and the last element is the
   // largest bit width, therefore, we will have {half, float, double} in
   // the order of their bit widths.
-  DenseMap<const Function *, SPIRV::FPFastMathDefaultInfoVector>
-      FPFastMathDefaultInfoMap;
+  FPFastMathDefaultInfoMapTy FPFastMathDefaultInfoMap;
 
-  MCRegister getFuncReg(const Function *F) {
-    assert(F && "Function is null");
-    return FuncMap.lookup(F);
+  enum class AMDGPUAtomicMDKind : uint8_t {
+    NoFineGrainedMemory,
+    NoRemoteMemory,
+    IgnoreDenormalMode,
+
+    Last = IgnoreDenormalMode,
+  };
+  struct InstrAuxDataRecord {
+    const MachineFunction *MF;
+    Register TargetReg;
+    AMDGPUAtomicMDKind Kind;
+  };
+  SmallVector<InstrAuxDataRecord> InstrAuxDataRecords;
+
+  MCRegister getGlobalObjReg(const GlobalObject *GO) {
+    assert(GO && "GlobalObject is null");
+    return GlobalObjMap.lookup(GO);
   }
   MCRegister getExtInstSetReg(unsigned SetNum) { return ExtInstSetMap[SetNum]; }
   InstrList &getMSInstrs(unsigned MSType) { return MS[MSType]; }
@@ -211,23 +228,37 @@ struct ModuleAnalysisInfo {
       It->second = getNextIDRegister();
     return It->second;
   }
+  static StringRef getAMDGPUAtomicMDName(AMDGPUAtomicMDKind Kind) {
+    switch (Kind) {
+    case AMDGPUAtomicMDKind::NoFineGrainedMemory:
+      return "amdgpu.no.fine.grained.memory";
+    case AMDGPUAtomicMDKind::NoRemoteMemory:
+      return "amdgpu.no.remote.memory";
+    case AMDGPUAtomicMDKind::IgnoreDenormalMode:
+      return "atomic.ignore.denormal.mode";
+    }
+    llvm_unreachable("unknown AMDGPUAtomicMDKind");
+  }
+  // Must stay alive until the AsmPrinter consumes it.
+  bool invalidate(Module &, const PreservedAnalyses &,
+                  ModuleAnalysisManager::Invalidator &) {
+    return false;
+  }
 };
 } // namespace SPIRV
 
 using InstrSignature = SmallVector<size_t>;
 using InstrTraces = std::set<InstrSignature>;
 using InstrGRegsMap = std::map<SmallVector<size_t>, unsigned>;
+using MachineFunctionGetter = function_ref<MachineFunction *(const Function &)>;
 
-struct SPIRVModuleAnalysis : public ModulePass {
-  static char ID;
-
+class SPIRVModuleAnalysisImpl {
 public:
-  SPIRVModuleAnalysis()
-      : ModulePass(ID), ST(nullptr), GR(nullptr), TII(nullptr), MMI(nullptr) {}
+  SPIRVModuleAnalysisImpl(const SPIRVSubtarget &ST,
+                          SPIRV::ModuleAnalysisInfo &MAI,
+                          MachineFunctionGetter GetMF);
 
-  bool runOnModule(Module &M) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  static struct SPIRV::ModuleAnalysisInfo MAI;
+  void run(const Module &M);
 
 private:
   void setBaseInfo(const Module &M);
@@ -248,15 +279,38 @@ private:
   handleFunctionOrParameter(const MachineFunction *MF, const MachineInstr &MI,
                             std::map<const Value *, unsigned> &GlobalToGReg,
                             bool &IsFunDef);
-  void visitFunPtrUse(Register OpReg, InstrGRegsMap &SignatureToGReg,
+  void visitFunPtrUse(Register OpReg, const MachineOperand *FunPtrOp,
+                      InstrGRegsMap &SignatureToGReg,
                       std::map<const Value *, unsigned> &GlobalToGReg,
-                      const MachineFunction *MF, const MachineInstr &MI);
+                      const MachineFunction *MF);
   bool isDeclSection(const MachineRegisterInfo &MRI, const MachineInstr &MI);
 
   const SPIRVSubtarget *ST;
   SPIRVGlobalRegistry *GR;
   const SPIRVInstrInfo *TII;
-  MachineModuleInfo *MMI;
+  SPIRV::ModuleAnalysisInfo &MAI;
+  MachineFunctionGetter GetMF;
+};
+
+struct SPIRVModuleAnalysisWrapperPass : public ModulePass {
+  static char ID;
+
+public:
+  SPIRVModuleAnalysisWrapperPass() : ModulePass(ID) {}
+
+  bool runOnModule(Module &M) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  SPIRV::ModuleAnalysisInfo MAI;
+};
+
+class SPIRVModuleAnalysis : public AnalysisInfoMixin<SPIRVModuleAnalysis> {
+  friend AnalysisInfoMixin<SPIRVModuleAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = SPIRV::ModuleAnalysisInfo;
+
+  Result run(Module &M, ModuleAnalysisManager &MAM);
 };
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVMODULEANALYSIS_H

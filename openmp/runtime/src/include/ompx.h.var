@@ -9,7 +9,7 @@
 #ifndef __OMPX_H
 #define __OMPX_H
 
-#if (defined(__NVPTX__) || defined(__AMDGPU__))
+#if (defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__))
 #include <gpuintrin.h>
 #define __OMPX_TARGET_IS_GPU
 #endif
@@ -24,17 +24,6 @@ static inline uint32_t __warpSize(void) {
   __builtin_trap();
 #endif
 }
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int omp_get_ancestor_thread_num(int);
-int omp_get_team_size(int);
-
-#ifdef __cplusplus
-}
-#endif
 
 /// Target kernel language extensions
 ///

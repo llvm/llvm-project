@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -mv75 -mhvx -mattr=+hvx-length128b -hexagon-hvx-widen=32 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
 
 ; Make sure that this doesn't crash.
 ; CHECK-LABEL: f0:
@@ -16,3 +16,5 @@ b0:
   store <16 x i16> %v4, ptr %v0, align 2
   ret void
 }
+
+attributes #0 = { "target-features"="+hvxv66,+hvx-length128b" }

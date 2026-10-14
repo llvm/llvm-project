@@ -40,6 +40,7 @@ SUPPORTED_ANALYSES = {
     "Dependence Analysis",
     "Delinearization",
     "Loop Access Analysis",
+    "Loop Cache Analysis",
     "Scalar Evolution Analysis",
     "Scalar Evolution Division",
 }
@@ -506,6 +507,19 @@ def getSubstitutions(sourcepath):
     ]
 
 
+def split_run_line(run_line):
+    """Split a FileCheck RUN line into its tool, FileCheck, and pre-processing commands."""
+    if "%if" in run_line:
+        match = re.search(r"%{\s*(.*?)\s*%}", run_line)
+        if match:
+            run_line = match.group(1)
+
+    commands = [cmd.strip() for cmd in run_line.split("|")]
+    assert len(commands) >= 2
+    preprocess_cmd = " | ".join(commands[:-2]) or None
+    return commands[-2], commands[-1], preprocess_cmd
+
+
 def applySubstitutions(s, substitutions):
     for a, b in substitutions:
         s = s.replace(a, b)
@@ -597,6 +611,10 @@ LOOP_PASS_DEBUG_RE = re.compile(
     r"^\s*\'(?P<func>[\w.$-]+?)\'[^\n]*" r"\s*\n(?P<body>.*)$", flags=(re.X | re.S)
 )
 
+VPLAN_RE = re.compile(
+    r"\'(?P<func>[\w.$-]+?)\'[^\n]*\n(?P<body>.*)\n$", flags=(re.X | re.S)
+)
+
 IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@"?([\w.$-]+)"?\s*\(')
 IR_FUNCTION_LABEL_RE = re.compile(
     r'^\s*(?:define\s+(?:internal\s+)?[^@]*)?@"?([\w.$-]+)"?\s*\('
@@ -628,6 +646,8 @@ SEPARATOR = "."
 
 METADATA_NODES_RE = re.compile(r"^\s*!(\d+)\s*=\s*!\{(.*)\}", re.M)
 TBAA_TAGS_RE = re.compile(r"!tbaa\s*!([0-9]+)")
+
+MULTIPLE_BRACES_RE = re.compile(r"{{+|\[\[+")
 
 
 def error(msg, test_file=None):
@@ -986,6 +1006,14 @@ class FunctionTestBuilder:
         """
         Returns the number of functions processed from the output by the regex.
         """
+
+        def escape_braces(match_obj):
+            return "{{" + re.escape(match_obj.group(0)) + "}}"
+
+        # Escape multiple {{ or [[ as {{}} and [[]] have special meaning in
+        # FileCheck.
+        raw_tool_output = MULTIPLE_BRACES_RE.sub(escape_braces, raw_tool_output)
+
         build_global_values_dictionary(
             self._global_var_dict, raw_tool_output, prefixes, self._ginfo
         )
@@ -1184,6 +1212,9 @@ class NamelessValue:
     # Create a FileCheck variable name based on an IR name.
     def get_value_name(self, var: str, check_prefix: str):
         var = var.replace("!", "")
+        var = var.replace("%", "")
+        if var.startswith("."):
+            var = var.replace(".", "dot", 1)
         if self.replace_number_with_counter:
             assert var
             replacement = self.variable_mapping.get(var, None)
@@ -1412,15 +1443,23 @@ def make_analyze_generalizer(version):
         NamelessValue(
             r"GRP",
             "#",
-            r"",
+            r"group",
             r"0x[0-9a-f]+",
             None,
             replace_number_with_counter=True,
         ),
+        NamelessValue(
+            r"VP",
+            r"vp",
+            r"vp<",
+            r"%[0-9]+",
+            None,
+            ir_suffix=r">",
+        ),
     ]
 
     prefix = r"(\s*)"
-    suffix = r"(\)?:)"
+    suffix = r"([,\s\(\)\}\]:]|\Z)"
 
     return GeneralizerInfo(
         version, GeneralizerInfo.MODE_ANALYZE, values, prefix, suffix
@@ -1577,7 +1616,12 @@ def find_diff_matching(lhs: List[str], rhs: List[str]) -> List[tuple]:
 
 
 VARIABLE_TAG = "[[@@]]"
-METAVAR_RE = re.compile(r"\[\[([A-Z0-9_]+)(?::[^]]+)?\]\]")
+METAVAR_PATTERN = r"\[\[([A-Z0-9_]+)(?::[^]]+)?\]\]"
+LABEL_METAVAR_PATTERN1 = r"label %" + METAVAR_PATTERN
+LABEL_METAVAR_PATTERN2 = r"^" + METAVAR_PATTERN + r":"
+METAVAR_RE = re.compile(
+    rf"(?:{LABEL_METAVAR_PATTERN1})|(?:{LABEL_METAVAR_PATTERN2})|(?:{METAVAR_PATTERN})"
+)
 NUMERIC_SUFFIX_RE = re.compile(r"[0-9]*$")
 
 
@@ -1887,15 +1931,8 @@ def generalize_check_lines(
     else:
         regexp = ginfo.get_regexp()
 
-    multiple_braces_re = re.compile(r"({{+)|(}}+)")
-
-    def escape_braces(match_obj):
-        return "{{" + re.escape(match_obj.group(0)) + "}}"
-
     if ginfo.is_ir():
         for i, line in enumerate(lines):
-            # An IR variable named '%.' matches the FileCheck regex string.
-            line = line.replace("%.", "%dot")
             for regex in _global_hex_value_regex:
                 if re.match("^@" + regex + " = ", line):
                     line = re.sub(
@@ -2014,7 +2051,8 @@ def generalize_check_lines(
                     CheckValueInfo(
                         key=None,
                         text=None,
-                        name=m.group(1),
+                        # The sole capturing group is only designated for the name.
+                        name=m.group(m.lastindex),
                         prefix="",
                         suffix="",
                     )
@@ -2068,12 +2106,6 @@ def generalize_check_lines(
             line += line_template
 
             lines[i] = line
-
-    if ginfo.is_analyze():
-        for i, _ in enumerate(lines):
-            # Escape multiple {{ or }} as {{}} denotes a FileCheck regex.
-            scrubbed_line = multiple_braces_re.sub(escape_braces, lines[i])
-            lines[i] = scrubbed_line
 
     return lines
 
@@ -2262,7 +2294,9 @@ def add_checks(
                             "{} {}-EMPTY:".format(comment_marker, checkprefix)
                         )
                     else:
-                        check_suffix = "-NEXT" if not is_filtered else ""
+                        # TODO: Remove once only -vplan-print-after is supported.
+                        check_next = not is_filtered and "VPlan" not in func_line
+                        check_suffix = "-NEXT" if check_next else ""
                         output_lines.append(
                             "{} {}{}:  {}".format(
                                 comment_marker, checkprefix, check_suffix, func_line
@@ -2410,9 +2444,12 @@ def add_analyze_checks(
     func_name,
     ginfo: GeneralizerInfo,
     is_filtered,
+    check_label_prefix="",
 ):
     assert ginfo.is_analyze()
-    check_label_format = "{} %s-LABEL: '%s%s%s%s'".format(comment_marker)
+    check_label_format = "{} %s-LABEL: {}'%s%s%s%s'".format(
+        comment_marker, check_label_prefix
+    )
     global_vars_seen_dict = {}
     return add_checks(
         output_lines,
@@ -2517,7 +2554,7 @@ METADATA_FILTERS = [
         r"(?<=\")(.+ )?(\w+ version )[\d.]+(?:[^\" ]*)(?: \([^)]+\))?",
         r"{{.*}}\2{{.*}}",
     ),  # preface with glob also, to capture optional CLANG_VENDOR
-    (r'(!DIFile\(filename: ")(.+/)?([^/]+", directory: )".+"', r"\1{{.*}}\3{{.*}}"),
+    (r'(!DIFile\(filename: ")(.+/)?([^/]+", directory: )"[^"]*"', r"\1{{.*}}\3{{.*}}"),
 ]
 METADATA_FILTERS_RE = [(re.compile(f), r) for (f, r) in METADATA_FILTERS]
 
@@ -2706,6 +2743,7 @@ def get_autogennote_suffix(parser, args):
             "tool_binary",
             "opt_binary",
             "llc_binary",
+            "llubi_binary",
             "clang",
             "opt",
             "llvm_bin",

@@ -12,6 +12,8 @@
 #ifndef CLANG_CIR_LOWERTOLLVM_H
 #define CLANG_CIR_LOWERTOLLVM_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <memory>
 
 namespace llvm {
@@ -28,7 +30,9 @@ namespace cir {
 namespace direct {
 std::unique_ptr<llvm::Module>
 lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule,
-                             llvm::LLVMContext &llvmCtx);
+                             llvm::LLVMContext &llvmCtx, bool enableOpenMP,
+                             llvm::StringRef mlirSaveTempsOutFile = {},
+                             llvm::vfs::FileSystem *fs = nullptr);
 } // namespace direct
 } // namespace cir
 

@@ -6,6 +6,7 @@ from lldbsuite.test_event.build_exception import BuildError
 
 class TestStepUntilAPI(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def setUp(self):
         super().setUp()
@@ -122,7 +123,7 @@ class TestStepUntilAPI(TestBase):
             self, "At the start", self.main_spec
         )
         self.assertIn(
-            "step until target not in current function",
+            "Until target outside of the current function",
             thread.StepOverUntil(
                 self.frame(), self.main_spec, self.in_foo
             ).GetCString(),
@@ -144,7 +145,7 @@ class TestStepUntilAPI(TestBase):
             self.skipTest(f"failed to build with linker script.")
 
         self.assertIn(
-            "step until target not in current function",
+            "Until target outside of the current function",
             thread.StepOverUntil(
                 self.frame(), self.main_spec, self.in_foo
             ).GetCString(),

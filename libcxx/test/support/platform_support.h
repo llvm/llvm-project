@@ -37,9 +37,10 @@
 #include <stdlib.h>
 #include <string>
 #if defined(_WIN32)
-#   include <io.h> // _mktemp_s
-#   include <fcntl.h> // _O_EXCL, ...
-#   include <sys/stat.h> // _S_IREAD, ...
+#  include <io.h>       // _mktemp_s
+#  include <fcntl.h>    // _O_EXCL, ...
+#  include <sys/stat.h> // _S_IREAD, ...
+#  include <cerrno>
 #elif __has_include(<unistd.h>)
 #  include <unistd.h> // close
 #endif

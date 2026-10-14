@@ -63,7 +63,7 @@ entry:
   %cbufferidx.i = getelementptr <{ %OrigType, target("spirv.Padding", 12) }>, ptr addrspace(12) @myArray, i64 %idxprom.i
 
 ; CHECK: %[[PTR_FIELD:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[PTR_ELEM]] %[[ZERO]] %[[ZERO]]
-; CHECK: %[[VAL_FLOAT:[0-9]+]] = OpLoad %[[FLOAT]] %[[PTR_FIELD]] Aligned 4
+; CHECK: %[[VAL_FLOAT:[0-9]+]] = OpLoad %[[FLOAT]] %[[PTR_FIELD]]
   %2 = load float, ptr addrspace(12) %cbufferidx.i, align 4
 
   %val = load i64, ptr addrspace(10) getelementptr (%__cblayout_MyCBuffer2, ptr addrspace(10) @myPrivateVar, i32 0, i32 1), align 8

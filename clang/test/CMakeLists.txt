@@ -12,8 +12,8 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_CIR
   CLANG_ENABLE_OBJC_REWRITER
   CLANG_LINK_CLANG_DYLIB
+  CLANG_USE_XCSELECT
   ENABLE_BACKTRACES
-  LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
   LLVM_ENABLE_ZLIB
@@ -21,6 +21,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_THREADS
   LLVM_ENABLE_REVERSE_ITERATION
+  LLVM_INCLUDE_EXAMPLES
   LLVM_LINK_LLVM_DYLIB
   LLVM_WITH_Z3
   PPC_LINUX_DEFAULT_IEEELONGDOUBLE
@@ -92,7 +93,7 @@ list(APPEND CLANG_TEST_DEPS
   clang
   clang-fuzzer-dictionary
   clang-resource-headers
-  clang-format
+  clang-format-check-format
   clang-tblgen
   clang-offload-bundler
   clang-import-test
@@ -103,17 +104,33 @@ list(APPEND CLANG_TEST_DEPS
   clang-linker-wrapper
   clang-nvlink-wrapper
   clang-offload-bundler
+  clang-ssaf-analyzer
+  clang-ssaf-format
+  clang-ssaf-linker
+  clang-ssaf-merge-conflict-report
+  clang-ssaf-merge-transformation-report
+  clang-ssaf-src-edit-merge
   clang-sycl-linker
   diagtool
   hmaptool
   )
 
+if(NOT WIN32)
+  list(APPEND CLANG_TEST_DEPS
+    clang-ssaf-driver
+    clang-ssaf-orchestrator-make
+    )
+  if(TARGET clang-apply-replacements)
+    list(APPEND CLANG_TEST_DEPS clang-apply-replacements)
+  endif()
+endif()
+
 if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
     cir-translate
-    mlir-translate
     )
+  add_subdirectory(CIR/lib)
 endif()
 
 if(CLANG_ENABLE_STATIC_ANALYZER)
@@ -133,6 +150,12 @@ if(CLANG_BUILD_EXAMPLES AND CLANG_PLUGIN_SUPPORT)
     LLVMPrintFunctionNames
     )
 endif ()
+
+if(LLVM_INCLUDE_EXAMPLES AND NOT WIN32 AND NOT CYGWIN)
+  list(APPEND CLANG_TEST_DEPS
+    Bye
+    )
+endif()
 
 if(LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
   list(APPEND CLANG_TEST_DEPS
@@ -179,6 +202,10 @@ if( NOT CLANG_BUILT_STANDALONE )
     yaml2obj
     )
 
+  if(TARGET lld)
+    list(APPEND CLANG_TEST_DEPS lld)
+  endif()
+
   if(TARGET llvm-lto)
     list(APPEND CLANG_TEST_DEPS llvm-lto)
   endif()
@@ -192,6 +219,14 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
       CheckerOptionHandlingAnalyzerPlugin
       )
   endif()
+endif()
+
+if(CLANG_PLUGIN_SUPPORT AND LLVM_ENABLE_PLUGINS AND NOT WIN32)
+  list(APPEND CLANG_TEST_DEPS
+    SSAFExamplePlugin
+    SSAFTestTransformationPlugin
+    )
+  add_subdirectory(Analysis/Scalable/source-edit-generation/Plugins)
 endif()
 
 if (HAVE_CLANG_REPL_SUPPORT)
@@ -215,10 +250,50 @@ add_lit_testsuite(check-clang "Running the Clang regression tests"
   ARGS ${CLANG_TEST_EXTRA_ARGS}
   )
 
+# Skip CIR here. check-clang above still discovers these tests, but they do
+# nothing unless CIR is enabled. When CIR is enabled, the check-clang-cir
+# targets below depend only on the tools those tests invoke and the tools
+# required to load clang/test/lit.cfg.py.
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CLANG_TEST_DEPS}
   FOLDER "Clang tests/Suites"
+  SKIP "^CIR"
 )
+
+if(CLANG_ENABLE_CIR)
+  # These tools are resolved while loading clang/test/lit.cfg.py, or invoked
+  # directly by tests under clang/test/CIR.
+  set(CLANG_CIR_TEST_DEPS
+    clang
+    cir-opt
+    cir-translate
+    )
+  if(NOT CLANG_BUILT_STANDALONE)
+    list(APPEND CLANG_CIR_TEST_DEPS
+      FileCheck
+      count
+      llvm-config
+      llvm-dis
+      llvm-objdump
+      llvm-readelf
+      llvm-strings
+      not
+      opt
+      split-file
+      )
+  endif()
+
+  add_lit_target(check-clang-cir "Running the CIR regression tests"
+    ${CMAKE_CURRENT_SOURCE_DIR}/CIR
+    DEPENDS ${CLANG_CIR_TEST_DEPS}
+    )
+  set_target_properties(check-clang-cir PROPERTIES FOLDER "Clang tests/Suites")
+
+  add_lit_testsuites(CLANG-CIR ${CMAKE_CURRENT_SOURCE_DIR}/CIR
+    DEPENDS ${CLANG_CIR_TEST_DEPS}
+    FOLDER "Clang tests/Suites"
+    )
+endif()
 
 # Add a legacy target spelling: clang-test
 add_custom_target(clang-test)

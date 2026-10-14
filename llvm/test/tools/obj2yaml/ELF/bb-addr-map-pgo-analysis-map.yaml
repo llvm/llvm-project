@@ -14,7 +14,7 @@
 # VALID-NEXT:   - Name: .llvm_bb_addr_map
 # VALID-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
 # VALID-NEXT:     Entries:
-# VALID-NEXT:       - Version: 2
+# VALID-NEXT:       - Version: 5
 # VALID-NEXT:         Feature: 0x87
 ## The 'BaseAddress' field is omitted when it's zero.
 # VALID-NEXT:         BBRanges:
@@ -31,7 +31,7 @@
 # VALID-NEXT:               AddressOffset: 0xFFFFFFFFFFFFFFF7
 # VALID-NEXT:               Size:          0xFFFFFFFFFFFFFFF8
 # VALID-NEXT:               Metadata:      0xFFFFFFFFFFFFFFF9
-# VALID-NEXT:       - Version: 2
+# VALID-NEXT:       - Version: 5
 # VALID-NEXT:         Feature: 0xA
 # VALID-NEXT:         BBRanges:
 # VALID-NEXT:           - BaseAddress: 0xFFFFFFFFFFFFFF20
@@ -74,7 +74,7 @@ Sections:
     Type:   SHT_LLVM_BB_ADDR_MAP
     ShSize: [[SIZE=<none>]]
     Entries:
-      - Version: 2
+      - Version: 5
         Feature: 0x87
         BBRanges:
           - BaseAddress: 0x0
@@ -91,7 +91,7 @@ Sections:
                 AddressOffset: 0xFFFFFFFFFFFFFFF7
                 Size:          0xFFFFFFFFFFFFFFF8
                 Metadata:      0xFFFFFFFFFFFFFFF9
-      - Version:   2
+      - Version:   5
         Feature:   0xA
         BBRanges:
           - BaseAddress:   0xFFFFFFFFFFFFFF20

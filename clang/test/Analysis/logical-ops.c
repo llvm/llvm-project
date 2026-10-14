@@ -52,3 +52,7 @@ void ambiguous_backtrack_2(int x) {
   global_a = x >= 2 ? 1 : x;
   global_b == x && 9 || 2;
 }
+
+void wide_bitint_logical_truth_value(unsigned _BitInt(63) x) {
+  clang_analyzer_eval((1 && x) == (x != 0)); // expected-warning{{TRUE}}
+}

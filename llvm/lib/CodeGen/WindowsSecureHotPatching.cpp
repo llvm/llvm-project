@@ -177,9 +177,7 @@ class WindowsSecureHotPatching : public ModulePass {
 public:
   static char ID;
 
-  WindowsSecureHotPatching() : ModulePass(ID) {
-    initializeWindowsSecureHotPatchingPass(*PassRegistry::getPassRegistry());
-  }
+  WindowsSecureHotPatching() : ModulePass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -361,12 +359,9 @@ static GlobalVariable *getOrCreateRefVariable(
 
   auto PtrTy = PointerType::get(M->getContext(), 0);
 
-  Constant *AddrOfOldGV =
-      ConstantExpr::getGetElementPtr(PtrTy, GV, ArrayRef<Value *>{});
-
   GlobalVariable *RefGV =
       new GlobalVariable(*M, PtrTy, false, GlobalValue::LinkOnceAnyLinkage,
-                         AddrOfOldGV, Twine("__ref_").concat(GV->getName()),
+                         GV, Twine("__ref_").concat(GV->getName()),
                          nullptr, GlobalVariable::NotThreadLocal);
 
   // RefGV is created with isConstant = false, but we want to place RefGV into
@@ -571,7 +566,7 @@ bool WindowsSecureHotPatching::runOnFunction(
   // to move them to the start of entry BB.
 
   auto &EntryBlock = F.getEntryBlock();
-  IRBuilder<> IRBuilderAtEntry(&EntryBlock, EntryBlock.begin());
+  IRBuilder<> IRBuilderAtEntry(EntryBlock.begin());
 
   for (auto &[GV, LoadValue] : GVLoadMap) {
     assert(LoadValue == nullptr);

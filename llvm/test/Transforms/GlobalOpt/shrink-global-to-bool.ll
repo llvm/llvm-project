@@ -1,4 +1,4 @@
-; RUN: opt -passes=globalopt --mtriple=amdgcn-amd-amdhsa < %s -S | FileCheck %s
+; RUN: opt -passes=globalopt --mtriple=amdgpu-amd-amdhsa < %s -S | FileCheck %s
 ; REQUIRES: amdgpu-registered-target
 
 @gvar = internal unnamed_addr global i32 undef

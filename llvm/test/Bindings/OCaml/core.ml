@@ -18,7 +18,7 @@ open Llvm
 open Llvm_bitwriter
 
 open Testsuite
-let context = global_context ()
+let context = create_context ()
 let i1_type = Llvm.i1_type context
 let i8_type = Llvm.i8_type context
 let i16_type = Llvm.i16_type context
@@ -83,8 +83,8 @@ let test_target () =
 
   begin group "layout";
     let layout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:128-n8:16:32-S128" in
-    set_data_layout layout m;
-    insist (layout = data_layout m)
+    set_data_layout (DataLayout.of_string layout) m;
+    insist (layout = DataLayout.as_string (data_layout m))
   end
   (* CHECK: target datalayout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:128-n8:16:32-S128"
    * CHECK: target triple = "i686-apple-darwin8"
@@ -161,8 +161,8 @@ let test_constants () =
   (* CHECK: const_single{{.*}}2.75
    * CHECK: const_double{{.*}}3.1459
    * CHECK: const_double_string{{.*}}2
-   * CHECK: const_fake_fp128{{.*}}0xL00000000000000004000000000000000
-   * CHECK: const_fp128_string{{.*}}0xLF3CB1CCF26FBC178452FB4EC7F91973F
+   * CHECK: const_fake_fp128{{.*}}2.000000e+00
+   * CHECK: const_fp128_string{{.*}}1.000000e+400
    *)
   begin group "real";
     let cs = const_float float_type 2.75 in
@@ -263,7 +263,6 @@ let test_constants () =
   group "constant arithmetic";
   (* CHECK: @const_neg = global i64 sub
    * CHECK: @const_nsw_neg = global i64 sub nsw
-   * CHECK: @const_nuw_neg = global i64 sub
    * CHECK: @const_not = global i64 xor
    * CHECK: @const_add = global i64 add
    * CHECK: @const_nsw_add = global i64 add nsw
@@ -279,7 +278,6 @@ let test_constants () =
   let foldbomb = const_ptrtoint foldbomb_gv i64_type in
   ignore (define_global "const_neg" (const_neg foldbomb) m);
   ignore (define_global "const_nsw_neg" (const_nsw_neg foldbomb) m);
-  ignore (define_global "const_nuw_neg" (const_nuw_neg foldbomb) m);
   ignore (define_global "const_not" (const_not foldbomb) m);
   ignore (define_global "const_add" (const_add foldbomb five) m);
   ignore (define_global "const_nsw_add" (const_nsw_add foldbomb five) m);
@@ -299,23 +297,40 @@ let test_constants () =
   ignore (define_global "const_trunc" (const_trunc (const_add foldbomb five)
                                                i8_type) m);
   ignore (define_global "const_ptrtoint" (const_ptrtoint
-    (const_gep i8_type (const_null (pointer_type context))
-               [| const_int i32_type 1 |])
+    (const_ptradd (const_null (pointer_type context)) (const_int i32_type 1)
+                   GEPNoWrapFlags.none)
     i32_type) m);
   ignore (define_global "const_inttoptr" (const_inttoptr (const_add foldbomb five)
                                                   void_ptr) m);
   ignore (define_global "const_bitcast" (const_bitcast foldbomb double_type) m);
 
   group "misc constants";
-  (* CHECK: const_size_of{{.*}}getelementptr{{.*}}null
-   * CHECK: const_gep{{.*}}getelementptr
+  (* CHECK: const_ptradd = global ptr getelementptr (i8, ptr @FoldBomb, i64 5)
+   * CHECK: const_ptradd_inbounds = global ptr
+   * CHECK-SAME: getelementptr inbounds (i8, ptr @FoldBomb, i64 5)
+   * CHECK: const_ptradd_inbounds_nuw = global ptr
+   * CHECK-SAME: getelementptr inbounds nuw (i8, ptr @FoldBomb, i64 5)
+   * CHECK: const_ptradd_from_indices = global ptr
+   * CHECK-SAME: getelementptr nusw (i8, ptr @FoldBomb, i32 20)
    * CHECK: const_extractelement{{.*}}extractelement
    * CHECK: const_insertelement{{.*}}insertelement
    * CHECK: const_shufflevector = global <4 x i32> <i32 0, i32 1, i32 1, i32 0>
    *)
-  ignore (define_global "const_size_of" (size_of (pointer_type context)) m);
-  ignore (define_global "const_gep" (const_gep i8_type foldbomb_gv [| five |])
+  ignore (define_global "const_ptradd"
+          (const_ptradd foldbomb_gv five GEPNoWrapFlags.none) m);
+  ignore (define_global "const_ptradd_inbounds"
+          (const_ptradd foldbomb_gv five GEPNoWrapFlags.inbounds) m);
+  ignore (define_global "const_ptradd_inbounds_nuw"
+          (const_ptradd foldbomb_gv five
+           (GEPNoWrapFlags.inbounds lor GEPNoWrapFlags.nuw)) m);
+  ignore (define_global "const_ptradd_from_indices"
+          (Option.get (const_ptradd_from_indices (data_layout m) i32_type
+                       foldbomb_gv [| five |] GEPNoWrapFlags.nusw))
           m);
+  assert (Option.is_none (const_ptradd_from_indices (data_layout m) i32_type
+                          foldbomb_gv
+                          [| (const_ptrtoint foldbomb_gv i32_type) |]
+                          GEPNoWrapFlags.none));
   let zero = const_int i32_type 0 in
   let one  = const_int i32_type 1 in
   ignore (define_global "const_extractelement" (const_extractelement
@@ -537,7 +552,7 @@ let test_global_variables () =
     let m = create_module context "temp" in
 
     insist (get_module_identifier m = "temp");
-    set_module_identifer m "temp2";
+    set_module_identifier m "temp2";
     insist (get_module_identifier m = "temp2");
 
     insist (At_end m = global_begin m);
@@ -678,6 +693,22 @@ let test_functions () =
   set_value_name "Param1" params.(0);
   set_value_name "Param2" params.(1);
   ignore (build_unreachable (builder_at_end context (entry_block fn)));
+
+  group "intrinsics";
+  insist (not (is_intrinsic fn));
+  let abs_id = lookup_intrinsic_id "llvm.abs" in
+  let abs_decl = intrinsic_declaration m abs_id [|i32_type|] in
+  insist ("llvm.abs.i8" = intrinsic_overloaded_name m abs_id [|i8_type|]);
+  insist ("llvm.abs.i32" = intrinsic_overloaded_name m abs_id [|i32_type|]);
+  let abs_i8_type = intrinsic_type context abs_id [|i8_type|] in
+  insist (TypeKind.Function = classify_type abs_i8_type);
+  insist (is_intrinsic abs_decl);
+  insist (intrinsic_is_overloaded abs_id);
+  let stackmap_id = lookup_intrinsic_id "llvm.experimental.stackmap" in
+  let stackmap_decl = intrinsic_declaration m stackmap_id [||] in
+  insist ("llvm.experimental.stackmap" = intrinsic_name stackmap_id);
+  insist (is_intrinsic stackmap_decl);
+  insist (not (intrinsic_is_overloaded stackmap_id));
 
   (* CHECK: fastcc{{.*}}Fn5
    *)
@@ -1241,7 +1272,7 @@ let test_builder () =
   end;
 
   group "malloc/free"; begin
-      (* CHECK: call{{.*}}@malloc(i32 ptrtoint
+      (* CHECK: call{{.*}}@malloc(i32 4
        * CHECK: call{{.*}}@free(ptr
        * CHECK: call{{.*}}@malloc(i32 %
        *)
@@ -1318,7 +1349,6 @@ let test_builder () =
      * CHECK: %build_xor = xor i32 %P1, %P2
      * CHECK: %build_neg = sub i32 0, %P1
      * CHECK: %build_nsw_neg = sub nsw i32 0, %P1
-     * CHECK: %build_nuw_neg = sub nuw i32 0, %P1
      * CHECK: %build_fneg = fneg float %F1
      * CHECK: %build_not = xor i32 %P1, -1
      * CHECK: %build_freeze = freeze i32 %P1
@@ -1350,7 +1380,6 @@ let test_builder () =
     ignore (build_xor p1 p2 "build_xor" b);
     ignore (build_neg p1 "build_neg" b);
     ignore (build_nsw_neg p1 "build_nsw_neg" b);
-    ignore (build_nuw_neg p1 "build_nuw_neg" b);
     ignore (build_fneg f1 "build_fneg" b);
     ignore (build_not p1 "build_not" b);
     ignore (build_freeze p1 "build_freeze" b);
@@ -1495,4 +1524,5 @@ let _ =
   suite "builder"          test_builder;
   suite "memory buffer"    test_memory_buffer;
   suite "writer"           test_writer; (* Keep this last; it disposes m. *)
+  dispose_context context;
   exit !exit_status

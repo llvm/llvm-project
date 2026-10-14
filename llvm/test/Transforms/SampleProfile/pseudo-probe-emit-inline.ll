@@ -50,49 +50,52 @@ define dso_local i32 @entry() !dbg !14 {
 
 ; CHECK-IL: ![[#SCOPE1:]] = distinct !DISubprogram(name: "foo2"
 ; CHECK-IL: ![[#SCOPE2:]] = distinct !DISubprogram(name: "foo"
-; CHECK-IL: ![[#DL1]] = !DILocation(line: 3, column: 1,  scope: ![[#SCOPE1]], inlinedAt: ![[#INL1:]])
+; CHECK-IL: ![[#DL1]] = distinct !DILocation(line: 3, column: 1,  scope: ![[#SCOPE1]], inlinedAt: ![[#INL1:]])
 ; CHECK-IL: ![[#INL1]] = distinct !DILocation(line: 7, column: 3, scope: ![[#BL1:]])
 ;; A discriminator of 455082007 which is 0x1b200017 in hexdecimal, stands for a direct call probe
 ;; with an index of 2 and a scale of 100%.
 ; CHECK-IL: ![[#BL1]] = !DILexicalBlockFile(scope: ![[#SCOPE2]], file: !1, discriminator: 455082007)
 ; CHECK-IL: ![[#SCOPE3:]] = distinct !DISubprogram(name: "entry"
-; CHECK-IL: ![[#DL2]] = !DILocation(line: 7, column: 3,  scope: ![[#SCOPE2]], inlinedAt: ![[#INL2:]])
+; CHECK-IL: ![[#DL2]] = distinct !DILocation(line: 7, column: 3,  scope: ![[#SCOPE2]], inlinedAt: ![[#INL2:]])
 ; CHECK-IL: ![[#INL2]] = distinct !DILocation(line: 11, column: 3, scope: ![[#BL2:]])
 ; CHECK-IL: ![[#BL2]] = !DILexicalBlockFile(scope: ![[#SCOPE3]], file: !1, discriminator: 455082007)
-; CHECK-IL: ![[#DL3]] = !DILocation(line: 3, column: 1,  scope: ![[#SCOPE1]], inlinedAt: ![[#INL3:]])
+; CHECK-IL: ![[#DL3]] = distinct !DILocation(line: 3, column: 1,  scope: ![[#SCOPE1]], inlinedAt: ![[#INL3:]])
 ; CHECK-IL: ![[#INL3]] = distinct !DILocation(line: 7, column: 3,  scope: ![[#BL1]], inlinedAt: ![[#INL2]])
 
 
 ; Check the generation of .pseudo_probe_desc section
-; CHECK-ASM-ELF: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo2,comdat
+; CHECK-ASM-ELF: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo2.{{[0-9a-f]+}},comdat
 ; CHECK-ASM-ELF-NEXT: .quad [[#GUID1]]
 ; CHECK-ASM-ELF-NEXT: .quad [[#HASH1:]]
 ; CHECK-ASM-ELF-NEXT: .byte	4
 ; CHECK-ASM-ELF-NEXT: .ascii "foo2"
-; CHECK-ASM-ELF-NEXT: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo,comdat
+; CHECK-ASM-ELF-NEXT: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo.{{[0-9a-f]+}},comdat
 ; CHECK-ASM-ELF-NEXT: .quad [[#GUID2]]
 ; CHECK-ASM-ELF-NEXT: .quad [[#HASH2:]]
 ; CHECK-ASM-ELF-NEXT: .byte	3
 ; CHECK-ASM-ELF-NEXT: .ascii "foo"
-; CHECK-ASM-ELF-NEXT: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_entry,comdat
+; CHECK-ASM-ELF-NEXT: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_entry.{{[0-9a-f]+}},comdat
 ; CHECK-ASM-ELF-NEXT: .quad [[#GUID3]]
 ; CHECK-ASM-ELF-NEXT: .quad [[#HASH3:]]
 ; CHECK-ASM-ELF-NEXT: .byte	5
 ; CHECK-ASM-ELF-NEXT: .ascii "entry"
-; CHECK-ASM-COFF:      .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo2
-; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo2:
+; CHECK-ASM-COFF:      .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo2.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo2.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo2.{{[0-9a-f]+}}:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID1]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH1:]]
 ; CHECK-ASM-COFF-NEXT: .byte	4
 ; CHECK-ASM-COFF-NEXT: .ascii	"foo2"
-; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo
-; CHECK-ASM-COFF:      .pseudo_probe_desc_foo:
+; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo.{{[0-9a-f]+}}:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID2]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH2:]]
 ; CHECK-ASM-COFF-NEXT: .byte	3
 ; CHECK-ASM-COFF-NEXT: .ascii	"foo"
-; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_entry
-; CHECK-ASM-COFF:      .pseudo_probe_desc_entry:
+; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_entry.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_entry.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_entry.{{[0-9a-f]+}}:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID3]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH3:]]
 ; CHECK-ASM-COFF-NEXT: .byte	5

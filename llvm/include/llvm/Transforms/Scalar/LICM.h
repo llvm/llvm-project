@@ -34,7 +34,6 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
@@ -42,8 +41,10 @@ class LPMUpdater;
 class Loop;
 class LoopNest;
 
-extern cl::opt<unsigned> SetLicmMssaOptCap;
-extern cl::opt<unsigned> SetLicmMssaNoAccForPromotionCap;
+/// Returns -licm-mssa-optimization-cap.
+LLVM_ABI unsigned getLicmMssaOptCap();
+/// Returns -licm-mssa-max-acc-promotion.
+LLVM_ABI unsigned getLicmMssaNoAccForPromotionCap();
 
 struct LICMOptions {
   unsigned MssaOptCap;
@@ -51,8 +52,8 @@ struct LICMOptions {
   bool AllowSpeculation;
 
   LICMOptions()
-      : MssaOptCap(SetLicmMssaOptCap),
-        MssaNoAccForPromotionCap(SetLicmMssaNoAccForPromotionCap),
+      : MssaOptCap(getLicmMssaOptCap()),
+        MssaNoAccForPromotionCap(getLicmMssaNoAccForPromotionCap()),
         AllowSpeculation(true) {}
 
   LICMOptions(unsigned MssaOptCap, unsigned MssaNoAccForPromotionCap,
@@ -63,7 +64,7 @@ struct LICMOptions {
 };
 
 /// Performs Loop Invariant Code Motion Pass.
-class LICMPass : public PassInfoMixin<LICMPass> {
+class LICMPass : public OptionalPassInfoMixin<LICMPass> {
   LICMOptions Opts;
 
 public:
@@ -73,15 +74,17 @@ public:
                              AllowSpeculation)) {}
   LICMPass(LICMOptions Opts) : Opts(Opts) {}
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 /// Performs LoopNest Invariant Code Motion Pass.
-class LNICMPass : public PassInfoMixin<LNICMPass> {
+class LNICMPass : public OptionalPassInfoMixin<LNICMPass> {
   LICMOptions Opts;
 
 public:
@@ -91,11 +94,13 @@ public:
                               AllowSpeculation)) {}
   LNICMPass(LICMOptions Opts) : Opts(Opts) {}
 
-  PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 } // end namespace llvm
 

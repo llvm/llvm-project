@@ -3,6 +3,8 @@
 ---
 name: mov-merge
 tracksRegLiveness: true
+frameInfo:
+  maxCallFrameSize: 0
 body:             |
   bb.0.entry:
     liveins: $x8, $x9

@@ -19,9 +19,9 @@ body: |
     ; CHECK-LABEL: name: test_copy
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
-    %0(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](i64)
+    %0(i64) = COPY $x0
     $x0 = COPY %0
 ...
 

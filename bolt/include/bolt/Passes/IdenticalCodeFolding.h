@@ -37,17 +37,19 @@ public:
   Error runOnFunctions(BinaryContext &BC) override;
 
 private:
+  static constexpr uint64_t VTableAddressGranularity = 4;
+
   /// Bit vector of memory addresses of vtables.
   llvm::SparseBitVector<> VTableBitVector;
 
   /// Return true if the memory address is in a vtable.
   bool isAddressInVTable(uint64_t Address) const {
-    return VTableBitVector.test(Address / 8);
+    return VTableBitVector.test(Address / VTableAddressGranularity);
   }
 
   /// Mark memory address of a vtable as used.
   void setAddressUsedInVTable(uint64_t Address) {
-    VTableBitVector.set(Address / 8);
+    VTableBitVector.set(Address / VTableAddressGranularity);
   }
 
   /// Scan symbol table and mark memory addresses of

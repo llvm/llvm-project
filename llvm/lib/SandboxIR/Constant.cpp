@@ -45,9 +45,9 @@ Constant *ConstantInt::getBool(Type *Ty, bool V) {
   auto *LLVMC = llvm::ConstantInt::getBool(Ty->LLVMTy, V);
   return Ty->getContext().getOrCreateConstant(LLVMC);
 }
-ConstantInt *ConstantInt::get(Type *Ty, uint64_t V, bool IsSigned) {
+Constant *ConstantInt::get(Type *Ty, uint64_t V, bool IsSigned) {
   auto *LLVMC = llvm::ConstantInt::get(Ty->LLVMTy, V, IsSigned);
-  return cast<ConstantInt>(Ty->getContext().getOrCreateConstant(LLVMC));
+  return Ty->getContext().getOrCreateConstant(LLVMC);
 }
 ConstantInt *ConstantInt::get(IntegerType *Ty, uint64_t V, bool IsSigned) {
   auto *LLVMC = llvm::ConstantInt::get(Ty->LLVMTy, V, IsSigned);
@@ -225,9 +225,13 @@ ConstantPointerNull *ConstantPointerNull::get(PointerType *Ty) {
   return cast<ConstantPointerNull>(Ty->getContext().getOrCreateConstant(LLVMC));
 }
 
-PointerType *ConstantPointerNull::getType() const {
+Type *ConstantPointerNull::getType() const {
+  return Ctx.getType(cast<llvm::ConstantPointerNull>(Val)->getType());
+}
+
+PointerType *ConstantPointerNull::getPointerType() const {
   return cast<PointerType>(
-      Ctx.getType(cast<llvm::ConstantPointerNull>(Val)->getType()));
+      Ctx.getType(cast<llvm::ConstantPointerNull>(Val)->getPointerType()));
 }
 
 UndefValue *UndefValue::get(Type *T) {

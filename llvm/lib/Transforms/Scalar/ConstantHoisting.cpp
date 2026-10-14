@@ -33,6 +33,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -56,7 +57,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -75,22 +75,6 @@ using namespace consthoist;
 STATISTIC(NumConstantsHoisted, "Number of constants hoisted");
 STATISTIC(NumConstantsRebased, "Number of constants rebased");
 
-static cl::opt<bool> ConstHoistWithBlockFrequency(
-    "consthoist-with-block-frequency", cl::init(true), cl::Hidden,
-    cl::desc("Enable the use of the block frequency analysis to reduce the "
-             "chance to execute const materialization more frequently than "
-             "without hoisting."));
-
-static cl::opt<bool> ConstHoistGEP(
-    "consthoist-gep", cl::init(false), cl::Hidden,
-    cl::desc("Try hoisting constant gep expressions"));
-
-static cl::opt<unsigned>
-MinNumOfDependentToRebase("consthoist-min-num-to-rebase",
-    cl::desc("Do not rebase if number of dependent constants of a Base is less "
-             "than this number."),
-    cl::init(0), cl::Hidden);
-
 namespace {
 
 /// The constant hoisting pass.
@@ -108,7 +92,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    if (ConstHoistWithBlockFrequency)
+    if (ScalarOptions::Global.consthoist_with_block_frequency)
       AU.addRequired<BlockFrequencyInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
@@ -147,7 +131,7 @@ bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
   bool MadeChange =
       Impl.runImpl(Fn, getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn),
                    getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-                   ConstHoistWithBlockFrequency
+                   ScalarOptions::Global.consthoist_with_block_frequency
                        ? &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI()
                        : nullptr,
                    Fn.getEntryBlock(),
@@ -268,12 +252,14 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
       std::pair<SetVector<BasicBlock *>, BlockFrequency>;
 
   // InsertPtsMap is a map from a BB to the best insertion points for the
-  // subtree of BB (subtree not including the BB itself).
+  // subtree of BB (subtree not including the BB itself). Pre-populate every
+  // node so that loop below only uses find().
   DenseMap<BasicBlock *, InsertPtsCostPair> InsertPtsMap;
-  InsertPtsMap.reserve(Orders.size() + 1);
+  for (BasicBlock *Node : Orders)
+    InsertPtsMap.try_emplace(Node);
   for (BasicBlock *Node : llvm::reverse(Orders)) {
     bool NodeInBBs = BBs.count(Node);
-    auto &[InsertPts, InsertPtsFreq] = InsertPtsMap[Node];
+    auto &[InsertPts, InsertPtsFreq] = InsertPtsMap.find(Node)->second;
 
     // Return the optimal insert points in BBs.
     if (Node == Entry) {
@@ -289,7 +275,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
     BasicBlock *Parent = DT.getNode(Node)->getIDom()->getBlock();
     // Initially, ParentInsertPts is empty and ParentPtsFreq is 0. Every child
     // will update its parent's ParentInsertPts and ParentPtsFreq.
-    auto &[ParentInsertPts, ParentPtsFreq] = InsertPtsMap[Parent];
+    auto &[ParentInsertPts, ParentPtsFreq] = InsertPtsMap.find(Parent)->second;
     // Choose to insert in Node or in subtree of Node.
     // Don't hoist to EHPad because we may not find a proper place to insert
     // in EHPad.
@@ -477,7 +463,7 @@ void ConstantHoistingPass::collectConstantCandidates(
   // Visit constant expressions that have constant integers.
   if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
     // Handle constant gep expressions.
-    if (ConstHoistGEP && isa<GEPOperator>(ConstExpr))
+    if (ScalarOptions::Global.consthoist_gep && isa<GEPOperator>(ConstExpr))
       collectConstantCandidates(ConstCandMap, Inst, Idx, ConstExpr);
 
     // Only visit constant cast expressions.
@@ -503,6 +489,12 @@ void ConstantHoistingPass::collectConstantCandidates(
 
   // Scan all operands.
   for (unsigned Idx = 0, E = Inst->getNumOperands(); Idx != E; ++Idx) {
+    // Skip analyzing incoming PHI edges from unreachable blocks.
+    if (auto PHI = dyn_cast<PHINode>(Inst)) {
+      BasicBlock *IncomingBB = PHI->getIncomingBlock(Idx);
+      if (!DT->isReachableFromEntry(IncomingBB))
+        continue;
+    }
     // The cost of materializing the constants (defined in
     // `TargetTransformInfo::getIntImmCostInst`) for instructions which only
     // take constant variables is lower than `TargetTransformInfo::TCC_Basic`.
@@ -854,7 +846,8 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
 
       // If only few constants depend on this IP of base, skip rebasing,
       // assuming the base and the rebased have the same materialization cost.
-      if (ToBeRebased.size() < MinNumOfDependentToRebase) {
+      if (ToBeRebased.size() <
+          ScalarOptions::Global.consthoist_min_num_to_rebase) {
         NotRebasedNum += ToBeRebased.size();
         continue;
       }
@@ -962,7 +955,7 @@ PreservedAnalyses ConstantHoistingPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  auto BFI = ConstHoistWithBlockFrequency
+  auto BFI = ScalarOptions::Global.consthoist_with_block_frequency
                  ? &AM.getResult<BlockFrequencyAnalysis>(F)
                  : nullptr;
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);

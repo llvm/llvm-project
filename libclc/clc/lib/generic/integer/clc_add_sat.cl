@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/internal/clc.h>
+#include "clc/internal/clc.h"
 
 #define __CLC_FUNCTION __clc_add_sat
 #define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_add_sat
-#define __CLC_BODY <clc/shared/binary_def.inc>
+#define __CLC_BODY "clc/shared/binary_def.inc"
 
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"

@@ -255,27 +255,21 @@ bool NativeSession::addressForRVA(uint32_t RVA, uint32_t &Section,
 
 std::unique_ptr<PDBSymbol>
 NativeSession::findSymbolByAddress(uint64_t Address, PDB_SymType Type) {
-  uint32_t Section;
-  uint32_t Offset;
-  addressForVA(Address, Section, Offset);
-  return findSymbolBySectOffset(Section, Offset, Type);
+  if (AddrToModuleIndex.empty())
+    parseSectionContribs();
+
+  return Cache.findSymbolByVA(Address, Type);
 }
 
 std::unique_ptr<PDBSymbol> NativeSession::findSymbolByRVA(uint32_t RVA,
                                                           PDB_SymType Type) {
-  uint32_t Section;
-  uint32_t Offset;
-  addressForRVA(RVA, Section, Offset);
-  return findSymbolBySectOffset(Section, Offset, Type);
+  return findSymbolByAddress(getLoadAddress() + RVA, Type);
 }
 
 std::unique_ptr<PDBSymbol>
 NativeSession::findSymbolBySectOffset(uint32_t Sect, uint32_t Offset,
                                       PDB_SymType Type) {
-  if (AddrToModuleIndex.empty())
-    parseSectionContribs();
-
-  return Cache.findSymbolBySectOffset(Sect, Offset, Type);
+  return findSymbolByAddress(getVAFromSectOffset(Sect, Offset), Type);
 }
 
 std::unique_ptr<IPDBEnumLineNumbers>
@@ -410,21 +404,26 @@ uint64_t NativeSession::getVAFromSectOffset(uint32_t Section,
 bool NativeSession::moduleIndexForVA(uint64_t VA, uint16_t &ModuleIndex) const {
   ModuleIndex = 0;
   auto Iter = AddrToModuleIndex.find(VA);
-  if (Iter == AddrToModuleIndex.end())
-    return false;
-  ModuleIndex = Iter.value();
-  return true;
+  if (Iter.valid() && !IMap::KeyTraits::startLess(VA, Iter.start())) {
+    ModuleIndex = Iter.value();
+    return true;
+  }
+  return false;
 }
 
 bool NativeSession::moduleIndexForSectOffset(uint32_t Sect, uint32_t Offset,
                                              uint16_t &ModuleIndex) const {
-  ModuleIndex = 0;
-  auto Iter = AddrToModuleIndex.find(getVAFromSectOffset(Sect, Offset));
-  if (Iter == AddrToModuleIndex.end())
-    return false;
-  ModuleIndex = Iter.value();
-  return true;
+  return moduleIndexForVA(getVAFromSectOffset(Sect, Offset), ModuleIndex);
 }
+
+#ifndef NDEBUG
+void NativeSession::checkSymbolRange(uint64_t Start, uint64_t Stop) const {
+  auto Iter = AddrToModuleIndex.find(Start);
+  assert(Iter.valid() && !IMap::KeyTraits::startLess(Start, Iter.start()) &&
+         !IMap::KeyTraits::stopLess(Iter.stop(), Stop - 1) &&
+         "Symbol range is not within a single contiguous module range");
+}
+#endif
 
 void NativeSession::parseSectionContribs() {
   auto Dbi = Pdb->getPDBDbiStream();

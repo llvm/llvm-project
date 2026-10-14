@@ -173,7 +173,7 @@ void StackLifetime::calculateLocalLiveness() {
         BitsIn.resize(NumAllocas, true);
 
       // Update block LiveIn set, noting whether it has changed.
-      if (BitsIn.test(BlockInfo.LiveIn)) {
+      if (!BitsIn.subsetOf(BlockInfo.LiveIn)) {
         BlockInfo.LiveIn |= BitsIn;
       }
 
@@ -198,7 +198,7 @@ void StackLifetime::calculateLocalLiveness() {
       }
 
       // Update block LiveOut set, noting whether it has changed.
-      if (BitsIn.test(BlockInfo.LiveOut)) {
+      if (!BitsIn.subsetOf(BlockInfo.LiveOut)) {
         Changed = true;
         BlockInfo.LiveOut |= BitsIn;
       }

@@ -1,4 +1,4 @@
-//===- Passes.h - OpenACC pass entry points -------------------*- C++ -*-===//
+//===- Passes.h - OpenACC pass entry points ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,7 +29,12 @@ namespace acc {
 #include "flang/Optimizer/OpenACC/Passes.h.inc"
 
 std::unique_ptr<mlir::Pass> createACCInitializeFIRAnalysesPass();
+std::unique_ptr<mlir::Pass> createACCOptimizeFirstprivateMapPass();
 std::unique_ptr<mlir::Pass> createACCRecipeBufferizationPass();
+std::unique_ptr<mlir::Pass> createACCUseDeviceCanonicalizerPass();
+
+/// Populate the OpenACC pass pipeline that runs at HLFIR level.
+void populateHLFIROpenACCPassPipeline(mlir::PassManager &pm);
 
 } // namespace acc
 } // namespace fir

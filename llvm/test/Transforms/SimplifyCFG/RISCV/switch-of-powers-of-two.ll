@@ -28,15 +28,16 @@ define i32 @switch_of_powers(i32 %x) {
 ; RV64I:       bb5:
 ; RV64I-NEXT:    br label [[RETURN]]
 ; RV64I:       return:
-; RV64I-NEXT:    [[P:%.*]] = phi i32 [ 2, [[BB2]] ], [ 1, [[BB3]] ], [ 0, [[BB4]] ], [ 42, [[BB5]] ], [ 3, [[ENTRY:%.*]] ]
+; RV64I-NEXT:    [[P:%.*]] = phi i32 [ 42, [[BB5]] ], [ 2, [[BB2]] ], [ 1, [[BB3]] ], [ 0, [[BB4]] ], [ 3, [[ENTRY:%.*]] ]
 ; RV64I-NEXT:    ret i32 [[P]]
 ;
 ; RV64ZBB-LABEL: @switch_of_powers(
 ; RV64ZBB-NEXT:  entry:
 ; RV64ZBB-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; RV64ZBB-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
-; RV64ZBB-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.switch_of_powers, i64 0, i64 [[TMP1]]
-; RV64ZBB-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; RV64ZBB-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i8], ptr @switch.table.switch_of_powers, i64 0, i64 [[TMP1]]
+; RV64ZBB-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
+; RV64ZBB-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; RV64ZBB-NEXT:    ret i32 [[SWITCH_LOAD]]
 ;
 entry:
@@ -102,7 +103,7 @@ define i32 @switch_of_powers_reachable_default(i32 %x) {
 ; RV64ZBB-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; RV64ZBB-NEXT:    br label [[RETURN]]
 ; RV64ZBB:       return:
-; RV64ZBB-NEXT:    [[P:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ -1, [[ENTRY_SPLIT]] ], [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ]
+; RV64ZBB-NEXT:    [[P:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ -1, [[ENTRY_SPLIT]] ], [ -1, [[ENTRY:%.*]] ]
 ; RV64ZBB-NEXT:    ret i32 [[P]]
 ;
 entry:
@@ -149,7 +150,7 @@ define i32 @switch_of_non_powers(i32 %x) {
 ; CHECK:       bb5:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 2, [[BB2]] ], [ 1, [[BB3]] ], [ 0, [[BB4]] ], [ 42, [[BB5]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 42, [[BB5]] ], [ 2, [[BB2]] ], [ 1, [[BB3]] ], [ 0, [[BB4]] ], [ 3, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
@@ -180,8 +181,7 @@ define i32 @unable_to_create_dense_switch(i32 %x) {
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT_CASE:%.*]] [
 ; CHECK-NEXT:      i32 1, label [[RETURN:%.*]]
 ; CHECK-NEXT:      i32 2, label [[BB3:%.*]]
-; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
-; CHECK-NEXT:      i32 4096, label [[BB5:%.*]]
+; CHECK-NEXT:      i32 1073741824, label [[BB5:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default_case:
 ; CHECK-NEXT:    unreachable
@@ -189,18 +189,15 @@ define i32 @unable_to_create_dense_switch(i32 %x) {
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       bb5:
-; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 1, [[BB3]] ], [ 0, [[BB4]] ], [ 42, [[BB5]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 42, [[BB5]] ], [ 1, [[BB3]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
   switch i32 %x, label %default_case [
   i32 1,  label %bb2
   i32 2, label %bb3
-  i32 4, label %bb4
-  i32 4096, label %bb5
+  i32 1073741824, label %bb4
   ]
 
 
@@ -209,10 +206,9 @@ bb1: br label %return
 bb2: br label %return
 bb3: br label %return
 bb4: br label %return
-bb5: br label %return
 
 return:
-  %p = phi i32 [ 3, %bb1 ], [ 2, %bb2 ], [ 1, %bb3 ], [ 0, %bb4 ], [ 42, %bb5 ]
+  %p = phi i32 [ 3, %bb1 ], [ 2, %bb2 ], [ 1, %bb3 ], [ 42, %bb4 ]
   ret i32 %p
 }
 
@@ -248,7 +244,7 @@ define i32 @unable_to_generate_lookup_table(i32 %x, i32 %y) {
 ; RV64I-NEXT:    [[ADD5:%.*]] = add i32 [[CALL5]], [[X]]
 ; RV64I-NEXT:    br label [[RETURN]]
 ; RV64I:       return:
-; RV64I-NEXT:    [[P:%.*]] = phi i32 [ [[ADD2]], [[BB2]] ], [ [[ADD3]], [[BB3]] ], [ [[ADD4]], [[BB4]] ], [ [[ADD5]], [[BB5]] ]
+; RV64I-NEXT:    [[P:%.*]] = phi i32 [ [[ADD5]], [[BB5]] ], [ [[ADD2]], [[BB2]] ], [ [[ADD3]], [[BB3]] ], [ [[ADD4]], [[BB4]] ]
 ; RV64I-NEXT:    ret i32 [[P]]
 ;
 ; RV64ZBB-LABEL: @unable_to_generate_lookup_table(
@@ -282,7 +278,7 @@ define i32 @unable_to_generate_lookup_table(i32 %x, i32 %y) {
 ; RV64ZBB-NEXT:    [[ADD5:%.*]] = add i32 [[CALL5]], [[X]]
 ; RV64ZBB-NEXT:    br label [[RETURN]]
 ; RV64ZBB:       return:
-; RV64ZBB-NEXT:    [[P:%.*]] = phi i32 [ [[ADD2]], [[BB2]] ], [ [[ADD3]], [[BB3]] ], [ [[ADD4]], [[BB4]] ], [ [[ADD5]], [[BB5]] ]
+; RV64ZBB-NEXT:    [[P:%.*]] = phi i32 [ [[ADD5]], [[BB5]] ], [ [[ADD2]], [[BB2]] ], [ [[ADD3]], [[BB3]] ], [ [[ADD4]], [[BB4]] ]
 ; RV64ZBB-NEXT:    ret i32 [[P]]
 ;
 entry:
@@ -344,7 +340,7 @@ define i128 @switch_with_long_condition(i128 %x) {
 ; CHECK:       bb5:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[P:%.*]] = phi i128 [ 1, [[BB3]] ], [ 0, [[BB4]] ], [ 42, [[BB5]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i128 [ 42, [[BB5]] ], [ 0, [[BB4]] ], [ 1, [[BB3]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i128 [[P]]
 ;
 entry:

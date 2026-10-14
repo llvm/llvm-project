@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_SINCOSF_UTILS_H
-#define LIBC_SRC___SUPPORT_MATH_SINCOSF_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINCOSF_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_SINCOSF_UTILS_H
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -16,26 +16,37 @@
 
 #if defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
 #include "range_reduction_fma.h"
-// using namespace LIBC_NAMESPACE::fma;
-using LIBC_NAMESPACE::fma::FAST_PASS_BOUND;
-using LIBC_NAMESPACE::fma::large_range_reduction;
-using LIBC_NAMESPACE::fma::small_range_reduction;
-
 #else
 #include "range_reduction.h"
-// using namespace LIBC_NAMESPACE::generic;
-using LIBC_NAMESPACE::generic::FAST_PASS_BOUND;
-using LIBC_NAMESPACE::generic::large_range_reduction;
-using LIBC_NAMESPACE::generic::small_range_reduction;
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
+
+namespace math {
+
+namespace sincosf_utils_internal {
+
+#if defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
+
+// using namespace LIBC_NAMESPACE::fma;
+using math::trigonometric_fma_utils_internal::FAST_PASS_BOUND;
+using math::trigonometric_fma_utils_internal::large_range_reduction;
+using math::trigonometric_fma_utils_internal::small_range_reduction;
+
+#else
+
+// using namespace LIBC_NAMESPACE::generic;
+using math::trigonometric_func_utils_internal::FAST_PASS_BOUND;
+using math::trigonometric_func_utils_internal::large_range_reduction;
+using math::trigonometric_func_utils_internal::small_range_reduction;
+
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 // Lookup table for sin(k * pi / 32) with k = 0, ..., 63.
 // Table is generated with Sollya as follow:
 // > display = hexadecimal;
 // > for k from 0 to 63 do { D(sin(k * pi/32)); };
-const double SIN_K_PI_OVER_32[64] = {
+LIBC_INLINE_VAR const double SIN_K_PI_OVER_32[64] = {
     0x0.0000000000000p+0,  0x1.917a6bc29b42cp-4,  0x1.8f8b83c69a60bp-3,
     0x1.294062ed59f06p-2,  0x1.87de2a6aea963p-2,  0x1.e2b5d3806f63bp-2,
     0x1.1c73b39ae68c8p-1,  0x1.44cf325091dd6p-1,  0x1.6a09e667f3bcdp-1,
@@ -60,9 +71,9 @@ const double SIN_K_PI_OVER_32[64] = {
     -0x1.917a6bc29b42cp-4,
 };
 
-static LIBC_INLINE void sincosf_poly_eval(int64_t k, double y, double &sin_k,
-                                          double &cos_k, double &sin_y,
-                                          double &cosm1_y) {
+LIBC_INLINE void sincosf_poly_eval(int64_t k, double y, double &sin_k,
+                                   double &cos_k, double &sin_y,
+                                   double &cosm1_y) {
   // After range reduction, k = round(x * 32 / pi) and y = (x * 32 / pi) - k.
   // So k is an integer and -0.5 <= y <= 0.5.
   // Then sin(x) = sin((k + y)*pi/32)
@@ -106,7 +117,7 @@ LIBC_INLINE void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
 // Return k and y, where
 //   k = round(x * 32) and y = (x * 32) - k.
 //   => pi * x = (k + y) * pi / 32
-static LIBC_INLINE int64_t range_reduction_sincospi(double x, double &y) {
+LIBC_INLINE int64_t range_reduction_sincospi(double x, double &y) {
   double kd = fputil::nearest_integer(x * 32);
   y = fputil::multiply_add(x, 32.0, -kd);
 
@@ -120,6 +131,10 @@ LIBC_INLINE void sincospif_eval(double xd, double &sin_k, double &cos_k,
   sincosf_poly_eval(k, y, sin_k, cos_k, sin_y, cosm1_y);
 }
 
+} // namespace sincosf_utils_internal
+
+} // namespace math
+
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_SINCOSF_UTILS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_SINCOSF_UTILS_H

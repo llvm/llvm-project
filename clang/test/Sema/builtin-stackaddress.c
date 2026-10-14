@@ -36,3 +36,8 @@ void* h(unsigned x) {
 // expected-error@+1 {{argument value 1048575 is outside the valid range [0, 65535]}}
 return __builtin_frame_address(0xFFFFF);
 }
+
+void *i() {
+  // expected-error@+1 {{too many arguments to function call, expected 0, have 1}}
+  return __builtin_stack_address(0);
+}

@@ -55,7 +55,7 @@ define void @noundef_dbg(ptr %0, ptr %1) {
 ; CHECK-NEXT:    tail call void @noundef(ptr [[TMP0:%.*]], ptr [[TMP1:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  %3 = load ptr, ptr %1, align 8, !noundef !0, !dbg !1
+  %3 = load ptr, ptr %1, align 8, !noundef !0, !dbg !8
   store ptr %3, ptr %0, align 8
   ret void
 }
@@ -73,9 +73,10 @@ define void @noalias_2(ptr %0, ptr %1) {
 
 !0 = !{}
 !1 = !{}
-!2 = !{!2}
+!2 = !{!2, i1 false}
 !3 = !{!3, !2}
 !4 = !{!3}
-!5 = !{!5}
+!5 = !{!5, i1 false}
 !6 = !{!6, !5}
 !7 = !{!6}
+!8 = !DILocation(line: 1, column: 1, scope: !{})

@@ -1,4 +1,4 @@
-//===- LowerNontemporal.cpp -------------------------------------------===//
+//===- LowerNontemporal.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,7 +41,7 @@ class LowerNontemporalPass
                   operand = op.getMemref();
                   defOp = operand.getDefiningOp();
                 })
-            .Case<fir::BoxAddrOp>([&](auto op) {
+            .Case([&](fir::BoxAddrOp op) {
               operand = op.getVal();
               defOp = operand.getDefiningOp();
             })

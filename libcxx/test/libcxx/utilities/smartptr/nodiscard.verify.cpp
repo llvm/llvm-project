@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <memory>
@@ -41,6 +39,14 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::make_unique_for_overwrite<int[]>(5);
 #endif
+
+    std::hash<std::unique_ptr<int> > hash;
+    hash(uPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+  { // [util.smartptr.weak.bad]
+    std::bad_weak_ptr bwp;
+
+    bwp.what(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
   { // [util.sharedptr]
     std::shared_ptr<int[]> sPtr;
@@ -53,6 +59,14 @@ void test() {
     sPtr.owner_before(std::shared_ptr<int>());
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     sPtr.owner_before(std::weak_ptr<int>());
+#if TEST_STD_VER >= 26
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sPtr.owner_hash();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sPtr.owner_equal(std::shared_ptr<int>());
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sPtr.owner_equal(std::weak_ptr<int>());
+#endif
 #if TEST_STD_VER >= 17
     sPtr[0]; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
@@ -118,6 +132,9 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::get_deleter<int[]>(sPtr);
 #endif
+
+    std::hash<std::shared_ptr<int[]> > hash;
+    hash(sPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
   { // [util.smartptr.weak]
     std::weak_ptr<int> wPtr;
@@ -129,7 +146,31 @@ void test() {
     wPtr.owner_before(std::weak_ptr<int>());
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     wPtr.owner_before(std::shared_ptr<int>());
+#if TEST_STD_VER >= 26
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    wPtr.owner_hash();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    wPtr.owner_equal(std::weak_ptr<int>());
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    wPtr.owner_equal(std::shared_ptr<int>());
+#endif
   }
+#if TEST_STD_VER >= 26
+  { // [util.smartptr.owner.hash], [util.smartptr.owner.equal]
+    std::shared_ptr<int> sPtr;
+    std::weak_ptr<int> wPtr;
+
+    std::owner_hash oh;
+    oh(sPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    oh(wPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+    std::owner_equal oe;
+    oe(sPtr, sPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    oe(sPtr, wPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    oe(wPtr, sPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    oe(wPtr, wPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+#endif
   { // [util.smartptr.enab]
     class EnableShared : public std::enable_shared_from_this<EnableShared> {};
     EnableShared es;

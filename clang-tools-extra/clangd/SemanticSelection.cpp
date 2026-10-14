@@ -42,72 +42,6 @@ void addIfDistinct(const Range &R, std::vector<Range> &Result) {
   }
 }
 
-std::optional<FoldingRange> toFoldingRange(SourceRange SR,
-                                           const SourceManager &SM) {
-  const auto Begin = SM.getDecomposedLoc(SR.getBegin()),
-             End = SM.getDecomposedLoc(SR.getEnd());
-  // Do not produce folding ranges if either range ends is not within the main
-  // file. Macros have their own FileID so this also checks if locations are not
-  // within the macros.
-  if ((Begin.first != SM.getMainFileID()) || (End.first != SM.getMainFileID()))
-    return std::nullopt;
-  FoldingRange Range;
-  Range.startCharacter = SM.getColumnNumber(Begin.first, Begin.second) - 1;
-  Range.startLine = SM.getLineNumber(Begin.first, Begin.second) - 1;
-  Range.endCharacter = SM.getColumnNumber(End.first, End.second) - 1;
-  Range.endLine = SM.getLineNumber(End.first, End.second) - 1;
-  return Range;
-}
-
-std::optional<FoldingRange>
-extractFoldingRange(const syntax::Node *Node,
-                    const syntax::TokenBufferTokenManager &TM) {
-  if (const auto *Stmt = dyn_cast<syntax::CompoundStatement>(Node)) {
-    const auto *LBrace = cast_or_null<syntax::Leaf>(
-        Stmt->findChild(syntax::NodeRole::OpenParen));
-    // FIXME(kirillbobyrev): This should find the last child. Compound
-    // statements have only one pair of braces so this is valid but for other
-    // node kinds it might not be correct.
-    const auto *RBrace = cast_or_null<syntax::Leaf>(
-        Stmt->findChild(syntax::NodeRole::CloseParen));
-    if (!LBrace || !RBrace)
-      return std::nullopt;
-    // Fold the entire range within braces, including whitespace.
-    const SourceLocation LBraceLocInfo =
-                             TM.getToken(LBrace->getTokenKey())->endLocation(),
-                         RBraceLocInfo =
-                             TM.getToken(RBrace->getTokenKey())->location();
-    auto Range = toFoldingRange(SourceRange(LBraceLocInfo, RBraceLocInfo),
-                                TM.sourceManager());
-    // Do not generate folding range for compound statements without any
-    // nodes and newlines.
-    if (Range && Range->startLine != Range->endLine)
-      return Range;
-  }
-  return std::nullopt;
-}
-
-// Traverse the tree and collect folding ranges along the way.
-std::vector<FoldingRange>
-collectFoldingRanges(const syntax::Node *Root,
-                     const syntax::TokenBufferTokenManager &TM) {
-  std::queue<const syntax::Node *> Nodes;
-  Nodes.push(Root);
-  std::vector<FoldingRange> Result;
-  while (!Nodes.empty()) {
-    const syntax::Node *Node = Nodes.front();
-    Nodes.pop();
-    const auto Range = extractFoldingRange(Node, TM);
-    if (Range)
-      Result.push_back(*Range);
-    if (const auto *T = dyn_cast<syntax::Tree>(Node))
-      for (const auto *NextNode = T->getFirstChild(); NextNode;
-           NextNode = NextNode->getNextSibling())
-        Nodes.push(NextNode);
-  }
-  return Result;
-}
-
 } // namespace
 
 llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos) {
@@ -229,18 +163,6 @@ public:
       walk(SubTree);
   }
 };
-
-// FIXME(kirillbobyrev): Collect comments, PP conditional regions, includes and
-// other code regions (e.g. public/private/protected sections of classes,
-// control flow statement bodies).
-// Related issue: https://github.com/clangd/clangd/issues/310
-llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST) {
-  syntax::Arena A;
-  syntax::TokenBufferTokenManager TM(AST.getTokens(), AST.getLangOpts(),
-                                     AST.getSourceManager());
-  const auto *SyntaxTree = syntax::buildSyntaxTree(A, TM, AST.getASTContext());
-  return collectFoldingRanges(SyntaxTree, TM);
-}
 
 // FIXME( usaxena95): Collect includes and other code regions (e.g.
 // public/private/protected sections of classes, control flow statement bodies).

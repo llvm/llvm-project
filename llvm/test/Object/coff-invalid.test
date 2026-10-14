@@ -10,4 +10,4 @@ SECTIONS-NEXT:   VirtualAddress: 0x1000000
 RUN: not --crash llvm-readobj -r %p/Inputs/invalid-bad-section-address.coff 2>&1 | \
 RUN: FileCheck %s
 
-CHECK: Sections with relocations should have an address of 0
+CHECK: sections with relocations should have an address of 0

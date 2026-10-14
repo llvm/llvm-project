@@ -1,0 +1,121 @@
+#ifndef _SET_
+#define _SET_
+
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <utility>
+
+namespace std {
+
+template <typename T, typename Compare = less<T>,
+          typename Allocator = allocator<T>>
+class set {
+public:
+  using value_type = T;
+  using key_type = T;
+
+  class iterator {
+  public:
+    iterator &operator++();
+    iterator operator++(int);
+    bool operator!=(const iterator &other) const;
+    bool operator==(const iterator &other) const;
+    const T &operator*() const;
+    const T *operator->() const;
+  };
+  class const_iterator {
+  public:
+    const_iterator() = default;
+    const_iterator(const iterator &) {}
+    const_iterator(decltype(nullptr)) {}
+    const_iterator &operator++();
+    const_iterator operator++(int);
+    bool operator!=(const const_iterator &other) const;
+    bool operator==(const const_iterator &other) const;
+    const T &operator*() const;
+    const T *operator->() const;
+  };
+
+  set() = default;
+  set(initializer_list<T>) {}
+
+  iterator begin();
+  const_iterator begin() const;
+  iterator end();
+  const_iterator end() const;
+
+  pair<iterator, bool> insert(const T &);
+  pair<iterator, bool> insert(T &&);
+  iterator insert(const_iterator hint, const T &);
+  iterator insert(const_iterator hint, T &&);
+
+  template <typename... Args>
+  void emplace(Args &&...args) {}
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args);
+
+  iterator find(const T &);
+  const_iterator find(const T &) const;
+
+  unsigned count(const T &) const;
+  bool contains(const T &) const;
+
+  void clear();
+  bool empty() const;
+  size_t size() const;
+};
+
+template <typename T, typename Compare = less<T>,
+          typename Allocator = allocator<T>>
+class multiset {
+public:
+  using value_type = T;
+  using key_type = T;
+
+  class iterator {
+  public:
+    iterator &operator++();
+    iterator operator++(int);
+    bool operator!=(const iterator &other) const;
+    bool operator==(const iterator &other) const;
+    const T &operator*() const;
+    const T *operator->() const;
+  };
+  class const_iterator {
+  public:
+    const_iterator() = default;
+    const_iterator(const iterator &) {}
+    const_iterator(decltype(nullptr)) {}
+    const_iterator &operator++();
+    const_iterator operator++(int);
+    bool operator!=(const const_iterator &other) const;
+    bool operator==(const const_iterator &other) const;
+    const T &operator*() const;
+    const T *operator->() const;
+  };
+
+  multiset() = default;
+  multiset(initializer_list<T>) {}
+
+  iterator begin();
+  const_iterator begin() const;
+  iterator end();
+  const_iterator end() const;
+
+  template <typename... Args>
+  void emplace(Args &&...args) {}
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args);
+
+  unsigned count(const T &) const;
+  bool contains(const T &) const;
+
+  void clear();
+  bool empty() const;
+  size_t size() const;
+};
+
+} // namespace std
+
+#endif // _SET_

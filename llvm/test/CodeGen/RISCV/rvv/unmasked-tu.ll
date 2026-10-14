@@ -437,8 +437,9 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfwsub.w_wv_nxv16f32_nxv16f32_nxv16f16(<vscale x 16 x float> %0, <vscale x 16 x float> %1, <vscale x 16 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_nxv16f32_nxv16f32_nxv16f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vl4re16.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, tu, ma
 ; CHECK-NEXT:    vfwsub.wv v8, v16, v24
 ; CHECK-NEXT:    ret
 entry:
@@ -519,8 +520,8 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64(<vscale 
 ; RV32-LABEL: intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetvli a2, a2, e64, m1, ta, ma
-; RV32-NEXT:    slli a2, a2, 1
 ; RV32-NEXT:    vmv1r.v v10, v8
+; RV32-NEXT:    slli a2, a2, 1
 ; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
 ; RV32-NEXT:    vslide1down.vx v10, v9, a0
 ; RV32-NEXT:    vslide1down.vx v8, v10, a1
@@ -545,8 +546,8 @@ define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64(<vscale x 
 ; RV32-LABEL: intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetvli a2, a2, e64, m1, ta, ma
-; RV32-NEXT:    slli a2, a2, 1
 ; RV32-NEXT:    vmv1r.v v10, v8
+; RV32-NEXT:    slli a2, a2, 1
 ; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
 ; RV32-NEXT:    vslide1up.vx v10, v9, a1
 ; RV32-NEXT:    vslide1up.vx v8, v10, a0
@@ -1880,10 +1881,10 @@ define <vscale x 8 x i64> @intrinsic_vmerge_vim_nxv8i64_nxv8i64_i64(<vscale x 8 
 ; RV32-LABEL: intrinsic_vmerge_vim_nxv8i64_nxv8i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    li a1, 15
-; RV32-NEXT:    li a2, -1
-; RV32-NEXT:    sw a2, 8(sp)
-; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    li a1, -1
+; RV32-NEXT:    li a2, 15
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    addi a1, sp, 8
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a1), zero

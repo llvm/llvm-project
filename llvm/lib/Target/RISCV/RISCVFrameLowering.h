@@ -47,11 +47,10 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
-  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
-                                   const TargetRegisterInfo *TRI,
-                                   std::vector<CalleeSavedInfo> &CSI,
-                                   unsigned &MinCSFrameIndex,
-                                   unsigned &MaxCSFrameIndex) const override;
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
@@ -72,6 +71,11 @@ public:
 
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
+  Register
+  findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
+                                   Register PreferredReg,
+                                   Register DontUseReg = Register()) const;
+
   bool isSupportedStackID(TargetStackID::Value ID) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
 
@@ -87,6 +91,8 @@ public:
                      uint64_t ProbeSize, bool DynAllocation,
                      MachineInstr::MIFlag Flag) const;
 
+  uint64_t getStackThreshold() const override;
+
 protected:
   const RISCVSubtarget &STI;
 
@@ -99,9 +105,6 @@ private:
                                    bool HasFP) const;
   void emitCalleeSavedRVVEpilogCFI(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI) const;
-  template <typename Emitter>
-  void emitCFIForCSI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                     const SmallVector<CalleeSavedInfo, 8> &CSI) const;
   void deallocateStack(MachineFunction &MF, MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                        uint64_t &StackSize, int64_t CFAOffset) const;
@@ -116,6 +119,10 @@ private:
                                    const DebugLoc &DL, int64_t Amount,
                                    MachineInstr::MIFlag Flag, bool EmitCFI,
                                    bool DynAllocation) const;
+
+  /// Emit target zero call-used regs.
+  void emitZeroCallUsedRegs(BitVector RegsToZero, MachineBasicBlock &MBB,
+                            RegScavenger *RS) const override;
 };
 } // namespace llvm
 #endif

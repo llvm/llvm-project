@@ -7,12 +7,14 @@
 //===---------------------------------------------------------------------===//
 
 #include "RegisterContextFreeBSD_i386.h"
-#include "RegisterContextPOSIX_x86.h"
+#include "RegisterContext_x86.h"
+#include "lldb-x86-register-enums.h"
+#include "lldb/lldb-defines.h"
 
 using namespace lldb_private;
 using namespace lldb;
 
-// http://svnweb.freebsd.org/base/head/sys/x86/include/reg.h
+// https://cgit.freebsd.org/src/tree/sys/x86/include/reg.h?h=stable/14
 struct GPR {
   uint32_t fs;
   uint32_t es;

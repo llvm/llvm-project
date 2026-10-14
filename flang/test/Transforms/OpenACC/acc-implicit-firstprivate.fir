@@ -8,12 +8,11 @@
 // CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_i32 : !fir.ref<i32> init {
 // CHECK:       ^bb0(%{{.*}}: !fir.ref<i32>):
 // CHECK:         %[[ALLOC:.*]] = fir.alloca i32
-// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
-// CHECK:         acc.yield %[[DECL]]#0 : !fir.ref<i32>
+// CHECK:         acc.yield %[[ALLOC]] : !fir.ref<i32>
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<i32>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<i32>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : i32, !fir.ref<i32>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -27,7 +26,7 @@ func.func @test_i32_scalar_in_parallel() {
   return
 }
 
-// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i32_var"}
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) implicit(true) name("i32_var") -> !fir.ref<i32>
 // CHECK: acc.parallel firstprivate(%[[FIRSTPRIV]] : !fir.ref<i32>)
 
 // -----
@@ -35,12 +34,11 @@ func.func @test_i32_scalar_in_parallel() {
 // CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_i64 : !fir.ref<i64> init {
 // CHECK:       ^bb0(%{{.*}}: !fir.ref<i64>):
 // CHECK:         %[[ALLOC:.*]] = fir.alloca i64
-// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
-// CHECK:         acc.yield %[[DECL]]#0 : !fir.ref<i64>
+// CHECK:         acc.yield %[[ALLOC]] : !fir.ref<i64>
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<i64>, %[[DST:.*]]: !fir.ref<i64>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<i64>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<i64>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : i64, !fir.ref<i64>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -54,7 +52,7 @@ func.func @test_i64_scalar_in_parallel() {
   return
 }
 
-// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i64>) recipe(@firstprivatization_ref_i64) -> !fir.ref<i64> {implicit = true, name = "i64_var"}
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i64>) recipe(@firstprivatization_ref_i64) implicit(true) name("i64_var") -> !fir.ref<i64>
 // CHECK: acc.parallel firstprivate(%[[FIRSTPRIV]] : !fir.ref<i64>)
 
 // -----
@@ -62,12 +60,11 @@ func.func @test_i64_scalar_in_parallel() {
 // CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_f32 : !fir.ref<f32> init {
 // CHECK:       ^bb0(%{{.*}}: !fir.ref<f32>):
 // CHECK:         %[[ALLOC:.*]] = fir.alloca f32
-// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
-// CHECK:         acc.yield %[[DECL]]#0 : !fir.ref<f32>
+// CHECK:         acc.yield %[[ALLOC]] : !fir.ref<f32>
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<f32>, %[[DST:.*]]: !fir.ref<f32>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<f32>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<f32>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : f32, !fir.ref<f32>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -81,7 +78,7 @@ func.func @test_f32_scalar_in_parallel() {
   return
 }
 
-// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<f32>) recipe(@firstprivatization_ref_f32) -> !fir.ref<f32> {implicit = true, name = "f32_var"}
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<f32>) recipe(@firstprivatization_ref_f32) implicit(true) name("f32_var") -> !fir.ref<f32>
 // CHECK: acc.parallel firstprivate(%[[FIRSTPRIV]] : !fir.ref<f32>)
 
 // -----
@@ -89,12 +86,11 @@ func.func @test_f32_scalar_in_parallel() {
 // CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_f64 : !fir.ref<f64> init {
 // CHECK:       ^bb0(%{{.*}}: !fir.ref<f64>):
 // CHECK:         %[[ALLOC:.*]] = fir.alloca f64
-// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
-// CHECK:         acc.yield %[[DECL]]#0 : !fir.ref<f64>
+// CHECK:         acc.yield %[[ALLOC]] : !fir.ref<f64>
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<f64>, %[[DST:.*]]: !fir.ref<f64>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<f64>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<f64>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : f64, !fir.ref<f64>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -108,7 +104,7 @@ func.func @test_f64_scalar_in_parallel() {
   return
 }
 
-// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<f64>) recipe(@firstprivatization_ref_f64) -> !fir.ref<f64> {implicit = true, name = "f64_var"}
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<f64>) recipe(@firstprivatization_ref_f64) implicit(true) name("f64_var") -> !fir.ref<f64>
 // CHECK: acc.parallel firstprivate(%[[FIRSTPRIV]] : !fir.ref<f64>)
 
 // -----
@@ -116,12 +112,11 @@ func.func @test_f64_scalar_in_parallel() {
 // CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_l32 : !fir.ref<!fir.logical<4>> init {
 // CHECK:       ^bb0(%{{.*}}: !fir.ref<!fir.logical<4>>):
 // CHECK:         %[[ALLOC:.*]] = fir.alloca !fir.logical<4>
-// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
-// CHECK:         acc.yield %[[DECL]]#0 : !fir.ref<!fir.logical<4>>
+// CHECK:         acc.yield %[[ALLOC]] : !fir.ref<!fir.logical<4>>
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<!fir.logical<4>>, %[[DST:.*]]: !fir.ref<!fir.logical<4>>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.logical<4>>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<!fir.logical<4>>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -135,7 +130,7 @@ func.func @test_logical_scalar_in_parallel() {
   return
 }
 
-// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) recipe(@firstprivatization_ref_l32) -> !fir.ref<!fir.logical<4>> {implicit = true, name = "logical_var"}
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) recipe(@firstprivatization_ref_l32) implicit(true) name("logical_var") -> !fir.ref<!fir.logical<4>>
 // CHECK: acc.parallel firstprivate(%[[FIRSTPRIV]] : !fir.ref<!fir.logical<4>>)
 
 // -----
@@ -143,12 +138,11 @@ func.func @test_logical_scalar_in_parallel() {
 // CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_z32 : !fir.ref<complex<f32>> init {
 // CHECK:       ^bb0(%{{.*}}: !fir.ref<complex<f32>>):
 // CHECK:         %[[ALLOC:.*]] = fir.alloca complex<f32>
-// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
-// CHECK:         acc.yield %[[DECL]]#0 : !fir.ref<complex<f32>>
+// CHECK:         acc.yield %[[ALLOC]] : !fir.ref<complex<f32>>
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<complex<f32>>, %[[DST:.*]]: !fir.ref<complex<f32>>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<complex<f32>>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<complex<f32>>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : complex<f32>, !fir.ref<complex<f32>>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -162,7 +156,7 @@ func.func @test_complex_scalar_in_parallel() {
   return
 }
 
-// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<complex<f32>>) recipe(@firstprivatization_ref_z32) -> !fir.ref<complex<f32>> {implicit = true, name = "complex_var"}
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<complex<f32>>) recipe(@firstprivatization_ref_z32) implicit(true) name("complex_var") -> !fir.ref<complex<f32>>
 // CHECK: acc.parallel firstprivate(%[[FIRSTPRIV]] : !fir.ref<complex<f32>>)
 
 // -----
@@ -170,12 +164,11 @@ func.func @test_complex_scalar_in_parallel() {
 // CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_z64 : !fir.ref<complex<f64>> init {
 // CHECK:       ^bb0(%{{.*}}: !fir.ref<complex<f64>>):
 // CHECK:         %[[ALLOC:.*]] = fir.alloca complex<f64>
-// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
-// CHECK:         acc.yield %[[DECL]]#0 : !fir.ref<complex<f64>>
+// CHECK:         acc.yield %[[ALLOC]] : !fir.ref<complex<f64>>
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<complex<f64>>, %[[DST:.*]]: !fir.ref<complex<f64>>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<complex<f64>>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<complex<f64>>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : complex<f64>, !fir.ref<complex<f64>>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -189,7 +182,7 @@ func.func @test_complex8_scalar_in_parallel() {
   return
 }
 
-// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<complex<f64>>) recipe(@firstprivatization_ref_z64) -> !fir.ref<complex<f64>> {implicit = true, name = "complex8_var"}
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<complex<f64>>) recipe(@firstprivatization_ref_z64) implicit(true) name("complex8_var") -> !fir.ref<complex<f64>>
 // CHECK: acc.parallel firstprivate(%[[FIRSTPRIV]] : !fir.ref<complex<f64>>)
 
 // -----
@@ -206,7 +199,7 @@ func.func @test_i32_scalar_in_serial() {
   return
 }
 
-// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "serial_i32_var"}
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) implicit(true) name("serial_i32_var") -> !fir.ref<i32>
 // CHECK: acc.serial firstprivate(%[[FIRSTPRIV]] : !fir.ref<i32>)
 
 // -----
@@ -223,7 +216,7 @@ func.func @test_f64_scalar_in_serial() {
   return
 }
 
-// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<f64>) recipe(@firstprivatization_ref_f64) -> !fir.ref<f64> {implicit = true, name = "serial_f64_var"}
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<f64>) recipe(@firstprivatization_ref_f64) implicit(true) name("serial_f64_var") -> !fir.ref<f64>
 // CHECK: acc.serial firstprivate(%[[FIRSTPRIV]] : !fir.ref<f64>)
 
 // -----
@@ -233,12 +226,11 @@ func.func @test_f64_scalar_in_serial() {
 // CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_i8 : !fir.ref<i8> init {
 // CHECK:       ^bb0(%{{.*}}: !fir.ref<i8>):
 // CHECK:         %[[ALLOC:.*]] = fir.alloca i8
-// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
-// CHECK:         acc.yield %[[DECL]]#0 : !fir.ref<i8>
+// CHECK:         acc.yield %[[ALLOC]] : !fir.ref<i8>
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<i8>, %[[DST:.*]]: !fir.ref<i8>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<i8>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<i8>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : i8, !fir.ref<i8>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -252,7 +244,7 @@ func.func @test_i8_scalar_in_parallel() {
   return
 }
 
-// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i8>) recipe(@firstprivatization_ref_i8) -> !fir.ref<i8> {implicit = true, name = "i8_var"}
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i8>) recipe(@firstprivatization_ref_i8) implicit(true) name("i8_var") -> !fir.ref<i8>
 // CHECK: acc.parallel firstprivate(%[[FIRSTPRIV]] : !fir.ref<i8>)
 
 // -----
@@ -260,12 +252,11 @@ func.func @test_i8_scalar_in_parallel() {
 // CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_i16 : !fir.ref<i16> init {
 // CHECK:       ^bb0(%{{.*}}: !fir.ref<i16>):
 // CHECK:         %[[ALLOC:.*]] = fir.alloca i16
-// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
-// CHECK:         acc.yield %[[DECL]]#0 : !fir.ref<i16>
+// CHECK:         acc.yield %[[ALLOC]] : !fir.ref<i16>
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<i16>, %[[DST:.*]]: !fir.ref<i16>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<i16>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<i16>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : i16, !fir.ref<i16>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -279,6 +270,6 @@ func.func @test_i16_scalar_in_parallel() {
   return
 }
 
-// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i16>) recipe(@firstprivatization_ref_i16) -> !fir.ref<i16> {implicit = true, name = "i16_var"}
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i16>) recipe(@firstprivatization_ref_i16) implicit(true) name("i16_var") -> !fir.ref<i16>
 // CHECK: acc.parallel firstprivate(%[[FIRSTPRIV]] : !fir.ref<i16>)
 

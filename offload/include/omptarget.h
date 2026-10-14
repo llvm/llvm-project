@@ -14,6 +14,8 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
+#include "OffloadAPI.h"
+
 #include "Shared/APITypes.h"
 #include "Shared/Environment.h"
 #include "Shared/SourceInfo.h"
@@ -46,7 +48,7 @@ enum __tgt_target_return_t : int {
 };
 
 /// Data attributes for each data reference used in an OpenMP target region.
-enum tgt_map_type {
+enum tgt_map_type : uint64_t {
   // No flags
   OMP_TGT_MAPTYPE_NONE = 0x000,
   // copy data from host to device
@@ -80,6 +82,10 @@ enum tgt_map_type {
   // Attach pointer and pointee, after processing all other maps.
   // Applicable to map-entering directives. Does not change ref-count.
   OMP_TGT_MAPTYPE_ATTACH = 0x4000,
+  // When a lookup fails, fall back to using null as the translated pointer,
+  // instead of preserving the original pointer's value. Currently only
+  // useful in conjunction with RETURN_PARAM.
+  OMP_TGT_MAPTYPE_FB_NULLIFY = 0x8000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1
@@ -103,6 +109,7 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_HOST,
   TARGET_ALLOC_SHARED,
   TARGET_ALLOC_DEFAULT,
+  TARGET_ALLOC_LAST = TARGET_ALLOC_DEFAULT
 };
 
 struct DeviceTy;
@@ -125,20 +132,29 @@ private:
   using PostProcFuncTy = std::function<int()>;
   llvm::SmallVector<PostProcFuncTy> PostProcessingFunctions;
 
-  __tgt_async_info AsyncInfo;
+  ol_queue_handle_t Queue = nullptr;
   DeviceTy &Device;
 
 public:
   /// Synchronization method to be used.
   SyncTy SyncType;
 
-  AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING)
-      : Device(Device), SyncType(SyncType) {}
-  ~AsyncInfoTy() { synchronize(); }
+  AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING);
+  ~AsyncInfoTy();
+
+  // If we ever need to enable one of this methods we need to ensure
+  // that the underlying queue is not freed more than once.
+  AsyncInfoTy(const AsyncInfoTy &) = delete;
+  AsyncInfoTy &operator=(const AsyncInfoTy &) = delete;
+  AsyncInfoTy(AsyncInfoTy &&) = delete;
+  AsyncInfoTy &operator=(AsyncInfoTy &&) = delete;
 
   /// Implicit conversion to the __tgt_async_info which is used in the
   /// plugin interface.
-  operator __tgt_async_info *() { return &AsyncInfo; }
+  operator __tgt_async_info *();
+
+  /// Get the underlying queue handle.
+  ol_queue_handle_t getQueue() const { return Queue; }
 
   /// Synchronize all pending actions.
   ///
@@ -269,12 +285,24 @@ struct __tgt_target_non_contig {
 extern "C" {
 #endif
 
+/// The OpenMP access group type. The criterion for grouping tasks using a
+/// specific grouping property.
+enum omp_access_t {
+  /// Groups the tasks based on the contention group to which they belong.
+  omp_access_cgroup = 0,
+  /// Groups the tasks based on the parallel region to which they bind.
+  omp_access_pteam = 1,
+};
+
 void ompx_dump_mapping_tables(void);
 int omp_get_num_devices(void);
 int omp_get_device_num(void);
 int omp_get_device_from_uid(const char *DeviceUid);
 const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
+size_t omp_get_gprivate_limit(int DeviceNum,
+                              omp_access_t AccessGroup = omp_access_cgroup);
+void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
 int omp_target_is_present(const void *Ptr, int DeviceNum);
@@ -410,11 +438,13 @@ void __tgt_target_nowait_query(void **AsyncHandle);
 
 /// Executes a target kernel by replaying recorded kernel arguments and
 /// device memory.
-int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId, void *HostPtr,
-                               void *DeviceMemory, int64_t DeviceMemorySize,
-                               void **TgtArgs, ptrdiff_t *TgtOffsets,
-                               int32_t NumArgs, int32_t NumTeams,
-                               int32_t ThreadLimit, uint64_t LoopTripCount);
+int __tgt_target_kernel_replay(
+    ident_t *Loc, int64_t DeviceId, void *HostPtr, void *DeviceMemory,
+    void *ReuseDeviceAlloc, int64_t DeviceMemorySize,
+    const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
+    void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs, int32_t NumTeams,
+    int32_t ThreadLimit, uint32_t SharedMemorySize, uint64_t LoopTripCount,
+    KernelReplayOutcomeTy *ReplayOutcome);
 
 void __tgt_set_info_flag(uint32_t);
 
@@ -422,7 +452,15 @@ int __tgt_print_device_info(int64_t DeviceId);
 
 int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                  void *VAddr, bool IsRecord, bool SaveOutput,
-                                 uint64_t &ReqPtrArgOffset);
+                                 bool EmitReport, const char *OutputDirPath);
+
+// Gets mapped device pointer. If device pointer is not found, returns
+// host pointer
+void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr);
+// Registers a callback for the RPC server. Expects this function type.
+// unsigned callback(rpc::Server::Port *Port, unsigned NumLanes). See the RPC
+// code for details.
+void __tgt_register_rpc_callback(unsigned (*Callback)(void *, unsigned));
 
 #ifdef __cplusplus
 }

@@ -45,6 +45,7 @@ def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
 def defaultlib : P<"defaultlib", "Add the library to the list of input files">;
 def delayload : P<"delayload", "Delay loaded DLL name">;
 def diasdkdir : P<"diasdkdir", "Set the location of the DIA SDK">;
+def discard_section : P<"discard-section", "Discard input sections by name">;
 def dwodir : P<"dwodir",
     "Directory to store .dwo files when LTO and debug fission are used">;
 def entry   : P<"entry", "Name of entry point symbol">;
@@ -75,6 +76,9 @@ def link : F<"link">, HelpText<"Ignored for compatibility">;
 def linkrepro : Joined<["/", "-", "/?", "-?"], "linkrepro:">,
     MetaVarName<"directory">,
     HelpText<"Write repro.tar containing inputs and command to reproduce link">;
+def linkreprofullpathrsp : Joined<["/", "-", "/?", "-?"], "linkreprofullpathrsp:">,
+    MetaVarName<"directory">,
+    HelpText<"Write .rsp file containing inputs used to link with full paths">;
 def lldignoreenv : F<"lldignoreenv">,
     HelpText<"Ignore environment variables like %LIB%">;
 def lldltocache : P<"lldltocache",
@@ -299,6 +303,9 @@ def thinlto_remote_compiler_prepend_arg : P<"thinlto-remote-compiler-prepend-arg
 def thinlto_remote_compiler_arg : P<"thinlto-remote-compiler-arg",
   "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
   "compilations">;
+defm fat_lto_objects: B<"fat-lto-objects",
+    "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
+    "Ignore the .llvm.lto section in relocatable object files (default).">;
 def lto_obj_path : P<
     "lto-obj-path",
     "output native object for merged LTO unit to this path">;
@@ -347,6 +354,23 @@ defm build_id: B<
 
 def incl_glob : Joined<["/", "-", "/?", "-?"], "includeglob:">,
     HelpText<"Force symbol to be added to symbol table as undefined one using a glob pattern">;
+
+defm prefetch_inputs : B<"prefetch-inputs",
+                         "Request the OS to prefetch input files as early as "
+                         "possible, to improve link times",
+                         "Do not prefetch input files (default)">;
+
+def opt_remarks_filename: P<"opt-remarks-filename",
+  "YAML output file for optimization remarks">;
+def opt_remarks_passes: P<"opt-remarks-passes",
+  "Regex for the passes that need to be serialized to the output file">;
+def opt_remarks_format: P<"opt-remarks-format",
+  "The format used for serializing remarks (default: YAML)">;
+def opt_remarks_with_hotness: F<"opt-remarks-with-hotness">,
+  HelpText<"Include hotness information in the optimization remarks file">;
+def opt_remarks_hotness_threshold: P<"opt-remarks-hotness-threshold",
+  "Minimum profile count required for an optimization remark to be output. "
+  "Use 'auto' to apply the threshold from profile summary.">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;

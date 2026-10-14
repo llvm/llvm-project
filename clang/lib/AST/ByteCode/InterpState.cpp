@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterpState.h"
+#include "EvalSettings.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "Program.h"
+#include "Reflect.h"
 #include "State.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
@@ -17,27 +19,45 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
+InterpState::InterpState(const EvalSettings &Settings, Program &P,
+                         InterpStack &Stk, FrameAllocator &FrameAlloc,
                          Context &Ctx, SourceMapper *M)
-    : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
-      Current(&BottomFrame) {
-  InConstantContext = Parent.InConstantContext;
+    : State(Ctx.getASTContext(), Settings.EvalStatus), M(M),
+      FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
+      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
+  InConstantContext = Settings.InConstantContext;
   CheckingPotentialConstantExpression =
-      Parent.CheckingPotentialConstantExpression;
-  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
-  EvalMode = Parent.EvalMode;
+      Settings.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Settings.CheckingForUndefinedBehavior;
+  EvalMode = Settings.EvalMode;
 }
 
-InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
+InterpState::InterpState(const EvalSettings &Settings, Program &P,
+                         InterpStack &Stk, FrameAllocator &FrameAlloc,
                          Context &Ctx, const Function *Func)
-    : Parent(Parent), M(nullptr), P(P), Stk(Stk), Ctx(Ctx),
-      BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
-      Current(&BottomFrame) {
-  InConstantContext = Parent.InConstantContext;
+    : State(Ctx.getASTContext(), Settings.EvalStatus), M(nullptr),
+      FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
+      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
+  InConstantContext = Settings.InConstantContext;
   CheckingPotentialConstantExpression =
-      Parent.CheckingPotentialConstantExpression;
-  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
-  EvalMode = Parent.EvalMode;
+      Settings.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Settings.CheckingForUndefinedBehavior;
+  EvalMode = Settings.EvalMode;
+}
+
+InterpState::InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
+                         FrameAllocator &FrameAlloc, Context &Ctx,
+                         SourceMapper *M)
+    : State(Ctx.getASTContext(), Status), M(M), FrameAlloc(FrameAlloc), P(P),
+      Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
+  InConstantContext = true;
+  CheckingPotentialConstantExpression = false;
+  CheckingForUndefinedBehavior = true;
+  EvalMode = EvaluationMode::ConstantExpression;
 }
 
 bool InterpState::inConstantContext() const {
@@ -48,12 +68,7 @@ bool InterpState::inConstantContext() const {
 }
 
 InterpState::~InterpState() {
-  while (Current && !Current->isBottomFrame()) {
-    InterpFrame *Next = Current->Caller;
-    delete Current;
-    Current = Next;
-  }
-  BottomFrame.destroyScopes();
+  assert(Current->isBottomFrame());
 
   while (DeadBlocks) {
     DeadBlock *Next = DeadBlocks->Next;
@@ -75,7 +90,7 @@ void InterpState::cleanup() {
     Alloc->cleanup();
 }
 
-Frame *InterpState::getCurrentFrame() { return Current; }
+const Frame *InterpState::getCurrentFrame() { return Current; }
 
 void InterpState::deallocate(Block *B) {
   assert(B);
@@ -146,10 +161,17 @@ StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {
     if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
         TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
       QualType ElemType = TAL[0].getAsType();
-      const auto *NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetPC()));
+      const auto *NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetOpPC()));
       return {NewCall, ElemType};
     }
   }
 
   return {};
+}
+
+bool InterpState::diagnoseStepLimitExceeded(CodePtr OpPC) {
+  FFDiag(Current->getSource(OpPC), diag::note_constexpr_step_limit_exceeded, 1)
+      << getLangOpts().ConstexprStepLimit;
+  Note(Current->getSource(OpPC), diag::note_constexpr_steps);
+  return false;
 }

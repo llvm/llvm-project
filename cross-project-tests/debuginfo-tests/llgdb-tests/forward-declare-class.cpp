@@ -1,6 +1,7 @@
 // RUN: %clangxx %target_itanium_abi_host_triple -O0 -g %s -c -o %t.o
 // RUN: %test_debuginfo %s %t.o
 // Radar 9168773
+// REQUIRES: system-darwin || has-gdb
 // XFAIL: !system-darwin && gdb-clang-incompatibility
 
 // DEBUGGER: ptype A

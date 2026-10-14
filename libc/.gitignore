@@ -1,3 +1,6 @@
 # Sphinx documentation
 docs/_build/
 build/
+
+# Unicode data used for wctype functions
+UnicodeData.txt

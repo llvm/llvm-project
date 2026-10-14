@@ -22,6 +22,7 @@ endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)
 clang_diag_gen(AST)
+clang_diag_gen(CodeGen)
 clang_diag_gen(Comment)
 clang_diag_gen(Common)
 clang_diag_gen(CrossTU)
@@ -42,46 +43,50 @@ clang_tablegen(DiagnosticIndexName.inc -gen-clang-diags-index-name
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticIndexName)
 
+clang_tablegen(DiagnosticStableIDs.inc -gen-clang-diags-stable-ids
+  SOURCE Diagnostic.td
+  TARGET ClangDiagnosticStableIDs)
+
 clang_tablegen(DiagnosticAllCompatIDs.inc
   -gen-clang-diags-compat-ids
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticAllCompatIDs)
 
 clang_tablegen(AttrList.inc -gen-clang-attr-list
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrList)
 
 clang_tablegen(AttrParsedAttrList.inc -gen-clang-attr-parsed-attr-list
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrParsedAttrList)
 
 clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrSubjectMatchRuleList)
 
 clang_tablegen(RegularKeywordAttrInfo.inc -gen-clang-regular-keyword-attr-info
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangRegularKeywordAttrInfo
   )
 
 clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrHasAttributeImpl
   )
 
 clang_tablegen(CXX11AttributeInfo.inc -gen-cxx11-attribute-info
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET CXX11AttributeInfo
   )
 
   clang_tablegen(AttributeSpellingList.inc -gen-attribute-spelling-list
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET AttributeSpellingList
   )
@@ -89,6 +94,18 @@ clang_tablegen(CXX11AttributeInfo.inc -gen-cxx11-attribute-info
 clang_tablegen(Builtins.inc -gen-clang-builtins
   SOURCE Builtins.td
   TARGET ClangBuiltins)
+
+clang_tablegen(BuiltinsAArch64.inc -gen-clang-builtins
+  SOURCE BuiltinsAArch64.td
+  TARGET ClangBuiltinsAArch64)
+
+clang_tablegen(BuiltinsARM.inc -gen-clang-builtins
+  SOURCE BuiltinsARM.td
+  TARGET ClangBuiltinsARM)
+
+clang_tablegen(BuiltinsAMDGPU.inc -gen-clang-builtins
+  SOURCE BuiltinsAMDGPU.td
+  TARGET ClangBuiltinsAMDGPU)
 
 clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td
@@ -122,6 +139,10 @@ clang_tablegen(BuiltinsSPIRVCL.inc -gen-clang-builtins
   SOURCE BuiltinsSPIRVCL.td
   TARGET ClangBuiltinsSPIRVCL)
 
+clang_tablegen(BuiltinsSystemZ.inc -gen-clang-builtins
+  SOURCE BuiltinsSystemZ.td
+  TARGET ClangBuiltinsSystemZ)
+
 clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
   SOURCE BuiltinsX86.td
   TARGET ClangBuiltinsX86)
@@ -130,9 +151,17 @@ clang_tablegen(BuiltinsX86_64.inc -gen-clang-builtins
   SOURCE BuiltinsX86_64.td
   TARGET ClangBuiltinsX86_64)
 
+clang_tablegen(BuiltinsZOS.inc -gen-clang-builtins
+  SOURCE BuiltinsZOS.td
+  TARGET ClangBuiltinsZOS)
+
 clang_tablegen(BuiltinTemplates.inc -gen-clang-builtin-templates
   SOURCE BuiltinTemplates.td
   TARGET ClangBuiltinTemplates)
+
+clang_tablegen(BuiltinTraits.inc -gen-clang-builtin-traits
+  SOURCE BuiltinTraits.td
+  TARGET ClangBuiltinTraits)
 
 # ARM NEON and MVE
 clang_tablegen(arm_neon.inc -gen-arm-neon-sema

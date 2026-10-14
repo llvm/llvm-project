@@ -46,22 +46,21 @@ namespace clang::tidy::performance {
 //   - ProtoVarDeclName: 'p' (as VarDecl).
 //   - ProtoVarDeclStmtName: The entire 'SomeProto p;' statement (as DeclStmt).
 //   - ProtoAddFieldCallName: 'p.add_xxx(i)' (as cxxMemberCallExpr).
-static const char LoopCounterName[] = "for_loop_counter";
-static const char LoopParentName[] = "loop_parent";
-static const char VectorVarDeclName[] = "vector_var_decl";
-static const char VectorVarDeclStmtName[] = "vector_var_decl_stmt";
-static const char PushBackOrEmplaceBackCallName[] = "append_call";
-static const char ProtoVarDeclName[] = "proto_var_decl";
-static const char ProtoVarDeclStmtName[] = "proto_var_decl_stmt";
-static const char ProtoAddFieldCallName[] = "proto_add_field";
-static const char LoopInitVarName[] = "loop_init_var";
-static const char LoopEndExprName[] = "loop_end_expr";
-static const char RangeLoopName[] = "for_range_loop";
+static constexpr char LoopCounterName[] = "for_loop_counter";
+static constexpr char LoopParentName[] = "loop_parent";
+static constexpr char VectorVarDeclName[] = "vector_var_decl";
+static constexpr char VectorVarDeclStmtName[] = "vector_var_decl_stmt";
+static constexpr char PushBackOrEmplaceBackCallName[] = "append_call";
+static constexpr char ProtoVarDeclName[] = "proto_var_decl";
+static constexpr char ProtoVarDeclStmtName[] = "proto_var_decl_stmt";
+static constexpr char ProtoAddFieldCallName[] = "proto_add_field";
+static constexpr char LoopInitVarName[] = "loop_init_var";
+static constexpr char LoopEndExprName[] = "loop_end_expr";
+static constexpr char RangeLoopName[] = "for_range_loop";
 
-static ast_matchers::internal::Matcher<Expr> supportedContainerTypesMatcher() {
-  return hasType(cxxRecordDecl(hasAnyName(
-      "::std::vector", "::std::set", "::std::unordered_set", "::std::map",
-      "::std::unordered_map", "::std::array", "::std::deque")));
+static ast_matchers::internal::Matcher<Expr>
+supportedContainerTypesMatcher(ArrayRef<StringRef> ContainerTypes) {
+  return hasType(cxxRecordDecl(hasAnyName(ContainerTypes)));
 }
 
 namespace {
@@ -77,12 +76,18 @@ InefficientVectorOperationCheck::InefficientVectorOperationCheck(
     : ClangTidyCheck(Name, Context),
       VectorLikeClasses(utils::options::parseStringList(
           Options.get("VectorLikeClasses", "::std::vector"))),
+      ForRangeLoopClasses(utils::options::parseStringList(Options.get(
+          "ForRangeLoopClasses",
+          "::std::array;::std::deque;::std::map;::std::set;"
+          "::std::unordered_map;::std::unordered_set;::std::vector"))),
       EnableProto(Options.get("EnableProto", false)) {}
 
 void InefficientVectorOperationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "VectorLikeClasses",
                 utils::options::serializeStringList(VectorLikeClasses));
+  Options.store(Opts, "ForRangeLoopClasses",
+                utils::options::serializeStringList(ForRangeLoopClasses));
   Options.store(Opts, "EnableProto", EnableProto);
 }
 
@@ -100,9 +105,9 @@ void InefficientVectorOperationCheck::addMatcher(
           .bind(VarDeclStmtName);
 
   const auto AppendCallExpr =
-      cxxMemberCallExpr(
-          callee(AppendMethodDecl), on(hasType(TargetRecordDecl)),
-          onImplicitObjectArgument(declRefExpr(to(TargetVarDecl))))
+      cxxMemberCallExpr(callee(AppendMethodDecl), on(hasType(TargetRecordDecl)),
+                        onImplicitObjectArgument(ignoringParenImpCasts(
+                            declRefExpr(to(TargetVarDecl)))))
           .bind(AppendCallName);
   const auto AppendCall = expr(ignoringImplicit(AppendCallExpr));
   const auto LoopVarInit = declStmt(hasSingleDecl(
@@ -146,10 +151,10 @@ void InefficientVectorOperationCheck::addMatcher(
   // FIXME: Support more complex range-expressions.
   Finder->addMatcher(
       cxxForRangeStmt(
-          hasRangeInit(
-              anyOf(declRefExpr(supportedContainerTypesMatcher()),
-                    memberExpr(hasObjectExpression(unless(hasSideEffects())),
-                               supportedContainerTypesMatcher()))),
+          hasRangeInit(anyOf(
+              declRefExpr(supportedContainerTypesMatcher(ForRangeLoopClasses)),
+              memberExpr(hasObjectExpression(unless(hasSideEffects())),
+                         supportedContainerTypesMatcher(ForRangeLoopClasses)))),
           HasInterestingLoopBody, InInterestingCompoundStmt)
           .bind(RangeLoopName),
       this);
@@ -229,14 +234,14 @@ void InefficientVectorOperationCheck::check(
   if (VectorAppendCall != nullptr) {
     PartialReserveStmt = ".reserve";
   } else {
-    llvm::StringRef FieldName = ProtoAddFieldCall->getMethodDecl()->getName();
+    StringRef FieldName = ProtoAddFieldCall->getMethodDecl()->getName();
     FieldName.consume_front("add_");
     const std::string MutableFieldName = ("mutable_" + FieldName).str();
     PartialReserveStmt = "." + MutableFieldName +
                          "()->Reserve"; // e.g., ".mutable_xxx()->Reserve"
   }
 
-  const llvm::StringRef VarName = Lexer::getSourceText(
+  const StringRef VarName = Lexer::getSourceText(
       CharSourceRange::getTokenRange(
           AppendCall->getImplicitObjectArgument()->getSourceRange()),
       SM, Context->getLangOpts());
@@ -259,10 +264,11 @@ void InefficientVectorOperationCheck::check(
     ReserveSize = std::string(LoopEndSource);
   }
 
-  auto Diag = diag(AppendCall->getBeginLoc(),
-                   "%0 is called inside a loop; consider pre-allocating the "
-                   "container capacity before the loop")
-              << AppendCall->getMethodDecl()->getDeclName();
+  const auto Diag =
+      diag(AppendCall->getBeginLoc(),
+           "%0 is called inside a loop; consider pre-allocating the "
+           "container capacity before the loop")
+      << AppendCall->getMethodDecl()->getDeclName();
   if (!ReserveSize.empty()) {
     const std::string ReserveStmt =
         (VarName + PartialReserveStmt + "(" + ReserveSize + ");\n").str();

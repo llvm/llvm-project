@@ -66,7 +66,7 @@ llc -march=bpf -mcpu=v4 -bpf-min-jump-table-entries=3 < test.ll \
 ; CHECK: # %bb.0:                                # %entry
 ; CHECK:                                         # kill: def $w1 killed $w1 def $r1
 ; CHECK: 	w1 += -1
-; CHECK: 	if w1 > 29 goto LBB0_5
+; CHECK: 	if w1 > 29 goto .LBB0_5
 ; CHECK: # %bb.1:                                # %entry
 ; CHECK: 	w2 = 18
 ; CHECK: 	r1 <<= 3
@@ -76,15 +76,15 @@ llc -march=bpf -mcpu=v4 -bpf-min-jump-table-entries=3 < test.ll \
 ; CHECK: 	r1 = *(u64 *)(r4 + 0)
 ; CHECK: 	r3 += r1
 ; CHECK: 	gotox r3
-; CHECK: LBB0_2:                                 # %sw.bb1
+; CHECK: .LBB0_2:                                # %sw.bb1
 ; CHECK: 	w2 = 6
-; CHECK: 	goto LBB0_4
-; CHECK: LBB0_3:                                 # %sw.bb2
+; CHECK: 	goto .LBB0_4
+; CHECK: .LBB0_3:                                # %sw.bb2
 ; CHECK: 	w2 = 2
-; CHECK: LBB0_4:                                 # %sw.epilog.sink.split
+; CHECK: .LBB0_4:                                # %sw.epilog.sink.split
 ; CHECK: 	r1 = ret_user ll
 ; CHECK: 	*(u32 *)(r1 + 0) = w2
-; CHECK: LBB0_5:                                 # %sw.epilog
+; CHECK: .LBB0_5:                                # %sw.epilog
 ; CHECK: 	w0 = 0
 ; CHECK: 	exit
 ; CHECK: .Lfunc_end0:
@@ -93,34 +93,34 @@ llc -march=bpf -mcpu=v4 -bpf-min-jump-table-entries=3 < test.ll \
 ; CHECK: 	.cfi_endproc
 ; CHECK: 	.section	.jumptables,"",@progbits
 ; CHECK: BPF.JT.0.0:
-; CHECK: 	.quad	LBB0_4-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_2-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_5-.text
-; CHECK: 	.quad	LBB0_3-.text
+; CHECK: 	.quad	.LBB0_4-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_2-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_3-.text
 ; CHECK: 	.size	BPF.JT.0.0, 240

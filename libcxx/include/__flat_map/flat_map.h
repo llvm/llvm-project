@@ -85,8 +85,10 @@ class flat_map {
   template <class, class, class, class, class>
   friend class flat_map;
 
-  static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
-  static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>);
+  static_assert(is_same_v<_Key, typename _KeyContainer::value_type>,
+                "The stored elements' key type must match the underlying key container's value_type.");
+  static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>,
+                "The stored elements' mapped type must match the underlying mapped container's value_type.");
   static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
   static_assert(!is_same_v<_MappedContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
 
@@ -152,16 +154,12 @@ public:
 #  endif // _LIBCPP_HAS_EXCEPTIONS
       : __containers_(std::move(__other.__containers_)), __compare_(std::move(__other.__compare_)) {
     __other.clear();
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __other.clear();
-    // gcc does not like the `throw` keyword in a conditionally noexcept function
-    if constexpr (!(is_nothrow_move_constructible_v<_KeyContainer> &&
-                    is_nothrow_move_constructible_v<_MappedContainer> && is_nothrow_move_constructible_v<_Compare>)) {
-      throw;
-    }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
   }
+#  if _LIBCPP_HAS_EXCEPTIONS
+  catch (...) {
+    __other.clear();
+  }
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 
   template <class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
@@ -184,12 +182,12 @@ public:
                  std::move(__other.__containers_.values),
                  std::move(__other.__compare_)) {
     __other.clear();
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __other.clear();
-    throw;
-#  endif // _LIBCPP_HAS_EXCEPTIONS
   }
+#  if _LIBCPP_HAS_EXCEPTIONS
+  catch (...) {
+    __other.clear();
+  }
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_map(
       key_container_type __key_cont, mapped_container_type __mapped_cont, const key_compare& __comp = key_compare())
@@ -465,13 +463,13 @@ public:
   }
 
   // [flat.map.access], element access
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](const key_type& __x)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](const key_type& __x)
     requires is_constructible_v<mapped_type>
   {
     return try_emplace(__x).first->second;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](key_type&& __x)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](key_type&& __x)
     requires is_constructible_v<mapped_type>
   {
     return try_emplace(std::move(__x)).first->second;
@@ -480,7 +478,7 @@ public:
   template <class _Kp>
     requires(__is_compare_transparent && is_constructible_v<key_type, _Kp> && is_constructible_v<mapped_type> &&
              !is_convertible_v<_Kp &&, const_iterator> && !is_convertible_v<_Kp &&, iterator>)
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](_Kp&& __x) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& operator[](_Kp&& __x) {
     return try_emplace(std::forward<_Kp>(__x)).first->second;
   }
 
@@ -590,6 +588,15 @@ public:
     }
 
     __append_sort_merge_unique</*WasSorted = */ false>(ranges::begin(__range), ranges::end(__range));
+  }
+
+  template <_ContainerCompatibleRange<value_type> _Range>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert_range(sorted_unique_t, _Range&& __range) {
+    if constexpr (ranges::sized_range<_Range>) {
+      __reserve(ranges::size(__range));
+    }
+
+    __append_sort_merge_unique</*WasSorted = */ true>(ranges::begin(__range), ranges::end(__range));
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(initializer_list<value_type> __il) {
@@ -741,14 +748,17 @@ public:
     return iterator(std::move(__key_it), std::move(__mapped_it));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(flat_map& __y) noexcept {
-    // warning: The spec has unconditional noexcept, which means that
-    // if any of the following functions throw an exception,
-    // std::terminate will be called.
-    // This is discussed in P2767, which hasn't been voted on yet.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  swap(flat_map& __y) noexcept(is_nothrow_swappable_v<key_container_type> &&
+                               is_nothrow_swappable_v<mapped_container_type> && is_nothrow_swappable_v<key_compare>) {
+    auto __on_failure = std::__make_exception_guard([&]() noexcept {
+      clear() /* noexcept */;
+      __y.clear() /* noexcept */;
+    });
     ranges::swap(__compare_, __y.__compare_);
     ranges::swap(__containers_.keys, __y.__containers_.keys);
     ranges::swap(__containers_.values, __y.__containers_.values);
+    __on_failure.__complete();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void clear() noexcept {
@@ -886,7 +896,8 @@ public:
         __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(flat_map& __x, flat_map& __y) noexcept {
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  swap(flat_map& __x, flat_map& __y) noexcept(noexcept(__x.swap(__y))) {
     __x.swap(__y);
   }
 
@@ -921,7 +932,7 @@ private:
         __compare_(std::forward<_CompArg>(__comp)...) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __is_sorted_and_unique(auto&& __key_container) const {
-    auto __greater_or_equal_to = [this](const auto& __x, const auto& __y) { return !__compare_(__x, __y); };
+    auto __greater_or_equal_to = [this](const auto& __x, const auto& __y) -> bool { return !__compare_(__x, __y); };
     return ranges::adjacent_find(__key_container, __greater_or_equal_to) == ranges::end(__key_container);
   }
 
@@ -954,7 +965,7 @@ private:
       auto __zv                  = ranges::views::zip(__containers_.keys, __containers_.values);
       auto __append_start_offset = __containers_.keys.size() - __num_of_appended;
       auto __end                 = __zv.end();
-      auto __compare_key         = [this](const auto& __p1, const auto& __p2) {
+      auto __compare_key         = [this](const auto& __p1, const auto& __p2) -> bool {
         return __compare_(std::get<0>(__p1), std::get<0>(__p2));
       };
       if constexpr (!_WasSorted) {

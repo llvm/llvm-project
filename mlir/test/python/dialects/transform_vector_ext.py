@@ -5,6 +5,13 @@ from mlir.dialects import transform
 from mlir.dialects.transform import vector
 
 
+def run(f):
+    with Context(), Location.unknown():
+        print("\nTEST:", f.__name__)
+        f()
+    return f
+
+
 def run_apply_patterns(f):
     with Context(), Location.unknown():
         module = Module.create()
@@ -67,6 +74,9 @@ def configurable_patterns():
     # CHECK-SAME: max_transfer_rank = 3
     # CHECK-SAME: full_unroll = true
     vector.ApplyTransferToScfPatternsOp(max_transfer_rank=3, full_unroll=True)
+    # CHECK: transform.apply_patterns.vector.flatten_vector_transfer_ops
+    # CHECK-SAME: target_vector_bitwidth = 1
+    vector.ApplyFlattenVectorTransferOpsPatternsOp(target_vector_bitwidth=1)
 
 
 @run_apply_patterns
@@ -84,16 +94,27 @@ def enum_configurable_patterns():
         lowering_strategy=vector.VectorContractLowering.ParallelArith
     )
 
-    # CHECK: transform.apply_patterns.vector.lower_multi_reduction
-    vector.ApplyLowerMultiReductionPatternsOp()
-    # CHECK: transform.apply_patterns.vector.lower_multi_reduction
-    # This is the default mode, not printed.
-    vector.ApplyLowerMultiReductionPatternsOp(
-        lowering_strategy=vector.VectorMultiReductionLowering.InnerParallel
-    )
-    # CHECK: transform.apply_patterns.vector.lower_multi_reduction
+    # CHECK: transform.apply_patterns.vector.reorder_multi_reduction_dims
+    vector.ApplyReorderMultiReductionPatternsOp()
+    # CHECK: transform.apply_patterns.vector.reorder_multi_reduction_dims
     # CHECK-SAME: lowering_strategy = innerreduction
-    vector.ApplyLowerMultiReductionPatternsOp(
+    vector.ApplyReorderMultiReductionPatternsOp(
+        lowering_strategy=vector.VectorMultiReductionLowering.InnerReduction
+    )
+
+    # CHECK: transform.apply_patterns.vector.multi_reduction_flattening
+    vector.ApplyMultiReductionFlatteningPatternsOp()
+    # CHECK: transform.apply_patterns.vector.multi_reduction_flattening
+    # CHECK-SAME: lowering_strategy = innerreduction
+    vector.ApplyMultiReductionFlatteningPatternsOp(
+        lowering_strategy=vector.VectorMultiReductionLowering.InnerReduction
+    )
+
+    # CHECK: transform.apply_patterns.vector.multi_reduction_unrolling
+    vector.ApplyMultiReductionUnrollingPatternsOp()
+    # CHECK: transform.apply_patterns.vector.multi_reduction_unrolling
+    # CHECK-SAME: lowering_strategy = innerreduction
+    vector.ApplyMultiReductionUnrollingPatternsOp(
         lowering_strategy=vector.VectorMultiReductionLowering.InnerReduction
     )
 
@@ -149,3 +170,32 @@ def enum_configurable_patterns():
     vector.ApplySplitTransferFullPartialPatternsOp(
         split_transfer_strategy=vector.VectorTransferSplit.ForceInBounds
     )
+
+
+# CHECK-LABEL: TEST: linearize_conversion_patterns
+@run
+def linearize_conversion_patterns():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.AnyOpType.get(),
+    )
+    with InsertionPoint(sequence.body):
+        apply = transform.ApplyConversionPatternsOp(
+            sequence.bodyTarget, 1, partial_conversion=True
+        )
+        with InsertionPoint(apply.patterns.blocks.append()):
+            vector.ApplyVectorLinearizeConversionPatternsOp(
+                shuffle_like_ops=True, target_vector_bitwidth=128
+            )
+        with InsertionPoint(apply.default_type_converter_region[0].blocks.append()):
+            vector.VectorLinearizeTypeConverterOp()
+        transform.YieldOp()
+    # CHECK: apply_conversion_patterns to
+    # CHECK-NEXT: transform.apply_conversion_patterns.vector.linearize
+    # CHECK-SAME: shuffle_like_ops = true
+    # CHECK-SAME: target_vector_bitwidth = 128
+    # CHECK-NEXT: } with type_converter {
+    # CHECK-NEXT: transform.apply_conversion_patterns.vector.linearize_type_converter
+    # CHECK-NEXT: } <partial_conversion>
+    print(sequence)

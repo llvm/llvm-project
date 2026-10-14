@@ -1,6 +1,6 @@
 include "../../../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "processgdbremote" in {
+let Definition = "processgdbremote", Path = "plugin.process.gdb-remote" in {
   def PacketTimeout: Property<"packet-timeout", "UInt64">,
     Global,
 #ifdef LLDB_SANITIZED
@@ -21,4 +21,10 @@ let Definition = "processgdbremote" in {
     Global,
     DefaultFalse,
     Desc<"Specify if the server should use 'g' packets to read registers.">;
+  def PacketTestDelay
+      : Property<"packet-test-delay", "UInt64">,
+        Global,
+        DefaultUnsignedValue<0>,
+        Desc<"Specify an artificial delay in milliseconds inserted before "
+             "sending each packet, for testing purposes.">;
 }

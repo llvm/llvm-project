@@ -220,6 +220,14 @@ protected:
             mlir::Type stmtResultType) override;
 };
 
+struct HlfirLenLowering : public HlfirTransformationalIntrinsic {
+  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
+};
+
 } // namespace
 
 mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
@@ -481,6 +489,14 @@ mlir::Value HlfirCShiftLowering::lowerImpl(
   if (!dim) {
     // If DIM is not present, drop the last element which is a null Value.
     operands.truncate(2);
+  } else if (loweredActuals[2] && loweredActuals[2]->handleDynamicOptional()) {
+    // Use getIsPresent() to select between a present DIM value or
+    // the default 1 per Fortran 16.9.68.
+    mlir::Value isPresent = loweredActuals[2]->getIsPresent();
+    mlir::Type dimType = dim.getType();
+    mlir::Value one = builder.createIntegerConstant(loc, dimType, 1);
+    dim = mlir::arith::SelectOp::create(builder, loc, isPresent, dim, one);
+    operands[2] = dim;
   } else {
     // If DIM is present, then dereference it if it is a ref.
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
@@ -501,9 +517,17 @@ mlir::Value HlfirEOShiftLowering::lowerImpl(
   mlir::Value shift = operands[1];
   mlir::Value boundary = operands[2];
   mlir::Value dim = operands[3];
-  // If DIM is present, then dereference it if it is a ref.
-  if (dim)
+  if (loweredActuals[3] && loweredActuals[3]->handleDynamicOptional()) {
+    // Use getIsPresent() to select between a present DIM value or
+    // the default 1 per Fortran 16.9.77.
+    mlir::Value isPresent = loweredActuals[3]->getIsPresent();
+    mlir::Type dimType = dim.getType();
+    mlir::Value one = builder.createIntegerConstant(loc, dimType, 1);
+    dim = mlir::arith::SelectOp::create(builder, loc, isPresent, dim, one);
+  } else if (dim) {
+    // If DIM is statically present, dereference it if it is a ref.
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
+  }
 
   mlir::Type resultType = computeResultType(array, stmtResultType);
 
@@ -556,6 +580,19 @@ mlir::Value HlfirIndexLowering::lowerImpl(
   mlir::Value result =
       createOp<hlfir::IndexOp>(stmtResultType, substr, str, back);
   return result;
+}
+
+mlir::Value HlfirLenLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  // LEN (STRING [, KIND])
+  assert((loweredActuals.size() == 1 || loweredActuals.size() == 2) &&
+         loweredActuals[0].has_value());
+  Fortran::lower::PreparedActualArgument &strArg =
+      const_cast<Fortran::lower::PreparedActualArgument &>(*loweredActuals[0]);
+  return builder.createConvert(loc, stmtResultType,
+                               strArg.genCharLength(loc, builder));
 }
 
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
@@ -615,6 +652,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "index")
     return HlfirIndexLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                   stmtResultType);
+  if (name == "len")
+    return HlfirLenLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                stmtResultType);
 
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")

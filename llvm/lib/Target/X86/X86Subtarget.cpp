@@ -27,9 +27,9 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -47,12 +47,8 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "X86GenSubtargetInfo.inc"
 
-// Temporary option to control early if-conversion for x86 while adding machine
-// models.
-static cl::opt<bool>
-X86EarlyIfConv("x86-early-ifcvt", cl::Hidden,
-               cl::desc("Enable early if-conversion on X86"));
-
+#define OPTIONS_STRUCT_DEFS
+#include "X86Options.inc"
 
 /// Classify a blockaddress reference for the current subtarget according to how
 /// we should reference it in a non-pcrel context.
@@ -241,7 +237,7 @@ bool X86Subtarget::isLegalToCallImmediateAddr() const {
   // FIXME: I386 PE/COFF supports PC relative calls using IMAGE_REL_I386_REL32
   // but WinCOFFObjectWriter::RecordRelocation cannot emit them.  Once it does,
   // the following check for Win32 should be removed.
-  if (Is64Bit || isTargetWin32())
+  if (Is64Bit || isTargetWin32() || isPositionIndependent())
     return false;
   return isTargetELF() || TM.getRelocationModel() == Reloc::Static;
 }
@@ -261,8 +257,9 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     FullFS = (Twine(FullFS) + "," + FS).str();
 
   // Disable 64-bit only features in non-64-bit mode.
-  StringRef FeaturesIn64BitOnly[] = {
-      "egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "cf", "zu", "uintr"};
+  StringRef FeaturesIn64BitOnly[] = {"egpr",   "push2pop2", "ppx", "ndd",
+                                     "ccmp",   "nf",        "cf",  "zu",
+                                     "jmpabs", "uintr"};
   if (FullFS.find("-64bit-mode") != std::string::npos)
     for (StringRef F : FeaturesIn64BitOnly)
       FullFS += ",-" + F.str();
@@ -283,6 +280,9 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
                           "support it!");
 
+  if (HasEGPR && !hasSSE1() && isTargetWin64())
+    reportFatalUsageError("EGPR on Windows x64 requires SSE");
+
   // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, Hurd and for all
   // 64-bit targets.  On Solaris (32-bit), stack alignment is 4 bytes
   // following the i386 psABI, while on Illumos it is always 16 bytes.
@@ -299,6 +299,8 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     PreferVectorWidth = 128;
   else if (Prefer256Bit)
     PreferVectorWidth = 256;
+
+  HasUserReservedRegisters = ReservedRReg.any();
 }
 
 X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,
@@ -313,7 +315,7 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                            MaybeAlign StackAlignOverride,
                            unsigned PreferVectorWidthOverride,
                            unsigned RequiredVectorWidth)
-    : X86GenSubtargetInfo(TT, CPU, TuneCPU, FS),
+    : X86GenSubtargetInfo(TT, CPU, TuneCPU, FS), CLOpts(TM.getCLOpts()),
       PICStyle(PICStyles::Style::None), TM(TM), TargetTriple(TT),
       StackAlignOverride(StackAlignOverride),
       PreferVectorWidthOverride(PreferVectorWidthOverride),
@@ -362,7 +364,7 @@ const RegisterBankInfo *X86Subtarget::getRegBankInfo() const {
 }
 
 bool X86Subtarget::enableEarlyIfConversion() const {
-  return canUseCMOV() && X86EarlyIfConv;
+  return canUseCMOV() && CLOpts.early_ifcvt;
 }
 
 void X86Subtarget::getPostRAMutations(

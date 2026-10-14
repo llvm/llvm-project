@@ -35,17 +35,12 @@ ClientLauncher::GetLauncher(ClientLauncher::Client client) {
 std::string VSCodeLauncher::URLEncode(llvm::StringRef str) {
   std::string out;
   llvm::raw_string_ostream os(out);
-  for (char c : str) {
-    if (std::isalnum(c) || llvm::StringRef("-_.~").contains(c))
-      os << c;
-    else
-      os << '%' << llvm::utohexstr(c, false, 2);
-  }
-  return os.str();
+  llvm::printPercentEncoded(str, os);
+  return out;
 }
 
 std::string
-VSCodeLauncher::GetLaunchURL(const std::vector<llvm::StringRef> args) const {
+VSCodeLauncher::GetLaunchURL(const std::vector<llvm::StringRef> &args) const {
   assert(!args.empty() && "empty launch args");
 
   std::vector<std::string> encoded_launch_args;
@@ -59,7 +54,7 @@ VSCodeLauncher::GetLaunchURL(const std::vector<llvm::StringRef> args) const {
       .str();
 }
 
-llvm::Error VSCodeLauncher::Launch(const std::vector<llvm::StringRef> args) {
+llvm::Error VSCodeLauncher::Launch(const std::vector<llvm::StringRef> &args) {
   const std::string launch_url = GetLaunchURL(args);
   const std::string command =
       llvm::formatv("code --open-url {0}", launch_url).str();
@@ -68,7 +63,7 @@ llvm::Error VSCodeLauncher::Launch(const std::vector<llvm::StringRef> args) {
   return llvm::Error::success();
 }
 
-llvm::Error VSCodeURLPrinter::Launch(const std::vector<llvm::StringRef> args) {
+llvm::Error VSCodeURLPrinter::Launch(const std::vector<llvm::StringRef> &args) {
   llvm::outs() << GetLaunchURL(args) << '\n';
   return llvm::Error::success();
 }

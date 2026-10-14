@@ -14,6 +14,7 @@
 #include "src/__support/CPP/bit.h" // bit_ceil
 #include "src/__support/CPP/new.h"
 #include "src/__support/HashTable/bitmask.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/hash.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -207,10 +208,10 @@ private:
 
   LIBC_INLINE HashTable *grow() const {
     size_t hint = full_capacity() + 1;
-    HashState state = this->state;
+    HashState new_state = state;
     // migrate to a new random state
-    state.update(&hint, sizeof(hint));
-    HashTable *new_table = allocate(hint, state.finish());
+    new_state.update(&hint, sizeof(hint));
+    HashTable *new_table = allocate(hint, new_state.finish());
     // It is safe to call unsafe_insert() because we know that:
     // - the new table has enough capacity to hold all the entries
     // - there is no duplicate key in the old table

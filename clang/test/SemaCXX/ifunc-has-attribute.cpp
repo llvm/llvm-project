@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -emit-llvm-only -triple x86_64-apple-macosx -verify %s -DSUPPORTED=1
 // RUN: %clang_cc1 -emit-llvm-only -triple arm64-apple-macosx -verify %s -DSUPPORTED=1
 // RUN: %clang_cc1 -emit-llvm-only -triple x86_64-pc-win32 -verify %s -DNOT_SUPPORTED=1
+// RUN: %clang_cc1 -emit-llvm-only -triple powerpc64-ibm-aix-xcoff -verify %s -DSUPPORTED=1
 
 // expected-no-diagnostics
 

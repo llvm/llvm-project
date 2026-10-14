@@ -2,6 +2,8 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load(
     "//:vars.bzl",
@@ -18,18 +20,20 @@ package(
 
 licenses(["notice"])
 
-# TODO: Actually compute version info
-genrule(
+expand_template(
     name = "config_version_gen",
-    outs = ["include/lld/Common/Version.inc"],
-    cmd = "echo '#define LLD_VERSION_STRING \"{}\"' > $@".format(LLVM_VERSION),
+    out = "include/lld/Common/Version.inc",
+    substitutions = {"@LLD_VERSION@": LLVM_VERSION},
+    template = "include/lld/Common/Version.inc.in",
 )
 
-genrule(
+write_file(
     name = "vcs_version_gen",
-    outs = ["Common/VCSVersion.inc"],
-    cmd = "echo '#undef LLD_REVISION' >> $@\n" +
-          "echo '#undef LLD_REPOSITORY' >> $@\n",
+    out = "Common/VCSVersion.inc",
+    content = [
+        "#undef LLD_REVISION",
+        "#undef LLD_REPOSITORY",
+    ],
 )
 
 # See https://github.com/bazelbuild/bazel/issues/13803
@@ -91,6 +95,7 @@ cc_library(
         "//llvm:BitWriter",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:DTLTO",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
         "//llvm:IPO",
@@ -138,6 +143,7 @@ cc_library(
         "//llvm:BitReader",
         "//llvm:BitWriter",
         "//llvm:Core",
+        "//llvm:DTLTO",
         "//llvm:DebugInfo",
         "//llvm:DebugInfoCodeView",
         "//llvm:DebugInfoMSF",
@@ -150,6 +156,7 @@ cc_library(
         "//llvm:MC",
         "//llvm:Object",
         "//llvm:Option",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:Symbolize",
         "//llvm:TargetParser",

@@ -10,15 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 #include "RemarkUtilRegistry.h"
-#include <unordered_map>
+#include "llvm/ADT/DenseMap.h"
 
 namespace llvm {
 namespace remarkutil {
 
 using HandlerType = std::function<Error()>;
 
-static std::unordered_map<cl::SubCommand *, HandlerType> &getCommands() {
-  static std::unordered_map<cl::SubCommand *, HandlerType> Commands;
+static DenseMap<cl::SubCommand *, HandlerType> &getCommands() {
+  static DenseMap<cl::SubCommand *, HandlerType> Commands;
   return Commands;
 }
 

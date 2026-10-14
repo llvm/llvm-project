@@ -175,10 +175,8 @@ struct OperandsSignature {
 
       // Emit the type check.
       TreePattern *TP = PredFn.getOrigPatFragRecord();
-      ValueTypeByHwMode VVT = TP->getTree(0)->getType(0);
-      assert(VVT.isSimple() &&
-             "Cannot use variable value types with fast isel");
-      OS << LS << "VT == " << getEnumName(VVT.getSimple().SimpleTy) << " && ";
+      MVT VT = TP->getTree(0)->getSimpleType(0);
+      OS << LS << "VT == " << getEnumName(VT) << " && ";
 
       OS << PredFn.getFnName() << "(imm" << Idx << ')';
     }
@@ -463,11 +461,13 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
     if (MultiInsts)
       continue;
 
-    // For now, ignore instructions where the first operand is not an
-    // output register.
+    // For now, ignore instructions that do not define the result in their
+    // first operand.
     const CodeGenRegisterClass *DstRC = nullptr;
     std::string SubRegNo;
     if (Op->getName() != "EXTRACT_SUBREG") {
+      if (Inst.Operands.NumDefs == 0)
+        continue;
       const Record *Op0Rec = Inst.Operands[0].Rec;
       if (Op0Rec->isSubClassOf("RegisterOperand"))
         Op0Rec = Op0Rec->getValueAsDef("RegClass");

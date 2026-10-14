@@ -1,12 +1,16 @@
 // RUN: cir-opt %s -cir-to-llvm -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
 
+!s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 
-module {
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.func private @__gxx_personality_v0(...) -> !s32i
 
 // CHECK: llvm.func @__gxx_personality_v0(...) -> i32
 
-cir.func @inflight_exception() {
+cir.func @inflight_exception() personality(@__gxx_personality_v0) {
   %exception_ptr, %type_id = cir.eh.inflight_exception
   cir.return
 }
@@ -19,7 +23,7 @@ cir.func @inflight_exception() {
 // CHECK:   llvm.return
 // CHECK: }
 
-cir.func @inflight_exception_with_cleanup() {
+cir.func @inflight_exception_with_cleanup() personality(@__gxx_personality_v0) {
   %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
   cir.return
 }
@@ -34,8 +38,9 @@ cir.func @inflight_exception_with_cleanup() {
 
 cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
 cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIl : !cir.ptr<!u8i>
 
-cir.func @inflight_exception_with_catch_type_list() {
+cir.func @inflight_exception_with_catch_type_list() personality(@__gxx_personality_v0) {
   %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
   cir.return
 }
@@ -49,5 +54,62 @@ cir.func @inflight_exception_with_catch_type_list() {
 // CHECK:   llvm.return
 // CHECK: }
 
+cir.func @inflight_exception_catch_all_with_type_list() personality(@__gxx_personality_v0) {
+  %exception_ptr, %type_id = cir.eh.inflight_exception catch_all [@_ZTIi]
+  cir.return
+}
+
+// CHECK: llvm.func @inflight_exception_catch_all_with_type_list() attributes {personality = @__gxx_personality_v0} {
+// CHECK:   %[[NULL:.*]] = llvm.mlir.zero : !llvm.ptr
+// CHECK:   %[[TI_ADDR:.*]] = llvm.mlir.addressof @_ZTIi : !llvm.ptr
+// CHECK:   %[[LP:.*]] = llvm.landingpad (catch %[[TI_ADDR]] : !llvm.ptr) (catch %[[NULL]] : !llvm.ptr) : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[EXCEPTION_PTR:.*]] = llvm.extractvalue %[[LP]][0] : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[TYPE_ID:.*]] = llvm.extractvalue %[[LP]][1] : !llvm.struct<(ptr, i32)>
+// CHECK:   llvm.return
+// CHECK: }
+
+cir.func @inflight_exception_catch_all_only() personality(@__gxx_personality_v0) {
+  %exception_ptr, %type_id = cir.eh.inflight_exception catch_all
+  cir.return
+}
+
+// CHECK: llvm.func @inflight_exception_catch_all_only() attributes {personality = @__gxx_personality_v0} {
+// CHECK:   %[[NULL:.*]] = llvm.mlir.zero : !llvm.ptr
+// CHECK:   %[[LP:.*]] = llvm.landingpad (catch %[[NULL]] : !llvm.ptr) : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[EXCEPTION_PTR:.*]] = llvm.extractvalue %[[LP]][0] : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[TYPE_ID:.*]] = llvm.extractvalue %[[LP]][1] : !llvm.struct<(ptr, i32)>
+// CHECK:   llvm.return
+// CHECK: }
+
+cir.func @inflight_exception_filter() personality(@__gxx_personality_v0) {
+  %exception_ptr, %type_id = cir.eh.inflight_exception filter [@_ZTIi]
+  cir.return
+}
+
+// CHECK-LABEL: llvm.func @inflight_exception_filter()
+// CHECK:   %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.array<1 x ptr>
+// CHECK:   %[[TI:.*]] = llvm.mlir.addressof @_ZTIi : !llvm.ptr
+// CHECK:   %[[FILTER:.*]] = llvm.insertvalue %[[TI]], %[[UNDEF]][0] : !llvm.array<1 x ptr>
+// CHECK:   %[[LP:.*]] = llvm.landingpad (filter %[[FILTER]] : !llvm.array<1 x ptr>) : !llvm.struct<(ptr, i32)>
+
+cir.func @inflight_exception_empty_filter() personality(@__gxx_personality_v0) {
+  %exception_ptr, %type_id = cir.eh.inflight_exception filter []
+  cir.return
+}
+
+// CHECK-LABEL: llvm.func @inflight_exception_empty_filter()
+// CHECK:   %[[ZERO:.*]] = llvm.mlir.zero : !llvm.array<0 x ptr>
+// CHECK:   %[[LP:.*]] = llvm.landingpad (filter %[[ZERO]] : !llvm.array<0 x ptr>) : !llvm.struct<(ptr, i32)>
+
+cir.func @inflight_exception_catch_and_filter() personality(@__gxx_personality_v0) {
+  %exception_ptr, %type_id =
+      cir.eh.inflight_exception cleanup [@_ZTIl] filter []
+  cir.return
+}
+
+// CHECK-LABEL: llvm.func @inflight_exception_catch_and_filter()
+// CHECK:   %[[ZERO:.*]] = llvm.mlir.zero : !llvm.array<0 x ptr>
+// CHECK:   %[[TI:.*]] = llvm.mlir.addressof @_ZTIl : !llvm.ptr
+// CHECK:   %[[LP:.*]] = llvm.landingpad cleanup (catch %[[TI]] : !llvm.ptr) (filter %[[ZERO]] : !llvm.array<0 x ptr>) : !llvm.struct<(ptr, i32)>
 
 }

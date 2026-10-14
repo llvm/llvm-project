@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/BasicBlock.h"
@@ -21,7 +22,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 
 #include <cmath>
@@ -41,23 +41,13 @@ STATISTIC(ExpectIntrinsicsHandled,
 // programmers may be using __builtin_expect() / llvm.expect to annotate that a
 // branch is likely or unlikely to be taken.
 
-// WARNING: these values are internal implementation detail of the pass.
-// They should not be exposed to the outside of the pass, front-end codegen
-// should emit @llvm.expect intrinsics instead of using these weights directly.
-// Transforms should use TargetTransformInfo's getPredictableBranchThreshold().
-static cl::opt<uint32_t> LikelyBranchWeight(
-    "likely-branch-weight", cl::Hidden, cl::init(2000),
-    cl::desc("Weight of the branch likely to be taken (default = 2000)"));
-static cl::opt<uint32_t> UnlikelyBranchWeight(
-    "unlikely-branch-weight", cl::Hidden, cl::init(1),
-    cl::desc("Weight of the branch unlikely to be taken (default = 1)"));
-
 static std::tuple<uint32_t, uint32_t>
 getBranchWeight(Intrinsic::ID IntrinsicID, CallInst *CI, int BranchCount) {
+  const ScalarOptions &Opts = ScalarOptions::Global;
   if (IntrinsicID == Intrinsic::expect) {
     // __builtin_expect
-    return std::make_tuple(LikelyBranchWeight.getValue(),
-                           UnlikelyBranchWeight.getValue());
+    return std::make_tuple(Opts.likely_branch_weight,
+                           Opts.unlikely_branch_weight);
   } else {
     // __builtin_expect_with_probability
     assert(CI->getNumOperands() >= 3 &&
@@ -193,18 +183,14 @@ static void handlePhiDef(CallInst *Expect) {
 
   // Get the first dominating conditional branch of the operand
   // i's incoming block.
-  auto GetDomConditional = [&](unsigned i) -> BranchInst * {
+  auto GetDomConditional = [&](unsigned i) -> CondBrInst * {
     BasicBlock *BB = PhiDef->getIncomingBlock(i);
-    BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
-    if (BI && BI->isConditional())
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(BB->getTerminator()))
       return BI;
     BB = BB->getSinglePredecessor();
     if (!BB)
       return nullptr;
-    BI = dyn_cast<BranchInst>(BB->getTerminator());
-    if (!BI || BI->isUnconditional())
-      return nullptr;
-    return BI;
+    return dyn_cast<CondBrInst>(BB->getTerminator());
   };
 
   // Now walk through all Phi operands to find phi oprerands with values
@@ -226,7 +212,7 @@ static void handlePhiDef(CallInst *Expect) {
     if (ExpectedValueIsLikely == (ExpectedPhiValue == CurrentPhiValue))
       continue;
 
-    BranchInst *BI = GetDomConditional(i);
+    CondBrInst *BI = GetDomConditional(i);
     if (!BI)
       continue;
 
@@ -272,7 +258,7 @@ static void handlePhiDef(CallInst *Expect) {
   }
 }
 
-// Handle both BranchInst and SelectInst.
+// Handle both CondBrInst and SelectInst.
 template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
 
   // Handle non-optimized IR code like:
@@ -354,20 +340,13 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
   return true;
 }
 
-static bool handleBranchExpect(BranchInst &BI) {
-  if (BI.isUnconditional())
-    return false;
-
-  return handleBrSelExpect<BranchInst>(BI);
-}
-
 static bool lowerExpectIntrinsic(Function &F) {
   bool Changed = false;
 
   for (BasicBlock &BB : F) {
     // Create "block_weights" metadata.
-    if (BranchInst *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
-      if (handleBranchExpect(*BI))
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(BB.getTerminator())) {
+      if (handleBrSelExpect<CondBrInst>(*BI))
         ExpectIntrinsicsHandled++;
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(BB.getTerminator())) {
       if (handleSwitchExpect(*SI))

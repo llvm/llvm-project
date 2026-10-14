@@ -12,5 +12,5 @@ struct S {
   v4i32 B[0];
 } s;
 
-//CHECK: !llvm.module.flags = !{!0, !1}
+//CHECK: !llvm.module.flags = !{!0}
 //CHECK: !0 = !{i32 2, !"s390x-visible-vector-ABI", i32 1}

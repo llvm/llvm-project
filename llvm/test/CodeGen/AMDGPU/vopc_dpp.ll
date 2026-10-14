@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck -check-prefix=GFX11 %s
 
 define amdgpu_cs void @_amdgpu_cs_main(i32 %0) {
 ; GFX11-LABEL: _amdgpu_cs_main:

@@ -210,7 +210,7 @@ static bool runImpl(Module &M) {
       Value *Res = CallInst::Create(AtExit, Args, "call", EntryBB);
       Value *Cmp = new ICmpInst(EntryBB, ICmpInst::ICMP_NE, Res,
                                 Constant::getNullValue(Res->getType()));
-      BranchInst::Create(FailBB, RetBB, Cmp, EntryBB);
+      CondBrInst::Create(Cmp, FailBB, RetBB, EntryBB);
 
       // If `__cxa_atexit` hits out-of-memory, trap, so that we don't misbehave.
       // This should be very rare, because if the process is running out of

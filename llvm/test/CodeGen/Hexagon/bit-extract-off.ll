@@ -14,12 +14,12 @@ b4:
   br label %b5
 
 b5:                                               ; preds = %b5, %b4
-  %v6 = call double @fabs(double undef) #1
+  %v6 = call double @llvm.fabs.f64(double undef) #1
   store double %v6, ptr @g0, align 8
   br label %b5
 }
 
-declare double @fabs(double) #1
+declare double @llvm.fabs.f64(double) #1
 
 attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }
 attributes #1 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }

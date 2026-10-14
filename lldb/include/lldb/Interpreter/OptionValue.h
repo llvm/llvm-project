@@ -63,6 +63,7 @@ public:
     eDumpOptionRaw = (1u << 4),
     eDumpOptionCommand = (1u << 5),
     eDumpOptionDefaultValue = (1u << 6),
+    eDumpOptionOnlyChanged = (1u << 7),
     eDumpGroupValue = (eDumpOptionName | eDumpOptionType | eDumpOptionValue),
     eDumpGroupHelp =
         (eDumpOptionName | eDumpOptionType | eDumpOptionDescription),
@@ -101,7 +102,10 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign);
 
-  virtual void Clear() = 0;
+  void Clear() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    ClearImpl();
+  }
 
   virtual lldb::OptionValueSP
   DeepCopy(const lldb::OptionValueSP &new_parent) const;
@@ -126,7 +130,9 @@ public:
 
   virtual llvm::StringRef GetName() const { return llvm::StringRef(); }
 
-  virtual bool DumpQualifiedName(Stream &strm) const;
+  virtual bool DumpQualifiedName(
+      Stream &strm,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt) const;
 
   // Subclasses should NOT override these functions as they use the above
   // functions to implement functionality
@@ -249,6 +255,13 @@ public:
 
   void SetOptionWasSet() { m_value_was_set = true; }
 
+  /// Return true if the current value equals the default value.
+  ///
+  /// Subclasses that store a default value should override this to compare
+  /// against it. The base implementation falls back to `OptionWasSet()`, which
+  /// is a reasonable approximation for types without an explicit default.
+  virtual bool IsDefault() const { return !OptionWasSet(); }
+
   void SetParent(const lldb::OptionValueSP &parent_sp) {
     m_parent_wp = parent_sp;
   }
@@ -340,6 +353,8 @@ protected:
   // DeepCopy to it. Inherit from Cloneable to avoid doing this manually.
   virtual lldb::OptionValueSP Clone() const = 0;
 
+  virtual void ClearImpl() = 0;
+
   class DefaultValueFormat {
   public:
     DefaultValueFormat(Stream &stream) : stream(stream) {
@@ -362,6 +377,8 @@ protected:
                                 // set from the command line or as a setting,
                                 // versus if we just have the default value that
                                 // was already populated in the option value.
+  mutable std::mutex m_mutex;
+
 private:
   std::optional<ArchSpec> GetArchSpecValue() const;
   bool SetArchSpecValue(ArchSpec arch_spec);
@@ -402,8 +419,6 @@ private:
   bool SetFormatEntityValue(const FormatEntity::Entry &entry);
 
   const RegularExpression *GetRegexValue() const;
-
-  mutable std::mutex m_mutex;
 };
 
 } // namespace lldb_private

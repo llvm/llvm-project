@@ -7,7 +7,7 @@ SUBROUTINE WORK(I)
 END SUBROUTINE WORK
 
 SUBROUTINE ORDERED_GOOD(N)
-  INTEGER N, I, A(10), B(10), C(10) 
+  INTEGER N, I, A(10), B(10), C(10)
   !$OMP SIMD
   DO I = 1,N
     IF (I <= 10) THEN
@@ -27,7 +27,7 @@ SUBROUTINE ORDERED_BAD(N)
     IF (I <= 10) THEN
       !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !ERROR: An ORDERED directive without the DEPEND clause must be closely nested in a worksharing-loop (or worksharing-loop SIMD) region with ORDERED clause without the parameter
-      !$OMP ORDERED 
+      !$OMP ORDERED
       CALL WORK(I)
       !$OMP END ORDERED
     ENDIF
@@ -38,18 +38,18 @@ SUBROUTINE ORDERED_BAD(N)
   DO I = 1,N
     IF (I <= 10) THEN
       !ERROR: An ORDERED directive without the DEPEND clause must be closely nested in a worksharing-loop (or worksharing-loop SIMD) region with ORDERED clause without the parameter
-      !$OMP ORDERED 
+      !$OMP ORDERED
       CALL WORK(I)
       !$OMP END ORDERED
     ENDIF
   END DO
   !$OMP END PARALLEL DO
 
-  !$OMP CRITICAL  
+  !$OMP CRITICAL
   DO I = 1,N
     IF (I <= 10) THEN
       !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
-      !$OMP ORDERED 
+      !$OMP ORDERED
       CALL WORK(I)
       !$OMP END ORDERED
     ENDIF
@@ -59,71 +59,71 @@ SUBROUTINE ORDERED_BAD(N)
   !$OMP CRITICAL
     WRITE(*,*) I
     !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
-    !$OMP ORDERED 
+    !$OMP ORDERED
     CALL WORK(I)
     !$OMP END ORDERED
   !$OMP END CRITICAL
 
-  !$OMP ORDERED 
+  !$OMP ORDERED
     WRITE(*,*) I
     IF (I <= 10) THEN
       !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
-      !$OMP ORDERED 
+      !$OMP ORDERED
       CALL WORK(I)
       !$OMP END ORDERED
     ENDIF
   !$OMP END ORDERED
 
-  !$OMP TASK  
+  !$OMP TASK
     C =  C - A * B
     !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
-    !$OMP ORDERED 
+    !$OMP ORDERED
     CALL WORK(I)
     !$OMP END ORDERED
   !$OMP END TASK
 
-  !$OMP TASKLOOP 
+  !$OMP TASKLOOP
   DO I = 1,N
     IF (I <= 10) THEN
       !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
-      !$OMP ORDERED 
+      !$OMP ORDERED
       CALL WORK(I)
       !$OMP END ORDERED
     ENDIF
   END DO
   !$OMP END TASKLOOP
 
-  !$OMP CRITICAL  
+  !$OMP CRITICAL
     C =  C - A * B
     !$OMP MASTER
     DO I = 1,N
       !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
-      !$OMP ORDERED 
+      !$OMP ORDERED
       CALL WORK(I)
       !$OMP END ORDERED
     END DO
     !$OMP END MASTER
   !$OMP END CRITICAL
 
-  !$OMP ORDERED  
+  !$OMP ORDERED
     C =  C - A * B
     !$OMP MASTER
     DO I = 1,N
       !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
-      !$OMP ORDERED 
+      !$OMP ORDERED
       CALL WORK(I)
       !$OMP END ORDERED
     END DO
     !$OMP END MASTER
   !$OMP END ORDERED
 
-  !$OMP TASK  
+  !$OMP TASK
     C =  C - A * B
     !ERROR: `MASTER` region may not be closely nested inside of `WORKSHARING`, `LOOP`, `TASK`, `TASKLOOP`, or `ATOMIC` region.
     !$OMP MASTER
     DO I = 1,N
       !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
-      !$OMP ORDERED 
+      !$OMP ORDERED
       CALL WORK(I)
       !$OMP END ORDERED
     END DO
@@ -131,13 +131,13 @@ SUBROUTINE ORDERED_BAD(N)
   !$OMP END TASK
 
   !$OMP TASKLOOP
-  DO J= 1,N  
+  DO J= 1,N
     C =  C - A * B
     !ERROR: `MASTER` region may not be closely nested inside of `WORKSHARING`, `LOOP`, `TASK`, `TASKLOOP`, or `ATOMIC` region.
     !$OMP MASTER
     DO I = 1,N
       !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
-      !$OMP ORDERED 
+      !$OMP ORDERED
       CALL WORK(I)
       !$OMP END ORDERED
     END DO

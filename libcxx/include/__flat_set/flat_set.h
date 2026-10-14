@@ -76,7 +76,8 @@ class flat_set {
 
   friend __flat_set_utils;
 
-  static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
+  static_assert(is_same_v<_Key, typename _KeyContainer::value_type>,
+                "The stored elements' key type must match the underlying key container's value_type.");
   static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
 
   using __key_iterator _LIBCPP_NODEBUG = typename _KeyContainer::const_iterator;
@@ -112,15 +113,12 @@ public:
 #  endif // _LIBCPP_HAS_EXCEPTIONS
       : __keys_(std::move(__other.__keys_)), __compare_(std::move(__other.__compare_)) {
     __other.clear();
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __other.clear();
-    // gcc does not like the `throw` keyword in a conditionally noexcept function
-    if constexpr (!(is_nothrow_move_constructible_v<_KeyContainer> && is_nothrow_move_constructible_v<_Compare>)) {
-      throw;
-    }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
   }
+#  if _LIBCPP_HAS_EXCEPTIONS
+  catch (...) {
+    __other.clear();
+  }
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit flat_set(const key_compare& __comp)
       : __keys_(), __compare_(__comp) {}
@@ -231,12 +229,12 @@ public:
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc, std::move(__other.__keys_))),
         __compare_(std::move(__other.__compare_)) {
     __other.clear();
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __other.clear();
-    throw;
-#  endif // _LIBCPP_HAS_EXCEPTIONS
   }
+#  if _LIBCPP_HAS_EXCEPTIONS
+  catch (...) {
+    __other.clear();
+  }
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 
   template <class _InputIterator, class _Allocator>
     requires(__has_input_iterator_category<_InputIterator>::value && uses_allocator<container_type, _Allocator>::value)
@@ -466,6 +464,15 @@ public:
     __append_sort_merge_unique</*WasSorted = */ false>(std::forward<_Range>(__range));
   }
 
+  template <_ContainerCompatibleRange<value_type> _Range>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert_range(std::sorted_unique_t, _Range&& __range) {
+    if constexpr (ranges::sized_range<_Range>) {
+      __reserve(ranges::size(__range));
+    }
+
+    __append_sort_merge_unique</*WasSorted = */ true>(std::forward<_Range>(__range));
+  }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(initializer_list<value_type> __il) {
     insert(__il.begin(), __il.end());
   }
@@ -524,13 +531,15 @@ public:
     return iterator(std::move(__key_it));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(flat_set& __y) noexcept {
-    // warning: The spec has unconditional noexcept, which means that
-    // if any of the following functions throw an exception,
-    // std::terminate will be called.
-    // This is discussed in P2767, which hasn't been voted on yet.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  swap(flat_set& __y) noexcept(is_nothrow_swappable_v<container_type> && is_nothrow_swappable_v<key_compare>) {
+    auto __on_failure = std::__make_exception_guard([&]() noexcept {
+      clear() /* noexcept */;
+      __y.clear() /* noexcept */;
+    });
     ranges::swap(__compare_, __y.__compare_);
     ranges::swap(__keys_, __y.__keys_);
+    __on_failure.__complete();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void clear() noexcept { __keys_.clear(); }
@@ -661,13 +670,14 @@ public:
         __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(flat_set& __x, flat_set& __y) noexcept {
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  swap(flat_set& __x, flat_set& __y) noexcept(noexcept(__x.swap(__y))) {
     __x.swap(__y);
   }
 
 private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __is_sorted_and_unique(auto&& __key_container) const {
-    auto __greater_or_equal_to = [this](const auto& __x, const auto& __y) { return !__compare_(__x, __y); };
+    auto __greater_or_equal_to = [this](const auto& __x, const auto& __y) -> bool { return !__compare_(__x, __y); };
     return ranges::adjacent_find(__key_container, __greater_or_equal_to) == ranges::end(__key_container);
   }
 

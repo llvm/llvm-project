@@ -25,7 +25,7 @@ void test(double *d_value)
   *d_value = h_chebyshev_coefs[1];  return;
 }
 
-// CHECK: void @__omp_offloading_{{.+}}test{{.+}}(ptr %0)
+// CHECK: void @__omp_offloading_{{.+}}test{{.+}}(ptr %0, ptr null)
 
 int main() {
 #pragma omp target
@@ -33,4 +33,4 @@ int main() {
   return 0;
 }
 
-// CHECK: call void @__omp_offloading_{{.+}}_main_{{.+}}()
+// CHECK: call void @__omp_offloading_{{.+}}_main_{{.+}}(ptr null)

@@ -25,7 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
@@ -117,8 +117,6 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   CI->setVirtualFileSystem(FM->getVirtualFileSystemPtr());
   CI->setFileManager(FM);
   CI->createDiagnostics();
-  if (!CI->hasDiagnostics())
-    return EXIT_FAILURE;
 
   // Execute, verify and gather AST results.
   // An invocation is ran for each unique target triple and for each header

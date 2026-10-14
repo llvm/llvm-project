@@ -25,7 +25,7 @@ static constexpr int QUOTIENT_LSB_BITS = 3;
 // The implementation is a bit-by-bit algorithm which uses integer division
 // to evaluate the quotient and remainder.
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T remquo(T x, T y, int &q) {
+LIBC_INLINE constexpr T remquo(T x, T y, int &q) {
   FPBits<T> xbits(x), ybits(y);
   if (xbits.is_nan())
     return x;

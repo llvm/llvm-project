@@ -207,7 +207,7 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
   const auto AddFrom =
       [&Results](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
                  std::initializer_list<StringRef> Names, StringRef Prefix) {
-        llvm::SmallString<64> Buffer;
+        SmallString<64> Buffer;
         for (const auto &Name : Names) {
           Buffer.assign({"::", Prefix, (Prefix.empty() ? "" : "::"), Name});
           Results.try_emplace(Buffer, Replacer);
@@ -348,7 +348,7 @@ DiagnosticBuilder UseRangesCheck::createDiag(const CallExpr &Call) {
 }
 ArrayRef<std::pair<StringRef, StringRef>>
 UseRangesCheck::getFreeBeginEndMethods() const {
-  static const std::pair<StringRef, StringRef> Refs[] = {
+  static constexpr std::pair<StringRef, StringRef> Refs[] = {
       {"::std::begin", "::std::end"},
       {"::std::cbegin", "::std::cend"},
       {"::boost::range_adl_barrier::begin", "::boost::range_adl_barrier::end"},
@@ -359,7 +359,7 @@ UseRangesCheck::getFreeBeginEndMethods() const {
 }
 std::optional<UseRangesCheck::ReverseIteratorDescriptor>
 UseRangesCheck::getReverseDescriptor() const {
-  static const std::pair<StringRef, StringRef> Refs[] = {
+  static constexpr std::pair<StringRef, StringRef> Refs[] = {
       {"::std::rbegin", "::std::rend"},
       {"::std::crbegin", "::std::crend"},
       {"::boost::rbegin", "::boost::rend"},

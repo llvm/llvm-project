@@ -29,7 +29,7 @@ end
 !PARSE-TREE: | | | OmpBeginDirective
 !PARSE-TREE: | | | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | | | OmpClauseList -> OmpClause -> Write
-!PARSE-TREE: | | | | Flags = {}
+!PARSE-TREE: | | | | Flags = {CrossesLabelDo}
 !PARSE-TREE: | | | Block
 !PARSE-TREE: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'x=i'
 !PARSE-TREE: | | | | | Variable = 'x'

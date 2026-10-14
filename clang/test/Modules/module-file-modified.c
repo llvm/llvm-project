@@ -8,4 +8,5 @@
 #include "a.h"
 int foo = 0; // redefinition of 'foo'
 // CHECK: fatal error: file {{.*}} has been modified since the module file {{.*}} was built
-// CHECK: note: please rebuild precompiled file
+// CHECK: note: precompiled file '{{.*}}m.pcm' needs to be rebuilt
+// CHECK: note: earlier input file validation was disabled for this kind of precompiled file

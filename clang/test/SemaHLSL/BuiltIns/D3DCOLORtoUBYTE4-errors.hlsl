@@ -3,19 +3,19 @@
 int4 test_too_few_arg() {
   return D3DCOLORtoUBYTE4();
   // expected-error@-1 {{no matching function for call to 'D3DCOLORtoUBYTE4'}}
-  // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: requires single argument 'V', but no arguments were provided}}
+  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* {{candidate function not viable: requires single argument 'V', but no arguments were provided}}
 }
 
 int4 test_too_many_arg(float4 v) {
   return D3DCOLORtoUBYTE4(v, v);
   // expected-error@-1 {{no matching function for call to 'D3DCOLORtoUBYTE4'}}
-  // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: requires single argument 'V', but 2 arguments were provided}}
+  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* {{candidate function not viable: requires single argument 'V', but 2 arguments were provided}}
 }
 
 int4 float2_arg(float2 v) {
     return D3DCOLORtoUBYTE4(v);
     // expected-error@-1 {{no matching function for call to 'D3DCOLORtoUBYTE4'}}
-    // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: no known conversion from 'vector<[...], 2>' to 'vector<[...], 4>' for 1st argument}}
+    // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* {{candidate function not viable: no known conversion from 'vector<[...], 2>' to 'vector<[...], 4>' for 1st argument}}
 }
 
 struct S {
@@ -25,5 +25,5 @@ struct S {
 int4 struct_arg(S v) {
     return D3DCOLORtoUBYTE4(v);
     // expected-error@-1 {{no matching function for call to 'D3DCOLORtoUBYTE4'}}
-    // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: no known conversion from 'S' to 'float4' (aka 'vector<float, 4>') for 1st argument}}
+    // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* {{candidate function not viable: no known conversion from 'S' to 'float4' (aka 'vector<float, 4>') for 1st argument}}
 }

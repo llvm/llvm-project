@@ -164,6 +164,14 @@ getFunctionSourceAfterReplacements(const FunctionDecl *FD,
     Source.insert(0, "inline ");
   if (!TemplatePrefix.empty())
     Source.insert(0, TemplatePrefix);
+  if (!FD->hasBody() && !FD->isExplicitlyDefaulted()) {
+    Source.pop_back(); // The semicolon finishing the declaration.
+    Source += " {";
+    if (!FD->getReturnType()->isVoidType())
+      Source += " return {}; ";
+    Source += "}";
+  }
+
   return Source;
 }
 
@@ -236,8 +244,13 @@ getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
         if (Ref.Qualifier || Ref.Targets.empty() || Ref.NameLoc.isMacroID())
           return;
         // Only qualify return type and function name.
-        if (Ref.NameLoc != FD->getReturnTypeSourceRange().getBegin() &&
-            Ref.NameLoc != FD->getLocation())
+        if (auto ReturnTypeRange = FD->getReturnTypeSourceRange();
+            Ref.NameLoc != FD->getLocation() &&
+            (ReturnTypeRange.isInvalid() ||
+             SM.isBeforeInTranslationUnit(Ref.NameLoc,
+                                          ReturnTypeRange.getBegin()) ||
+             SM.isBeforeInTranslationUnit(ReturnTypeRange.getEnd(),
+                                          Ref.NameLoc)))
           return;
 
         for (const NamedDecl *ND : Ref.Targets) {
@@ -375,6 +388,30 @@ struct InsertionAnchor {
 // initializers.
 SourceRange getDeletionRange(const FunctionDecl *FD,
                              const syntax::TokenBuffer &TokBuf) {
+  if (!FD->hasBody()) {
+    if (!FD->isExplicitlyDefaulted())
+      return {};
+
+    auto Tokens = TokBuf.expandedTokens(FD->getSourceRange());
+    for (auto It = std::rbegin(Tokens); It != std::rend(Tokens); ++It) {
+      if (It->kind() == tok::kw_default) {
+        const auto NextIt = std::next(It);
+        if (NextIt == std::rend(Tokens))
+          return {};
+        const auto &ExpandedEquals = *NextIt;
+        if (ExpandedEquals.kind() != tok::equal)
+          return {};
+        auto SpelledEquals =
+            TokBuf.spelledForExpanded(llvm::ArrayRef(ExpandedEquals));
+        if (!SpelledEquals)
+          return {};
+        return {SpelledEquals->front().location(),
+                FD->getDefaultLoc().getLocWithOffset(1)};
+      }
+    }
+    return {};
+  }
+
   auto DeletionRange = FD->getBody()->getSourceRange();
   if (auto *CD = llvm::dyn_cast<CXXConstructorDecl>(FD)) {
     // AST doesn't contain the location for ":" in ctor initializers. Therefore
@@ -432,19 +469,43 @@ public:
     return CodeAction::REFACTOR_KIND;
   }
   std::string title() const override {
-    return "Move function body to out-of-line";
+    if (Source->doesThisDeclarationHaveABody())
+      return "Move function body to out-of-line";
+    return "Create function body out-of-line";
   }
 
   bool prepare(const Selection &Sel) override {
     SameFile = !isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts());
     Source = getSelectedFunction(Sel.ASTSelection.commonAncestor());
 
-    // Bail out if the selection is not a in-line function definition.
-    if (!Source || !Source->doesThisDeclarationHaveABody() ||
-        Source->isOutOfLine())
+    // Bail out if the selection is not a function declaration.
+    if (!Source || Source->isDeleted() || Source->isOutOfLine())
       return false;
 
-    // Bail out if this is a function template specialization, as their
+    // Bail out if a definition exists somewhere else.
+    if (!Source->hasBody() && !Source->isExplicitlyDefaulted()) {
+      // Check AST first.
+      if (Source->getDefinition())
+        return false;
+
+      // Then consult the index.
+      if (Sel.Index) {
+        bool HasDefinition = false;
+
+        // Note: Once other code actions want to start querying the index for
+        // the symbol under the cursor in their prepare() function, this look-up
+        // should get consolidated in some manner (e.g. a cache).
+        Sel.Index->lookup({{getSymbolID(Source)}},
+                          [&HasDefinition](const Symbol &S) {
+                            if (S.Definition)
+                              HasDefinition = true;
+                          });
+        if (HasDefinition)
+          return false;
+      }
+    }
+
+    // Bail out if this is a function template or specialization, as their
     // definitions need to be visible in all including translation units.
     if (Source->getTemplateSpecializationInfo())
       return false;
@@ -574,12 +635,17 @@ public:
     if (!Effect)
       return Effect.takeError();
 
-    tooling::Replacements HeaderUpdates(tooling::Replacement(
-        Sel.AST->getSourceManager(),
-        CharSourceRange::getTokenRange(*toHalfOpenFileRange(
-            SM, Sel.AST->getLangOpts(),
-            getDeletionRange(Source, Sel.AST->getTokens()))),
-        ";"));
+    tooling::Replacements HeaderUpdates;
+    auto DeletionRange = getDeletionRange(Source, Sel.AST->getTokens());
+    if (DeletionRange.isValid()) {
+      if (auto Error = HeaderUpdates.add(tooling::Replacement(
+              Sel.AST->getSourceManager(),
+              CharSourceRange::getTokenRange(*toHalfOpenFileRange(
+                  SM, Sel.AST->getLangOpts(), DeletionRange)),
+              ";"))) {
+        return Error;
+      }
+    }
 
     if (Source->isInlineSpecified()) {
       auto DelInline =
@@ -671,6 +737,27 @@ public:
     return {};
   }
 
+  // Helper function to skip over a matching pair of tokens (e.g., parentheses
+  // or braces). Returns an iterator to the matching closing token, or the end
+  // iterator if no matching pair is found.
+  template <typename Iterator>
+  Iterator skipTokenPair(Iterator Begin, Iterator End, tok::TokenKind StartKind,
+                         tok::TokenKind EndKind) {
+    int Count = 0;
+    for (auto It = Begin; It != End; ++It) {
+      if (It->kind() == StartKind) {
+        ++Count;
+      } else if (It->kind() == EndKind) {
+        if (--Count == 0)
+          return It;
+        if (Count < 0)
+          // We encountered a closing token without a matching opening token.
+          return End;
+      }
+    }
+    return End;
+  }
+
   // We don't know the actual start or end of the definition, only the position
   // of the name. Therefore, we heuristically try to locate the last token
   // before or in this function, respectively. Adapt as required by user code.
@@ -718,34 +805,41 @@ public:
       InsertBefore();
     } else {
       // Skip over one top-level pair of parentheses (for the parameter list)
-      // and one pair of curly braces (for the code block).
+      // and one pair of curly braces (for the code block), or `= default`.
       // If that fails, insert before the function instead.
       auto Tokens =
           syntax::tokenize(syntax::FileRange(SM.getMainFileID(), *StartOffset,
                                              Buffer.getBuffer().size()),
                            SM, AST->getLangOpts());
-      bool SkippedParams = false;
-      int OpenParens = 0;
-      int OpenBraces = 0;
       std::optional<syntax::Token> Tok;
-      for (const auto &T : Tokens) {
-        tok::TokenKind StartKind = SkippedParams ? tok::l_brace : tok::l_paren;
-        tok::TokenKind EndKind = SkippedParams ? tok::r_brace : tok::r_paren;
-        int &Count = SkippedParams ? OpenBraces : OpenParens;
-        if (T.kind() == StartKind) {
-          ++Count;
-        } else if (T.kind() == EndKind) {
-          if (--Count == 0) {
-            if (SkippedParams) {
-              Tok = T;
-              break;
+
+      // Skip parameter list (parentheses)
+      auto ClosingParen = skipTokenPair(Tokens.begin(), Tokens.end(),
+                                        tok::l_paren, tok::r_paren);
+      if (ClosingParen != Tokens.end()) {
+        // After the closing paren, check for `= default`
+        auto AfterParams = std::next(ClosingParen);
+        if (AfterParams != Tokens.end() && AfterParams->kind() == tok::equal) {
+          auto NextIt = std::next(AfterParams);
+          if (NextIt != Tokens.end() && NextIt->kind() == tok::kw_default) {
+            // Find the semicolon after `default`.
+            auto SemiIt = std::next(NextIt);
+            if (SemiIt != Tokens.end() && SemiIt->kind() == tok::semi) {
+              Tok = *SemiIt;
             }
-            SkippedParams = true;
-          } else if (Count < 0) {
-            break;
+          }
+        }
+
+        // If not `= default`, skip function body (braces)
+        if (!Tok && AfterParams != Tokens.end()) {
+          auto ClosingBrace = skipTokenPair(AfterParams, Tokens.end(),
+                                            tok::l_brace, tok::r_brace);
+          if (ClosingBrace != Tokens.end()) {
+            Tok = *ClosingBrace;
           }
         }
       }
+
       if (Tok)
         InsertionLoc = Tok->endLocation();
       else

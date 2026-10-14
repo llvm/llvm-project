@@ -39,6 +39,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/GuardWidening.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
@@ -53,7 +54,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Scalar.h"
@@ -69,12 +69,6 @@ STATISTIC(GuardsEliminated, "Number of eliminated guards");
 STATISTIC(CondBranchEliminated, "Number of eliminated conditional branches");
 STATISTIC(FreezeAdded, "Number of freeze instruction introduced");
 
-static cl::opt<bool>
-    WidenBranchGuards("guard-widening-widen-branch-guards", cl::Hidden,
-                      cl::desc("Whether or not we should widen guards  "
-                               "expressed as branches by widenable conditions"),
-                      cl::init(true));
-
 // Get the condition of \p I. It can either be a guard or a conditional branch.
 static Value *getCondition(Instruction *I) {
   if (IntrinsicInst *GI = dyn_cast<IntrinsicInst>(I)) {
@@ -87,7 +81,7 @@ static Value *getCondition(Instruction *I) {
   if (parseWidenableBranch(I, Cond, WC, IfTrueBB, IfFalseBB))
     return Cond;
 
-  return cast<BranchInst>(I)->getCondition();
+  return cast<CondBrInst>(I)->getCondition();
 }
 
 // Set the condition for \p I to \p NewCond. \p I can either be a guard or a
@@ -99,7 +93,7 @@ static void setCondition(Instruction *I, Value *NewCond) {
     GI->setArgOperand(0, NewCond);
     return;
   }
-  cast<BranchInst>(I)->setCondition(NewCond);
+  cast<CondBrInst>(I)->setCondition(NewCond);
 }
 
 // Eliminates the guard instruction properly.
@@ -311,7 +305,7 @@ class GuardWideningImpl {
                                               getCondition(ToWiden), *InsertPt);
 
     if (isGuardAsWidenableBranch(ToWiden)) {
-      setWidenableBranchCond(cast<BranchInst>(ToWiden), Result);
+      setWidenableBranchCond(cast<CondBrInst>(ToWiden), Result);
       return;
     }
     setCondition(ToWiden, Result);
@@ -333,7 +327,8 @@ public:
 static bool isSupportedGuardInstruction(const Instruction *Insn) {
   if (isGuard(Insn))
     return true;
-  if (WidenBranchGuards && isGuardAsWidenableBranch(Insn))
+  if (ScalarOptions::Global.guard_widening_widen_branch_guards &&
+      isGuardAsWidenableBranch(Insn))
     return true;
   return false;
 }
@@ -364,7 +359,7 @@ bool GuardWideningImpl::run() {
       if (isSupportedGuardInstruction(I))
         eliminateGuard(I, MSSAU);
       else {
-        assert(isa<BranchInst>(I) &&
+        assert(isa<CondBrInst>(I) &&
                "Eliminated something other than guard or branch?");
         ++CondBranchEliminated;
       }
@@ -792,7 +787,7 @@ Value *GuardWideningImpl::hoistChecks(SmallVectorImpl<Value *> &ChecksToHoist,
                                       Value *OldCondition,
                                       BasicBlock::iterator InsertPt) {
   assert(!ChecksToHoist.empty());
-  IRBuilder<> Builder(InsertPt->getParent(), InsertPt);
+  IRBuilder<> Builder(InsertPt);
   makeAvailableAt(ChecksToHoist, InsertPt);
   makeAvailableAt(OldCondition, InsertPt);
   Value *Result = Builder.CreateAnd(ChecksToHoist);

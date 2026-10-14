@@ -13,6 +13,7 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_H
 
+#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <list>
@@ -25,7 +26,11 @@
 #include "Shared/Utils.h"
 #include "omptarget.h"
 
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/Error.h"
+
+using namespace llvm::offload::debug;
 
 namespace llvm {
 
@@ -36,9 +41,9 @@ public:
 
   /// Allocate a memory of size \p Size . \p HstPtr is used to assist the
   /// allocation.
-  virtual Expected<void *>
-  allocate(size_t Size, void *HstPtr,
-           TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
+  virtual Expected<void *> allocate(size_t Size, void *HstPtr,
+                                    TargetAllocTy Kind = TARGET_ALLOC_DEFAULT,
+                                    size_t Alignment = 0) = 0;
 
   /// Delete the pointer \p TgtPtr on the device
   virtual Error free(void *TgtPtr,
@@ -79,7 +84,8 @@ class MemoryManagerTy {
   static int findBucket(size_t Size) {
     const size_t F = floorToPowerOfTwo(Size);
 
-    DP("findBucket: Size %zu is floored to %zu.\n", Size, F);
+    ODBG(OLDT_Alloc) << "findBucket: Size " << Size << " is floored to " << F
+                     << ".";
 
     int L = 0, H = NumBuckets - 1;
     while (H - L > 1) {
@@ -94,20 +100,24 @@ class MemoryManagerTy {
 
     assert(L >= 0 && L < NumBuckets && "L is out of range");
 
-    DP("findBucket: Size %zu goes to bucket %d\n", Size, L);
+    ODBG(OLDT_Alloc) << "findBucket: Size " << Size << " goes to bucket " << L;
 
     return L;
   }
 
   /// A structure stores the meta data of a target pointer
   struct NodeTy {
-    /// Memory size
+    /// Final allocation size, including the alignment padding
     const size_t Size;
-    /// Target pointer
+    /// Target pointer, returned to the caller after adjustments related to the
+    /// memory alignment (moving the pointer)
     void *Ptr;
+    /// Pointer to the originally allocated memory
+    void *BasePtr;
 
     /// Constructor
-    NodeTy(size_t Size, void *Ptr) : Size(Size), Ptr(Ptr) {}
+    NodeTy(size_t Size, void *Ptr, void *BasePtr)
+        : Size(Size), Ptr(Ptr), BasePtr(BasePtr) {}
   };
 
   /// To make \p NodePtrTy ordered when they're put into \p std::multiset.
@@ -133,24 +143,30 @@ class MemoryManagerTy {
 
   /// The reference to a device allocator
   DeviceAllocatorTy &DeviceAllocator;
+  /// The kind of device for which the memory manager is allocated
+  TargetAllocTy DeviceKind;
 
   /// The threshold to manage memory using memory manager. If the request size
   /// is larger than \p SizeThreshold, the allocation will not be managed by the
   /// memory manager.
-  size_t SizeThreshold = 1U << 13;
+  size_t SizeThreshold = DefaultSizeThreshold;
 
   /// Request memory from target device
-  Expected<void *> allocateOnDevice(size_t Size, void *HstPtr) const {
-    return DeviceAllocator.allocate(Size, HstPtr, TARGET_ALLOC_DEVICE);
+  Expected<void *> allocateOnDevice(size_t Size, void *HstPtr,
+                                    size_t Alignment) const {
+    return DeviceAllocator.allocate(Size, HstPtr, DeviceKind, Alignment);
   }
 
   /// Deallocate data on device
-  Error deleteOnDevice(void *Ptr) const { return DeviceAllocator.free(Ptr); }
+  Error deleteOnDevice(void *Ptr) const {
+    return DeviceAllocator.free(Ptr, DeviceKind);
+  }
 
   /// This function is called when it tries to allocate memory on device but the
   /// device returns out of memory. It will first free all memory in the
   /// FreeList and try to allocate again.
-  Expected<void *> freeAndAllocate(size_t Size, void *HstPtr) {
+  Expected<void *> freeAndAllocate(size_t Size, void *HstPtr,
+                                   size_t Alignment) {
     std::vector<void *> RemoveList;
 
     // Deallocate all memory in FreeList
@@ -160,7 +176,7 @@ class MemoryManagerTy {
       if (List.empty())
         continue;
       for (const NodeTy &N : List) {
-        if (auto Err = deleteOnDevice(N.Ptr))
+        if (auto Err = deleteOnDevice(N.BasePtr))
           return Err;
         RemoveList.push_back(N.Ptr);
       }
@@ -175,16 +191,16 @@ class MemoryManagerTy {
     }
 
     // Try allocate memory again
-    return allocateOnDevice(Size, HstPtr);
+    return allocateOnDevice(Size, HstPtr, Alignment);
   }
 
   /// The goal is to allocate memory on the device. It first tries to
   /// allocate directly on the device. If a \p nullptr is returned, it might
   /// be because the device is OOM. In that case, it will free all unused
   /// memory and then try again.
-  Expected<void *> allocateOrFreeAndAllocateOnDevice(size_t Size,
-                                                     void *HstPtr) {
-    auto TgtPtrOrErr = allocateOnDevice(Size, HstPtr);
+  Expected<void *> allocateOrFreeAndAllocateOnDevice(size_t Size, void *HstPtr,
+                                                     size_t Alignment) {
+    auto TgtPtrOrErr = allocateOnDevice(Size, HstPtr, Alignment);
     if (!TgtPtrOrErr)
       return TgtPtrOrErr.takeError();
 
@@ -192,27 +208,38 @@ class MemoryManagerTy {
     // We cannot get memory from the device. It might be due to OOM. Let's
     // free all memory in FreeLists and try again.
     if (TgtPtr == nullptr) {
-      DP("Failed to get memory on device. Free all memory in FreeLists and "
-         "try again.\n");
-      TgtPtrOrErr = freeAndAllocate(Size, HstPtr);
+      ODBG(OLDT_Alloc) << "Failed to get memory on device. Free all memory "
+                       << "in FreeLists and try again.";
+      TgtPtrOrErr = freeAndAllocate(Size, HstPtr, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
       TgtPtr = *TgtPtrOrErr;
     }
 
     if (TgtPtr == nullptr)
-      DP("Still cannot get memory on device probably because the device is "
-         "OOM.\n");
+      ODBG(OLDT_Alloc) << "Still cannot get memory on device probably because "
+                       << "the device is OOM.";
 
     return TgtPtr;
   }
 
+  void changeKeyPtr(void *FinalPtr, NodeTy *NodePtr) {
+    std::lock_guard<std::mutex> LG(MapTableLock);
+    auto NodeHandle = PtrToNodeTable.extract(NodePtr->Ptr);
+    NodeHandle.mapped().Ptr = FinalPtr;
+    NodeHandle.key() = FinalPtr;
+    PtrToNodeTable.insert(std::move(NodeHandle));
+  }
+
 public:
+  static constexpr size_t DefaultSizeThreshold = 1U << 13;
+
   /// Constructor. If \p Threshold is non-zero, then the default threshold will
   /// be overwritten by \p Threshold.
-  MemoryManagerTy(DeviceAllocatorTy &DeviceAllocator, size_t Threshold = 0)
+  MemoryManagerTy(DeviceAllocatorTy &DeviceAllocator, size_t Threshold = 0,
+                  TargetAllocTy DeviceKind = TARGET_ALLOC_DEVICE)
       : FreeLists(NumBuckets), FreeListLocks(NumBuckets),
-        DeviceAllocator(DeviceAllocator) {
+        DeviceAllocator(DeviceAllocator), DeviceKind(DeviceKind) {
     if (Threshold)
       SizeThreshold = Threshold;
   }
@@ -220,36 +247,57 @@ public:
   /// Destructor
   ~MemoryManagerTy() {
     for (auto &PtrToNode : PtrToNodeTable) {
-      assert(PtrToNode.second.Ptr && "nullptr in map table");
-      if (auto Err = deleteOnDevice(PtrToNode.second.Ptr))
-        REPORT("Failure to delete memory: %s\n",
-               toString(std::move(Err)).data());
+      assert(PtrToNode.second.BasePtr && "nullptr in map table");
+      if (auto Err = deleteOnDevice(PtrToNode.second.BasePtr))
+        REPORT() << "Failure to delete memory: " << toString(std::move(Err));
     }
   }
 
   /// Allocate memory of size \p Size from target device. \p HstPtr is used to
   /// assist the allocation.
-  Expected<void *> allocate(size_t Size, void *HstPtr) {
+  Expected<void *> allocate(size_t Size, void *HstPtr, size_t Alignment) {
     // If the size is zero, we will not bother the target device. Just return
     // nullptr directly.
     if (Size == 0)
       return nullptr;
 
-    DP("MemoryManagerTy::allocate: size %zu with host pointer " DPxMOD ".\n",
-       Size, DPxPTR(HstPtr));
+    size_t AllocationSize = Size;
+    if (Alignment > 0) {
+      auto PaddedSize = checkedAddUnsigned(Size, Alignment - 1);
+      if (!PaddedSize) {
+        ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: warning: "
+                            "size+alignment overflow, bailing out.";
+        return nullptr;
+      }
+      AllocationSize = *PaddedSize;
+    }
+
+    ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: requested memory " << Size
+                     << ", allocated:  " << AllocationSize
+                     << " with host pointer " << HstPtr << ".";
 
     // If the size is greater than the threshold, allocate it directly from
     // device.
-    if (Size > SizeThreshold) {
-      DP("%zu is greater than the threshold %zu. Allocate it directly from "
-         "device\n",
-         Size, SizeThreshold);
-      auto TgtPtrOrErr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
+    if (AllocationSize > SizeThreshold) {
+      ODBG(OLDT_Alloc) << AllocationSize << " is greater than the threshold "
+                       << SizeThreshold << ". Allocate it directly from device";
+      auto TgtPtrOrErr =
+          allocateOrFreeAndAllocateOnDevice(AllocationSize, HstPtr, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 
-      DP("Got target pointer " DPxMOD ". Return directly.\n",
-         DPxPTR(*TgtPtrOrErr));
+      ODBG(OLDT_Alloc) << "Got target pointer " << *TgtPtrOrErr
+                       << ". Return directly.";
+
+      if (Alignment > 0 && !isAddrAligned(Align(Alignment), *TgtPtrOrErr)) {
+        auto AlignErr = make_error<StringError>(
+            "Allocated address is misaligned", inconvertibleErrorCode());
+        if (auto FreeErr = deleteOnDevice(*TgtPtrOrErr)) {
+          return joinErrors(std::move(FreeErr), std::move(AlignErr));
+        }
+
+        return AlignErr;
+      }
 
       return *TgtPtrOrErr;
     }
@@ -258,12 +306,12 @@ public:
 
     // Try to get a node from FreeList
     {
-      const int B = findBucket(Size);
+      const int B = findBucket(AllocationSize);
       FreeListTy &List = FreeLists[B];
 
-      NodeTy TempNode(Size, nullptr);
+      NodeTy TempNode(AllocationSize, nullptr, nullptr);
       std::lock_guard<std::mutex> LG(FreeListLocks[B]);
-      const auto Itr = List.find(TempNode);
+      auto Itr = List.find(TempNode);
 
       if (Itr != List.end()) {
         NodePtr = &Itr->get();
@@ -271,15 +319,31 @@ public:
       }
     }
 
-    if (NodePtr != nullptr)
-      DP("Find one node " DPxMOD " in the bucket.\n", DPxPTR(NodePtr));
+    if (NodePtr != nullptr) {
+      ODBG(OLDT_Alloc) << "Find one node " << NodePtr << " in the bucket.";
+
+      if (Alignment > 0) {
+        void *AlignedPointer =
+            (void *)alignAddr(NodePtr->BasePtr, Align(Alignment));
+
+        if (AlignedPointer != NodePtr->Ptr) {
+          changeKeyPtr(AlignedPointer, NodePtr);
+        }
+      } else {
+        if (NodePtr->Ptr != NodePtr->BasePtr) {
+          changeKeyPtr(NodePtr->BasePtr, NodePtr);
+        }
+      }
+    }
 
     // We cannot find a valid node in FreeLists. Let's allocate on device and
     // create a node for it.
     if (NodePtr == nullptr) {
-      DP("Cannot find a node in the FreeLists. Allocate on device.\n");
+      ODBG(OLDT_Alloc) << "Cannot find a node in the FreeLists. "
+                       << "Allocate on device.";
       // Allocate one on device
-      auto TgtPtrOrErr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
+      auto TgtPtrOrErr =
+          allocateOrFreeAndAllocateOnDevice(AllocationSize, HstPtr, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 
@@ -287,15 +351,21 @@ public:
       if (TgtPtr == nullptr)
         return nullptr;
 
+      void *BasePtr = TgtPtr;
+      if (Alignment > 0) {
+        TgtPtr = (void *)alignAddr(TgtPtr, Align(Alignment));
+      }
+
       // Create a new node and add it into the map table
       {
         std::lock_guard<std::mutex> Guard(MapTableLock);
-        auto Itr = PtrToNodeTable.emplace(TgtPtr, NodeTy(Size, TgtPtr));
+        auto Itr = PtrToNodeTable.emplace(
+            TgtPtr, NodeTy(AllocationSize, TgtPtr, BasePtr));
         NodePtr = &Itr.first->second;
       }
 
-      DP("Node address " DPxMOD ", target pointer " DPxMOD ", size %zu\n",
-         DPxPTR(NodePtr), DPxPTR(TgtPtr), Size);
+      ODBG(OLDT_Alloc) << "Node address " << NodePtr << ", target pointer "
+                       << TgtPtr << ", size " << AllocationSize;
     }
 
     assert(NodePtr && "NodePtr should not be nullptr at this point");
@@ -305,7 +375,8 @@ public:
 
   /// Deallocate memory pointed by \p TgtPtr
   Error free(void *TgtPtr) {
-    DP("MemoryManagerTy::free: target memory " DPxMOD ".\n", DPxPTR(TgtPtr));
+    ODBG(OLDT_Alloc) << "MemoryManagerTy::free: target memory " << TgtPtr
+                     << ".";
 
     NodeTy *P = nullptr;
 
@@ -322,14 +393,15 @@ public:
 
     // The memory is not managed by the manager
     if (P == nullptr) {
-      DP("Cannot find its node. Delete it on device directly.\n");
+      ODBG(OLDT_Alloc) << "Cannot find its node. Delete it on device directly.";
       return deleteOnDevice(TgtPtr);
     }
 
     // Insert the node to the free list
     const int B = findBucket(P->Size);
 
-    DP("Found its node " DPxMOD ". Insert it to bucket %d.\n", DPxPTR(P), B);
+    ODBG(OLDT_Alloc) << "Found its node " << P << ". Insert it to bucket " << B
+                     << ".";
 
     {
       std::lock_guard<std::mutex> G(FreeListLocks[B]);
@@ -345,6 +417,8 @@ public:
   /// threshold and the second element represents whether user disables memory
   /// manager explicitly by setting the var to 0. If user doesn't specify
   /// anything, returns <0, true>.
+  /// Note that this only affects the device memory manager, not the manager for
+  /// host or shared memory.
   static std::pair<size_t, bool> getSizeThresholdFromEnv() {
     static UInt64Envar MemoryManagerThreshold(
         "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD", 0);
@@ -352,8 +426,8 @@ public:
     size_t Threshold = MemoryManagerThreshold.get();
 
     if (MemoryManagerThreshold.isPresent() && Threshold == 0) {
-      DP("Disabled memory manager as user set "
-         "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=0.\n");
+      ODBG(OLDT_Alloc) << "Disabled memory manager as user set "
+                       << "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=0.";
       return std::make_pair(0, false);
     }
 

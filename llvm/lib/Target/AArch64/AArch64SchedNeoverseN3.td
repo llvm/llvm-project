@@ -19,7 +19,8 @@ def NeoverseN3Model : SchedMachineModel {
     let CompleteModel         =   1;
 
     list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
-        [HasSVE2p1, HasSVEB16B16, HasPAuthLR, HasCPA, HasCSSC]);
+                                                      SVE2p1Unsupported.F,
+        [HasSVE2p1, HasSVEB16B16, HasSVEBFSCALE, HasPAuthLR, HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -118,14 +119,9 @@ def N3Write_2c_1V1  : SchedWriteRes<[N3UnitV1]>  { let Latency = 2; }
 def N3Write_5c_1V   : SchedWriteRes<[N3UnitV]>   { let Latency = 5; }
 def N3Write_1c_1L01 : SchedWriteRes<[N3UnitL01]> { let Latency = 1; }
 
-def N3Write_12c_1M0_12 : SchedWriteRes<[N3UnitM0]> {
-    let Latency = 12;
-    let ReleaseAtCycles = [12];
-}
-
-def N3Write_20c_1M0_20 : SchedWriteRes<[N3UnitM0]> {
-    let Latency = 20;
-    let ReleaseAtCycles = [20];
+def N3Write_7c_1M0_7 : SchedWriteRes<[N3UnitM0]> {
+    let Latency = 7;
+    let ReleaseAtCycles = [7];
 }
 
 //===----------------------------------------------------------------------===//
@@ -756,10 +752,10 @@ def : InstRW<[N3Write_2c_1M], (instregex "^(AND|BIC)S[WX]rs$")>;
 // subsequent divide operations until complete.
 
 // Divide, W-form
-def : SchedAlias<WriteID32, N3Write_12c_1M0_12>;
+def : SchedAlias<WriteID32, N3Write_7c_1M0_7>;
 
 // Divide, X-form
-def : SchedAlias<WriteID64, N3Write_20c_1M0_20>;
+def : SchedAlias<WriteID64, N3Write_7c_1M0_7>;
 
 def N3Wr_IM   : SchedWriteRes<[N3UnitM]>  { let Latency = 2; }
 def N3Wr_IMA  : SchedWriteRes<[N3UnitM0]> { let Latency = 2; }
@@ -1715,7 +1711,7 @@ def : InstRW<[N3Write_0or2c_1M], (instregex "^PTRUES_[BHSD]")>;
 def : InstRW<[N3Write_2c_1M], (instregex "^PFIRST_B$", "^PNEXT_[BHSD]$")>;
 
 // Predicate test
-def : InstRW<[N3Write_1c_1M], (instrs PTEST_PP)>;
+def : InstRW<[N3Write_1c_1M], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[N3Write_2c_1M], (instregex "^TRN[12]_PPP_[BHSDQ]$")>;
@@ -1752,7 +1748,7 @@ def : InstRW<[N3Write_2c_1V],
                         "^ADR_LSL_ZZZ_[SD]_[0123]",
                         "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
                         "^SADDLBT_ZZZ_[HSD]",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^[SU]H(ADD|SUB|SUBR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex
@@ -1814,7 +1810,8 @@ def : InstRW<[N3Write_4c_1V1], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]",
 def : InstRW<[N3Write_4c_2V0], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
 
 // Bitwise select
-def : InstRW<[N3Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$")>;
+def : InstRW<[N3Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$",
+                                         "^(EON|NAND|NOR)_ZZZ$")>;
 
 // Count/reverse bits
 def : InstRW<[N3Write_2c_1V], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]")>;
@@ -2157,7 +2154,7 @@ def : InstRW<[N3Write_2c_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
                                          "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[N3Write_3c_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+def : InstRW<[N3Write_3c_1V], (instregex "^(FSCALE|FMULX)_(ZPmZ|ZPZZ)_[HSD]",
                                          "^FMULX_ZPZZ_[HSD]",
                                          "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
                                          "^FMUL_ZPZ[IZ]_[HSD]")>;

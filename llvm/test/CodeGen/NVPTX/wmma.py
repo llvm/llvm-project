@@ -11,6 +11,13 @@ from itertools import product
 from string import Template
 
 
+def has_arch_accel_features():
+    return full_sm_version % 10 == 1 and ptx_version >= 80
+
+
+def has_family_specific_features():
+    return ptx_version >= 88 if full_sm_version % 10 == 2 else has_arch_accel_features()
+
 class MMAType:
     def __init__(self, ptx_type):
         self.ptx_type = ptx_type
@@ -28,6 +35,7 @@ class MMAType:
             "b8": "i32",
             "b8x16.b6x16_p32": "i32",
             "b8x16.b4x16_p64": "i32",
+            "s8.s4": "i32",
             "s8": "i32",
             "u8": "i32",
             "s4": "i32",
@@ -250,6 +258,9 @@ class MMAFrag:
             "m8n16:x1:b8x16.b4x16_p64": 1,
             "m8n16:x2:b8x16.b4x16_p64": 2,
             "m8n16:x4:b8x16.b4x16_p64": 4,
+            "m8n16:x1:s8.s4": 1,
+            "m8n16:x2:s8.s4": 2,
+            "m8n16:x4:s8.s4": 4,
             # stmatrix
             "m8n8:x1:b16": 1,
             "m8n8:x2:b16": 2,
@@ -414,7 +425,9 @@ def get_ldmatrix_ops():
             ["m16n16"], ["x1", "x2"], ["b8", "b8x16.b6x16_p32", "b8x16.b4x16_p64"]
         )
         + make_ldmatrix_ops(
-            ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64"]
+            ["m8n16"],
+            ["x1", "x2", "x4"],
+            ["b8x16.b6x16_p32", "b8x16.b4x16_p64", "s8.s4"],
         )
     )
 
@@ -431,7 +444,7 @@ def is_wmma_geom_supported(geom):
         return ptx_version >= 61
     # geometries for sub-ints.
     if geom in ["m8n8k32", "m8n8k128"]:
-        return ptx_version >= 63 and gpu_arch >= 75
+        return ptx_version >= 63 and sm_version >= 75
     if geom == "m16n16k16":
         return ptx_version >= 60
     if geom == "m16n8k8":
@@ -462,19 +475,25 @@ def is_mma_geom_supported(geom):
 
 def is_ldmatrix_geom_supported(geom):
     if geom in ["m8n8"]:
-        return ptx_version >= 65 and gpu_arch >= 75
+        return ptx_version >= 65 and sm_version >= 75
     elif geom in ["m16n16"]:
-        return ptx_version >= 86 and gpu_arch >= 100 and aa
+        return (
+            ptx_version >= 86 and sm_version == 100 and has_family_specific_features()
+        )
     elif geom in ["m8n16"]:
-        return ptx_version >= 86 and gpu_arch >= 100 and aa
+        return (
+            ptx_version >= 86 and sm_version == 100 and has_family_specific_features()
+        )
     assert False  # Unexpected geometry.
 
 
 def is_stmatrix_geom_supported(geom):
     if geom in ["m8n8"]:
-        return ptx_version >= 78 and gpu_arch >= 90
+        return ptx_version >= 78 and sm_version >= 90
     elif geom in ["m16n8"]:
-        return ptx_version >= 86 and gpu_arch >= 100 and aa
+        return (
+            ptx_version >= 86 and sm_version >= 100 and has_family_specific_features()
+        )
     assert False  # Unexpected geometry.
 
 
@@ -498,18 +517,20 @@ def is_stmatrix_trans_supported(geom, trans):
 
 def is_type_supported(ptx_type):
     if ptx_type in ["s8", "u8", "s32"]:
-        return ptx_version >= 63 and gpu_arch >= 72
+        return ptx_version >= 63 and sm_version >= 72
     if ptx_type in ["s4", "u4", "b1"]:
-        return ptx_version >= 63 and gpu_arch >= 75
+        return ptx_version >= 63 and sm_version >= 75
     if ptx_type == "b16":
-        return ptx_version >= 65 and gpu_arch >= 75
+        return ptx_version >= 65 and sm_version >= 75
     if ptx_type in ["bf16", "tf32", "f64"]:
         return ptx_version >= 70
     if ptx_type in ["e4m3", "e5m2"]:
-        return ptx_version >= 84 and gpu_arch >= 89
+        return ptx_version >= 84 and sm_version >= 89
     if ptx_type in ["e3m2", "e2m3", "e2m1"]:
-        return ptx_version >= 87 and gpu_arch >= 120 and aa
-    return ptx_version >= 60 and gpu_arch >= 70
+        return (
+            ptx_version >= 87 and sm_version >= 120 and has_family_specific_features()
+        )
+    return ptx_version >= 60 and sm_version >= 70
 
 
 def is_wmma_variant_supported(op, layout_a, layout_b, rnd, satf):
@@ -562,7 +583,7 @@ def is_mma_variant_supported(op, layout_a, layout_b, kind, satf):
     if (
         op.a.geom != "m8n8k4"
         and op.a.mma_type.ptx_type == "f64"
-        and (ptx_version < 78 or gpu_arch < 90)
+        and (ptx_version < 78 or sm_version < 90)
     ):
         return False
 
@@ -583,7 +604,9 @@ def is_mma_variant_supported(op, layout_a, layout_b, kind, satf):
     ):
         return False
 
-    if kind != "" and not (ptx_version >= 87 and gpu_arch >= 120 and aa):
+    if kind != "" and not (
+        ptx_version >= 87 and sm_version >= 120 and has_family_specific_features()
+    ):
         return False
 
     if kind != "" and (
@@ -624,7 +647,26 @@ def is_ldst_variant_supported(frag, layout):
     return True
 
 
+def is_ldmatrix_s8s4_supported():
+    if ptx_version < 94:
+        return False
+    # sm_90a
+    if sm_version == 90 and has_arch_accel_features():
+        return True
+    # sm_100f / sm_110f / sm_120f families
+    if sm_version in [100, 110, 120] and has_family_specific_features():
+        return True
+    return False
+
+
 def is_ldmatrix_variant_supported(frag, trans):
+    if frag.mma_type.ptx_type == "s8.s4":
+        return (
+            frag.geom == "m8n16"
+            and trans == ""
+            and frag.frag in ["x1", "x2", "x4"]
+            and is_ldmatrix_s8s4_supported()
+        )
     if not (
         is_type_supported(frag.mma_type.ptx_type)
         and is_ldmatrix_geom_supported(frag.geom)
@@ -1159,6 +1201,16 @@ def is_mma_block_scale_variant_supported(op, kind, scale_vec_size, stype):
         return False
 
     if (
+        kind == "mxf4nvf4"
+        and scale_vec_size == ".scale_vec::4X"
+        and stype == "ue8m0"
+        and not (
+            ptx_version >= 91 and sm_version == 120 and has_family_specific_features()
+        )
+    ):
+        return False
+
+    if (
         op.a.geom == "m16n8k64"
         and kind == "mxf4"
         and stype == "ue8m0"
@@ -1177,7 +1229,7 @@ def is_mma_block_scale_variant_supported(op, kind, scale_vec_size, stype):
     if (
         op.a.geom == "m16n8k64"
         and kind == "mxf4nvf4"
-        and stype == "ue4m3"
+        and stype in ["ue4m3", "ue8m0"]
         and scale_vec_size == ".scale_vec::4X"
     ):
         return True
@@ -1246,7 +1298,7 @@ define ${ret_ty} @test_${function}(
 
 
 def gen_mma_block_scale_tests():
-    if not (ptx_version >= 88 and gpu_arch >= 120 and aa):
+    if not (ptx_version >= 87 and sm_version >= 120 and has_family_specific_features()):
         return []
 
     mma_block_scale_intrinsic_template = "llvm.nvvm.mma.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
@@ -1328,10 +1380,12 @@ def is_mma_sp_geom_supported(geom):
 
 
 def is_mma_sp_variant_supported(op, metadata, kind, satf):
-    if metadata != "sp" and (ptx_version < 85 or gpu_arch < 80):
+    if metadata != "sp" and (ptx_version < 85 or sm_version < 80):
         return False
 
-    if kind != "" and (ptx_version < 87 or gpu_arch < 120 or not aa):
+    if kind != "" and (
+        ptx_version < 87 or sm_version < 120 or not has_family_specific_features()
+    ):
         return False
 
     if not (
@@ -1473,7 +1527,7 @@ define ${ret_ty} @test_${function}_${selector}(
 
 
 def gen_mma_sp_tests():
-    if ptx_version < 71 or gpu_arch < 80:
+    if ptx_version < 71 or sm_version < 80:
         return []
 
     mma_sp_intrinsic_template = (
@@ -1542,6 +1596,18 @@ def is_mma_sp_block_scale_variant_supported(op, kind, scale_vec_size, stype):
         return False
 
     if (
+        kind == "mxf4nvf4"
+        and scale_vec_size == ".scale_vec::4X"
+        and stype == "ue8m0"
+        and not (
+            ptx_version >= 91
+            and (sm_version == 120 or sm_version == 121)
+            and has_arch_accel_features()
+        )
+    ):
+        return False
+
+    if (
         op.a.geom == "m16n8k128"
         and kind == "mxf4"
         and stype == "ue8m0"
@@ -1560,7 +1626,7 @@ def is_mma_sp_block_scale_variant_supported(op, kind, scale_vec_size, stype):
     if (
         op.a.geom == "m16n8k128"
         and kind == "mxf4nvf4"
-        and stype == "ue4m3"
+        and stype in ["ue4m3", "ue8m0"]
         and scale_vec_size == ".scale_vec::4X"
     ):
         return True
@@ -1646,7 +1712,7 @@ define ${ret_ty} @test_${function}_${selector}(
 
 
 def gen_mma_sp_block_scale_tests():
-    if not (ptx_version >= 88 and gpu_arch >= 120 and aa):
+    if not (ptx_version >= 87 and sm_version >= 120):
         return []
 
     mma_sp_block_scale_intrinsic_template = "llvm.nvvm.mma.sp.ordered.metadata.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
@@ -1660,6 +1726,11 @@ def gen_mma_sp_block_scale_tests():
         ["", ".scale_vec::1X", ".scale_vec::2X", ".scale_vec::4X"],
         ["ue8m0", "ue4m3"],
     ):
+        if (kind == "mxf4" or kind == "mxf4nvf4") and not (
+            (sm_version == 120 or sm_version == 121) and has_arch_accel_features()
+        ):
+            continue
+
         if not is_mma_sp_block_scale_variant_supported(op, kind, scale_vec_size, stype):
             continue
 
@@ -1692,7 +1763,7 @@ def gen_mma_sp_block_scale_tests():
 def gen_check_unsupported_ops(items):
     print(
         "; Complete list of intrinsics supported by PTX%d on sm_%d"
-        % (ptx_version, gpu_arch)
+        % (ptx_version, sm_version)
     )
     print("; INTRINSICS: {{^; INTRINSICS_LIST_BEGIN}}")
     print(
@@ -1807,6 +1878,13 @@ def gen_check_unsupported_ops(items):
 ; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.b8x16.b6x16_p32
 ; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.b8x16.b4x16_p64
 
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x1.s8.s4
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x2.s8.s4
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.s8.s4
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x1.shared.s8.s4
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x2.shared.s8.s4
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.shared.s8.s4
+
 ; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x1.b16
 ; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x2.b16
 ; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x4.b16
@@ -1881,19 +1959,27 @@ def gen_tests():
     gen_check_unsupported_ops(items)
 
 
+def parseGpuArch(arch):
+    if arch.isdigit():
+        return int(arch), int(arch)
+    if arch[-1] == "a":
+        return (int(arch[:-1]), (int(arch[:-1]) * 10 + 1))
+    if arch[-1] == "f":
+        return (int(arch[:-1]), (int(arch[:-1]) * 10 + 2))
+    raise ValueError(f"Invalid gpu_arch version: {arch}")
+
+
 def main():
     global ptx_version
-    global gpu_arch
-    global aa
+    global sm_version
+    global full_sm_version
     parser = argparse.ArgumentParser()
     parser.add_argument("--ptx", type=int, default=60)
-    parser.add_argument("--gpu-arch", type=int, default=70)
-    parser.add_argument("--aa", action="store_true")
+    parser.add_argument("--gpu-arch", type=str, default="70")
     args = parser.parse_args()
 
     ptx_version = args.ptx
-    gpu_arch = args.gpu_arch
-    aa = args.aa
+    sm_version, full_sm_version = parseGpuArch(args.gpu_arch)
 
     gen_tests()
 

@@ -9,7 +9,7 @@ define void @f(ptr %a, i32 %n, i64 %n2) {
 ; CHECK-NEXT:  Src: %v = load i32, ptr %arrayidx1, align 4 --> Dst: store i32 %add, ptr %a.lcssa, align 4
 ; CHECK-NEXT:    da analyze - anti [*|<]!
 ; CHECK-NEXT:  Src: store i32 %add, ptr %a.lcssa, align 4 --> Dst: store i32 %add, ptr %a.lcssa, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ;
 entry:
   br label %while.body

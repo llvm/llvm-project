@@ -19,12 +19,12 @@
 # RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/split-both.out %S/Inputs/diff-test-update/split-both.test
 
 
-# CHECK: # update-diff-test: could not deduce source and target from {{.*}}1.in and {{.*}}2.in
-# CHECK: # update-diff-test: could not deduce source and target from {{.*}}1.txt and {{.*}}2.txt
-# CHECK: # update-diff-test: copied {{.*}}my-file.txt to {{.*}}my-file.expected
-# CHECK: # update-diff-test: copied {{.*}}1.txt to {{.*}}empty.txt
-# CHECK: # update-diff-test: copied {{.*}}diff-tmp.test.tmp.txt to {{.*}}diff-t-out.txt
-# CHECK: # update-diff-test: copied {{.*}}unrelated-split.txt to {{.*}}unrelated-split.expected
+# CHECK: update-diff-test: could not deduce source and target from {{.*}}1.in and {{.*}}2.in
+# CHECK: update-diff-test: could not deduce source and target from {{.*}}1.txt and {{.*}}2.txt
+# CHECK: update-diff-test: copied {{.*}}my-file.txt to {{.*}}my-file.expected
+# CHECK: update-diff-test: copied {{.*}}1.txt to {{.*}}empty.txt
+# CHECK: update-diff-test: copied {{.*}}diff-tmp.test.tmp.txt to {{.*}}diff-t-out.txt
+# CHECK: update-diff-test: copied {{.*}}unrelated-split.txt to {{.*}}unrelated-split.expected
 
 
 # CHECK: Failed: 14 (100.00%)

@@ -50,6 +50,19 @@ entry:
   ret i32 %res
 }
 
+define i1 @lsx_vpickve2gr_bu_cmp(<16 x i8> %va) nounwind {
+; CHECK-LABEL: lsx_vpickve2gr_bu_cmp:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpickve2gr.bu $a0, $vr0, 15
+; CHECK-NEXT:    sltui $a0, $a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %val = call i32 @llvm.loongarch.lsx.vpickve2gr.bu(<16 x i8> %va, i32 15)
+  %tmp = and i32 %val, 255
+  %res = icmp eq i32 %tmp, 0
+  ret i1 %res
+}
+
 declare i32 @llvm.loongarch.lsx.vpickve2gr.hu(<8 x i16>, i32)
 
 define i32 @lsx_vpickve2gr_hu(<8 x i16> %va) nounwind {
@@ -62,6 +75,19 @@ entry:
   ret i32 %res
 }
 
+define i1 @lsx_vpickve2gr_hu_cmp(<8 x i16> %va) nounwind {
+; CHECK-LABEL: lsx_vpickve2gr_hu_cmp:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 7
+; CHECK-NEXT:    sltui $a0, $a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %val = call i32 @llvm.loongarch.lsx.vpickve2gr.hu(<8 x i16> %va, i32 7)
+  %tmp = and i32 %val, 65535
+  %res = icmp eq i32 %tmp, 0
+  ret i1 %res
+}
+
 declare i32 @llvm.loongarch.lsx.vpickve2gr.wu(<4 x i32>, i32)
 
 define i32 @lsx_vpickve2gr_wu(<4 x i32> %va) nounwind {
@@ -72,4 +98,17 @@ define i32 @lsx_vpickve2gr_wu(<4 x i32> %va) nounwind {
 entry:
   %res = call i32 @llvm.loongarch.lsx.vpickve2gr.wu(<4 x i32> %va, i32 3)
   ret i32 %res
+}
+
+define i1 @lsx_vpickve2gr_wu_cmp(<4 x i32> %va) nounwind {
+; CHECK-LABEL: lsx_vpickve2gr_wu_cmp:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpickve2gr.wu $a0, $vr0, 3
+; CHECK-NEXT:    sltui $a0, $a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %val = call i32 @llvm.loongarch.lsx.vpickve2gr.wu(<4 x i32> %va, i32 3)
+  %tmp = and i32 %val, 4294967295
+  %res = icmp eq i32 %tmp, 0
+  ret i1 %res
 }

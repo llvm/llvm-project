@@ -113,7 +113,7 @@
 // ERROR-NOVFP: instruction requires: VFP2
 // ERROR-NOVFP: instruction requires: FPARMv8
 // ERROR-NOVFP: invalid instruction
-// ERROR-NOVFP: invalid instruction
+// ERROR-NOVFP: operand must be a register in range [r0, r14]
 
         vmsr  fpscr, APSR_nzcv
         vmsr  fpscr, r0
@@ -171,10 +171,10 @@
 // ERROR-V8M: invalid operand for instruction
 // ERROR-V8M: operand must be a register in range [r0, r14]
 
-// ERROR-NOVFP: invalid instruction
+// ERROR-NOVFP: invalid operand for instruction
 // ERROR-NOVFP: instruction requires: fp registers
 // ERROR-NOVFP: instruction requires: VFP2
 // ERROR-NOVFP: instruction requires: VFP2
 // ERROR-NOVFP: instruction requires: fp registers
 // ERROR-NOVFP: invalid instruction
-// ERROR-NOVFP: invalid instruction
+// ERROR-NOVFP: invalid operand for instruction

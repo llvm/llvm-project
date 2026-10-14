@@ -881,13 +881,30 @@ define void @test_store_same_parts_twice(i32 %x, ptr %p) {
   ret void
 }
 
+; A case where the resulting store requires a zext.
+define void @test_zext_store(i56 %arg, ptr %p) {
+; CHECK-LABEL: define void @test_zext_store(
+; CHECK-SAME: i56 [[ARG:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i56 [[ARG]] to i64
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %lo = trunc i56 %arg to i32
+  store i32 %lo, ptr %p, align 4
+  %shr = lshr i56 %arg, 32
+  %hi = trunc i56 %shr to i32
+  %p.4 = getelementptr i8, ptr %p, i64 4
+  store i32 %hi, ptr %p.4, align 4
+  ret void
+}
+
 !0 = !{!1}
 !1 = !{!1, !2}
-!2 = !{!2}
+!2 = !{!2, i1 false}
 
 !3 = !{!4}
 !4 = !{!4, !5}
-!5 = !{!5}
+!5 = !{!5, i1 false}
 
 !6 = !{!7, !7, i64 0}
 !7 = !{!"short", !8, i64 0}
@@ -896,6 +913,6 @@ define void @test_store_same_parts_twice(i32 %x, ptr %p) {
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]]}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false}
 ; CHECK: [[META3]] = !{}
 ;.

@@ -20,10 +20,9 @@
 #ifndef LLVM_DEBUGINFOD_DEBUGINFOD_H
 #define LLVM_DEBUGINFOD_DEBUGINFOD_H
 
-#include "HTTPServer.h"
-
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/HTTP/HTTPServer.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"

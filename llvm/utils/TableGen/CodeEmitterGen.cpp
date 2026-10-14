@@ -29,11 +29,14 @@
 #include "Common/VarLenCodeEmitterGen.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -47,6 +50,18 @@
 using namespace llvm;
 
 namespace {
+
+// A map of uniqued case statements. The key is the body of the case statement
+// and the value is a list of cases which share the same body.
+using CaseMapT = std::map<std::string, std::vector<unsigned>>;
+
+struct BaseEncodingPool {
+  std::vector<APInt> Values;
+  std::map<unsigned, std::vector<unsigned>> IndicesByHwMode;
+  unsigned IndexBitWidth = 0;
+
+  bool empty() const { return Values.empty(); }
+};
 
 class CodeEmitterGen {
   const RecordKeeper &RK;
@@ -69,12 +84,15 @@ private:
                                const std::string &VarName, std::string &Case,
                                std::string &BitOffsetCase);
 
+  APInt getInstructionBaseValue(const CodeGenInstruction *CGI, unsigned HwMode);
+  void buildBaseEncodingPool(
+      ArrayRef<const CodeGenInstruction *> NumberedInstructions,
+      const std::set<unsigned> &HwModes);
+  void emitBaseEncodingPool(raw_ostream &O);
   void emitInstructionBaseValues(
       raw_ostream &O, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
       unsigned HwMode = DefaultMode);
-  void
-  emitCaseMap(raw_ostream &O,
-              const std::map<std::string, std::vector<std::string>> &CaseMap);
+  BaseEncodingPool BaseEncodings;
   unsigned BitWidth = 0u;
   bool UseAPInt = false;
 };
@@ -218,6 +236,22 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   return true;
 }
 
+static void emitCaseMap(raw_ostream &O, const CaseMapT &CaseMap,
+                        function_ref<void(raw_ostream &, unsigned)> PrintCase) {
+  for (const auto &[CaseBody, Cases] : CaseMap) {
+    ListSeparator LS("\n");
+    for (unsigned Case : Cases) {
+      O << LS << "    case ";
+      PrintCase(O, Case);
+      O << ":";
+    }
+    O << " {\n";
+    O << CaseBody;
+    O << "      break;\n"
+      << "    }\n";
+  }
+}
+
 std::pair<std::string, std::string>
 CodeEmitterGen::getInstructionCases(const Record *R) {
   std::string Case, BitOffsetCase;
@@ -238,25 +272,34 @@ CodeEmitterGen::getInstructionCases(const Record *R) {
     Case += "      switch (HwMode) {\n";
     Case += "      default: llvm_unreachable(\"Unknown hardware mode!\"); "
             "break;\n";
+    std::string InstBitsTableName =
+        BaseEncodings.empty() ? "InstBits" : "InstBitsIndices";
     for (auto &[ModeId, Encoding] : EBM) {
       if (ModeId == DefaultMode) {
-        Case +=
-            "      case " + itostr(DefaultMode) + ": InstBitsByHw = InstBits";
+        Case += "      case " + itostr(DefaultMode) + ": " + InstBitsTableName +
+                "ByHw = " + InstBitsTableName;
       } else {
-        Case += "      case " + itostr(ModeId) + ": InstBitsByHw = InstBits_" +
-                CGH.getMode(ModeId).Name.str();
+        Case += "      case " + itostr(ModeId) + ": " + InstBitsTableName +
+                "ByHw = " + InstBitsTableName + "_" +
+                CGH.getModeName(ModeId).str();
       }
       Case += "; break;\n";
     }
     Case += "      };\n";
 
-    // We need to remodify the 'Inst' value from the table we found above.
+    // Reload Inst from the selected HwMode table.
     if (UseAPInt) {
-      int NumWords = APInt::getNumWords(BitWidth);
-      Case += "      Inst = APInt(" + itostr(BitWidth);
-      Case += ", ArrayRef(InstBitsByHw + TableIndex * " + itostr(NumWords) +
-              ", " + itostr(NumWords);
-      Case += "));\n";
+      if (BaseEncodings.empty()) {
+        int NumWords = APInt::getNumWords(BitWidth);
+        Case += "      Inst = APInt(" + itostr(BitWidth);
+        Case += ", ArrayRef(InstBitsByHw + TableIndex * " + itostr(NumWords) +
+                ", " + itostr(NumWords);
+        Case += "));\n";
+      } else {
+        Case += "      InstBitsIndex = InstBitsIndicesByHw[TableIndex];\n";
+        Case += "      Inst = APInt(" + itostr(BitWidth) +
+                ", ArrayRef(InstBits[InstBitsIndex]));\n";
+      }
       Case += "      Value = Inst;\n";
     } else {
       Case += "      Value = InstBitsByHw[TableIndex];\n";
@@ -264,12 +307,28 @@ CodeEmitterGen::getInstructionCases(const Record *R) {
 
     Append("      switch (HwMode) {\n");
     Append("      default: llvm_unreachable(\"Unhandled HwMode\");\n");
+
+    // Attempt to unique the per-hw-mode encoding case statements. This helps
+    // reduce the code size if 2 or more hw-modes share the same encoding for
+    // the fields of the instruction.
+    CaseMapT CaseMap, BitOffsetCaseMap;
+    std::string ModeCase, ModeBitOffsetCase;
+
+    auto PrintHWMode = [](raw_ostream &O, unsigned Mode) { O << Mode; };
+
     for (auto &[ModeId, Encoding] : EBM) {
-      Append("      case " + itostr(ModeId) + ": {\n");
-      addInstructionCasesForEncoding(R, Encoding, Case, BitOffsetCase);
-      Append("      break;\n");
-      Append("      }\n");
+      ModeCase.clear();
+      ModeBitOffsetCase.clear();
+      addInstructionCasesForEncoding(R, Encoding, ModeCase, ModeBitOffsetCase);
+      CaseMap[ModeCase].push_back(ModeId);
+      BitOffsetCaseMap[ModeBitOffsetCase].push_back(ModeId);
     }
+
+    raw_string_ostream CaseOS(Case);
+    raw_string_ostream BitOffsetCaseOS(BitOffsetCase);
+    emitCaseMap(CaseOS, CaseMap, PrintHWMode);
+    emitCaseMap(BitOffsetCaseOS, BitOffsetCaseMap, PrintHWMode);
+
     Append("      }\n");
     return {std::move(Case), std::move(BitOffsetCase)};
   }
@@ -327,6 +386,90 @@ static void emitInstBits(raw_ostream &OS, const APInt &Bits) {
     OS << ((I > 0) ? ", " : "") << "UINT64_C(" << Bits.getRawData()[I] << ")";
 }
 
+APInt CodeEmitterGen::getInstructionBaseValue(const CodeGenInstruction *CGI,
+                                              unsigned HwMode) {
+  const Record *R = CGI->TheDef;
+  const Record *EncodingDef = R;
+  if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
+    EncodingInfoByHwMode EBM(RV, CGH);
+    if (!EBM.hasMode(HwMode))
+      return APInt(BitWidth, 0);
+    EncodingDef = EBM.get(HwMode);
+  }
+
+  const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
+  APInt Value(BitWidth, 0);
+  for (unsigned I = 0, E = BI->getNumBits(); I != E; ++I) {
+    if (const auto *B = dyn_cast<BitInit>(BI->getBit(I)); B && B->getValue())
+      Value.setBit(I);
+  }
+  return Value;
+}
+
+void CodeEmitterGen::buildBaseEncodingPool(
+    ArrayRef<const CodeGenInstruction *> NumberedInstructions,
+    const std::set<unsigned> &HwModes) {
+  assert(UseAPInt && "pooling is only used for multiword encodings");
+
+  const unsigned NumWords = APInt::getNumWords(BitWidth);
+  DenseMap<APInt, unsigned> ValueToIndex;
+  BaseEncodings.IndicesByHwMode.try_emplace(DefaultMode);
+  for (unsigned HwMode : HwModes)
+    BaseEncodings.IndicesByHwMode.try_emplace(HwMode);
+
+  for (auto &[HwMode, Indices] : BaseEncodings.IndicesByHwMode) {
+    for (const CodeGenInstruction *CGI : NumberedInstructions) {
+      APInt Value = getInstructionBaseValue(CGI, HwMode);
+      auto [It, Inserted] =
+          ValueToIndex.try_emplace(Value, BaseEncodings.Values.size());
+      if (Inserted)
+        BaseEncodings.Values.push_back(std::move(Value));
+      Indices.push_back(It->second);
+    }
+  }
+
+  const uint64_t NumValues = BaseEncodings.Values.size();
+  BaseEncodings.IndexBitWidth =
+      std::max<uint64_t>(8, PowerOf2Ceil(Log2_64_Ceil(NumValues)));
+  if (BaseEncodings.IndexBitWidth > 32) {
+    BaseEncodings = {};
+    return;
+  }
+
+  const uint64_t NumTables = BaseEncodings.IndicesByHwMode.size();
+  const uint64_t RawSize =
+      NumTables * NumberedInstructions.size() * NumWords * sizeof(uint64_t);
+  const uint64_t PooledSize = NumValues * NumWords * sizeof(uint64_t) +
+                              NumTables * NumberedInstructions.size() *
+                                  (BaseEncodings.IndexBitWidth / 8);
+  if (PooledSize >= RawSize)
+    BaseEncodings = {};
+}
+
+void CodeEmitterGen::emitBaseEncodingPool(raw_ostream &O) {
+  const unsigned NumWords = APInt::getNumWords(BitWidth);
+  O << "  static const uint64_t InstBits[][" << NumWords << "] = {\n";
+  for (const APInt &Value : BaseEncodings.Values) {
+    O << "    {";
+    emitInstBits(O, Value);
+    O << "},\n";
+  }
+  O << "  };\n";
+
+  for (const auto &[HwMode, Indices] : BaseEncodings.IndicesByHwMode) {
+    O << formatv("  static const uint{}_t InstBitsIndices",
+                 BaseEncodings.IndexBitWidth);
+    if (HwMode != DefaultMode)
+      O << "_" << CGH.getModeName(HwMode);
+    O << "[] = {\n";
+    for (unsigned Index : Indices)
+      O << "    " << Index << ",\n";
+    O << "  };\n";
+  }
+  O << "  static_assert(sizeof(InstBits) / sizeof(InstBits[0]) <=\n"
+       "                (UINT64_C(1) << (sizeof(InstBitsIndices[0]) * 8)));\n";
+}
+
 void CodeEmitterGen::emitInstructionBaseValues(
     raw_ostream &O, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
     unsigned HwMode) {
@@ -338,52 +481,12 @@ void CodeEmitterGen::emitInstructionBaseValues(
 
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
     const Record *R = CGI->TheDef;
-    const Record *EncodingDef = R;
-    if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
-      EncodingInfoByHwMode EBM(RV, CGH);
-      if (EBM.hasMode(HwMode)) {
-        EncodingDef = EBM.get(HwMode);
-      } else {
-        // If the HwMode does not match, then Encoding '0'
-        // should be generated.
-        APInt Value(BitWidth, 0);
-        O << "    ";
-        emitInstBits(O, Value);
-        O << "," << '\t' << "// " << R->getName() << "\n";
-        continue;
-      }
-    }
-    const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
-
-    // Start by filling in fixed values.
-    APInt Value(BitWidth, 0);
-    for (unsigned I = 0, E = BI->getNumBits(); I != E; ++I) {
-      if (const auto *B = dyn_cast<BitInit>(BI->getBit(I)); B && B->getValue())
-        Value.setBit(I);
-    }
+    APInt Value = getInstructionBaseValue(CGI, HwMode);
     O << "    ";
     emitInstBits(O, Value);
     O << "," << '\t' << "// " << R->getName() << "\n";
   }
   O << "  };\n";
-}
-
-void CodeEmitterGen::emitCaseMap(
-    raw_ostream &O,
-    const std::map<std::string, std::vector<std::string>> &CaseMap) {
-  for (const auto &[Case, InstList] : CaseMap) {
-    bool First = true;
-    for (const auto &Inst : InstList) {
-      if (!First)
-        O << "\n";
-      O << "    case " << Inst << ":";
-      First = false;
-    }
-    O << " {\n";
-    O << Case;
-    O << "      break;\n"
-      << "    }\n";
-  }
 }
 
 CodeEmitterGen::CodeEmitterGen(const RecordKeeper &RK)
@@ -420,6 +523,8 @@ void CodeEmitterGen::run(raw_ostream &O) {
     BitWidth = std::max(BitWidth, BI->getNumBits());
   }
   UseAPInt = BitWidth > 64;
+  if (UseAPInt)
+    buildBaseEncodingPool(EncodedInstructions, HwModes);
 
   // Emit function declaration
   if (UseAPInt) {
@@ -437,34 +542,43 @@ void CodeEmitterGen::run(raw_ostream &O) {
   }
 
   // Emit instruction base values
-  emitInstructionBaseValues(O, EncodedInstructions, DefaultMode);
-  if (!HwModes.empty()) {
-    // Emit table for instrs whose encodings are controlled by HwModes.
+  if (BaseEncodings.empty()) {
+    emitInstructionBaseValues(O, EncodedInstructions, DefaultMode);
     for (unsigned HwMode : HwModes) {
       if (HwMode == DefaultMode)
         continue;
       emitInstructionBaseValues(O, EncodedInstructions, HwMode);
     }
+  } else {
+    emitBaseEncodingPool(O);
+  }
 
+  if (!HwModes.empty()) {
     // This pointer will be assigned to the HwMode table later.
-    O << "  const uint64_t *InstBitsByHw;\n";
+    if (BaseEncodings.empty())
+      O << "  const uint64_t *InstBitsByHw;\n";
+    else
+      O << formatv("  const uint{0}_t *InstBitsIndicesByHw;\n",
+                   BaseEncodings.IndexBitWidth);
   }
 
   // Map to accumulate all the cases.
-  std::map<std::string, std::vector<std::string>> CaseMap;
-  std::map<std::string, std::vector<std::string>> BitOffsetCaseMap;
+  CaseMapT CaseMap, BitOffsetCaseMap;
 
   // Construct all cases statement for each opcode
-  for (const CodeGenInstruction *CGI : EncodedInstructions) {
+  for (auto [Index, CGI] : enumerate(EncodedInstructions)) {
     const Record *R = CGI->TheDef;
-    std::string InstName =
-        (R->getValueAsString("Namespace") + "::" + R->getName()).str();
-    std::string Case, BitOffsetCase;
-    std::tie(Case, BitOffsetCase) = getInstructionCases(R);
+    auto [Case, BitOffsetCase] = getInstructionCases(R);
 
-    CaseMap[Case].push_back(InstName);
-    BitOffsetCaseMap[BitOffsetCase].push_back(std::move(InstName));
+    CaseMap[Case].push_back(Index);
+    BitOffsetCaseMap[BitOffsetCase].push_back(Index);
   }
+
+  auto PrintInstName = [&](raw_ostream &OS, unsigned Index) {
+    const CodeGenInstruction *CGI = EncodedInstructions[Index];
+    const Record *R = CGI->TheDef;
+    OS << R->getValueAsString("Namespace") << "::" << R->getName();
+  };
 
   unsigned FirstSupportedOpcode = EncodedInstructions.front()->EnumVal;
   O << "  constexpr unsigned FirstSupportedOpcode = " << FirstSupportedOpcode
@@ -480,10 +594,17 @@ void CodeEmitterGen::run(raw_ostream &O) {
   if (UseAPInt) {
     int NumWords = APInt::getNumWords(BitWidth);
     O << "  if (Scratch.getBitWidth() != " << BitWidth << ")\n"
-      << "    Scratch = Scratch.zext(" << BitWidth << ");\n"
-      << "  Inst = APInt(" << BitWidth << ", ArrayRef(InstBits + TableIndex * "
-      << NumWords << ", " << NumWords << "));\n"
-      << "  APInt &Value = Inst;\n"
+      << "    Scratch = Scratch.zext(" << BitWidth << ");\n";
+    if (BaseEncodings.empty()) {
+      O << "  Inst = APInt(" << BitWidth
+        << ", ArrayRef(InstBits + TableIndex * " << NumWords << ", " << NumWords
+        << "));\n";
+    } else {
+      O << "  unsigned InstBitsIndex = InstBitsIndices[TableIndex];\n"
+        << "  Inst = APInt(" << BitWidth
+        << ", ArrayRef(InstBits[InstBitsIndex]));\n";
+    }
+    O << "  APInt &Value = Inst;\n"
       << "  APInt &op = Scratch;\n"
       << "  switch (opcode) {\n";
   } else {
@@ -494,7 +615,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
   }
 
   // Emit each case statement
-  emitCaseMap(O, CaseMap);
+  emitCaseMap(O, CaseMap, PrintInstName);
 
   // Default case: unhandled opcode.
   O << "  default:\n"
@@ -506,20 +627,18 @@ void CodeEmitterGen::run(raw_ostream &O) {
     O << "  return Value;\n";
   O << "}\n\n";
 
-  O << "#ifdef GET_OPERAND_BIT_OFFSET\n"
-    << "#undef GET_OPERAND_BIT_OFFSET\n\n"
-    << "uint32_t " << Target.getName()
+  IfDefEmitter IfDef(O, "GET_OPERAND_BIT_OFFSET");
+  O << "uint32_t " << Target.getName()
     << "MCCodeEmitter::getOperandBitOffset(const MCInst &MI,\n"
     << "    unsigned OpNum,\n"
     << "    const MCSubtargetInfo &STI) const {\n"
     << "  switch (MI.getOpcode()) {\n";
-  emitCaseMap(O, BitOffsetCaseMap);
+  emitCaseMap(O, BitOffsetCaseMap, PrintInstName);
   O << "  default:\n"
     << "    reportUnsupportedInst(MI);\n"
     << "  }\n"
     << "  reportUnsupportedOperand(MI, OpNum);\n"
-    << "}\n\n"
-    << "#endif // GET_OPERAND_BIT_OFFSET\n\n";
+    << "}\n";
 }
 
 static TableGen::Emitter::OptClass<CodeEmitterGen>

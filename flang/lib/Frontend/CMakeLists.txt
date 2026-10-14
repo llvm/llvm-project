@@ -13,6 +13,14 @@ add_flang_library(flangFrontend
   TextDiagnosticBuffer.cpp
   TextDiagnostic.cpp
 
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
+  [["flang/Parser/parsing.h"]]
+  [["flang/Parser/parse-tree.h"]]
+  [["flang/Parser/dump-parse-tree.h"]]
+  [["flang/Lower/PFTBuilder.h"]]
+  [["flang/Lower/Bridge.h"]]
+
   DEPENDS
   CUFDialect
   FIRDialect
@@ -46,6 +54,7 @@ add_flang_library(flangFrontend
 
   LINK_COMPONENTS
   Passes
+  Plugins
   Analysis
   BitReader
   Extensions
@@ -76,12 +85,4 @@ add_flang_library(flangFrontend
   CLANG_LIBS
   clangBasic
   clangOptions
-)
-
-target_precompile_headers(flangFrontend PRIVATE
-  [["flang/Parser/parsing.h"]]
-  [["flang/Parser/parse-tree.h"]]
-  [["flang/Parser/dump-parse-tree.h"]]
-  [["flang/Lower/PFTBuilder.h"]]
-  [["flang/Lower/Bridge.h"]]
 )

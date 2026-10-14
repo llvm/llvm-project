@@ -83,7 +83,8 @@ public:
                              const char *ExtraCode, raw_ostream &O) override;
 
   void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                        const MCSubtargetInfo *EndInfo) const override;
+                        const MCSubtargetInfo *EndInfo,
+                        const MachineInstr *MI) override;
 
   void emitJumpTableAddrs(const MachineInstr *MI);
   void emitJumpTableInsts(const MachineInstr *MI);
@@ -104,6 +105,7 @@ public:
   void emitEndOfAsmFile(Module &M) override;
   void emitXXStructor(const DataLayout &DL, const Constant *CV) override;
   void emitGlobalVariable(const GlobalVariable *GV) override;
+  void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
 
@@ -158,6 +160,8 @@ private:
   MCSymbol *GetARMJTIPICJumpTableLabel(unsigned uid) const;
 
   MCSymbol *GetARMGVSymbol(const GlobalValue *GV, unsigned char TargetFlags);
+
+  void emitCMSEVeneerAlias(const GlobalAlias &GA);
 
 public:
   /// EmitMachineConstantPoolValue - Print a machine constantpool value to

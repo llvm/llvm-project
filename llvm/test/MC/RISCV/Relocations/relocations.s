@@ -2,19 +2,25 @@
 # RUN:     | FileCheck -check-prefix=INSTR %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELOC %s
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c,+relax %s \
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELOC-RELAX %s
 
 # Check prefixes:
 # RELOC - Check the relocation in the object.
+# RELOC-RELAX - Check the relocation in the object with relaxations
 # INSTR - Check the instruction is handled properly by the ASMPrinter
 
 .long foo
 # RELOC: R_RISCV_32 foo
+# RELOC-RELAX: R_RISCV_32 foo
 
 .quad foo
 # RELOC: R_RISCV_64 foo
+# RELOC-RELAX: R_RISCV_64 foo
 
 lui t1, %hi(foo)
 # RELOC: R_RISCV_HI20 foo 0x0
+# RELOC
 # INSTR: lui t1, %hi(foo)
 
 lui t1, %hi(foo+4)

@@ -41,7 +41,7 @@ CallInst *AtomicInfo::EmitAtomicLibcall(StringRef fnName, Type *ResultType,
   for (Value *Arg : Args)
     ArgTys.push_back(Arg->getType());
   FunctionType *FnType = FunctionType::get(ResultType, ArgTys, false);
-  Module *M = Builder->GetInsertBlock()->getModule();
+  Module *M = Builder->getModule();
 
   // TODO: Use llvm::TargetLowering for Libcall ABI
   AttrBuilder fnAttrBuilder(ctx);
@@ -75,10 +75,12 @@ std::pair<Value *, Value *> AtomicInfo::EmitAtomicCompareExchangeLibcall(
       ExpectedVal,
       DesiredVal,
       Constant::getIntegerValue(IntegerType::get(ctx, IntBits),
-                                APInt(IntBits, static_cast<uint64_t>(Success),
+                                APInt(IntBits,
+                                      static_cast<uint64_t>(toCABI(Success)),
                                       /*signed=*/true)),
       Constant::getIntegerValue(IntegerType::get(ctx, IntBits),
-                                APInt(IntBits, static_cast<uint64_t>(Failure),
+                                APInt(IntBits,
+                                      static_cast<uint64_t>(toCABI(Failure)),
                                       /*signed=*/true)),
   };
   auto Result = EmitAtomicLibcall("__atomic_compare_exchange",
@@ -110,7 +112,7 @@ AtomicInfo::EmitAtomicLoadLibcall(AtomicOrdering AO) {
   Type *ResultTy;
   SmallVector<Value *, 6> Args;
   AttributeList Attr;
-  Module *M = Builder->GetInsertBlock()->getModule();
+  Module *M = Builder->getModule();
   const DataLayout &DL = M->getDataLayout();
   Args.push_back(
       ConstantInt::get(DL.getIntPtrType(Ctx), this->getAtomicSizeInBits() / 8));
@@ -149,7 +151,7 @@ void AtomicInfo::EmitAtomicStoreLibcall(AtomicOrdering AO, Value *Source) {
   LLVMContext &Ctx = getLLVMContext();
   SmallVector<Value *, 6> Args;
   AttributeList Attr;
-  Module *M = Builder->GetInsertBlock()->getModule();
+  Module *M = Builder->getModule();
   const DataLayout &DL = M->getDataLayout();
   Args.push_back(
       ConstantInt::get(DL.getIntPtrType(Ctx), this->getAtomicSizeInBits() / 8));

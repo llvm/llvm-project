@@ -30,10 +30,12 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -145,6 +147,18 @@ unsigned TargetInstrInfo::getInlineAsmLength(
   }
 
   return Length;
+}
+
+unsigned TargetInstrInfo::getInstBundleSize(const MachineInstr &MI) const {
+  unsigned Size = 0;
+  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
+  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
+  while (++I != E && I->isInsideBundle()) {
+    assert(!I->isBundle() && "No nested bundle!");
+    Size += getInstSizeInBytes(*I);
+  }
+
+  return Size;
 }
 
 /// ReplaceTailWithBranchTo - Delete the instruction OldInst and everything
@@ -446,7 +460,8 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
 void TargetInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
                                     Register DestReg, unsigned SubIdx,
-                                    const MachineInstr &Orig) const {
+                                    const MachineInstr &Orig,
+                                    LaneBitmask UsedLanes) const {
   MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
   MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, TRI);
   MBB.insert(I, MI);
@@ -466,7 +481,7 @@ TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
   // CFI instructions are marked as non-duplicable, because Darwin compact
   // unwind info emission can't handle multiple prologue setups.
   assert((!Orig.isNotDuplicable() ||
-          (!MF.getTarget().getTargetTriple().isOSDarwin() &&
+          (!MF.getFunction().getParent()->getTargetTriple().isOSDarwin() &&
            Orig.isCFIInstruction())) &&
          "Instruction cannot be duplicated");
 
@@ -516,7 +531,8 @@ MCInst TargetInstrInfo::getNop() const { llvm_unreachable("Not implemented"); }
 MachineInstr *TargetInstrInfo::optimizeLoadInstr(MachineInstr &MI,
                                                  const MachineRegisterInfo *MRI,
                                                  Register &FoldAsLoadDefReg,
-                                                 MachineInstr *&DefMI) const {
+                                                 MachineInstr *&DefMI,
+                                                 MachineInstr *&CopyMI) const {
   // Check whether we can move DefMI here.
   DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
   assert(DefMI);
@@ -542,7 +558,8 @@ MachineInstr *TargetInstrInfo::optimizeLoadInstr(MachineInstr &MI,
     return nullptr;
 
   // Check whether we can fold the def into SrcOperandId.
-  if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandIds, *DefMI)) {
+  if (MachineInstr *FoldMI =
+          foldMemoryOperand(MI, SrcOperandIds, *DefMI, CopyMI)) {
     FoldAsLoadDefReg = 0;
     return FoldMI;
   }
@@ -701,6 +718,7 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
 
 MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
                                                  ArrayRef<unsigned> Ops, int FI,
+                                                 MachineInstr *&CopyMI,
                                                  LiveIntervals *LIS,
                                                  VirtRegMap *VRM) const {
   auto Flags = MachineMemOperand::MONone;
@@ -749,7 +767,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     return foldInlineAsmMemOperand(MI, Ops, FI, *this);
   } else {
     // Ask the target to do the actual folding.
-    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, FI, LIS, VRM);
+    NewMI = foldMemoryOperandImpl(MF, MI, Ops, FI, CopyMI, LIS, VRM);
   }
 
   if (NewMI) {
@@ -799,10 +817,10 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   return &*--Pos;
 }
 
-MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
-                                                 ArrayRef<unsigned> Ops,
-                                                 MachineInstr &LoadMI,
-                                                 LiveIntervals *LIS) const {
+MachineInstr *
+TargetInstrInfo::foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
+                                   MachineInstr &LoadMI, MachineInstr *&CopyMI,
+                                   LiveIntervals *LIS, VirtRegMap *VRM) const {
   assert(LoadMI.canFoldAsLoad() && "LoadMI isn't foldable!");
 #ifndef NDEBUG
   for (unsigned OpIdx : Ops)
@@ -828,7 +846,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     return foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
   } else {
     // Ask the target to do the actual folding.
-    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI, LIS);
+    NewMI = foldMemoryOperandImpl(MF, MI, Ops, LoadMI, CopyMI, LIS, VRM);
   }
 
   if (!NewMI)
@@ -870,8 +888,7 @@ static void transferImplicitOperands(MachineInstr *MI,
   }
 }
 
-void TargetInstrInfo::lowerCopy(
-    MachineInstr *MI, const TargetRegisterInfo * /*Remove me*/) const {
+void TargetInstrInfo::lowerCopy(MachineInstr *MI) const {
   if (MI->allDefsAreDead()) {
     MI->setDesc(get(TargetOpcode::KILL));
     return;
@@ -1117,7 +1134,7 @@ void TargetInstrInfo::reduceAccumulatorTree(
   if (RegistersToReduce.size() % 2 != 0)
     NewRegs.push_back(RegistersToReduce[RegistersToReduce.size() - 1]);
 
-  RegistersToReduce = NewRegs;
+  RegistersToReduce = std::move(NewRegs);
 }
 
 // The concept of the reassociation pass is that these operations can benefit
@@ -1731,13 +1748,14 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 }
 
 // Default implementation of getMemOperandWithOffset.
-bool TargetInstrInfo::getMemOperandWithOffset(
-    const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
-    bool &OffsetIsScalable, const TargetRegisterInfo * /*RemoveMe*/) const {
+bool TargetInstrInfo::getMemOperandWithOffset(const MachineInstr &MI,
+                                              const MachineOperand *&BaseOp,
+                                              int64_t &Offset,
+                                              bool &OffsetIsScalable) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
   LocationSize Width = LocationSize::precise(0);
   if (!getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
-                                     Width, &TRI) ||
+                                     Width) ||
       BaseOps.size() != 1)
     return false;
   BaseOp = BaseOps.front();
@@ -1796,12 +1814,13 @@ unsigned TargetInstrInfo::getNumMicroOps(const InstrItineraryData *ItinData,
 }
 
 /// Return the default expected latency for a def based on it's opcode.
-unsigned TargetInstrInfo::defaultDefLatency(const MCSchedModel &SchedModel,
+unsigned TargetInstrInfo::defaultDefLatency(const TargetSubtargetInfo &STI,
+                                            const MCSchedModel &SchedModel,
                                             const MachineInstr &DefMI) const {
   if (DefMI.isTransient())
     return 0;
   if (DefMI.mayLoad())
-    return SchedModel.LoadLatency;
+    return STI.getLoadLatency();
   if (isHighLatencyDef(DefMI.getOpcode()))
     return SchedModel.HighLatency;
   return 1;
@@ -1833,6 +1852,23 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
   std::optional<unsigned> DefCycle =
       ItinData->getOperandCycle(DefClass, DefIdx);
   return DefCycle && DefCycle <= 1U;
+}
+
+bool TargetInstrInfo::isFunctionSafeToOutlineFrom(
+    MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
+  const Function &F = MF.getFunction();
+
+  // Can F be deduplicated by the linker? If it can, don't outline from it.
+  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
+    return false;
+
+  // Allow outlining from named section functions if the target can place the
+  // outlined function in the   same section.
+  if (F.hasSection() && !supportsSectionAwareOutlining())
+    return false;
+
+  // It's safe to outline from MF.
+  return true;
 }
 
 bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
@@ -1898,7 +1934,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
       return std::nullopt;
 
     const MachineOperand *BaseOp;
-    if (!getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, &TRI))
+    if (!getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
       return std::nullopt;
 
     // FIXME: Scalable offsets are not yet handled in the offset code below.
@@ -1914,13 +1950,20 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     if (MI.getNumExplicitDefs() != 1)
       return std::nullopt;
 
+    // DW_OP_deref_size needs a known, fixed size that fits in its one-byte
+    // operand and is no larger than the size of an address.
+    if (!MMO->getSize().hasValue() || MMO->getSize().isScalable() ||
+        !isUInt<8>(MMO->getSize().getValue().getFixedValue()) ||
+        MMO->getSize().getValue().getFixedValue() >
+            MF->getDataLayout().getPointerSize())
+      return std::nullopt;
+
     // TODO: In what way do we need to take Reg into consideration here?
 
     SmallVector<uint64_t, 8> Ops;
     DIExpression::appendOffset(Ops, Offset);
     Ops.push_back(dwarf::DW_OP_deref_size);
-    Ops.push_back(MMO->getSize().hasValue() ? MMO->getSize().getValue()
-                                            : ~UINT64_C(0));
+    Ops.push_back(MMO->getSize().getValue().getFixedValue());
     Expr = DIExpression::prependOpcodes(Expr, Ops);
     return ParamLoadedValue(*BaseOp, Expr);
   }
@@ -2035,9 +2078,9 @@ bool TargetInstrInfo::getInsertSubregInputs(
 }
 
 // Returns a MIRPrinter comment for this machine operand.
-std::string TargetInstrInfo::createMIROperandComment(
-    const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
-    const TargetRegisterInfo * /*RemoveMe*/) const {
+std::string TargetInstrInfo::createMIROperandComment(const MachineInstr &MI,
+                                                     const MachineOperand &Op,
+                                                     unsigned OpIdx) const {
 
   if (!MI.isInlineAsm())
     return "";
@@ -2048,14 +2091,7 @@ std::string TargetInstrInfo::createMIROperandComment(
   if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
     // Print HasSideEffects, MayLoad, MayStore, IsAlignStack
     unsigned ExtraInfo = Op.getImm();
-    bool First = true;
-    for (StringRef Info : InlineAsm::getExtraInfoNames(ExtraInfo)) {
-      if (!First)
-        OS << " ";
-      First = false;
-      OS << Info;
-    }
-
+    OS << interleaved(InlineAsm::getExtraInfoNames(ExtraInfo), " ");
     return Flags;
   }
 

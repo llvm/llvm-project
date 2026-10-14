@@ -36,4 +36,20 @@ void *test_nonlibcall_malloc() {
   return nonstandard_malloc(sizeof(int));
 }
 
+// Ensure that the standard allocation functions annotated with malloc_span
+// are properly instrumented as well.
+typedef struct {
+    void *p;
+    size_t n;
+} __sized_ptr_t;
+__sized_ptr_t __size_returning_new(size_t size) __attribute__((malloc_span));
+
+// CHECK-LABEL: @test_size_returning_new
+// DEFAULT: call{{.*}} { ptr, i64 } @__alloc_token___size_returning_new(i64 noundef 4, i64 2689373973731826898){{.*}} !alloc_token [[META_INT]]
+// FASTABI: call{{.*}} { ptr, i64 } @__alloc_token_2689373973731826898___size_returning_new(i64 noundef 4){{.*}} !alloc_token [[META_INT]]
+void *test_size_returning_new() {
+  __sized_ptr_t ret = __size_returning_new(sizeof(int));
+  return ret.p;
+}
+
 // CHECK: [[META_INT]] = !{!"int", i1 false}

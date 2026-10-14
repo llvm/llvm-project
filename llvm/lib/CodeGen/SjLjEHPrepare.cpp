@@ -55,6 +55,9 @@ class SjLjEHPrepareImpl {
   AllocaInst *FuncCtx = nullptr;
   const TargetMachine *TM = nullptr;
 
+  // The module's "exception-model" flag.
+  ExceptionHandling ExceptionModel = ExceptionHandling::Default;
+
 public:
   explicit SjLjEHPrepareImpl(const TargetMachine *TM = nullptr) : TM(TM) {}
   bool doInitialization(Module &M);
@@ -106,6 +109,8 @@ FunctionPass *llvm::createSjLjEHPreparePass(const TargetMachine *TM) {
 // doInitialization - Set up decalarations and types needed to process
 // exceptions.
 bool SjLjEHPrepareImpl::doInitialization(Module &M) {
+  ExceptionModel = M.getExceptionModel();
+
   // Build the function context structure.
   // builtin_setjmp uses a five word jbuf
   Type *VoidPtrTy = PointerType::getUnqual(M.getContext());
@@ -139,7 +144,7 @@ void SjLjEHPrepareImpl::insertCallSiteStore(Instruction *I, int Number) {
       Builder.CreateGEP(FunctionContextTy, FuncCtx, Idxs, "call_site");
 
   // Insert a store of the call-site number
-  ConstantInt *CallSiteNoC = ConstantInt::get(DataTy, Number);
+  ConstantInt *CallSiteNoC = ConstantInt::getSigned(DataTy, Number);
   Builder.CreateStore(CallSiteNoC, CallSite, true /*volatile*/);
 }
 
@@ -181,7 +186,7 @@ void SjLjEHPrepareImpl::substituteLPadValues(LandingPadInst *LPI, Value *ExnVal,
   Type *LPadType = LPI->getType();
   Value *LPadVal = PoisonValue::get(LPadType);
   auto *SelI = cast<Instruction>(SelVal);
-  IRBuilder<> Builder(SelI->getParent(), std::next(SelI->getIterator()));
+  IRBuilder<> Builder(std::next(SelI->getIterator()));
   LPadVal = Builder.CreateInsertValue(LPadVal, ExnVal, 0, "lpad.val");
   LPadVal = Builder.CreateInsertValue(LPadVal, SelVal, 1, "lpad.val");
 
@@ -205,8 +210,7 @@ SjLjEHPrepareImpl::setupFunctionContext(Function &F,
 
   // Fill in the function context structure.
   for (LandingPadInst *LPI : LPads) {
-    IRBuilder<> Builder(LPI->getParent(),
-                        LPI->getParent()->getFirstInsertionPt());
+    IRBuilder<> Builder(LPI->getParent()->getFirstInsertionPt());
 
     // Reference the __data field.
     Value *FCData =
@@ -385,7 +389,7 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
       if (Function *Callee = II->getCalledFunction())
         if (Callee->getIntrinsicID() == Intrinsic::donothing) {
           // Remove the NOP invoke.
-          BranchInst::Create(II->getNormalDest(), II->getIterator());
+          UncondBrInst::Create(II->getNormalDest(), II->getIterator());
           II->eraseFromParent();
           continue;
         }
@@ -496,6 +500,10 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
 }
 
 bool SjLjEHPrepareImpl::runOnFunction(Function &F) {
+  if (ExceptionModel != ExceptionHandling::SjLj &&
+      ExceptionModel != ExceptionHandling::Default)
+    return false;
+
   Module &M = *F.getParent();
   RegisterFn = M.getOrInsertFunction(
       "_Unwind_SjLj_Register", Type::getVoidTy(M.getContext()),

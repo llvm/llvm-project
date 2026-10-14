@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prolog-epilog \
 # RUN:    -filetype=obj | llvm-readobj --unwind - | FileCheck %s
 # Check save_fplr_x, set_fp, alloc_s
 

@@ -15,7 +15,7 @@
 namespace llvm {
 
 struct HexagonLoopIdiomRecognitionPass
-    : PassInfoMixin<HexagonLoopIdiomRecognitionPass> {
+    : OptionalPassInfoMixin<HexagonLoopIdiomRecognitionPass> {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
 };

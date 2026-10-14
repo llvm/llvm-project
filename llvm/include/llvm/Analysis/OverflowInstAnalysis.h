@@ -14,6 +14,8 @@
 #ifndef LLVM_ANALYSIS_OVERFLOWINSTANALYSIS_H
 #define LLVM_ANALYSIS_OVERFLOWINSTANALYSIS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class Use;
 class Value;
@@ -35,9 +37,10 @@ class Value;
 /// If Op0 and Op1 match one of the patterns above, return true and fill Y's
 /// use.
 
-bool isCheckForZeroAndMulWithOverflow(Value *Op0, Value *Op1, bool IsAnd,
-                                      Use *&Y);
-bool isCheckForZeroAndMulWithOverflow(Value *Op0, Value *Op1, bool IsAnd);
+LLVM_ABI bool isCheckForZeroAndMulWithOverflow(Value *Op0, Value *Op1,
+                                               bool IsAnd, Use *&Y);
+LLVM_ABI bool isCheckForZeroAndMulWithOverflow(Value *Op0, Value *Op1,
+                                               bool IsAnd);
 } // end namespace llvm
 
 #endif

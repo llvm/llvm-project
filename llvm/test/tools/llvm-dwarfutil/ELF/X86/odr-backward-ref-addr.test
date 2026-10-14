@@ -1,0 +1,198 @@
+## This test checks that backward DW_FORM_ref_addr references produce
+## correct absolute offsets after ODR deduplication. When both CUs
+## define the same type, the duplicate is pruned and references to it
+## are redirected to the canonical copy via ref_addr. Since the
+## canonical copy is in an earlier (already-emitted) CU, this is a
+## backward reference, exercising the DIEEntry emission path.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfutil %t.o - | llvm-dwarfdump -a - | FileCheck %s
+
+## CU1:
+##
+## class Foo {
+##   int x;
+## };
+## Foo var1;
+##
+## CU2:
+##
+## class Foo {
+##   int x;
+## };
+## Foo var2;
+
+# CHECK: file format elf64-x86-64
+# CHECK: .debug_info contents:
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"CU1"
+
+# CHECK: 0x[[CU1_FOO:[0-9a-f]*]]: DW_TAG_class_type{{.*[[:space:]].*}}DW_AT_name{{.*}}"Foo"
+# CHECK: DW_TAG_member
+# CHECK: DW_AT_name{{.*}}"x"
+
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var1"
+# CHECK: DW_AT_type{{.*}}0x00000000[[CU1_FOO]] "Foo"
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"CU2"
+
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var2"
+# CHECK: DW_AT_type{{.*}}0x00000000[[CU1_FOO]] "Foo"
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    Size:            0x1b
+  - Name:            .text2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x2000
+    Size:            0x1b
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+            - Value:  0x1000
+            - Value:  0x1b
+        - AbbrCode: 2
+          Values:
+            - CStr: Foo
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000037
+            - CStr: x
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - CStr: int
+        - AbbrCode: 5
+          Values:
+            - CStr: var1
+            - Value:  0x00000000
+            - Value:  0x0000002a
+        - AbbrCode: 0
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU2
+            - Value:  0x2000
+            - Value:  0x1b
+        - AbbrCode: 2
+          Values:
+            - CStr: Foo
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000082
+            - CStr: x
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - CStr: int
+        - AbbrCode: 5
+          Values:
+            - CStr: var2
+            - Value:  0x00000000
+            - Value:  0x00000075
+        - AbbrCode: 0
+...

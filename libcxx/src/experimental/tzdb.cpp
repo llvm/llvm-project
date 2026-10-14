@@ -46,18 +46,22 @@
 // TODO TZDB Implement the Windows mapping in tzdb::current_zone
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace chrono {
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes")
 // This function is weak so it can be overriden in the tests. The
 // declaration is in the test header test/support/test_tzdb.h
-_LIBCPP_WEAK string_view __libcpp_tzdb_directory() {
+[[gnu::weak]] string_view __libcpp_tzdb_directory() {
 #if defined(__linux__)
   return "/usr/share/zoneinfo/";
 #else
 #  error "unknown path to the IANA Time Zone Database"
 #endif
 }
+_LIBCPP_DIAGNOSTIC_POP
 
 //===----------------------------------------------------------------------===//
 //                           Details
@@ -821,4 +825,5 @@ _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI string remote_version() {
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

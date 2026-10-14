@@ -17,6 +17,7 @@
 #include <optional>
 
 namespace mlir {
+class PassInstrumentation;
 namespace detail {
 class OpToOpPassAdaptor;
 struct OpPassManagerImpl;
@@ -341,6 +342,9 @@ private:
 
   /// Allow access to 'passOptions'.
   friend class PassInfo;
+
+  /// Allow access to 'signalPassFailure'.
+  friend class PassInstrumentation;
 };
 
 //===----------------------------------------------------------------------===//
@@ -525,10 +529,6 @@ public:
   /// lifetime of the pass, and so this class is therefore unsafe to keep past
   /// the lifetime of the `executeAction` call.
   const Pass &pass;
-
-  /// The base op for this pass. For an OperationPass<ModuleOp>, we would have a
-  /// ModuleOp here.
-  Operation *op;
 };
 
 } // namespace mlir

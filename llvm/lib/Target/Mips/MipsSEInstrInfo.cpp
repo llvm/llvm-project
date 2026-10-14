@@ -105,9 +105,9 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(Mips::RDDSP), DestReg).addImm(1 << 4)
         .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
       return;
-    }
-    else if (Mips::MSACtrlRegClass.contains(SrcReg))
+    } else if (Mips::MSACtrlRegClass.contains(SrcReg)) {
       Opc = Mips::CFCMSA;
+    }
   }
   else if (Mips::GPR32RegClass.contains(SrcReg)) { // Copy from CPU Reg.
     if (Mips::CCRRegClass.contains(DestReg))
@@ -157,8 +157,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = Mips::MTLO64, DestReg = 0;
     else if (Mips::FGR64RegClass.contains(DestReg))
       Opc = Mips::DMTC1;
-  }
-  else if (Mips::MSA128BRegClass.contains(DestReg)) { // Copy to MSA reg
+  } else if (Mips::MSA128BRegClass.contains(DestReg)) { // Copy to MSA reg
     if (Mips::MSA128BRegClass.contains(SrcReg))
       Opc = Mips::MOVE_V;
   }
@@ -431,6 +430,9 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case Mips::BuildPairF64:
     expandBuildPairF64(MBB, MI, isMicroMips, false);
     break;
+  case Mips::BuildPairF64_FPR:
+    MI.eraseFromParent();
+    return true;
   case Mips::BuildPairF64_64:
     expandBuildPairF64(MBB, MI, isMicroMips, true);
     break;
@@ -624,30 +626,34 @@ unsigned MipsSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
 }
 
 unsigned MipsSEInstrInfo::getAnalyzableBrOpc(unsigned Opc) const {
-  return (Opc == Mips::BEQ    || Opc == Mips::BEQ_MM || Opc == Mips::BNE    ||
-          Opc == Mips::BNE_MM || Opc == Mips::BGTZ   || Opc == Mips::BGEZ   ||
-          Opc == Mips::BLTZ   || Opc == Mips::BLEZ   || Opc == Mips::BEQ64  ||
-          Opc == Mips::BNE64  || Opc == Mips::BGTZ64 || Opc == Mips::BGEZ64 ||
-          Opc == Mips::BLTZ64 || Opc == Mips::BLEZ64 || Opc == Mips::BC1T   ||
-          Opc == Mips::BC1F   || Opc == Mips::B      || Opc == Mips::J      ||
-          Opc == Mips::J_MM   || Opc == Mips::B_MM   || Opc == Mips::BEQZC_MM ||
-          Opc == Mips::BNEZC_MM || Opc == Mips::BEQC || Opc == Mips::BNEC   ||
-          Opc == Mips::BLTC   || Opc == Mips::BGEC   || Opc == Mips::BLTUC  ||
-          Opc == Mips::BGEUC  || Opc == Mips::BGTZC  || Opc == Mips::BLEZC  ||
-          Opc == Mips::BGEZC  || Opc == Mips::BLTZC  || Opc == Mips::BEQZC  ||
-          Opc == Mips::BNEZC  || Opc == Mips::BEQZC64 || Opc == Mips::BNEZC64 ||
+  return (Opc == Mips::BEQ || Opc == Mips::BEQ_MM || Opc == Mips::BNE ||
+          Opc == Mips::BNE_MM || Opc == Mips::BGTZ || Opc == Mips::BGEZ ||
+          Opc == Mips::BLTZ || Opc == Mips::BLEZ || Opc == Mips::BEQ64 ||
+          Opc == Mips::BNE64 || Opc == Mips::BGTZ64 || Opc == Mips::BGEZ64 ||
+          Opc == Mips::BLTZ64 || Opc == Mips::BLEZ64 || Opc == Mips::BC1T ||
+          Opc == Mips::BC1F || Opc == Mips::B || Opc == Mips::J ||
+          Opc == Mips::J_MM || Opc == Mips::B_MM || Opc == Mips::BEQZC_MM ||
+          Opc == Mips::BNEZC_MM || Opc == Mips::BEQC || Opc == Mips::BNEC ||
+          Opc == Mips::BLTC || Opc == Mips::BGEC || Opc == Mips::BLTUC ||
+          Opc == Mips::BGEUC || Opc == Mips::BGTZC || Opc == Mips::BLEZC ||
+          Opc == Mips::BGEZC || Opc == Mips::BLTZC || Opc == Mips::BEQZC ||
+          Opc == Mips::BNEZC || Opc == Mips::BEQZC64 || Opc == Mips::BNEZC64 ||
           Opc == Mips::BEQC64 || Opc == Mips::BNEC64 || Opc == Mips::BGEC64 ||
           Opc == Mips::BGEUC64 || Opc == Mips::BLTC64 || Opc == Mips::BLTUC64 ||
           Opc == Mips::BGTZC64 || Opc == Mips::BGEZC64 ||
           Opc == Mips::BLTZC64 || Opc == Mips::BLEZC64 || Opc == Mips::BC ||
-          Opc == Mips::BBIT0 || Opc == Mips::BBIT1 || Opc == Mips::BBIT032 ||
-          Opc == Mips::BBIT132 ||  Opc == Mips::BC_MMR6 ||
-          Opc == Mips::BEQC_MMR6 || Opc == Mips::BNEC_MMR6 ||
-          Opc == Mips::BLTC_MMR6 || Opc == Mips::BGEC_MMR6 ||
-          Opc == Mips::BLTUC_MMR6 || Opc == Mips::BGEUC_MMR6 ||
-          Opc == Mips::BGTZC_MMR6 || Opc == Mips::BLEZC_MMR6 ||
-          Opc == Mips::BGEZC_MMR6 || Opc == Mips::BLTZC_MMR6 ||
-          Opc == Mips::BEQZC_MMR6 || Opc == Mips::BNEZC_MMR6) ? Opc : 0;
+          Opc == Mips::BC1EQZ || Opc == Mips::BC1NEZ || Opc == Mips::BBIT0 ||
+          Opc == Mips::BBIT1 || Opc == Mips::BBIT032 || Opc == Mips::BBIT132 ||
+          Opc == Mips::BC_MMR6 || Opc == Mips::BEQC_MMR6 ||
+          Opc == Mips::BNEC_MMR6 || Opc == Mips::BLTC_MMR6 ||
+          Opc == Mips::BGEC_MMR6 || Opc == Mips::BLTUC_MMR6 ||
+          Opc == Mips::BGEUC_MMR6 || Opc == Mips::BGTZC_MMR6 ||
+          Opc == Mips::BLEZC_MMR6 || Opc == Mips::BGEZC_MMR6 ||
+          Opc == Mips::BLTZC_MMR6 || Opc == Mips::BEQZC_MMR6 ||
+          Opc == Mips::BNEZC_MMR6 || Opc == Mips::BC1EQZC_MMR6 ||
+          Opc == Mips::BC1NEZC_MMR6)
+             ? Opc
+             : 0;
 }
 
 void MipsSEInstrInfo::expandRetRA(MachineBasicBlock &MBB,
@@ -728,7 +734,7 @@ void MipsSEInstrInfo::expandCvtFPInt(MachineBasicBlock &MBB,
   const MCInstrDesc &CvtDesc = get(CvtOpc), &MovDesc = get(MovOpc);
   const MachineOperand &Dst = I->getOperand(0), &Src = I->getOperand(1);
   unsigned DstReg = Dst.getReg(), SrcReg = Src.getReg(), TmpReg = DstReg;
-  unsigned KillSrc =  getKillRegState(Src.isKill());
+  RegState KillSrc = getKillRegState(Src.isKill());
   DebugLoc DL = I->getDebugLoc();
   bool DstIsLarger, SrcIsLarger;
 
@@ -758,9 +764,9 @@ void MipsSEInstrInfo::expandExtractElementF64(MachineBasicBlock &MBB,
   unsigned SubIdx = N ? Mips::sub_hi : Mips::sub_lo;
   Register SubReg = getRegisterInfo().getSubReg(SrcReg, SubIdx);
 
-  // FPXX on MIPS-II or MIPS32r1 should have been handled with a spill/reload
+  // FPXX/FP64 without MFHC1 should have been handled with a spill/reload
   // in MipsSEFrameLowering.cpp.
-  assert(!(Subtarget.isABI_FPXX() && !Subtarget.hasMips32r2()));
+  assert(!((Subtarget.isABI_FPXX() || FP64) && !Subtarget.hasMTHC1()));
 
   // FP64A (FP64 with nooddspreg) should have been handled with a spill/reload
   // in MipsSEFrameLowering.cpp.
@@ -801,7 +807,7 @@ void MipsSEInstrInfo::expandBuildPairF64(MachineBasicBlock &MBB,
   //   mtc1 Lo, $fp
   //   mthc1 Hi, $fp
   //
-  // Otherwise, for O32 FPXX ABI:
+  // Otherwise, for FPXX/FP64:
   //   spill + reload via ldc1
   // This case is handled by the frame lowering code.
   //
@@ -809,12 +815,12 @@ void MipsSEInstrInfo::expandBuildPairF64(MachineBasicBlock &MBB,
   //   mtc1 Lo, $fp
   //   mtc1 Hi, $fp + 1
   //
-  // The case where dmtc1 is available doesn't need to be handled here
+  // The case where 64-bit GPRs can be used doesn't need to be handled here
   // because it never creates a BuildPairF64 node.
 
-  // FPXX on MIPS-II or MIPS32r1 should have been handled with a spill/reload
+  // FPXX/FP64 without MTHC1 should have been handled with a spill/reload
   // in MipsSEFrameLowering.cpp.
-  assert(!(Subtarget.isABI_FPXX() && !Subtarget.hasMips32r2()));
+  assert(!((Subtarget.isABI_FPXX() || FP64) && !Subtarget.hasMTHC1()));
 
   // FP64A (FP64 with nooddspreg) should have been handled with a spill/reload
   // in MipsSEFrameLowering.cpp.
@@ -857,7 +863,7 @@ void MipsSEInstrInfo::expandEhReturn(MachineBasicBlock &MBB,
   unsigned ADDU = ABI.GetPtrAdduOp();
   unsigned SP = Subtarget.isGP64bit() ? Mips::SP_64 : Mips::SP;
   unsigned RA = Subtarget.isGP64bit() ? Mips::RA_64 : Mips::RA;
-  unsigned T9 = Subtarget.isGP64bit() ? Mips::T9_64 : Mips::T9;
+  unsigned T9 = ABI.getTempReg(9, Subtarget.isGP64bit());
   unsigned ZERO = Subtarget.isGP64bit() ? Mips::ZERO_64 : Mips::ZERO;
   Register OffsetReg = I->getOperand(0).getReg();
   Register TargetReg = I->getOperand(1).getReg();

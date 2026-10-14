@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: OpEntryPoint Kernel %[[#Func:]] "test" %[[#Interface1:]] %[[#Interface2:]] %[[#Interface3:]] %[[#Interface4:]]
+; CHECK: OpEntryPoint Kernel %[[#Func:]] "test" %[[#Interface3:]] %[[#Interface4:]] %[[#Interface1:]] %[[#Interface2:]]
 ; CHECK-DAG: OpName %[[#Func]] "test"
 ; CHECK-DAG: OpName %[[#Interface1]] "var"
 ; CHECK-DAG: OpName %[[#Interface3]] "var2"

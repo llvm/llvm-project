@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_UTILITY_WASM_VIRTUAL_REGISTERS_H
-#define LLDB_SOURCE_UTILITY_WASM_VIRTUAL_REGISTERS_H
+#ifndef LLDB_SOURCE_UTILITY_WASMVIRTUALREGISTERS_H
+#define LLDB_SOURCE_UTILITY_WASMVIRTUALREGISTERS_H
 
 #include "lldb/lldb-private.h"
 

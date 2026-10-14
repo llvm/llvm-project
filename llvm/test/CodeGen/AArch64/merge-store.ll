@@ -44,8 +44,9 @@ define void @blam() {
 define void @merge_vec_extract_stores(<4 x float> %v1, ptr %ptr) {
 ; SPLITTING-LABEL: merge_vec_extract_stores:
 ; SPLITTING:       // %bb.0:
-; SPLITTING-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; SPLITTING-NEXT:    stp d0, d1, [x0, #24]
+; SPLITTING-NEXT:    add x8, x0, #32
+; SPLITTING-NEXT:    str d0, [x0, #24]
+; SPLITTING-NEXT:    st1 { v0.d }[1], [x8]
 ; SPLITTING-NEXT:    ret
 ;
 ; MISALIGNED-LABEL: merge_vec_extract_stores:

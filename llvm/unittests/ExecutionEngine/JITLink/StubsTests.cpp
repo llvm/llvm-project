@@ -58,7 +58,7 @@ TEST(StubsTest, StubsGeneration_x86_64) {
   const char PointerJumpStubContent[6] = {
       static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+              Triple("x86_64-apple-darwin"), 8, SubtargetFeatures(),
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, x86_64::Pointer64);
 
@@ -79,7 +79,7 @@ TEST(StubsTest, StubsGeneration_aarch64) {
       0x00, 0x02, 0x1f, (char)0xd6u  // BR  x16
   };
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("aarch64-linux-gnu"), SubtargetFeatures(),
+              Triple("aarch64-linux-gnu"), 8, SubtargetFeatures(),
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, aarch64::Pointer64);
 
@@ -100,7 +100,7 @@ TEST(StubsTest, StubsGeneration_x86) {
   const char PointerJumpStubContent[6] = {
       static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("i386-unknown-linux-gnu"), SubtargetFeatures(),
+              Triple("i386-unknown-linux-gnu"), 4, SubtargetFeatures(),
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 4U, x86::Pointer32);
 
@@ -119,30 +119,30 @@ TEST(StubsTest, StubsGeneration_loongarch32) {
       0x14,
       0x00,
       0x00,
-      0x1a, // pcalau12i $t8, %page20(imm)
+      0x1c, // pcaddu12i $t8, %pcadd20(imm)
       static_cast<char>(0x94),
       0x02,
       static_cast<char>(0x80),
-      0x28, // ld.d $t8, $t8, %pageoff12(imm)
+      0x28, // ld.w $t8, $t8, %pcadd12(.Lpcadd_hi)
       static_cast<char>(0x80),
       0x02,
       0x00,
       0x4c // jr $t8
   };
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("loongarch32"), SubtargetFeatures(),
+              Triple("loongarch32"), 4, SubtargetFeatures(),
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 4U, loongarch::Pointer32);
 
   EXPECT_EQ(std::distance(StubSym.getBlock().edges().begin(),
                           StubSym.getBlock().edges().end()),
             2U);
-  auto &PageHighEdge = *StubSym.getBlock().edges().begin();
-  auto &PageLowEdge = *++StubSym.getBlock().edges().begin();
-  EXPECT_EQ(PageHighEdge.getKind(), loongarch::Page20);
-  EXPECT_EQ(&PageHighEdge.getTarget(), &PointerSym);
-  EXPECT_EQ(PageLowEdge.getKind(), loongarch::PageOffset12);
-  EXPECT_EQ(&PageLowEdge.getTarget(), &PointerSym);
+  auto &HighEdge = *StubSym.getBlock().edges().begin();
+  auto &LowEdge = *++StubSym.getBlock().edges().begin();
+  EXPECT_EQ(HighEdge.getKind(), loongarch::PCAddHi20);
+  EXPECT_EQ(&HighEdge.getTarget(), &PointerSym);
+  EXPECT_EQ(LowEdge.getKind(), loongarch::PCAddLo12);
+  EXPECT_EQ(&LowEdge.getTarget(), &StubSym);
   EXPECT_EQ(StubSym.getBlock().getContent(),
             ArrayRef<char>(PointerJumpStubContent));
 }
@@ -164,7 +164,7 @@ TEST(StubsTest, StubsGeneration_loongarch64) {
   };
 
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("loongarch64"), SubtargetFeatures(),
+              Triple("loongarch64"), 8, SubtargetFeatures(),
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, loongarch::Pointer64);
 

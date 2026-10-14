@@ -27,6 +27,8 @@ struct SMTEmissionOptions {
   bool inlineSingleUseValues = false;
   // Increase indentation for each 'let' expression body.
   bool indentLetBody = false;
+  // Emit a '(reset)' command at the end of each solver scope.
+  bool emitReset = true;
 };
 
 /// Run the ExportSMTLIB pass.

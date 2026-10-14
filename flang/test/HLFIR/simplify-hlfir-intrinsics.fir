@@ -80,7 +80,7 @@ func.func @transpose3(%arg0: !hlfir.expr<?x2xi32>) -> !hlfir.expr<2x?xi32> {
 // CHECK-SAME:                          %[[ARG0:.*]]: !hlfir.expr<?x2xi32>) -> !hlfir.expr<2x?xi32> {
 // CHECK:           %[[C2:.*]] = arith.constant 2 : index
 // CHECK:           %[[IN_SHAPE:.*]] = hlfir.shape_of %[[ARG0]] : (!hlfir.expr<?x2xi32>) -> !fir.shape<2>
-// CHECK:           %[[EXTENT0:.*]] = hlfir.get_extent %[[IN_SHAPE]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[EXTENT0:.*]] = hlfir.get_extent %[[IN_SHAPE]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[OUT_SHAPE:.*]] = fir.shape %[[C2]], %[[EXTENT0]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[EXPR:.*]] = hlfir.elemental %[[OUT_SHAPE]] unordered : (!fir.shape<2>) -> !hlfir.expr<2x?xi32> {
 // CHECK:           ^bb0(%[[I:.*]]: index, %[[J:.*]]: index):
@@ -129,7 +129,7 @@ func.func @transpose4(%arg0: !hlfir.expr<2x2xf32>, %arg1: !fir.ref<!fir.box<!fir
 // regression test
 func.func @transpose5(%arg0: !fir.ref<tuple<!fir.box<!fir.array<2x2xf64>>, !fir.box<!fir.array<2x2xf64>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   %0 = fir.address_of(@_QFEb) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
-  %1:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFEb") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>)
   %c0_i32 = arith.constant 0 : i32
   %2 = fir.coordinate_of %arg0, %c0_i32 : (!fir.ref<tuple<!fir.box<!fir.array<2x2xf64>>, !fir.box<!fir.array<2x2xf64>>>>, i32) -> !fir.ref<!fir.box<!fir.array<2x2xf64>>>
   %3 = fir.load %2 : !fir.ref<!fir.box<!fir.array<2x2xf64>>>
@@ -139,7 +139,7 @@ func.func @transpose5(%arg0: !fir.ref<tuple<!fir.box<!fir.array<2x2xf64>>, !fir.
   %c1 = arith.constant 1 : index
   %6:3 = fir.box_dims %3, %c1 : (!fir.box<!fir.array<2x2xf64>>, index) -> (index, index, index)
   %7 = fir.shape %5#1, %6#1 : (index, index) -> !fir.shape<2>
-  %8:2 = hlfir.declare %4(%7) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<2x2xf64>>, !fir.shape<2>) -> (!fir.ref<!fir.array<2x2xf64>>, !fir.ref<!fir.array<2x2xf64>>)
+  %8:2 = hlfir.declare %4(%7) uniq_name("_QFEa") : (!fir.ref<!fir.array<2x2xf64>>, !fir.shape<2>) -> (!fir.ref<!fir.array<2x2xf64>>, !fir.ref<!fir.array<2x2xf64>>)
   %c1_i32 = arith.constant 1 : i32
   %9 = fir.coordinate_of %arg0, %c1_i32 : (!fir.ref<tuple<!fir.box<!fir.array<2x2xf64>>, !fir.box<!fir.array<2x2xf64>>>>, i32) -> !fir.ref<!fir.box<!fir.array<2x2xf64>>>
   %10 = fir.load %9 : !fir.ref<!fir.box<!fir.array<2x2xf64>>>
@@ -149,7 +149,7 @@ func.func @transpose5(%arg0: !fir.ref<tuple<!fir.box<!fir.array<2x2xf64>>, !fir.
   %c1_1 = arith.constant 1 : index
   %13:3 = fir.box_dims %10, %c1_1 : (!fir.box<!fir.array<2x2xf64>>, index) -> (index, index, index)
   %14 = fir.shape %12#1, %13#1 : (index, index) -> !fir.shape<2>
-  %15:2 = hlfir.declare %11(%14) {uniq_name = "_QFEc"} : (!fir.ref<!fir.array<2x2xf64>>, !fir.shape<2>) -> (!fir.ref<!fir.array<2x2xf64>>, !fir.ref<!fir.array<2x2xf64>>)
+  %15:2 = hlfir.declare %11(%14) uniq_name("_QFEc") : (!fir.ref<!fir.array<2x2xf64>>, !fir.shape<2>) -> (!fir.ref<!fir.array<2x2xf64>>, !fir.ref<!fir.array<2x2xf64>>)
   %16 = hlfir.transpose %8#0 : (!fir.ref<!fir.array<2x2xf64>>) -> !hlfir.expr<2x2xf64>
   %17 = hlfir.shape_of %16 : (!hlfir.expr<2x2xf64>) -> !fir.shape<2>
   %18 = hlfir.elemental %17 : (!fir.shape<2>) -> !hlfir.expr<?x?xf64> {

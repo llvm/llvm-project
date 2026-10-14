@@ -1,6 +1,6 @@
 ; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
-; CHECK: atomic store operand must have integer, pointer, floating point, or vector type!
-; CHECK: atomic load operand must have integer, pointer, floating point, or vector type!
+; CHECK: atomic store operand must have integer, byte, pointer, floating point, or vector type!
+; CHECK: atomic load operand must have integer, byte, pointer, floating point, or vector type!
 
 %ty = type { i32 };
 

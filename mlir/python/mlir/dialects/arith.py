@@ -21,26 +21,6 @@ except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
 
-def _isa(obj: Any, cls: type):
-    try:
-        cls(obj)
-    except ValueError:
-        return False
-    return True
-
-
-def _is_any_of(obj: Any, classes: List[type]):
-    return any(_isa(obj, cls) for cls in classes)
-
-
-def _is_integer_like_type(type: Type):
-    return _is_any_of(type, [IntegerType, IndexType])
-
-
-def _is_float_type(type: Type):
-    return _is_any_of(type, [BF16Type, F16Type, F32Type, F64Type])
-
-
 @_ods_cext.register_operation(_Dialect, replace=True)
 class ConstantOp(ConstantOp):
     """Specialization for the constant op class."""
@@ -96,9 +76,9 @@ class ConstantOp(ConstantOp):
 
     @property
     def literal_value(self) -> Union[int, float]:
-        if _is_integer_like_type(self.type):
+        if isinstance(self.type, (IntegerType, IndexType)):
             return IntegerAttr(self.value).value
-        elif _is_float_type(self.type):
+        elif isinstance(self.type, FloatType):
             return FloatAttr(self.value).value
         else:
             raise ValueError("only integer and float constants have literal values")

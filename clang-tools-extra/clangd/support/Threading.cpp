@@ -85,7 +85,7 @@ void AsyncTaskRunner::runAsync(const llvm::Twine &Name,
     ++InFlightTasks;
   }
 
-  auto CleanupTask = llvm::make_scope_exit([this]() {
+  llvm::scope_exit CleanupTask([this]() {
     std::lock_guard<std::mutex> Lock(Mutex);
     int NewTasksCnt = --InFlightTasks;
     if (NewTasksCnt == 0) {

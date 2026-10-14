@@ -1,0 +1,521 @@
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %s | FileCheck %s
+
+! Tests for the iterator modifier on the depend clause across all directives
+! that Flang currently supports: task, target, target enter data, target exit data,
+! and target update.
+! TODO: We need to add iterator test for taskwait, depobj, interop once they are
+! supported.
+
+!===============================================================================
+! task
+!===============================================================================
+
+! Each locator uses its own iterator subset; c remains non-iterated.
+subroutine depend_per_locator(m)
+  integer :: m
+  integer :: a(4), b(4), c
+
+  !$omp task depend(iterator(i = 1:2, j = 3:m), in: a(i), b(j), c)
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdepend_per_locator(
+! CHECK: %[[A:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFdepend_per_locatorEa")
+! CHECK: %[[B:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFdepend_per_locatorEb")
+! CHECK: %[[C:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFdepend_per_locatorEc")
+! CHECK: %[[M:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFdepend_per_locatorEm")
+! CHECK: %[[I_LB:.*]] = arith.constant 1 : i32
+! CHECK: %[[I_UB:.*]] = arith.constant 2 : i32
+! CHECK: %[[I_STEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[J_LB:.*]] = arith.constant 3 : i32
+! CHECK: %[[J_UB:.*]] = fir.load %[[M]]#0 : !fir.ref<i32>
+! CHECK: %[[J_STEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: i32) =
+! CHECK-SAME: (%[[I_LB]] to %[[I_UB]] step %[[I_STEP]]) {
+! CHECK: fir.store %[[IV_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
+! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[MEM_I]]
+! CHECK: %[[LD_I:.*]] = fir.load %[[DECL_I]]#0 : !fir.ref<i32>
+! CHECK: %[[IDX_I:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
+! CHECK: %[[COOR_I:.*]] = hlfir.designate %[[A]]#0 (%[[IDX_I]])
+! CHECK: %[[PTR_I:.*]] = fir.convert %[[COOR_I]]
+! CHECK-SAME: (!fir.ref<i32>) -> !llvm.ptr
+! CHECK: omp.yield(%[[PTR_I]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[IT_J:.*]] = omp.iterator(%[[IV_J:.*]]: i32) =
+! CHECK-SAME: (%[[J_LB]] to %[[J_UB]] step %[[J_STEP]]) {
+! CHECK: fir.store %[[IV_J]] to %[[MEM_J:.*]] : !fir.ref<i32>
+! CHECK: %[[DECL_J:.*]]:2 = hlfir.declare %[[MEM_J]]
+! CHECK: %[[LD_J:.*]] = fir.load %[[DECL_J]]#0 : !fir.ref<i32>
+! CHECK: %[[IDX_J:.*]] = fir.convert %[[LD_J]] : (i32) -> i64
+! CHECK: %[[COOR_J:.*]] = hlfir.designate %[[B]]#0 (%[[IDX_J]])
+! CHECK: %[[PTR_J:.*]] = fir.convert %[[COOR_J]]
+! CHECK-SAME: (!fir.ref<i32>) -> !llvm.ptr
+! CHECK: omp.yield(%[[PTR_J]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK-NOT: omp.iterator
+! CHECK: omp.task depend(taskdependin -> %[[C]]#0 : !fir.ref<i32>,
+! CHECK-SAME: taskdependin -> %[[IT_I]] : !omp.iterated<!llvm.ptr>,
+! CHECK-SAME: taskdependin -> %[[IT_J]] : !omp.iterated<!llvm.ptr>) {
+
+! Each range and induction value keeps its own iterator's kind.
+subroutine depend_iterator_kinds(a, n)
+  integer :: a(4, 4)
+  integer(8) :: n
+  !$omp task depend(iterator(integer(8) :: i = 1:n, j = 1:2), in: a(i, j))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdepend_iterator_kinds(
+! CHECK: %[[N:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFdepend_iterator_kindsEn")
+! CHECK: %[[I_UB:.*]] = fir.load %[[N]]#0 : !fir.ref<i64>
+! CHECK: %[[I_STEP:.*]] = arith.constant 1 : i64
+! CHECK: %[[I_LB:.*]] = fir.convert %{{.*}} : (i32) -> i64
+! CHECK: %[[J_LB:.*]] = arith.constant 1 : i32
+! CHECK: %[[J_UB:.*]] = arith.constant 2 : i32
+! CHECK: %[[J_STEP:.*]] = arith.constant 1 : i32
+! CHECK: omp.iterator(%[[IV_I:.*]]: i64, %[[IV_J:.*]]: i32) =
+! CHECK-SAME: (%[[I_LB]] to %[[I_UB]] step %[[I_STEP]],
+! CHECK-SAME: %[[J_LB]] to %[[J_UB]] step %[[J_STEP]]) {
+! CHECK: fir.store %[[IV_I]] to %{{.*}} : !fir.ref<i64>
+! CHECK: fir.store %[[IV_J]] to %{{.*}} : !fir.ref<i32>
+
+subroutine task_depend_iterator_simple()
+  integer, parameter :: n = 16
+  integer :: a(n)
+  integer :: i
+
+  !$omp task depend(iterator(i = 1:n), in: a(i))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_depend_iterator_simple()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_simpleEa")
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! Iterator IV temp must be named in the compiler-generated namespace ("_QQ"
+! prefix) so it is not emitted as a bogus user local in DWARF under -g.
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]] uniq_name("_QQ{{.*}}.omp.iter")
+! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
+! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.task depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
+! CHECK:   omp.terminator
+! CHECK: }
+
+subroutine task_depend_iterator_2d()
+  integer, parameter :: n = 4, m = 6
+  integer :: a(n, m)
+  integer :: i, j
+
+  !$omp task depend(iterator(i = 1:n, j = 1:m), inout: a(i, j))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_depend_iterator_2d()
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: i32, %[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_MEM]]
+! CHECK:   fir.store %[[IV1]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
+! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV0_I64:.*]] = fir.convert %[[IV0_LD]] : (i32) -> i64
+! CHECK:   %[[IV1_LD:.*]] = fir.load %[[IV1_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV1_I64:.*]] = fir.convert %[[IV1_LD]] : (i32) -> i64
+! CHECK:   %[[COOR:.*]] = hlfir.designate %{{.*}} (%[[IV0_I64]], %[[IV1_I64]])
+! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.task depend(taskdependinout -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
+
+subroutine task_depend_iterator_mixed()
+  integer, parameter :: n = 16
+  integer :: a(n), x
+  integer :: i
+
+  !$omp task depend(iterator(i = 1:n), in: a(i)) depend(out: x)
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_depend_iterator_mixed()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_mixedEa")
+! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtask_depend_iterator_mixedEx")
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.task depend(taskdependout -> %[[X]]#0 : !fir.ref<i32>, taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
+
+subroutine task_depend_iterator_step()
+  integer, parameter :: n = 16
+  integer :: a(n)
+  integer :: i
+
+  !$omp task depend(iterator(i = 1:n:2), in: a(i))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_depend_iterator_step()
+! CHECK: %[[LB:.*]] = arith.constant 1 : i32
+! CHECK: %[[UB:.*]] = arith.constant 16 : i32
+! CHECK: %[[STEP:.*]] = arith.constant 2 : i32
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
+! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.task depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
+
+subroutine task_depend_iterator_multi_obj()
+  integer, parameter :: n = 16
+  integer :: a(n), b(n)
+  integer :: i
+
+  !$omp task depend(iterator(i = 1:n), inout: a(i), b(i))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_depend_iterator_multi_obj()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_multi_objEa")
+! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_multi_objEb")
+! CHECK: %[[IT1:.*]] = omp.iterator(%[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
+! CHECK:   %[[PTR1:.*]] = fir.convert %[[COOR1]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR1]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[IT2:.*]] = omp.iterator(%[[IV2:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
+! CHECK:   %[[PTR2:.*]] = fir.convert %[[COOR2]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR2]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.task depend(taskdependinout -> %[[IT1]] : !omp.iterated<!llvm.ptr>, taskdependinout -> %[[IT2]] : !omp.iterated<!llvm.ptr>) {
+
+! Expression-based subscript using multiple iterator variables: a((i-1)*m+j)
+! maps a 2D logical iteration space onto a 1D array.
+subroutine task_depend_iterator_expr_subscript()
+  integer, parameter :: m = 4
+  integer, parameter :: n = m * m
+  integer :: a(n)
+  integer :: i, j
+
+  !$omp task depend(iterator(i = 1:m, j = 1:m), out: a((i-1)*m+j))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_depend_iterator_expr_subscript()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_expr_subscriptEa")
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: i32, %[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_MEM]]
+! CHECK:   fir.store %[[IV1]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
+! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[C1_I32:.*]] = arith.constant 1 : i32
+! CHECK:   %[[SUB:.*]] = arith.subi %[[IV0_LD]], %[[C1_I32]] overflow<nsw> : i32
+! CHECK:   %[[NOREASSOC:.*]] = hlfir.no_reassoc %[[SUB]] : i32
+! CHECK:   %[[MUL:.*]] = arith.muli %{{.*}}, %[[NOREASSOC]] overflow<nsw> : i32
+! CHECK:   %[[IV1_LD:.*]] = fir.load %[[IV1_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[ADD:.*]] = arith.addi %[[MUL]], %[[IV1_LD]] overflow<nsw> : i32
+! CHECK:   %[[IDX:.*]] = fir.convert %[[ADD]] : (i32) -> i64
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IDX]])
+! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.task depend(taskdependout -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
+
+! Multiple depend clauses each with their own iterator on the same task.
+subroutine task_depend_multi_iter_clauses()
+  integer, parameter :: n = 8
+  integer :: a(n), b(n)
+  integer :: i, j
+
+  !$omp task depend(iterator(i = 1:n), in: a(i)) &
+  !$omp&     depend(iterator(j = 1:n), out: b(j))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_depend_multi_iter_clauses()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_multi_iter_clausesEa")
+! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_multi_iter_clausesEb")
+! CHECK: %[[IT1:.*]] = omp.iterator(%[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
+! CHECK:   %[[PTR1:.*]] = fir.convert %[[COOR1]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR1]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[IT2:.*]] = omp.iterator(%[[IV2:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
+! CHECK:   %[[PTR2:.*]] = fir.convert %[[COOR2]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR2]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.task depend(taskdependin -> %[[IT1]] : !omp.iterated<!llvm.ptr>, taskdependout -> %[[IT2]] : !omp.iterated<!llvm.ptr>) {
+
+subroutine task_depend_iterator_negative_step()
+  integer, parameter :: n = 16
+  integer :: a(n)
+  integer :: i
+
+  !$omp task depend(iterator(i = n:1:-1), in: a(i))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_depend_iterator_negative_step()
+! CHECK: %[[LB:.*]] = arith.constant 16 : i32
+! CHECK: %[[UB:.*]] = arith.constant 1 : i32
+! CHECK: %[[STEP:.*]] = arith.constant -1 : i32
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
+! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.task depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
+
+! Mixed iterated and non-iterated objects in the same depend clause:
+! a(1) does not reference the iterator IV, so it is lowered as a regular
+! (non-iterated) depend var, while a(i) produces an omp.iterator.
+subroutine task_depend_iterator_mixed_within_clause()
+  integer, parameter :: n = 16
+  integer :: a(n)
+  integer :: i
+
+  !$omp task depend(iterator(i = 2:n:2), in: a(1), a(i))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_depend_iterator_mixed_within_clause()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_mixed_within_clauseEa")
+! CHECK: %[[A1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})  : (!fir.ref<!fir.array<16xi32>>, index) -> !fir.ref<i32>
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
+! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.task depend(taskdependin -> %[[A1]] : !fir.ref<i32>, taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
+
+!===============================================================================
+! target
+!===============================================================================
+
+subroutine target_depend_iterator()
+  integer, parameter :: n = 16
+  integer :: a(n)
+  integer :: i
+
+  !$omp target depend(iterator(i = 1:n), in: a(i)) map(tofrom: a)
+    a(1) = 10
+  !$omp end target
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_depend_iterator()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_depend_iteratorEa")
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
+! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
+! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
+! CHECK: omp.target kernel_type(generic) depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP]] -> %{{.*}} : !fir.ref<!fir.array<16xi32>>) {
+! CHECK:   omp.terminator
+! CHECK: }
+
+subroutine target_depend_iterator_multi()
+  integer, parameter :: n = 8
+  integer :: a(n), b(n), c(n)
+  integer :: i, j
+
+  !$omp target depend(iterator(i = 1:n), inout: a(i), b(i)) &
+  !$omp&       depend(iterator(j = 1:n:2), in: c(j)) &
+  !$omp&       map(tofrom: a, b)
+    a(1) = b(1)
+  !$omp end target
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_depend_iterator_multi()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_depend_iterator_multiEa")
+! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_depend_iterator_multiEb")
+! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_depend_iterator_multiEc")
+! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
+! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
+! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[IT3:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[COOR3:.*]] = hlfir.designate %[[C]]#0 (%{{.*}})
+! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<8xi32>>
+! CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[B]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) bounds({{.*}}) name("b") -> !fir.ref<!fir.array<8xi32>>
+! CHECK: %[[MAP_C:.*]] = omp.map.info var_ptr(%[[C]]#1 : {{.*}}) map_clauses(implicit, tofrom) capture(ByRef) bounds({{.*}}) name("c") -> !fir.ref<!fir.array<8xi32>>
+! CHECK: omp.target kernel_type(generic) depend(taskdependinout -> %[[IT1]] : !omp.iterated<!llvm.ptr>, taskdependinout -> %[[IT2]] : !omp.iterated<!llvm.ptr>, taskdependin -> %[[IT3]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP_A]] -> %{{.*}}, %[[MAP_B]] -> %{{.*}}, %[[MAP_C]] -> %{{.*}} : !fir.ref<!fir.array<8xi32>>, !fir.ref<!fir.array<8xi32>>, !fir.ref<!fir.array<8xi32>>) {
+
+!===============================================================================
+! target enter data
+!===============================================================================
+
+subroutine target_enter_data_depend_iterator()
+  integer, parameter :: n = 16
+  integer :: a(n)
+  integer :: i
+
+  !$omp target enter data map(to: a) depend(iterator(i = 1:n), in: a(i))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_enter_data_depend_iterator()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_enter_data_depend_iteratorEa")
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
+! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
+! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(to) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
+! CHECK: omp.target_enter_data depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP]] : !fir.ref<!fir.array<16xi32>>)
+
+subroutine target_enter_data_depend_iterator_expr()
+  integer, parameter :: m = 4
+  integer, parameter :: n = m * m
+  integer :: a(n)
+  integer :: i, j
+
+  !$omp target enter data map(to: a) &
+  !$omp&   depend(iterator(i = 1:m, j = 1:m), inout: a(1), a((i-1)*m+j))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_enter_data_depend_iterator_expr()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_enter_data_depend_iterator_exprEa")
+! CHECK: %[[A1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})  : (!fir.ref<!fir.array<16xi32>>, index) -> !fir.ref<i32>
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: i32, %[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_MEM]]
+! CHECK:   fir.store %[[IV1]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
+! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[SUB:.*]] = arith.subi %[[IV0_LD]], %{{.*}} : i32
+! CHECK:   %[[NOREASSOC:.*]] = hlfir.no_reassoc %[[SUB]] : i32
+! CHECK:   %[[MUL:.*]] = arith.muli %{{.*}}, %[[NOREASSOC]] overflow<nsw> : i32
+! CHECK:   %[[IV1_LD:.*]] = fir.load %[[IV1_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[ADD:.*]] = arith.addi %[[MUL]], %[[IV1_LD]] overflow<nsw> : i32
+! CHECK:   %[[IDX:.*]] = fir.convert %[[ADD]] : (i32) -> i64
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IDX]])
+! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(to) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
+! CHECK: omp.target_enter_data depend(taskdependinout -> %[[A1]] : !fir.ref<i32>, taskdependinout -> %[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP]] : !fir.ref<!fir.array<16xi32>>)
+
+!===============================================================================
+! target exit data
+!===============================================================================
+
+subroutine target_exit_data_depend_iterator()
+  integer, parameter :: n = 16
+  integer :: a(n)
+  integer :: i
+
+  !$omp target exit data map(from: a) depend(iterator(i = 1:n), out: a(i))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_exit_data_depend_iterator()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_exit_data_depend_iteratorEa")
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
+! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
+! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(from) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
+! CHECK: omp.target_exit_data depend(taskdependout -> %[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP]] : !fir.ref<!fir.array<16xi32>>)
+
+subroutine target_exit_data_depend_iterator_multi()
+  integer, parameter :: n = 16
+  integer :: a(n), b(n)
+  integer :: i
+
+  !$omp target exit data map(from: a, b) &
+  !$omp&   depend(iterator(i = n:1:-1), out: a(i), b(i))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_exit_data_depend_iterator_multi()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_exit_data_depend_iterator_multiEa")
+! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_exit_data_depend_iterator_multiEb")
+! CHECK: %[[LB:.*]] = arith.constant 16 : i32
+! CHECK: %[[UB:.*]] = arith.constant 1 : i32
+! CHECK: %[[STEP:.*]] = arith.constant -1 : i32
+! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
+! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
+! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
+! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
+! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(from) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
+! CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[B]]#1 : {{.*}}) map_clauses(from) capture(ByRef) bounds({{.*}}) name("b") -> !fir.ref<!fir.array<16xi32>>
+! CHECK: omp.target_exit_data depend(taskdependout -> %[[IT1]] : !omp.iterated<!llvm.ptr>, taskdependout -> %[[IT2]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP_A]], %[[MAP_B]] : !fir.ref<!fir.array<16xi32>>, !fir.ref<!fir.array<16xi32>>)
+
+!===============================================================================
+! target update
+!===============================================================================
+
+subroutine target_update_depend_iterator()
+  integer, parameter :: n = 16
+  integer :: a(n)
+  integer :: i
+
+  !$omp target update to(a) depend(iterator(i = 1:n), in: a(i))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_update_depend_iterator()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_update_depend_iteratorEa")
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
+! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
+! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
+! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(to) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
+! CHECK: omp.target_update depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP]] : !fir.ref<!fir.array<16xi32>>)
+
+! Two separate depend(iterator) clauses with different IVs and depend kinds,
+! plus a non-iterated depend.
+subroutine target_update_depend_iterator_multi()
+  integer, parameter :: n = 8
+  integer :: a(n), b(n), x
+  integer :: i, j
+
+  !$omp target update to(a) from(b) &
+  !$omp&   depend(iterator(i = 1:n), in: a(i)) &
+  !$omp&   depend(iterator(j = 1:n:2), out: b(j)) &
+  !$omp&   depend(inout: x)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_update_depend_iterator_multi()
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_update_depend_iterator_multiEa")
+! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_update_depend_iterator_multiEb")
+! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtarget_update_depend_iterator_multiEx")
+! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
+! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
+! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(to) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<8xi32>>
+! CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[B]]#1 : {{.*}}) map_clauses(from) capture(ByRef) bounds({{.*}}) name("b") -> !fir.ref<!fir.array<8xi32>>
+! CHECK: omp.target_update depend(taskdependinout -> %[[X]]#0 : !fir.ref<i32>, taskdependin -> %[[IT1]] : !omp.iterated<!llvm.ptr>, taskdependout -> %[[IT2]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP_A]], %[[MAP_B]] : !fir.ref<!fir.array<8xi32>>, !fir.ref<!fir.array<8xi32>>)

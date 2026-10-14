@@ -40,16 +40,16 @@ void foo(long double f, long double *l, int *i, const char *c) {
   // PPCF128: call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %{{.+}})
   __builtin_frexpl(f,i);
 
-  // F80: store x86_fp80 0xK7FFF8000000000000000, ptr
-  // PPC: store ppc_fp128 0xM7FF00000000000000000000000000000, ptr
-  // X86F128: store fp128 0xL00000000000000007FFF000000000000, ptr
-  // PPCF128: store fp128 0xL00000000000000007FFF000000000000, ptr
+  // F80: store x86_fp80 +inf, ptr
+  // PPC: store ppc_fp128 +inf, ptr
+  // X86F128: store fp128 +inf, ptr
+  // PPCF128: store fp128 +inf, ptr
   *l = __builtin_huge_vall();
 
-  // F80: store x86_fp80 0xK7FFF8000000000000000, ptr
-  // PPC: store ppc_fp128 0xM7FF00000000000000000000000000000, ptr
-  // X86F128: store fp128 0xL00000000000000007FFF000000000000, ptr
-  // PPCF128: store fp128 0xL00000000000000007FFF000000000000, ptr
+  // F80: store x86_fp80 +inf, ptr
+  // PPC: store ppc_fp128 +inf, ptr
+  // X86F128: store fp128 +inf, ptr
+  // PPCF128: store fp128 +inf, ptr
   *l = __builtin_infl();
 
   // F80: call x86_fp80 @ldexpl(x86_fp80 noundef %{{.+}}, i32 noundef %{{.+}})
@@ -148,16 +148,16 @@ void foo(long double f, long double *l, int *i, const char *c) {
   // PPCF128: call fp128 @llvm.floor.f128(fp128 %{{.+}})
   __builtin_floorl(f);
 
-  // F80: call x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
-  // PPC: call ppc_fp128 @llvm.maxnum.ppcf128(ppc_fp128 %{{.+}}, ppc_fp128 %{{.+}})
-  // X86F128: call fp128 @llvm.maxnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
-  // PPCF128: call fp128 @llvm.maxnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
+  // F80: call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // PPC: call nsz ppc_fp128 @llvm.maxnum.ppcf128(ppc_fp128 %{{.+}}, ppc_fp128 %{{.+}})
+  // X86F128: call nsz fp128 @llvm.maxnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
+  // PPCF128: call nsz fp128 @llvm.maxnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
   __builtin_fmaxl(f,f);
 
-  // F80: call x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
-  // PPC: call ppc_fp128 @llvm.minnum.ppcf128(ppc_fp128 %{{.+}}, ppc_fp128 %{{.+}})
-  // X86F128: call fp128 @llvm.minnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
-  // PPCF128: call fp128 @llvm.minnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
+  // F80: call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // PPC: call nsz ppc_fp128 @llvm.minnum.ppcf128(ppc_fp128 %{{.+}}, ppc_fp128 %{{.+}})
+  // X86F128: call nsz fp128 @llvm.minnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
+  // PPCF128: call nsz fp128 @llvm.minnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
   __builtin_fminl(f,f);
 
   // F80: call x86_fp80 @llvm.nearbyint.f80(x86_fp80 %{{.+}})

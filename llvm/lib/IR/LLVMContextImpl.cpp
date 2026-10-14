@@ -13,13 +13,11 @@
 #include "LLVMContextImpl.h"
 #include "AttributeImpl.h"
 #include "llvm/ADT/StringMapEntry.h"
-#include "llvm/ADT/iterator.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/Compiler.h"
@@ -37,7 +35,17 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
       X86_FP80Ty(C, Type::X86_FP80TyID), FP128Ty(C, Type::FP128TyID),
       PPC_FP128Ty(C, Type::PPC_FP128TyID), X86_AMXTy(C, Type::X86_AMXTyID),
       Int1Ty(C, 1), Int8Ty(C, 8), Int16Ty(C, 16), Int32Ty(C, 32),
-      Int64Ty(C, 64), Int128Ty(C, 128) {}
+      Int64Ty(C, 64), Int128Ty(C, 128), Byte1Ty(C, 1), Byte8Ty(C, 8),
+      Byte16Ty(C, 16), Byte32Ty(C, 32), Byte64Ty(C, 64), Byte128Ty(C, 128) {}
+
+void LLVMContextImpl::getAllMetadataNodes(
+    SmallVectorImpl<MDNode *> &Nodes) const {
+  Nodes.append(DistinctMDNodes.begin(), DistinctMDNodes.end());
+#define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
+  Nodes.append(CLASS##s.begin(), CLASS##s.end());
+#include "llvm/IR/Metadata.def"
+  Nodes.append(TemporaryMDNodes.begin(), TemporaryMDNodes.end());
+}
 
 LLVMContextImpl::~LLVMContextImpl() {
 #ifndef NDEBUG
@@ -56,9 +64,8 @@ LLVMContextImpl::~LLVMContextImpl() {
 
 #ifndef NDEBUG
   // Check for metadata references from leaked Values.
-  for (auto &Pair : ValueMetadata)
-    Pair.first->dump();
-  assert(ValueMetadata.empty() && "Values with metadata have been leaked");
+  assert((Metadatas.empty() || MetadataRecycleSize + 1 == Metadatas.size()) &&
+         "Values with metadata have been leaked");
 #endif
 
   // Drop references for MDNodes.  Do this before Values get deleted to avoid
@@ -119,6 +126,10 @@ LLVMContextImpl::~LLVMContextImpl() {
   IntOneConstants.clear();
   IntConstants.clear();
   IntSplatConstants.clear();
+  ByteZeroConstants.clear();
+  ByteOneConstants.clear();
+  ByteConstants.clear();
+  ByteSplatConstants.clear();
   FPConstants.clear();
   FPSplatConstants.clear();
   CDSConstants.clear();

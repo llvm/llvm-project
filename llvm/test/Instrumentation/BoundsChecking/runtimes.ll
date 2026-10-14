@@ -20,7 +20,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @f1(i64 %x) nounwind {
 ; TR-LABEL: define void @f1(
 ; TR-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; TR-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; TR-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
 ; TR-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
 ; TR-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; TR-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
@@ -36,7 +36,7 @@ define void @f1(i64 %x) nounwind {
 ;
 ; RT-LABEL: define void @f1(
 ; RT-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; RT-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; RT-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
 ; RT-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
 ; RT-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; RT-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
@@ -52,7 +52,7 @@ define void @f1(i64 %x) nounwind {
 ;
 ; TR-NOMERGE-LABEL: define void @f1(
 ; TR-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; TR-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; TR-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
 ; TR-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
 ; TR-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; TR-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
@@ -68,7 +68,7 @@ define void @f1(i64 %x) nounwind {
 ;
 ; RT-NOMERGE-LABEL: define void @f1(
 ; RT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; RT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; RT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
 ; RT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
 ; RT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; RT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
@@ -84,7 +84,7 @@ define void @f1(i64 %x) nounwind {
 ;
 ; RTABORT-NOMERGE-LABEL: define void @f1(
 ; RTABORT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; RTABORT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; RTABORT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
 ; RTABORT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
 ; RTABORT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; RTABORT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
@@ -100,7 +100,7 @@ define void @f1(i64 %x) nounwind {
 ;
 ; MINRT-PRESERVE-NOMERGE-LABEL: define void @f1(
 ; MINRT-PRESERVE-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
 ; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
 ; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
@@ -116,7 +116,7 @@ define void @f1(i64 %x) nounwind {
 ;
 ; MINRT-NOMERGE-LABEL: define void @f1(
 ; MINRT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; MINRT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; MINRT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
 ; MINRT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
 ; MINRT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; MINRT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
@@ -132,7 +132,7 @@ define void @f1(i64 %x) nounwind {
 ;
 ; MINRTABORT-NOMERGE-LABEL: define void @f1(
 ; MINRTABORT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; MINRTABORT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; MINRTABORT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
 ; MINRTABORT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
 ; MINRTABORT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; MINRTABORT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
@@ -148,7 +148,7 @@ define void @f1(i64 %x) nounwind {
 ;
 ; TR-GUARD-COMMON-LABEL: define void @f1(
 ; TR-GUARD-COMMON-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; TR-GUARD-COMMON-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; TR-GUARD-COMMON-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
 ; TR-GUARD-COMMON-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
 ; TR-GUARD-COMMON-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; TR-GUARD-COMMON-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
@@ -172,7 +172,7 @@ define void @f1(i64 %x) nounwind {
 ;
 ; RT-GUARD-LABEL: define void @f1(
 ; RT-GUARD-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; RT-GUARD-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; RT-GUARD-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
 ; RT-GUARD-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
 ; RT-GUARD-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; RT-GUARD-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]

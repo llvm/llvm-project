@@ -97,11 +97,11 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @uzp_x4_f64(<vscale x 4 x double> %unused, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3, <vscale x 2 x double> %zn4) nounwind {
 ; CHECK-LABEL: uzp_x4_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z27.d, z5.d
-; CHECK-NEXT:    mov z26.d, z4.d
-; CHECK-NEXT:    mov z25.d, z3.d
-; CHECK-NEXT:    mov z24.d, z2.d
-; CHECK-NEXT:    uzp { z0.d - z3.d }, { z24.d - z27.d }
+; CHECK-NEXT:    mov z7.d, z5.d
+; CHECK-NEXT:    mov z6.d, z4.d
+; CHECK-NEXT:    mov z5.d, z3.d
+; CHECK-NEXT:    mov z4.d, z2.d
+; CHECK-NEXT:    uzp { z0.d - z3.d }, { z4.d - z7.d }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.uzp.x4.nxv2f64(<vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3, <vscale x 2 x double> %zn4)
   ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
@@ -204,11 +204,11 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @zipq_x4_f64(<vscale x 4 x double> %unused, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3, <vscale x 2 x double> %zn4) nounwind {
 ; CHECK-LABEL: zipq_x4_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z27.d, z5.d
-; CHECK-NEXT:    mov z26.d, z4.d
-; CHECK-NEXT:    mov z25.d, z3.d
-; CHECK-NEXT:    mov z24.d, z2.d
-; CHECK-NEXT:    uzp { z0.q - z3.q }, { z24.q - z27.q }
+; CHECK-NEXT:    mov z7.d, z5.d
+; CHECK-NEXT:    mov z6.d, z4.d
+; CHECK-NEXT:    mov z5.d, z3.d
+; CHECK-NEXT:    mov z4.d, z2.d
+; CHECK-NEXT:    uzp { z0.q - z3.q }, { z4.q - z7.q }
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.uzpq.x4.nxv2f64(<vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3, <vscale x 2 x double> %zn4)
   ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res

@@ -7,20 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUArgumentUsageInfo.h"
-#include "AMDGPU.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/IR/Function.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-#define DEBUG_TYPE "amdgpu-argument-reg-usage-info"
-
-INITIALIZE_PASS(AMDGPUArgumentUsageInfo, DEBUG_TYPE,
-                "Argument Register Usage Information Storage", false, true)
 
 void ArgDescriptor::print(raw_ostream &OS,
                           const TargetRegisterInfo *TRI) const {
@@ -42,49 +34,9 @@ void ArgDescriptor::print(raw_ostream &OS,
   OS << '\n';
 }
 
-char AMDGPUArgumentUsageInfo::ID = 0;
-
-const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::ExternFunctionInfo{};
-
 // Hardcoded registers from fixed function ABI
-const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::FixedABIFunctionInfo
-  = AMDGPUFunctionArgInfo::fixedABILayout();
-
-bool AMDGPUArgumentUsageInfo::doInitialization(Module &M) {
-  return false;
-}
-
-bool AMDGPUArgumentUsageInfo::doFinalization(Module &M) {
-  ArgInfoMap.clear();
-  return false;
-}
-
-// TODO: Print preload kernargs?
-void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
-  for (const auto &FI : ArgInfoMap) {
-    OS << "Arguments for " << FI.first->getName() << '\n'
-       << "  PrivateSegmentBuffer: " << FI.second.PrivateSegmentBuffer
-       << "  DispatchPtr: " << FI.second.DispatchPtr
-       << "  QueuePtr: " << FI.second.QueuePtr
-       << "  KernargSegmentPtr: " << FI.second.KernargSegmentPtr
-       << "  DispatchID: " << FI.second.DispatchID
-       << "  FlatScratchInit: " << FI.second.FlatScratchInit
-       << "  PrivateSegmentSize: " << FI.second.PrivateSegmentSize
-       << "  WorkGroupIDX: " << FI.second.WorkGroupIDX
-       << "  WorkGroupIDY: " << FI.second.WorkGroupIDY
-       << "  WorkGroupIDZ: " << FI.second.WorkGroupIDZ
-       << "  WorkGroupInfo: " << FI.second.WorkGroupInfo
-       << "  LDSKernelId: " << FI.second.LDSKernelId
-       << "  PrivateSegmentWaveByteOffset: "
-          << FI.second.PrivateSegmentWaveByteOffset
-       << "  ImplicitBufferPtr: " << FI.second.ImplicitBufferPtr
-       << "  ImplicitArgPtr: " << FI.second.ImplicitArgPtr
-       << "  WorkItemIDX " << FI.second.WorkItemIDX
-       << "  WorkItemIDY " << FI.second.WorkItemIDY
-       << "  WorkItemIDZ " << FI.second.WorkItemIDZ
-       << '\n';
-  }
-}
+const AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::FixedABIFunctionInfo =
+    AMDGPUFunctionArgInfo::fixedABILayout();
 
 std::tuple<const ArgDescriptor *, const TargetRegisterClass *, LLT>
 AMDGPUFunctionArgInfo::getPreloadedValue(
@@ -148,13 +100,13 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
                       LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_X:
     return std::tuple(WorkItemIDX ? &WorkItemIDX : nullptr,
-                      &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
+                      &AMDGPU::VGPR_32RegClass, LLT::integer(32));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_Y:
     return std::tuple(WorkItemIDY ? &WorkItemIDY : nullptr,
-                      &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
+                      &AMDGPU::VGPR_32RegClass, LLT::integer(32));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_Z:
     return std::tuple(WorkItemIDZ ? &WorkItemIDZ : nullptr,
-                      &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
+                      &AMDGPU::VGPR_32RegClass, LLT::integer(32));
   }
   llvm_unreachable("unexpected preloaded value type");
 }
@@ -182,12 +134,4 @@ AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {
   AI.WorkItemIDY = ArgDescriptor::createRegister(AMDGPU::VGPR31, Mask << 10);
   AI.WorkItemIDZ = ArgDescriptor::createRegister(AMDGPU::VGPR31, Mask << 20);
   return AI;
-}
-
-const AMDGPUFunctionArgInfo &
-AMDGPUArgumentUsageInfo::lookupFuncArgInfo(const Function &F) const {
-  auto I = ArgInfoMap.find(&F);
-  if (I == ArgInfoMap.end())
-    return FixedABIFunctionInfo;
-  return I->second;
 }

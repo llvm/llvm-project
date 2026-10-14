@@ -40,4 +40,17 @@ convertOpenACCModifiers(OpenACCModifierKind modifiers) {
   mlirModifiers = mlirModifiers | static_cast<DataClauseModifier>(modifiers);
   return mlirModifiers;
 }
+
+inline mlir::acc::DeviceType decodeDeviceType(const IdentifierInfo *ii) {
+  // '*' case leaves no identifier-info, just a nullptr.
+  if (!ii)
+    return mlir::acc::DeviceType::Star;
+  return llvm::StringSwitch<mlir::acc::DeviceType>(ii->getName())
+      .CaseLower("default", mlir::acc::DeviceType::Default)
+      .CaseLower("host", mlir::acc::DeviceType::Host)
+      .CaseLower("multicore", mlir::acc::DeviceType::Multicore)
+      .CasesLower({"nvidia", "acc_device_nvidia"},
+                  mlir::acc::DeviceType::Nvidia)
+      .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
+}
 } // namespace clang::CIRGen

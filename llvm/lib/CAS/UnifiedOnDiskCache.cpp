@@ -53,8 +53,19 @@
 /// the underlying on-disk storage. The low-level storage is designed to remain
 /// coherent across regular process crashes, but may be invalid after power loss
 /// or similar system failures. \c UnifiedOnDiskCache::validateIfNeeded allows
-/// validating the contents once per boot and can recover by marking invalid
-/// data for garbage collection.
+/// validating the contents once per boot (or every time, where the boot time is
+/// not known), and if validation fails (or crashes,
+/// when performed in a separate process) \c UnifiedOnDiskCache::recover can
+/// recover by marking invalid data for garbage collection.
+///
+/// Validation and recovery are serialized by an exclusive lock on the
+/// "v1.validation" file, which records the boot time of the last successful
+/// validation or recovery. Before validating, the file is marked as validation
+/// pending, and the boot time is only written once validation succeeds; a
+/// validation that fails or crashes leaves it pending, so the next validation
+/// is not skipped. Recovery only happens while validation is pending, so when
+/// multiple processes attempt recovery after a failed validation only the first
+/// one recovers.
 ///
 /// The data recovery described above requires exclusive access to the CAS, and
 /// it is an error to attempt recovery if the CAS is open in any process/thread.
@@ -66,7 +77,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/UnifiedOnDiskCache.h"
-#include "BuiltinCAS.h"
 #include "OnDiskCommon.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -74,23 +84,18 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
 #include "llvm/CAS/OnDiskKeyValueDB.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 #include <optional>
-
-#if __has_include(<sys/sysctl.h>)
-#include <sys/sysctl.h>
-#endif
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -211,212 +216,297 @@ static void getNextDBDirName(StringRef DBDir, llvm::raw_ostream &OS) {
   OS << DBDirPrefix << Count + 1;
 }
 
-static Error validateOutOfProcess(StringRef LLVMCasBinary, StringRef RootPath,
-                                  bool CheckHash) {
-  SmallVector<StringRef> Args{LLVMCasBinary, "-cas", RootPath, "-validate"};
-  if (CheckHash)
-    Args.push_back("-check-hash");
-
-  llvm::SmallString<128> StdErrPath;
-  int StdErrFD = -1;
-  if (std::error_code EC = sys::fs::createTemporaryFile(
-          "llvm-cas-validate-stderr", "txt", StdErrFD, StdErrPath,
-          llvm::sys::fs::OF_Text))
-    return createStringError(EC, "failed to create temporary file");
-  FileRemover OutputRemover(StdErrPath.c_str());
-
-  std::optional<llvm::StringRef> Redirects[] = {
-      {""}, // stdin = /dev/null
-      {""}, // stdout = /dev/null
-      StdErrPath.str(),
-  };
-
-  std::string ErrMsg;
-  int Result =
-      sys::ExecuteAndWait(LLVMCasBinary, Args, /*Env=*/std::nullopt, Redirects,
-                          /*SecondsToWait=*/120, /*MemoryLimit=*/0, &ErrMsg);
-
-  if (Result == -1)
-    return createStringError("failed to exec " + join(Args, " ") + ": " +
-                             ErrMsg);
-  if (Result != 0) {
-    llvm::SmallString<64> Err("cas contents invalid");
-    if (!ErrMsg.empty()) {
-      Err += ": ";
-      Err += ErrMsg;
-    }
-    auto StdErrBuf = MemoryBuffer::getFile(StdErrPath.c_str());
-    if (StdErrBuf && !(*StdErrBuf)->getBuffer().empty()) {
-      Err += ": ";
-      Err += (*StdErrBuf)->getBuffer();
-    }
-    return createStringError(Err);
-  }
-  return Error::success();
+Error UnifiedOnDiskCache::validateActionCache() const {
+  return getKeyValueDB().validate();
 }
 
 static Error validateInProcess(StringRef RootPath, StringRef HashName,
-                               unsigned HashByteSize, bool CheckHash) {
+                               unsigned HashByteSize, bool CheckHash,
+                               OnDiskGraphDB::HashingFuncT HashFn) {
   std::shared_ptr<UnifiedOnDiskCache> UniDB;
   if (Error E = UnifiedOnDiskCache::open(RootPath, std::nullopt, HashName,
                                          HashByteSize)
                     .moveInto(UniDB))
     return E;
-  auto CAS = builtin::createObjectStoreFromUnifiedOnDiskCache(UniDB);
-  if (Error E = CAS->validate(CheckHash))
+  if (Error E = UniDB->getGraphDB().validate(CheckHash, HashFn))
     return E;
-  auto Cache = builtin::createActionCacheFromUnifiedOnDiskCache(UniDB);
-  if (Error E = Cache->validate())
+  if (Error E = UniDB->validateActionCache())
     return E;
   return Error::success();
 }
 
-static Expected<uint64_t> getBootTime() {
-#if __has_include(<sys/sysctl.h>) && defined(KERN_BOOTTIME)
-  struct timeval TV;
-  size_t TVLen = sizeof(TV);
-  int KernBoot[2] = {CTL_KERN, KERN_BOOTTIME};
-  if (sysctl(KernBoot, 2, &TV, &TVLen, nullptr, 0) < 0)
-    return createStringError(llvm::errnoAsErrorCode(),
-                             "failed to get boottime");
-  if (TVLen != sizeof(TV))
-    return createStringError("sysctl kern.boottime unexpected format");
-  return TV.tv_sec;
-#elif defined(__linux__)
-  // Use the mtime for /proc, which is recreated during system boot.
-  // We could also read /proc/stat and search for 'btime'.
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status("/proc", Status))
-    return createFileError("/proc", EC);
-  return Status.getLastModificationTime().time_since_epoch().count();
-#else
-  llvm::report_fatal_error("getBootTime unimplemented");
-#endif
+/// \returns the boot time, or 0 if it is not known, including if getting it
+/// failed. Validation is never skipped where the boot time is not known.
+static uint64_t getCachedBootTime() {
+  static const uint64_t BootTime =
+      expectedToOptional(getBootTime()).value_or(0);
+  return BootTime;
+}
+
+namespace {
+/// The validation file records the state of validation for the data:
+/// - empty: never validated.
+/// - \c ValidationPending: a validation started but did not yet succeed, i.e.
+///   it is in progress, failed, or crashed, and the data has not been
+///   recovered since.
+/// - a boot time: the data was validated or recovered during that boot.
+///
+/// While this object is alive it holds an exclusive lock on the file, which
+/// serializes validation and recovery across processes and threads.
+///
+/// Lock ordering: the validation file lock is always acquired before the
+/// top-level "lock" file, and the latter is only ever acquired exclusively via
+/// a non-blocking try-lock, so that validation and recovery cannot deadlock.
+class LockedValidationFile {
+public:
+  /// Written before validating. It is an integer so that older versions, which
+  /// only know about boot times, still parse the file and treat it as not
+  /// validated. It never matches a boot time.
+  static constexpr uint64_t ValidationPending =
+      std::numeric_limits<uint64_t>::max();
+
+  static Expected<std::unique_ptr<LockedValidationFile>>
+  open(StringRef RootPath) {
+    if (std::error_code EC = sys::fs::create_directories(RootPath))
+      return createFileError(RootPath, EC);
+
+    SmallString<256> PathBuf(RootPath);
+    sys::path::append(PathBuf, ValidationFilename);
+    int FD = -1;
+    if (std::error_code EC = sys::fs::openFileForReadWrite(
+            PathBuf, FD, sys::fs::CD_OpenAlways, sys::fs::OF_None))
+      return createFileError(PathBuf, EC);
+    assert(FD != -1);
+    std::unique_ptr<LockedValidationFile> VF(
+        new LockedValidationFile(PathBuf, FD));
+
+    if (std::error_code EC =
+            lockFileThreadSafe(FD, sys::fs::LockKind::Exclusive))
+      return createFileError(PathBuf, EC);
+    VF->Locked = true;
+
+    SmallString<8> Bytes;
+    if (Error E = sys::fs::readNativeFileToEOF(VF->File, Bytes))
+      return createFileError(PathBuf, std::move(E));
+    if (!Bytes.empty()) {
+      uint64_t Value;
+      if (StringRef(Bytes).trim().getAsInteger(10, Value))
+        return createFileError(PathBuf, errc::illegal_byte_sequence,
+                               "expected integer");
+      VF->State = Value;
+    }
+    return std::move(VF);
+  }
+
+  ~LockedValidationFile() {
+    if (Locked)
+      unlockFileThreadSafe(FD);
+    sys::fs::closeFile(File);
+  }
+
+  /// \returns the boot time of the last successful validation or recovery, or
+  /// 0 if there is none.
+  uint64_t getLastValidBootTime() const {
+    return isValidationPending() ? 0 : State.value_or(0);
+  }
+
+  /// Whether the data was validated or recovered during the boot with
+  /// \p BootTime. Always false where the boot time is not known, i.e. 0,
+  /// since it cannot be told whether that was during the current boot.
+  bool isValidAtBoot(uint64_t BootTime) const {
+    // The boot time can be computed from the current time, so it moves when
+    // the clock is adjusted and the recorded one can be later than BootTime
+    // during the same boot. A reboot always makes it later. Pending is larger
+    // than any boot time, so it needs to be excluded.
+    return BootTime != 0 && !isValidationPending() && State &&
+           BootTime <= *State;
+  }
+
+  bool isValidationPending() const { return State == ValidationPending; }
+
+  Error setValidationPending() { return write(ValidationPending); }
+
+  Error setLastValidBootTime(uint64_t BootTime) { return write(BootTime); }
+
+private:
+  LockedValidationFile(StringRef Path, int FD)
+      : Path(Path), FD(FD), File(sys::fs::convertFDToNativeFile(FD)) {}
+
+  Error write(uint64_t Value) {
+    if (State == Value)
+      return Error::success();
+    if (std::error_code EC = sys::fs::resize_file(FD, 0))
+      return createFileError(Path, EC);
+    raw_fd_ostream OS(FD, /*shouldClose=*/false);
+    OS.seek(0); // resize does not reset position
+    OS << Value << '\n';
+    if (OS.has_error())
+      return createFileError(Path, OS.error());
+    State = Value;
+    return Error::success();
+  }
+
+  SmallString<256> Path;
+  int FD;
+  sys::fs::file_t File;
+  bool Locked = false;
+  std::optional<uint64_t> State;
+};
+} // namespace
+
+/// Marks all the database directories in \p RootPath as corrupt, which makes
+/// them eligible for garbage collection. Requires exclusive access to the CAS.
+static Error markAllDBDirsCorrupt(StringRef RootPath) {
+  SmallString<256> PathBuf(RootPath);
+  sys::path::append(PathBuf, "lock");
+
+  int LockFD = -1;
+  if (std::error_code EC = sys::fs::openFileForReadWrite(
+          PathBuf, LockFD, sys::fs::CD_OpenAlways, sys::fs::OF_None))
+    return createFileError(PathBuf, EC);
+  sys::fs::file_t LockFile = sys::fs::convertFDToNativeFile(LockFD);
+  llvm::scope_exit CloseLock([&]() { sys::fs::closeFile(LockFile); });
+  if (std::error_code EC = tryLockFileThreadSafe(LockFD)) {
+    if (EC == std::errc::no_lock_available)
+      return createFileError(
+          PathBuf, EC,
+          "CAS recovery requires exclusive access but CAS was in use");
+    return createFileError(PathBuf, EC);
+  }
+  llvm::scope_exit UnlockFD([&]() { unlockFileThreadSafe(LockFD); });
+
+  auto DBDirs = getAllDBDirs(RootPath);
+  if (!DBDirs)
+    return DBDirs.takeError();
+
+  for (StringRef DBDir : *DBDirs) {
+    sys::path::remove_filename(PathBuf);
+    sys::path::append(PathBuf, DBDir);
+    // Pick the first name not taken by earlier recoveries. Checking the error
+    // of the rename is not enough since Windows reports permission denied when
+    // the destination directory exists. The name cannot be taken concurrently
+    // since only garbage collection touches these directories, and it only
+    // removes them.
+    int Attempt = 0, MaxAttempts = 100;
+    SmallString<128> GCPath;
+    for (; Attempt < MaxAttempts; ++Attempt) {
+      GCPath.assign(RootPath);
+      sys::path::append(GCPath,
+                        CorruptPrefix + std::to_string(Attempt) + "." + DBDir);
+      if (!sys::fs::exists(GCPath))
+        break;
+    }
+    if (Attempt == MaxAttempts)
+      return createStringError(
+          errc::file_exists,
+          "rename " + PathBuf +
+              " failed: too many CAS directories awaiting pruning");
+    if (std::error_code EC = sys::fs::rename(PathBuf, GCPath))
+      return createStringError(EC, "rename " + PathBuf + " to " + GCPath +
+                                       " failed: " + EC.message());
+  }
+  return Error::success();
 }
 
 Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
     StringRef RootPath, StringRef HashName, unsigned HashByteSize,
-    bool CheckHash, bool AllowRecovery, bool ForceValidation,
-    std::optional<StringRef> LLVMCasBinaryPath) {
-  if (std::error_code EC = sys::fs::create_directories(RootPath))
-    return createFileError(RootPath, EC);
+    bool CheckHash, OnDiskGraphDB::HashingFuncT HashFn, bool ForceValidation) {
+  std::unique_ptr<LockedValidationFile> VF;
+  if (Error E = LockedValidationFile::open(RootPath).moveInto(VF))
+    return std::move(E);
 
-  SmallString<256> PathBuf(RootPath);
-  sys::path::append(PathBuf, ValidationFilename);
-  int FD = -1;
-  if (std::error_code EC = sys::fs::openFileForReadWrite(
-          PathBuf, FD, sys::fs::CD_OpenAlways, sys::fs::OF_None))
-    return createFileError(PathBuf, EC);
-  assert(FD != -1);
-
-  sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
-  auto CloseFile = make_scope_exit([&]() { sys::fs::closeFile(File); });
-
-  if (std::error_code EC = lockFileThreadSafe(FD, sys::fs::LockKind::Exclusive))
-    return createFileError(PathBuf, EC);
-  auto UnlockFD = make_scope_exit([&]() { unlockFileThreadSafe(FD); });
-
-  SmallString<8> Bytes;
-  if (Error E = sys::fs::readNativeFileToEOF(File, Bytes))
-    return createFileError(PathBuf, std::move(E));
-
-  uint64_t ValidationBootTime = 0;
-  if (!Bytes.empty() &&
-      StringRef(Bytes).trim().getAsInteger(10, ValidationBootTime))
-    return createFileError(PathBuf, errc::illegal_byte_sequence,
-                           "expected integer");
-
-  static uint64_t BootTime = 0;
-  if (BootTime == 0)
-    if (Error E = getBootTime().moveInto(BootTime))
-      return std::move(E);
-
-  if (ValidationBootTime == BootTime && !ForceValidation)
-    return ValidationResult::Skipped;
-
-  // Validate!
-  bool NeedsRecovery = false;
+  std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
+#ifndef _WIN32
   if (Error E =
-          LLVMCasBinaryPath
-              ? validateOutOfProcess(*LLVMCasBinaryPath, RootPath, CheckHash)
-              : validateInProcess(RootPath, HashName, HashByteSize,
-                                  CheckHash)) {
-    if (AllowRecovery) {
-      consumeError(std::move(E));
-      NeedsRecovery = true;
-    } else {
-      return std::move(E);
-    }
+          ondisk::OnDiskCASLogger::openIfEnabled(RootPath).moveInto(Logger))
+    return std::move(E);
+#endif
+
+  uint64_t BootTime = getCachedBootTime();
+  uint64_t ValidationBootTime = VF->getLastValidBootTime();
+
+  bool Skipped = false;
+  std::string LogValidationError;
+
+  llvm::scope_exit Log([&] {
+    if (!Logger)
+      return;
+    Logger->logUnifiedOnDiskCacheValidateIfNeeded(
+        RootPath, BootTime, ValidationBootTime, CheckHash, ForceValidation,
+        LogValidationError, Skipped);
+  });
+
+  if (VF->isValidAtBoot(BootTime) && !ForceValidation) {
+    Skipped = true;
+    return ValidationResult::Skipped;
   }
 
-  if (NeedsRecovery) {
-    sys::path::remove_filename(PathBuf);
-    sys::path::append(PathBuf, "lock");
+  // Mark validation as pending until it succeeds, so that a failed or crashed
+  // validation is detected by recovery and by the next validation.
+  if (Error E = VF->setValidationPending())
+    return std::move(E);
 
-    int LockFD = -1;
-    if (std::error_code EC = sys::fs::openFileForReadWrite(
-            PathBuf, LockFD, sys::fs::CD_OpenAlways, sys::fs::OF_None))
-      return createFileError(PathBuf, EC);
-    sys::fs::file_t LockFile = sys::fs::convertFDToNativeFile(LockFD);
-    auto CloseLock = make_scope_exit([&]() { sys::fs::closeFile(LockFile); });
-    if (std::error_code EC = tryLockFileThreadSafe(LockFD)) {
-      if (EC == std::errc::no_lock_available)
-        return createFileError(
-            PathBuf, EC,
-            "CAS validation requires exclusive access but CAS was in use");
-      return createFileError(PathBuf, EC);
-    }
-    auto UnlockFD = make_scope_exit([&]() { unlockFileThreadSafe(LockFD); });
-
-    auto DBDirs = getAllDBDirs(RootPath);
-    if (!DBDirs)
-      return DBDirs.takeError();
-
-    for (StringRef DBDir : *DBDirs) {
-      sys::path::remove_filename(PathBuf);
-      sys::path::append(PathBuf, DBDir);
-      std::error_code EC;
-      int Attempt = 0, MaxAttempts = 100;
-      SmallString<128> GCPath;
-      for (; Attempt < MaxAttempts; ++Attempt) {
-        GCPath.assign(RootPath);
-        sys::path::append(GCPath, CorruptPrefix + std::to_string(Attempt) +
-                                      "." + DBDir);
-        EC = sys::fs::rename(PathBuf, GCPath);
-        // Darwin uses ENOTEMPTY. Linux may return either ENOTEMPTY or EEXIST.
-        if (EC != errc::directory_not_empty && EC != errc::file_exists)
-          break;
-      }
-      if (Attempt == MaxAttempts)
-        return createStringError(
-            EC, "rename " + PathBuf +
-                    " failed: too many CAS directories awaiting pruning");
-      if (EC)
-        return createStringError(EC, "rename " + PathBuf + " to " + GCPath +
-                                         " failed: " + EC.message());
-    }
+  if (Error E = validateInProcess(RootPath, HashName, HashByteSize, CheckHash,
+                                  HashFn)) {
+    if (Logger)
+      LogValidationError = toStringWithoutConsuming(E);
+    return std::move(E);
   }
 
-  if (ValidationBootTime != BootTime) {
-    // Fix filename in case we have error to report.
-    sys::path::remove_filename(PathBuf);
-    sys::path::append(PathBuf, ValidationFilename);
-    if (std::error_code EC = sys::fs::resize_file(FD, 0))
-      return createFileError(PathBuf, EC);
-    raw_fd_ostream OS(FD, /*shouldClose=*/false);
-    OS.seek(0); // resize does not reset position
-    OS << BootTime << '\n';
-    if (OS.has_error())
-      return createFileError(PathBuf, OS.error());
+  if (Error E = VF->setLastValidBootTime(BootTime))
+    return std::move(E);
+  return ValidationResult::Valid;
+}
+
+Expected<ValidationResult> UnifiedOnDiskCache::recover(StringRef RootPath) {
+  std::unique_ptr<LockedValidationFile> VF;
+  if (Error E = LockedValidationFile::open(RootPath).moveInto(VF))
+    return std::move(E);
+
+  std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
+#ifndef _WIN32
+  if (Error E =
+          ondisk::OnDiskCASLogger::openIfEnabled(RootPath).moveInto(Logger))
+    return std::move(E);
+#endif
+
+  uint64_t BootTime = getCachedBootTime();
+
+  bool Skipped = false;
+  std::string LogRecoveryError;
+
+  llvm::scope_exit Log([&] {
+    if (!Logger)
+      return;
+    Logger->logUnifiedOnDiskCacheRecover(RootPath, BootTime, LogRecoveryError,
+                                         Skipped);
+  });
+
+  // Unless validation is still pending, the data has been recovered or
+  // successfully validated since the failed validation, e.g. by a concurrent
+  // process.
+  if (!VF->isValidationPending()) {
+    Skipped = true;
+    return ValidationResult::Skipped;
   }
 
-  return NeedsRecovery ? ValidationResult::Recovered : ValidationResult::Valid;
+  if (Error E = markAllDBDirsCorrupt(RootPath)) {
+    if (Logger)
+      LogRecoveryError = toStringWithoutConsuming(E);
+    return std::move(E);
+  }
+
+  if (Error E = VF->setLastValidBootTime(BootTime))
+    return std::move(E);
+  return ValidationResult::Recovered;
 }
 
 Expected<std::unique_ptr<UnifiedOnDiskCache>>
 UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
                          StringRef HashName, unsigned HashByteSize,
                          OnDiskGraphDB::FaultInPolicy FaultInPolicy) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (std::error_code EC = sys::fs::create_directories(RootPath))
     return createFileError(RootPath, EC);
 
@@ -441,7 +531,12 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
   if (DBDirs->empty())
     DBDirs->push_back((Twine(DBDirPrefix) + "1").str());
 
-  assert(!DBDirs->empty());
+  std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
+#ifndef _WIN32
+  if (Error E =
+          ondisk::OnDiskCASLogger::openIfEnabled(RootPath).moveInto(Logger))
+    return std::move(E);
+#endif
 
   /// If there is only one directory open databases on it. If there are 2 or
   /// more directories, get the most recent directories and chain them, with the
@@ -454,13 +549,15 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
     StringRef UpstreamDir = *(DBDirs->end() - 2);
     PathBuf = RootPath;
     sys::path::append(PathBuf, UpstreamDir);
-    if (Error E = OnDiskGraphDB::open(PathBuf, HashName, HashByteSize,
-                                      /*UpstreamDB=*/nullptr, FaultInPolicy)
-                      .moveInto(UpstreamGraphDB))
+    if (Error E =
+            OnDiskGraphDB::open(PathBuf, HashName, HashByteSize,
+                                /*UpstreamDB=*/nullptr, Logger, FaultInPolicy)
+                .moveInto(UpstreamGraphDB))
       return std::move(E);
     if (Error E = OnDiskKeyValueDB::open(PathBuf, HashName, HashByteSize,
                                          /*ValueName=*/"objectid",
-                                         /*ValueSize=*/sizeof(uint64_t))
+                                         /*ValueSize=*/sizeof(uint64_t),
+                                         /*UnifiedCache=*/nullptr, Logger)
                       .moveInto(UpstreamKVDB))
       return std::move(E);
   }
@@ -469,18 +566,19 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
   PathBuf = RootPath;
   sys::path::append(PathBuf, PrimaryDir);
   std::unique_ptr<OnDiskGraphDB> PrimaryGraphDB;
-  if (Error E = OnDiskGraphDB::open(PathBuf, HashName, HashByteSize,
-                                    UpstreamGraphDB.get(), FaultInPolicy)
-                    .moveInto(PrimaryGraphDB))
+  if (Error E =
+          OnDiskGraphDB::open(PathBuf, HashName, HashByteSize,
+                              UpstreamGraphDB.get(), Logger, FaultInPolicy)
+              .moveInto(PrimaryGraphDB))
     return std::move(E);
   std::unique_ptr<OnDiskKeyValueDB> PrimaryKVDB;
   // \p UnifiedOnDiskCache does manual chaining for key-value requests,
   // including an extra translation step of the value during fault-in.
-  if (Error E =
-          OnDiskKeyValueDB::open(PathBuf, HashName, HashByteSize,
-                                 /*ValueName=*/"objectid",
-                                 /*ValueSize=*/sizeof(uint64_t), UniDB.get())
-              .moveInto(PrimaryKVDB))
+  if (Error E = OnDiskKeyValueDB::open(PathBuf, HashName, HashByteSize,
+                                       /*ValueName=*/"objectid",
+                                       /*ValueSize=*/sizeof(uint64_t),
+                                       UniDB.get(), Logger)
+                    .moveInto(PrimaryKVDB))
     return std::move(E);
 
   UniDB->RootPath = RootPath;
@@ -492,6 +590,7 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
   UniDB->PrimaryGraphDB = std::move(PrimaryGraphDB);
   UniDB->UpstreamKVDB = std::move(UpstreamKVDB);
   UniDB->PrimaryKVDB = std::move(PrimaryKVDB);
+  UniDB->Logger = std::move(Logger);
 
   return std::move(UniDB);
 }
@@ -539,9 +638,11 @@ bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
 }
 
 Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (LockFD == -1)
     return Error::success(); // already closed.
-  auto CloseLock = make_scope_exit([&]() {
+  llvm::scope_exit CloseLock([&]() {
     assert(LockFD >= 0);
     sys::fs::file_t LockFile = sys::fs::convertFDToNativeFile(LockFD);
     sys::fs::closeFile(LockFile);
@@ -569,7 +670,7 @@ Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
       return Error::success(); // couldn't get exclusive lock, give up.
     return createFileError(RootPath, EC);
   }
-  auto UnlockFile = make_scope_exit([&]() { unlockFileThreadSafe(LockFD); });
+  llvm::scope_exit UnlockFile([&]() { unlockFileThreadSafe(LockFD); });
 
   // Managed to get an exclusive lock which means there are no other open
   // \p UnifiedOnDiskCache instances for the same path, so we can safely start a
@@ -593,7 +694,8 @@ UnifiedOnDiskCache::UnifiedOnDiskCache() = default;
 
 UnifiedOnDiskCache::~UnifiedOnDiskCache() { consumeError(close()); }
 
-Error UnifiedOnDiskCache::collectGarbage(StringRef Path) {
+Error UnifiedOnDiskCache::collectGarbage(StringRef Path,
+                                         ondisk::OnDiskCASLogger *Logger) {
   auto DBDirs = getAllGarbageDirs(Path);
   if (!DBDirs)
     return DBDirs.takeError();
@@ -601,6 +703,8 @@ Error UnifiedOnDiskCache::collectGarbage(StringRef Path) {
   SmallString<256> PathBuf(Path);
   for (StringRef UnusedSubDir : *DBDirs) {
     sys::path::append(PathBuf, UnusedSubDir);
+    if (Logger)
+      Logger->logUnifiedOnDiskCacheCollectGarbage(PathBuf);
     if (std::error_code EC = sys::fs::remove_directories(PathBuf))
       return createFileError(PathBuf, EC);
     sys::path::remove_filename(PathBuf);
@@ -608,4 +712,6 @@ Error UnifiedOnDiskCache::collectGarbage(StringRef Path) {
   return Error::success();
 }
 
-Error UnifiedOnDiskCache::collectGarbage() { return collectGarbage(RootPath); }
+Error UnifiedOnDiskCache::collectGarbage() {
+  return collectGarbage(RootPath, Logger.get());
+}

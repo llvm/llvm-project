@@ -146,6 +146,14 @@ static bool ignoreOp(const Instruction *I, unsigned OpIdx) {
   return true;
 }
 
+static FunctionHashInfo hashFunction(const Function &F) {
+  // Globals with local linkage are qualified with their module's source file
+  // name so that same-named locals in different modules are not mistaken for
+  // identical operands when the merged map is finalized across modules.
+  return StructuralHashWithDifferences(F, ignoreOp,
+                                       /*SourceQualifyLocalGlobals=*/true);
+}
+
 void GlobalMergeFunc::analyze(Module &M) {
   ++NumAnalyzedModues;
   for (Function &Func : M) {
@@ -153,7 +161,7 @@ void GlobalMergeFunc::analyze(Module &M) {
     if (isEligibleFunction(&Func)) {
       ++NumEligibleFunctions;
 
-      auto FI = llvm::StructuralHashWithDifferences(Func, ignoreOp);
+      auto FI = hashFunction(Func);
 
       // Convert the operand map to a vector for a serialization-friendly
       // format.
@@ -208,6 +216,10 @@ static Function *createMergedFunction(FuncMergeInfo &FI,
   if (auto *SP = MergedFunc->getSubprogram())
     NewFunction->setSubprogram(SP);
   NewFunction->copyAttributesFrom(MergedFunc);
+  // Preserve entry count for the merged function. Branch weights for blocks
+  // are automatically preserved via splice() which moves the basic blocks.
+  if (auto EC = MergedFunc->getEntryCount())
+    NewFunction->setEntryCount(*EC);
   NewFunction->setDLLStorageClass(GlobalValue::DefaultStorageClass);
 
   NewFunction->setLinkage(GlobalValue::InternalLinkage);
@@ -234,7 +246,7 @@ static Function *createMergedFunction(FuncMergeInfo &FI,
       auto *Inst = FI.IndexInstruction->lookup(InstIndex);
       auto *OrigC = Inst->getOperand(OpndIndex);
       if (OrigC->getType() != NewArg->getType()) {
-        IRBuilder<> Builder(Inst->getParent(), Inst->getIterator());
+        IRBuilder<> Builder(Inst->getIterator());
         Inst->setOperand(OpndIndex,
                          Builder.CreateAggregateCast(NewArg, OrigC->getType()));
       } else {
@@ -254,6 +266,10 @@ static void createThunk(FuncMergeInfo &FI, ArrayRef<Constant *> Params,
 
   assert(Thunk->arg_size() + Params.size() ==
          ToFunc->getFunctionType()->getNumParams());
+
+  // Save entry count before dropping references (which clears metadata).
+  auto EC = Thunk->getEntryCount();
+
   Thunk->dropAllReferences();
 
   BasicBlock *BB = BasicBlock::Create(Thunk->getContext(), "", Thunk);
@@ -289,6 +305,10 @@ static void createThunk(FuncMergeInfo &FI, ArrayRef<Constant *> Params,
     Builder.CreateRetVoid();
   else
     Builder.CreateRet(Builder.CreateAggregateCast(CI, Thunk->getReturnType()));
+
+  // Restore the thunk's original entry count.
+  if (EC)
+    Thunk->setEntryCount(*EC);
 }
 
 // Check if the old merged/optimized IndexOperandHashMap is compatible with
@@ -398,7 +418,7 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   for (auto &F : M) {
     if (!isEligibleFunction(&F))
       continue;
-    auto FI = llvm::StructuralHashWithDifferences(F, ignoreOp);
+    auto FI = hashFunction(F);
     if (FunctionMap->contains(FI.FunctionHash))
       HashToFuncs[FI.FunctionHash].emplace_back(&F, std::move(FI));
   }
@@ -571,7 +591,7 @@ class GlobalMergeFuncPassWrapper : public ModulePass {
 public:
   static char ID;
 
-  GlobalMergeFuncPassWrapper();
+  GlobalMergeFuncPassWrapper() : ModulePass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addUsedIfAvailable<ImmutableModuleSummaryIndexWrapperPass>();
@@ -592,11 +612,6 @@ INITIALIZE_PASS(GlobalMergeFuncPassWrapper, "global-merge-func",
 
 ModulePass *llvm::createGlobalMergeFuncPass() {
   return new GlobalMergeFuncPassWrapper();
-}
-
-GlobalMergeFuncPassWrapper::GlobalMergeFuncPassWrapper() : ModulePass(ID) {
-  initializeGlobalMergeFuncPassWrapperPass(
-      *llvm::PassRegistry::getPassRegistry());
 }
 
 bool GlobalMergeFuncPassWrapper::runOnModule(Module &M) {

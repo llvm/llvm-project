@@ -495,13 +495,13 @@ define void @phi_load_store_memdep_check(i1 %c, ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: 'phi_load_store_memdep_check'
 ; CHECK-NEXT:    for.body:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:  Unsafe dependence on loop-invariant address.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        InvariantUnsafe:
 ; CHECK-NEXT:            %lv3 = load i16, ptr %c.sink, align 2 ->
 ; CHECK-NEXT:            store i16 %add, ptr %c.sink, align 1
 ; CHECK-EMPTY:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        InvariantUnsafe:
 ; CHECK-NEXT:            %lv3 = load i16, ptr %c.sink, align 2 ->
 ; CHECK-NEXT:            store i16 %add, ptr %c.sink, align 1
 ; CHECK-EMPTY:
@@ -509,36 +509,27 @@ define void @phi_load_store_memdep_check(i1 %c, ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %A
-; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:        ptr %C
 ; CHECK-NEXT:        ptr %C
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %A
-; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:      Check 2:
 ; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:        ptr %C
-; CHECK-NEXT:        ptr %C
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: (2 + %A))
 ; CHECK-NEXT:            Member: %A
-; CHECK-NEXT:            Member: %A
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %C High: (2 + %C))
 ; CHECK-NEXT:            Member: %C
-; CHECK-NEXT:            Member: %C
 ; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %B High: (2 + %B))
-; CHECK-NEXT:            Member: %B
 ; CHECK-NEXT:            Member: %B
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were found in loop.

@@ -18,7 +18,7 @@ define void @t1(ptr %a) {
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: %2 = load i32, ptr %arrayidx6, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: store i32 %2, ptr %arrayidx10, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1 -2]!
+; CHECK-NEXT:    da analyze - anti [1 -2]!
 ; CHECK-NEXT:  Src: store i32 %2, ptr %arrayidx10, align 4 --> Dst: store i32 %2, ptr %arrayidx10, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -60,7 +60,7 @@ define void @t2(ptr %a) {
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: %call = call ptr @func_with_returned_arg(ptr returned %a)
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: store i32 %2, ptr %arrayidx10, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1 -2]!
+; CHECK-NEXT:    da analyze - anti [1 -2]!
 ; CHECK-NEXT:  Src: %call = call ptr @func_with_returned_arg(ptr returned %a) --> Dst: %call = call ptr @func_with_returned_arg(ptr returned %a)
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %call = call ptr @func_with_returned_arg(ptr returned %a) --> Dst: store i32 %2, ptr %arrayidx10, align 4
@@ -115,7 +115,7 @@ define void @t3(ptr %a) {
 ; CHECK-NEXT:  Src: %4 = load i32, ptr %arrayidx26, align 4 --> Dst: %4 = load i32, ptr %arrayidx26, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %4 = load i32, ptr %arrayidx26, align 4 --> Dst: store i32 %4, ptr %arrayidx36, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1 -2 0 -3 2]!
+; CHECK-NEXT:    da analyze - anti [1 -2 0 -3 2]!
 ; CHECK-NEXT:  Src: store i32 %4, ptr %arrayidx36, align 4 --> Dst: store i32 %4, ptr %arrayidx36, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;

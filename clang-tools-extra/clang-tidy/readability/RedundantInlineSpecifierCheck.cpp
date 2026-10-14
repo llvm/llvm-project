@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantInlineSpecifierCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -16,9 +17,8 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
-
-#include "../utils/LexerUtils.h"
 
 using namespace clang::ast_matchers;
 
@@ -65,8 +65,8 @@ static SourceLocation getInlineTokenLocation(SourceRange RangeLocation,
         CurrentToken->getRawIdentifier() == "inline")
       return CurrentToken->getLocation();
 
-    CurrentToken =
-        Lexer::findNextToken(CurrentToken->getLocation(), Sources, LangOpts);
+    CurrentToken = utils::lexer::findNextTokenSkippingComments(
+        CurrentToken->getLocation(), Sources, LangOpts);
   }
   return {};
 }

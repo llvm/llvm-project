@@ -1,10 +1,19 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("MCCLOptions") {
+  visibility = [ ":MC" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("MC") {
   output_name = "LLVMMC"
   deps = [
+    ":MCCLOptions",
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/DebugInfo/CodeView",
     "//llvm/lib/DebugInfo/DWARF/LowLevel",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]
@@ -14,6 +23,7 @@ static_library("MC") {
   ]
   sources = [
     "ConstantPools.cpp",
+    "DXContainerInfo.cpp",
     "DXContainerPSVInfo.cpp",
     "DXContainerRootSignature.cpp",
     "ELFObjectWriter.cpp",
@@ -29,6 +39,7 @@ static_library("MC") {
     "MCAsmMacro.cpp",
     "MCAsmStreamer.cpp",
     "MCAssembler.cpp",
+    "MCCLOptions.cpp",
     "MCCodeEmitter.cpp",
     "MCCodeView.cpp",
     "MCContext.cpp",
@@ -45,6 +56,8 @@ static_library("MC") {
     "MCInstrAnalysis.cpp",
     "MCInstrDesc.cpp",
     "MCInstrInfo.cpp",
+    "MCLFI.cpp",
+    "MCLFIRewriter.cpp",
     "MCLabel.cpp",
     "MCLinkerOptimizationHint.cpp",
     "MCMachOStreamer.cpp",
@@ -64,6 +77,7 @@ static_library("MC") {
     "MCSubtargetInfo.cpp",
     "MCSymbol.cpp",
     "MCSymbolELF.cpp",
+    "MCSymbolGOFF.cpp",
     "MCSymbolXCOFF.cpp",
     "MCTargetOptions.cpp",
     "MCTargetOptionsCommandFlags.cpp",

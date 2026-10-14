@@ -8,14 +8,16 @@
 
 #include "RegisterContextFreeBSD_x86_64.h"
 #include "RegisterContextFreeBSD_i386.h"
-#include "RegisterContextPOSIX_x86.h"
+#include "RegisterContext_x86.h"
+#include "lldb-x86-register-enums.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/Support/Threading.h"
 #include <vector>
 
 using namespace lldb_private;
 using namespace lldb;
 
-// http://svnweb.freebsd.org/base/head/sys/x86/include/reg.h
+// https://cgit.freebsd.org/src/tree/sys/x86/include/reg.h
 typedef struct _GPR {
   uint64_t r15;
   uint64_t r14;

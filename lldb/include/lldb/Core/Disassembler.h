@@ -18,8 +18,8 @@
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -210,13 +210,13 @@ public:
     } m_type = Type::Invalid;
     std::vector<Operand> m_children;
     lldb::addr_t m_immediate = 0;
-    ConstString m_register;
+    std::string m_register;
     bool m_negative = false;
     bool m_clobbered = false;
 
     bool IsValid() { return m_type != Type::Invalid; }
 
-    static Operand BuildRegister(ConstString &r);
+    static Operand BuildRegister(llvm::StringRef r);
     static Operand BuildImmediate(lldb::addr_t imm, bool neg);
     static Operand BuildImmediate(int64_t imm);
     static Operand BuildDereference(const Operand &ref);
@@ -232,6 +232,10 @@ public:
 
   static const char *GetNameForInstructionControlFlowKind(
       lldb::InstructionControlFlowKind instruction_control_flow_kind);
+
+  /// Get variable annotations for this instruction as structured data.
+  /// Returns an array of dictionaries to be used in SBInstruction class.
+  StructuredData::ArraySP GetVariableAnnotations();
 
 protected:
   Address m_address; // The section offset address of this instruction
@@ -276,7 +280,7 @@ MatchUnaryOp(std::function<bool(const Instruction::Operand &)> base,
 std::function<bool(const Instruction::Operand &)>
 MatchRegOp(const RegisterInfo &info);
 
-std::function<bool(const Instruction::Operand &)> FetchRegOp(ConstString &reg);
+std::function<bool(const Instruction::Operand &)> FetchRegOp(std::string &reg);
 
 std::function<bool(const Instruction::Operand &)> MatchImmOp(int64_t imm);
 
@@ -574,24 +578,40 @@ private:
   const Disassembler &operator=(const Disassembler &) = delete;
 };
 
+/// Structured data for a single variable annotation.
+struct VariableAnnotation {
+  std::string variable_name;
+  /// Location description (e.g., "r15", "undef", "const_0").
+  std::string location_description;
+  /// Whether variable is live at this instruction.
+  bool is_live;
+  /// Register numbering scheme for location interpretation.
+  lldb::RegisterKind register_kind;
+  /// Where this annotation is valid.
+  std::optional<lldb_private::AddressRange> address_range;
+  /// Source file where variable was declared.
+  std::optional<std::string> decl_file;
+  /// Line number where variable was declared.
+  std::optional<uint32_t> decl_line;
+  /// Variable's type name.
+  std::optional<std::string> type_name;
+};
+
 /// Tracks live variable annotations across instructions and produces
 /// per-instruction "events" like `name = RDI` or `name = <undef>`.
 class VariableAnnotator {
-  struct VarState {
-    /// Display name.
-    std::string name;
-    /// Last printed location (empty means <undef>).
-    std::string last_loc;
-  };
 
   // Live state from the previous instruction, keyed by Variable::GetID().
-  llvm::DenseMap<lldb::user_id_t, VarState> m_live_vars;
+  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> m_live_vars;
 
 public:
   /// Compute annotation strings for a single instruction and update
   /// `m_live_vars`. Returns only the events that should be printed *at this
   /// instruction*.
   std::vector<std::string> Annotate(Instruction &inst);
+
+  /// Returns structured data for all variables relevant at this instruction.
+  std::vector<VariableAnnotation> AnnotateStructured(Instruction &inst);
 };
 
 } // namespace lldb_private

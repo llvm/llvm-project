@@ -48,7 +48,9 @@ static void *getFuncAddr(const char *name, uintptr_t wrapper_addr) {
 }
 
 static int FuzzerInited = 0;
+#ifndef NDEBUG
 static bool FuzzerInitIsRunning;
+#endif
 
 static void fuzzerInit();
 
@@ -226,7 +228,9 @@ static void fuzzerInit() {
   assert(!FuzzerInitIsRunning);
   if (FuzzerInited)
     return;
+#ifndef NDEBUG
   FuzzerInitIsRunning = true;
+#endif
 
   REAL(bcmp) = reinterpret_cast<memcmp_type>(
       getFuncAddr("bcmp", reinterpret_cast<uintptr_t>(&bcmp)));
@@ -247,7 +251,9 @@ static void fuzzerInit() {
   REAL(memmem) = reinterpret_cast<memmem_type>(
       getFuncAddr("memmem", reinterpret_cast<uintptr_t>(&memmem)));
 
+#ifndef NDEBUG
   FuzzerInitIsRunning = false;
+#endif
   FuzzerInited = 1;
 }
 

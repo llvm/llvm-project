@@ -154,6 +154,7 @@ struct SanitizerCoverageOptions {
   bool TraceGep = false;
   bool Use8bitCounters = false;
   bool TracePC = false;
+  bool TracePCEntryExit = false;
   bool TracePCGuard = false;
   bool Inline8bitCounters = false;
   bool InlineBoolFlag = false;
@@ -188,9 +189,8 @@ struct InstrumentationIRBuilder : IRBuilder<> {
     ensureDebugInfo(*this, *IP->getFunction());
   }
 
-  explicit InstrumentationIRBuilder(BasicBlock *BB, BasicBlock::iterator It)
-      : IRBuilder<>(BB, It) {
-    ensureDebugInfo(*this, *BB->getParent());
+  explicit InstrumentationIRBuilder(BasicBlock::iterator It) : IRBuilder<>(It) {
+    ensureDebugInfo(*this, *It.getNodeParent()->getParent());
   }
 };
 } // end namespace llvm

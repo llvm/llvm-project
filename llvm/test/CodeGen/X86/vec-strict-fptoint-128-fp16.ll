@@ -220,14 +220,14 @@ define <2 x i1> @strict_vector_fptosi_v2f16_to_v2i1(<2 x half> %a) #0 {
 ;
 ; NOVL-LABEL: strict_vector_fptosi_v2f16_to_v2i1:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
-; NOVL-NEXT:    andl $1, %eax
-; NOVL-NEXT:    kmovw %eax, %k0
-; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm0
-; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kshiftlw $1, %k1, %k1
-; NOVL-NEXT:    korw %k1, %k0, %k1
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm0
+; NOVL-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; NOVL-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; NOVL-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [1,1]
+; NOVL-NEXT:    vptestmq %zmm1, %zmm0, %k1
 ; NOVL-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
 ; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NOVL-NEXT:    vzeroupper
@@ -251,14 +251,14 @@ define <2 x i1> @strict_vector_fptoui_v2f16_to_v2i1(<2 x half> %a) #0 {
 ;
 ; NOVL-LABEL: strict_vector_fptoui_v2f16_to_v2i1:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
-; NOVL-NEXT:    andl $1, %eax
-; NOVL-NEXT:    kmovw %eax, %k0
-; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm0
-; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kshiftlw $1, %k1, %k1
-; NOVL-NEXT:    korw %k1, %k0, %k1
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm0
+; NOVL-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; NOVL-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; NOVL-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [1,1]
+; NOVL-NEXT:    vptestmq %zmm1, %zmm0, %k1
 ; NOVL-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
 ; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NOVL-NEXT:    vzeroupper
@@ -445,30 +445,19 @@ define <4 x i1> @strict_vector_fptosi_v4f16_to_v4i1(<4 x half> %a) #0 {
 ;
 ; NOVL-LABEL: strict_vector_fptosi_v4f16_to_v4i1:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
-; NOVL-NEXT:    andl $1, %eax
-; NOVL-NEXT:    kmovw %eax, %k0
 ; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kshiftlw $15, %k1, %k1
-; NOVL-NEXT:    kshiftrw $14, %k1, %k1
-; NOVL-NEXT:    korw %k1, %k0, %k0
-; NOVL-NEXT:    movw $-5, %ax
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kandw %k1, %k0, %k0
-; NOVL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kshiftlw $2, %k1, %k1
-; NOVL-NEXT:    korw %k1, %k0, %k0
-; NOVL-NEXT:    kshiftlw $13, %k0, %k0
-; NOVL-NEXT:    kshiftrw $13, %k0, %k0
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm1
+; NOVL-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
+; NOVL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; NOVL-NEXT:    vcvttsh2si %xmm2, %eax
+; NOVL-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
 ; NOVL-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kshiftlw $3, %k1, %k1
-; NOVL-NEXT:    korw %k1, %k0, %k1
+; NOVL-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm0
+; NOVL-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; NOVL-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k1
 ; NOVL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NOVL-NEXT:    vzeroupper
@@ -491,30 +480,19 @@ define <4 x i1> @strict_vector_fptoui_v4f16_to_v4i1(<4 x half> %a) #0 {
 ;
 ; NOVL-LABEL: strict_vector_fptoui_v4f16_to_v4i1:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
-; NOVL-NEXT:    andl $1, %eax
-; NOVL-NEXT:    kmovw %eax, %k0
 ; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kshiftlw $15, %k1, %k1
-; NOVL-NEXT:    kshiftrw $14, %k1, %k1
-; NOVL-NEXT:    korw %k1, %k0, %k0
-; NOVL-NEXT:    movw $-5, %ax
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kandw %k1, %k0, %k0
-; NOVL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kshiftlw $2, %k1, %k1
-; NOVL-NEXT:    korw %k1, %k0, %k0
-; NOVL-NEXT:    kshiftlw $13, %k0, %k0
-; NOVL-NEXT:    kshiftrw $13, %k0, %k0
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm1
+; NOVL-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
+; NOVL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; NOVL-NEXT:    vcvttsh2si %xmm2, %eax
+; NOVL-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
 ; NOVL-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
-; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kshiftlw $3, %k1, %k1
-; NOVL-NEXT:    korw %k1, %k0, %k1
+; NOVL-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm0
+; NOVL-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; NOVL-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k1
 ; NOVL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NOVL-NEXT:    vzeroupper

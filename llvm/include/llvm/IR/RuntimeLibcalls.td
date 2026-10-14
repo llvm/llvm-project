@@ -15,63 +15,203 @@ include "llvm/IR/RuntimeLibcallsImpl.td"
 class DuplicateLibcallImplWithPrefix<RuntimeLibcallImpl Impl, string prefix>
     : RuntimeLibcallImpl<Impl.Provides, prefix#Impl.LibCallFuncName>;
 
+def IsOSDarwin : LibcallPredicate<[{TT.isOSDarwin()}]>;
+def IsOSOpenBSD : LibcallPredicate<[{TT.isOSOpenBSD()}]>;
+def IsOSWindows : LibcallPredicate<[{TT.isOSWindows()}]>;
+def IsOSLinux : LibcallPredicate<[{TT.isOSLinux()}]>;
+def IsOSMSVCRT : LibcallPredicate<[{TT.isOSMSVCRT()}]>;
+def IsPS : LibcallPredicate<[{TT.isPS()}]>;
+def IsMacOSX : LibcallPredicate<[{TT.isMacOSX()}]>;
+
+def IsWindowsMSVCEnv : LibcallPredicate<[{TT.isWindowsMSVCEnvironment()}]>;
+def IsWindowsItaniumEnv
+  : LibcallPredicate<[{TT.isWindowsItaniumEnvironment()}]>;
+def IsWindowsArm64EC : LibcallPredicate<[{TT.isWindowsArm64EC()}]>;
+
+def IsAndroid : LibcallPredicate<[{TT.isAndroid()}]>;
+def IsGNUEnv : LibcallPredicate<[{TT.isGNUEnvironment()}]>;
+def IsOSFuchsia : LibcallPredicate<[{TT.isOSFuchsia()}]>;
+
+def IsTargetAEABI : LibcallPredicate<[{TT.isTargetAEABI()}]>;
+def IsTargetGNUAEABI : LibcallPredicate<[{TT.isTargetGNUAEABI()}]>;
+def IsTargetMuslAEABI : LibcallPredicate<[{TT.isTargetMuslAEABI()}]>;
+
+def IsOSBinFormatMachO : LibcallPredicate<[{TT.isOSBinFormatMachO()}]>;
+
+def IsAArch64 : LibcallPredicate<[{TT.isAArch64()}]>;
+def IsIsiOS : LibcallPredicate<[{TT.isiOS()}]>;
+def IsIOS : LibcallPredicate<[{TT.getOS() == Triple::IOS}]>;
+def IsTvOS : LibcallPredicate<[{TT.isTvOS()}]>;
+def IsWatchOS : LibcallPredicate<[{TT.isWatchOS()}]>;
+def IsDriverKit : LibcallPredicate<[{TT.isDriverKit()}]>;
+def IsXROS : LibcallPredicate<[{TT.isXROS()}]>;
+def IsBridgeOS : LibcallPredicate<[{TT.getOS() == Triple::BridgeOS}]>;
+
+class MacOSXVersionAtLeast<int major, int minor>
+  : LibcallPredicate<[{!TT.isMacOSXVersionLT(}] # !cast<string>(major)
+                     # [{, }] # !cast<string>(minor) # [{)}]>;
+class OSVersionAtLeast<int major, int minor>
+  : LibcallPredicate<[{!TT.isOSVersionLT(}] # !cast<string>(major)
+                     # [{, }] # !cast<string>(minor) # [{)}]>;
+
+def IsAAPCS_ABI : LibcallPredicate<[{isAAPCS_ABI(TT, ABIName)}]>;
+
+// A numbered EABI (4/5) rather than GNU, i.e. not GNU/Musl AEABI.
+def IsEABIVersion
+  : LibcallPredicate<[{!TT.isTargetGNUAEABI() && !TT.isTargetMuslAEABI()}]>;
+
+// The format of the C `long double` type, which selects the type of
+// the `l`-suffixed libm/compiler-rt entries. At most one holds for a
+// module. Targets where long double is another type are not
+// implemented.
+def IsLongDoubleX87 : LibcallPredicate<[{LongDoubleFormat == LongDoubleFormat::X87DoubleExtended}]>;
+def IsLongDoubleF128 : LibcallPredicate<[{LongDoubleFormat == LongDoubleFormat::IEEEquad}]>;
+def IsLongDoublePPCF128 : LibcallPredicate<[{LongDoubleFormat == LongDoubleFormat::PPCDoubleDouble}]>;
+
+def IsAMDGPU : LibcallPredicate<[{TT.isAMDGPU()}]>;
+def IsARM : LibcallPredicate<[{TT.isARM()}]>;
+def IsThumb : LibcallPredicate<[{TT.isThumb()}]>;
+def IsAVR : LibcallPredicate<[{TT.getArch() == Triple::avr}]>;
+def IsDXIL : LibcallPredicate<[{TT.isDXIL()}]>;
+def IsHexagon : LibcallPredicate<[{TT.getArch() == Triple::hexagon}]>;
+def IsLanai : LibcallPredicate<[{TT.getArch() == Triple::lanai}]>;
+def IsMSP430 : LibcallPredicate<[{TT.getArch() == Triple::msp430}]>;
+def IsNVPTX : LibcallPredicate<[{TT.isNVPTX()}]>;
+
+def IsPPC : LibcallPredicate<[{TT.isPPC()}]>;
+def IsPPC32 : LibcallPredicate<[{TT.isPPC32()}]>;
+def IsPPC64 : LibcallPredicate<[{TT.isPPC64()}]>;
+def IsOSAIX : LibcallPredicate<[{TT.isOSAIX()}]>;
+
+def IsRISCV : LibcallPredicate<[{TT.isRISCV()}]>;
+def IsRISCV64 : LibcallPredicate<[{TT.isRISCV64()}]>;
+def IsSPARC : LibcallPredicate<[{TT.isSPARC()}]>;
+def IsSPARC32 : LibcallPredicate<[{TT.isSPARC32()}]>;
+def IsSPARC64 : LibcallPredicate<[{TT.isSPARC64()}]>;
+def IsSPIRV : LibcallPredicate<[{TT.isSPIRV()}]>;
+
+def IsX86_32 : LibcallPredicate<[{TT.getArch() == Triple::x86}]>;
+def IsX86_64 : LibcallPredicate<[{TT.getArch() == Triple::x86_64}]>;
+def IsX86 : LibcallPredicate<[{TT.isX86()}]>;
+def IsXCore : LibcallPredicate<[{TT.getArch() == Triple::xcore}]>;
+
+def IsOSzOS : LibcallPredicate<[{TT.isOSzOS()}]>;
+def IsSystemZ : LibcallPredicate<[{TT.isSystemZ()}]>;
+def IsWasm : LibcallPredicate<[{TT.isWasm()}]>;
+def IsOSEmscripten : LibcallPredicate<[{TT.isOSEmscripten()}]>;
+def IsArch64Bit : LibcallPredicate<[{TT.isArch64Bit()}]>;
+
+def IsOSCygMing : LibcallPredicate<[{TT.isOSCygMing()}]>;
+def IsOSWindowsOrUEFI : LibcallPredicate<[{TT.isOSWindowsOrUEFI()}]>;
+
+def IsMIPS : LibcallPredicate<[{TT.isMIPS()}]>;
+def IsLoongArch : LibcallPredicate<[{TT.isLoongArch()}]>;
+def IsVE : LibcallPredicate<[{TT.isVE()}]>;
+def IsBPF : LibcallPredicate<[{TT.isBPF()}]>;
+def IsArchCSKY : LibcallPredicate<[{TT.getArch() == Triple::csky}]>;
+def IsArchArc : LibcallPredicate<[{TT.getArch() == Triple::arc}]>;
+def IsArchM68k : LibcallPredicate<[{TT.getArch() == Triple::m68k}]>;
+def IsArchXtensa : LibcallPredicate<[{TT.getArch() == Triple::xtensa}]>;
+
 /// Libcall Predicates
-def isOSDarwin : RuntimeLibcallPredicate<"TT.isOSDarwin()">;
-def isOSOpenBSD : RuntimeLibcallPredicate<"TT.isOSOpenBSD()">;
-def isNotOSOpenBSD : RuntimeLibcallPredicate<"!TT.isOSOpenBSD()">;
-def isOSWindows : RuntimeLibcallPredicate<"TT.isOSWindows()">;
-def isNotOSWindows : RuntimeLibcallPredicate<"!TT.isOSWindows()">;
-def isNotOSLinux : RuntimeLibcallPredicate<[{!TT.isOSLinux()}]>;
-def isNotOSMSVCRT : RuntimeLibcallPredicate<"!TT.isOSMSVCRT()">;
-def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
-def isMacOSX : RuntimeLibcallPredicate<[{TT.isMacOSX()}]>;
+def isOSDarwin : RuntimeLibcallAvailability<(all_of IsOSDarwin)>;
+def isOSOpenBSD : RuntimeLibcallAvailability<(all_of IsOSOpenBSD)>;
+def isNotOSOpenBSD : RuntimeLibcallAvailability<(not IsOSOpenBSD)>;
+
+// The i128 helpers apply on 64-bit targets.
+def isArch64Bit : RuntimeLibcallAvailability<(all_of IsArch64Bit)>;
+
+// The x86_fp80 compiler-rt helpers apply on all x86, since x86_fp80 is a legal
+// IR type there regardless of the C long double format.
+def isX86 : RuntimeLibcallAvailability<(all_of IsX86)>;
+
+def isLongDoubleX87 : RuntimeLibcallAvailability<(all_of IsLongDoubleX87)>;
+def isLongDoubleF128 : RuntimeLibcallAvailability<(all_of IsLongDoubleF128)>;
+def isLongDoublePPCF128 : RuntimeLibcallAvailability<(all_of IsLongDoublePPCF128)>;
+
+// The l-suffixed sincos exists only when hasSinCos and the long double type
+// matches the width.
+def isLongDoubleX87AndHasSinCos : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleX87, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
+def isLongDoubleF128AndHasSinCos : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleF128, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
+
+def isOSWindows : RuntimeLibcallAvailability<(all_of IsOSWindows)>;
+def isNotOSWindows : RuntimeLibcallAvailability<(not IsOSWindows)>;
+def isNotOSLinux : RuntimeLibcallAvailability<(not IsOSLinux)>;
+def isNotOSMSVCRT : RuntimeLibcallAvailability<(not IsOSMSVCRT)>;
+def isPS : RuntimeLibcallAvailability<(all_of IsPS)>;
+def isMacOSX : RuntimeLibcallAvailability<(all_of IsMacOSX)>;
 def isNotOSWindowsOrIsCygwinMinGW
-  : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
-def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
-  [{TT.isWindowsMSVCEnvironment()}]>;
+  : RuntimeLibcallAvailability<(any_of (not IsOSWindows), IsOSCygMing)>;
 
-def isNotOSLinuxAndNotOSOpenBSD : RuntimeLibcallPredicate<
-  [{!TT.isOSLinux() && !TT.isOSOpenBSD()}]>;
+def isWindowsMSVCEnvironment
+  : RuntimeLibcallAvailability<(all_of IsWindowsMSVCEnv)>;
 
-def isNotOSAIXAndNotOSOpenBSD : RuntimeLibcallPredicate<
-  [{!TT.isOSAIX() && !TT.isOSOpenBSD()}]>;
+def isNotOSLinuxAndNotOSOpenBSD
+  : RuntimeLibcallAvailability<(all_of (not IsOSLinux), (not IsOSOpenBSD))>;
 
-def isNotPS : RuntimeLibcallPredicate<
-  [{!TT.isPS()}]>;
+def isNotOSAIXAndNotOSOpenBSD
+  : RuntimeLibcallAvailability<(all_of (not IsOSAIX), (not IsOSOpenBSD))>;
+
+def isNotPS : RuntimeLibcallAvailability<(not IsPS)>;
 
 // OpenBSD uses __guard_local. AIX uses __ssp_canary_word, MSVC/Windows
 // Itanium uses __security_cookie
-def hasStackChkFail : RuntimeLibcallPredicate<
-  [{ !TT.isOSOpenBSD() && !TT.isWindowsMSVCEnvironment() &&
-     !TT.isWindowsItaniumEnvironment()}]>;
+def hasStackChkFail : RuntimeLibcallAvailability<
+  (all_of (not IsOSOpenBSD), (not IsWindowsMSVCEnv),
+          (not IsWindowsItaniumEnv))>;
 
-def isWindowsMSVCOrItaniumEnvironment : RuntimeLibcallPredicate<
-  [{TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()}]>;
+def isWindowsMSVCOrItaniumEnvironment
+  : RuntimeLibcallAvailability<(any_of IsWindowsMSVCEnv, IsWindowsItaniumEnv)>;
 
-def isGNUEnvironment : RuntimeLibcallPredicate<"TT.isGNUEnvironment()">;
-def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
-def darwinHasExp10 : RuntimeLibcallPredicate<"darwinHasExp10(TT)">;
-def darwinHasMemsetPattern : RuntimeLibcallPredicate<[{darwinHasMemsetPattern(TT)}]>;
+def isAndroid : RuntimeLibcallAvailability<(all_of IsAndroid)>;
 
-def hasExp10 : RuntimeLibcallPredicate<[{!TT.isOSDarwin()}]>;
+def isGNUEnvironment : RuntimeLibcallAvailability<(all_of IsGNUEnv)>;
+def darwinHasSinCosStret : RuntimeLibcallAvailability<
+  (all_of IsOSDarwin, (not IsX86_32),
+          (any_of (all_of IsMacOSX, MacOSXVersionAtLeast<10, 9>, IsArch64Bit),
+                  (all_of IsIsiOS, OSVersionAtLeast<7, 0>),
+                  (all_of (not IsMacOSX), (not IsIsiOS))))>;
 
-def hasSinCos : RuntimeLibcallPredicate<"hasSinCos(TT)">;
+def darwinHasExp10 : RuntimeLibcallAvailability<
+  (any_of (all_of IsMacOSX, MacOSXVersionAtLeast<10, 9>),
+          (all_of IsIOS, OSVersionAtLeast<7, 0>),
+          IsDriverKit, IsTvOS, IsWatchOS, IsXROS, IsBridgeOS)>;
 
-// FIXME: Way to combine predicates
-def hasSinCos_f32_f64 : RuntimeLibcallPredicate<"hasSinCos_f32_f64(TT)">;
+// memset_pattern{4,8,16} is only available on iOS 3.0 and Mac OS X
+// 10.5 and later. All versions of watchOS support it.
+def darwinHasMemsetPattern : RuntimeLibcallAvailability<
+  (any_of (all_of IsMacOSX, MacOSXVersionAtLeast<10, 5>),
+          (all_of IsIsiOS, OSVersionAtLeast<3, 0>),
+          IsWatchOS)>;
 
-def ExceptionModelIsNotNone : RuntimeLibcallPredicate<
-  [{ExceptionModel != ExceptionHandling::None}]
->;
+def hasExp10 : RuntimeLibcallAvailability<(not IsOSDarwin)>;
 
-def ExceptionModelHasUnwindResume : RuntimeLibcallPredicate<
-  [{ExceptionModel != ExceptionHandling::None &&
-    ExceptionModel != ExceptionHandling::SjLj}]
->;
+def hasSinCos
+  : RuntimeLibcallAvailability<(any_of IsGNUEnv, IsOSFuchsia, IsAndroid)>;
 
-def ExceptionModelIsSjLj : RuntimeLibcallPredicate<
-  [{ExceptionModel == ExceptionHandling::SjLj}]
->;
+def hasSinCos_f32_f64
+  : RuntimeLibcallAvailability<(any_of IsGNUEnv, IsOSFuchsia, IsAndroid, IsPS)>;
+
+// The ppcf128 l-suffixed sincos exists only when hasSinCos and long double is
+// ppcf128.
+def isLongDoublePPCF128AndHasSinCos : RuntimeLibcallAvailability<
+  (all_of IsLongDoublePPCF128, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
+
+def IsExceptionModelNone
+  : LibcallPredicate<[{ExceptionModel == ExceptionHandling::None}]>;
+def IsExceptionModelSjLj
+  : LibcallPredicate<[{ExceptionModel == ExceptionHandling::SjLj}]>;
+
+def ExceptionModelIsNotNone
+  : RuntimeLibcallAvailability<(not IsExceptionModelNone)>;
+
+def ExceptionModelHasUnwindResume : RuntimeLibcallAvailability<
+  (all_of (not IsExceptionModelNone), (not IsExceptionModelSjLj))>;
+
+def ExceptionModelIsSjLj
+  : RuntimeLibcallAvailability<(all_of IsExceptionModelSjLj)>;
 
 //--------------------------------------------------------------------
 // Declare all kinds of used libcalls
@@ -110,92 +250,162 @@ foreach IntTy = ["I32", "I64", "I128"] in {
   def CTPOP_#IntTy : RuntimeLibcall;
 }
 
-foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
-  def ADD_#FPTy : RuntimeLibcall;
-  def FAST_ADD_#FPTy : RuntimeLibcall;
 
-  def SUB_#FPTy : RuntimeLibcall;
-  def FAST_SUB_#FPTy : RuntimeLibcall;
+class TypeSuffix<string S, FuncArgType Ty> {
+  string Suffix = S;
+  FuncArgType Type = Ty;
+}
+def F32 : TypeSuffix<"F32", Flt>;
+def F64 : TypeSuffix<"F64", Dbl>;
+def F80 : TypeSuffix<"F80", LDbl>;
+def F128 : TypeSuffix<"F128", LDbl>;
+def PPCF128 : TypeSuffix<"PPCF128", LDbl>;
 
-  def MUL_#FPTy : RuntimeLibcall;
-  def FAST_MUL_#FPTy : RuntimeLibcall;
+foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
+  def ADD_#FPTy.Suffix : RuntimeLibcall;
+  def FAST_ADD_#FPTy.Suffix : RuntimeLibcall;
 
-  def DIV_#FPTy : RuntimeLibcall;
-  def FAST_DIV_#FPTy : RuntimeLibcall;
+  def SUB_#FPTy.Suffix : RuntimeLibcall;
+  def FAST_SUB_#FPTy.Suffix : RuntimeLibcall;
 
-  def REM_#FPTy : RuntimeLibcall;
-  def FMA_#FPTy : RuntimeLibcall;
-  def POWI_#FPTy : RuntimeLibcall;
+  def MUL_#FPTy.Suffix : RuntimeLibcall;
+  def FAST_MUL_#FPTy.Suffix : RuntimeLibcall;
 
-  def SQRT_#FPTy : RuntimeLibcall;
-  def FAST_SQRT_#FPTy : RuntimeLibcall;
+  def DIV_#FPTy.Suffix : RuntimeLibcall;
+  def FAST_DIV_#FPTy.Suffix : RuntimeLibcall;
 
-  def CBRT_#FPTy : RuntimeLibcall;
-  def LOG_#FPTy : RuntimeLibcall;
-  def LOG_FINITE_#FPTy : RuntimeLibcall;
-  def LOG2_#FPTy : RuntimeLibcall;
-  def LOG2_FINITE_#FPTy : RuntimeLibcall;
-  def LOG10_#FPTy : RuntimeLibcall;
-  def LOG10_FINITE_#FPTy : RuntimeLibcall;
-  def EXP_#FPTy : RuntimeLibcall;
-  def EXP_FINITE_#FPTy : RuntimeLibcall;
-  def EXP2_#FPTy : RuntimeLibcall;
-  def EXP2_FINITE_#FPTy : RuntimeLibcall;
-  def EXP10_#FPTy : RuntimeLibcall;
-  def EXP10_FINITE_#FPTy : RuntimeLibcall;
-  def SIN_#FPTy : RuntimeLibcall;
-  def COS_#FPTy : RuntimeLibcall;
-  def TAN_#FPTy : RuntimeLibcall;
-  def SINH_#FPTy : RuntimeLibcall;
-  def COSH_#FPTy : RuntimeLibcall;
-  def TANH_#FPTy : RuntimeLibcall;
-  def ASIN_#FPTy : RuntimeLibcall;
-  def ACOS_#FPTy : RuntimeLibcall;
-  def ATAN_#FPTy : RuntimeLibcall;
-  def ATAN2_#FPTy : RuntimeLibcall;
-  def SINCOS_#FPTy : RuntimeLibcall;
-  def REMQUO_#FPTy : RuntimeLibcall;
-  def FDIM_#FPTy : RuntimeLibcall;
+  def REM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMA_#FPTy.Suffix : RuntimeLibcall;
+  def POWI_#FPTy.Suffix : RuntimeLibcall;
 
-  def CABS_#FPTy : RuntimeLibcall;
+  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def FAST_SQRT_#FPTy.Suffix : RuntimeLibcall;
+
+  def CBRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG2_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG10_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG10_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP2_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP10_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP10_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def SIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def COS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def TAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def SINH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def COSH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def TANH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ASIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ACOS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ATAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ATAN2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]>;
+  def REMQUO_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]>;
+  def FDIM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+
+  def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
 }
 
 foreach FPTy = [ "F32", "F64" ] in {
   def SINCOS_STRET_#FPTy : RuntimeLibcall;
 }
 
-foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
-  def POW_#FPTy : RuntimeLibcall;
-  def POW_FINITE_#FPTy : RuntimeLibcall;
-  def CEIL_#FPTy : RuntimeLibcall;
-  def TRUNC_#FPTy : RuntimeLibcall;
-  def RINT_#FPTy : RuntimeLibcall;
-  def NEARBYINT_#FPTy : RuntimeLibcall;
-  def ROUND_#FPTy : RuntimeLibcall;
-  def ROUNDEVEN_#FPTy : RuntimeLibcall;
-  def FLOOR_#FPTy : RuntimeLibcall;
-  def COPYSIGN_#FPTy : RuntimeLibcall;
-  def FMIN_#FPTy : RuntimeLibcall;
-  def FMAX_#FPTy : RuntimeLibcall;
-  def FMINIMUM_#FPTy : RuntimeLibcall;
-  def FMAXIMUM_#FPTy : RuntimeLibcall;
-  def FMINIMUM_NUM_#FPTy : RuntimeLibcall;
-  def FMAXIMUM_NUM_#FPTy : RuntimeLibcall;
-  def LROUND_#FPTy : RuntimeLibcall;
-  def LLROUND_#FPTy : RuntimeLibcall;
-  def LRINT_#FPTy : RuntimeLibcall;
-  def LLRINT_#FPTy : RuntimeLibcall;
-  def LDEXP_#FPTy : RuntimeLibcall;
-  def FREXP_#FPTy : RuntimeLibcall;
-  def SINCOSPI_#FPTy : RuntimeLibcall;
-  def MODF_#FPTy : RuntimeLibcall;
-  def NAN_#FPTy : RuntimeLibcall;
-  def NEXTTOWARD_#FPTy : RuntimeLibcall;
-  def REMAINDER_#FPTy : RuntimeLibcall;
-  def SCALBLN_#FPTy : RuntimeLibcall;
-  def SCALBN_#FPTy : RuntimeLibcall;
-  def TGAMMA_#FPTy : RuntimeLibcall;
+foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
+  def POW_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def POW_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def CEIL_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def TRUNC_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def RINT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def NEARBYINT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ROUND_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ROUNDEVEN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def FLOOR_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def COPYSIGN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMIN_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
+  def FMAX_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
+  def FMINIMUM_#FPTy.Suffix : RuntimeLibcall;
+  def FMAXIMUM_#FPTy.Suffix : RuntimeLibcall;
+  def FMINIMUM_NUM_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
+  def FMAXIMUM_NUM_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
+  def LROUND_#FPTy.Suffix : RuntimeLibcall;
+  def LLROUND_#FPTy.Suffix : RuntimeLibcall;
+  def LRINT_#FPTy.Suffix : RuntimeLibcall;
+  def LLRINT_#FPTy.Suffix : RuntimeLibcall;
+  def LDEXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
+  def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
+  def SINCOSPI_#FPTy.Suffix : RuntimeLibcall;
+  def MODF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
+  def NAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [Ptr]>;
+  def NEXTTOWARD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, LDbl]>;
+  def REMAINDER_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def SCALBLN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Long]>;
+  def SCALBN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
+  def TGAMMA_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
 }
+
+// Floating-point libcall families. Each generates the backend selector
+// RTLIB::get<base>(EVT) and, for families with an intrinsic, the IR-level
+// getLibcallForIntrinsic() mapping. See RuntimeLibcallFamily.
+defvar Vec4F32_2F64 = ["V4F32", "V2F64", "NXV4F32", "NXV2F64"];
+
+class StrictFP<string base> {
+  list<string> ret = [base, "experimental_constrained_"#base];
+}
+
+def : RuntimeLibcallFamily<"POWI", StrictFP<"powi">.ret>;
+def : RuntimeLibcallFamily<"POW", StrictFP<"pow">.ret, Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"CBRT", [], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"LDEXP", StrictFP<"ldexp">.ret>;
+def : RuntimeLibcallFamily<"FREXP", ["frexp"]>;
+def : RuntimeLibcallFamily<"SIN", StrictFP<"sin">.ret>;
+def : RuntimeLibcallFamily<"COS", StrictFP<"cos">.ret>;
+def : RuntimeLibcallFamily<"SINCOS", ["sincos"],
+    ["V4F32", "V8F32", "V16F32", "V2F64", "V4F64", "V8F64", "NXV4F32",
+     "NXV2F64"]>;
+def : RuntimeLibcallFamily<"SINCOSPI", ["sincospi"], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"SINCOS_STRET">;
+def : RuntimeLibcallFamily<"MODF", ["modf"], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"REM", [], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"LROUND", StrictFP<"lround">.ret>;
+def : RuntimeLibcallFamily<"LLROUND", StrictFP<"llround">.ret>;
+def : RuntimeLibcallFamily<"LRINT", StrictFP<"lrint">.ret>;
+def : RuntimeLibcallFamily<"LLRINT", StrictFP<"llrint">.ret>;
+
+def : RuntimeLibcallFamily<"SQRT", StrictFP<"sqrt">.ret>;
+def : RuntimeLibcallFamily<"FMA", StrictFP<"fma">.ret>;
+def : RuntimeLibcallFamily<"TAN", StrictFP<"tan">.ret>;
+def : RuntimeLibcallFamily<"ASIN", StrictFP<"asin">.ret>;
+def : RuntimeLibcallFamily<"ACOS", StrictFP<"acos">.ret>;
+def : RuntimeLibcallFamily<"ATAN", StrictFP<"atan">.ret>;
+def : RuntimeLibcallFamily<"ATAN2", StrictFP<"atan2">.ret>;
+def : RuntimeLibcallFamily<"SINH", StrictFP<"sinh">.ret>;
+def : RuntimeLibcallFamily<"COSH", StrictFP<"cosh">.ret>;
+def : RuntimeLibcallFamily<"TANH", StrictFP<"tanh">.ret>;
+def : RuntimeLibcallFamily<"LOG", StrictFP<"log">.ret>;
+def : RuntimeLibcallFamily<"LOG2", StrictFP<"log2">.ret>;
+def : RuntimeLibcallFamily<"LOG10", StrictFP<"log10">.ret>;
+def : RuntimeLibcallFamily<"EXP", StrictFP<"exp">.ret>;
+def : RuntimeLibcallFamily<"EXP2", StrictFP<"exp2">.ret>;
+def : RuntimeLibcallFamily<"EXP10", ["exp10"]>;
+def : RuntimeLibcallFamily<"TRUNC", StrictFP<"trunc">.ret>;
+def : RuntimeLibcallFamily<"FLOOR", StrictFP<"floor">.ret>;
+def : RuntimeLibcallFamily<"CEIL", StrictFP<"ceil">.ret>;
+def : RuntimeLibcallFamily<"RINT", StrictFP<"rint">.ret>;
+def : RuntimeLibcallFamily<"NEARBYINT", StrictFP<"nearbyint">.ret>;
+def : RuntimeLibcallFamily<"ROUND", StrictFP<"round">.ret>;
+def : RuntimeLibcallFamily<"ROUNDEVEN", StrictFP<"roundeven">.ret>;
+def : RuntimeLibcallFamily<"FMIN", StrictFP<"minnum">.ret>;
+def : RuntimeLibcallFamily<"FMAX", StrictFP<"maxnum">.ret>;
+def : RuntimeLibcallFamily<"FMINIMUM", StrictFP<"minimum">.ret>;
+def : RuntimeLibcallFamily<"FMAXIMUM", StrictFP<"maximum">.ret>;
+def : RuntimeLibcallFamily<"FMINIMUM_NUM", ["minimumnum"]>;
+def : RuntimeLibcallFamily<"FMAXIMUM_NUM", ["maximumnum"]>;
+def : RuntimeLibcallFamily<"COPYSIGN", ["copysign"]>;
 
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
 defvar F64VectorSuffixes = ["V2F64", "V4F64", "V8F64", "NXV2F64"];
@@ -215,7 +425,9 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def COSH_#S : RuntimeLibcall;
   def COSPI_#S : RuntimeLibcall;
   def ERFC_#S : RuntimeLibcall;
+  def ERFCINV_#S : RuntimeLibcall;
   def ERF_#S : RuntimeLibcall;
+  def ERFINV_#S : RuntimeLibcall;
   def EXP_#S : RuntimeLibcall;
   def EXP_FINITE_#S : RuntimeLibcall;
   def EXP10_#S : RuntimeLibcall;
@@ -227,12 +439,13 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def FMA_#S : RuntimeLibcall;
   def FMAX_#S : RuntimeLibcall;
   def FMIN_#S : RuntimeLibcall;
-  def FMOD_#S : RuntimeLibcall;
+  def REM_#S : RuntimeLibcall; // "fmod"
   def HYPOT_#S : RuntimeLibcall;
   def ILOGB_#S : RuntimeLibcall;
   def LDEXP_#S : RuntimeLibcall;
   def LGAMMA_#S : RuntimeLibcall;
   def LOG_#S : RuntimeLibcall;
+  def LOG_FINITE_#S : RuntimeLibcall;
   def LOG10_#S : RuntimeLibcall;
   def LOG1P_#S : RuntimeLibcall;
   def LOG2_#S : RuntimeLibcall;
@@ -240,6 +453,8 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def MODF_#S : RuntimeLibcall;
   def NEXTAFTER_#S : RuntimeLibcall;
   def POW_#S : RuntimeLibcall;
+  def POW_FINITE_#S : RuntimeLibcall;
+  def REMAINDER_#S : RuntimeLibcall;
   def SINCOS_#S : RuntimeLibcall;
   def SINCOSPI_#S : RuntimeLibcall;
   def SIN_#S : RuntimeLibcall;
@@ -248,12 +463,11 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def SQRT_#S : RuntimeLibcall;
   def TAN_#S : RuntimeLibcall;
   def TANH_#S : RuntimeLibcall;
+  def TANPI_#S : RuntimeLibcall;
   def TGAMMA_#S : RuntimeLibcall;
-}
-
-foreach S = F64VectorSuffixes in {
-  def LOG_FINITE_#S : RuntimeLibcall;
-  def POW_FINITE_#S : RuntimeLibcall;
+  def CDFNORM_#S : RuntimeLibcall;
+  def CDFNORMINV_#S : RuntimeLibcall;
+  def ROUND_#S : RuntimeLibcall;
 }
 
 def FEGETENV : RuntimeLibcall;
@@ -367,7 +581,13 @@ def UINTTOFP_I128_PPCF128 : RuntimeLibcall;
 def CONVERT_F128_PPCF128 : RuntimeLibcall;
 def CONVERT_PPCF128_F128 : RuntimeLibcall;
 
-// Comparisons
+// Comparisons.
+//
+// The O*_F* and UO_F* libcalls return a simple 0/1 boolean value.
+//
+// The FCMP3_PRED_*_F* libcalls return a three-way (-1/0/1) result, one symbol
+// per predicate. FCMP3_F* is a generic three-way compare for ABIs with one
+// symbol serving every predicate (e.g. MSP430's __mspabi_cmpd).
 foreach FPTy = ["F32", "F64", "F128", "PPCF128"] in {
   def OEQ_#FPTy : RuntimeLibcall;
   def UNE_#FPTy : RuntimeLibcall;
@@ -376,21 +596,30 @@ foreach FPTy = ["F32", "F64", "F128", "PPCF128"] in {
   def OLE_#FPTy : RuntimeLibcall;
   def OGT_#FPTy : RuntimeLibcall;
   def UO_#FPTy : RuntimeLibcall;
+
+  def FCMP3_PRED_OEQ_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_UNE_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_OGE_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_OLT_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_OLE_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_OGT_#FPTy : RuntimeLibcall;
+
+  def FCMP3_#FPTy : RuntimeLibcall;
 }
 
 // Memory
-def MEMCMP : RuntimeLibcall;
-def MEMCPY : RuntimeLibcall;
-def MEMCPY_CHK : RuntimeLibcall;
-def MEMMOVE : RuntimeLibcall;
-def MEMMOVE_CHK : RuntimeLibcall;
-def MEMSET : RuntimeLibcall;
-def MEMSET_CHK : RuntimeLibcall;
-def MALLOC : RuntimeLibcall;
-def CALLOC : RuntimeLibcall;
-def FREE : RuntimeLibcall;
-def BZERO : RuntimeLibcall;
-def STRLEN : RuntimeLibcall;
+def MEMCMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]>;
+def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def MEMCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]>;
+def MALLOC : RuntimeLibcall<Ptr, [SizeT]>;
+def CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
+def FREE : RuntimeLibcall<Void, [Ptr]>;
+def BZERO : RuntimeLibcall<Void, [Ptr, SizeT]>;
+def STRLEN : RuntimeLibcall<SizeT, [Ptr]>;
 
 // Element-wise unordered-atomic memory of different sizes
 foreach MemSize = [1, 2, 4, 8, 16] in {
@@ -403,7 +632,7 @@ foreach MemSize = [1, 2, 4, 8, 16] in {
 def UNWIND_RESUME : RuntimeLibcall;
 def UNWIND_REGISTER : RuntimeLibcall;
 def UNWIND_UNREGISTER : RuntimeLibcall;
-def UNWIND_CALL_PERSONALITY : RuntimeLibcall;
+def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall;
 def CXA_END_CLEANUP : RuntimeLibcall;
 
 // Note: there are two sets of atomics libcalls; see
@@ -431,10 +660,15 @@ defset list<RuntimeLibcall> LibCalls__sync = {
 defset list<RuntimeLibcall> LibCalls__atomic = {
   // Atomic `__atomic_*' libcalls.
   foreach MemSize = ["", "_1", "_2", "_4", "_8", "_16"] in {
-    def ATOMIC_LOAD#MemSize : RuntimeLibcall;
-    def ATOMIC_STORE#MemSize : RuntimeLibcall;
     def ATOMIC_EXCHANGE#MemSize : RuntimeLibcall;
     def ATOMIC_COMPARE_EXCHANGE#MemSize : RuntimeLibcall;
+  }
+
+  def ATOMIC_LOAD : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
+  def ATOMIC_STORE : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
+  foreach MemSize = ["_1", "_2", "_4", "_8", "_16"] in {
+    def ATOMIC_LOAD#MemSize : RuntimeLibcall;
+    def ATOMIC_STORE#MemSize : RuntimeLibcall;
   }
 
   foreach MemSize = [1, 2, 4, 8, 16] in {
@@ -480,6 +714,10 @@ def STACK_SMASH_HANDLER : RuntimeLibcall;
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall;
 
+// Really a global variable, not a function
+def SAFESTACK_UNSAFE_STACK_PTR : RuntimeLibcall;
+
+def STACK_PROBE : RuntimeLibcall;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall;
 
 // Deoptimization
@@ -487,6 +725,10 @@ def DEOPTIMIZE : RuntimeLibcall;
 
 // Return address
 def RETURN_ADDRESS : RuntimeLibcall;
+
+// GPU profiling
+def PROFILE_INSTRUMENT_GPU : RuntimeLibcall;
+def PROFILE_SAMPLING_GPU : RuntimeLibcall;
 
 // Clear cache
 def CLEAR_CACHE : RuntimeLibcall;
@@ -498,19 +740,26 @@ def MIPS16_RET_DF : RuntimeLibcall;
 def MIPS16_RET_SC : RuntimeLibcall;
 def MIPS16_RET_SF : RuntimeLibcall;
 
-multiclass LibmLongDoubleLibCall<string libcall_basename = !toupper(!substr(NAME, 0, !sub(!size(NAME), 1))),
-                                 string rtname = NAME> {
-
-
-  def NAME#"_f128"
+// Produce libcall impls for all float types. If provided, `rtbasename` should
+// contain a `<typesuffix>` that will be replaced with the `f`/`l`/`fX` suffix.
+// If not provided, it is appended to the def name.
+multiclass LibmLibcallImpls<string libcall_basename = !toupper(NAME),
+                            string rtbasename = !strconcat(NAME, "<typesuffix>")> {
+  def NAME#"f"
+      : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F32"),
+                           !subst("<typesuffix>", "f", rtbasename)>;
+  def NAME#""
+      : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F64"),
+                           !subst("<typesuffix>", "", rtbasename)>;
+  def NAME#"l_f128"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F128"),
-                           rtname>;
-  def NAME#"_ppcf128"
+                           !subst("<typesuffix>", "l", rtbasename)>;
+  def NAME#"l_ppcf128"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_PPCF128"),
-                           rtname>;
-  def NAME#"_f80"
+                           !subst("<typesuffix>", "l", rtbasename)>;
+  def NAME#"l_f80"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F80"),
-                           rtname>;
+                           !subst("<typesuffix>", "l", rtbasename)>;
 }
 
 // AArch64 calls
@@ -539,6 +788,10 @@ def AEABI_MEMSET8 : RuntimeLibcall;
 def AEABI_MEMCLR : RuntimeLibcall;
 def AEABI_MEMCLR4 : RuntimeLibcall;
 def AEABI_MEMCLR8 : RuntimeLibcall;
+def AEABI_UREAD4 : RuntimeLibcall;
+def AEABI_UREAD8 : RuntimeLibcall;
+def AEABI_UWRITE4 : RuntimeLibcall;
+def AEABI_UWRITE8 : RuntimeLibcall;
 
 // Hexagon calls
 def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
@@ -575,301 +828,302 @@ def OBJC_RETAIN_AUTORELEASE : RuntimeLibcall;
 def OBJC_SYNC_ENTER : RuntimeLibcall;
 def OBJC_SYNC_EXIT : RuntimeLibcall;
 
-def ABORT : RuntimeLibcall;
-def ABS : RuntimeLibcall;
-def ACCESS : RuntimeLibcall;
-def ALIGNED_ALLOC : RuntimeLibcall;
-def ATEXIT : RuntimeLibcall;
-def ATOF : RuntimeLibcall;
-def ATOI : RuntimeLibcall;
-def ATOL : RuntimeLibcall;
-def ATOLL : RuntimeLibcall;
-def BCMP : RuntimeLibcall;
-def BCOPY : RuntimeLibcall;
-def CHMOD : RuntimeLibcall;
-def CHOWN : RuntimeLibcall;
-def CLEARERR : RuntimeLibcall;
-def CLOSEDIR : RuntimeLibcall;
-def CTERMID : RuntimeLibcall;
-def CXA_ATEXIT : RuntimeLibcall;
-def CXA_GUARD_ABORT : RuntimeLibcall;
-def CXA_GUARD_ACQUIRE : RuntimeLibcall;
-def CXA_GUARD_RELEASE : RuntimeLibcall;
-def CXA_THROW : RuntimeLibcall;
-def DUNDER_ISOC99_SCANF : RuntimeLibcall;
-def DUNDER_ISOC99_SSCANF : RuntimeLibcall;
-def DUNDER_STRDUP : RuntimeLibcall;
-def DUNDER_STRNDUP : RuntimeLibcall;
-def DUNDER_STRTOK_R : RuntimeLibcall;
+def ABORT : RuntimeLibcall<Void, []>;
+def ABS : RuntimeLibcall<Int, [Int]>;
+def ACCESS : RuntimeLibcall<Int, [Ptr, Int]>;
+def ALIGNED_ALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
+def ATEXIT : RuntimeLibcall<Int, [Ptr]>;
+def ATOF : RuntimeLibcall<Dbl, [Ptr]>;
+def ATOI : RuntimeLibcall<Int, [Ptr]>;
+def ATOL : RuntimeLibcall<Long, [Ptr]>;
+def ATOLL : RuntimeLibcall<LLong, [Ptr]>;
+def BCMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]>;
+def BCOPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def CHMOD : RuntimeLibcall<Int, [Ptr, IntX]>;
+def CHOWN : RuntimeLibcall<Int, [Ptr, IntX, IntX]>;
+def CLEARERR : RuntimeLibcall<Void, [Ptr]>;
+def CLOSEDIR : RuntimeLibcall<Int, [Ptr]>;
+def CTERMID : RuntimeLibcall<Ptr, [Ptr]>;
+def CXA_ATEXIT : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
+def CXA_GUARD_ABORT : RuntimeLibcall<Void, [Ptr]>;
+def CXA_GUARD_ACQUIRE : RuntimeLibcall<Int, [Ptr]>;
+def CXA_GUARD_RELEASE : RuntimeLibcall<Void, [Ptr]>;
+def CXA_THROW : RuntimeLibcall<Void, [Ptr, Ptr, Ptr]>;
+def DUNDER_ISOC99_SCANF : RuntimeLibcall<Int, [Ptr, Ellip]>;
+def DUNDER_ISOC99_SSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def DUNDER_STRDUP : RuntimeLibcall<Ptr, [Ptr]>;
+def DUNDER_STRNDUP : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
+def DUNDER_STRTOK_R : RuntimeLibcall<Ptr, [Ptr, Ptr, Ptr]>;
 def ENUM_VARIANT : RuntimeLibcall;
-def EXECL : RuntimeLibcall;
-def EXECLE : RuntimeLibcall;
-def EXECLP : RuntimeLibcall;
-def EXECV : RuntimeLibcall;
-def EXECVE : RuntimeLibcall;
-def EXECVP : RuntimeLibcall;
-def EXECVPE : RuntimeLibcall;
-def EXIT : RuntimeLibcall;
-def FCLOSE : RuntimeLibcall;
-def FDOPEN : RuntimeLibcall;
-def FEOF : RuntimeLibcall;
-def FERROR : RuntimeLibcall;
-def FFLUSH : RuntimeLibcall;
-def FFS : RuntimeLibcall;
-def FFSL : RuntimeLibcall;
-def FFSLL : RuntimeLibcall;
-def FGETC : RuntimeLibcall;
-def FGETC_UNLOCKED : RuntimeLibcall;
-def FGETPOS : RuntimeLibcall;
-def FGETS : RuntimeLibcall;
-def FGETS_UNLOCKED : RuntimeLibcall;
-def FILENO : RuntimeLibcall;
-def FIPRINTF : RuntimeLibcall;
-def FLOCKFILE : RuntimeLibcall;
-def FLS : RuntimeLibcall;
-def FLSL : RuntimeLibcall;
-def FLSLL : RuntimeLibcall;
-def FOPEN : RuntimeLibcall;
-def FOPEN64 : RuntimeLibcall;
-def FORK : RuntimeLibcall;
-def FPRINTF : RuntimeLibcall;
-def FPUTC : RuntimeLibcall;
-def FPUTC_UNLOCKED : RuntimeLibcall;
-def FPUTS : RuntimeLibcall;
-def FPUTS_UNLOCKED : RuntimeLibcall;
-def FREAD : RuntimeLibcall;
-def FREAD_UNLOCKED : RuntimeLibcall;
-def FSCANF : RuntimeLibcall;
-def FSEEK : RuntimeLibcall;
-def FSEEKO : RuntimeLibcall;
-def FSEEKO64 : RuntimeLibcall;
-def FSETPOS : RuntimeLibcall;
-def FSTAT : RuntimeLibcall;
-def FSTAT64 : RuntimeLibcall;
-def FSTATVFS : RuntimeLibcall;
-def FSTATVFS64 : RuntimeLibcall;
-def FTELL : RuntimeLibcall;
-def FTELLO : RuntimeLibcall;
-def FTELLO64 : RuntimeLibcall;
-def FTRYLOCKFILE : RuntimeLibcall;
-def FUNLOCKFILE : RuntimeLibcall;
-def FWRITE : RuntimeLibcall;
-def FWRITE_UNLOCKED : RuntimeLibcall;
-def GETC : RuntimeLibcall;
-def GETCHAR : RuntimeLibcall;
-def GETCHAR_UNLOCKED : RuntimeLibcall;
-def GETC_UNLOCKED : RuntimeLibcall;
-def GETENV : RuntimeLibcall;
-def GETITIMER : RuntimeLibcall;
-def GETLOGIN_R : RuntimeLibcall;
-def GETPWNAM : RuntimeLibcall;
-def GETS : RuntimeLibcall;
-def GETTIMEOFDAY : RuntimeLibcall;
-def HTONL : RuntimeLibcall;
-def HTONS : RuntimeLibcall;
-def IPRINTF : RuntimeLibcall;
-def ISASCII : RuntimeLibcall;
-def ISDIGIT : RuntimeLibcall;
-def LABS : RuntimeLibcall;
-def LCHOWN : RuntimeLibcall;
-def LLABS : RuntimeLibcall;
-def LSTAT : RuntimeLibcall;
-def LSTAT64 : RuntimeLibcall;
-def MEMALIGN : RuntimeLibcall;
-def MEMCCPY : RuntimeLibcall;
-def MEMCCPY_CHK : RuntimeLibcall;
-def MEMCHR : RuntimeLibcall;
-def MEMPCPY : RuntimeLibcall;
-def MEMPCPY_CHK : RuntimeLibcall;
-def MEMRCHR : RuntimeLibcall;
-def MEMSET_PATTERN16 : RuntimeLibcall;
-def MEMSET_PATTERN4 : RuntimeLibcall;
-def MEMSET_PATTERN8 : RuntimeLibcall;
-def MKDIR : RuntimeLibcall;
-def MKTIME : RuntimeLibcall;
-def MSVC_DELETE_ARRAY_PTR32 : RuntimeLibcall;
-def MSVC_DELETE_ARRAY_PTR32_INT : RuntimeLibcall;
-def MSVC_DELETE_ARRAY_PTR32_NOTHROW : RuntimeLibcall;
-def MSVC_DELETE_ARRAY_PTR64 : RuntimeLibcall;
-def MSVC_DELETE_ARRAY_PTR64_LONGLONG : RuntimeLibcall;
-def MSVC_DELETE_ARRAY_PTR64_NOTHROW : RuntimeLibcall;
-def MSVC_DELETE_PTR32 : RuntimeLibcall;
-def MSVC_DELETE_PTR32_INT : RuntimeLibcall;
-def MSVC_DELETE_PTR32_NOTHROW : RuntimeLibcall;
-def MSVC_DELETE_PTR64 : RuntimeLibcall;
-def MSVC_DELETE_PTR64_LONGLONG : RuntimeLibcall;
-def MSVC_DELETE_PTR64_NOTHROW : RuntimeLibcall;
-def MSVC_NEW_ARRAY_INT : RuntimeLibcall;
-def MSVC_NEW_ARRAY_INT_NOTHROW : RuntimeLibcall;
-def MSVC_NEW_ARRAY_LONGLONG : RuntimeLibcall;
-def MSVC_NEW_ARRAY_LONGLONG_NOTHROW : RuntimeLibcall;
-def MSVC_NEW_INT : RuntimeLibcall;
-def MSVC_NEW_INT_NOTHROW : RuntimeLibcall;
-def MSVC_NEW_LONGLONG : RuntimeLibcall;
-def MSVC_NEW_LONGLONG_NOTHROW : RuntimeLibcall;
-def NTOHL : RuntimeLibcall;
-def NTOHS : RuntimeLibcall;
-def OPEN : RuntimeLibcall;
-def OPEN64 : RuntimeLibcall;
-def OPENDIR : RuntimeLibcall;
-def PCLOSE : RuntimeLibcall;
-def PERROR : RuntimeLibcall;
-def POPEN : RuntimeLibcall;
-def POSIX_MEMALIGN : RuntimeLibcall;
-def PREAD : RuntimeLibcall;
-def PRINTF : RuntimeLibcall;
-def PUTC : RuntimeLibcall;
-def PUTCHAR : RuntimeLibcall;
-def PUTCHAR_UNLOCKED : RuntimeLibcall;
-def PUTC_UNLOCKED : RuntimeLibcall;
-def PUTS : RuntimeLibcall;
-def PVALLOC : RuntimeLibcall;
-def PWRITE : RuntimeLibcall;
-def QSORT : RuntimeLibcall;
-def READ : RuntimeLibcall;
-def READLINK : RuntimeLibcall;
-def REALLOC : RuntimeLibcall;
-def REALLOCARRAY : RuntimeLibcall;
-def REALLOCF : RuntimeLibcall;
-def REALPATH : RuntimeLibcall;
-def REMOVE : RuntimeLibcall;
-def RENAME : RuntimeLibcall;
-def REWIND : RuntimeLibcall;
-def RMDIR : RuntimeLibcall;
-def SCANF : RuntimeLibcall;
-def SETBUF : RuntimeLibcall;
-def SETITIMER : RuntimeLibcall;
-def SETVBUF : RuntimeLibcall;
-def SIPRINTF : RuntimeLibcall;
-def SIZE_RETURNING_NEW : RuntimeLibcall;
-def SIZE_RETURNING_NEW_ALIGNED : RuntimeLibcall;
-def SIZE_RETURNING_NEW_ALIGNED_HOT_COLD : RuntimeLibcall;
-def SIZE_RETURNING_NEW_HOT_COLD : RuntimeLibcall;
-def SMALL_FPRINTF : RuntimeLibcall;
-def SMALL_PRINTF : RuntimeLibcall;
-def SMALL_SPRINTF : RuntimeLibcall;
-def SNPRINTF : RuntimeLibcall;
-def SNPRINTF_CHK : RuntimeLibcall;
-def SPRINTF : RuntimeLibcall;
-def SPRINTF_CHK : RuntimeLibcall;
-def SSCANF : RuntimeLibcall;
-def STAT : RuntimeLibcall;
-def STAT64 : RuntimeLibcall;
-def STATVFS : RuntimeLibcall;
-def STATVFS64 : RuntimeLibcall;
-def STPCPY : RuntimeLibcall;
-def STPCPY_CHK : RuntimeLibcall;
-def STPNCPY : RuntimeLibcall;
-def STPNCPY_CHK : RuntimeLibcall;
-def STRCASECMP : RuntimeLibcall;
-def STRCAT : RuntimeLibcall;
-def STRCAT_CHK : RuntimeLibcall;
-def STRCHR : RuntimeLibcall;
-def STRCMP : RuntimeLibcall;
-def STRCOLL : RuntimeLibcall;
-def STRCPY : RuntimeLibcall;
-def STRCPY_CHK : RuntimeLibcall;
-def STRCSPN : RuntimeLibcall;
-def STRDUP : RuntimeLibcall;
-def STRLCAT : RuntimeLibcall;
-def STRLCAT_CHK : RuntimeLibcall;
-def STRLCPY : RuntimeLibcall;
-def STRLCPY_CHK : RuntimeLibcall;
-def STRLEN_CHK : RuntimeLibcall;
-def STRNCASECMP : RuntimeLibcall;
-def STRNCAT : RuntimeLibcall;
-def STRNCAT_CHK : RuntimeLibcall;
-def STRNCMP : RuntimeLibcall;
-def STRNCPY : RuntimeLibcall;
-def STRNCPY_CHK : RuntimeLibcall;
-def STRNDUP : RuntimeLibcall;
-def STRNLEN : RuntimeLibcall;
-def STRPBRK : RuntimeLibcall;
-def STRRCHR : RuntimeLibcall;
-def STRSPN : RuntimeLibcall;
-def STRSTR : RuntimeLibcall;
-def STRTOD : RuntimeLibcall;
-def STRTOF : RuntimeLibcall;
-def STRTOK : RuntimeLibcall;
-def STRTOK_R : RuntimeLibcall;
-def STRTOL : RuntimeLibcall;
-def STRTOLD : RuntimeLibcall;
-def STRTOLL : RuntimeLibcall;
-def STRTOUL : RuntimeLibcall;
-def STRTOULL : RuntimeLibcall;
-def STRXFRM : RuntimeLibcall;
-def SYSTEM : RuntimeLibcall;
-def TERMINATE : RuntimeLibcall;
-def TIMES : RuntimeLibcall;
-def TMPFILE : RuntimeLibcall;
-def TMPFILE64 : RuntimeLibcall;
-def TOASCII : RuntimeLibcall;
-def UNAME : RuntimeLibcall;
-def UNDER_IO_GETC : RuntimeLibcall;
-def UNDER_IO_PUTC : RuntimeLibcall;
-def UNGETC : RuntimeLibcall;
-def UNLINK : RuntimeLibcall;
-def UNSETENV : RuntimeLibcall;
-def UTIME : RuntimeLibcall;
-def UTIMES : RuntimeLibcall;
-def VALLOC : RuntimeLibcall;
-def VEC_CALLOC : RuntimeLibcall;
-def VEC_FREE : RuntimeLibcall;
-def VEC_MALLOC : RuntimeLibcall;
-def VEC_REALLOC : RuntimeLibcall;
-def VFPRINTF : RuntimeLibcall;
-def VFSCANF : RuntimeLibcall;
-def VPRINTF : RuntimeLibcall;
-def VSCANF : RuntimeLibcall;
-def VSNPRINTF : RuntimeLibcall;
-def VSNPRINTF_CHK : RuntimeLibcall;
-def VSPRINTF : RuntimeLibcall;
-def VSPRINTF_CHK : RuntimeLibcall;
-def VSSCANF : RuntimeLibcall;
-def WCSLEN : RuntimeLibcall;
-def WRITE : RuntimeLibcall;
-def ZDAPV : RuntimeLibcall;
-def ZDAPVJ : RuntimeLibcall;
-def ZDAPVJST11ALIGN_VAL_T : RuntimeLibcall;
-def ZDAPVM : RuntimeLibcall;
-def ZDAPVMST11ALIGN_VAL_T : RuntimeLibcall;
-def ZDAPVRKST9NOTHROW_T : RuntimeLibcall;
-def ZDAPVST11ALIGN_VAL_T : RuntimeLibcall;
-def ZDAPVST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall;
-def ZDLPV : RuntimeLibcall;
-def ZDLPVJ : RuntimeLibcall;
-def ZDLPVJST11ALIGN_VAL_T : RuntimeLibcall;
-def ZDLPVM : RuntimeLibcall;
-def ZDLPVMST11ALIGN_VAL_T : RuntimeLibcall;
-def ZDLPVRKST9NOTHROW_T : RuntimeLibcall;
-def ZDLPVST11ALIGN_VAL_T : RuntimeLibcall;
-def ZDLPVST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall;
-def ZNAJ : RuntimeLibcall;
-def ZNAJRKST9NOTHROW_T : RuntimeLibcall;
-def ZNAJST11ALIGN_VAL_T : RuntimeLibcall;
-def ZNAJST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall;
-def ZNAM : RuntimeLibcall;
-def ZNAM12__HOT_COLD_T : RuntimeLibcall;
-def ZNAMRKST9NOTHROW_T : RuntimeLibcall;
-def ZNAMRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall;
-def ZNAMST11ALIGN_VAL_T : RuntimeLibcall;
-def ZNAMST11ALIGN_VAL_T12__HOT_COLD_T : RuntimeLibcall;
-def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall;
-def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall;
-def ZNWJ : RuntimeLibcall;
-def ZNWJRKST9NOTHROW_T : RuntimeLibcall;
-def ZNWJST11ALIGN_VAL_T : RuntimeLibcall;
-def ZNWJST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall;
-def ZNWM : RuntimeLibcall;
-def ZNWM12__HOT_COLD_T : RuntimeLibcall;
-def ZNWMRKST9NOTHROW_T : RuntimeLibcall;
-def ZNWMRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall;
-def ZNWMST11ALIGN_VAL_T : RuntimeLibcall;
-def ZNWMST11ALIGN_VAL_T12__HOT_COLD_T : RuntimeLibcall;
-def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall;
-def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall;
-def KMPC_ALLOC_SHARED : RuntimeLibcall;
-def KMPC_FREE_SHARED : RuntimeLibcall;
+def EXECL : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def EXECLE : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def EXECLP : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def EXECV : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def EXECVE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
+def EXECVP : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def EXECV_P : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
+def EXECVPE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
+def EXIT : RuntimeLibcall<Void, [Int]>;
+def FCLOSE : RuntimeLibcall<Int, [Ptr]>;
+def FDOPEN : RuntimeLibcall<Ptr, [Int, Ptr]>;
+def FEOF : RuntimeLibcall<Int, [Ptr]>;
+def FERROR : RuntimeLibcall<Int, [Ptr]>;
+def FFLUSH : RuntimeLibcall<Int, [Ptr]>;
+def FFS : RuntimeLibcall<Int, [Int]>;
+def FFSL : RuntimeLibcall<Int, [Long]>;
+def FFSLL : RuntimeLibcall<Int, [LLong]>;
+def FGETC : RuntimeLibcall<Int, [Ptr]>;
+def FGETC_UNLOCKED : RuntimeLibcall<Int, [Ptr]>;
+def FGETPOS : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def FGETS : RuntimeLibcall<Ptr, [Ptr, Int, Ptr]>;
+def FGETS_UNLOCKED : RuntimeLibcall<Ptr, [Ptr, Int, Ptr]>;
+def FILENO : RuntimeLibcall<Int, [Ptr]>;
+def FIPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def FLOCKFILE : RuntimeLibcall<Void, [Ptr]>;
+def FLS : RuntimeLibcall<Int, [Int]>;
+def FLSL : RuntimeLibcall<Int, [Long]>;
+def FLSLL : RuntimeLibcall<Int, [LLong]>;
+def FOPEN : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def FOPEN64 : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def FORK : RuntimeLibcall<Int, []>;
+def FPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def FPUTC : RuntimeLibcall<Int, [Int, Ptr]>;
+def FPUTC_UNLOCKED : RuntimeLibcall<Int, [Int, Ptr]>;
+def FPUTS : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def FPUTS_UNLOCKED : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def FREAD : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
+def FREAD_UNLOCKED : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
+def FSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def FSEEK : RuntimeLibcall<Int, [Ptr, Long, Int]>;
+def FSEEKO : RuntimeLibcall<Int, [Ptr, IntX, Int]>;
+def FSEEKO64 : RuntimeLibcall<Int, [Ptr, Int64, Int]>;
+def FSETPOS : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def FSTAT : RuntimeLibcall<Int, [Int, Ptr]>;
+def FSTAT64 : RuntimeLibcall<Int, [Int, Ptr]>;
+def FSTATVFS : RuntimeLibcall<Int, [Int, Ptr]>;
+def FSTATVFS64 : RuntimeLibcall<Int, [Int, Ptr]>;
+def FTELL : RuntimeLibcall<Long, [Ptr]>;
+def FTELLO : RuntimeLibcall<IntPlus, [Ptr]>;
+def FTELLO64 : RuntimeLibcall<Int64, [Ptr]>;
+def FTRYLOCKFILE : RuntimeLibcall<Int, [Ptr]>;
+def FUNLOCKFILE : RuntimeLibcall<Void, [Ptr]>;
+def FWRITE : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
+def FWRITE_UNLOCKED : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
+def GETC : RuntimeLibcall<Int, [Ptr]>;
+def GETCHAR : RuntimeLibcall<Int, []>;
+def GETCHAR_UNLOCKED : RuntimeLibcall<Int, []>;
+def GETC_UNLOCKED : RuntimeLibcall<Int, [Ptr]>;
+def GETENV : RuntimeLibcall<Ptr, [Ptr]>;
+def GETITIMER : RuntimeLibcall<Int, [Int, Ptr]>;
+def GETLOGIN_R : RuntimeLibcall<Int, [Ptr, SizeT]>;
+def GETPWNAM : RuntimeLibcall<Ptr, [Ptr]>;
+def GETS : RuntimeLibcall<Ptr, [Ptr]>;
+def GETTIMEOFDAY : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def HTONL : RuntimeLibcall<Int32, [Int32]>;
+def HTONS : RuntimeLibcall<Int16, [Int16]>;
+def IPRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
+def ISASCII : RuntimeLibcall<Int, [Int]>;
+def ISDIGIT : RuntimeLibcall<Int, [Int]>;
+def LABS : RuntimeLibcall<Long, [Same]>;
+def LCHOWN : RuntimeLibcall<Int, [Ptr, IntX, IntX]>;
+def LLABS : RuntimeLibcall<LLong, [LLong]>;
+def LSTAT : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def LSTAT64 : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def MEMALIGN : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
+def MEMCCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, Int, SizeT]>;
+def MEMCCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, Int, SizeT, SizeT]>;
+def MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def MEMPCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def MEMPCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def MEMRCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def MEMSET_PATTERN16 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def MEMSET_PATTERN4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def MEMSET_PATTERN8 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def MKDIR : RuntimeLibcall<Int, [Ptr, IntX]>;
+def MKTIME : RuntimeLibcall<IntPlus, [Ptr]>;
+def MSVC_DELETE_ARRAY_PTR32 : RuntimeLibcall<Void, [Ptr]>;
+def MSVC_DELETE_ARRAY_PTR32_INT : RuntimeLibcall<Void, [Ptr, Int]>;
+def MSVC_DELETE_ARRAY_PTR32_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
+def MSVC_DELETE_ARRAY_PTR64 : RuntimeLibcall<Void, [Ptr]>;
+def MSVC_DELETE_ARRAY_PTR64_LONGLONG : RuntimeLibcall<Void, [Ptr, LLong]>;
+def MSVC_DELETE_ARRAY_PTR64_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
+def MSVC_DELETE_PTR32 : RuntimeLibcall<Void, [Ptr]>;
+def MSVC_DELETE_PTR32_INT : RuntimeLibcall<Void, [Ptr, Int]>;
+def MSVC_DELETE_PTR32_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
+def MSVC_DELETE_PTR64 : RuntimeLibcall<Void, [Ptr]>;
+def MSVC_DELETE_PTR64_LONGLONG : RuntimeLibcall<Void, [Ptr, LLong]>;
+def MSVC_DELETE_PTR64_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
+def MSVC_NEW_ARRAY_INT : RuntimeLibcall<Ptr, [Int]>;
+def MSVC_NEW_ARRAY_INT_NOTHROW : RuntimeLibcall<Ptr, [Int, Ptr]>;
+def MSVC_NEW_ARRAY_LONGLONG : RuntimeLibcall<Ptr, [LLong]>;
+def MSVC_NEW_ARRAY_LONGLONG_NOTHROW : RuntimeLibcall<Ptr, [LLong, Ptr]>;
+def MSVC_NEW_INT : RuntimeLibcall<Ptr, [Int]>;
+def MSVC_NEW_INT_NOTHROW : RuntimeLibcall<Ptr, [Int, Ptr]>;
+def MSVC_NEW_LONGLONG : RuntimeLibcall<Ptr, [LLong]>;
+def MSVC_NEW_LONGLONG_NOTHROW : RuntimeLibcall<Ptr, [LLong, Ptr]>;
+def NTOHL : RuntimeLibcall<Int32, [Int32]>;
+def NTOHS : RuntimeLibcall<Int16, [Int16]>;
+def OPEN : RuntimeLibcall<Int, [Ptr, Int, Ellip]>;
+def OPEN64 : RuntimeLibcall<Int, [Ptr, Int, Ellip]>;
+def OPENDIR : RuntimeLibcall<Ptr, [Ptr]>;
+def PCLOSE : RuntimeLibcall<Int, [Ptr]>;
+def PERROR : RuntimeLibcall<Void, [Ptr]>;
+def POPEN : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def POSIX_MEMALIGN : RuntimeLibcall<Int, [Ptr, SizeT, SizeT]>;
+def PREAD : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT, IntPlus]>;
+def PRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
+def PUTC : RuntimeLibcall<Int, [Int, Ptr]>;
+def PUTCHAR : RuntimeLibcall<Int, [Int]>;
+def PUTCHAR_UNLOCKED : RuntimeLibcall<Int, [Int]>;
+def PUTC_UNLOCKED : RuntimeLibcall<Int, [Int, Ptr]>;
+def PUTS : RuntimeLibcall<Int, [Ptr]>;
+def PVALLOC : RuntimeLibcall<Ptr, [SizeT]>;
+def PWRITE : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT, IntPlus]>;
+def QSORT : RuntimeLibcall<Void, [Ptr, SizeT, SizeT, Ptr]>;
+def READ : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT]>;
+def READLINK : RuntimeLibcall<SSizeT, [Ptr, Ptr, SizeT]>;
+def REALLOC : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
+def REALLOCARRAY : RuntimeLibcall<Ptr, [Ptr, SizeT, SizeT]>;
+def REALLOCF : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
+def REALPATH : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def REMOVE : RuntimeLibcall<Int, [Ptr]>;
+def RENAME : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def REWIND : RuntimeLibcall<Void, [Ptr]>;
+def RMDIR : RuntimeLibcall<Int, [Ptr]>;
+def SCANF : RuntimeLibcall<Int, [Ptr, Ellip]>;
+def SETBUF : RuntimeLibcall<Void, [Ptr, Ptr]>;
+def SETITIMER : RuntimeLibcall<Int, [Int, Ptr, Ptr]>;
+def SETVBUF : RuntimeLibcall<Int, [Ptr, Ptr, Int, SizeT]>;
+def SIPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def SIZE_RETURNING_NEW : RuntimeLibcall<NoneType, []>;
+def SIZE_RETURNING_NEW_ALIGNED : RuntimeLibcall<NoneType, []>;
+def SIZE_RETURNING_NEW_ALIGNED_HOT_COLD : RuntimeLibcall<NoneType, []>;
+def SIZE_RETURNING_NEW_HOT_COLD : RuntimeLibcall<NoneType, []>;
+def SMALL_FPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def SMALL_PRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
+def SMALL_SPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def SNPRINTF : RuntimeLibcall<Int, [Ptr, SizeT, Ptr, Ellip]>;
+def SNPRINTF_CHK : RuntimeLibcall<Int, [Ptr, SizeT, Int, SizeT, Ptr, Ellip]>;
+def SPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def SPRINTF_CHK : RuntimeLibcall<Int, [Ptr, Int, SizeT, Ptr, Ellip]>;
+def SSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
+def STAT : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def STAT64 : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def STATVFS : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def STATVFS64 : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def STPCPY : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def STPCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def STPNCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def STPNCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def STRCASECMP : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def STRCAT : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def STRCAT_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def STRCHR : RuntimeLibcall<Ptr, [Ptr, Int]>;
+def STRCMP : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def STRCOLL : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def STRCPY : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def STRCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def STRCSPN : RuntimeLibcall<SizeT, [Ptr, Ptr]>;
+def STRDUP : RuntimeLibcall<Ptr, [Ptr]>;
+def STRLCAT : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]>;
+def STRLCAT_CHK : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT, SizeT]>;
+def STRLCPY : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]>;
+def STRLCPY_CHK : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT, SizeT]>;
+def STRLEN_CHK : RuntimeLibcall<SizeT, [Ptr, SizeT]>;
+def STRNCASECMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]>;
+def STRNCAT : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def STRNCAT_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def STRNCMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]>;
+def STRNCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def STRNCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def STRNDUP : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
+def STRNLEN : RuntimeLibcall<SizeT, [Ptr, SizeT]>;
+def STRPBRK : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def STRRCHR : RuntimeLibcall<Ptr, [Ptr, Int]>;
+def STRSPN : RuntimeLibcall<SizeT, [Ptr, Ptr]>;
+def STRSTR : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def STRTOD : RuntimeLibcall<Dbl, [Ptr, Ptr]>;
+def STRTOF : RuntimeLibcall<Flt, [Ptr, Ptr]>;
+def STRTOK : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
+def STRTOK_R : RuntimeLibcall<Ptr, [Ptr, Ptr, Ptr]>;
+def STRTOL : RuntimeLibcall<Long, [Ptr, Ptr, Int]>;
+def STRTOLD : RuntimeLibcall<LDbl, [Ptr, Ptr]>;
+def STRTOLL : RuntimeLibcall<LLong, [Ptr, Ptr, Int]>;
+def STRTOUL : RuntimeLibcall<Long, [Ptr, Ptr, Int]>;
+def STRTOULL : RuntimeLibcall<LLong, [Ptr, Ptr, Int]>;
+def STRXFRM : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]>;
+def SYSTEM : RuntimeLibcall<Int, [Ptr]>;
+def TERMINATE : RuntimeLibcall<Void, []>;
+def TIMES : RuntimeLibcall<IntPlus, [Ptr]>;
+def TMPFILE : RuntimeLibcall<Ptr, []>;
+def TMPFILE64 : RuntimeLibcall<Ptr, []>;
+def TOASCII : RuntimeLibcall<Int, [Int]>;
+def UNAME : RuntimeLibcall<Int, [Ptr]>;
+def UNDER_IO_GETC : RuntimeLibcall<Int, [Ptr]>;
+def UNDER_IO_PUTC : RuntimeLibcall<Int, [Int, Ptr]>;
+def UNGETC : RuntimeLibcall<Int, [Int, Ptr]>;
+def UNLINK : RuntimeLibcall<Int, [Ptr]>;
+def UNSETENV : RuntimeLibcall<Int, [Ptr]>;
+def UTIME : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def UTIMES : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def VALLOC : RuntimeLibcall<Ptr, [SizeT]>;
+def VEC_CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
+def VEC_FREE : RuntimeLibcall<Void, [Ptr]>;
+def VEC_MALLOC : RuntimeLibcall<Ptr, [SizeT]>;
+def VEC_REALLOC : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
+def VFPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
+def VFSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
+def VPRINTF : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def VSCANF : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def VSNPRINTF : RuntimeLibcall<Int, [Ptr, SizeT, Ptr, Ptr]>;
+def VSNPRINTF_CHK : RuntimeLibcall<Int, [Ptr, SizeT, Int, SizeT, Ptr, Ptr]>;
+def VSPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
+def VSPRINTF_CHK : RuntimeLibcall<Int, [Ptr, Int, SizeT, Ptr, Ptr]>;
+def VSSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
+def WCSLEN : RuntimeLibcall<SizeT, [Ptr]>;
+def WRITE : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT]>;
+def ZDAPV : RuntimeLibcall<Void, [Ptr]>;
+def ZDAPVJ : RuntimeLibcall<Void, [Ptr, Int]>;
+def ZDAPVJST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, Int, Int]>;
+def ZDAPVM : RuntimeLibcall<Void, [Ptr, Long]>;
+def ZDAPVMST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, Long, Long]>;
+def ZDAPVRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, Ptr]>;
+def ZDAPVST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, IntPlus]>;
+def ZDAPVST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, IntPlus, Ptr]>;
+def ZDLPV : RuntimeLibcall<Void, [Ptr]>;
+def ZDLPVJ : RuntimeLibcall<Void, [Ptr, Int]>;
+def ZDLPVJST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, Int, Int]>;
+def ZDLPVM : RuntimeLibcall<Void, [Ptr, Long]>;
+def ZDLPVMST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, Long, Long]>;
+def ZDLPVRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, Ptr]>;
+def ZDLPVST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, IntPlus]>;
+def ZDLPVST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, IntPlus, Ptr]>;
+def ZNAJ : RuntimeLibcall<Ptr, [Int]>;
+def ZNAJRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Int, Ptr]>;
+def ZNAJST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [Int, Int]>;
+def ZNAJST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Int, Int, Ptr]>;
+def ZNAM : RuntimeLibcall<Ptr, [Long]>;
+def ZNAM12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Bool]>;
+def ZNAMRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Long, Ptr]>;
+def ZNAMRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Ptr, Bool]>;
+def ZNAMST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [Long, Long]>;
+def ZNAMST11ALIGN_VAL_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Long, Bool]>;
+def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Long, Long, Ptr]>;
+def ZNAMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Long, Ptr, Bool]>;
+def ZNWJ : RuntimeLibcall<Ptr, [Int]>;
+def ZNWJRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Int, Ptr]>;
+def ZNWJST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [Int, Int]>;
+def ZNWJST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Int, Int, Ptr]>;
+def ZNWM : RuntimeLibcall<Ptr, [Long]>;
+def ZNWM12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Bool]>;
+def ZNWMRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Long, Ptr]>;
+def ZNWMRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Ptr, Bool]>;
+def ZNWMST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [Long, Long]>;
+def ZNWMST11ALIGN_VAL_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Long, Bool]>;
+def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Long, Long, Ptr]>;
+def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Long, Ptr, Bool]>;
+def KMPC_ALLOC_SHARED : RuntimeLibcall<Ptr, [SizeT]>;
+def KMPC_FREE_SHARED : RuntimeLibcall<Void, [Ptr, SizeT]>;
 
 //--------------------------------------------------------------------
 // Global variable references
@@ -882,15 +1136,14 @@ def KMPC_FREE_SHARED : RuntimeLibcall;
 def STACK_CHECK_GUARD : RuntimeLibcall;
 
 //--------------------------------------------------------------------
-// Define implementation default libcalls
+// Define the implementation libcalls making up runtime libraries.
 //--------------------------------------------------------------------
-
-let IsDefault = true in {
 
 //--------------------------------------------------------------------
 // compiler-rt / libgcc
 //--------------------------------------------------------------------
 
+defset list<RuntimeLibcallImpl> CompilerRtLibgccImpls = {
 def __ashlhi3 : RuntimeLibcallImpl<SHL_I16>;
 def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
 def __ashldi3 : RuntimeLibcallImpl<SHL_I64>;
@@ -1083,31 +1336,32 @@ def __floatuntitf_ppcf128 : RuntimeLibcallImpl<UINTTOFP_I128_PPCF128, "__floatun
 def __extendkftf2 : RuntimeLibcallImpl<CONVERT_F128_PPCF128>;
 def __trunctfkf2 : RuntimeLibcallImpl<CONVERT_PPCF128_F128>;
 
-// Comparison
-def __eqsf2 : RuntimeLibcallImpl<OEQ_F32>;
-def __eqdf2 : RuntimeLibcallImpl<OEQ_F64>;
-def __eqtf2 : RuntimeLibcallImpl<OEQ_F128>;
-def __gcc_qeq : RuntimeLibcallImpl<OEQ_PPCF128>;
-def __nesf2 : RuntimeLibcallImpl<UNE_F32>;
-def __nedf2 : RuntimeLibcallImpl<UNE_F64>;
-def __netf2 : RuntimeLibcallImpl<UNE_F128>;
-def __gcc_qne : RuntimeLibcallImpl<UNE_PPCF128>;
-def __gesf2 : RuntimeLibcallImpl<OGE_F32>;
-def __gedf2 : RuntimeLibcallImpl<OGE_F64>;
-def __getf2 : RuntimeLibcallImpl<OGE_F128>;
-def __gcc_qge : RuntimeLibcallImpl<OGE_PPCF128>;
-def __ltsf2 : RuntimeLibcallImpl<OLT_F32>;
-def __ltdf2 : RuntimeLibcallImpl<OLT_F64>;
-def __lttf2 : RuntimeLibcallImpl<OLT_F128>;
-def __gcc_qlt : RuntimeLibcallImpl<OLT_PPCF128>;
-def __lesf2 : RuntimeLibcallImpl<OLE_F32>;
-def __ledf2 : RuntimeLibcallImpl<OLE_F64>;
-def __letf2 : RuntimeLibcallImpl<OLE_F128>;
-def __gcc_qle : RuntimeLibcallImpl<OLE_PPCF128>;
-def __gtsf2 : RuntimeLibcallImpl<OGT_F32>;
-def __gtdf2 : RuntimeLibcallImpl<OGT_F64>;
-def __gttf2 : RuntimeLibcallImpl<OGT_F128>;
-def __gcc_qgt : RuntimeLibcallImpl<OGT_PPCF128>;
+// Comparison. These return a three-way -1/0/1 result (FCMP3_PRED_*_F*), not a
+// boolean.
+def __eqsf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F32>;
+def __eqdf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F64>;
+def __eqtf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F128>;
+def __gcc_qeq : RuntimeLibcallImpl<FCMP3_PRED_OEQ_PPCF128>;
+def __nesf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F32>;
+def __nedf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F64>;
+def __netf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F128>;
+def __gcc_qne : RuntimeLibcallImpl<FCMP3_PRED_UNE_PPCF128>;
+def __gesf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F32>;
+def __gedf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F64>;
+def __getf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F128>;
+def __gcc_qge : RuntimeLibcallImpl<FCMP3_PRED_OGE_PPCF128>;
+def __ltsf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F32>;
+def __ltdf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F64>;
+def __lttf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F128>;
+def __gcc_qlt : RuntimeLibcallImpl<FCMP3_PRED_OLT_PPCF128>;
+def __lesf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F32>;
+def __ledf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F64>;
+def __letf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F128>;
+def __gcc_qle : RuntimeLibcallImpl<FCMP3_PRED_OLE_PPCF128>;
+def __gtsf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F32>;
+def __gtdf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F64>;
+def __gttf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F128>;
+def __gcc_qgt : RuntimeLibcallImpl<FCMP3_PRED_OGT_PPCF128>;
 def __unordsf2 : RuntimeLibcallImpl<UO_F32>;
 def __unorddf2 : RuntimeLibcallImpl<UO_F64>;
 def __unordtf2 : RuntimeLibcallImpl<UO_F128>;
@@ -1135,265 +1389,105 @@ foreach lc = LibCalls__atomic in {
   def __#!tolower(!cast<string>(lc)) : RuntimeLibcallImpl<lc>;
 }
 
-// Safe stack.
-def __safestack_pointer_address : RuntimeLibcallImpl<SAFESTACK_POINTER_ADDRESS>;
-
 // Deoptimization
 def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
 
 // Clear cache
 def __clear_cache : RuntimeLibcallImpl<CLEAR_CACHE>;
+} // End defset CompilerRtLibgccImpls
 
 //--------------------------------------------------------------------
 // libm
 //--------------------------------------------------------------------
 
-def fmodf : RuntimeLibcallImpl<REM_F32>;
-def fmod : RuntimeLibcallImpl<REM_F64>;
-def fmodl_f128 : RuntimeLibcallImpl<REM_F128, "fmodl">;
-def fmodl_f80 : RuntimeLibcallImpl<REM_F80, "fmodl">;
-def fmodl_ppc128 : RuntimeLibcallImpl<REM_PPCF128, "fmodl">;
+/* Standard math.h routines */
 
-def fmaf : RuntimeLibcallImpl<FMA_F32>;
-def fma : RuntimeLibcallImpl<FMA_F64>;
-defm fmal : LibmLongDoubleLibCall;
+defset list<RuntimeLibcallImpl> LibmCoreImpls = {
+// Unless specified, all of these have been available since C99.
+defm acos : LibmLibcallImpls;
+defm asin : LibmLibcallImpls;
+defm atan : LibmLibcallImpls;
+defm atan2 : LibmLibcallImpls;
+defm cbrt : LibmLibcallImpls;
+defm ceil : LibmLibcallImpls;
+defm copysign : LibmLibcallImpls;
+defm cos : LibmLibcallImpls;
+defm cosh : LibmLibcallImpls;
+defm exp : LibmLibcallImpls;
+defm exp10 : LibmLibcallImpls; // C23
+defm exp2 : LibmLibcallImpls;
+defm fdim : LibmLibcallImpls;
+defm floor : LibmLibcallImpls;
+defm fma : LibmLibcallImpls;
+defm fmax : LibmLibcallImpls;
+defm fmaximum : LibmLibcallImpls; // C23
+defm fmaximum_num : LibmLibcallImpls; // C23
+defm fmin : LibmLibcallImpls;
+defm fminimum : LibmLibcallImpls; // C23
+defm fminimum_num : LibmLibcallImpls; // C23
+defm fmod : LibmLibcallImpls<"REM">;
+defm frexp : LibmLibcallImpls;
+defm ldexp : LibmLibcallImpls;
+defm llrint : LibmLibcallImpls;
+defm llround : LibmLibcallImpls;
+defm log : LibmLibcallImpls;
+defm log10 : LibmLibcallImpls;
+defm log2 : LibmLibcallImpls;
+defm lrint : LibmLibcallImpls;
+defm lround : LibmLibcallImpls;
+defm modf : LibmLibcallImpls;
+defm nan : LibmLibcallImpls;
+defm nearbyint : LibmLibcallImpls;
+defm nexttoward : LibmLibcallImpls;
+defm pow : LibmLibcallImpls;
+defm remainder : LibmLibcallImpls;
+defm remquo : LibmLibcallImpls;
+defm rint : LibmLibcallImpls;
+defm round : LibmLibcallImpls;
+defm roundeven : LibmLibcallImpls; // C23
+defm scalbln : LibmLibcallImpls;
+defm scalbn : LibmLibcallImpls;
+defm sin : LibmLibcallImpls;
+defm sinh : LibmLibcallImpls;
+defm sqrt : LibmLibcallImpls;
+defm tan : LibmLibcallImpls;
+defm tanh : LibmLibcallImpls;
+defm tgamma : LibmLibcallImpls;
+defm trunc : LibmLibcallImpls;
 
-def sqrtf : RuntimeLibcallImpl<SQRT_F32>;
-def sqrt : RuntimeLibcallImpl<SQRT_F64>;
-defm sqrtl : LibmLongDoubleLibCall;
+/* math.h extensions */
 
-def cbrtf : RuntimeLibcallImpl<CBRT_F32>;
-def cbrt : RuntimeLibcallImpl<CBRT_F64>;
-defm cbrtl : LibmLongDoubleLibCall;
+// Extensions for -ffinite-math-only
+defm __exp2_finite : LibmLibcallImpls<"EXP2_FINITE", "__exp2<typesuffix>_finite">;
+defm __exp_finite : LibmLibcallImpls<"EXP_FINITE", "__exp<typesuffix>_finite">;
+defm __log10_finite : LibmLibcallImpls<"LOG10_FINITE", "__log10<typesuffix>_finite">;
+defm __log2_finite : LibmLibcallImpls<"LOG2_FINITE", "__log2<typesuffix>_finite">;
+defm __log_finite : LibmLibcallImpls<"LOG_FINITE", "__log<typesuffix>_finite">;
+defm __pow_finite : LibmLibcallImpls<"POW_FINITE", "__pow<typesuffix>_finite">;
 
-def logf : RuntimeLibcallImpl<LOG_F32>;
-def log : RuntimeLibcallImpl<LOG_F64>;
-defm logl : LibmLongDoubleLibCall;
+/* Standard complex.h routines */
 
-def __logf_finite : RuntimeLibcallImpl<LOG_FINITE_F32>;
-def __log_finite : RuntimeLibcallImpl<LOG_FINITE_F64>;
-def __logl_finite_f80 : RuntimeLibcallImpl<LOG_FINITE_F80, "__logl_finite">;
-def __logl_finite_f128 : RuntimeLibcallImpl<LOG_FINITE_F128, "__logl_finite">;
-def __logl_finite_ppcf128 : RuntimeLibcallImpl<LOG_FINITE_PPCF128, "__logl_finite">;
+// Present since C99
+defm cabs : LibmLibcallImpls;
 
-def log2f : RuntimeLibcallImpl<LOG2_F32>;
-def log2 : RuntimeLibcallImpl<LOG2_F64>;
-defm log2l : LibmLongDoubleLibCall;
+/* Standard fenv.h routines */
 
-def __log2f_finite : RuntimeLibcallImpl<LOG2_FINITE_F32>;
-def __log2_finite : RuntimeLibcallImpl<LOG2_FINITE_F64>;
-def __log2l_finite_f80 : RuntimeLibcallImpl<LOG2_FINITE_F80, "__log2l_finite">;
-def __log2l_finite_f128 : RuntimeLibcallImpl<LOG2_FINITE_F128, "__log2l_finite">;
-def __log2l_finite_ppcf128 : RuntimeLibcallImpl<LOG2_FINITE_PPCF128, "__log2l_finite">;
-
-def log10f : RuntimeLibcallImpl<LOG10_F32>;
-def log10 : RuntimeLibcallImpl<LOG10_F64>;
-defm log10l : LibmLongDoubleLibCall;
-
-def __log10f_finite : RuntimeLibcallImpl<LOG10_FINITE_F32>;
-def __log10_finite : RuntimeLibcallImpl<LOG10_FINITE_F64>;
-def __log10l_finite_f80 : RuntimeLibcallImpl<LOG10_FINITE_F80, "__log10l_finite">;
-def __log10l_finite_f128 : RuntimeLibcallImpl<LOG10_FINITE_F128, "__log10l_finite">;
-def __log10l_finite_ppcf128 : RuntimeLibcallImpl<LOG10_FINITE_PPCF128, "__log10l_finite">;
-
-def expf : RuntimeLibcallImpl<EXP_F32>;
-def exp : RuntimeLibcallImpl<EXP_F64>;
-defm expl : LibmLongDoubleLibCall<"EXP">;
-
-def __expf_finite : RuntimeLibcallImpl<EXP_FINITE_F32>;
-def __exp_finite : RuntimeLibcallImpl<EXP_FINITE_F64>;
-def __expl_finite_f80 : RuntimeLibcallImpl<EXP_FINITE_F80, "__expl_finite">;
-def __expl_finite_f128 : RuntimeLibcallImpl<EXP_FINITE_F128, "__expl_finite">;
-def __expl_finite_ppcf128 : RuntimeLibcallImpl<EXP_FINITE_PPCF128, "__expl_finite">;
-
-def exp2f : RuntimeLibcallImpl<EXP2_F32>;
-def exp2 : RuntimeLibcallImpl<EXP2_F64>;
-defm exp2l : LibmLongDoubleLibCall<"EXP2">;
-
-def __exp2f_finite : RuntimeLibcallImpl<EXP2_FINITE_F32>;
-def __exp2_finite : RuntimeLibcallImpl<EXP2_FINITE_F64>;
-def __exp2l_finite_f80 : RuntimeLibcallImpl<EXP2_FINITE_F80, "__exp2l_finite">;
-def __exp2l_finite_f128 : RuntimeLibcallImpl<EXP2_FINITE_F128, "__exp2l_finite">;
-def __exp2l_finite_ppcf128 : RuntimeLibcallImpl<EXP2_FINITE_PPCF128, "__exp2l_finite">;
-
-def sinf : RuntimeLibcallImpl<SIN_F32>;
-def sin : RuntimeLibcallImpl<SIN_F64>;
-defm sinl : LibmLongDoubleLibCall;
-
-def cosf : RuntimeLibcallImpl<COS_F32>;
-def cos : RuntimeLibcallImpl<COS_F64>;
-defm cosl : LibmLongDoubleLibCall;
-
-def tanf : RuntimeLibcallImpl<TAN_F32>;
-def tan : RuntimeLibcallImpl<TAN_F64>;
-defm tanl : LibmLongDoubleLibCall;
-
-def sinhf : RuntimeLibcallImpl<SINH_F32>;
-def sinh : RuntimeLibcallImpl<SINH_F64>;
-defm sinhl : LibmLongDoubleLibCall;
-
-def coshf : RuntimeLibcallImpl<COSH_F32>;
-def cosh : RuntimeLibcallImpl<COSH_F64>;
-defm coshl : LibmLongDoubleLibCall;
-
-def tanhf : RuntimeLibcallImpl<TANH_F32>;
-def tanh : RuntimeLibcallImpl<TANH_F64>;
-defm tanhl : LibmLongDoubleLibCall;
-
-def asinf : RuntimeLibcallImpl<ASIN_F32>;
-def asin : RuntimeLibcallImpl<ASIN_F64>;
-defm asinl : LibmLongDoubleLibCall;
-
-def acosf : RuntimeLibcallImpl<ACOS_F32>;
-def acos : RuntimeLibcallImpl<ACOS_F64>;
-defm acosl : LibmLongDoubleLibCall;
-
-def atanf : RuntimeLibcallImpl<ATAN_F32>;
-def atan : RuntimeLibcallImpl<ATAN_F64>;
-defm atanl : LibmLongDoubleLibCall;
-
-def atan2f : RuntimeLibcallImpl<ATAN2_F32>;
-def atan2 : RuntimeLibcallImpl<ATAN2_F64>;
-defm atan2l : LibmLongDoubleLibCall;
-
-def powf : RuntimeLibcallImpl<POW_F32>;
-def pow : RuntimeLibcallImpl<POW_F64>;
-defm powl : LibmLongDoubleLibCall;
-
-def __powf_finite : RuntimeLibcallImpl<POW_FINITE_F32>;
-def __pow_finite : RuntimeLibcallImpl<POW_FINITE_F64>;
-def __powl_finite_f80 : RuntimeLibcallImpl<POW_FINITE_F80, "__powl_finite">;
-def __powl_finite_f128 : RuntimeLibcallImpl<POW_FINITE_F128, "__powl_finite">;
-def __powl_finite_ppcf128 : RuntimeLibcallImpl<POW_FINITE_PPCF128, "__powl_finite">;
-
-def ceilf : RuntimeLibcallImpl<CEIL_F32>;
-def ceil : RuntimeLibcallImpl<CEIL_F64>;
-defm ceill : LibmLongDoubleLibCall;
-
-def truncf : RuntimeLibcallImpl<TRUNC_F32>;
-def trunc : RuntimeLibcallImpl<TRUNC_F64>;
-defm truncl : LibmLongDoubleLibCall;
-
-def rintf : RuntimeLibcallImpl<RINT_F32>;
-def rint : RuntimeLibcallImpl<RINT_F64>;
-defm rintl : LibmLongDoubleLibCall;
-
-def nearbyintf : RuntimeLibcallImpl<NEARBYINT_F32>;
-def nearbyint : RuntimeLibcallImpl<NEARBYINT_F64>;
-defm nearbyintl : LibmLongDoubleLibCall;
-
-def roundf : RuntimeLibcallImpl<ROUND_F32>;
-def round : RuntimeLibcallImpl<ROUND_F64>;
-defm roundl : LibmLongDoubleLibCall;
-
-def roundevenf : RuntimeLibcallImpl<ROUNDEVEN_F32>;
-def roundeven : RuntimeLibcallImpl<ROUNDEVEN_F64>;
-defm roundevenl : LibmLongDoubleLibCall;
-
-def floorf : RuntimeLibcallImpl<FLOOR_F32>;
-def floor : RuntimeLibcallImpl<FLOOR_F64>;
-defm floorl : LibmLongDoubleLibCall;
-
-def copysignf : RuntimeLibcallImpl<COPYSIGN_F32>;
-def copysign : RuntimeLibcallImpl<COPYSIGN_F64>;
-defm copysignl : LibmLongDoubleLibCall;
-
-def fminf : RuntimeLibcallImpl<FMIN_F32>;
-def fmin : RuntimeLibcallImpl<FMIN_F64>;
-defm fminl : LibmLongDoubleLibCall;
-
-def fmaxf : RuntimeLibcallImpl<FMAX_F32>;
-def fmax : RuntimeLibcallImpl<FMAX_F64>;
-defm fmaxl : LibmLongDoubleLibCall;
-
-def fminimumf : RuntimeLibcallImpl<FMINIMUM_F32>;
-def fminimum : RuntimeLibcallImpl<FMINIMUM_F64>;
-defm fminimuml : LibmLongDoubleLibCall;
-
-def fmaximumf : RuntimeLibcallImpl<FMAXIMUM_F32>;
-def fmaximum : RuntimeLibcallImpl<FMAXIMUM_F64>;
-defm fmaximuml : LibmLongDoubleLibCall;
-
-def fminimum_numf : RuntimeLibcallImpl<FMINIMUM_NUM_F32>;
-def fminimum_num : RuntimeLibcallImpl<FMINIMUM_NUM_F64>;
-defm fminimum_numl : LibmLongDoubleLibCall;
-
-def fmaximum_numf : RuntimeLibcallImpl<FMAXIMUM_NUM_F32>;
-def fmaximum_num : RuntimeLibcallImpl<FMAXIMUM_NUM_F64>;
-defm fmaximum_numl : LibmLongDoubleLibCall;
-
-def lroundf : RuntimeLibcallImpl<LROUND_F32>;
-def lround : RuntimeLibcallImpl<LROUND_F64>;
-defm lroundl : LibmLongDoubleLibCall;
-
-def llroundf : RuntimeLibcallImpl<LLROUND_F32>;
-def llround : RuntimeLibcallImpl<LLROUND_F64>;
-defm llroundl : LibmLongDoubleLibCall;
-
-def lrintf : RuntimeLibcallImpl<LRINT_F32>;
-def lrint : RuntimeLibcallImpl<LRINT_F64>;
-defm lrintl : LibmLongDoubleLibCall;
-
-def llrintf : RuntimeLibcallImpl<LLRINT_F32>;
-def llrint : RuntimeLibcallImpl<LLRINT_F64>;
-defm llrintl : LibmLongDoubleLibCall;
-
-def ldexpf : RuntimeLibcallImpl<LDEXP_F32>;
-def ldexp : RuntimeLibcallImpl<LDEXP_F64>;
-defm ldexpl : LibmLongDoubleLibCall;
-
-def frexpf : RuntimeLibcallImpl<FREXP_F32>;
-def frexp : RuntimeLibcallImpl<FREXP_F64>;
-defm frexpl : LibmLongDoubleLibCall;
-
-def modff : RuntimeLibcallImpl<MODF_F32>;
-def modf : RuntimeLibcallImpl<MODF_F64>;
-defm modfl : LibmLongDoubleLibCall;
-
-def nanf : RuntimeLibcallImpl<NAN_F32>;
-def nan : RuntimeLibcallImpl<NAN_F64>;
-defm nanl : LibmLongDoubleLibCall;
-
-def nexttowardf : RuntimeLibcallImpl<NEXTTOWARD_F32>;
-def nexttoward : RuntimeLibcallImpl<NEXTTOWARD_F64>;
-defm nexttowardl : LibmLongDoubleLibCall;
-
-def remainderf : RuntimeLibcallImpl<REMAINDER_F32>;
-def remainder : RuntimeLibcallImpl<REMAINDER_F64>;
-defm remainderl : LibmLongDoubleLibCall;
-
-def remquof : RuntimeLibcallImpl<REMQUO_F32>;
-def remquo : RuntimeLibcallImpl<REMQUO_F64>;
-defm remquol : LibmLongDoubleLibCall;
-
-def fdimf : RuntimeLibcallImpl<FDIM_F32>;
-def fdim : RuntimeLibcallImpl<FDIM_F64>;
-defm fdiml : LibmLongDoubleLibCall;
-
-def scalbnf : RuntimeLibcallImpl<SCALBN_F32>;
-def scalbn : RuntimeLibcallImpl<SCALBN_F64>;
-defm scalbnl : LibmLongDoubleLibCall;
-
-def scalblnf : RuntimeLibcallImpl<SCALBLN_F32>;
-def scalbln : RuntimeLibcallImpl<SCALBLN_F64>;
-defm scalblnl : LibmLongDoubleLibCall;
-
-def tgammaf : RuntimeLibcallImpl<TGAMMA_F32>;
-def tgamma : RuntimeLibcallImpl<TGAMMA_F64>;
-defm tgammal : LibmLongDoubleLibCall;
-
-// Floating point environment
+// Present since C99
 def fegetenv : RuntimeLibcallImpl<FEGETENV>;
 def fesetenv : RuntimeLibcallImpl<FESETENV>;
 
-// Floating point control modes
+/* fenv.h extensions */
+
+// Floating point control modes, present in glibc
 def fegetmode : RuntimeLibcallImpl<FEGETMODE>;
 def fesetmode : RuntimeLibcallImpl<FESETMODE>;
+} // End defset LibmCoreImpls
 
 //--------------------------------------------------------------------
 // libc
 //--------------------------------------------------------------------
 
+defset list<RuntimeLibcallImpl> LibcCoreImpls = {
 // Memory
 def memcpy : RuntimeLibcallImpl<MEMCPY>;
 def memmove : RuntimeLibcallImpl<MEMMOVE>;
@@ -1408,14 +1502,7 @@ def malloc : RuntimeLibcallImpl<MALLOC>;
 // DSEPass can emit calloc if it finds a pair of malloc/memset
 def calloc : RuntimeLibcallImpl<CALLOC>;
 def free : RuntimeLibcallImpl<FREE>;
-
-} // End let IsDefault = true
-
-def exp10f : RuntimeLibcallImpl<EXP10_F32>;
-def exp10 : RuntimeLibcallImpl<EXP10_F64>;
-def exp10l_f80 : RuntimeLibcallImpl<EXP10_F80, "exp10l">;
-def exp10l_f128 : RuntimeLibcallImpl<EXP10_F128, "exp10l">;
-def exp10l_ppcf128 : RuntimeLibcallImpl<EXP10_PPCF128, "exp10l">;
+} // End defset LibcCoreImpls
 
 // Stack Protector Fail
 def __stack_chk_fail : RuntimeLibcallImpl<STACKPROTECTOR_CHECK_FAIL>;
@@ -1575,9 +1662,6 @@ def atol : RuntimeLibcallImpl<ATOL>;
 def atoll : RuntimeLibcallImpl<ATOLL>;
 def bcmp : RuntimeLibcallImpl<BCMP>;
 def bcopy : RuntimeLibcallImpl<BCOPY>;
-def cabs : RuntimeLibcallImpl<CABS_F64>;
-def cabsf : RuntimeLibcallImpl<CABS_F32>;
-defm cabsl : LibmLongDoubleLibCall;
 def chmod : RuntimeLibcallImpl<CHMOD>;
 def chown : RuntimeLibcallImpl<CHOWN>;
 def clearerr : RuntimeLibcallImpl<CLEARERR>;
@@ -1587,7 +1671,7 @@ def execl : RuntimeLibcallImpl<EXECL>;
 def execle : RuntimeLibcallImpl<EXECLE>;
 def execlp : RuntimeLibcallImpl<EXECLP>;
 def execv : RuntimeLibcallImpl<EXECV>;
-def execvP : RuntimeLibcallImpl<EXECVP>;
+def execvP : RuntimeLibcallImpl<EXECV_P>;
 def execve : RuntimeLibcallImpl<EXECVE>;
 def execvp : RuntimeLibcallImpl<EXECVP>;
 def execvpe : RuntimeLibcallImpl<EXECVPE>;
@@ -1798,24 +1882,19 @@ defset list<RuntimeLibcallImpl> CompilerRTOnlyInt128Libcalls = {
 
 // TODO: Define other custom names targets use to override
 
-def __exp10f : RuntimeLibcallImpl<EXP10_F32>;
-def __exp10 : RuntimeLibcallImpl<EXP10_F64>;
-
-def __sincosf_stret : RuntimeLibcallImpl<SINCOS_STRET_F32>;
-def __sincos_stret : RuntimeLibcallImpl<SINCOS_STRET_F64>;
-
-def sincosf : RuntimeLibcallImpl<SINCOS_F32>;
-def sincos : RuntimeLibcallImpl<SINCOS_F64>;
-defm sincosl : LibmLongDoubleLibCall;
+// Not specified as of C23 but present in numerous implementations
+defm sincos : LibmLibcallImpls;
 
 // Exists in sun math library
-def sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
-def sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
-defm sincospil : LibmLongDoubleLibCall;
+defm sincospi : LibmLibcallImpls;
 
-// Exists on macOS
-def __sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
+// Exists on Apple targets
+def __exp10 : RuntimeLibcallImpl<EXP10_F64>;
+def __exp10f : RuntimeLibcallImpl<EXP10_F32>;
+def __sincos_stret : RuntimeLibcallImpl<SINCOS_STRET_F64>;
+def __sincosf_stret : RuntimeLibcallImpl<SINCOS_STRET_F32>;
 def __sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
+def __sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
 
 def bzero : RuntimeLibcallImpl<BZERO>;
 def __bzero : RuntimeLibcallImpl<BZERO>;
@@ -1832,17 +1911,28 @@ defset list<RuntimeLibcallImpl> SjLjExceptionHandlingLibcalls = {
   def _Unwind_SjLj_Unregister : RuntimeLibcallImpl<UNWIND_UNREGISTER>;
 }
 
-// Only used on wasm?
-def _Unwind_CallPersonality : RuntimeLibcallImpl<UNWIND_CALL_PERSONALITY>;
+// Only used on wasm
+def _Unwind_GetWasmLPadContext : RuntimeLibcallImpl<UNWIND_GET_WASM_LPAD_CONTEXT>;
 
 // Used on OpenBSD
 def __stack_smash_handler : RuntimeLibcallImpl<STACK_SMASH_HANDLER>;
 
 def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 
+def _chkstk : RuntimeLibcallImpl<STACK_PROBE>;
+def _alloca : RuntimeLibcallImpl<STACK_PROBE>;
+
+def __chkstk : RuntimeLibcallImpl<STACK_PROBE>;
+def ___chkstk_ms : RuntimeLibcallImpl<STACK_PROBE>;
+def __chkstk_arm64ec : RuntimeLibcallImpl<STACK_PROBE, "#__chkstk_arm64ec">;
+
 def __security_check_cookie : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE>;
 def __security_check_cookie_arm64ec : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE,
   "#__security_check_cookie_arm64ec">;
+
+// Safe stack.
+def __safestack_pointer_address : RuntimeLibcallImpl<SAFESTACK_POINTER_ADDRESS>;
+def __safestack_unsafe_stack_ptr : RuntimeLibcallImpl<SAFESTACK_UNSAFE_STACK_PTR>;
 
 //===----------------------------------------------------------------------===//
 // F128 libm Runtime Libcalls
@@ -1932,45 +2022,26 @@ defvar ExceptionModelCalls = (add
                ExceptionModelIsSjLj>
 );
 
-// FIXME: Should move to explicit opt-in to different sets of libcalls
-// instead of trying to remove from a default set. We have
-// unreasonable defaults like reporting f80 calls on most targets when
-// they are relevant to only one.
+// The unwinder runtime, libunwind or libgcc_eh. Its members are selected by the
+// module's exception model.
+def ExceptionRuntime : LibcallLibrary<"unwind", ExceptionModelCalls>;
 
-defvar AllDefaultRuntimeLibcallImpls
-  = !filter(entry, !instances<RuntimeLibcallImpl>(), entry.IsDefault);
-
-defvar DefaultRuntimeLibcallImpls_f80 =
-    !filter(entry, AllDefaultRuntimeLibcallImpls,
+// Width-specific slices of the compiler-rt/libgcc body. The core definition
+// contains the integer, f32, f64 and f128 helpers, while the f80 and ppcf128
+// slices are added separately.
+defvar CompilerRtLibgccImpls_f80 =
+    !filter(entry, CompilerRtLibgccImpls,
             !match(!cast<string>(entry.Provides), "F80"));
 
-defvar DefaultRuntimeLibcallImpls_ppcf128 =
-    !filter(entry, AllDefaultRuntimeLibcallImpls,
+defvar CompilerRtLibgccImpls_ppcf128 =
+    !filter(entry, CompilerRtLibgccImpls,
             !match(!cast<string>(entry.Provides), "PPCF128"));
 
-defvar DefaultRuntimeLibcallImpls_f128 =
-    !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry.Provides), "_F128"));
+defvar CompilerRtLibgccImpls_core =
+    !listremove(
+      !listremove(CompilerRtLibgccImpls, CompilerRtLibgccImpls_f80),
+                  CompilerRtLibgccImpls_ppcf128);
 
-// FIXME: Ideally we would just use dags everywhere, but for the
-// arm64ec case we need iterable lists so we can add the # prefix
-defvar DefaultRuntimeLibcallImplsBaseList =
-!listremove(
-  !listremove(
-    !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
-                DefaultRuntimeLibcallImpls_f80),
-                DefaultRuntimeLibcallImpls_ppcf128);
-
-defvar DefaultRuntimeLibcallImpls =
-  (add DefaultRuntimeLibcallImplsBaseList,
-       ExceptionModelCalls);
-
-/// Default set of libcall impls for 32-bit architectures.
-defvar DefaultLibcallImpls32 = (add DefaultRuntimeLibcallImpls);
-
-/// Default set of libcall impls for 64-bit architectures.
-defvar DefaultLibcallImpls64 = (add DefaultRuntimeLibcallImpls,
-                                    Int128RTLibcalls);
 
 // TODO: Guessing sincospi added at same time as sincos_stret
 defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret,
@@ -1991,45 +2062,24 @@ defvar SecurityCheckCookieIfWinMSVC =
     LibcallImpls<(add __security_check_cookie, __security_cookie),
                  isWindowsMSVCOrItaniumEnvironment>;
 
-defvar LibmHasSinCosF32 = LibcallImpls<(add sincosf), hasSinCos>;
-defvar LibmHasSinCosF64 =  LibcallImpls<(add sincos), hasSinCos>;
-defvar LibmHasSinCosF80 = LibcallImpls<(add sincosl_f80), hasSinCos>;
-defvar LibmHasSinCosF128 = LibcallImpls<(add sincosl_f128), hasSinCos>;
-defvar LibmHasSinCosPPCF128 = LibcallImpls<(add sincosl_ppcf128), hasSinCos>;
+// The Windows CRT security cookie and stack probes are part of libc.
+def isWindowsAArch64NotArm64EC : RuntimeLibcallAvailability<
+  (all_of IsOSWindows, IsAArch64, (not IsWindowsArm64EC))>;
+def isWindowsARM : RuntimeLibcallAvailability<
+  (all_of IsOSWindows, (any_of IsARM, IsThumb))>;
+def WindowsCRTLibc : LibcallLibrary<"libc", (add SecurityCheckCookieIfWinMSVC)>;
+def WindowsCRTLibcAArch64 : LibcallLibrary<"libc",
+  (add __chkstk), isWindowsAArch64NotArm64EC>;
+def WindowsCRTLibcARM : LibcallLibrary<"libc", (add __chkstk), isWindowsARM>;
+
+defvar LibmHasSincoslF128 =
+    LibcallImpls<(add sincosl_f128), isLongDoubleF128AndHasSinCos>;
 
 defvar LibmHasExp10F32 = LibcallImpls<(add exp10f), hasExp10>;
 defvar LibmHasExp10F64 = LibcallImpls<(add exp10), hasExp10>;
-defvar LibmHasExp10F80 = LibcallImpls<(add exp10l_f80), hasExp10>;
-defvar LibmHasExp10F128 = LibcallImpls<(add exp10l_f128), hasExp10>;
-defvar LibmHasExp10PPCF128 = LibcallImpls<(add exp10l_ppcf128), hasExp10>;
-
-defvar DefaultLibmExp10 = [
-  LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F128
-];
-
-
-defvar WindowsMathRemovals = [
-  ldexpf, ldexpl_f80, ldexpl_f128, ldexpl_ppcf128,
-  frexpf, frexpl_f80, frexpl_f128, frexpl_ppcf128
-];
-
-defvar MostPowI = !listremove(PowiLibcallImpls, [__powitf2_f128, __powitf2_ppc128]);
-defvar WindowsExclusions = !listconcat(WindowsMathRemovals, MostPowI);
-
-// Targets which support windows should start with these as a base and
-// add in calls for other OSes
-defvar WinDefaultLibcallImplsBaseList =
-  !listremove(DefaultRuntimeLibcallImplsBaseList,
-              WindowsExclusions);
-
-defvar WinDefaultLibcallImpls = (add WinDefaultLibcallImplsBaseList,
-                                     ExceptionModelCalls);
 
 defvar LibmHasFrexpF32 = LibcallImpls<(add frexpf), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF32 = LibcallImpls<(add ldexpf), isNotOSWindowsOrIsCygwinMinGW>;
-
-defvar LibmHasFrexpF80 = LibcallImpls<(add frexpl_f80), isNotOSWindowsOrIsCygwinMinGW>;
-defvar LibmHasLdexpF80 = LibcallImpls<(add ldexpl_f80), isNotOSWindowsOrIsCygwinMinGW>;
 
 defvar LibmHasFrexpF128 = LibcallImpls<(add frexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
@@ -2042,6 +2092,143 @@ defvar has___guard_local = LibcallImpls<(add __guard_local), isOSOpenBSD>;
 
 defvar DefaultStackProtector = (add has__stack_chk_fail, has__stack_chk_guard,
     has__stack_smash_handler, has___guard_local);
+
+// The SafeStack runtime globals live in compiler-rt and apply only to targets
+// supporting the SafeStack pass. __safestack_pointer_address is further limited
+// to Android.
+def isSafeStackArch : RuntimeLibcallAvailability<(any_of
+    IsAArch64, IsARM, IsThumb, IsHexagon, IsRISCV, IsSPARC, IsX86,
+    IsMIPS, IsLoongArch, IsVE, IsBPF, IsArchCSKY, IsArchArc, IsArchM68k,
+    IsArchXtensa, (all_of IsSystemZ, (not IsOSzOS)))>;
+
+def isSafeStackPointerAddress : RuntimeLibcallAvailability<
+    (all_of (any_of IsAArch64, IsARM, IsThumb, IsX86), IsAndroid)>;
+
+def SafeStackRuntime : LibcallLibrary<"compiler-rt",
+  (add __safestack_unsafe_stack_ptr,
+       LibcallImpls<(add __safestack_pointer_address),
+                    isSafeStackPointerAddress>), isSafeStackArch>;
+
+//===----------------------------------------------------------------------===//
+// libm provider library
+//===----------------------------------------------------------------------===//
+
+// Width-specific slices of the libm body. The core holds the f32 and f64
+// functions, as well as the complex and fenv entries.
+defvar LibmCoreImpls_f80 =
+    !filter(entry, LibmCoreImpls, !match(!cast<string>(entry.Provides), "F80"));
+defvar LibmCoreImpls_ppcf128 =
+    !filter(entry, LibmCoreImpls,
+            !match(!cast<string>(entry.Provides), "PPCF128"));
+defvar LibmCoreImpls_f128 =
+    !filter(entry, LibmCoreImpls, !match(!cast<string>(entry.Provides), "_F128"));
+defvar LibmCoreImpls_core =
+    !listremove(
+      !listremove(
+        !listremove(LibmCoreImpls, LibmCoreImpls_f80),
+                    LibmCoreImpls_ppcf128),
+                    LibmCoreImpls_f128);
+
+// The Windows math runtime lacks frexp/ldexp except for f64, so the other widths
+// are pulled out of the slices and re-added under a Windows guard.
+defvar LibmFrexpLdexpF32 = [frexpf, ldexpf];
+defvar LibmFrexpLdexpF80 = [frexpl_f80, ldexpl_f80];
+defvar LibmFrexpLdexpF128 = [frexpl_f128, ldexpl_f128];
+defvar LibmFrexpLdexpPPCF128 = [frexpl_ppcf128, ldexpl_ppcf128];
+
+// exp10 is absent from the Darwin math runtime, which uses __exp10 instead.
+defvar LibmExp10F32F64 = [exp10f, exp10];
+defvar LibmExp10F80 = [exp10l_f80];
+defvar LibmExp10F128 = [exp10l_f128];
+defvar LibmExp10PPCF128 = [exp10l_ppcf128];
+
+defvar LibmCoreImpls_core_noFrexpLdexp =
+    !listremove(!listremove(LibmCoreImpls_core, LibmFrexpLdexpF32),
+                LibmExp10F32F64);
+defvar LibmCoreImpls_f80_noFrexpLdexp =
+    !listremove(!listremove(LibmCoreImpls_f80, LibmFrexpLdexpF80), LibmExp10F80);
+defvar LibmCoreImpls_f128_noFrexpLdexp =
+    !listremove(!listremove(LibmCoreImpls_f128, LibmFrexpLdexpF128),
+                LibmExp10F128);
+defvar LibmCoreImpls_ppcf128_noFrexpLdexp =
+    !listremove(!listremove(LibmCoreImpls_ppcf128, LibmFrexpLdexpPPCF128),
+                LibmExp10PPCF128);
+
+def isLongDoubleX87NotWinMath : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleX87, (any_of (not IsOSWindows), IsOSCygMing))>;
+def isLongDoubleF128NotWinMath : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleF128, (any_of (not IsOSWindows), IsOSCygMing))>;
+def isLongDoublePPCF128NotWinMath : RuntimeLibcallAvailability<
+  (all_of IsLongDoublePPCF128, (any_of (not IsOSWindows), IsOSCygMing))>;
+
+def isLongDoubleX87NotDarwin : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleX87, (not IsOSDarwin))>;
+def isLongDoubleF128NotDarwin : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleF128, (not IsOSDarwin))>;
+def isLongDoublePPCF128NotDarwin : RuntimeLibcallAvailability<
+  (all_of IsLongDoublePPCF128, (not IsOSDarwin))>;
+
+// The libm body shared by every libm variant. The `l`-suffixed functions are
+// selected by the module's long double format.
+defvar LibmImpls =
+  (add LibmCoreImpls_core_noFrexpLdexp,
+       LibcallImpls<(add LibmFrexpLdexpF32), isNotOSWindowsOrIsCygwinMinGW>,
+       LibcallImpls<(add LibmExp10F32F64), hasExp10>,
+       LibcallImpls<(add LibmCoreImpls_f80_noFrexpLdexp), isLongDoubleX87>,
+       LibcallImpls<(add LibmFrexpLdexpF80), isLongDoubleX87NotWinMath>,
+       LibcallImpls<(add LibmExp10F80), isLongDoubleX87NotDarwin>,
+       LibcallImpls<(add LibmCoreImpls_f128_noFrexpLdexp), isLongDoubleF128>,
+       LibcallImpls<(add LibmFrexpLdexpF128), isLongDoubleF128NotWinMath>,
+       LibcallImpls<(add LibmExp10F128), isLongDoubleF128NotDarwin>,
+       LibcallImpls<(add LibmCoreImpls_ppcf128_noFrexpLdexp), isLongDoublePPCF128>,
+       LibcallImpls<(add LibmFrexpLdexpPPCF128), isLongDoublePPCF128NotWinMath>,
+       LibcallImpls<(add LibmExp10PPCF128), isLongDoublePPCF128NotDarwin>,
+       LibcallImpls<(add sincosf, sincos), hasSinCos>,
+       LibcallImpls<(add sincosl_f80), isLongDoubleX87AndHasSinCos>,
+       LibcallImpls<(add sincosl_f128), isLongDoubleF128AndHasSinCos>,
+       LibcallImpls<(add sincosl_ppcf128), isLongDoublePPCF128AndHasSinCos>);
+
+def Libm : LibcallLibrary<"libm", LibmImpls>;
+
+//===----------------------------------------------------------------------===//
+// Generic compiler-rt / libgcc and libc provider libraries
+//===----------------------------------------------------------------------===//
+
+// MSVCRT lacks __powisf2 and __powidf2.
+defvar CompilerRtPowiF32F64 = [__powisf2, __powidf2];
+defvar CompilerRtLibgccImpls_core_noPowi =
+    !listremove(CompilerRtLibgccImpls_core, CompilerRtPowiF32F64);
+
+// The compiler builtins runtime, compiler-rt or libgcc.
+def CompilerRtLibgcc : LibcallLibrary<"compiler-rt",
+  (add CompilerRtLibgccImpls_core_noPowi,
+       LibcallImpls<(add CompilerRtPowiF32F64), isNotOSMSVCRT>,
+       LibcallImpls<(add CompilerRtLibgccImpls_f80), isX86>,
+       LibcallImpls<(add CompilerRtLibgccImpls_ppcf128), isLongDoublePPCF128>,
+       LibcallImpls<(add Int128RTLibcalls), isArch64Bit>)>;
+
+def Libc : LibcallLibrary<"libc", (add LibcCoreImpls)>;
+
+// PPC and SPARC provide their own stack protector, and XCore has none.
+def isStackProtectorDefault : RuntimeLibcallAvailability<
+    (all_of (not IsPPC), (not IsSPARC), (not IsXCore))>;
+
+// The glibc-style stack protector.
+def DefaultStackProtectorLibc : LibcallLibrary<"libc", DefaultStackProtector> {
+  let Pred = isStackProtectorDefault;
+}
+
+// Darwin variants of libm and libc. These merge by name into the generic
+// libraries, so only the Darwin extras are emitted under the isOSDarwin guard.
+def DarwinLibm : LibcallLibrary<"libm",
+  (add LibmImpls, DarwinExp10, DarwinSinCosStret)> {
+  let Pred = isOSDarwin;
+}
+def DarwinLibc : LibcallLibrary<"libc",
+  (add LibcCoreImpls, LibcallImpls<(add bzero), isOSDarwin>,
+       DarwinMemsetPattern, MacOSUnlockedIO)> {
+  let Pred = isOSDarwin;
+}
 
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
@@ -2130,34 +2317,54 @@ def SMEABI_LibCalls_PreserveMost_From_X2 : LibcallsWithCC<(add
   SMEABI_PreserveMost_From_X2>;
 
 def isAArch64_ExceptArm64EC
-    : RuntimeLibcallPredicate<"(TT.isAArch64() && !TT.isWindowsArm64EC())">;
-def isWindowsArm64EC : RuntimeLibcallPredicate<"TT.isWindowsArm64EC()">;
-def isAArch64_ILP64  : RuntimeLibcallPredicate<"TT.isAArch64(64)">;
+    : RuntimeLibcallAvailability<(all_of IsAArch64, (not IsWindowsArm64EC))>;
 
+// The Arm SME ABI support routines ship in their own runtime, libsme.
+def AArch64SMERuntime : LibcallLibrary<"sme",
+  (add SMEABI_LibCalls_PreserveMost_From_X0,
+       SMEABI_LibCalls_PreserveMost_From_X1,
+       SMEABI_LibCalls_PreserveMost_From_X2),
+  isAArch64_ExceptArm64EC>;
+def isWindowsArm64EC : RuntimeLibcallAvailability<(all_of IsWindowsArm64EC)>;
+
+// frexpl/ldexpl/exp10l are added separately based on the Target Triple.
+defvar AArch64LongDoubleF128Body =
+    !listremove(LibmCoreImpls_f128,
+                [frexpl_f128, ldexpl_f128, exp10l_f128]);
+
+// AArch64 libm extras.
+def AArch64Libm : LibcallLibrary<"libm",
+  (add LibmHasFrexpF32, LibmHasLdexpF32, LibmHasSincoslF128,
+       // The l-suffixed libm functions are fp128 only when long double is.
+       LibcallImpls<(add frexpl_f128, ldexpl_f128), isLongDoubleF128NotWinMath>,
+       LibcallImpls<(add AArch64LongDoubleF128Body), isLongDoubleF128>,
+       LibmHasExp10F32, LibmHasExp10F64,
+       // exp10l is fp128 only when long double is.
+       LibcallImpls<(add exp10l_f128), isLongDoubleF128NotDarwin>),
+  isAArch64_ExceptArm64EC>;
+
+// AArch64 outline atomics and streaming-mode mem* helpers.
+def AArch64OutlineAtomics : LibcallLibrary<"compiler-rt",
+  (add AArch64LibcallImpls),
+  isAArch64_ExceptArm64EC>;
 
 def AArch64SystemLibrary : SystemRuntimeLibrary<
   isAArch64_ExceptArm64EC,
-  (add WinDefaultLibcallImpls,
-       LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
-       LibmHasFrexpF32, LibmHasLdexpF32,
-       LibmHasFrexpF128, LibmHasLdexpF128,
-       AArch64LibcallImpls,
-       LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
-       LibcallImpls<(add bzero), isOSDarwin>,
-       DarwinExp10, DarwinSinCosStret, DarwinMemsetPattern,
-       MacOSUnlockedIO,
-       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-       DefaultLibmExp10,
-       DefaultStackProtector,
-       SecurityCheckCookieIfWinMSVC,
-       SMEABI_LibCalls_PreserveMost_From_X0,
-       SMEABI_LibCalls_PreserveMost_From_X1,
-       SMEABI_LibCalls_PreserveMost_From_X2)
+  (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime,
+       AArch64Libm, AArch64OutlineAtomics,
+       AArch64SMERuntime, SafeStackRuntime)
 >;
+
+// The Windows runtime lacks the f32 and f64 powi helpers, and frexpf/ldexpf.
+defvar Arm64ECCompilerRtImpls =
+    !listremove(CompilerRtLibgccImpls_core,
+                !listremove(PowiLibcallImpls, [__powitf2_f128, __powitf2_ppc128]));
+defvar Arm64ECLibmImpls = !listremove(LibmCoreImpls_core, LibmFrexpLdexpF32);
 
 // Prepend a # to every name
 defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
-  foreach libcall = WinDefaultLibcallImplsBaseList in {
+  foreach libcall = !listconcat(Arm64ECCompilerRtImpls, Arm64ECLibmImpls,
+                                LibcCoreImpls) in {
     def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
   }
 
@@ -2189,31 +2396,69 @@ defvar ExceptionModelCallsArm64EC = (add
                ExceptionModelIsSjLj>
 );
 
+// arm64ec uses '#'-prefixed variants of the libc and unwind symbols.
+def Arm64ECLibc : LibcallLibrary<"libc",
+  (add AvailableIf<arm64ec___stack_chk_fail, hasStackChkFail>,
+       AvailableIf<__stack_chk_guard, hasStackChkFail>,
+       LibcallImpls<(add __security_check_cookie_arm64ec, __security_cookie),
+                    isWindowsMSVCEnvironment>,
+       __chkstk_arm64ec),
+  isWindowsArm64EC> {
+  // Isolated to save space, rather than merging with the generic libc
+  // and excluding all of its normal unprefixed symbols.
+  let Isolated = true;
+}
+
+def Arm64ECExceptionRuntime : LibcallLibrary<"unwind",
+  ExceptionModelCallsArm64EC, isWindowsArm64EC> {
+  let Isolated = true;
+}
+
+// '#'-prefixed compiler-rt builtins and AArch64 outline atomics.
+def Arm64ECRuntime : LibcallLibrary<"compiler-rt",
+  (add WinArm64ECDefaultRuntimeLibcallImpls), isWindowsArm64EC> {
+  let Isolated = true;
+}
+
 def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
-                           (add WinArm64ECDefaultRuntimeLibcallImpls,
-                                AvailableIf<arm64ec___stack_chk_fail, hasStackChkFail>,
-                                AvailableIf<__stack_chk_guard, hasStackChkFail>,
-                                LibcallImpls<(add __security_check_cookie_arm64ec,
-                                                  __security_cookie),
-                                              isWindowsMSVCEnvironment>,
-                                ExceptionModelCallsArm64EC)>;
+                           (add Arm64ECRuntime,
+                                Arm64ECLibc,
+                                Arm64ECExceptionRuntime)>;
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
-def isAMDGPU : RuntimeLibcallPredicate<"TT.isAMDGPU()">;
+def isAMDGPU : RuntimeLibcallAvailability<(all_of IsAMDGPU)>;
 
-// No calls.
-def AMDGPUSystemLibrary : SystemRuntimeLibrary<isAMDGPU, (add)>;
+def __llvm_profile_instrument_gpu : RuntimeLibcallImpl<PROFILE_INSTRUMENT_GPU>;
+def __llvm_profile_sampling_gpu : RuntimeLibcallImpl<PROFILE_SAMPLING_GPU>;
+
+// The GPU profiling runtime, which is separate from the compiler-rt builtins.
+def AMDGPUProfileRt : LibcallLibrary<"compiler-rt-profile",
+  (add __llvm_profile_instrument_gpu, __llvm_profile_sampling_gpu), isAMDGPU>;
+
+def AMDGPUSystemLibrary
+    : SystemRuntimeLibrary<isAMDGPU, (add AMDGPUProfileRt)>;
 
 //===----------------------------------------------------------------------===//
 // ARM Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
-def isTargetAEABIAndAAPCS_ABI : RuntimeLibcallPredicate<
-  [{TT.isTargetAEABI() && isAAPCS_ABI(TT, ABIName)}]>;
+def isTargetAEABIAndAAPCS_ABI
+    : RuntimeLibcallAvailability<(all_of IsTargetAEABI, IsAAPCS_ABI)>;
+
+defvar HasAEABILibcallsDag =
+  (any_of IsTargetAEABI, IsTargetGNUAEABI, IsTargetMuslAEABI,
+          IsOSFuchsia, IsAndroid);
+
+def hasAEABILibcalls : RuntimeLibcallAvailability<HasAEABILibcallsDag>;
+
+def hasAEABILibcallsAndAAPCS_ABI : RuntimeLibcallAvailability<
+  (all_of (any_of IsTargetAEABI, IsTargetGNUAEABI, IsTargetMuslAEABI,
+                  IsOSFuchsia, IsAndroid),
+          IsAAPCS_ABI)>;
 
 // if (isTargetMachO()) {
 // if (Subtarget->isThumb() && Subtarget->hasVFP2Base() &&
@@ -2286,6 +2531,13 @@ def __aeabi_ddiv : RuntimeLibcallImpl<DIV_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dmul : RuntimeLibcallImpl<MUL_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dsub : RuntimeLibcallImpl<SUB_F64>; // CallingConv::ARM_AAPCS
 
+// Unaligned memory access helper functions
+// RTABI chapter 5.3.3
+def __aeabi_uread4  : RuntimeLibcallImpl<AEABI_UREAD4>;  // CallingConv::ARM_AAPCS
+def __aeabi_uread8  : RuntimeLibcallImpl<AEABI_UREAD8>;  // CallingConv::ARM_AAPCS
+def __aeabi_uwrite4 : RuntimeLibcallImpl<AEABI_UWRITE4>; // CallingConv::ARM_AAPCS
+def __aeabi_uwrite8 : RuntimeLibcallImpl<AEABI_UWRITE8>; // CallingConv::ARM_AAPCS
+
 defvar AEABIOverrides = [
   __eqsf2, __eqdf2,
   __nesf2, __nedf2,
@@ -2323,8 +2575,7 @@ defvar AEABIOverrides = [
 
 // Double-precision floating-point comparison helper functions
 // RTABI chapter 4.1.2, Table 3
-def __aeabi_dcmpeq__oeq : RuntimeLibcallImpl<OEQ_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
-def __aeabi_dcmpeq__une : RuntimeLibcallImpl<UNE_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ
+def __aeabi_dcmpeq : RuntimeLibcallImpl<OEQ_F64>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_dcmplt : RuntimeLibcallImpl<OLT_F64>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_dcmple : RuntimeLibcallImpl<OLE_F64>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_dcmpge : RuntimeLibcallImpl<OGE_F64>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
@@ -2340,8 +2591,7 @@ def __aeabi_fsub : RuntimeLibcallImpl<SUB_F32>; // CallingConv::ARM_AAPCS
 
 // Single-precision floating-point comparison helper functions
 // RTABI chapter 4.1.2, Table 5
-def __aeabi_fcmpeq__oeq : RuntimeLibcallImpl<OEQ_F32, "__aeabi_fcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
-def __aeabi_fcmpeq__une : RuntimeLibcallImpl<UNE_F32, "__aeabi_fcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ
+def __aeabi_fcmpeq : RuntimeLibcallImpl<OEQ_F32>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_fcmplt : RuntimeLibcallImpl<OLT_F32>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_fcmple : RuntimeLibcallImpl<OLE_F32>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_fcmpge : RuntimeLibcallImpl<OGE_F32>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
@@ -2453,21 +2703,24 @@ def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
 // non-watchos platforms, but are needed for some targets which use a
 // hard-float calling convention by default.
 def ARMHalfConvertLibcallCallingConv : LibcallCallingConv<
-  [{TT.isWatchABI() ? DefaultCC :
-    (isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
+  [{TT.isWatchABI() ? static_cast<CallingConv::ID>(DefaultCC) :
+    static_cast<CallingConv::ID>(isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
 >;
 
+def isNotTargetAEABIAndMachO
+    : RuntimeLibcallAvailability<(all_of (not IsTargetAEABI),
+                                            IsOSBinFormatMachO)>;
+def isNotTargetAEABI : RuntimeLibcallAvailability<(not IsTargetAEABI)>;
+
 def ARMLibgccHalfConvertCalls :
-  LibcallImpls<(add __truncsfhf2, __extendhfsf2),
-    RuntimeLibcallPredicate<[{!TT.isTargetAEABI() && TT.isOSBinFormatMachO()}]>> {
+  LibcallImpls<(add __truncsfhf2, __extendhfsf2), isNotTargetAEABIAndMachO> {
   let CallingConv = ARMHalfConvertLibcallCallingConv;
 }
 
 // FIXME: These conditions are probably bugged. We're using the
 // default libgcc call when the other cases are replaced.
 def ARMDoubleToHalfCalls :
-  LibcallImpls<(add __truncdfhf2),
-    RuntimeLibcallPredicate<[{!TT.isTargetAEABI()}]>> {
+  LibcallImpls<(add __truncdfhf2), isNotTargetAEABI> {
   let CallingConv = ARMHalfConvertLibcallCallingConv;
 }
 
@@ -2478,10 +2731,17 @@ def EABIHalfConvertCalls : LibcallImpls<(add __aeabi_f2h, __aeabi_h2f),
   let CallingConv = ARM_AAPCS;
 }
 
+def isNotMachOAndNotTargetAEABI
+    : RuntimeLibcallAvailability<(all_of (not IsOSBinFormatMachO),
+                                            (not IsTargetAEABI))>;
+
+// Note that these actually pass and return int and short rather than float and
+// _Float16. This happens to work with the AAPCS calling convention where they
+// are treated equally, but may not work on other platforms. __extendhfsf2 and
+// __truncsfhf2 should be used instead on non-GNUEABIHF targets anyway.
 def GNUEABIHalfConvertCalls :
   LibcallImpls<(add __gnu_f2h_ieee, __gnu_h2f_ieee),
-    RuntimeLibcallPredicate<[{!TT.isOSBinFormatMachO() &&
-                              !TT.isTargetAEABI()}]>> {
+    isNotMachOAndNotTargetAEABI> {
   let CallingConv = ARMHalfConvertLibcallCallingConv;
 }
 
@@ -2502,7 +2762,7 @@ def WindowARMFPIntCasts : LibcallImpls<
 def AEABIDivRemCalls : LibcallImpls<
   (add __aeabi_idivmod, __aeabi_ldivmod,
        __aeabi_uidivmod, __aeabi_uldivmod),
-  RuntimeLibcallPredicate<[{hasAEABILibcalls(TT)}]>> {
+  hasAEABILibcalls> {
   let CallingConv = ARM_AAPCS;
 }
 
@@ -2517,13 +2777,12 @@ def AEABICalls : LibcallImpls<
 
       // Double-precision floating-point comparison helper functions
       // RTABI chapter 4.1.2, Table 3
-      __aeabi_dcmpeq__oeq,
-      __aeabi_dcmpeq__une,
+      __aeabi_dcmpeq,
       __aeabi_dcmplt,
       __aeabi_dcmple,
       __aeabi_dcmpge,
       __aeabi_dcmpgt,
-       __aeabi_dcmpun,
+      __aeabi_dcmpun,
 
       // Single-precision floating-point arithmetic helper functions
       // RTABI chapter 4.1.2, Table 4
@@ -2534,8 +2793,7 @@ def AEABICalls : LibcallImpls<
 
       // Single-precision floating-point comparison helper functions
       // RTABI chapter 4.1.2, Table 5
-      __aeabi_fcmpeq__oeq,
-      __aeabi_fcmpeq__une,
+      __aeabi_fcmpeq,
       __aeabi_fcmplt,
       __aeabi_fcmple,
       __aeabi_fcmpge,
@@ -2583,7 +2841,7 @@ def AEABICalls : LibcallImpls<
       // RTABI chapter 4.3.1
       __aeabi_idiv,
       __aeabi_uidiv),
-  RuntimeLibcallPredicate<[{hasAEABILibcalls(TT) && isAAPCS_ABI(TT, ABIName)}]>> {
+  hasAEABILibcallsAndAAPCS_ABI> {
   let CallingConv = ARM_AAPCS;
 }
 
@@ -2594,48 +2852,70 @@ def AEABI45MemCalls : LibcallImpls<
        __aeabi_memmove, __aeabi_memmove4, __aeabi_memmove8,
        __aeabi_memset, __aeabi_memset4, __aeabi_memset8,
        __aeabi_memclr, __aeabi_memclr4, __aeabi_memclr8),
-  RuntimeLibcallPredicate<[{(EABIVersion == EABI::EABI4 ||
-                             EABIVersion == EABI::EABI5) &&
-                             hasAEABILibcalls(TT) && isAAPCS_ABI(TT, ABIName)}]>> {
+  RuntimeLibcallAvailability<
+    (all_of IsEABIVersion,
+            (any_of IsTargetAEABI, IsTargetGNUAEABI, IsTargetMuslAEABI,
+                    IsOSFuchsia, IsAndroid),
+            IsAAPCS_ABI)>> {
   let CallingConv = ARM_AAPCS;
 }
 
-def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
+// Unaligned Memory read/write operations
+// RTABI chapter 5.3.3
+def AEABIUnalignedMemCalls : LibcallImpls<
+  (add __aeabi_uread4,  __aeabi_uread8,
+       __aeabi_uwrite4, __aeabi_uwrite8),
+  hasAEABILibcallsAndAAPCS_ABI> {
+  let CallingConv = ARM_AAPCS;
+}
+
+def isARMOrThumb : RuntimeLibcallAvailability<(any_of IsARM, IsThumb)>;
+
+// Generic compiler-rt calls that ARMCompilerRt re-adds with ARM's own
+// predicates and calling conventions.
+defvar ARMDefaultOptOut =
+    !listconcat([__truncsfhf2, __extendhfsf2, __gnu_f2h_ieee, __gnu_h2f_ieee,
+                 __truncdfhf2],
+                AEABIOverrides);
+
+// ARM's compiler-rt extras: the AEABI runtime, half conversions and Windows RT
+// helpers. These replace the generic helpers in ARMDefaultOptOut.
+def ARMCompilerRt : LibcallLibrary<"compiler-rt",
+  (add WindowARMDivRemCalls,
+       WindowARMFPIntCasts,
+       AEABIDivRemCalls,
+       AEABICalls,
+       AEABI45MemCalls,
+       AEABIUnalignedMemCalls,
+       ARMLibgccHalfConvertCalls,
+       EABIHalfConvertCalls,
+       GNUEABIHalfConvertCalls,
+       ARMDoubleToHalfCalls,
+       LibcallImpls<(add AEABIOverrides), isNotOSWindows>,
+       LibcallImpls<(add CompilerRtPowiF32F64), isNotOSMSVCRT>,
+       // Use divmod compiler-rt calls for iOS 5.0 and later.
+       LibcallImpls<(add __divmodsi4, __udivmodsi4),
+                    RuntimeLibcallAvailability<
+                      (all_of IsOSBinFormatMachO,
+                              (any_of (not IsIsiOS),
+                                      OSVersionAtLeast<5, 0>))>>),
+  isARMOrThumb>;
+
+// The l-suffixed libm functions are fp128 only when long double is.
+def ARMLibm : LibcallLibrary<"libm",
+  (add LibcallImpls<(add frexpl_f128, ldexpl_f128, sincosl_f128, exp10l_f128),
+                    isLongDoubleF128>),
+  isARMOrThumb>;
 
 def ARMSystemLibrary
     : SystemRuntimeLibrary<isARMOrThumb,
-      (add (sub WinDefaultLibcallImpls, ARMLibgccHalfConvertCalls,
-                                        GNUEABIHalfConvertCalls,
-                                        ARMDoubleToHalfCalls,
-                                        AEABIOverrides),
-           LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
-           LibmHasFrexpF32, LibmHasLdexpF32,
-           LibmHasFrexpF128, LibmHasLdexpF128,
-           WindowARMDivRemCalls,
-           WindowARMFPIntCasts,
-           SecurityCheckCookieIfWinMSVC,
-           AEABIDivRemCalls,
-           DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
-           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-           DefaultLibmExp10,
-
-           AEABICalls,
-           AEABI45MemCalls,
-           ARMLibgccHalfConvertCalls,
-           EABIHalfConvertCalls,
-           GNUEABIHalfConvertCalls,
-           ARMDoubleToHalfCalls,
-
-           LibcallImpls<(add AEABIOverrides),
-             RuntimeLibcallPredicate<[{
-               (!hasAEABILibcalls(TT) || !isAAPCS_ABI(TT, ABIName)) &&
-               !TT.isOSWindows()
-            }]>>,
-           // Use divmod compiler-rt calls for iOS 5.0 and later.
-           LibcallImpls<(add __divmodsi4, __udivmodsi4),
-                        RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
-                                                  (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>,
-           DefaultStackProtector)> {
+      // ARM excludes the Darwin bzero and unlocked stdio functions.
+      (add LibraryRef<CompilerRtLibgcc, ARMDefaultOptOut>, Libm,
+           LibraryRef<Libc, [bzero, getc_unlocked, getchar_unlocked,
+                                putc_unlocked, putchar_unlocked]>,
+           ExceptionRuntime,
+           ARMCompilerRt,
+           SafeStackRuntime)> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
      TT.isOSDarwin() ? CallingConv::C :
         (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
@@ -2661,38 +2941,37 @@ def __udivmodhi4 : RuntimeLibcallImpl<UDIVREM_I16>;
 def avr_sin : RuntimeLibcallImpl<SIN_F32, "sin">;
 def avr_cos : RuntimeLibcallImpl<COS_F32, "cos">;
 
-def isAVR : RuntimeLibcallPredicate<"TT.getArch() == Triple::avr">;
+def isAVR : RuntimeLibcallAvailability<(all_of IsAVR)>;
+
+def AVRCompilerRt : LibcallLibrary<"compiler-rt", (add
+  LibcallsWithCC<(add __divmodqi4, __divmodhi4, __udivmodqi4,
+                     __udivmodhi4),
+                 AVR_BUILTIN>,
+  __divmodsi4, __udivmodsi4,
+  avr_sin, avr_cos), isAVR>;
+
+// AVR uses the divmod functions instead of these.
+defvar AVRCompilerRtOptOut = [
+    __divqi3, __divhi3, __divsi3, __udivqi3, __udivhi3, __udivsi3,
+    __modqi3, __modhi3, __modsi3, __umodqi3, __umodhi3, __umodsi3
+];
+
+// AVR replaces sin and cos with its own, and has no sincos.
+defvar AVRLibmOptOut = [sin, cos, sinf, cosf, sincos, sincosf];
 
 def AVRSystemLibrary
     : SystemRuntimeLibrary<
           isAVR,
-          (add (sub DefaultRuntimeLibcallImpls,
-
-               // Division rtlib functions (not supported), use divmod
-               // functions instead
-               __divqi3, __divhi3, __divsi3, __udivqi3, __udivhi3, __udivsi3,
-
-               // Modulus rtlib functions (not supported), use divmod functions
-               // instead
-               __modqi3, __modhi3, __modsi3, __umodqi3, __umodhi3, __umodsi3,
-
-               // Standard f64 names are replaced
-               sin, cos, sinf, cosf),
-
-              // Several of the runtime library functions use a special calling
-              // conv
-              LibcallsWithCC<(add __divmodqi4, __divmodhi4, __udivmodqi4,
-                                 __udivmodhi4),
-                             AVR_BUILTIN>,
-              __divmodsi4, __udivmodsi4,
-              // Trigonometric rtlib functions
-              avr_sin, avr_cos)>;
+          (add LibraryRef<CompilerRtLibgcc, AVRCompilerRtOptOut>,
+              LibraryRef<Libm, AVRLibmOptOut>,
+              Libc,
+              ExceptionRuntime)>;
 
 //===----------------------------------------------------------------------===//
 // DXIL Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
-def isDXIL : RuntimeLibcallPredicate<"TT.isDXIL()">;
+def isDXIL : RuntimeLibcallAvailability<(all_of IsDXIL)>;
 
 // No calls
 def DXILSystemLibrary : SystemRuntimeLibrary<isDXIL, (add)>;
@@ -2738,27 +3017,30 @@ def __hexagon_memcpy_likely_aligned_min32bytes_mult8bytes
 def hexagon_memcpy_forward_vp4cp4n2 : RuntimeLibcallImpl<HEXAGON_VOLATILE_MEMCPY>;
 }
 
-def isHexagon : RuntimeLibcallPredicate<"TT.getArch() == Triple::hexagon">;
+def isHexagon : RuntimeLibcallAvailability<(all_of IsHexagon)>;
+
+// The generic arithmetic/division helpers (__adddf3, __divsi3, ...) exist in
+// Hexagon's compiler-rt alongside the preferred __hexagon_* variants, so both
+// are available. Selection of the __hexagon_* variants is handled in
+// HexagonSubtarget::initLibcallLoweringInfo.
+def HexagonCompilerRt
+    : LibcallLibrary<"compiler-rt", (add HexagonLibcalls), isHexagon>;
 
 def HexagonSystemLibrary
     : SystemRuntimeLibrary<isHexagon,
-    (add (sub DefaultLibcallImpls32,
-    __adddf3, __divsf3, __udivsi3, __udivdi3,
-    __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
-    __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
-    LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-    exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard)>;
+    (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime, HexagonCompilerRt,
+    SafeStackRuntime)>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
-def isLanai : RuntimeLibcallPredicate<"TT.getArch() == Triple::lanai">;
+def isLanai : RuntimeLibcallAvailability<(all_of IsLanai)>;
 
 // Use fast calling convention for library functions.
 def LanaiSystemLibrary
-    : SystemRuntimeLibrary<isLanai, (add DefaultRuntimeLibcallImpls,
-                                        __stack_chk_fail, __stack_chk_guard)> {
+    : SystemRuntimeLibrary<isLanai,
+      (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime)> {
   let DefaultLibcallCallingConv = FASTCC;
 }
 
@@ -2771,8 +3053,8 @@ def __mips16_adddf3 : RuntimeLibcallImpl<ADD_F64>;
 def __mips16_addsf3 : RuntimeLibcallImpl<ADD_F32>;
 def __mips16_divdf3 : RuntimeLibcallImpl<DIV_F64>;
 def __mips16_divsf3 : RuntimeLibcallImpl<DIV_F32>;
-def __mips16_eqdf2 : RuntimeLibcallImpl<OEQ_F64>;
-def __mips16_eqsf2 : RuntimeLibcallImpl<OEQ_F32>;
+def __mips16_eqdf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F64>;
+def __mips16_eqsf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F32>;
 def __mips16_extendsfdf2 : RuntimeLibcallImpl<FPEXT_F32_F64>;
 def __mips16_fix_truncdfsi : RuntimeLibcallImpl<FPTOSINT_F64_I32>;
 def __mips16_fix_truncsfsi : RuntimeLibcallImpl<FPTOSINT_F32_I32>;
@@ -2780,18 +3062,18 @@ def __mips16_floatsidf : RuntimeLibcallImpl<SINTTOFP_I32_F64>;
 def __mips16_floatsisf : RuntimeLibcallImpl<SINTTOFP_I32_F32>;
 def __mips16_floatunsidf : RuntimeLibcallImpl<UINTTOFP_I32_F64>;
 def __mips16_floatunsisf : RuntimeLibcallImpl<UINTTOFP_I32_F32>;
-def __mips16_gedf2 : RuntimeLibcallImpl<OGE_F64>;
-def __mips16_gesf2 : RuntimeLibcallImpl<OGE_F32>;
-def __mips16_gtdf2 : RuntimeLibcallImpl<OGT_F64>;
-def __mips16_gtsf2 : RuntimeLibcallImpl<OGT_F32>;
-def __mips16_ledf2 : RuntimeLibcallImpl<OLE_F64>;
-def __mips16_lesf2 : RuntimeLibcallImpl<OLE_F32>;
-def __mips16_ltdf2 : RuntimeLibcallImpl<OLT_F64>;
-def __mips16_ltsf2 : RuntimeLibcallImpl<OLT_F32>;
+def __mips16_gedf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F64>;
+def __mips16_gesf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F32>;
+def __mips16_gtdf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F64>;
+def __mips16_gtsf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F32>;
+def __mips16_ledf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F64>;
+def __mips16_lesf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F32>;
+def __mips16_ltdf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F64>;
+def __mips16_ltsf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F32>;
 def __mips16_muldf3 : RuntimeLibcallImpl<MUL_F64>;
 def __mips16_mulsf3 : RuntimeLibcallImpl<MUL_F32>;
-def __mips16_nedf2 : RuntimeLibcallImpl<UNE_F64>;
-def __mips16_nesf2 : RuntimeLibcallImpl<UNE_F32>;
+def __mips16_nedf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F64>;
+def __mips16_nesf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F32>;
 def __mips16_ret_dc : RuntimeLibcallImpl<MIPS16_RET_DC>;
 def __mips16_ret_df : RuntimeLibcallImpl<MIPS16_RET_DF>;
 def __mips16_ret_sc : RuntimeLibcallImpl<MIPS16_RET_SC>;
@@ -2861,18 +3143,9 @@ def __mspabi_fltulf : RuntimeLibcallImpl<UINTTOFP_I32_F32>;
 def __mspabi_fltullf : RuntimeLibcallImpl<UINTTOFP_I64_F32>;
 
 // Floating point comparisons - EABI Table 7
-def __mspabi_cmpd__oeq : RuntimeLibcallImpl<OEQ_F64, "__mspabi_cmpd">;
-def __mspabi_cmpd__une : RuntimeLibcallImpl<UNE_F64, "__mspabi_cmpd">;
-def __mspabi_cmpd__oge : RuntimeLibcallImpl<OGE_F64, "__mspabi_cmpd">;
-def __mspabi_cmpd__olt : RuntimeLibcallImpl<OLT_F64, "__mspabi_cmpd">;
-def __mspabi_cmpd__ole : RuntimeLibcallImpl<OLE_F64, "__mspabi_cmpd">;
-def __mspabi_cmpd__ogt : RuntimeLibcallImpl<OGT_F64, "__mspabi_cmpd">;
-def __mspabi_cmpf__oeq : RuntimeLibcallImpl<OEQ_F32, "__mspabi_cmpf">;
-def __mspabi_cmpf__une : RuntimeLibcallImpl<UNE_F32, "__mspabi_cmpf">;
-def __mspabi_cmpf__oge : RuntimeLibcallImpl<OGE_F32, "__mspabi_cmpf">;
-def __mspabi_cmpf__olt : RuntimeLibcallImpl<OLT_F32, "__mspabi_cmpf">;
-def __mspabi_cmpf__ole : RuntimeLibcallImpl<OLE_F32, "__mspabi_cmpf">;
-def __mspabi_cmpf__ogt : RuntimeLibcallImpl<OGT_F32, "__mspabi_cmpf">;
+// A single three-way compare symbol serves every predicate.
+def __mspabi_cmpd : RuntimeLibcallImpl<FCMP3_F64>;
+def __mspabi_cmpf : RuntimeLibcallImpl<FCMP3_F32>;
 
 // Floating point arithmetic - EABI Table 8
 def __mspabi_addd : RuntimeLibcallImpl<ADD_F64>;
@@ -2943,28 +3216,17 @@ def __mspabi_mpyll : RuntimeLibcallImpl<MUL_I64>;
 
 // setLibcallCallingConv(MUL_I64, CallingConv::MSP430_BUILTIN);
 
-def isMSP430 : RuntimeLibcallPredicate<"TT.getArch() == Triple::msp430">;
+def isMSP430 : RuntimeLibcallAvailability<(all_of IsMSP430)>;
 
+// msp430 libgcc provides the 32-bit logical right shift only under
+// the __mspabi_srll name. Everything else in the default list
+// coexists in msp430 libgcc alongside its __mspabi_* variant.
 defvar MSP430DefaultOptOut = [
-  __addsf3, __divsf3, __extendsfdf2, __truncdfsf2, __fixsfsi,
-  __fixsfdi, __fixunssfsi, __mulsf3, __eqsf2, __gesf2, __gtsf2,
-  __divhi3, __divsi3, __ashlsi3, __floatsidf, __floatsisf,
-  __ashrsi3, __modhi3, __udivsi3, __fixdfsi, __fixunssfdi,
-  __udivhi3, __umodsi3, __nesf2, __lesf2, __floatundisf,
-  __fixdfdi, __fixunsdfsi, __modsi3, __floatunsisf,
-  __fixunsdfdi, __ltsf2, __floatdisf, __floatdidf,
-  __lshrsi3, __subsf3, __umodhi3, __floatunsidf,
-  __floatundidf, __gtdf2, __eqdf2, __gedf2, __ltdf2, __ledf2,
-  __adddf3, __divdf3, __divdi3, __moddi3,
-  __muldf3, __subdf3, __udivdi3, __umoddi3
+  __lshrsi3
 ];
 
 // EABI Libcalls - EABI Section 6.2
-def MSP430SystemLibrary
-    : SystemRuntimeLibrary<isMSP430,
-    (add (sub DefaultRuntimeLibcallImpls, MSP430DefaultOptOut),
-      exp10f, exp10, exp10l_f128,
-
+def MSP430CompilerRt : LibcallLibrary<"compiler-rt", (add
       // Floating point conversions - EABI Table 6
       __mspabi_cvtdf,
       __mspabi_cvtfd,
@@ -3006,18 +3268,8 @@ def MSP430SystemLibrary
       __mspabi_fltullf,
 
       // Floating point comparisons - EABI Table 7
-      LibcallsWithCC<(add __mspabi_cmpd__oeq,
-                          __mspabi_cmpd__une,
-                          __mspabi_cmpd__oge,
-                          __mspabi_cmpd__olt,
-                          __mspabi_cmpd__ole,
-                          __mspabi_cmpd__ogt), MSP430_BUILTIN>,
-      __mspabi_cmpf__oeq,
-      __mspabi_cmpf__une,
-      __mspabi_cmpf__oge,
-      __mspabi_cmpf__olt,
-      __mspabi_cmpf__ole,
-      __mspabi_cmpf__ogt,
+      LibcallsWithCC<(add __mspabi_cmpd), MSP430_BUILTIN>,
+      __mspabi_cmpf,
 
       // Floating point arithmetic - EABI Table 8
       LibcallsWithCC<(add __mspabi_addd,
@@ -3055,11 +3307,14 @@ def MSP430SystemLibrary
       // TODO: __mspabi_[srli/srai/slli] ARE implemented in libgcc
       __mspabi_srll,
       __mspabi_sral,
-      __mspabi_slll,
+      __mspabi_slll
       // __mspabi_[srlll/srall/sllll/rlli/rlll] are NOT implemented in libgcc
+  ), isMSP430>;
 
-      __stack_chk_fail,
-      __stack_chk_guard
+def MSP430SystemLibrary
+    : SystemRuntimeLibrary<isMSP430,
+    (add LibraryRef<CompilerRtLibgcc, MSP430DefaultOptOut>,
+      LibraryRef<Libm, [sincos, sincosf]>, Libc, ExceptionRuntime
   )
 >;
 
@@ -3067,7 +3322,7 @@ def MSP430SystemLibrary
 // NVPTX Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
-def isNVPTX : RuntimeLibcallPredicate<"TT.isNVPTX()">;
+def isNVPTX : RuntimeLibcallAvailability<(all_of IsNVPTX)>;
 
 // No calls.
 def NVPTXSystemLibrary : SystemRuntimeLibrary<isNVPTX, (add)>;
@@ -3100,81 +3355,105 @@ defset list<RuntimeLibcallImpl> PPCRuntimeLibcalls = {
   def __floatunsikf : RuntimeLibcallImpl<UINTTOFP_I32_F128>;
   def __floatundikf : RuntimeLibcallImpl<UINTTOFP_I64_F128>;
   def __floatuntikf : RuntimeLibcallImpl<UINTTOFP_I128_F128>;
-  def __eqkf2 : RuntimeLibcallImpl<OEQ_F128>;
-  def __nekf2 : RuntimeLibcallImpl<UNE_F128>;
-  def __gekf2 : RuntimeLibcallImpl<OGE_F128>;
-  def __ltkf2 : RuntimeLibcallImpl<OLT_F128>;
-  def __lekf2 : RuntimeLibcallImpl<OLE_F128>;
-  def __gtkf2 : RuntimeLibcallImpl<OGT_F128>;
+  def __eqkf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F128>;
+  def __nekf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F128>;
+  def __gekf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F128>;
+  def __ltkf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F128>;
+  def __lekf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F128>;
+  def __gtkf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F128>;
   def __unordkf2 : RuntimeLibcallImpl<UO_F128>;
 }
 
 defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
+  def ___memccpy64 : RuntimeLibcallImpl<MEMCCPY>;
   def ___memcmp64 : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove64 : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
+  def ___strcmp64 : RuntimeLibcallImpl<STRCMP>;
+  def ___strcpy64 : RuntimeLibcallImpl<STRCPY>;
   def ___strlen64 : RuntimeLibcallImpl<STRLEN>;
+  def ___strstr64 : RuntimeLibcallImpl<STRSTR>;
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
+  def ___memccpy : RuntimeLibcallImpl<MEMCCPY>;
   def ___memcmp : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
   def ___bzero : RuntimeLibcallImpl<BZERO>;
+  def ___strcmp : RuntimeLibcallImpl<STRCMP>;
+  def ___strcpy : RuntimeLibcallImpl<STRCPY>;
   def ___strlen : RuntimeLibcallImpl<STRLEN>;
+  def ___strstr : RuntimeLibcallImpl<STRSTR>;
 }
 
-defvar PPCOverrides = !foreach(entry, PPCRuntimeLibcalls, entry.Provides);
-
-def isPPC : RuntimeLibcallPredicate<"TT.isPPC()">;
-def isPPC32 : RuntimeLibcallPredicate<"TT.isPPC32()">;
-def isPPC64 : RuntimeLibcallPredicate<"TT.isPPC64()">;
-def isAIX : RuntimeLibcallPredicate<"TT.isOSAIX()">;
-def isNotAIX : RuntimeLibcallPredicate<"!TT.isOSAIX()">;
-def isPPC32_AIX : RuntimeLibcallPredicate<"(TT.isPPC32() && TT.isOSAIX())">;
-def isPPC64_AIX : RuntimeLibcallPredicate<"(TT.isPPC64() && TT.isOSAIX())">;
+def isPPC : RuntimeLibcallAvailability<(all_of IsPPC)>;
+def isPPC32 : RuntimeLibcallAvailability<(all_of IsPPC32)>;
+def isPPC64 : RuntimeLibcallAvailability<(all_of IsPPC64)>;
+def isAIX : RuntimeLibcallAvailability<(all_of IsOSAIX)>;
+def isNotAIX : RuntimeLibcallAvailability<(not IsOSAIX)>;
+def isPPC32_AIX : RuntimeLibcallAvailability<(all_of IsPPC32, IsOSAIX)>;
+def isPPC64_AIX : RuntimeLibcallAvailability<(all_of IsPPC64, IsOSAIX)>;
 
 def AIX32Calls : LibcallImpls<(add PPC32AIXCallList), isPPC32_AIX>;
 def AIX64Calls : LibcallImpls<(add PPC64AIXCallList), isPPC64_AIX>;
 
-// FIXME: Current emission behavior with multiple implementations is
-// janky. We need to filter out the conflicting cases with different
-// f128 names, and then add the overrides. We should switch to
-// explicitly adding subsets of the default calls.
+def PPCF128CompilerRt
+    : LibcallLibrary<"compiler-rt",
+                     (add PPCRuntimeLibcalls, CompilerRtLibgccImpls_ppcf128), isPPC>;
+
+// PPC's libc extras. AIX has no memcpy, so it is excluded from the
+// generic libc and re-added here for other OSes.
+def PPCLibc : LibcallLibrary<"libc",
+  (add AIX32Calls, AIX64Calls,
+       LibcallImpls<(add vec_calloc, vec_malloc, vec_realloc, vec_free), isAIX>,
+       LibcallImpls<(add memcpy), isNotAIX>), isPPC>;
+
+// PPC's f128 and ppcf128 math.
+def PPCLibm : LibcallLibrary<"libm",
+  (add LibmF128Libcalls, LibmCoreImpls_ppcf128), isPPC>;
+
+// PPC's stack protector, which uses __ssp_canary_word on AIX.
+def PPCStackProtectorLibc : LibcallLibrary<"libc",
+  (add AvailableIf<__stack_chk_fail, isNotOSOpenBSD>,
+       AvailableIf<__stack_chk_guard, isNotOSAIXAndNotOSOpenBSD>,
+       AvailableIf<__ssp_canary_word, isAIX>,
+       has__stack_smash_handler, has___guard_local), isPPC>;
+
+// PPC implements f128 with the `kf` functions in PPCF128CompilerRt, so drop the
+// generic f128 `tf` functions. Some share names with ppcf128 variants PPC
+// keeps, so only the f128 records are listed.
+defvar PPCReplacedCompilerRtF128 = [
+    __addtf3, __subtf3, __multf3, __divtf3,
+    __extenddftf2, __extendsftf2, __extendhftf2,
+    __trunctfbf2, __trunctfsf2, __trunctfdf2,
+    __fixtfsi, __floatsitf, __floatunsitf,
+    __eqtf2, __netf2, __getf2, __lttf2, __letf2, __gttf2, __unordtf2,
+    __fixtfdi_f128, __fixtfti_f128,
+    __fixunstfdi_f128, __fixunstfsi_f128, __fixunstfti_f128,
+    __floatditf_f128, __floattitf_f128, __floatunditf_f128, __floatuntitf_f128,
+    __powitf2_f128, __trunctfhf2_f128];
+
 def PPCSystemLibrary
     : SystemRuntimeLibrary<isPPC,
-      (add PPCRuntimeLibcalls,
-           (sub DefaultRuntimeLibcallImpls, memcpy,
-                DefaultRuntimeLibcallImpls_f128),
-           __extendkftf2, __trunctfkf2,
-           DefaultRuntimeLibcallImpls_ppcf128,
-           exp10f, exp10, exp10l_ppcf128,
-           LibmF128Libcalls, AIX32Calls, AIX64Calls,
-           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-           LibmHasSinCosPPCF128,
-           AvailableIf<memcpy, isNotAIX>,
-           LibcallImpls<(add Int128RTLibcalls), isPPC64>,
-           has__stack_smash_handler,
-           has___guard_local,
-           AvailableIf<__ssp_canary_word, isAIX>,
-           AvailableIf<__stack_chk_fail, isNotOSOpenBSD>,
-           AvailableIf<__stack_chk_guard, isNotOSAIXAndNotOSOpenBSD>)>;
+      (add LibraryRef<CompilerRtLibgcc, PPCReplacedCompilerRtF128>,
+           LibraryRef<Libc, [memcpy]>, PPCStackProtectorLibc,
+           Libm, ExceptionRuntime)>;
 
 //===----------------------------------------------------------------------===//
 // RISCV Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
-def isRISCV : RuntimeLibcallPredicate<"TT.isRISCV()">;
-def isRISCV64 : RuntimeLibcallPredicate<"TT.isRISCV64()">;
+def isRISCV : RuntimeLibcallAvailability<(all_of IsRISCV)>;
+def isRISCV64 : RuntimeLibcallAvailability<(all_of IsRISCV64)>;
+
+def RISCVLibc : LibcallLibrary<"libc", (add __riscv_flush_icache), isRISCV>;
 
 def RISCVSystemLibrary
     : SystemRuntimeLibrary<isRISCV,
-      (add DefaultRuntimeLibcallImpls,
-           exp10f, exp10, exp10l_f128,
-           __riscv_flush_icache,
-           LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
-           DefaultStackProtector)>;
+      (add CompilerRtLibgcc, Libm, Libc, RISCVLibc, ExceptionRuntime,
+           SafeStackRuntime)>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
@@ -3227,37 +3506,47 @@ def _Q_qtoull : RuntimeLibcallImpl<FPTOUINT_F128_I64>;
 def _Q_lltoq : RuntimeLibcallImpl<SINTTOFP_I64_F128>;
 def _Q_ulltoq : RuntimeLibcallImpl<UINTTOFP_I64_F128>;
 
-def isSPARC : RuntimeLibcallPredicate<"TT.isSPARC()">;
-def isSPARC32 : RuntimeLibcallPredicate<"TT.isSPARC32()">;
-def isSPARC64 : RuntimeLibcallPredicate<"TT.isSPARC64()">;
+def isSPARC : RuntimeLibcallAvailability<(all_of IsSPARC)>;
+def isSPARC32 : RuntimeLibcallAvailability<(all_of IsSPARC32)>;
+def isSPARC64 : RuntimeLibcallAvailability<(all_of IsSPARC64)>;
 
 defvar SPARC64_MulDivCalls = [
   __mulsi3, __divsi3, __modsi3, __udivsi3, __umodsi3
 ];
 
+def SparcCompilerRt : LibcallLibrary<"compiler-rt",
+  (add sparc_umul, sparc_div, sparc_udiv, sparc_rem, sparc_urem,
+       LibcallImpls<(add _Q_qtoll, _Q_qtoull, _Q_lltoq, _Q_ulltoq), isSPARC32>,
+       LibcallImpls<(add SPARC64_MulDivCalls), isSPARC64>), isSPARC>;
+
+// SPARC's stack protector, which has no __stack_chk_guard on Linux.
+def SPARCStackProtectorLibc : LibcallLibrary<"libc",
+  (add has__stack_chk_fail,
+       AvailableIf<__stack_chk_guard, isNotOSLinuxAndNotOSOpenBSD>,
+       has__stack_smash_handler, has___guard_local), isSPARC>;
+
 def SPARCSystemLibrary
     : SystemRuntimeLibrary<isSPARC,
-      (add (sub DefaultLibcallImpls32, SPARC64_MulDivCalls),
-            sparc_umul, sparc_div, sparc_udiv, sparc_rem, sparc_urem,
-       LibcallImpls<(add _Q_qtoll, _Q_qtoull, _Q_lltoq, _Q_ulltoq), isSPARC32>,
-       LibcallImpls<(add SPARC64_MulDivCalls, Int128RTLibcalls), isSPARC64>,
-       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-       has__stack_chk_fail,
-       has__stack_smash_handler,
-       has___guard_local,
-       AvailableIf<__stack_chk_guard, isNotOSLinuxAndNotOSOpenBSD>)
+      (add LibraryRef<CompilerRtLibgcc, SPARC64_MulDivCalls>,
+            Libm, Libc, SPARCStackProtectorLibc, SparcCompilerRt,
+            ExceptionRuntime, SafeStackRuntime)
 >;
 
 //===----------------------------------------------------------------------===//
 // SPIRV Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
-def isSPIRV : RuntimeLibcallPredicate<"TT.isSPIRV()">;
+def isSPIRV : RuntimeLibcallAvailability<(all_of IsSPIRV)>;
 
 // No calls FIXME: Add memcpy/memset is a hack to skip
 // PreISelIntrinsicLowering in favor of SPIRVPrepareFunctions;
 // probably should remove that and just use the default one.
-def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add memset, memcpy)>;
+// Isolated so SPIRV gets only memset and memcpy from libc.
+def SPIRVLibc : LibcallLibrary<"libc", (add memset, memcpy), isSPIRV> {
+  let Isolated = true;
+}
+
+def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add SPIRVLibc)>;
 
 //===----------------------------------------------------------------------===//
 // Windows Runtime Libcalls
@@ -3280,62 +3569,71 @@ defvar WindowsDivRemMulLibcallOverrides = [
 // X86 Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
-def isX86_32 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86">;
-def isX86_64 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86_64">;
-def isX86 : RuntimeLibcallPredicate<"TT.isX86()">;
+def isCygwinMinGW64
+  : RuntimeLibcallAvailability<(all_of IsOSCygMing, IsX86_64)>;
+def isCygwinMinGW32
+  : RuntimeLibcallAvailability<(all_of IsOSCygMing, IsX86_32)>;
+
+def isWin32NotCygMing : RuntimeLibcallAvailability<
+  (all_of IsX86_32, IsOSWindowsOrUEFI, (not IsOSCygMing))>;
+def isWin64NotCygMing : RuntimeLibcallAvailability<
+  (all_of IsX86_64, IsOSWindowsOrUEFI, (not IsOSCygMing))>;
+
+// X86's Windows CRT stack probes.
+def WindowsCRTLibcX86 : LibcallLibrary<"libc",
+  (add LibcallImpls<(add ___chkstk_ms), isCygwinMinGW64>,
+       LibcallImpls<(add __chkstk), isWin64NotCygMing>,
+       LibcallImpls<(add _alloca), isCygwinMinGW32>,
+       LibcallImpls<(add _chkstk), isWin32NotCygMing>), isX86>;
+
 
 // Some darwins have an optimized __bzero/bzero function.
-def darwinHas__bzero : RuntimeLibcallPredicate<"TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6)">;
-
-// FIXME: This is has ldexpl/frexpl plus use f128 for long double.
-def hasExpFrexplLdexplF128
-  : RuntimeLibcallPredicate<[{(!TT.isOSWindows() || TT.isOSCygMing()) && !TT.isGNUEnvironment()}]>;
+def darwinHas__bzero : RuntimeLibcallAvailability<
+  (all_of IsMacOSX, MacOSXVersionAtLeast<10, 6>)>;
 
 // Use the f128 variants of math functions on x86
 defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls), isGNUEnvironment>;
 
-defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>;
-
 defvar MemChkLibcalls = [__memcpy_chk, __memset_chk, __memmove_chk];
 
-defvar X86CommonLibcalls =
-  (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides, MemChkLibcalls),
-       DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern, MacOSUnlockedIO,
-       X86_F128_Libcalls,
-       LibmHasSinCosF80, // FIXME: Depends on long double
-       SinCosF32F64Libcalls,
-       LibcallImpls<(add __bzero), darwinHas__bzero>,
-       LibmHasFrexpF32, LibmHasLdexpF32,
-       LibmHasFrexpF80, LibmHasLdexpF80,
-       LibcallImpls<(add frexpl_f128, ldexpl_f128, exp10l_f128), hasExpFrexplLdexplF128>,
-       DefaultRuntimeLibcallImpls_f80,
-       LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F80,
-       LibcallImpls<(add MostPowI), isNotOSMSVCRT>,
-       SecurityCheckCookieIfWinMSVC,
-       // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
-       // hack for one test relying on it.
-       __powitf2_f128,
-       DefaultStackProtector,
-       LibcallImpls<(add MemChkLibcalls), isNotPS>
-     );
+def isX86_32WindowsMSVCOrItanium : RuntimeLibcallAvailability<
+  (all_of IsX86_32, (any_of IsWindowsMSVCEnv, IsWindowsItaniumEnv))>;
+def isX86_32NotWindowsMSVCOrItanium : RuntimeLibcallAvailability<
+  (all_of IsX86_32, (not IsWindowsMSVCEnv), (not IsWindowsItaniumEnv))>;
 
-defvar Windows32DivRemMulCalls =
-  LibcallsWithCC<(add WindowsDivRemMulLibcalls), X86_STDCALL,
-  RuntimeLibcallPredicate<"TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()">>;
+// X86's compiler-rt extras. These include the x86_32 div/rem/mul
+// helpers that replace the generic ones.
+def X86CompilerRt : LibcallLibrary<"compiler-rt",
+  (add LibcallImpls<(add __powitf2_f128), isNotOSMSVCRT>,
+       LibcallsWithCC<(add WindowsDivRemMulLibcalls), X86_STDCALL,
+                      isX86_32WindowsMSVCOrItanium>,
+       LibcallImpls<(add WindowsDivRemMulLibcallOverrides),
+                    isX86_32NotWindowsMSVCOrItanium>),
+  isX86>;
 
-defvar NotWindows32DivRemMulCalls =
-  LibcallImpls<(add WindowsDivRemMulLibcallOverrides),
-    RuntimeLibcallPredicate<"!TT.isWindowsMSVCEnvironment() && !TT.isWindowsItaniumEnvironment()">>;
+// X86's libc extras. Darwin uses __bzero instead of bzero, and PS has
+// no mem*_chk functions.
+def X86Libc : LibcallLibrary<"libc",
+  (add LibcallImpls<(add __bzero), darwinHas__bzero>,
+       LibcallImpls<(add MemChkLibcalls), isNotPS>), isX86>;
 
-def X86_32SystemLibrary
-    : SystemRuntimeLibrary<isX86_32,
-      (add X86CommonLibcalls,
-             NotWindows32DivRemMulCalls,
-             Windows32DivRemMulCalls)>;
+// X86's libm extras.
+def X86Libm : LibcallLibrary<"libm",
+  (add X86_F128_Libcalls,
+       LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>,
+       // frexpl/ldexpl are available on Windows too.
+       LibcallImpls<(add frexpl_f80, ldexpl_f80), isLongDoubleX87>,
+       LibcallImpls<(add frexpl_f128, ldexpl_f128), isLongDoubleF128>), isX86>;
 
-def X86_64SystemLibrary
-    : SystemRuntimeLibrary<isX86_64,
-      (add X86CommonLibcalls, Int128RTLibcalls)>;
+def X86SystemLibrary
+    : SystemRuntimeLibrary<isX86,
+      (add LibraryRef<CompilerRtLibgcc,
+                      !listconcat(WindowsDivRemMulLibcallOverrides,
+                                  [__powitf2_f128])>,
+           // x86 has no fp128 sincosl, only the x87 one.
+           LibraryRef<Libm, [sincosl_f128]>,
+           LibraryRef<Libc, !listconcat(MemChkLibcalls, [bzero])>,
+           ExceptionRuntime, SafeStackRuntime)>;
 
 //===----------------------------------------------------------------------===//
 // XCore Runtime Libcalls
@@ -3343,15 +3641,22 @@ def X86_64SystemLibrary
 
 def __memcpy_4 : RuntimeLibcallImpl<MEMCPY_ALIGN_4>;
 
-def isXCore : RuntimeLibcallPredicate<"TT.getArch() == Triple::xcore">;
+def isXCore : RuntimeLibcallAvailability<(all_of IsXCore)>;
+
+def XCoreLibc : LibcallLibrary<"libc",
+  (add __memcpy_4, iprintf, siprintf, fiprintf), isXCore>;
+
+// The _Float128 libm functions, provided by glibc.
+def XCoreLibm : LibcallLibrary<"libm",
+  (add LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls),
+                    isGNUEnvironment>), isXCore>;
+
 def XCoreSystemLibrary
     : SystemRuntimeLibrary<isXCore,
-    (add DefaultRuntimeLibcallImpls,
-         exp10f, exp10, exp10l_f128,
-         __memcpy_4,
-         iprintf, siprintf, fiprintf,
-         LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls), isGNUEnvironment>
-)>;
+    // XCore does not use the stack protector.
+    (add CompilerRtLibgcc, LibraryRef<Libm, [sincos, sincosf]>, Libc,
+         ExceptionRuntime,
+         XCoreLibc, XCoreLibm)>;
 
 //===----------------------------------------------------------------------===//
 // ZOS Runtime Libcalls
@@ -3439,14 +3744,40 @@ defset list<RuntimeLibcallImpl> ZOSRuntimeLibcalls = {
   def zos___SCRT_B : RuntimeLibcallImpl<CBRT_F64, "@@SCRT@B">;
   def zos___FCBT_B : RuntimeLibcallImpl<CBRT_F32, "@@FCBT@B">;
   def zos___LCBT_B : RuntimeLibcallImpl<CBRT_F128, "@@LCBT@B">;
+  def zos___STAN_B : RuntimeLibcallImpl<TAN_F64, "@@STAN@B">;
+  def zos___FTAN_B : RuntimeLibcallImpl<TAN_F32, "@@FTAN@B">;
+  def zos___LTAN_B : RuntimeLibcallImpl<TAN_F128, "@@LTAN@B">;
+  def zos___WASN_B : RuntimeLibcallImpl<ASIN_F64, "@@WASN@B">;
+  def zos___FASN_B : RuntimeLibcallImpl<ASIN_F32, "@@FASN@B">;
+  def zos___LASN_B : RuntimeLibcallImpl<ASIN_F128, "@@LASN@B">;
+  def zos___WACS_B : RuntimeLibcallImpl<ACOS_F64, "@@WACS@B">;
+  def zos___FACS_B : RuntimeLibcallImpl<ACOS_F32, "@@FACS@B">;
+  def zos___LACS_B : RuntimeLibcallImpl<ACOS_F128, "@@LACS@B">;
+  def zos___SATN_B : RuntimeLibcallImpl<ATAN_F64, "@@SATN@B">;
+  def zos___FATN_B : RuntimeLibcallImpl<ATAN_F32, "@@FATN@B">;
+  def zos___LATN_B : RuntimeLibcallImpl<ATAN_F128, "@@LATN@B">;
+  def zos___WAT2_B : RuntimeLibcallImpl<ATAN2_F64, "@@WAT2@B">;
+  def zos___FAT2_B : RuntimeLibcallImpl<ATAN2_F32, "@@FAT2@B">;
+  def zos___LAT2_B : RuntimeLibcallImpl<ATAN2_F128, "@@LAT2@B">;
+  def zos___WSNH_B : RuntimeLibcallImpl<SINH_F64, "@@WSNH@B">;
+  def zos___FSNH_B : RuntimeLibcallImpl<SINH_F32, "@@FSNH@B">;
+  def zos___LSNH_B : RuntimeLibcallImpl<SINH_F128, "@@LSNH@B">;
+  def zos___WCSH_B : RuntimeLibcallImpl<COSH_F64, "@@WCSH@B">;
+  def zos___FCSH_B : RuntimeLibcallImpl<COSH_F32, "@@FCSH@B">;
+  def zos___LCSH_B : RuntimeLibcallImpl<COSH_F128, "@@LCSH@B">;
+  def zos___STNH_B : RuntimeLibcallImpl<TANH_F64, "@@STNH@B">;
+  def zos___FTNH_B : RuntimeLibcallImpl<TANH_F32, "@@FTNH@B">;
+  def zos___LTNH_B : RuntimeLibcallImpl<TANH_F128, "@@LTNH@B">;
 }
 
-def isSystemZZOS : RuntimeLibcallPredicate<"(TT.isSystemZ() && TT.isOSzOS())">;
-def isZOS : RuntimeLibcallPredicate<"TT.isOSzOS()">;
+def isSystemZZOS : RuntimeLibcallAvailability<(all_of IsSystemZ, IsOSzOS)>;
+
+def ZOSLibc : LibcallLibrary<"libc", (add ZOSRuntimeLibcalls), isSystemZZOS>;
+
 def SystemZZOSSystemLibrary
     : SystemRuntimeLibrary<
-          isSystemZZOS, (add DefaultLibcallImpls64,
-                            LibcallImpls<(add ZOSRuntimeLibcalls), isZOS>)>;
+          isSystemZZOS, (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime,
+                            ZOSLibc)>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly Runtime Libcalls
@@ -3457,46 +3788,45 @@ def SystemZZOSSystemLibrary
 // this on emscripten depending on what they end up doing.
 def emscripten_return_address : RuntimeLibcallImpl<RETURN_ADDRESS>;
 
-def isWasm : RuntimeLibcallPredicate<"TT.isWasm()">;
-def isOSEmscripten : RuntimeLibcallPredicate<[{TT.isOSEmscripten()}]>;
+def isWasm : RuntimeLibcallAvailability<(all_of IsWasm)>;
+def isOSEmscripten : RuntimeLibcallAvailability<(all_of IsOSEmscripten)>;
 
-// Define the emscripten name for return address helper.
-// TODO: when implementing other Wasm backends, make this generic or only do
-// this on emscripten depending on what they end up doing.
+def WasmLibc : LibcallLibrary<"libc",
+  (add LibcallImpls<(add __small_printf, __small_sprintf, __small_fprintf),
+                    isOSEmscripten>),
+  isWasm>;
+
+// Wasm's compiler-rt extras. Unlike other targets, Wasm provides the i128
+// helpers on wasm32 too.
+def WasmCompilerRt : LibcallLibrary<"compiler-rt",
+  (add Int128RTLibcalls,
+       CompilerRTOnlyInt64Libcalls, CompilerRTOnlyInt128Libcalls,
+       emscripten_return_address),
+  isWasm>;
+
+def WasmExceptionRuntime : LibcallLibrary<"unwind",
+  (add _Unwind_GetWasmLPadContext), isWasm>;
+
 def WasmSystemLibrary
     : SystemRuntimeLibrary<isWasm,
-      (add DefaultRuntimeLibcallImpls, Int128RTLibcalls,
-           CompilerRTOnlyInt64Libcalls, CompilerRTOnlyInt128Libcalls,
-           exp10f, exp10,
-           _Unwind_CallPersonality,
-           emscripten_return_address,
-           LibcallImpls<(add __small_printf,
-                             __small_sprintf,
-                             __small_fprintf), isOSEmscripten>,
-           __stack_chk_fail, __stack_chk_guard)>;
+      (add CompilerRtLibgcc, LibraryRef<Libm, [sincos, sincosf, sincosl_f128]>,
+           Libc, WasmLibc, WasmCompilerRt,
+           ExceptionRuntime, WasmExceptionRuntime)>;
 
 //===----------------------------------------------------------------------===//
 // Legacy Default Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
 // TODO: Should make every target explicit.
-def isDefaultLibcallArch : RuntimeLibcallPredicate<[{
-  TT.isMIPS() || TT.isLoongArch() || TT.isVE() || TT.isBPF() ||
-  TT.getArch() == Triple::csky || TT.getArch() == Triple::arc ||
-  TT.getArch() == Triple::m68k ||  TT.getArch() == Triple::xtensa ||
-  (TT.isSystemZ() && !TT.isOSzOS())
-}]>;
+def isDefaultLibcallArch : RuntimeLibcallAvailability<
+  (any_of IsMIPS, IsLoongArch, IsVE, IsBPF, IsArchCSKY, IsArchArc, IsArchM68k,
+          IsArchXtensa, (all_of IsSystemZ, (not IsOSzOS)))>;
 
 
-def isArch64Bit : RuntimeLibcallPredicate<[{TT.isArch64Bit()}]>;
 def LegacyDefaultSystemLibrary
     : SystemRuntimeLibrary<isDefaultLibcallArch,
-      (add DefaultRuntimeLibcallImpls,
-         LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-         exp10f, exp10, exp10l_f128,
-         __powisf2, __powidf2, __powitf2_f128,
-         LibcallImpls<(add Int128RTLibcalls), isArch64Bit>,
-         DefaultStackProtector
+      (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime,
+         SafeStackRuntime
 )>;
 
 //===----------------------------------------------------------------------===//
@@ -3558,20 +3888,52 @@ defset list<RuntimeLibcallImpl> DARWIN_LIBSYSTEM_M_VECFUNCS = {
   def _simd_cos_f4 : RuntimeLibcallImpl<COS_V4F32>;
   def _simd_cosh_d2 : RuntimeLibcallImpl<COSH_V2F64>;
   def _simd_cosh_f4 : RuntimeLibcallImpl<COSH_V4F32>;
+  def _simd_cospi_d2 : RuntimeLibcallImpl<COSPI_V2F64>;
+  def _simd_cospi_f4 : RuntimeLibcallImpl<COSPI_V4F32>;
   def _simd_erf_d2 : RuntimeLibcallImpl<ERF_V2F64>;
   def _simd_erf_f4 : RuntimeLibcallImpl<ERF_V4F32>;
+  def _simd_erfc_d2 : RuntimeLibcallImpl<ERFC_V2F64>;
+  def _simd_erfc_f4 : RuntimeLibcallImpl<ERFC_V4F32>;
+  def _simd_exp10_d2 : RuntimeLibcallImpl<EXP10_V2F64>;
+  def _simd_exp10_f4 : RuntimeLibcallImpl<EXP10_V4F32>;
+  def _simd_exp2_d2 : RuntimeLibcallImpl<EXP2_V2F64>;
+  def _simd_exp2_f4 : RuntimeLibcallImpl<EXP2_V4F32>;
   def _simd_exp_d2 : RuntimeLibcallImpl<EXP_V2F64>;
   def _simd_exp_f4 : RuntimeLibcallImpl<EXP_V4F32>;
+  def _simd_expm1_d2 : RuntimeLibcallImpl<EXPM1_V2F64>;
+  def _simd_expm1_f4 : RuntimeLibcallImpl<EXPM1_V4F32>;
+  def _simd_hypot_d2 : RuntimeLibcallImpl<HYPOT_V2F64>;
+  def _simd_hypot_f4 : RuntimeLibcallImpl<HYPOT_V4F32>;
+  def _simd_lgamma_d2 : RuntimeLibcallImpl<LGAMMA_V2F64>;
+  def _simd_lgamma_f4 : RuntimeLibcallImpl<LGAMMA_V4F32>;
+  def _simd_log10_d2 : RuntimeLibcallImpl<LOG10_V2F64>;
+  def _simd_log10_f4 : RuntimeLibcallImpl<LOG10_V4F32>;
+  def _simd_log1p_d2 : RuntimeLibcallImpl<LOG1P_V2F64>;
+  def _simd_log1p_f4 : RuntimeLibcallImpl<LOG1P_V4F32>;
+  def _simd_log2_d2 : RuntimeLibcallImpl<LOG2_V2F64>;
+  def _simd_log2_f4 : RuntimeLibcallImpl<LOG2_V4F32>;
+  def _simd_log_d2 : RuntimeLibcallImpl<LOG_V2F64>;
+  def _simd_log_f4 : RuntimeLibcallImpl<LOG_V4F32>;
+  def _simd_nextafter_d2 : RuntimeLibcallImpl<NEXTAFTER_V2F64>;
+  def _simd_nextafter_f4 : RuntimeLibcallImpl<NEXTAFTER_V4F32>;
   def _simd_pow_d2 : RuntimeLibcallImpl<POW_V2F64>;
   def _simd_pow_f4 : RuntimeLibcallImpl<POW_V4F32>;
+  def _simd_remainder_d2 : RuntimeLibcallImpl<REMAINDER_V2F64>;
+  def _simd_remainder_f4 : RuntimeLibcallImpl<REMAINDER_V4F32>;
   def _simd_sin_d2 : RuntimeLibcallImpl<SIN_V2F64>;
   def _simd_sin_f4 : RuntimeLibcallImpl<SIN_V4F32>;
   def _simd_sinh_d2 : RuntimeLibcallImpl<SINH_V2F64>;
   def _simd_sinh_f4 : RuntimeLibcallImpl<SINH_V4F32>;
+  def _simd_sinpi_d2 : RuntimeLibcallImpl<SINPI_V2F64>;
+  def _simd_sinpi_f4 : RuntimeLibcallImpl<SINPI_V4F32>;
   def _simd_tan_d2 : RuntimeLibcallImpl<TAN_V2F64>;
   def _simd_tan_f4 : RuntimeLibcallImpl<TAN_V4F32>;
   def _simd_tanh_d2 : RuntimeLibcallImpl<TANH_V2F64>;
   def _simd_tanh_f4 : RuntimeLibcallImpl<TANH_V4F32>;
+  def _simd_tanpi_d2 : RuntimeLibcallImpl<TANPI_V2F64>;
+  def _simd_tanpi_f4 : RuntimeLibcallImpl<TANPI_V4F32>;
+  def _simd_tgamma_d2 : RuntimeLibcallImpl<TGAMMA_V2F64>;
+  def _simd_tgamma_f4 : RuntimeLibcallImpl<TGAMMA_V4F32>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3593,14 +3955,14 @@ defset list<RuntimeLibcallImpl> LIBMVEC_X86_VECFUNCS = {
   def LIBMVEC__ZGVbN2v_tan : LibmvecLibcall<TAN_V2F64>;
   def LIBMVEC__ZGVbN2vv___pow_finite : LibmvecLibcall<POW_FINITE_V2F64>;
   def LIBMVEC__ZGVbN2vv_pow : LibmvecLibcall<POW_V2F64>;
-  def LIBMVEC__ZGVbN4v___expf_finite : LibmvecLibcall<EXP_FINITE_V4F64>;
-  def LIBMVEC__ZGVbN4v___logf_finite : LibmvecLibcall<LOG_FINITE_V4F64>;
+  def LIBMVEC__ZGVbN4v___expf_finite : LibmvecLibcall<EXP_FINITE_V4F32>;
+  def LIBMVEC__ZGVbN4v___logf_finite : LibmvecLibcall<LOG_FINITE_V4F32>;
   def LIBMVEC__ZGVbN4v_cosf : LibmvecLibcall<COS_V4F32>;
   def LIBMVEC__ZGVbN4v_expf : LibmvecLibcall<EXP_V4F32>;
   def LIBMVEC__ZGVbN4v_logf : LibmvecLibcall<LOG_V4F32>;
   def LIBMVEC__ZGVbN4v_sinf : LibmvecLibcall<SIN_V4F32>;
   def LIBMVEC__ZGVbN4v_tanf : LibmvecLibcall<TAN_V4F32>;
-  def LIBMVEC__ZGVbN4vv___powf_finite : LibmvecLibcall<POW_FINITE_V4F64>;
+  def LIBMVEC__ZGVbN4vv___powf_finite : LibmvecLibcall<POW_FINITE_V4F32>;
   def LIBMVEC__ZGVbN4vv_powf : LibmvecLibcall<POW_V4F32>;
   def LIBMVEC__ZGVdN4v___exp_finite : LibmvecLibcall<EXP_FINITE_V4F64>;
   def LIBMVEC__ZGVdN4v___log_finite : LibmvecLibcall<LOG_FINITE_V4F64>;
@@ -3611,14 +3973,14 @@ defset list<RuntimeLibcallImpl> LIBMVEC_X86_VECFUNCS = {
   def LIBMVEC__ZGVdN4v_tan : LibmvecLibcall<TAN_V4F64>;
   def LIBMVEC__ZGVdN4vv___pow_finite : LibmvecLibcall<POW_FINITE_V4F64>;
   def LIBMVEC__ZGVdN4vv_pow : LibmvecLibcall<POW_V4F64>;
-  def LIBMVEC__ZGVdN8v___expf_finite : LibmvecLibcall<EXP_FINITE_V8F64>;
-  def LIBMVEC__ZGVdN8v___logf_finite : LibmvecLibcall<LOG_FINITE_V8F64>;
+  def LIBMVEC__ZGVdN8v___expf_finite : LibmvecLibcall<EXP_FINITE_V8F32>;
+  def LIBMVEC__ZGVdN8v___logf_finite : LibmvecLibcall<LOG_FINITE_V8F32>;
   def LIBMVEC__ZGVdN8v_cosf : LibmvecLibcall<COS_V8F32>;
   def LIBMVEC__ZGVdN8v_expf : LibmvecLibcall<EXP_V8F32>;
   def LIBMVEC__ZGVdN8v_logf : LibmvecLibcall<LOG_V8F32>;
   def LIBMVEC__ZGVdN8v_sinf : LibmvecLibcall<SIN_V8F32>;
   def LIBMVEC__ZGVdN8v_tanf : LibmvecLibcall<TAN_V8F32>;
-  def LIBMVEC__ZGVdN8vv___powf_finite : LibmvecLibcall<POW_FINITE_V8F64>;
+  def LIBMVEC__ZGVdN8vv___powf_finite : LibmvecLibcall<POW_FINITE_V8F32>;
   def LIBMVEC__ZGVdN8vv_powf : LibmvecLibcall<POW_V8F32>;
 }
 
@@ -3915,7 +4277,7 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_VF2_VECFUNCS = {
   def _ZGVnN2vv_fdim : RuntimeLibcallImpl<FDIM_V2F64>;
   def _ZGVnN2vv_fmax : RuntimeLibcallImpl<FMAX_V2F64>;
   def _ZGVnN2vv_fmin : RuntimeLibcallImpl<FMIN_V2F64>;
-  def _ZGVnN2vv_fmod : RuntimeLibcallImpl<FMOD_V2F64>;
+  def _ZGVnN2vv_fmod : RuntimeLibcallImpl<REM_V2F64>;
   def _ZGVnN2vv_hypot : RuntimeLibcallImpl<HYPOT_V2F64>;
   def _ZGVnN2vv_ldexp : RuntimeLibcallImpl<LDEXP_V2F64>;
   def _ZGVnN2vv_nextafter : RuntimeLibcallImpl<NEXTAFTER_V2F64>;
@@ -3961,7 +4323,7 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_VF4_VECFUNCS = {
   def _ZGVnN4vv_fdimf : RuntimeLibcallImpl<FDIM_V4F32>;
   def _ZGVnN4vv_fmaxf : RuntimeLibcallImpl<FMAX_V4F32>;
   def _ZGVnN4vv_fminf : RuntimeLibcallImpl<FMIN_V4F32>;
-  def _ZGVnN4vv_fmodf : RuntimeLibcallImpl<FMOD_V4F32>;
+  def _ZGVnN4vv_fmodf : RuntimeLibcallImpl<REM_V4F32>;
   def _ZGVnN4vv_hypotf : RuntimeLibcallImpl<HYPOT_V4F32>;
   def _ZGVnN4vv_ldexpf : RuntimeLibcallImpl<LDEXP_V4F32>;
   def _ZGVnN4vv_nextafterf : RuntimeLibcallImpl<NEXTAFTER_V4F32>;
@@ -4038,8 +4400,8 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS = {
   def _ZGVsMxvv_fmaxf : RuntimeLibcallImpl<FMAX_NXV4F32>;
   def _ZGVsMxvv_fmin : RuntimeLibcallImpl<FMIN_NXV2F64>;
   def _ZGVsMxvv_fminf : RuntimeLibcallImpl<FMIN_NXV4F32>;
-  def _ZGVsMxvv_fmod : RuntimeLibcallImpl<FMOD_NXV2F64>;
-  def _ZGVsMxvv_fmodf : RuntimeLibcallImpl<FMOD_NXV4F32>;
+  def _ZGVsMxvv_fmod : RuntimeLibcallImpl<REM_NXV2F64>;
+  def _ZGVsMxvv_fmodf : RuntimeLibcallImpl<REM_NXV4F32>;
   def _ZGVsMxvv_hypot : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def _ZGVsMxvv_hypotf : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def _ZGVsMxvv_ldexp : RuntimeLibcallImpl<LDEXP_NXV2F64>;
@@ -4103,8 +4465,8 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV = {
   def Sleef_fmaxfx_rvvm2 : RuntimeLibcallImpl<FMAX_NXV4F32>;
   def Sleef_fmindx_u10rvvm2 : RuntimeLibcallImpl<FMIN_NXV2F64>;
   def Sleef_fminfx_u10rvvm2 : RuntimeLibcallImpl<FMIN_NXV4F32>;
-  def Sleef_fmoddx_rvvm2 : RuntimeLibcallImpl<FMOD_NXV2F64>;
-  def Sleef_fmodfx_rvvm2 : RuntimeLibcallImpl<FMOD_NXV4F32>;
+  def Sleef_fmoddx_rvvm2 : RuntimeLibcallImpl<REM_NXV2F64>;
+  def Sleef_fmodfx_rvvm2 : RuntimeLibcallImpl<REM_NXV4F32>;
   def Sleef_hypotdx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def Sleef_hypotfx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def Sleef_ilogbdx_rvvm2 : RuntimeLibcallImpl<ILOGB_NXV2F64>;
@@ -4196,8 +4558,8 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
   def armpl_svfmax_f64_x : RuntimeLibcallImpl<FMAX_NXV2F64>;
   def armpl_svfmin_f32_x : RuntimeLibcallImpl<FMIN_NXV4F32>;
   def armpl_svfmin_f64_x : RuntimeLibcallImpl<FMIN_NXV2F64>;
-  def armpl_svfmod_f32_x : RuntimeLibcallImpl<FMOD_NXV4F32>;
-  def armpl_svfmod_f64_x : RuntimeLibcallImpl<FMOD_NXV2F64>;
+  def armpl_svfmod_f32_x : RuntimeLibcallImpl<REM_NXV4F32>;
+  def armpl_svfmod_f64_x : RuntimeLibcallImpl<REM_NXV2F64>;
   def armpl_svhypot_f32_x : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def armpl_svhypot_f64_x : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def armpl_svilogb_f32_x : RuntimeLibcallImpl<ILOGB_NXV4F32>;
@@ -4282,8 +4644,8 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
   def armpl_vfmaxq_f64 : RuntimeLibcallImpl<FMAX_V2F64>;
   def armpl_vfminq_f32 : RuntimeLibcallImpl<FMIN_V4F32>;
   def armpl_vfminq_f64 : RuntimeLibcallImpl<FMIN_V2F64>;
-  def armpl_vfmodq_f32 : RuntimeLibcallImpl<FMOD_V4F32>;
-  def armpl_vfmodq_f64 : RuntimeLibcallImpl<FMOD_V2F64>;
+  def armpl_vfmodq_f32 : RuntimeLibcallImpl<REM_V4F32>;
+  def armpl_vfmodq_f64 : RuntimeLibcallImpl<REM_V2F64>;
   def armpl_vhypotq_f32 : RuntimeLibcallImpl<HYPOT_V4F32>;
   def armpl_vhypotq_f64 : RuntimeLibcallImpl<HYPOT_V2F64>;
   def armpl_vilogbq_f32 : RuntimeLibcallImpl<ILOGB_V4F32>;
@@ -4331,25 +4693,33 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
 //===----------------------------------------------------------------------===//
 
 defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
+  def amd_vrd2_acos : RuntimeLibcallImpl<ACOS_V2F64>;
   def amd_vrd2_atan : RuntimeLibcallImpl<ATAN_V2F64>;
+  def amd_vrd2_atan2 : RuntimeLibcallImpl<ATAN2_V2F64>;
   def amd_vrd2_cbrt : RuntimeLibcallImpl<CBRT_V2F64>;
   def amd_vrd2_cos : RuntimeLibcallImpl<COS_V2F64>;
+  def amd_vrd2_cosh : RuntimeLibcallImpl<COSH_V2F64>;
   def amd_vrd2_erf : RuntimeLibcallImpl<ERF_V2F64>;
   def amd_vrd2_exp : RuntimeLibcallImpl<EXP_V2F64>;
   def amd_vrd2_exp10 : RuntimeLibcallImpl<EXP10_V2F64>;
   def amd_vrd2_exp2 : RuntimeLibcallImpl<EXP2_V2F64>;
-  def amd_vrd2_expm1 : RuntimeLibcallImpl<EXPM1_V2F64>;
   def amd_vrd2_log : RuntimeLibcallImpl<LOG_V2F64>;
   def amd_vrd2_log10 : RuntimeLibcallImpl<LOG10_V2F64>;
   def amd_vrd2_log1p : RuntimeLibcallImpl<LOG1P_V2F64>;
   def amd_vrd2_log2 : RuntimeLibcallImpl<LOG2_V2F64>;
   def amd_vrd2_pow : RuntimeLibcallImpl<POW_V2F64>;
   def amd_vrd2_sin : RuntimeLibcallImpl<SIN_V2F64>;
+  def amd_vrd2_sincos : RuntimeLibcallImpl<SINCOS_V2F64>;
   def amd_vrd2_tan : RuntimeLibcallImpl<TAN_V2F64>;
+  def amd_vrd2_tanh : RuntimeLibcallImpl<TANH_V2F64>;
+  def amd_vrd4_acos : RuntimeLibcallImpl<ACOS_V4F64>;
   def amd_vrd4_atan : RuntimeLibcallImpl<ATAN_V4F64>;
+  def amd_vrd4_atan2 : RuntimeLibcallImpl<ATAN2_V4F64>;
   def amd_vrd4_cos : RuntimeLibcallImpl<COS_V4F64>;
-  def amd_vrd4_erf : RuntimeLibcallImpl<ERF_V4F32>;
+  def amd_vrd4_cosh : RuntimeLibcallImpl<COSH_V4F64>;
+  def amd_vrd4_erf : RuntimeLibcallImpl<ERF_V4F64>;
   def amd_vrd4_exp : RuntimeLibcallImpl<EXP_V4F64>;
+  def amd_vrd4_exp10 : RuntimeLibcallImpl<EXP10_V4F64>;
   def amd_vrd4_exp2 : RuntimeLibcallImpl<EXP2_V4F64>;
   def amd_vrd4_log : RuntimeLibcallImpl<LOG_V4F64>;
   def amd_vrd4_log2 : RuntimeLibcallImpl<LOG2_V4F64>;
@@ -4357,11 +4727,16 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd4_sin : RuntimeLibcallImpl<SIN_V4F64>;
   def amd_vrd4_sincos : RuntimeLibcallImpl<SINCOS_V4F64>;
   def amd_vrd4_tan : RuntimeLibcallImpl<TAN_V4F64>;
+  def amd_vrd4_tanh : RuntimeLibcallImpl<TANH_V4F64>;
+  def amd_vrd8_acos : RuntimeLibcallImpl<ACOS_V8F64>;
   def amd_vrd8_asin : RuntimeLibcallImpl<ASIN_V8F64>;
   def amd_vrd8_atan : RuntimeLibcallImpl<ATAN_V8F64>;
+  def amd_vrd8_atan2 : RuntimeLibcallImpl<ATAN2_V8F64>;
   def amd_vrd8_cos : RuntimeLibcallImpl<COS_V8F64>;
-  def amd_vrd8_erf : RuntimeLibcallImpl<ERF_V8F32>;
+  def amd_vrd8_cosh : RuntimeLibcallImpl<COSH_V8F64>;
+  def amd_vrd8_erf : RuntimeLibcallImpl<ERF_V8F64>;
   def amd_vrd8_exp : RuntimeLibcallImpl<EXP_V8F64>;
+  def amd_vrd8_exp10 : RuntimeLibcallImpl<EXP10_V8F64>;
   def amd_vrd8_exp2 : RuntimeLibcallImpl<EXP2_V8F64>;
   def amd_vrd8_log : RuntimeLibcallImpl<LOG_V8F64>;
   def amd_vrd8_log2 : RuntimeLibcallImpl<LOG2_V8F64>;
@@ -4369,11 +4744,20 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd8_sin : RuntimeLibcallImpl<SIN_V8F64>;
   def amd_vrd8_sincos : RuntimeLibcallImpl<SINCOS_V8F64>;
   def amd_vrd8_tan : RuntimeLibcallImpl<TAN_V8F64>;
+  def amd_vrd8_tanh : RuntimeLibcallImpl<TANH_V8F64>;
+  def amd_vrd2_erfinv : RuntimeLibcallImpl<ERFINV_V2F64>;
+  def amd_vrd4_erfinv : RuntimeLibcallImpl<ERFINV_V4F64>;
+  def amd_vrd8_erfinv : RuntimeLibcallImpl<ERFINV_V8F64>;
+  def amd_vrd2_erfcinv : RuntimeLibcallImpl<ERFCINV_V2F64>;
+  def amd_vrd4_erfcinv : RuntimeLibcallImpl<ERFCINV_V4F64>;
+  def amd_vrd8_erfcinv : RuntimeLibcallImpl<ERFCINV_V8F64>;
   def amd_vrs16_acosf : RuntimeLibcallImpl<ACOS_V16F32>;
   def amd_vrs16_asinf : RuntimeLibcallImpl<ASIN_V16F32>;
   def amd_vrs16_atanf : RuntimeLibcallImpl<ATAN_V16F32>;
   def amd_vrs16_cosf : RuntimeLibcallImpl<COS_V16F32>;
+  def amd_vrs16_coshf : RuntimeLibcallImpl<COSH_V16F32>;
   def amd_vrs16_erff : RuntimeLibcallImpl<ERF_V16F32>;
+  def amd_vrs16_exp10f : RuntimeLibcallImpl<EXP10_V16F32>;
   def amd_vrs16_exp2f : RuntimeLibcallImpl<EXP2_V16F32>;
   def amd_vrs16_expf : RuntimeLibcallImpl<EXP_V16F32>;
   def amd_vrs16_log10f : RuntimeLibcallImpl<LOG10_V16F32>;
@@ -4407,9 +4791,11 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_acosf : RuntimeLibcallImpl<ACOS_V8F32>;
   def amd_vrs8_asinf : RuntimeLibcallImpl<ASIN_V8F32>;
   def amd_vrs8_atanf : RuntimeLibcallImpl<ATAN_V8F32>;
+  def amd_vrs8_cbrtf : RuntimeLibcallImpl<CBRT_V8F32>;
   def amd_vrs8_cosf : RuntimeLibcallImpl<COS_V8F32>;
   def amd_vrs8_coshf : RuntimeLibcallImpl<COSH_V8F32>;
   def amd_vrs8_erff : RuntimeLibcallImpl<ERF_V8F32>;
+  def amd_vrs8_exp10f : RuntimeLibcallImpl<EXP10_V8F32>;
   def amd_vrs8_exp2f : RuntimeLibcallImpl<EXP2_V8F32>;
   def amd_vrs8_expf : RuntimeLibcallImpl<EXP_V8F32>;
   def amd_vrs8_log10f : RuntimeLibcallImpl<LOG10_V8F32>;
@@ -4420,4 +4806,16 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_sinf : RuntimeLibcallImpl<SIN_V8F32>;
   def amd_vrs8_tanf : RuntimeLibcallImpl<TAN_V8F32>;
   def amd_vrs8_tanhf : RuntimeLibcallImpl<TANH_V8F32>;
+  def amd_vrd2_cdfnorm : RuntimeLibcallImpl<CDFNORM_V2F64>;
+  def amd_vrd4_cdfnorm : RuntimeLibcallImpl<CDFNORM_V4F64>;
+  def amd_vrd8_cdfnorm : RuntimeLibcallImpl<CDFNORM_V8F64>;
+  def amd_vrd2_cdfnorminv : RuntimeLibcallImpl<CDFNORMINV_V2F64>;
+  def amd_vrd4_cdfnorminv : RuntimeLibcallImpl<CDFNORMINV_V4F64>;
+  def amd_vrd8_cdfnorminv : RuntimeLibcallImpl<CDFNORMINV_V8F64>;
+  def amd_vrs4_roundf : RuntimeLibcallImpl<ROUND_V4F32>;
+  def amd_vrs8_roundf : RuntimeLibcallImpl<ROUND_V8F32>;
+  def amd_vrs16_roundf : RuntimeLibcallImpl<ROUND_V16F32>;
+  def amd_vrd2_round : RuntimeLibcallImpl<ROUND_V2F64>;
+  def amd_vrd4_round : RuntimeLibcallImpl<ROUND_V4F64>;
+  def amd_vrd8_round : RuntimeLibcallImpl<ROUND_V8F64>;
 }

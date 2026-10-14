@@ -2,13 +2,19 @@
 // memory. Make sure we don't report these leaks.
 
 // RUN: %clangxx_lsan %s -o %t
+//
+// Heap-allocated
 // RUN: %env_lsan_opts= %run %t 2>&1
+//
+// Stack-allocated
 // RUN: %env_lsan_opts= not %run %t foo 2>&1 | FileCheck %s
+//
 // Missing 'getcontext' and 'makecontext' on Android.
 // UNSUPPORTED: target={{(arm|aarch64|loongarch64|powerpc64).*}},android
 
 #include "sanitizer_common/sanitizer_ucontext.h"
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 const int kStackSize = 1 << 20;
@@ -36,6 +42,10 @@ int main(int argc, char *argv[]) {
     perror("swapcontext");
     return 1;
   }
+
+  // If 'leaked' is inside 'stack_memory', LSan's pointer-tracing may consider
+  // 'leaked' to be reachable.
+  memset(stack_memory, 0, kStackSize + 1);
 
   delete[] heap_memory;
   return 0;

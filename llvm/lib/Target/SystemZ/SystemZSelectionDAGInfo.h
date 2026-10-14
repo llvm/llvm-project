@@ -46,10 +46,17 @@ public:
 
   SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &DL,
                                   SDValue Chain, SDValue Dst, SDValue Src,
-                                  SDValue Size, Align Alignment,
+                                  SDValue Size, Align DstAlign, Align SrcAlign,
                                   bool IsVolatile, bool AlwaysInline,
                                   MachinePointerInfo DstPtrInfo,
                                   MachinePointerInfo SrcPtrInfo) const override;
+
+  SDValue EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &DL,
+                                   SDValue Chain, SDValue Dst, SDValue Src,
+                                   SDValue Size, Align DstAlign, Align SrcAlign,
+                                   bool IsVolatile,
+                                   MachinePointerInfo DstPtrInfo,
+                                   MachinePointerInfo SrcPtrInfo) const override;
 
   SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, const SDLoc &DL,
                                   SDValue Chain, SDValue Dst, SDValue Byte,
@@ -67,16 +74,17 @@ public:
                           SDValue Src, SDValue Char, SDValue Length,
                           MachinePointerInfo SrcPtrInfo) const override;
 
-  std::pair<SDValue, SDValue> EmitTargetCodeForStrcpy(
-      SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dest,
-      SDValue Src, MachinePointerInfo DestPtrInfo,
-      MachinePointerInfo SrcPtrInfo, bool isStpcpy) const override;
-
   std::pair<SDValue, SDValue>
-  EmitTargetCodeForStrcmp(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
-                          SDValue Src1, SDValue Src2,
-                          MachinePointerInfo Op1PtrInfo,
-                          MachinePointerInfo Op2PtrInfo) const override;
+  EmitTargetCodeForStrcpy(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                          SDValue Dest, SDValue Src,
+                          MachinePointerInfo DestPtrInfo,
+                          MachinePointerInfo SrcPtrInfo, bool isStpcpy,
+                          const CallInst *CI) const override;
+
+  std::pair<SDValue, SDValue> EmitTargetCodeForStrcmp(
+      SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Src1,
+      SDValue Src2, MachinePointerInfo Op1PtrInfo,
+      MachinePointerInfo Op2PtrInfo, const CallInst *CI) const override;
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,

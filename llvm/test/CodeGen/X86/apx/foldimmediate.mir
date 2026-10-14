@@ -40,7 +40,7 @@ body: |
     ; CHECK-NEXT: NOOP implicit $eflags
     ; CHECK-NEXT: CCMP32ri [[COPY]], 81, 2, 10, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit $eflags
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOV32ri]], %subreg.sub_32bit
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOV32ri]], %subreg.sub_32bit
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: CTEST64ri32 [[COPY1]], 81, 2, 10, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit $eflags
@@ -57,7 +57,7 @@ body: |
     CCMP32rr %1, %0, 2, 10, implicit-def $eflags, implicit $eflags
     NOOP implicit $eflags
 
-    %7 = SUBREG_TO_REG 0, killed %0:gr32, %subreg.sub_32bit
+    %7 = SUBREG_TO_REG killed %0:gr32, %subreg.sub_32bit
     %8 = COPY $rsi
 
     CTEST64rr %8, %7, 2, 10, implicit-def $eflags, implicit $eflags

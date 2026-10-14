@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
@@ -27,7 +28,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto transform) {
       benchmark::RegisterBenchmark(
           name,
-          [transform](auto& st) {
+          [transform](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;
@@ -35,10 +36,7 @@ int main(int argc, char** argv) {
 
             std::vector<ValueType> out(size);
 
-            auto f = [](auto element) {
-              benchmark::DoNotOptimize(element);
-              return element;
-            };
+            auto f = [](auto element) { return element; };
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
@@ -55,9 +53,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::transform(vector<int>) (identity transform)", std_transform);
     bm.operator()<std::deque<int>>("std::transform(deque<int>) (identity transform)", std_transform);
     bm.operator()<std::list<int>>("std::transform(list<int>) (identity transform)", std_transform);
-    bm.operator()<std::vector<int>>("rng::transform(vector<int>) (identity transform)", std::ranges::transform);
-    bm.operator()<std::deque<int>>("rng::transform(deque<int>) (identity transform)", std::ranges::transform);
-    bm.operator()<std::list<int>>("rng::transform(list<int>) (identity transform)", std::ranges::transform);
   }
 
   benchmark::Initialize(&argc, argv);

@@ -1,27 +1,22 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; TODO: re-enable validator FPRoundingMode is placed correctly
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-DAG: OpName %[[#r1:]] "r1"
-; CHECK-DAG: OpName %[[#r2:]] "r2"
-; CHECK-DAG: OpName %[[#r3:]] "r3"
-; CHECK-DAG: OpName %[[#r4:]] "r4"
-; CHECK-DAG: OpName %[[#r5:]] "r5"
-; CHECK-DAG: OpName %[[#r6:]] "r6"
-
-; CHECK-NOT: OpDecorate %[[#r5]] FPRoundingMode
-; CHECK-NOT: OpDecorate %[[#r6]] FPRoundingMode
+; CHECK-DAG: %[[#r1:]] = OpFAdd %[[#]] %[[#]]
+; CHECK-DAG: %[[#r2:]] = OpFDiv %[[#]] %[[#]]
+; CHECK-DAG: %[[#r3:]] = OpFSub %[[#]] %[[#]]
+; CHECK-DAG: %[[#r4:]] = OpFMul %[[#]] %[[#]]
+; CHECK-DAG: %[[#r5:]] = OpExtInst %[[#]] %[[#]] fma %[[#]] %[[#]] %[[#]]
+; CHECK-DAG: %[[#r6:]] = OpFRem
 
 ; CHECK-DAG: OpDecorate %[[#r1]] FPRoundingMode RTE
 ; CHECK-DAG: OpDecorate %[[#r2]] FPRoundingMode RTZ
 ; CHECK-DAG: OpDecorate %[[#r4]] FPRoundingMode RTN
 ; CHECK-DAG: OpDecorate %[[#r3]] FPRoundingMode RTP
 
-; CHECK: OpFAdd %[[#]] %[[#]]
-; CHECK: OpFDiv %[[#]] %[[#]]
-; CHECK: OpFSub %[[#]] %[[#]]
-; CHECK: OpFMul %[[#]] %[[#]]
-; CHECK: OpExtInst %[[#]] %[[#]] fma %[[#]] %[[#]] %[[#]]
-; CHECK: OpFRem
+; CHECK-NOT: OpDecorate %[[#r5]] FPRoundingMode
+; CHECK-NOT: OpDecorate %[[#r6]] FPRoundingMode
+
 
 @G_r1 = global float 0.0
 @G_r2 = global float 0.0

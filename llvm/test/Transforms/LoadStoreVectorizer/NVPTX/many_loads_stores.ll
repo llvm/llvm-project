@@ -1,9 +1,10 @@
 ; This is an end-to-end test that checks that LSV succeeds at vectorizing a
 ; large program with many loads.
 ; RUN: opt -mtriple=nvptx64-nvidia-cuda -passes=load-store-vectorizer -S -o - %s > %t
-; RUN: grep 'load i8' < %t | count 18
-; RUN: grep 'load <2 x i8>' < %t | count 9
+; RUN: grep 'load i8' < %t | count 12
+; RUN: grep 'load <2 x i8>' < %t | count 3
 ; RUN: grep 'load <4 x i8>' < %t | count 27
+; RUN: grep 'call <4 x i8> @llvm.masked.load.v4i8.p1.*<4 x i1> <i1 false, i1 true, i1 true, i1 true>' < %t | count 6
 
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"

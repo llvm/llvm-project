@@ -483,3 +483,49 @@ ProgramHeaders:
   - Type:     PT_DYNAMIC
     FirstSec: .dynamic
     LastSec:  .dynamic
+
+## Case 8: Test that x86-64 machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=8 %s -o %t.x86_64
+# RUN: llvm-readobj --dynamic-table %t.x86_64 | FileCheck %s --check-prefix=LLVM-X86_64
+# RUN: llvm-readelf --dynamic-table %t.x86_64 | FileCheck %s --check-prefix=GNU-X86_64
+
+# LLVM-X86_64:      DynamicSection [ (4 entries)
+# LLVM-X86_64-NEXT:   Tag                Type          Name/Value
+# LLVM-X86_64-NEXT:   0x0000000070000000 X86_64_PLT    0x401020
+# LLVM-X86_64-NEXT:   0x0000000070000001 X86_64_PLTSZ  0x20
+# LLVM-X86_64-NEXT:   0x0000000070000003 X86_64_PLTENT 0x10
+# LLVM-X86_64-NEXT:   0x0000000000000000 NULL          0x0
+# LLVM-X86_64-NEXT: ]
+
+# GNU-X86_64:      Dynamic section at offset {{.*}} contains 4 entries:
+# GNU-X86_64-NEXT:   Tag                Type            Name/Value
+# GNU-X86_64-NEXT:   0x0000000070000000 (X86_64_PLT)    0x401020
+# GNU-X86_64-NEXT:   0x0000000070000001 (X86_64_PLTSZ)  0x20
+# GNU-X86_64-NEXT:   0x0000000070000003 (X86_64_PLTENT) 0x10
+# GNU-X86_64-NEXT:   0x0000000000000000 (NULL)          0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_X86_64_PLT
+        Value: 0x401020
+      - Tag:   DT_X86_64_PLTSZ
+        Value: 0x20
+      - Tag:   DT_X86_64_PLTENT
+        Value: 0x10
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

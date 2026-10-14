@@ -1,14 +1,11 @@
-# RUN: not --crash llc -o - -mtriple=aarch64 -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -o - -mtriple=aarch64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_fcmp
-legalized:       true
-regBankSelected: false
-selected:        false
+name: test_fcmp
 tracksRegLiveness: true
 liveins:
-body:             |
+body: |
   bb.0:
     liveins: $x0, $w0, $q0
     %s32:_(s32) = COPY $w0
@@ -33,5 +30,4 @@ body:             |
 
     %var7:_(<2 x s1>) = G_IS_FPCLASS %vector:_(<4 x s32>), 1
     ; CHECK: *** Bad machine code: operand types must preserve number of vector elements ***
-
 ...

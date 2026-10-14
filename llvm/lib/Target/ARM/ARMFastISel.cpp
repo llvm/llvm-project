@@ -146,8 +146,9 @@ class ARMFastISel final : public FastISel {
 
   public:
     explicit ARMFastISel(FunctionLoweringInfo &funcInfo,
-                         const TargetLibraryInfo *libInfo)
-        : FastISel(funcInfo, libInfo),
+                         const TargetLibraryInfo *libInfo,
+                         const LibcallLoweringInfo *libcallLowering)
+        : FastISel(funcInfo, libInfo, libcallLowering),
           Subtarget(&funcInfo.MF->getSubtarget<ARMSubtarget>()),
           M(const_cast<Module &>(*funcInfo.Fn->getParent())),
           TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()),
@@ -439,6 +440,9 @@ Register ARMFastISel::ARMMoveToIntReg(MVT VT, Register SrcReg) {
 // (the high and the low) into integer registers then use a move to get
 // the combined constant into an FP reg.
 Register ARMFastISel::ARMMaterializeFP(const ConstantFP *CFP, MVT VT) {
+  if (VT != MVT::f32 && VT != MVT::f64)
+    return Register();
+
   const APFloat Val = CFP->getValueAPF();
   bool is64bit = VT == MVT::f64;
 
@@ -679,8 +683,7 @@ Register ARMFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   if (!isLoadTypeLegal(AI->getType(), VT))
     return Register();
 
-  DenseMap<const AllocaInst*, int>::iterator SI =
-    FuncInfo.StaticAllocaMap.find(AI);
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
 
   // This will get lowered later into the correct offsets and registers
   // via rewriteXFrameIndex.
@@ -813,8 +816,7 @@ bool ARMFastISel::ARMComputeAddress(const Value *Obj, Address &Addr) {
     }
     case Instruction::Alloca: {
       const AllocaInst *AI = cast<AllocaInst>(Obj);
-      DenseMap<const AllocaInst*, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+      auto SI = FuncInfo.StaticAllocaMap.find(AI);
       if (SI != FuncInfo.StaticAllocaMap.end()) {
         Addr.setKind(Address::FrameIndexBase);
         Addr.setFI(SI->second);
@@ -1264,7 +1266,7 @@ static ARMCC::CondCodes getComparePred(CmpInst::Predicate Pred) {
 }
 
 bool ARMFastISel::SelectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
@@ -1893,8 +1895,8 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   default:
     report_fatal_error("Unsupported calling convention");
   case CallingConv::Fast:
-    if (Subtarget->hasVFP2Base() && !isVarArg) {
-      if (!TM.isAAPCS_ABI())
+    if (Subtarget->hasFPRegs() && !isVarArg) {
+      if (!Subtarget->isAAPCS_ABI())
         return (Return ? RetFastCC_ARM_APCS : FastCC_ARM_APCS);
       // For AAPCS ABI targets, just use VFP variant of the calling convention.
       return (Return ? RetCC_ARM_AAPCS_VFP : CC_ARM_AAPCS_VFP);
@@ -1903,9 +1905,8 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::C:
   case CallingConv::CXX_FAST_TLS:
     // Use target triple & subtarget features to do actual dispatch.
-    if (TM.isAAPCS_ABI()) {
-      if (Subtarget->hasFPRegs() &&
-          TM.Options.FloatABIType == FloatABI::Hard && !isVarArg)
+    if (Subtarget->isAAPCS_ABI()) {
+      if (Subtarget->hasFPRegs() && Subtarget->isTargetHardFloat() && !isVarArg)
         return (Return ? RetCC_ARM_AAPCS_VFP: CC_ARM_AAPCS_VFP);
       else
         return (Return ? RetCC_ARM_AAPCS: CC_ARM_AAPCS);
@@ -2056,10 +2057,16 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
       assert(VA.isRegLoc() && NextVA.isRegLoc() &&
              "We only handle register args!");
 
+      // VMOVRRD moves the low word to Rt and the high word to Rt2; on
+      // big-endian targets the high word goes in the first register.
+      Register Lo = VA.getLocReg();
+      Register Hi = NextVA.getLocReg();
+      if (DL.isBigEndian())
+        std::swap(Lo, Hi);
       AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                              TII.get(ARM::VMOVRRD), VA.getLocReg())
-                      .addReg(NextVA.getLocReg(), RegState::Define)
-                      .addReg(Arg));
+                              TII.get(ARM::VMOVRRD), Lo)
+                          .addReg(Hi, RegState::Define)
+                          .addReg(Arg));
       RegArgs.push_back(VA.getLocReg());
       RegArgs.push_back(NextVA.getLocReg());
     } else {
@@ -2106,10 +2113,16 @@ bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<Register> &UsedRegs,
       MVT DestVT = RVLocs[0].getValVT();
       const TargetRegisterClass* DstRC = TLI.getRegClassFor(DestVT);
       Register ResultReg = createResultReg(DstRC);
+      // VMOVDRR takes the low word from Rt and the high word from Rt2; on
+      // big-endian targets the first register holds the high word.
+      Register Lo = RVLocs[0].getLocReg();
+      Register Hi = RVLocs[1].getLocReg();
+      if (DL.isBigEndian())
+        std::swap(Lo, Hi);
       AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                               TII.get(ARM::VMOVDRR), ResultReg)
-                      .addReg(RVLocs[0].getLocReg())
-                      .addReg(RVLocs[1].getLocReg()));
+                          .addReg(Lo)
+                          .addReg(Hi));
 
       UsedRegs.push_back(RVLocs[0].getLocReg());
       UsedRegs.push_back(RVLocs[1].getLocReg());
@@ -2268,7 +2281,9 @@ Register ARMFastISel::getLibcallReg(const Twine &Name) {
 // TODO: Try to unify this and the normal call bits for ARM, then try to unify
 // with X86.
 bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
-  CallingConv::ID CC = TLI.getLibcallCallingConv(Call);
+  RTLIB::LibcallImpl LCImpl = LibcallLowering->getLibcallImpl(Call);
+  if (LCImpl == RTLIB::Unsupported)
+    return false;
 
   // Handle *simple* calls for now.
   Type *RetTy = I->getType();
@@ -2277,6 +2292,8 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
     RetVT = MVT::isVoid;
   else if (!isTypeLegal(RetTy, RetVT))
     return false;
+
+  CallingConv::ID CC = LibcallLowering->getLibcallImplCallingConv(LCImpl);
 
   // Can't handle non-double multi-reg retvals.
   if (RetVT != MVT::isVoid && RetVT != MVT::i32) {
@@ -2321,9 +2338,11 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
                        RegArgs, CC, NumBytes, false))
     return false;
 
+  StringRef FuncName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+
   Register CalleeReg;
   if (Subtarget->genLongCalls()) {
-    CalleeReg = getLibcallReg(TLI.getLibcallName(Call));
+    CalleeReg = getLibcallReg(FuncName);
     if (!CalleeReg)
       return false;
   }
@@ -2340,7 +2359,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
         constrainOperandRegClass(TII.get(CallOpc), CalleeReg, isThumb2 ? 2 : 0);
     MIB.addReg(CalleeReg);
   } else
-    MIB.addExternalSymbol(TLI.getLibcallName(Call));
+    MIB.addExternalSymbol(FuncName.data());
 
   // Add implicit physical register uses to the call.
   for (Register R : RegArgs)
@@ -2792,13 +2811,12 @@ Register ARMFastISel::ARMEmitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
     unsigned Opcode = isLsl ? LSLOpc : Opc;
     ARM_AM::ShiftOpc ShiftAM = isLsl ? ARM_AM::lsl : Shift;
     unsigned ImmEnc = ImmIsSO ? ARM_AM::getSORegOpc(ShiftAM, Imm) : Imm;
-    bool isKill = 1 == Instr;
     MachineInstrBuilder MIB = BuildMI(
         *FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opcode), ResultReg);
     if (setsCPSR)
-      MIB.addReg(ARM::CPSR, RegState::Define);
+      MIB.addReg(ARM::CPSR, RegState::Define | RegState::Dead);
     SrcReg = constrainOperandRegClass(TII.get(Opcode), SrcReg, 1 + setsCPSR);
-    MIB.addReg(SrcReg, isKill * RegState::Kill)
+    MIB.addReg(SrcReg)
         .addImm(ImmEnc)
         .add(predOps(ARMCC::AL));
     if (hasS)
@@ -2901,7 +2919,7 @@ bool ARMFastISel::fastSelectInstruction(const Instruction *I) {
       return SelectLoad(I);
     case Instruction::Store:
       return SelectStore(I);
-    case Instruction::Br:
+    case Instruction::CondBr:
       return SelectBranch(I);
     case Instruction::IndirectBr:
       return SelectIndirectBr(I);
@@ -3139,9 +3157,9 @@ bool ARMFastISel::fastLowerArguments() {
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
     Register ResultReg = createResultReg(RC);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY),
-            ResultReg).addReg(DstReg, getKillRegState(true));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(DstReg);
     updateValueMap(&Arg, ResultReg);
   }
 
@@ -3150,12 +3168,13 @@ bool ARMFastISel::fastLowerArguments() {
 
 namespace llvm {
 
-  FastISel *ARM::createFastISel(FunctionLoweringInfo &funcInfo,
-                                const TargetLibraryInfo *libInfo) {
-    if (funcInfo.MF->getSubtarget<ARMSubtarget>().useFastISel())
-      return new ARMFastISel(funcInfo, libInfo);
+FastISel *ARM::createFastISel(FunctionLoweringInfo &funcInfo,
+                              const TargetLibraryInfo *libInfo,
+                              const LibcallLoweringInfo *libcallLowering) {
+  if (funcInfo.MF->getSubtarget<ARMSubtarget>().useFastISel())
+    return new ARMFastISel(funcInfo, libInfo, libcallLowering);
 
-    return nullptr;
-  }
+  return nullptr;
+}
 
 } // end namespace llvm

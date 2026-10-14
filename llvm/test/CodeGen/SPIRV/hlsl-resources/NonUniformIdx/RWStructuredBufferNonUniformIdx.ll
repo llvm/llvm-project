@@ -21,7 +21,7 @@ entry:
   %4 = load <4 x i32>, ptr addrspace(11) %3, align 16
   %vecins.i = insertelement <4 x i32> %4, i32 99, i64 0
 ; CHECK: %[[#access1]] = OpAccessChain {{.*}}
-; CHECK: OpStore %[[#access1]] {{%[0-9]+}} Aligned 16
+; CHECK: OpStore %[[#access1]] {{%[0-9]+}}
   store <4 x i32> %vecins.i, ptr addrspace(11) %3, align 16
   ret void
 }

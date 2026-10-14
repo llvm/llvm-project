@@ -13,23 +13,19 @@
 #include "clang/DependencyScanning/DependencyScanningUtils.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
-#include "clang/Tooling/JSONCompilationDatabase.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLExtras.h"
-#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace clang {
 namespace tooling {
-namespace dependencies {
 
 struct P1689Rule {
   std::string PrimaryOutput;
-  std::optional<clang::dependencies::P1689ModuleInfo> Provides;
-  std::vector<clang::dependencies::P1689ModuleInfo> Requires;
+  std::optional<dependencies::P1689ModuleInfo> Provides;
+  std::vector<dependencies::P1689ModuleInfo> Requires;
 };
 
 /// The high-level implementation of the dependency discovery tool that runs on
@@ -39,20 +35,19 @@ public:
   /// Construct a dependency scanning tool.
   ///
   /// @param Service  The parent service. Must outlive the tool.
-  /// @param FS The filesystem for the tool to use. Defaults to the physical FS.
-  DependencyScanningTool(
-      clang::dependencies::DependencyScanningService &Service,
-      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
-          llvm::vfs::createPhysicalFileSystem());
+  DependencyScanningTool(dependencies::DependencyScanningService &Service)
+      : Worker(Service) {}
 
   /// Print out the dependency information into a string using the dependency
   /// file format that is specified in the options (-MD is the default) and
   /// return it.
   ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, dependency file contents otherwise.
-  llvm::Expected<std::string>
-  getDependencyFile(const std::vector<std::string> &CommandLine, StringRef CWD);
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// dependency file contents otherwise.
+  std::optional<std::string>
+  getDependencyFile(ArrayRef<std::string> CommandLine, StringRef CWD,
+                    dependencies::LookupModuleOutputCallback LookupModuleOutput,
+                    DiagnosticConsumer &DiagConsumer);
 
   /// Collect the module dependency in P1689 format for C++20 named modules.
   ///
@@ -63,20 +58,21 @@ public:
   /// \param MakeformatOutputPath The output parameter for the path to
   /// \param MakeformatOutput.
   ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, P1689 dependency format rules otherwise.
-  llvm::Expected<P1689Rule>
-  getP1689ModuleDependencyFile(const clang::tooling::CompileCommand &Command,
-                               StringRef CWD, std::string &MakeformatOutput,
-                               std::string &MakeformatOutputPath);
-  llvm::Expected<P1689Rule>
-  getP1689ModuleDependencyFile(const clang::tooling::CompileCommand &Command,
-                               StringRef CWD) {
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// P1689 dependency format rules otherwise.
+  std::optional<P1689Rule>
+  getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD,
+                               std::string &MakeformatOutput,
+                               std::string &MakeformatOutputPath,
+                               DiagnosticConsumer &DiagConsumer);
+  std::optional<P1689Rule>
+  getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD,
+                               DiagnosticConsumer &DiagConsumer) {
     std::string MakeformatOutput;
     std::string MakeformatOutputPath;
 
     return getP1689ModuleDependencyFile(Command, CWD, MakeformatOutput,
-                                        MakeformatOutputPath);
+                                        MakeformatOutputPath, DiagConsumer);
   }
 
   /// Given a Clang driver command-line for a translation unit, gather the
@@ -94,77 +90,59 @@ public:
   ///                 TUBuffer is nullopt, the input should be included in the
   ///                 Commandline already.
   ///
-  /// \returns a \c StringError with the diagnostic output if clang errors
-  /// occurred, \c TranslationUnitDeps otherwise.
-  llvm::Expected<clang::dependencies::TranslationUnitDeps>
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// translation unit dependencies otherwise.
+  std::optional<dependencies::TranslationUnitDeps>
   getTranslationUnitDependencies(
-      const std::vector<std::string> &CommandLine, StringRef CWD,
-      const llvm::DenseSet<clang::dependencies::ModuleID> &AlreadySeen,
-      clang::dependencies::LookupModuleOutputCallback LookupModuleOutput,
+      ArrayRef<std::string> CommandLine, StringRef CWD,
+      DiagnosticConsumer &DiagConsumer,
+      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
+      dependencies::LookupModuleOutputCallback LookupModuleOutput,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
-  /// Given a compilation context specified via the Clang driver command-line,
-  /// gather modular dependencies of module with the given name, and return the
-  /// information needed for explicit build.
-  /// TODO: this method should be removed as soon as Swift and our C-APIs adopt
-  /// CompilerInstanceWithContext. We are keeping it here so that it is easier
-  /// to coordinate with Swift and C-API changes.
-  llvm::Expected<clang::dependencies::TranslationUnitDeps>
-  getModuleDependencies(
-      StringRef ModuleName, const std::vector<std::string> &CommandLine,
-      StringRef CWD,
-      const llvm::DenseSet<clang::dependencies::ModuleID> &AlreadySeen,
-      clang::dependencies::LookupModuleOutputCallback LookupModuleOutput);
+  /// By-name scanning given a Clang command-line. The scanning context is
+  /// initialized once and reused for each name pulled from
+  /// \p getNextName until it returns std::nullopt. Results flow to
+  /// \p DepConsumer (with per-name status via finishQuery); diagnostics flow to
+  /// \p DiagConsumer.
+  ///
+  /// \returns true if the scanning context initialized successfully and all
+  /// scans succeeded. Query the DepConsumer for the state of each individual
+  /// scan.
+  bool getByNameDependencies(
+      StringRef CWD, ArrayRef<std::string> CommandLine,
+      DiagnosticConsumer &DiagConsumer,
+      dependencies::DependencyActionController &Controller,
+      llvm::function_ref<std::optional<std::string>()> getNextName,
+      dependencies::DependencyConsumer &DepConsumer);
 
-  /// The following three methods provide a new interface to perform
-  /// by name dependency scan. The new interface's intention is to improve
-  /// dependency scanning performance when a sequence of name is looked up
-  /// with the same current working directory and the command line.
-
-  /// @brief Initializing the context and the compiler instance.
-  ///        This method must be called before calling
-  ///        computeDependenciesByNameWithContext.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @return Error if the initializaiton fails.
-  llvm::Error initializeCompilerInstanceWithContext(
-      StringRef CWD, const std::vector<std::string> &CommandLine);
-
-  /// @brief Computes the dependeny for the module named ModuleName.
-  /// @param ModuleName The name of the module for which this method computes
-  ///.                  dependencies.
-  /// @param AlreadySeen This stores modules which have previously been
-  ///                    reported. Use the same instance for all calls to this
-  ///                    function for a single \c DependencyScanningTool in a
-  ///                    single build. Note that this parameter is not part of
-  ///                    the context because it can be shared across different
-  ///                    worker threads and each worker thread may update it.
-  /// @param LookupModuleOutput This function is called to fill in
-  ///                           "-fmodule-file=", "-o" and other output
-  ///                           arguments for dependencies.
-  /// @return An instance of \c TranslationUnitDeps if the scan is successful.
-  ///         Otherwise it returns an error.
-  llvm::Expected<clang::dependencies::TranslationUnitDeps>
-  computeDependenciesByNameWithContext(
-      StringRef ModuleName,
-      const llvm::DenseSet<clang::dependencies::ModuleID> &AlreadySeen,
-      clang::dependencies::LookupModuleOutputCallback LookupModuleOutput);
-
-  /// @brief This method finializes the compiler instance. It finalizes the
-  ///        diagnostics and deletes the compiler instance. Call this method
-  ///        once all names for a same commandline are scanned.
-  /// @return Error if an error occured during finalization.
-  llvm::Error finalizeCompilerInstanceWithContext();
-
-  llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
+  /// Returns the worker tracing VFS, if it was requested via the service.
+  llvm::vfs::TracingFileSystem *getWorkerTracingVFS() const {
+    return Worker.getTracingVFS();
+  }
 
 private:
-  clang::dependencies::DependencyScanningWorker Worker;
-  std::unique_ptr<clang::dependencies::TextDiagnosticsPrinterWithOutput>
-      DiagPrinterWithOS;
+  dependencies::DependencyScanningWorker Worker;
 };
 
-} // end namespace dependencies
+/// Run the dependency scanning worker for the given driver or frontend
+/// command-line, and report the discovered dependencies to the provided
+/// consumer.
+///
+/// OverlayFS should be based on the Worker's dependency scanning file-system
+/// and can be used to provide any input specified on the command-line as
+/// in-memory file. If no overlay file-system is provided, the Worker's
+/// dependency scanning file-system is used instead.
+///
+/// \returns false if any errors occurred (with diagnostics reported to
+/// \c DiagConsumer), true otherwise.
+bool computeDependencies(
+    dependencies::DependencyScanningWorker &Worker, StringRef WorkingDirectory,
+    ArrayRef<std::string> CommandLine,
+    dependencies::DependencyConsumer &Consumer,
+    dependencies::DependencyActionController &Controller,
+    DiagnosticConsumer &DiagConsumer,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 } // end namespace tooling
 } // end namespace clang
 

@@ -1,7 +1,21 @@
-; RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
+; RUN: not llvm-mc -triple=amdgpu12.50 -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
 
 global_atomic_ordered_add_b64 v0, v[2:3], s[0:1] offset:-64
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+;; VOPD dot2acc instructions
+
+v_dual_dot2acc_f32_f16 v0, v1, v2 :: v_dual_add_f32 v3, v4, v5
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dual_add_f32 v0, v1, v2 :: v_dual_dot2acc_f32_f16 v3, v4, v5
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_dual_dot2acc_f32_bf16 v0, v1, v2 :: v_dual_add_f32 v3, v4, v5
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dual_add_f32 v0, v1, v2 :: v_dual_dot2acc_f32_bf16 v3, v4, v5
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 ;; DOT4_F32_*, DOT2_F32_*, DOT2_F16 and DOT2_BF16
 

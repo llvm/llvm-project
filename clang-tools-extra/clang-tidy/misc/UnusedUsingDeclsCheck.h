@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSEDUSINGDECLSCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../utils/FileExtensionsUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <vector>
 
@@ -50,8 +49,6 @@ private:
 
   std::vector<UsingDeclContext> Contexts;
   llvm::SmallPtrSet<const Decl *, 32> UsingTargetDeclsCache;
-
-  FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::misc
