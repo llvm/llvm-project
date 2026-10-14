@@ -495,6 +495,17 @@ void DiagnosticInfoMisExpect::print(DiagnosticPrinter &DP) const {
   DP << getLocationStr() << ": " << getMsg();
 }
 
+DiagnosticInfoUninitialized::DiagnosticInfoUninitialized(
+    const Instruction *Inst, bool Maybe)
+    : DiagnosticInfoWithLocationBase(DK_Uninitialized, DS_Warning,
+                                     *Inst->getFunction(), Inst->getDebugLoc()),
+      Maybe(Maybe) {}
+
+void DiagnosticInfoUninitialized::print(DiagnosticPrinter &DP) const {
+  DP << getLocationStr() << ": field " << (Maybe ? "may be" : "is")
+     << " uninitialized when used here";
+}
+
 void OptimizationRemarkAnalysisFPCommute::anchor() {}
 void OptimizationRemarkAnalysisAliasing::anchor() {}
 

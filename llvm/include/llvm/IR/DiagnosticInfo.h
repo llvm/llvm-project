@@ -93,6 +93,7 @@ enum DiagnosticKind {
   DK_SrcMgr,
   DK_DontCall,
   DK_MisExpect,
+  DK_Uninitialized,
   DK_FirstPluginKind // Must be last value to work with
                      // getNextAvailablePluginDiagnosticKind
 };
@@ -1169,6 +1170,26 @@ public:
 private:
   /// Message to report.
   const Twine &Msg;
+};
+
+/// Diagnostic information for an uninitialized load.
+class LLVM_ABI DiagnosticInfoUninitialized
+    : public DiagnosticInfoWithLocationBase {
+public:
+  explicit DiagnosticInfoUninitialized(const Instruction *Inst,
+                                       bool Maybe = false);
+
+  /// \see DiagnosticInfo::print.
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_Uninitialized;
+  }
+
+  bool isMaybe() const { return Maybe; }
+
+private:
+  bool Maybe;
 };
 
 static DiagnosticSeverity getDiagnosticSeverity(SourceMgr::DiagKind DK) {

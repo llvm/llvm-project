@@ -178,14 +178,6 @@ const FullSourceLoc BackendDiagnosticConsumer::getBestLocationFromDebugLoc(
       Loc = *MaybeLoc;
   }
 
-  if (DILoc.isInvalid() && D.isLocationAvailable())
-    // If we were not able to translate the file:line:col information
-    // back to a SourceLocation, at least emit a note stating that
-    // we could not translate this location. This can happen in the
-    // case of #line directives.
-    Diags.Report(Loc, diag::note_fe_backend_invalid_loc)
-        << Filename << Line << Column;
-
   return Loc;
 }
 
@@ -549,6 +541,26 @@ void BackendDiagnosticConsumer::MisExpectDiagHandler(
         << Filename << Line << Column;
 }
 
+void BackendDiagnosticConsumer::UninitializedDiagHandler(
+    const llvm::DiagnosticInfoUninitialized &D) {
+  unsigned DiagID = D.isMaybe() ? diag::warn_fe_backend_maybe_uninitialized
+                                : diag::warn_fe_backend_uninitialized;
+  StringRef Filename;
+  unsigned Line, Column;
+  bool BadDebugInfo = false;
+  FullSourceLoc Loc;
+  if (SM)
+    Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
+
+  if (Diags.isIgnored(DiagID, Loc))
+    return;
+  Diags.Report(Loc, DiagID);
+
+  if (BadDebugInfo)
+    Diags.Report(Loc, diag::note_fe_backend_invalid_loc)
+        << Filename << Line << Column;
+}
+
 void BackendDiagnosticConsumer::handleDiagnostics(const DiagnosticInfo &DI) {
   unsigned DiagID = diag::err_fe_inline_asm;
   llvm::DiagnosticSeverity Severity = DI.getSeverity();
@@ -632,6 +644,9 @@ void BackendDiagnosticConsumer::handleDiagnostics(const DiagnosticInfo &DI) {
     return;
   case llvm::DK_MisExpect:
     MisExpectDiagHandler(cast<DiagnosticInfoMisExpect>(DI));
+    return;
+  case llvm::DK_Uninitialized:
+    UninitializedDiagHandler(cast<DiagnosticInfoUninitialized>(DI));
     return;
   default:
     // Plugin IDs are not bound to any value as they are set dynamically.
