@@ -477,13 +477,13 @@ public:
           F.front() == '+' ? llvm::AMDGPU::TargetIDSetting::On
                            : llvm::AMDGPU::TargetIDSetting::Off;
       StringRef Name = StringRef(F).drop_front();
-      // xnack is a valid target-id modifier only when the processor supports
-      // on/off modes; sramecc when the processor supports sramecc.
+      // xnack and sramecc are valid target-id modifiers only when the processor
+      // supports on/off modes for them.
       if (Name == "xnack" &&
           ArchFeatures.test(llvm::AMDGPU::FEAT_XNACK_ON_OFF_MODES))
         XnackSetting = Setting;
       else if (Name == "sramecc" &&
-               ArchFeatures.test(llvm::AMDGPU::FEAT_SRAMECC_SUPPORT))
+               ArchFeatures.test(llvm::AMDGPU::FEAT_SRAMECC_ON_OFF_MODES))
         SramEccSetting = Setting;
     }
     return true;
