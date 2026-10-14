@@ -129,8 +129,6 @@ struct ArithIndexingBuilder : public ArithBuilder {
 };
 
 namespace arith {
-/// Add patterns to expand Arith ceil/floor division ops.
-void populateCeilFloorDivExpandOpsPatterns(RewritePatternSet &patterns);
 
 // Build the product of a sequence.
 // If values = (v0, v1, ..., vn) than the returned

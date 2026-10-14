@@ -552,9 +552,9 @@ cc_library(
     deps = [
         ":TestDialect",
         "//llvm:Support",
+        "//mlir:ArithCommonConversion",
         "//mlir:ArithToSPIRV",
         "//mlir:ArithTransforms",
-        "//mlir:ArithUtils",
         "//mlir:ControlFlowToSPIRV",
         "//mlir:FuncDialect",
         "//mlir:FuncToSPIRV",
