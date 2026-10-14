@@ -101,33 +101,6 @@ bool KnownFPClass::isKnownNeverLogicalPosZero(DenormalMode Mode) const {
   return applyInputDenormalMode(*this, Mode).isKnownNeverPosZero();
 }
 
-void KnownFPClass::propagateDenormal(const KnownFPClass &Src,
-                                     DenormalMode Mode) {
-  setKnownFPClasses(Src.getKnownFPClasses());
-  // If we aren't assuming the source can't be a zero, we don't have to check if
-  // a denormal input could be flushed.
-  if (!Src.isKnownNeverPosZero() && !Src.isKnownNeverNegZero())
-    return;
-
-  // If we know the input can't be a denormal, it can't be flushed to 0.
-  if (Src.isKnownNeverSubnormal())
-    return;
-
-  if (!Src.isKnownNeverPosSubnormal() && Mode != DenormalMode::getIEEE())
-    setKnownFPClasses(getKnownFPClasses() | fcPosZero);
-
-  if (!Src.isKnownNeverNegSubnormal() && Mode != DenormalMode::getIEEE()) {
-    if (Mode != DenormalMode::getPositiveZero())
-      setKnownFPClasses(getKnownFPClasses() | fcNegZero);
-
-    if (Mode.Input == DenormalMode::PositiveZero ||
-        Mode.Output == DenormalMode::PositiveZero ||
-        Mode.Input == DenormalMode::Dynamic ||
-        Mode.Output == DenormalMode::Dynamic)
-      setKnownFPClasses(getKnownFPClasses() | fcPosZero);
-  }
-}
-
 KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &LHS_,
                                       const KnownFPClass &RHS_, MinMaxKind Kind,
                                       DenormalMode Mode) {
@@ -213,10 +186,6 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
                                         DenormalMode DenormMode) {
   KnownFPClass Known;
 
-  // This is essentially a stronger form of
-  // propagateCanonicalizingSrc. Other "canonicalizing" operations don't
-  // actually have an IR canonicalization guarantee.
-
   // Canonicalize may flush denormals to zero, so we have to consider the
   // denormal mode to preserve known-not-0 knowledge.
   Known.setKnownFPClasses(KnownSrc.getKnownFPClasses() | fcZero | fcQNan);
@@ -298,7 +267,12 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
   else if (Bits.isNegative())
     Known.signBitMustBeOne();
 
-  if (APFloat::isIEEELikeFP(FltSemantics)) {
+  switch (APFloatBase::SemanticsToEnum(FltSemantics)) {
+  case APFloatBase::S_IEEEhalf:
+  case APFloatBase::S_BFloat:
+  case APFloatBase::S_IEEEsingle:
+  case APFloatBase::S_IEEEdouble:
+  case APFloatBase::S_IEEEquad: {
     const unsigned MantissaBits = FltSemantics.precision - 1;
     const APInt ExponentMask = APInt::getBitsSet(
         FltSemantics.sizeInBits, MantissaBits, FltSemantics.sizeInBits - 1);
@@ -342,6 +316,80 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
       Known.knownNot(fcSNan);
     else if (QuietBitKnownClear)
       Known.knownNot(fcQNan);
+
+    break;
+  }
+  case APFloatBase::S_x87DoubleExtended: {
+    // Layout of the x87 floating point type:
+    // [0:62] fraction
+    // [63] explicit integer bit
+    // [64:78] exponent
+    // [79] sign bit
+    // APFloat treats the x87 pseudo encodings as documented in
+    // fltSemantics::hasExplicitIntegerBit.
+    constexpr unsigned BitWidth = 80;
+    constexpr unsigned FractionBits = 63;
+    constexpr unsigned IntegerBitIndex = FractionBits;
+    const APInt FractionMask = APInt::getLowBitsSet(BitWidth, FractionBits);
+    const APInt ExponentMask =
+        APInt::getBitsSet(BitWidth, FractionBits + 1, BitWidth - 1);
+
+    const bool ExponentKnownAllZeros =
+        (Bits.Zero & ExponentMask) == ExponentMask;
+    const bool ExponentKnownAllOnes = (Bits.One & ExponentMask) == ExponentMask;
+    const bool ExponentKnownNotAllZeros = !(Bits.One & ExponentMask).isZero();
+    const bool ExponentKnownNotAllOnes = !(Bits.Zero & ExponentMask).isZero();
+    const bool FractionKnownAllZeros =
+        (Bits.Zero & FractionMask) == FractionMask;
+    const bool FractionKnownNotAllZeros = !(Bits.One & FractionMask).isZero();
+    const bool IntegerBitKnownSet = Bits.One[IntegerBitIndex];
+    const bool IntegerBitKnownClear = Bits.Zero[IntegerBitIndex];
+
+    // zero and subnormal require an exponent with all zero bits and a cleared
+    // integer bit.
+    if (ExponentKnownNotAllZeros || IntegerBitKnownSet)
+      Known.knownNot(fcZero | fcSubnormal);
+
+    // Zero requires a zero fraction.
+    if (FractionKnownNotAllZeros)
+      Known.knownNot(fcZero);
+
+    // Infinity requires an exponent with all one bits, a set integer bit, and
+    // a zero fraction.
+    if (ExponentKnownNotAllOnes || IntegerBitKnownClear ||
+        FractionKnownNotAllZeros)
+      Known.knownNot(fcInf);
+
+    // A normal x87 value has its integer bit set. A zero exponent with that
+    // bit set is the x87 pseudodenormal encoding, which APFloat treats as
+    // normal.
+    if (IntegerBitKnownClear || ExponentKnownAllOnes)
+      Known.knownNot(fcNormal);
+
+    // A subnormal has a nonzero fraction; NaNs are possible with a zero
+    // fraction through pseudoinfinity and unnormal encodings.
+    if (FractionKnownAllZeros)
+      Known.knownNot(fcSubnormal);
+
+    // We can rule out NaN if the value has all exponent bits set to zero, or
+    // if the value is a canonical normal or infinity.
+    if (ExponentKnownAllZeros ||
+        (IntegerBitKnownSet &&
+         (ExponentKnownNotAllOnes || FractionKnownAllZeros)))
+      Known.knownNot(fcNan);
+
+    const bool QuietBitKnownSet = Bits.One[FractionBits - 1];
+    const bool QuietBitKnownClear = Bits.Zero[FractionBits - 1];
+
+    if (QuietBitKnownSet)
+      Known.knownNot(fcSNan);
+    else if (QuietBitKnownClear)
+      Known.knownNot(fcQNan);
+
+    break;
+  }
+  default:
+    llvm_unreachable("unhandled supported type");
   }
 
   return Known;
@@ -795,12 +843,6 @@ KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
   return Known;
 }
 
-void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,
-                                              DenormalMode Mode) {
-  propagateDenormal(Src, Mode);
-  propagateNonNaN(Src);
-}
-
 KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc, DenormalMode Mode,
                                bool IsMultiUnitFPType) {
   KnownFPClass Known;
@@ -1052,7 +1094,7 @@ KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc) {
 }
 
 KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
-                                           bool IsTrunc, bool IsMultiUnitFPType,
+                                           bool MayBeMultiUnitFPType,
                                            DenormalMode Mode) {
   KnownFPClass Known;
 
@@ -1061,9 +1103,8 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
 
   Known.propagateNonNaN(KnownSrc);
 
-  // Pass through infinities, except PPC_FP128 is a special case for
-  // intrinsics other than trunc.
-  if (IsTrunc || !IsMultiUnitFPType) {
+  // Pass through infinities, except PPC_FP128 is a special case for intrinsics.
+  if (!MayBeMultiUnitFPType) {
     if (KnownSrc.isKnownNeverPosInfinity())
       Known.knownNot(fcPosInf);
     if (KnownSrc.isKnownNeverNegInfinity())
@@ -1085,6 +1126,41 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
       (KnownSrc.isKnownNever(fcNegSubnormal) ||
        !Mode.inputsMayBePositiveZero()))
     Known.knownNot(fcPosZero);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::trunc(const KnownFPClass &KnownSrc,
+                                 DenormalMode Mode) {
+  KnownFPClass Known = roundToIntegral(KnownSrc,
+                                       /*MayBeMultiUnitFPType=*/true, Mode);
+
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
+  if (KnownSrc.isKnownNeverNegInfinity())
+    Known.knownNot(fcNegInf);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::floor(const KnownFPClass &KnownSrc,
+                                 bool IsMultiUnitFPType, DenormalMode Mode) {
+  KnownFPClass Known = roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+
+  // Applicable for multi-unit floating point types.
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::ceil(const KnownFPClass &KnownSrc,
+                                bool IsMultiUnitFPType, DenormalMode Mode) {
+  KnownFPClass Known = roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+
+  // Applicable for multi-unit floating point types.
+  if (KnownSrc.isKnownNeverNegInfinity())
+    Known.knownNot(fcNegInf);
 
   return Known;
 }
