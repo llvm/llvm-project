@@ -240,8 +240,8 @@ bool llvm::getRequiredFeatures(
     for (auto *Arg : D->getArgs()) {
       bool IsNot = false;
       if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-        if (NotArg->getOperator()->getAsString() != "not" ||
-            NotArg->getNumArgs() != 1)
+        std::string NotOp = NotArg->getOperator()->getAsString();
+        if ((NotOp != "not" && NotOp != "none_of") || NotArg->getNumArgs() != 1)
           PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
         Arg = NotArg->getArg(0);
         IsNot = true;

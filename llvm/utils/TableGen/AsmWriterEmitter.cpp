@@ -1155,7 +1155,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
         for (auto *Arg : D->getArgs()) {
           bool IsNeg = false;
           if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-            if (NotArg->getOperator()->getAsString() != "not" ||
+            std::string NotOp = NotArg->getOperator()->getAsString();
+            if ((NotOp != "not" && NotOp != "none_of") ||
                 NotArg->getNumArgs() != 1)
               PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
             Arg = NotArg->getArg(0);
