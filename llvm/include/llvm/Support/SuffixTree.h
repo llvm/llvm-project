@@ -102,10 +102,8 @@ private:
   /// \param Parent The parent of this node.
   /// \param StartIdx The start index of this node's associated string.
   /// \param Edge The label on the edge leaving \p Parent to this node.
-  ///
-  /// \returns A pointer to the allocated leaf node.
-  SuffixTreeNode *insertLeaf(SuffixTreeInternalNode &Parent, unsigned StartIdx,
-                             unsigned Edge);
+  void insertLeaf(SuffixTreeInternalNode &Parent, unsigned StartIdx,
+                  unsigned Edge);
 
   /// Allocate an internal node and add it to the tree.
   ///

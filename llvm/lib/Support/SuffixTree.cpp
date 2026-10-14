@@ -52,15 +52,14 @@ SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str,
     setLeafNodes();
 }
 
-SuffixTreeNode *SuffixTree::insertLeaf(SuffixTreeInternalNode &Parent,
-                                       unsigned StartIdx, unsigned Edge) {
+void SuffixTree::insertLeaf(SuffixTreeInternalNode &Parent, unsigned StartIdx,
+                            unsigned Edge) {
   assert(StartIdx <= LeafEndIdx && "String can't start after it ends!");
   auto *N = new (LeafNodeAllocator.Allocate())
       SuffixTreeLeafNode(StartIdx, &LeafEndIdx);
   // Subtract the parent path length to find the start of the suffix.
   N->setSuffixIdx(StartIdx - Parent.getConcatLen());
   Parent.Children[Edge] = N;
-  return N;
 }
 
 SuffixTreeInternalNode *
