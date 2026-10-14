@@ -818,6 +818,18 @@ struct FieldTypes {
   }
 };
 
+namespace FieldOriginEscapeThroughAnonStruct {
+struct FieldInAnonStruct {
+  struct {
+    int *ptr_; // expected-note {{if field 'ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  };
+
+  int *get_ptr() const { // expected-warning {{return value depends on the object referenced by field 'ptr_', not on '*this'}}
+    return ptr_;         // expected-note {{returned here}}
+  }
+};
+} // namespace FieldOriginEscapeThroughAnonStruct
+
 struct Base {
   int *pub_ptr_; // expected-note {{if field 'pub_ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
   int *get_priv() const { // expected-warning {{return value depends on the object referenced by field 'priv_ptr_', not on '*this'}}

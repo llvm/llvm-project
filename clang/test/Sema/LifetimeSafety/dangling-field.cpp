@@ -196,27 +196,60 @@ struct MemberSetters {
   }
 };
 
-// FIXME: Detect escape to field of field.
-struct IndirectEscape{
+// FIXME: Escape to a field of a *named* subobject is not detected; only
+// anonymous struct/union subobjects are traversed.
+struct IndirectEscape {
   struct {
     const char *p;
   } b;
-  
+
   void foo() {
     std::string s;
     b.p = s.data();
   }
 };
 
-// FIXME: Detect escape to field of field.
+// FIXME: Not detected either, and this shows *why* only anonymous subobjects are
+// traversed: the named members `a` and `b` share the terminal field `Inner::p`,
+// so a FieldDecl-keyed origin could not tell `a.p` apart from `b.p` if it
+// traversed named subobjects.
+struct IndirectEscapeSameType {
+  struct Inner {
+    const char *p;
+  };
+  Inner a;
+  Inner b;
+
+  void foo() {
+    std::string s;
+    a.p = s.data();
+  }
+};
+
+// Escape to a field of an anonymous subobject is detected (members of an
+// anonymous struct/union are uniquely named within the enclosing class).
 struct IndirectEscape2 {
   struct {
-    const char *p;
+    const char *p; // expected-note {{this field dangles}}
   };
 
   void foo() {
     std::string s;
-    p = s.data();
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+  }
+};
+
+// A field reached through a *reference* member is NOT a subobject of `*this`
+// (the reference binds to external storage), so it is not attributed to a
+// `$this` field: no false diagnostic.
+struct IndirectEscapeThroughReference {
+  struct Inner { const char *p; };
+  Inner &r;
+  IndirectEscapeThroughReference(Inner &i) : r(i) {}
+
+  void foo() {
+    std::string s;
+    r.p = s.data(); // no diagnostic: r.p is not a subobject of *this
   }
 };
 
