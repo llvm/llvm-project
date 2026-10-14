@@ -217,6 +217,38 @@ def TosaGatherScatterHardeningPass
   }];
 }
 
+def TosaConvertIntegerTypesPass : Pass<"tosa-convert-integer-types", "ModuleOp"> {
+  let summary = "Convert selected TOSA integer types";
+  let description = [{
+    Converts integer types using `bitwidth-mappings`, a required list of
+    `<source>:<destination>` bitwidth pairs.
+    A typical use case is `bitwidth-mappings=4:8,48:64` which maps i4 and i48 to
+    i8 and i64 respectively.
+
+    Mappings apply once to the original width, preserving signedness and
+    leaving unmapped widths unchanged. Widening sign-extends signed and
+    signless constants and zero-extends unsigned constants. Narrowing truncates
+    without checking for data loss. The caller is responsible for ensuring the
+    conversion is appropriate.
+
+    Conversion covers types, function signatures and attribute payloads
+    throughout the module, including non-TOSA operations.
+    External callers and implementations must use the converted signatures.
+
+    Run after `tosa-validate`: converted IR may not conform to the TOSA
+    specification.
+  }];
+
+  let options = [
+    ListOption<"bitwidthMappings", "bitwidth-mappings",
+               "std::pair<unsigned, unsigned>",
+               "Integer bitwidth mappings <source>:<destination> "
+               "(required, non-empty)">
+  ];
+
+  let dependentDialects = ["func::FuncDialect", "tosa::TosaDialect"];
+}
+
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   let summary = "Narrow I64 TOSA operations to I32";
   let description = [{
