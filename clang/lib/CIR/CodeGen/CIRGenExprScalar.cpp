@@ -2968,6 +2968,8 @@ ScalarExprEmitter::emitVectorInitWithSubvectors(mlir::Location loc,
     }
 
     const unsigned initElts = initType.getSize();
+    assert(curIdx + initElts <= resElts &&
+           "Sema should reject excess elements");
     SmallVector<int64_t, 16> mask(resElts, -1);
     std::iota(mask.begin(), mask.begin() + initElts, 0);
     mlir::Value ext = builder.createVecShuffle(loc, init, mask);
@@ -3009,13 +3011,13 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
         mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
 
     SmallVector<mlir::Value, 16> elements;
+    bool hasVectorInit = false;
     for (Expr *init : e->inits()) {
       elements.push_back(Visit(init));
+      hasVectorInit |= mlir::isa<cir::VectorType>(elements.back().getType());
     }
 
-    if (llvm::any_of(elements, [](mlir::Value v) {
-          return mlir::isa<cir::VectorType>(v.getType());
-        }))
+    if (hasVectorInit)
       return emitVectorInitWithSubvectors(cgf.getLoc(e->getSourceRange()),
                                           vectorType, elements);
 
