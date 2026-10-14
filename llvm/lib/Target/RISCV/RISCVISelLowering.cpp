@@ -13088,7 +13088,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
     }
 
-    SDValue Shift = DAG.getTargetConstant(0, DL, XLenVT);
+    SDValue Shift = DAG.getConstant(0, DL, XLenVT);
     if (VT == MVT::v4i8) {
       unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
       SDValue Pair = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs1, Rs2);
@@ -18137,7 +18137,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                               : (IsSigned ? RISCVISD::PSRA : RISCVISD::PSRL);
       SDValue Shifted = DAG.getNode(ShiftOpc, DL, SrcVT, Src, ShAmt);
       MVT WideVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
-      SDValue Zero = DAG.getBitcast(SrcVT, DAG.getConstant(0, DL, XLenVT));
+      SDValue Zero = DAG.getConstant(0, DL, SrcVT);
       unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
       SDValue Clipped = DAG.getNode(ClipOpc, DL, WideVT, Shifted, Zero);
       Results.push_back(DAG.getExtractSubvector(DL, VT, Clipped, 0));
