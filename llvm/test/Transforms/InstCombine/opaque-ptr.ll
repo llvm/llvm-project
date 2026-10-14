@@ -399,7 +399,7 @@ define ptr @indexed_compare(ptr %A, i64 %offset) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[RHS_IDX]], 400
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[RHS_IDX]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
@@ -428,7 +428,7 @@ define ptr @indexed_compare_different_types(ptr %A, i64 %offset) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[RHS_IDX]], 800
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[RHS_IDX]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:

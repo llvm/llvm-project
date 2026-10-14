@@ -18,7 +18,7 @@ define ptr@test1(ptr %A, i32 %Offset) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
@@ -76,7 +76,7 @@ define ptr @test1_not_all_nuw(ptr %A, i32 %Offset) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
@@ -106,7 +106,7 @@ define ptr@test2(i32 %A, i32 %Offset) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[A_PTR:%.*]] = inttoptr i32 [[A:%.*]] to ptr
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A_PTR]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
@@ -231,7 +231,7 @@ define ptr@test4(i16 %A, i32 %Offset) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[A_PTR:%.*]] = inttoptr i32 [[TMP0]] to ptr
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A_PTR]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
@@ -268,7 +268,7 @@ define ptr@test5(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
@@ -314,7 +314,7 @@ define ptr@test6(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[A_PTR:%.*]] = inttoptr i32 [[A]] to ptr
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A_PTR]], i32 [[RHS_IDX]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A_PTR]], i32 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
