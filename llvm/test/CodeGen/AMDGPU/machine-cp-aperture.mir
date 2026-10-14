@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=amdgpu12.01 -run-pass=machine-cp %s -o - | FileCheck %s --check-prefixes=CHECK,KEEP_SGPR
 # RUN: llc -mtriple=amdgpu9.42 -run-pass=machine-cp %s -o - | FileCheck %s --check-prefixes=CHECK,FORWARD_APERTURE
-# RUN: llc -mtriple=amdgpu12.01 -run-pass=machine-cp,postrapseudos %s -o /dev/null
-# RUN: llc -mtriple=amdgpu9.42 -run-pass=machine-cp,postrapseudos %s -o /dev/null
+# RUN: llc -mtriple=amdgpu12.01 -passes=machine-cp,post-ra-pseudos %s -o /dev/null
+# RUN: llc -mtriple=amdgpu9.42 -passes=machine-cp,post-ra-pseudos %s -o /dev/null
 
 # Aperture registers have no readable high subregister. Preserve the SGPR
 # intermediate unless the target can copy the whole aperture to a VGPR pair.
