@@ -11,6 +11,7 @@
 #include "ErrorHandling.h"
 #include "ProfiledBinary.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -383,7 +384,7 @@ using RangeSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // The instruction address is the virtual address in the binary.
 using VTableAccessSample = std::map<std::pair<uint64_t, StringRef>, uint64_t>;
 // <data-addr, count> map for data access samples.
-using DataAccessSample = std::map<uint64_t, uint64_t>;
+using DataAccessSample = MapVector<uint64_t, uint64_t>;
 // Wrapper for sample counters including range counter and branch counter
 struct SampleCounter {
   RangeSample RangeCounter;
