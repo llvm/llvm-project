@@ -20845,9 +20845,11 @@ SDValue DAGCombiner::visitFP_TO_SINT(SDNode *N) {
     return C;
 
   // fold (fp_to_sint (ftrunc x)) -> (fp_to_sint x)
-  // Folding with a second user spills the source when ftrunc is a libcall.
+  // With a second user the ftrunc stays, so folding only pays when it is one
+  // instruction or when the convert can reuse its promotion.
   if (N0.getOpcode() == ISD::FTRUNC &&
-      (N0.hasOneUse() || TLI.isOperationLegal(ISD::FTRUNC, N0.getValueType())))
+      (N0.hasOneUse() ||
+       TLI.isOperationLegalOrPromote(ISD::FTRUNC, N0.getValueType())))
     return DAG.getNode(ISD::FP_TO_SINT, DL, VT, N0.getOperand(0));
 
   return FoldIntToFPToInt(N, DL, DAG);
@@ -20867,9 +20869,11 @@ SDValue DAGCombiner::visitFP_TO_UINT(SDNode *N) {
     return C;
 
   // fold (fp_to_uint (ftrunc x)) -> (fp_to_uint x)
-  // Folding with a second user spills the source when ftrunc is a libcall.
+  // With a second user the ftrunc stays, so folding only pays when it is one
+  // instruction or when the convert can reuse its promotion.
   if (N0.getOpcode() == ISD::FTRUNC &&
-      (N0.hasOneUse() || TLI.isOperationLegal(ISD::FTRUNC, N0.getValueType())))
+      (N0.hasOneUse() ||
+       TLI.isOperationLegalOrPromote(ISD::FTRUNC, N0.getValueType())))
     return DAG.getNode(ISD::FP_TO_UINT, DL, VT, N0.getOperand(0));
 
   return FoldIntToFPToInt(N, DL, DAG);
@@ -20880,9 +20884,11 @@ SDValue DAGCombiner::visitFP_TO_INT_SAT(SDNode *N) {
 
   // fold (fp_to_sint_sat (ftrunc x)) -> (fp_to_sint_sat x)
   // fold (fp_to_uint_sat (ftrunc x)) -> (fp_to_uint_sat x)
-  // Folding with a second user spills the source when ftrunc is a libcall.
+  // With a second user the ftrunc stays, so folding only pays when it is one
+  // instruction or when the convert can reuse its promotion.
   if (N0.getOpcode() == ISD::FTRUNC &&
-      (N0.hasOneUse() || TLI.isOperationLegal(ISD::FTRUNC, N0.getValueType())))
+      (N0.hasOneUse() ||
+       TLI.isOperationLegalOrPromote(ISD::FTRUNC, N0.getValueType())))
     return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
                        N0.getOperand(0), N->getOperand(1));
 
