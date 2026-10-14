@@ -9,6 +9,7 @@ add_libc_fuzzer(
     TwoInputSingleOutputDiff.h
   DEPENDS
     libc.hdr.math_macros
+    libc.hdr.math_function_macros
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
@@ -57,6 +58,8 @@ add_libc_fuzzer(
   HDRS
     TwoInputSingleOutputDiff.h
   DEPENDS
+    libc.hdr.math_macros
+    libc.hdr.math_function_macros
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
@@ -68,6 +71,7 @@ add_libc_fuzzer(
   SRCS
     exp_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.exp
 )
 
@@ -77,6 +81,7 @@ add_libc_fuzzer(
   SRCS
     exp10_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.exp10
 )
 
@@ -86,6 +91,7 @@ add_libc_fuzzer(
   SRCS
     exp2_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.exp2
 )
 
@@ -95,6 +101,7 @@ add_libc_fuzzer(
   SRCS
     expm1_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.expm1
 )
 
@@ -104,6 +111,7 @@ add_libc_fuzzer(
   SRCS
     asin_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.asin
 )
 
@@ -113,6 +121,7 @@ add_libc_fuzzer(
   SRCS
     sin_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.sin
 )
 
@@ -122,6 +131,7 @@ add_libc_fuzzer(
   SRCS
     acos_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.acos
 )
 
@@ -131,6 +141,7 @@ add_libc_fuzzer(
   SRCS
     cos_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.cos
 )
 
@@ -140,6 +151,7 @@ add_libc_fuzzer(
   SRCS
     tan_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.tan
 )
 
@@ -149,6 +161,7 @@ add_libc_fuzzer(
   SRCS
     sincos_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.sincos
 )
 
@@ -158,6 +171,7 @@ add_libc_fuzzer(
   SRCS
     log_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.log
 )
 
@@ -167,6 +181,7 @@ add_libc_fuzzer(
   SRCS
     log10_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.log10
 )
 
@@ -176,6 +191,7 @@ add_libc_fuzzer(
   SRCS
     log1p_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.log1p
 )
 
@@ -185,6 +201,7 @@ add_libc_fuzzer(
   SRCS
     log2_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.log2
 )
 
@@ -194,6 +211,7 @@ add_libc_fuzzer(
   SRCS
     sqrt_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.__support.FPUtil.generic.sqrt
 )
 
@@ -203,6 +221,7 @@ add_libc_fuzzer(
   SRCS
     cbrt_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.cbrt
 )
 
@@ -212,6 +231,7 @@ add_libc_fuzzer(
   SRCS
     fsqrt_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.fsqrt
 )
 
@@ -221,6 +241,7 @@ add_libc_fuzzer(
   SRCS
     f16sqrt_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.f16sqrt
 )
 
@@ -230,5 +251,6 @@ add_libc_fuzzer(
   SRCS
     hypot_fuzz.cpp
   DEPENDS
+    libc.hdr.math_function_macros
     libc.src.math.hypot
 )
