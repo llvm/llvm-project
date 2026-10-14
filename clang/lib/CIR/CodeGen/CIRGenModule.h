@@ -82,6 +82,9 @@ private:
 
   const clang::LangOptions &langOpts;
 
+  /// Seeded from langOpts and then pushed and popped by clang::atomic.
+  clang::AtomicOptions atomicOpts;
+
   const clang::CodeGenOptions &codeGenOpts;
 
   /// A "module" matches a c/cpp source file: containing a list of functions.
@@ -175,6 +178,12 @@ public:
   clang::DiagnosticsEngine &getDiags() const { return diags; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
+
+  /// The atomic options in effect at the point currently being emitted.
+  /// clang::atomic adjusts these for the extent of the statement it is attached
+  /// to, so they are module state rather than a fixed language option.
+  clang::AtomicOptions getAtomicOpts() const { return atomicOpts; }
+  void setAtomicOpts(clang::AtomicOptions opts) { atomicOpts = opts; }
 
   CIRGenCXXABI &getCXXABI() const { return *abi; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
@@ -339,6 +348,10 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Cast \p addr, the address of the global \p vd, to the address space of
+  /// the declared type of \p vd if they differ.
+  mlir::Value castGlobalToDeclAddrSpace(mlir::Value addr, const VarDecl &vd);
+
   /// Get or create a thunk function with the given name and type.
   cir::FuncOp getAddrOfThunk(StringRef name, mlir::Type fnTy, GlobalDecl gd);
 
@@ -380,6 +393,12 @@ public:
   void addDefaultFunctionAttributes(StringRef name, bool hasOptNoneAttr,
                                     bool attrOnCallSite,
                                     mlir::NamedAttrList &attrs);
+
+  /// Returns the frame pointer kind to record on functions and on the module,
+  /// or std::nullopt when \p kind is CodeGenOptions::FramePointerKind::None,
+  /// the default, which is left implicit.
+  static std::optional<cir::FramePointerKind>
+  getFramePointerKind(CodeGenOptions::FramePointerKind kind);
 
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type
@@ -460,11 +479,20 @@ public:
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
 
+  /// Create a private constant global holding the null-terminated string
+  /// \p str, mirroring llvm::IRBuilder::CreateGlobalString.
+  cir::GlobalOp createGlobalString(mlir::Location loc, llvm::StringRef str,
+                                   llvm::StringRef name);
+
   /// Returns the address space for temporary allocations in the language. This
   /// ensures that the allocated variable's address space matches the
   /// expectations of the AST, rather than using the target's allocation address
   /// space, which may lead to type mismatches in other parts of the IR.
   LangAS getLangTempAllocaAddressSpace() const;
+
+  /// Return the CIR address space attribute for a global in \p as, honoring
+  /// the target address space map where the LangAS fold would lose it.
+  mlir::ptr::MemorySpaceAttrInterface getGlobalCIRAddressSpace(LangAS as);
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).
@@ -719,6 +747,10 @@ public:
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
   mlir::TypedAttr emitNullConstantAttr(QualType t);
+
+  /// Get target specific null pointer.
+  mlir::Value getNullPointer(cir::PointerType ptrTy, QualType qt,
+                             mlir::Location loc);
 
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.

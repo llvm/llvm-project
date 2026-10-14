@@ -776,6 +776,35 @@ add_header_library(
 )
 
 add_header_library(
+  fchownat
+  HDRS
+    fchownat.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  lchown
+  HDRS
+    lchown.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.gid_t
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ftruncate
   HDRS
     ftruncate.h
@@ -1039,6 +1068,29 @@ add_header_library(
   fsync
   HDRS
     fsync.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sync
+  HDRS
+    sync.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  syncfs
+  HDRS
+    syncfs.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
@@ -1351,6 +1403,22 @@ add_header_library(
 )
 
 add_header_library(
+  waitid
+  HDRS
+    waitid.h
+  DEPENDS
+    libc.hdr.types.id_t
+    libc.hdr.types.idtype_t
+    libc.hdr.types.siginfo_t
+    libc.hdr.types.struct_rusage
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   execve
   HDRS
     execve.h
@@ -1544,3 +1612,71 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+add_header_library(
+  inotify_init
+  HDRS
+    inotify_init.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  inotify_init1
+  HDRS
+    inotify_init1.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  inotify_add_watch
+  HDRS
+    inotify_add_watch.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  inotify_rm_watch
+  HDRS
+    inotify_rm_watch.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  exit
+  HDRS
+    exit.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  exit_group
+  HDRS
+    exit_group.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)

@@ -8,14 +8,16 @@ define i64 @add_sub_xchg(ptr addrspace(1) %addr, i64 %val) {
 ; SM20-LABEL: define i64 @add_sub_xchg(
 ; SM20-SAME: ptr addrspace(1) [[ADDR:%.*]], i64 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; SM20-NEXT:    [[ADD:%.*]] = atomicrmw add ptr addrspace(1) [[ADDR]], i64 [[VAL]] monotonic, align 8
-; SM20-NEXT:    [[SUB:%.*]] = atomicrmw sub ptr addrspace(1) [[ADDR]], i64 [[VAL]] monotonic, align 8
+; SM20-NEXT:    [[NEG:%.*]] = sub i64 0, [[VAL]]
+; SM20-NEXT:    [[SUB:%.*]] = atomicrmw add ptr addrspace(1) [[ADDR]], i64 [[NEG]] monotonic, align 8
 ; SM20-NEXT:    [[XCHG:%.*]] = atomicrmw xchg ptr addrspace(1) [[ADDR]], i64 [[VAL]] monotonic, align 8
 ; SM20-NEXT:    ret i64 [[XCHG]]
 ;
 ; SM32-LABEL: define i64 @add_sub_xchg(
 ; SM32-SAME: ptr addrspace(1) [[ADDR:%.*]], i64 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; SM32-NEXT:    [[ADD:%.*]] = atomicrmw add ptr addrspace(1) [[ADDR]], i64 [[VAL]] monotonic, align 8
-; SM32-NEXT:    [[SUB:%.*]] = atomicrmw sub ptr addrspace(1) [[ADDR]], i64 [[VAL]] monotonic, align 8
+; SM32-NEXT:    [[NEG:%.*]] = sub i64 0, [[VAL]]
+; SM32-NEXT:    [[SUB:%.*]] = atomicrmw add ptr addrspace(1) [[ADDR]], i64 [[NEG]] monotonic, align 8
 ; SM32-NEXT:    [[XCHG:%.*]] = atomicrmw xchg ptr addrspace(1) [[ADDR]], i64 [[VAL]] monotonic, align 8
 ; SM32-NEXT:    ret i64 [[XCHG]]
 ;

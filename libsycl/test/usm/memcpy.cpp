@@ -12,9 +12,12 @@
 
 #include <sycl/sycl.hpp>
 
+#include <cassert>
 #include <cstddef>
+#include <memory>
 #include <numeric>
 #include <tuple>
+#include <vector>
 
 using namespace sycl;
 
@@ -25,9 +28,9 @@ constexpr std::size_t NumBytes = DataSize * sizeof(int);
 // performing a sequence of copies from one allocation to the next,
 // using MemCpyFunc to specify dependencies.
 // Assumes that the first and the last allocations are accessible on host.
-template <typename MemcpyFuncT, typename... AllocFuncssT>
+template <typename MemcpyFuncT, typename... AllocFuncsT>
 void test(queue &Q, MemcpyFuncT MemCpyFunc,
-          std::tuple<AllocFuncssT...> AllocFs) {
+          std::tuple<AllocFuncsT...> AllocFs) {
   constexpr std::size_t NAllocations = std::tuple_size_v<decltype(AllocFs)>;
   static_assert(NAllocations > 1);
 
@@ -111,6 +114,16 @@ int main() {
   });
   runTestsForMemCpyFunc<true>([&](queue &Q, event Dep, auto... OtherArgs) {
     return Q.memcpy(OtherArgs..., std::vector<event>({Dep}));
+  });
+  runTestsForMemCpyFunc<false>([&](queue &Q, event Dep, auto... OtherArgs) {
+    (void)Dep;
+    return Q.submit([&](sycl::handler &CGH) { Q.memcpy(OtherArgs...); });
+  });
+  runTestsForMemCpyFunc<true>([&](queue &Q, event Dep, auto... OtherArgs) {
+    return Q.submit([&](sycl::handler &CGH) {
+      CGH.depends_on(Dep);
+      Q.memcpy(OtherArgs...);
+    });
   });
 
   return 0;

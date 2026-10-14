@@ -378,10 +378,10 @@
 # CHECK-NEXT:  1      3     0.25                        fmul	s0, s1, v0.s[3]
 # CHECK-NEXT:  1      3     0.25                        fmul	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      3     0.25                        fmulx	d0, d4, v0.d[1]
-# CHECK-NEXT:  1      2     0.25                        fmulx	d23, d11, d1
-# CHECK-NEXT:  1      2     0.25                        fmulx	s20, s22, s15
+# CHECK-NEXT:  1      3     0.25                        fmulx	d23, d11, d1
+# CHECK-NEXT:  1      3     0.25                        fmulx	s20, s22, s15
 # CHECK-NEXT:  1      3     0.25                        fmulx	h18, h17, v7.h[1]
-# CHECK-NEXT:  1      2     0.25                        fmulx	h20, h25, h0
+# CHECK-NEXT:  1      3     0.25                        fmulx	h20, h25, h0
 # CHECK-NEXT:  1      3     0.25                        fmulx	s3, s5, v0.s[3]
 # CHECK-NEXT:  1      3     0.25                        fmulx	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.25                        fmulx	v28.4h, v25.4h, v15.h[1]

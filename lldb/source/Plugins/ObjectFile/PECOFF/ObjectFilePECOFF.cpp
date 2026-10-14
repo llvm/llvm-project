@@ -128,7 +128,10 @@ static bool GetDebugLinkContents(const llvm::object::COFFObjectFile &coff_obj,
           content->data(), content->size(),
           coff_obj.isLittleEndian() ? eByteOrderLittle : eByteOrderBig, 4);
       lldb::offset_t gnu_debuglink_offset = 0;
-      gnu_debuglink_file = data.GetCStr(&gnu_debuglink_offset);
+      const char *file = data.GetCStr(&gnu_debuglink_offset);
+      if (!file)
+        return false;
+      gnu_debuglink_file = file;
       // Align to the next 4-byte offset
       gnu_debuglink_offset = llvm::alignTo(gnu_debuglink_offset, 4);
       data.GetU32(&gnu_debuglink_offset, &gnu_debuglink_crc, 1);
@@ -953,6 +956,19 @@ std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
 
   return std::make_unique<PECallFrameInfo>(*this, data_dir_exception.vmaddr,
                                            data_dir_exception.vmsize);
+}
+
+lldb::addr_t ObjectFilePECOFF::GetTlsIndexAddress() const {
+  addr_t addr = LLDB_INVALID_ADDRESS;
+  if (m_binary->is64()) {
+    if (m_binary->getTLSDirectory64())
+      addr = m_binary->getTLSDirectory64()->AddressOfIndex.value();
+  } else if (m_binary->getTLSDirectory32())
+    addr = m_binary->getTLSDirectory32()->AddressOfIndex.value();
+
+  if (addr == 0)
+    addr = LLDB_INVALID_ADDRESS;
+  return addr;
 }
 
 bool ObjectFilePECOFF::IsStripped() {

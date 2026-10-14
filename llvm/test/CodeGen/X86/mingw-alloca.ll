@@ -22,12 +22,12 @@ entry:
 ; COFF: andl $-16, %esp
 ; COFF: pushl %eax
 ; COFF: calll __alloca
-; COFF: movl	8012(%esp), %eax
+; COFF: movl	7996(%esp), %eax
 ; ELF: foo2:
 ; ELF: andl $-16, %esp
 ; ELF: pushl %eax
 ; ELF: calll _alloca
-; ELF: movl	8012(%esp), %eax
+; ELF: movl	7996(%esp), %eax
 	%A2 = alloca [2000 x i32], align 16		; <ptr> [#uses=1]
 	%A2.sub = getelementptr [2000 x i32], ptr %A2, i32 0, i32 0		; <ptr> [#uses=1]
 	call void @bar2( ptr %A2.sub, i32 %N )

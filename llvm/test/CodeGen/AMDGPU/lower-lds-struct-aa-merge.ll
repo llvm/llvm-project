@@ -33,7 +33,7 @@ bb:
 
 !0 = !{!1}
 !1 = distinct !{!1, !2}
-!2 = distinct !{!2}
+!2 = distinct !{!2, i1 false}
 !3 = !{!4}
 !4 = distinct !{!4, !2}
 !5 = !{!6, !7, i64 0}
@@ -50,9 +50,9 @@ bb:
 ; CHECK:!5 = !{!"Simple C++ TBAA"}
 ; CHECK:!6 = !{!7, !9}
 ; CHECK:!7 = distinct !{!7, !8}
-; CHECK:!8 = distinct !{!8}
+; CHECK:!8 = distinct !{!8, i1 false}
 ; CHECK:!9 = distinct !{!9, !10}
-; CHECK:!10 = distinct !{!10}
+; CHECK:!10 = distinct !{!10, i1 false}
 ; CHECK:!11 = !{!12, !13}
 ; CHECK:!12 = distinct !{!12, !8}
 ; CHECK:!13 = distinct !{!13, !10}

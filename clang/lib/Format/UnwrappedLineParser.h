@@ -126,13 +126,15 @@ private:
   bool precededByCommentOrPPDirective() const;
   bool parseLevel(const FormatToken *OpeningBrace = nullptr,
                   IfStmtKind *IfKind = nullptr,
-                  FormatToken **IfLeftBrace = nullptr);
+                  FormatToken **IfLeftBrace = nullptr,
+                  bool *SeenExplicitAccessModifier = nullptr);
   bool mightFitOnOneLine(UnwrappedLine &Line,
                          const FormatToken *OpeningBrace = nullptr) const;
   FormatToken *parseBlock(bool MustBeDeclaration = false,
                           unsigned AddLevels = 1u, bool MunchSemi = true,
                           bool KeepBraces = true, IfStmtKind *IfKind = nullptr,
-                          bool UnindentWhitesmithsBraces = false);
+                          bool UnindentWhitesmithsBraces = false,
+                          bool IndentAfterExplicitAccessModifier = false);
   void parseChildBlock();
   void parsePPDirective();
   void parsePPDefine();
