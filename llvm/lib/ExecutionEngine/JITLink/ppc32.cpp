@@ -18,6 +18,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "Pointer32";
   case Pointer16:
     return "Pointer16";
+  case Pointer16LO:
+    return "Pointer16LO";
   case Pointer16HI:
     return "Pointer16HI";
   case Pointer16HA:
@@ -28,6 +30,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "NegDelta32";
   case Delta16:
     return "Delta16";
+  case Delta16LO:
+    return "Delta16LO";
   case Delta16HI:
     return "Delta16HI";
   case Delta16HA:
@@ -84,27 +88,34 @@ Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     support::endian::write16(Fixup, V, Order);
     return Error::success();
   case Pointer32:
-    if (!isUInt<32>(V))
+    if (!isUInt<32>(V) && !isInt<32>(static_cast<int64_t>(V)))
       return makeTargetOutOfRangeError(G, B, E);
     support::endian::write32(Fixup, V, Order);
     return Error::success();
   case Delta32:
-    if (!isInt<32>(static_cast<int64_t>(V - P)))
-      return makeTargetOutOfRangeError(G, B, E);
+    // Displacements wrap modulo 2^32.
     support::endian::write32(Fixup, V - P, Order);
     return Error::success();
   case NegDelta32:
     support::endian::write32(Fixup, P - V, Order);
     return Error::success();
   case Pointer16:
+  case Pointer16LO:
   case Pointer16HI:
   case Pointer16HA:
   case Delta16:
+  case Delta16LO:
   case Delta16HI:
   case Delta16HA: {
-    if (E.getKind() == Delta16 || E.getKind() == Delta16HI ||
-        E.getKind() == Delta16HA)
+    if (E.getKind() == Delta16 || E.getKind() == Delta16LO ||
+        E.getKind() == Delta16HI || E.getKind() == Delta16HA)
       V -= P;
+    if (E.getKind() == Pointer16 && !isUInt<16>(V) &&
+        !isInt<16>(static_cast<int64_t>(V)))
+      return makeTargetOutOfRangeError(G, B, E);
+    // Check the displacement after 32-bit wraparound.
+    if (E.getKind() == Delta16 && !isInt<16>(static_cast<int32_t>(V)))
+      return makeTargetOutOfRangeError(G, B, E);
     if (E.getKind() == Pointer16HI || E.getKind() == Delta16HI)
       V >>= 16;
     else if (E.getKind() == Pointer16HA || E.getKind() == Delta16HA)
@@ -161,7 +172,7 @@ Symbol &createAnonymousPointerJumpStub(LinkGraph &G, Section &StubSection,
                                         orc::ExecutorAddr(), 4, 0);
   unsigned ImmOffset = G.getEndianness() == endianness::big ? 2 : 0;
   B.addEdge(Pointer16HA, ImmOffset, PointerSymbol, 0);
-  B.addEdge(Pointer16, 4 + ImmOffset, PointerSymbol, 0);
+  B.addEdge(Pointer16LO, 4 + ImmOffset, PointerSymbol, 0);
   return G.addAnonymousSymbol(B, 0, Content.size(), true, false);
 }
 

@@ -17,18 +17,22 @@ namespace llvm::jitlink::ppc32 {
 enum EdgeKind_ppc32 : Edge::Kind {
   /// Write Target + Addend as an unsigned 32-bit pointer.
   Pointer32 = Edge::FirstRelocation,
-  /// Write the low 16 bits of Target + Addend.
+  /// Write Target + Addend with a signed or unsigned 16-bit range check.
   Pointer16,
+  /// Write the low 16 bits of Target + Addend.
+  Pointer16LO,
   /// Write the high 16 bits of Target + Addend.
   Pointer16HI,
   /// Write the high 16 bits of Target + Addend + 0x8000.
   Pointer16HA,
-  /// Write Target + Addend - Fixup as a signed 32-bit displacement.
+  /// Write Target + Addend - Fixup as a 32-bit displacement.
   Delta32,
   /// Write Fixup - (Target + Addend) as a 32-bit displacement.
   NegDelta32,
-  /// Low, high, and adjusted high halves of Target + Addend - Fixup.
+  /// Write Target + Addend - Fixup as a signed 16-bit displacement.
   Delta16,
+  /// Low, high, and adjusted high halves of Target + Addend - Fixup.
+  Delta16LO,
   Delta16HI,
   Delta16HA,
   /// Relative branches with signed 26-bit and 16-bit byte displacements.

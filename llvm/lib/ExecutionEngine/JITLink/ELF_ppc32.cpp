@@ -11,6 +11,7 @@
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
 #include "llvm/ExecutionEngine/JITLink/ppc32.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/Endian.h"
 
 #include "EHFrameSupportImpl.h"
 #include "ELFLinkGraphBuilder.h"
@@ -22,7 +23,6 @@ namespace llvm::jitlink {
 namespace {
 
 constexpr StringLiteral ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
-constexpr uint64_t ELFGOTBaseOffset = 0x8000;
 
 class GOTTableManager_ELF_ppc32 {
 public:
@@ -44,8 +44,30 @@ public:
     default:
       return false;
     }
-    E.setTarget(getEntryForTarget(G, E.getTarget()));
+    E.setTarget(getEntryForTarget(G, E.getTarget(), E.getAddend()));
+    E.setAddend(0);
     return true;
+  }
+
+  /// Create the GOT and define or resolve its base symbol.
+  Section &getOrCreateSection(LinkGraph &G, Symbol *ExternalGOTSym = nullptr) {
+    if (GOT)
+      return *GOT;
+    // GOT setup branches to an executable blrl at _GLOBAL_OFFSET_TABLE_ - 4.
+    GOT = &G.createSection(getSectionName(),
+                           orc::MemProt::Read | orc::MemProt::Exec);
+    auto Content = G.allocateBuffer(4);
+    support::endian::write32(Content.data(), 0x4e800021, // blrl
+                             G.getEndianness());
+    auto &B =
+        G.createMutableContentBlock(*GOT, Content, orc::ExecutorAddr(), 4, 0);
+    if (ExternalGOTSym)
+      G.makeDefined(*ExternalGOTSym, B, 4, 0, Linkage::Strong, Scope::Local,
+                    true);
+    else
+      G.addDefinedSymbol(B, 4, ELFGOTSymbolName, 0, Linkage::Strong,
+                         Scope::Local, false, true);
+    return *GOT;
   }
 
   Symbol &getEntryForTarget(LinkGraph &G, Symbol &Target,
@@ -58,13 +80,17 @@ public:
   }
 
   Symbol &createEntry(LinkGraph &G, Symbol &Target, Edge::AddendT Addend) {
-    if (!GOT)
-      GOT = &G.createSection(getSectionName(), orc::MemProt::Read);
-    return ppc32::createAnonymousPointer(G, *GOT, &Target, Addend);
+    auto &Entry = ppc32::createAnonymousPointer(G, getOrCreateSection(G),
+                                                &Target, Addend);
+    // Order GOT entries after blrl when BasicLayout sorts blocks by address.
+    Entry.getBlock().setAddress(orc::ExecutorAddr(NextEntryAddress));
+    NextEntryAddress += 4;
+    return Entry;
   }
 
 private:
   Section *GOT = nullptr;
+  uint64_t NextEntryAddress = 4;
   DenseMap<std::pair<Symbol *, Edge::AddendT>, Symbol *> Entries;
 };
 
@@ -103,6 +129,15 @@ private:
 static Error buildTables_ELF_ppc32(LinkGraph &G) {
   GOTTableManager_ELF_ppc32 GOT;
   PLTTableManager_ELF_ppc32 PLT(GOT);
+  // Resolve the GOT base before PLT stub creation.
+  Symbol *ExternalGOTSym = nullptr;
+  for (auto *Sym : G.external_symbols())
+    if (*Sym->getName() == ELFGOTSymbolName) {
+      ExternalGOTSym = Sym;
+      break;
+    }
+  if (ExternalGOTSym)
+    GOT.getOrCreateSection(G, ExternalGOTSym);
   visitExistingEdges(G, GOT, PLT);
   return Error::success();
 }
@@ -140,8 +175,10 @@ class ELFLinkGraphBuilder_ppc32
       break;
     case ELF::R_PPC_ADDR16:
     case ELF::R_PPC_UADDR16:
-    case ELF::R_PPC_ADDR16_LO:
       K = ppc32::Pointer16;
+      break;
+    case ELF::R_PPC_ADDR16_LO:
+      K = ppc32::Pointer16LO;
       break;
     case ELF::R_PPC_ADDR16_HI:
       K = ppc32::Pointer16HI;
@@ -165,8 +202,10 @@ class ELFLinkGraphBuilder_ppc32
       K = ppc32::RequestGOTAndTransformToGOTDelta16HA;
       break;
     case ELF::R_PPC_REL16:
-    case ELF::R_PPC_REL16_LO:
       K = ppc32::Delta16;
+      break;
+    case ELF::R_PPC_REL16_LO:
+      K = ppc32::Delta16LO;
       break;
     case ELF::R_PPC_REL16_HI:
       K = ppc32::Delta16HI;
@@ -180,16 +219,12 @@ class ELFLinkGraphBuilder_ppc32
       K = ppc32::Branch24;
       break;
     case ELF::R_PPC_REL14:
-    case ELF::R_PPC_REL14_BRTAKEN:
-    case ELF::R_PPC_REL14_BRNTAKEN:
       K = ppc32::Branch14;
       break;
     case ELF::R_PPC_ADDR24:
       K = ppc32::Branch24Absolute;
       break;
     case ELF::R_PPC_ADDR14:
-    case ELF::R_PPC_ADDR14_BRTAKEN:
-    case ELF::R_PPC_ADDR14_BRNTAKEN:
       K = ppc32::Branch14Absolute;
       break;
     default:
@@ -205,9 +240,11 @@ class ELFLinkGraphBuilder_ppc32
 
     auto FixupAddress = orc::ExecutorAddr(Sect.sh_addr) + Rel.r_offset;
     Edge::OffsetT Offset = FixupAddress - B.getAddress();
-    unsigned Size = K == ppc32::Pointer16 || K == ppc32::Pointer16HI ||
+    unsigned Size = K == ppc32::Pointer16 || K == ppc32::Pointer16LO ||
+                            K == ppc32::Pointer16HI ||
                             K == ppc32::Pointer16HA || K == ppc32::Delta16 ||
-                            K == ppc32::Delta16HI || K == ppc32::Delta16HA ||
+                            K == ppc32::Delta16LO || K == ppc32::Delta16HI ||
+                            K == ppc32::Delta16HA ||
                             K == ppc32::RequestGOTAndTransformToGOTDelta16 ||
                             K == ppc32::RequestGOTAndTransformToGOTDelta16LO ||
                             K == ppc32::RequestGOTAndTransformToGOTDelta16HI ||
@@ -240,33 +277,20 @@ public:
                      std::unique_ptr<LinkGraph> G, PassConfiguration Config)
       : JITLinker(std::move(Ctx), std::move(G), std::move(Config)) {
     getPassConfig().PostAllocationPasses.push_back(
-        [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
+        [this](LinkGraph &G) { return findGOTSymbol(G); });
   }
 
 private:
   Symbol *GOTSymbol = nullptr;
 
-  Error getOrCreateGOTSymbol(LinkGraph &G) {
-    auto *GOT =
-        G.findSectionByName(GOTTableManager_ELF_ppc32::getSectionName());
-    // Bias the GOT base to cover 64 KiB with signed 16-bit displacements.
-    // If there are no entries, a base reference can point anywhere in the
-    // graph: no GOT-relative loads will use it.
-    orc::ExecutorAddr GOTBase;
-    if (GOT)
-      GOTBase = SectionRange(*GOT).getStart() + ELFGOTBaseOffset;
-    else if (!G.blocks().empty())
-      GOTBase = (*G.blocks().begin())->getAddress();
-
-    for (auto *Sym : G.external_symbols())
-      if (*Sym->getName() == ELFGOTSymbolName) {
-        G.makeAbsolute(*Sym, GOTBase);
-        GOTSymbol = Sym;
-        return Error::success();
-      }
-    if (GOT)
-      GOTSymbol = &G.addAbsoluteSymbol(ELFGOTSymbolName, GOTBase, 0,
-                                       Linkage::Strong, Scope::Local, true);
+  Error findGOTSymbol(LinkGraph &G) {
+    if (auto *GOT =
+            G.findSectionByName(GOTTableManager_ELF_ppc32::getSectionName()))
+      for (auto *Sym : GOT->symbols())
+        if (Sym->hasName() && *Sym->getName() == ELFGOTSymbolName) {
+          GOTSymbol = Sym;
+          break;
+        }
     return Error::success();
   }
 
