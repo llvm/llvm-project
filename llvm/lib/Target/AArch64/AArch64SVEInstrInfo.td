@@ -307,6 +307,8 @@ def AArch64fsub_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                      (AArch64fsub_p node:$op1, node:$op2, node:$op3), [{
   return N->getFlags().hasAllowContract();
 }]>;
+def AArch64fmul_p_contract : ContractablePatFrag<(ops node:$op1, node:$op2, node:$op3),
+                                                 (AArch64fmul_p node:$op1, node:$op2, node:$op3)>;
 
 def AArch64fminnm_p_nnan : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                    (AArch64fminnm_p node:$op1, node:$op2, node:$op3), [{
@@ -515,6 +517,10 @@ def AArch64fabd_p : PatFrags<(ops node:$pg, node:$op1, node:$op2),
 def AArch64fmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
                              [(AArch64fma_p node:$pg, node:$zn, node:$zm, node:$za),
                               (AArch64fma_p node:$pg, node:$zm, node:$zn, node:$za)]>;
+
+def AArch64fmla_p_contract : PatFrags<(ops node:$pg, node:$acc, node:$lhs, node:$rhs),
+                                      [(AArch64fadd_p_contract node:$pg, (AArch64fmul_p_contract (SVEAllActive), node:$lhs, node:$rhs), node:$acc),
+                                       (AArch64fadd_p_contract node:$pg, node:$acc, (AArch64fmul_p_contract (SVEAllActive), node:$lhs, node:$rhs))]>;
 
 def AArch64fmlaidx : PatFrags<(ops node:$acc, node:$op1, node:$op2, node:$idx),
                               [(AArch64fmla_p (SVEAllActive), node:$acc, node:$op1, (int_aarch64_sve_dup_laneq node:$op2, node:$idx)),
@@ -1008,6 +1014,11 @@ let Predicates = [HasSVE_or_SME] in {
   defm FMLS_ZPZZZ  : sve_fp_3op_pred_hfd<AArch64fmls_p>;
   defm FNMLA_ZPZZZ : sve_fp_3op_pred_hfd<AArch64fnmla_p>;
   defm FNMLS_ZPZZZ : sve_fp_3op_pred_hfd<AArch64fnmls_p>;
+
+  def : Pat<(nxv2f64 (AArch64fmla_p_contract (SVEAllActive), nxv2f64:$Acc, nxv2f64:$L, nxv2f64:$R)),
+            (FMLA_ZPmZZ_D (PTRUE_D 31), $Acc, $L, $R)>;
+  def : Pat<(nxv4f32 (AArch64fmla_p_contract (SVEAllActive), nxv4f32:$Acc, nxv4f32:$L, nxv4f32:$R)),
+            (FMLA_ZPmZZ_S (PTRUE_S 31), $Acc, $L, $R)>;
 } // End HasSVE_or_SME
 
 let Predicates = [HasSVE] in {

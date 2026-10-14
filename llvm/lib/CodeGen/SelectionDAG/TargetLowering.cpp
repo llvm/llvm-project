@@ -14111,6 +14111,7 @@ SDValue TargetLowering::expandVectorMatch(SDNode *N, SelectionDAG &DAG) const {
 SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
                                                SelectionDAG &DAG) const {
   SDLoc DL(N);
+  SDNodeFlags Flags = N->getFlags();
   SDValue Acc = N->getOperand(0);
   SDValue MulLHS = N->getOperand(1);
   SDValue MulRHS = N->getOperand(2);
@@ -14159,15 +14160,15 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
       return DAG.getNode(Opc, DL, AccVT, Acc,
                          DAG.getNode(Opc, DL, RungVT,
                                      DAG.getConstant(0, DL, RungVT), MulLHS,
-                                     MulRHS),
-                         DAG.getConstant(1, DL, RungVT));
+                                     MulRHS, Flags),
+                         DAG.getConstant(1, DL, RungVT), Flags);
     }
 
     // A multiply widens the products by one rung, which legalizes back into a
     // widening multiply per half, and the ladder re-enters as a plain sum.
-    SDValue Prod = DAG.getNode(ISD::MUL, DL, ProdVT,
-                               DAG.getNode(ExtOpcLHS, DL, ProdVT, MulLHS),
-                               DAG.getNode(ExtOpcRHS, DL, ProdVT, MulRHS));
+    SDValue Prod = DAG.getNode(
+        ISD::MUL, DL, ProdVT, DAG.getNode(ExtOpcLHS, DL, ProdVT, MulLHS),
+        DAG.getNode(ExtOpcRHS, DL, ProdVT, MulRHS), Flags);
     auto [Lo, Hi] = DAG.SplitVector(Prod, DL);
     SDValue One = DAG.getConstant(1, DL, Lo.getValueType());
 
@@ -14177,11 +14178,13 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
                     .getHalfNumVectorElementsVT(Ctx);
     if (ElementCount::isKnownLE(MidVT.getVectorElementCount(), AccEC))
       return DAG.getNode(Opc, DL, AccVT,
-                         DAG.getNode(Opc, DL, AccVT, Acc, Lo, One), Hi, One);
-    SDValue Mid =
-        DAG.getNode(Opc, DL, MidVT, DAG.getConstant(0, DL, MidVT), Lo, One);
-    Mid = DAG.getNode(Opc, DL, MidVT, Mid, Hi, One);
-    return DAG.getNode(Opc, DL, AccVT, Acc, Mid, DAG.getConstant(1, DL, MidVT));
+                         DAG.getNode(Opc, DL, AccVT, Acc, Lo, One), Hi, One,
+                         Flags);
+    SDValue Mid = DAG.getNode(Opc, DL, MidVT, DAG.getConstant(0, DL, MidVT), Lo,
+                              One, Flags);
+    Mid = DAG.getNode(Opc, DL, MidVT, Mid, Hi, One, Flags);
+    return DAG.getNode(Opc, DL, AccVT, Acc, Mid, DAG.getConstant(1, DL, MidVT),
+                       Flags);
   }
 
   if (ExtMulOpVT != MulOpVT) {
@@ -14191,9 +14194,9 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
   SDValue Input = MulLHS;
   if (N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA) {
     if (!llvm::isOneOrOneSplatFP(MulRHS))
-      Input = DAG.getNode(ISD::FMUL, DL, ExtMulOpVT, MulLHS, MulRHS);
+      Input = DAG.getNode(ISD::FMUL, DL, ExtMulOpVT, MulLHS, MulRHS, Flags);
   } else if (!llvm::isOneOrOneSplat(MulRHS)) {
-    Input = DAG.getNode(ISD::MUL, DL, ExtMulOpVT, MulLHS, MulRHS);
+    Input = DAG.getNode(ISD::MUL, DL, ExtMulOpVT, MulLHS, MulRHS, Flags);
   }
 
   unsigned Stride = AccVT.getVectorMinNumElements();
@@ -14209,8 +14212,8 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
 
   // Flatten the subvector tree
   while (Subvectors.size() > 1) {
-    Subvectors.push_back(
-        DAG.getNode(FlatNode, DL, AccVT, {Subvectors[0], Subvectors[1]}));
+    Subvectors.push_back(DAG.getNode(FlatNode, DL, AccVT,
+                                     {Subvectors[0], Subvectors[1]}, Flags));
     Subvectors.pop_front();
     Subvectors.pop_front();
   }
