@@ -14,7 +14,7 @@
 namespace llvm {
 
 class AssignSectionsToGlobalsPass
-    : public PassInfoMixin<AssignSectionsToGlobalsPass> {
+    : public RequiredPassInfoMixin<AssignSectionsToGlobalsPass> {
   TargetMachine *TM;
 
 public:
