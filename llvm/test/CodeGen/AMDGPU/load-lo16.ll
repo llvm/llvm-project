@@ -145,7 +145,6 @@ define <2 x i16> @load_local_lo_v2i16_zerolo(ptr addrspace(3) %in) #0 {
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    ds_read_u16 v0, v0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX803-LABEL: load_local_lo_v2i16_zerolo:
