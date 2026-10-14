@@ -19,6 +19,7 @@ package = false
 extend-exclude = '''
 (
   third-party/
+  polly/lib/External
 )
 '''
 
