@@ -1,12 +1,6 @@
 ; uinc_wrap/udec_wrap lower to helper OpFunctionCalls; their AMDGPU metadata
 ; is preserved as AuxData InstructionMetadata on the call result.
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 \
-; RUN:   -mtriple=spirv64-amd-amdhsa -spirv-preserve-auxdata %s -o - \
-; RUN:   -filetype=obj | spirv-val %}
-
 ; AMD triples preserve it without -spirv-preserve-auxdata. The old UserSemantic
 ; decoration encoding is no longer emitted.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
