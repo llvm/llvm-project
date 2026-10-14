@@ -85,7 +85,7 @@ static rpc::RPCStatus handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
 
 static rpc::RPCStatus
 runServer(plugin::GenericDeviceTy &Device, void *Buffer,
-          llvm::SmallSetVector<RPCServerTy::RPCServerCallbackTy, 0> &Callbacks,
+          llvm::SetVector<RPCServerTy::RPCServerCallbackTy> &Callbacks,
           bool &ClientInUse) {
   const uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
@@ -114,9 +114,9 @@ runServer(plugin::GenericDeviceTy &Device, void *Buffer,
   return Status;
 }
 
-static void flushServer(
-    plugin::GenericDeviceTy &Device, void *Buffer,
-    llvm::SmallSetVector<RPCServerTy::RPCServerCallbackTy, 0> Callbacks) {
+static void
+flushServer(plugin::GenericDeviceTy &Device, void *Buffer,
+            llvm::SetVector<RPCServerTy::RPCServerCallbackTy> Callbacks) {
   bool Pending = true;
   while (Pending) {
     Pending = false;

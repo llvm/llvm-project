@@ -25,11 +25,21 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 
 namespace llvm {
+
+namespace detail {
+/// This set is only used when SmallSetVector grows large enough that linear
+/// scanning would be unprofitable. Try to use SmallPtrSet, falling back to a
+/// DenseSet, but don't inline any elements.
+template <typename T>
+using Set = std::conditional_t<std::is_pointer_v<T>, llvm::SmallPtrSet<T, 0>,
+                               llvm::DenseSet<T>>;
+} // namespace detail
 
 /// A vector that has set insertion semantics.
 ///
@@ -53,7 +63,7 @@ namespace llvm {
 /// for performance. A value of 0 means that this mode of operation is not used,
 /// and is the default value.
 template <typename T, typename Vector = SmallVector<T, 0>,
-          typename Set = DenseSet<T>, unsigned N = 0>
+          typename Set = detail::Set<T>, unsigned N = 0>
 class SetVector {
   // Much like in SmallPtrSet, this value should not be too high to prevent
   // excessively long linear scans from occuring.
@@ -342,9 +352,13 @@ private:
 /// A SetVector that performs no allocations if smaller than
 /// a certain size.
 template <typename T, unsigned N>
-class SmallSetVector : public SetVector<T, SmallVector<T, N>, DenseSet<T>, N> {
+class SmallSetVector
+    : public SetVector<T, SmallVector<T, N>, detail::Set<T>, N> {
+  static_assert(N != 0 && "SmallSetVector is meant to be used with non-zero N; "
+                          "use SetVector instead");
+
 public:
-  using SetVector<T, SmallVector<T, N>, DenseSet<T>, N>::SetVector;
+  using SetVector<T, SmallVector<T, N>, detail::Set<T>, N>::SetVector;
 };
 
 } // end namespace llvm

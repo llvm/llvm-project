@@ -90,7 +90,7 @@ private:
   std::mutex BufferMutex{};
 
   /// A list of callbacks the server will attempt to handle.
-  llvm::SmallSetVector<RPCServerCallbackTy, 0> Callbacks;
+  llvm::SetVector<RPCServerCallbackTy> Callbacks;
 
   /// A helper class for running the user thread that handles the RPC interface.
   /// Because we only need to check the RPC server while any kernels are
@@ -114,7 +114,7 @@ private:
     std::mutex &BufferMutex;
 
     /// A reference to the main server's callbacks.
-    llvm::SmallSetVector<RPCServerCallbackTy, 0> &Callbacks;
+    llvm::SetVector<RPCServerCallbackTy> &Callbacks;
 
     /// A reference to all the RPC interfaces that the server is handling.
     llvm::ArrayRef<void *> Buffers;
@@ -129,7 +129,7 @@ private:
     /// Initialize the worker thread to run in the background.
     ServerThread(void *Buffers[], plugin::GenericDeviceTy *Devices[],
                  size_t Length, std::mutex &BufferMutex,
-                 llvm::SmallSetVector<RPCServerCallbackTy, 0> &Callbacks)
+                 llvm::SetVector<RPCServerCallbackTy> &Callbacks)
         : Running(false), NumUsers(0), CV(), Mutex(), BufferMutex(BufferMutex),
           Callbacks(Callbacks), Buffers(Buffers, Length),
           Devices(Devices, Length), SleepFunction([]() {
