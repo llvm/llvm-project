@@ -2814,24 +2814,6 @@ defm V_LDEXP_F16          : VOP2_Real_e32e64_vi <0x33>;
 
 let SubtargetPredicate = isGFX8GFX9 in {
 
-// Aliases to simplify matching of floating-point instructions that
-// are VOP2 on SI and VOP3 on VI.
-class SI2_VI3Alias <string name, VOP3_Real inst> : InstAlias <
-  name#" $dst, $src0, $src1",
-  !if(inst.Pfl.HasOMod,
-      (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0, 0),
-      (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0))
->, PredicateControl {
-  let UseInstAsmMatchConverter = 0;
-  let AsmVariantName = AMDGPUAsmVariants.VOP3;
-}
-
-def : SI2_VI3Alias <"v_ldexp_f32", V_LDEXP_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pkaccum_u8_f32", V_CVT_PKACCUM_U8_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pknorm_i16_f32", V_CVT_PKNORM_I16_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pknorm_u16_f32", V_CVT_PKNORM_U16_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pkrtz_f16_f32", V_CVT_PKRTZ_F16_F32_e64_vi>;
-
 defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_vi>;
 
 } // End SubtargetPredicate = isGFX8GFX9
