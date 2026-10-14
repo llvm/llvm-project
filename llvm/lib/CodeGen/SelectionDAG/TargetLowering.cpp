@@ -4015,6 +4015,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
   case ISD::OR:
   case ISD::XOR:
   case ISD::SUB:
@@ -11700,7 +11702,6 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
   EVT VT = N->getValueType(0);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
-
   unsigned Opc = N->getOpcode();
   bool IsFloor = Opc == ISD::AVGFLOORS || Opc == ISD::AVGFLOORU;
   bool IsSigned = Opc == ISD::AVGCEILS || Opc == ISD::AVGFLOORS;
