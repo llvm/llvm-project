@@ -2745,11 +2745,7 @@ static bool isAbortCall(const Instruction &I, const SPIRVSubtarget &ST) {
 // emit an extra OpUnreachable instruction.
 static bool precededByAbortIntrinsic(const UnreachableInst &I,
                                      const SPIRVSubtarget &ST) {
-  // Find a previous non-debug instruction.
   const Instruction *Prev = I.getPrevNode();
-  while (Prev && isa<PseudoProbeInst>(Prev))
-    Prev = Prev->getPrevNode();
-
   if (Prev && isAbortCall(*Prev, ST))
     return true;
 

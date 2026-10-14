@@ -928,7 +928,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
 
     while (BBIt != BB.end()) {
       Instruction *NI = &*BBIt;
-      // Debug/pseudo instructions should be skipped and not prevent the
+      // Pseudo instructions should be skipped and not prevent the
       // formation of a select group.
       if (isa<PseudoProbeInst>(NI)) {
         ++BBIt;

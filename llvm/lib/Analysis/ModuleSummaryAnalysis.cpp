@@ -1271,8 +1271,6 @@ INITIALIZE_PASS(ImmutableModuleSummaryIndexWrapperPass, "module-summary-info",
 bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
   if (!CB)
     return false;
-  if (isa<PseudoProbeInst>(CB))
-    return false;
   auto *CI = dyn_cast<CallInst>(CB);
   auto *CalledValue = CB->getCalledOperand();
   auto *CalledFunction = CB->getCalledFunction();

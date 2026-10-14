@@ -179,7 +179,7 @@ Embedding Embedder::computeEmbeddings() const {
 Embedding Embedder::computeEmbeddings(const BasicBlock &BB) const {
   Embedding BBVector(Dimension, 0);
 
-  // We consider only the non-debug and non-pseudo instructions
+  // We consider only the non-pseudo instructions
   for (const auto &I : BB)
     if (!isa<PseudoProbeInst>(I))
       BBVector += computeEmbeddings(I);
