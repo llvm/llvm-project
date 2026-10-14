@@ -48,13 +48,6 @@ The previous behavior can be restored with `-Wno-error=unicode-whitespace`.
 Clang will stop accepting non-ascii whitespaces as token separators
 in a future version of Clang.
 
-- The experimental ClangIR code generator is now built into Clang by default, so
-`-fclangir` can be used without any additional CMake options. While ClangIR will
-work for many workloads in some narrow configurations (ie, Itanium only), it
-should prove useful for MLIR experimentation in Clang. This does however have a
-measureable and significant impact on the build-time of clang itself. It can be
-disabled with the CMake option `-DCLANG_ENABLE_CIR=Off`.
-
 ### C++ Specific Potentially Breaking Changes
 
 - The `[[carries_dependency]]` attribute is no longer recognized, in any language
@@ -172,6 +165,15 @@ features cannot lower the translation-unit ABI level;
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
+
+- The experimental ClangIR code generator is now built into Clang by default, so
+`-fclangir` can be used without any additional CMake options. While ClangIR will
+work for many workloads in some narrow configurations (ie, Itanium only), it
+should prove useful for MLIR experimentation in Clang. This does however have a
+measureable and significant impact on the build-time of clang itself. It can be
+disabled with the CMake option `-DCLANG_ENABLE_CIR=Off`. See [the CIR
+documentation](https://clang.llvm.org/docs/CIR/index.html) for more information
+regarding ClangIR's status and design.
 
 ### C++ Language Changes
 - Clang now supports friend declarations with a dependent nested name specifier. (#GH104057)
