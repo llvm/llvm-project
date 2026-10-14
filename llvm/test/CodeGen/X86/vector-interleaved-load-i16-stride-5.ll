@@ -6026,8 +6026,8 @@ define void @load_i16_stride5_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[1,2,2,3,4,5,6,7]
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3,4,5,6,7]
 ; AVX-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; AVX-NEXT:    vpblendw $207, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm3 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm3 = mem[0,1,2,3],xmm0[4,5],mem[6,7]
+; AVX-NEXT:    vpblendw $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm3 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm3 = xmm0[0,1,2,3],mem[4,5],xmm0[6,7]
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,2,3,4,5,6,7,8,9,4,5,14,15,8,9]
 ; AVX-NEXT:    vpshufb %xmm2, %xmm3, %xmm3
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm1[0,1,2,3,4],xmm3[5,6,7]
@@ -6148,8 +6148,8 @@ define void @load_i16_stride5_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[2,1,2,3,4,5,6,7]
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3,4,5,6,7]
 ; AVX-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; AVX-NEXT:    vpblendw $12, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2, %xmm3 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm3 = xmm2[0,1],mem[2,3],xmm2[4,5,6,7]
+; AVX-NEXT:    vpblendw $243, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2, %xmm3 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm3 = mem[0,1],xmm2[2,3],mem[4,5,6,7]
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,6,7,4,5,6,7,8,9,6,7,0,1,10,11]
 ; AVX-NEXT:    vpshufb %xmm2, %xmm3, %xmm3
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm1[0,1,2,3,4],xmm3[5,6,7]

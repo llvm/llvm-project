@@ -10677,8 +10677,8 @@ define void @store_i16_stride7_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm5 = ymm5[2,1,3,2]
 ; AVX2-NEXT:    vpblendvb %ymm0, %ymm4, %ymm5, %ymm0
 ; AVX2-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    vpshuflw {{.*#+}} ymm5 = ymm0[1,2,2,3,4,5,6,7,9,10,10,11,12,13,14,15]
+; AVX2-NEXT:    vpshuflw $233, {{[-0-9]+}}(%r{{[sb]}}p), %ymm5 # 32-byte Folded Reload
+; AVX2-NEXT:    # ymm5 = mem[1,2,2,3,4,5,6,7,9,10,10,11,12,13,14,15]
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm5 = ymm5[0,0,0,0,4,4,4,4]
 ; AVX2-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm15 # 32-byte Reload
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm6 = ymm15[0,0,2,1,4,4,6,5]

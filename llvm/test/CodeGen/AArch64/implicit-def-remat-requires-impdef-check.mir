@@ -34,7 +34,7 @@ body:             |
     ; CHECK-NEXT: STRXui $x0, %stack.0, 0 :: (store (s64) into %stack.0)
     ; CHECK-NEXT: dead undef [[COPY:%[0-9]+]].sub_32:gpr64 = COPY $x1
     ; CHECK-NEXT: dead undef [[DEF:%[0-9]+]].sub_32:gpr64 = IMPLICIT_DEF implicit-def %6
-    ; CHECK-NEXT: STRXui %6, %stack.1, 0 :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: KILL %6
     ; CHECK-NEXT: ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: BL @foo, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
     ; CHECK-NEXT: ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp

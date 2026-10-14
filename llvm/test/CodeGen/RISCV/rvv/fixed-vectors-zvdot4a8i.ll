@@ -1336,11 +1336,6 @@ define <64 x i32> @vdot4asu_vv_partial_v64i32_v256i8(<256 x i8> %a, <256 x i8> %
 ; NODOT-NEXT:    li a1, 64
 ; NODOT-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; NODOT-NEXT:    vslidedown.vx v0, v8, a1
-; NODOT-NEXT:    csrr a2, vlenb
-; NODOT-NEXT:    slli a2, a2, 3
-; NODOT-NEXT:    add a2, sp, a2
-; NODOT-NEXT:    addi a2, a2, 16
-; NODOT-NEXT:    vs8r.v v0, (a2) # vscale x 64-byte Folded Spill
 ; NODOT-NEXT:    li a2, 128
 ; NODOT-NEXT:    vslidedown.vx v8, v16, a1
 ; NODOT-NEXT:    csrr a3, vlenb
@@ -1405,6 +1400,11 @@ define <64 x i32> @vdot4asu_vv_partial_v64i32_v256i8(<256 x i8> %a, <256 x i8> %
 ; NODOT-NEXT:    add a1, sp, a1
 ; NODOT-NEXT:    addi a1, a1, 16
 ; NODOT-NEXT:    vs4r.v v12, (a1) # vscale x 32-byte Folded Spill
+; NODOT-NEXT:    csrr a1, vlenb
+; NODOT-NEXT:    slli a1, a1, 3
+; NODOT-NEXT:    add a1, sp, a1
+; NODOT-NEXT:    addi a1, a1, 16
+; NODOT-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
 ; NODOT-NEXT:    csrr a1, vlenb
 ; NODOT-NEXT:    slli a1, a1, 2
 ; NODOT-NEXT:    mv a2, a1
