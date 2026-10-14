@@ -65,7 +65,6 @@ struct ManglingRule {
    unsigned char Param[5];
 
    int maxLeadIndex() const { return (std::max)(Lead[0], Lead[1]); }
-   int getNumLeads() const { return (Lead[0] ? 1 : 0) + (Lead[1] ? 1 : 0); }
 
    unsigned getNumArgs() const;
 
@@ -105,7 +104,6 @@ public:
         Index + 1 + static_cast<unsigned>(AMDGPULibFunc::EI_LAST_MANGLED));
   }
   static unsigned getNumArgs(ID Id) { return Table[toIndex(Id)].NumArgs; }
-  static StringRef getName(ID Id) { return Table[toIndex(Id)].Name; }
 };
 
 unsigned ManglingRule::getNumArgs() const {
@@ -708,13 +706,6 @@ bool AMDGPULibFunc::parse(StringRef FuncName, AMDGPULibFunc &F) {
 
   F.Impl = std::unique_ptr<AMDGPULibFuncImpl>();
   return false;
-}
-
-StringRef AMDGPUMangledLibFunc::getUnmangledName(StringRef mangledName) {
-  StringRef S = mangledName;
-  if (eatTerm(S, "_Z"))
-    return eatLengthPrefixedName(S);
-  return StringRef();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

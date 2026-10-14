@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_DEVICE_IMAGE_WRAPPER
-#define _LIBSYCL_DEVICE_IMAGE_WRAPPER
+#ifndef _LIBSYCL_SRC_DETAIL_DEVICE_IMAGE_WRAPPER_HPP
+#define _LIBSYCL_SRC_DETAIL_DEVICE_IMAGE_WRAPPER_HPP
 
 #include <sycl/__impl/detail/config.hpp>
 
@@ -28,6 +28,7 @@ _LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END
 #include <memory>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
@@ -90,7 +91,7 @@ private:
 /// This class manages data parsing of device images.
 class DeviceImageManager {
 public:
-  DeviceImageManager(std::unique_ptr<llvm::object::OffloadBinary> Bin)
+  explicit DeviceImageManager(std::unique_ptr<llvm::object::OffloadBinary> Bin)
       : MBin(std::move(Bin)) {}
   // Explicitly delete copy constructor/operator= to avoid unintentional copies.
   DeviceImageManager(const DeviceImageManager &) = delete;
@@ -104,7 +105,7 @@ public:
   /// \return a reference to the corresponding parsed OffloadBinary object.
   const llvm::object::OffloadBinary &getOffloadBinary() const { return *MBin; }
 
-protected:
+private:
   std::unique_ptr<llvm::object::OffloadBinary> MBin;
 };
 
@@ -112,4 +113,4 @@ protected:
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_DEVICE_IMAGE_WRAPPER
+#endif // _LIBSYCL_SRC_DETAIL_DEVICE_IMAGE_WRAPPER_HPP

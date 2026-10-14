@@ -455,7 +455,7 @@ bool foo19(double _Complex a, double _Complex b) {
 // CIR: %[[RESULT:.*]] = cir.cmp eq %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!cir.double>
 
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo19CdS_(double %0, double %1, double %2, double %3)
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo19CdS_(double noundef %0, double noundef %1, double noundef %2, double noundef %3)
 // LLVM: %[[B_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[B_SLOT:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[B_SLOT_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_SLOT]], i32 0, i32 0
@@ -568,7 +568,7 @@ bool foo21(double _Complex a, double _Complex b) {
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[RESULT:.*]] = cir.cmp ne %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!cir.double>
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo21CdS_(double %0, double %1, double %2, double %3)
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo21CdS_(double noundef %0, double noundef %1, double noundef %2, double noundef %3)
 // LLVM: %[[B_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[B_SLOT:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[B_SLOT_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_SLOT]], i32 0, i32 0
@@ -1984,10 +1984,10 @@ void compare_two_complex_bin_ops() {
 // CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
-// CIR: %[[COMPLEX_AB:.*]] = cir.complex.add %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.double>
+// CIR: %[[COMPLEX_AB:.*]] = cir.complex.fadd %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.double>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
-// CIR: %[[COMPLEX_BA:.*]] = cir.complex.add %[[TMP_B]], %[[TMP_A]] : !cir.complex<!cir.double>
+// CIR: %[[COMPLEX_BA:.*]] = cir.complex.fadd %[[TMP_B]], %[[TMP_A]] : !cir.complex<!cir.double>
 // CIR: %[[RESULT:.*]] = cir.cmp ne %[[COMPLEX_AB]], %[[COMPLEX_BA]] : !cir.complex<!cir.double>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 

@@ -8,7 +8,7 @@
 //  CHECK-NEXT:    cf.cond_br %{{.*}}, ^bb2, ^bb3
 //  CHECK-NEXT:  ^bb2:   // pred: ^bb1
 //  CHECK-NEXT:    %{{.*}} = arith.constant 1 : index
-//  CHECK-NEXT:    %[[iv:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    %[[iv:.*]] = arith.addi %{{.*}}, %{{.*}} overflow<nsw> : index
 //  CHECK-NEXT:    cf.br ^bb1(%[[iv]] : index)
 //  CHECK-NEXT:  ^bb3:   // pred: ^bb1
 //  CHECK-NEXT:    return
@@ -26,7 +26,7 @@ func.func @simple_std_for_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
 //  CHECK-NEXT:    cf.cond_br %{{.*}}, ^bb2, ^bb3
 //  CHECK-NEXT:  ^bb2:   // pred: ^bb1
 //  CHECK-NEXT:    %{{.*}} = arith.constant 1 : index
-//  CHECK-NEXT:    %[[iv:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    %[[iv:.*]] = arith.addi %{{.*}}, %{{.*}} overflow<nuw> : index
 //  CHECK-NEXT:    cf.br ^bb1(%[[iv]] : index)
 //  CHECK-NEXT:  ^bb3:   // pred: ^bb1
 //  CHECK-NEXT:    return
@@ -50,10 +50,10 @@ func.func @unsigned_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
 //  CHECK-NEXT:    cf.cond_br %[[cond1]], ^bb4, ^bb5
 //  CHECK-NEXT:  ^bb4:   // pred: ^bb3
 //  CHECK-NEXT:    %{{.*}} = arith.constant 1 : index
-//  CHECK-NEXT:    %[[iv1:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    %[[iv1:.*]] = arith.addi %{{.*}}, %{{.*}} overflow<nsw> : index
 //  CHECK-NEXT:    cf.br ^bb3(%[[iv1]] : index)
 //  CHECK-NEXT:  ^bb5:   // pred: ^bb3
-//  CHECK-NEXT:    %[[iv0:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    %[[iv0:.*]] = arith.addi %{{.*}}, %{{.*}} overflow<nsw> : index
 //  CHECK-NEXT:    cf.br ^bb1(%[[iv0]] : index)
 //  CHECK-NEXT:  ^bb6:   // pred: ^bb1
 //  CHECK-NEXT:    return
@@ -147,7 +147,7 @@ func.func @simple_std_2_ifs(%arg0: i1) {
 //  CHECK-NEXT:   ^bb6:   // 2 preds: ^bb4, ^bb5
 //  CHECK-NEXT:     cf.br ^bb7
 //  CHECK-NEXT:   ^bb7:   // 2 preds: ^bb2, ^bb6
-//  CHECK-NEXT:     %[[iv0:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:     %[[iv0:.*]] = arith.addi %{{.*}}, %{{.*}} overflow<nsw> : index
 //  CHECK-NEXT:     cf.br ^bb1(%[[iv0]] : index)
 //  CHECK-NEXT:   ^bb8:   // pred: ^bb1
 //  CHECK-NEXT:     return
@@ -258,10 +258,10 @@ func.func @nested_if_yield(%arg0: i1) -> (index) {
 // CHECK:           cf.cond_br [[VAL_9]], ^bb4, ^bb5
 // CHECK:         ^bb4:
 // CHECK:           [[VAL_10:%.*]] = arith.constant 1 : index
-// CHECK:           [[VAL_11:%.*]] = arith.addi [[VAL_8]], [[VAL_5]] : index
+// CHECK:           [[VAL_11:%.*]] = arith.addi [[VAL_8]], [[VAL_5]] overflow<nsw> : index
 // CHECK:           cf.br ^bb3([[VAL_11]] : index)
 // CHECK:         ^bb5:
-// CHECK:           [[VAL_12:%.*]] = arith.addi [[VAL_6]], [[VAL_4]] : index
+// CHECK:           [[VAL_12:%.*]] = arith.addi [[VAL_6]], [[VAL_4]] overflow<nsw> : index
 // CHECK:           cf.br ^bb1([[VAL_12]] : index)
 // CHECK:         ^bb6:
 // CHECK:           return
@@ -283,6 +283,8 @@ func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:           cf.cond_br
 // CHECK:           arith.cmpi ult
 // CHECK:           cf.cond_br
+// CHECK:           arith.addi {{.*}} overflow<nuw> : index
+// CHECK:           arith.addi {{.*}} overflow<nuw> : index
 func.func @unsigned_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
                                   %arg3 : index, %arg4 : index) {
   %step = arith.constant 1 : index
@@ -306,7 +308,7 @@ func.func @unsigned_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //
 // CHECK:      ^[[BODY]]:
 // CHECK:        %[[SUM:.*]] = arith.addf %[[ITER_ARG0]], %[[ITER_ARG1]] : f32
-// CHECK:        %[[STEPPED:.*]] = arith.addi %[[ITER]], %[[STEP]] : index
+// CHECK:        %[[STEPPED:.*]] = arith.addi %[[ITER]], %[[STEP]] overflow<nsw> : index
 // CHECK:        cf.br ^[[COND]](%[[STEPPED]], %[[SUM]], %[[SUM]] : index, f32, f32)
 //
 // CHECK:      ^[[CONTINUE]]:
@@ -375,7 +377,7 @@ func.func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
   // CHECK: ^[[BODY]]:
   // CHECK:   %[[CST:.*]] = arith.constant 4.2
   // CHECK:   %[[PROD:.*]] = arith.mulf %[[ITER_ARG]], %[[CST]]
-  // CHECK:   %[[INCR:.*]] = arith.addi %[[ITER]], %[[STEP]]
+  // CHECK:   %[[INCR:.*]] = arith.addi %[[ITER]], %[[STEP]] overflow<nsw>
   // CHECK:   cf.br ^[[COND]](%[[INCR]], %[[PROD]]
 
   // The continuation block has access to the (last value of) reduction.
@@ -602,7 +604,7 @@ func.func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, 
   // CHECK: ^[[IF2_CONT]]:
   // CHECK:   cf.br ^[[IF1_CONT]]
   // CHECK: ^[[IF1_CONT]]:
-  // CHECK:   %{{.*}} = arith.addi %[[LOOP_IV]], %[[ARG2]] : index
+  // CHECK:   %{{.*}} = arith.addi %[[LOOP_IV]], %[[ARG2]] overflow<nsw> : index
   // CHECK:   cf.br ^[[LOOP_LATCH]](%{{.*}} : index)
   scf.parallel (%i) = (%arg1) to (%arg2) step (%arg3) {
     scf.if %arg4 {
@@ -724,7 +726,7 @@ func.func @index_switch_large_cases(%i: index) {
 //       CHECK:   cf.cond_br %[[cmpi]], ^[[bb2:.*]], ^[[bb3:.*]]
 //       CHECK: ^[[bb2]]:
 //       CHECK:   "test.foo"(%[[arg0]])
-//       CHECK:   %[[addi:.*]] = arith.addi %[[arg0]], %[[c1]]
+//       CHECK:   %[[addi:.*]] = arith.addi %[[arg0]], %[[c1]] overflow<nsw>
 //       CHECK:   cf.br ^[[bb1]](%[[addi]] : index)
 //       CHECK: ^[[bb3]]:
 //       CHECK:   return

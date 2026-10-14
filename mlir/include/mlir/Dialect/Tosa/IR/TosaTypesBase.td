@@ -171,6 +171,10 @@ def AtLeastRankOne : And<[
   IsRankedTensorTypePred,
   CPred<"::llvm::cast<::mlir::RankedTensorType>($_self).getRank() >= 1">]>;
 
+def AtLeastRankTwo : And<[
+  IsRankedTensorTypePred,
+  CPred<"::llvm::cast<::mlir::RankedTensorType>($_self).getRank() >= 2">]>;
+
 def IsValidBlockScaledTensorType
     : CPred<"::mlir::succeeded(::mlir::tosa::"
             "verifyBlockScaledTensorType($_self))">;
@@ -256,6 +260,10 @@ def Tosa_IndexTensor2D : TosaTensorRankOf<[Tosa_Int32, Tosa_Int64], [2]>;
 def Tosa_TensorAtLeast1D
     : TosaTensorOf<[Tosa_AnyNumber], [AtLeastRankOne],
                    "tosa-conformant tensor of at least rank 1">;
+
+def Tosa_TensorAtLeast2D
+    : TosaTensorOf<[Tosa_AnyNumber], [AtLeastRankTwo],
+                   "tosa-conformant tensor of at least rank 2">;
 
 def Tosa_MXFPDataTensor3D
     : TosaTensorRankOf<[Tosa_MXFPValue], [3]>;

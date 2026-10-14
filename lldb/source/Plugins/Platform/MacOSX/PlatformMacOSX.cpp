@@ -178,8 +178,9 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
   return error;
 }
 
-llvm::StringRef PlatformMacOSX::GetDeviceSupportDirectoryName() {
-  return "macOS DeviceSupport";
+llvm::SmallVector<llvm::StringRef>
+PlatformMacOSX::GetDeviceSupportDirectoryNames() {
+  return {"macOS DeviceSupport"};
 }
 
 llvm::StringRef PlatformMacOSX::GetPlatformName() { return "MacOSX.platform"; }
