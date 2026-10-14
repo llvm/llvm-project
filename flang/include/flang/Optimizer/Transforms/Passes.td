@@ -664,10 +664,15 @@ def CUFSharedTypeInfo : Pass<"cuf-shared-type-info", "mlir::ModuleOp"> {
     descriptor address from them in device code. The `acc.declare` attribute
     is dropped so OpenACC does not copy the type information to the device.
 
+    Each translation unit defining such type information also ends the
+    section with a page-aligned global, so that the registered pages hold
+    nothing but type information.
+
     Device code then sees the host binding tables, so type-bound procedures
     cannot be called from device code.
   }];
-  let dependentDialects = ["mlir::gpu::GPUDialect", "cuf::CUFDialect"];
+  let dependentDialects = ["mlir::gpu::GPUDialect", "cuf::CUFDialect",
+                           "mlir::LLVM::LLVMDialect"];
 }
 
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
