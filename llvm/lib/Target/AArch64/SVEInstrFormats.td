@@ -11568,3 +11568,31 @@ multiclass sve2_int_to_fp_upcvt<string asm, bits<2> U, SDPatternOperator op> {
   def : SVE_1_Op_Pat<nxv4f32, op, nxv8i16, !cast<Instruction>(NAME # _HtoS)>;
   def : SVE_1_Op_Pat<nxv2f64, op, nxv4i32, !cast<Instruction>(NAME # _StoD)>;
 }
+
+//===----------------------------------------------------------------------===//
+// SVE ordered load/store
+//===----------------------------------------------------------------------===//
+class sve_mem_z_ordered_inst<string mnemonic, dag oops, dag iops,
+                             bits<11> opc, bits<3> opc2> :
+  I<oops, iops, mnemonic, "\t$Zt, [$Rn, $imm]", "", []>, Sched<[]> {
+  bits<5> Zt;
+  bits<5> Rn;
+  bits<8> imm;
+  let Inst{31-21} = opc;
+  let Inst{20-16} = imm{7-3};
+  let Inst{15-13} = opc2;
+  let Inst{12-10} = imm{2-0};
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+}
+
+multiclass sve_mem_z_ordered<string mnemonic, dag oops, dag iops,
+                             bits<11> opc, bits<3> opc2, bit isLoad> {
+  def NAME : sve_mem_z_ordered_inst<mnemonic, oops, iops, opc, opc2> {
+    let mayLoad = isLoad;
+    let mayStore = !not(isLoad);
+  }
+
+  def : InstAlias<mnemonic # "\t$Zt, [$Rn]",
+                  (!cast<Instruction>(NAME) ZPRAny:$Zt, GPR64sp:$Rn, 0), 1>;
+}
