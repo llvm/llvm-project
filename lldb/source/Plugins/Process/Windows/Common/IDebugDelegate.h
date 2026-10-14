@@ -30,7 +30,8 @@ public:
   virtual void OnDebuggerConnected(lldb::addr_t image_base) = 0;
   virtual ExceptionResult OnDebugException(bool first_chance,
                                            const ExceptionRecord &record) = 0;
-  virtual void OnCreateThread(const HostThread &thread) = 0;
+  virtual void OnCreateThread(const HostThread &thread,
+                              lldb::addr_t start_address) = 0;
   virtual void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) = 0;
   virtual DllEventAction OnLoadDll(const ModuleSpec &module_spec,
                                    lldb::addr_t module_addr,

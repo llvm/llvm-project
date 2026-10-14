@@ -46,7 +46,8 @@ public:
   void OnDebuggerConnected(lldb::addr_t image_base) override;
   ExceptionResult OnDebugException(bool first_chance,
                                    const ExceptionRecord &record) override;
-  void OnCreateThread(const HostThread &thread) override;
+  void OnCreateThread(const HostThread &thread,
+                      lldb::addr_t start_address) override;
   void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) override;
   DllEventAction OnLoadDll(const lldb_private::ModuleSpec &module_spec,
                            lldb::addr_t module_addr,
