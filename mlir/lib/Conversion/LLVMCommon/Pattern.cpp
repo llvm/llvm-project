@@ -12,6 +12,8 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Matchers.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -354,6 +356,23 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   return success();
 }
 
+SmallVector<OpFoldResult> LLVM::getIntrinsicArguments(StringRef intrinsic,
+                                                      ValueRange operands) {
+  llvm::Intrinsic::ID id = llvm::Intrinsic::lookupIntrinsicID(intrinsic);
+  SmallVector<OpFoldResult> args;
+  args.reserve(operands.size());
+  for (auto [index, operand] : llvm::enumerate(operands)) {
+    Attribute attr;
+    if (llvm::Intrinsic::isImmArg(id, index) &&
+        matchPattern(operand, m_Constant(&attr)) &&
+        isa<IntegerAttr, FloatAttr>(attr))
+      args.push_back(attr);
+    else
+      args.push_back(operand);
+  }
+  return args;
+}
+
 LogicalResult LLVM::detail::intrinsicRewrite(
     Operation *op, StringRef intrinsic, ValueRange operands,
     const LLVMTypeConverter &typeConverter, RewriterBase &rewriter) {
@@ -370,7 +389,9 @@ LogicalResult LLVM::detail::intrinsicRewrite(
     resType = typeConverter.packOperationResults(op->getResultTypes());
 
   auto callIntrOp = LLVM::CallIntrinsicOp::create(
-      rewriter, loc, resType, rewriter.getStringAttr(intrinsic), operands);
+      rewriter, loc, resType ? TypeRange{resType} : TypeRange{},
+      rewriter.getStringAttr(intrinsic),
+      getIntrinsicArguments(intrinsic, operands));
   // Propagate attributes.
   SmallVector<NamedAttribute> discardableAttrs;
   auto copyAttr = [&](StringAttr name, Attribute attr) {

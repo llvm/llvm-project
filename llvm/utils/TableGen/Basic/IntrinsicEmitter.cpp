@@ -891,6 +891,32 @@ AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {{
 )",
                 UniqAttributesBitSize, MaxNumAttrs, NoFunctionAttrsID,
                 NoFunctionAttrsID);
+
+  // Query immarg without constructing types or attribute sets. Reuse the
+  // intrinsic argument attribute tables above.
+  OS << R"(
+bool Intrinsic::isImmArg(ID id, unsigned ArgNo) {
+  if (id == not_intrinsic)
+    return false;
+  auto [FnAttrID, ArgAttrID] = unpackID(IntrinsicsToAttributesMap[id - 1]);
+  auto [StartIndex, NumAttrs] = ArgAttributesInfoTable[ArgAttrID];
+  for (const auto &Entry : ArrayRef(ArgAttrIdTable).slice(StartIndex, NumAttrs)) {
+    if (Entry.ArgNo != ArgNo + AttributeList::FirstArgIndex)
+      continue;
+    switch (Entry.ArgAttrID) {
+    default: return false;
+)";
+  for (const auto &[Attrs, ID] : UniqArgAttributes)
+    if (llvm::any_of(Attrs, [](const CodeGenIntrinsic::ArgAttribute &Attr) {
+          return Attr.Kind == CodeGenIntrinsic::ImmArg;
+        }))
+      OS << "    case " << ID << ":\n";
+  OS << R"(      return true;
+    }
+  }
+  return false;
+}
+)";
 }
 
 void IntrinsicEmitter::EmitImmArgRangeSetChecks(

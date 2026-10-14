@@ -4206,6 +4206,33 @@ LogicalResult CallIntrinsicOp::verify() {
     return emitOpError() << "intrinsic name must start with 'llvm.'";
   if (failed(verifyOperandBundles(*this)))
     return failure();
+
+  ArrayRef<int32_t> positions = getImmargPositions();
+  ArrayAttr values = getImmargValues();
+  if (positions.size() != values.size())
+    return emitOpError(
+        "expected one value for each immediate argument position");
+
+  size_t numArgs = getArgs().size() + values.size();
+  int32_t previous = -1;
+  for (int32_t position : positions) {
+    if (position < 0 || static_cast<size_t>(position) >= numArgs)
+      return emitOpError("immediate argument position ")
+             << position << " is out of range for " << numArgs << " arguments";
+    if (position <= previous)
+      return emitOpError(
+          "immediate argument positions must be strictly increasing");
+    previous = position;
+  }
+
+  for (auto [index, value] : llvm::enumerate(values)) {
+    if (!isa<IntegerAttr, FloatAttr>(value) ||
+        !isCompatibleType(cast<TypedAttr>(value).getType()))
+      return emitOpError("immediate argument value #")
+             << index
+             << " must be an LLVM-compatible scalar integer or "
+                "floating-point attribute";
+  }
   return success();
 }
 
@@ -4241,6 +4268,39 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, resultTypes, intrin, args, fastMathFlags,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
         /*res_attrs=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            TypeRange resultTypes, StringAttr intrin,
+                            ArrayRef<OpFoldResult> args,
+                            FastmathFlagsAttr fastMathFlags) {
+  SmallVector<Value> operands;
+  SmallVector<int32_t> positions;
+  SmallVector<Attribute> values;
+  for (auto [index, arg] : llvm::enumerate(args)) {
+    if (auto value = dyn_cast<Value>(arg)) {
+      operands.push_back(value);
+    } else {
+      positions.push_back(index);
+      values.push_back(cast<Attribute>(arg));
+    }
+  }
+  build(builder, state, resultTypes, intrin, operands, fastMathFlags,
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
+        /*res_attrs=*/{}, builder.getDenseI32ArrayAttr(positions),
+        builder.getArrayAttr(values));
+}
+
+SmallVector<OpFoldResult> CallIntrinsicOp::getMixedArgs() {
+  SmallVector<OpFoldResult> args(getArgs().size() + getImmargValues().size());
+  for (auto [position, value] :
+       llvm::zip_equal(getImmargPositions(), getImmargValues()))
+    args[position] = value;
+  auto operand = getArgs().begin();
+  for (OpFoldResult &arg : args)
+    if (!arg)
+      arg = *operand++;
+  return args;
 }
 
 ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
@@ -4322,11 +4382,18 @@ void CallIntrinsicOp::print(OpAsmPrinter &p) {
                    getOpBundleOperands().getTypes(), getOpBundleTagsAttr());
   }
 
+  SmallVector<StringRef> elidedAttrs = {getOperandSegmentSizesAttrName(),
+                                        getOpBundleSizesAttrName(),
+                                        getIntrinAttrName(),
+                                        getOpBundleTagsAttrName(),
+                                        getArgAttrsAttrName(),
+                                        getResAttrsAttrName()};
+  if (getImmargPositions().empty())
+    elidedAttrs.push_back(getImmargPositionsAttrName());
+  if (getImmargValues().empty())
+    elidedAttrs.push_back(getImmargValuesAttrName());
   p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
-                          {getOperandSegmentSizesAttrName(),
-                           getOpBundleSizesAttrName(), getIntrinAttrName(),
-                           getOpBundleTagsAttrName(), getArgAttrsAttrName(),
-                           getResAttrsAttrName()});
+                          elidedAttrs);
 
   p << " : ";
 

@@ -1,5 +1,6 @@
 add_mlir_unittest(MLIRLLVMIRTests
   LLVMAttrsTest.cpp
+  LLVMOpsTest.cpp
   LLVMTypeTest.cpp
   ROCDLTargetInfoTest.cpp
 )

@@ -10,6 +10,18 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
 
 ## LLVM 24
 
+### LLVM Dialect
+
+`llvm.call_intrinsic` can represent immediate arguments using the
+`immarg_positions` and `immarg_values` attributes. This preserves their constant
+values through transformations such as block merging. LLVM IR import, X86
+legalization, and Clang CIR lowering now use this representation for constant
+`immarg` parameters when producing `llvm.call_intrinsic`.
+Existing SSA constant operands remain supported, but producers should use the
+attribute representation to preserve immediates through optimization. The
+`LLVM::getIntrinsicArguments` conversion helper identifies these parameters
+using LLVM's intrinsic definitions.
+
 ### Strict Property Assembly Formats
 
 Property-backed operations now use strict declarative assembly formats by
