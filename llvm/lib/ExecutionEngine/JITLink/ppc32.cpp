@@ -60,19 +60,52 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "RequestGOTAndTransformToGOTDelta16HI";
   case RequestGOTAndTransformToGOTDelta16HA:
     return "RequestGOTAndTransformToGOTDelta16HA";
+  case RequestTLSDescInGOTAndTransformToGOTDelta16:
+    return "RequestTLSDescInGOTAndTransformToGOTDelta16";
+  case RequestTLSDescInGOTAndTransformToGOTDelta16LO:
+    return "RequestTLSDescInGOTAndTransformToGOTDelta16LO";
+  case RequestTLSDescInGOTAndTransformToGOTDelta16HI:
+    return "RequestTLSDescInGOTAndTransformToGOTDelta16HI";
+  case RequestTLSDescInGOTAndTransformToGOTDelta16HA:
+    return "RequestTLSDescInGOTAndTransformToGOTDelta16HA";
+  case RequestTLSLDAndTransformToGOTDelta16:
+    return "RequestTLSLDAndTransformToGOTDelta16";
+  case RequestTLSLDAndTransformToGOTDelta16LO:
+    return "RequestTLSLDAndTransformToGOTDelta16LO";
+  case RequestTLSLDAndTransformToGOTDelta16HI:
+    return "RequestTLSLDAndTransformToGOTDelta16HI";
+  case RequestTLSLDAndTransformToGOTDelta16HA:
+    return "RequestTLSLDAndTransformToGOTDelta16HA";
+  case DTPRel32:
+    return "DTPRel32";
+  case DTPRel16:
+    return "DTPRel16";
+  case DTPRel16LO:
+    return "DTPRel16LO";
+  case DTPRel16HI:
+    return "DTPRel16HI";
+  case DTPRel16HA:
+    return "DTPRel16HA";
   default:
     return getGenericEdgeKindName(K);
   }
 }
 
-Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
-                 const Symbol *GOTSymbol) {
+Error applyFixup(LinkGraph &G, Block &B, const Edge &E, const Symbol *GOTSymbol,
+                 const Symbol *TLSBaseSymbol) {
   uint64_t S = E.getTarget().getAddress().getValue();
   uint64_t P = (B.getAddress() + E.getOffset()).getValue();
   uint64_t V = S + E.getAddend();
   auto Order = G.getEndianness();
   char *Fixup = B.getAlreadyMutableContent().data() + E.getOffset();
   switch (E.getKind()) {
+  case DTPRel32:
+    if (!TLSBaseSymbol)
+      return make_error<JITLinkError>(
+          "PPC32 DTPREL relocation requires a TLS template");
+    support::endian::write32(Fixup, V - TLSBaseSymbol->getAddress().getValue(),
+                             Order);
+    return Error::success();
   case GOTDelta16:
   case GOTDelta16LO:
   case GOTDelta16HI:
@@ -99,6 +132,15 @@ Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   case NegDelta32:
     support::endian::write32(Fixup, P - V, Order);
     return Error::success();
+  case DTPRel16:
+  case DTPRel16LO:
+  case DTPRel16HI:
+  case DTPRel16HA:
+    if (!TLSBaseSymbol)
+      return make_error<JITLinkError>(
+          "PPC32 DTPREL relocation requires a TLS template");
+    V -= TLSBaseSymbol->getAddress().getValue();
+    [[fallthrough]];
   case Pointer16:
   case Pointer16LO:
   case Pointer16HI:
@@ -114,11 +156,14 @@ Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
         !isInt<16>(static_cast<int64_t>(V)))
       return makeTargetOutOfRangeError(G, B, E);
     // Check the displacement after 32-bit wraparound.
-    if (E.getKind() == Delta16 && !isInt<16>(static_cast<int32_t>(V)))
+    if ((E.getKind() == Delta16 || E.getKind() == DTPRel16) &&
+        !isInt<16>(static_cast<int32_t>(V)))
       return makeTargetOutOfRangeError(G, B, E);
-    if (E.getKind() == Pointer16HI || E.getKind() == Delta16HI)
+    if (E.getKind() == Pointer16HI || E.getKind() == Delta16HI ||
+        E.getKind() == DTPRel16HI)
       V >>= 16;
-    else if (E.getKind() == Pointer16HA || E.getKind() == Delta16HA)
+    else if (E.getKind() == Pointer16HA || E.getKind() == Delta16HA ||
+             E.getKind() == DTPRel16HA)
       V = (V + 0x8000) >> 16;
     support::endian::write16(Fixup, V, Order);
     return Error::success();

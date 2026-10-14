@@ -23,6 +23,23 @@ namespace llvm::jitlink {
 namespace {
 
 constexpr StringLiteral ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
+constexpr StringLiteral ELFTLSBaseSymbolName = "__jitlink_ppc32_tls_base";
+
+static Symbol &getOrCreateTLSBase(LinkGraph &G) {
+  auto Name = G.intern(ELFTLSBaseSymbolName);
+  if (auto *S = G.findDefinedSymbolByName(Name))
+    return *S;
+  auto *TLS = G.findSectionByName(".tdata");
+  if (!TLS || TLS->empty())
+    TLS = G.findSectionByName(".tbss");
+  if (!TLS || TLS->empty()) {
+    TLS = &G.createSection(".tdata", orc::MemProt::Read | orc::MemProt::Write);
+    G.createMutableContentBlock(*TLS, 1, orc::ExecutorAddr(), 1, 0);
+  }
+  auto &B = **TLS->blocks().begin();
+  return G.addDefinedSymbol(B, 0, Name, 0, Linkage::Strong, Scope::Local, false,
+                            true);
+}
 
 class GOTTableManager_ELF_ppc32 {
 public:
@@ -126,9 +143,74 @@ private:
   DenseMap<Symbol *, Symbol *> Entries;
 };
 
+class TLSInfoTableManager_ELF_ppc32 {
+public:
+  explicit TLSInfoTableManager_ELF_ppc32(GOTTableManager_ELF_ppc32 &GOT)
+      : GOT(GOT) {}
+
+  bool visitEdge(LinkGraph &G, Block *, Edge &E) {
+    switch (E.getKind()) {
+    case ppc32::RequestTLSDescInGOTAndTransformToGOTDelta16:
+      return rewriteTLS(G, E, ppc32::GOTDelta16, false);
+    case ppc32::RequestTLSDescInGOTAndTransformToGOTDelta16LO:
+      return rewriteTLS(G, E, ppc32::GOTDelta16LO, false);
+    case ppc32::RequestTLSDescInGOTAndTransformToGOTDelta16HI:
+      return rewriteTLS(G, E, ppc32::GOTDelta16HI, false);
+    case ppc32::RequestTLSDescInGOTAndTransformToGOTDelta16HA:
+      return rewriteTLS(G, E, ppc32::GOTDelta16HA, false);
+    case ppc32::RequestTLSLDAndTransformToGOTDelta16:
+      return rewriteTLS(G, E, ppc32::GOTDelta16, true);
+    case ppc32::RequestTLSLDAndTransformToGOTDelta16LO:
+      return rewriteTLS(G, E, ppc32::GOTDelta16LO, true);
+    case ppc32::RequestTLSLDAndTransformToGOTDelta16HI:
+      return rewriteTLS(G, E, ppc32::GOTDelta16HI, true);
+    case ppc32::RequestTLSLDAndTransformToGOTDelta16HA:
+      return rewriteTLS(G, E, ppc32::GOTDelta16HA, true);
+    case ppc32::DTPRel32:
+    case ppc32::DTPRel16:
+    case ppc32::DTPRel16LO:
+    case ppc32::DTPRel16HI:
+    case ppc32::DTPRel16HA:
+      getOrCreateTLSBase(G);
+      return false;
+    default:
+      return false;
+    }
+  }
+
+private:
+  bool rewriteTLS(LinkGraph &G, Edge &E, Edge::Kind K, bool IsLocalDynamic) {
+    auto &Target = IsLocalDynamic ? getOrCreateTLSBase(G) : E.getTarget();
+    auto Addend = IsLocalDynamic ? 0 : E.getAddend();
+    auto &Entry = Entries[{&Target, Addend}];
+    if (!Entry)
+      Entry = &createEntry(G, Target, Addend);
+    GOT.getOrCreateSection(G);
+    E.setKind(K);
+    E.setTarget(*Entry);
+    E.setAddend(0);
+    return true;
+  }
+
+  Symbol &createEntry(LinkGraph &G, Symbol &Target, Edge::AddendT Addend) {
+    if (!TLSInfo)
+      TLSInfo = &G.createSection("$__TLSINFO", orc::MemProt::Read);
+    // ELFNixPlatform fills in the pthread key.
+    auto &B =
+        G.createMutableContentBlock(*TLSInfo, 8, orc::ExecutorAddr(), 4, 0);
+    B.addEdge(ppc32::Pointer32, 4, Target, Addend);
+    return G.addAnonymousSymbol(B, 0, 8, false, false);
+  }
+
+  GOTTableManager_ELF_ppc32 &GOT;
+  Section *TLSInfo = nullptr;
+  DenseMap<std::pair<Symbol *, Edge::AddendT>, Symbol *> Entries;
+};
+
 static Error buildTables_ELF_ppc32(LinkGraph &G) {
   GOTTableManager_ELF_ppc32 GOT;
   PLTTableManager_ELF_ppc32 PLT(GOT);
+  TLSInfoTableManager_ELF_ppc32 TLSInfo(GOT);
   // Resolve the GOT base before PLT stub creation.
   Symbol *ExternalGOTSym = nullptr;
   for (auto *Sym : G.external_symbols())
@@ -138,7 +220,18 @@ static Error buildTables_ELF_ppc32(LinkGraph &G) {
     }
   if (ExternalGOTSym)
     GOT.getOrCreateSection(G, ExternalGOTSym);
-  visitExistingEdges(G, GOT, PLT);
+  visitExistingEdges(G, GOT, PLT, TLSInfo);
+  return Error::success();
+}
+
+static Error mergeTLSInfoIntoGOT(LinkGraph &G) {
+  if (auto *TLSInfo = G.findSectionByName("$__TLSINFO")) {
+    auto *GOT =
+        G.findSectionByName(GOTTableManager_ELF_ppc32::getSectionName());
+    assert(GOT && "TLS info entries require a GOT base");
+    // Keep TLS info in GOT reach after initializing its keys.
+    G.mergeSections(*GOT, *TLSInfo);
+  }
   return Error::success();
 }
 
@@ -164,11 +257,51 @@ class ELFLinkGraphBuilder_ppc32
                           const typename ELFT::Shdr &Sect, Block &B) {
     int64_t Addend = Rel.r_addend;
     uint32_t Type = Rel.getType(false);
-    if (Type == ELF::R_PPC_NONE)
+    if (Type == ELF::R_PPC_NONE || Type == ELF::R_PPC_TLSGD ||
+        Type == ELF::R_PPC_TLSLD)
       return Error::success();
 
     Edge::Kind K;
     switch (Type) {
+    case ELF::R_PPC_GOT_TLSGD16:
+      K = ppc32::RequestTLSDescInGOTAndTransformToGOTDelta16;
+      break;
+    case ELF::R_PPC_GOT_TLSGD16_LO:
+      K = ppc32::RequestTLSDescInGOTAndTransformToGOTDelta16LO;
+      break;
+    case ELF::R_PPC_GOT_TLSGD16_HI:
+      K = ppc32::RequestTLSDescInGOTAndTransformToGOTDelta16HI;
+      break;
+    case ELF::R_PPC_GOT_TLSGD16_HA:
+      K = ppc32::RequestTLSDescInGOTAndTransformToGOTDelta16HA;
+      break;
+    case ELF::R_PPC_GOT_TLSLD16:
+      K = ppc32::RequestTLSLDAndTransformToGOTDelta16;
+      break;
+    case ELF::R_PPC_GOT_TLSLD16_LO:
+      K = ppc32::RequestTLSLDAndTransformToGOTDelta16LO;
+      break;
+    case ELF::R_PPC_GOT_TLSLD16_HI:
+      K = ppc32::RequestTLSLDAndTransformToGOTDelta16HI;
+      break;
+    case ELF::R_PPC_GOT_TLSLD16_HA:
+      K = ppc32::RequestTLSLDAndTransformToGOTDelta16HA;
+      break;
+    case ELF::R_PPC_DTPREL32:
+      K = ppc32::DTPRel32;
+      break;
+    case ELF::R_PPC_DTPREL16:
+      K = ppc32::DTPRel16;
+      break;
+    case ELF::R_PPC_DTPREL16_LO:
+      K = ppc32::DTPRel16LO;
+      break;
+    case ELF::R_PPC_DTPREL16_HI:
+      K = ppc32::DTPRel16HI;
+      break;
+    case ELF::R_PPC_DTPREL16_HA:
+      K = ppc32::DTPRel16HA;
+      break;
     case ELF::R_PPC_ADDR32:
     case ELF::R_PPC_UADDR32:
       K = ppc32::Pointer32;
@@ -240,17 +373,20 @@ class ELFLinkGraphBuilder_ppc32
 
     auto FixupAddress = orc::ExecutorAddr(Sect.sh_addr) + Rel.r_offset;
     Edge::OffsetT Offset = FixupAddress - B.getAddress();
-    unsigned Size = K == ppc32::Pointer16 || K == ppc32::Pointer16LO ||
-                            K == ppc32::Pointer16HI ||
-                            K == ppc32::Pointer16HA || K == ppc32::Delta16 ||
-                            K == ppc32::Delta16LO || K == ppc32::Delta16HI ||
-                            K == ppc32::Delta16HA ||
-                            K == ppc32::RequestGOTAndTransformToGOTDelta16 ||
-                            K == ppc32::RequestGOTAndTransformToGOTDelta16LO ||
-                            K == ppc32::RequestGOTAndTransformToGOTDelta16HI ||
-                            K == ppc32::RequestGOTAndTransformToGOTDelta16HA
-                        ? 2
-                        : 4;
+    unsigned Size = 2;
+    switch (K) {
+    case ppc32::Pointer32:
+    case ppc32::Delta32:
+    case ppc32::DTPRel32:
+    case ppc32::Branch24:
+    case ppc32::Branch14:
+    case ppc32::Branch24Absolute:
+    case ppc32::Branch14Absolute:
+      Size = 4;
+      break;
+    default:
+      break;
+    }
     if (Offset > B.getSize() || Size > B.getSize() - Offset)
       return make_error<JITLinkError>("PPC32 relocation outside block");
     // The PLTREL24 addend selects a GOT base in the static linker. Our stub
@@ -277,13 +413,15 @@ public:
                      std::unique_ptr<LinkGraph> G, PassConfiguration Config)
       : JITLinker(std::move(Ctx), std::move(G), std::move(Config)) {
     getPassConfig().PostAllocationPasses.push_back(
-        [this](LinkGraph &G) { return findGOTSymbol(G); });
+        [this](LinkGraph &G) { return findBaseSymbols(G); });
   }
 
 private:
   Symbol *GOTSymbol = nullptr;
+  Symbol *TLSBaseSymbol = nullptr;
 
-  Error findGOTSymbol(LinkGraph &G) {
+  Error findBaseSymbols(LinkGraph &G) {
+    TLSBaseSymbol = G.findDefinedSymbolByName(G.intern(ELFTLSBaseSymbolName));
     if (auto *GOT =
             G.findSectionByName(GOTTableManager_ELF_ppc32::getSectionName()))
       for (auto *Sym : GOT->symbols())
@@ -295,7 +433,7 @@ private:
   }
 
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    return ppc32::applyFixup(G, B, E, GOTSymbol);
+    return ppc32::applyFixup(G, B, E, GOTSymbol, TLSBaseSymbol);
   }
 };
 
@@ -347,6 +485,7 @@ void link_ELF_ppc32(std::unique_ptr<LinkGraph> G,
   Config.PostPrunePasses.push_back(buildTables_ELF_ppc32);
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));
+  Config.PostPrunePasses.push_back(mergeTLSInfoIntoGOT);
   ELFJITLinker_ppc32::link(std::move(Ctx), std::move(G), std::move(Config));
 }
 

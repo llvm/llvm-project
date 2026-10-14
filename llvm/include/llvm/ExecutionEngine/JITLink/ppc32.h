@@ -55,12 +55,29 @@ enum EdgeKind_ppc32 : Edge::Kind {
   RequestGOTAndTransformToGOTDelta16LO,
   RequestGOTAndTransformToGOTDelta16HI,
   RequestGOTAndTransformToGOTDelta16HA,
+  /// Request a general-dynamic TLS info entry.
+  RequestTLSDescInGOTAndTransformToGOTDelta16,
+  RequestTLSDescInGOTAndTransformToGOTDelta16LO,
+  RequestTLSDescInGOTAndTransformToGOTDelta16HI,
+  RequestTLSDescInGOTAndTransformToGOTDelta16HA,
+  /// Request a local-dynamic TLS info entry.
+  RequestTLSLDAndTransformToGOTDelta16,
+  RequestTLSLDAndTransformToGOTDelta16LO,
+  RequestTLSLDAndTransformToGOTDelta16HI,
+  RequestTLSLDAndTransformToGOTDelta16HA,
+  /// Offset from the TLS base.
+  DTPRel32,
+  DTPRel16,
+  DTPRel16LO,
+  DTPRel16HI,
+  DTPRel16HA,
 };
 
 LLVM_ABI const char *getEdgeKindName(Edge::Kind K);
-/// Apply a fixup. GOTSymbol is required for GOTDelta16 and its split forms.
+/// Apply a fixup using the GOT and TLS bases.
 LLVM_ABI Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
-                          const Symbol *GOTSymbol = nullptr);
+                          const Symbol *GOTSymbol = nullptr,
+                          const Symbol *TLSBaseSymbol = nullptr);
 
 /// Create a four-byte pointer, optionally initialized to a target plus addend.
 LLVM_ABI Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
