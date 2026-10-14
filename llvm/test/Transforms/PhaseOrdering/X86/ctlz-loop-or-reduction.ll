@@ -25,8 +25,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ; }
 
 define i32 @scalefactor(ptr %data, i32 %n) {
-;
-;
 ; CHECK-LABEL: define range(i32 1, 17) i32 @scalefactor(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[DATA:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
