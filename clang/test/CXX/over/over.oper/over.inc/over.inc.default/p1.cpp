@@ -82,15 +82,15 @@ struct ExplicitRvalue {
 };
 struct ExplicitConst {
   ExplicitConst &operator++();
-  ExplicitConst operator++(this const ExplicitConst &, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix increment operator; found 'const ExplicitConst &', expected 'ExplicitConst &' or 'volatile ExplicitConst &'}}
+  ExplicitConst operator++(this const ExplicitConst &, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix increment operator; found 'const ExplicitConst &', expected 'ExplicitConst &'}}
 };
 struct ExplicitOther {
   ExplicitOther &operator++();
-  ExplicitOther operator++(this S &, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix increment operator; found 'S &', expected 'ExplicitOther &' or 'volatile ExplicitOther &'}}
+  ExplicitOther operator++(this S &, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix increment operator; found 'S &', expected 'ExplicitOther &'}}
 };
 struct ExplicitByValue {
   ExplicitByValue &operator--();
-  ExplicitByValue operator--(this ExplicitByValue, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix decrement operator; found 'ExplicitByValue', expected 'ExplicitByValue &' or 'volatile ExplicitByValue &'}}
+  ExplicitByValue operator--(this ExplicitByValue, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix decrement operator; found 'ExplicitByValue', expected 'ExplicitByValue &'}}
 };
 
 // Return type.
@@ -163,15 +163,16 @@ struct NV {
 NV operator++(volatile NV &, int) = default; // OK
 
 struct NConst { NConst &operator++(); };
-NConst operator++(const NConst &, int) = default; // expected-error {{invalid first parameter type for defaulted postfix increment operator; found 'const NConst &', expected 'NConst &' or 'volatile NConst &'}}
+NConst operator++(const NConst &, int) = default; // expected-error {{invalid first parameter type for defaulted postfix increment operator; found 'const NConst &', expected 'NConst &'}}
 struct NValue { NValue &operator++(); };
-NValue operator++(NValue, int) = default; // expected-error {{invalid first parameter type for defaulted non-member postfix increment operator; found 'NValue', expected reference to a non-const class or enumeration type}}
+NValue operator++(NValue, int) = default; // expected-error {{invalid first parameter type for defaulted postfix increment operator; found 'NValue', expected 'NValue &'}}
 struct NRet { NRet &operator--(); };
 int operator--(NRet &, int) = default; // expected-error {{return type for defaulted postfix decrement operator must be 'NRet', not 'int'}}
 struct NMismatch { NMismatch &operator++(); };
 S operator++(NMismatch &, int) = default; // expected-error {{return type for defaulted postfix increment operator must be 'NMismatch', not 'S'}}
-struct NUnknown { NUnknown &operator++(); };
-S &operator++(NUnknown, int) = default; // expected-error {{invalid first parameter type for defaulted non-member postfix increment operator; found 'NUnknown', expected reference to a non-const class or enumeration type}}
+// The first parameter is checked before the return type.
+struct NValueBadReturn { NValueBadReturn &operator++(); };
+S &operator++(NValueBadReturn, int) = default; // expected-error {{invalid first parameter type for defaulted postfix increment operator; found 'NValueBadReturn', expected 'NValueBadReturn &'}}
 struct NAuto {
   NAuto &operator++();
   NAuto &operator--();
@@ -296,7 +297,7 @@ DependentReturn<int> dr1; // expected-note {{in instantiation of template class 
 
 template <typename T> struct DependentObject {
   DependentObject &operator++();
-  DependentObject operator++(this T &, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix increment operator; found 'int &', expected 'DependentObject<int> &' or 'volatile DependentObject<int> &'}}
+  DependentObject operator++(this T &, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix increment operator; found 'int &', expected 'DependentObject<int> &'}}
 };
 DependentObject<int> do1; // expected-note {{in instantiation of template class 'DependentObject<int>' requested here}}
 

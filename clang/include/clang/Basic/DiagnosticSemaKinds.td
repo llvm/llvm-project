@@ -10707,12 +10707,7 @@ def err_defaulted_postfix_operator_const : Error<
   "const-qualified">;
 def err_defaulted_postfix_operator_param : Error<
   "invalid %select{explicit object|first}1 parameter type for defaulted "
-  "%sub{select_defaulted_postfix_operator_kind}0; found %2, expected %3 "
-  "or %4">;
-def err_defaulted_postfix_operator_param_unknown : Error<
-  "invalid first parameter type for defaulted non-member "
-  "%sub{select_defaulted_postfix_operator_kind}0; found %1, expected "
-  "reference to a non-const class or enumeration type">;
+  "%sub{select_defaulted_postfix_operator_kind}0; found %2, expected %3">;
 def err_defaulted_postfix_operator_return_type : Error<
   "return type for defaulted %sub{select_defaulted_postfix_operator_kind}0 "
   "must be %1, not %2">;

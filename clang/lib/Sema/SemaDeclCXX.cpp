@@ -9878,54 +9878,38 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
   QualType FirstParamType = getPostfixOperatorFirstParamType(FD);
   QualType ReturnType = FD->getDeclaredReturnType();
 
-  // Diagnose an invalid first parameter. ExpectedC is the type that the
-  // parameter should be a reference to, if that type is known.
-  auto DiagnoseFirstParam = [&](QualType ExpectedC) {
-    if (MD && MD->isImplicitObjectMemberFunction()) {
-      // The implicit object parameter is always a reference to the enclosing
-      // class, so the only possible problem is a const qualifier.
-      Diag(MD->getLocation(), diag::err_defaulted_postfix_operator_const)
-          << (int)Kind;
-    } else if (ExpectedC.isNull()) {
-      Diag(FirstParam->getBeginLoc(),
-           diag::err_defaulted_postfix_operator_param_unknown)
-          << (int)Kind << FirstParamType << FirstParam->getSourceRange();
-    } else {
-      Diag(FirstParam->getBeginLoc(),
-           diag::err_defaulted_postfix_operator_param)
-          << (int)Kind << !MD << FirstParamType
-          << Context.getLValueReferenceType(ExpectedC)
-          << Context.getLValueReferenceType(ExpectedC.withVolatile())
-          << FirstParam->getSourceRange();
-    }
-    return true;
-  };
-
   // Check the type of the first parameter and determine the type C from it.
   // If the parameter type is dependent, C is not known until instantiation.
   QualType C;
   if (!FirstParamType->isDependentType()) {
-    QualType EnclosingClass =
-        MD ? Context.getCanonicalTagType(MD->getParent()) : QualType();
-
-    // The first parameter must be a reference to C.
-    if (!FirstParamType->isReferenceType())
-      return DiagnoseFirstParam(EnclosingClass);
-    QualType Referent = FirstParamType.getNonReferenceType();
-    C = Referent.getUnqualifiedType();
-
     // For a member function, C is the enclosing class. For a non-member
-    // function, C must be a class or enumeration type.
-    if (MD) {
-      if (!Context.hasSameType(C, EnclosingClass))
-        return DiagnoseFirstParam(EnclosingClass);
-    } else if (!C->isRecordType() && !C->isEnumeralType()) {
-      return DiagnoseFirstParam(QualType());
-    }
+    // function, C is the class or enumeration type of its first parameter;
+    // CheckOverloadedOperatorDeclaration has already required it to have one.
+    QualType Referent = FirstParamType.getNonReferenceType();
+    C = MD ? Context.getCanonicalTagType(MD->getParent())
+           : Referent.getUnqualifiedType();
+    assert((C->isRecordType() || C->isEnumeralType()) &&
+           "postfix operator for a non-class, non-enumeration type");
 
-    // The referent may be volatile-qualified, but not const-qualified.
-    if (Referent.isConstQualified())
-      return DiagnoseFirstParam(C);
+    // The first parameter must be a reference to C, which may be
+    // volatile-qualified but not const-qualified.
+    if (!FirstParamType->isReferenceType() ||
+        !Context.hasSameUnqualifiedType(Referent, C) ||
+        Referent.isConstQualified()) {
+      if (MD && MD->isImplicitObjectMemberFunction()) {
+        // The implicit object parameter is always a reference to the enclosing
+        // class, so the only possible problem is a const qualifier.
+        Diag(MD->getLocation(), diag::err_defaulted_postfix_operator_const)
+            << (int)Kind;
+      } else {
+        Diag(FirstParam->getBeginLoc(),
+             diag::err_defaulted_postfix_operator_param)
+            << (int)Kind << !MD << FirstParamType
+            << Context.getLValueReferenceType(C)
+            << FirstParam->getSourceRange();
+      }
+      return true;
+    }
   }
 
   // A deduced return type is never permitted, so diagnose it even if C is not
