@@ -318,8 +318,7 @@ def HasTinyEncoding : Predicate<"Subtarget->hasTinyEncoding()">,
                       AssemblerPredicate<(all_of FeatureTinyEncoding)>;
 
 def HasNonTinyEncoding : Predicate<"!Subtarget->hasTinyEncoding()">,
-                         AssemblerPredicate<(any_of
-                                             (none_of FeatureTinyEncoding))>;
+                         AssemblerPredicate<(none_of FeatureTinyEncoding)>;
 
 // AVR specific condition code. These correspond to AVR_*_COND in
 // AVRInstrInfo.td. They must be kept in synch.

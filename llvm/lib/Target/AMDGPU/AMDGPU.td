@@ -119,19 +119,19 @@ def isGFX6 :
 def isGFX6GFX7 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS">,
-  AssemblerPredicate<(all_of (none_of FeatureGCN3Encoding), (none_of FeatureGFX10Insts))>;
+  AssemblerPredicate<(none_of FeatureGCN3Encoding, FeatureGFX10Insts)>;
 
 def isGFX6GFX7GFX10 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
-  AssemblerPredicate<(all_of (none_of FeatureGCN3Encoding), (none_of FeatureGFX11Insts))>;
+  AssemblerPredicate<(none_of FeatureGCN3Encoding, FeatureGFX11Insts)>;
 
 def isGFX6GFX7GFX10Plus :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
             "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10">,
-  AssemblerPredicate<(all_of (none_of FeatureGCN3Encoding))>;
+  AssemblerPredicate<(none_of FeatureGCN3Encoding)>;
 
 def isGFX7Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS">,
@@ -159,7 +159,7 @@ def isGFX6GFX7GFX8GFX9 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
-  AssemblerPredicate<(all_of (none_of FeatureGFX10Insts))>;
+  AssemblerPredicate<(none_of FeatureGFX10Insts)>;
 
 def isGFX6GFX7GFX8GFX9NotGFX90A :
   Predicate<"!Subtarget->hasGFX90AInsts() &&"
@@ -167,7 +167,7 @@ def isGFX6GFX7GFX8GFX9NotGFX90A :
             " Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
             " Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
             " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9)">,
-  AssemblerPredicate<(all_of (none_of FeatureGFX10Insts), (none_of FeatureGFX90AInsts))>;
+  AssemblerPredicate<(none_of FeatureGFX10Insts, FeatureGFX90AInsts)>;
 
 def isGFX6GFX7GFX8GFX9GFX10 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
@@ -175,11 +175,11 @@ def isGFX6GFX7GFX8GFX9GFX10 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9 ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
-  AssemblerPredicate<(all_of (none_of FeatureGFX11Insts))>;
+  AssemblerPredicate<(none_of FeatureGFX11Insts)>;
 
 def isNotGFX12Plus :
   Predicate<"Subtarget->getGeneration() <= AMDGPUSubtarget::GFX11">,
-  AssemblerPredicate<(all_of (none_of FeatureGFX12Insts))>;
+  AssemblerPredicate<(none_of FeatureGFX12Insts)>;
 
 def isGFX7GFX8GFX9GFX10 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
@@ -234,7 +234,7 @@ def isGFX90APlus :
 
 def isNotGFX90APlus :
   Predicate<"!Subtarget->hasGFX90AInsts()">,
-  AssemblerPredicate<(all_of (none_of FeatureGFX90AInsts))>;
+  AssemblerPredicate<(none_of FeatureGFX90AInsts)>;
 
 def isGFX8GFX9NotGFX90A :
   Predicate<"!Subtarget->hasGFX90AInsts() &&"
@@ -256,7 +256,7 @@ def isGFX940Plus :
 
 def isNotGFX940Plus :
   Predicate<"!Subtarget->hasGFX940Insts()">,
-  AssemblerPredicate<(all_of (none_of FeatureGFX940Insts))>;
+  AssemblerPredicate<(none_of FeatureGFX940Insts)>;
 
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
@@ -358,7 +358,7 @@ def isGFX1250Plus :
 
 def isNotGFX1250Plus :
   Predicate<"!Subtarget->hasGFX1250Insts()">,
-  AssemblerPredicate<(all_of (none_of FeatureGFX1250Insts))>;
+  AssemblerPredicate<(none_of FeatureGFX1250Insts)>;
 
 def isGFX940orGFX1250 :
   Predicate<"Subtarget->hasGFX940Insts() ||"
@@ -387,10 +387,10 @@ def HasGFX10_BEncoding : Predicate<"Subtarget->hasGFX10_BEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX10_BEncoding)>;
 
 def HasPackedD16VMem : Predicate<"!Subtarget->hasUnpackedD16VMem()">,
-  AssemblerPredicate<(all_of (none_of FeatureUnpackedD16VMem))>;
+  AssemblerPredicate<(none_of FeatureUnpackedD16VMem)>;
 
 def HasUnrestrictedSOffset : Predicate<"!Subtarget->hasRestrictedSOffset()">,
-  AssemblerPredicate<(all_of (none_of FeatureRestrictedSOffset))>;
+  AssemblerPredicate<(none_of FeatureRestrictedSOffset)>;
 
 def D16PreservesUnusedBits :
   Predicate<"Subtarget->d16PreservesUnusedBits()">,
@@ -402,7 +402,7 @@ def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 def HasUsableDSOffset : Predicate<"Subtarget->hasUsableDSOffset()">;
 
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX13Insts, (all_of (none_of FeatureGFX90AInsts), (none_of FeatureGFX1250Insts)))>;
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (none_of FeatureGFX90AInsts, FeatureGFX1250Insts))>;
 
 def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
   AssemblerPredicate<(any_of FeatureGFX13Insts, (all_of FeatureGFX11Insts, (none_of FeatureGFX1250Insts)))>;
@@ -418,7 +418,7 @@ def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarryInsts()">;
 def HasXNACKEnabled : Predicate<"Subtarget->isXNACKEnabled()">;
 
 def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">,
-  AssemblerPredicate<(all_of (none_of FeatureTrue16BitInsts))>;
+  AssemblerPredicate<(none_of FeatureTrue16BitInsts)>;
 
 // Control use of True16 instructions. The real True16 instructions are
 // True16 instructions as they are defined in the ISA. Fake True16
@@ -494,16 +494,16 @@ def HasDPP16 : Predicate<"Subtarget->hasDPP()">,
   AssemblerPredicate<(all_of (none_of FeatureGCN3Encoding), FeatureGFX10Insts, FeatureDPP)>;
 
 def HasSdstCMPX : Predicate<"!Subtarget->hasNoSdstCMPX()">,
-  AssemblerPredicate<(all_of (none_of FeatureNoSdstCMPX))>;
+  AssemblerPredicate<(none_of FeatureNoSdstCMPX)>;
 
 def has16BankLDS : Predicate<"Subtarget->getLDSBankCount() == 16">;
 def has32BankLDS : Predicate<"Subtarget->getLDSBankCount() == 32">;
 
 def NotHasMAIInsts : Predicate<"!Subtarget->hasMAIInsts()">,
-  AssemblerPredicate<(all_of (none_of FeatureMAIInsts))>;
+  AssemblerPredicate<(none_of FeatureMAIInsts)>;
 
 def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
-  AssemblerPredicate<(all_of (none_of FeatureFP8E5M3Insts))>;
+  AssemblerPredicate<(none_of FeatureFP8E5M3Insts)>;
 
 // Byte 0 of the SDWA src_sel form is reachable through the plain VOP1 encoding
 // unless that encoding is unreliable.
@@ -537,7 +537,7 @@ def NotHasFlatScratchEnabled : Predicate<"!Subtarget->hasFlatScratchEnabled()">;
 def NotHasMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
 def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
-  AssemblerPredicate<(all_of (none_of FeatureSALUFloatInsts))>;
+  AssemblerPredicate<(none_of FeatureSALUFloatInsts)>;
 
 def HasSignedDotInsts : Predicate<"Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts()">,
   AssemblerPredicate<(any_of FeatureDot1Insts, FeatureDot8Insts)>;
@@ -557,7 +557,7 @@ def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
 
 def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
-                      AssemblerPredicate<(all_of (none_of FeatureRequiresAlignedVGPRs))>;
+                      AssemblerPredicate<(none_of FeatureRequiresAlignedVGPRs)>;
 
 def NotNeedsAligned2addrDS : Predicate<"!Subtarget->hasNeedsAligned2addrDS()">;
 
