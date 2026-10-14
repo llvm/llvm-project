@@ -10,6 +10,7 @@
 #define _LIBCPP___ALGORITHM_RANGES_REVERSE_COPY_H
 
 #include <__algorithm/in_out_result.h>
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/ranges_copy.h>
 #include <__config>
 #include <__iterator/concepts.h>
@@ -50,8 +51,12 @@ struct __reverse_copy {
     requires indirectly_copyable<iterator_t<_Range>, _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_copy_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, _OutIter __result) const {
-    auto __ret = ranges::copy(__range | views::reverse, std::move(__result));
-    return {ranges::next(ranges::begin(__range), ranges::end(__range)), std::move(__ret.out)};
+    auto __first = ranges::begin(__range);
+    auto __last  = ranges::next(__first, _IterOps<_RangeAlgPolicy>::__end(__range));
+
+    auto __ret =
+        ranges::copy(std::make_reverse_iterator(__last), std::make_reverse_iterator(__first), std::move(__result));
+    return {std::move(__last), std::move(__ret.out)};
   }
 };
 
