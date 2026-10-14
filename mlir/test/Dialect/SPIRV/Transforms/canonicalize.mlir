@@ -2558,3 +2558,14 @@ func.func @cannot_canonicalize_selection_op_4(%cond: i1) -> () {
   }
   spirv.Return
 }
+
+// -----
+
+// CHECK-LABEL: func.func @sincos_unused_result(
+// CHECK-SAME: %[[X:.*]]: f32, %[[COSVAL:.*]]: !spirv.ptr<f32, Function>
+func.func @sincos_unused_result(%x: f32, %cosval: !spirv.ptr<f32, Function>) {
+  // CHECK: spirv.CL.sincos %[[X]], %[[COSVAL]]
+  // CHECK-NEXT: return
+  %sin = spirv.CL.sincos %x, %cosval : f32, !spirv.ptr<f32, Function> -> f32
+  return
+}
