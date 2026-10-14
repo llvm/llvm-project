@@ -25,7 +25,6 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 /// Creates a scalar floating-point constant of the given value.
 Value createFPConstant(OpBuilder &builder, Location loc, Type type,
                        double value) {
