@@ -406,6 +406,8 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         one_region_file = self.getBuildArtifact("core.one_region.dmp")
+        target = None
+        core_target = None
         try:
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
@@ -452,7 +454,10 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(err.Fail(), "Should fail to read memory")
 
         finally:
-            self.assertTrue(self.dbg.DeleteTarget(target))
+            if target:
+                self.assertTrue(self.dbg.DeleteTarget(target))
+            if core_target:
+                self.assertTrue(self.dbg.DeleteTarget(core_target))
             if os.path.isfile(one_region_file):
                 os.unlink(one_region_file)
 
