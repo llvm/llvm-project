@@ -3207,9 +3207,8 @@ bool GVNPassImpl::processMaskedLoad(IntrinsicInst *I) {
       return false;
   } else {
     auto *MSSA = MSSAU->getMemorySSA();
-    MemoryAccess *ClobberAccess = MSSA->getWalker()->getClobberingMemoryAccess(
-        MSSA->getMemoryAccess(I)->getDefiningAccess(), LoadLoc, BatchAA);
-    auto *Def = dyn_cast<MemoryDef>(ClobberAccess);
+    auto *Def = dyn_cast<MemoryDef>(
+        MSSA->getWalker()->getClobberingMemoryAccess(I, BatchAA));
     if (!Def || MSSA->isLiveOnEntryDef(Def) ||
         Def->getBlock() != I->getParent())
       return false;
@@ -3228,7 +3227,7 @@ bool GVNPassImpl::processMaskedLoad(IntrinsicInst *I) {
     // Ensure the masked store and load access the same exact memory location.
     MemoryLocation StoreLoc =
         MemoryLocation::getForArgument(cast<IntrinsicInst>(DepInst), 1, TLI);
-    if (BatchAA.alias(StoreLoc, LoadLoc) != AliasResult::MustAlias)
+    if (!BatchAA.isMustAlias(StoreLoc, LoadLoc))
       return false;
   }
 
