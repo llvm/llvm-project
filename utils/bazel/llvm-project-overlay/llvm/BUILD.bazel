@@ -2054,6 +2054,17 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "VectorizeOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/Vectorize",
+    tbl_outs = {
+        "lib/Transforms/Vectorize/VectorizeOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/Vectorize/VectorizeOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Vectorize",
     srcs = glob([
@@ -2070,11 +2081,13 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":Option",
         ":SandboxIR",
         ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
+        ":VectorizeOptionsTableGen",
         ":config",
     ],
 )
