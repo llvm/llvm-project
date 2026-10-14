@@ -35,7 +35,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__pstl/backends/statpart.h>
 #  endif
 
-// statpart pulls <cerrno> in transitively via __thread/thread.h, make sure this include is not is conditional/flaky
+// statpart pulls <cerrno> in transitively via __thread/thread.h, make sure this include is not conditional/flaky.
 #  include <cerrno>
 
 #endif // _LIBCPP_STD_VER >= 17

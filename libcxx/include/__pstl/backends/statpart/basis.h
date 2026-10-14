@@ -110,7 +110,7 @@ private:
   __partition(_Iter, _Iter, __partitioning_result&, size_t, size_t, size_t, size_t) noexcept;
 };
 
-// Splits the input iterator range into a finite set of partitions, such that every iterator sub-range can queried in
+// Splits the input iterator range into a finite set of partitions, such that every iterator sub-range can be queried in
 // a O(1) time later.
 // If partitioning fails, returns nullopt and reports the reason in __result.
 // __min_partition_size specifies the minimal number of elements in every partition.
