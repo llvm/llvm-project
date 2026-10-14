@@ -3589,7 +3589,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case AArch64::EMITBKEY: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;
@@ -3602,7 +3602,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   case AArch64::EMITMTETAGGED: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;

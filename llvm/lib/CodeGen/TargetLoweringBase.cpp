@@ -717,7 +717,7 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
     : TM(tm),
-      RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
+      RuntimeLibcallInfo(TM.getTargetTriple(), ExceptionHandling::Default,
                          TM.getTargetTriple().getDefaultFloatABI(),
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
       Libcalls(RuntimeLibcallInfo, [&STI](LibcallLoweringInfo &Info) {
