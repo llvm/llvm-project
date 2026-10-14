@@ -1932,6 +1932,26 @@ func.func @pad_fold_static(%arg0: tensor<?x64x?x?xf32>) -> tensor<?x?x?x?xf32> {
 
 // -----
 
+// A negative constant is not folded into the attribute, since the verifier
+// requires the attribute to be non-negative.
+
+// CHECK-LABEL: func @pad_nofold_negative_constant(
+//  CHECK-SAME:   %[[ARG0:.*]]: tensor<4xf32>
+//       CHECK:   %[[C:.*]] = arith.constant -2 : index
+//       CHECK:   tensor.pad %[[ARG0]] low[%[[C]]] high[0]
+//       CHECK:   } : tensor<4xf32> to tensor<?xf32>
+func.func @pad_nofold_negative_constant(%arg0: tensor<4xf32>, %pad_value: f32)
+    -> tensor<?xf32> {
+  %c = arith.constant -2 : index
+  %0 = tensor.pad %arg0 low[%c] high[0] {
+  ^bb0(%arg1: index):
+    tensor.yield %pad_value : f32
+  } : tensor<4xf32> to tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @pad_nofold_same_static_shape(
 //  CHECK-SAME:   %[[ARG0:.*]]: tensor<5x6xf32>
 //       CHECK:   %[[PAD:.*]] = tensor.pad

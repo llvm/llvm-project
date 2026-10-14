@@ -3678,12 +3678,14 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
 
     auto outputDims = oldResultType.getShape();
 
-    // Extract the static info from the high and low operands.
+    // Extract the static info from the high and low operands. A negative
+    // constant is not folded, since the attribute must be non-negative.
     SmallVector<int64_t> constOperandsLow;
     SmallVector<Value> newLows;
     for (auto operand : padTensorOp.getLow()) {
       APSInt intOp;
-      if (!matchPattern(operand, m_ConstantInt(&intOp))) {
+      if (!matchPattern(operand, m_ConstantInt(&intOp)) ||
+          intOp.getExtValue() < 0) {
         constOperandsLow.push_back(ShapedType::kDynamic);
         newLows.push_back(operand);
         continue;
@@ -3694,7 +3696,8 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
     SmallVector<Value> newHighs;
     for (auto operand : padTensorOp.getHigh()) {
       APSInt intOp;
-      if (!matchPattern(operand, m_ConstantInt(&intOp))) {
+      if (!matchPattern(operand, m_ConstantInt(&intOp)) ||
+          intOp.getExtValue() < 0) {
         constOperandsHigh.push_back(ShapedType::kDynamic);
         newHighs.push_back(operand);
         continue;
