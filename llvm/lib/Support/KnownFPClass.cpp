@@ -496,7 +496,7 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
 
   if (!IsFMA) {
     // (fadd x, +0.0) is guaranteed to return +0.0, not -0.0.
-    if (KnownLHS.isKnownNeverNegZero() || KnownRHS.isKnownNeverNegZero())
+    if (KnownLHS.isKnownNever(fcNegZero) || KnownRHS.isKnownNever(fcNegZero))
       Known.knownNot(fcNegZero);
 
     Known.propagateNonSNaN(KnownLHS, KnownRHS);
@@ -528,7 +528,7 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc_,
     Known.knownNot(fcNegSubnormal);
 
   // Doubling 0 will give the same 0.
-  if (KnownSrc.isKnownNeverPosZero())
+  if (KnownSrc.isKnownNever(fcPosZero))
     Known.knownNot(fcPosZero);
 
   return applyOutputDenormalMode(Known, Mode);
