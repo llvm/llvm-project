@@ -361,10 +361,9 @@ define amdgpu_kernel void @constant_sextload_i8_align2(ptr addrspace(1) %out, pt
 ; GFX9-NEXT:    global_load_sbyte v1, v0, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s2, v1
-; GFX9-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-NEXT:    global_store_short v0, v1, s[0:1] offset:2
+; GFX9-NEXT:    global_store_short_d16_hi v0, v1, s[0:1] offset:2
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: constant_sextload_i8_align2:
@@ -375,10 +374,9 @@ define amdgpu_kernel void @constant_sextload_i8_align2(ptr addrspace(1) %out, pt
 ; GFX10-NEXT:    global_load_sbyte v1, v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s2, v1
-; GFX10-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX10-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX10-NEXT:    global_store_short v0, v2, s[0:1] offset:2
+; GFX10-NEXT:    global_store_short_d16_hi v0, v2, s[0:1] offset:2
 ; GFX10-NEXT:    s_endpgm
   %load = load i8, ptr addrspace(1) %in, align 2
   %sextload = sext i8 %load to i32

@@ -2310,11 +2310,9 @@ define amdgpu_kernel void @s_ctlz_zero_poison_i18(ptr addrspace(1) noalias %out,
 ; GFX9-GISEL-NEXT:    s_lshl_b32 s2, s2, 14
 ; GFX9-GISEL-NEXT:    s_flbit_i32_b32 s2, s2
 ; GFX9-GISEL-NEXT:    s_and_b32 s2, s2, 0x3ffff
-; GFX9-GISEL-NEXT:    s_lshr_b32 s3, s2, 16
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-GISEL-NEXT:    global_store_byte v0, v1, s[0:1] offset:2
+; GFX9-GISEL-NEXT:    global_store_byte_d16_hi v0, v1, s[0:1] offset:2
 ; GFX9-GISEL-NEXT:    s_endpgm
   %ctlz = call i18 @llvm.ctlz.i18(i18 %val, i1 true) nounwind readnone
   store i18 %ctlz, ptr addrspace(1) %out, align 4
@@ -2470,8 +2468,6 @@ define <3 x i16> @v_ctlz_zero_poison_v3i16(<3 x i16> %val) {
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v1, v1
 ; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e64 v2, 16, s4
-; GFX9-GISEL-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %ctlz = call <3 x i16> @llvm.ctlz.v3i16(<3 x i16> %val, i1 true)
   ret <3 x i16> %ctlz

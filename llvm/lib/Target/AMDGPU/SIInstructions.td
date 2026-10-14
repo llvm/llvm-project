@@ -10,7 +10,10 @@
 // that are not yet supported remain commented out.
 //===----------------------------------------------------------------------===//
 
-class GCNPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl;
+class GCNPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl,
+                              GISelFlags {
+  let GIIgnoreCopies = 1;
+}
 
 class UniformSextInreg<ValueType VT> : PatFrag<
   (ops node:$src),
@@ -4384,10 +4387,14 @@ def : GCNPat<
 // Avoid pointlessly materializing a constant in VGPR.
 // FIXME: Should also do this for readlane, but tablegen crashes on
 // the ignored src1.
+// Do not look through copies here. A copy from an SGPR constant to a VGPR is a
+// required bank transition for readfirstlane, not an ignorable pattern detail.
 def : GCNPat<
   (i32 (int_amdgcn_readfirstlane (i32 imm:$src))),
   (S_MOV_B32 SReg_32:$src)
->;
+> {
+  let GIIgnoreCopies = 0;
+}
 
 multiclass BFMPatterns <ValueType vt, PatFrag SHL, PatFrag ADD, InstSI BFM> {
   def : GCNPat <
