@@ -221,6 +221,13 @@ static constexpr StringLiteral getCollapseCountAttrName() {
   return StringLiteral("acc.collapse_count");
 }
 
+/// Name for a unit attribute attached to the region an unstructured
+/// independent loop was converted to, recording that the loop could not be
+/// represented as a structured loop and is therefore not parallelized.
+static constexpr StringLiteral getUnstructuredIndependentLoopAttrName() {
+  return StringLiteral("acc.unstructured_independent_loop");
+}
+
 static constexpr StringLiteral getVarNameAttrName() {
   return VarNameAttr::name;
 }
