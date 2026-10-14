@@ -277,3 +277,14 @@ func.func @fold_bcast_scalar_scalable(%arg0: f32) -> vector<2x[4]xf32> {
   %1 = vector.shape_cast %0 : vector<[8]xf32> to vector<2x[4]xf32>
   return %1 : vector<2x[4]xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @fold_bcast_0d_vector
+// CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : vector<f32> to vector<2x4xf32>
+// CHECK-NEXT:    return %[[RES]] : vector<2x4xf32>
+func.func @fold_bcast_0d_vector(%arg0: vector<f32>) -> vector<2x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<f32> to vector<8xf32>
+  %1 = vector.shape_cast %0 : vector<8xf32> to vector<2x4xf32>
+  return %1 : vector<2x4xf32>
+}

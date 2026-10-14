@@ -7172,50 +7172,44 @@ public:
           BroadcastableToResult::Success) {
         return failure();
       }
-      // `shape_cast` preserves the flattened 1-D (row-major) element order.
-      // Thus, `shape_cast(broadcast(src, broadcastShape), dstShape)` produces
-      // the exact same elements as `broadcast(src, dstShape)` if and only if
-      // every non-unit dimension of `src` has the same linear stride in both
-      // `broadcastShape` and `dstShape`.
-      //
-      // A scalable dimension of static size D has runtime size D * vscale.
-      // A linear stride through trailing dimensions is thus:
-      //   stride = staticStride * (vscale ^ numScalableDims)
-      // Since vscale is an unknown runtime quantity (vscale >= 1), both
-      // staticStride and numScalableDims must match to guarantee stride
-      // equivalence across all targets.
+      // `shape_cast` preserves the flattened 1-D (row-major) element order, so
+      // folding `shape_cast(broadcast(src, broadcastShape), dstShape)` into
+      // `broadcast(src, dstShape)` is valid when every non-unit dimension of
+      // `src` has the same linear stride in both `broadcastShape` and
+      // `dstShape`. For scalable vectors, a dimension's linear stride is
+      // `staticStride * (vscale ^ scalableDims)`, so we check both the static
+      // stride product and the count of trailing scalable dimensions.
       VectorType broadcastVectorType = broadcastOp.getResultVectorType();
-      SmallVector<int64_t> bcastStrides =
-          computeStrides(broadcastVectorType.getShape());
-      SmallVector<int64_t> dstStrides =
-          computeStrides(dstVectorType.getShape());
-      ArrayRef<bool> bcastScalable = broadcastVectorType.getScalableDims();
-      ArrayRef<bool> dstScalable = dstVectorType.getScalableDims();
-      ArrayRef<bool> srcScalable = srcVectorType.getScalableDims();
 
       // Iterate from the innermost (trailing) dimension outward. `llvm::zip`
       // stops once all `src` dimensions are visited, aligning each `src`
       // dimension with the corresponding trailing dimension of `broadcast` and
       // `dst`.
-      for (auto [idx, dims] : llvm::enumerate(llvm::zip(
-               llvm::reverse(srcVectorType.getShape()),
-               llvm::reverse(srcScalable), llvm::reverse(bcastStrides),
-               llvm::reverse(dstStrides)))) {
-        auto [srcDim, isSrcScalable, bcastStride, dstStride] = dims;
+      int64_t bcastStride = 1, dstStride = 1;
+      int64_t bcastScalableDims = 0, dstScalableDims = 0;
+      for (auto [srcDim, isSrcScalable, bcastDim, isBcastScalable, dstDim,
+                 isDstScalable] :
+           llvm::zip(llvm::reverse(srcVectorType.getShape()),
+                     llvm::reverse(srcVectorType.getScalableDims()),
+                     llvm::reverse(broadcastVectorType.getShape()),
+                     llvm::reverse(broadcastVectorType.getScalableDims()),
+                     llvm::reverse(dstVectorType.getShape()),
+                     llvm::reverse(dstVectorType.getScalableDims()))) {
         // Unit dimensions (fixed size 1; `[1]` has runtime size `vscale` and is
         // not unit) only ever have index 0, so their stride does not contribute
-        // to the linear element offset.
+        // to the linear element offset. For non-unit dimensions, verify that
+        // both the static stride factor and the `vscale` exponent accumulated
+        // from the more minor (trailing) dimensions match.
         bool isUnitDim = srcDim == 1 && !isSrcScalable;
-        if (isUnitDim)
-          continue;
-        // For the dimension at reverse index `idx`, its stride is the product
-        // of the `idx` more minor (trailing) dimensions. Verify that both the
-        // static stride factor and the `vscale` exponent (the number of
-        // scalable dimensions in the trailing `idx` dimensions) match.
-        if (bcastStride != dstStride ||
-            llvm::count(bcastScalable.take_back(idx), true) !=
-                llvm::count(dstScalable.take_back(idx), true))
+        if (!isUnitDim && (bcastStride != dstStride ||
+                           bcastScalableDims != dstScalableDims)) {
           return failure();
+        }
+
+        bcastStride *= bcastDim;
+        dstStride *= dstDim;
+        bcastScalableDims += isBcastScalable;
+        dstScalableDims += isDstScalable;
       }
     }
 
