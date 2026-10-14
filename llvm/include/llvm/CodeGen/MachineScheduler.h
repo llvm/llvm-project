@@ -81,6 +81,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/CodeGen/AntiDepBreaker.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
@@ -95,8 +96,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
-#include <llvm/Support/raw_ostream.h>
 #include <list>
+#include <llvm/Support/raw_ostream.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -137,7 +138,6 @@ LLVM_ABI extern const bool PrintDAGs;
 #endif
 
 class AAResults;
-class AntiDepBreaker;
 class LiveIntervals;
 class MachineFunction;
 class MachineInstr;
@@ -314,6 +314,29 @@ public:
   virtual void releaseBottomNode(SUnit *SU) = 0;
 };
 
+class LLVM_ABI AntiDepState {
+  std::unique_ptr<AntiDepBreaker> Breaker;
+  unsigned EndIndex = 0;
+  MachineBasicBlock::iterator ScanPos;
+  bool RegionProcessed = false;
+
+public:
+  AntiDepState(MachineSchedContext *C,
+               TargetSubtargetInfo::AntiDepBreakMode AntiDepMode);
+  ~AntiDepState();
+
+  void startBlock(MachineBasicBlock *MBB);
+  void finishBlock();
+  void enterRegion(MachineBasicBlock *MBB, MachineBasicBlock::iterator End);
+  void exitRegion(MachineBasicBlock::iterator Begin,
+                  MachineBasicBlock::iterator End);
+  bool breakAntiDependencies(const std::vector<SUnit> &SUnits,
+                             MachineBasicBlock::iterator Begin,
+                             MachineBasicBlock::iterator End,
+                             AntiDepBreaker::DbgValueVector &DbgValues);
+  void finishRegion();
+};
+
 /// ScheduleDAGMI is an implementation of ScheduleDAGInstrs that simply
 /// schedules machine instructions according to the given MachineSchedStrategy
 /// without much extra book-keeping. This is the common functionality between
@@ -325,27 +348,7 @@ protected:
   MachineBlockFrequencyInfo *MBFI;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
 
-  struct AntiDepState {
-    std::unique_ptr<AntiDepBreaker> Breaker;
-    unsigned EndIndex = 0;
-    MachineBasicBlock::iterator ScanPos;
-    bool RegionProcessed = false;
-
-    AntiDepState(MachineSchedContext *C,
-                 TargetSubtargetInfo::AntiDepBreakMode AntiDepMode);
-    ~AntiDepState();
-
-    void startBlock(MachineBasicBlock *MBB);
-    void finishBlock();
-    void enterRegion(MachineBasicBlock *MBB, MachineBasicBlock::iterator End);
-    void exitRegion(MachineBasicBlock::iterator Begin,
-                    MachineBasicBlock::iterator End);
-    bool breakAntiDependencies(const std::vector<SUnit> &SUnits,
-                               MachineBasicBlock::iterator Begin,
-                               MachineBasicBlock::iterator End,
-                               DbgValueVector &DbgValues);
-    void finishRegion();
-  } AntiDep;
+  AntiDepState AntiDep;
 
   /// Ordered list of DAG postprocessing steps.
   std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;

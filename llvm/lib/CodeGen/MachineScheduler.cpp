@@ -1119,8 +1119,8 @@ LLVM_DUMP_METHOD void ReadyQueue::dump() const {
 // virtual registers.
 // ===----------------------------------------------------------------------===/
 
-ScheduleDAGMI::AntiDepState::AntiDepState(
-    MachineSchedContext *C, TargetSubtargetInfo::AntiDepBreakMode AntiDepMode) {
+AntiDepState::AntiDepState(MachineSchedContext *C,
+                           TargetSubtargetInfo::AntiDepBreakMode AntiDepMode) {
   if (AntiDepMode == TargetSubtargetInfo::ANTIDEP_NONE)
     return;
 
@@ -1139,9 +1139,9 @@ ScheduleDAGMI::AntiDepState::AntiDepState(
   }
 }
 
-ScheduleDAGMI::AntiDepState::~AntiDepState() = default;
+AntiDepState::~AntiDepState() = default;
 
-void ScheduleDAGMI::AntiDepState::startBlock(MachineBasicBlock *MBB) {
+void AntiDepState::startBlock(MachineBasicBlock *MBB) {
   if (!Breaker)
     return;
   Breaker->StartBlock(MBB);
@@ -1149,14 +1149,14 @@ void ScheduleDAGMI::AntiDepState::startBlock(MachineBasicBlock *MBB) {
   EndIndex = MBB->size();
 }
 
-void ScheduleDAGMI::AntiDepState::finishBlock() {
+void AntiDepState::finishBlock() {
   if (!Breaker)
     return;
   Breaker->FinishBlock();
 }
 
-void ScheduleDAGMI::AntiDepState::enterRegion(MachineBasicBlock *MBB,
-                                              MachineBasicBlock::iterator End) {
+void AntiDepState::enterRegion(MachineBasicBlock *MBB,
+                               MachineBasicBlock::iterator End) {
   if (!Breaker)
     return;
 
@@ -1174,8 +1174,8 @@ void ScheduleDAGMI::AntiDepState::enterRegion(MachineBasicBlock *MBB,
   RegionProcessed = false;
 }
 
-void ScheduleDAGMI::AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
-                                             MachineBasicBlock::iterator End) {
+void AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
+                              MachineBasicBlock::iterator End) {
   if (!Breaker)
     return;
 
@@ -1193,16 +1193,17 @@ void ScheduleDAGMI::AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
   ScanPos = Begin;
 }
 
-bool ScheduleDAGMI::AntiDepState::breakAntiDependencies(
+bool AntiDepState::breakAntiDependencies(
     const std::vector<SUnit> &SUnits, MachineBasicBlock::iterator Begin,
-    MachineBasicBlock::iterator End, DbgValueVector &DbgValues) {
+    MachineBasicBlock::iterator End,
+    AntiDepBreaker::DbgValueVector &DbgValues) {
   if (!Breaker)
     return false;
   return Breaker->BreakAntiDependencies(SUnits, Begin, End, EndIndex,
                                         DbgValues) != 0;
 }
 
-void ScheduleDAGMI::AntiDepState::finishRegion() {
+void AntiDepState::finishRegion() {
   if (!Breaker)
     return;
   RegionProcessed = true;
