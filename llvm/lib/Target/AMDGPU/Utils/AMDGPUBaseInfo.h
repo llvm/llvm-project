@@ -1201,7 +1201,6 @@ using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;
 namespace DepCtr {
 
 int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI);
-
 int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
                  const MCSubtargetInfo &STI);
 bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
