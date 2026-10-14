@@ -431,7 +431,7 @@ public:
       : __output_buffer<_CharT>{std::__unwrap_iter(__out_it), __buffer_size, __prepare_write, __max_output_size},
         __out_it_(__out_it) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _OutIt __out_it() && { return __out_it_ + this->__size(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _OutIt __out_it() && { return __out_it_ + this->__size(); }
 
 private:
   // The function format_to expects a buffer large enough for the output. The
@@ -461,7 +461,7 @@ public:
       : __output_buffer<_CharT>{__small_buffer_, __buffer_size, __prepare_write, __max_output_size},
         __container_{__out_it.__get_container()} {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto __out_it() && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto __out_it() && {
     __container_->insert(__container_->end(), __small_buffer_, __small_buffer_ + this->__size());
     return std::back_inserter(*__container_);
   }
@@ -494,13 +494,13 @@ private:
 template <class _OutIt, __fmt_char_type _CharT>
 class __iterator_buffer : public __allocating_buffer<_CharT> {
 public:
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __iterator_buffer(_OutIt __out_it)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator_buffer(_OutIt __out_it)
       : __allocating_buffer<_CharT>{}, __out_it_{std::move(__out_it)} {}
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __iterator_buffer(_OutIt __out_it, __max_output_size* __max_output_size)
       : __allocating_buffer<_CharT>{__max_output_size}, __out_it_{std::move(__out_it)} {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto __out_it() && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto __out_it() && {
     return std::ranges::copy(this->__view(), std::move(__out_it_)).out;
   }
 
