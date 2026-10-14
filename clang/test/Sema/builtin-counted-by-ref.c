@@ -187,10 +187,10 @@ void test11(struct ptr_no_attr *p) {
 }
 
 struct bitfield_counter {
-  int count : 13; // expected-note {{counter field 'count' declared here}}
+  int count : 13; // expected-note {{bit-field 'count' declared here}}
   int array[] __attribute__((counted_by(count)));
 };
 
 void test_bitfield_counter(struct bitfield_counter *p) {
-  __builtin_counted_by_ref(p->array); // expected-error {{'__builtin_counted_by_ref' cannot be used on 'p->array' because its counter field is a bit-field}}
+  __builtin_counted_by_ref(p->array); // expected-error {{'__builtin_counted_by_ref' cannot be used on 'p->array' because its 'counted_by' attribute refers to bit-field 'count'}}
 }
