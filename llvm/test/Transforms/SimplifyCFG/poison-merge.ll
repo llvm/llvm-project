@@ -8,10 +8,13 @@ define i32 @undef_merge(i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
 ; CHECK-NEXT:      i32 4, label [[G:%.*]]
-; CHECK-NEXT:      i32 12, label [[G]]
+; CHECK-NEXT:      i32 12, label [[G1:%.*]]
 ; CHECK-NEXT:    ]
+; CHECK:       loop:
+; CHECK-NEXT:    [[K2:%.*]] = phi i64 [ undef, [[ENTRY:%.*]] ], [ [[K3:%.*]], [[G1]] ]
+; CHECK-NEXT:    br label [[G1]]
 ; CHECK:       g:
-; CHECK-NEXT:    [[K3:%.*]] = phi i64 [ undef, [[ENTRY:%.*]] ], [ [[K3]], [[G]] ], [ undef, [[ENTRY]] ]
+; CHECK-NEXT:    [[K3]] = phi i64 [ undef, [[ENTRY]] ], [ [[K2]], [[G]] ]
 ; CHECK-NEXT:    br label [[G]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 undef
@@ -41,10 +44,13 @@ define i32 @poison_merge(i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
 ; CHECK-NEXT:      i32 4, label [[G:%.*]]
-; CHECK-NEXT:      i32 12, label [[G]]
+; CHECK-NEXT:      i32 12, label [[G1:%.*]]
 ; CHECK-NEXT:    ]
+; CHECK:       loop:
+; CHECK-NEXT:    [[K2:%.*]] = phi i64 [ poison, [[ENTRY:%.*]] ], [ [[K3:%.*]], [[G1]] ]
+; CHECK-NEXT:    br label [[G1]]
 ; CHECK:       g:
-; CHECK-NEXT:    [[K3:%.*]] = phi i64 [ poison, [[ENTRY:%.*]] ], [ [[K3]], [[G]] ], [ poison, [[ENTRY]] ]
+; CHECK-NEXT:    [[K3]] = phi i64 [ poison, [[ENTRY]] ], [ [[K2]], [[G]] ]
 ; CHECK-NEXT:    br label [[G]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 undef
@@ -173,10 +179,13 @@ define i32 @PR49218(i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
 ; CHECK-NEXT:      i32 4, label [[G:%.*]]
-; CHECK-NEXT:      i32 12, label [[G]]
+; CHECK-NEXT:      i32 12, label [[G1:%.*]]
 ; CHECK-NEXT:    ]
+; CHECK:       loop:
+; CHECK-NEXT:    [[K2:%.*]] = phi i64 [ undef, [[ENTRY:%.*]] ], [ [[K3:%.*]], [[G1]] ]
+; CHECK-NEXT:    br label [[G1]]
 ; CHECK:       g:
-; CHECK-NEXT:    [[K3:%.*]] = phi i64 [ undef, [[ENTRY:%.*]] ], [ [[K3]], [[G]] ], [ undef, [[ENTRY]] ]
+; CHECK-NEXT:    [[K3]] = phi i64 [ poison, [[ENTRY]] ], [ [[K2]], [[G]] ]
 ; CHECK-NEXT:    br label [[G]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 undef
