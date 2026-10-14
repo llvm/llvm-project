@@ -665,8 +665,8 @@ define bfloat @fmed3_f32_fpext_f16_fptrunc_bf16(half %arg0, half %arg1, half %ar
 ; GFX7-GISEL-NEXT:    v_med3_f32 v0, v0, v1, v2
 ; GFX7-GISEL-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX7-GISEL-NEXT:    v_add_i32_e32 v2, vcc, v2, v0
-; GFX7-GISEL-NEXT:    v_add_i32_e32 v2, vcc, 0x7fff, v2
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v1, 0x400000, v0
+; GFX7-GISEL-NEXT:    v_add_i32_e32 v2, vcc, 0x7fff, v2
 ; GFX7-GISEL-NEXT:    v_cmp_u_f32_e32 vcc, 0, v0
 ; GFX7-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX7-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
@@ -697,8 +697,8 @@ define bfloat @fmed3_f32_fpext_f16_fptrunc_bf16(half %arg0, half %arg1, half %ar
 ; GFX8-GISEL-NEXT:    v_med3_f32 v0, v0, v1, v2
 ; GFX8-GISEL-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v2, vcc, v2, v0
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v2, vcc, 0x7fff, v2
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, 0x400000, v0
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v2, vcc, 0x7fff, v2
 ; GFX8-GISEL-NEXT:    v_cmp_u_f32_e32 vcc, 0, v0
 ; GFX8-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0

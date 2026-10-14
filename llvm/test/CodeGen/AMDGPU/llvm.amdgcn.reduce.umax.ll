@@ -1846,9 +1846,9 @@ define void @divergent_value_dpp_i64(ptr addrspace(1) %out, i64 %in) #0 {
 ; GFX1064DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1064DAGISEL-NEXT:    v_add_nc_u32_e32 v8, 32, v8
 ; GFX1064DAGISEL-NEXT:    v_cmp_gt_u64_e32 vcc, v[4:5], v[6:7]
-; GFX1064DAGISEL-NEXT:    v_mul_lo_u32 v8, 4, v8
 ; GFX1064DAGISEL-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; GFX1064DAGISEL-NEXT:    v_cndmask_b32_e32 v5, v7, v5, vcc
+; GFX1064DAGISEL-NEXT:    v_mul_lo_u32 v8, 4, v8
 ; GFX1064DAGISEL-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX1064DAGISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX1064DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:2 row_mask:0xf bank_mask:0xf
@@ -1926,9 +1926,9 @@ define void @divergent_value_dpp_i64(ptr addrspace(1) %out, i64 %in) #0 {
 ; GFX1064GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1064GISEL-NEXT:    v_add_nc_u32_e32 v8, 32, v8
 ; GFX1064GISEL-NEXT:    v_cmp_gt_u64_e32 vcc, v[4:5], v[6:7]
-; GFX1064GISEL-NEXT:    v_mul_lo_u32 v8, 4, v8
 ; GFX1064GISEL-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; GFX1064GISEL-NEXT:    v_cndmask_b32_e32 v5, v7, v5, vcc
+; GFX1064GISEL-NEXT:    v_mul_lo_u32 v8, 4, v8
 ; GFX1064GISEL-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX1064GISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX1064GISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:2 row_mask:0xf bank_mask:0xf

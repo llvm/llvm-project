@@ -966,6 +966,14 @@ public:
     return AMDGPU::getMinWavesPerEU();
   }
 
+  /// \returns true if \p MI is a VALU fast forward producer via the operand at
+  /// position \p OpNo writing to an SGPR.
+  bool isFastForwardProducer(const MachineInstr &MI, int OpNo) const;
+
+  /// \returns true if \p MI is a VALU fast forward consumer via the operand at
+  /// position \p OpNo reading from an SGPR.
+  bool isFastForwardConsumer(const MachineInstr &MI, int OpNo) const;
+
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
                              SDep &Dep,
                              const TargetSchedModel *SchedModel) const override;

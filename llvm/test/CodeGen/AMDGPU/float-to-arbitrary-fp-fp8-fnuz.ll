@@ -18,15 +18,16 @@ define i8 @to_fp8_f32(float %x) {
 ; GFX942-NEXT:    v_or_b32_e32 v2, 0x800000, v2
 ; GFX942-NEXT:    v_sub_u32_e64 v6, v4, 1 clamp
 ; GFX942-NEXT:    v_bfe_u32 v7, v2, 0, v6
-; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v5, v4, v2
+; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, v6, v2
+; GFX942-NEXT:    s_movk_i32 s0, 0x80
 ; GFX942-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
 ; GFX942-NEXT:    v_and_or_b32 v7, v5, 1, v7
 ; GFX942-NEXT:    v_and_b32_e32 v2, v2, v7
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX942-NEXT:    s_movk_i32 s0, 0x80
 ; GFX942-NEXT:    v_bfe_u32 v6, v1, 20, 3
+; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX942-NEXT:    v_add_u32_e32 v2, v5, v2
 ; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 7, v2
@@ -76,15 +77,16 @@ define i8 @to_bf8_f32(float %x) {
 ; GFX942-NEXT:    v_or_b32_e32 v2, 0x800000, v2
 ; GFX942-NEXT:    v_sub_u32_e64 v6, v4, 1 clamp
 ; GFX942-NEXT:    v_bfe_u32 v7, v2, 0, v6
-; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v5, v4, v2
+; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, v6, v2
+; GFX942-NEXT:    s_movk_i32 s0, 0x80
 ; GFX942-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
 ; GFX942-NEXT:    v_and_or_b32 v7, v5, 1, v7
 ; GFX942-NEXT:    v_and_b32_e32 v2, v2, v7
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX942-NEXT:    s_movk_i32 s0, 0x80
 ; GFX942-NEXT:    v_bfe_u32 v6, v1, 21, 2
+; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX942-NEXT:    v_add_u32_e32 v2, v5, v2
 ; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 3, v2

@@ -349,8 +349,8 @@ define float @from_f6e3m2fn_dynamic(i6 %x) {
 ; CHECK-NEXT:    v_add_u32_e32 v2, 0x3e000000, v2
 ; CHECK-NEXT:    v_or3_b32 v4, v3, v4, v5
 ; CHECK-NEXT:    s_and_b64 vcc, s[4:5], vcc
-; CHECK-NEXT:    v_or_b32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; CHECK-NEXT:    v_or_b32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -432,8 +432,8 @@ define float @from_f6e2m3fn_dynamic(i6 %x) {
 ; CHECK-NEXT:    v_add_u32_e32 v2, 0.5, v2
 ; CHECK-NEXT:    v_or3_b32 v4, v3, v4, v5
 ; CHECK-NEXT:    s_and_b64 vcc, s[4:5], vcc
-; CHECK-NEXT:    v_or_b32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; CHECK-NEXT:    v_or_b32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -505,8 +505,8 @@ define float @from_f4e2m1fn_dynamic(i4 %x) {
 ; CHECK-NEXT:    v_add_u32_e32 v3, 0.5, v3
 ; CHECK-NEXT:    v_or3_b32 v5, v4, v5, v6
 ; CHECK-NEXT:    s_and_b64 vcc, vcc, s[4:5]
-; CHECK-NEXT:    v_or_b32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc
+; CHECK-NEXT:    v_or_b32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -642,8 +642,8 @@ define <4 x float> @fp4_to_f32_vec(<4 x i4> %x) {
 ; CHECK-NEXT:    v_add_u32_e32 v6, 0.5, v6
 ; CHECK-NEXT:    v_or3_b32 v8, v7, v8, v9
 ; CHECK-NEXT:    s_and_b64 vcc, s[4:5], vcc
-; CHECK-NEXT:    v_or_b32_e32 v4, v5, v4
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, v6, v8, vcc
+; CHECK-NEXT:    v_or_b32_e32 v4, v5, v4
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v4
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v7, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

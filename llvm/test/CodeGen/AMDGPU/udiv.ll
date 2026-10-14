@@ -393,8 +393,8 @@ define amdgpu_kernel void @udiv_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    v_sub_i32_e32 v1, vcc, v1, v8
 ; SI-NEXT:    v_sub_i32_e64 v6, s[0:1], v0, v2
 ; SI-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
-; SI-NEXT:    v_cmp_ge_u32_e64 s[0:1], v1, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v4, v4, v7, vcc
+; SI-NEXT:    v_cmp_ge_u32_e64 s[0:1], v1, v3
 ; SI-NEXT:    v_cndmask_b32_e64 v5, v5, v9, s[0:1]
 ; SI-NEXT:    v_sub_i32_e64 v7, s[2:3], v1, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
@@ -448,8 +448,8 @@ define amdgpu_kernel void @udiv_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_sub_u32_e32 v1, vcc, v1, v8
 ; VI-NEXT:    v_sub_u32_e64 v6, s[0:1], v0, v2
 ; VI-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
-; VI-NEXT:    v_cmp_ge_u32_e64 s[0:1], v1, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v4, v4, v7, vcc
+; VI-NEXT:    v_cmp_ge_u32_e64 s[0:1], v1, v3
 ; VI-NEXT:    v_cndmask_b32_e64 v5, v5, v9, s[0:1]
 ; VI-NEXT:    v_sub_u32_e64 v7, s[2:3], v1, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
@@ -504,8 +504,8 @@ define amdgpu_kernel void @udiv_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_sub_u32_e32 v1, vcc, v1, v10
 ; GCN-NEXT:    v_sub_u32_e64 v8, s[0:1], v0, v2
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
-; GCN-NEXT:    v_cmp_ge_u32_e64 s[0:1], v1, v3
 ; GCN-NEXT:    v_cndmask_b32_e32 v6, v6, v9, vcc
+; GCN-NEXT:    v_cmp_ge_u32_e64 s[0:1], v1, v3
 ; GCN-NEXT:    v_cndmask_b32_e64 v7, v7, v11, s[0:1]
 ; GCN-NEXT:    v_sub_u32_e64 v9, s[2:3], v1, v3
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v8, vcc
@@ -551,16 +551,16 @@ define amdgpu_kernel void @udiv_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-NEXT:    v_sub_nc_u32_e32 v1, v1, v7
 ; GFX1030-NEXT:    v_add_nc_u32_e32 v7, 1, v5
 ; GFX1030-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v2
-; GFX1030-NEXT:    v_sub_nc_u32_e32 v8, v1, v3
-; GFX1030-NEXT:    v_cmp_ge_u32_e64 s0, v1, v3
 ; GFX1030-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc_lo
 ; GFX1030-NEXT:    v_sub_nc_u32_e32 v6, v0, v2
+; GFX1030-NEXT:    v_sub_nc_u32_e32 v8, v1, v3
+; GFX1030-NEXT:    v_cmp_ge_u32_e64 s0, v1, v3
 ; GFX1030-NEXT:    v_cndmask_b32_e64 v5, v5, v7, s0
-; GFX1030-NEXT:    v_cndmask_b32_e64 v1, v1, v8, s0
-; GFX1030-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX1030-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc_lo
 ; GFX1030-NEXT:    v_add_nc_u32_e32 v6, 1, v4
+; GFX1030-NEXT:    v_cndmask_b32_e64 v1, v1, v8, s0
 ; GFX1030-NEXT:    v_add_nc_u32_e32 v7, 1, v5
+; GFX1030-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX1030-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v2
 ; GFX1030-NEXT:    v_cndmask_b32_e32 v0, v4, v6, vcc_lo
 ; GFX1030-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v1, v3
@@ -699,10 +699,10 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    v_sub_i32_e64 v13, s[2:3], v5, v1
 ; SI-NEXT:    v_sub_i32_e64 v14, s[4:5], v6, v2
 ; SI-NEXT:    v_cmp_ge_u32_e64 s[0:1], v5, v1
-; SI-NEXT:    v_cmp_ge_u32_e64 s[2:3], v6, v2
-; SI-NEXT:    v_cmp_ge_u32_e64 s[4:5], v7, v3
 ; SI-NEXT:    v_cndmask_b32_e64 v9, v9, v15, s[0:1]
+; SI-NEXT:    v_cmp_ge_u32_e64 s[2:3], v6, v2
 ; SI-NEXT:    v_cndmask_b32_e64 v10, v10, v17, s[2:3]
+; SI-NEXT:    v_cmp_ge_u32_e64 s[4:5], v7, v3
 ; SI-NEXT:    v_cndmask_b32_e64 v11, v11, v19, s[4:5]
 ; SI-NEXT:    v_sub_i32_e64 v15, s[6:7], v7, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v4, v4, v12, vcc
@@ -794,10 +794,10 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_sub_u32_e64 v13, s[2:3], v5, v1
 ; VI-NEXT:    v_sub_u32_e64 v14, s[4:5], v6, v2
 ; VI-NEXT:    v_cmp_ge_u32_e64 s[0:1], v5, v1
-; VI-NEXT:    v_cmp_ge_u32_e64 s[2:3], v6, v2
-; VI-NEXT:    v_cmp_ge_u32_e64 s[4:5], v7, v3
 ; VI-NEXT:    v_cndmask_b32_e64 v9, v9, v15, s[0:1]
+; VI-NEXT:    v_cmp_ge_u32_e64 s[2:3], v6, v2
 ; VI-NEXT:    v_cndmask_b32_e64 v10, v10, v17, s[2:3]
+; VI-NEXT:    v_cmp_ge_u32_e64 s[4:5], v7, v3
 ; VI-NEXT:    v_cndmask_b32_e64 v11, v11, v19, s[4:5]
 ; VI-NEXT:    v_sub_u32_e64 v15, s[6:7], v7, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v4, v4, v12, vcc
@@ -974,31 +974,31 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-NEXT:    v_sub_nc_u32_e32 v4, v4, v12
 ; GFX1030-NEXT:    v_sub_nc_u32_e32 v5, v5, v14
 ; GFX1030-NEXT:    v_sub_nc_u32_e32 v6, v6, v15
-; GFX1030-NEXT:    v_sub_nc_u32_e32 v7, v7, v16
 ; GFX1030-NEXT:    v_add_nc_u32_e32 v12, 1, v11
-; GFX1030-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v4, v0
+; GFX1030-NEXT:    v_sub_nc_u32_e32 v7, v7, v16
 ; GFX1030-NEXT:    v_sub_nc_u32_e32 v14, v4, v0
-; GFX1030-NEXT:    v_cmp_ge_u32_e64 s0, v5, v1
-; GFX1030-NEXT:    v_sub_nc_u32_e32 v15, v5, v1
-; GFX1030-NEXT:    v_cmp_ge_u32_e64 s1, v6, v2
+; GFX1030-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v4, v0
 ; GFX1030-NEXT:    v_cndmask_b32_e32 v8, v8, v17, vcc_lo
-; GFX1030-NEXT:    v_cndmask_b32_e32 v4, v4, v14, vcc_lo
+; GFX1030-NEXT:    v_sub_nc_u32_e32 v15, v5, v1
+; GFX1030-NEXT:    v_cmp_ge_u32_e64 s0, v5, v1
 ; GFX1030-NEXT:    v_cndmask_b32_e64 v9, v9, v18, s0
 ; GFX1030-NEXT:    v_sub_nc_u32_e32 v16, v6, v2
-; GFX1030-NEXT:    v_cmp_ge_u32_e64 s2, v7, v3
-; GFX1030-NEXT:    v_add_nc_u32_e32 v14, 1, v8
-; GFX1030-NEXT:    v_cndmask_b32_e64 v5, v5, v15, s0
-; GFX1030-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v4, v0
+; GFX1030-NEXT:    v_cmp_ge_u32_e64 s1, v6, v2
 ; GFX1030-NEXT:    v_cndmask_b32_e64 v10, v10, v19, s1
+; GFX1030-NEXT:    v_cmp_ge_u32_e64 s2, v7, v3
 ; GFX1030-NEXT:    v_cndmask_b32_e64 v11, v11, v12, s2
 ; GFX1030-NEXT:    v_sub_nc_u32_e32 v12, v7, v3
+; GFX1030-NEXT:    v_cndmask_b32_e32 v4, v4, v14, vcc_lo
+; GFX1030-NEXT:    v_add_nc_u32_e32 v14, 1, v8
+; GFX1030-NEXT:    v_cndmask_b32_e64 v5, v5, v15, s0
 ; GFX1030-NEXT:    v_add_nc_u32_e32 v15, 1, v9
 ; GFX1030-NEXT:    v_cndmask_b32_e64 v6, v6, v16, s1
-; GFX1030-NEXT:    v_cndmask_b32_e32 v0, v8, v14, vcc_lo
-; GFX1030-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v5, v1
 ; GFX1030-NEXT:    v_add_nc_u32_e32 v16, 1, v10
 ; GFX1030-NEXT:    v_cndmask_b32_e64 v7, v7, v12, s2
 ; GFX1030-NEXT:    v_add_nc_u32_e32 v12, 1, v11
+; GFX1030-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v4, v0
+; GFX1030-NEXT:    v_cndmask_b32_e32 v0, v8, v14, vcc_lo
+; GFX1030-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v5, v1
 ; GFX1030-NEXT:    v_cndmask_b32_e32 v1, v9, v15, vcc_lo
 ; GFX1030-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v6, v2
 ; GFX1030-NEXT:    v_cndmask_b32_e32 v2, v10, v16, vcc_lo

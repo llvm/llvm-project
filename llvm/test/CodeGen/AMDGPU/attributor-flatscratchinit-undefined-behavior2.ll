@@ -19,8 +19,8 @@ define void @with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0xc0
 ; GFX8-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0
+; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s4
@@ -34,8 +34,8 @@ define void @with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX8-ARCH-FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-ARCH-FLAT-NEXT:    s_mov_b64 s[0:1], 0xc0
 ; GFX8-ARCH-FLAT-NEXT:    s_load_dword s0, s[0:1], 0x0
-; GFX8-ARCH-FLAT-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX8-ARCH-FLAT-NEXT:    v_mov_b32_e32 v2, 0
+; GFX8-ARCH-FLAT-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX8-ARCH-FLAT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GFX8-ARCH-FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-ARCH-FLAT-NEXT:    v_mov_b32_e32 v1, s0
@@ -49,8 +49,8 @@ define void @with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GFX9-NEXT:    flat_store_dword v[0:1], v2
@@ -62,8 +62,8 @@ define void @with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX9-ARCH-FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-ARCH-FLAT-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX9-ARCH-FLAT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-ARCH-FLAT-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX9-ARCH-FLAT-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-ARCH-FLAT-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX9-ARCH-FLAT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX9-ARCH-FLAT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GFX9-ARCH-FLAT-NEXT:    flat_store_dword v[0:1], v2
@@ -75,9 +75,9 @@ define void @with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX942-ARCH-FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-ARCH-FLAT-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX942-ARCH-FLAT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-ARCH-FLAT-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX942-ARCH-FLAT-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-ARCH-FLAT-NEXT:    s_nop 0
+; GFX942-ARCH-FLAT-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
+; GFX942-ARCH-FLAT-NEXT:    s_nop 1
 ; GFX942-ARCH-FLAT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX942-ARCH-FLAT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GFX942-ARCH-FLAT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
@@ -87,9 +87,9 @@ define void @with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX10-LABEL: with_private_to_flat_addrspacecast:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
 ; GFX10-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, s5, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2

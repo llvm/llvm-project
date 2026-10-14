@@ -179,8 +179,8 @@ define amdgpu_ps <2 x bfloat> @fma_v2bf16_vss(<2 x bfloat> %a, <2 x bfloat> inre
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0x7fff
 ; GFX9-NEXT:    v_or_b32_e32 v2, 0x400000, v0
 ; GFX9-NEXT:    v_add3_u32 v3, v3, v0, v4
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v0
 ; GFX9-NEXT:    s_lshl_b32 s1, s3, 16
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX9-NEXT:    s_lshl_b32 s0, s2, 16
@@ -330,8 +330,8 @@ define amdgpu_ps <2 x bfloat> @fma_v2bf16_vsc(<2 x bfloat> %a, <2 x bfloat> inre
 ; GFX9-NEXT:    s_lshl_b32 s0, s1, 16
 ; GFX9-NEXT:    v_or_b32_e32 v2, 0x400000, v0
 ; GFX9-NEXT:    v_add3_u32 v3, v3, v0, v4
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v0
 ; GFX9-NEXT:    v_fma_f32 v1, v1, s0, 0.5
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; GFX9-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX9-NEXT:    v_or_b32_e32 v2, 0x400000, v1
@@ -658,9 +658,9 @@ define amdgpu_ps <4 x bfloat> @fma_v4bf16_vvv(<4 x bfloat> %a, <4 x bfloat> %b, 
 ; GFX9-NEXT:    v_bfe_u32 v6, v2, 16, 1
 ; GFX9-NEXT:    v_or_b32_e32 v4, 0x400000, v2
 ; GFX9-NEXT:    v_add3_u32 v6, v6, v2, v12
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v2
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, v6, v4, vcc
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
@@ -914,9 +914,9 @@ define amdgpu_ps <5 x bfloat> @fma_v5bf16_vvv(<5 x bfloat> %a, <5 x bfloat> %b, 
 ; GFX9-NEXT:    v_bfe_u32 v9, v3, 16, 1
 ; GFX9-NEXT:    v_or_b32_e32 v6, 0x400000, v3
 ; GFX9-NEXT:    v_add3_u32 v9, v9, v3, v15
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v3
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v10, 16, v1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v4
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v3
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, v9, v6, vcc
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v4

@@ -410,8 +410,8 @@ define b87 @test_bitinsert_b87_var(b87 %base, i16 %val, i32 %off) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0xffff
 ; GFX9-NEXT:    v_lshlrev_b64 v[5:6], v4, s[4:5]
-; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v4
 ; GFX9-NEXT:    s_mov_b32 s6, 0
+; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v4
 ; GFX9-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v9, 0, v5, vcc
 ; GFX9-NEXT:    v_bfi_b32 v1, v6, 0, v1
@@ -1461,9 +1461,9 @@ define b128 @test_bitinsert_val_b123_into_b128_var(b128 %base, b123 %val, i32 %o
 ; GFX9-NEXT:    v_or_b32_e32 v12, v12, v10
 ; GFX9-NEXT:    v_or_b32_e32 v11, v11, v9
 ; GFX9-NEXT:    v_lshlrev_b64 v[9:10], v14, v[4:5]
-; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v8
 ; GFX9-NEXT:    s_mov_b32 s6, -1
 ; GFX9-NEXT:    s_mov_b32 s7, 0x7ffffff
+; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v8
 ; GFX9-NEXT:    v_cndmask_b32_e32 v10, v10, v12, vcc
 ; GFX9-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v8
 ; GFX9-NEXT:    v_cndmask_b32_e64 v15, v10, v7, s[4:5]

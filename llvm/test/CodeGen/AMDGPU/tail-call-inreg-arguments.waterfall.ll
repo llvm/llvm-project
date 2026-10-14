@@ -158,7 +158,6 @@ define amdgpu_kernel void @v_multiple_frame_indexes_literal_offsets() #0 {
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 8
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
@@ -169,6 +168,7 @@ define amdgpu_kernel void @v_multiple_frame_indexes_literal_offsets() #0 {
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
 ; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; CHECK-NEXT:    s_movk_i32 s32, 0x400
@@ -223,7 +223,6 @@ define amdgpu_kernel void @call_user_i32_inreg_i32_i32_inreg(i32 %a, i32 %a1, i3
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s69
 ; CHECK-NEXT:    v_mov_b32_e32 v5, s68
-; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s67, v0
 ; CHECK-NEXT:    s_add_u32 s48, s8, 32
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
@@ -233,6 +232,7 @@ define amdgpu_kernel void @call_user_i32_inreg_i32_i32_inreg(i32 %a, i32 %a1, i3
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[4:5]
+; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s67, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
 ; CHECK-NEXT:    s_addc_u32 s49, s9, 0
 ; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
@@ -294,7 +294,6 @@ define amdgpu_kernel void @call_user_ft_inreg_ft_ft_inreg(i32 %a, float %a1, flo
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s69
 ; CHECK-NEXT:    v_mov_b32_e32 v5, s68
-; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s67, v0
 ; CHECK-NEXT:    s_add_u32 s48, s8, 32
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
@@ -304,6 +303,7 @@ define amdgpu_kernel void @call_user_ft_inreg_ft_ft_inreg(i32 %a, float %a1, flo
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[4:5]
+; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s67, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
 ; CHECK-NEXT:    s_addc_u32 s49, s9, 0
 ; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
@@ -368,8 +368,8 @@ define amdgpu_kernel void @call_user_2xft_inreg_ft_2xft_inreg(i32 %a, <2 x float
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s4
-; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s10, v0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
+; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s10, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s7
 ; CHECK-NEXT:    v_mov_b32_e32 v5, s5

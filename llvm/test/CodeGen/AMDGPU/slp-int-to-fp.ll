@@ -598,16 +598,16 @@ define void @sitofp_i12_to_bfloat(ptr addrspace(1) noalias %out, ptr addrspace(1
 ; GFX900-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
 ; GFX900-NEXT:    v_or_b32_e32 v9, 0x400000, v2
 ; GFX900-NEXT:    v_bfe_u32 v10, v5, 16, 1
+; GFX900-NEXT:    v_bfe_u32 v12, v3, 16, 1
 ; GFX900-NEXT:    v_add3_u32 v8, v8, v2, s4
 ; GFX900-NEXT:    v_cndmask_b32_e32 v4, v6, v7, vcc
 ; GFX900-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; GFX900-NEXT:    v_or_b32_e32 v11, 0x400000, v5
-; GFX900-NEXT:    v_bfe_u32 v12, v3, 16, 1
+; GFX900-NEXT:    v_or_b32_e32 v13, 0x400000, v3
 ; GFX900-NEXT:    v_add3_u32 v10, v10, v5, s4
+; GFX900-NEXT:    v_add3_u32 v12, v12, v3, s4
 ; GFX900-NEXT:    v_cndmask_b32_e32 v2, v8, v9, vcc
 ; GFX900-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
-; GFX900-NEXT:    v_or_b32_e32 v13, 0x400000, v3
-; GFX900-NEXT:    v_add3_u32 v12, v12, v3, s4
 ; GFX900-NEXT:    v_cndmask_b32_e32 v5, v10, v11, vcc
 ; GFX900-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; GFX900-NEXT:    v_cndmask_b32_e32 v3, v12, v13, vcc
@@ -639,16 +639,16 @@ define void @sitofp_i12_to_bfloat(ptr addrspace(1) noalias %out, ptr addrspace(1
 ; GFX90A-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
 ; GFX90A-NEXT:    v_or_b32_e32 v9, 0x400000, v3
 ; GFX90A-NEXT:    v_bfe_u32 v10, v5, 16, 1
+; GFX90A-NEXT:    v_bfe_u32 v12, v2, 16, 1
 ; GFX90A-NEXT:    v_add3_u32 v8, v8, v3, s4
 ; GFX90A-NEXT:    v_cndmask_b32_e32 v4, v6, v7, vcc
 ; GFX90A-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; GFX90A-NEXT:    v_or_b32_e32 v11, 0x400000, v5
-; GFX90A-NEXT:    v_bfe_u32 v12, v2, 16, 1
+; GFX90A-NEXT:    v_or_b32_e32 v13, 0x400000, v2
 ; GFX90A-NEXT:    v_add3_u32 v10, v10, v5, s4
+; GFX90A-NEXT:    v_add3_u32 v12, v12, v2, s4
 ; GFX90A-NEXT:    v_cndmask_b32_e32 v3, v8, v9, vcc
 ; GFX90A-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
-; GFX90A-NEXT:    v_or_b32_e32 v13, 0x400000, v2
-; GFX90A-NEXT:    v_add3_u32 v12, v12, v2, s4
 ; GFX90A-NEXT:    v_cndmask_b32_e32 v5, v10, v11, vcc
 ; GFX90A-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; GFX90A-NEXT:    v_cndmask_b32_e32 v2, v12, v13, vcc
@@ -682,27 +682,27 @@ define void @sitofp_i12_to_bfloat(ptr addrspace(1) noalias %out, ptr addrspace(1
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_bfe_u32 v6, v4, 16, 1
 ; GFX1100-NEXT:    v_bfe_u32 v8, v2, 16, 1
-; GFX1100-NEXT:    v_or_b32_e32 v9, 0x400000, v2
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1100-NEXT:    v_bfe_u32 v10, v5, 16, 1
 ; GFX1100-NEXT:    v_bfe_u32 v11, v3, 16, 1
-; GFX1100-NEXT:    v_cmp_u_f32_e32 vcc_lo, v2, v2
+; GFX1100-NEXT:    v_or_b32_e32 v9, 0x400000, v2
 ; GFX1100-NEXT:    v_or_b32_e32 v13, 0x400000, v3
 ; GFX1100-NEXT:    v_add3_u32 v8, v8, v2, 0x7fff
 ; GFX1100-NEXT:    v_or_b32_e32 v7, 0x400000, v4
 ; GFX1100-NEXT:    v_add3_u32 v11, v11, v3, 0x7fff
-; GFX1100-NEXT:    v_bfe_u32 v10, v5, 16, 1
+; GFX1100-NEXT:    v_or_b32_e32 v12, 0x400000, v5
 ; GFX1100-NEXT:    v_add3_u32 v6, v6, v4, 0x7fff
+; GFX1100-NEXT:    v_add3_u32 v10, v10, v5, 0x7fff
+; GFX1100-NEXT:    v_cmp_u_f32_e32 vcc_lo, v2, v2
 ; GFX1100-NEXT:    v_cndmask_b32_e32 v8, v8, v9, vcc_lo
 ; GFX1100-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX1100-NEXT:    v_or_b32_e32 v12, 0x400000, v5
-; GFX1100-NEXT:    v_add3_u32 v10, v10, v5, 0x7fff
 ; GFX1100-NEXT:    v_cndmask_b32_e32 v9, v11, v13, vcc_lo
 ; GFX1100-NEXT:    v_cmp_u_f32_e32 vcc_lo, v4, v4
 ; GFX1100-NEXT:    v_cndmask_b32_e32 v2, v6, v7, vcc_lo
 ; GFX1100-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
-; GFX1100-NEXT:    v_mov_b16_e32 v2.l, v8.h
 ; GFX1100-NEXT:    v_cndmask_b32_e32 v3, v10, v12, vcc_lo
 ; GFX1100-NEXT:    v_mov_b16_e32 v3.l, v9.h
+; GFX1100-NEXT:    v_mov_b16_e32 v2.l, v8.h
 ; GFX1100-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;

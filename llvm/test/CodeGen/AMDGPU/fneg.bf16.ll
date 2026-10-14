@@ -642,8 +642,8 @@ define <2 x bfloat> @v_fneg_fold_v2bf16(<2 x bfloat> %in) #0 {
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_bfe_u32 v2, v1, 16, 1
 ; GFX11-TRUE16-NEXT:    v_or_b32_e32 v4, 0x400000, v1
-; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
 ; GFX11-TRUE16-NEXT:    v_or_b32_e32 v5, 0x400000, v0
+; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
 ; GFX11-TRUE16-NEXT:    v_add3_u32 v3, v3, v0, 0x7fff
 ; GFX11-TRUE16-NEXT:    v_add3_u32 v2, v2, v1, 0x7fff
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)
@@ -712,11 +712,11 @@ define void @v_extract_fneg_fold_v2bf16(<2 x bfloat> %val) #0 {
 ; GFX8-NEXT:    v_mul_f32_e32 v1, -4.0, v1
 ; GFX8-NEXT:    v_bfe_u32 v2, v1, 16, 1
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, v2, v1
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x7fff, v2
 ; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x7fff, v2
 ; GFX8-NEXT:    v_or_b32_e32 v3, 0x400000, v1
-; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX8-NEXT:    v_sub_f32_e32 v0, 2.0, v0
+; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; GFX8-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, v2, v0
@@ -742,8 +742,8 @@ define void @v_extract_fneg_fold_v2bf16(<2 x bfloat> %val) #0 {
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
 ; GFX9-NEXT:    v_add3_u32 v2, v2, v1, s4
 ; GFX9-NEXT:    v_or_b32_e32 v3, 0x400000, v1
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX9-NEXT:    v_sub_f32_e32 v0, 2.0, v0
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; GFX9-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX9-NEXT:    v_add3_u32 v2, v2, v0, s4
@@ -767,8 +767,8 @@ define void @v_extract_fneg_fold_v2bf16(<2 x bfloat> %val) #0 {
 ; GFX11-NEXT:    v_bfe_u32 v2, v1, 16, 1
 ; GFX11-NEXT:    v_bfe_u32 v3, v0, 16, 1
 ; GFX11-NEXT:    v_or_b32_e32 v4, 0x400000, v1
-; GFX11-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
 ; GFX11-NEXT:    v_or_b32_e32 v5, 0x400000, v0
+; GFX11-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
 ; GFX11-NEXT:    v_add3_u32 v2, v2, v1, 0x7fff
 ; GFX11-NEXT:    v_add3_u32 v3, v3, v0, 0x7fff
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)

@@ -166,8 +166,8 @@ define <4 x i32> @nan_guard_fptosi_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cvt_i32_f32_e32 v5, v0
 ; CHECK-NEXT:    v_cvt_i32_f32_e32 v7, v1
-; CHECK-NEXT:    v_cvt_i32_f32_e32 v6, v2
 ; CHECK-NEXT:    v_cvt_i32_f32_e32 v4, v3
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v6, v2
 ; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v5, vcc
 ; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v1, v1
@@ -189,17 +189,17 @@ define <4 x i32> @nan_guard_fptosi_v4f32_and_mask(<4 x float> %x, <4 x i32> %m) 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cvt_i32_f32_e32 v11, v0
 ; CHECK-NEXT:    v_cvt_i32_f32_e32 v10, v1
-; CHECK-NEXT:    v_cvt_i32_f32_e32 v9, v2
 ; CHECK-NEXT:    v_cvt_i32_f32_e32 v8, v3
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v9, v2
 ; CHECK-NEXT:    v_and_b32_e32 v4, v11, v4
 ; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; CHECK-NEXT:    v_and_b32_e32 v5, v10, v5
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v1, v1
+; CHECK-NEXT:    v_and_b32_e32 v7, v8, v7
 ; CHECK-NEXT:    v_and_b32_e32 v6, v9, v6
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0, v5, vcc
 ; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v2, v2
-; CHECK-NEXT:    v_and_b32_e32 v7, v8, v7
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v6, vcc
 ; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v3, v3
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v7, vcc

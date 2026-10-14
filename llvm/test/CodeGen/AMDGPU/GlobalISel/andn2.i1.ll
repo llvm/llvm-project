@@ -58,8 +58,8 @@ define i32 @s_andn2_i1_vcc_multi_use(i32 %arg0, i32 %arg1) {
 ; WAVE64-LABEL: s_andn2_i1_vcc_multi_use:
 ; WAVE64:       ; %bb.0:
 ; WAVE64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; WAVE64-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v1
 ; WAVE64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; WAVE64-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v1
 ; WAVE64-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; WAVE64-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; WAVE64-NEXT:    v_cndmask_b32_e64 v0, v0, 1, s[4:5]
@@ -68,8 +68,8 @@ define i32 @s_andn2_i1_vcc_multi_use(i32 %arg0, i32 %arg1) {
 ; WAVE32-LABEL: s_andn2_i1_vcc_multi_use:
 ; WAVE32:       ; %bb.0:
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; WAVE32-NEXT:    v_cmp_ne_u32_e64 s4, 0, v1
 ; WAVE32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; WAVE32-NEXT:    v_cmp_ne_u32_e64 s4, 0, v1
 ; WAVE32-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; WAVE32-NEXT:    s_and_b32 s4, vcc_lo, s4
 ; WAVE32-NEXT:    v_cndmask_b32_e64 v0, v0, 1, s4

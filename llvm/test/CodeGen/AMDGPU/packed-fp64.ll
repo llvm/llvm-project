@@ -2529,10 +2529,10 @@ define amdgpu_kernel void @fneg_v2f64_pkfma(ptr addrspace(1) %out) {
 ; GFX1251-SDAG-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1251-SDAG-NEXT:    v_nop
 ; GFX1251-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1251-SDAG-NEXT:    s_mov_b32 s0, 0x3ff
-; GFX1251-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1251-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_bitop2_b32 v1, s0, v0 bitop3:0x40
 ; GFX1251-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX1251-SDAG-NEXT:    s_mov_b32 s2, 0x3ff
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_bitop2_b32 v1, s2, v0 bitop3:0x40
 ; GFX1251-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX1251-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0x3ff00000, 0, vcc_lo
 ; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)

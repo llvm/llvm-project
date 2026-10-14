@@ -12,15 +12,15 @@ define i32 @ucmp_i128(i128 %a, i128 %b) {
 ; GFX7-SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], v[0:1], v[4:5]
 ; GFX7-SDAG-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
 ; GFX7-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc, v[2:3], v[6:7]
+; GFX7-SDAG-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
 ; GFX7-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GFX7-SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], v[2:3], v[6:7]
-; GFX7-SDAG-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
-; GFX7-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, v[2:3], v[6:7]
 ; GFX7-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
-; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX7-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, v[2:3], v[6:7]
 ; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v8, v9, v8, vcc
-; GFX7-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX7-SDAG-NEXT:    v_and_b32_e32 v8, 1, v8
+; GFX7-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX7-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GFX7-SDAG-NEXT:    v_cndmask_b32_e64 v0, v8, -1, vcc
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -32,11 +32,11 @@ define i32 @ucmp_i128(i128 %a, i128 %b) {
 ; GFX7-GISEL-NEXT:    v_cmp_lt_u64_e64 s[4:5], v[0:1], v[4:5]
 ; GFX7-GISEL-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
 ; GFX7-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc, v[2:3], v[6:7]
+; GFX7-GISEL-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
 ; GFX7-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GFX7-GISEL-NEXT:    v_cmp_lt_u64_e64 s[4:5], v[2:3], v[6:7]
-; GFX7-GISEL-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
-; GFX7-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, v[2:3], v[6:7]
 ; GFX7-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
+; GFX7-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, v[2:3], v[6:7]
 ; GFX7-GISEL-NEXT:    v_cndmask_b32_e32 v8, v9, v8, vcc
 ; GFX7-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX7-GISEL-NEXT:    v_sub_i32_e32 v0, vcc, v8, v0

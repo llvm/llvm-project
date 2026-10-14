@@ -143,9 +143,9 @@ define i64 @v_underflow_compare_fold_i64_multi_use(i64 %a, i64 %b, ptr addrspace
 ; GFX9-NEXT:    v_sub_co_u32_e32 v2, vcc, v0, v2
 ; GFX9-NEXT:    v_subb_co_u32_e32 v3, vcc, v1, v3, vcc
 ; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, v[2:3], v[0:1]
-; GFX9-NEXT:    global_store_dwordx2 v[4:5], v[2:3], off
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GFX9-NEXT:    global_store_dwordx2 v[4:5], v[2:3], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -156,8 +156,8 @@ define i64 @v_underflow_compare_fold_i64_multi_use(i64 %a, i64 %b, ptr addrspace
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_co_ci_u32_e64 v3, null, v1, v3, vcc_lo
 ; GFX11-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[2:3], v[0:1]
-; GFX11-NEXT:    global_store_b64 v[4:5], v[2:3], off
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v2 :: v_dual_cndmask_b32 v1, v1, v3
+; GFX11-NEXT:    global_store_b64 v[4:5], v[2:3], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i64 %a, %b
   store i64 %sub, ptr addrspace(1) %ptr

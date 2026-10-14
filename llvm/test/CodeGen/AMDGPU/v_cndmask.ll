@@ -750,8 +750,8 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %o
 ; VI-NEXT:    flat_load_dword v3, v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v2, 1.0, v4, vcc
@@ -1715,8 +1715,8 @@ define amdgpu_kernel void @fcmp_vgprX_k0_selectf64_k1_vgprZ_f32(ptr addrspace(1)
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, s0, v5
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x3ff00000
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    v_cmp_le_f32_e32 vcc, 0, v6
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc

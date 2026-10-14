@@ -8,8 +8,8 @@
 
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]]
-; GCN: v_cmp_neq_f32_e32 vcc, 1.0, [[VAL]]
 ; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], [[VAL]], [[VAL]]
+; GCN: v_cmp_neq_f32_e32 vcc, 1.0, [[VAL]]
 ; GCN: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], [[ADD]], [[VAL]], vcc
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {

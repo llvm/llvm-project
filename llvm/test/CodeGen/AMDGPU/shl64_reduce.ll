@@ -461,9 +461,9 @@ define <2 x i64> @shl_v2_maxmin(<2 x i64> %arg0, <2 x i64> noundef %arg1) {
 ; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, 63, v[6:7]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v6, 63, v6, vcc
 ; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, 63, v[4:5]
-; CHECK-NEXT:    v_lshlrev_b64 v[2:3], v6, v[2:3]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v4, 63, v4, vcc
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], v4, v[0:1]
+; CHECK-NEXT:    v_lshlrev_b64 v[2:3], v6, v[2:3]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %max = call <2 x i64> @llvm.umax.i64(<2 x i64> %arg1, <2 x i64> splat (i64 32))
   %min = call <2 x i64> @llvm.umin.i64(<2 x i64> %max,  <2 x i64> splat (i64 63))
@@ -487,12 +487,12 @@ define <3 x i64> @shl_v3_maxmin(<3 x i64> %arg0, <3 x i64> noundef %arg1) {
 ; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, 63, v[10:11]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v10, 63, v10, vcc
 ; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, 63, v[8:9]
-; CHECK-NEXT:    v_lshlrev_b64 v[4:5], v10, v[4:5]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v8, 63, v8, vcc
 ; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, 63, v[6:7]
-; CHECK-NEXT:    v_lshlrev_b64 v[2:3], v8, v[2:3]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v6, 63, v6, vcc
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], v6, v[0:1]
+; CHECK-NEXT:    v_lshlrev_b64 v[2:3], v8, v[2:3]
+; CHECK-NEXT:    v_lshlrev_b64 v[4:5], v10, v[4:5]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %max = call <3 x i64> @llvm.umax.i64(<3 x i64> %arg1, <3 x i64> splat (i64 32))
   %min = call <3 x i64> @llvm.umin.i64(<3 x i64> %max,  <3 x i64> splat (i64 63))
@@ -519,15 +519,15 @@ define <4 x i64> @shl_v4_maxmin(<4 x i64> %arg0, <4 x i64> noundef %arg1) {
 ; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, 63, v[14:15]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v14, 63, v14, vcc
 ; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, 63, v[12:13]
-; CHECK-NEXT:    v_lshlrev_b64 v[6:7], v14, v[6:7]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v12, 63, v12, vcc
 ; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, 63, v[10:11]
-; CHECK-NEXT:    v_lshlrev_b64 v[4:5], v12, v[4:5]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v10, 63, v10, vcc
 ; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, 63, v[8:9]
-; CHECK-NEXT:    v_lshlrev_b64 v[2:3], v10, v[2:3]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v8, 63, v8, vcc
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], v8, v[0:1]
+; CHECK-NEXT:    v_lshlrev_b64 v[2:3], v10, v[2:3]
+; CHECK-NEXT:    v_lshlrev_b64 v[4:5], v12, v[4:5]
+; CHECK-NEXT:    v_lshlrev_b64 v[6:7], v14, v[6:7]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %max = call <4 x i64> @llvm.umax.i64(<4 x i64> %arg1, <4 x i64> splat (i64 32))
   %min = call <4 x i64> @llvm.umin.i64(<4 x i64> %max,  <4 x i64> splat (i64 63))

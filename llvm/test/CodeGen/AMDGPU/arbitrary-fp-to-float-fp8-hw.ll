@@ -319,9 +319,10 @@ define float @from_e5m3fnu_f32(i8 %x) {
 ; GFX1170-NEXT:    v_or_b32_e32 v4, v0, v1
 ; GFX1170-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v1
 ; GFX1170-NEXT:    v_cmp_ne_u32_e64 s1, 0, v4
-; GFX1170-NEXT:    s_and_b32 s0, s0, vcc_lo
-; GFX1170-NEXT:    v_cndmask_b32_e64 v0, 0, v2, s1
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_cndmask_b32_e64 v0, 0, v2, s1
+; GFX1170-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v0, v0, 0x7fc00000, s0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -431,14 +432,14 @@ define <2 x float> @v2_from_e5m3fnu(<2 x i8> %x) {
 ; GFX1170-NEXT:    v_lshlrev_b32_e32 v10, 20, v3
 ; GFX1170-NEXT:    v_cmp_ne_u32_e64 s3, 0, v3
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s4, 0, v1
-; GFX1170-NEXT:    v_cndmask_b32_e64 v0, 0, v0, s0
+; GFX1170-NEXT:    v_cmp_eq_u32_e64 s5, 7, v3
 ; GFX1170-NEXT:    v_sub_nc_u32_e32 v9, 31, v6
 ; GFX1170-NEXT:    v_add_nc_u32_e32 v8, -8, v6
 ; GFX1170-NEXT:    v_sub_nc_u32_e32 v5, 0x8d, v6
 ; GFX1170-NEXT:    v_lshl_or_b32 v6, v1, 23, v10
 ; GFX1170-NEXT:    s_and_b32 vcc_lo, s4, s3
 ; GFX1170-NEXT:    v_lshlrev_b32_e64 v9, v9, 1
-; GFX1170-NEXT:    v_cmp_eq_u32_e64 s5, 7, v3
+; GFX1170-NEXT:    v_cndmask_b32_e64 v0, 0, v0, s0
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1170-NEXT:    v_add_nc_u32_e32 v4, 0x38000000, v6
 ; GFX1170-NEXT:    v_xor_b32_e32 v9, v3, v9
@@ -626,25 +627,25 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX1170-NEXT:    v_clz_i32_u32_e32 v12, v5
 ; GFX1170-NEXT:    v_lshlrev_b32_e32 v13, 20, v5
 ; GFX1170-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v10
-; GFX1170-NEXT:    v_and_b32_e32 v7, 7, v3
-; GFX1170-NEXT:    v_cmp_ne_u32_e64 s3, 0, v5
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-NEXT:    v_dual_cndmask_b32 v0, 0, v0 :: v_dual_and_b32 v7, 7, v3
 ; GFX1170-NEXT:    v_sub_nc_u32_e32 v16, 31, v12
 ; GFX1170-NEXT:    v_add_nc_u32_e32 v9, -8, v12
 ; GFX1170-NEXT:    v_sub_nc_u32_e32 v12, 0x8d, v12
 ; GFX1170-NEXT:    v_lshl_or_b32 v13, v1, 23, v13
-; GFX1170-NEXT:    v_cmp_eq_u32_e64 s4, 0, v1
+; GFX1170-NEXT:    v_cmp_ne_u32_e64 s3, 0, v5
 ; GFX1170-NEXT:    v_lshlrev_b32_e64 v16, v16, 1
-; GFX1170-NEXT:    v_or_b32_e32 v14, v1, v5
+; GFX1170-NEXT:    v_cmp_eq_u32_e64 s4, 0, v1
+; GFX1170-NEXT:    v_clz_i32_u32_e32 v11, v7
 ; GFX1170-NEXT:    v_lshlrev_b32_e64 v4, v8, 1
 ; GFX1170-NEXT:    v_add_nc_u32_e32 v8, 0x38000000, v13
-; GFX1170-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
 ; GFX1170-NEXT:    v_xor_b32_e32 v16, v5, v16
-; GFX1170-NEXT:    v_clz_i32_u32_e32 v11, v7
 ; GFX1170-NEXT:    s_and_b32 vcc_lo, s4, s3
+; GFX1170-NEXT:    v_or_b32_e32 v14, v1, v5
 ; GFX1170-NEXT:    v_xor_b32_e32 v4, v6, v4
-; GFX1170-NEXT:    v_cndmask_b32_e64 v0, v0, 0x7fc00000, s0
-; GFX1170-NEXT:    v_lshlrev_b32_e32 v9, v9, v16
 ; GFX1170-NEXT:    v_sub_nc_u32_e32 v10, 31, v11
+; GFX1170-NEXT:    v_lshlrev_b32_e32 v9, v9, v16
+; GFX1170-NEXT:    v_cndmask_b32_e64 v0, v0, 0x7fc00000, s0
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s0, 31, v1
 ; GFX1170-NEXT:    v_bfe_u32 v3, v3, 3, 5
 ; GFX1170-NEXT:    v_cmp_ne_u32_e64 s3, 0, v7
@@ -653,10 +654,10 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s4, 0, v3
 ; GFX1170-NEXT:    v_dual_cndmask_b32 v8, v8, v9 :: v_dual_add_nc_u32 v9, -8, v15
 ; GFX1170-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v14
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1170-NEXT:    v_lshlrev_b32_e32 v4, v9, v4
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX1170-NEXT:    v_cndmask_b32_e32 v8, 0, v8, vcc_lo
 ; GFX1170-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v5
+; GFX1170-NEXT:    v_lshlrev_b32_e32 v4, v9, v4
 ; GFX1170-NEXT:    v_lshlrev_b32_e64 v5, v10, 1
 ; GFX1170-NEXT:    v_sub_nc_u32_e32 v9, 0x8d, v15
 ; GFX1170-NEXT:    v_lshlrev_b32_e32 v10, 20, v6
@@ -683,11 +684,11 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v1, v5, v1, s1
 ; GFX1170-NEXT:    v_or_b32_e32 v5, v3, v7
 ; GFX1170-NEXT:    v_cmp_ne_u32_e64 s1, 0, v10
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1170-NEXT:    v_cmp_ne_u32_e64 s3, 0, v5
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v4, 0, v4, s1
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s1, 7, v6
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; GFX1170-NEXT:    v_cmp_ne_u32_e64 s3, 0, v5
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v5, 0, v1, s3
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s3, 7, v7
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v1, v8, 0x7fc00000, s0

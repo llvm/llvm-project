@@ -384,18 +384,18 @@ define <2 x half> @v_test_cvt_v2f64_v2f16(<2 x double> %src) {
 ; GFX950-GISEL:       ; %bb.0:
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v7, 0x1ff
-; GFX950-GISEL-NEXT:    v_and_or_b32 v0, v1, v7, v0
 ; GFX950-GISEL-NEXT:    v_bfe_u32 v4, v1, 20, 11
-; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX950-GISEL-NEXT:    v_and_or_b32 v0, v1, v7, v0
 ; GFX950-GISEL-NEXT:    v_add_u32_e32 v4, 0xfffffc10, v4
 ; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, 0xffe
+; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX950-GISEL-NEXT:    v_sub_u32_e32 v10, 1, v4
+; GFX950-GISEL-NEXT:    v_med3_i32 v10, v10, 0, 13
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX950-GISEL-NEXT:    v_and_or_b32 v0, v5, v6, v0
-; GFX950-GISEL-NEXT:    v_sub_u32_e32 v10, 1, v4
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX950-GISEL-NEXT:    v_lshl_or_b32 v9, v4, 12, v0
-; GFX950-GISEL-NEXT:    v_med3_i32 v10, v10, 0, 13
 ; GFX950-GISEL-NEXT:    v_or_b32_e32 v0, 0x1000, v0
 ; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v11, v10, v0
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v10, v10, v11
@@ -426,15 +426,15 @@ define <2 x half> @v_test_cvt_v2f64_v2f16(<2 x double> %src) {
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
 ; GFX950-GISEL-NEXT:    v_and_or_b32 v0, v1, v4, v0
 ; GFX950-GISEL-NEXT:    v_bfe_u32 v1, v3, 20, 11
-; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; GFX950-GISEL-NEXT:    v_add_u32_e32 v1, 0xfffffc10, v1
 ; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v5, 8, v3
+; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
+; GFX950-GISEL-NEXT:    v_sub_u32_e32 v7, 1, v1
+; GFX950-GISEL-NEXT:    v_med3_i32 v7, v7, 0, 13
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX950-GISEL-NEXT:    v_and_or_b32 v2, v5, v6, v2
-; GFX950-GISEL-NEXT:    v_sub_u32_e32 v7, 1, v1
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; GFX950-GISEL-NEXT:    v_lshl_or_b32 v6, v1, 12, v2
-; GFX950-GISEL-NEXT:    v_med3_i32 v7, v7, 0, 13
 ; GFX950-GISEL-NEXT:    v_or_b32_e32 v2, 0x1000, v2
 ; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v10, v7, v2
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v7, v7, v10
