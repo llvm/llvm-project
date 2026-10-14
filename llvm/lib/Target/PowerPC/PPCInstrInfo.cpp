@@ -2656,6 +2656,25 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (NewOpC == -1)
     return false;
 
+  // Converting MI to its record form makes it define CR0, which is only legal
+  // if CR0 is dead at that point. CR0 may still be live from an earlier
+  // record-form instruction with a use scheduled after MI: expanding the
+  // ANDI_rec_1_{EQ,GT}_BIT pseudos produces COPYs of CR0 subregisters, and
+  // nothing keeps those adjacent to their `andi.` once other instructions are
+  // scheduled in between. The backward scan above only covers the range
+  // between MI and CmpInstr, so it cannot see such a use. Query CR0's
+  // liveness right after MI, using the block size as the neighborhood so the
+  // query can inspect the remainder of the block, and be conservative about
+  // an unknown answer.
+  const bool IntroducesRecFormInstr = MIOpC != NewOpC;
+  if (IntroducesRecFormInstr) {
+    const MachineBasicBlock *MBB = MI->getParent();
+    if (MBB->computeRegisterLiveness(
+            &RI, PPC::CR0, std::next(MachineBasicBlock::const_iterator(MI)),
+            /*Neighborhood=*/MBB->size()) != MachineBasicBlock::LQR_Dead)
+      return false;
+  }
+
   // This transformation should not be performed if `nsw` is missing and is not
   // `equalityOnly` comparison. Since if there is overflow, sub_lt, sub_gt in
   // CRReg do not reflect correct order. If `equalityOnly` is true, sub_eq in
