@@ -96,7 +96,6 @@ public:
     size_t NumSlabs = 0;
     size_t NumCustomSizedSlabs = 0;
     char *CurPtr = nullptr;
-    uintptr_t EndSentinel = 0;
   };
 
   BumpPtrAllocatorImpl() = default;
@@ -258,38 +257,41 @@ public:
   size_t GetNumSlabs() const { return Slabs.size() + CustomSizedSlabs.size(); }
 
   /// Save a mark representing the current state of the allocator.
-  Mark save() const {
+  Mark Save() const {
     Mark M;
     M.NumSlabs = Slabs.size();
     M.NumCustomSizedSlabs = CustomSizedSlabs.size();
     M.CurPtr = CurPtr;
-    M.EndSentinel = EndSentinel;
     return M;
   }
 
   /// Rewind the allocator to a saved mark and free all memory allocated after
   /// it.
   ///
-  /// Unlike Deallocate(), this releases memory back to the underlying
-  /// allocator. Any pointers to that memory become invalid, and their addresses
+  /// Any pointers to that memory become invalid, and their addresses
   /// may be reused. The mark itself remains valid and can be used again.
-  void rewind(const Mark &M) {
+  void Rewind(const Mark &M) {
     assert(M.NumSlabs <= Slabs.size() &&
            M.NumCustomSizedSlabs <= CustomSizedSlabs.size() &&
            "rewinding to an invalidated mark");
-    DeallocateCustomSizedSlabs(CustomSizedSlabs.begin() + M.NumCustomSizedSlabs,
-                               CustomSizedSlabs.end());
+    DeallocateCustomSizedSlabs(M.NumCustomSizedSlabs);
     CustomSizedSlabs.truncate(M.NumCustomSizedSlabs);
     DeallocateSlabs(Slabs.begin() + M.NumSlabs, Slabs.end());
     Slabs.truncate(M.NumSlabs);
-
+    if (M.NumSlabs == 0) {
+      CurPtr = nullptr;
+      EndSentinel = 0;
+      return;
+    }
+    unsigned SlabIdx = M.NumSlabs - 1;
+    EndSentinel =
+        uintptr_t(Slabs[SlabIdx]) + computeSlabSize(SlabIdx) + 1;
     // Mark the freed part of the slab as poisoned so ASan can catch
     // any use of stale pointers.
     if (M.CurPtr)
       __asan_poison_memory_region(M.CurPtr,
-                                  M.EndSentinel - 1 - uintptr_t(M.CurPtr));
+                                  EndSentinel - 1 - uintptr_t(M.CurPtr));
     CurPtr = M.CurPtr;
-    EndSentinel = M.EndSentinel;
   }
 
   /// Check if \p Ptr points to memory allocated after \p M was saved.
@@ -297,12 +299,11 @@ public:
   /// \p Ptr must belong to this allocator, and \p M must still be valid.
   /// This helps remove references to objects that will be freed when
   /// rewinding to \p M.
-  bool allocatedAfter(const void *Ptr, const Mark &M) const {
+  bool AllocatedAfter(const void *Ptr, const Mark &M) const {
     const char *P = static_cast<const char *>(Ptr);
-    // A mark that predates the first slab makes every slab newer.
-    // Memory after the saved pointer in the current slab was allocated later.
-    // All slabs created after the mark were also allocated later.
-    // If the mark was saved before the first slab, all slabs are newer.
+
+    // Check the part of the marked slab after the saved pointer and all newer
+    // slabs.
     for (size_t I = M.NumSlabs ? M.NumSlabs - 1 : 0, E = Slabs.size(); I < E;
          ++I) {
       const char *S = static_cast<const char *>(Slabs[I]);
@@ -310,7 +311,7 @@ public:
       if (P >= Lo && P < S + computeSlabSize(I))
         return true;
     }
-    // Custom-sized slabs are allocated whole, so the index alone decides.
+
     for (size_t I = M.NumCustomSizedSlabs, E = CustomSizedSlabs.size(); I < E;
          ++I) {
       const char *S = static_cast<const char *>(CustomSizedSlabs[I].first);
@@ -452,17 +453,12 @@ private:
   }
 
   /// Deallocate all memory for custom sized slabs.
-  void DeallocateCustomSizedSlabs(
-      SmallVectorImpl<std::pair<void *, size_t>>::iterator I,
-      SmallVectorImpl<std::pair<void *, size_t>>::iterator E) {
-    for (; I != E; ++I) {
-      this->getAllocator().Deallocate(I->first, I->second,
-                                      alignof(std::max_align_t));
+  void DeallocateCustomSizedSlabs(unsigned I = 0) {
+    for (size_t E = CustomSizedSlabs.size(); I < E; ++I) {
+      void *Ptr = CustomSizedSlabs[I].first;
+      size_t Size = CustomSizedSlabs[I].second;
+      this->getAllocator().Deallocate(Ptr, Size, alignof(std::max_align_t));
     }
-  }
-  void DeallocateCustomSizedSlabs() {
-    DeallocateCustomSizedSlabs(CustomSizedSlabs.begin(),
-                               CustomSizedSlabs.end());
   }
 
   template <typename T> friend class SpecificBumpPtrAllocator;
