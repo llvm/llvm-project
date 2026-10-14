@@ -33,7 +33,7 @@ class SuperHMachineFunctionInfo : public MachineFunctionInfo {
 
 public:
   explicit SuperHMachineFunctionInfo(const Function &F,
-                                     const TargetSubtargetInfo *STI) {}
+                                     const TargetSubtargetInfo *STI) { }
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -46,6 +46,11 @@ public:
 
   // createConstIndex - Creates a new PIC Label UId.
   unsigned createConstIndex() { return CPIndexCount++; }
+
+  // ImplicitStackSize - The size of the implicit portion of the stack,
+  // this includes the saved frame pointer, saved procedure register,
+  // etc.
+  int64_t ImplicitStackSize;
 
   // tryGetConstant - SuperH's compressed instruction set means that
   // immediates and displacements can not be larger than 8 bits.
@@ -80,9 +85,6 @@ public:
   // Helpers for lower level passes to create constants.
   SuperHConstantPoolConstant *getOrCreate(const ConstantInt *G,
                                           const MachineFunction &MF) const;
-
-private:
-  virtual void anchor();
 };
 
 } // namespace llvm

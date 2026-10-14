@@ -337,10 +337,10 @@ void SuperHInstrInfo::storeRegToStackSlot(
       break;
     case 4:
       Opc = SH::MOVLSF;
-
       break;
     }
   }
+
   BuildMI(MBB, II, DebugLoc(), get(Opc))
       .addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FrameIndex)

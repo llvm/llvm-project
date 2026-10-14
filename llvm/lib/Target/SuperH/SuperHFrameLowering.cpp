@@ -81,17 +81,21 @@ SuperHFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   const SuperHSubtarget &Subtarget = MF.getSubtarget<SuperHSubtarget>();
   const SuperHRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SuperHMachineFunctionInfo *TMFI = MF.getInfo<SuperHMachineFunctionInfo>();
   bool HasFP = hasFP(MF);
 
   // NOTE:  All the frame indices are relative to the stack/frame pointer
   //        post-offset. as such an extra adjustment is needed here.
   int64_t FrameOffset = MFI.getObjectOffset(FI);
+  if (FI < 0)
+    FrameOffset += TMFI->ImplicitStackSize + 4;
+
+  LLVM_DEBUG(dbgs() << "FI[" << FI << "] == " << FrameOffset << "\n");
 
   // R14 base
   if (HasFP) {
 
     // Adjust down to remove FP.
-    FrameOffset -= 4;
     FrameReg = RegInfo->getFrameRegister();
     return StackOffset::getFixed(FrameOffset);
   }
@@ -114,6 +118,7 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF,
 
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  SuperHMachineFunctionInfo *TMFI = MF.getInfo<SuperHMachineFunctionInfo>();
   const SuperHSubtarget &STI = MF.getSubtarget<SuperHSubtarget>();
   const SuperHInstrInfo &TII = *STI.getInstrInfo();
   const SuperHRegisterInfo &RII = *STI.getRegisterInfo();
@@ -126,13 +131,10 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Get stack frame size, align up to 32-bits if needed.
   int64_t StackSize = MFI.getStackSize();
-  if (StackSize < 4)
-    StackSize = 4;
-
-  MFI.setStackSize(StackSize);
 
   // Store previous frame pointer.
   if (HasFP) {
+    TMFI->ImplicitStackSize += 4;
     BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLM), FP)
         .addReg(SP)
         .setMIFlag(MachineInstr::FrameSetup);
@@ -140,6 +142,7 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Store Return address on stack (if needed)
   if (MFI.hasCalls()) {
+    TMFI->ImplicitStackSize += 4;
     BuildMI(MBB, MBBI, DL, TII.get(SH::STSMPR))
         .addReg(SP)
         .setMIFlag(MachineInstr::FrameSetup);
@@ -168,6 +171,7 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF,
   LLVM_DEBUG(dbgs() << "Emitting epilogue for " << MF.getName() << "...\n");
 
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+  SuperHMachineFunctionInfo *TMFI = MF.getInfo<SuperHMachineFunctionInfo>();
   const SuperHRegisterInfo &RII = *STI.getRegisterInfo();
   const SuperHSubtarget &STI = MF.getSubtarget<SuperHSubtarget>();
   const SuperHInstrInfo &TII = *STI.getInstrInfo();
