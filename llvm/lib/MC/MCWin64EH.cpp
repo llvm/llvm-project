@@ -1661,9 +1661,8 @@ static void simplifyARM64Opcodes(std::vector<WinEH::Instruction> &Instructions,
 }
 
 // Check if an epilog exists as a subset of the end of a prolog (backwards).
-static int
-getARM64OffsetInProlog(const std::vector<WinEH::Instruction> &Prolog,
-                       const std::vector<WinEH::Instruction> &Epilog) {
+static int getARM64OffsetInProlog(ArrayRef<WinEH::Instruction> Prolog,
+                                  ArrayRef<WinEH::Instruction> Epilog) {
   // Can't find an epilog as a subset if it is longer than the prolog.
   if (Epilog.size() > Prolog.size())
     return -1;
@@ -1679,12 +1678,12 @@ getARM64OffsetInProlog(const std::vector<WinEH::Instruction> &Prolog,
     return 0;
 
   // If the epilog was a subset of the prolog, find its offset.
-  return ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction>(
-      &Prolog[Epilog.size()], Prolog.size() - Epilog.size()));
+  return ARM64CountOfUnwindCodes(Prolog.drop_front(Epilog.size()));
 }
 
 static int checkARM64PackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
                                   WinEH::FrameInfo::Segment *Seg,
+                                  ArrayRef<WinEH::Instruction> Prolog,
                                   int PrologCodeBytes) {
   // Can only pack if there's one single epilog
   if (Seg->Epilogs.size() != 1)
@@ -1710,7 +1709,7 @@ static int checkARM64PackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
       PrologCodeBytes + ARM64CountOfUnwindCodes(Epilog) <= 124)
     RetVal = PrologCodeBytes;
 
-  int Offset = getARM64OffsetInProlog(info->Instructions, Epilog);
+  int Offset = getARM64OffsetInProlog(Prolog, Epilog);
   if (Offset < 0)
     return RetVal;
 
@@ -2050,6 +2049,7 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
 
 static void ARM64ProcessEpilogs(WinEH::FrameInfo *info,
                                 WinEH::FrameInfo::Segment *Seg,
+                                ArrayRef<WinEH::Instruction> Prolog,
                                 uint32_t &TotalCodeBytes,
                                 MapVector<MCSymbol *, uint32_t> &EpilogInfo) {
 
@@ -2074,15 +2074,9 @@ static void ARM64ProcessEpilogs(WinEH::FrameInfo *info,
       // Clear the unwind codes in the EpilogMap, so that they don't get output
       // in ARM64EmitUnwindInfoForSegment().
       EpilogInstrs.clear();
-    } else if ((PrologOffset = getARM64OffsetInProlog(info->Instructions,
-                                                      EpilogInstrs)) >= 0) {
+    } else if ((PrologOffset = getARM64OffsetInProlog(Prolog, EpilogInstrs)) >=
+               0) {
       EpilogInfo[EpilogStart] = PrologOffset;
-      // If the segment doesn't have a prolog, an end_c will be emitted before
-      // prolog opcodes. So epilog start index in opcodes array is moved by 1.
-      if (!Seg->HasProlog &&
-          (info->Instructions.empty() ||
-           info->Instructions.back().Operation != Win64EH::UOP_EndC))
-        EpilogInfo[EpilogStart] += 1;
       // Clear the unwind codes in the EpilogMap, so that they don't get output
       // in ARM64EmitUnwindInfoForSegment().
       EpilogInstrs.clear();
@@ -2190,15 +2184,23 @@ static void ARM64EmitUnwindInfoForSegment(MCStreamer &streamer,
 
   bool HasProlog = Seg.HasProlog;
   bool HasEpilogs = (Seg.Epilogs.size() != 0);
-  bool NeedsEndC =
-      !HasProlog && (info->Instructions.empty() ||
-                     info->Instructions.back().Operation != Win64EH::UOP_EndC);
+  SmallVector<WinEH::Instruction> PhantomProlog;
+  ArrayRef<WinEH::Instruction> Prolog = info->Instructions;
+  if (!HasProlog) {
+    for (const WinEH::Instruction &Inst : Prolog)
+      if (Inst.Operation != Win64EH::UOP_EndC)
+        PhantomProlog.push_back(Inst);
+    PhantomProlog.emplace_back(Win64EH::UOP_EndC, nullptr, -1, 0);
+    Prolog = PhantomProlog;
+  }
 
   uint32_t SegLength = (uint32_t)Seg.Length / 4;
-  uint32_t PrologCodeBytes = info->PrologCodeBytes;
+  uint32_t PrologCodeBytes = ARM64CountOfUnwindCodes(Prolog);
 
-  int PackedEpilogOffset = HasEpilogs ?
-      checkARM64PackedEpilog(streamer, info, &Seg, PrologCodeBytes) : -1;
+  int PackedEpilogOffset = HasEpilogs
+                               ? checkARM64PackedEpilog(streamer, info, &Seg,
+                                                        Prolog, PrologCodeBytes)
+                               : -1;
 
   // TODO:
   // 1. Enable packed unwind info (.pdata only) for multi-segment functions.
@@ -2218,27 +2220,21 @@ static void ARM64EmitUnwindInfoForSegment(MCStreamer &streamer,
       return;
   }
 
-  // If the prolog is not in this segment, we need to emit an end_c, which takes
-  // 1 byte, before prolog unwind ops.
-  if (NeedsEndC) {
-    PrologCodeBytes += 1;
-    if (PackedEpilogOffset >= 0)
-      PackedEpilogOffset += 1;
+  if (!HasProlog && !HasEpilogs) {
     // If a segment has neither prolog nor epilog, "With full .xdata record,
     // Epilog Count = 1. Epilog Start Index points to end_c."
     // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling#function-fragments
     // TODO: We can remove this if testing shows zero epilog scope is ok with
     //       MS unwinder.
-    if (!HasEpilogs)
-      // Pack the fake epilog into phantom prolog.
-      PackedEpilogOffset = 0;
+    // Pack the fake epilog into phantom prolog.
+    PackedEpilogOffset = 0;
   }
 
   uint32_t TotalCodeBytes = PrologCodeBytes;
 
   // Process epilogs.
   MapVector<MCSymbol *, uint32_t> EpilogInfo;
-  ARM64ProcessEpilogs(info, &Seg, TotalCodeBytes, EpilogInfo);
+  ARM64ProcessEpilogs(info, &Seg, Prolog, TotalCodeBytes, EpilogInfo);
 
   // Code Words, Epilog count, E, X, Vers, Function Length
   uint32_t row1 = 0x0;
@@ -2295,12 +2291,9 @@ static void ARM64EmitUnwindInfoForSegment(MCStreamer &streamer,
   // The end_c opcode at the start indicates to the unwinder that the actual
   // prolog is outside of the current segment, and the unwinder shouldn't try
   // to check for unwinding from a partial prolog.
-  if (NeedsEndC)
-    // Emit an end_c.
-    streamer.emitInt8((uint8_t)0xE5);
 
   // Emit prolog unwind instructions (in reverse order).
-  for (auto Inst : llvm::reverse(info->Instructions))
+  for (auto Inst : llvm::reverse(Prolog))
     ARM64EmitUnwindCode(streamer, Inst);
 
   // Emit epilog unwind instructions
