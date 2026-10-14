@@ -1441,14 +1441,17 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   return false;
 }
 
-static APValue::LValueBase getLValueBase(const Pointer &Ptr) {
-  if (Ptr.isBlockPointer()) {
-    if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
-      return VD;
-  }
-  if (const auto *E = Ptr.getRootExpr())
-    return E;
-  return APValue::LValueBase();
+/// Returns the alignment of the object Ptr points into.
+static CharUnits getBaseAlignment(const ASTContext &ASTCtx,
+                                  const Pointer &Ptr) {
+  CharUnits BaseAlignment;
+  if (Ptr.isBlockPointer() && Ptr.block()->isDynamic())
+    BaseAlignment = Ptr.getDeclDesc()->computeAlignForDynamicAlloc(ASTCtx);
+  else if (const auto *VD = Ptr.getRootVarDecl())
+    BaseAlignment = ASTCtx.getDeclAlign(VD);
+  else if (const auto *E = Ptr.getRootExpr())
+    BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
+  return BaseAlignment;
 }
 
 /// __builtin_assume_aligned(Ptr, Alignment[, ExtraOffset])
@@ -1475,14 +1478,7 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
 
   // If there is a base object, then it must have the correct alignment.
   if (Ptr.isBlockPointer() || Ptr.isOpaquePointer()) {
-    CharUnits BaseAlignment;
-    if (Ptr.isBlockPointer() && Ptr.block()->isDynamic())
-      BaseAlignment = Ptr.getDeclDesc()->computeAlignForDynamicAlloc(ASTCtx);
-    else if (const auto *VD = Ptr.getRootVarDecl())
-      BaseAlignment = ASTCtx.getDeclAlign(VD);
-    else if (const auto *E = Ptr.getRootExpr())
-      BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
-
+    CharUnits BaseAlignment = getBaseAlignment(ASTCtx, Ptr);
     if (BaseAlignment < Align) {
       S.CCEDiag(Call->getArg(0),
                 diag::note_constexpr_baa_insufficient_alignment)
@@ -2244,8 +2240,7 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   if (IsAligned) {
     CharUnits RequiredAlign =
         S.getASTContext().getTypeAlignInChars(Call->getType());
-    CharUnits BaseAlignment =
-        getBaseAlignment(S.getASTContext(), getLValueBase(Ptr));
+    CharUnits BaseAlignment = getBaseAlignment(S.getASTContext(), Ptr);
     std::optional<size_t> LayoutOffset =
         Ptr.computeLayoutOffset(S.getASTContext());
     if (!LayoutOffset)
