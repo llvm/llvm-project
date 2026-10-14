@@ -18,8 +18,8 @@ define double @combine_consecutive_loads_as_double(ptr %p) {
   ; CHECK-LABEL: name: combine_consecutive_loads_as_double
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
-  ; CHECK-NEXT:   [[LD_Fp64m80_:%[0-9]+]]:rfp80 = nofpexcept LD_Fp64m80 killed [[MOV32rm]], 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.p, !mem.cache_hint !1)
-  ; CHECK-NEXT:   RET 0, killed [[LD_Fp64m80_]]
+  ; CHECK-NEXT:   [[LD_Fp64m80_:%[0-9]+]]:rfp80 = nofpexcept LD_Fp64m80 [[MOV32rm]], 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.p, !mem.cache_hint !1)
+  ; CHECK-NEXT:   RET 0, [[LD_Fp64m80_]]
   %lo = load i32, ptr %p, align 8, !mem.cache_hint !1
   %p4 = getelementptr i8, ptr %p, i32 4
   %hi = load i32, ptr %p4, align 4, !mem.cache_hint !1
@@ -35,8 +35,8 @@ define double @combine_consecutive_loads_as_double_different(ptr %p) {
   ; CHECK-LABEL: name: combine_consecutive_loads_as_double_different
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
-  ; CHECK-NEXT:   [[LD_Fp64m80_:%[0-9]+]]:rfp80 = nofpexcept LD_Fp64m80 killed [[MOV32rm]], 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.p)
-  ; CHECK-NEXT:   RET 0, killed [[LD_Fp64m80_]]
+  ; CHECK-NEXT:   [[LD_Fp64m80_:%[0-9]+]]:rfp80 = nofpexcept LD_Fp64m80 [[MOV32rm]], 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.p)
+  ; CHECK-NEXT:   RET 0, [[LD_Fp64m80_]]
   %lo = load i32, ptr %p, align 8, !mem.cache_hint !1
   %p4 = getelementptr i8, ptr %p, i32 4
   %hi = load i32, ptr %p4, align 4, !mem.cache_hint !2
