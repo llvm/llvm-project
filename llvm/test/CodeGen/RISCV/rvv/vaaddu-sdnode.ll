@@ -34,21 +34,6 @@ define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_floor(<vscale x 8 x i8> %x, i8 %y) {
   ret <vscale x 8 x i8> %ret
 }
 
-define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_floor_sexti16(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
-; CHECK-LABEL: vaaddu_vv_nxv8i8_floor_sexti16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrwi vxrm, 2
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vaadd.vv v8, v8, v9
-; CHECK-NEXT:    ret
-  %xzv = sext <vscale x 8 x i8> %x to <vscale x 8 x i16>
-  %yzv = sext <vscale x 8 x i8> %y to <vscale x 8 x i16>
-  %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
-  %div = lshr <vscale x 8 x i16> %add, splat (i16 1)
-  %ret = trunc <vscale x 8 x i16> %div to <vscale x 8 x i8>
-  ret <vscale x 8 x i8> %ret
-}
-
 define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_floor_zexti32(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i8_floor_zexti32:
 ; CHECK:       # %bb.0:
@@ -217,22 +202,6 @@ define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_ceil(<vscale x 8 x i8> %x, i8 %y) {
   %yhead = insertelement <vscale x 8 x i8> poison, i8 %y, i32 0
   %ysplat = shufflevector <vscale x 8 x i8> %yhead, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
   %yzv = zext <vscale x 8 x i8> %ysplat to <vscale x 8 x i16>
-  %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
-  %add1 = add nuw nsw <vscale x 8 x i16> %add, splat (i16 1)
-  %div = lshr <vscale x 8 x i16> %add1, splat (i16 1)
-  %ret = trunc <vscale x 8 x i16> %div to <vscale x 8 x i8>
-  ret <vscale x 8 x i8> %ret
-}
-
-define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_ceil_sexti16(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
-; CHECK-LABEL: vaaddu_vv_nxv8i8_ceil_sexti16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrwi vxrm, 0
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vaadd.vv v8, v8, v9
-; CHECK-NEXT:    ret
-  %xzv = sext <vscale x 8 x i8> %x to <vscale x 8 x i16>
-  %yzv = sext <vscale x 8 x i8> %y to <vscale x 8 x i16>
   %add = add nuw nsw <vscale x 8 x i16> %xzv, %yzv
   %add1 = add nuw nsw <vscale x 8 x i16> %add, splat (i16 1)
   %div = lshr <vscale x 8 x i16> %add1, splat (i16 1)
