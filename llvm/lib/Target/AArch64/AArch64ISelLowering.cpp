@@ -20197,6 +20197,7 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
     if (isa<ScalableVectorType>(Ty)) {
       EVT VT = getValueType(DL, Ty);
 
+      // Check if I is an extending load (that may need splitting).
       if (I) {
         User *U = I->getUniqueUndroppableUser();
         if (isa_and_nonnull<ZExtInst, SExtInst>(U))
