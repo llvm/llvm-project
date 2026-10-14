@@ -689,4 +689,5 @@ void HLSLToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
   CC1Args.push_back("-Wconversion");
   CC1Args.push_back("-Wvector-conversion");
   CC1Args.push_back("-Wmatrix-conversion");
+  CC1Args.push_back("-load-bool-from-mem=nonzero");
 }
