@@ -618,7 +618,8 @@ public:
 
   using CIRBaseBuilderTy::createGetMember;
   Address createGetMember(mlir::Location loc, Address base,
-                          llvm::StringRef name, unsigned index) {
+                          llvm::StringRef name, unsigned index,
+                          const cir::CIRDataLayout &layout) {
     auto recordTy = mlir::cast<cir::RecordType>(base.getElementType());
 
     assert(index < recordTy.getMembers().size() &&
@@ -626,11 +627,8 @@ public:
     mlir::Type memberTy = recordTy.getMembers()[index];
     mlir::Type memberPtrTy = getPointerTo(memberTy, base.getAddressSpace());
 
-    auto moduleOp =
-        getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
-    mlir::DataLayout layout(moduleOp);
-    auto memberOffset =
-        CharUnits::fromQuantity(recordTy.getElementOffset(layout, index));
+    auto memberOffset = CharUnits::fromQuantity(
+        recordTy.getElementOffset(layout.layout, index));
 
     mlir::Value memberPtr =
         createGetMember(loc, memberPtrTy, base.getBasePointer(), name, index);

@@ -92,6 +92,22 @@ def Ptr : FuncArgType;      // Any pointer type.
 def Struct : FuncArgType;   // Any struct type.
 def Ellip : FuncArgType;    // The ellipsis (...).
 def Same : FuncArgType;     // Same argument type as the previous one.
+def NXV2I1 : FuncArgType;
+def NXV4I1 : FuncArgType;
+
+class VectorFuncArgType : FuncArgType {
+  FuncArgType MaskType = ?;
+}
+
+def V2F32 : VectorFuncArgType;
+def V4F32 : VectorFuncArgType;
+def V8F32 : VectorFuncArgType;
+def V16F32 : VectorFuncArgType;
+def NXV4F32 : VectorFuncArgType { let MaskType = NXV4I1; }
+def V2F64 : VectorFuncArgType;
+def V4F64 : VectorFuncArgType;
+def V8F64 : VectorFuncArgType;
+def NXV2F64 : VectorFuncArgType { let MaskType = NXV2I1; }
 
 /// Abstract definition for functionality the compiler may need to
 /// emit a call to. Emits the RTLIB::Libcall enum - This enum defines
@@ -109,6 +125,23 @@ class RuntimeLibcall<FuncArgType RetType = NoneType,
   list<FuncArgType> ArgumentTypes = ArgTypes;
 
   // TODO: Record attributes
+}
+
+class MaskedRuntimeLibcall<RuntimeLibcall unmasked, FuncArgType mask>
+    : RuntimeLibcall<unmasked.ReturnType,
+                     !if(!empty(unmasked.ArgumentTypes), [],
+                         !listconcat(unmasked.ArgumentTypes, [mask]))> {
+  RuntimeLibcall Unmasked = unmasked;
+}
+
+multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
+                             list<FuncArgType> ArgTypes = []> {
+  defvar VT = !cast<VectorFuncArgType>(suffix);
+  def _#suffix : RuntimeLibcall<RetType, ArgTypes>;
+  if !initialized(VT.MaskType) then
+    def _MASKED_#suffix
+        : MaskedRuntimeLibcall<!cast<RuntimeLibcall>(NAME#"_"#suffix),
+                               VT.MaskType>;
 }
 
 // Concrete implementation of a libcall, which may have a different
