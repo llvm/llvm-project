@@ -944,6 +944,9 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
     }
   }
 
+  if (!EnableEmEH && !EnableEmSjLj && !EnableWasmSjLj)
+    return Changed;
+
   IRBuilder<> IRB(M);
 
   Function *SetjmpF = M.getFunction("setjmp");
