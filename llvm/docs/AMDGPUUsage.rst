@@ -1355,6 +1355,14 @@ supported for the ``amdgcn`` target.
   to make incorrect transformations (such as promotion to ``s_buffer_load``,
   which requires such componentwise alignment).
 
+  The buffer intrinsics that take their resource as a ``<4 x i32>`` instead of
+  a ``ptr addrspace(8)`` are deprecated and will be removed in a future LLVM
+  release. Add ``ptr`` after the
+  ``raw``/``struct`` component of the intrinsic name for the new version.
+  However, ``llvm.amdgcn.s.buffer.load`` becomes
+  ``llvm.amdgcn.ptr.s.buffer.load`` and needs to be annotated with ``!invariant.load``
+  to preserve the old merging behavior. This migration was already done in clang.
+
 **Buffer Strided Pointer**
   The buffer index pointer is an experimental address space. It represents
   a 128-bit buffer descriptor and a 32-bit offset, like the **Buffer Fat
@@ -2231,6 +2239,17 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    * Local pointer to the LDS barrier data.
 
+  llvm.amdgcn.s.buffer.load                        Deprecated. Takes its buffer resource as a ``<4 x i32>``. Use
+                                                   ``llvm.amdgcn.ptr.s.buffer.load``, which takes a ``ptr addrspace(8)``
+                                                   produced by ``llvm.amdgcn.make.buffer.rsrc``.
+                                                   The implicit assumptions encoded by the fact that this intrinsic was tagged as not reading memory are replaced by needing to tag ``llvm.amdgcn.ptr.s.buffer.load`` with ``!invariant.load`` metadata.
+
+  llvm.amdgcn.{raw|struct}.*buffer.*               Deprecated. The ``buffer``, ``tbuffer`` and ``atomic.buffer.load``
+                                                   intrinsics that take their buffer resource as a ``<4 x i32>`` are
+                                                   replaced by the variants with ``ptr`` inserted after the ``raw`` or
+                                                   ``struct`` component of the name, which take a ``ptr addrspace(8)``
+                                                   produced by ``llvm.amdgcn.make.buffer.rsrc``. Codegen warns for their use.
+
   ==============================================   ==========================================================
 
 .. TODO::
@@ -2406,9 +2425,13 @@ registers. See :ref:`amdgpu-dma-operations` for full documentation.
 
   llvm.amdgcn.load[.async].to.lds
   llvm.amdgcn.global.load[.async].lds
-  llvm.amdgcn.{raw|struct}[.ptr].buffer.load[.async].lds
+  llvm.amdgcn.{raw|struct}.ptr.buffer.load[.async].lds
   llvm.amdgcn.{global|cluster}.load.async.to.lds.b{8,32,64,128}
   llvm.amdgcn.global.store.async.from.lds.b{8,32,64,128}
+
+The ``llvm.amdgcn.{raw|struct}.buffer.load[.async].lds`` spellings, which take
+their buffer resource as a ``<4 x i32>`` rather than a ``ptr addrspace(8)``,
+are deprecated.
 
 Tensor Intrinsics
 ~~~~~~~~~~~~~~~~~
