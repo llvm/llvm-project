@@ -28,6 +28,9 @@
 !rec_UX87Scalar =
     !cir.union<"UX87Scalar" {data !cir.long_double<!cir.f80>,
                              data !cir.array<!u8i x 11>}>
+!rec_UX87VecArr =
+    !cir.union<"UX87VecArr" {data !cir.long_double<!cir.f80>,
+                             data !cir.array<!cir.vector<3 x !s8i> x 3>}>
 !rec_SLongDouble = !cir.struct<"SLongDouble" {data !cir.long_double<!cir.f80>}>
 !rec_UX87Nested =
     !cir.union<"UX87Nested" {data !rec_SLongDouble, data !cir.array<!u8i x 4>}>
@@ -207,6 +210,14 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UX87Scalar"
+
+  // A three-byte vector's alloc size is 4, so the last of these three array
+  // elements starts at byte 8 and reaches byte 11.
+  cir.func @take_union_x87_vec_arr(%arg0: !rec_UX87VecArr) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UX87VecArr"
 
   cir.func @take_union_x87_nested(%arg0: !rec_UX87Nested) {
     cir.return

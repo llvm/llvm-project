@@ -19,7 +19,6 @@
 #include "mlir/Support/LLVM.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
-#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypesDetails.h"
@@ -588,8 +587,8 @@ mlir::Type UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout,
                    dataLayout.getTypeABIAlignment(rhs) ||
                (dataLayout.getTypeABIAlignment(lhs) ==
                     dataLayout.getTypeABIAlignment(rhs) &&
-                cir::getTypeAllocSize(dataLayout, lhs) <
-                    cir::getTypeAllocSize(dataLayout, rhs));
+                dataLayout.getTypeAllocSize(lhs) <
+                    dataLayout.getTypeAllocSize(rhs));
       });
   // A union's storage is bytes, and stands in for every variant rather than
   // for the one bit-field that happened to be widest, so a bit-field variant
@@ -848,8 +847,7 @@ UnionType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                              mlir::DataLayoutEntryListRef params) const {
   llvm::TypeSize size = llvm::TypeSize::getFixed(0);
   if (mlir::Type storage = getUnionStorageType(dataLayout))
-    size += llvm::TypeSize::getFixed(
-        cir::getTypeAllocSize(dataLayout, storage) * 8);
+    size += dataLayout.getTypeAllocSize(storage) * 8;
   if (mlir::Type pad = getPadding())
     size += dataLayout.getTypeSizeInBits(pad);
   return size;
@@ -885,7 +883,7 @@ StructType::computeStructSize(const mlir::DataLayout &dataLayout) const {
     // Add padding to the struct size to align it to the abi alignment of the
     // element type before adding the element's alloc size.
     recordSize = llvm::alignTo(recordSize, tyAlign);
-    recordSize += cir::getTypeAllocSize(dataLayout, ty);
+    recordSize += dataLayout.getTypeAllocSize(ty);
 
     // The alignment requirement of a struct is equal to the strictest
     // alignment requirement of its elements.
@@ -920,7 +918,7 @@ StructType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
     const uint64_t tyAlign =
         (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
     recordSize = llvm::alignTo(recordSize, tyAlign);
-    recordSize += cir::getTypeAllocSize(dataLayout, ty);
+    recordSize += dataLayout.getTypeAllocSize(ty);
   }
   return recordSize;
 }
@@ -970,7 +968,7 @@ uint64_t StructType::getElementOffset(const ::mlir::DataLayout &dataLayout,
     const llvm::Align tyAlign = llvm::Align(
         getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[i]));
     offset = llvm::alignTo(offset, tyAlign);
-    offset += cir::getTypeAllocSize(dataLayout, members[i]);
+    offset += dataLayout.getTypeAllocSize(members[i]);
   }
 
   const llvm::Align tyAlign = llvm::Align(
@@ -1424,8 +1422,7 @@ uint64_t VPtrType::getABIAlignment(const mlir::DataLayout &dataLayout,
 llvm::TypeSize
 ArrayType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                              ::mlir::DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(
-      getSize() * cir::getTypeAllocSize(dataLayout, getElementType()) * 8);
+  return getSize() * dataLayout.getTypeAllocSize(getElementType()) * 8;
 }
 
 uint64_t

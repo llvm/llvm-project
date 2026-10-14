@@ -40,7 +40,6 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
-#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
@@ -2832,7 +2831,7 @@ static uint64_t getTypeAllocSize(mlir::Type type, mlir::Operation &op) {
   // For LLVM purposes we treat void as u8.
   if (isa<cir::VoidType>(type))
     type = cir::IntType::get(type.getContext(), 8, /*isSigned=*/false);
-  return cir::getTypeAllocSize(layout, type);
+  return layout.getTypeAllocSize(type);
 }
 
 mlir::LogicalResult CIRToLLVMPrefetchOpLowering::matchAndRewrite(

@@ -2095,7 +2095,7 @@ mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
     bytePtr = roundPointerUpToAlignment(b, f.loc, bytePtr, tyAlign, f.dl);
 
   uint64_t stride =
-      llvm::alignTo(cir::getTypeAllocSize(f.dl, f.resultTy), UINT64_C(8));
+      llvm::alignTo(f.dl.getTypeAllocSize(f.resultTy).getFixedValue(), 8);
   mlir::Value strideVal = b.getSignedInt(f.loc, stride, 32);
   mlir::Value next = b.createPtrStride(f.loc, bytePtr, strideVal);
   b.createStore(f.loc, next, overflowP);
