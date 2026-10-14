@@ -170,17 +170,10 @@ define void @factor2_v2f32(ptr %src) {
 define void @factor2_v4i32(ptr %src) {
 ; CHECK-LABEL: factor2_v4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov.f32 s8, s1
-; CHECK-NEXT:    vmov.f32 s9, s3
-; CHECK-NEXT:    vmov.f32 s1, s2
-; CHECK-NEXT:    vmov.f32 s10, s5
-; CHECK-NEXT:    vmov.f32 s11, s7
-; CHECK-NEXT:    @ fake_use: $q2
-; CHECK-NEXT:    vmov.f32 s2, s4
-; CHECK-NEXT:    vmov.f32 s3, s6
+; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
+; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    @ fake_use: $q0
+; CHECK-NEXT:    @ fake_use: $q1
 ; CHECK-NEXT:    bx lr
   %load = load <8 x i32>, ptr %src
   %deinterleave = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %load)
