@@ -7401,7 +7401,8 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, DominatorTree *DT,
 }
 
 bool LoopVectorizePass::processLoop(Loop *L) {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
+  const VectorizeOptions &Opts =
+      L->getHeader()->getContext().getLibraryOptions().get<VectorizeOptions>();
   assert((Opts.enable_vplan_native_path || L->isInnermost()) &&
          "VPlan-native path is not enabled. Only process inner loops.");
 
@@ -7964,8 +7965,10 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
   // and can invalidate iterators across the loops.
   SmallVector<Loop *, 8> Worklist;
 
+  const VectorizeOptions &Opts =
+      F.getContext().getLibraryOptions().get<VectorizeOptions>();
   for (Loop *L : *LI)
-    collectSupportedLoops(VectorizeOptions::Global, *L, LI, ORE, Worklist);
+    collectSupportedLoops(Opts, *L, LI, ORE, Worklist);
 
   LoopsAnalyzed += Worklist.size();
 

@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def VectorizeOptions : OptionsStruct;
+def VectorizeOptions : OptionsStruct<perContext = true>;
 
 // LoopIdiomVectorize.cpp
 defm : BoolField<"disable-loop-idiom-vectorize-all", "false",

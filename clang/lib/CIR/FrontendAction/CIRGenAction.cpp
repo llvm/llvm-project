@@ -35,6 +35,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -367,6 +368,7 @@ CIRGenAction::CIRGenAction(OutputType Act, mlir::MLIRContext *MLIRCtx)
 CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
 
 bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
+  Ctx->getLibraryOptions().assign(CI.getLibraryOptions());
   if (clang::loadLinkModules(CI, *Ctx, LinkModules))
     return false;
   return ASTFrontendAction::BeginSourceFileAction(CI);

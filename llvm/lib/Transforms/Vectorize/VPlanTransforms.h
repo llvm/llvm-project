@@ -41,7 +41,7 @@ struct VPlanTransforms {
   LLVM_ABI_FOR_TEST static void verifyIfRequested(VPlan &Plan);
 
 #ifndef NDEBUG
-  LLVM_ABI_FOR_TEST static bool isPrintingRequested();
+  LLVM_ABI_FOR_TEST static bool isPrintingRequested(const VPlan &Plan);
 
   /// Print \p Plan of \p Fn before or after the pass \p NumberedPassName if
   /// requested.
@@ -65,7 +65,7 @@ struct VPlanTransforms {
     unsigned Instance;
     std::string NumberedPassName;
 
-    if (isPrintingRequested()) {
+    if (isPrintingRequested(Plan)) {
       Instance = ++PassCounter[{Fn, PassName}];
 
       NumberedPassName = Instance == 1

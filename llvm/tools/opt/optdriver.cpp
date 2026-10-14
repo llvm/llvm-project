@@ -456,8 +456,10 @@ optMain(int argc, char **argv,
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
 
-  cl::ParseCommandLineOptions(
-      argc, argv, "llvm .bc -> .bc modular optimizer and analysis printer\n");
+  LLVMContext Context;
+  cl::parseCommandLineOptions(
+      Context.getLibraryOptions(), ArrayRef(argv, argc),
+      "llvm .bc -> .bc modular optimizer and analysis printer\n");
 
   SmallVector<PassPluginLibraryInfo, 0> Extensions;
   for (const std::string &Path : PassPlugins) {
@@ -470,8 +472,6 @@ optMain(int argc, char **argv,
 #include "llvm/Support/Extension.def"
   if (Error E = passPluginArguments(Extensions, PluginArgs))
     reportFatalUsageError(std::move(E));
-
-  LLVMContext Context;
 
   // TODO: remove shouldForceLegacyPM().
   const bool UseNPM =
