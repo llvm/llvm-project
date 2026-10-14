@@ -729,6 +729,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when `__builtin_object_size` or
   `__builtin_dynamic_object_size` is called with an out-of-range type argument
   during constant evaluation. (#GH225041)
+- Fixed an assertion failure when constant-evaluating `__builtin_object_size`
+  or `__builtin_dynamic_object_size` with a type argument that is not an
+  integer constant expression. (#GH231108)
 
 #### Bug Fixes to Attribute Support
 
