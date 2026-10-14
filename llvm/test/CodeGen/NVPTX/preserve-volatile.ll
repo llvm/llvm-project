@@ -15,8 +15,8 @@ define ptx_kernel void @volatile_read(ptr noalias readonly %input, ptr %output) 
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; PTX-NEXT:    ld.param.b64 %rd3, [volatile_read_param_1];
 ; PTX-NEXT:    cvta.to.global.u64 %rd4, %rd3;
-; PTX-NEXT:    ld.global.nc.b32 %r1, [%rd2];
-; PTX-NEXT:    ld.global.nc.b32 %r2, [%rd2];
+; PTX-NEXT:    ld.volatile.global.b32 %r1, [%rd2];
+; PTX-NEXT:    ld.volatile.global.b32 %r2, [%rd2];
 ; PTX-NEXT:    add.s32 %r3, %r1, %r2;
 ; PTX-NEXT:    st.global.b32 [%rd4], %r3;
 ; PTX-NEXT:    ret;
@@ -26,9 +26,9 @@ define ptx_kernel void @volatile_read(ptr noalias readonly %input, ptr %output) 
 ; MIR-NEXT:   %1:b64 = cvta_to_global_64 [[LD_i64_]]
 ; MIR-NEXT:   [[LD_i64_1:%[0-9]+]]:b64 = LD_i64 0, 0, 101, 3, 64, -1, <mcsymbol volatile_read_param_1>, 0, 0, $noreg :: (dereferenceable invariant load (s64), addrspace 101)
 ; MIR-NEXT:   %3:b64 = cvta_to_global_64 [[LD_i64_1]]
-; MIR-NEXT:   [[LD_GLOBAL_NC_i32_:%[0-9]+]]:b32 = LD_GLOBAL_NC_i32 3, 32, -1, %1, 0, 0, $noreg
-; MIR-NEXT:   [[LD_GLOBAL_NC_i32_1:%[0-9]+]]:b32 = LD_GLOBAL_NC_i32 3, 32, -1, %1, 0, 0, $noreg
-; MIR-NEXT:   [[ADD32_:%[0-9]+]]:b32 = ADD32 [[LD_GLOBAL_NC_i32_]], [[LD_GLOBAL_NC_i32_1]]
+; MIR-NEXT:   [[LD_i32_:%[0-9]+]]:b32 = LD_i32 8, 0, 1, 3, 32, -1, %1, 0, 0, $noreg :: (volatile invariant load (s32) from %ir.1, addrspace 1)
+; MIR-NEXT:   [[LD_i32_1:%[0-9]+]]:b32 = LD_i32 8, 0, 1, 3, 32, -1, %1, 0, 0, $noreg :: (volatile invariant load (s32) from %ir.1, addrspace 1)
+; MIR-NEXT:   [[ADD32_:%[0-9]+]]:b32 = ADD32 [[LD_i32_]], [[LD_i32_1]]
 ; MIR-NEXT:   ST_i32 [[ADD32_]], 0, 0, 1, 32, %3, 0, 0, $noreg :: (store (s32) into %ir.2, addrspace 1)
 ; MIR-NEXT:   Return
   %a = load volatile i32, ptr %input, align 4
