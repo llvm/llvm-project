@@ -49,7 +49,7 @@ volatile int volatile_object_size_type = 0;
 _Static_assert(OBJECT_SIZE_BUILTIN((void *)0, volatile_object_size_type), ""); // expected-error {{static assertion expression is not an integral constant expression}}
 
 _Static_assert(OBJECT_SIZE_BUILTIN((void *)0, *(int *)0), ""); // expected-error {{static assertion expression is not an integral constant expression}} \
-                                                               expected-note {{dereferencing a null pointer is not allowed in a constant expression}}
+                                                                  expected-note {{dereferencing a null pointer is not allowed in a constant expression}}
 
 // cannot call vsnprintf with va_list on x86_64
 void f4(const char *fmt, ...) {
