@@ -2,8 +2,7 @@
 # RUN:   -verify-machineinstrs %s -o - | FileCheck %s
 
 # Debug uses do not stop an offset from being folded into the address of a
-# global. Those that described a value the fold changes or removes become
-# undef.
+# global. Those that described a value the fold changes become undef.
 
 --- |
   @values = external hidden global [2 x i64]
@@ -48,11 +47,12 @@ body:             |
     PseudoRET implicit $x10
 ...
 
-# The offset is folded into the address, so nothing computes it anymore.
+# The offset is folded into the address, so nothing computes it anymore. Its
+# debug use is left without a definition, so later passes drop it.
 # CHECK-LABEL: name: debug_use_of_offset
 # CHECK-NOT:   LUI 128
 # CHECK:       %hi:gpr = LUI target-flags(riscv-hi) @values + 524288
-# CHECK:       DBG_VALUE $noreg, $noreg
+# CHECK:       DBG_VALUE %off:gpr, $noreg
 # CHECK-NOT:   ADD
 # CHECK:       $x10 = COPY %lo
 ---

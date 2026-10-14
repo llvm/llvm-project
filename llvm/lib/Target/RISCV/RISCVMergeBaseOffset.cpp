@@ -145,13 +145,6 @@ bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
   return true;
 }
 
-/// Erase MI, whose result is left with only debug uses. Those cannot describe a
-/// value that is no longer computed.
-static void eraseWithDebugUses(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  MRI.markUsesInDebugValueAsUndef(MI.getOperand(0).getReg());
-  MI.eraseFromParent();
-}
-
 // Update the offset in Hi and Lo instructions.
 // Delete the tail instruction and update all the uses to use the
 // output from Lo.
@@ -242,7 +235,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
       LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail);
       if (!foldOffset(Hi, Lo, TailAdd, OffLo))
         return false;
-      eraseWithDebugUses(OffsetTail, *MRI);
+      OffsetTail.eraseFromParent();
       return true;
     }
 
@@ -264,8 +257,8 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
                       << "                 " << OffsetLui);
     if (!foldOffset(Hi, Lo, TailAdd, Offset))
       return false;
-    eraseWithDebugUses(OffsetTail, *MRI);
-    eraseWithDebugUses(OffsetLui, *MRI);
+    OffsetTail.eraseFromParent();
+    OffsetLui.eraseFromParent();
     return true;
   } else if (OffsetTailOpc == RISCV::LUI) {
     // The offset value has all zero bits in the lower 12 bits. Only LUI
@@ -274,7 +267,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     int64_t Offset = SignExtend64<32>(OffsetTail.getOperand(1).getImm() << 12);
     if (!foldOffset(Hi, Lo, TailAdd, Offset))
       return false;
-    eraseWithDebugUses(OffsetTail, *MRI);
+    OffsetTail.eraseFromParent();
     return true;
   }
   return false;
@@ -334,7 +327,7 @@ bool RISCVMergeBaseOffsetOpt::foldShiftedOffset(MachineInstr &Hi,
   LLVM_DEBUG(dbgs() << "  Offset Instr: " << OffsetTail);
   if (!foldOffset(Hi, Lo, TailShXAdd, Offset))
     return false;
-  eraseWithDebugUses(OffsetTail, *MRI);
+  OffsetTail.eraseFromParent();
   return true;
 }
 
@@ -370,7 +363,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
           LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);
           if (!foldOffset(Hi, Lo, TailTail, Offset))
             return false;
-          eraseWithDebugUses(Tail, *MRI);
+          Tail.eraseFromParent();
           return true;
         }
       }
