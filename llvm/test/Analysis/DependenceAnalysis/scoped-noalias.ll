@@ -106,7 +106,6 @@ exit:
   ret void
 }
 
-!0 = !{!0}
 
 
 ; Decl is called between the two loops. The load and store do not alias, but the
@@ -156,5 +155,6 @@ exit:
   ret void
 }
 
-!1 = !{!1, !0}
+!0 = distinct !{!0, i1 false, !"domain"}
+!1 = distinct !{!1, !0, !"scope"}
 !2 = !{!1}
