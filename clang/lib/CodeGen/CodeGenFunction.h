@@ -4586,7 +4586,7 @@ public:
   std::pair<LValue, LValue> EmitHLSLOutArgLValues(const HLSLOutArgExpr *E,
                                                   QualType Ty);
   LValue EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
-                            QualType Ty);
+                            QualType Ty, bool IsImplicitObject = false);
 
   Address EmitExtVectorElementLValue(LValue V);
 

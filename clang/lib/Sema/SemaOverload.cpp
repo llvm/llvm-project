@@ -6346,14 +6346,35 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
 
   LangAS FromAS = From->getType().getAddressSpace();
   if (getLangOpts().HLSL &&
-      (FromAS == LangAS::hlsl_constant || FromAS == LangAS::hlsl_groupshared)) {
-    QualType CastType = From->getType().getLocalUnqualifiedType();
-    if (FromAS == LangAS::hlsl_constant)
-      CastType = CastType.withConst();
-
+      (FromAS == LangAS::hlsl_constant ||
+       (FromAS == LangAS::hlsl_groupshared && Method->isConst()))) {
+    QualType CastType = From->getType().getLocalUnqualifiedType().withConst();
     From = ImplicitCastExpr::Create(Context, CastType, CK_LValueToRValue, From,
                                     /*BasePath=*/nullptr, VK_PRValue,
                                     FPOptionsOverride());
+  } else if (getLangOpts().HLSL && FromAS == LangAS::hlsl_groupshared) {
+    ASTContext &Ctx = SemaRef.getASTContext();
+    QualType Ty =
+        From->getType().getLocalUnqualifiedType().getNonLValueExprType(Ctx);
+    InitializedEntity Entity = InitializedEntity::InitializeTemporary(Ty);
+    auto *FromOpV = new (Ctx) OpaqueValueExpr(
+        From->getBeginLoc(), From->getType().getLocalUnqualifiedType(),
+        VK_LValue, OK_Ordinary, From);
+    ExprResult Res =
+        SemaRef.PerformCopyInitialization(Entity, From->getBeginLoc(), From);
+    if (Res.isInvalid())
+      return ExprError();
+    Expr *Base = Res.get();
+    auto *OpV = new (Ctx)
+        OpaqueValueExpr(From->getBeginLoc(), Ty, VK_LValue, OK_Ordinary, Base);
+
+    Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), From->getBeginLoc(),
+                             tok::equal, FromOpV, OpV);
+    if (Res.isInvalid())
+      return ExprError();
+    Expr *Writeback = Res.get();
+    From = HLSLOutArgExpr::Create(Ctx, Ty, FromOpV, OpV, Writeback,
+                                  /*IsInOut=*/true);
   }
 
   Expr::Classification FromClassification;
