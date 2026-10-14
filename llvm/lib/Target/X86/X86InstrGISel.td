@@ -41,16 +41,24 @@ def G_FLDCW16 : X86GenericInstruction {
   let mayLoad = true;
 }
 
+def G_X86_SHUFP : X86GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, untyped_imm_0:$imm);
+  let hasSideEffects = false;
+}
+
 // RIP-relative address wrapper for PIC mode global access.
 // Equivalent to X86ISD::WrapperRIP in SelectionDAG.
 def G_WRAPPER_RIP : X86GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
   let hasSideEffects = false;
-}
+} 
 
 def : GINodeEquiv<G_FILD, X86fild>;
 def : GINodeEquiv<G_FIST, X86fp_to_mem>;
 def : GINodeEquiv<G_FNSTCW16, X86fp_cwd_get16>;
 def : GINodeEquiv<G_FLDCW16, X86fp_cwd_set16>;
+
+def : GINodeEquiv<G_X86_SHUFP, X86Shufp>;
 def : GINodeEquiv<G_WRAPPER_RIP, X86WrapperRIP>;
