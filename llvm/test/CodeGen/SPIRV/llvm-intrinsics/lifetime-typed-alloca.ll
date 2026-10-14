@@ -10,8 +10,16 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --implicit-check-not=OpBitcast
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; Shaders drop lifetime markers entirely.
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - | FileCheck %s --check-prefix=VK --implicit-check-not=OpLifetime --implicit-check-not=OpBitcast
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
+
 ; CHECK-NOT: OpCapability Int8
 ; CHECK-NOT: OpTypeInt 8
+
+; VK: OpCapability Shader
+; VK-NOT: OpCapability Int8
+; VK-NOT: OpTypeInt 8
 
 %struct = type { i64, float }
 
