@@ -1302,7 +1302,7 @@ std::optional<uint64_t> Context::isSupportedType(
       return std::nullopt;
     }
     // Now the multiplication never overflows.
-    return *ElementBits * getEVL(EC);
+    return alignTo(*ElementBits * getEVL(EC), DL.getABITypeAlign(Ty).value());
   }
   case Type::ArrayTyID: {
     if (uint64_t Size = ValidAggTys.lookup(Ty))
