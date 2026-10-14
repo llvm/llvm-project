@@ -211,6 +211,7 @@ CXX_OPERATOR_ATTRIBUTE
 void operator delete(void* ptr, size_t size, std::align_val_t align) NOEXCEPT {
   OPERATOR_DELETE_BODY_SIZE_ALIGN;
 }
+2
 CXX_OPERATOR_ATTRIBUTE
 void operator delete[](void* ptr, size_t size,
                        std::align_val_t align) NOEXCEPT {
@@ -227,3 +228,5 @@ INTERCEPTOR(void, _ZdaPvRKSt9nothrow_t, void* ptr, std::nothrow_t const&) {
   OPERATOR_DELETE_BODY_ARRAY;
 }
 #endif  // !SANITIZER_APPLE
+
+1
