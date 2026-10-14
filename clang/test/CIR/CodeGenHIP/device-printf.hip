@@ -2,30 +2,30 @@
 // RUN: | FileCheck --check-prefixes=CIR,CIR-HOSTCALL %s
 // RUN: %clang_cc1 -triple=amdgpu9.0a-amd-amdhsa -x hip -fcuda-is-device -fcxx-exceptions -fexceptions -fclangir -mprintf-kind=buffered -emit-cir %s -o - \
 // RUN: | FileCheck --check-prefixes=CIR,CIR-BUFFERED %s
-// RUN: %clang_cc1 -triple=amdgpu9.0a-amd-amdhsa -x hip -fcxx-exceptions -fexceptions -fclangir -fcuda-is-device -emit-llvm %s -o - | FileCheck --check-prefix=LLVM  %s
+// RUN: %clang_cc1 -triple=amdgpu9.0a-amd-amdhsa -x hip -fcxx-exceptions -fexceptions -fclangir -fcuda-is-device -emit-llvm %s -o - | FileCheck --check-prefixes=LLVM,LLVM-CIR %s
 // RUN: %clang_cc1 -triple=amdgpu9.0a-amd-amdhsa -x hip -fcuda-is-device -fcxx-exceptions -fexceptions -emit-llvm %s -o - \
-// RUN: | FileCheck --check-prefix=LLVM %s
+// RUN: | FileCheck --check-prefixes=LLVM,LLVM-OGCG %s
 // RUN: %clang_cc1 -triple=amdgpu9.0a-amd-amdhsa -x hip -fcuda-is-device -fcxx-exceptions -fexceptions -fclangir -mprintf-kind=buffered -emit-llvm %s -o - \
-// RUN: | FileCheck --check-prefix=BUFFERED %s
+// RUN: | FileCheck --check-prefixes=BUFFERED,BUFFERED-CIR %s
 // RUN: %clang_cc1 -triple=amdgpu9.0a-amd-amdhsa -x hip -fcuda-is-device -fcxx-exceptions -fexceptions -mprintf-kind=buffered -emit-llvm %s -o - \
-// RUN: | FileCheck --check-prefix=BUFFERED %s
+// RUN: | FileCheck --check-prefixes=BUFFERED,BUFFERED-OGCG %s
 
 // RUN: %clang_cc1 -triple=spirv64-amd-amdhsa -x hip -fcuda-is-device -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o - \
 // RUN: | FileCheck --check-prefixes=CIR,CIR-HOSTCALL %s
 // RUN: %clang_cc1 -triple=spirv64-amd-amdhsa -x hip -fcuda-is-device -fcxx-exceptions -fexceptions -fclangir -mprintf-kind=buffered -emit-cir %s -o - \
 // RUN: | FileCheck --check-prefixes=CIR,CIR-BUFFERED %s
 // RUN: %clang_cc1 -triple=spirv64-amd-amdhsa -x hip -fcuda-is-device -fcxx-exceptions -fexceptions -fclangir -emit-llvm %s -o - \
-// RUN: | FileCheck --check-prefix=LLVM %s
+// RUN: | FileCheck --check-prefixes=LLVM,LLVM-CIR %s
 // RUN: %clang_cc1 -triple=spirv64-amd-amdhsa -x hip -fcuda-is-device -fcxx-exceptions -fexceptions -emit-llvm %s -o - \
-// RUN: | FileCheck --check-prefix=LLVM %s
+// RUN: | FileCheck --check-prefixes=LLVM,LLVM-OGCG %s
 // RUN: %clang_cc1 -triple=spirv64-amd-amdhsa -x hip -fcuda-is-device -fcxx-exceptions -fexceptions -fclangir -mprintf-kind=buffered -emit-llvm %s -o - \
-// RUN: | FileCheck --check-prefix=BUFFERED %s
+// RUN: | FileCheck --check-prefixes=BUFFERED,BUFFERED-CIR %s
 // RUN: %clang_cc1 -triple=spirv64-amd-amdhsa -x hip -fcuda-is-device -fcxx-exceptions -fexceptions -mprintf-kind=buffered -emit-llvm %s -o - \
-// RUN: | FileCheck --check-prefix=BUFFERED %s
+// RUN: | FileCheck --check-prefixes=BUFFERED,BUFFERED-OGCG %s
 
 // Device printf is emitted as cir.offload.printf, which AMDGPU expands into the
 // OpenCL printf runtime: hostcall by default, or the buffered kind with
-// -mprintf-kind=buffered. Both must match classic codegen.
+// -mprintf-kind=buffered.
 
 #define __device__ __attribute__((device))
 extern "C" __device__ int printf(const char *, ...);
@@ -247,12 +247,53 @@ __device__ void many(int a, long b, double c, void *d, float e, char f,
 __device__ void off() { printf(&"xx%s|\n"[2], "skip-me" + 5); }
 #pragma clang diagnostic pop
 
+// A constant format in a deferred global. Classic codegen expands printf before
+// the global's initializer is emitted, so it treats the format as non-constant
+// and passes the %s argument as a pointer value.
+// CIR-LABEL: cir.func {{.*}} @_Z2bfv(
+// CIR: cir.get_global @_ZL9brace_fmt
+// CIR: %[[FMT:.*]] = cir.cast array_to_ptrdecay
+// CIR: %[[STR:.*]] = cir.cast array_to_ptrdecay
+// CIR: cir.offload.printf(%[[FMT]], %[[STR]])
+// LLVM-LABEL: @_Z2bfv(
+// LLVM: [[D0:%.*]] = call{{.*}} i64 @__ockl_printf_begin(i64 0)
+// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@_ZL9brace_fmt{{.*}}, i64 {{%.*}}, i32 0)
+// LLVM-CIR-NOT: @__ockl_printf_append_args
+// LLVM-CIR: call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D1]], ptr{{.*}}@.str.7{{.*}}, i64 {{%.*}}, i32 1)
+// LLVM-OGCG: call{{.*}} i64 @__ockl_printf_append_args(i64 [[D1]], i32 1, i64 ptrtoint ({{.*}}@.str.7{{.*}}), i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 1)
+// BUFFERED-LABEL: @_Z2bfv(
+// BUFFERED-CIR: [[BUF:%.*]] = call{{.*}} ptr addrspace(1) @__printf_alloc(i32 20)
+// BUFFERED-CIR: store i32 82, ptr addrspace(1) [[BUF]], align 4
+// BUFFERED-CIR: [[P0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[BUF]], i32 4
+// BUFFERED-CIR: store i64 -88937716022153584, ptr addrspace(1) [[P0]], align 8
+// BUFFERED-CIR: [[P1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P0]], i32 8
+// BUFFERED-CIR: store i32 120, ptr addrspace(1) [[P1]], align 4
+// BUFFERED-CIR: [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P1]], i32 4
+// BUFFERED-CIR: store i32 0, ptr addrspace(1) [[P2]], align 4
+// BUFFERED-OGCG: [[LEN:%.*]] = phi i64
+// BUFFERED-OGCG: [[ADD:%.*]] = add i64 [[LEN]], 7
+// BUFFERED-OGCG: [[ALIGNED:%.*]] = and i64 [[ADD]], 4294967288
+// BUFFERED-OGCG: [[TOTAL:%.*]] = add i64 [[ALIGNED]], 12
+// BUFFERED-OGCG: [[SIZE:%.*]] = trunc i64 [[TOTAL]] to i32
+// BUFFERED-OGCG: [[BUF:%.*]] = call{{.*}} ptr addrspace(1) @__printf_alloc(i32 [[SIZE]])
+// BUFFERED-OGCG: [[CTRL:%.*]] = shl i32 [[SIZE]], 2
+// BUFFERED-OGCG-NEXT: store i32 [[CTRL]], ptr addrspace(1) [[BUF]], align 4
+// BUFFERED-OGCG-NEXT: [[P0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[BUF]], i32 4
+// BUFFERED-OGCG-NEXT: call{{.*}} void @llvm.memcpy.p1.{{p0|p4}}.i64(ptr addrspace(1){{.*}} [[P0]], ptr{{.*}}@_ZL9brace_fmt{{.*}}, i64 [[LEN]], i1 false)
+// BUFFERED-OGCG-NEXT: [[P1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P0]], i64 [[ALIGNED]]
+// BUFFERED-OGCG-NEXT: store ptr{{.*}}@.str.7{{.*}}, ptr addrspace(1) [[P1]], align 8
+const char brace_fmt[] = {'%', 's', '\n', 0};
+__device__ void bf() { printf(brace_fmt, "x"); }
+
 // Constant formats are recorded with the low 64 bits of their MD5 hash, in
-// emission order. The runtime format in nf adds no entry.
+// emission order. The runtime format in nf adds no entry, nor does brace_fmt
+// in classic codegen.
 // LLVM-NOT: !llvm.printf.fmts
-// BUFFERED: !llvm.printf.fmts = !{[[F0:![0-9]+]], [[F0]], [[F0]], [[F1:![0-9]+]], [[F2:![0-9]+]], [[F3:![0-9]+]], [[F4:![0-9]+]]}
+// BUFFERED-CIR: !llvm.printf.fmts = !{[[F0:![0-9]+]], [[F0]], [[F0]], [[F1:![0-9]+]], [[F2:![0-9]+]], [[F3:![0-9]+]], [[F4:![0-9]+]], [[F5:![0-9]+]]}
+// BUFFERED-OGCG: !llvm.printf.fmts = !{[[F0:![0-9]+]], [[F0]], [[F0]], [[F1:![0-9]+]], [[F2:![0-9]+]], [[F3:![0-9]+]], [[F4:![0-9]+]]}
 // BUFFERED-DAG: [[F0]] = !{!"0:0:d0c6b786f3b15530,%d\0A"}
 // BUFFERED-DAG: [[F1]] = !{!"0:0:4a046e29962e76f2,%s|%s\0A"}
 // BUFFERED-DAG: [[F2]] = !{!"0:0:34d29224c96a94b1,hello\0A"}
 // BUFFERED-DAG: [[F3]] = !{!"0:0:d65d67a83a8c421d,%d %ld %f %p %f %c %llu %hd\0A"}
 // BUFFERED-DAG: [[F4]] = !{!"0:0:a64db8027ff6276,%s|\0A"}
+// BUFFERED-CIR-DAG: [[F5]] = !{!"0:0:fec4079e555d6e90,%s\0A"}
