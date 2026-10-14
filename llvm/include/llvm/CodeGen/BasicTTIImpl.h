@@ -331,7 +331,8 @@ private:
     }
 
     // Find associated libcall.
-    RTLIB::LibcallImpl LibcallImpl = getTLI()->getLibcallImpl(LC);
+    RTLIB::LibcallImpl LibcallImpl =
+        getTLI()->getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC);
     if (LibcallImpl == RTLIB::Unsupported)
       return std::nullopt;
 

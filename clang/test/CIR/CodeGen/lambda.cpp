@@ -238,8 +238,7 @@ int f() {
 // CIR:   %[[G2:.*]] = cir.call @_Z2g2v() : () -> !cir.ptr<!void>
 // CIR:   cir.store %[[G2]], %[[COERCE]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:   %[[COERCE_REC:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<![[REC_LAM_G2]]>
-// CIR:   %[[LAM:.*]] = cir.load %[[COERCE_REC]] : !cir.ptr<![[REC_LAM_G2]]>, ![[REC_LAM_G2]]
-// CIR:   cir.store{{.*}} %[[LAM]], %[[TMP]]
+// CIR:   cir.copy %[[COERCE_REC]] align(8) to %[[TMP]] align(8) : !cir.ptr<![[REC_LAM_G2]]>
 // CIR:   %[[RESULT:.*]] = cir.call @_ZZ2g2vENK3$_0clEv(%[[TMP]])
 // CIR:   cir.store{{.*}} %[[RESULT]], %[[RETVAL]]
 // CIR:   %[[RET:.*]] = cir.load{{.*}} %[[RETVAL]]
@@ -269,8 +268,7 @@ int f() {
 // LLVM:   %[[TMP:.*]] = alloca %[[REC_LAM_G2:[^,]*]],
 // LLVM:   %[[G2:.*]] = call ptr @_Z2g2v()
 // LLVM:   store ptr %[[G2]], ptr %[[COERCE]]
-// LLVM:   %[[LAM:.*]] = load %[[REC_LAM_G2]], ptr %[[COERCE]]
-// LLVM:   store %[[REC_LAM_G2]] %[[LAM]], ptr %[[TMP]]
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP]], ptr align 8 %[[COERCE]], i64 8, i1 false)
 // LLVM:   %[[RESULT:.*]] = call {{.*}}i32 @"_ZZ2g2vENK3$_0clEv"(ptr {{.*}} %[[TMP]])
 // LLVM:   store i32 %[[RESULT]], ptr %[[RETVAL]]
 // LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
