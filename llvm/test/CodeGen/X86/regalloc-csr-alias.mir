@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=i386 -run-pass=greedy,virt-reg-rewriter -regalloc-csr-cost-scale=100 -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=i386 -passes=greedy,virt-reg-rewriter -regalloc-csr-cost-scale=100 -verify-machineinstrs %s -o - | FileCheck %s
 
 # BL already requires saving EBX, so allocating BH adds no CSR cost. The
 # control verifies that a genuinely unused CSR is still avoided.

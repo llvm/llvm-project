@@ -1,8 +1,8 @@
 # RUN: llc -x mir -mtriple=x86_64-unknown-linux-gnu \
-# RUN:   -run-pass=greedy,virt-reg-rewriter -restrict-statepoint-remat \
+# RUN:   -passes=greedy,virt-reg-rewriter -restrict-statepoint-remat \
 # RUN:   -regalloc-csr-cost-scale=100 < %s | FileCheck %s --check-prefix=CSR
 # RUN: llc -x mir -mtriple=x86_64-unknown-linux-gnu \
-# RUN:   -run-pass=greedy,virt-reg-rewriter -restrict-statepoint-remat=false \
+# RUN:   -passes=greedy,virt-reg-rewriter -restrict-statepoint-remat=false \
 # RUN:   -regalloc-csr-cost-scale=100 < %s | FileCheck %s --check-prefix=REMAT
 
 --- |
