@@ -41,6 +41,7 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
@@ -333,6 +334,7 @@ CodeGenerator *CodeGenAction::getCodeGenerator() const {
 }
 
 bool CodeGenAction::BeginSourceFileAction(CompilerInstance &CI) {
+  VMContext->getLibraryOptions().assign(CI.getLibraryOptions());
   if (CI.getFrontendOpts().GenReducedBMI)
     CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
   return ASTFrontendAction::BeginSourceFileAction(CI);
