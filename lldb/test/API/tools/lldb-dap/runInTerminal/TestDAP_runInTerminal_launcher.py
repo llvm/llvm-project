@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+import uuid
 
 from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
@@ -13,7 +14,6 @@ from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 if sys.platform == "win32":
     import ctypes
     import ctypes.wintypes
-    import uuid
 
 
 class CommChannel:
@@ -79,7 +79,7 @@ class CommChannel:
     else:
 
         def __init__(self, directory: str):
-            self.path = os.path.join(directory, "comm-file")
+            self.path = os.path.join(directory, f"comm-file{uuid.uuid4().hex}")
             os.mkfifo(self.path)
 
         def read_message(self) -> str:
@@ -91,7 +91,8 @@ class CommChannel:
                 file.write(message)
 
         def close(self) -> None:
-            pass
+            if os.path.exists(self.path):
+                os.unlink(self.path)
 
     def __enter__(self) -> "CommChannel":
         return self
@@ -105,7 +106,6 @@ class CommChannel:
 
 @skipIfWasm  # runInTerminal has the client run the program, and a Wasm module is not executable
 class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
-    SHARED_BUILD_TESTCASE = False
     USE_DEFAULT_DEBUG_ADAPTER = False
 
     def test_launch_target_requires_comm_file(self):
@@ -148,6 +148,7 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
                 self.assertIn("No such file or directory", stderr)
 
     def test_launches_program_after_attach(self):
+        self.build()
         build_dir = self.getBuildDir()
         with CommChannel(build_dir) as channel:
             proc = subprocess.Popen(
@@ -156,6 +157,7 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
                     "--comm-file",
                     channel.path,
                     "--launch-target",
+                    self.getBuildArtifact("a.out"),
                     "echo",
                     "foo",
                 ],
@@ -171,6 +173,7 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
         self.assertIn("foo", stdout)
 
     def test_program_inherits_environment(self):
+        self.build()
         with CommChannel(self.getBuildDir()) as channel:
             proc = subprocess.Popen(
                 [
@@ -178,6 +181,7 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
                     "--comm-file",
                     channel.path,
                     "--launch-target",
+                    self.getBuildArtifact("a.out"),
                     "env",
                 ],
                 universal_newlines=True,
@@ -200,6 +204,7 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
                     "--comm-file",
                     channel.path,
                     "--launch-target",
+                    self.getBuildArtifact("a.out"),
                     "echo",
                     "foo",
                 ],

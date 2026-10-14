@@ -27,7 +27,7 @@ class TestDAP_runInTerminal(DAPTestCaseBase):
         launch_args = LaunchArgs(
             program,
             console=Console.INTEGRATED_TERMINAL,
-            args=["foobar"],
+            args=["no_cmd"],
             env=["FOO=bar"],
         )
         with session.configure(launch_args) as ctx:
@@ -37,7 +37,7 @@ class TestDAP_runInTerminal(DAPTestCaseBase):
         request_args = self.run_in_terminal_args(session)
         self.assertIn(self.lldb_dap_exe, request_args.args)
         self.assertIn(program, request_args.args)
-        self.assertIn("foobar", request_args.args)
+        self.assertIn("no_cmd", request_args.args)
         request_env = self.expect_not_none(request_args.env)
         self.assertIn("FOO", request_env)
         if sys.platform == "win32":
@@ -51,7 +51,7 @@ class TestDAP_runInTerminal(DAPTestCaseBase):
 
         # We verify we were able to set the launch arguments.
         self.assertEqual(frame.locals["argc"].value_as_int, 2)
-        self.assertIn("foobar", frame.evaluate("argv[1]").result)
+        self.assertIn("no_cmd", frame.evaluate("argv[1]").result)
 
         # We verify we were able to set the environment.
         self.assertIn("bar", frame.evaluate("foo").result)
@@ -87,7 +87,7 @@ class TestDAP_runInTerminal(DAPTestCaseBase):
             LaunchArgs(
                 program,
                 console=Console.INTEGRATED_TERMINAL,
-                args=["foobar"],
+                args=["echo", "foobar"],
                 env=["FOO=bar"],
             )
         )
