@@ -59,10 +59,15 @@ declare i32 @__gxx_personality_v0(...)
 ;--- noflag.ll
 target triple = "wasm32-unknown-unknown"
 
+; The landing pad is unreachable once the invoke is lowered, so it is removed.
 ; NOFLAG-LABEL: define void @f()
 ; NOFLAG-NEXT:  entry:
 ; NOFLAG-NEXT:    call void @g()
-; NOFLAG-NOT:     invoke
+; NOFLAG-NEXT:    br label %cont
+; NOFLAG-EMPTY:
+; NOFLAG-NEXT:  cont:
+; NOFLAG-NEXT:    ret void
+; NOFLAG-NEXT:  }
 
 define void @f() personality ptr @__gxx_personality_v0 {
 entry:
