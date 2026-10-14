@@ -153,27 +153,17 @@ private:
   /// The branch condition in Head as determined by analyzeBranch.
   SmallVector<MachineOperand, 4> HeadCond;
 
-  /// The condition code that makes Head branch to CmpBB.
-  AArch64CC::CondCode HeadCmpBBCC;
-
   /// The branch condition in CmpBB.
   SmallVector<MachineOperand, 4> CmpBBCond;
 
-  /// The condition code that makes CmpBB branch to Tail.
-  AArch64CC::CondCode CmpBBTailCC;
+  /// Target-owned recognition/emission state produced by canConvertToCCMP().
+  TargetInstrInfo::CCmpConvInfo Info;
 
   /// Check if the Tail PHIs are trivially convertible.
   bool trivialTailPHIs();
 
   /// Remove CmpBB from the Tail PHIs.
   void updateTailPHIs();
-
-  /// Check if an operand defining DstReg is dead.
-  bool isDeadDef(unsigned DstReg);
-
-  /// Find the compare instruction in MBB that controls the conditional branch.
-  /// Return NULL if a convertible instruction can't be found.
-  MachineInstr *findConvertibleCompare(MachineBasicBlock *MBB);
 
   /// Return true if all non-terminator instructions in MBB can be safely
   /// speculated.
@@ -201,7 +191,7 @@ public:
 
   /// Return the expected code size delta if the conversion into a
   /// conditional compare is performed.
-  int expectedCodeSizeDelta() const;
+  int expectedCodeSizeDelta() const { return Info.CodeSizeDelta; }
 };
 } // end anonymous namespace
 
@@ -261,7 +251,7 @@ void SSACCmpConv::updateTailPHIs() {
 
 // This pass runs before the AArch64DeadRegisterDefinitions pass, so compares
 // are still writing virtual registers without any uses.
-bool SSACCmpConv::isDeadDef(unsigned DstReg) {
+static bool isDeadDef(const MachineRegisterInfo &MRI, unsigned DstReg) {
   // Writes to the zero register are dead.
   if (DstReg == AArch64::WZR || DstReg == AArch64::XZR)
     return true;
@@ -269,7 +259,7 @@ bool SSACCmpConv::isDeadDef(unsigned DstReg) {
     return false;
   // A virtual register def without any uses will be marked dead later, and
   // eventually replaced by the zero register.
-  return MRI->use_nodbg_empty(DstReg);
+  return MRI.use_nodbg_empty(DstReg);
 }
 
 // Parse a condition code returned by analyzeBranch, and compute the CondCode
@@ -299,7 +289,7 @@ static bool parseCond(ArrayRef<MachineOperand> Cond, AArch64CC::CondCode &CC) {
     CC = AArch64CC::NE;
     return true;
 
-  // For CB, cond is { -1, Opcode, CC, Op0, Op1 }
+    // For CB, cond is { -1, Opcode, CC, Op0, Op1 }
   case AArch64::CBWPri:
   case AArch64::CBXPri:
   case AArch64::CBWPrr:
@@ -319,7 +309,9 @@ static bool parseCond(ArrayRef<MachineOperand> Cond, AArch64CC::CondCode &CC) {
   }
 }
 
-MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
+static MachineInstr *findConvertibleCompare(MachineBasicBlock *MBB,
+                                            const MachineRegisterInfo &MRI,
+                                            const TargetRegisterInfo *TRI) {
   MachineBasicBlock::iterator I = MBB->getFirstTerminator();
   if (I == MBB->end())
     return nullptr;
@@ -390,7 +382,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
     case AArch64::SUBSXrr:
     case AArch64::ADDSWrr:
     case AArch64::ADDSXrr:
-      if (isDeadDef(I->getOperand(0).getReg()))
+      if (isDeadDef(MRI, I->getOperand(0).getReg()))
         return &*I;
       LLVM_DEBUG(dbgs() << "Can't convert compare with live destination: "
                         << *I);
@@ -492,6 +484,8 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
 bool SSACCmpConv::canConvert(MachineBasicBlock *MBB) {
   Head = MBB;
   Tail = CmpBB = nullptr;
+  CmpMI = nullptr;
+  Info = TargetInstrInfo::CCmpConvInfo();
 
   if (Head->succ_size() != 2)
     return false;
@@ -568,17 +562,9 @@ bool SSACCmpConv::canConvert(MachineBasicBlock *MBB) {
     return false;
   }
 
-  if (!parseCond(HeadCond, HeadCmpBBCC)) {
-    LLVM_DEBUG(dbgs() << "Unsupported branch type on Head\n");
-    ++NumHeadBranchRejs;
-    return false;
-  }
-
-  // Make sure the branch direction is right.
-  if (TBB != CmpBB) {
-    assert(TBB == Tail && "Unexpected TBB");
-    HeadCmpBBCC = AArch64CC::getInvertedCondCode(HeadCmpBBCC);
-  }
+  // Remember whether Head branches to CmpBB before TBB is reused below.
+  assert((TBB == CmpBB || TBB == Tail) && "Unexpected TBB");
+  bool HeadTBBIsCmpBB = TBB == CmpBB;
 
   CmpBBCond.clear();
   TBB = FBB = nullptr;
@@ -595,23 +581,15 @@ bool SSACCmpConv::canConvert(MachineBasicBlock *MBB) {
     return false;
   }
 
-  if (!parseCond(CmpBBCond, CmpBBTailCC)) {
-    LLVM_DEBUG(dbgs() << "Unsupported branch type on CmpBB\n");
-    ++NumCmpBranchRejs;
+  // Delegate target-specific recognition: condition-code parsing/reject-lists,
+  // any target-specific terminator constraints, and finding the convertible
+  // compare. The condition arrays are passed opaquely; the booleans tell the
+  // target whether analyzeBranch's TBB is the desired successor so it can apply
+  // its own condition-code inversion.
+  if (!TII->canConvertToCCMP(*Head, *CmpBB, HeadCond, HeadTBBIsCmpBB, CmpBBCond,
+                             TBB == Tail, *MRI, Info))
     return false;
-  }
-
-  if (TBB != Tail)
-    CmpBBTailCC = AArch64CC::getInvertedCondCode(CmpBBTailCC);
-
-  LLVM_DEBUG(dbgs() << "Head->CmpBB on "
-                    << AArch64CC::getCondCodeName(HeadCmpBBCC)
-                    << ", CmpBB->Tail on "
-                    << AArch64CC::getCondCodeName(CmpBBTailCC) << '\n');
-
-  CmpMI = findConvertibleCompare(CmpBB);
-  if (!CmpMI)
-    return false;
+  CmpMI = Info.CmpMI;
 
   if (!canSpeculateInstrs(CmpBB, CmpMI)) {
     ++NumSpeculateRejs;
@@ -666,116 +644,19 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   DebugLoc TermDL = Head->getFirstTerminator()->getDebugLoc();
   TII->removeBranch(*Head);
 
-  // If the Head terminator was one of the cb / cbz / tbz branches with built-in
-  // compare, we need to insert an explicit compare instruction in its place.
-  if (HeadCond[0].getImm() == -1) {
-    ++NumCompBranches;
-    TII->insertCmpForCondBr(*Head, Head->end(), TermDL, HeadCond);
-  }
+  // Remember the splice boundary: the first CmpBB instruction, which after the
+  // splice below becomes the insertion point in Head for any synthesized Head
+  // compare (e.g. a cbz/cbnz head).
+  assert(!CmpBB->empty() && "CmpBB unexpectedly empty");
+  MachineInstr *SpliceStart = &CmpBB->front();
 
   Head->splice(Head->end(), CmpBB, CmpBB->begin(), CmpBB->end());
 
-  // Now replace CmpMI with a ccmp instruction that also considers the incoming
-  // flags.
-  unsigned Opc = 0;
-  unsigned FirstOp = 1;   // First CmpMI operand to copy.
-  bool isZBranch = false; // CmpMI is a cbz/cbnz instruction.
-  switch (CmpMI->getOpcode()) {
-  default:
-    llvm_unreachable("Unknown compare opcode");
-  case AArch64::SUBSWri:    Opc = AArch64::CCMPWi; break;
-  case AArch64::SUBSWrr:    Opc = AArch64::CCMPWr; break;
-  case AArch64::SUBSXri:    Opc = AArch64::CCMPXi; break;
-  case AArch64::SUBSXrr:    Opc = AArch64::CCMPXr; break;
-  case AArch64::ADDSWri:    Opc = AArch64::CCMNWi; break;
-  case AArch64::ADDSWrr:    Opc = AArch64::CCMNWr; break;
-  case AArch64::ADDSXri:    Opc = AArch64::CCMNXi; break;
-  case AArch64::ADDSXrr:    Opc = AArch64::CCMNXr; break;
-  case AArch64::FCMPSrr:    Opc = AArch64::FCCMPSrr; FirstOp = 0; break;
-  case AArch64::FCMPDrr:    Opc = AArch64::FCCMPDrr; FirstOp = 0; break;
-  case AArch64::FCMPESrr:   Opc = AArch64::FCCMPESrr; FirstOp = 0; break;
-  case AArch64::FCMPEDrr:   Opc = AArch64::FCCMPEDrr; FirstOp = 0; break;
-  case AArch64::CBZW:
-  case AArch64::CBNZW:
-    Opc = AArch64::CCMPWi;
-    FirstOp = 0;
-    isZBranch = true;
-    break;
-  case AArch64::CBZX:
-  case AArch64::CBNZX:
-    Opc = AArch64::CCMPXi;
-    FirstOp = 0;
-    isZBranch = true;
-    break;
-  case AArch64::CBWPri:
-    Opc = AArch64::CCMPWi;
-    FirstOp = 1;
-    break;
-  case AArch64::CBXPri:
-    Opc = AArch64::CCMPXi;
-    FirstOp = 1;
-    break;
-  case AArch64::CBWPrr:
-  case AArch64::CBBAssertExt:
-  case AArch64::CBHAssertExt:
-    Opc = AArch64::CCMPWr;
-    FirstOp = 1;
-    break;
-  case AArch64::CBXPrr:
-    Opc = AArch64::CCMPXr;
-    FirstOp = 1;
-    break;
-  }
+  // Let the target emit the conditional compare that replaces CmpMI (and any
+  // Head-terminator fixup). It builds before CmpMI, which now lives in Head.
+  TII->convertToCCMP(*Head, SpliceStart->getIterator(), TermDL, HeadCond, Info,
+                     *MRI);
 
-  // The ccmp instruction should set the flags according to the comparison when
-  // Head would have branched to CmpBB.
-  // The NZCV immediate operand should provide flags for the case where Head
-  // would have branched to Tail. These flags should cause the new Head
-  // terminator to branch to tail.
-  unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CmpBBTailCC);
-  const MCInstrDesc &MCID = TII->get(Opc);
-  MRI->constrainRegClass(CmpMI->getOperand(FirstOp).getReg(),
-                         TII->getRegClass(MCID, 0));
-  if (CmpMI->getOperand(FirstOp + 1).isReg())
-    MRI->constrainRegClass(CmpMI->getOperand(FirstOp + 1).getReg(),
-                           TII->getRegClass(MCID, 1));
-  MachineInstrBuilder MIB = BuildMI(*Head, CmpMI, CmpMI->getDebugLoc(), MCID)
-                                .add(CmpMI->getOperand(FirstOp)); // Register Rn
-  if (isZBranch)
-    MIB.addImm(0); // cbz/cbnz Rn -> ccmp Rn, #0
-  else
-    MIB.add(CmpMI->getOperand(FirstOp + 1)); // Register Rm / Immediate
-  MIB.addImm(NZCV).addImm(HeadCmpBBCC);
-
-  // If CmpMI was a terminator, we need a new conditional branch to replace it.
-  // This now becomes a Head terminator.
-  if (CmpMI->isTerminator()) {
-    AArch64CC::CondCode CC;
-    switch (CmpMI->getOpcode()) {
-    default:
-      llvm_unreachable("Unexpected CMP opcode");
-    case AArch64::CBZW:
-    case AArch64::CBZX:
-      CC = AArch64CC::EQ;
-      break;
-    case AArch64::CBNZW:
-    case AArch64::CBNZX:
-      CC = AArch64CC::NE;
-      break;
-    case AArch64::CBWPri:
-    case AArch64::CBXPri:
-    case AArch64::CBBAssertExt:
-    case AArch64::CBHAssertExt:
-    case AArch64::CBWPrr:
-    case AArch64::CBXPrr:
-      CC = static_cast<AArch64CC::CondCode>(CmpMI->getOperand(0).getImm());
-      break;
-    }
-    MachineBasicBlock *BrTarget = TII->getBranchDestBlock(*CmpMI);
-    BuildMI(*Head, CmpMI, CmpMI->getDebugLoc(), TII->get(AArch64::Bcc))
-        .addImm(CC)
-        .addMBB(BrTarget);
-  }
   CmpMI->eraseFromParent();
   Head->updateTerminator(CmpBB->getNextNode());
 
@@ -784,7 +665,8 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   ++NumConverted;
 }
 
-int SSACCmpConv::expectedCodeSizeDelta() const {
+static int expectedCodeSizeDelta(ArrayRef<MachineOperand> HeadCond,
+                                 const MachineInstr *CmpMI) {
   int delta = 0;
   // If the Head terminator was one of the cb / cbz / tbz branches with built-in
   // compare, we need to insert an explicit compare instruction in its place
@@ -834,6 +716,171 @@ int SSACCmpConv::expectedCodeSizeDelta() const {
     break;
   }
   return delta;
+}
+
+bool AArch64InstrInfo::canConvertToCCMP(
+    MachineBasicBlock &Head, MachineBasicBlock &CmpBB,
+    ArrayRef<MachineOperand> HeadCond, bool HeadTBBIsCmpBB,
+    ArrayRef<MachineOperand> CmpBBCond, bool CmpBBTBBIsTail,
+    const MachineRegisterInfo &MRI, CCmpConvInfo &Info) const {
+  AArch64CC::CondCode HeadCmpBBCC;
+  if (!parseCond(HeadCond, HeadCmpBBCC)) {
+    LLVM_DEBUG(dbgs() << "Unsupported branch type on Head\n");
+    ++NumHeadBranchRejs;
+    return false;
+  }
+
+  // Make sure the branch direction is right.
+  if (!HeadTBBIsCmpBB)
+    HeadCmpBBCC = AArch64CC::getInvertedCondCode(HeadCmpBBCC);
+
+  AArch64CC::CondCode CmpBBTailCC;
+  if (!parseCond(CmpBBCond, CmpBBTailCC)) {
+    LLVM_DEBUG(dbgs() << "Unsupported branch type on CmpBB\n");
+    ++NumCmpBranchRejs;
+    return false;
+  }
+
+  if (!CmpBBTBBIsTail)
+    CmpBBTailCC = AArch64CC::getInvertedCondCode(CmpBBTailCC);
+
+  LLVM_DEBUG(dbgs() << "Head->CmpBB on "
+                    << AArch64CC::getCondCodeName(HeadCmpBBCC)
+                    << ", CmpBB->Tail on "
+                    << AArch64CC::getCondCodeName(CmpBBTailCC) << '\n');
+
+  MachineInstr *CmpMI = findConvertibleCompare(&CmpBB, MRI, &getRegisterInfo());
+  if (!CmpMI)
+    return false;
+
+  Info.CmpMI = CmpMI;
+  Info.HeadCC = HeadCmpBBCC;
+  Info.CmpBBCC = CmpBBTailCC;
+
+  Info.CodeSizeDelta = expectedCodeSizeDelta(HeadCond, CmpMI);
+  return true;
+}
+
+void AArch64InstrInfo::convertToCCMP(MachineBasicBlock &Head,
+                                     MachineBasicBlock::iterator SpliceLoc,
+                                     const DebugLoc &HeadTermDL,
+                                     ArrayRef<MachineOperand> HeadCond,
+                                     const CCmpConvInfo &Info,
+                                     MachineRegisterInfo &MRI) const {
+  MachineInstr *CmpMI = Info.CmpMI;
+  auto HeadCmpBBCC = static_cast<AArch64CC::CondCode>(Info.HeadCC);
+  auto CmpBBTailCC = static_cast<AArch64CC::CondCode>(Info.CmpBBCC);
+
+  // If the Head terminator was one of the cb / cbz / tbz branches with built-in
+  // compare, we need to insert an explicit compare instruction in its place.
+  if (HeadCond[0].getImm() == -1) {
+    ++NumCompBranches;
+    insertCmpForCondBr(Head, SpliceLoc, HeadTermDL, HeadCond);
+  }
+
+  // Now replace CmpMI with a ccmp instruction that also considers the incoming
+  // flags.
+  unsigned Opc = 0;
+  unsigned FirstOp = 1;   // First CmpMI operand to copy.
+  bool isZBranch = false; // CmpMI is a cbz/cbnz instruction.
+  // clang-format off
+  switch (CmpMI->getOpcode()) {
+  default:
+    llvm_unreachable("Unknown compare opcode");
+  case AArch64::SUBSWri:    Opc = AArch64::CCMPWi; break;
+  case AArch64::SUBSWrr:    Opc = AArch64::CCMPWr; break;
+  case AArch64::SUBSXri:    Opc = AArch64::CCMPXi; break;
+  case AArch64::SUBSXrr:    Opc = AArch64::CCMPXr; break;
+  case AArch64::ADDSWri:    Opc = AArch64::CCMNWi; break;
+  case AArch64::ADDSWrr:    Opc = AArch64::CCMNWr; break;
+  case AArch64::ADDSXri:    Opc = AArch64::CCMNXi; break;
+  case AArch64::ADDSXrr:    Opc = AArch64::CCMNXr; break;
+  case AArch64::FCMPSrr:    Opc = AArch64::FCCMPSrr; FirstOp = 0; break;
+  case AArch64::FCMPDrr:    Opc = AArch64::FCCMPDrr; FirstOp = 0; break;
+  case AArch64::FCMPESrr:   Opc = AArch64::FCCMPESrr; FirstOp = 0; break;
+  case AArch64::FCMPEDrr:   Opc = AArch64::FCCMPEDrr; FirstOp = 0; break;
+  case AArch64::CBZW:
+  case AArch64::CBNZW:
+    Opc = AArch64::CCMPWi;
+    FirstOp = 0;
+    isZBranch = true;
+    break;
+  case AArch64::CBZX:
+  case AArch64::CBNZX:
+    Opc = AArch64::CCMPXi;
+    FirstOp = 0;
+    isZBranch = true;
+    break;
+  case AArch64::CBWPri:
+    Opc = AArch64::CCMPWi;
+    FirstOp = 1;
+    break;
+  case AArch64::CBXPri:
+    Opc = AArch64::CCMPXi;
+    FirstOp = 1;
+    break;
+  case AArch64::CBWPrr:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
+    Opc = AArch64::CCMPWr;
+    FirstOp = 1;
+    break;
+  case AArch64::CBXPrr:
+    Opc = AArch64::CCMPXr;
+    FirstOp = 1;
+    break;
+  }
+  // clang-format on
+
+  // The ccmp instruction should set the flags according to the comparison when
+  // Head would have branched to CmpBB.
+  // The NZCV immediate operand should provide flags for the case where Head
+  // would have branched to Tail. These flags should cause the new Head
+  // terminator to branch to tail.
+  unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CmpBBTailCC);
+  const MCInstrDesc &MCID = get(Opc);
+  MRI.constrainRegClass(CmpMI->getOperand(FirstOp).getReg(),
+                        getRegClass(MCID, 0));
+  if (CmpMI->getOperand(FirstOp + 1).isReg())
+    MRI.constrainRegClass(CmpMI->getOperand(FirstOp + 1).getReg(),
+                          getRegClass(MCID, 1));
+  MachineInstrBuilder MIB = BuildMI(Head, CmpMI, CmpMI->getDebugLoc(), MCID)
+                                .add(CmpMI->getOperand(FirstOp)); // Register Rn
+  if (isZBranch)
+    MIB.addImm(0); // cbz/cbnz Rn -> ccmp Rn, #0
+  else
+    MIB.add(CmpMI->getOperand(FirstOp + 1)); // Register Rm / Immediate
+  MIB.addImm(NZCV).addImm(HeadCmpBBCC);
+
+  // If CmpMI was a terminator, we need a new conditional branch to replace it.
+  // This now becomes a Head terminator.
+  if (CmpMI->isTerminator()) {
+    AArch64CC::CondCode CC;
+    switch (CmpMI->getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected CMP opcode");
+    case AArch64::CBZW:
+    case AArch64::CBZX:
+      CC = AArch64CC::EQ;
+      break;
+    case AArch64::CBNZW:
+    case AArch64::CBNZX:
+      CC = AArch64CC::NE;
+      break;
+    case AArch64::CBWPri:
+    case AArch64::CBXPri:
+    case AArch64::CBBAssertExt:
+    case AArch64::CBHAssertExt:
+    case AArch64::CBWPrr:
+    case AArch64::CBXPrr:
+      CC = static_cast<AArch64CC::CondCode>(CmpMI->getOperand(0).getImm());
+      break;
+    }
+    MachineBasicBlock *BrTarget = getBranchDestBlock(*CmpMI);
+    BuildMI(Head, CmpMI, CmpMI->getDebugLoc(), get(AArch64::Bcc))
+        .addImm(CC)
+        .addMBB(BrTarget);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -893,6 +940,7 @@ INITIALIZE_PASS_BEGIN(AArch64ConditionalComparesLegacy, "aarch64-ccmp",
                       "AArch64 CCMP Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
 INITIALIZE_PASS_END(AArch64ConditionalComparesLegacy, "aarch64-ccmp",
                     "AArch64 CCMP Pass", false, false)
