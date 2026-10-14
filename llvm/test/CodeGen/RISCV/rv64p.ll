@@ -1853,6 +1853,15 @@ define i32 @test_mulhrsu_i32(i32 %rs1, i32 %rs2) {
   ret i32 %res
 }
 
+define i64 @rev16_intrinsic(i64 %x) {
+; CHECK-LABEL: rev16_intrinsic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rev16 a0, a0
+; CHECK-NEXT:    ret
+  %r = call i64 @llvm.riscv.rev16.64(i64 %x)
+  ret i64 %r
+}
+
 define i32 @test_aadd_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_aadd_i32:
 ; CHECK:       # %bb.0:

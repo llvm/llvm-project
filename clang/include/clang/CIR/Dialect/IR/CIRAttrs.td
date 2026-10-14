@@ -1461,6 +1461,55 @@ def CIR_UnwindTableKindAttr : CIR_EnumAttr<CIR_UnwindTableKind, "uwtable"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FramePointerKind
+//===----------------------------------------------------------------------===//
+
+def CIR_FramePointerKind : CIR_I32Enum<"FramePointerKind",
+                                       "frame pointer kind", [
+  I32EnumCase<"None", 0, "none">,
+  I32EnumCase<"NonLeaf", 1, "non_leaf">,
+  I32EnumCase<"All", 2, "all">,
+  I32EnumCase<"Reserved", 3, "reserved">,
+  I32EnumCase<"NonLeafNoReserve", 4, "non_leaf_no_reserve">
+]>;
+
+def CIR_FramePointerKindAttr
+    : CIR_EnumAttr<CIR_FramePointerKind, "frame_pointer"> {
+  let summary = "Encodes the frame pointer kind for a function or a module.";
+
+  let description = [{
+    Mirrors the `frame-pointer` function attribute and module flag of LLVM
+    IR (https://llvm.org/docs/LangRef.html#function-attributes), which tell
+    the code generator whether a function should keep its frame pointer.  The
+    code generator may keep a frame pointer even when the kind says it can
+    be eliminated.
+
+    - `none`: the frame pointer can be eliminated, and its register can be
+      used for other purposes.
+    - `reserved`: the frame pointer register must either be updated to point
+      to a valid frame record for the current function, or not be modified.
+    - `non_leaf`: the frame pointer should be kept if the function calls
+      other functions.
+    - `non_leaf_no_reserve`: like `non_leaf`, but a leaf function may use
+      the frame pointer register for other purposes.
+    - `all`: the frame pointer should be kept.
+
+    On a function, the attribute applies to that function.  On the module,
+    it becomes the `frame-pointer` module flag, which LLVM applies to the
+    functions it creates after CIR is lowered, such as sanitizer
+    constructors.  Without the attribute, the kind is `none`.
+
+    Example:
+
+    ```
+    module attributes {cir.frame_pointer = #cir.frame_pointer<all>} {
+      cir.func private @f() attributes {frame_pointer = #cir.frame_pointer<all>}
+    }
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GloblCtorAttr
 //===----------------------------------------------------------------------===//
 

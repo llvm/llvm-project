@@ -2541,9 +2541,12 @@ public:
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
-  /// AtomicRMW, if at all. Default is to never expand.
+  /// AtomicRMW, if at all. By default, elementwise operations are expanded and
+  /// floating-point operations use are expanded to a compare-exchange loop.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
+    if (RMW->isElementwise())
+      return AtomicExpansionKind::Expand;
     if (RMW->isFloatingPointOperation())
       return AtomicExpansionKind::CmpXChg;
     if (RMW->getType()->isVectorTy())
@@ -6071,6 +6074,14 @@ public:
   /// Method for building the DAG expansion of ISD::VECTOR_SPLICE. This
   /// method accepts vectors as its arguments.
   SDValue expandVectorSplice(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_INTERLEAVE without introducing wider vector types.
+  void expandVectorInterleave(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                              SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_DEINTERLEAVE without introducing wider vector types.
+  void expandVectorDeinterleave(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                                SelectionDAG &DAG) const;
 
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.

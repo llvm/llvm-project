@@ -441,6 +441,7 @@ __packed_srx(srx_32, uint32_t)
 #if __riscv_xlen == 64
 __packed_cls(cls_64, int64_t, __builtin_clrsbll)
 __packed_unary_builtin(rev_64, uint64_t, __builtin_bitreverse64)
+__packed_unary_builtin(rev16_64, uint64_t, __builtin_riscv_rev16_64)
 __packed_slx(slx_64, uint64_t)
 __packed_srx(srx_64, uint64_t)
 #endif
@@ -843,6 +844,24 @@ __packed_binary_builtin_mixed(pnsrar_s_i8x4, int8x4_t, int16x4_t, unsigned,
                               __builtin_riscv_pnsrar_s_i8x4)
 __packed_binary_builtin_mixed(pnsrar_s_i16x2, int16x2_t, int32x2_t, unsigned,
                               __builtin_riscv_pnsrar_s_i16x2)
+
+/* Packed Narrowing Clip */
+__packed_binary_builtin_mixed(pnclipu_s_u8x4, uint8x4_t, uint16x4_t, unsigned,
+                              __builtin_riscv_pnclipu_s_u8x4)
+__packed_binary_builtin_mixed(pnclipu_s_u16x2, uint16x2_t, uint32x2_t, unsigned,
+                              __builtin_riscv_pnclipu_s_u16x2)
+__packed_binary_builtin_mixed(pnclipru_s_u8x4, uint8x4_t, uint16x4_t, unsigned,
+                              __builtin_riscv_pnclipru_s_u8x4)
+__packed_binary_builtin_mixed(pnclipru_s_u16x2, uint16x2_t, uint32x2_t, unsigned,
+                              __builtin_riscv_pnclipru_s_u16x2)
+__packed_binary_builtin_mixed(pnclip_s_i8x4, int8x4_t, int16x4_t, unsigned,
+                              __builtin_riscv_pnclip_s_i8x4)
+__packed_binary_builtin_mixed(pnclip_s_i16x2, int16x2_t, int32x2_t, unsigned,
+                              __builtin_riscv_pnclip_s_i16x2)
+__packed_binary_builtin_mixed(pnclipr_s_i8x4, int8x4_t, int16x4_t, unsigned,
+                              __builtin_riscv_pnclipr_s_i8x4)
+__packed_binary_builtin_mixed(pnclipr_s_i16x2, int16x2_t, int32x2_t, unsigned,
+                              __builtin_riscv_pnclipr_s_i16x2)
 
 /* Packed Widening Addition and Subtraction */
 __packed_widen_binary_op(pwadd_i16x4, int16x4_t, int8x4_t, +)

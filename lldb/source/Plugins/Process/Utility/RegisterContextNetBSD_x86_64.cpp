@@ -8,7 +8,9 @@
 
 #include "RegisterContextNetBSD_x86_64.h"
 #include "RegisterContextNetBSD_i386.h"
-#include "RegisterContextPOSIX_x86.h"
+#include "RegisterContext_x86.h"
+#include "lldb-x86-register-enums.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
