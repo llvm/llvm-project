@@ -1404,6 +1404,8 @@ multiclass PatVrW<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_W_H") LSX128:$vj)>;
   def : Pat<(v2i64 (OpNode(v4i32 LSX128:$vj))),
             (!cast<LAInst>(Inst#"_D_W") LSX128:$vj)>;
+  def : Pat<(v1i128 (OpNode(v2i64 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_Q_D") LSX128:$vj)>;
 }
 
 multiclass PatVrWU<SDPatternOperator OpNode, string Inst> {
@@ -1413,6 +1415,8 @@ multiclass PatVrWU<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_WU_HU") LSX128:$vj)>;
   def : Pat<(v2i64 (OpNode(v4i32 LSX128:$vj))),
             (!cast<LAInst>(Inst#"_DU_WU") LSX128:$vj)>;
+  def : Pat<(v1i128 (OpNode(v2i64 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_QU_DU") LSX128:$vj)>;
 }
 
 multiclass PatVrVr<SDPatternOperator OpNode, string Inst> {
@@ -1431,6 +1435,19 @@ multiclass PatVrVrF<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_S") LSX128:$vj, LSX128:$vk)>;
   def : Pat<(OpNode (v2f64 LSX128:$vj), (v2f64 LSX128:$vk)),
             (!cast<LAInst>(Inst#"_D") LSX128:$vj, LSX128:$vk)>;
+}
+
+multiclass PatVrVrQ<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_B") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_H") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_W") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v1i128 LSX128:$vj), (v1i128 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_Q") LSX128:$vj, LSX128:$vk)>;
 }
 
 multiclass PatVrVrU<SDPatternOperator OpNode, string Inst> {
@@ -1670,10 +1687,10 @@ multiclass InsertExtractPatV2<ValueType vecty, ValueType elemty> {
 
 let Predicates = [HasExtLSX] in {
 
-// VADD_{B/H/W/D}
-defm : PatVrVr<add, "VADD">;
-// VSUB_{B/H/W/D}
-defm : PatVrVr<sub, "VSUB">;
+// VADD_{B/H/W/D/Q}
+defm : PatVrVrQ<add, "VADD">;
+// VSUB_{B/H/W/D/Q}
+defm : PatVrVrQ<sub, "VSUB">;
 
 // VADDI_{B/H/W/D}U
 defm : PatVrNimm5<sub, "VADDI">;
@@ -1816,10 +1833,10 @@ defm : PatVrUimmW<loongarch_vsllwil, "VSLLWIL">;
 // VSLLWIL_{HU_BU/WU_HU/DU_WU}
 defm : PatVrUimmWU<loongarch_vsllwil_u, "VSLLWIL">;
 
-// VEXTH_{H_B/W_H/D_W}
+// VEXTH_{H_B/W_H/D_W/Q_D}
 defm : PatVrW<loongarch_vexth, "VEXTH">;
 
-// VEXTH_{HU_BU/WU_HU/DU_WU}
+// VEXTH_{HU_BU/WU_HU/DU_WU/QU_DU}
 defm : PatVrWU<loongarch_vexth_u, "VEXTH">;
 
 // VCLO_{B/H/W/D}
@@ -2321,7 +2338,7 @@ defm : VstelmPat<store, v4f32, VSTELM_W, simm8_lsl2, uimm2, f32>;
 defm : VstelmPat<store, v2f64, VSTELM_D, simm8_lsl3, uimm1, f64>;
 
 // Loads/Stores
-foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
+foreach vt = [v16i8, v8i16, v4i32, v2i64, v1i128, v4f32, v2f64] in {
   defm : LdPat<load, VLD, vt>;
   def  : RegRegLdPat<load, VLDX, vt>;
   defm : StPat<store, VST, LSX128, vt>;
@@ -2389,7 +2406,7 @@ def : Pat<(f64 (vector_extract v2f64:$vj, GRLenVT:$rk)),
 def : Pat<(v16i8 (vselect LSX128:$vd, (v16i8 (SplatPat_uimm8 uimm8:$imm)),
                           LSX128:$vj)),
           (VBITSELI_B LSX128:$vd, LSX128:$vj, uimm8:$imm)>;
-foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in
+foreach vt = [v16i8, v8i16, v4i32, v2i64, v1i128, v4f32, v2f64] in
   def  : Pat<(vt (vselect LSX128:$va, LSX128:$vk, LSX128:$vj)),
              (VBITSEL_V LSX128:$vj, LSX128:$vk, LSX128:$va)>;
 
