@@ -2200,12 +2200,8 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
                               "cls");
   }
 
-  if (BuiltinID == clang::ARM::BI__clear_cache) {
-    Value *Begin = EmitScalarExpr(E->getArg(0));
-    Value *End = EmitScalarExpr(E->getArg(1));
-    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
-    return Builder.CreateCall(F, {Begin, End});
-  }
+  if (BuiltinID == clang::ARM::BI__clear_cache)
+    return EmitClearCache(E);
 
   if (BuiltinID == clang::ARM::BI__builtin_arm_mcrr ||
       BuiltinID == clang::ARM::BI__builtin_arm_mcrr2) {
@@ -4643,12 +4639,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Status;
   }
 
-  if (BuiltinID == clang::AArch64::BI__clear_cache) {
-    Value *Begin = EmitScalarExpr(E->getArg(0));
-    Value *End = EmitScalarExpr(E->getArg(1));
-    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
-    return Builder.CreateCall(F, {Begin, End});
-  }
+  if (BuiltinID == clang::AArch64::BI__clear_cache)
+    return EmitClearCache(E);
 
   if ((BuiltinID == clang::AArch64::BI__builtin_arm_ldrex ||
        BuiltinID == clang::AArch64::BI__builtin_arm_ldaex) &&

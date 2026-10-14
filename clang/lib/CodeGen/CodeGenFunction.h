@@ -4896,6 +4896,8 @@ public:
   RValue EmitBuiltinIsAligned(const CallExpr *E);
   /// Emit IR for __builtin_align_up/__builtin_align_down.
   RValue EmitBuiltinAlignTo(const CallExpr *E, bool AlignUp);
+  /// Emit IR for __builtin___clear_cache and the ARM/AArch64 __clear_cache.
+  llvm::Value *EmitClearCache(const CallExpr *E);
 
   llvm::Function *generateBuiltinOSLogHelperFunction(
       const analyze_os_log::OSLogBufferLayout &Layout,

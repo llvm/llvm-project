@@ -12,6 +12,12 @@ void f1(char *a, char *b) {
 	__clear_cache(a,b);
 }
 
+void f1_as1(__attribute__((address_space(1))) char *a,
+            __attribute__((address_space(1))) char *b) {
+  // CHECK: call void @llvm.clear_cache.p1(ptr addrspace(1) %a, ptr addrspace(1) %b)
+  __clear_cache(a, b);
+}
+
 float test_vcvtrf0(float f) {
   // CHECK: call float @llvm.arm.vcvtr.f32(float %f)
   return __builtin_arm_vcvtr_f(f, 0);
