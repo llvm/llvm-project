@@ -624,24 +624,59 @@ void Loop::addIntLoopAttribute(StringRef Name, unsigned Value,
   setLoopID(NewLoopID);
 }
 
-bool Loop::isAnnotatedParallel() const {
-  MDNode *DesiredLoopIdMetadata = getLoopID();
-
-  if (!DesiredLoopIdMetadata)
-    return false;
-
+void Loop::getParallelAccessGroups(
+    SmallPtrSetImpl<MDNode *> &ParallelAccessGroups) const {
   MDNode *ParallelAccesses =
       findOptionMDForLoop(this, "llvm.loop.parallel_accesses");
-  SmallPtrSet<MDNode *, 4>
-      ParallelAccessGroups; // For scalable 'contains' check.
-  if (ParallelAccesses) {
-    for (const MDOperand &MD : drop_begin(ParallelAccesses->operands())) {
-      MDNode *AccGroup = cast<MDNode>(MD.get());
-      assert(isValidAsAccessGroup(AccGroup) &&
-             "List item must be an access group");
-      ParallelAccessGroups.insert(AccGroup);
+  if (!ParallelAccesses)
+    return;
+
+  for (const MDOperand &MD : drop_begin(ParallelAccesses->operands())) {
+    MDNode *AccGroup = cast<MDNode>(MD.get());
+    assert(isValidAsAccessGroup(AccGroup) &&
+           "List item must be an access group");
+    ParallelAccessGroups.insert(AccGroup);
+  }
+}
+
+bool Loop::isParallelAccess(
+    const Instruction &I, const SmallPtrSetImpl<MDNode *> &ParallelAccessGroups,
+    MDNode *LoopID) {
+  if (MDNode *AccessGroup = I.getMetadata(LLVMContext::MD_access_group)) {
+    if (AccessGroup->getNumOperands() == 0) {
+      assert(isValidAsAccessGroup(AccessGroup) &&
+             "Item must be an access group");
+      if (ParallelAccessGroups.contains(AccessGroup))
+        return true;
+    } else {
+      for (const MDOperand &MD : AccessGroup->operands()) {
+        auto *Group = cast<MDNode>(MD.get());
+        assert(isValidAsAccessGroup(Group) &&
+               "List item must be an access group");
+        if (ParallelAccessGroups.contains(Group))
+          return true;
+      }
     }
   }
+
+  // The memory instruction can refer to the loop identifier metadata
+  // directly or indirectly through another list metadata (in case of
+  // nested parallel loops). The loop identifier metadata refers to
+  // itself so we can check both cases with the same routine.
+  MDNode *LoopIdMD = I.getMetadata(LLVMContext::MD_mem_parallel_loop_access);
+  if (!LoopIdMD || !LoopID)
+    return false;
+
+  return llvm::is_contained(LoopIdMD->operands(), LoopID);
+}
+
+bool Loop::isAnnotatedParallel() const {
+  MDNode *LoopID = getLoopID();
+  if (!LoopID)
+    return false;
+
+  SmallPtrSet<MDNode *, 4> ParallelAccessGroups;
+  getParallelAccessGroups(ParallelAccessGroups);
 
   // The loop branch contains the parallel loop metadata. In order to ensure
   // that any parallel-loop-unaware optimization pass hasn't added loop-carried
@@ -653,38 +688,7 @@ bool Loop::isAnnotatedParallel() const {
       if (!I.mayReadOrWriteMemory())
         continue;
 
-      if (MDNode *AccessGroup = I.getMetadata(LLVMContext::MD_access_group)) {
-        auto ContainsAccessGroup = [&ParallelAccessGroups](MDNode *AG) -> bool {
-          if (AG->getNumOperands() == 0) {
-            assert(isValidAsAccessGroup(AG) && "Item must be an access group");
-            return ParallelAccessGroups.count(AG);
-          }
-
-          for (const MDOperand &AccessListItem : AG->operands()) {
-            MDNode *AccGroup = cast<MDNode>(AccessListItem.get());
-            assert(isValidAsAccessGroup(AccGroup) &&
-                   "List item must be an access group");
-            if (ParallelAccessGroups.count(AccGroup))
-              return true;
-          }
-          return false;
-        };
-
-        if (ContainsAccessGroup(AccessGroup))
-          continue;
-      }
-
-      // The memory instruction can refer to the loop identifier metadata
-      // directly or indirectly through another list metadata (in case of
-      // nested parallel loops). The loop identifier metadata refers to
-      // itself so we can check both cases with the same routine.
-      MDNode *LoopIdMD =
-          I.getMetadata(LLVMContext::MD_mem_parallel_loop_access);
-
-      if (!LoopIdMD)
-        return false;
-
-      if (!llvm::is_contained(LoopIdMD->operands(), DesiredLoopIdMetadata))
+      if (!isParallelAccess(I, ParallelAccessGroups, LoopID))
         return false;
     }
   }
