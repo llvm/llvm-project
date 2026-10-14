@@ -31,11 +31,11 @@ int test(void) {
   x = *((int NODEREF *)p2); // expected-warning{{dereferencing expression marked as 'noderef'}}
 
   int NODEREF **q;
-  int *NODEREF *q2; // expected-note 4 {{q2 declared here}}
+  int *NODEREF *q2;
 
   // Indirection
   x = **q;  // expected-warning{{dereferencing expression marked as 'noderef'}}
-  p2 = *q2; // expected-warning{{dereferencing q2; was declared with a 'noderef' type}}
+  p2 = *q2; // expected-warning{{casting to dereferenceable pointer removes 'noderef' attribute}}
 
   **q; // expected-warning{{dereferencing expression marked as 'noderef'}}
 
@@ -51,7 +51,7 @@ int test(void) {
   *p = 2;   // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
   *q = p;   // ok
   **q = 2;  // expected-warning{{dereferencing expression marked as 'noderef'}}
-  *q2 = p2; // expected-warning{{dereferencing q2; was declared with a 'noderef' type}}
+  *q2 = p2; // ok - casting from normal int pointer to a NODEREF int pointer
 
   p = p + 1;
   p = &*(p + 1);
@@ -99,7 +99,7 @@ int test(void) {
   // Subscript access
   x = p[1];    // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
   x = q[0][0]; // expected-warning{{dereferencing expression marked as 'noderef'}}
-  p2 = q2[0];  // expected-warning{{dereferencing q2; was declared with a 'noderef' type}}
+  p2 = q2[0];  // expected-warning{{casting to dereferenceable pointer removes 'noderef' attribute}}
   p = q[*p];   // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
   x = p[*p];   // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
                // expected-warning@-1{{dereferencing p; was declared with a 'noderef' type}}
@@ -119,7 +119,11 @@ int test(void) {
 
   p = s2_arr[1]->a;
   p = s2_arr[1]->b; // expected-warning{{dereferencing expression marked as 'noderef'}}
-  int *NODEREF *bptr = &s2_arr[1]->b;
+
+  // `&s2_arr[1]->b` is a NODEREF pointer to a normal int pointer.
+  // `bptr` is a normal pointer to a NODEREF int pointer.
+  // Assigning the former to the latter strips NODEREF from the outer pointer.
+  int *NODEREF *bptr = &s2_arr[1]->b; // expected-warning{{casting to dereferenceable pointer removes 'noderef' attribute}}
 
   x = s2->s2->a;        // expected-warning{{dereferencing expression marked as 'noderef'}}
   x = s2_noderef->a[1]; // expected-warning{{dereferencing s2_noderef; was declared with a 'noderef' type}}
@@ -155,18 +159,25 @@ int test(void) {
   typedef int_t NODEREF *(noderef_int_t);
   typedef noderef_int_t *noderef_int_nested_t;
   noderef_int_nested_t noderef_int_nested_ptr;
-  *noderef_int_nested_ptr;
+  *noderef_int_nested_ptr; // ok - dereferencing the outer normal pointer
   **noderef_int_nested_ptr; // expected-warning{{dereferencing expression marked as 'noderef'}}
 
   typedef int_t *(NODEREF noderef_int2_t);
   typedef noderef_int2_t *noderef_int2_nested_t;
-  noderef_int2_nested_t noderef_int2_nested_ptr; // expected-note{{noderef_int2_nested_ptr declared here}}
-  *noderef_int2_nested_ptr;                      // expected-warning{{dereferencing noderef_int2_nested_ptr; was declared with a 'noderef' type}}
+  noderef_int2_nested_t noderef_int2_nested_ptr;
+  // `noderef_int2_nested_ptr` is a normal pointer to a NODEREF pointer.
+  // Dereferencing it yields a NODEREF pointer, which is safe.
+  // Dereferencing the result should warn.
+  *noderef_int2_nested_ptr;
+  **noderef_int2_nested_ptr; // expected-warning{{dereferencing expression marked as 'noderef'}}
 
   typedef int_t *(noderef_int3_t);
   typedef noderef_int3_t(NODEREF(*(noderef_int3_nested_t)));
-  noderef_int3_nested_t noderef_int3_nested_ptr; // expected-note{{noderef_int3_nested_ptr declared here}}
-  *noderef_int3_nested_ptr;                      // expected-warning{{dereferencing noderef_int3_nested_ptr; was declared with a 'noderef' type}}
+  noderef_int3_nested_t noderef_int3_nested_ptr;
+  // `noderef_int3_nested_ptr` is also a normal pointer to a NODEREF pointer
+  // because NODEREF is inside the parentheses but before the '*'.
+  *noderef_int3_nested_ptr;
+  **noderef_int3_nested_ptr; // expected-warning{{dereferencing expression marked as 'noderef'}}
 
   // Parentheses
   (((*((p))))); // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
@@ -175,7 +186,7 @@ int test(void) {
   (p[1]);      // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
   (q[0]);      // ok
   (q[0][0]);   // expected-warning{{dereferencing expression marked as 'noderef'}}
-  (q2[0]);     // expected-warning{{dereferencing q2; was declared with a 'noderef' type}}
+  (q2[0]);     // ok - q2 is a pointer to a NODEREF pointer, so the first deref is safe.
   (q[(*(p))]); // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
   (p[(*(p))]); // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
                // expected-warning@-1{{dereferencing p; was declared with a 'noderef' type}}
@@ -222,23 +233,25 @@ int test(void) {
   return *p;          // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
 }
 
-// FIXME: Currently, [[]] syntax does not work for the `noderef` atribute.
-// For the time being, test that we consistently diagnose the attribute as
-// ignored.
-// For details see https://github.com/llvm/llvm-project/issues/55790
-void test_standard_syntax() {
-  [[clang::noderef]] int i; // expected-warning {{'clang::noderef' attribute ignored}}
+void test_standard_syntax(void) {
+  [[clang::noderef]] int i; // expected-error{{'clang::noderef' attribute cannot be applied to a declaration}} expected-warning{{'noderef' can only be used on an array or pointer type}}
 
-  [[clang::noderef]] int *p1; // expected-warning {{'clang::noderef' attribute ignored}}
-  *p1;
+  [[clang::noderef]] int *p1; // expected-error{{'clang::noderef' attribute cannot be applied to a declaration}} expected-note{{p1 declared here}}
+  *p1; // expected-warning{{dereferencing p1; was declared with a 'noderef' type}}
 
-  int *p2 [[clang::noderef]]; // expected-warning {{'clang::noderef' attribute ignored}}
-  *p2;
+  int *p2 [[clang::noderef]]; // expected-error{{'clang::noderef' attribute cannot be applied to a declaration}} expected-note{{p2 declared here}}
+  *p2; // expected-warning{{dereferencing p2; was declared with a 'noderef' type}}
 
-  int * [[clang::noderef]] p3; // expected-warning {{'clang::noderef' attribute ignored}}
+  int [[clang::noderef]] *p3; // expected-warning{{'noderef' can only be used on an array or pointer type}}
   *p3;
 
+  int * [[clang::noderef]] p4; // expected-note{{p4 declared here}}
+  *p4; // expected-warning{{dereferencing p4; was declared with a 'noderef' type}}
+
   typedef int* IntPtr;
-  [[clang::noderef]] IntPtr p4; // expected-warning {{'clang::noderef' attribute ignored}}
-  *p4;
+  [[clang::noderef]] IntPtr p5; // expected-error{{'clang::noderef' attribute cannot be applied to a declaration}} expected-note{{p5 declared here}}
+  *p5; // expected-warning{{dereferencing p5; was declared with a 'noderef' type}}
+
+  IntPtr [[clang::noderef]] p6; // expected-note{{p6 declared here}}
+  *p6; // expected-warning{{dereferencing p6; was declared with a 'noderef' type}}
 }

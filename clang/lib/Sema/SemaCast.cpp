@@ -225,15 +225,11 @@ namespace {
 
   void CheckNoDeref(Sema &S, const QualType FromType, const QualType ToType,
                     SourceLocation OpLoc) {
-    if (const auto *PtrType = dyn_cast<PointerType>(FromType)) {
-      if (PtrType->getPointeeType()->hasAttr(attr::NoDeref)) {
-        if (const auto *DestType = dyn_cast<PointerType>(ToType)) {
-          if (!DestType->getPointeeType()->hasAttr(attr::NoDeref)) {
-            S.Diag(OpLoc, diag::warn_noderef_to_dereferenceable_pointer);
-          }
-        }
-      }
-    }
+    // Note `getAs` strips the sugar to ensure it's a real pointer, but we still
+    // use the original type since the attribute is part of the sugar.
+    if (FromType->getAs<PointerType>() && FromType->hasAttr(attr::NoDeref) &&
+        ToType->getAs<PointerType>() && !ToType->hasAttr(attr::NoDeref))
+      S.Diag(OpLoc, diag::warn_noderef_to_dereferenceable_pointer);
   }
 
   struct CheckNoDerefRAII {
