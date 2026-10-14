@@ -82,7 +82,7 @@ TEST_F(LlvmLibcStdioFdopenTest, InvalidMode) {
   // "r+"
   auto *fp2 = LIBC_NAMESPACE::fdopen(fd, "w");
   ASSERT_ERRNO_EQ(EINVAL);
-  ASSERT_EQ(fp, nullptr);
+  ASSERT_EQ(fp2, nullptr);
   LIBC_NAMESPACE::close(fd);
   ASSERT_ERRNO_SUCCESS();
 }
