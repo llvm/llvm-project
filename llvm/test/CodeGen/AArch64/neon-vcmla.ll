@@ -624,8 +624,8 @@ define <4 x half> @lhs_dup_complex_v4f16(<4 x half> %acc, <4 x half> %lhs, <4 x 
   %lhs.i32 = bitcast <4 x half> %lhs to <2 x i32>
   %lhs.dup = shufflevector <2 x i32> %lhs.i32, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
   %lhs.complex = bitcast <2 x i32> %lhs.dup to <4 x half>
-  %partial = call <4 x half> @llvm.aarch64.neon.vcmla.rot0.v4f16(<4 x half> %acc, <4 x half> %lhs.complex, <4 x half> %rhs)
-  %result = call <4 x half> @llvm.aarch64.neon.vcmla.rot90.v4f16(<4 x half> %partial, <4 x half> %lhs.complex, <4 x half> %rhs)
+  %partial = call reassoc <4 x half> @llvm.aarch64.neon.vcmla.rot0.v4f16(<4 x half> %acc, <4 x half> %lhs.complex, <4 x half> %rhs)
+  %result = call reassoc <4 x half> @llvm.aarch64.neon.vcmla.rot90.v4f16(<4 x half> %partial, <4 x half> %lhs.complex, <4 x half> %rhs)
   ret <4 x half> %result
 }
 
@@ -638,9 +638,69 @@ define <8 x half> @lhs_dup_complex_v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x 
   %lhs.i32 = bitcast <8 x half> %lhs to <4 x i32>
   %lhs.dup = shufflevector <4 x i32> %lhs.i32, <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   %lhs.complex = bitcast <4 x i32> %lhs.dup to <8 x half>
-  %partial = call <8 x half> @llvm.aarch64.neon.vcmla.rot180.v8f16(<8 x half> %acc, <8 x half> %lhs.complex, <8 x half> %rhs)
-  %result = call <8 x half> @llvm.aarch64.neon.vcmla.rot270.v8f16(<8 x half> %partial, <8 x half> %lhs.complex, <8 x half> %rhs)
+  %partial = call fast <8 x half> @llvm.aarch64.neon.vcmla.rot180.v8f16(<8 x half> %acc, <8 x half> %lhs.complex, <8 x half> %rhs)
+  %result = call fast <8 x half> @llvm.aarch64.neon.vcmla.rot270.v8f16(<8 x half> %partial, <8 x half> %lhs.complex, <8 x half> %rhs)
   ret <8 x half> %result
+}
+
+define <4 x float> @lhs_dup_no_reassoc(<4 x float> %acc, <4 x float> %lhs, <4 x float> %rhs) {
+; CHECK-LE-SD-LABEL: lhs_dup_no_reassoc:
+; CHECK-LE-SD:       // %bb.0:
+; CHECK-LE-SD-NEXT:    dup v1.2d, v1.d[1]
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #0
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #90
+; CHECK-LE-SD-NEXT:    ret
+  %lhs.i64 = bitcast <4 x float> %lhs to <2 x i64>
+  %lhs.dup = shufflevector <2 x i64> %lhs.i64, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
+  %lhs.complex = bitcast <2 x i64> %lhs.dup to <4 x float>
+  %partial = call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
+  %result = call <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
+  ret <4 x float> %result
+}
+
+define <4 x float> @lhs_dup_reassoc_first_only(<4 x float> %acc, <4 x float> %lhs, <4 x float> %rhs) {
+; CHECK-LE-SD-LABEL: lhs_dup_reassoc_first_only:
+; CHECK-LE-SD:       // %bb.0:
+; CHECK-LE-SD-NEXT:    dup v1.2d, v1.d[1]
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #0
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #90
+; CHECK-LE-SD-NEXT:    ret
+  %lhs.i64 = bitcast <4 x float> %lhs to <2 x i64>
+  %lhs.dup = shufflevector <2 x i64> %lhs.i64, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
+  %lhs.complex = bitcast <2 x i64> %lhs.dup to <4 x float>
+  %partial = call reassoc <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
+  %result = call <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
+  ret <4 x float> %result
+}
+
+define <4 x float> @lhs_dup_reassoc_second_only(<4 x float> %acc, <4 x float> %lhs, <4 x float> %rhs) {
+; CHECK-LE-SD-LABEL: lhs_dup_reassoc_second_only:
+; CHECK-LE-SD:       // %bb.0:
+; CHECK-LE-SD-NEXT:    dup v1.2d, v1.d[1]
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #0
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #90
+; CHECK-LE-SD-NEXT:    ret
+  %lhs.i64 = bitcast <4 x float> %lhs to <2 x i64>
+  %lhs.dup = shufflevector <2 x i64> %lhs.i64, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
+  %lhs.complex = bitcast <2 x i64> %lhs.dup to <4 x float>
+  %partial = call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
+  %result = call reassoc <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
+  ret <4 x float> %result
+}
+
+define <4 x float> @lhs_dup_all_fmf_except_reassoc(<4 x float> %acc, <4 x float> %lhs, <4 x float> %rhs) {
+; CHECK-LE-SD-LABEL: lhs_dup_all_fmf_except_reassoc:
+; CHECK-LE-SD:       // %bb.0:
+; CHECK-LE-SD-NEXT:    dup v1.2d, v1.d[1]
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #0
+; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #90
+; CHECK-LE-SD-NEXT:    ret
+  %lhs.i64 = bitcast <4 x float> %lhs to <2 x i64>
+  %lhs.dup = shufflevector <2 x i64> %lhs.i64, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
+  %lhs.complex = bitcast <2 x i64> %lhs.dup to <4 x float>
+  %partial = call nnan ninf nsz arcp contract afn <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
+  %result = call nnan ninf nsz arcp contract afn <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
+  ret <4 x float> %result
 }
 
 define <4 x float> @lhs_dup_complex_v4f32_rot270_rot0(<4 x float> %acc, <4 x float> %lhs, <4 x float> %rhs) {
@@ -653,8 +713,8 @@ define <4 x float> @lhs_dup_complex_v4f32_rot270_rot0(<4 x float> %acc, <4 x flo
   %lhs.i64 = bitcast <4 x float> %lhs to <2 x i64>
   %lhs.dup = shufflevector <2 x i64> %lhs.i64, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
   %lhs.complex = bitcast <2 x i64> %lhs.dup to <4 x float>
-  %partial = call <4 x float> @llvm.aarch64.neon.vcmla.rot270.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
-  %result = call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
+  %partial = call reassoc <4 x float> @llvm.aarch64.neon.vcmla.rot270.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
+  %result = call reassoc <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
   ret <4 x float> %result
 }
 
@@ -668,8 +728,8 @@ define <4 x float> @lhs_dup_complex_v4f32_rot90_rot180(<4 x float> %acc, <4 x fl
   %lhs.i64 = bitcast <4 x float> %lhs to <2 x i64>
   %lhs.dup = shufflevector <2 x i64> %lhs.i64, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
   %lhs.complex = bitcast <2 x i64> %lhs.dup to <4 x float>
-  %partial = call <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
-  %result = call <4 x float> @llvm.aarch64.neon.vcmla.rot180.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
+  %partial = call reassoc <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
+  %result = call reassoc <4 x float> @llvm.aarch64.neon.vcmla.rot180.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
   ret <4 x float> %result
 }
 
@@ -683,8 +743,8 @@ define <8 x half> @lhs_dup_nonorthogonal(<8 x half> %acc, <8 x half> %lhs, <8 x 
   %lhs.i32 = bitcast <8 x half> %lhs to <4 x i32>
   %lhs.dup = shufflevector <4 x i32> %lhs.i32, <4 x i32> poison, <4 x i32> zeroinitializer
   %lhs.complex = bitcast <4 x i32> %lhs.dup to <8 x half>
-  %partial = call <8 x half> @llvm.aarch64.neon.vcmla.rot90.v8f16(<8 x half> %acc, <8 x half> %lhs.complex, <8 x half> %rhs)
-  %result = call <8 x half> @llvm.aarch64.neon.vcmla.rot270.v8f16(<8 x half> %partial, <8 x half> %lhs.complex, <8 x half> %rhs)
+  %partial = call reassoc <8 x half> @llvm.aarch64.neon.vcmla.rot90.v8f16(<8 x half> %acc, <8 x half> %lhs.complex, <8 x half> %rhs)
+  %result = call reassoc <8 x half> @llvm.aarch64.neon.vcmla.rot270.v8f16(<8 x half> %partial, <8 x half> %lhs.complex, <8 x half> %rhs)
   ret <8 x half> %result
 }
 
@@ -699,8 +759,8 @@ define <4 x half> @lhs_dup_different_rhs(<4 x half> %acc, <4 x half> %lhs, <4 x 
   %lhs.i32 = bitcast <4 x half> %lhs to <2 x i32>
   %lhs.dup = shufflevector <2 x i32> %lhs.i32, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
   %lhs.complex = bitcast <2 x i32> %lhs.dup to <4 x half>
-  %partial = call <4 x half> @llvm.aarch64.neon.vcmla.rot0.v4f16(<4 x half> %acc, <4 x half> %lhs.complex, <4 x half> %rhs0)
-  %result = call <4 x half> @llvm.aarch64.neon.vcmla.rot90.v4f16(<4 x half> %partial, <4 x half> %lhs.complex, <4 x half> %rhs1)
+  %partial = call reassoc <4 x half> @llvm.aarch64.neon.vcmla.rot0.v4f16(<4 x half> %acc, <4 x half> %lhs.complex, <4 x half> %rhs0)
+  %result = call reassoc <4 x half> @llvm.aarch64.neon.vcmla.rot90.v4f16(<4 x half> %partial, <4 x half> %lhs.complex, <4 x half> %rhs1)
   ret <4 x half> %result
 }
 
@@ -712,8 +772,8 @@ define <4 x float> @lhs_scalar_dup_is_not_complex_dup(<4 x float> %acc, <4 x flo
 ; CHECK-LE-SD-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #90
 ; CHECK-LE-SD-NEXT:    ret
   %lhs.dup = shufflevector <4 x float> %lhs, <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %partial = call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %acc, <4 x float> %lhs.dup, <4 x float> %rhs)
-  %result = call <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %partial, <4 x float> %lhs.dup, <4 x float> %rhs)
+  %partial = call reassoc <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %acc, <4 x float> %lhs.dup, <4 x float> %rhs)
+  %result = call reassoc <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %partial, <4 x float> %lhs.dup, <4 x float> %rhs)
   ret <4 x float> %result
 }
 
@@ -729,8 +789,8 @@ define <4 x float> @lhs_dup_partial_has_multiple_uses(<4 x float> %acc, <4 x flo
   %lhs.i64 = bitcast <4 x float> %lhs to <2 x i64>
   %lhs.dup = shufflevector <2 x i64> %lhs.i64, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
   %lhs.complex = bitcast <2 x i64> %lhs.dup to <4 x float>
-  %partial = call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
-  %result = call <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
+  %partial = call reassoc <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %acc, <4 x float> %lhs.complex, <4 x float> %rhs)
+  %result = call reassoc <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %partial, <4 x float> %lhs.complex, <4 x float> %rhs)
   %combined = fadd <4 x float> %result, %partial
   ret <4 x float> %combined
 }

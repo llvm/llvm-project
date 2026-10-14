@@ -25344,8 +25344,16 @@ static SDValue performNeonFCMLACombine(SDNode *N,
   int SecondRotation = getNeonFCMLARotation(getIntrinsicID(N));
   assert(SecondRotation >= 0 && "Unexpected FCMLA intrinsic");
 
+  // Swapping the multiplicands changes the order in which the two products
+  // are accumulated for one component of the complex result.
+  if (!N->getFlags().hasAllowReassociation())
+    return SDValue();
+
   SDValue First = N->getOperand(1);
   if (First.getOpcode() != ISD::INTRINSIC_WO_CHAIN || !First->hasOneUse())
+    return SDValue();
+
+  if (!First->getFlags().hasAllowReassociation())
     return SDValue();
 
   int FirstRotation = getNeonFCMLARotation(getIntrinsicID(First.getNode()));
