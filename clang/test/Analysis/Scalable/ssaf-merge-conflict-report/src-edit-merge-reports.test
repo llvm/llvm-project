@@ -1,0 +1,26 @@
+// Conflict reports written by clang-ssaf-src-edit-merge for two files merge
+// into one, and a report given twice contributes its conflicts once.
+
+// RUN: rm -rf %t.dir && mkdir -p %t.dir
+// RUN: printf '%%80s' '' > %t.dir/foo.cpp
+// RUN: printf '%%80s' '' > %t.dir/bar.cpp
+// DEFINE: %{inputs} = %S/../ssaf-src-edit-merge/Inputs
+// RUN: sed "s|@FOO@|%/t.dir/foo.cpp|g" %{inputs}/single-replacement.tpl.yaml > %t.dir/foo-a.yaml
+// RUN: sed "s|@FOO@|%/t.dir/foo.cpp|g" %{inputs}/conflict-text-y.tpl.yaml > %t.dir/foo-b.yaml
+// RUN: sed "s|@FOO@|%/t.dir/bar.cpp|g" %{inputs}/single-replacement.tpl.yaml > %t.dir/bar-a.yaml
+// RUN: sed "s|@FOO@|%/t.dir/bar.cpp|g" %{inputs}/conflict-text-z.tpl.yaml > %t.dir/bar-b.yaml
+// RUN: clang-ssaf-src-edit-merge %t.dir/foo-a.yaml %t.dir/foo-b.yaml \
+// RUN:   -o %t.dir/foo.yaml --sarif-conflicts-out=%t.dir/foo.sarif 2> /dev/null
+// RUN: clang-ssaf-src-edit-merge %t.dir/bar-a.yaml %t.dir/bar-b.yaml \
+// RUN:   -o %t.dir/bar.yaml --sarif-conflicts-out=%t.dir/bar.sarif 2> /dev/null
+
+// RUN: clang-ssaf-merge-conflict-report %t.dir/foo.sarif %t.dir/bar.sarif \
+// RUN:   %t.dir/foo.sarif -o %t.dir/merged.sarif
+// RUN: FileCheck %s --input-file=%t.dir/merged.sarif
+// RUN: grep '"ruleId": "clang-reforge-replacement-conflict"' %t.dir/merged.sarif \
+// RUN:   | count 2
+
+// CHECK:      "results": [
+// CHECK:        "uri": "file://{{.*}}bar.cpp"
+// CHECK:        "uri": "file://{{.*}}foo.cpp"
+// CHECK:        "name": "clang-ssaf-src-edit-merge",

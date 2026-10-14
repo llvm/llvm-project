@@ -1,0 +1,28 @@
+// Two conflict reports that share a conflict merge into one run.
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: clang-ssaf-merge-conflict-report %S/Inputs/conflicts-a.sarif \
+// RUN:   %S/Inputs/conflicts-b.sarif -o %t/merged.sarif
+// RUN: FileCheck %s --input-file=%t/merged.sarif
+
+// '-' writes the report to stdout.
+// RUN: clang-ssaf-merge-conflict-report %S/Inputs/conflicts-a.sarif \
+// RUN:   %S/Inputs/conflicts-b.sarif -o - > %t/stdout.sarif
+// RUN: diff %t/merged.sarif %t/stdout.sarif
+// RUN: grep '"text": "2 overlapping replacement(s) at file:///src/shared.h' \
+// RUN:   %t/merged.sarif | count 1
+
+// The conflicts in location order, the shared one once.
+// CHECK:      "results": [
+// CHECK:        "uri": "file:///src/shared.h"
+// CHECK:        "byteOffset": 4
+// CHECK:        "text": "2 overlapping replacement(s) at file:///src/shared.h byte 4 were dropped; resolve manually."
+// CHECK:        "text": "candidate edit: \"int\""
+// CHECK:        "text": "candidate edit: \"long\""
+// CHECK:        "uri": "file:///src/x.cpp"
+// CHECK:        "byteOffset": 10
+// CHECK:        "uri": "file:///src/y.cpp"
+// CHECK:        "byteOffset": 30
+// CHECK:      "tool": {
+// CHECK:        "name": "clang-ssaf-src-edit-merge",
+// CHECK:      "version": "2.1.0"
