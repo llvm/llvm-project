@@ -7224,10 +7224,10 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
       if (const FieldDecl *CountFD = MemberDecl->findCountedByField()) {
         if (CountFD->isBitField()) {
           Diag(ME->getBeginLoc(),
-               diag::err_builtin_counted_by_ref_argument_is_bitfield)
-              << ME->getSourceRange();
+               diag::err_builtin_counted_by_ref_counter_field_is_bitfield)
+              << Arg << ME->getSourceRange();
           return Diag(CountFD->getBeginLoc(),
-                      diag::note_flexible_array_counted_by_attr_field)
+                      diag::note_counted_by_counter_field)
                  << CountFD << CountFD->getSourceRange();
         }
 

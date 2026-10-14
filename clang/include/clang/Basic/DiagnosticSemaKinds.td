@@ -7274,8 +7274,10 @@ def err_builtin_counted_by_ref_cannot_leak_reference : Error<
 def err_builtin_counted_by_ref_invalid_use : Error<
   "value returned by '__builtin_counted_by_ref' cannot be used in "
   "%select{an array subscript|a binary}0 expression">;
-def err_builtin_counted_by_ref_argument_is_bitfield : Error<
-  "'__builtin_counted_by_ref' argument cannot be a bitfield">;
+def err_builtin_counted_by_ref_counter_field_is_bitfield : Error<
+  "'__builtin_counted_by_ref' cannot be used on %0 because its counter field is a bit-field">;
+def note_counted_by_counter_field : Note<
+  "counter field %0 declared here">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
