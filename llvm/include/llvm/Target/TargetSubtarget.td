@@ -92,13 +92,12 @@ class Predicate<code cond> {
 
   /// AssemblerCondDag - Set of subtarget features being tested used
   /// as alternative condition string used for assembler matcher. Must be used
-  /// with (all_of) to indicate that all features must be present, or (any_of)
-  /// to indicate that at least one must be. The required lack of presence of
-  /// a feature can be tested using a (none_of) or (not) node including the
-  /// feature.
+  /// with (all_of) to indicate that all features must be present, (any_of)
+  /// to indicate that at least one must be, or (none_of) to indicate that none
+  /// may be. The required lack of presence of a feature can also be tested
+  /// using a (none_of) or (not) node including the feature.
   /// e.g. "(all_of ModeThumb)" is translated to "(Bits & ModeThumb) != 0".
-  ///      "(all_of (none_of ModeThumb))" is translated to
-  ///      "(Bits & ModeThumb) == 0".
+  ///      "(none_of ModeThumb)" is translated to "(Bits & ModeThumb) == 0".
   ///      "(all_of ModeThumb, FeatureThumb2)" is translated to
   ///      "(Bits & ModeThumb) != 0 && (Bits & FeatureThumb2) != 0".
   ///      "(any_of ModeTumb, FeatureThumb2)" is translated to
