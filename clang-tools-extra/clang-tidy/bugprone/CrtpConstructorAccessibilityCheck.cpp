@@ -67,18 +67,27 @@ getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
 static std::vector<FixItHint>
 hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
                     const std::string &OriginalAccess) {
-  std::vector<FixItHint> Hints;
-
-  Hints.emplace_back(FixItHint::CreateInsertion(
-      Ctor->getBeginLoc().getLocWithOffset(-1), "private:\n"));
-
   const ASTContext &ASTCtx = Ctor->getASTContext();
+  const SourceManager &SM = ASTCtx.getSourceManager();
+  const LangOptions &LangOpts = ASTCtx.getLangOpts();
+
+  // Stepping back from a macro location can leave its expansion, so insert
+  // before the macro when the constructor starts at one, as in
+  // 'CONSTEXPR CRTP() {}', and give no fix-it otherwise.
+  SourceLocation CtorBeginLoc = Ctor->getBeginLoc();
+  if (CtorBeginLoc.isMacroID() &&
+      !Lexer::isAtStartOfMacroExpansion(CtorBeginLoc, SM, LangOpts,
+                                        &CtorBeginLoc))
+    return {};
+
   const SourceLocation CtorEndLoc =
       Ctor->isExplicitlyDefaulted()
-          ? utils::lexer::findNextTerminator(Ctor->getEndLoc(),
-                                             ASTCtx.getSourceManager(),
-                                             ASTCtx.getLangOpts())
+          ? utils::lexer::findNextTerminator(Ctor->getEndLoc(), SM, LangOpts)
           : Ctor->getEndLoc();
+
+  std::vector<FixItHint> Hints;
+  Hints.emplace_back(FixItHint::CreateInsertion(
+      CtorBeginLoc.getLocWithOffset(-1), "private:\n"));
   Hints.emplace_back(FixItHint::CreateInsertion(
       CtorEndLoc.getLocWithOffset(1), '\n' + OriginalAccess + ':' + '\n'));
 
@@ -159,15 +168,15 @@ void CrtpConstructorAccessibilityCheck::check(
 
     const bool IsPublic = Ctor->getAccess() == AS_public;
     const std::string Access = IsPublic ? "public" : "protected";
+    const std::vector<FixItHint> CtorHints = hintMakeCtorPrivate(Ctor, Access);
 
     WithFriendHintIfNeeded(
         diag(Ctor->getLocation(),
              "%0 constructor allows the CRTP to be %select{inherited "
              "from|constructed}1 as a regular template class; consider making "
              "it private%select{| and declaring the derived class as friend}2")
-            << Access << IsPublic << NeedsFriend
-            << hintMakeCtorPrivate(Ctor, Access),
-        NeedsFriend);
+            << Access << IsPublic << NeedsFriend << CtorHints,
+        NeedsFriend && !CtorHints.empty());
   }
 }
 

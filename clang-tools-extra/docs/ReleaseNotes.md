@@ -174,6 +174,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Fixed a crash in {doc}`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` when a
+  constructor declaration begins with a macro.
+
 - Improved {doc}`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
   emitting empty notes for type aliases when {option}`ModelImplicitConversions`
