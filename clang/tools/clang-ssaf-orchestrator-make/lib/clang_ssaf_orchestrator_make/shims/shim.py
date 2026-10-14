@@ -11,7 +11,12 @@ import traceback
 
 from .. import build_graph, config, failure_logs, logging_diagnostics, utils
 from ..failure_logs import SSAFFailureKind
-from ..ssaf_artifact_repository import SSAFArtifactRepository
+from ..ssaf_artifact_repository import (
+    SSAFArtifactKind,
+    SSAFArtifactRepository,
+    get_ssaf_artifact_id,
+)
+from .commands import artifact_of, unique
 
 SKIP_BINARY_TOOL_INVOCATION = "--ssaf-shim-skip-binary-tool-invocation"
 
@@ -181,3 +186,35 @@ class Shim:
                 logging_diagnostics.report_error("and its log could not be written")
         # A shim must never be the reason a build fails.
         return 0
+
+
+def merge_edits(shim, build_artifact_id, input_build_artifact_ids):
+    ssaf_artifact_repo = shim.ssaf_artifact_repo
+    found = []
+    for each in input_build_artifact_ids:
+        edits = artifact_of(ssaf_artifact_repo, each, SSAFArtifactKind.EDITS)
+        if edits:
+            found.append(edits)
+    found = unique(found)
+    if not found:
+        logging_diagnostics.report_note(
+            shim.workflow_config.verbose,
+            "no edits feed %s, nothing to merge" % build_artifact_id.get_path(),
+        )
+        return
+    command = [shim.pass_config.ssaf_src_edit_merge] + found
+    command += [
+        "-o",
+        utils.make_parents(
+            ssaf_artifact_repo.get_path_for_artifact(
+                get_ssaf_artifact_id(build_artifact_id, SSAFArtifactKind.EDITS)
+            )
+        ),
+    ]
+    command += [
+        "--sarif-conflicts-out="
+        + ssaf_artifact_repo.get_path_for_artifact(
+            get_ssaf_artifact_id(build_artifact_id, SSAFArtifactKind.CONFLICTS)
+        )
+    ]
+    shim.run(command, SSAFFailureKind.MERGE, build_artifact_id)

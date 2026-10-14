@@ -16,6 +16,7 @@
 
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include "LoopVectorizationPlanner.h"
+#include "VectorizeOptions.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -40,46 +41,6 @@ using namespace LoopVectorizationUtils;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
-static cl::opt<bool>
-    EnableIfConversion("enable-if-conversion", cl::init(true), cl::Hidden,
-                       cl::desc("Enable if-conversion during vectorization."));
-
-static cl::opt<bool>
-AllowStridedPointerIVs("lv-strided-pointer-ivs", cl::init(false), cl::Hidden,
-                       cl::desc("Enable recognition of non-constant strided "
-                                "pointer induction variables."));
-
-static cl::opt<bool>
-    HintsAllowReordering("hints-allow-reordering", cl::init(true), cl::Hidden,
-                         cl::desc("Allow enabling loop hints to reorder "
-                                  "FP operations during vectorization."));
-
-static cl::opt<LoopVectorizeHints::ScalableForceKind>
-    ForceScalableVectorization(
-        "scalable-vectorization", cl::init(LoopVectorizeHints::SK_Unspecified),
-        cl::Hidden,
-        cl::desc("Control whether the compiler can use scalable vectors to "
-                 "vectorize a loop"),
-        cl::values(
-            clEnumValN(LoopVectorizeHints::SK_FixedWidthOnly, "off",
-                       "Scalable vectorization is disabled."),
-            clEnumValN(
-                LoopVectorizeHints::SK_PreferScalable, "preferred",
-                "Scalable vectorization is available and favored when the "
-                "cost is inconclusive."),
-            clEnumValN(
-                LoopVectorizeHints::SK_PreferScalable, "on",
-                "Scalable vectorization is available and favored when the "
-                "cost is inconclusive."),
-            clEnumValN(
-                LoopVectorizeHints::SK_AlwaysScalable, "always",
-                "Scalable vectorization is available and always favored when "
-                "feasible")));
-
-static cl::opt<bool> EnableHistogramVectorization(
-    "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
-    cl::desc("Enables autovectorization of some loops containing histograms"));
-
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
 
@@ -97,11 +58,13 @@ bool LoopVectorizeHints::Hint::validate(unsigned Val) {
   return false;
 }
 
-LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
+LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
+                                       const Loop *L,
                                        bool InterleaveOnlyWhenForced,
                                        OptimizationRemarkEmitter &ORE,
                                        const TargetTransformInfo *TTI)
-    : Width("vectorize.width",
+    : Opts(Opts),
+      Width("vectorize.width",
             VectorizerParams::VectorizationFactor.getKnownMinValue(), HK_WIDTH),
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
       Force(FK_Undefined), IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
@@ -133,9 +96,8 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
 
   // If the flag is set to force any use of scalable vectors, override the loop
   // hints.
-  if (ForceScalableVectorization.getValue() !=
-      LoopVectorizeHints::SK_Unspecified)
-    Scalable = ForceScalableVectorization.getValue();
+  if (Opts.scalable_vectorization != LoopVectorizeHints::SK_Unspecified)
+    Scalable = Opts.scalable_vectorization;
 
   // If force-vector-width is scalable, force scalable vectorization.
   if (VectorizerParams::VectorizationFactor.isScalable())
@@ -245,7 +207,7 @@ bool LoopVectorizeHints::allowReordering() const {
   // Allow the vectorizer to change the order of operations if enabling
   // loop hints are provided
   ElementCount EC = getWidth();
-  return HintsAllowReordering &&
+  return Opts.hints_allow_reordering &&
          (getForce() == LoopVectorizeHints::FK_Enabled ||
           EC.getKnownMinValue() > 1);
 }
@@ -892,8 +854,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // IVDescriptor code.  The intent is to remove this check, but we
     // have to fix issues around code quality for such loops first.
     auto IsDisallowedStridedPointerInduction =
-        [](const InductionDescriptor &ID) {
-          if (AllowStridedPointerIVs)
+        [&](const InductionDescriptor &ID) {
+          if (Opts.lv_strided_pointer_ivs)
             return false;
           return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
                  ID.getConstIntStepValue() == nullptr;
@@ -1139,7 +1101,7 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
 bool LoopVectorizationLegality::canVectorizeIndirectUnsafeDependences() {
   // For now, we only support an IndirectUnsafe dependency that calculates
   // a histogram
-  if (!EnableHistogramVectorization)
+  if (!Opts.enable_histogram_loop_vectorization)
     return false;
 
   // Find a single IndirectUnsafe dependency.
@@ -1428,7 +1390,7 @@ bool LoopVectorizationLegality::blockCanBePredicated(
 }
 
 bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
-  if (!EnableIfConversion) {
+  if (!Opts.enable_if_conversion) {
     reportVectorizationFailure("If-conversion is disabled",
                                "IfConversionDisabled", ORE, TheLoop);
     return false;

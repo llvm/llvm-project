@@ -60,4 +60,20 @@ namespace ex7 {
   short *g1(G<(j)> *ap) { return f(ap); }
   long *g2(G<j> *ap) { return f(ap); }
 }
+
+namespace partial_spec {
+  enum E { Val };
+  int global_var;
+
+  template <class T, auto V> struct A {};
+  template <class T> struct A<T, 0> {};
+  template <class T> struct A<T, Val> {};
+  template <class T> struct A<T, nullptr> {};
+
+  template <class T, auto... V> struct Pack {};
+  template <class T> struct Pack<T, 0, 1> {};
+
+  template <class T, const auto &V> struct Ref {};
+  template <class T> struct Ref<T, global_var> {};
+}
 #endif
