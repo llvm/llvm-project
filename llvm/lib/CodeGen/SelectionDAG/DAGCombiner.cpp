@@ -25523,11 +25523,20 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       VT = VT.changeElementType(*DAG.getContext(), EltVT);
     }
 
-    // Check if this operation will be handled the default way for its type.
+    // Check if this operation will be handled the default way for its type,
+    // i.e. legalized through a stack temporary.
     auto IsTypeDefaultHandled = [this](EVT VT) {
-      return TLI.getTypeAction(*DAG.getContext(), VT) ==
-                 TargetLowering::TypeSplitVector ||
-             TLI.isOperationExpand(ISD::INSERT_VECTOR_ELT, VT);
+      LLVMContext &Ctx = *DAG.getContext();
+      if (TLI.getTypeAction(Ctx, VT) != TargetLowering::TypeWidenVector)
+        return TLI.getTypeAction(Ctx, VT) == TargetLowering::TypeSplitVector ||
+               TLI.isOperationExpand(ISD::INSERT_VECTOR_ELT, VT);
+      // Widening redoes the insert on the widened type, where it does not go
+      // through memory if it is Legal, or Promote to another type. Custom
+      // lowering may still fall back to the stack, so treat it like Expand.
+      do
+        VT = TLI.getTypeToTransformTo(Ctx, VT);
+      while (TLI.getTypeAction(Ctx, VT) == TargetLowering::TypeWidenVector);
+      return !TLI.isOperationLegalOrPromote(ISD::INSERT_VECTOR_ELT, VT);
     };
 
     // Check if this operation is illegal and will be handled the default way,
