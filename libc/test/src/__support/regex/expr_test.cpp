@@ -69,8 +69,13 @@ TEST(LlvmLibcRegexExprTest, RecursiveInterning) {
 TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesConcat) {
   ExprPool pool;
   auto lit_a = pool.make_lit('a').value();
+  auto lit_b = pool.make_lit('b').value();
   auto empty_set = pool.empty_set().value();
   auto empty_str = pool.empty_str().value();
+
+  // Invalid IDs return REG_BADPAT.
+  EXPECT_EQ(pool.make_concat(INVALID_EXPR_ID, lit_a).error(), REG_BADPAT);
+  EXPECT_EQ(pool.make_concat(lit_a, INVALID_EXPR_ID).error(), REG_BADPAT);
 
   // (Ø · R) or (R · Ø) => Ø
   EXPECT_EQ(pool.make_concat(empty_set, lit_a).value(), empty_set);
@@ -79,6 +84,22 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesConcat) {
   // (ε · R) or (R · ε) => R
   EXPECT_EQ(pool.make_concat(empty_str, lit_a).value(), lit_a);
   EXPECT_EQ(pool.make_concat(lit_a, empty_str).value(), lit_a);
+
+  // Nullability of (L · R) requires both L and R to be nullable.
+  auto opt_a = pool.make_alt(lit_a, empty_str).value();
+  auto opt_b = pool.make_alt(lit_b, empty_str).value();
+  EXPECT_FALSE(pool.is_nullable(pool.make_concat(lit_a, opt_b).value()));
+  EXPECT_FALSE(pool.is_nullable(pool.make_concat(opt_a, lit_b).value()));
+  EXPECT_TRUE(pool.is_nullable(pool.make_concat(opt_a, opt_b).value()));
+
+  // Expr::operator== structural comparisons across kinds, literals, and binary
+  // children.
+  EXPECT_FALSE(Expr::make_empty_set() == Expr::make_literal('a'));
+  EXPECT_FALSE(Expr::make_literal('a') == Expr::make_literal('b'));
+  EXPECT_FALSE(Expr::make_concat(lit_a, lit_b) ==
+               Expr::make_concat(lit_a, opt_b));
+  EXPECT_FALSE(Expr::make_concat(lit_a, lit_b) ==
+               Expr::make_concat(lit_b, lit_b));
 }
 
 TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAlt) {
@@ -86,6 +107,11 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAlt) {
   auto lit_a = pool.make_lit('a').value();
   auto lit_b = pool.make_lit('b').value();
   auto empty_set = pool.empty_set().value();
+  auto empty_str = pool.empty_str().value();
+
+  // Invalid IDs return REG_BADPAT.
+  EXPECT_EQ(pool.make_alt(INVALID_EXPR_ID, lit_a).error(), REG_BADPAT);
+  EXPECT_EQ(pool.make_alt(lit_a, INVALID_EXPR_ID).error(), REG_BADPAT);
 
   // (Ø | R) or (R | Ø) => R
   EXPECT_EQ(pool.make_alt(empty_set, lit_a).value(), lit_a);
@@ -97,6 +123,12 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAlt) {
   // (A | B) == (B | A) (Commutativity)
   EXPECT_EQ(pool.make_alt(lit_a, lit_b).value(),
             pool.make_alt(lit_b, lit_a).value());
+
+  // Nullability of (L | R) when L is non-nullable and R (with higher ExprId) is
+  // nullable.
+  auto opt_b = pool.make_alt(lit_b, empty_str).value();
+  auto opt_bb = pool.make_concat(opt_b, opt_b).value();
+  EXPECT_TRUE(pool.is_nullable(pool.make_alt(lit_a, opt_bb).value()));
 }
 
 TEST(LlvmLibcRegexExprTest, HermeticHundredPools) {
