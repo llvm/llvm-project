@@ -36,6 +36,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SuffixTreeNode.h"
+#include <optional>
 
 namespace llvm {
 class SuffixTree {
@@ -56,6 +57,12 @@ public:
   };
 
 private:
+  const std::optional<unsigned> BoundaryStart;
+
+  bool isBoundary(unsigned Value) const {
+    return BoundaryStart && Value >= *BoundaryStart;
+  }
+
   /// Maintains internal nodes in the tree.
   SpecificBumpPtrAllocator<SuffixTreeInternalNode> InternalNodeAllocator;
   /// Maintains leaf nodes in the tree.
@@ -149,8 +156,11 @@ public:
   /// \param Str The string to construct the suffix tree for.
   /// \param OutlinerLeafDescendants Whether to consider leaf descendants or
   /// only leaf children (used by Machine Outliner).
+  /// \param BoundaryStart Values at or above this lower bound must be unique
+  /// terminators. If omitted, no symbols are treated as unique terminators.
   LLVM_ABI SuffixTree(const ArrayRef<unsigned> &Str,
-                      bool OutlinerLeafDescendants = false);
+                      bool OutlinerLeafDescendants = false,
+                      std::optional<unsigned> BoundaryStart = std::nullopt);
 
   /// Iterator for finding all repeated substrings in the suffix tree.
   struct RepeatedSubstringIterator {
