@@ -3138,7 +3138,8 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
 
   auto getConstantMatCost =
       [&](unsigned Operand, TTI::OperandValueInfo OpInfo) -> InstructionCost {
-    if (OpInfo.isUniform() && canSplatOperand(Opcode, Operand))
+    if (OpInfo.isUniform() &&
+        canSplatOperand(Opcode, Operand, Intrinsic::not_intrinsic))
       // Two sub-cases:
       // * Has a 5 bit immediate operand which can be splatted.
       // * Has a larger immediate which must be materialized in scalar register
