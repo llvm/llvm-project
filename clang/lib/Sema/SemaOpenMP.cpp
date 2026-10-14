@@ -5395,9 +5395,8 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
   }
   if (isOpenMPSimdDirective(ParentRegion) &&
       ((OMPVersion <= 45 && CurrentRegion != OMPD_ordered_blockassoc) ||
-       (OMPVersion >= 50 && CurrentRegion != OMPD_ordered_blockassoc &&
-        CurrentRegion != OMPD_simd && CurrentRegion != OMPD_atomic &&
-        CurrentRegion != OMPD_scan))) {
+       (OMPVersion >= 50 &&
+        !isOpenMPSimdizableDirective(CurrentRegion, SemaRef.LangOpts)))) {
     // OpenMP [2.16, Nesting of Regions]
     // OpenMP constructs may not be nested inside a simd region.
     // OpenMP [2.8.1,simd Construct, Restrictions]
@@ -5410,10 +5409,16 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // The only OpenMP constructs that can be encountered during execution of
     // a simd region are the atomic construct, the loop construct, the simd
     // construct and the ordered construct with the simd clause.
+    // OpenMP 5.2 [10.4, simd Construct, Restrictions]
+    // Only simdizable constructs can be encountered during execution of a
+    // simd region.
+    // OpenMP 6.0 makes all loop-transforming constructs simdizable.
     SemaRef.Diag(StartLoc, (CurrentRegion != OMPD_simd)
                                ? diag::err_omp_prohibited_region_simd
                                : diag::warn_omp_nesting_simd)
-        << (OMPVersion >= 50 ? 1 : 0);
+        << (OMPVersion >= 60   ? 2
+            : OMPVersion >= 50 ? 1
+                               : 0);
     return CurrentRegion != OMPD_simd;
   }
   if (EnclosingConstruct == OMPD_atomic) {
