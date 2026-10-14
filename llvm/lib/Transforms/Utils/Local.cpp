@@ -420,12 +420,6 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
   if (I->isEHPad())
     return false;
 
-  if (const DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(I)) {
-    if (DLI->getLabel())
-      return false;
-    return true;
-  }
-
   if (auto *CB = dyn_cast<CallBase>(I))
     if (isRemovableAlloc(CB, TLI))
       return true;
@@ -1575,7 +1569,7 @@ Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
   // LLVM doesn't support alignments larger than (1 << MaxAlignmentExponent).
   TrailZ = std::min(TrailZ, +Value::MaxAlignmentExponent);
 
-  Align Alignment = Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
+  Align Alignment = Align::fromLog2(std::min(Known.getBitWidth() - 1, TrailZ));
 
   if (PrefAlign && *PrefAlign > Alignment)
     Alignment = std::max(Alignment, tryEnforceAlignment(V, *PrefAlign, DL));
@@ -1817,12 +1811,9 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, PHINode *APN,
 bool llvm::LowerDbgDeclare(Function &F) {
   bool Changed = false;
   DIBuilder DIB(*F.getParent(), /*AllowUnresolved*/ false);
-  SmallVector<DbgDeclareInst *, 4> Dbgs;
   SmallVector<DbgVariableRecord *> DVRs;
   for (auto &FI : F) {
     for (Instruction &BI : FI) {
-      if (auto *DDI = dyn_cast<DbgDeclareInst>(&BI))
-        Dbgs.push_back(DDI);
       for (DbgVariableRecord &DVR : filterDbgVars(BI.getDbgRecordRange())) {
         if (DVR.getType() == DbgVariableRecord::LocationType::Declare)
           DVRs.push_back(&DVR);
@@ -1830,7 +1821,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     }
   }
 
-  if (Dbgs.empty() && DVRs.empty())
+  if (DVRs.empty())
     return Changed;
 
   auto LowerOne = [&](DbgVariableRecord *DDI) {

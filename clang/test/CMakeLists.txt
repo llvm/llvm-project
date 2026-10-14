@@ -113,6 +113,12 @@ list(APPEND CLANG_TEST_DEPS
   hmaptool
   )
 
+if(NOT WIN32)
+  list(APPEND CLANG_TEST_DEPS
+    clang-ssaf-orchestrator-make
+    )
+endif()
+
 if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
@@ -264,6 +270,7 @@ if(CLANG_ENABLE_CIR)
       llvm-dis
       llvm-objdump
       llvm-readelf
+      llvm-strings
       not
       opt
       split-file

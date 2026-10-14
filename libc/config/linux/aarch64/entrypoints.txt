@@ -400,6 +400,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/wait.h entrypoints
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
+    libc.src.sys.wait.waitid
     libc.src.sys.wait.waitpid
 
     # sys/xattr.h entrypoints
@@ -427,6 +428,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.sysmacros.major
     libc.src.sys.sysmacros.minor
 
+    # sys/inotify.h entrypoints
+    libc.src.sys.inotify.inotify_add_watch
+    libc.src.sys.inotify.inotify_init
+    libc.src.sys.inotify.inotify_init1
+    libc.src.sys.inotify.inotify_rm_watch
+
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed
@@ -437,8 +444,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcflush
     libc.src.termios.tcgetattr
     libc.src.termios.tcgetsid
+    libc.src.termios.tcgetwinsize
     libc.src.termios.tcsendbreak
     libc.src.termios.tcsetattr
+    libc.src.termios.tcsetwinsize
 
     # unistd.h entrypoints
     libc.src.unistd.alarm
@@ -475,6 +484,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getgid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
+    libc.src.unistd.lchown
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
@@ -498,6 +508,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.sleep
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
+    libc.src.unistd.sync
+    libc.src.unistd.syncfs
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
@@ -1295,6 +1307,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fflush
     libc.src.stdio.fgetc
     libc.src.stdio.fgetc_unlocked
+    libc.src.stdio.fgetpos
     libc.src.stdio.fgets
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
@@ -1308,6 +1321,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fread_unlocked
     libc.src.stdio.fseek
     libc.src.stdio.fseeko
+    libc.src.stdio.fsetpos
     libc.src.stdio.ftell
     libc.src.stdio.ftello
     libc.src.stdio.funlockfile
@@ -1330,10 +1344,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.ungetc
 
     # stdlib.h entrypoints
+    libc.src.stdlib.__cxa_thread_atexit_impl
     libc.src.stdlib._Exit
     libc.src.stdlib.abort
     libc.src.stdlib.at_quick_exit
     libc.src.stdlib.atexit
+    libc.src.stdlib.clearenv
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.putenv
@@ -1414,6 +1430,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime_r
     libc.src.time.clock
     libc.src.time.clock_getcpuclockid
+    libc.src.time.clock_getres
     libc.src.time.clock_gettime
     libc.src.time.clock_settime
     libc.src.time.difftime

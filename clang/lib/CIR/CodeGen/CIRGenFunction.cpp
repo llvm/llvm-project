@@ -21,7 +21,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/ClassUtils.h"
 #include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
@@ -1314,9 +1314,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                "emitLValue: MatrixSingleSubscriptExpr");
     return LValue();
   case Expr::MatrixSubscriptExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: MatrixSubscriptExpr");
-    return LValue();
+    return emitMatrixSubscriptExpr(cast<MatrixSubscriptExpr>(e));
   case Expr::ArraySectionExprClass:
     getCIRGenModule().errorNYI(e->getSourceRange(),
                                "emitLValue: ArraySectionExpr");

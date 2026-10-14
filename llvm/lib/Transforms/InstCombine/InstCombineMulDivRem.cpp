@@ -344,10 +344,12 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   {
     Value *NewOp, *Cond, *OtherValue;
     Constant *C1, *C2, *C3;
+    Instruction *SI = nullptr;
 
     if (match(&I, m_c_Mul(m_OneUse(m_Value(OtherValue)),
-                          m_OneUse(m_Select(m_Value(Cond), m_ImmConstant(C2),
-                                            m_ImmConstant(C3))))) &&
+                          m_OneUse(m_Instruction(
+                              SI, m_Select(m_Value(Cond), m_ImmConstant(C2),
+                                           m_ImmConstant(C3)))))) &&
         (match(OtherValue, m_Mul(m_Value(NewOp), m_ImmConstant(C1))) ||
          match(OtherValue, m_Shl(m_Value(NewOp), m_ImmConstant(C1))))) {
 
@@ -358,7 +360,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       Constant *NewFV = ConstantFoldBinaryOpOperands(Opc, C3, C1, DL);
 
       if (NewTV && NewFV) {
-        Value *NewSel = Builder.CreateSelect(Cond, NewTV, NewFV);
+        Value *NewSel = Builder.CreateSelect(Cond, NewTV, NewFV, "", SI);
         BinaryOperator *BO = BinaryOperator::CreateMul(NewOp, NewSel);
 
         if (HasNUW && OtherInst->hasNoUnsignedWrap())
