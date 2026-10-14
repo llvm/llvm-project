@@ -78,6 +78,7 @@ static InstructionCost getCost(Instruction &Inst, TTI::TargetCostKind CostKind,
         II->getIntrinsicID(), *II, InstructionCost::getInvalid(),
         /*TypeBasedOnly=*/IntrinsicCost ==
             IntrinsicCostStrategy::TypeBasedIntrinsicCost);
+
     return TTI.getIntrinsicInstrCost(ICA, CostKind);
   }
 
