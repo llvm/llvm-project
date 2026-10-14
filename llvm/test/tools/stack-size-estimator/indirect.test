@@ -1,0 +1,10 @@
+; RUN: %stack-size-estimator %S/Inputs/test_indirect.json --entry-function caller | FileCheck %s
+
+; CHECK: --- Detected Cycles (Recursive SCCs) ---
+; CHECK-NEXT: None
+
+; CHECK: ✅ Max stack usage from 'caller': 40 bytes
+
+; CHECK: --- Path Contributing to Max Stack Usage ---
+; CHECK-NEXT: - caller (@0x3e8): 10 bytes
+; CHECK-NEXT: - target2 (@0xbb8): 30 bytes

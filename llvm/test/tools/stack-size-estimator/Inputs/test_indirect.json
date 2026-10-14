@@ -1,0 +1,82 @@
+[
+  {
+    "CallGraph": [
+      {
+        "Function": {
+          "Names": [
+            "caller"
+          ],
+          "Address": 1000,
+          "DirectCallees": [],
+          "IndirectTypeIDs": [
+            12345
+          ]
+        }
+      },
+      {
+        "Function": {
+          "Names": [
+            "target1"
+          ],
+          "Address": 2000,
+          "TypeID": 12345,
+          "DirectCallees": []
+        }
+      },
+      {
+        "Function": {
+          "Names": [
+            "target2"
+          ],
+          "Address": 3000,
+          "TypeID": 12345,
+          "DirectCallees": []
+        }
+      },
+      {
+        "Function": {
+          "Names": [
+            "other"
+          ],
+          "Address": 4000,
+          "TypeID": 67890,
+          "DirectCallees": []
+        }
+      }
+    ],
+    "StackSizes": [
+      {
+        "Entry": {
+          "Functions": [
+            "caller"
+          ],
+          "Size": 10
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "target1"
+          ],
+          "Size": 20
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "target2"
+          ],
+          "Size": 30
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "other"
+          ],
+          "Size": 100
+        }
+      }
+    ]
+  }
+]
