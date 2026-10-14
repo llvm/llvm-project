@@ -22347,6 +22347,45 @@ static SDValue performFADDCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performFADDPCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Pg = N->getOperand(0);
+  SDValue Acc = N->getOperand(1);
+  SDValue FMul = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  SDNodeFlags Flags = N->getFlags();
+  SDLoc DL(N);
+
+  // fadd contract All, Acc, (fmul contract All, L, R) -> fma All, L, R, Acc
+  if (!TLI.isOperationLegalOrCustom(AArch64ISD::FMA_PRED, VT) ||
+      !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT))
+    return SDValue();
+
+  if (!Flags.hasAllowContract())
+    return SDValue();
+
+  if (FMul->getOpcode() != AArch64ISD::FMUL_PRED ||
+      !FMul->getFlags().hasAllowContract())
+    std::swap(Acc, FMul);
+
+  if (FMul->getOpcode() != AArch64ISD::FMUL_PRED ||
+      !FMul->getFlags().hasAllowContract())
+    return SDValue();
+
+  // FMLA/FMAD use a merging predicate, so we would need to be careful about
+  // which results are merged if not all true.
+  if (!isAllActivePredicate(DAG, Pg) ||
+      !isAllActivePredicate(DAG, FMul->getOperand(0)))
+    return SDValue();
+
+  SDValue L = FMul->getOperand(1);
+  SDValue R = FMul->getOperand(2);
+
+  return DAG.getNode(AArch64ISD::FMA_PRED, DL, VT, {Pg, L, R, Acc}, Flags);
+}
+
 static bool hasPairwiseAdd(unsigned Opcode, EVT VT, bool FullFP16) {
   switch (Opcode) {
   case ISD::STRICT_FADD:
@@ -31838,6 +31877,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performANDCombine(N, DCI);
   case ISD::FADD:
     return performFADDCombine(N, DCI);
+  case AArch64ISD::FADD_PRED:
+    return performFADDPCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
     return performIntrinsicCombine(N, DCI, Subtarget);
   case ISD::ANY_EXTEND:
