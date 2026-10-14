@@ -78,10 +78,11 @@ static bool isLoopCounter(const OMPLoopDirective &S, const Expr *E) {
   const VarDecl *Canonical =
       cast<VarDecl>(cast<DeclRefExpr>(E->IgnoreParenImpCasts())->getDecl())
           ->getCanonicalDecl();
-  for (const Expr *C : S.counters())
+  for (const Expr *C : S.counters()) {
     if (cast<VarDecl>(cast<DeclRefExpr>(C)->getDecl())->getCanonicalDecl() ==
         Canonical)
       return true;
+  }
   return false;
 }
 
@@ -6637,7 +6638,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
       const bool NoLoopKernel = CGM.getOpenMPRuntime().canPromoteToNoLoop(S);
       if (!NoLoopKernel)
         HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
-      
+
       EmitOMPPrivateLoopCounters(S, LoopScope);
       (void)LoopScope.Privatize();
       if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
