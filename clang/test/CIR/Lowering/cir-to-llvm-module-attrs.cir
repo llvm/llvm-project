@@ -13,7 +13,10 @@
 // Missing cir.triple.
 
 !s32i = !cir.int<s, 32>
+// FIXME: CIREHABILoweringPass emits an error diagnostic, but returns normally.
+// Make CIREHABILoweringPass return error too, and delete this line:
 // expected-error @below {{cannot lower cir.cpuid without a 'cir.triple' attribute}}
+// expected-error @below {{Module has no target triple}}
 module {
   cir.func @missing_triple(%p: !cir.ptr<!s32i>, %a: !s32i, %b: !s32i) {
     // expected-error @below {{failed to legalize operation 'cir.cpuid'}}
