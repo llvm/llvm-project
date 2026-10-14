@@ -222,11 +222,11 @@ template <class ELFT> struct CallGraphFunc {
 // Per-function call graph information.
 template <class ELFT> struct FunctionCallGraphInfo {
   CallGraphFunc<ELFT> Entry;
-  uint8_t FormatVersionNumber;
-  bool IsIndirectTarget;
   uint64_t FunctionTypeID;
   SmallVector<CallGraphFunc<ELFT>, 4> DirectCallees;
   SmallSet<uint64_t, 4> IndirectTypeIDs;
+  uint8_t FormatVersionNumber;
+  bool IsIndirectTarget;
 };
 
 template <class ELFT> class MipsGOTParser;
