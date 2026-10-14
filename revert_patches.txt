@@ -16,13 +16,11 @@ ASAN-DEBUG lib breaks
 ---
 comgr fails to build -lzma
 [Support][lldb] Port xz (lzma) decompression from LLDB into LLVM (#220092)
+[llvm-gsymutil] Read function symbols from .gnu_debugdata in gsymutil (#227159)
 ---
 breaks asan-debug build
 [DebugInfo] Support global addresses in variable locations  (#218722)" (#4800) (2 hours ago) <theRonShark>
 ---
 needs merge help
 [DebugInfo] Accept DW_OP_xderef_size and DW_OP_lit1..DW_OP_lit31. (#227839)
----
-Defered
-Reland "[compiler-rt][asan] Add asan checks for __builtin_assume_dereferencable" (#224163)
 ---
