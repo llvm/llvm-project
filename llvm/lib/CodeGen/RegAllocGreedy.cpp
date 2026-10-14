@@ -13,6 +13,7 @@
 
 #include "RegAllocGreedy.h"
 #include "AllocationOrder.h"
+#include "InlineSpiller.h"
 #include "InterferenceCache.h"
 #include "RegAllocBase.h"
 #include "SplitKit.h"
@@ -2423,6 +2424,9 @@ BlockFrequency RAGreedy::calcRematCost(const LiveInterval &VirtReg,
   for (MachineInstr &UseMI : MRI->use_nodbg_instructions(VirtReg.reg())) {
     if (!UseMI.readsVirtualRegister(VirtReg.reg()))
       continue;
+
+    if (!canGuaranteeAssignmentAfterRemat(VirtReg.reg(), UseMI))
+      return BlockFrequency::max();
 
     SlotIndex UseIdx = LIS->getInstructionIndex(UseMI).getRegSlot(true);
     if (!VirtRegAuxInfo::allUsesAvailableAt(DefMI, UseIdx, *LIS, *MRI, *TII))
