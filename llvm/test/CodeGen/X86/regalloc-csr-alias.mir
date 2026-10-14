@@ -26,6 +26,8 @@ body: |
     $al = COPY %0
     RET 0, $al
 ...
+# No CSR is otherwise used, so rematerialize after the call instead of
+# keeping the value in BH and incurring the cost of saving EBX.
 ---
 name: unused_csr
 tracksRegLiveness: true
