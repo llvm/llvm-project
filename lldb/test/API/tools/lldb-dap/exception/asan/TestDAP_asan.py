@@ -29,8 +29,6 @@ class TestDAP_asan(DAPTestCaseBase):
         self.assertRegex(description, r"fatal_error: heap-use-after-free")
         self.assertEqual(exception_info.exceptionId, "runtime-instrumentation")
 
-        stop_info = self.expect_not_none(
-            exception_info.lldb_stop_reason_extended_info
-        )
+        stop_info = self.expect_not_none(exception_info.lldb_stop_reason_extended_info)
         self.assertEqual(stop_info["instrumentation_class"], "AddressSanitizer")
         self.assertEqual(stop_info["description"], "heap-use-after-free")
