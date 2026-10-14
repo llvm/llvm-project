@@ -54,6 +54,8 @@ TEST(OffloadArchTest, Unknown) {
 }
 
 // Names must round-trip through parse -> string.
+// TODO: Add IGCA targets (e.g. "igca_20ca"), plus IntelIGCA classification and
+// ==/< ordering tests.
 TEST(OffloadArchTest, RoundTrip) {
   for (const char *Name :
        {"sm_52", "sm_90a", "gfx906", "gfx1201", "gfx12-generic", "amdgcnspirv",

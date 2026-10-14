@@ -78,4 +78,93 @@ TEST(IntelGPUTargetParserTest, NumericArchName) {
       "xe_12.60.7");
 }
 
+TEST(IntelGPUTargetParserTest, IGCATargetBehavior) {
+  IntelGPU::IGCATarget T(60, IntelGPU::IGCA_COMPUTE, true);
+  EXPECT_TRUE(T.isValid());
+  EXPECT_EQ(T.getTarget(), 60);
+  EXPECT_EQ(T.getFeatureSet(), IntelGPU::IGCA_COMPUTE);
+  EXPECT_TRUE(T.isExact());
+  EXPECT_TRUE(T.isComputeExact());
+  EXPECT_FALSE(T.isRender());
+  EXPECT_EQ(IntelGPU::IGCATarget::unpack(T.pack()), T);
+  EXPECT_NE(T, IntelGPU::IGCATarget(60, IntelGPU::IGCA_COMPUTE, false));
+  // Invalid behavior:
+  EXPECT_FALSE(IntelGPU::IGCATarget::invalid());
+  EXPECT_EQ(IntelGPU::IGCATarget::invalid().pack(), 0u);
+}
+
+TEST(IntelGPUTargetParserTest, ParseIGCATarget) {
+  using IntelGPU::IGCATarget;
+  EXPECT_EQ(IntelGPU::parseIGCATarget("igca_10"),
+            IGCATarget(10, IntelGPU::IGCA_CORE, false));
+  EXPECT_EQ(IntelGPU::parseIGCATarget("igca_20c"),
+            IGCATarget(20, IntelGPU::IGCA_COMPUTE, false));
+  EXPECT_EQ(IntelGPU::parseIGCATarget("igca_20ca"),
+            IGCATarget(20, IntelGPU::IGCA_COMPUTE, true));
+  EXPECT_EQ(IntelGPU::parseIGCATarget("igca_15r"),
+            IGCATarget(15, IntelGPU::IGCA_RENDER, false));
+  EXPECT_EQ(IntelGPU::parseIGCATarget("igca_15ra"),
+            IGCATarget(15, IntelGPU::IGCA_RENDER, true));
+  // Only levels in the table are valid targets.
+  EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_42"));
+  EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_0"));
+  // Cannot have exact without naming feature set:
+  EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_10a"));
+  // Malformed spellings:
+  EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_"));
+  EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_10x"));
+  EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_10cr"));
+  EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_10caa"));
+  EXPECT_FALSE(IntelGPU::parseIGCATarget("igca10"));
+  EXPECT_FALSE(IntelGPU::parseIGCATarget("IGCA_10"));
+  EXPECT_FALSE(IntelGPU::parseIGCATarget(""));
+}
+
+TEST(IntelGPUTargetParserTest, IGCATargetName) {
+  using IntelGPU::IGCATarget;
+  EXPECT_EQ(
+      IntelGPU::getIGCATargetName(IGCATarget(60, IntelGPU::IGCA_CORE, false)),
+      "igca_60");
+  EXPECT_EQ(
+      IntelGPU::getIGCATargetName(IGCATarget(60, IntelGPU::IGCA_COMPUTE, true)),
+      "igca_60ca");
+  EXPECT_EQ(
+      IntelGPU::getIGCATargetName(IGCATarget(15, IntelGPU::IGCA_RENDER, false)),
+      "igca_15r");
+  EXPECT_EQ(IntelGPU::getIGCATargetName(IGCATarget::invalid()), "");
+  // A level that is not in the table has no spelling, and neither does an
+  // exact core target.
+  EXPECT_EQ(
+      IntelGPU::getIGCATargetName(IGCATarget(11, IntelGPU::IGCA_CORE, false)),
+      "");
+  EXPECT_EQ(
+      IntelGPU::getIGCATargetName(IGCATarget(10, IntelGPU::IGCA_CORE, true)),
+      "");
+}
+
+TEST(IntelGPUTargetParserTest, EveryIGCASpellingRoundTrips) {
+  SmallVector<StringRef> Names;
+  IntelGPU::fillValidIGCATargetList(Names);
+  EXPECT_FALSE(Names.empty());
+  for (StringRef Name : Names) {
+    IntelGPU::IGCATarget T = IntelGPU::parseIGCATarget(Name);
+    EXPECT_TRUE(T.isValid()) << Name;
+    EXPECT_EQ(IntelGPU::getIGCATargetName(T), Name);
+  }
+}
+
+TEST(IntelGPUTargetParserTest, EveryDeviceHasValidIGCATargetLevel) {
+  // Every device's defined IGCA target should have a corresponding entry in
+  // INTEL_IGCA_TARGET:
+#define INTEL_IGCA_TARGET_CHECK(NAME, IGCA_TARGET)                             \
+  EXPECT_TRUE(IntelGPU::parseIGCATarget("igca_" #IGCA_TARGET).isValid())       \
+      << NAME;
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  INTEL_IGCA_TARGET_CHECK(NAME, IGCA_TARGET)
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  INTEL_IGCA_TARGET_CHECK(NAME, IGCA_TARGET)
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+#undef INTEL_IGCA_TARGET_CHECK
+}
+
 } // namespace
