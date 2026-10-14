@@ -1,6 +1,3 @@
-set(LLVM_TARGET_DEFINITIONS ${PROJECT_SOURCE_DIR}/lib/Target/ARM/ARM.td)
-tablegen(LLVM ARMTargetParserDef.inc -gen-arm-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/ARM)
-
 set(LLVM_TARGET_DEFINITIONS ${PROJECT_SOURCE_DIR}/lib/Target/AArch64/AArch64.td)
 tablegen(LLVM AArch64TargetParserDef.inc -gen-arm-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/AArch64)
 
