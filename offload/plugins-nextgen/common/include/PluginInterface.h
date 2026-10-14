@@ -1630,23 +1630,6 @@ public:
                         __tgt_async_info *AsyncInfoPtr,
                         GenericProfilerTy *ProfilerPtr = nullptr);
 
-  /// Creates an event in the given plugin if supported.
-  int32_t create_event(int32_t DeviceId, void **EventPtr);
-
-  /// Records an event that has occurred.
-  int32_t record_event(int32_t DeviceId, void *EventPtr,
-                       __tgt_async_info *AsyncInfoPtr);
-
-  /// Wait until an event has occurred.
-  int32_t wait_event(int32_t DeviceId, void *EventPtr,
-                     __tgt_async_info *AsyncInfoPtr);
-
-  /// Synchronize execution until an event is done.
-  int32_t sync_event(int32_t DeviceId, void *EventPtr);
-
-  /// Remove the event from the plugin.
-  int32_t destroy_event(int32_t DeviceId, void *EventPtr);
-
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
 
