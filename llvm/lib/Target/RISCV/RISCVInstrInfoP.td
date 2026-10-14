@@ -2086,6 +2086,8 @@ def riscv_pnsra  : RVSDNode<"PNSRA", SDT_RISCVPackedNarrowingShift>;
 def riscv_pnsrar : RVSDNode<"PNSRAR", SDT_RISCVPackedNarrowingShift>;
 def riscv_pnclip  : RVSDNode<"PNCLIP", SDT_RISCVPackedNarrowingShift>;
 def riscv_pnclipu : RVSDNode<"PNCLIPU", SDT_RISCVPackedNarrowingShift>;
+def riscv_pnclipr : RVSDNode<"PNCLIPR", SDT_RISCVPackedNarrowingShift>;
+def riscv_pnclipru : RVSDNode<"PNCLIPRU", SDT_RISCVPackedNarrowingShift>;
 
 // RV32 packed widening shift.
 def SDT_RISCVPackedWideningShift
@@ -2827,6 +2829,15 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v2i16 (riscv_pnsrar (v2i32 GPRPair:$rs1), uimm5:$imm)),
             (PNSRARI_H GPRPair:$rs1, uimm5:$imm)>;
 
+  def : Pat<(v4i8 (riscv_pnclipru (v4i16 GPRPair:$rs1), uimm4:$imm)),
+            (PNCLIPRIU_B GPRPair:$rs1, uimm4:$imm)>;
+  def : Pat<(v2i16 (riscv_pnclipru (v2i32 GPRPair:$rs1), uimm5:$imm)),
+            (PNCLIPRIU_H GPRPair:$rs1, uimm5:$imm)>;
+  def : Pat<(v4i8 (riscv_pnclipr (v4i16 GPRPair:$rs1), uimm4:$imm)),
+            (PNCLIPRI_B GPRPair:$rs1, uimm4:$imm)>;
+  def : Pat<(v2i16 (riscv_pnclipr (v2i32 GPRPair:$rs1), uimm5:$imm)),
+            (PNCLIPRI_H GPRPair:$rs1, uimm5:$imm)>;
+
   def : Pat<(v4i8 (riscv_pnsrl (v4i16 GPRPair:$rs1), shiftMask32:$rs2)),
             (PNSRL_BS GPRPair:$rs1, shiftMask32:$rs2)>;
   def : Pat<(v2i16 (riscv_pnsrl (v2i32 GPRPair:$rs1), shiftMask32:$rs2)),
@@ -2839,6 +2850,23 @@ let append Predicates = [IsRV32] in {
             (PNSRAR_BS GPRPair:$rs1, shiftMask32:$rs2)>;
   def : Pat<(v2i16 (riscv_pnsrar (v2i32 GPRPair:$rs1), shiftMask32:$rs2)),
             (PNSRAR_HS GPRPair:$rs1, shiftMask32:$rs2)>;
+
+  def : Pat<(v4i8 (riscv_pnclipu (v4i16 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNCLIPU_BS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v2i16 (riscv_pnclipu (v2i32 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNCLIPU_HS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v4i8 (riscv_pnclipru (v4i16 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNCLIPRU_BS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v2i16 (riscv_pnclipru (v2i32 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNCLIPRU_HS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v4i8 (riscv_pnclip (v4i16 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNCLIP_BS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v2i16 (riscv_pnclip (v2i32 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNCLIP_HS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v4i8 (riscv_pnclipr (v4i16 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNCLIPR_BS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v2i16 (riscv_pnclipr (v2i32 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNCLIPR_HS GPRPair:$rs1, shiftMask32:$rs2)>;
 
   def : Pat<(v4i8 (trunc (v4i16 (riscv_psrl GPRPair:$rs1, uimm4:$imm)))),
             (PNSRLI_B GPRPair:$rs1, uimm4:$imm)>;
@@ -3127,19 +3155,19 @@ let append Predicates = [IsRV32] in {
             (EXTRACT_SUBREG GPRPair:$vec, sub_gpr_odd)>;
 
   // Packed narrowing clip by immediate (RV32). shift=0 == plain clip.
-  def : Pat<(v4i8 (riscv_pnclip (v4i16 GPRPair:$rs1), timm:$imm)),
-            (PNCLIPI_B GPRPair:$rs1, timm:$imm)>;
-  def : Pat<(v4i8 (riscv_pnclipu (v4i16 GPRPair:$rs1), timm:$imm)),
-            (PNCLIPIU_B GPRPair:$rs1, timm:$imm)>;
-  def : Pat<(v2i16 (riscv_pnclip (v2i32 GPRPair:$rs1), timm:$imm)),
-            (PNCLIPI_H GPRPair:$rs1, timm:$imm)>;
-  def : Pat<(v2i16 (riscv_pnclipu (v2i32 GPRPair:$rs1), timm:$imm)),
-            (PNCLIPIU_H GPRPair:$rs1, timm:$imm)>;
+  def : Pat<(v4i8 (riscv_pnclip (v4i16 GPRPair:$rs1), uimm4:$imm)),
+            (PNCLIPI_B GPRPair:$rs1, uimm4:$imm)>;
+  def : Pat<(v4i8 (riscv_pnclipu (v4i16 GPRPair:$rs1), uimm4:$imm)),
+            (PNCLIPIU_B GPRPair:$rs1, uimm4:$imm)>;
+  def : Pat<(v2i16 (riscv_pnclip (v2i32 GPRPair:$rs1), uimm5:$imm)),
+            (PNCLIPI_H GPRPair:$rs1, uimm5:$imm)>;
+  def : Pat<(v2i16 (riscv_pnclipu (v2i32 GPRPair:$rs1), uimm5:$imm)),
+            (PNCLIPIU_H GPRPair:$rs1, uimm5:$imm)>;
 
-  def : Pat<(XLenVT (riscv_nclip XLenVT:$lo, XLenVT:$hi, timm:$imm)),
-            (NCLIPI (BuildGPRPair GPR:$lo, GPR:$hi), timm:$imm)>;
-  def : Pat<(XLenVT (riscv_nclipu XLenVT:$lo, XLenVT:$hi, timm:$imm)),
-            (NCLIPIU (BuildGPRPair GPR:$lo, GPR:$hi), timm:$imm)>;
+  def : Pat<(XLenVT (riscv_nclip XLenVT:$lo, XLenVT:$hi, uimm6:$imm)),
+            (NCLIPI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
+  def : Pat<(XLenVT (riscv_nclipu XLenVT:$lo, XLenVT:$hi, uimm6:$imm)),
+            (NCLIPIU (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
 
   // Packed multiply high accumulate, scalar halfword (RV32). The packed
   // intrinsic expands to a pair of these, one per result word.
