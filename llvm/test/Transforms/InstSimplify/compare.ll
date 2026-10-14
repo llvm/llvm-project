@@ -3380,8 +3380,7 @@ define i1 @test_byval_global_inequal(ptr byval(i32) %a) {
 
 define i1 @neg_global_alias() {
 ; CHECK-LABEL: @neg_global_alias(
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr @A, @A.alias
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %res = icmp ne ptr @A, @A.alias
   ret i1 %res
@@ -3572,6 +3571,80 @@ define <vscale x 8 x i1> @icmp_eq_i1_vec_constant_expr_commuted() {
 ;
 entry:
   %cmp = icmp eq <vscale x 8 x i1> zeroinitializer, insertelement (<vscale x 8 x i1> poison, i1 true, i64 0)
+  ret <vscale x 8 x i1> %cmp
+}
+
+define i1 @icmp_slt_i1_constant_expr() {
+; CHECK-LABEL: @icmp_slt_i1_constant_expr(
+; CHECK-NEXT:    ret i1 ptrtoint (ptr @a to i1)
+;
+  %cmp = icmp slt i1 ptrtoint (ptr @a to i1), false
+  ret i1 %cmp
+}
+
+define i1 @icmp_sgt_i1_constant_expr() {
+; CHECK-LABEL: @icmp_sgt_i1_constant_expr(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp sgt i1 ptrtoint (ptr @a to i1), false
+  ret i1 %cmp
+}
+
+define i1 @icmp_sle_i1_constant_expr() {
+; CHECK-LABEL: @icmp_sle_i1_constant_expr(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp sle i1 ptrtoint (ptr @a to i1), false
+  ret i1 %cmp
+}
+
+define i1 @icmp_sge_i1_constant_expr() {
+; CHECK-LABEL: @icmp_sge_i1_constant_expr(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp sge i1 ptrtoint (ptr @a to i1), false
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_i1_constant_expr() {
+; CHECK-LABEL: @icmp_ult_i1_constant_expr(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i1 ptrtoint (ptr @a to i1), true
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ult i1 ptrtoint (ptr @a to i1), true
+  ret i1 %cmp
+}
+
+define i1 @icmp_ugt_i1_constant_expr() {
+; CHECK-LABEL: @icmp_ugt_i1_constant_expr(
+; CHECK-NEXT:    ret i1 ptrtoint (ptr @a to i1)
+;
+  %cmp = icmp ugt i1 ptrtoint (ptr @a to i1), false
+  ret i1 %cmp
+}
+
+define i1 @icmp_ule_i1_constant_expr() {
+; CHECK-LABEL: @icmp_ule_i1_constant_expr(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i1 ptrtoint (ptr @a to i1), false
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ule i1 ptrtoint (ptr @a to i1), false
+  ret i1 %cmp
+}
+
+define i1 @icmp_uge_i1_constant_expr() {
+; CHECK-LABEL: @icmp_uge_i1_constant_expr(
+; CHECK-NEXT:    ret i1 ptrtoint (ptr @a to i1)
+;
+  %cmp = icmp uge i1 ptrtoint (ptr @a to i1), true
+  ret i1 %cmp
+}
+
+define <vscale x 8 x i1> @icmp_slt_i1_vec_constant_expr() {
+; CHECK-LABEL: @icmp_slt_i1_vec_constant_expr(
+; CHECK-NEXT:    ret <vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0)
+;
+  %cmp = icmp slt <vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), zeroinitializer
   ret <vscale x 8 x i1> %cmp
 }
 
