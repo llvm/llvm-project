@@ -4772,10 +4772,10 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
       SatMax = DAG.getSetCC(dl, BoolNVT, ResultHH, NVTZero, ISD::SETNE);
     } else if (Scale < VTSize) {
       // Overflow happened if ((HH >> (Scale - NVTSize)) != 0).
-      SDValue HLAdjusted =
-          DAG.getNode(ISD::SRL, dl, NVT, ResultHL,
+      SDValue HHAdjusted =
+          DAG.getNode(ISD::SRL, dl, NVT, ResultHH,
                       DAG.getShiftAmountConstant(Scale - NVTSize, NVT, dl));
-      SatMax = DAG.getSetCC(dl, BoolNVT, HLAdjusted, NVTZero, ISD::SETNE);
+      SatMax = DAG.getSetCC(dl, BoolNVT, HHAdjusted, NVTZero, ISD::SETNE);
     } else
       llvm_unreachable("Scale must be less or equal to VTSize for UMULFIXSAT"
                        "(and saturation can't happen with Scale==VTSize).");
