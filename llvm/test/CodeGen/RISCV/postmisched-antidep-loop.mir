@@ -5,6 +5,12 @@
 # RUN: llc -mtriple=riscv64 -mcpu=sifive-x280 -run-pass=postmisched \
 # RUN:   -enable-post-misched -misched-postra-antidep=none \
 # RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,NO-ANTIDEP
+# RUN: llc -mtriple=riscv64 -mcpu=sifive-x280 -run-pass=postmisched \
+# RUN:   -enable-post-misched -verify-machineinstrs -o - %s \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,ANTIDEP
+# RUN: llc -mtriple=riscv64 -mcpu=sifive-p870-d -run-pass=postmisched \
+# RUN:   -enable-post-misched -verify-machineinstrs -o - %s \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,NO-ANTIDEP
 
 ---
 name:            gpr_loop_carried_war
