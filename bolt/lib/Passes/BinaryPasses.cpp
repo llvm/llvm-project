@@ -79,7 +79,6 @@ HotTextMoveSections("hot-text-move-sections",
            "the hot text. (default=\'.stub,.mover\')."),
   cl::value_desc("sec1,sec2,sec3,..."),
   cl::CommaSeparated,
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 bool isHotTextMover(const BinaryFunction &Function) {
@@ -110,7 +109,7 @@ static cl::list<Peepholes::PeepholeOpts> Peepholes(
                           "remove useless conditional branches"),
                clEnumValN(Peepholes::PEEP_ALL, "all",
                           "enable all peephole optimizations")),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>
     PrintFuncStat("print-function-statistics",
@@ -135,7 +134,7 @@ static cl::list<bolt::DynoStats::Category>
 #undef D
                           clEnumValN(bolt::DynoStats::LAST_DYNO_STAT, "all",
                                      "sorted by all names")),
-                  cl::ZeroOrMore, cl::cat(BoltOptCategory));
+                  cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
     PrintUnknown("print-unknown",
@@ -173,14 +172,7 @@ cl::opt<bolt::ReorderBasicBlocks::LayoutType> ReorderBlocks(
                    "perform layout optimizing I-cache behavior"),
         clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_SHUFFLE,
                    "cluster-shuffle", "perform random layout of clusters")),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory),
-    cl::callback([](const bolt::ReorderBasicBlocks::LayoutType &option) {
-      if (option == bolt::ReorderBasicBlocks::LT_OPTIMIZE_CACHE_PLUS) {
-        errs() << "BOLT-WARNING: '-reorder-blocks=cache+' is deprecated, please"
-               << " use '-reorder-blocks=ext-tsp' instead\n";
-        ReorderBlocks = bolt::ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP;
-      }
-    }));
+    cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> ReportBadLayout(
     "report-bad-layout",
@@ -210,7 +202,6 @@ SctcMode("sctc-mode",
     clEnumValN(SctcHeuristic,
       "heuristic",
       "use branch prediction data to control sctc")),
-  cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>
@@ -243,8 +234,7 @@ static cl::opt<int> ProfileDensityCutOffHot(
 static cl::opt<double> ProfileDensityThreshold(
     "profile-density-threshold", cl::init(60),
     cl::desc("If the profile density is below the given threshold, it "
-             "will be suggested to increase the sampling rate."),
-    cl::Optional);
+             "will be suggested to increase the sampling rate."));
 
 } // namespace opts
 
@@ -418,6 +408,11 @@ bool ReorderBasicBlocks::shouldOptimize(const BinaryFunction &BF) const {
 }
 
 Error ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
+  if (opts::ReorderBlocks == ReorderBasicBlocks::LT_OPTIMIZE_CACHE_PLUS) {
+    BC.errs() << "BOLT-WARNING: '-reorder-blocks=cache+' is deprecated, please"
+              << " use '-reorder-blocks=ext-tsp' instead\n";
+    opts::ReorderBlocks = ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP;
+  }
   if (opts::ReorderBlocks == ReorderBasicBlocks::LT_NONE)
     return Error::success();
 

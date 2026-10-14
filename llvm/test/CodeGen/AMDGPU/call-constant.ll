@@ -29,6 +29,8 @@ define amdgpu_kernel void @test_call_undef() #0 {
 ; GISEL-NEXT:    s_mov_b32 s14, s16
 ; GISEL-NEXT:    s_mov_b32 s32, 0
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GISEL-NEXT:    flat_store_dword v[0:1], v0
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_endpgm
   %val = call i32 undef(i32 1)
   %op = add i32 %val, 1
@@ -98,6 +100,10 @@ define amdgpu_kernel void @test_call_null() #0 {
 ; GISEL-NEXT:    s_mov_b32 s14, s16
 ; GISEL-NEXT:    s_mov_b32 s32, 0
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], 0
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-NEXT:    flat_store_dword v[0:1], v0
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_endpgm
   %val = call i32 null(i32 1)
   %op = add i32 %val, 1

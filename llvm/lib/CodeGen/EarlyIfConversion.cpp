@@ -141,8 +141,8 @@ public:
   struct PHIInfo {
     MachineInstr *PHI;
     Register TReg, FReg;
-    // Latencies from Cond+Branch, TReg, and FReg to DstReg.
-    int CondCycles = 0, TCycles = 0, FCycles = 0;
+    /// Description of the select that will replace this phi.
+    TargetInstrInfo::SelectExpansion Select;
 
     PHIInfo(MachineInstr *phi) : PHI(phi) {}
   };
@@ -561,8 +561,7 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
 
     // Get target information.
     if (!TII->canInsertSelect(*Head, Cond, PI.PHI->getOperand(0).getReg(),
-                              PI.TReg, PI.FReg, PI.CondCycles, PI.TCycles,
-                              PI.FCycles)) {
+                              PI.TReg, PI.FReg, PI.Select)) {
       LLVM_DEBUG(dbgs() << "Can't convert: " << *PI.PHI);
       return false;
     }
@@ -980,20 +979,23 @@ bool EarlyIfConverter::hasCallOrLoopInRange(const MachineInstr *From,
 
   // If From and To are in the same block, just check (From, To).
   if (FromBB == ToBB) {
-    for (const MachineInstr &MI :
-         make_range(std::next(From->getIterator()), To->getIterator()))
+    for (const MachineInstr &MI : instructionsWithoutDebug(
+             std::next(From->getIterator()), To->getIterator(),
+             /*SkipPseudoOp=*/false))
       if (IsCallOrHitSearchLimit(MI))
         return true;
     return false;
   }
 
   // Check (From, end of From's block] and [start of To's block, To).
-  for (const MachineInstr &MI :
-       make_range(std::next(From->getIterator()), FromBB->instr_end()))
+  for (const MachineInstr &MI : instructionsWithoutDebug(
+           std::next(From->getIterator()), FromBB->instr_end(),
+           /*SkipPseudoOp=*/false))
     if (IsCallOrHitSearchLimit(MI))
       return true;
   for (const MachineInstr &MI :
-       make_range(ToBB->instr_begin(), To->getIterator()))
+       instructionsWithoutDebug(ToBB->instr_begin(), To->getIterator(),
+                                /*SkipPseudoOp=*/false))
     if (IsCallOrHitSearchLimit(MI))
       return true;
 
@@ -1029,10 +1031,15 @@ bool EarlyIfConverter::hasCallOrLoopInRange(const MachineInstr *From,
       if (HitSearchLimit(CacheIt->second))
         return true;
     } else {
-      for (const MachineInstr &MI : *BB)
+      unsigned NumBlockInstrs = 0;
+      for (const MachineInstr &MI :
+           instructionsWithoutDebug(BB->instr_begin(), BB->instr_end(),
+                                    /*SkipPseudoOp=*/false)) {
+        ++NumBlockInstrs;
         if (IsCallOrHitSearchLimit(MI))
           return true;
-      NoCallBlocksCache[BB] = BB->size();
+      }
+      NoCallBlocksCache[BB] = NumBlockInstrs;
     }
 
     for (const MachineBasicBlock *Pred : BB->predecessors())
@@ -1298,7 +1305,7 @@ bool EarlyIfConverter::shouldConvertIf() {
     LLVM_DEBUG(dbgs() << "Slack " << Slack << ":\t" << *PI.PHI);
 
     // The condition is pulled into the critical path.
-    unsigned CondDepth = adjCycles(BranchDepth, PI.CondCycles);
+    unsigned CondDepth = adjCycles(BranchDepth, PI.Select.CondCycles);
     if (CondDepth > MaxDepth) {
       unsigned Extra = CondDepth - MaxDepth;
       LLVM_DEBUG(dbgs() << "Condition adds " << Extra << " cycles.\n");
@@ -1311,7 +1318,8 @@ bool EarlyIfConverter::shouldConvertIf() {
     }
 
     // The TBB value is pulled into the critical path.
-    unsigned TDepth = adjCycles(TBBTrace.getPHIDepth(*PI.PHI), PI.TCycles);
+    unsigned TDepth =
+        adjCycles(TBBTrace.getPHIDepth(*PI.PHI), PI.Select.TrueCycles);
     if (TDepth > MaxDepth) {
       unsigned Extra = TDepth - MaxDepth;
       LLVM_DEBUG(dbgs() << "TBB data adds " << Extra << " cycles.\n");
@@ -1324,7 +1332,8 @@ bool EarlyIfConverter::shouldConvertIf() {
     }
 
     // The FBB value is pulled into the critical path.
-    unsigned FDepth = adjCycles(FBBTrace.getPHIDepth(*PI.PHI), PI.FCycles);
+    unsigned FDepth =
+        adjCycles(FBBTrace.getPHIDepth(*PI.PHI), PI.Select.FalseCycles);
     if (FDepth > MaxDepth) {
       unsigned Extra = FDepth - MaxDepth;
       LLVM_DEBUG(dbgs() << "FBB data adds " << Extra << " cycles.\n");

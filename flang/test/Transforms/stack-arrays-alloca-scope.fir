@@ -1,9 +1,15 @@
-// RUN: fir-opt --stack-arrays %s | FileCheck %s
+// RUN: fir-opt --allocation-placement %s | FileCheck %s
 
 // Test that stack allocations are created in the block where the enclosing
 // construct expects them (fir::getAllocaBlock) and are not hoisted out of it:
 // each concurrent execution of a construct modelling parallelism needs its own
 // storage.
+//
+// -fstack-arrays is not honored inside offload regions, so the default size
+// based policy is used: the 168 byte <42xi32> temporaries go on the stack,
+// runtime-sized ones stay on the heap.
+
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"} {
 
 // The allocation has no operand but must still stay inside the compute
 // construct instead of being hoisted to the function entry block.
@@ -63,8 +69,8 @@ func.func @acc_kernels_no_operand() {
 // CHECK:         acc.kernels {
 // CHECK-NEXT:      fir.alloca !fir.array<42xi32>
 
-// The extent operand is available before the compute construct: the allocation
-// can only be hoisted up to the beginning of the construct.
+// A runtime-sized allocation inside a compute construct stays on the heap, even
+// when its extent is available before the construct.
 func.func @acc_parallel_operand_outside(%n: index) {
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
@@ -80,13 +86,13 @@ func.func @acc_parallel_operand_outside(%n: index) {
   return
 }
 // CHECK-LABEL: func.func @acc_parallel_operand_outside(
-// CHECK:         %[[SIZE:.*]] = arith.addi
 // CHECK-NOT:     fir.alloca
 // CHECK:         acc.parallel {
-// CHECK-NEXT:      fir.alloca !fir.array<?xi32>, %[[SIZE]]
+// CHECK-NEXT:      fir.allocmem !fir.array<?xi32>
+// CHECK:           fir.freemem
+// CHECK-NOT:     fir.alloca
 
-// The extent operand is defined inside the compute construct: the allocation is
-// placed right after it, as it would be in a plain function.
+// Same when the extent is defined inside the compute construct.
 func.func @acc_parallel_operand_inside(%n: index) {
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
@@ -104,8 +110,10 @@ func.func @acc_parallel_operand_inside(%n: index) {
 // CHECK-LABEL: func.func @acc_parallel_operand_inside(
 // CHECK-NOT:     fir.alloca
 // CHECK:         acc.parallel {
-// CHECK-NEXT:      %[[SIZE:.*]] = arith.addi
-// CHECK-NEXT:      fir.alloca !fir.array<?xi32>, %[[SIZE]]
+// CHECK-NEXT:      arith.addi
+// CHECK-NEXT:      fir.allocmem !fir.array<?xi32>
+// CHECK:           fir.freemem
+// CHECK-NOT:     fir.alloca
 
 // Hoisting out of a sequential loop is still done, but only up to the beginning
 // of the compute construct.
@@ -212,3 +220,4 @@ func.func @acc_data_no_operand() {
 // CHECK-LABEL: func.func @acc_data_no_operand()
 // CHECK:         fir.alloca !fir.array<42xi32>
 // CHECK:         acc.data
+}

@@ -80,10 +80,6 @@ char SIOptimizeExecMaskingPreRALegacy::ID = 0;
 
 char &llvm::SIOptimizeExecMaskingPreRAID = SIOptimizeExecMaskingPreRALegacy::ID;
 
-FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
-  return new SIOptimizeExecMaskingPreRALegacy();
-}
-
 // See if there is a def between \p AndIdx and \p SelIdx that needs to live
 // beyond \p AndIdx.
 static bool isDefBetween(const LiveRange &LR, SlotIndex AndIdx,

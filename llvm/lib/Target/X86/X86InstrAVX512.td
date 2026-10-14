@@ -3142,6 +3142,11 @@ let Predicates = [HasAVX512, NoVLX] in {
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPD", v2f64x_info, v8f64_info>;
 }
 
+let Predicates = [HasFP16, NoVLX] in {
+  defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPH", v16f16x_info, v32f16_info>;
+  defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPH", v8f16x_info, v32f16_info>;
+}
+
 let Predicates = [HasBWI, NoVLX] in {
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpm, X86pcmpm_su, "VPCMPB", v32i8x_info, v64i8_info>;
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpum, X86pcmpum_su, "VPCMPUB", v32i8x_info, v64i8_info>;
@@ -12632,7 +12637,7 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                    (ins VTI.RC:$src2, VTI.MemOp:$src3), OpStr,
                                    "$src3, $src2", "$src2, $src3",
                                    (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
-                                            (VTI.VT (VTI.LdFrag addr:$src3))))>,
+                                            (load addr:$src3)))>,
                                    EVEX, VVVV, EVEX_CD8<32, CD8VF>, T8,
                                    Sched<[sched.Folded, sched.ReadAfterFold,
                                           sched.ReadAfterFold]>;
@@ -12640,8 +12645,9 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                    (ins VTI.RC:$src2, VTI.ScalarMemOp:$src3),
                                    OpStr, "${src3}"#VTI.BroadcastStr#", $src2",
                                    "$src2, ${src3}"#VTI.BroadcastStr,
-                                   (OpNode VTI.RC:$src1, VTI.RC:$src2,
-                                    (VTI.VT (VTI.BroadcastLdFrag addr:$src3)))>,
+                                   (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
+                                            (bitconvert
+                                             (VTI.VT (VTI.BroadcastLdFrag addr:$src3)))))>,
                                    EVEX, VVVV, EVEX_CD8<32, CD8VF>, EVEX_B,
                                    T8, Sched<[sched.Folded, sched.ReadAfterFold,
                                                 sched.ReadAfterFold]>;

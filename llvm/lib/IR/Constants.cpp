@@ -309,19 +309,47 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
 }
 
+static std::optional<unsigned> getNumWalkableElements(Type *Ty) {
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+    return FVTy->getNumElements();
+  if (auto *STy = dyn_cast<StructType>(Ty))
+    return STy->getNumElements();
+  if (auto *ATy = dyn_cast<ArrayType>(Ty))
+    return ATy->getNumElements();
+  return std::nullopt;
+}
+
+static bool
+containsMatchingElement(const Constant *C,
+                        function_ref<bool(const Constant *)> PredFn) {
+  // Simple pruning for large size array. UndefValue is fine as it is filtered
+  // out by PredFn already.
+  if (isa<ConstantData>(C))
+    return false;
+
+  std::optional<unsigned> NumElts = getNumWalkableElements(C->getType());
+  if (!NumElts)
+    return false;
+
+  for (unsigned I = 0; I != *NumElts; ++I) {
+    Constant *Elt = C->getAggregateElement(I);
+    if (Elt && (PredFn(Elt) || containsMatchingElement(Elt, PredFn)))
+      return true;
+  }
+  return false;
+}
+
 static bool
 containsUndefinedElement(const Constant *C,
                          function_ref<bool(const Constant *)> HasFn) {
-  if (C->getType()->isVectorTy()) {
-    if (HasFn(C))
-      return true;
-    if (isa<ConstantAggregateZero>(C))
-      return false;
+  Type *Ty = C->getType();
+  if (!Ty->isVectorTy() && !Ty->isAggregateType())
+    return false;
 
-    return C->containsMatchingVectorElement(HasFn);
-  }
+  if (HasFn(C))
+    return true;
 
-  return false;
+  return containsMatchingElement(C, HasFn);
 }
 
 bool Constant::containsUndefOrPoisonElement() const {
@@ -344,7 +372,7 @@ bool Constant::containsConstantExpression() const {
   if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
     return false;
 
-  return containsMatchingVectorElement(IsaPred<ConstantExpr>);
+  return containsMatchingElement(this, IsaPred<ConstantExpr>);
 }
 
 bool Constant::containsMatchingVectorElement(
@@ -1717,9 +1745,11 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::GetElementPtr: {
     auto *GEPO = cast<GEPOperator>(this);
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
         GEPO->getNoWrapFlags(), GEPO->getInRange(), OnlyIfReducedTy);
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   }
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
@@ -2639,9 +2669,11 @@ Constant *ConstantExpr::getSizeOf(Type* Ty) {
   // sizeof is implemented as: (i64) gep (Ty*)null, 1
   // Note that a non-inbounds gep is used, as null isn't within any object.
   Constant *GEPIdx = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   Constant *GEP = getGetElementPtr(
       Ty, Constant::getNullValue(PointerType::getUnqual(Ty->getContext())),
       GEPIdx);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   return getPtrToInt(GEP,
                      Type::getInt64Ty(Ty->getContext()));
 }
@@ -2655,7 +2687,9 @@ Constant *ConstantExpr::getAlignOf(Type* Ty) {
   Constant *Zero = ConstantInt::get(Type::getInt64Ty(Ty->getContext()), 0);
   Constant *One = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
   Constant *Indices[2] = {Zero, One};
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   Constant *GEP = getGetElementPtr(AligningTy, NullPtr, Indices);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   return getPtrToInt(GEP, Type::getInt64Ty(Ty->getContext()));
 }
 
@@ -2708,6 +2742,84 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
+}
+
+Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
+                                         Constant *C, ArrayRef<Constant *> Idxs,
+                                         GEPNoWrapFlags NW,
+                                         std::optional<ConstantRange> InRange,
+                                         Type *OnlyIfReducedTy) {
+  // Handle already canonical GEP.
+  if (Ty->isIntegerTy(8) && Idxs[0]->getType() == DL.getIndexType(C->getType()))
+    return getPtrAdd(C, Idxs[0], NW, InRange, OnlyIfReducedTy);
+
+  // Some API require an ArrayRef of Value * instead of Constant *.
+  ArrayRef<Value *> ValIdxs =
+      ArrayRef((Value *const *)Idxs.data(), Idxs.size());
+  assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
+
+  if (!isSupportedGetElementPtr(Ty))
+    return nullptr;
+
+  Type *RetTy = GetElementPtrInst::getGEPReturnType(C, ValIdxs);
+  Type *IdxTy = DL.getIndexType(RetTy);
+
+  Constant *Offset = Constant::getNullValue(IdxTy);
+  auto GTI = gep_type_begin(Ty, ValIdxs), GTE = gep_type_end(Ty, ValIdxs);
+  for (; GTI != GTE; ++GTI) {
+    auto *Idx = cast<Constant>(GTI.getOperand());
+    if (Idx->isNullValue())
+      continue;
+
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
+      uint64_t OpValue = Idx->getUniqueInteger().getZExtValue();
+      uint64_t Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
+      if (!Size)
+        continue;
+
+      Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset,
+                                             ConstantInt::get(IdxTy, Size));
+      if (!Offset)
+        return nullptr;
+
+      continue;
+    }
+
+    // Splat the index if needed.
+    if (IdxTy->isVectorTy() && !Idx->getType()->isVectorTy())
+      Idx = ConstantVector::getSplat(cast<VectorType>(IdxTy)->getElementCount(),
+                                     Idx);
+
+    // Convert to correct type.
+    if (Idx->getType() != IdxTy) {
+      Idx = ConstantFoldCastInstruction(Idx->getType()->getScalarSizeInBits() <
+                                                IdxTy->getScalarSizeInBits()
+                                            ? Instruction::SExt
+                                            : Instruction::Trunc,
+                                        Idx, IdxTy);
+      if (!Idx)
+        return nullptr;
+    }
+
+    TypeSize TySize = GTI.getSequentialElementStride(DL);
+    if (TySize.isScalable())
+      return nullptr;
+
+    // Multiply by scale.
+    if (TySize != TypeSize::getFixed(1)) {
+      Constant *Scale = ConstantInt::getSigned(IdxTy, TySize.getFixedValue(),
+                                               /*ImplicitTrunc=*/true);
+      Idx = ConstantFoldBinaryInstruction(Instruction::Mul, Idx, Scale);
+      if (!Idx)
+        return nullptr;
+    }
+
+    Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset, Idx);
+    if (!Offset)
+      return nullptr;
+  }
+
+  return getPtrAdd(C, Offset, NW, InRange, OnlyIfReducedTy);
 }
 
 Constant *ConstantExpr::getExtractElement(Constant *Val, Constant *Idx,

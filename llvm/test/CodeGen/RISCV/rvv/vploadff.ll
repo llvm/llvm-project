@@ -1006,3 +1006,41 @@ define { <vscale x 3 x i8>, i32 } @vploadff_nxv3i8(ptr %ptr, <vscale x 3 x i1> %
   %load = call { <vscale x 3 x i8>, i32 } @llvm.vp.load.ff.nxv3i8.p0(ptr %ptr, <vscale x 3 x i1> %m, i32 %evl)
   ret { <vscale x 3 x i8>, i32 } %load
 }
+
+define <vscale x 8 x i8> @consecutive_vploadff(ptr %p0, ptr %p1) {
+; CHECK-LABEL: consecutive_vploadff:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vle8ff.v v8, (a0)
+; CHECK-NEXT:    vle8ff.v v9, (a1)
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %ff1 = call {<vscale x 8 x i8>, i32} @llvm.vp.load.ff(ptr %p0, <vscale x 8 x i1> splat (i1 true), i32 16)
+  %vl1.new = extractvalue {<vscale x 8 x i8>, i32} %ff1, 1
+  %ff2 = call {<vscale x 8 x i8>, i32} @llvm.vp.load.ff(ptr %p1, <vscale x 8 x i1> splat (i1 true), i32 %vl1.new)
+
+  %val1 = extractvalue {<vscale x 8 x i8>, i32} %ff1, 0
+  %val2 = extractvalue {<vscale x 8 x i8>, i32} %ff2, 0
+  %ret = add nuw <vscale x 8 x i8> %val1, %val2
+  ret <vscale x 8 x i8> %ret
+}
+
+define <vscale x 8 x i8> @consecutive_vploadff_non_const_evl(ptr %p0, ptr %p1, i32 zeroext %vl) {
+; CHECK-LABEL: consecutive_vploadff_non_const_evl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
+; CHECK-NEXT:    vle8ff.v v8, (a0)
+; CHECK-NEXT:    vle8ff.v v9, (a1)
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %ff1 = call {<vscale x 8 x i8>, i32} @llvm.vp.load.ff(ptr %p0, <vscale x 8 x i1> splat (i1 true), i32 %vl)
+  %vl1.new = extractvalue {<vscale x 8 x i8>, i32} %ff1, 1
+  %ff2 = call {<vscale x 8 x i8>, i32} @llvm.vp.load.ff(ptr %p1, <vscale x 8 x i1> splat (i1 true), i32 %vl1.new)
+
+  %val1 = extractvalue {<vscale x 8 x i8>, i32} %ff1, 0
+  %val2 = extractvalue {<vscale x 8 x i8>, i32} %ff2, 0
+  %ret = add nuw <vscale x 8 x i8> %val1, %val2
+  ret <vscale x 8 x i8> %ret
+}

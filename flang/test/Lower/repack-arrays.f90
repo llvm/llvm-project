@@ -13,7 +13,7 @@ subroutine test1(x)
 ! WHOLE-SAME:    whole
 ! ALL-NOT:       no_copy
 ! ALL-SAME       : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
-! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} {uniq_name = "_QFtest1Ex"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} uniq_name("_QFtest1Ex") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! ALL:           fir.unpack_array %[[VAL_2]] to %[[VAL_0]]
 ! STACK-SAME:    stack
 ! HEAP-SAME:     heap
@@ -34,7 +34,7 @@ subroutine test2(n, x)
 ! INNER-SAME:    innermost
 ! ALL-NOT:       no_copy
 ! ALL-SAME:      typeparams %[[VAL_7:.*]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
-! ALL:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] typeparams %[[VAL_7]] dummy_scope %{{.*}} {uniq_name = "_QFtest2Ex"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
+! ALL:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] typeparams %[[VAL_7]] dummy_scope %{{.*}} uniq_name("_QFtest2Ex") : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
 ! ALL:           fir.unpack_array %[[VAL_8]] to %[[VAL_1]]
 ! STACK-SAME:    stack
 ! HEAP-SAME:     heap
@@ -55,7 +55,7 @@ subroutine test3(x)
 ! INNER-SAME:    innermost
 ! ALL-NOT:       no_copy
 ! ALL-SAME:      : (!fir.box<!fir.array<?x?x!fir.type<_QFtest3Tt>>>) -> !fir.box<!fir.array<?x?x!fir.type<_QFtest3Tt>>>
-! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} {uniq_name = "_QFtest3Ex"} : (!fir.box<!fir.array<?x?x!fir.type<_QFtest3Tt>>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.type<_QFtest3Tt>>>, !fir.box<!fir.array<?x?x!fir.type<_QFtest3Tt>>>)
+! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} uniq_name("_QFtest3Ex") : (!fir.box<!fir.array<?x?x!fir.type<_QFtest3Tt>>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.type<_QFtest3Tt>>>, !fir.box<!fir.array<?x?x!fir.type<_QFtest3Tt>>>)
 ! ALL:           fir.unpack_array %[[VAL_2]] to %[[VAL_0]]
 ! STACK-SAME:    stack
 ! HEAP-SAME:     heap
@@ -64,7 +64,7 @@ subroutine test3(x)
 end subroutine test3
 
 ! ALL-LABEL:   func.func @_QPtest4(
-! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_inout>}) {
 subroutine test4(x)
   real, intent(inout) :: x(:)
 ! ALL:           %[[VAL_2:.*]] = fir.pack_array %[[VAL_0]]
@@ -73,7 +73,7 @@ subroutine test4(x)
 ! WHOLE-SAME:    whole
 ! ALL-NOT:       no_copy
 ! ALL-SAME       : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
-! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFtest4Ex"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} uniq_name("_QFtest4Ex") fortran_attrs<intent_inout> : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! ALL:           fir.unpack_array %[[VAL_2]] to %[[VAL_0]]
 ! STACK-SAME:    stack
 ! HEAP-SAME:     heap
@@ -82,7 +82,7 @@ subroutine test4(x)
 end subroutine test4
 
 ! ALL-LABEL:   func.func @_QPtest5(
-! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_in>}) {
 subroutine test5(x)
   real, intent(in) :: x(:)
 ! ALL:           %[[VAL_2:.*]] = fir.pack_array %[[VAL_0]]
@@ -91,7 +91,7 @@ subroutine test5(x)
 ! WHOLE-SAME:    whole
 ! ALL-NOT:       no_copy
 ! ALL-SAME:      (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
-! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest5Ex"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} uniq_name("_QFtest5Ex") fortran_attrs<intent_in> : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! ALL:           fir.unpack_array %[[VAL_2]] to %[[VAL_0]]
 ! STACK-SAME:    stack
 ! HEAP-SAME:     heap
@@ -99,7 +99,7 @@ subroutine test5(x)
 end subroutine test5
 
 ! ALL-LABEL:   func.func @_QPtest6(
-! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
 subroutine test6(x)
   real, intent(out) :: x(:)
 ! ALL:           %[[VAL_2:.*]] = fir.pack_array %[[VAL_0]]
@@ -107,7 +107,7 @@ subroutine test6(x)
 ! HEAP-SAME:     heap
 ! WHOLE-SAME:    whole
 ! ALL-SAME       no_copy : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
-! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QFtest6Ex"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} uniq_name("_QFtest6Ex") fortran_attrs<intent_out> : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! ALL:           fir.unpack_array %[[VAL_2]] to %[[VAL_0]]
 ! STACK-SAME:    stack
 ! HEAP-SAME:     heap
@@ -127,7 +127,7 @@ subroutine test7(x)
 ! WHOLE-SAME:    whole
 ! ALL-NOT:       no_copy
 ! ALL-SAME       : (!fir.class<!fir.array<?x!fir.type<_QFtest7Tt>>>) -> !fir.class<!fir.array<?x!fir.type<_QFtest7Tt>>>
-! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} {uniq_name = "_QFtest7Ex"} : (!fir.class<!fir.array<?x!fir.type<_QFtest7Tt>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QFtest7Tt>>>, !fir.class<!fir.array<?x!fir.type<_QFtest7Tt>>>)
+! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} uniq_name("_QFtest7Ex") : (!fir.class<!fir.array<?x!fir.type<_QFtest7Tt>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QFtest7Tt>>>, !fir.class<!fir.array<?x!fir.type<_QFtest7Tt>>>)
 ! ALL:           fir.unpack_array %[[VAL_2]] to %[[VAL_0]]
 ! STACK-SAME:    stack
 ! HEAP-SAME:     heap
@@ -145,7 +145,7 @@ subroutine test8(x)
 ! WHOLE-SAME:    whole
 ! ALL-NOT:       no_copy
 ! ALL-SAME       : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
-! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} {uniq_name = "_QFtest8Ex"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} uniq_name("_QFtest8Ex") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   call inner(x(1))
 ! ALL:           fir.call @_QFtest8Pinner
 ! ALL:           fir.unpack_array %[[VAL_2]] to %[[VAL_0]]
@@ -173,7 +173,7 @@ real function test9(x)
 ! WHOLE-SAME:    whole
 ! ALL-NOT:       no_copy
 ! ALL-SAME       : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
-! ALL:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] dummy_scope %{{.*}} {uniq_name = "_QFtest9Ex"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! ALL:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] dummy_scope %{{.*}} uniq_name("_QFtest9Ex") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   real :: y(10)
   test9 = x(1)
 ! ALL:           fir.unpack_array %[[VAL_6]] to %[[VAL_0]]
@@ -202,7 +202,7 @@ subroutine test10(x)
 ! INNER-SAME:    innermost
 ! ALL-NOT:       no_copy
 ! ALL-SAME:      : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
-! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest10Ex"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+! ALL:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{.*}} uniq_name("_QFtest10Ex") fortran_attrs<optional> : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
 ! ALL:           fir.unpack_array %[[VAL_2]] to %[[VAL_0]]
 ! STACK-SAME:    stack
 ! HEAP-SAME:     heap

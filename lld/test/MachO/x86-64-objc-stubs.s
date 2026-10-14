@@ -1,11 +1,12 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: %lld -arch x86_64 -lSystem -o %t.out %t.o
+# RUN: %lld -arch x86_64 -lSystem -o %t.out %t.o -map %t.map
 # RUN: llvm-objdump --macho --section-headers %t.out > %t.txt
 # RUN: llvm-otool -vs __DATA __objc_selrefs %t.out >> %t.txt
 # RUN: llvm-otool -vs __TEXT __objc_stubs %t.out >> %t.txt
 # RUN: FileCheck %s < %t.txt
+# RUN: FileCheck %s --check-prefix=MAP < %t.map
 # RUN: %no-fatal-warnings-lld -arch x86_64 -lSystem -o %t.out %t.o -objc_stubs_small 2>&1 | FileCheck %s --check-prefix=WARNING
 
 # WARNING: warning: -objc_stubs_small is not yet implemented, defaulting to -objc_stubs_fast
@@ -48,6 +49,11 @@
 # CHECK-SAME: jmpq    *0x[[#%x, GOTSTART - PC4 - 6]](%rip)
 
 # CHECK-EMPTY:
+
+# MAP: 0x[[#%.8X,OBJC_STUBS:]] 0x0000001A __TEXT __objc_stubs
+# MAP-LABEL: # Symbols:
+# MAP: 0x[[#OBJC_STUBS]] 0x0000000D [  0] _objc_msgSend$foo
+# MAP-NEXT: 0x[[#OBJC_STUBS+0xD]] 0x0000000D [  0] _objc_msgSend$length
 
 .section  __TEXT,__objc_methname,cstring_literals
 lselref1:

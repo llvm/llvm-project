@@ -30,6 +30,10 @@ public:
     return llvm::SmallVector<AbstractMethodRequirement>({{"get_id"}});
   }
 
+  llvm::SmallVector<llvm::StringLiteral> GetOptionalMethods() const override {
+    return {"get_plan_spec_for_step_type"};
+  }
+
   lldb::user_id_t GetID() override;
 
   lldb::addr_t GetPC() override;

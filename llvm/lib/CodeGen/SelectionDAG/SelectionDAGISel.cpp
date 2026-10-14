@@ -106,6 +106,7 @@
 #include <cstdint>
 #include <iterator>
 #include <limits>
+#include <list>
 #include <memory>
 #include <optional>
 #include <string>
@@ -451,13 +452,14 @@ SelectionDAGISelPass::run(MachineFunction &MF,
   // we change the optimisation level.
   MF.setUseDebugInstrRef(MF.shouldUseDebugInstrRef());
 
-  // Reset OptLevel to None for optnone functions.
+  // Reset OptLevel to None for optnone functions or when opt-bisect skips.
   // TODO: Add a function analysis to handle this.
   Selector->MF = &MF;
-  // Reset OptLevel to None for optnone functions.
-  CodeGenOptLevel NewOptLevel = MF.getFunction().hasOptNone()
-                                    ? CodeGenOptLevel::None
-                                    : Selector->OptLevel;
+  CodeGenOptLevel NewOptLevel =
+      (MF.getFunction().hasOptNone() ||
+       shouldSkipOptimizationForOptBisect(MF.getFunction()))
+          ? CodeGenOptLevel::None
+          : Selector->OptLevel;
 
   OptLevelChanger OLC(*Selector, NewOptLevel);
   Selector->initializeAnalysisResults(MFAM);
@@ -1475,7 +1477,7 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
   if (auto *RegMask = TRI.getCustomEHPadPreservedMask(*MF))
     MF->getRegInfo().addPhysRegsUsedFromRegMask(RegMask);
 
-  if (Pers == EHPersonality::Wasm_CXX) {
+  if (Pers == EHPersonality::Wasm_CXX || Pers == EHPersonality::Wasm_D) {
     if (const auto *CPI = dyn_cast<CatchPadInst>(LLVMBB->getFirstNonPHIIt()))
       mapWasmLandingPadIndex(MBB, CPI);
   } else {
