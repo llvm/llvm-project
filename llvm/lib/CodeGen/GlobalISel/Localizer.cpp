@@ -226,36 +226,37 @@ bool LocalizerImpl::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
       LLVM_DEBUG(dbgs() << "Intra-block: moving " << *MI << " before " << *II);
     }
 
-    // Move each DBG_VALUE above MI that uses one of its results right after
-    // MI, so that it stays with MI. If a later DBG_VALUE of the same variable
-    // replaces it before that, mark it undef instead.
-    SmallVector<MachineInstr *, 4> DbgUsersToMove;
+    // Leave each DBG_VALUE above MI that uses one of its results behind as
+    // undef, so that it still ends any earlier location of the variable, and
+    // put a copy right after MI, like MachineSink does. No copy is needed if a
+    // later DBG_VALUE of the same variable replaces it before that.
+    SmallVector<MachineInstr *, 4> DbgUsers;
+    SmallVector<MachineInstr *, 4> DbgUsersToCopy;
     for (MachineInstr &DbgMI :
          make_range(std::next(MachineBasicBlock::iterator(MI)), II)) {
       if (!DbgMI.isDebugValue())
         continue;
-      erase_if(DbgUsersToMove, [&](MachineInstr *Earlier) {
-        if (Earlier->getDebugVariable() != DbgMI.getDebugVariable() ||
-            Earlier->getDebugLoc().getInlinedAt() !=
-                DbgMI.getDebugLoc().getInlinedAt() ||
-            !Earlier->getDebugExpression()->fragmentsOverlap(
-                DbgMI.getDebugExpression()))
-          return false;
-        Earlier->setDebugValueUndef();
-        return true;
+      erase_if(DbgUsersToCopy, [&](const MachineInstr *Earlier) {
+        return Earlier->getDebugVariable() == DbgMI.getDebugVariable() &&
+               Earlier->getDebugLoc().getInlinedAt() ==
+                   DbgMI.getDebugLoc().getInlinedAt() &&
+               Earlier->getDebugExpression()->fragmentsOverlap(
+                   DbgMI.getDebugExpression());
       });
-      if (DbgMI.hasDebugOperandForReg(Reg))
-        DbgUsersToMove.push_back(&DbgMI);
+      if (DbgMI.hasDebugOperandForReg(Reg)) {
+        DbgUsers.push_back(&DbgMI);
+        DbgUsersToCopy.push_back(&DbgMI);
+      }
     }
 
     MI->removeFromParent();
     MBB.insert(II, MI);
     Changed = true;
 
-    for (MachineInstr *DbgMI : DbgUsersToMove) {
-      DbgMI->removeFromParent();
-      MBB.insert(II, DbgMI);
-    }
+    for (MachineInstr *DbgMI : DbgUsersToCopy)
+      MBB.insert(II, MBB.getParent()->CloneMachineInstr(DbgMI));
+    for (MachineInstr *DbgMI : DbgUsers)
+      DbgMI->setDebugValueUndef();
 
     // If the instruction (constant) being localized has single user, we can
     // propagate debug location from user.
