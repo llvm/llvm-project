@@ -194,6 +194,7 @@ CXX_OPERATOR_ATTRIBUTE
 void operator delete(void* ptr, std::align_val_t align) NOEXCEPT {
   OPERATOR_DELETE_BODY_ALIGN;
 }
+3
 CXX_OPERATOR_ATTRIBUTE
 void operator delete[](void* ptr, std::align_val_t align) NOEXCEPT {
   OPERATOR_DELETE_BODY_ALIGN_ARRAY;
