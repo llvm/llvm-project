@@ -539,9 +539,12 @@ bool ARMDAGToDAGISel::hasNoVMLxHazardUse(SDNode *N) const {
 bool ARMDAGToDAGISel::isShifterOpProfitable(const SDValue &Shift,
                                             ARM_AM::ShiftOpc ShOpcVal,
                                             unsigned ShAmt) {
-  if (!Subtarget->isLikeA9() && !Subtarget->isSwift())
+  // Trivial if we are optimizing for code size or if there is only
+  // one use of the value.
+  if (CurDAG->shouldOptForSize() || Shift.hasOneUse())
     return true;
-  if (Shift.hasOneUse())
+
+  if (!Subtarget->isLikeA9() && !Subtarget->isSwift())
     return true;
   // R << 2 is free.
   return ShOpcVal == ARM_AM::lsl &&
@@ -616,14 +619,15 @@ bool ARMDAGToDAGISel::SelectImmShifterOperand(SDValue N,
   // lower complexity pattern with explicit register operand.
   if (ShOpcVal == ARM_AM::no_shift) return false;
 
-  BaseReg = N.getOperand(0);
-  unsigned ShImmVal = 0;
-  ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1));
-  if (!RHS) return false;
-  ShImmVal = RHS->getZExtValue() & 31;
-  Opc = CurDAG->getTargetConstant(ARM_AM::getSORegOpc(ShOpcVal, ShImmVal),
-                                  SDLoc(N), MVT::i32);
-  return true;
+  if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
+    unsigned Val = RHS->getZExtValue() & 31;
+    unsigned ShVal = ARM_AM::getSORegOpc(ShOpcVal, Val);
+    BaseReg = N.getOperand(0);
+    Opc = CurDAG->getTargetConstant(ShVal, SDLoc(N), MVT::i32);
+    return CheckProfitability ? isShifterOpProfitable(N, ShOpcVal, Val) : true;
+  }
+
+  return false;
 }
 
 bool ARMDAGToDAGISel::SelectRegShifterOperand(SDValue N,
