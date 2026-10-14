@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=i686-unknown -verify-machineinstrs < %s | FileCheck %s
 ; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck --check-prefix=CHECK-CGP %s
 ; RUN: opt < %s -codegenprepare -cgp-huge-func=0 -S -mtriple=x86_64-unknown-unknown | FileCheck --check-prefix=CHECK-CGP %s
+; RUN: opt < %s -codegenprepare -cgpp-huge-func=0 -S -mtriple=x86_64-unknown-unknown | FileCheck --check-prefix=CHECK-CGP %s
 
 @A = global i32 zeroinitializer
 @B = global i32 zeroinitializer

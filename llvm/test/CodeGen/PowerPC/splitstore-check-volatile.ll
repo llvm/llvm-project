@@ -1,6 +1,8 @@
 ; Test that CodeGenPrepare respect the volatile flag when splitting a store.
 ;
 ; RUN: opt -S -mtriple=powerpc64le -codegenprepare -cgp-force-split-store < %s  | FileCheck %s
+; The pre-cgp- spelling is an alias.
+; RUN: opt -S -mtriple=powerpc64le -codegenprepare -force-split-store < %s  | FileCheck %s
 
 define void @fun(ptr %Src, ptr %Dst) {
 ; CHECK: store volatile i16 %8, ptr %Dst 
