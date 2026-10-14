@@ -8,10 +8,18 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fprebuilt-module-path=%t -DINCLUDE_FIRST %t/use.cpp -emit-llvm -o - | FileCheck %s --check-prefix=INLINE --implicit-check-not=always_wrapper
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fprebuilt-module-path=%t -O2 %t/use.cpp -emit-llvm -o - | FileCheck %s --check-prefix=INLINE --implicit-check-not=always_wrapper
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fprebuilt-module-path=%t -O2 -DINCLUDE_FIRST %t/use.cpp -emit-llvm -o - | FileCheck %s --check-prefix=INLINE --implicit-check-not=always_wrapper
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fprebuilt-module-path=%t %t/address.cpp -emit-llvm -o - | FileCheck %s --check-prefix=ADDRESS --implicit-check-not="define{{.*}}@always_wrapper(" --implicit-check-not="define{{.*}}@plain_wrapper("
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fprebuilt-module-path=%t -DINCLUDE_FIRST %t/address.cpp -emit-llvm -o - | FileCheck %s --check-prefix=ADDRESS --implicit-check-not="define{{.*}}@always_wrapper(" --implicit-check-not="define{{.*}}@plain_wrapper("
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fprebuilt-module-path=%t -O2 %t/address.cpp -emit-llvm -o - | FileCheck %s --check-prefix=ADDRESS --implicit-check-not="define{{.*}}@always_wrapper(" --implicit-check-not="define{{.*}}@plain_wrapper("
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fprebuilt-module-path=%t -O2 -DINCLUDE_FIRST %t/address.cpp -emit-llvm -o - | FileCheck %s --check-prefix=ADDRESS --implicit-check-not="define{{.*}}@always_wrapper(" --implicit-check-not="define{{.*}}@plain_wrapper("
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fprebuilt-module-path=%t %t/address.cpp -emit-llvm -o - | FileCheck %s --check-prefix=ADDRESS
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fprebuilt-module-path=%t -DINCLUDE_FIRST %t/address.cpp -emit-llvm -o - | FileCheck %s --check-prefix=ADDRESS
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fprebuilt-module-path=%t -O2 %t/address.cpp -emit-llvm -o - | FileCheck %s --check-prefix=ADDRESS
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fprebuilt-module-path=%t -O2 -DINCLUDE_FIRST %t/address.cpp -emit-llvm -o - | FileCheck %s --check-prefix=ADDRESS
+
+// Taking an address can retain an available_externally IR body, but must not
+// emit a definition of either GNU-inline wrapper in the object file.
+// RUN: %if x86-registered-target %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 %t/M.cppm -emit-module-interface -o %t/M.pcm %}
+// RUN: %if x86-registered-target %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fprebuilt-module-path=%t %t/address.cpp -emit-obj -o %t/address.o && llvm-nm %t/address.o | FileCheck %s --check-prefix=SYMBOLS %}
+// RUN: %if x86-registered-target %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fprebuilt-module-path=%t -DINCLUDE_FIRST %t/address.cpp -emit-obj -o %t/address.o && llvm-nm %t/address.o | FileCheck %s --check-prefix=SYMBOLS %}
+// RUN: %if x86-registered-target %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fprebuilt-module-path=%t -O2 %t/address.cpp -emit-obj -o %t/address.o && llvm-nm %t/address.o | FileCheck %s --check-prefix=SYMBOLS %}
+// RUN: %if x86-registered-target %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fprebuilt-module-path=%t -O2 -DINCLUDE_FIRST %t/address.cpp -emit-obj -o %t/address.o && llvm-nm %t/address.o | FileCheck %s --check-prefix=SYMBOLS %}
 
 // RAW-DAG: define available_externally{{.*}} @always_wrapper(
 // RAW-DAG: attributes #{{[0-9]+}} = { alwaysinline
@@ -26,6 +34,8 @@
 // ADDRESS: ret ptr @always_wrapper
 // ADDRESS-LABEL: define{{.*}} @address_plain(
 // ADDRESS: ret ptr @plain_wrapper
+// SYMBOLS-DAG: U always_wrapper
+// SYMBOLS-DAG: U plain_wrapper
 
 //--- wrappers.h
 extern "C" {
