@@ -5,11 +5,11 @@ define <vscale x 1 x i8> @test_vlseg3_mask_nxv16i8_triscv.vector.tuple_nxv1i8_3t
 ; CHECK-LABEL: test_vlseg3_mask_nxv16i8_triscv.vector.tuple_nxv1i8_3t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
-; CHECK-NEXT:    addi a0, a0, 1
-; CHECK-NEXT:    li a2, 3
+; CHECK-NEXT:    vmv1r.v v9, v10
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
-; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vlseg3e8.v v7, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv1i8_3t.nxv16i1(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) %passthru, ptr %base, <vscale x 1 x i1> %mask, i64 %vl, i64 1, i64 3)
