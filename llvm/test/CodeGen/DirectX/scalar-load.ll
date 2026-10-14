@@ -29,7 +29,7 @@ define <3 x float> @load_array_vec_test() #0 {
 
 ; CHECK-LABEL: load_vec_test
 define <4 x i32> @load_vec_test() #0 {
-  ; CHECK-COUNT-4: load i32, ptr addrspace(3) {{(@vecData.scalarized|getelementptr \(i32, ptr addrspace\(3\) @vecData.scalarized, i32 .*\)|%.*)}}, align {{.*}}
+  ; CHECK-COUNT-4: load i32, ptr addrspace(3) {{(@vecData.scalarized|getelementptr \(i8, ptr addrspace\(3\) @vecData.scalarized, i32 .*\)|%.*)}}, align {{.*}}
   %1 = load <4 x i32>, <4 x i32> addrspace(3)* @"vecData", align 4
   ret <4 x i32> %1
 }

@@ -46,6 +46,7 @@ struct LifetimeSafetyOpts {
   bool CheckLifetimeboundViolations;
   bool CheckMisplacedLifetimebound;
   bool CheckInapplicableLifetimebound;
+  bool CheckFieldOriginEscape;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -74,9 +75,12 @@ public:
                                    SourceLocation FreeLoc,
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
+  // TODO: Report where the object was destroyed when that happens before the
+  // return (inner scopes, temporaries).
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
-                                    const Expr *MovedExpr) {}
+                                    const Expr *MovedExpr,
+                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
@@ -160,6 +164,11 @@ public:
   virtual void suggestLifetimeboundToImplicitThis(WarningScope Scope,
                                                   const CXXMethodDecl *MD,
                                                   const Expr *EscapeExpr) {}
+
+  // Reports when a member function returns an origin of a field.
+  virtual void reportFieldOriginEscape(const CXXMethodDecl *MD,
+                                       const FieldDecl *FD,
+                                       const Expr *EscapeExpr) {}
 
   // Adds inferred lifetime bound attribute for implicit this to its
   // TypeSourceInfo.

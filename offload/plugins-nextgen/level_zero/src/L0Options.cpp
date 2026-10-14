@@ -26,6 +26,9 @@ void L0OptionsTy::processEnvironmentVars() {
   Flags.UseCopyOffloadHint =
       BoolEnvar("LIBOFFLOAD_LEVEL_ZERO_USE_COPY_OFFLOAD_HINT", true);
 
+  // Always print the full module build/link log, not only on failure.
+  Flags.ShowBuildLog = BoolEnvar("LIBOFFLOAD_LEVEL_ZERO_SHOW_BUILD_LOG", false);
+
   // Memory pool syntax:
   // LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL=<Option>
   //  <Option>       := 0 | <PoolInfoList>
@@ -144,19 +147,6 @@ void L0OptionsTy::processEnvironmentVars() {
     // INTEL_ENABLE_OFFLOAD_ANNOTATIONS is set. The actual value
     // does not matter.
     CommonSpecConstants.addConstant<char>(0xFF747469, 1);
-  }
-
-  // LIBOMPTARGET_LEVEL_ZERO_STAGING_BUFFER_SIZE=<SizeInKB>.
-  const Envar<size_t> StagingBufferSizeVar(
-      "LIBOMPTARGET_LEVEL_ZERO_STAGING_BUFFER_SIZE");
-  if (StagingBufferSizeVar.isPresent()) {
-    size_t SizeInKB = StagingBufferSizeVar;
-    if (SizeInKB > (16 << 10)) {
-      SizeInKB = (16 << 10);
-      ODBG(OLDT_Init) << "Staging buffer size is capped at " << SizeInKB
-                      << " KB";
-    }
-    StagingBufferSize = SizeInKB << 10;
   }
 
   // LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE=<Fmt>.

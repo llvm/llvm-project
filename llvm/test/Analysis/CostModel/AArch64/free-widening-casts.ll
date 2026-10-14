@@ -622,3 +622,57 @@ define <3 x i68> @neg_llegal_vector_type_3(<3 x i34> %a, <3 x i68> %b) {
   %tmp1 = add <3 x i68> %b, %tmp0
   ret <3 x i68> %tmp1
 }
+
+
+; COST-LABEL: usubl_abs_diff_multi_user
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp1 = zext <8 x i8> %b to <8 x i16>
+define <8 x i16> @usubl_abs_diff_multi_user(<8 x i8> %a, <8 x i8> %b) {
+  %tmp0 = zext <8 x i8> %a to <8 x i16>
+  %tmp1 = zext <8 x i8> %b to <8 x i16>
+  %cmp = icmp ugt <8 x i8> %a, %b
+  %sub1 = sub <8 x i16> %tmp0, %tmp1
+  %sub2 = sub <8 x i16> %tmp1, %tmp0
+  %abs = select <8 x i1> %cmp, <8 x i16> %sub1, <8 x i16> %sub2
+  ret <8 x i16> %abs
+}
+
+; COST-LABEL: uaddw_multi_user
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
+define <8 x i16> @uaddw_multi_user(<8 x i8> %a, <8 x i16> %b, <8 x i16> %c) {
+  %tmp0 = zext <8 x i8> %a to <8 x i16>
+  %tmp1 = add <8 x i16> %b, %tmp0
+  %tmp2 = add <8 x i16> %c, %tmp0
+  %tmp3 = add <8 x i16> %tmp1, %tmp2
+  ret <8 x i16> %tmp3
+}
+
+; COST-LABEL: usubw_multi_user
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
+define <8 x i16> @usubw_multi_user(<8 x i8> %a, <8 x i16> %b, <8 x i16> %c, i1 %flag) {
+  %tmp0 = zext <8 x i8> %a to <8 x i16>
+  %tmp1 = sub <8 x i16> %b, %tmp0
+  %tmp2 = sub <8 x i16> %c, %tmp0
+  %tmp3 = select i1 %flag, <8 x i16> %tmp1, <8 x i16> %tmp2
+  ret <8 x i16> %tmp3
+}
+
+; COST-LABEL: neg_add_multi_user_not_all_absorbed
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
+define <8 x i16> @neg_add_multi_user_not_all_absorbed(<8 x i8> %a, <8 x i16> %b, <8 x i16> %c) {
+  %tmp0 = zext <8 x i8> %a to <8 x i16>
+  %tmp1 = add <8 x i16> %b, %tmp0
+  %tmp2 = udiv <8 x i16> %c, %tmp0
+  %tmp3 = add <8 x i16> %tmp1, %tmp2
+  ret <8 x i16> %tmp3
+}
+
+; COST-LABEL: neg_sub_multi_user_not_all_absorbed
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
+define <8 x i16> @neg_sub_multi_user_not_all_absorbed(<8 x i8> %a, <8 x i16> %b, <8 x i16> %c, i1 %flag) {
+  %tmp0 = zext <8 x i8> %a to <8 x i16>
+  %tmp1 = sub <8 x i16> %b, %tmp0
+  %tmp2 = udiv <8 x i16> %c, %tmp0
+  %tmp3 = select i1 %flag, <8 x i16> %tmp1, <8 x i16> %tmp2
+  ret <8 x i16> %tmp3
+}

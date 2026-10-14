@@ -1782,32 +1782,20 @@ struct OversizedBitfield {
 // ARM-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
 // ARM-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
 // ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
-// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
-// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
-// ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
-// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// ARM-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
-// ARM-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -64
-// ARM-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
-// ARM-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP7]], align 2
-// ARM-BE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP8]], align 1
-// ARM-BE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
-// ARM-BE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 4
-// ARM-BE-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], 31
-// ARM-BE-NEXT:    store i8 [[TMP11]], ptr [[TMP9]], align 4
-// ARM-BE-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// ARM-BE-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP12]], align 4
-// ARM-BE-NEXT:    [[TMP14:%.*]] = and i8 [[TMP13]], -32
-// ARM-BE-NEXT:    store i8 [[TMP14]], ptr [[TMP12]], align 4
-// ARM-BE-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP15]], align 1
-// ARM-BE-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP16]], align 2
-// ARM-BE-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP17]], align 1
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// ARM-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP2]], align 2
+// ARM-BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP4]], align 4
+// ARM-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// ARM-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP6]], align 2
+// ARM-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // ARM-BE-NEXT:    ret void
 //
 // AARCH64-BE-LABEL: define dso_local void @testOversizedBitfield(
@@ -1816,32 +1804,20 @@ struct OversizedBitfield {
 // AARCH64-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
 // AARCH64-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
-// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
-// AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
-// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// AARCH64-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
-// AARCH64-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -64
-// AARCH64-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
-// AARCH64-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP7]], align 2
-// AARCH64-BE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP8]], align 1
-// AARCH64-BE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
-// AARCH64-BE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 4
-// AARCH64-BE-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], 31
-// AARCH64-BE-NEXT:    store i8 [[TMP11]], ptr [[TMP9]], align 4
-// AARCH64-BE-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// AARCH64-BE-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP12]], align 4
-// AARCH64-BE-NEXT:    [[TMP14:%.*]] = and i8 [[TMP13]], -32
-// AARCH64-BE-NEXT:    store i8 [[TMP14]], ptr [[TMP12]], align 4
-// AARCH64-BE-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP15]], align 1
-// AARCH64-BE-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP16]], align 2
-// AARCH64-BE-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP17]], align 1
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP2]], align 2
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP4]], align 4
+// AARCH64-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// AARCH64-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP6]], align 2
+// AARCH64-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // AARCH64-BE-NEXT:    ret void
 //
 extern "C" void testOversizedBitfield(struct OversizedBitfield *s) {
@@ -1898,32 +1874,20 @@ extern "C" void testOversizedBitfield(struct OversizedBitfield *s) {
 // ARM-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
 // ARM-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
 // ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
-// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
-// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
-// ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
-// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// ARM-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
-// ARM-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -64
-// ARM-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
-// ARM-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP7]], align 2
-// ARM-BE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP8]], align 1
-// ARM-BE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
-// ARM-BE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 4
-// ARM-BE-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], 31
-// ARM-BE-NEXT:    store i8 [[TMP11]], ptr [[TMP9]], align 4
-// ARM-BE-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// ARM-BE-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP12]], align 4
-// ARM-BE-NEXT:    [[TMP14:%.*]] = and i8 [[TMP13]], -32
-// ARM-BE-NEXT:    store i8 [[TMP14]], ptr [[TMP12]], align 4
-// ARM-BE-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP15]], align 1
-// ARM-BE-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP16]], align 2
-// ARM-BE-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP17]], align 1
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// ARM-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP2]], align 2
+// ARM-BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP4]], align 4
+// ARM-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// ARM-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP6]], align 2
+// ARM-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // ARM-BE-NEXT:    ret void
 //
 // AARCH64-BE-LABEL: define dso_local void @testOversizedBitfieldVolatileStruct(
@@ -1932,32 +1896,20 @@ extern "C" void testOversizedBitfield(struct OversizedBitfield *s) {
 // AARCH64-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
 // AARCH64-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
-// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
-// AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
-// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// AARCH64-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
-// AARCH64-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -64
-// AARCH64-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
-// AARCH64-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP7]], align 2
-// AARCH64-BE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP8]], align 1
-// AARCH64-BE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
-// AARCH64-BE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 4
-// AARCH64-BE-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], 31
-// AARCH64-BE-NEXT:    store i8 [[TMP11]], ptr [[TMP9]], align 4
-// AARCH64-BE-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// AARCH64-BE-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP12]], align 4
-// AARCH64-BE-NEXT:    [[TMP14:%.*]] = and i8 [[TMP13]], -32
-// AARCH64-BE-NEXT:    store i8 [[TMP14]], ptr [[TMP12]], align 4
-// AARCH64-BE-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP15]], align 1
-// AARCH64-BE-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP16]], align 2
-// AARCH64-BE-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP17]], align 1
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP2]], align 2
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP4]], align 4
+// AARCH64-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// AARCH64-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP6]], align 2
+// AARCH64-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // AARCH64-BE-NEXT:    ret void
 //
 extern "C" void testOversizedBitfieldVolatileStruct(
@@ -2021,32 +1973,20 @@ struct VolatileOversizedBitfield {
 // ARM-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
 // ARM-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
 // ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
-// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
-// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
-// ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
-// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// ARM-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
-// ARM-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -64
-// ARM-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
-// ARM-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP7]], align 2
-// ARM-BE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP8]], align 1
-// ARM-BE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
-// ARM-BE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 4
-// ARM-BE-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], 31
-// ARM-BE-NEXT:    store i8 [[TMP11]], ptr [[TMP9]], align 4
-// ARM-BE-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// ARM-BE-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP12]], align 4
-// ARM-BE-NEXT:    [[TMP14:%.*]] = and i8 [[TMP13]], -32
-// ARM-BE-NEXT:    store i8 [[TMP14]], ptr [[TMP12]], align 4
-// ARM-BE-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP15]], align 1
-// ARM-BE-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP16]], align 2
-// ARM-BE-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP17]], align 1
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// ARM-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP2]], align 2
+// ARM-BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP4]], align 4
+// ARM-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// ARM-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP6]], align 2
+// ARM-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // ARM-BE-NEXT:    ret void
 //
 // AARCH64-BE-LABEL: define dso_local void @testVolatileOversizedBitfield(
@@ -2055,32 +1995,20 @@ struct VolatileOversizedBitfield {
 // AARCH64-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
 // AARCH64-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
-// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
-// AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
-// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// AARCH64-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
-// AARCH64-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -64
-// AARCH64-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
-// AARCH64-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP7]], align 2
-// AARCH64-BE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP8]], align 1
-// AARCH64-BE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
-// AARCH64-BE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 4
-// AARCH64-BE-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], 31
-// AARCH64-BE-NEXT:    store i8 [[TMP11]], ptr [[TMP9]], align 4
-// AARCH64-BE-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// AARCH64-BE-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP12]], align 4
-// AARCH64-BE-NEXT:    [[TMP14:%.*]] = and i8 [[TMP13]], -32
-// AARCH64-BE-NEXT:    store i8 [[TMP14]], ptr [[TMP12]], align 4
-// AARCH64-BE-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP15]], align 1
-// AARCH64-BE-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP16]], align 2
-// AARCH64-BE-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP17]], align 1
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP2]], align 2
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP4]], align 4
+// AARCH64-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// AARCH64-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP6]], align 2
+// AARCH64-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // AARCH64-BE-NEXT:    ret void
 //
 extern "C" void testVolatileOversizedBitfield(
@@ -2138,32 +2066,20 @@ extern "C" void testVolatileOversizedBitfield(
 // ARM-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
 // ARM-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
 // ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
-// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
-// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
-// ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
-// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// ARM-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
-// ARM-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -64
-// ARM-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
-// ARM-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP7]], align 2
-// ARM-BE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP8]], align 1
-// ARM-BE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
-// ARM-BE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 4
-// ARM-BE-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], 31
-// ARM-BE-NEXT:    store i8 [[TMP11]], ptr [[TMP9]], align 4
-// ARM-BE-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// ARM-BE-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP12]], align 4
-// ARM-BE-NEXT:    [[TMP14:%.*]] = and i8 [[TMP13]], -32
-// ARM-BE-NEXT:    store i8 [[TMP14]], ptr [[TMP12]], align 4
-// ARM-BE-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP15]], align 1
-// ARM-BE-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP16]], align 2
-// ARM-BE-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP17]], align 1
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// ARM-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP2]], align 2
+// ARM-BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP4]], align 4
+// ARM-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// ARM-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP6]], align 2
+// ARM-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // ARM-BE-NEXT:    ret void
 //
 // AARCH64-BE-LABEL: define dso_local void @testVolatileOversizedBitfieldVolatileStruct(
@@ -2172,32 +2088,20 @@ extern "C" void testVolatileOversizedBitfield(
 // AARCH64-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
 // AARCH64-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
-// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
-// AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
-// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// AARCH64-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
-// AARCH64-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -64
-// AARCH64-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
-// AARCH64-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP7]], align 2
-// AARCH64-BE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP8]], align 1
-// AARCH64-BE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
-// AARCH64-BE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 4
-// AARCH64-BE-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], 31
-// AARCH64-BE-NEXT:    store i8 [[TMP11]], ptr [[TMP9]], align 4
-// AARCH64-BE-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// AARCH64-BE-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP12]], align 4
-// AARCH64-BE-NEXT:    [[TMP14:%.*]] = and i8 [[TMP13]], -32
-// AARCH64-BE-NEXT:    store i8 [[TMP14]], ptr [[TMP12]], align 4
-// AARCH64-BE-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP15]], align 1
-// AARCH64-BE-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP16]], align 2
-// AARCH64-BE-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP17]], align 1
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP2]], align 2
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP4]], align 4
+// AARCH64-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// AARCH64-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP6]], align 2
+// AARCH64-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // AARCH64-BE-NEXT:    ret void
 //
 extern "C" void testVolatileOversizedBitfieldVolatileStruct(
@@ -4650,12 +4554,196 @@ extern "C" void testBitfieldUnnamedOnly(struct BitfieldUnnamedOnly *s) {
   __builtin_clear_padding(s);
 }
 
+typedef bool bool6 __attribute__((ext_vector_type(6)));
+
+// CHECK64-LABEL: define dso_local void @testPackedBooleanVectorLessThan8Elements(
+// CHECK64-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK64-NEXT:  [[ENTRY:.*:]]
+// CHECK64-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK64-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// CHECK64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// CHECK64-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// CHECK64-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// CHECK64-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
+// CHECK64-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// CHECK64-NEXT:    ret void
+//
+// ARM-LABEL: define dso_local void @testPackedBooleanVectorLessThan8Elements(
+// ARM-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-NEXT:  [[ENTRY:.*:]]
+// ARM-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// ARM-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
+// ARM-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// ARM-NEXT:    ret void
+//
+extern "C" void testPackedBooleanVectorLessThan8Elements(bool6 *v) {
+  __builtin_clear_padding(v);
+}
+
+typedef bool bool8 __attribute__((ext_vector_type(8)));
+
+// CHECK64-LABEL: define dso_local void @testPackedBooleanVector8Elements(
+// CHECK64-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK64-NEXT:  [[ENTRY:.*:]]
+// CHECK64-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK64-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// CHECK64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// CHECK64-NEXT:    ret void
+//
+// ARM-LABEL: define dso_local void @testPackedBooleanVector8Elements(
+// ARM-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-NEXT:  [[ENTRY:.*:]]
+// ARM-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-NEXT:    ret void
+//
+extern "C" void testPackedBooleanVector8Elements(bool8 *v) {
+  __builtin_clear_padding(v);
+}
+
+typedef bool bool12 __attribute__((ext_vector_type(12)));
+
+// CHECK64-LE-LABEL: define dso_local void @testPackedBooleanVectorMoreThan8Elements(
+// CHECK64-LE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK64-LE-NEXT:  [[ENTRY:.*:]]
+// CHECK64-LE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK64-LE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// CHECK64-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// CHECK64-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// CHECK64-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// CHECK64-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// CHECK64-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// CHECK64-LE-NEXT:    ret void
+//
+// ARM-LE-LABEL: define dso_local void @testPackedBooleanVectorMoreThan8Elements(
+// ARM-LE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-LE-NEXT:  [[ENTRY:.*:]]
+// ARM-LE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-LE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// ARM-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// ARM-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// ARM-LE-NEXT:    ret void
+//
+// ARM-BE-LABEL: define dso_local void @testPackedBooleanVectorMoreThan8Elements(
+// ARM-BE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-BE-NEXT:  [[ENTRY:.*:]]
+// ARM-BE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-BE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
+// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
+// ARM-BE-NEXT:    ret void
+//
+// AARCH64-BE-LABEL: define dso_local void @testPackedBooleanVectorMoreThan8Elements(
+// AARCH64-BE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// AARCH64-BE-NEXT:  [[ENTRY:.*:]]
+// AARCH64-BE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// AARCH64-BE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
+// AARCH64-BE-NEXT:    ret void
+//
+extern "C" void testPackedBooleanVectorMoreThan8Elements(bool12 *v) {
+  __builtin_clear_padding(v);
+}
+
+typedef bool bool33 __attribute__((ext_vector_type(33)));
+
+// CHECK64-LE-LABEL: define dso_local void @testPackedBooleanVectorWithFullyPaddingBytes(
+// CHECK64-LE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK64-LE-NEXT:  [[ENTRY:.*:]]
+// CHECK64-LE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK64-LE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// CHECK64-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// CHECK64-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4
+// CHECK64-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
+// CHECK64-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// CHECK64-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
+// CHECK64-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// CHECK64-LE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// CHECK64-LE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// CHECK64-LE-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// CHECK64-LE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// CHECK64-LE-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// CHECK64-LE-NEXT:    ret void
+//
+// ARM-LE-LABEL: define dso_local void @testPackedBooleanVectorWithFullyPaddingBytes(
+// ARM-LE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-LE-NEXT:  [[ENTRY:.*:]]
+// ARM-LE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-LE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4
+// ARM-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
+// ARM-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// ARM-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
+// ARM-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// ARM-LE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// ARM-LE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// ARM-LE-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// ARM-LE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// ARM-LE-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// ARM-LE-NEXT:    ret void
+//
+// ARM-BE-LABEL: define dso_local void @testPackedBooleanVectorWithFullyPaddingBytes(
+// ARM-BE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-BE-NEXT:  [[ENTRY:.*:]]
+// ARM-BE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-BE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 8
+// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 8
+// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// ARM-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// ARM-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// ARM-BE-NEXT:    ret void
+//
+// AARCH64-BE-LABEL: define dso_local void @testPackedBooleanVectorWithFullyPaddingBytes(
+// AARCH64-BE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// AARCH64-BE-NEXT:  [[ENTRY:.*:]]
+// AARCH64-BE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// AARCH64-BE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 8
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 8
+// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// AARCH64-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// AARCH64-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// AARCH64-BE-NEXT:    ret void
+//
+extern "C" void testPackedBooleanVectorWithFullyPaddingBytes(bool33 *v) {
+  __builtin_clear_padding(v);
+}
+
 #ifndef _WIN32
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wbitfield-width"
 
-// Match Clang's existing oversized-field representation. On big endian the
-// occupied byte is byte 1, so clearing padding must leave that byte intact.
+// Value bits occupy the first byte on both endians. The second byte is
+// padding and must be cleared.
 struct BitfieldOversizedAligned {
   unsigned char value : 16;
 };
@@ -4686,8 +4774,8 @@ struct BitfieldOversizedAligned {
 // ARM-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
 // ARM-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
 // ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
-// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP1]], align 2
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // ARM-BE-NEXT:    ret void
 //
 // AARCH64-BE-LABEL: define dso_local void @testBitfieldOversizedAligned(
@@ -4696,16 +4784,65 @@ struct BitfieldOversizedAligned {
 // AARCH64-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
 // AARCH64-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP1]], align 2
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // AARCH64-BE-NEXT:    ret void
 //
 extern "C" void testBitfieldOversizedAligned(BitfieldOversizedAligned *s) {
   __builtin_clear_padding(s);
 }
 
-// The occupied bits cross a byte boundary after more than one byte of leading
-// padding on big endian. The declared width also exceeds the allocation type.
+// `bool : 16` occupies the whole first byte on both endians, like GCC. Only
+// the second byte is padding.
+struct BitfieldOversizedBool {
+  bool value : 16;
+};
+
+// ITANIUM64-LE-LABEL: define dso_local void @testBitfieldOversizedBool(
+// ITANIUM64-LE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// ITANIUM64-LE-NEXT:  [[ENTRY:.*:]]
+// ITANIUM64-LE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// ITANIUM64-LE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// ITANIUM64-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// ITANIUM64-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ITANIUM64-LE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// ITANIUM64-LE-NEXT:    ret void
+//
+// ARM-LE-LABEL: define dso_local void @testBitfieldOversizedBool(
+// ARM-LE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// ARM-LE-NEXT:  [[ENTRY:.*:]]
+// ARM-LE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
+// ARM-LE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-LE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// ARM-LE-NEXT:    ret void
+//
+// ARM-BE-LABEL: define dso_local void @testBitfieldOversizedBool(
+// ARM-BE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// ARM-BE-NEXT:  [[ENTRY:.*:]]
+// ARM-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
+// ARM-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// ARM-BE-NEXT:    ret void
+//
+// AARCH64-BE-LABEL: define dso_local void @testBitfieldOversizedBool(
+// AARCH64-BE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// AARCH64-BE-NEXT:  [[ENTRY:.*:]]
+// AARCH64-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// AARCH64-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// AARCH64-BE-NEXT:    ret void
+//
+extern "C" void testBitfieldOversizedBool(BitfieldOversizedBool *s) {
+  __builtin_clear_padding(s);
+}
+
+// Eight value bits occupy the first byte. The rest of the allocation is padding.
 struct BitfieldOversizedBeyondBoundary {
   unsigned char value : 17;
 };
@@ -4744,18 +4881,12 @@ struct BitfieldOversizedBeyondBoundary {
 // ARM-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
 // ARM-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
 // ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
-// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP1]], align 2
-// ARM-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// ARM-BE-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
-// ARM-BE-NEXT:    [[TMP4:%.*]] = and i8 [[TMP3]], 127
-// ARM-BE-NEXT:    store i8 [[TMP4]], ptr [[TMP2]], align 1
-// ARM-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// ARM-BE-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 2
-// ARM-BE-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -128
-// ARM-BE-NEXT:    store i8 [[TMP7]], ptr [[TMP5]], align 2
-// ARM-BE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// ARM-BE-NEXT:    store i8 0, ptr [[TMP8]], align 1
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// ARM-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP2]], align 2
+// ARM-BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // ARM-BE-NEXT:    ret void
 //
 // AARCH64-BE-LABEL: define dso_local void @testBitfieldOversizedBeyondBoundary(
@@ -4764,18 +4895,12 @@ struct BitfieldOversizedBeyondBoundary {
 // AARCH64-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
 // AARCH64-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP1]], align 2
-// AARCH64-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// AARCH64-BE-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
-// AARCH64-BE-NEXT:    [[TMP4:%.*]] = and i8 [[TMP3]], 127
-// AARCH64-BE-NEXT:    store i8 [[TMP4]], ptr [[TMP2]], align 1
-// AARCH64-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// AARCH64-BE-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 2
-// AARCH64-BE-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -128
-// AARCH64-BE-NEXT:    store i8 [[TMP7]], ptr [[TMP5]], align 2
-// AARCH64-BE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP8]], align 1
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP2]], align 2
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // AARCH64-BE-NEXT:    ret void
 //
 extern "C" void testBitfieldOversizedBeyondBoundary(
@@ -4800,16 +4925,12 @@ struct BitfieldOversizedValueTypes {
 // ITANIUM64-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // ITANIUM64-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 // ITANIUM64-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
-// ITANIUM64-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// ITANIUM64-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 7
 // ITANIUM64-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
 // ITANIUM64-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
 // ITANIUM64-LE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 2
 // ITANIUM64-LE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -16
 // ITANIUM64-LE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 2
-// ITANIUM64-LE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// ITANIUM64-LE-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// ITANIUM64-LE-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], 31
-// ITANIUM64-LE-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 1
 // ITANIUM64-LE-NEXT:    ret void
 //
 // ARM-LE-LABEL: define dso_local void @testBitfieldOversizedValueTypes(
@@ -4820,16 +4941,12 @@ struct BitfieldOversizedValueTypes {
 // ARM-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
 // ARM-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 // ARM-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
-// ARM-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// ARM-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 7
 // ARM-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
 // ARM-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
 // ARM-LE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 2
 // ARM-LE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -16
 // ARM-LE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 2
-// ARM-LE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// ARM-LE-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// ARM-LE-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], 31
-// ARM-LE-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 1
 // ARM-LE-NEXT:    ret void
 //
 // ARM-BE-LABEL: define dso_local void @testBitfieldOversizedValueTypes(
@@ -4842,18 +4959,10 @@ struct BitfieldOversizedValueTypes {
 // ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
 // ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -32
 // ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
-// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
 // ARM-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 2
-// ARM-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 63
+// ARM-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 15
 // ARM-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 2
-// ARM-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// ARM-BE-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// ARM-BE-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], 15
-// ARM-BE-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 1
-// ARM-BE-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// ARM-BE-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 2
-// ARM-BE-NEXT:    [[TMP12:%.*]] = and i8 [[TMP11]], -15
-// ARM-BE-NEXT:    store i8 [[TMP12]], ptr [[TMP10]], align 2
 // ARM-BE-NEXT:    ret void
 //
 // AARCH64-BE-LABEL: define dso_local void @testBitfieldOversizedValueTypes(
@@ -4866,22 +4975,90 @@ struct BitfieldOversizedValueTypes {
 // AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
 // AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -32
 // AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
-// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
 // AARCH64-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 2
-// AARCH64-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 63
+// AARCH64-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 15
 // AARCH64-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 2
-// AARCH64-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
-// AARCH64-BE-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// AARCH64-BE-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], 15
-// AARCH64-BE-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 1
-// AARCH64-BE-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// AARCH64-BE-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 2
-// AARCH64-BE-NEXT:    [[TMP12:%.*]] = and i8 [[TMP11]], -15
-// AARCH64-BE-NEXT:    store i8 [[TMP12]], ptr [[TMP10]], align 2
 // AARCH64-BE-NEXT:    ret void
 //
 extern "C" void testBitfieldOversizedValueTypes(
     BitfieldOversizedValueTypes *s) {
+  __builtin_clear_padding(s);
+}
+
+// Within a single byte, padding follows the occupied bits: it is in the high
+// bits on little endian and in the low bits on big endian. The _BitInt(5)
+// field is kept up to the storage size of _BitInt(5), i.e. all 6 bits.
+struct BitfieldOversizedSubByte {
+  _BitInt(5) precise : 6;
+  bool flag : 6;
+};
+
+// ITANIUM64-LE-LABEL: define dso_local void @testBitfieldOversizedSubByte(
+// ITANIUM64-LE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// ITANIUM64-LE-NEXT:  [[ENTRY:.*:]]
+// ITANIUM64-LE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// ITANIUM64-LE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// ITANIUM64-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// ITANIUM64-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ITANIUM64-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// ITANIUM64-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
+// ITANIUM64-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// ITANIUM64-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ITANIUM64-LE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+// ITANIUM64-LE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 63
+// ITANIUM64-LE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
+// ITANIUM64-LE-NEXT:    ret void
+//
+// ARM-LE-LABEL: define dso_local void @testBitfieldOversizedSubByte(
+// ARM-LE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// ARM-LE-NEXT:  [[ENTRY:.*:]]
+// ARM-LE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
+// ARM-LE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// ARM-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
+// ARM-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// ARM-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-LE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+// ARM-LE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 63
+// ARM-LE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
+// ARM-LE-NEXT:    ret void
+//
+// ARM-BE-LABEL: define dso_local void @testBitfieldOversizedSubByte(
+// ARM-BE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// ARM-BE-NEXT:  [[ENTRY:.*:]]
+// ARM-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
+// ARM-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -4
+// ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+// ARM-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -4
+// ARM-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
+// ARM-BE-NEXT:    ret void
+//
+// AARCH64-BE-LABEL: define dso_local void @testBitfieldOversizedSubByte(
+// AARCH64-BE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// AARCH64-BE-NEXT:  [[ENTRY:.*:]]
+// AARCH64-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// AARCH64-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -4
+// AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// AARCH64-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+// AARCH64-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -4
+// AARCH64-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
+// AARCH64-BE-NEXT:    ret void
+//
+extern "C" void testBitfieldOversizedSubByte(BitfieldOversizedSubByte *s) {
   __builtin_clear_padding(s);
 }
 

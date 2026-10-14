@@ -24,19 +24,18 @@
 namespace llvm::orc::rt::sps_ci {
 
 inline constexpr SymbolNameSpec SharedMemoryMapperInstanceName =
-    SymbolNameSpec::verbatim(
-        "__llvm_orc_ExecutorSharedMemoryMapperService_Instance");
+    SymbolNameSpec::c("__llvm_orc_ExecutorSharedMemoryMapperService_Instance");
 
 struct SharedMemoryMapperReserve {
-  static constexpr SymbolNameSpec Name = SymbolNameSpec::verbatim(
-      "__llvm_orc_ExecutorSharedMemoryMapperService_Reserve");
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__llvm_orc_ExecutorSharedMemoryMapperService_Reserve");
   using SPSSig = shared::SPSExpected<
       shared::SPSTuple<shared::SPSExecutorAddr, shared::SPSString>>(
       shared::SPSExecutorAddr, uint64_t);
 };
 
 struct SharedMemoryMapperInitialize {
-  static constexpr SymbolNameSpec Name = SymbolNameSpec::verbatim(
+  static constexpr SymbolNameSpec Name = SymbolNameSpec::c(
       "__llvm_orc_ExecutorSharedMemoryMapperService_Initialize");
   using SPSSig = shared::SPSExpected<shared::SPSExecutorAddr>(
       shared::SPSExecutorAddr, shared::SPSExecutorAddr,
@@ -44,15 +43,15 @@ struct SharedMemoryMapperInitialize {
 };
 
 struct SharedMemoryMapperDeinitialize {
-  static constexpr SymbolNameSpec Name = SymbolNameSpec::verbatim(
+  static constexpr SymbolNameSpec Name = SymbolNameSpec::c(
       "__llvm_orc_ExecutorSharedMemoryMapperService_Deinitialize");
   using SPSSig = shared::SPSError(shared::SPSExecutorAddr,
                                   shared::SPSSequence<shared::SPSExecutorAddr>);
 };
 
 struct SharedMemoryMapperRelease {
-  static constexpr SymbolNameSpec Name = SymbolNameSpec::verbatim(
-      "__llvm_orc_ExecutorSharedMemoryMapperService_Release");
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__llvm_orc_ExecutorSharedMemoryMapperService_Release");
   using SPSSig = shared::SPSError(shared::SPSExecutorAddr,
                                   shared::SPSSequence<shared::SPSExecutorAddr>);
 };

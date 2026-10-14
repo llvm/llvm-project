@@ -306,7 +306,8 @@ Error FilePermissionsApplier::apply(
       return createFileError(OutputFilename, EC);
 
   sys::fs::file_status OStat;
-  if (std::error_code EC = sys::fs::status(FD, OStat))
+  if (std::error_code EC =
+          sys::fs::status(sys::fs::convertFDToNativeFile(FD), OStat))
     return createFileError(OutputFilename, EC);
   if (OStat.type() == sys::fs::file_type::regular_file) {
 #ifndef _WIN32

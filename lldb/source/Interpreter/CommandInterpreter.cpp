@@ -3436,8 +3436,11 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
   StartHandlingCommand();
 
+  // Only push the selected execution context when a real target is selected.
+  // The command may create and select a target (e.g. "target create"), and any
+  // command it runs afterwards must see that target, not the dummy target.
   ExecutionContext exe_ctx =
-      m_debugger.GetSelectedExecutionContext(/*adopt_dummy_target=*/true);
+      m_debugger.GetSelectedExecutionContext(/*adopt_dummy_target=*/false);
   bool pushed_exe_ctx = false;
   if (exe_ctx.HasTargetScope()) {
     OverrideExecutionContext(exe_ctx);

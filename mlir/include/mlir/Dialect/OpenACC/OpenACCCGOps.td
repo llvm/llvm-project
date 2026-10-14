@@ -713,8 +713,8 @@ def OpenACC_PredicateRegionOp
     //   !$acc atomic update
     //   !$acc loop vector
     //     !$acc atomic update
-    %w_gang = acc.par_width %cNG {par_dim = #acc.par_dim<block_x>}
-    %w_vector = acc.par_width %cVL {par_dim = #acc.par_dim<thread_x>}
+    %w_gang = acc.par_width %cNG par_dim(#acc.par_dim<block_x>)
+    %w_vector = acc.par_width %cVL par_dim(#acc.par_dim<thread_x>)
     acc.compute_region launch(%ng = %w_gang, %vl = %w_vector)
         ins(%arg_c1 = %c1, %arg_c2 = %c2) : (memref<i32>, memref<i32>) {
       scf.parallel (%i) = (%c1) to (%cN) step (%c1) {

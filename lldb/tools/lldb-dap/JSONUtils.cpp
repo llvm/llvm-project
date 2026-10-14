@@ -359,14 +359,6 @@ bool ValuePointsToCode(lldb::SBValue v) {
   return line_entry.IsValid();
 }
 
-int64_t PackLocation(int64_t var_ref, bool is_value_location) {
-  return var_ref << 1 | is_value_location;
-}
-
-std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
-  return std::pair{location_id >> 1, location_id & 1};
-}
-
 /// See
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object CreateRunInTerminalReverseRequest(

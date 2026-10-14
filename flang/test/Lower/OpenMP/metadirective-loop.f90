@@ -59,7 +59,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_simd(
 ! CHECK:         %[[SIMD_AFTER:.*]]:2 = hlfir.declare %arg2
-! CHECK-SAME:      uniq_name = "_QFtest_simdEafter"
+! CHECK-SAME:      uniq_name("_QFtest_simdEafter")
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK: %[[SIMD_I:.*]]:2 = hlfir.declare {{.*}}_QFtest_simdEi
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
@@ -1062,7 +1062,7 @@ end subroutine
 ! CHECK-NOT:       omp.
 ! CHECK-NOT:       fir.do_loop
 ! CHECK:           fir.do_loop
-! CHECK-SAME:        attributes {loopAnnotation = #[[UNROLL_ANNOTATION]]}
+! CHECK-SAME:        <{loopAnnotation = #[[UNROLL_ANNOTATION]]}>
 ! CHECK-NOT:       omp.
 ! CHECK-NOT:       fir.do_loop
 ! CHECK:         }
@@ -1099,7 +1099,7 @@ end subroutine
 ! CHECK-NOT:       omp.
 ! CHECK-NOT:       fir.do_loop
 ! CHECK:           fir.do_loop
-! CHECK-SAME:        attributes {loopAnnotation = #[[UNROLL_ANNOTATION]]}
+! CHECK-SAME:        <{loopAnnotation = #[[UNROLL_ANNOTATION]]}>
 ! CHECK-NOT:       omp.
 ! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:         {{^ *}}}
@@ -1144,7 +1144,7 @@ end subroutine
 ! CHECK:         } else {
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           fir.do_loop
-! CHECK-SAME:        attributes {loopAnnotation = #[[VECTOR_ANNOTATION]]}
+! CHECK-SAME:        <{loopAnnotation = #[[VECTOR_ANNOTATION]]}>
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:         {{^ *}}}
 ! CHECK:             fir.call @_QPconsume

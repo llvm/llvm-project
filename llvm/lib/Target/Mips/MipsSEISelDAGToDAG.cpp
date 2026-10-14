@@ -162,7 +162,7 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
         break;
       case Mips::BuildPairF64_64:
       case Mips::ExtractElementF64_64:
-        if (!Subtarget->useOddSPReg()) {
+        if (!Subtarget->useOddSPReg() || !Subtarget->hasMTHC1()) {
           MI.addOperand(MachineOperand::CreateReg(Mips::SP, false, true));
           break;
         }
@@ -289,7 +289,7 @@ bool MipsSEDAGToDAGISel::selectAddrFrameIndexOffset(
         Base = Addr.getOperand(0);
         // If base is a FI, additional offset calculation is done in
         // eliminateFrameIndex, otherwise we need to check the alignment
-        const Align Alignment(1ULL << ShiftAmount);
+        const Align Alignment = Align::fromLog2(ShiftAmount);
         if (!isAligned(Alignment, CN->getZExtValue()))
           return false;
       }
@@ -1062,8 +1062,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     // same set/ of registers. Similarly, ldi.h isn't capable of producing {
     // 0x00000000, 0x00000001, 0x00000000, 0x00000001 } but 'ldi.d wd, 1' can.
 
-    const MipsABIInfo &ABI =
-        static_cast<const MipsTargetMachine &>(TM).getABI();
+    const MipsABIInfo &ABI = Subtarget->getABI();
 
     BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Node);
     APInt SplatValue, SplatUndef;

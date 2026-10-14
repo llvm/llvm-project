@@ -80,12 +80,12 @@ public:
   }
 };
 
-#define LIST_FMAXIMUM_MAG_TESTS(T, func)                                       \
-  using LlvmLibcFMaximumMagTest = FMaximumMagTest<T>;                          \
-  TEST_F(LlvmLibcFMaximumMagTest, NaN) { testNaN(&func); }                     \
-  TEST_F(LlvmLibcFMaximumMagTest, InfArg) { testInfArg(&func); }               \
-  TEST_F(LlvmLibcFMaximumMagTest, NegInfArg) { testNegInfArg(&func); }         \
-  TEST_F(LlvmLibcFMaximumMagTest, BothZero) { testBothZero(&func); }           \
-  TEST_F(LlvmLibcFMaximumMagTest, Range) { testRange(&func); }
+#define LIST_FMAXIMUM_MAG_TESTS(Name, T, func)                                 \
+  using LlvmLibc##Name##Test = FMaximumMagTest<T>;                             \
+  TEST_F(LlvmLibc##Name##Test, NaN) { testNaN(&func); }                        \
+  TEST_F(LlvmLibc##Name##Test, InfArg) { testInfArg(&func); }                  \
+  TEST_F(LlvmLibc##Name##Test, NegInfArg) { testNegInfArg(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, BothZero) { testBothZero(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXIMUM_MAGTEST_H

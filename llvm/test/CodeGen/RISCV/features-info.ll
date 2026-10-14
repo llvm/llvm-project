@@ -40,6 +40,7 @@
 ; CHECK-NEXT:   experimental-ssip                - 'Ssip' (Support for Interrupt Handler Push/Pop at Supervisor Level).
 ; CHECK-NEXT:   experimental-ssnip               - 'Ssnip' (Nested Interrupt Preemption Support at Supervisor Level).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
+; CHECK-NEXT:   experimental-xqccmi              - 'Xqccmi' (Qualcomm 16-bit Instruction Lookup Table).
 ; CHECK-NEXT:   experimental-xqccmt              - 'Xqccmt' (Qualcomm 16-bit Table Jump).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
 ; CHECK-NEXT:   experimental-xsfsclic            - 'XSfsclic' (SiFive CLIC Supervisor-mode CSRs).
