@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -27,6 +28,18 @@ namespace dwarf_linker {
 /// but only uses to compute the variable's value, for example
 /// DW_OP_addr DW_OP_stack_value.
 LLVM_ABI bool hasImplicitAddressLocation(const DWARFDie &Die);
+
+/// Test if the DW_TAG_member \p Die declares a C++ static data member instead
+/// of describing storage in the record.
+LLVM_ABI bool isStaticDataMember(const DWARFDie &Die);
+
+/// Test if an unnamed type with tag \p Tag is told apart from others declared
+/// on the same line by its contents.
+LLVM_ABI bool isIdentifiedByContents(dwarf::Tag Tag);
+
+/// Test if the child \p Die is part of the contents that identify an unnamed
+/// type.
+LLVM_ABI bool isIdentifyingContent(const DWARFDie &Die);
 
 /// Build a map from an input DW_AT_LLVM_stmt_sequence byte offset to
 /// the first-row index (in \p LT.Rows) of the corresponding line-table
