@@ -99,7 +99,7 @@ contains
   end subroutine
 end module
 ! CHECK-LABEL: func.func @_QMtest_bound_kindsPtest_bound_kinds_bounds(
-! CHECK:  %[[N8:.*]]:2 = hlfir.declare %arg1{{.*}}n8"} : (!fir.ref<!fir.array<2xi64>>{{.*}}
+! CHECK:  %[[N8:.*]]:2 = hlfir.declare %arg1{{.*}}n8"{{.*}} : (!fir.ref<!fir.array<2xi64>>{{.*}}
 ! CHECK:  %[[A4:.*]] = hlfir.elemental {{.*}} -> !hlfir.expr<2xi64>
 ! CHECK:    hlfir.designate {{.*}} (%arg{{.*}}) : ({{.*}}, index) -> !fir.ref<i32>
 ! CHECK:    fir.load {{.*}} : !fir.ref<i32>
