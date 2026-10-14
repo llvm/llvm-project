@@ -526,8 +526,7 @@ foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
   if (!DiffArgNo)
     return nullptr;
 
-  // A select cannot feed a parameter that requires an immediate.
-  if (TII->paramHasAttr(*DiffArgNo, Attribute::ImmArg))
+  if (!canReplaceOperandWithVariable(TII, *DiffArgNo))
     return nullptr;
 
   Value *TV = TII->getArgOperand(*DiffArgNo);
@@ -577,15 +576,6 @@ Instruction *InstCombinerImpl::foldSelectIntrinsic(SelectInst &SI) {
     Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
     Value *NewPoisonFlag = Builder.CreateAnd(TZ, FZ);
     Value *NewCall = Builder.CreateBinaryIntrinsic(IID, NewSel, NewPoisonFlag);
-
-    return replaceInstUsesWith(SI, NewCall);
-  }
-  case Intrinsic::ctpop: {
-    Value *TV = LHSIntrinsic->getArgOperand(0);
-    Value *FV = RHSIntrinsic->getArgOperand(0);
-
-    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
-    Value *NewCall = Builder.CreateUnaryIntrinsic(IID, NewSel);
 
     return replaceInstUsesWith(SI, NewCall);
   }
