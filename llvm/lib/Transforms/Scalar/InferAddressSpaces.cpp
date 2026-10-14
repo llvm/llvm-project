@@ -993,22 +993,21 @@ Value *InferAddressSpacesImpl::cloneConstantExprWithNewAddressSpace(
           ? getPtrOrVecOfPtrsWithNewAS(CE->getType(), NewAddrSpace)
           : CE->getType();
 
-  if (CE->getOpcode() == Instruction::AddrSpaceCast) {
+  switch (CE->getOpcode()) {
+  case Instruction::AddrSpaceCast:
     // Because CE is flat, the source address space must be specific.
     // Therefore, the inferred address space must be the source space according
     // to our algorithm.
     assert(CE->getOperand(0)->getType()->getPointerAddressSpace() ==
            NewAddrSpace);
     return CE->getOperand(0);
-  }
 
-  if (CE->getOpcode() == Instruction::BitCast) {
+  case Instruction::BitCast:
     if (Value *NewOperand = ValueWithNewAddrSpace.lookup(CE->getOperand(0)))
       return ConstantExpr::getBitCast(cast<Constant>(NewOperand), TargetType);
     return ConstantExpr::getAddrSpaceCast(CE, TargetType);
-  }
 
-  if (CE->getOpcode() == Instruction::IntToPtr) {
+  case Instruction::IntToPtr:
     if (isNoopPtrIntCastPair(cast<Operator>(CE), *DL, TTI)) {
       Constant *Src = cast<ConstantExpr>(CE->getOperand(0))->getOperand(0);
       assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
@@ -1016,39 +1015,33 @@ Value *InferAddressSpacesImpl::cloneConstantExprWithNewAddressSpace(
     }
     assert(isSafeToCastIntToPtrAddrSpace(cast<Operator>(CE)));
     return ConstantExpr::getAddrSpaceCast(CE, TargetType);
+
+  case Instruction::GetElementPtr: {
+    // Only the pointer operand is rewritten: the indices are not related to
+    // the pointer and NewAddrSpace may not be valid for them. The pointer
+    // operand is an address expression, but it is not guaranteed to have been
+    // cloned already, so clone it here if needed.
+    Constant *Base = CE->getOperand(0);
+    Value *NewBase = ValueWithNewAddrSpace.lookup(Base);
+    if (!NewBase)
+      NewBase = cloneConstantExprWithNewAddressSpace(
+          cast<ConstantExpr>(Base), NewAddrSpace, ValueWithNewAddrSpace, DL,
+          TTI);
+    assert(NewBase && "pointer operand of a rewritten GEP was not rewritten");
+
+    SmallVector<Constant *, 4> NewOperands;
+    NewOperands.push_back(cast<Constant>(NewBase));
+    for (unsigned Index = 1; Index < CE->getNumOperands(); ++Index)
+      NewOperands.push_back(CE->getOperand(Index));
+    // Needs to specify the source type while constructing a getelementptr
+    // constant expression.
+    return CE->getWithOperands(NewOperands, TargetType, /*OnlyIfReduced=*/false,
+                               cast<GEPOperator>(CE)->getSourceElementType());
   }
 
-  // The remaining constant expression is a getelementptr. Only its pointer
-  // operand is rewritten: the indices are not related to the pointer and
-  // NewAddrSpace may not be valid for them.
-  assert(CE->getOpcode() == Instruction::GetElementPtr &&
-         "unexpected constant expression");
-  // If the address space of the base needs to be modified, the new base with
-  // the new address space should already be in ValueWithNewAddrSpace because
-  // (1) the constant expressions we consider do not incur cycles in the data
-  // flow graph and (2) this function is called on constant expressions in
-  // postorder.
-  Constant *Base = CE->getOperand(0);
-  Value *NewBase = ValueWithNewAddrSpace.lookup(Base);
-  if (!NewBase)
-    if (auto *BaseCE = dyn_cast<ConstantExpr>(Base))
-      NewBase = cloneConstantExprWithNewAddressSpace(
-          BaseCE, NewAddrSpace, ValueWithNewAddrSpace, DL, TTI);
-
-  // If the base is unchanged, we will replace the Value with itself. However,
-  // replaced values are assumed to wrapped in an addrspacecast cast later so
-  // drop it now.
-  if (!NewBase)
-    return nullptr;
-
-  SmallVector<Constant *, 4> NewOperands;
-  NewOperands.push_back(cast<Constant>(NewBase));
-  for (unsigned Index = 1; Index < CE->getNumOperands(); ++Index)
-    NewOperands.push_back(CE->getOperand(Index));
-  // Needs to specify the source type while constructing a getelementptr
-  // constant expression.
-  return CE->getWithOperands(NewOperands, TargetType, /*OnlyIfReduced=*/false,
-                             cast<GEPOperator>(CE)->getSourceElementType());
+  default:
+    llvm_unreachable("unexpected constant expression");
+  }
 }
 
 // Returns a clone of the value `V`, with its operands replaced as specified in
