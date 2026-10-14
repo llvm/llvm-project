@@ -1328,10 +1328,6 @@ public:
     // 0 or successor 1 based on condition 0.
     BranchOnTwoConds,
     Broadcast,
-    /// Given operands of (the same) struct type, creates a struct of fixed-
-    /// width vectors each containing a struct field of all operands. The
-    /// number of operands matches the element count of every vector.
-    BuildStructVector,
     /// Creates a fixed-width vector containing all operands. The number of
     /// operands matches the vector element count.
     BuildVector,
@@ -1453,7 +1449,8 @@ private:
       return true;
 
     return Instruction::isCast(Opcode) || Opcode == Instruction::PHI ||
-           Opcode == Instruction::GetElementPtr;
+           Opcode == Instruction::GetElementPtr ||
+           Opcode == Instruction::ExtractValue;
   }
 
 public:
@@ -1482,7 +1479,7 @@ public:
   unsigned getOpcode() const { return Opcode; }
 
   /// Add \p Op as operand of this VPInstruction. Only supported for AnyOf,
-  /// ComputeReductionResult, BuildVector, BuildStructVector, ExtractLane,
+  /// ComputeReductionResult, BuildVector, ExtractLane,
   /// ExtractLastActive, FirstActiveLane, LastActiveLane.
   void addOperand(VPValue *Op);
 
@@ -2055,7 +2052,8 @@ protected:
 };
 
 /// A recipe for widening vector memory intrinsics.
-class VPWidenMemIntrinsicRecipe final : public VPWidenIntrinsicRecipe {
+class LLVM_ABI_FOR_TEST VPWidenMemIntrinsicRecipe final
+    : public VPWidenIntrinsicRecipe {
   /// Alignment information for this memory access.
   Align Alignment;
 
@@ -2068,9 +2066,12 @@ public:
                                VectorIntrinsicID, CallArguments, Ty, {}, MD,
                                DL),
         Alignment(Alignment) {
-    assert((VectorIntrinsicID == Intrinsic::experimental_vp_strided_load ||
-            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store) &&
-           "Unexpected intrinsic");
+    assert(getVectorMemoryIntrinsicPointerArgIdx(VectorIntrinsicID) &&
+           getVectorIntrinsicMaskArgIdx(VectorIntrinsicID) &&
+           "Expected a masked vector load/store intrinsic");
+    assert((!Ty->isVoidTy() ||
+            getVectorStoreIntrinsicDataArgIdx(VectorIntrinsicID)) &&
+           "Expected data argument for store intrinsic");
   }
 
   ~VPWidenMemIntrinsicRecipe() override = default;
@@ -2085,6 +2086,15 @@ public:
 
   /// Produce a widened version of the vector memory intrinsic.
   void execute(VPTransformState &State) override;
+
+  /// Returns the address operand index of the VPWidenMemIntrinsicRecipe.
+  unsigned getAddrOpIdx() const;
+
+  /// Returns the mask of a predicated VPWidenMemIntrinsicRecipe.
+  VPValue *getMask() const;
+
+  /// Returns the data type of the memory access at \p VF.
+  Type *getAccessType(ElementCount VF) const;
 
   /// Helper function for computing the cost of vector memory intrinsic.
   static InstructionCost computeMemIntrinsicCost(Intrinsic::ID IID, Type *Ty,
@@ -2161,23 +2171,24 @@ protected:
 /// A recipe representing a sequence of load -> update -> store as part of
 /// a histogram operation. This means there may be aliasing between vector
 /// lanes, which is handled by the llvm.experimental.vector.histogram family
-/// of intrinsics. The only update operations currently supported are
-/// 'add' and 'sub' where the other term is loop-invariant.
+/// of intrinsics. Supported update operations are: add, sub, uadd.sat, umax,
+/// and umin, where the other term is loop-invariant.
 class VPHistogramRecipe : public VPRecipeBase, public VPIRMetadata {
-  /// Opcode of the update operation, currently either add or sub.
-  unsigned Opcode;
+  /// The update operation kind for this histogram.
+  HistogramUpdateKind UpdateKind;
 
 public:
-  VPHistogramRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
+  VPHistogramRecipe(HistogramUpdateKind UpdateKind,
+                    ArrayRef<VPValue *> Operands,
                     const VPIRMetadata &Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(VPRecipeBase::VPHistogramSC, Operands, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {}
+        VPIRMetadata(Metadata), UpdateKind(UpdateKind) {}
 
   ~VPHistogramRecipe() override = default;
 
   VPHistogramRecipe *clone() override {
-    return new VPHistogramRecipe(Opcode, operands(), *this, getDebugLoc());
+    return new VPHistogramRecipe(UpdateKind, operands(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPHistogramSC);
@@ -2200,6 +2211,16 @@ public:
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getOperand(1);
+  }
+
+private:
+  /// Return the histogram intrinsic ID for this recipe's update kind.
+  Intrinsic::ID getHistogramIntrinsicID() const;
+
+  /// Return true if the increment should be negated before passing to the
+  /// histogram intrinsic (only for Sub).
+  bool mustNegateIncrement() const {
+    return UpdateKind == HistogramUpdateKind::Sub;
   }
 
 protected:

@@ -61,6 +61,19 @@
 // RUN: %{fw} -fmodules-validate-directory-dependencies \
 // RUN:   | FileCheck %s --check-prefix=NO-BUILD --allow-empty
 
+// A module found through a relative search path still depends on absolute
+// directories.
+// RUN: cd %t && %clang_cc1 -fsyntax-only -fmodules -fimplicit-module-maps \
+// RUN:   -fmodules-cache-path=%t/rel-cache -I include tu.c
+// RUN: sleep 1
+// RUN: touch %t/include/umbrella/nested/added-later.h
+// RUN: cd %t && %clang_cc1 -fsyntax-only -fmodules -fimplicit-module-maps \
+// RUN:   -fmodules-cache-path=%t/rel-cache -I include tu.c \
+// RUN:   -fmodules-validate-directory-dependencies -Rmodule-validation 2>&1 \
+// RUN:   | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t --check-prefix=RELATIVE
+
+// RELATIVE: remark: module 'Umbrella' is out of date because the contents of directory '[[PREFIX]]/include/umbrella/nested' changed after it was built
+
 // RUN: %clang -### -fmodules -fmodules-validate-directory-dependencies \
 // RUN:   -c %t/tu.c 2>&1 | FileCheck %s --check-prefix=DRIVER
 // RUN: %clang -### -fmodules-validate-directory-dependencies -c %t/tu.c 2>&1 \
