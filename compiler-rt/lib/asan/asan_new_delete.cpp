@@ -232,5 +232,3 @@ INTERCEPTOR(void, _ZdaPvRKSt9nothrow_t, void* ptr, std::nothrow_t const&) {
   OPERATOR_DELETE_BODY_ARRAY;
 }
 #endif  // !SANITIZER_APPLE
-
-1
