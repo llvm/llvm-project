@@ -308,6 +308,18 @@ TEST(OpcodeMap, TagsPackedFloatOpcodesOnGfx1250) {
             CanonicalOp::V_PK_MUL_F32);
 }
 
+TEST(OpcodeMap, TagsF32K4WMMAOpcodesOnGfx1250) {
+  llvm::Expected<MCState> StateOrErr = initMCState("gfx1250");
+  ASSERT_TRUE(static_cast<bool>(StateOrErr))
+      << llvm::toString(StateOrErr.takeError());
+  OpcodeMap Map;
+  Map.build(*StateOrErr->InstrInfo);
+  for (llvm::StringRef Name : {"V_WMMA_F32_16X16X4_F32_w32_twoaddr",
+                               "V_WMMA_F32_16X16X4_F32_w32_threeaddr"})
+    EXPECT_EQ(Map.lookup(opcodeNamed(*StateOrErr->InstrInfo, Name)),
+              CanonicalOp::V_WMMA_F32_16x16x4_F32);
+}
+
 // -- decode -------------------------------------------------------------------
 
 // Concatenate instruction encodings into one .text image.

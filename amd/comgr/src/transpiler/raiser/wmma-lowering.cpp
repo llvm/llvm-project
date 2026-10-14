@@ -67,12 +67,14 @@ void redistributeInput(IRBuilder<> &B, Module &M, ArrayRef<Value *> Source,
                        unsigned SourceWave, Value *LaneInGroup,
                        Value *LaneGroup, MutableArrayRef<Value *> Low,
                        MutableArrayRef<Value *> High) {
-  for (unsigned TargetDword = 0; TargetDword != 2; ++TargetDword) {
-    for (unsigned KHalf = 0; KHalf != 2; ++KHalf) {
+  unsigned InputDwords = Low.size();
+  unsigned KParts = High.empty() ? 1 : 2;
+  for (unsigned TargetDword = 0; TargetDword != InputDwords; ++TargetDword) {
+    for (unsigned KHalf = 0; KHalf != KParts; ++KHalf) {
       SmallVector<Value *, 4> Candidates;
       for (unsigned Group = 0; Group != 4; ++Group) {
         detail::FragmentDwordLocation Location = detail::getWMMAInputDword(
-            SourceWave, Group * 16, TargetDword, KHalf);
+            SourceWave, Group * 16, TargetDword, KHalf, InputDwords);
         Value *SourceLane =
             B.CreateAdd(LaneInGroup, B.getInt32(Location.Lane), "source.lane");
         Value *Address =
@@ -131,7 +133,10 @@ void runGroupPass(RaiseContext &Ctx, unsigned GroupBase, Value *LaneId,
       Builder.CreateLShr(LaneId, Builder.getInt32(4), "lane.group");
   unsigned SourceWave = GroupBase / 32;
 
-  SmallVector<Value *, 2> ALow(2), AHigh(2), BLow(2), BHigh(2);
+  unsigned InputDwords = InputType == WMMAInputType::F32 ? 1 : 2;
+  unsigned HighDwords = InputType == WMMAInputType::F32 ? 0 : 2;
+  SmallVector<Value *, 2> ALow(InputDwords), AHigh(HighDwords),
+      BLow(InputDwords), BHigh(HighDwords);
   SmallVector<Value *, 4> Accumulator(4);
   redistributeInput(Builder, M, A, SourceWave, LaneInGroup, LaneGroup, ALow,
                     AHigh);
@@ -144,6 +149,11 @@ void runGroupPass(RaiseContext &Ctx, unsigned GroupBase, Value *LaneId,
   Type *AccumulatorTy;
   Intrinsic::ID IntrinsicId;
   switch (InputType) {
+  case WMMAInputType::F32:
+    InputTy = Builder.getFloatTy();
+    AccumulatorTy = FixedVectorType::get(Builder.getFloatTy(), 4);
+    IntrinsicId = Intrinsic::amdgcn_mfma_f32_16x16x4f32;
+    break;
   case WMMAInputType::F16:
     InputTy = FixedVectorType::get(Builder.getHalfTy(), 4);
     AccumulatorTy = FixedVectorType::get(Builder.getFloatTy(), 4);
@@ -171,13 +181,16 @@ void runGroupPass(RaiseContext &Ctx, unsigned GroupBase, Value *LaneId,
   Value *First =
       Ctx.Projection.wrapAsWWMValue(Builder, FirstCall, "mfma.0.wwm");
 
-  Value *AHighPack = packDwords(Builder, AHigh, InputTy);
-  Value *BHighPack = packDwords(Builder, BHigh, InputTy);
-  Value *SecondCall = Builder.CreateCall(
-      Mfma, {AHighPack, BHighPack, First, Zero, Zero, Zero}, "mfma.1");
-  Value *Second =
-      Ctx.Projection.wrapAsWWMValue(Builder, SecondCall, "mfma.1.wwm");
-  SmallVector<Value *> MfmaResult = unpackDwords(Builder, Second, 4);
+  Value *ResultValue = First;
+  if (!AHigh.empty()) {
+    Value *AHighPack = packDwords(Builder, AHigh, InputTy);
+    Value *BHighPack = packDwords(Builder, BHigh, InputTy);
+    Value *SecondCall = Builder.CreateCall(
+        Mfma, {AHighPack, BHighPack, First, Zero, Zero, Zero}, "mfma.1");
+    ResultValue =
+        Ctx.Projection.wrapAsWWMValue(Builder, SecondCall, "mfma.1.wwm");
+  }
+  SmallVector<Value *> MfmaResult = unpackDwords(Builder, ResultValue, 4);
   Value *Wave32Lane =
       Builder.CreateAnd(LaneId, Builder.getInt32(31), "wave32.lane");
   collectResult(Builder, M, MfmaResult, Wave32Lane, Result);
@@ -200,8 +213,9 @@ Expected<Value *> emitWMMAtoMFMA(RaiseContext &Ctx, Value *A, Value *B,
         "WMMA to MFMA remapping requires one or two source waves per target");
 
   IRBuilder<> &Builder = Ctx.B;
-  SmallVector<Value *> ADwords = unpackDwords(Builder, A, 8);
-  SmallVector<Value *> BDwords = unpackDwords(Builder, B, 8);
+  unsigned InputDwords = InputType == WMMAInputType::F32 ? 2 : 8;
+  SmallVector<Value *> ADwords = unpackDwords(Builder, A, InputDwords);
+  SmallVector<Value *> BDwords = unpackDwords(Builder, B, InputDwords);
   SmallVector<Value *> CDwords = unpackDwords(Builder, C, 8);
   Value *LaneId = Ctx.emitLaneIdx();
 

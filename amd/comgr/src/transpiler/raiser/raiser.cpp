@@ -909,6 +909,19 @@ raiseKernel(const RaiseEnvironment &Env, Module &M, const TextSection &Text,
       UseWaveNative ? ProjectionKind::WaveNative : ProjectionKind::SameWave;
   KernelLaunchRequirements Launch{KernelLaunchRequirements::Kind::Unchanged,
                                   Meta.MaxFlatWorkgroupSize, RequiredSize};
+  bool HasWMMA = any_of(Decoded->Insts, [&](const DecodedInst &Di) {
+    return SIInstrFlags::isWMMA(*Env.Source.MC.InstrInfo, Di.Inst);
+  });
+  if (HasWMMA) {
+    Launch.SourceWaveSize = getWaveSize(SourceSTI);
+    if (RequiredSize) {
+      uint64_t Workitems = uint64_t((*RequiredSize)[0]) * (*RequiredSize)[1] *
+                           (*RequiredSize)[2];
+      if (Workitems % Launch.SourceWaveSize != 0)
+        return RaiseFailure::general(RaiseFailureReason::UnsupportedLaunch,
+                                     "WMMA requires whole source waves");
+    }
+  }
   std::array<std::optional<uint32_t>, 3> GroupSizes;
   for (const KernelArgMeta &Arg : Meta.Args) {
     std::optional<unsigned> Dimension;
@@ -962,10 +975,10 @@ raiseKernel(const RaiseEnvironment &Env, Module &M, const TextSection &Text,
   assert(TargetWaveSize % SourceWaveSize == 0 &&
          "replicated dispatch requires an integer wave-size ratio");
   unsigned ReplicationFactor = TargetWaveSize / SourceWaveSize;
-  bool HasMatrix = any_of(Decoded->Insts, [&](const DecodedInst &Di) {
-    return SIInstrFlags::isMAI(*Env.Source.MC.InstrInfo, Di.Inst) ||
-           SIInstrFlags::isWMMA(*Env.Source.MC.InstrInfo, Di.Inst);
-  });
+  bool HasMatrix =
+      HasWMMA || any_of(Decoded->Insts, [&](const DecodedInst &Di) {
+        return SIInstrFlags::isMAI(*Env.Source.MC.InstrInfo, Di.Inst);
+      });
   if (RequiredSize &&
       uint64_t((*RequiredSize)[0]) * (*RequiredSize)[1] * (*RequiredSize)[2] >
           AMDGPU::getMaxFlatWorkGroupSize() / ReplicationFactor &&
@@ -999,7 +1012,7 @@ raiseKernel(const RaiseEnvironment &Env, Module &M, const TextSection &Text,
         {*GroupSizes[0], *GroupSizes[1], *GroupSizes[2]}};
   }
   Launch.RequiresWholeSourceWaves =
-      !RequiredSize && !Launch.WorkgroupSizeArgOffsets;
+      HasWMMA || (!RequiredSize && !Launch.WorkgroupSizeArgOffsets);
   auto ValidateRequiredShape = [&]() -> Error {
     if (!RequiredSize)
       return Error::success();

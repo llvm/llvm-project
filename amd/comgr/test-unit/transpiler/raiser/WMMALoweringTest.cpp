@@ -45,7 +45,7 @@ void checkInputMapping(unsigned ElementBits) {
         unsigned LaneGroup = TargetLane / 16;
         for (unsigned TargetDword = 0; TargetDword != 2; ++TargetDword) {
           detail::FragmentDwordLocation Source = detail::getWMMAInputDword(
-              SourceWave, TargetLane, TargetDword, KHalf);
+              SourceWave, TargetLane, TargetDword, KHalf, 2);
           for (unsigned Element = 0; Element != ElementsPerDword; ++Element) {
             auto [Lane, Dword, Subelement] =
                 decodeIdentity(identity(Source.Lane, Source.Dword, Element));
@@ -71,6 +71,19 @@ void checkInputMapping(unsigned ElementBits) {
 }
 
 } // namespace
+
+TEST(WMMALoweringTest, RedistributesF32Inputs) {
+  for (unsigned SourceWave = 0; SourceWave != 2; ++SourceWave) {
+    for (unsigned K = 0; K != 4; ++K) {
+      for (unsigned Row = 0; Row != 16; ++Row) {
+        detail::FragmentDwordLocation Source =
+            detail::getWMMAInputDword(SourceWave, Row + 16 * K, 0, 0, 1);
+        EXPECT_EQ(Source.Lane, 32 * SourceWave + Row + 16 * (K / 2));
+        EXPECT_EQ(Source.Dword, K % 2);
+      }
+    }
+  }
+}
 
 TEST(WMMALoweringTest, RedistributesF16Inputs) { checkInputMapping(16); }
 

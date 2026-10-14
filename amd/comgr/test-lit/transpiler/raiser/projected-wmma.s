@@ -6,7 +6,7 @@
 ; RUN: %opt -passes='default<O2>' %t.ll -o %t.bc
 ; RUN: %llc -mtriple=amdgpu9.42-amd-amdhsa -filetype=obj %t.bc -o %t.target.o
 ; RUN: not %transpile_cli %t.hsaco --target-isa=gfx942 --emit-ir=f16 --allow-replicated-dispatch --specialize-workgroup=16,1,1 2>&1 | %FileCheck %s --check-prefix=PARTIAL
-; PARTIAL: replicated dispatch requires whole source waves
+; PARTIAL: WMMA requires whole source waves
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
 .amdhsa_code_object_version 6
 .text

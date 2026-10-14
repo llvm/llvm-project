@@ -19,11 +19,14 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Error.h"
 
@@ -466,13 +469,34 @@ Error raiseWMMA(RaiseContext &Ctx, const DecodedInst &Di, OperandResolver &Op,
       Ctx.Projection.targetWaveSize() != 64)
     return unsupported(Ctx, Di, "WMMA remapping requires wave32 to wave64");
   unsigned RequiredFeature =
-      InputType == WMMAInputType::F16    ? AMDGPU::FeatureMAIInsts
+      InputType == WMMAInputType::F16 || InputType == WMMAInputType::F32
+          ? AMDGPU::FeatureMAIInsts
       : InputType == WMMAInputType::BF16 ? AMDGPU::FeatureGFX90AInsts
                                          : AMDGPU::FeatureGFX940Insts;
   if (!Ctx.Projection.TargetSTI.hasFeature(RequiredFeature))
     return unsupported(Ctx, Di, "target ISA does not support mapped MFMA");
   if (Op.nSrcs() < 3)
     return unsupported(Ctx, Di, "WMMA requires three source operands");
+
+  if (InputType == WMMAInputType::F32) {
+    Function *Kernel = Ctx.B.GetInsertBlock()->getParent();
+    MDNode *RequiredSize = Kernel->getMetadata("reqd_work_group_size");
+    uint64_t Workitems = 1;
+    if (RequiredSize)
+      for (const MDOperand &Dimension : RequiredSize->operands())
+        Workitems *= mdconst::extract<ConstantInt>(Dimension)->getZExtValue();
+
+    // MFMA requires all target lanes to participate.
+    if (!RequiredSize || Workitems % Ctx.Projection.targetWaveSize() != 0)
+      if (Error Err = Ctx.requirePerWaveExecution(Di))
+        return Err;
+
+    // F32 WMMA preserves denormals, so the mapped MFMA must do the same.
+    if (Kernel->getDenormalMode(APFloat::IEEEsingle()) !=
+        DenormalMode::getIEEE())
+      return unsupported(
+          Ctx, Di, "F32 WMMA requires preserved input and output denormals");
+  }
 
   if (InputType == WMMAInputType::IU8) {
     if (Op.srcMod(0) != SISrcMods::NEG || Op.srcMod(1) != SISrcMods::NEG ||
@@ -503,7 +527,8 @@ Error raiseWMMA(RaiseContext &Ctx, const DecodedInst &Di, OperandResolver &Op,
   if (!*SourceA || !*SourceB)
     return unsupported(Ctx, Di, "WMMA matrix inputs must be registers");
 
-  Type *InputTy = FixedVectorType::get(Ctx.B.getInt32Ty(), 8);
+  Type *InputTy = FixedVectorType::get(Ctx.B.getInt32Ty(),
+                                       InputType == WMMAInputType::F32 ? 2 : 8);
   Type *ElementTy =
       InputType == WMMAInputType::IU8 ? Ctx.B.getInt32Ty() : Ctx.B.getFloatTy();
   Type *AccumulatorTy = FixedVectorType::get(ElementTy, 8);
@@ -556,6 +581,8 @@ Error handleVOP3P(RaiseContext &Ctx, const DecodedInst &Di,
     return raisePackedInt16(Ctx, Di, Op);
   case CanonicalOp::V_FMA_MIX_F32_BF16:
     return raiseFMAMixF32BF16(Ctx, Di, Op);
+  case CanonicalOp::V_WMMA_F32_16x16x4_F32:
+    return raiseWMMA(Ctx, Di, Op, WMMAInputType::F32);
   case CanonicalOp::V_WMMA_F32_16x16x32_F16:
     return raiseWMMA(Ctx, Di, Op, WMMAInputType::F16);
   case CanonicalOp::V_WMMA_F32_16x16x32_BF16:

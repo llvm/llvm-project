@@ -29,10 +29,11 @@ struct FragmentDwordLocation {
 constexpr FragmentDwordLocation getWMMAInputDword(unsigned SourceWave,
                                                   unsigned TargetLane,
                                                   unsigned TargetDword,
-                                                  unsigned KHalf) {
+                                                  unsigned KHalf,
+                                                  unsigned DwordsPerLane) {
   unsigned LaneGroup = TargetLane / 16;
   return {SourceWave * 32 + (LaneGroup / 2) * 16 + TargetLane % 16,
-          KHalf * 4 + (LaneGroup % 2) * 2 + TargetDword};
+          (KHalf * 2 + LaneGroup % 2) * DwordsPerLane + TargetDword};
 }
 
 constexpr FragmentDwordLocation getWMMAAccumulatorDword(unsigned SourceWave,
@@ -52,6 +53,7 @@ constexpr FragmentDwordLocation getMFMAResultDword(unsigned SourceLane,
 } // namespace detail
 
 enum class WMMAInputType {
+  F32,
   F16,
   BF16,
   IU8,

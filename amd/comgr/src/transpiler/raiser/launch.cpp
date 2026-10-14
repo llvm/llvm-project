@@ -51,8 +51,15 @@ Expected<LaunchDimensions> KernelLaunchRequirements::project(
     if (support::endian::read32le(Kernarg.data() + Offset) != DynamicLDSSize)
       return Refuse("kernarg dynamic LDS size does not match the allocation");
   }
-  if (Mapping == Kind::Unchanged)
+  if (Mapping == Kind::Unchanged) {
+    if (RequiresWholeSourceWaves && Workitems % SourceWaveSize != 0)
+      return Refuse("launch requires whole source waves");
+    if (RequiresWholeSourceWaves && SourceWaveSize > 1)
+      for (unsigned I = 0; I != 3; ++I)
+        if (Source.Grid[I] % Source.Workgroup[I] != 0)
+          return Refuse("launch requires complete workgroups");
     return Source;
+  }
 
   assert(SourceWaveSize > 0 && ReplicationFactor > 1 &&
          "invalid replicated launch requirements");
