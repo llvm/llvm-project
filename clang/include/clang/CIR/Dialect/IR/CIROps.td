@@ -5295,6 +5295,37 @@ def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
 }
 
 //===----------------------------------------------------------------------===//
+// Coroutine intrinsic SaveOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSaveOp : CIR_CoroIntrinsicOp<"save",
+    (ins CIR_VoidPtrType:$coroaddr),
+    (outs Token:$result), [TokenProducerTrait]> {
+  let summary = "Represents llvm.coro.save";
+  let description = [{
+    `cir.coro.intrinsic.save` represents the `llvm.coro.save` intrinsic.
+
+    It marks the point where a coroutine needs to update its state to
+    prepare for resumption, so that it is considered suspended (and thus
+    eligible for resumption).
+  }];
+  let llvmOp = "CoroSaveOp";
+}
+
+def CIR_CoroExitOp : CIR_Op<"coro.exit", [
+  Terminator
+]> {
+  let summary = "Branches to the enclosing cir.coroutine's exit region";
+  let description = [{
+    Placeholder emitted while flattening `cir.await`.
+    `cir.coroutine` flattening rewrites it into a `cir.br`
+    to the `exit` block. It must not survive flattening.
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // Coroutine intrinsic PromiseOp
 //===----------------------------------------------------------------------===//
 
