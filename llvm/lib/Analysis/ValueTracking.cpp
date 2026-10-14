@@ -9204,11 +9204,10 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
 }
 
 static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
-                                              FastMathFlags FMF,
-                                              Value *CmpLHS, Value *CmpRHS,
-                                              Value *TrueVal, Value *FalseVal,
-                                              Value *&LHS, Value *&RHS,
-                                              unsigned Depth) {
+                                              FastMathFlags FMF, Value *CmpLHS,
+                                              Value *CmpRHS, Value *TrueVal,
+                                              Value *FalseVal, Value *&LHS,
+                                              Value *&RHS) {
   if (CmpInst::isFPPredicate(Pred)) {
     // IEEE-754 ignores the sign of 0.0 in comparisons. So if the select has one
     // 0.0 operand, set the compare's 0.0 operands to that same value for the
@@ -9504,11 +9503,7 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
   return CastedTo;
 }
 SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
-                                             Instruction::CastOps *CastOp,
-                                             unsigned Depth) {
-  if (Depth >= MaxAnalysisRecursionDepth)
-    return {SPF_UNKNOWN, SPNB_NA, false};
-
+                                             Instruction::CastOps *CastOp) {
   SelectInst *SI = dyn_cast<SelectInst>(V);
   if (!SI) return {SPF_UNKNOWN, SPNB_NA, false};
 
@@ -9518,14 +9513,13 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
   Value *TrueVal = SI->getTrueValue();
   Value *FalseVal = SI->getFalseValue();
 
-  return llvm::matchDecomposedSelectPattern(CmpI, TrueVal, FalseVal, LHS, RHS,
-                                            SI->getFastMathFlagsOrNone(),
-                                            CastOp, Depth);
+  return llvm::matchDecomposedSelectPattern(
+      CmpI, TrueVal, FalseVal, LHS, RHS, SI->getFastMathFlagsOrNone(), CastOp);
 }
 
 SelectPatternResult llvm::matchDecomposedSelectPattern(
     CmpInst *CmpI, Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
-    FastMathFlags FMF, Instruction::CastOps *CastOp, unsigned Depth) {
+    FastMathFlags FMF, Instruction::CastOps *CastOp) {
   CmpInst::Predicate Pred = CmpI->getPredicate();
   Value *CmpLHS = CmpI->getOperand(0);
   Value *CmpRHS = CmpI->getOperand(1);
@@ -9545,20 +9539,20 @@ SelectPatternResult llvm::matchDecomposedSelectPattern(
         FMF.setNoSignedZeros();
       return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS,
                                   cast<CastInst>(TrueVal)->getOperand(0), C,
-                                  LHS, RHS, Depth);
+                                  LHS, RHS);
     }
     if (Value *C = lookThroughCast(CmpI, FalseVal, TrueVal, CastOp)) {
       // If this is a potential fmin/fmax with a cast to integer, then ignore
       // -0.0 because there is no corresponding integer value.
       if (*CastOp == Instruction::FPToSI || *CastOp == Instruction::FPToUI)
         FMF.setNoSignedZeros();
-      return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS,
-                                  C, cast<CastInst>(FalseVal)->getOperand(0),
-                                  LHS, RHS, Depth);
+      return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS, C,
+                                  cast<CastInst>(FalseVal)->getOperand(0), LHS,
+                                  RHS);
     }
   }
-  return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS, TrueVal, FalseVal,
-                              LHS, RHS, Depth);
+  return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS,
+                              RHS);
 }
 
 CmpInst::Predicate llvm::getMinMaxPred(SelectPatternFlavor SPF, bool Ordered) {
