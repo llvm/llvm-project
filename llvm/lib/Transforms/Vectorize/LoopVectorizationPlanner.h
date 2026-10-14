@@ -51,6 +51,7 @@ class TargetLibraryInfo;
 class VPRecipeBuilder;
 struct VPRegisterUsage;
 struct VFRange;
+struct VectorizeOptions;
 
 /// \return An upper bound for vscale based on TTI or the vscale_range
 /// attribute.
@@ -703,6 +704,7 @@ class VFSelectionContext {
   /// return the value returned by the corresponding TTI method.
   void initializeVScaleForTuning();
 
+  const VectorizeOptions &Opts;
   const TargetTransformInfo &TTI;
   const LoopVectorizationLegality *Legal;
   const Loop *TheLoop;
@@ -749,14 +751,15 @@ public:
   /// or profile information.
   const bool OptForSize;
 
-  VFSelectionContext(const TargetTransformInfo &TTI,
+  VFSelectionContext(const VectorizeOptions &Opts,
+                     const TargetTransformInfo &TTI,
                      const LoopVectorizationLegality *Legal,
                      const Loop *TheLoop, const Function &F,
                      PredicatedScalarEvolution &PSE, DemandedBits *DB,
                      OptimizationRemarkEmitter *ORE,
                      const LoopVectorizeHints *Hints, bool OptForSize)
-      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE), DB(DB),
-        ORE(ORE), Hints(Hints),
+      : Opts(Opts), TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE),
+        DB(DB), ORE(ORE), Hints(Hints),
         CostKind(F.hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput),
         OptForSize(OptForSize) {
     initializeVScaleForTuning();
@@ -764,6 +767,8 @@ public:
 
   /// \return The vscale value used for tuning the cost model.
   std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
+
+  const VectorizeOptions &getOpts() const { return Opts; }
 
   const TargetTransformInfo &getTTI() const { return TTI; }
 
@@ -868,6 +873,8 @@ public:
 /// Planner drives the vectorization process after having passed
 /// Legality checks.
 class LoopVectorizationPlanner {
+  const VectorizeOptions &Opts;
+
   /// The loop that we evaluate.
   Loop *OrigLoop;
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
+#include "../VectorizeOptions.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Type.h"
@@ -17,15 +18,6 @@
 
 using namespace llvm;
 namespace llvm::sandboxir {
-
-static cl::opt<unsigned> SeedBundleSizeLimit(
-    "sbvec-seed-bundle-size-limit", cl::init(32), cl::Hidden,
-    cl::desc("Limit the size of the seed bundle to cap compilation time."));
-
-static cl::opt<unsigned> SeedGroupsLimit(
-    "sbvec-seed-groups-limit", cl::init(256), cl::Hidden,
-    cl::desc("Limit the number of collected seeds groups in a BB to "
-             "cap compilation time."));
 
 ArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
                                              unsigned MaxVecRegBits,
@@ -113,7 +105,9 @@ void SeedContainer::insert(LoadOrStoreT *LSI, bool AllowDiffTypes) {
   // Fill this vector of bundles front to back so that only the last bundle in
   // the vector may have available space. This avoids iteration to find one with
   // space.
-  if (BundleVec.empty() || BundleVec.back()->size() == SeedBundleSizeLimit)
+  if (BundleVec.empty() ||
+      BundleVec.back()->size() ==
+          VectorizeOptions::Global.sbvec_seed_bundle_size_limit)
     BundleVec.emplace_back(std::make_unique<MemSeedBundle<LoadOrStoreT>>(LSI));
   else
     BundleVec.back()->tryInsert(LSI, SE);
@@ -189,7 +183,7 @@ SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
       if (CollectLoads && isValidMemSeed(LI))
         LoadSeeds.insert(LI, AllowDiffTypes);
     // Cap compilation time.
-    if (totalNumSeedGroups() > SeedGroupsLimit)
+    if (totalNumSeedGroups() > VectorizeOptions::Global.sbvec_seed_groups_limit)
       break;
   }
 }
