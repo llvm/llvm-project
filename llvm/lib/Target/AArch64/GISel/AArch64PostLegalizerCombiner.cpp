@@ -20,7 +20,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "AArch64GlobalISelUtils.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
@@ -571,8 +570,9 @@ bool matchVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
     return false;
   Register Amt = MI.getOperand(2).getReg();
-  if (AArch64GISelUtils::getAArch64VectorSplatScalar(*MRI.getVRegDef(Amt), MRI))
-    return false;
+  if (auto Splat = getVectorSplat(*MRI.getVRegDef(Amt), MRI))
+    if (getIConstantVRegVal(*Splat, MRI))
+      return false;
   // Constant splats with undef lanes (e.g. from widening odd-sized vectors) are
   // still immediates for vashr_vlshr_imm once the undef lanes are cleaned up.
   if (auto *BV = getOpcodeDef<GBuildVector>(Amt, MRI))

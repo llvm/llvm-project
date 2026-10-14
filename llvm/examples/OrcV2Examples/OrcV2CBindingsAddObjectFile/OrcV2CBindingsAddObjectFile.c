@@ -86,6 +86,10 @@ int main(int argc, const char *argv[]) {
 
     // Get the Target.
     const char *Triple = LLVMOrcLLJITGetTripleString(J);
+
+    // Set the triple on the module.
+    LLVMSetTarget(M, Triple);
+
     LLVMTargetRef Target = 0;
     char *ErrorMsg = 0;
     if (LLVMGetTargetFromTriple(Triple, &Target, &ErrorMsg)) {

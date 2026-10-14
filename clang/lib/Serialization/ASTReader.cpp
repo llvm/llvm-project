@@ -4881,8 +4881,13 @@ void ASTReader::ReadDirectoryDependencies(const RecordData &Record,
   unsigned Idx = 0;
   unsigned N = Record[Idx++];
   F.DirectoryDependencies.reserve(N);
-  for (unsigned I = 0; I != N; ++I)
-    F.DirectoryDependencies.push_back(ReadPath(F, Record, Idx));
+  for (unsigned I = 0; I != N; ++I) {
+    // The base directory is relative if the module was found through a
+    // relative search path, and empty with -fmodule-file-home-is-cwd.
+    SmallString<256> Dir(ReadPath(F, Record, Idx));
+    ModuleMap::canonicalizeDirectoryDependency(FileMgr, Dir);
+    F.DirectoryDependencies.push_back(std::string(Dir));
+  }
 }
 
 bool ASTReader::isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain) {
