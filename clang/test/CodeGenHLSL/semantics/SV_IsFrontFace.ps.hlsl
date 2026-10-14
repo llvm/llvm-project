@@ -3,7 +3,8 @@
 
 // CHECK-SPIRV: @SV_IsFrontFace = external hidden thread_local addrspace(7) externally_initialized constant i1, !spirv.Decorations ![[#MD_0:]]
 
-// CHECK: define void @main() {{.*}} {
+// CHECK-SPIRV: define void @main() {{.*}} {
+// CHECK-DXIL:  define void @main() {{.*}} {
 float4 main(bool ff : SV_IsFrontFace) : SV_Target {
   // CHECK-SPIRV: %[[FF:.*]] = load i1, ptr addrspace(7) @SV_IsFrontFace
   // CHECK-SPIRV: %[[R:.*]] = call spir_func <4 x float> @_Z4mainb(i1 %[[FF]])
