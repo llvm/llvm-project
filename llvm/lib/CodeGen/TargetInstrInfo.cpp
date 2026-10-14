@@ -1713,16 +1713,19 @@ bool TargetInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
 
   // Sanitizers need a correct stack frame at the point of a crash,
   // which can happen anywhere. Treat frame register modifications
-  // as scheduling boundaries so the scheduler can't reorder other
-  // instructions across the frame register save/restore.
-  if (MF.getFunction().hasFnAttribute(Attribute::SanitizeAddress) ||
-      MF.getFunction().hasFnAttribute(Attribute::SanitizeThread) ||
-      MF.getFunction().hasFnAttribute(Attribute::SanitizeMemory) ||
-      MF.getFunction().hasFnAttribute(Attribute::SanitizeType) ||
-      MF.getFunction().hasFnAttribute(Attribute::SanitizeHWAddress) ||
-      MF.getFunction().hasFnAttribute(Attribute::SanitizeMemTag)) {
-    Register FrameReg = TRI.getFrameRegister(MF);
-    if (MI.modifiesRegister(FrameReg, &TRI))
+  // in the prologue/epilogue as scheduling boundaries so the scheduler
+  // can't reorder other instructions across the frame register
+  // save/restore. Check the flags first, getFrameRegister is expensive.
+  if (MI.getFlag(MachineInstr::FrameSetup) ||
+      MI.getFlag(MachineInstr::FrameDestroy)) {
+    const Function &F = MF.getFunction();
+    if ((F.hasFnAttribute(Attribute::SanitizeAddress) ||
+         F.hasFnAttribute(Attribute::SanitizeThread) ||
+         F.hasFnAttribute(Attribute::SanitizeMemory) ||
+         F.hasFnAttribute(Attribute::SanitizeType) ||
+         F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
+         F.hasFnAttribute(Attribute::SanitizeMemTag)) &&
+        MI.modifiesRegister(TRI.getFrameRegister(MF), &TRI))
       return true;
   }
 

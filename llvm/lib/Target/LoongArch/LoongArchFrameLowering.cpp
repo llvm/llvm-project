@@ -655,7 +655,28 @@ bool LoongArchFrameLowering::spillCalleeSavedRegisters(
         !(Reg == LoongArch::R1 && MF->getFrameInfo().isReturnAddressTaken());
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, CS.getFrameIdx(), RC,
-                            Register());
+                            Register(), MachineInstr::FrameSetup);
+  }
+
+  return true;
+}
+
+bool LoongArchFrameLowering::restoreCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+  if (CSI.empty())
+    return true;
+
+  MachineFunction *MF = MBB.getParent();
+  const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
+
+  // Insert the restore from the stack frame.
+  for (auto &CS : reverse(CSI)) {
+    MCRegister Reg = CS.getReg();
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, Register(),
+                             /*SubReg=*/0, MachineInstr::FrameDestroy);
+    assert(MI != MBB.begin() && "loadRegFromStackSlot didn't insert any code!");
   }
 
   return true;
