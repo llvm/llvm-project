@@ -1181,11 +1181,9 @@ void test_long_long_long_long(va_list *ap) {
 // GPR64N32-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 1
 // GPR64N32-NEXT:    store float [[X_REAL]], ptr [[COERCE_REALP]], align 4
 // GPR64N32-NEXT:    store float [[X_IMAG]], ptr [[COERCE_IMAGP]], align 4
-// GPR64N32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 0
-// GPR64N32-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
-// GPR64N32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 1
-// GPR64N32-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4
-// GPR64N32-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, float inreg noundef [[TMP2]], float inreg noundef [[TMP4]])
+// GPR64N32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64 }, ptr [[COERCE]], i32 0, i32 0
+// GPR64N32-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 4
+// GPR64N32-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 inreg noundef [[TMP2]])
 // GPR64N32-NEXT:    ret void
 //
 // GPR64N64BE-LABEL: define dso_local void @test_complex_float(
@@ -1215,11 +1213,9 @@ void test_long_long_long_long(va_list *ap) {
 // GPR64N64BE-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 1
 // GPR64N64BE-NEXT:    store float [[X_REAL]], ptr [[COERCE_REALP]], align 4
 // GPR64N64BE-NEXT:    store float [[X_IMAG]], ptr [[COERCE_IMAGP]], align 4
-// GPR64N64BE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 0
-// GPR64N64BE-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
-// GPR64N64BE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 1
-// GPR64N64BE-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4
-// GPR64N64BE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, float inreg noundef [[TMP2]], float inreg noundef [[TMP4]])
+// GPR64N64BE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64 }, ptr [[COERCE]], i32 0, i32 0
+// GPR64N64BE-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 4
+// GPR64N64BE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 inreg noundef [[TMP2]])
 // GPR64N64BE-NEXT:    ret void
 //
 // GPR64N64LE-LABEL: define dso_local void @test_complex_float(
@@ -1249,11 +1245,9 @@ void test_long_long_long_long(va_list *ap) {
 // GPR64N64LE-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 1
 // GPR64N64LE-NEXT:    store float [[X_REAL]], ptr [[COERCE_REALP]], align 4
 // GPR64N64LE-NEXT:    store float [[X_IMAG]], ptr [[COERCE_IMAGP]], align 4
-// GPR64N64LE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 0
-// GPR64N64LE-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
-// GPR64N64LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 1
-// GPR64N64LE-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4
-// GPR64N64LE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, float inreg noundef [[TMP2]], float inreg noundef [[TMP4]])
+// GPR64N64LE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64 }, ptr [[COERCE]], i32 0, i32 0
+// GPR64N64LE-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 4
+// GPR64N64LE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 inreg noundef [[TMP2]])
 // GPR64N64LE-NEXT:    ret void
 //
 void test_complex_float(va_list *ap) {
@@ -1399,11 +1393,11 @@ void test_float_float(va_list *ap) {
 // GPR64N32-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 1
 // GPR64N32-NEXT:    store double [[X_REAL]], ptr [[COERCE_REALP]], align 8
 // GPR64N32-NEXT:    store double [[X_IMAG]], ptr [[COERCE_IMAGP]], align 8
-// GPR64N32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 0
-// GPR64N32-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP1]], align 8
-// GPR64N32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 1
-// GPR64N32-NEXT:    [[TMP4:%.*]] = load double, ptr [[TMP3]], align 8
-// GPR64N32-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, double inreg noundef [[TMP2]], double inreg noundef [[TMP4]])
+// GPR64N32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 0
+// GPR64N32-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
+// GPR64N32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 1
+// GPR64N32-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
+// GPR64N32-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 inreg noundef [[TMP2]], i64 inreg noundef [[TMP4]])
 // GPR64N32-NEXT:    ret void
 //
 // GPR64N64BE-LABEL: define dso_local void @test_complex_double(
@@ -1433,11 +1427,11 @@ void test_float_float(va_list *ap) {
 // GPR64N64BE-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 1
 // GPR64N64BE-NEXT:    store double [[X_REAL]], ptr [[COERCE_REALP]], align 8
 // GPR64N64BE-NEXT:    store double [[X_IMAG]], ptr [[COERCE_IMAGP]], align 8
-// GPR64N64BE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 0
-// GPR64N64BE-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP1]], align 8
-// GPR64N64BE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 1
-// GPR64N64BE-NEXT:    [[TMP4:%.*]] = load double, ptr [[TMP3]], align 8
-// GPR64N64BE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, double inreg noundef [[TMP2]], double inreg noundef [[TMP4]])
+// GPR64N64BE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 0
+// GPR64N64BE-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
+// GPR64N64BE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 1
+// GPR64N64BE-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
+// GPR64N64BE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 inreg noundef [[TMP2]], i64 inreg noundef [[TMP4]])
 // GPR64N64BE-NEXT:    ret void
 //
 // GPR64N64LE-LABEL: define dso_local void @test_complex_double(
@@ -1467,11 +1461,11 @@ void test_float_float(va_list *ap) {
 // GPR64N64LE-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 1
 // GPR64N64LE-NEXT:    store double [[X_REAL]], ptr [[COERCE_REALP]], align 8
 // GPR64N64LE-NEXT:    store double [[X_IMAG]], ptr [[COERCE_IMAGP]], align 8
-// GPR64N64LE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 0
-// GPR64N64LE-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP1]], align 8
-// GPR64N64LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 1
-// GPR64N64LE-NEXT:    [[TMP4:%.*]] = load double, ptr [[TMP3]], align 8
-// GPR64N64LE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, double inreg noundef [[TMP2]], double inreg noundef [[TMP4]])
+// GPR64N64LE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 0
+// GPR64N64LE-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
+// GPR64N64LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 1
+// GPR64N64LE-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
+// GPR64N64LE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 inreg noundef [[TMP2]], i64 inreg noundef [[TMP4]])
 // GPR64N64LE-NEXT:    ret void
 //
 void test_complex_double(va_list *ap) {
@@ -1631,11 +1625,15 @@ void test_double_double(va_list *ap) {
 // GPR64N32-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[COERCE]], i32 0, i32 1
 // GPR64N32-NEXT:    store fp128 [[X_REAL]], ptr [[COERCE_REALP]], align 16
 // GPR64N32-NEXT:    store fp128 [[X_IMAG]], ptr [[COERCE_IMAGP]], align 16
-// GPR64N32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[COERCE]], i32 0, i32 0
-// GPR64N32-NEXT:    [[TMP3:%.*]] = load fp128, ptr [[TMP2]], align 16
-// GPR64N32-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[COERCE]], i32 0, i32 1
-// GPR64N32-NEXT:    [[TMP5:%.*]] = load fp128, ptr [[TMP4]], align 16
-// GPR64N32-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 undef, fp128 inreg noundef [[TMP3]], fp128 inreg noundef [[TMP5]])
+// GPR64N32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 0
+// GPR64N32-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 16
+// GPR64N32-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 1
+// GPR64N32-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
+// GPR64N32-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 2
+// GPR64N32-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP6]], align 16
+// GPR64N32-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 3
+// GPR64N32-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP8]], align 8
+// GPR64N32-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 undef, i64 inreg noundef [[TMP3]], i64 inreg noundef [[TMP5]], i64 inreg noundef [[TMP7]], i64 inreg noundef [[TMP9]])
 // GPR64N32-NEXT:    ret void
 //
 // GPR64N64BE-LABEL: define dso_local void @test_complex_long_double(
@@ -1667,11 +1665,15 @@ void test_double_double(va_list *ap) {
 // GPR64N64BE-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[COERCE]], i32 0, i32 1
 // GPR64N64BE-NEXT:    store fp128 [[X_REAL]], ptr [[COERCE_REALP]], align 16
 // GPR64N64BE-NEXT:    store fp128 [[X_IMAG]], ptr [[COERCE_IMAGP]], align 16
-// GPR64N64BE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[COERCE]], i32 0, i32 0
-// GPR64N64BE-NEXT:    [[TMP3:%.*]] = load fp128, ptr [[TMP2]], align 16
-// GPR64N64BE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[COERCE]], i32 0, i32 1
-// GPR64N64BE-NEXT:    [[TMP5:%.*]] = load fp128, ptr [[TMP4]], align 16
-// GPR64N64BE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 undef, fp128 inreg noundef [[TMP3]], fp128 inreg noundef [[TMP5]])
+// GPR64N64BE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 0
+// GPR64N64BE-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 16
+// GPR64N64BE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 1
+// GPR64N64BE-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
+// GPR64N64BE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 2
+// GPR64N64BE-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP6]], align 16
+// GPR64N64BE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 3
+// GPR64N64BE-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP8]], align 8
+// GPR64N64BE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 undef, i64 inreg noundef [[TMP3]], i64 inreg noundef [[TMP5]], i64 inreg noundef [[TMP7]], i64 inreg noundef [[TMP9]])
 // GPR64N64BE-NEXT:    ret void
 //
 // GPR64N64LE-LABEL: define dso_local void @test_complex_long_double(
@@ -1703,11 +1705,15 @@ void test_double_double(va_list *ap) {
 // GPR64N64LE-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[COERCE]], i32 0, i32 1
 // GPR64N64LE-NEXT:    store fp128 [[X_REAL]], ptr [[COERCE_REALP]], align 16
 // GPR64N64LE-NEXT:    store fp128 [[X_IMAG]], ptr [[COERCE_IMAGP]], align 16
-// GPR64N64LE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[COERCE]], i32 0, i32 0
-// GPR64N64LE-NEXT:    [[TMP3:%.*]] = load fp128, ptr [[TMP2]], align 16
-// GPR64N64LE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[COERCE]], i32 0, i32 1
-// GPR64N64LE-NEXT:    [[TMP5:%.*]] = load fp128, ptr [[TMP4]], align 16
-// GPR64N64LE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 undef, fp128 inreg noundef [[TMP3]], fp128 inreg noundef [[TMP5]])
+// GPR64N64LE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 0
+// GPR64N64LE-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 16
+// GPR64N64LE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 1
+// GPR64N64LE-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
+// GPR64N64LE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 2
+// GPR64N64LE-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP6]], align 16
+// GPR64N64LE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw { i64, i64, i64, i64 }, ptr [[COERCE]], i32 0, i32 3
+// GPR64N64LE-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP8]], align 8
+// GPR64N64LE-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 undef, i64 inreg noundef [[TMP3]], i64 inreg noundef [[TMP5]], i64 inreg noundef [[TMP7]], i64 inreg noundef [[TMP9]])
 // GPR64N64LE-NEXT:    ret void
 //
 void test_complex_long_double(va_list *ap) {

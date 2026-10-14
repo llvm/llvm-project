@@ -1,12 +1,11 @@
 // RUN: mlir-opt --transform-interpreter --canonicalize --split-input-file %s | FileCheck %s
 
-// XFAIL: mlir-expensive-checks
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %tile_sizes, %chunk_sizes = transform.structured.continuous_tile_sizes %0 { dimension = 0, target_size = 9 } : (!transform.any_op) -> !transform.any_op
-    %linalg_splits = transform.structured.split %0 after %chunk_sizes { dimension = 0, multiway } : !transform.any_op, !transform.any_op
+    %tile_sizes, %chunk_sizes = transform.structured.continuous_tile_sizes %0 dimension = 0 target_size = 9 : (!transform.any_op) -> !transform.any_op
+    %linalg_splits = transform.structured.split %0 after %chunk_sizes {dimension = 0, multiway} : !transform.any_op, !transform.any_op
     transform.foreach %linalg_splits, %tile_sizes : !transform.any_op, !transform.any_op {
     ^bb1(%linalg_split: !transform.any_op, %tile_size: !transform.any_op):
       %tiled_linalg_split, %dim0_loop = transform.structured.tile_using_for %linalg_split tile_sizes [%tile_size] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
@@ -66,8 +65,8 @@ func.func @continuous_tile_linalg_matmul(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %tile_sizes, %chunk_sizes = transform.structured.continuous_tile_sizes %0 { dimension = 0, target_size = 9 } : (!transform.any_op) -> !transform.param<i64>
-    %linalg_splits = transform.structured.split %0 after %chunk_sizes { dimension = 0, multiway } : !transform.any_op, !transform.param<i64>
+    %tile_sizes, %chunk_sizes = transform.structured.continuous_tile_sizes %0 dimension = 0 target_size = 9 : (!transform.any_op) -> !transform.param<i64>
+    %linalg_splits = transform.structured.split %0 after %chunk_sizes {dimension = 0, multiway} : !transform.any_op, !transform.param<i64>
     transform.foreach %linalg_splits, %tile_sizes : !transform.any_op, !transform.param<i64> {
     ^bb1(%linalg_split: !transform.any_op, %tile_size: !transform.param<i64>):
       %tiled_linalg_split, %dim0_loop = transform.structured.tile_using_for %linalg_split tile_sizes [%tile_size] : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op)
@@ -127,8 +126,8 @@ func.func @continuous_tile_static_linalg_matmul(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %tile_sizes, %chunk_sizes = transform.structured.continuous_tile_sizes %0 { dimension = 0, target_size = 9 } : (!transform.any_op) -> !transform.any_op
-    %linalg_splits = transform.structured.split %0 after %chunk_sizes { dimension = 0, multiway } : !transform.any_op, !transform.any_op
+    %tile_sizes, %chunk_sizes = transform.structured.continuous_tile_sizes %0 dimension = 0 target_size = 9 : (!transform.any_op) -> !transform.any_op
+    %linalg_splits = transform.structured.split %0 after %chunk_sizes {dimension = 0, multiway} : !transform.any_op, !transform.any_op
     transform.foreach %linalg_splits, %tile_sizes with_zip_shortest : !transform.any_op, !transform.any_op {
     ^bb1(%linalg_split: !transform.any_op, %tile_size: !transform.any_op):
       %tiled_linalg_split, %dim0_loop = transform.structured.tile_using_for %linalg_split tile_sizes [%tile_size] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)

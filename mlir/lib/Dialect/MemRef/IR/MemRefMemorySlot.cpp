@@ -96,25 +96,39 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
   MemRefType type = getType();
 
   // A single-element memref is promoted to a scalar SSA value.
-  if (type.hasStaticShape() && type.getNumElements() == 1)
-    return {MemorySlot{getResult(), type.getElementType()}};
+  if (type.hasStaticShape()) {
+    std::optional<int64_t> numElements =
+        ShapedType::tryGetNumElements(type.getShape());
+    // Element count overflow: not promotable.
+    if (!numElements)
+      return {};
+    if (*numElements == 1)
+      return {MemorySlot{getResult(), type.getElementType()}};
+  }
 
   // A multi-element memref can be promoted to a single vector SSA value when it
   // is only ever accessed as a whole buffer (e.g. through whole-buffer
   // `vector.transfer_read`/`vector.transfer_write`).
   if (VectorType::isValidElementType(type.getElementType())) {
+    // Vector types require strictly positive extents, so a memref with a zero
+    // extent has nothing to promote.
+    if (llvm::is_contained(type.getShape(), 0))
+      return {};
+
     // Static shape: a fixed-size vector of the same extents.
     if (type.hasStaticShape())
       return {MemorySlot{getResult(), VectorType::get(type.getShape(),
                                                       type.getElementType())}};
 
-    // A 1-D memref whose single dynamic extent is `vector.vscale * C` maps to a
-    // scalable `vector<[C]x...>` slot.
+    // A 1-D memref whose single dynamic extent is `vector.vscale * N` maps to a
+    // scalable `vector<[N]x...>` slot, for a strictly positive multiple `N`.
     if (type.getRank() == 1 && type.isDynamicDim(0)) {
-      if (std::optional<int64_t> c = matchVScaleMultiple(getDynamicSizes()[0]))
-        return {
-            MemorySlot{getResult(), VectorType::get({*c}, type.getElementType(),
-                                                    /*scalableDims=*/{true})}};
+      if (std::optional<int64_t> multiple =
+              matchVScaleMultiple(getDynamicSizes()[0]);
+          multiple && *multiple > 0)
+        return {MemorySlot{getResult(),
+                           VectorType::get({*multiple}, type.getElementType(),
+                                           /*scalableDims=*/{true})}};
     }
   }
 
@@ -123,7 +137,7 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
 
 Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                         OpBuilder &builder) {
-  return ub::PoisonOp::create(builder, getLoc(), slot.elemType);
+  return ub::PoisonOp::create(builder, getLoc(), slot.valueType);
 }
 
 std::optional<PromotableAllocationOpInterface>
@@ -209,7 +223,7 @@ bool memref::LoadOp::canUsesBeRemoved(
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getMemRef() == slot.ptr &&
-         getResult().getType() == slot.elemType;
+         getResult().getType() == slot.valueType;
 }
 
 DeletionKind memref::LoadOp::removeBlockingUses(
@@ -289,7 +303,7 @@ bool memref::StoreOp::canUsesBeRemoved(
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getMemRef() == slot.ptr &&
-         getValue() != slot.ptr && getValue().getType() == slot.elemType;
+         getValue() != slot.ptr && getValue().getType() == slot.valueType;
 }
 
 DeletionKind memref::StoreOp::removeBlockingUses(
@@ -338,9 +352,12 @@ struct MemRefDestructurableTypeExternalModel
   getSubelementIndexMap(Type type) const {
     auto memrefType = llvm::cast<MemRefType>(type);
     constexpr int64_t maxMemrefSizeForDestructuring = 16;
-    if (!memrefType.hasStaticShape() ||
-        memrefType.getNumElements() > maxMemrefSizeForDestructuring ||
-        memrefType.getNumElements() == 1)
+    if (!memrefType.hasStaticShape())
+      return {};
+    std::optional<int64_t> numElements =
+        ShapedType::tryGetNumElements(memrefType.getShape());
+    if (!numElements || *numElements > maxMemrefSizeForDestructuring ||
+        *numElements == 1)
       return {};
 
     DenseMap<Attribute, Type> destructured;
@@ -377,7 +394,8 @@ struct MemRefDestructurableTypeExternalModel
 //  Register external models
 //===----------------------------------------------------------------------===//
 
-void mlir::memref::registerMemorySlotExternalModels(DialectRegistry &registry) {
+void mlir::memref::registerDestructurableTypeExternalModels(
+    DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
     MemRefType::attachInterface<MemRefDestructurableTypeExternalModel>(*ctx);
   });

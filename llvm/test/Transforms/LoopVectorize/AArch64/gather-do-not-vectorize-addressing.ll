@@ -75,8 +75,7 @@ define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef 
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SVE:       vector.ph:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SVE:       vector.body:
@@ -88,7 +87,7 @@ define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef 
 ; SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[DATA:%.*]], <vscale x 2 x i64> [[TMP7]]
 ; SVE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> poison)
 ; SVE-NEXT:    [[TMP9]] = fadd <vscale x 2 x double> [[VEC_PHI]], [[WIDE_MASKED_GATHER]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SVE:       middle.block:

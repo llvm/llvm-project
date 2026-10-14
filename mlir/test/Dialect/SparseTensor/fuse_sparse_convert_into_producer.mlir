@@ -1,7 +1,6 @@
 // RUN: mlir-opt %s --pre-sparsification-rewrite --sparse-reinterpret-map  | FileCheck %s --check-prefix=CHECK-FOLD
 // RUN: mlir-opt %s --pre-sparsification-rewrite --sparse-reinterpret-map --sparsification | FileCheck %s
 
-// XFAIL: mlir-expensive-checks
 
 #trait = {
   indexing_maps = [

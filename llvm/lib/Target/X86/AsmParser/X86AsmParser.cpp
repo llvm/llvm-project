@@ -11,11 +11,11 @@
 #include "MCTargetDesc/X86IntelInstPrinter.h"
 #include "MCTargetDesc/X86MCAsmInfo.h"
 #include "MCTargetDesc/X86MCExpr.h"
+#include "MCTargetDesc/X86MCOptions.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86Operand.h"
-#include "X86RegisterInfo.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -38,7 +38,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -48,11 +47,6 @@
 #include <optional>
 
 using namespace llvm;
-
-static cl::opt<bool> LVIInlineAsmHardening(
-    "x86-experimental-lvi-inline-asm-hardening",
-    cl::desc("Harden inline assembly code that may be vulnerable to Load Value"
-             " Injection (LVI). This feature is experimental."), cl::Hidden);
 
 static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
   if (Scale != 1 && Scale != 2 && Scale != 4 && Scale != 8) {
@@ -94,6 +88,7 @@ static const char OpPrecedence[] = {
 };
 
 class X86AsmParser : public MCTargetAsmParser {
+  const X86MCOptions &CLOpts;
   ParseInstructionInfo *InstInfo;
   bool Code16GCC;
   unsigned ForcedDataPrefix = 0;
@@ -462,7 +457,6 @@ private:
     bool OffsetOperator = false;
     bool AttachToOperandIdx = false;
     bool IsPIC = false;
-    SMLoc OffsetOperatorLoc;
     AsmTypeInfo CurType;
 
     bool setSymRef(const MCExpr *Val, StringRef ID, StringRef &ErrMsg) {
@@ -483,7 +477,6 @@ private:
     bool isMemExpr() const { return MemExpr; }
     bool isBracketUsed() const { return BracketUsed; }
     bool isOffsetOperator() const { return OffsetOperator; }
-    SMLoc getOffsetLoc() const { return OffsetOperatorLoc; }
     MCRegister getBaseReg() const { return BaseReg; }
     MCRegister getIndexReg() const { return IndexReg; }
     unsigned getScale() const { return Scale; }
@@ -1161,7 +1154,7 @@ private:
       PrevState = CurrState;
       return false;
     }
-    bool onOffset(const MCExpr *Val, SMLoc OffsetLoc, StringRef ID,
+    bool onOffset(const MCExpr *Val, StringRef ID,
                   const InlineAsmIdentifierInfo &IDInfo,
                   bool ParsingMSInlineAsm, StringRef &ErrMsg) {
       PrevState = State;
@@ -1175,7 +1168,6 @@ private:
         if (setSymRef(Val, ID, ErrMsg))
           return true;
         OffsetOperator = true;
-        OffsetOperatorLoc = OffsetLoc;
         State = IES_OFFSET;
         // As we cannot yet resolve the actual value (offset), we retain
         // the requested semantics by pushing a '0' to the operands stack
@@ -1186,6 +1178,25 @@ private:
         break;
       }
       return false;
+    }
+    // Unlike onOffset, we do not set OffsetOperator here. The IMAGEREL
+    // specifier is already encoded in the MCExpr with VK_COFF_IMGREL32,
+    // so no additional rewriting is needed for inline asm.
+    bool onImagerel(const MCExpr *Val, StringRef ID, StringRef &ErrMsg) {
+      PrevState = State;
+      switch (State) {
+      case IES_PLUS:
+      case IES_INIT:
+      case IES_LBRAC:
+        if (setSymRef(Val, ID, ErrMsg))
+          return true;
+        State = IES_OFFSET;
+        IC.pushOperand(IC_IMM);
+        return false;
+      default:
+        ErrMsg = "unexpected imagerel operator expression";
+        return true;
+      }
     }
     void onCast(AsmTypeInfo Info) {
       PrevState = State;
@@ -1231,6 +1242,8 @@ private:
   bool parseIntelOperand(OperandVector &Operands, StringRef Name);
   bool ParseIntelOffsetOperator(const MCExpr *&Val, StringRef &ID,
                                 InlineAsmIdentifierInfo &Info, SMLoc &End);
+  bool ParseIntelImagerelOperator(const MCExpr *&Val, StringRef &ID,
+                                  InlineAsmIdentifierInfo &Info, SMLoc &End);
   bool ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End);
   unsigned IdentifyIntelInlineAsmOperator(StringRef Name);
   unsigned ParseIntelInlineAsmOperator(unsigned OpKind);
@@ -1388,7 +1401,8 @@ public:
 
   X86AsmParser(const MCSubtargetInfo &sti, MCAsmParser &Parser,
                const MCInstrInfo &mii)
-      : MCTargetAsmParser(sti, mii), InstInfo(nullptr), Code16GCC(false) {
+      : MCTargetAsmParser(sti, mii), CLOpts(X86MCOptions::Global),
+        InstInfo(nullptr), Code16GCC(false) {
 
     Parser.addAliasForDirective(".word", ".2byte");
 
@@ -1924,6 +1938,9 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
   if (Name != Name.lower() && Name != Name.upper() &&
       !getParser().isParsingMasm())
     return false;
+  // Operators like 'offset' and 'imagerel' consume their operand tokens
+  // internally; other named operators need a trailing consumeToken().
+  bool AlreadyConsumed = false;
   if (Name.equals_insensitive("not")) {
     SM.onNot();
   } else if (Name.equals_insensitive("or")) {
@@ -1939,7 +1956,6 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
   } else if (Name.equals_insensitive("mod")) {
     SM.onMod();
   } else if (Name.equals_insensitive("offset")) {
-    SMLoc OffsetLoc = getTok().getLoc();
     const MCExpr *Val = nullptr;
     StringRef ID;
     InlineAsmIdentifierInfo Info;
@@ -1947,14 +1963,26 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
     if (ParseError)
       return true;
     StringRef ErrMsg;
-    ParseError =
-        SM.onOffset(Val, OffsetLoc, ID, Info, isParsingMSInlineAsm(), ErrMsg);
+    ParseError = SM.onOffset(Val, ID, Info, isParsingMSInlineAsm(), ErrMsg);
     if (ParseError)
       return Error(SMLoc::getFromPointer(Name.data()), ErrMsg);
+    AlreadyConsumed = true;
+  } else if (Name.equals_insensitive("imagerel")) {
+    const MCExpr *Val;
+    StringRef ID;
+    InlineAsmIdentifierInfo Info;
+    ParseError = ParseIntelImagerelOperator(Val, ID, Info, End);
+    if (ParseError)
+      return true;
+    StringRef ErrMsg;
+    ParseError = SM.onImagerel(Val, ID, ErrMsg);
+    if (ParseError)
+      return Error(SMLoc::getFromPointer(Name.data()), ErrMsg);
+    AlreadyConsumed = true;
   } else {
     return false;
   }
-  if (!Name.equals_insensitive("offset"))
+  if (!AlreadyConsumed)
     End = consumeToken();
   return true;
 }
@@ -2554,6 +2582,33 @@ bool X86AsmParser::ParseIntelOffsetOperator(const MCExpr *&Val, StringRef &ID,
   } else if (Info.isKind(InlineAsmIdentifierInfo::IK_EnumVal)) {
     return Error(Start, "offset operator cannot yet handle constants");
   }
+  return false;
+}
+
+/// Parse the 'imagerel' operator.
+/// This operator is used to specify an image-relative reference to a symbol.
+bool X86AsmParser::ParseIntelImagerelOperator(const MCExpr *&Val, StringRef &ID,
+                                              InlineAsmIdentifierInfo &Info,
+                                              SMLoc &End) {
+  // Eat imagerel, mark start of identifier.
+  SMLoc Start = Lex().getLoc();
+  ID = getTok().getString();
+  if (!isParsingMSInlineAsm()) {
+    if ((getTok().isNot(AsmToken::Identifier) &&
+         getTok().isNot(AsmToken::String)) ||
+        getParser().parsePrimaryExpr(Val, End, nullptr))
+      return Error(Start, "unexpected token!");
+  } else if (ParseIntelInlineAsmIdentifier(Val, ID, Info, false, End, true)) {
+    return Error(Start, "unable to lookup expression");
+  } else if (Info.isKind(InlineAsmIdentifierInfo::IK_EnumVal)) {
+    return Error(Start, "imagerel operator cannot yet handle constants");
+  }
+
+  const MCExpr *ModifiedVal =
+      getParser().applySpecifier(Val, MCSymbolRefExpr::VK_COFF_IMGREL32);
+  if (!ModifiedVal)
+    return Error(Start, "cannot apply 'imagerel' to this expression");
+  Val = ModifiedVal;
   return false;
 }
 
@@ -3210,7 +3265,11 @@ bool X86AsmParser::ParseMemOperand(MCRegister SegReg, const MCExpr *Disp,
     if (!isAtMemOperand()) {
       if (Parser.parseTokenLoc(Loc) || Parser.parseExpression(Disp, EndLoc))
         return true;
-      assert(!isa<X86MCExpr>(Disp) && "Expected non-register here.");
+      // A register here is a second segment override, or a register standing
+      // where the displacement belongs.
+      if (isa<X86MCExpr>(Disp))
+        return Error(Loc, "unexpected register in memory operand",
+                     SMRange(Loc, EndLoc));
     } else {
       // Disp is implicitly zero if we haven't parsed it yet.
       Disp = MCConstantExpr::create(0, Parser.getContext());
@@ -4273,13 +4332,13 @@ void X86AsmParser::applyLVILoadHardeningMitigation(MCInst &Inst,
 
 void X86AsmParser::emitInstruction(MCInst &Inst, OperandVector &Operands,
                                    MCStreamer &Out) {
-  if (LVIInlineAsmHardening &&
+  if (CLOpts.experimental_lvi_inline_asm_hardening &&
       getSTI().hasFeature(X86::FeatureLVIControlFlowIntegrity))
     applyLVICFIMitigation(Inst, Out);
 
   Out.emitInstruction(Inst, getSTI());
 
-  if (LVIInlineAsmHardening &&
+  if (CLOpts.experimental_lvi_inline_asm_hardening &&
       getSTI().hasFeature(X86::FeatureLVILoadHardening))
     applyLVILoadHardeningMitigation(Inst, Out);
 }

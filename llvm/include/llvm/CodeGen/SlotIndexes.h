@@ -396,6 +396,20 @@ class raw_ostream;
       return index.listEntry()->getInstr();
     }
 
+    /// Returns true if \p Idx refers to an entry created to mark a basic block
+    /// boundary. Such entries never have an instruction attached.
+    LLVM_ABI bool isBlockBoundaryIndex(SlotIndex Idx) const;
+
+    /// Returns true if \p Idx refers to an instruction that has been erased.
+    bool isStaleIndex(SlotIndex Idx) const {
+      return !getInstructionFromIndex(Idx) && !isBlockBoundaryIndex(Idx);
+    }
+
+    /// Returns the register slot of the closest instruction preceding a stale
+    /// \p Idx, or the start index of its basic block if there is none. Returns
+    /// \p Idx unchanged if it is not stale.
+    LLVM_ABI SlotIndex canonicalizeIndex(SlotIndex Idx) const;
+
     /// Returns the next non-null index, if one exists.
     /// Otherwise returns getLastIndex().
     SlotIndex getNextNonNullIndex(SlotIndex Index) {
@@ -419,6 +433,8 @@ class raw_ostream;
         if (I == B)
           return getMBBStartIdx(MBB);
         --I;
+        if (I->isDebugInstr())
+          continue;
         Mi2IndexMap::const_iterator MapItr = mi2iMap.find(&*I);
         if (MapItr != mi2iMap.end())
           return MapItr->second;
@@ -436,6 +452,8 @@ class raw_ostream;
         ++I;
         if (I == E)
           return getMBBEndIdx(MBB);
+        if (I->isDebugInstr())
+          continue;
         Mi2IndexMap::const_iterator MapItr = mi2iMap.find(&*I);
         if (MapItr != mi2iMap.end())
           return MapItr->second;
@@ -619,11 +637,19 @@ class raw_ostream;
       assert(unsigned(mbb->getAnalysisNumber()) == MBBRanges.size() &&
              "Blocks must be added in order");
       MBBRanges.push_back(std::make_pair(startIdx, endIdx));
-      idx2MBBMap.push_back(IdxMBBPair(startIdx, mbb));
 
       renumberIndexes(newItr);
-      llvm::sort(idx2MBBMap, less_first());
+      auto InsertPt =
+          llvm::partition_point(idx2MBBMap, [=](const IdxMBBPair &IM) {
+            return IM.first < startIdx;
+          });
+      idx2MBBMap.insert(InsertPt, IdxMBBPair(startIdx, mbb));
     }
+
+    /// Inverse of insertMBBInMaps: merge \p MBB's slot range into its layout
+    /// predecessor and drop it from the maps. Call before erasing \p MBB and
+    /// after its instructions have been removed from the maps.
+    LLVM_ABI void removeMBBFromMaps(MachineBasicBlock &MBB);
 
     /// Renumber all indexes using the default instruction distance.
     LLVM_ABI void packIndexes();

@@ -21,6 +21,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Queue.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
@@ -172,7 +173,11 @@ void ScriptedProcess::Terminate() {
 Status ScriptedProcess::DoLoadCore() {
   ProcessLaunchInfo launch_info = GetTarget().GetProcessLaunchInfo();
 
-  return DoLaunch(nullptr, launch_info);
+  Status error = DoLaunch(nullptr, launch_info);
+  // Process::LoadCore() doesn't go through DidLaunch().
+  if (error.Success())
+    DidLaunchOrAttach();
+  return error;
 }
 
 Status ScriptedProcess::DoLaunch(Module *exe_module,
@@ -188,7 +193,29 @@ Status ScriptedProcess::DoLaunch(Module *exe_module,
   return error;
 }
 
-void ScriptedProcess::DidLaunch() { m_pid = GetInterface().GetProcessID(); }
+void ScriptedProcess::DidLaunch() { DidLaunchOrAttach(); }
+
+void ScriptedProcess::DidLaunchOrAttach() {
+  m_pid = GetInterface().GetProcessID();
+
+  // The addressable bits are optional: without them, the process keeps the
+  // masks it inherits from the target.
+  StructuredData::DictionarySP metadata_sp = GetInterface().GetMetadata();
+  StructuredData::Dictionary *bits = nullptr;
+  if (!metadata_sp ||
+      !metadata_sp->GetValueForKeyAsDictionary("addressable_bits", bits))
+    return;
+
+  uint64_t lowmem_bits = 0;
+  uint64_t highmem_bits = 0;
+  bits->GetValueForKeyAsInteger("lowmem", lowmem_bits);
+  if (!bits->GetValueForKeyAsInteger("highmem", highmem_bits))
+    highmem_bits = lowmem_bits;
+
+  AddressableBits addressable_bits;
+  addressable_bits.SetAddressableBits(lowmem_bits, highmem_bits);
+  SetAddressableBitMasks(addressable_bits);
+}
 
 void ScriptedProcess::DidResume() {
   // Update the PID again, in case the user provided a placeholder pid at launch
@@ -216,7 +243,7 @@ Status ScriptedProcess::DoAttach(const ProcessAttachInfo &attach_info) {
   SetPrivateState(eStateStopped);
   // NOTE: We need to set the PID before finishing to attach otherwise we will
   // hit an assert when calling the attach completion handler.
-  DidLaunch();
+  DidLaunchOrAttach();
 
   return {};
 }
@@ -234,14 +261,18 @@ Status ScriptedProcess::DoAttachToProcessWithName(
 
 void ScriptedProcess::DidAttach(ArchSpec &process_arch) {
   process_arch = GetArchitecture();
+  // Process::DidExec also comes through Process::CompleteAttach without
+  // resetting the address masks, so they have to be reported again here.
+  DidLaunchOrAttach();
 }
 
 Status ScriptedProcess::DoDestroy() { return Status(); }
 
 bool ScriptedProcess::IsAlive() { return GetInterface().IsAlive(); }
 
-size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                     Status &error) {
+size_t ScriptedProcess::DoReadMemory(const ProcessAddress &process_addr,
+                                     void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   lldb::DataExtractorSP data_extractor_sp =
       GetInterface().ReadMemoryAtAddress(addr, size, error);
 

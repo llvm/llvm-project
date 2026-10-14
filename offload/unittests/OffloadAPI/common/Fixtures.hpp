@@ -14,6 +14,7 @@
 #include <thread>
 
 #include "Environment.hpp"
+#include "Shared/EnvironmentVar.h"
 
 #pragma once
 
@@ -142,6 +143,16 @@ template <typename Fn> inline void threadify(Fn body) {
   }
 }
 
+/// Skip the current test when OFFLOAD_FORCE_SYNC_OPS is enabled. Tests using
+/// ManuallyTriggeredTask enqueue a host task that blocks until a later
+/// `trigger`; forcing operations synchronous makes the enqueue wait for that
+/// task inline, so it can never be triggered and times out.
+#define SKIP_IF_FORCE_SYNC_OPS()                                               \
+  do {                                                                         \
+    if (BoolEnvar("OFFLOAD_FORCE_SYNC_OPS", false))                            \
+      GTEST_SKIP() << "incompatible with OFFLOAD_FORCE_SYNC_OPS";              \
+  } while (0)
+
 /// Enqueues a task to the queue that can be manually resolved.
 // It will block until `trigger` is called.
 struct ManuallyTriggeredTask {
@@ -261,7 +272,8 @@ struct OffloadProgramTestWithParam : OffloadDeviceTestWithParam<T> {
     ASSERT_TRUE(TestEnvironment::loadDeviceBinary(ProgramName, this->Device,
                                                   DeviceBin));
     ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
-    ASSERT_SUCCESS(olCreateProgram(this->Device, DeviceBin->getBufferStart(),
+    ASSERT_SUCCESS(olCreateProgram(this->Context, this->Device,
+                                   DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
   }
 
@@ -346,7 +358,7 @@ struct LaunchKernelTestBase : OffloadQueueTest {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
     ASSERT_TRUE(TestEnvironment::loadDeviceBinary(program, Device, DeviceBin));
     ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
-    ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+    ASSERT_SUCCESS(olCreateProgram(Context, Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
 
     LaunchArgs.Dimensions = 1;

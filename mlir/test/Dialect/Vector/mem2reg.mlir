@@ -253,7 +253,7 @@ func.func @negative_dynamic_shape(%pad: f32, %d: index) -> vector<4xf32> {
 //    CHECK-NOT:   memref.subview
 //    CHECK-NOT:   vector.transfer_write
 //    CHECK-NOT:   vector.transfer_read
-//        CHECK:   %[[INS:.*]] = vector.insert_strided_slice %[[V]], %[[INIT]] {offsets = [2], strides = [1]}
+//        CHECK:   %[[INS:.*]] = vector.insert_strided_slice %[[V]], %[[INIT]] offsets = [2], strides = [1]
 //        CHECK:   return %[[INS]] : vector<8xf32>
 func.func @subview_static_write(%v: vector<4xf32>, %init: vector<8xf32>, %pad: f32) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
@@ -273,7 +273,7 @@ func.func @subview_static_write(%v: vector<4xf32>, %init: vector<8xf32>, %pad: f
 // CHECK-LABEL: func.func @subview_static_read
 //    CHECK-NOT:   memref.alloca
 //    CHECK-NOT:   memref.subview
-//        CHECK:   %[[EXT:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2], sizes = [4], strides = [1]}
+//        CHECK:   %[[EXT:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2], sizes = [4], strides = [1]
 //        CHECK:   return %[[EXT]] : vector<4xf32>
 func.func @subview_static_read(%init: vector<8xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
@@ -299,7 +299,7 @@ func.func @subview_static_read(%init: vector<8xf32>, %pad: f32) -> vector<4xf32>
 //    CHECK-NOT:   vector.transfer_write
 //    CHECK-NOT:   vector.transfer_read
 //        CHECK:   %[[POISON:.*]] = ub.poison : vector<8xf32>
-//        CHECK:   vector.insert_strided_slice %[[V]], %[[POISON]] {offsets = [0], strides = [1]}
+//        CHECK:   vector.insert_strided_slice %[[V]], %[[POISON]] offsets = [0], strides = [1]
 func.func @subview_only_write_read(%v: vector<4xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
@@ -321,9 +321,9 @@ func.func @subview_only_write_read(%v: vector<4xf32>, %pad: f32) -> vector<4xf32
 //   CHECK-SAME:   (%[[VA:.*]]: vector<4xf32>, %[[VB:.*]]: vector<4xf32>, %[[PAD:.*]]: f32)
 //    CHECK-NOT:   memref.alloca
 //    CHECK-NOT:   memref.subview
-//        CHECK:   %[[D0:.*]] = vector.insert_strided_slice %[[VA]], %{{.*}} {offsets = [0], strides = [1]}
-//        CHECK:   %[[D1:.*]] = vector.insert_strided_slice %[[VB]], %[[D0]] {offsets = [4], strides = [1]}
-//        CHECK:   %[[R:.*]] = vector.extract_strided_slice %[[D1]] {offsets = [2], sizes = [4], strides = [1]}
+//        CHECK:   %[[D0:.*]] = vector.insert_strided_slice %[[VA]], %{{.*}} offsets = [0], strides = [1]
+//        CHECK:   %[[D1:.*]] = vector.insert_strided_slice %[[VB]], %[[D0]] offsets = [4], strides = [1]
+//        CHECK:   %[[R:.*]] = vector.extract_strided_slice %[[D1]] offsets = [2], sizes = [4], strides = [1]
 //        CHECK:   return %[[R]] : vector<4xf32>
 func.func @subview_disjoint_writes_boundary_read(%vA: vector<4xf32>, %vB: vector<4xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
@@ -349,9 +349,9 @@ func.func @subview_disjoint_writes_boundary_read(%vA: vector<4xf32>, %vB: vector
 //   CHECK-SAME:   (%[[VA:.*]]: vector<4xf32>, %[[VB:.*]]: vector<4xf32>, %[[PAD:.*]]: f32)
 //    CHECK-NOT:   memref.alloca
 //    CHECK-NOT:   memref.subview
-//        CHECK:   %[[D0:.*]] = vector.insert_strided_slice %[[VA]], %{{.*}} {offsets = [0], strides = [1]}
-//        CHECK:   %[[D1:.*]] = vector.insert_strided_slice %[[VB]], %[[D0]] {offsets = [2], strides = [1]}
-//        CHECK:   %[[R:.*]] = vector.extract_strided_slice %[[D1]] {offsets = [1], sizes = [4], strides = [1]}
+//        CHECK:   %[[D0:.*]] = vector.insert_strided_slice %[[VA]], %{{.*}} offsets = [0], strides = [1]
+//        CHECK:   %[[D1:.*]] = vector.insert_strided_slice %[[VB]], %[[D0]] offsets = [2], strides = [1]
+//        CHECK:   %[[R:.*]] = vector.extract_strided_slice %[[D1]] offsets = [1], sizes = [4], strides = [1]
 //        CHECK:   return %[[R]] : vector<4xf32>
 func.func @subview_overlapping_writes_overlap_read(%vA: vector<4xf32>, %vB: vector<4xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
@@ -379,11 +379,11 @@ func.func @subview_overlapping_writes_overlap_read(%vA: vector<4xf32>, %vB: vect
 //    CHECK-NOT:   vector.transfer_write
 //    CHECK-NOT:   vector.transfer_read
 //        CHECK:   %[[R:.*]] = scf.for %{{.*}} iter_args(%[[IT:.*]] = %{{.*}}) -> (vector<8xf32>)
-//        CHECK:     %[[V:.*]] = vector.extract_strided_slice %[[IT]] {offsets = [0], sizes = [4], strides = [1]}
+//        CHECK:     %[[V:.*]] = vector.extract_strided_slice %[[IT]] offsets = [0], sizes = [4], strides = [1]
 //        CHECK:     %[[N:.*]] = arith.addf %[[V]], %[[V]]
-//        CHECK:     %[[INS:.*]] = vector.insert_strided_slice %[[N]], %[[IT]] {offsets = [0], strides = [1]}
+//        CHECK:     %[[INS:.*]] = vector.insert_strided_slice %[[N]], %[[IT]] offsets = [0], strides = [1]
 //        CHECK:     scf.yield %[[INS]] : vector<8xf32>
-//        CHECK:   vector.extract_strided_slice %[[R]] {offsets = [0], sizes = [4], strides = [1]}
+//        CHECK:   vector.extract_strided_slice %[[R]] offsets = [0], sizes = [4], strides = [1]
 func.func @subview_in_scf_for_cross_iter(%lb: index, %ub: index, %step: index, %init: vector<8xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
@@ -410,9 +410,9 @@ func.func @subview_in_scf_for_cross_iter(%lb: index, %ub: index, %step: index, %
 //    CHECK-NOT:   memref.alloca
 //    CHECK-NOT:   memref.subview
 //        CHECK:   %[[POISON:.*]] = ub.poison : vector<8xf32>
-//        CHECK:   %[[R0:.*]] = vector.extract_strided_slice %[[POISON]] {offsets = [0], sizes = [4], strides = [1]}
-//        CHECK:   %[[INS:.*]] = vector.insert_strided_slice %[[V]], %[[POISON]] {offsets = [0], strides = [1]}
-//        CHECK:   %[[R1:.*]] = vector.extract_strided_slice %[[INS]] {offsets = [0], sizes = [4], strides = [1]}
+//        CHECK:   %[[R0:.*]] = vector.extract_strided_slice %[[POISON]] offsets = [0], sizes = [4], strides = [1]
+//        CHECK:   %[[INS:.*]] = vector.insert_strided_slice %[[V]], %[[POISON]] offsets = [0], strides = [1]
+//        CHECK:   %[[R1:.*]] = vector.extract_strided_slice %[[INS]] offsets = [0], sizes = [4], strides = [1]
 //        CHECK:   return %[[R0]], %[[R1]] : vector<4xf32>, vector<4xf32>
 func.func @subview_read_before_write(%v: vector<4xf32>, %pad: f32) -> (vector<4xf32>, vector<4xf32>) {
   %c0 = arith.constant 0 : index

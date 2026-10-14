@@ -6,4 +6,10 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(ABITests
   AArch64TargetInfoTest.cpp
+  IRTypeMapperTest.cpp
+  FunctionInfoTest.cpp
+  TargetInfoTest.cpp
+  AMDGPUTargetInfoTest.cpp
+  X86TargetInfoTest.cpp
+  TypesTest.cpp
   )

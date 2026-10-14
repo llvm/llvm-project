@@ -348,7 +348,7 @@ define <2 x double> @f14(<2 x double> %a, <2 x double> %b, <2 x double> %c) #0 {
 ; SSE-X86-NEXT:    movl %esp, %ebp
 ; SSE-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE-X86-NEXT:    andl $-16, %esp
-; SSE-X86-NEXT:    subl $112, %esp
+; SSE-X86-NEXT:    subl $96, %esp
 ; SSE-X86-NEXT:    movaps %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; SSE-X86-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; SSE-X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill

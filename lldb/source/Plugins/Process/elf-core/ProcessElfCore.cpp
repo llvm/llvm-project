@@ -301,7 +301,8 @@ Status ProcessElfCore::DoLoadCore() {
         }
       }
       if (exe_module_sp)
-        GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
+        GetTarget().RebuildModuleListWithExecutable(exe_module_sp,
+                                                    eLoadDependentsNo);
     }
   }
   return error;
@@ -524,8 +525,9 @@ Status ProcessElfCore::DoDestroy() { return Status(); }
 bool ProcessElfCore::IsAlive() { return true; }
 
 // Process Memory
-size_t ProcessElfCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                  Status &error) {
+size_t ProcessElfCore::ReadMemory(const ProcessAddress &process_addr, void *buf,
+                                  size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   if (lldb::ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 
@@ -562,8 +564,9 @@ Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
   return Status();
 }
 
-size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                    Status &error) {
+size_t ProcessElfCore::DoReadMemory(const ProcessAddress &process_addr,
+                                    void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
   if (core_objfile == nullptr)
@@ -652,7 +655,10 @@ void ProcessElfCore::Initialize() {
 }
 
 lldb::addr_t ProcessElfCore::GetImageInfoAddress() {
-  ObjectFile *obj_file = GetTarget().GetExecutableModule()->GetObjectFile();
+  lldb::ModuleSP executable_sp = GetTarget().GetExecutableModule();
+  if (!executable_sp)
+    return LLDB_INVALID_ADDRESS;
+  ObjectFile *obj_file = executable_sp->GetObjectFile();
   Address addr = obj_file->GetImageInfoAddress(&GetTarget());
 
   if (addr.IsValid())

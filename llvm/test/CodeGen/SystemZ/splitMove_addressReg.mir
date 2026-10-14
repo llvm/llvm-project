@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=s390x-linux-gnu -run-pass=postrapseudos \
+# RUN: llc -mtriple=s390x-linux-gnu -run-pass=post-ra-pseudos \
 # RUN:   %s -o - -verify-machineinstrs | FileCheck %s
 #
 # Test that a L128 reload do not overwrite an address register prematurely

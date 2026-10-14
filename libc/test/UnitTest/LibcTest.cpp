@@ -13,8 +13,8 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "src/__support/uint128.h"
+#include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/TestLogger.h"
 
 #if __STDC_HOSTED__
@@ -73,19 +73,7 @@ cpp::string_view describeValue(const cpp::string &Value) { return Value; }
 cpp::string_view describeValue(cpp::string_view Value) { return Value; }
 
 cpp::string describeValue(cpp::wstring_view Value) {
-  // TODO: Print `Value` as UTF-8 once `StringConverter` supports `wchar_t`.
-  if (Value.empty())
-    return "{}";
-
-  cpp::string S;
-  S += '{';
-  for (const wchar_t *Iter = Value.begin(); Iter + 1 != Value.end(); ++Iter) {
-    S += cpp::to_string(*Iter);
-    S += ',';
-  }
-  S += cpp::to_string(Value.back());
-  S += '}';
-  return S;
+  return try_convert_to_utf8(Value);
 }
 
 template <typename ValType>
@@ -297,11 +285,27 @@ bool test_str_eq(const char *LHS, const char *RHS, const char *LHSStr,
                    RHSStr, Loc);
 }
 
+bool test_str_eq(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc) {
+  return test_impl(internal::current_context, TestCond::EQ,
+                   LHS ? cpp::wstring_view(LHS) : cpp::wstring_view(),
+                   RHS ? cpp::wstring_view(RHS) : cpp::wstring_view(), LHSStr,
+                   RHSStr, Loc);
+}
+
 bool test_str_ne(const char *LHS, const char *RHS, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc) {
   return test_impl(internal::current_context, TestCond::NE,
                    LHS ? cpp::string_view(LHS) : cpp::string_view(),
                    RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr,
+                   RHSStr, Loc);
+}
+
+bool test_str_ne(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc) {
+  return test_impl(internal::current_context, TestCond::NE,
+                   LHS ? cpp::wstring_view(LHS) : cpp::wstring_view(),
+                   RHS ? cpp::wstring_view(RHS) : cpp::wstring_view(), LHSStr,
                    RHSStr, Loc);
 }
 

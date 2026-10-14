@@ -52,7 +52,6 @@ def SPIRV_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
-  let useStrictPropertiesInAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     void registerAttributes();
@@ -88,9 +87,7 @@ class SPIRV_BitEnum<string name, string description,
 }
 class SPIRV_BitEnumAttr<string name, string description, string mnemonic,
                         list<BitEnumAttrCaseBase> cases> :
-    EnumAttr<SPIRV_Dialect, SPIRV_BitEnum<name, description, cases>, mnemonic> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<SPIRV_Dialect, SPIRV_BitEnum<name, description, cases>, mnemonic>;
 
 // Wrapper over base I32EnumAttr to set common fields.
 class SPIRV_I32Enum<string name, string description,
@@ -101,9 +98,7 @@ class SPIRV_I32Enum<string name, string description,
 }
 class SPIRV_I32EnumAttr<string name, string description, string mnemonic,
                         list<I32EnumAttrCase> cases> :
-    EnumAttr<SPIRV_Dialect, SPIRV_I32Enum<name, description, cases>, mnemonic> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<SPIRV_Dialect, SPIRV_I32Enum<name, description, cases>, mnemonic>;
 
 //===----------------------------------------------------------------------===//
 // SPIR-V availability definitions
@@ -4493,6 +4488,7 @@ def SPIRV_OC_OpLoad                           : I32EnumAttrCase<"OpLoad", 61>;
 def SPIRV_OC_OpStore                          : I32EnumAttrCase<"OpStore", 62>;
 def SPIRV_OC_OpCopyMemory                     : I32EnumAttrCase<"OpCopyMemory", 63>;
 def SPIRV_OC_OpAccessChain                    : I32EnumAttrCase<"OpAccessChain", 65>;
+def SPIRV_OC_OpInBoundsAccessChain            : I32EnumAttrCase<"OpInBoundsAccessChain", 66>;
 def SPIRV_OC_OpPtrAccessChain                 : I32EnumAttrCase<"OpPtrAccessChain", 67>;
 def SPIRV_OC_OpInBoundsPtrAccessChain         : I32EnumAttrCase<"OpInBoundsPtrAccessChain", 70>;
 def SPIRV_OC_OpDecorate                       : I32EnumAttrCase<"OpDecorate", 71>;
@@ -4522,6 +4518,8 @@ def SPIRV_OC_OpUConvert                       : I32EnumAttrCase<"OpUConvert", 11
 def SPIRV_OC_OpSConvert                       : I32EnumAttrCase<"OpSConvert", 114>;
 def SPIRV_OC_OpFConvert                       : I32EnumAttrCase<"OpFConvert", 115>;
 def SPIRV_OC_OpConvertPtrToU                  : I32EnumAttrCase<"OpConvertPtrToU", 117>;
+def SPIRV_OC_OpSatConvertSToU                 : I32EnumAttrCase<"OpSatConvertSToU", 118>;
+def SPIRV_OC_OpSatConvertUToS                 : I32EnumAttrCase<"OpSatConvertUToS", 119>;
 def SPIRV_OC_OpConvertUToPtr                  : I32EnumAttrCase<"OpConvertUToPtr", 120>;
 def SPIRV_OC_OpPtrCastToGeneric               : I32EnumAttrCase<"OpPtrCastToGeneric", 121>;
 def SPIRV_OC_OpGenericCastToPtr               : I32EnumAttrCase<"OpGenericCastToPtr", 122>;
@@ -4744,7 +4742,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpSpecConstantOp, SPIRV_OC_OpFunction, SPIRV_OC_OpFunctionParameter,
       SPIRV_OC_OpFunctionEnd, SPIRV_OC_OpFunctionCall, SPIRV_OC_OpVariable,
       SPIRV_OC_OpLoad, SPIRV_OC_OpStore, SPIRV_OC_OpCopyMemory,
-      SPIRV_OC_OpAccessChain, SPIRV_OC_OpPtrAccessChain,
+      SPIRV_OC_OpAccessChain, SPIRV_OC_OpInBoundsAccessChain, SPIRV_OC_OpPtrAccessChain,
       SPIRV_OC_OpInBoundsPtrAccessChain, SPIRV_OC_OpDecorate,
       SPIRV_OC_OpMemberDecorate, SPIRV_OC_OpVectorExtractDynamic,
       SPIRV_OC_OpVectorInsertDynamic, SPIRV_OC_OpVectorShuffle,
@@ -4758,7 +4756,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpImageQuerySize,
       SPIRV_OC_OpConvertFToU, SPIRV_OC_OpConvertFToS, SPIRV_OC_OpConvertSToF,
       SPIRV_OC_OpConvertUToF, SPIRV_OC_OpUConvert, SPIRV_OC_OpSConvert,
-      SPIRV_OC_OpFConvert, SPIRV_OC_OpConvertPtrToU, SPIRV_OC_OpConvertUToPtr,
+      SPIRV_OC_OpFConvert, SPIRV_OC_OpConvertPtrToU, SPIRV_OC_OpSatConvertSToU,
+      SPIRV_OC_OpSatConvertUToS, SPIRV_OC_OpConvertUToPtr,
       SPIRV_OC_OpPtrCastToGeneric, SPIRV_OC_OpGenericCastToPtr,
       SPIRV_OC_OpGenericCastToPtrExplicit, SPIRV_OC_OpBitcast, SPIRV_OC_OpSNegate,
       SPIRV_OC_OpFNegate, SPIRV_OC_OpIAdd, SPIRV_OC_OpFAdd, SPIRV_OC_OpISub,

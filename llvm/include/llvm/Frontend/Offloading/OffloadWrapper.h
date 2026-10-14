@@ -68,9 +68,16 @@ struct SYCLJITOptions {
 /// as global symbols and registers the images with the SYCL Runtime.
 /// \param Options Compiler and linker options to be encoded for the later
 ///  use by a runtime for JIT compilation. Not used for AOT.
+/// \param IsFinalizedImage True when \p Buffer holds an already finalized
+///  device image, which must not be device-linked again.
+/// \param RegistrationFunc When given, receives the function that registers the
+///  binary with the runtime instead of it being appended to llvm.global_ctors.
+///  A caller has to add it to that list itself.
 LLVM_ABI llvm::Error
 wrapSYCLBinaries(llvm::Module &M, llvm::ArrayRef<char> Buffer,
-                 SYCLJITOptions Options = SYCLJITOptions());
+                 SYCLJITOptions Options = SYCLJITOptions(),
+                 bool IsFinalizedImage = false,
+                 llvm::Function **RegistrationFunc = nullptr);
 
 } // namespace offloading
 } // namespace llvm

@@ -225,6 +225,16 @@ if is_configured("llvm_include_dir"):
 if is_configured("llvm_tools_dir"):
     dotest_cmd += ["--env", "LLVM_TOOLS_DIR=" + config.llvm_tools_dir]
 
+# Prevent tests from accidentally invoking the real dsymForUUID, which can
+# make slow network requests. Tests that need a working dsymForUUID mock
+# should override this with their own script.
+if platform.system() == "Darwin":
+    dotest_cmd += [
+        "--env",
+        "LLDB_APPLE_DSYMFORUUID_EXECUTABLE="
+        + os.path.join(config.lldb_src_root, "test", "Utils", "fake-dsymForUUID.sh"),
+    ]
+
 # If we have a just-built libcxx, prefer it over the system one.
 if is_configured("has_libcxx") and config.has_libcxx:
     if platform.system() != "Windows":
@@ -254,7 +264,6 @@ if is_configured("lldb_module_cache"):
     dotest_cmd += ["--lldb-module-cache-dir", config.lldb_module_cache]
 
 if is_configured("clang_module_cache"):
-    delete_module_cache(config.clang_module_cache)
     dotest_cmd += ["--clang-module-cache-dir", config.clang_module_cache]
 
 if is_configured("lldb_executable"):
@@ -382,6 +391,7 @@ if is_configured("dotest_lit_args_str"):
     dotest_cmd.extend(shlex.split(config.dotest_lit_args_str))
 
 # Load LLDB test format.
+sys.path.append(os.path.join(config.lldb_src_root, "test"))
 sys.path.append(os.path.join(config.lldb_src_root, "test", "API"))
 import lldbtest
 

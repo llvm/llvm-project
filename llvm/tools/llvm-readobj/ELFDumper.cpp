@@ -182,7 +182,7 @@ struct GroupSection {
 };
 
 // Per-function call graph information.
-struct FunctionCallgraphInfo {
+struct FunctionCallGraphInfo {
   uint64_t FunctionAddress;
   uint8_t FormatVersionNumber;
   bool IsIndirectTarget;
@@ -454,7 +454,7 @@ protected:
   // populate call graph related data structures which will be used to dump call
   // graph info. Returns an empty vector if there are no such sections or if
   // parsing fails.
-  SmallVector<FunctionCallgraphInfo, 16>
+  SmallVector<FunctionCallGraphInfo, 16>
   processCallGraphSection(const Elf_Shdr *CGSection);
 
   std::string getProgramHeadersNumString();
@@ -701,7 +701,6 @@ private:
     if (F.Column != 0)
       OS.PadToColumn(F.Column);
     OS << F.Str;
-    OS.flush();
     return OS;
   }
   void printHashedSymbol(const Elf_Sym *Sym, unsigned SymIndex,
@@ -3758,7 +3757,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
         e.e_flags, EnumStrings(ElfHeaderMipsFlags), unsigned(ELF::EF_MIPS_ARCH),
         unsigned(ELF::EF_MIPS_ABI), unsigned(ELF::EF_MIPS_MACH));
   else if (e.e_machine == EM_RISCV)
-    ElfFlags = printFlags(e.e_flags, EnumStrings(ElfHeaderRISCVFlags));
+    ElfFlags = printFlags(e.e_flags, EnumStrings(ElfHeaderRISCVFlags),
+                          unsigned(ELF::EF_RISCV_FLOAT_ABI));
   else if (e.e_machine == EM_SPARC32PLUS || e.e_machine == EM_SPARCV9)
     ElfFlags = printFlags(e.e_flags, EnumStrings(ElfHeaderSPARCFlags),
                           unsigned(ELF::EF_SPARCV9_MM));
@@ -5332,13 +5332,13 @@ void GNUELFDumper<ELFT>::printHashHistogramStats(size_t NBucket,
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
-  OS << "GNUStyle::printCGProfile not implemented\n";
+  OS << "GNU output style is not supported for --cg-profile\n";
 }
 
 template <class ELFT>
-SmallVector<FunctionCallgraphInfo, 16>
+SmallVector<FunctionCallGraphInfo, 16>
 ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
-  SmallVector<FunctionCallgraphInfo, 16> FuncCGInfos;
+  SmallVector<FunctionCallGraphInfo, 16> FuncCGInfos;
   ArrayRef<uint8_t> Contents = cantFail(Obj.getSectionContents(*CGSection));
   DataExtractor Data(Contents, Obj.isLE());
   DataExtractor::Cursor C(0);
@@ -5389,7 +5389,7 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
 
     bool IsETREL = this->Obj.getHeader().e_type == ELF::ET_REL;
     // Create a new entry for this function.
-    FunctionCallgraphInfo CGInfo;
+    FunctionCallGraphInfo CGInfo;
     CGInfo.FunctionAddress = IsETREL ? FuncAddrOffset : FuncAddr;
     CGInfo.FormatVersionNumber = FormatVersionNumber;
     bool IsIndirectTarget =
@@ -5466,7 +5466,7 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
 
 template <class ELFT>
 void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
-  OS << "GNUStyle::printBBAddrMaps not implemented\n";
+  OS << "GNU output style is not supported for --bb-addr-map\n";
 }
 
 static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
@@ -6910,7 +6910,7 @@ void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printELFLinkerOptions() {
-  OS << "printELFLinkerOptions not implemented!\n";
+  OS << "GNU output style is not supported for --elf-linker-options\n";
 }
 
 template <class ELFT>
@@ -7659,7 +7659,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       }
       }
     } else if (E.e_machine == EM_RISCV)
-      W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderRISCVFlags));
+      W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderRISCVFlags),
+                   unsigned(ELF::EF_RISCV_FLOAT_ABI));
     else if (E.e_machine == EM_SPARC32PLUS || E.e_machine == EM_SPARCV9)
       W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderSPARCFlags),
                    unsigned(ELF::EF_SPARCV9_MM));
@@ -8346,7 +8347,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     const Elf_Shdr *CGSection = CGMapEntry.first;
     const Elf_Shdr *CGRelSection = CGMapEntry.second;
 
-    SmallVector<FunctionCallgraphInfo, 16> FuncCGInfos =
+    SmallVector<FunctionCallGraphInfo, 16> FuncCGInfos =
         this->processCallGraphSection(CGSection);
     if (FuncCGInfos.empty())
       continue;
@@ -8412,8 +8413,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     auto PrintFunc = [&](uint64_t FuncPC) {
       uint64_t FuncEntryPC = FuncPC;
       // In ARM thumb mode the LSB of the function pointer is set to 1. Since
-      // this detail is unncessary in call graph reconstruction, we are clearing
-      // this bit to facilate tooling.
+      // this detail is unnecessary in call graph reconstruction, we are
+      // clearing this bit to facilitate tooling.
       if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
         FuncEntryPC = FuncPC & ~1;
       if (this->Obj.getHeader().e_type == ELF::ET_REL)
@@ -8423,7 +8424,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     };
     if (!CGI)
       CGI = std::make_unique<ListScope>(W, "CallGraph");
-    for (const FunctionCallgraphInfo &CGInfo : FuncCGInfos) {
+    for (const FunctionCallGraphInfo &CGInfo : FuncCGInfos) {
       DictScope D(W, "Function");
       PrintFunc(CGInfo.FunctionAddress);
       W.printNumber("Version", CGInfo.FormatVersionNumber);
