@@ -1022,9 +1022,19 @@ KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
   // atan is bounded to (-pi/2, pi/2), never Inf. atan(+-Inf) = +-pi/2 (finite).
   Known.knownNot(fcInf);
 
-  // atan is sign-preserving: atan(x) < 0 iff x < 0.
-  if (KnownSrc.isKnownNever(fcNegative))
-    Known.knownNot(fcNegative);
+  // Ruling out Subnormal/Normal from the result requires the
+  // input to never be finite-nonzero and never inf, since
+  // atan(+-inf) = +-pi/2
+  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf))
+    Known.knownNot(fcNegSubnormal | fcNegNormal);
+
+  if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf))
+    Known.knownNot(fcPosSubnormal | fcPosNormal);
+
+  // atan(-0.0) = -0.0. Negative finite inputs may also produce -0.0
+  // if the result rounds to a negative subnormal that is flushed to zero.
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegSubnormal | fcNegZero))
+    Known.knownNot(fcNegZero);
 
   Known.propagateNonNaN(KnownSrc);
 
