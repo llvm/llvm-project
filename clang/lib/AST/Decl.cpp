@@ -3318,11 +3318,7 @@ FunctionDecl::getDefaultedFunctionKind() const {
     // Only the postfix forms can be defaulted. They are distinguished from the
     // prefix forms by their trailing 'int' parameter, so they have exactly two
     // parameters including implicit or explicit 'this'.
-    unsigned NumParams = getNumParams();
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(this);
-        MD && MD->isImplicitObjectMemberFunction())
-      ++NumParams;
-    if (NumParams != 2)
+    if (getNumParamsIncludingThis() != 2)
       break;
     return OO == OO_PlusPlus ? PostfixOperatorKind::Increment
                              : PostfixOperatorKind::Decrement;
