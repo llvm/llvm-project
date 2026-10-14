@@ -8,7 +8,11 @@ import subprocess
 import lit.formats
 
 # name: The name of this test suite.
-config.name = "LLVM-Unit"
+suffix = getattr(config, "llvm_windows_prefer_forward_slash", "")
+if suffix in ("1", "ON", "True"):
+    config.name = "LLVM-Unit-ForwardSlash"
+else:
+    config.name = "LLVM-Unit"
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = []
@@ -36,6 +40,16 @@ if "TEMP" in os.environ:
 # that causes the tests to fail.
 if "HOME" in os.environ:
     config.environment["HOME"] = os.environ["HOME"]
+
+prefer_forward_slash = getattr(config, "llvm_windows_prefer_forward_slash", "")
+if prefer_forward_slash in ("1", "ON", "True"):
+    config.environment["LLVM_WINDOWS_PREFER_FORWARD_SLASH"] = "1"
+elif prefer_forward_slash in ("0", "OFF", "False"):
+    config.environment["LLVM_WINDOWS_PREFER_FORWARD_SLASH"] = "0"
+elif "LLVM_WINDOWS_PREFER_FORWARD_SLASH" in os.environ:
+    config.environment["LLVM_WINDOWS_PREFER_FORWARD_SLASH"] = os.environ[
+        "LLVM_WINDOWS_PREFER_FORWARD_SLASH"
+    ]
 
 # Propagate sanitizer options.
 for var in [
