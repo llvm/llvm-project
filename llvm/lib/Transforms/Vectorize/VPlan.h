@@ -2663,9 +2663,7 @@ public:
   /// incoming value, its start value.
   unsigned getNumIncoming() const override { return 1; }
 
-  /// Returns true if this induction is of integer type with result type
-  /// narrower than the start type: this would result in trunc instructions
-  /// being materialized when the recipe is lowered.
+  /// Returns true if this induction is truncated.
   bool isTruncated() const {
     return getStartValue() && getScalarType()->isIntegerTy() &&
            getScalarType()->getPrimitiveSizeInBits() <
