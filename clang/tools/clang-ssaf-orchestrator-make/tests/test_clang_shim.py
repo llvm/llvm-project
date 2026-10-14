@@ -148,7 +148,7 @@ class TheSsafArguments(unittest.TestCase):
 
     def test_extraction_names_the_unit_and_where_its_summary_goes(self):
         shim = self._shim()
-        summary, extra = clang._summary_extraction_args(shim, self._id("build/a.o"))
+        (summary,), extra = clang._summary_extraction_args(shim, self._id("build/a.o"))
         self.assertIn("--ssaf-extract-summaries=PointerFlow", extra)
         self.assertIn(
             "--ssaf-compilation-unit-id=" + self._id("build/a.o").get_path(), extra
@@ -160,15 +160,13 @@ class TheSsafArguments(unittest.TestCase):
         pass_config = configs.transformation_config()
         pass_config.name_link_unit(self._id("build/prg").get_path())
         shim = self._shim(pass_config)
-        edits, extra = clang._transformation_args(shim, self._id("build/a.o"))
+        (edits, report), extra = clang._transformation_args(shim, self._id("build/a.o"))
         self.assertIn("--ssaf-link-unit-id=" + self._id("build/prg").get_path(), extra)
         self.assertIn("--ssaf-src-edit-file=" + edits, extra)
         self.assertTrue(
             any(a.startswith("--ssaf-global-scope-analysis-result=") for a in extra)
         )
-        self.assertTrue(
-            any(a.startswith("--ssaf-transformation-report-file=") for a in extra)
-        )
+        self.assertIn("--ssaf-transformation-report-file=" + report, extra)
 
     def test_the_extra_clang_arguments_come_last(self):
         shim = self._shim(configs.analysis_config(ssaf_extra_clang_args=["-DX"]))
@@ -218,6 +216,35 @@ class RunningTheFrontend(unittest.TestCase):
             )
         )
         self.assertFalse(os.path.exists(summary))
+
+    def test_a_failed_transformation_leaves_neither_edits_nor_report(self):
+        shim = configs.RecordingShim(
+            ["clang", "-cc1", "-o", "build/a.o", "a.cpp"],
+            self.out,
+            configs.transformation_config(link_unit_id="build/prg"),
+        )
+        records = configs.repository_for(self.out)
+        artifacts = [
+            records.get_path_for_artifact(
+                repository.get_ssaf_artifact_id(self._id("build/a.o"), kind)
+            )
+            for kind in (
+                repository.SSAFArtifactKind.EDITS,
+                repository.SSAFArtifactKind.REPORT,
+            )
+        ]
+
+        def run(*args):
+            for artifact in artifacts:
+                open(artifact, "w").close()
+            return False
+
+        shim._shim.run = run
+        with mock.patch("sys.stderr", mock.MagicMock()):
+            clang._run_clang_driven_tool(shim, self.tmp)
+        self.assertEqual(
+            [False, False], [os.path.exists(artifact) for artifact in artifacts]
+        )
 
     def test_the_marker_chooses_the_frontend_half(self):
         shim = self._shim(

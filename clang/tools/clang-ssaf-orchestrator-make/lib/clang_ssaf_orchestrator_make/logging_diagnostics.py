@@ -41,7 +41,9 @@ def report_analysis_result(wpa_result_path):
     report_info("analysis-result", wpa_result_path)
 
 
-def report_transformation(merged, conflicts_paths):
+def report_transformation(merged, transformation_report, conflict_report):
     report_info("source-edits", merged)
-    for conflicts_path in conflicts_paths:
-        report_info("edit-conflicts", conflicts_path)
+    if transformation_report:
+        report_info("transformation-report", transformation_report)
+    if conflict_report:
+        report_info("conflict-report", conflict_report)
