@@ -21,6 +21,8 @@ DEFAULT_PLUGINS = [
     "ArchitectureArm",
     "ArchitectureMips",
     "ArchitecturePPC64",
+    "ArchitectureRISCV",
+    "ArchitectureWasm",
     "ClangREPL",
     "CPlusPlusLanguage",
     "CPPRuntime",

@@ -1214,6 +1214,30 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginArchitectureRISCV",
+    srcs = glob(["Architecture/RISCV/*.cpp"]),
+    hdrs = glob(["Architecture/RISCV/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginArchitectureWasm",
+    srcs = glob(["Architecture/Wasm/*.cpp"]),
+    hdrs = glob(["Architecture/Wasm/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
     name = "PluginBugReporterNone",
     srcs = glob(["BugReporter/None/*.cpp"]),
     hdrs = glob(["BugReporter/None/*.h"]),
