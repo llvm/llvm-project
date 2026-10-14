@@ -29,10 +29,10 @@ set(SsafOrchestratorMakeShimDir "libexec/ssaf-orchestrator-shims")
 # tool's target can depend on it. kind is FILES or PROGRAMS.
 function(add_ssaf_orchestrator_make_file source build_dir destination kind)
   get_filename_component(name "${source}" NAME)
-  set(copied "${CMAKE_BINARY_DIR}/${build_dir}/${name}")
+  set(copied "${LLVM_BINARY_DIR}/${build_dir}/${name}")
   add_custom_command(OUTPUT "${copied}"
                      COMMAND ${CMAKE_COMMAND} -E make_directory
-                       "${CMAKE_BINARY_DIR}/${build_dir}"
+                       "${LLVM_BINARY_DIR}/${build_dir}"
                      COMMAND ${CMAKE_COMMAND} -E copy
                        "${CMAKE_CURRENT_SOURCE_DIR}/${source}" "${copied}"
                      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
@@ -59,10 +59,10 @@ endforeach()
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/${SsafOrchestratorMakePackageDir}/version.py.in"
   "${CMAKE_CURRENT_BINARY_DIR}/version.py")
-set(version_py "${CMAKE_BINARY_DIR}/${SsafOrchestratorMakePackageDir}/version.py")
+set(version_py "${LLVM_BINARY_DIR}/${SsafOrchestratorMakePackageDir}/version.py")
 add_custom_command(OUTPUT "${version_py}"
                    COMMAND ${CMAKE_COMMAND} -E make_directory
-                     "${CMAKE_BINARY_DIR}/${SsafOrchestratorMakePackageDir}"
+                     "${LLVM_BINARY_DIR}/${SsafOrchestratorMakePackageDir}"
                    COMMAND ${CMAKE_COMMAND} -E copy
                      "${CMAKE_CURRENT_BINARY_DIR}/version.py" "${version_py}"
                    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/version.py")
