@@ -3451,29 +3451,34 @@ static Value *trySimplifyExpr(Instruction &Expr,
     return &Expr;
   }
 
-  // Post-order walk of the operand DAG: an expression is simplified only once
-  // all of its operands have an entry in the map.
-  struct Frame {
-    Instruction *I;
-    unsigned NextOp;
-  };
-  SmallVector<Frame, 8> Stack;
-  Stack.push_back({&Expr, 0});
+  // Post-order walk of the operand DAG. Push every supported operand that
+  // does not yet have a map entry; simplify this instruction once none
+  // remain. A shared operand may be pushed once per incoming edge — the map
+  // check drops the extras. Because the new frames sit above this one, a
+  // cross-edge (C uses sibling B, and B is not simplified yet) finishes B
+  // before C.
+  SmallVector<Instruction *, 8> Stack;
+  Stack.push_back(&Expr);
 
   while (!Stack.empty()) {
-    Instruction *I = Stack.back().I;
-    unsigned NextOp = Stack.back().NextOp;
-
-    if (NextOp < I->getNumOperands()) {
-      Value *Op = I->getOperand(NextOp);
-      Stack.back().NextOp = NextOp + 1;
-      if (SimplifiedExprs.count(Op))
-        continue;
-      auto *OpI = dyn_cast<Instruction>(Op);
-      if (OpI && isSupportedExpr(OpI))
-        Stack.push_back({OpI, 0});
+    Instruction *I = Stack.back();
+    if (SimplifiedExprs.contains(I)) {
+      Stack.pop_back();
       continue;
     }
+
+    bool PushedOperand = false;
+    for (Value *Op : I->operands()) {
+      if (SimplifiedExprs.contains(Op))
+        continue;
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (!OpI || !isSupportedExpr(OpI))
+        continue;
+      Stack.push_back(OpI);
+      PushedOperand = true;
+    }
+    if (PushedOperand)
+      continue;
 
     // Operands with no entry in the map stand for themselves.
     SmallVector<Value *, 4> NewOps;
