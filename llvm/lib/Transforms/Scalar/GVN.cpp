@@ -3209,6 +3209,8 @@ bool GVNPassImpl::processMaskedLoad(IntrinsicInst *I) {
     auto *MSSA = MSSAU->getMemorySSA();
     auto *Def = dyn_cast<MemoryDef>(
         MSSA->getWalker()->getClobberingMemoryAccess(I, BatchAA));
+    // We may want to extend this to non-local forwarding as well. For now, keep
+    // parity with MemoryDependenceAnalysis.
     if (!Def || MSSA->isLiveOnEntryDef(Def) ||
         Def->getBlock() != I->getParent())
       return false;
