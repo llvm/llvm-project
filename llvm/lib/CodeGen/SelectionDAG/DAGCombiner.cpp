@@ -5922,8 +5922,10 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
 
       // Check nsw flag or willNotOverflowAdd because we don't infer nsw flags
       // in SelectionDAG.
-      if (IsSigned && (Add->getFlags().hasNoSignedWrap() ||
-                       DAG.willNotOverflowAdd(/*IsSigned=*/true, Add->getOperand(0), Add->getOperand(1))))
+      if (IsSigned &&
+          (Add->getFlags().hasNoSignedWrap() ||
+           DAG.willNotOverflowAdd(/*IsSigned=*/true, Add->getOperand(0),
+                                  Add->getOperand(1))))
         return DAG.getNode(ISD::AVGCEILS, DL, VT, X, Y);
 
       // FIXME: Use willNotOverflowAdd here?
