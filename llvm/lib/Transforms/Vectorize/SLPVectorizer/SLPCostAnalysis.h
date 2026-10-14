@@ -55,7 +55,7 @@ InstructionCost getStridedLoadCost(
     const TargetTransformInfo &TTI, const DataLayout &DL, Value *StrideVal,
     Type *StridedLoadTy, Type *VecTy, Type *ScalarTy, Value *Ptr,
     Align CommonAlignment, TargetTransformInfo::CastContextHint Ctx,
-    TargetTransformInfo::TargetCostKind CostKind, bool IsReverse = false);
+    TargetTransformInfo::TargetCostKind CostKind, bool IsReverse);
 
 /// Describe a single compressed load for costing and generating the vector
 /// instruction.
