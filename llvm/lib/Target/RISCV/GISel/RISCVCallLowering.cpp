@@ -27,6 +27,17 @@ using namespace llvm;
 
 namespace {
 
+// Map calling convention FP register aliases to full-width GPRs.
+Register getGPRForFPAlias(Register PhysReg, const TargetRegisterInfo &TRI) {
+  if (!RISCV::GPRF16RegClass.contains(PhysReg) &&
+      !RISCV::GPRF32RegClass.contains(PhysReg))
+    return Register();
+  for (MCPhysReg SuperReg : TRI.superregs(PhysReg))
+    if (RISCV::GPRRegClass.contains(SuperReg))
+      return SuperReg;
+  llvm_unreachable("FP alias without a containing GPR");
+}
+
 struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   RISCVOutgoingValueHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                             MachineInstrBuilder MIB)
@@ -68,8 +79,17 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA,
                         ISD::ArgFlagsTy Flags = {}) override {
-    Register ExtReg = extendRegister(ValVReg, VA);
-    MIRBuilder.buildCopy(PhysReg, ExtReg);
+    if (Register GPR =
+            getGPRForFPAlias(PhysReg, *Subtarget.getRegisterInfo())) {
+      LLT XLenTy = LLT::scalar(Subtarget.getXLen());
+      PhysReg = GPR;
+      if (MRI.getType(ValVReg).getSizeInBits() < XLenTy.getSizeInBits())
+        ValVReg = MIRBuilder.buildAnyExt(XLenTy, ValVReg).getReg(0);
+    } else {
+      ValVReg = extendRegister(ValVReg, VA);
+    }
+
+    MIRBuilder.buildCopy(PhysReg, ValVReg);
     MIB.addUse(PhysReg, RegState::Implicit);
   }
 
@@ -192,6 +212,17 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA,
                         ISD::ArgFlagsTy Flags = {}) override {
+    if (Register GPR =
+            getGPRForFPAlias(PhysReg, *Subtarget.getRegisterInfo())) {
+      markPhysRegUsed(GPR);
+      LLT XLenTy = LLT::scalar(Subtarget.getXLen());
+      if (MRI.getType(ValVReg).getSizeInBits() < XLenTy.getSizeInBits())
+        MIRBuilder.buildTrunc(ValVReg, MIRBuilder.buildCopy(XLenTy, GPR));
+      else
+        MIRBuilder.buildCopy(ValVReg, GPR);
+      return;
+    }
+
     markPhysRegUsed(PhysReg);
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
