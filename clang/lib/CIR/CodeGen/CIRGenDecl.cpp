@@ -761,10 +761,11 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
 
   cir::GlobalOp var = globalOp;
 
-  assert(!cir::MissingFeatures::cudaSupport());
-
+  // Sema ensures any initializer of a CUDA __shared__ variable is a no-op.
+  bool isCudaSharedVar = getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
+                         d.hasAttr<CUDASharedAttr>();
   // If this value has an initializer, emit it.
-  if (d.getInit())
+  if (d.getInit() && !isCudaSharedVar)
     var = addInitializerToStaticVarDecl(d, var, getAddrOp);
 
   var.setAlignment(alignment.getAsAlign().value());

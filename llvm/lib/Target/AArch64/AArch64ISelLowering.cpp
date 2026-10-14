@@ -7745,11 +7745,9 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
   (void)TLI;
 
   if (SrcAS == ARM64AS::PTR32_SPTR) {
-    return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, Src,
-                       DAG.getTargetConstant(0, DL, DestVT));
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, Src);
   } else if (SrcAS == ARM64AS::PTR32_UPTR) {
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, DestVT, Src,
-                       DAG.getTargetConstant(0, DL, DestVT));
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, DestVT, Src);
   } else if ((DestAS == ARM64AS::PTR32_SPTR) ||
              (DestAS == ARM64AS::PTR32_UPTR)) {
     SDValue Ext = DAG.getAnyExtOrTrunc(Src, DL, DestVT);
@@ -20166,24 +20164,47 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
     return false;
 
   if (Ty->isScalableTy()) {
+    if (AM.BaseOffs)
+      return false;
+
     if (isa<ScalableVectorType>(Ty)) {
+      EVT VT = getValueType(DL, Ty);
+      LLVMContext &Ctx = Ty->getContext();
+      TargetLowering::LegalizeTypeAction Action = getTypeAction(Ctx, VT);
+
+      // Note: If VT cannot be legalized (e.g. no scalable vectors) then LegalVT
+      // could be MVT::Other (which would assert on getStoreSize()).
+      EVT LegalVT = getLegalTypeToTransformTo(Ctx, VT);
+      if (Action == TargetLowering::TypeSplitVector && LegalVT.isScalableVT() &&
+          LegalVT.getVectorElementType() == VT.getVectorElementType()) {
+        uint64_t LegalNumBytes = LegalVT.getStoreSize().getKnownMinValue();
+        assert(VT.getStoreSize().getKnownMinValue() % LegalNumBytes == 0 &&
+               "expected vector split");
+
+        // Don't prefer scaled access if the type may need splitting. Only the
+        // first access can use the scaled offset. Later accesses need to
+        // materialize a new base + mul vl offset.
+        if (AM.Scale)
+          return false;
+        if (AM.ScalableOffset && AM.ScalableOffset % LegalNumBytes == 0)
+          return true;
+      }
+
       // See if we have a foldable vscale-based offset, for vector types which
-      // are either legal or smaller than the minimum; more work will be
-      // required if we need to consider addressing for types which need
-      // legalization by splitting.
-      uint64_t VecNumBytes = DL.getTypeSizeInBits(Ty).getKnownMinValue() / 8;
-      if (AM.HasBaseReg && !AM.BaseOffs && AM.ScalableOffset && !AM.Scale &&
+      // are either legal or smaller than the minimum.
+      uint64_t VecNumBytes = VT.getStoreSize().getKnownMinValue();
+      if (AM.ScalableOffset && !AM.Scale &&
           (AM.ScalableOffset % VecNumBytes == 0) && VecNumBytes <= 16 &&
           isPowerOf2_64(VecNumBytes))
         return isInt<4>(AM.ScalableOffset / (int64_t)VecNumBytes);
 
       uint64_t VecElemNumBytes =
           DL.getTypeSizeInBits(cast<VectorType>(Ty)->getElementType()) / 8;
-      return AM.HasBaseReg && !AM.BaseOffs && !AM.ScalableOffset &&
+      return !AM.ScalableOffset &&
              (AM.Scale == 0 || (uint64_t)AM.Scale == VecElemNumBytes);
     }
 
-    return AM.HasBaseReg && !AM.BaseOffs && !AM.ScalableOffset && !AM.Scale;
+    return !AM.ScalableOffset && !AM.Scale;
   }
 
   // No scalable offsets allowed for non-scalable types.
@@ -23214,8 +23235,12 @@ static bool isSetCCOrZExtSetCC(const SDValue& Op, SetCCInfoAndKind &Info) {
 // (csel x, (add x, 1), !cc ...)
 //
 // The latter will get matched to a CSINC instruction.
-static SDValue performSetccAddFolding(SDNode *Op, SelectionDAG &DAG) {
-  assert(Op && Op->getOpcode() == ISD::ADD && "Unexpected operation!");
+static SDValue performSetccAddFolding(SDNode *Op,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  if (DCI.isBeforeLegalizeOps() || Op->getOpcode() != ISD::ADD)
+    return SDValue();
+
   SDValue LHS = Op->getOperand(0);
   SDValue RHS = Op->getOperand(1);
   SetCCInfoAndKind InfoAndKind;
@@ -23499,11 +23524,8 @@ static SDValue performAddSubLongCombine(SDNode *N,
     return SDValue();
 
   MVT VT = N->getSimpleValueType(0);
-  if (!VT.is128BitVector()) {
-    if (N->getOpcode() == ISD::ADD)
-      return performSetccAddFolding(N, DAG);
+  if (!VT.is128BitVector())
     return SDValue();
-  }
 
   if (SDValue R = reassociateAddSubLong(N, DAG))
     return R;
@@ -24646,6 +24668,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddMulZextCombine(N, DCI))
+    return Val;
+  if (SDValue Val = performSetccAddFolding(N, DCI))
     return Val;
 
   return performAddSubLongCombine(N, DCI);
@@ -34038,11 +34062,14 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   }
 
   // The !mem.cache_hint metadata is not supported by GISel and will be dropped.
-  // TODO: Remove this and handle atomic store hints in GISel once supported.
+  // TODO: Remove this and handle atomic hints in GISel once supported.
   if (auto *Store = dyn_cast<StoreInst>(&Inst)) {
     if (Store->isAtomic() && getMemCacheHintMetadata(*Store, 1))
       return true;
   }
+  if (auto *RMW = dyn_cast<AtomicRMWInst>(&Inst))
+    if (getMemCacheHintMetadata(*RMW))
+      return true;
 
   return false;
 }
