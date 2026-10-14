@@ -307,6 +307,8 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
 
   if (attrName == getOptInfoAttrName()) {
     auto optInfo = mlir::dyn_cast<cir::OptInfoAttr>(attr.getValue());
+    // Checks whether or not OptInfoAttr is even parseable; opt info range
+    // sanity checks are done in OptInfoAttr::verify.
     if (!optInfo)
       return op->emitOpError() << "malformed "
                                << cir::CIRDialect::getOptInfoAttrName()
