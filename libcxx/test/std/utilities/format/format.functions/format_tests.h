@@ -29,7 +29,7 @@
 enum class execution_modus { partial, full };
 
 template <class CharT>
-std::vector<std::basic_string_view<CharT>> invalid_types(std::string_view valid) {
+constexpr std::vector<std::basic_string_view<CharT>> invalid_types(std::string_view valid) {
   std::vector<std::basic_string_view<CharT>> result;
 
 #define CASE(T)                                                                                                        \

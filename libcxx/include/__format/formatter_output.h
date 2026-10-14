@@ -99,7 +99,7 @@ __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto _
 template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
+_LIBCPP_HIDE_FROM_ABI constexpr auto
 __copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{__first, __last}, std::move(__out_it));
 }
@@ -119,7 +119,7 @@ template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT,
           class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI auto
+_LIBCPP_HIDE_FROM_ABI constexpr auto
 __transform(_Iterator __first,
             _Iterator __last,
             output_iterator<const _OutCharT&> auto __out_it,
@@ -251,7 +251,7 @@ template <contiguous_iterator _Iterator,
           class _CharT = typename iterator_traits<_Iterator>::value_type,
           class _ParserCharT,
           class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI auto __write_transformed(
+_LIBCPP_HIDE_FROM_ABI constexpr auto __write_transformed(
     _Iterator __first,
     _Iterator __last,
     output_iterator<const _CharT&> auto __out_it,
@@ -295,7 +295,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __write_string_no_precision(
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI int __truncate(basic_string_view<_CharT>& __str, int __precision) {
+_LIBCPP_HIDE_FROM_ABI constexpr int __truncate(basic_string_view<_CharT>& __str, int __precision) {
   __format_spec::__column_width_result __result =
       __format_spec::__estimate_column_width(__str, __precision, __format_spec::__column_width_rounding::__down);
   __str = basic_string_view<_CharT>{__str.begin(), __result.__last_};
