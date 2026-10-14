@@ -133,6 +133,14 @@ struct DeviceTy {
   /// allocator should be used (host, shared, device).
   int32_t deleteData(void *TgtPtrBegin, int32_t Kind = TARGET_ALLOC_DEFAULT);
 
+  /// Allocate \p Size bytes of \p Type memory in the device's context, which,
+  /// unlike allocData, caches the allocation for reuse. \p Type must be
+  /// OL_ALLOC_TYPE_DEVICE or OL_ALLOC_TYPE_MANAGED. Free it with freeCtxMem.
+  llvm::Expected<void *> allocCtxMem(int64_t Size, ol_alloc_type_t Type);
+
+  /// Free memory allocated with allocCtxMem.
+  llvm::Error freeCtxMem(void *Ptr);
+
   // Data transfer. When AsyncInfo is nullptr, the transfer will be
   // synchronous.
   // Copy data from host to device
