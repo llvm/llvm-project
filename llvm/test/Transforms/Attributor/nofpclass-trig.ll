@@ -435,7 +435,7 @@ define float @ret_atan_no_negative_finite(float nofpclass(nzero nsub nnorm) %arg
 ; CHECK-SAME: (float nofpclass(nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero) float @llvm.atan.f32(float nofpclass(nzero nsub nnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
-
+;
   %call = call float @llvm.atan.f32(float %arg)
   ret float %call
 }
@@ -446,6 +446,7 @@ define float @ret_atan_no_negzero_negsubnormal(float nofpclass(nzero nsub) %arg)
 ; CHECK-SAME: (float nofpclass(nzero nsub) [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.atan.f32(float nofpclass(nzero nsub) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
+;
   %call = call float @llvm.atan.f32(float %arg)
   ret float %call
 }
