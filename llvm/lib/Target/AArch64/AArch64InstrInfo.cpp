@@ -10503,7 +10503,10 @@ static bool adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta,
 
   // ADD/SUBXri encode a 12-bit unsigned immediate with an optional left shift
   // which can only be 12.
-  int64_t Shift = MI.getOperand(3).getImm();
+  int64_t ShiftImm = MI.getOperand(3).getImm();
+  assert(AArch64_AM::getShiftType(ShiftImm) == AArch64_AM::LSL &&
+         "Unexpected add/sub immediate shift type");
+  unsigned Shift = AArch64_AM::getShiftValue(ShiftImm);
   assert((Shift == 0 || Shift == 12) && "Unexpected add/sub immediate shift");
 
   int64_t Offset = MI.getOperand(2).getImm() << Shift;
@@ -10517,10 +10520,10 @@ static bool adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta,
   // Try to encode as a 12-bit immediate with shift=0 first.
   if (AbsOffset <= 0xfff) {
     OutImm = AbsOffset;
-    OutShift = 0;
+    OutShift = AArch64_AM::getShifterImm(AArch64_AM::LSL, 0);
   } else if ((AbsOffset & 0xfff) == 0 && (AbsOffset >> 12) <= 0xfff) {
     OutImm = AbsOffset >> 12;
-    OutShift = 12;
+    OutShift = AArch64_AM::getShifterImm(AArch64_AM::LSL, 12);
   } else {
     return false;
   }
