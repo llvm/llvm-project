@@ -210,6 +210,7 @@
 ; GCN-O2-NEXT:       si-fold-operands
 ; GCN-O2-NEXT:       dead-mi-elimination
 ; GCN-O2-NEXT:       si-shrink-instructions
+; GCN-O2-NEXT:       si-materialize-wmma-scale
 ; GCN-O2-NEXT: require<reg-usage>
 ; GCN-O2-NEXT: cgscc
 ; GCN-O2-NEXT:   function
@@ -398,6 +399,7 @@
 ; GCN-O3-NEXT:       si-fold-operands
 ; GCN-O3-NEXT:       dead-mi-elimination
 ; GCN-O3-NEXT:       si-shrink-instructions
+; GCN-O3-NEXT:       si-materialize-wmma-scale
 ; GCN-O3-NEXT: require<reg-usage>
 ; GCN-O3-NEXT: cgscc
 ; GCN-O3-NEXT:   function
