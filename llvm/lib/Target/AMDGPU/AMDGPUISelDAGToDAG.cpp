@@ -1701,7 +1701,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
   }
 
   const SIInstrInfo *TII = Subtarget->getInstrInfo();
-  if (TII->isLegalMUBUFImmOffset(static_cast<unsigned>(C1->getZExtValue()))) {
+  if (TII->isLegalMUBUFImmOffset(C1->getZExtValue())) {
     // Legal offset for instruction.
     Offset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i32);
     return true;
@@ -1810,7 +1810,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
     // MUBUF vaddr, but not on older subtargets which can only do this if the
     // sign bit is known 0.
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
-    if (TII->isLegalMUBUFImmOffset(static_cast<unsigned>(C1)) &&
+    if (TII->isLegalMUBUFImmOffset(C1) &&
         (!Subtarget->privateMemoryResourceIsRangeChecked() ||
          CurDAG->SignBitIsZero(N0))) {
       std::tie(VAddr, SOffset) = foldFrameIndex(N0);
@@ -1858,16 +1858,14 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffset(SDNode *Parent,
   if (Addr.getOpcode() == ISD::ADD) {
     // Add (CopyFromReg <sgpr>) <constant>
     CAddr = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
-    if (!CAddr || !TII->isLegalMUBUFImmOffset(
-                      static_cast<unsigned>(CAddr->getZExtValue())))
+    if (!CAddr || !TII->isLegalMUBUFImmOffset(CAddr->getZExtValue()))
       return false;
     if (!IsCopyFromSGPR(*TRI, Addr.getOperand(0)))
       return false;
 
     SOffset = Addr.getOperand(0);
   } else if ((CAddr = dyn_cast<ConstantSDNode>(Addr)) &&
-             TII->isLegalMUBUFImmOffset(
-                 static_cast<unsigned>(CAddr->getZExtValue()))) {
+             TII->isLegalMUBUFImmOffset(CAddr->getZExtValue())) {
     // <constant>
     SOffset = CurDAG->getTargetConstant(0, DL, MVT::i32);
   } else {
