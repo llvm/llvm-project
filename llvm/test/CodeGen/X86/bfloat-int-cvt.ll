@@ -415,6 +415,24 @@ define <8 x i32> @fptosi_v8bf16_to_v8i32(<8 x bfloat> %a) {
   ret <8 x i32> %cvt
 }
 
+define <8 x i32> @fptosi_v8bf16_to_v8i32_multiple_uses(<8 x bfloat> %a, ptr %p) {
+; CHECK-LABEL: fptosi_v8bf16_to_v8i32_multiple_uses:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpslld $16, %ymm0, %ymm0
+; CHECK-NEXT:    vroundps $11, %ymm0, %ymm0
+; CHECK-NEXT:    vcvtneps2bf16 %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
+; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpslld $16, %ymm0, %ymm0
+; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %t = call <8 x bfloat> @llvm.trunc.v8bf16(<8 x bfloat> %a)
+  store <8 x bfloat> %t, ptr %p
+  %cvt = fptosi <8 x bfloat> %t to <8 x i32>
+  ret <8 x i32> %cvt
+}
+
 define <4 x i32> @fptosi_v4bf16_to_v4i32(<4 x bfloat> %a) {
 ; CHECK-LABEL: fptosi_v4bf16_to_v4i32:
 ; CHECK:       # %bb.0:
