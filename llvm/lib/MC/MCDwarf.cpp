@@ -1458,7 +1458,11 @@ static void encodeDwarfSignedConstant(int64_t Value, raw_ostream &OS) {
 static void emitDwarfCfaAddress(MCObjectStreamer &Streamer,
                                 unsigned AddressSpace,
                                 raw_svector_ostream &OS) {
-  encodeDwarfAspaceAddress(AddressSpace, OS);
+  // DWARF address space `0` is the default, and since we know the
+  // expression ends here we can rely on the implicit conversion to
+  // a memory location in the default address space.
+  if (AddressSpace)
+    encodeDwarfAspaceAddress(AddressSpace, OS);
   StringRef Block = OS.str();
   Streamer.emitInt8(dwarf::DW_CFA_def_cfa_expression);
   Streamer.emitULEB128IntValue(Block.size());
@@ -1665,7 +1669,11 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     SmallString<16> Block;
     raw_svector_ostream OSBlock(Block);
     encodeDwarfRegisterLocation(Fields.Register, OSBlock);
-    OSBlock << uint8_t(dwarf::DW_OP_deref_size) << uint8_t(Fields.DerefSize);
+    if (Fields.DerefSize ==
+        Streamer.getContext().getAsmInfo().getCodePointerSize())
+      OSBlock << uint8_t(dwarf::DW_OP_deref);
+    else
+      OSBlock << uint8_t(dwarf::DW_OP_deref_size) << uint8_t(Fields.DerefSize);
     if (Fields.Scale != 1) {
       bool IsPowerOfTwo = isPowerOf2_32(Fields.Scale);
       encodeDwarfUnsignedConstant(
