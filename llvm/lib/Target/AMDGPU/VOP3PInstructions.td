@@ -2998,7 +2998,7 @@ defm V_WMMA_I32_16X16X16_IU4   : VOP3P_Real_WMMA <0x045>;
 multiclass VOP3P_Real_vi<bits<7> op> {
   def _vi : VOP3P_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
             VOP3Pe_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
-    let AssemblerPredicate = HasVOP3PInsts;
+    let AssemblerPredicate = isGFX9Only;
     let DecoderNamespace = "GFX8";
     let VOP3P = 1;
   }
