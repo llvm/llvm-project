@@ -1,0 +1,222 @@
+# RUN: llc -mtriple=amdgpu9.00 -run-pass=postmisched %s -o /dev/null -debug-only=machine-scheduler 2>&1 | FileCheck -check-prefixes=CHECK,GFX9 %s
+# RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize64 -run-pass=postmisched %s -o /dev/null -debug-only=machine-scheduler 2>&1 | FileCheck -check-prefixes=CHECK,GFX10 %s
+# REQUIRES: asserts
+
+# Check the scheduling latency of dependencies through a lane mask or carry
+# SGPR from a VALU fast forward producer to a VALU fast forward consumer.
+
+# CHECK-LABEL: # Machine code for function vopc_e32_to_cndmask_e32:
+# CHECK:       SU(1): {{.*}}V_CNDMASK_B32_e32
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(0): Data Latency=0 Reg=$vcc{{$}}
+---
+name: vopc_e32_to_cndmask_e32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr3, $vgpr4
+    V_CMP_EQ_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc, implicit $exec
+    $vgpr2 = V_CNDMASK_B32_e32 $vgpr3, $vgpr4, implicit $vcc, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2
+...
+
+# CHECK-LABEL: # Machine code for function vopc_e64_to_cndmask_e64:
+# CHECK:       SU(1): {{.*}}V_CNDMASK_B32_e64
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(0): Data Latency=0 Reg=$sgpr0_sgpr1{{$}}
+---
+name: vopc_e64_to_cndmask_e64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr3, $vgpr4
+    $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $vgpr0, $vgpr1, implicit $exec
+    $vgpr2 = V_CNDMASK_B32_e64 0, $vgpr3, 0, $vgpr4, $sgpr0_sgpr1, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2
+...
+
+# CHECK-LABEL: # Machine code for function vopc_sdwa_to_cndmask_e64:
+# CHECK:       SU(1): {{.*}}V_CNDMASK_B32_e64
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(0): Data Latency=0 Reg=$sgpr0_sgpr1{{$}}
+---
+name: vopc_sdwa_to_cndmask_e64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr3, $vgpr4
+    $sgpr0_sgpr1 = V_CMP_EQ_U32_sdwa 0, $vgpr0, 0, $vgpr1, 0, 6, 6, implicit $exec
+    $vgpr2 = V_CNDMASK_B32_e64 0, $vgpr3, 0, $vgpr4, $sgpr0_sgpr1, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2
+...
+
+# CHECK-LABEL: # Machine code for function vopc_e32_to_cndmask_dpp:
+# CHECK:       SU(1): {{.*}}V_CNDMASK_B32_dpp
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(0): Data Latency=0 Reg=$vcc{{$}}
+---
+name: vopc_e32_to_cndmask_dpp
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
+    V_CMP_EQ_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc, implicit $exec
+    $vgpr2 = V_CNDMASK_B32_dpp $vgpr2, 0, $vgpr3, 0, $vgpr4, 1, 15, 15, 1, implicit $vcc, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2
+...
+
+# CHECK-LABEL: # Machine code for function vopc_e32_to_cndmask_sdwa:
+# CHECK:       SU(1): {{.*}}V_CNDMASK_B32_sdwa
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(0): Data Latency=0 Reg=$vcc{{$}}
+---
+name: vopc_e32_to_cndmask_sdwa
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr3, $vgpr4
+    V_CMP_EQ_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc, implicit $exec
+    $vgpr2 = V_CNDMASK_B32_sdwa 0, $vgpr3, 0, $vgpr4, 0, 6, 0, 6, 6, implicit $exec, implicit $vcc
+    S_ENDPGM 0, implicit $vgpr2
+...
+
+# CHECK-LABEL: # Machine code for function carry_e32_chain:
+# CHECK:       SU(1): {{.*}}V_ADDC_U32_e32
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(0): Data Latency=0 Reg=$vcc{{$}}
+# CHECK:       SU(2): {{.*}}V_SUBB_U32_e32
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(1): Data Latency=0 Reg=$vcc{{$}}
+# CHECK:       SU(3): {{.*}}V_SUBBREV_U32_e32
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(2): Data Latency=0 Reg=$vcc{{$}}
+---
+name: carry_e32_chain
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    $vgpr2 = V_ADD_CO_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc, implicit $exec
+    $vgpr3 = V_ADDC_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+    $vgpr4 = V_SUBB_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+    $vgpr5 = V_SUBBREV_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5
+...
+
+# CHECK-LABEL: # Machine code for function carry_sdwa_to_addc_e32:
+# CHECK:       SU(1): {{.*}}V_ADDC_U32_e32
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(0): Data Latency=0 Reg=$vcc{{$}}
+---
+name: carry_sdwa_to_addc_e32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    $vgpr2 = V_ADD_CO_U32_sdwa 0, $vgpr0, 0, $vgpr1, 0, 6, 0, 6, 6, implicit-def $vcc, implicit $exec
+    $vgpr3 = V_ADDC_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2, implicit $vgpr3
+...
+
+# CHECK-LABEL: # Machine code for function carry_dpp_to_addc_e32:
+# CHECK:       SU(1): {{.*}}V_ADDC_U32_e32
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(0): Data Latency=0 Reg=$vcc{{$}}
+---
+name: carry_dpp_to_addc_e32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+    $vgpr2 = V_ADD_CO_U32_dpp $vgpr2, $vgpr0, $vgpr1, 1, 15, 15, 1, implicit-def $vcc, implicit $exec
+    $vgpr3 = V_ADDC_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2, implicit $vgpr3
+...
+
+# CHECK-LABEL: # Machine code for function carry_e64_chain:
+# CHECK:       SU(1): {{.*}}V_ADDC_U32_e64
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(0): Data Latency=0 Reg=$sgpr0_sgpr1{{$}}
+# CHECK:       SU(2): {{.*}}V_SUBB_U32_e64
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(1): Data Latency=0 Reg=$sgpr2_sgpr3{{$}}
+# CHECK:       SU(3): {{.*}}V_SUBBREV_U32_e64
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(2): Data Latency=0 Reg=$sgpr4_sgpr5{{$}}
+---
+name: carry_e64_chain
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    $vgpr2, $sgpr0_sgpr1 = V_ADD_CO_U32_e64 $vgpr0, $vgpr1, 0, implicit $exec
+    $vgpr3, $sgpr2_sgpr3 = V_ADDC_U32_e64 $vgpr0, $vgpr1, $sgpr0_sgpr1, 0, implicit $exec
+    $vgpr4, $sgpr4_sgpr5 = V_SUBB_U32_e64 $vgpr0, $vgpr1, $sgpr2_sgpr3, 0, implicit $exec
+    $vgpr5, $sgpr6_sgpr7 = V_SUBBREV_U32_e64 $vgpr0, $vgpr1, $sgpr4_sgpr5, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $sgpr6_sgpr7
+...
+
+# V_MAD_U64_U32 and V_DIV_SCALE are only fast forward producers up to GFX9.
+# CHECK-LABEL: # Machine code for function mad_u64_u32_to_addc_e64:
+# CHECK:       SU(1): {{.*}}V_ADDC_U32_e64
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# GFX9:           SU(0): Data Latency=0 Reg=$sgpr0_sgpr1{{$}}
+# GFX10:          SU(0): Data Latency={{[1-9][0-9]*}} Reg=$sgpr0_sgpr1{{$}}
+---
+name: mad_u64_u32_to_addc_e64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr4_vgpr5
+    $vgpr2_vgpr3, $sgpr0_sgpr1 = V_MAD_U64_U32_e64 $vgpr0, $vgpr1, $vgpr4_vgpr5, 0, implicit $exec
+    $vgpr6, $sgpr2_sgpr3 = V_ADDC_U32_e64 $vgpr0, $vgpr1, $sgpr0_sgpr1, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2_vgpr3, implicit $vgpr6, implicit $sgpr2_sgpr3
+...
+
+# CHECK-LABEL: # Machine code for function div_scale_to_cndmask_e64:
+# CHECK:       SU(1): {{.*}}V_CNDMASK_B32_e64
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# GFX9:           SU(0): Data Latency=0 Reg=$sgpr0_sgpr1{{$}}
+# GFX10:          SU(0): Data Latency={{[1-9][0-9]*}} Reg=$sgpr0_sgpr1{{$}}
+---
+name: div_scale_to_cndmask_e64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr4, $vgpr5
+    $vgpr2, $sgpr0_sgpr1 = V_DIV_SCALE_F32_e64 0, $vgpr0, 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+    $vgpr3 = V_CNDMASK_B32_e64 0, $vgpr4, 0, $vgpr5, $sgpr0_sgpr1, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2, implicit $vgpr3
+...
+
+# A VALU writing an SGPR through vdst is not a fast forward producer.
+# CHECK-LABEL: # Machine code for function readfirstlane_not_producer:
+# CHECK:       SU(1): {{.*}}V_CNDMASK_B32_e64
+# CHECK:         Predecessors:
+# CHECK-NOT:   {{^}}SU(
+# CHECK:          SU(0): Data Latency={{[1-9][0-9]*}} Reg=$sgpr0{{$}}
+---
+name: readfirstlane_not_producer
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr3, $vgpr4, $sgpr1
+    $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
+    $vgpr2 = V_CNDMASK_B32_e64 0, $vgpr3, 0, $vgpr4, $sgpr0_sgpr1, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2
+...
