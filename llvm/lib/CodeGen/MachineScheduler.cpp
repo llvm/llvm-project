@@ -1087,7 +1087,7 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
 LLVM_DUMP_METHOD void ReadyQueue::dump() const {
   dbgs() << "Queue " << Name << ": ";
   for (const SUnit *SU : Queue)
-    dbgs() << SU->NodeNum << " ";
+    dbgs() << *SU << " ";
   dbgs() << "\n";
 }
 #endif
@@ -1438,8 +1438,8 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
       dbgs() << "Missing SUnit\n";
       continue;
     }
-    std::string NodeName("SU(");
-    NodeName += std::to_string(SU->NodeNum) + ")";
+    std::string NodeName;
+    raw_string_ostream(NodeName) << *SU;
     dbgs() << llvm::left_justify(NodeName, HeaderColWidth);
     unsigned C = FirstCycle;
     for (; C <= LastCycle; ++C) {
@@ -1520,8 +1520,8 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
       dbgs() << "Missing SUnit\n";
       continue;
     }
-    std::string NodeName("SU(");
-    NodeName += std::to_string(SU->NodeNum) + ")";
+    std::string NodeName;
+    raw_string_ostream(NodeName) << *SU;
     dbgs() << llvm::left_justify(NodeName, HeaderColWidth);
     int C = FirstCycle;
     for (; C >= LastCycle; --C) {
@@ -2334,8 +2334,8 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
       for (const SDep &Succ : SUa->Succs) {
         if (Succ.getSUnit() == SUb)
           continue;
-        LLVM_DEBUG(dbgs() << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum
-                          << ")\n");
+        LLVM_DEBUG(dbgs() << "  Copy Succ ";
+                   DAG->dumpNodeName(*Succ.getSUnit()); dbgs() << "\n");
         DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
       }
     } else {
@@ -4463,8 +4463,10 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
       if (TopClusterID != InvalidClusterId) {
         ClusterInfo *TopCluster = DAG->getCluster(TopClusterID);
         dbgs() << "  Top Cluster: ";
-        for (auto *N : *TopCluster)
-          dbgs() << N->NodeNum << '\t';
+        for (auto *N : *TopCluster) {
+          DAG->dumpNodeName(*N);
+          dbgs() << '\t';
+        }
         dbgs() << '\n';
       }
     });
@@ -4478,8 +4480,10 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
       if (BotClusterID != InvalidClusterId) {
         ClusterInfo *BotCluster = DAG->getCluster(BotClusterID);
         dbgs() << "  Bot Cluster: ";
-        for (auto *N : *BotCluster)
-          dbgs() << N->NodeNum << '\t';
+        for (auto *N : *BotCluster) {
+          DAG->dumpNodeName(*N);
+          dbgs() << '\t';
+        }
         dbgs() << '\n';
       }
     });
@@ -5054,7 +5058,7 @@ struct llvm::DOTGraphTraits<ScheduleDAGMI *> : public DefaultDOTGraphTraits {
     const ScheduleDAGMI *DAG = static_cast<const ScheduleDAGMI*>(G);
     const SchedDFSResult *DFS = DAG->hasVRegLiveness() ?
       static_cast<const ScheduleDAGMILive*>(G)->getDFSResult() : nullptr;
-    SS << "SU:" << SU->NodeNum;
+    SS << *SU;
     if (DFS)
       SS << " I:" << DFS->getNumInstrs(SU);
     return Str;

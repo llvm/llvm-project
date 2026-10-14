@@ -31,6 +31,7 @@
 #include "OpenMP/Mapping.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include "GlobalHandler.h"
@@ -86,14 +87,18 @@ struct KernelLaunchInfoTy {
   }
 };
 
+struct PluginManager;
+
 struct DeviceTy {
   int32_t DeviceID;
   GenericPluginTy *RTL;
   int32_t RTLDeviceID;
   ol_device_handle_t DeviceHandle;
+  PluginManager *PM;
+  ol_context_handle_t Context = nullptr;
 
   DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
-           ol_device_handle_t DeviceHandle);
+           ol_device_handle_t DeviceHandle, PluginManager *PM);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
@@ -102,6 +107,9 @@ struct DeviceTy {
 
   /// Try to initialize the device and return any failure.
   llvm::Error init();
+
+  /// Deinitialize the OpenMP device.
+  llvm::Error deinit();
 
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
@@ -124,6 +132,14 @@ struct DeviceTy {
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails. p Kind dictates what
   /// allocator should be used (host, shared, device).
   int32_t deleteData(void *TgtPtrBegin, int32_t Kind = TARGET_ALLOC_DEFAULT);
+
+  /// Allocate \p Size bytes of \p Type memory in the device's context, which,
+  /// unlike allocData, caches the allocation for reuse. \p Type must be
+  /// OL_ALLOC_TYPE_DEVICE or OL_ALLOC_TYPE_MANAGED. Free it with freeCtxMem.
+  llvm::Expected<void *> allocCtxMem(int64_t Size, ol_alloc_type_t Type);
+
+  /// Free memory allocated with allocCtxMem.
+  llvm::Error freeCtxMem(void *Ptr);
 
   // Data transfer. When AsyncInfo is nullptr, the transfer will be
   // synchronous.
@@ -220,6 +236,9 @@ struct DeviceTy {
   /// Indicate that there are pending images for this device or not.
   void setHasPendingImages(bool V) { HasPendingImages = V; }
 
+  /// Return the unique identifier of the device.
+  llvm::StringRef getUid() const { return Uid; }
+
   /// Get information from the device.
   template <typename T> T getInfo(DeviceInfo Info) const {
     T Value{};
@@ -244,6 +263,9 @@ struct DeviceTy {
   }
 
 private:
+  /// Unique identifier of the device.
+  llvm::SmallString<32> Uid;
+
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
       llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;
