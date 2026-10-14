@@ -7909,11 +7909,9 @@ void NVPTXTargetLowering::ReplaceNodeResults(
 }
 
 /// Returns how NVPTX should expand a scalar atomicrmw.
-static TargetLoweringBase::AtomicExpansionKind
-getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
-                            unsigned AddressSpace, const Function &F,
-                            bool IgnoreDenormalMode,
-                            const NVPTXSubtarget &STI) {
+static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
+    AtomicRMWInst::BinOp Op, Type *Ty, unsigned AddressSpace, const Function &F,
+    bool IgnoreDenormalMode, const NVPTXSubtarget &STI) {
   using AtomicExpansionKind = TargetLoweringBase::AtomicExpansionKind;
   assert(!Ty->isVectorTy() && "Expected a scalar atomicrmw type");
 
