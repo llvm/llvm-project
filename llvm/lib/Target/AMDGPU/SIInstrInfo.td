@@ -270,7 +270,7 @@ class SDGlobalAtomicNoRtn<string opcode, ValueType ty> : SDNode <opcode,
 >;
 
 def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
-  SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>]>
+  SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>
 >;
 
 def SIpc_add_rel_offset64 : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET64",

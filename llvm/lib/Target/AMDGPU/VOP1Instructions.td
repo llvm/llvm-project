@@ -1254,10 +1254,10 @@ let OtherPredicates = [HasOCPFP8ConversionInsts] in {
 let True16Predicate = UseRealTrue16Insts in {
   def : GCNPat<(i16 (cvt_to_fp8 (f16 VGPR_16:$src))),
     (V_CVT_PK_FP8_F16_t16_e64 0,
-      (REG_SEQUENCE VGPR_32, $src, lo16, (f16 (IMPLICIT_DEF)), hi16), 0)>;
+      (lo16_to_vgpr32 $src), 0)>;
   def : GCNPat<(i16 (cvt_to_bf8 (f16 VGPR_16:$src))),
     (V_CVT_PK_BF8_F16_t16_e64 0,
-      (REG_SEQUENCE VGPR_32, $src, lo16, (f16 (IMPLICIT_DEF)), hi16), 0)>;
+      (lo16_to_vgpr32 $src), 0)>;
 }
 let True16Predicate = UseFakeTrue16Insts in {
   def : GCNPat<(i16 (cvt_to_fp8 f16:$src)),
@@ -1804,7 +1804,7 @@ def : GCNPat<
 
 def : GCNPat<
   (i32 (DivergentUnaryFrag<anyext> i16:$src)),
-  (REG_SEQUENCE VGPR_32, $src, lo16, (i16 (IMPLICIT_DEF)), hi16)
+  (lo16_to_vgpr32 $src)
 >;
 
 def : GCNPat<
