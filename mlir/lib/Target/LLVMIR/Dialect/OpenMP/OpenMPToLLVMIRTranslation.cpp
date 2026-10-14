@@ -5089,7 +5089,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     //    end-of-construct synchronization.
     bool needsBarrier = isInScanRegion ? inputScanLoop : loopNeedsBarrier;
     // Nested regions (e.g. an inner parallel before the scan loop) can move the
-    // instruction referenced by allocaIP, so recompute it from the alloca block.
+    // instruction referenced by allocaIP, so recompute it from the alloca
+    // block.
     allocaIP = allocaBlock->getFirstInsertionPt();
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
         ompBuilder->applyWorkshareLoop(
