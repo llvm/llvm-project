@@ -1,0 +1,41 @@
+import("//llvm/utils/gn/build/write_cmake_config.gni")
+import("//llvm/version.gni")
+
+# Python tool. Copies its scripts into the build dir, like scan-build.
+group("clang-ssaf-driver") {
+  deps = [
+    ":bin",
+    ":lib",
+    ":version",
+
+    # The driver runs the orchestrator installed beside it.
+    "//clang/tools/clang-ssaf-orchestrator-make",
+  ]
+}
+
+copy("bin") {
+  sources = [ "bin/clang-ssaf-driver" ]
+  outputs = [ "$root_build_dir/bin/{{source_file_part}}" ]
+}
+
+copy("lib") {
+  sources = [
+    "lib/clang_ssaf_driver/__init__.py",
+    "lib/clang_ssaf_driver/apply.py",
+    "lib/clang_ssaf_driver/driver.py",
+    "lib/clang_ssaf_driver/logging_diagnostics.py",
+    "lib/clang_ssaf_driver/make_orchestrator.py",
+    "lib/clang_ssaf_driver/options.py",
+    "lib/clang_ssaf_driver/patch.py",
+    "lib/clang_ssaf_driver/report.py",
+    "lib/clang_ssaf_driver/source_edits.py",
+    "lib/clang_ssaf_driver/transformations.py",
+  ]
+  outputs = [ "$root_build_dir/lib/clang_ssaf_driver/{{source_file_part}}" ]
+}
+
+write_cmake_config("version") {
+  input = "lib/clang_ssaf_driver/version.py.in"
+  output = "$root_build_dir/lib/clang_ssaf_driver/version.py"
+  values = [ "CLANG_VERSION=$llvm_version" ]
+}
