@@ -2304,9 +2304,18 @@ mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
   }
 
   if (ops.fullType->isConstantMatrixType()) {
-    assert(!cir::MissingFeatures::matrixType());
-    cgf.cgm.errorNYI("ScalarExprEmitter::emitDiv: matrix types");
-    return {};
+    assert(mlir::isa<cir::MatrixType>(ops.lhs.getType()) &&
+           "first operand must be a matrix");
+    assert(cir::isAnyIntegerOrFloatingPointType(ops.rhs.getType()) &&
+           "second operand must be an arithmetic type");
+
+    auto [lhs, rhs] =
+        builder.splatMatrixOpOperandsIfNecessary(loc, ops.lhs, ops.rhs);
+
+    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, ops.fpFeatures);
+    if (cir::isFPOrVectorOrMatrixOfFPType(lhs.getType()))
+      return builder.createFDiv(loc, lhs, rhs);
+    return builder.createDiv(loc, lhs, rhs);
   }
 
   if (ops.isFixedPointOp())

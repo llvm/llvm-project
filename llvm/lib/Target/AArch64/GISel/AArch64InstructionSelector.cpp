@@ -1765,45 +1765,27 @@ bool AArch64InstructionSelector::selectCompareBranch(
 
 /// Returns the element immediate value of a vector shift operand if found.
 /// This needs to detect a splat-like operation, e.g. a G_BUILD_VECTOR.
-static std::optional<int64_t> getVectorShiftImm(Register Reg,
-                                                MachineRegisterInfo &MRI) {
+static std::optional<APInt> getVectorShiftImm(Register Reg,
+                                              MachineRegisterInfo &MRI) {
   assert(MRI.getType(Reg).isVector() && "Expected a *vector* shift operand");
   MachineInstr *OpMI = MRI.getVRegDef(Reg);
-  return getAArch64VectorSplatScalar(*OpMI, MRI);
+  std::optional<Register> Splat = getVectorSplat(*OpMI, MRI);
+  if (!Splat)
+    return std::nullopt;
+  return getIConstantVRegVal(*Splat, MRI);
 }
 
 /// Matches and returns the shift immediate value for a SHL instruction given
 /// a shift operand.
-static std::optional<int64_t> getVectorSHLImm(LLT SrcTy, Register Reg,
-                                              MachineRegisterInfo &MRI) {
-  std::optional<int64_t> ShiftImm = getVectorShiftImm(Reg, MRI);
+static std::optional<uint64_t> getVectorSHLImm(LLT SrcTy, Register Reg,
+                                               MachineRegisterInfo &MRI) {
+  std::optional<APInt> ShiftImm = getVectorShiftImm(Reg, MRI);
   if (!ShiftImm)
     return std::nullopt;
   // Check the immediate is in range for a SHL.
-  int64_t Imm = *ShiftImm;
-  if (Imm < 0)
+  uint64_t Imm = ShiftImm->getZExtValue();
+  if (Imm >= SrcTy.getElementType().getSizeInBits())
     return std::nullopt;
-  switch (SrcTy.getElementType().getSizeInBits()) {
-  default:
-    LLVM_DEBUG(dbgs() << "Unhandled element type for vector shift");
-    return std::nullopt;
-  case 8:
-    if (Imm > 7)
-      return std::nullopt;
-    break;
-  case 16:
-    if (Imm > 15)
-      return std::nullopt;
-    break;
-  case 32:
-    if (Imm > 31)
-      return std::nullopt;
-    break;
-  case 64:
-    if (Imm > 63)
-      return std::nullopt;
-    break;
-  }
   return Imm;
 }
 
@@ -1820,7 +1802,7 @@ bool AArch64InstructionSelector::selectVectorSHL(MachineInstr &I,
 
   // Check if we have a vector of constants on RHS that we can select as the
   // immediate form.
-  std::optional<int64_t> ImmVal = getVectorSHLImm(Ty, Src2Reg, MRI);
+  std::optional<uint64_t> ImmVal = getVectorSHLImm(Ty, Src2Reg, MRI);
 
   unsigned Opc = 0;
   if (Ty == LLT::fixed_vector(2, 64)) {
@@ -2184,7 +2166,7 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
         .addReg(FPRDst);
     return true;
   }
-  case AArch64::G_DUP: {
+  case TargetOpcode::G_SPLAT_VECTOR: {
     // Convert the type from p0 to s64 to help selection.
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
     if (!DstTy.isPointerVector())
@@ -2392,7 +2374,11 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   switch (I.getOpcode()) {
-  case AArch64::G_DUP: {
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    Register Dst = I.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(Dst);
+    if (DstTy.isScalableVector())
+      return false;
     // Before selecting a DUP instruction, check if it is better selected as a
     // MOV or load from a constant pool.
     Register Src = I.getOperand(1).getReg();
@@ -2401,7 +2387,6 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     if (!ValAndVReg)
       return false;
     LLVMContext &Ctx = MF.getFunction().getContext();
-    Register Dst = I.getOperand(0).getReg();
     auto *CV = ConstantDataVector::getSplat(
         MRI.getType(Dst).getNumElements(),
         ConstantInt::get(
@@ -3560,29 +3545,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       constrainSelectedInstRegOperands(*MovMI, TII, TRI, RBI);
       return true;
     }
-  }
-  case AArch64::G_DUP: {
-    // When the scalar of G_DUP is an s8/s16 gpr, they can't be selected by
-    // imported patterns. Do it manually here. Avoiding generating s16 gpr is
-    // difficult because at RBS we may end up pessimizing the fpr case if we
-    // decided to add an anyextend to fix this. Manual selection is the most
-    // robust solution for now.
-    if (RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI)->getID() !=
-        AArch64::GPRRegBankID)
-      return false; // We expect the fpr regbank case to be imported.
-    LLT VecTy = MRI.getType(I.getOperand(0).getReg());
-    if (VecTy == LLT::fixed_vector(8, 8))
-      I.setDesc(TII.get(AArch64::DUPv8i8gpr));
-    else if (VecTy == LLT::fixed_vector(16, 8))
-      I.setDesc(TII.get(AArch64::DUPv16i8gpr));
-    else if (VecTy == LLT::fixed_vector(4, 16))
-      I.setDesc(TII.get(AArch64::DUPv4i16gpr));
-    else if (VecTy == LLT::fixed_vector(8, 16))
-      I.setDesc(TII.get(AArch64::DUPv8i16gpr));
-    else
-      return false;
-    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-    return true;
   }
   case TargetOpcode::G_BUILD_VECTOR:
     return selectBuildVector(I, MRI);
@@ -8276,7 +8238,7 @@ AArch64InstructionSelector::selectCVTFixedPointBase(const MachineOperand &Root,
   Register Reg = Root.getReg();
   MachineInstr *Dup = getDefIgnoringCopies(Reg, MRI);
 
-  if (Dup && Dup->getOpcode() == AArch64::G_DUP)
+  if (Dup && Dup->getOpcode() == TargetOpcode::G_SPLAT_VECTOR)
     Reg = Dup->getOperand(1).getReg();
 
   std::optional<ValueAndVReg> CstVal =
