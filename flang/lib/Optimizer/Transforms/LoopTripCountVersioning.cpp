@@ -21,11 +21,13 @@
 /// `a(1:m, :) = 0` with `real :: a(4, n)`, the inner loop is versioned on
 /// `m == 4`. Loops are skipped when N times the body size exceeds
 /// max-unrolled-ops (LLVM's -O3 full-unroll budget), since the fast arm would
-/// not unroll. This runs on FIR, the only level where both the loop and the
-/// array's declared type exist.
+/// not unroll. Loops that run on a GPU are skipped: the guard could split
+/// threads across two copies of a barrier. This runs on FIR, the only level
+/// where both the loop and the array's declared type exist.
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -240,6 +242,18 @@ static void versionLoop(fir::FirOpBuilder &builder, fir::DoLoopOp loop,
     fir::ResultOp::create(builder, loc, loop.getResults());
 }
 
+/// Device code may contain convergent operations which must not be duplicated
+/// under a condition that can differ between threads. attributes(host,device)
+/// procedures are included: their device copy is split off after this pass
+/// runs, so there is only one func.func here and it would be versioned for
+/// both. omp.target is not covered by the CUF helpers so we add it here.
+static bool runsOnDevice(fir::DoLoopOp loop) {
+  auto func = loop->getParentOfType<mlir::func::FuncOp>();
+  return cuf::isExecutingOnDevice(loop) ||
+         (func && cuf::isDeviceProcedure(func)) ||
+         loop->getParentOfType<mlir::omp::TargetOp>();
+}
+
 /// Innermost means no nested loop of any kind. Loops containing OpenMP or
 /// OpenACC operations are also excluded.
 static bool isVersionableInnermostLoop(fir::DoLoopOp loop) {
@@ -267,7 +281,7 @@ void LoopTripCountVersioningPass::runOnOperation() {
   // independent.
   llvm::SmallVector<SectionExtentCandidate> candidates;
   func.walk([&](fir::DoLoopOp loop) {
-    if (!isVersionableInnermostLoop(loop))
+    if (runsOnDevice(loop) || !isVersionableInnermostLoop(loop))
       return;
     ++NumLoopsExamined;
     std::optional<int64_t> extent = getSectionExtent(loop, maxSectionExtent);

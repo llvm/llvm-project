@@ -546,6 +546,93 @@ func.func @contains_omp(%arg0: !fir.ref<!fir.array<4xf64>>, %arg1: !fir.ref<i32>
 // CHECK:         omp.parallel
 // CHECK:         return
 
+// Loops that run on a GPU are not versioned. The host loop below has the same
+// body as the device cases and is versioned, which shows that the device cases
+// are skipped only because of where they run.
+func.func @host_control(%a: !fir.ref<!fir.array<4xi32>>, %n: index) {
+  %c1 = arith.constant 1 : index
+  %c0_i32 = arith.constant 0 : i32
+  fir.do_loop %i = %c1 to %n step %c1 {
+    %p = fir.array_coor %a %i : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+    fir.store %c0_i32 to %p : !fir.ref<i32>
+  }
+  return
+}
+// CHECK-LABEL: func.func @host_control(
+// CHECK:         fir.if
+// CHECK:         return
+
+// Versioning would turn the one barrier into two, and threads whose %n differ
+// would reach different ones.
+func.func @device_proc(%n: index) attributes {cuf.proc_attr = #cuf.cuda_proc<device>} {
+  %a = fir.alloca !fir.array<4xi32>
+  %c1 = arith.constant 1 : index
+  %c0_i32 = arith.constant 0 : i32
+  fir.do_loop %i = %c1 to %n step %c1 {
+    %first = arith.cmpi eq, %i, %c1 : index
+    fir.if %first { nvvm.barrier }
+    %p = fir.array_coor %a %i : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+    fir.store %c0_i32 to %p : !fir.ref<i32>
+  }
+  return
+}
+// CHECK-LABEL: func.func @device_proc(
+// CHECK-NOT:     arith.constant 4
+// CHECK:         nvvm.barrier
+// CHECK-NOT:     nvvm.barrier
+// CHECK:         return
+
+// attributes(host,device) compiles for both CPU and GPU, so it is not versioned.
+func.func @host_device_proc(%a: !fir.ref<!fir.array<4xi32>>, %n: index) attributes {cuf.proc_attr = #cuf.cuda_proc<host_device>} {
+  %c1 = arith.constant 1 : index
+  %c0_i32 = arith.constant 0 : i32
+  fir.do_loop %i = %c1 to %n step %c1 {
+    %p = fir.array_coor %a %i : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+    fir.store %c0_i32 to %p : !fir.ref<i32>
+  }
+  return
+}
+// CHECK-LABEL: func.func @host_device_proc(
+// CHECK-NOT:     fir.if
+// CHECK:         return
+
+func.func @cuf_kernel(%a: !fir.ref<!fir.array<4xi32>>, %n: index) {
+  %c1 = arith.constant 1 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c0_i32 = arith.constant 0 : i32
+  cuf.kernel<<<%c1_i32, %c1_i32>>> (%j : index) = (%c1 : index) to (%c1 : index) step (%c1 : index) {
+    fir.do_loop %i = %c1 to %n step %c1 {
+      %p = fir.array_coor %a %i : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+      fir.store %c0_i32 to %p : !fir.ref<i32>
+    }
+    "fir.end"() : () -> ()
+  }
+  return
+}
+// CHECK-LABEL: func.func @cuf_kernel(
+// CHECK-NOT:     fir.if
+// CHECK:         return
+
+func.func @omp_target(%a: !fir.ref<!fir.array<4xi32>>, %n: !fir.ref<i32>) {
+  %0 = omp.map.info var_ptr(%a : !fir.ref<!fir.array<4xi32>>, !fir.array<4xi32>) map_clauses(tofrom) capture(ByRef) name("a") -> !fir.ref<!fir.array<4xi32>>
+  %1 = omp.map.info var_ptr(%n : !fir.ref<i32>, i32) map_clauses(to) capture(ByRef) name("n") -> !fir.ref<i32>
+  omp.target kernel_type(generic) map_entries(%0 -> %arg0, %1 -> %arg1 : !fir.ref<!fir.array<4xi32>>, !fir.ref<i32>) {
+    %c1 = arith.constant 1 : index
+    %c0_i32 = arith.constant 0 : i32
+    %2 = fir.load %arg1 : !fir.ref<i32>
+    %3 = fir.convert %2 : (i32) -> index
+    fir.do_loop %i = %c1 to %3 step %c1 {
+      %p = fir.array_coor %arg0 %i : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+      fir.store %c0_i32 to %p : !fir.ref<i32>
+    }
+    omp.terminator
+  }
+  return
+}
+// CHECK-LABEL: func.func @omp_target(
+// CHECK-NOT:     fir.if
+// CHECK:         return
+
 // A loop containing a loop that is not a fir.do_loop is not innermost and is
 // not versioned.
 func.func @contains_iterate_while(%arg0: !fir.ref<!fir.array<4xf64>>, %arg1: !fir.ref<i32>, %arg2: i1) {
