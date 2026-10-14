@@ -70,6 +70,22 @@ void populateMergeConsecutiveInsertExtractSlicePatterns(
 /// tiling interface.
 void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
 
+/// Appends patterns to bubble up `tensor.extract_slice` through any operation
+/// that implements the `TilingInterface`. This pattern handles multiple
+/// non-overlapping extract_slice consumers and uses
+/// `TilingInterface::generateResultTileValue` to create tiled implementations.
+///
+/// The optional `controlFn` can be used to filter which slices should be
+/// transformed. It is called for each extract_slice with the producer op and
+/// the slice op. Return success() to allow transformation, failure() to skip.
+///
+/// This is more general than the Linalg-specific bubble up pattern as it
+/// works with any TilingInterface operation, not just Linalg ops.
+void populateBubbleUpExtractSliceThroughTilingInterfacePatterns(
+    RewritePatternSet &patterns,
+    function_ref<LogicalResult(TilingInterface, tensor::ExtractSliceOp)>
+        controlFn = nullptr);
+
 /// Populates `patterns` with patterns that drop redundant tensor.insert_slice
 /// rank expansions.
 void populateDropRedundantInsertSliceRankExpansionPatterns(
