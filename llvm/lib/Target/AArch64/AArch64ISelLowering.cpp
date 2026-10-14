@@ -22134,7 +22134,21 @@ static SDValue performReinterpretCastCombine(SDNode *N) {
 
 static SDValue performSVEAndCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
+  assert(N->getOpcode() == ISD::AND && "Expected AND instruction");
   SelectionDAG &DAG = DCI.DAG;
+
+  // Fold AND of a predicated NOT into BIC when NOT's inactive lanes do not
+  // matter, leaving standalone NOTs available for predicated selection.
+  for (unsigned I = 0; I != 2; ++I) {
+    SDValue Not = N->getOperand(I);
+    if (getIntrinsicID(Not.getNode()) != Intrinsic::aarch64_sve_not)
+      continue;
+    if (Not.getOperand(1).isUndef() ||
+        isAllActivePredicate(DAG, Not.getOperand(2)))
+      return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
+                         N->getOperand(1 - I), Not.getOperand(3));
+  }
+
   SDValue Src = N->getOperand(0);
   unsigned Opc = Src->getOpcode();
 
@@ -25442,6 +25456,26 @@ static SDValue lowerPredCounterWhile(Intrinsic::ID IID, SDNode *N,
                      DAG.getTargetConstant(ElementSizeInBits, DL, MVT::i64));
 }
 
+static SDValue performSVEAndNotIntrinsicCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue Pg = N->getOperand(1);
+
+  // Fold matching predicates before lowering AND_U discards its predicate.
+  // NOT's inactive lanes cannot affect AND_U's active lanes.
+  for (unsigned I = 0; I != 2; ++I) {
+    unsigned NotOperandIdx = 2 + I;
+    unsigned OtherOperandIdx = 3 - I;
+    SDValue Not = N->getOperand(NotOperandIdx);
+    if (getIntrinsicID(Not.getNode()) != Intrinsic::aarch64_sve_not ||
+        Not.getOperand(2) != Pg)
+      continue;
+
+    return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
+                       N->getOperand(OtherOperandIdx), Not.getOperand(3));
+  }
+  return DAG.getNode(ISD::AND, SDLoc(N), N->getValueType(0), N->getOperand(2),
+                     N->getOperand(3));
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -25661,8 +25695,7 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_subr:
     return convertMergedOpToPredOp(N, ISD::SUB, DAG, true, true);
   case Intrinsic::aarch64_sve_and_u:
-    return DAG.getNode(ISD::AND, SDLoc(N), N->getValueType(0), N->getOperand(2),
-                       N->getOperand(3));
+    return performSVEAndNotIntrinsicCombine(N, DAG);
   case Intrinsic::aarch64_sve_bic_u:
     return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
                        N->getOperand(2), N->getOperand(3));
