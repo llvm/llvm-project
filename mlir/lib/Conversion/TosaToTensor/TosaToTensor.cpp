@@ -354,6 +354,13 @@ public:
       paddingVals.push_back(static_cast<int64_t>(idx.getInt()));
     }
 
+    // A padding of -1 means that the amount is not known, so it cannot be
+    // lowered to a `tensor.pad`, which requires non-negative padding.
+    if (llvm::is_contained(paddingVals, -1)) {
+      return rewriter.notifyMatchFailure(
+          padOp, "padding must not contain -1 (unknown amount)");
+    }
+
     ShapedType inputTy = cast<ShapedType>(input.getType());
     int64_t rank = inputTy.getRank();
 
