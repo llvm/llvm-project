@@ -851,7 +851,7 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
   }
 
   // For the next N - 1 pages, just probe.
-  while (CurrentOffset + StackProbeSize < Offset) {
+  while (CurrentOffset + StackProbeSize <= Offset) {
     BuildStackAdjustment(MBB, MBBI, DL, -StackProbeSize, /*InEpilogue=*/false)
         .setMIFlag(MachineInstr::FrameSetup);
 
@@ -870,7 +870,11 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
   }
 
   const uint64_t ChunkSize = Offset - CurrentOffset;
-  if (ChunkSize == SlotSize) {
+  // We may not require a tail allocation. For example, this can happen
+  // if Offset is a multiple of StackProbeSize, and AlignOffset = 0.
+  if (ChunkSize == 0)
+    return;
+  else if (ChunkSize == SlotSize) {
     // Use push for slot sized adjustments as a size optimization,
     // like emitSPUpdate does when not probing.
     unsigned Reg = Is64Bit ? X86::RAX : X86::EAX;
@@ -879,21 +883,10 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
         .addReg(Reg, RegState::Undef)
         .setMIFlag(MachineInstr::FrameSetup);
   } else {
-    BuildStackAdjustment(MBB, MBBI, DL, -ChunkSize, /*InEpilogue=*/false)
-        .setMIFlag(MachineInstr::FrameSetup);
-    // The loop above can leave CurrentOffset + StackProbeSize == Offset.
-    // Example: If Offset is a multiple of StackProbeSize, and AlignOffset = 0,
-    // then ChunkSize := Offset - CurrentOffset = StackProbeSize,
-    // which requires a probe.
-    // If ChunkSize < StackProbeSize, no probe needed.
     assert(!(ChunkSize > StackProbeSize) &&
            "Tail allocation greater than page size");
-    if (ChunkSize == StackProbeSize)
-      addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(MovMIOpc))
-                       .setMIFlag(MachineInstr::FrameSetup),
-                   StackPtr, false, 0)
-          .addImm(0)
-          .setMIFlag(MachineInstr::FrameSetup);
+    BuildStackAdjustment(MBB, MBBI, DL, -ChunkSize, /*InEpilogue=*/false)
+        .setMIFlag(MachineInstr::FrameSetup);
   }
   // No need to adjust Dwarf CFA offset here, the last position of the stack has
   // been defined
