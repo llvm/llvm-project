@@ -1575,6 +1575,8 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = DeleteFns;
   AC.DefaultInitializeLiveInternals = false;
+  // AAIsDead is not allowed, so nothing is ever assumed dead.
+  AC.UseLiveness = false;
   AC.IndirectCalleeSpecializationCallback =
       [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
          Function &Callee, unsigned NumAssumedCallees) {
