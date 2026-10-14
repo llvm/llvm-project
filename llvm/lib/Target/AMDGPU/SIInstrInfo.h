@@ -276,14 +276,7 @@ public:
   // constraints should use 64-bit pointers.
   const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
       InlineAsm::ConstraintCode C) const override {
-    switch (C) {
-    case InlineAsm::ConstraintCode::RF:
-    case InlineAsm::ConstraintCode::m:
-      // flat_load/flat_store require a 64-bit VGPR pair for the address.
-      return &AMDGPU::VReg_64RegClass;
-    default:
-      return &AMDGPU::VGPR_32RegClass;
-    }
+    return &AMDGPU::VGPR_32RegClass;
   }
 
   const GCNSubtarget &getSubtarget() const {

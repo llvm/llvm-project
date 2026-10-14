@@ -10749,14 +10749,8 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         assert((OpInfo.isIndirect ||
                 OpInfo.ConstraintType != TargetLowering::C_Memory) &&
                "Operand must be indirect to be a mem!");
-
         assert(InOperandVal.getValueType() ==
-                   TLI.getPointerTy(
-                       DAG.getDataLayout(),
-                       OpInfo.CallOperandVal
-                           ? cast<PointerType>(OpInfo.CallOperandVal->getType())
-                                 ->getAddressSpace()
-                           : 0) &&
+                   TLI.getPointerTy(DAG.getDataLayout()) &&
                "Memory operands expect pointer values");
 
         const InlineAsm::ConstraintCode ConstraintID =
