@@ -7912,6 +7912,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
 static TargetLoweringBase::AtomicExpansionKind
 getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
                             unsigned AddressSpace, const Function &F,
+                            bool IgnoreDenormalMode,
                             const NVPTXSubtarget &STI) {
   using AtomicExpansionKind = TargetLoweringBase::AtomicExpansionKind;
   assert(!Ty->isVectorTy() && "Expected a scalar atomicrmw type");
@@ -7936,15 +7937,13 @@ getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
     // !atomic.ignore.denormal.mode say that denormal handling is insignificant
     // here, so atom.add may be used even when its FTZ behavior disagrees with
     // the function's.
-    const bool IgnoreFTZMismatch =
-        AllowFTZAtomics ||
-        AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
+    const bool IgnoreFTZMismatch = AllowFTZAtomics || IgnoreDenormalMode;
 
     if (Ty->isFloatTy()) {
       const bool FTZ = F.getDenormalMode(APFloat::IEEEsingle()).Output ==
                        DenormalMode::PreserveSign;
       bool UseNative = IgnoreFTZMismatch;
-      switch (AI->getPointerAddressSpace()) {
+      switch (AddressSpace) {
       case llvm::ADDRESS_SPACE_GLOBAL:
         UseNative |= FTZ;
         break;
@@ -8050,6 +8049,8 @@ NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   const DataLayout &DL = AI->getDataLayout();
   AtomicRMWInst::BinOp Op = AI->getOperation();
+  const bool IgnoreDenormalMode =
+      AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
 
   // TODO: once we support native elementwise vector atoms,
   // return `AtomicExpansionKind::None` to preserve and lower them.
@@ -8082,7 +8083,8 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     // Expand so halving eventually bottoms out at the scalar base case. The
     // latter includes sub and fsub, which expand to add and fadd, respectively.
     AtomicExpansionKind LaneExpansionKind = getScalarAtomicRMWExpansion(
-        Op, Ty, AI->getPointerAddressSpace(), *AI->getFunction(), STI);
+        Op, Ty, AI->getPointerAddressSpace(), *AI->getFunction(),
+        IgnoreDenormalMode, STI);
     if (LaneExpansionKind == AtomicExpansionKind::None ||
         LaneExpansionKind == AtomicExpansionKind::Expand)
       return AtomicExpansionKind::Expand;
@@ -8101,7 +8103,8 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   if (Ty->isVectorTy())
     return AtomicExpansionKind::CmpXChg;
   return getScalarAtomicRMWExpansion(Op, Ty, AI->getPointerAddressSpace(),
-                                     *AI->getFunction(), STI);
+                                     *AI->getFunction(), IgnoreDenormalMode,
+                                     STI);
 }
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
