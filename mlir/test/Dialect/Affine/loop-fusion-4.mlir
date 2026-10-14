@@ -831,6 +831,28 @@ func.func @fusion_non_constant_bounds_1(%N: index, %M: memref<?xf32>, %cst: f32)
   return
 }
 
+// PRODUCER-CONSUMER-MAXIMAL-LABEL: func @maximal_fusion_dynamic_source_bound
+func.func @maximal_fusion_dynamic_source_bound(%N: index, %M: memref<100xf64>) {
+  %cst = arith.constant 0.000000e+00 : f64
+  affine.for %i = 0 to 10 {
+    affine.store %cst, %M[%i] : memref<100xf64>
+  }
+  affine.for %i = 0 to %N {
+    affine.store %cst, %M[%i] : memref<100xf64>
+  }
+  affine.for %i = 0 to 10 {
+    affine.load %M[%i] : memref<100xf64>
+  }
+  return
+}
+// PRODUCER-CONSUMER-MAXIMAL:      affine.for %{{.*}} = 0 to %{{.*}} {
+// PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.store
+// PRODUCER-CONSUMER-MAXIMAL-NEXT: }
+// PRODUCER-CONSUMER-MAXIMAL:      affine.for %{{.*}} = 0 to 10 {
+// PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.store
+// PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.load
+// PRODUCER-CONSUMER-MAXIMAL-NEXT: }
+
 // No fusion here as the cost models computing slice costs run out of 64-bit precision.
 
 // PRODUCER-CONSUMER-LABEL: func @high_trip_count
