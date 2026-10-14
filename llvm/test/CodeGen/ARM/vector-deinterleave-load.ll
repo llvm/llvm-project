@@ -5,11 +5,9 @@
 define void @arm_vector_deinterleave_idx_ld2(ptr %src) {
 ; CHECK-LABEL: arm_vector_deinterleave_idx_ld2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vld1.32 {d16, d17}, [r0:128]!
-; CHECK-NEXT:    vld1.64 {d18, d19}, [r0:128]
-; CHECK-NEXT:    vuzp.32 q8, q9
+; CHECK-NEXT:    vld2.32 {d16, d17, d18, d19}, [r0:256]
 ; CHECK-NEXT:    @ fake_use: $q8
-; CHECK-NEXT:    @ fake_use: $q9
+; CHECK-NEXT:    @ fake_use: $q9 $q8_q9
 ; CHECK-NEXT:    bx lr
 entry:
   %load = load <8 x float>, ptr %src
@@ -72,11 +70,9 @@ entry:
 define void @factor2_v4i32(ptr %src) {
 ; CHECK-LABEL: factor2_v4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vld1.32 {d16, d17}, [r0:128]!
-; CHECK-NEXT:    vld1.64 {d18, d19}, [r0:128]
-; CHECK-NEXT:    vuzp.32 q8, q9
+; CHECK-NEXT:    vld2.32 {d16, d17, d18, d19}, [r0:256]
 ; CHECK-NEXT:    @ fake_use: $q8
-; CHECK-NEXT:    @ fake_use: $q9
+; CHECK-NEXT:    @ fake_use: $q9 $q8_q9
 ; CHECK-NEXT:    bx lr
   %load = load <8 x i32>, ptr %src
   %deinterleave = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %load)
