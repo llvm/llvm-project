@@ -776,8 +776,8 @@ public:
     return (Val >= 0 && Val < 64);
   }
 
-  template <int Width> bool isSImm() const {
-    return bool(isSImmScaled<Width, 1>());
+  template <int Width> DiagnosticPredicate isSImm() const {
+    return isSImmScaled<Width, 1>();
   }
 
   template <int Bits, int Scale> DiagnosticPredicate isSImmScaled() const {
@@ -882,27 +882,30 @@ public:
     return false;
   }
 
-  template <int Scale> bool isUImm12Offset() const {
+  template <int Scale> DiagnosticPredicate isUImm12Offset() const {
     if (!isImm())
-      return false;
+      return DiagnosticPredicate::NoMatch;
 
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
-      return isSymbolicUImm12Offset(getImm());
+      return DiagnosticPredicate(isSymbolicUImm12Offset(getImm()));
 
     int64_t Val = MCE->getValue();
-    return (Val % Scale) == 0 && Val >= 0 && (Val / Scale) < 0x1000;
+    if ((Val % Scale) == 0 && Val >= 0 && (Val / Scale) < 0x1000)
+      return DiagnosticPredicate::Match;
+    return DiagnosticPredicate::NearMatch;
   }
 
-  template <int N, int M>
-  bool isImmInRange() const {
+  template <int N, int M> DiagnosticPredicate isImmInRange() const {
     if (!isImm())
-      return false;
+      return DiagnosticPredicate::NoMatch;
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
-      return false;
+      return DiagnosticPredicate::NoMatch;
     int64_t Val = MCE->getValue();
-    return (Val >= N && Val <= M);
+    if (Val >= N && Val <= M)
+      return DiagnosticPredicate::Match;
+    return DiagnosticPredicate::NearMatch;
   }
 
   bool isHinteUImm16() const {
@@ -7074,12 +7077,8 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())
-      return Error(IDLoc, "too few operands for instruction", SMRange(IDLoc, (*Operands.back()).getEndLoc()));
-    // CFLT has both register and immediate forms. The matcher may select an
-    // immediate-form failure for an invalid register operand.
-    if (Tok.starts_with("cflt") &&
-        static_cast<AArch64Operand &>(*Operands[ErrorInfo]).isScalarReg())
-      MatchResult = Match_InvalidOperand;
+      return Error(IDLoc, "too few operands for instruction",
+                   SMRange(IDLoc, (*Operands.back()).getEndLoc()));
     // Any time we get here, there's nothing fancy to do. Just get the
     // operand SMLoc and display the diagnostic.
     SMLoc ErrorLoc = ((AArch64Operand &)*Operands[ErrorInfo]).getStartLoc();
