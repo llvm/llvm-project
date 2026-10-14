@@ -1,0 +1,16 @@
+// A merged report merges again like the reports it was made from, so that an
+// archive's report can feed the report of the program it is linked into.
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: clang-ssaf-merge-transformation-report %S/Inputs/tu-a.sarif \
+// RUN:   %S/Inputs/tu-b.sarif -o %t/ab.sarif
+// RUN: clang-ssaf-merge-transformation-report %t/ab.sarif \
+// RUN:   %S/Inputs/tu-c.sarif -o %t/ab-c.sarif
+// RUN: clang-ssaf-merge-transformation-report %S/Inputs/tu-a.sarif \
+// RUN:   %S/Inputs/tu-b.sarif %S/Inputs/tu-c.sarif -o %t/abc.sarif
+// RUN: diff %t/ab-c.sarif %t/abc.sarif
+
+// Merging a report with itself adds nothing.
+// RUN: clang-ssaf-merge-transformation-report %t/ab.sarif %t/ab.sarif \
+// RUN:   -o %t/ab-ab.sarif
+// RUN: diff %t/ab.sarif %t/ab-ab.sarif
