@@ -310,12 +310,8 @@ bool RISCVTTIImpl::preferLoopExitWithEqualityComparison(
 
   // Relational comparisons against zero and some adjacent constants can
   // already lower to a single branch against x0.
-  ICmpInst::Predicate Pred = Cond.getPredicate();
+  const auto Pred = Cond.getPredicate();
   const auto *C = dyn_cast<ConstantInt>(Cond.getOperand(1));
-  if (!C) {
-    C = dyn_cast<ConstantInt>(Cond.getOperand(0));
-    Pred = ICmpInst::getSwappedPredicate(Pred);
-  }
   if (C && (C->isZero() ||
             (C->isMinusOne() &&
              (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE)) ||
