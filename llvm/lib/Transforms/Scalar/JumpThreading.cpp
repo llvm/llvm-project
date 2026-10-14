@@ -560,20 +560,19 @@ static std::optional<bool> isImpliedByEdgeBranch(BasicBlock *PredBB,
 /// Returns false if threading the edge PredBB->BB on an edge-implied compare is
 /// not profitable.
 static bool shouldThreadImpliedEdge(BasicBlock *PredBB, BasicBlock *BB) {
-  // Threading the edge duplicates BB; do not duplicate calls.
-  if (any_of(*BB, [](const Instruction &I) {
-        return isa<CallBase>(I) && !isAssumeLikeIntrinsic(&I);
-      }))
-    return false;
-  // Threading the edge duplicates BB's stores, which can split the overwrite
-  // of an earlier store across paths so DSE no longer removes it:
+  // Threading the edge duplicates BB; do not duplicate calls or stores.
+  // Duplicating a store can split the overwrite of an earlier store across
+  // paths so DSE no longer removes it:
   //
   //   Pre:    store/memset ptr %p    ; earlier store
   //           br %c, PredBB, Other
   //   PredBB: br ..., BB, ...
   //   BB:     store ptr %p           ; overwrites it on all paths: DSE
   //                                  ; removes the earlier store.
-  if (any_of(*BB, [](const Instruction &I) { return isa<StoreInst>(I); }))
+  if (any_of(*BB, [](const Instruction &I) {
+        return isa<StoreInst>(I) ||
+               (isa<CallBase>(I) && !isAssumeLikeIntrinsic(&I));
+      }))
     return false;
   // Don't prevent if-conversion by threading:
   //
@@ -813,10 +812,12 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
 
         // If it doesn't fold, the compare may still be known on this edge when
         // PredBB's branch condition implies it (see isImpliedByEdgeBranch).
-        if (!Res && isa<ICmpInst>(Cmp) && shouldThreadImpliedEdge(PredBB, BB))
-          if (std::optional<bool> Implied =
-                  isImpliedByEdgeBranch(PredBB, BB, Pred, LHS, RHS, DL))
+        if (!Res && isa<ICmpInst>(Cmp)) {
+          std::optional<bool> Implied =
+              isImpliedByEdgeBranch(PredBB, BB, Pred, LHS, RHS, DL);
+          if (Implied && shouldThreadImpliedEdge(PredBB, BB))
             Res = ConstantInt::getBool(CmpType, *Implied);
+        }
 
         if (!Res) {
           if (!isa<Constant>(RHS))
