@@ -65,17 +65,22 @@ static_assert(t2[15] == -2);
 
 using I = int __attribute__((vector_size(16)));
 
-// expected-error@+1 {{constexpr function never produces a constant expression}}
 constexpr unsigned test2() {
-  // cpp17-warning@+1 {{uninitialized variable in a constexpr function is a C++20 extension}}
+  // cpp17-warning@+2 {{uninitialized variable in a constexpr function is a C++20 extension}}
+  // expected-note@+1 {{declared here}}
   I v;
 
-  // expected-note@+2 {{subexpression not valid in a constant expression}}
-  // expected-note@+1 {{subexpression not valid in a constant expression}}
+  // expected-note@+1 {{read of uninitialized object is not allowed in a constant expression}}
   return __builtin_bit_cast(unsigned, v[0]);
 }
 
 // expected-error@+2 {{static assertion expression is not an integral constant expression}}
 // expected-note@+1 {{in call to 'test2()'}}
 static_assert(test2(), "");
+
+constexpr unsigned test3() {
+  I v = {1, 2, 3, 4};
+  return __builtin_bit_cast(unsigned, v[1]);
+}
+static_assert(test3() == 2, "");
 }

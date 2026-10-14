@@ -756,6 +756,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when `__builtin_object_size` or
   `__builtin_dynamic_object_size` is called with an out-of-range type argument
   during constant evaluation. (#GH225041)
+- Fixed wrong code generation for `__builtin_bit_cast` of a vector element,
+  matrix element, bit-field or global register variable, which read from the
+  start of the containing object instead of the element or field.
+  (#GH95673), (#GH219531), (#GH226388)
 
 #### Bug Fixes to Attribute Support
 

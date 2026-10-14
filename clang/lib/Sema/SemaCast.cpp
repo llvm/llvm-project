@@ -3404,6 +3404,15 @@ void CastOperation::CheckBuiltinBitCast() {
     return;
   }
 
+  if (SrcExpr.get()->isGLValue() &&
+      (SrcExpr.get()->getObjectKind() != OK_Ordinary ||
+       SrcExpr.get()->refersToGlobalRegisterVar())) {
+    SrcExpr = Self.DefaultLvalueConversion(SrcExpr.get());
+    if (SrcExpr.isInvalid())
+      return;
+    SrcType = SrcExpr.get()->getType();
+  }
+
   if (SrcExpr.get()->isPRValue())
     SrcExpr = Self.CreateMaterializeTemporaryExpr(SrcType, SrcExpr.get(),
                                                   /*IsLValueReference=*/false);

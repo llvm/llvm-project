@@ -491,6 +491,20 @@ static_assert(bit_cast<unsigned long long>(test_vector) == (LITTLE_END
 static_assert(round_trip<uint2>(0xCAFEBABE0C05FEFEULL), "");
 static_assert(round_trip<byte8>(0xCAFEBABE0C05FEFEULL), "");
 
+typedef unsigned uint2e __attribute__((ext_vector_type(2)));
+constexpr uint2e test_ext_vector = { 0x0C05FEFE, 0xCAFEBABE };
+
+// Elements are read by value, not from the start of the vector.
+static_assert(__builtin_bit_cast(unsigned, test_vector[1]) == 0xCAFEBABE, "");
+static_assert(__builtin_bit_cast(unsigned, test_ext_vector[1]) == 0xCAFEBABE, "");
+static_assert(__builtin_bit_cast(unsigned, test_ext_vector.y) == 0xCAFEBABE, "");
+
+struct BitField {
+  unsigned a : 4, b : 12;
+};
+constexpr BitField test_bit_field = { 0xF, 0x123 };
+static_assert(__builtin_bit_cast(unsigned, test_bit_field.b) == 0x123, "");
+
 typedef bool bool8 __attribute__((ext_vector_type(8)));
 typedef bool bool9 __attribute__((ext_vector_type(9)));
 typedef bool bool16 __attribute__((ext_vector_type(16)));
