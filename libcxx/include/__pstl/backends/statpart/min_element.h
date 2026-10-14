@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_STATPART_MIN_ELEMENT_H
-#define _LIBCPP___PSTL_STATPART_MIN_ELEMENT_H
+#ifndef _LIBCPP___PSTL_BACKENDS_STATPART_MIN_ELEMENT_H
+#define _LIBCPP___PSTL_BACKENDS_STATPART_MIN_ELEMENT_H
 
 #include <__algorithm/min_element.h>
 #include <__config>
@@ -82,4 +82,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_STATPART_MIN_ELEMENT_H
+#endif // _LIBCPP___PSTL_BACKENDS_STATPART_MIN_ELEMENT_H

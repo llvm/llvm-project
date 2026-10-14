@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_STATPART_H
-#define _LIBCPP___PSTL_STATPART_H
+#ifndef _LIBCPP___PSTL_BACKENDS_STATPART_H
+#define _LIBCPP___PSTL_BACKENDS_STATPART_H
 
 #include <__pstl/backends/statpart/basis.h>
 #include <__pstl/backends/statpart/find_end.h>
@@ -28,4 +28,4 @@
 #include <__pstl/backends/statpart/uninitialized_copy.h>
 #include <__pstl/backends/statpart/uninitialized_move.h>
 
-#endif // _LIBCPP___PSTL_STATPART_H
+#endif // _LIBCPP___PSTL_BACKENDS_STATPART_H
