@@ -11229,7 +11229,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
         break;
       }
 
-      if (!Update.isUsable()) {
+      if (!Update.isUsable() || !Final.isUsable()) {
         HasErrors = true;
         break;
       }
@@ -15472,7 +15472,8 @@ public:
 bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
                                      LoopSequenceAnalysis &SeqAnalysis,
                                      ASTContext &Context,
-                                     OpenMPDirectiveKind Kind) {
+                                     OpenMPDirectiveKind Kind,
+                                     bool IsGeneratedSequence) {
   VarsWithInheritedDSAType TmpDSA;
   // Helper Lambda to handle storing initialization and body statements for
   // both ForStmt and CXXForRangeStmt.
@@ -15529,7 +15530,8 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
       // to any specific generated loop; propagate to the enclosing directive.
       if (Stmt *InnerFinal = LoopTransform->getFinals())
         SeqAnalysis.InnerFinals.push_back(InnerFinal);
-      return analyzeLoopSequence(TransformedStmt, SeqAnalysis, Context, Kind);
+      return analyzeLoopSequence(TransformedStmt, SeqAnalysis, Context, Kind,
+                                 /*IsGeneratedSequence=*/true);
     }
     // Vast majority: (Tile, Unroll, Stripe, Reverse, Interchange, Fuse all)
     // Process the transformed loop statement
@@ -15570,6 +15572,22 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
   for (Stmt *Child : LoopSeqStmt->children()) {
     if (!Child)
       continue;
+    // A sequence-generating transformation (e.g. looprange fuse) emits each
+    // out-of-range loop transformation as `{ Loop; Finals }` so its loop
+    // variables are finalized right after the loop. Analyze the loop and carry
+    // its Finals along so the enclosing directive can place them.
+    if (IsGeneratedSequence) {
+      auto *CS = dyn_cast<CompoundStmt>(Child);
+      if (CS && CS->size() == 2 &&
+          LoopAnalysis::isRegularLoop(CS->body_front()) &&
+          !LoopAnalysis::isRegularLoop(CS->body_back())) {
+        if (!AnalyzeRegularLoop(CS->body_front()))
+          return false;
+        SeqAnalysis.Loops.back().TransformFinals = CS->body_back();
+        SeqAnalysis.LoopSeqSize++;
+        continue;
+      }
+    }
     // Skip over non-loop-sequence statements.
     if (!LoopSequenceAnalysis::isLoopSequenceDerivation(Child)) {
       Child = Child->IgnoreContainers();
@@ -15579,7 +15597,8 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
       // In the case of a nested loop sequence ignoring containers would not
       // be enough, a recurisve transversal of the loop sequence is required.
       if (isa<CompoundStmt>(Child)) {
-        if (!analyzeLoopSequence(Child, SeqAnalysis, Context, Kind))
+        if (!analyzeLoopSequence(Child, SeqAnalysis, Context, Kind,
+                                 IsGeneratedSequence))
           return false;
         // Already been treated, skip this children
         continue;
@@ -15715,8 +15734,8 @@ static Expr *makeFloorIVRef(Sema &SemaRef, ArrayRef<VarDecl *> FloorIndVars,
 /// Build loop variable finalization statement from HelperExprs.Finals.
 /// Returns a CompoundStmt containing all finalization statements, or nullptr
 /// if there are no finalization statements.
-/// Note: Loops with non-arithmetic loop variables (e.g., iterators) are skipped
-/// because finalization only applies to integer/floating-point counters.
+/// Note: Counters that are neither arithmetic nor pointers (class-type
+/// iterators) are skipped; see FIXME below.
 static Stmt *buildLoopFinalization(
     ASTContext &Context,
     ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers) {
@@ -18048,36 +18067,24 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
               FusedBody, InitStmt.get()->getBeginLoc(), SourceLocation(),
               IncrExpr.get()->getEndLoc());
 
-  // 8. Build finalization statements for fused loops.
-  // Collect HelperExprs from the fused loops.
-  SmallVector<OMPLoopBasedDirective::HelperExprs, 4> FusedLoopHelpers;
-  for (unsigned I = FirstVal - 1; I < LastVal; ++I) {
-    if (SeqAnalysis.Loops[I].isRegularLoop() &&
-        isa<ForStmt>(SeqAnalysis.Loops[I].TheForStmt)) {
-      FusedLoopHelpers.push_back(SeqAnalysis.Loops[I].HelperExprs);
-    }
-  }
-
-  // Build Finals for this fuse and combine with:
+  // 8. Build finalization statements for fused loops, combining:
   //   - Finals from inner sequence-generating transformations (looprange
   //     fuse, split) that produced our SeqAnalysis.Loops entries.
   //   - Finals from inner single-loop transformations (reverse, tile, ...)
   //     whose loops are in-range and thus consumed by this fuse.
+  //   - This fuse's own Finals for the fused loops.
   // Out-of-range loops carry their own Finals inline; see the FinalLoops
   // assembly below.
-  Stmt *OwnFinals = buildLoopFinalization(Context, FusedLoopHelpers);
-  SmallVector<Stmt *, 4> AllFinalsStmts;
-  for (Stmt *InnerFinal : SeqAnalysis.InnerFinals) {
-    assert(InnerFinal && "null Finals should never be pushed");
-    AllFinalsStmts.push_back(InnerFinal);
+  SmallVector<OMPLoopBasedDirective::HelperExprs, 4> FusedLoopHelpers;
+  auto AllFinalsStmts = llvm::to_vector<4>(SeqAnalysis.InnerFinals);
+  for (unsigned I : llvm::seq<unsigned>(FirstVal - 1, LastVal)) {
+    const LoopAnalysis &Loop = SeqAnalysis.Loops[I];
+    if (Loop.isRegularLoop() && isa<ForStmt>(Loop.TheForStmt))
+      FusedLoopHelpers.push_back(Loop.HelperExprs);
+    if (Loop.TransformFinals)
+      AllFinalsStmts.push_back(Loop.TransformFinals);
   }
-  for (unsigned I : llvm::seq<unsigned>(SeqAnalysis.LoopSeqSize)) {
-    if (LRC && (I < FirstVal - 1 || I >= FirstVal + CountVal - 1))
-      continue;
-    if (Stmt *F = SeqAnalysis.Loops[I].TransformFinals)
-      AllFinalsStmts.push_back(F);
-  }
-  if (OwnFinals)
+  if (Stmt *OwnFinals = buildLoopFinalization(Context, FusedLoopHelpers))
     AllFinalsStmts.push_back(OwnFinals);
   Stmt *CombinedFinals = nullptr;
   if (AllFinalsStmts.size() == 1)

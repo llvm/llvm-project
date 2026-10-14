@@ -287,6 +287,29 @@ void test_fuse_looprange_reverse(void) {
   // emitted inline right after the reversed loop (per OpenMP 6.0 spec).
 }
 
+void test_fuse_nested_reverse(void) {
+  // CHECK-LABEL: define {{.*}} @test_fuse_nested_reverse
+  int i, j, k, l;
+  #pragma omp fuse
+  {
+    #pragma omp fuse looprange(1, 2)
+    {
+      for (i = 0; i < 10; i++) ;
+      for (j = 0; j < 15; j++) ;
+      #pragma omp reverse
+      for (k = 0; k < 5; k++) ;
+    }
+    for (l = 0; l < 4; l++) ;
+  }
+  // CHECK: store i32 10, ptr %i
+  // CHECK: store i32 15, ptr %j
+  // CHECK: store i32 5, ptr %k
+  // CHECK: store i32 4, ptr %l
+  // The inner looprange fuse emits the reversed k-loop together with its
+  // finalization; the outer fuse must accept that as a single loop and still
+  // finalize k.
+}
+
 void test_for_tile(void) {
   // CHECK-LABEL: define {{.*}} @test_for_tile
   int i;
