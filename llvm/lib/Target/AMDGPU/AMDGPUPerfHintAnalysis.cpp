@@ -413,13 +413,8 @@ bool AMDGPUPerfHint::isLDSLoad(const Instruction *I) const {
 }
 
 bool AMDGPUPerfHint::isMatrixIntrinsic(const Instruction *I) {
-  if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
-    StringRef Name = Intrinsic::getBaseName(II->getIntrinsicID());
-    return Name.starts_with("llvm.amdgcn.wmma.") ||
-           Name.starts_with("llvm.amdgcn.mfma.") ||
-           Name.starts_with("llvm.amdgcn.swmmac.") ||
-           Name.starts_with("llvm.amdgcn.smfmac.");
-  }
+  if (const auto *II = dyn_cast<IntrinsicInst>(I))
+    return AMDGPU::isMatrixIntrinsic(II->getIntrinsicID());
   return false;
 }
 
