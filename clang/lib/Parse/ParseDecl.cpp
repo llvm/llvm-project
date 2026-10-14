@@ -5051,13 +5051,26 @@ void Parser::CompleteLateParsedTypeAttributes(
     AttributeFactory AF;
     ParsedAttributes Attrs(AF);
     ParseLexedTypeAttribute(*LTA, Attrs);
+    assert(Attrs.size() <= 1);
 
-    // An unparseable argument leaves no attribute behind; already diagnosed.
-    if (Attrs.empty())
-      continue;
-    assert(Attrs.size() == 1);
-
-    Expr *Arg = Attrs[0].getArgAsExpr(0);
+    // An unparseable argument leaves no attribute behind; it's already been
+    // diagnosed. The node is already part of the fields' types, so complete it
+    // with a recovery expression rather than leave it without a count; Sema
+    // then rejects it and marks the fields invalid, as for an argument that
+    // parses but has errors. Build the RecoveryExpr directly, since the node
+    // needs a count even with -fno-recovery-ast.
+    Expr *Arg;
+    if (Attrs.empty()) {
+      // The cached tokens are `( ... ) <eof>`; end at the closing paren.
+      SourceLocation End = LTA->Toks.size() >= 2
+                               ? LTA->Toks[LTA->Toks.size() - 2].getLocation()
+                               : LTA->AttrNameLoc;
+      ASTContext &Ctx = Actions.getASTContext();
+      Arg = RecoveryExpr::Create(Ctx, Ctx.IntTy, LTA->AttrNameLoc, End,
+                                 /*SubExprs=*/{});
+    } else {
+      Arg = Attrs[0].getArgAsExpr(0);
+    }
     assert(Arg);
 
     bool Valid = true;
@@ -5066,6 +5079,8 @@ void Parser::CompleteLateParsedTypeAttributes(
       Valid &= Actions.ActOnLateParsedTypeAttrArgument(
           BATy, cast<FieldDecl>(FD), Arg);
 
+    if (Attrs.empty())
+      continue;
     if (Valid)
       Attrs[0].setUsedAsTypeAttr();
     else
