@@ -151,6 +151,14 @@ static Error parseSignature(Metadata *MD,
           E.CompType != ElementType::I32 && E.CompType != ElementType::U32)))
       return signatureError(
           "SV_VertexID requires a scalar 16- or 32-bit integer");
+    if (E.SemanticKind == dxbc::PSV::SemanticKind::VertexID &&
+        E.SemanticIndices.front() != 0)
+      return signatureError("SV_VertexID requires semantic index 0");
+    if (E.SemanticKind == dxbc::PSV::SemanticKind::InstanceID &&
+        (E.Rows != 1 || E.Cols != 1 ||
+         (E.CompType != ElementType::U16 && E.CompType != ElementType::U32)))
+      return signatureError(
+          "SV_InstanceID requires a scalar 16- or 32-bit unsigned integer");
 
     if (Stage == Triple::Vertex && IO == IOType::In &&
         (E.StartRow != Extent || E.StartCol != 0))

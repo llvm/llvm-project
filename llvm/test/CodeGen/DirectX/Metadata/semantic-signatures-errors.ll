@@ -33,6 +33,19 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-OUTPUT
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/position-integer.ll 2>&1 | FileCheck %s --check-prefix=POSITION-INTEGER
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/vertex-id-float.ll 2>&1 | FileCheck %s --check-prefix=VERTEX-ID-FLOAT
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/vertex-id-index.ll 2>&1 | FileCheck %s --check-prefix=VERTEX-ID-INDEX
+; RUN: cat %t/instance-common.ll %t/instance-float.ll > %t/instance.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-FLOAT
+; RUN: cat %t/instance-common.ll %t/instance-signed16.ll > %t/instance.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-SIGNED16
+; RUN: cat %t/instance-common.ll %t/instance-signed32.ll > %t/instance.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-SIGNED32
+; RUN: cat %t/instance-common.ll %t/instance-bool.ll > %t/instance.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-BOOL
+; RUN: cat %t/instance-common.ll %t/instance-vector.ll > %t/instance.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-VECTOR
+; RUN: cat %t/instance-common.ll %t/instance-rows.ll > %t/instance.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-ROWS
 ; RUN: cat %t/row-common.ll %t/row-interpolation.ll > %t/row-check.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/row-check.ll 2>&1 | FileCheck %s --check-prefix=ROW-INTERPOLATION
 ; RUN: cat %t/row-common.ll %t/row-multi.ll > %t/row-check.ll
@@ -371,3 +384,55 @@ attributes #0 = { "hlsl.shader"="pixel" }
 !5 = !{i32 1, !"dx.nativelowprec", i32 1}
 !2 = !{i32 0, !"A", i32 8, i32 0, !4, i32 2, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
 !3 = !{i32 1, !"B", i32 9, i32 0, !4, i32 2, i32 1, i8 1, i32 0, i8 1, i8 0, i8 0, i32 0}
+
+;--- vertex-id-index.ll
+; VERTEX-ID-INDEX: entry 'main' input signature: SV_VertexID requires semantic index 0
+; A scalar U32 element is otherwise valid; semantic index 1 is not.
+target triple = "dxil-pc-shadermodel6.8-vertex"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="vertex" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, !1, null}
+!1 = !{!2}
+!2 = !{i32 0, !"SV_VertexID", i32 5, i32 1, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 1}
+
+;--- instance-common.ll
+target triple = "dxil-pc-shadermodel6.8-vertex"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="vertex" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, !1, null}
+!1 = !{!2}
+!3 = !{i32 0}
+
+;--- instance-float.ll
+; INSTANCE-FLOAT: entry 'main' input signature: SV_InstanceID requires a scalar 16- or 32-bit unsigned integer
+; Component type F32 is not an unsigned integer.
+!2 = !{i32 0, !"SV_InstanceID", i32 9, i32 2, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+
+;--- instance-signed16.ll
+; INSTANCE-SIGNED16: entry 'main' input signature: SV_InstanceID requires a scalar 16- or 32-bit unsigned integer
+; Signed I16 is not interchangeable with U16 for this system value.
+!2 = !{i32 0, !"SV_InstanceID", i32 2, i32 2, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+
+;--- instance-signed32.ll
+; INSTANCE-SIGNED32: entry 'main' input signature: SV_InstanceID requires a scalar 16- or 32-bit unsigned integer
+; Signed I32 is not interchangeable with U32 for this system value.
+!2 = !{i32 0, !"SV_InstanceID", i32 4, i32 2, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+
+;--- instance-bool.ll
+; INSTANCE-BOOL: entry 'main' input signature: SV_InstanceID requires a scalar 16- or 32-bit unsigned integer
+; I1 is supported for arbitrary signatures, not InstanceID.
+!2 = !{i32 0, !"SV_InstanceID", i32 1, i32 2, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+
+;--- instance-vector.ll
+; INSTANCE-VECTOR: entry 'main' input signature: SV_InstanceID requires a scalar 16- or 32-bit unsigned integer
+; U32 is a valid component type, but two columns make this a vector.
+!2 = !{i32 0, !"SV_InstanceID", i32 5, i32 2, !3, i32 0, i32 1, i8 2, i32 0, i8 0, i8 0, i8 0, i32 0}
+
+;--- instance-rows.ll
+; INSTANCE-ROWS: entry 'main' input signature: SV_InstanceID requires a scalar 16- or 32-bit unsigned integer
+; Each row is a scalar U32, but InstanceID cannot cover multiple rows.
+!2 = !{i32 0, !"SV_InstanceID", i32 5, i32 2, !4, i32 0, i32 2, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+!4 = !{i32 0, i32 1}
