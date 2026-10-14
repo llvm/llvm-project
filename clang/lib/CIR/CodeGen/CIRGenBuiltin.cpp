@@ -1927,8 +1927,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_readcyclecounter:
+    return RValue::get(builder.emitIntrinsicCallOp(
+        getLoc(e->getExprLoc()), "readcyclecounter", builder.getUInt64Ty()));
   case Builtin::BI__builtin_readsteadycounter:
-    return errorBuiltinNYI(*this, e, builtinID);
+    return RValue::get(builder.emitIntrinsicCallOp(
+        getLoc(e->getExprLoc()), "readsteadycounter", builder.getUInt64Ty()));
   case Builtin::BI__builtin___clear_cache: {
     mlir::Value begin =
         builder.createPtrBitcast(emitScalarExpr(e->getArg(0)), cgm.voidTy);
