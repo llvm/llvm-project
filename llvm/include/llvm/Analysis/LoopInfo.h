@@ -349,6 +349,20 @@ public:
   /// iterations.
   bool isAnnotatedParallel() const;
 
+  /// Collects the access groups referenced by this loop's
+  /// `llvm.loop.parallel_accesses` metadata into \p ParallelAccessGroups.
+  void getParallelAccessGroups(
+      SmallPtrSetImpl<MDNode *> &ParallelAccessGroups) const;
+
+  /// Return whether I is annotated as having no loop-carried dependence with
+  /// other parallel accesses in the loop. ParallelAccessGroups and LoopID must
+  /// be obtained from getParallelAccessGroups() and getLoopID() for the same
+  /// loop. Unannotated accesses still need analysis.
+  static bool
+  isParallelAccess(const Instruction &I,
+                   const SmallPtrSetImpl<MDNode *> &ParallelAccessGroups,
+                   MDNode *LoopID);
+
   /// Return the llvm.loop loop id metadata node for this loop if it is present.
   ///
   /// If this loop contains the same llvm.loop metadata on each branch to the
