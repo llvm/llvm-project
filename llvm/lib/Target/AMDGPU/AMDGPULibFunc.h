@@ -317,9 +317,9 @@ public:
     return static_cast<unsigned>(Id) <= static_cast<unsigned>(EI_LAST_MANGLED);
   }
 
-  static unsigned getEPtrKindFromAddrSpace(unsigned AS) {
+  static unsigned char getEPtrKindFromAddrSpace(unsigned AS) {
     assert(((AS + 1) & ~ADDR_SPACE) == 0);
-    return AS + 1;
+    return static_cast<unsigned char>(AS + 1);
   }
 
   static unsigned getAddrSpaceFromEPtrKind(unsigned Kind) {

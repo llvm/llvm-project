@@ -455,8 +455,7 @@ AMDGPULibFunc::Param ParamIterator::getNextParam() {
       case AMDGPUAS::GLOBAL_ADDRESS: AS = AMDGPUAS::LOCAL_ADDRESS; break;
       case AMDGPUAS::LOCAL_ADDRESS:  AS = AMDGPUAS::GLOBAL_ADDRESS; break;
       }
-      P.PtrKind = static_cast<unsigned char>(
-          AMDGPULibFunc::getEPtrKindFromAddrSpace(AS));
+      P.PtrKind = AMDGPULibFunc::getEPtrKindFromAddrSpace(AS);
       P.PtrKind |= AMDGPULibFunc::CONST;
       break;
     }

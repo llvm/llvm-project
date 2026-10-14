@@ -1744,12 +1744,12 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   // Merge the sin and cos. For OpenCL 2.0, there may only be a generic pointer
   // implementation. Prefer the private form if available.
   AMDGPULibFunc SinCosLibFuncPrivate(AMDGPULibFunc::EI_SINCOS, fInfo);
-  SinCosLibFuncPrivate.getLeads()[0].PtrKind = static_cast<unsigned char>(
-      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::PRIVATE_ADDRESS));
+  SinCosLibFuncPrivate.getLeads()[0].PtrKind =
+      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::PRIVATE_ADDRESS);
 
   AMDGPULibFunc SinCosLibFuncGeneric(AMDGPULibFunc::EI_SINCOS, fInfo);
-  SinCosLibFuncGeneric.getLeads()[0].PtrKind = static_cast<unsigned char>(
-      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS));
+  SinCosLibFuncGeneric.getLeads()[0].PtrKind =
+      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS);
 
   FunctionCallee FSinCosPrivate = getFunction(M, SinCosLibFuncPrivate);
   FunctionCallee FSinCosGeneric = getFunction(M, SinCosLibFuncGeneric);
