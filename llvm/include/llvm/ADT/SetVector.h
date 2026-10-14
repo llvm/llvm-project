@@ -340,23 +340,22 @@ private:
   vector_type vector_;   ///< The vector.
 };
 
-/// A SetVector that performs no allocations if smaller than
-/// a certain size.
+/// A SetVector with a size-hint.
+/// TODO: Should the DenseSet use the size-hint, as a SmallDenseSet?
 template <typename T, unsigned N>
 class SmallSetVector
-    : public SetVector<
-          T, SmallVector<T, N>,
-          std::conditional_t<std::is_pointer_v<T>, SmallPtrSet<T, N>,
-                             SmallDenseSet<T, N>>,
-          N> {
+    : public SetVector<T, SmallVector<T, N>,
+                       std::conditional_t<std::is_pointer_v<T>,
+                                          SmallPtrSet<T, N>, DenseSet<T>>,
+                       N> {
   static_assert(N != 0 && "SmallSetVector is not meant to be used with zero "
                           "size-hint; use SetVector instead");
 
 public:
-  using SetVector<T, SmallVector<T, N>,
-                  std::conditional_t<std::is_pointer_v<T>, SmallPtrSet<T, N>,
-                                     SmallDenseSet<T, N>>,
-                  N>::SetVector;
+  using SetVector<
+      T, SmallVector<T, N>,
+      std::conditional_t<std::is_pointer_v<T>, SmallPtrSet<T, N>, DenseSet<T>>,
+      N>::SetVector;
 };
 
 } // end namespace llvm
