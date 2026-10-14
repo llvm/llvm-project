@@ -242,36 +242,56 @@ func.func @test_block_arg_no_hoist(%arg0: !fir.ref<i32>) {
 
 // -----
 
-// Test: Optional variable guarded by its presence - should optimize and
-// replace the presence check in the region with true
-
-func.func private @use_i32(i32)
+// Test: Optional variable used as a loop bound in a compute construct guarded
+// by its presence, after recipe materialization - should optimize and replace
+// the presence checks in the region with true
 
 // CHECK-LABEL: func.func @test_optional_guarded_hoist
-func.func @test_optional_guarded_hoist(%arg0: !fir.ref<i32>) {
-  %decl = fir.declare %arg0 uniq_name("_QFtest_optional_guardedEopt_var") fortran_attrs<optional> : (!fir.ref<i32>) -> !fir.ref<i32>
-  %present = fir.is_present %decl : (!fir.ref<i32>) -> i1
-  // CHECK: %[[DECL:.*]] = fir.declare
-  // CHECK: %[[PRESENT:.*]] = fir.is_present %[[DECL]]
-  // CHECK: fir.if %[[PRESENT]] {
-  // CHECK: %[[LOAD:.*]] = fir.load %[[DECL]] : !fir.ref<i32>
+func.func @test_optional_guarded_hoist(%n_arg: !fir.ref<i32>) {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %dscope = fir.dummy_scope : !fir.dscope
+  %n = fir.declare %n_arg dummy_scope %dscope arg 1 uniq_name("_QFtest_optional_guardedEn") fortran_attrs<intent_in, optional> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %n_is_present = fir.is_present %n : (!fir.ref<i32>) -> i1
+  // CHECK: %[[N:.*]] = fir.declare
+  // CHECK: %[[N_IS_PRESENT:.*]] = fir.is_present %[[N]]
+  // CHECK: fir.if %[[N_IS_PRESENT]] {
+  // CHECK: %[[N_VALUE:.*]] = fir.load %[[N]] : !fir.ref<i32>
   // CHECK-NOT: acc.firstprivate_map
-  // CHECK: acc.parallel {
-  fir.if %present {
-    %fpmap = acc.firstprivate_map varPtr(%decl : !fir.ref<i32>) -> !fir.ref<i32>
-    acc.parallel {
-      // CHECK: %[[LOCAL:.*]] = fir.alloca i32
-      // CHECK: %[[TRUE:.*]] = arith.constant true
-      // CHECK: fir.if %[[TRUE]] {
-      // CHECK: fir.store %[[LOAD]] to %[[LOCAL]] : !fir.ref<i32>
-      %local = fir.alloca i32
-      %inner = fir.is_present %fpmap : (!fir.ref<i32>) -> i1
-      fir.if %inner {
-        %load = fir.load %fpmap : !fir.ref<i32>
-        fir.store %load to %local : !fir.ref<i32>
+  // CHECK: acc.parallel combined(loop) {
+  fir.if %n_is_present {
+    %n_mapped = acc.firstprivate_map varPtr(%n : !fir.ref<i32>) implicit(true) name("n") -> !fir.ref<i32>
+    acc.parallel combined(loop) {
+      // CHECK: %[[N_PRIVATE:.*]] = fir.alloca i32
+      // CHECK-NOT: fir.is_present
+      // CHECK: %[[SELECT_TRUE:.*]] = arith.constant true
+      // CHECK: %[[N_TARGET:.*]] = fir.if %[[SELECT_TRUE]] -> (!fir.ref<i32>) {
+      // CHECK: fir.result %[[N_PRIVATE]] : !fir.ref<i32>
+      // CHECK-NOT: fir.is_present
+      // CHECK: %[[STORE_TRUE:.*]] = arith.constant true
+      // CHECK: fir.if %[[STORE_TRUE]] {
+      // CHECK: fir.store %[[N_VALUE]] to %[[N_TARGET]] : !fir.ref<i32>
+      // CHECK: %[[N_PRIVATE_VALUE:.*]] = fir.load %[[N_TARGET]] : !fir.ref<i32>
+      // CHECK: %[[UPPER:.*]] = arith.subi %[[N_PRIVATE_VALUE]]
+      // CHECK: acc.loop {{.*}} to (%[[UPPER]] : i32)
+      %n_private = fir.alloca i32 {acc.var_name = #acc.var_name<"n">}
+      %select_present = fir.is_present %n_mapped : (!fir.ref<i32>) -> i1
+      %n_target = fir.if %select_present -> (!fir.ref<i32>) {
+        fir.result %n_private : !fir.ref<i32>
+      } else {
+        %n_absent = fir.absent !fir.ref<i32>
+        fir.result %n_absent : !fir.ref<i32>
+      } {acc.var_name = #acc.var_name<"n">}
+      %store_present = fir.is_present %n_mapped : (!fir.ref<i32>) -> i1
+      fir.if %store_present {
+        %n_mapped_value = fir.load %n_mapped : !fir.ref<i32>
+        fir.store %n_mapped_value to %n_target : !fir.ref<i32>
       }
-      %val = fir.load %local : !fir.ref<i32>
-      fir.call @use_i32(%val) : (i32) -> ()
+      %n_private_value = fir.load %n_target : !fir.ref<i32>
+      %upper = arith.subi %n_private_value, %c1_i32 : i32
+      acc.loop combined(parallel) control(%i : i32) = (%c0_i32 : i32) to (%upper : i32) step (%c1_i32 : i32) {
+        acc.yield
+      } inclusiveUpperbound(array<i1: true>) independent
       acc.yield
     }
   }
