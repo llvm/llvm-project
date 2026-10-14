@@ -463,7 +463,7 @@ void CrossTranslationUnitContext::importReferencedInitializers(
 
     void VisitIfStmt(const IfStmt *If) {
       if (auto Selected = If->getNondiscardedCase(Context)) {
-        // The init-statement executes even when a body is discarded.
+        // Preserve the init-statement when skipping a discarded constexpr body.
         if (const Stmt *Init = If->getInit())
           Visit(Init);
         if (const Stmt *ConditionVar = If->getConditionVariableDeclStmt())
