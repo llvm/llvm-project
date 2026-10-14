@@ -46,27 +46,21 @@ define void @icmp_immediate_2049(ptr %p) {
 ; RV32IXQCIBI-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IXQCIBI-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IXQCIBI-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IXQCIBI-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32IXQCIBI-NEXT:    .cfi_offset ra, -4
 ; RV32IXQCIBI-NEXT:    .cfi_offset s0, -8
-; RV32IXQCIBI-NEXT:    .cfi_offset s1, -12
-; RV32IXQCIBI-NEXT:    lui a0, 1
-; RV32IXQCIBI-NEXT:    addi s1, a0, -2046
-; RV32IXQCIBI-NEXT:    addi s0, a0, -2047
+; RV32IXQCIBI-NEXT:    lui s0, 1
+; RV32IXQCIBI-NEXT:    addi s0, s0, -2047
 ; RV32IXQCIBI-NEXT:  .LBB0_1: # %loop
 ; RV32IXQCIBI-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32IXQCIBI-NEXT:    mv a0, s0
 ; RV32IXQCIBI-NEXT:    call use
-; RV32IXQCIBI-NEXT:    addi s1, s1, -2
 ; RV32IXQCIBI-NEXT:    addi s0, s0, 2
-; RV32IXQCIBI-NEXT:    bnez s1, .LBB0_1
+; RV32IXQCIBI-NEXT:    qc.e.bnei s0, 4099, .LBB0_1
 ; RV32IXQCIBI-NEXT:  # %bb.2: # %exit
 ; RV32IXQCIBI-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IXQCIBI-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IXQCIBI-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32IXQCIBI-NEXT:    .cfi_restore ra
 ; RV32IXQCIBI-NEXT:    .cfi_restore s0
-; RV32IXQCIBI-NEXT:    .cfi_restore s1
 ; RV32IXQCIBI-NEXT:    addi sp, sp, 16
 ; RV32IXQCIBI-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IXQCIBI-NEXT:    ret

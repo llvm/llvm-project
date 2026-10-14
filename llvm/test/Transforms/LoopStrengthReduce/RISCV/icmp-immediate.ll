@@ -68,7 +68,7 @@ define void @icmp_immediate_2049(ptr %p) {
 ; RV32IXQCIBI-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
 ; RV32IXQCIBI-NEXT:    call void @use(i32 [[LSR_IV]])
 ; RV32IXQCIBI-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV]], 1
-; RV32IXQCIBI-NEXT:    [[DONE:%.*]] = icmp eq i32 2049, [[LSR_IV_NEXT]]
+; RV32IXQCIBI-NEXT:    [[DONE:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 2049
 ; RV32IXQCIBI-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; RV32IXQCIBI:       [[EXIT]]:
 ; RV32IXQCIBI-NEXT:    ret void
