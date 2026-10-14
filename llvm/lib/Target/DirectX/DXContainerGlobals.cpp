@@ -341,6 +341,21 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
   }
 }
 
+// Selects the PSV version to encode based on the module's validator version.
+// The DXIL validator computes the expected PSVRuntimeInfo size from the
+// validator version, so the emitted PSV version must agree with it; otherwise
+// the DXContainer is rejected with a PSVRuntimeInfoSize mismatch. This mirrors
+// the mapping used by DXC (hlsl::GetPSVVersion).
+static uint32_t getPSVVersion(VersionTuple ValVer) {
+  if (ValVer.empty() || ValVer < VersionTuple(1, 1))
+    return 0;
+  if (ValVer < VersionTuple(1, 6))
+    return 1;
+  if (ValVer < VersionTuple(1, 8))
+    return 2;
+  return 3;
+}
+
 void DXContainerGlobals::addPipelineStateValidationInfo(
     Module &M, SmallVector<GlobalValue *> &Globals) {
   SmallString<256> Data;
@@ -385,8 +400,13 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
       MMI.ShaderProfile != Triple::RootSignature)
     PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
 
-  PSV.finalize(MMI.ShaderProfile);
-  PSV.write(OS);
+  // The PSV version determines the size of the PSVRuntimeInfo record written
+  // below. The DXIL validator computes the expected size from the module's
+  // validator version, so the emitted version must be selected the same way or
+  // the container is rejected with a PSVRuntimeInfoSize mismatch.
+  uint32_t PSVVersion = getPSVVersion(MMI.ValidatorVersion);
+  PSV.finalize(MMI.ShaderProfile, PSVVersion);
+  PSV.write(OS, PSVVersion);
   addSection(M, Globals, Data, "dx.psv0", "PSV0");
 }
 
