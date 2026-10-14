@@ -25,6 +25,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
@@ -671,6 +672,8 @@ static Value *createDynamicCBufferLoad(IntrinsicInst *II, LoadInst *LI,
     Value *CrossesRow = Builder.CreateICmpUGE(
         LastComponent, Builder.getInt32(MinRows * Intrin.NumElts));
     Instruction *ThenTerm = SplitBlockAndInsertIfThen(CrossesRow, LI, false);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Head->getTerminator(),
+                                                DEBUG_TYPE);
     Builder.SetInsertPoint(ThenTerm);
     Value *NextWindow = loadCBufferRowIntoWindow(
         Builder, Intrin, Handle, FirstRow, Window, MinRows, Name);
@@ -981,6 +984,23 @@ struct AccessIndices {
   bool hasHandleIdx() { return HandleIdx != nullptr; }
   bool hasOffsetIdx() { return OffsetIdx != nullptr; }
 };
+
+/// AccessIndices cached per phi. The values may be placeholder phis that are
+/// later folded away (via replaceAllUsesWith) and freed, so track them with
+/// value handles rather than raw pointers.
+struct TrackedAccessIndices {
+  WeakTrackingVH GetPtrIdx;
+  WeakTrackingVH HandleIdx;
+  WeakTrackingVH OffsetIdx;
+
+  TrackedAccessIndices() = default;
+  TrackedAccessIndices(const AccessIndices &AI)
+      : GetPtrIdx(AI.GetPtrIdx), HandleIdx(AI.HandleIdx),
+        OffsetIdx(AI.OffsetIdx) {}
+  operator AccessIndices() const { return {GetPtrIdx, HandleIdx, OffsetIdx}; }
+};
+
+using PhiAccessIndicesMap = SmallDenseMap<PHINode *, TrackedAccessIndices>;
 } // namespace
 
 // Compute the total byte offset described by a GEP as a single i32 value,
@@ -1016,7 +1036,7 @@ static Value *accumulateGEPOffset(GetElementPtrInst *GEP,
 //  - OffsetIdx is the accumulated byte offset of any GEPs in the ptr chain
 static AccessIndices
 getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
-                 SmallDenseMap<PHINode *, AccessIndices> &VisitedPhis) {
+                 PhiAccessIndicesMap &VisitedPhis) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
       DeadInsts.insert(II);
@@ -1072,14 +1092,15 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
         PHINode::Create(Builder.getInt32Ty(), NumEdges));
     bool HasOffset = false;
 
-    // Register a ref to this phi for a recursive phi. This is safe to add to
-    // the map even if we end up deleting newly created phi below since we can't
-    // possibly have a constant value if we recursed.
+    // Register a ref to this phi for a recursive phi. If a placeholder phi
+    // below folds to a single value, replaceAllUsesWith updates any cached
+    // entries that captured it.
     if (Phi->getType()->isTargetExtTy())
-      VisitedPhis[Phi] = {/*GetPtrIdx=*/nullptr, HandlePhi.get(),
-                          /*OffsetIdx=*/nullptr};
+      VisitedPhis[Phi] = AccessIndices{/*GetPtrIdx=*/nullptr, HandlePhi.get(),
+                                       /*OffsetIdx=*/nullptr};
     else if (Phi->getType()->isPointerTy())
-      VisitedPhis[Phi] = {GetPtrPhi.get(), HandlePhi.get(), OffsetPhi.get()};
+      VisitedPhis[Phi] =
+          AccessIndices{GetPtrPhi.get(), HandlePhi.get(), OffsetPhi.get()};
 
     for (unsigned Idx = 0; Idx < NumEdges; Idx++) {
       auto *BB = Phi->getIncomingBlock(Idx);
@@ -1127,8 +1148,11 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
       }
     }
 
+    // Replace the placeholder entry with the final indices.
+    AccessIndices Result = {GetPtrIdx, HandleIdx, OffsetIdx};
+    VisitedPhis[Phi] = Result;
     DeadInsts.insert(Phi);
-    return {GetPtrIdx, HandleIdx, OffsetIdx};
+    return Result;
   }
 
   if (auto *Select = dyn_cast<SelectInst>(I)) {
@@ -1171,7 +1195,7 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
 static void
 replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
                          SmallSetVector<Instruction *, 16> &DeadInsts,
-                         SmallDenseMap<PHINode *, AccessIndices> &VisitedPhis) {
+                         PhiAccessIndicesMap &VisitedPhis) {
   auto AccessIdx = getAccessIndices(Ptr, DeadInsts, VisitedPhis);
   assert(AccessIdx.hasHandleIdx() &&
          "Couldn't retrieve handle index. This is guaranteed by "
@@ -1219,7 +1243,7 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
 // Returns true if any changes are made.
 static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
   SmallSetVector<Instruction *, 16> DeadInsts;
-  SmallDenseMap<PHINode *, AccessIndices> VisitedPhis;
+  PhiAccessIndicesMap VisitedPhis;
 
   for (BasicBlock &BB : make_early_inc_range(F)) {
     for (Instruction &I : BB) {

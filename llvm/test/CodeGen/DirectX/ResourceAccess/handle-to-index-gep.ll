@@ -223,3 +223,36 @@ main:
   store i32 %e, ptr %dst, align 4
   ret void
 }
+
+; A pointer phi reached both through a select and directly must reuse the
+; already-computed indices rather than stale placeholder phis.
+; CHECK-LABEL: define i32 @phi_revisited(
+; CHECK-SAME: i1 %[[C:.*]], i1 %[[D:.*]], i32 %[[INDEX:.*]])
+define i32 @phi_revisited(i1 %c, i1 %d, i32 %index) {
+entry:
+  %h0 = call target("dx.RawBuffer", %struct.S, 1, 0) @llvm.dx.resource.handlefromimplicitbinding(i32 2, i32 0, i32 3, i32 0, ptr @OutArr.str)
+  %b0 = call ptr @llvm.dx.resource.getpointer(target("dx.RawBuffer", %struct.S, 1, 0) %h0, i32 %index)
+  %h1 = call target("dx.RawBuffer", %struct.S, 1, 0) @llvm.dx.resource.handlefromimplicitbinding(i32 2, i32 0, i32 3, i32 1, ptr @OutArr.str)
+  %b1 = call ptr @llvm.dx.resource.getpointer(target("dx.RawBuffer", %struct.S, 1, 0) %h1, i32 %index)
+  %h2 = call target("dx.RawBuffer", %struct.S, 1, 0) @llvm.dx.resource.handlefromimplicitbinding(i32 2, i32 0, i32 3, i32 2, ptr @OutArr.str)
+  %b2 = call ptr @llvm.dx.resource.getpointer(target("dx.RawBuffer", %struct.S, 1, 0) %h2, i32 %index)
+  br i1 %c, label %then, label %merge
+
+then:
+  br label %merge
+
+merge:
+; CHECK: merge:
+; CHECK-NEXT: %[[PHI_IDX:.*]] = phi i32 [ 0, %entry ], [ 1, %then ]
+; CHECK-NEXT: %[[PHI_HANDLE:.*]] = call target("dx.RawBuffer", %struct.S, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_s_struct.Ss_1_0t(i32 2, i32 0, i32 3, i32 %[[PHI_IDX]], ptr @OutArr.str)
+; CHECK: %[[SEL_IDX:.*]] = select i1 %[[D]], i32 %[[PHI_IDX]], i32 2
+; CHECK-NEXT: %[[SEL_HANDLE:.*]] = call target("dx.RawBuffer", %struct.S, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_s_struct.Ss_1_0t(i32 2, i32 0, i32 3, i32 %[[SEL_IDX]], ptr @OutArr.str)
+; CHECK: call { i32, i1 } @llvm.dx.resource.load.rawbuffer.i32.tdx.RawBuffer_s_struct.Ss_1_0t(target("dx.RawBuffer", %struct.S, 1, 0) %[[SEL_HANDLE]], i32 {{.*}}, i32 0)
+; CHECK: call { i32, i1 } @llvm.dx.resource.load.rawbuffer.i32.tdx.RawBuffer_s_struct.Ss_1_0t(target("dx.RawBuffer", %struct.S, 1, 0) %[[PHI_HANDLE]], i32 %[[INDEX]], i32 0)
+  %p = phi ptr [ %b0, %entry ], [ %b1, %then ]
+  %q = select i1 %d, ptr %p, ptr %b2
+  %v0 = load i32, ptr %q, align 4
+  %v1 = load i32, ptr %p, align 4
+  %r = add i32 %v0, %v1
+  ret i32 %r
+}

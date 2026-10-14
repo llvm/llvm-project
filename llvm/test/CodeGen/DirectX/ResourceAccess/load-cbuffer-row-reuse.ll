@@ -129,6 +129,20 @@ entry:
   ret <2 x i32> %value
 }
 
+; In a profiled function the row-crossing branch gets explicitly unknown
+; branch weights.
+; CHECK-LABEL: define <2 x i32> @conditional_crossing_profiled(
+; CHECK: br i1 {{%.*}}, label {{%.*}}, label {{%.*}}, !prof [[UNKNOWN:![0-9]+]]
+define <2 x i32> @conditional_crossing_profiled(i1 %cond) !prof !0 {
+entry:
+  %handle = call target("dx.CBuffer", %CB) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
+  %base = call ptr addrspace(2) @llvm.dx.resource.getpointer(target("dx.CBuffer", %CB) %handle, i32 0)
+  %offset = select i1 %cond, i32 0, i32 12
+  %ptr = getelementptr i8, ptr addrspace(2) %base, i32 %offset
+  %value = load <2 x i32>, ptr addrspace(2) %ptr, align 4
+  ret <2 x i32> %value
+}
+
 ; Five elements require exactly two rows for every starting component.
 ; CHECK-LABEL: define <5 x i32> @two_rows(
 ; CHECK: call { i32, i32, i32, i32 } @llvm.dx.resource.load.cbufferrow.4.{{.*}}
@@ -269,3 +283,6 @@ entry:
   %value = load <3 x i16>, ptr addrspace(2) %ptr, align 2
   ret <3 x i16> %value
 }
+
+; CHECK: [[UNKNOWN]] = !{!"unknown", !"dxil-resource-access"}
+!0 = !{!"function_entry_count", i64 10}
