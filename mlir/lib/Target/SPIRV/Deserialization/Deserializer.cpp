@@ -361,6 +361,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
   case spirv::Decoration::Volatile:
+  case spirv::Decoration::SaturatedConversion:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecorate with ")
              << decorationName << " needs a single target <id>";
