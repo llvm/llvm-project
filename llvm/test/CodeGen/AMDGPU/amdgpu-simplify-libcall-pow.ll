@@ -5785,8 +5785,7 @@ define float @test_pow_f32__y_known_integral_trunc_ninf_use(float %x, float %y.a
 define float @test_pow_afn_f32_nnan_ninf__y_known_integral_trunc(float %x, float %y.arg) {
 ; PRELINK-LABEL: define float @test_pow_afn_f32_nnan_ninf__y_known_integral_trunc
 ; PRELINK-SAME: (float [[X:%.*]], float [[Y_ARG:%.*]]) {
-; PRELINK-NEXT:    [[Y:%.*]] = call float @llvm.trunc.f32(float [[Y_ARG]])
-; PRELINK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; PRELINK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y_ARG]] to i32
 ; PRELINK-NEXT:    [[__FABS:%.*]] = call nnan ninf afn float @llvm.fabs.f32(float [[X]])
 ; PRELINK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[__FABS]])
 ; PRELINK-NEXT:    [[POWNI2F:%.*]] = sitofp nnan ninf afn i32 [[TMP1]] to float
@@ -5801,12 +5800,12 @@ define float @test_pow_afn_f32_nnan_ninf__y_known_integral_trunc(float %x, float
 ;
 ; NOPRELINK-LABEL: define float @test_pow_afn_f32_nnan_ninf__y_known_integral_trunc
 ; NOPRELINK-SAME: (float [[X:%.*]], float [[Y_ARG:%.*]]) {
-; NOPRELINK-NEXT:    [[Y:%.*]] = call float @llvm.trunc.f32(float [[Y_ARG]])
+; NOPRELINK-NEXT:    [[Y:%.*]] = call nnan ninf float @llvm.trunc.f32(float [[Y_ARG]])
 ; NOPRELINK-NEXT:    [[__FABS:%.*]] = call nnan ninf afn float @llvm.fabs.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[__FABS]])
 ; NOPRELINK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn float [[Y]], [[__LOG2]]
 ; NOPRELINK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[__YLOGX]])
-; NOPRELINK-NEXT:    [[__YTOU:%.*]] = fptosi float [[Y]] to i32
+; NOPRELINK-NEXT:    [[__YTOU:%.*]] = fptosi float [[Y_ARG]] to i32
 ; NOPRELINK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[__YTOU]], 31
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = bitcast float [[X]] to i32
 ; NOPRELINK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP1]]
@@ -5822,8 +5821,7 @@ define float @test_pow_afn_f32_nnan_ninf__y_known_integral_trunc(float %x, float
 define float @test_pow_afn_f32__y_known_integral_trunc(float %x, float nofpclass(inf nan) %y.arg) {
 ; PRELINK-LABEL: define float @test_pow_afn_f32__y_known_integral_trunc
 ; PRELINK-SAME: (float [[X:%.*]], float nofpclass(nan inf) [[Y_ARG:%.*]]) {
-; PRELINK-NEXT:    [[Y:%.*]] = call float @llvm.trunc.f32(float [[Y_ARG]])
-; PRELINK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; PRELINK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y_ARG]] to i32
 ; PRELINK-NEXT:    [[POW:%.*]] = tail call afn float @_Z11__pown_fastfi(float [[X]], i32 [[TMP1]])
 ; PRELINK-NEXT:    ret float [[POW]]
 ;
@@ -5911,8 +5909,7 @@ define float @test_pow_f32__y_known_integral_ceil(float %x, float nofpclass(inf 
 define float @test_pow_f32__y_known_integral_trunc(float %x, float nofpclass(inf nan) %y.arg) {
 ; PRELINK-LABEL: define float @test_pow_f32__y_known_integral_trunc
 ; PRELINK-SAME: (float [[X:%.*]], float nofpclass(nan inf) [[Y_ARG:%.*]]) {
-; PRELINK-NEXT:    [[Y:%.*]] = call float @llvm.trunc.f32(float [[Y_ARG]])
-; PRELINK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; PRELINK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y_ARG]] to i32
 ; PRELINK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
 ; PRELINK-NEXT:    ret float [[POW]]
 ;

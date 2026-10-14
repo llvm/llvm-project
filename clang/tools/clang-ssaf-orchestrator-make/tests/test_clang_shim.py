@@ -11,7 +11,7 @@ from unittest import mock
 
 from clang_ssaf_orchestrator_make.shims import clang, shim as shim_module
 from clang_ssaf_orchestrator_make import ssaf_artifact_repository as repository
-from clang_ssaf_orchestrator_make import build_graph
+from clang_ssaf_orchestrator_make import build_graph, config
 from clang_ssaf_orchestrator_make.failure_logs import SSAFFailureKind
 
 from . import configs
@@ -24,7 +24,7 @@ class ForwardingAJob(unittest.TestCase):
         self.out = os.path.join(self.tmp, "out")
         self.links = os.path.join(self.out, "shims")
         os.makedirs(self.links)
-        for name in ("clang", "ld"):
+        for name in config.SHIM_FOR_LINK_NAME:
             path = os.path.join(self.links, name)
             open(path, "w").close()
             os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR)
@@ -55,6 +55,14 @@ class ForwardingAJob(unittest.TestCase):
             self.shim, self._job(["/build/bin/clang-23", "-cc1", "-o", "a.o"]), self.tmp
         )
         self.assertEqual(os.path.join(self.links, "clang"), self.shim.commands[0][1][0])
+
+    def test_a_link_run_by_ld_lld_reaches_the_ld_shim(self):
+        clang._invoke_shim_for_job(
+            self.shim, self._job(["/build/bin/ld.lld", "-o", "prg", "a.o"]), self.tmp
+        )
+        link = self.shim.commands[0][1][0]
+        self.assertEqual(os.path.join(self.links, "ld.lld"), link)
+        self.assertEqual("ld", config.SHIM_FOR_LINK_NAME[os.path.basename(link)])
 
     def test_a_job_with_no_link_is_noted_and_skipped(self):
         with configs.recorded_notes() as notes:
@@ -147,6 +155,20 @@ class TheSsafArguments(unittest.TestCase):
         )
         self.assertIn("--ssaf-tu-summary-file=" + summary, extra)
         self.assertTrue(os.path.isdir(os.path.dirname(summary)))
+
+    def test_transformation_names_the_link_unit_and_the_analysis_result(self):
+        pass_config = configs.transformation_config()
+        pass_config.name_link_unit(self._id("build/prg").get_path())
+        shim = self._shim(pass_config)
+        edits, extra = clang._transformation_args(shim, self._id("build/a.o"))
+        self.assertIn("--ssaf-link-unit-id=" + self._id("build/prg").get_path(), extra)
+        self.assertIn("--ssaf-src-edit-file=" + edits, extra)
+        self.assertTrue(
+            any(a.startswith("--ssaf-global-scope-analysis-result=") for a in extra)
+        )
+        self.assertTrue(
+            any(a.startswith("--ssaf-transformation-report-file=") for a in extra)
+        )
 
     def test_the_extra_clang_arguments_come_last(self):
         shim = self._shim(configs.analysis_config(ssaf_extra_clang_args=["-DX"]))
