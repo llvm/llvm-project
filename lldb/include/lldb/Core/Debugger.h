@@ -399,6 +399,8 @@ public:
 
   bool GetAutoOneLineSummaries() const;
 
+  bool GetPrintBraces() const;
+
   bool GetAutoIndent() const;
 
   bool SetAutoIndent(bool b);

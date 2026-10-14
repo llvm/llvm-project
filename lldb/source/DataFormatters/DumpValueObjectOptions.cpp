@@ -21,7 +21,8 @@ DumpValueObjectOptions::DumpValueObjectOptions()
       m_hide_root_type(false), m_hide_root_name(false), m_hide_name(false),
       m_hide_value(false), m_run_validator(false),
       m_use_type_display_name(true), m_allow_oneliner_mode(true),
-      m_hide_pointer_value(false), m_reveal_empty_aggregates(true) {}
+      m_hide_pointer_value(false), m_reveal_empty_aggregates(true),
+      m_print_braces(true) {}
 
 DumpValueObjectOptions::DumpValueObjectOptions(ValueObject &valobj)
     : DumpValueObjectOptions() {
@@ -207,6 +208,11 @@ DumpValueObjectOptions::SetAllowOnelinerMode(bool oneliner) {
 DumpValueObjectOptions &
 DumpValueObjectOptions::SetRevealEmptyAggregates(bool reveal) {
   m_reveal_empty_aggregates = reveal;
+  return *this;
+}
+
+DumpValueObjectOptions &DumpValueObjectOptions::SetPrintBraces(bool print) {
+  m_print_braces = print;
   return *this;
 }
 

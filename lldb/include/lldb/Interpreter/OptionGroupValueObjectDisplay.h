@@ -44,7 +44,7 @@ public:
 
   bool show_types : 1, show_location : 1, flat_output : 1, use_object_desc : 1,
       use_synth : 1, be_raw : 1, ignore_cap : 1, run_validator : 1,
-      max_depth_is_default : 1;
+      max_depth_is_default : 1, print_braces : 1;
 
   uint32_t no_summary_depth;
   uint32_t max_depth;
