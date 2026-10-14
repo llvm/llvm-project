@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpenMP/OffloadRTL.h"
+#include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 
@@ -56,7 +57,10 @@ void initRuntime() {
     llvm::omp::target::ompt::connectLibrary();
 #endif
 
-    PM->init();
+    if (!OffloadPolicy::isOffloadDisabled())
+      PM->init();
+    else
+      ODBG(ODT_Init) << "Offload is disabled. Skipping plugin initialization";
     PM->registerDelayedLibraries();
     // After all plugins are initialized, register atExit cleanup handlers.
     std::atexit([]() {
@@ -84,7 +88,11 @@ void deinitRuntime() {
                      << RTLOngoingSyncs.load();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    PM->deinit();
+    if (!OffloadPolicy::isOffloadDisabled())
+      PM->deinit();
+    else
+      ODBG(ODT_Deinit)
+          << "Offload is disabled. Skipping plugin deinitialization";
     delete PM;
     PM = nullptr;
   }

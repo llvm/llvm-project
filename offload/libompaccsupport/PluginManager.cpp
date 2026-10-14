@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginManager.h"
-#include "OffloadPolicy.h"
 #include "OmpAccError.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
@@ -49,10 +48,6 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 
 void PluginManager::init() {
   TIMESCOPE();
-  if (OffloadPolicy::isOffloadDisabled()) {
-    ODBG(ODT_Init) << "Offload is disabled. Skipping plugin initialization";
-    return;
-  }
 
   ODBG(ODT_Init) << "Loading RTLs";
   if (ol_result_t Res = olInit(nullptr))
@@ -84,10 +79,6 @@ void PluginManager::init() {
 
 void PluginManager::deinit() {
   TIMESCOPE();
-  if (OffloadPolicy::isOffloadDisabled()) {
-    ODBG(ODT_Deinit) << "Offload is disabled. Skipping plugin deinitialization";
-    return;
-  }
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
