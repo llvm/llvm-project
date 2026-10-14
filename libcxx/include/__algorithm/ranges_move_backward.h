@@ -40,14 +40,13 @@ using move_backward_result = in_out_result<_InIter, _OutIter>;
 struct __move_backward {
   template <bidirectional_iterator _InIter, sentinel_for<_InIter> _Sent, bidirectional_iterator _OutIter>
     requires indirectly_movable<_InIter, _OutIter>
-  _LIBCPP_HIDE_FROM_ABI constexpr move_backward_result<_InIter, _OutIter>
-  operator()(_InIter __first, _Sent __last, _OutIter __result) const {
+  constexpr move_backward_result<_InIter, _OutIter> operator()(_InIter __first, _Sent __last, _OutIter __result) const {
     return std::__move_backward<_RangeAlgPolicy>(std::move(__first), std::move(__last), std::move(__result));
   }
 
   template <bidirectional_range _Range, bidirectional_iterator _Iter>
     requires indirectly_movable<iterator_t<_Range>, _Iter>
-  _LIBCPP_HIDE_FROM_ABI constexpr move_backward_result<borrowed_iterator_t<_Range>, _Iter>
+  constexpr move_backward_result<borrowed_iterator_t<_Range>, _Iter>
   operator()(_Range&& __range, _Iter __result) const {
     return std::__move_backward<_RangeAlgPolicy>(ranges::begin(__range), ranges::end(__range), std::move(__result));
   }

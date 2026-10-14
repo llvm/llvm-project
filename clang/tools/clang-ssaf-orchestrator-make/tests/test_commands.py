@@ -21,6 +21,12 @@ class Extensions(unittest.TestCase):
         for name in ("a.a", "a.c", "a", "a.o.tmp", "a.O"):
             self.assertFalse(commands.is_object(name), name)
 
+    def test_archive_extensions(self):
+        for name in ("libx.a", "build/libx.a"):
+            self.assertTrue(commands.is_archive(name), name)
+        for name in ("libx.so", "libx.dylib", "libx", "libx.a.tmp"):
+            self.assertFalse(commands.is_archive(name), name)
+
 
 class Unique(unittest.TestCase):
     def test_the_first_of_each_is_kept_in_order(self):
@@ -104,11 +110,11 @@ class FilterBuildArtifacts(_OverABuild):
         self._write("build/a.o", repository.SSAFArtifactKind.EDITS)
         self.assertEqual([self._id("build/a.o")], self._kept("build/a.o"))
 
-    def test_an_assembled_object_with_only_a_record_is_kept(self):
+    def test_an_archive_with_only_a_record_is_kept(self):
         self.build_graph.record_build_step(
-            self._id("build/combined.o"), [self._id("build/a.o")]
+            self._id("build/x.a"), [self._id("build/a.o")]
         )
-        self.assertEqual([self._id("build/combined.o")], self._kept("build/combined.o"))
+        self.assertEqual([self._id("build/x.a")], self._kept("build/x.a"))
 
     def test_what_the_build_never_touched_is_dropped(self):
         self.assertEqual([], self._kept("third_party/prebuilt.a", "/usr/lib/libz.a"))
