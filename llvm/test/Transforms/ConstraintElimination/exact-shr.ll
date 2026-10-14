@@ -25,17 +25,103 @@ define i1 @test_exact_lshr_decompose_mul_add(i64 %a) {
 define i1 @test_exact_ashr_decompose(i64 %a) {
 ; CHECK-LABEL: define i1 @test_exact_ashr_decompose(
 ; CHECK-SAME: i64 [[A:%.*]]) {
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[A]], 8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[MUL]], 16
+; CHECK-NEXT:    [[SHIFT:%.*]] = ashr exact i64 [[ADD]], 3
+; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i64 [[SHIFT]], 1
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = mul nsw i64 %a, 8
+  %add = add nsw i64 %mul, 16
+  %shift = ashr exact i64 %add, 3
+  %add2 = add nsw i64 %shift, 1
+  %cmp = icmp sgt i64 %add2, %a
+  ret i1 %cmp
+}
+
+; Negative: ashr exact in the unsigned system is not equivalent to unsigned
+; division when the shifted operand may have its sign bit set.
+define i1 @test_exact_ashr_unsigned_unknown_sign(i64 %a) {
+; CHECK-LABEL: define i1 @test_exact_ashr_unsigned_unknown_sign(
+; CHECK-SAME: i64 [[A:%.*]]) {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i64 [[A]], 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i64 [[MUL]], 16
 ; CHECK-NEXT:    [[SHIFT:%.*]] = ashr exact i64 [[ADD]], 3
 ; CHECK-NEXT:    [[ADD2:%.*]] = add nuw i64 [[SHIFT]], 1
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[ADD2]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul nuw i64 %a, 8
   %add = add nuw i64 %mul, 16
   %shift = ashr exact i64 %add, 3
   %add2 = add nuw i64 %shift, 1
   %cmp = icmp ugt i64 %add2, %a
+  ret i1 %cmp
+}
+
+; Positive: ashr exact in the unsigned system can be decomposed when the
+; shifted operand is known to be non-negative.
+define i1 @test_exact_ashr_unsigned_known_nonneg(i64 %a) {
+; CHECK-LABEL: define i1 @test_exact_ashr_unsigned_known_nonneg(
+; CHECK-SAME: i64 [[A:%.*]]) {
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i64 [[A]], 8
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i64 [[MUL]], 16
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i64 [[ADD]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[SHIFT:%.*]] = ashr exact i64 [[ADD]], 3
+; CHECK-NEXT:    [[ADD2:%.*]] = add nuw i64 [[SHIFT]], 1
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = mul nuw i64 %a, 8
+  %add = add nuw i64 %mul, 16
+  %nonneg = icmp sge i64 %add, 0
+  tail call void @llvm.assume(i1 %nonneg)
+  %shift = ashr exact i64 %add, 3
+  %add2 = add nuw i64 %shift, 1
+  %cmp = icmp ugt i64 %add2, %a
+  ret i1 %cmp
+}
+
+; Negative: lshr exact in the signed system is not equivalent to signed
+; division when the shifted operand may be negative.
+define i1 @test_exact_lshr_signed_unknown_sign(i64 %a) {
+; CHECK-LABEL: define i1 @test_exact_lshr_signed_unknown_sign(
+; CHECK-SAME: i64 [[A:%.*]]) {
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[A]], 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[MUL]], 8
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[ADD]], 2
+; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i64 [[SHIFT]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[ADD2]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nsw i64 %a, 4
+  %add = add nsw i64 %mul, 8
+  %shift = lshr exact i64 %add, 2
+  %add2 = add nsw i64 %shift, 1
+  %cmp = icmp sgt i64 %add2, %a
+  ret i1 %cmp
+}
+
+; Positive: lshr exact in the signed system can be decomposed when the shifted
+; operand is known to be non-negative.
+define i1 @test_exact_lshr_signed_known_nonneg(i64 %a) {
+; CHECK-LABEL: define i1 @test_exact_lshr_signed_known_nonneg(
+; CHECK-SAME: i64 [[A:%.*]]) {
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[A]], 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[MUL]], 8
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i64 [[ADD]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[ADD]], 2
+; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i64 [[SHIFT]], 1
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = mul nsw i64 %a, 4
+  %add = add nsw i64 %mul, 8
+  %nonneg = icmp sge i64 %add, 0
+  tail call void @llvm.assume(i1 %nonneg)
+  %shift = lshr exact i64 %add, 2
+  %add2 = add nsw i64 %shift, 1
+  %cmp = icmp sgt i64 %add2, %a
   ret i1 %cmp
 }
 
@@ -93,5 +179,26 @@ define i1 @test_shr_not_exact(i64 %a) {
   %shift = lshr i64 %add, 2
   %add2 = add nuw i64 %shift, 1
   %cmp = icmp ugt i64 %add2, %a
+  ret i1 %cmp
+}
+
+; Negative: shift amount >= bitwidth is poison
+define i1 @test_exact_shr_oob_shift_i8(i16 %a) {
+; CHECK-LABEL: define i1 @test_exact_shr_oob_shift_i8(
+; CHECK-SAME: i16 [[A:%.*]]) {
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[A]], 256
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i16 [[MUL]] to i8
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i8 [[TRUNC]], 8
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[SHIFT]] to i16
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i16 [[EXT]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[ADD]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw i16 %a, 256
+  %trunc = trunc nuw i16 %mul to i8
+  %shift = lshr exact i8 %trunc, 8
+  %ext = zext i8 %shift to i16
+  %add = add nuw i16 %ext, 1
+  %cmp = icmp ugt i16 %add, %a
   ret i1 %cmp
 }
