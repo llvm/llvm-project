@@ -578,17 +578,17 @@ adjustAliasScopeList(MDNode *ScopeList,
   return ScopeList;
 }
 
-  // Location is spanned accross iteration
-  // and single iteration alias scope are dropped
-  static MemoryLocation
-  adjustLoc(MemoryLocation Loc,
-            const SmallPtrSetImpl<const MDNode *> &LoopAliasScopes) {
-    MemoryLocation Adj = MemoryLocation::getBeforeOrAfter(Loc.Ptr, Loc.AATags);
-    Adj.AATags.Scope = adjustAliasScopeList(Adj.AATags.Scope, LoopAliasScopes);
-    Adj.AATags.NoAlias =
-        adjustAliasScopeList(Adj.AATags.NoAlias, LoopAliasScopes);
-    return Adj;
-  }
+// Location is spanned accross iteration
+// and single iteration alias scope are dropped
+static MemoryLocation
+adjustLoc(MemoryLocation Loc,
+          const SmallPtrSetImpl<const MDNode *> &LoopAliasScopes) {
+  MemoryLocation Adj = MemoryLocation::getBeforeOrAfter(Loc.Ptr, Loc.AATags);
+  Adj.AATags.Scope = adjustAliasScopeList(Adj.AATags.Scope, LoopAliasScopes);
+  Adj.AATags.NoAlias =
+      adjustAliasScopeList(Adj.AATags.NoAlias, LoopAliasScopes);
+  return Adj;
+}
 
 // Returns NoAlias/MayAliass/MustAlias for two memory locations based upon their
 // underlaying objects. If LocA and LocB are known to not alias (for any reason:
@@ -599,7 +599,7 @@ static AliasResult
 underlyingObjectsAlias(AAResults *AA, const DataLayout &DL,
                        const MemoryLocation &LocA, const MemoryLocation &LocB,
                        const SmallPtrSetImpl<const MDNode *> &LoopAliasScopes) {
-  
+
   MemoryLocation LocAS = adjustLoc(LocA, LoopAliasScopes);
   MemoryLocation LocBS = adjustLoc(LocB, LoopAliasScopes);
 
@@ -2741,20 +2741,20 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     updateLoopAliasScopes(LI->getLoopFor(Dst->getParent()));
   }
 
-  switch (underlyingObjectsAlias(AA, F->getDataLayout(), DstLoc, SrcLoc, 
-  LoopAliasScopes)) {
-    case AliasResult::MayAlias:
-    case AliasResult::PartialAlias:
-      // cannot analyse objects if we don't understand their aliasing.
-      LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
-      return std::make_unique<Dependence>(Src, Dst,
-                                          SCEVUnionPredicate(Assume, *SE));
-    case AliasResult::NoAlias:
-      // If the objects noalias, they are distinct, accesses are independent.
-      LLVM_DEBUG(dbgs() << "no alias\n");
-      return nullptr;
-    case AliasResult::MustAlias:
-      break; // The underlying objects alias; test accesses for dependence.
+  switch (underlyingObjectsAlias(AA, F->getDataLayout(), DstLoc, SrcLoc,
+                                 LoopAliasScopes)) {
+  case AliasResult::MayAlias:
+  case AliasResult::PartialAlias:
+    // cannot analyse objects if we don't understand their aliasing.
+    LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
+  case AliasResult::NoAlias:
+    // If the objects noalias, they are distinct, accesses are independent.
+    LLVM_DEBUG(dbgs() << "no alias\n");
+    return nullptr;
+  case AliasResult::MustAlias:
+    break; // The underlying objects alias; test accesses for dependence.
   }
 
   if (DstLoc.Size != SrcLoc.Size || !DstLoc.Size.isPrecise() ||
