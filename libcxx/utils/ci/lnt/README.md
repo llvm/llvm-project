@@ -106,6 +106,12 @@ Note that `run-benchmarks` does not build anything: the library being benchmarke
 or installed beforehand. How to pick up that library is determined by `--test-config` and any Lit parameters
 passed.
 
+## Test suite schemas
+
+`schemas/` holds the schemas of the `libcxx` and `libstdcxx` test suites as we submit them to LNT.
+This describes the various metrics and fields we submit to the instance. For the `libcxx` test suite,
+the ordinal (the ordering between commits) is obtained by `git rev-list --count`.
+
 ## Setting up a local LNT instance
 
 ```
