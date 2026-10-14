@@ -4,23 +4,18 @@
 ; An alternate [fmul | fadd] node is emitted as a full vector fmul, a full
 ; vector fadd and a lane-select shuffle. The vector fmul only feeds the
 ; shuffle, so it cannot fuse into an fma even though the scalar fmul in lane 0
-; feeds an fsub. The vector fmul gets no fmul+fadd fusion discount, but the
-; scalar form must pack two computed f32 values into the returned vector,
-; which outweighs the lost fusion, so the tree is still vectorized.
+; feeds an fsub. Without the fmul+fadd fusion discount on the vector fmul,
+; vectorizing is not profitable.
 
 define <2 x float> @alt_fmul_fadd(float %a0, float %a1, float %b0, float %b1, float %c0, float %c1) {
 ; CHECK-LABEL: define <2 x float> @alt_fmul_fadd(
 ; CHECK-SAME: float [[A0:%.*]], float [[A1:%.*]], float [[B0:%.*]], float [[B1:%.*]], float [[C0:%.*]], float [[C1:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[A1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[B0]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[B1]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract <2 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd contract <2 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> [[TMP6]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> poison, float [[C0]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> [[TMP8]], float [[C1]], i64 1
-; CHECK-NEXT:    [[INS1:%.*]] = fsub contract <2 x float> [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[A0]], [[B0]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd contract float [[A1]], [[B1]]
+; CHECK-NEXT:    [[SUB0:%.*]] = fsub contract float [[MUL]], [[C0]]
+; CHECK-NEXT:    [[SUB1:%.*]] = fsub contract float [[ADD]], [[C1]]
+; CHECK-NEXT:    [[INS0:%.*]] = insertelement <2 x float> poison, float [[SUB0]], i64 0
+; CHECK-NEXT:    [[INS1:%.*]] = insertelement <2 x float> [[INS0]], float [[SUB1]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[INS1]]
 ;
   %mul = fmul contract float %a0, %b0

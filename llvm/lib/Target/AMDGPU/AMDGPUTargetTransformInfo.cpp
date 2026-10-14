@@ -1355,12 +1355,15 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     // Packed f32 pair formation for v_pk_*_f32. Only a lane holding a computed
     // value costs the real packing work, scaled by legalization for wider
     // vectors. A loaded lane lands in place, and arguments and constants are
-    // already in a register, so both are free.
+    // already in a register, so both are free. SLP prices a buildvector root
+    // with the insertelements themselves as Op1, and those lanes need no
+    // packing either.
     auto *VecTy = dyn_cast<FixedVectorType>(ValTy);
     const auto *InsertedInst = dyn_cast_or_null<Instruction>(Op1);
     if (Opcode == Instruction::InsertElement && EltSize == 32 &&
         ST->hasAnyPackedFP32Ops() && InsertedInst && VecTy &&
-        VecTy->getElementType()->isFloatTy() && !isa<LoadInst>(InsertedInst))
+        VecTy->getElementType()->isFloatTy() &&
+        !isa<LoadInst, InsertElementInst>(InsertedInst))
       return getTypeLegalizationCost(ValTy).first;
 
     // Extracts are just reads of a subregister, so are free. Inserts are
@@ -1659,6 +1662,38 @@ InstructionCost GCNTTIImpl::getShuffleCost(
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
 
   unsigned ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
+
+  // A v_pk_*_f32 operand is an aligned register pair. A lane already in its
+  // half of a source pair is read in place, and a splat of the low half is an
+  // op_sel_hi. Every other lane costs a v_mov_b32 to move it into place.
+  if (ScalarSize == 32 && ST->hasAnyPackedFP32Ops() &&
+      SrcTy->getElementType()->isFloatTy() && !Mask.empty()) {
+    const int NumSrcElts = cast<FixedVectorType>(SrcTy)->getNumElements();
+    // Source pairs of the second operand are numbered after the first.
+    auto GetPair = [&](int Idx) {
+      return Idx < NumSrcElts ? Idx / 2 : NumSrcElts + (Idx - NumSrcElts) / 2;
+    };
+    auto GetHalf = [&](int Idx) {
+      return Idx < NumSrcElts ? Idx % 2 : (Idx - NumSrcElts) % 2;
+    };
+    unsigned Cost = 0;
+    for (unsigned DstIdx = 0; DstIdx < Mask.size(); DstIdx += 2) {
+      const int Lo = Mask[DstIdx];
+      const int Hi =
+          DstIdx + 1 < Mask.size() ? Mask[DstIdx + 1] : PoisonMaskElem;
+      const bool LoInPlace = Lo != PoisonMaskElem && GetHalf(Lo) == 0;
+      const bool HiInPlace = Hi != PoisonMaskElem && GetHalf(Hi) == 1;
+      if (Lo != PoisonMaskElem && Lo == Hi && LoInPlace)
+        continue;
+      if (LoInPlace && HiInPlace)
+        Cost += GetPair(Lo) != GetPair(Hi);
+      else
+        Cost += (Lo != PoisonMaskElem && !LoInPlace) +
+                (Hi != PoisonMaskElem && !HiInPlace);
+    }
+    return Cost;
+  }
+
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       (ScalarSize == 16 || ScalarSize == 8)) {
     // Larger vector widths may require additional instructions, but are
