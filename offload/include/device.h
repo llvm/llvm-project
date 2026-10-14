@@ -133,21 +133,27 @@ struct DeviceTy {
   /// allocator should be used (host, shared, device).
   int32_t deleteData(void *TgtPtrBegin, int32_t Kind = TARGET_ALLOC_DEFAULT);
 
+  /// Allocate \p Size bytes of \p Type memory in the device's context, which,
+  /// unlike allocData, caches the allocation for reuse. \p Type must be
+  /// OL_ALLOC_TYPE_DEVICE or OL_ALLOC_TYPE_MANAGED. Free it with freeCtxMem.
+  llvm::Expected<void *> allocCtxMem(int64_t Size, ol_alloc_type_t Type);
+
+  /// Free memory allocated with allocCtxMem.
+  llvm::Error freeCtxMem(void *Ptr);
+
   // Data transfer. When AsyncInfo is nullptr, the transfer will be
   // synchronous.
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
                      HostDataToTargetTy *Entry = nullptr,
-                     MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
-                     const ident_t *Loc = nullptr, const char *Name = nullptr);
+                     MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
 
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        AsyncInfoTy &AsyncInfo,
                        HostDataToTargetTy *Entry = nullptr,
-                       MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
-                       const ident_t *Loc = nullptr);
+                       MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
 
   // Return true if data can be copied to DstDevice directly
   bool isDataExchangable(const DeviceTy &DstDevice);
@@ -195,12 +201,11 @@ struct DeviceTy {
 
   /// Event related interfaces.
   /// {
-  /// Create an event.
-  int32_t createEvent(void **Event);
-
   /// Record the event based on status in AsyncInfo->Queue at the moment the
-  /// function is called.
-  int32_t recordEvent(void *Event, AsyncInfoTy &AsyncInfo);
+  /// function is called. If \p Event already holds an event, it is replaced
+  /// with a new one representing the current queue state and the old event
+  /// is destroyed.
+  int32_t recordEvent(void **Event, AsyncInfoTy &AsyncInfo);
 
   /// Wait for an event. This function can be blocking or non-blocking,
   /// depending on the implementation. It is expected to set a dependence on the
