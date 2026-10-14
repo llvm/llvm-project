@@ -2739,6 +2739,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       kernel argument that holds the completion action pointer. If this
                                                       attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
+     "amdgpu-no-lds-dma"                              Indicates the function does not execute any :ref:`LDS DMA operations
+                                                      <amdgpu-dma-operations>`.
+
      "amdgpu-tg-split"                                Enable threadgroup split execution mode for the function. This must be
                                                       consistently set (or unset) for all reachable functions. This is only
                                                       relevant on targets with the `tgsplit-support` feature.
