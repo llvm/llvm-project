@@ -25,6 +25,7 @@
 
 #include <chrono>
 #include <cassert>
+#include <ratio>
 #include <type_traits>
 #include <utility>
 
@@ -35,6 +36,8 @@ using years      = std::chrono::years;
 using month      = std::chrono::month;
 using months     = std::chrono::months;
 using year_month = std::chrono::year_month;
+using decamonths = std::chrono::duration<int, std::ratio_multiply<std::ratio<10>, months::period>>;
+using decades    = std::chrono::duration<int, std::ratio_multiply<std::ratio<10>, years::period>>;
 
 // year_month + years
 constexpr bool test_ym_plus_y() {
@@ -52,6 +55,17 @@ constexpr bool test_ym_plus_y() {
     assert(static_cast<int>(ym2.year()) == i + 1234);
     assert(ym1.month() == std::chrono::January);
     assert(ym2.month() == std::chrono::January);
+    assert(ym1 == ym2);
+  }
+
+  for (int i = 0; i <= 3; ++i) {
+    year_month ym1 = ym + decades(i);
+    year_month ym2 = decades(i) + ym;
+    assert(ym1.month() == std::chrono::January);
+    assert(ym1.year() == ym.year() + years{i * 10});
+
+    assert(ym2.month() == std::chrono::January);
+    assert(ym2.year() == ym.year() + years{i * 10});
     assert(ym1 == ym2);
   }
 
@@ -95,6 +109,21 @@ constexpr bool test_ym_plus_m() {
     assert(ym2.month() == month(1 + i % 12));
     assert(ym1 == ym2);
   }
+
+  for (unsigned int i = 0; i < 5; i++) {
+    months added_months = decamonths(i);
+    year_month ym1      = ym + decamonths(i);
+    year_month ym2      = decamonths(i) + ym;
+    assert(ym1.month() == ym.month() + decamonths(i));
+    assert(ym2.month() == ym.month() + decamonths(i));
+
+    years added_years{(static_cast<unsigned>(ym.month()) - 1 + added_months.count()) / 12};
+    year expected_year = ym.year() + added_years;
+    assert(ym1.year() == expected_year);
+    assert(ym2.year() == expected_year);
+    assert(ym1 == ym2);
+  }
+
   return true;
 }
 
