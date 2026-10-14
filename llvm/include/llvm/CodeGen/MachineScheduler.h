@@ -96,8 +96,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
-#include <llvm/Support/raw_ostream.h>
 #include <list>
+#include <llvm/Support/raw_ostream.h>
 #include <memory>
 #include <string>
 #include <vector>

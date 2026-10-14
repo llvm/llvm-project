@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "AggressiveAntiDepBreaker.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -1131,8 +1130,8 @@ AntiDepState::AntiDepState(MachineSchedContext *C,
   if (AntiDepMode == TargetSubtargetInfo::ANTIDEP_ALL) {
     SmallVector<const TargetRegisterClass *, 4> CriticalPathRCs;
     C->MF->getSubtarget().getCriticalPathRCs(CriticalPathRCs);
-    Breaker = std::make_unique<AggressiveAntiDepBreaker>(
-        *C->MF, *C->RegClassInfo, CriticalPathRCs);
+    Breaker.reset(createAggressiveAntiDepBreaker(*C->MF, *C->RegClassInfo,
+                                                 CriticalPathRCs));
   } else {
     assert(AntiDepMode == TargetSubtargetInfo::ANTIDEP_CRITICAL);
     Breaker.reset(createCriticalAntiDepBreaker(*C->MF, *C->RegClassInfo));
