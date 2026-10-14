@@ -1094,15 +1094,20 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
 }
 
 static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
-                                      unsigned BuiltIn) {
+                                      unsigned BuiltIn, bool NeedsFlat = false) {
   LLVMContext &Ctx = GV->getContext();
   IRBuilder<> B(*GV->getParent());
-  MDNode *Operands = MDNode::get(
+  // Emit all decorations as a single spirv.Decorations node.
+  SmallVector<Metadata *, 2> Decorations;
+  Decorations.push_back(MDNode::get(
       Ctx,
       {ConstantAsMetadata::get(B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
-       ConstantAsMetadata::get(B.getInt32(BuiltIn))});
-  MDNode *Decoration = MDNode::get(Ctx, {Operands});
-  GV->addMetadata("spirv.Decorations", *Decoration);
+       ConstantAsMetadata::get(B.getInt32(BuiltIn))}));
+  if (NeedsFlat)
+    Decorations.push_back(
+        MDNode::get(Ctx, {ConstantAsMetadata::get(
+                             B.getInt32(/* Spirv::Decoration::Flat */ 14))}));
+  GV->addMetadata("spirv.Decorations", *MDNode::get(Ctx, Decorations));
 }
 
 static void addLocationDecoration(llvm::GlobalVariable *GV, unsigned Location) {
@@ -1137,13 +1142,14 @@ static bool inputRequiresFlatDecoration(llvm::Type *Ty) {
 
 static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
                                            llvm::Type *Ty, const Twine &Name,
-                                           unsigned BuiltInID) {
+                                           unsigned BuiltInID,
+                                           bool NeedsFlat = false) {
   auto *GV = new llvm::GlobalVariable(
       M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
-  addSPIRVBuiltinDecoration(GV, BuiltInID);
+  addSPIRVBuiltinDecoration(GV, BuiltInID, NeedsFlat);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   return B.CreateLoad(Ty, GV);
 }
@@ -1562,6 +1568,20 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
                                     Semantic->getAttrName()->getName(),
                                     /* BuiltIn::InstanceIndex */ 43);
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
+  case llvm::dxbc::PSV::SemanticKind::IsFrontFace:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_IsFrontFace is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      // Non-float pixel inputs cannot be interpolated and must be Flat.
+      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                    Semantic->getAttrName()->getName(),
+                                    /* BuiltIn::FrontFacing */ 17,
+                                    inputRequiresFlatDecoration(Type));
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);

@@ -13796,7 +13796,7 @@ def err_hlsl_semantic_invalid_type
             "%select{scalar|scalar or vector of up to %2 components}1 of "
             "%select{16 or 32 bit integer|32 bit integer|"
             "16 or 32 bit floating-point|16 or 32 bit unsigned integer|"
-            "32 bit unsigned integer}3 type (was %4)">;
+            "32 bit unsigned integer|bool}3 type (was %4)">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
