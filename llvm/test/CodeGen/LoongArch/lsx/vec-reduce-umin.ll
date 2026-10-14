@@ -184,8 +184,9 @@ define void @vec_reduce_umin_v2i32(ptr %src, ptr %dst) nounwind {
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 4
+; LA32-NEXT:    vori.b $vr1, $vr0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 1
+; LA32-NEXT:    vbsrl.v $vr1, $vr1, 4
 ; LA32-NEXT:    vmin.wu $vr0, $vr1, $vr0
 ; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
 ; LA32-NEXT:    st.w $a0, $a1, 0

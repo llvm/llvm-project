@@ -34,7 +34,7 @@ define <4 x i1> @t1_all_odd_eq(<4 x i32> %X) nounwind {
 ; CHECK-SSE41-LABEL: t1_all_odd_eq:
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2863311531,2863311531,2863311531,2863311531]
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [1431655765,4294967295,4294967295,4294967295]
+; CHECK-SSE41-NEXT:    pmovzxdq {{.*#+}} xmm1 = [1431655765,4294967295]
 ; CHECK-SSE41-NEXT:    pminud %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
@@ -85,7 +85,7 @@ define <4 x i1> @t1_all_odd_ne(<4 x i32> %X) nounwind {
 ; CHECK-SSE41-LABEL: t1_all_odd_ne:
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2863311531,2863311531,2863311531,2863311531]
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [1431655765,4294967295,4294967295,4294967295]
+; CHECK-SSE41-NEXT:    pmovzxdq {{.*#+}} xmm1 = [1431655765,4294967295]
 ; CHECK-SSE41-NEXT:    pminud %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
@@ -140,7 +140,7 @@ define <8 x i1> @t2_narrow(<8 x i16> %X) nounwind {
 ; CHECK-SSE41-LABEL: t2_narrow:
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [43691,43691,43691,43691,43691,43691,43691,43691]
-; CHECK-SSE41-NEXT:    pmovsxdq {{.*#+}} xmm1 = [18446744073709507925,18446744073709507925]
+; CHECK-SSE41-NEXT:    pmovzxdq {{.*#+}} xmm1 = [4294923605,4294923605]
 ; CHECK-SSE41-NEXT:    pminuw %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqw %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
@@ -278,7 +278,9 @@ define <2 x i1> @t3_wide(<2 x i64> %X) nounwind {
 ; CHECK-AVX512VL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
-; CHECK-AVX512VL-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; CHECK-AVX512VL-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
+; CHECK-AVX512VL-NEXT:    vmovq %rax, %xmm1
+; CHECK-AVX512VL-NEXT:    vpminuq %xmm1, %xmm0, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-AVX512VL-NEXT:    retq
