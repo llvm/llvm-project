@@ -464,3 +464,38 @@ define <8 x i64> @vaadd_vx_v8i64_ceil(<8 x i64> %x, i64 %y) {
   %ret = trunc <8 x i128> %div to <8 x i64>
   ret <8 x i64> %ret
 }
+
+; The add with 1 has two uses. It will be used to form an avgceils for one
+; of the uses. An avgfloors will be formed from the other add+lshr+trunc. The
+; add of 1 will be reassociated to expose an opportunity to turn the avgfloors
+; into an avgceils.
+define <4 x i8> @vaadd_reassociate(<4 x i8> %x, <4 x i8> %y, <4 x i8> %z, <4 x i8> %w) {
+; CHECK-LABEL: vaadd_reassociate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v12, v11
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vwsub.vv v11, v8, v10
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vaadd.vv v10, v11, v12
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
+; CHECK-NEXT:    vnsrl.wi v9, v10, 0
+; CHECK-NEXT:    vmul.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %a = sext <4 x i8> %x to <4 x i16>
+  %b = sext <4 x i8> %y to <4 x i16>
+  %c = sext <4 x i8> %z to <4 x i16>
+  %d = sext <4 x i8> %w to <4 x i16>
+  %add = add nsw <4 x i16> %a, splat (i16 1)
+  %add2 = add nsw <4 x i16> %add, %b
+  %lshr = lshr <4 x i16> %add2, splat (i16 1)
+  %trunc = trunc <4 x i16> %lshr to <4 x i8>
+  %sub = sub nsw <4 x i16> %add, %c
+  %add3 = add nsw <4 x i16> %sub, %d
+  %lshr2 = lshr <4 x i16> %add3, splat (i16 1)
+  %trunc2 = trunc <4 x i16> %lshr2 to <4 x i8>
+  %mul = mul <4 x i8> %trunc, %trunc2
+  ret <4 x i8> %mul
+}
