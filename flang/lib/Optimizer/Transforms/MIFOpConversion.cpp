@@ -104,7 +104,13 @@ static mlir::Value convertRefTypeToCPtrType(fir::FirOpBuilder &builder,
   mlir::Type cptrType = getBuiltinCptrType(builder, loc);
   mlir::Value cptr = builder.createTemporary(loc, cptrType);
 
-  mlir::Value addrI64 = builder.createConvert(loc, builder.getI64Type(), ref);
+  mlir::Value addr = ref;
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ref.getType())) {
+    mlir::Type addrTy = fir::boxMemRefType(boxTy);
+    addr = fir::BoxAddrOp::create(builder, loc, addrTy, ref);
+  }
+
+  mlir::Value addrI64 = builder.createConvert(loc, builder.getI64Type(), addr);
   mlir::Value addrRef =
       fir::factory::genCPtrOrCFunptrAddr(builder, loc, cptr, cptrType);
   fir::StoreOp::create(builder, loc, addrI64, addrRef);
