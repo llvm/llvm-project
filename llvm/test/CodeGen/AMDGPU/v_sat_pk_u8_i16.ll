@@ -97,9 +97,9 @@ define <2 x i16> @basic_smax_smin(i16 %src0, i16 %src1) {
 ; GISEL-GFX9-LABEL: basic_smax_smin:
 ; GISEL-GFX9:       ; %bb.0:
 ; GISEL-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX9-NEXT:    v_mov_b32_e32 v2, 0xff
-; GISEL-GFX9-NEXT:    v_med3_i16 v1, v1, 0, v2
-; GISEL-GFX9-NEXT:    v_med3_i16 v0, v0, 0, v2
+; GISEL-GFX9-NEXT:    s_movk_i32 s4, 0xff
+; GISEL-GFX9-NEXT:    v_med3_i16 v1, v1, 0, s4
+; GISEL-GFX9-NEXT:    v_med3_i16 v0, v0, 0, s4
 ; GISEL-GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GISEL-GFX9-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -646,9 +646,9 @@ define <2 x i16> @vec_smax_smin(<2 x i16> %src) {
 ; GISEL-GFX9-LABEL: vec_smax_smin:
 ; GISEL-GFX9:       ; %bb.0:
 ; GISEL-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX9-NEXT:    s_mov_b32 s4, 0xff00ff
 ; GISEL-GFX9-NEXT:    v_pk_max_i16 v0, v0, 0
-; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0xff00ff
-; GISEL-GFX9-NEXT:    v_pk_min_i16 v0, v0, v1
+; GISEL-GFX9-NEXT:    v_pk_min_i16 v0, v0, s4
 ; GISEL-GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX11-LABEL: vec_smax_smin:
@@ -887,8 +887,8 @@ define <2 x i16> @vec_smin_smax(<2 x i16> %src) {
 ; GISEL-GFX9-LABEL: vec_smin_smax:
 ; GISEL-GFX9:       ; %bb.0:
 ; GISEL-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0xff00ff
-; GISEL-GFX9-NEXT:    v_pk_min_i16 v0, v0, v1
+; GISEL-GFX9-NEXT:    s_mov_b32 s4, 0xff00ff
+; GISEL-GFX9-NEXT:    v_pk_min_i16 v0, v0, s4
 ; GISEL-GFX9-NEXT:    v_pk_max_i16 v0, v0, 0
 ; GISEL-GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1000,9 +1000,9 @@ define i16 @basic_smax_smin_bit_or(i16 %src0, i16 %src1) {
 ; GISEL-GFX9-LABEL: basic_smax_smin_bit_or:
 ; GISEL-GFX9:       ; %bb.0:
 ; GISEL-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX9-NEXT:    v_mov_b32_e32 v2, 0xff
-; GISEL-GFX9-NEXT:    v_med3_i16 v1, v1, 0, v2
-; GISEL-GFX9-NEXT:    v_med3_i16 v0, v0, 0, v2
+; GISEL-GFX9-NEXT:    s_movk_i32 s4, 0xff
+; GISEL-GFX9-NEXT:    v_med3_i16 v1, v1, 0, s4
+; GISEL-GFX9-NEXT:    v_med3_i16 v0, v0, 0, s4
 ; GISEL-GFX9-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
 ; GISEL-GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -1298,9 +1298,9 @@ define i16 @basic_smax_smin_vec_cast(i16 %src0, i16 %src1) {
 ; GISEL-GFX9-LABEL: basic_smax_smin_vec_cast:
 ; GISEL-GFX9:       ; %bb.0:
 ; GISEL-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX9-NEXT:    v_mov_b32_e32 v2, 0xff
-; GISEL-GFX9-NEXT:    v_med3_i16 v1, v1, 0, v2
-; GISEL-GFX9-NEXT:    v_med3_i16 v0, v0, 0, v2
+; GISEL-GFX9-NEXT:    s_movk_i32 s4, 0xff
+; GISEL-GFX9-NEXT:    v_med3_i16 v1, v1, 0, s4
+; GISEL-GFX9-NEXT:    v_med3_i16 v0, v0, 0, s4
 ; GISEL-GFX9-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
 ; GISEL-GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -1445,9 +1445,9 @@ define i16 @basic_smax_smin_bit_shl(i16 %src0, i16 %src1) {
 ; GISEL-GFX9-LABEL: basic_smax_smin_bit_shl:
 ; GISEL-GFX9:       ; %bb.0:
 ; GISEL-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX9-NEXT:    v_mov_b32_e32 v2, 0xff
-; GISEL-GFX9-NEXT:    v_med3_i16 v0, v0, 0, v2
+; GISEL-GFX9-NEXT:    s_movk_i32 s4, 0xff
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GISEL-GFX9-NEXT:    v_med3_i16 v0, v0, 0, s4
 ; GISEL-GFX9-NEXT:    v_max_i16_sdwa v1, v1, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -1601,8 +1601,8 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; GISEL-GFX9-LABEL: basic_smax_smin_vec_input:
 ; GISEL-GFX9:       ; %bb.0:
 ; GISEL-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0xff00ff
-; GISEL-GFX9-NEXT:    v_pk_min_i16 v0, v1, v0
+; GISEL-GFX9-NEXT:    s_mov_b32 s4, 0xff00ff
+; GISEL-GFX9-NEXT:    v_pk_min_i16 v0, s4, v0
 ; GISEL-GFX9-NEXT:    v_pk_max_i16 v0, 0, v0
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0xff
 ; GISEL-GFX9-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
@@ -1774,9 +1774,9 @@ define i16 @basic_smax_smin_vec_input_rev(<2 x i16> %src) {
 ; GISEL-GFX9-LABEL: basic_smax_smin_vec_input_rev:
 ; GISEL-GFX9:       ; %bb.0:
 ; GISEL-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX9-NEXT:    s_mov_b32 s4, 0xff00ff
 ; GISEL-GFX9-NEXT:    v_pk_max_i16 v0, 0, v0
-; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0xff00ff
-; GISEL-GFX9-NEXT:    v_pk_min_i16 v0, v1, v0
+; GISEL-GFX9-NEXT:    v_pk_min_i16 v0, s4, v0
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0xff
 ; GISEL-GFX9-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD

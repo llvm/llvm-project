@@ -55,23 +55,14 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 }
 
 define i8 @test_signed_i8_f32(float %f) nounwind {
-; GFX7-ISEL-LABEL: test_signed_i8_f32:
-; GFX7-ISEL:       ; %bb.0:
-; GFX7-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-ISEL-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GFX7-ISEL-NEXT:    s_movk_i32 s4, 0xff80
-; GFX7-ISEL-NEXT:    v_mov_b32_e32 v1, 0x7f
-; GFX7-ISEL-NEXT:    v_med3_i32 v0, v0, s4, v1
-; GFX7-ISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GI-LABEL: test_signed_i8_f32:
-; GFX7-GI:       ; %bb.0:
-; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0x7f
-; GFX7-GI-NEXT:    v_mov_b32_e32 v2, 0xffffff80
-; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v2, v1
-; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: test_signed_i8_f32:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX7-NEXT:    s_movk_i32 s4, 0xff80
+; GFX7-NEXT:    v_mov_b32_e32 v1, 0x7f
+; GFX7-NEXT:    v_med3_i32 v0, v0, s4, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_signed_i8_f32:
 ; GFX9:       ; %bb.0:
@@ -245,9 +236,9 @@ define i64 @test_signed_i64_f32(float %f) nounwind {
 ; GFX7-GI-NEXT:    v_trunc_f32_e32 v1, v0
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v2, 0x2f800000
 ; GFX7-GI-NEXT:    v_mul_f32_e64 v2, |v1|, v2
+; GFX7-GI-NEXT:    s_mov_b32 s4, 0xcf800000
 ; GFX7-GI-NEXT:    v_floor_f32_e32 v2, v2
-; GFX7-GI-NEXT:    v_mov_b32_e32 v3, 0xcf800000
-; GFX7-GI-NEXT:    v_fma_f32 v1, v2, v3, |v1|
+; GFX7-GI-NEXT:    v_fma_f32 v1, v2, s4, |v1|
 ; GFX7-GI-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX7-GI-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX7-GI-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
@@ -661,9 +652,9 @@ define i64 @test_s_signed_i64_f32(float inreg %f) nounwind {
 ; GFX7-GI-NEXT:    v_trunc_f32_e32 v0, s16
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0x2f800000
 ; GFX7-GI-NEXT:    v_mul_f32_e64 v1, |v0|, v1
+; GFX7-GI-NEXT:    s_mov_b32 s4, 0xcf800000
 ; GFX7-GI-NEXT:    v_floor_f32_e32 v1, v1
-; GFX7-GI-NEXT:    v_mov_b32_e32 v2, 0xcf800000
-; GFX7-GI-NEXT:    v_fma_f32 v0, v1, v2, |v0|
+; GFX7-GI-NEXT:    v_fma_f32 v0, v1, s4, |v0|
 ; GFX7-GI-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX7-GI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX7-GI-NEXT:    s_ashr_i32 s4, s16, 31
@@ -900,23 +891,14 @@ define i1 @test_signed_i1_f64(double %f) nounwind {
 }
 
 define i8 @test_signed_i8_f64(double %f) nounwind {
-; GFX7-ISEL-LABEL: test_signed_i8_f64:
-; GFX7-ISEL:       ; %bb.0:
-; GFX7-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-ISEL-NEXT:    v_cvt_i32_f64_e32 v0, v[0:1]
-; GFX7-ISEL-NEXT:    s_movk_i32 s4, 0xff80
-; GFX7-ISEL-NEXT:    v_mov_b32_e32 v1, 0x7f
-; GFX7-ISEL-NEXT:    v_med3_i32 v0, v0, s4, v1
-; GFX7-ISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GI-LABEL: test_signed_i8_f64:
-; GFX7-GI:       ; %bb.0:
-; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GI-NEXT:    v_cvt_i32_f64_e32 v0, v[0:1]
-; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0x7f
-; GFX7-GI-NEXT:    v_mov_b32_e32 v2, 0xffffff80
-; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v2, v1
-; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: test_signed_i8_f64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_i32_f64_e32 v0, v[0:1]
+; GFX7-NEXT:    s_movk_i32 s4, 0xff80
+; GFX7-NEXT:    v_mov_b32_e32 v1, 0x7f
+; GFX7-NEXT:    v_med3_i32 v0, v0, s4, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_signed_i8_f64:
 ; GFX9:       ; %bb.0:
@@ -964,23 +946,14 @@ define i8 @test_signed_i8_f64(double %f) nounwind {
 }
 
 define i16 @test_signed_i16_f64(double %f) nounwind {
-; GFX7-ISEL-LABEL: test_signed_i16_f64:
-; GFX7-ISEL:       ; %bb.0:
-; GFX7-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-ISEL-NEXT:    v_cvt_i32_f64_e32 v0, v[0:1]
-; GFX7-ISEL-NEXT:    s_movk_i32 s4, 0x8000
-; GFX7-ISEL-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX7-ISEL-NEXT:    v_med3_i32 v0, v0, s4, v1
-; GFX7-ISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GI-LABEL: test_signed_i16_f64:
-; GFX7-GI:       ; %bb.0:
-; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GI-NEXT:    v_cvt_i32_f64_e32 v0, v[0:1]
-; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX7-GI-NEXT:    v_mov_b32_e32 v2, 0xffff8000
-; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v2, v1
-; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: test_signed_i16_f64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_i32_f64_e32 v0, v[0:1]
+; GFX7-NEXT:    s_movk_i32 s4, 0x8000
+; GFX7-NEXT:    v_mov_b32_e32 v1, 0x7fff
+; GFX7-NEXT:    v_med3_i32 v0, v0, s4, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_signed_i16_f64:
 ; GFX9:       ; %bb.0:
@@ -1722,25 +1695,15 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 }
 
 define i8 @test_signed_i8_f16(half %f) nounwind {
-; GFX7-ISEL-LABEL: test_signed_i8_f16:
-; GFX7-ISEL:       ; %bb.0:
-; GFX7-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-ISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-ISEL-NEXT:    s_movk_i32 s4, 0xff80
-; GFX7-ISEL-NEXT:    v_mov_b32_e32 v1, 0x7f
-; GFX7-ISEL-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GFX7-ISEL-NEXT:    v_med3_i32 v0, v0, s4, v1
-; GFX7-ISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GI-LABEL: test_signed_i8_f16:
-; GFX7-GI:       ; %bb.0:
-; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0x7f
-; GFX7-GI-NEXT:    v_mov_b32_e32 v2, 0xffffff80
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v2, v1
-; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: test_signed_i8_f16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    s_movk_i32 s4, 0xff80
+; GFX7-NEXT:    v_mov_b32_e32 v1, 0x7f
+; GFX7-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX7-NEXT:    v_med3_i32 v0, v0, s4, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_signed_i8_f16:
 ; GFX9:       ; %bb.0:

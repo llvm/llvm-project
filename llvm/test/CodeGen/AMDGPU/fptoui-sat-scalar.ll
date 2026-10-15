@@ -191,9 +191,9 @@ define i64 @test_unsigned_i64_f32(float %f) nounwind {
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_trunc_f32_e32 v1, v0
 ; GFX7-GI-NEXT:    v_mul_f32_e32 v2, 0x2f800000, v1
+; GFX7-GI-NEXT:    s_mov_b32 s4, 0xcf800000
 ; GFX7-GI-NEXT:    v_floor_f32_e32 v2, v2
-; GFX7-GI-NEXT:    v_mov_b32_e32 v3, 0xcf800000
-; GFX7-GI-NEXT:    v_fma_f32 v1, v2, v3, v1
+; GFX7-GI-NEXT:    v_fma_f32 v1, v2, s4, v1
 ; GFX7-GI-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX7-GI-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX7-GI-NEXT:    v_cmp_nle_f32_e32 vcc, 0, v0
@@ -483,9 +483,9 @@ define i64 @test_s_unsigned_i64_f32(float inreg %f) nounwind {
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_trunc_f32_e32 v0, s16
 ; GFX7-GI-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
+; GFX7-GI-NEXT:    s_mov_b32 s4, 0xcf800000
 ; GFX7-GI-NEXT:    v_floor_f32_e32 v1, v1
-; GFX7-GI-NEXT:    v_mov_b32_e32 v2, 0xcf800000
-; GFX7-GI-NEXT:    v_fma_f32 v0, v1, v2, v0
+; GFX7-GI-NEXT:    v_fma_f32 v0, v1, s4, v0
 ; GFX7-GI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX7-GI-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX7-GI-NEXT:    v_cmp_nge_f32_e64 s[6:7], s16, 0

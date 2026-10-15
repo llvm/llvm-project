@@ -216,9 +216,9 @@ define { float, float } @test_modf_f32(float %x) {
 ; GFX9-GISEL-NEXT:    v_sub_f32_e32 v2, v0, v1
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f32_e64 s[4:5], |v0|, v3
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[4:5]
-; GFX9-GISEL-NEXT:    v_bfrev_b32_e32 v3, -2
+; GFX9-GISEL-NEXT:    s_brev_b32 s4, -2
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v2, v3, v0
+; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v2, s4, v0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { float, float } @llvm.modf.f32(float %x)
   ret { float, float } %result
@@ -245,9 +245,9 @@ define float @test_modf_f32_only_use_fract(float %x) {
 ; GFX9-GISEL-NEXT:    v_sub_f32_e32 v1, v0, v1
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f32_e64 s[4:5], |v0|, v2
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, v1, 0, s[4:5]
-; GFX9-GISEL-NEXT:    v_bfrev_b32_e32 v2, -2
+; GFX9-GISEL-NEXT:    s_brev_b32 s4, -2
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v1, v2, v0
+; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v1, s4, v0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { float, float } @llvm.modf.f32(float %x)
   %result.0 = extractvalue { float, float } %result, 0
@@ -291,15 +291,15 @@ define { <2 x float>, <2 x float> } @test_modf_v2f32(<2 x float> %x) {
 ; GFX9-GISEL-NEXT:    v_sub_f32_e32 v3, v0, v2
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f32_e64 s[4:5], |v0|, v4
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0, s[4:5]
-; GFX9-GISEL-NEXT:    v_bfrev_b32_e32 v5, -2
+; GFX9-GISEL-NEXT:    s_brev_b32 s6, -2
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v3, v5, v0
+; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v3, s6, v0
 ; GFX9-GISEL-NEXT:    v_trunc_f32_e32 v3, v1
-; GFX9-GISEL-NEXT:    v_sub_f32_e32 v6, v1, v3
+; GFX9-GISEL-NEXT:    v_sub_f32_e32 v5, v1, v3
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f32_e64 s[4:5], |v1|, v4
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v4, v6, 0, s[4:5]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v4, v5, 0, s[4:5]
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
-; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v4, v5, v1
+; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v4, s6, v1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { <2 x float>, <2 x float> } @llvm.modf.v2f32(<2 x float> %x)
   ret { <2 x float>, <2 x float> } %result
@@ -331,15 +331,15 @@ define <2 x float> @test_modf_v2f32_only_use_fract(<2 x float> %x) {
 ; GFX9-GISEL-NEXT:    v_sub_f32_e32 v2, v0, v2
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f32_e64 s[4:5], |v0|, v3
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[4:5]
-; GFX9-GISEL-NEXT:    v_bfrev_b32_e32 v4, -2
+; GFX9-GISEL-NEXT:    s_brev_b32 s6, -2
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v2, v4, v0
+; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v2, s6, v0
 ; GFX9-GISEL-NEXT:    v_trunc_f32_e32 v2, v1
 ; GFX9-GISEL-NEXT:    v_sub_f32_e32 v2, v1, v2
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f32_e64 s[4:5], |v1|, v3
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[4:5]
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
-; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v2, v4, v1
+; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v2, s6, v1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { <2 x float>, <2 x float> } @llvm.modf.v2f32(<2 x float> %x)
   %result.0 = extractvalue { <2 x float>, <2 x float> } %result, 0
@@ -379,12 +379,12 @@ define { double, double } @test_modf_f64(double %x) {
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0x7ff00000
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f64_e64 s[4:5], |v[0:1]|, v[4:5]
-; GFX9-GISEL-NEXT:    v_bfrev_b32_e32 v4, -2
+; GFX9-GISEL-NEXT:    s_brev_b32 s6, -2
 ; GFX9-GISEL-NEXT:    v_add_f64 v[6:7], v[0:1], -v[2:3]
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v5, v7, 0, s[4:5]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v4, v7, 0, s[4:5]
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, v6, 0, s[4:5]
-; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v5, v4, v1
+; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v4, s6, v1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { double, double } @llvm.modf.f64(double %x)
   ret { double, double } %result
@@ -411,12 +411,12 @@ define double @test_modf_f64_only_use_fract(double %x) {
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0x7ff00000
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f64_e64 s[4:5], |v[0:1]|, v[4:5]
-; GFX9-GISEL-NEXT:    v_bfrev_b32_e32 v4, -2
+; GFX9-GISEL-NEXT:    s_brev_b32 s6, -2
 ; GFX9-GISEL-NEXT:    v_add_f64 v[2:3], v[0:1], -v[2:3]
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, v2, 0, s[4:5]
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, v3, 0, s[4:5]
-; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v2, v4, v1
+; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v2, s6, v1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { double, double } @llvm.modf.f64(double %x)
   %result.0 = extractvalue { double, double } %result, 0
@@ -463,17 +463,17 @@ define { <2 x double>, <2 x double> } @test_modf_v2f64(<2 x double> %x) {
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v9, 0x7ff00000
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f64_e64 s[4:5], |v[0:1]|, v[8:9]
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f64_e64 s[6:7], |v[2:3]|, v[8:9]
-; GFX9-GISEL-NEXT:    v_bfrev_b32_e32 v8, -2
+; GFX9-GISEL-NEXT:    s_brev_b32 s8, -2
 ; GFX9-GISEL-NEXT:    v_add_f64 v[10:11], v[0:1], -v[4:5]
 ; GFX9-GISEL-NEXT:    v_add_f64 v[12:13], v[2:3], -v[6:7]
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v3, 0x80000000, v3
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v8, v11, 0, s[4:5]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v9, v13, 0, s[6:7]
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, v10, 0, s[4:5]
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v9, v11, 0, s[4:5]
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v10, v13, 0, s[6:7]
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, v12, 0, s[6:7]
-; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v9, v8, v1
-; GFX9-GISEL-NEXT:    v_and_or_b32 v3, v10, v8, v3
+; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v8, s8, v1
+; GFX9-GISEL-NEXT:    v_and_or_b32 v3, v9, s8, v3
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { <2 x double>, <2 x double> } @llvm.modf.v2f64(<2 x double> %x)
   ret { <2 x double>, <2 x double> } %result
@@ -508,7 +508,7 @@ define <2 x double> @test_modf_v2f64_only_use_fract(<2 x double> %x) {
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v9, 0x7ff00000
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f64_e64 s[4:5], |v[0:1]|, v[8:9]
 ; GFX9-GISEL-NEXT:    v_cmp_eq_f64_e64 s[6:7], |v[2:3]|, v[8:9]
-; GFX9-GISEL-NEXT:    v_bfrev_b32_e32 v8, -2
+; GFX9-GISEL-NEXT:    s_brev_b32 s8, -2
 ; GFX9-GISEL-NEXT:    v_add_f64 v[4:5], v[0:1], -v[4:5]
 ; GFX9-GISEL-NEXT:    v_add_f64 v[6:7], v[2:3], -v[6:7]
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
@@ -517,8 +517,8 @@ define <2 x double> @test_modf_v2f64_only_use_fract(<2 x double> %x) {
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v4, v5, 0, s[4:5]
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v5, v7, 0, s[6:7]
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, v6, 0, s[6:7]
-; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v4, v8, v1
-; GFX9-GISEL-NEXT:    v_and_or_b32 v3, v5, v8, v3
+; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v4, s8, v1
+; GFX9-GISEL-NEXT:    v_and_or_b32 v3, v5, s8, v3
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { <2 x double>, <2 x double> } @llvm.modf.v2f64(<2 x double> %x)
   %result.0 = extractvalue { <2 x double>, <2 x double> } %result, 0
@@ -552,9 +552,9 @@ define { float, float } @test_modf_ninf(float %x) {
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_trunc_f32_e32 v1, v0
 ; GFX9-GISEL-NEXT:    v_sub_f32_e32 v2, v0, v1
-; GFX9-GISEL-NEXT:    v_bfrev_b32_e32 v3, -2
+; GFX9-GISEL-NEXT:    s_brev_b32 s4, -2
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v2, v3, v0
+; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v2, s4, v0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call ninf { float, float } @llvm.modf.f32(float %x)
   ret { float, float } %result
