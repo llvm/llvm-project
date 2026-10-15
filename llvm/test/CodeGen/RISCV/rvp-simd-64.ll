@@ -6731,8 +6731,7 @@ define <2 x i32> @test_pmulqr_v2i32(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i32> @test_return_zero() {
 ; RV32-LABEL: test_return_zero:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    mvd a0, zero
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_return_zero:

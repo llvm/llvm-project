@@ -241,7 +241,8 @@ class SPIRVEmitIntrinsicsImpl
                                      bool UnknownElemTypeI8);
   Type *deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
                                      SmallPtrSetImpl<Value *> &Visited,
-                                     bool UnknownElemTypeI8);
+                                     bool UnknownElemTypeI8,
+                                     std::optional<unsigned> AddrSpace = {});
   Type *deduceElementTypeByUsersDeep(Value *Op,
                                      SmallPtrSetImpl<Value *> &Visited,
                                      bool UnknownElemTypeI8);
@@ -713,13 +714,14 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeByValueDeep(
 
 Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeByValueDeep(
     Type *ValueTy, Value *Operand, SmallPtrSetImpl<Value *> &Visited,
-    bool UnknownElemTypeI8) {
+    bool UnknownElemTypeI8, std::optional<unsigned> AddrSpace) {
   Type *Ty = ValueTy;
   if (Operand) {
     if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
       if (Type *NestedTy =
               deduceElementTypeHelper(Operand, Visited, UnknownElemTypeI8))
-        Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
+        Ty = getTypedPointerWrapper(
+            NestedTy, AddrSpace.value_or(PtrTy->getAddressSpace()));
     } else {
       Ty = deduceNestedTypeHelper(dyn_cast<User>(Operand), Ty, Visited,
                                   UnknownElemTypeI8);
@@ -993,10 +995,21 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
       Ty = SPIRV::getOriginalFunctionType(*Fn);
       GR->addDeducedElementType(I, Ty);
     } else {
-      Ty = deduceElementTypeByValueDeep(
-          Ref->getValueType(),
-          Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr, Visited,
-          UnknownElemTypeI8);
+      Value *Op = Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr;
+      // Code lives in the program address space, not in the address space of
+      // the global. For known SPIR-V targets, program address space 0 maps
+      // to Function/Private, which cannot hold code, so treat it as unset.
+      std::optional<unsigned> ProgramAS;
+      if (isa_and_nonnull<Function>(Op)) {
+        if (unsigned AS = CurrF->getDataLayout().getProgramAddressSpace())
+          ProgramAS = AS;
+        else if (TM.getSubtargetImpl()->canUseExtension(
+                     SPIRV::Extension::SPV_INTEL_function_pointers))
+          ProgramAS =
+              storageClassToAddressSpace(SPIRV::StorageClass::CodeSectionINTEL);
+      }
+      Ty = deduceElementTypeByValueDeep(Ref->getValueType(), Op, Visited,
+                                        UnknownElemTypeI8, ProgramAS);
     }
   } else if (auto *Ref = dyn_cast<AddrSpaceCastInst>(I)) {
     Type *RefTy = deduceElementTypeHelper(Ref->getPointerOperand(), Visited,
@@ -2745,11 +2758,7 @@ static bool isAbortCall(const Instruction &I, const SPIRVSubtarget &ST) {
 // emit an extra OpUnreachable instruction.
 static bool precededByAbortIntrinsic(const UnreachableInst &I,
                                      const SPIRVSubtarget &ST) {
-  // Find a previous non-debug instruction.
   const Instruction *Prev = I.getPrevNode();
-  while (Prev && Prev->isDebugOrPseudoInst())
-    Prev = Prev->getPrevNode();
-
   if (Prev && isAbortCall(*Prev, ST))
     return true;
 
@@ -4177,46 +4186,67 @@ void SPIRVEmitIntrinsicsImpl::preprocessBoolVectorBitcasts(Function &F) {
     IRBuilder<> B(BC);
     Value *Src = BC->getOperand(0);
     unsigned BoolVecN = BoolVecTy->getNumElements();
-    // Use iN as the scalar intermediate type for the bool vector side.
-    Type *IntTy = B.getIntNTy(BoolVecN);
+    // Convert per element of the other side, as iN can exceed the maximum
+    // SPIR-V integer width.
+    Type *OtherTy = SrcIsBoolVec ? BC->getDestTy() : Src->getType();
+    unsigned NumElts = 1;
+    if (auto *VTy = dyn_cast<FixedVectorType>(OtherTy))
+      NumElts = VTy->getNumElements();
+    unsigned EltBits = OtherTy->getScalarSizeInBits();
+    Type *EltTy = B.getIntNTy(EltBits);
+    Type *IntTy = NumElts > 1 ? FixedVectorType::get(EltTy, NumElts) : EltTy;
 
-    // Convert source to scalar integer.
-    Value *IntVal;
-    if (SrcIsBoolVec) {
-      // Extract each bool, zext, shift, and OR.
-      IntVal = ConstantInt::get(IntTy, 0);
-      for (unsigned I = 0; I < BoolVecN; ++I) {
-        Value *Elem = B.CreateExtractElement(Src, B.getInt32(I));
-        Value *Ext = B.CreateZExt(Elem, IntTy);
-        if (I > 0)
-          Ext = B.CreateShl(Ext, ConstantInt::get(IntTy, I));
-        IntVal = B.CreateOr(IntVal, Ext);
-      }
-    } else {
-      // Source is a non-bool type. If it's already a scalar integer, use it
-      // directly, otherwise bitcast to iN first.
-      IntVal = Src;
-      if (!Src->getType()->isIntegerTy())
-        IntVal = B.CreateBitCast(Src, IntTy);
-    }
-
-    // Convert scalar integer to destination type.
     Value *Result;
     if (!SrcIsBoolVec) {
-      // Test each bit with AND + icmp.
-      Result = PoisonValue::get(BoolVecTy);
-      for (unsigned I = 0; I < BoolVecN; ++I) {
-        Value *Mask = ConstantInt::get(IntTy, APInt::getOneBitSet(BoolVecN, I));
-        Value *And = B.CreateAnd(IntVal, Mask);
-        Value *Cmp = B.CreateICmpNE(And, ConstantInt::get(IntTy, 0));
-        Result = B.CreateInsertElement(Result, Cmp, B.getInt32(I));
+      Value *IntVal = B.CreateBitCast(Src, IntTy);
+      // Lane I is bit I % EltBits of element I / EltBits.
+      auto GetLane = [&](unsigned I) {
+        Value *Elt = IntVal;
+        if (NumElts > 1)
+          Elt = B.CreateExtractElement(IntVal, B.getInt32(I / EltBits));
+        Value *Mask =
+            ConstantInt::get(EltTy, APInt::getOneBitSet(EltBits, I % EltBits));
+        Value *And = B.CreateAnd(Elt, Mask);
+        return B.CreateICmpNE(And, ConstantInt::get(EltTy, 0));
+      };
+
+      // Compute constant-index extracts directly, as no later pass removes
+      // the unused lanes.
+      for (User *U : make_early_inc_range(BC->users())) {
+        auto *EE = dyn_cast<ExtractElementInst>(U);
+        auto *Idx = EE ? dyn_cast<ConstantInt>(EE->getIndexOperand()) : nullptr;
+        if (!Idx || Idx->getValue().uge(BoolVecN))
+          continue;
+        B.SetInsertPoint(EE);
+        EE->replaceAllUsesWith(GetLane(Idx->getZExtValue()));
+        EE->eraseFromParent();
       }
+      if (BC->use_empty()) {
+        BC->eraseFromParent();
+        continue;
+      }
+
+      B.SetInsertPoint(BC);
+      Result = PoisonValue::get(BoolVecTy);
+      for (unsigned I = 0; I < BoolVecN; ++I)
+        Result = B.CreateInsertElement(Result, GetLane(I), B.getInt32(I));
     } else {
-      // Destination is a non-bool type. If it's a scalar integer, use IntVal
-      // directly, otherwise bitcast from iN.
-      Result = IntVal;
-      if (!BC->getDestTy()->isIntegerTy())
-        Result = B.CreateBitCast(IntVal, BC->getDestTy());
+      // Build each element from its lanes.
+      Value *IntVal = PoisonValue::get(IntTy);
+      for (unsigned J = 0; J < NumElts; ++J) {
+        Value *Elt = ConstantInt::get(EltTy, 0);
+        for (unsigned Bit = 0; Bit < EltBits; ++Bit) {
+          Value *Lane =
+              B.CreateExtractElement(Src, B.getInt32(J * EltBits + Bit));
+          Value *Ext = B.CreateZExt(Lane, EltTy);
+          if (Bit > 0)
+            Ext = B.CreateShl(Ext, ConstantInt::get(EltTy, Bit));
+          Elt = B.CreateOr(Elt, Ext);
+        }
+        IntVal = NumElts > 1 ? B.CreateInsertElement(IntVal, Elt, B.getInt32(J))
+                             : Elt;
+      }
+      Result = B.CreateBitCast(IntVal, BC->getDestTy());
     }
 
     BC->replaceAllUsesWith(Result);
