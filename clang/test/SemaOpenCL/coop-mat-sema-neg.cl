@@ -145,7 +145,7 @@ kernel void test_incompatible_muladd_shapes() {
     (void)coop_mat_mulAdd(a, b, c); // expected-error {{two cooperative matrices with incompatible shapes}}
 }
 
-// TEst of cooperative matrix binary operators.
+// Test of cooperative matrix binary operators.
 kernel void test_unsupported_coopmat_binary_operator() {
     MatA_t a;
     MatB_t b;
