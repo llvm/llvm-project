@@ -121,3 +121,12 @@ multiclass EnumListField<string name, string type, string values,
                          list<code> enumerators, string help> {
   defm NAME : ListField<name, type, help>, EnumValues<values, enumerators>;
 }
+
+// Another spelling of an option, e.g.
+//   AliasOf<"x-limit", "x-threshold">: -x-limit=8 means -x-threshold=8
+//   AliasOf<"disable-x", "x=false">: -disable-x means -x=false
+class AliasOf<string name, string target> : Flag<["-", "--"], name> {
+  int Eq = !find(target, "=");
+  string AliasTarget = !if(!lt(Eq, 0), target, !substr(target, 0, Eq));
+  let AliasArgs = !if(!lt(Eq, 0), []<string>, [!substr(target, !add(Eq, 1))]);
+}
