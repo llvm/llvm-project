@@ -123,7 +123,8 @@ public:
 
   void notifyAll() {
     std::lock_guard<std::mutex> Lock(Mutex);
-    Cond.notify_all();
+    if (!WorkStack.empty())
+      Cond.notify_all();
   }
 
 private:
@@ -243,13 +244,14 @@ TaskGroup::~TaskGroup() {
   if (Parallel) {
     if (IsNested)
       getDefaultExecutor()->helpSync(L);
-#if defined(__linux__) && defined(__GLIBC__)
+#if defined(__linux__) && defined(__GLIBC__) &&                                \
+    (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 38))
+    // Workaround for https://sourceware.org/bugzilla/show_bug.cgi?id=25847
+    // Fixed in glibc 2.38, but LTS distros such as Ubuntu 22.04 (2.35),
+    // Debian 12 (2.36), and RHEL 9 (2.34) distribute older versions of glibc
+    // where notify_one() (pthread_cond_signal) can drop wakeups under
+    // contention. Broadcast wakes all workers so tasks aren't stranded.
     else
-      // Workaround for https://sourceware.org/bugzilla/show_bug.cgi?id=25847
-      // Fixed in glibc 2.38, but LTS distros such as Ubuntu 22.04 (2.35),
-      // Debian 12 (2.36), and RHEL 9 (2.34) distribute older versions of glibc
-      // where notify_one() (pthread_cond_signal) can drop wakeups under
-      // contention. Broadcast wakes all workers so tasks aren't stranded.
       getDefaultExecutor()->notifyAll();
 #endif
   }
