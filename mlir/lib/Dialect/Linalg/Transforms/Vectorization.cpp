@@ -4230,7 +4230,7 @@ static FailureOr<Operation *> vectorizeConvolution(
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {
-  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {
