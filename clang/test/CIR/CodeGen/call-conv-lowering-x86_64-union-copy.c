@@ -450,8 +450,8 @@ union VI takeVI(union VI u) { return u; }
 // CIR-LABEL: cir.func {{.*}} @takeVI(%arg0: !u64i loc({{[^)]+}}), %arg1: !cir.double loc({{[^)]+}})) -> !rec_anon_struct1
 // CIR:   %[[SLOT:.+]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_anon_struct1>
 // CIR:   %[[VIEW:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!rec_VI>
-// CIR:   %[[U:.+]] = cir.alloca "u" align(16) init : !cir.ptr<!rec_VI>
 // CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) : !cir.ptr<!rec_VI>
+// CIR:   %[[U:.+]] = cir.alloca "u" align(16) init : !cir.ptr<!rec_VI>
 // CIR:   cir.copy %[[VIEW]] align(16) to %[[U]] align(16) : !cir.ptr<!rec_VI>
 // CIR:   cir.copy %[[U]] align(16) to %[[RETVAL]] align(16) : !cir.ptr<!rec_VI>
 // CIR:   %[[RETVIEW:.+]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_VI> -> !cir.ptr<!rec_anon_struct1>

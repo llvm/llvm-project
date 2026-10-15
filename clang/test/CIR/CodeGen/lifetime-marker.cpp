@@ -125,6 +125,7 @@ void if_body(int n) {
 // CIR:         cir.call @_Z3usei
 
 // LLVM-LABEL: define{{.*}} void @_Z7if_bodyi
+// LLVM:         %[[N:.*]] = alloca i32
 // LLVM:         %[[X:.*]] = alloca i32
 // LLVM:         br i1 %{{.*}}, label %[[IF_BODY:[0-9]+]], label %[[IF_END:[0-9]+]]
 // LLVM:       [[IF_BODY]]:
