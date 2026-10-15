@@ -1894,6 +1894,8 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
            << operands[0];
   }
 
+  // Unused constants are not materialized as ops, so their verifier cannot
+  // diagnose missing constituents. Only empty structs may have none.
   auto structType = dyn_cast<spirv::StructType>(resultType);
   if (operands.size() < 3 &&
       (!structType || structType.getNumElements() != 0)) {
@@ -1903,18 +1905,18 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
 
   SmallVector<Attribute, 4> elements;
   elements.reserve(operands.size() - 2);
-  for (unsigned i = 2, e = operands.size(); i < e; ++i) {
-    auto elementInfo = getConstant(operands[i]);
+  for (auto [index, id] : llvm::enumerate(operands.drop_front(2))) {
+    auto elementInfo = getConstant(id);
     if (!elementInfo) {
       // spirv.Constant cannot represent undefined constituents.
-      if (getUndefType(operands[i])) {
-        return emitError(unknownLoc, "OpConstantComposite component <id> ")
-               << operands[i]
+      if (getUndefType(id)) {
+        return emitError(unknownLoc, "OpConstantComposite component #")
+               << index << " <id> " << id
                << " is an OpUndef, which cannot be represented in "
                   "spirv.Constant";
       }
-      return emitError(unknownLoc, "OpConstantComposite component <id> ")
-             << operands[i] << " must come from a normal constant";
+      return emitError(unknownLoc, "OpConstantComposite component #")
+             << index << " <id> " << id << " must come from a normal constant";
     }
     elements.push_back(elementInfo->first);
   }

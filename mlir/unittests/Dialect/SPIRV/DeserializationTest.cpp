@@ -537,6 +537,16 @@ TEST_F(DeserializationTest, ConstantCompositeMissingConstituentsFailure) {
   expectDiagnostic("OpConstantComposite must have at least 1 parameter");
 }
 
+TEST_F(DeserializationTest, ConstantCompositeVectorMissingConstituentsFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto vectorType = addVectorType(int32Type, 2);
+  addConstantComposite(vectorType, {});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpConstantComposite must have at least 1 parameter");
+}
+
 TEST_F(DeserializationTest, ConstantCompositeNullConstituentRoundTrip) {
   addHeader();
   addMemoryModel();
@@ -617,9 +627,22 @@ TEST_F(DeserializationTest, ConstantCompositeUndefConstituentFailure) {
   addConstantComposite(arrayType, {two, undef});
 
   ASSERT_FALSE(deserialize());
-  expectDiagnostic(("OpConstantComposite component <id> " + Twine(undef) +
+  expectDiagnostic(("OpConstantComposite component #1 <id> " + Twine(undef) +
                     " is an OpUndef, which cannot be represented in "
                     "spirv.Constant")
+                       .str());
+}
+
+TEST_F(DeserializationTest, ConstantCompositeNonConstantConstituentFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto arrayType = addArrayType(int32Type, two);
+  addConstantComposite(arrayType, {int32Type, two});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpConstantComposite component #0 <id> " +
+                    Twine(int32Type) + " must come from a normal constant")
                        .str());
 }
 
