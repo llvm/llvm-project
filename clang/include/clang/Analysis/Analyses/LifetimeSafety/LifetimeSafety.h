@@ -37,16 +37,16 @@ namespace clang::lifetimes {
 struct LifetimeSafetyOpts {
   /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
   /// be skipped.
-  size_t MaxCFGBlocks = 0;
+  size_t MaxCFGBlocks;
 
   /// Whether to suggest lifetime annotations.
-  bool SuggestAnnotations = false;
+  bool SuggestAnnotations;
 
-  bool CheckNoescapeViolations = false;
-  bool CheckLifetimeboundViolations = false;
-  bool CheckMisplacedLifetimebound = false;
-  bool CheckInapplicableLifetimebound = false;
-  bool CheckFieldOriginEscape = false;
+  bool CheckNoescapeViolations;
+  bool CheckLifetimeboundViolations;
+  bool CheckMisplacedLifetimebound;
+  bool CheckInapplicableLifetimebound;
+  bool CheckFieldOriginEscape;
 };
 
 /// Enum to track functions visible across or within TU.
