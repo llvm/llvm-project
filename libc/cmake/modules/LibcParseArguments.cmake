@@ -177,7 +177,6 @@ function(llvm_libc_parse_arguments name_prefix)
   foreach(argument IN LISTS LLVM_LIBC_MULTI_VALUE_ARGS)
     if(ARG_${mode_prefix}_${argument})
       list(APPEND ARG_${argument} ${ARG_${mode_prefix}_${argument}})
-      libc_log(DEPS "${name_prefix}: appending ${mode_prefix}_${argument} to ${argument}: ${ARG_${argument}}")
     endif()
   endforeach()
 
