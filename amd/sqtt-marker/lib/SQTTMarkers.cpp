@@ -16,6 +16,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -45,7 +46,7 @@ static bool isPayloadSequence(CallInst *Header, CallInst *Payload,
   for (Instruction *I = Header->getNextNode(); I != Payload;
        I = I ? I->getNextNode() : nullptr)
     if (!I || (I->getMetadata(SqttPayloadGroupMetadata) != Group &&
-               !I->isDebugOrPseudoInst() && !I->isLifetimeStartOrEnd()))
+               !isa<PseudoProbeInst>(I) && !I->isLifetimeStartOrEnd()))
       return false;
   return true;
 }
