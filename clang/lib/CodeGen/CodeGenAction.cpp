@@ -542,6 +542,9 @@ void CodeGenAction::ExecuteAction() {
     Diagnostics.Report(SourceLocation(), diag::warn_fe_override_module)
         << TargetOpts.Triple;
     TheModule->setTargetTriple(Triple(TargetOpts.Triple));
+    // The module's DataLayout was computed for the old triple. Clear it so
+    // emitAssembly() recomputes it for the new triple and target-abi flag.
+    TheModule->setDataLayout(DataLayout());
   }
 
   llvm::ExceptionHandling ExceptionModel =
