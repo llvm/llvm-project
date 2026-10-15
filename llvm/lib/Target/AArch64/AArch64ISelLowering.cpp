@@ -15852,8 +15852,8 @@ AArch64TargetLowering::LowerZERO_EXTEND_VECTOR_INREG(SDValue Op,
   if (Scale != 2)
     return SDValue();
   SDValue Zeros = DAG.getConstant(0, DL, SrcVT);
-  return DAG.getBitcast(VT,
-                        DAG.getNode(AArch64ISD::ZIP1, DL, SrcVT, SrcOp, Zeros));
+  return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
+                     DAG.getNode(AArch64ISD::ZIP1, DL, SrcVT, SrcOp, Zeros));
 }
 
 SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
