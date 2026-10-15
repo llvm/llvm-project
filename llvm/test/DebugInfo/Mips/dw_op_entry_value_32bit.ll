@@ -1,9 +1,9 @@
 ;; Test mips32:
-; RUN: llc -emit-call-site-info -stop-after=livedebugvalues -mtriple=mips-linux-gnu -o - %s | FileCheck %s
-; RUN: llc -force-instr-ref-livedebugvalues=1 -emit-call-site-info -stop-after=livedebugvalues -mtriple=mips-linux-gnu -o - %s | FileCheck %s
+; RUN: llc -emit-call-site-info -stop-after=live-debug-values -mtriple=mips-linux-gnu -o - %s | FileCheck %s
+; RUN: llc -force-instr-ref-livedebugvalues=1 -emit-call-site-info -stop-after=live-debug-values -mtriple=mips-linux-gnu -o - %s | FileCheck %s
 ;; Test mipsel:
-; RUN: llc -emit-call-site-info -stop-after=livedebugvalues -mtriple=mipsel-linux-gnu -o - %s | FileCheck %s --check-prefix=CHECKel
-; RUN: llc -force-instr-ref-livedebugvalues=1 -emit-call-site-info -stop-after=livedebugvalues -mtriple=mipsel-linux-gnu -o - %s | FileCheck %s --check-prefix=CHECKel
+; RUN: llc -emit-call-site-info -stop-after=live-debug-values -mtriple=mipsel-linux-gnu -o - %s | FileCheck %s --check-prefix=CHECKel
+; RUN: llc -force-instr-ref-livedebugvalues=1 -emit-call-site-info -stop-after=live-debug-values -mtriple=mipsel-linux-gnu -o - %s | FileCheck %s --check-prefix=CHECKel
 
 ;; Built from source:
 ;; extern long fn1(long,long,long);
@@ -18,12 +18,12 @@
 ;; Confirm that info from callSites attribute is used as entry_value in DIExpression.
 
 ;; Test mips32:
-; CHECK: $a0 = nsw ADDu $a1, killed renamable $a0,
-; CHECK-NEXT: DBG_VALUE $a0, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1)
+; CHECK: $r4 = nsw ADDu $r5, killed renamable $r4,
+; CHECK-NEXT: DBG_VALUE $r4, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1)
 
 ;; Test mipsel:
-; CHECKel: $a0 = nsw ADDu $a1, killed renamable $a0,
-; CHECKel-NEXT: DBG_VALUE $a0, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1)
+; CHECKel: $r4 = nsw ADDu $r5, killed renamable $r4,
+; CHECKel-NEXT: DBG_VALUE $r4, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1)
 
 ; ModuleID = 'm.c'
 source_filename = "m.c"

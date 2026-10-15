@@ -25,8 +25,8 @@
 define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 %b) {
 ; INTERLEAVE-2-LABEL: @interleave_single_load_store(
 ; INTERLEAVE-2-NEXT:  iter.check:
-; INTERLEAVE-2-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC:%.*]] to i64
 ; INTERLEAVE-2-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST:%.*]] to i64
+; INTERLEAVE-2-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC:%.*]] to i64
 ; INTERLEAVE-2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 8
 ; INTERLEAVE-2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; INTERLEAVE-2:       vector.memcheck:
@@ -114,8 +114,8 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ;
 ; INTERLEAVE-4-LABEL: @interleave_single_load_store(
 ; INTERLEAVE-4-NEXT:  iter.check:
-; INTERLEAVE-4-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC:%.*]] to i64
 ; INTERLEAVE-4-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST:%.*]] to i64
+; INTERLEAVE-4-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC:%.*]] to i64
 ; INTERLEAVE-4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 8
 ; INTERLEAVE-4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; INTERLEAVE-4:       vector.memcheck:
@@ -217,8 +217,8 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ;
 ; INTERLEAVE-2-VLA-LABEL: @interleave_single_load_store(
 ; INTERLEAVE-2-VLA-NEXT:  iter.check:
-; INTERLEAVE-2-VLA-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC:%.*]] to i64
 ; INTERLEAVE-2-VLA-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST:%.*]] to i64
+; INTERLEAVE-2-VLA-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC:%.*]] to i64
 ; INTERLEAVE-2-VLA-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 8
 ; INTERLEAVE-2-VLA-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; INTERLEAVE-2-VLA:       vector.memcheck:

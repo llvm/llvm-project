@@ -236,12 +236,14 @@ class SPIRVLegalizePointerCastImpl {
       Value *Handle = ResourcePtr->getOperand(0);
       Value *BaseOffset = ResourcePtr->getOperand(1);
       Value *NewOffset;
-      if (auto *CI = dyn_cast<ConstantInt>(BaseOffset))
+      if (auto *CI = dyn_cast<ConstantInt>(BaseOffset)) {
         NewOffset =
             ConstantInt::get(CI->getType(), CI->getZExtValue() + ByteOffset);
-      else
+      } else {
         NewOffset = B.CreateAdd(
             BaseOffset, ConstantInt::get(BaseOffset->getType(), ByteOffset));
+        buildAssignType(B, NewOffset->getType(), NewOffset);
+      }
       SmallVector<OperandBundleDef> OpBundles;
       ResourcePtr->getOperandBundlesAsDefs(OpBundles);
       CallInst *ResourcePtrAtOffset = B.CreateCall(
@@ -777,7 +779,7 @@ class SPIRVLegalizePointerCastImpl {
     Value *CastedOperand = II;
     Value *OriginalOperand = II->getOperand(0);
 
-    IRBuilder<> B(II->getContext());
+    IRBuilder<> B(*II->getModule());
     std::vector<Value *> Users;
     for (Use &U : II->uses())
       Users.push_back(U.getUser());

@@ -142,7 +142,7 @@ convertOperandBundles(OperandRangeRange bundleOperands,
 static LogicalResult
 convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
                            LLVM::ModuleTranslation &moduleTranslation) {
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  llvm::Module *module = builder.getModule();
   llvm::Intrinsic::ID id =
       llvm::Intrinsic::lookupIntrinsicID(op.getIntrinAttr());
   if (!id)

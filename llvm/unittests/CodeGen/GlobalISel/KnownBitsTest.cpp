@@ -2121,7 +2121,8 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
     EXPECT_EQ(64u, Res.getBitWidth());
     EXPECT_EQ(NumBits - 1, Res.Zero.countr_one());
     EXPECT_EQ(64u, Res.One.countr_zero());
-    EXPECT_EQ(Align(1ull << (NumBits - 1)), Info.computeKnownAlignment(Copies[Idx]));
+    EXPECT_EQ(Align::fromLog2(NumBits - 1),
+              Info.computeKnownAlignment(Copies[Idx]));
   };
 
   const unsigned NumSetupCopies = 5;
