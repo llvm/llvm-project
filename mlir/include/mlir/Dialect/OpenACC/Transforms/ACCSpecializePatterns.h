@@ -95,6 +95,10 @@ class ACCRegionUnwrapConversion : public OpRewritePattern<OpTy> {
 public:
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
+    if (op.getRegion().empty()) {
+      rewriter.eraseOp(op);
+      return success();
+    }
     assert(op.getRegion().hasOneBlock() && "expected one block");
     Block *block = &op.getRegion().front();
     // Erase the terminator (acc.yield or acc.terminator) before unwrapping
