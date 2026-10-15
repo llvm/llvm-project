@@ -193,12 +193,12 @@ func.func @fold_bcast_consecutive_unit_dims(%arg0: vector<2x1x1x3xf32>) -> vecto
 // -----
 
 // CHECK-LABEL: @no_fold_bcast_scalable_vs_fixed
-// CHECK:         vector.broadcast %{{.*}} : vector<2x1x1xf32> to vector<2x[4]x2xf32>
-// CHECK-NEXT:    vector.shape_cast %{{.*}} : vector<2x[4]x2xf32> to vector<[1]x2x4x2xf32>
-func.func @no_fold_bcast_scalable_vs_fixed(%arg0: vector<2x1x1xf32>) -> vector<[1]x2x4x2xf32> {
-  %0 = vector.broadcast %arg0 : vector<2x1x1xf32> to vector<2x[4]x2xf32>
-  %1 = vector.shape_cast %0 : vector<2x[4]x2xf32> to vector<[1]x2x4x2xf32>
-  return %1 : vector<[1]x2x4x2xf32>
+// CHECK:         vector.broadcast %{{.*}} : vector<1x2x1xf32> to vector<4x2x[4]xf32>
+// CHECK-NEXT:    vector.shape_cast %{{.*}} : vector<4x2x[4]xf32> to vector<[4]x2x4xf32>
+func.func @no_fold_bcast_scalable_vs_fixed(%arg0: vector<1x2x1xf32>) -> vector<[4]x2x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<1x2x1xf32> to vector<4x2x[4]xf32>
+  %1 = vector.shape_cast %0 : vector<4x2x[4]xf32> to vector<[4]x2x4xf32>
+  return %1 : vector<[4]x2x4xf32>
 }
 
 // -----
