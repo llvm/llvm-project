@@ -145,6 +145,11 @@ unsigned getLoadcntStorecntBitShift(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 8 : 0;
 }
 
+/// \returns barrier member count bit width in M0.
+unsigned getBarrierMemberCountBitWidth(unsigned VersionMajor) {
+  return VersionMajor >= 13 ? 8 : 6;
+}
+
 /// \returns VaSdst bit width
 inline unsigned getVaSdstBitWidth() { return 3; }
 
@@ -394,10 +399,6 @@ struct VOPC64DPPInfo {
 };
 
 struct VOPCDPPAsmOnlyInfo {
-  uint32_t Opcode;
-};
-
-struct VOP3CDPPAsmOnlyInfo {
   uint32_t Opcode;
 };
 
@@ -845,11 +846,6 @@ bool isDPMACCInstruction(unsigned Opc) {
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
   const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom2AddrOpcode(Opc);
   return Info ? Info->Opcode3Addr : ~0u;
-}
-
-unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc) {
-  const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom3AddrOpcode(Opc);
-  return Info ? Info->Opcode2Addr : ~0u;
 }
 
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
@@ -1445,13 +1441,6 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
-unsigned getEncodedNumVGPRBlocks(const MCSubtargetInfo &STI, unsigned NumVGPRs,
-                                 std::optional<bool> EnableWavefrontSize32) {
-  return getGranulatedNumRegisterBlocks(
-             NumVGPRs, getVGPREncodingGranule(STI, EnableWavefrontSize32)) -
-         1;
-}
-
 unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo &STI,
                                    unsigned NumVGPRs,
                                    unsigned DynamicVGPRBlockSize,
@@ -1494,14 +1483,6 @@ void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
         S_00B848_WGP_MODE(STI.getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
         S_00B848_MEM_ORDERED(1) | S_00B848_FWD_PROGRESS(1);
   }
-}
-
-bool isGroupSegment(const GlobalValue *GV) {
-  return GV->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
-}
-
-bool isGlobalSegment(const GlobalValue *GV) {
-  return GV->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
 }
 
 bool isReadOnlySegment(const GlobalValue *GV) {
@@ -1712,6 +1693,10 @@ unsigned getStorecntBitMask(const IsaVersion &Version) {
   return (1 << getStorecntBitWidth(Version.Major)) - 1;
 }
 
+unsigned getBarrierMemberCountBitMask(const IsaVersion &Version) {
+  return (1 << getBarrierMemberCountBitWidth(Version.Major)) - 1;
+}
+
 unsigned getWaitcntBitMask(const IsaVersion &Version) {
   unsigned VmcntLo = getBitMask(getVmcntBitShiftLo(Version.Major),
                                 getVmcntBitWidthLo(Version.Major));
@@ -1846,18 +1831,6 @@ unsigned encodeStorecntDscnt(const IsaVersion &Version, unsigned Storecnt,
 // Custom Operand Values
 //===----------------------------------------------------------------------===//
 
-static unsigned getDefaultCustomOperandEncoding(const CustomOperandVal *Opr,
-                                                int Size,
-                                                const MCSubtargetInfo &STI) {
-  unsigned Enc = 0;
-  for (int Idx = 0; Idx < Size; ++Idx) {
-    const auto &Op = Opr[Idx];
-    if (Op.isSupported(STI))
-      Enc |= Op.encode(Op.Default);
-  }
-  return Enc;
-}
-
 static bool isSymbolicCustomOperandEncoding(const CustomOperandVal *Opr,
                                             int Size, unsigned Code,
                                             bool &HasNonDefaultVal,
@@ -1930,10 +1903,13 @@ static int encodeCustomOperand(const CustomOperandVal *Opr, int Size,
 namespace DepCtr {
 
 int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI) {
-  static int Default = -1;
-  if (Default == -1)
-    Default = getDefaultCustomOperandEncoding(DepCtrInfo, DEP_CTR_SIZE, STI);
-  return Default;
+  unsigned Enc = 0;
+  for (int Idx = 0; Idx < DEP_CTR_SIZE; ++Idx) {
+    const auto &Op = DepCtrInfo[Idx];
+    if (Op.isSupported(STI))
+      Enc |= Op.encode(Op.Default);
+  }
+  return Enc;
 }
 
 bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
@@ -2397,13 +2373,6 @@ unsigned getDynamicVGPRBlockSize(const Function &F) {
   return 0;
 }
 
-bool hasXNACK(const MCSubtargetInfo &STI) {
-  // Only hardwired-on xnack (gfx1250) is knowable from the subtarget alone;
-  // toggleable targets take their mode from the TargetID.
-  return STI.hasFeature(AMDGPU::FeatureSupportsXNACK) &&
-         !STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes);
-}
-
 bool hasMIMG_R128(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureMIMG_R128) &&
          !STI.hasFeature(AMDGPU::FeatureR128A16);
@@ -2772,15 +2741,6 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   default:
     return false;
   }
-}
-
-bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
-  assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.operands()[OpNo].OperandType;
-  return (OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
-          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST) ||
-         (OpType >= AMDGPU::OPERAND_REG_INLINE_AC_FIRST &&
-          OpType <= AMDGPU::OPERAND_REG_INLINE_AC_LAST);
 }
 
 // Avoid using MCRegisterClass::getSize, since that function will go away
@@ -3379,8 +3339,14 @@ struct AlwaysUniform {
 };
 const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 
+struct LDSDMAIntrinsic {
+  unsigned Intr;
+};
+const LDSDMAIntrinsic *lookupLDSDMAIntrinsic(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
+#define GET_LDSDMAIntrinsicTable_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -3395,6 +3361,10 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
 
 bool isIntrinsicAlwaysUniform(unsigned IntrID) {
   return lookupAlwaysUniform(IntrID);
+}
+
+bool isLDSDMAIntrinsic(unsigned IntrID) {
+  return lookupLDSDMAIntrinsic(IntrID);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

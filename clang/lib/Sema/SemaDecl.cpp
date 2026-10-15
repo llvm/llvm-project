@@ -1504,6 +1504,25 @@ void Sema::EnterTemplatedContext(Scope *S, DeclContext *DC) {
   }
 }
 
+void Sema::ActOnReenterFunctionPrototypeParams(Scope *S,
+                                               ArrayRef<ParmVarDecl *> Params) {
+  for (ParmVarDecl *Param : Params)
+    if (Param->getIdentifier()) {
+      S->AddDecl(Param);
+      IdResolver.AddDecl(Param);
+    }
+}
+
+void Sema::ActOnExitFunctionPrototypeParams(Scope *S,
+                                            ArrayRef<ParmVarDecl *> Params) {
+  // Remove in reverse so each name is the most recent one when it is removed.
+  for (ParmVarDecl *Param : llvm::reverse(Params))
+    if (Param->getIdentifier()) {
+      IdResolver.RemoveDecl(Param);
+      S->RemoveDecl(Param);
+    }
+}
+
 void Sema::ActOnReenterFunctionContext(Scope* S, Decl *D) {
   // We assume that the caller has already called
   // ActOnReenterTemplateScope so getTemplatedDecl() works.
@@ -1518,14 +1537,7 @@ void Sema::ActOnReenterFunctionContext(Scope* S, Decl *D) {
   CurContext = FD;
   S->setEntity(CurContext);
 
-  for (unsigned P = 0, NumParams = FD->getNumParams(); P < NumParams; ++P) {
-    ParmVarDecl *Param = FD->getParamDecl(P);
-    // If the parameter has an identifier, then add it to the scope
-    if (Param->getIdentifier()) {
-      S->AddDecl(Param);
-      IdResolver.AddDecl(Param);
-    }
-  }
+  ActOnReenterFunctionPrototypeParams(S, FD->parameters());
 }
 
 void Sema::ActOnExitFunctionContext() {
@@ -7173,11 +7185,26 @@ void Sema::deduceOpenCLAddressSpace(VarDecl *Var) {
   Var->assignAddressSpace(Context, ImplAS);
 }
 
+static bool checkWeakAttrCompatibility(Sema &S, const NamedDecl &ND,
+                                       const WeakAttr &Attr) {
+  const NamedDecl *D = &ND;
+  // IFuncAttr is not inherited, so a redeclaration may need to check the
+  // attributes on the definition instead.
+  if (const auto *FD = dyn_cast<FunctionDecl>(&ND))
+    if (const FunctionDecl *Def = FD->getDefinition())
+      D = Def;
+  return DiagnoseMutualExclusions(S, D, &Attr);
+}
+
 static void checkWeakAttr(Sema &S, NamedDecl &ND) {
   // 'weak' only applies to declarations with external linkage.
   if (WeakAttr *Attr = ND.getAttr<WeakAttr>()) {
     if (!ND.isExternallyVisible()) {
       S.Diag(Attr->getLocation(), diag::err_attribute_weak_static);
+      ND.dropAttr<WeakAttr>();
+    } else if (!checkWeakAttrCompatibility(S, ND, *Attr)) {
+      // A forward #pragma weak adds the attribute without checking mutual
+      // exclusions during attribute processing.
       ND.dropAttr<WeakAttr>();
     }
   }
@@ -21441,10 +21468,13 @@ void Sema::ActOnPragmaRedefineExtname(IdentifierInfo* Name,
 void Sema::ActOnPragmaWeakID(IdentifierInfo* Name,
                              SourceLocation PragmaLoc,
                              SourceLocation NameLoc) {
-  Decl *PrevDecl = LookupSingleName(TUScope, Name, NameLoc, LookupOrdinaryName);
+  NamedDecl *PrevDecl =
+      LookupSingleName(TUScope, Name, NameLoc, LookupOrdinaryName);
 
   if (PrevDecl) {
-    PrevDecl->addAttr(WeakAttr::CreateImplicit(Context, PragmaLoc));
+    auto *Attr = WeakAttr::CreateImplicit(Context, PragmaLoc);
+    if (checkWeakAttrCompatibility(*this, *PrevDecl, *Attr))
+      PrevDecl->addAttr(Attr);
   } else {
     (void)WeakUndeclaredIdentifiers[Name].insert(WeakInfo(nullptr, NameLoc));
   }

@@ -357,6 +357,10 @@ void LLVMContext::setOptPassGate(OptPassGate& OPG) {
   pImpl->setOptPassGate(OPG);
 }
 
+cl::LibraryOptionsContext &LLVMContext::getLibraryOptions() const {
+  return pImpl->LibraryOptions;
+}
+
 const DiagnosticHandler *LLVMContext::getDiagHandlerPtr() const {
   return pImpl->DiagHandler.get();
 }
