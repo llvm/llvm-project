@@ -945,7 +945,11 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
 
       if (!disable_stdio) {
         if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd) {
+#ifdef _WIN32
           SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
+#else
+          SetSTDIOPseudoTerminal(pty);
+#endif
         }
 #ifdef _WIN32
         else if (m_stdin_forward) {
@@ -1179,6 +1183,7 @@ void ProcessGDBRemote::LoadStubBinaries() {
       bin_spec.force_symbol_search = true;
       bin_spec.notify = true;
       bin_spec.set_address_in_target = true;
+      bin_spec.is_main_executable = true;
       llvm::Expected<ModuleSP> module =
           DynamicLoader::LocateAndLoadBinary(this, bin_spec);
       if (!module)
@@ -3401,6 +3406,27 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
                                               packet.GetData());
   }
   return 0;
+}
+
+bool ProcessGDBRemote::DoCanAllocateMemory() {
+  // Probe the _M packet. Falling back to mmap() only needs its symbol.
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolCalculate) {
+    addr_t addr = m_gdb_comm.AllocateMemory(8, ePermissionsReadable |
+                                                   ePermissionsWritable |
+                                                   ePermissionsExecutable);
+    if (addr != LLDB_INVALID_ADDRESS)
+      m_gdb_comm.DeallocateMemory(addr);
+  }
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolYes)
+    return true;
+
+  ModuleFunctionSearchOptions options;
+  options.include_symbols = true;
+  options.include_inlines = false;
+  SymbolContextList sc_list;
+  GetTarget().GetImages().FindFunctions(
+      ConstString("mmap"), eFunctionNameTypeFull, options, sc_list);
+  return !sc_list.IsEmpty();
 }
 
 lldb::addr_t ProcessGDBRemote::DoAllocateMemory(size_t size,
@@ -6355,7 +6381,7 @@ llvm::Error ProcessGDBRemote::LoadModules() {
         return IterationAction::Stop;
 
       lldb::ModuleSP module_copy_sp = module_sp;
-      target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
+      target.RebuildModuleListWithExecutable(module_copy_sp, eLoadDependentsNo);
       return IterationAction::Stop;
     });
 

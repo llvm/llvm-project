@@ -21,7 +21,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/ClassUtils.h"
 #include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
@@ -462,6 +462,14 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
     cgm.errorNYI(bodyBeginLoc, "naked function decl");
   }
 
+  // If this is an implicit-return-zero function, initialize the return value.
+  if (fd && fd->hasImplicitReturnZero()) {
+    mlir::Type retTy = convertType(fd->getReturnType().getUnqualifiedType());
+    mlir::Location loc = getLoc(bodyBeginLoc);
+    mlir::Value zero = builder.getNullValue(retTy, loc);
+    builder.CIRBaseBuilderTy::createStore(loc, zero, returnValue.getPointer());
+  }
+
   // Declare all the function arguments in the symbol table.
   for (const auto nameValue : llvm::zip(args, entryBB->getArguments())) {
     const VarDecl *paramVar = std::get<0>(nameValue);
@@ -496,7 +504,8 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
     // Location of the store to the param storage tracked as beginning of
     // the function body.
     mlir::Location fnBodyBegin = getLoc(bodyBeginLoc);
-    builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
+    builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal,
+                                          addr.getPointer());
   }
   assert(builder.getInsertionBlock() && "Should be valid");
 }
@@ -516,6 +525,15 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
+
+  // Recursion is disallowed for C++ main, OpenCL, HLSL, SYCL device code and
+  // CUDA/HIP kernels.
+  if (fd &&
+      ((getLangOpts().CPlusPlus && fd->isMain()) || getLangOpts().OpenCL ||
+       getLangOpts().HLSL || getLangOpts().SYCLIsDevice ||
+       (getLangOpts().CUDA && fd->hasAttr<CUDAGlobalAttr>())))
+    fn->setAttr(cir::CIRDialect::getNoRecurseAttrName(),
+                mlir::UnitAttr::get(fn.getContext()));
 
   // This is an artifact of the legacy handling of constrained floating-point
   // modes. The rounding mode and exception behavior tracked in
@@ -538,29 +556,11 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
 
-  // Wrap the rest of the function in a filter try when this declaration has
-  // a dynamic exception specification. Parameter cleanups are pushed after
-  // this so they nest inside the specification, matching classic codegen.
-  emitStartEHSpec(d);
-  prologueCleanupDepth = ehStack.stable_begin();
-
-  // Determine the function body begin location for the prolog.
-  // If fd is null or has no body, use startLoc as fallback.
-  SourceLocation bodyBeginLoc = startLoc;
-  if (fd) {
-    if (Stmt *body = fd->getBody())
-      bodyBeginLoc = body->getBeginLoc();
-    else
-      bodyBeginLoc = fd->getLocation();
-  }
-
-  emitFunctionProlog(args, entryBB, fd, bodyBeginLoc);
-
   // When the current function is not void, create an address to store the
   // result value.
   if (!returnType->isVoidType()) {
-    // Determine the function body end location.
-    // If fd is null or has no body, use loc as fallback.
+    // Determine the function body end location.  A function without a body
+    // uses its declaration's location, and a null fd uses loc.
     SourceLocation bodyEndLoc = loc;
     if (fd) {
       if (Stmt *body = fd->getBody())
@@ -570,22 +570,26 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
     emitAndUpdateRetAlloca(returnType, getLoc(bodyEndLoc),
                            getContext().getTypeAlignInChars(returnType));
-
-    // If this is an implicit-return-zero function, initialize the return
-    // value. This mirrors the implicit-return-zero handling in classic
-    // codegen's EmitFunctionProlog (CGCall.cpp). It is done here, after
-    // emitAndUpdateRetAlloca, because in CIR the return slot is created
-    // after the prolog (the opposite of classic codegen, where ReturnValue
-    // is set up before EmitFunctionProlog runs).
-    // TODO(cir): Align prolog handling with classic codegen.
-    if (fd && fd->hasImplicitReturnZero()) {
-      mlir::Type cirRetTy = convertType(returnType.getUnqualifiedType());
-      mlir::Location bodyBeginMLIRLoc = getLoc(bodyBeginLoc);
-      mlir::Value zero = builder.getNullValue(cirRetTy, bodyBeginMLIRLoc);
-      builder.CIRBaseBuilderTy::createStore(bodyBeginMLIRLoc, zero,
-                                            returnValue.getPointer());
-    }
   }
+
+  // Wrap the rest of the function in a filter try when this declaration has
+  // a dynamic exception specification. Parameter cleanups are pushed after
+  // this so they nest inside the specification, matching classic codegen.
+  emitStartEHSpec(d);
+  prologueCleanupDepth = ehStack.stable_begin();
+
+  // Determine the function body begin location for the prolog.  A function
+  // without a body uses its declaration's location, and a null fd uses
+  // startLoc.
+  SourceLocation bodyBeginLoc = startLoc;
+  if (fd) {
+    if (Stmt *body = fd->getBody())
+      bodyBeginLoc = body->getBeginLoc();
+    else
+      bodyBeginLoc = fd->getLocation();
+  }
+
+  emitFunctionProlog(args, entryBB, fd, bodyBeginLoc);
 
   if (const auto *md = dyn_cast_if_present<CXXMethodDecl>(d);
       md && !md->isStatic()) {
@@ -779,6 +783,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
       llvm::append_range(fnArgs, funcDecl->parameters());
 
+    if (checkIfFunctionMustProgress())
+      fn->setAttr(cir::CIRDialect::getMustProgressAttrName(),
+                  mlir::UnitAttr::get(&getMLIRContext()));
+
     if (shouldEmitLifetimeMarkers)
       fnHasBypassStmt = functionMightHaveBypass(body);
 
@@ -877,7 +885,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
 
   ctorTryBodyEmitter emitter{ctor, ctorType, args, isTryBody, body};
   mlir::LogicalResult bodyRes =
-      isTryBody ? emitCXXTryStmt(*cast<CXXTryStmt>(body), emitter)
+      isTryBody ? emitCXXTryStmt(*cast<CXXTryStmt>(body), emitter,
+                                 /*isFnTryBlock=*/true)
                 : emitter(*this);
 
   // TODO(cir): propagate this result via mlir::logical result. Just
@@ -915,13 +924,25 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   if (dtorType == Dtor_Deleting || dtorType == Dtor_VectorDeleting) {
     if (cxxStructorImplicitParamValue && dtorType == Dtor_VectorDeleting)
       cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
+
+    // A destroying operator delete destroys the object and deallocates its
+    // storage, so the deleting destructor only calls the operator delete.
+    const FunctionDecl *operatorDelete = dtor->getOperatorDelete();
+    if (operatorDelete->isDestroyingOperatorDelete()) {
+      if (cxxStructorImplicitParamValue) {
+        // The implicit parameter of a deleting destructor is the Microsoft ABI.
+        cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
+      }
+      emitDeleteCall(operatorDelete, loadThisForDtorDelete(dtor),
+                     getContext().getCanonicalTagType(dtor->getParent()));
+      return;
+    }
+
     RunCleanupsScope dtorEpilogue(*this);
     enterDtorCleanups(dtor, Dtor_Deleting);
-    if (haveInsertPoint()) {
-      QualType thisTy = dtor->getFunctionObjectParameterType();
-      emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
-                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
-    }
+    QualType thisTy = dtor->getFunctionObjectParameterType();
+    emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
+                          /*delegating=*/false, loadCXXThisAddress(), thisTy);
     return;
   }
 
@@ -1287,9 +1308,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                "emitLValue: MatrixSingleSubscriptExpr");
     return LValue();
   case Expr::MatrixSubscriptExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: MatrixSubscriptExpr");
-    return LValue();
+    return emitMatrixSubscriptExpr(cast<MatrixSubscriptExpr>(e));
   case Expr::ArraySectionExprClass:
     getCIRGenModule().errorNYI(e->getSourceRange(),
                                "emitLValue: ArraySectionExpr");
@@ -1301,8 +1320,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                "emitLValue: MatrixElementExpr");
     return LValue();
   case Expr::CXXThisExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CXXThisExpr");
-    return LValue();
+    return makeAddrLValue(loadCXXThisAddress(), e->getType());
   case Expr::MemberExprClass:
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::CompoundLiteralExprClass:
@@ -1466,6 +1484,33 @@ CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
   cgf.curFPFeatures = oldFPFeatures;
   cgf.builder.setDefaultConstrainedExcept(oldExcept);
   cgf.builder.setDefaultConstrainedRounding(oldRounding);
+}
+
+cir::FastMathFlags CIRGenFunction::getCurrentFastMathFlags() const {
+  cir::FastMathFlags flags = cir::FastMathFlags::none;
+  if (curFPFeatures.getAllowFPReassociate())
+    flags |= cir::FastMathFlags::reassoc;
+  if (curFPFeatures.getNoHonorNaNs())
+    flags |= cir::FastMathFlags::nnan;
+  if (curFPFeatures.getNoHonorInfs())
+    flags |= cir::FastMathFlags::ninf;
+  if (curFPFeatures.getNoSignedZero())
+    flags |= cir::FastMathFlags::nsz;
+  if (curFPFeatures.getAllowReciprocal())
+    flags |= cir::FastMathFlags::arcp;
+  if (curFPFeatures.getAllowApproxFunc())
+    flags |= cir::FastMathFlags::afn;
+  if (curFPFeatures.allowFPContractAcrossStatement())
+    flags |= cir::FastMathFlags::contract;
+
+  return flags;
+}
+
+cir::FastMathFlagsAttr
+CIRGenFunction::getFastMathFlagsAttr(cir::FastMathFlags fastMathFlags) {
+  if (fastMathFlags == cir::FastMathFlags::none)
+    return {};
+  return cir::FastMathFlagsAttr::get(&getMLIRContext(), fastMathFlags);
 }
 
 // TODO(cir): should be shared with LLVM codegen.

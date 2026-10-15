@@ -2208,6 +2208,10 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     return;
   }
 
+  // Count in 64 bits so that the index cannot wrap with a narrow size_t.
+  if (elementIndex.getBitWidth() < 64)
+    elementIndex = elementIndex.extend(64);
+
   // We might know the maximum number of elements in advance.
   llvm::APSInt maxElements(elementIndex.getBitWidth(),
                            elementIndex.isUnsigned());
@@ -2291,6 +2295,12 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
       // Sizing an array implicitly to zero is not allowed by ISO C,
       // but is supported by GNU.
       SemaRef.Diag(IList->getBeginLoc(), diag::ext_typecheck_zero_array_size);
+    }
+
+    if (SemaRef.checkArrayTooLarge(elementType, maxElements,
+                                   IList->getBeginLoc())) {
+      hadError = true;
+      return;
     }
 
     DeclType = SemaRef.Context.getConstantArrayType(
@@ -8570,7 +8580,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
         return ExprError();
       CurInit = CurInitExprRes;
 
-      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity)) {
+      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity) &&
+          !CurInit.get()->containsErrors()) {
         CheckC23ConstexprInitConversion(S, SourceType, Entity.getType(),
                                         CurInit.get());
 

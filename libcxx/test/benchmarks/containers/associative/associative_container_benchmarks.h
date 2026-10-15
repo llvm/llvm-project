@@ -86,6 +86,8 @@ void associative_container_benchmarks(std::string container) {
 
   static constexpr bool is_map_like = requires { typename Container::mapped_type; };
 
+  static constexpr bool is_hash_table_based = requires(Container c) { c.bucket_count(); };
+
   // These benchmarks are structured to perform the operation being benchmarked
   // a small number of times at each iteration, in order to offset the cost of
   // PauseTiming() and ResumeTiming().
@@ -483,31 +485,30 @@ void associative_container_benchmarks(std::string container) {
   }
 
   auto insert_iter_iter_bench = [=](bool bench_end_iter, auto& st) {
-    const std::size_t size = st.range(0);
-    std::vector<Value> in  = make_value_types(generate_unique_keys(size + (size / 10)));
-    auto skip_start        = bench_end_iter ? size : size / 2;
+    const std::size_t size   = st.range(0);
+    std::vector<Value> large = make_value_types(generate_unique_keys(size + (size / 10)));
+    auto skip_start          = bench_end_iter ? size : size / 2;
 
-    std::vector<Value> small;
-    small.reserve(size / 10);
+    Container c;
     { // Split the range
       std::vector<Value> tmp;
       tmp.reserve(size);
-      std::copy_n(in.begin(), skip_start, std::back_inserter(tmp));
-      std::copy_n(in.begin() + skip_start, size / 10, std::back_inserter(small));
-      std::copy(in.begin() + skip_start + size / 10, in.end(), std::back_inserter(tmp));
+      std::copy_n(large.begin(), skip_start, std::back_inserter(tmp));
+      std::copy_n(large.begin() + skip_start, size / 10, std::inserter(c, c.end()));
+      std::copy(large.begin() + skip_start + size / 10, large.end(), std::back_inserter(tmp));
 
-      in = std::move(tmp);
+      large = std::move(tmp);
     }
 
-    Container c(small.begin(), small.end());
+    const Container copy = c;
 
     for ([[maybe_unused]] auto _ : st) {
-      c.insert(in.begin(), in.end());
+      c.insert(large.begin(), large.end());
       benchmark::DoNotOptimize(c);
       benchmark::ClobberMemory();
 
       st.PauseTiming();
-      c = Container(small.begin(), small.end());
+      c = copy;
       st.ResumeTiming();
     }
   };
@@ -519,24 +520,24 @@ void associative_container_benchmarks(std::string container) {
   });
 
   bench_non_empty("insert(iterator, iterator) (half new keys)", [=](auto& st) TEST_ALIGN_BENCHMARK {
-    const std::size_t size = st.range(0);
-    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    const std::size_t size   = st.range(0);
+    std::vector<Value> large = make_value_types(generate_unique_keys(size));
 
     // Populate a container that already contains half the elements we'll try inserting,
     // that's what our container will start with.
-    std::vector<Value> small;
+    Container c;
     for (std::size_t i = 0; i != size / 2; ++i) {
-      small.push_back(in.at(i * 2));
+      c.insert(large.at(i * 2));
     }
-    Container c(small.begin(), small.end());
+    const Container copy = c;
 
     for ([[maybe_unused]] auto _ : st) {
-      c.insert(in.begin(), in.end());
+      c.insert(large.begin(), large.end());
       benchmark::DoNotOptimize(c);
       benchmark::ClobberMemory();
 
       st.PauseTiming();
-      c = Container(small.begin(), small.end());
+      c = copy;
       st.ResumeTiming();
     }
   });
@@ -673,10 +674,11 @@ void associative_container_benchmarks(std::string container) {
   bench_non_empty("erase(iterator, iterator) (erase half the container)", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
-    Container c(in.begin(), in.end());
 
-    auto first = std::next(c.begin(), c.size() / 4);
-    auto last  = std::next(c.begin(), 3 * (c.size() / 4));
+    Container c(in.begin(), in.end());
+    const Container copy = c;
+    auto first           = std::next(c.begin(), c.size() / 4);
+    auto last            = std::next(first, c.size() / 2);
     for ([[maybe_unused]] auto _ : st) {
       auto result = c.erase(first, last);
       benchmark::DoNotOptimize(result);
@@ -684,9 +686,9 @@ void associative_container_benchmarks(std::string container) {
       benchmark::ClobberMemory();
 
       st.PauseTiming();
-      c     = Container(in.begin(), in.end());
+      c     = copy;
       first = std::next(c.begin(), c.size() / 4);
-      last  = std::next(c.begin(), 3 * (c.size() / 4));
+      last  = std::next(first, c.size() / 2);
       st.ResumeTiming();
     }
   });
@@ -694,7 +696,9 @@ void associative_container_benchmarks(std::string container) {
   bench("clear()", [=](auto& st) TEST_ALIGN_BENCHMARK {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+
     Container c(in.begin(), in.end());
+    const Container copy = c;
 
     for ([[maybe_unused]] auto _ : st) {
       c.clear();
@@ -702,7 +706,7 @@ void associative_container_benchmarks(std::string container) {
       benchmark::ClobberMemory();
 
       st.PauseTiming();
-      c = Container(in.begin(), in.end());
+      c = copy;
       st.ResumeTiming();
     }
   });
@@ -750,6 +754,28 @@ void associative_container_benchmarks(std::string container) {
         "upper_bound(key)", query_bench([](Container const& c, Key const& key) { return c.upper_bound(key); }));
     bench_non_empty(
         "equal_range(key)", query_bench([](Container const& c, Key const& key) { return c.equal_range(key); }));
+  }
+
+  if constexpr (is_multi_key_container && is_hash_table_based) {
+    bench_non_empty("rehash (half keys tripled)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+      for (std::size_t i = 0; i != size / 2; ++i) {
+        in.push_back(in.at(i * 2));
+        in.push_back(in.at(i * 2));
+      }
+      Container c(in.begin(), in.end());
+
+      for ([[maybe_unused]] auto _ : st) {
+        c.rehash(c.bucket_count() * 2);
+        benchmark::DoNotOptimize(c);
+        benchmark::ClobberMemory();
+
+        st.PauseTiming();
+        c = Container(in.begin(), in.end());
+        st.ResumeTiming();
+      }
+    });
   }
 }
 

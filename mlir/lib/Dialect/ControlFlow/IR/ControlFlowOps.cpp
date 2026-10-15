@@ -266,7 +266,7 @@ namespace {
 /// predecessors, for any op implementing BranchOpInterface.
 struct SimplifyUniformBlockArguments
     : public OpInterfaceRewritePattern<BranchOpInterface> {
-  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(BranchOpInterface op,
                                 PatternRewriter &rewriter) const override {
     bool changed = false;
@@ -307,7 +307,7 @@ namespace {
 ///  -> br ^bb2
 ///
 struct SimplifyConstCondBranchPred : public OpRewritePattern<CondBranchOp> {
-  using OpRewritePattern<CondBranchOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(CondBranchOp condbr,
                                 PatternRewriter &rewriter) const override {

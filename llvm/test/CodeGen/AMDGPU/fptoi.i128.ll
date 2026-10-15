@@ -731,8 +731,8 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_and_b32_e32 v0, 0x7f, v4
 ; SDAG-NEXT:    s_movk_i32 s5, 0x85
 ; SDAG-NEXT:    s_mov_b32 s4, 0
-; SDAG-NEXT:    v_ashrrev_i32_e32 v5, 31, v7
-; SDAG-NEXT:    v_or_b32_e32 v6, 1, v7
+; SDAG-NEXT:    v_ashrrev_i32_e32 v6, 31, v7
+; SDAG-NEXT:    v_or_b32_e32 v5, 1, v7
 ; SDAG-NEXT:    v_or_b32_e32 v4, 0x80, v0
 ; SDAG-NEXT:    v_cmp_lt_u16_e32 vcc, s5, v8
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
@@ -756,24 +756,24 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_lshlrev_b64 v[3:4], v10, v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v8, 0, v8, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e32 v10, 0, v3, vcc
-; SDAG-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v10, v6, 0
+; SDAG-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v10, v5, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; SDAG-NEXT:    v_cndmask_b32_e32 v13, 0, v4, vcc
-; SDAG-NEXT:    v_mul_lo_u32 v11, v5, v8
-; SDAG-NEXT:    v_mad_u64_u32 v[3:4], s[4:5], v13, v6, v[1:2]
-; SDAG-NEXT:    v_mul_lo_u32 v12, v6, v9
-; SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[4:5], v6, v8, 0
-; SDAG-NEXT:    v_mul_lo_u32 v6, v7, v13
+; SDAG-NEXT:    v_mul_lo_u32 v11, v6, v8
+; SDAG-NEXT:    v_mad_u64_u32 v[3:4], s[4:5], v13, v5, v[1:2]
+; SDAG-NEXT:    v_mul_lo_u32 v12, v5, v9
+; SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[4:5], v5, v8, 0
+; SDAG-NEXT:    v_mul_lo_u32 v5, v7, v13
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v3
-; SDAG-NEXT:    v_mad_u64_u32 v[1:2], s[4:5], v10, v5, v[1:2]
+; SDAG-NEXT:    v_mad_u64_u32 v[1:2], s[4:5], v10, v6, v[1:2]
 ; SDAG-NEXT:    v_add3_u32 v9, v9, v12, v11
 ; SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[4:5], v7, v10, v[8:9]
 ; SDAG-NEXT:    v_mul_lo_u32 v7, v7, v10
 ; SDAG-NEXT:    v_add_co_u32_e32 v2, vcc, v4, v2
 ; SDAG-NEXT:    v_addc_co_u32_e64 v3, s[4:5], 0, 0, vcc
-; SDAG-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v13, v5, v[2:3]
-; SDAG-NEXT:    v_add3_u32 v4, v7, v9, v6
-; SDAG-NEXT:    ; implicit-def: $vgpr6
+; SDAG-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v13, v6, v[2:3]
+; SDAG-NEXT:    v_add3_u32 v4, v7, v9, v5
+; SDAG-NEXT:    ; implicit-def: $vgpr5
 ; SDAG-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v8
 ; SDAG-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v4, vcc
 ; SDAG-NEXT:    ; implicit-def: $vgpr8
@@ -783,9 +783,9 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:  ; %bb.4: ; %fp-to-i-if-exp.small
 ; SDAG-NEXT:    v_sub_u16_e32 v0, 0x86, v8
 ; SDAG-NEXT:    v_lshrrev_b16_e32 v0, v0, v4
-; SDAG-NEXT:    v_mul_hi_i32_i24_e32 v1, v0, v6
+; SDAG-NEXT:    v_mul_hi_i32_i24_e32 v1, v0, v5
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
-; SDAG-NEXT:    v_mul_i32_i24_e32 v0, v0, v6
+; SDAG-NEXT:    v_mul_i32_i24_e32 v0, v0, v5
 ; SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; SDAG-NEXT:  ; %bb.5: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]

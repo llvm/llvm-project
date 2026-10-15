@@ -420,6 +420,8 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineInstrBuilder MIB = MIRBuilder.buildInstrNoInsert(
       Info.Callee.isReg() || IsCalleeGlobalPIC ? Mips::JALRPseudo : Mips::JAL);
   MIB.setOperandDead(0); // implicit-def $ra
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
   MIB.addDef(Mips::SP, RegState::Implicit);
   if (IsCalleeGlobalPIC) {
     Register CalleeReg =
@@ -477,7 +479,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     MIRBuilder.buildCopy(
       Register(Mips::GP),
       MF.getInfo<MipsFunctionInfo>()->getGlobalBaseRegForGlobalISel(MF));
-    MIB.addDef(Mips::GP, RegState::Implicit);
+    MIB.addUse(Mips::GP, RegState::Implicit);
   }
   MIRBuilder.insertInstr(MIB);
   if (MIB->getOpcode() == Mips::JALRPseudo) {
