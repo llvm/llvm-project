@@ -22,6 +22,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <atomic>
 #include <optional>
 
 using namespace mlir;
@@ -991,6 +992,23 @@ void SourceMgrDiagnosticVerifierHandler::process(LocationAttr loc,
 
 namespace mlir {
 namespace detail {
+/// Unique ids for parallel diagnostic handlers, so the thread-local slot
+/// below can name a handler without holding a raw pointer to it: a handler
+/// may be destroyed while a thread that skipped its erase still names it.
+static std::atomic<uint64_t> nextSlotID{1};
+
+/// The handler, if any, whose order id for the current thread is held in
+/// `threadOrderID` rather than in the handler's `threadToOrderID` map. A
+/// parallel loop sets and erases a thread's order id once per element, and
+/// doing that under the handler's mutex made the mutex the most contended lock
+/// of a loop over many small elements. A thread processes one element at a
+/// time for each handler, so one slot covers every thread whose loop is not
+/// nested in another loop on the same thread; a nested loop's handler falls
+/// back to the map. Reentrant use of the same handler on one thread remains
+/// unsupported, as before.
+static LLVM_THREAD_LOCAL uint64_t threadSlotID = 0;
+static LLVM_THREAD_LOCAL size_t threadOrderID = 0;
+
 struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
   struct ThreadDiagnostic {
     ThreadDiagnostic(size_t id, Diagnostic diag)
@@ -1008,16 +1026,21 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
   ParallelDiagnosticHandlerImpl(MLIRContext *ctx) : context(ctx) {
     handlerID = ctx->getDiagEngine().registerHandler([this](Diagnostic &diag) {
+      // Fast path: this thread's order id is in the slot, no lock needed.
+      if (threadSlotID == slotID) {
+        llvm::sys::SmartScopedLock<true> lock(mutex);
+        diagnostics.emplace_back(threadOrderID, std::move(diag));
+        return success();
+      }
+      // Slow path: a nested loop on this thread, consult the map. If this
+      // thread is not tracked, return failure to let another handler
+      // process this diagnostic.
       uint64_t tid = llvm::get_threadid();
       llvm::sys::SmartScopedLock<true> lock(mutex);
-
-      // If this thread is not tracked, then return failure to let another
-      // handler process this diagnostic.
-      if (!threadToOrderID.count(tid))
+      auto it = threadToOrderID.find(tid);
+      if (it == threadToOrderID.end())
         return failure();
-
-      // Append a new diagnostic.
-      diagnostics.emplace_back(threadToOrderID[tid], std::move(diag));
+      diagnostics.emplace_back(it->second, std::move(diag));
       return success();
     });
   }
@@ -1050,6 +1073,11 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
   /// Set the order id for the current thread.
   void setOrderIDForThread(size_t orderID) {
+    if (!threadSlotID || threadSlotID == slotID) {
+      threadSlotID = slotID;
+      threadOrderID = orderID;
+      return;
+    }
     uint64_t tid = llvm::get_threadid();
     llvm::sys::SmartScopedLock<true> lock(mutex);
     threadToOrderID[tid] = orderID;
@@ -1057,6 +1085,10 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
   /// Remove the order id for the current thread.
   void eraseOrderIDForThread() {
+    if (threadSlotID == slotID) {
+      threadSlotID = 0;
+      return;
+    }
     uint64_t tid = llvm::get_threadid();
     llvm::sys::SmartScopedLock<true> lock(mutex);
     threadToOrderID.erase(tid);
@@ -1097,7 +1129,8 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
   /// A smart mutex to lock access to the internal state.
   llvm::sys::SmartMutex<true> mutex;
 
-  /// A mapping between the thread id and the current order id.
+  /// A mapping between the thread id and the current order id, for the threads
+  /// whose order id is not in `threadOrderID`.
   DenseMap<uint64_t, size_t> threadToOrderID;
 
   /// An unordered list of diagnostics that were emitted.
@@ -1105,6 +1138,9 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
   /// The unique id for the parallel handler.
   DiagnosticEngine::HandlerID handlerID = 0;
+
+  /// Unique id naming this handler in the thread-local order-id slot.
+  const uint64_t slotID = nextSlotID.fetch_add(1, std::memory_order_relaxed);
 
   /// The context to emit the diagnostics to.
   MLIRContext *context;

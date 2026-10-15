@@ -13,6 +13,8 @@
 #include "gtest/gtest.h"
 
 #include <memory>
+#include <string>
+#include <vector>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -102,6 +104,44 @@ TEST(SourceMgrDiagnosticVerifierHandler, ErasesOwnRegistration) {
   }
   emitRemark(UnknownLoc::get(&own), "after the verifier");
   EXPECT_EQ(seen, 1u);
+}
+
+TEST(ParallelDiagnosticHandler, NestedFallbackPreservesOrder) {
+  MLIRContext ctx;
+  std::vector<std::string> seen;
+  ScopedDiagnosticHandler capture(&ctx, [&](Diagnostic &diag) {
+    std::string msg;
+    llvm::raw_string_ostream os(msg);
+    diag.print(os);
+    seen.push_back(msg);
+    return success();
+  });
+
+  {
+    ParallelDiagnosticHandler outer(&ctx);
+    outer.setOrderIDForThread(1);
+    {
+      ParallelDiagnosticHandler inner(&ctx);
+      // The slot is taken by outer, so these go through the map fallback.
+      inner.setOrderIDForThread(2);
+      emitError(UnknownLoc::get(&ctx), "inner-2");
+      inner.setOrderIDForThread(1);
+      emitError(UnknownLoc::get(&ctx), "inner-1");
+      inner.eraseOrderIDForThread();
+    } // inner emits sorted: inner-1, inner-2.
+    // The slot still names outer after the nested use: the inner flush was
+    // attributed to outer's element, and this is held with id 1, so the
+    // id-0 diagnostic below sorts first.
+    emitError(UnknownLoc::get(&ctx), "outer-A");
+    outer.setOrderIDForThread(0);
+    emitError(UnknownLoc::get(&ctx), "outer-B");
+    outer.eraseOrderIDForThread();
+  } // outer emits sorted: outer-B, then the id-1 group in arrival order.
+  ASSERT_EQ(seen.size(), 4u);
+  EXPECT_NE(seen[0].find("outer-B"), std::string::npos);
+  EXPECT_NE(seen[1].find("inner-1"), std::string::npos);
+  EXPECT_NE(seen[2].find("inner-2"), std::string::npos);
+  EXPECT_NE(seen[3].find("outer-A"), std::string::npos);
 }
 
 TEST(SourceMgrDiagnosticVerifierHandler, OutlivesRegisteredContext) {
