@@ -90,7 +90,7 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
 
   if (IsProcessorFeaturePresent(PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE) &&
       IsProcessorFeaturePresent(PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE))
-    setCPUFeature(FEAT_SHA3);
+    setCPUFeature(FEAT_SHA3); // covers both SHA3 and SHA512 in FMV
 
   static const struct ProcessFeatureToFeatMap_t {
     int WinApiFeature;
