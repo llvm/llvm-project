@@ -1029,6 +1029,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasSafeSmemPrefetch() || Subtarget->hasVmemPrefInsts())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
+  // Type legalization cannot expand the i128 pointer of a buffer resource
+  // prefetch; lowerPREFETCH drops the prefetch instead.
+  setOperationAction(ISD::PREFETCH, MVT::i128, Custom);
 
   if (Subtarget->hasIEEEMinimumMaximumInsts()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
@@ -5017,18 +5020,23 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
 }
 
 SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
+  unsigned AS = cast<MemSDNode>(Op)->getAddressSpace();
+  if (AS == AMDGPUAS::BUFFER_RESOURCE)
+    return Op.getOperand(0);
+
   if (Op->isDivergent() &&
       (!Subtarget->hasVmemPrefInsts() || !Op.getConstantOperandVal(4)))
     // Cannot do I$ prefetch with divergent pointer.
     return SDValue();
 
-  switch (cast<MemSDNode>(Op)->getAddressSpace()) {
+  switch (AS) {
   case AMDGPUAS::FLAT_ADDRESS:
   case AMDGPUAS::GLOBAL_ADDRESS:
   case AMDGPUAS::CONSTANT_ADDRESS:
     break;
   case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
-    if (Subtarget->hasSafeSmemPrefetch())
+    // Only a scalar prefetch can use a 32-bit pointer.
+    if (Subtarget->hasSafeSmemPrefetch() && !Op->isDivergent())
       break;
     [[fallthrough]];
   default:

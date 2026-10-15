@@ -2589,6 +2589,14 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     I.replaceAllUsesWith(NewLoad);
     return {nullptr, nullptr};
   }
+  case Intrinsic::prefetch: {
+    if (!isSplitFatPtr(I.getArgOperand(0)->getType()))
+      return {nullptr, nullptr};
+    // A prefetch is only a hint, so drop it rather than lower it to a buffer
+    // prefetch.
+    SplitUsers.insert(&I);
+    return {nullptr, nullptr};
+  }
   }
   return {nullptr, nullptr};
 }

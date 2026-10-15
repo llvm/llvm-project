@@ -1656,7 +1656,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{P3}, {{}, {}, DeletePrefetch}})
       .Any({{P5}, {{}, {}, DeletePrefetch}})
       .Any({{UniP6}, {{}, {SgprP6}}}, HasSMemPF)
-      .Any({{UniP6}, {{}, {}, DeletePrefetch}}, !HasSMemPF);
+      .Any({{UniP6}, {{}, {}, DeletePrefetch}}, !HasSMemPF)
+      .Any({{DivPtr32}, {{}, {}, DeletePrefetch}})
+      .Any({{P8}, {{}, {}, DeletePrefetch}});
 
   addRulesForGOpcs({G_FPEXT})
       .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}})
@@ -1866,6 +1868,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_global_prefetch}).Any({{}, {{}, {IntrId, VgprP1}}});
 
   addRulesForIOpcs({amdgcn_s_prefetch_data, amdgcn_s_prefetch_inst})
+      .Any({{_, Ptr32}, {{}, {}, DeletePrefetch}})
       .Any({{}, {{}, {IntrId, SgprB64_ReadFirstLane, SgprB32_ReadFirstLane}}});
 
   addRulesForIOpcs({amdgcn_class})
