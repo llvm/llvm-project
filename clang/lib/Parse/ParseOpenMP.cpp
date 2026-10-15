@@ -2697,6 +2697,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       TraitInfos.push_back(&TI);
     }
 
+    SourceLocation EndLoc = Tok.getLocation();
     TPA.Revert();
     // End of the first iteration. Parser is reset to the start of metadirective
 
@@ -2720,146 +2721,75 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       return VMI.HasNonConstantUserCondition;
     });
 
-    // Different directives have different data-sharing attributes, so each
-    // variant needs its own CapturedStmt with proper DSA context.
-    // We manually cache body tokens and inject them for each variant parse.
     if (HasUserCondition &&
         getLangOpts().OpenMPMetadirectiveRuntimeSelection) {
-      SmallVector<OpenMPClauseKind, 4> ClauseKinds;
-      SmallVector<OpenMPDirectiveKind, 4> DirectiveKinds;
-      SmallVector<SmallVector<OMPClause *, 5>, 4> DirectiveClauses;
+      // OpenMP 5.2, 7.4: without an 'otherwise' clause the effect is as if one
+      // was specified without an associated directive variant. Only
+      // 'otherwise' (or the deprecated 'default') has no context selectors.
+      unsigned NumClauses = TraitInfos.size();
+      if (llvm::none_of(TraitInfos, [](const OMPTraitInfo *TI) {
+            return TI->Sets.empty();
+          }))
+        TraitInfos.push_back(&Actions.getASTContext().getNewOMPTraitInfo());
 
-      BalancedDelimiterTracker T(*this, tok::l_paren,
-                                 tok::annot_pragma_openmp_end);
-      while (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        OpenMPClauseKind CKind = Tok.isAnnotation()
-                                     ? OMPC_unknown
-                                     : getOpenMPClauseKind(PP.getSpelling(Tok));
-        SourceLocation ClauseLoc = ConsumeToken();
+      // Reuse the normal metadirective variant parse per clause so every
+      // variant is a complete directive node with its own body and its own
+      // data-sharing context. Diagnostics in the associated statement are
+      // reported once per variant.
+      SmallVector<Stmt *, 4> Variants;
+      bool HasError = false;
+      for (unsigned I : llvm::seq<unsigned>(TraitInfos.size())) {
+        // Re-parse from the first clause for every variant but the last.
+        std::optional<TentativeParsingAction> VariantTPA;
+        if (I + 1 < TraitInfos.size())
+          VariantTPA.emplace(*this);
 
-        // Parse '('.
-        T.consumeOpen();
-
-        if (CKind == OMPC_when) {
-          OMPTraitInfo &TI = Actions.getASTContext().getNewOMPTraitInfo();
-          parseOMPContextSelectors(ClauseLoc, TI);
-
-          // Parse ':'.
-          if (Tok.is(tok::colon))
-            ConsumeAnyToken();
+        for (unsigned J = 0, E = std::min(I, NumClauses); J != E; ++J) {
+          ConsumeToken();  // Clause name.
+          T.consumeOpen(); // '('
+          SkipUntil(tok::r_paren, StopBeforeMatch);
+          T.consumeClose(); // ')'
         }
 
-        OpenMPDirectiveKind DKind = OMPD_unknown;
-        SmallVector<OMPClause *, 5> Clauses;
-
-        if (!Tok.is(tok::r_paren)) {
-          // Parse directive kind (e.g., 'parallel', 'single').
-          DKind = parseOpenMPDirectiveKind(*this);
-
-          if (Tok.isNot(tok::annot_pragma_openmp_end) &&
-              Tok.isNot(tok::r_paren))
-            ConsumeAnyToken();
-
-          // Open temporary DSA block so clauses have an active directive frame.
-          if (DKind != OMPD_unknown)
-            Actions.OpenMP().StartOpenMPDSABlock(DKind, DeclarationNameInfo(),
-                                                 getCurScope(), ClauseLoc);
-
-          // Parse clauses for this directive variant.
-          while (Tok.isNot(tok::r_paren) &&
-                 Tok.isNot(tok::annot_pragma_openmp_end)) {
-            // Skip optional commas between clauses.
-            if (Tok.is(tok::comma))
-              ConsumeAnyToken();
-
-            OpenMPClauseKind ClauseKind =
-                Tok.isAnnotation() ? OMPC_unknown
-                                   : getOpenMPClauseKind(PP.getSpelling(Tok));
-
-            if (ClauseKind == OMPC_unknown)
-              break;
-
-            Actions.OpenMP().StartOpenMPClause(ClauseKind);
-            OMPClause *Clause =
-                ParseOpenMPClause(DKind, ClauseKind,
-                                  /* FirstClause */ Clauses.empty());
-            Actions.OpenMP().EndOpenMPClause();
-
-            if (Clause)
-              Clauses.push_back(Clause);
+        bool HasDirective = false;
+        if (I < NumClauses) {
+          OpenMPClauseKind CKind = getOpenMPClauseKind(PP.getSpelling(Tok));
+          ConsumeToken();
+          T.consumeOpen();
+          if (CKind == OMPC_when) {
+            // The selectors were parsed into TraitInfos[I] by the first pass;
+            // skip them so their diagnostics are not repeated.
+            SkipUntil(tok::colon, StopBeforeMatch);
+            ConsumeToken(); // ':'
           }
-
-          // Close the temporary DSA block for header parsing.
-          if (DKind != OMPD_unknown)
-            Actions.OpenMP().EndOpenMPDSABlock(nullptr);
+          HasDirective = Tok.isNot(tok::r_paren);
         }
 
-        // Parse ')' or recover to pragma end on syntax error.
-        if (T.consumeClose())
-          T.skipToEnd();
-
-        ClauseKinds.push_back(CKind);
-        DirectiveKinds.push_back(DKind);
-        DirectiveClauses.push_back(Clauses);
-      }
-
-      SourceLocation EndLoc = Tok.getLocation();
-      ConsumeAnnotationToken();
-
-      // Parse the body separately for each variant to establish proper DSA.
-      SmallVector<Stmt *, 4> VariantBodies;
-
-      for (unsigned I : llvm::seq<unsigned>(DirectiveKinds.size())) {
-        std::optional<TentativeParsingAction> TPA;
-        if (I < DirectiveKinds.size() - 1)
-          TPA.emplace(*this);
-
-        const bool HasDirective = (DirectiveKinds[I] != OMPD_unknown);
-
+        StmtResult Variant;
         if (HasDirective) {
-          Actions.OpenMP().StartOpenMPDSABlock(
-              DirectiveKinds[I], DeclarationNameInfo(), getCurScope(), Loc);
-          Actions.OpenMP().ActOnOpenMPRegionStart(DirectiveKinds[I],
-                                                  getCurScope());
+          Variant = ParseOpenMPDeclarativeOrExecutableDirective(
+              StmtCtx, /*ReadDirectiveWithinMetadirective=*/true);
+        } else {
+          // No directive variant: the variant is the plain associated
+          // statement.
+          while (Tok.isNot(tok::annot_pragma_openmp_end))
+            ConsumeAnyToken();
+          ConsumeAnnotationToken();
+          ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+          Variant = ParseStatement();
         }
 
-        StmtResult Body;
-        ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
-        {
-          Sema::CompoundScopeRAII Scope(Actions);
-          Body = ParseStatement();
-        }
-        if (Body.isInvalid()) {
-          if (HasDirective)
-            Actions.OpenMP().EndOpenMPDSABlock(nullptr);
-          if (TPA)
-            TPA->Revert();
-          return StmtError();
-        }
-        if (HasDirective) {
-          Body =
-              Actions.OpenMP().ActOnOpenMPRegionEnd(Body, DirectiveClauses[I]);
-          if (Body.isInvalid()) {
-            Actions.OpenMP().EndOpenMPDSABlock(nullptr);
-            if (TPA)
-              TPA->Revert();
-            return StmtError();
-          }
-
-          Actions.OpenMP().EndOpenMPDSABlock(Body.get());
-        }
-        VariantBodies.push_back(Body.get());
-        if (TPA)
-          TPA->Revert();
+        if (VariantTPA)
+          VariantTPA->Revert();
+        if (Variant.isInvalid())
+          HasError = true;
+        else
+          Variants.push_back(Variant.get());
       }
-
-      // Convert DirectiveClauses to ArrayRef<ArrayRef<OMPClause *>>.
-      SmallVector<ArrayRef<OMPClause *>, 4> ClausesArrayRefs;
-      for (const auto &Clauses : DirectiveClauses)
-        ClausesArrayRefs.push_back(Clauses);
-      return Actions.OpenMP().ActOnOpenMPMetaDirective(
-          Loc, EndLoc, TraitInfos, ClauseKinds, DirectiveKinds,
-          ClausesArrayRefs, VariantBodies);
+      if (HasError)
+        return StmtError();
+      return Actions.OpenMP().ActOnOpenMPMetaDirective(Loc, EndLoc, TraitInfos,
+                                                       Variants);
     }
 
     int Idx = 0;

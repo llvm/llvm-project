@@ -3773,31 +3773,15 @@ StmtResult SemaOpenMP::ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
 
 StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
     SourceLocation StartLoc, SourceLocation EndLoc,
-    ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<OpenMPClauseKind> ClauseKinds,
-    ArrayRef<OpenMPDirectiveKind> DirectiveKinds,
-    ArrayRef<ArrayRef<OMPClause *>> DirectiveClauses,
-    ArrayRef<Stmt *> VariantBodies) {
-
-  assert((ClauseKinds.size() == DirectiveKinds.size() &&
-          DirectiveKinds.size() == DirectiveClauses.size() &&
-          DirectiveClauses.size() == VariantBodies.size()) &&
-         "Mismatched variant arrays");
-
-  // VariantBodies are complete CapturedStmt nodes with DSA from Parser.
+    ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<Stmt *> Variants) {
+  assert(TraitInfos.size() == Variants.size() &&
+         "Expected one variant per metadirective clause");
   // TODO Phase 3: Build OMPMetaDirective AST node holding all variants.
-  // TODO Phase 3: Extract conditions from TraitInfos.
   // TODO Phase 4: Codegen - generate runtime if-else chain.
-
-  // Temporary stub: return first variant until OMPMetaDirective exists.
-  // Early return if no variants were successfully parsed.
-  if (VariantBodies.empty())
+  // Temporary stub: return the first variant until OMPMetaDirective exists.
+  if (Variants.empty())
     return StmtError();
-
-  // Return first variant if it's valid.
-  if (VariantBodies[0])
-    return VariantBodies[0];
-
-  return StmtError();
+  return Variants.front();
 }
 
 OMPRequiresDecl *
