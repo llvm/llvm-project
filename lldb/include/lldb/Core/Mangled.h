@@ -14,9 +14,11 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 
 namespace lldb_private {
@@ -39,17 +41,20 @@ public:
     ePreferDemangledWithoutArguments
   };
 
-  enum ManglingScheme {
+  /// The underlying type is fixed so that the schemes that language plugins
+  /// register, which have no enumerators, are valid values too.
+  enum ManglingScheme : uint8_t {
     eManglingSchemeNone = 0,
-    eManglingSchemeMSVC,
-    eManglingSchemeItanium,
     eManglingSchemeRustV0,
     eManglingSchemeD,
     eManglingSchemeSwift,
+    /// The first of the schemes that language plugins register with
+    /// RegisterManglingScheme().
+    eFirstRegisteredManglingScheme,
   };
 
-  /// The number of mangling schemes.
-  static constexpr size_t kNumManglingSchemes = eManglingSchemeSwift + 1;
+  /// The number of mangling schemes, including all that can be registered.
+  static constexpr size_t kNumManglingSchemes = 16;
 
   /// What a mangled function name says about the function's declaration.
   enum class FunctionNameKind {
@@ -232,6 +237,32 @@ public:
   static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef name);
 
   static bool IsMangledName(llvm::StringRef name);
+
+  /// Returns true if \p name, which starts with one of the prefixes of a
+  /// mangling scheme, is a name of that scheme.
+  using ManglingSchemeMatcher = bool (*)(llvm::StringRef name);
+
+  /// Register a mangling scheme whose names start with one of \p prefixes,
+  /// for the language plugin of \p language to demangle and parse. If the
+  /// prefixes alone don't tell the names of the scheme apart, \p matches
+  /// checks the rest of each name. Language plugins call this when they are
+  /// initialized. Registering the same scheme again returns the same scheme.
+  ///
+  /// \return
+  ///     The new scheme, or eManglingSchemeNone if there is no room for
+  ///     another one.
+  static ManglingScheme
+  RegisterManglingScheme(llvm::ArrayRef<llvm::StringRef> prefixes,
+                         lldb::LanguageType language,
+                         ManglingSchemeMatcher matches = nullptr);
+
+  /// Stop recognizing the names of \p scheme, a scheme returned by
+  /// RegisterManglingScheme().
+  static void UnregisterManglingScheme(ManglingScheme scheme);
+
+  /// Returns the language that registered \p scheme, or eLanguageTypeUnknown
+  /// if no language did.
+  static lldb::LanguageType GetLanguageForManglingScheme(ManglingScheme scheme);
 
   /// Decode a serialized version of this object from data.
   ///

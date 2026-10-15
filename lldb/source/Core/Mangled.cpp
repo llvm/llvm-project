@@ -19,22 +19,172 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 
+#include <array>
+#include <atomic>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <cstdlib>
 #include <cstring>
 using namespace lldb_private;
 
 #pragma mark Mangled
+
+namespace {
+/// A mangling scheme that a language plugin registered.
+struct RegisteredManglingScheme {
+  std::vector<std::string> prefixes;
+  /// If set, a name that starts with one of the prefixes must also match.
+  Mangled::ManglingSchemeMatcher matches = nullptr;
+  lldb::LanguageType language = lldb::eLanguageTypeUnknown;
+  /// Schemes are never removed, so that GetManglingScheme() can read them
+  /// without a lock. Unregistered schemes are only marked inactive. No other
+  /// data is published through this flag, so it needs no memory ordering.
+  std::atomic<bool> active = false;
+};
+
+/// The mangling schemes that language plugins registered.
+class ManglingSchemeRegistry {
+public:
+  Mangled::ManglingScheme Register(llvm::ArrayRef<llvm::StringRef> prefixes,
+                                   lldb::LanguageType language,
+                                   Mangled::ManglingSchemeMatcher matches);
+  void Unregister(Mangled::ManglingScheme scheme);
+  lldb::LanguageType GetLanguage(Mangled::ManglingScheme scheme) const;
+  Mangled::ManglingScheme Find(llvm::StringRef name) const;
+
+private:
+  /// Serializes registrations.
+  std::mutex m_mutex;
+  std::array<RegisteredManglingScheme,
+             Mangled::kNumManglingSchemes -
+                 Mangled::eFirstRegisteredManglingScheme>
+      m_schemes;
+  /// The number of initialized entries in m_schemes. Incrementing it publishes
+  /// a new entry to readers.
+  std::atomic<size_t> m_num_schemes = 0;
+};
+} // namespace
+
+static ManglingSchemeRegistry &GetManglingSchemeRegistry() {
+  // NOTE: INTENTIONAL LEAK due to global destructor chain.
+  static ManglingSchemeRegistry *g_registry = new ManglingSchemeRegistry();
+  return *g_registry;
+}
+
+static Mangled::ManglingScheme SchemeForIndex(size_t index) {
+  return static_cast<Mangled::ManglingScheme>(
+      Mangled::eFirstRegisteredManglingScheme + index);
+}
+
+/// Returns true if a name could start with both one of \p prefixes and a
+/// prefix of one of the active \p schemes.
+[[maybe_unused]] static bool
+OverlapsActiveScheme(llvm::ArrayRef<llvm::StringRef> prefixes,
+                     llvm::ArrayRef<RegisteredManglingScheme> schemes) {
+  for (const RegisteredManglingScheme &scheme : schemes) {
+    if (!scheme.active.load(std::memory_order_relaxed))
+      continue;
+    for (llvm::StringRef prefix : prefixes)
+      for (llvm::StringRef other : scheme.prefixes)
+        if (prefix.starts_with(other) || other.starts_with(prefix))
+          return true;
+  }
+  return false;
+}
+
+Mangled::ManglingScheme
+ManglingSchemeRegistry::Register(llvm::ArrayRef<llvm::StringRef> prefixes,
+                                 lldb::LanguageType language,
+                                 Mangled::ManglingSchemeMatcher matches) {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  const size_t num_schemes = m_num_schemes.load(std::memory_order_relaxed);
+  size_t index = 0;
+  for (; index < num_schemes; ++index) {
+    const RegisteredManglingScheme &scheme = m_schemes[index];
+    if (scheme.language == language && scheme.matches == matches &&
+        llvm::equal(scheme.prefixes, prefixes))
+      break;
+  }
+
+  if (index == num_schemes) {
+    assert(index < m_schemes.size() && "too many mangling schemes");
+    if (index >= m_schemes.size())
+      return Mangled::eManglingSchemeNone;
+    assert(!OverlapsActiveScheme(
+               prefixes, llvm::ArrayRef(m_schemes.data(), num_schemes)) &&
+           "mangling scheme prefixes overlap");
+    m_schemes[index].prefixes.assign(prefixes.begin(), prefixes.end());
+    m_schemes[index].matches = matches;
+    m_schemes[index].language = language;
+    m_num_schemes.store(num_schemes + 1, std::memory_order_release);
+  }
+  m_schemes[index].active.store(true, std::memory_order_relaxed);
+  return SchemeForIndex(index);
+}
+
+void ManglingSchemeRegistry::Unregister(Mangled::ManglingScheme scheme) {
+  if (scheme < Mangled::eFirstRegisteredManglingScheme)
+    return;
+  size_t index = scheme - Mangled::eFirstRegisteredManglingScheme;
+  if (index < m_num_schemes.load(std::memory_order_acquire))
+    m_schemes[index].active.store(false, std::memory_order_relaxed);
+}
+
+lldb::LanguageType
+ManglingSchemeRegistry::GetLanguage(Mangled::ManglingScheme scheme) const {
+  if (scheme < Mangled::eFirstRegisteredManglingScheme)
+    return lldb::eLanguageTypeUnknown;
+  size_t index = scheme - Mangled::eFirstRegisteredManglingScheme;
+  if (index >= m_num_schemes.load(std::memory_order_acquire))
+    return lldb::eLanguageTypeUnknown;
+  return m_schemes[index].language;
+}
+
+Mangled::ManglingScheme
+ManglingSchemeRegistry::Find(llvm::StringRef name) const {
+  const size_t num_schemes = m_num_schemes.load(std::memory_order_acquire);
+  for (size_t index = 0; index < num_schemes; ++index) {
+    const RegisteredManglingScheme &scheme = m_schemes[index];
+    if (!scheme.active.load(std::memory_order_relaxed))
+      continue;
+    for (llvm::StringRef prefix : scheme.prefixes) {
+      if (!name.starts_with(prefix))
+        continue;
+      // Prefixes don't overlap, so no other scheme can match the name.
+      if (scheme.matches && !scheme.matches(name))
+        return Mangled::eManglingSchemeNone;
+      return SchemeForIndex(index);
+    }
+  }
+  return Mangled::eManglingSchemeNone;
+}
+
+Mangled::ManglingScheme
+Mangled::RegisterManglingScheme(llvm::ArrayRef<llvm::StringRef> prefixes,
+                                lldb::LanguageType language,
+                                ManglingSchemeMatcher matches) {
+  return GetManglingSchemeRegistry().Register(prefixes, language, matches);
+}
+
+void Mangled::UnregisterManglingScheme(ManglingScheme scheme) {
+  GetManglingSchemeRegistry().Unregister(scheme);
+}
+
+lldb::LanguageType
+Mangled::GetLanguageForManglingScheme(ManglingScheme scheme) {
+  return GetManglingSchemeRegistry().GetLanguage(scheme);
+}
 
 bool Mangled::IsMangledName(llvm::StringRef name) {
   return Mangled::GetManglingScheme(name) != Mangled::eManglingSchemeNone;
@@ -43,9 +193,6 @@ bool Mangled::IsMangledName(llvm::StringRef name) {
 Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
-
-  if (name.starts_with("?"))
-    return Mangled::eManglingSchemeMSVC;
 
   if (name.starts_with("_R"))
     return Mangled::eManglingSchemeRustV0;
@@ -59,13 +206,6 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
     if (!buf.empty() && (llvm::isDigit(buf.front()) || name == "_Dmain"))
       return Mangled::eManglingSchemeD;
   }
-
-  if (name.starts_with("_Z"))
-    return Mangled::eManglingSchemeItanium;
-
-  // ___Z is a clang extension of block invocations
-  if (name.starts_with("___Z"))
-    return Mangled::eManglingSchemeItanium;
 
   // Swift's older style of mangling used "_T" as a mangling prefix. This can
   // lead to false positives with other symbols that just so happen to start
@@ -87,7 +227,7 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
       name.starts_with("@__swiftmacro_"))
     return Mangled::eManglingSchemeSwift;
 
-  return Mangled::eManglingSchemeNone;
+  return GetManglingSchemeRegistry().Find(name);
 }
 
 Mangled::Mangled(ConstString s) : m_mangled(), m_demangled() {
@@ -184,16 +324,6 @@ ConstString Mangled::GetDemangledName() const {
   ManglingScheme scheme = GetManglingScheme(m_mangled.GetStringRef());
   char *demangled_name = nullptr;
   switch (scheme) {
-  case eManglingSchemeMSVC:
-  case eManglingSchemeItanium:
-    // The C++ language plugin demangles C++ names.
-    if (Language *lang = Language::FindPluginForManglingScheme(scheme)) {
-      Language::DemangledName demangled =
-          lang->DemangleSymbol(m_mangled, scheme, Language::DemangleOptions());
-      if (!demangled.name.empty())
-        m_demangled.SetStringWithMangledCounterpart(demangled.name, m_mangled);
-    }
-    break;
   case eManglingSchemeRustV0:
     demangled_name = GetRustV0DemangledStr(m_mangled);
     break;
@@ -206,6 +336,15 @@ ConstString Mangled::GetDemangledName() const {
     break;
   case eManglingSchemeNone:
     // Don't bother demangling anything that isn't mangled.
+    break;
+  default:
+    // Language plugins demangle the schemes they registered.
+    if (Language *lang = Language::FindPluginForManglingScheme(scheme)) {
+      Language::DemangledName demangled =
+          lang->DemangleSymbol(m_mangled, scheme, Language::DemangleOptions());
+      if (!demangled.name.empty())
+        m_demangled.SetStringWithMangledCounterpart(demangled.name, m_mangled);
+    }
     break;
   }
 
@@ -224,19 +363,19 @@ ConstString Mangled::GetDemangledName() const {
 }
 
 std::optional<DemangledNameInfo> Mangled::ComputeDemangledInfo() const {
-  // Only supported for itanium.
-  if (!m_mangled ||
-      GetManglingScheme(m_mangled.GetStringRef()) != eManglingSchemeItanium)
+  if (!m_mangled)
     return std::nullopt;
 
-  Language *lang =
-      Language::FindPluginForManglingScheme(eManglingSchemeItanium);
+  // Only the language plugins compute the info, for the schemes they
+  // registered.
+  ManglingScheme scheme = GetManglingScheme(m_mangled.GetStringRef());
+  Language *lang = Language::FindPluginForManglingScheme(scheme);
   if (!lang)
     return std::nullopt;
 
   Language::DemangleOptions options;
   options.want_info = true;
-  return lang->DemangleSymbol(m_mangled, eManglingSchemeItanium, options).info;
+  return lang->DemangleSymbol(m_mangled, scheme, options).info;
 }
 
 ConstString Mangled::GetDisplayDemangledName() const {
@@ -302,6 +441,14 @@ void Mangled::DumpDebug(Stream *s) const {
 // of mangling names from a given language, likewise the compilation units
 // within those targets.
 lldb::LanguageType Mangled::GuessLanguage() const {
+  // The language that registered the mangling scheme knows the name best.
+  if (m_mangled) {
+    lldb::LanguageType language = GetLanguageForManglingScheme(
+        GetManglingScheme(m_mangled.GetStringRef()));
+    if (language != lldb::eLanguageTypeUnknown)
+      return language;
+  }
+
   lldb::LanguageType result = lldb::eLanguageTypeUnknown;
   // Ask each language plugin to check if the mangled name belongs to it.
   Language::ForEach([this, &result](Language *l) {
