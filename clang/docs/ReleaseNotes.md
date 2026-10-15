@@ -64,6 +64,11 @@ in a future version of Clang.
 
 ### ABI Changes in This Version
 
+- Clang now correctly mangles C++20 parenthesized aggregate initialization
+  expressions. Previously, initializer arguments could be omitted from the
+  mangled name, causing distinct entities to receive the same name.
+  (#GH231953)
+
 - Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
 for 256- and 512-bit vector arguments and returns from effective per-function
 target features. Features and `arch=` CPUs that imply AVX or AVX512F are
