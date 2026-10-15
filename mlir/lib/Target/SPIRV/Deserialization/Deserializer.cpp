@@ -535,7 +535,10 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
 
     std::optional<spirv::Decoration> decoration = spirv::symbolizeDecoration(
         llvm::convertToCamelFromSnakeCase(decAttr.getName(), true));
-    assert(decoration.has_value());
+    if (!decoration)
+      return emitError(unknownLoc, "unknown decoration '")
+             << decAttr.getName().getValue()
+             << "' on function argument with result <id> " << argID;
     foundDecorationAttr = spirv::DecorationAttr::get(context, *decoration);
   }
 
