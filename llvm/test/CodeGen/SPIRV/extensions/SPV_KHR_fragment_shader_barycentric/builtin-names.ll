@@ -1,8 +1,10 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-vulkan1.3-pixel -spirv-ext=+SPV_KHR_fragment_shader_barycentric %s -o - | FileCheck %s --implicit-check-not='OpCapability FragmentBarycentricNV' --implicit-check-not='BuiltIn BaryCoordNV' --implicit-check-not='BuiltIn BaryCoordNoPerspNV'
+; RUN: not llc -O0 -mtriple=spirv-unknown-vulkan1.3-pixel %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERROR
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-pixel -spirv-ext=+SPV_KHR_fragment_shader_barycentric %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; SPIR-V-friendly IR names identify the same KHR built-ins as numeric
 ; BuiltIn decorations.
+; ERROR: LLVM ERROR: Barycentric built-ins require the following SPIR-V extension: SPV_KHR_fragment_shader_barycentric
 ; CHECK-DAG: OpCapability FragmentBarycentricKHR
 ; CHECK-DAG: OpExtension "SPV_KHR_fragment_shader_barycentric"
 ; CHECK-DAG: OpDecorate %[[#NOPERSP:]] BuiltIn BaryCoordNoPerspKHR
