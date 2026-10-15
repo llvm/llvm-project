@@ -170,8 +170,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
                                            /*High=*/UINT16_MAX);
   case AMDGPU::BI__builtin_amdgcn_flat_prefetch:
   case AMDGPU::BI__builtin_amdgcn_global_prefetch: {
-    // Only th (bits 0-2, where 7 is reserved), scope (bits 3-4) and nv (bit 5)
-    // may be set.
+    // Only th (bits 0-2, not 7), scope (bits 3-4) and nv (bit 5) may be set.
     llvm::APSInt CPol;
     if (SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/1, /*Low=*/0,
                                         /*High=*/63) ||
