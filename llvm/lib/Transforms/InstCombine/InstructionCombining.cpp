@@ -1980,7 +1980,9 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     // Walk the use list for the instruction, comparing them to I.
     for (User *U : PN->users()) {
       Instruction *UI = cast<Instruction>(U);
-      if (UI != &I && !I.isIdenticalTo(UI))
+      if (UI != &I &&
+          (!I.isIdenticalTo(UI) ||
+           I.getFastMathFlagsOrNone() != UI->getFastMathFlagsOrNone()))
         return nullptr;
     }
     // Otherwise, we can replace *all* users with the new PHI we form.
