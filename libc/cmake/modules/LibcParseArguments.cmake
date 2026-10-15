@@ -10,11 +10,14 @@
 # When `llvm_libc_parse_arguments` is called:
 #   1. It parses all base, overlay, and full-build argument variants using
 #      cmake_parse_arguments.
-#   2. It determines the active build mode (either explicitly specified via
-#      `BUILD_MODE` or defaulted from `LLVM_LIBC_FULL_BUILD`).
-#   3. It automatically merges the active mode's argument values
-#      (e.g., `FULL_BUILD_<arg>` or `OVERLAY_<arg>`) into the canonical
-#      `<prefix>_<arg>` variable.
+#   2. It selects the active build mode from `LLVM_LIBC_FULL_BUILD`.
+#   3. It resolves mode-specific options into the canonical `<prefix>_<arg>`
+#      variables:
+#        - Optional and single-value arguments may be specified either via the
+#          base `<arg>` or via `OVERLAY_<arg>` / `FULL_BUILD_<arg>` (specifying
+#          both is an error).
+#        - Multi-value arguments append `OVERLAY_<arg>` or `FULL_BUILD_<arg>` to
+#          the base `<arg>` list.
 #
 # Examples:
 #
@@ -55,20 +58,7 @@
 #        skip defining the target. Similarly, `OVERLAY_ONLY` skips the
 #        target in full-build mode.
 #
-# 3. Explicit BUILD_MODE override:
-#
-#      add_libc_test(
-#        gpu_perf
-#        IS_GPU_BENCHMARK
-#        BUILD_MODE FULL_BUILD
-#        SRCS perf.cpp
-#        DEPENDS ...
-#      )
-#
-#    - Even if LLVM_LIBC_FULL_BUILD is OFF, `BUILD_MODE FULL_BUILD` ensures
-#      that full-build rules and FULL_BUILD_* options are selected.
-#
-# 4. Forwarding merged arguments:
+# 3. Forwarding merged arguments:
 #
 #    `forward_arguments(name_prefix output_var)` re-emits only the canonical
 #    (merged) arguments, dropping the mode-specific prefixes. This allows
@@ -82,18 +72,14 @@
 #        _add_libc_test(${test_name} ${forwarded_args} ${LIBC_TEST_UNPARSED_ARGUMENTS})
 #      endfunction()
 
-# Common options that control mode / target inclusion. These do NOT receive
+# Common options that control target inclusion by mode. These do NOT receive
 # OVERLAY_ or FULL_BUILD_ prefixes.
 set(LLVM_LIBC_COMMON_OPTIONAL_ARGS
   FULL_BUILD_ONLY
   OVERLAY_ONLY
 )
 
-set(LLVM_LIBC_COMMON_SINGLE_VALUE_ARGS
-  BUILD_MODE
-)
-
-# Target configuration options that can have mode-specific overrides.
+# Target configuration options that can have mode-specific variants.
 set(LLVM_LIBC_OPTIONAL_ARGS
   ALIAS
   PUBLIC
@@ -158,62 +144,74 @@ foreach(arg_list LLVM_LIBC_OPTIONAL_ARGS LLVM_LIBC_SINGLE_VALUE_ARGS LLVM_LIBC_M
 endforeach()
 
 # Parse arguments and automatically merge mode-specific options into the
-# canonical <name_prefix>_<argument> variables.
-macro(llvm_libc_parse_arguments name_prefix)
+# canonical <name_prefix>_<argument> variables in the caller's scope.
+function(llvm_libc_parse_arguments name_prefix)
   cmake_parse_arguments(
-    ${name_prefix}
+    ARG
     "${LLVM_LIBC_COMMON_OPTIONAL_ARGS};${LLVM_LIBC_OPTIONAL_ARGS_COMPLETE}"
-    "${LLVM_LIBC_COMMON_SINGLE_VALUE_ARGS};${LLVM_LIBC_SINGLE_VALUE_ARGS_COMPLETE}"
+    "${LLVM_LIBC_SINGLE_VALUE_ARGS_COMPLETE}"
     "${LLVM_LIBC_MULTI_VALUE_ARGS_COMPLETE}"
     ${ARGN}
   )
 
-  if(NOT ${name_prefix}_BUILD_MODE)
-    if(LLVM_LIBC_FULL_BUILD)
-      set(${name_prefix}_BUILD_MODE "FULL_BUILD")
-    else()
-      set(${name_prefix}_BUILD_MODE "OVERLAY")
-    endif()
-  elseif(NOT (${name_prefix}_BUILD_MODE STREQUAL "FULL_BUILD" OR ${name_prefix}_BUILD_MODE STREQUAL "OVERLAY"))
-    message(FATAL_ERROR "Invalid BUILD_MODE '${${name_prefix}_BUILD_MODE}'. Expected 'FULL_BUILD' or 'OVERLAY'.")
+  if(LLVM_LIBC_FULL_BUILD)
+    set(mode_prefix "FULL_BUILD")
+  else()
+    set(mode_prefix "OVERLAY")
   endif()
 
-  # Merge mode-specific optional and single-value arguments (override base value).
+  # Resolve mode-specific optional and single-value arguments.
+  # Specifying both the base argument and a mode-specific variant is forbidden.
   foreach(argument IN LISTS LLVM_LIBC_OPTIONAL_ARGS LLVM_LIBC_SINGLE_VALUE_ARGS)
-    if(${name_prefix}_${${name_prefix}_BUILD_MODE}_${argument})
-      set(${name_prefix}_${argument} "${${name_prefix}_${${name_prefix}_BUILD_MODE}_${argument}}")
-      libc_log(DEPS "${name_prefix}: overriding ${argument} with ${${name_prefix}_BUILD_MODE}_${argument}=${${name_prefix}_${argument}}")
+    if(ARG_${argument} AND (ARG_OVERLAY_${argument} OR ARG_FULL_BUILD_${argument}))
+      message(FATAL_ERROR
+        "Cannot specify both ${argument} and OVERLAY_${argument}/FULL_BUILD_${argument}."
+      )
+    endif()
+    if(ARG_${mode_prefix}_${argument})
+      set(ARG_${argument} "${ARG_${mode_prefix}_${argument}}")
     endif()
   endforeach()
 
   # Merge mode-specific multi-value arguments (append to base list).
   foreach(argument IN LISTS LLVM_LIBC_MULTI_VALUE_ARGS)
-    if(${name_prefix}_${${name_prefix}_BUILD_MODE}_${argument})
-      list(APPEND ${name_prefix}_${argument} ${${name_prefix}_${${name_prefix}_BUILD_MODE}_${argument}})
-      libc_log(DEPS "${name_prefix}: appending ${${name_prefix}_BUILD_MODE}_${argument} to ${argument}: ${${name_prefix}_${argument}}")
+    if(ARG_${mode_prefix}_${argument})
+      list(APPEND ARG_${argument} ${ARG_${mode_prefix}_${argument}})
+      libc_log(DEPS "${name_prefix}: appending ${mode_prefix}_${argument} to ${argument}: ${ARG_${argument}}")
     endif()
   endforeach()
 
-  unset(argument)
-endmacro()
+  foreach(argument
+    IN LISTS
+    LLVM_LIBC_COMMON_OPTIONAL_ARGS
+    LLVM_LIBC_OPTIONAL_ARGS
+    LLVM_LIBC_SINGLE_VALUE_ARGS
+    LLVM_LIBC_MULTI_VALUE_ARGS
+    ITEMS
+    UNPARSED_ARGUMENTS
+    KEYWORDS_MISSING_VALUES
+  )
+    set(${name_prefix}_${argument} "${ARG_${argument}}" PARENT_SCOPE)
+  endforeach()
+endfunction()
 
 # Forward all arguments that can be used for llvm_libc_parse_arguments again.
-# Re-emits only the canonical arguments, assuming that *_OVERLAY and *_FULL_BUILD
+# Re-emits only the canonical arguments, assuming that OVERLAY_* and FULL_BUILD_*
 # args have already been merged properly.
-macro(forward_arguments name_prefix output)
-  set(${output} "")
+function(forward_arguments name_prefix output)
+  set(forwarded "")
 
   foreach(argument IN LISTS LLVM_LIBC_COMMON_OPTIONAL_ARGS LLVM_LIBC_OPTIONAL_ARGS)
     if(${name_prefix}_${argument})
-      list(APPEND ${output} ${argument})
+      list(APPEND forwarded ${argument})
     endif()
   endforeach()
 
-  foreach(argument IN LISTS LLVM_LIBC_COMMON_SINGLE_VALUE_ARGS LLVM_LIBC_SINGLE_VALUE_ARGS LLVM_LIBC_MULTI_VALUE_ARGS)
+  foreach(argument IN LISTS LLVM_LIBC_SINGLE_VALUE_ARGS LLVM_LIBC_MULTI_VALUE_ARGS)
     if(${name_prefix}_${argument})
-      list(APPEND ${output} ${argument} "${${name_prefix}_${argument}}")
+      list(APPEND forwarded ${argument} "${${name_prefix}_${argument}}")
     endif()
   endforeach()
 
-  unset(argument)
-endmacro()
+  set(${output} "${forwarded}" PARENT_SCOPE)
+endfunction()
