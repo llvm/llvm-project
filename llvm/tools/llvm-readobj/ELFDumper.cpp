@@ -230,13 +230,11 @@ template <class ELFT> struct FunctionCallGraphInfo {
 };
 
 // The relocation that applies to the address field of a .stack_sizes entry in
-// a relocatable file.
+// a relocatable file. Sym is null if the symbol could not be read.
 template <class ELFT> struct StackSizeRelocation {
   const Relocation<ELFT> &R;
-  // The symbol of the relocation, if it could be read, and its symbol table.
   const typename ELFT::Sym *Sym;
   const typename ELFT::Shdr &SymTab;
-  // The value stored in the address field.
   uint64_t FieldValue;
 };
 
