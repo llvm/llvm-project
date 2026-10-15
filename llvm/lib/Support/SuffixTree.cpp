@@ -20,9 +20,8 @@ using namespace llvm;
 /// \returns the number of elements in the substring associated with \p N.
 static size_t numElementsInSubstring(const SuffixTreeNode *N) {
   assert(N && "Got a null node?");
-  if (auto *Internal = dyn_cast<SuffixTreeInternalNode>(N))
-    if (Internal->isRoot())
-      return 0;
+  if (N->isRoot())
+    return 0;
   return N->getEndIdx() - N->getStartIdx() + 1;
 }
 
@@ -52,21 +51,20 @@ SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str,
     setLeafNodes();
 }
 
-void SuffixTree::insertLeaf(SuffixTreeInternalNode &Parent, unsigned StartIdx,
+void SuffixTree::insertLeaf(SuffixTreeNode &Parent, unsigned StartIdx,
                             unsigned Edge) {
   assert(StartIdx <= LeafEndIdx && "String can't start after it ends!");
   Parent.Children[Edge] = SuffixTreeIndex(StartIdx);
 }
 
-SuffixTreeInternalNode *
-SuffixTree::insertInternalNode(SuffixTreeInternalNode *Parent,
-                               unsigned StartIdx, unsigned EndIdx,
-                               unsigned Edge) {
+SuffixTreeNode *SuffixTree::insertInternalNode(SuffixTreeNode *Parent,
+                                               unsigned StartIdx,
+                                               unsigned EndIdx, unsigned Edge) {
   assert(StartIdx <= EndIdx && "String can't start after it ends!");
   assert(!(!Parent && StartIdx != SuffixTreeNode::EmptyIdx) &&
          "Non-root internal nodes must have parents!");
   auto *N = new (InternalNodeAllocator.Allocate())
-      SuffixTreeInternalNode(StartIdx, EndIdx, Root);
+      SuffixTreeNode(StartIdx, EndIdx, Root);
   if (Parent) {
     // Path length = parent path length + edge length.
     N->setConcatLen(Parent->getConcatLen() + (EndIdx - StartIdx + 1));
@@ -75,14 +73,14 @@ SuffixTree::insertInternalNode(SuffixTreeInternalNode *Parent,
   return N;
 }
 
-SuffixTreeInternalNode *SuffixTree::insertRoot() {
+SuffixTreeNode *SuffixTree::insertRoot() {
   return insertInternalNode(/*Parent = */ nullptr, SuffixTreeNode::EmptyIdx,
                             SuffixTreeNode::EmptyIdx, /*Edge = */ 0);
 }
 
 void SuffixTree::setLeafNodes() {
   // A stack that keeps track of nodes to visit for post-order DFS traversal.
-  SmallVector<SuffixTreeInternalNode *> ToVisit;
+  SmallVector<SuffixTreeNode *> ToVisit;
   ToVisit.push_back(Root);
 
   // This keeps track of the index of the next leaf node to be added to
@@ -91,11 +89,11 @@ void SuffixTree::setLeafNodes() {
 
   // This keeps track of nodes whose children have been added to the stack.
   // The value is the index of its first leaf in LeafNodes.
-  DenseMap<SuffixTreeInternalNode *, unsigned> ChildrenMap;
+  DenseMap<SuffixTreeNode *, unsigned> ChildrenMap;
 
   // Traverse the tree in post-order.
   while (!ToVisit.empty()) {
-    SuffixTreeInternalNode *CurrInternalNode = ToVisit.pop_back_val();
+    SuffixTreeNode *CurrInternalNode = ToVisit.pop_back_val();
     auto I = ChildrenMap.find(CurrInternalNode);
     if (I == ChildrenMap.end()) {
       // This is the first time we visit this node.
@@ -106,8 +104,7 @@ void SuffixTree::setLeafNodes() {
         ToVisit.push_back(CurrInternalNode);
         ChildrenMap[CurrInternalNode] = LeafCounter;
         for (; J != CurrInternalNode->Children.end(); ++J) {
-          if (auto *InternalChild =
-                  dyn_cast<SuffixTreeInternalNode *>(J->second)) {
+          if (auto *InternalChild = dyn_cast<SuffixTreeNode *>(J->second)) {
             ToVisit.push_back(InternalChild);
           } else {
             // Subtract the parent path length to find the suffix start.
@@ -133,7 +130,7 @@ void SuffixTree::setLeafNodes() {
 }
 
 unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
-  SuffixTreeInternalNode *NeedsLink = nullptr;
+  SuffixTreeNode *NeedsLink = nullptr;
 
   while (SuffixesToAdd > 0) {
 
@@ -172,8 +169,7 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
       unsigned NextStartIdx;
 
       // A leaf edge reaches the current prefix end, so it cannot be consumed.
-      if (auto *NextInternalNode =
-              dyn_cast<SuffixTreeInternalNode *>(NextNode)) {
+      if (auto *NextInternalNode = dyn_cast<SuffixTreeNode *>(NextNode)) {
         unsigned SubstringLen = numElementsInSubstring(NextInternalNode);
 
         // Consume the edge only when the active suffix reaches its end.
@@ -220,7 +216,7 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
       //                      n   l
 
       // The node s from the diagram
-      SuffixTreeInternalNode *SplitNode = insertInternalNode(
+      SuffixTreeNode *SplitNode = insertInternalNode(
           Active.Node, NextStartIdx, NextStartIdx + Active.Len - 1, FirstChar);
 
       // Insert the new node representing the new substring into the tree as
@@ -231,7 +227,7 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
       // Make the old node a child of the split node and update its start
       // index. This is the node n from the diagram.
       NextStartIdx += Active.Len;
-      if (auto *NextInternalNode = dyn_cast<SuffixTreeInternalNode *>(NextNode))
+      if (auto *NextInternalNode = dyn_cast<SuffixTreeNode *>(NextNode))
         NextInternalNode->incrementStartIdx(Active.Len);
       else
         NextNode = SuffixTreeIndex(NextStartIdx);
@@ -286,8 +282,7 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
     // Internal nodes represent individual strings, which may repeat.
     for (auto &ChildPair : Curr->Children)
       // Save all of this node's children for processing.
-      if (auto *InternalChild =
-              dyn_cast<SuffixTreeInternalNode *>(ChildPair.second))
+      if (auto *InternalChild = dyn_cast<SuffixTreeNode *>(ChildPair.second))
         InternalNodesToVisit.push_back(InternalChild);
 
     // If length of repeated substring is below threshold, then skip it.
