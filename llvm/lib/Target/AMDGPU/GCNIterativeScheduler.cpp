@@ -13,6 +13,7 @@
 
 #include "GCNIterativeScheduler.h"
 #include "AMDGPUIGroupLP.h"
+#include "AMDGPUPrefetchOrdering.h"
 #include "GCNSchedStrategy.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
@@ -136,6 +137,7 @@ void GCNIterativeScheduler::swapIGLPMutations(const Region &R, bool IsReentry) {
     auto SchedPhase = IsReentry ? AMDGPU::SchedulingPhase::PreRAReentry
                                 : AMDGPU::SchedulingPhase::Initial;
 
+    addMutation(createAMDGPUPrefetchOrderingDAGMutation());
     addMutation(createIGroupLPDAGMutation(SchedPhase));
   }
 }
