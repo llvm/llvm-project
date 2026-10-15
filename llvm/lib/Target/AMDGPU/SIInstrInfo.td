@@ -1758,6 +1758,12 @@ def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
+def VOP3PModsPkFmaOpSel0 :
+    ComplexPattern<untyped, 2, "SelectVOP3PModsPkFmaOpSel0">;
+
+def VOP3PModsPkAddMulOpSel0 :
+    ComplexPattern<untyped, 2, "SelectVOP3PModsPkAddMulOpSel0">;
+
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
 def VOP3PNoModsDOT  : ComplexPattern<untyped, 1, "SelectVOP3PNoModsDOT">;
 def VOP3PModsF32  : ComplexPattern<untyped, 2, "SelectVOP3PModsF32">;

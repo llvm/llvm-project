@@ -1,0 +1,26 @@
+# RUN: not --crash llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# CHECK-COUNT-4: *** Bad machine code: GFX950 v_pk_{add,mul,fma}_f32 has an invalid op_sel. ***
+# CHECK-NOT: Bad machine code
+---
+name: test
+body: |
+  bb.0:
+    ; Valid: opsel[1:0] == 2'b00, 2'b01 and 2'b11.
+    $vgpr0_vgpr1 = V_PK_ADD_F32 8, $vgpr2_vgpr3, 8, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_PK_ADD_F32 4, $vgpr2_vgpr3, 8, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_PK_MUL_F32 4, $vgpr2_vgpr3, 4, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; Valid fma: OP_SEL_0 only on src0.
+    $vgpr0_vgpr1 = V_PK_FMA_F32 4, $vgpr2_vgpr3, 8, $vgpr4_vgpr5, 8, $vgpr6_vgpr7, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; Invalid: opsel[1:0] == 2'b10.
+    $vgpr0_vgpr1 = V_PK_ADD_F32 8, $vgpr2_vgpr3, 4, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_PK_MUL_F32 8, $vgpr2_vgpr3, 4, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; Invalid: OP_SEL_0 on src1.
+    $vgpr0_vgpr1 = V_PK_FMA_F32 8, $vgpr2_vgpr3, 4, $vgpr4_vgpr5, 8, $vgpr6_vgpr7, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; Invalid: OP_SEL_0 on src2.
+    $vgpr0_vgpr1 = V_PK_FMA_F32 8, $vgpr2_vgpr3, 8, $vgpr4_vgpr5, 4, $vgpr6_vgpr7, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
