@@ -107,11 +107,13 @@ define void @test_laziness(ptr %a) nounwind {
 ; MACHO-O0-GI:       ; %bb.0:
 ; MACHO-O0-GI-NEXT:    sub sp, sp, #32
 ; MACHO-O0-GI-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; MACHO-O0-GI-NEXT:    str x0, [sp] ; 8-byte Spill
+; MACHO-O0-GI-NEXT:    mov w8, #1000 ; =0x3e8
+; MACHO-O0-GI-NEXT:    mov w0, w8
 ; MACHO-O0-GI-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; MACHO-O0-GI-NEXT:    bl _external
-; MACHO-O0-GI-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
-; MACHO-O0-GI-NEXT:    mov w8, #1000 ; =0x3e8
-; MACHO-O0-GI-NEXT:    mov w2, w8
+; MACHO-O0-GI-NEXT:    ldr x0, [sp] ; 8-byte Reload
+; MACHO-O0-GI-NEXT:    ldr x2, [sp, #8] ; 8-byte Reload
 ; MACHO-O0-GI-NEXT:    adrp x8, _memset@GOTPAGE
 ; MACHO-O0-GI-NEXT:    ldr x8, [x8, _memset@GOTPAGEOFF]
 ; MACHO-O0-GI-NEXT:    mov w1, #1 ; =0x1
@@ -160,11 +162,13 @@ define void @test_laziness(ptr %a) nounwind {
 ; ARM64E-O0:       ; %bb.0:
 ; ARM64E-O0-NEXT:    sub sp, sp, #32
 ; ARM64E-O0-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; ARM64E-O0-NEXT:    str x0, [sp] ; 8-byte Spill
+; ARM64E-O0-NEXT:    mov w8, #1000 ; =0x3e8
+; ARM64E-O0-NEXT:    mov x0, x8
 ; ARM64E-O0-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; ARM64E-O0-NEXT:    bl _external
-; ARM64E-O0-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
-; ARM64E-O0-NEXT:    mov w8, #1000 ; =0x3e8
-; ARM64E-O0-NEXT:    mov x2, x8
+; ARM64E-O0-NEXT:    ldr x0, [sp] ; 8-byte Reload
+; ARM64E-O0-NEXT:    ldr x2, [sp, #8] ; 8-byte Reload
 ; ARM64E-O0-NEXT:    adrp x8, _memset@GOTPAGE
 ; ARM64E-O0-NEXT:    ldr x8, [x8, _memset@GOTPAGEOFF]
 ; ARM64E-O0-NEXT:    mov w1, #1 ; =0x1
