@@ -200,6 +200,17 @@ public:
     return false;
   }
 
+  /// Memory operand of an MSP430X instruction in non-register mode. The offset
+  /// must be a constant that fits in 20 bits.
+  bool isMem20() const {
+    if (!isMem())
+      return false;
+    if (!Mem.Offset)
+      return true;
+    const auto *CE = dyn_cast<MCConstantExpr>(Mem.Offset);
+    return CE && (isInt<20>(CE->getValue()) || isUInt<20>(CE->getValue()));
+  }
+
   StringRef getToken() const {
     assert(Kind == k_Tok && "Invalid access!");
     return Tok;

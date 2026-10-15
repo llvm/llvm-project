@@ -11,3 +11,5 @@
 // CHECK: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   popm #1, r4
 // CHECK: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
+  movx.a @r13, 0(r12)
+// CHECK: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled

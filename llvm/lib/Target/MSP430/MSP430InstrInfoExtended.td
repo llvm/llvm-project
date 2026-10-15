@@ -11,12 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 // TODO: Most extended instructions have a .A version that enables 20-bit
-// operands. This requires support the large memory model to be implemented.
+// operands. This requires support for the large memory model.
 //
 // Only the extended instructions that are useful in the small memory model
-// (16-bit pointers) are implemented so far. Instructions like MOVX are not
-// required in the small memory model, and have increased size/cycle count
-// compared to their 430 versions.
+// (16-bit pointers) are implemented so far. Most MOVX forms are not needed
+// there and are larger and slower than MOV. MOVX.A @Rs, x(Rd) is the
+// exception, because 20-bit registers like the DMA address registers can only
+// be written with a single 20-bit store.
 
 //===----------------------------------------------------------------------===//
 //  Operands
@@ -49,6 +50,21 @@ def rpt4imm : Operand<i8>,
 def popmreg : RegisterOperand<GR16> {
   let EncoderMethod = "getPOPMRegOpValue";
   let DecoderMethod = "decodePOPMRegOperand";
+}
+
+// Memory operand with a 20-bit offset. Bits 19:16 go into the extension word.
+// Only constant offsets are accepted, because there are no 20-bit fixups yet.
+def Mem20AsmOperand : AsmOperandClass {
+  let Name = "Mem20";
+  let RenderMethod = "addMemOperands";
+}
+
+def memdst20 : Operand<i32> {
+  let PrintMethod = "printSrcMemOperand";
+  let MIOperandInfo = (ops GR16, i32imm);
+  let ParserMatchClass = Mem20AsmOperand;
+  let EncoderMethod = "getMemOpValue";
+  let DecoderMethod = "decodeMem20Operand";
 }
 
 //===----------------------------------------------------------------------===//
@@ -102,6 +118,16 @@ let Defs = [SR], Constraints = "$src2 = $rd" in {
 // Alias printing is disabled for the same reason as for RLA.
 def RLAX8r  : InstAlias<"rlax.b\t$dst", (ADDX8rr  GR8:$dst,  GR8:$dst),  0>;
 def RLAX16r : InstAlias<"rlax\t$dst",   (ADDX16rr GR16:$dst, GR16:$dst), 0>;
+
+//===----------------------------------------------------------------------===//
+//  Move Instructions
+//
+let mayLoad = 1, mayStore = 1, hasSideEffects = 0 in {
+def MOVXAmn  : IAmnExtended<0b0100, (outs), (ins memdst20:$dst, indreg:$rs),
+                            "movx.a\t$rs, $dst", []>;
+def MOVX16mn : I16mnExtended<0b0100, (outs), (ins memdst20:$dst, indreg:$rs),
+                             "movx\t$rs, $dst", []>;
+}
 
 //===----------------------------------------------------------------------===//
 //  Push/Pop Multiple Registers

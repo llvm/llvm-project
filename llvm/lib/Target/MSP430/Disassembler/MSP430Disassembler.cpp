@@ -146,6 +146,19 @@ static DecodeStatus DecodeMemOperand(MCInst &MI, uint64_t Bits,
   return MCDisassembler::Success;
 }
 
+/// Like DecodeMemOperand, but bits 19:16 of the offset come from the extension
+/// word.
+static DecodeStatus decodeMem20Operand(MCInst &MI, uint64_t Bits,
+                                       uint64_t Address,
+                                       const MCDisassembler *Decoder) {
+  if (DecodeGR16RegisterClass(MI, Bits & 15, Address, Decoder) !=
+      MCDisassembler::Success)
+    return MCDisassembler::Fail;
+
+  MI.addOperand(MCOperand::createImm(SignExtend64<20>(Bits >> 4)));
+  return MCDisassembler::Success;
+}
+
 /// POPM encodes Rdst - n + 1 for Rdst, while PUSHM encodes Rdst. The count n
 /// is decoded before the register.
 static DecodeStatus decodePOPMRegOperand(MCInst &MI, uint64_t Bits,
@@ -222,6 +235,31 @@ static AddrMode DecodeDstAddrMode(unsigned Insn) {
   return Ad ? amIndexed : amRegister;
 }
 
+/// Number of operand words that follow a Format I instruction word.
+static unsigned getOperandWordsI(AddrMode SrcAM, AddrMode DstAM) {
+  unsigned Words = 0;
+  switch (SrcAM) {
+  case amIndexed:
+  case amSymbolic:
+  case amImmediate:
+  case amAbsolute:
+    ++Words;
+    break;
+  default:
+    break;
+  }
+  switch (DstAM) {
+  case amIndexed:
+  case amSymbolic:
+  case amAbsolute:
+    ++Words;
+    break;
+  default:
+    break;
+  }
+  return Words;
+}
+
 static const uint8_t *getDecoderTable(AddrMode SrcAM, unsigned Words) {
   assert(0 < Words && Words < 4 && "Incorrect number of words");
   switch (SrcAM) {
@@ -258,37 +296,14 @@ DecodeStatus MSP430Disassembler::getInstructionI(MCInst &MI, uint64_t &Size,
     return MCDisassembler::Fail;
   }
 
-  unsigned Words = 1;
-  switch (SrcAM) {
-  case amIndexed:
-  case amSymbolic:
-  case amImmediate:
-  case amAbsolute:
-    if (Bytes.size() < (Words + 1) * 2) {
-      Size = 2;
-      return DecodeStatus::Fail;
-    }
-    Insn |= (uint64_t)support::endian::read16le(Bytes.data() + 2) << 16;
-    ++Words;
-    break;
-  default:
-    break;
+  unsigned Words = 1 + getOperandWordsI(SrcAM, DstAM);
+  if (Bytes.size() < Words * 2) {
+    Size = 2;
+    return DecodeStatus::Fail;
   }
-  switch (DstAM) {
-  case amIndexed:
-  case amSymbolic:
-  case amAbsolute:
-    if (Bytes.size() < (Words + 1) * 2) {
-      Size = 2;
-      return DecodeStatus::Fail;
-    }
-    Insn |= (uint64_t)support::endian::read16le(Bytes.data() + Words * 2)
-        << (Words * 16);
-    ++Words;
-    break;
-  default:
-    break;
-  }
+  for (unsigned I = 1; I < Words; ++I)
+    Insn |= (uint64_t)support::endian::read16le(Bytes.data() + I * 2)
+            << (I * 16);
 
   DecodeStatus Result = decodeInstruction(getDecoderTable(SrcAM, Words), MI,
                                           Insn, Address, this, STI);
@@ -390,20 +405,47 @@ DecodeStatus MSP430Disassembler::getInstructionX(MCInst &MI, uint64_t &Size,
       Size = 2;
       return DecodeStatus::Fail;
     }
-    Insn |= (uint64_t)support::endian::read16le(Bytes.data() + 2) << 16;
+    uint64_t InsnWord = support::endian::read16le(Bytes.data() + 2);
     Words = 2;
+    // A Format I word can have operand words. Format II words behind an
+    // extension word are only supported in register mode so far.
+    if (InsnWord >= 0x4000)
+      Words += getOperandWordsI(DecodeSrcAddrModeI(InsnWord),
+                                DecodeDstAddrMode(InsnWord));
+    if (Bytes.size() < Words * 2) {
+      Size = 4;
+      return DecodeStatus::Fail;
+    }
+    for (unsigned I = 1; I < Words; ++I)
+      Insn |= (uint64_t)support::endian::read16le(Bytes.data() + I * 2)
+              << (I * 16);
   }
 
-  // MSP430X32 decodes the extension word together with the following Format I
-  // or II word. Each combination is its own instruction, like RRCX_16 or
-  // ADDX16rr, so the plain Format I and II tables are not used here.
-  const uint8_t *DecoderTable =
-      Words == 2 ? DecoderTableMSP430X32 : DecoderTableMSP430X16;
+  // MSP430X32 and MSP430X48 decode the extension word together with the
+  // following Format I or II word and its operand words. Each combination is
+  // its own instruction, like RRCX_16 or MOVXAmn, so the plain Format I and II
+  // tables are not used here.
+  const uint8_t *DecoderTable;
+  switch (Words) {
+  case 1:
+    DecoderTable = DecoderTableMSP430X16;
+    break;
+  case 2:
+    DecoderTable = DecoderTableMSP430X32;
+    break;
+  case 3:
+    DecoderTable = DecoderTableMSP430X48;
+    break;
+  default:
+    // Two operand words are not supported yet.
+    Size = Words * 2;
+    return DecodeStatus::Fail;
+  }
   DecodeStatus Result =
       decodeInstruction(DecoderTable, MI, Insn, Address, this, STI);
   // The word after an extension word is a valid Format I or II instruction on
-  // its own. Skip it on failure too, so it is not shown without the extension
-  // word.
+  // its own. Skip it and its operand words on failure too, so they are not
+  // shown without the extension word.
   Size = Words * 2;
   return Result;
 }
@@ -425,11 +467,12 @@ DecodeStatus MSP430Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
   //   0x0000-0x0fff  X        addr, II*  MOVA, ADDA, ..., RRCM, RRAM, RLAM, ...
   //   0x1000-0x13ff  II       II         RRC, SWPB, RRA, SXT, PUSH, CALL, RETI
   //   0x1400-0x17ff  X        II*        PUSHM, POPM
-  //   0x1800-0x1fff  X        ext+I/II   RRCX, RRAX, ADDX, ...
+  //   0x1800-0x1fff  X        ext+I/II   RRCX, ADDX, MOVX, ...
   //   0x2000-0x3fff  CJ       jump       JMP, JNE, ...
   //   0x4000-0xffff  I        I          MOV, ADD, ...
   //
-  // ext+I/II is an extension word followed by a Format I or II word.
+  // ext+I/II is an extension word followed by a Format I or II word and its
+  // operand words.
   uint64_t Insn = support::endian::read16le(Bytes.data());
   unsigned FormatBits = fieldFromInstruction(Insn, 13, 3);
   switch (FormatBits) {

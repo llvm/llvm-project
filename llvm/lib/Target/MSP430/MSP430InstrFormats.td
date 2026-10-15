@@ -463,27 +463,44 @@ class IIExtExcRotForm16<bits<2> opcode,
                         dag outs, dag ins, string asmstr, list<dag> pattern>
   : IIExtExcRotForm<opcode, ALWord, outs, ins, asmstr, pattern>;
 
-// MSP430X extended instructions in register mode.
+// MSP430X extended instructions.
 //
 // The extension word precedes the instruction word in memory, so it occupies
-// Inst{15-0} and the instruction word is in Inst{31-16}.
-//
-// FIXME: Add the non-register mode, which is needed for 20-bit memory
-// operands.
-class ExtRegForm<bit zc, bit rpt, ALKind al,
-                 dag outs, dag ins, string asmstr, list<dag> pattern>
-  : MSP430Inst<outs, ins, 4, asmstr> {
+// Inst{15-0} and the instruction word is in Inst{31-16}. Operand words follow
+// from Inst{47-32}.
+class ExtWordForm<ALKind al, int size,
+                  dag outs, dag ins, string asmstr, list<dag> pattern>
+  : MSP430Inst<outs, ins, size, asmstr> {
   let Pattern = pattern;
   let DecoderNamespace = "MSP430X";
 
+  let Inst{15-11} = 0b00011;
+  let Inst{6}     = al.Value;
+  let Inst{5-4}   = 0b00;
+}
+
+// Register mode. The extension word holds the repeat count.
+class ExtRegForm<bit zc, bit rpt, ALKind al,
+                 dag outs, dag ins, string asmstr, list<dag> pattern>
+  : ExtWordForm<al, 4, outs, ins, asmstr, pattern> {
   bits<4> cnt = 0;
 
-  let Inst{15-9} = 0b0001100;
+  let Inst{10-9} = 0b00;
   let Inst{8}    = zc;
   let Inst{7}    = rpt;
-  let Inst{6}    = al.Value;
-  let Inst{5-4}  = 0b00;
   let Inst{3-0}  = cnt;
+}
+
+// Non-register mode. The extension word holds bits 19:16 of the source and
+// destination operand words.
+class ExtMemForm<ALKind al, int size,
+                 dag outs, dag ins, string asmstr, list<dag> pattern>
+  : ExtWordForm<al, size, outs, ins, asmstr, pattern> {
+  bits<4> srchi = 0;
+  bits<4> dsthi = 0;
+
+  let Inst{10-7} = srchi;
+  let Inst{3-0}  = dsthi;
 }
 
 // Same layout as IIForm, moved behind the extension word.
@@ -526,6 +543,41 @@ class I8rExtended<bits<4> opcode, bit zc, bit rpt,
 class I16rExtended<bits<4> opcode, bit zc, bit rpt,
                    dag outs, dag ins, string asmstr, list<dag> pattern>
   : IExtRegForm<opcode, 0, zc, rpt, outs, ins, asmstr, pattern>;
+
+// Same layout as IForm, moved behind the extension word in non-register mode.
+class IExtMemForm<bits<4> opcode, ALKind al, bit bw, DestMode ad,
+                  SourceMode as, int size,
+                  dag outs, dag ins, string asmstr, list<dag> pattern>
+  : ExtMemForm<al, size, outs, ins, asmstr, pattern> {
+  bits<4> rs;
+  bits<4> rd;
+
+  let Inst{31-28} = opcode;
+  let Inst{27-24} = rs;
+  let Inst{23}    = ad.Value;
+  let Inst{22}    = bw;
+  let Inst{21-20} = as.Value;
+  let Inst{19-16} = rd;
+}
+
+// Indexed or absolute destination with a 20-bit offset, indirect source.
+class IExtMemFormMN<bits<4> opcode, ALKind al, bit bw,
+                    dag outs, dag ins, string asmstr, list<dag> pattern>
+  : IExtMemForm<opcode, al, bw, DstMem, SrcIndReg, 6,
+                outs, ins, asmstr, pattern> {
+  bits<24> dst;
+  let rd = dst{3-0};
+  let Inst{47-32} = dst{19-4};
+  let dsthi = dst{23-20};
+}
+
+// .A uses A/L = 0 with B/W = 1, .W uses A/L = 1 with B/W = 0.
+class IAmnExtended<bits<4> opcode,
+                   dag outs, dag ins, string asmstr, list<dag> pattern>
+  : IExtMemFormMN<opcode, ALAddr, 1, outs, ins, asmstr, pattern>;
+class I16mnExtended<bits<4> opcode,
+                    dag outs, dag ins, string asmstr, list<dag> pattern>
+  : IExtMemFormMN<opcode, ALWord, 0, outs, ins, asmstr, pattern>;
 
 // PUSHM and POPM. Single-word MSP430X instructions with their own layout in
 // the Format II opcode space, without an extension word. TI calls them Format
