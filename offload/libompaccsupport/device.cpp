@@ -377,8 +377,18 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
           omp_initial_device, HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
-                                AsyncInfo);
+  ol_queue_handle_t queue = AsyncInfo.getQueue();
+  if (!queue)
+    return OFFLOAD_FAIL;
+
+  if (auto Res = olMemcpy(queue, TgtPtrBegin, DeviceHandle, HstPtrBegin,
+                          PM->getHostDevice(), Size)) {
+    REPORT() << "Failure to copy data from host to device. Pointers: host "
+             << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 // Retrieve data from device
@@ -397,8 +407,17 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
           DeviceID, TgtPtrBegin, omp_initial_device, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
-                                  AsyncInfo);
+  ol_queue_handle_t queue = AsyncInfo.getQueue();
+  if (!queue)
+    return OFFLOAD_FAIL;
+  if (auto Res = olMemcpy(queue, HstPtrBegin, PM->getHostDevice(), TgtPtrBegin,
+                          DeviceHandle, Size)) {
+    REPORT() << "Failure to copy data from device to host. Pointers: host "
+             << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 // Copy data from current device to destination device directly
@@ -415,12 +434,19 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
-  if (!AsyncInfo) {
-    return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
-                              Size);
+
+  ol_queue_handle_t queue = AsyncInfo.getQueue();
+  if (!queue)
+    return OFFLOAD_FAIL;
+  if (auto Res = olMemcpy(queue, DstPtr, DstDev.DeviceHandle, SrcPtr,
+                          DeviceHandle, Size)) {
+    REPORT() << "Failure to copy data from device (" << RTLDeviceID
+             << ") to device (" << DstDev.RTLDeviceID
+             << "). Pointers: host = " << SrcPtr << ", device = " << DstPtr
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
   }
-  return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
-                                  DstPtr, Size, AsyncInfo);
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
@@ -968,16 +994,6 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
        LaunchArgs.UserThreadLimit[2], KernelLaunchInfo.getExecutionModeName());
 
   return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo);
-}
-
-// Whether data can be copied to DstDevice directly
-bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
-  if (RTL != DstDevice.RTL)
-    return false;
-
-  if (RTL->is_data_exchangable(RTLDeviceID, DstDevice.RTLDeviceID))
-    return true;
-  return false;
 }
 
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
