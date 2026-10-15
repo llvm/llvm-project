@@ -35,13 +35,16 @@ The mapping onto the SSAF tools is direct:
 
 Run it from the project root; that is where the build runs.
 
-There are two workflows, the second going one step further than the first:
+There are three workflows, each going one step further than the last:
 
 - **Summary extraction and linking**, with `--extract-summaries`. Every
   translation unit gets a summary, and the summaries are linked the way the
   build links the objects, into one link unit summary.
 - **Whole-program analysis**, adding `--analysis`. `clang-ssaf-analyzer` runs
   the named analyses over the link unit summary.
+- **Whole-program transformation**, adding `--transformation`. A second build
+  generates source edits from the analysis result, and they are merged across
+  the whole program.
 
 Summary extraction and linking:
 
@@ -62,6 +65,17 @@ $ clang-ssaf-orchestrator-make \
     -- make -j8
 ```
 
+Whole-program transformation, which ends in merged source edits:
+
+```console
+$ clang-ssaf-orchestrator-make \
+    --extract-summaries=PointerFlow,UnsafeBufferUsage \
+    --analysis=UnsafeBufferReachableAnalysisResult \
+    --transformation=cpp-bounded-buffers \
+    -o ssaf-output \
+    -- make -j8
+```
+
 For a project configured by autoconf, run `configure` first and give the
 orchestrator only the `make` invocation.
 
@@ -78,6 +92,9 @@ orchestrator only the `make` invocation.
    * - ``--analysis=<name>``
      - Whole-program analysis to run on the link unit summary. Repeatable.
        Without it the run stops after summary extraction.
+   * - ``--transformation=<name>``
+     - Source transformation to run in the second pass. Requires
+       ``--analysis``. Without it the run stops after the analysis.
    * - ``-o``, ``--output-dir=<dir>``
      - Where the SSAF artifacts go, made absolute. Defaults to
        ``ssaf-output``. It must be absent, empty, or an earlier run's.
@@ -89,6 +106,9 @@ orchestrator only the `make` invocation.
    * - ``--ssaf-analyzer=<path>``
      - Path to ``clang-ssaf-analyzer``. Defaults to the name on ``PATH``, and
        is only required with ``--analysis``.
+   * - ``--ssaf-src-edit-merge=<path>``
+     - Path to ``clang-ssaf-src-edit-merge``. Defaults to the name on
+       ``PATH``, and is only required with ``--transformation``.
    * - ``--ssaf-extra-clang-arg=<arg>``
      - Extra argument for every SSAF compilation. Repeatable.
    * - ``-k``, ``--keep-going``
@@ -135,8 +155,16 @@ translation units, and only the whole path tells them apart.
      - Which build artifacts were inputs for the ``<path>`` build artifact.
    * - ``<output-dir>/wpa.json``
      - Whole-program analysis result.
+   * - ``<output-dir>/ssaf-artifacts/<path>.edits.yaml``
+     - Source edits for the ``<path>`` build artifact.
+   * - ``<output-dir>/ssaf-artifacts/<path>.conflicts.sarif``
+     - Edits dropped because they conflicted.
+   * - ``<output-dir>/ssaf-artifacts/<path>.report.sarif``
+     - Transformation report for the ``<path>`` build artifact.
    * - ``<output-dir>/config-analysis.json``
-     - Configuration for the analysis pass.
+     - Configuration for the analysis pass, the first build pass.
+   * - ``<output-dir>/config-transformation.json``
+     - Configuration for the transformation pass, the second build pass.
    * - ``<output-dir>/shims/``
      - Links to the shims named so they interpose the binary tools, recreated
        on every run.

@@ -127,6 +127,13 @@ class SsafStep(unittest.TestCase):
         self.assertEqual([], shim.missing)
         self.assertIn("nothing to link", self.notes[-1])
 
+    def test_in_the_transformation_pass_the_edits_are_merged_instead(self):
+        shim = self._run(["build/a.o"], configs.transformation_config())
+        self.assertEqual(
+            ["no edits feed %s, nothing to merge" % self._id("build/prg").get_path()],
+            self.notes,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
