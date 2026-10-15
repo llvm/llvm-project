@@ -63,7 +63,7 @@ STATISTIC(NumRcRotatesConvertedToRcAnd,
           "Number of record-form rotates converted to record-form andi");
 
 static cl::opt<bool>
-    EnableCTRLoopAnal("ppc-ctrloop-analysis",
+    EnableCTRLoopAnal("ppc-ctr-loop-analysis",
                       cl::desc("Enable analysis for CTR loops"), cl::init(true),
                       cl::Hidden);
 

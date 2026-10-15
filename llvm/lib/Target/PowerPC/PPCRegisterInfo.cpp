@@ -1248,8 +1248,7 @@ void PPCRegisterInfo::spillRegPair(MachineBasicBlock &MBB,
 }
 
 /// Remove any STXVP[X] instructions and split them out into a pair of
-/// STXV[X] instructions if --ppc-auto-paired-vec-st=false is specified on
-/// the command line.
+/// STXV[X] instructions when paired vector stores are disabled.
 void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
                                            unsigned FrameIndex) const {
   assert(!EnableAutoPairedVecSt &&

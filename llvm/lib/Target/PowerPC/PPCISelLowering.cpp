@@ -113,10 +113,10 @@ static cl::opt<bool> EnablePPCPreinc(
     "ppc-preinc", cl::desc("enable preincrement load/store generation on PPC"),
     cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnableILPPref(
-    "ppc-ilp-pref",
-    cl::desc("enable setting the node scheduling preference to ILP on PPC"),
-    cl::init(true), cl::Hidden);
+static cl::opt<bool>
+    EnableILPPref("ppc-ilp-pref",
+                  cl::desc("Set the node scheduling preference to ILP on PPC"),
+                  cl::init(true), cl::Hidden);
 
 static cl::opt<bool> EnablePPCUnaligned(
     "ppc-unaligned", cl::desc("enable unaligned load/store generation on PPC"),
@@ -128,7 +128,7 @@ static cl::opt<bool>
 
 static cl::opt<bool> EnableInnermostLoopAlign32(
     "ppc-innermost-loop-align32",
-    cl::desc("always align innermost loop to 32 bytes on ppc"), cl::init(true),
+    cl::desc("Align innermost loops to 32 bytes on ppc"), cl::init(true),
     cl::Hidden);
 
 static cl::opt<bool> UseAbsoluteJumpTables("ppc-use-absolute-jumptables",
