@@ -62,9 +62,7 @@ target_compile_options(orc-rt-connect-tcp-objects
 add_library(orc-rt-connect-tcp ${ORC_RT_BEDROCK_LIBRARY_TYPE})
 
 target_link_libraries(orc-rt-connect-tcp
-  PUBLIC orc-rt-headers orc-rt-connect-socket)
-
-target_link_libraries(orc-rt-connect-tcp
+  PUBLIC orc-rt-headers orc-rt-connect-socket
   PRIVATE $<BUILD_INTERFACE:orc-rt-connect-tcp-objects>)
 
 # TODO: Use common runtimes infrastructure for output and install paths

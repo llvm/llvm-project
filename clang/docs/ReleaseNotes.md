@@ -715,6 +715,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed crashes on an OpenMP `target` region inside a lambda or block at namespace scope, including when the region used a global reference. (#GH223397)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
+- Fixed a crash when a local register variable bound to a pseudo or status register by an `asm` label,
+  such as `register long double t __asm("17");` (the flags register), was used as an inline asm operand.
+  Such declarations are now rejected, matching GCC. (#GH225033)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed a C23 rejects-valid where `auto T x;` (with `T` a typedef-name) was rejected as a missing initializer. (#GH164930)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
@@ -756,6 +759,15 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when `__builtin_object_size` or
   `__builtin_dynamic_object_size` is called with an out-of-range type argument
   during constant evaluation. (#GH225041)
+- Fixed an assertion failure when constant-evaluating `__builtin_object_size`
+  or `__builtin_dynamic_object_size` with a type argument that is not an
+  integer constant expression. (#GH231108)
+
+- `__has_unique_object_representations` now returns `true` for `_Atomic` types
+  whose object representation is identical to that of their value type, such
+  as `_Atomic(int)`. Atomic types whose size is rounded up to a power of two
+  (adding padding bits) continue to report `false`. This also fixes a false
+  positive in the `bugprone-suspicious-memory-comparison` clang-tidy check.
 
 #### Bug Fixes to Attribute Support
 
@@ -994,6 +1006,9 @@ features cannot lower the translation-unit ABI level;
   constrained placeholder type (such as `C auto`) whose default argument
   contains a lambda. (#GH230539)
 
+- Fixed a bug where Clang failed to resolve a reference to an overloaded
+  conversion function when one of the overloads was non-template. (#GH230682)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1152,6 +1167,9 @@ features cannot lower the translation-unit ABI level;
 
 #### CUDA Support
 
+- Fixed a CUDA miscompile caused by lambdas in reopened namespaces receiving
+  the same mangled name. (#GH231096)
+
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
 
@@ -1161,6 +1179,8 @@ features cannot lower the translation-unit ABI level;
   `__cxa_deleted_virtual()`; previously, any (potential) call to a pure/deleted
   virtual function that could not be optimised out would cause the program to
   fail to assemble. This is now fixed. (#GH49183) (#GH67533)
+
+- External CUDA kernel declarations now use the correct calling convention. (#GH118212)
 
 #### AIX Support
 
@@ -1247,6 +1267,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 (release-notes-sanitizers)=
 
 ### Sanitizers
+
+- Added the `typefunchash` and `typefunchashpointersplit` token assignment
+  modes for `-fsanitize=alloc-token`, selected with
+  `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both
+  the allocated type and the name of the function containing the allocation.
 
 ### Python Binding Changes
 

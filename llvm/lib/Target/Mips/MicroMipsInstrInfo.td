@@ -200,7 +200,7 @@ class CompactBranchMM<string opstr, DAGOperand opnd, RegisterOperand RO> :
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 0;
-  let Defs = [AT];
+  let Defs = [R1];
 }
 
 let canFoldAsLoad = 1 in
@@ -412,7 +412,7 @@ class JumpLinkRegMM16<string opstr, RegisterOperand RO> :
            [(MipsJmpLink RO:$rs)], FrmR> {
   let isCall = 1;
   let hasDelaySlot = 1;
-  let Defs = [RA];
+  let Defs = [R31];
   let hasPostISelHook = 1;
 }
 
@@ -441,7 +441,7 @@ class JumpLinkRegSMM16<string opstr, RegisterOperand RO> :
            [], FrmR> {
   let isCall = 1;
   let hasDelaySlot = 1;
-  let Defs = [RA];
+  let Defs = [R31];
 }
 
 // 16-bit Jump Register Compact - No delay slot
@@ -466,11 +466,11 @@ class CBranchZeroMM<string opstr, DAGOperand opnd, RegisterOperand RO> :
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
 }
 
 // MicroMIPS Jump and Link (Call) - Short Delay Slot
-let isCall = 1, hasDelaySlot = 1, Defs = [RA] in {
+let isCall = 1, hasDelaySlot = 1, Defs = [R31] in {
   class JumpLinkMM<string opstr, DAGOperand opnd> :
     InstSE<(outs), (ins opnd:$target), !strconcat(opstr, "\t$target"),
            [], FrmJ, opstr> {
@@ -564,7 +564,7 @@ class UncondBranchMM16<string opstr> :
   let isBarrier = 1;
   let hasDelaySlot = 1;
   let Predicates = [RelocPIC, InMicroMips];
-  let Defs = [AT];
+  let Defs = [R1];
 }
 
 class HypcallMM<string opstr> :
@@ -1145,7 +1145,7 @@ let DecoderNamespace = "MicroMips" in {
 // MicroMips arbitrary patterns that map to one or more instructions
 //===----------------------------------------------------------------------===//
 
-defm : MipsHiLoRelocs<LUi_MM, ADDiu_MM, ZERO, GPR32Opnd>, ISA_MICROMIPS;
+defm : MipsHiLoRelocs<LUi_MM, ADDiu_MM, R0, GPR32Opnd>, ISA_MICROMIPS;
 
 def : MipsPat<(MipsGotHi tglobaladdr:$in), (LUi_MM tglobaladdr:$in)>,
       ISA_MICROMIPS;
@@ -1175,12 +1175,12 @@ def : MipsPat<(atomic_load_nonext_32 addr:$a), (LW_MM addr:$a)>, ISA_MICROMIPS;
 def : MipsPat<(i32 immLi16:$imm),
               (LI16_MM immLi16:$imm)>, ISA_MICROMIPS;
 
-defm : MaterializeImms<i32, ZERO, ADDiu_MM, LUi_MM, ORi_MM>, ISA_MICROMIPS;
+defm : MaterializeImms<i32, R0, ADDiu_MM, LUi_MM, ORi_MM>, ISA_MICROMIPS;
 
 def : MipsPat<(not GPRMM16:$in),
               (NOT16_MM GPRMM16:$in)>, ISA_MICROMIPS;
 def : MipsPat<(not GPR32:$in),
-              (NOR_MM GPR32Opnd:$in, ZERO)>, ISA_MICROMIPS;
+              (NOR_MM GPR32Opnd:$in, R0)>, ISA_MICROMIPS;
 
 def : MipsPat<(add GPRMM16:$src, immSExtAddiur2:$imm),
               (ADDIUR2_MM GPRMM16:$src, immSExtAddiur2:$imm)>, ISA_MICROMIPS;
@@ -1250,14 +1250,14 @@ def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
               (TAILCALL_MM texternalsym:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
 defm : BrcondPats<GPR32, BEQ_MM, BEQ_MM, BNE_MM, SLT_MM, SLTu_MM, SLTi_MM,
-                  SLTiu_MM, ZERO>, ISA_MICROMIPS32_NOT_MIPS32R6;
+                  SLTiu_MM, R0>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
 def : MipsPat<(brcond (i32 (setlt i32:$lhs, 1)), bb:$dst),
               (BLEZ_MM i32:$lhs, bb:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 def : MipsPat<(brcond (i32 (setgt i32:$lhs, -1)), bb:$dst),
               (BGEZ_MM i32:$lhs, bb:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
-defm : SeteqPats<GPR32, SLTiu_MM, XOR_MM, SLTu_MM, ZERO>, ISA_MICROMIPS;
+defm : SeteqPats<GPR32, SLTiu_MM, XOR_MM, SLTu_MM, R0>, ISA_MICROMIPS;
 defm : SetlePats<GPR32, XORi_MM, SLT_MM, SLTu_MM>, ISA_MICROMIPS;
 defm : SetgtPats<GPR32, SLT_MM, SLTu_MM>, ISA_MICROMIPS;
 defm : SetgePats<GPR32, XORi_MM, SLT_MM, SLTu_MM>, ISA_MICROMIPS;
@@ -1309,21 +1309,21 @@ let EncodingPredicates = [InMicroMips] in {
                                      0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
 
   def : MipsInstAlias<"wait", (WAIT_MM 0x0), 1>, ISA_MICROMIPS;
-  def : MipsInstAlias<"nop", (SLL_MM ZERO, ZERO, 0), 1>, ISA_MICROMIPS;
-  def : MipsInstAlias<"nop", (MOVE16_MM ZERO, ZERO), 1>, ISA_MICROMIPS;
-  def : MipsInstAlias<"ei", (EI_MM ZERO), 1>, ISA_MICROMIPS;
-  def : MipsInstAlias<"di", (DI_MM ZERO), 1>, ISA_MICROMIPS;
+  def : MipsInstAlias<"nop", (SLL_MM R0, R0, 0), 1>, ISA_MICROMIPS;
+  def : MipsInstAlias<"nop", (MOVE16_MM R0, R0), 1>, ISA_MICROMIPS;
+  def : MipsInstAlias<"ei", (EI_MM R0), 1>, ISA_MICROMIPS;
+  def : MipsInstAlias<"di", (DI_MM R0), 1>, ISA_MICROMIPS;
   def : MipsInstAlias<"neg $rt, $rs",
-                      (SUB_MM GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>,
+                      (SUB_MM GPR32Opnd:$rt, R0, GPR32Opnd:$rs), 1>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"neg $rt",
-                      (SUB_MM GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>,
+                      (SUB_MM GPR32Opnd:$rt, R0, GPR32Opnd:$rt), 1>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"negu $rt, $rs",
-                      (SUBu_MM GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>,
+                      (SUBu_MM GPR32Opnd:$rt, R0, GPR32Opnd:$rs), 1>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"negu $rt",
-                      (SUBu_MM GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>,
+                      (SUBu_MM GPR32Opnd:$rt, R0, GPR32Opnd:$rt), 1>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"teq $rs, $rt",
                       (TEQ_MM GPR32Opnd:$rs, GPR32Opnd:$rt, 0), 1>;
@@ -1388,16 +1388,16 @@ let EncodingPredicates = [InMicroMips] in {
   defm : OneOrTwoOperandMacroImmediateAlias<"sltu", SLTiu_MM>, ISA_MICROMIPS;
 
   def : MipsInstAlias<"not $rt, $rs",
-                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rs, ZERO), 0>,
+                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rs, R0), 0>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"not $rt",
-                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rt, ZERO), 0>,
+                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rt, R0), 0>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"bnez $rs,$offset",
-                      (BNE_MM GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
+                      (BNE_MM GPR32Opnd:$rs, R0, brtarget:$offset), 0>,
         ISA_MICROMIPS;
   def : MipsInstAlias<"beqz $rs,$offset",
-                      (BEQ_MM GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
+                      (BEQ_MM GPR32Opnd:$rs, R0, brtarget:$offset), 0>,
         ISA_MICROMIPS;
   def : MipsInstAlias<"seh $rd", (SEH_MM GPR32Opnd:$rd, GPR32Opnd:$rd), 0>,
                      ISA_MICROMIPS;
@@ -1406,10 +1406,10 @@ let EncodingPredicates = [InMicroMips] in {
   def : MipsInstAlias<"break", (BREAK_MM 0, 0), 1>, ISA_MICROMIPS;
   def : MipsInstAlias<"break $imm", (BREAK_MM uimm10:$imm, 0), 1>,
         ISA_MICROMIPS;
-  def : MipsInstAlias<"bal $offset", (BGEZAL_MM ZERO, brtarget_mm:$offset), 1>,
+  def : MipsInstAlias<"bal $offset", (BGEZAL_MM R0, brtarget_mm:$offset), 1>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
 
-  def : MipsInstAlias<"jalr.hb $rs", (JALR_HB_MM RA, GPR32Opnd:$rs), 0>,
+  def : MipsInstAlias<"jalr.hb $rs", (JALR_HB_MM R31, GPR32Opnd:$rs), 0>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
 
   def : MipsInstAlias<"j $rs", (JR_MM GPR32Opnd:$rs), 0>,

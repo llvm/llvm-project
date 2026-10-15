@@ -89,6 +89,7 @@ private:
 
   void emitGetInitRuntimeLibcallNames(raw_ostream &OS) const;
   void emitGetInitRuntimeLibcallSignatures(raw_ostream &OS) const;
+  void emitMaskedVectorLibcallMapping(raw_ostream &OS) const;
 
   // Emit the sorted per-predicate `setAvailable` tables/loops. The
   // always-available bucket emits at \p BaseIndent; each predicated bucket is
@@ -496,6 +497,55 @@ const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
                   LibcallDef->getName());
   }
   OS << "};\n";
+}
+
+static void emitMaskedVectorLibcallSwitch(
+    raw_ostream &OS, StringRef FuncName, bool ToUnmasked,
+    ArrayRef<std::pair<const RuntimeLibcall *, const RuntimeLibcall *>>
+        MaskedToUnmasked) {
+  OS << "RTLIB::Libcall RTLIB::RuntimeLibcallsInfo::" << FuncName
+     << "(RTLIB::Libcall LC) {\n"
+        "  switch (LC) {\n";
+  for (auto [Masked, Unmasked] : MaskedToUnmasked) {
+    OS << "  case ";
+    if (ToUnmasked) {
+      Masked->emitEnumEntry(OS);
+      OS << ":\n    return ";
+      Unmasked->emitEnumEntry(OS);
+    } else {
+      Unmasked->emitEnumEntry(OS);
+      OS << ":\n    return ";
+      Masked->emitEnumEntry(OS);
+    }
+
+    OS << ";\n";
+  }
+
+  OS << "  default:\n"
+        "    return RTLIB::UNKNOWN_LIBCALL;\n"
+        "  }\n"
+        "}\n";
+}
+
+void RuntimeLibcallEmitter::emitMaskedVectorLibcallMapping(
+    raw_ostream &OS) const {
+  IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALL_MASKED_VECTOR_LIBCALL_MAPPING");
+
+  SmallVector<std::pair<const RuntimeLibcall *, const RuntimeLibcall *>, 0>
+      MaskedToUnmasked;
+  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList()) {
+    const Record *Def = LC.getDef();
+    if (Def->isSubClassOf("MaskedRuntimeLibcall")) {
+      MaskedToUnmasked.emplace_back(
+          &LC, Libcalls.getRuntimeLibcall(Def->getValueAsDef("Unmasked")));
+    }
+  }
+
+  emitMaskedVectorLibcallSwitch(OS, "getUnmaskedVectorLibcall",
+                                /*ToUnmasked=*/true, MaskedToUnmasked);
+  OS << '\n';
+  emitMaskedVectorLibcallSwitch(OS, "getMaskedVectorLibcall",
+                                /*ToUnmasked=*/false, MaskedToUnmasked);
 }
 
 void RuntimeLibcallEmitter::emitPredicateGroups(
@@ -1061,6 +1111,7 @@ void RuntimeLibcallEmitter::run(raw_ostream &OS) {
 
   emitGetInitRuntimeLibcallNames(OS);
   emitGetInitRuntimeLibcallSignatures(OS);
+  emitMaskedVectorLibcallMapping(OS);
 
   emitRuntimeLibcallsInfoMemberDecls(OS);
 

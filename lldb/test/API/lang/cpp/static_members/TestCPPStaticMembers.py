@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class TestCase(TestBase):
     # We fail to lookup static members on Windows.
     @expectedFailureAll(oslist=["windows"], debug_info=no_match(["pdb"]))
+    @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     @requireExpressionEvaluation
     def test_access_from_main(self):
         self.build()
@@ -25,6 +26,7 @@ class TestCase(TestBase):
 
     # We fail to lookup static members on Windows.
     @expectedFailureAll(oslist=["windows"], debug_info=no_match(["pdb"]))
+    @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     @requireExpressionEvaluation
     def test_access_from_member_function(self):
         self.build()

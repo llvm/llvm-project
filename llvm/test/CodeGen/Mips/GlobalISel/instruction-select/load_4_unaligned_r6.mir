@@ -80,11 +80,11 @@ body:             |
     ; MIPS32R6: [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) @i32_align2
     ; MIPS32R6: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LUi]], target-flags(mips-abs-lo) @i32_align2
     ; MIPS32R6: [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (dereferenceable load (s32) from @i32_align2, align 2)
-    ; MIPS32R6: $v0 = COPY [[LW]]
-    ; MIPS32R6: RetRA implicit $v0
+    ; MIPS32R6: $r2 = COPY [[LW]]
+    ; MIPS32R6: RetRA implicit $r2
     %1:gprb(p0) = G_GLOBAL_VALUE @i32_align2
     %0:gprb(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @i32_align2, align 2)
-    $v0 = COPY %0(s32)
-    RetRA implicit $v0
+    $r2 = COPY %0(s32)
+    RetRA implicit $r2
 
 ...
