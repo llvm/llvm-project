@@ -814,7 +814,6 @@ static DebugLoc getFirstNonZeroLocAfterSuspend(Instruction *ActiveSuspend) {
 
   BasicBlock *PBB = Successor->getParent();
   for (; Successor != PBB->end(); Successor = std::next(Successor)) {
-    Successor = skipDebugIntrinsics(Successor);
     auto DL = Successor->getDebugLoc();
     if (DL && DL.getLine() != 0)
       return DL;
