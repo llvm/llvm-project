@@ -30,7 +30,6 @@
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -107,10 +106,8 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <tuple>
 #include <utility>
