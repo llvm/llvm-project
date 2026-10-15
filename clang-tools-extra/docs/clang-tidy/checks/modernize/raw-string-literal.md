@@ -1,39 +1,39 @@
-.. title:: clang-tidy - modernize-raw-string-literal
+```{title} clang-tidy - modernize-raw-string-literal
+```
 
-modernize-raw-string-literal
-============================
+# modernize-raw-string-literal
 
 This check selectively replaces string literals containing escaped characters
 with raw string literals.
 
 Example:
 
-.. code-block:: c++
-
-  const char *const Quotes{"embedded \"quotes\""};
-  const char *const Paragraph{"Line one.\nLine two.\nLine three.\n"};
-  const char *const SingleLine{"Single line.\n"};
-  const char *const TrailingSpace{"Look here -> \n"};
-  const char *const Tab{"One\tTwo\n"};
-  const char *const Bell{"Hello!\a  And welcome!"};
-  const char *const Path{"C:\\Program Files\\Vendor\\Application.exe"};
-  const char *const RegEx{"\\w\\([a-z]\\)"};
+```c++
+const char *const Quotes{"embedded \"quotes\""};
+const char *const Paragraph{"Line one.\nLine two.\nLine three.\n"};
+const char *const SingleLine{"Single line.\n"};
+const char *const TrailingSpace{"Look here -> \n"};
+const char *const Tab{"One\tTwo\n"};
+const char *const Bell{"Hello!\a  And welcome!"};
+const char *const Path{"C:\\Program Files\\Vendor\\Application.exe"};
+const char *const RegEx{"\\w\\([a-z]\\)"};
+```
 
 becomes
 
-.. code-block:: c++
-
-  const char *const Quotes{R"(embedded "quotes")"};
-  const char *const Paragraph{"Line one.\nLine two.\nLine three.\n"};
-  const char *const SingleLine{"Single line.\n"};
-  const char *const TrailingSpace{"Look here -> \n"};
-  const char *const Tab{"One\tTwo\n"};
-  const char *const Bell{"Hello!\a  And welcome!"};
-  const char *const Path{R"(C:\Program Files\Vendor\Application.exe)"};
-  const char *const RegEx{R"(\w\([a-z]\))"};
+```c++
+const char *const Quotes{R"(embedded "quotes")"};
+const char *const Paragraph{"Line one.\nLine two.\nLine three.\n"};
+const char *const SingleLine{"Single line.\n"};
+const char *const TrailingSpace{"Look here -> \n"};
+const char *const Tab{"One\tTwo\n"};
+const char *const Bell{"Hello!\a  And welcome!"};
+const char *const Path{R"(C:\Program Files\Vendor\Application.exe)"};
+const char *const RegEx{R"(\w\([a-z]\))"};
+```
 
 The presence of any of the following escapes can cause the string to be
-converted to a raw string literal: ``\\``, ``\'``, ``\"``, ``\?``,
+converted to a raw string literal: `\\`, `\'`, `\"`, `\?`,
 and octal or hexadecimal escapes for printable ASCII characters.
 
 A string literal containing only escaped newlines is a common way of
@@ -45,17 +45,20 @@ An escaped horizontal tab, form feed, or vertical tab prevents the string
 literal from being converted. The presence of a horizontal tab, form feed or
 vertical tab in source code is not visually obvious.
 
-Options
--------
+## Options
 
-.. option:: DelimiterStem
+(modernize-raw-string-literal-delimiter-stem)=
 
-  Custom delimiter to escape characters in raw string literals. It is used in
-  the following construction: ``R"stem_delimiter(contents)stem_delimiter"``.
-  The default value is `lit`.
+```{option} DelimiterStem
+Custom delimiter to escape characters in raw string literals. It is used in
+the following construction: `R"stem_delimiter(contents)stem_delimiter"`.
+Default is `lit`.
+```
 
-.. option:: ReplaceShorterLiterals
+(modernize-raw-string-literal-replace-shorter-literals)=
 
-  Controls replacing shorter non-raw string literals with longer raw string
-  literals. Setting this option to `true` enables the replacement.
-  The default value is `false` (shorter literals are not replaced).
+```{option} ReplaceShorterLiterals
+Controls replacing shorter non-raw string literals with longer raw string
+literals. Setting this option to `true` enables the replacement.
+When `false`, shorter literals are not replaced. Default is `false`.
+```
