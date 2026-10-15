@@ -1655,8 +1655,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivPtr64}, {{}, {SgprB64_ReadFirstLane}}}, HasSMemPF)
       .Any({{DivPtr64}, {{}, {}, DeletePrefetch}})
 
-      .Any({{P3}, {{}, {}, DeletePrefetch}})
-      .Any({{P5}, {{}, {}, DeletePrefetch}})
       .Any({{Ptr32}, {{}, {}, DeletePrefetch}})
       .Any({{P8}, {{}, {}, DeletePrefetch}});
 

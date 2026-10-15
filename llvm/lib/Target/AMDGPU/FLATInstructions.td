@@ -2543,15 +2543,18 @@ def prefetch_flat : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
 // that is safe.
 def prefetch_global : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                                (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
-                               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-                                         (AMDGPU::isConstantAddressSpace(cast<MemSDNode>(N)->getAddressSpace()) &&
+                               [{ unsigned AS = cast<MemSDNode>(N)->getAddressSpace();
+                                  return AS == AMDGPUAS::GLOBAL_ADDRESS ||
+                                         ((AS == AMDGPUAS::CONSTANT_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
                                           (!Subtarget->hasSafeSmemPrefetch() || N->getOperand(1)->isDivergent())); }]> {
   let GISelPredicateCode = [{
-    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-            (AMDGPU::isConstantAddressSpace((*MI.memoperands_begin())->getAddrSpace()) &&
-             (!Subtarget->hasSafeSmemPrefetch() ||
-              RBI.getRegBank(MI.getOperand(0).getReg(), MRI, TRI)->getID() !=
-                  AMDGPU::SGPRRegBankID));
+    unsigned AS = (*MI.memoperands_begin())->getAddrSpace();
+    return AS == AMDGPUAS::GLOBAL_ADDRESS ||
+           ((AS == AMDGPUAS::CONSTANT_ADDRESS ||
+             AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+            (!Subtarget->hasSafeSmemPrefetch() ||
+             RBI.getRegBank(MI.getOperand(0).getReg(), MRI, TRI)->getID() !=
+                 AMDGPU::SGPRRegBankID));
   }];
 }
 
