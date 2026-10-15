@@ -168,8 +168,7 @@ define void @rotl_v2i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA32-LABEL: rotl_v2i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a1, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
+; LA32-NEXT:    vreplgr2vr.w $vr1, $a2
 ; LA32-NEXT:    vneg.d $vr1, $vr1
 ; LA32-NEXT:    vrotr.d $vr0, $vr0, $vr1
 ; LA32-NEXT:    vst $vr0, $a0, 0
@@ -198,8 +197,7 @@ define void @rotr_v2i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA32-LABEL: rotr_v2i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a1, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
+; LA32-NEXT:    vreplgr2vr.w $vr1, $a2
 ; LA32-NEXT:    vrotr.d $vr0, $vr0, $vr1
 ; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret

@@ -168,9 +168,7 @@ define void @rotl_v4i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA32-LABEL: rotl_v4i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA32-NEXT:    xvpermi.q $xr1, $xr1, 2
+; LA32-NEXT:    xvreplgr2vr.w $xr1, $a2
 ; LA32-NEXT:    xvneg.d $xr1, $xr1
 ; LA32-NEXT:    xvrotr.d $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
@@ -199,9 +197,7 @@ define void @rotr_v4i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA32-LABEL: rotr_v4i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
-; LA32-NEXT:    xvpermi.q $xr1, $xr1, 2
+; LA32-NEXT:    xvreplgr2vr.w $xr1, $a2
 ; LA32-NEXT:    xvrotr.d $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
