@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
+#include "TosaToLinalgUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
@@ -1430,7 +1431,230 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   return success();
 }
 
+// Insert missing leading batch dimensions, taking their sizes from `other`.
+static Value broadcastMatMulTLeadingDimensions(PatternRewriter &rewriter,
+                                               Location loc, Value operand,
+                                               Value other) {
+  auto type = cast<RankedTensorType>(operand.getType());
+  int64_t missingDims =
+      cast<RankedTensorType>(other.getType()).getRank() - type.getRank();
+  if (missingDims <= 0)
+    return operand;
+
+  SmallVector<OpFoldResult> shape;
+  SmallVector<int64_t> dimensions;
+  for (int64_t dim = 0; dim < missingDims; ++dim) {
+    shape.push_back(tensor::getMixedSize(rewriter, loc, other, dim));
+    dimensions.push_back(dim);
+  }
+  llvm::append_range(shape, tensor::getMixedSizes(rewriter, loc, operand));
+  Value empty = tensor::EmptyOp::create(
+      rewriter, loc, shape, type.getElementType(), type.getEncoding());
+  return linalg::BroadcastOp::create(rewriter, loc, operand, empty, dimensions)
+      .getResult()
+      .front();
+}
+
+// Expand an existing singleton batch dimension to `size`, preserving the rank.
+// Missing dimensions are handled by broadcastMatMulTLeadingDimensions.
+// linalg.broadcast inserts dimensions, so first remove the singleton dimension
+// with a rank-reducing slice, then reinsert it at the target size.
+static Value broadcastMatMulTSingletonDimension(PatternRewriter &rewriter,
+                                                Location loc, Value operand,
+                                                int64_t dim,
+                                                OpFoldResult size) {
+  auto type = cast<RankedTensorType>(operand.getType());
+  SmallVector<int64_t> sliceShape(type.getShape());
+  sliceShape.erase(sliceShape.begin() + dim);
+  auto sliceType = RankedTensorType::get(sliceShape, type.getElementType(),
+                                         type.getEncoding());
+  Value slice = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, operand, sliceType);
+
+  SmallVector<OpFoldResult> shape =
+      tensor::getMixedSizes(rewriter, loc, operand);
+  shape[dim] = size;
+  Value empty = tensor::EmptyOp::create(
+      rewriter, loc, shape, type.getElementType(), type.getEncoding());
+  return linalg::BroadcastOp::create(rewriter, loc, slice, empty,
+                                     ArrayRef<int64_t>{dim})
+      .getResult()
+      .front();
+}
+
+// Align the ranks, then broadcast each shared batch dimension independently.
+static std::pair<Value, Value>
+normalizeMatMulTBatchDimensions(PatternRewriter &rewriter, Location loc,
+                                Value a, Value b, int64_t batchRank) {
+  int64_t aRank = cast<RankedTensorType>(a.getType()).getRank();
+  int64_t bRank = cast<RankedTensorType>(b.getType()).getRank();
+  int64_t firstSharedDim = std::max(aRank, bRank) - std::min(aRank, bRank);
+  a = broadcastMatMulTLeadingDimensions(rewriter, loc, a, b);
+  b = broadcastMatMulTLeadingDimensions(rewriter, loc, b, a);
+
+  IndexPool indexPool;
+  // The inserted leading dimensions already match their partner's sizes.
+  for (int64_t dim = firstSharedDim; dim < batchRank; ++dim) {
+    auto aType = cast<RankedTensorType>(a.getType());
+    auto bType = cast<RankedTensorType>(b.getType());
+    int64_t aSize = aType.getDimSize(dim);
+    int64_t bSize = bType.getDimSize(dim);
+    if (aSize == bSize && ShapedType::isStatic(aSize))
+      continue;
+
+    // Compute the shared broadcast target only for batch dimensions.
+    // The matrix dimensions may differ between A and B.
+    auto [size, masterOperand] =
+        computeTargetSize(rewriter, loc, indexPool, ValueRange{a, b}, dim);
+    if (aSize == 1) {
+      a = broadcastMatMulTSingletonDimension(rewriter, loc, a, dim, size);
+      continue;
+    }
+    if (bSize == 1) {
+      b = broadcastMatMulTSingletonDimension(rewriter, loc, b, dim, size);
+      continue;
+    }
+    a = broadcastDynamicDimension(rewriter, loc, indexPool, a, dim, size,
+                                  masterOperand);
+    b = broadcastDynamicDimension(rewriter, loc, indexPool, b, dim, size,
+                                  masterOperand);
+  }
+  return {a, b};
+}
+
+MatMulTOperands
+mlir::tosa::prepareMatMulTOperands(PatternRewriter &rewriter, Location loc,
+                                   Value a, Value b,
+                                   RankedTensorType outputType) {
+  const int64_t outputRank = outputType.getRank();
+  const int64_t batchRank = outputRank - 2;
+  auto normalizedOperands =
+      normalizeMatMulTBatchDimensions(rewriter, loc, a, b, batchRank);
+  a = normalizedOperands.first;
+  b = normalizedOperands.second;
+
+  SmallVector<OpFoldResult> outputShape;
+  outputShape.reserve(outputRank);
+  for (int64_t batchDim = 0; batchDim < batchRank; ++batchDim)
+    outputShape.push_back(tensor::getMixedSize(rewriter, loc, a, batchDim));
+  outputShape.push_back(tensor::getMixedSize(rewriter, loc, a, outputRank - 2));
+  outputShape.push_back(tensor::getMixedSize(rewriter, loc, b, outputRank - 2));
+  SmallVector<Value> dynamicDims;
+  for (auto [dim, size] : llvm::enumerate(outputShape))
+    if (outputType.isDynamicDim(dim))
+      dynamicDims.push_back(
+          getValueOrCreateConstantIndexOp(rewriter, loc, size));
+
+  Value zero = arith::ConstantOp::create(
+      rewriter, loc, rewriter.getZeroAttr(outputType.getElementType()));
+  Value emptyTensor = tensor::EmptyOp::create(
+      rewriter, loc, outputType.getShape(), outputType.getElementType(),
+      condenseValues(dynamicDims));
+  Value zeroTensor = linalg::FillOp::create(rewriter, loc, ValueRange{zero},
+                                            ValueRange{emptyTensor})
+                         .result();
+
+  return {a, b, zeroTensor};
+}
+
 namespace {
+// Linalg has quantized matmul and batch matmul operations, but neither has a
+// transpose-B variant. Lower nonzero zero points separately to linalg.generic
+// so the reduction can accumulate (A - aZp) * (B - bZp).
+class QuantizedMatMulTConverter : public OpConversionPattern<tosa::MatMulTOp> {
+public:
+  using OpConversionPattern<tosa::MatMulTOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::MatMulTOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    auto aType = dyn_cast<RankedTensorType>(adaptor.getA().getType());
+    auto bType = dyn_cast<RankedTensorType>(adaptor.getB().getType());
+    auto outputType = dyn_cast<RankedTensorType>(op.getType());
+    if (!aType || !bType || !outputType)
+      return rewriter.notifyMatchFailure(op, "only supports ranked tensors");
+
+    FailureOr<int64_t> maybeAZp = op.getAZeroPoint();
+    FailureOr<int64_t> maybeBZp = op.getBZeroPoint();
+    if (failed(maybeAZp))
+      return rewriter.notifyMatchFailure(
+          op, "input A zero point cannot be statically determined");
+    if (failed(maybeBZp))
+      return rewriter.notifyMatchFailure(
+          op, "input B zero point cannot be statically determined");
+
+    const int64_t aZpVal = *maybeAZp;
+    const int64_t bZpVal = *maybeBZp;
+
+    if (aZpVal == 0 && bZpVal == 0)
+      return rewriter.notifyMatchFailure(
+          op, "requires at least one nonzero zero point");
+
+    const int64_t outputRank = outputType.getRank();
+    const int64_t batchRank = outputRank - 2;
+    auto [a, b, zeroTensor] = prepareMatMulTOperands(
+        rewriter, loc, adaptor.getA(), adaptor.getB(), outputType);
+    Type outputElementType = outputType.getElementType();
+
+    int64_t loopRank = outputRank + 1;
+    SmallVector<AffineExpr> dimensions =
+        llvm::map_to_vector(llvm::seq<int64_t>(0, loopRank), [&](int64_t dim) {
+          return rewriter.getAffineDimExpr(dim);
+        });
+    SmallVector<AffineExpr> aMap(dimensions.begin(),
+                                 dimensions.begin() + batchRank);
+    aMap.push_back(dimensions[batchRank]);
+    aMap.push_back(dimensions[batchRank + 2]);
+    SmallVector<AffineExpr> bMap(dimensions.begin(),
+                                 dimensions.begin() + batchRank);
+    bMap.push_back(dimensions[batchRank + 1]);
+    bMap.push_back(dimensions[batchRank + 2]);
+    SmallVector<AffineExpr> outputMap(dimensions.begin(),
+                                      dimensions.begin() + batchRank);
+    outputMap.push_back(dimensions[batchRank]);
+    outputMap.push_back(dimensions[batchRank + 1]);
+    SmallVector<AffineMap> indexingMaps = {
+        AffineMap::get(loopRank, 0, aMap, rewriter.getContext()),
+        AffineMap::get(loopRank, 0, bMap, rewriter.getContext()),
+        AffineMap::get(loopRank, 0, outputMap, rewriter.getContext())};
+    SmallVector<utils::IteratorType> iteratorTypes(
+        loopRank, utils::IteratorType::parallel);
+    iteratorTypes.back() = utils::IteratorType::reduction;
+
+    auto generic = linalg::GenericOp::create(
+        rewriter, loc, outputType, ValueRange{a, b}, zeroTensor, indexingMaps,
+        iteratorTypes,
+        [=](OpBuilder &builder, Location nestedLoc, ValueRange args) {
+          auto extendToOutputType = [&](Value value) {
+            if (value.getType() == outputElementType)
+              return value;
+            return arith::ExtSIOp::create(builder, nestedLoc, outputElementType,
+                                          value)
+                .getResult();
+          };
+
+          Value aValue = extendToOutputType(args[0]);
+          Value bValue = extendToOutputType(args[1]);
+          Value aZp = arith::ConstantOp::create(
+              builder, nestedLoc,
+              builder.getIntegerAttr(outputElementType, aZpVal));
+          Value bZp = arith::ConstantOp::create(
+              builder, nestedLoc,
+              builder.getIntegerAttr(outputElementType, bZpVal));
+          Value adjustedA =
+              arith::SubIOp::create(builder, nestedLoc, aValue, aZp);
+          Value adjustedB =
+              arith::SubIOp::create(builder, nestedLoc, bValue, bZp);
+          Value product =
+              arith::MulIOp::create(builder, nestedLoc, adjustedA, adjustedB);
+          Value sum =
+              arith::AddIOp::create(builder, nestedLoc, args[2], product);
+          linalg::YieldOp::create(builder, nestedLoc, sum);
+        });
+    rewriter.replaceOp(op, generic.getResult(0));
+    return success();
+  }
+};
 
 template <typename SrcOp>
 class PointwiseConverter : public OpConversionPattern<SrcOp> {
@@ -3249,6 +3473,8 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       PointwiseConverter<tosa::ClampOp>,
       PointwiseConverter<tosa::SigmoidOp>
         >(converter, patterns->getContext());
+
+  patterns->add<QuantizedMatMulTConverter>(converter, patterns->getContext());
 
   patterns->add<
       IdentityNConverter<tosa::IdentityOp>,

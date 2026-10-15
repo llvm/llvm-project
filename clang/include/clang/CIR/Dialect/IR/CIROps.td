@@ -1458,12 +1458,11 @@ def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
   let summary = "Represents a scope with associated cleanup code";
   let description = [{
     `cir.cleanup.scope` contains a body region and a cleanup region. The body
-    region is executed first, and the cleanup region is executed when the body
-    region is exited, either normally or due to an exception.
+    region runs first, and the cleanup region may run when the body region is
+    exited.
 
-    The cleanup kind attribute specifies when the cleanup region should be
-    executed:
-    - `none`: No cleanup (cleanup region is empty/unused)
+    The cleanup kind attribute specifies which exits from the body region run
+    the cleanup region:
     - `normal`: Cleanup is executed only on normal exit
     - `eh`: Cleanup is executed only on exception unwinding
     - `all`: Cleanup is executed on both normal exit and exception unwinding
@@ -5339,7 +5338,9 @@ def CIR_CoroDoneOp : CIR_CoroIntrinsicOp<"done", (ins CIR_VoidPtrType:$handle),
 
 def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
   Pure, Terminator, HasParent<"AwaitOp">,
-  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
+    "getMutableSuccessorOperands"
+  ]>
 ]> {
   let summary = "Marks the point where a coroutine actually suspends";
   let description = [{
@@ -5357,11 +5358,24 @@ def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
     - destroy: transfers through the enclosing `cir.cleanup.scope`s to the
       `cir.coroutine`'s `destroy` region when the coroutine handle is
       destroyed.
+
+    When the optional `cond` operand is present, a `false` value vetoes the
+    suspension and control branches directly to the `resume` region of the
+    enclosing `cir.await`. A `true` value indicates the coroutine actually
+    suspends.
   }];
 
+  let arguments = (ins Optional<CIR_AnyBoolType>:$cond);
+
   let assemblyFormat = [{
-    attr-dict
+    (`(` $cond^ `)`)? attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins), [{
+      /* No operands. */
+    }]>
+  ];
 
   let hasLLVMLowering = false;
 }

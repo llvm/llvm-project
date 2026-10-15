@@ -444,6 +444,12 @@ void populateVectorTransposeNarrowTypeRewritePatterns(
 void populateForVectorLinearize(TypeConverter &typeConverter,
                                 ConversionTarget &conversionTarget);
 
+/// Extends `conversionTarget` so that ops whose inner-most vector dimension is
+/// at least `targetBitWidth` bits wide (or has `index` elements) stay legal.
+/// Must be called after `populateForVectorLinearize`.
+void populateVectorLinearizeBitWidthTargetRules(
+    ConversionTarget &conversionTarget, unsigned targetBitWidth);
+
 /// Populates `patterns` for ND vector (N >= 2) linearization. This currently
 /// contains patterns for converting ConstantLike, Vectorizable, and
 /// vector::BitCast ops.

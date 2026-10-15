@@ -2826,12 +2826,12 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-static uint64_t getTypeSize(mlir::Type type, mlir::Operation &op) {
+static uint64_t getTypeAllocSize(mlir::Type type, mlir::Operation &op) {
   mlir::DataLayout layout(op.getParentOfType<mlir::ModuleOp>());
   // For LLVM purposes we treat void as u8.
   if (isa<cir::VoidType>(type))
     type = cir::IntType::get(type.getContext(), 8, /*isSigned=*/false);
-  return llvm::divideCeil(layout.getTypeSizeInBits(type), 8);
+  return layout.getTypeAllocSize(type);
 }
 
 mlir::LogicalResult CIRToLLVMPrefetchOpLowering::matchAndRewrite(
@@ -2859,7 +2859,7 @@ mlir::LogicalResult CIRToLLVMPtrDiffOpLowering::matchAndRewrite(
 
   cir::PointerType ptrTy = op.getLhs().getType();
   assert(!cir::MissingFeatures::llvmLoweringPtrDiffConsidersPointee());
-  uint64_t typeSize = getTypeSize(ptrTy.getPointee(), *op);
+  uint64_t typeSize = getTypeAllocSize(ptrTy.getPointee(), *op);
 
   // Avoid silly division by 1.
   mlir::Value resultVal = diff.getResult();

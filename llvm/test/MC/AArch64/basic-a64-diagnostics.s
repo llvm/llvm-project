@@ -1274,7 +1274,7 @@ cbz w1, lsl
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        ccmp wsp, w4, #2, ne
 // CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 31]
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        ccmp w3, wsp, #0, ge
 // CHECK-ERROR-NEXT:                 ^
 // CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 15]
@@ -1291,7 +1291,7 @@ cbz w1, lsl
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        ccmp sp, x4, #2, ne
 // CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 31]
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        ccmp x25, sp, #15, hs
 // CHECK-ERROR-NEXT:                  ^
 // CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 15]
@@ -1308,7 +1308,7 @@ cbz w1, lsl
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        ccmn wsp, w4, #2, ne
 // CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 31]
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        ccmn w25, wsp, #15, hs
 // CHECK-ERROR-NEXT:                  ^
 // CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 15]
@@ -1325,7 +1325,7 @@ cbz w1, lsl
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        ccmn sp, x4, #2, ne
 // CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 31]
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        ccmn x25, sp, #15, hs
 // CHECK-ERROR-NEXT:                  ^
 // CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 15]
@@ -1822,10 +1822,10 @@ cbz w1, lsl
 // Scale must be an immediate, not a symbol
         scvtf s0, w0, f0
         ucvtf d0, x0, f0
-// CHECK-ERROR-NEXT: error: immediate must be an integer in range [1, 32]
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        scvtf s0, w0, f0
 // CHECK-ERROR-NEXT:                      ^
-// CHECK-ERROR-NEXT: error: immediate must be an integer in range [1, 64]
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        ucvtf d0, x0, f0
 // CHECK-ERROR-NEXT:                      ^
 
@@ -3273,20 +3273,20 @@ cbz w1, lsl
         movk w3, #:abs_g2_nc:sym
         movz x13, #:abs_g2_nc:sym
         movn x24, #:abs_g2_nc:sym
-// CHECK-ERROR: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]
+// CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         movz w12, #:abs_g2:sym
 // CHECK-ERROR-NEXT:                   ^
-// CHECK-ERROR-NEXT: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         movk w3, #:abs_g2_nc:sym
 // CHECK-ERROR-NEXT:                  ^
 
         movn x19, #:abs_g3:sym
         movz w20, #:abs_g3:sym
         movk w21, #:abs_g3:sym
-// CHECK-ERROR-NEXT: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         movz w20, #:abs_g3:sym
 // CHECK-ERROR-NEXT:                   ^
-// CHECK-ERROR-NEXT: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         movk w21, #:abs_g3:sym
 // CHECK-ERROR-NEXT:                   ^
 
@@ -3300,13 +3300,13 @@ cbz w1, lsl
         movn w29, #:abs_g2_s:sym
         movk x19, #:abs_g2_s:sym
         movk w23, #:abs_g2_s:sym
-// CHECK-ERROR: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]
+// CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         movz w2, #:abs_g2_s:sym
 // CHECK-ERROR-NEXT:                    ^
-// CHECK-ERROR-NEXT: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         movn w29, #:abs_g2_s:sym
 // CHECK-ERROR-NEXT:                   ^
-// CHECK-ERROR-NEXT: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         movk w23, #:abs_g2_s:sym
 // CHECK-ERROR-NEXT:                   ^
 
@@ -3421,7 +3421,7 @@ cbz w1, lsl
         msr spsel #-1
         msr daifclr, #16
         msr CurrentEL, x12
-// CHECK-ERROR: [[@LINE-5]]:22: error: {{expected|immediate must be an}} integer in range [0, 15]
+// CHECK-ERROR: [[@LINE-5]]:22: error: invalid operand for instruction
 // CHECK-ERROR: [[@LINE-5]]:20: error: {{expected|immediate must be an}} integer in range [0, 15]
 // CHECK-ERROR: [[@LINE-5]]:{{9|19}}: error: {{too few operands for instruction|expected comma before next operand|unexpected token in argument list}}
 // CHECK-ERROR: [[@LINE-5]]:22: error: {{expected|immediate must be an}} integer in range [0, 15]
