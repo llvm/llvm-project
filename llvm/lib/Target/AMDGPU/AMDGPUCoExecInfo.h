@@ -25,7 +25,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUCOEXECINFO_H
 
 #include "SIDefines.h"
-#include "SIInstrInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -35,7 +35,46 @@
 
 namespace llvm {
 
+class MachineInstr;
+class SIInstrInfo;
+
 namespace AMDGPU {
+
+/// Properties that determine the WMMA coexecution model.
+struct WMMAProperties {
+  /// Modeled instruction family, or Unknown when none is identified.
+  WMMAVariant Variant = WMMAVariant::Unknown;
+
+  /// Whether the instruction has an LD_SCALE stage.
+  bool HasScaling = false;
+};
+
+/// Normalize WMMA properties from \p Opc and optional matrix formats.
+/// Set Variant to Unknown when \p Opc has no modeled properties.
+inline WMMAProperties
+getWMMAProperties(unsigned Opc,
+                  std::optional<int64_t> MatrixAFmt = std::nullopt,
+                  std::optional<int64_t> MatrixBFmt = std::nullopt) {
+  WMMAProperties Properties;
+  const WMMAInstInfo *InstInfo = getWMMAInstInfoHelper(Opc);
+  if (!InstInfo)
+    return Properties;
+
+  Properties.Variant = InstInfo->CoExecVariant;
+  // Scaled variants use an LD_SCALE stage that can absorb the next scaled
+  // WMMA in the last internal slot.
+  Properties.HasScaling = InstInfo->HasMatrixScale;
+
+  // F8F6F4 is the only family with matrix format operands. Two FP4 inputs use
+  // four cycle occupancy, while wider combinations use eight. This matches
+  // PredIsNotBothF4_WMMA_SCALE.
+  if (Properties.Variant == WMMAVariant::F8F6F4_16x16x128 && MatrixAFmt &&
+      MatrixBFmt && *MatrixAFmt == WMMA::MATRIX_FMT_FP4 &&
+      *MatrixBFmt == WMMA::MATRIX_FMT_FP4)
+    Properties.Variant = WMMAVariant::F8F6F4_16x16x128_BothF4;
+
+  return Properties;
+}
 
 //===----------------------------------------------------------------------===//
 // Co-execution Bitmasks
@@ -371,47 +410,23 @@ inline CoExecInfo CoExecInfo::build(unsigned UnitOccupancy,
 /// Get co-execution info for a gfx950 MFMA instruction.
 CoExecInfo getMFMACoExecInfo(unsigned Opcode);
 
-/// Get co-execution info for a WMMA instruction, selecting the per-cycle slot
-/// pattern from the opcode (and operand formats for the F8F6F4 variants).
-inline CoExecInfo getCoExecInfo(const MachineInstr &MI,
-                                const SIInstrInfo &TII) {
-  unsigned Opc = MI.getOpcode();
-  const WMMAInstInfo *InstInfo = getWMMAInstInfoHelper(Opc);
-  WMMAVariant Variant =
-      InstInfo ? InstInfo->CoExecVariant : WMMAVariant::Unknown;
-
-  if (TII.isMFMA(Opc))
-    return getMFMACoExecInfo(Opc);
-
-  // Scaled variants (LD_SCALE rule) absorb the next WMMA in the last I slot.
-  bool HasScaling = InstInfo && InstInfo->HasMatrixScale;
-
-  // The F8F6F4 family is the only WMMA carrying matrix format operands, and its
-  // window depends on them: both inputs f4 issue in 4 cycles, anything wider in
-  // 8. This matches the PredIsNotBothF4_WMMA_SCALE latency variant.
-  if (const MachineOperand *FmtA =
-          TII.getNamedOperand(MI, AMDGPU::OpName::matrix_a_fmt)) {
-    const MachineOperand *FmtB =
-        TII.getNamedOperand(MI, AMDGPU::OpName::matrix_b_fmt);
-    bool BothF4 = FmtB && FmtA->getImm() == AMDGPU::WMMA::MATRIX_FMT_FP4 &&
-                  FmtB->getImm() == AMDGPU::WMMA::MATRIX_FMT_FP4;
-    if (BothF4)
-      Variant = WMMAVariant::F8F6F4_16x16x128_BothF4;
-  }
-
-  switch (Variant) {
+/// Return coexecution data for \p Properties, or no value when unmodeled.
+inline std::optional<CoExecInfo>
+getKnownCoExecInfo(const WMMAProperties &Properties) {
+  switch (Properties.Variant) {
   // 16x16x64 IU8: 16-cycle occupancy, 17-cycle window.
   case WMMAVariant::IU8_16x16x64:
     return CoExecInfo::build(16, 17, "0EIIEEIIEEIIEEIIV");
 
   // 16x16x128 F8/F6/F4 has occupancy of 8 cycles and a window of 10 cycles.
   case WMMAVariant::F8F6F4_16x16x128:
-    return CoExecInfo::build(8, 10, HasScaling ? "0EEIEEISVV" : "0EEIEEIIVV");
+    return CoExecInfo::build(
+        8, 10, Properties.HasScaling ? "0EEIEEISVV" : "0EEIEEIIVV");
 
   // 16x16x128 with two F4 inputs has occupancy of 4 cycles and a window of 6
   // cycles.
   case WMMAVariant::F8F6F4_16x16x128_BothF4:
-    return CoExecInfo::build(4, 6, HasScaling ? "0EESVV" : "0EEIVV");
+    return CoExecInfo::build(4, 6, Properties.HasScaling ? "0EESVV" : "0EEIVV");
 
   // 16x16x64 FP8/BF8: 4-cycle occupancy, 6-cycle window.
   case WMMAVariant::FP8BF8_16x16x64:
@@ -427,14 +442,18 @@ inline CoExecInfo getCoExecInfo(const MachineInstr &MI,
 
   // 32x16x128 F4: 8-cycle occupancy, 10-cycle window.
   case WMMAVariant::F4_32x16x128:
-    return CoExecInfo::build(8, 10, HasScaling ? "0EEIEIESVV" : "0EEIEIEIVV");
+    return CoExecInfo::build(
+        8, 10, Properties.HasScaling ? "0EEIEIESVV" : "0EEIEIEIVV");
 
   case WMMAVariant::Unknown:
-    // Permissive window for variants without a modeled slot pattern.
-    return CoExecInfo::build(0, 9, "AAAAAAAAA");
+    return std::nullopt;
   }
   llvm_unreachable("unknown WMMA variant");
 }
+
+/// Return coexecution data for \p MI.
+/// Use a permissive window when no model is available.
+CoExecInfo getCoExecInfo(const MachineInstr &MI, const SIInstrInfo &TII);
 
 } // namespace AMDGPU
 } // namespace llvm
