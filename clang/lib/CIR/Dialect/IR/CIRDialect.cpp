@@ -781,6 +781,12 @@ cir::ResumeOp::getMutableSuccessorOperands(RegionSuccessor point) {
   return MutableOperandRange(getOperation(), 0, 0);
 }
 
+MutableOperandRange
+cir::CoroSuspendPoint::getMutableSuccessorOperands(RegionSuccessor point) {
+  // The condition operand is not forwarded to successor regions.
+  return MutableOperandRange(getOperation(), 0, 0);
+}
+
 LogicalResult cir::ConditionOp::verify() {
   if (!isa<LoopOpInterface, AwaitOp>(getOperation()->getParentOp()))
     return emitOpError("condition must be within a conditional region");
@@ -3702,8 +3708,9 @@ void cir::AwaitOp::getSuccessorRegions(
     return;
   }
 
-  // Branching from suspend: continue in resume once the coroutine is resumed,
-  // or exit to the parent operation if it stays suspended or is destroyed.
+  // Branching from suspend: continue in resume once the coroutine is resumed
+  // (or immediately if suspension is vetoed), or exit to the parent operation
+  // if it stays suspended or is destroyed.
   if (&getSuspend() == parentRegion) {
     regions.emplace_back(&getResume());
     regions.emplace_back(getOperation());
