@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines the PISA registers and register classes in TableGen.
+///
+//===----------------------------------------------------------------------===//
 
 let Namespace = "PISA" in {
 

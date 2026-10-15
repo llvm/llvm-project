@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the PISA MCInst printer.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISAInstPrinter.h"
 #include "llvm/MC/MCInst.h"

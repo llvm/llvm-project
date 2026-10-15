@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file declares the PISA MCInst printer.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISAINSTPRINTER_H
 #define LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISAINSTPRINTER_H

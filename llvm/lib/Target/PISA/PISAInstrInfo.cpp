@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements instruction information for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISAInstrInfo.h"
 #include "PISA.h"

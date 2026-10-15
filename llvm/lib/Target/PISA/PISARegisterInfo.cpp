@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements register information for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISARegisterInfo.h"
 #include "PISA.h"

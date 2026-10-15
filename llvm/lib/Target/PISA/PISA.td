@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines the top-level TableGen description for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 include "llvm/Target/Target.td"
 

@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines the PISA instruction set in TableGen.
+///
+//===----------------------------------------------------------------------===//
 
 class PISAInst<dag outs, dag ins, string asmstr, list<dag> pattern>
     : Instruction {

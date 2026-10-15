@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines the subtarget features for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 // Target architecture feature.
 def Feature100 : SubtargetFeature<"100", "PISATarget100", "true",

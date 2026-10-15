@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the assembly properties for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISAMCAsmInfo.h"
 

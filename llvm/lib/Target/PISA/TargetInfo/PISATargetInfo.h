@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file declares the PISA target registration interface.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_PISA_TARGETINFO_PISATARGETINFO_H
 #define LLVM_LIB_TARGET_PISA_TARGETINFO_PISATARGETINFO_H

@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the PISA target machine.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISATargetMachine.h"
 #include "PISA.h"
