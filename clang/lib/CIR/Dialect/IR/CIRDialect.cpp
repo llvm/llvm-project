@@ -777,7 +777,7 @@ cir::ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
 
 MutableOperandRange
 cir::ResumeOp::getMutableSuccessorOperands(RegionSuccessor point) {
-  // The eh_token operand is not forwarded to the parent region.
+  // The eh_token operand is not modeled as forwarded to any successor.
   return MutableOperandRange(getOperation(), 0, 0);
 }
 
@@ -5109,18 +5109,40 @@ LogicalResult cir::TypeInfoAttr::verify(
 void cir::TryOp::getSuccessorRegions(
     mlir::RegionBranchPoint point,
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
-  // The `try` and the `catchers` region branch back to the parent operation.
-  if (!point.isParent()) {
+  // The interface has no branch point for an unwind out of a call in the try
+  // region, which is how most handlers are entered. The handlers are
+  // therefore potential successors of the parent and of every exit from the
+  // try region. The edge from the parent stands in for a throw before the try
+  // region has any effect, and the edges from its exits for one after some of
+  // its effects.
+  //
+  // TODO(CIR): If we know a target function never throws a specific type, we
+  // can remove the catch handler.
+  auto addHandlers = [&] {
+    for (mlir::Region &handlerRegion : getHandlerRegions())
+      regions.emplace_back(&handlerRegion);
+  };
+
+  if (point.isParent()) {
+    regions.emplace_back(&getTryRegion());
+    addHandlers();
+    return;
+  }
+
+  // A handler exit leaves the operation.
+  mlir::Operation *term = point.getTerminatorPredecessorOrNull();
+  if (term->getParentRegion() != &getTryRegion()) {
     regions.emplace_back(getOperation());
     return;
   }
 
-  regions.push_back(mlir::RegionSuccessor(&getTryRegion()));
+  addHandlers();
 
-  // TODO(CIR): If we know a target function never throws a specific type, we
-  // can remove the catch handler.
-  for (mlir::Region &handlerRegion : this->getHandlerRegions())
-    regions.push_back(mlir::RegionSuccessor(&handlerRegion));
+  // A cir.resume ending the try region unwinds into a handler. It leaves the
+  // operation only when there is no handler to unwind into. Every other exit
+  // can leave the operation.
+  if (!isa<cir::ResumeOp>(term) || getHandlerRegions().empty())
+    regions.emplace_back(getOperation());
 }
 
 /// Verify that each cir.init_catch_param in \p handlerRegion, outside any
