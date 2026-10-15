@@ -8487,13 +8487,10 @@ void LLVMELFDumper<ELFT>::printCallGraphRelocation(
   const Relocation<ELFT> &R = *Func.Reloc;
   const Elf_Sym *Sym = nullptr;
   Expected<RelSymbol<ELFT>> TargetOrErr = this->getRelocationTarget(R, &SymTab);
-  if (!TargetOrErr)
+  if (!TargetOrErr) {
     this->reportUniqueWarning(TargetOrErr.takeError());
-  else
-    Sym = TargetOrErr->Sym;
-
-  // As with Address, Names comes before the Relocation object.
-  if (Sym) {
+  } else if ((Sym = TargetOrErr->Sym)) {
+    // As with Address, Names comes before the Relocation object.
     SmallVector<std::string> Names =
         getCallGraphTargetNames(Func, RelSec, SymTab, *Sym);
     if (!Names.empty())
