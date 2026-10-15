@@ -71,26 +71,25 @@ hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
   const SourceManager &SM = ASTCtx.getSourceManager();
   const LangOptions &LangOpts = ASTCtx.getLangOpts();
 
-  // Stepping back from a macro location can leave its expansion, so insert
-  // before the macro, or give up if the constructor starts inside one.
+  // Insert right before the first token and after the last one, mapped out of
+  // macros. Give up if either end is in the middle of a macro expansion.
   SourceLocation CtorBeginLoc = Ctor->getBeginLoc();
   if (CtorBeginLoc.isMacroID() &&
       !Lexer::isAtStartOfMacroExpansion(CtorBeginLoc, SM, LangOpts,
                                         &CtorBeginLoc))
     return {};
 
-  const SourceLocation CtorEndLoc =
+  const SourceLocation CtorEndLoc = Lexer::getLocForEndOfToken(
       Ctor->isExplicitlyDefaulted()
           ? utils::lexer::findNextTerminator(Ctor->getEndLoc(), SM, LangOpts)
-          : Ctor->getEndLoc();
+          : Ctor->getEndLoc(),
+      0, SM, LangOpts);
+  if (CtorEndLoc.isInvalid())
+    return {};
 
-  std::vector<FixItHint> Hints;
-  Hints.emplace_back(FixItHint::CreateInsertion(
-      CtorBeginLoc.getLocWithOffset(-1), "private:\n"));
-  Hints.emplace_back(FixItHint::CreateInsertion(
-      CtorEndLoc.getLocWithOffset(1), '\n' + OriginalAccess + ':' + '\n'));
-
-  return Hints;
+  return {FixItHint::CreateInsertion(CtorBeginLoc, "private:\n"),
+          FixItHint::CreateInsertion(CtorEndLoc,
+                                     '\n' + OriginalAccess + ':' + '\n')};
 }
 
 void CrtpConstructorAccessibilityCheck::registerMatchers(MatchFinder *Finder) {

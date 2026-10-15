@@ -3,31 +3,36 @@
 // CONSTEXPR must stay the first expansion in this file: the crash needs a file
 // entry right before it, and a macro or a split '>>' above would hide it.
 #define CONSTEXPR constexpr
+#define EMPTY_BODY {}
 
-namespace ctor_begins_with_macro {
+namespace ctor_begins_and_ends_with_macro {
 template <typename T>
 class CRTP {
 public:
-    CONSTEXPR CRTP() {}
+    CONSTEXPR CRTP() EMPTY_BODY
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: public constructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
-    // CHECK-FIXES: private:{{[[:space:]]*}}CONSTEXPR CRTP() {}{{[[:space:]]*}}public:
+    // CHECK-FIXES: private:{{[[:space:]]*}}CONSTEXPR CRTP() EMPTY_BODY{{[[:space:]]*}}public:
     // CHECK-FIXES: friend T;
 };
 
 class A : CRTP<A> {};
-} // namespace ctor_begins_with_macro
+} // namespace ctor_begins_and_ends_with_macro
 
-#define MEMBERS(Name) int I; Name() {}
+#define MEMBER_THEN(X) int I; X
+#define THEN_MEMBER(X) X int J;
 
-namespace ctor_inside_macro {
+namespace ctor_in_middle_of_macro {
 template <typename T>
 class CRTP {
 public:
-    MEMBERS(CRTP)
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: public constructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
-    // CHECK-FIXES: MEMBERS(CRTP)
+    MEMBER_THEN(CRTP() {})
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: public constructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
+    // CHECK-FIXES: MEMBER_THEN(CRTP() {})
+    THEN_MEMBER(CRTP(int) {})
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: public constructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
+    // CHECK-FIXES: THEN_MEMBER(CRTP(int) {})
     // CHECK-FIXES-NOT: friend T;
 };
 
 class A : CRTP<A> {};
-} // namespace ctor_inside_macro
+} // namespace ctor_in_middle_of_macro
