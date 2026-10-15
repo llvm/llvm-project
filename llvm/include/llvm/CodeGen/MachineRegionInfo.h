@@ -50,6 +50,11 @@ template <> struct RegionTraits<MachineFunction> {
   LLVM_ABI static void updateStatistics(MachineRegion *R);
 };
 
+// The explicit instantiation declarations of the region base classes must come
+// before the classes deriving from them. Defining a derived class implicitly
+// instantiates its base. Declaring the explicit instantiation after the derived
+// class will cause clang-cl to silently drop the dllimport attribute, resulting
+// in incorrect linkage.
 extern template class LLVM_TEMPLATE_ABI
     RegionNodeBase<RegionTraits<MachineFunction>>;
 
