@@ -5,17 +5,15 @@
 
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -fclangir \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,CIR-LLVM %s --input-file=%t-cir.ll
+// RUN: FileCheck --check-prefix=LLVM %s --input-file=%t-cir.ll
 
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,OGCG %s --input-file=%t.ll
+// RUN: FileCheck --check-prefix=LLVM %s --input-file=%t.ll
 
 // RUN: %clang_cc1 -triple spir64-unknown-unknown -x hip -fclangir \
 // RUN:            -fcuda-is-device -emit-cir %s -o %t-spir.cir
 // RUN: FileCheck --check-prefix=SPIR %s --input-file=%t-spir.cir
-
-// FIXME: CIR emits AMDGPU scope names on SPIR-V for agent and wavefront.
 
 #define __device__ __attribute__((device))
 
@@ -33,8 +31,7 @@ __device__ float singlethread(float *p, float v) {
 // CIR-LABEL: @_Z9wavefrontPii
 // CIR: cir.atomic.fetch add relaxed syncscope(hip_wavefront)
 // LLVM-LABEL: @_Z9wavefrontPii
-// CIR-LLVM: atomicrmw add {{.*}} syncscope("wavefront") monotonic
-// OGCG: atomicrmw add {{.*}} syncscope("subgroup") monotonic
+// LLVM: atomicrmw add {{.*}} syncscope("subgroup") monotonic
 // SPIR-LABEL: @_Z9wavefrontPii
 // SPIR: cir.atomic.fetch add relaxed syncscope(system)
 __device__ int wavefront(int *p, int v) {
@@ -56,8 +53,7 @@ __device__ float workgroup(float *p, float v) {
 // CIR-LABEL: @_Z5agentPii
 // CIR: cir.atomic.fetch add relaxed syncscope(hip_agent)
 // LLVM-LABEL: @_Z5agentPii
-// CIR-LLVM: atomicrmw add {{.*}} syncscope("agent") monotonic
-// OGCG: atomicrmw add {{.*}} syncscope("device") monotonic
+// LLVM: atomicrmw add {{.*}} syncscope("device") monotonic
 // SPIR-LABEL: @_Z5agentPii
 // SPIR: cir.atomic.fetch add relaxed syncscope(system)
 __device__ int agent(int *p, int v) {

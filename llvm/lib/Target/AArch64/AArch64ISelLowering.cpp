@@ -15852,8 +15852,8 @@ AArch64TargetLowering::LowerZERO_EXTEND_VECTOR_INREG(SDValue Op,
   if (Scale != 2)
     return SDValue();
   SDValue Zeros = DAG.getConstant(0, DL, SrcVT);
-  return DAG.getBitcast(VT,
-                        DAG.getNode(AArch64ISD::ZIP1, DL, SrcVT, SrcOp, Zeros));
+  return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
+                     DAG.getNode(AArch64ISD::ZIP1, DL, SrcVT, SrcOp, Zeros));
 }
 
 SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
@@ -19586,7 +19586,7 @@ bool hasNearbyPairedStore(Iter It, Iter End, Value *Ptr, const DataLayout &DL) {
                                              /*AllowNonInbounds=*/true);
 
   while (++It != End) {
-    if (It->isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(*It))
       continue;
     if (MaxLookupDist-- == 0)
       break;
@@ -30011,8 +30011,8 @@ static SDValue performVselectPowCombine(SDNode *N,
   RTLIB::Libcall LC = RTLIB::getPOW(VT);
   SelectionDAG &DAG = DCI.DAG;
   auto &TLI = DAG.getTargetLoweringInfo();
-  bool HasLibCall =
-      TLI.getLibcallLoweringInfo().getLibcallImpl(LC) != RTLIB::Unsupported;
+  bool HasLibCall = TLI.getLibcallLoweringInfo().getVectorLibcallImplOrMasked(
+                        LC) != RTLIB::Unsupported;
   if (!HasLibCall)
     return SDValue();
 
@@ -31724,9 +31724,43 @@ static unsigned getReductionForOpcode(unsigned Op) {
   }
 }
 
+// umin(abs(X), signed_max) is a saturating absolute value. In particular,
+// abs(signed_min) has the unsigned value signed_max + 1 and must be clamped.
+static SDValue trySQABSCombine(SDNode *N, SelectionDAG &DAG,
+                               const AArch64TargetLowering &TLI) {
+  using namespace llvm::SDPatternMatch;
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector() || !VT.isInteger() || VT.isVectorOf(MVT::i1) ||
+      !TLI.isTypeLegal(VT))
+    return SDValue();
+
+  SDValue X;
+  const APInt Max = APInt::getSignedMaxValue(VT.getScalarSizeInBits());
+  if (!sd_match(N, m_UMin(m_Abs(m_Value(X)), m_SpecificInt(Max))))
+    return SDValue();
+
+  const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  SDLoc DL(N);
+  if (VT.isScalableVector()) {
+    if (!(Subtarget.hasSVE2() || Subtarget.hasSME()))
+      return SDValue();
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, VT,
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_sqabs, DL, MVT::i32),
+        DAG.getPOISON(VT), getPredicateForVector(DAG, DL, VT), X);
+  }
+
+  if (Subtarget.isNeonAvailable() &&
+      (VT.is64BitVector() || VT.is128BitVector()))
+    return DAG.getNode(AArch64ISD::SQABS, DL, VT, X);
+  return SDValue();
+}
+
 static SDValue performMINMAXCombine(SDNode *N, SelectionDAG &DAG,
                                     const AArch64TargetLowering &TLI) {
   using namespace llvm::SDPatternMatch;
+  if (SDValue V = trySQABSCombine(N, DAG, TLI))
+    return V;
   if (SDValue V = trySQDMULHCombine(N, DAG))
     return V;
 
