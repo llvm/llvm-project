@@ -35,7 +35,7 @@ define ptx_kernel void @sources(i32 noundef %arg, ptr addrspace(1) %global, ptr 
   ret void
 }
 
-define ptx_kernel void @collectives(i32 noundef %mask, i32 noundef %index, i32 %maybe.undef) {
+define ptx_kernel void @collectives(i32 noundef %mask, i32 noundef %index, i32 %maybe_undefined) {
 ; CHECK-LABEL: for function 'collectives'
 ; CHECK-DAG: DIVERGENT: %thread =
 ; CHECK-DAG: DIVERGENT: %frozen.broadcast =
@@ -45,7 +45,6 @@ define ptx_kernel void @collectives(i32 noundef %mask, i32 noundef %index, i32 %
 ; CHECK-DAG: DIVERGENT: %undefined.match.data =
 ; CHECK-DAG: DIVERGENT: %varying.index =
 ; CHECK-DAG: DIVERGENT: %varying.mask =
-; CHECK-DAG: DIVERGENT: %undefined.mask =
 ; CHECK-DAG: DIVERGENT: %unknown.mask =
 ; CHECK-DAG: DIVERGENT: %match.any =
   %thread = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
@@ -67,11 +66,10 @@ define ptx_kernel void @collectives(i32 noundef %mask, i32 noundef %index, i32 %
   %uniform.match.any = call i32 @llvm.nvvm.match.any.sync.i32(i32 %mask, i32 %index)
   %segmented = call i32 @llvm.nvvm.shfl.sync.idx.i32(i32 -1, i32 %thread, i32 0, i32 4111)
   %out.of.range = call i32 @llvm.nvvm.shfl.sync.idx.i32(i32 -1, i32 %thread, i32 16, i32 15)
-  %undefined.match.data = call i32 @llvm.nvvm.match.any.sync.i32(i32 -1, i32 undef)
+  %undefined.match.data = call i32 @llvm.nvvm.match.any.sync.i32(i32 -1, i32 %maybe_undefined)
   %varying.index = call i32 @llvm.nvvm.shfl.sync.idx.i32(i32 -1, i32 %thread, i32 %thread, i32 31)
   %varying.mask = call i32 @llvm.nvvm.vote.ballot.sync(i32 %thread, i1 true)
-  %undefined.mask = call i32 @llvm.nvvm.vote.ballot.sync(i32 undef, i1 true)
-  %unknown.mask = call i32 @llvm.nvvm.vote.ballot.sync(i32 %maybe.undef, i1 true)
+  %unknown.mask = call i32 @llvm.nvvm.vote.ballot.sync(i32 %maybe_undefined, i1 true)
   %match.any = call i32 @llvm.nvvm.match.any.sync.i32(i32 %mask, i32 %thread)
   ret void
 }
