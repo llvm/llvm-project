@@ -1916,8 +1916,8 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
       if (CC == InlineAsm::ConstraintCode::Unknown)
         return error("unknown memory constraint '" + ConstraintStr + "'");
       F.setMemConstraint(CC);
-    } else if (K == InlineAsm::Kind::RegDef || K == InlineAsm::Kind::RegUse ||
-               K == InlineAsm::Kind::RegDefEarlyClobber) {
+    } else if (F.isRegDefKind() || F.isRegUseKind() ||
+               F.isRegDefEarlyClobberKind()) {
       const TargetRegisterClass *RC =
           PFS.Target.getRegClass(ConstraintStr.lower());
       if (!RC)
