@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/Language/D/DLanguage.h"
 #include "Plugins/Language/Rust/RustLanguage.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
@@ -104,6 +105,7 @@ TEST(MangledTest, EmptyForInvalidRustV0Name) {
 }
 
 TEST(MangledTest, ResultForValidDLangName) {
+  SubsystemRAII<DLanguage> subsystems;
   ConstString mangled_name("_Dmain");
   Mangled the_mangled(mangled_name);
   ConstString the_demangled = the_mangled.GetDemangledName();

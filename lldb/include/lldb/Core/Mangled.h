@@ -45,7 +45,6 @@ public:
   /// register, which have no enumerators, are valid values too.
   enum ManglingScheme : uint8_t {
     eManglingSchemeNone = 0,
-    eManglingSchemeD,
     eManglingSchemeSwift,
     /// The first of the schemes that language plugins register with
     /// RegisterManglingScheme().
