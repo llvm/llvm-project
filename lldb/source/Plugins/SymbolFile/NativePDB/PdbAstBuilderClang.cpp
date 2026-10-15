@@ -35,17 +35,18 @@ using namespace llvm::pdb;
 
 namespace {
 struct CreateMethodDecl : public TypeVisitorCallbacks {
-  CreateMethodDecl(PdbIndex &m_index, TypeSystemClang &m_clang,
+  CreateMethodDecl(PdbIndex &m_index, PdbAstBuilderClang &m_ast_builder,
                    TypeIndex func_type_index,
                    clang::FunctionDecl *&function_decl,
                    lldb::opaque_compiler_type_t parent_ty,
                    llvm::StringRef proc_name, llvm::StringRef asm_label,
                    CompilerType func_ct)
-      : m_index(m_index), m_clang(m_clang), func_type_index(func_type_index),
-        function_decl(function_decl), parent_ty(parent_ty),
-        proc_name(proc_name), asm_label(asm_label), func_ct(func_ct) {}
+      : m_index(m_index), m_ast_builder(m_ast_builder),
+        func_type_index(func_type_index), function_decl(function_decl),
+        parent_ty(parent_ty), proc_name(proc_name), asm_label(asm_label),
+        func_ct(func_ct) {}
   PdbIndex &m_index;
-  TypeSystemClang &m_clang;
+  PdbAstBuilderClang &m_ast_builder;
   TypeIndex func_type_index;
   clang::FunctionDecl *&function_decl;
   lldb::opaque_compiler_type_t parent_ty;
@@ -93,11 +94,9 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
     bool is_static = attrs.isStatic();
     bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                          MethodOptions::CompilerGenerated;
-    function_decl = m_clang.AddMethodToCXXRecordType(
-        parent_ty, proc_name, asm_label, func_ct,
-        /*is_virtual=*/is_virtual, /*is_static=*/is_static,
-        /*is_inline=*/false, /*is_explicit=*/false,
-        /*is_attr_used=*/false, /*is_artificial=*/is_artificial);
+    function_decl = m_ast_builder.GetOrCreateMethodDecl(
+        parent_ty, proc_name, asm_label, func_ct, is_virtual, is_static,
+        is_artificial);
   }
 };
 } // namespace
@@ -576,8 +575,8 @@ bool PdbAstBuilderClang::CompleteTagDecl(clang::TagDecl &tag) {
   // Visit all members of this class, then perform any finalization necessary
   // to complete the class.
   CompilerType ct = ToCompilerType(tag_qt);
-  UdtRecordCompleter completer(best_ti, ct, tag, *this, index, m_decl_to_status,
-                               m_cxx_record_map);
+  UdtRecordCompleter completer(best_ti, ct, tag, *this, index,
+                               m_decl_to_status);
   llvm::Error error =
       llvm::codeview::visitMemberRecordStream(field_list.Data, completer);
   completer.complete();
@@ -1001,6 +1000,20 @@ CompilerType PdbAstBuilderClang::GetOrCreateType(PdbTypeSymId type) {
   return ToCompilerType(qt);
 }
 
+clang::CXXMethodDecl *PdbAstBuilderClang::GetOrCreateMethodDecl(
+    lldb::opaque_compiler_type_t parent_ty, llvm::StringRef name,
+    llvm::StringRef asm_label, const CompilerType &method_ct, bool is_virtual,
+    bool is_static, bool is_artificial) {
+  clang::CXXMethodDecl *&method_decl = m_cxx_method_decls[{
+      parent_ty, ConstString(name), method_ct.GetOpaqueQualType()}];
+  if (!method_decl)
+    method_decl = m_clang.AddMethodToCXXRecordType(
+        parent_ty, name, asm_label, method_ct, is_virtual, is_static,
+        /*is_inline=*/false, /*is_explicit=*/false,
+        /*is_attr_used=*/false, is_artificial);
+  return method_decl;
+}
+
 clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
     PdbCompilandSymId func_id, llvm::StringRef func_name, TypeIndex func_ti,
     CompilerType func_ct, uint32_t param_count,
@@ -1016,13 +1029,12 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
             llvm::cast<clang::TypeDecl>(parent));
     lldb::opaque_compiler_type_t parent_opaque_ty =
         ToCompilerType(parent_qt).GetOpaqueQualType();
-    // FIXME: Remove this workaround.
-    auto iter = m_cxx_record_map.find(parent_opaque_ty);
-    if (iter != m_cxx_record_map.end()) {
-      if (iter->getSecond().contains({func_name, func_ct})) {
-        return nullptr;
-      }
-    }
+    // The method may already have been added while completing the class.
+    auto iter =
+        m_cxx_method_decls.find({parent_opaque_ty, ConstString(func_name),
+                                 func_ct.GetOpaqueQualType()});
+    if (iter != m_cxx_method_decls.end())
+      return iter->second;
 
     CVType cvt = index.tpi().getType(func_ti);
     MemberFunctionRecord func_record(static_cast<TypeRecordKind>(cvt.kind()));
@@ -1063,20 +1075,16 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
       if (llvm::Error error = TypeDeserializer::deserializeAs<FieldListRecord>(
               field_list_cvt, field_list))
         llvm::consumeError(std::move(error));
-      CreateMethodDecl process(index, m_clang, func_ti, function_decl,
+      CreateMethodDecl process(index, *this, func_ti, function_decl,
                                parent_opaque_ty, func_name, asm_label, func_ct);
       if (llvm::Error err = visitMemberRecordStream(field_list.Data, process))
         llvm::consumeError(std::move(err));
     }
 
-    if (!function_decl) {
-      function_decl = m_clang.AddMethodToCXXRecordType(
+    if (!function_decl)
+      function_decl = GetOrCreateMethodDecl(
           parent_opaque_ty, func_name, asm_label, func_ct,
-          /*is_virtual=*/false, /*is_static=*/false,
-          /*is_inline=*/false, /*is_explicit=*/false,
-          /*is_attr_used=*/false, /*is_artificial=*/false);
-    }
-    m_cxx_record_map[parent_opaque_ty].insert({func_name, func_ct});
+          /*is_virtual=*/false, /*is_static=*/false, /*is_artificial=*/false);
   } else {
     SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
         m_clang.GetSymbolFile()->GetBackingSymbolFile());
@@ -1732,6 +1740,8 @@ clang::QualType PdbAstBuilderClang::FromCompilerType(CompilerType ct) {
 
 CompilerDeclContext
 PdbAstBuilderClang::ToCompilerDeclContext(clang::DeclContext *context) {
+  if (!context)
+    return CompilerDeclContext();
   return m_clang.CreateDeclContext(context);
 }
 

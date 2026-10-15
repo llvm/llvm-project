@@ -1765,45 +1765,27 @@ bool AArch64InstructionSelector::selectCompareBranch(
 
 /// Returns the element immediate value of a vector shift operand if found.
 /// This needs to detect a splat-like operation, e.g. a G_BUILD_VECTOR.
-static std::optional<int64_t> getVectorShiftImm(Register Reg,
-                                                MachineRegisterInfo &MRI) {
+static std::optional<APInt> getVectorShiftImm(Register Reg,
+                                              MachineRegisterInfo &MRI) {
   assert(MRI.getType(Reg).isVector() && "Expected a *vector* shift operand");
   MachineInstr *OpMI = MRI.getVRegDef(Reg);
-  return getAArch64VectorSplatScalar(*OpMI, MRI);
+  std::optional<Register> Splat = getVectorSplat(*OpMI, MRI);
+  if (!Splat)
+    return std::nullopt;
+  return getIConstantVRegVal(*Splat, MRI);
 }
 
 /// Matches and returns the shift immediate value for a SHL instruction given
 /// a shift operand.
-static std::optional<int64_t> getVectorSHLImm(LLT SrcTy, Register Reg,
-                                              MachineRegisterInfo &MRI) {
-  std::optional<int64_t> ShiftImm = getVectorShiftImm(Reg, MRI);
+static std::optional<uint64_t> getVectorSHLImm(LLT SrcTy, Register Reg,
+                                               MachineRegisterInfo &MRI) {
+  std::optional<APInt> ShiftImm = getVectorShiftImm(Reg, MRI);
   if (!ShiftImm)
     return std::nullopt;
   // Check the immediate is in range for a SHL.
-  int64_t Imm = *ShiftImm;
-  if (Imm < 0)
+  uint64_t Imm = ShiftImm->getZExtValue();
+  if (Imm >= SrcTy.getElementType().getSizeInBits())
     return std::nullopt;
-  switch (SrcTy.getElementType().getSizeInBits()) {
-  default:
-    LLVM_DEBUG(dbgs() << "Unhandled element type for vector shift");
-    return std::nullopt;
-  case 8:
-    if (Imm > 7)
-      return std::nullopt;
-    break;
-  case 16:
-    if (Imm > 15)
-      return std::nullopt;
-    break;
-  case 32:
-    if (Imm > 31)
-      return std::nullopt;
-    break;
-  case 64:
-    if (Imm > 63)
-      return std::nullopt;
-    break;
-  }
   return Imm;
 }
 
@@ -1820,7 +1802,7 @@ bool AArch64InstructionSelector::selectVectorSHL(MachineInstr &I,
 
   // Check if we have a vector of constants on RHS that we can select as the
   // immediate form.
-  std::optional<int64_t> ImmVal = getVectorSHLImm(Ty, Src2Reg, MRI);
+  std::optional<uint64_t> ImmVal = getVectorSHLImm(Ty, Src2Reg, MRI);
 
   unsigned Opc = 0;
   if (Ty == LLT::fixed_vector(2, 64)) {
@@ -2184,7 +2166,7 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
         .addReg(FPRDst);
     return true;
   }
-  case AArch64::G_DUP: {
+  case TargetOpcode::G_SPLAT_VECTOR: {
     // Convert the type from p0 to s64 to help selection.
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
     if (!DstTy.isPointerVector())
@@ -2392,7 +2374,11 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   switch (I.getOpcode()) {
-  case AArch64::G_DUP: {
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    Register Dst = I.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(Dst);
+    if (DstTy.isScalableVector())
+      return false;
     // Before selecting a DUP instruction, check if it is better selected as a
     // MOV or load from a constant pool.
     Register Src = I.getOperand(1).getReg();
@@ -2401,7 +2387,6 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     if (!ValAndVReg)
       return false;
     LLVMContext &Ctx = MF.getFunction().getContext();
-    Register Dst = I.getOperand(0).getReg();
     auto *CV = ConstantDataVector::getSplat(
         MRI.getType(Dst).getNumElements(),
         ConstantInt::get(
@@ -2551,6 +2536,22 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_BRINDIRECT: {
+    const Function &Fn = MF.getFunction();
+    if (std::optional<uint16_t> BADisc =
+            STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn)) {
+      auto MI = MIB.buildInstr(AArch64::BRA, {}, {I.getOperand(0).getReg()});
+      MI.addImm(AArch64PACKey::IA);
+      MI.addImm(*BADisc);
+      MI.addReg(/*AddrDisc=*/AArch64::XZR);
+      I.eraseFromParent();
+      constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+      return true;
+    }
+    // Use table-based selection.
+    return false;
+  }
+
   default:
     return false;
   }
@@ -2674,23 +2675,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
   case TargetOpcode::G_BRCOND:
     return selectCompareBranch(I, MF, MRI);
-
-  case TargetOpcode::G_BRINDIRECT: {
-    const Function &Fn = MF.getFunction();
-    if (std::optional<uint16_t> BADisc =
-            STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn)) {
-      auto MI = MIB.buildInstr(AArch64::BRA, {}, {I.getOperand(0).getReg()});
-      MI.addImm(AArch64PACKey::IA);
-      MI.addImm(*BADisc);
-      MI.addReg(/*AddrDisc=*/AArch64::XZR);
-      I.eraseFromParent();
-      constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
-      return true;
-    }
-    I.setDesc(TII.get(AArch64::BR));
-    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-    return true;
-  }
 
   case TargetOpcode::G_BRJT:
     return selectBrJT(I, MRI);
@@ -2923,6 +2907,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       I.setDesc(TII.get(IsGOTSigned ? AArch64::LOADgotAUTH : AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
       I.addImplicitDefUseOperands(MF);
+      I.setImplicitPhysRegDefsDead();
     } else if (TM.getCodeModel() == CodeModel::Large &&
                !TM.isPositionIndependent()) {
       // Materialize the global using movz/movk instructions.
@@ -3531,8 +3516,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     Function *BAFn = I.getOperand(1).getBlockAddress()->getFunction();
     if (std::optional<uint16_t> BADisc =
             STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(*BAFn)) {
-      MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X16}, {});
-      MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
       MIB.buildInstr(AArch64::MOVaddrPAC)
           .addBlockAddress(I.getOperand(1).getBlockAddress())
           .addImm(AArch64PACKey::IA)
@@ -3562,29 +3545,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       constrainSelectedInstRegOperands(*MovMI, TII, TRI, RBI);
       return true;
     }
-  }
-  case AArch64::G_DUP: {
-    // When the scalar of G_DUP is an s8/s16 gpr, they can't be selected by
-    // imported patterns. Do it manually here. Avoiding generating s16 gpr is
-    // difficult because at RBS we may end up pessimizing the fpr case if we
-    // decided to add an anyextend to fix this. Manual selection is the most
-    // robust solution for now.
-    if (RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI)->getID() !=
-        AArch64::GPRRegBankID)
-      return false; // We expect the fpr regbank case to be imported.
-    LLT VecTy = MRI.getType(I.getOperand(0).getReg());
-    if (VecTy == LLT::fixed_vector(8, 8))
-      I.setDesc(TII.get(AArch64::DUPv8i8gpr));
-    else if (VecTy == LLT::fixed_vector(16, 8))
-      I.setDesc(TII.get(AArch64::DUPv16i8gpr));
-    else if (VecTy == LLT::fixed_vector(4, 16))
-      I.setDesc(TII.get(AArch64::DUPv4i16gpr));
-    else if (VecTy == LLT::fixed_vector(8, 16))
-      I.setDesc(TII.get(AArch64::DUPv8i16gpr));
-    else
-      return false;
-    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-    return true;
   }
   case TargetOpcode::G_BUILD_VECTOR:
     return selectBuildVector(I, MRI);
@@ -6891,6 +6851,8 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)
         .addImm(Addend)
+        .setOperandDead(8) // implicit-def $x17
+        .setOperandDead(9) // implicit-def $nzcv
         .constrainAllUses(TII, TRI, RBI);
     MIB.buildCopy({DstReg}, Register(AArch64::X16));
 
@@ -6930,7 +6892,6 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
         extractPtrauthBlendDiscriminators(PACDisc, MRI);
 
     MIB.buildCopy({AArch64::X16}, {ValReg});
-    MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
     MIB.buildInstr(AArch64::AUTPAC)
         .addImm(AUTKey)
         .addImm(AUTConstDiscC)
@@ -6938,6 +6899,8 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
         .addImm(PACKey)
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)
+        .setOperandDead(7) // implicit-def $x17
+        .setOperandDead(8) // implicit-def $nzcv
         .constrainAllUses(TII, TRI, RBI);
     MIB.buildCopy({DstReg}, Register(AArch64::X16));
 
@@ -6974,6 +6937,9 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
         .addImm(PACKey)
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)
+        .setOperandDead(5) // implicit-def $x15
+        .setOperandDead(6) // implicit-def $x16
+        .setOperandDead(7) // implicit-def $nzcv
         .constrainAllUses(TII, TRI, RBI);
 
     MIB.buildCopy({DstReg}, Register(AArch64::X17));
@@ -6994,24 +6960,26 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
 
     if (STI.isX16X17Safer()) {
       MIB.buildCopy({AArch64::X16}, {ValReg});
-      MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
       MIB.buildInstr(AArch64::AUTx16x17)
           .addImm(AUTKey)
           .addImm(AUTConstDiscC)
           .addUse(AUTAddrDisc)
+          .setOperandDead(4) // implicit-def $x17
+          .setOperandDead(5) // implicit-def $nzcv
           .constrainAllUses(TII, TRI, RBI);
       MIB.buildCopy({DstReg}, Register(AArch64::X16));
     } else {
       Register ScratchReg =
           MRI.createVirtualRegister(&AArch64::GPR64commonRegClass);
-      MIB.buildInstr(AArch64::AUTxMxN)
-          .addDef(DstReg)
-          .addDef(ScratchReg)
-          .addUse(ValReg)
-          .addImm(AUTKey)
-          .addImm(AUTConstDiscC)
-          .addUse(AUTAddrDisc)
-          .constrainAllUses(TII, TRI, RBI);
+      auto Auth = MIB.buildInstr(AArch64::AUTxMxN)
+                      .addDef(DstReg)
+                      .addDef(ScratchReg)
+                      .addUse(ValReg)
+                      .addImm(AUTKey)
+                      .addImm(AUTConstDiscC)
+                      .addUse(AUTAddrDisc);
+      Auth->setImplicitPhysRegDefsDead();
+      Auth.constrainAllUses(TII, TRI, RBI);
     }
 
     RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
@@ -7214,8 +7182,6 @@ bool AArch64InstructionSelector::selectPtrAuthGlobalValue(
   // - GOT load for non-extern_weak -> LOADgotPAC
   //   Note that we disallow extern_weak refs to avoid null checks later.
   if (!GV->hasExternalWeakLinkage()) {
-    MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X16}, {});
-    MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
     MIB.buildInstr(NeedsGOTLoad ? AArch64::LOADgotPAC : AArch64::MOVaddrPAC)
         .addGlobalAddress(GV, Offset)
         .addImm(Key)
@@ -7374,6 +7340,30 @@ AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
                        .addReg(SubSrcReg);
       constrainSelectedInstRegOperands(*NegMI, TII, TRI, RBI);
       MIB.addReg(NegReg);
+    }}};
+  }
+
+  // If shifting by N-X where N == -1 mod ShiftWidth, then just shift by ~X
+  // to generate a NOT (MVN) instead of a SUB from a constant.
+  Register NotSrcReg;
+  int64_t NotImm;
+  if (MRI.hasOneUse(ShAmtReg) &&
+      mi_match(ShAmtReg, MRI, m_GSub(m_ICst(NotImm), m_Reg(NotSrcReg))) &&
+      (NotImm % ShiftWidth == ShiftWidth - 1)) {
+    return {{[=](MachineInstrBuilder &MIB) {
+      MachineInstr *I = MIB.getInstr();
+      MachineRegisterInfo &MRI2 = I->getMF()->getRegInfo();
+      const TargetRegisterClass &RC =
+          ShiftWidth == 32 ? AArch64::GPR32RegClass : AArch64::GPR64RegClass;
+      unsigned NotOpc = ShiftWidth == 32 ? AArch64::ORNWrr : AArch64::ORNXrr;
+      Register ZeroReg = ShiftWidth == 32 ? AArch64::WZR : AArch64::XZR;
+      Register NotReg = MRI2.createVirtualRegister(&RC);
+      auto NotMI = BuildMI(*I->getParent(), *I, I->getDebugLoc(),
+                           TII.get(NotOpc), NotReg)
+                       .addReg(ZeroReg)
+                       .addReg(NotSrcReg);
+      constrainSelectedInstRegOperands(*NotMI, TII, TRI, RBI);
+      MIB.addReg(NotReg);
     }}};
   }
 
@@ -8248,7 +8238,7 @@ AArch64InstructionSelector::selectCVTFixedPointBase(const MachineOperand &Root,
   Register Reg = Root.getReg();
   MachineInstr *Dup = getDefIgnoringCopies(Reg, MRI);
 
-  if (Dup && Dup->getOpcode() == AArch64::G_DUP)
+  if (Dup && Dup->getOpcode() == TargetOpcode::G_SPLAT_VECTOR)
     Reg = Dup->getOperand(1).getReg();
 
   std::optional<ValueAndVReg> CstVal =

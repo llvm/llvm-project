@@ -33,8 +33,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 
 template <class _Iter, class _Sent, class _Type, class _Proj, class _Pred>
-_LIBCPP_HIDE_FROM_ABI constexpr _Iter
-__replace_if_impl(_Iter __first, _Sent __last, _Pred& __pred, const _Type& __new_value, _Proj& __proj) {
+constexpr _Iter __replace_if_impl(_Iter __first, _Sent __last, _Pred& __pred, const _Type& __new_value, _Proj& __proj) {
   for (; __first != __last; ++__first) {
     if (std::invoke(__pred, std::invoke(__proj, *__first)))
       *__first = __new_value;
@@ -49,7 +48,7 @@ struct __replace_if {
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
     requires indirectly_writable<_Iter, const _Type&>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iter
+  constexpr _Iter
   operator()(_Iter __first, _Sent __last, _Pred __pred, const _Type& __new_value, _Proj __proj = {}) const {
     return ranges::__replace_if_impl(std::move(__first), std::move(__last), __pred, __new_value, __proj);
   }
@@ -59,7 +58,7 @@ struct __replace_if {
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
     requires indirectly_writable<iterator_t<_Range>, const _Type&>
-  _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range>
+  constexpr borrowed_iterator_t<_Range>
   operator()(_Range&& __range, _Pred __pred, const _Type& __new_value, _Proj __proj = {}) const {
     return ranges::__replace_if_impl(ranges::begin(__range), ranges::end(__range), __pred, __new_value, __proj);
   }

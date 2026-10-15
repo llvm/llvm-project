@@ -3047,27 +3047,27 @@ define <4 x i64> @test_pr28312(<4 x ptr> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i64
 ; X86-KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; X86-KNL-NEXT:    kmovw %k0, %ebx
 ; X86-KNL-NEXT:    testb $1, %bl
-; X86-KNL-NEXT:    vmovd %xmm0, %eax
+; X86-KNL-NEXT:    vmovd %xmm0, %edx
 ; X86-KNL-NEXT:    # implicit-def: $ymm1
 ; X86-KNL-NEXT:    je .LBB42_2
 ; X86-KNL-NEXT:  # %bb.1: # %cond.load
 ; X86-KNL-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; X86-KNL-NEXT:  .LBB42_2: # %else
 ; X86-KNL-NEXT:    testb $2, %bl
-; X86-KNL-NEXT:    vpextrd $1, %xmm0, %ecx
+; X86-KNL-NEXT:    vpextrd $1, %xmm0, %eax
 ; X86-KNL-NEXT:    je .LBB42_4
 ; X86-KNL-NEXT:  # %bb.3: # %cond.load1
-; X86-KNL-NEXT:    vpinsrd $2, (%ecx), %xmm1, %xmm2
-; X86-KNL-NEXT:    vpinsrd $3, 4(%ecx), %xmm2, %xmm2
+; X86-KNL-NEXT:    vpinsrd $2, (%eax), %xmm1, %xmm2
+; X86-KNL-NEXT:    vpinsrd $3, 4(%eax), %xmm2, %xmm2
 ; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
 ; X86-KNL-NEXT:  .LBB42_4: # %else2
 ; X86-KNL-NEXT:    testb $4, %bl
-; X86-KNL-NEXT:    vpextrd $2, %xmm0, %edx
+; X86-KNL-NEXT:    vpextrd $2, %xmm0, %ecx
 ; X86-KNL-NEXT:    je .LBB42_6
 ; X86-KNL-NEXT:  # %bb.5: # %cond.load4
-; X86-KNL-NEXT:    vpbroadcastd (%edx), %ymm2
+; X86-KNL-NEXT:    vpbroadcastd (%ecx), %ymm2
 ; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4],ymm1[5,6,7]
-; X86-KNL-NEXT:    vpbroadcastd 4(%edx), %ymm2
+; X86-KNL-NEXT:    vpbroadcastd 4(%ecx), %ymm2
 ; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4],ymm2[5],ymm1[6,7]
 ; X86-KNL-NEXT:  .LBB42_6: # %else5
 ; X86-KNL-NEXT:    testb $8, %bl
@@ -3131,15 +3131,15 @@ define <4 x i64> @test_pr28312(<4 x ptr> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i64
 ; X86-KNL-NEXT:    testb $2, %bl
 ; X86-KNL-NEXT:    je .LBB42_12
 ; X86-KNL-NEXT:  .LBB42_11: # %cond.load17
-; X86-KNL-NEXT:    vpinsrd $2, (%ecx), %xmm0, %xmm2
-; X86-KNL-NEXT:    vpinsrd $3, 4(%ecx), %xmm2, %xmm2
+; X86-KNL-NEXT:    vpinsrd $2, (%eax), %xmm0, %xmm2
+; X86-KNL-NEXT:    vpinsrd $3, 4(%eax), %xmm2, %xmm2
 ; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; X86-KNL-NEXT:    testb $4, %bl
 ; X86-KNL-NEXT:    je .LBB42_14
 ; X86-KNL-NEXT:  .LBB42_13: # %cond.load23
-; X86-KNL-NEXT:    vpbroadcastd (%edx), %ymm2
+; X86-KNL-NEXT:    vpbroadcastd (%ecx), %ymm2
 ; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4],ymm0[5,6,7]
-; X86-KNL-NEXT:    vpbroadcastd 4(%edx), %ymm2
+; X86-KNL-NEXT:    vpbroadcastd 4(%ecx), %ymm2
 ; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm2[5],ymm0[6,7]
 ; X86-KNL-NEXT:    testb $8, %bl
 ; X86-KNL-NEXT:    jne .LBB42_15
@@ -3149,15 +3149,15 @@ define <4 x i64> @test_pr28312(<4 x ptr> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i64
 ; X86-KNL-NEXT:    testb $2, %bl
 ; X86-KNL-NEXT:    je .LBB42_20
 ; X86-KNL-NEXT:  .LBB42_19: # %cond.load42
-; X86-KNL-NEXT:    vpinsrd $2, (%ecx), %xmm2, %xmm3
-; X86-KNL-NEXT:    vpinsrd $3, 4(%ecx), %xmm3, %xmm3
+; X86-KNL-NEXT:    vpinsrd $2, (%eax), %xmm2, %xmm3
+; X86-KNL-NEXT:    vpinsrd $3, 4(%eax), %xmm3, %xmm3
 ; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm3[0,1,2,3],ymm2[4,5,6,7]
 ; X86-KNL-NEXT:    testb $4, %bl
 ; X86-KNL-NEXT:    je .LBB42_22
 ; X86-KNL-NEXT:  .LBB42_21: # %cond.load48
-; X86-KNL-NEXT:    vpbroadcastd (%edx), %ymm3
+; X86-KNL-NEXT:    vpbroadcastd (%ecx), %ymm3
 ; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm3[4],ymm2[5,6,7]
-; X86-KNL-NEXT:    vpbroadcastd 4(%edx), %ymm3
+; X86-KNL-NEXT:    vpbroadcastd 4(%ecx), %ymm3
 ; X86-KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3,4],ymm3[5],ymm2[6,7]
 ; X86-KNL-NEXT:    testb $8, %bl
 ; X86-KNL-NEXT:    jne .LBB42_23

@@ -1840,7 +1840,7 @@ static void RemovePreallocated(Function *F) {
 
   auto *M = F->getParent();
 
-  IRBuilder<> Builder(M->getContext());
+  IRBuilder<> Builder(*M);
 
   // Cannot modify users() while iterating over it, so make a copy.
   SmallVector<User *, 4> PreallocatedCalls(F->users());
@@ -2373,7 +2373,7 @@ static bool IsEmptyAtExitFunction(const Function &Fn) {
     return false;
 
   for (const auto &I : Fn.getEntryBlock()) {
-    if (I.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(I))
       continue;
     if (isa<ReturnInst>(I))
       return true;

@@ -2694,20 +2694,9 @@ __arm_set_fpm_overflow_cvt(fpm_t __fpm, enum __ARM_FPM_OVERFLOW __behaviour) {
   return (__fpm & ~0x8000ull) | ((fpm_t)__behaviour << 15u);
 }
 
-static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
-__arm_set_fpm_lscale(fpm_t __fpm, uint64_t __scale) {
-  return (__fpm & ~0x7f0000ull) | (__scale << 16u);
-}
-
-static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
-__arm_set_fpm_nscale(fpm_t __fpm, int64_t __scale) {
-  return (__fpm & ~0xff000000ull) | (((fpm_t)__scale & 0xffu) << 24u);
-}
-
-static __inline__ fpm_t __attribute__((__always_inline__, __nodebug__))
-__arm_set_fpm_lscale2(fpm_t __fpm, uint64_t __scale) {
-  return (uint32_t)__fpm | (__scale << 32u);
-}
+__inline__ fpm_t __attribute__((__always_inline__, __nodebug__)) __arm_set_fpm_lscale(fpm_t __fpm, uint64_t __scale);
+__inline__ fpm_t __attribute__((__always_inline__, __nodebug__)) __arm_set_fpm_nscale(fpm_t __fpm, int64_t __scale);
+__inline__ fpm_t __attribute__((__always_inline__, __nodebug__))  __arm_set_fpm_lscale2(fpm_t __fpm, uint64_t __scale);
 
 )";
 

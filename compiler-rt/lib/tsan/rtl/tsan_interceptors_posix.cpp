@@ -2211,19 +2211,12 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // StackTrace::GetNestInstructionPc(pc) is used because return address is
   // expected, OutputReport() will undo this.
   ObtainCurrentStack(thr, StackTrace::GetNextInstructionPc(pc), &stack);
+  if (IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack))
+    return;
   ScopedReport rep(ReportTypeErrnoInSignal);
-  bool suppressed;
-  // Release locks before symbolizing and outputting the report to avoid
-  // deadlocks.
-  {
-    ThreadRegistryLock l(&ctx->thread_registry);
-    rep.SetSigNum(sig);
-    suppressed = IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack);
-    if (!suppressed)
-      rep.AddStack(stack, true);
-  }
-  if (!suppressed)
-    OutputReport(thr, rep);
+  rep.SetSigNum(sig);
+  rep.AddStack(stack, true);
+  OutputReport(thr, rep);
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,

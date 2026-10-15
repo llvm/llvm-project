@@ -180,13 +180,18 @@ private:
       const ModuleDeps &Deps,
       llvm::function_ref<void(CowCompilerInvocation &)> Optimize) const;
 
-  /// Collect module map files for given modules.
-  llvm::DenseSet<const FileEntry *>
-  collectModuleMapFiles(ArrayRef<ModuleID> ClangModuleDeps) const;
+  /// Collect the module maps for the module dependencies that are named with
+  /// -fmodule-file.
+  ///
+  /// \param ModuleMapFiles The list of module map files to append for the
+  /// invocation, if needed.
+  /// \param SeenModuleMapFiles The uniqued set of module maps accounted for.
+  /// \param ClangModuleDeps The module dependencies whose module maps to add.
+  void collectModuleMapFiles(
+      std::vector<std::string> &ModuleMapFiles,
+      llvm::SmallDenseSet<const FileEntry *, 16> &SeenModuleMapFiles,
+      ArrayRef<ModuleID> ClangModuleDeps) const;
 
-  /// Add module map files to the invocation, if needed.
-  void addModuleMapFiles(CompilerInvocation &CI,
-                         ArrayRef<ModuleID> ClangModuleDeps) const;
   /// Add module files (pcm) to the invocation, if needed.
   void addModuleFiles(CompilerInvocation &CI,
                       ArrayRef<ModuleID> ClangModuleDeps) const;

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "artifacts": [
+        {
+          "length": 40,
+          "location": {
+            "index": 0,
+            "uri": "file:///src/c.cpp"
+          },
+          "mimeType": "text/plain",
+          "roles": [
+            "resultFile"
+          ]
+        }
+      ],
+      "columnKind": "unicodeCodePoints",
+      "results": [
+        {
+          "level": "note",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                  "uri": "file:///src/c.cpp"
+                },
+                "region": {
+                  "endColumn": 9,
+                  "endLine": 2,
+                  "startColumn": 5,
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "multi-level pointer indirection is not yet rewritten"
+          },
+          "ruleId": "cpp-bounded-buffers-skipped",
+          "ruleIndex": 0
+        }
+      ],
+      "tool": {
+        "driver": {
+          "fullName": "clang ScalableStaticAnalysisFramework source transformation (cpp-bounded-buffers)",
+          "informationUri": "https://clang.llvm.org/docs/UsersManual.html",
+          "language": "en-US",
+          "name": "clang-ssaf",
+          "rules": [
+            {
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning",
+                "rank": -1
+              },
+              "fullDescription": {
+                "text": ""
+              },
+              "id": "cpp-bounded-buffers-skipped",
+              "name": ""
+            }
+          ],
+          "version": "24.0.0git"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}
