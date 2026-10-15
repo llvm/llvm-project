@@ -186,7 +186,6 @@ struct MissingFeatures {
   static bool appleArm64CXXABI() { return false; }
   static bool appleKext() { return false; }
   static bool asmGoto() { return false; }
-  static bool asmLabelAttr() { return false; }
   static bool asmLLVMAssume() { return false; }
   static bool asmMemoryEffects() { return false; }
   static bool asmUnwindClobber() { return false; }
