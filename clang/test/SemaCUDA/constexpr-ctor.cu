@@ -13,7 +13,8 @@ struct A {
 
 template <class T, int x> struct B {
   T a;
-  constexpr B() = default; // dev-error 2{{reference to __host__ function 'A' in __host__ __device__ function}}
+  constexpr B() = default; // dev-error 2{{reference to __host__ function 'A' in __host__ __device__ function}} \
+                             // dev-note 2{{in HD-promoted function 'B'}}
 };
 
 __host__ void f() { B<A, 1> x; }
