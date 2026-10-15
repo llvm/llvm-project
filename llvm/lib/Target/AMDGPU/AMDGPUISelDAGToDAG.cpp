@@ -82,6 +82,14 @@ static bool isExtractHiElt(SDValue In, SDValue &Out) {
   return false;
 }
 
+static bool isLoEltExtractHi(SDValue BV) {
+  SDValue Lo = stripBitcast(BV.getOperand(0));
+  if (Lo.getOpcode() == ISD::FNEG)
+    Lo = stripBitcast(Lo.getOperand(0));
+  SDValue Unused;
+  return isExtractHiElt(Lo, Unused);
+}
+
 static SDValue createVOP3PSrc32FromLo16(SDValue Lo, SDValue Src,
                                         llvm::SelectionDAG *CurDAG,
                                         const GCNSubtarget *Subtarget) {
@@ -3703,8 +3711,25 @@ bool AMDGPUDAGToDAGISel::SelectVOP3OMods(SDValue In, SDValue &Src,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsPkFmaOpSel0(SDValue In, SDValue &Src,
+                                                    SDValue &SrcMods) const {
+  return SelectVOP3PMods(In, Src, SrcMods, false,
+                         Subtarget->hasPkF32InvalidOpSel() &&
+                             In.getValueType() == MVT::v2f32);
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsPkAddMulOpSel0(SDValue In, SDValue &Src,
+                                                       SDValue &SrcMods) const {
+  if (!SelectVOP3PMods(In, Src, SrcMods))
+    return false;
+  return !(
+      Subtarget->hasPkF32InvalidOpSel() && In.getValueType() == MVT::v2f32 &&
+      (cast<ConstantSDNode>(SrcMods)->getZExtValue() & SISrcMods::OP_SEL_0));
+}
+
 bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
-                                         SDValue &SrcMods, bool IsDOT) const {
+                                         SDValue &SrcMods, bool IsDOT,
+                                         bool NoOpSel0) const {
   unsigned Mods = SISrcMods::NONE;
   Src = In;
 
@@ -3718,7 +3743,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
   bool HasOpSel = Src.getValueSizeInBits() != 128;
 
   if (Src.getOpcode() == ISD::BUILD_VECTOR && Src.getNumOperands() == 2 &&
-      (!IsDOT || !Subtarget->hasDOTOpSelHazard())) {
+      (!IsDOT || !Subtarget->hasDOTOpSelHazard()) &&
+      !(NoOpSel0 && isLoEltExtractHi(Src))) {
     unsigned VecMods = Mods;
 
     SDValue Lo = stripBitcast(Src.getOperand(0));
@@ -3827,7 +3853,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
     auto *SVN = cast<ShuffleVectorSDNode>(Src);
     ArrayRef<int> Mask = SVN->getMask();
 
-    if (Mask[0] < 2 && Mask[1] < 2) {
+    if (Mask[0] < 2 && Mask[1] < 2 && !(NoOpSel0 && Mask[0] == 1)) {
       // src1 should be undef.
       SDValue ShuffleSrc = SVN->getOperand(0);
 

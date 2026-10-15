@@ -4688,22 +4688,6 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_EXTRACT_VECTOR_ELT(I);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     return selectG_INSERT_VECTOR_ELT(I);
-  case TargetOpcode::G_FMA: {
-    if (!STI.hasPkF32InvalidOpSel())
-      return selectImpl(I, *CoverageInfo);
-
-    Register VReg = I.getOperand(0).getReg();
-    if (!selectImpl(I, *CoverageInfo))
-      return false;
-
-    MachineInstr *Sel = MRI->getVRegDef(VReg);
-    // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
-    if (Sel && Sel->getOpcode() == AMDGPU::V_PK_FMA_F32 &&
-        !TII.isLegalPkFMAF32OpSel(*Sel))
-      TII.decomposePkFMAF32(*Sel, *MRI);
-
-    return true;
-  }
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_NORET:
@@ -5402,7 +5386,8 @@ static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat, Register NewReg,
 }
 
 std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
-    Register RootReg, const MachineRegisterInfo &MRI, bool IsDOT) const {
+    Register RootReg, const MachineRegisterInfo &MRI, bool IsDOT,
+    bool NoOpSel0) const {
   unsigned Mods = 0;
   // No modification if Root type is not form of <2 x Type>.
   if (isVectorOfTwoOrScalar(RootReg, MRI) != TypeClass::VECTOR_OF_TWO) {
@@ -5455,9 +5440,13 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
     for (int J = StatlistLo.size() - 1; J >= 0; J--) {
       if (StatlistHi[I].first == StatlistLo[J].first &&
           isValidToPack(StatlistHi[I].second, StatlistLo[J].second,
-                        StatlistHi[I].first, RootReg, TII, MRI))
-        return {StatlistHi[I].first,
-                updateMods(StatlistHi[I].second, StatlistLo[J].second, Mods)};
+                        StatlistHi[I].first, RootReg, TII, MRI)) {
+        unsigned NewMods =
+            updateMods(StatlistHi[I].second, StatlistLo[J].second, Mods);
+        if (NoOpSel0 && (NewMods & SISrcMods::OP_SEL_0))
+          continue;
+        return {StatlistHi[I].first, NewMods};
+      }
     }
   }
   // Packed instructions do not have abs modifiers.
@@ -5509,16 +5498,19 @@ getLegalRegBank(Register NewReg, Register RootReg, MachineInstr &Use,
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PRetHelper(MachineOperand &Root,
-                                                bool IsDOT) const {
+                                                bool IsDOT,
+                                                bool NoOpSel0) const {
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
   Register Reg;
   unsigned Mods;
-  std::tie(Reg, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI, IsDOT);
+  std::tie(Reg, Mods) =
+      selectVOP3PModsImpl(Root.getReg(), MRI, IsDOT, NoOpSel0);
 
-  Reg = getLegalRegBank(Reg, Root.getReg(), *Root.getParent(), RBI, MRI, TRI,
-                        TII);
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Reg); },
+      [=, &Root, &MRI](MachineInstrBuilder &MIB) {
+        MIB.addReg(getLegalRegBank(Reg, Root.getReg(), *MIB.getInstr(), RBI,
+                                   MRI, TRI, TII));
+      },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
@@ -5526,6 +5518,28 @@ AMDGPUInstructionSelector::selectVOP3PRetHelper(MachineOperand &Root,
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PMods(MachineOperand &Root) const {
 
+  return selectVOP3PRetHelper(Root);
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PModsPkFmaOpSel0(
+    MachineOperand &Root) const {
+  MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
+  LLT Ty = MRI.getType(Root.getReg());
+  bool NoOpSel0 = Subtarget->hasPkF32InvalidOpSel() && Ty.isFixedVector() &&
+                  Ty.getNumElements() == 2 && Ty.getScalarSizeInBits() == 32;
+  return selectVOP3PRetHelper(Root, /*IsDOT=*/false, NoOpSel0);
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PModsPkAddMulOpSel0(
+    MachineOperand &Root) const {
+  MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
+  LLT Ty = MRI.getType(Root.getReg());
+  if (Subtarget->hasPkF32InvalidOpSel() && Ty.isFixedVector() &&
+      Ty.getNumElements() == 2 && Ty.getScalarSizeInBits() == 32 &&
+      (selectVOP3PModsImpl(Root.getReg(), MRI).second & SISrcMods::OP_SEL_0))
+    return std::nullopt;
   return selectVOP3PRetHelper(Root);
 }
 
