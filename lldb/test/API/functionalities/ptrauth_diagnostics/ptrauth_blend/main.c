@@ -9,7 +9,5 @@ int main() {
   struct mytype s;
   s.p = &x;
   struct mytype *s_ptr = &s;
-  //% self.filecheck("expr -j 0 -- *s_ptr->p", "main.c")
-  // CHECK: (int) {{.*}} = 123
-  return 0;
+  return 0; // break here
 }
