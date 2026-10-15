@@ -13,12 +13,28 @@
 ;    doubled: entry count 201. The remapping file's content is irrelevant; the
 ;    rule in it matches nothing in this test. A follow-up PR will fix this.
 ;
+; The profile also carries a vtable type record at foo's indirect callsite. The
+; per-location vtable type map is the one consumer that rejects duplicate keys,
+; so decoding foo twice additionally surfaces as a "Duplicate vtable type"
+; warning (a build error under -Werror=backend-plugin). No warning is emitted
+; without the remapping file.
+;
 ; bar(int) is read exactly once in both cases (51).
 ;
-; RUN: llvm-profdata merge -sample -extbinary %S/Inputs/remapper-reread-loaded-profile.prof -o %t.afdo
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.afdo -salvage-stale-profile -salvage-unused-profile -S | FileCheck %s --check-prefixes=CHECK,NOREMAP
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.afdo -sample-profile-remapping-file=%S/Inputs/remapper-reread-loaded-profile.map -salvage-stale-profile -salvage-unused-profile -S | FileCheck %s --check-prefixes=CHECK,REMAP
+; RUN: llvm-profdata merge -sample -extbinary -extbinary-write-vtable-type-prof \
+; RUN:   %S/Inputs/remapper-reread-loaded-profile.prof -o %t.afdo
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.afdo \
+; RUN:   -salvage-stale-profile -salvage-unused-profile -S 2>&1 \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,NOREMAP \
+; RUN:       --implicit-check-not='Duplicate vtable type'
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.afdo \
+; RUN:   -sample-profile-remapping-file=%S/Inputs/remapper-reread-loaded-profile.map \
+; RUN:   -salvage-stale-profile -salvage-unused-profile -S 2>&1 \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,REMAP
 
+; FIXME: foo's vtable record is decoded twice; the second copy is rejected with
+; this warning. It should not be emitted.
+; REMAP: warning: {{.*}}Duplicate vtable type _ZTV4Base at the same location
 ; CHECK: define {{.*}} @_Z3fooP4Basei({{.*}} !prof ![[FOO_ENTRY:[0-9]+]]
 ; CHECK: br i1 %cmp, label %if.then, label %if.end, {{.*}} !prof ![[FOO_BR:[0-9]+]]
 ; CHECK: define {{.*}} @_ZN2ns3barEl({{.*}} !prof ![[BAR_ENTRY:[0-9]+]]
