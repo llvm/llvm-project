@@ -3029,9 +3029,10 @@ TEST(YAMLIO, TestEscaped) {
   // unicode-scalar level escape like \uNNNN (at the YAML level), and don't
   // just pass the UTF-8 byte sequence through as with quoted printables.
   {
-    const unsigned char foobar[10] = {'f',  'o',  'o', 0xE2,
-                                      0x80, 0x8B, // UTF-8 of U+200B
-                                      'b',  'a',  'r', 0x0};
+    const unsigned char foobar[10] = {'f', 'o', 'o',
+                                      0xE2, 0x80, 0x8B, // UTF-8 of U+200B
+                                      'b', 'a', 'r',
+                                      0x0};
     TestEscaped((char const *)foobar, "\"foo\\u200Bbar\"");
   }
 }
