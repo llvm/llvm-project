@@ -1008,11 +1008,17 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS64, P0}, {{Vgpr64}, {VgprP0, VgprV2S64}}})
       .Any({{DivS64, P1}, {{Vgpr64}, {VgprP1, VgprV2S64}}});
 
-  addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_CMPSWAP}, Standard)
-      .Div(S32, {{Vgpr32},
-                 {Vgpr32, Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Div(S64, {{Vgpr64},
-                 {Vgpr64, Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
+  addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_CMPSWAP})
+      .Any({{DivS32, S32, S32, V4S32},
+            {{Vgpr32},
+             {Vgpr32, Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivS64, S64, S64, V4S32},
+            {{Vgpr64},
+             {Vgpr64, Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivS32, S32, S32, S32},
+            {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivS64, S64, S64, S32},
+            {{Vgpr64}, {Vgpr64, Vgpr64, Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_ADD, G_AMDGPU_BUFFER_ATOMIC_AND,
                     G_AMDGPU_BUFFER_ATOMIC_DEC, G_AMDGPU_BUFFER_ATOMIC_FMAX,
@@ -1020,10 +1026,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     G_AMDGPU_BUFFER_ATOMIC_OR, G_AMDGPU_BUFFER_ATOMIC_SMAX,
                     G_AMDGPU_BUFFER_ATOMIC_SMIN, G_AMDGPU_BUFFER_ATOMIC_SUB,
                     G_AMDGPU_BUFFER_ATOMIC_SWAP, G_AMDGPU_BUFFER_ATOMIC_UMAX,
-                    G_AMDGPU_BUFFER_ATOMIC_UMIN, G_AMDGPU_BUFFER_ATOMIC_XOR},
-                   Standard)
-      .Div(S32, {{Vgpr32}, {Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Div(S64, {{Vgpr64}, {Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
+                    G_AMDGPU_BUFFER_ATOMIC_UMIN, G_AMDGPU_BUFFER_ATOMIC_XOR})
+      .Any({{DivS32, S32, V4S32},
+            {{Vgpr32}, {Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivS64, S64, V4S32},
+            {{Vgpr64}, {Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivS32, S32, S32},
+            {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivS64, S64, S32},
+            {{Vgpr64}, {Vgpr64, Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   bool hasSMRDx3 = ST->hasScalarDwordx3Loads();
   bool hasSMRDSmall = ST->hasScalarSubwordLoads();
@@ -1261,51 +1272,110 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   // clang-format on
 
   addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD, G_AMDGPU_BUFFER_LOAD_FORMAT,
-                    G_AMDGPU_TBUFFER_LOAD_FORMAT},
-                   StandardB)
-      .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Div(B64, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B64, {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Div(B96, {{VgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B96, {{UniInVgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Div(B128, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B128, {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
+                    G_AMDGPU_TBUFFER_LOAD_FORMAT})
+      .Any({{DivB32, V4S32},
+            {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB32, V4S32},
+            {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB64, V4S32},
+            {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB64, V4S32},
+            {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB96, V4S32},
+            {{VgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB96, V4S32},
+            {{UniInVgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB128, V4S32},
+            {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB128, V4S32},
+            {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB32, S32}, {{VgprB32}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB32, S32},
+            {{UniInVgprB32}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB64, S32}, {{VgprB64}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB64, S32},
+            {{UniInVgprB64}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB96, S32}, {{VgprB96}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB96, S32},
+            {{UniInVgprB96}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB128, S32}, {{VgprB128}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB128, S32},
+            {{UniInVgprB128}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD_USHORT, G_AMDGPU_BUFFER_LOAD_UBYTE,
-                    G_AMDGPU_BUFFER_LOAD_SSHORT, G_AMDGPU_BUFFER_LOAD_SBYTE},
-                   StandardB)
-      .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
+                    G_AMDGPU_BUFFER_LOAD_SSHORT, G_AMDGPU_BUFFER_LOAD_SBYTE})
+      .Any({{DivB32, V4S32},
+            {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB32, V4S32},
+            {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB32, S32}, {{VgprB32}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB32, S32},
+            {{UniInVgprB32}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   addRulesForGOpcs(
-      {G_AMDGPU_BUFFER_LOAD_UBYTE_TFE, G_AMDGPU_BUFFER_LOAD_USHORT_TFE},
-      StandardB)
-      .Div(B64, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B64, {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
+      {G_AMDGPU_BUFFER_LOAD_UBYTE_TFE, G_AMDGPU_BUFFER_LOAD_USHORT_TFE})
+      .Any({{DivB64, V4S32},
+            {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB64, V4S32},
+            {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB64, S32}, {{VgprB64}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB64, S32},
+            {{UniInVgprB64}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD_TFE, G_AMDGPU_BUFFER_LOAD_FORMAT_TFE,
-                    G_AMDGPU_BUFFER_LOAD_FORMAT_D16_TFE},
-                   StandardB)
-      .Div(B64, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B64, {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Div(B96, {{VgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B96, {{UniInVgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Div(B128, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B128, {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Any({{DivB160}, {{VgprB160}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
-      .Any({{UniB160},
-            {{UniInVgprB160}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
+                    G_AMDGPU_BUFFER_LOAD_FORMAT_D16_TFE})
+      .Any({{DivB64, V4S32},
+            {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB64, V4S32},
+            {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB96, V4S32},
+            {{VgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB96, V4S32},
+            {{UniInVgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB128, V4S32},
+            {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB128, V4S32},
+            {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB160, V4S32},
+            {{VgprB160}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB160, V4S32},
+            {{UniInVgprB160}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB64, S32}, {{VgprB64}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB64, S32},
+            {{UniInVgprB64}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB96, S32}, {{VgprB96}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB96, S32},
+            {{UniInVgprB96}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB128, S32}, {{VgprB128}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB128, S32},
+            {{UniInVgprB128}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB160, S32}, {{VgprB160}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB160, S32},
+            {{UniInVgprB160}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   addRulesForGOpcs(
-      {G_AMDGPU_BUFFER_LOAD_FORMAT_D16, G_AMDGPU_TBUFFER_LOAD_FORMAT_D16},
-      StandardB)
-      .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Div(B64, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B64, {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Div(B128, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
-      .Uni(B128, {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
+      {G_AMDGPU_BUFFER_LOAD_FORMAT_D16, G_AMDGPU_TBUFFER_LOAD_FORMAT_D16})
+      .Any({{DivB32, V4S32},
+            {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB32, V4S32},
+            {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB64, V4S32},
+            {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB64, V4S32},
+            {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB128, V4S32},
+            {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB128, V4S32},
+            {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB32, S32}, {{VgprB32}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB32, S32},
+            {{UniInVgprB32}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB64, S32}, {{VgprB64}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB64, S32},
+            {{UniInVgprB64}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB128, S32}, {{VgprB128}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB128, S32},
+            {{UniInVgprB128}, {Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   addRulesForGOpcs({G_AMDGPU_S_BUFFER_LOAD})
       // waterfall expansion is part of S_BUF_to_BUF
@@ -1373,10 +1443,18 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     G_AMDGPU_BUFFER_STORE_FORMAT_D16,
                     G_AMDGPU_TBUFFER_STORE_FORMAT,
                     G_AMDGPU_TBUFFER_STORE_FORMAT_D16})
-      .Any({{B32}, {{}, {VgprB32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
-      .Any({{B64}, {{}, {VgprB64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
-      .Any({{B96}, {{}, {VgprB96, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
-      .Any({{B128}, {{}, {VgprB128, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
+      .Any({{B32, V4S32},
+            {{}, {VgprB32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{B64, V4S32},
+            {{}, {VgprB64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{B96, V4S32},
+            {{}, {VgprB96, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{B128, V4S32},
+            {{}, {VgprB128, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{B32, S32}, {{}, {VgprB32, Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{B64, S32}, {{}, {VgprB64, Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{B96, S32}, {{}, {VgprB96, Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{B128, S32}, {{}, {VgprB128, Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   // Buffer atomics: resource descriptor + scalar offset are SGPR, data and
   // address components are VGPR.
@@ -1389,9 +1467,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
             {{Vgpr32}, {Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
       .Any({{S64, S64, V4S32, S32, S32, S32},
             {{Vgpr64}, {Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
-      .Any({{V2S16, V2S16, V4S32, S32, S32, S32},
-            {{VgprV2S16},
-             {VgprV2S16, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
+      .Any(
+          {{V2S16, V2S16, V4S32, S32, S32, S32},
+           {{VgprV2S16}, {VgprV2S16, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{S32, S32, S32, S32, S32, S32},
+            {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{S64, S64, S32, S32, S32, S32},
+            {{Vgpr64}, {Vgpr64, Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{V2S16, V2S16, S32, S32, S32, S32},
+            {{VgprV2S16}, {VgprV2S16, Vgpr32, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   addRulesForGOpcs({G_PTR_ADD})
       .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32, Sgpr32}}})

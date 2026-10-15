@@ -653,6 +653,10 @@ public:
     return isMUBUF(MI) || isMTBUF(MI);
   }
 
+  static bool isBUFIndexed(const MachineInstr &MI) {
+    return AMDGPU::isBUFIndexed(MI.getOpcode());
+  }
+
   static bool isSMRD(const MachineInstr &MI) {
     return SIInstrFlags::isSMRD(MI);
   }

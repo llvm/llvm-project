@@ -7853,6 +7853,12 @@ generateWaterFallLoop(const SIInstrInfo &TII, MachineInstr &MI,
   return BodyBB;
 }
 
+static bool legalizeVGPRBUFIndex(const MachineInstr &MI, MachineOperand &Rsrc,
+                                 MachineRegisterInfo &MRI) {
+  return SIInstrInfo::isBUFIndexed(MI) && Rsrc.getReg().isVirtual() &&
+         MRI.constrainRegClass(Rsrc.getReg(), &AMDGPU::VGPR_32_Lo256RegClass);
+}
+
 // Extract pointer from Rsrc and return a zero-value Rsrc replacement.
 static std::tuple<unsigned, unsigned>
 extractRsrcPtr(const SIInstrInfo &TII, MachineInstr &MI, MachineOperand &Rsrc) {
@@ -8029,7 +8035,8 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
                                     ? AMDGPU::OpName::rsrc
                                     : AMDGPU::OpName::srsrc;
     MachineOperand *SRsrc = getNamedOperand(MI, RSrcOpName);
-    if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg())))
+    if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg())) &&
+        !legalizeVGPRBUFIndex(MI, *SRsrc, MRI))
       CreatedBB = generateWaterFallLoop(*this, MI, {SRsrc}, MDT);
 
     AMDGPU::OpName SampOpName =
@@ -8092,7 +8099,8 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::srsrc);
   if (RsrcIdx != -1) {
     MachineOperand *Rsrc = &MI.getOperand(RsrcIdx);
-    if (Rsrc->isReg() && !RI.isSGPRReg(MRI, Rsrc->getReg()))
+    if (Rsrc->isReg() && !RI.isSGPRReg(MRI, Rsrc->getReg()) &&
+        !legalizeVGPRBUFIndex(MI, *Rsrc, MRI))
       isRsrcLegal = false;
   }
 
