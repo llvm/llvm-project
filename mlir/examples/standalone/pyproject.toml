@@ -13,7 +13,7 @@ dependencies = [
     "PyYAML>=5.4.0, <=6.0.1",
     "ml_dtypes>=0.1.0, <=0.6.0; python_version<'3.13'",
     "ml_dtypes>=0.5.0, <=0.6.0; python_version>='3.13' and python_version<'3.15'",
-    "ml_dtypes>=0.6.0, <=0.6.0; python_version>='3.15'",
+    "ml_dtypes==0.6.0; python_version>='3.15'",
 ]
 
 [project.urls]
