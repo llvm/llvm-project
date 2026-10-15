@@ -275,14 +275,14 @@ for.end:
 
 ; CHECK-LABEL: predicated_store_trunc_iv
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i8 %iv.trunc, ptr %gep.dst, align 1
-; CHECK: Cost of 2 for VF 2: profitable to scalarize   %iv.trunc = trunc i64 %iv to i8
-; CHECK: Precomputed costs for VF 2: 8
+; CHECK-NOT: profitable to scalarize   %iv.trunc = trunc i64 %iv to i8
+; CHECK: Precomputed costs for VF 2: 6
 ; CHECK: Cost of 0 for VF 2: EMIT-SCALAR vp<[[IV_TRUNC:%[0-9]+]]> = trunc vp<[[CAN_IV:%[0-9]+]]> to i8
 ; CHECK: Cost of 0.5 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<{{.+}}>
 ; CHECK: Cost of 0.5 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<[[IV_TRUNC]]>, ir<1>, vp<{{.+}}>
 ; CHECK: Cost of 1 for VF 2: EMIT branch-on-count
 ; CHECK: Cost of 1 for VF 2: canonical IV increment
-; CHECK: Cost for VF 2: 11
+; CHECK: Cost for VF 2: 9
 ;
 define void @predicated_store_trunc_iv(ptr %dst, i1 %c, i64 %n) {
 entry:
