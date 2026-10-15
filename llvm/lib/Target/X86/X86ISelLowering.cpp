@@ -2818,6 +2818,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::INSERT_SUBVECTOR,
                        ISD::EXTRACT_SUBVECTOR,
                        ISD::BITCAST,
+                       ISD::MASK_BEFOREFIRST,
                        ISD::VSELECT,
                        ISD::SELECT,
                        ISD::SHL,
@@ -47219,6 +47220,26 @@ static SDValue combineBitcastToBoolVector(EVT VT, SDValue V, const SDLoc &DL,
   return SDValue();
 }
 
+/// Compute MASK_BEFOREFIRST as (x - 1) & ~x in a GPR.
+static SDValue combineMaskBeforeFirst(SDNode *N, SelectionDAG &DAG,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  if (!DCI.isBeforeLegalize() || !isPowerOf2_32(VT.getVectorNumElements()))
+    return SDValue();
+  assert(VT.getVectorElementType() == MVT::i1 && "Expected a mask vector");
+
+  SDLoc DL(N);
+  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+  // Do the arithmetic in at least 32 bits so that ANDN can be used.
+  EVT OpVT = IntVT.getSizeInBits() < 32 ? MVT::i32 : IntVT;
+  SDValue X =
+      DAG.getAnyExtOrTrunc(DAG.getBitcast(IntVT, N->getOperand(0)), DL, OpVT);
+  SDValue Dec =
+      DAG.getNode(ISD::SUB, DL, OpVT, X, DAG.getConstant(1, DL, OpVT));
+  SDValue Res = DAG.getNode(ISD::AND, DL, OpVT, DAG.getNOT(DL, X, OpVT), Dec);
+  return DAG.getBitcast(VT, DAG.getAnyExtOrTrunc(Res, DL, IntVT));
+}
+
 static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
                               TargetLowering::DAGCombinerInfo &DCI,
                               const X86Subtarget &Subtarget) {
@@ -64207,6 +64228,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SELECT:
   case X86ISD::BLENDV:      return combineSelect(N, DAG, DCI, Subtarget);
   case ISD::BITCAST:        return combineBitcast(N, DAG, DCI, Subtarget);
+  case ISD::MASK_BEFOREFIRST:
+    return combineMaskBeforeFirst(N, DAG, DCI);
   case X86ISD::CMOV:        return combineCMov(N, DAG, DCI, Subtarget);
   case X86ISD::CMP:         return combineCMP(N, DAG, DCI, Subtarget);
   case ISD::ADD:            return combineAdd(N, DAG, DCI, Subtarget);
