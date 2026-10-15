@@ -1333,4 +1333,31 @@ define <vscale x 4 x float> @pr_fma_nx4xfloat_wider_input(<vscale x 4 x float> %
   ret <vscale x 4 x float> %res
 }
 
+define <vscale x 2 x double> @pr_fma_nx2xdouble_second_use(<vscale x 2 x double> %acc, <vscale x 2 x double> %lhs, <vscale x 2 x double> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_fma_nx2xdouble_second_use:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-NOBF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-NOBF16-NEXT:    fmul z0.d, z0.d, z1.d
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_fma_nx2xdouble_second_use:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-BF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-BF16-NEXT:    fmul z0.d, z0.d, z1.d
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_fma_nx2xdouble_second_use:
+; SVE:       // %bb.0:
+; SVE-NEXT:    fmul z1.d, z1.d, z2.d
+; SVE-NEXT:    fadd z0.d, z0.d, z1.d
+; SVE-NEXT:    fmul z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+  %fmul = fmul contract <vscale x 2 x double> %lhs, %rhs
+  %pr.fadd = call contract <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 2 x double> %fmul)
+  %res = fmul <vscale x 2 x double> %pr.fadd, %fmul
+  ret <vscale x 2 x double> %res
+}
+
 attributes #0 = { nounwind "target-features"="+sve2,+bf16,+sve-b16b16" vscale_range(1,16) }

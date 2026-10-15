@@ -22366,7 +22366,7 @@ static SDValue performFADDPREDCombine(SDNode *N,
     std::swap(Acc, FMul);
 
   if (FMul->getOpcode() != AArch64ISD::FMUL_PRED ||
-      !FMul->getFlags().hasAllowContract())
+      !FMul->getFlags().hasAllowContract() || !FMul->hasOneUse())
     return SDValue();
 
   if (Pg != FMul->getOperand(0))
