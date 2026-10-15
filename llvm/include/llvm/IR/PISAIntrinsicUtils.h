@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file declares utility interfaces for PISA intrinsics.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_PISAINTRINSICUTILS_H
 #define LLVM_IR_PISAINTRINSICUTILS_H

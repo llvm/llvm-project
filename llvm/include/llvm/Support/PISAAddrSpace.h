@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines the address spaces used by the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_PISAADDRSPACE_H
 #define LLVM_SUPPORT_PISAADDRSPACE_H
