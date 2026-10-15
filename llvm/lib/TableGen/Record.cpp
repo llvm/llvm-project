@@ -2375,8 +2375,10 @@ const DefInit *VarDefInit::instantiate() {
   Record *NewRec = NewRecOwner.get();
 
   // Copy values from class to instance
-  for (const RecordVal &Val : Class->getValues())
+  for (const RecordVal &Val : Class->getValues()) {
     NewRec->addValue(Val);
+    NewRec->appendValueReferenceLocs(*Class, Val.getNameInit());
+  }
 
   // Copy assertions from class to instance.
   NewRec->appendAssertions(Class);
@@ -2420,6 +2422,13 @@ const DefInit *VarDefInit::instantiate() {
 }
 
 const Init *VarDefInit::resolveReferences(Resolver &R) const {
+  bool CachedUnresolved = false;
+  if (const Init *Cached = R.getCachedResult(this, CachedUnresolved)) {
+    if (CachedUnresolved)
+      R.noteUnresolved();
+    return Cached;
+  }
+
   TrackUnresolvedResolver UR(&R);
   bool Changed = false;
   SmallVector<const ArgumentInit *, 8> NewArgs;
@@ -2431,13 +2440,16 @@ const Init *VarDefInit::resolveReferences(Resolver &R) const {
     Changed |= NewArg != Arg;
   }
 
+  const Init *Result = this;
   if (Changed) {
     auto *New = VarDefInit::get(Loc, Class, NewArgs);
-    if (!UR.foundUnresolved())
-      return const_cast<VarDefInit *>(New)->instantiate();
-    return New;
+    if (UR.foundUnresolved())
+      Result = New;
+    else
+      Result = const_cast<VarDefInit *>(New)->instantiate();
   }
-  return this;
+  R.cacheResult(this, Result, UR.foundUnresolved());
+  return Result;
 }
 
 const Init *VarDefInit::Fold() const {
@@ -2720,7 +2732,7 @@ std::string DagInit::getAsString() const {
 //===----------------------------------------------------------------------===//
 
 RecordVal::RecordVal(const Init *N, const RecTy *T, FieldKind K)
-    : Name(N), TyAndKind(T, K) {
+    : Name(N), TyAndFlags(T, K) {
   setValue(UnsetInit::get(N->getRecordKeeper()));
   assert(Value && "Cannot create unset value for current type!");
 }
@@ -2728,7 +2740,7 @@ RecordVal::RecordVal(const Init *N, const RecTy *T, FieldKind K)
 // This constructor accepts the same arguments as the above, but also
 // a source location.
 RecordVal::RecordVal(const Init *N, SMLoc Loc, const RecTy *T, FieldKind K)
-    : Name(N), Loc(Loc), TyAndKind(T, K) {
+    : Name(N), Loc(Loc), TyAndFlags(T, K) {
   setValue(UnsetInit::get(N->getRecordKeeper()));
   assert(Value && "Cannot create unset value for current type!");
 }
@@ -2748,7 +2760,7 @@ std::string RecordVal::getPrintType() const {
       return "string";
     }
   } else {
-    return TyAndKind.getPointer()->getAsString();
+    return getType()->getAsString();
   }
 }
 
@@ -3223,7 +3235,9 @@ const Init *MapResolver::resolve(const Init *VarName) {
     // Resolve mutual references among the mapped variables, but prevent
     // infinite recursion.
     Map.erase(It);
+    ++NumInProgress;
     I = I->resolveReferences(*this);
+    --NumInProgress;
     Map[VarName] = {I, true};
   }
 

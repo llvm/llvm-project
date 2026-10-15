@@ -1831,18 +1831,6 @@ unsigned encodeStorecntDscnt(const IsaVersion &Version, unsigned Storecnt,
 // Custom Operand Values
 //===----------------------------------------------------------------------===//
 
-static unsigned getDefaultCustomOperandEncoding(const CustomOperandVal *Opr,
-                                                int Size,
-                                                const MCSubtargetInfo &STI) {
-  unsigned Enc = 0;
-  for (int Idx = 0; Idx < Size; ++Idx) {
-    const auto &Op = Opr[Idx];
-    if (Op.isSupported(STI))
-      Enc |= Op.encode(Op.Default);
-  }
-  return Enc;
-}
-
 static bool isSymbolicCustomOperandEncoding(const CustomOperandVal *Opr,
                                             int Size, unsigned Code,
                                             bool &HasNonDefaultVal,
@@ -1915,10 +1903,13 @@ static int encodeCustomOperand(const CustomOperandVal *Opr, int Size,
 namespace DepCtr {
 
 int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI) {
-  static int Default = -1;
-  if (Default == -1)
-    Default = getDefaultCustomOperandEncoding(DepCtrInfo, DEP_CTR_SIZE, STI);
-  return Default;
+  unsigned Enc = 0;
+  for (int Idx = 0; Idx < DEP_CTR_SIZE; ++Idx) {
+    const auto &Op = DepCtrInfo[Idx];
+    if (Op.isSupported(STI))
+      Enc |= Op.encode(Op.Default);
+  }
+  return Enc;
 }
 
 bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
@@ -3348,8 +3339,14 @@ struct AlwaysUniform {
 };
 const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 
+struct LDSDMAIntrinsic {
+  unsigned Intr;
+};
+const LDSDMAIntrinsic *lookupLDSDMAIntrinsic(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
+#define GET_LDSDMAIntrinsicTable_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -3364,6 +3361,10 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
 
 bool isIntrinsicAlwaysUniform(unsigned IntrID) {
   return lookupAlwaysUniform(IntrID);
+}
+
+bool isLDSDMAIntrinsic(unsigned IntrID) {
+  return lookupLDSDMAIntrinsic(IntrID);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

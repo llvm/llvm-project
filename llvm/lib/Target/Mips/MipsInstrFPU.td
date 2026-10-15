@@ -85,13 +85,13 @@ let PrintMethod = "printFCCOperand", DecoderMethod = "DecodeCondCode" in
 def IsFP64bit        : Predicate<"Subtarget->isFP64bit()">,
                        AssemblerPredicate<(all_of FeatureFP64Bit)>;
 def NotFP64bit       : Predicate<"!Subtarget->isFP64bit()">,
-                       AssemblerPredicate<(all_of (not FeatureFP64Bit))>;
+                       AssemblerPredicate<(none_of FeatureFP64Bit)>;
 def IsSingleFloat    : Predicate<"Subtarget->isSingleFloat()">,
                        AssemblerPredicate<(all_of FeatureSingleFloat)>;
 def IsNotSingleFloat : Predicate<"!Subtarget->isSingleFloat()">,
-                       AssemblerPredicate<(all_of (not FeatureSingleFloat))>;
+                       AssemblerPredicate<(none_of FeatureSingleFloat)>;
 def IsNotSoftFloat   : Predicate<"!Subtarget->useSoftFloat()">,
-                       AssemblerPredicate<(all_of (not FeatureSoftFloat))>;
+                       AssemblerPredicate<(none_of FeatureSoftFloat)>;
 def HasMips3D        : Predicate<"Subtarget->has3D()">,
                        AssemblerPredicate<(all_of FeatureMips3D)>;
 

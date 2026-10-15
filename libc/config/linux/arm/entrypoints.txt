@@ -283,6 +283,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.lchown
     libc.src.unistd.link
     libc.src.unistd.linkat
+    libc.src.unistd.lockf
     libc.src.unistd.lseek
     libc.src.unistd.nice
     libc.src.unistd.pause
@@ -301,6 +302,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
     libc.src.unistd.sync
+    libc.src.unistd.syncfs
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate

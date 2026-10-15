@@ -409,6 +409,12 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
                                          const mlir::TypeConverter &tc,
                                          mlir::Type ty,
                                          mlir::Attribute initVal) {
+  if (mlir::isa_and_present<cir::UndefAttr>(initVal))
+    return cir::UndefAttr::get(tc.convertType(ty));
+
+  if (mlir::isa_and_present<cir::PoisonAttr>(initVal))
+    return cir::PoisonAttr::get(tc.convertType(ty));
+
   if (mlir::isa<cir::DataMemberType>(ty)) {
     // Members without a CIR field index (e.g. no_unique_address empty fields)
     // are represented by an explicit byte offset instead of a field path.
@@ -468,14 +474,6 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
 
     if (auto recVal = mlir::dyn_cast_if_present<cir::ZeroAttr>(initVal))
       return cir::ZeroAttr::get(convertedTy);
-
-    if (auto undefVal = mlir::dyn_cast_if_present<cir::UndefAttr>(initVal))
-      return cir::UndefAttr::get(convertedTy);
-
-    // This might not be possible from Clang directly, but we can get here with
-    // hand-written IR.
-    if (auto poisonVal = mlir::dyn_cast_if_present<cir::PoisonAttr>(initVal))
-      return cir::PoisonAttr::get(convertedTy);
 
     if (auto recVal =
             mlir::dyn_cast_if_present<cir::ConstRecordAttr>(initVal)) {
