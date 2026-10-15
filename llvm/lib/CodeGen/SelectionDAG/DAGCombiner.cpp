@@ -18299,16 +18299,16 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
     }
 
     SDValue TmpFMA = FMA;
-    while (E && isFusedOp(TmpFMA) && TmpFMA.hasOneUse()) {
+    while (E && isFusedOp(TmpFMA) && TmpFMA.hasOneUse() &&
+           TmpFMA->getFlags().hasAllowReassociation()) {
       SDValue FMul = TmpFMA->getOperand(2);
-      if (FMul.getOpcode() == ISD::FMUL && FMul.hasOneUse()) {
+      if (isContractableFMUL(FMul) && FMul.hasOneUse()) {
         SDValue C = FMul.getOperand(0);
         SDValue D = FMul.getOperand(1);
         SDValue CDE = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
+        HandleSDNode FMAHandle(FMA);
         DAG.ReplaceAllUsesOfValueWith(FMul, CDE);
-        // Replacing the inner FMul could cause the outer FMA to be simplified
-        // away.
-        return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue(N, 0) : FMA;
+        return FMAHandle.getValue();
       }
 
       TmpFMA = TmpFMA->getOperand(2);
