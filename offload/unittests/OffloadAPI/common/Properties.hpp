@@ -194,8 +194,9 @@ struct olPropertyTest : OffloadDeviceTestWithParam<SizedProperty<T>> {
 };
 
 struct olGetHostDeviceInfoPropertyTest : olPropertyTest<ol_device_info_t> {
-  // Used when the fixture has been instantiated with getDevicesAndHost() in
-  // Fixtures.hpp instead of TestEnvironment::getDevices()
+  // Used when the fixture has been instantiated with
+  // allDevicesSeparatelyWithHost() in Fixtures.hpp instead of
+  // TestEnvironment::getDevices()
   bool isHost() { return Host == this->Device; }
 };
 

@@ -407,7 +407,7 @@ inline DeviceSetsVec allDevicesSeparately() {
   return Res;
 }
 
-inline DeviceSetsVec allDevicesSeparatelyWtihHost() {
+inline DeviceSetsVec allDevicesSeparatelyWithHost() {
   DeviceSetsVec Res = allDevicesSeparately();
   TestEnvironment::Device Host{TestEnvironment::getHostDevice(), "HOST"};
 
@@ -485,7 +485,8 @@ defaultPrinter(const ::testing::TestParamInfo<OffloadParam<int>> &info) {
   OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES(FIXTURE, allDevicesSeparately())
 
 #define OFFLOAD_TESTS_INSTANTIATE_HOST_DEVICE_FIXTURE(FIXTURE)                 \
-  OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES(FIXTURE, getDevicesAndHost())
+  OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES(FIXTURE,                              \
+                                         allDevicesSeparatelyWithHost())
 
 #define OFFLOAD_TESTS_INSTANTIATE_MULTI_DEVICE_FIXTURE(FIXTURE)                \
   OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES(FIXTURE, groupedCompatibleDevices())
@@ -506,7 +507,7 @@ defaultPrinter(const ::testing::TestParamInfo<OffloadParam<int>> &info) {
 #define OFFLOAD_TESTS_INSTANTIATE_HOST_DEVICE_FIXTURE_WITH_PARAM(              \
     FIXTURE, VALUES, PRINTER)                                                  \
   OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES_WITH_PARAM(                           \
-      FIXTURE, VALUES, getDevicesAndHost(), PRINTER)
+      FIXTURE, VALUES, allDevicesSeparatelyWithHost(), PRINTER)
 
 #define OFFLOAD_TESTS_INSTANTIATE_MULTI_DEVICE_FIXTURE_WITH_PARAM(             \
     FIXTURE, VALUES, PRINTER)                                                  \
