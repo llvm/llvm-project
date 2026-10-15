@@ -226,8 +226,8 @@ struct sized_by_or_null_ptr {
   char *ptr __attribute__((sized_by_or_null(count)));
 };
 
-void test12(struct counted_by_or_null_ptr *a, struct sized_by_ptr *b,
-            struct sized_by_or_null_ptr *c) {
+void test_or_null_kinds(struct counted_by_or_null_ptr *a, struct sized_by_ptr *b,
+                        struct sized_by_or_null_ptr *c) {
   _Static_assert(_Generic(__builtin_counted_by_ref(a->ptr), void * : 1, default : 0) == 1, "should be void*");
   _Static_assert(_Generic(__builtin_counted_by_ref(b->ptr), void * : 1, default : 0) == 1, "should be void*");
   _Static_assert(_Generic(__builtin_counted_by_ref(c->ptr), void * : 1, default : 0) == 1, "should be void*");
@@ -258,8 +258,8 @@ struct typedef_count {
   int array[] __attribute__((counted_by(count)));
 };
 
-void test13(struct volatile_count *vp, struct const_count *cp,
-            struct enum_count *ep, struct typedef_count *tp) {
+void test_qualified_enum_typedef(struct volatile_count *vp, struct const_count *cp,
+                                 struct enum_count *ep, struct typedef_count *tp) {
   _Static_assert(_Generic(__builtin_counted_by_ref(vp->array), volatile int * : 1, default : 0) == 1, "wrong return type");
   _Static_assert(_Generic(__builtin_counted_by_ref(cp->array), const int * : 1, default : 0) == 1, "wrong return type");
   _Static_assert(_Generic(__builtin_counted_by_ref(ep->array), enum count_enum * : 1, default : 0) == 1, "wrong return type");
@@ -290,8 +290,8 @@ struct anon_count {
   int array[] __attribute__((counted_by(count)));
 };
 
-void test14(struct nested_inner *p, struct nested_inner s,
-            struct nested_outer *o, struct anon_count *a) {
+void test_nested_anonymous_by_value_subscripted(struct nested_inner *p, struct nested_inner s,
+                                                struct nested_outer *o, struct anon_count *a) {
   _Static_assert(_Generic(__builtin_counted_by_ref((*p).array), int * : 1, default : 0) == 1, "wrong return type");
   _Static_assert(_Generic(__builtin_counted_by_ref(p[1].array), int * : 1, default : 0) == 1, "wrong return type");
   _Static_assert(_Generic(__builtin_counted_by_ref((p)->array), int * : 1, default : 0) == 1, "wrong return type");
