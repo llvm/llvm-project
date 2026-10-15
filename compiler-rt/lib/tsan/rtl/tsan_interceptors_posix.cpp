@@ -1015,6 +1015,8 @@ void PlatformCleanUpThreadState(ThreadState *thr) {
   if (sctx) {
     atomic_store(&thr->signal_ctx, 0, memory_order_relaxed);
     sctx->oldset.Reset();
+    DontNeedShadowFor((uptr)sctx,
+                      RoundUpTo(sizeof(*sctx), GetPageSizeCached()));
     UnmapOrDie(sctx, sizeof(*sctx));
   }
 }
