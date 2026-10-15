@@ -1219,6 +1219,21 @@ static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
   return false;
 }
 
+/// Returns the innermost named record that \p FD is a member of, looking
+/// through anonymous structs and unions. That's the object a 'counted_by'
+/// field and its count are both part of: Sema requires them to be in the same
+/// struct, and only anonymous members can sit in between. A struct defined
+/// lexically inside another one is still a type of its own, whose objects
+/// needn't be embedded in an object of the outer struct (or appear in it only
+/// through a pointer), so the outermost lexical record isn't the right one.
+static const RecordDecl *getEnclosingNamedRecord(const FieldDecl *FD) {
+  const RecordDecl *RD = FD->getParent();
+  while (RD->isAnonymousStructOrUnion())
+    RD = cast<RecordDecl>(RD->getParent());
+
+  return RD;
+}
+
 llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
   // Walk Base to find the deepest sub-expression whose struct type transitively
@@ -5050,21 +5065,17 @@ struct StructFieldAccess
 static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
                                                         const FieldDecl *FD1,
                                                         const FieldDecl *FD2) {
-  const RecordDecl *FD1OuterRec =
-      FD1->getParent()->getOuterLexicalRecordContext();
-  const RecordDecl *FD2OuterRec =
-      FD2->getParent()->getOuterLexicalRecordContext();
-
-  if (FD1OuterRec != FD2OuterRec)
+  const RecordDecl *RD = getEnclosingNamedRecord(FD1);
+  if (getEnclosingNamedRecord(FD2) != RD)
     // Fields must be within the same RecordDecl.
     return std::optional<int64_t>();
 
   int64_t FD1Offset = 0;
-  if (!getFieldOffsetInBits(CGF, FD1OuterRec, FD1, FD1Offset))
+  if (!getFieldOffsetInBits(CGF, RD, FD1, FD1Offset))
     return std::optional<int64_t>();
 
   int64_t FD2Offset = 0;
-  if (!getFieldOffsetInBits(CGF, FD2OuterRec, FD2, FD2Offset))
+  if (!getFieldOffsetInBits(CGF, RD, FD2, FD2Offset))
     return std::optional<int64_t>();
 
   return std::make_optional<int64_t>(FD1Offset - FD2Offset);
