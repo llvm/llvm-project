@@ -556,9 +556,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// CIRABIRewriteContext.
 ///
 /// Direct: the value passes in register(s).  A coercion is forwarded in the
-/// five cases where the value has to be rebuilt on the wire: an aggregate
-/// unpacked into the register(s) holding it, a scalar too wide for one register
-/// split into a tuple of them, a scalar the classifier widens to fill its
+/// cases where the value has to be rebuilt on the wire: an aggregate unpacked
+/// into the register(s) holding it, a scalar too wide for one register split
+/// into a tuple of them, a scalar the classifier widens to fill its
 /// eightbyte, a pointer moved into another address space, and a value whose
 /// live bytes start partway into its storage because a leading eightbyte
 /// holds no field (getDirectOffset).  canFlatten
@@ -600,22 +600,22 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
       return std::nullopt;
     // A pointer moved to another address space keeps its pointee, which
     // abiTypeToCIR cannot recover.
-    if (auto origPtr = dyn_cast_if_present<cir::PointerType>(origTy)) {
-      if (const auto *coercePtr =
-              dyn_cast_if_present<llvm::abi::PointerType>(coerceAbi)) {
-        auto origAS = dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
-            origPtr.getAddrSpace());
-        unsigned origASValue = origAS ? origAS.getValue() : 0;
-        if (!offset && coercePtr->getAddrSpace() != origASValue) {
-          auto coercedPtr =
-              cast<cir::PointerType>(abiTypeToCIR(coerceAbi, ctx));
-          ArgClassification classified = ArgClassification::getDirect(
-              cir::PointerType::get(origPtr.getPointee(),
-                                    coercedPtr.getAddrSpace()),
-              /*offset=*/0);
-          classified.canFlatten = info.getCanBeFlattened();
-          return classified;
-        }
+    auto origPtr = dyn_cast_if_present<cir::PointerType>(origTy);
+    const auto *coercePtr =
+        dyn_cast_if_present<llvm::abi::PointerType>(coerceAbi);
+    if (origPtr && coercePtr && !offset) {
+      // Compare numbers, since an explicit address_space(0) keeps a
+      // target_address_space(0) attribute that a plain pointer lacks.
+      auto origAS = dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+          origPtr.getAddrSpace());
+      if (coercePtr->getAddrSpace() != (origAS ? origAS.getValue() : 0)) {
+        auto coercedPtr = cast<cir::PointerType>(abiTypeToCIR(coerceAbi, ctx));
+        ArgClassification classified = ArgClassification::getDirect(
+            cir::PointerType::get(origPtr.getPointee(),
+                                  coercedPtr.getAddrSpace()),
+            /*offset=*/0);
+        classified.canFlatten = info.getCanBeFlattened();
+        return classified;
       }
     }
     // Compare widths rather than identity: a coerce no wider than the natural
