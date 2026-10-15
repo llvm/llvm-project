@@ -83,6 +83,10 @@ public:
   /// be converted to integer, or violate subtarget's specifications.
   std::pair<unsigned, unsigned> getFlatWorkGroupSizes(const Function &F) const;
 
+  /// \returns true if the maximum flat work-group size for \p F is at most the
+  /// wavefront size, so a work-group may fit in a single wavefront.
+  bool isSingleWavefrontWorkgroup(const Function &F) const;
+
   /// \returns The required size of workgroups that will be used to execute \p F
   /// in the \p Dim dimension, if it is known (from `!reqd_work_group_size`
   /// metadata. Otherwise, returns std::nullopt.
@@ -101,7 +105,7 @@ public:
   /// This information is currently only gathered from the !reqd_work_group_size
   /// metadata on \p F, but this may be improved in the future.
   bool hasWavefrontsEvenlySplittingXDim(const Function &F,
-                                        bool REquiresUniformYZ = false) const;
+                                        bool RequiresUniformYZ = false) const;
 
   /// \returns Subtarget's default pair of minimum/maximum number of waves per
   /// execution unit for function \p F, or minimum/maximum number of waves per

@@ -898,11 +898,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   MAI = GetMAI();
   assert(ST && TII && MAI && M && "Module analysis is required");
 
-  if (!AuxDataHandler) {
-    auto Handler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
-    if (Handler->hasWork())
-      AuxDataHandler = std::move(Handler);
-  }
+  if (!AuxDataHandler && spirvPreserveAuxData(M->getTargetTriple()))
+    AuxDataHandler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
 
   // Let the NSDI handler add its extension and ext inst import entry to MAI
   // before the module header sections are emitted.
@@ -929,6 +926,13 @@ void SPIRVAsmPrinter::outputModuleSections() {
   outputDebugSourceAndStrings(*M);
   // 7b. Debug: all OpName and all OpMemberName.
   outputModuleSection(SPIRV::MB_DebugNames);
+  for (const auto &[Reg, Name] : MAI->MBBNames) {
+    MCInst Inst;
+    Inst.setOpcode(SPIRV::OpName);
+    Inst.addOperand(MCOperand::createReg(Reg));
+    addStringImm(Name, Inst);
+    outputMCInst(Inst);
+  }
   // 7c. Debug: all OpModuleProcessed instructions.
   outputModuleSection(SPIRV::MB_DebugModuleProcessed);
   // xxx. SPV_INTEL_memory_access_aliasing instructions go before 8.
