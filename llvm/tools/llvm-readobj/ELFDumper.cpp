@@ -7235,8 +7235,7 @@ template <class ELFT>
 bool ELFDumper<ELFT>::printFunctionStackSize(
     uint64_t SymValue, std::optional<const Elf_Shdr *> FunctionSec,
     const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
-  // As in --call-graph-info, clear the Thumb bit, which is not part of the
-  // function's address.
+  // Clear the Thumb bit, which is not part of the function's address.
   if (Obj.getHeader().e_machine == ELF::EM_ARM)
     SymValue &= ~1;
   SmallVector<uint32_t> FuncSymIndexes =
