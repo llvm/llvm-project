@@ -1522,6 +1522,40 @@ Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr,
       Ptr, Flags & OL_MEMORY_REGISTER_FLAG_UNLOCK_MEMORY);
 }
 
+Error olMemIsAccessible_impl(ol_context_handle_t Context,
+                             ol_device_handle_t Device, const void *Ptr,
+                             size_t Size, bool *IsAccessible) {
+  if (Context) {
+    if (auto Err = Context->requireDevice(Device))
+      return Err;
+
+    // Allocations made in a user context are not tracked by the device, so
+    // look them up in the context first.
+    auto AllocOrErr = Context->getAllocInfo(Ptr);
+    if (AllocOrErr) {
+      uintptr_t Begin = reinterpret_cast<uintptr_t>(Ptr);
+      uintptr_t AllocBegin = reinterpret_cast<uintptr_t>(AllocOrErr->Base);
+      size_t Offset = Begin - AllocBegin;
+      bool InRange = Begin >= AllocBegin && Offset <= AllocOrErr->Size &&
+                     Size <= AllocOrErr->Size - Offset;
+      if (InRange && (AllocOrErr->Kind != TARGET_ALLOC_DEVICE ||
+                      AllocOrErr->Device == Device->Device)) {
+        *IsAccessible = true;
+        return Error::success();
+      }
+    } else if (auto Err = error::consumeErrorIfCode(AllocOrErr.takeError(),
+                                                    ErrorCode::NOT_FOUND))
+      return Err;
+  }
+
+  auto AccessibleOrErr = Device->Device->isAccessiblePtr(Ptr, Size);
+  if (!AccessibleOrErr)
+    return AccessibleOrErr.takeError();
+
+  *IsAccessible = *AccessibleOrErr;
+  return Error::success();
+}
+
 Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
   if (Queue->AsyncInfo->Queue) {
     if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo, false,
