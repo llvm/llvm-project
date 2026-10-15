@@ -725,6 +725,14 @@ enum NodeType {
   AVGCEILS,
   AVGCEILU,
 
+  /// AVGSUBFLOORS/AVGSUBFLOORU - Averaging subtract - Subtract two integers
+  /// using an integer of type i[N+1], halving the result by shifting it one bit
+  /// right, i.e. rounding towards negative infinity. This is a signed
+  /// difference, not an absolute difference like ABDS/ABDU.
+  /// shr(sub(ext(X), ext(Y)), 1)
+  AVGSUBFLOORS,
+  AVGSUBFLOORU,
+
   /// ABDS/ABDU - Absolute difference - Return the absolute difference between
   /// two numbers interpreted as signed/unsigned.
   /// i.e trunc(abs(sext(Op0) - sext(Op1))) becomes abds(Op0, Op1)
