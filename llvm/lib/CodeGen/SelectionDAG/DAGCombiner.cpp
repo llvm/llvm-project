@@ -27798,6 +27798,8 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
     // is true and input of AArch64TargetLowering::LowerCONCAT_VECTORS() is
     // scalable.
     if (In.getOpcode() == ISD::CONCAT_VECTORS && In.hasOneUse() &&
+        N->getNumOperands() * In.getNumOperands() <=
+            SDNode::getMaxNumOperands() &&
         !(LegalDAG && In.getValueType().isScalableVector())) {
       unsigned NumOps = N->getNumOperands() * In.getNumOperands();
       SmallVector<SDValue, 4> Ops(In->ops());
@@ -27857,7 +27859,8 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   auto IsBuildVectorOrUndef = [](const SDValue &Op) {
     return Op.isUndef() || ISD::BUILD_VECTOR == Op.getOpcode();
   };
-  if (llvm::all_of(N->ops(), IsBuildVectorOrUndef)) {
+  if (VT.getVectorMinNumElements() <= SDNode::getMaxNumOperands() &&
+      llvm::all_of(N->ops(), IsBuildVectorOrUndef)) {
     SmallVector<SDValue, 8> Opnds;
     EVT SVT = VT.getScalarType();
 

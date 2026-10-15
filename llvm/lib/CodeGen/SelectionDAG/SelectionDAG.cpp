@@ -7057,6 +7057,9 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
   if (VT.isScalableVector())
     return SDValue();
 
+  if (VT.getVectorNumElements() > SDNode::getMaxNumOperands())
+    return SDValue();
+
   // A CONCAT_VECTOR of scalar sources, such as UNDEF, BUILD_VECTOR and
   // single-element INSERT_VECTOR_ELT operands can be simplified to one big
   // BUILD_VECTOR.
@@ -7100,6 +7103,50 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
   SDValue V = DAG.getBuildVector(VT, DL, Elts);
   NewSDValueDbgMsg(V, "New node fold concat vectors: ", &DAG);
   return V;
+}
+
+/// Build a BUILD_VECTOR or CONCAT_VECTORS with more operands than fit into one
+/// SDNode as a CONCAT_VECTORS of power-of-two sized chunks, so that the type
+/// legalizer splits the chunks instead of widening them back over the limit.
+static SDValue concatOperandChunks(unsigned Opcode, const SDLoc &DL, EVT VT,
+                                   ArrayRef<SDValue> Ops, SelectionDAG &DAG) {
+  assert((Opcode == ISD::BUILD_VECTOR || Opcode == ISD::CONCAT_VECTORS) &&
+         VT.isFixedLengthVector() && "Unexpected node to split into chunks");
+  assert(Ops.size() > SDNode::getMaxNumOperands() &&
+         "Operands already fit into one node");
+
+  const unsigned ChunkSize = llvm::bit_floor(SDNode::getMaxNumOperands());
+  EVT OpVT = Ops[0].getValueType();
+  unsigned EltsPerOp = OpVT.isVector() ? OpVT.getVectorNumElements() : 1;
+  EVT EltVT = VT.getVectorElementType();
+  EVT ChunkVT =
+      EVT::getVectorVT(*DAG.getContext(), EltVT, ChunkSize * EltsPerOp);
+
+  unsigned NumChunks = llvm::bit_ceil(divideCeil(Ops.size(), ChunkSize));
+  SmallVector<SDValue, 8> Chunks;
+  Chunks.reserve(NumChunks);
+  for (size_t Offset = 0; Offset < Ops.size(); Offset += ChunkSize) {
+    ArrayRef<SDValue> ChunkOps =
+        Ops.slice(Offset, std::min<size_t>(ChunkSize, Ops.size() - Offset));
+    if (ChunkOps.size() == ChunkSize) {
+      Chunks.push_back(DAG.getNode(Opcode, DL, ChunkVT, ChunkOps));
+      continue;
+    }
+    SmallVector<SDValue, 16> PaddedOps(ChunkOps);
+    PaddedOps.append(ChunkSize - ChunkOps.size(), DAG.getPOISON(OpVT));
+    Chunks.push_back(DAG.getNode(Opcode, DL, ChunkVT, PaddedOps));
+  }
+  Chunks.append(NumChunks - Chunks.size(), DAG.getPOISON(ChunkVT));
+
+  uint64_t ConcatNumElts = uint64_t(NumChunks) * ChunkSize * EltsPerOp;
+  assert(ConcatNumElts <= std::numeric_limits<unsigned>::max() &&
+         "Padded vector element count overflows the vector type");
+  EVT ConcatVT =
+      EVT::getVectorVT(*DAG.getContext(), EltVT, unsigned(ConcatNumElts));
+  SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Chunks);
+  if (ConcatVT == VT)
+    return Concat;
+  return DAG.getExtractSubvector(DL, VT, Concat, 0);
 }
 
 /// Gets or creates the specified node.
@@ -12000,10 +12047,14 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // Attempt to simplify BUILD_VECTOR.
     if (SDValue V = FoldBUILD_VECTOR(DL, VT, Ops, *this))
       return V;
+    if (NumOps > SDNode::getMaxNumOperands())
+      return concatOperandChunks(Opcode, DL, VT, Ops, *this);
     break;
   case ISD::CONCAT_VECTORS:
     if (SDValue V = foldCONCAT_VECTORS(DL, VT, Ops, *this))
       return V;
+    if (NumOps > SDNode::getMaxNumOperands())
+      return concatOperandChunks(Opcode, DL, VT, Ops, *this);
     break;
   case ISD::SELECT_CC:
     assert(NumOps == 5 && "SELECT_CC takes 5 operands!");

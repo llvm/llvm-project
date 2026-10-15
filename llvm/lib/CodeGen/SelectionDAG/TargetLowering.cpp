@@ -11934,7 +11934,7 @@ TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
     LoadChains.push_back(ScalarLoad.getValue(1));
   }
 
-  SDValue NewChain = DAG.getNode(ISD::TokenFactor, SL, MVT::Other, LoadChains);
+  SDValue NewChain = DAG.getTokenFactor(SL, LoadChains);
   SDValue Value = DAG.getBuildVector(DstVT, SL, Vals);
 
   return std::make_pair(Value, NewChain);
@@ -12012,7 +12012,7 @@ SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
     Stores.push_back(Store);
   }
 
-  return DAG.getNode(ISD::TokenFactor, SL, MVT::Other, Stores);
+  return DAG.getTokenFactor(SL, Stores);
 }
 
 std::pair<SDValue, SDValue>

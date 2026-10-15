@@ -393,6 +393,9 @@ Makes programs 10x faster by doing Special New Thing.
   size collided with the sentinel value MachineFrameInfo used to mark dead
   stack objects.
 * Fixed a crash
+  ([#214666](https://github.com/llvm/llvm-project/issues/214666)) when
+  compiling operations on fixed-length vectors with more than 65535 elements.
+* Fixed a crash
   ([#220959](https://github.com/llvm/llvm-project/issues/220959)) when
   compiling a `landingpad` whose result type is not a struct of an exception
   pointer and an integer selector (for example `{}`). Such a landingpad is now
