@@ -100,16 +100,36 @@ subroutine separate_ranges(a, b, c, n)
   !$omp& a(i), b(j), c(i,j))
 end
 ! CHECK-LABEL: func.func @_QPseparate_ranges
+! CHECK-DAG: %[[FOUR:.*]] = arith.constant 4 : i32
+! CHECK-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFseparate_rangesEa")
+! CHECK-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFseparate_rangesEb")
+! CHECK-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFseparate_rangesEc")
+! CHECK-DAG: %[[N:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFseparate_rangesEn")
+! CHECK: %[[N_VAL:.*]] = fir.load %[[N]]#0 : !fir.ref<i32>
 ! CHECK: fir.call @_QPextent()
-! CHECK: omp.iterator(%{{[^:]+}}: i32) =
-! CHECK: omp.iterator(%{{[^:]+}}: i32) =
+! CHECK: omp.iterator(%{{[^:]+}}: i32) = (%{{[^ ]+}} to %[[FOUR]] step %{{[^)]+}}) {
+! CHECK:   omp.map.info var_ptr(%[[A]]#0
+! CHECK: omp.iterator(%{{[^:]+}}: i32) = (%{{[^ ]+}} to %[[N_VAL]] step %{{[^)]+}}) {
+! CHECK:   omp.map.info var_ptr(%[[B]]#0
 ! CHECK: omp.iterator(%{{[^:]+}}: i32, %{{[^:]+}}: i32) =
+! CHECK-SAME: (%{{[^ ]+}} to %[[FOUR]] step %{{[^,]+}}, %{{[^ ]+}} to %[[N_VAL]] step %{{[^)]+}}) {
+! CHECK:   omp.map.info var_ptr(%[[C]]#0
 ! CHECK: omp.target_update
 ! CAN-LABEL: func.func @_QPseparate_ranges
+! CAN-DAG: %[[FOUR:.*]] = arith.constant 4 : i32
+! CAN-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFseparate_rangesEa")
+! CAN-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFseparate_rangesEb")
+! CAN-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFseparate_rangesEc")
+! CAN-DAG: %[[N:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFseparate_rangesEn")
+! CAN: %[[N_VAL:.*]] = fir.load %[[N]]#0 : !fir.ref<i32>
 ! CAN: fir.call @_QPextent()
-! CAN: omp.iterator(%{{[^:]+}}: i32) =
-! CAN: omp.iterator(%{{[^:]+}}: i32) =
+! CAN: omp.iterator(%{{[^:]+}}: i32) = (%{{[^ ]+}} to %[[FOUR]] step %{{[^)]+}}) {
+! CAN:   omp.map.info var_ptr(%[[A]]#0
+! CAN: omp.iterator(%{{[^:]+}}: i32) = (%{{[^ ]+}} to %[[N_VAL]] step %{{[^)]+}}) {
+! CAN:   omp.map.info var_ptr(%[[B]]#0
 ! CAN: omp.iterator(%{{[^:]+}}: i32, %{{[^:]+}}: i32) =
+! CAN-SAME: (%{{[^ ]+}} to %[[FOUR]] step %{{[^,]+}}, %{{[^ ]+}} to %[[N_VAL]] step %{{[^)]+}}) {
+! CAN:   omp.map.info var_ptr(%[[C]]#0
 ! CAN: omp.target_update
 
 subroutine unused_empty_range(a)

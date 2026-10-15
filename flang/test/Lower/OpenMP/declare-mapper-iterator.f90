@@ -303,14 +303,17 @@ subroutine mapper_ranges()
 end
 
 ! CHECK-LABEL: omp.declare_mapper @_QQFmapper_rangesm
-! CHECK: %[[A:.*]] = omp.iterator(%{{[^:]+}}: i32) =
+! CHECK-DAG: %[[TWO:.*]] = arith.constant 2 : i32
+! CHECK-DAG: %[[FOUR:.*]] = arith.constant 4 : i32
+! CHECK: %[[A:.*]] = omp.iterator(%{{[^:]+}}: i32) = (%{{[^ ]+}} to %[[FOUR]] step
+! CHECK: hlfir.designate %{{.*}}{"a"}
 ! CHECK: omp.map.info
 ! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
-! CHECK: %[[B:.*]] = omp.iterator(%{{[^:]+}}: i32) =
+! CHECK: %[[B:.*]] = omp.iterator(%{{[^:]+}}: i32) = (%[[TWO]] to %{{[^ ]+}} step
+! CHECK: hlfir.designate %{{.*}}{"b"}
 ! CHECK: omp.map.info
 ! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
-! CHECK: omp.declare_mapper.info
-! CHECK-SAME: map_iterated(%[[A]], %[[B]]
+! CHECK: omp.declare_mapper.info map_iterated(%[[A]], %[[B]]
 
 !--- mapper.f90
 module iterator_mapper_mod
