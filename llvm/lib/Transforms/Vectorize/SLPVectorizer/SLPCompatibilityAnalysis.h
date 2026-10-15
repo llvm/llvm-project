@@ -75,6 +75,9 @@ class BinOpSameOpcodeHelper {
     MainOpBIT = 1 << 12,
     LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
+  /// Return if the current possible MainOp/AltOp combination
+  /// is a valid combination.
+  bool checkValidAltState() const;
   /// Return a non-nullptr if either operand of I is a ConstantInt (for the
   /// integer opcodes) or a ConstantFP (for FAdd/FSub).
   /// The second return value represents the operand position. We check the

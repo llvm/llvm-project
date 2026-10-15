@@ -43,6 +43,17 @@ bool isValidForAlternation(unsigned Opcode) {
   return !Instruction::isIntDivRem(Opcode);
 }
 
+bool BinOpSameOpcodeHelper::checkValidAltState() const {
+  auto IsValidForAlternation =
+      [](const BinOpSameOpcodeHelper::InterchangeableInfo &Op) -> bool {
+    if (Op.hasDefinedOpcode())
+      return slpvectorizer::isValidForAlternation(Op.getOpcode());
+    return slpvectorizer::isValidForAlternation(Op.I->getOpcode());
+  };
+  return !hasAltOp() ||
+         (IsValidForAlternation(MainOp) && IsValidForAlternation(AltOp));
+}
+
 std::pair<Constant *, unsigned>
 BinOpSameOpcodeHelper::isBinOpWithConstant(const Instruction *I) {
   [[maybe_unused]] unsigned Opcode = I->getOpcode();
@@ -238,16 +249,9 @@ SmallVector<Value *> BinOpSameOpcodeHelper::InterchangeableInfo::getOperand(
   return SmallVector<Value *>({RHS, LHS});
 }
 
-bool BinOpSameOpcodeHelper::isValidForAlternation(const Instruction *I) const {
-  return slpvectorizer::isValidForAlternation(MainOp.I->getOpcode()) &&
-         slpvectorizer::isValidForAlternation(I->getOpcode());
-}
-
 bool BinOpSameOpcodeHelper::initializeAltOp(const Instruction *I) {
   if (AltOp.I)
     return true;
-  if (!isValidForAlternation(I))
-    return false;
   AltOp.I = I;
   return true;
 }
@@ -297,7 +301,9 @@ bool BinOpSameOpcodeHelper::add(const Instruction *I) {
     OpcodeInMaskForm = UDivBIT;
     break;
   default:
-    return MainOp.equal(Opcode) || (initializeAltOp(I) && AltOp.equal(Opcode));
+    return (MainOp.equal(Opcode) ||
+            (initializeAltOp(I) && AltOp.equal(Opcode))) &&
+           checkValidAltState();
   }
   MaskType InterchangeableMask = OpcodeInMaskForm;
   auto [C, Pos] = isBinOpWithConstant(I);
@@ -355,9 +361,10 @@ bool BinOpSameOpcodeHelper::add(const Instruction *I) {
     // on the other side).
     InterchangeableMask = FSubBIT | FAddBIT;
   }
-  return MainOp.trySet(OpcodeInMaskForm, InterchangeableMask) ||
-         (initializeAltOp(I) &&
-          AltOp.trySet(OpcodeInMaskForm, InterchangeableMask));
+  return (MainOp.trySet(OpcodeInMaskForm, InterchangeableMask) ||
+          (initializeAltOp(I) &&
+           AltOp.trySet(OpcodeInMaskForm, InterchangeableMask))) &&
+         checkValidAltState();
 }
 
 /// If the comparison (Pred, X, C) is a single-element or single-complement
