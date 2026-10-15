@@ -133,8 +133,10 @@ SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
 /// lanes given by `size`). This uses butterfly shuffles to perform the
 /// reduction in a log2(size) number of steps.
 /// NOTE: Implementation taken from TestVectorTransforms.cpp
+/// `fastmath` is set on every combining operation.
 Value subgroupReduction(Location loc, OpBuilder &builder, Value input,
-                        vector::CombiningKind kind, uint32_t size);
+                        vector::CombiningKind kind, uint32_t size,
+                        arith::FastMathFlagsAttr fastmath = nullptr);
 
 /// Given a `src` and an `acc` argumments from a vector::MultiDimReductionOp,
 /// lower to a set of vector::ReductionOp ops over 1D slices extracted from
@@ -144,27 +146,32 @@ Value subgroupReduction(Location loc, OpBuilder &builder, Value input,
 Value lowerToVectorReductions(TypedValue<VectorType> src,
                               TypedValue<VectorType> acc,
                               vector::CombiningKind kind, int64_t reductionDim,
-                              Location loc, PatternRewriter &rewriter);
+                              Location loc, PatternRewriter &rewriter,
+                              arith::FastMathFlagsAttr fastmath = nullptr);
 
 /// Creates a constant filled with the neutral (identity) value for the
-/// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL/AND,
-/// max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI, and +/-infinity
-/// for float min/max operations. If \p type is a VectorType, returns a splat
-/// vector constant; otherwise returns a scalar constant. Returns nullptr if
-/// the element type is incompatible with the requested reduction kind.
+/// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL/AND, and
+/// max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI. For float min/max
+/// kinds, the value is one that the element type can represent and \p fastmath
+/// allows: a quiet NaN for the kinds that ignore NaN operands, unless `nnan` is
+/// set; else the infinity that never wins, unless `ninf` is set or the type
+/// has none; else the lowest (for max) or highest (for min) finite value. If
+/// \p type is a VectorType, returns a splat vector constant; otherwise returns
+/// a scalar constant. Returns nullptr if the element type is incompatible with
+/// the requested reduction kind.
 Value createReductionNeutralValue(OpBuilder &builder, Location loc, Type type,
-                                  vector::CombiningKind kind);
+                                  vector::CombiningKind kind,
+                                  arith::FastMathFlagsAttr fastmath = nullptr);
 
 /// Lowers cross-lane reductions to shuffle operations on a 2D vector.
 /// Extracts slices along the reduction dimension, performs subgroup reductions
 /// with shuffles across reductionSize work-items, and inserts the results back
 /// into an accumulator vector.
-Value lowerCrossLaneReductionToShuffles(TypedValue<VectorType> src,
-                                        TypedValue<VectorType> acc,
-                                        vector::CombiningKind kind,
-                                        int64_t reductionDim,
-                                        int64_t reductionSize, Location loc,
-                                        PatternRewriter &rewriter);
+Value lowerCrossLaneReductionToShuffles(
+    TypedValue<VectorType> src, TypedValue<VectorType> acc,
+    vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
+    Location loc, PatternRewriter &rewriter,
+    arith::FastMathFlagsAttr fastmath = nullptr);
 
 /// Helper Function to find a proper instruction multiple for the user-supplied
 /// sg-level data shape (diven by `dim`). `candidates` are uArch allowed shapes.
