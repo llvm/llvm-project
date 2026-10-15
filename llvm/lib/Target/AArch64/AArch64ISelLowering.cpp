@@ -31724,9 +31724,43 @@ static unsigned getReductionForOpcode(unsigned Op) {
   }
 }
 
+// umin(abs(X), signed_max) is a saturating absolute value. In particular,
+// abs(signed_min) has the unsigned value signed_max + 1 and must be clamped.
+static SDValue trySQABSCombine(SDNode *N, SelectionDAG &DAG,
+                               const AArch64TargetLowering &TLI) {
+  using namespace llvm::SDPatternMatch;
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector() || !VT.isInteger() || VT.isVectorOf(MVT::i1) ||
+      !TLI.isTypeLegal(VT))
+    return SDValue();
+
+  SDValue X;
+  const APInt Max = APInt::getSignedMaxValue(VT.getScalarSizeInBits());
+  if (!sd_match(N, m_UMin(m_Abs(m_Value(X)), m_SpecificInt(Max))))
+    return SDValue();
+
+  const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  SDLoc DL(N);
+  if (VT.isScalableVector()) {
+    if (!(Subtarget.hasSVE2() || Subtarget.hasSME()))
+      return SDValue();
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, VT,
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_sqabs, DL, MVT::i32),
+        DAG.getPOISON(VT), getPredicateForVector(DAG, DL, VT), X);
+  }
+
+  if (Subtarget.isNeonAvailable() &&
+      (VT.is64BitVector() || VT.is128BitVector()))
+    return DAG.getNode(AArch64ISD::SQABS, DL, VT, X);
+  return SDValue();
+}
+
 static SDValue performMINMAXCombine(SDNode *N, SelectionDAG &DAG,
                                     const AArch64TargetLowering &TLI) {
   using namespace llvm::SDPatternMatch;
+  if (SDValue V = trySQABSCombine(N, DAG, TLI))
+    return V;
   if (SDValue V = trySQDMULHCombine(N, DAG))
     return V;
 
