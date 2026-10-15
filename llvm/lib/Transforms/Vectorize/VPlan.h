@@ -2613,10 +2613,8 @@ public:
 /// converted to concrete recipes before executing.
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe,
                                       public VPIRFlags {
-  std::optional<APInt> StartOffset;
-
-  // If this recipe is unrolled it will have 2 additional operands.
-  bool isUnrolled() const { return getNumOperands() == 5; }
+  // Operands: Start, Step, VF, [StartOffset], [SplatVFStep, LastPart].
+  bool isUnrolled() const { return getNumOperands() >= 5; }
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
@@ -2632,12 +2630,13 @@ public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
                                 Type *ResultTy, const VPIRFlags &Flags,
-                                DebugLoc DL,
-                                std::optional<APInt> StartOffset = std::nullopt)
+                                DebugLoc DL, VPValue *StartOffset = nullptr)
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
                                Start, Step, IndDesc, ResultTy, DL),
-        VPIRFlags(Flags), StartOffset(std::move(StartOffset)) {
+        VPIRFlags(Flags) {
     addOperand(VF);
+    if (StartOffset)
+      addOperand(StartOffset);
   }
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
@@ -2646,7 +2645,7 @@ public:
     return new VPWidenIntOrFpInductionRecipe(
         getPHINode(), getStartValue(), getStepValue(), getVFValue(),
         getInductionDescriptor(), getScalarType(), *this, getDebugLoc(),
-        StartOffset);
+        getStartOffset());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenIntOrFpInductionSC)
@@ -2675,10 +2674,15 @@ public:
                getStartValue()->getScalarType()->getPrimitiveSizeInBits();
   }
 
-  /// Return the constant offset from the original induction start that was
-  /// folded into this recipe's start value, if any.
-  const APInt *getStartOffset() const {
-    return StartOffset ? &*StartOffset : nullptr;
+  /// Returns the value added to the start value, or null if there is none.
+  VPValue *getStartOffset() const {
+    unsigned NumOps = getNumOperands();
+    return NumOps == 4 || NumOps == 6 ? getOperand(3) : nullptr;
+  }
+
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    return Op == getStartOffset() ||
+           VPWidenInductionRecipe::usesFirstLaneOnly(Op);
   }
 
   /// Return the cost of this VPWidenIntOrFpInductionRecipe.

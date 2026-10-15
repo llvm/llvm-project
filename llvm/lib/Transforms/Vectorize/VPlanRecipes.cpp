@@ -3121,7 +3121,7 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   // The step may be defined by a recipe in the preheader (e.g. if it requires
   // SCEV expansion), but for the canonical induction the step is required to be
   // 1, which is represented as live-in.
-  return match(getStartValue(), m_ZeroInt()) &&
+  return match(getStartValue(), m_ZeroInt()) && !getStartOffset() &&
          match(getStepValue(), m_One()) &&
          getScalarType() == getRegion()->getCanonicalIVType();
 }
