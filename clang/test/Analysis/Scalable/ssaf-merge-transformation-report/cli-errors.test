@@ -1,0 +1,87 @@
+// Tests for clang-ssaf-merge-transformation-report errors.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// CLI error: no arguments
+// ============================================================================
+
+// RUN: not clang-ssaf-merge-transformation-report 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-ARGS
+// NO-ARGS: clang-ssaf-merge-transformation-report{{(\.exe)?}}: Not enough positional command line arguments specified!
+
+// ============================================================================
+// CLI error: missing -o
+// ============================================================================
+
+// RUN: not clang-ssaf-merge-transformation-report %S/Inputs/tu-a.sarif 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-OUTPUT
+// NO-OUTPUT: clang-ssaf-merge-transformation-report{{(\.exe)?}}: for the -o option: must be specified at least once!
+
+// ============================================================================
+// Error: nonexistent input
+// ============================================================================
+
+// RUN: not clang-ssaf-merge-transformation-report %t/missing.sarif \
+// RUN:   -o %t/out.sarif 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MISSING -DPATH=%t/missing.sarif
+// MISSING: clang-ssaf-merge-transformation-report: error: failed to read '[[PATH]]': {{.*}}
+
+// ============================================================================
+// Error: input is not JSON
+// ============================================================================
+
+// RUN: echo 'not json' > %t/not-json.sarif
+// RUN: not clang-ssaf-merge-transformation-report %t/not-json.sarif \
+// RUN:   -o %t/out.sarif 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NOT-JSON -DPATH=%t/not-json.sarif
+// NOT-JSON: clang-ssaf-merge-transformation-report: error: failed to parse '[[PATH]]': {{.*}}
+
+// ============================================================================
+// Error: input does not have exactly one run
+// ============================================================================
+
+// RUN: not clang-ssaf-merge-transformation-report %S/Inputs/two-runs.sarif \
+// RUN:   -o %t/out.sarif 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=TWO-RUNS
+// TWO-RUNS: clang-ssaf-merge-transformation-report: error: '{{.*}}two-runs.sarif' is not a SARIF log with exactly one run
+
+// ============================================================================
+// Error: inputs from different transformations
+// ============================================================================
+
+// RUN: not clang-ssaf-merge-transformation-report %S/Inputs/tu-a.sarif \
+// RUN:   %S/Inputs/other-transformation.sarif -o %t/out.sarif 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=OTHER
+// OTHER: clang-ssaf-merge-transformation-report: error: '{{.*}}other-transformation.sarif' reports on 'clang ScalableStaticAnalysisFramework source transformation (fix-noexcept)', not on 'clang ScalableStaticAnalysisFramework source transformation (cpp-bounded-buffers)'
+
+// ============================================================================
+// Error: a result refers to a rule its run does not define
+// ============================================================================
+
+// RUN: not clang-ssaf-merge-transformation-report \
+// RUN:   %S/Inputs/bad-rule-index.sarif -o %t/out.sarif 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-RULE
+// BAD-RULE: clang-ssaf-merge-transformation-report: error: '{{.*}}bad-rule-index.sarif': a result refers to rule 3, which its run does not define
+
+// ============================================================================
+// Error: a location refers to an artifact its run does not define
+// ============================================================================
+
+// RUN: not clang-ssaf-merge-transformation-report \
+// RUN:   %S/Inputs/bad-artifact-index.sarif -o %t/out.sarif 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-ARTIFACT
+// BAD-ARTIFACT: clang-ssaf-merge-transformation-report: error: '{{.*}}bad-artifact-index.sarif': a location refers to artifact 5, which its run does not define
+
+// ============================================================================
+// Error: the output cannot be written
+// ============================================================================
+
+// RUN: not clang-ssaf-merge-transformation-report %S/Inputs/tu-a.sarif \
+// RUN:   -o %t/no-such-dir/out.sarif 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CANNOT-WRITE -DPATH=%t/no-such-dir/out.sarif
+// CANNOT-WRITE: clang-ssaf-merge-transformation-report: error: failed to write '[[PATH]]': {{.*}}
+
+// No error leaves an output behind.
+// RUN: not ls %t/out.sarif
