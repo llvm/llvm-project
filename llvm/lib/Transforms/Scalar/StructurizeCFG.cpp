@@ -395,7 +395,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     if (SkipUniformRegions)
       AU.addRequired<UniformityInfoWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
 
@@ -412,6 +411,7 @@ INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
                       "Structurize the CFG", false, false)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
 INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
                     "Structurize the CFG", false, false)
