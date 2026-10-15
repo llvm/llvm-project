@@ -702,22 +702,21 @@ bool SuperHExpandPseudo::expand<SH::SHLri>(Block &MBB, BlockIt MBBI) {
   int64_t Offset = MI.getOperand(2).getImm();
 
   while (Offset > 0) {
-
-    if (Offset > 16) {
+    if (Offset >= 16) {
       BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL16), DstReg).addReg(SrcReg);
 
       Offset -= 16;
       continue;
     }
 
-    if (Offset > 8) {
+    if (Offset >= 8) {
       BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL8), DstReg).addReg(SrcReg);
 
       Offset -= 8;
       continue;
     }
 
-    if (Offset > 2) {
+    if (Offset >= 2) {
       BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL2), DstReg).addReg(SrcReg);
 
       Offset -= 2;
@@ -743,21 +742,21 @@ bool SuperHExpandPseudo::expand<SH::SHRri>(Block &MBB, BlockIt MBBI) {
 
   while (Offset > 0) {
 
-    if (Offset > 16) {
+    if (Offset >= 16) {
       BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR16), DstReg).addReg(SrcReg);
 
       Offset -= 16;
       continue;
     }
 
-    if (Offset > 8) {
+    if (Offset >= 8) {
       BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR8), DstReg).addReg(SrcReg);
 
       Offset -= 8;
       continue;
     }
 
-    if (Offset > 2) {
+    if (Offset >= 2) {
       BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR2), DstReg).addReg(SrcReg);
 
       Offset -= 2;
