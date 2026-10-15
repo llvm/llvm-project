@@ -1,0 +1,54 @@
+# RUN: llc -mtriple=amdgpu12.50 -verify-machineinstrs -verify-misched -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec %s -o - | FileCheck %s --check-prefix=SCHED
+# RUN: llc -mtriple=amdgpu12.50 -verify-machineinstrs -run-pass=amdgpu-print-rp -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=RP --implicit-check-not="mis LIS"
+# RUN: llc -mtriple=amdgpu12.50 -verify-machineinstrs -run-pass=amdgpu-print-rp -amdgpu-print-rp-downward -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=RP --implicit-check-not="mis LIS"
+
+# Scheduling queries after a bundle must advance over its entire contents.
+# Check liveness in both directions, including a bundle at the end of a block:
+# the consumed input dies and the defined value stays live into the successor.
+
+---
+name: bundled_pressure_query
+tracksRegLiveness: true
+body: |
+  ; SCHED-LABEL: name: bundled_pressure_query
+  ; SCHED: BUNDLE
+  ; SCHED: V_EXP_F32_e32
+  ; RP-LABEL: name: bundled_pressure_query
+  ; RP: BUNDLE
+  ; RP-NEXT: 0     2
+  ; RP: 0     3      %3:vgpr_32 = V_EXP_F32_e32
+  ; RP: Live-out:
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    BUNDLE implicit-def %2, implicit %0, implicit %1, implicit $mode, implicit $exec {
+      %2:vgpr_32 = V_ADD_F32_e32 %0, %1, implicit $mode, implicit $exec
+    }
+    %3:vgpr_32 = V_EXP_F32_e32 %2, implicit $mode, implicit $exec
+    %4:vgpr_32 = V_ADD_F32_e32 %2, %1, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %3, implicit %4
+...
+---
+name: bundle_at_block_end
+tracksRegLiveness: true
+body: |
+  ; SCHED-LABEL: name: bundle_at_block_end
+  ; SCHED: BUNDLE
+  ; RP-LABEL: name: bundle_at_block_end
+  ; RP: Live-out: %1:0000000000000003 %3:0000000000000003
+  ; RP: bb.1:
+  ; RP-NEXT: Live-in: %1:0000000000000003 %3:0000000000000003
+  ; RP: 0     2      S_ENDPGM
+  ; RP-NEXT: 0     0
+  ; RP-NEXT: Live-out:
+  bb.0:
+    successors: %bb.1
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    BUNDLE implicit-def dead %2, implicit-def %3, implicit %0, implicit %1, implicit $mode, implicit $exec {
+      %2:vgpr_32 = V_ADD_F32_e32 %0, %1, implicit $mode, implicit $exec
+      %3:vgpr_32 = V_ADD_F32_e32 internal %2, %1, implicit $mode, implicit $exec
+    }
+  bb.1:
+    S_ENDPGM 0, implicit %3, implicit %1
+...
