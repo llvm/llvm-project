@@ -368,9 +368,9 @@ protected:
                       unsigned Ndx, const Elf_Shdr *SymTab,
                       const Elf_Shdr *FunctionSec, const Elf_Shdr &StackSizeSec,
                       const RelocationResolver &Resolver, DataExtractor Data);
-  // Prints a stack size entry. Address is the function's address: the value
-  // stored in the entry in a linked file, or the value that its relocation
-  // resolves to in a relocatable file.
+  /// Prints a stack size entry for the functions in \p FuncNames. \p Address
+  /// is the function's address: the value stored in the entry in a linked
+  /// file, or the value that its relocation resolves to in a relocatable file.
   virtual void printStackSizeEntry(uint64_t Size,
                                    ArrayRef<std::string> FuncNames,
                                    uint64_t Address) = 0;
@@ -9009,8 +9009,8 @@ void LLVMELFDumper<ELFT>::printStackSizeEntry(uint64_t Size,
                                               uint64_t Address) {
   DictScope D(W, "Entry");
   W.printList("Functions", FuncNames);
-  // In a linked file, the function is identified by its address, as in
-  // --call-graph-info.
+  // Print the address only for a linked file. In a relocatable file the field
+  // holds a placeholder for the relocation that applies to it.
   if (this->Obj.getHeader().e_type != ELF::ET_REL)
     W.printHex("Address", Address);
   W.printHex("Size", Size);
