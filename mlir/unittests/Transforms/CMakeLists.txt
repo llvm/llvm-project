@@ -5,7 +5,5 @@ add_mlir_unittest(MLIRTransformsTests
 )
 mlir_target_link_libraries(MLIRTransformsTests
   PRIVATE
-  MLIRControlFlowDialect
-  MLIRFuncDialect
   MLIRParser
   MLIRTransforms)
