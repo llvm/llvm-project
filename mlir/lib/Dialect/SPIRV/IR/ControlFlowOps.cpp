@@ -305,6 +305,26 @@ Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.LifetimeStart / spirv.LifetimeStop
+//===----------------------------------------------------------------------===//
+
+template <typename LifetimeOpTy>
+static LogicalResult verifyLifetimeOp(LifetimeOpTy op) {
+  auto ptrType = cast<spirv::PointerType>(op.getPointer().getType());
+  if (ptrType.getStorageClass() != spirv::StorageClass::Function)
+    return op.emitOpError("pointer must have the Function storage class");
+
+  if (op.getSize() != 0)
+    return op.emitOpError("size must be 0 for a pointer to a non-void type");
+
+  return success();
+}
+
+LogicalResult LifetimeStartOp::verify() { return verifyLifetimeOp(*this); }
+
+LogicalResult LifetimeStopOp::verify() { return verifyLifetimeOp(*this); }
+
+//===----------------------------------------------------------------------===//
 // spirv.mlir.loop
 //===----------------------------------------------------------------------===//
 
