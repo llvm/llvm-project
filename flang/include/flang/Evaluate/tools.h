@@ -1089,6 +1089,14 @@ const Expr<SomeType> *GetVariableSelector(const Symbol &);
 // when none is found.
 const Symbol *GetLastTarget(const SymbolVector &);
 
+// The PROTECTED_TARGET pointer through which an object is accessed, if any.
+// A later ordinary pointer component starts a different target (F2028 9.4.2p5).
+// For pointer association contexts, exclude the pointer being defined.
+const Symbol *GetProtectedTarget(
+    const DataRef &, bool isPointerDefinition = false);
+const Symbol *GetProtectedTarget(
+    const Expr<SomeType> &, bool isPointerDefinition = false);
+
 // Collects all of the Symbols in an expression
 template <typename A> semantics::UnorderedSymbolSet CollectSymbols(const A &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(

@@ -314,6 +314,14 @@ void CheckHelper::Check(const Symbol &symbol) {
     messages_.Say(
         "An entity may not have the ASYNCHRONOUS attribute unless it is a variable"_err_en_US);
   }
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET) &&
+      !IsObjectPointer(&symbol)) {
+    // 25-182r1 specifies this attribute for named data pointers and data
+    // pointer components; the draft has no numbered constraint for a
+    // type-declaration attr-spec.
+    messages_.Say(
+        "An entity with the PROTECTED_TARGET attribute must be a data pointer"_err_en_US);
+  }
   if (symbol.attrs().HasAny({Attr::INTENT_IN, Attr::INTENT_INOUT,
           Attr::INTENT_OUT, Attr::OPTIONAL, Attr::VALUE}) &&
       !IsDummy(symbol)) {
@@ -345,6 +353,12 @@ void CheckHelper::Check(const Symbol &symbol) {
     if (FindCommonBlockContaining(symbol)) { // C856
       messages_.Say(
           "A PROTECTED entity may not be in a common block"_err_en_US);
+    }
+  }
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET)) {
+    if (FindCommonBlockContaining(symbol)) { // F2028 C867
+      messages_.Say(
+          "A PROTECTED_TARGET pointer may not be in a common block"_err_en_US);
     }
   }
   if (IsPointer(symbol)) {
@@ -619,6 +633,18 @@ void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
                       *componentPath),
                   derived->typeSymbol()),
               *ref);
+        }
+        if (!IsPointer(*ref)) {
+          if (const Symbol *pointer{
+                  FindUltimateComponent(*derived, [](const Symbol &component) {
+                    return component.attrs().test(Attr::PROTECTED_TARGET);
+                  })}) { // Interpret F2028 C867 to include pointer components.
+            evaluate::AttachDeclaration(
+                messages_.Say(
+                    "COMMON block /%s/ may not contain a PROTECTED_TARGET pointer component '%s'"_err_en_US,
+                    symbol.name(), pointer->name()),
+                *pointer);
+          }
         }
       }
     }
@@ -4177,7 +4203,9 @@ void SubprogramMatchHelper::CheckDummyDataObject(const Symbol &symbol1,
     const Symbol &symbol2, const DummyDataObject &obj1,
     const DummyDataObject &obj2) {
   if (!CheckSameIntent(symbol1, symbol2, obj1.intent, obj2.intent)) {
-  } else if (!CheckSameAttrs(symbol1, symbol2, obj1.attrs, obj2.attrs)) {
+  } else if (!CheckSameAttrs(symbol1, symbol2,
+                 obj1.attrs - DummyDataObject::Attr::ProtectedTarget,
+                 obj2.attrs - DummyDataObject::Attr::ProtectedTarget)) {
   } else if (!obj1.type.type().IsEquivalentTo(obj2.type.type())) {
     Say(symbol1, symbol2,
         "Dummy argument '%s' has type %s; the corresponding argument in the interface body has distinct type %s"_err_en_US,

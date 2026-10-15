@@ -67,6 +67,11 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (evaluate::GetProtectedTarget(*expr)) { // F2028 C873
+      messages.Say(
+          "PROTECTED_TARGET pointer or subobject '%s' requires an explicit interface"_err_en_US,
+          expr->AsFortran());
+    }
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
@@ -830,6 +835,15 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // Definability checking
   // Problems with polymorphism are caught in the callee's definition.
   if (scope) {
+    if (!dummyIsPointer && dummy.intent != common::Intent::In &&
+        // Intrinsic dummies default to INTENT(IN) (J3/26-007r1 17.2.1p3).
+        !(intrinsic && dummy.intent == common::Intent::Default) &&
+        evaluate::GetProtectedTarget(actual)) { // F2028 C874
+      messages.Say(
+          "PROTECTED_TARGET pointer or subobject '%s' may be associated only with an INTENT(IN) nonpointer %s"_err_en_US,
+          actual.AsFortran(), dummyName);
+      return;
+    }
     std::optional<parser::MessageFixedText> undefinableMessage;
     DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
     if (dummy.intent == common::Intent::InOut) {

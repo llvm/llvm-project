@@ -11,6 +11,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -98,6 +99,19 @@ private:
 };
 
 template <typename T>
+static void CheckProtectedTargetDefinition(
+    SemanticsContext &context, const T &x) {
+  if (const auto *expr{GetExpr(context, x)};
+      expr && evaluate::GetProtectedTarget(*expr)) {
+    auto at{parser::FindSourceLocation(x)};
+    if (auto whyNot{WhyNotDefinable(at, context.FindScope(at),
+            {DefinabilityFlag::AllowEventLockOrNotifyType}, *expr)}) {
+      context.Say(std::move(*whyNot));
+    }
+  }
+}
+
+template <typename T>
 static void CheckTeamType(
     SemanticsContext &context, const T &x, bool mustBeVariable = false) {
   if (const auto *expr{GetExpr(context, x)}) {
@@ -108,6 +122,8 @@ static void CheckTeamType(
     } else if (mustBeVariable && !IsVariable(*expr)) {
       context.Say(parser::FindSourceLocation(x),
           "Team must be a variable in this context"_err_en_US);
+    } else if (mustBeVariable) {
+      CheckProtectedTargetDefinition(context, x);
     }
   }
 }
@@ -115,6 +131,7 @@ static void CheckTeamType(
 static void CheckTeamStat(
     SemanticsContext &context, const parser::ImageSelectorSpec::Stat &stat) {
   const auto &var{parser::UnwrapRef<parser::Variable>(stat)};
+  CheckProtectedTargetDefinition(context, var);
   if (parser::GetCoindexedNamedObject(var)) {
     context.Say(parser::FindSourceLocation(var), // C931
         "Image selector STAT variable must not be a coindexed "
@@ -177,6 +194,8 @@ static void CheckEventVariable(
     if (!IsEventType(evaluate::GetDerivedTypeSpec(expr->GetType()))) { // C1176
       context.Say(parser::FindSourceLocation(eventVar),
           "The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
+    } else {
+      CheckProtectedTargetDefinition(context, eventVar);
     }
   }
 }
@@ -285,6 +304,7 @@ static void CheckEventWaitSpecList(SemanticsContext &context,
 
 void CoarrayChecker::Leave(const parser::NotifyWaitStmt &x) {
   const auto &notifyVar{std::get<parser::Scalar<parser::Variable>>(x.t)};
+  CheckProtectedTargetDefinition(context_, notifyVar);
 
   if (const auto *expr{GetExpr(context_, notifyVar)}) {
     if (ExtractCoarrayRef(expr)) {
@@ -358,6 +378,9 @@ void CoarrayChecker::Leave(const parser::LockStmt &x) {
     } else {
       CHECK(std::holds_alternative<
           parser::Scalar<parser::Logical<parser::Variable>>>(lockStat.u));
+      CheckProtectedTargetDefinition(context_,
+          std::get<parser::Scalar<parser::Logical<parser::Variable>>>(
+              lockStat.u));
       if (gotAcquired) {
         context_.Say(parser::FindSourceLocation(lockStat),
             "Multiple ACQUIRED_LOCK specifiers"_err_en_US);
@@ -383,6 +406,10 @@ void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
     if (const auto *stat{std::get_if<parser::ImageSelectorSpec::Stat>(
             &imageSelectorSpec.u)}) {
       CheckTeamStat(context_, *stat);
+    } else if (const auto *notify{
+                   std::get_if<parser::ImageSelectorSpec::Notify>(
+                       &imageSelectorSpec.u)}) {
+      CheckProtectedTargetDefinition(context_, *notify);
     }
   }
 }

@@ -1177,6 +1177,45 @@ const Symbol *GetLastTarget(const SymbolVector &symbols) {
   return iter == end ? nullptr : &**iter;
 }
 
+const Symbol *GetProtectedTarget(
+    const DataRef &dataRef, bool isPointerDefinition) {
+  SymbolVector symbols{GetSymbolVector(dataRef)};
+  if (isPointerDefinition && !symbols.empty()) {
+    symbols.pop_back();
+  }
+  for (auto iter{symbols.rbegin()}; iter != symbols.rend(); ++iter) {
+    const Symbol &symbol{iter->get().GetUltimate()};
+    if (const auto *association{
+            symbol.detailsIf<semantics::AssocEntityDetails>()};
+        association && association->expr()) {
+      // GetSymbolVector() does not expand pointer-valued function selectors.
+      return GetProtectedTarget(*association->expr());
+    }
+    if (IsPointer(symbol)) {
+      return symbol.attrs().test(semantics::Attr::PROTECTED_TARGET) ? &symbol
+                                                                    : nullptr;
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *GetProtectedTarget(
+    const Expr<SomeType> &expr, bool isPointerDefinition) {
+  if (auto dataRef{ExtractDataRef(expr, true, true)}) {
+    return GetProtectedTarget(*dataRef, isPointerDefinition);
+  } else if (!isPointerDefinition) {
+    if (const auto *ref{UnwrapProcedureRef(expr)}) {
+      if (const Symbol *interface{ref->proc().GetInterfaceSymbol()}) {
+        if (const Symbol *result{FindFunctionResult(*interface)};
+            result && result->attrs().test(semantics::Attr::PROTECTED_TARGET)) {
+          return result;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
 struct CollectSymbolsHelper
     : public SetTraverse<CollectSymbolsHelper, semantics::UnorderedSymbolSet> {
   using Base = SetTraverse<CollectSymbolsHelper, semantics::UnorderedSymbolSet>;

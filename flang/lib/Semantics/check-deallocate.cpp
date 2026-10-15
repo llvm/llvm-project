@@ -9,9 +9,11 @@
 #include "check-deallocate.h"
 #include "check-allocate.h"
 #include "definable.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 #include <optional>
 
@@ -53,6 +55,13 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
   }
   for (const parser::AllocateObject &allocateObject :
       std::get<std::list<parser::AllocateObject>>(deallocateStmt.t)) {
+    if (const auto *expr{GetExpr(context_, allocateObject)}; expr &&
+        evaluate::IsObjectPointer(*expr) &&
+        evaluate::GetProtectedTarget(*expr)) { // F2028 C868
+      context_.Say(parser::GetLastName(allocateObject).source,
+          "A PROTECTED_TARGET pointer may not be deallocated"_err_en_US);
+      continue;
+    }
     parser::CharBlock source;
     common::visit(
         common::visitors{
