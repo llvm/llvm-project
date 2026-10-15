@@ -5519,6 +5519,10 @@ mlir::acc::getDataClause(mlir::Operation *accDataEntryOp) {
   return dataClause;
 }
 
+bool mlir::acc::isDataEntryOp(mlir::Operation *op) {
+  return mlir::isa_and_nonnull<ACC_DATA_ENTRY_OPS, mlir::acc::MapInfoOp>(op);
+}
+
 bool mlir::acc::getImplicitFlag(mlir::Operation *accDataEntryOp) {
   return llvm::TypeSwitch<mlir::Operation *, bool>(accDataEntryOp)
       .Case<ACC_DATA_ENTRY_OPS>([&](auto entry) { return entry.getImplicit(); })

@@ -142,6 +142,10 @@ mlir::ArrayAttr getAsyncOnly(mlir::Operation *accDataClauseOp);
 /// Used to obtain the `name` from an acc operation.
 std::optional<llvm::StringRef> getVarName(mlir::Operation *accOp);
 
+/// Used to find out whether `op` is a data entry operation or an
+/// `acc.map_info`. `op` may be null.
+bool isDataEntryOp(mlir::Operation *op);
+
 /// Used to obtain the `dataClause` from a data entry operation.
 /// Returns empty optional if not a data entry operation.
 std::optional<mlir::acc::DataClause>
