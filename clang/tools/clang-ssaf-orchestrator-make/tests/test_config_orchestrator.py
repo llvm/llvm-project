@@ -114,6 +114,7 @@ class Configure(Executables, unittest.TestCase):
         self.clang = self._executable("clang")
         self.linker = self._executable("clang-ssaf-linker")
         self.analyzer = self._executable("clang-ssaf-analyzer")
+        self.merge = self._executable("clang-ssaf-src-edit-merge")
         self.project = os.path.join(self.tmp, "project")
         os.makedirs(self.project)
         self.addCleanup(os.chdir, os.getcwd())
@@ -139,10 +140,12 @@ class Configure(Executables, unittest.TestCase):
         configs, problem = config_orchestrator.configure(
             command_line_opts, {} if env is None else env
         )
-        return (configs or (None, None)) + (problem,)
+        return (configs or (None, None, None)) + (problem,)
 
     def test_a_valid_command_line_yields_the_configuration(self):
-        workflow_config, analysis_config, problem = self._configure("--", "make", "-j8")
+        workflow_config, analysis_config, _, problem = self._configure(
+            "--", "make", "-j8"
+        )
         self.assertIsNone(problem)
         self.assertEqual(["make", "-j8"], workflow_config.build_command)
         self.assertEqual("PointerFlow", analysis_config.extractors)
@@ -154,19 +157,62 @@ class Configure(Executables, unittest.TestCase):
             "--ssaf-clang=clang",
             "--ssaf-linker=clang-ssaf-linker",
             "--ssaf-analyzer=clang-ssaf-analyzer",
+            "--ssaf-src-edit-merge=clang-ssaf-src-edit-merge",
             "--analysis=a",
+            "--transformation=x",
             "--",
             "make",
         ]
         with mock.patch.dict(os.environ, {"PATH": self.tmp}):
-            workflow_config, analysis_config, problem = self._configure_argv(argv)
+            (
+                workflow_config,
+                analysis_config,
+                transformation_config,
+                problem,
+            ) = self._configure_argv(argv)
         self.assertIsNone(problem)
         self.assertEqual(self.clang, analysis_config.ssaf_clang)
         self.assertEqual(self.linker, analysis_config.ssaf_linker)
         self.assertEqual(self.analyzer, workflow_config.ssaf_analyzer)
+        self.assertEqual(self.merge, transformation_config.ssaf_src_edit_merge)
+
+    def test_a_run_analyses_and_transforms_only_where_asked(self):
+        _, analysis_config, transformation_config, problem = self._configure(
+            "--", "make"
+        )
+        self.assertIsNone(problem)
+        self.assertIsInstance(analysis_config, config.SSAFAnalysisPassConfig)
+        self.assertIsNone(transformation_config)
+
+        _, analysis_config, transformation_config, problem = self._configure(
+            "--analysis=a",
+            "--transformation=x",
+            "--ssaf-analyzer=" + self.analyzer,
+            "--ssaf-src-edit-merge=" + self.merge,
+            "--",
+            "make",
+        )
+        self.assertIsNone(problem)
+        self.assertEqual(["a"], analysis_config.analyses)
+        self.assertEqual("x", transformation_config.transformation)
+
+    def test_both_passes_get_the_clang_and_its_extra_arguments(self):
+        _, analysis_config, transformation_config, problem = self._configure(
+            "--analysis=a",
+            "--transformation=x",
+            "--ssaf-analyzer=" + self.analyzer,
+            "--ssaf-src-edit-merge=" + self.merge,
+            "--ssaf-extra-clang-arg=-DX",
+            "--",
+            "make",
+        )
+        self.assertIsNone(problem)
+        for pass_config in (analysis_config, transformation_config):
+            self.assertEqual(self.clang, pass_config.ssaf_clang)
+            self.assertEqual(["-DX"], pass_config.ssaf_extra_clang_args)
 
     def test_the_environment_reaches_the_config_but_not_the_file(self):
-        workflow_config, _, problem = self._configure(
+        workflow_config, _, _, problem = self._configure(
             "--", "make", env={"PATH": "/usr/bin", "SECRET": "x"}
         )
         self.assertIsNone(problem)
@@ -176,7 +222,7 @@ class Configure(Executables, unittest.TestCase):
 
     def test_an_output_dir_holding_the_project_is_refused(self):
         for value in (".", "..", os.getcwd()):
-            workflow_config, _, problem = self._configure("-o", value, "--", "make")
+            workflow_config, _, _, problem = self._configure("-o", value, "--", "make")
             self.assertIsNone(workflow_config, value)
             self.assertEqual(options.ENVIRONMENT_ERROR, problem.exit_status)
             self.assertIn("would contain the project", problem.message)
@@ -185,7 +231,7 @@ class Configure(Executables, unittest.TestCase):
         other = os.path.join(self.project, "src")
         os.makedirs(other)
         open(os.path.join(other, "main.c"), "w").close()
-        workflow_config, _, problem = self._configure("-o", other, "--", "make")
+        workflow_config, _, _, problem = self._configure("-o", other, "--", "make")
         self.assertIsNone(workflow_config)
         self.assertEqual(options.ENVIRONMENT_ERROR, problem.exit_status)
         self.assertIn("no earlier run made it", problem.message)
@@ -194,7 +240,7 @@ class Configure(Executables, unittest.TestCase):
     def test_an_empty_directory_is_taken(self):
         empty = os.path.join(self.tmp, "empty")
         os.makedirs(empty)
-        workflow_config, _, problem = self._configure("-o", empty, "--", "make")
+        workflow_config, _, _, problem = self._configure("-o", empty, "--", "make")
         self.assertIsNone(problem)
         self.assertEqual(os.path.realpath(empty), workflow_config.output_dir)
 
@@ -202,18 +248,20 @@ class Configure(Executables, unittest.TestCase):
         earlier = os.path.join(self.tmp, "earlier")
         os.makedirs(os.path.join(earlier, "ssaf-artifacts"))
         open(config.output_dir_marker_path(earlier), "w").close()
-        _, _, problem = self._configure("-o", earlier, "--", "make")
+        _, _, _, problem = self._configure("-o", earlier, "--", "make")
         self.assertIsNone(problem)
 
     def test_a_relative_output_dir_is_made_absolute(self):
-        workflow_config, _, problem = self._configure("-o", "somewhere", "--", "make")
+        workflow_config, _, _, problem = self._configure(
+            "-o", "somewhere", "--", "make"
+        )
         self.assertIsNone(problem)
         self.assertEqual(
             os.path.join(os.getcwd(), "somewhere"), workflow_config.output_dir
         )
 
     def test_an_unresolvable_ssaf_tool(self):
-        workflow_config, _, problem = self._configure_argv(
+        workflow_config, _, _, problem = self._configure_argv(
             [
                 "--extract-summaries=PointerFlow",
                 "--ssaf-clang=/no/such/clang",
@@ -228,7 +276,7 @@ class Configure(Executables, unittest.TestCase):
         self.assertIn("/no/such/clang", problem.details[0])
 
     def test_the_ssaf_tools_take_no_flags(self):
-        workflow_config, _, problem = self._configure_argv(
+        workflow_config, _, _, problem = self._configure_argv(
             [
                 "--extract-summaries=PointerFlow",
                 "--ssaf-clang=%s -O2" % self.clang,
@@ -257,7 +305,7 @@ class Configure(Executables, unittest.TestCase):
 
     def test_a_tool_absent_from_path_names_what_was_looked_for(self):
         with mock.patch.dict(os.environ, {"PATH": self.elsewhere}):
-            workflow_config, _, problem = self._configure_argv(
+            workflow_config, _, _, problem = self._configure_argv(
                 [
                     "--extract-summaries=PointerFlow",
                     "--ssaf-clang=" + self.clang,
@@ -272,7 +320,7 @@ class Configure(Executables, unittest.TestCase):
         )
 
     def test_every_unresolvable_tool_is_reported_at_once(self):
-        workflow_config, _, problem = self._configure_argv(
+        workflow_config, _, _, problem = self._configure_argv(
             [
                 "--extract-summaries=PointerFlow",
                 "--ssaf-clang=/no/such/clang",
@@ -294,13 +342,19 @@ class Configure(Executables, unittest.TestCase):
         )
 
     def test_the_analyzer_is_only_required_when_an_analysis_is_asked_for(self):
-        workflow_config, _, problem = self._configure("--", "make")
+        workflow_config, _, transformation_config, problem = self._configure(
+            "--", "make"
+        )
         self.assertIsNone(problem)
         self.assertIsNone(workflow_config.ssaf_analyzer)
+        self.assertIsNone(transformation_config)
 
     def test_a_tool_no_pass_will_run_is_not_resolved_at_all(self):
-        workflow_config, _, problem = self._configure(
-            "--ssaf-analyzer=/no/such/analyzer", "--", "make"
+        workflow_config, _, _, problem = self._configure(
+            "--ssaf-analyzer=/no/such/analyzer",
+            "--ssaf-src-edit-merge=/no/such/merge",
+            "--",
+            "make",
         )
         self.assertIsNone(problem)
         self.assertIsNone(workflow_config.ssaf_analyzer)

@@ -18,7 +18,9 @@ def from_json(written):
         for key, value in written.items()
         if key not in shared and key != "pass_kind"
     }
-    config.SSAFPassKind(written["pass_kind"])
+    pass_kind = config.SSAFPassKind(written["pass_kind"])
+    if pass_kind == config.SSAFPassKind.TRANSFORMATION:
+        return workflow_config, config.SSAFTransformationPassConfig(**own)
     return workflow_config, config.SSAFAnalysisPassConfig(**own)
 
 

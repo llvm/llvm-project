@@ -49,6 +49,12 @@ class Resolve(unittest.TestCase):
         self.assertIsNone(command_line_opts)
         self.assertEqual(options.USAGE_ERROR, problem.exit_status)
 
+    def test_a_transformation_needs_an_analysis(self):
+        command_line_opts, problem = self._resolve("--transformation=x", "--", "make")
+        self.assertIsNone(command_line_opts)
+        self.assertEqual(options.USAGE_ERROR, problem.exit_status)
+        self.assertIn("--analysis", problem.message)
+
     def test_resolving_makes_none_of_the_calls_configure_makes(self):
         # Not every filesystem call: argparse reads the locale through
         # gettext. These are the calls the configuration layer makes, and the
