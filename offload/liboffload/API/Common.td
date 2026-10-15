@@ -187,10 +187,7 @@ def olInit : Function {
     "The environment variables `OFFLOAD_TRACE` and "
     "`OFFLOAD_DISABLE_VALIDATION` are read when `olInit` initializes the "
     "library. Changes made afterwards take effect at the next initialization.",
-    "`olInit` is thread safe.",
-    "If the process exits while the reference count is not zero, the library "
-    "shuts itself down before the vendor runtimes are torn down. After that, "
-    "`olInit` fails with `OL_ERRC_UNINITIALIZED`."
+    "`olInit` is thread safe."
   ];
   let params = [
     Param<"const ol_init_args_t*", "InitArgs", "Optional configuration. NULL selects all platforms.", PARAM_IN_OPTIONAL>

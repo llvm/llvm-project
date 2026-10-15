@@ -337,9 +337,9 @@ TEST_F(olInitTest, ConcurrentShutDown) {
   ASSERT_ERROR(OL_ERRC_UNINITIALIZED, olShutDown());
 }
 
-// If the process exits while references are held, the library shuts
-// itself down; afterwards olShutDown succeeds and olInit fails with
-// OL_ERRC_UNINITIALIZED. Checked from an exit handler in a child process.
+// A balancing olShutDown from an exit handler is safe even after the library
+// shut itself down at process exit, and olInit cannot be used after that.
+// Checked from an exit handler in a child process.
 //
 // On Windows, atexit handlers registered inside a DLL run when the DLL is
 // unloaded, after every handler registered by the executable, so the state
