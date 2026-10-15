@@ -924,7 +924,9 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     // If Src2 is a literal that can be represented inline then use v_fma.
     if ((Opc == AMDGPU::V_FMAMK_F32 || Opc == AMDGPU::V_FMAMK_F16 ||
          Opc == AMDGPU::V_FMAMK_F16_t16 || Opc == AMDGPU::V_FMAMK_F16_fake16) &&
-        OpNo == 3 && OpToFold.isImm() && ST->hasVOP3Literal()) {
+        OpNo == 3 && OpToFold.isImm() && ST->hasVOP3Literal() &&
+        llvm::none_of(FoldList,
+                      [&](const FoldCandidate &C) { return C.UseMI == MI; })) {
       unsigned NewOpc = AMDGPU::V_FMA_F32_e64;
       switch (Opc) {
       case AMDGPU::V_FMAMK_F16:

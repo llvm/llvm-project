@@ -138,3 +138,18 @@ body: |
     %2:vgpr_32 = contract nofpexcept V_FMAMK_F32 %0, 778462824, %1, implicit $mode, implicit $exec
     $vgpr0 = COPY %2
 ...
+
+# Check this does not trigger an assertion due to partial FMA conversion
+---
+name: fmamk_constant_used_twice
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: fmamk_constant_used_twice
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1056964608, implicit $exec
+    ; GCN-NEXT: [[V_FMAMK_F32_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAMK_F32 1056964608, 778462824, [[V_MOV_B32_e32_]], implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY [[V_FMAMK_F32_]]
+    %0:vgpr_32 = V_MOV_B32_e32 1056964608, implicit $exec
+    %1:vgpr_32 = contract nofpexcept V_FMAMK_F32 %0, 778462824, %0, implicit $mode, implicit $exec
+    $vgpr0 = COPY %1
+...
