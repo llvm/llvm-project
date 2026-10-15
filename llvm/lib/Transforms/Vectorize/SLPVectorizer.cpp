@@ -13551,16 +13551,16 @@ bool BoUpSLP::bypassesInstCountCheck(InstructionCost TreeCost) const {
   if (!Opts.slp_vectorize_poor_throughput || TreeCost >= -getCostThreshold())
     return false;
   PoorThroughputOpCache Cache;
-  return any_of(
-      Candidate.VectorizableTree, [&](const std::unique_ptr<TreeEntry> &Ptr) {
-        const TreeEntry &TE = *Ptr;
-        return TE.hasState() && !Shared.DeletedNodes.contains(&TE) &&
-               !TE.isGather() &&
-               !Shared.TransformedToGatherNodes.contains(&TE) &&
-               TE.State != TreeEntry::CombinedVectorize &&
-               isPoorThroughputOp(Opts, TE.getMainOp(), *TTI, *TLI, Cache,
-                                  CostKind);
-      });
+  return any_of(Candidate.VectorizableTree,
+                [&](const std::unique_ptr<TreeEntry> &Ptr) {
+                  const TreeEntry &TE = *Ptr;
+                  return TE.hasState() && !Shared.DeletedNodes.contains(&TE) &&
+                         !TE.isGather() &&
+                         !Shared.TransformedToGatherNodes.contains(&TE) &&
+                         TE.State != TreeEntry::CombinedVectorize &&
+                         isPoorThroughputOp(Opts, TE.getMainOp(), *TTI, *TLI,
+                                            Cache, CostKind);
+                });
 }
 
 bool BoUpSLP::collectGatherUserOps(
