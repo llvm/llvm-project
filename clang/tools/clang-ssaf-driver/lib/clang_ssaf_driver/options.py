@@ -27,12 +27,12 @@ FORWARDED_TOOLS = (
         "Path to clang-ssaf-src-edit-merge (default: found on PATH).",
     ),
     (
-        "--ssaf-merge-transformation-report",
-        "Path to clang-ssaf-merge-transformation-report (default: found on PATH).",
+        "--ssaf-report-merge",
+        "Path to clang-ssaf-report-merge (default: found on PATH).",
     ),
     (
-        "--ssaf-merge-conflict-report",
-        "Path to clang-ssaf-merge-conflict-report (default: found on PATH).",
+        "--ssaf-conflict-merge",
+        "Path to clang-ssaf-conflict-merge (default: found on PATH).",
     ),
 )
 

@@ -75,8 +75,8 @@ Both are left to be done by hand, and neither changes the exit status.
        ``ssaf-output``, and is the orchestrator's output directory.
    * - ``--ssaf-clang=<path>``, ``--ssaf-linker=<path>``,
        ``--ssaf-analyzer=<path>``, ``--ssaf-src-edit-merge=<path>``,
-       ``--ssaf-merge-transformation-report=<path>``,
-       ``--ssaf-merge-conflict-report=<path>``,
+       ``--ssaf-report-merge=<path>``,
+       ``--ssaf-conflict-merge=<path>``,
        ``--ssaf-extra-clang-arg=<arg>``, ``-k``, ``-v``
      - Passed to the orchestrator; see {doc}`MakeProjects`.
    * - ``--version``

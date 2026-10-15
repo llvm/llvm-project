@@ -1,4 +1,4 @@
-//===- MergeConflictReport.cpp - SSAF Conflict Report Merge Tool ----------===//
+//===- ConflictMerge.cpp - SSAF Conflict Report Merge Tool ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,16 +41,14 @@ namespace {
 // Command-Line Options
 //===----------------------------------------------------------------------===//
 
-cl::OptionCategory
-    MergeConflictReportCategory("clang-ssaf-merge-conflict-report options");
+cl::OptionCategory ConflictMergeCategory("clang-ssaf-conflict-merge options");
 
 cl::list<std::string> InputPaths(cl::Positional, cl::desc("<input.sarif>..."),
-                                 cl::OneOrMore,
-                                 cl::cat(MergeConflictReportCategory));
+                                 cl::OneOrMore, cl::cat(ConflictMergeCategory));
 
 cl::opt<std::string> OutputPath("o", cl::desc("Output file path"),
                                 cl::value_desc("path"), cl::Required,
-                                cl::cat(MergeConflictReportCategory));
+                                cl::cat(ConflictMergeCategory));
 
 //===----------------------------------------------------------------------===//
 // Error Messages
@@ -237,7 +235,7 @@ int main(int argc, const char **argv) {
   llvm::StringRef ToolHeading = "SSAF Conflict Report Merger";
 
   InitLLVM X(argc, argv);
-  initTool(argc, argv, "0.1", MergeConflictReportCategory, ToolHeading);
+  initTool(argc, argv, "0.1", ConflictMergeCategory, ToolHeading);
 
   ConflictReportMerger Merger;
   for (const std::string &Path : InputPaths) {

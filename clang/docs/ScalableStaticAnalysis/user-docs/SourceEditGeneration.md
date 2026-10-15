@@ -68,12 +68,11 @@ The transformation report can be consumed by any SARIF viewer.
 
 ## Merging transformation reports
 
-A transformation report covers one translation unit.
-`clang-ssaf-merge-transformation-report` merges the reports of the
-translation units of a link unit into one:
+A transformation report covers one translation unit. `clang-ssaf-report-merge`
+merges the reports of the translation units of a link unit into one:
 
 ```console
-$ clang-ssaf-merge-transformation-report foo.sarif bar.sarif -o prg.sarif
+$ clang-ssaf-report-merge foo.sarif bar.sarif -o prg.sarif
 ```
 
 The inputs must come from the same transformation. A finding that several
@@ -84,12 +83,12 @@ inputs. A merged report can be merged again.
 ## Merging conflict reports
 
 `clang-ssaf-src-edit-merge --sarif-conflicts-out=` reports the overlapping
-edits it dropped while merging. `clang-ssaf-merge-conflict-report` merges
+edits it dropped while merging. `clang-ssaf-conflict-merge` merges
 such reports the same way, so that the conflicts found while merging the
 edits of an archive reach the report of the program it is linked into:
 
 ```console
-$ clang-ssaf-merge-conflict-report libparse.a.sarif prg.sarif -o all.sarif
+$ clang-ssaf-conflict-merge libparse.a.sarif prg.sarif -o all.sarif
 ```
 
 The inputs must all have been written by the same tool.

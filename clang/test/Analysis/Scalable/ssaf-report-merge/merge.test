@@ -2,12 +2,12 @@
 // rule and artifact indices, merge into one run.
 
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-ssaf-merge-transformation-report %S/Inputs/tu-a.sarif \
+// RUN: clang-ssaf-report-merge %S/Inputs/tu-a.sarif \
 // RUN:   %S/Inputs/tu-b.sarif -o %t/merged.sarif
 // RUN: FileCheck %s --input-file=%t/merged.sarif
 
 // '-' writes the report to stdout.
-// RUN: clang-ssaf-merge-transformation-report %S/Inputs/tu-a.sarif \
+// RUN: clang-ssaf-report-merge %S/Inputs/tu-a.sarif \
 // RUN:   %S/Inputs/tu-b.sarif -o - > %t/stdout.sarif
 // RUN: diff %t/merged.sarif %t/stdout.sarif
 

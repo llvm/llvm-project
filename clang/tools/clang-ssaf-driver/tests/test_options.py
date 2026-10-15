@@ -46,7 +46,7 @@ class Resolve(unittest.TestCase):
     def test_the_orchestrator_gets_each_forwarded_option_with_its_value(self):
         command_line_opts, _ = self._resolve(
             "--ssaf-clang=/x/clang",
-            "--ssaf-merge-conflict-report",
+            "--ssaf-conflict-merge",
             "/x/merge",
             "--ssaf-extra-clang-arg=-DX",
             "--ssaf-extra-clang-arg=-DY",
@@ -58,7 +58,7 @@ class Resolve(unittest.TestCase):
         self.assertEqual(
             [
                 "--ssaf-clang=/x/clang",
-                "--ssaf-merge-conflict-report=/x/merge",
+                "--ssaf-conflict-merge=/x/merge",
                 "--ssaf-extra-clang-arg=-DX",
                 "--ssaf-extra-clang-arg=-DY",
                 "--keep-going",

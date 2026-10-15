@@ -14,7 +14,7 @@
 // RUN: %{transform} --ssaf-compilation-unit-id=b --ssaf-src-edit-file=%t/b.yaml \
 // RUN:   --ssaf-transformation-report-file=%t/b.sarif -o %t/b.o %t/b.cpp
 
-// RUN: clang-ssaf-merge-transformation-report %t/a.sarif %t/b.sarif \
+// RUN: clang-ssaf-report-merge %t/a.sarif %t/b.sarif \
 // RUN:   %t/a.sarif -o %t/merged.sarif
 // RUN: FileCheck %s --input-file=%t/merged.sarif
 // RUN: grep '"text": "visited alpha"' %t/merged.sarif | count 1

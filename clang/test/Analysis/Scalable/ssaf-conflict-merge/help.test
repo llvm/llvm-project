@@ -1,11 +1,11 @@
-// Test clang-ssaf-merge-conflict-report help option
+// Test clang-ssaf-conflict-merge help option
 
-// RUN: clang-ssaf-merge-conflict-report --help-list-hidden \
+// RUN: clang-ssaf-conflict-merge --help-list-hidden \
 // RUN:           | FileCheck %s --match-full-lines
 
 // CHECK:      OVERVIEW: SSAF Conflict Report Merger
 // CHECK-EMPTY:
-// CHECK-NEXT: USAGE: clang-ssaf-merge-conflict-report{{(\.exe)?}} [options] <input.sarif>...
+// CHECK-NEXT: USAGE: clang-ssaf-conflict-merge{{(\.exe)?}} [options] <input.sarif>...
 // CHECK-EMPTY:
 // CHECK-NEXT: OPTIONS:
 // CHECK-NEXT:   -h                  - Alias for --help

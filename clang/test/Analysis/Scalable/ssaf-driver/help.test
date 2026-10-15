@@ -9,8 +9,8 @@
 # CHECK: --ssaf-linker
 # CHECK: --ssaf-analyzer
 # CHECK: --ssaf-src-edit-merge
-# CHECK: --ssaf-merge-transformation-report
-# CHECK: --ssaf-merge-conflict-report
+# CHECK: --ssaf-report-merge
+# CHECK: --ssaf-conflict-merge
 # CHECK: --ssaf-extra-clang-arg
 # CHECK: --keep-going
 # CHECK: --verbose

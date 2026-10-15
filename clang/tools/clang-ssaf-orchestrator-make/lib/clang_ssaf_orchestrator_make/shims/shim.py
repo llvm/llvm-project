@@ -242,7 +242,7 @@ def merge_transformation_reports(shim, build_artifact_id, input_build_artifact_i
     if not found:
         _report_nothing_to_merge(shim, "transformation reports", build_artifact_id)
         return
-    command = [shim.pass_config.ssaf_merge_transformation_report] + found
+    command = [shim.pass_config.ssaf_report_merge] + found
     command += [
         "-o",
         _output_artifact(
@@ -263,7 +263,7 @@ def merge_conflict_reports(shim, build_artifact_id, input_build_artifact_ids):
     if not found:
         _report_nothing_to_merge(shim, "conflict reports", build_artifact_id)
         return
-    command = [shim.pass_config.ssaf_merge_conflict_report] + found
+    command = [shim.pass_config.ssaf_conflict_merge] + found
     command += [
         "-o",
         _output_artifact(

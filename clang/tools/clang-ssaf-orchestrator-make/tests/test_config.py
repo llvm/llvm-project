@@ -39,8 +39,8 @@ class Passes(unittest.TestCase):
                 "ssaf_clang",
                 "ssaf_extra_clang_args",
                 "ssaf_src_edit_merge",
-                "ssaf_merge_transformation_report",
-                "ssaf_merge_conflict_report",
+                "ssaf_report_merge",
+                "ssaf_conflict_merge",
                 "transformation",
                 "link_unit_id",
             },
@@ -124,8 +124,8 @@ class Serialization(unittest.TestCase):
         self.assertEqual(
             {
                 "ssaf_src_edit_merge",
-                "ssaf_merge_transformation_report",
-                "ssaf_merge_conflict_report",
+                "ssaf_report_merge",
+                "ssaf_conflict_merge",
                 "transformation",
                 "link_unit_id",
             },

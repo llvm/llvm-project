@@ -115,8 +115,8 @@ class Configure(Executables, unittest.TestCase):
         self.linker = self._executable("clang-ssaf-linker")
         self.analyzer = self._executable("clang-ssaf-analyzer")
         self.merge = self._executable("clang-ssaf-src-edit-merge")
-        self.report_merge = self._executable("clang-ssaf-merge-transformation-report")
-        self.conflict_merge = self._executable("clang-ssaf-merge-conflict-report")
+        self.report_merge = self._executable("clang-ssaf-report-merge")
+        self.conflict_merge = self._executable("clang-ssaf-conflict-merge")
         self.project = os.path.join(self.tmp, "project")
         os.makedirs(self.project)
         self.addCleanup(os.chdir, os.getcwd())
@@ -160,8 +160,8 @@ class Configure(Executables, unittest.TestCase):
             "--ssaf-linker=clang-ssaf-linker",
             "--ssaf-analyzer=clang-ssaf-analyzer",
             "--ssaf-src-edit-merge=clang-ssaf-src-edit-merge",
-            "--ssaf-merge-transformation-report=clang-ssaf-merge-transformation-report",
-            "--ssaf-merge-conflict-report=clang-ssaf-merge-conflict-report",
+            "--ssaf-report-merge=clang-ssaf-report-merge",
+            "--ssaf-conflict-merge=clang-ssaf-conflict-merge",
             "--analysis=a",
             "--transformation=x",
             "--",
@@ -179,12 +179,8 @@ class Configure(Executables, unittest.TestCase):
         self.assertEqual(self.linker, analysis_config.ssaf_linker)
         self.assertEqual(self.analyzer, workflow_config.ssaf_analyzer)
         self.assertEqual(self.merge, transformation_config.ssaf_src_edit_merge)
-        self.assertEqual(
-            self.report_merge, transformation_config.ssaf_merge_transformation_report
-        )
-        self.assertEqual(
-            self.conflict_merge, transformation_config.ssaf_merge_conflict_report
-        )
+        self.assertEqual(self.report_merge, transformation_config.ssaf_report_merge)
+        self.assertEqual(self.conflict_merge, transformation_config.ssaf_conflict_merge)
 
     def test_a_run_analyses_and_transforms_only_where_asked(self):
         _, analysis_config, transformation_config, problem = self._configure(
@@ -199,8 +195,8 @@ class Configure(Executables, unittest.TestCase):
             "--transformation=x",
             "--ssaf-analyzer=" + self.analyzer,
             "--ssaf-src-edit-merge=" + self.merge,
-            "--ssaf-merge-transformation-report=" + self.report_merge,
-            "--ssaf-merge-conflict-report=" + self.conflict_merge,
+            "--ssaf-report-merge=" + self.report_merge,
+            "--ssaf-conflict-merge=" + self.conflict_merge,
             "--",
             "make",
         )
@@ -214,8 +210,8 @@ class Configure(Executables, unittest.TestCase):
             "--transformation=x",
             "--ssaf-analyzer=" + self.analyzer,
             "--ssaf-src-edit-merge=" + self.merge,
-            "--ssaf-merge-transformation-report=" + self.report_merge,
-            "--ssaf-merge-conflict-report=" + self.conflict_merge,
+            "--ssaf-report-merge=" + self.report_merge,
+            "--ssaf-conflict-merge=" + self.conflict_merge,
             "--ssaf-extra-clang-arg=-DX",
             "--",
             "make",
@@ -367,8 +363,8 @@ class Configure(Executables, unittest.TestCase):
         workflow_config, _, _, problem = self._configure(
             "--ssaf-analyzer=/no/such/analyzer",
             "--ssaf-src-edit-merge=/no/such/merge",
-            "--ssaf-merge-transformation-report=/no/such/report-merge",
-            "--ssaf-merge-conflict-report=/no/such/conflict-merge",
+            "--ssaf-report-merge=/no/such/report-merge",
+            "--ssaf-conflict-merge=/no/such/conflict-merge",
             "--",
             "make",
         )

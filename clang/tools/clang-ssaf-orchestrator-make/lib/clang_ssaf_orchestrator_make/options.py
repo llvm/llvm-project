@@ -80,17 +80,16 @@ def build_parser():
         help="Path to clang-ssaf-src-edit-merge (default: found on PATH).",
     )
     parser.add_argument(
-        "--ssaf-merge-transformation-report",
+        "--ssaf-report-merge",
         metavar="<path>",
         default=None,
-        help="Path to clang-ssaf-merge-transformation-report "
-        "(default: found on PATH).",
+        help="Path to clang-ssaf-report-merge (default: found on PATH).",
     )
     parser.add_argument(
-        "--ssaf-merge-conflict-report",
+        "--ssaf-conflict-merge",
         metavar="<path>",
         default=None,
-        help="Path to clang-ssaf-merge-conflict-report (default: found on PATH).",
+        help="Path to clang-ssaf-conflict-merge (default: found on PATH).",
     )
     parser.add_argument(
         "--ssaf-extra-clang-arg",
@@ -134,8 +133,8 @@ class CommandLineOpts:
         ssaf_linker=None,
         ssaf_analyzer=None,
         ssaf_src_edit_merge=None,
-        ssaf_merge_transformation_report=None,
-        ssaf_merge_conflict_report=None,
+        ssaf_report_merge=None,
+        ssaf_conflict_merge=None,
         keep_going=False,
         verbose=False,
     ):
@@ -149,8 +148,8 @@ class CommandLineOpts:
         self.ssaf_linker = ssaf_linker
         self.ssaf_analyzer = ssaf_analyzer
         self.ssaf_src_edit_merge = ssaf_src_edit_merge
-        self.ssaf_merge_transformation_report = ssaf_merge_transformation_report
-        self.ssaf_merge_conflict_report = ssaf_merge_conflict_report
+        self.ssaf_report_merge = ssaf_report_merge
+        self.ssaf_conflict_merge = ssaf_conflict_merge
         self.keep_going = keep_going
         self.verbose = verbose
 
@@ -183,8 +182,8 @@ def resolve(argv):
             ssaf_linker=args.ssaf_linker,
             ssaf_analyzer=args.ssaf_analyzer,
             ssaf_src_edit_merge=args.ssaf_src_edit_merge,
-            ssaf_merge_transformation_report=args.ssaf_merge_transformation_report,
-            ssaf_merge_conflict_report=args.ssaf_merge_conflict_report,
+            ssaf_report_merge=args.ssaf_report_merge,
+            ssaf_conflict_merge=args.ssaf_conflict_merge,
             keep_going=args.keep_going,
             verbose=args.verbose,
         ),

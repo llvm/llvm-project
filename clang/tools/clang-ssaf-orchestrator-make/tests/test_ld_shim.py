@@ -196,7 +196,7 @@ class SsafStep(unittest.TestCase):
         )
         self.assertEqual(
             [
-                "/bin/clang-ssaf-merge-transformation-report",
+                "/bin/clang-ssaf-report-merge",
                 a_report,
                 x_report,
                 "-o",
@@ -210,7 +210,7 @@ class SsafStep(unittest.TestCase):
         )
         self.assertEqual(
             [
-                "/bin/clang-ssaf-merge-conflict-report",
+                "/bin/clang-ssaf-conflict-merge",
                 x_conflicts,
                 own_conflicts,
                 "-o",

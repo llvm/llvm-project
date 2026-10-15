@@ -95,15 +95,15 @@ class SSAFTransformationPassConfig(SSAFPassConfig):
         ssaf_clang=None,
         ssaf_extra_clang_args=(),
         ssaf_src_edit_merge=None,
-        ssaf_merge_transformation_report=None,
-        ssaf_merge_conflict_report=None,
+        ssaf_report_merge=None,
+        ssaf_conflict_merge=None,
         transformation=None,
         link_unit_id=None,
     ):
         super().__init__(ssaf_clang, ssaf_extra_clang_args)
         self.ssaf_src_edit_merge = ssaf_src_edit_merge
-        self.ssaf_merge_transformation_report = ssaf_merge_transformation_report
-        self.ssaf_merge_conflict_report = ssaf_merge_conflict_report
+        self.ssaf_report_merge = ssaf_report_merge
+        self.ssaf_conflict_merge = ssaf_conflict_merge
         self.transformation = transformation
         self.link_unit_id = link_unit_id
 

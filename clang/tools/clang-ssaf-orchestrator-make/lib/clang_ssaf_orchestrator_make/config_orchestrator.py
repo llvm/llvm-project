@@ -127,22 +127,22 @@ def configure(command_line_opts, env):
         if command_line_opts.transformation
         else None
     )
-    ssaf_merge_transformation_report = (
+    ssaf_report_merge = (
         _resolve_ssaf_tool(
-            "--ssaf-merge-transformation-report",
-            "clang-ssaf-merge-transformation-report",
-            command_line_opts.ssaf_merge_transformation_report,
+            "--ssaf-report-merge",
+            "clang-ssaf-report-merge",
+            command_line_opts.ssaf_report_merge,
             installed_shim_dir_path,
             errors,
         )
         if command_line_opts.transformation
         else None
     )
-    ssaf_merge_conflict_report = (
+    ssaf_conflict_merge = (
         _resolve_ssaf_tool(
-            "--ssaf-merge-conflict-report",
-            "clang-ssaf-merge-conflict-report",
-            command_line_opts.ssaf_merge_conflict_report,
+            "--ssaf-conflict-merge",
+            "clang-ssaf-conflict-merge",
+            command_line_opts.ssaf_conflict_merge,
             installed_shim_dir_path,
             errors,
         )
@@ -178,8 +178,8 @@ def configure(command_line_opts, env):
     transformation_config = (
         config.SSAFTransformationPassConfig(
             ssaf_src_edit_merge=ssaf_src_edit_merge,
-            ssaf_merge_transformation_report=ssaf_merge_transformation_report,
-            ssaf_merge_conflict_report=ssaf_merge_conflict_report,
+            ssaf_report_merge=ssaf_report_merge,
+            ssaf_conflict_merge=ssaf_conflict_merge,
             transformation=command_line_opts.transformation,
             **common_pass_config,
         )

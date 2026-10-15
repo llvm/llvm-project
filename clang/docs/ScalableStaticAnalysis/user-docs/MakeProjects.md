@@ -112,11 +112,11 @@ orchestrator only the `make` invocation.
    * - ``--ssaf-src-edit-merge=<path>``
      - Path to ``clang-ssaf-src-edit-merge``. Defaults to the name on
        ``PATH``, and is only required with ``--transformation``.
-   * - ``--ssaf-merge-transformation-report=<path>``
-     - Path to ``clang-ssaf-merge-transformation-report``. Defaults to the
-       name on ``PATH``, and is only required with ``--transformation``.
-   * - ``--ssaf-merge-conflict-report=<path>``
-     - Path to ``clang-ssaf-merge-conflict-report``. Defaults to the name on
+   * - ``--ssaf-report-merge=<path>``
+     - Path to ``clang-ssaf-report-merge``. Defaults to the name on
+       ``PATH``, and is only required with ``--transformation``.
+   * - ``--ssaf-conflict-merge=<path>``
+     - Path to ``clang-ssaf-conflict-merge``. Defaults to the name on
        ``PATH``, and is only required with ``--transformation``.
    * - ``--ssaf-extra-clang-arg=<arg>``
      - Extra argument for every SSAF compilation. Repeatable.

@@ -132,9 +132,9 @@ link         clang-ssaf-linker over a link's inputs
 archive      the same for an archive
 merge        clang-ssaf-src-edit-merge over a link's or an archive's inputs
 transformation-report
-             clang-ssaf-merge-transformation-report over the same inputs
+             clang-ssaf-report-merge over the same inputs
 conflict-report
-             clang-ssaf-merge-conflict-report over the same inputs and the
+             clang-ssaf-conflict-merge over the same inputs and the
              conflicts of the merge itself
 forward      handing a job to the shim that stands in for its tool
 missing      an artifact with nothing analysed behind it
