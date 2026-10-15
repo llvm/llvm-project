@@ -72,7 +72,7 @@ StringRef getTargetBuiltinLibFunctionName(unsigned BuiltinID,
             {Builtin::BI__builtin_frexpl, "frexp"},
             {Builtin::BI__builtin_ldexpl, "ldexp"},
             {Builtin::BI__builtin_modfl, "modf"},
-        };
+    };
     return AIXLongDouble64Builtins.lookup(BuiltinID);
   }
 
