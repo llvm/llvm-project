@@ -2405,7 +2405,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FMAD:
     return legalizeFMad(MI, MRI, B);
   case TargetOpcode::G_FDIV:
-    return legalizeFDIV(MI, MRI, B);
+    return legalizeFDIV(Helper, MI);
   case TargetOpcode::G_FFREXP:
     return legalizeFFREXP(MI, MRI, B);
   case TargetOpcode::G_FSQRT:
@@ -5281,14 +5281,15 @@ bool AMDGPULegalizerInfo::legalizeKernargMemParameter(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
-                                       MachineRegisterInfo &MRI,
-                                       MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeFDIV(LegalizerHelper &Helper,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
 
   if (DstTy == F16 || DstTy == BF16)
-    return legalizeFDIV16(MI, MRI, B);
+    return legalizeFDIV16(Helper, MI);
   if (DstTy == F32)
     return legalizeFDIV32(MI, MRI, B);
   if (DstTy == F64)
@@ -5716,9 +5717,10 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
-                                         MachineRegisterInfo &MRI,
-                                         MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeFDIV16(LegalizerHelper &Helper,
+                                         MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
   if (legalizeFastUnsafeFDIV(MI, MRI, B))
     return true;
 
@@ -5726,16 +5728,12 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
 
-  uint16_t Flags = MI.getFlags();
+  // For bf16, use the generic promotion to f32 when the fast math lowering
+  // above does not apply.
+  if (MRI.getType(Res) == BF16)
+    return Helper.widenScalar(MI, 0, F32) == LegalizerHelper::Legalized;
 
-  if (MRI.getType(Res) == BF16) {
-    auto LHSExt = B.buildFPExt(F32, LHS, Flags);
-    auto RHSExt = B.buildFPExt(F32, RHS, Flags);
-    auto ExtDiv = B.buildFDiv(F32, LHSExt, RHSExt, Flags);
-    B.buildFPTrunc(Res, ExtDiv, Flags);
-    MI.eraseFromParent();
-    return true;
-  }
+  uint16_t Flags = MI.getFlags();
 
   LLT I32 = LLT::integer(32);
 

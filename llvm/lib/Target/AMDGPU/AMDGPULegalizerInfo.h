@@ -163,10 +163,8 @@ public:
   bool legalizeSignedDIV_REM(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
 
-  bool legalizeFDIV(MachineInstr &MI, MachineRegisterInfo &MRI,
-                    MachineIRBuilder &B) const;
-  bool legalizeFDIV16(MachineInstr &MI, MachineRegisterInfo &MRI,
-                      MachineIRBuilder &B) const;
+  bool legalizeFDIV(LegalizerHelper &Helper, MachineInstr &MI) const;
+  bool legalizeFDIV16(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeFDIV32(MachineInstr &MI, MachineRegisterInfo &MRI,
                       MachineIRBuilder &B) const;
   bool legalizeFDIV64(MachineInstr &MI, MachineRegisterInfo &MRI,
