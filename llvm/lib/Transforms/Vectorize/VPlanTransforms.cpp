@@ -3357,7 +3357,8 @@ bool VPlanTransforms::handleUncountableEarlyExits(
     // blocks, each holding one exit's condition slice and branching to
     // vector.check.exit or on to the next check.
 
-    // Keeping it simple for now. Only support the IV as resume value from the loop.
+    // Keeping it simple for now. Only support the IV as resume value from the
+    // loop.
     if (range_size(TheLoop->getHeader()->phis()) > 1)
       return false;
 
@@ -3371,26 +3372,78 @@ bool VPlanTransforms::handleUncountableEarlyExits(
     if (EarlyExitingSet.contains(LatchVPBB))
       return false;
 
-    // Returns the single successor of VPBB that stays inside the loop, or
-    // nullptr if there is not exactly one. Edges to the middle block or to an
-    // early-exit block leave the loop and are not part of the chain.
+    // A guard on the header to latch chain. BypassBlock is the successor
+    // that skips the guarded block (usually the latch or a merge block).
+    struct GuardBranch {
+      VPValue *GuardCond;
+      bool InvertedCond;
+      VPBasicBlock *BypassBlock;
+      unsigned BypassBlockIdx = 0;
+    };
+    DenseMap<VPBasicBlock *, GuardBranch> ChainDiamond;
+
+    // The successor that continues the chain, or nullptr if the block is not
+    // a single edge or one diamond. Edges to the middle block or to an
+    // early-exit block leave the loop.
+    //
+    //   for.body:
+    //     br i1 %flags, label %guarded, label %latch
+    //   guarded:
+    //     br i1 %cmp, label %exit, label %latch
+    //
+    // for.body has two in-loop successors. guarded is the continuation and
+    // latch is the bypass. The chain is for.body, guarded, latch.
     auto GetUniqueInLoopSuccessor = [&](VPBasicBlock *VPBB) -> VPBasicBlock * {
-      VPBasicBlock *InLoopSucc = nullptr;
+      SmallVector<VPBasicBlock *, 2> InLoopSuccs;
       for (VPBlockBase *Succ : VPBB->getSuccessors()) {
         if (Succ == MiddleVPBB || ExitBlockSet.contains(Succ))
           continue;
         auto *SuccVPBB = dyn_cast<VPBasicBlock>(Succ);
-        if (!SuccVPBB || InLoopSucc)
+        if (!SuccVPBB)
           return nullptr;
-        InLoopSucc = SuccVPBB;
+        InLoopSuccs.push_back(SuccVPBB);
       }
-      return InLoopSucc;
+      // Linear chain. 
+      if (InLoopSuccs.size() == 1)
+        return InLoopSuccs[0];
+      // Unsupported shape such as switch cases.
+      if (InLoopSuccs.size() != 2)
+        return nullptr;
+
+      // Exactly two successors. One is the bypass, the other is the guard.
+      VPBasicBlock *Guard = nullptr;
+      VPBasicBlock *Bypass = nullptr;
+      if (InLoopSuccs[0] == LatchVPBB) {
+        Bypass = InLoopSuccs[0];
+        Guard = InLoopSuccs[1];
+      } else if (InLoopSuccs[1] == LatchVPBB) {
+        Bypass = InLoopSuccs[1];
+        Guard = InLoopSuccs[0];
+      } else {
+        bool S0Merge = InLoopSuccs[0]->getNumPredecessors() > 1;
+        bool S1Merge = InLoopSuccs[1]->getNumPredecessors() > 1;
+        if (S0Merge == S1Merge)
+          return nullptr;
+        if (S0Merge) {
+          Bypass = InLoopSuccs[0];
+          Guard = InLoopSuccs[1];
+        } else {
+          Bypass = InLoopSuccs[1];
+          Guard = InLoopSuccs[0];
+        }
+      }
+      VPValue *GuardCond = nullptr;
+      if (!match(VPBB->getTerminator(), m_BranchOnCond(m_VPValue(GuardCond))))
+        return nullptr;
+      bool InvCond = VPBB->getSuccessors()[1] == Guard;
+      ChainDiamond[VPBB] = {GuardCond, InvCond, Bypass, 0};
+      return Guard;
     };
 
     // Collect the chain of blocks from the header to the latch.
     // The recipes of these blocks are redistributed into the check blocks and
-    // the body block, so anything other than a straight-line chain is
-    // unsupported.
+    // the body block. A straight line is accepted, and so is one diamond
+    // whose bypass is later on the same chain.
     SmallVector<VPBasicBlock *, 4> LoopChain;
     SmallPtrSet<VPBasicBlock *, 8> VisitedBlocks;
     VPBasicBlock *Cur = HeaderVPBB;
@@ -3412,13 +3465,70 @@ bool VPlanTransforms::handleUncountableEarlyExits(
         return false;
     }
 
+    DenseMap<const VPBasicBlock *, unsigned> ChainIdx;
+    for (unsigned I = 0, E = LoopChain.size(); I != E; ++I)
+      ChainIdx[LoopChain[I]] = I;
+    for (auto &[DBB, DG] : ChainDiamond) {
+      auto RIt = ChainIdx.find(DG.BypassBlock);
+      if (RIt == ChainIdx.end() || RIt->second <= ChainIdx[DBB])
+        return false;
+      DG.BypassBlockIdx = RIt->second;
+    }
+
     ArrayRef<VPBasicBlock *> Intermediates =
         ArrayRef(LoopChain).drop_front().drop_back();
 
-    // All early exits must be inside the loop chain.
-    for (const EarlyExitInfo &Exit : Exits)
-      if (!is_contained(LoopChain, Exit.EarlyExitingVPBB))
+    // Combine guard conditions with exit conditions so that a speculated early
+    // exit is only taken when all its guards are true. Legality already checked
+    // that these conditions are speculatable.
+
+    // Locate the exit on the chain.
+    for (const EarlyExitInfo &Exit : Exits) {
+      auto It = llvm::find(LoopChain, Exit.EarlyExitingVPBB);
+      if (It == LoopChain.end())
         return false;
+      unsigned ExitIdx = It - LoopChain.begin();
+      auto *MC = cast<VPInstruction>(Exit.CondToExit);
+      VPBuilder GuardBuilder(MC);
+      VPValue *CombinedGuard = nullptr;
+      // Collect all guards for the exit.
+      for (unsigned I = 0; I < ExitIdx; ++I) {
+        auto DiamondIt = ChainDiamond.find(LoopChain[I]);
+        if (DiamondIt == ChainDiamond.end() ||
+            ExitIdx >= DiamondIt->second.BypassBlockIdx)
+          continue;
+        VPValue *Guard = DiamondIt->second.GuardCond;
+        if (DiamondIt->second.InvertedCond)
+          Guard = GuardBuilder.createNot(Guard);
+        CombinedGuard =
+            CombinedGuard ? GuardBuilder.createLogicalAnd(CombinedGuard, Guard)
+                          : Guard;
+      }
+      // Combine the guards with the exit condition.
+      if (CombinedGuard)
+        MC->setOperand(
+            0, GuardBuilder.createLogicalAnd(CombinedGuard, MC->getOperand(0)));
+    }
+
+    // Stores inside a diamond must not run on lanes that skipped the guard.
+    // Hence we record the guards for each conditionalstore.
+    DenseMap<VPRecipeBase *, SmallVector<std::pair<VPValue *, bool>, 2>>
+        StoreGuards;
+    for (unsigned J = 0, E = LoopChain.size(); J != E; ++J) {
+      if (LoopChain[J] == LatchVPBB)
+        continue;
+      SmallVector<std::pair<VPValue *, bool>, 2> Guards;
+      for (unsigned I = 0; I < J; ++I) {
+        auto GIt = ChainDiamond.find(LoopChain[I]);
+        if (GIt != ChainDiamond.end() && J < GIt->second.BypassBlockIdx)
+          Guards.push_back({GIt->second.GuardCond, GIt->second.InvertedCond});
+      }
+      if (Guards.empty())
+        continue;
+      for (VPRecipeBase &R : *LoopChain[J])
+        if (R.mayWriteToMemory())
+          StoreGuards[&R] = Guards;
+    }
 
     // Compute each exit's condition slice.
     SmallVector<SmallPtrSet<VPRecipeBase *, 16>, 4> Slices(Exits.size());
@@ -3450,7 +3560,8 @@ bool VPlanTransforms::handleUncountableEarlyExits(
       // Erase the terminator of the header if it is not an early exit.
       if (!EarlyExitingSet.contains(HeaderVPBB))
         HeaderVPBB->getTerminator()->eraseFromParent();
-      // Erase the terminators of the intermediate blocks if they are not early exits.
+      // Erase the terminators of the intermediate blocks if they are not early
+      // exits.
       for (VPBasicBlock *BB : Intermediates)
         if (!EarlyExitingSet.contains(BB) && BB->getTerminator())
           BB->getTerminator()->eraseFromParent();
@@ -3493,6 +3604,20 @@ bool VPlanTransforms::handleUncountableEarlyExits(
     PartitionBlock(HeaderVPBB);
     if (HeaderVPBB != LatchVPBB)
       PartitionBlock(LatchVPBB);
+
+    for (auto &[R, Guards] : StoreGuards) {
+      auto *OriginalStore = cast<VPInstruction>(R);
+      assert(OriginalStore->getOpcode() == Instruction::Store &&
+             "Check-first guarded side effect is not a store");
+      VPBuilder GuardBuilder(OriginalStore);
+      VPValue *StGuard = nullptr;
+      for (auto &[G, InvertedCond] : Guards) {
+        VPValue *GG = InvertedCond ? GuardBuilder.createNot(G) : G;
+        StGuard = StGuard ? GuardBuilder.createLogicalAnd(StGuard, GG) : GG;
+      }
+      assert(StGuard && "Guarded store recorded without any guard");
+      OriginalStore->addMask(StGuard);
+    }
 
     // Routes to the scalar preheader.
     VPBasicBlock *EarlyExitToScalarVPBB =

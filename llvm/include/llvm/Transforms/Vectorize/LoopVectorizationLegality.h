@@ -643,8 +643,9 @@ private:
   bool canUncountableExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
 
   /// Returns true if the exit conditions can be safely speculated.
-  bool
-  canCheckFirstSpeculateExitConditions(ArrayRef<BasicBlock *> ExitingBlocks);
+  bool canCheckFirstSpeculateExitConditions(
+      ArrayRef<BasicBlock *> ExitingBlocks,
+      SmallVectorImpl<LoadInst *> &CondSliceLoads);
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
