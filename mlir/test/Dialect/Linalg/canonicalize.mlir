@@ -621,7 +621,7 @@ func.func @fold_self_copy(%0 : memref<4x16xf32>) {
 // -----
 
 // CHECK-LABEL: func @negative_fold_fill_like_memref
-//  CHECK-NEXT:   linalg.generic 
+//  CHECK-NEXT:   linalg.generic
 func.func @negative_fold_fill_like_memref(%in_out : memref<4x16xf32>, %fill_val : f32) {
   linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                    affine_map<(d0, d1) -> (d0, d1)>],
@@ -637,7 +637,7 @@ func.func @negative_fold_fill_like_memref(%in_out : memref<4x16xf32>, %fill_val 
 // -----
 
 // CHECK-LABEL: func @negative_fold_fill_like_tensor
-//  CHECK-NEXT:   linalg.generic 
+//  CHECK-NEXT:   linalg.generic
 func.func @negative_fold_fill_like_tensor(%in_out : tensor<4x16xf32>, %fill_val : f32) -> tensor<4x16xf32> {
   %result = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                    affine_map<(d0, d1) -> (d0, d1)>],
@@ -2535,4 +2535,202 @@ func.func @no_fold_pack_cast_inner_tile_inlined_mismatch(%arg0: tensor<8x3xi32>,
     inner_tiles = [%c256, 1]
     into %dest : tensor<?x?xi32> -> tensor<?x3x?x1xi32>
   return %pack : tensor<?x3x?x1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @reduce_broadcast_addi(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xi32>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xi32>
+func.func @reduce_broadcast_addi(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<0> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %sum = arith.addi %in, %out : i32
+      linalg.yield %sum : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @reduce_broadcast_muli(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xi32>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xi32>
+func.func @reduce_broadcast_muli(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<1> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %prod = arith.muli %in, %out : i32
+      linalg.yield %prod : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @reduce_broadcast_andi(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xi32>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xi32>
+func.func @reduce_broadcast_andi(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<-1> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %and = arith.andi %in, %out : i32
+      linalg.yield %and : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @reduce_broadcast_ori(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xi32>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xi32>
+func.func @reduce_broadcast_ori(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<0> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %or = arith.ori %in, %out : i32
+      linalg.yield %or : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @reduce_broadcast_xori(
+// CHECK-SAME: %[[INPUT:[a-zA-Z0-9]+]]: tensor<3xi32>
+// CHECK-NEXT: return %[[INPUT]] : tensor<3xi32>
+func.func @reduce_broadcast_xori(%input: tensor<3xi32>,
+    %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<0> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %xor = arith.xori %in, %out : i32
+      linalg.yield %xor : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_reduce_broadcast_muli_non_identity_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_muli_non_identity_init(
+    %input: tensor<3xi32>, %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<0> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %prod = arith.muli %in, %out : i32
+      linalg.yield %prod : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_reduce_broadcast_andi_non_identity_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_andi_non_identity_init(
+    %input: tensor<3xi32>, %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<0> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %and = arith.andi %in, %out : i32
+      linalg.yield %and : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_reduce_broadcast_ori_non_identity_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_ori_non_identity_init(
+    %input: tensor<3xi32>, %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<1> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %or = arith.ori %in, %out : i32
+      linalg.yield %or : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_reduce_broadcast_xori_non_identity_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_xori_non_identity_init(
+    %input: tensor<3xi32>, %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<1> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %xor = arith.xori %in, %out : i32
+      linalg.yield %xor : i32
+  }
+  return %result : tensor<3xi32>
 }

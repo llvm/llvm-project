@@ -2044,6 +2044,11 @@ enum class BroadcastReduceKind {
   MaxUI,
   MinSI,
   MinUI,
+  AddI,
+  MulI,
+  AndI,
+  OrI,
+  XOrI,
 };
 
 /// Match a supported max/min reduction body and return its reduction kind.
@@ -2087,6 +2092,16 @@ matchBroadcastReduceBody(ReduceOp reduceOp) {
           [](arith::MinSIOp) { return BroadcastReduceKind::MinSI; })
       .Case<arith::MinUIOp>(
           [](arith::MinUIOp) { return BroadcastReduceKind::MinUI; })
+      .Case<arith::AddIOp>(
+          [](arith::AddIOp) { return BroadcastReduceKind::AddI; })
+      .Case<arith::MulIOp>(
+          [](arith::MulIOp) { return BroadcastReduceKind::MulI; })
+      .Case<arith::AndIOp>(
+          [](arith::AndIOp) { return BroadcastReduceKind::AndI; })
+      .Case<arith::OrIOp>(
+          [](arith::OrIOp) { return BroadcastReduceKind::OrI; })
+      .Case<arith::XOrIOp>(
+          [](arith::XOrIOp) { return BroadcastReduceKind::XOrI; })
       .Default([](Operation *) -> std::optional<BroadcastReduceKind> {
         return std::nullopt;
       });
@@ -2112,6 +2127,16 @@ static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
     return value.isMaxSignedValue();
   case BroadcastReduceKind::MinUI:
     return value.isAllOnes();
+  case BroadcastReduceKind::AddI:
+    return value.isZero();
+  case BroadcastReduceKind::MulI:
+    return value.isOne();
+  case BroadcastReduceKind::AndI:
+    return value.isAllOnes();
+  case BroadcastReduceKind::OrI:
+    return value.isZero();
+  case BroadcastReduceKind::XOrI:
+    return value.isZero();
   }
   llvm_unreachable("unknown broadcast reduction kind");
 }
