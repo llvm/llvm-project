@@ -19556,9 +19556,6 @@ static SDValue combineNegOfSelectCCSubs(SDNode *N, SelectionDAG &DAG) {
   SDValue A = Sel.getOperand(3);
   SDValue B = Sel.getOperand(4);
 
-  if (!A.hasOneUse() || !B.hasOneUse())
-    return SDValue();
-
   SDValue NewA = DAG.getNode(ISD::SUB, SDLoc(N), A.getValueType(),
                              N->getOperand(0), A);
   SDValue NewB = DAG.getNode(ISD::SUB, SDLoc(N), B.getValueType(),
