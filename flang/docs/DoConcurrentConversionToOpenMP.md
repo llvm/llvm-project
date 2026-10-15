@@ -70,7 +70,7 @@ Notes on the above:
   encounters it.
 * All standard reduction operations are mapped: `+`, `*`, `.and.`, `.or.`,
   `.eqv.`, `.neqv.`, `max`, `min`, `iand`, `ior`, and `ieor`. Support has so
-  far been exercised mostly with scalar reduction variables, hence "partial".
+  far been tested mostly with scalar reduction variables, hence "partial".
 * For nested `do concurrent` constructs, only the outermost construct is
   parallelized; inner constructs are emitted as sequential loops (see below).
 * On the device, derived types with allocatable components are mapped through
