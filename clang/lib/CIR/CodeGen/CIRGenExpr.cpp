@@ -3067,16 +3067,16 @@ CIRGenFunction::tryEmitAsConstant(const DeclRefExpr *refExpr) {
   const ValueDecl *value = refExpr->getDecl();
 
   // The value needs to be an enum constant or a constant variable.
-  QualType::ConstantEmissionKind cek;
+  CodeGenUtils::ConstantEmissionKind cek;
   if (isa<ParmVarDecl>(value))
-    cek = QualType::CEK_None;
+    cek = CodeGenUtils::CEK_None;
   else if (const auto *var = dyn_cast<VarDecl>(value))
-    cek = var->getType().getConstantEmissionKind();
+    cek = CodeGenUtils::checkVarTypeForConstantEmission(var->getType());
   else if (isa<EnumConstantDecl>(value))
-    cek = QualType::CEK_AsValueOnly;
+    cek = CodeGenUtils::CEK_AsValueOnly;
   else
-    cek = QualType::CEK_None;
-  if (cek == QualType::CEK_None)
+    cek = CodeGenUtils::CEK_None;
+  if (cek == CodeGenUtils::CEK_None)
     return ConstantEmission();
 
   Expr::EvalResult result;
@@ -3084,11 +3084,11 @@ CIRGenFunction::tryEmitAsConstant(const DeclRefExpr *refExpr) {
   QualType resultType;
 
   // It's best to evaluate all the way as an r-value if that's permitted.
-  if (cek != QualType::CEK_AsReferenceOnly &&
+  if (cek != CodeGenUtils::CEK_AsReferenceOnly &&
       refExpr->EvaluateAsRValue(result, getContext())) {
     resultIsReference = false;
     resultType = refExpr->getType().getUnqualifiedType();
-  } else if (cek != QualType::CEK_AsValueOnly &&
+  } else if (cek != CodeGenUtils::CEK_AsValueOnly &&
              refExpr->EvaluateAsLValue(result, getContext())) {
     resultIsReference = true;
     resultType = value->getType();
