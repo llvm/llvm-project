@@ -50,10 +50,6 @@ constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
 };
 constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
-static const X86MCOptions &getCLOpts(const MCTargetOptions &Options) {
-  return cl::LibraryOptionsContext::get<X86MCOptions>(Options.LibraryOptions);
-}
-
 void X86MCAsmInfoDarwin::anchor() { }
 
 X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T,
@@ -63,7 +59,7 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T,
   if (is64Bit)
     CodePointerSize = CalleeSaveStackSlotSize = 8;
 
-  AssemblerDialect = getCLOpts(Options).asm_syntax;
+  AssemblerDialect = X86_MC::getCLOpts(Options).asm_syntax;
 
   if (!is64Bit)
     Data64bitsDirective = nullptr;       // we can't emit a 64-bit unit
@@ -76,7 +72,7 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T,
   CommentString = "##";
 
   SupportsDebugInformation = true;
-  UseDataRegionDirectives = getCLOpts(Options).mark_data_regions;
+  UseDataRegionDirectives = X86_MC::getCLOpts(Options).mark_data_regions;
 
   // Exceptions handling
   ExceptionsType = ExceptionHandling::DwarfCFI;
@@ -115,7 +111,7 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T,
   // OTOH, stack slot size is always 8 for x86-64, even with the x32 ABI.
   CalleeSaveStackSlotSize = is64Bit ? 8 : 4;
 
-  AssemblerDialect = getCLOpts(Options).asm_syntax;
+  AssemblerDialect = X86_MC::getCLOpts(Options).asm_syntax;
 
   // Debug Information
   SupportsDebugInformation = true;
@@ -154,7 +150,7 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple,
 
   ExceptionsType = ExceptionHandling::WinEH;
 
-  AssemblerDialect = getCLOpts(Options).asm_syntax;
+  AssemblerDialect = X86_MC::getCLOpts(Options).asm_syntax;
 
   AllowAtInName = true;
 
@@ -191,7 +187,7 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple,
     ExceptionsType = ExceptionHandling::DwarfCFI;
   }
 
-  AssemblerDialect = getCLOpts(Options).asm_syntax;
+  AssemblerDialect = X86_MC::getCLOpts(Options).asm_syntax;
 
   AllowAtInName = true;
 

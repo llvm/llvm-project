@@ -1402,8 +1402,7 @@ public:
   X86AsmParser(const MCSubtargetInfo &sti, MCAsmParser &Parser,
                const MCInstrInfo &mii)
       : MCTargetAsmParser(sti, mii),
-        CLOpts(cl::LibraryOptionsContext::get<X86MCOptions>(
-            Parser.getContext().getTargetOptions().LibraryOptions)),
+        CLOpts(X86_MC::getCLOpts(Parser.getContext().getTargetOptions())),
         InstInfo(nullptr), Code16GCC(false) {
 
     Parser.addAliasForDirective(".word", ".2byte");

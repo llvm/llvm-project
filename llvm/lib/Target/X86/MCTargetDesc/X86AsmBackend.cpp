@@ -1196,9 +1196,7 @@ public:
 
 class ELFX86_32AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_32AsmBackend(const X86MCOptions &CLOpts, const Target &T,
-                      uint8_t OSABI, const MCSubtargetInfo &STI)
-      : ELFX86AsmBackend(CLOpts, T, OSABI, STI) {}
+  using ELFX86AsmBackend::ELFX86AsmBackend;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -1208,9 +1206,7 @@ public:
 
 class ELFX86_X32AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_X32AsmBackend(const X86MCOptions &CLOpts, const Target &T,
-                       uint8_t OSABI, const MCSubtargetInfo &STI)
-      : ELFX86AsmBackend(CLOpts, T, OSABI, STI) {}
+  using ELFX86AsmBackend::ELFX86AsmBackend;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -1221,9 +1217,7 @@ public:
 
 class ELFX86_IAMCUAsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_IAMCUAsmBackend(const X86MCOptions &CLOpts, const Target &T,
-                         uint8_t OSABI, const MCSubtargetInfo &STI)
-      : ELFX86AsmBackend(CLOpts, T, OSABI, STI) {}
+  using ELFX86AsmBackend::ELFX86AsmBackend;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -1234,9 +1228,7 @@ public:
 
 class ELFX86_64AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_64AsmBackend(const X86MCOptions &CLOpts, const Target &T,
-                      uint8_t OSABI, const MCSubtargetInfo &STI)
-      : ELFX86AsmBackend(CLOpts, T, OSABI, STI) {}
+  using ELFX86AsmBackend::ELFX86AsmBackend;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -1634,8 +1626,7 @@ MCAsmBackend *llvm::createX86_32AsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
-  const X86MCOptions &CLOpts =
-      cl::LibraryOptionsContext::get<X86MCOptions>(Options.LibraryOptions);
+  const X86MCOptions &CLOpts = X86_MC::getCLOpts(Options);
   if (TheTriple.isOSBinFormatMachO())
     return new DarwinX86AsmBackend(CLOpts, T, MRI, STI);
 
@@ -1655,8 +1646,7 @@ MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
-  const X86MCOptions &CLOpts =
-      cl::LibraryOptionsContext::get<X86MCOptions>(Options.LibraryOptions);
+  const X86MCOptions &CLOpts = X86_MC::getCLOpts(Options);
   if (TheTriple.isOSBinFormatMachO())
     return new DarwinX86AsmBackend(CLOpts, T, MRI, STI);
 
