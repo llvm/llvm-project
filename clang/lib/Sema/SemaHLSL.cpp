@@ -916,12 +916,13 @@ bool SemaHLSL::checkInterpolationModifiers(
 
   auto Modifiers = static_cast<InterpolationModifier>(A->getModifiers());
   if (Modifiers == InterpolationModifier::NoInterpolation) {
-    bool IsPosition =
-        Semantic && llvm::hlsl::getSemanticKind(Semantic->getSemanticName()) ==
-                        SemanticKind::Position;
-    if (!IsPosition)
+    if (!Semantic)
       return true;
-    Diag(A->getLocation(), diag::err_hlsl_interpolation_position);
+    SemanticKind Kind = llvm::hlsl::getSemanticKind(Semantic->getSemanticName());
+    if (Kind != SemanticKind::Position && Kind != SemanticKind::Barycentrics)
+      return true;
+    Diag(A->getLocation(), diag::err_hlsl_interpolation_semantic)
+        << Semantic->getSemanticName();
     Diag(Semantic->getLocation(), diag::note_conflicting_attribute);
     return false;
   }
@@ -1012,6 +1013,8 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     // TODO: extend to mesh
     return (ST == llvm::Triple::Pixel && IsInput) ||
            (ST == llvm::Triple::Vertex && !IsInput);
+  case SemanticKind::Barycentrics:
+    return ST == llvm::Triple::Pixel && IsInput;
   default:
     return false;
   }
@@ -1272,6 +1275,24 @@ void SemaHLSL::checkSemanticAnnotation(
 
   diagnoseSystemSemanticIndex(SemanticAttr, Kind, ElementCount);
   diagnoseSemanticType(Param, SemanticAttr, Kind);
+  diagnoseSemanticShaderModel(SemanticAttr, Kind);
+}
+
+void SemaHLSL::diagnoseSemanticShaderModel(
+    const HLSLAppliedSemanticAttr *A, SemanticKind Kind) {
+  const auto &Triple = getASTContext().getTargetInfo().getTriple();
+  if (!Triple.isDXIL())
+    return;
+
+  switch (Kind) {
+  case SemanticKind::Barycentrics:
+    if (Triple.getOSVersion() < VersionTuple(6, 1))
+      Diag(A->getLoc(), diag::err_hlsl_attribute_in_wrong_shader_model)
+          << A->getAttrName() << "6.1";
+    return;
+  default:
+    return;
+  }
 }
 
 void SemaHLSL::diagnoseSystemSemanticIndex(const HLSLAppliedSemanticAttr *A,
@@ -1370,6 +1391,12 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
   bool IsSPIRV = getASTContext().getTargetInfo().getTriple().isSPIRV();
 
   switch (Kind) {
+  case SemanticKind::Barycentrics:
+    if (DeclaredTy != T || !isFloatOrHalfElement(ElemTy) || Components != 3)
+      Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
+          << A->getAttrName() << /* vector of */ 2 << 3
+          << /* 16 or 32 bit floating-point */ 2 << DeclaredTy;
+    return;
   case SemanticKind::DispatchThreadID:
   case SemanticKind::GroupID:
   case SemanticKind::GroupThreadID:
@@ -2225,7 +2252,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::TessFactor:
   case SemanticKind::InsideTessFactor:
   case SemanticKind::ViewID:
-  case SemanticKind::Barycentrics:
   case SemanticKind::CullPrimitive:
     Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
     return;
