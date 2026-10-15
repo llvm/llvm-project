@@ -8398,7 +8398,11 @@ void LLVMELFDumper<ELFT>::printCallGraphRelocation(
     if (opts::Demangle)
       W.printString("DemangledName", demangle(SymbolName));
   }
-  if (int64_t Addend = R.Addend.value_or(0))
+  // Without an explicit addend, e.g. for SHT_REL, the addend is the value
+  // stored in the address field.
+  int64_t Addend = R.Addend.value_or(
+      SignExtend64<sizeof(typename ELFT::uint) * 8>(Func.FieldValue));
+  if (Addend != 0)
     W.printNumber("Addend", Addend);
 }
 

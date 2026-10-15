@@ -449,9 +449,11 @@ Symbols:
   - Name:  caller
 ...
 
-## Check ARM 32-bit Thumb handling in a relocatable object file. The Thumb bit
-## is not cleared from the offsets of address fields, so a field at an odd
-## offset still gets its relocation.
+## Check ARM 32-bit Thumb handling in a relocatable object file with SHT_REL
+## relocations. An implicit addend is the value stored in the address field,
+## sign-extended, and the Thumb bit is kept in it. The Thumb bit is not cleared
+## from the offsets of address fields either, so a field at an odd offset still
+## gets its relocation.
 # RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t3 2>&1 | count 0
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t3 2>&1 | \
@@ -466,6 +468,7 @@ Symbols:
 # LLVM-ARM-THUMB-NEXT:     Relocation {
 # LLVM-ARM-THUMB-NEXT:       SymbolIndex: 1
 # LLVM-ARM-THUMB-NEXT:       SymbolName: foo
+# LLVM-ARM-THUMB-NEXT:       Addend: 1
 # LLVM-ARM-THUMB-NEXT:     }
 # LLVM-ARM-THUMB-NEXT:     Version: 0
 # LLVM-ARM-THUMB-NEXT:     IsIndirectTarget: No
@@ -475,6 +478,13 @@ Symbols:
 # LLVM-ARM-THUMB-NEXT:         Relocation {
 # LLVM-ARM-THUMB-NEXT:           SymbolIndex: 2
 # LLVM-ARM-THUMB-NEXT:           SymbolName: bar
+# LLVM-ARM-THUMB-NEXT:           Addend: -4
+# LLVM-ARM-THUMB-NEXT:         }
+# LLVM-ARM-THUMB-NEXT:       }
+# LLVM-ARM-THUMB-NEXT:       {
+# LLVM-ARM-THUMB-NEXT:         Relocation {
+# LLVM-ARM-THUMB-NEXT:           SymbolIndex: 3
+# LLVM-ARM-THUMB-NEXT:           Addend: 33
 # LLVM-ARM-THUMB-NEXT:         }
 # LLVM-ARM-THUMB-NEXT:       }
 # LLVM-ARM-THUMB-NEXT:     ]
@@ -487,7 +497,8 @@ Symbols:
 # JSON-ARM-THUMB-NEXT:      "Function": {
 # JSON-ARM-THUMB-NEXT:        "Relocation": {
 # JSON-ARM-THUMB-NEXT:          "SymbolIndex": 1,
-# JSON-ARM-THUMB-NEXT:          "SymbolName": "foo"
+# JSON-ARM-THUMB-NEXT:          "SymbolName": "foo",
+# JSON-ARM-THUMB-NEXT:          "Addend": 1
 # JSON-ARM-THUMB-NEXT:        },
 # JSON-ARM-THUMB-NEXT:        "Version": 0,
 # JSON-ARM-THUMB-NEXT:        "IsIndirectTarget": false,
@@ -496,7 +507,14 @@ Symbols:
 # JSON-ARM-THUMB-NEXT:          {
 # JSON-ARM-THUMB-NEXT:            "Relocation": {
 # JSON-ARM-THUMB-NEXT:              "SymbolIndex": 2,
-# JSON-ARM-THUMB-NEXT:              "SymbolName": "bar"
+# JSON-ARM-THUMB-NEXT:              "SymbolName": "bar",
+# JSON-ARM-THUMB-NEXT:              "Addend": -4
+# JSON-ARM-THUMB-NEXT:            }
+# JSON-ARM-THUMB-NEXT:          },
+# JSON-ARM-THUMB-NEXT:          {
+# JSON-ARM-THUMB-NEXT:            "Relocation": {
+# JSON-ARM-THUMB-NEXT:              "SymbolIndex": 3,
+# JSON-ARM-THUMB-NEXT:              "Addend": 33
 # JSON-ARM-THUMB-NEXT:            }
 # JSON-ARM-THUMB-NEXT:          }
 # JSON-ARM-THUMB-NEXT:        ],
@@ -518,32 +536,42 @@ Sections:
     Type:   SHT_LLVM_CALL_GRAPH
     Link:   .text
     ContentArray: [
-      ## --- foo+1 (Thumb address) ---
       0x00, ## Version
       0x02, ## Flags (HasDirectCallees)
-      0x01, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1 (relative to foo)
+      0x01, 0x00, 0x00, 0x00, ## Offset 0x2: FunctionEntryPC, implicit addend 1 (the Thumb bit)
       0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12, ## FunctionTypeID: 0x123456789ABCDEF0
-      0x01, ## NumDirectCallees
-      0x01, 0x00, 0x00, 0x00  ## Direct callee: 0x1 (relative to bar)
+      0x02, ## NumDirectCallees
+      0xFC, 0xFF, 0xFF, 0xFF, ## Offset 0xF: Callee 1, implicit addend -4
+      0x21, 0x00, 0x00, 0x00  ## Offset 0x13: Callee 2 (baz), implicit addend 0x21
     ]
-  - Type:   SHT_RELA
+  - Name:   .rel.llvm.callgraph
+    Type:   SHT_REL
     Info:   .llvm.callgraph
     Relocations:
-      - Offset:  0x2 ## Offset to FunctionEntryPC
+      - Offset:  0x2
         Symbol:  foo
         Type:    R_ARM_ABS32
-      - Offset:  0xF ## Offset to the direct callee, which is odd
+      - Offset:  0xF ## An odd offset
         Symbol:  bar
+        Type:    R_ARM_ABS32
+      - Offset:  0x13
+        Symbol:  3 ## The STT_SECTION symbol of .text
         Type:    R_ARM_ABS32
 Symbols:
   - Name:     foo
     Type:     STT_FUNC
     Section:  .text
-    Value:    0x0 
+    Value:    0x0
   - Name:     bar
     Type:     STT_FUNC
     Section:  .text
     Value:    0x10
+  - Type:     STT_SECTION
+    Section:  .text
+  - Name:     baz
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x20
 ...
 
 ## Check multiple function names handling.
