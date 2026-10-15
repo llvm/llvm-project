@@ -5253,18 +5253,49 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
           IsNull, llvm::ConstantInt::get(BoundsType, 0), BoundsVal);
     }
 
+    QualType BoundsQTy = CountFD->getType();
+    bool CountSigned = BoundsQTy->isSignedIntegerOrEnumerationType();
+
     // For '__sized_by' the loaded bound is a byte count. Convert it to an
     // element count by dividing by the element size so the check can compare
-    // the (element) index directly. '__counted_by' already counts elements so
-    // needs no special handling.
-    if (CountAttributedTy->isCountInBytes())
+    // the (element) index directly.
+    if (CountAttributedTy->isCountInBytes()) {
       BoundsVal = convertSizedByBoundToElementCount(
-          *this, BoundsVal, ArrayType->getPointeeType(),
-          CountFD->getType()->isSignedIntegerOrEnumerationType());
+          *this, BoundsVal, ArrayType->getPointeeType(), CountSigned);
+    } else if (!FlexibleArray) {
+      // '__counted_by' counts elements of the field's pointee type, but a cast
+      // between the field and the subscript (e.g. '((char *)p->buf)[i]')
+      // changes what the index counts. Convert the count to a byte count, then
+      // to elements of the accessed type, as for '__sized_by'.
+      ASTContext &Ctx = getContext();
+      QualType CountedTy = FD->getType()->getPointeeType();
+      QualType AccessedTy = ArrayType->getPointeeType();
+      if (!AccessedTy.isNull() && !CountedTy->isIncompleteType() &&
+          !AccessedTy->isIncompleteType() &&
+          Ctx.getTypeSizeInChars(CountedTy) !=
+              Ctx.getTypeSizeInChars(AccessedTy)) {
+        // Do the arithmetic at least as wide as 'size_t', so that the byte
+        // count of any object that fits in memory is representable.
+        QualType WideQTy =
+            CountSigned ? Ctx.getSignedSizeType() : Ctx.getSizeType();
+        if (Ctx.getTypeSize(WideQTy) > Ctx.getTypeSize(BoundsQTy)) {
+          BoundsVal = Builder.CreateIntCast(BoundsVal, ConvertType(WideQTy),
+                                            CountSigned);
+          BoundsQTy = WideQTy;
+        }
+
+        llvm::Value *ElemSize = llvm::ConstantInt::get(
+            BoundsVal->getType(),
+            Ctx.getTypeSizeInChars(CountedTy).getQuantity());
+        BoundsVal = Builder.CreateMul(BoundsVal, ElemSize);
+        BoundsVal = convertSizedByBoundToElementCount(*this, BoundsVal,
+                                                      AccessedTy, CountSigned);
+      }
+    }
 
     // Now emit the bounds checking.
     EmitBoundsCheckImpl(ArrayExpr, ArrayType, IndexVal, IndexType, BoundsVal,
-                        CountFD->getType(), Accessed);
+                        BoundsQTy, Accessed);
   }
 }
 
