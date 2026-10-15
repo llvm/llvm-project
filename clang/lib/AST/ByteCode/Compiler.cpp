@@ -2813,11 +2813,8 @@ bool Compiler<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
   return this->visit(*It);
 }
 
-static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
+static CharUnits alignOfType(QualType T, const ASTContext &ASTCtx,
                              UnaryExprOrTypeTrait Kind) {
-  bool AlignOfReturnsPreferred =
-      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
-
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
   //     alignment of the referenced type.
@@ -2827,6 +2824,8 @@ static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
   if (T.getQualifiers().hasUnaligned())
     return CharUnits::One();
 
+  bool AlignOfReturnsPreferred =
+      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and
   // _Alignof as well.
@@ -2909,7 +2908,7 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     if (E->isArgumentType()) {
       QualType ArgType = E->getTypeOfArgument();
 
-      Size = AlignOfType(ArgType, ASTCtx, Kind);
+      Size = alignOfType(ArgType, ASTCtx, Kind);
     } else {
       // Argument is an expression, not a type.
       const Expr *Arg = E->getArgumentExpr()->IgnoreParens();
@@ -2925,12 +2924,12 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       // default to 1 in those cases.
       if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg))
         Size = ASTCtx.getDeclAlign(DRE->getDecl(),
-                                   /*RefAsPointee*/ true);
+                                   /*ForAlignOf=*/true);
       else if (const auto *ME = dyn_cast<MemberExpr>(Arg))
         Size = ASTCtx.getDeclAlign(ME->getMemberDecl(),
-                                   /*RefAsPointee*/ true);
+                                   /*ForAlignOf=*/true);
       else
-        Size = AlignOfType(Arg->getType(), ASTCtx, Kind);
+        Size = alignOfType(Arg->getType(), ASTCtx, Kind);
     }
 
     if (DiscardResult)
