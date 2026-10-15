@@ -754,6 +754,9 @@ enum ASTRecordTypes {
 
   /// Record code for the OpenMP 'requires' directives seen in the TU.
   OMP_REQUIRES_DECLS = 81,
+
+  /// Whether the HLSL 'precise' keyword was used in the TU.
+  HLSL_PRECISE_USED = 82,
 };
 
 /// Record types used within a source manager block.

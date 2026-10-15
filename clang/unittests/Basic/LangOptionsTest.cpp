@@ -55,4 +55,36 @@ TEST(LangOptsTest, CppStdLang) {
 
   EXPECT_FALSE(opts.getCLangStd());
 }
+
+TEST(LangOptsTest, HLSLPreciseOverridesUnsafeFPOptions) {
+  LangOptions Opts;
+  Opts.HLSL = true;
+
+  FPOptionsOverride Overrides;
+  Overrides.setFPPreciseEnabled(false);
+  Overrides.setFPEvalMethodOverride(LangOptions::FEM_Double);
+
+  FPOptions Result = Overrides.applyOverrides(Opts);
+  EXPECT_TRUE(Result.allowFPContractAcrossStatement());
+  EXPECT_TRUE(Result.getAllowFPReassociate());
+  EXPECT_TRUE(Result.getNoHonorNaNs());
+  EXPECT_TRUE(Result.getNoHonorInfs());
+  EXPECT_TRUE(Result.getNoSignedZero());
+  EXPECT_TRUE(Result.getAllowReciprocal());
+  EXPECT_TRUE(Result.getAllowApproxFunc());
+  EXPECT_EQ(Result.getFPEvalMethod(), LangOptions::FEM_Double);
+  EXPECT_FALSE(Result.getMathErrno());
+
+  Opts.HLSLPrecise = true;
+  Result = Overrides.applyOverrides(Opts);
+  EXPECT_EQ(Result.getFPContractMode(), LangOptions::FPM_Off);
+  EXPECT_FALSE(Result.getAllowFPReassociate());
+  EXPECT_FALSE(Result.getNoHonorNaNs());
+  EXPECT_FALSE(Result.getNoHonorInfs());
+  EXPECT_FALSE(Result.getNoSignedZero());
+  EXPECT_FALSE(Result.getAllowReciprocal());
+  EXPECT_FALSE(Result.getAllowApproxFunc());
+  EXPECT_EQ(Result.getFPEvalMethod(), LangOptions::FEM_Double);
+  EXPECT_FALSE(Result.getMathErrno());
+}
 } // namespace

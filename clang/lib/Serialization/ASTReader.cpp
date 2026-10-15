@@ -4503,6 +4503,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       FPPragmaOptions.swap(Record);
       break;
 
+    case HLSL_PRECISE_USED:
+      if (Record.size() != 1)
+        return llvm::createStringError(std::errc::illegal_byte_sequence,
+                                       "invalid HLSL precise record");
+      HLSLPreciseUsed |= Record[0] != 0;
+      break;
+
     case DECLS_WITH_EFFECTS_TO_VERIFY:
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
         DeclsWithEffectsToVerify.push_back(ReadDeclID(F, Record, I));
@@ -5763,6 +5770,9 @@ llvm::Error ASTReader::ReadExtensionBlock(ModuleFile &F) {
 void ASTReader::InitializeContext() {
   assert(ContextObj && "no context to initialize");
   ASTContext &Context = *ContextObj;
+
+  if (HLSLPreciseUsed)
+    Context.setHLSLPreciseUsed();
 
   // If there's a listener, notify them that we "read" the translation unit.
   if (DeserializationListener)

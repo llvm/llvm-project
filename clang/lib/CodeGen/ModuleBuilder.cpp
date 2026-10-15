@@ -242,6 +242,15 @@ namespace {
         return;
       // ASTContext refers to the CompilerInvocation's mutable LangOptions.
       LangOptions &LO = const_cast<LangOptions &>(Ctx->getLangOpts());
+      LO.HLSLPrecise = true;
+      LO.FastMath = false;
+      LO.UnsafeFPMath = false;
+      LO.AllowFPReassoc = false;
+      LO.NoHonorNaNs = false;
+      LO.NoHonorInfs = false;
+      LO.NoSignedZero = false;
+      LO.AllowRecip = false;
+      LO.ApproxFunc = false;
       LO.setDefaultFPContractMode(LangOptions::FPM_Off);
       LO.setComplexRange(LangOptions::CX_Full);
       // Like CompilerInstance::createTarget, only enable the rounding and

@@ -1090,7 +1090,18 @@ public:
   }
 
   FPOptions applyOverrides(const LangOptions &LO) {
-    return applyOverrides(FPOptions(LO));
+    FPOptions Result = applyOverrides(FPOptions(LO));
+    if (LO.HLSLPrecise) {
+      // TU-wide HLSL precise mode takes precedence over unsafe FP pragmas.
+      Result.setFPContractMode(LangOptions::FPM_Off);
+      Result.setAllowFPReassociate(false);
+      Result.setNoHonorNaNs(false);
+      Result.setNoHonorInfs(false);
+      Result.setNoSignedZero(false);
+      Result.setAllowReciprocal(false);
+      Result.setAllowApproxFunc(false);
+    }
+    return Result;
   }
 
   bool operator==(FPOptionsOverride other) const {

@@ -954,6 +954,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(CUDA_SPECIAL_DECL_REFS);
   RECORD(HEADER_SEARCH_TABLE);
   RECORD(FP_PRAGMA_OPTIONS);
+  RECORD(HLSL_PRECISE_USED);
   RECORD(OPENCL_EXTENSIONS);
   RECORD(OPENCL_EXTENSION_TYPES);
   RECORD(OPENCL_EXTENSION_DECLS);
@@ -5934,6 +5935,11 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
   ASTContext &Context = SemaRef.Context;
 
   bool isModule = WritingModule != nullptr;
+
+  if (getLangOpts().HLSL) {
+    RecordData HLSLPreciseUsed = {Context.isHLSLPreciseUsed()};
+    Stream.EmitRecord(HLSL_PRECISE_USED, HLSLPreciseUsed);
+  }
 
   // Write the record containing external, unnamed definitions.
   if (!EagerlyDeserializedDecls.empty())
