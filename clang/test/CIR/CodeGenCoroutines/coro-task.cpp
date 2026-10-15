@@ -1308,31 +1308,46 @@ folly::coro::Task<int> co_return_with_dtor(int flag) {
 // CIR-FLAT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR-FLAT:   cir.try_call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE]], %[[ONE]]) ^[[RET1:bb[0-9]+]],
 // CIR-FLAT: ^[[RET1]]:
-// CIR-FLAT:   %[[DEST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-FLAT:   cir.store %[[DEST_0]], %[[CLEANUP_DEST_SLOT]]
-// CIR-FLAT:   cir.br ^[[DTOR:bb[0-9]+]]
+// CIR-FLAT-NEXT:   %[[DEST_RET1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-FLAT-NEXT:   cir.store %[[DEST_RET1]], %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.br ^[[DTOR:bb[0-9]+]]
 // CIR-FLAT: ^[[IF_END]]:
+// CIR-FLAT-NEXT:   cir.br ^[[AFTER_IF:bb[0-9]+]]
+// CIR-FLAT: ^[[AFTER_IF]]:
 // CIR-FLAT:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CIR-FLAT:   cir.try_call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE]], %[[TWO]]) ^[[RET2:bb[0-9]+]],
 // CIR-FLAT: ^[[RET2]]:
-// CIR-FLAT:   %[[DEST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-FLAT:   cir.store %[[DEST_1]], %[[CLEANUP_DEST_SLOT]]
-// CIR-FLAT:   cir.br ^[[DTOR]]
+// CIR-FLAT-NEXT:   %[[DEST_RET2:.*]] = cir.const #cir.int<2> : !s32i
+// CIR-FLAT-NEXT:   cir.store %[[DEST_RET2]], %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.br ^[[DTOR]]
+
+// The normal fallthrough out of the cleanup scope gets slot 0. It is dead
+// here because both paths end in a cir.co_return.
+// CIR-FLAT: ^[[FALLTHROUGH:bb[0-9]+]]:  // no predecessors
+// CIR-FLAT-NEXT:   %[[DEST_FALLTHROUGH:.*]] = cir.const #cir.int<0> : !s32i
+// CIR-FLAT-NEXT:   cir.store %[[DEST_FALLTHROUGH]], %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.br ^[[DTOR]]
+
 // CIR-FLAT: ^[[DTOR]]:
 // CIR-FLAT-NEXT:   cir.call @_ZN7HasDtorD1Ev(%[[LOCAL]])
 // CIR-FLAT-NEXT:   cir.br ^[[DTOR_EXIT:bb[0-9]+]]
 // CIR-FLAT: ^[[DTOR_EXIT]]:
 // CIR-FLAT-NEXT:   %[[DEST:.*]] = cir.load %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.switch.flat %[[DEST]] : !s32i, ^[[DEFAULT:bb[0-9]+]] [
-// CIR-FLAT-NEXT:     0: ^[[FROM_RET1:bb[0-9]+]],
-// CIR-FLAT-NEXT:     1: ^[[FROM_RET2:bb[0-9]+]]
+// CIR-FLAT-NEXT:     0: ^[[FROM_FALLTHROUGH:bb[0-9]+]],
+// CIR-FLAT-NEXT:     1: ^[[FROM_RET1:bb[0-9]+]],
+// CIR-FLAT-NEXT:     2: ^[[FROM_RET2:bb[0-9]+]]
 // CIR-FLAT-NEXT:   ]
+// CIR-FLAT: ^[[FROM_FALLTHROUGH]]:
+// CIR-FLAT-NEXT:   cir.br ^[[AFTER_CLEANUP:bb[0-9]+]]
 // CIR-FLAT: ^[[FROM_RET1]]:
 // CIR-FLAT-NEXT:   cir.br ^[[FINAL:bb[0-9]+]]
 // CIR-FLAT: ^[[FROM_RET2]]:
 // CIR-FLAT-NEXT:   cir.br ^[[FINAL]]
 // CIR-FLAT: ^[[DEFAULT]]:
 // CIR-FLAT-NEXT:   cir.unreachable
+// CIR-FLAT: ^[[AFTER_CLEANUP]]:
+// CIR-FLAT-NEXT:   cir.br ^[[FINAL]]
 // CIR-FLAT: ^[[FINAL]]:
 // CIR-FLAT-NEXT:   cir.call @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(%[[PROMISE]])
 // CIR-FLAT:   cir.coro.intrinsic.free
