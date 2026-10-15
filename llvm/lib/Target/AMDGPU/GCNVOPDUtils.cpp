@@ -481,8 +481,9 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
 /// to the \p Head SU.
 /// \p Visited should allocate enough bits for the number of SUnits, but its
 /// value can otherwise be uninitialized.
-static void collectLoads(SmallSetVector<SUnit *, 8> &Loads, BitVector &Visited,
-                         SUnit &Head, bool Forward, bool StopAtLoads) {
+template <typename SetT>
+static void collectLoads(SetT &Loads, BitVector &Visited, SUnit &Head,
+                         bool Forward, bool StopAtLoads) {
   if (Head.isBoundaryNode())
     return;
 
@@ -539,7 +540,7 @@ loadsMayOverlap([[maybe_unused]] SUnit &I,
     return false;
 
   for (SUnit *ILoad : ILoadSuccs) {
-    SmallSetVector<SUnit *, 8> &ILoadDeps = LoadPredsCache[ILoad->NodeNum];
+    SmallPtrSet<SUnit *, 8> &ILoadDeps = LoadPredsCache[ILoad->NodeNum];
     if (!LoadPredsComputed.test(ILoad->NodeNum)) {
       collectLoads(ILoadDeps, Scratch, *ILoad, /*Forward=*/false,
                    /*StopAtLoads=*/false);
@@ -605,7 +606,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     // For VOPDCapable nodes, this caches collectLoads with StopAtLoads=true
     // For loads, this caches collectLoads with StopAtLoads=false
     BitVector LoadPredsComputed(DAG->SUnits.size());
-    SmallVector<SmallSetVector<SUnit *, 8>> LoadPredsCache(DAG->SUnits.size());
+    SmallVector<SmallPtrSet<SUnit *, 8>> LoadPredsCache(DAG->SUnits.size());
 
     BitVector Scratch(DAG->SUnits.size());
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
