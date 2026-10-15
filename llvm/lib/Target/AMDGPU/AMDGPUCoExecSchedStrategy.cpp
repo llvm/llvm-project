@@ -464,7 +464,7 @@ SUnit *HardwareUnitInfo::getNextTargetSU(bool LookDeep) const {
 }
 
 void HardwareUnitInfo::insert(SUnit *SU, unsigned BlockingCycles) {
-  if (!AllSUs.insert(SU))
+  if (!AllSUs.insert(SU).second)
     llvm_unreachable("HardwareUnit already contains SU!");
 
   TotalCycles += BlockingCycles;

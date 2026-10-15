@@ -4152,7 +4152,7 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
       if (!seenAttrs.count(attr))
         return emitError(loc, "attribute '" + name +
                                   "' must be bound before it is referenced");
-    } else if (!seenAttrs.insert(attr)) {
+    } else if (!seenAttrs.insert(attr).second) {
       return emitError(loc, "attribute '" + name + "' is already bound");
     }
 
@@ -4168,7 +4168,7 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
         return emitError(loc, "property '" + name +
                                   "' must be bound before it is referenced");
     } else {
-      if (!seenProperties.insert(property))
+      if (!seenProperties.insert(property).second)
         return emitError(loc, "property '" + name + "' is already bound");
     }
 

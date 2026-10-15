@@ -374,7 +374,7 @@ static void computeBlocksDominatingExits(
     if (!L.contains(IDomBB))
       continue;
 
-    if (BlocksDominatingExits.insert(IDomBB))
+    if (BlocksDominatingExits.insert(IDomBB).second)
       BBWorklist.push_back(IDomBB);
   }
 }

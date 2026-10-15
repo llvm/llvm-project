@@ -4306,7 +4306,7 @@ void CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
     MachineInstr *SrcMI;
     if (!mi_match(SrcReg, MRI, m_MInstr(SrcMI)))
       continue;
-    if (!SrcMIs.insert(SrcMI))
+    if (!SrcMIs.insert(SrcMI).second)
       continue;
 
     // Build an extend after each src inst.

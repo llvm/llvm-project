@@ -396,7 +396,7 @@ getInnerRegionEscapingValues(WarpExecuteOnLane0Op warpOp, Region &innerRegion,
   mlir::visitUsedValuesDefinedAbove(innerRegion, [&](OpOperand *operand) {
     Operation *parent = operand->get().getParentRegion()->getParentOp();
     if (warpOp->isAncestor(parent)) {
-      if (!escapingValues.insert(operand->get()))
+      if (!escapingValues.insert(operand->get()).second)
         return;
       Type distType = operand->get().getType();
       if (auto vecType = dyn_cast<VectorType>(distType)) {

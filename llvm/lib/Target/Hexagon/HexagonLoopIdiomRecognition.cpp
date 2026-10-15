@@ -1129,7 +1129,7 @@ bool PolynomialMultiplyRecognize::findCycle(Value *Out, Value *In,
     if (IsPhi && HadPhi)
       return false;
     HadPhi |= IsPhi;
-    if (!Cycle.insert(I))
+    if (!Cycle.insert(I).second)
       return false;
     if (findCycle(I, In, Cycle))
       break;
