@@ -1,0 +1,14 @@
+// Reports without conflicts merge into a report without conflicts, and add
+// nothing to a report that has some.
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: clang-ssaf-merge-conflict-report %S/Inputs/no-conflicts.sarif \
+// RUN:   %S/Inputs/no-conflicts.sarif -o %t/none.sarif
+// RUN: FileCheck %s --input-file=%t/none.sarif
+// CHECK: "results": [],
+
+// RUN: clang-ssaf-merge-conflict-report %S/Inputs/conflicts-a.sarif \
+// RUN:   -o %t/a.sarif
+// RUN: clang-ssaf-merge-conflict-report %S/Inputs/no-conflicts.sarif \
+// RUN:   %S/Inputs/conflicts-a.sarif -o %t/none-a.sarif
+// RUN: diff %t/a.sarif %t/none-a.sarif
