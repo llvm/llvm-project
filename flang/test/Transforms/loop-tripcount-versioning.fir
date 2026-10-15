@@ -1,14 +1,17 @@
-// RUN: fir-opt --loop-tripcount-versioning %s | FileCheck %s
-// Every versioned loop below has a declared extent of 4: a bound of 4 must
-// accept it and a bound of 3 must not. A bound of 0 disables the pass.
-// RUN: fir-opt --loop-tripcount-versioning="max-section-extent=4" %s | FileCheck %s
+// RUN: fir-opt --loop-tripcount-versioning %s | FileCheck %s --check-prefixes=CHECK,DEFAULT
+// @zero has a declared extent of 4: a bound of 4 must accept it and a bound
+// of 3 must not. A bound of 0 disables the pass.
+// RUN: fir-opt --loop-tripcount-versioning="max-section-extent=4" %s | FileCheck %s --check-prefixes=CHECK,DEFAULT
 // RUN: fir-opt --loop-tripcount-versioning="max-section-extent=3" %s | FileCheck %s --check-prefix=OFF
 // RUN: fir-opt --loop-tripcount-versioning="max-section-extent=0" %s | FileCheck %s --check-prefix=OFF
-// The unrolled-size limit is extent times body operations. @zero's body is
-// three operations, so 4 * 3 = 12 is accepted at the default and rejected
-// at 11; 0 removes the limit.
+// The unrolled-size limit is extent times body operations, terminators
+// included. @zero's body is three operations, so 4 * 3 = 12 is rejected at
+// 11. The largest product among the CHECK loops is @where_whole_rhs at
+// 4 * 10 = 40, accepted at exactly 40. @large_body is 32 * 10 = 320, over
+// the default of 300, and is versioned only when 0 removes the limit.
 // RUN: fir-opt --loop-tripcount-versioning="max-unrolled-ops=11" %s | FileCheck %s --check-prefix=OFF
-// RUN: fir-opt --loop-tripcount-versioning="max-unrolled-ops=0" %s | FileCheck %s
+// RUN: fir-opt --loop-tripcount-versioning="max-unrolled-ops=40" %s | FileCheck %s --check-prefixes=CHECK,DEFAULT
+// RUN: fir-opt --loop-tripcount-versioning="max-unrolled-ops=0" %s | FileCheck %s --check-prefixes=CHECK,NOLIMIT
 
 // Array sections with a runtime extent on an explicit-shape array. The pass
 // versions the innermost loop on `extent == declared extent` so that one arm
@@ -60,6 +63,51 @@ func.func @zero(%arg0: !fir.ref<!fir.array<4x26xf64>>, %arg1: !fir.ref<i32>) {
 // OFF-LABEL: func.func @zero(
 // OFF-NOT:     fir.if
 // OFF:         return
+
+// Over the default unrolled-size limit: extent 32 times a ten-operation body
+// is 320. Skipped at the default of 300, versioned when the limit is removed.
+// subroutine large_body(a, b, c, s, n)
+//   real(8) :: a(32), b(32), c(32), s
+//   a(1:n) = b(1:n) * s + c(1:n) * s
+func.func @large_body(%arg0: !fir.ref<!fir.array<32xf64>>, %arg1: !fir.ref<!fir.array<32xf64>>, %arg2: !fir.ref<!fir.array<32xf64>>, %arg3: !fir.ref<f64>, %arg4: !fir.ref<i32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c32 = arith.constant 32 : index
+  %0 = fir.shape %c32 : (index) -> !fir.shape<1>
+  %1 = fir.declare %arg0(%0) uniq_name("a") : (!fir.ref<!fir.array<32xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<32xf64>>
+  %2 = fir.declare %arg1(%0) uniq_name("b") : (!fir.ref<!fir.array<32xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<32xf64>>
+  %3 = fir.declare %arg2(%0) uniq_name("c") : (!fir.ref<!fir.array<32xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<32xf64>>
+  %4 = fir.load %arg3 : !fir.ref<f64>
+  %5 = fir.load %arg4 : !fir.ref<i32>
+  %6 = fir.convert %5 : (i32) -> index
+  %7 = arith.maxsi %6, %c0 : index
+  %8 = fir.slice %c1, %6, %c1 : (index, index, index) -> !fir.slice<1>
+  fir.do_loop %arg5 = %c1 to %7 step %c1 unordered {
+    %9 = fir.array_coor %2(%0) [%8] %arg5 : (!fir.ref<!fir.array<32xf64>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f64>
+    %10 = fir.load %9 : !fir.ref<f64>
+    %11 = arith.mulf %10, %4 : f64
+    %12 = fir.array_coor %3(%0) [%8] %arg5 : (!fir.ref<!fir.array<32xf64>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f64>
+    %13 = fir.load %12 : !fir.ref<f64>
+    %14 = arith.mulf %13, %4 : f64
+    %15 = arith.addf %11, %14 : f64
+    %16 = fir.array_coor %1(%0) [%8] %arg5 : (!fir.ref<!fir.array<32xf64>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f64>
+    fir.store %15 to %16 : !fir.ref<f64>
+  }
+  return
+}
+// DEFAULT-LABEL: func.func @large_body(
+// DEFAULT-NOT:     fir.if
+// DEFAULT:         return
+
+// NOLIMIT-LABEL: func.func @large_body(
+// NOLIMIT:         %[[UB:.*]] = arith.maxsi %{{.*}}, %{{.*}} : index
+// NOLIMIT:         %[[C32:.*]] = arith.constant 32 : index
+// NOLIMIT:         %[[CMP:.*]] = arith.cmpi eq, %[[UB]], %[[C32]] : index
+// NOLIMIT:         fir.if %[[CMP]] {
+// NOLIMIT:           fir.do_loop %{{.*}} = %{{.*}} to %[[C32]] step
+// NOLIMIT:         } else {
+// NOLIMIT:           fir.do_loop %{{.*}} = %{{.*}} to %[[UB]] step
+// NOLIMIT:         }
 
 // An unsliced access: the induction variable indexes the array directly, so
 // there is no triplet to check. (The assignment conforms only when n == 4,
@@ -423,25 +471,28 @@ func.func @conditional_unsliced(%arg0: !fir.ref<!fir.array<4xf64>>, %arg1: !fir.
 
 // A sliced access under a fir.if still bounds the loop: the section
 // designator `a(1:n)` must be in bounds whether or not element i is stored.
-// This is how WHERE lowers.
+// This is how WHERE lowers. The mask has extent 8 so that the result of 4
+// depends on counting the conditional store to `a`.
 // subroutine where_sliced(a, m, n)
 //   real(8) :: a(4)
-//   logical :: m(4)
+//   logical :: m(8)
 //   where (m(1:n)) a(1:n) = 0.0d0
-func.func @where_sliced(%arg0: !fir.ref<!fir.array<4xf64>>, %arg1: !fir.ref<!fir.array<4x!fir.logical<4>>>, %arg2: !fir.ref<i32>) {
+func.func @where_sliced(%arg0: !fir.ref<!fir.array<4xf64>>, %arg1: !fir.ref<!fir.array<8x!fir.logical<4>>>, %arg2: !fir.ref<i32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %cst = arith.constant 0.000000e+00 : f64
   %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
   %0 = fir.shape %c4 : (index) -> !fir.shape<1>
   %1 = fir.declare %arg0(%0) uniq_name("a") : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<4xf64>>
-  %2 = fir.declare %arg1(%0) uniq_name("m") : (!fir.ref<!fir.array<4x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<4x!fir.logical<4>>>
+  %shape8 = fir.shape %c8 : (index) -> !fir.shape<1>
+  %2 = fir.declare %arg1(%shape8) uniq_name("m") : (!fir.ref<!fir.array<8x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<8x!fir.logical<4>>>
   %3 = fir.load %arg2 : !fir.ref<i32>
   %4 = fir.convert %3 : (i32) -> index
   %5 = arith.maxsi %4, %c0 : index
   %6 = fir.slice %c1, %4, %c1 : (index, index, index) -> !fir.slice<1>
   fir.do_loop %arg3 = %c1 to %5 step %c1 unordered {
-    %7 = fir.array_coor %2(%0) [%6] %arg3 : (!fir.ref<!fir.array<4x!fir.logical<4>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<!fir.logical<4>>
+    %7 = fir.array_coor %2(%shape8) [%6] %arg3 : (!fir.ref<!fir.array<8x!fir.logical<4>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<!fir.logical<4>>
     %8 = fir.load %7 : !fir.ref<!fir.logical<4>>
     %9 = fir.convert %8 : (!fir.logical<4>) -> i1
     fir.if %9 {
