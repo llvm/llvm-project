@@ -330,6 +330,11 @@ infrastructure are described first, followed by tool-specific sections.
   avoid offering fix-its for string literals originating from macro
   expansions.
 
+- Improved {doc}`readability-container-contains
+  <clang-tidy/checks/readability/container-contains>` check by offering fix-its
+  for explicit comparisons spelled entirely within a macro argument that the
+  macro body only uses parenthesized.
+
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
   fixing a crash when checking a const-qualified method declared with the

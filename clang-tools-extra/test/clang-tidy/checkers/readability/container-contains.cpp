@@ -213,6 +213,170 @@ int testMacroExpansion(std::unordered_set<int> &MySet) {
   return 0;
 }
 
+// Explicit comparisons spelled entirely within a single macro argument.
+bool testMacroArgument(std::set<int> &MySet, int Key) {
+#define ONCE(E) ((E))
+  // CHECK-FIXES: #define ONCE(E) ((E))
+  bool A = ONCE(MySet.find(Key) != MySet.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool A = ONCE(MySet.contains(Key));
+  bool B = ONCE(MySet.find(Key) == MySet.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool B = ONCE(!MySet.contains(Key));
+  bool C = ONCE(MySet.count(Key) != 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool C = ONCE(MySet.contains(Key));
+  bool D = ONCE(0 == MySet.count(Key));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool D = ONCE(!MySet.contains(Key));
+#undef ONCE
+
+#define REPEAT(E) ((E) && (E) && (E))
+  // CHECK-FIXES: #define REPEAT(E) ((E) && (E) && (E))
+  bool E = REPEAT(MySet.find(Key) != MySet.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool E = REPEAT(MySet.contains(Key));
+  bool F = REPEAT(MySet.find(Key) == MySet.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool F = REPEAT(!MySet.contains(Key));
+#undef REPEAT
+
+#define ID(E) E
+  bool L = ID(MySet.find(Key) != MySet.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool L = ID(MySet.contains(Key));
+#undef ID
+
+  // No fix when a use of the parameter is not parenthesized.
+#define TWICE(E) E && E
+  // CHECK-FIXES: #define TWICE(E) E && E
+  bool G = TWICE(MySet.find(Key) == MySet.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool G = TWICE(MySet.find(Key) == MySet.end());
+#undef TWICE
+
+  // No fix for an implicitly converted `count` inside a macro argument.
+#define MIXED(E) (E && E == 2)
+  // CHECK-FIXES: #define MIXED(E) (E && E == 2)
+  bool H = MIXED(MySet.count(Key));
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool H = MIXED(MySet.count(Key));
+#undef MIXED
+
+  // Operands spelled through other macros.
+#define MY_SET MySet
+#define ONCE(E) ((E))
+  bool I = ONCE(MY_SET.find(Key) != MY_SET.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool I = ONCE(MY_SET.contains(Key));
+#undef MY_SET
+#define KEY Key
+  bool K = ONCE(MySet.find(KEY) != MySet.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool K = ONCE(MySet.contains(KEY));
+#undef KEY
+#define METHOD find
+  bool M = ONCE(MySet.METHOD(Key) != MySet.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool M = ONCE(MySet.contains(Key));
+#undef METHOD
+#define PAREN_KEY (Key)
+  bool N = ONCE(MySet.find(PAREN_KEY) != MySet.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool N = ONCE(MySet.contains(PAREN_KEY));
+#undef PAREN_KEY
+  bool O = ONCE(MySet.find((Key)) != MySet.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool O = ONCE(MySet.contains((Key)));
+
+  // No fix when the comparison mixes argument and macro body tokens.
+#define IS_FOUND(E) (E != MySet.end())
+  // CHECK-FIXES: #define IS_FOUND(E) (E != MySet.end())
+  bool J = IS_FOUND(MySet.find(Key));
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: bool J = IS_FOUND(MySet.find(Key));
+#undef IS_FOUND
+#undef ONCE
+  return A && B && C && D && E && F && G && H && I && J && K && L && M && N && O;
+}
+
+struct ConstexprContainer {
+  constexpr const int *find(int X) const { return X == 1 ? &Value : nullptr; }
+  constexpr const int *end() const { return nullptr; }
+  constexpr unsigned count(int X) const { return X == 1; }
+  constexpr bool contains(int X) const { return X == 1; }
+  int Value = 1;
+};
+
+constexpr ConstexprContainer CC;
+#define REPEAT(E) ((E) && (E) && (E))
+#define TWICE(E) E && E
+#define MIXED(E) (E && E == 2)
+#define MIX_COMPARISON(E) ((E) && (E + 1))
+static_assert(REPEAT(CC.find(1) != CC.end()), "");
+// CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use 'contains' to check for membership [readability-container-contains]
+// CHECK-FIXES: static_assert(REPEAT(CC.contains(1)), "");
+static_assert(TWICE(CC.find(2) == CC.end()), "");
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use 'contains' to check for membership [readability-container-contains]
+// CHECK-FIXES: static_assert(TWICE(CC.find(2) == CC.end()), "");
+static_assert(!MIXED(CC.count(1)), "");
+// CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use 'contains' to check for membership [readability-container-contains]
+// CHECK-FIXES: static_assert(!MIXED(CC.count(1)), "");
+static_assert(!MIX_COMPARISON(CC.count(1) != 0), "");
+// CHECK-MESSAGES: :[[@LINE-1]]:34: warning: use 'contains' to check for membership [readability-container-contains]
+// CHECK-FIXES: static_assert(!MIX_COMPARISON(CC.count(1) != 0), "");
+#undef REPEAT
+#undef TWICE
+#undef MIXED
+#undef MIX_COMPARISON
+
+// No fix when a use may be the argument of a call or macro invocation.
+#define BAD(E) (E + 1)
+#define ID(X) X
+#define FORWARD(E) ((E) && BAD(E))
+static_assert(!FORWARD(CC.count(1) != 0), "");
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use 'contains' to check for membership [readability-container-contains]
+// CHECK-FIXES: static_assert(!FORWARD(CC.count(1) != 0), "");
+#define VIA_PARAMETER(F, E) ((E) && F(E))
+static_assert(!VIA_PARAMETER(BAD, CC.count(1) != 0), "");
+// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: use 'contains' to check for membership [readability-container-contains]
+// CHECK-FIXES: static_assert(!VIA_PARAMETER(BAD, CC.count(1) != 0), "");
+#define VIA_EXPANSION(E) ((E) && ID(BAD)(E))
+static_assert(!VIA_EXPANSION(CC.count(1) != 0), "");
+// CHECK-MESSAGES: :[[@LINE-1]]:33: warning: use 'contains' to check for membership [readability-container-contains]
+// CHECK-FIXES: static_assert(!VIA_EXPANSION(CC.count(1) != 0), "");
+constexpr bool identity(bool B) { return B; }
+#define CALL(E) ((E) && identity(E))
+static_assert(CALL(CC.count(1) != 0), "");
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use 'contains' to check for membership [readability-container-contains]
+// CHECK-FIXES: static_assert(CALL(CC.count(1) != 0), "");
+#undef BAD
+#undef ID
+#undef FORWARD
+#undef VIA_PARAMETER
+#undef VIA_EXPANSION
+#undef CALL
+
+struct NonBoolIterator {
+  int operator!=(NonBoolIterator) const;
+};
+
+struct NonBoolComparisonContainer {
+  NonBoolIterator find(int) const;
+  NonBoolIterator end() const;
+  bool contains(int) const;
+};
+
+// No fix for a non-`bool` comparison inside a macro argument.
+int testMacroArgumentNonBoolComparison(NonBoolComparisonContainer &C, int Key) {
+#define ONCE(E) ((E))
+  int R = ONCE(C.find(Key) != C.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: int R = ONCE(C.find(Key) != C.end());
+#undef ONCE
+  return R;
+}
+
 // The following map has the same interface as `std::map`.
 template <class Key, class T>
 struct CustomMap {
