@@ -1,0 +1,25 @@
+# RUN: llc -mtriple=amdgpu11.00 -run-pass=machine-scheduler \
+# RUN:   -amdgpu-use-amdgpu-trackers -misched-prera-direction=topdown \
+# RUN:   -verify-machineinstrs -verify-misched %s -o - | FileCheck %s
+
+# Use AMDGPU pressure trackers and top-down scheduling to query pressure after
+# the bundle. The query must skip all bundled instructions; stepping into the
+# bundle used to assert in MachineInstrBundleIterator.
+
+---
+name: bundled_pressure_query
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: bundled_pressure_query
+  ; CHECK: BUNDLE
+  ; CHECK: V_EXP_F32_e32
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    BUNDLE implicit-def %2, implicit %0, implicit %1, implicit $mode, implicit $exec {
+      %2:vgpr_32 = V_ADD_F32_e32 %0, %1, implicit $mode, implicit $exec
+    }
+    %3:vgpr_32 = V_EXP_F32_e32 %2, implicit $mode, implicit $exec
+    %4:vgpr_32 = V_ADD_F32_e32 %2, %1, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %3, implicit %4
+...
