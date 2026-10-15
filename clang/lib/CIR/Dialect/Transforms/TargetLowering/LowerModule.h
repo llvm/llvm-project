@@ -47,11 +47,25 @@ public:
 
   clang::TargetCXXABI::Kind getCXXABIKind() const {
     assert(!cir::MissingFeatures::lowerModuleLangOpts());
+    assert(target && "No C++ ABI kind without a target (missing cir.triple)");
     return target->getCXXABI().getKind();
   }
+  CIRCXXABI &getCXXABI() const {
+    assert(abi && "No C++ ABI without a target (missing cir.triple)");
+    return *abi;
+  }
 
-  CIRCXXABI &getCXXABI() const { return *abi; }
-  const clang::TargetInfo &getTarget() const { return *target; }
+  bool hasTarget() const {
+    // Null target means module had no cir.triple; but when cir.triple becomes
+    // mandatory this function becomes useless.
+    assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
+    return target != nullptr;
+  }
+  const clang::TargetInfo &getTarget() const {
+    assert(target && "LowerModule has no target (missing cir.triple)");
+    return *target;
+  }
+
   mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
 
   const TargetLoweringInfo &getTargetLoweringInfo();

@@ -5820,13 +5820,10 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
   std::optional<llvm::Triple> triple = cir::getTripleFromModule(moduleOp);
-  if (!triple) {
-    moduleOp.emitError() << "cannot lower " << op.getOperationName() << " "
-                         << "without a '"
-                         << cir::CIRDialect::getTripleAttrName() << "' "
-                         << "attribute";
-    return mlir::failure();
-  }
+  if (!triple)
+    return op.emitOpError() << "requires a '"
+                            << cir::CIRDialect::getTripleAttrName()
+                            << "' module attribute";
 
   mlir::Type i32Ty = rewriter.getI32Type();
   mlir::Type i64Ty = rewriter.getI64Type();

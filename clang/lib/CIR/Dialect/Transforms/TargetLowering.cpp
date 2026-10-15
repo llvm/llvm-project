@@ -296,17 +296,12 @@ populateTargetLoweringConversionTarget(mlir::ConversionTarget &target,
 
 void TargetLoweringPass::runOnOperation() {
   auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
-  // Triple attribute is required by createLowerModule:
-  if (!mod->hasAttr(CIRDialect::getTripleAttrName())) {
-    mod.emitError() << getArgument() << " requires a module with a '"
-                    << CIRDialect::getTripleAttrName() << "' attribute";
-    return signalPassFailure();
-  }
 
   std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
-  if (!lowerModule) {
-    mod.emitError() << "cannot create a CIR lower module for " << getName()
-                    << " pass";
+  assert(lowerModule && "LowerModule shouldn't be null");
+  if (!lowerModule->hasTarget()) {
+    mod.emitError() << getArgument() << " requires a module with a '"
+                    << cir::CIRDialect::getTripleAttrName() << "' attribute";
     return signalPassFailure();
   }
 

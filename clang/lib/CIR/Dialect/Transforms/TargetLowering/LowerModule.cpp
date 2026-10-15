@@ -69,8 +69,10 @@ LowerModule::LowerModule(clang::LangOptions langOpts,
                          clang::CodeGenOptions codeGenOpts,
                          mlir::ModuleOp &module,
                          std::unique_ptr<clang::TargetInfo> target)
-    : module(module), langOpts(std::move(langOpts)), target(std::move(target)),
-      abi(createCXXABI(*this)) {}
+    : module(module), langOpts(std::move(langOpts)), target(std::move(target)) {
+  if (this->target)
+    abi = createCXXABI(*this);
+}
 
 const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
   if (!targetLoweringInfo)
@@ -80,19 +82,21 @@ const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
 
 // TODO: not to create it every time
 std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
-  // If the triple is not present, e.g. CIR modules parsed from text, we
-  // cannot init LowerModule properly.
+  // If the triple is not present, e.g. CIR modules parsed from text,
+  // LowerModule currently gets created with null target and abi. If triple
+  // becomes a requirement, we should not allow LowerModules to be created with
+  // null target and abi.
   assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
 
   // Fetch target information.
-  std::optional<llvm::Triple> triple = cir::getTripleFromModule(module);
-  if (!triple)
-    return nullptr;
-  clang::TargetOptions targetOptions;
-  targetOptions.Triple = triple->str();
-  auto targetInfo = clang::targets::AllocateTarget(*triple, targetOptions);
-  if (!targetInfo)
-    return nullptr;
+  std::unique_ptr<clang::TargetInfo> targetInfo;
+  if (std::optional<llvm::Triple> triple = cir::getTripleFromModule(module)) {
+    clang::TargetOptions targetOptions;
+    targetOptions.Triple = triple->str();
+    targetInfo = clang::targets::AllocateTarget(*triple, targetOptions);
+    assert(targetInfo &&
+           "bad cir.triple should have been rejected by the verifier");
+  }
 
   // Populate the lowering-relevant LangOptions from the module's
   // #cir.lowering_lang_options attribute so a reloaded .cir lowers the same
@@ -122,10 +126,10 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
 
   if (auto optAttr = module->getAttr(cir::CIRDialect::getOptInfoAttrName())) {
     auto optInfo = mlir::dyn_cast<cir::OptInfoAttr>(optAttr);
-    if (!optInfo)
-      return nullptr;
-    codeGenOpts.OptimizationLevel = optInfo.getLevel();
-    codeGenOpts.OptimizeSize = optInfo.getSize();
+    if (optInfo) {
+      codeGenOpts.OptimizationLevel = optInfo.getLevel();
+      codeGenOpts.OptimizeSize = optInfo.getSize();
+    }
   }
 
   return std::make_unique<LowerModule>(std::move(langOpts),

@@ -3180,17 +3180,12 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
 
 void LoweringPreparePass::runOnOperation() {
   mlirModule = getOperation();
-  // Triple attribute is required by createLowerModule:
-  if (!mlirModule->hasAttr(CIRDialect::getTripleAttrName())) {
-    mlirModule.emitError() << getArgument() << " requires a module with a '"
-                           << CIRDialect::getTripleAttrName() << "' attribute";
-    return signalPassFailure();
-  }
 
   lowerModule = cir::createLowerModule(mlirModule);
-  if (!lowerModule) {
-    mlirModule.emitError("cannot create a CIR lower module for ")
-        << getName() << " pass";
+  assert(lowerModule && "LowerModule shouldn't be null");
+  if (!lowerModule->hasTarget()) {
+    mlirModule.emitError() << getArgument() << " requires a module with a '"
+                           << CIRDialect::getTripleAttrName() << "' attribute";
     return signalPassFailure();
   }
 
