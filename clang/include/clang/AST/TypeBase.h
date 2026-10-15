@@ -1135,6 +1135,27 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
+  /// Given an object of this canonical, non-reference type, can we safely
+  /// copy a value out of it based on its initializer?
+  bool isConstantEmittableObjectType() const;
+
+  /// How a load of a variable of this type can be emitted as a constant.
+  enum ConstantEmissionKind {
+    CEK_None,
+    CEK_AsReferenceOnly,
+    CEK_AsValueOrReference,
+    CEK_AsValueOnly
+  };
+
+  /// Can we constant-emit a load of a reference to a variable of this type?
+  /// This is different from predicates like
+  /// Decl::mightBeUsableInConstantExpressions because we do want it to apply
+  /// in situations that don't necessarily satisfy the language's rules
+  /// for this (e.g. C++'s ODR-use rules).  For example, we want to able
+  /// to do this with const float variables even if those variables
+  /// aren't marked 'constexpr'.
+  ConstantEmissionKind getConstantEmissionKind() const;
+
   /// Returns true if the type uses postfix declarator syntax, i.e. the
   /// declarator component appears after the name (arrays, functions).
   /// Looks through pointer-like types to the pointee.

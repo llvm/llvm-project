@@ -3056,54 +3056,6 @@ Address CIRGenFunction::createDefaultAlignTempAlloca(mlir::Type ty,
   return createTempAlloca(ty, align, loc, name);
 }
 
-/// Given an object of the given canonical type, can we safely copy a
-/// value out of it based on its initializer?
-static bool isConstantEmittableObjectType(QualType type) {
-  assert(type.isCanonical());
-  assert(!type->isReferenceType());
-
-  // Must be const-qualified but non-volatile.
-  Qualifiers qs = type.getLocalQualifiers();
-  if (!qs.hasConst() || qs.hasVolatile())
-    return false;
-
-  // Otherwise, all object types satisfy this except C++ classes with
-  // mutable subobjects or non-trivial copy/destroy behavior.
-  if (const auto *rt = dyn_cast<clang::RecordType>(type))
-    if (const auto *rd = dyn_cast<CXXRecordDecl>(rt->getDecl())) {
-      rd = rd->getDefinitionOrSelf();
-      if (rd->hasMutableFields() || !rd->isTrivial())
-        return false;
-    }
-
-  return true;
-}
-
-/// Can we constant-emit a load of a reference to a variable of the
-/// given type?  This is different from predicates like
-/// Decl::mightBeUsableInConstantExpressions because we do want it to apply
-/// in situations that don't necessarily satisfy the language's rules
-/// for this (e.g. C++'s ODR-use rules).  For example, we want to able
-/// to do this with const float variables even if those variables
-/// aren't marked 'constexpr'.
-enum ConstantEmissionKind {
-  CEK_None,
-  CEK_AsReferenceOnly,
-  CEK_AsValueOrReference,
-  CEK_AsValueOnly
-};
-static ConstantEmissionKind checkVarTypeForConstantEmission(QualType type) {
-  type = type.getCanonicalType();
-  if (const auto *ref = dyn_cast<ReferenceType>(type)) {
-    if (isConstantEmittableObjectType(ref->getPointeeType()))
-      return CEK_AsValueOrReference;
-    return CEK_AsReferenceOnly;
-  }
-  if (isConstantEmittableObjectType(type))
-    return CEK_AsValueOnly;
-  return CEK_None;
-}
-
 /// Try to emit a reference to the given value without producing it as
 /// an l-value.  This is just an optimization, but it avoids us needing
 /// to emit global copies of variables if they're named without triggering
@@ -3115,16 +3067,16 @@ CIRGenFunction::tryEmitAsConstant(const DeclRefExpr *refExpr) {
   const ValueDecl *value = refExpr->getDecl();
 
   // The value needs to be an enum constant or a constant variable.
-  ConstantEmissionKind cek;
+  QualType::ConstantEmissionKind cek;
   if (isa<ParmVarDecl>(value))
-    cek = CEK_None;
+    cek = QualType::CEK_None;
   else if (const auto *var = dyn_cast<VarDecl>(value))
-    cek = checkVarTypeForConstantEmission(var->getType());
+    cek = var->getType().getConstantEmissionKind();
   else if (isa<EnumConstantDecl>(value))
-    cek = CEK_AsValueOnly;
+    cek = QualType::CEK_AsValueOnly;
   else
-    cek = CEK_None;
-  if (cek == CEK_None)
+    cek = QualType::CEK_None;
+  if (cek == QualType::CEK_None)
     return ConstantEmission();
 
   Expr::EvalResult result;
@@ -3132,18 +3084,14 @@ CIRGenFunction::tryEmitAsConstant(const DeclRefExpr *refExpr) {
   QualType resultType;
 
   // It's best to evaluate all the way as an r-value if that's permitted.
-  if (cek != CEK_AsReferenceOnly &&
+  if (cek != QualType::CEK_AsReferenceOnly &&
       refExpr->EvaluateAsRValue(result, getContext())) {
     resultIsReference = false;
     resultType = refExpr->getType().getUnqualifiedType();
-
-    // Otherwise, try to evaluate as an l-value.
-  } else if (cek != CEK_AsValueOnly &&
+  } else if (cek != QualType::CEK_AsValueOnly &&
              refExpr->EvaluateAsLValue(result, getContext())) {
     resultIsReference = true;
     resultType = value->getType();
-
-    // Failure.
   } else {
     return ConstantEmission();
   }

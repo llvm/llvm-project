@@ -3148,6 +3148,39 @@ bool QualType::isTriviallyCopyConstructibleType(
                                      /*IsCopyConstructible=*/true);
 }
 
+bool QualType::isConstantEmittableObjectType() const {
+  assert(isCanonical());
+  assert(!getTypePtr()->isReferenceType());
+
+  // Must be const-qualified but non-volatile.
+  Qualifiers Qs = getLocalQualifiers();
+  if (!Qs.hasConst() || Qs.hasVolatile())
+    return false;
+
+  // Otherwise, all object types satisfy this except C++ classes with
+  // mutable subobjects or non-trivial copy/destroy behavior.
+  if (const auto *RT = dyn_cast<RecordType>(getTypePtr()))
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
+      RD = RD->getDefinitionOrSelf();
+      if (RD->hasMutableFields() || !RD->isTrivial())
+        return false;
+    }
+
+  return true;
+}
+
+QualType::ConstantEmissionKind QualType::getConstantEmissionKind() const {
+  QualType Canon = getCanonicalType();
+  if (const auto *Ref = dyn_cast<ReferenceType>(Canon)) {
+    if (Ref->getPointeeType().isConstantEmittableObjectType())
+      return CEK_AsValueOrReference;
+    return CEK_AsReferenceOnly;
+  }
+  if (Canon.isConstantEmittableObjectType())
+    return CEK_AsValueOnly;
+  return CEK_None;
+}
+
 bool QualType::isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const {
   return !Context.getLangOpts().ObjCAutoRefCount &&
          Context.getLangOpts().ObjCWeak &&
