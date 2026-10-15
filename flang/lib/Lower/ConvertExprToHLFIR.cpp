@@ -404,6 +404,11 @@ private:
   gen(const Fortran::evaluate::CoarrayRef &coarrayRef) {
     PartInfo partInfo;
     mlir::Type resultType = visit(coarrayRef, partInfo);
+
+    if (partInfo.componentName.empty() && partInfo.subscripts.empty() &&
+        partInfo.substring.empty())
+      return gen(coarrayRef.GetFirstSymbol());
+
     return genDesignate(resultType, partInfo, coarrayRef);
   }
 

@@ -4581,7 +4581,8 @@ private:
              std::get<std::list<Fortran::parser::Association>>(stmt->t)) {
           Fortran::semantics::Symbol &sym =
               *std::get<Fortran::parser::Name>(assoc.t).symbol;
-          if (Fortran::evaluate::IsCoarray(
+          if (Fortran::evaluate::IsCoarray(sym) ||
+              Fortran::evaluate::IsCoarray(
                   Fortran::semantics::GetAssociationRoot(sym)))
             TODO(toLocation(),
                  "coarray: associating coarray entity in associate construct.");
