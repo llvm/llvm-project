@@ -191,7 +191,21 @@ static int WriteOutput(const char *argv0, StringRef Filename,
   return 0;
 }
 
-static int tableGenMainImpl(const char *argv0, MultiFileTableGenMainFn MainFn) {
+int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
+      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
+  if (std::error_code EC = FileOrErr.getError())
+    return reportError(argv0, "Could not open input file '" + InputFilename +
+                                  "': " + EC.message() + "\n");
+
+  // Tell SrcMgr about this buffer, which is what TGParser will pick up.
+  SrcMgr.AddNewSourceBuffer(std::move(*FileOrErr), SMLoc());
+
+  // Record the location of the include directory so that the lexer can find
+  // it later.
+  SrcMgr.setIncludeDirs(IncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
+
   if (Preprocess) {
     TGLexer Lex(SrcMgr, MacroNames);
     std::string OutString;
@@ -199,10 +213,9 @@ static int tableGenMainImpl(const char *argv0, MultiFileTableGenMainFn MainFn) {
     if (int Ret = preprocessInput(Lex, Out))
       return Ret;
     // Return early if the lexer printed errors but still reached EOF (e.g., a
-    // NUL character in the source). TableGenMain will recheck and report the
-    // error.
+    // NUL character in the source).
     if (ErrorsPrinted > 0)
-      return 0;
+      return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
     if (!DependFilename.empty()) {
       if (int Ret = createDependencyFile(Lex.getDependencies(), argv0))
         return Ret;
@@ -228,9 +241,9 @@ static int tableGenMainImpl(const char *argv0, MultiFileTableGenMainFn MainFn) {
   Timer.stopTimer();
 
   // Return early if any other errors were generated during parsing
-  // (e.g., assert failures). TableGenMain will recheck and report the error.
+  // (e.g., assert failures).
   if (ErrorsPrinted > 0)
-    return 0;
+    return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
 
   // Write output to memory.
   Timer.startBackendTimer("Backend overall");
@@ -271,26 +284,6 @@ static int tableGenMainImpl(const char *argv0, MultiFileTableGenMainFn MainFn) {
   Timer.stopTimer();
   Timer.stopPhaseTiming();
 
-  return 0;
-}
-
-int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
-  if (std::error_code EC = FileOrErr.getError())
-    return reportError(argv0, "Could not open input file '" + InputFilename +
-                                  "': " + EC.message() + "\n");
-
-  // Tell SrcMgr about this buffer, which is what TGParser will pick up.
-  SrcMgr.AddNewSourceBuffer(std::move(*FileOrErr), SMLoc());
-
-  // Record the location of the include directory so that the lexer can find
-  // it later.
-  SrcMgr.setIncludeDirs(IncludeDirs);
-  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
-
-  if (int Ret = tableGenMainImpl(argv0, MainFn))
-    return Ret;
   if (ErrorsPrinted > 0)
     return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
   return 0;
