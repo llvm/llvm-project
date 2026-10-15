@@ -4766,6 +4766,13 @@ public:
   ///
   virtual SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
+  // This method is invoked to find the depth recursion limit for load-combine
+  // recursion trees during DAG combine. Different architectures may benefit
+  // from different recursion depths for different root value types.
+  virtual unsigned getLoadCombineByteProviderDepthLimit(EVT VT) const {
+    return 10;
+  }
+
   /// Return true if it is profitable to move this shift by a constant amount
   /// through its operand, adjusting any immediate operands as necessary to
   /// preserve semantics. This transformation may not be desirable if it

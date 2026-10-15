@@ -32156,6 +32156,13 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
+// Typical i64 by i8 pattern requires recursion up to 8 calls depth, but
+// unrolled byte-accumulate loops can form deeper Horner-style shift/or trees.
+unsigned
+AArch64TargetLowering::getLoadCombineByteProviderDepthLimit(EVT VT) const {
+  return VT == MVT::i64 ? 16 : 10;
+}
+
 // Check if the return value is used as only a return value, as otherwise
 // we can't perform a tail-call. In particular, we need to check for
 // target ISD nodes that are returns and any other "odd" constructs

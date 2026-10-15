@@ -9769,12 +9769,12 @@ using SDByteProvider = ByteProvider<SDNode *>;
 
 static std::optional<SDByteProvider>
 calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
-                      std::optional<uint64_t> VectorIndex,
+                      unsigned DepthLimit, std::optional<uint64_t> VectorIndex,
                       unsigned StartingIndex = 0,
                       MutableArrayRef<uint8_t> ByteMask = {}) {
 
   // Typical i64 by i8 pattern requires recursion up to 8 calls depth
-  if (Depth == 10)
+  if (Depth >= DepthLimit)
     return std::nullopt;
 
   // Only allow multiple uses if the instruction is a vector load (in which
@@ -9797,12 +9797,14 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
 
   switch (Op.getOpcode()) {
   case ISD::OR: {
-    auto LHS = calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
-                                     VectorIndex, StartingIndex, ByteMask);
+    auto LHS =
+        calculateByteProvider(Op->getOperand(0), Index, Depth + 1, DepthLimit,
+                              VectorIndex, StartingIndex, ByteMask);
     if (!LHS)
       return std::nullopt;
-    auto RHS = calculateByteProvider(Op->getOperand(1), Index, Depth + 1,
-                                     VectorIndex, StartingIndex, ByteMask);
+    auto RHS =
+        calculateByteProvider(Op->getOperand(1), Index, Depth + 1, DepthLimit,
+                              VectorIndex, StartingIndex, ByteMask);
     if (!RHS)
       return std::nullopt;
 
@@ -9829,7 +9831,8 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     return Index < ByteShift
                ? SDByteProvider::getConstantZero()
                : calculateByteProvider(Op->getOperand(0), Index - ByteShift,
-                                       Depth + 1, VectorIndex, Index, ByteMask);
+                                       Depth + 1, DepthLimit, VectorIndex,
+                                       Index, ByteMask);
   }
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -9845,13 +9848,13 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                  ? std::optional<SDByteProvider>(
                        SDByteProvider::getConstantZero())
                  : std::nullopt;
-    return calculateByteProvider(NarrowOp, Index, Depth + 1, VectorIndex,
-                                 StartingIndex, ByteMask);
+    return calculateByteProvider(NarrowOp, Index, Depth + 1, DepthLimit,
+                                 VectorIndex, StartingIndex, ByteMask);
   }
   case ISD::BSWAP:
     return calculateByteProvider(Op->getOperand(0), ByteWidth - Index - 1,
-                                 Depth + 1, VectorIndex, StartingIndex,
-                                 ByteMask);
+                                 Depth + 1, DepthLimit, VectorIndex,
+                                 StartingIndex, ByteMask);
   case ISD::AND: {
     // Constants are canonicalized to the RHS of AND, so only operand 1 needs
     // to be checked.
@@ -9865,8 +9868,9 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     if (MaskByte == 0x00)
       return SDByteProvider::getConstantZero();
 
-    auto Result = calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
-                                        VectorIndex, StartingIndex, ByteMask);
+    auto Result =
+        calculateByteProvider(Op->getOperand(0), Index, Depth + 1, DepthLimit,
+                              VectorIndex, StartingIndex, ByteMask);
     if (!Result)
       return std::nullopt;
 
@@ -9907,7 +9911,8 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
       return std::nullopt;
 
     return calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
-                                 VectorIndex, StartingIndex, ByteMask);
+                                 DepthLimit, VectorIndex, StartingIndex,
+                                 ByteMask);
   }
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
@@ -10237,6 +10242,8 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   if (VT != MVT::i16 && VT != MVT::i32 && VT != MVT::i64)
     return SDValue();
   unsigned ByteWidth = VT.getSizeInBits() / 8;
+  unsigned ByteProviderDepthLimit =
+      TLI.getLoadCombineByteProviderDepthLimit(VT);
 
   bool IsBigEndianTarget = DAG.getDataLayout().isBigEndian();
   auto MemoryByteOffset = [&](SDByteProvider P) {
@@ -10265,9 +10272,9 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   SmallVector<uint8_t, 8> ByteMasks(ByteWidth, 0xFF);
   unsigned ZeroExtendedBytes = 0;
   for (int i = ByteWidth - 1; i >= 0; --i) {
-    auto P =
-        calculateByteProvider(SDValue(N, 0), i, 0, /*VectorIndex*/ std::nullopt,
-                              /*StartingIndex*/ i, ByteMasks);
+    auto P = calculateByteProvider(SDValue(N, 0), i, 0, ByteProviderDepthLimit,
+                                   /*VectorIndex*/ std::nullopt,
+                                   /*StartingIndex*/ i, ByteMasks);
     if (!P)
       return SDValue();
 

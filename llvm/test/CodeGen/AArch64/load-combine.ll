@@ -178,6 +178,55 @@ define i64 @load_i64_by_i8_bswap(ptr %arg) {
   ret i64 %tmp37
 }
 
+; ptr p; // p is 1 byte aligned
+; Deep tree from an unrolled byte-accumulate loop:
+; for (i = 0; i != 8; ++i) v = (v << 8) | p[i]
+define i64 @load_i64_by_i8_bswap_deep_tree(ptr %arg) {
+; CHECK-LABEL: load_i64_by_i8_bswap_deep_tree:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    rev x0, x8
+; CHECK-NEXT:    ret
+  %b0 = load i8, ptr %arg, align 1
+  %z0 = zext i8 %b0 to i64
+  %p1 = getelementptr inbounds i8, ptr %arg, i64 1
+  %b1 = load i8, ptr %p1, align 1
+  %z1 = zext i8 %b1 to i64
+  %p2 = getelementptr inbounds i8, ptr %arg, i64 2
+  %b2 = load i8, ptr %p2, align 1
+  %z2 = zext i8 %b2 to i64
+  %p3 = getelementptr inbounds i8, ptr %arg, i64 3
+  %b3 = load i8, ptr %p3, align 1
+  %z3 = zext i8 %b3 to i64
+  %p4 = getelementptr inbounds i8, ptr %arg, i64 4
+  %b4 = load i8, ptr %p4, align 1
+  %z4 = zext i8 %b4 to i64
+  %p5 = getelementptr inbounds i8, ptr %arg, i64 5
+  %b5 = load i8, ptr %p5, align 1
+  %z5 = zext i8 %b5 to i64
+  %p6 = getelementptr inbounds i8, ptr %arg, i64 6
+  %b6 = load i8, ptr %p6, align 1
+  %z6 = zext i8 %b6 to i64
+  %p7 = getelementptr inbounds i8, ptr %arg, i64 7
+  %b7 = load i8, ptr %p7, align 1
+  %z7 = zext i8 %b7 to i64
+  %s0 = shl nuw nsw i64 %z0, 16
+  %s1 = shl nuw nsw i64 %z1, 8
+  %o01 = or disjoint i64 %s0, %s1
+  %o012 = or disjoint i64 %o01, %z2
+  %s012 = shl nuw nsw i64 %o012, 16
+  %s3 = shl nuw nsw i64 %z3, 8
+  %o0123 = or disjoint i64 %s012, %s3
+  %o01234 = or disjoint i64 %o0123, %z4
+  %s01234 = shl nuw nsw i64 %o01234, 16
+  %s5 = shl nuw nsw i64 %z5, 8
+  %o012345 = or disjoint i64 %s01234, %s5
+  %o0123456 = or disjoint i64 %o012345, %z6
+  %s0123456 = shl nuw i64 %o0123456, 8
+  %result = or disjoint i64 %s0123456, %z7
+  ret i64 %result
+}
+
 ; ptr p; // p[1] is 4 byte aligned
 ; (i32) p[1] | ((i32) p[2] << 8) | ((i32) p[3] << 16) | ((i32) p[4] << 24)
 define i32 @load_i32_by_i8_nonzero_offset(ptr %arg) {
