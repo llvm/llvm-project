@@ -31,3 +31,5 @@ defm : FlagOrEnumField<"lib-print", "std::optional<test::Mode>", "std::nullopt",
 defm : ValueField<"lib-ratio", "double", "0.5", "A double">;
 defm : DefaultOnOffField<"lib-tristate", "A tri-state">;
 defm Path : ValueField<"lib-path", "StringRef", "\"p\"", "A string">;
+def : AliasOf<"lib-disable", "lib-enable=false">;
+def : AliasOf<"lib-number", "lib-count">;

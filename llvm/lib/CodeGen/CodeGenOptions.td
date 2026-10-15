@@ -75,6 +75,28 @@ defm : BoolField<"profile-unknown-in-special-section", "false",
   "In profiling mode like sampleFDO, if a function doesn't have profile, we cannot tell the function is cold for sure because it may be a function newly added without ever being sampled. "
   "With the flag enabled, compiler can put such profile unknown functions into a special section, so runtime system can choose to handle it in a different way than .text section, to save RAM for example">;
 
+// TODO: Remove the old spellings before the cgp- prefix.
+def : AliasOf<"addr-sink-combine-base-gv", "cgp-addr-sink-combine-base-gv">;
+def : AliasOf<"addr-sink-combine-base-offs", "cgp-addr-sink-combine-base-offs">;
+def : AliasOf<"addr-sink-combine-base-reg", "cgp-addr-sink-combine-base-reg">;
+def : AliasOf<"addr-sink-combine-scaled-reg", "cgp-addr-sink-combine-scaled-reg">;
+def : AliasOf<"addr-sink-new-phis", "cgp-addr-sink-new-phis">;
+def : AliasOf<"addr-sink-new-select", "cgp-addr-sink-new-select">;
+def : AliasOf<"addr-sink-using-gep", "cgp-addr-sink-using-gep">;
+def : AliasOf<"cgpp-huge-func", "cgp-huge-func">;
+def : AliasOf<"enable-andcmp-sinking", "cgp-andcmp-sinking">;
+def : AliasOf<"force-split-store", "cgp-force-split-store">;
+def : AliasOf<"stress-cgp-ext-ld-promotion", "cgp-stress-ext-ld-promotion">;
+def : AliasOf<"stress-cgp-store-extract", "cgp-stress-store-extract">;
+def : AliasOf<"disable-cgp-branch-opts", "cgp-branch-opts=false">;
+def : AliasOf<"disable-cgp-delete-phis", "cgp-delete-phis=false">;
+def : AliasOf<"disable-cgp-ext-ld-promotion", "cgp-ext-ld-promotion=false">;
+def : AliasOf<"disable-cgp-gc-opts", "cgp-gc-opts=false">;
+def : AliasOf<"disable-cgp-select2branch", "cgp-select2branch=false">;
+def : AliasOf<"disable-cgp-store-extract", "cgp-store-extract=false">;
+def : AliasOf<"disable-complex-addr-modes", "cgp-complex-addr-modes=false">;
+def : AliasOf<"disable-preheader-prot", "cgp-preheader-prot=false">;
+
 // TargetPassConfig.cpp
 defm : BoolField<"basic-block-section-match-infer", "false",
   "Enable matching and inference when generating basic block sections">;
