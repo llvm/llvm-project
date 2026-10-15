@@ -1736,6 +1736,8 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       # libintl.h entrypoints
       libc.src.libintl.bind_textdomain_codeset
       libc.src.libintl.bindtextdomain
+      libc.src.libintl.gettext
+      libc.src.libintl.gettext_l
       libc.src.libintl.textdomain
 
       # net/if.h entrypoints
