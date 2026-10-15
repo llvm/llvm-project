@@ -393,6 +393,9 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
       if (Phdr.p_flags & ELF::PF_X) {
         PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr);
         TextSegmentOffsets.push_back(Phdr.p_offset);
+        // Match mmap file offsets against bytes supplied by this ELF segment.
+        // p_memsz can include zero-filled memory beyond the file bytes.
+        TextSegmentFileSizes.push_back(Phdr.p_filesz);
       } else {
         PhdrInfo Info;
         Info.FileOffset = Phdr.p_offset;

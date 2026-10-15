@@ -9,9 +9,11 @@
 #include "ErrorHandling.h"
 #include "Options.h"
 #include "ProfileGenerator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/ProfileData/ETMTraceDecoder.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -647,6 +649,121 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
       }
     }
   }
+}
+
+void PerfScriptReader::updateExecutableMapping(const MMapEvent &Event,
+                                               bool IsTarget) {
+  if (Event.Size == 0 || (!Binary->isKernel() && Event.PID < 0))
+    return;
+  if (Binary->isKernel() && Event.PID != -1)
+    return;
+
+  // Kernel mmaps use PID -1, but samples carry the interrupted task's PID.
+  // Store one shared kernel history; userspace histories remain per process.
+  int32_t PID = static_cast<int32_t>(Event.PID);
+  SmallVector<ExecutableMapping, 2> NewMappings;
+  if (IsTarget &&
+      (Binary->isKernel() || Event.MemProtectionFlag.contains('x'))) {
+    if (Binary->isKernel() || Binary->isCOFF()) {
+      // Kernel mmap offsets describe a text address, not an ELF file offset.
+      // COFF mappings also use an image base, so neither uses the ELF join.
+      uint64_t Address = Binary->getPreferredTextSegmentAddresses().front();
+      NewMappings.push_back({Event.Address, Event.Size, Address, true});
+    } else {
+      // Join the mmap's file interval to each executable ELF segment. One mmap
+      // may span several segments, or begin part-way through one segment.
+      for (auto [Offset, Size, PreferredAddress] :
+           llvm::zip_equal(Binary->getTextSegmentOffsets(),
+                           Binary->getTextSegmentFileSizes(),
+                           Binary->getPreferredTextSegmentAddresses())) {
+        // Test for overlap using distances, avoiding overflowing end offsets.
+        if (Size == 0 ||
+            (Offset >= Event.Offset ? Offset - Event.Offset >= Event.Size
+                                    : Event.Offset - Offset >= Size))
+          continue;
+        uint64_t FileOffset = std::max(Offset, Event.Offset);
+        // The same file byte has one offset from the runtime mmap start and
+        // another from the segment's preferred address in the binary.
+        uint64_t MMapDelta = FileOffset - Event.Offset;
+        uint64_t SegmentDelta = FileOffset - Offset;
+        auto Address = checkedAddUnsigned(PreferredAddress, SegmentDelta);
+        if (!Address)
+          exitWithError("Invalid perf script mmap address");
+        // mmap parsing already checked the runtime interval. Limit this entry
+        // to its intersection with the file-backed executable segment.
+        ExecutableMapping Mapping{
+            Event.Address + MMapDelta,
+            std::min(Event.Size - MMapDelta, Size - SegmentDelta), *Address,
+            true};
+        // Overlapping segments must translate their shared bytes identically.
+        // Disjoint segments may legitimately have different load biases.
+        for (const ExecutableMapping &Other : NewMappings) {
+          uint64_t Start =
+              std::max(Mapping.RuntimeAddress, Other.RuntimeAddress);
+          if (Start - Mapping.RuntimeAddress < Mapping.Size &&
+              Start - Other.RuntimeAddress < Other.Size &&
+              Mapping.CanonicalAddress - Mapping.RuntimeAddress !=
+                  Other.CanonicalAddress - Other.RuntimeAddress)
+            exitWithError("Ambiguous perf script mmap load bias");
+        }
+        NewMappings.push_back(Mapping);
+      }
+    }
+  }
+  IsTarget = !NewMappings.empty();
+
+  auto It = MappingsByPID.find(PID);
+  // A non-target or non-executable mmap matters when it replaces target code.
+  // Ignore it only when it cannot hide any previously recorded target range.
+  if (!IsTarget &&
+      (It == MappingsByPID.end() ||
+       llvm::none_of(It->second, [&](const ExecutableMapping &Mapping) {
+         if (!Mapping.IsTarget)
+           return false;
+         return Event.Address >= Mapping.RuntimeAddress
+                    ? Event.Address - Mapping.RuntimeAddress < Mapping.Size
+                    : Mapping.RuntimeAddress - Event.Address < Event.Size;
+       })))
+    return;
+
+  auto &Mappings = MappingsByPID[PID];
+  // First mask the entire replacement mmap, then add its executable subranges.
+  // Reverse lookup sees the new code first and the mask in any remaining gaps.
+  // Older entries stay valid outside this mmap, including partial remappings.
+  Mappings.push_back({Event.Address, Event.Size, 0, false});
+  for (const ExecutableMapping &Mapping : NewMappings) {
+    Mappings.push_back(Mapping);
+    // Warning ranges use the same binary addresses as the relocated samples.
+    Binary->addMMapRange(Mapping.CanonicalAddress, Mapping.Size);
+  }
+  if (IsTarget)
+    Binary->setIsLoadedByMMap(true);
+  if (IsTarget && (Binary->isKernel() || !PIDFilter || PID == *PIDFilter))
+    // A recording can end after the last mapped process exits. Retain evidence
+    // that it had usable mappings when deciding whether the input is valid.
+    HadUsableMapping = true;
+}
+
+std::optional<uint64_t>
+PerfScriptReader::resolveMappedAddress(uint64_t Address, int32_t PID) const {
+  auto It = MappingsByPID.find(Binary->isKernel() ? -1 : PID);
+  if (It == MappingsByPID.end())
+    return std::nullopt;
+  // The latest event covering this byte wins. A replacement by another binary
+  // stops lookup before it can expose an older target map underneath.
+  for (const ExecutableMapping &Mapping : llvm::reverse(It->second)) {
+    if (Address < Mapping.RuntimeAddress)
+      continue;
+    uint64_t Delta = Address - Mapping.RuntimeAddress;
+    if (Delta < Mapping.Size) {
+      // CanonicalAddress is the binary address at this runtime interval's
+      // start; retain the sample's displacement within that interval.
+      if (Mapping.IsTarget)
+        return checkedAddUnsigned(Mapping.CanonicalAddress, Delta);
+      return std::nullopt;
+    }
+  }
+  return std::nullopt;
 }
 
 static std::string getContextKeyStr(ContextKey *K,

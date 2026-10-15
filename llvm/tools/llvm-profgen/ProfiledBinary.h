@@ -232,6 +232,9 @@ class ProfiledBinary {
   std::vector<uint64_t> PreferredTextSegmentAddresses;
   // The file offset of each executable segment.
   std::vector<uint64_t> TextSegmentOffsets;
+  // ELF file-backed sizes, indexed alongside TextSegmentOffsets and
+  // PreferredTextSegmentAddresses, bound each mapping's executable bytes.
+  std::vector<uint64_t> TextSegmentFileSizes;
 
   // Mutiple MC component info
   std::unique_ptr<const MCRegisterInfo> MRI;
@@ -484,6 +487,9 @@ public:
   }
   const std::vector<uint64_t> &getTextSegmentOffsets() const {
     return TextSegmentOffsets;
+  }
+  const std::vector<uint64_t> &getTextSegmentFileSizes() const {
+    return TextSegmentFileSizes;
   }
 
   uint64_t getInstSize(uint64_t Address) const {

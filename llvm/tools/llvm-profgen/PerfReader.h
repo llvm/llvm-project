@@ -19,6 +19,8 @@
 #include <cstdint>
 #include <fstream>
 #include <map>
+#include <optional>
+#include <unordered_map>
 
 namespace llvm {
 
@@ -616,12 +618,28 @@ public:
   static SmallVector<CleanupInstaller, 2> TempFileCleanups;
 
 protected:
+  // A runtime interval in one address space. For a target interval,
+  // RuntimeAddress + N corresponds to CanonicalAddress + N in the binary.
+  struct ExecutableMapping {
+    uint64_t RuntimeAddress = 0;
+    uint64_t Size = 0;
+    uint64_t CanonicalAddress = 0;
+    // False marks a replacement interval that blocks an older target mapping.
+    bool IsTarget = false;
+  };
+
   // Check whether a given line is LBR sample
   static bool isLBRSample(StringRef Line, bool CheckLineStart);
   // Check whether a given line is MMAP event
   static bool isMMapEvent(StringRef Line);
   // Update base address based on mmap events
   void updateBinaryAddress(const MMapEvent &Event);
+  // Apply an mmap to its address space's history, including replacement by
+  // a DSO other than the binary being profiled.
+  void updateExecutableMapping(const MMapEvent &Event, bool IsTarget);
+  // Return a binary address only if the most recent covering map is a target.
+  std::optional<uint64_t> resolveMappedAddress(uint64_t Address,
+                                               int32_t PID) const;
   // Parse mmap event and update binary address
   void parseMMapEvent(TraceStream &TraceIt);
   // Parse perf events/samples and do aggregation
@@ -662,6 +680,11 @@ protected:
   std::set<uint64_t> InvalidReturnAddresses;
   // PID for the process of interest
   std::optional<int32_t> PIDFilter;
+  // Append in event order and search backwards. Kernel mappings use key -1
+  // because they are shared across the task PIDs carried by kernel samples.
+  std::unordered_map<int32_t, SmallVector<ExecutableMapping, 2>> MappingsByPID;
+  // Remember usable mappings even after an exec or exit removes their state.
+  bool HadUsableMapping = false;
 };
 
 /*
