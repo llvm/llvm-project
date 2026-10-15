@@ -804,10 +804,6 @@ public:
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 
-  // Whether a global variable should be emitted by CUDA/HIP host/device
-  // related attributes.
-  bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
-
   /// Print the postfix for externalized static variable or kernels for single
   /// source offloading languages CUDA and HIP. The unique postfix is created
   /// using either the CUID argument, or the file's UniqueID and active macros.

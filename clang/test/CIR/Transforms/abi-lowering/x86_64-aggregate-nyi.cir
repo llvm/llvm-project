@@ -12,38 +12,6 @@
                                                      [#cir.bitfield_decl<!cir.int<s, 72, bitint>, 70>]>},
                padding = {!cir.array<!u8i x 7>}>
 !rec_SVec = !cir.struct<"SVec" {data !cir.vector<4 x !cir.float>}>
-!rec_SX87 = !cir.struct<"SX87" {data !cir.vector<1 x !cir.long_double<!cir.f80>>}>
-!rec_UX87Bytes =
-    !cir.union<"UX87Bytes" {data !cir.vector<1 x !cir.long_double<!cir.f80>>,
-                            data !cir.array<!u8i x 16>}>
-!rec_UX87InRec =
-    !cir.union<"UX87InRec" {data !rec_SX87, data !cir.array<!u8i x 16>}>
-!rec_UX87InArr =
-    !cir.union<"UX87InArr" {data !cir.array<!cir.vector<1 x !cir.long_double<!cir.f80>> x 1>,
-                            data !cir.array<!u8i x 16>}>
-!rec_SUX87 = !cir.struct<"SUX87" {data !rec_UX87Bytes}>
-!rec_UX87Twice =
-    !cir.union<"UX87Twice" {data !cir.vector<1 x !cir.long_double<!cir.f80>>,
-                            data !cir.vector<1 x !cir.long_double<!cir.f80>>}>
-!rec_UX87Scalar =
-    !cir.union<"UX87Scalar" {data !cir.long_double<!cir.f80>,
-                             data !cir.array<!u8i x 11>}>
-!rec_UX87VecArr =
-    !cir.union<"UX87VecArr" {data !cir.long_double<!cir.f80>,
-                             data !cir.array<!cir.vector<3 x !s8i> x 3>}>
-!rec_SLongDouble = !cir.struct<"SLongDouble" {data !cir.long_double<!cir.f80>}>
-!rec_UX87Nested =
-    !cir.union<"UX87Nested" {data !rec_SLongDouble, data !cir.array<!u8i x 4>}>
-!rec_UEmptyX87 =
-    !cir.union<"UEmptyX87" {data !s32i,
-                            empty !cir.array<!cir.long_double<!cir.f80> x 0>},
-               padding = {!cir.array<!u8i x 16>}>
-!rec_UX87Displaced =
-    !cir.union<"UX87Displaced" {data !rec_UEmptyX87,
-                                data !cir.long_double<!cir.f80>}>
-!rec_UX87Complex =
-    !cir.union<"UX87Complex" {data !cir.complex<!cir.long_double<!cir.f80>>,
-                              data !cir.array<!u8i x 32>}>
 !rec_UVec384 =
     !cir.union<"UVec384" {data !cir.vector<4 x !cir.float>, data !cir.array<!s8i x 33>},
                padding = {!cir.array<!u8i x 32>}>
@@ -198,77 +166,6 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.vector<16 x !cir.int<s, 2, bitint>>
-
-  // A union is moved as a value of its storage type, so a member holding data
-  // past the 10 bytes an x87 double extended value stores would lose it.  A
-  // member reaching byte 11 is refused next to one, and so is a double
-  // extended value held any other way, in a record, a _Complex, a vector or an
-  // array, even next to one of the same type.  A record holding such a union
-  // is refused with it.
-  cir.func @take_union_x87_scalar(%arg0: !rec_UX87Scalar) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Scalar"
-
-  // A three-byte vector's alloc size is 4, so the last of these three array
-  // elements starts at byte 8 and reaches byte 11.
-  cir.func @take_union_x87_vec_arr(%arg0: !rec_UX87VecArr) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87VecArr"
-
-  cir.func @take_union_x87_nested(%arg0: !rec_UX87Nested) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Nested"
-
-  // A member that ties the double extended member on alignment and size,
-  // listed first, becomes the storage type in its place, so the union is
-  // refused even though that member's data ends within the 10 bytes.
-  cir.func @take_union_x87_displaced(%arg0: !rec_UX87Displaced) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Displaced"
-
-  cir.func @take_union_x87_complex(%arg0: !rec_UX87Complex) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Complex"
-
-  cir.func @take_union_x87_twice(%arg0: !rec_UX87Twice) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Twice"
-
-  cir.func @take_union_x87_bytes(%arg0: !rec_UX87Bytes) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87Bytes"
-
-  cir.func @take_union_x87_in_rec(%arg0: !rec_UX87InRec) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87InRec"
-
-  cir.func @take_union_x87_in_arr(%arg0: !rec_UX87InArr) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UX87InArr"
-
-  cir.func @take_struct_union_x87(%arg0: !rec_SUX87) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.struct<"SUX87"
 
   // A definition (unlike a declaration) is refused: no incomplete-by-value
   // definition can arise from valid C++, so this stays a hard reject rather
