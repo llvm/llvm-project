@@ -652,6 +652,11 @@ static Decomposition decomposeGEP(GEPOperator &GEP, ConstraintInfo &Info,
       // coefficient.
       if (Scale.isNegative())
         return &GEP;
+      // Implicitly sign-extended indices can only be added to unsigned system
+      // if they are non-negative.
+      if (Index->getType()->getScalarSizeInBits() < Scale.getBitWidth() &&
+          !Info.isKnownNonNegative(Index))
+        return &GEP;
     }
 
     auto IdxResult = decompose(Index, Info, IsSigned, DL);

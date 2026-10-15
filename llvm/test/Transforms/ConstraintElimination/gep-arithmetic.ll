@@ -803,7 +803,8 @@ define i1 @test_nuw_narrow_index(ptr %p, i32 %x) {
 ; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i32 [[X]]
 ; CHECK-NEXT:    [[GEP_X_EXT:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[X_EXT]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[GEP_X]], [[GEP_X_EXT]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = zext i32 %x to i64
   %gep.x = getelementptr nuw i8, ptr %p, i32 %x
@@ -817,7 +818,8 @@ define i1 @test_nuw_narrow_index_scale_4(ptr %p, i32 %x) {
 ; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nuw i32, ptr [[P:%.*]], i32 [[X]]
 ; CHECK-NEXT:    [[GEP_X_EXT:%.*]] = getelementptr nuw i32, ptr [[P]], i64 [[X_EXT]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[GEP_X]], [[GEP_X_EXT]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.ext = zext i32 %x to i64
   %gep.x = getelementptr nuw i32, ptr %p, i32 %x
