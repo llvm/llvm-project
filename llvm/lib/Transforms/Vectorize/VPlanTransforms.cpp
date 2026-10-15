@@ -4437,7 +4437,7 @@ isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
   }
 
   auto IG = InterleaveR->getInterleaveGroup();
-  if (IG->getFactor() != IG->getNumMembers())
+  if (IG->getFactor() != IG->getNumMembers() || IG->isReverse())
     return std::nullopt;
 
   auto GetVectorBitWidthForVF = [&TTI](ElementCount VF) {
