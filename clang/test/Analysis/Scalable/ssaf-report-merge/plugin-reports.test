@@ -1,0 +1,47 @@
+// Reports written by clang for two translation units merge into one, and a
+// report given twice contributes its findings once.
+
+// REQUIRES: plugins
+
+// RUN: rm -rf %t && split-file %s %t
+// DEFINE: %{transform} = %clang_cc1 \
+// DEFINE:   -load %llvmshlibdir/SSAFTestTransformationPlugin%pluginext \
+// DEFINE:   --ssaf-source-transformation=test-transformation \
+// DEFINE:   --ssaf-global-scope-analysis-result=%S/../source-edit-generation/Inputs/two-function-suite.json \
+// DEFINE:   --ssaf-link-unit-id=lu -emit-obj
+// RUN: %{transform} --ssaf-compilation-unit-id=a --ssaf-src-edit-file=%t/a.yaml \
+// RUN:   --ssaf-transformation-report-file=%t/a.sarif -o %t/a.o %t/a.cpp
+// RUN: %{transform} --ssaf-compilation-unit-id=b --ssaf-src-edit-file=%t/b.yaml \
+// RUN:   --ssaf-transformation-report-file=%t/b.sarif -o %t/b.o %t/b.cpp
+
+// RUN: clang-ssaf-report-merge %t/a.sarif %t/b.sarif \
+// RUN:   %t/a.sarif -o %t/merged.sarif
+// RUN: FileCheck %s --input-file=%t/merged.sarif
+// RUN: grep '"text": "visited alpha"' %t/merged.sarif | count 1
+
+// CHECK:      "artifacts": [
+// CHECK:        "index": 0,
+// CHECK-NEXT:   "uri": "file://{{.*}}a.cpp"
+// CHECK:        "index": 1,
+// CHECK-NEXT:   "uri": "file://{{.*}}b.cpp"
+// CHECK:      "results": [
+// CHECK:        "index": 0,
+// CHECK-NEXT:   "uri": "file://{{.*}}a.cpp"
+// CHECK:        "text": "visited alpha"
+// CHECK:        "ruleId": "test-touches-function",
+// CHECK-NEXT:   "ruleIndex": 0
+// CHECK:        "index": 1,
+// CHECK-NEXT:   "uri": "file://{{.*}}b.cpp"
+// CHECK:        "text": "visited beta"
+// CHECK:        "ruleId": "test-touches-function",
+// CHECK-NEXT:   "ruleIndex": 0
+// CHECK:        "name": "clang-ssaf",
+// CHECK:        "rules": [
+// CHECK:          "id": "test-touches-function",
+// CHECK-NOT:      "id":
+
+//--- a.cpp
+void alpha() {}
+
+//--- b.cpp
+void beta() {}
