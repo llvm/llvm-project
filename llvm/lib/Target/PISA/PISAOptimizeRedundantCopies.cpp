@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements removal of redundant PISA COPY instructions.
+///
+//===----------------------------------------------------------------------===//
 //
 // Remove redundant COPY operations generated as result of previous passes.
 //

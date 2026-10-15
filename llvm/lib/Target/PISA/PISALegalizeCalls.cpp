@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements legalization of call signatures for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 //
 // Modify function argument/return types to the ones support by PISA:
 // - natively supported types are used as is

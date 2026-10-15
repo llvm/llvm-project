@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements selection of PISA atomic scope operands.
+///
+//===----------------------------------------------------------------------===//
 
 // syncscope("<target-scope>") support for atomics
 // - atomic operations take a 'scope' argument (part of MachineMemOperand)

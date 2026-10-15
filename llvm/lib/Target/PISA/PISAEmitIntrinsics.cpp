@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements emission of PISA-specific intrinsics.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISA.h"
 #include "llvm/ADT/DenseMap.h"

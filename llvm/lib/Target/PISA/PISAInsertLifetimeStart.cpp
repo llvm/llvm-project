@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements insertion of PISA register lifetime markers.
+///
+//===----------------------------------------------------------------------===//
 //
 // Inserts "lifetime.start %R;" markers at loop headers.
 //

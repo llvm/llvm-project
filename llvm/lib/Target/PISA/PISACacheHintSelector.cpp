@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements selection of PISA cache-hint operands.
+///
+//===----------------------------------------------------------------------===//
 
 // cachehint (.cc) support
 // - LLVM IR specifies cache hints via the 'pisa.cache.ctrl' MMRA tag

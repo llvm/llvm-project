@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements propagation of null pointers across PISA address
+/// spaces.
+///
+//===----------------------------------------------------------------------===//
 //
 // This pass ensures null pointers remain null when cast between address
 // spaces, handling both direct addrspacecast instructions and constant
