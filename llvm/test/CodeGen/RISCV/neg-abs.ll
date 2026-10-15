@@ -262,9 +262,8 @@ define i32 @expanded_neg_abs32(i32 %x) {
 ; RV32I-NEXT:    neg a1, a0
 ; RV32I-NEXT:    blt a0, a1, .LBB6_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:  .LBB6_2:
-; RV32I-NEXT:    neg a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: expanded_neg_abs32:
@@ -279,7 +278,8 @@ define i32 @expanded_neg_abs32(i32 %x) {
 ; RV64I-NEXT:    negw a0, a0
 ; RV64I-NEXT:    blt a1, a0, .LBB6_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    negw a0, a1
+; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB6_2:
 ; RV64I-NEXT:    negw a0, a0
 ; RV64I-NEXT:    ret
@@ -303,9 +303,8 @@ define i32 @expanded_neg_abs32_unsigned(i32 %x) {
 ; RV32I-NEXT:    neg a1, a0
 ; RV32I-NEXT:    bltu a0, a1, .LBB7_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:  .LBB7_2:
-; RV32I-NEXT:    neg a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: expanded_neg_abs32_unsigned:
@@ -320,7 +319,8 @@ define i32 @expanded_neg_abs32_unsigned(i32 %x) {
 ; RV64I-NEXT:    negw a0, a0
 ; RV64I-NEXT:    bltu a1, a0, .LBB7_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    negw a0, a1
+; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB7_2:
 ; RV64I-NEXT:    negw a0, a0
 ; RV64I-NEXT:    ret
@@ -392,9 +392,8 @@ define i64 @expanded_neg_abs64(i64 %x) {
 ; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    blt a0, a1, .LBB8_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB8_2:
-; RV64I-NEXT:    neg a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: expanded_neg_abs64:
@@ -462,9 +461,8 @@ define i64 @expanded_neg_abs64_unsigned(i64 %x) {
 ; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    bltu a0, a1, .LBB9_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB9_2:
-; RV64I-NEXT:    neg a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: expanded_neg_abs64_unsigned:
@@ -484,9 +482,8 @@ define i32 @expanded_neg_inv_abs32(i32 %x) {
 ; RV32I-NEXT:    neg a1, a0
 ; RV32I-NEXT:    blt a1, a0, .LBB10_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:  .LBB10_2:
-; RV32I-NEXT:    neg a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: expanded_neg_inv_abs32:
@@ -501,7 +498,8 @@ define i32 @expanded_neg_inv_abs32(i32 %x) {
 ; RV64I-NEXT:    negw a0, a0
 ; RV64I-NEXT:    blt a0, a1, .LBB10_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    negw a0, a1
+; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB10_2:
 ; RV64I-NEXT:    negw a0, a0
 ; RV64I-NEXT:    ret
@@ -525,9 +523,8 @@ define i32 @expanded_neg_inv_abs32_unsigned(i32 %x) {
 ; RV32I-NEXT:    neg a1, a0
 ; RV32I-NEXT:    bltu a1, a0, .LBB11_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:  .LBB11_2:
-; RV32I-NEXT:    neg a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: expanded_neg_inv_abs32_unsigned:
@@ -542,7 +539,8 @@ define i32 @expanded_neg_inv_abs32_unsigned(i32 %x) {
 ; RV64I-NEXT:    negw a0, a0
 ; RV64I-NEXT:    bltu a0, a1, .LBB11_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    negw a0, a1
+; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB11_2:
 ; RV64I-NEXT:    negw a0, a0
 ; RV64I-NEXT:    ret
@@ -614,9 +612,8 @@ define i64 @expanded_neg_inv_abs64(i64 %x) {
 ; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    blt a1, a0, .LBB12_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB12_2:
-; RV64I-NEXT:    neg a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: expanded_neg_inv_abs64:
@@ -684,9 +681,8 @@ define i64 @expanded_neg_inv_abs64_unsigned(i64 %x) {
 ; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    bltu a1, a0, .LBB13_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB13_2:
-; RV64I-NEXT:    neg a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: expanded_neg_inv_abs64_unsigned:

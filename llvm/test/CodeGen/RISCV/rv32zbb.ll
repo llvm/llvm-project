@@ -1735,15 +1735,15 @@ define i64 @sub_if_uge_C_i64(i64 %x) {
 ; CHECK-NEXT:    beq a1, a2, .LBB64_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    sltiu a2, a1, 2
-; CHECK-NEXT:    xori a2, a2, 1
+; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    j .LBB64_3
 ; CHECK-NEXT:  .LBB64_2:
 ; CHECK-NEXT:    lui a2, 172127
 ; CHECK-NEXT:    addi a2, a2, 511
 ; CHECK-NEXT:    sltu a2, a2, a0
+; CHECK-NEXT:    neg a2, a2
 ; CHECK-NEXT:  .LBB64_3:
 ; CHECK-NEXT:    lui a3, 876449
-; CHECK-NEXT:    neg a2, a2
 ; CHECK-NEXT:    addi a3, a3, -512
 ; CHECK-NEXT:    and a3, a2, a3
 ; CHECK-NEXT:    andi a4, a2, -2
