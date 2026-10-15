@@ -9909,9 +9909,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       }
 
       // If the user explicitly requested it via `--offload-arch` we should
-      // extract it from any static libraries if present.
-      for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ))
-        CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Arg));
+      // extract it from any static libraries if present. Use the canonical
+      // name, which device images are labeled with.
+      if (ToolChainArgs.hasArg(OPT_offload_arch_EQ))
+        for (const BoundArch &BA :
+             C.getDriver().getOffloadArchs(C, ToolChainArgs, Kind, *TC))
+          if (!BA.ArchName.empty())
+            CmdArgs.emplace_back(
+                Args.MakeArgString("--should-extract=" + BA.ArchName));
 
       // If this is OpenMP the device linker will need `-lompdevice`.
       if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&
