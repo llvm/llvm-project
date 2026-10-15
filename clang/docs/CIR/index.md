@@ -1,5 +1,10 @@
 # ClangIR
 
+:::{warning}
+ClangIR is not included in a default clang build yet. The documentation may
+be incomplete and out-of-date.
+:::
+
 ClangIR (CIR) is a high-level representation in Clang that reflects aspects
 of the C/C++ languages and their extensions. It is implemented using MLIR and
 occupies a position between Clang's AST and LLVM IR.
@@ -11,6 +16,13 @@ llvm-project. See the [ClangIR Design
 Documents](#clangir-design-documents) for in-depth coverage of CIR's design.
 
 ## Using ClangIR
+
+:::{note}
+Until [#221291](https://github.com/llvm/llvm-project/pull/221291) lands, you
+need a build of Clang with CIR enabled. [Configure
+LLVM](https://llvm.org/docs/CMake.html) with
+`-DLLVM_ENABLE_PROJECTS="clang;mlir"` and `-DCLANG_ENABLE_CIR=ON`.
+:::
 
 ClangIR is an MLIR dialect tightly integrated with Clang: it lives in the
 Clang project rather than as a standalone in-tree dialect.
