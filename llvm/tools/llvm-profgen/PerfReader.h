@@ -661,9 +661,14 @@ protected:
   // Extract call stack from the perf trace lines
   bool extractCallstack(TraceStream &TraceIt,
                         SmallVectorImpl<uint64_t> &CallStack);
-  // Extract LBR stack from one perf trace line
+  // Extract an LBR stack, consuming any mapped header and unused frames.
   bool extractLBRStack(TraceStream &TraceIt,
-                       SmallVectorImpl<LBREntry> &LBRStack);
+                       SmallVectorImpl<LBREntry> &LBRStack,
+                       std::optional<int32_t> PID = std::nullopt);
+  // Return true on malformed input, retaining preceding usable entries.
+  // The caller handles diagnostics and trace advancement.
+  bool parseLBRLine(StringRef Line, SmallVectorImpl<LBREntry> &LBRStack,
+                    std::optional<int32_t> PID) const;
   uint64_t parseAggregatedCount(TraceStream &TraceIt);
   // Parse one sample from multiple perf lines, override this for different
   // sample type

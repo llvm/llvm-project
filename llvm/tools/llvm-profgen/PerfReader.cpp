@@ -913,36 +913,89 @@ void HybridPerfReader::unwindSamples() {
 }
 
 /// Parse a hex address from \p Str.
-static bool parseAddress(StringRef Str, uint64_t &Addr, bool HasPrefix) {
-  Str = Str.take_while([](char C) { return !isspace(C); });
+static bool parseAddress(StringRef Str, uint64_t &Addr, bool HasPrefix,
+                         bool AllowSymbols = true) {
+  // Legacy input permits symbol/DSO suffixes. Mapped frames must be whole
+  // address lines so a PID/time header cannot be consumed as another frame.
+  if (AllowSymbols)
+    Str = Str.take_while([](char C) { return !isspace(C); });
+  else
+    Str = Str.rtrim();
   if (Str.consume_front("0x") != HasPrefix)
     return true;
   return Str.getAsInteger(16, Addr);
 }
 
+static bool skipCallchainFrames(TraceStream &TraceIt) {
+  uint64_t FrameAddr = 0;
+  bool HasCallchain = false;
+  while (!TraceIt.isAtEoF() &&
+         !parseAddress(TraceIt.getCurrentLine().ltrim(), FrameAddr, false,
+                       /*AllowSymbols=*/false)) {
+    HasCallchain = true;
+    TraceIt.advance();
+  }
+  return HasCallchain;
+}
+
+static int32_t parseSamplePID(StringRef &Line) {
+  // Consume only the header prefix, leaving the IP/branches for flat samples
+  // or an empty payload when perf prints the callchain on following lines.
+  auto [PIDField, Rest] = Line.trim().split(' ');
+  int32_t PID = 0;
+  if (PIDField.getAsInteger(10, PID) || PID < 0)
+    exitWithError("Invalid perf script sample PID");
+  // The timestamp distinguishes the next sample header from a callchain frame.
+  auto [Time, Payload] = Rest.ltrim().split(' ');
+  double Timestamp = 0;
+  if (!Time.consume_back(":") || Time.getAsDouble(Timestamp) ||
+      !std::isfinite(Timestamp))
+    exitWithError("Invalid perf script sample timestamp");
+  Line = Payload.ltrim();
+  return PID;
+}
+
 bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
-                                       SmallVectorImpl<LBREntry> &LBRStack) {
+                                       SmallVectorImpl<LBREntry> &LBRStack,
+                                       std::optional<int32_t> PID) {
   // The raw format of LBR stack is like:
   // 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0 ...
   //                           ... 0x4005c8/0x4005dc/P/-/-/0
   // It's in FIFO order and separated by whitespace.
-  SmallVector<StringRef, 32> Records;
-  TraceIt.getCurrentLine().rtrim().split(Records, " ", -1, false);
-  auto WarnInvalidLBR = [](TraceStream &TraceIt) {
+  StringRef Line = TraceIt.getCurrentLine();
+  if (UseProcessMappings && !PID) {
+    // The hybrid reader passes the PID after consuming its header. The flat
+    // reader starts at the header and may need to skip an unused callchain.
+    PID = parseSamplePID(Line);
+    if (Line.empty()) {
+      TraceIt.advance();
+      skipCallchainFrames(TraceIt);
+      if (TraceIt.isAtEoF() ||
+          !TraceIt.getCurrentLine().ltrim().starts_with("0x"))
+        return false;
+      Line = TraceIt.getCurrentLine();
+    }
+  }
+  if (parseLBRLine(Line, LBRStack, PID))
     WithColor::warning() << "Invalid address in LBR record at line "
                          << TraceIt.getLineNumber() << ": "
                          << TraceIt.getCurrentLine() << "\n";
-  };
+  TraceIt.advance();
+  return !LBRStack.empty();
+}
+
+bool PerfScriptReader::parseLBRLine(StringRef Line,
+                                    SmallVectorImpl<LBREntry> &LBRStack,
+                                    std::optional<int32_t> PID) const {
+  SmallVector<StringRef, 32> Records;
+  Line.rtrim().split(Records, " ", -1, false);
 
   // Skip the leading instruction pointer.
   size_t Index = 0;
   uint64_t LeadingAddr;
   if (!Records.empty() && !Records[0].contains('/')) {
-    if (parseAddress(Records[0], LeadingAddr, false)) {
-      WarnInvalidLBR(TraceIt);
-      TraceIt.advance();
-      return false;
-    }
+    if (parseAddress(Records[0], LeadingAddr, false))
+      return true;
     Index = 1;
   }
 
@@ -961,28 +1014,29 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
 
     // Stop at broken LBR records.
     if (Addresses.size() < 2 || parseAddress(Addresses[0], Src, true) ||
-        parseAddress(Addresses[1], Dst, true)) {
-      WarnInvalidLBR(TraceIt);
-      break;
-    }
+        parseAddress(Addresses[1], Dst, true))
+      return true;
 
-    // Canonicalize to use preferred load address as base address.
-    Src = Binary->canonicalizeVirtualAddress(Src);
-    Dst = Binary->canonicalizeVirtualAddress(Dst);
-    bool SrcIsInternal = Binary->addressIsCode(Src);
-    bool DstIsInternal = Binary->addressIsCode(Dst);
-    if (!SrcIsInternal)
-      Src = ExternalAddr;
-    if (!DstIsInternal)
-      Dst = ExternalAddr;
+    // Mapped input resolves both ends through the sampled process before
+    // checking binary instructions. An unmapped end remains external, keeping
+    // the unwinder's handling of calls into or out of other binaries.
+    std::optional<uint64_t> ResolvedSrc =
+        PID ? resolveMappedAddress(Src, *PID)
+            : Binary->canonicalizeVirtualAddress(Src);
+    std::optional<uint64_t> ResolvedDst =
+        PID ? resolveMappedAddress(Dst, *PID)
+            : Binary->canonicalizeVirtualAddress(Dst);
+    bool SrcIsInternal = ResolvedSrc && Binary->addressIsCode(*ResolvedSrc);
+    bool DstIsInternal = ResolvedDst && Binary->addressIsCode(*ResolvedDst);
+    Src = SrcIsInternal ? *ResolvedSrc : ExternalAddr;
+    Dst = DstIsInternal ? *ResolvedDst : ExternalAddr;
     // Filter external-to-external case to reduce LBR trace size.
     if (!SrcIsInternal && !DstIsInternal)
       continue;
 
     LBRStack.emplace_back(LBREntry(Src, Dst));
   }
-  TraceIt.advance();
-  return !LBRStack.empty();
+  return false;
 }
 
 bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
@@ -1058,6 +1112,10 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
 }
 
 void PerfScriptReader::warnIfMissingMMap() {
+  // Mapped mode cannot fall back to a shared preferred load base; it checks
+  // for usable per-process metadata after the full trace has been read.
+  if (UseProcessMappings)
+    return;
   if (!Binary->getMissingMMapWarned() && !Binary->getIsLoadedByMMap()) {
     WithColor::warning() << "No relevant mmap event is matched for "
                          << Binary->getName()
@@ -1340,8 +1398,25 @@ uint64_t PerfScriptReader::parseAggregatedCount(TraceStream &TraceIt) {
 }
 
 void PerfScriptReader::parseSample(TraceStream &TraceIt) {
+  // Filter samples before updating statistics. Metadata is replayed for every
+  // PID because a selected child may inherit an unselected parent's maps.
+  if (UseProcessMappings && PIDFilter) {
+    StringRef Line = TraceIt.getCurrentLine();
+    if (parseSamplePID(Line) != *PIDFilter) {
+      TraceIt.advance();
+      if (Line.empty()) {
+        // Consume the rest of this sample as a unit, preserving the next
+        // header or task event if the excluded sample has no branch line.
+        skipCallchainFrames(TraceIt);
+        if (!TraceIt.isAtEoF() &&
+            TraceIt.getCurrentLine().ltrim().starts_with("0x"))
+          TraceIt.advance();
+      }
+      return;
+    }
+  }
   NumTotalSample++;
-  uint64_t Count = parseAggregatedCount(TraceIt);
+  uint64_t Count = UseProcessMappings ? 1 : parseAggregatedCount(TraceIt);
   assert(Count >= 1 && "Aggregated count should be >= 1!");
   parseSample(TraceIt, Count);
 }
@@ -1779,6 +1854,10 @@ void PerfScriptReader::warnIfBranchTargetMismatch() {
 void PerfScriptReader::parsePerfTraces() {
   // Parse perf traces and do aggregation.
   parseAndAggregateTrace();
+  // An empty result can be valid after filtering, but missing mapping metadata
+  // cannot establish which binary instructions the samples referred to.
+  if (UseProcessMappings && !HadUsableMapping)
+    exitWithError("Invalid perf script input: no usable mmap");
   if (Binary->isKernel() && !Binary->getIsLoadedByMMap()) {
     exitWithError(
         "Kernel is requested, but no kernel is found in mmap events.");
