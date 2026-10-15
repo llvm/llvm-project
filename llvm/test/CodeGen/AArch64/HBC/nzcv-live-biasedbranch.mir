@@ -1,0 +1,163 @@
+# RUN: llc -run-pass=aarch64-biased-branch-opt -mtriple=aarch64-unknown-linux-gnu -enable-hbc %s -o - 2>&1 | FileCheck %s
+#
+# Test NZCV liveness check in transformCBZ. Three cases:
+#   1. nzcv_inblock_use_prevent_hbc  — NZCV used in-block (partial)
+#   2. nzcv_outblock_use_prevent_hbc — NZCV only used in successor
+#   3. nzcv_dead_allow_hbc           — NZCV dead, transform succeed
+
+--- |
+  ; Case 1: NZCV defined in block, partially used in block
+  define dso_local i32 @nzcv_inblock_use_prevent_hbc(i32 %a, i32 %b, i32 %c) #0 !prof !1 {
+  entry:
+    %cmp1 = icmp sgt i32 %a, %b
+    %tobool = icmp eq i32 %c, 0
+    br i1 %tobool, label %if.then, label %if.end, !prof !2
+  if.then:
+    br i1 %cmp1, label %if.then.then, label %if.then.else, !prof !5
+  if.then.then:
+    ret i32 1
+  if.then.else:
+    ret i32 0
+  if.end:
+    ret i32 0
+  }
+
+  ; Case 2: NZCV live-in from predecessor, no local def/use
+  define dso_local i32 @nzcv_outblock_use_prevent_hbc(i32 %c) #0 !prof !3 {
+  entry:
+    %tobool = icmp eq i32 %c, 0
+    br i1 %tobool, label %if.then, label %if.end, !prof !4
+  if.then:
+    br i1 false, label %if.then.then, label %if.then.else, !prof !5
+  if.then.then:
+    ret i32 1
+  if.then.else:
+    ret i32 0
+  if.end:
+    ret i32 0
+  }
+
+  ; Case 3: NZCV completely dead, HBC transform should succeed.
+  define dso_local i32 @nzcv_dead_allow_hbc(i32 %c) #0 !prof !3 {
+  entry:
+    %tobool = icmp eq i32 %c, 0
+    br i1 %tobool, label %if.then, label %if.end, !prof !4
+  if.then:
+    ret i32 1
+  if.end:
+    ret i32 0
+  }
+
+  attributes #0 = { nounwind uwtable "target-features"="+hbc" }
+  !1 = !{!"function_entry_count", i64 100}
+  !2 = !{!"branch_weights", i32 2147483647, i32 1}
+  !3 = !{!"function_entry_count", i64 100}
+  !4 = !{!"branch_weights", i32 2147483647, i32 1}
+  !5 = !{!"branch_weights", i32 100, i32 100}
+...
+---
+name:            nzcv_inblock_use_prevent_hbc
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+  - { reg: '$w1' }
+  - { reg: '$w2' }
+body:             |
+  ; CHECK-LABEL: name: nzcv_inblock_use_prevent_hbc
+  ; CHECK:       bb.0.entry:
+  ; CHECK:         dead $wzr = SUBSWrs
+  ; CHECK-NEXT:    renamable $w8 = CSINCWr
+  ; CHECK-NEXT:    CBZW
+  ; CHECK-NOT:     BCcc
+  bb.0.entry:
+    successors: %bb.1(0x7fffffff), %bb.2(0x00000001)
+    liveins: $w0, $w1, $w2
+
+    dead $wzr = SUBSWrs killed renamable $w0, killed renamable $w1, 0, implicit-def $nzcv
+    renamable $w8 = CSINCWr $wzr, $wzr, 4, implicit $nzcv
+    CBZW killed renamable $w2, %bb.1
+    B %bb.2
+
+  bb.1.if.then:
+    successors: %bb.3(0x40000000), %bb.4(0x40000000)
+    liveins: $nzcv, $w8
+
+    Bcc 6, %bb.3, implicit killed $nzcv
+    B %bb.4
+
+  bb.2.if.end:
+    renamable $w0 = MOVZWi 0, 0
+    RET undef $lr, implicit killed $w0
+
+  bb.3.if.then.then:
+    liveins: $w8
+    renamable $w0 = COPY killed renamable $w8
+    RET undef $lr, implicit killed $w0
+
+  bb.4.if.then.else:
+    renamable $w0 = MOVZWi 0, 0
+    RET undef $lr, implicit killed $w0
+...
+---
+name:            nzcv_outblock_use_prevent_hbc
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+  - { reg: '$nzcv' }
+body:             |
+  ; CHECK-LABEL: name: nzcv_outblock_use_prevent_hbc
+  ; CHECK:       bb.0.entry:
+  ; CHECK:         CBZW
+  ; CHECK-NOT:     BCcc
+  bb.0.entry:
+    successors: %bb.1(0x7fffffff), %bb.2(0x00000001)
+    liveins: $w0, $nzcv
+
+    CBZW killed renamable $w0, %bb.1
+    B %bb.2
+
+  bb.1.if.then:
+    successors: %bb.3(0x40000000), %bb.4(0x40000000)
+    liveins: $nzcv
+
+    Bcc 12, %bb.3, implicit killed $nzcv
+    B %bb.4
+
+  bb.2.if.end:
+    renamable $w0 = MOVZWi 0, 0
+    RET undef $lr, implicit killed $w0
+
+  bb.3.if.then.then:
+    renamable $w0 = MOVZWi 1, 0
+    RET undef $lr, implicit killed $w0
+
+  bb.4.if.then.else:
+    renamable $w0 = MOVZWi 0, 0
+    RET undef $lr, implicit killed $w0
+...
+---
+name:            nzcv_dead_allow_hbc
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+body:             |
+  ; CHECK-LABEL: name: nzcv_dead_allow_hbc
+  ; CHECK:       bb.0.entry:
+  ; CHECK:         $wzr = SUBSWri
+  ; CHECK-NEXT:    BCcc
+  ; CHECK-NOT:     CBZW
+  bb.0.entry:
+    successors: %bb.1(0x7fffffff), %bb.2(0x00000001)
+    liveins: $w0
+
+    CBZW killed renamable $w0, %bb.1
+    B %bb.2
+
+  bb.1.if.then:
+    renamable $w0 = MOVZWi 1, 0
+    RET undef $lr, implicit killed $w0
+
+  bb.2.if.end:
+    renamable $w0 = MOVZWi 0, 0
+    RET undef $lr, implicit killed $w0
+...

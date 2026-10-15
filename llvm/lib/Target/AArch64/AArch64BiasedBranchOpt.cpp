@@ -26,6 +26,7 @@
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/BasicBlock.h"
@@ -124,18 +125,17 @@ bool AArch64BiasedBranchOpt::transformCBZ(MachineInstr &MI,
 
   // Make sure current change won't clobber previous NZCV
   // that has been defined but has not been used
+  const TargetRegisterInfo *TRI =
+      MBB.getParent()->getSubtarget().getRegisterInfo();
+  LivePhysRegs LiveRegs(*TRI);
+  LiveRegs.addLiveOuts(MBB);
   for (MachineInstr &PrevMI : reverse(MBB)) {
-    bool FoundNZCVUse = false;
-    for (const MachineOperand &MO : PrevMI.implicit_operands()) {
-      if (MO.isReg() && MO.getReg() == AArch64::NZCV) {
-        if (MO.isDef())
-          return false;
-        FoundNZCVUse = true;
-      }
-    }
-    if (FoundNZCVUse)
+    if (&PrevMI == &MI)
       break;
+    LiveRegs.stepBackward(PrevMI);
   }
+  if (LiveRegs.contains(AArch64::NZCV))
+    return false;
 
   Register RegCmp = MI.getOperand(0).getReg();
   RegState NewRegState = getRegState(MI.getOperand(0));
