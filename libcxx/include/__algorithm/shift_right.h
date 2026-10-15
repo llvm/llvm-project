@@ -34,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _AlgPolicy, class _Iter, class _Sent>
-_LIBCPP_HIDE_FROM_ABI constexpr pair<_Iter, _Iter>
+constexpr pair<_Iter, _Iter>
 __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __n) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n >= 0, "Providing a negative shift amount to shift_right is UB");
   if (__n == 0) {
@@ -115,7 +115,7 @@ __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templa
 }
 
 template <class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI constexpr _ForwardIterator
+constexpr _ForwardIterator
 shift_right(_ForwardIterator __first,
             _ForwardIterator __last,
             typename iterator_traits<_ForwardIterator>::difference_type __n) {
