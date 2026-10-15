@@ -594,10 +594,14 @@ public:
 
   // Parse a single line of a PERF_RECORD_MMAP event looking for a
   // mapping between the binary name and its memory layout.
+  // With RequireProcessMappingInfo, reject malformed records and populate MMap
+  // even for other binaries, whose mappings can replace the target's addresses.
+  // The return value reports only whether the binary name matches.
   // TODO: Move this static method from PerScriptReader (subclass) to
   // PerfReaderBase (superclass).
   static bool extractMMapEventForBinary(ProfiledBinary *Binary, StringRef Line,
-                                        MMapEvent &MMap);
+                                        MMapEvent &MMap,
+                                        bool RequireProcessMappingInfo = false);
 
   // Generate perf script from perf data
   static InputFile convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,

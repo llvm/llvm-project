@@ -21,6 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cctype>
+#include <limits>
 
 #define DEBUG_TYPE "perf-reader"
 
@@ -1162,76 +1163,107 @@ void PerfScriptReader::parseSample(TraceStream &TraceIt) {
   parseSample(TraceIt, Count);
 }
 
-bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
-                                                 StringRef Line,
-                                                 MMapEvent &MMap) {
-  if (!Binary->isKernel() && !Line.contains(Binary->getName()) &&
-      !ShowMmapEvents)
-    return false;
+static bool extractMMapEvent(StringRef Line, MMapEvent &MMap,
+                             bool RequireProcessMappingInfo) {
   // Parse a MMap2 line like:
   //  PERF_RECORD_MMAP2 2113428/2113428: [0x7fd4efb57000(0x204000) @ 0
   //  08:04 19532229 3585508847]: r-xp /usr/lib64/libdl-2.17.so
   constexpr static const char *const MMap2Pattern =
-      "PERF_RECORD_MMAP2 (-?[0-9]+)/[0-9]+: "
-      "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
+      "PERF_RECORD_MMAP2 (-?[0-9]+)/([0-9]+): "
+      "\\[(0x[a-f0-9]+|0)\\((0x[a-f0-9]+|0)\\) @ "
       "(0x[a-f0-9]+|0) .*\\]: ([-a-z]+) (.*)";
   // Parse a MMap line like
   // PERF_RECORD_MMAP -1/0: [0xffffffff81e00000(0x3e8fa000) @ \
   //  0xffffffff81e00000]: x [kernel.kallsyms]_text
   constexpr static const char *const MMapPattern =
-      "PERF_RECORD_MMAP (-?[0-9]+)/[0-9]+: "
-      "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
+      "PERF_RECORD_MMAP (-?[0-9]+)/([0-9]+): "
+      "\\[(0x[a-f0-9]+|0)\\((0x[a-f0-9]+|0)\\) @ "
       "(0x[a-f0-9]+|0)\\]: ([-a-z]+) (.*)";
-  // Field 0 - whole line
-  // Field 1 - PID
-  // Field 2 - base address
-  // Field 3 - mmapped size
-  // Field 4 - page offset
-  // Field 5 - binary path
+  // Both patterns use these capture-group indices.
   enum EventIndex {
     WHOLE_LINE = 0,
     PID = 1,
-    MMAPPED_ADDRESS = 2,
-    MMAPPED_SIZE = 3,
-    PAGE_OFFSET = 4,
-    MEM_PROTECTION_FLAG = 5,
-    BINARY_PATH = 6,
+    TID = 2,
+    MMAPPED_ADDRESS = 3,
+    MMAPPED_SIZE = 4,
+    PAGE_OFFSET = 5,
+    MEM_PROTECTION_FLAG = 6,
+    BINARY_PATH = 7,
   };
 
   bool R = false;
-  SmallVector<StringRef, 7> Fields;
+  SmallVector<StringRef, 8> Fields;
   if (Line.contains("PERF_RECORD_MMAP2 ")) {
     Regex RegMmap2(MMap2Pattern);
     R = RegMmap2.match(Line, &Fields);
   } else if (Line.contains("PERF_RECORD_MMAP ")) {
     Regex RegMmap(MMapPattern);
     R = RegMmap.match(Line, &Fields);
-  } else
+  } else if (!RequireProcessMappingInfo)
     llvm_unreachable("unexpected MMAP event entry");
 
   if (!R) {
+    if (RequireProcessMappingInfo)
+      exitWithError("Invalid perf script mmap event");
+    return false;
+  }
+  // Preserve the legacy address/size spelling outside mapped mode.
+  if (!RequireProcessMappingInfo &&
+      (Fields[MMAPPED_ADDRESS] == "0" || Fields[MMAPPED_SIZE] == "0"))
+    return false;
+  if (RequireProcessMappingInfo) {
+    // Size-1 permits a valid mapping whose final byte is UINT64_MAX.
+    int32_t MMapPID = 0;
+    if (Fields[PID].getAsInteger(10, MMapPID) ||
+        Fields[TID].getAsInteger(10, MMap.TID) ||
+        Fields[MMAPPED_ADDRESS].getAsInteger(0, MMap.Address) ||
+        Fields[MMAPPED_SIZE].getAsInteger(0, MMap.Size) ||
+        (MMap.Size != 0 &&
+         MMap.Size - 1 > std::numeric_limits<uint64_t>::max() - MMap.Address) ||
+        Fields[PAGE_OFFSET].getAsInteger(0, MMap.Offset) ||
+        Fields[BINARY_PATH].empty())
+      exitWithError("Invalid perf script mmap event");
+    MMap.PID = MMapPID;
+  } else {
+    long long MMapPID = 0;
+    getAsSignedInteger(Fields[PID], 10, MMapPID);
+    MMap.PID = MMapPID;
+    Fields[MMAPPED_ADDRESS].getAsInteger(0, MMap.Address);
+    Fields[MMAPPED_SIZE].getAsInteger(0, MMap.Size);
+    Fields[PAGE_OFFSET].getAsInteger(0, MMap.Offset);
+  }
+  MMap.MemProtectionFlag = Fields[MEM_PROTECTION_FLAG];
+  MMap.BinaryPath = Fields[BINARY_PATH];
+  return true;
+}
+
+static bool mmapMatchesBinary(const ProfiledBinary &Binary,
+                              const MMapEvent &MMap) {
+  StringRef BinaryName = filename(MMap.BinaryPath, Binary.isCOFF());
+  if (Binary.isKernel())
+    return Binary.isKernelImageName(BinaryName);
+  return Binary.getName() == BinaryName;
+}
+
+bool PerfScriptReader::extractMMapEventForBinary(
+    ProfiledBinary *Binary, StringRef Line, MMapEvent &MMap,
+    bool RequireProcessMappingInfo) {
+  // Mapped mode needs records for other binaries too: a later mmap can cover
+  // a target address even when it has a different filename or permissions.
+  if (!RequireProcessMappingInfo && !Binary->isKernel() &&
+      !Line.contains(Binary->getName()) && !ShowMmapEvents)
+    return false;
+  if (!extractMMapEvent(Line, MMap, RequireProcessMappingInfo)) {
     std::string WarningMsg = "Cannot parse mmap event: " + Line.str() + " \n";
     WithColor::warning() << WarningMsg;
     return false;
   }
-  long long MMapPID = 0;
-  getAsSignedInteger(Fields[PID], 10, MMapPID);
-  MMap.PID = MMapPID;
-  Fields[MMAPPED_ADDRESS].getAsInteger(0, MMap.Address);
-  Fields[MMAPPED_SIZE].getAsInteger(0, MMap.Size);
-  Fields[PAGE_OFFSET].getAsInteger(0, MMap.Offset);
-  MMap.MemProtectionFlag = Fields[MEM_PROTECTION_FLAG];
-  MMap.BinaryPath = Fields[BINARY_PATH];
   if (ShowMmapEvents) {
     outs() << "Mmap: Binary " << MMap.BinaryPath << " loaded at "
            << format("0x%" PRIx64 ":", MMap.Address) << " \n";
   }
 
-  StringRef BinaryName = filename(MMap.BinaryPath, Binary->isCOFF());
-  if (Binary->isKernel()) {
-    return Binary->isKernelImageName(BinaryName);
-  }
-  return Binary->getName() == BinaryName;
+  return mmapMatchesBinary(*Binary, MMap);
 }
 
 void PerfScriptReader::parseMMapEvent(TraceStream &TraceIt) {
