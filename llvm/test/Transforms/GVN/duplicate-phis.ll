@@ -122,3 +122,61 @@ exit:
   ret void
 }
 
+; RUN: opt -passes=gvn -S %s | FileCheck %s
+; RUN: opt -passes=gvn -phicse-num-phi-smallsize=0 -S %s | FileCheck %s
+
+define i1 @phi_cse_drops_nnan(float %x) {
+; CHECK-LABEL: @phi_cse_drops_nnan(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[ENTRY_MERGE_CRIT_EDGE:%.*]], label [[B:%.*]]
+; CHECK:       entry.merge_crit_edge:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    [[XB:%.*]] = fadd float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[P1:%.*]] = phi float [ [[XB]], [[B]] ], [ poison, [[ENTRY_MERGE_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[P1]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br i1 false, label %merge, label %b
+
+b:
+  %xb = fadd float %x, 0.000000e+00
+  br label %merge
+
+merge:
+  %p1 = phi nnan float [ %xb, %b ], [ 0.000000e+00, %entry ]
+  %p2 = phi float [ %xb, %b ], [ 0.000000e+00, %entry ]
+  %cmp = fcmp uno float %p2, 0.000000e+00
+  ret i1 %cmp
+}
+
+define i1 @phi_cse_drops_nnan_commuted(float %x) {
+; CHECK-LABEL: @phi_cse_drops_nnan_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[ENTRY_MERGE_CRIT_EDGE:%.*]], label [[B:%.*]]
+; CHECK:       entry.merge_crit_edge:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    [[XB:%.*]] = fadd float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[P1:%.*]] = phi float [ [[XB]], [[B]] ], [ poison, [[ENTRY_MERGE_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[P1]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br i1 false, label %merge, label %b
+
+b:
+  %xb = fadd float %x, 0.000000e+00
+  br label %merge
+
+merge:
+  %p1 = phi float [ %xb, %b ], [ 0.000000e+00, %entry ]
+  %p2 = phi nnan float [ %xb, %b ], [ 0.000000e+00, %entry ]
+  %cmp = fcmp uno float %p1, 0.000000e+00
+  ret i1 %cmp
+}
