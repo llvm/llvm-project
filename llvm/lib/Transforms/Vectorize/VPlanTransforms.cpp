@@ -3137,11 +3137,11 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
   VPValue *Uncountable = nullptr;
   VPValue *Countable = nullptr;
   VPValue *Cond = Term->getOperand(0);
-  if (!match(Cond, m_OneUse(m_CombineOr(
+  if (!match(Cond, m_CombineOr(
                        m_c_LogicalOr(m_Uncountable(Uncountable),
                                      m_Countable(Countable, PSE, L)),
                        m_c_BinaryOr(m_Uncountable(Uncountable),
-                                    m_Countable(Countable, PSE, L))))))
+                                    m_Countable(Countable, PSE, L)))))
     return true;
 
   // If the conditions are combined with a logical or (select), then we'll
@@ -3187,8 +3187,9 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
   }
   Term->setOperand(0, Countable);
 
-  // Remove the combining or.
-  cast<VPInstruction>(Cond)->eraseFromParent();
+  // Remove the combining or if the branch was the only user.
+  if (Cond->getNumUsers() == 0)
+    cast<VPInstruction>(Cond)->eraseFromParent();
 
   return true;
 }
