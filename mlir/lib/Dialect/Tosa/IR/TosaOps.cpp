@@ -797,23 +797,6 @@ LogicalResult tosa::ConstOp::verify() {
   return success();
 }
 
-template <typename T>
-static LogicalResult verifyConvOpModes(T op) {
-  auto inputEType =
-      llvm::cast<ShapedType>(op.getInput().getType()).getElementType();
-
-  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
-    inputEType = getStorageElementTypeFromQuantized(quantType);
-
-  auto resultEType =
-      llvm::cast<ShapedType>(op.getResult().getType()).getElementType();
-
-  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(resultEType))
-    resultEType = getStorageElementTypeFromQuantized(quantType);
-
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // ERROR_IF functions.
 // ERROR_IF is a predicate that must set an error if the condition holds.
@@ -4513,8 +4496,7 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
 }
 
 LogicalResult Conv2DOp::verify() {
-  if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed() ||
-      verifyConvOpErrorIf(*this).failed())
+  if (verifyConvOp(*this).failed() || verifyConvOpErrorIf(*this).failed())
     return failure();
   return success();
 }
@@ -4673,8 +4655,7 @@ LogicalResult Conv3DOp::inferReturnTypeComponents(
 }
 
 LogicalResult Conv3DOp::verify() {
-  if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed() ||
-      verifyConvOpErrorIf(*this).failed())
+  if (verifyConvOp(*this).failed() || verifyConvOpErrorIf(*this).failed())
     return failure();
   return success();
 }
@@ -4853,8 +4834,7 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
 }
 
 LogicalResult DepthwiseConv2DOp::verify() {
-  if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed() ||
-      verifyConvOpErrorIf(*this).failed())
+  if (verifyConvOp(*this).failed() || verifyConvOpErrorIf(*this).failed())
     return failure();
   return success();
 }
@@ -4920,7 +4900,7 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
 }
 
 LogicalResult TransposeConv2DOp::verify() {
-  if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed())
+  if (verifyConvOp(*this).failed())
     return failure();
 
   const llvm::ArrayRef<int64_t> strides = getStride();

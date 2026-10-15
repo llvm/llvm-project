@@ -24,6 +24,7 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
+#include "VectorizeOptions.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -55,8 +56,6 @@ using namespace llvm::VPlanPatternMatch;
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-extern cl::opt<unsigned> NumberOfStoresToPredicate;
 } // namespace llvm
 
 /// @{
@@ -67,10 +66,6 @@ const char LLVMLoopVectorizeFollowupVectorized[] =
 const char LLVMLoopVectorizeFollowupEpilogue[] =
     "llvm.loop.vectorize.followup_epilogue";
 /// @}
-
-static cl::opt<bool> PrintVPlansInDotFormat(
-    "vplan-print-in-dot-format", cl::Hidden,
-    cl::desc("Use dot format instead of plain text when dumping VPlans"));
 
 #define DEBUG_TYPE "loop-vectorize"
 
@@ -772,8 +767,8 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
       Cost += Block->cost(VF, Ctx);
     // Add the costs of the loop's backedge and canonical IV increment
     auto AddCost = [&](InstructionCost C, const char *Name) {
-      if (ForceTargetInstructionCost.getNumOccurrences())
-        C = InstructionCost(ForceTargetInstructionCost);
+      if (Ctx.Opts.force_target_instruction_cost)
+        C = InstructionCost(*Ctx.Opts.force_target_instruction_cost);
       LLVM_DEBUG(dbgs() << "Cost of " << C << " for VF " << VF << ": " << Name
                         << "\n");
       Cost += C;
@@ -1455,13 +1450,13 @@ bool VPValue::isDefinedOutsideLoopRegions() const {
   return !isDefinedInsideLoopRegions(this);
 }
 void VPValue::replaceAllUsesWith(VPValue *New) {
-  replaceUsesWithIf(New, [](VPUser &) { return true; });
+  replaceUsesWithIf(New, [](VPUser *) { return true; });
   if (auto *SV = dyn_cast<VPSymbolicValue>(this))
     SV->markMaterialized();
 }
 
 void VPValue::replaceUsesWithIf(
-    VPValue *New, llvm::function_ref<bool(VPUser &U)> ShouldReplace) {
+    VPValue *New, llvm::function_ref<bool(VPUser *U)> ShouldReplace) {
   assertNotMaterialized();
   // Note that this early exit is required for correctness; the implementation
   // below relies on the number of users for this VPValue to decrease, which
@@ -1473,7 +1468,7 @@ void VPValue::replaceUsesWithIf(
     VPUser *User = Users[J];
     bool RemovedUser = false;
     for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
-      if (User->getOperand(I) != this || !ShouldReplace(*User))
+      if (User->getOperand(I) != this || !ShouldReplace(User))
         continue;
 
       RemovedUser = true;
@@ -1712,8 +1707,8 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       if (DisableRuntimeUnroll)
         addRuntimeUnrollDisableMetaData(OrigLoop);
 
-      LoopVectorizeHints Hints(OrigLoop, /*InterleaveOnlyWhenForced*/ false,
-                               *ORE);
+      LoopVectorizeHints Hints(Opts, OrigLoop,
+                               /*InterleaveOnlyWhenForced*/ false, *ORE);
       Hints.setAlreadyVectorized();
     }
   }
@@ -1737,8 +1732,8 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       VectorLoop->setLoopID(OrigLoopID);
 
     if (!VectorizingEpilogue) {
-      LoopVectorizeHints Hints(VectorLoop, /*InterleaveOnlyWhenForced*/ false,
-                               *ORE);
+      LoopVectorizeHints Hints(Opts, VectorLoop,
+                               /*InterleaveOnlyWhenForced*/ false, *ORE);
       Hints.setAlreadyVectorized();
     }
   }
@@ -1802,7 +1797,7 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
     return;
   }
   for (const auto &Plan : VPlans)
-    if (PrintVPlansInDotFormat)
+    if (Opts.vplan_print_in_dot_format)
       Plan->printDOT(O);
     else
       Plan->print(O);
@@ -1910,7 +1905,7 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
       }
     }
   }
-  return *NumPredStores > NumberOfStoresToPredicate;
+  return *NumPredStores > Opts.vectorize_num_stores_pred;
 }
 
 bool VPCostContext::isFreeScalarIntrinsic(Intrinsic::ID ID) {

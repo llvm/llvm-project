@@ -228,12 +228,13 @@ void CodeGenPassBuilder::flushFPMsToMPM(PassManagerWrapper &PMW,
 Error CodeGenPassBuilder::buildPipeline(
     ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
     raw_pwrite_stream *DwoOut, CodeGenFileType FileType, MCContext &Ctx) {
-  auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
+  auto StartStopInfo = TargetPassConfig::getStartStopInfo(TM, *PIC);
   if (!StartStopInfo)
     return StartStopInfo.takeError();
   setStartStopPasses(*StartStopInfo);
 
-  bool PrintAsm = TargetPassConfig::willCompleteCodeGenPipeline();
+  CompletesPipeline = StartStopInfo->StopPass.empty();
+  bool PrintAsm = CompletesPipeline;
   bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
 
   PassManagerWrapper PMW(MPM);
@@ -274,8 +275,9 @@ Error CodeGenPassBuilder::buildPipeline(
   if (auto Err = addMachinePasses(PMW))
     return Err;
 
-  if (!Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier)
-    addMachineFunctionPass(MachineVerifierPass(), PMW);
+  if (PrintAsm ? !Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier
+               : Opt.VerifyMachineCode == MachineVerifierMode::End)
+    addMachineFunctionPass(MachineVerifierPass(), PMW, /*Force=*/!PrintAsm);
 
   // We add AsmPrinter regardless if we are emitting MIR or Assembly as the
   // final output so that -stop-before=<target>-asm-printer works. When printing

@@ -87,14 +87,18 @@ struct KernelLaunchInfoTy {
   }
 };
 
+struct PluginManager;
+
 struct DeviceTy {
   int32_t DeviceID;
   GenericPluginTy *RTL;
   int32_t RTLDeviceID;
   ol_device_handle_t DeviceHandle;
+  PluginManager *PM;
+  ol_context_handle_t Context = nullptr;
 
   DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
-           ol_device_handle_t DeviceHandle);
+           ol_device_handle_t DeviceHandle, PluginManager *PM);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
@@ -104,8 +108,14 @@ struct DeviceTy {
   /// Try to initialize the device and return any failure.
   llvm::Error init();
 
+  /// Deinitialize the OpenMP device.
+  llvm::Error deinit();
+
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
+
+  /// Whether this device executes kernels on the host CPU.
+  bool isHostDevice() const { return IsHostDevice; }
 
   llvm::Expected<__tgt_device_binary> loadBinary(__tgt_device_image *Img);
 
@@ -125,6 +135,14 @@ struct DeviceTy {
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails. p Kind dictates what
   /// allocator should be used (host, shared, device).
   int32_t deleteData(void *TgtPtrBegin, int32_t Kind = TARGET_ALLOC_DEFAULT);
+
+  /// Allocate \p Size bytes of \p Type memory in the device's context, which,
+  /// unlike allocData, caches the allocation for reuse. \p Type must be
+  /// OL_ALLOC_TYPE_DEVICE or OL_ALLOC_TYPE_MANAGED. Free it with freeCtxMem.
+  llvm::Expected<void *> allocCtxMem(int64_t Size, ol_alloc_type_t Type);
+
+  /// Free memory allocated with allocCtxMem.
+  llvm::Error freeCtxMem(void *Ptr);
 
   // Data transfer. When AsyncInfo is nullptr, the transfer will be
   // synchronous.
@@ -186,12 +204,11 @@ struct DeviceTy {
 
   /// Event related interfaces.
   /// {
-  /// Create an event.
-  int32_t createEvent(void **Event);
-
   /// Record the event based on status in AsyncInfo->Queue at the moment the
-  /// function is called.
-  int32_t recordEvent(void *Event, AsyncInfoTy &AsyncInfo);
+  /// function is called. If \p Event already holds an event, it is replaced
+  /// with a new one representing the current queue state and the old event
+  /// is destroyed.
+  int32_t recordEvent(void **Event, AsyncInfoTy &AsyncInfo);
 
   /// Wait for an event. This function can be blocking or non-blocking,
   /// depending on the implementation. It is expected to set a dependence on the
@@ -259,6 +276,9 @@ private:
   /// Launch-geometry properties for each kernel registered on this device.
   using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
   ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
+
+  /// Whether this is a host device.
+  bool IsHostDevice = false;
 
   /// Handler to collect and organize host-2-device mapping information.
   MappingInfoTy MappingInfo;
