@@ -24,6 +24,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   MLIRFunctionInterfaces
   MLIRInferIntRangeInterface
   MLIRIR
+  MLIRLoopLikeInterface
   MLIRMathDialect
   MLIRMemRefDialect
   MLIRSideEffectInterfaces

@@ -19949,6 +19949,13 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     // Make sure constant bus requirements are respected.
     TII->legalizeOperandsVOP3(MRI, MI);
 
+    // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
+    if (MI.getOpcode() == AMDGPU::V_PK_FMA_F32 &&
+        !TII->isLegalPkFMAF32OpSel(MI)) {
+      TII->decomposePkFMAF32(MI, MRI);
+      return;
+    }
+
     if (TII->isMAI(MI)) {
       // The ordinary src0, src1, src2 were legalized above.
       //
@@ -20215,27 +20222,15 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'v':
     case 'a':
       return C_RegisterClass;
-    case 'm':
-      return C_Memory;
     }
   } else if (Constraint.size() == 2) {
     if (Constraint == "VA")
       return C_RegisterClass;
-    if (Constraint == "RF")
-      return C_Memory;
   }
   if (isImmConstraint(Constraint)) {
     return C_Other;
   }
   return TargetLowering::getConstraintType(Constraint);
-}
-
-InlineAsm::ConstraintCode
-SITargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
-  if (ConstraintCode == "RF")
-    return InlineAsm::ConstraintCode::RF;
-
-  return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }
 
 static uint64_t clearUnusedBits(uint64_t Val, unsigned Size) {
