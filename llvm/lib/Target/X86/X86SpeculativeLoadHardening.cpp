@@ -490,8 +490,8 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
       if (!MBB.isEHPad())
         continue;
       PS->SSA.AddAvailableValue(
-          &MBB,
-          extractPredStateFromSP(MBB, MBB.SkipPHIsAndLabels(MBB.begin()), Loc));
+          &MBB, extractPredStateFromSP(
+                    MBB, MBB.SkipPHIsLabelsAndDebug(MBB.begin()), Loc));
     }
   }
 
