@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements GlobalISel instruction selection for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/PISAEnum.h"
 #include "PISA.h"
