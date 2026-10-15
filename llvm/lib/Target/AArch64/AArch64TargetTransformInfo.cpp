@@ -11,7 +11,6 @@
 #include "AArch64PerfectShuffle.h"
 #include "AArch64SMEAttributes.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Analysis/LoopInfo.h"
