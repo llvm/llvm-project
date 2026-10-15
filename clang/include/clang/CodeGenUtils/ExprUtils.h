@@ -46,11 +46,8 @@ bool onlyHasInlineBuiltinDeclaration(const FunctionDecl *FD);
 /// Given an object of the canonical type \p Type, can we safely copy a value
 /// out of it based on its initializer?
 ///
-/// FIXME: This is conservative and only reliable as a pre-filter for
-/// constant evaluation. Arrays are always rejected, because the const
-/// qualifier of a canonical array type is on its element type. C++ records
-/// must be trivial, although trivially copyable and trivially destructible
-/// would be sufficient.
+/// FIXME: Overly conservative: rejects all arrays, and requires C++ records
+/// to be trivial rather than just trivially copyable.
 bool isConstantEmittableObjectType(QualType Type);
 
 /// How a reference to a variable can be emitted as a constant.
@@ -69,9 +66,7 @@ enum ConstantEmissionKind {
 /// to do this with const float variables even if those variables
 /// aren't marked 'constexpr'.
 ///
-/// FIXME: For reference types only the declared pointee type is checked, not
-/// the type of the object the reference is bound to. Callers must still
-/// constant-evaluate the reference.
+/// FIXME: For references, checks the pointee type, not the bound object's.
 ConstantEmissionKind checkVarTypeForConstantEmission(QualType Type);
 
 } // namespace clang::CodeGenUtils
