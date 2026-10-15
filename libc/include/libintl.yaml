@@ -7,6 +7,20 @@ types:
 enums: []
 objects: []
 functions:
+  - name: bind_textdomain_codeset
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: const char *
+  - name: bindtextdomain
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: const char *
   - name: textdomain
     standards:
       - posix
