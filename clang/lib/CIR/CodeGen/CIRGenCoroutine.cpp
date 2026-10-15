@@ -801,8 +801,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
                  "expected simple lvalue for coroutine resume");
           mlir::Value ptr = awaitRes.lv.getPointer();
           tmpResumeRValAddr = cgf.emitAlloca(
-              "__coawait_resume_lval", ptr.getType(), loc,
-              CharUnits::One(),
+              "__coawait_resume_lval", ptr.getType(), loc, CharUnits::One(),
               builder.getBestAllocaInsertPoint(scopeParentBlock));
           builder.CIRBaseBuilderTy::createStore(loc, ptr, tmpResumeRValAddr);
         } else {
@@ -900,9 +899,10 @@ getCoroutineSuspendExprReturnType(const ASTContext &ctx,
 #endif
 
 LValue CIRGenFunction::emitCoawaitLValue(const CoawaitExpr *e) {
-  assert(getCoroutineSuspendExprReturnType(getContext(), e)->isReferenceType() &&
-         "Can't have a scalar return unless the return type is a "
-         "reference type!");
+  assert(
+      getCoroutineSuspendExprReturnType(getContext(), e)->isReferenceType() &&
+      "Can't have a scalar return unless the return type is a "
+      "reference type!");
   mlir::Location scopeLoc = getLoc(e->getSourceRange());
   mlir::Block *currEntryBlock = curLexScope->getEntryBlock();
   mlir::Value tmpResumeLValAddr;
