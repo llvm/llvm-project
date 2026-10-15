@@ -962,8 +962,8 @@ Symbols:
     Type:    STT_FUNC
     Binding: STB_GLOBAL
 
-## Check that on ARM the Thumb bit is cleared from function addresses, as in
-## --call-graph-info. This lets Thumb functions be found.
+## Check that on ARM the Thumb bit is cleared from function addresses, so that
+## Thumb functions are found.
 
 # RUN: yaml2obj --docnum=15 %s -o %t20
 # RUN: llvm-readelf --stack-sizes %t20 2>&1 | \
