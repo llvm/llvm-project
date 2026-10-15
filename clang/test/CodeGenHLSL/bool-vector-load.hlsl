@@ -1,4 +1,7 @@
 // RUN: %clang_dxc -T cs_6_6 %s | FileCheck %s
+// RUN: %clang_dxc -T cs_6_6 -Xclang -load-bool-from-mem=truncate %s 2>&1 | FileCheck %s --check-prefix=CHECK,TRUNCATE
+
+// TRUNCATE: -load-bool-from-mem=truncate ignored for HLSL (always nonzero)
 
 StructuredBuffer<bool4> In : register(t0);
 RWStructuredBuffer<bool4> Out : register(u1);
