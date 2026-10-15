@@ -147,11 +147,7 @@ LIBC_NOINLINE LIBC_INLINE double exp_denorm(double x, int hi, double r,
   return res;
 }
 
-#ifdef LIBC_MATH_HAS_SMALL_TABLES
-LIBC_NOINLINE LIBC_INLINE double
-#else
-LIBC_ALWAYS_INLINE double
-#endif // LIBC_MATH_HAS_SMALL_TABLES
+LIBC_MATH_SMALL_TABLES_INLINE double
 exp2_eval(double x, double u, int hi, unsigned idx, bool is_exp2 = false) {
   double exp2_mid = EXP2_MID[idx];
   double u2 = u * u;
