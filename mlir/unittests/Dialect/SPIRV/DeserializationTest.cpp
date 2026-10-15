@@ -298,12 +298,12 @@ TEST_P(UnsupportedParameterDecorationTest, RejectWithSupportedDecoration) {
                    "result <id> 1");
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    SPIRV, UnsupportedParameterDecorationTest,
-    ::testing::Values(spirv::Decoration::Alignment,
-                      spirv::Decoration::FuncParamAttr,
-                      spirv::Decoration::Restrict,
-                      spirv::Decoration::RelaxedPrecision));
+INSTANTIATE_TEST_SUITE_P(SPIRV, UnsupportedParameterDecorationTest,
+                         ::testing::Values(spirv::Decoration::Alignment,
+                                           spirv::Decoration::FuncParamAttr,
+                                           spirv::Decoration::Restrict,
+                                           spirv::Decoration::RelaxedPrecision,
+                                           spirv::Decoration::Volatile));
 
 TEST_F(DeserializationTest, AlignmentMissingOperand) {
   addHeader();

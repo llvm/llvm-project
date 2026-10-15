@@ -103,3 +103,33 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Addresses, Kernel, Lin
     linkage_attributes = #spirv.linkage_attributes<linkage_name = "external", linkage_type = <Import>>
   }
 }
+
+// -----
+
+// `volatile` pointer parameters are decorated with Volatile; it may be combined
+// with Alignment and FuncParamAttr decorations.
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Addresses, Kernel, Linkage], []> {
+  // CHECK-LABEL: spirv.func @volatile(
+  // CHECK-SAME: !spirv.ptr<i32, CrossWorkgroup> {spirv.decoration = #spirv.decoration<Volatile>}
+  // CHECK-SAME: !spirv.ptr<i32, CrossWorkgroup> {spirv.alignment = 4 : i32, spirv.decoration = #spirv.decoration<Volatile>, spirv.func_param_attr = [#spirv.function_parameter_attribute<NoCapture>]}
+  spirv.func @volatile(
+      %a: !spirv.ptr<i32, CrossWorkgroup> {spirv.decoration = #spirv.decoration<Volatile>},
+      %b: !spirv.ptr<i32, CrossWorkgroup> {
+        spirv.alignment = 4 : i32,
+        spirv.decoration = #spirv.decoration<Volatile>,
+        spirv.func_param_attr = [#spirv.function_parameter_attribute<NoCapture>]}
+  ) "None" {
+    spirv.Return
+  }
+
+}
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Addresses, Kernel, Linkage], []> {
+  // CHECK-LABEL: spirv.func @volatile_declaration(
+  // CHECK-SAME: !spirv.ptr<i32, CrossWorkgroup> {spirv.decoration = #spirv.decoration<Volatile>}
+  spirv.func @volatile_declaration(%arg: !spirv.ptr<i32, CrossWorkgroup> {spirv.decoration = #spirv.decoration<Volatile>}) "None" attributes {
+    linkage_attributes = #spirv.linkage_attributes<linkage_name = "volatile_declaration", linkage_type = <Import>>
+  }
+}
