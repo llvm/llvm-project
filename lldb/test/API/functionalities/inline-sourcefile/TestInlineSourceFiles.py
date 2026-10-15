@@ -8,7 +8,6 @@ from lldbsuite.test import lldbutil
 class InlineSourceFilesTestCase(TestBase):
     @skipIf(compiler="gcc")
     @skipIf(compiler="clang", compiler_version=["<", "18.0"])
-    # Fails on Windows for unknown reasons.
     def test(self):
         """Test DWARF inline source files."""
         self.build()
