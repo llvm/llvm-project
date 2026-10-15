@@ -4404,7 +4404,11 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
                                       m_SMin(m_Value(X), NegPat),
                                       m_UMin(m_Value(X), NegPat))))) {
       unsigned NewOpc = ISD::getInverseMinMaxOpcode(N1->getOpcode());
-      if (hasOperation(NewOpc, VT))
+      // If the type is legal and the existing min/max isn't supported go ahead
+      // and do the conversion. The expansion of the new min/max will likely be
+      // similar to the old.
+      if (hasOperation(NewOpc, VT) ||
+          (isTypeLegal(VT) && !hasOperation(N1->getOpcode(), VT)))
         return DAG.getNode(NewOpc, DL, VT, X, S0);
     }
 
