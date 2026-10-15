@@ -179,10 +179,25 @@ void SemaBPF::handlePreserveAIRecord(RecordDecl *RD) {
 }
 
 void SemaBPF::handlePreserveAccessIndexAttr(Decl *D, const ParsedAttr &AL) {
-  auto *Rec = cast<RecordDecl>(D);
-  handlePreserveAIRecord(Rec);
-  Rec->addAttr(::new (getASTContext())
-                   BPFPreserveAccessIndexAttr(getASTContext(), AL));
+  if (auto *Rec = dyn_cast<RecordDecl>(D))
+    handlePreserveAIRecord(Rec);
+  auto *A =
+      ::new (getASTContext()) BPFPreserveAccessIndexAttr(getASTContext(), AL);
+  // The relocation of an enumerator is matched by type name. Whether an
+  // anonymous enum gets a typedef name is checked at the end of the
+  // translation unit. Skip #pragma clang attribute which may cover many
+  // anonymous enums in a header.
+  if (auto *ED = dyn_cast<EnumDecl>(D);
+      ED && !ED->getDeclName() && !AL.isPragmaClangAttribute())
+    AnonPreserveAIEnums.insert({ED, A});
+  D->addAttr(A);
+}
+
+void SemaBPF::DiagnoseAnonymousPreserveAIEnums() {
+  for (auto [ED, A] : AnonPreserveAIEnums)
+    if (!ED->getTypedefNameForAnonDecl())
+      Diag(A->getLocation(), diag::warn_preserve_access_index_anon_enum) << A;
+  AnonPreserveAIEnums.clear();
 }
 
 } // namespace clang

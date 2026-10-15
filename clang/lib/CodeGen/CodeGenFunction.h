@@ -5041,6 +5041,10 @@ public:
   llvm::Value *EmitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                       llvm::Triple::ArchType Arch);
   llvm::Value *EmitBPFBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitBPFPreserveEnumValue(const EnumConstantDecl *Enumerator,
+                                        QualType EnumTy, SourceLocation Loc,
+                                        uint64_t Flag);
+  llvm::Value *EmitBPFPreservedEnumerator(const DeclRefExpr *E);
 
   llvm::Value *BuildVector(ArrayRef<llvm::Value *> Ops);
   llvm::Value *EmitX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
@@ -5371,6 +5375,16 @@ public:
   /// Determine if the given statement might introduce a declaration into the
   /// current scope, by being a (possibly-labelled) DeclStmt.
   static bool mightAddDeclToScope(const Stmt *S);
+
+  /// For the BPF target, if E refers to an enumerator of an enum with the
+  /// preserve_access_index attribute, return the enum type to be used for
+  /// its CO-RE relocation. Otherwise, return a null type.
+  QualType getBPFPreservedEnumType(const DeclRefExpr *E);
+
+  /// For the BPF target, return true if the expression contains an
+  /// enumerator to be relocated, directly or through the initializer of a
+  /// local const variable. Such an expression should not be constant folded.
+  bool containsBPFPreservedEnumerator(const Expr *E);
 
   /// ConstantFoldsToSimpleInteger - If the specified expression does not fold
   /// to a constant, or if it does but contains a label, return false.  If it

@@ -581,7 +581,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   // more efficient than per-element initialization, the size of the elements
   // with explicit initializers should be large enough.
   if (NumInitElements * elementSize.getQuantity() > 16 &&
-      elementType.isTriviallyCopyableType(CGF.getContext())) {
+      elementType.isTriviallyCopyableType(CGF.getContext()) &&
+      !CGF.containsBPFPreservedEnumerator(ExprToVisit)) {
     CodeGen::CodeGenModule &CGM = CGF.CGM;
     ConstantEmitter Emitter(CGF);
     QualType GVArrayQTy = CGM.getContext().getAddrSpaceQualType(

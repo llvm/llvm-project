@@ -608,8 +608,11 @@ public:
 
   // l-values.
   Value *VisitDeclRefExpr(DeclRefExpr *E) {
-    if (CodeGenFunction::ConstantEmission Constant = CGF.tryEmitAsConstant(E))
-      return CGF.emitScalarConstant(Constant, E);
+    if (Value *V = CGF.EmitBPFPreservedEnumerator(E))
+      return V;
+    if (!CGF.containsBPFPreservedEnumerator(E))
+      if (CodeGenFunction::ConstantEmission Constant = CGF.tryEmitAsConstant(E))
+        return CGF.emitScalarConstant(Constant, E);
     return EmitLoadOfLValue(E);
   }
 
@@ -2144,7 +2147,10 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
 }
 
 Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
-  if (CodeGenFunction::ConstantEmission Constant = CGF.tryEmitAsConstant(E)) {
+  if (CGF.containsBPFPreservedEnumerator(E)) {
+    // Do not constant fold.
+  } else if (CodeGenFunction::ConstantEmission Constant =
+                 CGF.tryEmitAsConstant(E)) {
     CGF.EmitIgnoredExpr(E->getBase());
     return CGF.emitScalarConstant(Constant, E);
   } else {

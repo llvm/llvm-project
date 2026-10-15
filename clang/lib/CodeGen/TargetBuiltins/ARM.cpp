@@ -7287,6 +7287,51 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 }
 
+// A sequence number, injected into IR builtin functions, to
+// prevent CSE given the only difference of the function
+// may just be the debuginfo metadata.
+static uint32_t BPFBuiltinSeqNum;
+
+Value *
+CodeGenFunction::EmitBPFPreserveEnumValue(const EnumConstantDecl *Enumerator,
+                                          QualType EnumTy, SourceLocation Loc,
+                                          uint64_t Flag) {
+  llvm::DIType *DbgInfo =
+      getDebugInfo()->getOrCreateStandaloneType(EnumTy, Loc);
+
+  auto InitVal = Enumerator->getInitVal();
+  std::string InitValStr;
+  if (InitVal.isNegative() || InitVal > uint64_t(INT64_MAX))
+    InitValStr = std::to_string(InitVal.getSExtValue());
+  else
+    InitValStr = std::to_string(InitVal.getZExtValue());
+  std::string EnumStr = Enumerator->getNameAsString() + ":" + InitValStr;
+  Value *EnumStrVal = Builder.CreateGlobalString(EnumStr);
+
+  Value *FlagValue = ConstantInt::get(Int64Ty, Flag);
+  Value *SeqNumVal = ConstantInt::get(Int32Ty, BPFBuiltinSeqNum++);
+
+  llvm::Function *IntrinsicFn = Intrinsic::getOrInsertDeclaration(
+      &CGM.getModule(), Intrinsic::bpf_preserve_enum_value, {});
+  CallInst *Fn =
+      Builder.CreateCall(IntrinsicFn, {SeqNumVal, EnumStrVal, FlagValue});
+  Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
+  return Fn;
+}
+
+Value *CodeGenFunction::EmitBPFPreservedEnumerator(const DeclRefExpr *E) {
+  QualType EnumTy = getBPFPreservedEnumType(E);
+  if (EnumTy.isNull())
+    return nullptr;
+
+  // Flag 1 is ENUM_VALUE.
+  Value *V = EmitBPFPreserveEnumValue(cast<EnumConstantDecl>(E->getDecl()),
+                                      EnumTy, E->getExprLoc(), 1);
+  QualType Ty = E->getType();
+  return Builder.CreateIntCast(V, ConvertType(Ty),
+                               Ty->isSignedIntegerOrEnumerationType());
+}
+
 Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {
   assert((BuiltinID == BPF::BI__builtin_preserve_field_info ||
@@ -7294,11 +7339,6 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
           BuiltinID == BPF::BI__builtin_preserve_type_info ||
           BuiltinID == BPF::BI__builtin_preserve_enum_value) &&
          "unexpected BPF builtin");
-
-  // A sequence number, injected into IR builtin functions, to
-  // prevent CSE given the only difference of the function
-  // may just be the debuginfo metadata.
-  static uint32_t BuiltinSeqNum;
 
   switch (BuiltinID) {
   default:
@@ -7343,7 +7383,7 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
 
     ConstantInt *Flag = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
     Value *FlagValue = ConstantInt::get(Int64Ty, Flag->getSExtValue());
-    Value *SeqNumVal = ConstantInt::get(Int32Ty, BuiltinSeqNum++);
+    Value *SeqNumVal = ConstantInt::get(Int32Ty, BPFBuiltinSeqNum++);
 
     llvm::Function *FnDecl;
     if (BuiltinID == BPF::BI__builtin_btf_type_id)
@@ -7363,8 +7403,6 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     }
 
     const Expr *Arg0 = E->getArg(0);
-    llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateStandaloneType(
-        Arg0->getType(), Arg0->getExprLoc());
 
     // Find enumerator
     const auto *UO = cast<UnaryOperator>(Arg0->IgnoreParens());
@@ -7372,25 +7410,9 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     const auto *DR = cast<DeclRefExpr>(CE->getSubExpr());
     const auto *Enumerator = cast<EnumConstantDecl>(DR->getDecl());
 
-    auto InitVal = Enumerator->getInitVal();
-    std::string InitValStr;
-    if (InitVal.isNegative() || InitVal > uint64_t(INT64_MAX))
-      InitValStr = std::to_string(InitVal.getSExtValue());
-    else
-      InitValStr = std::to_string(InitVal.getZExtValue());
-    std::string EnumStr = Enumerator->getNameAsString() + ":" + InitValStr;
-    Value *EnumStrVal = Builder.CreateGlobalString(EnumStr);
-
     ConstantInt *Flag = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
-    Value *FlagValue = ConstantInt::get(Int64Ty, Flag->getSExtValue());
-    Value *SeqNumVal = ConstantInt::get(Int32Ty, BuiltinSeqNum++);
-
-    llvm::Function *IntrinsicFn = Intrinsic::getOrInsertDeclaration(
-        &CGM.getModule(), Intrinsic::bpf_preserve_enum_value, {});
-    CallInst *Fn =
-        Builder.CreateCall(IntrinsicFn, {SeqNumVal, EnumStrVal, FlagValue});
-    Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
-    return Fn;
+    return EmitBPFPreserveEnumValue(Enumerator, Arg0->getType(),
+                                    Arg0->getExprLoc(), Flag->getSExtValue());
   }
   }
 }

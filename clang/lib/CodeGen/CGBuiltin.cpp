@@ -2725,7 +2725,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // TODO: Extend this handling to all builtin calls that we can constant-fold.
   Expr::EvalResult Result;
   if (E->isPRValue() && E->EvaluateAsRValue(Result, CGM.getContext()) &&
-      !Result.hasSideEffects()) {
+      !Result.hasSideEffects() && !containsBPFPreservedEnumerator(E)) {
     if (Result.Val.isInt())
       return RValue::get(llvm::ConstantInt::get(getLLVMContext(),
                                                 Result.Val.getInt()));
