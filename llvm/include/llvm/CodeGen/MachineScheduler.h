@@ -314,26 +314,39 @@ public:
   virtual void releaseBottomNode(SUnit *SU) = 0;
 };
 
+/// State for breaking physical-register anti-dependencies while scheduling a
+/// machine basic block after register allocation.
 class LLVM_ABI AntiDepState {
+  /// The selected breaker, or null when anti-dependency breaking is disabled.
   std::unique_ptr<AntiDepBreaker> Breaker;
+
+  /// Instruction index of the current region's end in its basic block.
   unsigned EndIndex = 0;
+
+  /// Position from which boundary instructions are scanned for liveness.
   MachineBasicBlock::iterator ScanPos;
+
+  /// Whether ScheduleDAGMI::schedule() processed the current region.
   bool RegionProcessed = false;
 
 public:
   AntiDepState(MachineSchedContext *C,
                TargetSubtargetInfo::AntiDepBreakMode AntiDepMode);
-  ~AntiDepState();
 
   void startBlock(MachineBasicBlock *MBB);
+
   void finishBlock(const MachineLoopInfo *MLI);
+
   void enterRegion(MachineBasicBlock *MBB, MachineBasicBlock::iterator End);
+
   void exitRegion(MachineBasicBlock::iterator Begin,
                   MachineBasicBlock::iterator End);
+
   bool breakAntiDependencies(const std::vector<SUnit> &SUnits,
                              MachineBasicBlock::iterator Begin,
                              MachineBasicBlock::iterator End,
                              AntiDepBreaker::DbgValueVector &DbgValues);
+
   void finishRegion();
 };
 
@@ -348,6 +361,7 @@ protected:
   MachineBlockFrequencyInfo *MBFI;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
 
+  /// State for optional post-RA anti-dependency breaking.
   AntiDepState AntiDep;
 
   /// Ordered list of DAG postprocessing steps.
@@ -370,7 +384,12 @@ public:
   ScheduleDAGMI(MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S,
                 bool RemoveKillFlags,
                 TargetSubtargetInfo::AntiDepBreakMode AntiDepMode =
-                    TargetSubtargetInfo::ANTIDEP_NONE);
+                    TargetSubtargetInfo::ANTIDEP_NONE)
+      : ScheduleDAGInstrs(*C->MF, C->MLI, RemoveKillFlags), AA(C->AA),
+        LIS(C->LIS), MBFI(C->MBFI), SchedImpl(std::move(S)),
+        AntiDep(C, SchedImpl->doMBBSchedRegionsTopDown()
+                       ? TargetSubtargetInfo::ANTIDEP_NONE
+                       : AntiDepMode) {}
 
   // Provide a vtable anchor
   ~ScheduleDAGMI() override;
@@ -408,6 +427,7 @@ public:
                    MachineBasicBlock::iterator begin,
                    MachineBasicBlock::iterator end,
                    unsigned regioninstrs) override;
+
   void exitRegion() override;
 
   /// Implement ScheduleDAGInstrs interface for scheduling a sequence of

@@ -1138,8 +1138,6 @@ AntiDepState::AntiDepState(MachineSchedContext *C,
   }
 }
 
-AntiDepState::~AntiDepState() = default;
-
 void AntiDepState::startBlock(MachineBasicBlock *MBB) {
   if (!Breaker)
     return;
@@ -1178,18 +1176,19 @@ void AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
   if (!Breaker)
     return;
 
-  if (!RegionProcessed) {
-    unsigned Count = EndIndex;
-    for (auto I = End; I != Begin;) {
-      MachineInstr &MI = *--I;
-      --Count;
-      if (!MI.isDebugOrPseudoInstr())
-        Breaker->Observe(MI, Count, EndIndex);
-      if (MI.isBundle())
-        Count -= MI.getBundleSize();
-    }
-  }
   ScanPos = Begin;
+  if (RegionProcessed)
+    return;
+
+  unsigned Count = EndIndex;
+  for (auto I = End; I != Begin;) {
+    MachineInstr &MI = *--I;
+    --Count;
+    if (!MI.isDebugOrPseudoInstr())
+      Breaker->Observe(MI, Count, EndIndex);
+    if (MI.isBundle())
+      Count -= MI.getBundleSize();
+  }
 }
 
 bool AntiDepState::breakAntiDependencies(
@@ -1209,16 +1208,6 @@ void AntiDepState::finishRegion() {
 }
 
 // Provide a vtable anchor.
-ScheduleDAGMI::ScheduleDAGMI(MachineSchedContext *C,
-                             std::unique_ptr<MachineSchedStrategy> S,
-                             bool RemoveKillFlags,
-                             TargetSubtargetInfo::AntiDepBreakMode AntiDepMode)
-    : ScheduleDAGInstrs(*C->MF, C->MLI, RemoveKillFlags), AA(C->AA),
-      LIS(C->LIS), MBFI(C->MBFI), SchedImpl(std::move(S)),
-      AntiDep(C, SchedImpl->doMBBSchedRegionsTopDown()
-                     ? TargetSubtargetInfo::ANTIDEP_NONE
-                     : AntiDepMode) {}
-
 ScheduleDAGMI::~ScheduleDAGMI() = default;
 
 /// ReleaseSucc - Decrement the NumPredsLeft count of a successor. When
@@ -1377,10 +1366,9 @@ void ScheduleDAGMI::schedule() {
 
   if (AntiDep.breakAntiDependencies(SUnits, RegionBegin, RegionEnd,
                                     DbgValues)) {
-    // BreakAntiDependencies needs the original DAG to identify safe renames.
-    // Renaming invalidates its register dependencies, so rebuild it as the
-    // existing SchedulePostRATDList scheduler does. buildSchedGraph clears the
-    // old DAG itself, and this path runs only if a dependency was broken.
+    // Renaming invalidates register dependencies. Rebuild the base DAG before
+    // applying mutations below, as SchedulePostRATDList does. Updating the DAG
+    // in place would also need to account for edges removed by mutations.
     buildSchedGraph(AA);
   }
 
