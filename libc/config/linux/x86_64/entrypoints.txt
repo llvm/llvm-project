@@ -506,6 +506,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.fchown
     libc.src.unistd.fchownat
     libc.src.unistd.fdatasync
+    libc.src.unistd.fexecve
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
