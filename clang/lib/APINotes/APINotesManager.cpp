@@ -444,7 +444,7 @@ APINotesManager::findAPINotes(SourceLocation Loc) {
       if (auto APINotesFile = FileMgr.getOptionalFileRef(APINotesPath)) {
         if (!loadAPINotes(*Dir, *APINotesFile)) {
           ++NumHeaderAPINotes;
-          if (auto Reader = Readers[*Dir].dyn_cast<APINotesReader *>())
+          if (auto Reader = dyn_cast<APINotesReader *>(Readers[*Dir]))
             Results.push_back(Reader);
           break;
         }

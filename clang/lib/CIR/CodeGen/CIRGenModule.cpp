@@ -87,7 +87,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                            const clang::CodeGenOptions &cgo,
                            DiagnosticsEngine &diags)
     : builder(mlirContext, *this), astContext(astContext),
-      langOpts(astContext.getLangOpts()), codeGenOpts(cgo),
+      langOpts(astContext.getLangOpts()), atomicOpts(astContext.getLangOpts()),
+      codeGenOpts(cgo),
       theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&mlirContext))},
       diags(diags), target(astContext.getTargetInfo()),
       abi(createCXXABI(*this)), genTypes(*this), vtables(*this) {
@@ -182,6 +183,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*cuda=*/langOpts.CUDA,
           /*cuda_is_device=*/langOpts.CUDAIsDevice,
           /*hip=*/langOpts.HIP,
+          /*hlsl=*/langOpts.HLSL,
           /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
           /*openmp=*/langOpts.OpenMP != 0,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
@@ -522,28 +524,6 @@ void CIRGenModule::emitDeferred() {
   }
 }
 
-template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *decl) {
-  if (!decl)
-    return false;
-  if (auto *attr = decl->getAttr<AttrT>())
-    return attr->isImplicit();
-  return decl->isImplicit();
-}
-
-// TODO(cir): This should be shared with OG Codegen.
-bool CIRGenModule::shouldEmitCUDAGlobalVar(const VarDecl *global) const {
-  assert(langOpts.CUDA && "Should not be called by non-CUDA languages");
-  // We need to emit host-side 'shadows' for all global
-  // device-side variables because the CUDA runtime needs their
-  // size and host-side address in order to provide access to
-  // their device-side incarnations.
-  return !langOpts.CUDAIsDevice || global->hasAttr<CUDADeviceAttr>() ||
-         global->hasAttr<CUDAConstantAttr>() ||
-         global->hasAttr<CUDASharedAttr>() ||
-         global->getType()->isCUDADeviceBuiltinSurfaceType() ||
-         global->getType()->isCUDADeviceBuiltinTextureType();
-}
-
 void CIRGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &os,
                                                    const Decl *d) {
   // ptxas does not allow '.' in symbol names. On the other hand, HIP prefers
@@ -587,34 +567,8 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   }
 
   // If this is CUDA, be selective about which declarations we emit.
-  // Non-constexpr non-lambda implicit host device functions are not emitted
-  // unless they are used on device side.
-  if (langOpts.CUDA) {
-    assert((isa<FunctionDecl>(global) || isa<VarDecl>(global)) &&
-           "Expected Variable or Function");
-    if (const auto *varDecl = dyn_cast<VarDecl>(global)) {
-      if (!shouldEmitCUDAGlobalVar(varDecl))
-        return;
-      // TODO(cir): This should be shared with OG Codegen.
-    } else if (langOpts.CUDAIsDevice) {
-      const auto *functionDecl = dyn_cast<FunctionDecl>(global);
-      if ((!global->hasAttr<CUDADeviceAttr>() ||
-           (langOpts.OffloadImplicitHostDeviceTemplates &&
-            hasImplicitAttr<CUDAHostAttr>(functionDecl) &&
-            hasImplicitAttr<CUDADeviceAttr>(functionDecl) &&
-            !functionDecl->isConstexpr() &&
-            !isLambdaCallOperator(functionDecl) &&
-            !getASTContext().CUDAImplicitHostDeviceFunUsedByDevice.count(
-                functionDecl))) &&
-          !global->hasAttr<CUDAGlobalAttr>() &&
-          !(langOpts.HIPStdPar && isa<FunctionDecl>(global) &&
-            !global->hasAttr<CUDAHostAttr>()))
-        return;
-      // Device-only functions are the only things we skip.
-    } else if (!global->hasAttr<CUDAHostAttr>() &&
-               global->hasAttr<CUDADeviceAttr>())
-      return;
-  }
+  if (langOpts.CUDA && !getASTContext().shouldEmitCUDADecl(global))
+    return;
 
   if (langOpts.OpenMP) {
     // If this is OpenMP, check if it is legal to emit this global normally.
@@ -781,7 +735,7 @@ void CIRGenModule::addGlobalDtor(cir::FuncOp dtor,
 void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
   VarDecl::DefinitionKind dk = vd->isThisDeclarationADefinition();
   if ((dk == VarDecl::Definition && vd->hasAttr<DLLImportAttr>()) ||
-      (langOpts.CUDA && !shouldEmitCUDAGlobalVar(vd)))
+      (langOpts.CUDA && !getASTContext().shouldEmitCUDADecl(vd)))
     return;
 
   TemplateSpecializationKind tsk = vd->getTemplateSpecializationKind();
@@ -1415,8 +1369,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     // in both device and host compilations.
     if (getLangOpts().CUDA && d && d->hasAttr<HIPManagedAttr>() &&
         d->hasExternalStorage())
-      errorNYI(d->getSourceRange(),
-               "getOrCreateCIRGlobal: HIP managed attribute");
+      getCUDARuntime().handleVarRegistration(d, gv);
   }
 
   assert(!cir::MissingFeatures::addressSpace());
@@ -2328,16 +2281,22 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
   return builder.getGlobalViewAttr(ptrTy, gv);
 }
 
+cir::GlobalOp CIRGenModule::createGlobalString(mlir::Location loc,
+                                               StringRef str, StringRef name) {
+  mlir::Attribute init = builder.getString(str, convertType(astContext.CharTy),
+                                           /*size=*/std::nullopt);
+
+  // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
+  // we need to do that explicitly.
+  return generateStringLiteral(loc, mlir::cast<mlir::TypedAttr>(init),
+                               cir::GlobalLinkageKind::PrivateLinkage, *this,
+                               getUniqueGlobalName(name.str()),
+                               CharUnits::One());
+}
+
 mlir::ptr::MemorySpaceAttrInterface
 CIRGenModule::getGlobalCIRAddressSpace(LangAS as) {
-  // The cir::LangAddressSpace fold loses the SPIRDefIsGenMap split between
-  // cuda_constant and opencl_constant, so use the target map like classic.
-  if (langOpts.CUDAIsDevice && getTriple().isSPIRV() &&
-      (as == LangAS::cuda_device || as == LangAS::cuda_constant ||
-       as == LangAS::cuda_shared))
-    return cir::TargetAddressSpaceAttr::get(
-        &getMLIRContext(), astContext.getTargetAddressSpace(as));
-  return cir::toCIRAddressSpaceAttr(getMLIRContext(), as);
+  return getTargetCIRGenInfo().getGlobalCIRAddressSpace(as);
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
@@ -3935,6 +3894,12 @@ void CIRGenModule::release() {
                      builder.getArrayAttr(globalScopeAsm));
 
   emitGlobalAnnotations();
+
+  if (std::optional<cir::FramePointerKind> kind =
+          getFramePointerKind(codeGenOpts.getFramePointer()))
+    theModule->setAttr(
+        cir::CIRDialect::getModuleFramePointerAttrName(),
+        cir::FramePointerKindAttr::get(&getMLIRContext(), *kind));
 
   if (!recordLayoutEntries.empty())
     theModule->setAttr(

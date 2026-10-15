@@ -197,12 +197,13 @@ class SeedContainer {
   DenseMap<Instruction *, SeedBundle *> SeedLookupMap;
 
   ScalarEvolution &SE;
+  unsigned BundleSizeLimit;
 
   template <typename LoadOrStoreT>
   KeyT getKey(LoadOrStoreT *LSI, bool AllowDiffTypes) const;
 
 public:
-  SeedContainer(ScalarEvolution &SE) : SE(SE) {}
+  LLVM_ABI SeedContainer(ScalarEvolution &SE);
 
   class iterator {
     BundleMapT *Map = nullptr;

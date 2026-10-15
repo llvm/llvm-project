@@ -227,15 +227,18 @@ long callerHiWord(long hi) {
 }
 
 // CIR: cir.func {{.*}}@_Z12callerHiWordl(%arg0: !s64i {{.*}}) -> (!s64i
+// CIR:   %[[COERCE:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_HiWord>
+// CIR:   %[[TMP:.+]] = cir.alloca "agg.tmp0" align(8) : !cir.ptr<!rec_HiWord>
 // CIR:   %[[RET:.+]] = cir.call @_Z10giveHiWordl(
 // CIR:   %[[ROFF:.+]] = cir.const #cir.int<8> : !s64i
 // CIR:   %[[RGEP:.+]] = cir.ptr_stride %{{.+}}, %[[ROFF]]
 // CIR:   %[[RPTR:.+]] = cir.cast bitcast %[[RGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR:   cir.store %[[RET]], %[[RPTR]] : !s64i, !cir.ptr<!s64i>
+// CIR:   cir.copy %[[COERCE]] align(8) to %[[TMP]] align(8) : !cir.ptr<!rec_HiWord>
 // CIR:   %[[AOFF:.+]] = cir.const #cir.int<8> : !s64i
 // CIR:   %[[AGEP:.+]] = cir.ptr_stride %{{.+}}, %[[AOFF]]
 // CIR:   %[[APTR:.+]] = cir.cast bitcast %[[AGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
-// CIR:   %[[AVAL:.+]] = cir.load %[[APTR]] : !cir.ptr<!s64i>, !s64i
+// CIR:   %[[AVAL:.+]] = cir.load align(8) %[[APTR]] : !cir.ptr<!s64i>, !s64i
 // CIR:   %{{.+}} = cir.call @_Z10takeHiWord6HiWord(%[[AVAL]])
 // LLVM: define dso_local noundef i64 @_Z12callerHiWordl(i64 noundef %{{[^,)]+}})
 // LLVM:   %[[RET:.+]] = call i64 @_Z10giveHiWordl(i64 noundef %{{.+}})

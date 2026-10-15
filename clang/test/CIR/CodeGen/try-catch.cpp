@@ -1381,9 +1381,9 @@ int init_catch_param_with_type_int() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z30init_catch_param_with_type_intv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[X_ADDR:.*]] = alloca i32, align 4
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
 // LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[X_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
@@ -1523,9 +1523,9 @@ int init_catch_param_with_type_int_ptr() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z34init_catch_param_with_type_int_ptrv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[X_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
 // LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[X_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
@@ -1666,9 +1666,9 @@ int init_catch_param_with_ref_to_ptr_to_non_record() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z46init_catch_param_with_ref_to_ptr_to_non_recordv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
 // LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
