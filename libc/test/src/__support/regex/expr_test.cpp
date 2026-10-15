@@ -16,16 +16,20 @@
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::regex::Expr;
+using LIBC_NAMESPACE::regex::ExprId;
 using LIBC_NAMESPACE::regex::ExprKind;
 using LIBC_NAMESPACE::regex::ExprPool;
+using LIBC_NAMESPACE::regex::INVALID_EXPR_ID;
 
 TEST(LlvmLibcRegexExprTest, Interning) {
   ExprPool pool;
+  EXPECT_EQ(sizeof(Expr), size_t(16));
+  EXPECT_EQ(pool.allocated_bytes(), size_t(0));
   auto lit_a = pool.make_lit('a');
   ASSERT_TRUE(lit_a.has_value());
   auto lit_a_2 = pool.make_lit('a');
   ASSERT_TRUE(lit_a_2.has_value());
-  // Hash-consing: same literal should return the same pointer.
+  // Hash-consing: same literal should return the same ExprId.
   EXPECT_EQ(lit_a.value(), lit_a_2.value());
 
   auto lit_b = pool.make_lit('b');
@@ -35,10 +39,13 @@ TEST(LlvmLibcRegexExprTest, Interning) {
   auto empty_set_1 = pool.empty_set();
   auto empty_set_2 = pool.empty_set();
   EXPECT_EQ(empty_set_1.value(), empty_set_2.value());
+  EXPECT_FALSE(pool.is_nullable(empty_set_1.value()));
 
   auto empty_str_1 = pool.empty_str();
   auto empty_str_2 = pool.empty_str();
   EXPECT_EQ(empty_str_1.value(), empty_str_2.value());
+  EXPECT_TRUE(pool.is_nullable(empty_str_1.value()));
+  EXPECT_LE(pool.allocated_bytes(), size_t(1024));
 }
 
 TEST(LlvmLibcRegexExprTest, RecursiveInterning) {
@@ -77,6 +84,7 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesConcat) {
 TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAlt) {
   ExprPool pool;
   auto lit_a = pool.make_lit('a').value();
+  auto lit_b = pool.make_lit('b').value();
   auto empty_set = pool.empty_set().value();
 
   // (Ø | R) or (R | Ø) => R
@@ -85,15 +93,30 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAlt) {
 
   // (R | R) => R (Idempotency)
   EXPECT_EQ(pool.make_alt(lit_a, lit_a).value(), lit_a);
+
+  // (A | B) == (B | A) (Commutativity)
+  EXPECT_EQ(pool.make_alt(lit_a, lit_b).value(),
+            pool.make_alt(lit_b, lit_a).value());
+}
+
+TEST(LlvmLibcRegexExprTest, HermeticHundredPools) {
+  for (size_t i = 0; i < 100; ++i) {
+    ExprPool pool;
+    ExprId a = pool.make_lit('a').value();
+    ExprId b = pool.make_lit('b').value();
+    ExprId ab = pool.make_concat(a, b).value();
+    EXPECT_NE(ab, INVALID_EXPR_ID);
+    EXPECT_LE(pool.allocated_bytes(), size_t(1024));
+  }
 }
 
 TEST(LlvmLibcRegexExprTest, MemoryLimits) {
   ExprPool pool;
   // Verify that the pool correctly enforces MAX_NODE_LIMIT (10000 nodes).
-  // We exceed the limit by creating a deep chain of unique concatenations.
+  // EmptySet (1), EmptyStr (2), and 'a' (3) occupy the first 3 slots.
   auto lit_a = pool.make_lit('a').value();
   auto current = lit_a;
-  for (size_t i = 0; i < 9999; ++i) {
+  for (size_t i = 0; i < 9997; ++i) {
     auto next = pool.make_concat(lit_a, current);
     ASSERT_TRUE(next.has_value());
     current = next.value();

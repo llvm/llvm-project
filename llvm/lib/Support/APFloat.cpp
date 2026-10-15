@@ -3813,11 +3813,15 @@ void IEEEFloat::initFromPPCDoubleDoubleLegacyAPInt(const APInt &api) {
   // Unless we have a special case, add in second double.
   if (isFiniteNonZero()) {
     IEEEFloat v(APFloatBase::semIEEEdouble, APInt(64, i2));
-    fs = v.convert(APFloatBase::semPPCDoubleDoubleLegacy, rmNearestTiesToEven,
-                   &losesInfo);
-    assert(fs == opOK && !losesInfo);
+    // The first double determines the category, so ignore a non-canonical
+    // second double.
+    if (v.isFinite()) {
+      fs = v.convert(APFloatBase::semPPCDoubleDoubleLegacy, rmNearestTiesToEven,
+                     &losesInfo);
+      assert(fs == opOK && !losesInfo);
 
-    add(v, rmNearestTiesToEven);
+      add(v, rmNearestTiesToEven);
+    }
   }
 }
 

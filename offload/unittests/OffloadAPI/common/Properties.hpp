@@ -128,7 +128,8 @@ inline const DeviceInfoProperties RelevantGTCapabilitiesProperties =
                                       Prop_RelevantGTCapabilites);
 
 inline const DeviceInfoProp PropIrrelevantForHostGTUint32 = {
-    OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF, OL_DEVICE_INFO_DRIVER_ID};
+    OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF, OL_DEVICE_INFO_DRIVER_ID,
+    OL_DEVICE_INFO_MEMORY_CLOCK_RATE};
 inline const DeviceInfoProperties IrrelevantForHostGTUint32Properties =
     createPropertiesWithSizeContainer(sizeof(uint32_t),
                                       PropIrrelevantForHostGTUint32);
