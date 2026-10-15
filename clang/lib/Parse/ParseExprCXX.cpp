@@ -206,7 +206,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         return false;
 
       TypeSourceInfo *PatternTSI = nullptr;
-      QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType(), &PatternTSI);
+      QualType Pattern =
+          Sema::GetTypeFromParser(DS.getRepAsType(), &PatternTSI);
       QualType Type = Actions.ActOnPackIndexingType(
           Pattern, DS.getPackIndexingExpr(), DS.getBeginLoc());
 

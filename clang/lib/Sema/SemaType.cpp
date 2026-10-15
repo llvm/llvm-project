@@ -10201,8 +10201,7 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
 }
 
 QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                     SourceLocation Loc,
-                                     bool FullySubstituted,
+                                     SourceLocation Loc, bool FullySubstituted,
                                      ArrayRef<QualType> Expansions) {
 
   UnsignedOrNone Index = std::nullopt;
