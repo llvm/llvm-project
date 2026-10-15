@@ -242,10 +242,8 @@ void macho::writeMapFile() {
   os << "# Address\tSize    \tFile  Name\n";
   for (const OutputSegment *seg : outputSegments) {
     for (const OutputSection *osec : seg->getSections()) {
-      if (auto *textOsec = dyn_cast<TextOutputSection>(osec)) {
-        printIsecArrSyms(textOsec->inputs, textOsec->getThunks());
-      } else if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
-        printIsecArrSyms(concatOsec->inputs);
+      if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
+        printIsecArrSyms(concatOsec->inputs, concatOsec->getExtenders());
       } else if (is_contained(in.cStringSections, osec)) {
         const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);
         uint64_t lastAddr = 0; // strings will never start at address 0, so this

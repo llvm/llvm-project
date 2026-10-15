@@ -12,6 +12,7 @@
 #include "OutputSection.h"
 #include "Symbols.h"
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 
 #include <limits>
@@ -38,11 +39,30 @@ constexpr const char text[] = "__TEXT";
 class OutputSection;
 class InputSection;
 
+struct OutputSectionAttributes {
+  uint64_t size = 0;
+  // These flags answer two questions without relying on section attributes:
+  // 1. Should this section count as code when estimating the branch span?
+  //    Either flag being true is sufficient.
+  // 2. Can this section host extenders, and does it contain branches that
+  //    may need extensions? Only branch-source sections qualify; their
+  //    input-section boundaries are eligible insertion points.
+  bool containsBranchTarget = false;
+  // __objc_stubs never set this flag by design
+  bool containsBranchSource = false;
+};
+using OutputSectionAttributesMap =
+    llvm::DenseMap<const OutputSection *, OutputSectionAttributes>;
+
 class OutputSegment {
 public:
+  void computeOsecAttrs(OutputSectionAttributesMap &osecAttrs);
+  // Pass nullptr for __LINKEDIT, which cannot host branch extensions.
+  void finalize(const OutputSectionAttributesMap *osecAttrs);
   void addOutputSection(OutputSection *os);
   void sortOutputSections();
   void assignAddressesToStartEndSymbols();
+  bool needsBranchExtension(const OutputSectionAttributesMap &osecAttrs) const;
 
   const std::vector<OutputSection *> &getSections() const { return sections; }
   size_t numNonHiddenSections() const;
@@ -57,8 +77,6 @@ public:
   uint32_t initProt = 0;
   uint32_t flags = 0;
   uint8_t index;
-  bool needsThunks = false;
-
   llvm::TinyPtrVector<Defined *> segmentStartSymbols;
   llvm::TinyPtrVector<Defined *> segmentEndSymbols;
 

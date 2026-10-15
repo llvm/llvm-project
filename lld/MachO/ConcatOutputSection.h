@@ -11,12 +11,16 @@
 
 #include "InputSection.h"
 #include "OutputSection.h"
-#include "Symbols.h"
 #include "lld/Common/LLVM.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
+
+#include <optional>
+#include <utility>
 
 namespace lld::macho {
+class Defined;
+class InputSectionBoundary;
 
 // Linking multiple files will inevitably mean resolving sections in different
 // files that are labeled with the same segment and section name. This class
@@ -36,94 +40,33 @@ public:
   uint64_t getSize() const override { return size; }
   uint64_t getFileSize() const override { return fileSize; }
 
-  // Assign values to InputSection::outSecOff. In contrast to TextOutputSection,
-  // which does this in its implementation of `finalize()`, we can do this
-  // without `finalize()`'s sequential guarantees detailed in the block comment
-  // of `OutputSection::finalize()`.
-  virtual void finalizeContents();
+  // Assign input offsets and finalize planned branch extenders.
+  void finalizeContents();
+
+  // The planner keeps this range alive until finalizeContents() consumes it.
+  void setBoundaries(ArrayRef<InputSectionBoundary> boundaries,
+                     uint64_t expectedSize);
+  ArrayRef<ConcatInputSection *> getExtenders() const { return extenders; }
 
   void addInput(ConcatInputSection *input);
   void writeTo(uint8_t *buf) const override;
 
   static bool classof(const OutputSection *sec) {
-    return sec->kind() == ConcatKind || sec->kind() == TextKind;
+    return sec->kind() == ConcatKind;
   }
 
   static ConcatOutputSection *getOrCreateForInput(const InputSection *);
 
   std::vector<ConcatInputSection *> inputs;
 
-protected:
+private:
   size_t size = 0;
   uint64_t fileSize = 0;
+  ArrayRef<InputSectionBoundary> boundaries;
+  std::optional<uint64_t> plannedSize;
+  std::vector<ConcatInputSection *> extenders;
   void finalizeOne(ConcatInputSection *);
-
-private:
   void finalizeFlags(InputSection *input);
-};
-
-// We maintain one ThunkInfo per real function.
-//
-// The "active thunk" is represented by the sym/isec pair that
-// turns-over during finalize(): as the call-site address advances,
-// the active thunk goes out of branch-range, and we create a new
-// thunk to take its place.
-//
-// The remaining members -- bools and counters -- apply to the
-// collection of thunks associated with the real function.
-
-struct ThunkInfo {
-  // These denote the active thunk:
-  Defined *sym = nullptr;             // private-extern symbol for active thunk
-  ConcatInputSection *isec = nullptr; // input section for active thunk
-
-  // The following value is cumulative across all thunks on this function
-  uint8_t sequence = 0; // how many thunks created so-far?
-};
-
-// ConcatOutputSections that contain code (text) require special handling to
-// support thunk insertion.
-class TextOutputSection : public ConcatOutputSection {
-public:
-  explicit TextOutputSection(StringRef name)
-      : ConcatOutputSection(name, TextKind) {}
-  void finalizeContents() override {}
-  void finalize() override;
-  bool needsThunks() const;
-  ArrayRef<ConcatInputSection *> getThunks() const { return thunks; }
-  void writeTo(uint8_t *buf) const override;
-
-  static bool classof(const OutputSection *sec) {
-    return sec->kind() == TextKind;
-  }
-
-private:
-  std::vector<ConcatInputSection *> thunks;
-  /// \return true if the target in \p r is in range from the location in \p
-  /// isec. If the target isec is not finalized, \return false.
-  bool isTargetKnownInRange(const ConcatInputSection &isec,
-                            const Relocation &r) const;
-  /// If there exists a thunk in range of the target in \p r, \return that
-  /// thunk.
-  Defined *getThunkInRange(const ConcatInputSection &isec, const Relocation &r,
-                           const ThunkInfo &thunkInfo) const;
-  /// Update \p r to target \p thunk which is guaranteed to be in range.
-  void updateBranchTargetToThunk(Relocation &r, Defined *thunk);
-  /// Create a new thunk and update \p r to target the new thunk.
-  void createThunk(const ConcatInputSection &isec, Relocation &r,
-                   ThunkInfo &thunkInfo);
-  /// \return the largest possible stub section end VA or \p std::nullopt if we
-  /// can't estimate this yet. Used to determine if stub symbol targets are in
-  /// range.
-  std::optional<uint64_t> estimateStubsEndVA(unsigned numPotentialThunks) const;
-  /// \return true if the target in \p r is in __stubs or __objc_stubs and in
-  /// range from the location in \p isec. \p estimatedStubsEnd is the estimated
-  /// VA of the end of the last stubs section.
-  bool isTargetStubsAndInRange(const ConcatInputSection &isec,
-                               const Relocation &r,
-                               std::optional<uint64_t> estimatedStubsEnd) const;
-  /// The number of relocations updated to point to thunks.
-  size_t thunkCallCount = 0;
 };
 
 NamePair maybeRenameSection(NamePair key);
@@ -131,48 +74,6 @@ NamePair maybeRenameSection(NamePair key);
 // Output sections are added to output segments in iteration order
 // of ConcatOutputSection, so must have deterministic iteration order.
 extern llvm::MapVector<NamePair, ConcatOutputSection *> concatOutputSections;
-
-// Branch-extension thunks are keyed by both the target referent and the
-// branch relocation's addend.  Two call sites that branch to the same
-// symbol with different addends (e.g. `bl _func` and `bl _func+8`) target
-// distinct addresses and therefore need distinct thunks.
-//
-// After ICF, multiple Defined symbols may point to the same (isec, value)
-// yet remain as distinct Symbol pointers.  The equality predicate below
-// canonicalizes Defined symbols by (isec, value) so that ICF-folded copies
-// still share a single thunkMap entry when their addends match.
-struct ThunkKey {
-  Symbol *sym;
-  int64_t addend;
-
-  ThunkKey(Symbol *sym, int64_t addend) : sym(sym), addend(addend) {}
-  ThunkKey(Relocation &r) : ThunkKey(cast<Symbol *>(r.referent), r.addend) {}
-
-  bool operator==(const ThunkKey &other) const {
-    if (addend != other.addend)
-      return false;
-    if (sym == other.sym)
-      return true;
-    const auto *dl = dyn_cast<Defined>(sym);
-    const auto *dr = dyn_cast<Defined>(other.sym);
-    if (dl && dr)
-      return dl->isec() == dr->isec() && dl->value == dr->value;
-    return false;
-  }
-};
-
-struct ThunkMapKeyInfo {
-  static unsigned getHashValue(const ThunkKey &k) {
-    if (const auto *d = dyn_cast<Defined>(k.sym))
-      return llvm::hash_combine(d->isec(), d->value, k.addend);
-    return llvm::hash_combine(k.sym, k.addend);
-  }
-  static bool isEqual(const ThunkKey &lhs, const ThunkKey &rhs) {
-    return lhs == rhs;
-  }
-};
-
-extern llvm::DenseMap<ThunkKey, ThunkInfo, ThunkMapKeyInfo> thunkMap;
 
 } // namespace lld::macho
 

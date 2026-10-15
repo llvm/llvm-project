@@ -1,8 +1,10 @@
 # REQUIRES: aarch64
+
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/bar.s -o %t/bar.o
-# RUN: %lld -dylib -arch arm64 -lSystem -o %t/out %t/foo.o %t/bar.o
+# RUN: %lld -dylib -arch arm64 -lSystem -o %t/out %t/foo.o %t/bar.o \
+# RUN:   -arm64-islands-max-hops 0
 
 # RUN: llvm-objdump --macho --syms %t/out | FileCheck %s
 # CHECK: _bar.thunk.0

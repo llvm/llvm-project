@@ -92,6 +92,23 @@ def icf_eq: Joined<["--"], "icf=">,
             "  all         - Fold all identical functions">,
     MetaVarName<"[none,safe,safe_thunks,all]">,
     Group<grp_lld>;
+def arm64_islands_max_hops : Separate<["-"], "arm64-islands-max-hops">,
+    HelpText<"Maximum ARM64 island hops (range: 0 to 4294967295; default: 2). "
+             "Use 0 to disable islands">,
+    MetaVarName<"<N>">,
+    Group<grp_lld>;
+def arm64_thunks_max_hops : Separate<["-"], "arm64-thunks-max-hops">,
+    HelpText<"Maximum ARM64 thunk hops (range: 0 to 4294967295; default: 1). "
+             "Use 0 to disable thunks">,
+    MetaVarName<"<N>">,
+    Group<grp_lld>;
+def arm64_branch_extension_coarse_boundary_spacing :
+    Separate<["-"], "arm64-branch-extension-coarse-boundary-spacing">,
+    HelpText<"Minimum spacing in bytes between ARM64 branch-extension coarse "
+             "boundaries (range: 0 to 4294967295; default: 1048576). "
+             "Use 0 to include every input boundary">,
+    MetaVarName<"<N>">,
+    Group<grp_lld>;
 def keep_icf_stabs: Joined<["--"], "keep-icf-stabs">,
     HelpText<"Generate STABS entries for symbols folded by ICF. These entries can then be used by dsymutil to discover the address range where folded symbols are located.">,
     Group<grp_lld>;
@@ -1111,15 +1128,6 @@ defm tail_merge_strings
     : BB<"tail-merge-strings", "Enable string tail merging",
          "Disable string tail merging to improve link-time performance">,
       Group<grp_rare>;
-def slop_scale_eq
-    : Joined<["--"], "slop_scale=">,
-      MetaVarName<"<unsigned_int>">,
-      HelpText<"Specify the slop scale. Default value is 256. If your binary "
-               "has too many consecutive branch instructions resulting in "
-               "thunk-range overrun, then you need to increase this value to a "
-               "higher value, such as 512 or 1024, etc">,
-      Group<grp_rare>;
-
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;
 
 def lazy_framework : Separate<["-"], "lazy_framework">,
@@ -1501,6 +1509,12 @@ def new_linker : Flag<["-"], "new_linker">,
     Group<grp_ignored>;
 
 def grp_ignored_silently : OptionGroup<"ignored_silently">, HelpText<"IGNORED SILENTLY">;
+
+def slop_scale_eq : Joined<["--"], "slop_scale=">,
+    MetaVarName<"<unsigned_int>">,
+    HelpText<"Ignored for compatibility; branch extension no longer reserves slop">,
+    Flags<[HelpHidden]>,
+    Group<grp_ignored_silently>;
 
 def objc_abi_version : Separate<["-"], "objc_abi_version">,
     HelpText<"This option only applies to i386 in ld64">,
