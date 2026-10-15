@@ -229,6 +229,17 @@ template <class ELFT> struct FunctionCallGraphInfo {
   bool IsIndirectTarget;
 };
 
+// The relocation that applies to the address field of a .stack_sizes entry in
+// a relocatable file.
+template <class ELFT> struct StackSizeRelocation {
+  const Relocation<ELFT> &R;
+  // The symbol of the relocation, if it could be read, and its symbol table.
+  const typename ELFT::Sym *Sym;
+  const typename ELFT::Shdr &SymTab;
+  // The value stored in the address field.
+  uint64_t FieldValue;
+};
+
 template <class ELFT> class MipsGOTParser;
 
 template <typename ELFT> class ELFDumper : public ObjDumper {
@@ -363,17 +374,19 @@ protected:
   bool printFunctionStackSize(uint64_t SymValue,
                               std::optional<const Elf_Shdr *> FunctionSec,
                               const Elf_Shdr &StackSizeSec, DataExtractor Data,
-                              uint64_t *Offset);
+                              uint64_t *Offset,
+                              const StackSizeRelocation<ELFT> *Reloc);
   void printStackSize(const Relocation<ELFT> &R, const Elf_Shdr &RelocSec,
                       unsigned Ndx, const Elf_Shdr *SymTab,
                       const Elf_Shdr *FunctionSec, const Elf_Shdr &StackSizeSec,
                       const RelocationResolver &Resolver, DataExtractor Data);
   // Prints a stack size entry. Address is the function's address: the value
   // stored in the entry in a linked file, or the value that its relocation
-  // resolves to in a relocatable file.
+  // resolves to in a relocatable file. Reloc is that relocation, if any.
   virtual void printStackSizeEntry(uint64_t Size,
                                    ArrayRef<std::string> FuncNames,
-                                   uint64_t Address) = 0;
+                                   uint64_t Address,
+                                   const StackSizeRelocation<ELFT> *Reloc) = 0;
 
   void printRelocatableStackSizes(std::function<void()> PrintHeader);
   void printNonRelocatableStackSizes(std::function<void()> PrintHeader);
@@ -754,7 +767,8 @@ private:
                                     const Twine &Label, unsigned EntriesNum);
 
   void printStackSizeEntry(uint64_t Size, ArrayRef<std::string> FuncNames,
-                           uint64_t Address) override;
+                           uint64_t Address,
+                           const StackSizeRelocation<ELFT> *Reloc) override;
 
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
@@ -811,9 +825,16 @@ private:
   void printProgramHeaders() override;
   void printSectionMapping() override {}
   void printStackSizeEntry(uint64_t Size, ArrayRef<std::string> FuncNames,
-                           uint64_t Address) override;
+                           uint64_t Address,
+                           const StackSizeRelocation<ELFT> *Reloc) override;
   void printCallGraphRelocation(const CallGraphFunc<ELFT> &Func,
                                 const Elf_Shdr &RelSec, const Elf_Shdr &SymTab);
+  // Prints R as a Relocation object: its symbol index, the name of its symbol
+  // Sym exactly as recorded in st_name if Sym could be read, and its addend.
+  // FieldValue is the value stored in the field that R applies to, which is
+  // the addend of a relocation without an explicit one.
+  void printRelocationObject(const Relocation<ELFT> &R, const Elf_Sym *Sym,
+                             const Elf_Shdr &SymTab, uint64_t FieldValue);
   // Returns the names of the functions at the address that the relocation for
   // Func resolves to. Sym is the symbol of the relocation, and only functions
   // in its section are looked up.
@@ -7238,7 +7259,8 @@ SmallVector<uint32_t> ELFDumper<ELFT>::getSymbolIndexesForFunctionAddress(
 template <class ELFT>
 bool ELFDumper<ELFT>::printFunctionStackSize(
     uint64_t SymValue, std::optional<const Elf_Shdr *> FunctionSec,
-    const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
+    const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset,
+    const StackSizeRelocation<ELFT> *Reloc) {
   // As in --call-graph-info, clear the Thumb bit, which is not part of the
   // function's address.
   if (Obj.getHeader().e_machine == ELF::EM_ARM)
@@ -7262,21 +7284,21 @@ bool ELFDumper<ELFT>::printFunctionStackSize(
   }
 
   if (FuncSymIndexes.empty()) {
-    printStackSizeEntry(StackSize, {"?"}, SymValue);
+    printStackSizeEntry(StackSize, {"?"}, SymValue, Reloc);
   } else {
     SmallVector<std::string> FuncSymNames;
     for (uint32_t Index : FuncSymIndexes)
       FuncSymNames.push_back(this->getStaticSymbolName(Index));
-    printStackSizeEntry(StackSize, FuncSymNames, SymValue);
+    printStackSizeEntry(StackSize, FuncSymNames, SymValue, Reloc);
   }
 
   return true;
 }
 
 template <class ELFT>
-void GNUELFDumper<ELFT>::printStackSizeEntry(uint64_t Size,
-                                             ArrayRef<std::string> FuncNames,
-                                             uint64_t /*Address*/) {
+void GNUELFDumper<ELFT>::printStackSizeEntry(
+    uint64_t Size, ArrayRef<std::string> FuncNames, uint64_t /*Address*/,
+    const StackSizeRelocation<ELFT> * /*Reloc*/) {
   OS.PadToColumn(2);
   OS << format_decimal(Size, 11);
   OS.PadToColumn(18);
@@ -7331,11 +7353,12 @@ void ELFDumper<ELFT>::printStackSize(const Relocation<ELFT> &R,
     return;
   }
 
-  uint64_t SymValue = Resolver(R.Type, Offset, RelocSymValue,
-                               Data.getUnsigned(&Offset, sizeof(Elf_Addr)),
+  uint64_t FieldValue = Data.getUnsigned(&Offset, sizeof(Elf_Addr));
+  uint64_t SymValue = Resolver(R.Type, R.Offset, RelocSymValue, FieldValue,
                                R.Addend.value_or(0));
+  StackSizeRelocation<ELFT> Reloc{R, Sym, *SymTab, FieldValue};
   this->printFunctionStackSize(SymValue, FunctionSec, StackSizeSec, Data,
-                               &Offset);
+                               &Offset, &Reloc);
 }
 
 template <class ELFT>
@@ -7362,7 +7385,7 @@ void ELFDumper<ELFT>::printNonRelocatableStackSizes(
       }
       uint64_t SymValue = Data.getUnsigned(&Offset, sizeof(Elf_Addr));
       if (!printFunctionStackSize(SymValue, /*FunctionSec=*/std::nullopt, Sec,
-                                  Data, &Offset))
+                                  Data, &Offset, /*Reloc=*/nullptr))
         break;
     }
   }
@@ -8461,14 +8484,33 @@ void LLVMELFDumper<ELFT>::printCallGraphRelocation(
     const CallGraphFunc<ELFT> &Func, const Elf_Shdr &RelSec,
     const Elf_Shdr &SymTab) {
   const Relocation<ELFT> &R = *Func.Reloc;
+  const Elf_Sym *Sym = nullptr;
+  Expected<RelSymbol<ELFT>> TargetOrErr = this->getRelocationTarget(R, &SymTab);
+  if (!TargetOrErr)
+    this->reportUniqueWarning(TargetOrErr.takeError());
+  else
+    Sym = TargetOrErr->Sym;
+
+  // As with Address, Names comes before the Relocation object.
+  if (Sym) {
+    SmallVector<std::string> Names =
+        getCallGraphTargetNames(Func, RelSec, SymTab, *Sym);
+    if (!Names.empty())
+      W.printList("Names", Names);
+  }
+  printRelocationObject(R, Sym, SymTab, Func.FieldValue);
+}
+
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printRelocationObject(const Relocation<ELFT> &R,
+                                                const Elf_Sym *Sym,
+                                                const Elf_Shdr &SymTab,
+                                                uint64_t FieldValue) {
   // Print the symbol name exactly as recorded in st_name. RelSymbol::Name is
   // not used because it is demangled with --demangle, and is made up from the
   // section name for an unnamed STT_SECTION symbol.
   StringRef SymbolName;
-  Expected<RelSymbol<ELFT>> TargetOrErr = this->getRelocationTarget(R, &SymTab);
-  if (!TargetOrErr) {
-    this->reportUniqueWarning(TargetOrErr.takeError());
-  } else if (const Elf_Sym *Sym = TargetOrErr->Sym) {
+  if (Sym) {
     Expected<StringRef> StrTabOrErr = this->Obj.getStringTableForSymtab(SymTab);
     if (!StrTabOrErr)
       this->reportUniqueWarning(StrTabOrErr.takeError());
@@ -8476,12 +8518,6 @@ void LLVMELFDumper<ELFT>::printCallGraphRelocation(
       SymbolName = *NameOrErr;
     else
       this->reportUniqueWarning(NameOrErr.takeError());
-
-    // As with Address, Names comes before the Relocation object.
-    SmallVector<std::string> Names =
-        getCallGraphTargetNames(Func, RelSec, SymTab, *Sym);
-    if (!Names.empty())
-      W.printList("Names", Names);
   }
 
   DictScope D(W, "Relocation");
@@ -8492,9 +8528,9 @@ void LLVMELFDumper<ELFT>::printCallGraphRelocation(
       W.printString("DemangledName", demangle(SymbolName));
   }
   // Without an explicit addend, e.g. for SHT_REL, the addend is the value
-  // stored in the address field.
+  // stored in the field.
   int64_t Addend = R.Addend.value_or(
-      SignExtend64<sizeof(typename ELFT::uint) * 8>(Func.FieldValue));
+      SignExtend64<sizeof(typename ELFT::uint) * 8>(FieldValue));
   if (Addend != 0)
     W.printNumber("Addend", Addend);
 }
@@ -9005,14 +9041,17 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printStackSizes() {
 }
 
 template <class ELFT>
-void LLVMELFDumper<ELFT>::printStackSizeEntry(uint64_t Size,
-                                              ArrayRef<std::string> FuncNames,
-                                              uint64_t Address) {
+void LLVMELFDumper<ELFT>::printStackSizeEntry(
+    uint64_t Size, ArrayRef<std::string> FuncNames, uint64_t Address,
+    const StackSizeRelocation<ELFT> *Reloc) {
   DictScope D(W, "Entry");
   W.printList("Functions", FuncNames);
-  // In a linked file, the function is identified by its address, as in
-  // --call-graph-info.
-  if (this->Obj.getHeader().e_type != ELF::ET_REL)
+  // As in --call-graph-info, the function is identified by the relocation for
+  // the entry in a relocatable file, and by its address otherwise.
+  if (Reloc)
+    printRelocationObject(Reloc->R, Reloc->Sym, Reloc->SymTab,
+                          Reloc->FieldValue);
+  else
     W.printHex("Address", Address);
   W.printHex("Size", Size);
 }

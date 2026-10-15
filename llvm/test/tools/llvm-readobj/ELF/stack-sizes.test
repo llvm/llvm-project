@@ -1,10 +1,13 @@
 ## Check that we correctly display the contents of the .stack_sizes section
-## in a relocatable object file.
+## in a relocatable object file, with the relocation for each function in the
+## LLVM and JSON output.
 
 # RUN: yaml2obj --docnum=1 %s -o %t01
 # RUN: llvm-readelf --stack-sizes %t01 \
 # RUN:   | FileCheck %s --check-prefix=RELOC-GNU --strict-whitespace --match-full-lines
 # RUN: llvm-readobj --stack-sizes %t01 | FileCheck %s --check-prefix=RELOC-LLVM
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --stack-sizes %t01 \
+# RUN:   | FileCheck %s --check-prefix=RELOC-JSON
 
 #      RELOC-GNU:         Size     Functions
 # RELOC-GNU-NEXT:           16     referenced_by_symbol_foo
@@ -15,17 +18,44 @@
 # RELOC-LLVM:      StackSizes [
 # RELOC-LLVM-NEXT:   Entry {
 # RELOC-LLVM-NEXT:     Functions: [referenced_by_symbol_foo]
+# RELOC-LLVM-NEXT:     Relocation {
+# RELOC-LLVM-NEXT:       SymbolIndex: 3{{$}}
+# RELOC-LLVM-NEXT:       SymbolName: referenced_by_symbol_foo
+# RELOC-LLVM-NEXT:     }
 # RELOC-LLVM-NEXT:     Size: 0x10
 # RELOC-LLVM-NEXT:   }
 # RELOC-LLVM-NEXT:   Entry {
 # RELOC-LLVM-NEXT:     Functions: [referenced_via_section_bar]
+# RELOC-LLVM-NEXT:     Relocation {
+# RELOC-LLVM-NEXT:       SymbolIndex: 2{{$}}
+# RELOC-LLVM-NEXT:       SymbolName: .text
+# RELOC-LLVM-NEXT:       Addend: 16{{$}}
+# RELOC-LLVM-NEXT:     }
 # RELOC-LLVM-NEXT:     Size: 0x20
 # RELOC-LLVM-NEXT:   }
 # RELOC-LLVM-NEXT:   Entry {
 # RELOC-LLVM-NEXT:     Functions: [separate_text_section_baz]
+# RELOC-LLVM-NEXT:     Relocation {
+# RELOC-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# RELOC-LLVM-NEXT:       SymbolName: separate_text_section_baz
+# RELOC-LLVM-NEXT:     }
 # RELOC-LLVM-NEXT:     Size: 0x8
 # RELOC-LLVM-NEXT:   }
 # RELOC-LLVM-NEXT: ]
+
+# RELOC-JSON:      "StackSizes": [
+# RELOC-JSON-NEXT:   {
+# RELOC-JSON-NEXT:     "Entry": {
+# RELOC-JSON-NEXT:       "Functions": [
+# RELOC-JSON-NEXT:         "referenced_by_symbol_foo"
+# RELOC-JSON-NEXT:       ],
+# RELOC-JSON-NEXT:       "Relocation": {
+# RELOC-JSON-NEXT:         "SymbolIndex": 3,
+# RELOC-JSON-NEXT:         "SymbolName": "referenced_by_symbol_foo"
+# RELOC-JSON-NEXT:       },
+# RELOC-JSON-NEXT:       "Size": 16
+# RELOC-JSON-NEXT:     }
+# RELOC-JSON-NEXT:   },
 
 --- !ELF
 FileHeader:
@@ -122,17 +152,27 @@ Symbols:
 # SYMTAB-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 3
 # SYMTAB-LLVM-NEXT:   Entry {
 # SYMTAB-LLVM-NEXT:     Functions: [?]
+# SYMTAB-LLVM-NEXT:     Relocation {
+# SYMTAB-LLVM-NEXT:       SymbolIndex: 3{{$}}
+# SYMTAB-LLVM-NEXT:     }
 # SYMTAB-LLVM-NEXT:     Size: 0x10
 # SYMTAB-LLVM-NEXT:   }
 # SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 5: unable to read an entry with index 2 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
 # SYMTAB-LLVM-NEXT:   Entry {
 # SYMTAB-LLVM-NEXT:     Functions: [?]
+# SYMTAB-LLVM-NEXT:     Relocation {
+# SYMTAB-LLVM-NEXT:       SymbolIndex: 2{{$}}
+# SYMTAB-LLVM-NEXT:       Addend: 16{{$}}
+# SYMTAB-LLVM-NEXT:     }
 # SYMTAB-LLVM-NEXT:     Size: 0x20
 # SYMTAB-LLVM-NEXT:   }
 # SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 0 in SHT_RELA section with index 6: unable to read an entry with index 1 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
 # SYMTAB-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 4
 # SYMTAB-LLVM-NEXT:   Entry {
 # SYMTAB-LLVM-NEXT:     Functions: [?]
+# SYMTAB-LLVM-NEXT:     Relocation {
+# SYMTAB-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# SYMTAB-LLVM-NEXT:     }
 # SYMTAB-LLVM-NEXT:     Size: 0x8
 # SYMTAB-LLVM-NEXT:   }
 # SYMTAB-LLVM-NEXT: ]
@@ -161,16 +201,29 @@ Symbols:
 # SYM-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 3
 # SYM-LLVM-NEXT:   Entry {
 # SYM-LLVM-NEXT:     Functions: [?]
+# SYM-LLVM-NEXT:     Relocation {
+# SYM-LLVM-NEXT:       SymbolIndex: 3{{$}}
+# SYM-LLVM-NEXT:       SymbolName: referenced_by_symbol_foo
+# SYM-LLVM-NEXT:     }
 # SYM-LLVM-NEXT:     Size: 0x10
 # SYM-LLVM-NEXT:   }
 # SYM-LLVM-NEXT:   Entry {
 # SYM-LLVM-NEXT:     Functions: [?]
+# SYM-LLVM-NEXT:     Relocation {
+# SYM-LLVM-NEXT:       SymbolIndex: 2{{$}}
+# SYM-LLVM-NEXT:       SymbolName: .text
+# SYM-LLVM-NEXT:       Addend: 16{{$}}
+# SYM-LLVM-NEXT:     }
 # SYM-LLVM-NEXT:     Size: 0x20
 # SYM-LLVM-NEXT:   }
 # SYM-LLVM-NEXT: warning: '[[FILE]]': cannot identify the section for relocation symbol 'separate_text_section_baz': invalid section index: 255
 # SYM-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 4
 # SYM-LLVM-NEXT:   Entry {
 # SYM-LLVM-NEXT:     Functions: [?]
+# SYM-LLVM-NEXT:     Relocation {
+# SYM-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# SYM-LLVM-NEXT:       SymbolName: separate_text_section_baz
+# SYM-LLVM-NEXT:     }
 # SYM-LLVM-NEXT:     Size: 0x8
 # SYM-LLVM-NEXT:   }
 # SYM-LLVM-NEXT: ]
@@ -285,11 +338,19 @@ Symbols:
 # SHORT-LLVM:     StackSizes [
 # SHORT-LLVM-NEXT:   Entry {
 # SHORT-LLVM-NEXT:     Functions: [foo]
+# SHORT-LLVM-NEXT:     Relocation {
+# SHORT-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# SHORT-LLVM-NEXT:       SymbolName: foo
+# SHORT-LLVM-NEXT:     }
 # SHORT-LLVM-NEXT:     Size: 0x8
 # SHORT-LLVM-NEXT:   }
 # SHORT-LLVM-NEXT: warning: '[[FILE]]': found invalid relocation offset (0x1) into SHT_PROGBITS section with index 2 while trying to extract a stack size entry
 # SHORT-LLVM-NEXT:   Entry {
 # SHORT-LLVM-NEXT:     Functions: [foo]
+# SHORT-LLVM-NEXT:     Relocation {
+# SHORT-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# SHORT-LLVM-NEXT:       SymbolName: foo
+# SHORT-LLVM-NEXT:     }
 # SHORT-LLVM-NEXT:     Size: 0x8
 # SHORT-LLVM-NEXT:   }
 # SHORT-LLVM-NEXT: ]
@@ -343,7 +404,8 @@ Symbols:
 # RUN: FileCheck %s < %t04-llvm.err --check-prefix=WRONGSECTION-ERR -DFILE=%t04
 
 # RUN: llvm-readelf --stack-sizes --demangle %t04 2>&1 | FileCheck %s --check-prefix=WRONGSECTION-DEMANGLE-ERR -DFILE=%t04
-# RUN: llvm-readobj --stack-sizes --demangle %t04 2>&1 | FileCheck %s --check-prefix=WRONGSECTION-DEMANGLE-ERR -DFILE=%t04
+# RUN: llvm-readobj --stack-sizes --demangle %t04 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WRONGSECTION-DEMANGLE-ERR,WRONGSECTION-DEMANGLE-LLVM -DFILE=%t04
 
 # WRONGSECTION-GNU:      Size Functions
 # WRONGSECTION-GNU-NEXT: 8 _Z3foof
@@ -351,12 +413,25 @@ Symbols:
 # WRONGSECTION-LLVM:      StackSizes [
 # WRONGSECTION-LLVM-NEXT:   Entry {
 # WRONGSECTION-LLVM-NEXT:     Functions: [_Z3foof]
+# WRONGSECTION-LLVM-NEXT:     Relocation {
+# WRONGSECTION-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# WRONGSECTION-LLVM-NEXT:       SymbolName: _Z3foof
+# WRONGSECTION-LLVM-NEXT:     }
 # WRONGSECTION-LLVM-NEXT:     Size: 0x8
 # WRONGSECTION-LLVM-NEXT:   }
 # WRONGSECTION-LLVM-NEXT: ]
 
 # WRONGSECTION-ERR:           warning: '[[FILE]]': relocation symbol '_Z3foof' is not in the expected section
 # WRONGSECTION-DEMANGLE-ERR:  warning: '[[FILE]]': relocation symbol 'foo(float)' is not in the expected section
+
+## With --demangle, the relocation's symbol name is still printed as it is in the
+## symbol table, followed by its demangled form.
+# WRONGSECTION-DEMANGLE-LLVM:      Functions: [foo(float)]
+# WRONGSECTION-DEMANGLE-LLVM-NEXT: Relocation {
+# WRONGSECTION-DEMANGLE-LLVM-NEXT:   SymbolIndex: 1{{$}}
+# WRONGSECTION-DEMANGLE-LLVM-NEXT:   SymbolName: _Z3foof
+# WRONGSECTION-DEMANGLE-LLVM-NEXT:   DemangledName: foo(float)
+# WRONGSECTION-DEMANGLE-LLVM-NEXT: }
 
 --- !ELF
 FileHeader:
@@ -513,16 +588,26 @@ Symbols:
 # BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 2
 # BADSECTION-OUT-LLVM-NEXT:   Entry {
 # BADSECTION-OUT-LLVM-NEXT:     Functions: [?]
+# BADSECTION-OUT-LLVM-NEXT:     Relocation {
+# BADSECTION-OUT-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# BADSECTION-OUT-LLVM-NEXT:       SymbolName: _Z3foof
+# BADSECTION-OUT-LLVM-NEXT:     }
 # BADSECTION-OUT-LLVM-NEXT:     Size: 0x8
 # BADSECTION-OUT-LLVM-NEXT:   }
 # BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
 # BADSECTION-OUT-LLVM-NEXT:   Entry {
 # BADSECTION-OUT-LLVM-NEXT:     Functions: [?]
+# BADSECTION-OUT-LLVM-NEXT:     Relocation {
+# BADSECTION-OUT-LLVM-NEXT:       SymbolIndex: 255{{$}}
+# BADSECTION-OUT-LLVM-NEXT:     }
 # BADSECTION-OUT-LLVM-NEXT:     Size: 0x16
 # BADSECTION-OUT-LLVM-NEXT:   }
 # BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
 # BADSECTION-OUT-LLVM-NEXT:   Entry {
 # BADSECTION-OUT-LLVM-NEXT:     Functions: [?]
+# BADSECTION-OUT-LLVM-NEXT:     Relocation {
+# BADSECTION-OUT-LLVM-NEXT:       SymbolIndex: 255{{$}}
+# BADSECTION-OUT-LLVM-NEXT:     }
 # BADSECTION-OUT-LLVM-NEXT:     Size: 0x24
 # BADSECTION-OUT-LLVM-NEXT:   }
 # BADSECTION-OUT-LLVM-NEXT: ]
@@ -631,14 +716,27 @@ Sections:
 # MULTIPLE-LLVM:      StackSizes [
 # MULTIPLE-LLVM-NEXT:   Entry {
 # MULTIPLE-LLVM-NEXT:     Functions: [referenced_by_symbol_foo]
+# MULTIPLE-LLVM-NEXT:     Relocation {
+# MULTIPLE-LLVM-NEXT:       SymbolIndex: 3{{$}}
+# MULTIPLE-LLVM-NEXT:       SymbolName: referenced_by_symbol_foo
+# MULTIPLE-LLVM-NEXT:     }
 # MULTIPLE-LLVM-NEXT:     Size: 0x10
 # MULTIPLE-LLVM-NEXT:   }
 # MULTIPLE-LLVM-NEXT:   Entry {
 # MULTIPLE-LLVM-NEXT:     Functions: [referenced_via_section_bar]
+# MULTIPLE-LLVM-NEXT:     Relocation {
+# MULTIPLE-LLVM-NEXT:       SymbolIndex: 2{{$}}
+# MULTIPLE-LLVM-NEXT:       SymbolName: .text
+# MULTIPLE-LLVM-NEXT:       Addend: 16{{$}}
+# MULTIPLE-LLVM-NEXT:     }
 # MULTIPLE-LLVM-NEXT:     Size: 0x20
 # MULTIPLE-LLVM-NEXT:   }
 # MULTIPLE-LLVM-NEXT:   Entry {
 # MULTIPLE-LLVM-NEXT:     Functions: [separate_text_section_baz]
+# MULTIPLE-LLVM-NEXT:     Relocation {
+# MULTIPLE-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# MULTIPLE-LLVM-NEXT:       SymbolName: separate_text_section_baz
+# MULTIPLE-LLVM-NEXT:     }
 # MULTIPLE-LLVM-NEXT:     Size: 0x8
 # MULTIPLE-LLVM-NEXT:   }
 # MULTIPLE-LLVM-NEXT: ]
@@ -686,6 +784,10 @@ Sections:
 # NONFUNCTIONSYM-LLVM:      StackSizes [
 # NONFUNCTIONSYM-LLVM-NEXT:   Entry {
 # NONFUNCTIONSYM-LLVM-NEXT:     Functions: [?]
+# NONFUNCTIONSYM-LLVM-NEXT:     Relocation {
+# NONFUNCTIONSYM-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# NONFUNCTIONSYM-LLVM-NEXT:       SymbolName: foo
+# NONFUNCTIONSYM-LLVM-NEXT:     }
 # NONFUNCTIONSYM-LLVM-NEXT:     Size: 0x0
 # NONFUNCTIONSYM-LLVM-NEXT:   }
 # NONFUNCTIONSYM-LLVM-NEXT: ]
@@ -737,6 +839,10 @@ Symbols:
 # UNSUPPRELOC-LLVM-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 0: R_X86_64_RELATIVE
 # UNSUPPRELOC-LLVM-NEXT:   Entry {
 # UNSUPPRELOC-LLVM-NEXT:     Functions: [foo]
+# UNSUPPRELOC-LLVM-NEXT:     Relocation {
+# UNSUPPRELOC-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# UNSUPPRELOC-LLVM-NEXT:       SymbolName: foo
+# UNSUPPRELOC-LLVM-NEXT:     }
 # UNSUPPRELOC-LLVM-NEXT:     Size: 0x0
 # UNSUPPRELOC-LLVM-NEXT:   }
 # UNSUPPRELOC-LLVM-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 2: R_X86_64_RELATIVE
@@ -804,6 +910,10 @@ Symbols:
 # ARCHIVEWARN-LLVM:      warning: '{{.*04}}': relocation symbol '_Z3foof' is not in the expected section
 # ARCHIVEWARN-LLVM-NEXT:   Entry {
 # ARCHIVEWARN-LLVM-NEXT:     Functions: [_Z3foof]
+# ARCHIVEWARN-LLVM-NEXT:     Relocation {
+# ARCHIVEWARN-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# ARCHIVEWARN-LLVM-NEXT:       SymbolName: _Z3foof
+# ARCHIVEWARN-LLVM-NEXT:     }
 # ARCHIVEWARN-LLVM-NEXT:     Size: 0x8
 # ARCHIVEWARN-LLVM-NEXT:   }
 # ARCHIVEWARN-LLVM-NEXT: ]
@@ -811,14 +921,27 @@ Symbols:
 # ARCHIVEWARN-LLVM:      StackSizes [
 # ARCHIVEWARN-LLVM-NEXT:   Entry {
 # ARCHIVEWARN-LLVM-NEXT:     Functions: [referenced_by_symbol_foo]
+# ARCHIVEWARN-LLVM-NEXT:     Relocation {
+# ARCHIVEWARN-LLVM-NEXT:       SymbolIndex: 3{{$}}
+# ARCHIVEWARN-LLVM-NEXT:       SymbolName: referenced_by_symbol_foo
+# ARCHIVEWARN-LLVM-NEXT:     }
 # ARCHIVEWARN-LLVM-NEXT:     Size: 0x10
 # ARCHIVEWARN-LLVM-NEXT:   }
 # ARCHIVEWARN-LLVM-NEXT:   Entry {
 # ARCHIVEWARN-LLVM-NEXT:     Functions: [referenced_via_section_bar]
+# ARCHIVEWARN-LLVM-NEXT:     Relocation {
+# ARCHIVEWARN-LLVM-NEXT:       SymbolIndex: 2{{$}}
+# ARCHIVEWARN-LLVM-NEXT:       SymbolName: .text
+# ARCHIVEWARN-LLVM-NEXT:       Addend: 16{{$}}
+# ARCHIVEWARN-LLVM-NEXT:     }
 # ARCHIVEWARN-LLVM-NEXT:     Size: 0x20
 # ARCHIVEWARN-LLVM-NEXT:   }
 # ARCHIVEWARN-LLVM-NEXT:   Entry {
 # ARCHIVEWARN-LLVM-NEXT:     Functions: [separate_text_section_baz]
+# ARCHIVEWARN-LLVM-NEXT:     Relocation {
+# ARCHIVEWARN-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# ARCHIVEWARN-LLVM-NEXT:       SymbolName: separate_text_section_baz
+# ARCHIVEWARN-LLVM-NEXT:     }
 # ARCHIVEWARN-LLVM-NEXT:     Size: 0x8
 # ARCHIVEWARN-LLVM-NEXT:   }
 # ARCHIVEWARN-LLVM-NEXT: ]
@@ -1010,7 +1133,8 @@ Symbols:
 
 ## Check that on ARM the Thumb bit is also cleared from the address that a
 ## relocation resolves to, so that Thumb functions are found in relocatable
-## object files too.
+## object files too. The addend of a SHT_REL relocation is the value stored in
+## the address field, as in --call-graph-info.
 
 # RUN: yaml2obj --docnum=16 %s -o %t21
 # RUN: llvm-readelf --stack-sizes %t21 2>&1 | \
@@ -1025,10 +1149,18 @@ Symbols:
 # THUMB-REL-LLVM:      StackSizes [
 # THUMB-REL-LLVM-NEXT:   Entry {
 # THUMB-REL-LLVM-NEXT:     Functions: [foo]
+# THUMB-REL-LLVM-NEXT:     Relocation {
+# THUMB-REL-LLVM-NEXT:       SymbolIndex: 2{{$}}
+# THUMB-REL-LLVM-NEXT:       SymbolName: foo
+# THUMB-REL-LLVM-NEXT:     }
 # THUMB-REL-LLVM-NEXT:     Size: 0x10
 # THUMB-REL-LLVM-NEXT:   }
 # THUMB-REL-LLVM-NEXT:   Entry {
 # THUMB-REL-LLVM-NEXT:     Functions: [bar]
+# THUMB-REL-LLVM-NEXT:     Relocation {
+# THUMB-REL-LLVM-NEXT:       SymbolIndex: 1{{$}}
+# THUMB-REL-LLVM-NEXT:       Addend: 17{{$}}
+# THUMB-REL-LLVM-NEXT:     }
 # THUMB-REL-LLVM-NEXT:     Size: 0x20
 # THUMB-REL-LLVM-NEXT:   }
 # THUMB-REL-LLVM-NEXT: ]
