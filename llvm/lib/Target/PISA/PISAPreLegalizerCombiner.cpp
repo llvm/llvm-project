@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the PISA pre-legalizer combiner.
+///
+//===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/PISAMCTargetDesc.h"
 #include "PISA.h"

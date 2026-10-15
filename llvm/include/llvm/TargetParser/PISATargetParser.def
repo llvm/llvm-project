@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file provides defines to build up the PISA target parser's logic.
-//
+///
+/// \file
+/// This file provides definitions used to build the PISA target parser.
+///
 //===----------------------------------------------------------------------===//
 
 // NOTE: NO INCLUDE GUARD DESIRED!

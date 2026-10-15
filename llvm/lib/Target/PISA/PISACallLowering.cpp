@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements GlobalISel call lowering for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISACallLowering.h"
 #include "MCTargetDesc/PISABaseInfo.h"
