@@ -9,4 +9,3 @@ add_libc_test(
     libc.include.net_if
     libc.include.sys_socket
 )
-
