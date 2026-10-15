@@ -1,6 +1,5 @@
 set(SsafDriverLib
     "__init__.py"
-    "apply.py"
     "driver.py"
     "logging_diagnostics.py"
     "make_orchestrator.py"

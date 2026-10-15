@@ -21,7 +21,6 @@ copy("bin") {
 copy("lib") {
   sources = [
     "lib/clang_ssaf_driver/__init__.py",
-    "lib/clang_ssaf_driver/apply.py",
     "lib/clang_ssaf_driver/driver.py",
     "lib/clang_ssaf_driver/logging_diagnostics.py",
     "lib/clang_ssaf_driver/make_orchestrator.py",

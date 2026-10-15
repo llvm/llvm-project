@@ -1,10 +1,9 @@
 # clang-ssaf-driver
 
 Runs a Scalable Static Analysis Framework source transformation over a project
-as it builds, and presents the result: the source edits as a patch, the
-transformation report as diagnostics and as SARIF, and optionally the edits
-applied with `clang-apply-replacements`. Projects built with make are driven
-through `clang-ssaf-orchestrator-make`, installed beside it.
+as it builds, and presents the result: the source edits as a patch, and the
+transformation report as diagnostics and as SARIF. Projects built with make
+are driven through `clang-ssaf-orchestrator-make`, installed beside it.
 
 - Using it: [Transforming a Project](
   ../../docs/ScalableStaticAnalysis/user-docs/Driver.md)

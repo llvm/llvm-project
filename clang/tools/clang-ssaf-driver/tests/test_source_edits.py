@@ -137,35 +137,5 @@ class Reading(unittest.TestCase):
         self.assertIn("cannot read the source edits", problem.message)
 
 
-class Writing(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.tmp, True)
-        self.path = os.path.join(self.tmp, "edits.yaml")
-
-    def test_what_is_written_reads_back(self):
-        replacements = [
-            Replacement(os.path.join(self.tmp, "f.cpp"), 0, 3, text)
-            for text in (
-                "",
-                "bounded_ptr<int> ",
-                "it's",
-                'a "quote" and a \\',
-                "line\nbreak\ttab\r",
-                "\x01\x7f",
-                "\u00e9\U0001F600",
-                "\x85\u2028\u2029",
-            )
-        ]
-        source_edits.write_source_edits(self.path, replacements)
-        self.assertEqual(
-            (replacements, None), source_edits.read_source_edits(self.path)
-        )
-
-    def test_no_replacements_reads_back_as_none(self):
-        source_edits.write_source_edits(self.path, [])
-        self.assertEqual(([], None), source_edits.read_source_edits(self.path))
-
-
 if __name__ == "__main__":
     unittest.main()

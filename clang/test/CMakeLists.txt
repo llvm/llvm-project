@@ -120,9 +120,6 @@ if(NOT WIN32)
     clang-ssaf-driver
     clang-ssaf-orchestrator-make
     )
-  if(TARGET clang-apply-replacements)
-    list(APPEND CLANG_TEST_DEPS clang-apply-replacements)
-  endif()
 endif()
 
 if(CLANG_ENABLE_CIR)

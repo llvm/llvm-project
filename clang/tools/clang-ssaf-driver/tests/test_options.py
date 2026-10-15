@@ -2,10 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-import contextlib
 import io
-import os
-import shutil
 import unittest
 from unittest import mock
 
@@ -22,7 +19,6 @@ class Resolve(unittest.TestCase):
         self.assertEqual(["make", "-j8"], command_line_opts.build_command)
         self.assertEqual("cpp-bounded-buffers", command_line_opts.transformation)
         self.assertEqual("out", command_line_opts.output_dir)
-        self.assertFalse(command_line_opts.apply)
         self.assertEqual([], command_line_opts.orchestrator_args)
 
     def test_the_separator_before_the_build_command_is_optional(self):
@@ -31,9 +27,9 @@ class Resolve(unittest.TestCase):
         self.assertEqual(["make", "-j8"], command_line_opts.build_command)
 
     def test_an_option_after_the_build_command_is_the_builds(self):
-        command_line_opts, _ = self._resolve("make", "--apply")
-        self.assertEqual(["make", "--apply"], command_line_opts.build_command)
-        self.assertFalse(command_line_opts.apply)
+        command_line_opts, _ = self._resolve("make", "--verbose")
+        self.assertEqual(["make", "--verbose"], command_line_opts.build_command)
+        self.assertFalse(command_line_opts.verbose)
 
     def test_no_build_command_is_a_usage_error(self):
         _, problem = self._resolve("--")
@@ -70,37 +66,6 @@ class Resolve(unittest.TestCase):
             ],
             command_line_opts.orchestrator_args,
         )
-
-    def test_apply_and_its_tool_are_kept_for_the_driver(self):
-        command_line_opts, _ = self._resolve(
-            "--apply", "--clang-apply-replacements=/x/car", "--", "make"
-        )
-        self.assertTrue(command_line_opts.apply)
-        self.assertEqual("/x/car", command_line_opts.clang_apply_replacements)
-        self.assertEqual([], command_line_opts.orchestrator_args)
-
-    def test_resolving_makes_none_of_the_calls_the_driver_makes(self):
-        watched = (
-            (os, "getcwd"),
-            (os, "access"),
-            (os.path, "isfile"),
-            (os.path, "realpath"),
-            (shutil, "which"),
-        )
-        with contextlib.ExitStack() as stack:
-            for module, name in watched:
-                stack.enter_context(
-                    mock.patch.object(
-                        module,
-                        name,
-                        side_effect=AssertionError("%s called" % name),
-                    )
-                )
-            command_line_opts, problem = self._resolve(
-                "--apply", "--clang-apply-replacements=car", "--", "make"
-            )
-        self.assertIsNone(problem)
-        self.assertEqual("car", command_line_opts.clang_apply_replacements)
 
 
 if __name__ == "__main__":

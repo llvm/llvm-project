@@ -10,8 +10,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from clang_ssaf_driver import driver, make_orchestrator, source_edits
-from clang_ssaf_driver.source_edits import Replacement
+from clang_ssaf_driver import driver, make_orchestrator
 
 
 class Running(unittest.TestCase):
@@ -38,9 +37,17 @@ class Running(unittest.TestCase):
 
     def _results(self):
         edits = os.path.join(self.tmp, "prg.edits.yaml")
-        source_edits.write_source_edits(
-            edits, [Replacement("src/a.cpp", 0, 5, "bounded_ptr<int> ")]
-        )
+        with open(edits, "w") as handle:
+            handle.write(
+                "---\n"
+                "MainSourceFile:  ''\n"
+                "Replacements:\n"
+                '  - FilePath:        "src/a.cpp"\n'
+                "    Offset:          0\n"
+                "    Length:          5\n"
+                '    ReplacementText: "bounded_ptr<int> "\n'
+                "...\n"
+            )
         report = os.path.join(self.tmp, "prg.report.sarif")
         with open(report, "w") as handle:
             json.dump(
@@ -109,14 +116,6 @@ class Running(unittest.TestCase):
         status, _, stderr = self._main()
         self.assertEqual(1, status)
         self.assertIn("cannot find clang-ssaf-orchestrator-make", stderr)
-        make_orchestrator.run_orchestrator.assert_not_called()
-
-    def test_a_missing_clang_apply_replacements_stops_the_run_before_it_starts(self):
-        status, _, stderr = self._main(
-            "--apply", "--clang-apply-replacements=" + os.path.join(self.tmp, "none")
-        )
-        self.assertEqual(1, status)
-        self.assertIn("--apply needs clang-apply-replacements", stderr)
         make_orchestrator.run_orchestrator.assert_not_called()
 
 

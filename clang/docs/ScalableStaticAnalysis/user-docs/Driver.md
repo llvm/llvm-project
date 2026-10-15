@@ -1,11 +1,10 @@
 # Transforming a Project
 
 `clang-ssaf-driver` runs a source transformation over a whole project as it
-builds, and presents what it found: the source edits as a patch, the
-transformation report as diagnostics and as SARIF, and, if asked, the edits
-applied to the sources. It drives projects built with make through
-`clang-ssaf-orchestrator-make`, whose requirements it shares; see
-{doc}`MakeProjects`.
+builds, and presents what it found: the source edits as a patch, and the
+transformation report as diagnostics and as SARIF. It drives projects built
+with make through `clang-ssaf-orchestrator-make`, whose requirements it
+shares; see {doc}`MakeProjects`.
 
 ## Usage
 
@@ -61,14 +60,6 @@ where translation units asked for different edits; none of them is made, and
 an edit that overlaps a conflict is left out of the patch too, with a warning.
 Both are left to be done by hand, and neither changes the exit status.
 
-## Applying the edits
-
-`--apply` also rewrites the sources, using `clang-apply-replacements` from
-clang-tools-extra. It is looked for on `PATH`, or named with
-`--clang-apply-replacements=<path>`, before anything is built. The patch is
-written either way, and the run fails if the sources do not end up the way the
-patch shows them.
-
 ## Options
 
 ```{eval-rst}
@@ -82,11 +73,6 @@ patch shows them.
    * - ``-o``, ``--output-dir=<dir>``
      - Where the results and the SSAF artifacts go. Defaults to
        ``ssaf-output``, and is the orchestrator's output directory.
-   * - ``--apply``
-     - Also apply the source edits.
-   * - ``--clang-apply-replacements=<path>``
-     - Path to ``clang-apply-replacements``. Defaults to the name on
-       ``PATH``.
    * - ``--ssaf-clang=<path>``, ``--ssaf-linker=<path>``,
        ``--ssaf-analyzer=<path>``, ``--ssaf-src-edit-merge=<path>``,
        ``--ssaf-merge-transformation-report=<path>``,

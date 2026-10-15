@@ -5,7 +5,6 @@
 import os
 
 from . import (
-    apply,
     logging_diagnostics,
     make_orchestrator,
     options,
@@ -23,12 +22,6 @@ def run(command_line_opts):
             options.ENVIRONMENT_ERROR,
             "cannot find %s: %s" % (make_orchestrator.ORCHESTRATOR, orchestrator),
         )
-    tool = None
-    if command_line_opts.apply:
-        tool, problem = apply.resolve_tool(command_line_opts.clang_apply_replacements)
-        if problem is not None:
-            return problem
-
     project_root = os.path.realpath(os.getcwd())
     output_dir = os.path.realpath(command_line_opts.output_dir)
     status, results = make_orchestrator.run_orchestrator(
@@ -87,11 +80,6 @@ def run(command_line_opts):
         )
     logging_diagnostics.report_info("patch", patch_path)
     logging_diagnostics.report_info("report", report_path)
-
-    if tool is not None:
-        return apply.apply_source_edits(
-            tool, collected.files, output_dir, command_line_opts.verbose
-        )
     return None
 
 

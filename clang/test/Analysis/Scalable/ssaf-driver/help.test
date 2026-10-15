@@ -5,8 +5,6 @@
 # CHECK: --version
 # CHECK: --transformation <name>
 # CHECK: --output-dir
-# CHECK: --apply
-# CHECK: --clang-apply-replacements
 # CHECK: --ssaf-clang
 # CHECK: --ssaf-linker
 # CHECK: --ssaf-analyzer

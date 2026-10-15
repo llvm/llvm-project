@@ -35,14 +35,6 @@ _ESCAPED = {
     "P": "\u2029",
 }
 
-_ESCAPES = {
-    "\\": "\\\\",
-    '"': '\\"',
-    "\x85": "\\N",
-    "\u2028": "\\L",
-    "\u2029": "\\P",
-}
-
 
 class _Malformed(Exception):
     def __init__(self, line, message):
@@ -156,31 +148,3 @@ def read_source_edits(path):
             ENVIRONMENT_ERROR,
             "malformed source edits: %s:%d: %s" % (path, error.line, error.message),
         )
-
-
-def _quote(text):
-    pieces = []
-    for character in text:
-        if character in _ESCAPES:
-            pieces.append(_ESCAPES[character])
-        elif ord(character) < 0x20 or character == "\x7f":
-            pieces.append("\\x%02x" % ord(character))
-        else:
-            pieces.append(character)
-    return '"%s"' % "".join(pieces)
-
-
-def write_source_edits(path, replacements):
-    lines = ["---", "MainSourceFile:  ''"]
-    if not replacements:
-        lines.append("Replacements:    []")
-    else:
-        lines.append("Replacements:")
-    for each in replacements:
-        lines.append("  - FilePath:        %s" % _quote(each.file_path))
-        lines.append("    Offset:          %d" % each.offset)
-        lines.append("    Length:          %d" % each.length)
-        lines.append("    ReplacementText: %s" % _quote(each.text))
-    lines.append("...")
-    with open(path, "w", encoding="utf-8", errors="surrogateescape") as handle:
-        handle.write("\n".join(lines) + "\n")

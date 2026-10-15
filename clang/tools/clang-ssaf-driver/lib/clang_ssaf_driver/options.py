@@ -42,8 +42,8 @@ def build_parser():
         prog=PROGRAM,
         usage="%(prog)s [options] --transformation=<name> [--] <build command>",
         description="Run an SSAF transformation over a project as it builds. "
-        "The source edits are written as a patch and can be applied, and the "
-        "transformation report is printed and written as SARIF.",
+        "The source edits are written as a patch, and the transformation report "
+        "is printed and written as SARIF.",
     )
     parser.add_argument("--version", action="version", version="%(prog)s " + VERSION)
     parser.add_argument(
@@ -61,17 +61,6 @@ def build_parser():
         default="ssaf-output",
         help="Directory for the results and the SSAF artifacts "
         "(default: %(default)s).",
-    )
-    parser.add_argument(
-        "--apply",
-        action="store_true",
-        help="Also apply the source edits, with clang-apply-replacements.",
-    )
-    parser.add_argument(
-        "--clang-apply-replacements",
-        metavar="<path>",
-        default=None,
-        help="Path to clang-apply-replacements (default: found on PATH).",
     )
     for option, purpose in FORWARDED_TOOLS:
         parser.add_argument(option, metavar="<path>", default=None, help=purpose)
@@ -110,16 +99,12 @@ class CommandLineOpts:
         build_command=(),
         transformation=None,
         output_dir=None,
-        apply=False,
-        clang_apply_replacements=None,
         orchestrator_args=(),
         verbose=False,
     ):
         self.build_command = list(build_command)
         self.transformation = transformation
         self.output_dir = output_dir
-        self.apply = apply
-        self.clang_apply_replacements = clang_apply_replacements
         self.orchestrator_args = list(orchestrator_args)
         self.verbose = verbose
 
@@ -150,8 +135,6 @@ def resolve(argv):
             build_command=build_command,
             transformation=args.transformation,
             output_dir=args.output_dir,
-            apply=args.apply,
-            clang_apply_replacements=args.clang_apply_replacements,
             orchestrator_args=orchestrator_args,
             verbose=args.verbose,
         ),
