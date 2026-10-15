@@ -1276,6 +1276,27 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   return EmitPositiveResultOrZero(*this, Result, Index, ResType, IsSigned);
 }
 
+/// Returns the struct of the object that \p ME accesses a (possibly nested)
+/// member of, e.g. 'struct s' for both 'p->field' and 'p->sub.field' when 'p'
+/// is a 'struct s *'. That's found by following '.' accesses back to their
+/// base, which is either a struct l-value or (for '->') a pointer to one.
+///
+/// The field's own lexical context isn't a substitute: the field may belong to
+/// a separately declared sub-struct, and a struct declared inside another one
+/// is still a type of its own, which needn't be part of an object of the
+/// outer struct.
+static const RecordDecl *getAccessedObjectRecord(const MemberExpr *ME) {
+  const Expr *E = ME;
+  while (const auto *M = dyn_cast<MemberExpr>(E->IgnoreParens())) {
+    if (M->isArrow())
+      return M->getBase()->getType()->getPointeeType()->getAsRecordDecl();
+
+    E = M->getBase();
+  }
+
+  return E->getType()->getAsRecordDecl();
+}
+
 llvm::Value *CodeGenFunction::emitCountedByMemberSize(
     const MemberExpr *ME, const Expr *Idx, llvm::Value *EmittedE,
     QualType CastedArrayElementTy, unsigned Type, llvm::IntegerType *ResType) {
@@ -1286,7 +1307,10 @@ llvm::Value *CodeGenFunction::emitCountedByMemberSize(
   // Find the flexible array member and check that it has the __counted_by
   // attribute.
   ASTContext &Ctx = getContext();
-  const RecordDecl *RD = FD->getDeclContext()->getOuterLexicalRecordContext();
+  const RecordDecl *RD = getAccessedObjectRecord(ME);
+  if (!RD)
+    return nullptr;
+
   const FieldDecl *FlexibleArrayMemberFD = nullptr;
 
   if (Decl::isFlexibleArrayMemberLike(
