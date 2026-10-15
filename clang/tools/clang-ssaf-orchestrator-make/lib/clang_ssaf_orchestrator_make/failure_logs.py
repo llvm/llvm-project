@@ -14,9 +14,7 @@ FAILURE_LOG_SUFFIX = ".log"
 
 class SSAFFailureKind(enum.Enum):
     EXTRACT = "extract"
-    TRANSFORM = "transform"
     LINK = "link"
-    MERGE = "merge"
     FORWARD = "forward"
     MISSING = "missing"
     DRIVER_JOBS = "driver-jobs"

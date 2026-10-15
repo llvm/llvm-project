@@ -6,14 +6,11 @@
 import enum
 import os
 
-from .utils import coalesce_root_path, find_with_suffix, read_json
+from .utils import coalesce_root_path, find_with_suffix
 
 
 class SSAFArtifactKind(enum.Enum):
     SUMMARY = ".summary.json"
-    EDITS = ".edits.yaml"
-    CONFLICTS = ".conflicts.sarif"
-    REPORT = ".report.sarif"
 
 
 class SSAFArtifactId:
@@ -57,22 +54,5 @@ class SSAFArtifactRepository:
     def _all_paths_of_kind(self, ssaf_artifact_kind):
         return find_with_suffix(self.ssaf_artifact_dir, ssaf_artifact_kind.value)
 
-    def get_link_unit_name(self, summary_path):
-        document = read_json(summary_path)
-        if document is None:
-            return None
-        for component in document.get("lu_namespace", []):
-            if component.get("kind") == "LinkUnit":
-                return component.get("name")
-        return None
-
     def count_summaries(self):
         return len(self._all_paths_of_kind(SSAFArtifactKind.SUMMARY))
-
-    def get_conflicts(self):
-        found = []
-        for path in self._all_paths_of_kind(SSAFArtifactKind.CONFLICTS):
-            document = read_json(path)
-            if document and any(run.get("results") for run in document.get("runs", [])):
-                found.append(path)
-        return sorted(found)
