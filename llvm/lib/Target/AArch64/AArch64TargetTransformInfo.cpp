@@ -5038,14 +5038,32 @@ AArch64TTIImpl::getBuildVectorContextHint(
     return VectorInstrContext::None;
 
   SmallVector<TargetTransformInfo::BuildVectorUseOp, 4> UserOps;
-  if (!GatherUseOps(UserOps) || UserOps.empty())
+  if (!GatherUseOps(UserOps) || UserOps.empty() ||
+      any_of(UserOps, [](const TargetTransformInfo::BuildVectorUseOp &UserOp) {
+        return UserOp.Opcode != Instruction::FMul;
+      }))
     return VectorInstrContext::None;
 
-  // Only fmuls fused into fmuladds (FMLA/FMLS by element) are reported. An
-  // unfused fmul by element takes the lane too, but reporting it makes SLP
-  // vectorize VF=2 trees whose alternate fadd/fsub nodes it undercounts.
-  if (all_of(UserOps, [](const TargetTransformInfo::BuildVectorUseOp &UserOp) {
-        return UserOp.Opcode == Instruction::FMul && UserOp.IsFused;
+  // Only fmuls fused with their fadd/fsub user (FMLA/FMLS by element) are
+  // reported. An unfused fmul by element takes the lane too, but reporting it
+  // makes SLP vectorize VF=2 trees whose alternate fadd/fsub nodes it
+  // undercounts. Mixed fadd and fsub users form such an alternate node, which
+  // is not fused.
+  std::optional<unsigned> FusedOpcode;
+  if (all_of((*SplatIt)->users(), [&](const User *U) {
+        if (!match(U, m_FMul(m_Value(), m_Value())))
+          return true;
+        if (!match(U, m_OneUse(m_AllowContract(m_FMul(m_Value(), m_Value())))))
+          return false;
+        const auto *FAddSub = cast<Instruction>(U->user_back());
+        if (FAddSub->getParent() != cast<Instruction>(U)->getParent() ||
+            !match(FAddSub,
+                   m_AllowContract(m_CombineOr(m_FAdd(m_Value(), m_Value()),
+                                               m_FSub(m_Value(), m_Value())))))
+          return false;
+        if (!FusedOpcode)
+          FusedOpcode = FAddSub->getOpcode();
+        return *FusedOpcode == FAddSub->getOpcode();
       }))
     return VectorInstrContext::SplatOpFolded;
 

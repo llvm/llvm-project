@@ -13380,8 +13380,7 @@ bool BoUpSLP::collectGatherUserOps(
       if (isSplat(Other) && !allConstant(Other))
         return false;
     }
-    UserOps.emplace_back(UserTE->getOpcode(), OpIdx,
-                         UserTE->State == TreeEntry::CombinedVectorize);
+    UserOps.emplace_back(UserTE->getOpcode(), OpIdx);
   }
   return !UserOps.empty();
 }
