@@ -322,9 +322,22 @@ void getFuchsiaDefines(MacroBuilder &Builder, const LangOptions &Opts,
   // * Version 1 is first iteration formalizing the version number scheme.
   //   - SafeStack ABI no longer supported on aarch64, riscv64 (x86 only)
   //
+  // * Version 2 is entirely backward-compatible with version 1, but also
+  //   adds new guarantees that can be presumed of all ABI-compatible code.
+  //   - aarch64 BTI support (-mbranch-protection=bti) is on by default, with
+  //     linker enforcement (-z bti-report=error).
+  //     (32-bit armv8-a has no BTI support; 32-bit BTI only exists in M-profile
+  //     armv8.1-m.main and is not backward-compatible with armv8-a.)
+  //   - RISC-V lpad support (-fcf-protection=branch) is on by default, with
+  //     linker enforcement (-z zicfilp-unlabeled-report=error).
+  //   - x86-64 IBT support (-fcf-protection=branch) is on by default, with
+  //     linker enforcement (-z ibt-report=error) and jump tables disabled
+  //     (-fno-jump-tables) to avoid `notrack` indirect jumps as the
+  //     preferred security choice.
+  //
   // The predefine can be checked by code relying on the Fuchsia Compiler ABI
   // to ensure that a compiler new enough for the required version is in use.
-  Builder.defineMacro("__Fuchsia_Compiler_ABI__", Twine(1));
+  Builder.defineMacro("__Fuchsia_Compiler_ABI__", Twine(2));
 }
 
 } // namespace targets
