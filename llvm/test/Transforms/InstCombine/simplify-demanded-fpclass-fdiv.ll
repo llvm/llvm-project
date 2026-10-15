@@ -2483,7 +2483,7 @@ attributes #3 = { denormal_fpenv(ieee|dynamic) }
 ; CHECK: attributes #[[ATTR1]] = { denormal_fpenv(preservesign) }
 ; CHECK: attributes #[[ATTR2]] = { denormal_fpenv(dynamic) }
 ; CHECK: attributes #[[ATTR3]] = { denormal_fpenv(ieee|dynamic) }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}

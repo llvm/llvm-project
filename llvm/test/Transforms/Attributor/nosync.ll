@@ -487,7 +487,7 @@ define void @nosync_convergent_callee_test() {
 ; TUNIT: attributes #[[ATTR16:[0-9]+]] = { convergent memory(none) }
 ; TUNIT: attributes #[[ATTR17]] = { memory(none) }
 ; TUNIT: attributes #[[ATTR18]] = { nounwind }
-; TUNIT: attributes #[[ATTR19:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; TUNIT: attributes #[[ATTR19:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR20]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR21]] = { nosync memory(none) }
 ; TUNIT: attributes #[[ATTR22]] = { nofree nosync nounwind }
@@ -515,7 +515,7 @@ define void @nosync_convergent_callee_test() {
 ; CGSCC: attributes #[[ATTR16:[0-9]+]] = { convergent memory(none) }
 ; CGSCC: attributes #[[ATTR17]] = { memory(none) }
 ; CGSCC: attributes #[[ATTR18]] = { nounwind }
-; CGSCC: attributes #[[ATTR19:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CGSCC: attributes #[[ATTR19:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR20]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR21]] = { nosync memory(none) }
 ; CGSCC: attributes #[[ATTR22]] = { nofree nosync nounwind }

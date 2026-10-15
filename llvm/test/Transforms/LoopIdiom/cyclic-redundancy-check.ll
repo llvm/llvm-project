@@ -1412,5 +1412,5 @@ exit:
 ; TABLE: attributes #[[ATTR0]] = { optsize }
 ;.
 ; CLMUL: attributes #[[ATTR0]] = { optsize }
-; CLMUL: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CLMUL: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

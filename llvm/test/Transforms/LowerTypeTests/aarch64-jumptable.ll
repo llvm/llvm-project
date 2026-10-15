@@ -62,7 +62,7 @@ define i1 @foo(ptr %p) {
 ;.
 ; AARCH64: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; AARCH64: attributes #[[ATTR1:[0-9]+]] = { naked noinline }
-; AARCH64: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; AARCH64: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; AARCH64: [[META0:![0-9]+]] = !{i32 4, !"branch-target-enforcement", i32 1}
 ; AARCH64: [[META1:![0-9]+]] = !{i32 0, !"typeid1"}

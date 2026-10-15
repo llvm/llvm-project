@@ -99,11 +99,11 @@ define i1 @foo(ptr %p) {
 ;.
 ; X86_32: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; X86_32: attributes #[[ATTR1:[0-9]+]] = { naked nocf_check noinline }
-; X86_32: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; X86_32: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; X86_64: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; X86_64: attributes #[[ATTR1:[0-9]+]] = { naked nocf_check noinline }
-; X86_64: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; X86_64: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; X86_32: [[META0:![0-9]+]] = !{i32 8, !"cf-protection-branch", i32 1}
 ; X86_32: [[META1:![0-9]+]] = !{i32 0, !"typeid1"}

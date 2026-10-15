@@ -1979,12 +1979,12 @@ attributes #2 = { noinline }
 ;.
 ; PRELINK: attributes #[[ATTR0]] = { strictfp }
 ; PRELINK: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(read) }
-; PRELINK: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; PRELINK: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ; PRELINK: attributes #[[ATTR3]] = { noinline }
 ; PRELINK: attributes #[[ATTR4]] = { nobuiltin }
 ;.
 ; NOPRELINK: attributes #[[ATTR0]] = { strictfp }
-; NOPRELINK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; NOPRELINK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ; NOPRELINK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite) }
 ; NOPRELINK: attributes #[[ATTR3]] = { noinline }
 ; NOPRELINK: attributes #[[ATTR4]] = { nobuiltin }
