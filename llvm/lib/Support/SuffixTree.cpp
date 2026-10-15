@@ -87,7 +87,7 @@ SuffixTreeInternalNode *SuffixTree::insertRoot() {
 
 void SuffixTree::setLeafNodes() {
   // A stack that keeps track of nodes to visit for post-order DFS traversal.
-  SmallVector<SuffixTreeNode *> ToVisit;
+  SmallVector<SuffixTreeInternalNode *> ToVisit;
   ToVisit.push_back(Root);
 
   // This keeps track of the index of the next leaf node to be added to
@@ -95,62 +95,43 @@ void SuffixTree::setLeafNodes() {
   unsigned LeafCounter = 0;
 
   // This keeps track of nodes whose children have been added to the stack.
-  // The value is a pair, representing a node's first and last children.
-  DenseMap<SuffixTreeInternalNode *,
-           std::pair<SuffixTreeNode *, SuffixTreeNode *>>
-      ChildrenMap;
+  // The value is the index of its first leaf in LeafNodes.
+  DenseMap<SuffixTreeInternalNode *, unsigned> ChildrenMap;
 
   // Traverse the tree in post-order.
   while (!ToVisit.empty()) {
-    SuffixTreeNode *CurrNode = ToVisit.pop_back_val();
-    if (auto *CurrInternalNode = dyn_cast<SuffixTreeInternalNode>(CurrNode)) {
-      // The current node is an internal node.
-      auto I = ChildrenMap.find(CurrInternalNode);
-      if (I == ChildrenMap.end()) {
-        // This is the first time we visit this node.
-        // Its children have not been added to the stack yet.
-        // We add current node back, and add its children to the stack.
-        // We keep track of the first and last children of the current node.
-        auto J = CurrInternalNode->Children.begin();
-        if (J != CurrInternalNode->Children.end()) {
-          ToVisit.push_back(CurrNode);
-          SuffixTreeNode *FirstChild = J->second;
-          SuffixTreeNode *LastChild = nullptr;
-          for (; J != CurrInternalNode->Children.end(); ++J) {
-            LastChild = J->second;
-            ToVisit.push_back(LastChild);
+    SuffixTreeInternalNode *CurrInternalNode = ToVisit.pop_back_val();
+    auto I = ChildrenMap.find(CurrInternalNode);
+    if (I == ChildrenMap.end()) {
+      // This is the first time we visit this node.
+      // Its children have not been added to the stack yet.
+      // We add current node back, and add its internal children to the stack.
+      auto J = CurrInternalNode->Children.begin();
+      if (J != CurrInternalNode->Children.end()) {
+        ToVisit.push_back(CurrInternalNode);
+        ChildrenMap[CurrInternalNode] = LeafCounter;
+        for (; J != CurrInternalNode->Children.end(); ++J) {
+          if (auto *InternalChild =
+                  dyn_cast<SuffixTreeInternalNode>(J->second)) {
+            ToVisit.push_back(InternalChild);
+          } else {
+            LeafNodes.push_back(
+                cast<SuffixTreeLeafNode>(J->second)->getSuffixIdx());
+            ++LeafCounter;
           }
-          ChildrenMap[CurrInternalNode] = {FirstChild, LastChild};
         }
-      } else {
-        // This is the second time we visit this node.
-        // All of its children have already been processed.
-        // With MinLength == 2, pruning can leave empty internal nodes with path
-        // length 1. Only the root can have such children, so skip computing its
-        // unused leaf range.
-        if (CurrInternalNode->isRoot())
-          continue;
-
-        // Now, we can set its LeftLeafIdx and RightLeafIdx;
-        auto [FirstChild, LastChild] = I->second;
-        // Get the first child to use its RightLeafIdx.
-        // The first child is the first one added to the stack, so it is
-        // the last one to be processed. Hence, the leaf descendants
-        // of the first child are assigned the largest index numbers.
-        CurrNode->setRightLeafIdx(FirstChild->getRightLeafIdx());
-        // Get the last child to use its LeftLeafIdx.
-        CurrNode->setLeftLeafIdx(LastChild->getLeftLeafIdx());
-        assert(CurrNode->getLeftLeafIdx() <= CurrNode->getRightLeafIdx() &&
-               "LeftLeafIdx should not be larger than RightLeafIdx");
       }
     } else {
-      // The current node is a leaf node.
-      // We can simply set its LeftLeafIdx and RightLeafIdx.
-      CurrNode->setLeftLeafIdx(LeafCounter);
-      CurrNode->setRightLeafIdx(LeafCounter);
-      ++LeafCounter;
-      auto *CurrLeafNode = cast<SuffixTreeLeafNode>(CurrNode);
-      LeafNodes.push_back(CurrLeafNode->getSuffixIdx());
+      // This is the second time we visit this node.
+      // All of its children have already been processed.
+      // The root does not need a leaf range.
+      if (CurrInternalNode->isRoot())
+        continue;
+      CurrInternalNode->setLeftLeafIdx(I->second);
+      CurrInternalNode->setRightLeafIdx(LeafCounter - 1);
+      assert(CurrInternalNode->getLeftLeafIdx() <=
+                 CurrInternalNode->getRightLeafIdx() &&
+             "LeftLeafIdx should not be larger than RightLeafIdx");
     }
   }
 }
