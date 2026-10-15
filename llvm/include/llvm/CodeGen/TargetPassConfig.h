@@ -85,7 +85,7 @@ public:
 class LLVM_ABI TargetPassConfig : public ImmutablePass {
 private:
   PassManagerBase *PM = nullptr;
-  const CodeGenOptions *CGOpts = nullptr;
+  const CodeGenOptions &Opts;
   AnalysisID StartBefore = nullptr;
   AnalysisID StartAfter = nullptr;
   AnalysisID StopBefore = nullptr;
@@ -156,8 +156,6 @@ protected:
 
 public:
   TargetPassConfig(TargetMachine &TM, PassManagerBase &PM);
-  // Dummy constructor.
-  TargetPassConfig();
 
   ~TargetPassConfig() override;
 
@@ -494,6 +492,9 @@ protected:
   virtual bool addRegAssignAndRewriteFast();
   virtual bool addRegAssignAndRewriteOptimized();
 };
+
+/// TargetPassConfig needs a TargetMachine; the pass registry cannot create one.
+template <> LLVM_ABI Pass *callDefaultCtor<TargetPassConfig>();
 
 LLVM_ABI void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                       TargetMachine &);
