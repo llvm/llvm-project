@@ -530,10 +530,52 @@ while.end.loopexit:
   ret void
 }
 
+define void @uniform_load_store(ptr noalias %p, ptr noalias %q, ptr noalias %l, i32 %n) #0 {
+; CHECK-LABEL: @uniform_load_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[LOOP:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[GEP_L:%.*]] = getelementptr i32, ptr [[L:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP_L]], align 4, !alias.scope [[META13:![0-9]+]], !noalias [[META16:![0-9]+]]
+; CHECK-NEXT:    [[Y:%.*]] = add i32 [[X]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[Y]], ptr [[GEP]], align 4, !alias.scope [[META13]], !noalias [[META16]]
+; CHECK-NEXT:    store i32 [[Y]], ptr [[Q:%.*]], align 4, !alias.scope [[META16]], !noalias [[META13]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1025
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  %gep.l = getelementptr i32, ptr %l, i32 %iv
+  %x = load i32, ptr %gep.l, !alias.scope !7, !noalias !9
+  %y = add i32 %x, 1
+  %gep = getelementptr i32, ptr %p, i32 %iv
+  store i32 %y, ptr %gep, !alias.scope !7, !noalias !9
+  store i32 %y, ptr %q, !alias.scope !9, !noalias !7
+  %iv.next = add i32 %iv, 1
+  %done = icmp eq i32 %iv.next, 1025
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
 !2 = !{!"llvm.loop.vectorize.scalable.enable"}
 !3 = distinct !{!3, !4}
 !4 = !{!"llvm.loop.vectorize.width", i32 4}
+!5 = distinct !{!5, !6}
+!6 = distinct !{!6, i1 false, !"LVerDomain"}
+!7 = !{!5}
+!8 = distinct !{!8, !6}
+!9 = !{!8}
 
 attributes #0 = { "target-features"="+sve" vscale_range(1,16) }

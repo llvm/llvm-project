@@ -8677,11 +8677,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::vector_partial_reduce_fadd: {
+    SDNodeFlags Flags;
+    if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+      Flags.copyFMF(*FPOp);
     SDValue Acc = getValue(I.getOperand(0));
     SDValue Input = getValue(I.getOperand(1));
-    setValue(&I, DAG.getNode(
-                     ISD::PARTIAL_REDUCE_FMLA, sdl, Acc.getValueType(), Acc,
-                     Input, DAG.getConstantFP(1.0, sdl, Input.getValueType())));
+    setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_FMLA, sdl, Acc.getValueType(),
+                             Acc, Input,
+                             DAG.getConstantFP(1.0, sdl, Input.getValueType()),
+                             Flags));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -10317,6 +10321,9 @@ getRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
         // i64, which can be passed with two i32 values on a 32-bit machine.
       } else if (RegVT.isInteger() && OpInfo.ConstraintVT.isFloatingPoint()) {
         MVT VT = MVT::getIntegerVT(OpInfo.ConstraintVT.getSizeInBits());
+        // No integer type of that size to bitcast to (e.g. f80).
+        if (!VT.isValid())
+          return std::nullopt;
         if (OpInfo.Type == InlineAsm::isInput)
           OpInfo.CallOperand =
               DAG.getNode(ISD::BITCAST, DL, VT, OpInfo.CallOperand);

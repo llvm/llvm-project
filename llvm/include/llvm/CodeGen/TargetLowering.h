@@ -3204,6 +3204,8 @@ public:
     case ISD::UREM:
     case ISD::SSUBSAT:
     case ISD::USUBSAT:
+    case ISD::AVGSUBFLOORS:
+    case ISD::AVGSUBFLOORU:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
