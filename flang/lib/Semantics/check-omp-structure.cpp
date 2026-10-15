@@ -2691,17 +2691,32 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareMapperDirective &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDeclareReductionDirective &x) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  std::string dirName{
+      GetUpperName(llvm::omp::Directive::OMPD_declare_reduction, version)};
+
   const parser::OmpArgumentList &args{x.v.Arguments()};
   if (args.v.size() != 1) {
     context_.Say(args.source,
-        "DECLARE_REDUCTION directive should have a single argument"_err_en_US);
+        "%s directive should have a single argument"_err_en_US, dirName);
     return;
   }
 
   const parser::OmpArgument &arg{args.v.front()};
-  if (!std::holds_alternative<parser::OmpReductionSpecifier>(arg.u)) {
+  if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&arg.u)}) {
+    auto &ident{std::get<parser::OmpReductionIdentifier>(spec->t)};
+    using IntrinsicOperator = parser::DefinedOperator::IntrinsicOperator;
+    if (auto *intOp{parser::Unwrap<IntrinsicOperator>(ident)}) {
+      if (!CheckReductionIntrinsicOperator(*intOp, arg.source)) {
+        context_.Say(arg.source,
+            "Invalid reduction intrinsic operator in %s directive"_err_en_US,
+            dirName);
+      }
+    }
+  } else {
     context_.Say(arg.source,
-        "The argument to the DECLARE_REDUCTION directive should be a reduction-specifier"_err_en_US);
+        "The argument to the %s directive should be a reduction-specifier"_err_en_US,
+        dirName);
   }
 }
 
@@ -4095,6 +4110,32 @@ void OmpStructureChecker::Enter(const parser::OmpClause::TaskReduction &x) {
   CheckReductionObjects(objects, llvm::omp::Clause::OMPC_task_reduction);
 }
 
+bool OmpStructureChecker::CheckReductionIntrinsicOperator(
+    parser::DefinedOperator::IntrinsicOperator op, parser::CharBlock source) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  switch (op) {
+  case parser::DefinedOperator::IntrinsicOperator::Add:
+  case parser::DefinedOperator::IntrinsicOperator::Multiply:
+  case parser::DefinedOperator::IntrinsicOperator::AND:
+  case parser::DefinedOperator::IntrinsicOperator::OR:
+  case parser::DefinedOperator::IntrinsicOperator::EQV:
+  case parser::DefinedOperator::IntrinsicOperator::NEQV:
+    return true;
+  case parser::DefinedOperator::IntrinsicOperator::Subtract:
+    if (llvm::omp::Version v52(52); version >= v52) {
+      context_.Say(source,
+          "The minus reduction operator is deprecated since %s"_err_en_US,
+          ThisVersion(v52));
+    } else {
+      context_.Say(source,
+          "The minus operator is not supported as a reduction operator"_err_en_US);
+    }
+    return false;
+  default:
+    return false;
+  }
+}
+
 bool OmpStructureChecker::CheckReductionOperator(
     const parser::OmpReductionIdentifier &ident, parser::CharBlock source,
     llvm::omp::Clause clauseId) {
@@ -4103,22 +4144,13 @@ bool OmpStructureChecker::CheckReductionOperator(
   auto visitOperator{[&](const parser::DefinedOperator &dOpr) {
     if (const auto *intrinsicOp{
             std::get_if<parser::DefinedOperator::IntrinsicOperator>(&dOpr.u)}) {
-      switch (*intrinsicOp) {
-      case parser::DefinedOperator::IntrinsicOperator::Add:
-      case parser::DefinedOperator::IntrinsicOperator::Multiply:
-      case parser::DefinedOperator::IntrinsicOperator::AND:
-      case parser::DefinedOperator::IntrinsicOperator::OR:
-      case parser::DefinedOperator::IntrinsicOperator::EQV:
-      case parser::DefinedOperator::IntrinsicOperator::NEQV:
-        return true;
-      case parser::DefinedOperator::IntrinsicOperator::Subtract:
-        context_.Say(GetContext().clauseSource,
-            "The minus reduction operator is deprecated since OpenMP 5.2 and is not supported in the REDUCTION clause."_err_en_US,
-            ContextDirectiveAsFortran());
+      if (!CheckReductionIntrinsicOperator(*intrinsicOp, source)) {
+        context_.Say(source,
+            "Invalid reduction operator in %s clause"_err_en_US,
+            GetUpperName(clauseId, version));
         return false;
-      default:
-        break;
       }
+      return true;
     }
     // User-defined operators are OK if there has been a declared reduction
     // for that. We mangle those names to store the user details.
@@ -4244,7 +4276,7 @@ static std::optional<parser::CharBlock> MangledReductionIdentifier(
             if (const auto *intrinsicOp{
                     std::get_if<parser::DefinedOperator::IntrinsicOperator>(
                         &dOpr.u)}) {
-              return MakeNameFromOperator(*intrinsicOp, context);
+              return MakeNameFromOperator(*intrinsicOp);
             }
             if (const auto *definedOp{
                     std::get_if<parser::DefinedOpName>(&dOpr.u)};
@@ -4329,7 +4361,7 @@ static bool IsReductionAllowedForType(
         DIE("This should have been caught in CheckIntrinsicOperator");
         return false;
       }
-      parser::CharBlock name{MakeNameFromOperator(*intrinsicOp, context)};
+      parser::CharBlock name{MakeNameFromOperator(*intrinsicOp)};
       return CheckSymbolSupportsType(scope, name, type);
     } else if (const auto *definedOp{
                    std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
