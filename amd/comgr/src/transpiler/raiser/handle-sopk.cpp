@@ -176,6 +176,8 @@ HardwareRegisterPolicy classifyHardwareRegister(unsigned Id) {
     return {HardwareRegisterReadAction::Reject,
             HardwareRegisterWriteAction::Emit};
 
+  case ID_EXCP_FLAG_PRIV:
+  case ID_EXCP_FLAG_USER:
   case ID_MEM_BASES:
   case ID_FLAT_SCR_LO:
   case ID_FLAT_SCR_HI:
@@ -186,14 +188,15 @@ HardwareRegisterPolicy classifyHardwareRegister(unsigned Id) {
             HardwareRegisterWriteAction::Reject};
 
   case ID_TBA_LO:
-  case ID_TBA_HI:
-  case ID_TMA_LO:
   case ID_TMA_HI:
     return {HardwareRegisterReadAction::ReturnZero,
             HardwareRegisterWriteAction::Reject};
 
-  case ID_STATUS:
   case ID_TRAPSTS:
+    return {HardwareRegisterReadAction::Reject,
+            HardwareRegisterWriteAction::Ignore};
+
+  case ID_STATUS:
   case ID_HW_ID:
   case ID_GPR_ALLOC:
   case ID_LDS_ALLOC:

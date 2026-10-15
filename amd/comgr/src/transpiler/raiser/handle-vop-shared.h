@@ -41,6 +41,14 @@ llvm::Error raiseUnaryFloat32(RaiseContext &Ctx, const DecodedInst &Di,
 llvm::Error raiseUnaryFloat64(RaiseContext &Ctx, const DecodedInst &Di,
                               OperandResolver &Op);
 
+/// Raise floating-point addition, subtraction, or multiplication.
+llvm::Error raiseFloatBinary(RaiseContext &Ctx, const DecodedInst &Di,
+                             OperandResolver &Op);
+
+/// Raise F32 minimumNumber or maximumNumber, quieting source 0 if both are NaN.
+llvm::Error raiseNumericExtremum32(RaiseContext &Ctx, const DecodedInst &Di,
+                                   OperandResolver &Op);
+
 llvm::Error raiseFloatMac(RaiseContext &Ctx, const DecodedInst &Di,
                           OperandResolver &Op);
 

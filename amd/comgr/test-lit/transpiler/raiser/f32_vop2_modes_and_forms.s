@@ -28,16 +28,26 @@
 ; RUN:   --emit-ir=ieee_off_kernel \
 ; RUN:   | %FileCheck %s --check-prefix=IEEE-OFF-SAME-ISA
 
-; A mode the raise cannot carry over and an encoding outside the dispatched
-; VOP2 form are both refused rather than mislowered.
+; Unsupported rounding modes and lane-modifying encodings are refused.
 ; RUN: not %transpile_cli %t.hsaco \
-; RUN:   --emit-ir=rounding_kernel,e64_kernel,dpp_kernel,sdwa_kernel 2>&1 \
+; RUN:   --emit-ir=rounding_kernel,dpp_kernel,sdwa_kernel 2>&1 \
 ; RUN:   | %FileCheck %s --check-prefix=REFUSE
 ; REFUSE:      unsupported-floating-point-mode: v_add_f32 [VOP2]
 ; REFUSE-SAME: f32 rounding mode 1 is unsupported
-; REFUSE:      unsupported-instruction-form: v_add_f32 [VOP3]
 ; REFUSE:      unsupported-instruction-form: v_add_f32 [DPP]
 ; REFUSE:      unsupported-instruction-form: v_add_f32 [SDWA]
+
+; RUN: %transpile_cli %t.hsaco --emit-ir=e64_kernel \
+; RUN:   | %FileCheck %s --check-prefix=E64
+; E64: fadd float
+
+; RUN: not %transpile_cli %t.hsaco --target-isa=gfx1010 \
+; RUN:   --emit-ir=legacy_max,legacy_min 2>&1 \
+; RUN:   | %FileCheck %s --check-prefix=LEGACY
+; LEGACY: unsupported-instruction-form: v_max_f32 [VOP2]
+; LEGACY-SAME: legacy floating-point min/max semantics are not supported
+; LEGACY: unsupported-instruction-form: v_min_f32 [VOP3]
+; LEGACY-SAME: legacy floating-point min/max semantics are not supported
 
 	.amdgcn_target "amdgcn-amd-amdhsa--gfx1010"
 	.amdhsa_code_object_version 6
@@ -108,6 +118,20 @@ sdwa_kernel:
 	v_add_f32_sdwa v0, v1, v2
 	s_endpgm
 
+	.globl legacy_max
+	.p2align 8
+	.type legacy_max,@function
+legacy_max:
+	v_max_f32_e32 v0, v1, v2
+	s_endpgm
+
+	.globl legacy_min
+	.p2align 8
+	.type legacy_min,@function
+legacy_min:
+	v_min_f32_e64 v0, v1, v2
+	s_endpgm
+
 	.section	.rodata,"a",@progbits
 	.p2align	6, 0x0
 ; MODE: attributes #[[ATTR]] = {
@@ -160,6 +184,16 @@ sdwa_kernel:
 	.amdhsa_kernel sdwa_kernel
 		.amdhsa_next_free_vgpr 3
 		.amdhsa_next_free_sgpr 1
+	.end_amdhsa_kernel
+	.amdhsa_kernel legacy_max
+		.amdhsa_next_free_vgpr 3
+		.amdhsa_next_free_sgpr 1
+		.amdhsa_ieee_mode 1
+	.end_amdhsa_kernel
+	.amdhsa_kernel legacy_min
+		.amdhsa_next_free_vgpr 3
+		.amdhsa_next_free_sgpr 1
+		.amdhsa_ieee_mode 0
 	.end_amdhsa_kernel
 	.text
 	.amdgpu_metadata
@@ -244,6 +278,26 @@ amdhsa.kernels:
     .sgpr_count:     1
     .symbol:         sdwa_kernel.kd
     .vgpr_count:     3
+    .wavefront_size: 32
+  - .group_segment_fixed_size: 0
+    .kernarg_segment_align: 8
+    .kernarg_segment_size: 0
+    .max_flat_workgroup_size: 32
+    .name: legacy_max
+    .private_segment_fixed_size: 0
+    .sgpr_count: 1
+    .symbol: legacy_max.kd
+    .vgpr_count: 3
+    .wavefront_size: 32
+  - .group_segment_fixed_size: 0
+    .kernarg_segment_align: 8
+    .kernarg_segment_size: 0
+    .max_flat_workgroup_size: 32
+    .name: legacy_min
+    .private_segment_fixed_size: 0
+    .sgpr_count: 1
+    .symbol: legacy_min.kd
+    .vgpr_count: 3
     .wavefront_size: 32
 amdhsa.version: [1, 2]
 ...

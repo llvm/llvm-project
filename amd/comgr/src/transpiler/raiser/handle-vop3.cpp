@@ -569,14 +569,27 @@ Error handleVOP3(RaiseContext &Ctx, const DecodedInst &Di,
   switch (Di.CanonOp) {
   case CanonicalOp::V_NOP:
     return Error::success();
-  case CanonicalOp::V_FMAC_F32:
+  case CanonicalOp::V_ADD_F32:
+  case CanonicalOp::V_ADD_F64:
+  case CanonicalOp::V_MUL_F32:
+  case CanonicalOp::V_MUL_F64:
+  case CanonicalOp::V_SUB_F32:
+  case CanonicalOp::V_SUBREV_F32:
     if (Error Err = requireDefaultFloatOutputModifiers(Ctx, Di))
       return Err;
-    return raiseFloatMac(Ctx, Di, Op);
+    return raiseFloatBinary(Ctx, Di, Op);
+  case CanonicalOp::V_FMA_F32:
+  case CanonicalOp::V_FMAC_F32:
+  case CanonicalOp::V_FMA_F64:
   case CanonicalOp::V_FMAC_F64:
     if (Error Err = requireDefaultFloatOutputModifiers(Ctx, Di))
       return Err;
     return raiseFloatMac(Ctx, Di, Op);
+  case CanonicalOp::V_MAX_NUM_F32:
+  case CanonicalOp::V_MIN_NUM_F32:
+    if (Error Err = requireDefaultFloatOutputModifiers(Ctx, Di))
+      return Err;
+    return raiseNumericExtremum32(Ctx, Di, Op);
   case CanonicalOp::V_MAXIMUM_F32:
   case CanonicalOp::V_MINIMUM_F32:
     return raiseFloatBinary32(Ctx, Di, Op);

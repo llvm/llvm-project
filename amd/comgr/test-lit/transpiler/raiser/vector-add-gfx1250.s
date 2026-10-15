@@ -65,9 +65,7 @@ vector_add:
 ; IR: load i32, ptr addrspace(1) {{%.+}}, align 4
 	global_load_b32 v3, v1, s[6:7]
 	s_wait_loadcnt 0x0
-; IR: [[LHS:%.+]] = bitcast i32 {{%.+}} to float
-; IR: [[RHS:%.+]] = bitcast i32 {{%.+}} to float
-; IR: fadd float [[LHS]], [[RHS]]
+; IR: fadd float {{%.+}}, {{%.+}}
 	v_add_f32 v2, v2, v3
 ; IR: store i32 {{%.+}}, ptr addrspace(1) {{%.+}}, align 4
 	global_store_b32 v1, v2, s[8:9]

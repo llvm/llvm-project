@@ -30,35 +30,6 @@ using namespace llvm;
 
 namespace COMGR::transpiler {
 
-static Error raiseFloatBinary(RaiseContext &Ctx, const DecodedInst &Di,
-                              OperandResolver &Op,
-                              Instruction::BinaryOps Opcode,
-                              bool ReverseOperands) {
-  if (Di.NumDefs != 1 || Di.numOperands() == 0 || !Di.isReg(0) ||
-      Op.nSrcs() != 2) {
-    return unsupported(Ctx, Di,
-                       "expected one register destination and two sources");
-  }
-
-  if (Error Err = Ctx.validateFPEnvironment(Di, Ctx.B.getFloatTy())) {
-    return Err;
-  }
-
-  Expected<BinaryOperands> Args = Op.readBinary32();
-  if (!Args) {
-    return Args.takeError();
-  }
-
-  Value *Src0 = Ctx.B.CreateBitCast(Args->Src0, Ctx.B.getFloatTy());
-  Value *Src1 = Ctx.B.CreateBitCast(Args->Src1, Ctx.B.getFloatTy());
-  Value *Lhs = ReverseOperands ? Src1 : Src0;
-  Value *Rhs = ReverseOperands ? Src0 : Src1;
-  Value *Result = Ctx.B.CreateBinOp(Opcode, Lhs, Rhs);
-  Ctx.registers().writeReg32(Args->Dst,
-                             Ctx.B.CreateBitCast(Result, Ctx.B.getInt32Ty()));
-  return Error::success();
-}
-
 // Write an EXEC-predicated vector result and store carry or borrow in VCC for
 // active source lanes.
 static void writeResultAndVCC(RaiseContext &Ctx, ParsedReg Dst, Value *Result,
@@ -195,21 +166,20 @@ Error handleVOP2(RaiseContext &Ctx, const DecodedInst &Di,
   case CanonicalOp::V_WRITELANE_B32:
     return raiseWriteLane32(Ctx, Di, Op);
   case CanonicalOp::V_ADD_F32:
-    return raiseFloatBinary(Ctx, Di, Op, Instruction::FAdd,
-                            /*ReverseOperands=*/false);
+  case CanonicalOp::V_ADD_F64:
   case CanonicalOp::V_MUL_F32:
-    return raiseFloatBinary(Ctx, Di, Op, Instruction::FMul,
-                            /*ReverseOperands=*/false);
+  case CanonicalOp::V_MUL_F64:
   case CanonicalOp::V_SUB_F32:
-    return raiseFloatBinary(Ctx, Di, Op, Instruction::FSub,
-                            /*ReverseOperands=*/false);
   case CanonicalOp::V_SUBREV_F32:
-    return raiseFloatBinary(Ctx, Di, Op, Instruction::FSub,
-                            /*ReverseOperands=*/true);
+    return raiseFloatBinary(Ctx, Di, Op);
+  case CanonicalOp::V_MAX_NUM_F32:
+  case CanonicalOp::V_MIN_NUM_F32:
+    return raiseNumericExtremum32(Ctx, Di, Op);
   case CanonicalOp::V_FMAC_F64:
   case CanonicalOp::V_FMAMK_F64:
   case CanonicalOp::V_FMAC_F32:
   case CanonicalOp::V_FMAMK_F32:
+  case CanonicalOp::V_FMAAK_F32:
     return raiseFloatMac(Ctx, Di, Op);
 
   case CanonicalOp::V_ADD_NC_U32:

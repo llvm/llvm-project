@@ -261,13 +261,156 @@ Error raiseUnaryFloat64(RaiseContext &Ctx, const DecodedInst &Di,
   return Error::success();
 }
 
+/// Flush a subnormal operand or result according to its source FP mode.
+static Value *flushDenormal(IRBuilder<> &B, Value *V, bool IsOutput) {
+  Type *Ty = V->getType();
+  const fltSemantics &Semantics = Ty->getFltSemantics();
+  DenormalMode Mode =
+      B.GetInsertBlock()->getParent()->getDenormalMode(Semantics);
+  DenormalMode::DenormalModeKind Kind = IsOutput ? Mode.Output : Mode.Input;
+  if (Kind == DenormalMode::IEEE)
+    return V;
+  assert(Kind == DenormalMode::PreserveSign &&
+         "unexpected source denormal mode");
+  Type *BitsTy = B.getIntNTy(Ty->getPrimitiveSizeInBits());
+  Value *Bits = B.CreateBitCast(V, BitsTy);
+  APInt SignMask = APInt::getSignMask(Ty->getPrimitiveSizeInBits());
+  Value *Magnitude = B.CreateAnd(Bits, ~SignMask);
+  Value *IsTiny = B.CreateICmpULT(
+      Magnitude,
+      ConstantInt::get(
+          BitsTy, APFloat::getSmallestNormalized(Semantics).bitcastToAPInt()));
+  Value *Sign = B.CreateAnd(Bits, SignMask);
+  return B.CreateBitCast(B.CreateSelect(IsTiny, Sign, Bits), Ty);
+}
+
+/// Quiet result NaNs and enforce the source output denormal mode.
+static Value *getFloatResultBits(IRBuilder<> &B, Value *Result) {
+  Type *Ty = Result->getType();
+  unsigned Width = Ty->getPrimitiveSizeInBits();
+  Type *BitsTy = B.getIntNTy(Width);
+  Value *Bits = B.CreateBitCast(flushDenormal(B, Result, true), BitsTy);
+  APInt Infinity = APFloat::getInf(Ty->getFltSemantics()).bitcastToAPInt();
+  APInt QuietBit =
+      APFloat::getQNaN(Ty->getFltSemantics()).bitcastToAPInt() ^ Infinity;
+  Value *Magnitude = B.CreateAnd(Bits, APInt::getSignedMaxValue(Width));
+  Value *IsNaN = B.CreateICmpUGT(Magnitude, ConstantInt::get(BitsTy, Infinity));
+  // Ordinary FP operations may propagate a signaling NaN unchanged.
+  return B.CreateSelect(IsNaN, B.CreateOr(Bits, QuietBit), Bits);
+}
+
+Error raiseFloatBinary(RaiseContext &Ctx, const DecodedInst &Di,
+                       OperandResolver &Op) {
+  assert(Di.NumDefs == 1 && Op.nSrcs() == 2 &&
+         "expected one destination and two sources");
+
+  bool Is64 = Di.CanonOp == CanonicalOp::V_MUL_F64 ||
+              Di.CanonOp == CanonicalOp::V_ADD_F64;
+  Type *Ty = Is64 ? Ctx.B.getDoubleTy() : Ctx.B.getFloatTy();
+  if (Error Err = Ctx.validateFPEnvironment(Di, Ty)) {
+    return Err;
+  }
+
+  Expected<ParsedReg> Destination = Op.dst();
+  if (!Destination)
+    return Destination.takeError();
+  Expected<Value *> Left = Is64 ? Op.srcF64(0) : Op.srcF32(0);
+  if (!Left)
+    return Left.takeError();
+  Expected<Value *> Right = Is64 ? Op.srcF64(1) : Op.srcF32(1);
+  if (!Right)
+    return Right.takeError();
+
+  Instruction::BinaryOps Opcode;
+  switch (Di.CanonOp) {
+  case CanonicalOp::V_ADD_F32:
+  case CanonicalOp::V_ADD_F64:
+    Opcode = Instruction::FAdd;
+    break;
+  case CanonicalOp::V_MUL_F32:
+  case CanonicalOp::V_MUL_F64:
+    Opcode = Instruction::FMul;
+    break;
+  case CanonicalOp::V_SUB_F32:
+  case CanonicalOp::V_SUBREV_F32:
+    Opcode = Instruction::FSub;
+    break;
+  default:
+    llvm_unreachable("not binary floating-point arithmetic");
+  }
+  bool ReverseOperands = Di.CanonOp == CanonicalOp::V_SUBREV_F32;
+  Value *Lhs = flushDenormal(Ctx.B, ReverseOperands ? *Right : *Left, false);
+  Value *Rhs = flushDenormal(Ctx.B, ReverseOperands ? *Left : *Right, false);
+  Value *Bits = getFloatResultBits(Ctx.B, Ctx.B.CreateBinOp(Opcode, Lhs, Rhs));
+  if (Is64)
+    Ctx.registers().writeReg64(*Destination, Bits);
+  else
+    Ctx.registers().writeReg32(*Destination, Bits);
+  return Error::success();
+}
+
+Error raiseNumericExtremum32(RaiseContext &Ctx, const DecodedInst &Di,
+                             OperandResolver &Op) {
+  assert(Di.NumDefs == 1 && Op.nSrcs() == 2 &&
+         "expected one destination and two sources");
+  assert((Di.CanonOp == CanonicalOp::V_MAX_NUM_F32 ||
+          Di.CanonOp == CanonicalOp::V_MIN_NUM_F32) &&
+         "expected numeric minimum or maximum");
+  // Legacy min/max share these canonical opcodes but have different NaN rules.
+  if (Ctx.Projection.SourceSTI.hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode))
+    return unsupportedInstruction(
+        Ctx, Di, "legacy floating-point min/max semantics are not supported");
+  if (Error Err = Ctx.validateFPEnvironment(Di, Ctx.B.getFloatTy()))
+    return Err;
+  Expected<ParsedReg> Destination = Op.dst();
+  if (!Destination)
+    return Destination.takeError();
+  Expected<Value *> Left = Op.srcF32(0);
+  if (!Left)
+    return Left.takeError();
+  Expected<Value *> Right = Op.srcF32(1);
+  if (!Right)
+    return Right.takeError();
+  Value *LeftBits = Ctx.B.CreateBitCast(flushDenormal(Ctx.B, *Left, false),
+                                        Ctx.B.getInt32Ty());
+  Value *RightBits = Ctx.B.CreateBitCast(flushDenormal(Ctx.B, *Right, false),
+                                         Ctx.B.getInt32Ty());
+  auto IsNaN = [&](Value *Bits) {
+    return Ctx.B.CreateICmpUGT(Ctx.B.CreateAnd(Bits, 0x7fffffff),
+                               Ctx.B.getInt32(0x7f800000));
+  };
+  // Signed integer order after reflecting negative encodings also orders -0
+  // before +0, without flushing a selected subnormal result.
+  auto Ordered = [&](Value *Bits) {
+    Value *Negative = Ctx.B.CreateICmpSLT(Bits, Ctx.B.getInt32(0));
+    return Ctx.B.CreateXor(Bits, Ctx.B.CreateSelect(Negative,
+                                                    Ctx.B.getInt32(0x7fffffff),
+                                                    Ctx.B.getInt32(0)));
+  };
+  Value *ChooseLeft =
+      Di.CanonOp == CanonicalOp::V_MAX_NUM_F32
+          ? Ctx.B.CreateICmpSGT(Ordered(LeftBits), Ordered(RightBits))
+          : Ctx.B.CreateICmpSLT(Ordered(LeftBits), Ordered(RightBits));
+  Value *Bits = Ctx.B.CreateSelect(ChooseLeft, LeftBits, RightBits);
+  Value *LeftNaN = IsNaN(LeftBits);
+  Value *RightNaN = IsNaN(RightBits);
+  Bits = Ctx.B.CreateSelect(LeftNaN, RightBits, Bits);
+  Bits = Ctx.B.CreateSelect(RightNaN, LeftBits, Bits);
+  Value *BothNaN = Ctx.B.CreateAnd(LeftNaN, RightNaN);
+  Bits =
+      Ctx.B.CreateSelect(BothNaN, Ctx.B.CreateOr(LeftBits, 0x00400000), Bits);
+  Ctx.registers().writeReg32(*Destination, Bits);
+  return Error::success();
+}
+
 Error raiseFloatMac(RaiseContext &Ctx, const DecodedInst &Di,
                     OperandResolver &Op) {
   if (Di.NumDefs != 1 || Op.nSrcs() != 3)
     return unsupportedInstruction(
         Ctx, Di, "expected floating-point multiply-add operands");
   bool Is64 = Di.CanonOp == CanonicalOp::V_FMAC_F64 ||
-              Di.CanonOp == CanonicalOp::V_FMAMK_F64;
+              Di.CanonOp == CanonicalOp::V_FMAMK_F64 ||
+              Di.CanonOp == CanonicalOp::V_FMA_F64;
   Type *Ty = Is64 ? Ctx.B.getDoubleTy() : Ctx.B.getFloatTy();
   if (Error Err = Ctx.validateFPEnvironment(Di, Ty))
     return Err;
@@ -284,10 +427,11 @@ Error raiseFloatMac(RaiseContext &Ctx, const DecodedInst &Di,
   Expected<Value *> Src2 = Read(2);
   if (!Src2)
     return Src2.takeError();
-  Value *Result =
-      Ctx.B.CreateIntrinsic(Intrinsic::fma, {Ty}, {*Src0, *Src1, *Src2});
-  Value *Bits = Ctx.B.CreateBitCast(Result, Is64 ? Ctx.B.getInt64Ty()
-                                                 : Ctx.B.getInt32Ty());
+  Value *Result = Ctx.B.CreateIntrinsic(Intrinsic::fma, {Ty},
+                                        {flushDenormal(Ctx.B, *Src0, false),
+                                         flushDenormal(Ctx.B, *Src1, false),
+                                         flushDenormal(Ctx.B, *Src2, false)});
+  Value *Bits = getFloatResultBits(Ctx.B, Result);
   if (Is64)
     Ctx.registers().writeReg64(*Dst, Bits);
   else
@@ -300,10 +444,6 @@ Error raiseFloatConversion32(RaiseContext &Ctx, const DecodedInst &Di,
   if (Di.NumDefs != 1 || Op.nSrcs() != 1)
     return unsupportedInstruction(Ctx, Di,
                                   "expected one destination and one source");
-  if (Di.CanonOp == CanonicalOp::V_CVT_F16_F32 &&
-      Ctx.Projection.SourceSTI.hasFeature(AMDGPU::FeatureRealTrue16Insts))
-    return unsupportedInstruction(
-        Ctx, Di, "true16 destination preservation is not supported");
   if (Error Err = Ctx.validateFPEnvironment(Di, Ctx.B.getFloatTy()))
     return Err;
   if (Di.CanonOp == CanonicalOp::V_CVT_F16_F32) {
@@ -344,10 +484,9 @@ Error raiseFloatConversion32(RaiseContext &Ctx, const DecodedInst &Di,
     Expected<Value *> Source = Op.srcF32(0);
     if (!Source)
       return Source.takeError();
-    Value *Half = Ctx.B.CreateFPTrunc(*Source, Ctx.B.getHalfTy(), "cvt");
-    Value *HalfBits = Ctx.B.CreateBitCast(Half, Ctx.B.getInt16Ty());
-    Result = Ctx.B.CreateZExt(HalfBits, Ctx.B.getInt32Ty());
-    break;
+    Value *Half = Ctx.B.CreateFPTrunc(flushDenormal(Ctx.B, *Source, false),
+                                      Ctx.B.getHalfTy(), "cvt");
+    return writeDestination16(Ctx, Op, getFloatResultBits(Ctx.B, Half));
   }
   case CanonicalOp::V_CVT_F32_F16: {
     Expected<Value *> Source = Op.srcF16(0);

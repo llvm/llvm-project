@@ -53,7 +53,10 @@ Expected<Value *> OperandResolver::srcF32(unsigned I) {
   Expected<Value *> V = Ctx.registers().readOp32(Di, srcIdx(I));
   if (!V)
     return V.takeError();
-  if (srcMod(I) & ~(SISrcMods::NEG | SISrcMods::ABS))
+  unsigned AllowedModifiers = SISrcMods::NEG | SISrcMods::ABS;
+  if (I == 0 && dstKeepsOtherHalf())
+    AllowedModifiers |= SISrcMods::DST_OP_SEL;
+  if (srcMod(I) & ~AllowedModifiers)
     return unsupportedInstruction(Ctx, Di, "unsupported f32 source modifier");
   Value *Float = Ctx.B.CreateBitCast(*V, Ctx.B.getFloatTy());
   return applyMods(I, Float);

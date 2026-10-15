@@ -15,9 +15,9 @@
 ; RUN: not %transpile_cli %t.hsaco --target-isa=gfx942 \
 ; RUN:   --emit-ir=refuse_div_scale_modifiers 2>&1 \
 ; RUN:   | %FileCheck %s --check-prefix=REFUSE-SCALE-MODS
-; RUN: not %transpile_cli %t.hsaco --target-isa=gfx942 \
-; RUN:   --emit-ir=refuse_true16_destination 2>&1 \
-; RUN:   | %FileCheck %s --check-prefix=REFUSE-TRUE16
+; RUN: %transpile_cli %t.hsaco --target-isa=gfx942 \
+; RUN:   --emit-ir=true16_destination \
+; RUN:   | %FileCheck %s --check-prefix=TRUE16
 ; RUN: not %transpile_cli %t.hsaco --target-isa=gfx942 \
 ; RUN:   --emit-ir=refuse_tanh 2>&1 \
 ; RUN:   | %FileCheck %s --check-prefix=REFUSE-TANH
@@ -352,12 +352,11 @@ refuse_div_scale_modifiers:
 	v_div_scale_f32 v0, vcc_lo, -v0, v1, v0
 	s_endpgm
 
-	.globl	refuse_true16_destination
+	.globl	true16_destination
 	.p2align	8
-	.type	refuse_true16_destination,@function
-; REFUSE-TRUE16: unsupported-instruction-form: v_cvt_f16_f32 [VOP1]
-; REFUSE-TRUE16-SAME: true16 destination preservation is not supported
-refuse_true16_destination:
+	.type	true16_destination,@function
+; TRUE16: fptrunc float
+true16_destination:
 	v_cvt_f16_f32_e32 v0.l, v1
 	s_endpgm
 
@@ -459,7 +458,7 @@ refuse_f64_rounding:
 		.amdhsa_next_free_vgpr 2
 		.amdhsa_next_free_sgpr 1
 	.end_amdhsa_kernel
-	.amdhsa_kernel refuse_true16_destination
+	.amdhsa_kernel true16_destination
 		.amdhsa_next_free_vgpr 2
 		.amdhsa_next_free_sgpr 1
 	.end_amdhsa_kernel
@@ -562,10 +561,10 @@ amdhsa.kernels:
     .kernarg_segment_align: 8
     .kernarg_segment_size: 0
     .max_flat_workgroup_size: 1024
-    .name:           refuse_true16_destination
+    .name:           true16_destination
     .private_segment_fixed_size: 0
     .sgpr_count:     1
-    .symbol:         refuse_true16_destination.kd
+    .symbol:         true16_destination.kd
     .vgpr_count:     2
     .wavefront_size: 32
   - .group_segment_fixed_size: 0

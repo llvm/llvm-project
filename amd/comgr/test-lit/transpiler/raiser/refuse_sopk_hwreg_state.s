@@ -6,6 +6,17 @@
 ; RUN:   --emit-ir=refuse_hwreg_read,refuse_hwreg_write,refuse_mode_read 2>&1 \
 ; RUN:   | %FileCheck %s --check-prefix=REFUSE
 
+; RUN: %llvm-mc -triple=amdgpu9.42-amd-amdhsa -filetype=obj --defsym=READ_REG=3 %s -o %t.trap.o
+; RUN: %ld.lld -shared %t.trap.o -o %t.trap.hsaco
+; RUN: not %transpile_cli %t.trap.hsaco --emit-ir=refuse_hwreg_read 2>&1 | %FileCheck %s --check-prefix=TRAPSTS
+; TRAPSTS: cannot reproduce hardware-register read for id 3
+; RUN: %llvm-mc -triple=amdgpu9.42-amd-amdhsa -filetype=obj --defsym=READ_REG=17 %s -o %t.except.o
+; RUN: %ld.lld -shared %t.except.o -o %t.except.hsaco
+; RUN: not %transpile_cli %t.except.hsaco --emit-ir=refuse_hwreg_read 2>&1 | %FileCheck %s --check-prefix=PRIVATE
+; PRIVATE: cannot reproduce hardware-register read for id 17
+.ifndef READ_REG
+.set READ_REG, 20
+.endif
 	.amdgcn_target "amdgcn-amd-amdhsa--gfx942"
 	.amdhsa_code_object_version 6
 	.text
@@ -17,7 +28,7 @@ refuse_hwreg_read:
 	; REFUSE-SAME: cannot reproduce hardware-register read for id 20
 	; READ-SAME: s_getreg_b32
 	; READ-SAME: cannot reproduce hardware-register read for id 20
-	s_getreg_b32 s0, hwreg(20)
+	s_getreg_b32 s0, hwreg(READ_REG)
 	s_endpgm
 
 	.globl	refuse_hwreg_write

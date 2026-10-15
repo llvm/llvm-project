@@ -12,6 +12,7 @@
 #include "transpiler/decoder/decode.h"
 
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIModeRegisterDefaults.h"
 
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -82,14 +83,10 @@ Error raiseSleep(RaiseContext &Ctx, const DecodedInst &Di) {
   return Error::success();
 }
 
-// The rounding and denormal modes the raised kernel computes in, in the field
-// layout each mode-setting opcode takes its immediate in. Nothing the raiser
-// emits moves either of them.
+// The supported rounding mode in the S_ROUND_MODE immediate layout.
 constexpr int64_t KRaisedRoundMode =
     FP_ROUND_MODE_SP(FP_ROUND_ROUND_TO_NEAREST) |
     FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_NEAREST);
-constexpr int64_t KRaisedDenormMode =
-    FP_DENORM_FLUSH_NONE | (FP_DENORM_FLUSH_NONE << 2);
 
 } // namespace
 
@@ -276,16 +273,8 @@ Error handleSOPP(RaiseContext &Ctx, const DecodedInst &Di,
     return unsupported(Ctx, Di,
                        "ends the wave for a context save nothing here resumes");
 
-  // Accept only the immediate naming the mode the raised kernel is already in,
-  // so that the float instructions after it compute under the mode the source
-  // asked for. Any other immediate would leave the raised arithmetic rounding
-  // or flushing differently from the source, which is a wrong answer rather
-  // than a missing one.
-  //
-  // TODO: carry the requested mode instead of refusing it, by recording it and
-  // applying it to the float instructions it reaches. That needs control- and
-  // data-flow analysis to find those instructions, and block duplication where
-  // one is reachable under two different modes.
+  // Mode changes need tracking across control flow; only redundant writes can
+  // be dropped.
   case CanonicalOp::S_ROUND_MODE:
     if (Op.srcImm(0) != KRaisedRoundMode)
       return unsupported(Ctx, Di,
@@ -293,13 +282,21 @@ Error handleSOPP(RaiseContext &Ctx, const DecodedInst &Di,
                              " rather than round-to-nearest-even, which is the "
                              "mode the raised kernel computes in");
     return Error::success();
-  case CanonicalOp::S_DENORM_MODE:
-    if (Op.srcImm(0) != KRaisedDenormMode)
+  case CanonicalOp::S_DENORM_MODE: {
+    const DenormalFPEnv FPEnv =
+        Ctx.B.GetInsertBlock()->getParent()->getDenormalFPEnv();
+    SIModeRegisterDefaults Mode;
+    Mode.FP32Denormals = FPEnv.F32Mode;
+    Mode.FP64FP16Denormals = FPEnv.DefaultMode;
+    const int64_t DenormMode =
+        Mode.fpDenormModeSPValue() | (Mode.fpDenormModeDPValue() << 2);
+    if (Op.srcImm(0) != DenormMode)
       return unsupported(Ctx, Di,
                          "selects denormal mode " + Twine(Op.srcImm(0)) +
-                             " rather than keeping denormals, which is what "
-                             "the raised kernel computes with");
+                             " rather than kernel descriptor mode " +
+                             Twine(DenormMode));
     return Error::success();
+  }
 
   // The same SIMM16 names different messages on different targets, and most of
   // them are a conversation between the source wave and hardware that is not

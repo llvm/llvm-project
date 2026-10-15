@@ -18,17 +18,23 @@ f32_vop2_kernel:
 ; IR: [[ADD:%.+]] = fadd float 1.000000e+00, {{.+}}
 	v_add_f32_e32 v0, 1.0, v1
 ; IR: [[ADD_BITS:%.+]] = bitcast float [[ADD]] to i32
-; IR: [[ADD_REG:%.+]] = phi i32 {{.+}}[[ADD_BITS]]{{.+}}
+; IR: [[ADD_QUIET:%.+]] = or i32 {{%.+}}, 4194304
+; IR: [[ADD_RESULT:%.+]] = select i1 {{%.+}}, i32 [[ADD_QUIET]], i32 {{%.+}}
+; IR: [[ADD_REG:%.+]] = phi i32 {{.+}}[[ADD_RESULT]]{{.+}}
 ; IR: [[ADD_VALUE:%.+]] = bitcast i32 [[ADD_REG]] to float
 ; IR: [[SUB:%.+]] = fsub float 2.000000e+00, [[ADD_VALUE]]
 	v_sub_f32_e32 v2, 2.0, v0
 ; IR: [[SUB_BITS:%.+]] = bitcast float [[SUB]] to i32
-; IR: [[SUB_REG:%.+]] = phi i32 {{.+}}[[SUB_BITS]]{{.+}}
+; IR: [[SUB_QUIET:%.+]] = or i32 {{%.+}}, 4194304
+; IR: [[SUB_RESULT:%.+]] = select i1 {{%.+}}, i32 [[SUB_QUIET]], i32 {{%.+}}
+; IR: [[SUB_REG:%.+]] = phi i32 {{.+}}[[SUB_RESULT]]{{.+}}
 ; IR: [[SUB_VALUE:%.+]] = bitcast i32 [[SUB_REG]] to float
 ; IR: [[SUBREV:%.+]] = fsub float [[SUB_VALUE]], 2.000000e+00
 	v_subrev_f32_e32 v3, 2.0, v2
 ; IR: [[SUBREV_BITS:%.+]] = bitcast float [[SUBREV]] to i32
-; IR: [[SUBREV_REG:%.+]] = phi i32 {{.+}}[[SUBREV_BITS]]{{.+}}
+; IR: [[SUBREV_QUIET:%.+]] = or i32 {{%.+}}, 4194304
+; IR: [[SUBREV_RESULT:%.+]] = select i1 {{%.+}}, i32 [[SUBREV_QUIET]], i32 {{%.+}}
+; IR: [[SUBREV_REG:%.+]] = phi i32 {{.+}}[[SUBREV_RESULT]]{{.+}}
 ; IR: [[SUBREV_VALUE:%.+]] = bitcast i32 [[SUBREV_REG]] to float
 ; IR: fmul float 5.000000e-01, [[SUBREV_VALUE]]
 	v_mul_f32_e32 v4, 0.5, v3

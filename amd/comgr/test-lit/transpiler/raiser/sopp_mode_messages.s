@@ -88,7 +88,7 @@ round_up_kernel:
 	.type	denorm_flush_kernel,@function
 denorm_flush_kernel:
 ; DENORM-FLUSH: unsupported-instruction-form: s_denorm_mode [SOPP]
-; DENORM-FLUSH-SAME: selects denormal mode 0 rather than keeping denormals
+; DENORM-FLUSH-SAME: selects denormal mode 0 rather than kernel descriptor mode 15
 	s_denorm_mode 0
 	s_endpgm
 
@@ -141,6 +141,8 @@ endpgm_saved_kernel:
 		.amdhsa_kernarg_size 0
 		.amdhsa_next_free_vgpr 1
 		.amdhsa_next_free_sgpr 1
+		.amdhsa_float_denorm_mode_32 3
+		.amdhsa_float_denorm_mode_16_64 3
 	.end_amdhsa_kernel
 	.amdhsa_kernel messages_kernel
 		.amdhsa_kernarg_size 0
@@ -156,6 +158,8 @@ endpgm_saved_kernel:
 		.amdhsa_kernarg_size 0
 		.amdhsa_next_free_vgpr 1
 		.amdhsa_next_free_sgpr 1
+		.amdhsa_float_denorm_mode_32 3
+		.amdhsa_float_denorm_mode_16_64 3
 	.end_amdhsa_kernel
 	.amdhsa_kernel dealloc_halt_kernel
 		.amdhsa_kernarg_size 0
