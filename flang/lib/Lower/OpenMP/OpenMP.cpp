@@ -6739,8 +6739,7 @@ static void genOpenMPDeclareReductionImpl(
                           parser::CharBlock mangledOpName =
                               semantics::MakeNameFromOperator(
                                   ReductionProcessor::toParserIntrinsicOperator(
-                                      intrOp),
-                                  semaCtx);
+                                      intrOp));
                           redSymPtr = semantics::omp::FindUserReductionSymbol(
                               converter.getCurrentScope(), mangledOpName);
                         }
