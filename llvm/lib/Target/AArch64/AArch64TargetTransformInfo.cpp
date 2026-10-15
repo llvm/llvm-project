@@ -4133,12 +4133,17 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         SrcLT.second.isVector() || SrcLT.second.isFloatingPoint();
     bool DstIsFloatOrVec =
         DstLT.second.isVector() || DstLT.second.isFloatingPoint();
+
+    // Consider the bitcast free if they are both the same type and have the
+    // same size after legalization. Scalable vectors are handled specially as
+    // the type legalization cost of v2i16 is v2i64.
     if (SrcIsFloatOrVec == DstIsFloatOrVec &&
         (SrcLT.second.getSizeInBits() == DstLT.second.getSizeInBits() ||
          (SrcLT.second.isScalableVector() &&
           SrcLT.second.getScalarSizeInBits() != 1 &&
           DstLT.second.getScalarSizeInBits() != 1)))
       return 0;
+
     return std::max(SrcLT.first, DstLT.first) *
            (CostKind == TTI::TCK_CodeSize
                 ? 1
