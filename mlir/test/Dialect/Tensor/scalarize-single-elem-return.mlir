@@ -275,24 +275,24 @@ func.func private @private_caller(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 //       CHECK:   %[[CALL:.*]] = call @callee(%arg0) : (tensor<1xi64>) -> i64
 //       CHECK:   return %[[CALL]] : i64
 
-func.func @public_caller(%arg0: tensor<1xi64>) -> tensor<1xi64> {
+func.func @public_caller_of_private_function(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   %0 = call @private_caller(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
   return %0 : tensor<1xi64>
 }
-// CHECK-LABEL: func.func @public_caller
+// CHECK-LABEL: func.func @public_caller_of_private_function
 //  CHECK-SAME:     -> tensor<1xi64>
 //       CHECK:   %[[CALL:.*]] = call @private_caller(%arg0) : (tensor<1xi64>) -> i64
 //       CHECK:   %[[BOX:.*]] = tensor.from_elements %[[CALL]] : tensor<1xi64>
 //   CHECK-NOT:   tensor.extract
 //       CHECK:   return %[[BOX]] : tensor<1xi64>
 
-func.func @public_user(%arg0: tensor<1xi64>) -> tensor<1xi64> {
-  %0 = call @public_caller(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
+func.func @public_caller_of_public_function(%arg0: tensor<1xi64>) -> tensor<1xi64> {
+  %0 = call @public_caller_of_private_function(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
   return %0 : tensor<1xi64>
 }
-// CHECK-LABEL: func.func @public_user
+// CHECK-LABEL: func.func @public_caller_of_public_function
 //  CHECK-SAME:     -> tensor<1xi64>
-//       CHECK:   %[[CALL:.*]] = call @public_caller(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
+//       CHECK:   %[[CALL:.*]] = call @public_caller_of_private_function(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
 //   CHECK-NOT:   tensor.extract
 //       CHECK:   return %[[CALL]] : tensor<1xi64>
 
