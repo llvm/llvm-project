@@ -5302,6 +5302,110 @@ uint16x4_t test_ppairo_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
   return __riscv_ppairo_u16x4(rs1, rs2);
 }
 
+// CHECK-LABEL: define dso_local i64 @test_ppaire_i32x2(
+// CHECK-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 2>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to i64
+// CHECK-NEXT:    ret i64 [[TMP2]]
+//
+int32x2_t test_ppaire_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppaire_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: define dso_local i64 @test_ppaire_u32x2(
+// CHECK-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 2>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to i64
+// CHECK-NEXT:    ret i64 [[TMP2]]
+//
+uint32x2_t test_ppaire_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppaire_u32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: define dso_local i64 @test_ppaireo_i32x2(
+// CHECK-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 3>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to i64
+// CHECK-NEXT:    ret i64 [[TMP2]]
+//
+int32x2_t test_ppaireo_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppaireo_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: define dso_local i64 @test_ppaireo_u32x2(
+// CHECK-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 3>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to i64
+// CHECK-NEXT:    ret i64 [[TMP2]]
+//
+uint32x2_t test_ppaireo_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppaireo_u32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: define dso_local i64 @test_ppairoe_i32x2(
+// CHECK-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 2>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to i64
+// CHECK-NEXT:    ret i64 [[TMP2]]
+//
+int32x2_t test_ppairoe_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppairoe_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: define dso_local i64 @test_ppairoe_u32x2(
+// CHECK-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 2>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to i64
+// CHECK-NEXT:    ret i64 [[TMP2]]
+//
+uint32x2_t test_ppairoe_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppairoe_u32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: define dso_local i64 @test_ppairo_i32x2(
+// CHECK-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 3>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to i64
+// CHECK-NEXT:    ret i64 [[TMP2]]
+//
+int32x2_t test_ppairo_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppairo_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: define dso_local i64 @test_ppairo_u32x2(
+// CHECK-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 3>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to i64
+// CHECK-NEXT:    ret i64 [[TMP2]]
+//
+uint32x2_t test_ppairo_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppairo_u32x2(rs1, rs2);
+}
+
 /* Packed Absolute Difference Sum (32-bit) */
 // RV32-LABEL: define dso_local i32 @test_pabdsumu_u8x4_u32(
 // RV32-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
