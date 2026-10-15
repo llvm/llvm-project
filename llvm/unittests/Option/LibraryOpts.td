@@ -33,3 +33,5 @@ defm : DefaultOnOffField<"lib-tristate", "A tri-state">;
 defm Path : ValueField<"lib-path", "StringRef", "\"p\"", "A string">;
 def : AliasOf<"lib-disable", "lib-enable=false">;
 def : AliasOf<"lib-number", "lib-count">;
+def : AliasOf<"lib-old-mode", "lib-mode">;
+def : AliasOf<"lib-mode-b", "lib-mode=b">;
