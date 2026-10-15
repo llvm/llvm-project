@@ -146,6 +146,7 @@ namespace __sanitizer {
 #  if defined(__arm__) && defined(__linux__)
 // Linux Arm headers redefine __UINTPTR_TYPE__ and disagree with clang/gcc.
 typedef unsigned int uptr;
+2
 typedef int sptr;
 #  else
 typedef __UINTPTR_TYPE__ uptr;
