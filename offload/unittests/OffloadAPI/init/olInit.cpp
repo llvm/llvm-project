@@ -17,7 +17,29 @@
 #include <thread>
 #include <vector>
 
+#ifdef _WIN32
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
+
 struct olInitTest : ::testing::Test {};
+
+static void setEnv(const char *Name, const char *Value) {
+#ifdef _WIN32
+  _putenv_s(Name, Value);
+#else
+  setenv(Name, Value, 1);
+#endif
+}
+
+static void unsetEnv(const char *Name) {
+#ifdef _WIN32
+  _putenv_s(Name, "");
+#else
+  unsetenv(Name);
+#endif
+}
 
 // Collects the backend of every usable platform.
 static std::vector<ol_platform_backend_t> getBackends() {
@@ -258,9 +280,9 @@ TEST_F(olInitTest, NullPlatformsArray) {
 // Environment variables are read during olInit only. Changing
 // OFFLOAD_TRACE afterwards has no effect until the library is reinitialized.
 TEST_F(olInitTest, TraceReadAtInit) {
-  unsetenv("OFFLOAD_TRACE");
+  unsetEnv("OFFLOAD_TRACE");
   ASSERT_SUCCESS(olInit(nullptr));
-  setenv("OFFLOAD_TRACE", "1", 1);
+  setEnv("OFFLOAD_TRACE", "1");
 
   testing::internal::CaptureStderr();
   ASSERT_SUCCESS(olIteratePlatforms(
@@ -276,7 +298,7 @@ TEST_F(olInitTest, TraceReadAtInit) {
   ASSERT_NE(testing::internal::GetCapturedStderr().find("---> "),
             std::string::npos);
   ASSERT_SUCCESS(olShutDown());
-  unsetenv("OFFLOAD_TRACE");
+  unsetEnv("OFFLOAD_TRACE");
 }
 
 // OlInit is thread safe, concurrent calls are serialized and each one
@@ -289,8 +311,8 @@ TEST_F(olInitTest, ConcurrentInit) {
     Threads.emplace_back([&Results, I] { Results[I] = olInit(nullptr); });
   for (auto &T : Threads)
     T.join();
-  for (auto Res : Results)
-    ASSERT_SUCCESS(Res);
+  for (auto R : Results)
+    ASSERT_SUCCESS(R);
 
   for (size_t I = 0; I < NumThreads; I++)
     ASSERT_SUCCESS(olShutDown());
@@ -310,14 +332,19 @@ TEST_F(olInitTest, ConcurrentShutDown) {
     Threads.emplace_back([&Results, I] { Results[I] = olShutDown(); });
   for (auto &T : Threads)
     T.join();
-  for (auto Res : Results)
-    ASSERT_SUCCESS(Res);
+  for (auto R : Results)
+    ASSERT_SUCCESS(R);
   ASSERT_ERROR(OL_ERRC_UNINITIALIZED, olShutDown());
 }
 
 // If the process exits while references are held, the library shuts
 // itself down; afterwards olShutDown succeeds and olInit fails with
 // OL_ERRC_UNINITIALIZED. Checked from an exit handler in a child process.
+//
+// On Windows, atexit handlers registered inside a DLL run when the DLL is
+// unloaded, after every handler registered by the executable, so the state
+// after the library's exit teardown cannot be observed from here.
+#ifndef _WIN32
 static void checkAfterExitShutDown() {
   if (olShutDown() != OL_SUCCESS)
     _exit(1);
@@ -344,3 +371,4 @@ TEST_F(olInitTest, ShutDownAtProcessExit) {
       },
       ::testing::ExitedWithCode(0), "");
 }
+#endif
