@@ -1505,8 +1505,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   AArch64Err843419Patcher a64p(ctx);
   ARMErr657417Patcher a32p(ctx);
 
-  // These move input sections and must precede the first address assignment;
-  // the first iteration below would otherwise use stale addresses.
+  // Transforms that move input sections without reading addresses go here.
+  // After the first assignAddresses, only the loop below may change layout.
   if (ctx.arg.randomizeSectionPadding)
     randomizeSectionPadding(ctx);
   if (ctx.arg.branchToBranch)
