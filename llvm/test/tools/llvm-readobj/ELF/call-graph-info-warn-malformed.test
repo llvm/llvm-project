@@ -200,19 +200,50 @@ Sections:
     ]
 ...
 
-## Check missing relocation information.
+## Check that a single warning is reported when a SHT_LLVM_CALL_GRAPH section in
+## a relocatable object file has no relocation section, and that each function
+## is then identified by the value stored in its address field.
 # RUN: yaml2obj --docnum=6 %s -o %t11
 # RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t11 2>&1 | count 0
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t11 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t11 --check-prefixes=WARN-MISSING-INFO
+# RUN:   FileCheck %s -DFILE=%t11 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=WARN-MISSING-INFO,LLVM-MISSING-INFO
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t11 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t11 --check-prefixes=WARN-MISSING-INFO
+# RUN:   FileCheck %s -DFILE=%t11 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=WARN-MISSING-INFO,JSON-MISSING-INFO
 
 # WARN-MISSING-INFO: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type ID for 2 indirect targets
-# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 2
-# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 19
-# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 29
-# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 56
+# WARN-MISSING-INFO: warning: '[[FILE]]': unable to get relocation section for SHT_LLVM_CALL_GRAPH section with index 2
+
+# LLVM-MISSING-INFO:      CallGraph [
+# LLVM-MISSING-INFO-NEXT:   Function {
+# LLVM-MISSING-INFO-NEXT:     Address: 0x1{{$}}
+# LLVM-MISSING-INFO-NEXT:     Version: 0
+# LLVM-MISSING-INFO-NEXT:     IsIndirectTarget: Yes
+# LLVM-MISSING-INFO-NEXT:     TypeID: 0x0
+# LLVM-MISSING-INFO-NEXT:     DirectCallees [
+# LLVM-MISSING-INFO-NEXT:       {
+# LLVM-MISSING-INFO-NEXT:         Address: 0x1{{$}}
+# LLVM-MISSING-INFO-NEXT:       }
+# LLVM-MISSING-INFO-NEXT:     ]
+# LLVM-MISSING-INFO-NEXT:     IndirectTypeIDs: []
+# LLVM-MISSING-INFO-NEXT:   }
+# LLVM-MISSING-INFO-NEXT:   Function {
+# LLVM-MISSING-INFO-NEXT:     Address: 0x6{{$}}
+# LLVM-MISSING-INFO:        Function {
+# LLVM-MISSING-INFO-NEXT:     Address: 0xA{{$}}
+
+# JSON-MISSING-INFO:      "Function": {
+# JSON-MISSING-INFO-NEXT:   "Address": 1,
+# JSON-MISSING-INFO:        "DirectCallees": [
+# JSON-MISSING-INFO-NEXT:     {
+# JSON-MISSING-INFO-NEXT:       "Address": 1{{$}}
+# JSON-MISSING-INFO-NEXT:     }
+# JSON-MISSING-INFO-NEXT:   ],
+# JSON-MISSING-INFO:        "Function": {
+# JSON-MISSING-INFO-NEXT:   "Address": 6,
+# JSON-MISSING-INFO:        "Function": {
+# JSON-MISSING-INFO-NEXT:   "Address": 10,
 
 --- !ELF
 FileHeader:
@@ -227,10 +258,10 @@ Sections:
     ContentArray: [
         '0', ## Format version number
         '3', ## Flag IsIndirectTarget true, HasDirectCallees true
-        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s address
+        '1', '0', '0', '0', '0', '0', '0', '0', ## foo()'s address
         '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s TypeID Unknown
         '1', ## NumDirectCallees
-        '0', '0', '0', '0', '0', '0', '0', '0', ## Direct callee foo()'s address
+        '1', '0', '0', '0', '0', '0', '0', '0', ## Direct callee foo()'s address
         '0', ## Format version number
         '5', ## Flag IsIndirectTarget true, HasIndirectTargetTypeIDs true
         '6', '0', '0', '0', '0', '0', '0', '0', ## bar()'s address
@@ -285,13 +316,16 @@ Symbols:
 # BAD-SYMBOL-NEXT:   }
 
 ## Check warning when the relocation section linked to SHT_LLVM_CALL_GRAPH has an invalid sh_link.
+## The function is still dumped, identified by the value stored in its address field.
 # RUN: yaml2obj --docnum=7 -DLINK=255 -DINFO=.llvm_call_graph %s -o %t13
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t13 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t13 --check-prefix=INVALID-RELA-LINK
+# RUN:   FileCheck %s -DFILE=%t13 --check-prefixes=INVALID-RELA-LINK,INVALID-RELA-LINK-LLVM
 # RUN: llvm-readobj --elf-output-style=JSON --call-graph-info %t13 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t13 --check-prefix=INVALID-RELA-LINK
 
 # INVALID-RELA-LINK: warning: '[[FILE]]': invalid section linked to SHT_RELA section with index 2: invalid section index: 255
+# INVALID-RELA-LINK-LLVM:      Function {
+# INVALID-RELA-LINK-LLVM-NEXT:   Address: 0x1{{$}}
 
 ## Check warning when getSectionAndRelocations fails to read sections.
 # RUN: yaml2obj --docnum=7 -DLINK=0 -DINFO=255 %s -o %t14
@@ -301,6 +335,17 @@ Symbols:
 # RUN:   FileCheck %s -DFILE=%t14 --check-prefix=ERR-READ-SECTION
 
 # ERR-READ-SECTION: warning: '[[FILE]]': unable to read SHT_LLVM_CALL_GRAPH section: SHT_RELA section with index 2: failed to get a relocated section: invalid section index: 255
+
+## Check that when the relocations can't be read, no warning is reported for each
+## address field, and the function is identified by the value stored in it.
+# RUN: yaml2obj --docnum=7 -DLINK=.symtab -DINFO=.llvm_call_graph -DENTSIZE=1 %s -o %t15
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t15 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t15 --implicit-check-not=warning: --check-prefix=BAD-RELA
+
+# BAD-RELA:      warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type ID for 1 indirect targets
+# BAD-RELA-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_RELA section with index 2: section [index 2] has invalid sh_entsize: expected 24, but got 1
+# BAD-RELA:      Function {
+# BAD-RELA-NEXT:   Address: 0x1{{$}}
 
 --- !ELF
 FileHeader:
@@ -314,16 +359,106 @@ Sections:
     ContentArray: [
         '0', ## Format version number
         '1', ## Flag IsIndirectTarget true
-        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s address
+        '1', '0', '0', '0', '0', '0', '0', '0', ## foo()'s address
         '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s TypeID Unknown
       ]
   - Name: .rela.llvm_call_graph
     Type: SHT_RELA
     Link: [[LINK]]
     Info: [[INFO]]
+    EntSize: [[ENTSIZE=<none>]]
     Relocations:
       - Offset: 0x2
         Symbol: [[SYMBOL=foo]]
         Type:   R_X86_64_64
 Symbols:
   - Name: foo
+...
+
+## Check that a warning is reported for each address field that more than one
+## relocation, or no relocation, applies to, and that the function is then
+## identified by the value stored in the field. A field with exactly one
+## relocation is identified by it.
+# RUN: yaml2obj --docnum=8 %s -o %t16
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t16 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t16 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=RELOC-COUNT-WARN,RELOC-COUNT-LLVM
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t16 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t16 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=RELOC-COUNT-WARN,RELOC-COUNT-JSON
+
+# RELOC-COUNT-WARN: warning: '[[FILE]]': more than one relocation at offset 0x2 in SHT_LLVM_CALL_GRAPH section with index 1
+# RELOC-COUNT-WARN: warning: '[[FILE]]': no relocation at offset 0x13 in SHT_LLVM_CALL_GRAPH section with index 1
+
+# RELOC-COUNT-LLVM:      CallGraph [
+# RELOC-COUNT-LLVM-NEXT:   Function {
+# RELOC-COUNT-LLVM-NEXT:     Address: 0x1{{$}}
+# RELOC-COUNT-LLVM-NEXT:     Version: 0
+# RELOC-COUNT-LLVM-NEXT:     IsIndirectTarget: No
+# RELOC-COUNT-LLVM-NEXT:     TypeID: 0x0
+# RELOC-COUNT-LLVM-NEXT:     DirectCallees [
+# RELOC-COUNT-LLVM-NEXT:       {
+# RELOC-COUNT-LLVM-NEXT:         Address: 0x2{{$}}
+# RELOC-COUNT-LLVM-NEXT:       }
+# RELOC-COUNT-LLVM-NEXT:       {
+# RELOC-COUNT-LLVM-NEXT:         Relocation {
+# RELOC-COUNT-LLVM-NEXT:           SymbolIndex: 2
+# RELOC-COUNT-LLVM-NEXT:           SymbolName: bar
+# RELOC-COUNT-LLVM-NEXT:         }
+# RELOC-COUNT-LLVM-NEXT:       }
+# RELOC-COUNT-LLVM-NEXT:     ]
+# RELOC-COUNT-LLVM-NEXT:     IndirectTypeIDs: []
+# RELOC-COUNT-LLVM-NEXT:   }
+# RELOC-COUNT-LLVM-NEXT: ]
+
+# RELOC-COUNT-JSON:      "Function": {
+# RELOC-COUNT-JSON-NEXT:   "Address": 1,
+# RELOC-COUNT-JSON:        "DirectCallees": [
+# RELOC-COUNT-JSON-NEXT:     {
+# RELOC-COUNT-JSON-NEXT:       "Address": 2{{$}}
+# RELOC-COUNT-JSON-NEXT:     },
+# RELOC-COUNT-JSON-NEXT:     {
+# RELOC-COUNT-JSON-NEXT:       "Relocation": {
+# RELOC-COUNT-JSON-NEXT:         "SymbolIndex": 2,
+# RELOC-COUNT-JSON-NEXT:         "SymbolName": "bar"
+# RELOC-COUNT-JSON-NEXT:       }
+# RELOC-COUNT-JSON-NEXT:     }
+# RELOC-COUNT-JSON-NEXT:   ],
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name: .llvm_call_graph
+    Type: SHT_LLVM_CALL_GRAPH
+    ContentArray: [
+        '0', ## Format version number
+        '2', ## Flag HasDirectCallees true
+        '1', '0', '0', '0', '0', '0', '0', '0', ## foo()'s address
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s TypeID
+        '2', ## NumDirectCallees
+        '2', '0', '0', '0', '0', '0', '0', '0', ## First direct callee's address
+        '3', '0', '0', '0', '0', '0', '0', '0', ## Second direct callee's address
+      ]
+  - Name: .rela.llvm_call_graph
+    Type: SHT_RELA
+    Info: .llvm_call_graph
+    ## The relocations are not sorted by offset. Two relocations apply to foo()'s
+    ## address at 0x2, none to the first callee's address at 0x13, and one to the
+    ## second callee's address at 0x1B.
+    Relocations:
+      - Offset: 0x1B
+        Symbol: bar
+        Type:   R_X86_64_64
+      - Offset: 0x2
+        Symbol: foo
+        Type:   R_X86_64_64
+      - Offset: 0x2
+        Symbol: bar
+        Type:   R_X86_64_64
+Symbols:
+  - Name: foo
+  - Name: bar

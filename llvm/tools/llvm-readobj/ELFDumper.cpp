@@ -215,7 +215,7 @@ template <class ELFT> struct CallGraphFunc {
   uint64_t FieldOffset = 0;
   // The value stored in the address field.
   uint64_t FieldValue = 0;
-  // The relocation that applies to the address field, if any.
+  // The relocation that applies to the address field, if there is exactly one.
   std::optional<Relocation<ELFT>> Reloc = std::nullopt;
 };
 
@@ -468,10 +468,18 @@ protected:
   SmallVector<FunctionCallGraphInfo<ELFT>, 16>
   processCallGraphSection(const Elf_Shdr *CGSection);
   // Attach to each address field in FuncCGInfos the relocation from
-  // CGRelSection that applies to it, if any.
+  // CGRelSection that applies to it. A field that doesn't have exactly one
+  // relocation gets a warning instead, and falls back to the Address stored
+  // in it.
   void attachCallGraphRelocations(
-      const Elf_Shdr &CGRelSection,
+      const Elf_Shdr &CGSection, const Elf_Shdr &CGRelSection,
       MutableArrayRef<FunctionCallGraphInfo<ELFT>> FuncCGInfos);
+  // Attach to Func the relocation in Relocs that applies to its address field,
+  // as above. Relocs must be sorted by offset. The relocations up to and
+  // including those for the field are dropped from it.
+  void attachCallGraphRelocation(const Elf_Shdr &CGSection,
+                                 CallGraphFunc<ELFT> &Func,
+                                 ArrayRef<Relocation<ELFT>> &Relocs);
 
   std::string getProgramHeadersNumString();
 
@@ -5483,33 +5491,52 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
 
 template <class ELFT>
 void ELFDumper<ELFT>::attachCallGraphRelocations(
-    const Elf_Shdr &CGRelSection,
+    const Elf_Shdr &CGSection, const Elf_Shdr &CGRelSection,
     MutableArrayRef<FunctionCallGraphInfo<ELFT>> FuncCGInfos) {
   std::vector<Relocation<ELFT>> Relocations;
   forEachRelocationDo(CGRelSection,
                       [&](const Relocation<ELFT> &R, unsigned, const Elf_Shdr &,
                           const Elf_Shdr *) { Relocations.push_back(R); });
+  // Don't warn about each address field if there are no relocations. If they
+  // could not be read, forEachRelocationDo has already reported a warning.
+  if (Relocations.empty())
+    return;
   llvm::stable_sort(Relocations, [](const Relocation<ELFT> &LHS,
                                     const Relocation<ELFT> &RHS) {
     return LHS.Offset < RHS.Offset;
   });
 
   // Address fields are parsed in increasing offset order, so one pass over the
-  // sorted relocations finds the relocation for each field. If more than one
-  // relocation applies to a field, the first one is used.
+  // sorted relocations finds the relocations for each field.
   ArrayRef<Relocation<ELFT>> Remaining = Relocations;
-  auto Attach = [&](CallGraphFunc<ELFT> &Func) {
-    Remaining = Remaining.drop_while(
-        [&](const Relocation<ELFT> &R) { return R.Offset < Func.FieldOffset; });
-    if (!Remaining.empty() && Remaining.front().Offset == Func.FieldOffset)
-      Func.Reloc = Remaining.front();
-  };
-
   for (FunctionCallGraphInfo<ELFT> &CGInfo : FuncCGInfos) {
-    Attach(CGInfo.Entry);
+    attachCallGraphRelocation(CGSection, CGInfo.Entry, Remaining);
     for (CallGraphFunc<ELFT> &Callee : CGInfo.DirectCallees)
-      Attach(Callee);
+      attachCallGraphRelocation(CGSection, Callee, Remaining);
   }
+}
+
+template <class ELFT>
+void ELFDumper<ELFT>::attachCallGraphRelocation(
+    const Elf_Shdr &CGSection, CallGraphFunc<ELFT> &Func,
+    ArrayRef<Relocation<ELFT>> &Relocs) {
+  Relocs = Relocs.drop_while(
+      [&](const Relocation<ELFT> &R) { return R.Offset < Func.FieldOffset; });
+  ArrayRef<Relocation<ELFT>> Matches = Relocs.take_while(
+      [&](const Relocation<ELFT> &R) { return R.Offset == Func.FieldOffset; });
+  Relocs = Relocs.drop_front(Matches.size());
+
+  // A field without exactly one relocation is identified by the value stored
+  // in it instead.
+  if (Matches.size() == 1)
+    Func.Reloc = Matches.front();
+  else if (Matches.empty())
+    reportUniqueWarning(formatv("no relocation at offset {0:x+} in {1}",
+                                Func.FieldOffset, describe(CGSection)));
+  else
+    reportUniqueWarning(
+        formatv("more than one relocation at offset {0:x+} in {1}",
+                Func.FieldOffset, describe(CGSection)));
 }
 
 template <class ELFT>
@@ -8437,21 +8464,25 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     if (FuncCGInfos.empty())
       continue;
 
+    // In a relocatable object file, an address field holds a placeholder, and
+    // the relocation that applies to it identifies the function.
     const Elf_Shdr *RelocSymTab = nullptr;
-    if (IsRelocatable) {
-      if (CGRelSection) {
-        Expected<const typename ELFT::Shdr *> SymtabOrErr =
-            this->Obj.getSection(CGRelSection->sh_link);
-        if (!SymtabOrErr) {
-          reportWarning(createError("invalid section linked to " +
-                                    this->describe(*CGRelSection) + ": " +
-                                    toString(SymtabOrErr.takeError())),
-                        this->FileName);
-          return;
-        }
+    if (IsRelocatable && CGRelSection) {
+      Expected<const typename ELFT::Shdr *> SymtabOrErr =
+          this->Obj.getSection(CGRelSection->sh_link);
+      if (SymtabOrErr) {
         RelocSymTab = *SymtabOrErr;
-        this->attachCallGraphRelocations(*CGRelSection, FuncCGInfos);
+        this->attachCallGraphRelocations(*CGSection, *CGRelSection,
+                                         FuncCGInfos);
+      } else {
+        reportWarning(createError("invalid section linked to " +
+                                  this->describe(*CGRelSection) + ": " +
+                                  toString(SymtabOrErr.takeError())),
+                      this->FileName);
       }
+    } else if (IsRelocatable) {
+      this->reportUniqueWarning("unable to get relocation section for " +
+                                this->describe(*CGSection));
     }
 
     auto GetFunctionNames = [&](uint64_t FuncAddr) {
@@ -8464,36 +8495,27 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       return FuncSymNames;
     };
 
-    auto PrintNonRelocatableFuncSymbol = [&](uint64_t FuncEntryPC) {
-      SmallVector<std::string> FuncSymNames = GetFunctionNames(FuncEntryPC);
-      if (!FuncSymNames.empty())
-        W.printList("Names", FuncSymNames);
-      W.printHex("Address", FuncEntryPC);
-    };
-
-    auto PrintRelocatableFuncSymbol = [&](const CallGraphFunc<ELFT> &Func) {
-      if (!Func.Reloc) {
-        this->reportUniqueWarning("missing relocation for symbol at offset " +
-                                  Twine(Func.FieldOffset));
-        return;
-      }
-      printCallGraphRelocation(Func, *RelocSymTab);
-    };
-
     auto PrintFunc = [&](const CallGraphFunc<ELFT> &Func) {
-      // In a relocatable object file, the address field holds a placeholder,
-      // and the relocation that applies to it identifies the function.
-      if (IsRelocatable) {
-        PrintRelocatableFuncSymbol(Func);
+      if (Func.Reloc) {
+        printCallGraphRelocation(Func, *RelocSymTab);
         return;
       }
+      // Without a relocation, the function is identified by the value stored
+      // in the address field.
       uint64_t FuncEntryPC = Func.FieldValue;
       // In ARM thumb mode the LSB of the function pointer is set to 1. Since
       // this detail is unnecessary in call graph reconstruction, we are
       // clearing this bit to facilitate tooling.
       if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
         FuncEntryPC &= ~1;
-      PrintNonRelocatableFuncSymbol(FuncEntryPC);
+      // In a relocatable object file that value is not a final address, so
+      // there are no symbol names to look up for it.
+      if (!IsRelocatable) {
+        SmallVector<std::string> FuncSymNames = GetFunctionNames(FuncEntryPC);
+        if (!FuncSymNames.empty())
+          W.printList("Names", FuncSymNames);
+      }
+      W.printHex("Address", FuncEntryPC);
     };
     if (!CGI)
       CGI = std::make_unique<ListScope>(W, "CallGraph");
