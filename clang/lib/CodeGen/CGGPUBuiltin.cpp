@@ -155,27 +155,36 @@ RValue CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E) {
       E, this, GetVprintfDeclaration(CGM.getModule()), false);
 }
 
-// Collects the constant global variables that \p S refers to.
-static void
-collectReferencedGlobalVars(const ASTContext &Ctx, const Stmt *S,
-                            SmallVectorImpl<const VarDecl *> &Vars) {
-  if (!S)
-    return;
-  const ValueDecl *D = nullptr;
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
-    if (DRE->isNonOdrUse() == NOUR_None)
-      D = DRE->getDecl();
-  } else if (const auto *ME = dyn_cast<MemberExpr>(S)) {
-    if (ME->isNonOdrUse() == NOUR_None)
-      D = ME->getMemberDecl();
+// Collects the constant global variables that the arguments of \p E refer to.
+static SmallVector<const VarDecl *, 4>
+collectReferencedGlobalVars(const ASTContext &Ctx, const CallExpr *E) {
+  SmallVector<const VarDecl *, 4> Vars;
+  SmallVector<const Stmt *, 16> Worklist(E->arguments());
+  std::reverse(Worklist.begin(), Worklist.end());
+  while (!Worklist.empty()) {
+    const Stmt *Cur = Worklist.pop_back_val();
+    if (!Cur)
+      continue;
+    const ValueDecl *D = nullptr;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Cur)) {
+      if (DRE->isNonOdrUse() == NOUR_None)
+        D = DRE->getDecl();
+    } else if (const auto *ME = dyn_cast<MemberExpr>(Cur)) {
+      if (ME->isNonOdrUse() == NOUR_None)
+        D = ME->getMemberDecl();
+    }
+    if (const auto *VD = dyn_cast_if_present<VarDecl>(D))
+      if (VD->hasGlobalStorage() && !VD->isStaticLocal() &&
+          VD->getType().isConstantStorage(Ctx, /*ExcludeCtor=*/true,
+                                          /*ExcludeDtor=*/true))
+        Vars.push_back(VD);
+    // Push the children in reverse so that the globals are collected, and thus
+    // emitted, in source order.
+    size_t NumPending = Worklist.size();
+    llvm::append_range(Worklist, Cur->children());
+    std::reverse(Worklist.begin() + NumPending, Worklist.end());
   }
-  if (const auto *VD = dyn_cast_if_present<VarDecl>(D))
-    if (VD->hasGlobalStorage() && !VD->isStaticLocal() &&
-        VD->getType().isConstantStorage(Ctx, /*ExcludeCtor=*/true,
-                                        /*ExcludeDtor=*/true))
-      Vars.push_back(VD);
-  for (const Stmt *Child : S->children())
-    collectReferencedGlobalVars(Ctx, Child, Vars);
+  return Vars;
 }
 
 RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
@@ -189,10 +198,7 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   // The expansion finds constant format and %s strings in the initializers of
   // the globals they point to, so emit any that are still deferred before the
   // arguments refer to them.
-  SmallVector<const VarDecl *, 4> Globals;
-  for (const Expr *Arg : E->arguments())
-    collectReferencedGlobalVars(getContext(), Arg, Globals);
-  for (const VarDecl *VD : Globals)
+  for (const VarDecl *VD : collectReferencedGlobalVars(getContext(), E))
     CGM.emitDeferredGlobalVarDefinition(VD);
 
   CallArgList CallArgs;
