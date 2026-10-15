@@ -461,9 +461,10 @@ void CrossTranslationUnitContext::importReferencedInitializers(
       Visit(E->getBase());
     }
 
+    // Handle 'if constexpr' specially to skip its discarded branch while still
+    // visiting the init-statement and condition.
     void VisitIfStmt(const IfStmt *If) {
       if (auto Selected = If->getNondiscardedCase(Context)) {
-        // Preserve the init-statement when skipping a discarded constexpr body.
         if (const Stmt *Init = If->getInit())
           Visit(Init);
         if (const Stmt *ConditionVar = If->getConditionVariableDeclStmt())
