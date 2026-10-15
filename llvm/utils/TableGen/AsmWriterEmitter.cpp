@@ -1138,11 +1138,13 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
         if (!Op)
           PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
         StringRef CombineType = Op->getDef()->getName();
-        if (CombineType != "any_of" && CombineType != "all_of")
+        if (CombineType != "any_of" && CombineType != "all_of" &&
+            CombineType != "none_of")
           PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
         if (D->getNumArgs() == 0)
           PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
         bool IsOr = CombineType == "any_of";
+        bool IsNone = CombineType == "none_of";
         // Change (any_of FeatureAll, (any_of ...)) to (any_of FeatureAll, ...).
         if (IsOr && D->getNumArgs() == 2 && isa<DagInit>(D->getArg(1))) {
           const DagInit *RHS = cast<DagInit>(D->getArg(1));
@@ -1153,9 +1155,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
         }
 
         for (auto *Arg : D->getArgs()) {
-          bool IsNeg = false;
+          bool IsNeg = IsNone;
           if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-            if (NotArg->getOperator()->getAsString() != "not" ||
+            std::string NotOp = NotArg->getOperator()->getAsString();
+            if (IsNone || (NotOp != "not" && NotOp != "none_of") ||
                 NotArg->getNumArgs() != 1)
               PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
             Arg = NotArg->getArg(0);
