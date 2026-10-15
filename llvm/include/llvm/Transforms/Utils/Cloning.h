@@ -281,6 +281,13 @@ public:
   /// 'InlineFunction' fills this in by scanning the inlined instructions.
   SmallVector<CallBase *, 8> InlinedCallSites;
 
+  /// The first and last block holding the inlined code, in layout order.
+  /// 'InlineFunction' fills these in. They are the same block when the callee
+  /// was folded into the calling block, and InlinedLastBB is null when the
+  /// code after the call was removed.
+  BasicBlock *InlinedFirstBB = nullptr;
+  BasicBlock *InlinedLastBB = nullptr;
+
   Value *ConvergenceControlToken = nullptr;
   Instruction *CallSiteEHPad = nullptr;
 
@@ -291,6 +298,8 @@ public:
   void reset() {
     StaticAllocas.clear();
     InlinedCallSites.clear();
+    InlinedFirstBB = nullptr;
+    InlinedLastBB = nullptr;
     ConvergenceControlToken = nullptr;
     CallSiteEHPad = nullptr;
   }
