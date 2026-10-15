@@ -225,3 +225,24 @@ add_integration_test(
   ENV
     EXECV_TEST=PASS
 )
+
+add_integration_test(
+  execvp_test
+  SUITE
+    unistd-integration-tests
+  SRCS
+    execvp_test.cpp
+  DEPENDS
+    libc_execv_test_normal_exit
+    libc_exec_test_signal_exit
+    libc.hdr.signal_macros
+    libc.hdr.sys_wait_macros
+    libc.src.errno.errno
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.environ
+    libc.src.unistd.execvp
+    libc.src.unistd.fork
+  ENV
+    EXECV_TEST=PASS
+    PATH=.
+)
