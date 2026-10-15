@@ -2882,6 +2882,59 @@ static Instruction *combineConstantOffsets(GetElementPtrInst &GEP,
                               NW.intersectForOffsetAdd(GEP.getNoWrapFlags())));
 }
 
+namespace {
+/// An index of the form Base * Scale, together with the no-wrap flags that the
+/// multiplication is known to have.
+struct ScaledIndex {
+  Value *Base;
+  APInt Scale;
+  bool HasNUW;
+  bool HasNSW;
+};
+} // namespace
+
+/// Decompose \p Idx as X, (shl X, C) or (mul X, C). Other values are returned
+/// as themselves with a scale of one.
+static ScaledIndex getScaledIndex(Value *Idx) {
+  unsigned BitWidth = Idx->getType()->getScalarSizeInBits();
+  Value *X;
+  const APInt *C;
+  // A shift by BitWidth - 1 would give a scale with the sign bit set.
+  if (match(Idx, m_Shl(m_Value(X), m_APInt(C))) && C->ult(BitWidth - 1)) {
+    auto *OBO = cast<OverflowingBinaryOperator>(Idx);
+    return {X, APInt::getOneBitSet(BitWidth, C->getZExtValue()),
+            OBO->hasNoUnsignedWrap(), OBO->hasNoSignedWrap()};
+  }
+  if (match(Idx, m_Mul(m_Value(X), m_APInt(C)))) {
+    auto *OBO = cast<OverflowingBinaryOperator>(Idx);
+    return {X, *C, OBO->hasNoUnsignedWrap(), OBO->hasNoSignedWrap()};
+  }
+  return {Idx, APInt(BitWidth, 1), true, true};
+}
+
+/// Build the sum of the scaled indices \p A and \p B, which have the same base,
+/// as Base * (A.Scale + B.Scale). The result only gets nuw/nsw if the caller
+/// allows it (\p CanBeNUW, \p CanBeNSW), both operands are known not to wrap
+/// and the sum of the scales does not overflow. Return null if the scales
+/// cancel out.
+static Value *emitScaledIndexSum(IRBuilderBase &Builder, const ScaledIndex &A,
+                                 const ScaledIndex &B, bool CanBeNUW,
+                                 bool CanBeNSW) {
+  bool UOverflow = false, SOverflow = false;
+  APInt NewScale = A.Scale.uadd_ov(B.Scale, UOverflow);
+  (void)A.Scale.sadd_ov(B.Scale, SOverflow);
+  if (NewScale.isZero())
+    return nullptr;
+  bool HasNUW = CanBeNUW && A.HasNUW && B.HasNUW && !UOverflow;
+  bool HasNSW = CanBeNSW && A.HasNSW && B.HasNSW && !SOverflow;
+  Type *Ty = A.Base->getType();
+  if (NewScale.isPowerOf2())
+    return Builder.CreateShl(A.Base, ConstantInt::get(Ty, NewScale.logBase2()),
+                             "", HasNUW, HasNSW);
+  return Builder.CreateMul(A.Base, ConstantInt::get(Ty, NewScale), "", HasNUW,
+                           HasNSW);
+}
+
 Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
                                              GEPOperator *Src) {
   // Combine Indices - If the source pointer to this getelementptr instruction
@@ -2895,6 +2948,42 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
 
   if (auto *I = combineConstantOffsets(GEP, *this))
     return I;
+
+  // gep T, (gep i8, p, X * C1), X * C2 --> gep i8, p, X * (C1 + C2 * sizeof(T))
+  // Merging a GEP into an i8 GEP of the same value allows chains of GEPs with
+  // the same index to be merged completely, as the merged GEP is canonicalized
+  // to an i8 GEP.
+  if (Src->hasOneUse() && Src->getNumIndices() == 1 &&
+      GEP.getNumIndices() == 1 && Src->getSourceElementType()->isIntegerTy(8) &&
+      !GEP.getSourceElementType()->isIntegerTy(8)) {
+    Value *SrcIdx = *Src->idx_begin();
+    Value *GEPIdx = *GEP.idx_begin();
+    TypeSize EltSize = DL.getTypeAllocSize(GEP.getSourceElementType());
+    if (!EltSize.isScalable() && SrcIdx->getType() == GEPIdx->getType()) {
+      ScaledIndex SrcScaled = getScaledIndex(SrcIdx);
+      ScaledIndex GEPScaled = getScaledIndex(GEPIdx);
+      if (SrcScaled.Base == GEPScaled.Base &&
+          (SrcScaled.Base == SrcIdx || SrcIdx->hasOneUse()) &&
+          (GEPScaled.Base == GEPIdx || GEPIdx->hasOneUse())) {
+        // Convert the index of the GEP to bytes.
+        APInt Size(GEPScaled.Scale.getBitWidth(), EltSize.getFixedValue(),
+                   /*isSigned=*/false, /*implicitTrunc=*/true);
+        bool UOverflow = false, SOverflow = false;
+        GEPScaled.Scale = GEPScaled.Scale.umul_ov(Size, UOverflow);
+        (void)GEPScaled.Scale.smul_ov(Size, SOverflow);
+        GEPScaled.HasNUW &= !UOverflow;
+        GEPScaled.HasNSW &= !SOverflow;
+        GEPNoWrapFlags NW =
+            getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
+        if (Value *Idx =
+                emitScaledIndexSum(Builder, SrcScaled, GEPScaled,
+                                   NW.hasNoUnsignedWrap(), NW.isInBounds()))
+          return replaceInstUsesWith(
+              GEP, Builder.CreateGEP(Builder.getInt8Ty(),
+                                     Src->getPointerOperand(), Idx, "", NW));
+      }
+    }
+  }
 
   if (Src->getResultElementType() != GEP.getSourceElementType())
     return nullptr;
@@ -2965,14 +3054,34 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   Value *Sum =
       simplifyAddInst(GO1, SO1, false, false, SQ.getWithInstruction(&GEP));
   // Only do the combine when we are sure the cost after the
-  // merge is never more than that before the merge. If both indices are the
-  // same value, the merge still replaces two GEPs with a GEP and a shift as
-  // long as the source GEP has no other users. Emit the shift explicitly, as
-  // (gep p, (x + y)) may be split back into two GEPs by other folds.
+  // merge is never more than that before the merge. If both indices are
+  // multiples of the same value, the merge still replaces two GEPs with a GEP
+  // and a multiplication as long as the source GEP has no other users. Emit
+  // the multiplication explicitly, as (gep p, (x + y)) may be split back into
+  // two GEPs by other folds.
   if (Sum == nullptr) {
-    if (GO1 != SO1 || !Src->hasOneUse())
+    if (!Src->hasOneUse())
       return nullptr;
-    Sum = Builder.CreateShl(GO1, ConstantInt::get(GO1->getType(), 1));
+    ScaledIndex SrcScaled = getScaledIndex(SO1);
+    ScaledIndex GEPScaled = getScaledIndex(GO1);
+    // The instructions computing the scaled indices must go away with the
+    // GEPs.
+    if (SrcScaled.Base != GEPScaled.Base ||
+        (SrcScaled.Base != SO1 && !SO1->hasOneUse()) ||
+        (GEPScaled.Base != GO1 && !GO1->hasOneUse()))
+      return nullptr;
+
+    // The merged index is only known not to wrap if the merged GEP does not
+    // wrap, and only if the element size is not zero. This is the same as for
+    // the offset additions in EmitGEPOffsets.
+    GEPNoWrapFlags NW = getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
+    bool NonZeroSize =
+        !DL.getTypeAllocSize(GEP.getSourceElementType()).isZero();
+    Sum = emitScaledIndexSum(Builder, SrcScaled, GEPScaled,
+                             NonZeroSize && NW.hasNoUnsignedWrap(),
+                             NonZeroSize && NW.isInBounds());
+    if (!Sum)
+      return nullptr;
   }
 
   SmallVector<Value *, 8> Indices;

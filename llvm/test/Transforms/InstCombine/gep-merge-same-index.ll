@@ -2,13 +2,14 @@
 ; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 declare void @use(ptr)
+declare void @use.i64(i64)
 
-; gep (gep p, x), x --> gep p, (x + x) when the inner gep has a single use.
+; gep (gep p, x), x --> gep p, (x << 1) when the inner gep has a single use.
 
 define ptr @gep_gep_same_index(ptr %p, i64 %x) {
 ; CHECK-LABEL: define ptr @gep_gep_same_index(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[G2_IDX:%.*]] = shl i64 [[X]], 4
+; CHECK-NEXT:    [[G2_IDX:%.*]] = shl nsw i64 [[X]], 4
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[G2_IDX]]
 ; CHECK-NEXT:    ret ptr [[G2]]
 ;
@@ -29,6 +30,42 @@ define ptr @gep_gep_same_index_no_flags(ptr %p, i64 %x) {
   ret ptr %g2
 }
 
+; nusw alone does not imply that the index does not wrap.
+define ptr @gep_gep_same_index_nusw(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_gep_same_index_nusw(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[G2_IDX:%.*]] = shl i64 [[X]], 4
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr i8, ptr [[P]], i64 [[G2_IDX]]
+; CHECK-NEXT:    ret ptr [[G2]]
+;
+  %g1 = getelementptr nusw double, ptr %p, i64 %x
+  %g2 = getelementptr nusw double, ptr %g1, i64 %x
+  ret ptr %g2
+}
+
+define ptr @gep_gep_same_index_inbounds_nuw(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_gep_same_index_inbounds_nuw(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[G2_IDX:%.*]] = shl nuw nsw i64 [[X]], 4
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[G2_IDX]]
+; CHECK-NEXT:    ret ptr [[G2]]
+;
+  %g1 = getelementptr inbounds nuw double, ptr %p, i64 %x
+  %g2 = getelementptr inbounds nuw double, ptr %g1, i64 %x
+  ret ptr %g2
+}
+
+; Zero sized elements do not constrain the index, so no flags can be used.
+define ptr @gep_gep_same_index_zero_size(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_gep_same_index_zero_size(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %g1 = getelementptr inbounds [0 x i8], ptr %p, i64 %x
+  %g2 = getelementptr inbounds [0 x i8], ptr %g1, i64 %x
+  ret ptr %g2
+}
+
 ; Different indices.
 define ptr @gep_gep_different_index(ptr %p, i64 %x, i64 %y) {
 ; CHECK-LABEL: define ptr @gep_gep_different_index(
@@ -42,14 +79,26 @@ define ptr @gep_gep_different_index(ptr %p, i64 %x, i64 %y) {
   ret ptr %g2
 }
 
-; Each pair is merged. Merging the two identical shifts is left to CSE.
-define ptr @gep_gep_gep_gep_same_index(ptr %p, i64 %x) {
-; CHECK-LABEL: define ptr @gep_gep_gep_gep_same_index(
+; Chains of GEPs with the same index are merged completely.
+
+define ptr @gep_gep_gep_same_index(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_gep_gep_same_index(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[G2_IDX:%.*]] = shl i64 [[X]], 4
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[G2_IDX]]
-; CHECK-NEXT:    [[G4_IDX:%.*]] = shl i64 [[X]], 4
-; CHECK-NEXT:    [[G4:%.*]] = getelementptr inbounds i8, ptr [[G2]], i64 [[G4_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[X]], 24
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[G3]]
+;
+  %g1 = getelementptr inbounds double, ptr %p, i64 %x
+  %g2 = getelementptr inbounds double, ptr %g1, i64 %x
+  %g3 = getelementptr inbounds double, ptr %g2, i64 %x
+  ret ptr %g3
+}
+
+define ptr @gep_chain4_same_index(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_chain4_same_index(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[X]], 5
+; CHECK-NEXT:    [[G4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[G4]]
 ;
   %g1 = getelementptr inbounds double, ptr %p, i64 %x
@@ -57,6 +106,95 @@ define ptr @gep_gep_gep_gep_same_index(ptr %p, i64 %x) {
   %g3 = getelementptr inbounds double, ptr %g2, i64 %x
   %g4 = getelementptr inbounds double, ptr %g3, i64 %x
   ret ptr %g4
+}
+
+define ptr @gep_chain5_same_index(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_chain5_same_index(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[X]], 20
+; CHECK-NEXT:    [[G5:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[G5]]
+;
+  %g1 = getelementptr inbounds i32, ptr %p, i64 %x
+  %g2 = getelementptr inbounds i32, ptr %g1, i64 %x
+  %g3 = getelementptr inbounds i32, ptr %g2, i64 %x
+  %g4 = getelementptr inbounds i32, ptr %g3, i64 %x
+  %g5 = getelementptr inbounds i32, ptr %g4, i64 %x
+  ret ptr %g5
+}
+
+define ptr @gep_chain6_same_index(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_chain6_same_index(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[X]], 24
+; CHECK-NEXT:    [[G6:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[G6]]
+;
+  %g1 = getelementptr inbounds i32, ptr %p, i64 %x
+  %g2 = getelementptr inbounds i32, ptr %g1, i64 %x
+  %g3 = getelementptr inbounds i32, ptr %g2, i64 %x
+  %g4 = getelementptr inbounds i32, ptr %g3, i64 %x
+  %g5 = getelementptr inbounds i32, ptr %g4, i64 %x
+  %g6 = getelementptr inbounds i32, ptr %g5, i64 %x
+  ret ptr %g6
+}
+
+; A multiple of the same value is merged as well.
+define ptr @gep_gep_scaled_index(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_gep_scaled_index(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[X]], 5
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[G2]]
+;
+  %m = mul i64 %x, 3
+  %g1 = getelementptr inbounds double, ptr %p, i64 %m
+  %g2 = getelementptr inbounds double, ptr %g1, i64 %x
+  ret ptr %g2
+}
+
+; The scaled index may wrap (no nsw/nuw on the mul), so the merged index can not
+; have nsw/nuw even though the GEPs are inbounds nuw.
+define ptr @gep_gep_scaled_index_no_flags(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_gep_scaled_index_no_flags(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[X]], 5
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[G2]]
+;
+  %m = mul i64 %x, 3
+  %g1 = getelementptr inbounds nuw double, ptr %p, i64 %m
+  %g2 = getelementptr inbounds nuw double, ptr %g1, i64 %x
+  ret ptr %g2
+}
+
+; The flags on the scaled index and on the GEPs allow nuw/nsw on the merged index.
+define ptr @gep_gep_scaled_index_nuw_nsw(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_gep_scaled_index_nuw_nsw(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[X]], 5
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[G2]]
+;
+  %m = mul nuw nsw i64 %x, 3
+  %g1 = getelementptr inbounds nuw double, ptr %p, i64 %m
+  %g2 = getelementptr inbounds nuw double, ptr %g1, i64 %x
+  ret ptr %g2
+}
+
+; The sum of the scales overflows when signed, so there can be no nsw.
+define ptr @gep_gep_scaled_index_scale_overflow(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_gep_scaled_index_scale_overflow(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[X]], -9223372036854775807
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[G2]]
+;
+  %m1 = mul nuw nsw i64 %x, 4611686018427387904
+  %m2 = mul nuw nsw i64 %x, 4611686018427387905
+  %g1 = getelementptr inbounds nuw i8, ptr %p, i64 %m1
+  %g2 = getelementptr inbounds nuw i8, ptr %g1, i64 %m2
+  ret ptr %g2
 }
 
 ; The inner gep has another use: don't merge.
@@ -70,6 +208,23 @@ define ptr @gep_gep_same_index_extra_use(ptr %p, i64 %x) {
 ;
   %g1 = getelementptr inbounds double, ptr %p, i64 %x
   call void @use(ptr %g1)
+  %g2 = getelementptr inbounds double, ptr %g1, i64 %x
+  ret ptr %g2
+}
+
+; The scaled index has another use: don't merge.
+define ptr @gep_gep_scaled_index_extra_use(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_gep_scaled_index_extra_use(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[M:%.*]] = mul i64 [[X]], 3
+; CHECK-NEXT:    call void @use.i64(i64 [[M]])
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[M]]
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds [8 x i8], ptr [[G1]], i64 [[X]]
+; CHECK-NEXT:    ret ptr [[G2]]
+;
+  %m = mul i64 %x, 3
+  call void @use.i64(i64 %m)
+  %g1 = getelementptr inbounds double, ptr %p, i64 %m
   %g2 = getelementptr inbounds double, ptr %g1, i64 %x
   ret ptr %g2
 }
@@ -91,7 +246,7 @@ define ptr @gep_gep_same_index_different_types(ptr %p, i64 %x) {
 define <2 x ptr> @gep_gep_same_index_vector(ptr %p, <2 x i64> %x) {
 ; CHECK-LABEL: define <2 x ptr> @gep_gep_same_index_vector(
 ; CHECK-SAME: ptr [[P:%.*]], <2 x i64> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[X]], splat (i64 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw <2 x i64> [[X]], splat (i64 1)
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], <2 x i64> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x ptr> [[G2]]
 ;
