@@ -967,12 +967,6 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vle64.v v16, (a2)
 ; RV64-NEXT:    vsetivli zero, 8, e64, m8, ta, ma
 ; RV64-NEXT:    vslidedown.vi v24, v16, 8
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    li a3, 52
-; RV64-NEXT:    mul a2, a2, a3
-; RV64-NEXT:    add a2, sp, a2
-; RV64-NEXT:    addi a2, a2, 16
-; RV64-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v16, 2
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
@@ -991,6 +985,12 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    addi a1, a1, 128
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vslideup.vi v8, v24, 5, v0.t
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    li a3, 52
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    addi a2, a2, 16
+; RV64-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    li a3, 48
 ; RV64-NEXT:    mul a2, a2, a3

@@ -6433,12 +6433,10 @@ static void storeRegPairToStackSlot(const TargetRegisterInfo &TRI,
       .addMemOperand(MMO);
 }
 
-void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator MBBI,
-                                           Register SrcReg, bool isKill, int FI,
-                                           const TargetRegisterClass *RC,
-                                           Register VReg,
-                                           MachineInstr::MIFlag Flags) const {
+void AArch64InstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+    bool isKill, int FI, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags, LaneBitmask Lanes) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 

@@ -107,6 +107,8 @@ struct SGPRSpillBuilder {
   MachineBasicBlock::iterator MI;
   ArrayRef<int16_t> SplitParts;
   unsigned NumSubRegs;
+  unsigned FirstLane = 0;
+  bool IsPartial = false;
   bool IsKill;
   const DebugLoc &DL;
 
@@ -151,6 +153,11 @@ struct SGPRSpillBuilder {
     const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(SuperReg);
     SplitParts = TRI.getRegSplitParts(RC, EltSize);
     NumSubRegs = SplitParts.empty() ? 1 : SplitParts.size();
+    IsPartial = MI->getOpcode() == AMDGPU::SI_SPILL_S32_SAVE_PARTIAL;
+    if (IsPartial) {
+      FirstLane = MI->getOperand(2).getImm();
+      assert(NumSubRegs == 1 && FirstLane < 32 && "Invalid partial SGPR spill");
+    }
 
     if (IsWave32) {
       ExecReg = AMDGPU::EXEC_LO;
@@ -172,6 +179,7 @@ struct SGPRSpillBuilder {
     Data.PerVGPR = IsWave32 ? 32 : 64;
     Data.NumVGPRs = (NumSubRegs + (Data.PerVGPR - 1)) / Data.PerVGPR;
     Data.VGPRLanes = (1LL << std::min(Data.PerVGPR, NumSubRegs)) - 1LL;
+    Data.VGPRLanes <<= FirstLane;
     return Data;
   }
 
@@ -1313,6 +1321,7 @@ static unsigned getNumSubRegsForSpillOp(const MachineInstr &MI,
   case AMDGPU::SI_SPILL_AV64_CFI_SAVE:
   case AMDGPU::SI_SPILL_AV64_RESTORE:
     return 2;
+  case AMDGPU::SI_SPILL_S32_SAVE_PARTIAL:
   case AMDGPU::SI_SPILL_S32_SAVE:
   case AMDGPU::SI_SPILL_S32_CFI_SAVE:
   case AMDGPU::SI_SPILL_S32_RESTORE:
@@ -2187,7 +2196,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
     // VGPR lanes (mapped from spill stack slot) may be shared for SGPR
     // spills of different sizes. This accounts for number of VGPR lanes alloted
     // equal to the largest SGPR being spilled in them.
-    assert(SB.NumSubRegs <= VGPRSpills.size() &&
+    assert(SB.FirstLane + SB.NumSubRegs <= VGPRSpills.size() &&
            "Num of SGPRs spilled should be less than or equal to num of "
            "the VGPR lanes.");
 
@@ -2196,7 +2205,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
           SB.NumSubRegs == 1
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
-      SpilledReg Spill = VGPRSpills[i];
+      SpilledReg Spill = VGPRSpills[SB.FirstLane + i];
 
       bool IsFirstSubreg = i == 0;
       bool IsLastSubreg = i == SB.NumSubRegs - 1;
@@ -2258,6 +2267,15 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
     for (unsigned Offset = 0; Offset < PVD.NumVGPRs; ++Offset) {
       RegState TmpVGPRFlags = RegState::Undef;
 
+      // Without a register to save EXEC, readWriteTmpVGPR transfers every
+      // wave lane. Preserve the other slot words in the temporary VGPR before
+      // replacing the selected word. This uses the existing emergency-spill
+      // machinery, rather than allocating a second SGPR tuple.
+      if (SB.IsPartial && !SB.SavedExecReg) {
+        SB.readWriteTmpVGPR(Offset, /*IsLoad=*/true);
+        TmpVGPRFlags = {};
+      }
+
       // Write sub registers into the VGPR
       for (unsigned i = Offset * PVD.PerVGPR,
                     e = std::min((Offset + 1) * PVD.PerVGPR, SB.NumSubRegs);
@@ -2271,7 +2289,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
             BuildMI(*SB.MBB, MI, SB.DL,
                     SB.TII.get(AMDGPU::SI_SPILL_S32_TO_VGPR), SB.TmpVGPR)
                 .addReg(SubReg, SubKillState)
-                .addImm(i % PVD.PerVGPR)
+                .addImm((SB.FirstLane + i) % PVD.PerVGPR)
                 .addReg(SB.TmpVGPR, TmpVGPRFlags);
         TmpVGPRFlags = {};
 
@@ -2506,6 +2524,7 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   case AMDGPU::SI_SPILL_S96_SAVE:
   case AMDGPU::SI_SPILL_S64_SAVE:
   case AMDGPU::SI_SPILL_S32_SAVE:
+  case AMDGPU::SI_SPILL_S32_SAVE_PARTIAL:
     return spillSGPR(MI, FI, RS, Indexes, LIS, true, SpillToPhysVGPRLane,
                      NeedsCFI);
   case AMDGPU::SI_SPILL_S1024_RESTORE:
@@ -2602,6 +2621,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S128_SAVE:
     case AMDGPU::SI_SPILL_S96_SAVE:
     case AMDGPU::SI_SPILL_S64_SAVE:
+    case AMDGPU::SI_SPILL_S32_SAVE_PARTIAL:
     case AMDGPU::SI_SPILL_S32_SAVE: {
       return spillSGPR(MI, Index, RS, nullptr, nullptr,
                        FrameInfo.getStackID(Index) == TargetStackID::SGPRSpill,

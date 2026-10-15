@@ -10747,17 +10747,14 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_lshr_b32 s4, s3, 9
 ; GFX8-NEXT:    v_writelane_b32 v62, s4, 0
-; GFX8-NEXT:    v_writelane_b32 v62, s5, 1
 ; GFX8-NEXT:    s_lshr_b32 s4, s3, 6
-; GFX8-NEXT:    v_writelane_b32 v62, s4, 2
-; GFX8-NEXT:    v_writelane_b32 v62, s5, 3
-; GFX8-NEXT:    s_lshr_b32 s4, s3, 7
 ; GFX8-NEXT:    s_lshr_b32 s74, s3, 20
-; GFX8-NEXT:    v_writelane_b32 v62, s4, 4
+; GFX8-NEXT:    v_writelane_b32 v62, s4, 2
+; GFX8-NEXT:    s_lshr_b32 s4, s3, 7
 ; GFX8-NEXT:    s_lshr_b32 s68, s3, 24
 ; GFX8-NEXT:    s_lshr_b32 s72, s3, 22
 ; GFX8-NEXT:    s_lshr_b32 s38, s3, 21
-; GFX8-NEXT:    v_writelane_b32 v62, s5, 5
+; GFX8-NEXT:    v_writelane_b32 v62, s4, 4
 ; GFX8-NEXT:    s_bfe_i64 s[4:5], s[74:75], 0x10000
 ; GFX8-NEXT:    s_lshr_b32 s40, s3, 27
 ; GFX8-NEXT:    s_lshr_b32 s24, s3, 25

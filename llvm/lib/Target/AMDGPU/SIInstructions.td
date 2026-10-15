@@ -1217,6 +1217,14 @@ defm SI_SPILL_S384 : SI_SPILL_SGPR <SReg_384>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
 
+// Save one word in its original position in a tuple's shared spill slot.
+// Scratch lowering may read the other words to preserve them when no SGPR is
+// available to save EXEC. The data operand only reads this one source word.
+let UseNamedOperandTable = 1, Spill = 1, SALU = 1, Uses = [EXEC],
+    mayStore = 1, mayLoad = 1 in
+def SI_SPILL_S32_SAVE_PARTIAL : PseudoInstSI<
+  (outs), (ins SReg_32:$data, i32imm:$addr, i32imm:$offset)>;
+
 let Spill = 1, VALU = 1, isConvergent = 1 in {
 def SI_SPILL_S32_TO_VGPR : PseudoInstSI <(outs VGPR_32:$vdst),
   (ins SReg_32:$src0, i32imm:$src1, VGPR_32:$vdst_in)> {
