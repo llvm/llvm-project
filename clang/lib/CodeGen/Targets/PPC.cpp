@@ -817,10 +817,15 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
 }
 
 /// If Ty is a one-member aggregate wrapping a floating-point or 128-bit vector
-/// type, return that type.
+/// type, return that type. ELFv1 only unwraps structs and arrays; GCC passes
+/// unions in GPRs.
 const Type *
 PPC64_SVR4_ABIInfo::getSingleElementFPOrVectorType(QualType Ty) const {
-  const Type *EltType = isSingleElementRecord(Ty, getContext());
+  bool AllowUnions =
+      Kind != PPC64_SVR4_ABIKind::ELFv1 ||
+      getContext().getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver23);
+  const Type *EltType = AllowUnions ? isSingleElementRecord(Ty, getContext())
+                                    : isSingleElementStruct(Ty, getContext());
   if (!EltType)
     return nullptr;
   const BuiltinType *BT = EltType->getAs<BuiltinType>();
