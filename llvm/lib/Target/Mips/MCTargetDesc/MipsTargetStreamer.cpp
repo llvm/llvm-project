@@ -865,7 +865,8 @@ MipsTargetELFStreamer::getISAMode(const MCSubtargetInfo &STI) {
 
 MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
                                              const MCSubtargetInfo &STI)
-    : MipsTargetStreamer(S), CLOpts(MipsMCOptions::Global),
+    : MipsTargetStreamer(S),
+      CLOpts(MIPS_MC::getCLOpts(S.getContext().getTargetOptions())),
       Mode(getISAMode(STI)), STI(STI) {
   MCAssembler &MCA = getStreamer().getAssembler();
   ELFObjectWriter &W = getStreamer().getWriter();

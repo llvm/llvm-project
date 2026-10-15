@@ -67,14 +67,20 @@ single source of truth for all workflows that run benchmarks (PR benchmarking, r
 historical benchmarks, etc). Each entry contains variables used by the various workflows
 and the LNT machine name that the results will be reported under.
 
-The `runner` key selects the GitHub Actions runner(s) to benchmark on. When the runner set
-requires jobs to run in a container, the `container` key provides the image to use. Otherwise,
-the benchmarks run directly on the host.
+The `setup` key describes how benchmarks are run on that machine. It contains the following
+entries:
 
-The `cmake-cache` key provides the CMake cache to use when building libc++ before running the
-benchmarks. The `test-config` key selects the Lit testing configuration used to run the benchmarks
-against that build, and the `lit-params` key provides additional Lit parameters to pass when running
-the benchmarks.
+- `runner`: the GitHub Actions runner(s) to benchmark on.
+- `container`: the image to use if running in a container. Otherwise, the benchmarks run directly
+               on the host.
+- `cxx`: the C++ compiler to use.
+- `xcode-version`: the version of Xcode to use (only relevant on macOS).
+- `benchmark-suite-version`: the version of the benchmark suite to use (a LLVM monorepo SHA).
+- `cmake-cache`: the CMake cache to use when building libc++ before running the benchmarks (only
+                 relevant when benchmarking libc++).
+- `test-config`: the Lit testing configuration used to run the benchmarks against that build (only
+                 relevant when benchmarking libc++).
+- `lit-params`: additional Lit parameters to pass when running the benchmarks.
 
 The `coverage` key establishes how far back and at which frequency performance should be measured
 for that configuration. A machine without a `coverage` entry can be defined, but it won't result
@@ -85,7 +91,7 @@ with `/libcxx-bot benchmark`.
 
 ## Running benchmarks locally
 
-On GitHub, the `libcxx-benchmark-commit.yml` workflow is used to run benchmarks and report
+On GitHub, the `libcxx-lnt-pipeline.yml` workflow is used to run benchmarks and report
 results to a LNT instance. This workflow wraps the `libcxx/utils/ci/lnt/run-benchmarks` script,
 which can be used to benchmark locally:
 

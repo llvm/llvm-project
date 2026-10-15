@@ -124,10 +124,12 @@ TEST(LibraryOptionsTest, Parser) {
   });
   EXPECT_THAT(Rows,
               testing::ElementsAre(
-                  "lib-count|=<value>|An unsigned", "lib-enable||A bool",
-                  "lib-in-build||Available", "lib-limit|=<value>|An optional",
-                  "lib-list|=<value>|A list", "lib-modes|=<a|b>|An enum list",
-                  "lib-mode|=<a|b>|An enum", "lib-override||An optional bool",
+                  "lib-count|=<value>|An unsigned", "lib-disable||",
+                  "lib-enable||A bool", "lib-in-build||Available",
+                  "lib-limit|=<value>|An optional", "lib-list|=<value>|A list",
+                  "lib-mode-b||", "lib-modes|=<a|b>|An enum list",
+                  "lib-mode|=<a|b>|An enum", "lib-number|=<value>|",
+                  "lib-old-mode|=<value>|", "lib-override||An optional bool",
                   "lib-path|=<value>|A string",
                   "lib-print|[=<a|b>]|A flag or enum",
                   "lib-ratio|=<value>|A double",
@@ -156,6 +158,17 @@ TEST(LibraryOptionsTest, Parser) {
   EXPECT_EQ(Parse({"-lib-count", "x"}),
             "2 invalid value 'x' in '-lib-count=x'");
   EXPECT_EQ(Parse({"-lib-enable=x"}), "1 invalid value 'x' in '-lib-enable=x'");
+  EXPECT_EQ(Parse({"-lib-disable"}), "1 ");
+  EXPECT_FALSE(TestLibraryOptions::Global.enable);
+  EXPECT_EQ(Parse({"-lib-disable=1"}), "1 unknown argument '-lib-disable=1'");
+  EXPECT_EQ(Parse({"-lib-number", "6"}), "2 ");
+  EXPECT_EQ(TestLibraryOptions::Global.count, 6u);
+  EXPECT_EQ(Parse({"-lib-mode-b"}), "1 ");
+  EXPECT_EQ(TestLibraryOptions::Global.mode, test::Mode::B);
+  EXPECT_EQ(Parse({"-lib-old-mode", "a"}), "2 ");
+  EXPECT_EQ(TestLibraryOptions::Global.mode, test::Mode::A);
+  EXPECT_EQ(Parse({"-lib-old-mode=c"}),
+            "1 invalid value 'c' in '-lib-old-mode=c'");
   P.reset();
   EXPECT_EQ(TestLibraryOptions::Global.count, 3u);
 }
