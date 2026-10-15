@@ -716,6 +716,11 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
     ScriptSampleArgs.push_back("--pid");
     ScriptSampleArgs.push_back(PIDs);
   }
+  // The unwinder expects physical frames: the sampled IP followed by saved
+  // return addresses. Perf's inline expansion repeats IPs for logical inline
+  // calls, which can truncate the stack when interpreted as return addresses.
+  // llvm-profgen reconstructs inline contexts from the profiled binary itself.
+  ScriptSampleArgs.push_back("--no-inline");
   RunPerfScript(ScriptSampleArgs);
 
   return {std::string(PerfTraceFile), InputFormat::PerfScript,
