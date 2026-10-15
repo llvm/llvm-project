@@ -271,6 +271,19 @@ Symbols:
   - Name:  baz
 ...
 
+## Check that a relocation whose symbol can't be read is still printed, with
+## only its symbol index.
+# RUN: yaml2obj --docnum=7 -DLINK=.symtab -DINFO=.llvm_call_graph -DSYMBOL=42 %s -o %t12
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --implicit-check-not=warning: --check-prefix=BAD-SYMBOL
+
+# BAD-SYMBOL:      warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type ID for 1 indirect targets
+# BAD-SYMBOL:      Function {
+# BAD-SYMBOL-NEXT: warning: '[[FILE]]': unable to read an entry with index 42 from SHT_SYMTAB section with index 3: can't read an entry at 0x3f0: it goes past the end of the section (0x30)
+# BAD-SYMBOL-NEXT:   Relocation {
+# BAD-SYMBOL-NEXT:     SymbolIndex: 42{{$}}
+# BAD-SYMBOL-NEXT:   }
+
 ## Check warning when the relocation section linked to SHT_LLVM_CALL_GRAPH has an invalid sh_link.
 # RUN: yaml2obj --docnum=7 -DLINK=255 -DINFO=.llvm_call_graph %s -o %t13
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t13 2>&1 | \
@@ -310,7 +323,7 @@ Sections:
     Info: [[INFO]]
     Relocations:
       - Offset: 0x2
-        Symbol: foo
+        Symbol: [[SYMBOL=foo]]
         Type:   R_X86_64_64
 Symbols:
   - Name: foo

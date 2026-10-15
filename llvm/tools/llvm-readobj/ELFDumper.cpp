@@ -800,6 +800,8 @@ private:
   void printSectionMapping() override {}
   void printStackSizeEntry(uint64_t Size,
                            ArrayRef<std::string> FuncNames) override;
+  void printCallGraphRelocation(const CallGraphFunc<ELFT> &Func,
+                                const Elf_Shdr &SymTab);
 
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
@@ -8368,6 +8370,38 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
   }
 }
 
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printCallGraphRelocation(
+    const CallGraphFunc<ELFT> &Func, const Elf_Shdr &SymTab) {
+  const Relocation<ELFT> &R = *Func.Reloc;
+  // Print the symbol name exactly as recorded in st_name. RelSymbol::Name is
+  // not used because it is demangled with --demangle, and is made up from the
+  // section name for an unnamed STT_SECTION symbol.
+  StringRef SymbolName;
+  Expected<RelSymbol<ELFT>> TargetOrErr = this->getRelocationTarget(R, &SymTab);
+  if (!TargetOrErr) {
+    this->reportUniqueWarning(TargetOrErr.takeError());
+  } else if (const Elf_Sym *Sym = TargetOrErr->Sym) {
+    Expected<StringRef> StrTabOrErr = this->Obj.getStringTableForSymtab(SymTab);
+    if (!StrTabOrErr)
+      this->reportUniqueWarning(StrTabOrErr.takeError());
+    else if (Expected<StringRef> NameOrErr = Sym->getName(*StrTabOrErr))
+      SymbolName = *NameOrErr;
+    else
+      this->reportUniqueWarning(NameOrErr.takeError());
+  }
+
+  DictScope D(W, "Relocation");
+  W.printNumber("SymbolIndex", R.Symbol);
+  if (!SymbolName.empty()) {
+    W.printString("SymbolName", SymbolName);
+    if (opts::Demangle)
+      W.printString("DemangledName", demangle(SymbolName));
+  }
+  if (int64_t Addend = R.Addend.value_or(0))
+    W.printNumber("Addend", Addend);
+}
+
 template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   // Call graph section is of type SHT_LLVM_CALL_GRAPH. Typically named
   // ".llvm.callgraph". First fetch the section by its type.
@@ -8439,13 +8473,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
                                   Twine(Func.FieldOffset));
         return;
       }
-      Expected<RelSymbol<ELFT>> RelSymOrErr =
-          this->getRelocationTarget(*Func.Reloc, RelocSymTab);
-      if (!RelSymOrErr) {
-        this->reportUniqueWarning(RelSymOrErr.takeError());
-        return;
-      }
-      W.printString("Name", RelSymOrErr->Name);
+      printCallGraphRelocation(Func, *RelocSymTab);
     };
 
     auto PrintFunc = [&](const CallGraphFunc<ELFT> &Func) {
