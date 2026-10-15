@@ -67,13 +67,13 @@ private:
   bool isBoundary(unsigned Value) const { return Value >= BoundaryStart; }
 
   /// Maintains internal nodes in the tree.
-  SpecificBumpPtrAllocator<SuffixTreeInternalNode> InternalNodeAllocator;
+  SpecificBumpPtrAllocator<SuffixTreeNode> InternalNodeAllocator;
 
   /// The root of the suffix tree.
   ///
   /// The root represents the empty string. It is maintained by the
   /// \p NodeAllocator like every other node in the tree.
-  SuffixTreeInternalNode *Root = nullptr;
+  SuffixTreeNode *Root = nullptr;
 
   /// The end index of each leaf in the tree.
   unsigned LeafEndIdx = SuffixTreeNode::EmptyIdx;
@@ -82,7 +82,7 @@ private:
   /// Ukkonen's algorithm.
   struct ActiveState {
     /// The next node to insert at.
-    SuffixTreeInternalNode *Node = nullptr;
+    SuffixTreeNode *Node = nullptr;
 
     /// The index of the first character in the substring currently being added.
     unsigned Idx = SuffixTreeNode::EmptyIdx;
@@ -101,8 +101,7 @@ private:
   /// \param StartIdx The start index of this node's associated string.
   /// \param Edge The label on the edge leaving \p Parent to this node.
   /// The leaf is represented by its incoming edge start index.
-  void insertLeaf(SuffixTreeInternalNode &Parent, unsigned StartIdx,
-                  unsigned Edge);
+  void insertLeaf(SuffixTreeNode &Parent, unsigned StartIdx, unsigned Edge);
 
   /// Allocate an internal node and add it to the tree.
   ///
@@ -112,14 +111,13 @@ private:
   /// \param Edge The label on the edge leaving \p Parent to this node.
   ///
   /// \returns A pointer to the allocated internal node.
-  SuffixTreeInternalNode *insertInternalNode(SuffixTreeInternalNode *Parent,
-                                             unsigned StartIdx, unsigned EndIdx,
-                                             unsigned Edge);
+  SuffixTreeNode *insertInternalNode(SuffixTreeNode *Parent, unsigned StartIdx,
+                                     unsigned EndIdx, unsigned Edge);
 
   /// Allocate the root node and add it to the tree.
   ///
   /// \returns A pointer to the root.
-  SuffixTreeInternalNode *insertRoot();
+  SuffixTreeNode *insertRoot();
 
   /// Construct the suffix tree for the prefix of the input ending at
   /// \p EndIdx.
@@ -173,7 +171,7 @@ public:
     RepeatedSubstring RS;
 
     /// The nodes left to visit.
-    SmallVector<SuffixTreeInternalNode *> InternalNodesToVisit;
+    SmallVector<SuffixTreeNode *> InternalNodesToVisit;
 
     /// Vector of leaf nodes of the suffix tree.
     /// Each leaf is represented by its suffix start index.
@@ -207,7 +205,7 @@ public:
       return !(*this == Other);
     }
 
-    RepeatedSubstringIterator(SuffixTreeInternalNode *N,
+    RepeatedSubstringIterator(SuffixTreeNode *N,
                               const std::vector<unsigned> &LeafNodes = {})
         : N(N), LeafNodes(LeafNodes) {
       // Do we have a non-null node?

@@ -20,15 +20,13 @@ void SuffixTreeNode::incrementStartIdx(unsigned Inc) { StartIdx += Inc; }
 void SuffixTreeNode::setConcatLen(unsigned Len) { ConcatLen = Len; }
 unsigned SuffixTreeNode::getConcatLen() const { return ConcatLen; }
 
-bool SuffixTreeInternalNode::isRoot() const {
-  return getStartIdx() == EmptyIdx;
-}
-unsigned SuffixTreeInternalNode::getEndIdx() const { return EndIdx; }
-void SuffixTreeInternalNode::setLink(SuffixTreeInternalNode *L) {
+bool SuffixTreeNode::isRoot() const { return getStartIdx() == EmptyIdx; }
+unsigned SuffixTreeNode::getEndIdx() const { return EndIdx; }
+void SuffixTreeNode::setLink(SuffixTreeNode *L) {
   assert(L && "Cannot set a null link?");
   Link = L;
 }
-SuffixTreeInternalNode *SuffixTreeInternalNode::getLink() const { return Link; }
+SuffixTreeNode *SuffixTreeNode::getLink() const { return Link; }
 
 unsigned SuffixTreeNode::getLeftLeafIdx() const { return LeftLeafIdx; }
 unsigned SuffixTreeNode::getRightLeafIdx() const { return RightLeafIdx; }
