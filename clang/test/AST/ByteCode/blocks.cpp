@@ -7,3 +7,7 @@ struct S {
 };
 constexpr long l = __builtin_bit_cast(long, S{}); // both-error {{must be initialized by a constant expression}} \
                                                   // both-note {{constexpr bit cast involving type 'void (^)()' is not yet supported}}
+
+typedef void (^foo)();
+const foo &bar = ^{
+};

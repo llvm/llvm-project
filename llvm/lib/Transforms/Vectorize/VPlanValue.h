@@ -184,10 +184,9 @@ public:
   void replaceAllUsesWith(VPValue *New);
 
   /// Go through the uses list for this VPValue and make each use point to \p
-  /// New if the callback ShouldReplace returns true for the given use specified
-  /// by a pair of (VPUser, the use index).
+  /// New if the callback ShouldReplace returns true for the given VPUser.
   void replaceUsesWithIf(VPValue *New,
-                         llvm::function_ref<bool(VPUser &U)> ShouldReplace);
+                         llvm::function_ref<bool(VPUser *U)> ShouldReplace);
 
   /// Returns the recipe defining this VPValue or nullptr if it is not defined
   /// by a recipe, i.e. is a live-in.

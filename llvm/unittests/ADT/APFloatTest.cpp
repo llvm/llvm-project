@@ -143,6 +143,17 @@ TEST(APFloatTest, IsLosslesslyConvertibleToKnownWiderSemantics) {
       {APFloat::S_Float6E2M3FN, APFloat::S_IEEEhalf, false},
       {APFloat::S_Float4E2M1FN, APFloat::S_IEEEhalf, false},
       {APFloat::S_x87DoubleExtended, APFloat::S_IEEEquad, true},
+      // Anything that fits in a double fits in PPC double-double's high
+      // double, so the conversion will be lossless.
+      {APFloat::S_IEEEhalf, APFloat::S_PPCDoubleDouble, true},
+      {APFloat::S_BFloat, APFloat::S_PPCDoubleDouble, true},
+      {APFloat::S_IEEEsingle, APFloat::S_PPCDoubleDouble, true},
+      {APFloat::S_IEEEdouble, APFloat::S_PPCDoubleDouble, true},
+      {APFloat::S_Float8E5M2, APFloat::S_PPCDoubleDouble, true},
+      {APFloat::S_Float8E5M2FNUZ, APFloat::S_PPCDoubleDouble, false},
+      {APFloat::S_Float8E4M3FN, APFloat::S_PPCDoubleDouble, false},
+      {APFloat::S_Float8E8M0FNU, APFloat::S_PPCDoubleDouble, false},
+      {APFloat::S_Float4E2M1FN, APFloat::S_PPCDoubleDouble, false},
   };
 
   for (const TestCase &Case : Cases) {
@@ -182,12 +193,27 @@ TEST(APFloatTest, IsLosslesslyConvertibleToRejectsInformationLoss) {
   EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(NarrowNanOnly,
                                                       WiderFiniteOnly, true));
 
-  // PPC double-double's low component is not described by its fltSemantics
-  // exponent and precision fields, so only identity is known to be lossless.
+  // Converting from PPC double-double drops its low component, which is not
+  // described by its fltSemantics exponent and precision fields, so only
+  // identity is known to be lossless.
   EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
       APFloat::PPCDoubleDouble(), APFloat::IEEEquad(), true));
   EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::PPCDoubleDouble(), APFloat::IEEEdouble(), true));
+
+  // Converting to PPC double-double is only lossless for sources that fit
+  // in its high double, because converting back recovers just that double.
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
       APFloat::IEEEquad(), APFloat::PPCDoubleDouble(), true));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::x87DoubleExtended(), APFloat::PPCDoubleDouble(), true));
+
+  // A source IEEE signaling NaN is quieted by the conversion, so a double
+  // source needs IgnoreNaNs even though its value range fits exactly.
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::IEEEdouble(), APFloat::PPCDoubleDouble(), false));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::IEEEsingle(), APFloat::PPCDoubleDouble(), false));
 }
 
 TEST(APFloatTest, LosslessConversionsPreserveRepresentativeValues) {
