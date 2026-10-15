@@ -51,7 +51,7 @@ define void @select_v16i8_1(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vshuf4i.d $vr0, $vr1, 6
+; CHECK-NEXT:    vpermi.w $vr0, $vr1, 228
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %a0
@@ -100,8 +100,8 @@ define void @select_v8i16_1(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vshuf4i.d $vr0, $vr1, 12
-; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 228
+; CHECK-NEXT:    vst $vr1, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %a0
   %v1 = load <8 x i16>, ptr %a1
@@ -111,15 +111,21 @@ define void @select_v8i16_1(ptr %res, ptr %a0, ptr %a1) nounwind {
 }
 
 define void @select_v8i16_2(ptr %res, ptr %a0, ptr %a1) nounwind {
-; CHECK-LABEL: select_v8i16_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI7_0)
-; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI7_0)
-; CHECK-NEXT:    vshuf.w $vr2, $vr1, $vr0
-; CHECK-NEXT:    vst $vr2, $a0, 0
-; CHECK-NEXT:    ret
+; LA32-LABEL: select_v8i16_2:
+; LA32:       # %bb.0:
+; LA32-NEXT:    vld $vr0, $a2, 0
+; LA32-NEXT:    ld.w $a1, $a1, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 1
+; LA32-NEXT:    vst $vr0, $a0, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: select_v8i16_2:
+; LA64:       # %bb.0:
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vld $vr1, $a2, 0
+; LA64-NEXT:    vextrins.w $vr1, $vr0, 17
+; LA64-NEXT:    vst $vr1, $a0, 0
+; LA64-NEXT:    ret
   %v0 = load <8 x i16>, ptr %a0
   %v1 = load <8 x i16>, ptr %a1
   %sel = select <8 x i1> <i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i16> %v0, <8 x i16> %v1
@@ -148,8 +154,8 @@ define void @select_v4i32_1(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vshuf4i.d $vr0, $vr1, 12
-; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 228
+; CHECK-NEXT:    vst $vr1, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %a0
   %v1 = load <4 x i32>, ptr %a1
@@ -162,11 +168,9 @@ define void @select_v4f32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI10_0)
-; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI10_0)
-; CHECK-NEXT:    vshuf.w $vr2, $vr1, $vr0
-; CHECK-NEXT:    vst $vr2, $a0, 0
+; CHECK-NEXT:    fld.s $fa1, $a2, 0
+; CHECK-NEXT:    vextrins.w $vr0, $vr1, 0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
   %v1 = load <4 x float>, ptr %a1
