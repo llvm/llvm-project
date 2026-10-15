@@ -115,6 +115,7 @@ list(APPEND CLANG_TEST_DEPS
 
 if(NOT WIN32)
   list(APPEND CLANG_TEST_DEPS
+    clang-ssaf-driver
     clang-ssaf-orchestrator-make
     )
 endif()
