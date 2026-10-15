@@ -1094,6 +1094,7 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
   return B.CreateTrunc(B.CreateCall(F, {B.getInt32(0)}), Ty);
 }
 
+
 // A fragment shader input interface variable whose base type is an integer or
 // a 64-bit float (double) cannot be interpolated by the rasterizer. The Vulkan
 // specification requires these variables to be decorated with Flat (see
@@ -1505,6 +1506,44 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
     SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   switch (SemanticKind) {
+  case llvm::dxbc::PSV::SemanticKind::Barycentrics:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_Barycentrics is only available as a pixel shader input");
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      using llvm::dxbc::PSV::InterpolationMode;
+      // Perspective is encoded by the built-in; only sampling decorations
+      // belong on the interface variable.
+      bool NoPerspective = false;
+      switch (InterpMode) {
+      case InterpolationMode::LinearNoperspective:
+        NoPerspective = true;
+        InterpMode = InterpolationMode::Linear;
+        break;
+      case InterpolationMode::LinearNoperspectiveCentroid:
+        NoPerspective = true;
+        InterpMode = InterpolationMode::LinearCentroid;
+        break;
+      case InterpolationMode::LinearNoperspectiveSample:
+        NoPerspective = true;
+        InterpMode = InterpolationMode::LinearSample;
+        break;
+      default:
+        break;
+      }
+      // SPIR-V barycentric built-ins are float3, even for half3 inputs.
+      llvm::Type *BuiltinType = llvm::FixedVectorType::get(CGM.FloatTy, 3);
+      llvm::Value *Barycentrics = createSPIRVBuiltinLoad(
+          B, CGM.getModule(), BuiltinType, Semantic->getSemanticName(),
+          NoPerspective ? /* BuiltIn::BaryCoordNoPerspKHR */ 5287
+                        : /* BuiltIn::BaryCoordKHR */ 5286,
+          InterpMode);
+      if (Type->getScalarType()->isHalfTy())
+        return B.CreateFPTrunc(Barycentrics, Type);
+      return Barycentrics;
+    }
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index, Signature);
+    break;
   case llvm::dxbc::PSV::SemanticKind::GroupIndex: {
     assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
                                llvm::Triple::Amplification},
