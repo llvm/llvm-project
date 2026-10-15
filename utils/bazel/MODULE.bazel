@@ -49,7 +49,7 @@ single_version_override(
     ],
 )
 
-llvm_repos_extension = use_extension(":extensions.bzl", "llvm_repos_extension")
+llvm_repos_extension = use_extension("@llvm-raw//utils/bazel:extensions.bzl", "llvm_repos_extension")
 use_repo(
     llvm_repos_extension,
     "linux_uapi",
@@ -58,6 +58,5 @@ use_repo(
     "vulkan_sdk",
 )
 
-llvm_configure = use_repo_rule("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")
-
-llvm_configure(name = "llvm-project")
+llvm = use_extension("@llvm-raw//utils/bazel:configure.bzl", "llvm")
+use_repo(llvm, "llvm-project")
