@@ -21,7 +21,7 @@ void dispatch_once(dispatch_once_t *predicate, dispatch_block_t block);
 
 void test_stack(void) {
   dispatch_once_t once;
-  dispatch_once(&once, ^{}); // expected-warning{{Call to 'dispatch_once' uses the local variable 'once' for the predicate value.  Using such transient memory for the predicate is potentially dangerous.  Perhaps you intended to declare the variable as 'static'?}}
+  dispatch_once(&once, ^{}); // expected-warning{{Call to 'dispatch_once' uses the local variable 'once' for the predicate value. Using such transient memory for the predicate is potentially dangerous. Perhaps you intended to declare the variable as 'static'?}}
 }
 
 void test_static_local(void) {
@@ -32,7 +32,7 @@ void test_static_local(void) {
 void test_heap_var(void) {
   dispatch_once_t *once = calloc(1, sizeof(dispatch_once_t));
   // Use regexps to check that we're NOT suggesting to make this static.
-  dispatch_once(once, ^{}); // expected-warning-re{{{{^Call to 'dispatch_once' uses heap-allocated memory for the predicate value.  Using such transient memory for the predicate is potentially dangerous$}}}}
+  dispatch_once(once, ^{}); // expected-warning-re{{{{^Call to 'dispatch_once' uses heap-allocated memory for the predicate value. Using such transient memory for the predicate is potentially dangerous$}}}}
 }
 
 void test_external_pointer(dispatch_once_t *once) {
