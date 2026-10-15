@@ -26,13 +26,14 @@ namespace llvm {
 /// if a client needs to perform some action after the stream is written to,
 /// that can be done by deriving from this class and overriding the destructor
 /// or the commit() method.
+/// Before destruction of this class, either commit() or abort() must be called.
 class CachedFileStream {
 public:
   CachedFileStream(std::unique_ptr<raw_pwrite_stream> OS,
                    std::string OSPath = "")
       : OS(std::move(OS)), ObjectPathName(OSPath) {}
 
-  /// Must be called exactly once after the writes to OS have been completed
+  /// Must be called after the writes to OS have been completed successfully
   /// but before the CachedFileStream object is destroyed.
   virtual Error commit() {
     if (Committed)
@@ -50,7 +51,13 @@ public:
     return commit();
   }
 
+  /// Must be called if the file was not committed before its destroyed (for
+  /// example if some writes didn't complete).
   virtual Error abort() {
+    if (Committed)
+      return createStringError(make_error_code(std::errc::invalid_argument),
+                               "CacheStream already committed.");
+
     OS.reset();
     Aborted = true;
     return Error::success();

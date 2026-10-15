@@ -145,10 +145,9 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       }
 
       Error abort() override {
-        if (Error E = CachedFileStream::abort())
-          return E;
-
-        return TempFile.discard();
+        Error E1 = CachedFileStream::abort();
+        Error E2 = TempFile.discard();
+        return joinErrors(std::move(E1), std::move(E2));
       }
     };
 

@@ -72,22 +72,6 @@ TEST(Caching, Normal) {
     ASSERT_TRUE(memcmp(data, readData.data(), sizeof(data)) == 0);
   }
 
-  {
-    auto AddStreamOrErr = Cache(2, "bar", "");
-    ASSERT_TRUE(bool(AddStreamOrErr));
-
-    AddStreamFn &AddStream = *AddStreamOrErr;
-    ASSERT_TRUE(AddStream);
-
-    auto FileOrErr = AddStream(1, "");
-    ASSERT_TRUE(bool(FileOrErr));
-
-    CachedFileStream *CFS = FileOrErr->get();
-    (*CFS->OS).write(data, sizeof(data));
-    ASSERT_THAT_ERROR(CFS->abort(), Succeeded());
-    ASSERT_THAT_ERROR(CFS->commit(), Failed());
-  }
-
   ASSERT_NO_ERROR(sys::fs::remove_directories(CacheDir.str()));
 }
 
@@ -166,6 +150,47 @@ TEST(Caching, NoCommit) {
       },
       "")
       << "destruction without commit did not cause error";
+
+  ASSERT_NO_ERROR(sys::fs::remove_directories(CacheDir.str()));
+}
+
+TEST(Caching, Abort) {
+  SmallString<256> CacheDir;
+  sys::fs::createUniquePath("llvm_test_cache-%%%%%%", CacheDir, true);
+
+  sys::fs::remove_directories(CacheDir.str());
+
+  std::unique_ptr<MemoryBuffer> CachedBuffer;
+  auto AddBuffer = [&CachedBuffer](unsigned Task, const Twine &ModuleName,
+                                   std::unique_ptr<MemoryBuffer> M) {
+    CachedBuffer = std::move(M);
+  };
+  auto CacheOrErr =
+      localCache("LLVMTestCache", "LLVMTest", CacheDir, AddBuffer);
+  ASSERT_TRUE(bool(CacheOrErr));
+
+  FileCache &Cache = *CacheOrErr;
+
+  auto AddStreamOrErr = Cache(1, "foo", "");
+  ASSERT_TRUE(bool(AddStreamOrErr));
+
+  AddStreamFn &AddStream = *AddStreamOrErr;
+  ASSERT_TRUE(AddStream);
+
+  auto FileOrErr = AddStream(1, "");
+  ASSERT_TRUE(bool(FileOrErr));
+
+  CachedFileStream *CFS = FileOrErr->get();
+  (*CFS->OS).write(data, sizeof(data));
+  ASSERT_THAT_ERROR(CFS->abort(), Succeeded());
+
+  // Ensure the directory is still empty.
+  std::error_code EC;
+  sys::fs::directory_iterator DirIt(CacheDir.str(), EC);
+  ASSERT_NO_ERROR(EC);
+  ASSERT_EQ(DirIt, sys::fs::directory_iterator());
+
+  ASSERT_THAT_ERROR(CFS->commit(), Failed());
 
   ASSERT_NO_ERROR(sys::fs::remove_directories(CacheDir.str()));
 }
