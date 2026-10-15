@@ -12,6 +12,18 @@ from clang_ssaf_driver import patch
 from clang_ssaf_driver.source_edits import Replacement
 
 
+def _has_gnu_or_bsd_patch():
+    try:
+        version = subprocess.run(
+            ["patch", "--version"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        return False
+    return version.returncode == 0
+
+
 class ApplyingEdits(unittest.TestCase):
     def _apply(self, original, edits):
         return patch.apply_edits(original, sorted(edits))
@@ -207,7 +219,7 @@ class Rendering(unittest.TestCase):
     def test_no_edits_is_an_empty_patch(self):
         self.assertEqual(b"", patch.render([]))
 
-    @unittest.skipUnless(shutil.which("patch"), "needs patch")
+    @unittest.skipUnless(_has_gnu_or_bsd_patch(), "needs a GNU or BSD patch")
     def test_patch_applies_what_was_rendered(self):
         cases = {
             "src/a.cpp": (b"int f();\nint *p;\nint g();\n", [(9, 5, "q ")]),
