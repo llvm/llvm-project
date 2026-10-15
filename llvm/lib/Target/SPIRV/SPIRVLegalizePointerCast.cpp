@@ -165,8 +165,10 @@ class SPIRVLegalizePointerCastImpl {
   }
 
   // Returns true if |FromTy| has a memory layout compatible with loading or
-  // storing |ToTy|.
-  bool isCompatibleMemoryLayout(Type *ToTy, Type *FromTy) {
+  // storing |ToTy|. Loads allow scalar widening by inserting the scalar into
+  // a vector with the same element types.
+  bool isCompatibleMemoryLayout(Type *ToTy, Type *FromTy,
+                                bool AllowScalarWidening = false) {
     if (ToTy == FromTy)
       return true;
     auto *SVT = dyn_cast<FixedVectorType>(FromTy);
@@ -175,6 +177,11 @@ class SPIRVLegalizePointerCastImpl {
       return true;
     if (SVT && (ToTy->isIntegerTy() || ToTy->isFloatingPointTy()) &&
         ToTy->getPrimitiveSizeInBits() == SVT->getPrimitiveSizeInBits())
+      return true;
+    // If AllowScalarWidening is set, a scalar FromTy is also
+    // compatible with a vector ToTy of that scalar type.
+    if (AllowScalarWidening && DVT && DVT->getElementType() == FromTy &&
+        !FromTy->isIntegerTy(8))
       return true;
     auto *SAT = dyn_cast<ArrayType>(FromTy);
     if (SAT && DVT) {
@@ -192,14 +199,16 @@ class SPIRVLegalizePointerCastImpl {
   std::optional<std::pair<Value *, Type *>>
   getPointerToFirstCompatibleType(IRBuilder<> &B, Value *BasePtr,
                                   Type *PointerType, Type *TargetElemType,
-                                  bool IsInBounds) {
+                                  bool IsInBounds,
+                                  bool AllowScalarWidening = false) {
     Type *CurrentTy = GR->findDeducedElementType(BasePtr);
     assert(CurrentTy && "Could not deduce aggregate type");
     SmallVector<Value *, 8> Args{/* isInBounds= */ B.getInt1(IsInBounds),
                                  BasePtr};
     Args.push_back(B.getInt32(0)); // Pointer offset
 
-    while (!isCompatibleMemoryLayout(TargetElemType, CurrentTy)) {
+    while (!isCompatibleMemoryLayout(TargetElemType, CurrentTy,
+                                     AllowScalarWidening)) {
       if (auto *ST = dyn_cast<StructType>(CurrentTy)) {
         if (ST->getNumElements() == 0)
           return std::nullopt;
@@ -452,13 +461,37 @@ class SPIRVLegalizePointerCastImpl {
     return true;
   }
 
+  // Loads the scalar pointed to by |Source| and places it in element 0 of a
+  // vector of type |TargetType| leaving the other elements as undefs.
+  // This can result from optimizations such as
+  // VectorCombine that widen the load of a scalar to a vector load when only
+  // element 0 is used. The other elements would be populated using whatever
+  // was loaded past the scalar. Valid SPIR-V cannot have such a change in type
+  // at load.
+  Value *loadVectorFromScalar(IRBuilder<> &B, FixedVectorType *TargetType,
+                              Value *Source, Align OriginalAlign) {
+    Type *ScalarTy = TargetType->getElementType();
+    LoadInst *Load = B.CreateLoad(ScalarTy, Source);
+    Load->setAlignment(OriginalAlign);
+    buildAssignType(B, ScalarTy, Load);
+
+    SmallVector<Value *, 4> LoadedElements{Load};
+    if (TargetType->getNumElements() == 1)
+      return buildVectorFromLoadedElements(B, TargetType, LoadedElements);
+
+    Value *Result = PoisonValue::get(TargetType);
+    buildAssignType(B, TargetType, Result);
+    return makeInsertElement(B, Result, Load, 0);
+  }
+
   // Builds a legalized load from a pointer, drilling down through
   // memory layouts to find a compatible type. Load flags will be
   // copied from |IllegalLoad|, which should be the load being legalized.
   Value *buildLegalizedLoad(IRBuilder<> &B, Type *ElementType, Value *Source,
                             LoadInst *IllegalLoad, Value *CastedPtr) {
     auto ResultOpt = getPointerToFirstCompatibleType(
-        B, Source, IllegalLoad->getPointerOperandType(), ElementType, false);
+        B, Source, IllegalLoad->getPointerOperandType(), ElementType, false,
+        /* AllowScalarWidening */ true);
     if (!ResultOpt) {
       if (tryReinterpretLoad(B, ElementType, Source, CastedPtr, IllegalLoad))
         return nullptr;
@@ -490,6 +523,8 @@ class SPIRVLegalizePointerCastImpl {
     }
     if (SVT && DVT)
       return loadVectorFromVector(B, SVT, DVT, GEP, IllegalLoad->getAlign());
+    if (DVT && CurrentTy == DVT->getElementType())
+      return loadVectorFromScalar(B, DVT, GEP, IllegalLoad->getAlign());
     if (SAT && DVT && SAT->getElementType() == DVT->getElementType())
       return loadVectorFromArray(B, DVT, GEP, IllegalLoad->getAlign());
     if (MAT && DVT && MAT->getElementType() == DVT->getElementType())
