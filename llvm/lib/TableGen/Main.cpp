@@ -190,7 +190,7 @@ static int WriteOutput(const char *argv0, StringRef Filename,
   return 0;
 }
 
-static int Main(const char *argv0, MultiFileTableGenMainFn MainFn) {
+static int tableGenMainImpl(const char *argv0, MultiFileTableGenMainFn MainFn) {
   if (Preprocess) {
     std::string OutString;
     raw_string_ostream Out(OutString);
@@ -278,7 +278,7 @@ int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   SrcMgr.setIncludeDirs(IncludeDirs);
   SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
-  if (int Ret = Main(argv0, MainFn))
+  if (int Ret = tableGenMainImpl(argv0, MainFn))
     return Ret;
   if (ErrorsPrinted > 0)
     return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
