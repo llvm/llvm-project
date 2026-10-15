@@ -65,6 +65,12 @@ Specify the format of the generated profile. Supported \<format> are `text`,
 descriptions of the format.
 :::
 
+:::{option} --profile-format=[sample|instr]
+Specify the format of the generated data access profile. Supported formats are
+`sample` (default, embedded in the sample profile) and `instr` (written to a
+separate `<output>-data.<ext>` file in instrumentation-based MemProf format).
+:::
+
 :::{option} --show-mmap-events
 Print mmap events.
 :::

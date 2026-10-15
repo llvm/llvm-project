@@ -12,7 +12,12 @@
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/ProfileData/DataAccessProf.h"
+#include "llvm/ProfileData/InstrProfWriter.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <float.h>
@@ -36,6 +41,20 @@ static cl::opt<SampleProfileFormat> OutputFormat(
                clEnumValN(SPF_Text, "text", "Text encoding"),
                clEnumValN(SPF_GCC, "gcc",
                           "GCC encoding (only meaningful for -sample)")),
+    cl::cat(ProfGenCategory));
+
+enum DataAccessProfileFormat {
+  Sample,
+  Instrumented,
+};
+
+static cl::opt<DataAccessProfileFormat> ProfileFormat(
+    "profile-format", cl::desc("Format of output data access profile"),
+    cl::init(Sample),
+    cl::values(clEnumValN(Sample, "sample",
+                          "Sample-based profile format (default)"),
+               clEnumValN(Instrumented, "instr",
+                          "Instrumentation-based profile format")),
     cl::cat(ProfGenCategory));
 
 static cl::opt<bool> UseMD5(
@@ -170,11 +189,38 @@ void ProfileGeneratorBase::write(std::unique_ptr<SampleProfileWriter> Writer,
     Writer->setProfileSymbolList(&SymbolList);
   }
 
-  if (DataAccessProfileData && !DataAccessProfileData->empty())
+  if (ProfileFormat == Sample)
     Writer->setDataAccessProfData(std::move(DataAccessProfileData));
 
   if (std::error_code EC = Writer->write(ProfileMap))
     exitWithError(std::move(EC));
+
+  if (!DataAccessProfileData || DataAccessProfileData->empty())
+    return;
+
+  // Write the instrumentation-based data access profile.
+  StringRef Ext = sys::path::extension(OutputFilename);
+  SmallString<128> DataOutputFilename = StringRef(OutputFilename);
+  sys::path::replace_extension(DataOutputFilename, "");
+  DataOutputFilename += "-data";
+  DataOutputFilename += Ext;
+
+  std::error_code EC;
+  raw_fd_ostream OS(DataOutputFilename, EC, sys::fs::OF_None);
+  if (EC)
+    exitWithError("Could not open data profile output file: " + EC.message());
+
+  // The data access profiles are supported in MemProf Version 4 and above.
+  // Use the maximum supported version and enable the memory profile kind.
+  InstrProfWriter DataWriter(
+      /*Sparse=*/false, /*TemporalProfTraceReservoirSize=*/0,
+      /*MaxTemporalProfTraceLength=*/0, /*WritePrevVersion=*/false,
+      static_cast<memprof::IndexedVersion>(memprof::MaximumSupportedVersion));
+  cantFail(DataWriter.mergeProfileKind(InstrProfKind::MemProf));
+  DataWriter.addDataAccessProfData(std::move(DataAccessProfileData));
+
+  if (Error E = DataWriter.write(OS))
+    exitWithError(toString(std::move(E)));
 }
 
 void ProfileGeneratorBase::write() {
