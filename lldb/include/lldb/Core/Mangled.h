@@ -43,7 +43,6 @@ public:
 
   enum ManglingScheme : uint8_t {
     eManglingSchemeNone = 0,
-    eManglingSchemeSwift,
     eFirstRegisteredManglingScheme,
   };
 
@@ -224,8 +223,8 @@ public:
   ///     The name we are attempting to identify the mangling scheme for.
   ///
   /// \return
-  ///     eManglingSchemeNone if no known mangling scheme could be identified
-  ///     for s, otherwise the enumerator for the mangling scheme detected.
+  ///     eManglingSchemeNone if no registered mangling scheme matches \p name,
+  ///     otherwise the scheme that does.
   static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef name);
 
   static bool IsMangledName(llvm::StringRef name);

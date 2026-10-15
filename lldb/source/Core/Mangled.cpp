@@ -186,26 +186,6 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
 
-  // Swift's older style of mangling used "_T" as a mangling prefix. This can
-  // lead to false positives with other symbols that just so happen to start
-  // with "_T". To minimize the chance of that happening, we only return true
-  // for select old-style swift mangled names. The known cases are ObjC classes
-  // and protocols. Classes are either prefixed with "_TtC" or "_TtGC".
-  // Protocols are prefixed with "_TtP".
-  if (name.starts_with("_TtC") || name.starts_with("_TtGC") ||
-      name.starts_with("_TtP"))
-    return Mangled::eManglingSchemeSwift;
-
-  // Swift 4.2 used "$S" and "_$S".
-  // Swift 5 and onward uses "$s" and "_$s".
-  // Swift also uses "@__swiftmacro_" as a prefix for mangling filenames.
-  // Embedded Swift introduced "$e" and  "_$e" as Swift mangling prefixes.
-  if (name.starts_with("$S") || name.starts_with("_$S") ||
-      name.starts_with("$s") || name.starts_with("_$s") ||
-      name.starts_with("$e") || name.starts_with("_$e") ||
-      name.starts_with("@__swiftmacro_"))
-    return Mangled::eManglingSchemeSwift;
-
   return GetManglingSchemeRegistry().Find(name);
 }
 
@@ -269,25 +249,14 @@ ConstString Mangled::GetDemangledName() const {
   if (m_mangled.GetMangledCounterpart(m_demangled) && !m_demangled.IsNull())
     return m_demangled;
 
-  // We didn't already mangle this name, demangle it and if all goes well
+  // We didn't already demangle this name, demangle it and if all goes well
   // add it to our map.
   ManglingScheme scheme = GetManglingScheme(m_mangled.GetStringRef());
-  switch (scheme) {
-  case eManglingSchemeSwift:
-    // Demangling a swift name requires the swift compiler. This is
-    // explicitly unsupported on llvm.org.
-    break;
-  case eManglingSchemeNone:
-    // Don't bother demangling anything that isn't mangled.
-    break;
-  default:
-    if (Language *lang = Language::FindPluginForManglingScheme(scheme)) {
-      Language::DemangledName demangled =
-          lang->DemangleSymbol(m_mangled, scheme, Language::DemangleOptions());
-      if (!demangled.name.empty())
-        m_demangled.SetStringWithMangledCounterpart(demangled.name, m_mangled);
-    }
-    break;
+  if (Language *lang = Language::FindPluginForManglingScheme(scheme)) {
+    Language::DemangledName demangled =
+        lang->DemangleSymbol(m_mangled, scheme, Language::DemangleOptions());
+    if (!demangled.name.empty())
+      m_demangled.SetStringWithMangledCounterpart(demangled.name, m_mangled);
   }
 
   if (m_demangled.IsNull()) {
