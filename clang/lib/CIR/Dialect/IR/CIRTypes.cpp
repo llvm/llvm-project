@@ -1502,9 +1502,8 @@ llvm::TypeSize cir::VectorType::getTypeSizeInBits(
   }
 
   llvm::TypeSize elementSize = dataLayout.getTypeSizeInBits(getElementType());
-  return llvm::TypeSize::get(getSize().getKnownMinValue() *
-                                 elementSize.getFixedValue(),
-                             getSize().isScalable());
+  return llvm::TypeSize::get(
+      getSize().getKnownMinValue() * elementSize.getFixedValue(), isScalable());
 }
 
 uint64_t cir::VectorType::getBoolStorageWidth() const {
@@ -1586,11 +1585,11 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
 void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
   mlir::Builder odsBuilder(getContext());
   odsPrinter << "<";
-  if (getSize().isScalable())
+  if (isScalable())
     odsPrinter << "[";
 
   odsPrinter.printStrippedAttrOrType(getSize().getKnownMinValue());
-  if (getSize().isScalable())
+  if (isScalable())
     odsPrinter << "]";
   odsPrinter << ' ' << "x";
   odsPrinter << ' ';

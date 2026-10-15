@@ -4161,7 +4161,7 @@ LogicalResult cir::VecCreateOp::verify() {
   // vector, and that the type of all the arguments matches the type of the
   // elements in the vector.
   const cir::VectorType vecTy = getType();
-  if (vecTy.getSize().isScalable())
+  if (vecTy.isScalable())
     return emitOpError() << "scalable vectors are not supported";
 
   if (getElements().size() != vecTy.getFixedSize()) {
@@ -4404,9 +4404,8 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
 }
 
 LogicalResult cir::VecShuffleOp::verify() {
-  if (getVec1().getType().getSize().isScalable() ||
-      getVec2().getType().getSize().isScalable() ||
-      getResult().getType().getSize().isScalable())
+  if (getVec1().getType().isScalable() || getVec2().getType().isScalable() ||
+      getResult().getType().isScalable())
     return emitOpError() << "scalable vectors are not supported";
 
   // The number of elements in the indices array must match the number of

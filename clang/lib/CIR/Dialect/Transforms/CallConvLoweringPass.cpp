@@ -254,7 +254,7 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   if (auto vecTy = dyn_cast<cir::VectorType>(ty)) {
     // A scalable vector has no size the SysV eightbyte rules can read, and
     // x86_64 has no calling convention for one.
-    if (vecTy.getSize().isScalable())
+    if (vecTy.isScalable())
       return false;
     // mapCIRType maps a bool as a one-bit integer, so a bool vector is sized
     // one bit per element, as clang packs it.  Vectors of a _BitInt whose

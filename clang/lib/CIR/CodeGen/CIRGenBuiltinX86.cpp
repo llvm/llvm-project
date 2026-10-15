@@ -822,7 +822,7 @@ static mlir::Value emitX86VPerm2f128(CIRGenBuilderTy &builder,
                                      mlir::Location loc,
                                      llvm::SmallVector<mlir::Value> ops) {
   auto inputType = cast<cir::VectorType>(ops[0].getType());
-  assert(!inputType.getSize().isScalable() &&
+  assert(!inputType.isScalable() &&
          "This is only intended for fixed-width vectors");
 
   const uint8_t imm = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]);
@@ -867,7 +867,7 @@ static mlir::Value emitX86PackedByteShift(CIRGenBuilderTy &builder,
                                           llvm::ArrayRef<mlir::Value> ops,
                                           llvm::Boolean isLeftShift) {
   auto byteVecType = cast<cir::VectorType>(ops[0].getType());
-  assert(!byteVecType.getSize().isScalable() &&
+  assert(!byteVecType.isScalable() &&
          "This is only intended for fixed-width vectors");
 
   unsigned shiftVal = CIRGenFunction::getZExtIntValueFromConstOp(ops[1]) & 0xFF;
