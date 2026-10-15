@@ -24,10 +24,9 @@ define void @bound_is_ptr_iv_of_sibling_loop(ptr %a, ptr %b, i64 %n, i64 %m) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[B1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoaddr ptr [[PTR_IV_LCSSA]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[B1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], [[TMP0]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], -4
@@ -132,16 +131,16 @@ define void @bound_is_trunc_of_sibling_loop_iv_multi_exit(ptr %a, ptr %b, i64 %n
 ; CHECK-NEXT:    br label %[[LOOP_1]]
 ; CHECK:       [[PH_2]]:
 ; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i64 [ [[IV_1]], %[[LOOP_1_BODY]] ], [ [[IV_1]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[IV_1_LCSSA]] to i32
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 508
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[IV_1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 256
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SCEVGEP2]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP23:%.*]] = add nuw nsw i64 [[TMP3]], 256
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP1]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
