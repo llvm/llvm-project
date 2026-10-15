@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines the PISA register banks used by GlobalISel.
+///
+//===----------------------------------------------------------------------===//
 
 def RegistersRegBank : RegisterBank<"Registers",
   [Pred, Reg8b, Reg16b, Reg32b, Reg64b, Reg128b,

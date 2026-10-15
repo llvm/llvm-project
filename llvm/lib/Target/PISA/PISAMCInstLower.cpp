@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements lowering from PISA MachineInstrs to MCInsts.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISAMCInstLower.h"
 #include "MCTargetDesc/PISAMCExpr.h"
