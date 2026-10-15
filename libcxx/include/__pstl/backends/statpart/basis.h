@@ -64,7 +64,7 @@ constexpr inline size_t __max_partitions_per_cpu = 8;
 // The minimum number of elements to sort serially in a single partition
 constexpr inline size_t __min_sort_partition_size = 256;
 
-enum class __partitioning_result {
+enum class __partitioning_status {
   // Returned when the partitioning result is not a nullopt.
   __ok,
   // Returned when there are not enough element to produce a single partition or the final number of partitions is fewer
@@ -76,6 +76,9 @@ enum class __partitioning_result {
   // Reserved for later: returned when memory could not be allocated for the stashed forward iterators.
   __bad_alloc
 };
+
+template <class _Iterator>
+struct _LIBCPP_HIDE_FROM_ABI __partitioning_result;
 
 template <class _Iterator>
 struct _LIBCPP_HIDE_FROM_ABI __iterator_range {
@@ -106,8 +109,16 @@ private:
   size_t __partitions_count_;
 
   template <class _Iter>
-  friend optional<__iterator_partitions<_Iter>> _LIBCPP_HIDE_FROM_ABI
-  __partition(_Iter, _Iter, __partitioning_result&, size_t, size_t, size_t, size_t) noexcept;
+  friend __partitioning_result<_Iter> _LIBCPP_HIDE_FROM_ABI
+  __partition(_Iter, _Iter, size_t, size_t, size_t, size_t) noexcept;
+};
+
+// This is basically a barebones std::expected<__iterator_partitions<_Iterator>, __partitioning_status>.
+// __partition() uses this to avoid resorting to return arguments.
+template <class _Iterator>
+struct _LIBCPP_HIDE_FROM_ABI __partitioning_result {
+  optional<__iterator_partitions<_Iterator>> __value_;
+  __partitioning_status __status_ = __partitioning_status::__ok;
 };
 
 // Splits the input iterator range into a finite set of partitions, such that every iterator sub-range can be queried in
@@ -119,14 +130,13 @@ private:
 // __workers_count is normally implicitly queried from hardware_concurrency() and should be explicitly specified only in
 // unit tests.
 template <class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI optional<__iterator_partitions<_ForwardIterator>> __partition(
-    _ForwardIterator __first,
-    _ForwardIterator __last,
-    __partitioning_result& __result,
-    size_t __min_partition_size = 1,
-    size_t __prefix_to_skip     = 0,
-    size_t __suffix_to_skip     = 0,
-    size_t __workers_count      = thread::hardware_concurrency()) noexcept {
+_LIBCPP_HIDE_FROM_ABI __partitioning_result<_ForwardIterator>
+__partition(_ForwardIterator __first,
+            _ForwardIterator __last,
+            size_t __min_partition_size = 1,
+            size_t __prefix_to_skip     = 0,
+            size_t __suffix_to_skip     = 0,
+            size_t __workers_count      = thread::hardware_concurrency()) noexcept {
   // Forward iterators will be supported later.
   static_assert(__has_random_access_iterator_category_or_concept<_ForwardIterator>::value);
 
@@ -134,14 +144,12 @@ _LIBCPP_HIDE_FROM_ABI optional<__iterator_partitions<_ForwardIterator>> __partit
 
   if (__workers_count < 2) {
     // There's no available parallelism in the system, no reason to perform partitioning.
-    __result = __partitioning_result::__no_parallelism;
-    return {};
+    return {nullopt, __partitioning_status::__no_parallelism};
   }
 
   size_t __count = static_cast<size_t>(std::distance(__first, __last));
   if (__count <= __prefix_to_skip + __suffix_to_skip) {
-    __result = __partitioning_result::__not_enough_elements;
-    return {};
+    return {nullopt, __partitioning_status::__not_enough_elements};
   }
 
   size_t __effective_count = __count - __prefix_to_skip - __suffix_to_skip;
@@ -149,8 +157,8 @@ _LIBCPP_HIDE_FROM_ABI optional<__iterator_partitions<_ForwardIterator>> __partit
   size_t __partition_count = std::min(__max_partitions, __effective_count / __min_partition_size);
 
   if (__partition_count < 2) {
-    __result = __partitioning_result::__not_enough_elements;
-    return {}; // not enough input data to process in parallel => no reason to build partitions
+    // not enough input data to process in parallel => no reason to build partitions
+    return {nullopt, __partitioning_status::__not_enough_elements};
   }
 
   __iterator_partitions<_ForwardIterator> __p;
@@ -159,8 +167,7 @@ _LIBCPP_HIDE_FROM_ABI optional<__iterator_partitions<_ForwardIterator>> __partit
   __p.__partition_size_   = __effective_count / __partition_count;
   __p.__remainder_        = __effective_count % __partition_count;
   __p.__partitions_count_ = __partition_count;
-  __result                = __partitioning_result::__ok;
-  return __p;
+  return {std::move(__p), __partitioning_status::__ok};
 }
 
 // for_each with explicit partitioning:
@@ -199,12 +206,11 @@ template <class _Iterator, class _Functor>
 _LIBCPP_HIDE_FROM_ABI optional<__empty> __for_each(_Iterator __first, _Iterator __last, _Functor __func) {
   if (__first == __last)
     return __empty{};
-  __partitioning_result __partition_result;
-  auto __partitions = __statpart::__partition(__first, __last, __partition_result);
-  if (__partitions) {
-    __statpart::__for_each_partition(*__partitions, std::move(__func));
+  auto __partitions = __statpart::__partition(__first, __last);
+  if (__partitions.__value_) {
+    __statpart::__for_each_partition(*__partitions.__value_, std::move(__func));
     return __empty{};
-  } else if (__partition_result == __partitioning_result::__bad_alloc) {
+  } else if (__partitions.__status_ == __partitioning_status::__bad_alloc) {
     return nullopt;
   } else {
     __func(__first, __last);
@@ -269,10 +275,9 @@ _LIBCPP_HIDE_FROM_ABI optional<_Value> __transform_reduce(
     return __init;
 
   // Split into partitions with at least 3 elements in each
-  __partitioning_result __partitioning_result;
-  auto __partitions = __statpart::__partition(__first, __last, __partitioning_result, 3);
-  if (!__partitions) {
-    if (__partitioning_result == __partitioning_result::__bad_alloc) {
+  auto __partitions = __statpart::__partition(__first, __last, 3);
+  if (!__partitions.__value_) {
+    if (__partitions.__status_ == __partitioning_status::__bad_alloc) {
       // Failed to allocate memory for the partitions, propagate the error up.
       return nullopt;
     } else {
@@ -281,7 +286,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_Value> __transform_reduce(
     }
   }
 
-  auto __destroy = [__count = __partitions->__partitions_count()](_Value* __ptr) {
+  auto __destroy = [__count = __partitions.__value_->__partitions_count()](_Value* __ptr) {
     std::destroy_n(__ptr, __count);
     std::allocator<_Value>().deallocate(__ptr, __count);
   };
@@ -289,11 +294,11 @@ _LIBCPP_HIDE_FROM_ABI optional<_Value> __transform_reduce(
   // TODO: use __uninitialized_buffer
   // TODO: allocate one element per worker instead of one element per chunk
   unique_ptr<_Value[], decltype(__destroy)> __values(
-      std::allocator<_Value>().allocate(__partitions->__partitions_count()), __destroy);
+      std::allocator<_Value>().allocate(__partitions.__value_->__partitions_count()), __destroy);
 
   // __dispatch_apply is noexcept
-  __statpart::__for_each_partition_index(*__partitions, [&](size_t __index) {
-    auto __range = __partitions->__partition(__index);
+  __statpart::__for_each_partition_index(*__partitions.__value_, [&](size_t __index) {
+    auto __range = __partitions.__value_->__partition(__index);
     std::__construct_at(
         __values.get() + __index,
         __reduction(__range.__first + 2,
@@ -303,7 +308,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_Value> __transform_reduce(
 
   return std::reduce(
       std::make_move_iterator(__values.get()),
-      std::make_move_iterator(__values.get() + __partitions->__partitions_count()),
+      std::make_move_iterator(__values.get() + __partitions.__value_->__partitions_count()),
       std::move(__init),
       __combiner);
 }
@@ -331,10 +336,9 @@ __merge(_RandomAccessIterator1 __first1,
                  auto __find_cutpoint,
                  auto __merge_sub_ranges) -> optional<__empty> {
     // Partition the longest input range evenly.
-    __partitioning_result __partitioning_result;
-    auto __partitions = __statpart::__partition(__long_first, __long_last, __partitioning_result);
-    if (!__partitions) {
-      if (__partitioning_result == __partitioning_result::__bad_alloc)
+    auto __partitions = __statpart::__partition(__long_first, __long_last);
+    if (!__partitions.__value_) {
+      if (__partitions.__status_ == __partitioning_status::__bad_alloc)
         return nullopt;
       // Not enough elements to run in parallel, merge everything serially.
       __merge_sub_ranges(__long_first, __long_last, __short_first, __short_last, __result);
@@ -342,9 +346,9 @@ __merge(_RandomAccessIterator1 __first1,
     }
 
     // Process the partitions of the longest range in parallel.
-    __statpart::__for_each_partition_index(*__partitions, [&](size_t __index) {
+    __statpart::__for_each_partition_index(*__partitions.__value_, [&](size_t __index) {
       // Get the sub-range inside the longer input range.
-      auto __range = __partitions->__partition(__index);
+      auto __range = __partitions.__value_->__partition(__index);
 
       // Find the matching sub-range of the shorter input range: it will hold the elements that come after the last
       // element of the previous long partition and up to the last element of this partition.
@@ -352,7 +356,7 @@ __merge(_RandomAccessIterator1 __first1,
       auto __short_begin =
           __index == 0 ? __short_first : __find_cutpoint(__short_first, __short_last, __range.__first[-1]);
       auto __short_end =
-          __index == __partitions->__partitions_count() - 1
+          __index == __partitions.__value_->__partitions_count() - 1
               ? __short_last
               : __find_cutpoint(__short_first, __short_last, __range.__last[-1]);
 
@@ -399,10 +403,9 @@ _LIBCPP_HIDE_FROM_ABI optional<__empty>
 __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp, _LeafSort __leaf_sort) {
   const auto __size = __last - __first;
 
-  __partitioning_result __partitioning_result;
-  auto __partitions = __statpart::__partition(__first, __last, __partitioning_result, __min_sort_partition_size);
-  if (!__partitions) {
-    if (__partitioning_result == __partitioning_result::__bad_alloc)
+  auto __partitions = __statpart::__partition(__first, __last, __min_sort_partition_size);
+  if (!__partitions.__value_) {
+    if (__partitions.__status_ == __partitioning_status::__bad_alloc)
       return nullopt;
     // Not enough elements to run in parallel, sort everything serially.
     __leaf_sort(__first, __last, __comp);
@@ -428,23 +431,25 @@ __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp
   *__first = std::move(__values.get()[__size - 1]);
 
   __statpart::__for_each_partition(
-      *__partitions, [&__leaf_sort, &__comp](_RandomAccessIterator __chunk_first, _RandomAccessIterator __chunk_last) {
+      *__partitions.__value_,
+      [&__leaf_sort, &__comp](_RandomAccessIterator __chunk_first, _RandomAccessIterator __chunk_last) {
         __leaf_sort(std::move(__chunk_first), std::move(__chunk_last), __comp);
       });
 
   // A chunk span is a run of __chunk_span_size consecutive partitions, the last chunk can be shorter in case of odd
   // number of chunk spans. Each pass merges the chunk spans pairwise, so the chunk span size doubles and the chunk
   // count is halved (rounded up).
-  const size_t __partition_count = __partitions->__partitions_count();
+  const size_t __partition_count = __partitions.__value_->__partitions_count();
   size_t __chunk_span_size       = 1;
   size_t __chunk_spans           = __partition_count;
 
   // Offsets of the beginning and the end of the chunk from __first
   auto __chunk_begin = [&](size_t __chunk) {
-    return __partitions->__partition(__chunk * __chunk_span_size).__first - __first;
+    return __partitions.__value_->__partition(__chunk * __chunk_span_size).__first - __first;
   };
   auto __chunk_end = [&](size_t __chunk) {
-    return __partitions->__partition(std::min((__chunk + 1) * __chunk_span_size, __partition_count) - 1).__last -
+    return __partitions.__value_->__partition(std::min((__chunk + 1) * __chunk_span_size, __partition_count) - 1)
+               .__last -
            __first;
   };
 
