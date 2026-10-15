@@ -18,7 +18,6 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CommandLine.h"
 #include <optional>
 #include <type_traits>
@@ -264,6 +263,5 @@ int MCSchedModel::getResourceBufferSize(
 
 float MCSchedModel::getReservationStationScaleFactor(
     const MCTargetOptions &Options) {
-  return cl::LibraryOptionsContext::get<MCCLOptions>(Options.LibraryOptions)
-      .sched_model_reservation_station_scale_factor;
+  return getMCCLOptions(Options).sched_model_reservation_station_scale_factor;
 }

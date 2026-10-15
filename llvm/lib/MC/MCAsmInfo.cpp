@@ -25,8 +25,7 @@
 using namespace llvm;
 
 MCAsmInfo::MCAsmInfo(const MCTargetOptions &Options) : TargetOptions(Options) {
-  const MCCLOptions &CLOpts =
-      cl::LibraryOptionsContext::get<MCCLOptions>(Options.LibraryOptions);
+  const MCCLOptions &CLOpts = getMCCLOptions(Options);
   SupportsExtendedDwarfLocDirective =
       valueOr(CLOpts.dwarf_extended_loc, SupportsExtendedDwarfLocDirective);
   HasLEB128Directives =

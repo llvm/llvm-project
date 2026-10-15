@@ -39,9 +39,7 @@ void llvm::initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
 
   // Create the target-specific MCLFIRewriter.
   assert(TheTarget != nullptr);
-  if (cl::LibraryOptionsContext::get<MCCLOptions>(
-          Ctx.getTargetOptions().LibraryOptions)
-          .lfi_enable_rewriter) {
+  if (getMCCLOptions(Ctx.getTargetOptions()).lfi_enable_rewriter) {
     auto MRI =
         std::unique_ptr<MCRegisterInfo>(TheTarget->createMCRegInfo(TheTriple));
     auto MII = std::unique_ptr<MCInstrInfo>(TheTarget->createMCInstrInfo());
