@@ -199,6 +199,14 @@ SourceMgr::SrcBuffer::getPointerForLineNumber(unsigned LineNo) const {
     return getPointerForLineNumberSpecialized<uint64_t>(LineNo);
 }
 
+/// Return a pointer to the newline that terminates the specified line, or to
+/// the end of the buffer if there is no terminating newline.
+const char *SourceMgr::SrcBuffer::getPointerForLineEnd(unsigned LineNo) const {
+  // Line 0 is treated the same as line 1.
+  const char *NextLine = getPointerForLineNumber(std::max(LineNo, 1u) + 1);
+  return NextLine ? NextLine - 1 : Buffer->getBufferEnd();
+}
+
 SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
     : Buffer(std::move(Other.Buffer)), OffsetCache(Other.OffsetCache),
       IncludeLoc(Other.IncludeLoc) {
@@ -269,20 +277,11 @@ SMLoc SourceMgr::FindLocForLineAndColumn(unsigned BufferID, unsigned LineNo,
   if (ColNo != 0)
     --ColNo;
 
-  // If we have a column number, validate it.
-  if (ColNo) {
-    // Make sure the location is within the current line.
-    if (Ptr + ColNo > SB.Buffer->getBufferEnd())
-      return SMLoc();
+  // Make sure the location is within the current line.
+  if (ColNo > static_cast<size_t>(SB.getPointerForLineEnd(LineNo) - Ptr))
+    return SMLoc();
 
-    // Make sure there is no newline in the way.
-    if (StringRef(Ptr, ColNo).find_first_of("\n\r") != StringRef::npos)
-      return SMLoc();
-
-    Ptr += ColNo;
-  }
-
-  return SMLoc::getFromPointer(Ptr);
+  return SMLoc::getFromPointer(Ptr + ColNo);
 }
 
 void SourceMgr::PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const {
@@ -324,21 +323,16 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
     unsigned CurBuf = FindBufferContainingLoc(Loc);
     assert(CurBuf && "Invalid or unspecified location!");
 
-    const MemoryBuffer *CurMB = getMemoryBuffer(CurBuf);
-    BufferID = CurMB->getBufferIdentifier();
+    const SrcBuffer &SB = getBufferInfo(CurBuf);
+    BufferID = SB.Buffer->getBufferIdentifier();
 
-    // Scan backward to find the start of the line.
-    const char *LineStart = Loc.getPointer();
-    const char *BufStart = CurMB->getBufferStart();
-    while (LineStart != BufStart && LineStart[-1] != '\n' &&
-           LineStart[-1] != '\r')
-      --LineStart;
-
-    // Get the end of the line.
-    const char *LineEnd = Loc.getPointer();
-    const char *BufEnd = CurMB->getBufferEnd();
-    while (LineEnd != BufEnd && LineEnd[0] != '\n' && LineEnd[0] != '\r')
-      ++LineEnd;
+    // Find the start and end of the line, not including a CR before the
+    // terminating newline.
+    LineAndCol = getLineAndColumn(Loc, CurBuf);
+    const char *LineStart = Loc.getPointer() - (LineAndCol.second - 1);
+    const char *LineEnd = SB.getPointerForLineEnd(LineAndCol.first);
+    if (LineEnd != LineStart && LineEnd[-1] == '\r')
+      --LineEnd;
     LineStr = StringRef(LineStart, LineEnd - LineStart);
 
     // Convert any ranges to column ranges that only intersect the line of the
@@ -362,8 +356,6 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
       ColRanges.push_back(std::make_pair(R.Start.getPointer() - LineStart,
                                          R.End.getPointer() - LineStart));
     }
-
-    LineAndCol = getLineAndColumn(Loc, CurBuf);
   }
 
   return SMDiagnostic(*this, Loc, BufferID, LineAndCol.first,

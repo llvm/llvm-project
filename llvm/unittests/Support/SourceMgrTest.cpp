@@ -40,6 +40,12 @@ public:
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
                     const Twine &Msg, ArrayRef<SMRange> Ranges,
                     ArrayRef<SMFixIt> FixIts) {
+    // Check that we can round-trip from SMLoc to line and column number and
+    // back.
+    auto [LineNo, ColNo] = SM.getLineAndColumn(Loc, MainBufferID);
+    EXPECT_EQ(Loc, SM.FindLocForLineAndColumn(MainBufferID, LineNo, ColNo));
+
+    Output.clear();
     raw_string_ostream OS(Output);
     SM.PrintMessage(OS, Loc, Kind, Msg, Ranges, FixIts);
   }
@@ -195,6 +201,57 @@ TEST_F(SourceMgrTest, LocationOnEOLOfSecondSecondLineOfMultiline) {
             "6789\n"
             "    ^\n",
             Output);
+}
+
+TEST_F(SourceMgrTest, LineEndings) {
+  // Only LF is treated as a line terminator. A CR before an LF is not shown as
+  // part of the line, but a CR anywhere else is just an ordinary character.
+  setMainBuffer("CR\rLF\nCRLF\r\nEND", "file.in");
+
+  printMessage(getLoc(3), SourceMgr::DK_Error, "message", {}, {});
+  EXPECT_EQ("file.in:1:4: error: message\n"
+            "CR\rLF\n"
+            "   ^\n",
+            Output);
+
+  printMessage(getLoc(6), SourceMgr::DK_Error, "message", {}, {});
+  EXPECT_EQ("file.in:2:1: error: message\n"
+            "CRLF\n"
+            "^\n",
+            Output);
+
+  printMessage(getLoc(10), SourceMgr::DK_Error, "message", {}, {});
+  EXPECT_EQ("file.in:2:5: error: message\n"
+            "CRLF\n"
+            "    ^\n",
+            Output);
+
+  printMessage(getLoc(11), SourceMgr::DK_Error, "message", {}, {});
+  EXPECT_EQ("file.in:2:6: error: message\n"
+            "CRLF\n"
+            "    ^\n",
+            Output);
+
+  printMessage(getLoc(12), SourceMgr::DK_Error, "message", {}, {});
+  EXPECT_EQ("file.in:3:1: error: message\n"
+            "END\n"
+            "^\n",
+            Output);
+}
+
+TEST_F(SourceMgrTest, FindLocForLineAndColumn) {
+  setMainBuffer("CR\rLF\nCRLF\r\nEND", "file.in");
+
+  EXPECT_EQ(getLoc(0), SM.FindLocForLineAndColumn(MainBufferID, 0, 0));
+  EXPECT_EQ(getLoc(0), SM.FindLocForLineAndColumn(MainBufferID, 1, 1));
+  EXPECT_EQ(getLoc(5), SM.FindLocForLineAndColumn(MainBufferID, 1, 6));
+  EXPECT_EQ(SMLoc(), SM.FindLocForLineAndColumn(MainBufferID, 1, 7));
+  EXPECT_EQ(getLoc(6), SM.FindLocForLineAndColumn(MainBufferID, 2, 0));
+  EXPECT_EQ(getLoc(11), SM.FindLocForLineAndColumn(MainBufferID, 2, 6));
+  EXPECT_EQ(SMLoc(), SM.FindLocForLineAndColumn(MainBufferID, 2, 7));
+  EXPECT_EQ(getLoc(15), SM.FindLocForLineAndColumn(MainBufferID, 3, 4));
+  EXPECT_EQ(SMLoc(), SM.FindLocForLineAndColumn(MainBufferID, 3, 5));
+  EXPECT_EQ(SMLoc(), SM.FindLocForLineAndColumn(MainBufferID, 4, 1));
 }
 
 #define STRING_LITERAL_253_BYTES \
