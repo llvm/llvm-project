@@ -5819,13 +5819,19 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
   if (isConstantOrConstantVector(N1, /*NoOpaques=*/true,
                                  /*AllowTruncation=*/true) &&
       (!LegalOperations || hasOperation(ISD::SRL, VT))) {
-    if (SDValue LogBase2 = BuildLogBase2(N1, DL)) {
-      unsigned NumEltBits = VT.getScalarSizeInBits();
-      SDValue SRLAmt = DAG.getNode(
-          ISD::SUB, DL, VT, DAG.getConstant(NumEltBits, DL, VT), LogBase2);
-      EVT ShiftVT = getShiftAmountTy(N0.getValueType());
-      SDValue Trunc = DAG.getZExtOrTrunc(SRLAmt, DL, ShiftVT);
-      return DAG.getNode(ISD::SRL, DL, VT, N0, Trunc);
+    if (ISD::matchUnaryPredicate(
+            N1, [](ConstantSDNode *C) {
+              return C && C->getAPIntValue().isPowerOf2() &&
+                     !C->getAPIntValue().isOne();
+            })) {
+      if (SDValue LogBase2 = BuildLogBase2(N1, DL)) {
+        unsigned NumEltBits = VT.getScalarSizeInBits();
+        SDValue SRLAmt = DAG.getNode(
+            ISD::SUB, DL, VT, DAG.getConstant(NumEltBits, DL, VT), LogBase2);
+        EVT ShiftVT = getShiftAmountTy(N0.getValueType());
+        SDValue Trunc = DAG.getZExtOrTrunc(SRLAmt, DL, ShiftVT);
+        return DAG.getNode(ISD::SRL, DL, VT, N0, Trunc);
+      }
     }
   }
 
