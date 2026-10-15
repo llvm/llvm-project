@@ -433,7 +433,7 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
   Type *Int8Ty = Type::getInt8Ty(SrcTy->getContext());
   assert(BitWidth % 8 == 0 &&
          "The byte-multiple field width divides the result bit width.");
-  unsigned OutBytes = BitWidth / 8;
+  unsigned OutBytes = ResultTy->getScalarSizeInBits() / 8;
   auto *PackTy = FixedVectorType::get(Int8Ty, OutBytes);
   unsigned MinShiftWidth = 8;
   while (MinShiftWidth < MaxAmt + Info.FieldWidth)
@@ -454,12 +454,21 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
       IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy, {ResultTy});
       C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
     } else if (!ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
+      // A narrowing shuffle is a shuffle at the source width followed by an
+      // extract of the low elements.
+      auto *SrcByteTy = FixedVectorType::get(Int8Ty, InBytes);
+      SmallVector<int> WideMask(Mask);
+      WideMask.resize(std::max(InBytes, OutBytes), PoisonMaskElem);
       C += TTI.getShuffleCost(
           is_contained(Info.LaneOfField, BitPackInfo::NoLane)
               ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc,
-          PackTy, FixedVectorType::get(Int8Ty, InBytes), CostKind, Mask,
-          /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CtxI);
+          FixedVectorType::get(Int8Ty, WideMask.size()), SrcByteTy, CostKind,
+          WideMask, /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CtxI);
+      if (InBytes > OutBytes)
+        C += TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                PackTy, SrcByteTy, CostKind, /*Mask=*/{},
+                                /*Index=*/0, PackTy, /*Args=*/{}, CtxI);
     }
     if (W2 != BitWidth && W2 != ZExtSrcWidth)
       C += TTI.getCastInstrCost(Instruction::Trunc, ShiftTy, SrcTy, CCH,

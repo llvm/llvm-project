@@ -1474,7 +1474,7 @@ SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
 }
 
 Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
-                    unsigned ShiftWidth, unsigned &NumInsts) {
+                    Type *ResultTy, unsigned ShiftWidth, unsigned &NumInsts) {
   NumInsts = 0;
   auto *VecTy = cast<FixedVectorType>(X->getType());
   unsigned BitWidth = VecTy->getScalarSizeInBits();
@@ -1504,19 +1504,18 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
   }
   unsigned InBytes = NumElts * (ShiftWidth / 8);
   auto *ByteTy = FixedVectorType::get(Builder.getInt8Ty(), InBytes);
-  SmallVector<int> Mask =
-      getBitPackMask(Info, BitWidth / 8, NumElts, ShiftWidth / 8);
-  auto *IntTy = IntegerType::get(X->getContext(), BitWidth);
+  SmallVector<int> Mask = getBitPackMask(
+      Info, ResultTy->getScalarSizeInBits() / 8, NumElts, ShiftWidth / 8);
   // A plain byte reversal of the shifted lanes is a bswap.
   if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
     NumInsts += 2;
     return Builder.CreateUnaryIntrinsic(Intrinsic::bswap,
-                                        Builder.CreateBitCast(Y, IntTy));
+                                        Builder.CreateBitCast(Y, ResultTy));
   }
   // An identity byte order needs no shuffle.
   if (ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
     ++NumInsts;
-    return Builder.CreateBitCast(Y, IntTy);
+    return Builder.CreateBitCast(Y, ResultTy);
   }
   Value *Packed = Builder.CreateShuffleVector(
       Builder.CreateBitCast(Y, ByteTy),
@@ -1525,7 +1524,7 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
           : PoisonValue::get(ByteTy),
       Mask);
   NumInsts += 3;
-  return Builder.CreateBitCast(Packed, IntTy);
+  return Builder.CreateBitCast(Packed, ResultTy);
 }
 
 void redirectDbgValues(Instruction &From, Value &To) {
