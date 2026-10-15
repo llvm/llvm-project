@@ -85,6 +85,7 @@ static int reportError(const char *ProgName, Twine Msg) {
   return 1;
 }
 
+namespace {
 /// Encapsulate file, line and column numbers from SourceMgr.
 struct SMCoords {
   unsigned Buf = 0;
@@ -99,6 +100,7 @@ struct SMCoords {
     std::tie(Line, Col) = Mgr.getLineAndColumn(Loc, Buf);
   }
 };
+} // end anonymous namespace
 
 /// Create preprocessed output for `-E` option.
 static int preprocessInput(raw_ostream &OS) {
