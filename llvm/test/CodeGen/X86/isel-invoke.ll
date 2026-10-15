@@ -30,25 +30,20 @@ define void @foo() personality ptr @__gxx_personality_v0 {
 ;
 ; GISEL-X86-LABEL: foo:
 ; GISEL-X86:       # %bb.0: # %entry
-; GISEL-X86-NEXT:    pushl %esi
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 8
-; GISEL-X86-NEXT:    subl $8, %esp
+; GISEL-X86-NEXT:    subl $12, %esp
 ; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
-; GISEL-X86-NEXT:    .cfi_offset %esi, -8
-; GISEL-X86-NEXT:    movl $0, %esi
 ; GISEL-X86-NEXT:  .Ltmp0: # EH_LABEL
 ; GISEL-X86-NEXT:    calll bar
 ; GISEL-X86-NEXT:  .Ltmp1: # EH_LABEL
 ; GISEL-X86-NEXT:  # %bb.1: # %invoke.cont
-; GISEL-X86-NEXT:    addl $8, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 8
-; GISEL-X86-NEXT:    popl %esi
+; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    .cfi_def_cfa_offset 4
 ; GISEL-X86-NEXT:    retl
 ; GISEL-X86-NEXT:  .LBB0_2: # %lpad
 ; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:  .Ltmp2: # EH_LABEL
-; GISEL-X86-NEXT:    movl %esi, (%esp)
+; GISEL-X86-NEXT:    movl $0, %eax
+; GISEL-X86-NEXT:    movl %eax, (%esp)
 ; GISEL-X86-NEXT:    calll _Unwind_Resume
 ;
 ; X64-LABEL: foo:

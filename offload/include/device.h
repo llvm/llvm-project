@@ -114,6 +114,9 @@ struct DeviceTy {
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
 
+  /// Whether this device executes kernels on the host CPU.
+  bool isHostDevice() const { return IsHostDevice; }
+
   llvm::Expected<__tgt_device_binary> loadBinary(__tgt_device_image *Img);
 
   // device memory allocation/deallocation routines
@@ -147,13 +150,15 @@ struct DeviceTy {
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
                      HostDataToTargetTy *Entry = nullptr,
-                     MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+                     MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                     const ident_t *Loc = nullptr, const char *Name = nullptr);
 
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        AsyncInfoTy &AsyncInfo,
                        HostDataToTargetTy *Entry = nullptr,
-                       MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+                       MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                       const ident_t *Loc = nullptr);
 
   // Return true if data can be copied to DstDevice directly
   bool isDataExchangable(const DeviceTy &DstDevice);
@@ -273,6 +278,9 @@ private:
   /// Launch-geometry properties for each kernel registered on this device.
   using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
   ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
+
+  /// Whether this is a host device.
+  bool IsHostDevice = false;
 
   /// Handler to collect and organize host-2-device mapping information.
   MappingInfoTy MappingInfo;

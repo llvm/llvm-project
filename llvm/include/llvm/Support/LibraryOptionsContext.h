@@ -50,6 +50,11 @@ public:
     return T::Global;
   }
 
+  // C's values of T, or T::Global if C is null.
+  template <typename T> static const T &get(const LibraryOptionsContext *C) {
+    return C ? C->get<T>() : T::Global;
+  }
+
 private:
   DenseMap<const void *, void *> Values;
   SmallVector<const char *, 0> SavedArgs;

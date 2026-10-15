@@ -7268,13 +7268,16 @@ def err_builtin_counted_by_ref_invalid_arg
             "the 'counted_by' attribute">;
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
-
 def err_builtin_counted_by_ref_cannot_leak_reference : Error<
   "value returned by '__builtin_counted_by_ref' cannot be %select{assigned to a "
   "variable|passed into a function|returned from a function}0">;
 def err_builtin_counted_by_ref_invalid_use : Error<
   "value returned by '__builtin_counted_by_ref' cannot be used in "
   "%select{an array subscript|a binary}0 expression">;
+def err_builtin_counted_by_ref_counter_field_is_bitfield : Error<
+  "'__builtin_counted_by_ref' cannot be used on %0 because its 'counted_by' attribute refers to bit-field %1">;
+def note_counted_by_counter_field : Note<
+  "bit-field %0 declared here">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
@@ -10150,6 +10153,8 @@ let CategoryName = "Inline Assembly Issue" in {
   def err_asm_unwind_and_goto : Error<"unwind clobber cannot be used with asm goto">;
   def err_asm_invalid_global_var_reg : Error<"register '%0' unsuitable for "
     "global register variables on this target">;
+  def err_asm_invalid_local_var_reg : Error<"register '%0' unsuitable for "
+    "register variables">;
   def err_asm_register_size_mismatch : Error<"size of register '%0' does not "
     "match variable size">;
   def err_asm_unsupported_register_type : Error<
