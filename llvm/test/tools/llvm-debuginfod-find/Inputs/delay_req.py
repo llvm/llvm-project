@@ -3,7 +3,6 @@ import os
 import subprocess
 import sys
 import threading
-import time
 
 
 class DelayingHandler(http.server.BaseHTTPRequestHandler):
@@ -22,6 +21,6 @@ try:
     result = subprocess.run(sys.argv[1:], capture_output=True)
     # e.g. Build ID 00: curl_easy_perform() failed: Timeout was reached
     print(result.stderr.decode())
-    DelayingHandler.can_respond.set()
 finally:
+    DelayingHandler.can_respond.set()
     httpd.shutdown()
