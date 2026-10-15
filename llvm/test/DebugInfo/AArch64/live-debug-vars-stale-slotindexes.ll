@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu -O2 -stop-after=virt-reg-rewriter \
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -stop-after=virt-reg-rewriter \
 ; RUN:   %s -o - | FileCheck %s --implicit-check-not=DBG_VALUE
 
 ; LiveDebugVariables records SlotIndexes during register allocation and uses
@@ -34,7 +34,7 @@ entry:
   br label %loop.outer
 
 loop.outer:                                       ; preds = %latch, %entry
-    #dbg_value(ptr %pw, !9, !DIExpression(), !17)
+    #dbg_value(ptr %pw, !6, !DIExpression(), !9)
   call void @llvm.memset.p0.i64(ptr %mode, i8 0, i64 1, i1 false)
   br i1 %c3, label %for.cond, label %common.ret
 
@@ -82,15 +82,15 @@ declare ptr @allocate(i64)
 ; CHECK-NEXT:  DBG_VALUE $x[[THIS]], $noreg, ![[VAR]], !DIExpression()
 ; CHECK-NEXT:  SUBXrr $xzr
 
-define ptr @map_index(ptr %this, ptr %k, ptr %p0, ptr %x.addr.1, ptr %p1, i64 %n, i1 %cmp.i) !dbg !24 {
+define ptr @map_index(ptr %this, ptr %k, ptr %p0, ptr %x.addr.1, ptr %p1, i64 %n, i1 %cmp.i) !dbg !14 {
 entry:
-    #dbg_value(ptr %this, !30, !DIExpression(), !37)
-  %add.ptr = getelementptr i8, ptr %this, i64 8, !dbg !47
+    #dbg_value(ptr %this, !18, !DIExpression(), !23)
+  %add.ptr = getelementptr i8, ptr %this, i64 8, !dbg !29
   br label %while.body
 
 while.body:                                       ; preds = %while.body, %entry
   %x.addr.011 = phi ptr [ null, %entry ], [ %x.addr.1, %while.body ]
-  %call = call i32 @memcmp(ptr %p1)
+  %call = call i32 @cmp(ptr %p1)
   %sub = sub i64 0, %n
   %spec.select = tail call i64 @llvm.smax.i64(i64 %sub, i64 1)
   %retval.07 = tail call i64 @llvm.smin.i64(i64 %spec.select, i64 2147483647)
@@ -112,42 +112,37 @@ if.then:                                          ; preds = %lower_bound.exit
   br label %common.ret
 }
 
-declare i32 @memcmp(ptr)
+declare i32 @cmp(ptr)
 
-!llvm.dbg.cu = !{!0, !20}
+!llvm.dbg.cu = !{!0, !12}
 !llvm.module.flags = !{!3}
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: true, emissionKind: FullDebug)
 !1 = !DIFile(filename: "7zUpdate.cpp", directory: "/")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
-!4 = distinct !DISubprogram(name: "Update", scope: !1, file: !1, line: 714, type: !8, scopeLine: 728, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!8 = distinct !DISubroutineType(types: !2)
-!9 = !DILocalVariable(name: "this", arg: 1, scope: !10, type: !16, flags: DIFlagArtificial | DIFlagObjectPointer)
-!10 = distinct !DISubprogram(name: "CStringBase", scope: !1, file: !1, line: 182, type: !8, scopeLine: 182, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!16 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
-!17 = distinct !DILocation(line: 0, scope: !10, inlinedAt: !18)
-!18 = distinct !DILocation(line: 41, column: 3, scope: !19)
-!19 = distinct !DISubprogram(name: "CCompressionMethodMode", scope: !1, file: !1, line: 41, type: !8, scopeLine: 45, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!20 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !21, producer: "clang", isOptimized: true, emissionKind: FullDebug)
-!21 = !DIFile(filename: "InputFile.cc", directory: "/")
-!22 = !{}
-!24 = distinct !DISubprogram(name: "operator[]", scope: !26, file: !25, line: 504, type: !28, scopeLine: 505, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !20)
-!25 = !DIFile(filename: "stl_map.h", directory: "/")
-!26 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "map", scope: !27, file: !25, line: 102, size: 384, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !22)
-!27 = !DINamespace(name: "std", scope: null)
-!28 = distinct !DISubroutineType(types: !22)
-!30 = !DILocalVariable(name: "this", arg: 1, scope: !31, type: !36, flags: DIFlagArtificial | DIFlagObjectPointer)
-!31 = distinct !DISubprogram(name: "_M_end", scope: !33, file: !32, line: 747, type: !34, scopeLine: 748, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !20)
-!32 = !DIFile(filename: "stl_tree.h", directory: "/")
-!33 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "_Rb_tree", scope: !27, file: !32, line: 423, size: 384, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !22)
-!34 = distinct !DISubroutineType(types: !22)
-!36 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !33, size: 64)
-!37 = distinct !DILocation(line: 0, scope: !31, inlinedAt: !38)
-!38 = distinct !DILocation(line: 1267, column: 43, scope: !39, inlinedAt: !42)
-!39 = distinct !DISubprogram(name: "lower_bound", scope: !33, file: !32, line: 1266, type: !40, scopeLine: 1267, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !20)
-!40 = distinct !DISubroutineType(types: !22)
-!42 = distinct !DILocation(line: 1308, column: 21, scope: !43, inlinedAt: !46)
-!43 = distinct !DISubprogram(name: "lower_bound", scope: !26, file: !25, line: 1307, type: !44, scopeLine: 1308, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !20)
-!44 = distinct !DISubroutineType(types: !22)
-!46 = distinct !DILocation(line: 509, column: 17, scope: !24)
-!47 = distinct !DILocation(line: 748, column: 17, scope: !31, inlinedAt: !38)
+!4 = distinct !DISubprogram(name: "Update", scope: !1, file: !1, line: 714, type: !5, scopeLine: 728, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!5 = !DISubroutineType(types: !2)
+!6 = !DILocalVariable(name: "this", arg: 1, scope: !7, type: !8)
+!7 = distinct !DISubprogram(name: "CStringBase", scope: !1, file: !1, line: 182, type: !5, scopeLine: 182, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
+!9 = !DILocation(line: 0, scope: !7, inlinedAt: !10)
+!10 = !DILocation(line: 41, column: 3, scope: !11)
+!11 = distinct !DISubprogram(name: "CCompressionMethodMode", scope: !1, file: !1, line: 41, type: !5, scopeLine: 45, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!12 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !13, producer: "clang", isOptimized: true, emissionKind: FullDebug)
+!13 = !DIFile(filename: "InputFile.cc", directory: "/")
+!14 = distinct !DISubprogram(name: "operator[]", scope: !16, file: !15, line: 504, type: !5, scopeLine: 505, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !12)
+!15 = !DIFile(filename: "stl_map.h", directory: "/")
+!16 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "map", scope: !17, file: !15, line: 102, size: 384, elements: !2)
+!17 = !DINamespace(name: "std", scope: null)
+!18 = !DILocalVariable(name: "this", arg: 1, scope: !19, type: !22)
+!19 = distinct !DISubprogram(name: "_M_end", scope: !21, file: !20, line: 747, type: !5, scopeLine: 748, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !12)
+!20 = !DIFile(filename: "stl_tree.h", directory: "/")
+!21 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "_Rb_tree", scope: !17, file: !20, line: 423, size: 384, elements: !2)
+!22 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !21, size: 64)
+!23 = !DILocation(line: 0, scope: !19, inlinedAt: !24)
+!24 = !DILocation(line: 1267, column: 43, scope: !25, inlinedAt: !26)
+!25 = distinct !DISubprogram(name: "lower_bound", scope: !21, file: !20, line: 1266, type: !5, scopeLine: 1267, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !12)
+!26 = !DILocation(line: 1308, column: 21, scope: !27, inlinedAt: !28)
+!27 = distinct !DISubprogram(name: "lower_bound", scope: !16, file: !15, line: 1307, type: !5, scopeLine: 1308, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !12)
+!28 = !DILocation(line: 509, column: 17, scope: !14)
+!29 = !DILocation(line: 748, column: 17, scope: !19, inlinedAt: !24)

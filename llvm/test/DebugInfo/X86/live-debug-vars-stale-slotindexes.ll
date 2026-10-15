@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O2 -stop-after=live-debug-values \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=live-debug-values \
 ; RUN:   -experimental-debug-variable-locations=true %s -o - \
 ; RUN:   | FileCheck %s --implicit-check-not=DBG_
 
@@ -71,9 +71,9 @@ sw.bb164:                                         ; preds = %if.end15
 ; CHECK-NEXT:  DBG_VALUE 0, $noreg, !{{[0-9]+}}, !DIExpression()
 ; CHECK-NEXT:  MOVSX64rr32
 
-define fastcc i32 @accumulate_fit(ptr %flr, ptr %mdct, i32 %x0, i32 %x1, ptr %a, i32 %n, ptr %info, i64 %i.0141) !dbg !13 {
+define fastcc i32 @accumulate_fit(ptr %flr, ptr %mdct, i32 %x0, i32 %x1, ptr %a, i32 %n, ptr %info, i64 %i.0141) !dbg !11 {
 entry:
-    #dbg_value(i64 0, !16, !DIExpression(), !18)
+    #dbg_value(i64 0, !12, !DIExpression(), !14)
   %conv = sext i32 %x0 to i64
   br label %for.body
 
@@ -128,20 +128,18 @@ if.end37:                                         ; preds = %if.else, %if.then13
 
 !llvm.dbg.cu = !{!0, !9}
 !llvm.module.flags = !{!3}
-!0 = distinct !DICompileUnit(language: DW_LANG_C89, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, splitDebugInlining: false, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C89, file: !1, producer: "clang", isOptimized: true, emissionKind: FullDebug)
 !1 = !DIFile(filename: "cdecl.c", directory: "/")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
-!4 = distinct !DISubprogram(name: "yyparse", scope: !5, file: !5, line: 1022, type: !6, scopeLine: 1022, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2, keyInstructions: true)
+!4 = distinct !DISubprogram(name: "yyparse", scope: !5, file: !5, line: 1022, type: !6, scopeLine: 1022, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !5 = !DIFile(filename: "cdgram.y", directory: "/")
 !6 = !DISubroutineType(types: !2)
 !7 = !DILabel(scope: !4, name: "yystack", file: !5, line: 1038, column: 2)
 !8 = !DILocation(line: 1038, column: 2, scope: !4)
-!9 = distinct !DICompileUnit(language: DW_LANG_C11, file: !10, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+!9 = distinct !DICompileUnit(language: DW_LANG_C11, file: !10, producer: "clang", isOptimized: true, emissionKind: FullDebug)
 !10 = !DIFile(filename: "oggenc.c", directory: "/")
-!13 = distinct !DISubprogram(name: "accumulate_fit", scope: !10, file: !10, line: 1, type: !15, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !9)
-!15 = distinct !DISubroutineType(types: !11)
-!11 = !{}
-!16 = !DILocalVariable(name: "xa", scope: !13, file: !10, line: 2, type: !17)
-!17 = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
-!18 = !DILocation(line: 0, scope: !13)
+!11 = distinct !DISubprogram(name: "accumulate_fit", scope: !10, file: !10, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !9)
+!12 = !DILocalVariable(name: "xa", scope: !11, file: !10, line: 2, type: !13)
+!13 = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
+!14 = !DILocation(line: 0, scope: !11)
