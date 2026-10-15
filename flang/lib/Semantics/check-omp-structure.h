@@ -504,6 +504,7 @@ private:
       const parser::OmpObjectList &ompObjectList, llvm::omp::Clause clauseId);
   void CheckArraySection(const parser::ArrayElement &arrayElement,
       const parser::Name &name, const llvm::omp::Clause clause);
+  void CheckArraySectionStrides(const parser::DataRef &, llvm::omp::Clause);
   void CheckLastPartRefForArraySection(
       const parser::Designator &designator, llvm::omp::Clause clauseId);
   void CheckSharedBindingInOuterContext(

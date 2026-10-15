@@ -4682,7 +4682,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
 
     MachineInstr *Sel = MRI->getVRegDef(VReg);
     // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
-    if (Sel->getOpcode() == AMDGPU::V_PK_FMA_F32 &&
+    if (Sel && Sel->getOpcode() == AMDGPU::V_PK_FMA_F32 &&
         !TII.isLegalPkFMAF32OpSel(*Sel))
       TII.decomposePkFMAF32(*Sel, *MRI);
 

@@ -79,7 +79,7 @@ void f(int a) {
 struct Foo {
   int x;
 };
-void extracted(int &a, int b, int * &ptr, const Foo &foo) {
+void extracted(int &a, int b, int *&ptr, const Foo &foo) {
 a += foo.x + b;
   *ptr++;
 }
@@ -927,12 +927,12 @@ TEST_F(ExtractFunctionTest, ConstParametersPointerIndirection) {
     struct S { int x; };
     void f(S *ptr) { [[ptr->x = 1;]] }
   )cpp"),
-              HasSubstr("extracted(S * ptr)"));
+              HasSubstr("extracted(S *ptr)"));
   EXPECT_THAT(apply("void f(int *p) { [[p[0] = 1;]] }"),
-              HasSubstr("extracted(int * p)"));
+              HasSubstr("extracted(int *p)"));
   // Same for a plain dereference.
   EXPECT_THAT(apply("void f(int *p) { [[*p = 1;]] }"),
-              HasSubstr("extracted(int * p)"));
+              HasSubstr("extracted(int *p)"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersConditionalReferenceBinding) {
@@ -975,11 +975,31 @@ TEST_F(ExtractFunctionTest, ConstParametersStaticOperatorCall) {
               HasSubstr("extracted(const S &s, int x)"));
 }
 
+TEST_F(ExtractFunctionTest, ConstParametersFunctionPointer) {
+  Context = File;
+  // A function pointer's declarator syntax puts the name inside the
+  // parens around the "*", not after the whole type: printType()'s
+  // placeholder must be threaded through for this to render as
+  // `void (*F)(int)` rather than the uncompilable `void (*)(int) F`.
+  EXPECT_THAT(apply("void f(void (*F)(int)) { [[F(1);]] }"),
+              HasSubstr("extracted(void (*F)(int))"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersFunctionReference) {
+  Context = File;
+  // A (non-pointer) function type can't be cv-qualified at all, unlike
+  // every other non-scalar, non-array type this conservative-const
+  // logic otherwise applies to: adding const here would produce
+  // unparseable output (`void (const &F)(int)`).
+  EXPECT_THAT(apply("void f(void (&F)(int)) { [[F(0);]] }"),
+              HasSubstr("extracted(void (&F)(int))"));
+}
+
 TEST_F(ExtractFunctionTest, ConstParametersScalarsByValue) {
   Context = File;
   // An unmutated pointer is a scalar too: passed by value.
   EXPECT_THAT(apply("void use(int *); void f(int *p) { [[use(p);]] }"),
-              HasSubstr("extracted(int * p)"));
+              HasSubstr("extracted(int *p)"));
   // An unmutated enum: passed by value.
   EXPECT_THAT(apply(R"cpp(
     enum E { A, B };
@@ -998,7 +1018,7 @@ TEST_F(ExtractFunctionTest, ConstParametersScalarsByValue) {
   // An unmutated array is not a scalar (even though its element type is):
   // stays a non-const reference, per the existing array carve-out.
   EXPECT_THAT(apply("void f() { int arr[5]; [[int x = arr[0];]] }"),
-              HasSubstr("extracted(int[5] &arr)"));
+              HasSubstr("extracted(int (&arr)[5])"));
 }
 
 // Variables of reference type, const or non-const, must stay references,
@@ -1065,7 +1085,7 @@ TEST_F(ExtractFunctionTest, CFileModifiedScalarBecomesPointer) {
          int j;
          [[j = 0;]]
     })cpp"),
-              AllOf(HasSubstr("extracted(int * j)"), HasSubstr("(*j) = 0;"),
+              AllOf(HasSubstr("extracted(int *j)"), HasSubstr("(*j) = 0;"),
                     HasSubstr("extracted(&j)")));
 }
 
@@ -1082,7 +1102,7 @@ TEST_F(ExtractFunctionTest, CFileUnmodifiedStructBecomesConstPointer) {
          p.v1 = 0;
          [[i = p.v1;]]
     })cpp"),
-              AllOf(HasSubstr("extracted(const struct pair * p)"),
+              AllOf(HasSubstr("extracted(const struct pair *p)"),
                     HasSubstr("i = p->v1;"), HasSubstr("extracted(&p)")));
 }
 
@@ -1134,7 +1154,7 @@ TEST_F(ExtractFunctionTest, CFileModifiedArrayStaysPlainPointer) {
          int arr[5];
          [[arr[0] = 1;]]
     })cpp"),
-              AllOf(HasSubstr("extracted(int * arr)"), HasSubstr("arr[0] = 1;"),
+              AllOf(HasSubstr("extracted(int *arr)"), HasSubstr("arr[0] = 1;"),
                     HasSubstr("extracted(arr)"), Not(HasSubstr("&arr"))));
 }
 
@@ -1207,6 +1227,107 @@ TEST_F(ExtractFunctionTest, CFileRejectArrayTypeof) {
       void foo() {
          int arr[5];
          [[__typeof__(arr) copy;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileAllowSingleDimensionVariableLengthArray) {
+  // A VLA's own outermost dimension is never a problem: once decayed,
+  // it no longer appears in the parameter type at all (`int A[N]`
+  // decays to plain `int *A`, not something that needs to mention `N`).
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void foo(int N) {
+         int A[N];
+         [[A[0] = 1;]]
+    })cpp"),
+              HasSubstr("extracted(int *A)"));
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectMultiDimensionVariableLengthArray) {
+  // Unlike the single-dimension case, an inner dimension that's still
+  // variable-length after decaying the outer one (`int A[2][N]` decays
+  // to `int (*A)[N]`) is a real hazard: `N` is an arbitrary expression,
+  // typically another variable's name, that isn't necessarily (and
+  // here isn't at all) itself a parameter of the extracted function,
+  // and even printing it would reference a name meaningless in the new
+  // scope.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int A[2][N];
+         [[A[0][0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CXXRejectVariableLengthArray) {
+  // Clang also supports VLAs in C++ as a GNU extension. An unmutated
+  // array capture is passed by reference there (see
+  // ConstParametersScalarsByValue's plain, fixed-size array case,
+  // which that's still fine for) rather than decaying it to a pointer
+  // the way C does -- but a reference's declared type spells out every
+  // dimension's bound, including the outermost one:
+  // `void extracted(int (&A)[2][N])` looks plausible, and even
+  // compiles, but a call to it doesn't -- `N` in the parameter list
+  // isn't the same `N` as at the call site, and a reference-to-array
+  // parameter can't be bound by just matching the spelling.
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int A[2][N];
+         [[A[0][0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CXXRejectSingleDimensionVariableLengthArray) {
+  // Unlike in C (where a single-dimension VLA decays to a pointer that
+  // no longer mentions the bound at all, see
+  // CFileAllowSingleDimensionVariableLengthArray), a C++ reference's
+  // declared type keeps the bound regardless of dimension count, so
+  // even this simpler case has the same hazard as the 2D one above.
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int A[N];
+         [[A[0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CXXRejectPointerToVariableLengthArray) {
+  // A pointer to a VLA (`int (*)[N]`) isn't an array type itself, so
+  // the array-specific VLA checks above don't apply to it -- but it
+  // has the exact same hazard: its pointee's bound is baked into the
+  // type regardless of how the pointer itself ends up passed (by
+  // value, by reference, or, in C, by a further pointer indirection),
+  // so it can't be printed without mentioning a name that isn't in
+  // scope.
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int (*A)[N];
+         [[(*A)[0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectMutatedPointerToVariableLengthArray) {
+  // Same hazard as above, but in C, and with the pointer additionally
+  // mutated (so it would otherwise go through the C pointer-adapter
+  // path instead of being passed by value): the bound is baked into
+  // the pointee type regardless, so `int (**A)[N]` is just as broken
+  // as the unmutated `int (*A)[N]` would have been.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int (*A)[N];
+         A = 0;
+         [[(*A)[0] = 1;]]
     })cpp"),
             "fail: Too complex to extract.");
 }

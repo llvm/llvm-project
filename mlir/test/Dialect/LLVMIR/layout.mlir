@@ -228,6 +228,33 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 >} {
   // CHECK-LABEL: @struct_element_allocation_size
   func.func @struct_element_allocation_size() {
+    // The allocation size is the size rounded up to the ABI alignment.
+    // CHECK: alignment = 16
+    // CHECK-SAME: alloc_size = 16
+    // CHECK-SAME: bitsize = 80
+    // CHECK-SAME: size = 10
+    "test.data_layout_query"() : () -> f80
+
+    // CHECK: alignment = 4
+    // CHECK-SAME: alloc_size = 4
+    // CHECK-SAME: bitsize = 24
+    // CHECK-SAME: preferred = 8
+    // CHECK-SAME: size = 3
+    "test.data_layout_query"() : () -> i24
+
+    // Array elements are spaced by their allocation size.
+    // CHECK: alignment = 16
+    // CHECK-SAME: alloc_size = 32
+    // CHECK-SAME: bitsize = 256
+    // CHECK-SAME: size = 32
+    "test.data_layout_query"() : () -> !llvm.array<2 x f80>
+
+    // CHECK: alignment = 4
+    // CHECK-SAME: alloc_size = 12
+    // CHECK-SAME: bitsize = 96
+    // CHECK-SAME: size = 12
+    "test.data_layout_query"() : () -> !llvm.array<3 x i24>
+
     // A packed element still occupies its allocation size, including padding.
     // CHECK: alignment = 1
     // CHECK-SAME: bitsize = 128
