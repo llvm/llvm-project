@@ -1174,3 +1174,32 @@ func.func @no_hoist_while_store_alias(%condition: i1, %holder: memref<memref<1xi
   }
   return
 }
+
+// -----
+
+// Even without a memref exit alias, realloc must stay after the source store.
+// The loop runs once so that the source is not reused after reallocation.
+// CHECK-LABEL: func.func @realloc_after_store(
+// CHECK-SAME: %[[OLD:.*]]: memref<1xi32>)
+// CHECK-NOT: memref.realloc
+// CHECK: %[[RESULT:.*]] = scf.while {{.*}} {
+// CHECK-NEXT: memref.store %{{.*}}, %[[OLD]][%{{.*}}] : memref<1xi32>
+// CHECK-NEXT: %[[NEW:.*]] = memref.realloc %[[OLD]] : memref<1xi32> to memref<2xi32>
+// CHECK-NEXT: %[[READ:.*]] = memref.load %[[NEW]][%{{.*}}] : memref<2xi32>
+// CHECK-NEXT: scf.condition(%{{.*}}) %[[READ]] : i32
+// CHECK: return %[[RESULT]] : i32
+func.func @realloc_after_store(%old: memref<1xi32>) -> i32 {
+  %c0 = arith.constant 0 : index
+  %seven = arith.constant 7 : i32
+  %false = arith.constant false
+  %value = scf.while () : () -> i32 {
+    memref.store %seven, %old[%c0] : memref<1xi32>
+    %new = memref.realloc %old : memref<1xi32> to memref<2xi32>
+    %read = memref.load %new[%c0] : memref<2xi32>
+    scf.condition(%false) %read : i32
+  } do {
+  ^bb0(%unused: i32):
+    scf.yield
+  }
+  return %value : i32
+}
