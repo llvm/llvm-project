@@ -155,7 +155,8 @@ define ptx_kernel void @grid_const_escape(ptr byval(%struct.s) align 4 "nvvm.gri
 ; PTX-DEFAULT:       {
 ; PTX-DEFAULT-NEXT:    .reg .b64 %rd<4>;
 ; PTX-DEFAULT:  $L__prototype_0:
-; PTX-DEFAULT-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _);
+; PTX-DEFAULT-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _)
+; PTX-DEFAULT-NEXT: ;
 ; PTX-DEFAULT-NEXT:  // %bb.0:
 ; PTX-DEFAULT-NEXT:    mov.b64 %rd1, grid_const_escape_param_0;
 ; PTX-DEFAULT-NEXT:    cvta.param.u64 %rd2, %rd1;
@@ -173,7 +174,8 @@ define ptx_kernel void @grid_const_escape(ptr byval(%struct.s) align 4 "nvvm.gri
 ; PTX-SHORT-PTR-NEXT:    .reg .b32 %r<2>;
 ; PTX-SHORT-PTR-NEXT:    .reg .b64 %rd<4>;
 ; PTX-SHORT-PTR:  $L__prototype_0:
-; PTX-SHORT-PTR-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _);
+; PTX-SHORT-PTR-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _)
+; PTX-SHORT-PTR-NEXT: ;
 ; PTX-SHORT-PTR-NEXT:  // %bb.0:
 ; PTX-SHORT-PTR-NEXT:    mov.b32 %r1, grid_const_escape_param_0;
 ; PTX-SHORT-PTR-NEXT:    cvt.u64.u32 %rd1, %r1;
@@ -204,7 +206,8 @@ define ptx_kernel void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 
 ; PTX-DEFAULT-NEXT:    .reg .b32 %r<2>;
 ; PTX-DEFAULT-NEXT:    .reg .b64 %rd<8>;
 ; PTX-DEFAULT:  $L__prototype_1:
-; PTX-DEFAULT-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _, .param .b64 _, .param .b64 _);
+; PTX-DEFAULT-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _, .param .b64 _, .param .b64 _)
+; PTX-DEFAULT-NEXT: ;
 ; PTX-DEFAULT-NEXT:  // %bb.0:
 ; PTX-DEFAULT-NEXT:    mov.b64 %SPL, __local_depot4;
 ; PTX-DEFAULT-NEXT:    mov.b64 %rd1, multiple_grid_const_escape_param_0;
@@ -236,7 +239,8 @@ define ptx_kernel void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 
 ; PTX-SHORT-PTR-NEXT:    .reg .b32 %r<5>;
 ; PTX-SHORT-PTR-NEXT:    .reg .b64 %rd<8>;
 ; PTX-SHORT-PTR:  $L__prototype_1:
-; PTX-SHORT-PTR-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _, .param .b64 _, .param .b64 _);
+; PTX-SHORT-PTR-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _, .param .b64 _, .param .b64 _)
+; PTX-SHORT-PTR-NEXT: ;
 ; PTX-SHORT-PTR-NEXT:  // %bb.0:
 ; PTX-SHORT-PTR-NEXT:    mov.b32 %SPL, __local_depot4;
 ; PTX-SHORT-PTR-NEXT:    mov.b32 %r1, multiple_grid_const_escape_param_0;
@@ -367,7 +371,8 @@ define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) align 4 "nvvm.g
 ; PTX-DEFAULT-NEXT:    .reg .b32 %r<3>;
 ; PTX-DEFAULT-NEXT:    .reg .b64 %rd<6>;
 ; PTX-DEFAULT:  $L__prototype_2:
-; PTX-DEFAULT-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _);
+; PTX-DEFAULT-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _)
+; PTX-DEFAULT-NEXT: ;
 ; PTX-DEFAULT-NEXT:  // %bb.0:
 ; PTX-DEFAULT-NEXT:    mov.b64 %rd1, grid_const_partial_escape_param_0;
 ; PTX-DEFAULT-NEXT:    ld.param.b64 %rd2, [grid_const_partial_escape_param_1];
@@ -390,7 +395,8 @@ define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) align 4 "nvvm.g
 ; PTX-SHORT-PTR-NEXT:    .reg .b32 %r<4>;
 ; PTX-SHORT-PTR-NEXT:    .reg .b64 %rd<6>;
 ; PTX-SHORT-PTR:  $L__prototype_2:
-; PTX-SHORT-PTR-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _);
+; PTX-SHORT-PTR-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _)
+; PTX-SHORT-PTR-NEXT: ;
 ; PTX-SHORT-PTR-NEXT:  // %bb.0:
 ; PTX-SHORT-PTR-NEXT:    mov.b32 %r1, grid_const_partial_escape_param_0;
 ; PTX-SHORT-PTR-NEXT:    ld.param.b64 %rd1, [grid_const_partial_escape_param_1];
@@ -429,7 +435,8 @@ define ptx_kernel i32 @grid_const_partial_escapemem(ptr byval(%struct.s) align 4
 ; PTX-DEFAULT-NEXT:    .reg .b32 %r<4>;
 ; PTX-DEFAULT-NEXT:    .reg .b64 %rd<6>;
 ; PTX-DEFAULT:  $L__prototype_3:
-; PTX-DEFAULT-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _);
+; PTX-DEFAULT-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _)
+; PTX-DEFAULT-NEXT: ;
 ; PTX-DEFAULT-NEXT:  // %bb.0:
 ; PTX-DEFAULT-NEXT:    mov.b64 %rd1, grid_const_partial_escapemem_param_0;
 ; PTX-DEFAULT-NEXT:    ld.param.b64 %rd2, [grid_const_partial_escapemem_param_1];
@@ -454,7 +461,8 @@ define ptx_kernel i32 @grid_const_partial_escapemem(ptr byval(%struct.s) align 4
 ; PTX-SHORT-PTR-NEXT:    .reg .b32 %r<5>;
 ; PTX-SHORT-PTR-NEXT:    .reg .b64 %rd<6>;
 ; PTX-SHORT-PTR:  $L__prototype_3:
-; PTX-SHORT-PTR-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _);
+; PTX-SHORT-PTR-NEXT: .callprototype (.param .b32 _) _ (.param .b64 _)
+; PTX-SHORT-PTR-NEXT: ;
 ; PTX-SHORT-PTR-NEXT:  // %bb.0:
 ; PTX-SHORT-PTR-NEXT:    mov.b32 %r1, grid_const_partial_escapemem_param_0;
 ; PTX-SHORT-PTR-NEXT:    ld.param.b64 %rd1, [grid_const_partial_escapemem_param_1];

@@ -244,6 +244,11 @@ private:
                        const char *Modifier = nullptr);
   void printModuleLevelGV(const GlobalVariable *GVar, raw_ostream &O,
                           bool processDemoted, const NVPTXSubtarget &STI);
+  // PTX permits these directives only between a .func directive and its body,
+  // so the caller must not use this for a kernel.
+  template <typename T>
+  void printFunctionDirectives(const T &V, raw_ostream &O) const;
+
   void emitGlobals(const Module &M);
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
   void emitHeader(Module &M, const NVPTXSubtarget &STI);
@@ -253,25 +258,6 @@ private:
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
   void emitCallPrototype(const CallBase &CB, MCSymbol *PrototypeSymbol) const;
   void emitJumpTable(const MachineJumpTableEntry &MJT, unsigned MJTI) const;
-
-  /// Should a .noreturn directive be emitted for \p V, which is either a
-  /// function or a call site?
-  template <typename T> bool shouldEmitPTXNoReturn(const T &V) const {
-    static_assert(std::is_same_v<Function, T> || std::is_base_of_v<CallBase, T>,
-                  "expected a function or a call site");
-
-    const auto &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-    if (!NTM.getSubtargetImpl()->hasNoReturn())
-      return false;
-
-    if (!V.doesNotReturn() || !V.getFunctionType()->getReturnType()->isVoidTy())
-      return false;
-
-    if constexpr (std::is_same_v<Function, T>)
-      return !isKernelFunction(V);
-    else
-      return true;
-  }
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &) override;
@@ -753,9 +739,8 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
     O << (NonEmptyArgs.empty() ? "" : ",") << " .param .align "
       << STI.getMaxRequiredAlignment() << " .b8 _[]";
 
-  O << ")";
-  if (shouldEmitPTXNoReturn(CB))
-    O << " .noreturn";
+  O << ")\n";
+  printFunctionDirectives(CB, O);
   O << ";\n";
 
   OutStreamer->emitRawText(O.str());
@@ -843,9 +828,8 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
 
   if (isKernelFunction(*F))
     emitKernelFunctionDirectives(*F, O);
-
-  if (shouldEmitPTXNoReturn(*F))
-    O << ".noreturn";
+  else
+    printFunctionDirectives(*F, O);
 
   OutStreamer->emitRawText(O.str());
 
@@ -1011,8 +995,8 @@ void NVPTXAsmPrinter::emitDeclarationWithName(const Function *F, MCSymbol *S,
   O << "\n";
   emitFunctionParamList(F, O);
   O << "\n";
-  if (shouldEmitPTXNoReturn(*F))
-    O << ".noreturn";
+  if (!isKernelFunction(*F))
+    printFunctionDirectives(*F, O);
   O << ";\n";
 }
 
@@ -1479,6 +1463,28 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
 
   emitPTXGlobalVariableDefinition(GVar, O, STI, /*EmitInitializer=*/true);
   O << ";\n";
+}
+
+template <typename T>
+void NVPTXAsmPrinter::printFunctionDirectives(const T &V,
+                                              raw_ostream &O) const {
+  const NVPTXSubtarget &STI =
+      *static_cast<const NVPTXTargetMachine &>(TM).getSubtargetImpl();
+
+  if (STI.hasNoReturn() && V.doesNotReturn() &&
+      V.getFunctionType()->getReturnType()->isVoidTy())
+    O << ".noreturn\n";
+
+  // Don't emit abi_preserve directives on targets where they are
+  // unsupported.
+  if (!STI.hasABIPreserve())
+    return;
+
+  const ABIPreserveInfo ABI = getABIPreserve(V.getAttributes());
+  if (ABI.Preserve)
+    O << ".abi_preserve " << *ABI.Preserve << "\n";
+  if (ABI.PreserveControl)
+    O << ".abi_preserve_control " << *ABI.PreserveControl << "\n";
 }
 
 void NVPTXAsmPrinter::emitPTXGlobalVariableDefinition(
