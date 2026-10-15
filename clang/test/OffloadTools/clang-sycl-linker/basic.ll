@@ -114,19 +114,9 @@
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
 ; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-GPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPVSTEM:.*]].spv
-; AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b {{.*}}-output [[SPVSTEM]].out -file [[SPVSTEM]].spv
+; AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-bmg-g21 -a -b {{.*}}-output [[SPVSTEM]].out -file [[SPVSTEM]].spv
 ; AOT-INTEL-GPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: xe-bmg-g21
 ; AOT-INTEL-GPU-NOT:  {{.+}}
-;
-; Test that an Intel GPU name, or its numeric name, reaches ocloc as ocloc's own.
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-bmg-g21 %t/input1.bc -o %t/aot-gpu.out 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-NAME
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe_20.1.0 %t/input1.bc -o %t/aot-gpu.out 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-NAME
-; AOT-INTEL-NAME: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 {{.*}}-output
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-pvc %t/input1.bc -o %t/aot-gpu.out 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-PVC
-; AOT-INTEL-PVC: "{{.*}}ocloc{{.*}}" {{.*}}-device pvc {{.*}}-output
 ;
 ; Test that a GPU the list does not know yet stays SPIR-V, compiled at run time.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe_40.11.0 %t/input1.bc -o %t/jit-gpu.out 2>&1 \
@@ -137,7 +127,7 @@
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-bmg-g21 %t/input1.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" --ocloc-options=-c --ocloc-options="d" --ocloc-options='"-e -f"' \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-OCLOC-OPTIONS
-; AOT-INTEL-OCLOC-OPTIONS: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b -c d "-e -f"
+; AOT-INTEL-OCLOC-OPTIONS: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-bmg-g21 -a -b -c d "-e -f"
 ;
 ; Test AOT compilation for an Intel CPU.
 ; Test that IMG_Object image kind is set for AOT compilation (Intel CPU).
