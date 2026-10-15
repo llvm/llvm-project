@@ -124,6 +124,22 @@ Language *Language::FindPlugin(LanguageType language,
   return result;
 }
 
+Language *
+Language::FindPluginForManglingScheme(Mangled::ManglingScheme scheme) {
+  if (scheme == Mangled::eManglingSchemeNone)
+    return nullptr;
+
+  Language *result = nullptr;
+  ForEach([&result, scheme](Language *language) {
+    if (language->HandlesManglingScheme(scheme)) {
+      result = language;
+      return IterationAction::Stop;
+    }
+    return IterationAction::Continue;
+  });
+  return result;
+}
+
 void Language::ForEach(
     llvm::function_ref<IterationAction(Language *)> callback) {
   // If we want to iterate over all languages, we first have to complete the

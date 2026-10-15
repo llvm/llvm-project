@@ -12,11 +12,13 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <set>
 #include <vector>
 
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Highlighter.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
@@ -166,6 +168,10 @@ public:
 
   static Language *FindPlugin(lldb::LanguageType language,
                               llvm::StringRef file_path);
+
+  /// Returns the Language that handles names mangled with \p scheme, or a
+  /// nullptr if there is none.
+  static Language *FindPluginForManglingScheme(Mangled::ManglingScheme scheme);
 
   static llvm::Expected<lldb::LanguageType>
   GetExceptionLanguageForLanguage(llvm::StringRef lang_name);
@@ -322,6 +328,39 @@ public:
   /// that the name actually belongs to this language.
   virtual bool SymbolNameFitsToLanguage(const Mangled &name) const {
     return false;
+  }
+
+  /// Returns true if this language handles the names mangled with \p scheme.
+  virtual bool HandlesManglingScheme(Mangled::ManglingScheme scheme) const {
+    return false;
+  }
+
+  /// Parses mangled function names for the symbol table's name indexes.
+  ///
+  /// A symbol table uses one parser for all of its symbols, so a parser can
+  /// reuse state, such as a demangler, between names.
+  class MangledNameParser {
+  public:
+    virtual ~MangledNameParser() = default;
+
+    /// Parse \p mangled, a function name mangled with the scheme that this
+    /// parser was created for.
+    ///
+    /// \return
+    ///   The parts to index the symbol by. If their basename is empty, the
+    ///   symbol is only indexed by its mangled name. std::nullopt if this
+    ///   isn't a function name the parser understands, so that the symbol is
+    ///   indexed by its demangled name instead.
+    virtual std::optional<Mangled::FunctionNameParts>
+    Parse(const Mangled &mangled) = 0;
+  };
+
+  /// Returns a parser for the names mangled with \p scheme, a scheme that this
+  /// language handles, or a nullptr if the symbol table should index them by
+  /// their demangled names.
+  virtual std::unique_ptr<MangledNameParser>
+  CreateMangledNameParser(Mangled::ManglingScheme scheme) const {
+    return nullptr;
   }
 
   /// An individual data formatter may apply to several types and cross language

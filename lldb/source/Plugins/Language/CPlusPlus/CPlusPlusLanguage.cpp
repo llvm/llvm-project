@@ -25,6 +25,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/RichManglingContext.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -108,8 +109,92 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
   auto mangling_scheme =
       Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef());
-  return mangling_scheme == Mangled::eManglingSchemeItanium ||
-         mangling_scheme == Mangled::eManglingSchemeMSVC;
+  return HandlesManglingScheme(mangling_scheme);
+}
+
+bool CPlusPlusLanguage::HandlesManglingScheme(
+    Mangled::ManglingScheme scheme) const {
+  return scheme == Mangled::eManglingSchemeItanium ||
+         scheme == Mangled::eManglingSchemeMSVC;
+}
+
+/// Returns true for the Itanium names that aren't worth indexing as functions.
+static bool SkipItaniumName(llvm::StringRef mangled) {
+  if (mangled.size() < 3 || !mangled.starts_with("_Z"))
+    return true;
+
+  // Avoid the following types of symbols in the index.
+  switch (mangled[2]) {
+  case 'G': // guard variables
+  case 'T': // virtual tables, VTT structures, typeinfo structures + names
+  case 'Z': // named local entities (if we eventually handle
+            // eSymbolTypeData, we will want this back)
+    return true;
+
+  default:
+    return false;
+  }
+}
+
+namespace {
+/// Parses Itanium or MSVC mangled function names. Their mangling doesn't tell
+/// whether a declaration context is a class or a namespace.
+class CPlusPlusMangledNameParser : public Language::MangledNameParser {
+public:
+  explicit CPlusPlusMangledNameParser(Mangled::ManglingScheme scheme)
+      : m_scheme(scheme) {}
+
+  std::optional<Mangled::FunctionNameParts>
+  Parse(const Mangled &mangled) override {
+    if (!ParseRichManglingInfo(mangled))
+      return std::nullopt;
+
+    Mangled::FunctionNameParts parts;
+    llvm::StringRef base_name = m_rmc.ParseFunctionBaseName();
+    if (base_name.empty())
+      return parts;
+
+    // Parsing the context reuses the buffer that base_name points into.
+    parts.basename = ConstString(base_name);
+    llvm::StringRef decl_context = m_rmc.ParseFunctionDeclContextName();
+    if (decl_context.empty()) {
+      parts.kind = Mangled::FunctionNameKind::TopLevel;
+      return parts;
+    }
+
+    parts.decl_context = ConstString(decl_context);
+    parts.kind = m_rmc.IsCtorOrDtor()
+                     ? Mangled::FunctionNameKind::ConstructorOrDestructor
+                     : Mangled::FunctionNameKind::Unknown;
+    return parts;
+  }
+
+private:
+  bool ParseRichManglingInfo(const Mangled &mangled) {
+    ConstString mangled_name = mangled.GetMangledName();
+    if (m_scheme == Mangled::eManglingSchemeItanium)
+      return !SkipItaniumName(mangled_name) &&
+             m_rmc.FromItaniumName(mangled_name);
+
+    // There is no rich mangling info for MSVC names, so parse the demangled
+    // name with CPlusPlusLanguage::CxxMethodName instead.
+    ConstString demangled = mangled.GetDemangledName();
+    return !demangled.IsEmpty() && m_rmc.FromCxxMethodName(demangled);
+  }
+
+  Mangled::ManglingScheme m_scheme;
+  /// Instantiation of the demangler is expensive, so better use a single one
+  /// for all entries during batch processing.
+  RichManglingContext m_rmc;
+};
+} // namespace
+
+std::unique_ptr<Language::MangledNameParser>
+CPlusPlusLanguage::CreateMangledNameParser(
+    Mangled::ManglingScheme scheme) const {
+  if (!HandlesManglingScheme(scheme))
+    return nullptr;
+  return std::make_unique<CPlusPlusMangledNameParser>(scheme);
 }
 
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
