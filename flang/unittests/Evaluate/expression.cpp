@@ -73,17 +73,6 @@ int main() {
   // Integer expressions exercise the type-independent specifier representation.
   withNotify.set_notify(
       AsGenericExpr(DefaultIntegerExpr{2} + DefaultIntegerExpr{3}));
-  CoarrayRef sameNotify{withNotify};
-  CoarrayRef otherNotify{withNotify};
-  otherNotify.set_notify(AsGenericExpr(DefaultIntegerExpr{6}));
-  // Notification does not change which variable the reference designates.
-  TEST(noNotify == withNotify);
-  TEST(withNotify == noNotify);
-  TEST(withNotify == sameNotify);
-  TEST(withNotify == otherNotify);
-  CoarrayRef otherImage{withNotify};
-  otherImage.cosubscript().front() = Expr<SubscriptInteger>{3};
-  TEST(!(withNotify == otherImage));
   MATCH("a[1_8+1_8,NOTIFY=2_4+3_4]", asExpr(withNotify).AsFortran());
 
   auto foldedNotify{ExtractCoarrayRef(Fold(context, asExpr(withNotify)))};

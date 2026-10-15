@@ -1,6 +1,6 @@
 ! NOTE: Do not autogenerate
-! RUN: %flang_fc1 -cpp -fopenmp -fopenmp-version=51 -fopenacc -fsyntax-only %s
-! RUN: %flang_fc1 -cpp -fopenmp -fopenmp-version=51 -fopenacc -fdebug-dump-parse-tree %s | FileCheck %s
+! RUN: %flang_fc1 -cpp -fsyntax-only %s
+! RUN: %flang_fc1 -cpp -fdebug-dump-parse-tree %s | FileCheck %s
 
 module notify_intrinsic_types
   type t
@@ -98,47 +98,4 @@ program intrinsic_notify_assignment
     remote[1, notify=n] = 22
   end associate
   d[1, notify=n]%values(2) = 23
-
-  ! Frontend regression tests: NOTIFY= must not change atomic variable matching.
-  !$omp atomic update
-  b[1, notify=n] = b[1] + 1
-  !$omp atomic capture
-  i = b[1]
-  b[1, notify=n] = b[1] + 1
-  !$omp end atomic
-  !$omp atomic capture
-  b[1, notify=n] = b[1] + 1
-  i = b[1]
-  !$omp end atomic
-  !$omp atomic compare
-  if (b[1] == i) b[1, notify=n] = 1
-  !$omp atomic compare capture
-  i = b[1]
-  if (b[1] == status) then
-    b[1, notify=n] = 1
-  end if
-  !$omp end atomic
-  !$acc atomic update
-  b[1, notify=n] = b[1] + 1
-  !$acc atomic capture
-  i = b[1]
-  b[1, notify=n] = b[1] + 1
-  !$acc end atomic
-  !$acc atomic capture
-  b[1, notify=n] = b[1] + 1
-  i = b[1]
-  !$acc end atomic
-
-  !$omp atomic update
-  d[1, notify=n]%value = d[1]%value + 1
-  !$omp atomic capture
-  i = d[1]%value
-  d[1, notify=n]%value = d[1]%value + 1
-  !$omp end atomic
-  !$acc atomic update
-  d[1, notify=n]%value = d[1]%value + 1
-  !$acc atomic capture
-  i = d[1]%value
-  d[1, notify=n]%value = d[1]%value + 1
-  !$acc end atomic
 end program

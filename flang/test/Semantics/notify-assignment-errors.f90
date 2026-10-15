@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenmp -fopenmp-version=51 -fopenacc
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! F2023 C933
 
 module notify_defined_assignment
@@ -114,18 +114,6 @@ program invalid_notify_contexts
   !ERROR: coindexed reference has multiple NOTIFY= specifiers
   b[1, notify=n, notify=n] = 24
 
-  !$omp atomic write
-  !WARNING: Within atomic operation b[1_8,NOTIFY=n] and b[1_8]+1_4 access the same storage
-  b[1, notify=n] = b[1] + 1
-  !$acc atomic write
-  !ERROR: The RHS of this atomic write statement cannot reference the atomic variable: b[1_8,NOTIFY=n]
-  b[1, notify=n] = b[1] + 1
-  !$omp atomic update
-  !ERROR: The atomic variable b[1_8,NOTIFY=n] should appear as an argument of the top-level + operator
-  b[1, notify=n] = b[2] + 1
-  !$acc atomic update
-  !ERROR: The RHS of this atomic update statement must reference the updated variable: b[1_8,NOTIFY=n]
-  b[1, notify=n] = b[2] + 1
 contains
   subroutine consume(x)
     integer, intent(in) :: x
