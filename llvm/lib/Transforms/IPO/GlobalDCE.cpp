@@ -208,7 +208,7 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
 
     LLVM_DEBUG(dbgs() << "vfunc dep " << Caller->getName() << " -> "
                       << Callee->getName() << "\n");
-    GVDependencies[Caller].insert(Callee);
+    VFuncDependencies[Caller].emplace_back(VTable, Callee);
   }
 }
 
@@ -353,6 +353,23 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
     GlobalValue *LGV = NewLiveGVs.pop_back_val();
     for (auto *GVD : GVDependencies[LGV])
       MarkLive(*GVD, &NewLiveGVs);
+
+    // A virtual call keeps a virtual function alive only if the vtable it is
+    // loaded from is alive too. If the vtable is not live, defer the function:
+    // the vtable may become live later.
+    if (auto It = VFuncDependencies.find(LGV); It != VFuncDependencies.end()) {
+      for (auto [VTable, VFunc] : It->second) {
+        if (AliveGlobals.count(VTable))
+          MarkLive(*VFunc, &NewLiveGVs);
+        else
+          PendingVFuncs[VTable].push_back(VFunc);
+      }
+    }
+
+    // If LGV is a vtable that became alive later, mark its deferred functions
+    // live.
+    for (auto *VFunc : PendingVFuncs.lookup(LGV))
+      MarkLive(*VFunc, &NewLiveGVs);
   }
 
   // Now that all globals which are needed are in the AliveGlobals set, we loop
@@ -444,6 +461,8 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   AliveGlobals.clear();
   ConstantDependenciesCache.clear();
   GVDependencies.clear();
+  VFuncDependencies.clear();
+  PendingVFuncs.clear();
   ComdatMembers.clear();
   TypeIdMap.clear();
   VFESafeVTables.clear();
