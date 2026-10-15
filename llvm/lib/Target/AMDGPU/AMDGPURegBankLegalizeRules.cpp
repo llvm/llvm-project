@@ -1657,7 +1657,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{P5}, {{}, {}, DeletePrefetch}})
       .Any({{UniP6}, {{}, {SgprP6}}}, HasSMemPF)
       .Any({{UniP6}, {{}, {}, DeletePrefetch}}, !HasSMemPF)
-      .Any({{DivPtr32}, {{}, {}, DeletePrefetch}})
+      .Any({{Ptr32}, {{}, {}, DeletePrefetch}})
       .Any({{P8}, {{}, {}, DeletePrefetch}});
 
   addRulesForGOpcs({G_FPEXT})
