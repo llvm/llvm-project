@@ -10,9 +10,11 @@ declare float @llvm.experimental.constrained.uitofp.f32.i16(i16, metadata, metad
 define i32 @test(i32 %a, i16 %b) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mov r2, r1
+; CHECK-NEXT:    sub sp, sp, #4
+; CHECK-NEXT:    str r1, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    sxth r0, r2
+; CHECK-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    vmov s0, r1
 ; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vmov s2, r0
@@ -21,6 +23,7 @@ define i32 @test(i32 %a, i16 %b) #0 {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    movweq r0, #1
+; CHECK-NEXT:    add sp, sp, #4
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECK-O3-LABEL: test:
@@ -46,9 +49,11 @@ entry:
 define i32 @test2(i32 %a, i16 %b) #0 {
 ; CHECK-LABEL: test2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mov r2, r1
+; CHECK-NEXT:    sub sp, sp, #4
+; CHECK-NEXT:    str r1, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    uxth r0, r2
+; CHECK-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    vmov s0, r1
 ; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vmov s2, r0
@@ -57,6 +62,7 @@ define i32 @test2(i32 %a, i16 %b) #0 {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    movweq r0, #1
+; CHECK-NEXT:    add sp, sp, #4
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECK-O3-LABEL: test2:
