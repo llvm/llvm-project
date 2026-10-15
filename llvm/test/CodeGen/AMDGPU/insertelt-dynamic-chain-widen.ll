@@ -3,9 +3,16 @@
 
 ; A chain of runtime-known index INSERT_VECTOR_ELT on a TypeWidenVector value
 ; stays in registers when the widened insert is Legal or Promote, instead of
-; being combined into one scratch object. On gfx942 <9 x double> widens to
-; <16 x double> and that insert is Promote. A per-lane index is lowered with
-; v_cndmask; an index shared by the wave uses s_set_gpr_idx.
+; being combined into one scratch object. Otherwise the chain still uses
+; scratch.
+;
+; On gfx942 <9 x double> widens to <16 x double> and that insert is Promote. A
+; per-lane index is lowered with v_cndmask; an index shared by the wave uses
+; s_set_gpr_idx. 
+;
+; <3 x half> widens to <4 x half>, whose insert is Custom,
+; <5 x half> widens to <8 x half>, whose insert is Expand, and  
+; <3 x i8> widens to <4 x i8>, which is split, so these still use scratch.
 
 define amdgpu_kernel void @v9f64_divergent_idx(ptr addrspace(1) %out, double %a, double %b) {
 ; CHECK-LABEL: v9f64_divergent_idx:
@@ -161,6 +168,114 @@ define amdgpu_kernel void @v9f64_uniform_idx(ptr addrspace(1) %out, double %a, d
   %v1 = insertelement <9 x double> %vec, double %a, i32 %idx
   %v2 = insertelement <9 x double> %v1, double %b, i32 %i2
   store <9 x double> %v2, ptr addrspace(1) %gep
+  ret void
+}
+
+define amdgpu_kernel void @v3f16_uniform_idx(ptr addrspace(1) %out, half %a, half %b, i32 %idx) {
+; CHECK-LABEL: v3f16_uniform_idx:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx2 v[2:3], v0, s[0:1]
+; CHECK-NEXT:    s_min_u32 s4, s3, 2
+; CHECK-NEXT:    s_add_i32 s3, s3, 1
+; CHECK-NEXT:    s_min_u32 s3, s3, 2
+; CHECK-NEXT:    v_mov_b32_e32 v1, s2
+; CHECK-NEXT:    s_lshl_b32 s2, s4, 1
+; CHECK-NEXT:    s_lshl_b32 s3, s3, 1
+; CHECK-NEXT:    s_or_b32 s2, s2, 0
+; CHECK-NEXT:    s_or_b32 s3, s3, 0
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    scratch_store_short off, v3, off offset:4
+; CHECK-NEXT:    scratch_store_dword off, v2, off
+; CHECK-NEXT:    scratch_store_short off, v1, s2
+; CHECK-NEXT:    scratch_store_short_d16_hi off, v1, s3
+; CHECK-NEXT:    scratch_load_dwordx2 v[2:3], off, off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_store_short v0, v3, s[0:1] offset:4
+; CHECK-NEXT:    global_store_dword v0, v2, s[0:1]
+; CHECK-NEXT:    s_endpgm
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr <3 x half>, ptr addrspace(1) %out, i32 %tid
+  %vec = load <3 x half>, ptr addrspace(1) %gep
+  %i2 = add i32 %idx, 1
+  %v1 = insertelement <3 x half> %vec, half %a, i32 %idx
+  %v2 = insertelement <3 x half> %v1, half %b, i32 %i2
+  store <3 x half> %v2, ptr addrspace(1) %gep
+  ret void
+}
+
+define amdgpu_kernel void @v5f16_uniform_idx(ptr addrspace(1) %out, half %a, half %b, i32 %idx) {
+; CHECK-LABEL: v5f16_uniform_idx:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v0, s[0:1]
+; CHECK-NEXT:    s_min_u32 s4, s3, 4
+; CHECK-NEXT:    s_add_i32 s3, s3, 1
+; CHECK-NEXT:    s_min_u32 s3, s3, 4
+; CHECK-NEXT:    v_mov_b32_e32 v1, s2
+; CHECK-NEXT:    s_lshl_b32 s2, s4, 1
+; CHECK-NEXT:    s_lshl_b32 s3, s3, 1
+; CHECK-NEXT:    s_or_b32 s2, s2, 0
+; CHECK-NEXT:    s_or_b32 s3, s3, 0
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    scratch_store_short off, v4, off offset:8
+; CHECK-NEXT:    scratch_store_dwordx2 off, v[2:3], off
+; CHECK-NEXT:    scratch_store_short off, v1, s2
+; CHECK-NEXT:    scratch_store_short_d16_hi off, v1, s3
+; CHECK-NEXT:    scratch_load_dwordx4 v[2:5], off, off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_store_short v0, v4, s[0:1] offset:8
+; CHECK-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
+; CHECK-NEXT:    s_endpgm
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr <5 x half>, ptr addrspace(1) %out, i32 %tid
+  %vec = load <5 x half>, ptr addrspace(1) %gep
+  %i2 = add i32 %idx, 1
+  %v1 = insertelement <5 x half> %vec, half %a, i32 %idx
+  %v2 = insertelement <5 x half> %v1, half %b, i32 %i2
+  store <5 x half> %v2, ptr addrspace(1) %gep
+  ret void
+}
+
+define amdgpu_kernel void @v3i8_uniform_idx(ptr addrspace(1) %out, i8 %a, i8 %b, i32 %idx) {
+; CHECK-LABEL: v3i8_uniform_idx:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_dword v1, v0, s[0:1]
+; CHECK-NEXT:    s_min_u32 s4, s3, 2
+; CHECK-NEXT:    s_add_i32 s3, s3, 1
+; CHECK-NEXT:    s_lshr_b32 s5, s2, 8
+; CHECK-NEXT:    s_min_u32 s3, s3, 2
+; CHECK-NEXT:    v_mov_b32_e32 v2, s2
+; CHECK-NEXT:    s_or_b32 s2, s4, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    s_or_b32 s3, s3, 0
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    scratch_store_byte_d16_hi off, v1, off offset:2
+; CHECK-NEXT:    scratch_store_short off, v1, off
+; CHECK-NEXT:    scratch_store_byte off, v2, s2
+; CHECK-NEXT:    scratch_store_byte off, v3, s3
+; CHECK-NEXT:    scratch_load_dword v1, off, off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_store_byte_d16_hi v0, v1, s[0:1] offset:2
+; CHECK-NEXT:    global_store_short v0, v1, s[0:1]
+; CHECK-NEXT:    s_endpgm
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr <3 x i8>, ptr addrspace(1) %out, i32 %tid
+  %vec = load <3 x i8>, ptr addrspace(1) %gep
+  %i2 = add i32 %idx, 1
+  %v1 = insertelement <3 x i8> %vec, i8 %a, i32 %idx
+  %v2 = insertelement <3 x i8> %v1, i8 %b, i32 %i2
+  store <3 x i8> %v2, ptr addrspace(1) %gep
   ret void
 }
 
