@@ -252,3 +252,83 @@ __host__ void host_function() {
 }
 } // namespace virtual_bases
 } // namespace host_calls
+
+namespace inherited_constructors {
+__host__ int host_function(); // device-note 3 {{'host_function' declared here}}
+struct Base {
+  __host__ __device__ Base(int) {
+    host_function(); // device-error {{reference to __host__ function 'host_function' in __host__ __device__ function}}
+  }
+};
+struct Derived : Base {
+  using Base::Base; // device-note {{called by 'Base'}}
+};
+__global__ void kernel() { Derived value(1); } // device-note {{which is called by 'kernel'}}
+
+template <class T>
+struct TemplateBase {
+  __host__ __device__ TemplateBase(T) {
+    host_function(); // device-error 2 {{reference to __host__ function 'host_function' in __host__ __device__ function}}
+  }
+};
+template <class T>
+struct TemplateDerived : TemplateBase<T> {
+  using TemplateBase<T>::TemplateBase; // device-note {{called by 'TemplateBase'}}
+};
+struct Indirect : TemplateDerived<int> {
+  using TemplateDerived<int>::TemplateDerived; // device-note {{which is called by 'TemplateBase'}}
+};
+__global__ void indirect() { Indirect value(1); } // device-note {{which is called by 'indirect'}}
+
+struct VirtualDerived : virtual TemplateBase<long> {
+  using TemplateBase<long>::TemplateBase; // device-note {{called by 'TemplateBase'}}
+};
+__global__ void virtual_base() { VirtualDerived value(1L); } // device-note {{which is called by 'virtual_base'}}
+
+__host__ void host_only() { TemplateDerived<char> value('x'); }
+__global__ void discarded() {
+  if constexpr (false) {
+    TemplateDerived<short> value(1);
+  }
+}
+} // namespace inherited_constructors
+
+namespace host_inherited_constructors {
+__device__ int device_function(); // host-note 3 {{'device_function' declared here}}
+struct Base {
+  __host__ __device__ Base(int) {
+    device_function(); // host-error {{reference to __device__ function 'device_function' in __host__ __device__ function}}
+  }
+};
+struct Derived : Base {
+  using Base::Base; // host-note {{called by 'Base'}}
+};
+__host__ void host_function() { Derived value(1); } // host-note {{which is called by 'host_function'}}
+
+template <class T>
+struct TemplateBase {
+  __host__ __device__ TemplateBase(T) {
+    device_function(); // host-error 2 {{reference to __device__ function 'device_function' in __host__ __device__ function}}
+  }
+};
+template <class T>
+struct TemplateDerived : TemplateBase<T> {
+  using TemplateBase<T>::TemplateBase; // host-note {{called by 'TemplateBase'}}
+};
+struct Indirect : TemplateDerived<int> {
+  using TemplateDerived<int>::TemplateDerived; // host-note {{which is called by 'TemplateBase'}}
+};
+__host__ void indirect() { Indirect value(1); } // host-note {{which is called by 'indirect'}}
+
+struct VirtualDerived : virtual TemplateBase<long> {
+  using TemplateBase<long>::TemplateBase; // host-note {{called by 'TemplateBase'}}
+};
+__host__ void virtual_base() { VirtualDerived value(1L); } // host-note {{which is called by 'virtual_base'}}
+
+__device__ void device_only() { TemplateDerived<char> value('x'); }
+__host__ void discarded() {
+  if constexpr (false) {
+    TemplateDerived<short> value(1);
+  }
+}
+} // namespace host_inherited_constructors
