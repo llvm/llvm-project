@@ -2142,27 +2142,27 @@ collectCoReturnsOps(mlir::Region &region,
       [&](cir::CoReturnOp coReturnOp) { coReturnOps.push_back(coReturnOp); });
 }
 
-// Flatten `cir.coroutine`. It runs once every nested op (awaits, scopes,
-// cleanups, ...) has been flattened. This initialSuspend, body and finalSuspend
-// regions become the body of a cleanup scope whose cleanup is the destroy
-// region; the exit region follows the scope:
+// Flatten `cir.coroutine`. This runs once every nested op (awaits, cir.scope,
+// cleanup scopes, ...) has been flattened. The initialSuspend, body and
+// finalSuspend regions become the body of a cir.cleanup.scope whose cleanup is
+// the destroy region; the exit region follows the cleanup scope:
 //
 //   cir.cleanup.scope {
 //     initialSuspend ---> body ---> finalSuspend
 //                          |             ^
 //                          +-------------+  cir.co_return
 //   } cleanup all {
-//     destroy                               coro.free
+//     destroy                         cir.coro.intrinsic.free
 //   }
-//   exit                                    coro.end + cir.return
+//   exit                              cir.coro.intrinsic.end, cir.return
 //
-// Leaving the scope body always runs the destroy region. In particular, the
-// cir.yield emitted for an await's destroy case leaves through it. A
-// suspended coroutine (cir.coro.exit) must keep its frame, so it branches
-// straight to the exit region.
+// Leaving the cleanup scope body always runs the destroy region. In
+// particular, the cir.yield emitted for an await's destroy case leaves through
+// it. A suspended coroutine (cir.coro.exit) must keep its frame, so it
+// branches straight to the exit region.
 class CIRCoroutineFlattening : public mlir::OpRewritePattern<cir::CoroutineOp> {
   void collectCoroExitsOps(
-      cir::CoroutineOp &coroOp,
+      cir::CoroutineOp coroOp,
       llvm::SmallVectorImpl<cir::CoroExitOp> &coroExitsOps) const {
     // cir.coro.exit is produced by flattening a cir.await, which can only
     // appear in the initialSuspend, body and finalSuspend regions.
@@ -2172,6 +2172,115 @@ class CIRCoroutineFlattening : public mlir::OpRewritePattern<cir::CoroutineOp> {
     coroOp.getInitialSuspend().walk(collectCoroExit);
     coroOp.getBody().walk(collectCoroExit);
     coroOp.getFinalSuspend().walk(collectCoroExit);
+  }
+
+  // Cleanup scope body: initialSuspend -> body -> finalSuspend. The three
+  // regions are moved, in this order, in front of the placeholder block the
+  // cleanup scope was created with, and the placeholder is erased once they
+  // are in place.
+  void inlineCleanUpScopeBody(mlir::PatternRewriter &rewriter,
+                              cir::CoroutineOp coroOp,
+                              cir::CleanupScopeOp scope) const {
+    mlir::Block *bodyPlaceholder = &scope.getBodyRegion().front();
+    // Take the entry blocks before the regions are moved.
+    mlir::Block *beforeBody = &coroOp.getBody().front();
+    mlir::Block *beforeFinal = &coroOp.getFinalSuspend().front();
+
+    inlineInitialSuspend(rewriter, coroOp, bodyPlaceholder, beforeBody);
+    inlineBody(rewriter, coroOp, bodyPlaceholder, beforeFinal);
+    inlineFinalSuspend(rewriter, coroOp, bodyPlaceholder);
+    rewriter.eraseBlock(bodyPlaceholder);
+  }
+
+  // initialSuspend ends in a cir.yield once the init await is done. Replace it
+  // with a branch to the body.
+  void inlineInitialSuspend(mlir::PatternRewriter &rewriter,
+                            cir::CoroutineOp coroOp, mlir::Block *insertBefore,
+                            mlir::Block *beforeBody) const {
+    mlir::Region &initialRegion = coroOp.getInitialSuspend();
+    auto initialYieldOp =
+        cast<cir::YieldOp>(initialRegion.back().getTerminator());
+    rewriter.setInsertionPoint(initialYieldOp);
+    rewriter.replaceOpWithNewOp<cir::BrOp>(
+        initialYieldOp, initialYieldOp.getArgs(), beforeBody);
+    rewriter.inlineRegionBefore(initialRegion, insertBefore);
+  }
+
+  // The body either falls off the end (cir.yield) or ends in a
+  // cir.co_return. Both, like every other cir.co_return in the body, branch
+  // to the final suspend.
+  void inlineBody(mlir::PatternRewriter &rewriter, cir::CoroutineOp coroOp,
+                  mlir::Block *insertBefore, mlir::Block *beforeFinal) const {
+    mlir::Region &bodyRegion = coroOp.getBody();
+
+    llvm::SmallVector<cir::CoReturnOp> coReturnsOps;
+    collectCoReturnsOps(bodyRegion, coReturnsOps);
+
+    mlir::Operation *bodyTerminator = bodyRegion.back().getTerminator();
+    if (auto bodyYield = dyn_cast<cir::YieldOp>(bodyTerminator)) {
+      rewriter.setInsertionPoint(bodyYield);
+      rewriter.replaceOpWithNewOp<cir::BrOp>(bodyYield, mlir::ValueRange{},
+                                             beforeFinal);
+    }
+
+    for (auto &coReturn : coReturnsOps) {
+      rewriter.setInsertionPoint(coReturn);
+      rewriter.replaceOpWithNewOp<cir::BrOp>(coReturn, mlir::ValueRange{},
+                                             beforeFinal);
+    }
+
+    rewriter.inlineRegionBefore(bodyRegion, insertBefore);
+  }
+
+  // finalSuspend keeps its cir.yield, which now ends the cleanup scope body:
+  // once the final await completes, the coroutine leaves the cleanup scope
+  // normally and runs the destroy region.
+  void inlineFinalSuspend(mlir::PatternRewriter &rewriter,
+                          cir::CoroutineOp coroOp,
+                          mlir::Block *insertBefore) const {
+    rewriter.inlineRegionBefore(coroOp.getFinalSuspend(), insertBefore);
+  }
+
+  // Cleanup scope cleanup region: the destroy region.
+  void inlineCleanUpScopeCleanup(mlir::PatternRewriter &rewriter,
+                                 cir::CoroutineOp coroOp,
+                                 cir::CleanupScopeOp scope) const {
+    mlir::Region &destroyRegion = coroOp.getDestroy();
+    mlir::Block *cleanupPlaceholder = &scope.getCleanupRegion().front();
+    rewriter.inlineRegionBefore(destroyRegion, cleanupPlaceholder);
+    rewriter.eraseBlock(cleanupPlaceholder);
+  }
+
+  // A suspended coroutine keeps its frame, so each cir.coro.exit branches
+  // straight to the exit region without running the destroy region.
+  void lowerCoroExits(mlir::PatternRewriter &rewriter,
+                      llvm::ArrayRef<cir::CoroExitOp> coroExitsOps,
+                      mlir::Block *beforeExit) const {
+    for (cir::CoroExitOp coroExit : coroExitsOps) {
+      // TODO(cir): once the GRO region is supported, this may need to branch
+      // there instead of to the exit region.
+      assert(!cir::MissingFeatures::coroutineGetRetObjManager());
+      rewriter.setInsertionPoint(coroExit);
+      rewriter.replaceOpWithNewOp<cir::BrOp>(coroExit, mlir::ValueRange{},
+                                             beforeExit);
+    }
+  }
+
+  // Exit region: inline it right after the cleanup scope, which falls through
+  // to it.
+  void inlineExitRegion(mlir::PatternRewriter &rewriter,
+                        cir::CoroutineOp coroOp, cir::CleanupScopeOp scope,
+                        mlir::Block *remainingOpsBlock) const {
+    mlir::Region &exitRegion = coroOp.getExit();
+    mlir::Block *beforeExit = &exitRegion.front();
+
+    rewriter.setInsertionPointAfter(scope);
+    mlir::Block *afterCleanup =
+        rewriter.splitBlock(remainingOpsBlock, rewriter.getInsertionPoint());
+    rewriter.inlineRegionBefore(exitRegion, afterCleanup);
+
+    rewriter.setInsertionPointAfter(scope);
+    cir::BrOp::create(rewriter, scope.getLoc(), mlir::ValueRange(), beforeExit);
   }
 
 public:
@@ -2203,6 +2312,14 @@ public:
 
     // coroOp now lives in remainingOpsBlock. Build the cleanup scope in front
     // of it.
+    //
+    // The coroutine becomes a cir.cleanup.scope so that its frame is freed
+    // (the destroy region, as its cleanup region) on every way out of the
+    // coroutine: completing the final suspend, an await's destroy case and,
+    // because the kind is All, an exception escaping the coroutine. The
+    // regular cleanup scope flattening then routes each of those exits
+    // through the destroy region. A suspended coroutine must keep its frame,
+    // so cir.coro.exit skips the cleanup scope (see lowerCoroExits).
     rewriter.setInsertionPoint(coroOp);
 
     auto emitYield = [](mlir::OpBuilder &b, mlir::Location l) {
@@ -2211,74 +2328,13 @@ public:
 
     auto scope = cir::CleanupScopeOp::create(rewriter, loc, CleanupKind::All,
                                              emitYield, emitYield);
-    mlir::Block *bodyPlaceholder = &scope.getBodyRegion().front();
 
-    // Scope body: initialSuspend -> body -> finalSuspend.
-    mlir::Region &initialRegion = coroOp.getInitialSuspend();
-    mlir::Block *afterInitial = &initialRegion.back();
-    rewriter.inlineRegionBefore(initialRegion, bodyPlaceholder);
+    inlineCleanUpScopeBody(rewriter, coroOp, scope);
+    inlineCleanUpScopeCleanup(rewriter, coroOp, scope);
 
-    mlir::Region &bodyRegion = coroOp.getBody();
-    mlir::Block *beforeBody = &bodyRegion.front();
-    mlir::Block *afterBody = &bodyRegion.back();
-
-    rewriter.setInsertionPointToEnd(afterInitial);
-    auto initialYieldOp = cast<cir::YieldOp>(afterInitial->getTerminator());
-    rewriter.replaceOpWithNewOp<cir::BrOp>(
-        initialYieldOp, initialYieldOp.getArgs(), beforeBody);
-
-    llvm::SmallVector<cir::CoReturnOp> coReturnsOps;
-    collectCoReturnsOps(bodyRegion, coReturnsOps);
-
-    mlir::Region &finalRegion = coroOp.getFinalSuspend();
-    mlir::Block *beforeFinal = &finalRegion.front();
-
-    rewriter.inlineRegionBefore(bodyRegion, bodyPlaceholder);
-    rewriter.setInsertionPointToEnd(afterBody);
-
-    // The body either falls off the end (cir.yield) or ends in a
-    // cir.co_return. Both, like every other cir.co_return in the body, branch
-    // to the final suspend.
-    mlir::Operation *bodyTerminator = afterBody->getTerminator();
-    if (auto bodyYield = dyn_cast<cir::YieldOp>(bodyTerminator))
-      rewriter.replaceOpWithNewOp<cir::BrOp>(bodyYield, mlir::ValueRange{},
-                                             beforeFinal);
-
-    for (auto &coReturn : coReturnsOps) {
-      rewriter.setInsertionPoint(coReturn);
-      rewriter.replaceOpWithNewOp<cir::BrOp>(coReturn, mlir::ValueRange{},
-                                             beforeFinal);
-    }
-
-    rewriter.inlineRegionBefore(finalRegion, bodyPlaceholder);
-    rewriter.eraseBlock(bodyPlaceholder);
-
-    // Scope cleanup: the destroy region.
-    mlir::Region &destroyRegion = coroOp.getDestroy();
-    mlir::Block *cleanupPlaceholder = &scope.getCleanupRegion().front();
-    rewriter.inlineRegionBefore(destroyRegion, cleanupPlaceholder);
-    rewriter.eraseBlock(cleanupPlaceholder);
-
-    mlir::Region &exitRegion = coroOp.getExit();
-    mlir::Block *beforeExit = &exitRegion.front();
-
-    for (auto &coroExit : coroExitsOps) {
-      // TODO(cir): once the GRO region is supported, this may need to branch
-      // there instead of to the exit region.
-      assert(!cir::MissingFeatures::coroutineGetRetObjManager());
-      rewriter.setInsertionPoint(coroExit);
-      rewriter.replaceOpWithNewOp<cir::BrOp>(coroExit, mlir::ValueRange{},
-                                             beforeExit);
-    }
-
-    // Exit region: inline it right after the scope, which falls through to it.
-    rewriter.setInsertionPointAfter(scope);
-    mlir::Block *afterCleanup =
-        rewriter.splitBlock(remainingOpsBlock, rewriter.getInsertionPoint());
-    rewriter.inlineRegionBefore(exitRegion, afterCleanup);
-
-    rewriter.setInsertionPointAfter(scope);
-    cir::BrOp::create(rewriter, loc, mlir::ValueRange(), beforeExit);
+    mlir::Block *beforeExit = &coroOp.getExit().front();
+    lowerCoroExits(rewriter, coroExitsOps, beforeExit);
+    inlineExitRegion(rewriter, coroOp, scope, remainingOpsBlock);
 
     auto func = coroOp->getParentOfType<cir::FuncOp>();
     // The coroutine regions have been flattened, so the original coroutine
@@ -2293,6 +2349,148 @@ public:
 };
 
 class CIRAwaitOpFlattening : public mlir::OpRewritePattern<cir::AwaitOp> {
+  // The ready region ends in a cir.condition that holds the result of
+  // `await_ready()`. Replace it with a cir.brcond: if the awaiter is already
+  // ready, skip the suspension and go straight to the resume region
+  // otherwise go to the suspend region.
+  void flattenReadyRegion(mlir::PatternRewriter &rewriter, cir::AwaitOp awaitOp,
+                          mlir::Block *resumeEntry, mlir::Block *suspendEntry,
+                          mlir::Block *remainingOpsBlock) const {
+    mlir::Region &readyRegion = awaitOp.getReady();
+    auto conditionOp =
+        cast<cir::ConditionOp>(readyRegion.back().getTerminator());
+    rewriter.setInsertionPoint(conditionOp);
+    rewriter.replaceOpWithNewOp<cir::BrCondOp>(
+        conditionOp, conditionOp.getCondition(), resumeEntry, suspendEntry);
+    rewriter.inlineRegionBefore(readyRegion, remainingOpsBlock);
+  }
+
+  // The suspend region runs `await_suspend()` and ends in a
+  // cir.coro.suspend_point. Emit cir.coro.intrinsic.save and
+  // cir.coro.intrinsic.suspend around it, and replace the suspend point with a
+  // cir.switch.flat on the suspend result, which decides whether the coroutine
+  // resumes, is destroyed or stays suspended.
+  void flattenSuspendRegion(mlir::PatternRewriter &rewriter,
+                            cir::AwaitOp awaitOp, mlir::Block *resumeEntry,
+                            mlir::Block *remainingOpsBlock) const {
+    mlir::Region &suspendRegion = awaitOp.getSuspend();
+    // TODO(cir): support an await_suspend() that returns bool (it can veto
+    // the suspension and resume right away) by flattening it into a brcond.
+    auto suspendPoint =
+        cast<cir::CoroSuspendPoint>(suspendRegion.back().getTerminator());
+    cir::CoroSuspendOp coroSuspendIntri =
+        emitCoroSuspend(rewriter, awaitOp, suspendPoint);
+
+    // Inline the suspend region before creating the destroy and suspended
+    // blocks, so they are placed right after it, in front of the continuation.
+    rewriter.inlineRegionBefore(suspendRegion, remainingOpsBlock);
+
+    mlir::Location loc = awaitOp.getLoc();
+    mlir::Block *cleanupBlock =
+        createDestroyBlock(rewriter, loc, remainingOpsBlock);
+    mlir::Block *retBlock =
+        createSuspendedBlock(rewriter, loc, remainingOpsBlock);
+
+    // 0 resumes, 1 destroys and the default (-1) stays suspended.
+    llvm::SmallVector<mlir::APInt> caseValues{mlir::APInt(8, 0),
+                                              mlir::APInt(8, 1)};
+    llvm::SmallVector<mlir::Block *> caseDestinations{resumeEntry,
+                                                      cleanupBlock};
+    llvm::SmallVector<mlir::ValueRange> caseOperands{caseValues.size()};
+
+    // Dispatch to the appropriate coroutine path based on the result of
+    // `cir.coro.intrinsic.suspend`: resume, destroy, or suspend.
+    rewriter.setInsertionPoint(suspendPoint);
+    rewriter.replaceOpWithNewOp<cir::SwitchFlatOp>(
+        suspendPoint, coroSuspendIntri.getResult(), retBlock,
+        mlir::ValueRange{}, caseValues, caseDestinations, caseOperands);
+  }
+
+  // Emit cir.coro.intrinsic.save at the start of the suspend region and
+  // cir.coro.intrinsic.suspend right before its cir.coro.suspend_point.
+  cir::CoroSuspendOp emitCoroSuspend(mlir::PatternRewriter &rewriter,
+                                     cir::AwaitOp awaitOp,
+                                     cir::CoroSuspendPoint suspendPoint) const {
+    mlir::Location loc = awaitOp.getLoc();
+
+    // cir.coro.intrinsic.suspend takes the token produced by
+    // cir.coro.intrinsic.save as its first argument, so emit the save first.
+    rewriter.setInsertionPointToStart(&awaitOp.getSuspend().front());
+
+    // The save goes first in the suspend region, before await_suspend()
+    // runs, so the coroutine is already considered suspended (and can be
+    // resumed) from that point.
+    auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(getContext()));
+    auto nullPtr = cir::ConstantOp::create(
+        rewriter, loc,
+        cir::ConstPtrAttr::get(voidPtrTy, rewriter.getI64IntegerAttr(0)));
+    auto coroSave = cir::CoroSaveOp::create(rewriter, loc, nullPtr);
+    rewriter.setInsertionPoint(suspendPoint);
+
+    // The second argument to `cir.coro.intrinsic.suspend` indicates whether
+    // this is the final suspend point. Coroutines suspended at a final suspend
+    // point are considered done (`cir.coro.intrinsic.done` returns true) and
+    // may only be destroyed; resuming them is undefined behavior.
+    bool isFinalSuspend = awaitOp.getKind() == cir::AwaitKind::Final;
+    auto isFinalCoroSuspend = cir::ConstantOp::create(
+        rewriter, loc, cir::BoolAttr::get(getContext(), isFinalSuspend));
+
+    // cir.coro.intrinsic.suspend returns:
+    //  -1 : coroutine suspended
+    //   0 : coroutine resumed
+    //   1 : coroutine destroyed
+    return cir::CoroSuspendOp::create(
+        rewriter, loc,
+        mlir::ValueRange{coroSave.getResult(), isFinalCoroSuspend});
+  }
+
+  // Destroy case. Classic codegen uses EmitBranchThroughCleanup() so every
+  // enclosing cleanup runs before the frame is freed. Here the destroy block
+  // is a single cir.yield, meant to leave through the coroutine cleanup scope
+  // (cir.coro.intrinsic.free) and then reach the exit region.
+  //
+  // FIXME: This only works when the await is directly in the coroutine
+  // body. Any enclosing cir.cleanup.scope or loop treats the cir.yield as
+  // a normal fallthrough, so after running its cleanups the destroy path
+  // continues into the rest of the body (or the next loop iteration)
+  // instead of reaching cir.coro.intrinsic.free. This needs a dedicated
+  // terminator that createExitTerminator propagates through cleanup scopes
+  // (like cir.co_return) and that CIRCoroutineFlattening rewrites into a
+  // branch to the coroutine cleanup. See silly_task_with_dtor in
+  // clang/test/CIR/CodeGenCoroutines/coro-task.cpp.
+  mlir::Block *createDestroyBlock(mlir::PatternRewriter &rewriter,
+                                  mlir::Location loc,
+                                  mlir::Block *insertBefore) const {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    mlir::Block *cleanupBlock = rewriter.createBlock(insertBefore);
+    cir::YieldOp::create(rewriter, loc);
+    return cleanupBlock;
+  }
+
+  // Suspended case: cir.coro.exit, which CIRCoroutineFlattening turns into
+  // a branch to the exit region.
+  mlir::Block *createSuspendedBlock(mlir::PatternRewriter &rewriter,
+                                    mlir::Location loc,
+                                    mlir::Block *insertBefore) const {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    assert(!cir::MissingFeatures::coroutineGetRetObjManager());
+    mlir::Block *retBlock = rewriter.createBlock(insertBefore);
+    cir::CoroExitOp::create(rewriter, loc);
+    return retBlock;
+  }
+
+  void flattenResumeRegion(mlir::PatternRewriter &rewriter,
+                           cir::AwaitOp awaitOp,
+                           mlir::Block *remainingOpsBlock) const {
+    mlir::Region &resumeRegion = awaitOp.getResume();
+    auto resumeYield = cast<cir::YieldOp>(resumeRegion.back().getTerminator());
+    rewriter.setInsertionPoint(resumeYield);
+    // Once the coroutine resumes, continue with the operations that
+    // originally followed the await.
+    rewriter.replaceOpWithNewOp<cir::BrOp>(resumeYield, remainingOpsBlock);
+    rewriter.inlineRegionBefore(resumeRegion, remainingOpsBlock);
+  }
+
 public:
   using OpRewritePattern<cir::AwaitOp>::OpRewritePattern;
 
@@ -2304,8 +2502,8 @@ public:
   //                 ready              await_ready()
   //            true /     \ false
   //                |       v
-  //                |    suspend        coro.save, await_suspend(),
-  //                |   /   |   \       coro.suspend
+  //                |    suspend        await_suspend(), with
+  //                |   /   |   \       cir.coro.intrinsic.save/suspend
   //                | 0/   1|    \-1 (default)
   //                v v     v     v
   //              resume  destroy  suspended
@@ -2314,12 +2512,14 @@ public:
   //           continuation             ops after the await
   //
   // `destroy` is meant to leave through the enclosing cleanups to the
-  // coroutine's destroy region (see the FIXME below), and `suspended` goes
-  // straight to its exit region (see CIRCoroutineFlattening).
+  // coroutine's destroy region (see the FIXME on createDestroyBlock), and
+  // `suspended` goes straight to its exit region (see CIRCoroutineFlattening).
   mlir::LogicalResult
   matchAndRewrite(cir::AwaitOp awaitOp,
                   mlir::PatternRewriter &rewriter) const override {
-
+    // Nested ops (cir.if, cir.scope, cir.try, cleanup scopes, ...) must be
+    // flattened first. Fail here so the rewriter processes them before
+    // flattening this op.
     for (mlir::Region &region : awaitOp->getRegions())
       if (hasNestedOpsToFlatten(region))
         return mlir::failure();
@@ -2330,134 +2530,23 @@ public:
     mlir::Block *remainingOpsBlock =
         rewriter.splitBlock(awaitBlock, rewriter.getInsertionPoint());
 
-    mlir::Location loc = awaitOp.getLoc();
+    // Take the entry blocks before the regions are inlined.
+    mlir::Block *readyEntry = &awaitOp.getReady().front();
+    mlir::Block *suspendEntry = &awaitOp.getSuspend().front();
+    mlir::Block *resumeEntry = &awaitOp.getResume().front();
 
-    mlir::Region &readyRegion = awaitOp.getReady();
-    mlir::Block &beforeReady = awaitOp.getReady().front();
-    mlir::Region &suspendRegion = awaitOp.getSuspend();
-    mlir::Region &resumeRegion = awaitOp.getResume();
-    auto conditionOp =
-        cast<cir::ConditionOp>(readyRegion.back().getTerminator());
-    {
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPoint(conditionOp);
-      // The condition is the result of `await_ready()`. If true, execution
-      // continues in the resume region otherwise, control transfers to the
-      // suspend region.
-      rewriter.replaceOpWithNewOp<cir::BrCondOp>(
-          conditionOp, conditionOp.getCondition(), &resumeRegion.front(),
-          &suspendRegion.front());
-    }
-    rewriter.inlineRegionBefore(readyRegion, remainingOpsBlock);
+    flattenReadyRegion(rewriter, awaitOp, resumeEntry, suspendEntry,
+                       remainingOpsBlock);
 
-    {
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToEnd(awaitBlock);
-      // After inlining the ready region, branch from the original await block
-      // to the beginning of the inlined ready-region
-      cir::BrOp::create(rewriter, loc, mlir::ValueRange(), &beforeReady);
-    }
+    // After inlining the ready region, branch from the original await block
+    // to the beginning of the inlined ready region.
+    rewriter.setInsertionPointToEnd(awaitBlock);
+    cir::BrOp::create(rewriter, awaitOp.getLoc(), readyEntry);
 
-    // TODO(cir): support an await_suspend() that returns bool (it can veto
-    // the suspension and resume right away) by flattening it into a brcond.
-    auto suspendPoint =
-        cast<cir::CoroSuspendPoint>(suspendRegion.back().getTerminator());
-    cir::CoroSuspendOp coroSuspendIntri = nullptr;
-    {
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPoint(&suspendRegion.front().front());
-
-      // coro.save goes first in the suspend region, before await_suspend()
-      // runs, so the coroutine is already considered suspended (and can be
-      // resumed) from that point.
-      auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(getContext()));
-      auto nullPtr = cir::ConstantOp::create(
-          rewriter, loc,
-          cir::ConstPtrAttr::get(voidPtrTy, rewriter.getI64IntegerAttr(0)));
-      auto coroSave = cir::CoroSaveOp::create(rewriter, loc, nullPtr);
-      rewriter.setInsertionPoint(suspendPoint);
-
-      // The second argument to `llvm.coro.suspend` indicates whether this is
-      // the final suspend point. Coroutines suspended at a final suspend point
-      // are considered done (`llvm.coro.done` returns true) and may only be
-      // destroyed; resuming them is undefined behavior.
-      bool isFinalSuspend = awaitOp.getKind() == cir::AwaitKind::Final;
-      auto isFinalCoroSuspend = cir::ConstantOp::create(
-          rewriter, loc, cir::BoolAttr::get(getContext(), isFinalSuspend));
-
-      // llvm.coro.suspend returns:
-      //  -1 : coroutine suspended
-      //   0 : coroutine resumed
-      //   1 : coroutine destroyed
-      coroSuspendIntri = cir::CoroSuspendOp::create(
-          rewriter, loc,
-          mlir::ValueRange{coroSave.getResult(), isFinalCoroSuspend});
-    }
-    rewriter.inlineRegionBefore(suspendRegion, remainingOpsBlock);
-
-    {
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPoint(suspendPoint);
-      llvm::SmallVector<mlir::APInt> caseValues{mlir::APInt(8, 0),
-                                                mlir::APInt(8, 1)};
-
-      llvm::SmallVector<mlir::ValueRange> caseOperands{caseValues.size()};
-
-      // Destroy case. Classic codegen uses EmitBranchThroughCleanup() so every
-      // enclosing cleanup runs before coro.free. Here the destroy block is a
-      // single cir.yield, meant to leave through the coroutine cleanup scope
-      // (coro.free) and then reach the exit region.
-      //
-      // FIXME: This only works when the await is directly in the coroutine
-      // body. Any enclosing cir.cleanup.scope or loop treats the cir.yield as
-      // a normal fallthrough, so after running its cleanups the destroy path
-      // continues into the rest of the body (or the next loop iteration)
-      // instead of reaching coro.free. This needs a dedicated terminator that
-      // createExitTerminator propagates through cleanup scopes (like
-      // cir.co_return) and that CIRCoroutineFlattening rewrites into a branch
-      // to the coroutine cleanup. See silly_task_with_dtor in
-      // clang/test/CIR/CodeGenCoroutines/coro-task.cpp.
-      mlir::Block *cleanupBlock = nullptr;
-      {
-        mlir::OpBuilder::InsertionGuard guard(rewriter);
-        cleanupBlock = rewriter.createBlock(remainingOpsBlock);
-        cir::YieldOp::create(rewriter, loc);
-      }
-
-      // Suspended case: cir.coro.exit, which CIRCoroutineFlattening turns into
-      // a branch to the exit region.
-      mlir::Block *retBlock = nullptr;
-      {
-        mlir::OpBuilder::InsertionGuard guard(rewriter);
-        assert(!cir::MissingFeatures::coroutineGetRetObjManager());
-        retBlock = rewriter.createBlock(remainingOpsBlock);
-        cir::CoroExitOp::create(rewriter, loc);
-      }
-      // 0 resumes, 1 destroys and the default (-1) stays suspended.
-      llvm::SmallVector<mlir::Block *> caseDestinations{&resumeRegion.front(),
-                                                        cleanupBlock};
-
-      // Dispatch to the appropriate coroutine path based on the result of
-      // `llvm.coro.suspend`: resume, destroy, or suspend.
-      auto coroSuspendSwitch = cir::SwitchFlatOp::create(
-          rewriter, loc, coroSuspendIntri.getResult(), retBlock,
-          mlir::ValueRange{}, caseValues, caseDestinations, caseOperands);
-
-      rewriter.replaceOp(suspendPoint, coroSuspendSwitch);
-    }
-
-    auto resumeYield = cast<cir::YieldOp>(resumeRegion.back().getTerminator());
-    {
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPoint(resumeYield);
-      // Once the coroutine resumes, continue with the operations that
-      // originally followed the await.
-      rewriter.replaceOpWithNewOp<cir::BrOp>(resumeYield, remainingOpsBlock);
-    }
-    rewriter.inlineRegionBefore(resumeRegion, remainingOpsBlock);
+    flattenSuspendRegion(rewriter, awaitOp, resumeEntry, remainingOpsBlock);
+    flattenResumeRegion(rewriter, awaitOp, remainingOpsBlock);
 
     rewriter.eraseOp(awaitOp);
-
     return mlir::success();
   }
 };
