@@ -1246,7 +1246,7 @@ void StructurizeCFG::createFlow() {
 }
 
 /// Handle a rare case where the disintegrated nodes instructions
-/// no longer dominate all their uses. Not sure if this is really necessary
+/// no longer dominate all their uses.
 void StructurizeCFG::rebuildSSA() {
   SSAUpdater Updater;
   for (BasicBlock *BB : ParentRegion->blocks())
