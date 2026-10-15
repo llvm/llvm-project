@@ -38,7 +38,8 @@ func.func @_QMmPcallee() {
 // CHECK-LABEL: func.func @_QMmPcall_through_ptr()
 // CHECK:         %[[REF:.*]] = fir.address_of(@_QMmEtarget_ptr) : !fir.ref<() -> ()>
 // CHECK:         %[[LOAD:.*]] = fir.load %[[REF]] : !fir.ref<() -> ()>
-// CHECK:         fir.call %[[LOAD]]() : () -> ()
+// CHECK:         %[[CALLEE:.*]] = fir.convert %[[LOAD]] : (() -> ()) -> (() -> ())
+// CHECK:         fir.call %[[CALLEE]]() : () -> ()
 func.func @_QMmPcall_through_ptr() {
   %0 = fir.address_of(@_QMmEtarget_ptr) : !fir.ref<!fir.boxproc<() -> ()>>
   %1 = fir.load %0 : !fir.ref<!fir.boxproc<() -> ()>>
