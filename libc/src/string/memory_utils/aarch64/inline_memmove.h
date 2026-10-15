@@ -17,21 +17,16 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#if defined(__ARM_NEON)
-using uint128_t = generic_v128;
-using uint256_t = generic_v256;
-using uint512_t = generic_v512;
-using AlignT = uint256_t;
-using LoopT = uint512_t;
-#else
-using uint128_t = cpp::array<uint64_t, 2>;
-using uint256_t = cpp::array<uint64_t, 4>;
-using AlignT = uint128_t;
-using LoopT = uint256_t;
-#endif
-
 LIBC_INLINE bool inline_memmove_small_size_aarch64(Ptr dst, CPtr src,
                                                    size_t count) {
+#if defined(__ARM_NEON)
+  using uint128_t = generic_v128;
+  using uint256_t = generic_v256;
+  using uint512_t = generic_v512;
+#else
+  using uint128_t = cpp::array<uint64_t, 2>;
+  using uint256_t = cpp::array<uint64_t, 4>;
+#endif
   if (count == 0)
     return true;
   if (count == 1) {
@@ -69,6 +64,13 @@ LIBC_INLINE bool inline_memmove_small_size_aarch64(Ptr dst, CPtr src,
 
 LIBC_INLINE void inline_memmove_follow_up_aarch64(Ptr dst, CPtr src,
                                                   size_t count) {
+#if defined(__ARM_NEON)
+  using AlignT = generic_v256;
+  using LoopT = generic_v512;
+#else
+  using AlignT = cpp::array<uint64_t, 2>;
+  using LoopT = cpp::array<uint64_t, 4>;
+#endif
   if (dst < src) {
     generic::Memmove<AlignT>::align_forward<Arg::Src>(dst, src, count);
     return generic::Memmove<LoopT>::loop_and_tail_forward(dst, src, count);
