@@ -6469,7 +6469,7 @@ bool SROA::promoteAllocas() {
   if (PromotableAllocas.empty())
     return false;
 
-  if (ScalarOptions::Global.sroa_skip_mem2reg) {
+  if (C->getLibraryOptions().get<ScalarOptions>().sroa_skip_mem2reg) {
     LLVM_DEBUG(dbgs() << "Not promoting allocas with mem2reg!\n");
   } else {
     LLVM_DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");

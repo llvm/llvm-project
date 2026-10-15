@@ -269,13 +269,18 @@ static unsigned getHashValueImpl(SimpleValue Val) {
                       hash_combine_range(Inst->operand_values()));
 }
 
+#ifndef NDEBUG
+// -earlycse-debug-hash of the function being processed, bound once per run.
+static LLVM_THREAD_LOCAL bool DebugHash;
+#endif
+
 unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
 #ifndef NDEBUG
   // If -earlycse-debug-hash was specified, return a constant -- this
   // will force all hashing to collide, so we'll exhaustively search
   // the table for a match, and the assertion in isEqual will fire if
   // there's a bug causing equal keys to hash differently.
-  if (ScalarOptions::Global.earlycse_debug_hash)
+  if (DebugHash)
     return 0;
 #endif
   return getHashValueImpl(Val);
@@ -499,6 +504,7 @@ namespace {
 /// expected that a later pass of GVN will catch the interesting/hard cases.
 class EarlyCSE {
 public:
+  const ScalarOptions &Opts;
   const TargetLibraryInfo &TLI;
   const TargetTransformInfo &TTI;
   DominatorTree &DT;
@@ -589,11 +595,11 @@ public:
   unsigned CurrentGeneration = 0;
 
   /// Set up the EarlyCSE runner for a particular function.
-  EarlyCSE(const DataLayout &DL, const TargetLibraryInfo &TLI,
-           const TargetTransformInfo &TTI, DominatorTree &DT,
-           AssumptionCache &AC, MemorySSA *MSSA)
-      : TLI(TLI), TTI(TTI), DT(DT), AC(AC), SQ(DL, &TLI, &DT, &AC), MSSA(MSSA),
-        MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {}
+  EarlyCSE(const ScalarOptions &Opts, const DataLayout &DL,
+           const TargetLibraryInfo &TLI, const TargetTransformInfo &TTI,
+           DominatorTree &DT, AssumptionCache &AC, MemorySSA *MSSA)
+      : Opts(Opts), TLI(TLI), TTI(TTI), DT(DT), AC(AC), SQ(DL, &TLI, &DT, &AC),
+        MSSA(MSSA), MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {}
 
   bool run();
 
@@ -1019,7 +1025,7 @@ bool EarlyCSE::isSameMemGeneration(unsigned EarlierGeneration,
   // EarlierInst and LaterInst and neither can any other write that potentially
   // clobbers LaterInst.
   MemoryAccess *LaterDef;
-  if (ClobberCounter < ScalarOptions::Global.earlycse_mssa_optimization_cap) {
+  if (ClobberCounter < Opts.earlycse_mssa_optimization_cap) {
     LaterDef = MSSA->getWalker()->getClobberingMemoryAccess(LaterInst);
     ClobberCounter++;
   } else
@@ -1682,6 +1688,9 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 }
 
 bool EarlyCSE::run() {
+#ifndef NDEBUG
+  DebugHash = Opts.earlycse_debug_hash;
+#endif
   // Note, deque is being used here because there is significant performance
   // gains over vector when the container becomes very large due to the
   // specific access patterns. For more information see the mailing list
@@ -1741,7 +1750,8 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
   auto *MSSA =
       UseMemorySSA ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA() : nullptr;
 
-  EarlyCSE CSE(F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
+  EarlyCSE CSE(F.getContext().getLibraryOptions().get<ScalarOptions>(),
+               F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
 
   if (!CSE.run())
     return PreservedAnalyses::all();
@@ -1795,7 +1805,8 @@ public:
     auto *MSSA =
         UseMemorySSA ? &getAnalysis<MemorySSAWrapperPass>().getMSSA() : nullptr;
 
-    EarlyCSE CSE(F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
+    EarlyCSE CSE(F.getContext().getLibraryOptions().get<ScalarOptions>(),
+                 F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
 
     return CSE.run();
   }

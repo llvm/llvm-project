@@ -76,8 +76,10 @@ namespace llvm {
 extern cl::opt<bool> EnableVTableValueProfiling;
 } // namespace llvm
 
-bool llvm::isProfileCorrelationEnabled() {
-  return InstrumentationOptions::Global.profile_correlate.has_value();
+bool llvm::isProfileCorrelationEnabled(
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<InstrumentationOptions>()
+      .profile_correlate.has_value();
 }
 
 namespace {
@@ -639,8 +641,9 @@ PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
   auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  InstrLowerer Lowerer(InstrumentationOptions::Global, M, Options, GetTLI,
-                       IsCS);
+  const InstrumentationOptions &Opts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  InstrLowerer Lowerer(Opts, M, Options, GetTLI, IsCS);
   if (!Lowerer.lower())
     return PreservedAnalyses::all();
 
@@ -2441,8 +2444,9 @@ void createProfileSamplingVar(Module &M) {
   const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_SAMPLING_VAR));
   IntegerType *SamplingVarTy;
   Constant *ValueZero;
-  if (getSampledInstrumentationConfig(InstrumentationOptions::Global)
-          .UseShort) {
+  const InstrumentationOptions &Opts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  if (getSampledInstrumentationConfig(Opts).UseShort) {
     SamplingVarTy = Type::getInt16Ty(M.getContext());
     ValueZero = Constant::getIntegerValue(SamplingVarTy, APInt(16, 0));
   } else {

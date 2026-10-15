@@ -592,13 +592,33 @@ void insertModuleCtor(const InstrumentationOptions &Opts, Module &M) {
 
 } // end anonymous namespace
 
-MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K,
-                                               bool EC) {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
-  Kernel = valueOr(Opts.msan_kernel, K);
-  TrackOrigins = Opts.msan_track_origins.value_or(Kernel ? 2 : TO);
-  Recover = valueOr(Opts.msan_keep_going, Kernel || R);
-  EagerChecks = valueOr(Opts.msan_eager_checks, EC);
+MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K, bool EC)
+    : Kernel(K), TrackOrigins(TO), Recover(R), EagerChecks(EC) {}
+
+static MemorySanitizerOptions applyParams(MemorySanitizerOptions O) {
+  O.Kernel = O.KernelParam.value_or(O.Kernel);
+  O.TrackOrigins = O.TrackOriginsParam.value_or(O.TrackOrigins);
+  O.Recover = O.RecoverParam.value_or(O.Recover);
+  O.EagerChecks = O.EagerChecksParam.value_or(O.EagerChecks);
+  return O;
+}
+
+static MemorySanitizerOptions applyKernelDefaults(MemorySanitizerOptions O) {
+  if (O.Kernel) {
+    O.TrackOrigins = 2;
+    O.Recover = true;
+  }
+  return O;
+}
+
+static MemorySanitizerOptions resolveOptions(const InstrumentationOptions &Opts,
+                                             MemorySanitizerOptions O) {
+  O.Kernel = valueOr(Opts.msan_kernel, O.Kernel);
+  O = applyKernelDefaults(O);
+  O.TrackOrigins = Opts.msan_track_origins.value_or(O.TrackOrigins);
+  O.Recover = valueOr(Opts.msan_keep_going, O.Recover);
+  O.EagerChecks = valueOr(Opts.msan_eager_checks, O.EagerChecks);
+  return applyParams(O);
 }
 
 PreservedAnalyses MemorySanitizerPass::run(Module &M,
@@ -606,9 +626,11 @@ PreservedAnalyses MemorySanitizerPass::run(Module &M,
   // Return early if nosanitize_memory module flag is present for the module.
   if (checkIfAlreadyInstrumented(M, "nosanitize_memory"))
     return PreservedAnalyses::all();
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  MemorySanitizerOptions MSanOpts = resolveOptions(Opts, Options);
   bool Modified = false;
-  if (!Options.Kernel) {
+  if (!MSanOpts.Kernel) {
     insertModuleCtor(Opts, M);
     Modified = true;
   }
@@ -617,7 +639,7 @@ PreservedAnalyses MemorySanitizerPass::run(Module &M,
   for (Function &F : M) {
     if (F.empty())
       continue;
-    MemorySanitizer Msan(Opts, *F.getParent(), Options);
+    MemorySanitizer Msan(Opts, *F.getParent(), MSanOpts);
     Modified |=
         Msan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F));
   }
@@ -638,13 +660,14 @@ void MemorySanitizerPass::printPipeline(
   static_cast<PassInfoMixin<MemorySanitizerPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
   OS << '<';
-  if (Options.Recover)
+  MemorySanitizerOptions O = applyParams(applyKernelDefaults(Options));
+  if (O.Recover)
     OS << "recover;";
-  if (Options.Kernel)
+  if (O.Kernel)
     OS << "kernel;";
-  if (Options.EagerChecks)
+  if (O.EagerChecks)
     OS << "eager-checks;";
-  OS << "track-origins=" << Options.TrackOrigins;
+  OS << "track-origins=" << O.TrackOrigins;
   OS << '>';
 }
 

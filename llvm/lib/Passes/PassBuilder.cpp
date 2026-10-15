@@ -570,8 +570,11 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
-    : Opts(PassesOptions::Global), TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC),
-      FS(std::move(FS)) {
+    : LibraryOptions(PTO.LibraryOptions ? PTO.LibraryOptions
+                     : TM               ? TM->Options.MCOptions.LibraryOptions
+                                        : nullptr),
+      Opts(cl::LibraryOptionsContext::get<PassesOptions>(LibraryOptions)),
+      TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {
@@ -1162,19 +1165,21 @@ Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     if (ParamName == "recover") {
-      Result.Recover = true;
+      Result.RecoverParam = true;
     } else if (ParamName == "kernel") {
-      Result.Kernel = true;
+      Result.KernelParam = true;
     } else if (ParamName.consume_front("track-origins=")) {
-      if (ParamName.getAsInteger(0, Result.TrackOrigins))
+      int TrackOrigins;
+      if (ParamName.getAsInteger(0, TrackOrigins))
         return make_error<StringError>(
             formatv("invalid argument to MemorySanitizer pass track-origins "
                     "parameter: '{}'",
                     ParamName)
                 .str(),
             inconvertibleErrorCode());
+      Result.TrackOriginsParam = TrackOrigins;
     } else if (ParamName == "eager-checks") {
-      Result.EagerChecks = true;
+      Result.EagerChecksParam = true;
     } else {
       return make_error<StringError>(
           formatv("invalid MemorySanitizer pass parameter '{}'", ParamName)

@@ -195,7 +195,8 @@ getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
 
 static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
                               ScalarEvolution &SE,
-                              const BoundsCheckingPass::Options &Opts) {
+                              const BoundsCheckingPass::Options &Opts,
+                              bool SingleTrap) {
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
@@ -248,8 +249,8 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   // flags, this will either create a single block for the entire function or
   // will create a fresh block every time it is called.
   BasicBlock *ReuseTrapBB = nullptr;
-  auto GetTrapBB = [&ReuseTrapBB, &Opts, &Name](BuilderTy &IRB,
-                                                BasicBlock *Cont) {
+  auto GetTrapBB = [&ReuseTrapBB, &Opts, &Name, SingleTrap](BuilderTy &IRB,
+                                                            BasicBlock *Cont) {
     Function *Fn = IRB.GetInsertBlock()->getParent();
     auto DebugLoc = IRB.getCurrentDebugLocation();
     IRBuilder<>::InsertPointGuard Guard(IRB);
@@ -283,9 +284,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     // local-bounds. Make sure to change that too.
     if (Opts.Rt && Opts.Rt->HandlerPreserveAllRegs && MayReturn)
       TrapCall->setCallingConv(CallingConv::PreserveAll);
-    if (!MayReturn &&
-        InstrumentationOptions::Global.bounds_checking_single_trap &&
-        !DebugTrapBB)
+    if (!MayReturn && SingleTrap && !DebugTrapBB)
       ReuseTrapBB = TrapBB;
 
     return TrapBB;
@@ -304,7 +303,9 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
 
-  if (!addBoundsChecking(F, TLI, SE, Opts))
+  const InstrumentationOptions &CLOpts =
+      F.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  if (!addBoundsChecking(F, TLI, SE, Opts, CLOpts.bounds_checking_single_trap))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

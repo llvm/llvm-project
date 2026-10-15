@@ -24,7 +24,8 @@
 
 namespace llvm {
 // Get AddressSanitizer parameters.
-LLVM_ABI void getAddressSanitizerParams(const Triple &TargetTriple,
+LLVM_ABI void getAddressSanitizerParams(const LLVMContext &Ctx,
+                                        const Triple &TargetTriple,
                                         int LongSize, bool IsKasan,
                                         uint64_t *ShadowBase, int *MappingScale,
                                         bool *OrShadowOffset);

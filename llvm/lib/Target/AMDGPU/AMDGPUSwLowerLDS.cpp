@@ -1206,8 +1206,8 @@ void AMDGPUSwLowerLDS::initAsanInfo() {
   uint64_t Offset;
   int Scale;
   bool OrShadowOffset;
-  llvm::getAddressSanitizerParams(M.getTargetTriple(), LongSize, false, &Offset,
-                                  &Scale, &OrShadowOffset);
+  llvm::getAddressSanitizerParams(M.getContext(), M.getTargetTriple(), LongSize,
+                                  false, &Offset, &Scale, &OrShadowOffset);
   AsanInfo.Scale = Scale;
   AsanInfo.Offset = Offset;
 }

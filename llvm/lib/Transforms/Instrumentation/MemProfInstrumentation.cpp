@@ -172,7 +172,8 @@ MemProfilerPass::MemProfilerPass() = default;
 
 PreservedAnalyses MemProfilerPass::run(Function &F,
                                        AnalysisManager<Function> &AM) {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts =
+      F.getContext().getLibraryOptions().get<InstrumentationOptions>();
   assert((!Opts.memprof_histogram ||
           Opts.memprof_mapping_granularity == DefaultMemGranularity) &&
          "Memprof with histogram only supports default mapping granularity");
@@ -188,7 +189,9 @@ ModuleMemProfilerPass::ModuleMemProfilerPass() = default;
 PreservedAnalyses ModuleMemProfilerPass::run(Module &M,
                                              AnalysisManager<Module> &AM) {
 
-  ModuleMemProfiler Profiler(InstrumentationOptions::Global, M);
+  const InstrumentationOptions &Opts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  ModuleMemProfiler Profiler(Opts, M);
   if (Profiler.instrumentModule(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

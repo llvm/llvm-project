@@ -176,14 +176,14 @@ class LoopIdiomRecognize {
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
 public:
-  explicit LoopIdiomRecognize(AliasAnalysis *AA, DominatorTree *DT,
-                              LoopInfo *LI, ScalarEvolution *SE,
-                              TargetLibraryInfo *TLI,
+  explicit LoopIdiomRecognize(const ScalarOptions &Opts, AliasAnalysis *AA,
+                              DominatorTree *DT, LoopInfo *LI,
+                              ScalarEvolution *SE, TargetLibraryInfo *TLI,
                               const TargetTransformInfo *TTI, MemorySSA *MSSA,
                               const DataLayout *DL,
                               OptimizationRemarkEmitter &ORE)
-      : Opts(ScalarOptions::Global), AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI),
-        TTI(TTI), DL(DL), ORE(ORE) {
+      : Opts(Opts), AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL),
+        ORE(ORE) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
@@ -297,7 +297,9 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
-  LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
+  const ScalarOptions &Opts =
+      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  LoopIdiomRecognize LIR(Opts, &AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
                          AR.MSSA, DL, ORE);
   if (!LIR.runOnLoop(&L))
     return PreservedAnalyses::all();

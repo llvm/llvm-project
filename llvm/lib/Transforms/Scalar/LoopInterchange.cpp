@@ -635,11 +635,11 @@ struct LoopInterchange {
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;
 
-  LoopInterchange(ScalarEvolution *SE, LoopInfo *LI, DependenceInfo *DI,
-                  DominatorTree *DT, LoopStandardAnalysisResults *AR,
+  LoopInterchange(const ScalarOptions &Opts, ScalarEvolution *SE, LoopInfo *LI,
+                  DependenceInfo *DI, DominatorTree *DT,
+                  LoopStandardAnalysisResults *AR,
                   OptimizationRemarkEmitter *ORE)
-      : Opts(ScalarOptions::Global), SE(SE), LI(LI), DI(DI), DT(DT), AR(AR),
-        ORE(ORE) {}
+      : Opts(Opts), SE(SE), LI(LI), DI(DI), DT(DT), AR(AR), ORE(ORE) {}
 
   bool run(Loop *L) {
     if (L->getParentLoop())
@@ -2711,7 +2711,9 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   });
 
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
-  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, &AR, &ORE).run(LN))
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  if (!LoopInterchange(Opts, &AR.SE, &AR.LI, &DI, &AR.DT, &AR, &ORE).run(LN))
     return PreservedAnalyses::all();
   U.markLoopNestChanged(true);
   return getLoopPassPreservedAnalyses();

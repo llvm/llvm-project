@@ -62,8 +62,6 @@ LLVM_ABI void setGlobalVariableLargeSection(const Triple &TargetTriple,
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
-  LLVM_ABI static GCOVOptions getDefault();
-
   // Specify whether to emit .gcno files.
   bool EmitNotes;
 

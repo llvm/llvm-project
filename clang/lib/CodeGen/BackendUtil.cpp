@@ -144,10 +144,13 @@ extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
 }
 
 // Path and name of file used for profile generation
-static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
-  std::string FileName = CodeGenOpts.InstrProfileOutput.empty()
-                             ? llvm::driver::getDefaultProfileGenName()
-                             : CodeGenOpts.InstrProfileOutput;
+static std::string
+getProfileGenName(const cl::LibraryOptionsContext &LibraryOptions,
+                  const CodeGenOptions &CodeGenOpts) {
+  std::string FileName =
+      CodeGenOpts.InstrProfileOutput.empty()
+          ? llvm::driver::getDefaultProfileGenName(LibraryOptions)
+          : CodeGenOpts.InstrProfileOutput;
   if (CodeGenOpts.ContinuousProfileSync)
     FileName = "%c" + FileName;
   return FileName;
@@ -529,8 +532,8 @@ getGCOVOptions(const CodeGenOptions &CodeGenOpts, const LangOptions &LangOpts) {
   if (CodeGenOpts.CoverageNotesFile.empty() &&
       CodeGenOpts.CoverageDataFile.empty())
     return std::nullopt;
-  // Not using 'GCOVOptions::getDefault' allows us to avoid exiting if
-  // LLVM's -default-gcov-version flag is set to something invalid.
+  // Not using GCOVProfilerPass's default options allows us to avoid exiting
+  // if LLVM's -default-gcov-version flag is set to something invalid.
   GCOVOptions Options;
   Options.EmitNotes = !CodeGenOpts.CoverageNotesFile.empty();
   Options.EmitData = !CodeGenOpts.CoverageDataFile.empty();
@@ -773,7 +776,8 @@ static void addSanitizers(const Triple &TargetTriple,
   }
 }
 
-void addLowerAllowCheckPass(const CodeGenOptions &CodeGenOpts,
+void addLowerAllowCheckPass(const cl::LibraryOptionsContext &LibraryOptions,
+                            const CodeGenOptions &CodeGenOpts,
                             const LangOptions &LangOpts, PassBuilder &PB) {
   // SanitizeSkipHotCutoffs: doubles with range [0, 1]
   // Opts.cutoffs: unsigned ints with range [0, 1000000]
@@ -788,8 +792,9 @@ void addLowerAllowCheckPass(const CodeGenOptions &CodeGenOpts,
       SanitizerKind::KernelMemory | SanitizerKind::HWAddress |
       SanitizerKind::KernelHWAddress);
 
-  // TODO: remove IsRequested()
-  if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value() ||
+  // TODO: remove isRequested()
+  if (LowerAllowCheckPass::isRequested(LibraryOptions) ||
+      ScaledCutoffs.has_value() ||
       CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.has_value() ||
       LowerAllowSanitize) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
@@ -798,7 +803,7 @@ void addLowerAllowCheckPass(const CodeGenOptions &CodeGenOpts,
             ModulePassManager &MPM, OptimizationLevel Level,
             ThinOrFullLTOPhase Phase) {
           LowerAllowCheckPass::Options Opts;
-          // TODO: after removing IsRequested(), make this unconditional
+          // TODO: after removing isRequested(), make this unconditional
           if (ScaledCutoffs.has_value())
             Opts.cutoffs = ScaledCutoffs.value();
           Opts.runtime_check = AllowRuntimeCheckSkipHotCutoff;
@@ -843,11 +848,13 @@ static void addAMDGCNSPIRVSizeOptimizationPasses(ModulePassManager &MPM) {
 void EmitAssemblyHelper::RunOptimizationPipeline(
     BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
     std::unique_ptr<llvm::ToolOutputFile> &ThinLinkOS, BackendConsumer *BC) {
+  const cl::LibraryOptionsContext &LibraryOptions =
+      TheModule->getContext().getLibraryOptions();
   std::optional<PGOOptions> PGOOpt;
 
   if (CodeGenOpts.hasProfileIRInstr())
     // -fprofile-generate.
-    PGOOpt = PGOOptions(getProfileGenName(CodeGenOpts), "", "",
+    PGOOpt = PGOOptions(getProfileGenName(LibraryOptions, CodeGenOpts), "", "",
                         CodeGenOpts.MemoryProfileUsePath, PGOOptions::IRInstr,
                         PGOOptions::NoCSAction, ClPGOColdFuncAttr,
                         CodeGenOpts.DebugInfoForProfiling,
@@ -894,18 +901,18 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
              PGOOpt->Action != PGOOptions::SampleUse &&
              "Cannot run CSProfileGen pass with ProfileGen or SampleUse "
              " pass");
-      PGOOpt->CSProfileGenFile = getProfileGenName(CodeGenOpts);
+      PGOOpt->CSProfileGenFile = getProfileGenName(LibraryOptions, CodeGenOpts);
       PGOOpt->CSAction = PGOOptions::CSIRInstr;
     } else
-      PGOOpt = PGOOptions("", getProfileGenName(CodeGenOpts), "",
-                          /*MemoryProfile=*/"", PGOOptions::NoAction,
-                          PGOOptions::CSIRInstr, ClPGOColdFuncAttr,
-                          CodeGenOpts.DebugInfoForProfiling);
+      PGOOpt = PGOOptions(
+          "", getProfileGenName(LibraryOptions, CodeGenOpts), "",
+          /*MemoryProfile=*/"", PGOOptions::NoAction, PGOOptions::CSIRInstr,
+          ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);
   }
   if (TM)
     TM->setPGOOption(PGOOpt);
 
-  PipelineTuningOptions PTO;
+  PipelineTuningOptions PTO(&LibraryOptions);
   PTO.LoopUnrolling = CodeGenOpts.UnrollLoops;
   PTO.LoopInterchange = CodeGenOpts.InterchangeLoops;
   PTO.LoopFusion = CodeGenOpts.FuseLoops;
@@ -1086,7 +1093,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       // Most sanitizers only run during PreLink stage.
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
       addKCFIPass(TargetTriple, LangOpts, PB);
-      addLowerAllowCheckPass(CodeGenOpts, LangOpts, PB);
+      addLowerAllowCheckPass(LibraryOptions, CodeGenOpts, LangOpts, PB);
 
       PB.registerPipelineStartEPCallback(
           [&](ModulePassManager &MPM, OptimizationLevel Level) {
@@ -1378,6 +1385,9 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   Conf.OptLevel = CGOpts.OptimizationLevel;
   initTargetOptions(CI, Diags, Conf.Options);
   Conf.SampleProfile = std::move(SampleProfile);
+  const cl::LibraryOptionsContext &LibraryOptions =
+      M->getContext().getLibraryOptions();
+  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
   Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
   Conf.PTO.LoopFusion = CGOpts.FuseLoops;
@@ -1393,7 +1403,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   // Context sensitive profile.
   if (CGOpts.hasProfileCSIRInstr()) {
     Conf.RunCSIRInstr = true;
-    Conf.CSIRProfile = getProfileGenName(CGOpts);
+    Conf.CSIRProfile = getProfileGenName(LibraryOptions, CGOpts);
   } else if (CGOpts.hasProfileCSIRUse()) {
     Conf.RunCSIRInstr = false;
     Conf.CSIRProfile = std::move(CGOpts.ProfileInstrumentUsePath);

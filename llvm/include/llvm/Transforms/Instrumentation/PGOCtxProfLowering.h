@@ -15,13 +15,17 @@
 #include "llvm/IR/PassManager.h"
 namespace llvm {
 class Type;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 
 class PGOCtxProfLoweringPass
     : public OptionalPassInfoMixin<PGOCtxProfLoweringPass> {
 public:
   explicit PGOCtxProfLoweringPass() = default;
   // True if contextual instrumentation is enabled.
-  LLVM_ABI static bool isCtxIRPGOInstrEnabled();
+  LLVM_ABI static bool
+  isCtxIRPGOInstrEnabled(const cl::LibraryOptionsContext *LibraryOptions);
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

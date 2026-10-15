@@ -633,11 +633,10 @@ class NewGVN {
   SmallPtrSet<Instruction *, 8> InstructionsToErase;
 
 public:
-  NewGVN(Function &F, DominatorTree *DT, AssumptionCache *AC,
-         TargetLibraryInfo *TLI, AliasAnalysis *AA, MemorySSA *MSSA,
-         const DataLayout &DL)
-      : Opts(ScalarOptions::Global), F(F), DT(DT), TLI(TLI), AA(AA), MSSA(MSSA),
-        AC(AC), DL(DL),
+  NewGVN(const ScalarOptions &Opts, Function &F, DominatorTree *DT,
+         AssumptionCache *AC, TargetLibraryInfo *TLI, AliasAnalysis *AA,
+         MemorySSA *MSSA, const DataLayout &DL)
+      : Opts(Opts), F(F), DT(DT), TLI(TLI), AA(AA), MSSA(MSSA), AC(AC), DL(DL),
         // Reuse ExpressionAllocator for PredicateInfo as well.
         PredInfo(
             std::make_unique<PredicateInfo>(F, *DT, *AC, ExpressionAllocator)),
@@ -4227,9 +4226,10 @@ PreservedAnalyses NewGVNPass::run(Function &F, AnalysisManager<Function> &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
   auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
   bool Changed =
-      NewGVN(F, &DT, &AC, &TLI, &AA, &MSSA, F.getDataLayout())
-          .runGVN();
+      NewGVN(Opts, F, &DT, &AC, &TLI, &AA, &MSSA, F.getDataLayout()).runGVN();
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
