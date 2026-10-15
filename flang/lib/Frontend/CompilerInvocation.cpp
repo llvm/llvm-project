@@ -125,6 +125,9 @@ bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
   opts.setShowColors(parseShowColorsArgs(args) ? clang::ShowColorsKind::On
                                                : clang::ShowColorsKind::Off);
 
+  opts.AbsolutePath =
+      args.hasArg(clang::options::OPT_fdiagnostics_absolute_paths);
+
   return true;
 }
 
@@ -1181,6 +1184,12 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   diags.getDiagnosticOptions().setShowColors(colorsMode);
   res.getDiagnosticOpts().setShowColors(colorsMode);
   res.getFrontendOpts().showColors = showColors;
+
+  // -fdiagnostics-absolute-paths
+  bool absolutePath{
+      args.hasArg(clang::options::OPT_fdiagnostics_absolute_paths)};
+  diags.getDiagnosticOptions().AbsolutePath = absolutePath;
+  res.getDiagnosticOpts().AbsolutePath = absolutePath;
   return !diags.hasUncompilableErrorOccurred();
 }
 
@@ -2114,6 +2123,9 @@ void CompilerInvocation::setFortranOpts() {
 
   if (frontendOptions.showColors)
     fortranOptions.showColors = true;
+
+  if (getDiagnosticOpts().AbsolutePath)
+    fortranOptions.showAbsolutePaths = true;
 
   if (frontendOptions.needProvenanceRangeToCharBlockMappings)
     fortranOptions.needProvenanceRangeToCharBlockMappings = true;

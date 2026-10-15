@@ -8,6 +8,7 @@
 
 #include "flang/Parser/provenance.h"
 #include "flang/Common/idioms.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <set>
@@ -298,7 +299,16 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
           [&](const Inclusion &inc) {
             std::size_t offset{origin.covers.MemberOffset(range->start())};
             SourcePosition pos{inc.source.GetSourcePosition(offset)};
-            o << pos.path << ':' << pos.line << ':' << pos.column << ": ";
+            // When -fdiagnostics-absolute-paths is in effect, resolve the
+            // source path to a simplified absolute path, mirroring the
+            // behaviour of clang's TextDiagnostic::emitFilename().
+            llvm::StringRef path{pos.path.get()};
+            llvm::SmallString<256> absPath;
+            if (getShowAbsolutePaths() &&
+                !llvm::sys::fs::real_path(path, absPath)) {
+              path = absPath;
+            }
+            o << path << ':' << pos.line << ':' << pos.column << ": ";
             EmitPrefix(o, color, prefix, this->getShowColors());
             o << message << '\n';
             if (echoSourceLine) {

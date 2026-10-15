@@ -38,6 +38,7 @@ struct Options {
   bool preprocessingEnabled{false};
   bool expandIncludeLinesInPreprocessedOutput{true};
   bool showColors{false};
+  bool showAbsolutePaths{false}; // -fdiagnostics-absolute-paths
   std::vector<std::string> compilerDirectiveSentinels;
 };
 

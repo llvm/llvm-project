@@ -4090,7 +4090,7 @@ defm operator_names : BoolFOption<"operator-names",
           "Do not treat C++ operator name keywords as synonyms for operators">,
   PosFlag<SetTrue>>;
 def fdiagnostics_absolute_paths : Flag<["-"], "fdiagnostics-absolute-paths">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"Print absolute paths in diagnostics">,
   MarshallingInfoFlag<DiagnosticOpts<"AbsolutePath">>;
 defm diagnostics_show_line_numbers : BoolFOption<"diagnostics-show-line-numbers",
