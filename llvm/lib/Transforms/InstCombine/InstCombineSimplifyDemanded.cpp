@@ -2003,6 +2003,11 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
           // Scalar operands do not carry per-lane demand.
           if (isVectorIntrinsicWithScalarOpAtArg(IID, OpNo, /*TTI=*/nullptr))
             continue;
+          // Only propagate demanded lanes to fixed-width vectors with the same
+          // number of elements.
+          auto *OpVTy = dyn_cast<FixedVectorType>(Arg.get()->getType());
+          if (!OpVTy || OpVTy->getNumElements() != VWidth)
+            continue;
           APInt OpPoisonElts(VWidth, 0);
           simplifyAndSetOp(II, OpNo, DemandedElts, OpPoisonElts);
           PoisonEltsAcc |= OpPoisonElts;

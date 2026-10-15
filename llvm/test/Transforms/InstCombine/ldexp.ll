@@ -1202,6 +1202,55 @@ define double @ldexp_i16_exp_narrow_int_negative() {
   ret double %r
 }
 
+declare <4 x float> @llvm.ldexp.v4f32.i32(
+  <4 x float>, i32)
+
+declare <4 x float> @llvm.ldexp.v4f32.v4i32(
+  <4 x float>, <4 x i32>)
+
+; Scalar exponent: must not crash.
+define <4 x float> @scalar_exponent(
+; CHECK-LABEL: define <4 x float> @scalar_exponent
+; CHECK-SAME: (<4 x float> [[X:%.*]], i32 [[K:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.ldexp.v4f32.i32(<4 x float> [[X]], i32 [[K]])
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  <4 x float> %x, i32 %k) {
+  %r = call <4 x float> @llvm.ldexp.v4f32.i32(
+  <4 x float> %x, i32 %k)
+  ret <4 x float> %r
+}
+
+; Vector exponent: continue supporting vector analysis.
+define <4 x float> @vector_exponent(
+; CHECK-LABEL: define <4 x float> @vector_exponent
+; CHECK-SAME: (<4 x float> [[X:%.*]], <4 x i32> [[K:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> [[X]], <4 x i32> [[K]])
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  <4 x float> %x, <4 x i32> %k) {
+  %r = call <4 x float> @llvm.ldexp.v4f32.v4i32(
+  <4 x float> %x, <4 x i32> %k)
+  ret <4 x float> %r
+}
+
+; Lane 3 of the exponent is not demanded, so remove its insertion.
+define <4 x float> @vector_exponent_unused_lane(
+; CHECK-LABEL: define <4 x float> @vector_exponent_unused_lane
+; CHECK-SAME: (<4 x float> [[X:%.*]], <4 x i32> [[K:%.*]], i32 [[UNUSED:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> [[X]], <4 x i32> [[K]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x float> [[R]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  <4 x float> %x, <4 x i32> %k, i32 %unused) {
+  %exp = insertelement <4 x i32> %k, i32 %unused, i64 3
+  %r = call <4 x float> @llvm.ldexp.v4f32.v4i32(
+  <4 x float> %x, <4 x i32> %exp)
+  %s = shufflevector <4 x float> %r, <4 x float> poison,
+  <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+  ret <4 x float> %s
+}
+
 attributes #0 = { strictfp }
 
 !0 = !{i32 -127, i32 0}
