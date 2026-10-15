@@ -297,7 +297,16 @@ math_mpfr_test(
     hdrs = ["DivTest.h"],
 )
 
-# TODO: Add ffma, ffmal test.  Missing stdlib/rand dependency.
+math_mpfr_test(
+    name = "ffma",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+# TODO: Add ffmal test.  Missing stdlib/rand dependency.
 
 math_mpfr_test(
     name = "floor",
