@@ -126,7 +126,7 @@ TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
          lldb_private::Language::LanguageIsCPlusPlus(language) ||
          lldb_private::Language::LanguageIsObjC(language) ||
          lldb_private::Language::LanguageIsPascal(language) ||
-         // Use Clang for Rust until there is a proper language plugin for it
+         // Use Clang for Rust until there is a Rust type system
          language == eLanguageTypeRust ||
          // Use Clang for D until there is a proper language plugin for it
          language == eLanguageTypeD ||
