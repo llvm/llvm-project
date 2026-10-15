@@ -17,7 +17,7 @@ from .commands import (
     summary_of,
     unique,
 )
-from .shim import merge_edits
+from .shim import merge_transformation_outputs
 
 
 _CREATING_OPERATIONS = frozenset("rqm")
@@ -63,7 +63,7 @@ def invoke_ssaf_tools(shim, cwd):
     )
 
     if shim.pass_config.pass_kind == config.SSAFPassKind.TRANSFORMATION:
-        merge_edits(shim, build_artifact_id, input_build_artifact_ids)
+        merge_transformation_outputs(shim, build_artifact_id, input_build_artifact_ids)
         return
 
     shim.build_graph.record_build_step(

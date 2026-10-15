@@ -2902,10 +2902,6 @@ let OtherPredicates = [HasDot3Insts] in {
   defm V_DOT8C_I32_I4  : VOP2_Real_DOT_ACC_gfx9<0x3a>;
 }
 
-let SubtargetPredicate = HasPkFmacF16Inst in {
-defm V_PK_FMAC_F16 : VOP2_Real_e32_vi<0x3c>;
-} // End SubtargetPredicate = HasPkFmacF16Inst
-
 let SubtargetPredicate = HasDot3Insts in {
   // NB: Opcode conflicts with V_DOT2C_F32_F16
   let DecoderNamespace = "GFX10_B" in

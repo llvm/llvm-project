@@ -13368,7 +13368,12 @@ bool BoUpSLP::collectGatherUserOps(
     if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
         TransformedToGatherNodes.contains(UserTE))
       return false;
-    UserOps.emplace_back(UserTE->getOpcode(), TE->UserTreeIndex.EdgeIdx);
+
+    Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
+    if (auto *II = dyn_cast<IntrinsicInst>(UserTE->getMainOp()))
+      IntrinsicID = II->getIntrinsicID();
+    UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID,
+                         TE->UserTreeIndex.EdgeIdx);
   }
   return !UserOps.empty();
 }
@@ -29450,7 +29455,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
                                 LoopInfo *LI_, DominatorTree *DT_,
                                 AssumptionCache *AC_, DemandedBits *DB_,
                                 OptimizationRemarkEmitter *ORE_) {
-  Opts = &VectorizeOptions::Global;
+  Opts = &F.getContext().getLibraryOptions().get<VectorizeOptions>();
   if (!Opts->vectorize_slp)
     return false;
   SE = SE_;
@@ -36578,7 +36583,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
     // The values, feeding only the assumes, and the instructions, producing no
     // code, are dropped before the codegen, the tree is rejected for them
     // anyway.
-    if (isAssumeLikeIntrinsic(&*It) || It->isDebugOrPseudoInst() ||
+    if (isAssumeLikeIntrinsic(&*It) || isa<PseudoProbeInst>(It) ||
         R.isEphemeralValue(&*It))
       continue;
 

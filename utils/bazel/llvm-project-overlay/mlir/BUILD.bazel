@@ -5715,6 +5715,7 @@ td_library(
         ":FunctionInterfacesTdFiles",
         ":InferIntRangeInterfaceTdFiles",
         ":LLVMOpsTdFiles",
+        ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SCFTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -5808,6 +5809,7 @@ cc_library(
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":LoopLikeInterface",
         ":MathDialect",
         ":MemRefDialect",
         ":SCFDialect",
@@ -8861,8 +8863,8 @@ cc_library(
 
 cc_library(
     name = "ArithAttrToLLVMConversion",
-    srcs = glob(["lib/Conversion/ArithCommon/*.cpp"]),
-    hdrs = glob(["include/mlir/Conversion/ArithCommon/*.h"]),
+    srcs = glob(["lib/Conversion/ArithAttrToLLVM/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArithAttrToLLVM/*.h"]),
     includes = ["include"],
     deps = [
         ":ArithDialect",
@@ -10968,6 +10970,7 @@ td_library(
     deps = [
         ":AtomicInterfacesTdFiles",
         ":LLVMOpsTdFiles",
+        ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
     ],
 )
@@ -11062,6 +11065,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":LLVMDialect",
+        ":LoopLikeInterface",
         ":OpenACCMPOpsInterfacesIncGen",
         ":OpenMPInterfacesIncGen",
         ":OpenMPOpsIncGen",
