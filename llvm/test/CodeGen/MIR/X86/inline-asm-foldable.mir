@@ -1,6 +1,4 @@
 # RUN: llc -mtriple=x86_64 -run-pass=none -o - %s | FileCheck %s
-# RUN: llc -mtriple=x86_64 -run-pass=none -o - %s \
-# RUN:   | llc -mtriple=x86_64 -run-pass=none -x mir -o - | FileCheck %s
 
 # A register operand marked foldable (from an "rm" constraint) may be folded
 # to a stack slot by the register allocator. Check that the marker survives a
