@@ -18,7 +18,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Unicode.h"
 #include <algorithm>
 #include <optional>
 
@@ -179,11 +178,8 @@ printableTextForNextCharacter(StringRef SourceLine, size_t *I,
 
     (*I) += (Begin - OriginalBegin);
 
-    // Do not let through characters we cannot determine the width of, as they
-    // break caret diagnostics.
-    StringRef Codepoint(reinterpret_cast<const char *>(OriginalBegin),
-                        std::distance(OriginalBegin, Begin));
-    if (llvm::sys::unicode::columnWidthUTF8(Codepoint) >= 0)
+    // Valid, multi-byte, printable UTF8 character.
+    if (llvm::sys::locale::isPrint(C))
       return std::make_pair(SmallString<16>(OriginalBegin, End), true);
 
     // Valid but not printable.

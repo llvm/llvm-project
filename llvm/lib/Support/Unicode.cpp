@@ -19,17 +19,32 @@ namespace llvm {
 namespace sys {
 namespace unicode {
 
+extern const UnicodeCharSet::CharRanges GeneratedCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedPrintableRanges;
 extern const UnicodeCharSet::CharRanges GeneratedControlCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedFormatCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedCombiningCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedDoubleWidthCharacterRanges;
 
+/// Unicode code points that are considered characters. This function
+/// returns true for any code point defined by Unicode as a character, false for
+/// any code point defined as a non-character, as reserved, as a surrogate code
+/// point, or not defined at all.
+bool isCharacter(int UCS) {
+  static const UnicodeCharSet Character(GeneratedCharacterRanges);
+  return Character.contains(UCS);
+}
+
 /// Unicode code points of the categories L, M, N, P, S and Zs are considered
-/// printable.  \return true if the character is considered printable.
+/// printable.
+/// In addition, U+00AD SOFT HYPHEN is also considered printable, as
+/// it's actually displayed on most terminals. \return true if the character is
+/// considered printable.
 bool isPrintable(int UCS) {
   static const UnicodeCharSet Printables(GeneratedPrintableRanges);
-  return Printables.contains(UCS);
+  // Clang special cases 0x00AD (SOFT HYPHEN) which is rendered as an actual
+  // hyphen in most terminals.
+  return UCS == 0x00AD || Printables.contains(UCS);
 }
 
 /// Unicode code points of the Cc category are considered
@@ -54,20 +69,12 @@ bool isFormatting(int UCS) {
 /// \return Character width:
 ///   * ErrorNonPrintableCharacter (-1) for non-printable characters (as
 ///     identified by isPrintable);
-///   * 0 for non-spacing and enclosing combining marks, and for formatting
-///     characters (as identified by isFormatting), with the exception of
-///     U+00AD;
+///   * 0 for non-spacing and enclosing combining marks;
 ///   * 2 for CJK characters excluding halfwidth forms;
 ///   * 1 for all remaining characters.
 static inline int charWidth(int UCS) {
   if (!isPrintable(UCS))
     return ErrorNonPrintableCharacter;
-
-  if (isFormatting(UCS)) {
-    // Special case 0x00AD (SOFT HYPHEN) which is rendered as an actual hyphen
-    // in most terminals.
-    return UCS == 0x00AD ? 1 : 0;
-  }
 
   static const UnicodeCharSet CombiningCharacters(
       GeneratedCombiningCharacterRanges);

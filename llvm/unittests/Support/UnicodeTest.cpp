@@ -29,7 +29,7 @@ TEST(Unicode, columnWidthUTF8) {
   EXPECT_EQ(-1, columnWidthUTF8("\x01"));
   EXPECT_EQ(-1, columnWidthUTF8("\t"));
   EXPECT_EQ(-1, columnWidthUTF8("aaaaaaaaaa\x01"));
-  EXPECT_EQ(0, columnWidthUTF8("\342\200\213")); // 200B ZERO WIDTH SPACE
+  EXPECT_EQ(-1, columnWidthUTF8("\342\200\213")); // 200B ZERO WIDTH SPACE
 
   // 00AD SOFT HYPHEN is displayed on most terminals as a space or a dash. Some
   // text editors display it only when a line is broken at it, some use it as a
@@ -88,7 +88,7 @@ TEST(Unicode, isPrintable) {
   EXPECT_TRUE(isPrintable(0x0377));  // GREEK SMALL LETTER PAMPHYLIAN DIGAMMA
   EXPECT_FALSE(isPrintable(0x0378)); // <reserved-0378>..<reserved-0379>
 
-  EXPECT_TRUE(isPrintable(0x0600)); // ARABIC NUMBER SIGN
+  EXPECT_FALSE(isPrintable(0x0600)); // ARABIC NUMBER SIGN
 
   EXPECT_FALSE(isPrintable(0x1FFFF)); // <reserved-1F774>..<noncharacter-1FFFF>
   EXPECT_TRUE(isPrintable(0x20000));  // CJK UNIFIED IDEOGRAPH-20000

@@ -1108,10 +1108,8 @@ static void EscapeStringForDiagnostic(StringRef Str,
       assert(Begin == CodepointEnd &&
              "we must be further along in the string now");
 
-      // Do not let through control characters which could mess up the terminal.
-      if (!llvm::sys::unicode::isControl(CodepointValue) &&
-          (!ForCodepoint ||
-           !llvm::sys::unicode::isFormatting(CodepointValue))) {
+      if (llvm::sys::unicode::isPrintable(CodepointValue) ||
+          (!ForCodepoint && llvm::sys::unicode::isFormatting(CodepointValue))) {
         OutStream << (ForCodepoint ? "'" : "")
                   << StringRef(reinterpret_cast<const char *>(CodepointBegin),
                                std::distance(CodepointBegin, CodepointEnd))
@@ -1119,6 +1117,7 @@ static void EscapeStringForDiagnostic(StringRef Str,
         if (!ForCodepoint)
           continue;
       }
+      // Unprintable code point.
       OutStream << (ForCodepoint ? "" : "<") << "U+"
                 << llvm::format_hex_no_prefix(CodepointValue, 4, true)
                 << (ForCodepoint ? "" : ">");
