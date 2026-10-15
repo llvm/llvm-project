@@ -779,8 +779,8 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
     // we got there from a an annotation. Reconstruct the type
     // Ugly...
     QualType QT = Rep.get();
-    const PackIndexingType *LIT = cast<PackIndexingType>(QT);
-    TypeRep = ParsedType::make(LIT->getPattern());
+    const PackIndexingType *LIT =
+        cast<PackIndexingType>(cast<LocInfoType>(QT)->getType());
     PackIndexingExpr = LIT->getIndexExpr();
   }
   return false;

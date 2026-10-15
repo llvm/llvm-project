@@ -1300,9 +1300,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_typename_pack_indexing: {
     Expr *E = DS.getPackIndexingExpr();
     assert(E && "Didn't get an expression for pack indexing");
-    QualType Pattern = S.GetTypeFromParser(DS.getRepAsType());
-    Result = S.BuildPackIndexingType(Pattern, E, DS.getBeginLoc(),
-                                     DS.getEllipsisLoc());
+    Result = S.GetTypeFromParser(DS.getRepAsType());
     if (Result.isNull()) {
       declarator.setInvalidType(true);
       Result = Context.IntTy;
@@ -6121,7 +6119,9 @@ namespace {
     }
     void VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
-      TL.setEllipsisLoc(DS.getEllipsisLoc());
+      TypeSourceInfo *TInfo = nullptr;
+      Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
+      TL.copy(TInfo->getTypeLoc());
     }
     void VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
       assert(DS.isTransformTypeTrait(DS.getTypeSpecType()));
@@ -10185,8 +10185,7 @@ QualType Sema::BuildDecltypeType(Expr *E, bool AsUnevaluated) {
 }
 
 QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                     SourceLocation Loc,
-                                     SourceLocation EllipsisLoc) {
+                                     SourceLocation Loc) {
   if (!IndexExpr)
     return QualType();
 
@@ -10194,7 +10193,7 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
   if (!Pattern->containsUnexpandedParameterPack())
     Diag(Loc, diag::err_expected_name_of_pack) << Pattern;
 
-  QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
+  QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc);
 
   if (!Type.isNull())
     DiagCompat(Loc, diag_compat::pack_indexing);
@@ -10203,7 +10202,6 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
 
 QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                      SourceLocation Loc,
-                                     SourceLocation EllipsisLoc,
                                      bool FullySubstituted,
                                      ArrayRef<QualType> Expansions) {
 
