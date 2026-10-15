@@ -235,7 +235,7 @@ static int Main(const char *argv0, MultiFileTableGenMainFn MainFn) {
     return 1;
 
   // Always write the depfile, even if the main output hasn't changed.
-  // If it's missing, Ninja considers the output dirty.  If this was below
+  // If it's missing, Ninja considers the output dirty. If this was below
   // the early exit below and someone deleted the .inc.d file but not the .inc
   // file, tablegen would never write the depfile.
   if (!DependFilename.empty()) {
