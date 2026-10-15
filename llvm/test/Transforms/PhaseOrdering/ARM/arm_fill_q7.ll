@@ -15,7 +15,7 @@ define dso_local void @arm_fill_q7(i8 signext %value, ptr %pDst, i32 %blockSize)
 ; CHECK-NEXT:    br i1 [[CMP_NOT14]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[BLOCKSIZE]], -4
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr align 1 [[PDST:%.*]], i8 [[VALUE:%.*]], i32 range(i32 0, -3) [[TMP0]], i1 false), !tbaa [[TBAA3:![0-9]+]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr align 1 [[PDST:%.*]], i8 [[VALUE:%.*]], i32 [[TMP0]], i1 false), !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:

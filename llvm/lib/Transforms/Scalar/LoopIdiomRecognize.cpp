@@ -1067,40 +1067,44 @@ static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
                         SCEV::FlagNUW);
 }
 
-/// Add a range to newly formed memset/memset.pattern/memmove/memcpy intrinsic
-/// with an upper bound derived from the loop's constant max trip count.
-static void addRangeAttrFromTripCount(CallInst *NewCall, unsigned ArgNo,
-                                      uint64_t ElemsPerIter, Loop *L,
-                                      ScalarEvolution *SE) {
-  Value *Len = NewCall->getArgOperand(ArgNo);
-  if (isa<Constant>(Len))
+/// Add a range to the length (or, for memset.pattern, the count) of a newly
+/// formed memset/memset.pattern/memmove/memcpy intrinsic, with an upper bound
+/// derived from the loop's constant max backedge-taken count (BTC). Only small
+/// bounds are worth recording, e.g. to expand the call inline instead of
+/// calling the library function, so bail if the bound exceeds a cap.
+static void addRangeAttrFromTripCount(CallInst *NewCall, uint64_t ElemsPerIter,
+                                      Loop *L, ScalarEvolution *SE) {
+  Use &Len = isa<MemSetPatternInst>(NewCall)
+                 ? cast<MemSetPatternInst>(NewCall)->getLengthUse()
+                 : cast<AnyMemIntrinsic>(NewCall)->getLengthUse();
+
+  constexpr uint64_t MaxBoundedLen = 1 << 16;
+  if (isa<Constant>(Len) || ElemsPerIter > MaxBoundedLen)
     return;
 
-  const APInt *MaxBTCPtr;
-  if (!match(SE->getConstantMaxBackedgeTakenCount(L), m_scev_APInt(MaxBTCPtr)))
+  const APInt *MaxBTC;
+  if (!match(SE->getConstantMaxBackedgeTakenCount(L), m_scev_APInt(MaxBTC)))
     return;
-  const APInt &MaxBTC = *MaxBTCPtr;
+  if (MaxBTC->uge(MaxBoundedLen))
+    return;
 
-  // The length is in [0, (MaxBTC + 1) * ElemsPerIter]. Bail if that doesn't
-  // fit in the length's type.
+  // The length is in [0, (MaxBTC + 1) * ElemsPerIter]. Both factors are capped,
+  // so this can't overflow.
+  uint64_t MaxLen = (MaxBTC->getZExtValue() + 1) * ElemsPerIter;
+  if (MaxLen > MaxBoundedLen)
+    return;
+
+  // ConstantRange's upper end is exclusive, so the range ends at MaxLen + 1,
+  // which must fit in the length's type.
+  uint64_t RangeEnd = MaxLen + 1;
   unsigned BW = Len->getType()->getIntegerBitWidth();
-  if (MaxBTC.getActiveBits() > BW)
-    return;
-  bool Overflow;
-  APInt MaxTripCount = MaxBTC.zextOrTrunc(BW).uadd_ov(APInt(BW, 1), Overflow);
-  if (Overflow)
-    return;
-  APInt MaxLen = MaxTripCount.umul_ov(APInt(BW, ElemsPerIter), Overflow);
-  if (Overflow)
-    return;
-  // ConstantRange's upper end is exclusive, so the range ends at MaxLen + 1.
-  APInt RangeEnd = MaxLen.uadd_ov(APInt(BW, 1), Overflow);
-  if (Overflow)
+  if (RangeEnd > maxUIntN(BW))
     return;
 
   NewCall->addParamAttr(
-      ArgNo, Attribute::get(NewCall->getContext(), Attribute::Range,
-                            ConstantRange(APInt::getZero(BW), RangeEnd)));
+      Len.getOperandNo(),
+      Attribute::get(NewCall->getContext(), Attribute::Range,
+                     ConstantRange(APInt::getZero(BW), APInt(BW, RangeEnd))));
 }
 
 /// processLoopStridedStore - We see a strided store of some value.  If we can
@@ -1233,9 +1237,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
                                    MaybeAlign(StoreAlignment),
                                    /*isVolatile=*/false, AATags);
     if (auto *ConstStoreSize = dyn_cast<SCEVConstant>(StoreSizeSCEV)) {
-      addRangeAttrFromTripCount(NewCall, /*ArgNo*/ 2,
-                                ConstStoreSize->getValue()->getZExtValue(),
-                                CurLoop, SE);
+      addRangeAttrFromTripCount(
+          NewCall, ConstStoreSize->getValue()->getZExtValue(), CurLoop, SE);
     }
   } else if (Opts.loop_idiom_force_memset_pattern_intrinsic ||
              isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
@@ -1250,8 +1253,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
       cast<MemSetPatternInst>(NewCall)->setDestAlignment(*StoreAlignment);
     NewCall->setAAMetadata(AATags);
     assert(PatternRepsPerTrip != 0 && "PatternRepsPerTrip must be set");
-    addRangeAttrFromTripCount(NewCall, /*ArgNo*/ 2, PatternRepsPerTrip, CurLoop,
-                              SE);
+    addRangeAttrFromTripCount(NewCall, PatternRepsPerTrip, CurLoop, SE);
   } else {
     // Neither a memset, nor memset_pattern16
     return Changed;
@@ -1564,7 +1566,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
         StoreBasePtr, *StoreAlign, LoadBasePtr, *LoadAlign, NumBytes, StoreSize,
         AATags);
   }
-  addRangeAttrFromTripCount(NewCall, /*ArgNo*/ 2, StoreSize, CurLoop, SE);
+  addRangeAttrFromTripCount(NewCall, StoreSize, CurLoop, SE);
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 
   if (MSSAU) {

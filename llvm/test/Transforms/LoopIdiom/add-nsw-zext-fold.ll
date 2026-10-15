@@ -64,7 +64,7 @@ define void @test_memset_size_can_use_info_from_guards(i32 %x, ptr %dst) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[SHR]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[UMAX:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 0, i64 range(i64 0, 2147483648) [[UMAX]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 0, i64 [[UMAX]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP2:.*]]
 ; CHECK:       [[LOOP2]]:
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[IV_2_NEXT:%.*]], %[[LOOP2]] ], [ 0, %[[LOOP2_PREHEADER]] ]

@@ -8,6 +8,8 @@ target triple = "arm64-apple-macosx14.0.0"
 ;   for (unsigned long i = start; i < 4; ++i)
 ;     p[i] = -1;
 ; }
+;
+; TODO: should be range(i64 0, 17) once SCEV uses loop guards.
 
 define void @bounded_by_exit_condition(ptr %p, i64 %start) {
 ; CHECK-LABEL: define void @bounded_by_exit_condition(
@@ -19,7 +21,6 @@ define void @bounded_by_exit_condition(ptr %p, i64 %start) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[START]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 16, [[TMP0]]
-; TODO: should be range(i64 0, 17) once SCEV uses loop guards.
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 -1, i64 range(i64 0, 21) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -36,6 +37,7 @@ define void @bounded_by_exit_condition(ptr %p, i64 %start) {
 entry:
   %guard = icmp ult i64 %start, 4
   br i1 %guard, label %loop, label %exit
+
 loop:
   %i = phi i64 [ %start, %entry ], [ %i.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %p, i64 %i
@@ -43,6 +45,7 @@ loop:
   %i.next = add nuw nsw i64 %i, 1
   %cmp = icmp ult i64 %i.next, 4
   br i1 %cmp, label %loop, label %exit
+
 exit:
   ret void
 }
@@ -52,6 +55,8 @@ exit:
 ;     for (unsigned long i = 0; i < n; ++i)
 ;       p[i] = 0;
 ; }
+;
+; TODO: should be range(i64 0, 101) once SCEV uses loop guards.
 
 define void @bounded_by_guard(ptr %p, i64 %n) {
 ; CHECK-LABEL: define void @bounded_by_guard(
@@ -62,7 +67,6 @@ define void @bounded_by_guard(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[GUARD:%.*]] = and i1 [[SMALL]], [[NONZERO]]
 ; CHECK-NEXT:    br i1 [[GUARD]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; TODO: should be range(i64 0, 101) once SCEV uses loop guards.
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 [[N]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -81,6 +85,7 @@ entry:
   %nonzero = icmp ne i64 %n, 0
   %guard = and i1 %small, %nonzero
   br i1 %guard, label %loop, label %exit
+
 loop:
   %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
   %gep = getelementptr inbounds i8, ptr %p, i64 %i
@@ -88,6 +93,7 @@ loop:
   %i.next = add nuw nsw i64 %i, 1
   %cmp = icmp ult i64 %i.next, %n
   br i1 %cmp, label %loop, label %exit
+
 exit:
   ret void
 }
@@ -98,6 +104,8 @@ exit:
 ;     for (unsigned long i = 0; i < n; ++i)
 ;       p[i] = 0;
 ; }
+;
+; TODO: should be range(i64 0, 101) once SCEV uses loop guards.
 
 define void @bounded_by_assume(ptr %p, i64 %n) {
 ; CHECK-LABEL: define void @bounded_by_assume(
@@ -108,7 +116,6 @@ define void @bounded_by_assume(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[NONZERO]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; TODO: should be range(i64 0, 101) once SCEV uses loop guards.
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 [[N]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -127,6 +134,7 @@ entry:
   call void @llvm.assume(i1 %small)
   %nonzero = icmp ne i64 %n, 0
   br i1 %nonzero, label %loop, label %exit
+
 loop:
   %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
   %gep = getelementptr inbounds i8, ptr %p, i64 %i
@@ -134,33 +142,33 @@ loop:
   %i.next = add nuw nsw i64 %i, 1
   %cmp = icmp ult i64 %i.next, %n
   br i1 %cmp, label %loop, label %exit
+
 exit:
   ret void
 }
 
-; void bounded_by_type(int *p, unsigned n) {
+; void bounded_by_type(char *p, unsigned short n) {
 ;   if (n != 0)
-;     for (unsigned i = 0; i < n; ++i)
-;       p[i] = -1;
+;     for (unsigned short i = 0; i < n; ++i)
+;       p[i] = 0;
 ; }
 
-define void @bounded_by_type(ptr %p, i32 %n) {
+define void @bounded_by_type(ptr %p, i16 %n) {
 ; CHECK-LABEL: define void @bounded_by_type(
-; CHECK-SAME: ptr [[P:%.*]], i32 [[N:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]], i16 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i32 [[N]], 0
+; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i16 [[N]], 0
 ; CHECK-NEXT:    br i1 [[NONZERO]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P]], i8 -1, i64 range(i64 0, 17179869181) [[TMP1]], i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[N]] to i64
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 range(i64 0, 65536) [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[I_WIDE:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[I_WIDE]]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    [[I:%.*]] = phi i16 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[I_WIDE:%.*]] = zext i16 [[I]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[I_WIDE]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i16 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
@@ -168,16 +176,108 @@ define void @bounded_by_type(ptr %p, i32 %n) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %nonzero = icmp ne i32 %n, 0
+  %nonzero = icmp ne i16 %n, 0
   br i1 %nonzero, label %loop, label %exit
+
 loop:
-  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-  %i.wide = zext i32 %i to i64
-  %gep = getelementptr inbounds i32, ptr %p, i64 %i.wide
-  store i32 -1, ptr %gep, align 4
-  %i.next = add nuw i32 %i, 1
-  %cmp = icmp ult i32 %i.next, %n
+  %i = phi i16 [ 0, %entry ], [ %i.next, %loop ]
+  %i.wide = zext i16 %i to i64
+  %gep = getelementptr inbounds i8, ptr %p, i64 %i.wide
+  store i8 0, ptr %gep, align 1
+  %i.next = add nuw i16 %i, 1
+  %cmp = icmp ult i16 %i.next, %n
   br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The max length is 65536 bytes, exactly the cap, so the range is added.
+;
+; void at_cap(char *p, unsigned long start) {
+;   for (unsigned long i = start; i < 65535; ++i)
+;     p[i] = 0;
+; }
+
+define void @at_cap(ptr %p, i64 %start) {
+; CHECK-LABEL: define void @at_cap(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp ult i64 [[START]], 65535
+; CHECK-NEXT:    br i1 [[GUARD]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[START]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 65535, [[START]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[SCEVGEP]], i8 0, i64 range(i64 0, 65537) [[TMP0]], i1 false)
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_NEXT]], 65535
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %guard = icmp ult i64 %start, 65535
+  br i1 %guard, label %loop, label %exit
+
+loop:
+  %i = phi i64 [ %start, %entry ], [ %i.next, %loop ]
+  %gep = getelementptr inbounds i8, ptr %p, i64 %i
+  store i8 0, ptr %gep, align 1
+  %i.next = add nuw nsw i64 %i, 1
+  %cmp = icmp ult i64 %i.next, 65535
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The max length is 65537 bytes, above the cap, so no range is added.
+;
+; void above_cap(char *p, unsigned long start) {
+;   for (unsigned long i = start; i < 65536; ++i)
+;     p[i] = 0;
+; }
+
+define void @above_cap(ptr %p, i64 %start) {
+; CHECK-LABEL: define void @above_cap(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp ult i64 [[START]], 65536
+; CHECK-NEXT:    br i1 [[GUARD]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[START]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 65536, [[START]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[SCEVGEP]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_NEXT]], 65536
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %guard = icmp ult i64 %start, 65536
+  br i1 %guard, label %loop, label %exit
+
+loop:
+  %i = phi i64 [ %start, %entry ], [ %i.next, %loop ]
+  %gep = getelementptr inbounds i8, ptr %p, i64 %i
+  store i8 0, ptr %gep, align 1
+  %i.next = add nuw nsw i64 %i, 1
+  %cmp = icmp ult i64 %i.next, 65536
+  br i1 %cmp, label %loop, label %exit
+
 exit:
   ret void
 }
@@ -212,6 +312,7 @@ define void @unbounded(ptr %p, i64 %n) {
 entry:
   %nonzero = icmp ne i64 %n, 0
   br i1 %nonzero, label %loop, label %exit
+
 loop:
   %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %p, i64 %i
@@ -219,48 +320,7 @@ loop:
   %i.next = add nuw nsw i64 %i, 1
   %cmp = icmp ult i64 %i.next, %n
   br i1 %cmp, label %loop, label %exit
-exit:
-  ret void
-}
 
-; Byte stores with an unbounded trip count: the max length, 2^64 - 1, fits in
-; the length's type, but the exclusive end of the range doesn't.
-;
-; void unbounded_bytes(char *p, unsigned long n) {
-;   for (unsigned long i = 0; i < n; ++i)
-;     p[i] = 0;
-; }
-
-define void @unbounded_bytes(ptr %p, i64 %n) {
-; CHECK-LABEL: define void @unbounded_bytes(
-; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i64 [[N]], 0
-; CHECK-NEXT:    br i1 [[NONZERO]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
-; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 [[N]], i1 false)
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[I]]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
-; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
-;
-entry:
-  %nonzero = icmp ne i64 %n, 0
-  br i1 %nonzero, label %loop, label %exit
-loop:
-  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
-  %gep = getelementptr inbounds i8, ptr %p, i64 %i
-  store i8 0, ptr %gep, align 1
-  %i.next = add nuw i64 %i, 1
-  %cmp = icmp ult i64 %i.next, %n
-  br i1 %cmp, label %loop, label %exit
 exit:
   ret void
 }
@@ -287,6 +347,7 @@ define void @constant_trip_count(ptr %p) {
 ;
 entry:
   br label %loop
+
 loop:
   %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %p, i64 %i
@@ -294,6 +355,7 @@ loop:
   %i.next = add nuw nsw i64 %i, 1
   %cmp = icmp ult i64 %i.next, 4
   br i1 %cmp, label %loop, label %exit
+
 exit:
   ret void
 }
@@ -303,6 +365,8 @@ exit:
 ;   for (unsigned long i = start; i < 7; ++i)
 ;     dst[i] = src[i];
 ; }
+;
+; TODO: should be range(i64 0, 29) once SCEV uses loop guards.
 
 define void @memcpy_bounded(ptr noalias %dst, ptr noalias %src, i64 %start) {
 ; CHECK-LABEL: define void @memcpy_bounded(
@@ -315,7 +379,6 @@ define void @memcpy_bounded(ptr noalias %dst, ptr noalias %src, i64 %start) {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 28, [[TMP0]]
-; TODO: should be range(i64 0, 29) once SCEV uses loop guards.
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[SCEVGEP]], ptr align 4 [[SCEVGEP1]], i64 range(i64 0, 33) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -334,6 +397,7 @@ define void @memcpy_bounded(ptr noalias %dst, ptr noalias %src, i64 %start) {
 entry:
   %guard = icmp ult i64 %start, 7
   br i1 %guard, label %loop, label %exit
+
 loop:
   %i = phi i64 [ %start, %entry ], [ %i.next, %loop ]
   %src.gep = getelementptr inbounds i32, ptr %src, i64 %i
@@ -343,6 +407,7 @@ loop:
   %i.next = add nuw nsw i64 %i, 1
   %cmp = icmp ult i64 %i.next, 7
   br i1 %cmp, label %loop, label %exit
+
 exit:
   ret void
 }
@@ -351,6 +416,8 @@ exit:
 ;   for (unsigned long i = start; i < 5; ++i)
 ;     p[i] = p[i + 1];
 ; }
+;
+; TODO: should be range(i64 0, 21) once SCEV uses loop guards.
 
 define void @memmove_bounded(ptr %p, i64 %start) {
 ; CHECK-LABEL: define void @memmove_bounded(
@@ -364,7 +431,6 @@ define void @memmove_bounded(ptr %p, i64 %start) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 20, [[TMP0]]
-; TODO: should be range(i64 0, 21) once SCEV uses loop guards.
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 4 [[SCEVGEP]], ptr align 4 [[SCEVGEP1]], i64 range(i64 0, 25) [[TMP2]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -383,6 +449,7 @@ define void @memmove_bounded(ptr %p, i64 %start) {
 entry:
   %guard = icmp ult i64 %start, 5
   br i1 %guard, label %loop, label %exit
+
 loop:
   %i = phi i64 [ %start, %entry ], [ %i.next, %loop ]
   %i.next = add nuw nsw i64 %i, 1
@@ -392,6 +459,7 @@ loop:
   store i32 %val, ptr %dst.gep, align 4
   %cmp = icmp ult i64 %i.next, 5
   br i1 %cmp, label %loop, label %exit
+
 exit:
   ret void
 }
@@ -430,6 +498,7 @@ define void @do_while_no_guard(ptr %p, i64 %start) {
 ;
 entry:
   br label %loop
+
 loop:
   %i = phi i64 [ %start, %entry ], [ %i.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %p, i64 %i
@@ -437,6 +506,7 @@ loop:
   %i.next = add i64 %i, 1
   %cmp = icmp ult i64 %i.next, 4
   br i1 %cmp, label %loop, label %exit
+
 exit:
   ret void
 }
@@ -445,6 +515,8 @@ exit:
 ;   for (unsigned long i = start; i < 8; ++i)
 ;     p[i] = 0x12345678;
 ; }
+;
+; TODO: should be range(i64 0, 9) once SCEV uses loop guards.
 
 define void @memset_pattern_bounded(ptr %p, i64 %start) {
 ; CHECK-LABEL: define void @memset_pattern_bounded(
@@ -456,7 +528,6 @@ define void @memset_pattern_bounded(ptr %p, i64 %start) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[START]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 8, [[START]]
-; TODO: should be range(i64 0, 9) once SCEV uses loop guards.
 ; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[SCEVGEP]], i32 305419896, i64 range(i64 0, 10) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -473,6 +544,7 @@ define void @memset_pattern_bounded(ptr %p, i64 %start) {
 entry:
   %guard = icmp ult i64 %start, 8
   br i1 %guard, label %loop, label %exit
+
 loop:
   %i = phi i64 [ %start, %entry ], [ %i.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %p, i64 %i
@@ -480,6 +552,7 @@ loop:
   %i.next = add nuw nsw i64 %i, 1
   %cmp = icmp ult i64 %i.next, 8
   br i1 %cmp, label %loop, label %exit
+
 exit:
   ret void
 }
