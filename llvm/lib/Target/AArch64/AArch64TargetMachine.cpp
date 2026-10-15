@@ -117,8 +117,9 @@ LLVMInitializeAArch64Target() {
 }
 
 bool AArch64TargetMachine::isGlobalISelOptNone() const {
-  const bool GlobalISelFlag = getCGPassBuilderOption().EnableGlobalISelOption ==
-                              cl::boolOrDefault::BOU_TRUE;
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption(*this).EnableGlobalISelOption ==
+      cl::boolOrDefault::BOU_TRUE;
 
   return getOptLevel() == CodeGenOptLevel::None ||
          (static_cast<unsigned>(getOptLevel()) >
@@ -234,8 +235,9 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
       TT.getEnvironment() != Triple::GNUILP32 &&
       !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO());
 
-  const bool GlobalISelFlag = getCGPassBuilderOption().EnableGlobalISelOption ==
-                              cl::boolOrDefault::BOU_TRUE;
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption(*this).EnableGlobalISelOption ==
+      cl::boolOrDefault::BOU_TRUE;
 
   // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
   // MachO/CodeModel::Large, which GlobalISel does not support.

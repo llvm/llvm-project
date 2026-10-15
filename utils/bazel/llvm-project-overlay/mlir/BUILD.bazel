@@ -8874,6 +8874,17 @@ cc_library(
 )
 
 cc_library(
+    name = "ArithCommonConversion",
+    srcs = glob(["lib/Conversion/ArithCommon/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArithCommon/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":IR",
+    ],
+)
+
+cc_library(
     name = "ArithToAMDGPU",
     srcs = glob(["lib/Conversion/ArithToAMDGPU/*.cpp"]),
     hdrs = glob(["include/mlir/Conversion/ArithToAMDGPU/*.h"]),
@@ -8975,8 +8986,8 @@ cc_library(
     deps = [
         ":Analysis",
         ":ArithAttrToLLVMConversion",
+        ":ArithCommonConversion",
         ":ArithDialect",
-        ":ArithTransforms",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
         ":IR",
@@ -13468,6 +13479,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Analysis",
+        ":ArithCommonConversion",
         ":ArithDialect",
         ":ArithPassIncGen",
         ":ArithUtils",

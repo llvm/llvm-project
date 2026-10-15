@@ -1506,16 +1506,19 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
   auto *ByteTy = FixedVectorType::get(Builder.getInt8Ty(), InBytes);
   SmallVector<int> Mask = getBitPackMask(
       Info, ResultTy->getScalarSizeInBits() / 8, NumElts, ShiftWidth / 8);
-  // A plain byte reversal of the shifted lanes is a bswap.
-  if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
-    NumInsts += 2;
-    return Builder.CreateUnaryIntrinsic(Intrinsic::bswap,
-                                        Builder.CreateBitCast(Y, ResultTy));
-  }
-  // An identity byte order needs no shuffle.
-  if (ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
-    ++NumInsts;
-    return Builder.CreateBitCast(Y, ResultTy);
+  // Fields in lane order, possibly reversed, are a truncation of the shifted
+  // lanes. A reversal of byte fields is a bswap.
+  bool IsReversed = equal(Info.LaneOfField, reverse(seq<unsigned>(NumElts)));
+  if (IsReversed || equal(Info.LaneOfField, seq<unsigned>(NumElts))) {
+    Value *Fields = Builder.CreateTrunc(
+        Y, Y->getType()->getWithNewBitWidth(Info.FieldWidth));
+    NumInsts += 1 + (Info.FieldWidth != ShiftWidth) + IsReversed;
+    if (IsReversed && Info.FieldWidth == 8)
+      return Builder.CreateUnaryIntrinsic(
+          Intrinsic::bswap, Builder.CreateBitCast(Fields, ResultTy));
+    if (IsReversed)
+      Fields = Builder.CreateVectorReverse(Fields);
+    return Builder.CreateBitCast(Fields, ResultTy);
   }
   Value *Packed = Builder.CreateShuffleVector(
       Builder.CreateBitCast(Y, ByteTy),

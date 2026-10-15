@@ -438,6 +438,10 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
   unsigned MinShiftWidth = 8;
   while (MinShiftWidth < MaxAmt + Info.FieldWidth)
     MinShiftWidth *= 2;
+  bool IsReversed = equal(Info.LaneOfField, reverse(seq<unsigned>(NumElts)));
+  bool IsTrunc = IsReversed || equal(Info.LaneOfField, seq<unsigned>(NumElts));
+  auto *FieldTy = FixedVectorType::get(
+      IntegerType::get(SrcTy->getContext(), Info.FieldWidth), NumElts);
   InstructionCost NewCost = InstructionCost::getInvalid();
   ShiftWidth = 0;
   for (unsigned W2 = MinShiftWidth; W2 <= BitWidth; W2 *= 2) {
@@ -449,11 +453,21 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
         getBitPackMask(Info, OutBytes, NumElts, BytesPerLane);
     InstructionCost C = TTI.getCastInstrCost(Instruction::BitCast, ResultTy,
                                              PackTy, CCH, CostKind);
-    // A plain byte reversal of the shifted lanes is a bswap, no shuffle.
-    if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
-      IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy, {ResultTy});
-      C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
-    } else if (!ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
+    if (IsTrunc) {
+      // Fields in lane order, possibly reversed, are a truncation of the
+      // shifted lanes. A reversal of byte fields is a bswap.
+      if (Info.FieldWidth < W2)
+        C += TTI.getCastInstrCost(Instruction::Trunc, FieldTy, ShiftTy,
+                                  TTI::CastContextHint::None, CostKind);
+      if (IsReversed && Info.FieldWidth == 8) {
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy,
+                                          {ResultTy});
+        C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+      } else if (IsReversed) {
+        C += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, FieldTy,
+                                FieldTy, CostKind);
+      }
+    } else {
       // A narrowing shuffle is a shuffle at the source width followed by an
       // extract of the low elements.
       auto *SrcByteTy = FixedVectorType::get(Int8Ty, InBytes);
