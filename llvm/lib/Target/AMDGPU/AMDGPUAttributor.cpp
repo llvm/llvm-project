@@ -153,6 +153,9 @@ public:
                          BumpPtrAllocator &Allocator,
                          SetVector<Function *> *CGSCC, TargetMachine &TM)
       : InformationCache(M, AG, Allocator, CGSCC), TM(TM),
+        SubArch(M.getTargetTriple().getSubArch()),
+        Features(
+            AMDGPU::getFeatureBitset(AMDGPU::getGPUKindFromSubArch(SubArch))),
         CodeObjectVersion(AMDGPU::getAMDHSACodeObjectVersion(M)) {}
 
   TargetMachine &TM;
@@ -166,18 +169,6 @@ public:
         ADDR_SPACE_CAST_PRIVATE_TO_FLAT | ADDR_SPACE_CAST_LOCAL_TO_FLAT,
     CS_WORST = DS_GLOBAL | ADDR_SPACE_CAST_BOTH_TO_FLAT,
   };
-
-  /// Check if the subtarget has aperture regs.
-  bool hasApertureRegs(Function &F) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.hasApertureRegs();
-  }
-
-  /// Check if the subtarget supports GetDoorbellID.
-  bool supportsGetDoorbellID(Function &F) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.supportsGetDoorbellID();
-  }
 
   std::optional<std::pair<unsigned, unsigned>>
   getFlatWorkGroupSizeAttr(const Function &F) const {
@@ -193,14 +184,16 @@ public:
     return ST.getDefaultFlatWorkGroupSize(F.getCallingConv());
   }
 
-  std::pair<unsigned, unsigned>
-  getMaximumFlatWorkGroupRange(const Function &F) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return {ST.getMinFlatWorkGroupSize(), ST.getMaxFlatWorkGroupSize()};
+  std::pair<unsigned, unsigned> getMaximumFlatWorkGroupRange() const {
+    return {AMDGPU::getMinFlatWorkGroupSize(),
+            AMDGPU::getMaxFlatWorkGroupSize()};
   }
 
   /// Get code object version.
   unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
+
+  /// Get the features of the module target.
+  const AMDGPU::AMDGPUFeatureBitset &getFeatures() const { return Features; }
 
   std::optional<std::pair<unsigned, unsigned>>
   getWavesPerEUAttr(const Function &F) {
@@ -208,16 +201,13 @@ public:
                                                /*OnlyFirstRequired=*/true);
     if (!Val)
       return std::nullopt;
-    if (!Val->second) {
-      const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-      Val->second = ST.getMaxWavesPerEU();
-    }
+    if (!Val->second)
+      Val->second = AMDGPU::getMaxWavesPerEU(SubArch);
     return std::make_pair(Val->first, *(Val->second));
   }
 
-  unsigned getMaxWavesPerEU(const Function &F) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getMaxWavesPerEU();
+  unsigned getMaxWavesPerEU() const {
+    return AMDGPU::getMaxWavesPerEU(SubArch);
   }
 
   unsigned getMaxAddrSpace() const override {
@@ -288,7 +278,7 @@ public:
   /// Returns true if \p Fn needs the queue pointer because of \p C.
   bool needsQueuePtr(const Constant *C, Function &Fn) {
     bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(Fn.getCallingConv());
-    bool HasAperture = hasApertureRegs(Fn);
+    bool HasAperture = Features.test(AMDGPU::FEAT_APERTURE_REGS);
 
     // No need to explore the constants.
     if (!IsNonEntryFunc && HasAperture)
@@ -311,6 +301,8 @@ public:
 private:
   /// Used to determine if the Constant needs the queue pointer.
   DenseMap<const Constant *, std::optional<uint8_t>> ConstantStatus;
+  const Triple::SubArchType SubArch;
+  const AMDGPU::AMDGPUFeatureBitset Features;
   const unsigned CodeObjectVersion;
 };
 
@@ -503,8 +495,9 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
 
     bool NeedsImplicit = false;
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
-    bool HasApertureRegs = InfoCache.hasApertureRegs(*F);
-    bool SupportsGetDoorbellID = InfoCache.supportsGetDoorbellID(*F);
+    const AMDGPU::AMDGPUFeatureBitset &Features = InfoCache.getFeatures();
+    bool HasApertureRegs = Features.test(AMDGPU::FEAT_APERTURE_REGS);
+    bool SupportsGetDoorbellID = Features.test(AMDGPU::FEAT_GET_DOORBELL_ID);
     unsigned COV = InfoCache.getCodeObjectVersion();
 
     for (Function *Callee : AAEdges->getOptimisticEdges()) {
@@ -639,7 +632,8 @@ private:
       return true;
     };
 
-    bool HasApertureRegs = InfoCache.hasApertureRegs(*F);
+    bool HasApertureRegs =
+        InfoCache.getFeatures().test(AMDGPU::FEAT_APERTURE_REGS);
 
     // `checkForAllInstructions` is much more cheaper than going through all
     // instructions, try it first.
@@ -780,32 +774,7 @@ private:
       }
     }
 
-    // Finally check callees.
-
-    // This is called on each callee; false means callee shouldn't have
-    // no-flat-scratch-init.
-    auto CheckForNoFlatScratchInit = [&](Instruction &I) {
-      const auto &CB = cast<CallBase>(I);
-      const Function *Callee = CB.getCalledFunction();
-
-      // Callee == 0 for inline asm or indirect call with known callees.
-      // In the latter case, updateImpl() already checked the callees and we
-      // know their FLAT_SCRATCH_INIT bit is set.
-      // If function has indirect call with unknown callees, the bit is
-      // already removed in updateImpl() and execution won't reach here.
-      if (!Callee)
-        return true;
-
-      return Callee->getIntrinsicID() !=
-             Intrinsic::amdgcn_addrspacecast_nonnull;
-    };
-
-    UsedAssumedInformation = false;
-    // If any callee is false (i.e. need FlatScratchInit),
-    // checkForAllCallLikeInstructions returns false, in which case this
-    // function returns true.
-    return !A.checkForAllCallLikeInstructions(CheckForNoFlatScratchInit, *this,
-                                              UsedAssumedInformation);
+    return false;
   }
 };
 
@@ -908,7 +877,7 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
 
     bool HasAttr = false;
     auto Range = InfoCache.getDefaultFlatWorkGroupSize(*F);
-    auto MaxRange = InfoCache.getMaximumFlatWorkGroupRange(*F);
+    auto MaxRange = InfoCache.getMaximumFlatWorkGroupRange();
 
     if (auto Attr = InfoCache.getFlatWorkGroupSizeAttr(*F)) {
       // We only consider an attribute that is not max range because the front
@@ -943,10 +912,9 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
                                                    Attributor &A);
 
   ChangeStatus manifest(Attributor &A) override {
-    Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     return emitAttributeIfNotDefaultAfterClamp(
-        A, InfoCache.getMaximumFlatWorkGroupRange(*F));
+        A, InfoCache.getMaximumFlatWorkGroupRange());
   }
 
   /// See AbstractAttribute::getName()
@@ -1126,7 +1094,7 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
     // If the attribute exists, we will honor it if it is not the default.
     if (auto Attr = InfoCache.getWavesPerEUAttr(*F)) {
       std::pair<unsigned, unsigned> MaxWavesPerEURange{
-          1U, InfoCache.getMaxWavesPerEU(*F)};
+          1U, InfoCache.getMaxWavesPerEU()};
       if (*Attr != MaxWavesPerEURange) {
         auto [Min, Max] = *Attr;
         ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
@@ -1182,10 +1150,9 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
                                             Attributor &A);
 
   ChangeStatus manifest(Attributor &A) override {
-    Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     return emitAttributeIfNotDefaultAfterClamp(
-        A, {1U, InfoCache.getMaxWavesPerEU(*F)});
+        A, {1U, InfoCache.getMaxWavesPerEU()});
   }
 
   /// See AbstractAttribute::getName()
@@ -1221,7 +1188,7 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
   unsigned AGPRDefCount = 0;
   unsigned AGPRUseCount = 0;
   unsigned MaxPhysReg = 0;
-  const DataLayout &DL = Call.getFunction()->getParent()->getDataLayout();
+  const DataLayout &DL = Call.getFunction()->getDataLayout();
 
   // TODO: Overestimates due to not accounting for tied operands
   for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
@@ -1434,6 +1401,101 @@ struct AAAMDGPUMinAGPRAlloc
 
 const char AAAMDGPUMinAGPRAlloc::ID = 0;
 
+/// Deduce the function attribute "amdgpu-no-lds-dma"
+struct AAAMDGPUNoLDSDMA : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAAMDGPUNoLDSDMA(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAAMDGPUNoLDSDMA &createForPosition(const IRPosition &IRP,
+                                             Attributor &A) {
+    assert(IRP.getPositionKind() == IRPosition::IRP_FUNCTION &&
+           "AAAMDGPUNoLDSDMA is only valid for function position");
+    return *new (A.Allocator) AAAMDGPUNoLDSDMA(IRP, A);
+  }
+
+  void initialize(Attributor &A) override {
+    const Function *F = getAssociatedFunction();
+    if (F->hasFnAttribute("amdgpu-no-lds-dma")) {
+      indicateOptimisticFixpoint();
+      return;
+    }
+
+    if (F->isDeclaration())
+      indicatePessimisticFixpoint();
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    auto CheckNoLDSDMA = [&](Instruction &I) {
+      const auto &CB = cast<CallBase>(I);
+
+      // Inline assembly may hold any instruction, including an LDSDMA
+      // operation.
+      if (isa<InlineAsm>(CB.getCalledOperand()))
+        return false;
+
+      Intrinsic::ID IID = CB.getIntrinsicID();
+      if (IID != Intrinsic::not_intrinsic) {
+        // Assume !nocallback intrinsics may call a function which issues an
+        // LDSDMA operation.
+        return !AMDGPU::isLDSDMAIntrinsic(IID) &&
+               CB.hasFnAttr(Attribute::NoCallback);
+      }
+
+      const auto *CBEdges = A.getAAFor<AACallEdges>(
+          *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
+      if (!CBEdges || CBEdges->hasUnknownCallee())
+        return false;
+
+      for (const Function *PossibleCallee : CBEdges->getOptimisticEdges()) {
+        const auto *CalleeInfo = A.getAAFor<AAAMDGPUNoLDSDMA>(
+            *this, IRPosition::function(*PossibleCallee), DepClassTy::REQUIRED);
+        if (!CalleeInfo || !CalleeInfo->getAssumed())
+          return false;
+      }
+
+      return true;
+    };
+
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallLikeInstructions(CheckNoLDSDMA, *this,
+                                           UsedAssumedInformation))
+      return indicatePessimisticFixpoint();
+
+    return ChangeStatus::UNCHANGED;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (!getAssumed())
+      return ChangeStatus::UNCHANGED;
+
+    LLVMContext &Ctx = getAssociatedFunction()->getContext();
+    return A.manifestAttrs(getIRPosition(),
+                           {Attribute::get(Ctx, "amdgpu-no-lds-dma")});
+  }
+
+  bool isValidState() const override { return true; }
+
+  const std::string getAsStr(Attributor *A) const override {
+    return "AMDGPUNoLDSDMA[" + std::to_string(getAssumed()) + "]";
+  }
+
+  void trackStatistics() const override {}
+
+  StringRef getName() const override { return "AAAMDGPUNoLDSDMA"; }
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAMDGPUNoLDSDMA
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  static const char ID;
+};
+
+const char AAAMDGPUNoLDSDMA::ID = 0;
+
 /// An abstract attribute to propagate the function attribute
 /// "amdgpu-cluster-dims" from kernel entry functions to device functions.
 struct AAAMDGPUClusterDims
@@ -1600,7 +1662,7 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
        &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
        &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
        &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID, &AAAlign::ID});
+       &AAAMDGPUClusterDims::ID, &AAAMDGPUNoLDSDMA::ID, &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1608,6 +1670,8 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = DeleteFns;
   AC.DefaultInitializeLiveInternals = false;
+  // AAIsDead is not allowed, so nothing is ever assumed dead.
+  AC.UseLiveness = false;
   AC.IndirectCalleeSpecializationCallback =
       [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
          Function &Callee, unsigned NumAssumedCallees) {
@@ -1632,17 +1696,18 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAAMDMaxNumWorkgroups>(IRPosition::function(*F));
+    A.getOrCreateAAFor<AAAMDGPUNoLDSDMA>(IRPosition::function(*F));
     CallingConv::ID CC = F->getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CC)) {
       A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(*F));
       A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(*F));
     }
 
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
-    if (!F->isDeclaration() && ST.hasClusters())
+    const AMDGPU::AMDGPUFeatureBitset &Features = InfoCache.getFeatures();
+    if (!F->isDeclaration() && Features.test(AMDGPU::FEAT_CLUSTERS))
       A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
 
-    if (ST.hasGFX90AInsts())
+    if (Features.test(AMDGPU::FEAT_AGPR_ALLOC))
       A.getOrCreateAAFor<AAAMDGPUMinAGPRAlloc>(IRPosition::function(*F));
 
     for (auto &I : instructions(F)) {

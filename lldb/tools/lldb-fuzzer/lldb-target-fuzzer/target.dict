@@ -1,0 +1,52 @@
+# Magic bytes for the object file.
+#
+# libFuzzer only understands the \\, \" and \xAB escapes, so \x0a below is a
+# newline.
+
+# ELF, with EI_CLASS and EI_DATA: CreateInstance rejects the file unless
+# AddressSizeInBytes says 4 or 8.
+elf64_le="\x7fELF\x02\x01\x01"
+elf32_le="\x7fELF\x01\x01\x01"
+elf64_be="\x7fELF\x02\x02\x01"
+elf_et_core="\x04\x00"
+# e_phnum sentinel that moves the real count into section 0's sh_info.
+elf_pn_xnum="\xff\xff"
+
+# Mach-O, both bitnesses and byte orders, plus the universal container.
+macho_magic_64="\xcf\xfa\xed\xfe"
+macho_magic_32="\xce\xfa\xed\xfe"
+macho_cigam_64="\xfe\xed\xfa\xcf"
+macho_cigam_32="\xfe\xed\xfa\xce"
+fat_magic="\xca\xfe\xba\xbe"
+fat_magic_64="\xca\xfe\xba\xbf"
+
+# PE needs both the DOS stub magic and the signature e_lfanew points at.
+dos_magic="MZ"
+pe_signature="PE\x00\x00"
+
+# Bare COFF is recognised by its machine field alone.
+coff_amd64="\x64\x86"
+coff_i386="\x4c\x01"
+coff_arm64="\x64\xaa"
+
+# XCOFF::MagicNumber, read big endian.
+xcoff32="\x01\xdf"
+xcoff64="\x01\xf7"
+
+wasm_magic="\x00asm"
+wasm_version="\x01\x00\x00\x00"
+
+# The first two lines Breakpad's Header::parse wants.
+breakpad_module="MODULE \x0a"
+breakpad_info="INFO CODE_ID \x0a"
+
+# The three required keys of ObjectFileJSON's header (triple, uuid, type),
+# plus "symbols" from its optional body.
+json_open="{\"triple\":"
+json_uuid="\"uuid\":"
+json_type="\"type\":"
+json_symbols="\"symbols\":"
+
+# Object containers.
+bsd_archive="!<arch>\x0a"
+big_archive="<bigaf>\x0a"

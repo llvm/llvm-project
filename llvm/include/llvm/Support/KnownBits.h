@@ -590,6 +590,14 @@ private:
   static KnownBits remGetLowBits(const KnownBits &LHS, const KnownBits &RHS);
 };
 
+namespace SignBitsOps {
+
+/// Compute the number of sign bits after rotating a value.
+LLVM_ABI unsigned rot(unsigned SrcSignBits, unsigned BitWidth,
+                      std::optional<APInt> RotAmt, bool IsRotateRight);
+
+} // end namespace SignBitsOps
+
 inline KnownBits operator&(KnownBits LHS, const KnownBits &RHS) {
   LHS &= RHS;
   return LHS;

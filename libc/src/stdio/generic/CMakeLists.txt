@@ -8,7 +8,7 @@ function(add_generic_entrypoint_object name)
       ${ARGN}
     )
   endif()
-endfunction(add_generic_entrypoint_object)
+endfunction()
 
 add_generic_entrypoint_object(
   clearerr
@@ -94,22 +94,29 @@ add_generic_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_generic_entrypoint_object(
-  fflush
-  SRCS
-    fflush.cpp
-  HDRS
-    ../fflush.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.hdr.types.FILE
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-    libc.src.stdio.stdin
-    libc.src.stdio.stdout
-    libc.src.stdio.stderr
-)
-
+# since this isn't an entrypoint we need to do these checks manually.
+if(NOT TARGET libc.src.stdio.${LIBC_TARGET_OS}.fflush_internal AND
+  TARGET libc.src.__support.File.file AND
+  TARGET libc.src.__support.File.platform_file AND
+  "libc.src.stdio.stdin" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS AND
+  "libc.src.stdio.stdout" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS AND
+  "libc.src.stdio.stderr" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+  add_object_library(
+    fflush_internal
+    SRCS
+      fflush_internal.cpp
+    HDRS
+      ../fflush_internal.h
+    DEPENDS
+      libc.hdr.types.FILE
+      libc.src.__support.error_or
+      libc.src.__support.File.file
+      libc.src.__support.File.platform_file
+      libc.src.stdio.stdin
+      libc.src.stdio.stdout
+      libc.src.stdio.stderr
+  )
+endif()
 
 add_generic_entrypoint_object(
   fseek
@@ -121,6 +128,47 @@ add_generic_entrypoint_object(
     libc.src.errno.errno
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+)
+
+add_generic_entrypoint_object(
+  fgetpos
+  SRCS
+    fgetpos.cpp
+  HDRS
+    ../fgetpos.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.types.fpos_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.File.file
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.null_check
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
+)
+
+add_generic_entrypoint_object(
+  fsetpos
+  SRCS
+    fsetpos.cpp
+  HDRS
+    ../fsetpos.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.types.fpos_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.File.file
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.null_check
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_generic_entrypoint_object(
@@ -182,6 +230,22 @@ add_generic_entrypoint_object(
     libc.hdr.types.FILE
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+)
+
+add_generic_entrypoint_object(
+  freopen
+  SRCS
+    freopen.cpp
+  HDRS
+    ../freopen.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_generic_entrypoint_object(
@@ -408,19 +472,19 @@ add_generic_entrypoint_object(
 )
 
 list(APPEND fprintf_deps
-      libc.hdr.types.FILE
-      libc.src.__support.arg_list
-      libc.src.__support.CPP.limits
-      libc.src.__support.libc_errno
-      libc.src.__support.printf_core.vfprintf_internal
-      libc.src.__support.printf_core.core_structs
-      libc.src.__support.printf_core.error_mapper
+  libc.hdr.types.FILE
+  libc.src.__support.arg_list
+  libc.src.__support.CPP.limits
+  libc.src.__support.libc_errno
+  libc.src.__support.printf_core.vfprintf_internal
+  libc.src.__support.printf_core.core_structs
+  libc.src.__support.printf_core.error_mapper
 )
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND fprintf_deps
-      libc.src.__support.File.file
-      libc.src.__support.File.platform_file
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
   )
 endif()
 
@@ -429,11 +493,11 @@ set(printf_deps ${fprintf_deps})
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND printf_deps
-      libc.src.stdio.stdout
+    libc.src.stdio.stdout
   )
 endif()
 
-if (LIBC_CONF_PRINTF_MODULAR AND NOT LIBC_TARGET_OS_IS_BAREMETAL)
+if(LIBC_CONF_PRINTF_MODULAR AND NOT LIBC_TARGET_OS_IS_BAREMETAL)
   message(FATAL_ERROR "modular printf is only supported in baremetal stdio")
 endif()
 
@@ -478,16 +542,16 @@ add_generic_entrypoint_object(
 )
 
 list(APPEND scanf_deps
-      libc.src.__support.arg_list
-      libc.src.stdio.scanf_core.vfscanf_internal
-      libc.hdr.types.FILE
+  libc.src.__support.arg_list
+  libc.src.stdio.scanf_core.vfscanf_internal
+  libc.hdr.types.FILE
 )
 
 if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
   list(APPEND scanf_deps
-      libc.src.__support.File.file
-      libc.src.__support.File.platform_file
-      libc.src.stdio.stdin
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.stdio.stdin
   )
 endif()
 

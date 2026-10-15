@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=loop-simplify -disable-output -verify-loop-info -verify-dom-info < %s
+; RUN: opt -S -passes=loop-simplify -verify-loop-info -verify-dom-info < %s | FileCheck %s
 ; PR5235
 
 ; When loopsimplify inserts a preheader for this loop, it should add the new
@@ -60,6 +60,62 @@ unwindblock:
 
 retblock:
   ret void
+}
+
+; Ensure that removing >= 5 unreachable out-of-loop predecessors preserves a
+; deterministic incoming block order in the remaining PHINode operands.
+define i32 @deterministic_dead_pred_removal(i32 %x, i1 %cond) {
+; CHECK-LABEL: define i32 @deterministic_dead_pred_removal(
+; CHECK:       latch:
+; CHECK-NEXT:    %v = phi i32 [ 10, %live1 ], [ 20, %live2 ], [ 30, %live3 ], [ 40, %live4 ], [ 50, %live5 ]
+; CHECK-NEXT:    br i1 %cond, label %header, label %exit
+entry:
+  br label %header
+
+header:
+  switch i32 %x, label %live1 [
+    i32 1, label %live2
+    i32 2, label %live3
+    i32 3, label %live4
+    i32 4, label %live5
+  ]
+
+live1:
+  br label %latch
+
+live2:
+  br label %latch
+
+live3:
+  br label %latch
+
+live4:
+  br label %latch
+
+live5:
+  br label %latch
+
+dead1:
+  br label %latch
+
+dead2:
+  br label %latch
+
+dead3:
+  br label %latch
+
+dead4:
+  br label %latch
+
+dead5:
+  br label %latch
+
+latch:
+  %v = phi i32 [ 1, %dead1 ], [ 2, %dead2 ], [ 3, %dead3 ], [ 4, %dead4 ], [ 5, %dead5 ], [ 10, %live1 ], [ 20, %live2 ], [ 30, %live3 ], [ 40, %live4 ], [ 50, %live5 ]
+  br i1 %cond, label %header, label %exit
+
+exit:
+  ret i32 %v
 }
 
 ; Function Attrs: nounwind

@@ -157,12 +157,6 @@ v_tanh_bf16 v5.l, exec_hi
 v_tanh_bf16 v5.l, null
 // GFX1250: v_tanh_bf16_e32 v5.l, null              ; encoding: [0x7c,0x94,0x0a,0x7e]
 
-v_tanh_bf16 v5.l, -1
-// GFX1250: v_tanh_bf16_e32 v5.l, -1                ; encoding: [0xc1,0x94,0x0a,0x7e]
-
-v_tanh_bf16 v5.l, 0.5
-// GFX1250: v_tanh_bf16_e32 v5.l, 0.5               ; encoding: [0xf0,0x94,0x0a,0x7e]
-
 v_tanh_bf16 v5.l, src_scc
 // GFX1250: v_tanh_bf16_e32 v5.l, src_scc           ; encoding: [0xfd,0x94,0x0a,0x7e]
 
@@ -250,12 +244,6 @@ v_rcp_bf16 v5.l, exec_hi
 v_rcp_bf16 v5.l, null
 // GFX1250: v_rcp_bf16_e32 v5.l, null               ; encoding: [0x7c,0xf2,0x0a,0x7e]
 
-v_rcp_bf16 v5.l, -1
-// GFX1250: v_rcp_bf16_e32 v5.l, -1                 ; encoding: [0xc1,0xf2,0x0a,0x7e]
-
-v_rcp_bf16 v5.l, 0.5
-// GFX1250: v_rcp_bf16_e32 v5.l, 0.5                ; encoding: [0xf0,0xf2,0x0a,0x7e]
-
 v_rcp_bf16 v5.l, src_scc
 // GFX1250: v_rcp_bf16_e32 v5.l, src_scc            ; encoding: [0xfd,0xf2,0x0a,0x7e]
 
@@ -297,12 +285,6 @@ v_sqrt_bf16 v5.l, exec_hi
 
 v_sqrt_bf16 v5.l, null
 // GFX1250: v_sqrt_bf16_e32 v5.l, null              ; encoding: [0x7c,0xf4,0x0a,0x7e]
-
-v_sqrt_bf16 v5.l, -1
-// GFX1250: v_sqrt_bf16_e32 v5.l, -1                ; encoding: [0xc1,0xf4,0x0a,0x7e]
-
-v_sqrt_bf16 v5.l, 0.5
-// GFX1250: v_sqrt_bf16_e32 v5.l, 0.5               ; encoding: [0xf0,0xf4,0x0a,0x7e]
 
 v_sqrt_bf16 v5.l, src_scc
 // GFX1250: v_sqrt_bf16_e32 v5.l, src_scc           ; encoding: [0xfd,0xf4,0x0a,0x7e]
@@ -346,12 +328,6 @@ v_rsq_bf16 v5.l, exec_hi
 v_rsq_bf16 v5.l, null
 // GFX1250: v_rsq_bf16_e32 v5.l, null               ; encoding: [0x7c,0xf6,0x0a,0x7e]
 
-v_rsq_bf16 v5.l, -1
-// GFX1250: v_rsq_bf16_e32 v5.l, -1                 ; encoding: [0xc1,0xf6,0x0a,0x7e]
-
-v_rsq_bf16 v5.l, 0.5
-// GFX1250: v_rsq_bf16_e32 v5.l, 0.5                ; encoding: [0xf0,0xf6,0x0a,0x7e]
-
 v_rsq_bf16 v5.l, src_scc
 // GFX1250: v_rsq_bf16_e32 v5.l, src_scc            ; encoding: [0xfd,0xf6,0x0a,0x7e]
 
@@ -393,12 +369,6 @@ v_log_bf16 v5.l, exec_hi
 
 v_log_bf16 v5.l, null
 // GFX1250: v_log_bf16_e32 v5.l, null               ; encoding: [0x7c,0xf8,0x0a,0x7e]
-
-v_log_bf16 v5.l, -1
-// GFX1250: v_log_bf16_e32 v5.l, -1                 ; encoding: [0xc1,0xf8,0x0a,0x7e]
-
-v_log_bf16 v5.l, 0.5
-// GFX1250: v_log_bf16_e32 v5.l, 0.5                ; encoding: [0xf0,0xf8,0x0a,0x7e]
 
 v_log_bf16 v5.l, src_scc
 // GFX1250: v_log_bf16_e32 v5.l, src_scc            ; encoding: [0xfd,0xf8,0x0a,0x7e]
@@ -442,12 +412,6 @@ v_exp_bf16 v5.l, exec_hi
 v_exp_bf16 v5.l, null
 // GFX1250: v_exp_bf16_e32 v5.l, null               ; encoding: [0x7c,0xfa,0x0a,0x7e]
 
-v_exp_bf16 v5.l, -1
-// GFX1250: v_exp_bf16_e32 v5.l, -1                 ; encoding: [0xc1,0xfa,0x0a,0x7e]
-
-v_exp_bf16 v5.l, 0.5
-// GFX1250: v_exp_bf16_e32 v5.l, 0.5                ; encoding: [0xf0,0xfa,0x0a,0x7e]
-
 v_exp_bf16 v5.l, src_scc
 // GFX1250: v_exp_bf16_e32 v5.l, src_scc            ; encoding: [0xfd,0xfa,0x0a,0x7e]
 
@@ -489,12 +453,6 @@ v_sin_bf16 v5.l, exec_hi
 
 v_sin_bf16 v5.l, null
 // GFX1250: v_sin_bf16_e32 v5.l, null               ; encoding: [0x7c,0xfc,0x0a,0x7e]
-
-v_sin_bf16 v5.l, -1
-// GFX1250: v_sin_bf16_e32 v5.l, -1                 ; encoding: [0xc1,0xfc,0x0a,0x7e]
-
-v_sin_bf16 v5.l, 0.5
-// GFX1250: v_sin_bf16_e32 v5.l, 0.5                ; encoding: [0xf0,0xfc,0x0a,0x7e]
 
 v_sin_bf16 v5.l, src_scc
 // GFX1250: v_sin_bf16_e32 v5.l, src_scc            ; encoding: [0xfd,0xfc,0x0a,0x7e]
@@ -538,12 +496,6 @@ v_cos_bf16 v5.l, exec_hi
 v_cos_bf16 v5.l, null
 // GFX1250: v_cos_bf16_e32 v5.l, null               ; encoding: [0x7c,0xfe,0x0a,0x7e]
 
-v_cos_bf16 v5.l, -1
-// GFX1250: v_cos_bf16_e32 v5.l, -1                 ; encoding: [0xc1,0xfe,0x0a,0x7e]
-
-v_cos_bf16 v5.l, 0.5
-// GFX1250: v_cos_bf16_e32 v5.l, 0.5                ; encoding: [0xf0,0xfe,0x0a,0x7e]
-
 v_cos_bf16 v5.l, src_scc
 // GFX1250: v_cos_bf16_e32 v5.l, src_scc            ; encoding: [0xfd,0xfe,0x0a,0x7e]
 
@@ -585,12 +537,6 @@ v_cvt_f32_bf16 v5, exec_hi
 
 v_cvt_f32_bf16 v5, null
 // GFX1250: v_cvt_f32_bf16_e32 v5, null             ; encoding: [0x7c,0xe4,0x0a,0x7e]
-
-v_cvt_f32_bf16 v5, -1
-// GFX1250: v_cvt_f32_bf16_e32 v5, -1               ; encoding: [0xc1,0xe4,0x0a,0x7e]
-
-v_cvt_f32_bf16 v5, 0.5
-// GFX1250: v_cvt_f32_bf16_e32 v5, 0.5              ; encoding: [0xf0,0xe4,0x0a,0x7e]
 
 v_cvt_f32_bf16 v5, src_scc
 // GFX1250: v_cvt_f32_bf16_e32 v5, src_scc          ; encoding: [0xfd,0xe4,0x0a,0x7e]

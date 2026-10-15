@@ -70,27 +70,41 @@ private:
   const FieldDecl *FD;
 };
 
-/// Represents the base of a placeholder access path, which is either a
-/// function parameter or the implicit 'this' object of an instance method.
-/// Placeholder paths never expire within the function scope, as they represent
-/// storage from the caller's scope.
+/// Represents the base of a placeholder access path, which is a function
+/// parameter, the implicit 'this' object of an instance method, or a field of
+/// the enclosing class. Placeholder paths never expire within the function
+/// scope, as they represent storage from the caller's or object's scope.
 class PlaceholderBase : public llvm::FoldingSetNode {
-  llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *> ParamOrMethod;
+  llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *,
+                     const FieldDecl *>
+      ParamMethodOrField;
 
 public:
-  PlaceholderBase(const ParmVarDecl *PVD) : ParamOrMethod(PVD) {}
-  PlaceholderBase(const CXXMethodDecl *MD) : ParamOrMethod(MD) {}
+  PlaceholderBase(const ParmVarDecl *PVD) : ParamMethodOrField(PVD) {}
+  PlaceholderBase(const CXXMethodDecl *MD) : ParamMethodOrField(MD) {}
+  PlaceholderBase(const FieldDecl *FD) : ParamMethodOrField(FD) {}
 
   const ParmVarDecl *getParmVarDecl() const {
-    return ParamOrMethod.dyn_cast<const ParmVarDecl *>();
+    return dyn_cast<const ParmVarDecl *>(ParamMethodOrField);
   }
 
   const CXXMethodDecl *getImplicitThisParent() const {
-    return ParamOrMethod.dyn_cast<const CXXMethodDecl *>();
+    return dyn_cast<const CXXMethodDecl *>(ParamMethodOrField);
+  }
+
+  const FieldDecl *getFieldDecl() const {
+    return dyn_cast<const FieldDecl *>(ParamMethodOrField);
+  }
+
+  using KeyTy = llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *,
+                                   const FieldDecl *>;
+
+  static void Profile(llvm::FoldingSetNodeID &ID, KeyTy ParamMethodOrField) {
+    ID.AddPointer(ParamMethodOrField.getOpaqueValue());
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
-    ID.AddPointer(ParamOrMethod.getOpaqueValue());
+    Profile(ID, ParamMethodOrField);
   }
 };
 
@@ -134,19 +148,19 @@ public:
   }
 
   const clang::ValueDecl *getAsValueDecl() const {
-    return Base.dyn_cast<const clang::ValueDecl *>();
+    return dyn_cast<const clang::ValueDecl *>(Base);
   }
 
   const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
-    return Base.dyn_cast<const clang::MaterializeTemporaryExpr *>();
+    return dyn_cast<const clang::MaterializeTemporaryExpr *>(Base);
   }
 
   const PlaceholderBase *getAsPlaceholderBase() const {
-    return Base.dyn_cast<const PlaceholderBase *>();
+    return dyn_cast<const PlaceholderBase *>(Base);
   }
 
   const clang::CXXNewExpr *getAsNewAllocation() const {
-    return Base.dyn_cast<const clang::CXXNewExpr *>();
+    return dyn_cast<const clang::CXXNewExpr *>(Base);
   }
 
   bool operator==(const AccessPath &RHS) const {
@@ -225,6 +239,9 @@ public:
   Loan *createPlaceholderLoan(const CXXMethodDecl *MD) {
     return createLoan(AccessPath(getOrCreatePlaceholderBase(MD)));
   }
+  Loan *createPlaceholderLoan(const FieldDecl *FD) {
+    return createLoan(AccessPath(getOrCreatePlaceholderBase(FD)));
+  }
 
   const Loan *getLoan(LoanID ID) const {
     assert(ID.Value < AllLoans.size());
@@ -236,9 +253,11 @@ public:
 private:
   LoanID getNextLoanID() { return NextLoanID++; }
 
-  /// Gets or creates a placeholder base for a given parameter or method.
+  /// Gets or creates a placeholder base for a given parameter, method, or
+  /// field.
   const PlaceholderBase *getOrCreatePlaceholderBase(const ParmVarDecl *PVD);
   const PlaceholderBase *getOrCreatePlaceholderBase(const CXXMethodDecl *MD);
+  const PlaceholderBase *getOrCreatePlaceholderBase(const FieldDecl *FD);
 
   LoanID NextLoanID{0};
 

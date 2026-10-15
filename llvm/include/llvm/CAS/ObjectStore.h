@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/CASReference.h"
+#include "llvm/CAS/ValidationResult.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include <cstddef>
@@ -30,6 +31,7 @@ namespace cas {
 
 class ObjectStore;
 class ObjectProxy;
+class ActionCache;
 
 /// Content-addressable storage for objects.
 ///
@@ -81,7 +83,9 @@ class ObjectProxy;
 /// lifetime tradeoffs:
 ///
 /// - \a getData() accesses data without exposing lifetime at all.
-/// - \a getMemoryBuffer() returns a \a MemoryBuffer whose lifetime
+/// - \a getMemoryBuffer() returns a \a MemoryBuffer that may alias storage
+///   owned by the CAS, so it must not outlive the \a ObjectStore.
+/// - \a getStandaloneMemoryBuffer() returns a \a MemoryBuffer whose lifetime
 ///   is independent of the CAS (it can live longer).
 /// - \a getDataString() return StringRef with lifetime is guaranteed to last as
 ///   long as \a ObjectStore.
@@ -169,6 +173,17 @@ protected:
   storeFromOpenFileImpl(sys::fs::file_t FD,
                         std::optional<sys::fs::file_status> Status);
 
+  /// Customization point for \a getStandaloneMemoryBuffer(). The default
+  /// implementation copies the data, which always satisfies the lifetime
+  /// requirement; implementations that can hand out storage outliving
+  /// themselves, e.g. a mapping of a file they do not keep open, should
+  /// override this to avoid the copy. Must not return \c nullptr: fall back
+  /// to \c ObjectStore::getStandaloneMemoryBufferImpl() where the cheaper
+  /// path does not apply.
+  virtual std::unique_ptr<MemoryBuffer>
+  getStandaloneMemoryBufferImpl(ObjectHandle Node, StringRef Name,
+                                bool RequiresNullTerminator);
+
   /// Get a lifetime-extended StringRef pointing at \p Data.
   ///
   /// Depending on the CAS implementation, this may involve in-memory storage
@@ -177,13 +192,24 @@ protected:
     return toStringRef(getData(Node));
   }
 
-  /// Get a lifetime-extended MemoryBuffer pointing at \p Data.
+  /// Get a MemoryBuffer pointing at \p Data.
   ///
-  /// Depending on the CAS implementation, this may involve in-memory storage
-  /// overhead.
+  /// The buffer may alias storage owned by this ObjectStore, in which case it
+  /// is only valid for as long as the store is.
   std::unique_ptr<MemoryBuffer>
   getMemoryBuffer(ObjectHandle Node, StringRef Name = "",
                   bool RequiresNullTerminator = true);
+
+  /// Get a MemoryBuffer for \p Node that stays valid after this ObjectStore is
+  /// destroyed.
+  ///
+  /// May be more expensive than \a getMemoryBuffer(), which is free to alias
+  /// storage the store already has mapped; prefer that one whenever the buffer
+  /// cannot outlive the store. Never returns \c nullptr: copying the data
+  /// always satisfies the lifetime requirement.
+  std::unique_ptr<MemoryBuffer>
+  getStandaloneMemoryBuffer(ObjectHandle Node, StringRef Name = "",
+                            bool RequiresNullTerminator = true);
 
   /// Read all the refs from object in a SmallVector.
   virtual void readRefs(ObjectHandle Node,
@@ -317,6 +343,11 @@ public:
   getMemoryBuffer(StringRef Name = "",
                   bool RequiresNullTerminator = true) const;
 
+  /// Get a MemoryBuffer that stays valid after the CAS is destroyed.
+  LLVM_ABI std::unique_ptr<MemoryBuffer>
+  getStandaloneMemoryBuffer(StringRef Name = "",
+                            bool RequiresNullTerminator = true) const;
+
   /// Get the content of the node. Valid as long as the CAS is valid.
   StringRef getData() const { return CAS->getDataString(H); }
 
@@ -363,6 +394,58 @@ LLVM_ABI bool isOnDiskCASEnabled();
 /// Create a persistent on-disk path at \p Path.
 LLVM_ABI Expected<std::unique_ptr<ObjectStore>>
 createOnDiskCAS(const Twine &Path);
+
+/// Create \c ObjectStore and \c ActionCache instances backed by a plugin that
+/// implements the C API in \c "llvm-c/CAS/PluginAPI_functions.h".
+///
+/// \param PluginPath path of the dynamic library to load.
+/// \param OnDiskPath local path that the plugin should use for any on-disk
+/// resources/caches.
+/// \param PluginArgs name/value pairs passed to the plugin as custom options;
+/// they are opaque to the client.
+LLVM_ABI Expected<
+    std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
+createPluginCASDatabases(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs);
+
+/// Validate the on-disk data of a plugin-backed CAS in-process if needed, by
+/// calling the plugin's \c llcas_cas_validate_if_needed. The plugin decides
+/// whether validation is needed.
+///
+/// Clients that want to be resilient to unexpected crashes during validation
+/// may call this from a separate process (e.g. via
+/// \c llvm-cas -validate-if-needed) and call \c recoverPluginCASDatabases if
+/// it fails.
+///
+/// \param PluginPath path of the dynamic library to load.
+/// \param OnDiskPath local path that the plugin uses for any on-disk
+/// resources/caches.
+/// \param PluginArgs name/value pairs passed to the plugin as custom options;
+/// they are opaque to the client.
+/// \param CheckHash Whether to validate hashes match the data.
+/// \param ForceValidation Whether to force validation to occur even if it
+/// should not be necessary.
+///
+/// \returns \c Valid if the data is valid, \c Skipped if validation is not
+/// needed, or an \c Error if validation cannot be performed (including if the
+/// plugin does not support it) or the data is invalid.
+LLVM_ABI Expected<ValidationResult> validatePluginCASDatabasesIfNeeded(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs, bool CheckHash,
+    bool ForceValidation);
+
+/// Recover the on-disk data of a plugin-backed CAS after a failed
+/// \c validatePluginCASDatabasesIfNeeded, by calling the plugin's
+/// \c llcas_cas_recover_ondisk_data.
+///
+/// \returns \c Recovered if the data has been recovered, \c Skipped if
+/// recovery is not needed (e.g. a concurrent process already recovered), or an
+/// \c Error if recovery cannot be performed (including if the plugin does not
+/// support it).
+LLVM_ABI Expected<ValidationResult> recoverPluginCASDatabases(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs);
 
 } // namespace cas
 } // namespace llvm

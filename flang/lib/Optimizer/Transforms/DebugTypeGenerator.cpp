@@ -12,7 +12,8 @@
 
 #define DEBUG_TYPE "flang-debug-type-generator"
 
-#include "DebugTypeGenerator.h"
+#include "flang/Optimizer/Transforms/DebugTypeGenerator.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -45,9 +46,11 @@ std::uint64_t getComponentOffset<0>(const mlir::DataLayout &dl,
 
 DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
                                        mlir::SymbolTable *symbolTable_,
-                                       const mlir::DataLayout &dl)
+                                       const mlir::DataLayout &dl,
+                                       bool boundsInStackSlots_)
     : module(m), symbolTable(symbolTable_), dataLayout{&dl},
-      kindMapping(getKindMapping(m)), llvmTypeConverter(m, false, false, dl) {
+      boundsInStackSlots(boundsInStackSlots_), kindMapping(getKindMapping(m)),
+      llvmTypeConverter(m, false, false, dl) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 
   mlir::MLIRContext *context = module.getContext();
@@ -91,12 +94,40 @@ static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
                       /*bitSize=*/32, llvm::dwarf::DW_ATE_signed);
 }
 
+/// Return a stack slot holding \p val wherever the variable declared by
+/// \p declOp is visible.
+static fir::AllocaOp createBoundSlot(mlir::Value val,
+                                     fir::cg::XDeclareOp declOp) {
+  // Generate the slot and store with UnknownLoc so that they don't impact the
+  // line table.
+  mlir::OpBuilder builder(declOp);
+  mlir::Location loc = builder.getUnknownLoc();
+  builder.setInsertionPointToStart(
+      fir::getAllocaBlock(*declOp->getParentRegion()));
+  fir::AllocaOp slot = fir::AllocaOp::create(builder, loc, val.getType());
+  builder.setInsertionPoint(declOp);
+  fir::StoreOp::create(builder, loc, val, slot);
+  return slot;
+}
+
+bool DebugTypeGenerator::hasBoundSlot(mlir::Value val,
+                                      fir::cg::XDeclareOp declOp) const {
+  auto it = artificialVars.find({val, declOp});
+  return it != artificialVars.end() && it->second.slot;
+}
+
 // Helper function to create DILocalVariableAttr and DbgValueOp when information
-// about the size or dimension of a variable etc lives in an mlir::Value.
+// about the size or dimension of a variable etc lives in an mlir::Value. If the
+// value is kept in a stack slot, the variable describes the slot instead, which
+// holds the value wherever the variable is visible.
 mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
     mlir::MLIRContext *context, mlir::Value val,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DIScopeAttr scope,
     fir::cg::XDeclareOp declOp) {
+  std::pair<mlir::Value, mlir::Operation *> key{val, declOp};
+  if (auto it = artificialVars.find(key); it != artificialVars.end())
+    return it->second.var;
+
   // There can be multiple artificial variable for a single declOp. To help
   // distinguish them, we pad the name with a counter. The counter is the
   // position of 'val' in the operands of declOp.
@@ -107,8 +138,12 @@ mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
   auto name = mlir::StringAttr::get(context, "." + declOp.getUniqName().str() +
                                                  std::to_string(varID));
   builder.setInsertionPoint(declOp);
-  mlir::Type type = val.getType();
-  if (!mlir::isa<mlir::IntegerType>(type) || !type.isSignlessInteger()) {
+  fir::AllocaOp slot;
+  if (boundsInStackSlots)
+    slot = createBoundSlot(val, declOp);
+  mlir::Type type = slot ? slot.getInType() : val.getType();
+  if (!slot &&
+      (!mlir::isa<mlir::IntegerType>(type) || !type.isSignlessInteger())) {
     type = builder.getIntegerType(64);
     val = fir::ConvertOp::create(builder, declOp.getLoc(), type, val);
   }
@@ -116,8 +151,18 @@ mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
   auto lvAttr = mlir::LLVM::DILocalVariableAttr::get(
       context, scope, name, fileAttr, /*line=*/0, /*argNo=*/0,
       /*alignInBits=*/0, Ty, mlir::LLVM::DIFlags::Artificial);
-  mlir::LLVM::DbgValueOp::create(builder, declOp.getLoc(), val, lvAttr,
-                                 nullptr);
+  if (slot)
+    fir::cg::XDeclareOp::create(
+        builder, builder.getFusedLoc({declOp.getLoc()}, lvAttr), slot.getType(),
+        slot, /*shape=*/mlir::ValueRange{},
+        /*shift=*/mlir::ValueRange{}, /*typeparams=*/mlir::ValueRange{},
+        /*dummy_scope=*/mlir::Value{}, /*storage=*/mlir::Value{},
+        /*storage_offset=*/0, name, /*data_attr=*/cuf::DataAttributeAttr{},
+        /*dummy_arg_no=*/mlir::IntegerAttr{});
+  else
+    mlir::LLVM::DbgValueOp::create(builder, declOp.getLoc(), val, lvAttr,
+                                   nullptr);
+  artificialVars[key] = {slot, lvAttr};
   return lvAttr;
 }
 
@@ -405,6 +450,16 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   if (nameKind != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return genPlaceholderType(context);
 
+  // The fir.type_info is at the derived type definition, so it names the file
+  // the type is written in. That is not the file being compiled when the
+  // definition was read through an INCLUDE statement. A type with no
+  // fir.type_info carries no position at all, and keeps the compile unit's
+  // file and a line of 1.
+  fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
+  unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
+  if (tiOp)
+    fileAttr = fir::getFileAttrFromLoc(tiOp.getLoc(), fileAttr);
+
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   // Generate a place holder TypeAttr which will be used if a member
   // references the parent type.
@@ -418,9 +473,6 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       /*discriminator=*/nullptr, elements);
   DerivedTypeCache::ActiveLevels nestedRecursions =
       derivedTypeCache.startTranslating(Ty, placeHolder);
-
-  fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
-  unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
 
   mlir::OpBuilder builder(context);
   mlir::IntegerType intTy = mlir::IntegerType::get(context, 64);
@@ -678,14 +730,12 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     }
   }
 
-  // FIXME: Currently the DIStringType in llvm does not have the option to set
-  // type of the underlying character. This restricts out ability to represent
-  // string with non-default characters. Please see issue #95440 for more
-  // details.
+  // TODO: Populate the charType field to represent strings with non-default
+  // character types. Please see issue #95440 for more details.
   return mlir::LLVM::DIStringTypeAttr::get(
       context, llvm::dwarf::DW_TAG_string_type,
       mlir::StringAttr::get(context, ""), sizeInBits, /*alignInBits=*/0,
-      /*stringLength=*/varAttr, lenExpr, locExpr, encoding);
+      /*stringLength=*/varAttr, lenExpr, locExpr, encoding, nullptr);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(

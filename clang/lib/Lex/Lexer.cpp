@@ -116,7 +116,7 @@ bool Token::isSimpleTypeSpecifier(const LangOptions &LangOpts) const {
   case tok::kw__Fract:
   case tok::kw__Sat:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   case tok::kw___auto_type:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
@@ -1284,6 +1284,11 @@ DiagnosticBuilder Lexer::Diag(const char *Loc, unsigned DiagID) const {
   return PP->Diag(getSourceLocation(Loc), DiagID);
 }
 
+DiagnosticBuilder Lexer::DiagCompat(const char *Loc,
+                                    unsigned CompatDiagId) const {
+  return Diag(Loc, DiagnosticIDs::getCompatDiagId(LangOpts, CompatDiagId));
+}
+
 //===----------------------------------------------------------------------===//
 // Trigraph and Escaped Newline Handling Code.
 //===----------------------------------------------------------------------===//
@@ -1609,9 +1614,9 @@ static bool isUnicodeWhitespace(uint32_t Codepoint) {
 static bool isMathematicalExtensionID(uint32_t C, const LangOptions &LangOpts,
                                       bool IsStart, bool &IsExtension) {
   static const llvm::sys::UnicodeCharSet MathStartChars(
-      MathematicalNotationProfileIDStartRanges);
+      GeneratedMathematicalNotationProfileIDStartRanges);
   static const llvm::sys::UnicodeCharSet MathContinueChars(
-      MathematicalNotationProfileIDContinueRanges);
+      GeneratedMathematicalNotationProfileIDContinueRanges);
   if (MathStartChars.contains(C) ||
       (!IsStart && MathContinueChars.contains(C))) {
     IsExtension = true;
@@ -1628,11 +1633,13 @@ static bool isAllowedIDChar(uint32_t C, const LangOptions &LangOpts,
     return true;
   } else if (LangOpts.CPlusPlus || LangOpts.C23) {
     // A non-leading codepoint must have the XID_Continue property.
-    // XIDContinueRanges doesn't contains characters also in XIDStartRanges,
-    // so we need to check both tables.
+    // GeneratedXIDContinueRanges doesn't contain characters also in
+    // GeneratedXIDStartRanges, so we need to check both tables.
     // '_' doesn't have the XID_Continue property but is allowed in C and C++.
-    static const llvm::sys::UnicodeCharSet XIDStartChars(XIDStartRanges);
-    static const llvm::sys::UnicodeCharSet XIDContinueChars(XIDContinueRanges);
+    static const llvm::sys::UnicodeCharSet XIDStartChars(
+        GeneratedXIDStartRanges);
+    static const llvm::sys::UnicodeCharSet XIDContinueChars(
+        GeneratedXIDContinueRanges);
     if (C == '_' || XIDStartChars.contains(C) || XIDContinueChars.contains(C))
       return true;
     return isMathematicalExtensionID(C, LangOpts, /*IsStart=*/false,
@@ -1656,7 +1663,8 @@ static bool isAllowedInitiallyIDChar(uint32_t C, const LangOptions &LangOpts,
     return false;
   }
   if (LangOpts.CPlusPlus || LangOpts.C23) {
-    static const llvm::sys::UnicodeCharSet XIDStartChars(XIDStartRanges);
+    static const llvm::sys::UnicodeCharSet XIDStartChars(
+        GeneratedXIDStartRanges);
     if (XIDStartChars.contains(C))
       return true;
     return isMathematicalExtensionID(C, LangOpts, /*IsStart=*/true,
@@ -1680,9 +1688,9 @@ diagnoseMathematicalNotationInIdentifier(DiagnosticsEngine &Diags,
                                          uint32_t C, CharSourceRange Range) {
 
   static const llvm::sys::UnicodeCharSet MathStartChars(
-      MathematicalNotationProfileIDStartRanges);
+      GeneratedMathematicalNotationProfileIDStartRanges);
   static const llvm::sys::UnicodeCharSet MathContinueChars(
-      MathematicalNotationProfileIDContinueRanges);
+      GeneratedMathematicalNotationProfileIDContinueRanges);
 
   (void)MathStartChars;
   (void)MathContinueChars;
@@ -2391,9 +2399,7 @@ bool Lexer::LexRawStringLiteral(Token &Result, const char *CurPtr,
     if (!isLexingRawMode() &&
         llvm::is_contained({'$', '@', '`'}, CurPtr[PrefixLen])) {
       const char *Pos = &CurPtr[PrefixLen];
-      Diag(Pos, LangOpts.CPlusPlus26
-                    ? diag::warn_cxx26_compat_raw_string_literal_character_set
-                    : diag::ext_cxx26_raw_string_literal_character_set)
+      DiagCompat(Pos, diag_compat::raw_string_literal_character_set)
           << StringRef(Pos, 1);
     }
     ++PrefixLen;
@@ -2466,6 +2472,8 @@ bool Lexer::LexRawStringLiteral(Token &Result, const char *CurPtr,
 
 /// LexAngledStringLiteral - Lex the remainder of an angled string literal,
 /// after having lexed the '<' character.  This is used for #include filenames.
+/// Returns false if failed to lex the angled string literal; so the caller can
+/// lex the '<' normally.
 bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
   // Does this string contain the \0 character?
   const char *NulCharacter = nullptr;
@@ -2479,10 +2487,8 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
 
     if (isVerticalWhitespace(C) ||               // Newline.
         (C == 0 && (CurPtr - 1 == BufferEnd))) { // End of file.
-      // If the filename is unterminated, then it must just be a lone <
-      // character.  Return this as such.
-      FormTokenWithChars(Result, AfterLessPos, tok::less);
-      return true;
+      // If the filename is unterminated, let the caller lex the '<' normally.
+      return false;
     }
 
     if (C == 0) {
@@ -3163,6 +3169,7 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
   // If we are returning comments as tokens, return this comment as a token.
   if (inKeepCommentMode()) {
     FormTokenWithChars(Result, CurPtr, tok::comment);
+    IsAtPhysicalStartOfLine = Result.isAtPhysicalStartOfLine();
     return true;
   }
 
@@ -4348,9 +4355,10 @@ LexStart:
     break;
   case '<':
     Char = getCharAndSize(CurPtr, SizeTmp);
-    if (ParsingFilename) {
-      return LexAngledStringLiteral(Result, CurPtr);
-    } else if (Char == '<') {
+    if (ParsingFilename && LexAngledStringLiteral(Result, CurPtr))
+      return true;
+
+    if (Char == '<') {
       char After = getCharAndSize(CurPtr+SizeTmp, SizeTmp2);
       if (After == '=') {
         Kind = tok::lesslessequal;
@@ -4393,7 +4401,7 @@ LexStart:
       }
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::lessequal;
-    } else if (LangOpts.Digraphs && Char == ':') {     // '<:' -> '['
+    } else if (LangOpts.Digraphs && Char == ':') { // '<:' -> '['
       if (LangOpts.CPlusPlus11 &&
           getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == ':') {
         // C++0x [lex.pptoken]p3:
@@ -4413,7 +4421,7 @@ LexStart:
 
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::l_square;
-    } else if (LangOpts.Digraphs && Char == '%') {     // '<%' -> '{'
+    } else if (LangOpts.Digraphs && Char == '%') { // '<%' -> '{'
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::l_brace;
     } else if (Char == '#' && /*Not a trigraph*/ SizeTmp == 1 &&
@@ -4658,11 +4666,8 @@ LexNextToken:
 const char *Lexer::convertDependencyDirectiveToken(
     const dependency_directives_scan::Token &DDTok, Token &Result) {
   const char *TokPtr = BufferStart + DDTok.Offset;
-  Result.startToken();
-  Result.setLocation(getSourceLocation(TokPtr));
-  Result.setKind(DDTok.Kind);
+  Result = Token::create(DDTok.Kind, getSourceLocation(TokPtr), DDTok.Length);
   Result.setFlag((Token::TokenFlags)DDTok.Flags);
-  Result.setLength(DDTok.Length);
   if (Result.is(tok::raw_identifier))
     Result.setRawIdentifierData(TokPtr);
   else if (Result.isLiteral())
@@ -4673,6 +4678,8 @@ const char *Lexer::convertDependencyDirectiveToken(
 
 bool Lexer::LexDependencyDirectiveToken(Token &Result) {
   assert(isDependencyDirectivesLexer());
+
+  Result.startToken();
 
   using namespace dependency_directives_scan;
 
@@ -4695,12 +4702,19 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     MIOpt.ReadToken();
   }
 
-  if (ParsingFilename && DDTok.is(tok::less)) {
-    BufferPtr = BufferStart + DDTok.Offset;
-    LexAngledStringLiteral(Result, BufferPtr + 1);
-    if (Result.isNot(tok::header_name))
+  const char *DDTokPtr = BufferStart + DDTok.Offset;
+  if (ParsingFilename && *DDTokPtr == '<') {
+    Result.setFlag((clang::Token::TokenFlags)DDTok.Flags);
+    Result.clearFlag(clang::Token::NeedsCleaning);
+    BufferPtr = DDTokPtr;
+    if (!LexAngledStringLiteral(Result, BufferPtr + 1)) {
+      convertDependencyDirectiveToken(DDTok, Result);
       return true;
+    }
+
     // Advance the index of lexed tokens.
+    // FIXME: This will skip too many tokens if the header-name ended in the
+    // middle of a token, such as in '<foo>='.
     while (true) {
       const dependency_directives_scan::Token &NextTok =
           DepDirectives.front().Tokens[NextDepDirectiveTokenIndex];

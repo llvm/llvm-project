@@ -39,7 +39,7 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
 
         # Check that '&' is not allowed in simple mode, but allowed in legacy mode
         frame = thread.GetFrameAtIndex(0)
-        simple = frame.GetValueForVariablePath("&x", lldb.eDILModeSimple)
-        legacy = frame.GetValueForVariablePath("&x", lldb.eDILModeLegacy)
+        simple = frame.GetValueForVariablePathWithMode("&x", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePathWithMode("&x", lldb.eDILModeLegacy)
         self.assertFailure(simple.GetError())
         self.assertSuccess(legacy.GetError())

@@ -28,7 +28,7 @@
 /* LLVM_DEFAULT_TARGET_TRIPLE defined in Bazel */
 
 /* Define if threads enabled */
-#define LLVM_ENABLE_THREADS 1
+/* LLVM_ENABLE_THREADS defined in Bazel */
 
 /* Has gcc/MSVC atomic intrinsics */
 #define LLVM_HAS_ATOMICS 1

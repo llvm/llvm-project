@@ -868,6 +868,21 @@ class CMov_I_F_FM_MM<bits<8> funct, bits<2> fmt> : MMArch {
   let Inst{7-0}   = funct;
 }
 
+class MFC0_FM_MM<bits<11> funct> : MMArch {
+  bits<5> rt;
+  bits<5> rd;
+  bits<3> sel;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rd;
+  let Inst{15-14} = 0;
+  let Inst{13-11} = sel;
+  let Inst{10-0} = funct;
+}
+
 class MFC1_FM_MM<bits<8> funct> : MMArch {
   bits<5> rt;
   bits<5> fs;

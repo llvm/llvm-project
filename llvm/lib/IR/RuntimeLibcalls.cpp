@@ -8,11 +8,10 @@
 
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/FloatingPointMode.h"
-#include "llvm/ADT/StringTable.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/SystemLibraries.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/xxhash.h"
+#include "llvm/IR/Type.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 
 #define DEBUG_TYPE "runtime-libcalls-info"
@@ -22,23 +21,25 @@ using namespace RTLIB;
 
 #define GET_RUNTIME_LIBCALLS_INFO
 #define GET_INIT_RUNTIME_LIBCALL_NAMES
+#define GET_INIT_RUNTIME_LIBCALL_SIGNATURES
+#define GET_RUNTIME_LIBCALL_MASKED_VECTOR_LIBCALL_MAPPING
 #define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 #define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
+#define GET_RUNTIME_LIBCALL_INTRINSIC_TO_LIBCALL
 #include "llvm/IR/RuntimeLibcalls.inc"
 
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
                                          ExceptionHandling ExceptionModel,
                                          FloatABI::ABIType FloatABI,
-                                         EABI EABIVersion, StringRef ABIName,
+                                         StringRef ABIName,
                                          VectorLibrary VecLib) {
-  // FIXME: The ExceptionModel parameter is to handle the field in
-  // TargetOptions. This interface fails to distinguish the forced disable
-  // case for targets which support exceptions by default. This should
-  // probably be a module flag and removed from TargetOptions.
-  if (ExceptionModel == ExceptionHandling::None)
+  // Only an unspecified model resolves to the triple default; None is left as
+  // an explicit disable.
+  if (ExceptionModel == ExceptionHandling::Default)
     ExceptionModel = TT.getDefaultExceptionHandling();
 
-  initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
+  initLibcalls(TT, ExceptionModel, FloatABI, ABIName,
+               TT.getDefaultLongDoubleFormat());
 
   // TODO: Tablegen should generate these sets
   switch (VecLib) {
@@ -101,9 +102,16 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   }
 }
 
-RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M)
-    : RuntimeLibcallsInfo(M.getTargetTriple()) {
-  // TODO: Consider module flags
+// TODO: Consider the remaining module flags.
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M, StringRef ABIName,
+                                         VectorLibrary VecLib)
+    : RuntimeLibcallsInfo(M.getTargetTriple(), M.getExceptionModel(),
+                          M.getFloatABI(), ABIName, VecLib) {}
+
+bool RuntimeLibcallsInfo::isLibraryAvailable(RuntimeLibrary Library) const {
+  // TODO: Drive this from module-level state (e.g. the linked runtime). For now
+  // every named library is reported as available.
+  return true;
 }
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
@@ -111,9 +119,10 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M)
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
-                                       EABI EABIVersion, StringRef ABIName) {
-  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, EABIVersion,
-                              ABIName);
+                                       StringRef ABIName,
+                                       LongDoubleFormat LongDoubleFormat) {
+  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, ABIName,
+                              LongDoubleFormat);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -147,14 +156,154 @@ static IntegerType *getSizeTType(LLVMContext &Ctx, const DataLayout &DL) {
   return DL.getIndexType(Ctx, /*AddressSpace=*/0);
 }
 
+// TODO: NoCallback probably unsafe in general
+static constexpr Attribute::AttrKind CommonFnAttrs[] = {
+    Attribute::NoCallback, Attribute::NoFree, Attribute::NoSync,
+    Attribute::NoUnwind, Attribute::WillReturn};
+
+static std::pair<Type *, Attribute> convertToIRTypeAndAttr(FuncArgTypeID ID,
+                                                           LLVMContext &Ctx,
+                                                           const DataLayout &DL,
+                                                           unsigned IntBits) {
+
+  // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
+  switch (ID) {
+  case Void:
+    return {Type::getVoidTy(Ctx), Attribute()};
+  case Bool:
+    return {IntegerType::get(Ctx, 1), Attribute::get(Ctx, Attribute::ZExt)};
+  case Int16:
+  case UInt16:
+    return {IntegerType::get(Ctx, 16), Attribute()};
+  case Int32:
+  case UInt32:
+    return {IntegerType::get(Ctx, 32), Attribute()};
+  case Int:
+  case UInt:
+  case IntPlus:
+  case UIntPlus:
+  case Long:
+  case ULong:
+  case IntX:
+  case UIntX:
+    return {IntegerType::get(Ctx, IntBits), Attribute()};
+  case Int64:
+  case UInt64:
+  case LLong:
+  case ULLong:
+    return {IntegerType::get(Ctx, 64), Attribute()};
+  case SizeT:
+  case SSizeT:
+    return {getSizeTType(Ctx, DL), Attribute()};
+  case Flt:
+  case Floating:
+    return {Type::getFloatTy(Ctx), Attribute()};
+  case Dbl:
+  case LDbl:
+    return {Type::getDoubleTy(Ctx), Attribute()};
+  case Ptr:
+    return {PointerType::get(Ctx, 0), Attribute()};
+  case V2F32:
+    return {FixedVectorType::get(Type::getFloatTy(Ctx), 2), Attribute()};
+  case V4F32:
+    return {FixedVectorType::get(Type::getFloatTy(Ctx), 4), Attribute()};
+  case V8F32:
+    return {FixedVectorType::get(Type::getFloatTy(Ctx), 8), Attribute()};
+  case V16F32:
+    return {FixedVectorType::get(Type::getFloatTy(Ctx), 16), Attribute()};
+  case NXV4F32:
+    return {ScalableVectorType::get(Type::getFloatTy(Ctx), 4), Attribute()};
+  case V2F64:
+    return {FixedVectorType::get(Type::getDoubleTy(Ctx), 2), Attribute()};
+  case V4F64:
+    return {FixedVectorType::get(Type::getDoubleTy(Ctx), 4), Attribute()};
+  case V8F64:
+    return {FixedVectorType::get(Type::getDoubleTy(Ctx), 8), Attribute()};
+  case NXV2F64:
+    return {ScalableVectorType::get(Type::getDoubleTy(Ctx), 2), Attribute()};
+  case NXV2I1:
+    return {ScalableVectorType::get(Type::getInt1Ty(Ctx), 2), Attribute()};
+  case NXV4I1:
+    return {ScalableVectorType::get(Type::getInt1Ty(Ctx), 4), Attribute()};
+  case V2I32:
+    return {FixedVectorType::get(Type::getInt32Ty(Ctx), 2), Attribute()};
+  case V4I32:
+    return {FixedVectorType::get(Type::getInt32Ty(Ctx), 4), Attribute()};
+  case V8I32:
+    return {FixedVectorType::get(Type::getInt32Ty(Ctx), 8), Attribute()};
+  case V16I32:
+    return {FixedVectorType::get(Type::getInt32Ty(Ctx), 16), Attribute()};
+  case NXV2I32:
+    return {ScalableVectorType::get(Type::getInt32Ty(Ctx), 2), Attribute()};
+  case NXV4I32:
+    return {ScalableVectorType::get(Type::getInt32Ty(Ctx), 4), Attribute()};
+  default:
+    return {};
+  }
+}
+
+std::pair<FunctionType *, AttributeList>
+RuntimeLibcallsInfo::getDefaultFunctionTy(
+    LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+    RTLIB::LibcallImpl LibcallImpl) const {
+  Libcall LC = getLibcallFromImpl(LibcallImpl);
+  const FuncArgTypeID *ProtoTypes = &SignatureTable[SignatureOffset[LC]];
+
+  if (ProtoTypes[0] == NoFuncArgType)
+    return {};
+
+  unsigned IntBits = getIntSize(TT);
+  AttributeList Attrs;
+
+  auto [RetTy, RetAttr] =
+      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits);
+  if (RetAttr.isValid())
+    Attrs = Attrs.addRetAttribute(Ctx, RetAttr);
+
+  Type *LastTy = RetTy, *ArgTy;
+  Attribute LastAttr = RetAttr, ArgAttr;
+  SmallVector<Type *, 4> ArgTys;
+  bool IsVarArg = false;
+  unsigned Idx = 1;
+  for (FuncArgTypeID TyID = ProtoTypes[Idx]; TyID != NoFuncArgType;
+       TyID = ProtoTypes[++Idx]) {
+    if (TyID == Ellip) {
+      // The ellipsis ends the protoype list so it must be followed by
+      // NoFuncArgType.
+      assert(ProtoTypes[Idx + 1] == NoFuncArgType);
+      IsVarArg = true;
+      break;
+    }
+
+    if (TyID == Same) {
+      ArgTy = LastTy;
+      ArgAttr = LastAttr;
+    } else {
+      std::tie(ArgTy, ArgAttr) =
+          convertToIRTypeAndAttr(ProtoTypes[Idx], Ctx, DL, IntBits);
+      LastTy = ArgTy;
+      LastAttr = ArgAttr;
+    }
+
+    ArgTys.push_back(ArgTy);
+    if (ArgAttr.isValid())
+      Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, ArgAttr);
+  }
+
+  if (RetTy->isVectorTy()) {
+    AttrBuilder FuncAttrBuilder(Ctx);
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+  }
+
+  return {FunctionType::get(RetTy, ArgTys, IsVarArg), Attrs};
+}
+
 std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                                    const DataLayout &DL,
                                    RTLIB::LibcallImpl LibcallImpl) const {
-  // TODO: NoCallback probably unsafe in general
-  static constexpr Attribute::AttrKind CommonFnAttrs[] = {
-      Attribute::NoCallback, Attribute::NoFree, Attribute::NoSync,
-      Attribute::NoUnwind, Attribute::WillReturn};
   static constexpr Attribute::AttrKind MemoryFnAttrs[] = {
       Attribute::NoUnwind, Attribute::WillReturn};
   static constexpr Attribute::AttrKind CommonPtrArgAttrs[] = {
@@ -267,6 +416,64 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                               false),
             Attrs};
   }
+  case RTLIB::impl___aeabi_idivmod:
+  case RTLIB::impl___aeabi_uidivmod:
+  case RTLIB::impl___aeabi_ldivmod:
+  case RTLIB::impl___aeabi_uldivmod:
+  case RTLIB::impl___rt_sdiv:
+  case RTLIB::impl___rt_udiv:
+  case RTLIB::impl___rt_sdiv64:
+  case RTLIB::impl___rt_udiv64: {
+    // The ARM AEABI (__aeabi_*divmod) and Windows (__rt_*div*) divmod functions
+    // return both values modeled as an inreg { iN, iN } struct (quotient,
+    // remainder). The __rt_*div* cases pass the arguments in opposite order,
+    // though this doesn't affect the declaration.
+    bool IsSigned;
+    unsigned Bits;
+    switch (LibcallImpl) {
+    case RTLIB::impl___aeabi_idivmod:
+    case RTLIB::impl___rt_sdiv:
+      IsSigned = true;
+      Bits = 32;
+      break;
+    case RTLIB::impl___aeabi_uidivmod:
+    case RTLIB::impl___rt_udiv:
+      IsSigned = false;
+      Bits = 32;
+      break;
+    case RTLIB::impl___aeabi_ldivmod:
+    case RTLIB::impl___rt_sdiv64:
+      IsSigned = true;
+      Bits = 64;
+      break;
+    case RTLIB::impl___aeabi_uldivmod:
+    case RTLIB::impl___rt_udiv64:
+      IsSigned = false;
+      Bits = 64;
+      break;
+    default:
+      llvm_unreachable("unexpected divmod libcall");
+    }
+
+    Type *IntTy = IntegerType::get(Ctx, Bits);
+    StructType *RetTy = StructType::get(IntTy, IntTy);
+    FunctionType *FuncTy = FunctionType::get(RetTy, {IntTy, IntTy}, false);
+
+    AttrBuilder FuncAttrBuilder(Ctx);
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::none());
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    Attribute::AttrKind ExtKind = IsSigned ? Attribute::SExt : Attribute::ZExt;
+    Attrs = Attrs.addRetAttribute(Ctx, Attribute::InReg);
+    Attrs = Attrs.addParamAttribute(Ctx, 0, ExtKind);
+    Attrs = Attrs.addParamAttribute(Ctx, 1, ExtKind);
+
+    return {FuncTy, Attrs};
+  }
   case RTLIB::impl_sqrtf:
   case RTLIB::impl_sqrt: {
     AttrBuilder FuncAttrBuilder(Ctx);
@@ -287,200 +494,36 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                                                   fcNegNormal));
     return {FuncTy, Attrs};
   }
-  case RTLIB::impl__ZGVnN2vv_fmod:
-  case RTLIB::impl__ZGVnN4vv_fmodf:
-  case RTLIB::impl__ZGVsMxvv_fmod:
-  case RTLIB::impl__ZGVsMxvv_fmodf:
-  case RTLIB::impl_armpl_vfmodq_f32:
-  case RTLIB::impl_armpl_vfmodq_f64:
-  case RTLIB::impl_armpl_svfmod_f32_x:
-  case RTLIB::impl_armpl_svfmod_f64_x:
-  case RTLIB::impl_armpl_vpowq_f32:
-  case RTLIB::impl_armpl_vpowq_f64:
-  case RTLIB::impl_armpl_svpow_f32_x:
-  case RTLIB::impl_armpl_svpow_f64_x:
-  case RTLIB::impl_armpl_vcbrtq_f32:
-  case RTLIB::impl_armpl_vcbrtq_f64:
-  case RTLIB::impl_armpl_svcbrt_f32_x:
-  case RTLIB::impl_armpl_svcbrt_f64_x: {
-    bool IsF32 = LibcallImpl == RTLIB::impl__ZGVnN4vv_fmodf ||
-                 LibcallImpl == RTLIB::impl__ZGVsMxvv_fmodf ||
-                 LibcallImpl == RTLIB::impl_armpl_svfmod_f32_x ||
-                 LibcallImpl == RTLIB::impl_armpl_vfmodq_f32 ||
-                 LibcallImpl == RTLIB::impl_armpl_vpowq_f32 ||
-                 LibcallImpl == RTLIB::impl_armpl_svpow_f32_x ||
-                 LibcallImpl == RTLIB::impl_armpl_vcbrtq_f32 ||
-                 LibcallImpl == RTLIB::impl_armpl_svcbrt_f32_x;
+  default:
+    break;
+  }
 
-    bool IsScalable = LibcallImpl == RTLIB::impl__ZGVsMxvv_fmod ||
-                      LibcallImpl == RTLIB::impl__ZGVsMxvv_fmodf ||
-                      LibcallImpl == RTLIB::impl_armpl_svfmod_f32_x ||
-                      LibcallImpl == RTLIB::impl_armpl_svfmod_f64_x ||
-                      LibcallImpl == RTLIB::impl_armpl_svpow_f32_x ||
-                      LibcallImpl == RTLIB::impl_armpl_svpow_f64_x ||
-                      LibcallImpl == RTLIB::impl_armpl_svcbrt_f32_x ||
-                      LibcallImpl == RTLIB::impl_armpl_svcbrt_f64_x;
-
-    bool HasOneArg = LibcallImpl == RTLIB::impl_armpl_vcbrtq_f32 ||
-                     LibcallImpl == RTLIB::impl_armpl_vcbrtq_f64 ||
-                     LibcallImpl == RTLIB::impl_armpl_svcbrt_f32_x ||
-                     LibcallImpl == RTLIB::impl_armpl_svcbrt_f64_x;
-
-    AttrBuilder FuncAttrBuilder(Ctx);
-
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    Type *ScalarTy = IsF32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
-    unsigned EC = IsF32 ? 4 : 2;
-    VectorType *VecTy = VectorType::get(ScalarTy, EC, IsScalable);
-
-    SmallVector<Type *, 3> ArgTys(HasOneArg ? 1 : 2, VecTy);
-    if (hasVectorMaskArgument(LibcallImpl))
-      ArgTys.push_back(VectorType::get(Type::getInt1Ty(Ctx), EC, IsScalable));
-
-    FunctionType *FuncTy = FunctionType::get(VecTy, ArgTys, false);
+  auto [FuncTy, Attrs] = getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
+  if (!FuncTy || FuncTy->getNumParams() == 0 ||
+      !FuncTy->getParamType(0)->isVectorTy())
     return {FuncTy, Attrs};
+
+  Type *VecTy = FuncTy->getParamType(0);
+  AttrBuilder ArgAttrBuilder(Ctx);
+  for (Attribute::AttrKind AK : CommonPtrArgAttrs)
+    ArgAttrBuilder.addAttribute(AK);
+  ArgAttrBuilder.addAlignmentAttr(DL.getABITypeAlign(VecTy));
+
+  bool HasPtrArg = false;
+  for (auto [Idx, ParamTy] : enumerate(FuncTy->params())) {
+    if (ParamTy->isPointerTy()) {
+      Attrs = Attrs.addParamAttributes(Ctx, Idx, ArgAttrBuilder);
+      HasPtrArg = true;
+    }
   }
-  case RTLIB::impl__ZGVnN2vl8_modf:
-  case RTLIB::impl__ZGVnN4vl4_modff:
-  case RTLIB::impl__ZGVsNxvl8_modf:
-  case RTLIB::impl__ZGVsNxvl4_modff:
-  case RTLIB::impl_armpl_vmodfq_f64:
-  case RTLIB::impl_armpl_vmodfq_f32:
-  case RTLIB::impl_armpl_svmodf_f64_x:
-  case RTLIB::impl_armpl_svmodf_f32_x: {
+
+  if (HasPtrArg) {
     AttrBuilder FuncAttrBuilder(Ctx);
-
-    bool IsF32 = LibcallImpl == RTLIB::impl__ZGVnN4vl4_modff ||
-                 LibcallImpl == RTLIB::impl__ZGVsNxvl4_modff ||
-                 LibcallImpl == RTLIB::impl_armpl_vmodfq_f32 ||
-                 LibcallImpl == RTLIB::impl_armpl_svmodf_f32_x;
-
-    bool IsScalable = LibcallImpl == RTLIB::impl__ZGVsNxvl8_modf ||
-                      LibcallImpl == RTLIB::impl__ZGVsNxvl4_modff ||
-                      LibcallImpl == RTLIB::impl_armpl_svmodf_f64_x ||
-                      LibcallImpl == RTLIB::impl_armpl_svmodf_f32_x;
-
-    Type *ScalarTy = IsF32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
-    unsigned EC = IsF32 ? 4 : 2;
-    VectorType *VecTy = VectorType::get(ScalarTy, EC, IsScalable);
-
     for (Attribute::AttrKind Attr : CommonFnAttrs)
       FuncAttrBuilder.addAttribute(Attr);
     FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(ModRefInfo::Mod));
-
-    AttributeList Attrs;
     Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    {
-      AttrBuilder ArgAttrBuilder(Ctx);
-      for (Attribute::AttrKind AK : CommonPtrArgAttrs)
-        ArgAttrBuilder.addAttribute(AK);
-      ArgAttrBuilder.addAlignmentAttr(DL.getABITypeAlign(VecTy));
-      Attrs = Attrs.addParamAttributes(Ctx, 1, ArgAttrBuilder);
-    }
-
-    PointerType *PtrTy = PointerType::get(Ctx, 0);
-    SmallVector<Type *, 4> ArgTys = {VecTy, PtrTy};
-    if (hasVectorMaskArgument(LibcallImpl))
-      ArgTys.push_back(VectorType::get(Type::getInt1Ty(Ctx), EC, IsScalable));
-
-    return {FunctionType::get(VecTy, ArgTys, false), Attrs};
-  }
-  case RTLIB::impl__ZGVnN2vl8l8_sincos:
-  case RTLIB::impl__ZGVnN4vl4l4_sincosf:
-  case RTLIB::impl__ZGVsNxvl8l8_sincos:
-  case RTLIB::impl__ZGVsNxvl4l4_sincosf:
-  case RTLIB::impl_armpl_vsincosq_f64:
-  case RTLIB::impl_armpl_vsincosq_f32:
-  case RTLIB::impl_armpl_svsincos_f64_x:
-  case RTLIB::impl_armpl_svsincos_f32_x:
-  case RTLIB::impl__ZGVnN4vl4l4_sincospif:
-  case RTLIB::impl__ZGVnN2vl8l8_sincospi:
-  case RTLIB::impl__ZGVsNxvl4l4_sincospif:
-  case RTLIB::impl__ZGVsNxvl8l8_sincospi:
-  case RTLIB::impl_armpl_vsincospiq_f32:
-  case RTLIB::impl_armpl_vsincospiq_f64:
-  case RTLIB::impl_armpl_svsincospi_f32_x:
-  case RTLIB::impl_armpl_svsincospi_f64_x: {
-    AttrBuilder FuncAttrBuilder(Ctx);
-
-    bool IsF32 = LibcallImpl == RTLIB::impl__ZGVnN4vl4l4_sincospif ||
-                 LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincospif ||
-                 LibcallImpl == RTLIB::impl_armpl_vsincospiq_f32 ||
-                 LibcallImpl == RTLIB::impl_armpl_svsincospi_f32_x ||
-                 LibcallImpl == RTLIB::impl__ZGVnN4vl4l4_sincosf ||
-                 LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincosf ||
-                 LibcallImpl == RTLIB::impl_armpl_vsincosq_f32 ||
-                 LibcallImpl == RTLIB::impl_armpl_svsincos_f32_x;
-
-    Type *ScalarTy = IsF32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
-    unsigned EC = IsF32 ? 4 : 2;
-
-    bool IsScalable = LibcallImpl == RTLIB::impl__ZGVsNxvl8l8_sincos ||
-                      LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincosf ||
-                      LibcallImpl == RTLIB::impl_armpl_svsincos_f32_x ||
-                      LibcallImpl == RTLIB::impl_armpl_svsincos_f64_x ||
-                      LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincospif ||
-                      LibcallImpl == RTLIB::impl__ZGVsNxvl8l8_sincospi ||
-                      LibcallImpl == RTLIB::impl_armpl_svsincospi_f32_x ||
-                      LibcallImpl == RTLIB::impl_armpl_svsincospi_f64_x;
-    VectorType *VecTy = VectorType::get(ScalarTy, EC, IsScalable);
-
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(ModRefInfo::Mod));
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    {
-      AttrBuilder ArgAttrBuilder(Ctx);
-      for (Attribute::AttrKind AK : CommonPtrArgAttrs)
-        ArgAttrBuilder.addAttribute(AK);
-      ArgAttrBuilder.addAlignmentAttr(DL.getABITypeAlign(VecTy));
-      Attrs = Attrs.addParamAttributes(Ctx, 1, ArgAttrBuilder);
-      Attrs = Attrs.addParamAttributes(Ctx, 2, ArgAttrBuilder);
-    }
-
-    PointerType *PtrTy = PointerType::get(Ctx, 0);
-    SmallVector<Type *, 4> ArgTys = {VecTy, PtrTy, PtrTy};
-    if (hasVectorMaskArgument(LibcallImpl))
-      ArgTys.push_back(VectorType::get(Type::getInt1Ty(Ctx), EC, IsScalable));
-
-    return {FunctionType::get(Type::getVoidTy(Ctx), ArgTys, false), Attrs};
-  }
-  default:
-    return {};
   }
 
-  return {};
-}
-
-bool RuntimeLibcallsInfo::hasVectorMaskArgument(RTLIB::LibcallImpl Impl) {
-  /// FIXME: This should be generated by tablegen and support the argument at an
-  /// arbitrary position
-  switch (Impl) {
-  case RTLIB::impl_armpl_svfmod_f32_x:
-  case RTLIB::impl_armpl_svfmod_f64_x:
-  case RTLIB::impl_armpl_svmodf_f64_x:
-  case RTLIB::impl_armpl_svmodf_f32_x:
-  case RTLIB::impl_armpl_svsincos_f32_x:
-  case RTLIB::impl_armpl_svsincos_f64_x:
-  case RTLIB::impl_armpl_svsincospi_f32_x:
-  case RTLIB::impl_armpl_svsincospi_f64_x:
-  case RTLIB::impl__ZGVsMxvv_fmod:
-  case RTLIB::impl__ZGVsMxvv_fmodf:
-  case RTLIB::impl_armpl_svpow_f32_x:
-  case RTLIB::impl_armpl_svpow_f64_x:
-  case RTLIB::impl_armpl_svcbrt_f32_x:
-  case RTLIB::impl_armpl_svcbrt_f64_x:
-    return true;
-  default:
-    return false;
-  }
+  return {FuncTy, Attrs};
 }

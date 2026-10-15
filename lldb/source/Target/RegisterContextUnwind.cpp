@@ -37,6 +37,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <cassert>
 #include <memory>
@@ -1305,20 +1306,24 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
     const lldb_private::SymbolContext &m_sym_ctx) const {
   PlatformSP platform_sp(process->GetTarget().GetPlatform());
   if (platform_sp) {
-    const std::vector<ConstString> trap_handler_names(
+    const std::vector<std::string> &trap_handler_names(
         platform_sp->GetTrapHandlerSymbolNames());
-    for (ConstString name : trap_handler_names) {
-      if ((m_sym_ctx.function && m_sym_ctx.function->GetName() == name) ||
-          (m_sym_ctx.symbol && m_sym_ctx.symbol->GetName() == name)) {
+    for (const std::string &name : trap_handler_names) {
+      if ((m_sym_ctx.function &&
+           m_sym_ctx.function->GetName().GetStringRef() == name) ||
+          (m_sym_ctx.symbol &&
+           m_sym_ctx.symbol->GetName().GetStringRef() == name)) {
         return true;
       }
     }
   }
-  const std::vector<ConstString> user_specified_trap_handler_names(
-      m_parent_unwind.GetUserSpecifiedTrapHandlerFunctionNames());
-  for (ConstString name : user_specified_trap_handler_names) {
-    if ((m_sym_ctx.function && m_sym_ctx.function->GetName() == name) ||
-        (m_sym_ctx.symbol && m_sym_ctx.symbol->GetName() == name)) {
+  const std::vector<std::string> &user_specified_trap_handler_names =
+      m_parent_unwind.GetUserSpecifiedTrapHandlerFunctionNames();
+  for (const std::string &name : user_specified_trap_handler_names) {
+    if ((m_sym_ctx.function &&
+         m_sym_ctx.function->GetName().GetStringRef() == name) ||
+        (m_sym_ctx.symbol &&
+         m_sym_ctx.symbol->GetName().GetStringRef() == name)) {
       return true;
     }
   }
@@ -1583,7 +1588,7 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
   std::string unwindplan_name;
   if (m_full_unwind_plan_sp) {
     unwindplan_name += "via '";
-    unwindplan_name += m_full_unwind_plan_sp->GetSourceName().AsCString("");
+    unwindplan_name += m_full_unwind_plan_sp->GetSourceName();
     unwindplan_name += "'";
   }
   UNWIND_LOG(log, "no save location for {0} ({1}) {2}", regnum.GetName(),
@@ -2222,18 +2227,18 @@ bool RegisterContextUnwind::ReadFrameAddress(
       return false;
     const unsigned max_iterations = 256;
     for (unsigned i = 0; i < max_iterations; ++i) {
-      Status st;
       lldb::addr_t candidate_addr =
           return_address_hint + i * process.GetAddressByteSize();
-      lldb::addr_t candidate =
-          process.ReadPointerFromMemory(candidate_addr, st);
-      if (st.Fail()) {
-        UNWIND_LOG(log, "Cannot read memory at {0:x}: {1}", candidate_addr, st);
+      llvm::Expected<lldb::addr_t> candidate =
+          process.ReadPointerFromMemory(candidate_addr);
+      if (!candidate) {
+        LLDB_LOG_ERROR(log, candidate.takeError(),
+                       "Cannot read memory at {1:x}: {0}", candidate_addr);
         return false;
       }
       Address addr;
       uint32_t permissions;
-      if (process.GetLoadAddressPermissions(candidate, permissions) &&
+      if (process.GetLoadAddressPermissions(*candidate, permissions) &&
           permissions & lldb::ePermissionsExecutable) {
         address = candidate_addr;
         UNWIND_LOG(log, "Heuristically found CFA: {0:x}", address);

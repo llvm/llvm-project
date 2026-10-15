@@ -87,7 +87,7 @@ void skep2<KN<2>>(K<2>);
 // CHECK-NEXT: |   | |-CompoundStmt {{.*}}
 // CHECK-NEXT: |   | | `-CXXOperatorCallExpr {{.*}} 'void' '()'
 // CHECK-NEXT: |   | |   |-ImplicitCastExpr {{.*}} 'void (*)() const' <FunctionToPointerDecay>
-// CHECK-NEXT: |   | |   | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const'
+// CHECK-NEXT: |   | |   | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const' (FunctionTemplate {{.*}} 'operator()')
 // CHECK-NEXT: |   | |   `-ImplicitCastExpr {{.*}} 'const K<2>' lvalue <NoOp>
 // CHECK-NEXT: |   | |     `-DeclRefExpr {{.*}} 'K<2>' lvalue ParmVar {{.*}} 'k' 'K<2>'
 // CHECK-NEXT: |   | |-CompoundStmt {{.*}}
@@ -104,7 +104,7 @@ void skep2<KN<2>>(K<2>);
 // CHECK-NEXT: |   |   `-CompoundStmt {{.*}}
 // CHECK-NEXT: |   |     `-CXXOperatorCallExpr {{.*}} 'void' '()'
 // CHECK-NEXT: |   |       |-ImplicitCastExpr {{.*}} 'void (*)() const' <FunctionToPointerDecay>
-// CHECK-NEXT: |   |       | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const'
+// CHECK-NEXT: |   |       | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const' (FunctionTemplate {{.*}} 'operator()')
 // CHECK-NEXT: |   |       `-ImplicitCastExpr {{.*}} 'const K<2>' lvalue <NoOp>
 // CHECK-NEXT: |   |         `-DeclRefExpr {{.*}} 'K<2>' lvalue ImplicitParam {{.*}} 'k' 'K<2>'
 // CHECK-NEXT: |   `-SYCLKernelEntryPointAttr {{.*}} KN<2>
@@ -147,7 +147,7 @@ void skep3<KN<3>>(K<3> k) {
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | | `-CXXOperatorCallExpr {{.*}} 'void' '()'
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)() const' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const'
+// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const' (FunctionTemplate {{.*}} 'operator()')
 // CHECK-NEXT: | | |   `-ImplicitCastExpr {{.*}} 'const K<3>' lvalue <NoOp>
 // CHECK-NEXT: | | |     `-DeclRefExpr {{.*}} 'K<3>' lvalue ParmVar {{.*}} 'k' 'K<3>'
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
@@ -164,7 +164,7 @@ void skep3<KN<3>>(K<3> k) {
 // CHECK-NEXT: | |   `-CompoundStmt {{.*}}
 // CHECK-NEXT: | |     `-CXXOperatorCallExpr {{.*}} 'void' '()'
 // CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} 'void (*)() const' <FunctionToPointerDecay>
-// CHECK-NEXT: | |       | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const'
+// CHECK-NEXT: | |       | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const' (FunctionTemplate {{.*}} 'operator()')
 // CHECK-NEXT: | |       `-ImplicitCastExpr {{.*}} 'const K<3>' lvalue <NoOp>
 // CHECK-NEXT: | |         `-DeclRefExpr {{.*}} 'K<3>' lvalue ImplicitParam {{.*}} 'k' 'K<3>'
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<3>
@@ -181,7 +181,7 @@ void skep4(K<4> k, int p1, int p2) {
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | | `-CXXOperatorCallExpr {{.*}} 'void' '()'
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(int, int) const' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (int, int) const' lvalue CXXMethod {{.*}} 'operator()' 'void (int, int) const'
+// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (int, int) const' lvalue CXXMethod {{.*}} 'operator()' 'void (int, int) const' (FunctionTemplate {{.*}} 'operator()')
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const K<4>' lvalue <NoOp>
 // CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'K<4>' lvalue ParmVar {{.*}} 'k' 'K<4>'
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
@@ -210,7 +210,7 @@ void skep4(K<4> k, int p1, int p2) {
 // CHECK-NEXT: | |   `-CompoundStmt {{.*}}
 // CHECK-NEXT: | |     `-CXXOperatorCallExpr {{.*}} 'void' '()'
 // CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} 'void (*)(int, int) const' <FunctionToPointerDecay>
-// CHECK-NEXT: | |       | `-DeclRefExpr {{.*}} 'void (int, int) const' lvalue CXXMethod {{.*}} 'operator()' 'void (int, int) const'
+// CHECK-NEXT: | |       | `-DeclRefExpr {{.*}} 'void (int, int) const' lvalue CXXMethod {{.*}} 'operator()' 'void (int, int) const' (FunctionTemplate {{.*}} 'operator()')
 // CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} 'const K<4>' lvalue <NoOp>
 // CHECK-NEXT: | |       | `-DeclRefExpr {{.*}} 'K<4>' lvalue ImplicitParam {{.*}} 'k' 'K<4>'
 // CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
@@ -269,7 +269,7 @@ void skep5(int unused1, K<5> k, int unused2, int p, int unused3) {
 // CHECK-NEXT: | |     |   `-IntegerLiteral {{.*}} 'int' 4
 // CHECK-NEXT: | |     `-CXXOperatorCallExpr {{.*}} 'void' '()'
 // CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} 'void (*)(int, int, int, int, int, int, (lambda {{.*}}) const' <FunctionToPointerDecay>
-// CHECK-NEXT: | |       | `-DeclRefExpr {{.*}} 'void (int, int, int, int, int, int, (lambda {{.*}})) const' lvalue CXXMethod {{.*}} 'operator()' 'void (int, int, int, int, int, int, (lambda {{.*}})) const'
+// CHECK-NEXT: | |       | `-DeclRefExpr {{.*}} 'void (int, int, int, int, int, int, (lambda {{.*}})) const' lvalue CXXMethod {{.*}} 'operator()' 'void (int, int, int, int, int, int, (lambda {{.*}})) const' (FunctionTemplate {{.*}} 'operator()')
 // CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} 'const K<5>' lvalue <NoOp>
 // CHECK-NEXT: | |       | `-DeclRefExpr {{.*}} 'K<5>' lvalue ImplicitParam {{.*}} 'k' 'K<5>'
 // CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>

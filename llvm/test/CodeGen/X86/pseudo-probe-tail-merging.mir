@@ -1,0 +1,142 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=branch-folder -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -passes="require<profile-summary>,function(machine-function(branch-folder<enable-tail-merge>))" -o - %s | FileCheck %s
+
+--- |
+  target triple = "x86_64-unknown-unknown"
+
+  declare void @callee()
+
+  define void @probe_different_context() !dbg !4 {
+    ret void
+  }
+
+  define void @probe_same_context() !dbg !10 {
+    ret void
+  }
+
+  define void @call_different_context() !dbg !14 {
+    ret void
+  }
+
+  define void @call_same_context() !dbg !21 {
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "branch-folder test", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
+  !1 = !DIFile(filename: "pseudo-probe-tail-merging.cpp", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = !DISubroutineType(types: !{})
+
+  !4 = distinct !DISubprogram(name: "probe_different_context", scope: !1, file: !1, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !5 = distinct !DISubprogram(name: "inlined_probe", scope: !1, file: !1, line: 2, type: !3, scopeLine: 2, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !6 = distinct !DILocation(line: 10, column: 1, scope: !4)
+  !7 = distinct !DILocation(line: 20, column: 1, scope: !4)
+  !8 = !DILocation(line: 2, column: 1, scope: !5, inlinedAt: !6)
+  !9 = !DILocation(line: 2, column: 1, scope: !5, inlinedAt: !7)
+
+  !10 = distinct !DISubprogram(name: "probe_same_context", scope: !1, file: !1, line: 30, type: !3, scopeLine: 30, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !11 = distinct !DISubprogram(name: "inlined_same_probe", scope: !1, file: !1, line: 31, type: !3, scopeLine: 31, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !12 = distinct !DILocation(line: 32, column: 1, scope: !10)
+  !13 = !DILocation(line: 31, column: 1, scope: !11, inlinedAt: !12)
+
+  !14 = distinct !DISubprogram(name: "call_different_context", scope: !1, file: !1, line: 40, type: !3, scopeLine: 40, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !15 = distinct !DISubprogram(name: "inlined_call", scope: !1, file: !1, line: 41, type: !3, scopeLine: 41, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !16 = !DILexicalBlockFile(scope: !15, file: !1, discriminator: 455082007)
+  !17 = distinct !DILocation(line: 42, column: 1, scope: !14)
+  !18 = distinct !DILocation(line: 43, column: 1, scope: !14)
+  !19 = !DILocation(line: 41, column: 1, scope: !16, inlinedAt: !17)
+  !20 = !DILocation(line: 41, column: 1, scope: !16, inlinedAt: !18)
+
+  !21 = distinct !DISubprogram(name: "call_same_context", scope: !1, file: !1, line: 50, type: !3, scopeLine: 50, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !22 = distinct !DISubprogram(name: "inlined_same_call", scope: !1, file: !1, line: 51, type: !3, scopeLine: 51, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !23 = !DILexicalBlockFile(scope: !22, file: !1, discriminator: 455082007)
+  !24 = distinct !DILocation(line: 52, column: 1, scope: !21)
+  !25 = !DILocation(line: 51, column: 1, scope: !23, inlinedAt: !24)
+...
+
+---
+name: probe_different_context
+body: |
+  ; CHECK-LABEL: name: probe_different_context
+  ; CHECK-COUNT-2: PSEUDO_PROBE 1, 1, 0, 0
+  bb.0:
+    liveins: $al
+    TEST8rr killed $al, killed $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    PSEUDO_PROBE 1, 1, 0, 0, debug-location !8
+    NOOP
+    RET 0
+
+  bb.2:
+    PSEUDO_PROBE 1, 1, 0, 0, debug-location !9
+    NOOP
+    RET 0
+...
+
+---
+name: probe_same_context
+body: |
+  ; CHECK-LABEL: name: probe_same_context
+  ; CHECK-COUNT-1: PSEUDO_PROBE 2, 1, 0, 0
+  bb.0:
+    liveins: $al
+    TEST8rr killed $al, killed $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    PSEUDO_PROBE 2, 1, 0, 0, debug-location !13
+    NOOP
+    RET 0
+
+  bb.2:
+    PSEUDO_PROBE 2, 1, 0, 0, debug-location !13
+    NOOP
+    RET 0
+...
+
+---
+name: call_different_context
+body: |
+  ; CHECK-LABEL: name: call_different_context
+  ; CHECK-COUNT-2: CALL64pcrel32 @callee
+  bb.0:
+    liveins: $al
+    TEST8rr killed $al, killed $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !19
+    NOOP
+    RET 0
+
+  bb.2:
+    CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !20
+    NOOP
+    RET 0
+...
+
+---
+name: call_same_context
+body: |
+  ; CHECK-LABEL: name: call_same_context
+  ; CHECK-COUNT-1: CALL64pcrel32 @callee
+  bb.0:
+    liveins: $al
+    TEST8rr killed $al, killed $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !25
+    NOOP
+    RET 0
+
+  bb.2:
+    CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !25
+    NOOP
+    RET 0
+...

@@ -304,3 +304,103 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
   EXPECT_TRUE(!llvm::is_contained(InterceptFS->StatPaths, OtherPath));
   EXPECT_EQ(InterceptFS->ReadFiles, std::vector<std::string>{"test.m"});
 }
+
+// When scanning from a TU buffer, the in-memory TU lives ONLY
+// in the overlay filesystem built from that buffer, never on the base VFS. If
+// DependencyScanningWorker::computeDependencies moves the overlay away before
+// initializing the scan CompilerInstance, the scanner falls back to the base
+// VFS, cannot find its input, and the scan fails.
+TEST(DependencyScanner, ScanDepsTUBufferOverlayReachesScan) {
+  std::vector<std::string> CommandLine = {
+      "clang", "-target", "x86_64-apple-macosx10.7", "-c", "-o", "tu.o"};
+  StringRef CWD = "/root";
+
+  // Base VFS intentionally does NOT contain the TU file.
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  VFS->setCurrentWorkingDirectory(CWD);
+
+  DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [&] { return VFS; };
+  DependencyScanningService Service(std::move(Opts));
+  DependencyScanningTool ScanTool(Service);
+
+  auto Sept = llvm::sys::path::get_separator();
+  std::string TUPath = std::string(llvm::formatv("{0}root{0}tu.c", Sept));
+  auto TU = llvm::MemoryBuffer::getMemBuffer("int main(void) { return 0; }\n",
+                                             TUPath);
+
+  TextDiagnosticBuffer DiagConsumer;
+  llvm::DenseSet<ModuleID> AlreadySeen;
+  auto Result = ScanTool.getTranslationUnitDependencies(
+      CommandLine, CWD, DiagConsumer, AlreadySeen,
+      CallbackActionController::lookupUnreachableModuleOutput,
+      TU->getMemBufferRef());
+  ASSERT_TRUE(Result.has_value());
+  EXPECT_TRUE(llvm::any_of(Result->FileDeps,
+                           [](StringRef F) { return F.contains("tu.c"); }));
+}
+
+// A service is tied to a single build, so a path invalidated after the service
+// built a module depending on it doesn't cause a rebuild. Rebuilding would
+// write a different module file than the one already in the service's module
+// cache.
+TEST(DependencyScanner, InvalidatedPathAfterModuleBuilt) {
+  SmallString<128> Root;
+  ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("invalidated-path", Root));
+  auto Path = [&](StringRef Rel) {
+    SmallString<128> P(Root);
+    llvm::sys::path::append(P, Rel);
+    llvm::sys::path::native(P);
+    return std::string(P);
+  };
+  auto Write = [&](StringRef Rel, StringRef Contents) {
+    ASSERT_FALSE(llvm::sys::fs::create_directories(
+        llvm::sys::path::parent_path(Path(Rel))));
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(Path(Rel), EC);
+    ASSERT_FALSE(EC);
+    OS << Contents;
+  };
+  Write("include/module.modulemap", "module Umb { umbrella \"dir\" }\n");
+  Write("include/dir/a.h", "");
+  Write("tu.c", "#include \"dir/a.h\"\n");
+
+  std::vector<std::string> CommandLine = {"clang",
+                                          "-fmodules",
+                                          "-fmodules-cache-path=" +
+                                              Path("cache"),
+                                          "-I" + Path("include"),
+                                          "-c",
+                                          "tu.c",
+                                          "-o",
+                                          "tu.o"};
+
+  DependencyScanningServiceOptions Opts;
+  Opts.ValidateAgainstInvalidatedPaths = true;
+  DependencyScanningService Service(std::move(Opts));
+  DependencyScanningTool ScanTool(Service);
+  auto ScanModuleFileDeps = [&]() -> std::vector<std::string> {
+    TextDiagnosticBuffer DiagConsumer;
+    auto Result = ScanTool.getTranslationUnitDependencies(
+        CommandLine, Root, DiagConsumer, {},
+        [&](const ModuleDeps &MD, ModuleOutputKind) {
+          return Path("out/" + MD.ID.ModuleName + ".pcm");
+        });
+    if (!Result || Result->ModuleGraph.size() != 1)
+      return {};
+    std::vector<std::string> Deps;
+    Result->ModuleGraph[0].forEachFileDep([&](StringRef File) {
+      Deps.push_back(llvm::sys::path::filename(File).str());
+    });
+    return Deps;
+  };
+
+  std::vector<std::string> Expected = {"module.modulemap", "a.h"};
+  EXPECT_EQ(ScanModuleFileDeps(), Expected);
+
+  Write("include/dir/b.h", "");
+  Service.addInvalidatedPath(Path("include/dir"));
+  EXPECT_EQ(ScanModuleFileDeps(), Expected);
+
+  llvm::sys::fs::remove_directories(Root);
+}

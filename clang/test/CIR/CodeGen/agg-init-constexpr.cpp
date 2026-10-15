@@ -19,17 +19,21 @@ extern "C" void construct() {
   WithCtor c(2,5);
 }
 
-// CIR: cir.global "private" constant cir_private @__const.construct.c = #cir.const_record<{#cir.int<4> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.int<10> : !s64i, #cir.const_record<{#cir.int<5> : !s32i}> : !rec_HasVal, #cir.zero : !cir.array<!u8i x 4>}> : !rec_WithCtor
+// CIR: cir.global "private" constant cir_private @__const.construct.tmp = #cir.const_record<{#cir.int<4> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.int<10> : !s64i, #cir.const_record<{#cir.int<5> : !s32i}> : !rec_HasVal, #cir.zero : !cir.array<!u8i x 4>}> : !rec_WithCtor
 // CIR-LABEL: construct()
 // CIR-NEXT: %[[WC_ALLOCA:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_WithCtor>
-// CIR-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @__const.construct.c : !cir.ptr<!rec_WithCtor>
-// CIR-NEXT: cir.copy %[[GET_GLOBAL]] to %[[WC_ALLOCA]] : !cir.ptr<!rec_WithCtor>
+// CIR-NEXT: %[[TMP_ALLOCA:.*]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!rec_WithCtor>
+// CIR-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @__const.construct.tmp : !cir.ptr<!rec_WithCtor>
+// CIR-NEXT: cir.copy %[[GET_GLOBAL]] align(8) to %[[TMP_ALLOCA]] align(8) : !cir.ptr<!rec_WithCtor>
+// CIR-NEXT: cir.copy %[[TMP_ALLOCA]] align(8) to %[[WC_ALLOCA]] align(8) skip_tail_padding : !cir.ptr<!rec_WithCtor>
 // CIR-NEXT: cir.return
 
-// LLVM: @__const.construct.c = private constant %struct.WithCtor <{ i32 4, [4 x i8] zeroinitializer, i64 10, %struct.HasVal { i32 5 }, [4 x i8] zeroinitializer }>
+// LLVM: @__const.construct.tmp = private constant %struct.WithCtor <{ i32 4, [4 x i8] zeroinitializer, i64 10, %struct.HasVal { i32 5 }, [4 x i8] zeroinitializer }>
 // LLVM-LABEL: construct()
 // LLVM-NEXT: %[[WC_ALLOCA:.*]] = alloca %struct.WithCtor
-// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %1, ptr align 1 @__const.construct.c, i64 24, i1 false)
+// LLVM-NEXT: %[[TMP_ALLOCA:.*]] = alloca %struct.WithCtor
+// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP_ALLOCA]], ptr align 8 @__const.construct.tmp, i64 24, i1 false)
+// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[WC_ALLOCA]], ptr align 8 %[[TMP_ALLOCA]], i64 20, i1 false)
 // LLVM-NEXT: ret void
 
 // OGCG-LABEL: construct()

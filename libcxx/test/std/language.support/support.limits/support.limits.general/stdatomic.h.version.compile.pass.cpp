@@ -53,7 +53,7 @@
 #    error "__cpp_lib_stdatomic_h should have the value 202011L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_stdatomic_h
 #    error "__cpp_lib_stdatomic_h should be defined in c++26"
@@ -62,6 +62,15 @@
 #    error "__cpp_lib_stdatomic_h should have the value 202011L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_stdatomic_h
+#    error "__cpp_lib_stdatomic_h should be defined in c++29"
+#  endif
+#  if __cpp_lib_stdatomic_h != 202011L
+#    error "__cpp_lib_stdatomic_h should have the value 202011L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

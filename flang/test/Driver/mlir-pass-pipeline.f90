@@ -127,6 +127,7 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT:   CudaHeapAllocPromotion
 ! ALL-NEXT:   MemoryAllocationOpt
 
 ! ALL-NEXT: Inliner
@@ -135,7 +136,12 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
+! O2-NEXT: 'func.func' Pipeline
+! O2-NEXT:   LoopInvariantCodeMotion
+
 ! ALL-NEXT: PolymorphicOpConversion
+! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT: SelectOpsConversion
 ! ALL-NEXT: AssumedRankOpConversion
 ! O2-NEXT:  'func.func' Pipeline
 ! O2-NEXT:    OptimizeArrayRepacking
@@ -160,7 +166,8 @@ end program
 ! ALL-NEXT:      CFGConversion
 
 ! ALL-NEXT: SCFToControlFlow
-! ALL-NEXT: Canonicalizer
+! O0-NEXT: O0CanonicalizerPass
+! O2-NEXT: Canonicalizer
 ! ALL-NEXT: SimplifyRegionLite
 ! ALL-NEXT: ConvertComplexPow
 ! ALL-NEXT: CSE

@@ -9,19 +9,6 @@
 #ifndef LLDB_INTERPRETER_SCRIPTINTERPRETER_H
 #define LLDB_INTERPRETER_SCRIPTINTERPRETER_H
 
-#include "lldb/API/SBAttachInfo.h"
-#include "lldb/API/SBBreakpoint.h"
-#include "lldb/API/SBBreakpointLocation.h"
-#include "lldb/API/SBData.h"
-#include "lldb/API/SBError.h"
-#include "lldb/API/SBEvent.h"
-#include "lldb/API/SBExecutionContext.h"
-#include "lldb/API/SBFrameList.h"
-#include "lldb/API/SBLaunchInfo.h"
-#include "lldb/API/SBMemoryRegionInfo.h"
-#include "lldb/API/SBStream.h"
-#include "lldb/API/SBSymbolContext.h"
-#include "lldb/API/SBThread.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
@@ -35,12 +22,13 @@
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
-#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Interpreter/ScriptedInstanceRegistry.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
+#include <memory>
 #include <optional>
 
 namespace lldb_private {
@@ -258,12 +246,6 @@ public:
   }
 
   virtual StructuredData::ObjectSP
-  CreateSyntheticScriptedProvider(const char *class_name,
-                                  lldb::ValueObjectSP valobj) {
-    return StructuredData::ObjectSP();
-  }
-
-  virtual StructuredData::ObjectSP
   LoadPluginModule(const FileSpec &file_spec, lldb_private::Status &error) {
     return StructuredData::ObjectSP();
   }
@@ -343,43 +325,6 @@ public:
     // Clean up any ref counts to SBObjects that might be in global variables
   }
 
-  virtual size_t
-  CalculateNumChildren(const StructuredData::ObjectSP &implementor,
-                       uint32_t max) {
-    return 0;
-  }
-
-  virtual lldb::ValueObjectSP
-  GetChildAtIndex(const StructuredData::ObjectSP &implementor, uint32_t idx) {
-    return lldb::ValueObjectSP();
-  }
-
-  virtual llvm::Expected<uint32_t>
-  GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
-                          const char *child_name) {
-    return llvm::createStringError("Type has no child named '%s'", child_name);
-  }
-
-  virtual bool
-  UpdateSynthProviderInstance(const StructuredData::ObjectSP &implementor) {
-    return false;
-  }
-
-  virtual bool MightHaveChildrenSynthProviderInstance(
-      const StructuredData::ObjectSP &implementor) {
-    return true;
-  }
-
-  virtual lldb::ValueObjectSP
-  GetSyntheticValue(const StructuredData::ObjectSP &implementor) {
-    return nullptr;
-  }
-
-  virtual ConstString
-  GetSyntheticTypeName(const StructuredData::ObjectSP &implementor) {
-    return ConstString();
-  }
-
   virtual bool
   RunScriptBasedCommand(const char *impl_function, llvm::StringRef args,
                         ScriptedCommandSynchronicity synchronicity,
@@ -435,6 +380,10 @@ public:
                       StructuredData::ObjectSP *module_sp = nullptr,
                       FileSpec extra_search_dir = {},
                       lldb::TargetSP loaded_into_target_sp = {});
+
+  const lldb::ScriptedInstanceRegistrySP &GetScriptedInstanceRegistry() const {
+    return m_instance_registry_sp;
+  }
 
   virtual bool IsReservedWord(const char *word) { return false; }
 
@@ -517,6 +466,11 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedSyntheticChildrenInterfaceSP
+  CreateScriptedSyntheticChildrenInterface() {
+    return {};
+  }
+
   virtual StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) {
     return {};
@@ -567,57 +521,17 @@ public:
   virtual SanitizedScriptingModuleName
   GetSanitizedScriptingModuleName(llvm::StringRef name);
 
-  lldb::DataExtractorSP
-  GetDataExtractorFromSBData(const lldb::SBData &data) const;
-
-  Status GetStatusFromSBError(const lldb::SBError &error) const;
-
-  Event *GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const;
-
-  lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
-
-  lldb::ThreadSP GetOpaqueTypeFromSBThread(const lldb::SBThread &exe_ctx) const;
-
-  lldb::StackFrameSP GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const;
-
-  SymbolContext
-  GetOpaqueTypeFromSBSymbolContext(const lldb::SBSymbolContext &sym_ctx) const;
-
-  lldb::BreakpointSP
-  GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;
-
-  lldb::BreakpointLocationSP GetOpaqueTypeFromSBBreakpointLocation(
-      const lldb::SBBreakpointLocation &break_loc) const;
-
-  CommandReturnObject *GetOpaqueTypeFromSBCommandReturnObject(
-      const lldb::SBCommandReturnObject &cmd_retobj) const;
-
-  lldb::DebuggerSP
-  GetOpaqueTypeFromSBDebugger(const lldb::SBDebugger &debugger) const;
-
-  lldb::ProcessAttachInfoSP
-  GetOpaqueTypeFromSBAttachInfo(const lldb::SBAttachInfo &attach_info) const;
-
-  lldb::ProcessLaunchInfoSP
-  GetOpaqueTypeFromSBLaunchInfo(const lldb::SBLaunchInfo &launch_info) const;
-
-  std::optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
-      const lldb::SBMemoryRegionInfo &mem_region) const;
-
-  lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
-      const lldb::SBExecutionContext &exe_ctx) const;
-
-  lldb::StackFrameListSP
-  GetOpaqueTypeFromSBFrameList(const lldb::SBFrameList &exe_ctx) const;
-
-  lldb::ValueObjectSP
-  GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
-
-  lldb::TargetSP GetOpaqueTypeFromSBTarget(const lldb::SBTarget &target) const;
+  /// Get the debugger associated with this script interpreter.
+  Debugger &GetDebugger() { return m_debugger; }
+  const Debugger &GetDebugger() const { return m_debugger; }
 
 protected:
   Debugger &m_debugger;
   lldb::ScriptLanguage m_script_lang;
+
+private:
+  lldb::ScriptedInstanceRegistrySP m_instance_registry_sp =
+      std::make_shared<ScriptedInstanceRegistry>();
 };
 
 } // namespace lldb_private

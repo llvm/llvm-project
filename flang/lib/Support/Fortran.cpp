@@ -108,13 +108,19 @@ std::string AsFortran(IgnoreTKRSet tkr) {
 bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
     std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR,
     bool allowUnifiedMatchingRule, bool isHostDeviceProcedure,
-    const LanguageFeatureControl *features, bool actualIsVariable) {
+    const LanguageFeatureControl *features, bool actualIsVariable,
+    bool actualIsAllocatableOrPointer) {
   bool isCudaManaged{features
           ? features->IsEnabled(common::LanguageFeature::CudaManaged)
           : false};
   bool isCudaUnified{features
           ? features->IsEnabled(common::LanguageFeature::CudaUnified)
           : false};
+  // -gpu=mem:unified makes ordinary host variables device-accessible.
+  // -gpu=mem:managed only puts allocatable/pointer allocations in managed
+  // memory; static and automatic host objects remain host-resident.
+  bool actualHasImplicitCudaMemory{actualIsVariable &&
+      (isCudaUnified || (isCudaManaged && actualIsAllocatableOrPointer))};
   if (ignoreTKR.test(common::IgnoreTKR::Device)) {
     return true;
   }
@@ -163,18 +169,20 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
         // Non-variable actuals (expression results, intrinsic call results)
         // are host temporaries whose storage is not accessible from device
         // code even under unified memory, so the relaxation does not apply.
-        if (!y && (isCudaUnified || isCudaManaged) &&
-            !ignoreTKR.test(IgnoreTKR::Managed) && actualIsVariable) {
+        // Under -gpu=mem:managed, only allocatable/pointer actuals have
+        // implicit managed storage.
+        if (!y && actualHasImplicitCudaMemory &&
+            !ignoreTKR.test(IgnoreTKR::Managed)) {
           return true;
         }
       } else if (*x == CUDADataAttr::Managed) {
         if ((y && *y == CUDADataAttr::Unified) ||
-            (!y && (isCudaUnified || isCudaManaged) && actualIsVariable)) {
+            (!y && actualHasImplicitCudaMemory)) {
           return true;
         }
       } else if (*x == CUDADataAttr::Unified) {
         if ((y && *y == CUDADataAttr::Managed) ||
-            (!y && (isCudaUnified || isCudaManaged) && actualIsVariable)) {
+            (!y && actualHasImplicitCudaMemory)) {
           return true;
         }
       }
