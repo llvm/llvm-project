@@ -22,7 +22,8 @@ using LIBC_NAMESPACE::printf_core::OverflowMode;
 using LIBC_NAMESPACE::printf_core::WriteBuffer;
 using LIBC_NAMESPACE::printf_core::Writer;
 
-#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32) &&                                    \
+    !defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
 using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char, wchar_t>;
 #else
 using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char>;
