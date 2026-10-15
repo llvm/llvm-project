@@ -1543,13 +1543,9 @@ Error olMemIsAccessible_impl(ol_context_handle_t Context,
         *IsAccessible = true;
         return Error::success();
       }
-    } else {
-      // Not knowing the pointer is not an error, it may still be accessible,
-      // so only swallow NOT_FOUND and report anything else.
-      if (auto Err = error::consumeErrorIfCode(AllocOrErr.takeError(),
-                                               ErrorCode::NOT_FOUND))
-        return Err;
-    }
+    } else if (auto Err = error::consumeErrorIfCode(AllocOrErr.takeError(),
+                                                    ErrorCode::NOT_FOUND))
+      return Err;
   }
 
   auto AccessibleOrErr = Device->Device->isAccessiblePtr(Ptr, Size);
