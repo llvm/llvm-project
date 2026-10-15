@@ -23,6 +23,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -1073,8 +1074,8 @@ Error WasmObjectFile::parseCodeMetadataSection(StringRef Name,
   HintTypeName.consume_front("metadata.code.");
   if (HintTypeName == "branch_hint")
     return parseBranchHintSection(Ctx);
-  dbgs() << "invalid code metadata section: " << Name
-         << "; ignoring section.\n";
+  WithColor::warning() << "invalid code metadata section: " << Name
+                       << "; ignoring section.\n";
   return Error::success(); // Ignore unknown code metadata sections.
 }
 
@@ -1091,8 +1092,11 @@ Error WasmObjectFile::parseBranchHintSection(ReadContext &Ctx) {
       Hint.Size = readVaruint32(Ctx);
       uint32_t Data = readVaruint32(Ctx);
       if (Data > 0x1) {
-        dbgs() << "invalid branch hint data; hint out of range [0; 1]; "
-                  "ignoring metadata.code.branch_hint section.\n";
+        WithColor::warning()
+            << "invalid branch hint data; hint out of range [0; 1]; "
+               "ignoring metadata.code.branch_hint section.\n";
+        BranchHints.clear();
+        return Error::success();
       }
       Hint.Data = static_cast<wasm::WasmCodeMetadataBranchHint>(Data);
       FuncEntry.Hints.push_back(Hint);
@@ -1100,7 +1104,9 @@ Error WasmObjectFile::parseBranchHintSection(ReadContext &Ctx) {
     BranchHints.emplace_back(std::move(FuncEntry));
   }
   if (Ctx.Ptr != Ctx.End) {
-    dbgs() << "branch hint section ended prematurely; ignoring section.\n";
+    WithColor::warning()
+        << "branch hint section ended prematurely; ignoring section.\n";
+    BranchHints.clear();
   }
   return Error::success();
 }

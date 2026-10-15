@@ -34,7 +34,6 @@ private:
   WebAssemblyFunctionInfo *MFI;
   bool signaturesEmitted = false;
 
-  // vec idx == local func_idx
   MapVector<const MCSymbol *, BranchHintRecord> BranchHints;
 
 public:

@@ -64,7 +64,6 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 extern cl::opt<bool> WasmKeepRegisters;
-// values are divided by 1<<31 to calculate the probability
 static cl::opt<float>
     WasmHighBranchProb("wasm-branch-prob-high", cl::Hidden,
                        cl::desc("lowest branch probability to not be annotated "
@@ -869,8 +868,8 @@ void WebAssemblyAsmPrinter::recordBranchHint(const MachineInstr *MI) {
   else
     return; // Don't emit branch hint between thresholds
 
-  // we know that we only emit branch hints for internal functions,
-  // therefore we can directly cast and don't need getMCSymbolForFunction
+  // We only emit branch hints for defined functions, so we can use getSymbol
+  // directly instead of getMCSymbolForFunction.
   MCSymbol *FuncSym = getSymbol(&MF->getFunction());
   auto FuncEntry = BranchHints.find(FuncSym);
   if (FuncEntry == BranchHints.end()) {

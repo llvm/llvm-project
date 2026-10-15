@@ -96,7 +96,6 @@ private:
   void addSections();
 
   void createCustomSections();
-  // Code metadata custom sections must be placed before code section
   void createCodeMetaDataSections();
   void createSyntheticSections();
   void createSyntheticSectionsPostLayout();
@@ -593,6 +592,7 @@ void Writer::addSections() {
   addSection(out.elemSec);
   addSection(out.dataCountSec);
 
+  // Code metadata custom sections must be placed before the code section.
   createCodeMetaDataSections();
 
   addSection(make<CodeSection>(out.functionSec->inputFunctions));
