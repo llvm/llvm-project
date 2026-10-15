@@ -5194,6 +5194,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/Vector/TransformOps/VectorTransformOps.h"],
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -5714,6 +5715,7 @@ td_library(
         ":FunctionInterfacesTdFiles",
         ":InferIntRangeInterfaceTdFiles",
         ":LLVMOpsTdFiles",
+        ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SCFTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -5807,6 +5809,7 @@ cc_library(
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":LoopLikeInterface",
         ":MathDialect",
         ":MemRefDialect",
         ":SCFDialect",
@@ -8860,8 +8863,8 @@ cc_library(
 
 cc_library(
     name = "ArithAttrToLLVMConversion",
-    srcs = glob(["lib/Conversion/ArithCommon/*.cpp"]),
-    hdrs = glob(["include/mlir/Conversion/ArithCommon/*.h"]),
+    srcs = glob(["lib/Conversion/ArithAttrToLLVM/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArithAttrToLLVM/*.h"]),
     includes = ["include"],
     deps = [
         ":ArithDialect",
@@ -10967,6 +10970,7 @@ td_library(
     deps = [
         ":AtomicInterfacesTdFiles",
         ":LLVMOpsTdFiles",
+        ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
     ],
 )
@@ -11061,6 +11065,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":LLVMDialect",
+        ":LoopLikeInterface",
         ":OpenACCMPOpsInterfacesIncGen",
         ":OpenMPInterfacesIncGen",
         ":OpenMPOpsIncGen",
@@ -12521,6 +12526,7 @@ cc_library(
     name = "TosaToLinalg",
     srcs = glob([
         "lib/Conversion/TosaToLinalg/*.cpp",
+        "lib/Conversion/TosaToLinalg/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/TosaToLinalg/*.h",

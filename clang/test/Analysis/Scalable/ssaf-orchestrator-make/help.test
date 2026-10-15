@@ -13,6 +13,8 @@
 # SSAF: --ssaf-linker
 # SSAF: --ssaf-analyzer
 # SSAF: --ssaf-src-edit-merge
+# SSAF: --ssaf-merge-transformation-report
+# SSAF: --ssaf-merge-conflict-report
 # SSAF: --ssaf-extra-clang-arg
 # SSAF: --keep-going
 # SSAF: --verbose
