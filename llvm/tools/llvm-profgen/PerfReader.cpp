@@ -523,6 +523,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
                                          InputFile &File,
                                          std::optional<int32_t> PIDFilter) {
   StringRef PerfData = File.InputFilePath;
+  bool UseProcessMappings = File.UseProcessMappings;
   // Run perf script to retrieve PIDs matching binary we're interested in.
   auto PerfExecutable = sys::Process::FindInEnvPath("PATH", "perf");
   if (!PerfExecutable) {
@@ -578,31 +579,114 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
 
   std::string PIDs;
   if (!SkipPID) {
-    StringRef ScriptMMapArgs[] = {PerfExecutablePath,
-                                  "script",
-                                  "--show-mmap-events",
-                                  "-F",
-                                  "comm,pid",
-                                  "-i",
-                                  PerfData};
-    RunPerfScript(ScriptMMapArgs);
+    // Discover sample PIDs. Mapped mode follows task records because children
+    // can inherit the target without emitting their own mmap.
+    SmallVector<StringRef, 8> Args = {PerfExecutablePath, "script",
+                                      "--show-mmap-events"};
+    if (UseProcessMappings)
+      Args.push_back("--show-task-events");
+    Args.append(
+        {"-F", UseProcessMappings ? "pid,time" : "comm,pid", "-i", PerfData});
+    RunPerfScript(Args);
 
     // Collect the PIDs
     TraceStream TraceIt(PerfTraceFile);
     DenseSet<int32_t> PIDSet;
+    // ActivePIDs decides which later forks may inherit the target. EverPIDs
+    // retains earlier owners after exit/exec, since their recorded samples
+    // must still be extracted. This pass selects candidates, not addresses.
+    std::unordered_set<int32_t> ActivePIDs;
+    // A recording may begin after threads were created. Their observed subset
+    // cannot prove process death unless a birth/exec established completeness.
+    std::unordered_map<int32_t, std::unordered_set<int32_t>> ActiveThreads;
+    std::unordered_set<int32_t> CompleteThreadPIDs;
+    std::set<int32_t> EverPIDs;
     while (!TraceIt.isAtEoF()) {
       MMapEvent MMap;
-      if (isMMapEvent(TraceIt.getCurrentLine()) &&
-          extractMMapEventForBinary(Binary, TraceIt.getCurrentLine(), MMap)) {
-        auto It = PIDSet.insert(MMap.PID);
-        if (It.second && (!PIDFilter || MMap.PID == *PIDFilter)) {
-          if (!PIDs.empty()) {
-            PIDs.append(",");
+      StringRef Line = TraceIt.getCurrentLine();
+      // Mapped output prefixes metadata with a numeric PID. The legacy mmap
+      // shortcut skips digit-leading lines, so inspect the marker here.
+      bool IsMMap = UseProcessMappings ? Line.contains("PERF_RECORD_MMAP")
+                                       : isMMapEvent(Line);
+      if (IsMMap) {
+        if (extractMMapEventForBinary(Binary, Line, MMap, UseProcessMappings)) {
+          if (UseProcessMappings) {
+            ActivePIDs.insert(MMap.PID);
+            EverPIDs.insert(MMap.PID);
+          } else {
+            auto It = PIDSet.insert(MMap.PID);
+            if (It.second && (!PIDFilter || MMap.PID == *PIDFilter)) {
+              if (!PIDs.empty()) {
+                PIDs.append(",");
+              }
+              PIDs.append(utostr(MMap.PID));
+            }
           }
-          PIDs.append(utostr(MMap.PID));
+        }
+        // An mmap from any binary also tells us its emitting thread is live.
+        if (UseProcessMappings && MMap.PID >= 0 &&
+            ActiveThreads[static_cast<int32_t>(MMap.PID)]
+                .insert(MMap.TID)
+                .second)
+          CompleteThreadPIDs.erase(MMap.PID);
+      } else if (UseProcessMappings && Line.contains("PERF_RECORD_")) {
+        TaskEvent Event = parseTaskEvent(Line);
+        if (Event.Kind == TaskKind::Fork && !Event.IsSynthetic) {
+          // The parent may first appear in this fork record. Remember it so
+          // a later child-thread exit cannot retire a still-live process.
+          if (ActiveThreads[Event.ParentPID].insert(Event.ParentTID).second)
+            CompleteThreadPIDs.erase(Event.ParentPID);
+          if (Event.PID == Event.ParentPID) {
+            // New thread: the process's existing address space is shared.
+            ActiveThreads[Event.PID].insert(Event.TID);
+          } else if (ActivePIDs.count(Event.ParentPID)) {
+            ActivePIDs.insert(Event.PID);
+            ActiveThreads[Event.PID] = {Event.TID};
+            EverPIDs.insert(Event.PID);
+          } else {
+            // A reused child PID loses its previous target eligibility.
+            ActivePIDs.erase(Event.PID);
+            ActiveThreads[Event.PID] = {Event.TID};
+          }
+          if (Event.PID != Event.ParentPID)
+            CompleteThreadPIDs.insert(Event.PID);
+        } else if (Event.Kind == TaskKind::Comm) {
+          if (ActiveThreads[Event.PID].insert(Event.TID).second)
+            CompleteThreadPIDs.erase(Event.PID);
+        } else if (Event.Kind == TaskKind::Exec) {
+          // Stop inheritance from the old image. A later target mmap will
+          // make the new image eligible again.
+          ActivePIDs.erase(Event.PID);
+          ActiveThreads[Event.PID] = {Event.TID};
+          if (Event.IsSynthetic)
+            CompleteThreadPIDs.erase(Event.PID);
+          else
+            CompleteThreadPIDs.insert(Event.PID);
+        } else if (Event.Kind == TaskKind::Exit) {
+          // An EXIT record describes one thread, not necessarily the process.
+          auto It = ActiveThreads.find(Event.PID);
+          if (It == ActiveThreads.end() || !It->second.erase(Event.TID)) {
+            CompleteThreadPIDs.erase(Event.PID);
+          } else if (It->second.empty()) {
+            ActiveThreads.erase(It);
+            if (CompleteThreadPIDs.erase(Event.PID))
+              ActivePIDs.erase(Event.PID);
+          }
         }
       }
       TraceIt.advance();
+    }
+
+    if (UseProcessMappings) {
+      // Apply --pid only after following ancestry: the chosen process may
+      // obtain all its mappings from an unselected parent.
+      for (int32_t PID : EverPIDs) {
+        if (PIDFilter && PID != *PIDFilter)
+          continue;
+        if (!PIDs.empty())
+          PIDs.append(",");
+        PIDs.append(utostr(PID));
+      }
     }
 
     if (PIDs.empty()) {
@@ -615,8 +699,17 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   ScriptSampleArgs.push_back(PerfExecutablePath);
   ScriptSampleArgs.push_back("script");
   ScriptSampleArgs.push_back("--show-mmap-events");
+  // perf's PID selection filters samples while these options retain metadata
+  // needed to replay inherited mappings and later address-space changes.
+  if (UseProcessMappings && !Binary->isKernel())
+    ScriptSampleArgs.push_back("--show-task-events");
   ScriptSampleArgs.push_back("-F");
-  ScriptSampleArgs.push_back("ip,brstack");
+  ScriptSampleArgs.push_back(UseProcessMappings ? "pid,time,ip,brstack"
+                                                : "ip,brstack");
+  // Keep stack lines as bare addresses so the mapped parser can distinguish
+  // them from the next PID/timestamp header, even after an incomplete stack.
+  if (UseProcessMappings)
+    ScriptSampleArgs.append({"-F", "-sym"});
   ScriptSampleArgs.push_back("-i");
   ScriptSampleArgs.push_back(PerfData);
   if (!PIDs.empty()) {
@@ -626,7 +719,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   RunPerfScript(ScriptSampleArgs);
 
   return {std::string(PerfTraceFile), InputFormat::PerfScript,
-          PerfContent::UnknownContent};
+          PerfContent::UnknownContent, UseProcessMappings};
 }
 
 static StringRef filename(StringRef Path, bool UseBackSlash) {
