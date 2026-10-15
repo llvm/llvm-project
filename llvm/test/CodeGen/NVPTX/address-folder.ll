@@ -16,7 +16,7 @@ define ptx_kernel void @test_kernel_cross_block(ptr byval([2 x i64]) align 8 %r,
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd2, [test_kernel_cross_block_param_1];
 ; CHECK-NEXT:    setp.lt.s64 %p1, %rd2, 1;
-; CHECK-NEXT:    @%p1 bra $L__BB0_2;
+; CHECK-NEXT:    @%p1 bra.uni $L__BB0_2;
 ; CHECK-NEXT:  // %bb.1: // %body
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_kernel_cross_block_param_2];
 ; CHECK-NEXT:    ld.param.b64 %rd3, [test_kernel_cross_block_param_0];
@@ -36,7 +36,7 @@ define ptx_kernel void @test_kernel_cross_block(ptr byval([2 x i64]) align 8 %r,
 ; O0-NEXT:    ld.param.b64 %rd2, [test_kernel_cross_block_param_1];
 ; O0-NEXT:    mov.b64 %rd1, test_kernel_cross_block_param_0;
 ; O0-NEXT:    setp.lt.s64 %p1, %rd2, 1;
-; O0-NEXT:    @%p1 bra $L__BB0_2;
+; O0-NEXT:    @%p1 bra.uni $L__BB0_2;
 ; O0-NEXT:    bra.uni $L__BB0_1;
 ; O0-NEXT:  $L__BB0_1: // %body
 ; O0-NEXT:    ld.param.b64 %rd4, [%rd1];
@@ -70,7 +70,7 @@ define ptx_kernel void @test_kernel_var_offset(ptr byval([8 x i64]) align 8 %r, 
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd4, [test_kernel_var_offset_param_1];
 ; CHECK-NEXT:    setp.lt.s64 %p1, %rd4, 1;
-; CHECK-NEXT:    @%p1 bra $L__BB1_2;
+; CHECK-NEXT:    @%p1 bra.uni $L__BB1_2;
 ; CHECK-NEXT:  // %bb.1: // %body
 ; CHECK-NEXT:    ld.param.b64 %rd2, [test_kernel_var_offset_param_2];
 ; CHECK-NEXT:    mov.b64 %rd3, test_kernel_var_offset_param_0;
@@ -90,7 +90,7 @@ define ptx_kernel void @test_kernel_var_offset(ptr byval([8 x i64]) align 8 %r, 
 ; O0-NEXT:    ld.param.b64 %rd2, [test_kernel_var_offset_param_1];
 ; O0-NEXT:    mov.b64 %rd1, test_kernel_var_offset_param_0;
 ; O0-NEXT:    setp.lt.s64 %p1, %rd2, 1;
-; O0-NEXT:    @%p1 bra $L__BB1_2;
+; O0-NEXT:    @%p1 bra.uni $L__BB1_2;
 ; O0-NEXT:    bra.uni $L__BB1_1;
 ; O0-NEXT:  $L__BB1_1: // %body
 ; O0-NEXT:    add.s64 %rd4, %rd1, %rd2;

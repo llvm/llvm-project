@@ -1,0 +1,95 @@
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_90 -run-pass=branch-folder -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=FOLD
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_90 -run-pass=machine-cse -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=CSE
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_90 -run-pass=branch-folder -enable-tail-merge -tail-merge-size=1 -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=MERGE
+
+---
+name: uniform_loop
+tracksRegLiveness: true
+body: |
+  ; FOLD-LABEL: name: uniform_loop
+  ; FOLD: CBranchUni {{%[0-9]+}}, %bb.{{[0-9]+}}, 1
+  bb.0:
+    successors: %bb.1
+    GOTO %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    %0:b1 = IMPLICIT_DEF
+    CBranchUni %0, %bb.2, 0
+    GOTO %bb.1
+
+  bb.2:
+    Return
+...
+
+---
+name: compare_inversion
+tracksRegLiveness: true
+body: |
+  ; CSE-LABEL: name: compare_inversion
+  ; CSE: [[CMP:%[0-9]+]]:b1 = SETP_i32
+  ; CSE: CBranch [[CMP]], %bb.3, 0
+  ; CSE-NOT: SETP_i32
+  ; CSE: CBranchUni [[CMP]], %bb.3, 1
+  bb.0:
+    successors: %bb.1, %bb.3
+    %0:b32 = IMPLICIT_DEF
+    %1:b32 = IMPLICIT_DEF
+    %2:b1 = SETP_i32 %0, %1, 0
+    CBranch %2, %bb.3, 0
+    GOTO %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    %3:b1 = SETP_i32 %0, %1, 1
+    CBranchUni %3, %bb.3, 0
+    GOTO %bb.2
+
+  bb.2:
+    Return
+
+  bb.3:
+    Return
+...
+
+# Each branch can be uniform within its own incoming group of threads without
+# being uniform after the groups join. Merge the tails and drop uniformity.
+---
+name: separate_groups
+tracksRegLiveness: true
+body: |
+  ; MERGE-LABEL: name: separate_groups
+  ; MERGE: [[SPLIT:%[0-9]+]]:b1 = IMPLICIT_DEF
+  ; MERGE-NEXT: [[COND:%[0-9]+]]:b1 = IMPLICIT_DEF
+  ; MERGE-NOT: CBranchUni
+  ; MERGE: CBranch [[COND]],
+  ; MERGE-NOT: CBranchUni
+  ; MERGE-NOT: CBranch [[COND]],
+  ; MERGE: ...
+  bb.0:
+    successors: %bb.1, %bb.2
+    %0:b1 = IMPLICIT_DEF
+    %1:b1 = IMPLICIT_DEF
+    CBranch %0, %bb.2, 0
+    GOTO %bb.1
+
+  bb.1:
+    successors: %bb.3, %bb.4
+    INLINEASM &"// left", 1
+    CBranchUni %1, %bb.3, 0
+    GOTO %bb.4
+
+  bb.2:
+    successors: %bb.3, %bb.4
+    INLINEASM &"// right", 1
+    CBranchUni %1, %bb.3, 0
+    GOTO %bb.4
+
+  bb.3:
+    INLINEASM &"// true", 1
+    Return
+
+  bb.4:
+    INLINEASM &"// false", 1
+    Return
+...

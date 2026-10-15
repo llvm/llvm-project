@@ -748,7 +748,7 @@ define ptx_kernel void @test_phi(ptr byval(%struct.S) align 4 %input1, ptr byval
 ; PTX_60-NEXT:    ld.param.b64 %rd2, [test_phi_param_2];
 ; PTX_60-NEXT:    cvta.to.global.u64 %rd1, %rd2;
 ; PTX_60-NEXT:    ld.param.b32 %r1, [test_phi_param_0];
-; PTX_60-NEXT:    @%p1 bra $L__BB13_2;
+; PTX_60-NEXT:    @%p1 bra.uni $L__BB13_2;
 ; PTX_60-NEXT:  // %bb.1: // %second
 ; PTX_60-NEXT:    ld.param.b32 %r1, [test_phi_param_1+4];
 ; PTX_60-NEXT:  $L__BB13_2: // %merge
@@ -769,7 +769,7 @@ define ptx_kernel void @test_phi(ptr byval(%struct.S) align 4 %input1, ptr byval
 ; PTX_70-NEXT:    mov.b64 %rd4, test_phi_param_0;
 ; PTX_70-NEXT:    ld.param.b64 %rd3, [test_phi_param_2];
 ; PTX_70-NEXT:    cvta.to.global.u64 %rd1, %rd3;
-; PTX_70-NEXT:    @%p1 bra $L__BB13_2;
+; PTX_70-NEXT:    @%p1 bra.uni $L__BB13_2;
 ; PTX_70-NEXT:  // %bb.1: // %second
 ; PTX_70-NEXT:    mov.b64 %rd2, test_phi_param_1;
 ; PTX_70-NEXT:    add.s64 %rd4, %rd2, 4;
@@ -854,7 +854,7 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ; PTX-NEXT:    ld.param.b32 %r2, [test_phi_write_param_0];
 ; PTX-NEXT:    st.local.b32 [%SPL+4], %r2;
 ; PTX-NEXT:    add.u64 %rd2, %SPL, 4;
-; PTX-NEXT:    @%p1 bra $L__BB14_2;
+; PTX-NEXT:    @%p1 bra.uni $L__BB14_2;
 ; PTX-NEXT:  // %bb.1: // %second
 ; PTX-NEXT:    add.u64 %rd2, %SPL, 0;
 ; PTX-NEXT:  $L__BB14_2: // %merge

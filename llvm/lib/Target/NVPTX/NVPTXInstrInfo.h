@@ -69,6 +69,8 @@ public:
                         int *BytesAdded = nullptr) const override;
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+  void ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
+                               MachineBasicBlock *NewDest) const override;
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,

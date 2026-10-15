@@ -1,0 +1,175 @@
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -O0 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -O2 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,O2
+; RUN: llc -enable-new-pm < %s -mtriple=nvptx64 -mcpu=sm_90 -O0 -verify-machineinstrs | FileCheck %s
+; RUN: llc -enable-new-pm < %s -mtriple=nvptx64 -mcpu=sm_90 -O2 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,O2
+
+target triple = "nvptx64-nvidia-cuda"
+
+define ptx_kernel void @uniform_scalars(i32 %a, i32 %b) {
+; CHECK-LABEL: .entry uniform_scalars(
+; CHECK: @{{!?}}%p{{[0-9]+}} bra.uni
+  %block = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
+  %min = call i32 @llvm.umin.i32(i32 %a, i32 %block)
+  %c0 = icmp ult i32 %min, 7
+  %c1 = icmp ult i32 %b, 3
+  %both = and i1 %c0, %c1
+  %c2 = icmp eq i32 %a, %b
+  %cond = or i1 %both, %c2
+  br i1 %cond, label %then, label %exit
+then:
+  call void asm sideeffect "// taken", ""()
+  br label %exit
+exit:
+  ret void
+}
+
+define void @device_argument(i32 %a) {
+; CHECK-LABEL: .func device_argument(
+; CHECK: @{{!?}}%p{{[0-9]+}} bra $L
+  %cond = icmp eq i32 %a, 0
+  br i1 %cond, label %then, label %exit
+then:
+  call void asm sideeffect "// taken", ""()
+  br label %exit
+exit:
+  ret void
+}
+
+define ptx_kernel void @warp_dispatch() "nvvm.reqntid"="128" {
+; CHECK-LABEL: .entry warp_dispatch(
+; CHECK: @{{!?}}%p{{[0-9]+}} bra.uni
+  %thread = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %warp = lshr i32 %thread, 5
+  %cond = icmp ult i32 %warp, 2
+  br i1 %cond, label %then, label %exit
+then:
+  call void asm sideeffect "// default partition", ""()
+  br label %exit
+exit:
+  ret void
+}
+
+define ptx_kernel void @uniform_loop(i32 %n) {
+; CHECK-LABEL: .entry uniform_loop(
+; CHECK: @{{!?}}%p{{[0-9]+}} bra.uni
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ 0, %entry ], [ %next, %loop ]
+  call void asm sideeffect "// iteration $0", "r"(i32 %i)
+  %next = add i32 %i, 1
+  %cond = icmp ult i32 %next, %n
+  br i1 %cond, label %loop, label %exit
+exit:
+  ret void
+}
+
+define ptx_kernel void @broadcast_condition() {
+; CHECK-LABEL: .entry broadcast_condition(
+; CHECK: shfl.sync.idx.b32
+; CHECK: @{{!?}}%p{{[0-9]+}} bra.uni
+  %thread = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %broadcast = call i32 @llvm.nvvm.shfl.sync.idx.i32(i32 -1, i32 %thread, i32 0, i32 31)
+  %cond = icmp ult i32 %broadcast, 64
+  br i1 %cond, label %then, label %exit
+then:
+  call void asm sideeffect "// taken", ""()
+  br label %exit
+exit:
+  ret void
+}
+
+; The induction variable is uniform inside the loop, but threads can observe
+; different iterations at the exit. Both conditional branches are divergent.
+define ptx_kernel void @temporal_divergence() {
+; CHECK-LABEL: .entry temporal_divergence(
+; CHECK: @{{!?}}%p{{[0-9]+}} bra $L
+; CHECK: @{{!?}}%p{{[0-9]+}} bra $L
+entry:
+  %lane = call i32 @llvm.nvvm.read.ptx.sreg.laneid()
+  br label %loop
+loop:
+  %i = phi i32 [ 0, %entry ], [ %next, %loop ]
+  call void asm sideeffect "// iteration $0", "r"(i32 %i)
+  %next = add i32 %i, 1
+  %done = icmp uge i32 %next, %lane
+  br i1 %done, label %test, label %loop
+test:
+  %cond = icmp eq i32 %i, 8
+  br i1 %cond, label %then, label %exit
+then:
+  call void asm sideeffect "// taken", ""()
+  br label %exit
+exit:
+  ret void
+}
+
+define ptx_kernel void @uniform_switch(i32 %a) {
+; CHECK-LABEL: .entry uniform_switch(
+; CHECK-COUNT-2: @{{!?}}%p{{[0-9]+}} bra.uni
+  switch i32 %a, label %exit [ i32 4, label %four
+                             i32 32, label %thirtytwo ]
+four:
+  call void asm sideeffect "// four", ""()
+  br label %exit
+thirtytwo:
+  call void asm sideeffect "// thirtytwo", ""()
+  br label %exit
+exit:
+  ret void
+}
+
+; Opaque asm results are divergent, but independent branches can be uniform.
+define ptx_kernel void @opaque_control_flow(i32 %a) {
+; CHECK-LABEL: .entry opaque_control_flow(
+; CHECK: @{{!?}}%p{{[0-9]+}} bra.uni
+; CHECK: @{{!?}}%p{{[0-9]+}} bra $L
+  %uniform = icmp eq i32 %a, 0
+  br i1 %uniform, label %uniform_then, label %call
+uniform_then:
+  call void asm sideeffect "// uniform", ""()
+  br label %call
+call:
+  %value = callbr i32 asm sideeffect "mov.u32 $0, %laneid; // $1", "=r,!i"() to label %test [label %exit]
+test:
+  %cond = icmp eq i32 %a, %value
+  br i1 %cond, label %then, label %exit
+then:
+  call void asm sideeffect "// taken", ""()
+  br label %exit
+exit:
+  ret void
+}
+
+; Wide comparison legalization must retain the branch's IR proof.
+define ptx_kernel void @wide_comparison(i128 %a, i128 %b) {
+; CHECK-LABEL: .entry wide_comparison(
+; CHECK: @{{!?}}%p{{[0-9]+}} bra.uni
+  %cond = icmp ult i128 %a, %b
+  br i1 %cond, label %then, label %exit
+then:
+  call void asm sideeffect "// taken", ""()
+  br label %exit
+exit:
+  ret void
+}
+
+; A uniform branch has the same memory effects as an ordinary branch.
+define ptx_kernel void @sink_load(ptr addrspace(3) %input, ptr addrspace(1) %output, i1 %cond) {
+; O2-LABEL: .entry sink_load(
+; O2: @{{!?}}%p{{[0-9]+}} bra.uni
+; O2: ld.shared.b32
+  %value = load i32, ptr addrspace(3) %input
+  br i1 %cond, label %store, label %exit
+store:
+  store i32 %value, ptr addrspace(1) %output
+  br label %exit
+exit:
+  ret void
+}
+
+declare i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
+declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+declare i32 @llvm.nvvm.read.ptx.sreg.laneid()
+declare i32 @llvm.umin.i32(i32, i32)
+declare i32 @llvm.nvvm.shfl.sync.idx.i32(i32, i32, i32, i32)
