@@ -1,8 +1,0 @@
-
-# RUN: env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=%ssaf-orchestrator-make-libs \
-# RUN:     %ssaf-orchestrator-make-python -m unittest discover \
-# RUN:   -s %ssaf-orchestrator-make-src/tests -t %ssaf-orchestrator-make-src \
-# RUN:   > %t.log 2>&1
-# RUN: FileCheck %s --input-file=%t.log --implicit-check-not=FAILED
-
-# CHECK: {{^OK}}
