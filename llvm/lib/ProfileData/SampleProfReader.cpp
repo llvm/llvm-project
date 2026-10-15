@@ -1206,6 +1206,15 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     }
   }
 
+  // This function may be called more than once on the same reader (initially
+  // for the module's functions, then incrementally by SampleProfileMatcher).
+  // Make every lookup path idempotent: a top-level profile that is already in
+  // \p Profiles is never decoded again, regardless of how the request was
+  // built, so it cannot be merged into itself.
+  auto IsLoaded = [&Profiles](const SampleContext &Ctx) {
+    return Profiles.find(Ctx) != Profiles.end();
+  };
+
   if (FuncOffsetTable && FuncOffsetTable->isEytzinger() &&
       useFuncOffsetList()) {
     ArrayRef<support::ulittle32_t> Offsets = FuncOffsetTable->getFuncOffsets();
@@ -1256,6 +1265,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
 
       if (CommonContext == &FContext ||
           (CommonContext && CommonContext->isPrefixOf(FContext))) {
+        if (IsLoaded(FContext))
+          continue;
         // Load profile for the current context which originated from
         // the common ancestor.
         const uint8_t *FuncProfileAddr = Start + NameOffset.second;
@@ -1267,6 +1278,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     assert(!useFuncOffsetList());
     for (auto Name : FuncsToUse) {
       auto GUID = MD5Hash(Name);
+      if (IsLoaded(SampleContext(FunctionId(GUID))))
+        continue;
       if (auto Offset = FuncOffsetTable->lookup(GUID)) {
         const uint8_t *FuncProfileAddr = Start + *Offset;
         if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
@@ -1281,13 +1294,9 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
       StringRef FuncNameStr = FuncName.stringRef();
       if (!FuncsToUse.count(FuncNameStr) && !Remapper->exist(FuncNameStr))
         continue;
-      // This function may be called more than once on the same reader: once
-      // for the module's functions and then incrementally (e.g. by
-      // SampleProfileMatcher) for additional candidates. The remapper is
-      // cumulative, so names inserted by an earlier call still match here.
-      // Skip profiles that are already loaded; otherwise they would be read
-      // again and merged into themselves.
-      if (Profiles.find(FContext) != Profiles.end())
+      // The remapper is cumulative, so names inserted by an earlier call still
+      // match here.
+      if (IsLoaded(FContext))
         continue;
       const uint8_t *FuncProfileAddr = Start + NameOffset.second;
       if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
@@ -1296,6 +1305,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
   } else {
     assert(!useFuncOffsetList());
     for (auto Name : FuncsToUse) {
+      if (IsLoaded(SampleContext(Name)))
+        continue;
       if (auto Offset = FuncOffsetTable->lookup(MD5Hash(Name))) {
         const uint8_t *FuncProfileAddr = Start + *Offset;
         if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
