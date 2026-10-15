@@ -20,6 +20,7 @@
 #include <concepts>
 #include <bit>
 #include <cstddef>
+#include <array>
 
 namespace support {
 
