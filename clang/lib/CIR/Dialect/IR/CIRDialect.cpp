@@ -12,7 +12,6 @@
 
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
-#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -294,11 +293,9 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
       return op->emitOpError() << "expects '" << getTripleAttrName() << "' to "
                                << "be a string";
     llvm::Triple triple(tripleStr.getValue());
-    clang::TargetOptions targetOptions;
-    targetOptions.Triple = tripleStr.getValue();
-    // "Validate" our triple by checking if it can successfully initialize into
-    // a TargetInfo:
-    if (!clang::targets::AllocateTarget(triple, targetOptions))
+    // "Validate" our triple by checking if it has a known architecture;
+    // although not all triples have a corresponding clang TargetInfo.
+    if (triple.getArch() == llvm::Triple::UnknownArch)
       return op->emitOpError()
              << "unknown triple '" << tripleStr.getValue() << "' in '"
              << getTripleAttrName() << "' attribute";

@@ -3184,7 +3184,8 @@ void LoweringPreparePass::runOnOperation() {
   lowerModule = cir::createLowerModule(mlirModule);
   assert(lowerModule && "LowerModule shouldn't be null");
   if (!lowerModule->hasTarget()) {
-    mlirModule.emitError() << getArgument() << " requires a module with a '"
+    mlirModule.emitError() << getArgument()
+                           << " requires a module with a supported '"
                            << CIRDialect::getTripleAttrName() << "' attribute";
     return signalPassFailure();
   }

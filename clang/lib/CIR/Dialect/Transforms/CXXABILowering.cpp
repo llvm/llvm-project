@@ -903,7 +903,7 @@ void CXXABILoweringPass::runOnOperation() {
   std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
   assert(lowerModule && "LowerModule shouldn't be null");
   if (!lowerModule->hasTarget()) {
-    mod.emitError() << getArgument() << " requires a module with a '"
+    mod.emitError() << getArgument() << " requires a module with a supported '"
                     << cir::CIRDialect::getTripleAttrName() << "' attribute";
     return signalPassFailure();
   }

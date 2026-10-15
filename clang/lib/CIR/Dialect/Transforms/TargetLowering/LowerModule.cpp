@@ -82,10 +82,10 @@ const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
 
 // TODO: not to create it every time
 std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
-  // If the triple is not present, e.g. CIR modules parsed from text,
-  // LowerModule currently gets created with null target and abi. If triple
-  // becomes a requirement, we should not allow LowerModules to be created with
-  // null target and abi.
+  // If the triple is not present, e.g. CIR modules parsed from text, or clang
+  // has no TargetInfo support for it yet, LowerModule currently gets created
+  // with null target and abi. If triple becomes a requirement, we should not
+  // allow LowerModules to be created with null target and abi.
   assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
 
   // Fetch target information.
@@ -94,8 +94,6 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     clang::TargetOptions targetOptions;
     targetOptions.Triple = triple->str();
     targetInfo = clang::targets::AllocateTarget(*triple, targetOptions);
-    assert(targetInfo &&
-           "bad cir.triple should have been rejected by the verifier");
   }
 
   // Populate the lowering-relevant LangOptions from the module's

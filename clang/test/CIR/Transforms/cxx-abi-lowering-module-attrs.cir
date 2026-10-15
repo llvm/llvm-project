@@ -12,7 +12,7 @@
 
 // Missing cir.triple.
 
-// expected-error @below {{cir-cxxabi-lowering requires a module with a 'cir.triple' attribute}}
+// expected-error @below {{cir-cxxabi-lowering requires a module with a supported 'cir.triple' attribute}}
 module {
   cir.func @missing_triple() {
     cir.return
@@ -23,9 +23,20 @@ module {
 
 // Missing cir.triple with a valid cir.opt_info.
 
-// expected-error @below {{cir-cxxabi-lowering requires a module with a 'cir.triple' attribute}}
+// expected-error @below {{cir-cxxabi-lowering requires a module with a supported 'cir.triple' attribute}}
 module attributes {cir.opt_info = #cir.opt_info<level = 0, size = 1>} {
   cir.func @missing_triple() {
+    cir.return
+  }
+}
+
+// -----
+
+// cir.triple with a known architecture that clang has no TargetInfo for.
+
+// expected-error @below {{cir-cxxabi-lowering requires a module with a supported 'cir.triple' attribute}}
+module attributes {cir.triple = "spir-unknown-linux"} {
+  cir.func @unsupported_triple() {
     cir.return
   }
 }
