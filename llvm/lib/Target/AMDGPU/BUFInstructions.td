@@ -1576,27 +1576,30 @@ defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ubyte_tfe, v2i32, "BUFFER_LOAD_UBYTE
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ushort_tfe, v2i32, "BUFFER_LOAD_USHORT_TFE">;
 
 multiclass MUBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
-                                   string opcode, ValueType memoryVt = vt> {
+                                   string opcode, ValueType memoryVt = vt,
+                                   bit isTrue16 = false> {
   defvar st = !if(!eq(memoryVt, vt), name, mubuf_intrinsic_store<name, memoryVt>);
+  defvar vdata = !if(isTrue16, (lo16_to_vgpr32 $vdata),
+                               (vt getVregSrcForVT<vt>.ret:$vdata));
 
   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, 0, 0, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$auxiliary, 0),
-    (!cast<MUBUF_Pseudo>(opcode # _OFFSET_exact) getVregSrcForVT<vt>.ret:$vdata, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
+    (!cast<MUBUF_Pseudo>(opcode # _OFFSET_exact) vdata, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
 
   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, 0, i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$auxiliary, 0),
-    (!cast<MUBUF_Pseudo>(opcode # _OFFEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset,
+    (!cast<MUBUF_Pseudo>(opcode # _OFFEN_exact) vdata, VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset,
       timm:$offset, (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
 
   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, i32:$vindex, 0, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$auxiliary, timm),
-    (!cast<MUBUF_Pseudo>(opcode # _IDXEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset,
+    (!cast<MUBUF_Pseudo>(opcode # _IDXEN_exact) vdata, VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset,
       timm:$offset, (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
 
@@ -1604,7 +1607,7 @@ multiclass MUBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
     (st vt:$vdata, v4i32:$rsrc, i32:$vindex, i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$auxiliary, timm),
     (!cast<MUBUF_Pseudo>(opcode # _BOTHEN_exact)
-      getVregSrcForVT<vt>.ret:$vdata,
+      vdata,
       (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
       SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset, (extract_cpol $auxiliary),
       (extract_swz $auxiliary))
@@ -1612,11 +1615,12 @@ multiclass MUBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
 }
 
 multiclass MUBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
-                                   string opcode, ValueType memoryVt = vt> {
+                                   string opcode, ValueType memoryVt = vt,
+                                   bit isTrue16 = false> {
   let SubtargetPredicate = HasUnrestrictedSOffset in {
-    defm : MUBUF_StoreIntrinsicPat_Common<name, vt, opcode, memoryVt>;
+    defm : MUBUF_StoreIntrinsicPat_Common<name, vt, opcode, memoryVt, isTrue16>;
   }
-  defm : MUBUF_StoreIntrinsicPat_Common<name, vt, opcode # "_VBUFFER", memoryVt>;
+  defm : MUBUF_StoreIntrinsicPat_Common<name, vt, opcode # "_VBUFFER", memoryVt, isTrue16>;
 }
 
 let OtherPredicates = [HasFormattedMUBUFInsts] in {
@@ -1640,8 +1644,14 @@ let OtherPredicates = [HasUnpackedD16VMem, HasFormattedMUBUFInsts] in {
 } // End OtherPredicates = [HasUnpackedD16VMem, HasFormattedMUBUFInsts].
 
 let OtherPredicates = [HasPackedD16VMem, HasFormattedMUBUFInsts] in {
+let True16Predicate = UseRealTrue16Insts in {
+  defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, f16, "BUFFER_STORE_FORMAT_D16_X", f16, /*isTrue16*/true>;
+  defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, i16, "BUFFER_STORE_FORMAT_D16_X", i16, /*isTrue16*/true>;
+}
+let True16Predicate = NotUseRealTrue16Insts in {
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, f16, "BUFFER_STORE_FORMAT_D16_X">;
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, i16, "BUFFER_STORE_FORMAT_D16_X">;
+}
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, i32, "BUFFER_STORE_FORMAT_D16_X">;
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, v2f16, "BUFFER_STORE_FORMAT_D16_XY">;
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, v2i16, "BUFFER_STORE_FORMAT_D16_XY">;
@@ -2332,50 +2342,57 @@ defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE_D16_HI", i32, truncstorei8_hi16_
 //===----------------------------------------------------------------------===//
 
 multiclass MTBUF_LoadIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
-                                  string opcode, ValueType memoryVt = vt> {
+                                  string opcode, ValueType memoryVt = vt,
+                                  bit isTrue16 = false> {
   defvar st = !if(!eq(memoryVt, vt), name, mtbuf_intrinsic_load<name, memoryVt>);
+
+  defvar Offset = (!cast<MTBUF_Pseudo>(opcode # _OFFSET) SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
+      (as_i8timm $format),
+      (extract_cpol $auxiliary), (extract_swz $auxiliary));
+  defvar IdxEn = (!cast<MTBUF_Pseudo>(opcode # _IDXEN) VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
+      (as_i8timm $format),
+      (extract_cpol $auxiliary), (extract_swz $auxiliary));
+  defvar OffEn = (!cast<MTBUF_Pseudo>(opcode # _OFFEN) VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
+      (as_i8timm $format),
+      (extract_cpol $auxiliary), (extract_swz $auxiliary));
+  defvar BothEn = (!cast<MTBUF_Pseudo>(opcode # _BOTHEN)
+      (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
+      SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
+      (as_i8timm $format),
+      (extract_cpol $auxiliary), (extract_swz $auxiliary));
 
   def : GCNPat<
     (vt (st v4i32:$rsrc, 0, 0, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$format, timm:$auxiliary, 0)),
-    (!cast<MTBUF_Pseudo>(opcode # _OFFSET) SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
-      (as_i8timm $format),
-      (extract_cpol $auxiliary), (extract_swz $auxiliary))
+    !if(isTrue16, (vgpr32_lo16 Offset), Offset)
   >;
 
   def : GCNPat<
     (vt (st v4i32:$rsrc, i32:$vindex, 0, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$format, timm:$auxiliary, timm)),
-    (!cast<MTBUF_Pseudo>(opcode # _IDXEN) VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
-      (as_i8timm $format),
-      (extract_cpol $auxiliary), (extract_swz $auxiliary))
+    !if(isTrue16, (vgpr32_lo16 IdxEn), IdxEn)
   >;
 
   def : GCNPat<
     (vt (st v4i32:$rsrc, 0, i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$format, timm:$auxiliary, 0)),
-    (!cast<MTBUF_Pseudo>(opcode # _OFFEN) VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
-      (as_i8timm $format),
-      (extract_cpol $auxiliary), (extract_swz $auxiliary))
+    !if(isTrue16, (vgpr32_lo16 OffEn), OffEn)
   >;
 
   def : GCNPat<
     (vt (st v4i32:$rsrc, i32:$vindex, i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$format, timm:$auxiliary, timm)),
-    (!cast<MTBUF_Pseudo>(opcode # _BOTHEN)
-      (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
-      SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
-      (as_i8timm $format),
-      (extract_cpol $auxiliary), (extract_swz $auxiliary))
+    !if(isTrue16, (vgpr32_lo16 BothEn), BothEn)
   >;
 }
 
 multiclass MTBUF_LoadIntrinsicPat<SDPatternOperator name, ValueType vt,
-                                  string opcode, ValueType memoryVt = vt> {
+                                  string opcode, ValueType memoryVt = vt,
+                                  bit isTrue16 = false> {
   let SubtargetPredicate = HasUnrestrictedSOffset in {
-    defm : MTBUF_LoadIntrinsicPat_Common<name, vt, opcode, memoryVt>;
+    defm : MTBUF_LoadIntrinsicPat_Common<name, vt, opcode, memoryVt, isTrue16>;
   }
-  defm : MTBUF_LoadIntrinsicPat_Common<name, vt, opcode # "_VBUFFER", memoryVt>;
+  defm : MTBUF_LoadIntrinsicPat_Common<name, vt, opcode # "_VBUFFER", memoryVt, isTrue16>;
 }
 
 let OtherPredicates = [HasMTBUFInsts] in {
@@ -2405,6 +2422,9 @@ let OtherPredicates = [HasUnpackedD16VMem,HasMTBUFInsts] in {
 
 let OtherPredicates = [HasPackedD16VMem,HasMTBUFInsts] in {
   foreach vt = Reg16Types.types in {
+    let True16Predicate = UseRealTrue16Insts in
+    defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, vt, "TBUFFER_LOAD_FORMAT_D16_X", vt, /*isTrue16*/true>;
+    let True16Predicate = NotUseRealTrue16Insts in
     defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, vt, "TBUFFER_LOAD_FORMAT_D16_X">;
   }
   defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, i32,   "TBUFFER_LOAD_FORMAT_D16_X">;
@@ -2421,13 +2441,18 @@ let OtherPredicates = [HasPackedD16VMem,HasMTBUFInsts] in {
 } // End HasPackedD16VMem,HasMTBUFInsts.
 
 multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
-                                        string opcode, ValueType memoryVt = vt> {
+                                        string opcode, ValueType memoryVt = vt,
+                                        bit isTrue16 = false> {
   defvar st = !if(!eq(memoryVt, vt), name, mtbuf_intrinsic_store<name, memoryVt>);
+  defvar vdata = !if(isTrue16, (lo16_to_vgpr32 $vdata),
+                               (vt getVregSrcForVT<vt>.ret:$vdata));
 
   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, 0, 0, (BUFSOffset i32:$soffset), timm:$offset,
           timm:$format, timm:$auxiliary, 0),
-    (!cast<MTBUF_Pseudo>(opcode # _OFFSET_exact) getVregSrcForVT<vt>.ret:$vdata, SReg_128:$rsrc, SCSrc_b32:$soffset,
+    (!cast<MTBUF_Pseudo>(opcode # _OFFSET_exact)
+      vdata,
+      SReg_128:$rsrc, SCSrc_b32:$soffset,
       timm:$offset, (as_i8timm $format),
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
@@ -2435,7 +2460,9 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, i32:$vindex, 0, (BUFSOffset i32:$soffset), timm:$offset,
           timm:$format, timm:$auxiliary, timm),
-    (!cast<MTBUF_Pseudo>(opcode # _IDXEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset,
+    (!cast<MTBUF_Pseudo>(opcode # _IDXEN_exact)
+      vdata,
+      VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset,
       timm:$offset, (as_i8timm $format),
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
@@ -2443,7 +2470,9 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, 0, i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
           timm:$format, timm:$auxiliary, 0),
-    (!cast<MTBUF_Pseudo>(opcode # _OFFEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset,
+    (!cast<MTBUF_Pseudo>(opcode # _OFFEN_exact)
+      vdata,
+      VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset,
       timm:$offset, (as_i8timm $format),
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
@@ -2452,7 +2481,7 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
     (st vt:$vdata, v4i32:$rsrc, i32:$vindex, i32:$voffset, (BUFSOffset i32:$soffset),
           timm:$offset, timm:$format, timm:$auxiliary, timm),
     (!cast<MTBUF_Pseudo>(opcode # _BOTHEN_exact)
-      getVregSrcForVT<vt>.ret:$vdata,
+      vdata,
       (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
       SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset, (as_i8timm $format),
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
@@ -2460,11 +2489,12 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
 }
 
 multiclass MTBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
-                                  string opcode, ValueType memoryVt = vt> {
+                                  string opcode, ValueType memoryVt = vt,
+                                  bit isTrue16 = false> {
   let SubtargetPredicate = HasUnrestrictedSOffset in {
-    defm : MTBUF_StoreIntrinsicPat_Common<name, vt, opcode, memoryVt>;
+    defm : MTBUF_StoreIntrinsicPat_Common<name, vt, opcode, memoryVt, isTrue16>;
   }
-  defm : MTBUF_StoreIntrinsicPat_Common<name, vt, opcode # "_VBUFFER", memoryVt>;
+  defm : MTBUF_StoreIntrinsicPat_Common<name, vt, opcode # "_VBUFFER", memoryVt, isTrue16>;
 }
 
 let OtherPredicates = [HasMTBUFInsts] in {
@@ -2494,6 +2524,9 @@ let OtherPredicates = [HasUnpackedD16VMem,HasMTBUFInsts] in {
 
 let OtherPredicates = [HasPackedD16VMem,HasMTBUFInsts] in {
   foreach vt = Reg16Types.types in {
+    let True16Predicate = UseRealTrue16Insts in
+    defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, vt, "TBUFFER_STORE_FORMAT_D16_X", vt, /*isTrue16*/true>;
+    let True16Predicate = NotUseRealTrue16Insts in
     defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, vt, "TBUFFER_STORE_FORMAT_D16_X">;
   }
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, i32,   "TBUFFER_STORE_FORMAT_D16_X">;
