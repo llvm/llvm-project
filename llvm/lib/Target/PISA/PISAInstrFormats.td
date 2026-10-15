@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines PISA instruction formats and assembly operand classes.
+///
+//===----------------------------------------------------------------------===//
 
 include "PISAGenericOpcodes.td"
 include "MnemonicOperand.td"

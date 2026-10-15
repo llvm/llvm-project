@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file declares PISA enumeration and operand option tables.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISAENUM_H
 #define LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISAENUM_H

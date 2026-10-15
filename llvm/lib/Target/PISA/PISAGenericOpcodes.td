@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines PISA-specific generic Machine IR opcodes.
+///
+//===----------------------------------------------------------------------===//
 
 class PISAGenericInstruction : GenericInstruction {
   let Namespace = Global.NS;
