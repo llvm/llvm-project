@@ -242,3 +242,36 @@ func.func @non_index_loop_bounds(%init: i32, %lb: i32, %n: i32) -> i32 {
   }
   return %r : i32
 }
+
+// -----
+
+// Tests loops with constant bounds where the step and (upper bound - lower bound) are
+// very close, so `ceil(float(ub - lb) / step)` used to round to 1, and the front peeling
+// was skipped. See https://github.com/llvm/llvm-project/issues/231062
+
+// CHECK-LABEL:   func.func @peel_front_step_near_ub(
+// CHECK-SAME:                                         %[[MEMREF:[^:]*]]: memref<2xindex>) {
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C16777216:.*]] = arith.constant 16777216 : index
+// CHECK-DAG:       %[[C16777217:.*]] = arith.constant 16777217 : index
+// CHECK:           scf.for %[[IV0:.*]] = %[[C0]] to %[[C16777216]] step %[[C16777216]] {
+// CHECK:             %[[SLOT0:.*]] = arith.divui %[[IV0]], %[[C16777216]] : index
+// CHECK:             memref.store %[[IV0]], %[[MEMREF]][%[[SLOT0]]] : memref<2xindex>
+// CHECK:           }
+// CHECK:           scf.for %[[IV1:.*]] = %[[C16777216]] to %[[C16777217]] step %[[C16777216]] {
+// CHECK:             %[[SLOT1:.*]] = arith.divui %[[IV1]], %[[C16777216]] : index
+// CHECK:             memref.store %[[IV1]], %[[MEMREF]][%[[SLOT1]]] : memref<2xindex>
+// CHECK:           }
+// CHECK:           return
+
+func.func @peel_front_step_near_ub(%out: memref<2xindex>) {
+  %c0 = arith.constant 0 : index
+  %step = arith.constant 16777216 : index
+  %ub = arith.constant 16777217 : index
+
+  scf.for %i = %c0 to %ub step %step {
+    %slot = arith.divui %i, %step : index
+    memref.store %i, %out[%slot] : memref<2xindex>
+  }
+  return
+}

@@ -24,6 +24,7 @@ include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
+include "mlir/IR/SymbolInterfaces.td"
 
 class cuf_Op<string mnemonic, list<Trait> traits>
     : Op<CUFDialect, mnemonic, traits>;
@@ -334,7 +335,8 @@ def cuf_RegisterModuleOp : cuf_Op<"register_module", []> {
   let results = (outs LLVM_AnyPointer:$modulePtr);
 }
 
-def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
+def cuf_RegisterKernelOp : cuf_Op<"register_kernel", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Register a CUDA kernel";
 
   let arguments = (ins

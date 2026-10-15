@@ -204,7 +204,7 @@ action("lit-lldb-init-quiet") {
   outputs = [ "$root_out_dir/obj/lldb/test/Shell/lit-lldb-init-quiet" ]
   args = [
     rebase_path(outputs[0], root_build_dir),
-    "command source -C --silent-run true lit-lldb-init",
+    "command source -C --silent-run true lit-lldb-init\n",
   ]
 }
 

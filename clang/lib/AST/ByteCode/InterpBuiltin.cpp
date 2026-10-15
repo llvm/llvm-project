@@ -325,7 +325,8 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
   QualType ElemTy = getElemType(A);
   // Different element types shouldn't happen, but with casts they can.
-  if (!S.getASTContext().hasSameUnqualifiedType(ElemTy, getElemType(B)))
+  if (!S.getASTContext().hasSameUnqualifiedType(ElemTy, getElemType(B)) ||
+      !S.getContext().canClassify(ElemTy))
     return false;
 
   PrimType ElemT = *S.getContext().classify(ElemTy);
@@ -1592,7 +1593,7 @@ static bool interp__builtin_infer_alloc_token(InterpState &S, CodePtr OpPC,
 
   auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
   if (!MaybeToken) {
-    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_stateful_mode);
+    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_unsupported_mode);
     return false;
   }
 
@@ -2448,13 +2449,18 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   // clear, objects are whole variables. If it is set, a closest surrounding
   // subobject is considered the object a pointer points to. The second bit
   // determines if maximum or minimum of remaining bytes is computed.
-  uint64_t Kind;
-  if (!popToUInt64(S, Call->getArg(1), Kind))
+  APSInt Kind;
+  if (!popToAPSInt(S, Call->getArg(1), Kind))
     return false;
-  assert(Kind <= 3 && "unexpected kind");
+  if (Kind < 0 || Kind > 3) {
+    S.FFDiag(Call->getArg(1), diag::note_constexpr_builtin_arg_out_of_range)
+        << Kind << 0 << 3;
+    return false;
+  }
+  unsigned KindValue = Kind.getZExtValue();
   Pointer Ptr = S.Stk.pop<Pointer>();
 
-  if (auto Result = evaluateBuiltinObjectSize(ASTCtx, Kind, Ptr,
+  if (auto Result = evaluateBuiltinObjectSize(ASTCtx, KindValue, Ptr,
                                               Call->getArg(0), IsDynamic)) {
     pushInteger(S, *Result, Call->getType());
     return true;
@@ -2463,7 +2469,7 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   if (Call->getArg(0)->HasSideEffects(ASTCtx)) {
     // "If there are any side effects in them, it returns (size_t) -1
     // for type 0 or 1 and (size_t) 0 for type 2 or 3."
-    pushInteger(S, Kind <= 1 ? (size_t)-1 : (size_t)0, Call->getType());
+    pushInteger(S, KindValue <= 1 ? (size_t)-1 : (size_t)0, Call->getType());
     return true;
   }
 
@@ -2475,7 +2481,8 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
     return Invalid(S, OpPC);
   case EvaluationMode::ConstantExpressionUnevaluated:
     // Reduce it to a constant now.
-    pushInteger(S, ((Kind & 2u) ? (size_t)0 : (size_t)-1), Call->getType());
+    pushInteger(S, ((KindValue & 2u) ? (size_t)0 : (size_t)-1),
+                Call->getType());
     return true;
   }
 
@@ -2522,6 +2529,14 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
       return false;
     if (!CheckDummy(S, OpPC, Ptr, AK_Read))
       return false;
+  }
+
+  if (!Ptr.isBlockPointer()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_access_unreadable_object)
+        << AK_Read << Ptr.toDiagnosticString(S.getASTContext());
+    noteValueLocation(S, Ptr);
+    return false;
   }
 
   // Check if we're currently running an initializer.
