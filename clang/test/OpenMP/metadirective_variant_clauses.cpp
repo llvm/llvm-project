@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -std=c++11 \
+// RUN:   -fopenmp-metadirective-runtime-selection -fsyntax-only %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -std=c++11 \
 // RUN:   -fsyntax-only %s
 
 // expected-no-diagnostics

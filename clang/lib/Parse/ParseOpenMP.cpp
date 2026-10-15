@@ -2723,7 +2723,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     // Different directives have different data-sharing attributes, so each
     // variant needs its own CapturedStmt with proper DSA context.
     // We manually cache body tokens and inject them for each variant parse.
-    if (HasUserCondition) {
+    if (HasUserCondition &&
+        getLangOpts().OpenMPMetadirectiveRuntimeSelection) {
       SmallVector<OpenMPClauseKind, 4> ClauseKinds;
       SmallVector<OpenMPDirectiveKind, 4> DirectiveKinds;
       SmallVector<SmallVector<OMPClause *, 5>, 4> DirectiveClauses;
