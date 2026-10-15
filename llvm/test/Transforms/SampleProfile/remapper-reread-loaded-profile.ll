@@ -1,7 +1,3 @@
-; Precommit test: an extbinary profile that has already been loaded is decoded a
-; second time, and merged into itself, when the sample loader performs an
-; incremental read while a symbol remapping file is in use.
-;
 ; The module defines _Z3fooP4Basei, which has an exact profile match and is
 ; loaded by the initial Reader->read() in SampleProfileLoader::doInitialization.
 ; _ZN2ns3barEl has no profile, but ns::bar(int) in the profile shares its base
@@ -11,11 +7,11 @@
 ;  * Without a remapping file, readFuncProfiles looks up only the requested
 ;    names, foo is untouched, and its entry count is head samples + 1 = 101.
 ;  * With a remapping file, readFuncProfiles iterates over every function in the
-;    profile and also accepts names for which Remapper->exist() is true. The
+;    IR, and also reads function profiles of which Remapper->exist() is true. The
 ;    remapper is cumulative across read() calls, foo was inserted by the first
 ;    read, so foo is decoded again and its head, body and callsite samples are
 ;    doubled: entry count 201. The remapping file's content is irrelevant; the
-;    rule in it matches nothing in this test.
+;    rule in it matches nothing in this test. A follow-up PR will fix this.
 ;
 ; bar(int) is read exactly once in both cases (51).
 ;
