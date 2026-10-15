@@ -2747,6 +2747,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_sched_rr_get_interval",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sched_rr_get_interval.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_pid_t",
+        ":types_struct_timespec",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_sched_setaffinity",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sched_setaffinity.h"],
     target_compatible_with = select({
@@ -16936,6 +16953,21 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_fchdir",
         ":__support_osutil_syscall",
         ":errno",
+    ],
+)
+
+libc_function(
+    name = "sched_rr_get_interval",
+    srcs = ["src/sched/linux/sched_rr_get_interval.cpp"],
+    hdrs = ["src/sched/sched_rr_get_interval.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sched_rr_get_interval",
+        ":errno",
+        ":types_pid_t",
+        ":types_struct_timespec",
     ],
 )
 
