@@ -386,10 +386,10 @@ void LoongArchAvoidSFB::breakBlockedCopies(
   unsigned Size2 = 0;
   int64_t LdStDelta = StDispImm - LdDispImm;
 
-  for (auto DispSizePair : BlockingStoresDispSizeMap) {
-    LdDisp2 = DispSizePair.first;
-    StDisp2 = DispSizePair.first + LdStDelta;
-    Size2 = DispSizePair.second;
+  for (const auto &[Disp, Size] : BlockingStoresDispSizeMap) {
+    LdDisp2 = Disp;
+    StDisp2 = Disp + LdStDelta;
+    Size2 = Size;
     // Avoid copying overlapping areas.
     if (LdDisp2 < LdDisp1) {
       int OverlapDelta = LdDisp1 - LdDisp2;
@@ -481,9 +481,7 @@ bool LoongArchAvoidSFB::runOnMachineFunction(MachineFunction &MF) {
   findPotentiallyBlockedCopies(MF);
 
   bool Changed = false;
-  for (auto LoadStoreInstPair : BlockedLoadsStoresPairs) {
-    MachineInstr *LoadInst = LoadStoreInstPair.first;
-    MachineInstr *StoreInst = LoadStoreInstPair.second;
+  for (auto [LoadInst, StoreInst] : BlockedLoadsStoresPairs) {
     int64_t LdDispImm = getDispOperand(LoadInst).getImm();
     unsigned LdSize = getRegSizeInBytes(LoadInst);
     const MachineMemOperand &LMMO = **LoadInst->memoperands_begin();
