@@ -27,6 +27,11 @@ class ThreadExitTestCase(TestBase):
     @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     def test(self):
         """Test thread exit handling."""
+        if self.getArchitecture().lower() == "arm":
+            # We require a separate debug info file to be able to backtrace starting
+            # from a libc function. This file is provided by libc6-dbg on Linux.
+            self.runCmd("settings set symbols.enable-external-lookup true")
+
         self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)

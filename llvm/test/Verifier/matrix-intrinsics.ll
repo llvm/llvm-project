@@ -60,15 +60,6 @@ define void @column.major_store(ptr %m, ptr %n, i64 %arg) {
   ret void
 }
 
-;
-; CHECK: intrinsic argument 0 type (matching overload type 0) expected <4 x float>, but got <4 x i32>
-; CHECK-NEXT: declare <4 x float> @llvm.matrix.transpose.v4f32.v4i32(<4 x i32>, i32, i32)
-declare <4 x float> @llvm.matrix.transpose.v4f32.v4i32(<4 x i32>, i32, i32)
-
-; CHECK: intrinsic argument 0 type (matching overload type 0) expected <4 x i32>, but got <4 x float>
-; CHECK-NEXT: declare <4 x i32> @llvm.matrix.transpose.v4i32.v4f32(<4 x float>, i32, i32)
-declare <4 x i32> @llvm.matrix.transpose.v4i32.v4f32(<4 x float>, i32, i32)
-
 define <4 x float> @multiply_mixed_types(<4 x i32> %ivec, <4 x float> %fvec, i32 %arg) {
 ;
 ; CHECK-NEXT: Vector element type mismatch of the result and first operand vector!
@@ -149,3 +140,41 @@ declare <4 x float> @llvm.matrix.multiply.v4f32.v4f32.v4i32(<4 x float>, <4 x i3
 declare <4 x float> @llvm.matrix.multiply.v4f32.v4i32.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32)
 declare <4 x float> @llvm.matrix.multiply.v4f32.v4f32.v4f32(<4 x float>, <4 x float>, i32, i32, i32)
 declare <3 x float> @llvm.matrix.multiply.v3f32.v4f32.v4f32(<4 x float>, <4 x float>, i32, i32, i32)
+
+; Scalable vectors are not supported by matrix intrinsics.
+
+declare <vscale x 4 x float> @llvm.matrix.multiply.nxv4f32.nxv4f32.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, i32, i32, i32)
+
+define <vscale x 4 x float> @matrix_multiply_scalable(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK: Matrix operations require fixed-length vectors!
+; CHECK-NEXT:   %r = call <vscale x 4 x float> @llvm.matrix.multiply.nxv4f32.nxv4f32.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 4, i32 1, i32 1)
+  %r = call <vscale x 4 x float> @llvm.matrix.multiply.nxv4f32.nxv4f32.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, i32 4, i32 1, i32 1)
+  ret <vscale x 4 x float> %r
+}
+
+declare <vscale x 4 x float> @llvm.matrix.transpose.nxv4f32(<vscale x 4 x float>, i32, i32)
+
+define <vscale x 4 x float> @matrix_transpose_scalable(<vscale x 4 x float> %a) {
+; CHECK: Matrix operations require fixed-length vectors!
+; CHECK-NEXT:   %r = call <vscale x 4 x float> @llvm.matrix.transpose.nxv4f32(<vscale x 4 x float> %a, i32 2, i32 2)
+  %r = call <vscale x 4 x float> @llvm.matrix.transpose.nxv4f32(<vscale x 4 x float> %a, i32 2, i32 2)
+  ret <vscale x 4 x float> %r
+}
+
+declare <vscale x 4 x float> @llvm.matrix.column.major.load.nxv4f32.i64(ptr, i64, i1, i32, i32)
+
+define <vscale x 4 x float> @matrix_load_scalable(ptr %p) {
+; CHECK: Matrix operations require fixed-length vectors!
+; CHECK-NEXT:   %r = call <vscale x 4 x float> @llvm.matrix.column.major.load.nxv4f32.i64(ptr %p, i64 2, i1 false, i32 2, i32 2)
+  %r = call <vscale x 4 x float> @llvm.matrix.column.major.load.nxv4f32.i64(ptr %p, i64 2, i1 false, i32 2, i32 2)
+  ret <vscale x 4 x float> %r
+}
+
+declare void @llvm.matrix.column.major.store.nxv4f32.i64(<vscale x 4 x float>, ptr, i64, i1, i32, i32)
+
+define void @matrix_store_scalable(ptr %p) {
+; CHECK: Matrix operations require fixed-length vectors!
+; CHECK-NEXT:   call void @llvm.matrix.column.major.store.nxv4f32.i64(<vscale x 4 x float> zeroinitializer, ptr %p, i64 2, i1 false, i32 2, i32 2)
+  call void @llvm.matrix.column.major.store.nxv4f32.i64(<vscale x 4 x float> zeroinitializer, ptr %p, i64 2, i1 false, i32 2, i32 2)
+  ret void
+}

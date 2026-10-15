@@ -2008,6 +2008,16 @@ let TargetPrefix = "riscv" in {
                             [IntrNoMem]>, RISCVVIntrinsic {
       let VLOperand = 2;
     }
+
+    // Input: (passthru, vector_in, mask, vl, policy)
+    def "int_riscv_" # NAME # "_mask" :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                             llvm_anyint_ty, LLVMMatchType<2>],
+                            [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 3;
+    }
   }
 
   defm vzip    : RISCVZip;
@@ -2089,6 +2099,21 @@ class RVPBinaryIntrinsic
   def int_riscv_pwsll : RVPWideningShiftIntrinsic;
   def int_riscv_pwsla : RVPWideningShiftIntrinsic;
 
+  // Packed Narrowing Shifts.
+  class RVPNarrowingShiftIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [llvm_anyvector_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pnsrl  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnsra  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnsrar : RVPNarrowingShiftIntrinsic;
+
+  // Packed Narrowing Clip.
+  def int_riscv_pnclipu  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclipru : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclip   : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclipr  : RVPNarrowingShiftIntrinsic;
+
   // Packed Saturation.
   class RVPSaturationIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2121,6 +2146,10 @@ class RVPBinaryIntrinsic
                             [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_pmerge : RVPTernaryIntrinsic;
 
+  // Reverse the order of the 16-bit halfwords of a 64-bit value (RV64 only).
+  def int_riscv_rev16_64 : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
+                                              [IntrNoMem, IntrSpeculatable]>;
+
   // Packed Sign and Zero Extend.
   class RVPExtIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2132,21 +2161,27 @@ class RVPBinaryIntrinsic
   def int_riscv_pzext_h : RVPExtIntrinsic;
 
   // Packed Multiply High.
-  def int_riscv_pmulh    : RVPBinaryIntrinsic;
   def int_riscv_pmulhr   : RVPBinaryIntrinsic;
-  def int_riscv_pmulhu   : RVPBinaryIntrinsic;
   def int_riscv_pmulhru  : RVPBinaryIntrinsic;
   def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
   def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
+
+  // Scalar Averaging Addition and Subtraction. On RV64 these map to the
+  // packed paadd.w family on the low words.
+  class RVPScalarBinaryIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_aadd_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_aaddu_u32 : RVPScalarBinaryIntrinsic;
+  def int_riscv_asub_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_asubu_u32 : RVPScalarBinaryIntrinsic;
 
   // Scalar Multiply High. On RV32 these map to the M-extension mulh
   // instructions and the P-extension mulhr instructions.
   class RVPScalarMulHighIntrinsic
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
                               [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_mulh_i32    : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhr_i32   : RVPScalarMulHighIntrinsic;
-  def int_riscv_mulhu_u32   : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhru_u32  : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhsu_i32  : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhrsu_i32 : RVPScalarMulHighIntrinsic;
@@ -2220,6 +2255,14 @@ class RVPBinaryIntrinsic
   def int_riscv_pmulh_h1   : RVPMulHighPartsIntrinsic;
   def int_riscv_pmulhsu_h0 : RVPMulHighPartsIntrinsic;
   def int_riscv_pmulhsu_h1 : RVPMulHighPartsIntrinsic;
+
+  // Packed "Q-format" Multiply with Widening Accumulate.
+  class RVPQFormatWideningAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_v2i32_ty],
+                              [llvm_v2i32_ty, llvm_v2i16_ty, llvm_v2i16_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmqwacc_i32x2  : RVPQFormatWideningAccIntrinsic;
+  def int_riscv_pmqrwacc_i32x2 : RVPQFormatWideningAccIntrinsic;
 
   // The scalar forms keep a single product of the full-width rs1 and one
   // halfword of rs2: <2 x i16> pairs with i32.

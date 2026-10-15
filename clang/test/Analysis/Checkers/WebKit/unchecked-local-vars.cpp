@@ -360,6 +360,15 @@ void local_var_with_guardian_checked_ref() {
   }
 }
 
+void local_var_with_guardian_used_via_arrow() {
+  Ref<RefCountableAndCheckable> a = *provide_obj();
+  {
+    RefCountableAndCheckable* b = a.ptr();
+    a->method();
+    b->method();
+  }
+}
+
 void static_var() {
   static RefCountableAndCheckable* a = nullptr;
   // expected-warning@-1{{Static local variable 'a' is a raw pointer to CheckedPtr-capable type 'RefCountableAndCheckable' [alpha.webkit.UncheckedLocalVarsChecker]}}

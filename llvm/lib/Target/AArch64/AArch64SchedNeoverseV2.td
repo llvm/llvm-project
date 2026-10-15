@@ -113,10 +113,8 @@ def V2Write_3c_1M    : SchedWriteRes<[V2UnitM]>   { let Latency = 3; }
 def V2Write_2c_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 2; }
 def V2Write_3c_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 3; }
 def V2Write_5c_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 5; }
-def V2Write_12c_1M0  : SchedWriteRes<[V2UnitM0]>  { let Latency = 12;
-                                                    let ReleaseAtCycles = [12]; }
-def V2Write_20c_1M0  : SchedWriteRes<[V2UnitM0]>  { let Latency = 20;
-                                                    let ReleaseAtCycles = [20]; }
+def V2Write_7c_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 7;
+                                                    let ReleaseAtCycles = [7]; }
 def V2Write_4c_1L    : SchedWriteRes<[V2UnitL]>   { let Latency = 4; }
 def V2Write_6c_1L    : SchedWriteRes<[V2UnitL]>   { let Latency = 6; }
 def V2Write_2c_1V    : SchedWriteRes<[V2UnitV]>   { let Latency = 2; }
@@ -1189,8 +1187,8 @@ def : SchedAlias<WriteImm, V2Write_1c_1I>;
 // -----------------------------------------------------------------------------
 
 // SDIV, UDIV
-def : SchedAlias<WriteID32,  V2Write_12c_1M0>;
-def : SchedAlias<WriteID64,  V2Write_20c_1M0>;
+def : SchedAlias<WriteID32,  V2Write_7c_1M0>;
+def : SchedAlias<WriteID64,  V2Write_7c_1M0>;
 
 def : SchedAlias<WriteIM32, V2Write_2c_1M>;
 def : SchedAlias<WriteIM64, V2Write_2c_1M>;
@@ -1646,7 +1644,7 @@ def : InstRW<[V2Write_4c_2V], (instregex "^(FMAX|FMIN)(NM)?Vv4(i16|i32)v$")>;
 def : InstRW<[V2Write_6c_3V], (instregex "^(FMAX|FMIN)(NM)?Vv8i16v$")>;
 
 // ASIMD FP multiply
-def : InstRW<[V2Wr_VFM], (instregex "^FMULv", "^FMULXv")>;
+def : InstRW<[V2Wr_VFM], (instregex "^FMULv", "^FMULXv", "^FMULX(16|32|64)$")>;
 
 // ASIMD FP multiply accumulate
 def : InstRW<[V2Wr_VFMA, V2Rd_VFMA], (instregex "^FMLAv", "^FMLSv")>;

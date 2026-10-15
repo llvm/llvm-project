@@ -1171,4 +1171,4 @@
 // RUN:        -K \
 // RUN:        -c \
 // RUN:   | FileCheck --check-prefixes=CHECK-K-UNUSED %s
-// CHECK-K-UNUSED: clang: warning: -K: 'linker' input unused [-Wunused-command-line-argument]
+// CHECK-K-UNUSED: clang: warning: -K: 'linker' input unused when '-c' is present [-Wunused-command-line-argument]
