@@ -20,7 +20,9 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace llvm;
 
@@ -75,6 +77,9 @@ public:
                attribute.getName() ==
                    cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName()) {
       amendAMDGPUAtomicMetadata(instructions, attribute, moduleTranslation);
+    } else if (attribute.getName() ==
+               cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName()) {
+      amendAMDGPUNoPrivateAddrSpace(instructions, moduleTranslation);
     }
     return mlir::success();
   }
@@ -126,6 +131,17 @@ private:
       mdName = "amdgpu.no.remote.memory";
     for (llvm::Instruction *inst : instructions)
       inst->setMetadata(mdName, empty);
+  }
+
+  void amendAMDGPUNoPrivateAddrSpace(
+      llvm::ArrayRef<llvm::Instruction *> instructions,
+      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    llvm::MDBuilder mdHelper(moduleTranslation.getLLVMContext());
+    llvm::MDNode *asRange = mdHelper.createRange(
+        llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS),
+        llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata(llvm::LLVMContext::MD_noalias_addrspace, asRange);
   }
 
   mlir::LogicalResult amendRISCVNontemporalDomain(
