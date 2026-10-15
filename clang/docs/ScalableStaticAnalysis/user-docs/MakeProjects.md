@@ -242,10 +242,10 @@ either way.
 ## Interposition
 
 The orchestrator populates `<output-dir>/shims/` with links named after the
-tools a build invokes — `cc`, `clang`, `c++`, `clang++`, `ld`, `ld.lld` and
-`ar` — each pointing at the shim that stands in for it, and prepends that
-directory to `PATH`. It also puts the path of a configuration file in
-`SSAF_CONFIG`.
+tools a build invokes — `cc`, `clang`, `c++`, `clang++`, `ld`, `ld.lld`,
+`ld64.lld` and `ar` — each pointing at the shim that stands in for it, and
+prepends that directory to `PATH`. It also puts the path of a configuration
+file in `SSAF_CONFIG`.
 
 It changes nothing else in the build: no variable is replaced, so whatever the
 Makefile put in `CXX` — flags, a dialect, a define — arrives at the compiler

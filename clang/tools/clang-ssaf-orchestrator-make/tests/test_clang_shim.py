@@ -64,6 +64,14 @@ class ForwardingAJob(unittest.TestCase):
         self.assertEqual(os.path.join(self.links, "ld.lld"), link)
         self.assertEqual("ld", config.SHIM_FOR_LINK_NAME[os.path.basename(link)])
 
+    def test_a_link_run_by_ld64_lld_reaches_the_ld_shim(self):
+        clang._invoke_shim_for_job(
+            self.shim, self._job(["/build/bin/ld64.lld", "-o", "prg", "a.o"]), self.tmp
+        )
+        link = self.shim.commands[0][1][0]
+        self.assertEqual(os.path.join(self.links, "ld64.lld"), link)
+        self.assertEqual("ld", config.SHIM_FOR_LINK_NAME[os.path.basename(link)])
+
     def test_a_job_with_no_link_is_noted_and_skipped(self):
         with configs.recorded_notes() as notes:
             clang._invoke_shim_for_job(

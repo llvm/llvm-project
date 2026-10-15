@@ -46,6 +46,7 @@ SHIM_FOR_LINK_NAME = {
     "clang++": "clang",
     "ld": "ld",
     "ld.lld": "ld",
+    "ld64.lld": "ld",
     "ar": "ar",
 }
 
