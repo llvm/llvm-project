@@ -330,6 +330,205 @@ void __sanitizer_cov_store8(uint64_t *addr);
 void __sanitizer_cov_store16(__int128 *addr);
 ```
 
+## Tracing function arguments and return values
+
+With `-fsanitize-coverage=trace-args` the compiler will insert a callback for
+each argument of every instrumented function, on entry, and with
+`-fsanitize-coverage=trace-ret` a callback before every return. Neither flag
+needs another coverage mode: used alone, they emit no block or edge callbacks.
+
+The design rule for both flags is:
+
+> Debug information may enrich the interpretation of an observation, but must
+> never determine which instrumentation is emitted.
+
+What is observed is decided by the LLVM IR of the instrumented function alone.
+A build with `-g` emits exactly the same callbacks, with the same operands, and
+the same machine code, as a build without it; debug information gives the
+calls a source location and nothing else.
+
+```c++
+// Called once per observed IR argument, or element of one, on entry.
+// tag:        (arg_idx << 32) | size, where arg_idx is the zero-based
+//             position in the IR parameter list and size is the number of
+//             bytes reported (0 if nothing to report)
+// val:        the value itself, or the address of the bytes to read
+// offsets:    null if `val` is a value; otherwise a constant table:
+//             offsets[0] is the number of pairs N, followed by N
+//             [byte offset, byte size] pairs, none wider than 8 bytes
+void __sanitizer_cov_trace_args(uint64_t tag, uint64_t val,
+                                const uint64_t *offsets);
+
+// Called before each return; once per element of a first-class aggregate
+// return value.
+// size:       number of bytes reported, 0 if nothing to report
+void __sanitizer_cov_trace_ret(uint64_t size, uint64_t val,
+                               const uint64_t *offsets);
+```
+
+Neither callback is told which function it speaks for. A runtime that needs to
+know takes its own return address, less one so that the address lies within the
+call rather than on the instruction after it, and resolves it like any other
+code address. This is the same convention as the `trace-cmp` callbacks. Every
+observation has a call of its own, which is never a tail call, so that address
+identifies it.
+
+`offsets` says what `val` holds:
+
+* `offsets == nullptr`: `val` **is** the value, its low `size` bytes,
+  zero-extended. Integers, pointers, floating-point values and vectors are
+  reported this way: a pointer as the address it holds, a floating-point value
+  or a vector as its bit pattern, and a value wider than 64 bits by its low 64
+  bits.
+
+* `offsets != nullptr`: `val` is the **address** of `size` bytes that may be
+  read at the call, and `offsets` says which: `offsets[0]` pieces follow it as
+  [byte offset, byte size] pairs, none wider than 8 bytes, so a consumer reading
+  each into a 64-bit word reads all of them. That is one of
+
+  * an object the ABI placed in memory, which the IR itself marks as one: an
+    argument with a `byval`, `byref`, `inalloca` or `preallocated` attribute,
+    or the `sret` buffer of an indirect return. `offsets` describes the
+    elements of its IR type, nested structs included; anything wider than
+    8 bytes - an array, or the opaque `[N x i8]` rustc types every such object
+    as - in 8-byte pieces.
+  * a *pointee snapshot*: a `noundef` pointer argument the IR says is
+    `dereferenceable(N)` or `dereferenceable_or_null(N)` on entry, or a
+    pointer return value the function's return attributes say is (`noundef`
+    included), at the return. `val` is the pointer, and `size` is the first
+    min(N, `-sanitizer-coverage-trace-pointee-bytes`) bytes it points to
+    (64 by default; 0 reports every pointer by value), covered in 8-byte
+    pieces. The IR attribute alone bounds the read - the IR has no pointee
+    type - so the bytes are raw; a consumer cuts them into members with the
+    binary's debug information. A
+    `dereferenceable_or_null` pointer may be null, which the runtime checks.
+
+  The callback does not say which of the two it is. Every other
+  pointer is reported by value, and what it points to is never read: the
+  instrumentation reads memory only as far as the IR proves it may.
+
+`size == 0` means there was nothing to report: a `void` return, a value with no
+fixed-size bit pattern, such as a scalable vector, or an object the function
+does not use. Callers may pass anything for an argument the function does not
+use - dead argument elimination passes poison in the callers it can see - so
+such an object is not handed to the runtime to read; an unused value is still
+reported. A value that may be poison is frozen first, so `val` always holds
+bits.
+
+The compiler never creates memory to report a value from, so no stack slot
+escapes and no frame is realigned on the instrumentation's account.
+
+### IR arguments, not source parameters
+
+`arg_idx` is the position of the argument in the IR function's parameter list.
+That is the ABI's view of the signature, and it is not guaranteed to equal the
+source-language parameter number:
+
+* One source parameter may be several IR arguments. On x86-64,
+  `void f(struct mix { double d; long l; } m, int z)` is
+  `f(double %0, i64 %1, i32 %2)`: `m` is IR arguments 0 and 1, and `z` is IR
+  argument 2.
+* One IR argument may be several observations. On AArch64 the same function is
+  `f([2 x i64] %0, i32 %1)`: the first-class aggregate `%0` is reported as two
+  callbacks, both with `arg_idx == 0`, and `z` is IR argument 1.
+* A hidden struct-return (`sret`) pointer and a Swift error slot are not
+  observed, but keep their positions: in `struct big f(long x)`, lowered to
+  `f(ptr sret %0, i64 %1)`, `x` is reported with `arg_idx == 1`.
+* A C++ `this` is an ordinary pointer argument, reported as its value - with
+  the `sizeof` bytes of the object it points to, which the IR says are
+  dereferenceable, as for a C++ reference.
+
+A struct the ABI passes by address without an IR attribute that says so - a
+large struct on AArch64, a non-trivially-copyable C++ object - is a pointer
+argument, and is reported as the pointer, with what it points to if the IR
+says it is dereferenceable.
+
+Which pointers the IR says that of depends on the front end. Clang gives C++
+references and `this` `dereferenceable(sizeof(T))`, as it does a struct the ABI
+passes by address (on AArch64, any over 16 bytes), and a C array parameter of
+static size, `const struct s p[static 1]`, `dereferenceable` that far; a plain
+C pointer has no such attribute, and is reported by value. rustc gives `&T` and
+`&mut T` arguments `dereferenceable(size_of::<T>())`, `Option<&T>`
+`dereferenceable_or_null`, and the vtable of a `&dyn Trait` its size; not a
+`Box<T>`, a raw pointer, the data of a slice or trait object, a `&` to a
+`!Freeze` type (`Cell`, `UnsafeCell`) or a `&mut` to a `!Unpin` one, nor any
+return value.
+
+### Pointers: values, layouts and snapshots
+
+Four things about a pointer argument or return value are easily confused, and
+only the first and the third are recorded:
+
+* The **pointer value**, the address it holds: always reported, as `val`.
+* The **source-level pointee type and member layout**: what the debug
+  information says it points to. A consumer can name and lay out the members
+  from it, but debug information never causes anything to be read.
+* An explicit **pointee snapshot**: bytes the runtime reads behind the pointer
+  at the trace point. Only an explicit IR dereferenceability contract causes
+  the instrumentation runtime to read behind a pointer:
+  `noundef` together with `dereferenceable(N)`, or with
+  `dereferenceable_or_null(N)` and a null check, and then the first
+  min(N, `-sanitizer-coverage-trace-pointee-bytes`) bytes. The
+  attribute gives a bounded readable range, not a type: which members those
+  bytes are is the decoder's business, with the debug information.
+* **Complete and partial values**: a member wholly within the bytes read is a
+  complete value; one the byte limit cuts is partial, and one beyond it was
+  not read.
+
+What carries the contract is up to the front end (see above). An ordinary C
+`T *` argument normally does not, and is a pointer value only; a Rust `&T` or
+`&mut T` usually does; a Rust raw pointer, `*const T` or `*mut T`, does not,
+nor does a C pointer unless declared `T p[static N]`. Nothing is inferred to
+stand in for a missing contract - not from later accesses, the size of an
+object, the callers, the debug information or what must execute - and a
+pointer stored inside a snapshot is a value too: what it points to is not
+read. The instrumentation therefore does not reconstruct every pointer
+argument, nor complete structs behind pointers. As a measure of how far it
+goes, on an x86-64 Linux kernel build the pointee of 0 of 23,810 C pointer
+arguments has a byte recorded, and on arm64 21 of 22,606 (structs AArch64
+passes by reference); of the 756 pointer arguments of the kernel's Rust
+objects, 318 (42%) do. These are the shares of pointer arguments with at
+least one recorded pointee byte, not of arguments, structs or return values
+reconstructed in full.
+
+Recording, for a pointer without a contract, the values the function itself
+loads and stores through it, when it does, is possible future work, and not
+part of this implementation.
+
+Mapping an observation to a source parameter, or to a struct field, is the
+job of a consumer that has the binary's debug information; the
+instrumentation does not attempt it. An inlined callee is not an IR function
+of its own any more, so its parameters are not observed: arguments are those of
+the IR functions that remain after the inliner ran. `-fno-inline` makes more of
+them visible, at the usual cost.
+
+Argument values are read on entry, before the `-O0` prologue stores the
+incoming arguments to their stack slots, so they are correct at any
+optimization level; return values likewise.
+
+### Consumers
+
+`compiler-rt` defines both callbacks weakly and empty in `sanitizer_common`, so
+a program compiled with `trace-args`/`trace-ret` links without a runtime that
+consumes the values; a strong definition overrides the default.
+
+The Linux kernel consumes the same callbacks through the KCOV dataflow
+subsystem rather than through compiler-rt.
+
+### Supported scope
+
+The two flags are validated for:
+
+* C and C++ compiled by Clang, and Rust compiled by a `rustc` whose LLVM
+  carries the pass.
+* ELF targets on x86-64 and AArch64, both in userspace (a custom runtime) and
+  in the Linux kernel.
+* Code built with or without `-g`, at any optimization level.
+
+Any other frontend or target gets valid instrumentation: the pass works on
+LLVM IR and target-independent IR attributes only, and never emits IR the
+verifier rejects - a Swift `swifterror` slot, for one, is not reported.
+
 ## Tracing control flow
 
 With `-fsanitize-coverage=control-flow` the compiler will create a table to collect
