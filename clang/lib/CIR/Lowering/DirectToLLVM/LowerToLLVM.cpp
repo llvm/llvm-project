@@ -2923,6 +2923,8 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getNoRecurseAttrName() ||
          attr.getName() == CIRDialect::getMustProgressAttrName() ||
          attr.getName() == CIRDialect::getNoBuiltinAttrName() ||
+         attr.getName() == CIRDialect::getOptNoneAttrName() ||
+         attr.getName() == CIRDialect::getNakedAttrName() ||
          attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
          attr.getName() == CIRDialect::getDontCallErrorAttrName() ||
          attr.getName() == CIRDialect::getDontCallWarnAttrName();
@@ -3059,6 +3061,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
     fn.setNoreturn(true);
 
+  if (op->hasAttr(CIRDialect::getOptNoneAttrName()))
+    fn.setOptimizeNone(true);
+
   if (std::optional<cir::UnwindTableKind> uwtableKind = op.getUwtable())
     fn.setUwtableKindAttr(mlir::LLVM::UWTableKindAttr::get(
         fn.getContext(), convertUWTableKind(*uwtableKind)));
@@ -3076,7 +3081,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   for (llvm::StringRef flagAttr :
        {CIRDialect::getStrictFPAttrName(), CIRDialect::getNoRecurseAttrName(),
         CIRDialect::getMustProgressAttrName(),
-        CIRDialect::getNoBuiltinAttrName()})
+        CIRDialect::getNoBuiltinAttrName(), CIRDialect::getNakedAttrName()})
     if (op->hasAttr(flagAttr))
       passthrough.push_back(rewriter.getStringAttr(flagAttr));
 
@@ -3465,19 +3470,19 @@ mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
   }
 
   llvm::SmallVector<mlir::Block *, 8> caseDestinations;
-  llvm::SmallVector<mlir::ValueRange, 8> caseOperands;
 
   for (mlir::Block *x : op.getCaseDestinations())
     caseDestinations.push_back(x);
 
-  for (mlir::OperandRange x : op.getCaseOperands())
-    caseOperands.push_back(x);
+  // Use the converted operands so they match the type-converted successor
+  // block arguments.
+  llvm::SmallVector<mlir::ValueRange> caseOperands = adaptor.getCaseOperands();
 
   // Set switch op to branch to the newly created blocks.
   rewriter.setInsertionPoint(op);
   rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
       op, adaptor.getCondition(), op.getDefaultDestination(),
-      op.getDefaultOperands(), caseValues, caseDestinations, caseOperands);
+      adaptor.getDefaultOperands(), caseValues, caseDestinations, caseOperands);
   return mlir::success();
 }
 
@@ -6436,11 +6441,10 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
 
   (void)mlir::applyPassManagerCLOptions(pm);
 
-  if (mlir::failed(pm.run(mlirModule))) {
-    // FIXME: Handle any errors where they occurs and return a nullptr here.
-    report_fatal_error(
-        "The pass manager failed to lower CIR to LLVMIR dialect!");
-  }
+  // The failing pass has already reported its error through the MLIR
+  // diagnostic engine.
+  if (mlir::failed(pm.run(mlirModule)))
+    return nullptr;
 
   if (!mlirSaveTempsOutFile.empty()) {
     std::error_code ec;
@@ -6459,11 +6463,6 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
   StringRef moduleName = mlirModule.getName().value_or("CIRToLLVMModule");
   std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(
       mlirModule, llvmCtx, moduleName, /*disableVerification=*/false, fs);
-
-  if (!llvmModule) {
-    // FIXME: Handle any errors where they occurs and return a nullptr here.
-    report_fatal_error("Lowering from LLVMIR dialect to llvm IR failed!");
-  }
 
   return llvmModule;
 }
