@@ -378,56 +378,43 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
     // SVE types
     case BuiltinType::SveInt8:
-      resultType = cir::VectorType::get(builder.getSInt8Ty(),
-                                        llvm::ElementCount::getScalable(16));
+      resultType = cir::VectorType::getScalable(builder.getSInt8Ty(), 16);
       break;
     case BuiltinType::SveUint8:
-      resultType = cir::VectorType::get(builder.getUInt8Ty(),
-                                        llvm::ElementCount::getScalable(16));
+      resultType = cir::VectorType::getScalable(builder.getUInt8Ty(), 16);
       break;
     case BuiltinType::SveInt16:
-      resultType = cir::VectorType::get(builder.getSInt16Ty(),
-                                        llvm::ElementCount::getScalable(8));
+      resultType = cir::VectorType::getScalable(builder.getSInt16Ty(), 8);
       break;
     case BuiltinType::SveUint16:
-      resultType = cir::VectorType::get(builder.getUInt16Ty(),
-                                        llvm::ElementCount::getScalable(8));
+      resultType = cir::VectorType::getScalable(builder.getUInt16Ty(), 8);
       break;
     case BuiltinType::SveFloat16:
-      resultType = cir::VectorType::get(builder.getFp16Ty(),
-                                        llvm::ElementCount::getScalable(8));
+      resultType = cir::VectorType::getScalable(builder.getFp16Ty(), 8);
       break;
     case BuiltinType::SveBFloat16:
-      resultType = cir::VectorType::get(builder.getBfloat16Ty(),
-                                        llvm::ElementCount::getScalable(8));
+      resultType = cir::VectorType::getScalable(builder.getBfloat16Ty(), 8);
       break;
     case BuiltinType::SveInt32:
-      resultType = cir::VectorType::get(builder.getSInt32Ty(),
-                                        llvm::ElementCount::getScalable(4));
+      resultType = cir::VectorType::getScalable(builder.getSInt32Ty(), 4);
       break;
     case BuiltinType::SveUint32:
-      resultType = cir::VectorType::get(builder.getUInt32Ty(),
-                                        llvm::ElementCount::getScalable(4));
+      resultType = cir::VectorType::getScalable(builder.getUInt32Ty(), 4);
       break;
     case BuiltinType::SveFloat32:
-      resultType = cir::VectorType::get(builder.getSingleTy(),
-                                        llvm::ElementCount::getScalable(4));
+      resultType = cir::VectorType::getScalable(builder.getSingleTy(), 4);
       break;
     case BuiltinType::SveInt64:
-      resultType = cir::VectorType::get(builder.getSInt64Ty(),
-                                        llvm::ElementCount::getScalable(2));
+      resultType = cir::VectorType::getScalable(builder.getSInt64Ty(), 2);
       break;
     case BuiltinType::SveUint64:
-      resultType = cir::VectorType::get(builder.getUInt64Ty(),
-                                        llvm::ElementCount::getScalable(2));
+      resultType = cir::VectorType::getScalable(builder.getUInt64Ty(), 2);
       break;
     case BuiltinType::SveFloat64:
-      resultType = cir::VectorType::get(builder.getDoubleTy(),
-                                        llvm::ElementCount::getScalable(2));
+      resultType = cir::VectorType::getScalable(builder.getDoubleTy(), 2);
       break;
     case BuiltinType::SveBool:
-      resultType = cir::VectorType::get(builder.getUIntNTy(1),
-                                        llvm::ElementCount::getScalable(16));
+      resultType = cir::VectorType::getScalable(builder.getUIntNTy(1), 16);
       break;
 
     // Unsigned integral types.
@@ -508,7 +495,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 #define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
   case BuiltinType::Id: {                                                      \
     if (BuiltinType::Id == BuiltinType::AMDGPUTexture) {                       \
-      resultType = cir::VectorType::get(builder.getSInt32Ty(), 8);             \
+      resultType = cir::VectorType::getFixed(builder.getSInt32Ty(), 8);        \
     } else {                                                                   \
       resultType = builder.getPointerTo(                                       \
           cgm.voidTy,                                                          \
@@ -602,7 +589,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::Vector: {
     const VectorType *vec = cast<VectorType>(ty);
     const mlir::Type elemTy = convertType(vec->getElementType());
-    resultType = cir::VectorType::get(elemTy, vec->getNumElements());
+    resultType = cir::VectorType::getFixed(elemTy, vec->getNumElements());
     break;
   }
 

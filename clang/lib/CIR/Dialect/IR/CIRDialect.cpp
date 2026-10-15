@@ -4164,11 +4164,10 @@ LogicalResult cir::VecCreateOp::verify() {
   if (vecTy.getSize().isScalable())
     return emitOpError() << "scalable vectors are not supported";
 
-  if (getElements().size() != vecTy.getSize().getFixedValue()) {
+  if (getElements().size() != vecTy.getFixedSize()) {
     return emitOpError() << "operand count of " << getElements().size()
                          << " doesn't match vector type " << vecTy
-                         << " element count of "
-                         << vecTy.getSize().getFixedValue();
+                         << " element count of " << vecTy.getFixedSize();
   }
 
   const mlir::Type elementType = vecTy.getElementType();
@@ -4412,7 +4411,7 @@ LogicalResult cir::VecShuffleOp::verify() {
 
   // The number of elements in the indices array must match the number of
   // elements in the result type.
-  if (getIndices().size() != getResult().getType().getSize().getFixedValue()) {
+  if (getIndices().size() != getResult().getType().getFixedSize()) {
     return emitOpError() << ": the number of elements in " << getIndices()
                          << " and " << getResult().getType() << " don't match";
   }
@@ -4425,9 +4424,8 @@ LogicalResult cir::VecShuffleOp::verify() {
                          << " and " << getResult().getType() << " don't match";
   }
 
-  const uint64_t maxValidIndex = getVec1().getType().getSize().getFixedValue() +
-                                 getVec2().getType().getSize().getFixedValue() -
-                                 1;
+  const uint64_t maxValidIndex = getVec1().getType().getFixedSize() +
+                                 getVec2().getType().getFixedSize() - 1;
   if (llvm::any_of(
           getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
             return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;

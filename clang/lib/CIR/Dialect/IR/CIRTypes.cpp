@@ -1510,7 +1510,7 @@ llvm::TypeSize cir::VectorType::getTypeSizeInBits(
 uint64_t cir::VectorType::getBoolStorageWidth() const {
   assert(mlir::isa<cir::BoolType>(getElementType()) &&
          "only a bool vector is stored as an integer");
-  return std::max<uint64_t>(getSize().getFixedValue(), 8);
+  return std::max<uint64_t>(getFixedSize(), 8);
 }
 
 uint64_t

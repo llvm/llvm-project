@@ -1619,14 +1619,12 @@ public:
     mlir::Type srcTy = src.getType();
     mlir::Type dstTy = cgf.convertType(e->getType());
 
-    unsigned numElementsSrc =
-        isa<cir::VectorType>(srcTy)
-            ? cast<cir::VectorType>(srcTy).getSize().getFixedValue()
-            : 0;
-    unsigned numElementsDst =
-        isa<cir::VectorType>(dstTy)
-            ? cast<cir::VectorType>(dstTy).getSize().getFixedValue()
-            : 0;
+    unsigned numElementsSrc = isa<cir::VectorType>(srcTy)
+                                  ? cast<cir::VectorType>(srcTy).getFixedSize()
+                                  : 0;
+    unsigned numElementsDst = isa<cir::VectorType>(dstTy)
+                                  ? cast<cir::VectorType>(dstTy).getFixedSize()
+                                  : 0;
 
     // Use bit vector expansion for ext_vector_type boolean vectors.
     if (e->getType()->isExtVectorBoolType()) {
@@ -1650,7 +1648,7 @@ public:
     if (numElementsSrc != 3 && numElementsDst == 3) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
       auto dstElemTy = cast<cir::VectorType>(dstTy).getElementType();
-      auto dstVec4Ty = cir::VectorType::get(dstElemTy, 4);
+      auto dstVec4Ty = cir::VectorType::getFixed(dstElemTy, 4);
       src = createCastsForTypeOfSameSize(src, dstVec4Ty);
       src = convertVec3AndVec4(builder, loc, src, 3);
       return src;
@@ -2996,7 +2994,7 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
     }
 
     // Zero-initialize any remaining values.
-    const uint64_t vectorSize = vectorType.getSize().getFixedValue();
+    const uint64_t vectorSize = vectorType.getFixedSize();
     if (numInitElements < vectorSize) {
       const mlir::Value zeroValue = cgf.getBuilder().getNullValue(
           vectorType.getElementType(), cgf.getLoc(e->getSourceRange()));
@@ -3224,8 +3222,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     }
 
     return builder.getConstant(
-        loc,
-        cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getSize().getFixedValue()));
+        loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getFixedSize()));
   }
 
   // The result type is size_t (target-dependent width); use it so the IntAttr

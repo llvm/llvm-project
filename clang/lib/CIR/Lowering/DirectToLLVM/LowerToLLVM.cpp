@@ -178,15 +178,14 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
       if (vecTy.getSize().isScalable())
         return value;
       auto rawIntTy = mlir::cast<mlir::IntegerType>(value.getType());
-      auto paddedVecTy =
-          cir::VectorType::get(vecTy.getElementType(), rawIntTy.getWidth());
+      auto paddedVecTy = cir::VectorType::getFixed(vecTy.getElementType(),
+                                                   rawIntTy.getWidth());
       mlir::Type mlirVecTy = converter.convertType(paddedVecTy);
       // Bitcast iP --> <P x i1>.
       auto v = mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(),
                                              mlirVecTy, value);
       // Shuffle <P x i1> --> <N x i1> (N is the actual bit size).
-      return emitBoolVecConversion(rewriter, v,
-                                   vecTy.getSize().getFixedValue());
+      return emitBoolVecConversion(rewriter, v, vecTy.getFixedSize());
     }
   }
 
@@ -5226,7 +5225,7 @@ mlir::LogicalResult CIRToLLVMVecCreateOpLowering::matchAndRewrite(
   const mlir::Type llvmTy = typeConverter->convertType(vecTy);
   const mlir::Location loc = op.getLoc();
   mlir::Value result = mlir::LLVM::PoisonOp::create(rewriter, loc, llvmTy);
-  const uint64_t vectorSize = vecTy.getSize().getFixedValue();
+  const uint64_t vectorSize = vecTy.getFixedSize();
   assert(vectorSize == op.getElements().size() &&
          "cir.vec.create op count doesn't match vector type elements count");
 
@@ -5437,7 +5436,7 @@ mlir::LogicalResult CIRToLLVMVecShuffleDynamicOpLowering::matchAndRewrite(
       getTypeConverter()->convertType(op.getIndices().getType());
   mlir::Type llvmIndexType = getTypeConverter()->convertType(
       op.getIndices().getType().getElementType());
-  uint64_t numElements = op.getVec().getType().getSize().getFixedValue();
+  uint64_t numElements = op.getVec().getType().getFixedSize();
 
   uint64_t maskBits = llvm::NextPowerOf2(numElements - 1) - 1;
   mlir::Value maskValue = mlir::LLVM::ConstantOp::create(

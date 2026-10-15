@@ -905,7 +905,7 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (vecType.getSize().isScalable())
     return emitError() << "scalable vector constants are not supported";
 
-  if (vecType.getSize().getFixedValue() != elts.size())
+  if (vecType.getFixedSize() != elts.size())
     return emitError()
            << "number of constant elements should match vector size";
 

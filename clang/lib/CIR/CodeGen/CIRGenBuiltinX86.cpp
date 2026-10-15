@@ -69,7 +69,7 @@ static mlir::Value emitVectorFCmp(CIRGenFunction &cgf, const CallExpr &expr,
 
 static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
                                    mlir::Value mask, unsigned numElems) {
-  auto maskTy = cir::VectorType::get(
+  auto maskTy = cir::VectorType::getFixed(
       builder.getSIntNTy(1), cast<cir::IntType>(mask.getType()).getWidth());
   mlir::Value maskVec = builder.createBitcast(mask, maskTy);
 
@@ -91,7 +91,7 @@ static mlir::Value emitX86CompressStore(CIRGenBuilderTy &builder,
                                         ArrayRef<mlir::Value> ops) {
   auto resultTy = cast<cir::VectorType>(ops[1].getType());
   mlir::Value maskValue =
-      getMaskVecValue(builder, loc, ops[2], resultTy.getSize().getFixedValue());
+      getMaskVecValue(builder, loc, ops[2], resultTy.getFixedSize());
 
   return builder.emitIntrinsicCallOp(
       loc, "masked.compressstore", cir::VoidType::get(builder.getContext()),
@@ -113,7 +113,7 @@ static cir::VecShuffleOp emitPshufWord(CIRGenBuilderTy &builder,
   uint32_t imm = CIRGenFunction::getZExtIntValueFromConstOp(immediate);
 
   auto vecTy = cast<cir::VectorType>(vec.getType());
-  unsigned numElts = vecTy.getSize().getFixedValue();
+  unsigned numElts = vecTy.getFixedSize();
 
   unsigned firstHalfStart = isLow ? 0 : 4;
   unsigned secondHalfStart = 4 - firstHalfStart;
@@ -141,7 +141,7 @@ computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
                            uint32_t imm, const bool isShufP,
                            llvm::SmallVectorImpl<int64_t> &outIndices) {
   auto vecTy = cast<cir::VectorType>(vec.getType());
-  unsigned numElts = vecTy.getSize().getFixedValue();
+  unsigned numElts = vecTy.getFixedSize();
   unsigned numLanes = cgf.cgm.getDataLayout().getTypeSizeInBits(vecTy) / 128;
   unsigned numLaneElts = numElts / numLanes;
 
@@ -193,9 +193,9 @@ static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
                                          mlir::Value inputVector,
                                          const std::string &id) {
   auto resultTy = cast<cir::VectorType>(mask.getType());
-  mlir::Value maskValue = getMaskVecValue(
-      builder, loc, inputVector,
-      cast<cir::VectorType>(resultTy).getSize().getFixedValue());
+  mlir::Value maskValue =
+      getMaskVecValue(builder, loc, inputVector,
+                      cast<cir::VectorType>(resultTy).getFixedSize());
   return builder.emitIntrinsicCallOp(loc, id, resultTy,
                                      mlir::ValueRange{source, mask, maskValue});
 }
@@ -205,7 +205,8 @@ emitEncodeKey(mlir::MLIRContext *context, CIRGenBuilderTy &builder,
               const mlir::Location &location, mlir::ValueRange inputOperands,
               mlir::Value outputOperand, std::uint8_t vecOutputCount,
               const std::string &intrinsicName, std::uint8_t numResults) {
-  cir::VectorType resVector = cir::VectorType::get(builder.getUInt64Ty(), 2);
+  cir::VectorType resVector =
+      cir::VectorType::getFixed(builder.getUInt64Ty(), 2);
   llvm::SmallVector<mlir::Type> members{builder.getUInt32Ty()};
   llvm::append_range(members,
                      llvm::SmallVector<mlir::Type>(vecOutputCount, resVector));
@@ -235,9 +236,8 @@ static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
   if (constOp && constOp.isAllOnesValue())
     return op0;
 
-  mask = getMaskVecValue(
-      builder, loc, mask,
-      cast<cir::VectorType>(op0.getType()).getSize().getFixedValue());
+  mask = getMaskVecValue(builder, loc, mask,
+                         cast<cir::VectorType>(op0.getType()).getFixedSize());
 
   return cir::VecTernaryOp::create(builder, loc, mask, op0, op1);
 }
@@ -250,7 +250,7 @@ static mlir::Value getMaskZeroBitAsBool(CIRGenBuilderTy &builder,
   assert(intTy && "mask must be an integer type");
   unsigned width = intTy.getWidth();
 
-  auto maskVecTy = cir::VectorType::get(builder.getSIntNTy(1), width);
+  auto maskVecTy = cir::VectorType::getFixed(builder.getSIntNTy(1), width);
   mlir::Value maskVec = builder.createBitcast(mask, maskVecTy);
 
   // Extract bit 0 from the mask vector
@@ -387,15 +387,14 @@ emitX86MaskedCompare(CIRGenBuilderTy &builder, unsigned cc, bool isSigned,
                      ArrayRef<mlir::Value> ops, mlir::Location loc) {
   assert((ops.size() == 2 || ops.size() == 4) &&
          "Unexpected number of arguments");
-  unsigned numElts =
-      cast<cir::VectorType>(ops[0].getType()).getSize().getFixedValue();
+  unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getFixedSize();
   mlir::Value cmp;
   if (cc == 3) {
     cmp = builder.getNullValue(
-        cir::VectorType::get(builder.getSIntNTy(1), numElts), loc);
+        cir::VectorType::getFixed(builder.getSIntNTy(1), numElts), loc);
   } else if (cc == 7) {
     cir::VectorType resultTy =
-        cir::VectorType::get(builder.getSIntNTy(1), numElts);
+        cir::VectorType::getFixed(builder.getSIntNTy(1), numElts);
     llvm::APInt allOnes = llvm::APInt::getAllOnes(1);
     cmp = cir::VecSplatOp::create(
         builder, loc, resultTy,
@@ -425,7 +424,7 @@ emitX86MaskedCompare(CIRGenBuilderTy &builder, unsigned cc, bool isSigned,
       break;
     }
 
-    auto resultTy = cir::VectorType::get(builder.getSIntNTy(1), numElts);
+    auto resultTy = cir::VectorType::getFixed(builder.getSIntNTy(1), numElts);
     cmp = cir::VecCmpOp::create(builder, loc, resultTy, pred, ops[0], ops[1]);
   }
 
@@ -450,8 +449,7 @@ static std::optional<mlir::Value> emitX86SExtMask(CIRGenBuilderTy &builder,
                                                   mlir::Value op,
                                                   mlir::Type dstTy,
                                                   mlir::Location loc) {
-  unsigned numberOfElements =
-      cast<cir::VectorType>(dstTy).getSize().getFixedValue();
+  unsigned numberOfElements = cast<cir::VectorType>(dstTy).getFixedSize();
   mlir::Value mask = getMaskVecValue(builder, loc, op, numberOfElements);
 
   return builder.createCast(loc, cir::CastKind::integral, mask, dstTy);
@@ -460,8 +458,7 @@ static std::optional<mlir::Value> emitX86SExtMask(CIRGenBuilderTy &builder,
 static mlir::Value emitVecInsert(CIRGenBuilderTy &builder, mlir::Location loc,
                                  mlir::Value vec, mlir::Value value,
                                  mlir::Value indexOp) {
-  unsigned numElts =
-      cast<cir::VectorType>(vec.getType()).getSize().getFixedValue();
+  unsigned numElts = cast<cir::VectorType>(vec.getType()).getFixedSize();
 
   uint64_t index =
       indexOp.getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
@@ -484,7 +481,7 @@ static mlir::Value emitX86FunnelShift(CIRGenBuilderTy &builder,
   // so we only care about the lowest log2 bits anyway.
   if (amt.getType() != op0Ty) {
     auto vecTy = mlir::cast<cir::VectorType>(op0Ty);
-    uint64_t numElems = vecTy.getSize().getFixedValue();
+    uint64_t numElems = vecTy.getFixedSize();
 
     auto amtTy = mlir::cast<cir::IntType>(amt.getType());
     auto vecElemTy = mlir::cast<cir::IntType>(vecTy.getElementType());
@@ -498,8 +495,8 @@ static mlir::Value emitX86FunnelShift(CIRGenBuilderTy &builder,
     cir::IntType unsignedVecElemType = builder.getUIntNTy(vecElemTy.getWidth());
     amt = builder.createIntCast(amt, unsignedVecElemType);
     amt = cir::VecSplatOp::create(
-        builder, location, cir::VectorType::get(unsignedVecElemType, numElems),
-        amt);
+        builder, location,
+        cir::VectorType::getFixed(unsignedVecElemType, numElems), amt);
   }
 
   const StringRef intrinsicName = isRight ? "fshr" : "fshl";
@@ -511,8 +508,8 @@ static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
                                 bool isSigned,
                                 SmallVectorImpl<mlir::Value> &ops,
                                 unsigned opTypePrimitiveSizeInBits) {
-  mlir::Type ty = cir::VectorType::get(builder.getSInt64Ty(),
-                                       opTypePrimitiveSizeInBits / 64);
+  mlir::Type ty = cir::VectorType::getFixed(builder.getSInt64Ty(),
+                                            opTypePrimitiveSizeInBits / 64);
   mlir::Value lhs = builder.createBitcast(loc, ops[0], ty);
   mlir::Value rhs = builder.createBitcast(loc, ops[1], ty);
   if (isSigned) {
@@ -559,19 +556,18 @@ static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
     }
   }
 
-  unsigned numElts = cast<cir::VectorType>(dstTy).getSize().getFixedValue();
+  unsigned numElts = cast<cir::VectorType>(dstTy).getFixedSize();
   mlir::Value src = ops[0];
 
   // Extract the subvector
-  if (numElts !=
-      cast<cir::VectorType>(src.getType()).getSize().getFixedValue()) {
+  if (numElts != cast<cir::VectorType>(src.getType()).getFixedSize()) {
     assert(numElts == 4 && "Unexpected vector size");
     src = builder.createVecShuffle(loc, src, {0, 1, 2, 3});
   }
 
   // Bitcast from vXi16 to vXf16.
-  cir::VectorType halfTy =
-      cir::VectorType::get(cir::FP16Type::get(builder.getContext()), numElts);
+  cir::VectorType halfTy = cir::VectorType::getFixed(
+      cir::FP16Type::get(builder.getContext()), numElts);
 
   src = builder.createCast(cir::CastKind::bitcast, src, halfTy);
 
@@ -641,8 +637,7 @@ static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
 static mlir::Value emitX86Fpclass(CIRGenBuilderTy &builder, mlir::Location loc,
                                   unsigned builtinID,
                                   SmallVectorImpl<mlir::Value> &ops) {
-  unsigned numElts =
-      cast<cir::VectorType>(ops[0].getType()).getSize().getFixedValue();
+  unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getFixedSize();
   mlir::Value maskIn = ops[2];
   ops.erase(ops.begin() + 2);
 
@@ -688,7 +683,7 @@ static mlir::Value emitX86Fpclass(CIRGenBuilderTy &builder, mlir::Location loc,
     break;
   }
 
-  auto cmpResultTy = cir::VectorType::get(builder.getSIntNTy(1), numElts);
+  auto cmpResultTy = cir::VectorType::getFixed(builder.getSIntNTy(1), numElts);
   mlir::Value fpclass =
       builder.emitIntrinsicCallOp(loc, intrinsicName, cmpResultTy, ops);
   return emitX86MaskedCompareResult(builder, fpclass, numElts, maskIn, loc);
@@ -817,9 +812,8 @@ static mlir::Value emitX86MaskedLoad(CIRGenBuilderTy &builder,
                                      mlir::Location loc) {
   mlir::Type ty = ops[1].getType();
   mlir::Value ptr = ops[0];
-  mlir::Value maskVec =
-      getMaskVecValue(builder, loc, ops[2],
-                      cast<cir::VectorType>(ty).getSize().getFixedValue());
+  mlir::Value maskVec = getMaskVecValue(
+      builder, loc, ops[2], cast<cir::VectorType>(ty).getFixedSize());
 
   return builder.createMaskedLoad(loc, ty, ptr, alignment, maskVec, ops[1]);
 }
@@ -842,7 +836,7 @@ static mlir::Value emitX86VPerm2f128(CIRGenBuilderTy &builder,
   llvm::SmallVector<mlir::Attribute, 64> mask;
 
   cir::IntType i32Ty = builder.getSInt32Ty();
-  const unsigned numElts = inputType.getSize().getFixedValue();
+  const unsigned numElts = inputType.getFixedSize();
   // We must evaluated each lane(128 bits) separetely
   for (auto lane : llvm::seq(0, 2)) {
     bool isZeroBit = imm & (1 << ((lane * 4) + 3)),
@@ -885,7 +879,7 @@ static mlir::Value emitX86PackedByteShift(CIRGenBuilderTy &builder,
   if (shiftVal >= 16)
     return zeroVector;
 
-  uint64_t numElts = byteVecType.getSize().getFixedValue();
+  uint64_t numElts = byteVecType.getFixedSize();
   assert(numElts % 16 == 0 && "Expected a multiple of 16");
 
   llvm::SmallVector<int64_t, 64> shuffleMask;
@@ -1193,8 +1187,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vec_ext_v16hi:
   case X86::BI__builtin_ia32_vec_ext_v8si:
   case X86::BI__builtin_ia32_vec_ext_v4di: {
-    unsigned numElts =
-        cast<cir::VectorType>(ops[0].getType()).getSize().getFixedValue();
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getFixedSize();
 
     uint64_t index = getZExtIntValueFromConstOp(ops[1]);
     index &= numElts - 1;
@@ -1682,9 +1675,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     }
 
     mlir::Location loc = getLoc(expr->getExprLoc());
-    unsigned minElts = std::min(
-        cast<cir::VectorType>(ops[0].getType()).getSize().getFixedValue(),
-        cast<cir::VectorType>(ops[2].getType()).getSize().getFixedValue());
+    unsigned minElts =
+        std::min(cast<cir::VectorType>(ops[0].getType()).getFixedSize(),
+                 cast<cir::VectorType>(ops[2].getType()).getFixedSize());
     ops[3] = getMaskVecValue(builder, loc, ops[3], minElts);
     return builder.emitIntrinsicCallOp(loc, intrinsicName,
                                        convertType(expr->getType()), ops);
@@ -1792,9 +1785,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     }
 
     mlir::Location loc = getLoc(expr->getExprLoc());
-    unsigned minElts = std::min(
-        cast<cir::VectorType>(ops[2].getType()).getSize().getFixedValue(),
-        cast<cir::VectorType>(ops[3].getType()).getSize().getFixedValue());
+    unsigned minElts =
+        std::min(cast<cir::VectorType>(ops[2].getType()).getFixedSize(),
+                 cast<cir::VectorType>(ops[3].getType()).getFixedSize());
     ops[1] = getMaskVecValue(builder, loc, ops[1], minElts);
 
     return builder.emitIntrinsicCallOp(loc, intrinsicName,
@@ -1818,9 +1811,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_extracti64x2_512_mask: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     cir::VectorType dstTy = cast<cir::VectorType>(convertType(expr->getType()));
-    unsigned numElts = dstTy.getSize().getFixedValue();
+    unsigned numElts = dstTy.getFixedSize();
     unsigned srcNumElts =
-        cast<cir::VectorType>(ops[0].getType()).getSize().getFixedValue();
+        cast<cir::VectorType>(ops[0].getType()).getFixedSize();
     unsigned subVectors = srcNumElts / numElts;
     assert(llvm::isPowerOf2_32(subVectors) && "Expected power of 2 subvectors");
     unsigned index =
@@ -1858,9 +1851,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_insertf64x2_512:
   case X86::BI__builtin_ia32_inserti64x2_512: {
     unsigned dstNumElts =
-        cast<cir::VectorType>(ops[0].getType()).getSize().getFixedValue();
+        cast<cir::VectorType>(ops[0].getType()).getFixedSize();
     unsigned srcNumElts =
-        cast<cir::VectorType>(ops[1].getType()).getSize().getFixedValue();
+        cast<cir::VectorType>(ops[1].getType()).getFixedSize();
     unsigned subVectors = dstNumElts / srcNumElts;
     assert(llvm::isPowerOf2_32(subVectors) && "Expected power of 2 subvectors");
     assert(dstNumElts <= 16);
@@ -1902,8 +1895,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_pblendd128:
   case X86::BI__builtin_ia32_pblendd256: {
     uint32_t imm = getZExtIntValueFromConstOp(ops[2]);
-    unsigned numElts =
-        cast<cir::VectorType>(ops[0].getType()).getSize().getFixedValue();
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getFixedSize();
 
     llvm::SmallVector<mlir::Attribute, 16> indices;
     // If there are more than 8 elements, the immediate is used twice so make
@@ -1962,8 +1954,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_permdf512: {
     unsigned imm =
         ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
-    unsigned numElts =
-        cast<cir::VectorType>(ops[0].getType()).getSize().getFixedValue();
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getFixedSize();
 
     // These intrinsics operate on 256-bit lanes of four 64-bit elements.
     int64_t Indices[8];
@@ -1980,8 +1971,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_palignr512: {
     uint32_t shiftVal = getZExtIntValueFromConstOp(ops[2]) & 0xff;
 
-    unsigned numElts =
-        cast<cir::VectorType>(ops[0].getType()).getSize().getFixedValue();
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getFixedSize();
     assert(numElts % 16 == 0);
 
     // If palignr is shifting the pair of vectors more than the size of two
@@ -2019,8 +2009,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_alignq128:
   case X86::BI__builtin_ia32_alignq256:
   case X86::BI__builtin_ia32_alignq512: {
-    unsigned numElts =
-        cast<cir::VectorType>(ops[0].getType()).getSize().getFixedValue();
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getFixedSize();
     unsigned shiftVal =
         ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
         0xff;
@@ -2050,8 +2039,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     unsigned imm =
         ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
 
-    unsigned numElems =
-        cast<cir::VectorType>(src1.getType()).getSize().getFixedValue();
+    unsigned numElems = cast<cir::VectorType>(src1.getType()).getFixedSize();
     unsigned totalBits = getContext().getTypeSize(expr->getArg(0)->getType());
     unsigned numLanes = totalBits == 512 ? 4 : 2;
     unsigned numElemsPerLane = numElems / numLanes;
@@ -2563,8 +2551,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vp2intersect_d_512:
   case X86::BI__builtin_ia32_vp2intersect_d_256:
   case X86::BI__builtin_ia32_vp2intersect_d_128: {
-    unsigned numElts =
-        cast<cir::VectorType>(ops[0].getType()).getSize().getFixedValue();
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getFixedSize();
     mlir::Location loc = getLoc(expr->getExprLoc());
     StringRef intrinsicName;
 
@@ -2591,7 +2578,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
       break;
     }
 
-    auto resVector = cir::VectorType::get(builder.getSIntNTy(1), numElts);
+    auto resVector = cir::VectorType::getFixed(builder.getSIntNTy(1), numElts);
 
     mlir::Type resMembers[] = {resVector, resVector};
     cir::StructType resRecord = cir::StructType::get(
@@ -2705,7 +2692,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     cir::VectorType resTy = cast<cir::VectorType>(convertType(expr->getType()));
 
     cir::VectorType inputTy = cast<cir::VectorType>(ops[0].getType());
-    unsigned numElts = inputTy.getSize().getFixedValue();
+    unsigned numElts = inputTy.getFixedSize();
 
     mlir::Value mask = getMaskVecValue(builder, loc, ops[2], numElts);
 

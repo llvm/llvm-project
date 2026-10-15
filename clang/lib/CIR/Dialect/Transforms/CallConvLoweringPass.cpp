@@ -386,8 +386,8 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
         mlir::Type elemCIR = abiTypeToCIR(vecTy->getElementType(), ctx);
         if (!elemCIR)
           return nullptr;
-        return cir::VectorType::get(elemCIR,
-                                    vecTy->getNumElements().getFixedValue());
+        return cir::VectorType::getFixed(
+            elemCIR, vecTy->getNumElements().getFixedValue());
       })
       .Case([&](const llvm::abi::RecordType *recTy) -> mlir::Type {
         SmallVector<mlir::Type> fieldTypes;

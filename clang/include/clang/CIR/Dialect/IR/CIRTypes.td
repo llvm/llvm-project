@@ -534,15 +534,22 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     ), [{
         return $_get(element_type.getContext(), element_type, size);
     }]>,
-    TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$element_type, "uint64_t":$size
-    ), [{
-        return $_get(element_type.getContext(), element_type,
-                     llvm::ElementCount::getFixed(size));
-    }]>,
   ];
 
   let extraClassDeclaration = [{
+    /// Return the size of a fixed-width vector.
+    uint64_t getFixedSize() const { return getSize().getFixedValue(); }
+
+    /// Return a fixed-width vector with the given element type and size.
+    static VectorType getFixed(mlir::Type elementType, uint64_t size) {
+      return get(elementType, llvm::ElementCount::getFixed(size));
+    }
+
+    /// Return a scalable vector with the given element type and minimum size.
+    static VectorType getScalable(mlir::Type elementType, uint64_t size) {
+      return get(elementType, llvm::ElementCount::getScalable(size));
+    }
+
     /// The width of the integer a vector of `!cir.bool` is stored as: one bit
     /// per element, at least a byte.
     uint64_t getBoolStorageWidth() const;
