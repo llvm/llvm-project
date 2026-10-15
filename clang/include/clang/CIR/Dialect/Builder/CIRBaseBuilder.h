@@ -331,16 +331,20 @@ public:
   mlir::Value createComplexAdd(mlir::Location loc, mlir::Value lhs,
                                mlir::Value rhs) {
     auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
-    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
-      return cir::ComplexFAddOp::create(*this, loc, lhs, rhs);
+    if (cir::isAnyFloatingPointType(complexTy.getElementType())) {
+      cir::FenvAttr fenv = getConstrainedFPAttr();
+      return cir::ComplexFAddOp::create(*this, loc, lhs, rhs, fenv);
+    }
     return cir::ComplexAddOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createComplexSub(mlir::Location loc, mlir::Value lhs,
                                mlir::Value rhs) {
     auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
-    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
-      return cir::ComplexFSubOp::create(*this, loc, lhs, rhs);
+    if (cir::isAnyFloatingPointType(complexTy.getElementType())) {
+      cir::FenvAttr fenv = getConstrainedFPAttr();
+      return cir::ComplexFSubOp::create(*this, loc, lhs, rhs, fenv);
+    }
     return cir::ComplexSubOp::create(*this, loc, lhs, rhs);
   }
 
