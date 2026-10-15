@@ -91,7 +91,7 @@ with `/libcxx-bot benchmark`.
 
 ## Running benchmarks locally
 
-On GitHub, the `libcxx-benchmark-commit.yml` workflow is used to run benchmarks and report
+On GitHub, the `libcxx-lnt-pipeline.yml` workflow is used to run benchmarks and report
 results to a LNT instance. This workflow wraps the `libcxx/utils/ci/lnt/run-benchmarks` script,
 which can be used to benchmark locally:
 

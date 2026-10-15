@@ -1,70 +1,50 @@
-# This file defines a workflow that runs the libc++ benchmarks against the specified version
-# of libstdc++ and (optionally) submits the results to a LNT instance.
+# This file defines a reusable workflow that runs the libc++ benchmarks against the given version of
+# libstdc++, using the given machine setup, and uploads the resulting LNT report as an artifact.
 
-name: "[libc++] Run benchmark suite against libstdc++"
+name: "[libc++] Run benchmarks against libstdc++"
 
 permissions:
   contents: read
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       libstdcxx-version:
         description: 'The version of libstdc++ to benchmark. This is the major version of GCC being installed to get libstdc++ (e.g. 16).'
         required: true
         type: string
       lnt-machine:
-        description: 'The LNT machine configuration to use when benchmarking and to report results as'
+        description: 'The name of the LNT machine to report the results as'
         required: true
         type: string
-      benchmark-suite-override:
-        description: |
-          Override the version of the benchmark suite to use (a LLVM monorepo SHA). By default, the version pinned
-          for this machine in machines.json is used. This override can be used to dry-run benchmarks with arbitrary
-          commits of the benchmark suite, but only the version pinned in machines.json can be used when actually
-          submitting to LNT.
-        required: false
+      setup:
+        description: 'The setup of the machine to benchmark on, as a JSON object (see libcxx/utils/ci/lnt/README.md)'
+        required: true
         type: string
       filter:
         description: 'An optional filter to determine which benchmarks to run'
         required: false
         type: string
-      submit-lnt:
-        description: 'Whether to submit the results to LNT -- dry-run unless opted in'
-        required: false
-        type: boolean
-        default: false
-      lnt-url:
-        description: 'The URL of the LNT instance to submit to'
-        required: false
+      artifact-name:
+        description: 'The name of the artifact to upload the LNT report as'
+        required: true
         type: string
-        default: https://lnt.llvm.org
 
 jobs:
-  # Validate the inputs and select the configuration of the machine to benchmark on.
-  validate:
-    uses: $/.github/workflows/libcxx-lnt-validate.yml
-    with:
-      lnt-machine: ${{ inputs.lnt-machine }}
-      benchmark-suite-override: ${{ inputs.benchmark-suite-override }}
-      submit-lnt: ${{ inputs.submit-lnt }}
-
   run-benchmarks:
     name: Run benchmarks on ${{ inputs.lnt-machine }}
-    needs:
-      - validate
-    runs-on: ${{ fromJSON(needs.validate.outputs.setup).runner }}
-    container: ${{ fromJSON(needs.validate.outputs.setup).container || null }}
+    runs-on: ${{ fromJSON(inputs.setup).runner }}
+    container: ${{ fromJSON(inputs.setup).container || null }}
     defaults:
       run:
         shell: bash
     env:
-      BENCHMARK_SUITE_VERSION: ${{ fromJSON(needs.validate.outputs.setup).benchmark-suite-version }}
-      COMPILER: ${{ fromJSON(needs.validate.outputs.setup).cxx }}
+      BENCHMARK_SUITE_VERSION: ${{ fromJSON(inputs.setup).benchmark-suite-version }}
+      COMPILER: ${{ fromJSON(inputs.setup).cxx }}
       LIBSTDCXX_VERSION: ${{ inputs.libstdcxx-version }}
-      LIT_PARAMS: ${{ join(fromJSON(needs.validate.outputs.setup).lit-params, ' ') }}
+      LIT_PARAMS: ${{ join(fromJSON(inputs.setup).lit-params, ' ') }}
       LNT_MACHINE: ${{ inputs.lnt-machine }}
-      XCODE_VERSION: ${{ fromJSON(needs.validate.outputs.setup).xcode-version }}
+      XCODE_VERSION: ${{ fromJSON(inputs.setup).xcode-version }}
     steps:
       - name: Checkout the LLVM monorepo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -130,16 +110,6 @@ jobs:
       - name: Upload the LNT report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: lnt-report
+          name: ${{ inputs.artifact-name }}
           path: result.json
           if-no-files-found: error
-
-  submit:
-    needs:
-      - run-benchmarks
-    if: ${{ inputs.submit-lnt }}
-    uses: $/.github/workflows/libcxx-lnt-submit.yml
-    with:
-      artifact-name: lnt-report
-      test-suite: libstdcxx
-      lnt-url: ${{ inputs.lnt-url }}
