@@ -8601,9 +8601,8 @@ private:
                  diag::note_defaulted_comparison_not_rewritten_callee)
               << FD;
         } else {
-          S.Diag(Subobj.Loc,
-                 diag::note_defaulted_comparison_calls_deleted)
-              << FD << Subobj.Kind << Subobj.Decl;
+          S.Diag(Subobj.Loc, diag::note_defaulted_function_calls_deleted)
+              << FD << /*comparison function*/ 4 << Subobj.Kind << Subobj.Decl;
           S.NoteDeletedFunction(Best->Function);
         }
       }
@@ -9584,8 +9583,8 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
   auto NoteCallsDeleted = [&](unsigned Step, FunctionDecl *Callee) {
     if (!Diagnose)
       return;
-    S.Diag(Loc, diag::note_defaulted_postfix_operator_calls_deleted)
-        << FD << Step;
+    S.Diag(Loc, diag::note_defaulted_function_calls_deleted)
+        << FD << Step << /*complete object*/ 0;
     if (Callee)
       S.NoteDeletedFunction(Callee);
   };

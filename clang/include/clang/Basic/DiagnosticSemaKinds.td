@@ -10646,9 +10646,12 @@ def note_defaulted_comparison_inaccessible : Note<
   "defaulted %0 is implicitly deleted because it would invoke a "
   "%select{private|protected}3 %4%select{ member of %6|"
   " member of %6 to compare member %2| to compare base class %2}1">;
-def note_defaulted_comparison_calls_deleted : Note<
+// Shared by defaulted comparisons and defaulted postfix operators. The first
+// four %select indices of %1 are given by diag::DefaultedPostfixOperatorStep.
+def note_defaulted_function_calls_deleted : Note<
   "defaulted %0 is implicitly deleted because it would invoke a deleted "
-  "comparison function%select{| for member %2| for base class %2}1">;
+  "%select{constructor|destructor|prefix 'operator++'|prefix 'operator--'|"
+  "comparison function}1%select{| for member %3| for base class %3}2">;
 def note_defaulted_comparison_no_viable_function : Note<
   "defaulted %0 is implicitly deleted because there is no viable "
   "%select{three-way comparison function|'operator=='}1 for "
@@ -10734,11 +10737,8 @@ def note_defaulted_postfix_operator_ambiguous : Note<
   "defaulted %0 is implicitly deleted because %select{copy construction of|"
   "prefix 'operator++' for|prefix 'operator--' for}1 an lvalue of type %2 "
   "is ambiguous">;
-// The %select indices of the operations in the following notes are given by
+// The %select indices of the operations in the following note are given by
 // diag::DefaultedPostfixOperatorStep.
-def note_defaulted_postfix_operator_calls_deleted : Note<
-  "defaulted %0 is implicitly deleted because it would invoke a deleted "
-  "%select{constructor|destructor|prefix 'operator++'|prefix 'operator--'}1">;
 def note_defaulted_postfix_operator_inaccessible : Note<
   "defaulted %0 is implicitly deleted because it would invoke a "
   "%select{private|protected}2 %select{constructor|destructor|"
