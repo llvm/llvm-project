@@ -291,19 +291,11 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
     }
     break;
   }
-  case Intrinsic::amdgcn_s_prefetch_data:
+  case Intrinsic::amdgcn_s_prefetch_data: {
     Check(
         AMDGPU::isFlatGlobalAddrSpace(
             Call.getArgOperand(0)->getType()->getPointerAddressSpace()),
         "llvm.amdgcn.s.prefetch.data only supports global or constant memory");
-    [[fallthrough]];
-  case Intrinsic::amdgcn_s_prefetch_inst:
-  case Intrinsic::amdgcn_s_buffer_prefetch_data: {
-    // The length is encoded in 5 bits: 0-31 means 1-32 chunks of 128 bytes.
-    unsigned LenIdx = ID == Intrinsic::amdgcn_s_buffer_prefetch_data ? 2 : 1;
-    if (auto *Len = dyn_cast<ConstantInt>(Call.getArgOperand(LenIdx)))
-      Check(Len->getZExtValue() <= 31,
-            "prefetch length must be in the range [0, 31]", &Call);
     break;
   }
   case Intrinsic::amdgcn_flat_prefetch:
