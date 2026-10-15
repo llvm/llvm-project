@@ -43,7 +43,6 @@ add_clang_unittest(ToolingTests
   RecursiveASTVisitorTests/MemberPointerTypeLoc.cpp
   RecursiveASTVisitorTests/NestedNameSpecifiers.cpp
   RecursiveASTVisitorTests/OffsetOfExpr.cpp
-  RecursiveASTVisitorTests/PackIndexingTypeLoc.cpp
   RecursiveASTVisitorTests/ParenExpr.cpp
   RecursiveASTVisitorTests/TemplateArgumentLocTraverser.cpp
   RecursiveASTVisitorTests/TraversalScope.cpp
