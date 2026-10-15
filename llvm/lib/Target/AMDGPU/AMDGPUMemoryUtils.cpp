@@ -480,24 +480,27 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
   return false;
 }
 
-SIAtomicAddrSpace toSIAtomicAddrSpace(unsigned AS) {
-  if (AS == AMDGPUAS::FLAT_ADDRESS)
-    return SIAtomicAddrSpace::FLAT;
-  if (AS == AMDGPUAS::GLOBAL_ADDRESS)
-    return SIAtomicAddrSpace::GLOBAL;
-  if (AS == AMDGPUAS::LOCAL_ADDRESS)
-    return SIAtomicAddrSpace::LDS;
-  if (AS == AMDGPUAS::PRIVATE_ADDRESS)
-    return SIAtomicAddrSpace::SCRATCH;
-  if (AS == AMDGPUAS::REGION_ADDRESS)
-    return SIAtomicAddrSpace::GDS;
-  if (AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE ||
-      AS == AMDGPUAS::BUFFER_STRIDED_POINTER)
-    return SIAtomicAddrSpace::GLOBAL;
+static constexpr SIAtomicAddrSpace LLVMToSIAtomicAddrSpaceMapping[] = {
+    SIAtomicAddrSpace::FLAT,    //< AMDGPUAS::FLAT_ADDRESS
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::GLOBAL_ADDRESS
+    SIAtomicAddrSpace::GDS,     //< AMDGPUAS::REGION_ADDRESS
+    SIAtomicAddrSpace::LDS,     //< AMDGPUAS::LOCAL_ADDRESS
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::CONSTANT_ADDRESS
+    SIAtomicAddrSpace::SCRATCH, //< AMDGPUAS::PRIVATE_ADDRESS
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::CONSTANT_ADDRESS_32BIT
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::BUFFER_FAT_POINTER
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::BUFFER_RESOURCE
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::BUFFER_STRIDED_POINTER
+};
 
-  // Constant addrspaces map to OTHER because there is no point in atomic
-  // operations in them, since their memory does not change during kernel
-  // execution.
+SIAtomicAddrSpace toSIAtomicAddrSpace(unsigned LLVMAddrSpace) {
+  constexpr unsigned SizeOfLLVMToSIAtomicAddrSpaceMapping =
+      sizeof(LLVMToSIAtomicAddrSpaceMapping) /
+      sizeof(LLVMToSIAtomicAddrSpaceMapping[0]);
+  if (LLVMAddrSpace > AMDGPUAS::MAX_AMDGPU_ADDRESS)
+    return SIAtomicAddrSpace::GLOBAL;
+  if (LLVMAddrSpace < SizeOfLLVMToSIAtomicAddrSpaceMapping)
+    return LLVMToSIAtomicAddrSpaceMapping[LLVMAddrSpace];
   return SIAtomicAddrSpace::OTHER;
 }
 

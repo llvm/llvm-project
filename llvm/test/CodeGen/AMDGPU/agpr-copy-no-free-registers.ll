@@ -511,6 +511,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-LABEL: introduced_copy_to_sgpr:
 ; GFX908:       ; %bb.0: ; %bb
 ; GFX908-NEXT:    global_load_ushort v16, v[0:1], off glc
+; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x0
 ; GFX908-NEXT:    s_load_dwordx2 s[10:11], s[8:9], 0x10
 ; GFX908-NEXT:    s_load_dword s0, s[8:9], 0x18
@@ -547,7 +548,6 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    s_lshl_b64 s[14:15], s[10:11], 5
 ; GFX908-NEXT:    s_and_b64 s[0:1], exec, s[0:1]
 ; GFX908-NEXT:    s_lshl_b64 s[16:17], s[8:9], 5
-; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_readfirstlane_b32 s2, v16
 ; GFX908-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GFX908-NEXT:    s_mul_i32 s3, s5, s2
@@ -655,6 +655,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-LABEL: introduced_copy_to_sgpr:
 ; GFX90A:       ; %bb.0: ; %bb
 ; GFX90A-NEXT:    global_load_ushort v18, v[0:1], off glc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x0
 ; GFX90A-NEXT:    s_load_dwordx2 s[10:11], s[8:9], 0x10
 ; GFX90A-NEXT:    s_load_dword s0, s[8:9], 0x18
@@ -690,7 +691,6 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    s_lshl_b64 s[14:15], s[10:11], 5
 ; GFX90A-NEXT:    s_and_b64 s[0:1], exec, s[0:1]
 ; GFX90A-NEXT:    s_lshl_b64 s[16:17], s[8:9], 5
-; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_readfirstlane_b32 s2, v18
 ; GFX90A-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GFX90A-NEXT:    s_mul_i32 s3, s5, s2
