@@ -369,9 +369,6 @@ public:
 /// so it is never aliased onto compiler-emitted memory and may be extended
 /// freely.
 struct KernelLaunchArgsTy {
-  /// Version of KernelArgsTy this launch was built from, for ABI
-  /// compatibility checks.
-  uint32_t OmpABIVersion = 0;
   /// Number of kernel arguments in \p Args.
   uint32_t NumArgs = 0;
   /// Array of \p NumArgs pointers, each pointing at one argument's value,
