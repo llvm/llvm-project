@@ -1,0 +1,61 @@
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   [[FIRST_ADDRESS=0x401100]]
+Sections:
+  - Name:         .text.first
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      [[FIRST_ADDRESS=0x401100]]
+    Offset:       [[FIRST_OFFSET=0x1100]]
+    AddressAlign: 0x4
+    Content:      C0035FD6
+  - Name:         .text.second
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      [[SECOND_ADDRESS=0x501800]]
+    Offset:       [[SECOND_OFFSET=0x1800]]
+    AddressAlign: 0x4
+    Content:      C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0
+    VAddr:    [[RO_ADDRESS=0x400000]]
+    FileSize: 0x1000
+    MemSize:  0x1000
+    Align:    0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   [[FIRST_OFFSET=0x1100]]
+    VAddr:    [[FIRST_ADDRESS=0x401100]]
+    FileSize: [[FIRST_SIZE=0x4]]
+    MemSize:  [[FIRST_MEM_SIZE=0x4]]
+    Align:    0x1000
+    FirstSec: .text.first
+    LastSec:  .text.first
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   [[SECOND_OFFSET=0x1800]]
+    VAddr:    [[SECOND_ADDRESS=0x501800]]
+    FileSize: 0x4
+    MemSize:  0x4
+    Align:    0x1000
+    FirstSec: .text.second
+    LastSec:  .text.second
+Symbols:
+  - Name:    first
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text.first
+    Value:   [[FIRST_ADDRESS=0x401100]]
+    Size:    0x4
+  - Name:    second
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text.second
+    Value:   [[SECOND_ADDRESS=0x501800]]
+    Size:    0x4
