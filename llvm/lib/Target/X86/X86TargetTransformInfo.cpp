@@ -379,6 +379,27 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                   Op1Info.getNoProps(), Op2Info.getNoProps());
   }
 
+  // A rem paired with a div on the same operands in the same block is free:
+  // the pair costs the div alone. Power-of-two divisors are handled above.
+  if ((ISD == ISD::UREM || ISD == ISD::SREM) && CostKind != TTI::TCK_Latency &&
+      CtxI && CtxI->getOpcode() == Opcode) {
+    using namespace PatternMatch;
+    // Same use limit as SLP, bounds the walk over the operand users.
+    constexpr unsigned MaxUses = 64;
+    unsigned DivOpcode =
+        ISD == ISD::SREM ? Instruction::SDiv : Instruction::UDiv;
+    const Value *X = CtxI->getOperand(0);
+    const Value *Y = CtxI->getOperand(1);
+    // Constants have context-wide use lists, walk the variable operand.
+    const Value *V = isa<Constant>(Y) ? X : Y;
+    if (!isa<Constant>(V) && !V->hasNUsesOrMore(MaxUses) &&
+        any_of(V->users(), [&](const User *U) {
+          return match(U, m_BinOp(DivOpcode, m_Specific(X), m_Specific(Y))) &&
+                 cast<Instruction>(U)->getParent() == CtxI->getParent();
+        }))
+      return TTI::TCC_Free;
+  }
+
   // A scalar integer divide/remainder by a constant is not a hardware divide;
   // it lowers to a magic-number multiply-high plus a few fixup ops. Cost it as
   // that sequence rather than the generic single-instruction divide, so the

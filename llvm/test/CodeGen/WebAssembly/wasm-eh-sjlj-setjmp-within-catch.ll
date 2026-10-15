@@ -66,3 +66,6 @@ declare void @__cxa_end_catch()
 attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 attributes #2 = { returns_twice }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"wasm"}
