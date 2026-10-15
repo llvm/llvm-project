@@ -164,11 +164,13 @@ void use_TakesFunc() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z9TakesFuncIFivEEDcRKT_(
+// CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-NEXT: %[[FUNC_ALLOCA:.*]] = cir.alloca "f" {{.*}} init const : !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>
 // CIR: %[[FUNC_LOAD:.*]] = cir.load %[[FUNC_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>, !cir.ptr<!cir.func<() -> !s32i>>
 // CIR-NEXT: %[[CALL:.*]] = cir.call %[[FUNC_LOAD]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> (!s32i {llvm.noundef})
 
 // LLVM-LABEL: define{{.*}} @_Z9TakesFuncIFivEEDcRKT_(
+// LLVM-NEXT: %[[RETVAL:.*]] = alloca i32
 // LLVM-NEXT: %[[FUNC_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[FUNC_LOAD:.*]] = load ptr, ptr %[[FUNC_ALLOCA]]
 // LLVM-NEXT: %[[CALL:.*]] = call noundef i32 %[[FUNC_LOAD]]()
