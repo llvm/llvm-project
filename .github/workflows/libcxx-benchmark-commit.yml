@@ -137,18 +137,18 @@ jobs:
         run: |
           brew update
           brew install ninja cmake python@3.14
-          echo "$(brew --prefix python@3.14)/bin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
 
       - name: Diagnose tools in use
         run: |
           cmake --version
           ninja --version
           "${COMPILER}" --version
-          python3.14 --version
+          python3 --version
 
       - name: Setup virtual environment
         run: |
-          python3.14 -m venv .venv
+          python3 -m venv .venv
           source .venv/bin/activate
           pip install -r libcxx/utils/ci/lnt/requirements.txt
 
