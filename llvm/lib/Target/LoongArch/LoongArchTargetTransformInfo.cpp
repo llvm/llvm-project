@@ -124,12 +124,17 @@ LoongArchTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   Options.NumLoadsPerBlock = IsZeroCmp ? Options.MaxNumLoads : 1;
   Options.AllowOverlappingLoads = true;
 
-  // TODO: Support for vectors.
+  if (IsZeroCmp && ST->hasExtLSX()) {
+    if (ST->hasExtLASX())
+      Options.LoadSizes.push_back(32);
+    Options.LoadSizes.push_back(16);
+  }
+
   if (ST->is64Bit()) {
-    Options.LoadSizes = {8, 4, 2, 1};
+    Options.LoadSizes.append({8, 4, 2, 1});
     Options.AllowedTailExpansions = {3, 5, 6};
   } else {
-    Options.LoadSizes = {4, 2, 1};
+    Options.LoadSizes.append({4, 2, 1});
     Options.AllowedTailExpansions = {3};
   }
 
