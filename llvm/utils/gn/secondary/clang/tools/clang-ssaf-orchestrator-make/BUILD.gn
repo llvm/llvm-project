@@ -46,6 +46,7 @@ write_cmake_config("version") {
 copy("shims") {
   sources = [
     "lib/clang_ssaf_orchestrator_make/shims/__init__.py",
+    "lib/clang_ssaf_orchestrator_make/shims/ar.py",
     "lib/clang_ssaf_orchestrator_make/shims/clang.py",
     "lib/clang_ssaf_orchestrator_make/shims/commands.py",
     "lib/clang_ssaf_orchestrator_make/shims/driver_jobs.py",
