@@ -26,6 +26,8 @@ def transformation_config(**overrides):
         ssaf_clang="/bin/clang",
         ssaf_extra_clang_args=[],
         ssaf_src_edit_merge="/bin/clang-ssaf-src-edit-merge",
+        ssaf_report_merge="/bin/clang-ssaf-report-merge",
+        ssaf_conflict_merge="/bin/clang-ssaf-conflict-merge",
         transformation="x",
     )
     fields.update(overrides)

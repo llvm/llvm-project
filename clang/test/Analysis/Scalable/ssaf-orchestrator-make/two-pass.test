@@ -16,7 +16,8 @@
 # STDOUT: link-unit: {{[^ ]*}}/build/prg
 # STDOUT: analysis-result: {{[^ ]*}}/out/wpa.json
 # STDOUT: source-edits: {{[^ ]*}}/out/ssaf-artifacts{{[^ ]*}}/build/prg.edits.yaml
-# STDOUT-NOT: edit-conflicts
+# STDOUT: transformation-report: {{[^ ]*}}/out/ssaf-artifacts{{[^ ]*}}/build/prg.report.sarif
+# STDOUT: conflict-report: {{[^ ]*}}/out/ssaf-artifacts{{[^ ]*}}/build/prg.conflict-report.sarif
 
 # RUN: ls %t/out/ssaf-artifacts%t/build/main.o.summary.json %t/out/ssaf-artifacts%t/build/parse.o.summary.json
 # RUN: ls %t/out/ssaf-artifacts%t/build/main.o.edits.yaml \

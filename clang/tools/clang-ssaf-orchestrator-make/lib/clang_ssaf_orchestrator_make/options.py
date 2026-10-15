@@ -80,6 +80,18 @@ def build_parser():
         help="Path to clang-ssaf-src-edit-merge (default: found on PATH).",
     )
     parser.add_argument(
+        "--ssaf-report-merge",
+        metavar="<path>",
+        default=None,
+        help="Path to clang-ssaf-report-merge (default: found on PATH).",
+    )
+    parser.add_argument(
+        "--ssaf-conflict-merge",
+        metavar="<path>",
+        default=None,
+        help="Path to clang-ssaf-conflict-merge (default: found on PATH).",
+    )
+    parser.add_argument(
         "--ssaf-extra-clang-arg",
         metavar="<arg>",
         action="append",
@@ -121,6 +133,8 @@ class CommandLineOpts:
         ssaf_linker=None,
         ssaf_analyzer=None,
         ssaf_src_edit_merge=None,
+        ssaf_report_merge=None,
+        ssaf_conflict_merge=None,
         keep_going=False,
         verbose=False,
     ):
@@ -134,6 +148,8 @@ class CommandLineOpts:
         self.ssaf_linker = ssaf_linker
         self.ssaf_analyzer = ssaf_analyzer
         self.ssaf_src_edit_merge = ssaf_src_edit_merge
+        self.ssaf_report_merge = ssaf_report_merge
+        self.ssaf_conflict_merge = ssaf_conflict_merge
         self.keep_going = keep_going
         self.verbose = verbose
 
@@ -166,6 +182,8 @@ def resolve(argv):
             ssaf_linker=args.ssaf_linker,
             ssaf_analyzer=args.ssaf_analyzer,
             ssaf_src_edit_merge=args.ssaf_src_edit_merge,
+            ssaf_report_merge=args.ssaf_report_merge,
+            ssaf_conflict_merge=args.ssaf_conflict_merge,
             keep_going=args.keep_going,
             verbose=args.verbose,
         ),
