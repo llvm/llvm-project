@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Helper for the net/if.h and linux/if.h compatibility test.
+///
+//===----------------------------------------------------------------------===//
 
 #include <linux/if.h>
 #include <stddef.h>
