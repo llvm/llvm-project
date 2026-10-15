@@ -370,8 +370,8 @@ void PrintAddressSpaceLayout() {
     Printf("|| `[%p, %p]` || HighShadow ||\n",
            (void*)kHighShadowBeg, (void*)kHighShadowEnd);
   }
-  // Shadow gaps are only printed if they are non-empty (e.g. there are no shadow
-  // gaps on 64-bit AIX).
+  // Shadow gaps are only printed if they are non-empty (e.g. there are no
+  // shadow gaps on 64-bit AIX).
   if (kMidMemBeg) {
     if (kShadowGap3Beg != kShadowGap3End)
       Printf("|| `[%p, %p]` || ShadowGap3 ||\n", (void*)kShadowGap3Beg,
