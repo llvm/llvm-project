@@ -13,9 +13,6 @@ define i32 @multi_exit_cascade() {
 ; CHECK-NEXT:    br label %[[VECTOR_CHECK:.*]]
 ; CHECK:       [[VECTOR_CHECK]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1024 x i32], ptr @A, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer
@@ -32,17 +29,7 @@ define i32 @multi_exit_cascade() {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1024 x i32], ptr @D, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [1024 x i32], ptr @D, i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x i32], ptr @D, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1024 x i32], ptr @D, i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP11]], i64 0
-; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP12]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[TMP11]], i64 1
-; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP13]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[TMP11]], i64 2
-; CHECK-NEXT:    store i32 [[TMP18]], ptr [[TMP14]], align 4
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i32> [[TMP11]], i64 3
-; CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP15]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_CHECK]], !llvm.loop [[LOOP0:![0-9]+]]
