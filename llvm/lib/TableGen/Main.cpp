@@ -218,7 +218,7 @@ static int tableGenMainImpl(const char *argv0, MultiFileTableGenMainFn MainFn) {
   Timer.stopTimer();
 
   // Return early if any other errors were generated during parsing
-  // (e.g., assert failures).
+  // (e.g., assert failures). TableGenMain will recheck and report the error.
   if (ErrorsPrinted > 0)
     return 0;
 
