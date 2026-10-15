@@ -20,9 +20,14 @@
 
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cctype>
+#include <charconv>
+#include <cstdint>
+#include <gtest/gtest-spi.h>
 #include <gtest/gtest.h>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 // A user-defined sink with free inserts that return void. Not detected
 // structurally; opted in below.
@@ -71,6 +76,81 @@ template <typename T> std::string printLLVM(const T &V) {
   return Str;
 }
 
+// Expects a pointer. Its format is up to the stream (MSVC's std::ostream prints
+// 0000000000001000 where raw_ostream prints 0x1000), so the whole alphanumeric
+// word is consumed and must be hex, optionally 0x-prefixed, equal to Value.
+struct hex_string_t {
+  const void *Value;
+};
+
+// Matches a printed string piece by piece from the front, adding a test
+// failure at the first mismatch. Anything left unmatched at the end fails too.
+class OutputMatcher {
+public:
+  explicit OutputMatcher(std::string_view Str) : Str(Str), Rest(Str) {}
+  ~OutputMatcher() {
+    if (!Failed && !Rest.empty())
+      fail("unexpected trailing \"" + std::string(Rest) + "\"");
+  }
+
+  OutputMatcher &expectNext(std::string_view Expected) {
+    if (Failed)
+      return *this;
+    if (Rest.substr(0, Expected.size()) != Expected)
+      fail("expected \"" + std::string(Expected) + "\"");
+    else
+      Rest.remove_prefix(Expected.size());
+    return *this;
+  }
+
+  OutputMatcher &expectNext(hex_string_t Expected) {
+    if (Failed)
+      return *this;
+    size_t Len = 0;
+    while (Len < Rest.size() &&
+           std::isalnum(static_cast<unsigned char>(Rest[Len])))
+      ++Len;
+    std::string_view Word = Rest.substr(0, Len);
+    std::string_view Digits = Word;
+    if (Digits.substr(0, 2) == "0x" || Digits.substr(0, 2) == "0X")
+      Digits.remove_prefix(2);
+    uintptr_t Value;
+    auto [End, Err] = std::from_chars(Digits.data(),
+                                      Digits.data() + Digits.size(), Value, 16);
+    uintptr_t ExpectedValue = reinterpret_cast<uintptr_t>(Expected.Value);
+    if (Err != std::errc() || End != Digits.data() + Digits.size() ||
+        Value != ExpectedValue)
+      fail("expected hex for " + std::to_string(ExpectedValue) + ", got \"" +
+           std::string(Word) + "\"");
+    else
+      Rest.remove_prefix(Len);
+    return *this;
+  }
+
+private:
+  void fail(const std::string &What) {
+    Failed = true;
+    ADD_FAILURE() << What << " at offset " << Str.size() - Rest.size()
+                  << " of \"" << Str << "\"";
+  }
+
+  std::string_view Str;
+  std::string_view Rest;
+  bool Failed = false;
+};
+
+TEST(OffloadPrintTest, OutputMatcherHex) {
+  static const hex_string_t P{reinterpret_cast<const void *>(0xab)};
+  OutputMatcher("0xab").expectNext(P);
+  OutputMatcher("00000000000000AB").expectNext(P);
+  EXPECT_NONFATAL_FAILURE(OutputMatcher("0xac").expectNext(P), "got \"0xac\"");
+  EXPECT_NONFATAL_FAILURE(OutputMatcher("0xabg").expectNext(P),
+                          "got \"0xabg\"");
+  EXPECT_NONFATAL_FAILURE(OutputMatcher("0x").expectNext(P), "got \"0x\"");
+  EXPECT_NONFATAL_FAILURE(OutputMatcher("0xab)").expectNext(P),
+                          "unexpected trailing \")\"");
+}
+
 TEST(OffloadPrintTest, Enum) {
   EXPECT_EQ(printStd(OL_ERRC_INVALID_DEVICE), "OL_ERRC_INVALID_DEVICE");
   EXPECT_EQ(printLLVM(OL_ERRC_INVALID_DEVICE), "OL_ERRC_INVALID_DEVICE");
@@ -92,13 +172,14 @@ TEST(OffloadPrintTest, ParamStructWithTaggedValue) {
   void *PropValue = Name;
   ol_get_device_info_params_t Params{&Device, &PropName, &PropSize, &PropValue};
 
-  std::string Std = printStd(&Params);
-  std::string LLVM = printLLVM(&Params);
-  EXPECT_EQ(Std, LLVM);
-  EXPECT_NE(Std.find(".PropName = OL_DEVICE_INFO_NAME"), std::string::npos)
-      << Std;
-  EXPECT_NE(Std.find(".PropSize = 6"), std::string::npos) << Std;
-  EXPECT_NE(Std.find("(Hello)"), std::string::npos) << Std;
+  for (const std::string &Out : {printStd(&Params), printLLVM(&Params)})
+    OutputMatcher(Out)
+        .expectNext(".Device = ")
+        .expectNext(hex_string_t{Device})
+        .expectNext(", .PropName = OL_DEVICE_INFO_NAME, .PropSize = 6, "
+                    ".PropValue = ")
+        .expectNext(hex_string_t{Name})
+        .expectNext(" (Hello)");
 }
 
 TEST(OffloadPrintTest, GTestMessage) {
