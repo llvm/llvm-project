@@ -15,7 +15,11 @@ namespace llvm {
 
 class MachineInstr;
 
-/// Whether rematerializing VReg for MI can produce an assignable register.
+/// Return whether we can guarantee physical register assignment if VReg's value
+/// is rematerialized immediately before its use in MI. The new live range must
+/// be assignable without further spilling. For example, if MI is a pseudo
+/// instruction that has more register operands than available physical
+/// registers, rematerializing VReg may leave the new live range unassignable.
 bool canGuaranteeAssignmentAfterRemat(Register VReg, const MachineInstr &MI);
 
 } // end namespace llvm
