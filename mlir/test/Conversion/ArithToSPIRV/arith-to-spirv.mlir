@@ -435,6 +435,26 @@ func.func @bool_shift_div_rem_scalar(%arg0 : i1, %arg1 : i1) {
   // CHECK: %[[NOTB:.+]] = spirv.LogicalNot %arg1
   // CHECK: spirv.LogicalAnd %arg0, %[[NOTB]]
   %6 = arith.remsi %arg0, %arg1 : i1
+  // ceildivui(a,b) = a & b  (same as divui)
+  // CHECK: spirv.LogicalAnd %arg0, %arg1
+  %7 = arith.ceildivui %arg0, %arg1 : i1
+  // ceildivsi(a,b) = a & b  (same as divsi)
+  // CHECK: spirv.LogicalAnd %arg0, %arg1
+  %8 = arith.ceildivsi %arg0, %arg1 : i1
+  // floordivsi(a,b) = a & b  (same as divsi)
+  // CHECK: spirv.LogicalAnd %arg0, %arg1
+  %9 = arith.floordivsi %arg0, %arg1 : i1
+  return
+}
+
+// CHECK-LABEL: @bool_div_vector
+func.func @bool_div_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+  // CHECK: spirv.LogicalAnd %arg0, %arg1 : vector<4xi1>
+  %0 = arith.ceildivui %arg0, %arg1 : vector<4xi1>
+  // CHECK: spirv.LogicalAnd %arg0, %arg1 : vector<4xi1>
+  %1 = arith.ceildivsi %arg0, %arg1 : vector<4xi1>
+  // CHECK: spirv.LogicalAnd %arg0, %arg1 : vector<4xi1>
+  %2 = arith.floordivsi %arg0, %arg1 : vector<4xi1>
   return
 }
 

@@ -709,6 +709,9 @@ struct XOrIOpBooleanPattern final : public OpConversionPattern<arith::XOrIOp> {
 ///   muli(a, b)  = a & b  (1*1=1, else 0 = LogicalAnd)
 ///   divui(a, b) = a & b  (a/1=a, a/0=UB; truth table matches AND)
 ///   divsi(a, b) = a & b  (same as divui on i1)
+///   ceildivui(a, b)  = a & b  (same as divui on i1)
+///   ceildivsi(a, b)  = a & b  (same as divsi on i1)
+///   floordivsi(a, b) = a & b  (same as divsi on i1)
 ///   maxsi(a, b) = a & b  (signed i1: 1 represents -1, so max is 0 unless both
 ///                        are 1)
 ///   maxui(a, b) = a | b  (unsigned max on i1: 1 when either operand is 1)
@@ -1606,8 +1609,11 @@ void mlir::arith::populateArithToSPIRVPatterns(
     spirv::ElementwiseOpPattern<arith::DivUIOp, spirv::UDivOp>,
     BoolIOpPattern<arith::DivSIOp, spirv::LogicalAndOp>,     // same as divui on i1
     spirv::ElementwiseOpPattern<arith::DivSIOp, spirv::SDivOp>,
+    BoolIOpPattern<arith::CeilDivUIOp, spirv::LogicalAndOp>,  // same as divui on i1
     CeilDivUIOpPattern,
+    BoolIOpPattern<arith::CeilDivSIOp, spirv::LogicalAndOp>,  // same as divsi on i1
     CeilDivSIOpPattern,
+    BoolIOpPattern<arith::FloorDivSIOp, spirv::LogicalAndOp>, // same as divsi on i1
     FloorDivSIOpPattern,
     BoolIOpAndNotPattern<arith::RemUIOp>,  // remui(a,b) = a & ~b (see pattern comment)
     spirv::ElementwiseOpPattern<arith::RemUIOp, spirv::UModOp>,
