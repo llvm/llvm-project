@@ -1192,28 +1192,27 @@ public:
 
 } // end anonymous namespace
 
-/// The offset of a field from the beginning of the record.
-static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
+/// Adds to \p Offset the offset in bits of \p Field from the beginning of
+/// \p RD, descending through nested (possibly anonymous) records. Returns
+/// false if \p Field isn't transitively a member of \p RD.
+///
+/// Each field's offset is looked up by its own index, so union members (all at
+/// offset zero) need no special handling.
+static bool getFieldOffsetInBits(const ASTContext &Ctx, const RecordDecl *RD,
                                  const FieldDecl *Field, int64_t &Offset) {
-  ASTContext &Ctx = CGF.getContext();
   const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
-  unsigned FieldNo = 0;
 
   for (const FieldDecl *FD : RD->fields()) {
     if (FD == Field) {
-      Offset += Layout.getFieldOffset(FieldNo);
+      Offset += Layout.getFieldOffset(FD->getFieldIndex());
       return true;
     }
 
-    QualType Ty = FD->getType();
-    if (Ty->isRecordType())
-      if (getFieldOffsetInBits(CGF, Ty->getAsRecordDecl(), Field, Offset)) {
-        Offset += Layout.getFieldOffset(FieldNo);
+    if (const RecordDecl *SubRD = FD->getType()->getAsRecordDecl())
+      if (getFieldOffsetInBits(Ctx, SubRD, Field, Offset)) {
+        Offset += Layout.getFieldOffset(FD->getFieldIndex());
         return true;
       }
-
-    if (!RD->isUnion())
-      ++FieldNo;
   }
 
   return false;
@@ -1323,7 +1322,7 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
   // Struct GEP indices can't reach a count inside a union, because the union
   // lowers to its largest member and the indices would walk that one instead.
   int64_t Offset = 0;
-  if (!getFieldOffsetInBits(*this, RD, CountDecl, Offset))
+  if (!getFieldOffsetInBits(getContext(), RD, CountDecl, Offset))
     return nullptr;
 
   return Builder.CreateInBoundsGEP(
@@ -5207,7 +5206,7 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
   const RecordDecl *RD = getEnclosingNamedRecord(FD);
   int64_t FieldOffset = 0;
   if (getEnclosingNamedRecord(CountFD) == RD &&
-      getFieldOffsetInBits(*this, RD, FD, FieldOffset)) {
+      getFieldOffsetInBits(getContext(), RD, FD, FieldOffset)) {
     if (!ArrayInst.isValid()) {
       // An invalid Address indicates we're checking a pointer array access.
       // Emit the checked L-Value here.
