@@ -4,7 +4,7 @@
 ; CHECK: loop not vectorized
 
 ; Negative test: Conditional pointer (rather than index) increments are not supported yet (needs LAA support).
-define void @test_compress_store_with_pointer(ptr writeonly noalias %init.dst, ptr readonly %src, i32 %c, i64 %n) {
+define void @test_compress_store_with_pointer(ptr writeonly %init.dst, ptr readonly %src, i32 %c, i64 %n) {
 entry:
   br label %for.body
 

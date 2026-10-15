@@ -22,7 +22,6 @@ define void @load_escape_after_loop(ptr %data, ptr %pp, i1 %c, i64 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[OUTER]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
 ; CHECK-NEXT:    [[DATA_INNER:%.*]] = phi ptr [ [[DATA_OUTER]], %[[OUTER]] ], [ [[DATA_NEXT:%.*]], %[[INNER]] ]
 ; CHECK-NEXT:    [[BUF_GEP:%.*]] = getelementptr inbounds i8, ptr [[BUF]], i64 [[IV]]
-; CHECK-NEXT:    store i8 0, ptr [[BUF_GEP]], align 1
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[DATA_INNER]], align 1
 ; CHECK-NEXT:    store i8 [[L]], ptr [[BUF_GEP]], align 1
 ; CHECK-NEXT:    [[DATA_GEP:%.*]] = getelementptr inbounds i8, ptr [[DATA_INNER]], i64 1

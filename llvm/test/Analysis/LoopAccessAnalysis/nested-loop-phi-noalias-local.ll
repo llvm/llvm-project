@@ -5,21 +5,10 @@
 define void @nested_loop_arg_vs_local(ptr %data, i64 %n) {
 ; CHECK-LABEL: 'nested_loop_arg_vs_local'
 ; CHECK-NEXT:    inner:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %data.inner = phi ptr [ %data.outer, %outer ], [ %data.next, %inner ]
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %buf.gep = getelementptr inbounds nuw i8, ptr %buf, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %data.outer High: (16 + %data.outer))
-; CHECK-NEXT:            Member: {%data.outer,+,1}<nuw><%inner>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %buf High: (16 + %buf)<nuw>)
-; CHECK-NEXT:            Member: {%buf,+,1}<nuw><%inner>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
