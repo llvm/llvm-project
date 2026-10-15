@@ -1219,10 +1219,9 @@ class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = ""> {
                                    llvm_i32_ty,      // idesc
                                    llvm_i1_ty],      // enable_input_d
                                   !if(!eq(IsSparse, 1), [llvm_tmem_ptr_ty], [])); // spmetadata
-  list<IntrinsicProperty> common_intr_props = !listconcat(
-                            [IntrArgMemOnly, WriteOnly<ArgIndex<0>>],
-                            !if(!eq(Space, "tensor"), [ReadOnly<ArgIndex<1>>], [])
-                          );
+  // D is read and written, and .ashift also writes A. Shared memory is accessed
+  // through descriptors, so these operations are not restricted to argmem.
+  list<IntrinsicProperty> common_intr_props = [];
 
   string Prefix = "llvm.nvvm.tcgen05.mma";
   string SpSpaceKindStr = !if(IsSparse, ".sp", "")
