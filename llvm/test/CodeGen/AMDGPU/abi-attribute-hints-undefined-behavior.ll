@@ -256,6 +256,7 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #
 ; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
+; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    s_endpgm
   %queue.ptr = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -276,6 +277,7 @@ define amdgpu_kernel void @marked_kernel_nokernargs_implicitarg_ptr() #0 {
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v0, 0
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v1, 0
 ; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
+; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    s_endpgm
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %implicitarg.load = load volatile i8, ptr addrspace(4) %implicitarg.ptr
