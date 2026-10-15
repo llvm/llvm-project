@@ -5935,9 +5935,15 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
         sd_match(N, m_c_BinOp(Opcode, m_Value(Add, m_Add(m_Value(X), m_One())),
                               m_Value(Y)))) {
 
-      if (IsSigned && Add->getFlags().hasNoSignedWrap())
+      // Check nsw flag or willNotOverflowAdd because we don't infer nsw flags
+      // in SelectionDAG.
+      if (IsSigned &&
+          (Add->getFlags().hasNoSignedWrap() ||
+           DAG.willNotOverflowAdd(/*IsSigned=*/true, Add->getOperand(0),
+                                  Add->getOperand(1))))
         return DAG.getNode(ISD::AVGCEILS, DL, VT, X, Y);
 
+      // FIXME: Use willNotOverflowAdd here?
       if (!IsSigned && Add->getFlags().hasNoUnsignedWrap())
         return DAG.getNode(ISD::AVGCEILU, DL, VT, X, Y);
     }
@@ -8804,6 +8810,11 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
       (sd_match(N1, m_And(m_Specific(X), m_Specific(Y))) ||
        sd_match(N1, m_Or(m_Specific(X), m_Specific(Y)))))
     return DAG.getNode(ISD::OR, DL, VT, X, Y);
+
+  // fold or (not x), (and x, y) --> or (not x), y
+  if (sd_match(N0, m_Not(m_Value(X))) &&
+      sd_match(N1, m_And(m_Specific(X), m_Value(Y))))
+    return DAG.getNode(ISD::OR, DL, VT, N0, Y);
 
   if (SDValue R = foldLogicOfShifts(N, N0, N1, DAG))
     return R;
@@ -20563,8 +20574,8 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
     // Do not create a cbrt() libcall if the target does not have it, and do not
     // turn a pow that has lowering support into a cbrt() libcall.
     RTLIB::Libcall LC = RTLIB::getCBRT(VT);
-    bool HasLibCall =
-        DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported;
+    bool HasLibCall = DAG.getLibcalls().getVectorLibcallImplOrMasked(LC) !=
+                      RTLIB::Unsupported;
     if (!HasLibCall ||
         (!DAG.getTargetLoweringInfo().isOperationExpand(ISD::FPOW, VT) &&
          DAG.getTargetLoweringInfo().isOperationExpand(ISD::FCBRT, VT)))

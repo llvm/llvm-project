@@ -741,6 +741,8 @@ MapFlags computeDataClauseMapFlags(Operation *entryOp, bool ptrAndObj) {
     flags = flags | MapFlags::ptr_and_obj;
   if (getImplicitFlag(entryOp))
     flags = flags | MapFlags::implicit;
+  if (entryOp->hasDiscardableAttr(getNoDeviceDescriptorAttrName()))
+    flags = flags | MapFlags::no_device_descriptor;
   if (bitEnumContainsAny(getEntryModifiers(entryOp), DataClauseModifier::zero))
     flags = flags | MapFlags::init_zero;
 

@@ -720,10 +720,10 @@ Value *llvm::findAvailablePtrLoadStore(
   const Value *StrippedPtr = Loc.Ptr->stripPointerCasts();
 
   while (ScanFrom != ScanBB->begin()) {
-    // We must ignore debug info directives when counting (otherwise they
+    // We must ignore pseudo probes when counting (otherwise they
     // would affect codegen).
     Instruction *Inst = &*--ScanFrom;
-    if (Inst->isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(Inst))
       continue;
 
     // Restore ScanFrom to expected value in case next test succeeds
@@ -811,7 +811,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
   SmallVector<Instruction *> MustNotAliasInsts;
   for (Instruction &Inst : make_range(++Load->getReverseIterator(),
                                       ScanBB->rend())) {
-    if (Inst.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(Inst))
       continue;
 
     if (MaxInstsToScan-- == 0)
