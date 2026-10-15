@@ -9,6 +9,7 @@
 #include "CPlusPlusLanguage.h"
 
 #include <cctype>
+#include <cstdlib>
 #include <cstring>
 
 #include <functional>
@@ -17,6 +18,7 @@
 #include <set>
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 #include "llvm/Support/ErrorExtras.h"
 
@@ -116,6 +118,89 @@ bool CPlusPlusLanguage::HandlesManglingScheme(
     Mangled::ManglingScheme scheme) const {
   return scheme == Mangled::eManglingSchemeItanium ||
          scheme == Mangled::eManglingSchemeMSVC;
+}
+
+static char *GetMSVCDemangledStr(llvm::StringRef M) {
+  char *demangled_cstr = llvm::microsoftDemangle(
+      M, nullptr, nullptr,
+      llvm::MSDemangleFlags(
+          llvm::MSDF_NoAccessSpecifier | llvm::MSDF_NoCallingConvention |
+          llvm::MSDF_NoMemberType | llvm::MSDF_NoVariableType));
+
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
+    if (demangled_cstr && demangled_cstr[0])
+      LLDB_LOGF(log, "demangled msvc: %s -> \"%s\"", M.data(), demangled_cstr);
+    else
+      LLDB_LOGF(log, "demangled msvc: %s -> error", M.data());
+  }
+
+  return demangled_cstr;
+}
+
+static std::pair<char *, DemangledNameInfo>
+GetItaniumDemangledStr(const char *M) {
+  char *demangled_cstr = nullptr;
+
+  DemangledNameInfo info;
+  llvm::ItaniumPartialDemangler ipd;
+  bool err = ipd.partialDemangle(M);
+  if (!err) {
+    // Default buffer and size (OutputBuffer will realloc in case it's too
+    // small).
+    size_t demangled_size = 80;
+    demangled_cstr = static_cast<char *>(std::malloc(80));
+
+    TrackingOutputBuffer OB(demangled_cstr, demangled_size);
+    demangled_cstr = ipd.finishDemangle(&OB);
+    info = std::move(OB.NameInfo);
+
+    assert(demangled_cstr &&
+           "finishDemangle must always succeed if partialDemangle did");
+    assert(demangled_cstr[OB.getCurrentPosition() - 1] == '\0' &&
+           "Expected demangled_size to return length including trailing null");
+  }
+
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
+    if (demangled_cstr)
+      LLDB_LOGF(log, "demangled itanium: %s -> \"%s\"", M, demangled_cstr);
+    else
+      LLDB_LOGF(log, "demangled itanium: %s -> error: failed to demangle", M);
+
+    if (!info.hasBasename())
+      LLDB_LOGF(log,
+                "demangled itanium: %s -> error: failed to retrieve name info",
+                M);
+  }
+
+  return {demangled_cstr, std::move(info)};
+}
+
+Language::DemangledName
+CPlusPlusLanguage::DemangleSymbol(ConstString mangled,
+                                  Mangled::ManglingScheme scheme,
+                                  const DemangleOptions &options) const {
+  DemangledName demangled;
+  switch (scheme) {
+  case Mangled::eManglingSchemeItanium: {
+    auto [demangled_cstr, info] = GetItaniumDemangledStr(mangled.GetCString());
+    if (demangled_cstr) {
+      demangled.name = demangled_cstr;
+      std::free(demangled_cstr);
+    }
+    if (options.want_info)
+      demangled.info = std::move(info);
+    break;
+  }
+  case Mangled::eManglingSchemeMSVC:
+    if (char *demangled_cstr = GetMSVCDemangledStr(mangled.GetStringRef())) {
+      demangled.name = demangled_cstr;
+      std::free(demangled_cstr);
+    }
+    break;
+  default:
+    break;
+  }
+  return demangled;
 }
 
 /// Returns true for the Itanium names that aren't worth indexing as functions.
