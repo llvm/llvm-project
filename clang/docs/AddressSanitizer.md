@@ -11,31 +11,7 @@ following types of bugs:
 - Use-after-free
 - Use-after-return (clang flag `-fsanitize-address-use-after-return=(never|runtime|always)` default: `runtime`)
   :   - Enable with: `ASAN_OPTIONS=detect_stack_use_after_return=1` (already enabled on Linux).
-      - Disable with: `ASAN_OPTIONS=detect_stack_use_after_return=0`.
-- Use-after-scope (clang flag `-fsanitize-address-use-after-scope`)
-- Double-free, invalid free
-- Memory leaks (experimental)
-
-Typical slowdown introduced by AddressSanitizer is **2x**.
-
-## How to build
-
-Build LLVM/Clang with [CMake](https://llvm.org/docs/CMake.html) and enable
-the `compiler-rt` runtime. An example CMake configuration that will allow
-for the use/testing of AddressSanitizer:
-
-```console
-$ cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_RUNTIMES="compiler-rt" <path to source>/llvm
-```
-
-## Usage
-
-Simply compile and link your program with `-fsanitize=address` flag. The
-AddressSanitizer run-time library should be linked to the final executable, so
-make sure to use `clang` (not `ld`) for the final link step. When linking
-shared libraries, the AddressSanitizer run-time is not linked, so
-`-Wl,-z,defs` may cause link errors (don't use it with AddressSanitizer). To
-get a reasonable performance add `-O1` or higher. To get nicer stack traces
+      - Disable with: `“694_3_W9_INSTRUCTION.pdf”get a reasonable performance add `-O1` or higher. To get nicer stack traces
 in error messages add `-fno-omit-frame-pointer`. To get perfect stack traces
 you may need to disable inlining (just use `-O1`) and tail call elimination
 (`-fno-optimize-sibling-calls`).
