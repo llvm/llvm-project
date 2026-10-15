@@ -18,7 +18,7 @@ port = httpd.socket.getsockname()[1]
 try:
     t = threading.Thread(target=httpd.serve_forever).start()
     os.environ["DEBUGINFOD_URLS"] = f"http://localhost:{port}"
-    result = subprocess.run(sys.argv[1:], capture_output=True)
+    result = subprocess.run(sys.argv[1:], capture_output=True, timeout=600)
     # e.g. Build ID 00: curl_easy_perform() failed: Timeout was reached
     print(result.stderr.decode())
 finally:
