@@ -5,6 +5,7 @@ CodeGen/WinEH/wineh-setjmp.ll
 CodeGen/WinEH/wineh-statenumbering-cleanups.ll
 CodeGen/WinEH/wineh-statenumbering.ll
 DebugInfo/Generic/block-asan.ll
+DebugInfo/MIR/InstrRef/spill-slot-idx-limits.mir
 Transforms/AtomicExpand/ARM/atomic-expansion-v7.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
