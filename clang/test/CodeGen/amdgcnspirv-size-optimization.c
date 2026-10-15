@@ -15,6 +15,7 @@
 // RUN: %clang_cc1 -Oz -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -fenable-spirv-size-optimization -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
 // RUN: %clang_cc1 -Oz -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefix=O0-BC
 // RUN: %clang_cc1 -Oz -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm -fenable-spirv-size-optimization -o - %s | FileCheck %s --check-prefix=O-BC
+// RUN: not %clang_cc1 -Oz -triple spirv64-unknown-unknown -disable-llvm-passes -emit-llvm -fenable-spirv-size-optimization %s 2>&1 | FileCheck %s --check-prefix=ERR
 
 // O0-NOT: Running pass: LowerExpectIntrinsic
 // O0-NOT: Running pass: SimplifyCFG
@@ -48,3 +49,5 @@ int foo(int x) {
     int y = x;
     return y;
 }
+
+// ERR: error: option 'fenable-spirv-size-optimization' cannot be specified on this target
