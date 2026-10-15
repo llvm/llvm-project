@@ -24,7 +24,7 @@
 
 ; QUIET:         *** IR Dump After IRTranslator (ir-translator) on foo ***
 ; QUIET-NOT:     ***
-; QUIET:         *** IR Dump After Localizer (localizer) on foo ***
+; QUIET:         *** IR Dump After Legalizer (legalizer) on foo ***
 
 ; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed -filter-passes=ir-translator,legalizer %s 2>&1 | \
 ; RUN:   FileCheck %s --check-prefixes=VERBOSE-FILTER

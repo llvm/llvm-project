@@ -679,7 +679,7 @@ public:
                                 cir::FuncOp func, bool isThunk);
 
   /// Set extra attributes (inline, etc.) for a function.
-  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+  void setCIRFunctionAttributesForDefinition(const clang::Decl *decl,
                                              cir::FuncOp f);
 
   /// Generate OpenCL kernel argument metadata for a kernel function.
@@ -803,10 +803,6 @@ public:
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
-
-  // Whether a global variable should be emitted by CUDA/HIP host/device
-  // related attributes.
-  bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
 
   /// Print the postfix for externalized static variable or kernels for single
   /// source offloading languages CUDA and HIP. The unique postfix is created

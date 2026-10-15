@@ -51,12 +51,12 @@ using namespace mlir::abi;
 // each member from the source alloca (get_member + load) when the operand is
 // a load of an alloca, or via cir.extract_member otherwise.
 //
-// For Direct + canFlatten (where the coerced type is a multi-field struct),
-// the coerced struct is similarly flattened into N individual wire arguments.
-// The callee reassembles the N scalar block args into the coerced struct,
-// then coerces to the original argument type if the two types differ.  The
-// call site coerces the original type to the coerced struct, then extracts
-// each field as a separate call argument.
+// For Direct + canFlatten (where the coerced type is a multi-field struct), the
+// coerced struct is similarly passed as N separate arguments, one per field.
+// The callee stores the N scalar block args into one slot sized and aligned for
+// both the coerced struct and the original argument type, which the body reads.
+// The call site reads each field of the coerced struct out of memory holding
+// the operand as a separate call argument.
 
 namespace {
 
@@ -103,10 +103,9 @@ buildNewArgTypes(ArrayRef<mlir::Type> oldArgTypes,
       if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
         llvm::append_range(newArgTypes, flatTy.getMembers());
       } else {
-        // Direct with a coerced type: the wire signature uses the coerced
-        // type; the body still expects origTy and insertArgCoercion recovers
-        // it via a memory round-trip.  Direct without coercion is a
-        // pass-through.
+        // Direct with a coerced type: the lowered signature uses the coerced
+        // type; the body still expects origTy and insertArgCoercion recovers it
+        // from a coercion slot.  Direct without coercion is a pass-through.
         newArgTypes.push_back(ac.coercedType ? ac.coercedType : origTy);
       }
       break;
@@ -213,10 +212,12 @@ static bool needsArgAttrUpdate(const FunctionClassification &fc) {
 
 /// Build an updated arg_attrs ArrayAttr that drops Ignore'd args, adds
 /// llvm.signext / llvm.zeroext on Extend args, adds the pointer attributes
-/// for Indirect args, and drops llvm.noundef from a coerced Direct arg that
-/// passes undefined bits.  Preserves any other existing arg attributes on
-/// retained arg slots.  \p origArgTypes provides the pre-rewrite type for
-/// each arg slot.
+/// for Indirect args in place of llvm.nofpclass, drops llvm.noundef from a
+/// coerced Direct arg that passes undefined bits, gives each field of a
+/// Direct+canFlatten argument the argument's attributes, and gives each field
+/// of an Expand argument an empty dict.  Direct and Extend slots keep their
+/// other existing attributes.  \p origArgTypes provides the pre-rewrite type
+/// for each arg slot.
 mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
                                ArrayRef<mlir::Type> origArgTypes,
                                mlir::ArrayAttr existingArgAttrs,
@@ -231,14 +232,19 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
     mlir::DictionaryAttr existing = builder.getDictionaryAttr({});
     if (existingArgAttrs && oldIdx < existingArgAttrs.size())
       existing = mlir::cast<mlir::DictionaryAttr>(existingArgAttrs[oldIdx]);
+    if (ac.kind == ArgKind::Direct && ac.coercedType &&
+        isCoercionWiderThanMemory(origArgTypes[oldIdx], ac.coercedType, dl)) {
+      mlir::NamedAttrList attrs(existing);
+      attrs.erase(mlir::LLVM::LLVMDialect::getNoUndefAttrName());
+      existing = attrs.getDictionary(ctx);
+    }
     if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
-      // Direct + canFlatten: one empty attribute dict per flattened field; the
-      // flattened scalar arguments carry no special ABI attributes.
-      newArgAttrs.append(flatTy.getNumElements(),
-                         builder.getDictionaryAttr({}));
+      // Direct + canFlatten: as in classic CodeGen, each flattened field
+      // carries the attributes of the argument it came from.
+      newArgAttrs.append(flatTy.getNumElements(), existing);
     } else if (ac.kind == ArgKind::Expand) {
-      // Push one empty attribute dict per expanded field; the flattened
-      // scalar arguments carry no special ABI attributes.
+      // An expanded record has no attributes classic CodeGen would copy to its
+      // fields, so each field gets an empty dict.
       auto recTy = cast<cir::RecordType>(origArgTypes[oldIdx]);
       newArgAttrs.append(recTy.getNumElements(), builder.getDictionaryAttr({}));
     } else if (ac.kind == ArgKind::Extend) {
@@ -250,13 +256,15 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else if (ac.kind == ArgKind::Indirect) {
       // Indirect lowering hands the callee a pointer.  llvm.align and
-      // llvm.noundef describe that pointer, not the bytes it points to.
-      // Without byval the pointer points to the caller's own object.  With
-      // byval the backend copies the pointee on the caller's side of the call,
-      // so the callee gets an object of its own even when the pointer points
-      // to the caller's own object.
+      // llvm.noundef describe that pointer, not the bytes it points to, and
+      // llvm.nofpclass, which describes the value, does not apply to a
+      // pointer.  Without byval the pointer points to the caller's own object.
+      // With byval the backend copies the pointee on the caller's side of the
+      // call, so the callee gets an object of its own even when the pointer
+      // points to the caller's own object.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
       mlir::NamedAttrList attrs(existing);
+      attrs.erase(mlir::LLVM::LLVMDialect::getNoFPClassAttrName());
       attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
                 builder.getI64IntegerAttr(ac.indirectAlign.value()));
       attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
@@ -281,12 +289,6 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
                   builder.getI64IntegerAttr(
                       dl.getTypeSize(pointeeTy).getFixedValue()));
       }
-      newArgAttrs.push_back(attrs.getDictionary(ctx));
-    } else if (ac.kind == ArgKind::Direct && ac.coercedType &&
-               isCoercionWiderThanMemory(origArgTypes[oldIdx], ac.coercedType,
-                                         dl)) {
-      mlir::NamedAttrList attrs(existing);
-      attrs.erase(mlir::LLVM::LLVMDialect::getNoUndefAttrName());
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else {
       newArgAttrs.push_back(existing);
@@ -458,8 +460,8 @@ static cir::AllocaOp createCoercionSlot(
 /// register tuple, must not be given an offset.
 ///
 /// Any operations the helper creates are appended to \p createdOps so the
-/// caller can pass them to replaceAllUsesExcept and avoid clobbering the
-/// store's value operand when later rewiring the source value.
+/// caller can leave them out when it later rewires the source value's uses,
+/// which would otherwise clobber the store's value operand.
 mlir::Value emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
                                  mlir::Type dstTy, mlir::Value src,
                                  mlir::Block *slotBlock,
@@ -540,6 +542,31 @@ static cir::LoadOp maybeGetSimpleLoad(mlir::Value val) {
   return load;
 }
 
+/// \p val's defining load, if it loads a record and is not atomic.  Null
+/// otherwise.  The load may be volatile, and then its bytes may only be read
+/// through a volatile copy, never in place.
+static cir::LoadOp maybeGetCopyableRecordLoad(mlir::Value val) {
+  cir::LoadOp load = val.getDefiningOp<cir::LoadOp>();
+  if (!load || load.getMemOrder() ||
+      !mlir::isa<cir::RecordType>(load.getType()))
+    return {};
+  return load;
+}
+
+/// Emits an error and returns failure if \p val, an operand of \p user, is an
+/// atomic load of a record.  The record's bytes are read through a copy or in
+/// place, neither of which keeps the load atomic.
+static mlir::LogicalResult rejectAtomicRecordLoad(mlir::Operation *user,
+                                                  mlir::Value val) {
+  auto load = val.getDefiningOp<cir::LoadOp>();
+  if (!load || !load.getMemOrder() ||
+      !mlir::isa<cir::RecordType>(load.getType()))
+    return mlir::success();
+  return user->emitOpError()
+         << "atomic load of a record operand not yet implemented in "
+            "CallConvLowering";
+}
+
 /// Whether the storage the record load \p load reads is an alloca that holds
 /// \p coercedTy at \p offset.  With no offset, the coerced type's alloc size
 /// has to fit in the record's.  At an offset, the coerced value has to end
@@ -574,17 +601,16 @@ static mlir::Value emitInPlaceCoercedLoad(mlir::OpBuilder &builder,
   return coerced;
 }
 
-/// Copy the bytes of the record \p load reads into a new coercion slot at the
-/// start of \p slotBlock, then read \p coercedTy out of the slot at \p offset.
-/// The slot is at least as aligned as the storage copied from, and the read
-/// takes the slot's alignment at \p offset.  The copy goes just before
-/// \p load, so it reads the bytes \p load reads.
-static mlir::Value emitCopiedCoercedLoad(mlir::OpBuilder &builder,
-                                         mlir::Location loc, cir::LoadOp load,
-                                         mlir::Type coercedTy,
-                                         mlir::Block *slotBlock,
-                                         const mlir::DataLayout &dl,
-                                         unsigned offset) {
+/// Copy the bytes of the record \p load reads into a new coercion slot for
+/// \p coercedTy at \p offset, placed at the start of \p slotBlock, and return
+/// the slot.  The slot is at least as aligned as the storage copied from.  The
+/// copy goes just before \p load, so it reads the bytes \p load reads, and is
+/// volatile if \p load is.
+static cir::AllocaOp
+emitCopiedCoercionSlot(mlir::OpBuilder &builder, mlir::Location loc,
+                       cir::LoadOp load, mlir::Type coercedTy,
+                       mlir::Block *slotBlock, const mlir::DataLayout &dl,
+                       unsigned offset) {
   auto recTy = cast<cir::RecordType>(load.getType());
   uint64_t srcAlign;
   if (cir::AllocaOp src = cir::getUnderlyingAlloca(load.getAddr()))
@@ -599,10 +625,30 @@ static mlir::Value emitCopiedCoercedLoad(mlir::OpBuilder &builder,
          "a direct offset must leave the record as the slot's type");
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(load);
-  mlir::Value recView = emitViewAtOffset(builder, loc, recTy, slot, ignored, 0);
-  cir::CopyOp::create(builder, loc, recView, load.getAddr(),
-                      builder.getI64IntegerAttr(slot.getAlignment()),
-                      builder.getI64IntegerAttr(srcAlign));
+  mlir::Value recView =
+      emitViewAtOffset(builder, loc, recTy, slot, ignored, /*offset=*/0);
+  auto copy =
+      cir::CopyOp::create(builder, loc, recView, load.getAddr(),
+                          builder.getI64IntegerAttr(slot.getAlignment()),
+                          builder.getI64IntegerAttr(srcAlign));
+  copy.setIsVolatile(load.getIsVolatile());
+  return slot;
+}
+
+/// Copy the bytes of the record \p load reads into a coercion slot, as
+/// emitCopiedCoercionSlot does, then read \p coercedTy out of the slot at
+/// \p offset.  The read takes the slot's alignment at \p offset.
+static mlir::Value emitCopiedCoercedLoad(mlir::OpBuilder &builder,
+                                         mlir::Location loc, cir::LoadOp load,
+                                         mlir::Type coercedTy,
+                                         mlir::Block *slotBlock,
+                                         const mlir::DataLayout &dl,
+                                         unsigned offset) {
+  cir::AllocaOp slot = emitCopiedCoercionSlot(builder, loc, load, coercedTy,
+                                              slotBlock, dl, offset);
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(load);
+  SmallPtrSet<mlir::Operation *, 4> ignored;
   mlir::Value coercedView =
       emitViewAtOffset(builder, loc, coercedTy, slot, ignored, offset);
   auto coerced = cir::LoadOp::create(builder, loc, coercedView);
@@ -610,18 +656,171 @@ static mlir::Value emitCopiedCoercedLoad(mlir::OpBuilder &builder,
   return coerced;
 }
 
+/// Read \p coercedTy at \p offset out of the bytes the record load \p load
+/// reads: straight out of its storage if \p load is not volatile and
+/// canReadInPlace accepts it, and otherwise out of a coercion slot at the start
+/// of \p slotBlock that those bytes are copied into.  emitInPlaceCoercedLoad
+/// does not mark its read volatile, so a volatile load is read through the
+/// volatile copy instead.  Either way no new load of the record type is
+/// emitted.
+static mlir::Value emitCoercedRecordLoad(
+    mlir::OpBuilder &builder, mlir::Location loc, cir::LoadOp load,
+    mlir::Type coercedTy, mlir::Block *slotBlock, const mlir::DataLayout &dl,
+    const cir::CIRDataLayout &cirDataLayout, unsigned offset) {
+  if (!load.getIsVolatile() &&
+      canReadInPlace(load, coercedTy, cirDataLayout, offset))
+    return emitInPlaceCoercedLoad(builder, loc, load, coercedTy, offset);
+  return emitCopiedCoercedLoad(builder, loc, load, coercedTy, slotBlock, dl,
+                               offset);
+}
+
+/// Whether a cir.copy of \p ty into \p dst that stands in for a store of it
+/// skips tail padding.  Unless \p dst is an alloca, which holds a complete
+/// object, it can be a potentially-overlapping subobject, such as a
+/// [[no_unique_address]] member or a base, whose tail padding holds another
+/// object.  Classic CodeGen writes only the data size into a destination it is
+/// handed (EmitCall) and into one that may overlap (EmitAggregateCopy).
+/// Copying the whole object into an alloca is equivalent, since nothing else
+/// lives in its tail padding.  A struct has tail padding when its last members
+/// are pad members, which CIRGen emits for padding another object may reuse and
+/// for some other structs, such as an over-aligned one.
+static bool shouldSkipTailPadding(mlir::Value dst, mlir::Type ty) {
+  auto structTy = mlir::dyn_cast<cir::StructType>(ty);
+  if (!structTy || cir::getUnderlyingAlloca(dst))
+    return false;
+  llvm::ArrayRef<mlir::Type> members = structTy.getMembers();
+  llvm::ArrayRef<cir::RecordMemberKind> kinds = structTy.getMemberKinds();
+  for (auto [member, kind] : llvm::reverse(llvm::zip_equal(members, kinds)))
+    if (cir::memberOwnsBytes(member))
+      return kind == cir::RecordMemberKind::Pad;
+  return false;
+}
+
+/// Rewire the uses of the record value \p val, whose bytes sit at \p addr,
+/// which is aligned to \p addrAlign, so that each one finds the record in
+/// memory.  \p val may already have been retyped to the type it is passed as, a
+/// coerced type or a pointer, but its uses still expect the record.
+///
+/// A store of \p val becomes a cir.copy from \p addr at the store, volatile if
+/// the store is and skipping tail padding as shouldSkipTailPadding says.  A
+/// store of the record value writes only what its lowered type stores, so
+/// another union member's data past those bytes would be lost.  A consumer may
+/// be rewritten before \p val's defining op, and has then already stored \p val
+/// into a slot of its own.  That store becomes a copy here too.
+///
+/// Every other use is pointed at one cir.load of \p addr created at the
+/// builder's insertion point.  Only a call argument, a return and a read of a
+/// member that is not itself a record may use it, since those either read
+/// \p addr when they are rewritten or read a field.  Uses by an operation in
+/// \p exceptions are left alone.  Fails, after reporting it, on an atomic store
+/// of \p val or a use by anything else, before anything is rewired.
+static mlir::LogicalResult
+rewireRecordUses(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value val,
+                 mlir::Value addr, uint64_t addrAlign,
+                 const mlir::DataLayout &dl,
+                 const SmallPtrSetImpl<mlir::Operation *> &exceptions) {
+  mlir::Type recTy = mlir::cast<cir::PointerType>(addr.getType()).getPointee();
+  assert(mlir::isa<cir::RecordType>(recTy) && "only a record is rewired");
+  SmallVector<cir::StoreOp> stores;
+  SmallVector<mlir::OpOperand *> otherUses;
+  for (mlir::OpOperand &use : val.getUses()) {
+    mlir::Operation *user = use.getOwner();
+    if (exceptions.contains(user))
+      continue;
+    if (auto store = mlir::dyn_cast<cir::StoreOp>(user)) {
+      if (store.getMemOrder())
+        return store.emitOpError()
+               << "atomic store of a record argument or result not yet "
+                  "implemented in CallConvLowering";
+      stores.push_back(store);
+      continue;
+    }
+    auto member = mlir::dyn_cast<cir::ExtractMemberOp>(user);
+    bool isFieldRead = member && !mlir::isa<cir::RecordType>(member.getType());
+    if (!isFieldRead &&
+        !mlir::isa<cir::CIRCallOpInterface, cir::ReturnOp>(user))
+      return user->emitOpError()
+             << "use of a record argument or result other than by a store, "
+                "call, return or member read not yet implemented in "
+                "CallConvLowering";
+    otherUses.push_back(&use);
+  }
+
+  mlir::IntegerAttr srcAlign = builder.getI64IntegerAttr(addrAlign);
+  for (cir::StoreOp store : stores) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPoint(store);
+    uint64_t dstAlign =
+        store.getAlignment().value_or(dl.getTypeABIAlignment(recTy));
+    auto copy =
+        cir::CopyOp::create(builder, store.getLoc(), store.getAddr(), addr,
+                            builder.getI64IntegerAttr(dstAlign), srcAlign);
+    copy.setIsVolatile(store.getIsVolatile());
+    copy.setSkipTailPadding(shouldSkipTailPadding(store.getAddr(), recTy));
+    store->erase();
+  }
+
+  if (otherUses.empty())
+    return mlir::success();
+  auto load = cir::LoadOp::create(builder, loc, addr);
+  load.setAlignment(addrAlign);
+  for (mlir::OpOperand *use : otherUses)
+    use->set(load);
+  return mlir::success();
+}
+
+/// Point the uses of \p val outside \p exceptions at the value of \p val's
+/// original type that \p view, a view of the start of a coercion slot, holds.
+/// For a record, rewireRecordUses points the uses at the slot.  Any other type
+/// is loaded out of it at the builder's insertion point.
+static mlir::LogicalResult
+replaceUsesFromSlot(mlir::OpBuilder &builder, mlir::Location loc,
+                    mlir::Value val, mlir::Value view,
+                    const mlir::DataLayout &dl,
+                    const SmallPtrSetImpl<mlir::Operation *> &exceptions) {
+  if (!mlir::isa<cir::RecordType>(
+          mlir::cast<cir::PointerType>(view.getType()).getPointee())) {
+    auto load = cir::LoadOp::create(builder, loc, view);
+    val.replaceAllUsesExcept(load, exceptions);
+    return mlir::success();
+  }
+  cir::AllocaOp slot = cir::getUnderlyingAlloca(view);
+  assert(slot && "the view must start at the coercion slot");
+  return rewireRecordUses(builder, loc, val, view, slot.getAlignment(), dl,
+                          exceptions);
+}
+
+/// Coerce \p src, which is \p val retyped or the value replacing it, back to
+/// \p origTy through a coercion slot at the start of \p slotBlock, and point
+/// the uses of \p val outside \p createdOps at the result with
+/// replaceUsesFromSlot.  A direct \p offset lands on the coerced side, so the
+/// view of \p origTy starts at the slot.  The coercion's operations are added
+/// to \p createdOps.
+static mlir::LogicalResult
+emitCoercionAndReplaceUses(mlir::OpBuilder &builder, mlir::Location loc,
+                           mlir::Type origTy, mlir::Value src, mlir::Value val,
+                           mlir::Block *slotBlock, const mlir::DataLayout &dl,
+                           SmallPtrSetImpl<mlir::Operation *> &createdOps,
+                           unsigned offset) {
+  mlir::Value view = emitCoercionToMemory(builder, loc, origTy, src, slotBlock,
+                                          dl, createdOps, offset);
+  return replaceUsesFromSlot(builder, loc, val, view, dl, createdOps);
+}
+
 /// Coerce the value each cir.return returns to the new (coerced) return type.
 ///
-/// When the returned value is a simple load of a record, the coerced value is
-/// read straight out of the storage the load reads if canReadInPlace accepts
-/// it, and otherwise out of a coercion slot the record's bytes are copied into.
-/// The record load is erased once nothing else uses it.  Any other value is
-/// stored into a coercion slot and read back.
-void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
-                          mlir::Type origRetTy, mlir::Type coercedRetTy,
-                          mlir::OpBuilder &builder, const mlir::DataLayout &dl,
-                          unsigned offset) {
-  cir::CIRDataLayout cirDataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
+/// When the returned value is a non-atomic load of a record, the coerced value
+/// is read by emitCoercedRecordLoad, and the record load is erased once nothing
+/// else uses it.  Any other value is stored into a coercion slot and read back.
+/// A record with no storage behind it, such as a constant, defines no bytes
+/// beyond its fields, so the store writes every byte it defines.  A call
+/// result's store is turned into a copy when its call is rewritten later.
+/// Fails, after reporting it, on an atomic load of a record.
+mlir::LogicalResult
+insertReturnCoercion(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
+                     mlir::Type coercedRetTy, mlir::OpBuilder &builder,
+                     const mlir::DataLayout &dl,
+                     const cir::CIRDataLayout &cirDataLayout, unsigned offset) {
   SmallVector<cir::ReturnOp> returns;
   funcOp.walk([&](cir::ReturnOp r) { returns.push_back(r); });
   for (cir::ReturnOp r : returns) {
@@ -631,15 +830,12 @@ void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
     if (origVal.getType() == coercedRetTy)
       continue;
 
-    cir::LoadOp recLoad = maybeGetSimpleLoad(origVal);
-    if (recLoad && mlir::isa<cir::RecordType>(recLoad.getType())) {
-      mlir::Value coerced =
-          canReadInPlace(recLoad, coercedRetTy, cirDataLayout, offset)
-              ? emitInPlaceCoercedLoad(builder, r.getLoc(), recLoad,
-                                       coercedRetTy, offset)
-              : emitCopiedCoercedLoad(
-                    builder, r.getLoc(), recLoad, coercedRetTy,
-                    &funcOp->getRegion(0).front(), dl, offset);
+    if (failed(rejectAtomicRecordLoad(r, origVal)))
+      return mlir::failure();
+    if (cir::LoadOp recLoad = maybeGetCopyableRecordLoad(origVal)) {
+      mlir::Value coerced = emitCoercedRecordLoad(
+          builder, r.getLoc(), recLoad, coercedRetTy,
+          &funcOp->getRegion(0).front(), dl, cirDataLayout, offset);
       r->setOperand(0, coerced);
       if (recLoad->use_empty())
         recLoad->erase();
@@ -652,6 +848,7 @@ void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
                      &funcOp->getRegion(0).front(), dl, offset);
     r->setOperand(0, coerced);
   }
+  return mlir::success();
 }
 
 /// \p recordVal's defining load, if it is simple and its address resolves to
@@ -804,32 +1001,35 @@ findParamSpill(mlir::BlockArgument blockArg) {
   return {store, cast<cir::AllocaOp>(store.getAddr().getDefiningOp())};
 }
 
-/// For each Direct arg with a coerced type, change the block argument's type
-/// to the coerced type and insert a coercion at function entry that maps it
-/// back to the original type for body uses.  For each Indirect byval arg,
-/// change the block argument's type to a pointer, then replace a record's
-/// param spill with a copy from that pointer, or insert a load at entry for
-/// a body that reads the parameter as a value.  For each Indirect non-byval
-/// arg, change the block argument to a pointer and queue the param-slot
-/// alloca to be replaced by it (no entry load or byte-copy) so the body
-/// operates on the caller's storage in place.  For each Expand arg, replace
-/// the single struct block argument with N scalar block arguments (one per
-/// field) and store each field directly into the parameter's own alloca (the
-/// CIRGen spill slot), erasing the original whole-struct store.
+/// For each Direct arg with a coerced type, change the block argument's type to
+/// the coerced type and insert a coercion at function entry that maps it back
+/// to the original type for body uses, which find a record in the coercion slot
+/// through rewireRecordUses.  For each Indirect byval arg, change the block
+/// argument's type to a pointer, then replace a record's single param spill
+/// with a copy from that pointer.  Without such a spill, a record's uses find
+/// it at the pointer through rewireRecordUses, and a value of any other type is
+/// loaded from the pointer at entry.  For each Indirect non-byval arg, change
+/// the block argument to a pointer and queue the param-slot alloca to be
+/// replaced by it (no entry load or byte-copy) so the body operates on the
+/// caller's storage in place.  For each Expand arg, replace the single struct
+/// block argument with N scalar block arguments (one per field) and store each
+/// field directly into the parameter's own alloca (the CIRGen spill slot),
+/// erasing the original whole-struct store.
 ///
 /// \p hasSRetArg is true when the function has an sret return (a hidden return
 /// pointer is prepended as block argument 0).  Expand arguments expand the
 /// block argument count, so a running index tracks the current block argument
 /// position rather than computing the classification index + \p hasSRetArg
-/// directly.
-void insertArgCoercion(
-    mlir::FunctionOpInterface funcOp, const FunctionClassification &fc,
-    mlir::OpBuilder &builder, const mlir::DataLayout &dl, bool hasSRetArg,
-    SmallVectorImpl<std::pair<cir::AllocaOp, mlir::BlockArgument>>
-        &pendingParamSlots) {
+/// directly.  Fails, after reporting it, when rewireRecordUses does.
+mlir::LogicalResult
+insertArgCoercion(mlir::FunctionOpInterface funcOp,
+                  const FunctionClassification &fc, mlir::OpBuilder &builder,
+                  const mlir::DataLayout &dl, bool hasSRetArg,
+                  SmallVectorImpl<std::pair<cir::AllocaOp, mlir::BlockArgument>>
+                      &pendingParamSlots) {
   mlir::Region &body = funcOp->getRegion(0);
   if (body.empty())
-    return;
+    return mlir::success();
   mlir::Block &entry = body.front();
 
   // Running block argument index.  Each non-Expand classification occupies
@@ -919,12 +1119,11 @@ void insertArgCoercion(
     mlir::BlockArgument blockArg = entry.getArgument(blockArgIdx);
 
     if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
-      // Direct + canFlatten: the coerced type is a struct whose fields become
-      // individual wire arguments.  The reconstruction mirrors the Expand path
-      // — replace the single block arg with N scalar block args, store them
-      // into an alloca of the coerced struct type, reload — but then applies
-      // an additional coercion from the coerced struct type to the original
-      // argument type if the two differ in layout.
+      // Direct + canFlatten: the coerced type is a struct whose fields are
+      // passed as separate arguments.  As in the Expand path, the single block
+      // arg becomes N scalar block args, and each is stored straight into a
+      // slot sized and aligned for both the coerced struct and the original
+      // argument type, which the body then reads.
       unsigned numFields = flatTy.getNumElements();
       assert(numFields >= 2 && "getFlattenedCoercedType guarantees >1 fields");
       Type origTy = blockArg.getType();
@@ -937,43 +1136,43 @@ void insertArgCoercion(
 
       // setInsertionPointToStart: see comment in the Expand arm above.
       builder.setInsertionPointToStart(&entry);
-      cir::PointerType flatPtrTy = getAllocaPtrTy(flatTy, dl);
-      uint64_t flatAlign = dl.getTypeABIAlignment(flatTy);
-      auto flatSlot = cir::AllocaOp::create(
-          builder, loc, flatPtrTy, builder.getStringAttr("coerce"),
-          builder.getI64IntegerAttr(flatAlign));
-      SmallPtrSet<Operation *, 8> flattenOps = {flatSlot};
+      assert(!ac.directOffset &&
+             "the coerced struct starts at slot offset 0 here, so a flattened "
+             "coercion cannot honor a direct offset");
+      SmallPtrSet<Operation *, 8> flattenOps;
+      cir::AllocaOp slot;
+      if (origTy == flatTy) {
+        slot = cir::AllocaOp::create(
+            builder, loc, getAllocaPtrTy(flatTy, dl),
+            builder.getStringAttr("coerce"),
+            builder.getI64IntegerAttr(dl.getTypeABIAlignment(flatTy)));
+        flattenOps.insert(slot);
+      } else {
+        slot = createCoercionSlot(builder, loc, flatTy, origTy, &entry, dl,
+                                  flattenOps, /*offset=*/0);
+      }
+      Value flatView = emitViewAtOffset(builder, loc, flatTy, slot, flattenOps,
+                                        /*offset=*/0);
+      auto flatPtrTy = cast<cir::PointerType>(flatView.getType());
       for (auto [f, fieldTy] : llvm::enumerate(flatTy.getMembers())) {
         Type fieldPtrTy =
             cir::PointerType::get(fieldTy, flatPtrTy.getAddrSpace());
         auto fieldPtr = cir::GetMemberOp::create(builder, loc, fieldPtrTy,
-                                                 flatSlot, /*name=*/"",
+                                                 flatView, /*name=*/"",
                                                  /*index=*/f);
         flattenOps.insert(fieldPtr);
         auto storeOp = cir::StoreOp::create(
             builder, loc, entry.getArgument(blockArgIdx + f), fieldPtr);
         flattenOps.insert(storeOp);
       }
-      auto flatLoaded =
-          cir::LoadOp::create(builder, loc, flatTy, flatSlot.getResult());
-      flattenOps.insert(flatLoaded);
 
-      // If the coerced struct type differs from the original argument type,
-      // insert a memory round-trip to recover the original type for body uses.
-      Value finalVal = flatLoaded;
-      if (origTy != flatTy) {
-        SmallPtrSet<Operation *, 4> coercionOps;
-        assert(!ac.directOffset &&
-               "each field is read from slot offset 0 here, so a flattened "
-               "coercion cannot honor a direct offset");
-        finalVal = emitCoercion(builder, loc, origTy, flatLoaded, &entry, dl,
-                                coercionOps, /*offset=*/0);
-        flattenOps.insert(coercionOps.begin(), coercionOps.end());
-      }
-
-      // Replace all original body uses of the struct block arg (now field 0)
-      // with the recovered original-type value.
-      blockArg.replaceAllUsesExcept(finalVal, flattenOps);
+      // Point the original body uses of the struct block arg, now field 0, at
+      // the original-type view of the slot.
+      Value origView = emitViewAtOffset(builder, loc, origTy, slot, flattenOps,
+                                        /*offset=*/0);
+      if (failed(replaceUsesFromSlot(builder, loc, blockArg, origView, dl,
+                                     flattenOps)))
+        return mlir::failure();
 
       blockArgIdx += numFields;
       continue;
@@ -988,17 +1187,14 @@ void insertArgCoercion(
       }
       blockArg.setType(newArgTy);
 
+      // The coercion's own operations are left out of the rewiring, since they
+      // read blockArg as the coerced type.
       builder.setInsertionPointToStart(&entry);
       SmallPtrSet<mlir::Operation *, 4> coercionOps;
-      mlir::Value adapted =
-          emitCoercion(builder, funcOp.getLoc(), oldArgTy, blockArg, &entry, dl,
-                       coercionOps, ac.directOffset);
-
-      // Replace blockArg uses with the adapted value, except inside the
-      // helper ops we just created.  This is critical: the StoreOp's value
-      // operand is blockArg, and if we naively replaceAllUses it gets swapped
-      // to adapted (now of the original type != the alloca's pointee type).
-      blockArg.replaceAllUsesExcept(adapted, coercionOps);
+      if (failed(emitCoercionAndReplaceUses(builder, funcOp.getLoc(), oldArgTy,
+                                            blockArg, blockArg, &entry, dl,
+                                            coercionOps, ac.directOffset)))
+        return mlir::failure();
     } else if (ac.kind == ArgKind::Indirect) {
       // byval and non-byval both lower to !cir.ptr<T>, and which it is shows
       // up only in the attrs updateArgAttrs applies.  Body lowering differs:
@@ -1045,9 +1241,17 @@ void insertArgCoercion(
         mlir::Value destAddr;
         mlir::IntegerAttr destAlign;
         mlir::Operation *spillPos = nullptr;
+        bool spillIsVolatile = false;
         if (paramStore) {
+          if (paramStore.getMemOrder())
+            return paramStore.emitOpError()
+                   << "atomic store of a record argument or result not yet "
+                      "implemented in CallConvLowering";
+          spillIsVolatile = paramStore.getIsVolatile();
           destAddr = paramStore.getAddr();
-          if (cir::AllocaOp destAlloca = cir::getUnderlyingAlloca(destAddr))
+          cir::AllocaOp destAlloca = cir::getUnderlyingAlloca(destAddr);
+          destAlign = paramStore.getAlignmentAttr();
+          if (!destAlign && destAlloca)
             destAlign = destAlloca.getAlignmentAttr();
           spillPos = paramStore->getNextNode();
           assert(spillPos && "param spill must be followed by a block "
@@ -1060,15 +1264,26 @@ void insertArgCoercion(
         if (destAddr) {
           mlir::OpBuilder::InsertionGuard guard(builder);
           builder.setInsertionPoint(spillPos);
-          cir::CopyOp::create(
+          auto copy = cir::CopyOp::create(
               builder, funcOp.getLoc(), destAddr, blockArg, destAlign,
               builder.getI64IntegerAttr(ac.indirectAlign.value()));
+          copy.setIsVolatile(spillIsVolatile);
+          copy.setSkipTailPadding(
+              shouldSkipTailPadding(destAddr, ptrTy.getPointee()));
         } else if (!blockArg.use_empty()) {
-          // No spill to replace, so materialize the value the body reads.
           builder.setInsertionPointToStart(&entry);
-          auto loadOp = cir::LoadOp::create(builder, funcOp.getLoc(), blockArg);
-          SmallPtrSet<mlir::Operation *, 1> loadOps = {loadOp};
-          blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
+          if (mlir::isa<cir::RecordType>(ptrTy.getPointee())) {
+            SmallPtrSet<mlir::Operation *, 1> noExceptions;
+            if (failed(rewireRecordUses(builder, funcOp.getLoc(), blockArg,
+                                        blockArg, ac.indirectAlign.value(), dl,
+                                        noExceptions)))
+              return mlir::failure();
+          } else {
+            auto loadOp =
+                cir::LoadOp::create(builder, funcOp.getLoc(), blockArg);
+            SmallPtrSet<mlir::Operation *, 1> loadOps = {loadOp};
+            blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
+          }
         }
       }
     }
@@ -1076,6 +1291,7 @@ void insertArgCoercion(
 
     ++blockArgIdx;
   }
+  return mlir::success();
 }
 
 /// Rewrite each cir.return so the return value flows through the sret
@@ -1252,21 +1468,21 @@ static void prependIndirectCallee(cir::CallOp call,
   args.insert(args.begin(), calleePtr);
 }
 
-/// Rewrite an indirect-return (sret) call site: prepend a return-slot
-/// pointer as operand 0, make the call return void, and either reuse a
-/// dominating single-use store destination as the slot (so construction
-/// flows directly into it) or allocate a fresh slot and load the result
-/// back out.  \p newArgs is the already-shaped (Ignore-dropped,
+/// Rewrite an indirect-return (sret) call site: prepend a return-slot pointer
+/// as operand 0, make the call return void, and either reuse a dominating
+/// single-use store destination as the slot (so construction flows directly
+/// into it) or allocate a fresh slot and point the result's uses at it, a
+/// record's through rewireRecordUses and any other type's through a load of the
+/// slot after the call.  \p newArgs is the already-shaped (Ignore-dropped,
 /// coercion-applied) non-sret argument list, the last \p numEllipsisArgs of
-/// which were passed through the callee's ellipsis.  The caller guarantees
-/// the call has a result and an indirect-return classification.
-void rewriteIndirectReturnCall(cir::CallOp call,
-                               const FunctionClassification &fc,
-                               ArrayRef<mlir::Value> newArgs,
-                               unsigned numEllipsisArgs, mlir::Type origRetTy,
-                               ArrayRef<mlir::Type> origCallArgTypes,
-                               mlir::OpBuilder &builder,
-                               const mlir::DataLayout &dl) {
+/// which were passed through the callee's ellipsis.  The caller guarantees the
+/// call has a result and an indirect-return classification.  Fails, after
+/// reporting it, when rewireRecordUses does.
+mlir::LogicalResult rewriteIndirectReturnCall(
+    cir::CallOp call, const FunctionClassification &fc,
+    ArrayRef<mlir::Value> newArgs, unsigned numEllipsisArgs,
+    mlir::Type origRetTy, ArrayRef<mlir::Type> origCallArgTypes,
+    mlir::OpBuilder &builder, const mlir::DataLayout &dl) {
   mlir::MLIRContext *ctx = call->getContext();
   auto ptrTy = cir::PointerType::get(origRetTy);
   builder.setInsertionPoint(call);
@@ -1329,6 +1545,12 @@ void rewriteIndirectReturnCall(cir::CallOp call,
     // original store-from-result is redundant; dropping it avoids a
     // byte-copy of the record.
     reuseStore->erase();
+  } else if (mlir::isa<cir::RecordType>(origRetTy)) {
+    builder.setInsertionPointAfter(newCall);
+    SmallPtrSet<mlir::Operation *, 1> noExceptions;
+    if (failed(rewireRecordUses(builder, call.getLoc(), call.getResult(),
+                                sretSlot, sretAlign, dl, noExceptions)))
+      return mlir::failure();
   } else {
     builder.setInsertionPointAfter(newCall);
     auto load = cir::LoadOp::create(builder, call.getLoc(), origRetTy, sretSlot,
@@ -1342,6 +1564,7 @@ void rewriteIndirectReturnCall(cir::CallOp call,
     call.getResult().replaceAllUsesWith(load);
   }
   call->erase();
+  return mlir::success();
 }
 
 /// Whether \p ty, a type the classifier named for one register of a
@@ -1590,15 +1813,19 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       // becomes a pointer, and an Expand arg becomes one block argument per
       // field.  Done before the Ignore-drop below so the entry block
       // argument indices used here still refer to the original positions.
-      insertArgCoercion(funcOp, fc, builder, dl, hasSRet, pendingParamSlots);
+      if (failed(insertArgCoercion(funcOp, fc, builder, dl, hasSRet,
+                                   pendingParamSlots)))
+        return mlir::failure();
 
       // Direct return with coerced type: insert a coercion at every
       // cir.return so the returned value matches the (coerced) return
       // type in the new function signature set below.
       if (fc.returnInfo.kind == ArgKind::Direct && fc.returnInfo.coercedType &&
-          !oldResultTypes.empty() && fc.returnInfo.coercedType != origRetTy)
-        insertReturnCoercion(funcOp, origRetTy, fc.returnInfo.coercedType,
-                             builder, dl, fc.returnInfo.directOffset);
+          !oldResultTypes.empty() && fc.returnInfo.coercedType != origRetTy &&
+          failed(insertReturnCoercion(
+              funcOp, origRetTy, fc.returnInfo.coercedType, builder, dl,
+              cirDataLayout, fc.returnInfo.directOffset)))
+        return mlir::failure();
 
       mlir::Block &entry = body.front();
 
@@ -1734,10 +1961,10 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   mlir::ValueRange argOperands = call.getArgOperands();
   newArgs.reserve(argOperands.size());
 
-  // Loads that the new call leaves unused: Expand and Direct+canFlatten read
-  // the fields out of the source alloca, and an Indirect argument passes or
-  // copies from the address the load read from.  The old call still uses
-  // them, so erase them only after it is gone.
+  // Loads that the new call leaves unused: a Direct (coerced or flattened) or
+  // Expand record is read out of its load's storage or a copy of it, and an
+  // Indirect argument passes or copies from the address the load read from.
+  // The old call still uses them, so erase them only after it is gone.
   SmallVector<cir::LoadOp> deadRecordLoads;
 
   // Capture original arg types before building newArgs (an Indirect argument
@@ -1767,19 +1994,41 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     mlir::Value arg = argOperands[idx];
     if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
       // Direct + canFlatten: pass one scalar call argument per field of the
-      // ABI-coerced struct.  When the original and coerced types differ in
-      // layout, coerce through a memory slot and read each field with
-      // cir.get_member + cir.load from that slot.  When the types already
-      // match, decompose the struct value directly (reading from its source
-      // alloca when possible).
+      // ABI-coerced struct.  A non-atomic record load is read in place or
+      // through a copy of its storage, as emitCoercedRecordLoad decides, and
+      // any other operand is stored into a coercion slot first.  When the types
+      // already match, the fields come from the struct value directly (reading
+      // from its source alloca when possible).
       if (arg.getType() != flatTy) {
         SmallPtrSet<mlir::Operation *, 4> coercionOps;
         assert(!ac.directOffset &&
-               "each field is read from slot offset 0 here, so a flattened "
-               "coercion cannot honor a direct offset");
-        mlir::Value coercedPtr =
-            emitCoercionToMemory(builder, call.getLoc(), flatTy, arg, slotBlock,
-                                 dl, coercionOps, /*offset=*/0);
+               "the coerced struct starts at slot offset 0 here, so a "
+               "flattened coercion cannot honor a direct offset");
+        if (failed(rejectAtomicRecordLoad(call, arg)))
+          return mlir::failure();
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        mlir::Value coercedPtr;
+        uint64_t baseAlign = 0;
+        if (cir::LoadOp recLoad = maybeGetCopyableRecordLoad(arg)) {
+          mlir::Value base = recLoad.getAddr();
+          if (!recLoad.getIsVolatile() &&
+              canReadInPlace(recLoad, flatTy, cirDataLayout, /*offset=*/0)) {
+            cir::AllocaOp baseAlloca = cir::getUnderlyingAlloca(base);
+            assert(baseAlloca && "canReadInPlace requires an alloca");
+            baseAlign = baseAlloca.getAlignment();
+          } else {
+            base = emitCopiedCoercionSlot(builder, call.getLoc(), recLoad,
+                                          flatTy, slotBlock, dl, /*offset=*/0);
+          }
+          builder.setInsertionPoint(recLoad);
+          coercedPtr = emitViewAtOffset(builder, call.getLoc(), flatTy, base,
+                                        coercionOps, /*offset=*/0);
+          deadRecordLoads.push_back(recLoad);
+        } else {
+          coercedPtr =
+              emitCoercionToMemory(builder, call.getLoc(), flatTy, arg,
+                                   slotBlock, dl, coercionOps, /*offset=*/0);
+        }
         auto coercedPtrTy = mlir::cast<cir::PointerType>(coercedPtr.getType());
         for (auto [f, fieldTy] : llvm::enumerate(flatTy.getMembers())) {
           mlir::Type fieldPtrTy =
@@ -1787,8 +2036,14 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
           auto fieldPtr =
               cir::GetMemberOp::create(builder, call.getLoc(), fieldPtrTy,
                                        coercedPtr, /*name=*/"", /*index=*/f);
-          newArgs.push_back(cir::LoadOp::create(builder, call.getLoc(), fieldTy,
-                                                fieldPtr.getResult()));
+          auto field = cir::LoadOp::create(builder, call.getLoc(), fieldTy,
+                                           fieldPtr.getResult());
+          // Storage read in place may be less aligned than the coerced struct,
+          // so each field claims only what its offset in it allows.
+          if (baseAlign)
+            field.setAlignment(
+                llvm::MinAlign(baseAlign, flatTy.getElementOffset(dl, f)));
+          newArgs.push_back(field);
         }
       } else {
         emitStructFieldArgs(builder, call.getLoc(), arg, flatTy, newArgs,
@@ -1804,9 +2059,17 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                           deadRecordLoads);
     } else if (ac.kind == ArgKind::Direct && ac.coercedType &&
                arg.getType() != ac.coercedType) {
-      arg = emitCoercion(builder, call.getLoc(), ac.coercedType, arg, slotBlock,
-                         dl, ac.directOffset);
-      newArgs.push_back(arg);
+      if (failed(rejectAtomicRecordLoad(call, arg)))
+        return mlir::failure();
+      if (cir::LoadOp recLoad = maybeGetCopyableRecordLoad(arg)) {
+        newArgs.push_back(emitCoercedRecordLoad(
+            builder, call.getLoc(), recLoad, ac.coercedType, slotBlock, dl,
+            cirDataLayout, ac.directOffset));
+        deadRecordLoads.push_back(recLoad);
+      } else {
+        newArgs.push_back(emitCoercion(builder, call.getLoc(), ac.coercedType,
+                                       arg, slotBlock, dl, ac.directOffset));
+      }
     } else if (ac.kind == ArgKind::Indirect) {
       uint64_t minAlign = ac.indirectAlign.value();
 
@@ -1837,11 +2100,12 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
         continue;
       }
 
-      // byval hands the callee a copy taken at the call, so naming the
-      // object's own storage leaves it with the same copy and saves this
-      // one.  That holds only while nothing writes that storage between the
-      // load and the call, since the operand carries the value as of the
-      // load.
+      // byval hands the callee a copy taken at the call, so naming the object's
+      // own storage leaves it with the same copy and saves this one.  That
+      // holds only while nothing writes that storage between the load and the
+      // call, since the operand carries the value as of the load.  A volatile
+      // load is not forwarded, since the copy byval takes at the call is not
+      // volatile.
       if (cir::LoadOp fwdLoad = forwardableIndirectLoad(srcLoad, minAlign);
           fwdLoad && storageUnwrittenBetween(fwdLoad, call.getOperation(),
                                              aliasAnalysis)) {
@@ -1852,6 +2116,10 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
 
       // Otherwise fill a slot, at the load's position when there is one so
       // the copy reads the memory state the load read.
+      if (failed(rejectAtomicRecordLoad(call, arg)))
+        return mlir::failure();
+      if (!srcLoad)
+        srcLoad = maybeGetCopyableRecordLoad(arg);
       auto ptrTy = cir::PointerType::get(arg.getType());
       mlir::IntegerAttr slotAlign = builder.getI64IntegerAttr(minAlign);
       mlir::OpBuilder::InsertionGuard guard(builder);
@@ -1862,10 +2130,15 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
           cir::AllocaOp::create(builder, call.getLoc(), ptrTy,
                                 builder.getStringAttr("byval"), slotAlign);
       if (srcLoad) {
-        cir::CopyOp::create(builder, call.getLoc(), slot, srcLoad.getAddr(),
-                            slotAlign, loadSourceAlignment(srcLoad, builder));
+        auto copy = cir::CopyOp::create(builder, call.getLoc(), slot,
+                                        srcLoad.getAddr(), slotAlign,
+                                        loadSourceAlignment(srcLoad, builder));
+        copy.setIsVolatile(srcLoad.getIsVolatile());
         deadRecordLoads.push_back(srcLoad);
       } else {
+        // A record with no storage behind it, such as a constant, defines no
+        // bytes beyond its fields.  A producer rewritten later turns this store
+        // into a copy through rewireRecordUses.
         cir::StoreOp::create(builder, call.getLoc(), arg, slot);
       }
       newArgs.push_back(slot);
@@ -1885,8 +2158,10 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // through a prepended pointer slot, not as a result), so dispatch to a
   // dedicated helper for it; everything below handles the by-value returns.
   if (fc.returnInfo.kind == ArgKind::Indirect && hasResult) {
-    rewriteIndirectReturnCall(call, fc, newArgs, numEllipsisArgs, origRetTy,
-                              origCallArgTypes, builder, dl);
+    if (failed(rewriteIndirectReturnCall(call, fc, newArgs, numEllipsisArgs,
+                                         origRetTy, origCallArgTypes, builder,
+                                         dl)))
+      return mlir::failure();
     eraseDeadRecordLoads(deadRecordLoads);
     return mlir::success();
   }
@@ -1906,14 +2181,17 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                                      call.getCalleeAttr(), callRetTy, newArgs);
   copyCallAttributes(call, newCall);
 
-  // Direct return with coercion: the new call returns the coerced type;
-  // emit a coercion back to the original type for the call's existing uses.
+  // Direct return with coercion: the new call returns the coerced type, which
+  // is stored into a coercion slot where the old call's uses find the original
+  // type.
   if (returnNeedsCoercion) {
     builder.setInsertionPointAfter(newCall);
-    mlir::Value coercedBack =
-        emitCoercion(builder, call.getLoc(), origRetTy, newCall.getResult(),
-                     slotBlock, dl, fc.returnInfo.directOffset);
-    call.getResult().replaceAllUsesWith(coercedBack);
+    SmallPtrSet<mlir::Operation *, 4> coercionOps;
+    if (failed(emitCoercionAndReplaceUses(builder, call.getLoc(), origRetTy,
+                                          newCall.getResult(), call.getResult(),
+                                          slotBlock, dl, coercionOps,
+                                          fc.returnInfo.directOffset)))
+      return mlir::failure();
   }
 
   if (needsArgAttrUpdate(fc)) {
@@ -2091,8 +2369,8 @@ mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
   if (tyAlign > 8)
     bytePtr = roundPointerUpToAlignment(b, f.loc, bytePtr, tyAlign, f.dl);
 
-  uint64_t tySize = f.dl.getTypeSize(f.resultTy).getFixedValue();
-  uint64_t stride = (tySize + 7) & ~UINT64_C(7);
+  uint64_t stride =
+      llvm::alignTo(f.dl.getTypeAllocSize(f.resultTy).getFixedValue(), 8);
   mlir::Value strideVal = b.getSignedInt(f.loc, stride, 32);
   mlir::Value next = b.createPtrStride(f.loc, bytePtr, strideVal);
   b.createStore(f.loc, next, overflowP);
@@ -2215,9 +2493,14 @@ mlir::Value copyRegisterToTemp(CIRBaseBuilderTy &b, mlir::Location loc,
     return b.createPtrBitcast(temp, byteTy);
   }
 
-  mlir::Value val =
-      b.createAlignedLoad(loc, b.createPtrBitcast(regAddr, f.resultTy), 8);
-  b.createStore(loc, val, temp);
+  mlir::Value regView = b.createPtrBitcast(regAddr, f.resultTy);
+  if (mlir::isa<cir::RecordType>(f.resultTy))
+    cir::CopyOp::create(
+        b, loc, temp, regView,
+        b.getI64IntegerAttr(argumentAreaAlign(f.resultTy, f.module, f.dl)),
+        b.getI64IntegerAttr(8));
+  else
+    b.createStore(loc, b.createAlignedLoad(loc, regView, 8), temp);
   return b.createPtrBitcast(temp, byteTy);
 }
 
@@ -2373,10 +2656,17 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
   }
 
   // Every path above places the result at least this well aligned.
-  mlir::Value result =
-      builder.createAlignedLoad(loc, builder.createPtrBitcast(addr, resultTy),
-                                argumentAreaAlign(resultTy, module, dl));
-  op.getResult().replaceAllUsesWith(result);
+  mlir::Value resultAddr = builder.createPtrBitcast(addr, resultTy);
+  uint64_t resultAlign = argumentAreaAlign(resultTy, module, dl);
+  if (mlir::isa<cir::RecordType>(resultTy)) {
+    SmallPtrSet<mlir::Operation *, 1> noExceptions;
+    if (failed(rewireRecordUses(builder, loc, op.getResult(), resultAddr,
+                                resultAlign, dl, noExceptions)))
+      return mlir::failure();
+  } else {
+    op.getResult().replaceAllUsesWith(
+        builder.createAlignedLoad(loc, resultAddr, resultAlign));
+  }
   op->erase();
   return mlir::success();
 }

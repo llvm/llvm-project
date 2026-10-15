@@ -1233,6 +1233,28 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     IntrinsicTypes = {ResultType, Ops[0]->getType()};
     break;
 
+  // Packed Narrowing Clip
+  case RISCV::BI__builtin_riscv_pnclipu_s_u8x4:
+  case RISCV::BI__builtin_riscv_pnclipu_s_u16x2:
+    ID = Intrinsic::riscv_pnclipu;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  case RISCV::BI__builtin_riscv_pnclipru_s_u8x4:
+  case RISCV::BI__builtin_riscv_pnclipru_s_u16x2:
+    ID = Intrinsic::riscv_pnclipru;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  case RISCV::BI__builtin_riscv_pnclip_s_i8x4:
+  case RISCV::BI__builtin_riscv_pnclip_s_i16x2:
+    ID = Intrinsic::riscv_pnclip;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  case RISCV::BI__builtin_riscv_pnclipr_s_i8x4:
+  case RISCV::BI__builtin_riscv_pnclipr_s_i16x2:
+    ID = Intrinsic::riscv_pnclipr;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+
   // Packed Averaging Addition and Subtraction
   case RISCV::BI__builtin_riscv_paadd_i8x4:
   case RISCV::BI__builtin_riscv_paadd_i16x2:

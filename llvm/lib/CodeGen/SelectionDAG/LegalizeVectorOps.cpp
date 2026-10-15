@@ -386,6 +386,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
   case ISD::BSWAP:
   case ISD::BITREVERSE:
   case ISD::CTLZ:
@@ -2254,7 +2256,8 @@ bool VectorLegalizer::tryExpandVecMathCall(
 
   // Try to widen the vector type when no libcall is available at that width.
   EVT CallVT = VT;
-  RTLIB::LibcallImpl LCImpl = Libcalls.getLibcallImpl(GetLibcall(CallVT));
+  RTLIB::LibcallImpl LCImpl =
+      Libcalls.getVectorLibcallImplOrMasked(GetLibcall(CallVT));
   if (LCImpl == RTLIB::Unsupported && VT.getVectorElementCount().isScalar())
     return false;
   while (LCImpl == RTLIB::Unsupported) {
@@ -2262,7 +2265,7 @@ bool VectorLegalizer::tryExpandVecMathCall(
     if (!CallVT.isSimple())
       return false;
     if (TLI.isTypeLegal(CallVT))
-      LCImpl = Libcalls.getLibcallImpl(GetLibcall(CallVT));
+      LCImpl = Libcalls.getVectorLibcallImplOrMasked(GetLibcall(CallVT));
   }
 
   const RTLIB::RuntimeLibcallsInfo &RTLCI = TLI.getRuntimeLibcallsInfo();
