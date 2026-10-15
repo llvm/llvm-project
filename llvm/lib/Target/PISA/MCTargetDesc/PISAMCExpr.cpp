@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements PISA-specific MC expressions.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISAMCExpr.h"
 #include "PISAInstPrinter.h"

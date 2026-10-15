@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements utility functions for the PISA backend.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISAUtils.h"
 #include "MCTargetDesc/PISABaseInfo.h"

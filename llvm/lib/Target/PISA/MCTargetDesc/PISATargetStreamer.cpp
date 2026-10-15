@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the PISA target streamer.
+///
+//===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/PISATargetStreamer.h"
 #include "MCTargetDesc/PISAMCTargetDesc.h"

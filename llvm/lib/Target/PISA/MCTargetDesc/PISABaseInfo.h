@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file declares common definitions used by the PISA MC components.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISABASEINFO_H
 #define LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISABASEINFO_H

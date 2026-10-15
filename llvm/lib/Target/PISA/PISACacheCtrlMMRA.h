@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file declares PISA cache-control MMRA metadata handling.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_PISA_PISACACHECTRLMMRA_H
 #define LLVM_LIB_TARGET_PISA_PISACACHECTRLMMRA_H

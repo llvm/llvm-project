@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines TableGen utilities for PISA mnemonic operands.
+///
+//===----------------------------------------------------------------------===//
 
 // DAG operator used for dag representation of a condition flag: (cflag FlagName value)
 // These are used in EnumOptionOpnd to represent certain

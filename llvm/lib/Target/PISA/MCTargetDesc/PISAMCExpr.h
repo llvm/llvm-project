@@ -5,9 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-// PISA special MCTargetExpr class to model floating point immediates
-// Modeled after ARMMCExpr
+///
+/// \file
+/// This file declares PISA-specific MC expressions for floating-point
+/// immediates.
+///
+/// PISAMCExpr is modeled after ARMMCExpr.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISAMCEXPR_H
 #define LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISAMCEXPR_H

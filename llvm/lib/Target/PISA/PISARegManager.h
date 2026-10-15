@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file declares management of PISA virtual registers.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_PISA_PISAREGMANAGER_H
 #define LLVM_LIB_TARGET_PISA_PISAREGMANAGER_H

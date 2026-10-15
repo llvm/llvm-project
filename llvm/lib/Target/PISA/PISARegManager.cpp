@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements management of PISA virtual registers.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISARegManager.h"
 #include "PISAInstrInfo.h"
