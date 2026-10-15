@@ -1096,10 +1096,10 @@ public:
   }
 
   void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
+    const RISCVMCOptions &CLOpts = RISCV_MC::getCLOpts(MAI.getTargetOptions());
     auto RegName = [&](MCRegister Reg) {
       if (Reg)
-        return RISCVInstPrinter::getRegisterName(
-            RISCV_MC::getCLOpts(MAI.getTargetOptions()), Reg);
+        return RISCVInstPrinter::getRegisterName(CLOpts, Reg);
       else
         return "noreg";
     };
