@@ -30,7 +30,7 @@ TEST_F(FileCacheTest, WriteToPipe) {
   ASSERT_THAT_ERROR(
       pipe.CreateWithUniqueName("FileCacheTest-WriteToPipe", name).ToError(),
       llvm::Succeeded());
-  auto delete_pipe = llvm::make_scope_exit([&] { pipe.Delete(name); });
+  llvm::scope_exit delete_pipe([&] { pipe.Delete(name); });
   // With the read end open, opening the write end does not block.
   ASSERT_THAT_ERROR(pipe.OpenAsReader(name).ToError(), llvm::Succeeded());
 
