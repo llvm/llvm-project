@@ -72,8 +72,7 @@ hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
   const LangOptions &LangOpts = ASTCtx.getLangOpts();
 
   // Stepping back from a macro location can leave its expansion, so insert
-  // before the macro when the constructor starts at one, as in
-  // 'CONSTEXPR CRTP() {}', and give no fix-it otherwise.
+  // before the macro, or give up if the constructor starts inside one.
   SourceLocation CtorBeginLoc = Ctor->getBeginLoc();
   if (CtorBeginLoc.isMacroID() &&
       !Lexer::isAtStartOfMacroExpansion(CtorBeginLoc, SM, LangOpts,

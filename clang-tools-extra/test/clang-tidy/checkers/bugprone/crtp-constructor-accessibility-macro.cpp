@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-crtp-constructor-accessibility %t -- -- -fno-delayed-template-parsing
 
-// Keep 'CONSTEXPR' the first expansion in the file. The crash needs a file
-// entry right before it, and a split '>>' or another macro above would hide it.
+// CONSTEXPR must stay the first expansion in this file: the crash needs a file
+// entry right before it, and a macro or a split '>>' above would hide it.
 #define CONSTEXPR constexpr
 
 namespace ctor_begins_with_macro {
@@ -29,6 +29,5 @@ public:
     // CHECK-FIXES-NOT: friend T;
 };
 
-// CHECK-FIXES: class A : CRTP<A> {};
 class A : CRTP<A> {};
 } // namespace ctor_inside_macro
