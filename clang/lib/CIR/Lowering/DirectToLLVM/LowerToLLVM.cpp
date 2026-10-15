@@ -182,7 +182,7 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
   // Convert the `iN` back to boolean vectors
   if (auto vecTy = mlir::dyn_cast<cir::VectorType>(op.getType())) {
     if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
-      if (vecTy.getSize().isScalable())
+      if (vecTy.isScalable())
         return value;
       auto rawIntTy = mlir::cast<mlir::IntegerType>(value.getType());
       auto paddedVecTy = cir::VectorType::getFixed(vecTy.getElementType(),
@@ -227,10 +227,10 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
   if (auto vecTy = mlir::dyn_cast<cir::VectorType>(origType)) {
     if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
       mlir::Type resultTy;
-      if (vecTy.getSize().isScalable())
-        resultTy = mlir::VectorType::get(vecTy.getSize().getKnownMinValue(),
-                                         vecTy.getElementType(),
-                                         vecTy.getSize().isScalable());
+      if (vecTy.isScalable())
+        resultTy =
+            mlir::VectorType::get(vecTy.getSize().getKnownMinValue(),
+                                  vecTy.getElementType(), vecTy.isScalable());
       else {
         resultTy = mlir::IntegerType::get(origType.getContext(),
                                           vecTy.getBoolStorageWidth());
@@ -4371,7 +4371,7 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     if (!ty)
       return {};
     return mlir::VectorType::get(type.getSize().getKnownMinValue(), ty,
-                                 {type.getSize().isScalable()});
+                                 {type.isScalable()});
   });
   converter.addConversion([&](cir::MatrixType type) -> mlir::Type {
     const uint64_t size = type.getNumRows() * type.getNumColumns();

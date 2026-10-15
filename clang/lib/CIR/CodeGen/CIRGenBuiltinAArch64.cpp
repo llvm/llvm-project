@@ -632,7 +632,7 @@ emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
 
   bool scalarCmp = !isa<cir::VectorType>(src.getType());
   if (!scalarCmp) {
-    assert(!cast<cir::VectorType>(retTy).getSize().isScalable() &&
+    assert(!cast<cir::VectorType>(retTy).isScalable() &&
            "This is only intended for fixed-width vectors");
     // Vector types are cast to i8 vectors. Recover original type.
     src = builder.createBitcast(src, retTy);

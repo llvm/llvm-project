@@ -540,6 +540,9 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     /// Return the size of a fixed-width vector.
     uint64_t getFixedSize() const { return getSize().getFixedValue(); }
 
+    /// Return whether this vector is scalable.
+    bool isScalable() const { return getSize().isScalable(); }
+
     /// Return a fixed-width vector with the given element type and size.
     static VectorType getFixed(mlir::Type elementType, uint64_t size) {
       return get(elementType, llvm::ElementCount::getFixed(size));
