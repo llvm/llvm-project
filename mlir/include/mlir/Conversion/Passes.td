@@ -1530,6 +1530,7 @@ def TosaToSPIRVTosa : Pass<"tosa-to-spirv-tosa"> {
 def TosaToTensorPass : Pass<"tosa-to-tensor"> {
   let summary = "Lower TOSA to the Tensor dialect";
   let dependentDialects = [
+    "cf::ControlFlowDialect",
     "tensor::TensorDialect",
   ];
   let description = [{

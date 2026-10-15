@@ -10,6 +10,7 @@ add_mlir_conversion_library(MLIRTosaToTensor
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRControlFlowDialect
   MLIRTensorDialect
   MLIRTensorUtils
   MLIRIR

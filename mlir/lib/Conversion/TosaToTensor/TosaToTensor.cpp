@@ -13,6 +13,7 @@
 #include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
@@ -354,11 +355,15 @@ public:
       paddingVals.push_back(static_cast<int64_t>(idx.getInt()));
     }
 
-    // A padding of -1 means that the amount is not known, so it cannot be
-    // lowered to a `tensor.pad`, which requires non-negative padding.
-    if (llvm::is_contained(paddingVals, -1)) {
-      return rewriter.notifyMatchFailure(
-          padOp, "padding must not contain -1 (unknown amount)");
+    // The TOSA specification requires a negative padding (-1 stands for an
+    // amount that is not known) to be diagnosed.
+    if (llvm::any_of(paddingVals, [](int64_t val) { return val < 0; })) {
+      Value fail =
+          arith::ConstantOp::create(rewriter, loc, rewriter.getBoolAttr(false));
+      cf::AssertOp::create(
+          rewriter, loc, fail,
+          rewriter.getStringAttr("tosa.pad: padding must be non-negative, run "
+                                 "tosa-validate to diagnose it statically"));
     }
 
     ShapedType inputTy = cast<ShapedType>(input.getType());
