@@ -103,8 +103,7 @@ struct SMCoords {
 } // end anonymous namespace
 
 /// Create preprocessed output for `-E` option.
-static int preprocessInput(raw_ostream &OS) {
-  TGLexer Lex(SrcMgr, MacroNames);
+static int preprocessInput(TGLexer &Lex, raw_ostream &OS) {
   SMCoords Last;
   while (true) {
     Lex.Lex();
@@ -141,7 +140,8 @@ static int preprocessInput(raw_ostream &OS) {
 ///
 /// This functionality is really only for the benefit of the build system.
 /// It is similar to GCC's `-M*` family of options.
-static int createDependencyFile(const TGParser &Parser, const char *argv0) {
+static int createDependencyFile(const TGLexer::DependenciesSetTy &Dependencies,
+                                const char *argv0) {
   if (OutputFilename == "-")
     return reportError(argv0, "the option -d must be used together with -o\n");
 
@@ -161,7 +161,7 @@ static int createDependencyFile(const TGParser &Parser, const char *argv0) {
   if (InputFilename != "-")
     DepOut.os() << ' ' << InputFilename;
 
-  for (const auto &Dep : Parser.getDependencies()) {
+  for (const auto &Dep : Dependencies) {
     DepOut.os() << ' ' << Dep;
   }
   DepOut.os() << "\n";
@@ -193,10 +193,20 @@ static int WriteOutput(const char *argv0, StringRef Filename,
 
 static int tableGenMainImpl(const char *argv0, MultiFileTableGenMainFn MainFn) {
   if (Preprocess) {
+    TGLexer Lex(SrcMgr, MacroNames);
     std::string OutString;
     raw_string_ostream Out(OutString);
-    if (int Ret = preprocessInput(Out))
+    if (int Ret = preprocessInput(Lex, Out))
       return Ret;
+    // Return early if the lexer printed errors but still reached EOF (e.g., a
+    // NUL character in the source). TableGenMain will recheck and report the
+    // error.
+    if (ErrorsPrinted > 0)
+      return 0;
+    if (!DependFilename.empty()) {
+      if (int Ret = createDependencyFile(Lex.getDependencies(), argv0))
+        return Ret;
+    }
     return WriteOutput(argv0, OutputFilename, OutString);
   }
 
@@ -240,7 +250,7 @@ static int tableGenMainImpl(const char *argv0, MultiFileTableGenMainFn MainFn) {
   // the early exit below and someone deleted the .inc.d file but not the .inc
   // file, tablegen would never write the depfile.
   if (!DependFilename.empty()) {
-    if (int Ret = createDependencyFile(Parser, argv0))
+    if (int Ret = createDependencyFile(Parser.getDependencies(), argv0))
       return Ret;
   }
 
