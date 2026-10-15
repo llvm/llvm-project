@@ -13,6 +13,8 @@
 // RUN: llvm-tblgen %s -E | FileCheck %s
 
 // CHECK-FOO: yes
+// CHECK-FOO-NOT: no
+// CHECK-NOT: yes
 // CHECK: no
 
 #ifdef FOO
