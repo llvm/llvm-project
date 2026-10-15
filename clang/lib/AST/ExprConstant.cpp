@@ -17176,7 +17176,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
-    APSInt TypeValue = E->getArg(1)->EvaluateKnownConstInt(Info.Ctx);
+    APSInt TypeValue;
+    if (!EvaluateInteger(E->getArg(1), TypeValue, Info))
+      return false;
     if (TypeValue < 0 || TypeValue > 3) {
       Info.FFDiag(E->getArg(1), diag::note_constexpr_builtin_arg_out_of_range)
           << TypeValue << 0 << 3;
