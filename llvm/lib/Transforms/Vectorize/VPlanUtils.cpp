@@ -1154,14 +1154,6 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     auto m_scev_CanonicalIV = // NOLINT
         m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(), m_SpecificLoop(L));
     if (match(AR, m_scev_CanonicalIV)) {
-      // Try to reuse a wider existing canonical IV of the loop by truncating
-      // it.
-      for (auto &ExpR : make_isa_range<VPExpandSCEVRecipe>(*Plan.getEntry())) {
-        if (match(ExpR.getSCEV(), m_scev_CanonicalIV) &&
-            ExpR.getScalarType()->getIntegerBitWidth() >
-                Ty->getIntegerBitWidth())
-          return Builder.createScalarCast(Instruction::Trunc, &ExpR, Ty, DL);
-      }
       return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
     }
     if (!AR->isAffine())

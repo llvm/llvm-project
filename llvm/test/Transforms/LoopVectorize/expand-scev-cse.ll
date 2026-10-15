@@ -3,8 +3,7 @@
 
 declare i32 @cond()
 
-; FIXME: ptrtoaddr(%bound) should only be expanded once; see the two
-; ptrtoaddr instructions in the CHECK block below.
+; Make sure ptrtoaddr(%bound) is only expanded once.
 define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-LABEL: define i32 @ptrtoaddr_expanded_twice(
 ; CHECK-SAME: ptr [[BOUND:%.*]], ptr [[DST:%.*]]) {
@@ -209,8 +208,8 @@ exit:
   ret void
 }
 
-; FIXME: the umax/umin/sub expression computing the inner loop's trip count
-; (which depends on the outer AddRec %i) is expanded three times over.
+; Make sure the umax/umin/sub expression computing the inner loop's trip count
+; (which depends on the outer AddRec %i) is only expanded once.
 @arr = internal global [8193 x i8] zeroinitializer
 
 define i32 @nested_loop_min_iters_check_expanded_repeatedly(i64 %n) {
