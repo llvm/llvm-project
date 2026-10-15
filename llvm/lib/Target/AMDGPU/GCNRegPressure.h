@@ -397,7 +397,7 @@ public:
                                       const SIRegisterInfo *TRI) const;
 
 protected:
-  GCNDownwardRPTrackerBase(const LiveIntervals &LIS) : GCNRPTracker(LIS) {}
+  GCNDownwardRPTrackerBase(LiveIntervals &LIS) : GCNRPTracker(LIS) {}
 
   /// Retires all lanes of \p MI's register operands that are dead at \p SI,
   /// according to LIS.
@@ -424,8 +424,7 @@ private:
   MachineBasicBlock::const_iterator MBBEnd;
 
 public:
-  GCNDownwardRPTracker(const LiveIntervals &LIS)
-      : GCNDownwardRPTrackerBase(LIS) {}
+  GCNDownwardRPTracker(LiveIntervals &LIS) : GCNDownwardRPTrackerBase(LIS) {}
 
   using GCNRPTracker::reset;
 
@@ -477,7 +476,7 @@ public:
 /// down the instruction stream. It still uses LIS for liveness queries.
 class GCNManualDownwardRPTracker : public GCNDownwardRPTrackerBase {
 public:
-  GCNManualDownwardRPTracker(const LiveIntervals &LIS)
+  GCNManualDownwardRPTracker(LiveIntervals &LIS)
       : GCNDownwardRPTrackerBase(LIS) {}
 
   using GCNRPTracker::reset;
