@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/Language/Rust/RustLanguage.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/SubsystemRAII.h"
@@ -84,6 +85,7 @@ TEST(MangledTest, EmptyForInvalidName) {
 }
 
 TEST(MangledTest, ResultForValidRustV0Name) {
+  SubsystemRAII<RustLanguage> subsystems;
   ConstString mangled_name("_RNvC1a4main");
   Mangled the_mangled(mangled_name);
   ConstString the_demangled = the_mangled.GetDemangledName();
@@ -93,6 +95,7 @@ TEST(MangledTest, ResultForValidRustV0Name) {
 }
 
 TEST(MangledTest, EmptyForInvalidRustV0Name) {
+  SubsystemRAII<RustLanguage> subsystems;
   ConstString mangled_name("_RRR");
   Mangled the_mangled(mangled_name);
   ConstString the_demangled = the_mangled.GetDemangledName();

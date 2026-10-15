@@ -193,9 +193,6 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
 
-  if (name.starts_with("_R"))
-    return Mangled::eManglingSchemeRustV0;
-
   if (name.starts_with("_D")) {
     // A dlang mangled name begins with `_D`, followed by a numeric length. One
     // known exception is the symbol `_Dmain`.
@@ -275,20 +272,6 @@ void Mangled::SetValue(ConstString name) {
 }
 
 // Local helpers for different demangling implementations.
-static char *GetRustV0DemangledStr(llvm::StringRef M) {
-  char *demangled_cstr = llvm::rustDemangle(M);
-
-  if (Log *log = GetLog(LLDBLog::Demangle)) {
-    if (demangled_cstr && demangled_cstr[0])
-      LLDB_LOG(log, "demangled rustv0: {0} -> \"{1}\"", M, demangled_cstr);
-    else
-      LLDB_LOG(log, "demangled rustv0: {0} -> error: failed to demangle",
-               static_cast<std::string_view>(M));
-  }
-
-  return demangled_cstr;
-}
-
 static char *GetDLangDemangledStr(llvm::StringRef M) {
   char *demangled_cstr = llvm::dlangDemangle(M);
 
@@ -323,9 +306,6 @@ ConstString Mangled::GetDemangledName() const {
   ManglingScheme scheme = GetManglingScheme(m_mangled.GetStringRef());
   char *demangled_name = nullptr;
   switch (scheme) {
-  case eManglingSchemeRustV0:
-    demangled_name = GetRustV0DemangledStr(m_mangled);
-    break;
   case eManglingSchemeD:
     demangled_name = GetDLangDemangledStr(m_mangled);
     break;
