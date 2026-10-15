@@ -1298,8 +1298,6 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
   case DeclSpec::TST_typename_pack_indexing: {
-    Expr *E = DS.getPackIndexingExpr();
-    assert(E && "Didn't get an expression for pack indexing");
     Result = S.GetTypeFromParser(DS.getRepAsType());
     if (Result.isNull()) {
       declarator.setInvalidType(true);
