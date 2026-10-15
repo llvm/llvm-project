@@ -115,11 +115,12 @@ static int preprocessInput(raw_ostream &OS) {
       // Add a single space between tokens on the same line. This is overkill in
       // many cases but at least it will parse correctly.
       OS << ' ';
-    } else if (Last.Buf) {
+    } else {
       // Always start a new line when including a new file or popping back out
       // to the previous file. This is just a heuristic to make the output look
       // reasonably pretty.
-      OS << '\n';
+      if (Last.Buf)
+        OS << '\n';
       // Indent the first token on a line to its original indentation, to make
       // the output look pretty.
       OS.indent(This.Col - 1);
