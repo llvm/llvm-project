@@ -29,8 +29,8 @@ namespace cr_expf_rn_internal {
 
 using fputil::FloatFloat;
 
-LIBC_INLINE FloatFloat horner_step(float x, const FloatFloat &poly,
-                                   const FloatFloat &coeff) {
+LIBC_ALWAYS_INLINE FloatFloat horner_step(float x, const FloatFloat &poly,
+                                          const FloatFloat &coeff) {
   float hi = fputil::multiply_add(x, poly.hi, coeff.hi);
   float lo = fputil::multiply_add(x, poly.hi, coeff.hi - hi);
   lo = fputil::multiply_add(x, poly.lo, lo + coeff.lo);
