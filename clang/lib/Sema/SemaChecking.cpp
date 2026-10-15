@@ -1319,6 +1319,17 @@ private:
   const DiagnoseAsBuiltinAttr *DABAttr;
   unsigned SizeTypeWidth;
 };
+
+// Returns the target OS's fixed PATH_MAX value from <limits.h>, or std::nullopt
+// for targets where PATH_MAX is unbounded (e.g., Hurd) or unknown.
+static std::optional<uint64_t> getTargetPathMax(const llvm::Triple &T) {
+  if (T.isOSLinux() || T.isAndroid() || T.isOSFuchsia())
+    return 4096;
+  if (T.isOSDarwin() || T.isOSFreeBSD() || T.isOSNetBSD() || T.isOSOpenBSD() ||
+      T.isOSSolaris() || T.isOSHaiku())
+    return 1024;
+  return std::nullopt;
+}
 } // anonymous namespace
 
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
@@ -1602,20 +1613,17 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
   case Builtin::BIrealpath: {
+    // ComputeSizeArgument returns std::nullopt when resolved_path is NULL
+    // (which dynamically allocates in POSIX.1-2008) or has unknown size.
     BufferSize = Checker.ComputeSizeArgument(1);
     if (!BufferSize)
       return;
-    const llvm::Triple &T = Context.getTargetInfo().getTriple();
-    uint64_t PathMax = 0;
-    if (T.isOSLinux() || T.isOSFuchsia() || T.isOSAIX() || T.isOSHaiku())
-      PathMax = 4096;
-    else if (T.isOSDarwin() || T.isOSFreeBSD() || T.isOSNetBSD() ||
-             T.isOSOpenBSD() || T.isOSSolaris())
-      PathMax = 1024;
-    else
+    std::optional<uint64_t> PathMax =
+        getTargetPathMax(Context.getTargetInfo().getTriple());
+    if (!PathMax)
       return;
     DiagID = diag::warn_fortify_source_buffer_too_small;
-    AccessSize = llvm::APSInt::getUnsigned(PathMax).extOrTrunc(SizeTypeWidth);
+    AccessSize = llvm::APSInt::getUnsigned(*PathMax).extOrTrunc(SizeTypeWidth);
     break;
   }
   // memchr(buf, val, size)
