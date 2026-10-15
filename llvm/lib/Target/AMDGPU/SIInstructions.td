@@ -2458,7 +2458,7 @@ def : GCNPat <
 def : GCNPat <
   (fcopysign fp16vt:$src0, f64:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)), $src0,
-             (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1)))
+             (V_LSHRREV_B32_e64 (i32 16), (i32 (EXTRACT_SUBREG $src1, sub1))))
 >;
 }
 let True16Predicate = UseRealTrue16Insts in {
@@ -3716,11 +3716,11 @@ def : GCNPat <
 def : GCNPat <
   (i64 (bswap i64:$a)),
   (REG_SEQUENCE VReg_64,
-  (V_PERM_B32_e64  (i32 0), (EXTRACT_SUBREG VReg_64:$a, sub1),
-              (S_MOV_B32 (i32 0x00010203))),
+  (i32 (V_PERM_B32_e64  (i32 0), (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+              (S_MOV_B32 (i32 0x00010203)))),
   sub0,
-  (V_PERM_B32_e64  (i32 0), (EXTRACT_SUBREG VReg_64:$a, sub0),
-              (S_MOV_B32 (i32 0x00010203))),
+  (i32 (V_PERM_B32_e64  (i32 0), (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+              (S_MOV_B32 (i32 0x00010203)))),
   sub1)
 >;
 

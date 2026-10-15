@@ -3415,11 +3415,11 @@ multiclass FPToIntSatI16Pat<dag lhs, dag rhs> {
 // Packed f32 -> i16 saturated conversion.
 multiclass CvtPkF32ToI16Pat<SDPatternOperator dagOp, Instruction inst> {
   def : GCNPat<(v2i16 (dagOp (v2f32 VReg_64:$src), i16)),
-               (inst 0, (EXTRACT_SUBREG VReg_64:$src, sub0),
-                     0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
+               (inst 0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
+                     0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub1)))>;
   def : GCNPat<(v2i16 (dagOp (v2f32 SReg_64:$src), i16)),
-               (inst 0, (EXTRACT_SUBREG SReg_64:$src, sub0),
-                     0, (EXTRACT_SUBREG SReg_64:$src, sub1))>;
+               (inst 0, (f32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
+                     0, (f32 (EXTRACT_SUBREG SReg_64:$src, sub1)))>;
   // Single value conversion: use a packed instruction with a dummy second input.
   defm : FPToIntSatI16Pat<(i16 (dagOp (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)),
                           (inst $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;
