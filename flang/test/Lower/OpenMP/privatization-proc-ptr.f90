@@ -111,6 +111,37 @@ subroutine test_sections
   !$omp end sections
 end subroutine
 
+! Dummy procedure pointers are stored as an untyped !fir.boxproc<() -> ()>.
+! Their private copies must use the same type so that the firstprivate and
+! lastprivate copies are type consistent.
+!CHECK-LABEL: func private @_QFPtest_sections_dummy
+!CHECK-SAME:    %[[ARG_PF:[^:]*]]: !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK-SAME:    %[[ARG_PS:[^:]*]]: !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:       %[[PF:.*]]:2 = hlfir.declare %[[ARG_PF]] {{.*}}uniq_name("_QFFtest_sections_dummyEpf")
+!CHECK:       %[[PS:.*]]:2 = hlfir.declare %[[ARG_PS]] {{.*}}uniq_name("_QFFtest_sections_dummyEps")
+!CHECK:       %[[PRIV_PF_ADDR:.*]] = fir.alloca !fir.boxproc<() -> ()> {{.*}}uniq_name = "_QFFtest_sections_dummyEpf"
+!CHECK:       %[[PRIV_PF:.*]]:2 = hlfir.declare %[[PRIV_PF_ADDR]] {{.*}}uniq_name("_QFFtest_sections_dummyEpf")
+!CHECK:       %[[PF_VAL:.*]] = fir.load %[[PF]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:       fir.store %[[PF_VAL]] to %[[PRIV_PF]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:       %[[PRIV_PS_ADDR:.*]] = fir.alloca !fir.boxproc<() -> ()> {{.*}}uniq_name = "_QFFtest_sections_dummyEps"
+!CHECK:       %[[PRIV_PS:.*]]:2 = hlfir.declare %[[PRIV_PS_ADDR]] {{.*}}uniq_name("_QFFtest_sections_dummyEps")
+!CHECK:       %[[PS_VAL:.*]] = fir.load %[[PS]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:       fir.store %[[PS_VAL]] to %[[PRIV_PS]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:       omp.sections
+!CHECK:         %[[PF_VAL:.*]] = fir.load %[[PRIV_PF]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:         fir.store %[[PF_VAL]] to %[[PF]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:         %[[PS_VAL:.*]] = fir.load %[[PRIV_PS]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+!CHECK:         fir.store %[[PS_VAL]] to %[[PS]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
+subroutine test_sections_dummy(pf, ps)
+  procedure(f), pointer :: pf
+  procedure(sub), pointer :: ps
+
+  !$omp sections firstprivate(pf, ps) lastprivate(pf, ps)
+    pf => f
+    ps => sub
+  !$omp end sections
+end subroutine
+
 integer function f(arg)
   integer :: arg
   f = arg

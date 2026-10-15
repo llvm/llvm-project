@@ -960,14 +960,24 @@ public:
     Fortran::lower::SymbolBox hsb =
         lookupSymbol(hsym, /*symMap=*/nullptr, /*forceHlfirBase=*/true);
 
+    mlir::Type allocType =
+        Fortran::semantics::IsAllocatableOrObjectPointer(&hsym.GetUltimate())
+            ? hSymType
+            : symType;
+    // The type of a procedure pointer depends on how the original was created:
+    // dummy procedure pointers use an untyped `!fir.boxproc<() -> ()>`, while
+    // other procedure pointers carry their interface signature.
+    // Give the clone the same type as the original storage so that copies
+    // between them do not mix boxproc types.
+    if (Fortran::semantics::IsProcedurePointer(hsym.GetUltimate()))
+      if (mlir::Value hostAddr = hsb.getAddr())
+        allocType = fir::unwrapRefType(hostAddr.getType());
+
     auto allocate = [&](llvm::ArrayRef<mlir::Value> shape,
                         llvm::ArrayRef<mlir::Value> typeParams) -> mlir::Value {
       mlir::Value allocVal = builder->allocateLocal(
-          loc,
-          Fortran::semantics::IsAllocatableOrObjectPointer(&hsym.GetUltimate())
-              ? hSymType
-              : symType,
-          mangleName(sym), toStringRef(sym.GetUltimate().name()),
+          loc, allocType, mangleName(sym),
+          toStringRef(sym.GetUltimate().name()),
           /*pinned=*/true, shape, typeParams,
           sym.GetUltimate().attrs().test(Fortran::semantics::Attr::TARGET));
       return allocVal;
