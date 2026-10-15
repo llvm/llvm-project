@@ -114,19 +114,13 @@ static bool hasUnitLeadingLowerBound(mlir::Value shapeLike) {
 /// (unit lower bound and, if sliced, a triplet `(1, sectionUb, 1)`), return
 /// the extent.
 ///
-/// A sliced access `a(1:ub)` requires ub <= extent even if some elements are
-/// skipped, so it may sit under a fir.if (as in WHERE). An unsliced access
-/// `a(i)` only bounds ub if it runs on every iteration, so it must be
-/// directly in \p body.
-///
 /// Only the leading dimension is considered: it becomes the innermost loop,
 /// and unrolling produces contiguous memory accesses. An array section that
 /// reaches the loop through a temporary box (fir.box_addr of a fir.embox) is
 /// not recognized. Both are possible future extensions.
 static std::optional<int64_t> getLeadingExtentIndexedBy(fir::ArrayCoorOp coor,
                                                         mlir::Value iv,
-                                                        mlir::Value sectionUb,
-                                                        mlir::Block *body) {
+                                                        mlir::Value sectionUb) {
   // unwrapRefType leaves a box type as is, so this also rejects boxed arrays.
   auto seqTy = mlir::dyn_cast<fir::SequenceType>(
       fir::unwrapRefType(coor.getMemref().getType()));
@@ -149,8 +143,6 @@ static std::optional<int64_t> getLeadingExtentIndexedBy(fir::ArrayCoorOp coor,
     if (!isConstantInt(triples[0], 1) || !isConstantInt(triples[2], 1) ||
         stripConverts(triples[1]) != sectionUb)
       return std::nullopt;
-  } else if (coor->getBlock() != body) {
-    return std::nullopt;
   }
   return extent;
 }
@@ -158,10 +150,15 @@ static std::optional<int64_t> getLeadingExtentIndexedBy(fir::ArrayCoorOp coor,
 /// If \p loop is an innermost `do i = 1, ub step 1` with a non-constant upper
 /// bound whose induction variable is the leading subscript of at least one
 /// array with a constant declared leading extent, return the smallest such
-/// extent N, provided 1 < N <= \p maxExtent. Only accesses that bound ub in a
-/// conforming program take part (see getLeadingExtentIndexedBy), so the
-/// smallest extent is the value ub must equal when all of them are at full
-/// extent.
+/// extent N, provided 1 < N <= \p maxExtent. The smallest extent is the value
+/// ub must equal when every such array is at full extent, which is the case
+/// shape conformance forces for array-section assignments.
+///
+/// Accesses under a fir.if count too: a WHERE mask lowers to a fir.if, and
+/// `b` in `where (m(1:n)) a(1:n) = b` forces n == size(b) whether or not it
+/// is touched. TODO: a user conditional like `if (c) b(i) = 0` looks the
+/// same and does not bound ub; distinguishing the two needs a mark from
+/// HLFIR lowering. Counting it only picks a smaller N than is likely.
 ///
 /// Extent 1 is skipped: legacy code declares dummies as `a(1)` and indexes
 /// past them, so `ub == 1` would almost never hold.
@@ -189,7 +186,7 @@ static std::optional<int64_t> getSectionExtent(fir::DoLoopOp loop,
   std::optional<int64_t> extent;
   loop.getBody()->walk([&](fir::ArrayCoorOp coor) {
     if (std::optional<int64_t> coorExtent =
-            getLeadingExtentIndexedBy(coor, iv, sectionUb, loop.getBody()))
+            getLeadingExtentIndexedBy(coor, iv, sectionUb))
       extent = extent ? std::min(*extent, *coorExtent) : *coorExtent;
   });
   if (!extent || *extent <= 1 || *extent > maxExtent)

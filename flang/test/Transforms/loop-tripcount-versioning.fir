@@ -380,10 +380,12 @@ func.func @mixed_extents(%arg0: !fir.ref<!fir.array<4x26xf64>>, %arg1: !fir.ref<
 // CHECK:             fir.do_loop %{{.*}} = %{{.*}} to %[[UB]] step
 // CHECK:           }
 
-// An unsliced access under a fir.if does not execute on every iteration, so
-// it does not bound the loop and takes no part: here `b(2)` is conditional,
-// `a(4)` is not, and the loop is versioned on 4 rather than the minimum 2.
-// Hand-written: lowering reloads the loop variable in explicit DO loops.
+// An unsliced access under a user conditional. `b(2)` only executes when `c`
+// holds, so it does not really bound the loop, but FIR cannot tell this
+// fir.if from a WHERE mask (see @where_whole_rhs), so `b` counts and the loop
+// is versioned on 2 rather than the likelier 4. The cost is a rarely taken
+// fast arm. Hand-written: lowering reloads the loop variable in explicit DO
+// loops, so this shape does not arise from source today.
 //   do i = 1, n
 //     a(i) = 0
 //     if (c) b(i) = 0
@@ -411,10 +413,10 @@ func.func @conditional_unsliced(%arg0: !fir.ref<!fir.array<4xf64>>, %arg1: !fir.
 }
 // CHECK-LABEL: func.func @conditional_unsliced(
 // CHECK:         %[[UB:.*]] = fir.convert %{{.*}} : (i32) -> index
-// CHECK:         %[[C4:.*]] = arith.constant 4 : index
-// CHECK:         %[[CMP:.*]] = arith.cmpi eq, %[[UB]], %[[C4]] : index
+// CHECK:         %[[C2:.*]] = arith.constant 2 : index
+// CHECK:         %[[CMP:.*]] = arith.cmpi eq, %[[UB]], %[[C2]] : index
 // CHECK:         fir.if %[[CMP]] {
-// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %[[C4]] step
+// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %[[C2]] step
 // CHECK:         } else {
 // CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %[[UB]] step
 // CHECK:         }
@@ -450,6 +452,51 @@ func.func @where_sliced(%arg0: !fir.ref<!fir.array<4xf64>>, %arg1: !fir.ref<!fir
   return
 }
 // CHECK-LABEL: func.func @where_sliced(
+// CHECK:         %[[UB:.*]] = arith.maxsi %{{.*}}, %{{.*}} : index
+// CHECK:         %[[C4:.*]] = arith.constant 4 : index
+// CHECK:         %[[CMP:.*]] = arith.cmpi eq, %[[UB]], %[[C4]] : index
+// CHECK:         fir.if %[[CMP]] {
+// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %[[C4]] step
+// CHECK:         } else {
+// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %[[UB]] step
+// CHECK:         }
+
+// A whole-array operand of a masked assignment. `b` is unsliced and under the
+// mask's fir.if, but shape conformance of `a(1:n) = b` forces n == 4 whether
+// or not any element of `b` is read, so `b` must count: the loop is versioned
+// on 4, not on the 8 of `a` and `m`.
+// subroutine where_whole_rhs(a, b, m, n)
+//   real(8) :: a(8), b(4)
+//   logical :: m(8)
+//   where (m(1:n)) a(1:n) = b
+func.func @where_whole_rhs(%arg0: !fir.ref<!fir.array<8xf64>>, %arg1: !fir.ref<!fir.array<4xf64>>, %arg2: !fir.ref<!fir.array<8x!fir.logical<4>>>, %arg3: !fir.ref<i32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %0 = fir.shape %c8 : (index) -> !fir.shape<1>
+  %1 = fir.declare %arg0(%0) uniq_name("a") : (!fir.ref<!fir.array<8xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<8xf64>>
+  %2 = fir.shape %c4 : (index) -> !fir.shape<1>
+  %3 = fir.declare %arg1(%2) uniq_name("b") : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<4xf64>>
+  %4 = fir.declare %arg2(%0) uniq_name("m") : (!fir.ref<!fir.array<8x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<8x!fir.logical<4>>>
+  %5 = fir.load %arg3 : !fir.ref<i32>
+  %6 = fir.convert %5 : (i32) -> index
+  %7 = arith.maxsi %6, %c0 : index
+  %8 = fir.slice %c1, %6, %c1 : (index, index, index) -> !fir.slice<1>
+  fir.do_loop %arg4 = %c1 to %7 step %c1 unordered {
+    %9 = fir.array_coor %4(%0) [%8] %arg4 : (!fir.ref<!fir.array<8x!fir.logical<4>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<!fir.logical<4>>
+    %10 = fir.load %9 : !fir.ref<!fir.logical<4>>
+    %11 = fir.convert %10 : (!fir.logical<4>) -> i1
+    fir.if %11 {
+      %12 = fir.array_coor %3(%2) %arg4 : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+      %13 = fir.load %12 : !fir.ref<f64>
+      %14 = fir.array_coor %1(%0) [%8] %arg4 : (!fir.ref<!fir.array<8xf64>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f64>
+      fir.store %13 to %14 : !fir.ref<f64>
+    }
+  }
+  return
+}
+// CHECK-LABEL: func.func @where_whole_rhs(
 // CHECK:         %[[UB:.*]] = arith.maxsi %{{.*}}, %{{.*}} : index
 // CHECK:         %[[C4:.*]] = arith.constant 4 : index
 // CHECK:         %[[CMP:.*]] = arith.cmpi eq, %[[UB]], %[[C4]] : index
