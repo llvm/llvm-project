@@ -639,13 +639,13 @@ VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
 
   // Truncate BaseIV and Step to ResultTy.
   if (ResultTy->isIntegerTy()) {
-    Type *BaseIVTy = BaseIV->getScalarType();
+    [[maybe_unused]] Type *BaseIVTy = BaseIV->getScalarType();
     assert(BaseIVTy->isIntegerTy() && "Integral BaseIV type expected");
     assert(BaseIVTy->getPrimitiveSizeInBits() >=
                ResultTy->getPrimitiveSizeInBits() &&
            "BaseIV's type must be at least as large as ResultTy");
     BaseIV = Builder.createScalarZExtOrTrunc(BaseIV, ResultTy, DL);
-    Type *StepTy = Step->getScalarType();
+    [[maybe_unused]] Type *StepTy = Step->getScalarType();
     assert(StepTy->isIntegerTy() && "Integral Step type expected");
     assert(StepTy->getPrimitiveSizeInBits() >=
                ResultTy->getPrimitiveSizeInBits() &&
