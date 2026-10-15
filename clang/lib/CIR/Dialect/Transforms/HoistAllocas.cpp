@@ -96,7 +96,7 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
 
     // Hoisted allocas go after the allocas already at the start of the
     // destination block, so the return value and parameter allocas stay
-    // first, as in classic codegen.
+    // first.
     mlir::Operation *&insertPoint = insertPoints[destBlock];
     if (!insertPoint)
       insertPoint = &*llvm::find_if(*destBlock, [](mlir::Operation &blockOp) {
