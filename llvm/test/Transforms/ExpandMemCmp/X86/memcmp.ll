@@ -1160,9 +1160,9 @@ define i32 @cmp_eq16(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 !0 = !{!"function_entry_count", i64 1000}
 ;.
-; X64_1LD: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; X64_1LD: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
-; X64_2LD: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; X64_2LD: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; X64_1LD: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; X64_1LD: [[PROF1]] = !{!"unknown", !"expand-memcmp"}

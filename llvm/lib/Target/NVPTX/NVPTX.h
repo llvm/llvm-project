@@ -222,6 +222,8 @@ public:
 class NVPTXISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
   NVPTXISelDAGToDAGPass(NVPTXTargetMachine &TM, CodeGenOptLevel OptLevel);
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 class NVPTXPeepholePass : public OptionalPassInfoMixin<NVPTXPeepholePass> {

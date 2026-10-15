@@ -2551,15 +2551,26 @@ defm : CVT_ROUND<frint, CvtRNI, CvtRNI_FTZ>;
 // Control-flow
 //-----------------------------------
 
+def uniform_brcond : PatFrag<(ops node:$cond, node:$target),
+                            (brcond node:$cond, node:$target), [{
+    const BasicBlock *BB = CurDAG->getBasicBlock();
+    const Instruction *Term = BB ? BB->getTerminator() : nullptr;
+    // Exclude synthesized branches, such as stack-protector checks at returns.
+    return isa_and_nonnull<CondBrInst, SwitchInst>(Term) &&
+           CurDAG->getUniformityInfo()->isUniformTerminator(Term);
+}]>;
+
 let isTerminator=1 in {
   let isReturn=1, isBarrier=1 in
       def Return : BasicNVPTXInst<(outs), (ins), "ret", [(retglue)]>;
 
   let isBranch=1 in {
-    def CBranch : NVPTXInst<(outs),
-                              (ins B1:$a, brtarget:$target, BranchFlag:$negate),
-                              "@${negate}$a bra \t$target;",
-                              [(brcond i1:$a, bb:$target)]>;
+    class ConditionalBranch<string mnemonic, list<dag> pattern>
+        : NVPTXInst<(outs), (ins B1:$a, brtarget:$target, BranchFlag:$negate),
+                    "@${negate}$a " # mnemonic # " \t$target;", pattern>;
+    def CBranch : ConditionalBranch<"bra", [(brcond i1:$a, bb:$target)]>;
+    def CBranchUni : ConditionalBranch<"bra.uni",
+                                      [(uniform_brcond i1:$a, bb:$target)]>;
 
     let isBarrier=1 in
       def GOTO : BasicNVPTXInst<(outs), (ins brtarget:$target),

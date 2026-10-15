@@ -473,6 +473,14 @@ private:
   // Set of known-uniform values.
   SmallPtrSet<const InstructionT *, 32> UniformOverrides;
 
+  bool isTargetUniform(const InstructionT &I) const {
+    // For custom uniformity candidates, check if the instruction can be
+    // proven uniform based on which operands are uniform/divergent.
+    // The candidate will be re-evaluated as operands become divergent.
+    return isAlwaysUniform(I) ||
+           (CustomUniformityCandidates.contains(&I) && isCustomUniform(I));
+  }
+
   /// \brief Mark all nodes in \p JoinBlock as divergent and push them on
   /// the worklist.
   void taintAndPushAllDefs(const BlockT &JoinBlock);
@@ -821,27 +829,16 @@ auto llvm::GenericSyncDependenceAnalysis<ContextT>::getJoinBlocks(
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     const InstructionT &I) {
-  if (isAlwaysUniform(I))
+  if (isTargetUniform(I))
     return;
-  // For custom uniformity candidates, check if the instruction can be
-  // proven uniform based on which operands are uniform/divergent.
-  // The candidate will be re-evaluated as operands become divergent.
-  if (CustomUniformityCandidates.contains(&I)) {
-    if (isCustomUniform(I))
-      return;
-  }
-  bool Marked = false;
-  if (I.isTerminator()) {
-    Marked = DivergentTermBlocks.insert(I.getParent()).second;
-    if (Marked) {
-      LLVM_DEBUG(dbgs() << "marked divergent term block: "
-                        << Context.print(I.getParent()) << "\n");
-    }
-  } else {
-    Marked = markDefsDivergent(I);
+  const bool MarkedTerm =
+      I.isTerminator() && DivergentTermBlocks.insert(I.getParent()).second;
+  if (MarkedTerm) {
+    LLVM_DEBUG(dbgs() << "marked divergent term block: "
+                      << Context.print(I.getParent()) << "\n");
   }
 
-  if (Marked)
+  if (markDefsDivergent(I) || MarkedTerm)
     Worklist.push_back(&I);
 }
 
@@ -942,13 +939,11 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushAllDefs(
     const BlockT &BB) {
   LLVM_DEBUG(dbgs() << "taintAndPushAllDefs " << Context.print(&BB) << "\n");
   for (const auto &I : instrs(BB)) {
-    // Terminators do not produce values; they are divergent only if
-    // the condition is divergent. That is handled when the divergent
-    // condition is placed in the worklist.
-    if (I.isTerminator())
-      break;
-
-    markDivergent(I);
+    // For terminators, taint only their definitions. Their control flow
+    // becomes divergent when a divergent condition is placed in
+    // the worklist.
+    if (!isTargetUniform(I) && markDefsDivergent(I))
+      pushUsers(I);
   }
 }
 
@@ -1165,13 +1160,12 @@ void GenericUniformityAnalysisImpl<ContextT>::compute() {
 
     LLVM_DEBUG(dbgs() << "worklist pop: " << Context.print(I) << "\n");
 
-    if (I->isTerminator()) {
+    if (I->isTerminator())
       analyzeControlDivergence(*I);
-      continue;
-    }
 
     // propagate value divergence to users
-    assert(hasDivergentDefs(*I) && "Worklist invariant violated!");
+    assert((I->isTerminator() || hasDivergentDefs(*I)) &&
+           "Worklist invariant violated!");
     pushUsers(*I);
   }
 }

@@ -20,6 +20,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -33,6 +34,7 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -173,6 +175,11 @@ public:
   static char ID;
   explicit NVPTXDAGToDAGISelLegacy(NVPTXTargetMachine &tm,
                                    CodeGenOptLevel OptLevel);
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<UniformityInfoWrapperPass>();
+    SelectionDAGISelLegacy::getAnalysisUsage(AU);
+  }
 };
 
 } // end anonymous namespace
@@ -191,11 +198,24 @@ NVPTXDAGToDAGISelLegacy::NVPTXDAGToDAGISelLegacy(NVPTXTargetMachine &tm,
 
 char NVPTXDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(NVPTXDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS_BEGIN(NVPTXDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
+INITIALIZE_PASS_END(NVPTXDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false,
+                    false)
 
 NVPTXISelDAGToDAGPass::NVPTXISelDAGToDAGPass(NVPTXTargetMachine &TM,
                                              CodeGenOptLevel OptLevel)
     : SelectionDAGISelPass(std::make_unique<NVPTXDAGToDAGISel>(TM, OptLevel)) {}
+
+PreservedAnalyses
+NVPTXISelDAGToDAGPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  FAM.getResult<UniformityInfoAnalysis>(MF.getFunction());
+  return SelectionDAGISelPass::run(MF, MFAM);
+}
 
 NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                                      CodeGenOptLevel OptLevel)

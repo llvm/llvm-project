@@ -1173,24 +1173,6 @@ class NVVM_MMA_SP_BLOCK_SCALE_SUPPORTED<list<WMMA_REGS> frags, string kind,
   );
 }
 
-
-class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
-  string Suffix = !if(sync, "sync_", "")
-                  # mode # "_"
-                  # type
-                  # !if(return_pred, "p", "");
-
-  string Name = "int_nvvm_shfl_" # Suffix;
-  bit withGccBuiltin = !not(return_pred);
-  LLVMType OpType = !cond(
-    !eq(type,"i32"): llvm_i32_ty,
-    !eq(type,"f32"): llvm_float_ty);
-  list<LLVMType> RetTy = !if(return_pred, [OpType, llvm_i1_ty], [OpType]);
-  list<LLVMType> ArgsTy = !if(sync,
-    [llvm_i32_ty, OpType, llvm_i32_ty, llvm_i32_ty],
-    [OpType, llvm_i32_ty, llvm_i32_ty]);
-}
-
 class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num,
                                     string ElemType = "i32"> {
   int shift = !cond(!eq(Shape, "16x128b"): 1,
@@ -1622,6 +1604,7 @@ let TargetPrefix = "nvvm" in {
   //
   // PRMT - permute
   //
+  let append IntrProperties = [IntrNoDivergenceSource] in {
   def int_nvvm_prmt : NVVMBuiltin,
     PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
 
@@ -1635,6 +1618,7 @@ let TargetPrefix = "nvvm" in {
   foreach mode = ["rc8", "ecl", "ecr", "rc16"] in
     def int_nvvm_prmt_ # mode :
         PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
+  }
 
   //
   // Nanosleep
@@ -1654,7 +1638,7 @@ let TargetPrefix = "nvvm" in {
   // Min Max
   //
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
-                        IntrNoCreateUndefOrPoison] in {
+                        IntrNoCreateUndefOrPoison, IntrNoDivergenceSource] in {
     foreach operation = ["min", "max"] in {
       def int_nvvm_f # operation # _d : NVVMBuiltin,
         DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
@@ -1680,19 +1664,17 @@ let TargetPrefix = "nvvm" in {
         } // nan
       } // variant
     } // operation
-  }
 
   //
   // Multiplication
   //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative, 
-                        IntrNoCreateUndefOrPoison] in {
     foreach sign = ["", "u"] in {
       def int_nvvm_mul24_ # sign # i : NVVMBuiltin,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
     }
   }
 
+  let append IntrProperties = [IntrNoDivergenceSource] in {
   foreach ftz = ["", "_ftz"] in
     foreach sat = ["", "_sat"] in
       def int_nvvm_fmul # ftz # sat :
@@ -1708,7 +1690,7 @@ let TargetPrefix = "nvvm" in {
   //
   // Div
   //
-  let IntrProperties = [IntrNoMem, IntrNoCreateUndefOrPoison] in {
+  let append IntrProperties = [IntrNoMem, IntrNoCreateUndefOrPoison] in {
     foreach ftz = ["", "_ftz"] in {
       def int_nvvm_div_approx # ftz # _f : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
@@ -1800,7 +1782,7 @@ let TargetPrefix = "nvvm" in {
   //
   // Exp2  Log2
   //
-  let IntrProperties = [IntrNoMem] in {
+  let IntrProperties = [IntrNoMem, IntrNoDivergenceSource] in {
     foreach ftz = ["", "_ftz"] in
       def int_nvvm_ex2_approx # ftz :
           PureIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
@@ -1868,7 +1850,7 @@ let TargetPrefix = "nvvm" in {
   //
   // Rcp
   //
-  let IntrProperties = [IntrNoMem, IntrNoCreateUndefOrPoison] in {
+  let append IntrProperties = [IntrNoMem, IntrNoCreateUndefOrPoison] in {
     foreach rnd = ["rn", "rz", "rm", "rp"] in {
       foreach ftz = ["", "_ftz"] in
         def int_nvvm_rcp_ # rnd # ftz # _f : NVVMBuiltin,
@@ -1882,12 +1864,10 @@ let TargetPrefix = "nvvm" in {
         DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
     def int_nvvm_rcp_approx_ftz_d : NVVMBuiltin,
         DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-  }
 
   //
   // Sqrt
   //
-  let IntrProperties = [IntrNoMem, IntrNoCreateUndefOrPoison] in {
     foreach rnd = ["rn", "rz", "rm", "rp"] in {
       foreach ftz = ["", "_ftz"] in
         def int_nvvm_sqrt_ # rnd # ftz # _f : NVVMBuiltin,
@@ -1903,12 +1883,10 @@ let TargetPrefix = "nvvm" in {
     foreach ftz = ["", "_ftz"] in
       def int_nvvm_sqrt_approx # ftz # _f : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
-  }
 
   //
   // Rsqrt
   //
-  let IntrProperties = [IntrNoMem, IntrNoCreateUndefOrPoison] in {
     foreach ftz = ["", "_ftz"] in {
       def int_nvvm_rsqrt_approx # ftz # _f : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
@@ -1921,7 +1899,7 @@ let TargetPrefix = "nvvm" in {
   // FAdd
   //
 
-  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
+  let append IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
                         IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<2>>,
                         Range<ArgIndex<2>, 0, 4>,
                         ArgInfo<ArgIndex<2>,
@@ -2312,6 +2290,7 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_bf16x2_to_ue5m3x2_rp # satfinite
         : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
   }
+  }
 
   //
   // Bar.Sync
@@ -2493,7 +2472,7 @@ foreach is_shared = [true, false] in {
 }
 
 def int_nvvm_mbarrier_pending_count : NVVMBuiltin,
-    NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i64_ty]>;
+    NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoDivergenceSource]>;
 
 def int_nvvm_mbarrier_check_layout :
     DefaultAttrsIntrinsicFlags<[llvm_i1_ty],
@@ -2575,7 +2554,8 @@ foreach op = ["test_wait", "try_wait"] in {
 
 // Generated within nvvm. Use for ldu on sm_20 or later.  Second arg is the
 // pointer's alignment.
-let IntrProperties = [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>] in {
+let IntrProperties = [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn,
+                      NoCapture<ArgIndex<0>>, IntrNoDivergenceSource] in {
   def int_nvvm_ldu_global_i : Intrinsic<[llvm_anyint_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
   def int_nvvm_ldu_global_f : Intrinsic<[llvm_anyfloat_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
   def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
@@ -2583,7 +2563,7 @@ let IntrProperties = [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillRetur
 
 // Move intrinsics, used in nvvm internally
 
-let IntrProperties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem, IntrNoDivergenceSource] in {
   def int_nvvm_move_i16 : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty]>;
   def int_nvvm_move_i32 : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty]>;
   def int_nvvm_move_i64 : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty]>;
@@ -2596,18 +2576,20 @@ let IntrProperties = [IntrNoMem] in {
 def int_nvvm_texsurf_handle
   : NVVMPureIntrinsic<[llvm_i64_ty], [llvm_metadata_ty, llvm_anyptr_ty]>;
 def int_nvvm_texsurf_handle_internal
-  : NVVMPureIntrinsic<[llvm_i64_ty], [llvm_anyptr_ty]>;
+  : NVVMPureIntrinsic<[llvm_i64_ty], [llvm_anyptr_ty], [IntrNoDivergenceSource]>;
 
 /// Error / Warn
 def int_nvvm_compiler_error : Intrinsic<[], [llvm_anyptr_ty]>;
 def int_nvvm_compiler_warn : Intrinsic<[], [llvm_anyptr_ty]>;
 
+let append IntrProperties = [IntrNoDivergenceSource] in {
 def int_nvvm_reflect : NVVMBuiltin, NVVMPureIntrinsic<[llvm_i32_ty], [llvm_ptr_ty]>;
 
 // isspacep.{const, global, local, shared}
 foreach space = ["const", "global", "local", "shared", "shared_cluster"] in
   def int_nvvm_isspacep_ # space : NVVMBuiltin,
     NVVMPureIntrinsic<[llvm_i1_ty], [llvm_ptr_ty], [NoCapture<ArgIndex<0>>]>;
+}
 
 //
 // Texture Fetch
@@ -2702,6 +2684,7 @@ foreach clamp = ["clamp", "trap", "zero"] in {
   } // vec
 } // clamp
 
+let append IntrProperties = [IntrNoDivergenceSource] in {
 //===- Texture Query ------------------------------------------------------===//
 
 foreach query = ["channel_order", "channel_data_type", "width", "height",
@@ -2721,6 +2704,7 @@ foreach query = ["channel_order", "channel_data_type", "width", "height",
 foreach type = ["sampler", "surface", "texture"] in
   def int_nvvm_istypep_ # type : NVVMBuiltin,
     DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i64_ty], [IntrNoMem]>;
+}
 
 //===- Surface Stores -----------------------------------------------------===//
 
@@ -2899,32 +2883,31 @@ def int_nvvm_read_ptx_sreg_dynamic_smem_size :
 //
 // Sync shfl variants have synchronization side effects modeled as
 // inaccessible memory accesses to prevent DCE and reordering.
-foreach is_sync = [false, true] in {
-  defvar CommonIntrinsicProps = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback];
-  defvar IntrinsicProps = !if(is_sync, CommonIntrinsicProps,
-                              !listconcat(CommonIntrinsicProps, [IntrReadMem, IntrWillReturn]));
-  let IntrProperties = IntrinsicProps in {
-    foreach mode = ["up", "down", "bfly", "idx"] in {
-      foreach type = ["i32", "f32"] in {
-        foreach return_pred = [false, true] in {
-          defvar i = SHFL_INFO<is_sync, mode, type, return_pred>;
-          if i.withGccBuiltin then
-            def i.Name : NVVMBuiltin, Intrinsic<i.RetTy, i.ArgsTy>;
-          else
-            def i.Name : Intrinsic<i.RetTy, i.ArgsTy>;
-        }
-      }
-    }
-  }
+foreach is_sync = [false, true] in
+foreach return_pred = [false, true] in
+let IntrProperties = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback] #
+    !if(is_sync, []<IntrinsicProperty>, [IntrReadMem, IntrWillReturn]) #
+    !if(return_pred, []<IntrinsicProperty>, [IntrNoDivergenceSource]) in
+foreach mode = ["up", "down", "bfly", "idx"] in
+foreach type = ["i32", "f32"] in {
+  defvar suffix = !if(is_sync, "sync_", "") # mode # "_" # type #
+      !if(return_pred, "p", "");
+  defvar op_type = !if(!eq(type, "i32"), llvm_i32_ty, llvm_float_ty);
+  def int_nvvm_shfl_ # suffix : Intrinsic<
+      [op_type] # !if(return_pred, [llvm_i1_ty], []),
+      !if(is_sync, [llvm_i32_ty], []) # [op_type, llvm_i32_ty, llvm_i32_ty]>,
+      ClangBuiltin<!if(return_pred, "", "__nvvm_shfl_" # suffix)>;
 }
 
 //
 // VOTE
 //
 let IntrProperties = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback] in {
+  let append IntrProperties = [IntrNoDivergenceSource] in {
   def int_nvvm_vote_all : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i1_ty]>;
   def int_nvvm_vote_any : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i1_ty]>;
   def int_nvvm_vote_uni : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i1_ty]>;
+  }
   def int_nvvm_vote_ballot : NVVMBuiltin, Intrinsic<[llvm_i32_ty], [llvm_i1_ty]>;
 }
 
@@ -3233,15 +3216,14 @@ def int_nvvm_movmatrix_sync_aligned_m8n8_trans_b16
                IntrNoCallback, IntrNoFree]>;
 
 // MAPA
-let IntrProperties = [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>] in {
+let IntrProperties = [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>,
+                      IntrNoDivergenceSource] in {
   def int_nvvm_mapa
     : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty]>;
   def int_nvvm_mapa_shared_cluster
     : DefaultAttrsIntrinsic<[llvm_shared_cluster_ptr_ty], [llvm_shared_ptr_ty, llvm_i32_ty]>;
-}
 
 // GETCTARANK
-let IntrProperties = [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>] in {
   def int_nvvm_getctarank
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty]>;
   def int_nvvm_getctarank_shared_cluster
@@ -3958,12 +3940,12 @@ def int_nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared
 // clusterlaunchcontrol.query_cancel.is_canceled
 
 def int_nvvm_clusterlaunchcontrol_query_cancel_is_canceled
-    : NVVMPureIntrinsic<[llvm_i1_ty], [llvm_i128_ty], [],
+    : NVVMPureIntrinsic<[llvm_i1_ty], [llvm_i128_ty], [IntrNoDivergenceSource],
                     "llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled">;
 
 foreach dim = ["x", "y", "z"] in
   def int_nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_ # dim
-    : NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i128_ty], [],
+    : NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i128_ty], [IntrNoDivergenceSource],
                     "llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid." # dim>;
 
 //

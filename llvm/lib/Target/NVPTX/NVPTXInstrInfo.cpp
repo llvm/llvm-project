@@ -100,11 +100,11 @@ bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (LastInst.getOpcode() == NVPTX::GOTO) {
       TBB = LastInst.getOperand(0).getMBB();
       return false;
-    } else if (LastInst.getOpcode() == NVPTX::CBranch) {
+    } else if (LastInst.isConditionalBranch()) {
       // Block ends with fall-through condbranch.
       TBB = LastInst.getOperand(1).getMBB();
-      Cond.push_back(LastInst.getOperand(0));
-      Cond.push_back(LastInst.getOperand(2));
+      Cond.append({LastInst.getOperand(0), LastInst.getOperand(2),
+                   MachineOperand::CreateImm(LastInst.getOpcode())});
       return false;
     }
     // Otherwise, don't know what this is.
@@ -119,11 +119,11 @@ bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     return true;
 
   // If the block ends with NVPTX::GOTO and NVPTX:CBranch, handle it.
-  if (SecondLastInst.getOpcode() == NVPTX::CBranch &&
+  if (SecondLastInst.isConditionalBranch() &&
       LastInst.getOpcode() == NVPTX::GOTO) {
     TBB = SecondLastInst.getOperand(1).getMBB();
-    Cond.push_back(SecondLastInst.getOperand(0));
-    Cond.push_back(SecondLastInst.getOperand(2));
+    Cond.append({SecondLastInst.getOperand(0), SecondLastInst.getOperand(2),
+                 MachineOperand::CreateImm(SecondLastInst.getOpcode())});
     FBB = LastInst.getOperand(0).getMBB();
     return false;
   }
@@ -150,7 +150,7 @@ unsigned NVPTXInstrInfo::removeBranch(MachineBasicBlock &MBB,
   if (I == MBB.begin())
     return 0;
   --I;
-  if (I->getOpcode() != NVPTX::GOTO && I->getOpcode() != NVPTX::CBranch)
+  if (I->getOpcode() != NVPTX::GOTO && !I->isConditionalBranch())
     return 0;
 
   // Remove the branch.
@@ -161,7 +161,7 @@ unsigned NVPTXInstrInfo::removeBranch(MachineBasicBlock &MBB,
   if (I == MBB.begin())
     return 1;
   --I;
-  if (I->getOpcode() != NVPTX::CBranch)
+  if (!I->isConditionalBranch())
     return 1;
 
   // Remove the branch.
@@ -179,30 +179,34 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
-  assert((Cond.size() == 2 || Cond.size() == 0) &&
-         "NVPTX branch conditions have two components!");
+  assert((Cond.size() == 3 || Cond.empty()) &&
+         "NVPTX branch conditions have three components!");
 
-  // One-way branch.
-  if (!FBB) {
-    if (Cond.empty()) // Unconditional branch
-      BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(TBB);
-    else // Conditional branch
-      BuildMI(&MBB, DL, get(NVPTX::CBranch))
-          .add(Cond[0])
-          .addMBB(TBB)
-          .add(Cond[1]);
+  if (Cond.empty()) {
+    BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(TBB);
     return 1;
   }
 
-  // Two-way Conditional Branch.
-  BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB).add(Cond[1]);
+  unsigned Opcode = Cond[2].getImm();
+  BuildMI(&MBB, DL, get(Opcode)).add(Cond[0]).addMBB(TBB).add(Cond[1]);
+  if (!FBB)
+    return 1;
   BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
   return 2;
 }
 
+void NVPTXInstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
+                                             MachineBasicBlock *NewDest) const {
+  TargetInstrInfo::ReplaceTailWithBranchTo(Tail, NewDest);
+  // Coalescing can give different uniform predicates the same register.
+  for (MachineInstr &MI : NewDest->terminators())
+    if (MI.getOpcode() == NVPTX::CBranchUni)
+      MI.setDesc(get(NVPTX::CBranch));
+}
+
 bool NVPTXInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
-  assert(Cond.size() == 2 && "Invalid NVPTX branch condition!");
+  assert(Cond.size() == 3 && "Invalid NVPTX branch condition!");
   Cond[1].setImm(!Cond[1].getImm());
   return false;
 }

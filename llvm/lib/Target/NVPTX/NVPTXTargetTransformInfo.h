@@ -37,10 +37,6 @@ class NVPTXTTIImpl final : public BasicTTIImplBase<NVPTXTTIImpl> {
   const NVPTXSubtarget *getST() const { return ST; };
   const NVPTXTargetLowering *getTLI() const { return TLI; };
 
-  /// \returns true if the result of the value could potentially be
-  /// different across threads in a warp.
-  bool isSourceOfDivergence(const Value *V) const;
-
 public:
   explicit NVPTXTTIImpl(const NVPTXTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
@@ -242,6 +238,8 @@ public:
   }
 
   ValueUniformity getValueUniformity(const Value *V) const override;
+  bool isUniform(const Instruction *I,
+                 const SmallBitVector &UniformArgs) const override;
 };
 
 } // end namespace llvm

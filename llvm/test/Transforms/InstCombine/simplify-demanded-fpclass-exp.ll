@@ -621,7 +621,7 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unkn
 
 !0 = !{!"function_entry_count", i64 1000}
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}

@@ -517,6 +517,8 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     isNoReturn = true;
   else if (R->getName() == "IntrNoCallback")
     isNoCallback = true;
+  else if (R->getName() == "IntrNoDivergenceSource")
+    isNoDivergenceSource = true;
   else if (R->getName() == "IntrNoSync")
     isNoSync = true;
   else if (R->getName() == "IntrNoFree")

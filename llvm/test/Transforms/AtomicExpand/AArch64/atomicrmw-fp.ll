@@ -549,7 +549,7 @@ define <2 x double> @atomicrmw_fminimumnum_2_x_double(ptr %ptr, <2 x double> %va
 
 !0 = !{!"function_entry_count", i64 1000}
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"unknown", !"atomic-expand"}

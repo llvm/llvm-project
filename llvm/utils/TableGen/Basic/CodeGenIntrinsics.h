@@ -90,6 +90,9 @@ struct CodeGenIntrinsic {
   /// True if the intrinsic is no-callback.
   bool isNoCallback = false;
 
+  /// True if the intrinsic cannot introduce divergence.
+  bool isNoDivergenceSource = false;
+
   /// True if the intrinsic is no-sync.
   bool isNoSync = false;
 

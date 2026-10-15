@@ -374,7 +374,7 @@ define half @sitofp_i16_f16(i16 %x) {
   ret half %res
 }
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1048575, i32 1}

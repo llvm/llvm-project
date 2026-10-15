@@ -446,5 +446,5 @@ define <vscale x 4 x float> @frem_f32(<vscale x 4 x float> %in) {
 
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "target-features"="+v" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) "target-features"="+v" }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) "target-features"="+v" }
 ;.

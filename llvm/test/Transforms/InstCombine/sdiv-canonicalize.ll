@@ -229,7 +229,7 @@ define i32 @sdiv_neg_neg_missing_nsw(i32 %x, i32 %b) {
 
 !0 = !{!"function_entry_count", i64 1000}
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}

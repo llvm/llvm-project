@@ -86,7 +86,7 @@ declare void @use(ptr readonly)
 declare void @useBool(i1)
 
 declare void @clobber(ptr)
-; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite){{$}}
+; CHECK: Function Attrs: nocallback nodivergencesource nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite){{$}}
 ; CHECK-NEXT: declare ptr @llvm.launder.invariant.group.p0(ptr)
 declare ptr @llvm.launder.invariant.group.p0(ptr)
 

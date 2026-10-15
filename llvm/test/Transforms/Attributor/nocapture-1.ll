@@ -817,7 +817,7 @@ declare ptr @llvm.launder.invariant.group.p0(ptr)
 ; TUNIT: attributes #[[ATTR12]] = { nosync nounwind memory(read) }
 ; TUNIT: attributes #[[ATTR13:[0-9]+]] = { nounwind willreturn memory(read) }
 ; TUNIT: attributes #[[ATTR14]] = { mustprogress nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR15:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite) }
+; TUNIT: attributes #[[ATTR15:[0-9]+]] = { nocallback nodivergencesource nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite) }
 ; TUNIT: attributes #[[ATTR16]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR17]] = { nofree nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR18]] = { nofree nosync nounwind willreturn }
@@ -842,7 +842,7 @@ declare ptr @llvm.launder.invariant.group.p0(ptr)
 ; CGSCC: attributes #[[ATTR15]] = { nosync nounwind memory(read) }
 ; CGSCC: attributes #[[ATTR16:[0-9]+]] = { nounwind willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR17]] = { mustprogress nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR18:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite) }
+; CGSCC: attributes #[[ATTR18:[0-9]+]] = { nocallback nodivergencesource nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR19]] = { nofree nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR20]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR21]] = { nofree nounwind willreturn }

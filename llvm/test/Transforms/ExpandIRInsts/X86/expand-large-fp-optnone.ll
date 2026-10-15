@@ -102,7 +102,7 @@ attributes #0 = { noinline optnone }
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { noinline optnone }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}

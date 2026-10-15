@@ -614,7 +614,7 @@ define ptx_kernel void @foo19(ptr noalias readonly %from, ptr %to, i32 %n) {
 ; SM20-NEXT:    add.s64 %rd4, %rd4, 4;
 ; SM20-NEXT:    add.s32 %r2, %r2, -1;
 ; SM20-NEXT:    setp.ne.b32 %p1, %r2, 0;
-; SM20-NEXT:    @%p1 bra $L__BB18_1;
+; SM20-NEXT:    @%p1 bra.uni $L__BB18_1;
 ; SM20-NEXT:  // %bb.2: // %exit
 ; SM20-NEXT:    st.global.b32 [%rd1], %r3;
 ; SM20-NEXT:    ret;
@@ -639,7 +639,7 @@ define ptx_kernel void @foo19(ptr noalias readonly %from, ptr %to, i32 %n) {
 ; SM35-NEXT:    add.s64 %rd4, %rd4, 4;
 ; SM35-NEXT:    add.s32 %r2, %r2, -1;
 ; SM35-NEXT:    setp.ne.b32 %p1, %r2, 0;
-; SM35-NEXT:    @%p1 bra $L__BB18_1;
+; SM35-NEXT:    @%p1 bra.uni $L__BB18_1;
 ; SM35-NEXT:  // %bb.2: // %exit
 ; SM35-NEXT:    st.global.b32 [%rd1], %r3;
 ; SM35-NEXT:    ret;

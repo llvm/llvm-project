@@ -13,7 +13,7 @@ define void @test(ptr %p1, ptr %p16) {
   ret void
 }
 
-; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite)
+; CHECK: Function Attrs: nocallback nodivergencesource nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite)
 ; CHECK: declare ptr @llvm.launder.invariant.group.p0(ptr)
 declare ptr @llvm.invariant.group.barrier(ptr)
 declare ptr @llvm.invariant.group.barrier.p0(ptr)

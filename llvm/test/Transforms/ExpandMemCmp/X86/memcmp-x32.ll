@@ -565,7 +565,7 @@ define i32 @cmp_eq16(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 !0 = !{!"function_entry_count", i64 1000}
 ;.
-; X32: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; X32: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nodivergencesource nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; X32: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; X32: [[PROF1]] = !{!"unknown", !"expand-memcmp"}
