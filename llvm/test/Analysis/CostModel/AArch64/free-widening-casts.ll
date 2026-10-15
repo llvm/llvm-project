@@ -659,7 +659,7 @@ define <8 x i16> @usubw_multi_user(<8 x i8> %a, <8 x i16> %b, <8 x i16> %c, i1 %
 
 ; COST-LABEL: icmp_v2i64
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = icmp sgt <2 x i64> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = sext <2 x i1> %c to <2 x i64>
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s = sext <2 x i1> %c to <2 x i64>
 ; CODE-LABEL: icmp_v2i64
 ; CODE:       cmgt v0.2d, v0.2d, v1.2d
 ; CODE-NEXT:  ret
@@ -671,7 +671,7 @@ define <2 x i64> @icmp_v2i64(<2 x i64> %a, <2 x i64> %b) {
 
 ; COST-LABEL: fcmp_v4f32
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = fcmp olt <4 x float> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = sext <4 x i1> %c to <4 x i32>
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s = sext <4 x i1> %c to <4 x i32>
 ; CODE-LABEL: fcmp_v4f32
 ; CODE:       fcmgt v0.4s, v1.4s, v0.4s
 ; CODE-NEXT:  ret
