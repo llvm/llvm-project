@@ -16,6 +16,7 @@
 #define LLVM_ADT_SMALLPTRSET_H
 
 #include "llvm/ADT/ADL.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/EpochTracker.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/iterator_range.h"
@@ -246,13 +247,39 @@ protected:
 private:
   LLVM_ABI std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
-  LLVM_ABI const void *const *doFind(const void *Ptr) const;
+  const void *const *doFind(const void *Ptr) const {
+    unsigned Mask = CurArraySize - 1;
+    unsigned BucketNo = DenseMapInfo<void *>::getHashValue(Ptr) & Mask;
+    while (true) {
+      const void *const *Bucket = CurArray + BucketNo;
+      if (LLVM_LIKELY(*Bucket == Ptr))
+        return Bucket;
+      if (LLVM_LIKELY(*Bucket == getEmptyMarker()))
+        return nullptr;
+      BucketNo = (BucketNo + 1) & Mask;
+    }
+  }
   LLVM_ABI void shrink_and_clear();
 
 protected:
   /// Erase the entry at \p Bucket and close the resulting hole via Knuth
   /// TAOCP 6.4 Algorithm R. Caller must update \c NumEntries and the epoch.
-  LLVM_ABI void eraseFromBucket(const void **Bucket);
+  void eraseFromBucket(const void **Bucket) {
+    // Knuth TAOCP 6.4 Algorithm R: walk forward sliding each following entry
+    // whose probe path crosses the hole.
+    unsigned Mask = CurArraySize - 1;
+    unsigned I = Bucket - CurArray;
+    unsigned J = I;
+    const void *Empty = getEmptyMarker();
+    while ((J = (J + 1) & Mask), CurArray[J] != Empty) {
+      auto Ideal = DenseMapInfo<void *>::getHashValue(CurArray[J]);
+      if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
+        CurArray[I] = CurArray[J];
+        I = J;
+      }
+    }
+    CurArray[I] = Empty;
+  }
 
   /// Allocate a larger backing store for the buckets and move it over.
   /// Passing the current size triggers a same-size rehash, used by batch

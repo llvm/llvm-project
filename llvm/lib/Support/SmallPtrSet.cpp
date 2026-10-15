@@ -61,36 +61,6 @@ SmallPtrSetImplBase::insert_imp_big(const void *Ptr) {
   return {Array + I, true};
 }
 
-const void *const *SmallPtrSetImplBase::doFind(const void *Ptr) const {
-  unsigned Mask = CurArraySize - 1;
-  unsigned BucketNo = DenseMapInfo<void *>::getHashValue(Ptr) & Mask;
-  while (true) {
-    const void *const *Bucket = CurArray + BucketNo;
-    if (LLVM_LIKELY(*Bucket == Ptr))
-      return Bucket;
-    if (LLVM_LIKELY(*Bucket == getEmptyMarker()))
-      return nullptr;
-    BucketNo = (BucketNo + 1) & Mask;
-  }
-}
-
-void SmallPtrSetImplBase::eraseFromBucket(const void **Bucket) {
-  // Knuth TAOCP 6.4 Algorithm R: walk forward sliding each following entry
-  // whose probe path crosses the hole.
-  unsigned Mask = CurArraySize - 1;
-  unsigned I = Bucket - CurArray;
-  unsigned J = I;
-  const void *Empty = getEmptyMarker();
-  while ((J = (J + 1) & Mask), CurArray[J] != Empty) {
-    auto Ideal = DenseMapInfo<void *>::getHashValue(CurArray[J]);
-    if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
-      CurArray[I] = CurArray[J];
-      I = J;
-    }
-  }
-  CurArray[I] = Empty;
-}
-
 /// Grow - Allocate a larger backing store for the buckets and move it over.
 ///
 void SmallPtrSetImplBase::Grow(unsigned NewSize) {
