@@ -1,30 +1,51 @@
 ; Modified from: https://github.com/KhronosGroup/SPIRV-LLVM-Translator/test/extensions/INTEL/SPV_INTEL_variable_length_array/basic.ll
 
 ; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array %s -o - | FileCheck %s --check-prefixes=CHECK-COMMON,CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array %s -o - -filetype=obj | spirv-val %}
+
+; TODO: currently spirv-val mistakenly rejects Element Type as operand of OpUntypedVariableLengthArrayINTEL. Re-enable spirv-val once it's fixed.
+; Issue: https://github.com/KhronosGroup/SPIRV-Tools/issues/6921
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array,+SPV_KHR_untyped_pointers %s -o - -filetype=obj | spirv-val %}
+; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array,+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefixes=CHECK-COMMON,CHECK-SPIRV-UNTYPED
 
 ; CHECK-ERROR: LLVM ERROR: array allocation: this instruction requires the following SPIR-V extension: SPV_INTEL_variable_length_array
 
-; CHECK-SPIRV: Capability VariableLengthArrayINTEL
-; CHECK-SPIRV: Extension "SPV_INTEL_variable_length_array"
+; CHECK-SPIRV-UNTYPED: Capability UntypedPointersKHR
+; CHECK-COMMON: Capability VariableLengthArrayINTEL
+; CHECK-SPIRV-UNTYPED: Capability UntypedVariableLengthArrayINTEL
+; CHECK-COMMON-DAG: Extension "SPV_INTEL_variable_length_array"
+; CHECK-SPIRV-UNTYPED-DAG: Extension "SPV_KHR_untyped_pointers"
 
-; CHECK-SPIRV-DAG: OpName %[[Len:.*]] "a"
-; CHECK-SPIRV-DAG: %[[Long:.*]] = OpTypeInt 64 0
-; CHECK-SPIRV-DAG: %[[Int:.*]] = OpTypeInt 32 0
+; CHECK-COMMON-DAG: OpName %[[LenN:.*]] "n"
+; CHECK-COMMON-DAG: OpName %[[SVLA:.*]] "svla"
+; CHECK-COMMON-DAG: OpDecorate %[[SVLA]] Alignment 8
+
+; CHECK-COMMON-DAG: OpName %[[Len:.*]] "a"
+; CHECK-COMMON-DAG: %[[Long:.*]] = OpTypeInt 64 0
+; CHECK-COMMON-DAG: %[[Int:.*]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: %[[Char:.*]] = OpTypeInt 8 0
 ; CHECK-SPIRV-DAG: %[[CharPtr:.*]] = OpTypePointer {{[a-zA-Z]+}} %[[Char]]
 ; CHECK-SPIRV-DAG: %[[IntPtr:.*]] = OpTypePointer {{[a-zA-Z]+}} %[[Int]]
-; CHECK-SPIRV: %[[Len]] = OpFunctionParameter %[[Long:.*]]
-; CHECK-SPIRV: %[[SavedMem1:.*]] = OpSaveMemoryINTEL %[[CharPtr]]
+; CHECK-COMMON-DAG: %[[Float:.*]] = OpTypeFloat 32
+; CHECK-COMMON-DAG: %[[Struct:.*]] = OpTypeStruct %[[Int]] %[[Float]]
+; CHECK-SPIRV-DAG: %[[StructPtr:.*]] = OpTypePointer {{[a-zA-Z]+}} %[[Struct]]
+; CHECK-SPIRV-UNTYPED-DAG: %[[CharPtr:.*]] = OpTypeUntypedPointerKHR Function
+; CHECK-COMMON: %[[Len]] = OpFunctionParameter %[[Long]]
+; CHECK-COMMON: %[[SavedMem1:.*]] = OpSaveMemoryINTEL %[[CharPtr]]
 ; CHECK-SPIRV: OpVariableLengthArrayINTEL %[[IntPtr]] %[[Len]]
-; CHECK-SPIRV: OpRestoreMemoryINTEL %[[SavedMem1]]
-; CHECK-SPIRV: %[[SavedMem2:.*]] = OpSaveMemoryINTEL %[[CharPtr]]
+; CHECK-SPIRV-UNTYPED: OpUntypedVariableLengthArrayINTEL %[[CharPtr]] %[[Int]] %[[Len]]
+; CHECK-COMMON: OpRestoreMemoryINTEL %[[SavedMem1]]
+; CHECK-COMMON: %[[SavedMem2:.*]] = OpSaveMemoryINTEL %[[CharPtr]]
 ; CHECK-SPIRV: OpVariableLengthArrayINTEL %[[IntPtr]] %[[Len]]
-; CHECK-SPIRV: OpRestoreMemoryINTEL %[[SavedMem2]]
+; CHECK-SPIRV-UNTYPED: OpUntypedVariableLengthArrayINTEL %[[CharPtr]] %[[Int]] %[[Len]]
+; CHECK-COMMON: OpRestoreMemoryINTEL %[[SavedMem2]]
 
 target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
 target triple = "spir"
+
+%struct.S = type { i32, float }
 
 define dso_local spir_func i32 @foo(i64 %a, i64 %b) {
 entry:
@@ -46,6 +67,22 @@ entry:
   call void @llvm.stackrestore.p0(ptr %stack2)
   call void @llvm.lifetime.end.p0(i64 168, ptr nonnull %vector1)
   ret i32 %add5
+}
+
+; Test an aggregate element type instead of a scalar
+; CHECK-COMMON: %[[LenN]] = OpFunctionParameter %[[Long]]
+; CHECK-COMMON: %[[SavedMem3:.*]] = OpSaveMemoryINTEL %[[CharPtr]]
+; CHECK-SPIRV: %[[SVLA]] = OpVariableLengthArrayINTEL %[[StructPtr]] %[[LenN]]
+; CHECK-SPIRV-UNTYPED: %[[SVLA]] = OpUntypedVariableLengthArrayINTEL %[[CharPtr]] %[[Struct]] %[[LenN]]
+; CHECK-COMMON: OpRestoreMemoryINTEL %[[SavedMem3]]
+define dso_local spir_func i32 @bar(i64 %n, i64 %i) {
+entry:
+  %stack = call ptr @llvm.stacksave.p0()
+  %svla = alloca %struct.S, i64 %n, align 8
+  %arrayidx = getelementptr inbounds %struct.S, ptr %svla, i64 %i, i32 0
+  %elem = load i32, ptr %arrayidx, align 4
+  call void @llvm.stackrestore.p0(ptr %stack)
+  ret i32 %elem
 }
 
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)

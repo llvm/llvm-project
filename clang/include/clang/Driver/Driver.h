@@ -28,7 +28,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 #include <map>
 #include <set>
@@ -37,9 +37,6 @@
 
 namespace llvm {
 class Triple;
-namespace vfs {
-class FileSystem;
-}
 namespace cl {
 class ExpansionContext;
 }

@@ -1,0 +1,11 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+!void = !cir.void
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @test_coro_noop() -> !cir.ptr<!void> {
+    // CHECK: %0 = llvm.intr.coro.noop : !llvm.ptr
+    %0 = cir.coro.intrinsic.noop() : () -> !cir.ptr<!void>
+    cir.return %0 : !cir.ptr<!void>
+  }
+}

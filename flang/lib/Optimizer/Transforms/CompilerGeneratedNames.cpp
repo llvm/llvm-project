@@ -45,6 +45,8 @@ void CompilerGeneratedNamesConversionPass::runOnOperation() {
 
   auto processOp = [&](mlir::Operation &op) {
     auto symName = mlir::cast<mlir::SymbolOpInterface>(&op).getNameAttr();
+    if (symName.getValue().contains(".__uniq."))
+      return;
     auto deconstructedName = fir::NameUniquer::deconstruct(symName);
     if (deconstructedName.first != fir::NameUniquer::NameKind::NOT_UNIQUED &&
         !fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {

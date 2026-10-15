@@ -322,8 +322,9 @@ struct CallOpInterface
         auto memrefDstType = dyn_cast<MemRefType>(bufferType);
         assert(memrefDstType &&
                "buffer layout not supported on unranked tensors");
-        FailureOr<Value> replacement = bufferization::castOrReallocMemRefValue(
-            rewriter, buffer, memrefDstType, options);
+        FailureOr<Value> replacement =
+            bufferization::castOrReallocMemRefValue(rewriter, buffer,
+                                                    memrefDstType, options);
         if (failed(replacement))
           return failure();
         buffer = *replacement;

@@ -16,11 +16,3 @@ float1 test_vec1_inputs(float1 p0, float1 p1) {
   return ldexp(p0, p1);
   // expected-warning@-1 2 {{implicit conversion turns vector to scalar: 'float1' (aka 'vector<float, 1>') to 'float'}}
 }
-
-typedef float float5 __attribute__((ext_vector_type(5)));
-
-float5 test_vec5_inputs(float5 p0, float5 p1) {
-  return ldexp(p0, p1);
-  // expected-error@-1  {{call to 'ldexp' is ambiguous}}
-  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 4 {{candidate function}}
-}

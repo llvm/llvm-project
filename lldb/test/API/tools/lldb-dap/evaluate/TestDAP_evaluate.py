@@ -54,6 +54,11 @@ class TestDAP_evaluate(DAPTestCaseBase):
                 f"expected {expression!r} to fail using {context=!r} in {frame_id=!r}"
             )
 
+        def assert_eval_fails_frameless(expression: str):
+            session.do_evaluate(expression, frameId=None, context=context).error(
+                f"expected {expression!r} to fail using {context=!r} with no frame"
+            )
+
         source = "main.cpp"
         program = self.getBuildArtifact("a.out")
         breakpoint_lines = [
@@ -225,14 +230,37 @@ class TestDAP_evaluate(DAPTestCaseBase):
         session.verify_evaluate(eval_body, matches="20")
 
         if context_parses_expressions:
-            # Access global variable without a frame
-            # Run in variable mode to avoid interpreting it as a command.
-            session.evaluate("`lldb-dap repl-mode variable", context="repl")
-
+            # Access a global variable with no frame at all (frameId omitted).
             eval_body = session.evaluate("static_int", context=context)
             session.verify_evaluate(eval_body, matches="42", type="int")
 
-            session.evaluate("`lldb-dap repl-mode auto", context="repl")
+            assert_eval_fails_frameless("var1")  # local, not global.
+            assert_eval_fails_frameless("totally_bogus_expr_xyz")
+
+            if context in ("repl", None):
+                # `help` shares its name with a real LLDB command (see main.cpp).
+                # With no frame, the global should win and emit an ambiguity warning.
+                event_before_help_eval = session.last_event()
+                eval_body = session.evaluate("help", context=context)
+                session.verify_evaluate(eval_body, matches="99", type="int")
+                session.collect_console(
+                    until="Expression 'help' is both an LLDB command and variable",
+                    after=event_before_help_eval,
+                )
+
+                # A valid frame should add local lookup without preventing the same
+                # global from taking precedence over the LLDB command.
+                eval_body = a_frame.evaluate("help", context=context)
+                session.verify_evaluate(eval_body, matches="99", type="int")
+
+                # Use a uniquely named alias with deterministic output to verify that a
+                # command with no matching variable is still run as an LLDB command.
+                session.evaluate(
+                    "command alias lldb_dap_test_command expression -- 12345",
+                    context=context,
+                )
+                eval_body = session.evaluate("lldb_dap_test_command", context=context)
+                session.verify_evaluate(eval_body, matches="12345", has_mem_ref=False)
 
         # In a_function's own frame these names are out of scope.
         assert_eval_fails("var1")

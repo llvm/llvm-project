@@ -6,7 +6,7 @@ define void @fabs_v4f32(ptr %a, ptr %c) {
 ; P5600-LABEL: fabs_v4f32:
 ; P5600:       # %bb.0: # %entry
 ; P5600-NEXT:    ld.w $w0, 0($4)
-; P5600-NEXT:    fmax_a.w $w0, $w0, $w0
+; P5600-NEXT:    bclri.w $w0, $w0, 31
 ; P5600-NEXT:    st.w $w0, 0($5)
 ; P5600-NEXT:    jr $ra
 ; P5600-NEXT:    nop
@@ -22,7 +22,7 @@ define void @fabs_v2f64(ptr %a, ptr %c) {
 ; P5600-LABEL: fabs_v2f64:
 ; P5600:       # %bb.0: # %entry
 ; P5600-NEXT:    ld.d $w0, 0($4)
-; P5600-NEXT:    fmax_a.d $w0, $w0, $w0
+; P5600-NEXT:    bclri.d $w0, $w0, 63
 ; P5600-NEXT:    st.d $w0, 0($5)
 ; P5600-NEXT:    jr $ra
 ; P5600-NEXT:    nop

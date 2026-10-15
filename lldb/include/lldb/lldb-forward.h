@@ -197,6 +197,7 @@ class ScriptedMetadata;
 class ScriptedBreakpointInterface;
 class ScriptedCommandInterface;
 class ScriptedHookInterface;
+class ScriptedInstanceRegistry;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
 class ScriptedThreadInterface;
@@ -289,6 +290,7 @@ class TypeSummaryImpl;
 class TypeSummaryOptions;
 class TypeSystem;
 class TypeSystemClang;
+class TypeSystemFortran;
 class UUID;
 class UnixSignals;
 class Unwind;
@@ -435,6 +437,10 @@ typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
 typedef std::shared_ptr<lldb_private::ScriptedHookInterface>
     ScriptedHookInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedInstanceRegistry>
+    ScriptedInstanceRegistrySP;
+typedef std::weak_ptr<lldb_private::ScriptedInstanceRegistry>
+    ScriptedInstanceRegistryWP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
     ScriptedThreadInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>

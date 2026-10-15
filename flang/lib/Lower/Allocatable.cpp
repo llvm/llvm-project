@@ -484,9 +484,9 @@ private:
 
   void postAllocationAction(const Allocation &alloc,
                             const fir::MutableBoxValue &box) {
-    if (alloc.getSymbol().test(Fortran::semantics::Symbol::Flag::AccDeclare))
-      Fortran::lower::attachDeclarePostAllocAction(converter, builder,
-                                                   alloc.getSymbol());
+    auto &ult = alloc.getSymbol().GetUltimate();
+    if (ult.test(Fortran::semantics::Symbol::Flag::AccDeclare))
+      Fortran::lower::attachDeclarePostAllocAction(converter, builder, ult);
   }
 
   void setPinnedToFalse() {
@@ -524,6 +524,21 @@ private:
     const Fortran::semantics::Symbol *cudaSymForAlloc = &alloc.getSymbol();
     if (!isCudaAllocate)
       isCudaAllocate = propagateCUDAAttrsFromParent(alloc, cudaSymForAlloc);
+
+    const auto *details{
+        alloc.getSymbol()
+            .GetUltimate()
+            .detailsIf<Fortran::semantics::ObjectEntityDetails>()};
+    const bool attrIsImplicit{details && details->cudaDataAttrIsImplicit()};
+
+    // An enclosing object that did ask for a memory space of its own takes
+    // precedence over implicit an attribute.
+    if (attrIsImplicit) {
+      // The result is deliberately unused: reaching here means the object
+      // carries an attribute, so isCudaAllocate is already true. Only the
+      // symbol the allocator is taken from needs to change.
+      propagateCUDAAttrsFromParent(alloc, cudaSymForAlloc);
+    }
 
     bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(*cudaSymForAlloc);
@@ -929,16 +944,18 @@ static void preDeallocationAction(Fortran::lower::AbstractConverter &converter,
                                   fir::FirOpBuilder &builder,
                                   mlir::Value beginOpValue,
                                   const Fortran::semantics::Symbol &sym) {
-  if (sym.test(Fortran::semantics::Symbol::Flag::AccDeclare))
+  auto &ult = sym.GetUltimate();
+  if (ult.test(Fortran::semantics::Symbol::Flag::AccDeclare))
     Fortran::lower::attachDeclarePreDeallocAction(converter, builder,
-                                                  beginOpValue, sym);
+                                                  beginOpValue, ult);
 }
 
 static void postDeallocationAction(Fortran::lower::AbstractConverter &converter,
                                    fir::FirOpBuilder &builder,
                                    const Fortran::semantics::Symbol &sym) {
-  if (sym.test(Fortran::semantics::Symbol::Flag::AccDeclare))
-    Fortran::lower::attachDeclarePostDeallocAction(converter, builder, sym);
+  auto &ult = sym.GetUltimate();
+  if (ult.test(Fortran::semantics::Symbol::Flag::AccDeclare))
+    Fortran::lower::attachDeclarePostDeallocAction(converter, builder, ult);
 }
 
 static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
@@ -1100,10 +1117,16 @@ void Fortran::lower::genDeallocateStmt(
               Fortran::lower::getTypeDescAddr(converter, loc, *derivedTypeSpec);
         }
     }
-    // ALLOCATE gives the object's own attribute precedence over the parent's;
-    // both sides must match or the allocators differ.
+
+    const auto *details{
+        symbol.GetUltimate()
+            .detailsIf<Fortran::semantics::ObjectEntityDetails>()};
+    // An enclosing object that did ask for a memory space of its own takes
+    // precedence over implicit an attribute.
+    const bool attrIsImplicit{details && details->cudaDataAttrIsImplicit()};
+
     const Fortran::semantics::Symbol *cudaSymbol = nullptr;
-    if (!Fortran::semantics::HasCUDAAttr(symbol) &&
+    if ((!Fortran::semantics::HasCUDAAttr(symbol) || attrIsImplicit) &&
         !Fortran::semantics::HasCUDAComponent(symbol))
       cudaSymbol = getCUDAAttrParentSymbol(allocateObject);
     mlir::Value beginOpValue =

@@ -178,7 +178,6 @@ private:
   // destroyImpl.
   std::atomic<ImplType *> ImplPtr;
   ImplType &getOrCreateImpl();
-  ImplType *getImpl() const;
 };
 
 /// Lock-free thread-safe hash-mapped trie.

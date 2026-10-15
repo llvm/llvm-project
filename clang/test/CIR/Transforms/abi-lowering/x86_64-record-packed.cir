@@ -41,7 +41,7 @@ module attributes {
   // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!cir.int<u, 40>>
   // CHECK:   cir.store %arg0, %[[SLOT]] : !cir.int<u, 40>, !cir.ptr<!cir.int<u, 40>>
   // CHECK:   %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!cir.int<u, 40>> -> !cir.ptr<!rec_FiveShort>
-  // CHECK:   %{{.+}} = cir.load %[[VIEW]] : !cir.ptr<!rec_FiveShort>, !rec_FiveShort
+  // CHECK-NEXT:   cir.return
 
   // The caller allocates the slot the other way round, as the record, and
   // reads the register out through a view of it.
@@ -51,8 +51,9 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func{{.*}} @call_five_short(%arg0: !cir.int<u, 40>)
+  // CHECK:   %[[IN:.*]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.int<u, 40>> -> !cir.ptr<!rec_FiveShort>
   // CHECK:   %[[OUT:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_FiveShort>
-  // CHECK:   cir.store %{{.+}}, %[[OUT]] : !rec_FiveShort, !cir.ptr<!rec_FiveShort>
+  // CHECK:   cir.copy %[[IN]] align(8) to %[[OUT]] align(1) : !cir.ptr<!rec_FiveShort>
   // CHECK:   %[[OUTVIEW:.*]] = cir.cast bitcast %[[OUT]] : !cir.ptr<!rec_FiveShort> -> !cir.ptr<!cir.int<u, 40>>
   // CHECK:   %[[REG:.*]] = cir.load %[[OUTVIEW]] : !cir.ptr<!cir.int<u, 40>>, !cir.int<u, 40>
   // CHECK:   cir.call @take_five_short(%[[REG]]) : (!cir.int<u, 40>) -> ()
@@ -64,22 +65,21 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func{{.*}} @take_nine(%arg0: !u64i, %arg1: !s8i)
-  // CHECK:   %[[RECSLOT:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_anon_struct>
   // CHECK:   %[[TUPLE:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_anon_struct>
   // CHECK:   %[[LO:.*]] = cir.get_member %[[TUPLE]][0]{{.*}}-> !cir.ptr<!u64i>
   // CHECK:   cir.store %arg0, %[[LO]] : !u64i, !cir.ptr<!u64i>
   // CHECK:   %[[HI:.*]] = cir.get_member %[[TUPLE]][1]{{.*}}-> !cir.ptr<!s8i>
   // CHECK:   cir.store %arg1, %[[HI]] : !s8i, !cir.ptr<!s8i>
-  // CHECK:   %{{.+}} = cir.cast bitcast %[[RECSLOT]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_Nine>
+  // CHECK:   %{{.+}} = cir.cast bitcast %[[TUPLE]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_Nine>
 
-  // A packed record the caller must destroy takes byref rather than byval, and
-  // byref keeps the record's declared alignment where byval would raise it to
-  // the ABI minimum of 8.
+  // A packed record the caller must destroy takes the non-byval form rather
+  // than byval, which keeps the record's declared alignment where byval would
+  // raise it to the ABI minimum of 8.
   cir.func @take_p(%arg0: !rec_P) {
     cir.return
   }
 
-  // CHECK-LABEL: cir.func{{.*}} @take_p(%arg0: !cir.ptr<!rec_P> {llvm.align = 1 : i64, llvm.byref = !rec_P})
+  // CHECK-LABEL: cir.func{{.*}} @take_p(%arg0: !cir.ptr<!rec_P> {llvm.align = 1 : i64, llvm.dereferenceable = 5 : i64, llvm.nofreeobj, llvm.noundef})
 
   // A union coerces through the same one-register path as FiveShort.
   cir.func @take_upacked(%arg0: !rec_UPacked) {

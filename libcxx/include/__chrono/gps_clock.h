@@ -51,11 +51,10 @@ public:
   // The static difference between UTC and GPS time as specified in the Standard.
   static constexpr chrono::seconds __offset{315964809};
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static time_point now() { return from_utc(utc_clock::now()); }
+  [[nodiscard]] static time_point now() { return from_utc(utc_clock::now()); }
 
   template <class _Duration>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static utc_time<common_type_t<_Duration, seconds>>
-  to_utc(const gps_time<_Duration>& __time) noexcept {
+  [[nodiscard]] static utc_time<common_type_t<_Duration, seconds>> to_utc(const gps_time<_Duration>& __time) noexcept {
     using _Rp                    = common_type_t<_Duration, seconds>;
     _Duration __time_since_epoch = __time.time_since_epoch();
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__time_since_epoch >= utc_time<_Rp>::min().time_since_epoch() + __offset,
@@ -65,7 +64,7 @@ public:
   }
 
   template <class _Duration>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static gps_time<common_type_t<_Duration, seconds>>
+  [[nodiscard]] static gps_time<common_type_t<_Duration, seconds>>
   from_utc(const utc_time<_Duration>& __time) noexcept {
     using _Rp                    = common_type_t<_Duration, seconds>;
     _Duration __time_since_epoch = __time.time_since_epoch();

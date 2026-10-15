@@ -27,6 +27,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 
 namespace llvm {
 namespace orc {
@@ -42,6 +43,13 @@ enum class SimpleRemoteEPCOpcode : uint8_t {
   Result,
   CallWrapper,
   LastOpC = CallWrapper
+};
+
+/// Result message kind: either a value, or an out-of-band error.
+enum class SimpleRemoteEPCResultKind : uint64_t {
+  Value,
+  OutOfBandError,
+  LastResultKind = OutOfBandError
 };
 
 struct SimpleRemoteEPCExecutorInfo {
@@ -66,6 +74,28 @@ LLVM_ABI shared::WrapperFunctionBuffer encodeHangupPayload(Error Err);
 /// outcomes end the session with an error; they are distinguished only by the
 /// message.
 LLVM_ABI Error decodeHangupPayload(shared::WrapperFunctionBuffer Payload);
+
+/// Encode a wrapper function result as the TagAddr and payload of a Result
+/// message.
+///
+/// An ordinary result travels as its own bytes. An out-of-band error -- which
+/// reports a failure of the wrapper machinery itself, rather than one the
+/// wrapper chose to report -- has no bytes of its own, so its message is
+/// serialized into the payload and the result is tagged OutOfBandError instead.
+LLVM_ABI std::pair<ExecutorAddr, shared::WrapperFunctionBuffer>
+encodeResultMessage(shared::WrapperFunctionBuffer ResultBytes);
+
+/// Decode a Result message produced by encodeResultMessage, returning the
+/// result to complete the pending call with.
+///
+/// Returns an Error if TagAddr does not name a known result kind: like an
+/// unrecognized opcode, that means the peer is speaking a dialect this build
+/// does not know, so the session cannot safely continue. A payload that will
+/// not decode is not fatal by contrast -- it comes back as an out-of-band error
+/// describing itself, so the call waiting on it is still unblocked.
+LLVM_ABI Expected<shared::WrapperFunctionBuffer>
+decodeResultMessage(ExecutorAddr TagAddr,
+                    shared::WrapperFunctionBuffer Payload);
 
 class LLVM_ABI SimpleRemoteEPCTransportClient {
 public:
@@ -155,68 +185,13 @@ private:
   std::atomic<bool> Disconnected{false};
 };
 
-struct RemoteSymbolLookupSetElement {
-  std::string Name;
-  bool Required;
-};
-
-using RemoteSymbolLookupSet = std::vector<RemoteSymbolLookupSetElement>;
-
-struct RemoteSymbolLookup {
-  uint64_t H;
-  RemoteSymbolLookupSet Symbols;
-};
-
 namespace shared {
-
-using SPSRemoteSymbolLookupSetElement = SPSTuple<SPSString, bool>;
-
-using SPSRemoteSymbolLookupSet = SPSSequence<SPSRemoteSymbolLookupSetElement>;
-
-using SPSRemoteSymbolLookup = SPSTuple<uint64_t, SPSRemoteSymbolLookupSet>;
 
 /// Tuple containing target triple, page size, and bootstrap symbols.
 using SPSSimpleRemoteEPCExecutorInfo =
     SPSTuple<SPSString, uint64_t,
              SPSSequence<SPSTuple<SPSString, SPSSequence<char>>>,
              SPSSequence<SPSTuple<SPSString, SPSExecutorAddr>>>;
-
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookupSetElement,
-                             RemoteSymbolLookupSetElement> {
-public:
-  static size_t size(const RemoteSymbolLookupSetElement &V) {
-    return SPSArgList<SPSString, bool>::size(V.Name, V.Required);
-  }
-
-  static size_t serialize(SPSOutputBuffer &OB,
-                          const RemoteSymbolLookupSetElement &V) {
-    return SPSArgList<SPSString, bool>::serialize(OB, V.Name, V.Required);
-  }
-
-  static size_t deserialize(SPSInputBuffer &IB,
-                            RemoteSymbolLookupSetElement &V) {
-    return SPSArgList<SPSString, bool>::deserialize(IB, V.Name, V.Required);
-  }
-};
-
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookup, RemoteSymbolLookup> {
-public:
-  static size_t size(const RemoteSymbolLookup &V) {
-    return SPSArgList<uint64_t, SPSRemoteSymbolLookupSet>::size(V.H, V.Symbols);
-  }
-
-  static size_t serialize(SPSOutputBuffer &OB, const RemoteSymbolLookup &V) {
-    return SPSArgList<uint64_t, SPSRemoteSymbolLookupSet>::serialize(OB, V.H,
-                                                                     V.Symbols);
-  }
-
-  static size_t deserialize(SPSInputBuffer &IB, RemoteSymbolLookup &V) {
-    return SPSArgList<uint64_t, SPSRemoteSymbolLookupSet>::deserialize(
-        IB, V.H, V.Symbols);
-  }
-};
 
 template <>
 class SPSSerializationTraits<SPSSimpleRemoteEPCExecutorInfo,
@@ -238,13 +213,6 @@ public:
         IB, SI.TargetTriple, SI.PageSize, SI.BootstrapMap, SI.BootstrapSymbols);
   }
 };
-
-using SPSLoadDylibSignature = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr,
-                                                           SPSString, uint64_t);
-
-using SPSLookupSymbolsSignature =
-    SPSExpected<SPSSequence<SPSSequence<SPSExecutorAddr>>>(
-        SPSExecutorAddr, SPSSequence<SPSRemoteSymbolLookup>);
 
 } // end namespace shared
 } // end namespace orc

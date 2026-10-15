@@ -70,12 +70,12 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.conta
 
 // Already present in the GPU module with linkonce; reuse as-is.
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module} {
-  fir.global linkonce @_QQclXlit {acc.declare = #acc.declare<dataClause = acc_copyin>} constant : !fir.char<1,3> {
+  fir.global linkonce @some_constant {acc.declare = #acc.declare<dataClause = acc_copyin>} constant : !fir.char<1,3> {
     %0 = fir.string_lit "abc"(3) : !fir.char<1,3>
     fir.has_value %0 : !fir.char<1,3>
   }
   gpu.module @acc_gpu_module {
-    fir.global linkonce @_QQclXlit constant : !fir.char<1,3> {
+    fir.global linkonce @some_constant constant : !fir.char<1,3> {
       %0 = fir.string_lit "abc"(3) : !fir.char<1,3>
       fir.has_value %0 : !fir.char<1,3>
     }
@@ -83,5 +83,21 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.conta
 }
 
 // CHECK-LABEL: gpu.module @acc_gpu_module {
-// CHECK: fir.global linkonce @_QQclXlit {acc.declare = #acc.declare<dataClause = acc_copyin>} constant : !fir.char<1,3> {
+// CHECK: fir.global linkonce @some_constant {acc.declare = #acc.declare<dataClause = acc_copyin>} constant : !fir.char<1,3> {
 // CHECK: fir.has_value
+
+// -----
+
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module} {
+  fir.global linkonce @_QMmod1EXdtXstruct {acc.declare = #acc.declare<dataClause = acc_copyin>} constant : !fir.char<1,3> {
+    %0 = fir.string_lit "abc"(3) : !fir.char<1,3>
+    fir.has_value %0 : !fir.char<1,3>
+  }
+  gpu.module @acc_gpu_module {
+  }
+}
+
+// CHECK-LABEL: gpu.module @acc_gpu_module
+// CHECK: _QMmod1EXdtXstruct
+// UNIFIED-NOT: fir.has_value
+// NOUNIF: fir.has_value

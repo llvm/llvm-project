@@ -25,6 +25,8 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
+#include <numeric>
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
@@ -427,6 +429,8 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     // value.
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
+        match(&R,
+              m_VPInstruction<VPInstruction::ConcatVectors>(m_VPValue(Op1))) ||
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||
         match(&R, m_LastActiveLane(m_VPValue(Op1))) ||
         match(&R, m_ComputeReductionResult(m_VPValue(Op1)))) {
@@ -484,6 +488,13 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
 
+    if (match(&R,
+              m_CombineOr(m_VPInstruction<VPInstruction::WideVectorLoad>(),
+                          m_VPInstruction<VPInstruction::WideVectorStore>()))) {
+      cast<VPInstruction>(&R)->setOperand(0, Plan.getConstantInt(64, UF));
+      continue;
+    }
+
     auto *SingleDef = dyn_cast<VPSingleDefRecipe>(&R);
     if (SingleDef && vputils::isUniformAcrossVFsAndUFs(SingleDef)) {
       addUniformForAllParts(SingleDef);
@@ -506,13 +517,12 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
     auto Iter = vp_depth_first_deep(Plan.getEntry());
     // Remove recipes that are redundant after unrolling.
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
-      for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-        auto *VPI = dyn_cast<VPInstruction>(&R);
-        if (VPI &&
-            VPI->getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
-            VPI->getOperand(1) == &Plan.getVF()) {
-          VPI->replaceAllUsesWith(VPI->getOperand(0));
-          VPI->eraseFromParent();
+      for (VPInstruction &VPI :
+           make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
+        if (VPI.getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
+            VPI.getOperand(1) == &Plan.getVF()) {
+          VPI.replaceAllUsesWith(VPI.getOperand(0));
+          VPI.eraseFromParent();
         }
       }
     }
@@ -638,12 +648,6 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       continue;
     }
 
-    // Look through buildvector to avoid unnecessary extracts.
-    if (match(Op, m_BuildVector())) {
-      NewOps.push_back(
-          cast<VPInstruction>(Op)->getOperand(Lane.getKnownLane()));
-      continue;
-    }
     VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
     VPValue *Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
     NewOps.push_back(Ext);
@@ -656,7 +660,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     // Mask from the operands?)
     New = VPBuilder::createSingleScalarOp(
         RepR->getOpcode(), NewOps, /*Mask=*/nullptr, *RepR, *RepR,
-        RepR->getDebugLoc(), RepR->getUnderlyingInstr());
+        RepR->getDebugLoc(), RepR->getScalarType(), RepR->getUnderlyingInstr());
   } else {
     New = DefR->clone();
     for (const auto &[Idx, Op] : enumerate(NewOps)) {
@@ -671,6 +675,24 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
   }
   New->insertBefore(DefR);
   return New;
+}
+
+/// Converts the frequency \p Freq with which a block is entered to branch
+/// weights for the branch guarding it, or nullptr if \p Freq is unknown or
+/// estimated.
+static MDNode *
+convertFrequencyToBranchWeights(std::optional<VPExecutionFrequency> Freq,
+                                LLVMContext &Ctx) {
+  if (!Freq || Freq->IsEstimated)
+    return nullptr;
+  BranchProbability P = vputils::getExecutionProbability(Freq->Freq);
+
+  // Use the numerators of P and its complement as weights and reduce them via
+  // gcd to keep them small. Neither is zero, as P is neither zero nor one.
+  uint32_t Taken = P.getNumerator();
+  uint32_t NotTaken = P.getCompl().getNumerator();
+  uint32_t GCD = std::gcd(Taken, NotTaken);
+  return MDBuilder(Ctx).createBranchWeights(Taken / GCD, NotTaken / GCD);
 }
 
 /// Convert recipes in region blocks to operate on a single lane 0.
@@ -717,13 +739,18 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(&OldR)) {
         auto *NewR = VPBuilder::createSingleScalarOp(
             RepR->getOpcode(), to_vector(RepR->operands()), /*Mask=*/nullptr,
-            *RepR, *RepR, OldDL, RepR->getUnderlyingInstr());
+            *RepR, *RepR, OldDL, RepR->getScalarType(),
+            RepR->getUnderlyingInstr());
         NewR->insertBefore(RepR);
         RepR->replaceAllUsesWith(NewR);
         RepR->eraseFromParent();
       } else if (auto *BranchOnMask = dyn_cast<VPBranchOnMaskRecipe>(&OldR)) {
-        Builder.createNaryOp(VPInstruction::BranchOnCond,
-                             {BranchOnMask->getOperand(0)}, OldDL);
+        // Turn the frequency of the predicated block into branch weights.
+        auto *BOC = Builder.createNaryOp(VPInstruction::BranchOnCond,
+                                         {BranchOnMask->getOperand(0)}, OldDL);
+        if (MDNode *Weights = convertFrequencyToBranchWeights(
+                BranchOnMask->getExecutionFrequency(), Plan.getContext()))
+          BOC->setMetadata(LLVMContext::MD_prof, Weights);
         BranchOnMask->eraseFromParent();
       } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
         VPValue *PredOp = PredPhi->getOperand(0);
@@ -777,8 +804,7 @@ static void processLaneForReplicateRegion(VPlan &Plan, Type *IdxTy,
         assert(vputils::onlyFirstLaneUsed(OldPhi) &&
                "VPPhis expected to have only first lane used");
         auto *BVUser = dyn_cast_or_null<VPInstruction>(OldPhi->getSingleUser());
-        if (BVUser && match(BVUser, m_CombineOr(m_BuildVector(),
-                                                m_BuildStructVector()))) {
+        if (BVUser && match(BVUser, m_BuildVector())) {
           assert(BVUser->getOperand(0) == OldPhi &&
                  "Unexpected first operand of build vector user");
           BVUser->setOperand(Lane, NewPhi);
@@ -819,12 +845,12 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
     return;
   }
 
-  // Create a BuildVector or BuildStructVector in successor block for every
-  // VPPhi in (first lane's) exiting block having vector uses. All their
+  // Create a BuildVector in successor block for every VPPhi in (first lane's)
+  // exiting block having vector uses. All their
   // operands are initialized to poison and will be replaced when processing
   // each clone, except for the operand of the first lane which set here.
   // BuildVectors are recorded to be replaced later by chains of insert-element
-  // and widen phi's.
+  // and widen phis.
   unsigned NumLanes = VF.getFixedValue();
   SmallVector<VPInstruction *> BuildVectors;
   for (auto &R : FirstLaneExiting->phis()) {
@@ -833,14 +859,10 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
       continue;
 
     Type *ScalarTy = Phi->getScalarType();
-    bool IsStruct = isa<StructType>(ScalarTy);
     VPValue *Poison = Plan.getPoison(ScalarTy);
     SmallVector<VPValue *> BVOps(NumLanes, Poison);
-    auto *BV = new VPInstruction(IsStruct ? VPInstruction::BuildStructVector
-                                          : VPInstruction::BuildVector,
-                                 BVOps);
-    if (!IsStruct)
-      BuildVectors.push_back(BV);
+    auto *BV = new VPInstruction(VPInstruction::BuildVector, BVOps);
+    BuildVectors.push_back(BV);
     Phi->replaceAllUsesWith(BV);
     BV->setOperand(0, Phi);
     BV->insertBefore(*Successor, Successor->getFirstNonPhi());
@@ -943,7 +965,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   DenseMap<VPValue *, SmallVector<VPValue *>> Def2LaneDefs;
   // The removal of current recipes being replaced by new ones needs to be
   // delayed after Def2LaneDefs is no longer in use.
-  SmallVector<VPRecipeBase *> ToRemove;
+  SmallVector<VPSingleDefRecipe *> ToRemove;
   for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!vputils::doesGeneratePerAllLanes(&R))
@@ -965,34 +987,36 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
             cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs));
 
       Def2LaneDefs[DefR] = LaneDefs;
+      // Pack the lanes for vector users.
+      if (!vputils::onlyScalarValuesUsed(DefR)) {
+        DefR->replaceUsesWithIf(
+            Builder.createNaryOp(VPInstruction::BuildVector, LaneDefs),
+            [DefR](VPUser *U) { return !U->usesScalars(DefR); });
+      }
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
-      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
-        if (U.usesFirstLaneOnly(DefR))
+      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser *U) {
+        if (U->usesFirstLaneOnly(DefR))
           return true;
-        auto *VPI = dyn_cast<VPInstructionWithType>(&U);
+        auto *VPI = dyn_cast<VPInstruction>(U);
         return VPI && Instruction::isCast(VPI->getOpcode());
       });
-
-      // Update each build vector user that currently has DefR as its only
-      // operand, to have all LaneDefs as its operands.
-      for (VPUser *U : to_vector(DefR->users())) {
-        auto *VPI = dyn_cast<VPInstruction>(U);
-        if (!VPI || (VPI->getOpcode() != VPInstruction::BuildVector &&
-                     VPI->getOpcode() != VPInstruction::BuildStructVector))
-          continue;
-        assert(VPI->getNumOperands() == 1 &&
-               "Build(Struct)Vector must have a single operand before "
-               "replicating by VF");
-        VPI->setOperand(0, LaneDefs[0]);
-        for (VPValue *LaneDef : drop_begin(LaneDefs))
-          VPI->addOperand(LaneDef);
-      }
       ToRemove.push_back(DefR);
     }
   }
-  for (auto *R : reverse(ToRemove))
-    R->eraseFromParent();
 
   replicateReplicateRegionsByVF(Plan, VF, IdxTy);
+  // Replace the lane extracts created when dissolving replicate regions.
+  for (VPSingleDefRecipe *DefR : reverse(ToRemove)) {
+    for (VPUser *U : to_vector(DefR->users())) {
+      uint64_t Lane;
+      [[maybe_unused]] bool Match =
+          match(U, m_ExtractElement(m_Specific(DefR), m_ConstantInt(Lane)));
+      assert(Match && "unexpected remaining user");
+      auto *Ext = cast<VPInstruction>(U);
+      Ext->replaceAllUsesWith(Def2LaneDefs.at(DefR)[Lane]);
+      Ext->eraseFromParent();
+    }
+    DefR->eraseFromParent();
+  }
 }

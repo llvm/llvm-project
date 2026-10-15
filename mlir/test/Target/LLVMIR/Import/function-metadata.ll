@@ -1,5 +1,5 @@
-; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
-; RUN: mlir-translate -import-llvm -split-input-file %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
+; RUN: mlir-translate -import-llvm -split-input-file %s --verify-diagnostics | FileCheck %s
+; RUN: mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
 
 ; CHECK-LABEL: llvm.func @repeated_type_metadata
 ; CHECK-SAME: function_metadata
@@ -99,7 +99,7 @@ define void @ifunc_ref_metadata() !callees !0 {
 
 ; WARN: warning: unhandled function metadata:
 ; WARN-SAME: !{{[0-9]+}} = !{!"unknown", !"sample-pass"}
-; WARN-SAME: on define void @unknown_profile_metadata()
+; WARN-SAME: on @unknown_profile_metadata
 ; CHECK-LABEL: llvm.func @unknown_profile_metadata()
 ; CHECK-NOT: function_metadata
 ; CHECK: llvm.return
@@ -113,7 +113,7 @@ define void @unknown_profile_metadata() !prof !0 {
 
 ; WARN: warning: unhandled function metadata:
 ; WARN-SAME: !{{[0-9]+}} = distinct !{!"identity"}
-; WARN-SAME: on define void @distinct_metadata()
+; WARN-SAME: on @distinct_metadata
 ; CHECK-LABEL: llvm.func @distinct_metadata()
 ; CHECK-NOT: function_metadata
 ; CHECK: llvm.return
