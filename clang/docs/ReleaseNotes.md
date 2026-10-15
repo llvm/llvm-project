@@ -213,6 +213,10 @@ features cannot lower the translation-unit ABI level;
   them to an enumeration type with a fixed `bool` underlying type. This
   resolves [CWG1094](https://wg21.link/cwg1094).
 
+- Implemented [CWG2900](https://wg21.link/cwg2900), removing an ambiguity
+  when partial ordering constant template parameters declared
+  with placeholder types.
+
 ### C Language Changes
 
 #### C2y Feature Support
@@ -359,6 +363,43 @@ features cannot lower the translation-unit ABI level;
   `[[clang::unsafe_buffer_usage("container")]]`) to allow two-parameter container
   and view constructors and factory functions to opt in to
   `-Wunsafe-buffer-usage-in-container` diagnostics.
+
+- The thread safety attribute `lock_returned` (`RETURN_CAPABILITY`) can now be
+  applied to function pointers, like the other thread safety function
+  attributes:
+
+  ```c
+  struct Ops {
+    struct Mutex *(*lock_of)(struct Dev *d) RETURN_CAPABILITY(&d->lock);
+  };
+  ```
+
+- Under `-fexperimental-late-parse-attributes`, the thread safety capability
+  attributes (`requires_capability`, `acquire_capability`,
+  `release_capability`, `assert_capability`, `try_acquire_capability`,
+  `locks_excluded` and `lock_returned`) are now late parsed, as `guarded_by`
+  and `pt_guarded_by` already were, so a requirement may name a member declared
+  later in the same record:
+
+  ```c++
+  struct Cache {
+    void (*read)(void) REQUIRES(mu);   // 'mu' declared below
+    Mutex mu;
+  };
+  ```
+
+  and a requirement on a parameter may name another parameter of the same
+  prototype, declared later:
+
+  ```c++
+  int kref_put_lock(struct kref *kref,
+                    void (*release)(struct kref *) RELEASE(lock),
+                    spinlock_t *lock);
+  ```
+
+  A requirement naming a parameter of the pointee, such as
+  `void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)`, keeps
+  working. Without the flag both forward references remain errors.
 
 ### Improvements to Clang's diagnostics
 
@@ -686,6 +727,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
 - Clang no longer treats a file-scope `thread_local` declaration without an initializer as a tentative definition in C23 mode. As specified by C23 6.9.3, such a declaration is a definition, so declaring the same variable more that once is now diagnosed as a redefinition. (#GH217636)
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
+- Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
+- Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -713,6 +756,15 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when `__builtin_object_size` or
   `__builtin_dynamic_object_size` is called with an out-of-range type argument
   during constant evaluation. (#GH225041)
+- Fixed an assertion failure when constant-evaluating `__builtin_object_size`
+  or `__builtin_dynamic_object_size` with a type argument that is not an
+  integer constant expression. (#GH231108)
+
+- `__has_unique_object_representations` now returns `true` for `_Atomic` types
+  whose object representation is identical to that of their value type, such
+  as `_Atomic(int)`. Atomic types whose size is rounded up to a power of two
+  (adding padding bits) continue to report `false`. This also fixes a false
+  positive in the `bugprone-suspicious-memory-comparison` clang-tidy check.
 
 #### Bug Fixes to Attribute Support
 
@@ -1119,6 +1171,8 @@ features cannot lower the translation-unit ABI level;
   virtual function that could not be optimised out would cause the program to
   fail to assemble. This is now fixed. (#GH49183) (#GH67533)
 
+- External CUDA kernel declarations now use the correct calling convention. (#GH118212)
+
 #### AIX Support
 
 #### NetBSD Support
@@ -1204,6 +1258,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 (release-notes-sanitizers)=
 
 ### Sanitizers
+
+- Added the `typefunchash` and `typefunchashpointersplit` token assignment
+  modes for `-fsanitize=alloc-token`, selected with
+  `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both
+  the allocated type and the name of the function containing the allocation.
 
 ### Python Binding Changes
 

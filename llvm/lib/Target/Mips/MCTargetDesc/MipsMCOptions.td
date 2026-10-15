@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def MipsMCOptions : OptionsStruct<prefix = "mips-">;
+def MipsMCOptions : OptionsStruct<prefix = "mips-", perContext = false>;
 
 // MCTargetDesc/MipsABIInfo.cpp
 defm : BoolField<"mips-jalr-reloc", "true",

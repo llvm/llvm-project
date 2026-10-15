@@ -250,10 +250,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       // to fsub, causing a libcall (which doesn't exist for bf16). Instead,
       // directly expand to widened v2bf16 operations.
       setOperationAction(ISD::FSUB, MVT::bf16, Custom);
+      setOperationAction({ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}, MVT::bf16,
+                         Promote);
       // Promote scalar operations to a v2bf16 operation with an unused high
       // lane.
-      for (unsigned Opc : {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMAXNUM,
-                           ISD::FMINNUM, ISD::FCANONICALIZE})
+      for (unsigned Opc :
+           {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMAXNUM, ISD::FMINNUM,
+            ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FCANONICALIZE})
         AddPromotedToType(Opc, MVT::bf16, MVT::v2bf16);
     }
 
@@ -19945,6 +19948,13 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   if (TII->isVOP3(MI.getOpcode())) {
     // Make sure constant bus requirements are respected.
     TII->legalizeOperandsVOP3(MRI, MI);
+
+    // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
+    if (MI.getOpcode() == AMDGPU::V_PK_FMA_F32 &&
+        !TII->isLegalPkFMAF32OpSel(MI)) {
+      TII->decomposePkFMAF32(MI, MRI);
+      return;
+    }
 
     if (TII->isMAI(MI)) {
       // The ordinary src0, src1, src2 were legalized above.
