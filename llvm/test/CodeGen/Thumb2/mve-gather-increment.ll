@@ -610,30 +610,32 @@ define arm_aapcs_vfpcc void @gather_inc_v8i16_simple(ptr noalias nocapture reado
 ; CHECK-NEXT:    .pad #28
 ; CHECK-NEXT:    sub sp, #28
 ; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    strd r1, r2, [sp, #4] @ 8-byte Folded Spill
+; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    blt .LBB14_5
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph.preheader
-; CHECK-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    movs r6, #1
-; CHECK-NEXT:    add r2, sp, #12
-; CHECK-NEXT:    mov.w r9, #8
-; CHECK-NEXT:    bic r1, r1, #7
-; CHECK-NEXT:    str r1, [sp] @ 4-byte Spill
+; CHECK-NEXT:    bic r1, r2, #7
+; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    sub.w r3, r1, #8
-; CHECK-NEXT:    add.w r8, r6, r3, lsr #3
+; CHECK-NEXT:    movs r6, #1
+; CHECK-NEXT:    mov r11, r2
+; CHECK-NEXT:    add r2, sp, #12
+; CHECK-NEXT:    add.w r1, r6, r3, lsr #3
 ; CHECK-NEXT:    adr r3, .LCPI14_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
+; CHECK-NEXT:    mov.w r9, #8
+; CHECK-NEXT:    str r1, [sp] @ 4-byte Spill
 ; CHECK-NEXT:  .LBB14_2: @ %vector.ph
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB14_3 Depth 2
-; CHECK-NEXT:    dls lr, r8
+; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    dls lr, r1
+; CHECK-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:  .LBB14_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB14_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vstrw.32 q1, [r2]
-; CHECK-NEXT:    mov r12, r2
+; CHECK-NEXT:    mov r8, r2
 ; CHECK-NEXT:    vldrh.s32 q2, [r2, #8]
 ; CHECK-NEXT:    vadd.i16 q1, q1, r9
 ; CHECK-NEXT:    vshl.i32 q2, q2, #1
@@ -649,15 +651,15 @@ define arm_aapcs_vfpcc void @gather_inc_v8i16_simple(ptr noalias nocapture reado
 ; CHECK-NEXT:    ldrh r5, [r5]
 ; CHECK-NEXT:    ldrh.w r2, [r10]
 ; CHECK-NEXT:    ldrh.w r10, [r3]
-; CHECK-NEXT:    vmov r3, r11, d4
+; CHECK-NEXT:    vmov r3, r12, d4
 ; CHECK-NEXT:    ldrh r1, [r1]
 ; CHECK-NEXT:    ldrh r3, [r3]
-; CHECK-NEXT:    ldrh.w r11, [r11]
+; CHECK-NEXT:    ldrh.w r12, [r12]
 ; CHECK-NEXT:    vmov.16 q2[0], r3
-; CHECK-NEXT:    vmov.16 q2[1], r11
+; CHECK-NEXT:    vmov.16 q2[1], r12
 ; CHECK-NEXT:    vmov.16 q2[2], r1
 ; CHECK-NEXT:    vmov.16 q2[3], r2
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    mov r2, r8
 ; CHECK-NEXT:    vmov.16 q2[4], r10
 ; CHECK-NEXT:    vmov.16 q2[5], r4
 ; CHECK-NEXT:    vmov.16 q2[6], r7
@@ -666,9 +668,8 @@ define arm_aapcs_vfpcc void @gather_inc_v8i16_simple(ptr noalias nocapture reado
 ; CHECK-NEXT:    le lr, .LBB14_3
 ; CHECK-NEXT:  @ %bb.4: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB14_2 Depth=1
-; CHECK-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    ldr r3, [sp] @ 4-byte Reload
-; CHECK-NEXT:    cmp r3, r1
+; CHECK-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    cmp r1, r11
 ; CHECK-NEXT:    bne .LBB14_2
 ; CHECK-NEXT:  .LBB14_5: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #28
@@ -942,8 +943,8 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #240
-; CHECK-NEXT:    sub sp, #240
+; CHECK-NEXT:    .pad #256
+; CHECK-NEXT:    sub sp, #256
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    str r1, [sp, #56] @ 4-byte Spill
 ; CHECK-NEXT:    blt.w .LBB16_5
@@ -965,9 +966,9 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    ldr.w r10, [sp, #56] @ 4-byte Reload
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    adr r1, .LCPI16_9
-; CHECK-NEXT:    vldrw.u32 q5, [r1]
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
 ; CHECK-NEXT:    adr r1, .LCPI16_5
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
+; CHECK-NEXT:    vldrw.u32 q5, [r1]
 ; CHECK-NEXT:    adr r1, .LCPI16_6
 ; CHECK-NEXT:    vldrw.u32 q2, [r1]
 ; CHECK-NEXT:    adr r1, .LCPI16_3
@@ -975,36 +976,42 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    adr r1, .LCPI16_4
 ; CHECK-NEXT:    vldrw.u32 q6, [r1]
 ; CHECK-NEXT:    adr r1, .LCPI16_2
-; CHECK-NEXT:    vstrw.32 q0, [sp, #144] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q0, [sp, #192] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    adr r1, .LCPI16_10
 ; CHECK-NEXT:    bic r12, r2, #7
-; CHECK-NEXT:    vstrw.32 q0, [sp, #208] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q0, [sp, #224] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    adr r1, .LCPI16_11
 ; CHECK-NEXT:    str.w r12, [sp, #60] @ 4-byte Spill
-; CHECK-NEXT:    vstrw.32 q0, [sp, #224] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q0, [sp, #240] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vstrw.32 q0, [sp, #208] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q0, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vldrw.u32 q7, [r1]
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #160] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q0, [sp] @ 16-byte Reload
-; CHECK-NEXT:    vstrw.32 q0, [sp, #128] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q0, [sp, #144] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q0, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    vstrw.32 q0, [sp, #112] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q0, [sp, #128] @ 16-byte Spill
 ; CHECK-NEXT:  .LBB16_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB16_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vstrw.32 q1, [sp, #192] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q1, [sp, #176] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q6, [sp, #96] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [sp, #176] @ 16-byte Reload
+; CHECK-NEXT:    vmov q6, q5
+; CHECK-NEXT:    vmov q5, q3
 ; CHECK-NEXT:    vadd.i32 q3, q2, r0
-; CHECK-NEXT:    vldrw.u32 q0, [sp, #192] @ 16-byte Reload
-; CHECK-NEXT:    vmov r2, r8, d6
-; CHECK-NEXT:    vstrw.32 q2, [sp, #96] @ 16-byte Spill
-; CHECK-NEXT:    vstrw.32 q6, [sp, #176] @ 16-byte Spill
 ; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vadd.i32 q0, q7, r0
+; CHECK-NEXT:    vmov r2, r8, d6
 ; CHECK-NEXT:    vmov r7, r6, d3
-; CHECK-NEXT:    vstrw.32 q4, [sp, #64] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [sp, #208] @ 16-byte Reload
+; CHECK-NEXT:    vstrw.32 q2, [sp, #112] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q6, [sp, #64] @ 16-byte Spill
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
+; CHECK-NEXT:    vldrw.u32 q7, [sp, #160] @ 16-byte Reload
 ; CHECK-NEXT:    vmov r1, r5, d1
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #128] @ 16-byte Reload
 ; CHECK-NEXT:    vstrw.32 q5, [sp, #80] @ 16-byte Spill
 ; CHECK-NEXT:    subs.w r12, r12, #16
 ; CHECK-NEXT:    ldrb r4, [r6]
@@ -1019,7 +1026,7 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    ldrb r7, [r5]
 ; CHECK-NEXT:    vmov.8 q0[2], r1
 ; CHECK-NEXT:    vmov r1, r2, d2
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #208] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #224] @ 16-byte Reload
 ; CHECK-NEXT:    vmov.8 q0[3], r7
 ; CHECK-NEXT:    vadd.i32 q2, q1, r0
 ; CHECK-NEXT:    ldrb r1, [r1]
@@ -1034,12 +1041,12 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    vmov.8 q1[5], r3
 ; CHECK-NEXT:    ldrb.w r9, [r1]
 ; CHECK-NEXT:    vmov r1, lr, d5
-; CHECK-NEXT:    vldrw.u32 q2, [sp, #224] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q2, [sp, #240] @ 16-byte Reload
 ; CHECK-NEXT:    vadd.i32 q2, q2, r0
 ; CHECK-NEXT:    ldrb.w r11, [r1]
 ; CHECK-NEXT:    vmov r1, r2, d7
-; CHECK-NEXT:    vldrw.u32 q3, [sp, #144] @ 16-byte Reload
-; CHECK-NEXT:    vmov q6, q3
+; CHECK-NEXT:    vmov q3, q6
+; CHECK-NEXT:    vldrw.u32 q6, [sp, #96] @ 16-byte Reload
 ; CHECK-NEXT:    ldrb r1, [r1]
 ; CHECK-NEXT:    ldrb r2, [r2]
 ; CHECK-NEXT:    vmov.8 q1[6], r1
@@ -1052,7 +1059,7 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    vadd.i32 q2, q5, r0
 ; CHECK-NEXT:    vmov.8 q0[5], r3
 ; CHECK-NEXT:    vmov r3, r4, d4
-; CHECK-NEXT:    vldrw.u32 q5, [sp, #112] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q5, [sp, #208] @ 16-byte Reload
 ; CHECK-NEXT:    ldrb r1, [r1]
 ; CHECK-NEXT:    ldrb r2, [r2]
 ; CHECK-NEXT:    vmov.8 q0[6], r1
@@ -1061,7 +1068,7 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    ldrb r2, [r4]
 ; CHECK-NEXT:    vmov.8 q0[8], r1
 ; CHECK-NEXT:    vmov r1, r8, d5
-; CHECK-NEXT:    vadd.i32 q2, q4, r0
+; CHECK-NEXT:    vadd.i32 q2, q3, r0
 ; CHECK-NEXT:    vmov.8 q0[9], r9
 ; CHECK-NEXT:    vmov r4, r5, d4
 ; CHECK-NEXT:    ldrb.w r7, [lr]
@@ -1069,9 +1076,8 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    ldrb r3, [r3]
 ; CHECK-NEXT:    vmov.8 q0[11], r7
 ; CHECK-NEXT:    vmov r7, r6, d5
-; CHECK-NEXT:    vldrw.u32 q2, [sp, #176] @ 16-byte Reload
-; CHECK-NEXT:    vldrw.u32 q4, [sp, #128] @ 16-byte Reload
-; CHECK-NEXT:    vadd.i32 q2, q2, r0
+; CHECK-NEXT:    vadd.i32 q2, q6, r0
+; CHECK-NEXT:    vldrw.u32 q3, [sp, #144] @ 16-byte Reload
 ; CHECK-NEXT:    ldrb r1, [r1]
 ; CHECK-NEXT:    ldrb r4, [r4]
 ; CHECK-NEXT:    ldrb r5, [r5]
@@ -1090,22 +1096,22 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    ldrb r1, [r2]
 ; CHECK-NEXT:    vmov.8 q0[13], r1
 ; CHECK-NEXT:    vmov r1, r2, d5
-; CHECK-NEXT:    vadd.i32 q2, q3, r0
-; CHECK-NEXT:    vldrw.u32 q3, [sp, #160] @ 16-byte Reload
 ; CHECK-NEXT:    ldrb r1, [r1]
 ; CHECK-NEXT:    vmov.8 q0[14], r1
 ; CHECK-NEXT:    ldrb r1, [r2]
 ; CHECK-NEXT:    vmov.8 q0[15], r1
 ; CHECK-NEXT:    ldrb.w r1, [r8]
 ; CHECK-NEXT:    vmov.8 q1[15], r1
-; CHECK-NEXT:    vmov r1, r2, d4
 ; CHECK-NEXT:    vadd.i8 q0, q1, q0
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #192] @ 16-byte Reload
+; CHECK-NEXT:    vadd.i32 q2, q1, r0
+; CHECK-NEXT:    vmov r1, r2, d4
 ; CHECK-NEXT:    ldrb r1, [r1]
 ; CHECK-NEXT:    ldrb r2, [r2]
 ; CHECK-NEXT:    vmov.8 q1[0], r1
 ; CHECK-NEXT:    vmov.8 q1[1], r2
 ; CHECK-NEXT:    vmov r1, r2, d5
-; CHECK-NEXT:    vadd.i32 q2, q3, r0
+; CHECK-NEXT:    vadd.i32 q2, q7, r0
 ; CHECK-NEXT:    ldrb r1, [r1]
 ; CHECK-NEXT:    vmov.8 q1[2], r1
 ; CHECK-NEXT:    ldrb r1, [r2]
@@ -1116,7 +1122,7 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    ldrb r1, [r2]
 ; CHECK-NEXT:    vmov.8 q1[5], r1
 ; CHECK-NEXT:    vmov r1, r2, d5
-; CHECK-NEXT:    vadd.i32 q2, q4, r0
+; CHECK-NEXT:    vadd.i32 q2, q3, r0
 ; CHECK-NEXT:    ldrb r1, [r1]
 ; CHECK-NEXT:    vmov.8 q1[6], r1
 ; CHECK-NEXT:    ldrb r1, [r2]
@@ -1127,7 +1133,7 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    ldrb r1, [r2]
 ; CHECK-NEXT:    vmov.8 q1[9], r1
 ; CHECK-NEXT:    vmov r1, r2, d5
-; CHECK-NEXT:    vadd.i32 q2, q5, r0
+; CHECK-NEXT:    vadd.i32 q2, q4, r0
 ; CHECK-NEXT:    ldrb r1, [r1]
 ; CHECK-NEXT:    vmov.8 q1[10], r1
 ; CHECK-NEXT:    ldrb r1, [r2]
@@ -1138,38 +1144,39 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    ldrb r1, [r2]
 ; CHECK-NEXT:    vmov.8 q1[13], r1
 ; CHECK-NEXT:    vmov r1, r2, d5
-; CHECK-NEXT:    vldrw.u32 q2, [sp, #96] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q2, [sp, #112] @ 16-byte Reload
 ; CHECK-NEXT:    ldrb r1, [r1]
 ; CHECK-NEXT:    vmov.8 q1[14], r1
 ; CHECK-NEXT:    ldrb r1, [r2]
 ; CHECK-NEXT:    vmov.8 q1[15], r1
 ; CHECK-NEXT:    vadd.i8 q0, q0, q1
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #192] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #176] @ 16-byte Reload
 ; CHECK-NEXT:    vstrb.8 q0, [r10], #16
 ; CHECK-NEXT:    vmov.i32 q0, #0x30
-; CHECK-NEXT:    vadd.i32 q6, q6, q0
-; CHECK-NEXT:    vadd.i32 q3, q3, q0
-; CHECK-NEXT:    vstrw.32 q6, [sp, #144] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q6, [sp, #224] @ 16-byte Reload
-; CHECK-NEXT:    vadd.i32 q4, q4, q0
 ; CHECK-NEXT:    vadd.i32 q5, q5, q0
-; CHECK-NEXT:    vadd.i32 q6, q6, q0
-; CHECK-NEXT:    vstrw.32 q3, [sp, #160] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q3, [sp, #208] @ 16-byte Reload
-; CHECK-NEXT:    vstrw.32 q6, [sp, #224] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q6, [sp, #176] @ 16-byte Reload
-; CHECK-NEXT:    vstrw.32 q4, [sp, #128] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q4, [sp, #64] @ 16-byte Reload
-; CHECK-NEXT:    vstrw.32 q5, [sp, #112] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q5, [sp, #80] @ 16-byte Reload
 ; CHECK-NEXT:    vadd.i32 q3, q3, q0
+; CHECK-NEXT:    vstrw.32 q5, [sp, #208] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q5, [sp, #192] @ 16-byte Reload
+; CHECK-NEXT:    vstrw.32 q3, [sp, #144] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q3, [sp, #80] @ 16-byte Reload
+; CHECK-NEXT:    vadd.i32 q5, q5, q0
 ; CHECK-NEXT:    vadd.i32 q7, q7, q0
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vadd.i32 q2, q2, q0
+; CHECK-NEXT:    vstrw.32 q5, [sp, #192] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q5, [sp, #240] @ 16-byte Reload
 ; CHECK-NEXT:    vadd.i32 q4, q4, q0
-; CHECK-NEXT:    vadd.i32 q6, q6, q0
+; CHECK-NEXT:    vadd.i32 q1, q1, q0
 ; CHECK-NEXT:    vadd.i32 q5, q5, q0
-; CHECK-NEXT:    vstrw.32 q3, [sp, #208] @ 16-byte Spill
+; CHECK-NEXT:    vadd.i32 q2, q2, q0
+; CHECK-NEXT:    vstrw.32 q5, [sp, #240] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q5, [sp, #224] @ 16-byte Reload
+; CHECK-NEXT:    vadd.i32 q6, q6, q0
+; CHECK-NEXT:    vadd.i32 q3, q3, q0
+; CHECK-NEXT:    vadd.i32 q5, q5, q0
+; CHECK-NEXT:    vstrw.32 q7, [sp, #160] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q5, [sp, #224] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q5, [sp, #64] @ 16-byte Reload
+; CHECK-NEXT:    vstrw.32 q4, [sp, #128] @ 16-byte Spill
+; CHECK-NEXT:    vadd.i32 q5, q5, q0
 ; CHECK-NEXT:    bne.w .LBB16_3
 ; CHECK-NEXT:  @ %bb.4: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB16_2 Depth=1
@@ -1178,7 +1185,7 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    cmp r1, r2
 ; CHECK-NEXT:    bne.w .LBB16_2
 ; CHECK-NEXT:  .LBB16_5: @ %for.cond.cleanup
-; CHECK-NEXT:    add sp, #240
+; CHECK-NEXT:    add sp, #256
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}

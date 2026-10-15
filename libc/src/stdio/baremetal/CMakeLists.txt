@@ -151,14 +151,15 @@ add_entrypoint_object(
     libc.src.stdio.baremetal.fgetc
 )
 
-add_entrypoint_object(
-  fflush
+add_object_library(
+  fflush_internal
   SRCS
-    fflush.cpp
+    fflush_internal.cpp
   HDRS
-    ../fflush.h
+    ../fflush_internal.h
   DEPENDS
-    .file_internal
+    libc.hdr.types.FILE
+    libc.src.__support.error_or
 )
 
 add_entrypoint_object(

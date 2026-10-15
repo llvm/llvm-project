@@ -36,7 +36,7 @@ entry:
   ret double %0
 
 ; BEFORE-FINALIZE-ISEL: test_setrnd
-; BEFORE-FINALIZE-ISEL: SETRND killed %1, implicit-def dead $rm, implicit $rm
+; BEFORE-FINALIZE-ISEL: SETRND %1, implicit-def dead $rm, implicit $rm
 
 ; AFTER-FINALIZE-ISEL: test_setrnd
 ; AFTER-FINALIZE-ISEL: MFFS implicit $rm

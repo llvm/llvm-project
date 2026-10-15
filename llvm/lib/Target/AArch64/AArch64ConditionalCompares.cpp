@@ -18,6 +18,7 @@
 
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
@@ -35,23 +36,12 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-ccmp"
-
-// Absolute maximum number of instructions allowed per speculated block.
-// This bypasses all other heuristics, so it should be set fairly high.
-static cl::opt<unsigned> BlockInstrLimit(
-    "aarch64-ccmp-limit", cl::init(30), cl::Hidden,
-    cl::desc("Maximum number of instructions per speculated block."));
-
-// Stress testing mode - disable heuristics.
-static cl::opt<bool> Stress("aarch64-stress-ccmp", cl::Hidden,
-                            cl::desc("Turn all knobs to 11"));
 
 STATISTIC(NumConsidered, "Number of ccmps considered");
 STATISTIC(NumPhiRejs, "Number of ccmps rejected (PHI)");
@@ -450,6 +440,8 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
     return false;
   }
 
+  const AArch64Options &CLOpts =
+      MF->getSubtarget<AArch64Subtarget>().getCLOpts();
   unsigned InstrCount = 0;
 
   // Check all instructions, except the terminators. It is assumed that
@@ -458,9 +450,9 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
     if (I.isDebugInstr())
       continue;
 
-    if (++InstrCount > BlockInstrLimit && !Stress) {
+    if (++InstrCount > CLOpts.ccmp_limit && !CLOpts.stress_ccmp) {
       LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has more than "
-                        << BlockInstrLimit << " instructions.\n");
+                        << CLOpts.ccmp_limit << " instructions.\n");
       return false;
     }
 
@@ -853,7 +845,7 @@ class AArch64ConditionalComparesImpl {
   const MachineBranchProbabilityInfo *MBPI;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
-  const TargetSubtargetInfo *STI;
+  const AArch64Subtarget *STI;
   // Does the proceeded function has Oz attribute.
   bool MinSize;
   MachineRegisterInfo *MRI;
@@ -957,7 +949,7 @@ void AArch64ConditionalComparesImpl::invalidateTraces() {
 ///
 bool AArch64ConditionalComparesImpl::shouldConvert() {
   // Stress testing mode disables all cost considerations.
-  if (Stress)
+  if (STI->getCLOpts().stress_ccmp)
     return true;
   if (!MinInstr)
     MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
@@ -1037,7 +1029,7 @@ bool AArch64ConditionalComparesImpl::run(MachineFunction &MF) {
 
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  STI = &MF.getSubtarget();
+  STI = &MF.getSubtarget<AArch64Subtarget>();
   MRI = &MF.getRegInfo();
   MinInstr = nullptr;
   MinSize = MF.getFunction().hasMinSize();
