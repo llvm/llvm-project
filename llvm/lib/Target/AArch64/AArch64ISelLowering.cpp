@@ -25442,6 +25442,37 @@ static SDValue lowerPredCounterWhile(Intrinsic::ID IID, SDNode *N,
                      DAG.getTargetConstant(ElementSizeInBits, DL, MVT::i64));
 }
 
+static SDValue performSVEAndNotIntrinsicCombine(SDNode *N, SelectionDAG &DAG) {
+  bool IsMerging = getIntrinsicID(N) == Intrinsic::aarch64_sve_and;
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Pg = N->getOperand(1);
+
+  // Only commute AND_U: a merging AND must preserve its first operand in
+  // inactive lanes. NOT must cover all of AND's active lanes.
+  for (unsigned I = 0, E = IsMerging ? 1 : 2; I != E; ++I) {
+    unsigned NotOperandIdx = 3 - I;
+    unsigned OtherOperandIdx = 2 + I;
+    SDValue Not = N->getOperand(NotOperandIdx);
+    if (getIntrinsicID(Not.getNode()) != Intrinsic::aarch64_sve_not ||
+        (Not.getOperand(2) != Pg &&
+         !isAllActivePredicate(DAG, Not.getOperand(2))))
+      continue;
+
+    SDValue A = N->getOperand(OtherOperandIdx);
+    SDValue B = Not.getOperand(3);
+    if (!IsMerging || isAllActivePredicate(DAG, Pg))
+      return DAG.getNode(AArch64ISD::BIC, DL, VT, A, B);
+
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, VT,
+        DAG.getConstant(Intrinsic::aarch64_sve_bic, DL, MVT::i32), Pg, A, B);
+  }
+  if (IsMerging)
+    return SDValue();
+  return DAG.getNode(ISD::AND, DL, VT, N->getOperand(2), N->getOperand(3));
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -25660,6 +25691,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
                        N->getOperand(3));
   case Intrinsic::aarch64_sve_subr:
     return convertMergedOpToPredOp(N, ISD::SUB, DAG, true, true);
+  case Intrinsic::aarch64_sve_and:
+    return performSVEAndNotIntrinsicCombine(N, DAG);
   case Intrinsic::aarch64_sve_and_u:
     return DAG.getNode(AArch64ISD::AND_U, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));

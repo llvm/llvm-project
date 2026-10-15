@@ -148,8 +148,7 @@ define <vscale x 4 x i32> @all_not_partial_and(<vscale x 4 x i32> %a, <vscale x 
 define <vscale x 4 x i32> @merging_and_rhs(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %inactive, <vscale x 4 x i1> %pg) {
 ; CHECK-LABEL: merging_and_rhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    not z2.s, p0/m, z1.s
-; CHECK-NEXT:    and z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    bic z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> %inactive, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b)
   %and = call <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %not)
@@ -159,8 +158,7 @@ define <vscale x 4 x i32> @merging_and_rhs(<vscale x 4 x i32> %a, <vscale x 4 x 
 define <vscale x 16 x i8> @merging_and_rhs_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %inactive, <vscale x 16 x i1> %pg) {
 ; CHECK-LABEL: merging_and_rhs_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    not z2.b, p0/m, z1.b
-; CHECK-NEXT:    and z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    bic z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %not = call <vscale x 16 x i8> @llvm.aarch64.sve.not.nxv16i8(<vscale x 16 x i8> %inactive, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b)
   %and = call <vscale x 16 x i8> @llvm.aarch64.sve.and.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %not)
@@ -170,8 +168,7 @@ define <vscale x 16 x i8> @merging_and_rhs_i8(<vscale x 16 x i8> %a, <vscale x 1
 define <vscale x 8 x i16> @merging_and_rhs_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %inactive, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: merging_and_rhs_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    not z2.h, p0/m, z1.h
-; CHECK-NEXT:    and z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    bic z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %not = call <vscale x 8 x i16> @llvm.aarch64.sve.not.nxv8i16(<vscale x 8 x i16> %inactive, <vscale x 8 x i1> %pg, <vscale x 8 x i16> %b)
   %and = call <vscale x 8 x i16> @llvm.aarch64.sve.and.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %not)
@@ -181,8 +178,7 @@ define <vscale x 8 x i16> @merging_and_rhs_i16(<vscale x 8 x i16> %a, <vscale x 
 define <vscale x 2 x i64> @merging_and_rhs_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %inactive, <vscale x 2 x i1> %pg) {
 ; CHECK-LABEL: merging_and_rhs_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    not z2.d, p0/m, z1.d
-; CHECK-NEXT:    and z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    bic z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %not = call <vscale x 2 x i64> @llvm.aarch64.sve.not.nxv2i64(<vscale x 2 x i64> %inactive, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b)
   %and = call <vscale x 2 x i64> @llvm.aarch64.sve.and.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %not)
@@ -190,52 +186,20 @@ define <vscale x 2 x i64> @merging_and_rhs_i64(<vscale x 2 x i64> %a, <vscale x 
 }
 
 define <vscale x 4 x i32> @merging_and_all_active_not(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %inactive, <vscale x 4 x i1> %pg) {
-; SVE-LABEL: merging_and_all_active_not:
-; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p1.s
-; SVE-NEXT:    not z1.s, p1/m, z1.s
-; SVE-NEXT:    and z0.s, p0/m, z0.s, z1.s
-; SVE-NEXT:    ret
-;
-; SVE2P2-LABEL: merging_and_all_active_not:
-; SVE2P2:       // %bb.0:
-; SVE2P2-NEXT:    ptrue p1.s
-; SVE2P2-NEXT:    not z1.s, p1/z, z1.s
-; SVE2P2-NEXT:    and z0.s, p0/m, z0.s, z1.s
-; SVE2P2-NEXT:    ret
-;
-; SME-LABEL: merging_and_all_active_not:
-; SME:       // %bb.0:
-; SME-NEXT:    ptrue p1.s
-; SME-NEXT:    not z1.s, p1/m, z1.s
-; SME-NEXT:    and z0.s, p0/m, z0.s, z1.s
-; SME-NEXT:    ret
+; CHECK-LABEL: merging_and_all_active_not:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
   %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> %inactive, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %b)
   %and = call <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %not)
   ret <vscale x 4 x i32> %and
 }
 
 define <vscale x 4 x i32> @merging_and_all_active(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %inactive) {
-; SVE-LABEL: merging_and_all_active:
-; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.s
-; SVE-NEXT:    not z1.s, p0/m, z1.s
-; SVE-NEXT:    and z0.s, p0/m, z0.s, z1.s
-; SVE-NEXT:    ret
-;
-; SVE2P2-LABEL: merging_and_all_active:
-; SVE2P2:       // %bb.0:
-; SVE2P2-NEXT:    ptrue p0.s
-; SVE2P2-NEXT:    not z1.s, p0/z, z1.s
-; SVE2P2-NEXT:    and z0.s, p0/m, z0.s, z1.s
-; SVE2P2-NEXT:    ret
-;
-; SME-LABEL: merging_and_all_active:
-; SME:       // %bb.0:
-; SME-NEXT:    ptrue p0.s
-; SME-NEXT:    not z1.s, p0/m, z1.s
-; SME-NEXT:    and z0.s, p0/m, z0.s, z1.s
-; SME-NEXT:    ret
+; CHECK-LABEL: merging_and_all_active:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
   %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> %inactive, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %b)
   %and = call <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %not)
   ret <vscale x 4 x i32> %and
