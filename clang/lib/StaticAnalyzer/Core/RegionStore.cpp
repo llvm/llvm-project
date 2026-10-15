@@ -537,8 +537,9 @@ public:
         }()) {}
 
   Loc getLValueVar(const VarDecl *VD, const StackFrame *SF) override {
-    // Import before creating the region: the definition can complete an array
-    // type and becomes the declaration used to identify the region.
+    // Consider importing from another translation unit before creating the region:
+    // the definition can complete an array type and becomes the declaration used
+    // to identify the region.
     if (VD->getType().isConstQualified())
       getOrImportInitializer(VD);
     return StoreManager::getLValueVar(VD, SF);
