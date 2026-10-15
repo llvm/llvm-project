@@ -24319,8 +24319,10 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     SDValue NewStoreChain = getMergeStoreChains(StoreNodes, NumElem);
     AddToWorklist(NewStoreChain.getNode());
 
-    bool StoreCanReusePtrInfo = hasSameUnderlyingObj(StoreNodes);
-    bool LoadCanReusePtrInfo = hasSameUnderlyingObj(LoadNodes);
+    bool StoreCanReusePtrInfo =
+        hasSameUnderlyingObj(ArrayRef(StoreNodes).take_front(NumElem));
+    bool LoadCanReusePtrInfo =
+        hasSameUnderlyingObj(ArrayRef(LoadNodes).take_front(NumElem));
 
     MachineMemOperand::Flags LdMMOFlags =
         isDereferenceable ? MachineMemOperand::MODereferenceable
