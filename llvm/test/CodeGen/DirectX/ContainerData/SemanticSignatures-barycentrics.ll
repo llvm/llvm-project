@@ -47,6 +47,7 @@ attributes #0 = { "hlsl.shader"="pixel" }
 ; MD-DAG: ![[STATE]] = !{[6 x i32] [i32 4, i32 4, i32 0, i32 0, i32 0, i32 1]}
 ; MD-DAG: !{i32 0, !"sv_barycentrics", i8 9, i8 28, !{{[0-9]+}}, i8 7, i32 1, i8 3, i32 -1, i8 -1, ![[P:[0-9]+]]}
 ; MD-DAG: ![[P]] = !{i32 3, i32 7}
+; MD-DAG: !{i32 0, i64 4194304}
 
 ; PARTS: Name: ISG1
 ; PARTS: Name: SV_Barycentrics
