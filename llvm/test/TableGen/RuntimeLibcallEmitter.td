@@ -133,6 +133,12 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add BlahLibc)>;
 // CHECK-NEXT:  LDbl,
 // CHECK-NEXT:  LLong,
 // CHECK-NEXT:  Long,
+// CHECK-NEXT:  NXV2F64,
+// CHECK-NEXT:  NXV2I1,
+// CHECK-NEXT:  NXV2I32,
+// CHECK-NEXT:  NXV4F32,
+// CHECK-NEXT:  NXV4I1,
+// CHECK-NEXT:  NXV4I32,
 // CHECK-NEXT:  Ptr,
 // CHECK-NEXT:  SSizeT,
 // CHECK-NEXT:  Same,
@@ -146,8 +152,24 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add BlahLibc)>;
 // CHECK-NEXT:  UIntX,
 // CHECK-NEXT:  ULLong,
 // CHECK-NEXT:  ULong,
+// CHECK-NEXT:  V2F32,
+// CHECK-NEXT:  V2F64,
+// CHECK-NEXT:  V2I32,
+// CHECK-NEXT:  V4F32,
+// CHECK-NEXT:  V4F64,
+// CHECK-NEXT:  V4I32,
+// CHECK-NEXT:  V8F32,
+// CHECK-NEXT:  V8F64,
+// CHECK-NEXT:  V8I32,
+// CHECK-NEXT:  V16F32,
+// CHECK-NEXT:  V16I32,
 // CHECK-NEXT:  Void,
 // CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT: enum class RuntimeLibrary : unsigned char {
+// CHECK-NEXT:   UnknownLibrary = 0,
+// CHECK-NEXT:   libc,
+// CHECK-NEXT: };
 // CHECK-NEXT: } // End namespace RTLIB
 // CHECK-NEXT: } // End namespace llvm
 // CHECK-EMPTY:
@@ -271,6 +293,20 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add BlahLibc)>;
 // CHECK-EMPTY:
 // CHECK-NEXT:#endif // GET_INIT_RUNTIME_LIBCALL_SIGNATURES
 
+// CHECK:      RTLIB::Libcall RTLIB::RuntimeLibcallsInfo::getUnmaskedVectorLibcall(RTLIB::Libcall LC) {
+// CHECK-NEXT:   switch (LC) {
+// CHECK-NEXT:   default:
+// CHECK-NEXT:     return RTLIB::UNKNOWN_LIBCALL;
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: RTLIB::Libcall RTLIB::RuntimeLibcallsInfo::getMaskedVectorLibcall(RTLIB::Libcall LC) {
+// CHECK-NEXT:   switch (LC) {
+// CHECK-NEXT:   default:
+// CHECK-NEXT:     return RTLIB::UNKNOWN_LIBCALL;
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC) {
 // CHECK-NEXT:   if (TT.getArch() == Triple::blah) {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
@@ -359,28 +395,28 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add BlahLibc)>;
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-EMPTY:
 // CHECK-NEXT:   if (TT.getArch() == Triple::blah) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
 // CHECK-NEXT:   if (TT.getArch() == Triple::buzz) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
 // CHECK-NEXT:   if (TT.getArch() == Triple::foo) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
 // CHECK-NEXT:   if (TT.getArch() == Triple::simple) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;

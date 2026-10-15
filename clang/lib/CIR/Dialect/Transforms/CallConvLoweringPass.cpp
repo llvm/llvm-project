@@ -208,16 +208,12 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
       return false;
     // mapCIRType maps a bool as a one-bit integer, so a bool vector is sized
     // one bit per element, as clang packs it.  Vectors of a _BitInt whose
-    // width is not a whole number of bytes, or of x87 long double, are not
-    // handled yet.
+    // width is not a whole number of bytes are not handled yet.
     mlir::Type elemTy = vecTy.getElementType();
     if (auto elemInt = dyn_cast<cir::IntType>(elemTy)) {
       if (elemInt.getWidth() % 8)
         return false;
-    } else if (auto elemFp = dyn_cast<cir::FPTypeInterface>(elemTy)) {
-      if (&elemFp.getFloatSemantics() == &llvm::APFloat::x87DoubleExtended())
-        return false;
-    } else if (!isa<cir::BoolType>(elemTy)) {
+    } else if (!isa<cir::FPTypeInterface, cir::BoolType>(elemTy)) {
       return false;
     }
     return isSupportedType(elemTy, dl);
@@ -338,6 +334,19 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
             /*is_class=*/false, cir::RecordType::getAllDataKinds(fieldTypes));
       })
       .Default([](const llvm::abi::Type *) -> mlir::Type { return nullptr; });
+}
+
+/// Returns \p ty with a LongDoubleType vector element replaced by its
+/// underlying format, which is the element abiTypeToCIR builds for the same
+/// float.
+static mlir::Type unwrapLongDoubleVectorElement(mlir::Type ty) {
+  if (auto vecTy = dyn_cast<cir::VectorType>(ty)) {
+    if (auto longDoubleTy =
+            dyn_cast<cir::LongDoubleType>(vecTy.getElementType()))
+      return cir::VectorType::get(longDoubleTy.getUnderlying(), vecTy.getSize(),
+                                  vecTy.getIsScalable());
+  }
+  return ty;
 }
 
 /// Map a CIR type to an llvm::abi::Type.  classifyX86_64Function pre-filters
@@ -604,13 +613,14 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     mlir::Type coerced = abiTypeToCIR(coerceAbi, ctx);
     if (!coerced)
       return std::nullopt;
+    bool coerceIsNatural = coerced == unwrapLongDoubleVectorElement(origTy);
     // An offset would be lost here, since a coercion to the value's own type
     // is indistinguishable from no coercion at all.
-    if (offset && coerced == origTy)
+    if (offset && coerceIsNatural)
       return std::nullopt;
     // Coercing a value to the type it already has would add a memory round
     // trip for nothing.
-    if (comparesAgainstCoerce && coerced == origTy)
+    if (comparesAgainstCoerce && coerceIsNatural)
       return ArgClassification::getDirect();
     ArgClassification classified =
         ArgClassification::getDirect(coerced, offset);

@@ -576,14 +576,53 @@ void SplitGraph::buildGraph(CallGraph &CG) {
       CandidateEntryPoints.push_back(N);
   }
 
+  BitVector ReachableNodes = NodesReachableByKernels;
   for (Node *N : CandidateEntryPoints) {
     // This can be another entry point if it's not reachable by a kernel
     // TODO: We could sort all of the possible new entries in a stable order
     // (e.g. by cost), then consume them one by one until
     // NodesReachableByKernels is all 1s. It'd allow us to avoid
     // considering some nodes as non-entries in some specific cases.
-    if (!NodesReachableByKernels.test(N->getID()))
+    if (!NodesReachableByKernels.test(N->getID())) {
       N->markAsGraphEntry();
+      N->getDependencies(ReachableNodes);
+    }
+  }
+
+  // A function in a call cycle always has an incoming DirectCall edge, so it
+  // is never a candidate above. If no entry point reaches a cycle, one of its
+  // functions must become an entry point. Visit the unreached nodes in reverse
+  // post-order of the DirectCall edges, so that callers come before callees.
+  // This way, a function that an unreached cycle calls does not become an
+  // entry point of its own.
+  SmallVector<Node *> PostOrder;
+  BitVector Visited = ReachableNodes;
+  SmallVector<std::pair<Node *, edges_iterator>> Stack;
+  for (Node *Root : Nodes) {
+    if (Visited.test(Root->getID()))
+      continue;
+    Visited.set(Root->getID());
+    Stack.emplace_back(Root, Root->outgoing_edges().begin());
+    while (!Stack.empty()) {
+      auto &[N, It] = Stack.back();
+      if (It == N->outgoing_edges().end()) {
+        PostOrder.push_back(N);
+        Stack.pop_back();
+        continue;
+      }
+      const Edge *E = *It++;
+      if (E->Kind != EdgeKind::DirectCall || Visited.test(E->Dst->getID()))
+        continue;
+      Visited.set(E->Dst->getID());
+      Stack.emplace_back(E->Dst, E->Dst->outgoing_edges().begin());
+    }
+  }
+
+  for (Node *N : reverse(PostOrder)) {
+    if (ReachableNodes.test(N->getID()))
+      continue;
+    N->markAsGraphEntry();
+    N->getDependencies(ReachableNodes);
   }
 
 #ifndef NDEBUG

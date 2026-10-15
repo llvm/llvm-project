@@ -450,7 +450,6 @@ private:
   void visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call);
   void visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI);
   void visitVPIntrinsic(VPIntrinsic &VPI);
-  void visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI);
   void visitAtomicRMWInst(AtomicRMWInst &RMWI);
   void visitFenceInst(FenceInst &FI);
@@ -2961,11 +2960,14 @@ void Verifier::visitConstantExprsRecursively(const Constant *EntryC) {
 }
 
 void Verifier::visitConstantExpr(const ConstantExpr *CE) {
-  if (CE->getOpcode() == Instruction::BitCast)
+  if (CE->getOpcode() == Instruction::BitCast) {
     Check(CastInst::castIsValid(Instruction::BitCast, CE->getOperand(0),
                                 CE->getType()),
           "Invalid bitcast", CE);
-  else if (CE->getOpcode() == Instruction::PtrToAddr)
+    Check(DL.getTypeSizeInBits(CE->getOperand(0)->getType()) ==
+              DL.getTypeSizeInBits(CE->getType()),
+          "Invalid bitcast", CE);
+  } else if (CE->getOpcode() == Instruction::PtrToAddr)
     checkPtrToAddr(CE->getOperand(0)->getType(), CE->getType(), *CE);
 }
 
@@ -3525,6 +3527,20 @@ void Verifier::visitFunction(const Function &F) {
           PrintDecl);
   }
 
+  // Oracle functions of llvm.speculative.load may not be referenced in any
+  // other way.
+  if (isMaterialized && F.hasFnAttribute("oracle-function")) {
+    Check(F.hasLocalLinkage(), "oracle function must have local linkage", &F);
+    for (const Use &U : F.uses()) {
+      auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+      Check(II && II->getIntrinsicID() == Intrinsic::speculative_load &&
+                II->isArgOperand(&U) && II->getArgOperandNo(&U) == 2,
+            "oracle function may only be used as the oracle operand of "
+            "llvm.speculative.load",
+            &F, U.getUser());
+    }
+  }
+
   auto *N = F.getSubprogram();
   HasDebugInfo = (N != nullptr);
   if (!HasDebugInfo)
@@ -3990,6 +4006,9 @@ void Verifier::visitBitCastInst(BitCastInst &I) {
   Check(
       CastInst::castIsValid(Instruction::BitCast, I.getOperand(0), I.getType()),
       "Invalid bitcast", &I);
+  Check(DL.getTypeSizeInBits(I.getSrcTy()) ==
+            DL.getTypeSizeInBits(I.getDestTy()),
+        "Invalid bitcast", &I);
   visitInstruction(I);
 }
 
@@ -5617,19 +5636,6 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
       isa<AllocaInst>(I) || isa<StoreInst>(I) || isa<IntrinsicInst>(I);
   CheckDI(ExpectedInstTy, "!DIAssignID attached to unexpected instruction kind",
           I, MD);
-  // Iterate over the MetadataAsValue uses of the DIAssignID - these should
-  // only be found as DbgAssignIntrinsic operands.
-  if (auto *AsValue = MetadataAsValue::getIfExists(Context, MD)) {
-    for (auto *User : AsValue->users()) {
-      CheckDI(isa<DbgAssignIntrinsic>(User),
-              "!DIAssignID should only be used by llvm.dbg.assign intrinsics",
-              MD, User);
-      // All of the dbg.assign intrinsics should be in the same function as I.
-      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(User))
-        CheckDI(DAI->getFunction() == I.getFunction(),
-                "dbg.assign not in same function as inst", DAI, &I);
-    }
-  }
   for (DbgVariableRecord *DVR : at::getAssignmentMarkers(cast<DIAssignID>(MD)))
     CheckDI(DVR->getFunction() == I.getFunction(),
             "DVRAssign not in same function as inst", DVR, &I);
@@ -7098,6 +7104,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Check(OracleFn,
             "llvm.speculative.load third argument must be i64 or a direct "
             "reference to an oracle function",
+            &Call);
+
+      Check(OracleFn->hasFnAttribute("oracle-function"),
+            "llvm.speculative.load oracle function must have the "
+            "\"oracle-function\" attribute",
             &Call);
 
       // Make sure the called oracle matches the attributes of the intrinsic.

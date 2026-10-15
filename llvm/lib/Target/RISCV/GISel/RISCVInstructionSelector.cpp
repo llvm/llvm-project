@@ -2150,6 +2150,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       TmpReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
     MachineInstr *Cmp = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                 TII.get(getFCmpOpcode(Pred, Size)), TmpReg)
+                            .setMIFlag(MachineInstr::NoFPExcept)
                             .addReg(LHS)
                             .addReg(RHS);
     constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
@@ -2160,6 +2161,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
     MachineInstr *Cmp1 =
         BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                 TII.get(getFCmpOpcode(CmpInst::FCMP_OLT, Size)), Cmp1Reg)
+            .setMIFlag(MachineInstr::NoFPExcept)
             .addReg(LHS)
             .addReg(RHS);
     constrainSelectedInstRegOperands(*Cmp1, TII, TRI, RBI);
@@ -2167,6 +2169,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
     MachineInstr *Cmp2 =
         BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                 TII.get(getFCmpOpcode(CmpInst::FCMP_OLT, Size)), Cmp2Reg)
+            .setMIFlag(MachineInstr::NoFPExcept)
             .addReg(RHS)
             .addReg(LHS);
     constrainSelectedInstRegOperands(*Cmp2, TII, TRI, RBI);
@@ -2187,6 +2190,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       MachineInstr *Cmp =
           BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                   TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), TmpReg)
+              .setMIFlag(MachineInstr::NoFPExcept)
               .addReg(LHS)
               .addReg(LHS);
       constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
@@ -2195,6 +2199,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       MachineInstr *Cmp1 =
           BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                   TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp1Reg)
+              .setMIFlag(MachineInstr::NoFPExcept)
               .addReg(LHS)
               .addReg(LHS);
       constrainSelectedInstRegOperands(*Cmp1, TII, TRI, RBI);
@@ -2202,6 +2207,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       MachineInstr *Cmp2 =
           BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                   TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp2Reg)
+              .setMIFlag(MachineInstr::NoFPExcept)
               .addReg(RHS)
               .addReg(RHS);
       constrainSelectedInstRegOperands(*Cmp2, TII, TRI, RBI);

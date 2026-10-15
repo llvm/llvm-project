@@ -360,7 +360,7 @@ define void @local_store_i13(ptr addrspace(3) %ptr, i13 %arg) #0 {
 ; GFX11-TRUE16-LABEL: local_store_i13:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, 0x1fff, v1.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, v1.l, 0x1fff
 ; GFX11-TRUE16-NEXT:    ds_store_b16 v0, v1
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
