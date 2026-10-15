@@ -198,6 +198,7 @@ body:             |
   ; CHECK-CASCADE-BUDGET-NEXT:   STRWui $wzr, [[COPY]], 3 :: (store (s32))
   ; CHECK-CASCADE-BUDGET-NEXT:   STRWui $wzr, [[COPY]], 4 :: (store (s32))
   ; CHECK-CASCADE-BUDGET-NEXT:   STRWui $wzr, [[COPY]], 5 :: (store (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   DBG_VALUE [[LDRWui]], $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
   ; CHECK-CASCADE-BUDGET-NEXT:   B %bb.3
   ; CHECK-CASCADE-BUDGET-NEXT: {{  $}}
   ; CHECK-CASCADE-BUDGET-NEXT: bb.3:
