@@ -168,6 +168,10 @@ To merge your PR into the LLVM main branch do one of the following:
   gh pr merge --squash --delete-branch
   ```
 
+  Specifying `--squash` automatically selects the desired "Squash and Merge" merge strategy.
+  If you don't specify `--squash`, you'll get a selection option where you can only select "Squash and Merge".
+  Do not specify `--rebase` or `--merge` as these merge modes are not permitted in the LLVM repository.
+
   If you observe an error message from the above informing you that your pull
   request is not mergeable, then that is likely because upstream has been
   modified since your pull request was authored in a way that now results in a
