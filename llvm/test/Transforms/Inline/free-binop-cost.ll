@@ -4,8 +4,8 @@
 ; CHECK:      NumInstructionsSimplified: 3
 ; CHECK:      Cost: -35
 ; CHECK:      Analyzing call of inner_and... (caller:outer_and)
-; CHECK:      NumInstructionsSimplified: 2
-; CHECK:      Cost: -30
+; CHECK:      NumInstructionsSimplified: 3
+; CHECK:      Cost: -35
 
 define i1 @outer_sel(i1 %x) {
   %r = call i1 @inner_sel(i1 %x)

@@ -1,11 +1,11 @@
 ; RUN: opt -mtriple=arm-unknown-linux-gnu -passes="print<inline-cost>" -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK:      Analyzing call of inner_icmp... (caller:outer_icmp)
-; CHECK:      NumInstructionsSimplified: 1
-; CHECK:      Cost: -30
+; CHECK:      NumInstructionsSimplified: 2
+; CHECK:      Cost: -35
 ; CHECK:      Analyzing call of inner_fcmp... (caller:outer_fcmp)
-; CHECK:      NumInstructionsSimplified: 1
-; CHECK:      Cost: -30
+; CHECK:      NumInstructionsSimplified: 2
+; CHECK:      Cost: -35
 ; CHECK:      Analyzing call of inner_icmp_not_minmax... (caller:outer_icmp_not_minmax)
 ; CHECK:      NumInstructionsSimplified: 1
 ; CHECK:      Cost: -35
