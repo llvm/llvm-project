@@ -109,6 +109,7 @@ LLVM_ABI dxbc::PSV::InterpolationMode normalizeInterpolationMode(
 enum class SemanticInterpretation {
   Invalid,
   NotAllocated,
+  NotPacked,
   Arbitrary,
   SV,
   SGV,
@@ -162,9 +163,8 @@ struct SemanticSignatureElement {
   }
 
   uint8_t getDeclaredMask() const {
-    if (!isAllocated())
-      return 0;
-    return static_cast<uint8_t>(((1U << Cols) - 1U) << StartCol);
+    unsigned Column = isAllocated() ? StartCol : 0;
+    return static_cast<uint8_t>(((1U << Cols) - 1U) << Column);
   }
 
   uint8_t getAlwaysReadsMask() const { return UsageMask; }

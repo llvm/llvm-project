@@ -22,6 +22,8 @@ static StringRef getInterpretationName(SemanticInterpretation Interpretation) {
     return "Invalid";
   case SemanticInterpretation::NotAllocated:
     return "NotAllocated";
+  case SemanticInterpretation::NotPacked:
+    return "NotPacked";
   case SemanticInterpretation::Arbitrary:
     return "Arbitrary";
   case SemanticInterpretation::SV:
@@ -65,7 +67,7 @@ constexpr SemanticKind SupportedKinds[] = {
     SemanticKind::InsideTessFactor, SemanticKind::DispatchThreadID,
     SemanticKind::GroupID,          SemanticKind::GroupIndex,
     SemanticKind::GroupThreadID,    SemanticKind::InstanceID,
-    SemanticKind::ShadingRate};
+    SemanticKind::ShadingRate,      SemanticKind::Barycentrics};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -151,6 +153,16 @@ TEST(HLSLSemanticStagesTest, ShadingRateSignaturePoints) {
       {Triple::Mesh, IOType::PatchConstantOrPrimitive, SV},
   };
   expectOnlySignaturePoints(SemanticKind::ShadingRate, Valid);
+}
+
+TEST(HLSLSemanticStagesTest, BarycentricsAreUnpackedPixelInputs) {
+  for (Triple::EnvironmentType Stage : AllStages)
+    for (IOType IO : {IOType::In, IOType::Out,
+                      IOType::PatchConstantOrPrimitive})
+      EXPECT_EQ(getInterpretationKind(SemanticKind::Barycentrics, Stage, IO),
+                Stage == Triple::Pixel && IO == IOType::In
+                    ? SemanticInterpretation::NotPacked
+                    : SemanticInterpretation::Invalid);
 }
 
 } // namespace
