@@ -314,10 +314,19 @@ public:
   virtual void releaseBottomNode(SUnit *SU) = 0;
 };
 
+/// State for breaking physical-register anti-dependencies while scheduling a
+/// machine basic block after register allocation.
 class LLVM_ABI AntiDepState {
+  /// The selected breaker, or null when anti-dependency breaking is disabled.
   std::unique_ptr<AntiDepBreaker> Breaker;
+
+  /// Instruction index of the current region's end in its basic block.
   unsigned EndIndex = 0;
+
+  /// Position from which boundary instructions are scanned for liveness.
   MachineBasicBlock::iterator ScanPos;
+
+  /// Whether ScheduleDAGMI::schedule() processed the current region.
   bool RegionProcessed = false;
 
 public:
@@ -352,6 +361,7 @@ protected:
   MachineBlockFrequencyInfo *MBFI;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
 
+  /// State for optional post-RA anti-dependency breaking.
   AntiDepState AntiDep;
 
   /// Ordered list of DAG postprocessing steps.
