@@ -140,13 +140,10 @@ protected:
 
     bool LoadImageAtFileAddress(lldb_private::Process *process);
 
-    /// Determine what the search for this binary needs: its UUID, read from
-    /// memory if necessary, and whether the Target or the shared module list
-    /// already has it. For the kernel, also remove any kernel with a different
-    /// UUID from the Target.
-    ///
-    /// This function is not thread-safe. It reads process memory and modifies
-    /// the Target, so concurrent calls require external synchronization.
+    /// Determine what the search for this binary needs: its UUID, and whether
+    /// the Target or the shared module list already has it. For the kernel,
+    /// the UUID is read from process memory and any kernel with a different
+    /// UUID is removed from the Target.
     ///
     /// \param request Set to the search to run, or left empty if none is
     ///   needed.
@@ -158,9 +155,7 @@ protected:
 
     /// Add the module to the Target and set its load addresses.
     ///
-    /// This function is not thread-safe. It modifies the Target, so concurrent
-    /// calls require external synchronization. The order of the calls
-    /// determines the order of the Target's modules.
+    /// The order of the calls determines the order of the Target's modules.
     ///
     /// \param located The search result, or empty if PrepareSearch requested
     ///   no search.

@@ -895,6 +895,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadLocatedImage(
   }
 
   if (!IsKernel() && !m_module_sp && m_uuid.IsValid()) {
+    // Neither a platform's answer nor the fallback spec carry the Target.
     module_spec.SetTarget(target.shared_from_this());
     // The search has run or was not needed, so the Target must not search.
     m_module_sp =
@@ -1433,8 +1434,8 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
     Target &target = m_process->GetTarget();
 
     // A search can shell out to a symbol server, so the searches run as one
-    // batch that SymbolLocator may run concurrently. PrepareSearch and
-    // LoadLocatedImage are not thread-safe and run on this thread.
+    // batch that SymbolLocator may run concurrently. Everything else runs on
+    // this thread, in the order the kernel lists the kexts.
     std::vector<bool> can_load(num_of_new_kexts, false);
     std::vector<std::optional<llvm::Expected<SymbolLocator::Result>>> located(
         num_of_new_kexts);
