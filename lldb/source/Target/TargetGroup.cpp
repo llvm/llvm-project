@@ -60,18 +60,17 @@ bool TargetGroup::RemoveTarget(const TargetSP &target_sp) {
 
   std::lock_guard<std::recursive_mutex> guard(*m_mutex);
   bool removed = false;
-  auto it = std::remove_if(m_entries.begin(), m_entries.end(),
-                           [&](const Entry &entry) {
-                             TargetSP member_sp = entry.target_wp.lock();
-                             assert(member_sp &&
-                                    "target did not remove itself from its "
-                                    "target group");
-                             if (member_sp == target_sp) {
-                               removed = true;
-                               return true;
-                             }
-                             return false;
-                           });
+  auto it = std::remove_if(
+      m_entries.begin(), m_entries.end(), [&](const Entry &entry) {
+        TargetSP member_sp = entry.target_wp.lock();
+        assert(member_sp && "target did not remove itself from its "
+                            "target group");
+        if (member_sp == target_sp) {
+          removed = true;
+          return true;
+        }
+        return false;
+      });
   m_entries.erase(it, m_entries.end());
   if (removed)
     target_sp->RemoveTargetGroup(this);
