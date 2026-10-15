@@ -759,7 +759,8 @@ private:
         Retrieved |= LDS_KERNEL_ID;
         break;
       default:
-        break;
+        // Other calls do not retrieve anything.
+        return true;
       }
 
       // Stop once everything may be retrieved.
