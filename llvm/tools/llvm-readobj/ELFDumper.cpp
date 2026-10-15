@@ -8411,16 +8411,19 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     };
 
     auto PrintFunc = [&](uint64_t FuncPC) {
+      // In a relocatable object file, FuncPC is the offset of the address
+      // field, which is used to look up the relocation that applies to it.
+      if (this->Obj.getHeader().e_type == ELF::ET_REL) {
+        PrintRelocatableFuncSymbol(FuncPC);
+        return;
+      }
       uint64_t FuncEntryPC = FuncPC;
       // In ARM thumb mode the LSB of the function pointer is set to 1. Since
       // this detail is unnecessary in call graph reconstruction, we are
       // clearing this bit to facilitate tooling.
       if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
         FuncEntryPC = FuncPC & ~1;
-      if (this->Obj.getHeader().e_type == ELF::ET_REL)
-        PrintRelocatableFuncSymbol(FuncEntryPC);
-      else
-        PrintNonRelocatableFuncSymbol(FuncEntryPC);
+      PrintNonRelocatableFuncSymbol(FuncEntryPC);
     };
     if (!CGI)
       CGI = std::make_unique<ListScope>(W, "CallGraph");
@@ -8430,7 +8433,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       W.printNumber("Version", CGInfo.FormatVersionNumber);
       W.printBoolean("IsIndirectTarget", CGInfo.IsIndirectTarget);
       W.printHex("TypeID", CGInfo.FunctionTypeID);
-      W.printNumber("NumDirectCallees", CGInfo.DirectCallees.size());
       {
         ListScope DCs(W, "DirectCallees");
         for (uint64_t CalleePC : CGInfo.DirectCallees) {
@@ -8438,7 +8440,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
           PrintFunc(CalleePC);
         }
       }
-      W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
       SmallVector<uint64_t, 4> IndirectTypeIDsList(
           CGInfo.IndirectTypeIDs.begin(), CGInfo.IndirectTypeIDs.end());
       W.printHexList("IndirectTypeIDs", ArrayRef(IndirectTypeIDsList));

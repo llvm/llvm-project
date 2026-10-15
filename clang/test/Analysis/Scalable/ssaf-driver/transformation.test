@@ -1,0 +1,72 @@
+# REQUIRES: ssaf-driver-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+
+# RUN: cd %t
+# RUN: %clang-ssaf-driver --transformation=cpp-bounded-buffers \
+# RUN:     --ssaf-clang=%ssaf-driver-clang -o %t/out -- make \
+# RUN:   | FileCheck %s --check-prefix=STDOUT
+# STDOUT: source-edits: {{[^ ]*}}/out/ssaf-artifacts{{[^ ]*}}/build/prg.edits.yaml
+# STDOUT: patch: {{[^ ]*}}/out/cpp-bounded-buffers.patch
+# STDOUT: report: {{[^ ]*}}/out/cpp-bounded-buffers.sarif
+
+# RUN: diff %t/expected.patch %t/out/cpp-bounded-buffers.patch
+
+# The sources are left as they were.
+# RUN: FileCheck %s --check-prefix=UNCHANGED --input-file=%t/src/parse.cpp
+# UNCHANGED: int total(int *data, int n) {
+
+# A second run into the same output directory starts afresh.
+# RUN: %clang-ssaf-driver --transformation=cpp-bounded-buffers \
+# RUN:     --ssaf-clang=%ssaf-driver-clang -o %t/out -- make > %t/second.txt
+# RUN: diff %t/expected.patch %t/out/cpp-bounded-buffers.patch
+
+# The patch applies to the sources.
+# RUN: %if patch %{ rm -rf %t/copy && mkdir -p %t/copy && cp -R %t/src %t/copy %}
+# RUN: %if patch %{ patch -s -p1 -d %t/copy < %t/out/cpp-bounded-buffers.patch %}
+# RUN: %if patch %{ FileCheck %s --check-prefix=PATCHED --input-file=%t/copy/src/parse.cpp %}
+# PATCHED: int total(bounded_ptr<int> data, int n) {
+
+#--- Makefile
+CXX = clang++
+all: build/prg
+build/%.o: src/%.cpp
+	$(CXX) -c -o $@ $<
+build/prg: build/main.o build/parse.o
+	$(CXX) -o $@ build/main.o build/parse.o
+
+#--- src/parse.cpp
+int total(int *data, int n) {
+  int t = 0;
+  for (int i = 0; i < n; ++i)
+    t += data[i];
+  return t;
+}
+
+#--- src/main.cpp
+int total(int *data, int n);
+int main() {
+  int values[4] = {1, 2, 3, 4};
+  return total(values, 4);
+}
+
+#--- expected.patch
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -1,6 +1,6 @@
+-int total(int *data, int n);
++int total(bounded_ptr<int> data, int n);
+ int main() {
+-  int values[4] = {1, 2, 3, 4};
++  bounded_array<int, 4> values = {1, 2, 3, 4};
+   return total(values, 4);
+ }
+ 
+--- a/src/parse.cpp
++++ b/src/parse.cpp
+@@ -1,4 +1,4 @@
+-int total(int *data, int n) {
++int total(bounded_ptr<int> data, int n) {
+   int t = 0;
+   for (int i = 0; i < n; ++i)
+     t += data[i];

@@ -8059,8 +8059,7 @@ TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopInvalidLoopBody) {
   F->setName("func");
   IRBuilder<> Builder(BB);
 
-  auto BodyGenCB = [&](InsertPointTy BodyIP,
-                       Value *LinearIV) -> Expected<InsertPointTy> {
+  auto BodyGenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
     Builder.restoreIP(BodyIP);
     Builder.CreateAdd(LinearIV, Builder.getInt64(1));
     BasicBlock *BadDest =
@@ -8068,7 +8067,7 @@ TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopInvalidLoopBody) {
     Builder.CreateBr(BadDest);
     Builder.SetInsertPoint(BadDest);
     Builder.CreateUnreachable();
-    return Builder.saveIP();
+    return Error::success();
   };
 
   OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);

@@ -7276,13 +7276,6 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
         legalizeOpWithMove(MI, VOP3Idx[I]);
     }
   }
-
-  // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
-  if (ST.hasPkF32InvalidOpSel() && Opc == AMDGPU::V_PK_FMA_F32 &&
-      !isLegalPkFMAF32OpSel(MI)) {
-    decomposePkFMAF32(MI, MRI);
-    return;
-  }
 }
 
 Register SIInstrInfo::readlaneVGPRToSGPR(
