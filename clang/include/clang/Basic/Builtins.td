@@ -3297,6 +3297,12 @@ def AlignedAlloc : LibBuiltin<"stdlib.h"> {
   let Prototype = "void*(size_t, size_t)";
 }
 
+// POSIX stdlib.h
+def Realpath : LibBuiltin<"stdlib.h"> {
+  let Spellings = ["realpath"];
+  let Prototype = "char*(char const* restrict, char* restrict)";
+}
+
 // C99 string.h
 def MemCpy : LibBuiltin<"string.h"> {
   let Spellings = ["memcpy"];
