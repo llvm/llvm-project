@@ -28,6 +28,15 @@ define void @test_step2_div4(i64 %n) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((1 + (0 smax %n))<nuw> /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775806
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775806
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((1 + (0 smax %n))<nuw> /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775806
 ;
 entry:
   br label %loop
@@ -78,6 +87,15 @@ define void @test_step3_div6(i64 %n) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin (0 smax %n)))<nuw><nsw> + (0 smax %n)) /u 3) + (1 umin (0 smax %n)))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775805
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 3074457345618258602
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775805
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((((-1 * (1 umin (0 smax %n)))<nuw><nsw> + (0 smax %n)) /u 3) + (1 umin (0 smax %n)))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775805
 ;
 entry:
   br label %loop
@@ -137,6 +155,15 @@ define void @test_step4_div4(i64 %n) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((3 + (0 smax %n))<nuw> /u 4)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775804
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775804
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((3 + (0 smax %n))<nuw> /u 4)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775804
 ;
 entry:
   br label %loop
@@ -219,6 +246,15 @@ define void @test_step2_start_outer_add_rec_step_16(i64 %n, i64 %m) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (({1,+,-16}<%outer.header> + ({0,+,16}<%outer.header> smax %n)) /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775806
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775806
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (({1,+,-16}<%outer.header> + ({0,+,16}<%outer.header> smax %n)) /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775806
 ; CHECK-NEXT:  Loop %outer.header: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %outer.header: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %outer.header: Unpredictable symbolic max backedge-taken count.
@@ -335,6 +371,15 @@ define void @test_step2_div4_start_outer_add_rec_step_2(i64 %n, i64 %m) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (({1,+,-2}<%outer.header> + ({0,+,2}<%outer.header> smax %n)) /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775806
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775806
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (({1,+,-2}<%outer.header> + ({0,+,2}<%outer.header> smax %n)) /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 9223372036854775806
 ; CHECK-NEXT:  Loop %outer.header: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %outer.header: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %outer.header: Unpredictable symbolic max backedge-taken count.
