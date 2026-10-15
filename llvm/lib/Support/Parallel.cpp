@@ -244,8 +244,8 @@ TaskGroup::~TaskGroup() {
   if (Parallel) {
     if (IsNested)
       getDefaultExecutor()->helpSync(L);
-#if defined(__linux__) && defined(__GLIBC__) &&                                \
-    (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 38))
+#if defined(__linux__) && defined(__GLIBC__) && __GLIBC__ == 2 &&              \
+    __GLIBC_MINOR__ < 38
     // Workaround for https://sourceware.org/bugzilla/show_bug.cgi?id=25847
     // Fixed in glibc 2.38, but LTS distros such as Ubuntu 22.04 (2.35),
     // Debian 12 (2.36), and RHEL 9 (2.34) distribute older versions of glibc
