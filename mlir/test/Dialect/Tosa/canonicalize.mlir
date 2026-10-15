@@ -1524,6 +1524,25 @@ func.func @test_fold_i32_to_i1_cast() -> tensor<i1> {
 
 // -----
 
+// Fold both signed zeros to false and nonzero fractions to true.
+// CHECK-LABEL: @test_fold_f32_to_i1_cast
+// CHECK-DAG: %[[FALSE:.*]] = tosa.const values(dense<false> : tensor<i1>)
+// CHECK-DAG: %[[TRUE:.*]] = tosa.const values(dense<true> : tensor<i1>)
+// CHECK: return %[[FALSE]], %[[FALSE]], %[[TRUE]], %[[TRUE]]
+func.func @test_fold_f32_to_i1_cast() -> (tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>) {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<f32>}> : () -> tensor<f32>
+  %neg_zero = "tosa.const"() <{values = dense<-0.0> : tensor<f32>}> : () -> tensor<f32>
+  %positive = "tosa.const"() <{values = dense<0.01> : tensor<f32>}> : () -> tensor<f32>
+  %negative = "tosa.const"() <{values = dense<-0.01> : tensor<f32>}> : () -> tensor<f32>
+  %0 = tosa.cast %zero : (tensor<f32>) -> tensor<i1>
+  %1 = tosa.cast %neg_zero : (tensor<f32>) -> tensor<i1>
+  %2 = tosa.cast %positive : (tensor<f32>) -> tensor<i1>
+  %3 = tosa.cast %negative : (tensor<f32>) -> tensor<i1>
+  return %0, %1, %2, %3 : tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>
+}
+
+// -----
+
 // CHECK-LABEL: @test_canonicalize_non_narrowing_cast_i8_to_i32
 // CHECK: %[[OUT:.*]] = tosa.cast %arg0 input_unsigned(false) : (tensor<13x21x3xi8>) -> tensor<13x21x3xi32>
 // CHECK: return %[[OUT]] : tensor<13x21x3xi32>
