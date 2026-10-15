@@ -1824,6 +1824,14 @@ def constant_fold_binop : GICombineRule<
   let MaxPermutations = -1;
 }
 
+def constant_fold_vector_binop : GICombineRule<
+  (defs root:$d, build_fn_matchinfo:$matchinfo),
+  (match (constant_fold_binop_frags $d):$mi,
+   [{ return Helper.matchConstantFoldVectorBinOp(*${mi}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])> {
+  let MaxPermutations = -1;
+}
+
 def constant_fold_fp_binop_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
   !foreach(op,
@@ -3128,7 +3136,8 @@ def fma_combines : GICombineGroup<[combine_fadd_fmul_to_fmad_or_fma,
   combine_fsub_fpext_fneg_fmul_to_fmad_or_fma]>;
 
 def constant_fold_binops : GICombineGroup<[constant_fold_binop,
-                                           constant_fold_fp_binop]>;
+                                           constant_fold_fp_binop,
+                                           constant_fold_vector_binop]>;
 
 def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
 

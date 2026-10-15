@@ -733,6 +733,11 @@ public:
   LLVM_ABI bool matchConstantFoldBinOp(MachineInstr &MI,
                                        APInt &MatchInfo) const;
 
+  /// Constant fold a vector binop whose operands are G_BUILD_VECTORs of
+  /// constants.
+  LLVM_ABI bool matchConstantFoldVectorBinOp(MachineInstr &MI,
+                                             BuildFnTy &MatchInfo) const;
+
   /// Do constant FP folding when opportunities are exposed after MIR building.
   LLVM_ABI bool matchConstantFoldFPBinOp(MachineInstr &MI,
                                          ConstantFP *&MatchInfo) const;

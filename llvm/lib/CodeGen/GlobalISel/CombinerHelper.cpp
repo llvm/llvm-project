@@ -5191,6 +5191,22 @@ bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI,
   return true;
 }
 
+bool CombinerHelper::matchConstantFoldVectorBinOp(MachineInstr &MI,
+                                                  BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  if (!MRI.getType(Dst).isVector() || MI.getOpcode() == TargetOpcode::G_PTR_ADD)
+    return false;
+  SmallVector<APInt> Csts =
+      ConstantFoldVectorBinop(MI.getOpcode(), MI.getOperand(1).getReg(),
+                              MI.getOperand(2).getReg(), MRI);
+  if (Csts.empty())
+    return false;
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildBuildVectorConstant(Dst, Csts);
+  };
+  return true;
+}
+
 bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI,
                                               ConstantFP *&MatchInfo) const {
   Register Op1 = MI.getOperand(1).getReg();
