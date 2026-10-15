@@ -157,6 +157,41 @@ define ptr @gep_add_nuw(ptr %ptr, i64 %a, i64 %b) {
   ret ptr %gep
 }
 
+define ptr @gep_add_nuw_assume(ptr %ptr, i64 %a, i64 %b, i64 %n) {
+; CHECK-LABEL: define ptr @gep_add_nuw_assume(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i64 [[A]], [[B]]
+; CHECK-NEXT:    [[INB:%.*]] = icmp ult i64 [[ADD]], [[N]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[INB]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw [4 x i8], ptr [[PTR]], i64 [[A]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [4 x i8], ptr [[TMP1]], i64 [[B]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %add = add nuw i64 %a, %b
+  %inb = icmp ult i64 %add, %n
+  call void @llvm.assume(i1 %inb)
+  %gep = getelementptr nuw i32, ptr %ptr, i64 %add
+  ret ptr %gep
+}
+
+define ptr @gep_add_nuw_assume_and_use(ptr %ptr, i64 %a, i64 %b, i64 %n) {
+; CHECK-LABEL: define ptr @gep_add_nuw_assume_and_use(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i64 [[A]], [[B]]
+; CHECK-NEXT:    [[INB:%.*]] = icmp ult i64 [[ADD]], [[N]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[INB]])
+; CHECK-NEXT:    call void @use(i1 [[INB]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [4 x i8], ptr [[PTR]], i64 [[ADD]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %add = add nuw i64 %a, %b
+  %inb = icmp ult i64 %add, %n
+  call void @llvm.assume(i1 %inb)
+  call void @use(i1 %inb)
+  %gep = getelementptr nuw i32, ptr %ptr, i64 %add
+  ret ptr %gep
+}
+
 define ptr @gep_inbounds_add_nsw_nonneg(ptr %ptr, i64 %a, i64 %b) {
 ; CHECK-LABEL: define ptr @gep_inbounds_add_nsw_nonneg(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
@@ -334,3 +369,6 @@ define ptr @gep_not_inbounds_sext_add_nonneg(ptr %ptr, i32 %a) {
   %gep = getelementptr i32, ptr %ptr, i64 %idx
   ret ptr %gep
 }
+
+declare void @llvm.assume(i1)
+declare void @use(i1)
