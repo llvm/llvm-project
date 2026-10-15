@@ -468,7 +468,8 @@ TYPE_PARSER(construct<DataComponentDefStmt>(declarationTypeSpec,
 // R738 component-attr-spec ->
 //        access-spec | ALLOCATABLE |
 //        CODIMENSION lbracket coarray-spec rbracket |
-//        CONTIGUOUS | DIMENSION ( component-array-spec ) | POINTER |
+//        CONTIGUOUS | DIMENSION ( component-array-spec ) |
+//        POINTER | PROTECTED_TARGET |
 //        CUDA-data-attr
 TYPE_PARSER(construct<ComponentAttrSpec>(accessSpec) ||
     construct<ComponentAttrSpec>(allocatable) ||
@@ -476,6 +477,7 @@ TYPE_PARSER(construct<ComponentAttrSpec>(accessSpec) ||
     construct<ComponentAttrSpec>(contiguous) ||
     construct<ComponentAttrSpec>("DIMENSION" >> componentArraySpec) ||
     construct<ComponentAttrSpec>(pointer) ||
+    construct<ComponentAttrSpec>(protectedTarget) ||
     extension<LanguageFeature::CUDA>(
         construct<ComponentAttrSpec>(Parser<CUDADataAttrSpec>{})) ||
     construct<ComponentAttrSpec>(recovery(
@@ -742,8 +744,8 @@ TYPE_PARSER(
 //        CODIMENSION lbracket coarray-spec rbracket | CONTIGUOUS |
 //        DIMENSION ( array-spec ) | EXTERNAL | INTENT ( intent-spec ) |
 //        INTRINSIC | language-binding-spec | OPTIONAL | PARAMETER | POINTER |
-//        PROTECTED | RANK ( scalar-int-constant-expr ) | SAVE | TARGET |
-//        VALUE | VOLATILE |
+//        PROTECTED | PROTECTED_TARGET | RANK ( scalar-int-constant-expr ) |
+//        SAVE | TARGET | VALUE | VOLATILE |
 //        CUDA-data-attr
 TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(allocatable) ||
@@ -756,7 +758,8 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(construct<Intrinsic>("INTRINSIC"_tok)) ||
     construct<AttrSpec>(languageBindingSpec) || construct<AttrSpec>(optional) ||
     construct<AttrSpec>(construct<Parameter>("PARAMETER"_tok)) ||
-    construct<AttrSpec>(pointer) || construct<AttrSpec>(protectedAttr) ||
+    construct<AttrSpec>(pointer) || construct<AttrSpec>(protectedTarget) ||
+    construct<AttrSpec>(protectedAttr) ||
     construct<AttrSpec>("RANK" >>
         construct<RankClause>(parenthesized(scalarIntConstantExpr))) ||
     construct<AttrSpec>(save) ||
@@ -1049,6 +1052,11 @@ TYPE_PARSER(
 // R855 protected-stmt -> PROTECTED [::] entity-name-list
 TYPE_PARSER(
     construct<ProtectedStmt>("PROTECTED" >> maybe("::"_tok) >> listOfNames))
+
+// F'2028 R863 protected-target-stmt ->
+//        PROTECTED_TARGET [::] variable-name-list
+TYPE_PARSER(construct<ProtectedTargetStmt>(
+    "PROTECTED_TARGET" >> maybe("::"_tok) >> listOfNames))
 
 // R856 save-stmt -> SAVE [[::] saved-entity-list]
 TYPE_PARSER(construct<SaveStmt>(

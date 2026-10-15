@@ -329,6 +329,21 @@ void CheckHelper::Check(const Symbol &symbol) {
     CheckValue(symbol, derived);
   }
 
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET) &&
+      !symbol.has<AssocEntityDetails>()) {
+    // F'2028 C781 covers components; C8109 covers the statement form.
+    // For type declarations, 8.5.16 and J3/25-182r1 specify data pointers.
+    if (!IsObjectPointer(&symbol)) {
+      messages_.Say(
+          "PROTECTED_TARGET entity '%s' must be a data pointer"_err_en_US,
+          symbol.name());
+    }
+    if (FindCommonBlockContaining(symbol)) { // F'2028 C867
+      messages_.Say(
+          "A PROTECTED_TARGET pointer may not be in a common block"_err_en_US);
+    }
+  }
+
   if (isDone) {
     return; // following checks do not apply
   }
@@ -4177,7 +4192,9 @@ void SubprogramMatchHelper::CheckDummyDataObject(const Symbol &symbol1,
     const Symbol &symbol2, const DummyDataObject &obj1,
     const DummyDataObject &obj2) {
   if (!CheckSameIntent(symbol1, symbol2, obj1.intent, obj2.intent)) {
-  } else if (!CheckSameAttrs(symbol1, symbol2, obj1.attrs, obj2.attrs)) {
+  } else if (!CheckSameAttrs(symbol1, symbol2,
+                 obj1.attrs - DummyDataObject::Attr::ProtectedTarget,
+                 obj2.attrs - DummyDataObject::Attr::ProtectedTarget)) {
   } else if (!obj1.type.type().IsEquivalentTo(obj2.type.type())) {
     Say(symbol1, symbol2,
         "Dummy argument '%s' has type %s; the corresponding argument in the interface body has distinct type %s"_err_en_US,

@@ -9,6 +9,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -325,6 +326,69 @@ bool IsStmtFunctionResult(const Symbol &symbol) {
 
 bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
+}
+
+static const Symbol *FindProtectedTarget(const evaluate::DataRef &dataRef,
+    bool isPointerDefinition, bool followAssociations) {
+  // GetSymbolVector expands associate names, so walk the data-ref directly.
+  if (const auto *coarray{std::get_if<evaluate::CoarrayRef>(&dataRef.u)}) {
+    return FindProtectedTarget(
+        coarray->base(), isPointerDefinition, followAssociations);
+  }
+  if (!isPointerDefinition) {
+    const Symbol &symbol{dataRef.GetLastSymbol().GetUltimate()};
+    if (const auto *association{symbol.detailsIf<AssocEntityDetails>()};
+        followAssociations && association && association->expr()) {
+      // F'2028 11.1.3.3p1: ASSOCIATE/SELECT TYPE names are not pointers.
+      // Follow their selectors for definability, not C870-C874.
+      return FindProtectedTarget(*association->expr(),
+          /*isPointerDefinition=*/false, /*followAssociations=*/true);
+    } else if (symbol.attrs().test(Attr::PROTECTED_TARGET)) {
+      return &symbol;
+    } else if (IsPointer(symbol)) {
+      // F'2028 9.4.2p5: a pointer component's target is not a subobject
+      // of the object containing the pointer.
+      return nullptr;
+    }
+  }
+  if (const auto *component{std::get_if<evaluate::Component>(&dataRef.u)}) {
+    return FindProtectedTarget(
+        component->base(), /*isPointerDefinition=*/false, followAssociations);
+  } else if (const auto *array{std::get_if<evaluate::ArrayRef>(&dataRef.u)}) {
+    if (const auto *component{array->base().UnwrapComponent()}) {
+      return FindProtectedTarget(
+          component->base(), /*isPointerDefinition=*/false, followAssociations);
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTarget(
+    const SomeExpr &expr, bool isPointerDefinition, bool followAssociations) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTarget(
+        *dataRef, isPointerDefinition, followAssociations);
+  } else if (isPointerDefinition) {
+    if (const auto *proc{std::get_if<evaluate::ProcedureDesignator>(&expr.u)}) {
+      if (const auto *component{proc->GetComponent()}) {
+        return FindProtectedTarget(component->base(),
+            /*isPointerDefinition=*/false, followAssociations);
+      }
+    }
+  } else if (evaluate::IsVariable(expr)) {
+    if (const auto *ref{evaluate::UnwrapProcedureRef(expr)}) {
+      if (const Symbol *interface{ref->proc().GetInterfaceSymbol()}) {
+        if (const Symbol *result{FindFunctionResult(*interface)};
+            result && result->attrs().test(Attr::PROTECTED_TARGET)) {
+          // J3/26-007r1 8.5.16 applies to data pointers. Function results may
+          // have the attribute (J3/25-182r1); treat their references as those
+          // pointers for F'2028 C870-C874.
+          return result;
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 
 bool IsBindCProcedure(const Symbol &original) {

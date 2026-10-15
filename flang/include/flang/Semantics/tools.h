@@ -178,6 +178,11 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+// Find the PROTECTED_TARGET pointer through which an object is accessed.
+// For association or allocation definition, exclude the entity being defined.
+// Follow associate-name selectors only for definability checking.
+const Symbol *FindProtectedTarget(const SomeExpr &,
+    bool isPointerDefinition = false, bool followAssociations = false);
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }

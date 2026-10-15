@@ -23,6 +23,26 @@ static parser::Message BlameSymbol(parser::CharBlock at,
   return message;
 }
 
+static const Symbol &GetProtectedTargetBlameSymbol(
+    const SomeExpr &expr, const Symbol &protectedTarget) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    const Symbol &original{dataRef->GetFirstSymbol()};
+    if (&original.GetUltimate() == &protectedTarget) {
+      return original;
+    } else if (const auto *association{
+                   original.GetUltimate().detailsIf<AssocEntityDetails>()};
+        association && association->expr()) {
+      return GetProtectedTargetBlameSymbol(
+          *association->expr(), protectedTarget);
+    }
+  } else if (const auto *ref{evaluate::UnwrapProcedureRef(expr)}) {
+    if (const Symbol *symbol{ref->proc().GetSymbol()}) {
+      return *symbol;
+    }
+  }
+  return protectedTarget;
+}
+
 static bool IsPointerDummyOfPureFunction(const Symbol &x) {
   return IsPointerDummy(x) && FindPureProcedureContaining(x.owner()) &&
       x.owner().symbol() && IsFunction(*x.owner().symbol());
@@ -270,6 +290,26 @@ static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
 
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
+  const Symbol &ultimate{original.GetUltimate()};
+  const Symbol *protectedTarget{nullptr};
+  if (const auto *association{ultimate.detailsIf<AssocEntityDetails>()};
+      association && association->expr()) {
+    protectedTarget = FindProtectedTarget(*association->expr(),
+        flags.test(DefinabilityFlag::PointerDefinition) && IsPointer(ultimate),
+        /*followAssociations=*/true);
+    if (protectedTarget) {
+      protectedTarget = &GetProtectedTargetBlameSymbol(
+          *association->expr(), *protectedTarget);
+    }
+  } else if (!flags.test(DefinabilityFlag::PointerDefinition) &&
+      ultimate.attrs().test(Attr::PROTECTED_TARGET)) {
+    protectedTarget = &original;
+  }
+  if (protectedTarget) {
+    return BlameSymbol(at,
+        "The target of PROTECTED_TARGET pointer '%s' is not definable"_en_US,
+        *protectedTarget);
+  }
   auto whyNotBase{WhyNotDefinableBase(at, scope, flags, original,
       /*isWholeSymbol=*/true, /*isComponentPointerTarget=*/false)};
   if (!whyNotBase || !whyNotBase->IsFatal()) {
@@ -330,6 +370,14 @@ private:
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::Expr<evaluate::SomeType> &expr) {
+  if (const Symbol *protectedTarget{FindProtectedTarget(expr,
+          flags.test(DefinabilityFlag::PointerDefinition),
+          /*followAssociations=*/true)}) {
+    // F'2028 C866 and 8.5.16p2 protect the target, not the association.
+    return BlameSymbol(at,
+        "The target of PROTECTED_TARGET pointer '%s' is not definable"_en_US,
+        GetProtectedTargetBlameSymbol(expr, *protectedTarget));
+  }
   std::optional<parser::Message> portabilityWarning;
   if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
     if (evaluate::HasVectorSubscript(expr)) {

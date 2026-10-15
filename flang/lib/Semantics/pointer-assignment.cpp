@@ -49,10 +49,13 @@ public:
         description_{"pointer '"s + lhs.name().ToString() + '\''}, lhs_{&lhs} {
     set_lhsType(TypeAndShape::Characterize(lhs, foldingContext_));
     set_isContiguous(lhs.attrs().test(Attr::CONTIGUOUS));
+    set_isProtectedTarget(
+        lhs.GetUltimate().attrs().test(Attr::PROTECTED_TARGET));
     set_isVolatile(lhs.attrs().test(Attr::VOLATILE));
   }
   PointerAssignmentChecker &set_lhsType(std::optional<TypeAndShape> &&);
   PointerAssignmentChecker &set_isContiguous(bool);
+  PointerAssignmentChecker &set_isProtectedTarget(bool);
   PointerAssignmentChecker &set_isVolatile(bool);
   PointerAssignmentChecker &set_isBoundsRemapping(bool);
   PointerAssignmentChecker &set_isAssumedRank(bool);
@@ -91,6 +94,7 @@ private:
   std::optional<Procedure> procedure_;
   bool characterizedProcedure_{false};
   bool isContiguous_{false};
+  bool isProtectedTarget_{false};
   bool isVolatile_{false};
   bool isBoundsRemapping_{false};
   bool isAssumedRank_{false};
@@ -108,6 +112,12 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_lhsType(
 PointerAssignmentChecker &PointerAssignmentChecker::set_isContiguous(
     bool isContiguous) {
   isContiguous_ = isContiguous;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_isProtectedTarget(
+    bool isProtectedTarget) {
+  isProtectedTarget_ = isProtectedTarget;
   return *this;
 }
 
@@ -207,6 +217,11 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
   if (lhs_ && IsProcedure(*lhs_)) {
     return true;
   }
+  if (!isProtectedTarget_ && FindProtectedTarget(rhs)) { // F'2028 C870-C872
+    Say("A PROTECTED_TARGET pointer or its subobject may not be associated with %s without PROTECTED_TARGET"_err_en_US,
+        description_);
+    return false;
+  }
   if (const auto *pureProc{FindPureProcedureContaining(scope_)}) {
     if (pointerComponentLHS_) { // F'2023 C15104(4) is a hard error
       if (const Symbol * object{FindExternallyVisibleObject(rhs, *pureProc)}) {
@@ -242,6 +257,12 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
       Warn(common::UsageWarning::PointerToPossibleNoncontiguous,
           "Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
     }
+  }
+  // A PROTECTED_TARGET pointer cannot define its target, so the optional
+  // undefinable-target warning does not apply. This includes the USE-associated
+  // PROTECTED target in F'2028 8.5.16 NOTE 1, despite C864.
+  if (isProtectedTarget_) {
+    return true;
   }
   // Warn about undefinable data targets
   if (auto because{
@@ -618,6 +639,8 @@ bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
   return PointerAssignmentChecker{context, scope, source, description}
       .set_lhsType(common::Clone(lhs.type))
       .set_isContiguous(lhs.attrs.test(DummyDataObject::Attr::Contiguous))
+      .set_isProtectedTarget(
+          lhs.attrs.test(DummyDataObject::Attr::ProtectedTarget))
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
       .set_isAssumedRank(isAssumedRank)
       .set_isRHSPointerActualArgument(isPointerActualArgument)

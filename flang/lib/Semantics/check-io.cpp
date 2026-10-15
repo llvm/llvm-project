@@ -811,6 +811,16 @@ void IoChecker::Leave(const parser::InquireStmt &stmt) {
     CheckForProhibitedSpecifier(IoSpecKind::File, IoSpecKind::Unit); // C1246
     CheckForRequiredSpecifier(IoSpecKind::Id, IoSpecKind::Pending); // C1248
     CheckForUselessIomsg();
+  } else {
+    const auto &var{std::get<parser::ScalarIntVariable>(
+        std::get<parser::InquireStmt::Iolength>(stmt.u).t)};
+    // IOLENGTH= otherwise has no definability check. Limit this to
+    // PROTECTED_TARGET to preserve existing Fortran 2023 diagnostics.
+    if (const auto *expr{GetExpr(context_, var)}; expr &&
+        FindProtectedTarget(*expr, /*isPointerDefinition=*/false,
+            /*followAssociations=*/true)) {
+      CheckForDefinableVariable(var, "IOLENGTH");
+    }
   }
   Done();
 }

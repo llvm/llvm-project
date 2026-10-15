@@ -98,6 +98,22 @@ private:
 };
 
 template <typename T>
+static void CheckProtectedTargetDefinability(
+    SemanticsContext &context, const T &variable, const char *what) {
+  // These contexts otherwise have no definability check. Limit this to
+  // PROTECTED_TARGET to preserve existing Fortran 2023 diagnostics.
+  if (const auto *expr{GetExpr(context, variable)}; expr &&
+      FindProtectedTarget(*expr, /*isPointerDefinition=*/false,
+          /*followAssociations=*/true)) {
+    auto at{parser::FindSourceLocation(variable)};
+    if (auto whyNot{WhyNotDefinable(at, context.FindScope(at), {}, *expr)}) {
+      context.Say(at, "%s is not definable"_err_en_US, what)
+          .Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
+    }
+  }
+}
+
+template <typename T>
 static void CheckTeamType(
     SemanticsContext &context, const T &x, bool mustBeVariable = false) {
   if (const auto *expr{GetExpr(context, x)}) {
@@ -108,6 +124,8 @@ static void CheckTeamType(
     } else if (mustBeVariable && !IsVariable(*expr)) {
       context.Say(parser::FindSourceLocation(x),
           "Team must be a variable in this context"_err_en_US);
+    } else if (mustBeVariable) {
+      CheckProtectedTargetDefinability(context, x, "Team variable");
     }
   }
 }
@@ -119,6 +137,9 @@ static void CheckTeamStat(
     context.Say(parser::FindSourceLocation(var), // C931
         "Image selector STAT variable must not be a coindexed "
         "object"_err_en_US);
+  } else {
+    CheckProtectedTargetDefinability(
+        context, var, "Image selector STAT variable");
   }
 }
 
@@ -177,6 +198,8 @@ static void CheckEventVariable(
     if (!IsEventType(evaluate::GetDerivedTypeSpec(expr->GetType()))) { // C1176
       context.Say(parser::FindSourceLocation(eventVar),
           "The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
+    } else {
+      CheckProtectedTargetDefinability(context, eventVar, "Event variable");
     }
   }
 }
@@ -364,6 +387,10 @@ void CoarrayChecker::Leave(const parser::LockStmt &x) {
       } else {
         gotAcquired = true;
       }
+      CheckProtectedTargetDefinability(context_,
+          std::get<parser::Scalar<parser::Logical<parser::Variable>>>(
+              lockStat.u),
+          "ACQUIRED_LOCK variable");
     }
   }
 }
@@ -383,6 +410,10 @@ void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
     if (const auto *stat{std::get_if<parser::ImageSelectorSpec::Stat>(
             &imageSelectorSpec.u)}) {
       CheckTeamStat(context_, *stat);
+    } else if (const auto *notify{
+                   std::get_if<parser::ImageSelectorSpec::Notify>(
+                       &imageSelectorSpec.u)}) {
+      CheckProtectedTargetDefinability(context_, *notify, "NOTIFY variable");
     }
   }
 }

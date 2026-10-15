@@ -67,6 +67,10 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (FindProtectedTarget(*expr)) { // F'2028 C873
+      messages.Say(
+          "A PROTECTED_TARGET pointer or its subobject may not be an actual argument to a procedure with an implicit interface"_err_en_US);
+    }
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
@@ -830,6 +834,15 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // Definability checking
   // Problems with polymorphism are caught in the callee's definition.
   if (scope) {
+    // NULL's MOLD has no characterized INTENT; 17.2.1p3 makes it IN: no C874.
+    if (!dummyIsPointer && dummy.intent != common::Intent::In &&
+        !(intrinsic && intrinsic->name == "null") &&
+        FindProtectedTarget(actual)) { // F'2028 C874
+      messages.Say(
+          "A PROTECTED_TARGET pointer or its subobject may be associated with nonpointer %s only with INTENT(IN)"_err_en_US,
+          dummyName);
+      return;
+    }
     std::optional<parser::MessageFixedText> undefinableMessage;
     DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
     if (dummy.intent == common::Intent::InOut) {
@@ -1041,6 +1054,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   if (dummyIsPointer) {
     if (actualIsPointer || dummy.intent == common::Intent::In) {
       if (scope) {
+        // Flang applies F'2028 C872 to intrinsic pointer dummies as well,
+        // e.g. C_F_POINTER FPTR=.
         semantics::CheckPointerAssignment(context, messages.at(), dummyName,
             dummy, actual, *scope,
             /*isAssumedRank=*/dummyIsAssumedRank, actualIsPointer);

@@ -29,6 +29,8 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
+- Added support for the `PROTECTED_TARGET` pointer attribute from the Fortran 2028 working draft.
+
 ## Bug Fixes
 
 - Fixed `fir::getTypeSizeAndAlignment` returning the wrong allocation size for
