@@ -9,3 +9,12 @@ body: |
     ; CHECK: dead $rax = KILL killed $eax
     dead $rax = SUBREG_TO_REG killed $eax, %subreg.sub_32bit
 ...
+---
+# CHECK-LABEL: name: mov32ri64_dead_live_sub
+name: mov32ri64_dead_live_sub
+body: |
+  bb.0:
+    ; CHECK: dead $ecx = MOV32ri 1, implicit-def $cl, implicit-def dead $rcx
+    dead $rcx = MOV32ri64 1, implicit-def $cl
+    RET 0, $cl
+...

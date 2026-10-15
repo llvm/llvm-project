@@ -6460,9 +6460,10 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::MOV32ri64: {
     Register Reg = MIB.getReg(0);
     Register Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
+    bool IsDead = MIB->getOperand(0).isDead();
     MI.setDesc(get(X86::MOV32ri));
     MIB->getOperand(0).setReg(Reg32);
-    MIB.addReg(Reg, RegState::ImplicitDefine);
+    MIB.addReg(Reg, RegState::ImplicitDefine | getDeadRegState(IsDead));
     return true;
   }
 
