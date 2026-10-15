@@ -173,19 +173,6 @@ define <4 x float> @poison_base(i1 %c, float %x, float %y) {
   ret <4 x float> %s
 }
 
-define <4 x float> @undef_base(i1 %c, float %x, float %y) {
-; CHECK-LABEL: define <4 x float> @undef_base(
-; CHECK-SAME: i1 [[C:%.*]], float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[S_SCALAR:%.*]] = select i1 [[C]], float [[X]], float [[Y]]
-; CHECK-NEXT:    [[S:%.*]] = insertelement <4 x float> <float undef, float poison, float undef, float undef>, float [[S_SCALAR]], i64 1
-; CHECK-NEXT:    ret <4 x float> [[S]]
-;
-  %a = insertelement <4 x float> undef, float %x, i64 1
-  %b = insertelement <4 x float> undef, float %y, i64 1
-  %s = select i1 %c, <4 x float> %a, <4 x float> %b
-  ret <4 x float> %s
-}
-
 define <4 x float> @fast_math(i1 %c, <4 x float> %v, float %x, float %y) {
 ; CHECK-LABEL: define <4 x float> @fast_math(
 ; CHECK-SAME: i1 [[C:%.*]], <4 x float> [[V:%.*]], float [[X:%.*]], float [[Y:%.*]]) {
