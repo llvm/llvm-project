@@ -1146,10 +1146,10 @@ void AntiDepState::startBlock(MachineBasicBlock *MBB) {
   EndIndex = MBB->size();
 }
 
-void AntiDepState::finishBlock() {
+void AntiDepState::finishBlock(const MachineLoopInfo *MLI) {
   if (!Breaker)
     return;
-  Breaker->FinishBlock();
+  Breaker->FinishBlock(MLI);
 }
 
 void AntiDepState::enterRegion(MachineBasicBlock *MBB,
@@ -1288,7 +1288,7 @@ void ScheduleDAGMI::startBlock(MachineBasicBlock *bb) {
 
 void ScheduleDAGMI::finishBlock() {
   SchedImpl->leaveMBB();
-  AntiDep.finishBlock();
+  AntiDep.finishBlock(MLI);
   ScheduleDAGInstrs::finishBlock();
 }
 

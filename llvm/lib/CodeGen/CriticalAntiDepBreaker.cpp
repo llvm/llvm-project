@@ -93,7 +93,7 @@ void CriticalAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   }
 }
 
-void CriticalAntiDepBreaker::FinishBlock() {
+void CriticalAntiDepBreaker::FinishBlock(const MachineLoopInfo *) {
   RegRefs.clear();
   KeepRegs.reset();
 }

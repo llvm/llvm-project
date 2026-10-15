@@ -335,7 +335,7 @@ public:
 
   void startBlock(MachineBasicBlock *MBB);
 
-  void finishBlock();
+  void finishBlock(const MachineLoopInfo *MLI);
 
   void enterRegion(MachineBasicBlock *MBB, MachineBasicBlock::iterator End);
 

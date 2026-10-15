@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+class MachineLoopInfo;
 class RegisterClassInfo;
 
 /// This class works in conjunction with the post-RA scheduler to rename
@@ -51,8 +52,9 @@ public:
   virtual void Observe(MachineInstr &MI, unsigned Count,
                        unsigned InsertPosIndex) = 0;
 
-  /// Finish anti-dep breaking for a basic block.
-  virtual void FinishBlock() = 0;
+  /// Finish anti-dep breaking for a basic block. \p MLI may be provided to
+  /// handle loop-carried anti-dependencies.
+  virtual void FinishBlock(const MachineLoopInfo *MLI = nullptr) = 0;
 
   /// Update DBG_VALUE or DBG_PHI if dependency breaker is updating
   /// other machine instruction to use NewReg.

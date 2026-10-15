@@ -29,6 +29,7 @@ namespace llvm {
 class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
+class MachineLoopInfo;
 class MachineOperand;
 class MachineRegisterInfo;
 class RegisterClassInfo;
@@ -50,6 +51,8 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
     };
 
   private:
+    MachineBasicBlock *MBB;
+
     /// Number of non-virtual target registers (i.e. TRI->getNumRegs()).
     const unsigned NumTargetRegs;
 
@@ -113,6 +116,8 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
 
     /// Return true if Reg is live.
     bool IsLive(MCRegister Reg);
+
+    MachineBasicBlock &GetMBB() const { return *MBB; }
   };
 
   class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepBreaker
@@ -156,9 +161,12 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
                  unsigned InsertPosIndex) override;
 
     /// Finish anti-dep breaking for a basic block.
-    void FinishBlock() override;
+    void FinishBlock(const MachineLoopInfo *MLI) override;
 
   private:
+    void BreakLoopCarriedAntiDependencies(MachineBasicBlock &MBB,
+                                          const MachineLoopInfo &MLI);
+
     /// Keep track of a position in the allocation order for each regclass.
     using RenameOrderType = std::map<const TargetRegisterClass *, unsigned>;
 
