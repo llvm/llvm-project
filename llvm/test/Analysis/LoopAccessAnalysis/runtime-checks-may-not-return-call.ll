@@ -189,13 +189,11 @@ define void @non_affine_may_not_return(ptr %words, ptr %out, i64 %n) {
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
-; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %out High: (%n + %out))
-; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %words High: (1 + ((-1 + %n) /u 64) + %words))

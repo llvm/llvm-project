@@ -37,6 +37,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -131,9 +132,6 @@ STATISTIC(NumFactor   , "Number of factorizations");
 STATISTIC(NumReassoc  , "Number of reassociations");
 DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
-
-InstCombiner::IRBuilderInstCombineInserter::~IRBuilderInstCombineInserter() =
-    default;
 
 void InstCombiner::IRBuilderInstCombineInserter::InsertHelper(
     Instruction *I, const Twine &Name, BasicBlock::iterator InsertPt) const {
@@ -499,6 +497,13 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op0->getOperand(1);
         Value *C = I.getOperand(1);
 
+        if (tryReassociateAndFoldSymmetricPair(I, *Op0, A, B, C)) {
+          I.swapOperands();
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
+
         // Does "B op C" simplify?
         if (Value *V = simplifyBinOp(Opcode, B, C, SQ.getWithInstruction(&I))) {
           // It simplifies to V.  Form "A op V".
@@ -532,6 +537,13 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op1->getOperand(0);
         Value *C = Op1->getOperand(1);
 
+        if (tryReassociateAndFoldSymmetricPair(I, *Op1, C, B, A)) {
+          I.swapOperands();
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
+
         // Does "A op B" simplify?
         if (Value *V = simplifyBinOp(Opcode, A, B, SQ.getWithInstruction(&I))) {
           // It simplifies to V.  Form "V op C".
@@ -561,6 +573,12 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op0->getOperand(1);
         Value *C = I.getOperand(1);
 
+        if (tryReassociateAndFoldSymmetricPair(I, *Op0, B, A, C)) {
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
+
         // Does "C op A" simplify?
         if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
           // It simplifies to V.  Form "V op B".
@@ -581,6 +599,12 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *A = I.getOperand(0);
         Value *B = Op1->getOperand(0);
         Value *C = Op1->getOperand(1);
+
+        if (tryReassociateAndFoldSymmetricPair(I, *Op1, B, C, A)) {
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
 
         // Does "C op A" simplify?
         if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
@@ -1323,6 +1347,35 @@ InstCombinerImpl::matchSymmetricPair(Value *LHS, Value *RHS) {
   default:
     return std::nullopt;
   }
+}
+
+bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
+    BinaryOperator &OuterOp, BinaryOperator &InnerOp, Value *InnerVal0,
+    Value *InnerVal1, Value *OuterVal) {
+  assert(OuterOp.isCommutative() && OuterOp.isAssociative() &&
+         "OuterOp must be commutative and associative");
+  assert(OuterOp.getOpcode() == InnerOp.getOpcode() &&
+         "OuterOp and InnerOp must have same opcode");
+  if (!InnerOp.isAssociative() || !InnerOp.hasOneUse())
+    return false;
+
+  unsigned OuterValIdx = OuterOp.getOperand(0) == OuterVal ? 0 : 1;
+  assert(OuterOp.getOperand(OuterValIdx) == OuterVal &&
+         "OuterVal must be an operand of OuterOp");
+
+  auto Pair = matchSymmetricPair(InnerVal1, OuterVal);
+  if (!Pair)
+    return false;
+
+  replaceOperand(InnerOp, 0, Pair->first);
+  replaceOperand(InnerOp, 1, Pair->second);
+  InnerOp.dropPoisonGeneratingAnnotations();
+  InnerOp.dropUBImplyingAttrsAndMetadata();
+  replaceOperand(OuterOp, OuterValIdx, InnerVal0);
+  if (!isa<FPMathOperator>(OuterOp))
+    OuterOp.dropPoisonGeneratingFlags();
+  OuterOp.dropUBImplyingAttrsAndMetadata();
+  return true;
 }
 
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
@@ -4229,7 +4282,7 @@ Instruction *InstCombinerImpl::visitUncondBrInst(UncondBrInst &BI) {
     do {
       if (BBI != FirstInstr)
         --BBI;
-    } while (BBI != FirstInstr && BBI->isDebugOrPseudoInst());
+    } while (BBI != FirstInstr && isa<PseudoProbeInst>(BBI));
 
     return dyn_cast<StoreInst>(BBI);
   };
@@ -5585,20 +5638,29 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
         return false;
   }
 
+  SmallVector<AssumeInst *, 2> AssumesToSink;
   I->dropDroppableUses([&](const Use *U) {
-    auto *I = dyn_cast<Instruction>(U->getUser());
-    if (I && I->getParent() != DestBlock) {
-      Worklist.add(I);
+    auto *User = dyn_cast<Instruction>(U->getUser());
+    if (User && User->getParent() != DestBlock) {
+      if (auto *Assume = dyn_cast<AssumeInst>(User);
+          Assume && Assume->getParent() == SrcBlock) {
+        AssumesToSink.push_back(Assume);
+        return false;
+      }
+      Worklist.add(User);
       return true;
     }
     return false;
   });
-  /// FIXME: We could remove droppable uses that are not dominated by
-  /// the new position.
 
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
   I->moveBefore(*DestBlock, InsertPos);
   ++NumSunkInst;
+
+  // Sink the collected assumes right after I in DestBlock so that the
+  // alignment/attribute guarantees they encode remain visible to later passes.
+  for (AssumeInst *Assume : AssumesToSink)
+    Assume->moveAfter(I);
 
   // Also sink all related debug uses from the source basic block. Otherwise we
   // get debug use before the def. Attempt to salvage debug uses first, to
@@ -5954,6 +6016,40 @@ bool InstCombinerImpl::run() {
 class AliasScopeTracker {
   SmallPtrSet<const MDNode *, 8> UsedAliasScopesAndLists;
   SmallPtrSet<const MDNode *, 8> UsedNoAliasScopesAndLists;
+  // Scopes used by every !alias.scope list that scopes from a disjoint-scope
+  // domain appears in. This is used to catch scopes that don't actually make
+  // anything noalias.
+  SmallDenseMap<const MDNode *, SmallPtrSet<const MDNode *, 4>, 4>
+      CommonScopesOfDisjointDomain;
+
+  // Record, for each disjoint-scope domain \p ScopeList uses, which of its
+  // scopes are used by \p ScopeList, adding to a running intersection.
+  void recordDisjointDomainScopes(const MDNode *ScopeList) {
+    SmallDenseMap<const MDNode *, SmallPtrSet<const MDNode *, 4>, 4> UsedScopes;
+    for (const MDOperand &MDOperand : ScopeList->operands()) {
+      const auto *MDScope = cast<MDNode>(MDOperand);
+      const MDNode *Domain = AliasScopeNode(MDScope).getDomain();
+      if (AliasScopeDomainNode(Domain).hasDisjointScopes())
+        UsedScopes[Domain].insert(MDScope);
+    }
+
+    for (auto &[Domain, Scopes] : UsedScopes) {
+      auto [It, Inserted] =
+          CommonScopesOfDisjointDomain.try_emplace(Domain, Scopes);
+      if (!Inserted)
+        llvm::set_intersect(It->second, Scopes);
+    }
+  }
+
+  // Return true if \p Scope is on the implicit !noalias list of one of the
+  // analysed accesses, that is, if it belongs to a disjoint-scope domain and
+  // some access uses that domain without using \p Scope.
+  bool isImplicitlyNoAlias(const MDNode *Scope) const {
+    auto It =
+        CommonScopesOfDisjointDomain.find(AliasScopeNode(Scope).getDomain());
+    return It != CommonScopesOfDisjointDomain.end() &&
+           !It->second.contains(Scope);
+  }
 
 public:
   void analyse(Instruction *I) {
@@ -5961,16 +6057,20 @@ public:
     if (!I->hasMetadataOtherThanDebugLoc())
       return;
 
-    auto Track = [](Metadata *ScopeList, auto &Container) {
+    auto Track = [](Metadata *ScopeList, auto &Container) -> const MDNode * {
       const auto *MDScopeList = dyn_cast_or_null<MDNode>(ScopeList);
       if (!MDScopeList || !Container.insert(MDScopeList).second)
-        return;
+        return nullptr;
       for (const auto &MDOperand : MDScopeList->operands())
         if (auto *MDScope = dyn_cast<MDNode>(MDOperand))
           Container.insert(MDScope);
+      return MDScopeList;
     };
 
-    Track(I->getMetadata(LLVMContext::MD_alias_scope), UsedAliasScopesAndLists);
+    if (const MDNode *AliasScopeList =
+            Track(I->getMetadata(LLVMContext::MD_alias_scope),
+                  UsedAliasScopesAndLists))
+      recordDisjointDomainScopes(AliasScopeList);
     Track(I->getMetadata(LLVMContext::MD_noalias), UsedNoAliasScopesAndLists);
   }
 
@@ -5985,9 +6085,13 @@ public:
     assert(MDSL->getNumOperands() == 1 &&
            "llvm.experimental.noalias.scope should refer to a single scope");
     auto &MDOperand = MDSL->getOperand(0);
+    // A scope is relevant if it appears in an !alias.scope list, and either it
+    // appears in a !noalias list, or it is on the implicit !noalias list of
+    // some access using its disjoint-scope domain.
     if (auto *MD = dyn_cast<MDNode>(MDOperand))
       return !UsedAliasScopesAndLists.contains(MD) ||
-             !UsedNoAliasScopesAndLists.contains(MD);
+             (!UsedNoAliasScopesAndLists.contains(MD) &&
+              !isImplicitlyNoAlias(MD));
 
     // Not an MDNode ? throw away.
     return true;
@@ -6063,10 +6167,10 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
         }
       }
 
-      // Skip processing debug and pseudo intrinsics in InstCombine. Processing
+      // Skip processing pseudo intrinsics in InstCombine. Processing
       // these call instructions consumes non-trivial amount of time and
       // provides no value for the optimization.
-      if (!Inst.isDebugOrPseudoInst()) {
+      if (!isa<PseudoProbeInst>(Inst)) {
         InstrsForInstructionWorklist.push_back(&Inst);
         SeenAliasScopes.analyse(&Inst);
       }
@@ -6165,7 +6269,8 @@ static bool combineInstructionsOverFunction(
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
-  const InstCombineCLOptions &CLOpts = InstCombineCLOptions::Global;
+  const auto &CLOpts =
+      F.getContext().getLibraryOptions().get<InstCombineCLOptions>();
   bool MadeIRChange = false;
   if (CLOpts.lower_dbg_declare)
     MadeIRChange = LowerDbgDeclare(F);

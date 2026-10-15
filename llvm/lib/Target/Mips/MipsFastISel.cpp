@@ -72,9 +72,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> EmitJalrReloc;
-extern cl::opt<bool> NoZeroDivCheck;
-
 namespace {
 
 class MipsFastISel final : public FastISel {
@@ -363,10 +360,10 @@ unsigned MipsFastISel::materialize32BitInt(int64_t Imm,
 
   if (isInt<16>(Imm)) {
     unsigned Opc = Mips::ADDiu;
-    emitInst(Opc, ResultReg).addReg(Mips::ZERO).addImm(Imm);
+    emitInst(Opc, ResultReg).addReg(Mips::R0).addImm(Imm);
     return ResultReg;
   } else if (isUInt<16>(Imm)) {
-    emitInst(Mips::ORi, ResultReg).addReg(Mips::ZERO).addImm(Imm);
+    emitInst(Mips::ORi, ResultReg).addReg(Mips::R0).addImm(Imm);
     return ResultReg;
   }
   unsigned Lo = Imm & 0xFFFF;
@@ -418,8 +415,7 @@ unsigned MipsFastISel::materializeGV(const GlobalValue *GV, MVT VT) {
   emitInst(Mips::LW, DestReg)
       .addReg(MFI->getGlobalBaseReg(*MF))
       .addGlobalAddress(GV, 0, MipsII::MO_GOT);
-  if ((GV->hasInternalLinkage() ||
-       (GV->hasLocalLinkage() && !isa<Function>(GV)))) {
+  if (GV->hasLocalLinkage()) {
     Register TempReg = createResultReg(RC);
     emitInst(Mips::ADDiu, TempReg)
         .addReg(DestReg)
@@ -653,7 +649,7 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
   case CmpInst::ICMP_NE: {
     Register TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::XOR, TempReg).addReg(LeftReg).addReg(RightReg);
-    emitInst(Mips::SLTu, ResultReg).addReg(Mips::ZERO).addReg(TempReg);
+    emitInst(Mips::SLTu, ResultReg).addReg(Mips::R0).addReg(TempReg);
     break;
   }
   case CmpInst::ICMP_UGT:
@@ -735,8 +731,8 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
     }
     Register RegWithZero = createResultReg(&Mips::GPR32RegClass);
     Register RegWithOne = createResultReg(&Mips::GPR32RegClass);
-    emitInst(Mips::ADDiu, RegWithZero).addReg(Mips::ZERO).addImm(0);
-    emitInst(Mips::ADDiu, RegWithOne).addReg(Mips::ZERO).addImm(1);
+    emitInst(Mips::ADDiu, RegWithZero).addReg(Mips::R0).addImm(0);
+    emitInst(Mips::ADDiu, RegWithOne).addReg(Mips::R0).addImm(1);
     emitInst(Opc).addReg(Mips::FCC0, RegState::Define).addReg(LeftReg)
                  .addReg(RightReg);
     emitInst(CondMovOpc, ResultReg)
@@ -1477,9 +1473,9 @@ bool MipsFastISel::fastLowerArguments() {
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
     Register ResultReg = createResultReg(Allocation[ArgNo].RC);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
-        .addReg(DstReg, getKillRegState(true));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(DstReg);
     updateValueMap(&FormalArg, ResultReg);
   }
 
@@ -1580,14 +1576,13 @@ bool MipsFastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   CLI.Call = MIB;
 
-  if (EmitJalrReloc && !Subtarget->inMips16Mode()) {
+  if (Subtarget->getMCCLOpts().jalr_reloc && !Subtarget->inMips16Mode()) {
     // Attach callee address to the instruction, let asm printer emit
     // .reloc R_MIPS_JALR.
     if (Symbol)
       MIB.addSym(Symbol, MipsII::MO_JALR);
     else
-      MIB.addSym(FuncInfo.MF->getContext().getOrCreateSymbol(
-	                   Addr.getGlobalValue()->getName()), MipsII::MO_JALR);
+      MIB.addSym(TM.getSymbol(Addr.getGlobalValue()), MipsII::MO_JALR);
   }
 
   // Finish off the call including any return values.
@@ -1952,9 +1947,10 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
     return false;
 
   emitInst(DivOpc).addReg(Src0Reg).addReg(Src1Reg);
-  if (!NoZeroDivCheck && (!isa<ConstantInt>(I->getOperand(1)) ||
-                          dyn_cast<ConstantInt>(I->getOperand(1))->isZero())) {
-    emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
+  if (!Subtarget->getMCCLOpts().mno_check_zero_division &&
+      (!isa<ConstantInt>(I->getOperand(1)) ||
+       dyn_cast<ConstantInt>(I->getOperand(1))->isZero())) {
+    emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::R0).addImm(7);
   }
 
   Register ResultReg = createResultReg(&Mips::GPR32RegClass);

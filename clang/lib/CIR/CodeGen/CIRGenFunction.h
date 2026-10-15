@@ -36,8 +36,10 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
+#include "clang/CodeGenUtils/StmtUtils.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 
 namespace {
 class ScalarExprEmitter;
@@ -127,6 +129,8 @@ public:
 
   typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
 
+  class CapturedCleanups;
+
   /// A cleanup whose destructor call is not emitted where the cleanup is
   /// registered. Used by the lifetime-extended cleanup stack, whose entries
   /// are later promoted onto the EH scope stack, and by the deferred
@@ -146,6 +150,9 @@ public:
     QualType type;
     Destroyer *destroyer;
     Address activeFlag = Address::invalid();
+    /// If set, the cleanup is captured by this owner instead of opening a
+    /// cir.cleanup.scope when it is pushed onto the EH stack.
+    CapturedCleanups *capturedBy = nullptr;
   };
 
   llvm::SmallVector<PendingCleanupEntry> lifetimeExtendedCleanupStack;
@@ -197,6 +204,19 @@ public:
   /// cleanup scope only while this is set, since a FullExprCleanupScope is
   /// what closes those scopes.
   cir::CleanupScopeOp currentFullExprCleanupScope = nullptr;
+
+  /// Set by emitLoopConditionVariable while it emits the initializer of a loop
+  /// condition variable that lifetime-extends temporaries with a destructor.
+  /// The cleanups of the temporaries that \c extendingDecl extends are
+  /// captured by \c cleanups for the loop's cleanup region and guarded by
+  /// \c activeFlag, instead of opening cir.cleanup.scope operations around the
+  /// cir.condition.
+  struct LifetimeExtensionCapture {
+    const clang::ValueDecl *extendingDecl;
+    CapturedCleanups *cleanups;
+    Address activeFlag;
+  };
+  const LifetimeExtensionCapture *lifetimeExtensionCapture = nullptr;
 
   /// A cleanup that was pushed to the EH stack but whose deactivation is
   /// deferred until the enclosing CleanupDeactivationScope exits. Used to
@@ -290,14 +310,6 @@ public:
   /// global initializers.
   mlir::Operation *curFn = nullptr;
 
-  /// While the initializer of a variable with static storage duration is being
-  /// emitted, the region that destructors registered by that initializer belong
-  /// in: the cir.global's own dtor region for a namespace-scope variable, and
-  /// the enclosing cir.local_init's for a function-local static, which has to
-  /// be destroyed in-function under its guard. Null outside such an
-  /// initializer.
-  mlir::Region *curStaticVarDtorRegion = nullptr;
-
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *> fnArgs;
 
@@ -339,6 +351,12 @@ public:
     llvm::RoundingMode oldRounding;
   };
   clang::FPOptions curFPFeatures;
+
+  /// Convert the active Clang floating-point options to CIR fast-math flags.
+  cir::FastMathFlags getCurrentFastMathFlags() const;
+
+  /// Create a CIR fast-math attribute from the specified flags.
+  cir::FastMathFlagsAttr getFastMathFlagsAttr(cir::FastMathFlags fastMathFlags);
 
   /// The symbol table maps a variable name to a value in the current scope.
   /// Entering a function creates a new scope, and the function arguments are
@@ -638,6 +656,26 @@ public:
     return getLangOpts().CPlusPlus11;
   }
 
+  // [C++26][intro.progress] (DR)
+  // The implementation may assume that any thread will eventually do one of
+  // the following:
+  // [...]
+  // - continue execution of a trivial infinite loop ([stmt.iter.general]).
+  //
+  // A trivial infinite loop with no side effects (e.g. `while (true) {}`)
+  // is therefore exempt from the forward-progress guarantee. If such a loop
+  // is found in a function that was speculatively marked 'mustprogress',
+  // that attribute must be removed: otherwise the optimizer would be
+  // licensed to assume the loop terminates and could delete it.
+  bool checkIfLoopMustProgress(const clang::Expr *controllingExpression,
+                               bool hasEmptyBody) {
+    return clang::CodeGenUtils::checkIfLoopMustProgress(
+        getLangOpts(), cgm.getCodeGenOpts(), getContext(),
+        controllingExpression, hasEmptyBody, [this] {
+          curFn->removeAttr(cir::CIRDialect::getMustProgressAttrName());
+        });
+  }
+
   /// True if an insertion point is defined. If not, this indicates that the
   /// current code being emitted is unreachable.
   /// FIXME(cir): we need to inspect this and perhaps use a cleaner mechanism
@@ -645,6 +683,15 @@ public:
   /// LLVM's codegen does) and we probably shouldn't.
   bool haveInsertPoint() const {
     return builder.getInsertionBlock() != nullptr;
+  }
+
+  /// True if code emitted at the builder's insertion point can be reached.
+  /// After emitting a terminator CIRGen opens a fresh block to continue in, so
+  /// the insertion block holds unreachable code whenever it is neither its
+  /// region's entry block nor the target of a branch.
+  bool insertionPointIsReachable() const {
+    mlir::Block *block = builder.getInsertionBlock();
+    return block && (block->isEntryBlock() || !block->hasNoPredecessors());
   }
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
@@ -858,6 +905,10 @@ public:
   /// for a destructor. The end result should call destructors on members and
   /// base classes in reverse order of their construction.
   void enterDtorCleanups(const CXXDestructorDecl *dtor, CXXDtorType type);
+
+  /// Return the pointer to pass to the operator delete of the given
+  /// destructor, converted to the type of its first parameter if needed.
+  mlir::Value loadThisForDtorDelete(const CXXDestructorDecl *dd);
 
   /// Determines whether an EH cleanup is required to destroy a type
   /// with the given destruction kind.
@@ -1160,8 +1211,9 @@ public:
   clang::QualType buildFunctionArgList(clang::GlobalDecl gd,
                                        FunctionArgList &args);
 
-  /// Emit the function prologue: declare function arguments in the symbol
-  /// table.
+  /// Emit the function prologue: initialize the return value of an
+  /// implicit-return-zero function and declare function arguments in the
+  /// symbol table.
   void emitFunctionProlog(const FunctionArgList &args, mlir::Block *entryBB,
                           const FunctionDecl *fd, SourceLocation bodyBeginLoc);
 
@@ -1222,12 +1274,12 @@ public:
                         ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock(bool forDeactivation = false);
 
-  /// Emit the cleanups captured for a loop's condition variable (those pushed
-  /// above \p depth while EHScopeStack was capturing condition cleanups) at
-  /// the current insertion point, which must be inside the loop op's cleanup
-  /// region, and pop them off the EH stack.
-  void emitLoopConditionCleanups(EHScopeStack::stable_iterator depth,
-                                 mlir::Location loc);
+  /// Emit the captured cleanups (those pushed above \p depth while EHScopeStack
+  /// was capturing cleanups) at the current insertion point, which must be
+  /// inside the cleanup region of the op that owns them, and pop them off the
+  /// EH stack. Every cleanup above \p depth must have been captured.
+  void emitCapturedCleanups(EHScopeStack::stable_iterator depth,
+                            mlir::Location loc);
 
   void terminateStructuredRegionBody(mlir::Region &r, mlir::Location loc);
 
@@ -1461,50 +1513,55 @@ public:
     void operator=(const FullExprCleanupScope &) = delete;
   };
 
-  /// Captures cleanups for a loop's condition variable so that they can be
-  /// emitted into the loop op's per-iteration cleanup region.
-  class DeferredLoopConditionCleanup {
+  /// Captures cleanups for variables whose lifetime ends in a region owned by
+  /// an enclosing op rather than at the end of a cir.cleanup.scope, so that
+  /// they can be emitted into that region later. Examples for uses are:
+  ///   * A loop condition variable's cleanups in the loop op's per-iteration
+  ///     cleanup region.
+  ///   * Coroutine parameters and promises, which are cleaned up in a separate
+  ///     destroy region
+  class CapturedCleanups {
     CIRGenFunction &cgf;
     EHScopeStack::stable_iterator depth;
     bool active;
 
   public:
-    DeferredLoopConditionCleanup(CIRGenFunction &cgf, bool active)
+    CapturedCleanups(CIRGenFunction &cgf, bool active)
         : cgf(cgf), depth(cgf.ehStack.stable_begin()), active(active) {}
 
     /// An RAII class that suppresses cir.cleanup.scope creation for cleanups
-    /// pushed onto the EH stack while a loop condition variable is being
-    /// emitted and instead captures these cleanups so that they can be emitted
-    /// into the loop op's cleanup region after the condition region is built.
+    /// pushed onto the EH stack while such a variable is being emitted and
+    /// instead captures these cleanups so that they can be emitted into the
+    /// owning op's cleanup region later.
     class CaptureScope {
       EHScopeStack &ehStack;
 
     public:
-      explicit CaptureScope(DeferredLoopConditionCleanup &scope)
+      explicit CaptureScope(CapturedCleanups &scope)
           : ehStack(scope.cgf.ehStack) {
         // Capture scopes deliberately wrap individual cleanup-producing
         // operations, so they must never nest.
-        assert(!ehStack.isCapturingLoopConditionCleanups() &&
-               "loop condition cleanup capturing should not nest");
+        assert(!ehStack.isCapturingCleanups() &&
+               "cleanup capturing should not nest");
         if (scope.active)
-          ehStack.setCapturingLoopConditionCleanups(true);
+          ehStack.setCapturingCleanups(true);
       }
-      ~CaptureScope() { ehStack.setCapturingLoopConditionCleanups(false); }
+      ~CaptureScope() { ehStack.setCapturingCleanups(false); }
 
       CaptureScope(const CaptureScope &) = delete;
       void operator=(const CaptureScope &) = delete;
     };
 
-    /// Emit the captured condition-variable cleanups into the current insertion
-    /// point (the loop's cleanup region).
-    void emitIntoLoopCleanupRegion(mlir::Location loc) {
+    /// Emit the captured cleanups into the current insertion point, which must
+    /// be inside the owning op's cleanup region.
+    void emitIntoCleanupRegion(mlir::Location loc) {
       if (active)
-        cgf.emitLoopConditionCleanups(depth, loc);
+        cgf.emitCapturedCleanups(depth, loc);
     }
 
   private:
-    DeferredLoopConditionCleanup(const DeferredLoopConditionCleanup &) = delete;
-    void operator=(const DeferredLoopConditionCleanup &) = delete;
+    CapturedCleanups(const CapturedCleanups &) = delete;
+    void operator=(const CapturedCleanups &) = delete;
   };
 
 public:
@@ -1525,9 +1582,9 @@ public:
 
     // On a coroutine body, the OnFallthrough sub stmt holds the handler
     // (CoreturnStmt) for control flow falling off the body. Keep track
-    // of emitted co_return in this scope and allow OnFallthrough to be
-    // skipeed.
-    bool hasCoreturnStmt = false;
+    // of a co_return emitted in this scope and not followed by a label, and
+    // allow OnFallthrough to be skipped.
+    bool hasCoreturnSinceLastLabel = false;
 
     // Only Regular is used at the moment. Support for other kinds will be
     // added as the relevant statements/expressions are upstreamed.
@@ -1579,8 +1636,16 @@ public:
     // ---
     // Coroutine tracking
     // ---
-    bool hasCoreturn() const { return hasCoreturnStmt; }
-    void setCoreturn() { hasCoreturnStmt = true; }
+    bool hasCoreturn() const { return hasCoreturnSinceLastLabel; }
+    // Record an emitted co_return for fallthrough tracking.
+    // A later label clears this state.
+    void markCoreturnEmitted() { hasCoreturnSinceLastLabel = true; }
+    // A goto can reach a label after a co_return, and the code after it, so
+    // the end of this scope and of the enclosing ones may be reachable again.
+    void clearCoreturnInEnclosingScopes() {
+      for (LexicalScope *s = this; s; s = s->parentScope)
+        s->hasCoreturnSinceLastLabel = false;
+    }
 
     // ---
     // Kind
@@ -1692,7 +1757,8 @@ public:
 
   void pushLifetimeExtendedDestroy(CleanupKind kind, Address addr,
                                    QualType type, Destroyer *destroyer,
-                                   bool useEHCleanupForArray);
+                                   bool useEHCleanupForArray,
+                                   const clang::ValueDecl *extendingDecl);
 
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 
@@ -1816,6 +1882,8 @@ public:
 
   LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
 
+  LValue emitMatrixSubscriptExpr(const MatrixSubscriptExpr *e);
+
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
@@ -1869,8 +1937,17 @@ public:
 
   /// Emit a loop's condition-variable declaration. This needs special handling
   /// so that we can manage per-iteration cleanups for the loop condition.
+  /// \p extendedTemporaries are the types of the temporaries with a destructor
+  /// that its initializer lifetime-extends (see
+  /// getLifetimeExtendedTemporariesWithDestructor).
   void emitLoopConditionVariable(const clang::VarDecl &d,
-                                 DeferredLoopConditionCleanup &condCleanup);
+                                 CapturedCleanups &condCleanup,
+                                 llvm::ArrayRef<QualType> extendedTemporaries);
+
+  /// The types of the temporaries with a destructor that the initializer of
+  /// the variable \p d, which has automatic storage duration, lifetime-extends.
+  static llvm::SmallVector<QualType, 2>
+  getLifetimeExtendedTemporariesWithDestructor(const clang::VarDecl &d);
 
   /// Emit the initializer for an allocated variable.  If this call is not
   /// associated with the call to emitAutoVarAlloca (as the address of the
@@ -1916,6 +1993,11 @@ public:
                                               bool isDynamic);
 
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
+
+  /// Return the CIR signature of the LLVM intrinsic \p id, resolving its
+  /// overloaded types to \p overloadTys. Integer types are returned signed.
+  cir::FuncType getIntrinsicType(llvm::Intrinsic::ID id,
+                                 llvm::ArrayRef<mlir::Type> overloadTys = {});
 
   /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
   /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be
@@ -2012,8 +2094,11 @@ public:
   cir::CoroDoneOp emitCoroDoneBuiltinCall(const CallExpr *e);
   cir::CoroResumeOp emitCoroResumeBuiltinCall(const CallExpr *e);
   cir::CoroDestroyOp emitCoroDestroyBuiltinCall(const CallExpr *e);
+  cir::CoroNoopOp emitCoroNoopBuiltinCall(const CallExpr *e);
+  cir::CoroSuspendOp emitCoroSuspendBuiltinCall(const CallExpr *e);
 
   cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
+  cir::CoroAlignOp emitCoroAlignBuiltinCall(const CallExpr *e);
   cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
   RValue emitCoroutineFrame();
 
@@ -2131,7 +2216,8 @@ public:
   void emitBeginCatch(const CXXCatchStmt *catchStmt, mlir::Value ehToken);
 
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
-                                     cxxTryBodyEmitter &bodyCallback);
+                                     cxxTryBodyEmitter &bodyCallback,
+                                     bool isFnTryBlock = false);
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
@@ -2360,8 +2446,8 @@ public:
   std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
 
-  /// Emit a device-side printf call for NVPTX targets.
-  mlir::Value emitNVPTXDevicePrintfCallExpr(const CallExpr *expr);
+  /// Emit a device-side printf call for GPU targets.
+  mlir::Value emitDevicePrintfCallExpr(const CallExpr *expr);
 
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 

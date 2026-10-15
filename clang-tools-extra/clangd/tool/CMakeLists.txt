@@ -9,9 +9,15 @@ add_clang_library(clangdMain STATIC
   DISABLE_PCH_REUSE
   )
 
+# Support plugins.
+if(CLANG_PLUGIN_SUPPORT)
+  set(support_plugins SUPPORT_PLUGINS)
+endif()
+
 add_clang_tool(clangd
   ClangdToolMain.cpp
   $<TARGET_OBJECTS:obj.clangDaemonTweaks>
+  ${support_plugins}
   )
 
 set(LLVM_LINK_COMPONENTS
@@ -61,3 +67,7 @@ target_link_libraries(clangd
   clangDaemon
   clangdSupport
   )
+
+if(CLANG_PLUGIN_SUPPORT)
+  export_executable_symbols_for_plugins(clangd)
+endif()

@@ -20,11 +20,11 @@ function func(x, n, init)
 !CHECK: red_add: UserReductionDetails
 !CHECK: Subprogram scope: initme
 !CHECK: OtherConstruct scope:
-!CHECK: omp_in size=4 offset=0: ObjectEntity type: INTEGER(4)
-!CHECK: omp_out size=4 offset=4: ObjectEntity type: INTEGER(4)
+!CHECK: omp_in (OmpInVar) size=4 offset=0: ObjectEntity type: INTEGER(4)
+!CHECK: omp_out (OmpOutVar) size=4 offset=4: ObjectEntity type: INTEGER(4)
 !CHECK: OtherConstruct scope:
-!CHECK: omp_orig size=4 offset=0: ObjectEntity type: INTEGER(4)
-!CHECK: omp_priv size=4 offset=4: ObjectEntity type: INTEGER(4)
+!CHECK: omp_orig (OmpOrigVar) size=4 offset=0: ObjectEntity type: INTEGER(4)
+!CHECK: omp_priv (OmpPrivVar) size=4 offset=4: ObjectEntity type: INTEGER(4)
 !$omp simd reduction(red_add:res)
   do i=1,n
      res=res+x(i)
@@ -39,10 +39,10 @@ program main
 
 !CHECK: my_add_red: UserReductionDetails
 !CHECK: OtherConstruct scope:
-!CHECK: omp_in size=4 offset=0: ObjectEntity type: INTEGER(4)
-!CHECK: omp_out size=4 offset=4: ObjectEntity type: INTEGER(4)
+!CHECK: omp_in (OmpInVar) size=4 offset=0: ObjectEntity type: INTEGER(4)
+!CHECK: omp_out (OmpOutVar) size=4 offset=4: ObjectEntity type: INTEGER(4)
 !CHECK: OtherConstruct scope:
-!CHECK: omp_orig size=4 offset=0: ObjectEntity type: INTEGER(4)
-!CHECK: omp_priv size=4 offset=4: ObjectEntity type: INTEGER(4)
+!CHECK: omp_orig (OmpOrigVar) size=4 offset=0: ObjectEntity type: INTEGER(4)
+!CHECK: omp_priv (OmpPrivVar) size=4 offset=4: ObjectEntity type: INTEGER(4)
 
 end program main

@@ -570,9 +570,8 @@ bool SystemZInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
 bool SystemZInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                        ArrayRef<MachineOperand> Pred,
                                        Register DstReg, Register TrueReg,
-                                       Register FalseReg, int &CondCycles,
-                                       int &TrueCycles,
-                                       int &FalseCycles) const {
+                                       Register FalseReg,
+                                       SelectExpansion &Exp) const {
   // Not all subtargets have LOCR instructions.
   if (!STI.hasLoadStoreOnCond())
     return false;
@@ -591,9 +590,9 @@ bool SystemZInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
        SystemZ::GRX32BitRegClass.hasSubClassEq(RC)) ||
       SystemZ::GR32BitRegClass.hasSubClassEq(RC) ||
       SystemZ::GR64BitRegClass.hasSubClassEq(RC)) {
-    CondCycles = 2;
-    TrueCycles = 2;
-    FalseCycles = 2;
+    Exp.CondCycles = 2;
+    Exp.TrueCycles = 2;
+    Exp.FalseCycles = 2;
     return true;
   }
 
@@ -1089,6 +1088,8 @@ SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI,
   // Try to convert an AND into an RISBG-type instruction.
   // TODO: It might be beneficial to select RISBG and shorten to AND instead.
   if (LogicOp And = interpretAndImmediate(MI.getOpcode())) {
+    if (!MI.registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
+      return nullptr;
     uint64_t Imm = MI.getOperand(2).getImm() << And.ImmLSB;
     // AND IMMEDIATE leaves the other bits of the register unchanged.
     Imm |= allOnes(And.RegSize) & ~(allOnes(And.ImmSize) << And.ImmLSB);
@@ -1116,8 +1117,11 @@ SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI,
               .addImm(Start)
               .addImm(End + 128)
               .addImm(0);
-      if (LIS)
-        LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+      if (LIS) {
+        SlotIndex Idx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+        if (!MIB->definesRegister(SystemZ::CC, /*TRI=*/nullptr))
+          LIS->removePhysRegDefAt(SystemZ::CC, Idx.getRegSlot());
+      }
       transferDeadCC(&MI, MIB);
       return MIB;
     }

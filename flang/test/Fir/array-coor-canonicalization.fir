@@ -15,7 +15,7 @@ func.func @_QPtest1(%arg0: !fir.ref<!fir.array<120x2xi32>> {fir.bindc_name = "u"
   %c120 = arith.constant 120 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c120, %c2 : (index, index) -> !fir.shape<2>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFtest1Eu"} : (!fir.ref<!fir.array<120x2xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<120x2xi32>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFtest1Eu") : (!fir.ref<!fir.array<120x2xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<120x2xi32>>
   %3 = fir.slice %c1, %c120, %c1, %c1, %c2, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
   %4 = fir.embox %2(%1) [%3] : (!fir.ref<!fir.array<120x2xi32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<120x2xi32>>
   fir.do_loop %arg1 = %c1 to %c2 step %c1 unordered {
@@ -43,7 +43,7 @@ func.func @_QPtest2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "u"})
   %c2_i32 = arith.constant 2 : i32
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shift %c10, %c11 : (index, index) -> !fir.shift<2>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFtest2Eu"} : (!fir.box<!fir.array<?x?xi32>>, !fir.shift<2>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFtest2Eu") : (!fir.box<!fir.array<?x?xi32>>, !fir.shift<2>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
   %3 = fir.rebox %2(%1) : (!fir.box<!fir.array<?x?xi32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xi32>>
   %4:3 = fir.box_dims %3, %c0 : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
   %5:3 = fir.box_dims %3, %c1 : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
@@ -77,7 +77,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "u"})
   %c2_i32 = arith.constant 2 : i32
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shift %c10, %c11 : (index, index) -> !fir.shift<2>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFtest3Eu"} : (!fir.box<!fir.array<?x?xi32>>, !fir.shift<2>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFtest3Eu") : (!fir.box<!fir.array<?x?xi32>>, !fir.shift<2>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
   %3 = fir.rebox %2(%1) : (!fir.box<!fir.array<?x?xi32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xi32>>
   %4 = fir.slice %c10, %c120, %c1, %c11, %c12, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
   %5 = fir.rebox %3(%1) [%4] : (!fir.box<!fir.array<?x?xi32>>, !fir.shift<2>, !fir.slice<2>) -> !fir.box<!fir.array<111x2xi32>>
@@ -100,7 +100,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "u"})
 // CHECK:           %[[VAL_3:.*]] = arith.constant 100 : index
 // CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.array<100x100x100xi32> <{bindc_name = "u", uniq_name = "_QFtest4Eu"}>
 // CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]], %[[VAL_3]], %[[VAL_3]] : (index, index, index) -> !fir.shape<3>
-// CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_4]](%[[VAL_5]]) {uniq_name = "_QFtest4Eu"} : (!fir.ref<!fir.array<100x100x100xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<100x100x100xi32>>
+// CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_4]](%[[VAL_5]]) uniq_name("_QFtest4Eu") : (!fir.ref<!fir.array<100x100x100xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<100x100x100xi32>>
 // CHECK:           %[[VAL_8:.*]] = fir.slice
 // CHECK:           fir.do_loop %[[VAL_9:.*]] = %[[VAL_1]] to %[[VAL_3]]
 // CHECK:             fir.do_loop %[[VAL_10:.*]] = %[[VAL_1]] to %[[VAL_3]]
@@ -111,7 +111,7 @@ func.func @_QPtest4() {
   %c100 = arith.constant 100 : index
   %0 = fir.alloca !fir.array<100x100x100xi32> {bindc_name = "u", uniq_name = "_QFtest4Eu"}
   %1 = fir.shape %c100, %c100, %c100 : (index, index, index) -> !fir.shape<3>
-  %2 = fir.declare %0(%1) {uniq_name = "_QFtest4Eu"} : (!fir.ref<!fir.array<100x100x100xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<100x100x100xi32>>
+  %2 = fir.declare %0(%1) uniq_name("_QFtest4Eu") : (!fir.ref<!fir.array<100x100x100xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<100x100x100xi32>>
   %3 = fir.undefined index
   %4 = fir.slice %c1, %c100, %c1, %c1, %3, %3, %c1, %c100, %c1 : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
   %5 = fir.embox %2(%1) [%4] : (!fir.ref<!fir.array<100x100x100xi32>>, !fir.shape<3>, !fir.slice<3>) -> !fir.box<!fir.array<100x100xi32>>

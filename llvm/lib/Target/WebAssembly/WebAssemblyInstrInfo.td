@@ -75,7 +75,7 @@ def HasNontrappingFPToInt :
 
 def NotHasNontrappingFPToInt :
     Predicate<"!Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<(all_of (not FeatureNontrappingFPToInt)),
+    AssemblerPredicate<(none_of FeatureNontrappingFPToInt),
                        "nontrapping-fptoint">;
 
 def HasReferenceTypes :
