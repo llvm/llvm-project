@@ -769,7 +769,8 @@ define i1 @test_nuw_incorrect_precondition(ptr %p, i64 %x, i64 %y) {
 define i1 @test_nuw_scale_exceeds_signed_range(ptr %p, i64 %x) {
 ; CHECK-LABEL: @test_nuw_scale_exceeds_signed_range(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [9223372036854775809 x i8], ptr [[P:%.*]], i64 [[X:%.*]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[GEP]], [[P]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr nuw [9223372036854775809 x i8], ptr %p, i64 %x
   %cmp = icmp ule ptr %gep, %p
@@ -779,7 +780,8 @@ define i1 @test_nuw_scale_exceeds_signed_range(ptr %p, i64 %x) {
 define i1 @test_nuw_scale_exceeds_signed_range_repeated_index(ptr %p, i64 %x) {
 ; CHECK-LABEL: @test_nuw_scale_exceeds_signed_range_repeated_index(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [4611686018427387905 x [2 x i8]], ptr [[P:%.*]], i64 [[X:%.*]], i64 [[X]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[GEP]], [[P]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr nuw [4611686018427387905 x [2 x i8]], ptr %p, i64 %x, i64 %x
   %cmp = icmp ule ptr %gep, %p
