@@ -104,13 +104,20 @@ struct MultiReduceToContract
     auto dstMap =
         AffineMap::get(/*dimCount=*/reductionMask.size(),
                        /*symbolCount=*/0, exprs, reduceOp.getContext());
+    // The contraction's flags apply to both its multiply and its add, so keep
+    // only the flags that both the multiply and the reduction carry.
+    arith::FastMathFlags fastMathFlags = arith::FastMathFlags::none;
+    if (auto mulFOp = dyn_cast<arith::MulFOp>(mulOp))
+      fastMathFlags = mulFOp.getFastmath() & reduceOp.getFastmath();
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
         rewriter.getArrayAttr(llvm::map_to_vector(
-            iteratorTypes, [&](IteratorType t) -> mlir::Attribute {
+            iteratorTypes,
+            [&](IteratorType t) -> mlir::Attribute {
               return IteratorTypeAttr::get(rewriter.getContext(), t);
-            })));
+            })),
+        CombiningKind::ADD, fastMathFlags);
     return success();
   }
 };
