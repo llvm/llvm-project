@@ -1,5 +1,9 @@
-// RUN: mlir-opt %s -split-input-file -test-bit-width-constrained-vector-linearize=target-vector-bitwidth=128 | FileCheck %s --check-prefixes=ALL,BW-128
-// RUN: mlir-opt %s -split-input-file -test-bit-width-constrained-vector-linearize=target-vector-bitwidth=0   | FileCheck %s --check-prefixes=ALL,BW-0
+// RUN: mlir-opt %s -split-input-file \
+// RUN:   -transform-preload-library='transform-library-paths=%p/td/linearize.mlir' \
+// RUN:   -transform-interpreter=entry-point=linearize_bitwidth_128 | FileCheck %s --check-prefixes=ALL,BW-128
+// RUN: mlir-opt %s -split-input-file \
+// RUN:   -transform-preload-library='transform-library-paths=%p/td/linearize.mlir' \
+// RUN:   -transform-interpreter=entry-point=linearize_bitwidth_0 | FileCheck %s --check-prefixes=ALL,BW-0
 
 // A vector<2x2xf32> has inner-most dimension with 64-bits. Check that at
 // bitwidth threshold 128 (>= 64), operations are linearized, and at

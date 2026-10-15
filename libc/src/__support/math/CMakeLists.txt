@@ -3104,6 +3104,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
 )

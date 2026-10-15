@@ -3550,7 +3550,7 @@ bool AsmParser::parseDirectivePrefAlign() {
                               getStreamer().getCurrentSectionOnly()->getName() +
                               "'");
 
-  getStreamer().emitPrefAlign(Align(1ULL << Log2Alignment), *End, EmitNops,
+  getStreamer().emitPrefAlign(Align::fromLog2(Log2Alignment), *End, EmitNops,
                               Fill, getTargetParser().getSTI());
   return false;
 }
@@ -5200,11 +5200,11 @@ bool AsmParser::parseDirectiveComm(bool IsLocal) {
   // Create the Symbol as a common or local common with Size and Pow2Alignment
   if (IsLocal) {
     getStreamer().emitLocalCommonSymbol(Sym, Size,
-                                        Align(1ULL << Pow2Alignment));
+                                        Align::fromLog2(Pow2Alignment));
     return false;
   }
 
-  getStreamer().emitCommonSymbol(Sym, Size, Align(1ULL << Pow2Alignment));
+  getStreamer().emitCommonSymbol(Sym, Size, Align::fromLog2(Pow2Alignment));
   return false;
 }
 
@@ -6016,7 +6016,7 @@ bool AsmParser::parseDirectiveBundleAlignMode() {
             "invalid bundle alignment size (expected between 1 and 30)"))
     return true;
 
-  getStreamer().emitBundleAlignMode(Align(1ULL << AlignSizePow2));
+  getStreamer().emitBundleAlignMode(Align::fromLog2(AlignSizePow2));
   return false;
 }
 

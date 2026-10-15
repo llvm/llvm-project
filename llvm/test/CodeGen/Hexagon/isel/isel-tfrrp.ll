@@ -5,7 +5,7 @@
 ; REQUIRES: asserts
 
 ; CHECK: [[R0:%[0-9]+]]:intregs = A2_tfrsi 0
-; CHECK-NEXT: predregs = C2_tfrrp killed [[R0]]:intregs
+; CHECK-NEXT: predregs = C2_tfrrp [[R0]]:intregs
 
 define void @test_false(i1 %0) {
   %2 = insertelement <1024 x i1> zeroinitializer, i1 %0, i64 0

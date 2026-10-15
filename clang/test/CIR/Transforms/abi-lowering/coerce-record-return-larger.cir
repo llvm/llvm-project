@@ -57,7 +57,8 @@ module attributes {
   // CHECK:        %[[RET:.*]] = cir.call @returns_vec3() : () -> !rec_TwoI64
   // CHECK:        cir.store %[[RET]], %{{.*}} : !rec_TwoI64, !cir.ptr<!rec_TwoI64>
   // CHECK:        %[[RCAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_TwoI64> -> !cir.ptr<!rec_Vec3>
-  // CHECK:        %[[REC:.*]] = cir.load %[[RCAST]] : !cir.ptr<!rec_Vec3>, !rec_Vec3
+  // CHECK:        %[[R:.*]] = cir.alloca "r" {{.*}} : !cir.ptr<!rec_Vec3>
+  // CHECK:        cir.copy %[[RCAST]] align(8) to %[[R]] align(4) : !cir.ptr<!rec_Vec3>
   // CHECK:        %[[MEMBER:.*]] = cir.get_member %{{.*}}[0] {name = "first"} : !cir.ptr<!rec_Vec3> -> !cir.ptr<!s32i>
 
 }
