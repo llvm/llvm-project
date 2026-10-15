@@ -7268,8 +7268,10 @@ bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
 
 bool SPIRVInstructionSelector::selectTrap(MachineInstr &I) const {
   // When the SPV_KHR_abort extension is disabled, drop the G_TRAP and
-  // G_UBSANTRAP silently.
-  if (!STI.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
+  // G_UBSANTRAP silently. Also drop the no-op placeholder of the service
+  // function.
+  if (!STI.canUseExtension(SPIRV::Extension::SPV_KHR_abort) ||
+      I.getMF()->getFunction().hasFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME))
     return true;
 
   // Use the 32-bit integer constant for the abort "message" argument:

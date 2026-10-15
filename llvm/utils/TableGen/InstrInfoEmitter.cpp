@@ -59,7 +59,8 @@ class InstrInfoEmitter {
 
 public:
   InstrInfoEmitter(const RecordKeeper &R)
-      : Records(R), CDP(R), SchedModels(CDP.getTargetInfo().getSchedModels()) {}
+      : Records(R), CDP(R, /*ExpandHwMode=*/false),
+        SchedModels(CDP.getTargetInfo().getSchedModels()) {}
 
   // run - Output the instruction set description.
   void run(raw_ostream &OS);

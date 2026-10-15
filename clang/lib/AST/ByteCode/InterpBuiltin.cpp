@@ -1593,7 +1593,7 @@ static bool interp__builtin_infer_alloc_token(InterpState &S, CodePtr OpPC,
 
   auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
   if (!MaybeToken) {
-    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_stateful_mode);
+    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_unsupported_mode);
     return false;
   }
 
@@ -2529,6 +2529,14 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
       return false;
     if (!CheckDummy(S, OpPC, Ptr, AK_Read))
       return false;
+  }
+
+  if (!Ptr.isBlockPointer()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_access_unreadable_object)
+        << AK_Read << Ptr.toDiagnosticString(S.getASTContext());
+    noteValueLocation(S, Ptr);
+    return false;
   }
 
   // Check if we're currently running an initializer.

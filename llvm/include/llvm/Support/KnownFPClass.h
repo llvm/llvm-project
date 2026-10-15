@@ -253,8 +253,7 @@ struct KnownFPClass {
   minMaxLike(const KnownFPClass &LHS, const KnownFPClass &RHS, MinMaxKind Kind,
              DenormalMode DenormMode = DenormalMode::getDynamic());
 
-  /// Apply the canonicalize intrinsic to this value. This is essentially a
-  /// stronger form of propagateCanonicalizingSrc.
+  /// Apply the canonicalize intrinsic to this value.
   LLVM_ABI static KnownFPClass
   canonicalize(const KnownFPClass &Src,
                DenormalMode DenormMode = DenormalMode::getDynamic());
@@ -453,23 +452,6 @@ struct KnownFPClass {
       knownNot(fcNan);
   }
 
-  /// Propagate knowledge from a source value that could be a denormal or
-  /// zero. We have to be conservative since output flushing is not guaranteed,
-  /// so known-never-zero may not hold.
-  ///
-  /// This assumes a copy-like operation and will replace any currently known
-  /// information.
-  LLVM_ABI void propagateDenormal(const KnownFPClass &Src, DenormalMode Mode);
-
-  /// Report known classes if \p Src is evaluated through a potentially
-  /// canonicalizing operation. We can assume signaling nans will not be
-  /// introduced, but cannot assume a denormal will be flushed under FTZ/DAZ.
-  ///
-  /// This assumes a copy-like operation and will replace any currently known
-  /// information.
-  LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
-                                           DenormalMode Mode);
-
   /// Propagate known class for fpext.
   LLVM_ABI static KnownFPClass fpext(const KnownFPClass &KnownSrc,
                                      const fltSemantics &DstTy,
@@ -478,12 +460,29 @@ struct KnownFPClass {
   /// Propagate known class for fptrunc.
   LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc);
 
-  /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
-  /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
-  /// IsMultiUnitFPType if this is for a multi-unit floating-point type.
+  /// Propagate known class for rounding intrinsics (rint, nearbyint, round,
+  /// roundeven). \p IsMultiUnitFPType if this is for a multi-unit
+  /// floating-point type.
   LLVM_ABI static KnownFPClass
-  roundToIntegral(const KnownFPClass &Src, bool IsTrunc, bool IsMultiUnitFPType,
+  roundToIntegral(const KnownFPClass &Src, bool IsMultiUnitFPType,
                   DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for trunc.
+  LLVM_ABI static KnownFPClass
+  trunc(const KnownFPClass &Src,
+        DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for floor. \p IsMultiUnitFPType if this is for a
+  /// multi-unit floating-point type.
+  LLVM_ABI static KnownFPClass
+  floor(const KnownFPClass &Src, bool IsMultiUnitFPType,
+        DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for ceil. \p IsMultiUnitFPType if this is for a
+  /// multi-unit floating-point type.
+  LLVM_ABI static KnownFPClass
+  ceil(const KnownFPClass &Src, bool IsMultiUnitFPType,
+       DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for mantissa component of frexp
   LLVM_ABI static KnownFPClass
