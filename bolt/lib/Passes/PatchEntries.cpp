@@ -70,6 +70,7 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     FillerSize = BC.computeCodeSize(Seq.begin(), Seq.end());
   }
 
+  std::vector<std::pair<BinaryFunction *, std::vector<Patch>>> FunctionPatches;
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
 
@@ -132,6 +133,16 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       Function.setIgnored();
       continue;
     }
+
+    FunctionPatches.emplace_back(&Function, std::move(PendingPatches));
+  }
+
+  // Ignoring an unpatchable function can also ignore a previously checked
+  // callee. Wait until all such decisions are made before installing patches,
+  // or a retained callee's entry patch could end up jumping to itself.
+  for (auto &[Function, PendingPatches] : FunctionPatches) {
+    if (!BC.shouldEmit(*Function))
+      continue;
 
     for (Patch &Patch : PendingPatches) {
       // Add instruction patch to the binary.

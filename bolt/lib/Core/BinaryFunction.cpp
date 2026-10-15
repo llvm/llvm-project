@@ -1711,20 +1711,27 @@ bool BinaryFunction::scanExternalRefs() {
       // live at the target (including as the link register of jal t0).
       // Keep referenced functions in place and continue scanning, including
       // references in call and address-materialization pairs.
-      bool NeedsRelocation = false;
       for (const MCOperand &Op : MCPlus::primeOperands(Instruction)) {
         if (!Op.isExpr())
           continue;
         const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Op.getExpr());
         if (ignoreReference(Symbol))
           continue;
-        if (BinaryFunction *Target = BC.getFunctionForSymbol(Symbol))
+        if (BinaryFunction *Target = BC.getFunctionForSymbol(Symbol);
+            Target && !BC.forceSymbolRelocations(Symbol->getName()))
           InvalidTargets.insert(Target);
-        else
-          NeedsRelocation = true;
+        else {
+          // Symbols such as _end can move independently of functions. Neither
+          // pinning a function nor patching its entry fixes these references.
+          BC.errs() << "BOLT-ERROR: cannot update RISC-V instruction reference "
+                       "to "
+                    << Symbol->getName() << " at address 0x"
+                    << Twine::utohexstr(AbsoluteInstrAddr)
+                    << " in ignored function " << *this << '\n';
+          exit(1);
+        }
       }
-      if (!NeedsRelocation)
-        continue;
+      continue;
     }
 
     // For AArch64, we need to undo relaxation done by the linker if the target

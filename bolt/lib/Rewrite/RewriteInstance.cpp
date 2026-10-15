@@ -3517,6 +3517,14 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     }
   }
 
+  if (BC->isRISCV() && BC->forceSymbolRelocations(SymbolName)) {
+    // Special symbols such as _end move independently of the function whose
+    // boundary they happen to share. Preserve their names so retained-code
+    // scanning can recognize references that cannot be fixed by pinning it.
+    ReferencedBF = nullptr;
+    ReferencedSymbol = BC->Ctx->getOrCreateSymbol(SymbolName);
+  }
+
   if (ForceRelocation && !ReferencedBF) {
     // Create the relocation symbol if it's not defined in the binary.
     if (SymbolAddress == 0)

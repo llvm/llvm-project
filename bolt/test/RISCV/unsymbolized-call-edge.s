@@ -19,6 +19,19 @@
 // RUN: ld.lld --no-relax --emit-relocs -e backward_target -o %t.32 %t.32.o
 // RUN: llvm-bolt --print-cfg --print-only=odd_call -o %t.32.bolt %t.32 \
 // RUN:     | FileCheck --check-prefix=RV32 %s
+// RUN: llvm-bolt %t --skip-funcs=backward_tail --skip-funcs=odd_call -o %t.scan.bolt
+// RUN: llvm-nm --defined-only -n %t > %t.scan.nm
+// RUN: llvm-nm --defined-only -n %t.scan.bolt >> %t.scan.nm
+// RUN: FileCheck %s --input-file=%t.scan.nm --check-prefix=PIN
+// RUN: llvm-bolt %t.32 --skip-funcs=backward_tail --skip-funcs=odd_call -o %t.32.scan.bolt
+// RUN: llvm-nm --defined-only -n %t.32 > %t.32.scan.nm
+// RUN: llvm-nm --defined-only -n %t.32.scan.bolt >> %t.32.scan.nm
+// RUN: FileCheck %s --input-file=%t.32.scan.nm --check-prefix=PIN
+
+// PIN: [[BACKWARD:[0-9a-f]+]] T backward_target
+// PIN: [[FORWARD:[0-9a-f]+]] T forward_target
+// PIN: [[BACKWARD]] T backward_target
+// PIN: [[FORWARD]] T forward_target
 
 // BOLT-LABEL: Binary Function "backward_tail" after building cfg {
 // BOLT:       auipc t1, backward_target

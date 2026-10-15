@@ -127,12 +127,14 @@ bool RISCVMCSymbolizer::trySymbolizeLinkerResolvedControlTransfer(
   MCContext *Ctx = BC.Ctx.get();
   const uint64_t InstOffset = InstAddress - Function.getAddress();
 
-  // Recover RV64 linker-resolved intra-section calls and tail calls without
+  // Recover linker-resolved intra-section calls and tail calls without
   // relocations. Decode the following JALR and attach a call expression to the
   // AUIPC before function reordering can move the caller relative to the
   // callee.
-  if (Inst.getOpcode() != RISCV::AUIPC || !CreateNewSymbols ||
-      !BC.TheTriple->isRISCV64() || InstOffset + 8 > Function.getSize() ||
+  // RV32 recovery is only used to keep targets of retained code in place.
+  if (Inst.getOpcode() != RISCV::AUIPC ||
+      (CreateNewSymbols && !BC.TheTriple->isRISCV64()) ||
+      InstOffset + 8 > Function.getSize() ||
       Function.getRelocationInRange(InstOffset, InstOffset + 8))
     return false;
 
@@ -153,8 +155,10 @@ bool RISCVMCSymbolizer::trySymbolizeLinkerResolvedControlTransfer(
   if (!isLinkerResolvedControlTransfer(AUIPC, JALR))
     return false;
 
-  const uint64_t Target =
+  uint64_t Target =
       InstAddress + getLinkerResolvedControlTransferOffset(AUIPC, JALR);
+  if (BC.TheTriple->isRISCV32())
+    Target = static_cast<uint32_t>(Target);
   BinaryFunction *TargetBF = BC.getBinaryFunctionContainingAddress(Target);
   if (!TargetBF)
     return false;
@@ -164,6 +168,19 @@ bool RISCVMCSymbolizer::trySymbolizeLinkerResolvedControlTransfer(
   // is an intraprocedural long jump and must not be represented as a call.
   if (JALR.getOperand(0).getReg() == RISCV::X0 && TargetBF == &Function)
     return false;
+
+  if (!CreateNewSymbols) {
+    // Scanning retained code only needs to identify the owning function. Use
+    // its existing symbol even for interior or invalid entry points, so the
+    // scanner can pin the whole function without registering a new entry.
+    const MCExpr *Expr = MCSymbolRefExpr::create(TargetBF->getSymbol(), *Ctx);
+    if (Target != TargetBF->getAddress())
+      Expr = MCBinaryExpr::createAdd(
+          Expr, MCConstantExpr::create(Target - TargetBF->getAddress(), *Ctx),
+          *Ctx);
+    Inst.addOperand(MCOperand::createExpr(Expr));
+    return true;
+  }
 
   BC.addInterproceduralReference(&Function, Target);
   MCSymbol *TargetSymbol =
