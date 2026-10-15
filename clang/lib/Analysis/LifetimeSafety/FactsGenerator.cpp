@@ -309,6 +309,9 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     return;
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase:
+  case CK_BaseToDerived:
+    // The conversion cast doesn't change what it refers to, so preserve the
+    // borrow if we can.
     // It is possible that the derived class and base class have different
     // gsl::Pointer annotations. Skip if their origin shape differ.
     if (Dest && Src && Dest->getLength() == Src->getLength())
