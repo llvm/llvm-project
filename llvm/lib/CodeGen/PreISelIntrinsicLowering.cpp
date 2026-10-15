@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass implements IR lowering for the llvm.memcpy, llvm.memmove,
-// llvm.memset, llvm.load.relative and llvm.objc.* intrinsics.
+// llvm.memset, llvm.load.relative, llvm.objc.* and div/rem poison
+// intrinsics.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +18,7 @@
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ExpandVectorPredication.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -155,6 +157,83 @@ static bool lowerCanLoadSpeculatively(Function &F, const TargetMachine *TM) {
                                                   CI->getArgOperand(1));
     if (!Result)
       Result = Builder.getFalse();
+
+    CI->replaceAllUsesWith(Result);
+    CI->eraseFromParent();
+    return true;
+  });
+}
+
+/// Expand a division or remainder intrinsic that returns poison instead of
+/// having undefined behavior into a plain instruction with a guarded divisor.
+///
+/// Replace the divisor with 1 for the operands that would make the plain
+/// instruction undefined, so that the division computes x / 1 (or x % 1),
+/// which is a valid refinement of poison. The compare and the select are
+/// element-wise, so only the offending elements of a vector are guarded.
+static bool lowerDivRemPoison(Function &F) {
+  Intrinsic::ID ID = F.getIntrinsicID();
+  bool IsSigned = ID == Intrinsic::sdiv_poison || ID == Intrinsic::srem_poison;
+  Instruction::BinaryOps Opcode;
+  switch (ID) {
+  default:
+    llvm_unreachable("not a div/rem poison intrinsic");
+  case Intrinsic::sdiv_poison:
+    Opcode = Instruction::SDiv;
+    break;
+  case Intrinsic::udiv_poison:
+    Opcode = Instruction::UDiv;
+    break;
+  case Intrinsic::srem_poison:
+    Opcode = Instruction::SRem;
+    break;
+  case Intrinsic::urem_poison:
+    Opcode = Instruction::URem;
+    break;
+  }
+
+  return forEachCall(F, [&](CallInst *CI) {
+    Type *Ty = CI->getType();
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    // A signed i1 divisor of 1 is -1, so no divisor is safe. The only signed
+    // i1 division that is not poison is 0 / -1, and its result is 0.
+    if (IsSigned && BitWidth == 1) {
+      CI->replaceAllUsesWith(Constant::getNullValue(Ty));
+      CI->eraseFromParent();
+      return true;
+    }
+
+    IRBuilder<> Builder(CI);
+    // The plain instruction is undefined for a poison divisor and, for the
+    // signed forms, for a poison dividend with a divisor of -1, while the call
+    // only returns poison. Freeze the operands that the guard inspects, so
+    // that it sees the same value as the division.
+    auto Freeze = [&](Value *V) {
+      return isGuaranteedNotToBeUndefOrPoison(V) ? V : Builder.CreateFreeze(V);
+    };
+    Value *Dividend = CI->getArgOperand(0);
+    if (IsSigned)
+      Dividend = Freeze(Dividend);
+    Value *Divisor = Freeze(CI->getArgOperand(1));
+
+    // The operands that make the plain instruction undefined are a zero
+    // divisor and, for the signed forms, the minimum dividend with a divisor
+    // of -1.
+    Value *IsPoison = Builder.CreateICmpEQ(Divisor, Constant::getNullValue(Ty));
+    if (IsSigned) {
+      Value *IsOverflow = Builder.CreateAnd(
+          Builder.CreateICmpEQ(
+              Dividend,
+              ConstantInt::get(Ty, APInt::getSignedMinValue(BitWidth))),
+          Builder.CreateICmpEQ(
+              Divisor, ConstantInt::get(Ty, APInt::getAllOnes(BitWidth))));
+      IsPoison = Builder.CreateOr(IsPoison, IsOverflow);
+    }
+
+    // x / 1 is x and x % 1 is 0, so the guarded division never traps.
+    Value *SafeDivisor = Builder.CreateSelect(
+        IsPoison, ConstantInt::get(Ty, APInt(BitWidth, 1)), Divisor);
+    Value *Result = Builder.CreateBinOp(Opcode, Dividend, SafeDivisor);
 
     CI->replaceAllUsesWith(Result);
     CI->eraseFromParent();
@@ -701,6 +780,12 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::can_load_speculatively:
       Changed |= lowerCanLoadSpeculatively(F, TM);
+      break;
+    case Intrinsic::sdiv_poison:
+    case Intrinsic::udiv_poison:
+    case Intrinsic::srem_poison:
+    case Intrinsic::urem_poison:
+      Changed |= lowerDivRemPoison(F);
       break;
     case Intrinsic::is_constant:
     case Intrinsic::objectsize:
