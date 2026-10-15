@@ -6,5 +6,8 @@ target triple = "wasm32-unknown-unknown"
 ; RUN: not --crash llc < %s -exception-model=emscripten -wasm-enable-sjlj 2>&1 | FileCheck %s --check-prefix=EM_EH_W_WASM_SJLJ
 ; EM_EH_W_WASM_SJLJ: LLVM ERROR: -exception-model=emscripten not allowed with -wasm-enable-sjlj
 
+; RUN: not --crash llc < %s -exception-model=wasm -enable-emscripten-sjlj 2>&1 | FileCheck %s --check-prefix=WASM_EH_W_EM_SJLJ
+; WASM_EH_W_EM_SJLJ: LLVM ERROR: -exception-model=wasm not allowed with -enable-emscripten-sjlj
+
 ; RUN: not --crash llc < %s -exception-model=dwarf 2>&1 | FileCheck %s --check-prefix=EH_MODEL_DWARF
 ; EH_MODEL_DWARF: LLVM ERROR: -exception-model should be either 'none', 'wasm', or 'emscripten'
