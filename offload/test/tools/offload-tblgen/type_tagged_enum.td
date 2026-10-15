@@ -19,7 +19,8 @@ def my_type_tagged_enum_t : Enum {
   let etors = [
     TaggedEtor<"VALUE_ONE", "uint32_t", "Value one.">,
     TaggedEtor<"VALUE_TWO", "char[]", "Value two.">,
-    TaggedEtor<"VALUE_THREE", "some_handle_t", "Value three.">
+    TaggedEtor<"VALUE_THREE", "some_handle_t", "Value three.">,
+    TaggedEtor<"VALUE_FOUR", "uint32_t*", "Value four.">
   ];
 }
 
@@ -66,6 +67,14 @@ def FunctionA : Function {
 // CHECK-PRINT-NEXT:   os << " (";
 // CHECK-PRINT:   os << *tptr;
 // CHECK-PRINT:   os << ")";
+// CHECK-PRINT:   break;
+// CHECK-PRINT: }
+// CHECK-PRINT: case MY_TYPE_TAGGED_ENUM_VALUE_FOUR: {
+// CHECK-PRINT:   const uint32_t* const * tptr = (const uint32_t* const *)ptr;
+// CHECK-PRINT:   os << (const void *)tptr;
+// CHECK-PRINT-NEXT:   os << " (";
+// CHECK-PRINT-NEXT: {{^ *}}printPtr(os, tptr);
+// CHECK-PRINT-NEXT:   os << ")";
 // CHECK-PRINT:   break;
 // CHECK-PRINT: }
 

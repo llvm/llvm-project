@@ -86,7 +86,7 @@ inline void printTagged(OS &os, const void *ptr, {0} value, size_t size) {{
       OS << TAB_2 "os << (const void *)tptr;\n";
       OS << TAB_2 "os << \" (\";\n";
       if (Type.ends_with("*")) {
-        OS << TAB_2 "os << printPtr(os, tptr);\n";
+        OS << TAB_2 "printPtr(os, tptr);\n";
       } else {
         OS << TAB_2 "os << *tptr;\n";
       }
@@ -273,7 +273,7 @@ template <typename OS>
 using enable_if_stream_t = std::enable_if_t<is_stream_v<OS>, OS &>;
 } // namespace ol_print
 
-template <typename OS, typename T> inline ol_result_t printPtr(OS &os, const T *ptr);
+template <typename OS, typename T> inline void printPtr(OS &os, const T *ptr);
 )""";
 
   // ==========
@@ -324,7 +324,7 @@ template <typename OS, typename T> inline ol_result_t printPtr(OS &os, const T *
   OS << R"""(
 ///////////////////////////////////////////////////////////////////////////////
 // @brief Print pointer value
-template <typename OS, typename T> inline ol_result_t printPtr(OS &os, const T *ptr) {
+template <typename OS, typename T> inline void printPtr(OS &os, const T *ptr) {
     if (ptr == nullptr) {
         os << "nullptr";
     } else if constexpr (std::is_pointer_v<T>) {
@@ -345,8 +345,6 @@ template <typename OS, typename T> inline ol_result_t printPtr(OS &os, const T *
         os << *ptr;
         os << ")";
     }
-
-    return OL_SUCCESS;
 }
   )""";
 }
