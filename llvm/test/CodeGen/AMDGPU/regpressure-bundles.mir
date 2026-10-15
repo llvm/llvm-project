@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=amdgpu11.00 -run-pass=machine-scheduler \
+# RUN: llc -mtriple=amdgpu11.00 -passes=machine-scheduler \
 # RUN:   -amdgpu-use-amdgpu-trackers -misched-prera-direction=topdown \
-# RUN:   -verify-machineinstrs -verify-misched %s -o - | FileCheck %s
+# RUN:   -verify-misched %s -o - | FileCheck %s
 
 # Use AMDGPU pressure trackers and top-down scheduling to query pressure after
 # the bundle. The query must skip all bundled instructions; stepping into the
