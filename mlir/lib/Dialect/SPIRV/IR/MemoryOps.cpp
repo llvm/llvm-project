@@ -115,6 +115,9 @@ static void printSourceMemoryAccessAttribute(
                                  : memoryOp.getSourceMemoryAccess())) {
     elidedAttrs.push_back(memoryOp.getSourceMemoryAccessAttrName());
 
+    // Keep the source mask in the second position even without a target mask.
+    if (!memoryOp.getMemoryAccess())
+      printer << " [\"None\"]";
     printer << ", [\"" << stringifyMemoryAccess(*memAccess) << "\"";
 
     if (spirv::bitEnumContainsAll(*memAccess, spirv::MemoryAccess::Aligned)) {
@@ -546,6 +549,93 @@ LogicalResult CopyMemoryOp::verify() {
   return verifyMemoryAccessAttribute(
       getOperation(), getSourceMemoryAccessAttr(), getSourceAlignmentAttr(),
       MemoryAccessKind::Read);
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CopyMemorySized
+//===----------------------------------------------------------------------===//
+
+void CopyMemorySizedOp::print(OpAsmPrinter &printer) {
+  printer << ' ' << getTarget() << ", " << getSource() << ", " << getSize();
+
+  SmallVector<StringRef, 4> elidedAttrs;
+  printMemoryAccessAttribute(*this, printer, elidedAttrs);
+  printSourceMemoryAccessAttribute(*this, printer, elidedAttrs,
+                                   getSourceMemoryAccess(),
+                                   getSourceAlignment());
+
+  printer.printOptionalAttrDict(
+      (*this)->getDiscardableAttrDictionary().getValue(), elidedAttrs);
+
+  printer << " : " << getTarget().getType() << ", " << getSource().getType()
+          << ", " << getSize().getType();
+}
+
+ParseResult CopyMemorySizedOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand, 3> operandInfo;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseOperandList(operandInfo, 3) ||
+      parseMemoryAccessAttributes<CopyMemorySizedOp>(parser, result))
+    return failure();
+
+  if (!parser.parseOptionalComma()) {
+    // Parse 2nd memory access attributes.
+    if (parseSourceMemoryAccessAttributes<CopyMemorySizedOp>(parser, result))
+      return failure();
+  }
+
+  SmallVector<Type, 3> operandTypes;
+  if (parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
+      parser.parseTypeList(operandTypes))
+    return failure();
+
+  return parser.resolveOperands(operandInfo, operandTypes, loc,
+                                result.operands);
+}
+
+LogicalResult CopyMemorySizedOp::verify() {
+  if (auto constOp = getSize().getDefiningOp<spirv::ConstantOp>()) {
+    if (auto sizeAttr = dyn_cast<IntegerAttr>(constOp.getValue())) {
+      APInt size = sizeAttr.getValue();
+      if (size.isZero())
+        return emitOpError("size must not be a constant zero");
+      if (sizeAttr.getType().isSignedInteger() && size.isNegative())
+        return emitOpError("size must not be a negative signed constant");
+    }
+  }
+
+  // A lone mask applies to both operands. Only the first of two masks is
+  // Target-only.
+  MemoryAccessKind targetKind = getSourceMemoryAccess()
+                                    ? MemoryAccessKind::Write
+                                    : MemoryAccessKind::ReadWrite;
+  if (failed(verifyMemoryAccessAttribute(*this, targetKind)))
+    return failure();
+
+  return verifyMemoryAccessAttribute(
+      getOperation(), getSourceMemoryAccessAttr(), getSourceAlignmentAttr(),
+      MemoryAccessKind::Read);
+}
+
+std::optional<spirv::Version> CopyMemorySizedOp::getMinVersion() {
+  return getSourceMemoryAccess() ? spirv::Version::V_1_4
+                                 : spirv::Version::V_1_0;
+}
+
+std::optional<spirv::Version> CopyMemorySizedOp::getMaxVersion() {
+  return spirv::Version::V_1_6;
+}
+
+SmallVector<ArrayRef<spirv::Extension>, 1> CopyMemorySizedOp::getExtensions() {
+  return {};
+}
+
+SmallVector<ArrayRef<spirv::Capability>, 1>
+CopyMemorySizedOp::getCapabilities() {
+  static constexpr spirv::Capability capabilities[] = {
+      spirv::Capability::Addresses};
+  return {ArrayRef<spirv::Capability>(capabilities)};
 }
 
 //===----------------------------------------------------------------------===//
