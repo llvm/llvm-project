@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64GlobalISelUtils.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
@@ -567,19 +568,13 @@ static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
 bool matchVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI) {
   assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
          MI.getOpcode() == TargetOpcode::G_LSHR);
-  if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (!Ty.isVector())
     return false;
-  Register Amt = MI.getOperand(2).getReg();
-  if (auto Splat = getVectorSplat(*MRI.getVRegDef(Amt), MRI))
-    if (getIConstantVRegVal(*Splat, MRI))
-      return false;
-  // Constant splats with undef lanes (e.g. from widening odd-sized vectors) are
-  // still immediates for vashr_vlshr_imm once the undef lanes are cleaned up.
-  if (auto *BV = getOpcodeDef<GBuildVector>(Amt, MRI))
-    for (unsigned I = 0, E = BV->getNumSources(); I < E; ++I)
-      if (auto Cst = getIConstantVRegVal(BV->getSourceReg(I), MRI))
-        return !isBuildVectorConstantSplat(Amt, MRI, *Cst, /*AllowUndef=*/true);
-  return true;
+  // Leave shifts by a valid immediate to vashr_vlshr_imm.
+  int64_t Cnt;
+  return !AArch64GISelUtils::isVShiftRImm(MI.getOperand(2).getReg(), MRI, Ty,
+                                          Cnt);
 }
 
 void applyVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI,

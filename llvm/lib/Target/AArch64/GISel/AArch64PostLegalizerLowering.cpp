@@ -475,25 +475,6 @@ void applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
-/// isVShiftRImm - Check if this is a valid vector for the immediate
-/// operand of a vector shift right operation. The value must be in the range:
-///   1 <= Value <= ElementBits for a right shift.
-bool isVShiftRImm(Register Reg, MachineRegisterInfo &MRI, LLT Ty,
-                  int64_t &Cnt) {
-  assert(Ty.isVector() && "vector shift count is not a vector type");
-  int64_t ElementBits = Ty.getScalarSizeInBits();
-  assert(ElementBits <= 64 && "expected <= 64bit shift type");
-  MachineInstr *MI = MRI.getVRegDef(Reg);
-  std::optional<Register> Splat = getVectorSplat(*MI, MRI);
-  if (!Splat)
-    return false;
-  std::optional<APInt> C = getIConstantVRegVal(*Splat, MRI);
-  if (!C)
-    return false;
-  Cnt = C->getSExtValue();
-  return Cnt >= 1 && Cnt <= ElementBits;
-}
-
 /// Match a vector G_ASHR or G_LSHR with a valid immediate shift.
 bool matchVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
                        int64_t &Imm) {
