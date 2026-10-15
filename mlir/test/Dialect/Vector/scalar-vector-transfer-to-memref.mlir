@@ -201,3 +201,27 @@ func.func @region_masked_transfer_write(
   } : vector<1x1xi1>
   return
 }
+
+// -----
+
+// A region-masked read is not scalarized: the vector.extract source is the
+// vector.mask result, not the transfer_read.
+
+// CHECK-LABEL: func.func @region_masked_transfer_read
+//       CHECK:   %[[READ:.+]] = vector.mask %{{.+}} { vector.transfer_read
+//       CHECK:   vector.extract %[[READ]][0, 1]
+
+// MULTIUSE-LABEL: func.func @region_masked_transfer_read
+//       MULTIUSE:   %[[READ:.+]] = vector.mask %{{.+}} { vector.transfer_read
+//       MULTIUSE:   vector.extract %[[READ]][0, 1]
+func.func @region_masked_transfer_read(
+    %mem: memref<2x2xf32>, %mask: vector<2x2xi1>) -> f32 {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
+  %read = vector.mask %mask {
+    vector.transfer_read %mem[%c0, %c0], %cst {in_bounds = [true, true]} :
+      memref<2x2xf32>, vector<2x2xf32>
+  } : vector<2x2xi1> -> vector<2x2xf32>
+  %elem = vector.extract %read[0, 1] : f32 from vector<2x2xf32>
+  return %elem : f32
+}
