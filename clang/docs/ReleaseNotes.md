@@ -1171,6 +1171,9 @@ features cannot lower the translation-unit ABI level;
 
 #### CUDA Support
 
+- Fixed missing diagnostics for wrong-side functions reached through constructor
+  and member initializers, as well as inherited constructors. (#GH118415)
+
 - Fixed a CUDA miscompile caused by lambdas in reopened namespaces receiving
   the same mangled name. (#GH231096)
 
