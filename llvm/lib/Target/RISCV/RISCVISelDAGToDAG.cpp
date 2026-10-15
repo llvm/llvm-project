@@ -666,7 +666,8 @@ bool RISCVDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
     return false;
 
   uint64_t ShAmt = ShlCst->getZExtValue();
-  assert(ShAmt > 0 && ShAmt < Subtarget->getXLen() && "Unexpected shift amount!");
+  assert(ShAmt > 0 && ShAmt < Subtarget->getXLen() &&
+         "Unexpected shift amount!");
 
   // Make sure that we don't change the operation by removing bits.
   // This only matters for OR and XOR, AND is unaffected.
@@ -4404,7 +4405,8 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
       uint64_t Mask = N0.getConstantOperandVal(1);
       if (isShiftedMask_64(Mask)) {
         unsigned C1 = N.getConstantOperandVal(1);
-        assert(C1 > 0 && C1 < Subtarget->getXLen() && "Unexpected shift amount!");
+        assert(C1 > 0 && C1 < Subtarget->getXLen() &&
+               "Unexpected shift amount!");
         unsigned XLen = Subtarget->getXLen();
         unsigned Leading = XLen - llvm::bit_width(Mask);
         unsigned Trailing = llvm::countr_zero(Mask);
@@ -4445,7 +4447,8 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
                                           SDValue &Val) {
   if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
       N.hasOneUse()) {
-    assert(N.getSimpleValueType() == Subtarget->getXLenVT() && "Unexpected VT!");
+    assert(N.getSimpleValueType() == Subtarget->getXLenVT() &&
+           "Unexpected VT!");
     SDValue N0 = N.getOperand(0);
     if (N0.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N0.getOperand(1)) &&
         N0.hasOneUse()) {
