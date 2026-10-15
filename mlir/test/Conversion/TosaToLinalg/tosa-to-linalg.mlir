@@ -2940,3 +2940,90 @@ func.func @argmax_f16(%arg0: tensor<6xf16>) -> () {
   %0 = tosa.argmax %arg0 axis(0) : (tensor<6xf16>) -> tensor<i32>
   return
 }
+
+// -----
+
+// Nonzero zero points require a generic lowering because
+// linalg.quantized_batch_matmul has no transpose-B variant.
+
+// CHECK-DAG: #[[$MATMUL_T_RANK2_A_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$MATMUL_T_RANK2_B_MAP:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK-DAG: #[[$MATMUL_T_RANK2_OUT_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: @matmul_t_zero_point_rank2
+func.func @matmul_t_zero_point_rank2(%arg0: tensor<5x3xi8>, %arg1: tensor<6x3xi8>) -> tensor<5x6xi32> {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : i32
+  // CHECK: %[[INIT:.+]] = tensor.empty() : tensor<5x6xi32>
+  // CHECK: %[[FILLED:.+]] = linalg.fill ins(%[[C0]] : i32) outs(%[[INIT]] : tensor<5x6xi32>) -> tensor<5x6xi32>
+  // CHECK: %[[RESULT:.+]] = linalg.generic {indexing_maps = [#[[$MATMUL_T_RANK2_A_MAP]], #[[$MATMUL_T_RANK2_B_MAP]], #[[$MATMUL_T_RANK2_OUT_MAP]]], iterator_types = ["parallel", "parallel", "reduction"]}
+  // CHECK-SAME: ins(%arg0, %arg1 : tensor<5x3xi8>, tensor<6x3xi8>) outs(%[[FILLED]] : tensor<5x6xi32>)
+  // CHECK: ^bb0(%[[A:.+]]: i8, %[[B:.+]]: i8, %[[ACC:.+]]: i32):
+  // CHECK:   %[[EXT_A:.+]] = arith.extsi %[[A]] : i8 to i32
+  // CHECK:   %[[EXT_B:.+]] = arith.extsi %[[B]] : i8 to i32
+  // CHECK:   %[[AZP:.+]] = arith.constant 1 : i32
+  // CHECK:   %[[BZP:.+]] = arith.constant 2 : i32
+  // CHECK:   %[[ADJUSTED_A:.+]] = arith.subi %[[EXT_A]], %[[AZP]] : i32
+  // CHECK:   %[[ADJUSTED_B:.+]] = arith.subi %[[EXT_B]], %[[BZP]] : i32
+  // CHECK:   %[[PRODUCT:.+]] = arith.muli %[[ADJUSTED_A]], %[[ADJUSTED_B]] : i32
+  // CHECK:   %[[SUM:.+]] = arith.addi %[[ACC]], %[[PRODUCT]] : i32
+  // CHECK:   linalg.yield %[[SUM]] : i32
+  // CHECK: return %[[RESULT]] : tensor<5x6xi32>
+  %a_zp = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %b_zp = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<5x3xi8>, tensor<6x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<5x6xi32>
+  return %0 : tensor<5x6xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @matmul_t_zero_point
+func.func @matmul_t_zero_point(%arg0: tensor<4x5x3xi8>, %arg1: tensor<1x6x3xi8>) -> tensor<4x5x6xi32> {
+  // CHECK: %[[SLICE:.+]] = tensor.extract_slice %arg1[0, 0, 0] [1, 6, 3] [1, 1, 1] : tensor<1x6x3xi8> to tensor<6x3xi8>
+  // CHECK: %[[BCAST:.+]] = linalg.broadcast ins(%[[SLICE]] : tensor<6x3xi8>)
+  // CHECK: %[[RESULT:.+]] = linalg.generic
+  // CHECK-SAME: ins(%arg0, %[[BCAST]] : tensor<4x5x3xi8>, tensor<4x6x3xi8>)
+  // CHECK: ^bb0(%[[A:.+]]: i8, %[[BVAL:.+]]: i8, %[[ACC:.+]]: i32):
+  // CHECK:   %[[EXT_A:.+]] = arith.extsi %[[A]] : i8 to i32
+  // CHECK:   %[[EXT_B:.+]] = arith.extsi %[[BVAL]] : i8 to i32
+  // CHECK:   %[[AZP:.+]] = arith.constant 1 : i32
+  // CHECK:   %[[BZP:.+]] = arith.constant 2 : i32
+  // CHECK:   %[[ADJUSTED_A:.+]] = arith.subi %[[EXT_A]], %[[AZP]] : i32
+  // CHECK:   %[[ADJUSTED_B:.+]] = arith.subi %[[EXT_B]], %[[BZP]] : i32
+  // CHECK:   %[[PRODUCT:.+]] = arith.muli %[[ADJUSTED_A]], %[[ADJUSTED_B]] : i32
+  // CHECK:   %[[SUM:.+]] = arith.addi %[[ACC]], %[[PRODUCT]] : i32
+  // CHECK:   linalg.yield %[[SUM]] : i32
+  %a_zp = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %b_zp = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<4x5x3xi8>, tensor<1x6x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<4x5x6xi32>
+  return %0 : tensor<4x5x6xi32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MATMUL_T_A_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d4)>
+// CHECK-DAG: #[[$MATMUL_T_B_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d3, d4)>
+// CHECK-DAG: #[[$MATMUL_T_OUT_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3)>
+// CHECK-LABEL: @matmul_t_zero_point_rank4
+func.func @matmul_t_zero_point_rank4(%arg0: tensor<2x1x5x3xi8>, %arg1: tensor<1x3x6x3xi8>) -> tensor<2x3x5x6xi32> {
+  // CHECK: %[[B_SLICE:.+]] = tensor.extract_slice %arg1
+  // CHECK: %[[B_BCAST:.+]] = linalg.broadcast ins(%[[B_SLICE]] : tensor<3x6x3xi8>) {{.*}} dimensions = [0]
+  // CHECK: %[[A_SLICE:.+]] = tensor.extract_slice %arg0
+  // CHECK: %[[A_BCAST:.+]] = linalg.broadcast ins(%[[A_SLICE]] : tensor<2x5x3xi8>) {{.*}} dimensions = [1]
+  // CHECK: linalg.generic {indexing_maps = [#[[$MATMUL_T_A_MAP]], #[[$MATMUL_T_B_MAP]], #[[$MATMUL_T_OUT_MAP]]], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction"]} ins(%[[A_BCAST]], %[[B_BCAST]] : tensor<2x3x5x3xi8>, tensor<2x3x6x3xi8>)
+  %a_zp = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %b_zp = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<2x1x5x3xi8>, tensor<1x3x6x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2x3x5x6xi32>
+  return %0 : tensor<2x3x5x6xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @matmul_t_b_zero_point
+func.func @matmul_t_b_zero_point(%arg0: tensor<5x3xi8>, %arg1: tensor<6x3xi8>) -> tensor<5x6xi32> {
+  // CHECK: linalg.generic
+  // CHECK: %[[BZP:.+]] = arith.constant 2 : i32
+  // CHECK: arith.subi %{{.+}}, %[[BZP]] : i32
+  %a_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %b_zp = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<5x3xi8>, tensor<6x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<5x6xi32>
+  return %0 : tensor<5x6xi32>
+}

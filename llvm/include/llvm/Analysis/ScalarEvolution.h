@@ -1582,9 +1582,17 @@ public:
     SmallDenseSet<std::pair<const SCEV *, const SCEV *>> NotEqual;
     bool PreserveNUW = false;
     bool PreserveNSW = false;
+    /// The loop to collect guards for on first use by applyLoopGuards, if not
+    /// collected yet.
+    const Loop *PendingLoop = nullptr;
     ScalarEvolution &SE;
 
     LoopGuards(ScalarEvolution &SE) : SE(SE) {}
+
+    friend class ScalarEvolution;
+
+    /// Collect the guards for PendingLoop.
+    void collectPending();
 
     /// Recursively collect loop guards in \p Guards, starting from
     /// block \p Block with predecessor \p Pred. The intended starting point
@@ -1606,9 +1614,12 @@ public:
         unsigned Depth);
 
   public:
-    /// Collect rewrite map for loop guards for loop \p L, together with flags
-    /// indicating if NUW and NSW can be preserved during rewriting.
-    LLVM_ABI static LoopGuards collect(const Loop *L, ScalarEvolution &SE);
+    /// Return loop guards for loop \p L, which are collected on first use.
+    static LoopGuards collectOnDemand(const Loop *L, ScalarEvolution &SE) {
+      LoopGuards Guards(SE);
+      Guards.PendingLoop = L;
+      return Guards;
+    }
 
     /// Try to apply the collected loop guards to \p Expr.
     LLVM_ABI const SCEV *rewrite(const SCEV *Expr) const;
@@ -1616,8 +1627,7 @@ public:
 
   /// Try to apply information from loop guards for \p L to \p Expr.
   LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
-  LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr,
-                                       const LoopGuards &Guards);
+  LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr, LoopGuards &Guards);
 
   /// Return true if the loop has no abnormal exits. That is, if the loop
   /// is not infinite, it must exit through an explicit edge in the CFG.
@@ -2119,7 +2129,7 @@ private:
   /// Variant of getSmallConstantTripMultiple taking pre-collected loop
   /// \p Guards. \p ExitCount must be computable.
   unsigned getSmallConstantTripMultiple(const SCEV *ExitCount,
-                                        const LoopGuards &Guards);
+                                        LoopGuards &Guards);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if it exits via the specified block. If AllowPredicates is set,
@@ -2617,6 +2627,9 @@ private:
   /// allocated. This is used by releaseMemory to locate them all and call
   /// their destructors.
   SCEVUnknown *FirstUnknown = nullptr;
+
+  /// OrderID to assign to the next SCEVUnknown created.
+  unsigned NextUnknownOrderID = 0;
 };
 
 /// Analysis pass that exposes the \c ScalarEvolution for a function.

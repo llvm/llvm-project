@@ -1387,10 +1387,6 @@ bool Instruction::isLifetimeStartOrEnd() const {
   return ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end;
 }
 
-bool Instruction::isDebugOrPseudoInst() const {
-  return isa<DbgInfoIntrinsic>(this) || isa<PseudoProbeInst>(this);
-}
-
 const DebugLoc &Instruction::getStableDebugLoc() const {
   return getDebugLoc();
 }

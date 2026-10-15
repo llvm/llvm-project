@@ -520,3 +520,25 @@ func.func @memref_bounded(%arg0: memref<?xf32>) {
   acc.delete accPtr(%map : memref<?xf32>) dataClause(acc_copyin)
   return
 }
+
+// -----
+
+// acc.no_device_descriptor raises NO_DEVICE_DESCRIPTOR alongside the flags the
+// clause itself implies, and applies to the exit call as well.
+// CHECK-LABEL: llvm.func @no_device_descriptor
+// to | no_device_descriptor = 1 | 33554432.
+// CHECK: %[[FLAGS:.*]] = llvm.mlir.constant(33554433 : i64) : i64
+// CHECK: llvm.store %[[FLAGS]], %{{.*}} : i64, !llvm.ptr
+// CHECK: llvm.call @__tgt_acc_data_begin
+// CHECK: %[[FLAGS_END:.*]] = llvm.mlir.constant(33554433 : i64) : i64
+// CHECK: llvm.store %[[FLAGS_END]], %{{.*}} : i64, !llvm.ptr
+// CHECK: llvm.call @__tgt_acc_data_end
+func.func @no_device_descriptor(%arg0: !llvm.ptr) {
+  %map = acc.copyin varPtr(%arg0 : !llvm.ptr) varType(i32)
+      dataClause(acc_copyin) -> !llvm.ptr {acc.no_device_descriptor}
+  acc.data dataOperands(%map : !llvm.ptr) {
+    acc.terminator
+  }
+  acc.delete accPtr(%map : !llvm.ptr) dataClause(acc_copyin)
+  return
+}

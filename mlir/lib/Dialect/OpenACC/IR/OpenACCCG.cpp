@@ -25,6 +25,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -74,6 +75,80 @@ struct RemoveEmptyKernelEnvironment
     else
       rewriter.eraseOp(op);
 
+    return success();
+  }
+};
+
+struct KernelEnvironmentDedupDataOperands
+    : public OpRewritePattern<acc::KernelEnvironmentOp> {
+  using OpRewritePattern<acc::KernelEnvironmentOp>::OpRewritePattern;
+
+  static bool isReductionDataOperand(Value operand) {
+    Operation *def = operand.getDefiningOp();
+    if (!def)
+      return false;
+    std::optional<DataClause> clause = getDataClause(def);
+    if (!clause || *clause != DataClause::acc_reduction)
+      return false;
+    assert(isa<CopyinOp>(def) && "reduction clause must be an acc.copyin");
+    return true;
+  }
+
+  LogicalResult matchAndRewrite(acc::KernelEnvironmentOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> operands(op.getDataClauseOperands());
+    const unsigned numOperands = operands.size();
+    if (numOperands < 2)
+      return failure();
+
+    SmallVector<Value> kept;
+    SmallVector<std::pair<Value, Value>> useRewrites;
+    SmallVector<SmallVector<Value>> boundsStorage;
+    boundsStorage.reserve(numOperands);
+    llvm::DenseMap<std::pair<Value, ArrayRef<Value>>, unsigned>
+        keptIndexByVarAndBounds;
+    for (Value operand : operands) {
+      Operation *def = operand.getDefiningOp();
+      // acc.map_info is a finalized mapping. Its order and semantics stand;
+      // matching only its variable and bounds would ignore flags and
+      // descriptors.
+      if (!def || isa<MapInfoOp>(def)) {
+        kept.push_back(operand);
+        continue;
+      }
+
+      Value var = getVar(def);
+      if (!var) {
+        kept.push_back(operand);
+        continue;
+      }
+
+      boundsStorage.push_back(getBounds(def));
+      auto [it, inserted] = keptIndexByVarAndBounds.try_emplace(
+          std::make_pair(var, ArrayRef<Value>(boundsStorage.back())),
+          kept.size());
+      if (inserted) {
+        kept.push_back(operand);
+        continue;
+      }
+
+      Value &survivor = kept[it->second];
+      // A reduction acc.copyin is that copyin plus the reduction. Keeping
+      // another clause would drop the reduction.
+      if (isReductionDataOperand(operand) && !isReductionDataOperand(survivor))
+        std::swap(survivor, operand);
+      useRewrites.emplace_back(operand, survivor);
+    }
+    if (kept.size() == numOperands)
+      return failure();
+
+    for (auto [from, to] : useRewrites) {
+      rewriter.replaceUsesWithIf(from, to, [&](OpOperand &use) {
+        return op->isProperAncestor(use.getOwner());
+      });
+    }
+    rewriter.modifyOpInPlace(
+        op, [&] { op.getDataClauseOperandsMutable().assign(kept); });
     return success();
   }
 };
@@ -315,7 +390,8 @@ ValueRange KernelEnvironmentOp::getSuccessorInputs(RegionSuccessor successor) {
 
 void KernelEnvironmentOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveEmptyKernelEnvironment>(context);
+  results.add<RemoveEmptyKernelEnvironment, KernelEnvironmentDedupDataOperands>(
+      context);
 }
 
 /// Extract async for `clauseDeviceType`. Returns true if a clause was found.

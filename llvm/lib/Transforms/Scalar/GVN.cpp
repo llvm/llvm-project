@@ -1871,7 +1871,7 @@ LoadInst *GVNPassImpl::findLoadToHoistIntoPred(BasicBlock *Pred,
 
   unsigned int NumInsts = Opts.gvn_max_num_insns;
   for (Instruction &Inst : *SuccBB) {
-    if (Inst.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(Inst))
       continue;
     if (--NumInsts == 0)
       return nullptr;
@@ -2761,8 +2761,6 @@ std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::accessMayModifyLocation(
   }
 
   if (auto *II = dyn_cast<IntrinsicInst>(ClobberI)) {
-    if (isa<DbgInfoIntrinsic>(II))
-      return std::nullopt;
     if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
       MemoryLocation IIObjLoc = MemoryLocation::getForArgument(II, 0, TLI);
       if (AA.isMustAlias(IIObjLoc, Loc))
