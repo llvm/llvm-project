@@ -1881,7 +1881,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
           "expected register class or memory constraint name after ':'");
 
     StringRef ConstraintStr = Token.stringValue();
-    if (K == InlineAsm::Kind::Mem) {
+    if (F.isMemKind()) {
       InlineAsm::ConstraintCode CC =
           StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
               .Case("es", InlineAsm::ConstraintCode::es)
@@ -1930,8 +1930,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
 
   // Parse an optional 'foldable' marker: the register allocator may fold the
   // operand's register to a stack slot (see
-  // InlineAsm::Flag::setRegMayBeFolded()). A tied use can't be foldable, so
-  // the 'tiedto' case above doesn't reach this.
+  // InlineAsm::Flag::setRegMayBeFolded()).
   if (Token.is(MIToken::Identifier) && Token.stringValue() == "foldable") {
     if (!F.isRegDefKind() && !F.isRegUseKind() && !F.isRegDefEarlyClobberKind())
       return error("only a register operand can be 'foldable'");
