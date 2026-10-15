@@ -10,7 +10,7 @@ extern struct {
   unsigned long long features;
 } __aarch64_cpu_features;
 
-// For these targets __aarch64_cpu_features initialization 
+// For these targets __aarch64_cpu_features initialization
 // needs to be manually triggered.
 #if defined(__APPLE__) || defined(__Fuchsia__)
 void __init_cpu_features_resolver(void);
@@ -35,7 +35,7 @@ int main(void) {
 #endif
 
   int failed = 0;
-#define CHECK_FEATURE(name, feature)                                            \
+#define CHECK_FEATURE(name, feature)                                           \
   failed |= check_feature(name, feature, __builtin_cpu_supports(name))
 
   // Check runtime feature bit and use the builtin to verify that transitive
