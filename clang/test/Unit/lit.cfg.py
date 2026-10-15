@@ -76,7 +76,7 @@ else:
 
 # The unit tests on z/OS need auto-conversion turned on.
 if sys.platform == "zos":
-  config.environment['_BPXK_AUTOCVT'] = 'ON'
+    config.environment["_BPXK_AUTOCVT"] = "ON"
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable
