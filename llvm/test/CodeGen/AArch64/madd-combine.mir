@@ -3,27 +3,7 @@
 # RUN:     -verify-machineinstrs -o - %s | FileCheck %s
 ---
 name:            madd_w_asr
-alignment:       4
 tracksRegLiveness: true
-noPhis:          false
-isSSA:           true
-noVRegs:         false
-hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-liveins:
-  - { reg: '$w0', virtual-reg: '%0' }
-  - { reg: '$w1', virtual-reg: '%1' }
-  - { reg: '$w2', virtual-reg: '%2' }
-frameInfo:
-  maxAlignment:    1
-  framePointerPolicy: none
-  maxCallFrameSize: 0
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -48,27 +28,7 @@ body:             |
 ...
 ---
 name:            madd_w_lsr
-alignment:       4
 tracksRegLiveness: true
-noPhis:          false
-isSSA:           true
-noVRegs:         false
-hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-liveins:
-  - { reg: '$w0', virtual-reg: '%0' }
-  - { reg: '$w1', virtual-reg: '%1' }
-  - { reg: '$w2', virtual-reg: '%2' }
-frameInfo:
-  maxAlignment:    1
-  framePointerPolicy: none
-  maxCallFrameSize: 0
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -93,27 +53,7 @@ body:             |
 ...
 ---
 name:            madd_x_asr
-alignment:       4
 tracksRegLiveness: true
-noPhis:          false
-isSSA:           true
-noVRegs:         false
-hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64 }
-  - { id: 3, class: gpr64 }
-  - { id: 4, class: gpr64 }
-liveins:
-  - { reg: '$x0', virtual-reg: '%0' }
-  - { reg: '$x1', virtual-reg: '%1' }
-  - { reg: '$x2', virtual-reg: '%2' }
-frameInfo:
-  maxAlignment:    1
-  framePointerPolicy: none
-  maxCallFrameSize: 0
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -138,29 +78,7 @@ body:             |
 ...
 ---
 name:            no_madd_mul_multi_use
-alignment:       4
 tracksRegLiveness: true
-noPhis:          false
-isSSA:           true
-noVRegs:         false
-hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr64common }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
-liveins:
-  - { reg: '$w0', virtual-reg: '%0' }
-  - { reg: '$w1', virtual-reg: '%1' }
-  - { reg: '$w2', virtual-reg: '%2' }
-  - { reg: '$x3', virtual-reg: '%3' }
-frameInfo:
-  maxAlignment:    1
-  framePointerPolicy: none
-  maxCallFrameSize: 0
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3
@@ -189,27 +107,7 @@ body:             |
 ...
 ---
 name:            madd_w_lsl_small
-alignment:       4
 tracksRegLiveness: true
-noPhis:          false
-isSSA:           true
-noVRegs:         false
-hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-liveins:
-  - { reg: '$w0', virtual-reg: '%0' }
-  - { reg: '$w1', virtual-reg: '%1' }
-  - { reg: '$w2', virtual-reg: '%2' }
-frameInfo:
-  maxAlignment:    1
-  framePointerPolicy: none
-  maxCallFrameSize: 0
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -234,27 +132,7 @@ body:             |
 ...
 ---
 name:            madd_w_lsl_large
-alignment:       4
 tracksRegLiveness: true
-noPhis:          false
-isSSA:           true
-noVRegs:         false
-hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-liveins:
-  - { reg: '$w0', virtual-reg: '%0' }
-  - { reg: '$w1', virtual-reg: '%1' }
-  - { reg: '$w2', virtual-reg: '%2' }
-frameInfo:
-  maxAlignment:    1
-  framePointerPolicy: none
-  maxCallFrameSize: 0
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -279,27 +157,7 @@ body:             |
 ...
 ---
 name:            madd_x_lsl_large
-alignment:       4
 tracksRegLiveness: true
-noPhis:          false
-isSSA:           true
-noVRegs:         false
-hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64 }
-  - { id: 3, class: gpr64 }
-  - { id: 4, class: gpr64 }
-liveins:
-  - { reg: '$x0', virtual-reg: '%0' }
-  - { reg: '$x1', virtual-reg: '%1' }
-  - { reg: '$x2', virtual-reg: '%2' }
-frameInfo:
-  maxAlignment:    1
-  framePointerPolicy: none
-  maxCallFrameSize: 0
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -324,30 +182,7 @@ body:             |
 ...
 ---
 name:            madd_w_div_mul
-alignment:       4
 tracksRegLiveness: true
-noPhis:          false
-isSSA:           true
-noVRegs:         false
-hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32 }
-liveins:
-  - { reg: '$w0', virtual-reg: '%0' }
-  - { reg: '$w1', virtual-reg: '%1' }
-  - { reg: '$w2', virtual-reg: '%2' }
-  - { reg: '$w3', virtual-reg: '%3' }
-frameInfo:
-  maxAlignment:    1
-  framePointerPolicy: none
-  maxCallFrameSize: 0
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
@@ -376,30 +211,7 @@ body:             |
 ...
 ---
 name:            no_madd_w_lsl
-alignment:       4
 tracksRegLiveness: true
-noPhis:          false
-isSSA:           true
-noVRegs:         false
-hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32 }
-liveins:
-  - { reg: '$w0', virtual-reg: '%0' }
-  - { reg: '$w1', virtual-reg: '%1' }
-  - { reg: '$w2', virtual-reg: '%2' }
-  - { reg: '$w3', virtual-reg: '%3' }
-frameInfo:
-  maxAlignment:    1
-  framePointerPolicy: none
-  maxCallFrameSize: 0
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3

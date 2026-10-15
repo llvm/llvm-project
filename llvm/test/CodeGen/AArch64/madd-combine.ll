@@ -4,8 +4,8 @@
 define i32 @madd_w_asr(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: madd_w_asr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w8, w1, w0
-; CHECK-NEXT:    add w0, w8, w2, asr #2
+; CHECK-NEXT:    asr w8, w2, #2
+; CHECK-NEXT:    madd w0, w1, w0, w8
 ; CHECK-NEXT:    ret
   %m = mul nsw i32 %b, %a
   %s = ashr i32 %c, 2
@@ -16,8 +16,8 @@ define i32 @madd_w_asr(i32 %a, i32 %b, i32 %c) {
 define i32 @madd_w_lsr(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: madd_w_lsr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w8, w1, w0
-; CHECK-NEXT:    add w0, w8, w2, lsr #4
+; CHECK-NEXT:    lsr w8, w2, #4
+; CHECK-NEXT:    madd w0, w1, w0, w8
 ; CHECK-NEXT:    ret
   %m = mul i32 %b, %a
   %s = lshr i32 %c, 4
@@ -28,8 +28,8 @@ define i32 @madd_w_lsr(i32 %a, i32 %b, i32 %c) {
 define i32 @madd_w_lsl(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: madd_w_lsl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w8, w1, w0
-; CHECK-NEXT:    add w0, w8, w2, lsl #12
+; CHECK-NEXT:    lsl w8, w2, #12
+; CHECK-NEXT:    madd w0, w1, w0, w8
 ; CHECK-NEXT:    ret
   %m = mul i32 %b, %a
   %s = shl i32 %c, 12
@@ -40,8 +40,8 @@ define i32 @madd_w_lsl(i32 %a, i32 %b, i32 %c) {
 define i64 @madd_x_asr(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: madd_x_asr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    add x0, x8, x2, asr #2
+; CHECK-NEXT:    asr x8, x2, #2
+; CHECK-NEXT:    madd x0, x1, x0, x8
 ; CHECK-NEXT:    ret
   %m = mul nsw i64 %b, %a
   %s = ashr i64 %c, 2
@@ -52,8 +52,8 @@ define i64 @madd_x_asr(i64 %a, i64 %b, i64 %c) {
 define i64 @madd_x_lsl(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: madd_x_lsl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    add x0, x8, x2, lsl #12
+; CHECK-NEXT:    lsl x8, x2, #12
+; CHECK-NEXT:    madd x0, x1, x0, x8
 ; CHECK-NEXT:    ret
   %m = mul i64 %b, %a
   %s = shl i64 %c, 12
