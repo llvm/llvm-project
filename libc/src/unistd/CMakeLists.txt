@@ -176,6 +176,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fexecve
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fexecve
+)
+
+add_entrypoint_object(
   fsync
   ALIAS
   DEPENDS
