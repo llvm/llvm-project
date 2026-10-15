@@ -233,7 +233,8 @@ Error CodeGenPassBuilder::buildPipeline(
     return StartStopInfo.takeError();
   setStartStopPasses(*StartStopInfo);
 
-  bool PrintAsm = TargetPassConfig::willCompleteCodeGenPipeline(TM);
+  CompletesPipeline = StartStopInfo->StopPass.empty();
+  bool PrintAsm = CompletesPipeline;
   bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
 
   PassManagerWrapper PMW(MPM);

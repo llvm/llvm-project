@@ -173,16 +173,16 @@ public:
 
   /// Returns true if one of the `-start-after`, `-start-before`, `-stop-after`
   /// or `-stop-before` options is set.
-  static bool hasLimitedCodeGenPipeline(const TargetMachine &TM);
+  bool hasLimitedCodeGenPipeline() const;
 
   /// Returns true if none of the `-stop-before` and `-stop-after` options is
   /// set.
-  static bool willCompleteCodeGenPipeline(const TargetMachine &TM);
+  bool willCompleteCodeGenPipeline() const;
 
   /// If hasLimitedCodeGenPipeline is true, this method returns
   /// a string with the name of the options that caused this
   /// pipeline to be limited.
-  static std::string getLimitedCodeGenPipelineReason(const TargetMachine &TM);
+  std::string getLimitedCodeGenPipelineReason() const;
 
   struct StartStopInfo {
     bool StartAfter;
@@ -191,6 +191,12 @@ public:
     unsigned StopInstanceNum;
     StringRef StartPass;
     StringRef StopPass;
+
+    /// Returns true if a start or stop pass is set.
+    bool isLimited() const { return !StartPass.empty() || !StopPass.empty(); }
+
+    /// Returns the names of the options that set the start and stop passes.
+    LLVM_ABI std::string getLimitReason() const;
   };
 
   /// Returns pass name in `-stop-before` or `-stop-after`

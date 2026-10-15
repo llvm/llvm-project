@@ -176,8 +176,8 @@ static IdentifyingPassPtr overridePass(const CodeGenOptions &Opts,
 
 // Find the FSProfile file name. The internal option takes the precedence
 // before getting from TargetMachine.
-static std::string getFSProfileFile(const TargetMachine *TM) {
-  const CodeGenOptions &Opts = getOpts(*TM);
+static std::string getFSProfileFile(const CodeGenOptions &Opts,
+                                    const TargetMachine *TM) {
   if (!Opts.fs_profile_file.empty())
     return Opts.fs_profile_file.str();
   const std::optional<PGOOptions> &PGOOpt = TM->getPGOOption();
@@ -188,8 +188,8 @@ static std::string getFSProfileFile(const TargetMachine *TM) {
 
 // Find the Profile remapping file name. The internal option takes the
 // precedence before getting from TargetMachine.
-static std::string getFSRemappingFile(const TargetMachine *TM) {
-  const CodeGenOptions &Opts = getOpts(*TM);
+static std::string getFSRemappingFile(const CodeGenOptions &Opts,
+                                      const TargetMachine *TM) {
   if (!Opts.fs_remapping_file.empty())
     return Opts.fs_remapping_file.str();
   const std::optional<PGOOptions> &PGOOpt = TM->getPGOOption();
@@ -240,6 +240,10 @@ public:
   // that standard pass with an explicit command line option.
   DenseMap<AnalysisID,IdentifyingPassPtr> TargetPasses;
 
+  const CodeGenOptions &Opts;
+
+  explicit PassConfigImpl(const CodeGenOptions &Opts) : Opts(Opts) {}
+
   /// Store the pairs of <AnalysisID, AnalysisID> of which the second pass
   /// is inserted after each instance of the first one.
   SmallVector<InsertedPass, 4> InsertedPasses;
@@ -282,7 +286,7 @@ getPassNameAndInstanceNum(StringRef PassName) {
 }
 
 void TargetPassConfig::setStartStopPasses() {
-  const CodeGenOptions &Opts = getOpts(*TM);
+  const CodeGenOptions &Opts = Impl->Opts;
   StringRef StartBeforeName;
   std::tie(StartBeforeName, StartBeforeInstanceNum) =
       getPassNameAndInstanceNum(Opts.start_before);
@@ -434,7 +438,7 @@ TargetPassConfig::getStartStopInfo(const TargetMachine &TM,
 TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
     : ImmutablePass(ID), PM(&PM), TM(&TM) {
   const CodeGenOptions &Opts = getOpts(TM);
-  Impl = new PassConfigImpl();
+  Impl = new PassConfigImpl(Opts);
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   // Register all target independent codegen passes to activate their PassIDs,
@@ -508,25 +512,22 @@ TargetPassConfig::TargetPassConfig()
                         "triple set?");
 }
 
-bool TargetPassConfig::willCompleteCodeGenPipeline(const TargetMachine &TM) {
-  const CodeGenOptions &Opts = getOpts(TM);
+bool TargetPassConfig::willCompleteCodeGenPipeline() const {
+  const CodeGenOptions &Opts = Impl->Opts;
   return Opts.stop_before.empty() && Opts.stop_after.empty();
 }
 
-bool TargetPassConfig::hasLimitedCodeGenPipeline(const TargetMachine &TM) {
-  const CodeGenOptions &Opts = getOpts(TM);
+bool TargetPassConfig::hasLimitedCodeGenPipeline() const {
+  const CodeGenOptions &Opts = Impl->Opts;
   return !Opts.start_before.empty() || !Opts.start_after.empty() ||
-         !willCompleteCodeGenPipeline(TM);
+         !willCompleteCodeGenPipeline();
 }
 
-std::string
-TargetPassConfig::getLimitedCodeGenPipelineReason(const TargetMachine &TM) {
-  const CodeGenOptions &Opts = getOpts(TM);
-  if (!hasLimitedCodeGenPipeline(TM))
-    return std::string();
+static std::string formatLimitReason(StringRef StartAfter,
+                                     StringRef StartBefore, StringRef StopAfter,
+                                     StringRef StopBefore) {
   std::string Res;
-  StringRef PassNames[] = {Opts.start_after, Opts.start_before, Opts.stop_after,
-                           Opts.stop_before};
+  StringRef PassNames[] = {StartAfter, StartBefore, StopAfter, StopBefore};
   static const char *OptNames[] = {StartAfterOptName, StartBeforeOptName,
                                    StopAfterOptName, StopBeforeOptName};
   bool IsFirst = true;
@@ -538,6 +539,18 @@ TargetPassConfig::getLimitedCodeGenPipelineReason(const TargetMachine &TM) {
       Res += OptNames[Idx];
     }
   return Res;
+}
+
+std::string TargetPassConfig::getLimitedCodeGenPipelineReason() const {
+  const CodeGenOptions &Opts = Impl->Opts;
+  return formatLimitReason(Opts.start_after, Opts.start_before, Opts.stop_after,
+                           Opts.stop_before);
+}
+
+std::string TargetPassConfig::StartStopInfo::getLimitReason() const {
+  return formatLimitReason(
+      StartAfter ? StartPass : "", StartAfter ? "" : StartPass,
+      StopAfter ? StopPass : "", StopAfter ? "" : StopPass);
 }
 
 // Helper to verify the analysis is really immutable.
@@ -561,7 +574,7 @@ IdentifyingPassPtr TargetPassConfig::getPassSubstitution(AnalysisID ID) const {
 
 bool TargetPassConfig::isPassSubstitutedOrOverridden(AnalysisID ID) const {
   IdentifyingPassPtr TargetID = getPassSubstitution(ID);
-  IdentifyingPassPtr FinalPtr = overridePass(getOpts(*TM), ID, TargetID);
+  IdentifyingPassPtr FinalPtr = overridePass(Impl->Opts, ID, TargetID);
   return !FinalPtr.isValid() || FinalPtr.isInstance() ||
       FinalPtr.getID() != ID;
 }
@@ -620,7 +633,7 @@ void TargetPassConfig::addPass(Pass *P) {
 /// PassManager and the instance we create here may already be freed.
 AnalysisID TargetPassConfig::addPass(AnalysisID PassID) {
   IdentifyingPassPtr TargetID = getPassSubstitution(PassID);
-  IdentifyingPassPtr FinalPtr = overridePass(getOpts(*TM), PassID, TargetID);
+  IdentifyingPassPtr FinalPtr = overridePass(Impl->Opts, PassID, TargetID);
   if (!FinalPtr.isValid())
     return nullptr;
 
@@ -644,7 +657,7 @@ void TargetPassConfig::printAndVerify(const std::string &Banner) {
 }
 
 void TargetPassConfig::addPrintPass(const std::string &Banner) {
-  if (getOpts(*TM).print_after_isel)
+  if (Impl->Opts.print_after_isel)
     PM->add(createMachineFunctionPrinterPass(dbgs(), Banner));
 }
 
@@ -666,7 +679,7 @@ void TargetPassConfig::addCheckDebugPass() {
 }
 
 void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
-  const CodeGenOptions &Opts = getOpts(*TM);
+  const CodeGenOptions &Opts = Impl->Opts;
   if (AllowDebugify && DebugifyIsSafe &&
       (valueOr(Opts.debugify_and_strip_all_safe, false) ||
        valueOr(Opts.debugify_check_and_strip_all_safe, false)))
@@ -674,7 +687,7 @@ void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
 }
 
 void TargetPassConfig::addMachinePostPasses(const std::string &Banner) {
-  const CodeGenOptions &Opts = getOpts(*TM);
+  const CodeGenOptions &Opts = Impl->Opts;
   if (DebugifyIsSafe) {
     if (valueOr(Opts.debugify_check_and_strip_all_safe, false)) {
       addCheckDebugPass();
@@ -688,7 +701,7 @@ void TargetPassConfig::addMachinePostPasses(const std::string &Banner) {
 /// Add common target configurable passes that perform LLVM IR to IR transforms
 /// following machine independent optimization.
 void TargetPassConfig::addIRPasses() {
-  const CodeGenOptions &Opts = getOpts(*TM);
+  const CodeGenOptions &Opts = Impl->Opts;
   // Before running any passes, run the verifier to determine if the input
   // coming from the front-end and/or optimizer is valid.
   if (!DisableVerify)
@@ -813,7 +826,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
 /// Add pass to prepare the LLVM IR for code generation. This should be done
 /// before exception handling preparation passes.
 void TargetPassConfig::addCodeGenPrepare() {
-  if (getOptLevel() != CodeGenOptLevel::None && !getOpts(*TM).disable_cgp)
+  if (getOptLevel() != CodeGenOptLevel::None && !Impl->Opts.disable_cgp)
     addPass(createCodeGenPrepareLegacyPass());
 }
 
@@ -833,7 +846,7 @@ void TargetPassConfig::addISelPrepare() {
   addPass(createSafeStackPass());
   addPass(createStackProtectorPass());
 
-  if (getOpts(*TM).print_isel_input)
+  if (Impl->Opts.print_isel_input)
     addPass(createPrintFunctionPass(
         dbgs(), "\n\n*** Final LLVM Code input to ISel ***\n"));
 
@@ -844,7 +857,7 @@ void TargetPassConfig::addISelPrepare() {
 }
 
 bool TargetPassConfig::addCoreISelPasses() {
-  const CodeGenOptions &Opts = getOpts(*TM);
+  const CodeGenOptions &Opts = Impl->Opts;
   // Enable FastISel with -fast-isel, but allow that to be overridden.
   TM->setO0WantsFastISel(valueOr(Opts.fast_isel, true));
 
@@ -944,7 +957,7 @@ bool TargetPassConfig::addISelPasses() {
   addPass(createExpandIRInstsPass(getOptLevel()));
   addIRPasses();
 
-  if (getOpts(*TM).codegen_pipeline_trigger_crash)
+  if (Impl->Opts.codegen_pipeline_trigger_crash)
     addPass(new TriggerCrashFunctionLegacyPass());
 
   addCodeGenPrepare();
@@ -980,7 +993,7 @@ static cl::opt<RegisterRegAlloc::FunctionPassCtor, false,
 /// TODO: We could use a single addPre/Post(ID) hook to allow pass injection
 /// before/after any target-independent pass. But it's currently overkill.
 void TargetPassConfig::addMachinePasses() {
-  const CodeGenOptions &Opts = getOpts(*TM);
+  const CodeGenOptions &Opts = Impl->Opts;
   AddingMachinePasses = true;
 
   // Add passes that optimize machine instructions in SSA form.
@@ -1008,11 +1021,11 @@ void TargetPassConfig::addMachinePasses() {
   if (EnableFSDiscriminator) {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::Pass1));
-    const std::string ProfileFile = getFSProfileFile(TM);
+    const std::string ProfileFile = getFSProfileFile(Impl->Opts, TM);
     if (!ProfileFile.empty() && !Opts.disable_ra_fsprofile_loader)
-      addPass(createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
-                                         sampleprof::FSDiscriminatorPass::Pass1,
-                                         nullptr));
+      addPass(createMIRProfileLoaderPass(
+          ProfileFile, getFSRemappingFile(Impl->Opts, TM),
+          sampleprof::FSDiscriminatorPass::Pass1, nullptr));
   }
 
   // Run register allocation and passes that are tightly coupled with it,
@@ -1113,11 +1126,11 @@ void TargetPassConfig::addMachinePasses() {
 
   if (SplitFunctionsWithPGO || Opts.split_static_data ||
       TM->Options.EnableStaticDataPartitioning) {
-    const std::string ProfileFile = getFSProfileFile(TM);
+    const std::string ProfileFile = getFSProfileFile(Impl->Opts, TM);
     if (!ProfileFile.empty()) {
       if (EnableFSDiscriminator) {
         addPass(createMIRProfileLoaderPass(
-            ProfileFile, getFSRemappingFile(TM),
+            ProfileFile, getFSRemappingFile(Impl->Opts, TM),
             sampleprof::FSDiscriminatorPass::PassLast, nullptr));
       } else {
         // Sample profile is given, but FSDiscriminator is not
@@ -1425,15 +1438,15 @@ bool TargetPassConfig::addGCPasses() {
 
 /// Add standard basic block placement passes.
 void TargetPassConfig::addBlockPlacement() {
-  const CodeGenOptions &Opts = getOpts(*TM);
+  const CodeGenOptions &Opts = Impl->Opts;
   if (EnableFSDiscriminator) {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::Pass2));
-    const std::string ProfileFile = getFSProfileFile(TM);
+    const std::string ProfileFile = getFSProfileFile(Impl->Opts, TM);
     if (!ProfileFile.empty() && !Opts.disable_layout_fsprofile_loader)
-      addPass(createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
-                                         sampleprof::FSDiscriminatorPass::Pass2,
-                                         nullptr));
+      addPass(createMIRProfileLoaderPass(
+          ProfileFile, getFSRemappingFile(Impl->Opts, TM),
+          sampleprof::FSDiscriminatorPass::Pass2, nullptr));
   }
   if (addPass(&MachineBlockPlacementID)) {
     // Run a separate pass to collect block placement statistics.
